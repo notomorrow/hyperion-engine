@@ -4,7 +4,9 @@
 #include <rendering/PlaceholderData.hpp>
 #include <rendering/RenderGlobalState.hpp>
 
-#include <Engine.hpp>
+#include <rendering/backend/RendererDescriptorSet.hpp>
+
+#include <EngineGlobals.hpp>
 
 namespace hyperion {
 

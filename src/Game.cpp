@@ -34,6 +34,7 @@
 
 #include <system/SystemEvent.hpp>
 
+#include <EngineGlobals.hpp>
 #include <Engine.hpp>
 
 namespace hyperion {
@@ -95,7 +96,7 @@ void Game::Init()
     InitObject(world);
 
     Handle<UIStage> uiStage = CreateObject<UIStage>(g_gameThread);
-    m_uiSubsystem = world->AddSubsystem<UISubsystem>(uiStage);
+    m_uiSubsystem = world->AddSubsystem(CreateObject<UISubsystem>(uiStage));
 
     if (m_managedGameObject && m_managedGameObject->IsValid())
     {

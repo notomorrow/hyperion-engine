@@ -648,8 +648,6 @@ struct MakeUniqueHelper
 template <class T>
 using UniquePtr = memory::UniquePtr<T>;
 
-using AnyPtr = UniquePtr<void>;
-
 template <class T, class... Args>
 HYP_FORCE_INLINE UniquePtr<T> MakeUnique(Args&&... args)
 {

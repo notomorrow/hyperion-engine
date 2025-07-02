@@ -1023,7 +1023,7 @@ inline void utfToStr(T value, SizeType& bufferLength, CharType* result)
     result[bufferIndex] = 0;
 }
 
-inline char* getBytes(u32char& ch)
+inline char* asUtf8Char(u32char& ch)
 {
     return reinterpret_cast<char*>(&ch);
 }

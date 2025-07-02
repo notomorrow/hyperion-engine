@@ -37,7 +37,11 @@ bool FilePath::CanWrite() const
         return false;
     }
 
+#ifdef HYP_WINDOWS
+    return (st.st_mode & _S_IWRITE) != 0;
+#else
     return (st.st_mode & S_IWUSR) != 0 || (st.st_mode & S_IWGRP) != 0 || (st.st_mode & S_IWOTH) != 0;
+#endif
 }
 
 bool FilePath::CanRead() const
@@ -48,7 +52,11 @@ bool FilePath::CanRead() const
         return false;
     }
 
+#ifdef HYP_WINDOWS
+    return (st.st_mode & _S_IREAD) != 0;
+#else
     return (st.st_mode & S_IRUSR) != 0 || (st.st_mode & S_IRGRP) != 0 || (st.st_mode & S_IROTH) != 0;
+#endif
 }
 
 HYP_API String FilePath::GetExtension() const

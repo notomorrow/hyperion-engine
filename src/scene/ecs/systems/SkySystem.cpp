@@ -127,7 +127,7 @@ void SkySystem::AddRenderSubsystemToEnvironment(World* world, EntityManager& mgr
             materialAttributes.flags = MaterialAttributeFlags::DEPTH_TEST;
 
             material = CreateObject<Material>(NAME("SkyboxMaterial"), materialAttributes);
-            material->SetTexture(MaterialTextureKey::ALBEDO_MAP, Handle<SkyProbe>(skyComponent.subsystem->GetEnvProbe())->GetSkyboxCubemap());
+            material->SetTexture(MaterialTextureKey::ALBEDO_MAP, ObjCast<SkyProbe>(skyComponent.subsystem->GetEnvProbe())->GetSkyboxCubemap());
 
             InitObject(material);
         }

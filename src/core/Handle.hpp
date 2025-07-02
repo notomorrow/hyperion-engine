@@ -50,15 +50,6 @@ struct Handle final : HandleBase
     {
     }
 
-    explicit Handle(HypObjectBase* ptr)
-        : ptr(ptr)
-    {
-        if (ptr)
-        {
-            ptr->m_header->IncRefStrong();
-        }
-    }
-
     /*! \brief Construct a handle from the given Id. Use only if you have an Id for an object that is guaranteed to exist.
      *  \param id The Id of the object to reference. */
     explicit Handle(IdType id)
@@ -83,25 +74,6 @@ struct Handle final : HandleBase
             AssertDebugMsg(ptr->m_header->GetRefCountStrong() > 0, "Object is no longer alive!");
 
             // If strong count == 1 after incrementing, the object has already been destructed and it is invalid to create a strong reference
-            ptr->m_header->IncRefStrong();
-        }
-    }
-
-    template <class TPointerType, typename = std::enable_if_t<IsHypObject<TPointerType>::value && std::is_convertible_v<TPointerType*, T*>>>
-    explicit Handle(TPointerType* value)
-        : ptr(value ? static_cast<HypObjectBase*>(static_cast<T*>(value)) : nullptr)
-    {
-        if (IsValid())
-        {
-            ptr->m_header->IncRefStrong();
-        }
-    }
-
-    explicit Handle(HypObjectMemory<T>* value)
-        : ptr(value ? static_cast<HypObjectBase*>(value->GetPointer()) : nullptr)
-    {
-        if (IsValid())
-        {
             ptr->m_header->IncRefStrong();
         }
     }
@@ -373,6 +345,24 @@ struct Handle final : HandleBase
     {
         return Id().GetHashCode();
     }
+
+    static Handle FromPointer(HypObjectBase* ptr)
+    {
+        Handle<T> handle;
+        handle.ptr = ptr;
+
+        if (ptr)
+        {
+            if (!IsA(GetClass(TypeId::ForType<T>()), ptr, ptr->m_header->container->GetObjectTypeId()))
+            {
+                HYP_FAIL("Cannot create WeakHandle because it is not a base class of T!");
+            }
+
+            ptr->m_header->IncRefStrong();
+        }
+
+        return handle;
+    }
 };
 
 template <class T>
@@ -392,15 +382,6 @@ struct WeakHandle final
     WeakHandle(std::nullptr_t)
         : ptr(nullptr)
     {
-    }
-
-    explicit WeakHandle(HypObjectBase* ptr)
-        : ptr(ptr)
-    {
-        if (ptr)
-        {
-            ptr->m_header->IncRefWeak();
-        }
     }
 
     /*! \brief Construct a WeakHandle from the given Id.
@@ -536,10 +517,10 @@ struct WeakHandle final
             return Handle<T>();
         }
 
-        /// \todo: Fix this potential race condition. What if the object is destroyed while we are locking it?
+        /// \FIXME: Potential race condition. What if the object is destroyed while we are locking it?
         /// we should instead increment the strong reference count and then check if it is still alive. (we'll need to update the semantics around HypObject_OnIncRefCount_Strong first)
         return ptr->m_header->refCountStrong.Get(MemoryOrder::ACQUIRE) != 0
-            ? Handle<T>(ptr)
+            ? Handle<T>::FromPointer(ptr)
             : Handle<T>();
     }
 
@@ -690,6 +671,24 @@ struct WeakHandle final
     HYP_FORCE_INLINE HashCode GetHashCode() const
     {
         return Id().GetHashCode();
+    }
+
+    static WeakHandle FromPointer(T* ptr)
+    {
+        WeakHandle<T> handle;
+        handle.ptr = ptr;
+
+        if (ptr)
+        {
+            if (!IsA(GetClass(TypeId::ForType<T>()), ptr, ptr->m_header->container->GetObjectTypeId()))
+            {
+                HYP_FAIL("Cannot create WeakHandle because it is not a base class of T!");
+            }
+
+            ptr->m_header->IncRefWeak();
+        }
+
+        return handle;
     }
 };
 
@@ -856,7 +855,7 @@ public:
             return {};
         }
 
-        return Handle<T>(static_cast<T*>(ptr));
+        return Handle<T>::FromPointer(ptr);
     }
 
     template <class T>

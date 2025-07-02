@@ -76,6 +76,7 @@
 #include <core/logging/Logger.hpp>
 
 #include <HyperionEngine.hpp>
+#include <EngineGlobals.hpp>
 #include <Engine.hpp>
 
 namespace hyperion {

@@ -234,8 +234,7 @@ static void BuildRenderGroups(RenderProxyList& rpl, const Array<Pair<ObjId<Entit
             InitObject(rg);
         }
 
-        auto insertResult = mapping.renderProxies.Insert(proxy->entity.Id(), proxy);
-        AssertDebug(insertResult.second);
+        mapping.meshProxies.Set(proxy->entity.Id().ToIndex(), proxy);
     }
 }
 

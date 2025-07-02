@@ -350,22 +350,22 @@ public:
 
     HYP_FORCE_INLINE ObjIdBase Id() const
     {
-        AssertDebugMsg(m_header, "Invalid HypObject!");
+        AssertDebug(m_header, "Invalid HypObject!");
 
         return ObjIdBase { m_header->container->GetObjectTypeId(), m_header->index + 1 };
     }
 
     HYP_FORCE_INLINE TypeId GetTypeId() const
     {
-        AssertDebugMsg(m_header, "Invalid HypObject!");
+        AssertDebug(m_header, "Invalid HypObject!");
 
         return m_header->container->GetObjectTypeId();
     }
 
     HYP_FORCE_INLINE const HypClass* InstanceClass() const
     {
-        AssertDebugMsg(m_header, "Invalid HypObject!");
-        AssertDebugMsg(m_header->container->GetHypClass(), "No HypClass defined for type");
+        AssertDebug(m_header, "Invalid HypObject!");
+        AssertDebug(m_header->container->GetHypClass(), "No HypClass defined for type");
 
         return m_header->container->GetHypClass();
     }
@@ -437,7 +437,7 @@ protected:
 
     HYP_FORCE_INLINE void AssertReady() const
     {
-        AssertThrowMsg(
+        AssertThrow(
             IsReady(),
             "Object is not in ready state; maybe Init() has not been called on it, "
             "or the component requires an event to be sent from the Engine instance to determine that "
@@ -446,7 +446,7 @@ protected:
 
     HYP_FORCE_INLINE void AssertIsInitCalled() const
     {
-        AssertThrowMsg(IsInitCalled(), "Object has not had Init() called on it!");
+        AssertThrow(IsInitCalled(), "Object has not had Init() called on it!");
     }
 
     void AddDelegateHandler(Name name, DelegateHandler&& delegateHandler)

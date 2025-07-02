@@ -22,6 +22,7 @@
 #include <rendering/backend/RendererGraphicsPipeline.hpp>
 #include <rendering/backend/RendererFeatures.hpp>
 #include <rendering/backend/RenderConfig.hpp>
+#include <rendering/backend/RenderBackend.hpp>
 
 // temp
 #include <rendering/backend/vulkan/RendererGraphicsPipeline.hpp>
@@ -49,6 +50,7 @@
 
 #include <core/Defines.hpp>
 
+#include <EngineGlobals.hpp>
 #include <Engine.hpp>
 #include <Constants.hpp>
 

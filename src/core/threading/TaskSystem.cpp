@@ -253,6 +253,7 @@ TaskSystem& TaskSystem::GetInstance()
     return instance;
 }
 
+HYP_DISABLE_OPTIMIZATION;
 TaskSystem::TaskSystem()
 {
     m_pools.Reserve(THREAD_POOL_MAX);
@@ -261,16 +262,17 @@ TaskSystem::TaskSystem()
     {
         const TaskThreadPoolName poolName { i };
 
+        auto beginIt = g_threadPoolFactories.Begin();
+        auto endIt = g_threadPoolFactories.End();
+
         auto threadPoolFactoriesIt = g_threadPoolFactories.Find(poolName);
 
-        AssertThrowMsg(
-            threadPoolFactoriesIt != g_threadPoolFactories.End(),
-            "TaskThreadPoolName for %u not found in g_thread_pool_factories",
-            i);
+        AssertThrow(threadPoolFactoriesIt != endIt, "Invalid thread pool index %u", i);
 
         m_pools.PushBack(threadPoolFactoriesIt->second());
     }
 }
+HYP_ENABLE_OPTIMIZATION;
 
 void TaskSystem::Start()
 {

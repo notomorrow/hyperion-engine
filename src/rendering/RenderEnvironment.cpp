@@ -1,7 +1,5 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#include <Engine.hpp>
-
 #include <rendering/RenderEnvironment.hpp>
 #include <rendering/DirectionalLightShadowRenderer.hpp>
 #include <rendering/RenderScene.hpp>
@@ -29,6 +27,9 @@
 #include <scene/Material.hpp>
 
 #include <util/MeshBuilder.hpp>
+
+#include <EngineGlobals.hpp>
+#include <Engine.hpp>
 
 namespace hyperion {
 

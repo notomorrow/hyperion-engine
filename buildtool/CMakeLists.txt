@@ -9,7 +9,7 @@ set (CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 project(${BUILD_NAME} CXX C)
 
 if(MSVC)
-    set(CMAKE_CXX_FLAGS_RELEASE "/MD /O2 /Zi")
+    set(CMAKE_CXX_FLAGS "/Zc:preprocessor /MD /O2 /Zi")
 
     # set to path of vcpkg
     set(CMAKE_TOOLCHAIN_FILE, "${VCPKG_INSTALLED_DIR}/../scripts/buildsystems/vcpkg.cmake")

@@ -60,7 +60,7 @@ ScriptSystem::ScriptSystem(EntityManager& entityManager)
 
                             scriptComponent.assembly.Reset();
 
-                            OnEntityAdded(Handle<Entity>(entity));
+                            OnEntityAdded(entity->HandleFromThis());
 
                             scriptComponent.flags &= ~ScriptComponentFlags::RELOADING;
 

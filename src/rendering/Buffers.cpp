@@ -6,7 +6,7 @@
 
 #include <core/utilities/ByteUtil.hpp>
 
-#include <Engine.hpp>
+#include <EngineGlobals.hpp>
 
 namespace hyperion {
 

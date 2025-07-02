@@ -35,6 +35,7 @@
 
 #include <core/profiling/ProfileScope.hpp>
 
+#include <EngineGlobals.hpp>
 #include <Engine.hpp>
 
 namespace hyperion {

@@ -284,12 +284,12 @@ Token Lexer::ReadStringLiteral()
         {
             u32char esc = ReadEscapeCode();
             // append the bytes
-            value.Append(utf::getBytes(esc));
+            value.Append(utf::asUtf8Char(esc));
         }
         else
         {
             // Append the character itself
-            value.Append(utf::getBytes(ch));
+            value.Append(utf::asUtf8Char(ch));
         }
 
         ch = m_sourceStream.Next(posChange);
@@ -344,7 +344,7 @@ Token Lexer::ReadNumberLiteral()
     {
         int posChange = 0;
         u32char nextChar = m_sourceStream.Next(posChange);
-        value.Append(utf::getBytes(nextChar));
+        value.Append(utf::asUtf8Char(nextChar));
         m_sourceLocation.GetColumn() += posChange;
 
         if (tokenClass != TK_FLOAT)
@@ -364,7 +364,7 @@ Token Lexer::ReadNumberLiteral()
                     {
                         // type is a float because of '.' and not an identifier after
                         tokenClass = TK_FLOAT;
-                        value.Append(utf::getBytes(ch));
+                        value.Append(utf::asUtf8Char(ch));
                         m_sourceLocation.GetColumn() += posChange;
                     }
                     else
@@ -385,7 +385,7 @@ Token Lexer::ReadNumberLiteral()
                 hasExponent = true;
 
                 tokenClass = TK_FLOAT;
-                value.Append(utf::getBytes(ch));
+                value.Append(utf::asUtf8Char(ch));
 
                 int posChange = 0;
                 m_sourceStream.Next(posChange);
@@ -396,7 +396,7 @@ Token Lexer::ReadNumberLiteral()
                 // Handle negative exponent
                 if (ch == (u32char)'-')
                 {
-                    value.Append(utf::getBytes(ch));
+                    value.Append(utf::asUtf8Char(ch));
 
                     int posChange = 0;
                     m_sourceStream.Next(posChange);
@@ -447,7 +447,7 @@ Token Lexer::ReadHexNumberLiteral()
 
         int posChange = 0;
         u32char nextChar = m_sourceStream.Next(posChange);
-        value.Append(utf::getBytes(nextChar));
+        value.Append(utf::asUtf8Char(nextChar));
         m_sourceLocation.GetColumn() += posChange;
     }
 
@@ -460,7 +460,7 @@ Token Lexer::ReadHexNumberLiteral()
     {
         int posChange = 0;
         u32char nextChar = m_sourceStream.Next(posChange);
-        value.Append(utf::getBytes(nextChar));
+        value.Append(utf::asUtf8Char(nextChar));
         m_sourceLocation.GetColumn() += posChange;
         ch = m_sourceStream.Peek();
     }
@@ -610,7 +610,7 @@ Token Lexer::ReadIdentifier()
         ch = m_sourceStream.Next(posChange);
         m_sourceLocation.GetColumn() += posChange;
         // append the raw bytes
-        value.Append(utf::getBytes(ch));
+        value.Append(utf::asUtf8Char(ch));
         // set ch to be the next character in the buffer
         ch = m_sourceStream.Peek();
 

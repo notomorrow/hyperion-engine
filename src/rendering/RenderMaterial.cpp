@@ -6,6 +6,7 @@
 #include <rendering/PlaceholderData.hpp>
 #include <rendering/SafeDeleter.hpp>
 
+#include <rendering/backend/RenderBackend.hpp>
 #include <rendering/backend/RenderObject.hpp>
 #include <rendering/backend/RendererFeatures.hpp>
 #include <rendering/backend/RendererDescriptorSet.hpp>
@@ -22,6 +23,7 @@
 #include <core/utilities/ByteUtil.hpp>
 #include <core/profiling/ProfileScope.hpp>
 
+#include <EngineGlobals.hpp>
 #include <Engine.hpp>
 #include <Types.hpp>
 

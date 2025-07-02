@@ -21,6 +21,7 @@
 #include <scene/EnvProbe.hpp>
 #include <scene/EnvGrid.hpp>
 
+#include <EngineGlobals.hpp>
 #include <Engine.hpp>
 #include <Types.hpp>
 

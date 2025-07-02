@@ -60,7 +60,7 @@ static Array<String> CreatePlatformStackTrace(uint32 depth, uint32 offset)
         if (SymFromAddr(process, address, &displacementSym, symbol))
         {
             char line[2000];
-            sprintfS(line, "%s - 0x%0llX", symbol->Name, symbol->Address);
+            sprintf_s(line, "%s - 0x%0llX", symbol->Name, symbol->Address);
             stackTrace.PushBack(line);
         }
         else

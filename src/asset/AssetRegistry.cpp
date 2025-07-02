@@ -19,6 +19,7 @@
 #include <core/serialization/fbom/FBOMMarshaler.hpp>
 #include <core/serialization/fbom/FBOMWriter.hpp>
 
+#include <EngineGlobals.hpp>
 #include <Engine.hpp>
 
 namespace hyperion {

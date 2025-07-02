@@ -38,6 +38,7 @@
 
 #include <core/Util.hpp>
 
+#include <EngineGlobals.hpp>
 #include <Engine.hpp>
 
 namespace hyperion {
@@ -192,7 +193,7 @@ static void AddRenderProxy(RenderProxyList* renderProxyList, ResourceTracker<Obj
         InitObject(rg);
     }
 
-    mapping.renderProxies.Insert(proxy->entity.Id(), proxy);
+    mapping.meshProxies.Set(proxy->entity.Id().Value(), proxy);
 }
 
 static bool RemoveRenderProxy(RenderProxyList* renderProxyList, ResourceTracker<ObjId<Entity>, RenderProxyMesh>& meshes, RenderProxyMesh* proxy, const RenderableAttributeSet& attributes, RenderBucket rb)
@@ -207,15 +208,13 @@ static bool RemoveRenderProxy(RenderProxyList* renderProxyList, ResourceTracker<
     DrawCallCollectionMapping& mapping = it->second;
     AssertThrow(mapping.IsValid());
 
-    auto proxyIter = mapping.renderProxies.Find(proxy->entity.Id());
-
-    if (proxyIter == mapping.renderProxies.End())
+    if (!mapping.meshProxies.HasIndex(proxy->entity.Id().ToIndex()))
     {
         HYP_LOG(Rendering, Warning, "RenderProxyList::RemoveRenderProxy: Render proxy not found in mapping for entity #%u", proxy->entity.Id().Value());
         return false;
     }
 
-    mapping.renderProxies.Erase(proxyIter);
+    mapping.meshProxies.EraseAt(proxy->entity.Id().ToIndex());
 
     return true;
 }
@@ -277,7 +276,7 @@ void RenderProxyList::Clear()
         for (auto& it : mappings)
         {
             DrawCallCollectionMapping& mapping = it.second;
-            mapping.renderProxies.Clear();
+            mapping.meshProxies.Clear();
 
             if (mapping.indirectRenderer)
             {
@@ -299,7 +298,7 @@ void RenderProxyList::RemoveEmptyRenderGroups()
             DrawCallCollectionMapping& mapping = it->second;
             AssertDebug(mapping.IsValid());
 
-            if (mapping.renderProxies.Any())
+            if (mapping.meshProxies.Any())
             {
                 ++it;
 

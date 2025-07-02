@@ -97,11 +97,8 @@ struct ObjIdBase
 
     HYP_FORCE_INLINE constexpr HashCode GetHashCode() const
     {
-        HashCode hc;
-        hc.Add(typeIdValue);
-        hc.Add(value);
-
-        return hc;
+        return HashCode::GetHashCode(typeIdValue)
+            .Combine(HashCode::GetHashCode(value));
     }
 
     uint32 typeIdValue = 0;

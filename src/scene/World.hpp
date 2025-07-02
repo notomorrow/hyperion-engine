@@ -96,12 +96,12 @@ public:
         return m_physicsWorld;
     }
 
-    template <class T, class... Args>
-    HYP_FORCE_INLINE Handle<T> AddSubsystem(Args&&... args)
+    template <class T>
+    HYP_FORCE_INLINE Handle<T> AddSubsystem()
     {
         static_assert(std::is_base_of_v<Subsystem, T>, "T must be a subclass of Subsystem");
 
-        return ObjCast<T>(AddSubsystem(TypeId::ForType<T>(), CreateObject<T>(std::forward<Args>(args)...)));
+        return ObjCast<T>(AddSubsystem(TypeId::ForType<T>(), CreateObject<T>()));
     }
 
     template <class T>

@@ -5,6 +5,7 @@
 #include <rendering/RenderGlobalState.hpp>
 #include <rendering/Renderer.hpp>
 
+#include <rendering/backend/RenderBackend.hpp>
 #include <rendering/backend/RendererDescriptorSet.hpp>
 
 #include <core/math/Matrix4.hpp>
@@ -14,6 +15,7 @@
 #include <core/logging/Logger.hpp>
 #include <core/logging/LogChannels.hpp>
 
+#include <EngineGlobals.hpp>
 #include <Engine.hpp>
 
 namespace hyperion {

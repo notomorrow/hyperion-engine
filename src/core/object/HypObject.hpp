@@ -76,12 +76,12 @@ public:                                                                         
                                                                                                    \
     HYP_FORCE_INLINE Handle<T> HandleFromThis() const                                              \
     {                                                                                              \
-        return Handle<T>(const_cast<HypObjectBase*>(static_cast<const HypObjectBase*>(this)));     \
+        return Handle<T>::FromPointer(const_cast<T*>(this));     \
     }                                                                                              \
                                                                                                    \
     HYP_FORCE_INLINE WeakHandle<T> WeakHandleFromThis() const                                      \
     {                                                                                              \
-        return WeakHandle<T>(const_cast<HypObjectBase*>(static_cast<const HypObjectBase*>(this))); \
+        return WeakHandle<T>::FromPointer(const_cast<T*>(this)); \
     }                                                                                              \
                                                                                                    \
 private:
@@ -91,16 +91,6 @@ class HypObject : public HypObjectBase
 {
 public:
     virtual ~HypObject() = default;
-
-    HYP_FORCE_INLINE Handle<T> HandleFromThis() const
-    {
-        return Handle<T>(const_cast<HypObjectBase*>(static_cast<const HypObjectBase*>(this)));
-    }
-
-    HYP_FORCE_INLINE WeakHandle<T> WeakHandleFromThis() const
-    {
-        return WeakHandle<T>(const_cast<HypObjectBase*>(static_cast<const HypObjectBase*>(this)));
-    }
 };
 
 } // namespace hyperion

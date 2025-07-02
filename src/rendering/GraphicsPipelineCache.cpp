@@ -2,7 +2,7 @@
 
 #include <rendering/GraphicsPipelineCache.hpp>
 #include <rendering/RenderableAttributes.hpp>
-
+#include <rendering/backend/RenderBackend.hpp>
 #include <rendering/backend/RenderCommand.hpp>
 #include <rendering/backend/RendererGraphicsPipeline.hpp>
 #include <rendering/backend/RendererResult.hpp>
@@ -24,7 +24,7 @@
 // For CompiledShader
 #include <rendering/shader_compiler/ShaderCompiler.hpp>
 
-#include <Engine.hpp>
+#include <EngineGlobals.hpp>
 
 namespace hyperion {
 

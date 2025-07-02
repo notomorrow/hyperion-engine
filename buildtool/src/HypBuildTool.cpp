@@ -414,7 +414,7 @@ private:
 
     void WaitWhileTaskRunning(const Task<void>& task)
     {
-        Threads::AssertOnThread(g_main_thread);
+        Threads::AssertOnThread(g_mainThread);
 
         AssertThrow(task.IsValid());
 

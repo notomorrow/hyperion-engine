@@ -54,6 +54,7 @@
 
 #include <util/Float16.hpp>
 
+#include <EngineGlobals.hpp>
 #include <Engine.hpp>
 
 namespace hyperion {

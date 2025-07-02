@@ -20,7 +20,7 @@ HYP_DECLARE_LOG_CHANNEL(Camera);
 #pragma region EditorCameraInputHandler
 
 EditorCameraInputHandler::EditorCameraInputHandler(const WeakHandle<CameraController>& controller)
-    : m_controller(WeakHandle<EditorCameraController>(controller))
+    : m_controller(controller)
 {
     AssertThrowMsg(m_controller.IsValid(), "Null camera controller or not of type EditorCameraController");
 }

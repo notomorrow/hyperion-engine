@@ -11,6 +11,7 @@
 #include <rendering/Deferred.hpp>
 #include <rendering/GraphicsPipelineCache.hpp>
 
+#include <rendering/backend/RenderObject.hpp>
 #include <rendering/backend/RendererFrame.hpp>
 #include <rendering/backend/RendererGraphicsPipeline.hpp>
 
@@ -24,6 +25,7 @@
 
 #include <core/logging/Logger.hpp>
 
+#include <EngineGlobals.hpp>
 #include <Engine.hpp>
 
 namespace hyperion {

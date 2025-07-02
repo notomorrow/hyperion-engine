@@ -1,6 +1,7 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
 #include <rendering/PlaceholderData.hpp>
+#include <rendering/backend/RenderBackend.hpp>
 
 #include <core/math/Vector2.hpp>
 
@@ -8,8 +9,8 @@
 
 #include <util/img/Bitmap.hpp>
 
+#include <EngineGlobals.hpp>
 #include <Types.hpp>
-#include <Engine.hpp>
 
 namespace hyperion {
 
@@ -76,13 +77,13 @@ HYP_API void FillPlaceholderBuffer_Cubemap(Vec2u dimensions, ByteBuffer& outBuff
     }
 }
 
-template void FillPlaceholderBuffer_Tex2D<TF_R8>(Vec2u dimensions, ByteBuffer& outBuffer);      // R8
-template void FillPlaceholderBuffer_Tex2D<TF_RGBA8>(Vec2u dimensions, ByteBuffer& outBuffer);   // RGBA8
-template void FillPlaceholderBuffer_Tex2D<TF_RGBA16F>(Vec2u dimensions, ByteBuffer& outBuffer); // RGBA16F
-template void FillPlaceholderBuffer_Tex2D<TF_RGBA32F>(Vec2u dimensions, ByteBuffer& outBuffer); // RGBA32F
+template HYP_API void FillPlaceholderBuffer_Tex2D<TF_R8>(Vec2u dimensions, ByteBuffer& outBuffer);      // R8
+template HYP_API void FillPlaceholderBuffer_Tex2D<TF_RGBA8>(Vec2u dimensions, ByteBuffer& outBuffer);   // RGBA8
+template HYP_API void FillPlaceholderBuffer_Tex2D<TF_RGBA16F>(Vec2u dimensions, ByteBuffer& outBuffer); // RGBA16F
+template HYP_API void FillPlaceholderBuffer_Tex2D<TF_RGBA32F>(Vec2u dimensions, ByteBuffer& outBuffer); // RGBA32F
 
-template void FillPlaceholderBuffer_Cubemap<TF_R8>(Vec2u dimensions, ByteBuffer& outBuffer);    // R8
-template void FillPlaceholderBuffer_Cubemap<TF_RGBA8>(Vec2u dimensions, ByteBuffer& outBuffer); // RGBA8
+template HYP_API void FillPlaceholderBuffer_Cubemap<TF_R8>(Vec2u dimensions, ByteBuffer& outBuffer);    // R8
+template HYP_API void FillPlaceholderBuffer_Cubemap<TF_RGBA8>(Vec2u dimensions, ByteBuffer& outBuffer); // RGBA8
 
 PlaceholderData::PlaceholderData()
     : m_image2d1x1R8(g_renderBackend->MakeImage(TextureDesc {

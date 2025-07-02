@@ -21,8 +21,6 @@ class FullScreenPass;
 class RenderWorld;
 class Mesh;
 
-extern ShaderManager* g_shaderManager;
-
 struct RENDER_COMMAND(SetUILayerImageView);
 
 class FinalPass final

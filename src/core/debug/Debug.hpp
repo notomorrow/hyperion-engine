@@ -85,6 +85,7 @@ using debug::LogType;
 
 // obsolete
 #define HYP_NOT_IMPLEMENTED_VOID() HYP_NOT_IMPLEMENTED()
+#define HYP_EXPAND(x) x
 
 #define DebugLogRaw(type, ...) \
     debug::DebugLog_Write(type, nullptr, 0, __VA_ARGS__)
@@ -92,7 +93,12 @@ using debug::LogType;
 #define HYP_HAS_ARGS(...) HYP_HAS_ARGS_(__VA_ARGS__, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, )
 #define HYP_HAS_ARGS_(a1, a2, a3, a4, a5, b1, b2, b3, b4, b5, c1, c2, c3, c4, c5, d1, d2, d3, d4, d5, e, N, ...) N
 
-#define AssertThrow(...) HYP_CONCAT(HYP_ASSERT, HYP_HAS_ARGS(__VA_ARGS__))(__VA_ARGS__)
+#define HYP_SELECT_ASSERT(n) HYP_CONCAT(HYP_ASSERT, n)
+
+// #define AssertThrow(...) \
+//     HYP_EXPAND(                                                                 \
+//         HYP_SELECT_ASSERT( HYP_EXPAND( HYP_HAS_ARGS(__VA_ARGS__) ) )            \
+//     )(__VA_ARGS__)
 
 #define HYP_ASSERT0(expr) HYP_ASSERT1(expr, )
 
@@ -109,6 +115,12 @@ using debug::LogType;
         }                                                                                                         \
     }                                                                                                             \
     while (0)
+
+#if defined(HYP_MSVC) && defined(_MSVC_TRADITIONAL) && _MSVC_TRADITIONAL
+#error "Traditional MSVC mode is not supported. Please use the new MSVC preprocessor."
+#else
+#define AssertThrow(...) HYP_CONCAT(HYP_ASSERT, HYP_HAS_ARGS(__VA_ARGS__))(__VA_ARGS__)
+#endif
 
 #ifdef HYP_DEBUG_MODE
 #define AssertDebug(...) AssertThrow(__VA_ARGS__)

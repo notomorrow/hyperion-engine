@@ -37,7 +37,7 @@ void UISubsystem::OnAddedToWorld()
 
     InitObject(m_uiStage);
 
-    m_uiRenderSubsystem = GetWorld()->AddSubsystem<UIRenderSubsystem>(m_uiStage);
+    m_uiRenderSubsystem = GetWorld()->AddSubsystem(CreateObject<UIRenderSubsystem>(m_uiStage));
 }
 
 void UISubsystem::OnRemovedFromWorld()

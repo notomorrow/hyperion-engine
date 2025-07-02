@@ -6,10 +6,14 @@
 #include <cstdarg>
 #include <type_traits>
 
-#ifdef HYP_UNIX
+#if defined(HYP_UNIX)
 #include <sys/types.h>
 #include <sys/sysctl.h>
 #include <unistd.h>
+#elif defined(HYP_WINDOWS)
+#define WIN32_LEAN_AND_MEAN
+#include <Windows.h>
+#include <debugapi.h>
 #endif
 
 #define HYP_DEBUG_OUTPUT_STREAM stdout
@@ -51,13 +55,13 @@ static const char* g_logColourTable[] = {
 HYP_API void DebugLog_Write(LogType type, const char* fmt, ...)
 {
     /* Coloured files are less that ideal */
-    const int typeN = static_cast<std::underlyingType<LogType>::type>(type);
+    const int typeN = static_cast<std::underlying_type_t<LogType>>(type);
     fprintf(HYP_DEBUG_OUTPUT_STREAM, "[%s] ", g_logTypeTable[typeN]);
 
-    vaList args;
-    vaStart(args, fmt);
+    va_list args;
+    va_start(args, fmt);
     vfprintf(HYP_DEBUG_OUTPUT_STREAM, fmt, args);
-    vaEnd(args);
+    va_end(args);
 }
 #else
 HYP_API void DebugLog_Write(LogType type, const char* callee, uint32_t line, const char* fmt, ...)

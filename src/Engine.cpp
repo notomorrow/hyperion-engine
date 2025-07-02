@@ -64,6 +64,7 @@
 
 #include <scripting/ScriptingService.hpp>
 
+#include <EngineGlobals.hpp>
 #include <HyperionEngine.hpp>
 
 #define HYP_LOG_FRAMES_PER_SECOND

@@ -1259,7 +1259,7 @@ void EditorSubsystem::InitViewport()
 
     HYP_LOG(Editor, Info, "Creating editor viewport with size: {}", viewportSize);
 
-    Handle<ScreenCaptureRenderSubsystem> screenCaptureRenderSubsystem = GetWorld()->AddSubsystem<ScreenCaptureRenderSubsystem>(view);
+    Handle<ScreenCaptureRenderSubsystem> screenCaptureRenderSubsystem = GetWorld()->AddSubsystem(CreateObject<ScreenCaptureRenderSubsystem>(view));
     // m_delegateHandlers.Add(
     //     screenCaptureRenderSubsystem->OnTextureResize.Bind([this, sceneImageObjectWeak = sceneImageObject.ToWeak()](const Handle<Texture>& texture)
     //         {

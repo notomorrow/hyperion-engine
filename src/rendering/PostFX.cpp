@@ -2,6 +2,7 @@
 
 #include <rendering/PostFX.hpp>
 
+#include <rendering/backend/RenderBackend.hpp>
 #include <rendering/backend/RendererDescriptorSet.hpp>
 
 #include <core/object/HypClassUtils.hpp>
@@ -10,7 +11,7 @@
 
 #include <util/MeshBuilder.hpp>
 
-#include <Engine.hpp>
+#include <EngineGlobals.hpp>
 
 namespace hyperion {
 

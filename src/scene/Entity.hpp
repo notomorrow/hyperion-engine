@@ -46,8 +46,8 @@ public:
     friend class EntityManager;
     friend class Node;
 
-    HYP_API Entity();
-    HYP_API virtual ~Entity() override;
+    Entity();
+    virtual ~Entity() override;
 
     HYP_FORCE_INLINE World* GetWorld() const
     {

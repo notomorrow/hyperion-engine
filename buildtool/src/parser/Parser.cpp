@@ -117,6 +117,11 @@ TResult<CSharpTypeMapping> MapToCSharpType(const Analyzer& analyzer, const ASTTy
                 return CSharpTypeMapping { "Array" };
             }
 
+            // if (template_name == "ObjId")
+            // {
+            //     return
+            // }
+
             if (template_name == "RC"
                 || template_name == "Handle"
                 || template_name == "EnumFlags")
@@ -134,7 +139,7 @@ TResult<CSharpTypeMapping> MapToCSharpType(const Analyzer& analyzer, const ASTTy
                 return MapToCSharpType(analyzer, type->template_arguments[0]->type.Get());
             }
 
-            HYP_LOG(Parser, Error, "Template type is unable to be mapped to a C# type: {}", type->Format());
+            HYP_LOG(Parser, Error, "Template type is unable to be mapped to a C# type: {}  (type name string = {})", type->Format(), type_name_string);
 
             return HYP_MAKE_ERROR(Error, "Template type is unable to be mapped to a C# type");
         }

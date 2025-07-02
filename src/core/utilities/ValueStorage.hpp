@@ -162,16 +162,16 @@ struct ValueStorageArray<T, Count, Alignment, typename std::enable_if_t<Count !=
 template <class T, SizeType Alignment>
 struct ValueStorageArray<T, 0, Alignment, void>
 {
-    ValueStorage<char> data[1];
+    ValueStorage<char> dataBuffer[1];
 
     HYP_FORCE_INLINE void* GetRawPointer()
     {
-        return static_cast<void*>(&data[0]);
+        return static_cast<void*>(&dataBuffer[0]);
     }
 
     HYP_FORCE_INLINE const void* GetRawPointer() const
     {
-        return static_cast<const void*>(&data[0]);
+        return static_cast<const void*>(&dataBuffer[0]);
     }
 
     HYP_FORCE_INLINE constexpr SizeType Size() const

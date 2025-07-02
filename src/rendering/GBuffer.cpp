@@ -18,7 +18,7 @@
 #include <core/logging/LogChannels.hpp>
 #include <core/logging/Logger.hpp>
 
-#include <Engine.hpp>
+#include <EngineGlobals.hpp>
 
 namespace hyperion {
 

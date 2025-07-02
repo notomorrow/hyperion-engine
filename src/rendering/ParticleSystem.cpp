@@ -46,7 +46,7 @@
 #include <core/logging/LogChannels.hpp>
 #include <core/logging/Logger.hpp>
 
-#include <Engine.hpp>
+#include <EngineGlobals.hpp>
 
 namespace hyperion {
 
@@ -282,10 +282,7 @@ void ParticleSpawner::CreateComputePipelines()
 
     DeferCreate(descriptorTable);
 
-    m_updateParticles = g_renderBackend->MakeComputePipeline(
-        updateParticlesShader,
-        descriptorTable);
-
+    m_updateParticles = g_renderBackend->MakeComputePipeline(updateParticlesShader, descriptorTable);
     DeferCreate(m_updateParticles);
 }
 

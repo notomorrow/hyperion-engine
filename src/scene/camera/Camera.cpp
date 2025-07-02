@@ -29,7 +29,7 @@ class Camera;
 #pragma region CameraController
 
 CameraController::CameraController(CameraProjectionMode projectionMode)
-    : m_inputHandler(CreateObject<NullInputHandler>()),
+    : m_inputHandler(ObjCast<InputHandlerBase>(CreateObject<NullInputHandler>())),
       m_camera(nullptr),
       m_projectionMode(projectionMode),
       m_commandQueueCount { 0 },

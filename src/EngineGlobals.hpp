@@ -17,6 +17,10 @@ class MaterialCache;
 class RenderGlobalState;
 class IRenderBackend;
 
+#ifdef HYP_BUILD_LIBRARY
+
+// Globals for internal usage within the Hyperion library
+
 extern Handle<Engine> g_engine;
 extern Handle<AssetManager> g_assetManager;
 extern ShaderManager* g_shaderManager;
@@ -24,6 +28,8 @@ extern MaterialCache* g_materialSystem;
 extern SafeDeleter* g_safeDeleter;
 extern IRenderBackend* g_renderBackend;
 extern RenderGlobalState* g_renderGlobalState;
+
+#endif
 
 } // namespace hyperion
 

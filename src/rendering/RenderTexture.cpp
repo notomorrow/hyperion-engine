@@ -9,6 +9,7 @@
 
 #include <rendering/rhi/CmdList.hpp>
 
+#include <rendering/backend/RenderBackend.hpp>
 #include <rendering/backend/RendererFrame.hpp>
 #include <rendering/backend/RenderCommand.hpp>
 #include <rendering/backend/RendererImage.hpp>
@@ -32,6 +33,7 @@
 
 #include <core/profiling/ProfileScope.hpp>
 
+#include <EngineGlobals.hpp>
 #include <Engine.hpp>
 
 namespace hyperion {

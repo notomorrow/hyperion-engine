@@ -27,6 +27,7 @@
 
 #include <system/AppContext.hpp>
 
+#include <EngineGlobals.hpp>
 #include <Engine.hpp>
 
 #define HYP_RENDER_UI_IN_FINAL_PASS

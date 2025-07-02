@@ -11,6 +11,7 @@
 
 #include <core/threading/Threads.hpp>
 
+#include <EngineGlobals.hpp>
 #include <Engine.hpp>
 
 namespace hyperion {

@@ -10,7 +10,7 @@
 #include <rendering/RenderShadowMap.hpp>
 #include <rendering/RenderGlobalState.hpp>
 #include <rendering/Renderer.hpp>
-
+#include <rendering/backend/RenderBackend.hpp>
 #include <rendering/backend/RenderCommand.hpp>
 #include <rendering/backend/RendererFeatures.hpp>
 
@@ -27,7 +27,7 @@
 
 #include <core/profiling/ProfileScope.hpp>
 
-#include <Engine.hpp>
+#include <EngineGlobals.hpp>
 
 namespace hyperion {
 

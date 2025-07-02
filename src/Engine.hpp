@@ -5,7 +5,6 @@
 
 #include <Config.hpp>
 #include <Types.hpp>
-#include <EngineGlobals.hpp>
 
 #include <rendering/EngineRenderStats.hpp>
 

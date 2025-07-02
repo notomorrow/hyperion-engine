@@ -37,6 +37,7 @@
 #include <util/NoiseFactory.hpp>
 #include <util/MeshBuilder.hpp>
 
+#include <EngineGlobals.hpp>
 #include <Engine.hpp>
 
 // #define HYP_GAUSSIAN_SPLATTING_CPU_SORT

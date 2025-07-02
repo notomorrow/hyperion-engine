@@ -12,18 +12,16 @@
 #include <Types.hpp>
 
 namespace hyperion {
-
 namespace memory {
 
-/*! \brief A dynamically sized buffer, containing raw bytes. Initially has a size of zero, memory is allocated on the heap when first initialized with a non-zero size. */
-HYP_STRUCT()
-class HYP_API ByteBuffer
+template <class Allocator>
+class TByteBuffer
 {
 public:
-    using AllocatorType = DynamicAllocator;
+    using AllocatorType = Allocator;
 
     /*! \brief Constructs an empty ByteBuffer, no memory is allocated. */
-    ByteBuffer()
+    TByteBuffer()
         : m_size(0)
     {
         m_allocation.SetToInitialState();
@@ -31,7 +29,7 @@ public:
 
     /*! \brief Constructs a ByteBuffer with the given size, allocating memory on the heap if \ref{count} != 0.
      *  \param count The size of the ByteBuffer in bytes. If count is zero, no memory is allocated and the ByteBuffer is set to an empty state. */
-    explicit ByteBuffer(SizeType count)
+    explicit TByteBuffer(SizeType count)
         : m_size(count)
     {
         m_allocation.SetToInitialState();
@@ -46,7 +44,7 @@ public:
     }
 
     /*! \brief Constructs a ByteBuffer with the given size and data, allocating memory on the heap if \ref{count} != 0 and copies the data into the buffer. */
-    explicit ByteBuffer(SizeType count, const void* data)
+    explicit TByteBuffer(SizeType count, const void* data)
         : m_size(count)
     {
         m_allocation.SetToInitialState();
@@ -62,7 +60,7 @@ public:
 
     /*! \brief Constructs a ByteBuffer from a \ref{ByteView}, allocating memory on the heap if the view is not empty and copies the data into the buffer.
      *  \param view The ByteView to copy to the ByteBuffer. */
-    explicit ByteBuffer(const ByteView& view)
+    explicit TByteBuffer(const ByteView& view)
         : m_size(view.Size())
     {
         m_allocation.SetToInitialState();
@@ -78,7 +76,7 @@ public:
 
     /*! \brief Constructs a ByteBuffer from a \ref{ConstByteView}, allocating memory on the heap if the view is not empty and copies the data into the buffer.
      *  \param view The ConstByteView to copy to the ByteBuffer. */
-    explicit ByteBuffer(const ConstByteView& view)
+    explicit TByteBuffer(const ConstByteView& view)
         : m_size(view.Size())
     {
         m_allocation.SetToInitialState();
@@ -92,7 +90,7 @@ public:
         m_allocation.InitFromRangeCopy(view.Begin(), view.End());
     }
 
-    ByteBuffer(const ByteBuffer& other)
+    TByteBuffer(const TByteBuffer& other)
         : m_size(other.m_size)
     {
         m_allocation.SetToInitialState();
@@ -106,7 +104,22 @@ public:
         m_allocation.InitFromRangeCopy(other.Data(), other.Data() + m_size);
     }
 
-    ByteBuffer& operator=(const ByteBuffer& other)
+    template <class OtherAllocator>
+    TByteBuffer(const TByteBuffer<OtherAllocator>& other)
+        : m_size(other.m_size)
+    {
+        m_allocation.SetToInitialState();
+
+        if (m_size == 0)
+        {
+            return;
+        }
+
+        m_allocation.Allocate(m_size);
+        m_allocation.InitFromRangeCopy(other.Data(), other.Data() + m_size);
+    }
+
+    TByteBuffer& operator=(const TByteBuffer& other)
     {
         if (&other == this)
         {
@@ -129,7 +142,31 @@ public:
         return *this;
     }
 
-    ByteBuffer(ByteBuffer&& other) noexcept
+    template <class OtherAllocator>
+    TByteBuffer& operator=(const TByteBuffer<OtherAllocator>& other)
+    {
+        if (&other == this)
+        {
+            return *this;
+        }
+
+        const SizeType previousSize = m_size;
+        const SizeType newSize = other.m_size;
+
+        m_allocation.Free();
+
+        if (newSize != 0)
+        {
+            m_allocation.Allocate(newSize);
+            m_allocation.InitFromRangeCopy(other.Data(), other.Data() + newSize);
+        }
+
+        m_size = newSize;
+
+        return *this;
+    }
+
+    TByteBuffer(TByteBuffer<AllocatorType>&& other) noexcept
         : m_size(other.m_size)
     {
         m_allocation.SetToInitialState();
@@ -152,7 +189,7 @@ public:
         other.m_size = 0;
     }
 
-    ByteBuffer& operator=(ByteBuffer&& other) noexcept
+    TByteBuffer& operator=(TByteBuffer<AllocatorType>&& other) noexcept
     {
         if (&other == this)
         {
@@ -186,7 +223,7 @@ public:
         return *this;
     }
 
-    ~ByteBuffer()
+    ~TByteBuffer()
     {
         m_allocation.Free();
     }
@@ -443,7 +480,8 @@ public:
      *  Two ByteBuffers are considered equal if they have the same size and their contents are identical.
      *  \param other The other ByteBuffer to compare with.
      *  \return True if the ByteBuffers are equal, false otherwise. */
-    HYP_FORCE_INLINE bool operator==(const ByteBuffer& other) const
+    template <class OtherAllocator>
+    HYP_FORCE_INLINE bool operator==(const TByteBuffer<OtherAllocator>& other) const
     {
         if (m_size != other.m_size)
         {
@@ -457,7 +495,8 @@ public:
      *  Two ByteBuffers are considered unequal if they have different sizes or their contents differ.
      *  \param other The other ByteBuffer to compare with.
      *  \return True if the ByteBuffers are not equal, false otherwise. */
-    HYP_FORCE_INLINE bool operator!=(const ByteBuffer& other) const
+    template <class OtherAllocator>
+    HYP_FORCE_INLINE bool operator!=(const TByteBuffer<OtherAllocator>& other) const
     {
         if (m_size != other.m_size)
         {
@@ -469,9 +508,9 @@ public:
 
     /*! \brief Returns a copy of the ByteBuffer.
      *  \return A new ByteBuffer with the same size and contents as this ByteBuffer. */
-    HYP_NODISCARD HYP_FORCE_INLINE ByteBuffer Copy() const
+    HYP_NODISCARD HYP_FORCE_INLINE TByteBuffer Copy() const
     {
-        return ByteBuffer(m_size, Data());
+        return TByteBuffer(m_size, Data());
     }
 
     /*! \brief Generates a HashCode based on all bytes in the buffer. Returns an empty HashCode if the ByteBuffer is empty.
@@ -491,9 +530,16 @@ private:
     SizeType m_size;
 };
 
+using ByteBuffer = TByteBuffer<DynamicAllocator>;
+
+template <SizeType Size>
+using FixedByteBuffer = TByteBuffer<FixedAllocator<Size>>;
+
 } // namespace memory
 
 using memory::ByteBuffer;
+using memory::TByteBuffer;
+using memory::FixedByteBuffer;
 
 } // namespace hyperion
 

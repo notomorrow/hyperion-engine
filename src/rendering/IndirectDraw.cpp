@@ -12,6 +12,7 @@
 #include <rendering/RenderWorld.hpp>
 #include <rendering/RenderView.hpp>
 #include <rendering/Deferred.hpp>
+#include <rendering/backend/RenderBackend.hpp>
 
 #include <rendering/backend/RendererFrame.hpp>
 #include <rendering/backend/RendererComputePipeline.hpp>
@@ -24,7 +25,7 @@
 
 #include <core/profiling/ProfileScope.hpp>
 
-#include <Engine.hpp>
+#include <EngineGlobals.hpp>
 
 namespace hyperion {
 

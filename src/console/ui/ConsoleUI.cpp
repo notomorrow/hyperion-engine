@@ -202,15 +202,16 @@ void ConsoleUI::Init()
     historyListView->SetInnerSize(UIObjectSize({ 100, UIObjectSize::PERCENT }, { 0, UIObjectSize::AUTO }));
     historyListView->SetDataSource(dataSource);
 
-    historyListView->OnChildAttached.Bind([this](UIObject* child) -> UIEventHandlerResult
-                                          {
-                                              // m_historyListView->SetScrollOffset(Vec2i {
-                                              //     m_historyListView->GetScrollOffset().x,
-                                              //     m_historyListView->GetActualInnerSize().y - m_historyListView->GetActualSize().y
-                                              // }, /* smooth */ false);
+    historyListView->OnChildAttached
+        .Bind([this](UIObject* child) -> UIEventHandlerResult
+        {
+            // m_historyListView->SetScrollOffset(Vec2i {
+            //     m_historyListView->GetScrollOffset().x,
+            //     m_historyListView->GetActualInnerSize().y - m_historyListView->GetActualSize().y
+            // }, /* smooth */ false);
 
-                                              return UIEventHandlerResult::STOP_BUBBLING;
-                                          })
+            return UIEventHandlerResult::STOP_BUBBLING;
+        })
         .Detach();
 
     AddChildUIObject(historyListView);
