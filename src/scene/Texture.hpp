@@ -6,6 +6,7 @@
 #include <core/Base.hpp>
 
 #include <core/memory/UniquePtr.hpp>
+#include <core/memory/Pimpl.hpp>
 
 #include <core/memory/resource/Resource.hpp>
 

@@ -68,7 +68,7 @@ void Glyph::LoadMetrics()
 #endif
 }
 
-void Glyph::Render()
+TResult<Handle<Texture>> Glyph::Rasterize()
 {
     AssertThrow(m_face != nullptr);
 
@@ -78,16 +78,12 @@ void Glyph::Render()
 #ifdef HYP_FREETYPE
     if (FT_Set_Pixel_Sizes(m_face->GetFace(), 0, MathUtil::Floor<float, uint32>(64.0f * m_scale)))
     {
-        HYP_LOG(Font, Error, "Error setting pixel size for font face!");
-
-        return;
+        return HYP_MAKE_ERROR(Error, "Error setting pixel size for font face!");
     }
 
     if (FT_Load_Glyph(m_face->GetFace(), m_index, FT_LOAD_DEFAULT | FT_LOAD_COLOR | FT_LOAD_RENDER | FT_PIXEL_MODE_GRAY))
     {
-        HYP_LOG(Font, Error, "Error loading glyph from font face!");
-
-        return;
+        return HYP_MAKE_ERROR(Error, "Error loading glyph from font face!");
     }
 
     glyph = m_face->GetFace()->glyph;
@@ -141,6 +137,19 @@ void Glyph::Render()
         std::move(byteBuffer)
     };
 #endif
+
+    if (m_glyphImageData.byteBuffer.Empty())
+    {
+        return HYP_MAKE_ERROR(Error, "Failed to rasterize glyph, no font data in buffer");
+    }
+
+    Handle<Texture> glyphTexture = m_glyphImageData.CreateTexture();
+    if (!InitObject(glyphTexture))
+    {
+        return HYP_MAKE_ERROR(Error, "Failed to initialize glyph texture");
+    }
+
+    return std::move(glyphTexture);
 }
 
 Vec2i Glyph::GetMax()

@@ -150,7 +150,8 @@ struct RENDER_COMMAND(BakeLightmapVolumeTexture)
             const Handle<Texture>& atlasTexture = atlasTextures[textureTypeIndex];
 
             ByteBuffer data;
-            atlasTexture->GetRenderResource().Readback(data);
+            HYP_NOT_IMPLEMENTED(); // fixme
+            // atlasTexture->GetRenderResource().Readback(data);
 
             if (data.Empty())
             {

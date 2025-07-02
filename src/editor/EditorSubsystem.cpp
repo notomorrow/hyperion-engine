@@ -1038,11 +1038,10 @@ void EditorSubsystem::OnAddedToWorld()
 
     CreateHighlightNode();
 
-    g_engine->GetScriptingService()->OnScriptStateChanged
-        .Bind([](const ManagedScript& script)
-        {
-            DebugLog(LogType::Debug, "Script state changed: now is %u\n", script.state);
-        })
+    g_engine->GetScriptingService()->OnScriptStateChanged.Bind([](const ManagedScript& script)
+                                                             {
+                                                                 DebugLog(LogType::Debug, "Script state changed: now is %u\n", script.state);
+                                                             })
         .Detach();
 
     if (Handle<AssetCollector> baseAssetCollector = g_assetManager->GetBaseAssetCollector())
@@ -1145,18 +1144,53 @@ void EditorSubsystem::LoadEditorUIDefinitions()
     UISubsystem* uiSubsystem = GetWorld()->GetSubsystem<UISubsystem>();
     AssertThrow(uiSubsystem != nullptr);
 
-    RC<FontAtlas> fontAtlas = CreateFontAtlas();
-    uiSubsystem->GetUIStage()->SetDefaultFontAtlas(fontAtlas);
-
     auto loadedUiAsset = AssetManager::GetInstance()->Load<UIObject>("ui/Editor.Main.ui.xml");
     AssertThrowMsg(loadedUiAsset.HasValue(), "Failed to load editor UI definitions!");
 
     Handle<UIStage> loadedUi = ObjCast<UIStage>(loadedUiAsset->Result());
     AssertThrowMsg(loadedUi.IsValid(), "Failed to load editor UI");
 
-    loadedUi->SetDefaultFontAtlas(fontAtlas);
-
     uiSubsystem->GetUIStage()->AddChildUIObject(loadedUi);
+
+    CreateFontAtlas([uiSubsystemWeak = uiSubsystem->WeakHandleFromThis()](TResult<RC<FontAtlas>> result)
+        {
+            if (result.HasError())
+            {
+                HYP_LOG(Editor, Error, "Failed to create font atlas: {}", result.GetError().GetMessage());
+
+                return;
+            }
+
+            RC<FontAtlas> fontAtlas = std::move(result.GetValue());
+
+            auto setDefaultFontAtlas = [fontAtlas, uiSubsystemWeak]()
+            {
+                Handle<UISubsystem> uiSubsystem = uiSubsystemWeak.Lock();
+
+                if (!uiSubsystem.IsValid())
+                {
+                    HYP_LOG(Editor, Error, "UISubsystem is no longer valid when setting default font atlas!");
+                    return;
+                }
+
+                if (!uiSubsystem->GetUIStage().IsValid())
+                {
+                    HYP_LOG(Editor, Error, "UIStage is no longer valid when setting default font atlas!");
+                    return;
+                }
+
+                uiSubsystem->GetUIStage()->SetDefaultFontAtlas(fontAtlas);
+            };
+
+            if (!Threads::IsOnThread(g_gameThread))
+            {
+                Threads::GetThread(g_gameThread)->GetScheduler().Enqueue(std::move(setDefaultFontAtlas));
+
+                return;
+            }
+
+            setDefaultFontAtlas();
+        });
 }
 
 void EditorSubsystem::CreateHighlightNode()
@@ -2564,7 +2598,7 @@ void EditorSubsystem::SetSelectedPackage(const Handle<AssetPackage>& package)
     }
 }
 
-RC<FontAtlas> EditorSubsystem::CreateFontAtlas()
+void EditorSubsystem::CreateFontAtlas(Proc<void(TResult<RC<FontAtlas>>)>&& onComplete)
 {
     HYP_SCOPE;
 
@@ -2584,10 +2618,14 @@ RC<FontAtlas> EditorSubsystem::CreateFontAtlas()
 
         if (FBOMResult err = reader.LoadFromFile(serializedFilePath, loadedFontAtlasData))
         {
-            HYP_FAIL("failed to load: %s", *err.message);
+            onComplete(HYP_MAKE_ERROR(Error, "Failed to load font atlas from file: {}", 0, err.message));
+
+            return;
         }
 
-        return loadedFontAtlasData.Get<RC<FontAtlas>>();
+        onComplete(loadedFontAtlasData.Get<RC<FontAtlas>>());
+
+        return;
     }
 
     auto fontFaceAsset = AssetManager::GetInstance()->Load<RC<FontFace>>("fonts/Roboto/Roboto-Regular.ttf");
@@ -2596,24 +2634,36 @@ RC<FontAtlas> EditorSubsystem::CreateFontAtlas()
     {
         HYP_LOG(Editor, Error, "Failed to load font face! Error: {}", fontFaceAsset.GetError().GetMessage());
 
-        return nullptr;
+        return;
     }
 
     RC<FontAtlas> atlas = MakeRefCountedPtr<FontAtlas>(std::move(fontFaceAsset->Result()));
-    atlas->Render();
+    atlas->RenderAtlasTextures([onComplete = std::move(onComplete), serializedFilePath = serializedFilePath](TResult<RC<FontAtlas>> result)
+        {
+            if (result.HasError())
+            {
+                onComplete(std::move(result));
 
-    FileByteWriter byteWriter { serializedFilePath };
-    FBOMWriter writer { FBOMWriterConfig {} };
-    writer.Append(*atlas);
-    auto writeErr = writer.Emit(&byteWriter);
-    byteWriter.Close();
+                return;
+            }
 
-    if (writeErr != FBOMResult::FBOM_OK)
-    {
-        HYP_FAIL("Failed to save font atlas: %s", writeErr.message.Data());
-    }
+            RC<FontAtlas> fontAtlas = std::move(result.GetValue());
 
-    return atlas;
+            FileByteWriter byteWriter { serializedFilePath };
+            FBOMWriter writer { FBOMWriterConfig {} };
+            writer.Append(*fontAtlas);
+            auto writeErr = writer.Emit(&byteWriter);
+            byteWriter.Close();
+
+            if (writeErr != FBOMResult::FBOM_OK)
+            {
+                onComplete(HYP_MAKE_ERROR(Error, "Failed to save font atlas! {}", 0, writeErr.message));
+
+                return;
+            }
+
+            onComplete(std::move(fontAtlas));
+        });
 }
 
 void EditorSubsystem::NewProject()

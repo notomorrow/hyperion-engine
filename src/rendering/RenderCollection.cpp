@@ -193,7 +193,7 @@ static void AddRenderProxy(RenderProxyList* renderProxyList, ResourceTracker<Obj
         InitObject(rg);
     }
 
-    mapping.meshProxies.Set(proxy->entity.Id().Value(), proxy);
+    mapping.meshProxies.Set(proxy->entity.Id().ToIndex(), proxy);
 }
 
 static bool RemoveRenderProxy(RenderProxyList* renderProxyList, ResourceTracker<ObjId<Entity>, RenderProxyMesh>& meshes, RenderProxyMesh* proxy, const RenderableAttributeSet& attributes, RenderBucket rb)
@@ -210,7 +210,7 @@ static bool RemoveRenderProxy(RenderProxyList* renderProxyList, ResourceTracker<
 
     if (!mapping.meshProxies.HasIndex(proxy->entity.Id().ToIndex()))
     {
-        HYP_LOG(Rendering, Warning, "RenderProxyList::RemoveRenderProxy: Render proxy not found in mapping for entity #%u", proxy->entity.Id().Value());
+        HYP_LOG(Rendering, Warning, "RenderProxyList::RemoveRenderProxy: Render proxy not found in mapping for entity {}", proxy->entity.Id());
         return false;
     }
 

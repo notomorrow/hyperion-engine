@@ -864,7 +864,9 @@ void LightmapCPUPathTracer::Render(FrameBase* frame, const RenderSetup& renderSe
     {
         // prepare env probe texture to be sampled on the CPU in the tasks
         envProbeTexture = renderSetup.envProbe->GetPrefilteredEnvMap();
-        envProbeTexture->Readback();
+        // envProbeTexture->Readback();
+
+        HYP_NOT_IMPLEMENTED();
     }
 
     m_hitsBuffer.Resize(rays.Size());

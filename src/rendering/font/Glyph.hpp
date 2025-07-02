@@ -5,6 +5,8 @@
 
 #include <core/Handle.hpp>
 
+#include <core/utilities/Result.hpp>
+
 #include <rendering/font/FontEngine.hpp>
 #include <rendering/font/FontFace.hpp>
 
@@ -65,7 +67,7 @@ public:
     }
 
     HYP_API void LoadMetrics();
-    HYP_API void Render();
+    HYP_API TResult<Handle<Texture>> Rasterize();
 
     HYP_API Vec2i GetMax();
     HYP_API Vec2i GetMin();
@@ -75,7 +77,6 @@ private:
     FontFace::GlyphIndex m_index;
     float m_scale;
 
-    FontEngine::Glyph m_glyph;
     GlyphImageData m_glyphImageData;
     Metrics m_metrics { 0 };
 };

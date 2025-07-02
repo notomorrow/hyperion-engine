@@ -10,9 +10,12 @@
 #include <rendering/backend/RenderCommand.hpp>
 #include <rendering/backend/RendererHelpers.hpp>
 
+#include <streaming/StreamedTextureData.hpp>
+
 #include <scene/Texture.hpp>
 
 #include <core/logging/Logger.hpp>
+#include <core/utilities/DeferredScope.hpp>
 
 #include <EngineGlobals.hpp>
 
@@ -77,11 +80,7 @@ struct RENDER_COMMAND(FontAtlas_RenderCharacter)
                 // put dst image in state for copying to
                 cmd.Add<InsertBarrier>(atlasTexture->GetRenderResource().GetImage(), RS_COPY_DST);
 
-                cmd.Add<BlitRect>(
-                    image,
-                    atlasTexture->GetRenderResource().GetImage(),
-                    srcRect,
-                    destRect);
+                cmd.Add<BlitRect>(image, atlasTexture->GetRenderResource().GetImage(), srcRect, destRect);
             });
 
         return commands.Execute();
@@ -172,6 +171,8 @@ FontAtlas::FontAtlas(RC<FontFace> face)
     m_cellDimensions = FindMaxDimensions(m_face);
 }
 
+FontAtlas::~FontAtlas() = default;
+
 FontAtlas::SymbolList FontAtlas::GetDefaultSymbolList()
 {
     // first renderable symbol
@@ -191,7 +192,7 @@ FontAtlas::SymbolList FontAtlas::GetDefaultSymbolList()
     return symbolList;
 }
 
-void FontAtlas::Render()
+void FontAtlas::RenderAtlasTextures(Proc<void(TResult<RC<FontAtlas>>)>&& onCompleteCallback)
 {
     AssertThrow(m_face != nullptr);
 
@@ -203,6 +204,10 @@ void FontAtlas::Render()
     m_glyphMetrics.Clear();
     m_glyphMetrics.Resize(m_symbolList.Size());
 
+    AtomicSemaphore* semaphore = new AtomicSemaphore();
+    Proc<void(TResult<RC<FontAtlas>>)>* onComplete = new Proc<void(TResult<RC<FontAtlas>>)>(std::move(onCompleteCallback));
+    Array<Pair<Handle<Texture>, Proc<void(TResult<ByteBuffer>&&)>>> readbackHandlerFunctions;
+
     const auto renderGlyphs = [&](float scale, bool isMainAtlas)
     {
         const Vec2i scaledExtent {
@@ -212,15 +217,17 @@ void FontAtlas::Render()
 
         HYP_LOG(Font, Info, "Rendering font atlas for pixel size {}", scaledExtent.y);
 
-        Handle<Texture> texture = CreateObject<Texture>(TextureDesc {
+        const TextureDesc atlasTextureDesc {
             TT_TEX2D,
             TF_RGBA8,
             Vec3u { uint32(scaledExtent.x * s_symbolColumns), uint32(scaledExtent.y * s_symbolRows), 1 },
             TFM_NEAREST,
             TFM_NEAREST,
-            TWM_CLAMP_TO_EDGE });
+            TWM_CLAMP_TO_EDGE
+        };
 
-        InitObject(texture);
+        Handle<Texture> atlasTexture = CreateObject<Texture>(atlasTextureDesc);
+        InitObject(atlasTexture);
 
         for (SizeType i = 0; i < m_symbolList.Size(); i++)
         {
@@ -229,12 +236,7 @@ void FontAtlas::Render()
             const Vec2i index { int(i % s_symbolColumns), int(i / s_symbolColumns) };
             const Vec2i position = index * scaledExtent;
 
-            Glyph glyph(m_face, m_face->GetGlyphIndex(symbol), scale);
-            // Render the glyph into a temporary texture
-            glyph.Render();
-
-            Handle<Texture> glyphTexture = glyph.GetImageData().CreateTexture();
-            AssertThrow(InitObject(glyphTexture));
+            Glyph glyph { m_face, m_face->GetGlyphIndex(symbol), scale };
 
             if (isMainAtlas)
             {
@@ -242,20 +244,66 @@ void FontAtlas::Render()
                 m_glyphMetrics[i].imagePosition = position;
             }
 
+            TResult<Handle<Texture>> glyphRasterizeResult = glyph.Rasterize();
+
+            if (glyphRasterizeResult.HasError())
+            {
+                HYP_LOG(Font, Error, "Failed to rasterize glyph for symbol '{}': {}", symbol, glyphRasterizeResult.GetError().GetMessage());
+
+                continue;
+            }
+
+            Handle<Texture> glyphTexture = std::move(glyphRasterizeResult.GetValue());
+            AssertDebug(glyphTexture.IsValid());
+
             if (index.y > s_symbolRows)
             {
                 break;
             }
 
             // Render our character texture => atlas texture
-            RenderCharacter(texture, glyphTexture, position, scaledExtent);
+            RenderCharacter(atlasTexture, glyphTexture, position, scaledExtent);
         }
 
         // Readback the texture to streamed texture data
-        texture->Readback();
+        readbackHandlerFunctions.EmplaceBack(atlasTexture, [fontAtlas = RefCountedPtrFromThis(), atlasTexture, semaphore, onComplete](auto&& result)
+            {
+                HYP_DEFER({
+                    semaphore->Release(1, [&]()
+                        {
+                            delete semaphore;
+
+                            (*onComplete)(fontAtlas);
+                            delete onComplete;
+                        });
+                });
+
+                if (result.HasError())
+                {
+                    HYP_LOG(Font, Error, "Failed to readback texture: {}", result.GetError().GetMessage());
+
+                    return;
+                }
+
+                ByteBuffer byteBuffer = std::move(result.GetValue());
+
+                const SizeType expected = atlasTexture->GetTextureDesc().GetByteSize();
+                const SizeType real = byteBuffer.Size();
+
+                AssertThrowMsg(expected == real, "Failed to readback texture: expected size: %llu, got %llu", expected, real);
+
+                ResourceHandle res;
+
+                TextureData newTextureData {
+                    atlasTexture->GetTextureDesc(),
+                    std::move(byteBuffer)
+                };
+
+                atlasTexture->SetStreamedTextureData(MakeRefCountedPtr<StreamedTextureData>(std::move(newTextureData), res));
+            });
 
         // Add initial atlas
-        m_atlasTextures.AddAtlas(scaledExtent.y, std::move(texture), isMainAtlas);
+        m_atlasTextures.AddAtlas(scaledExtent.y, std::move(atlasTexture), isMainAtlas);
     };
 
     renderGlyphs(1.0f, true);
@@ -265,10 +313,24 @@ void FontAtlas::Render()
         renderGlyphs(i, false);
     }
 
-    if (!Threads::IsOnThread(g_renderThread))
+    if (readbackHandlerFunctions.Empty())
     {
-        // Sync render commands if not on render thread (render commands are executed inline if on render thread)
-        HYP_SYNC_RENDER();
+        delete semaphore;
+
+        (*onComplete)(RefCountedPtrFromThis());
+        delete onComplete;
+
+        return;
+    }
+
+    semaphore->SetValue(readbackHandlerFunctions.Size());
+
+    for (auto& it : readbackHandlerFunctions)
+    {
+        Handle<Texture>& texture = it.first;
+        Proc<void(TResult<ByteBuffer>&&)>& readbackFunc = it.second;
+
+        texture->GetRenderResource().EnqueueReadback(std::move(readbackFunc));
     }
 }
 

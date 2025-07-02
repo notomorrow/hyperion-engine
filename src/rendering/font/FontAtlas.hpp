@@ -9,6 +9,7 @@
 #include <core/memory/ByteBuffer.hpp>
 #include <core/containers/Array.hpp>
 #include <core/utilities/Optional.hpp>
+#include <core/utilities/Result.hpp>
 
 #include <rendering/font/FontFace.hpp>
 #include <rendering/font/Glyph.hpp>
@@ -38,7 +39,7 @@ struct HYP_API FontAtlasTextureSet
     void AddAtlas(uint32 pixelSize, Handle<Texture> texture, bool isMainAtlas = false);
 };
 
-class FontAtlas
+class FontAtlas : public EnableRefCountedPtrFromThis<FontAtlas>
 {
 public:
     static constexpr uint32 s_symbolColumns = 20;
@@ -56,11 +57,11 @@ public:
 
     FontAtlas(const FontAtlas& other) = delete;
     FontAtlas& operator=(const FontAtlas& other) = delete;
-    FontAtlas(FontAtlas&& other) noexcept = default;
-    FontAtlas& operator=(FontAtlas&& other) noexcept = default;
-    ~FontAtlas() = default;
+    FontAtlas(FontAtlas&& other) noexcept = delete;
+    FontAtlas& operator=(FontAtlas&& other) noexcept = delete;
+    ~FontAtlas();
 
-    HYP_API void Render();
+    HYP_API void RenderAtlasTextures(Proc<void(TResult<RC<FontAtlas>>)>&& onCompleteCallback);
 
     HYP_FORCE_INLINE const GlyphMetricsBuffer& GetGlyphMetrics() const
     {

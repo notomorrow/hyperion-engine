@@ -49,9 +49,7 @@ public:
      *  Thread-safe, blocking function. Use sparingly. */
     void RenderMipmaps();
 
-    /*! \brief Enqueues a render command to copy the texture data to a buffer and waits for it to finish.
-     *  Thread-safe, blocking function. Use sparingly. */
-    void Readback(ByteBuffer& outByteBuffer);
+    void EnqueueReadback(Proc<void(TResult<ByteBuffer>&&)>&& onComplete);
 
     void Resize(const Vec3u& extent);
 

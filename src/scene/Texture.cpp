@@ -206,20 +206,22 @@ void Texture::Readback_Internal()
 {
     AssertReady();
 
-    ByteBuffer resultByteBuffer;
-    m_renderResource->Readback(resultByteBuffer);
+    // ByteBuffer resultByteBuffer;
+    // m_renderResource->Readback(resultByteBuffer);
 
-    const SizeType expected = m_textureDesc.GetByteSize();
-    const SizeType real = resultByteBuffer.Size();
+    // const SizeType expected = m_textureDesc.GetByteSize();
+    // const SizeType real = resultByteBuffer.Size();
 
-    AssertThrowMsg(expected == real, "Failed to readback texture: expected size: %llu, got %llu", expected, real);
+    // AssertThrowMsg(expected == real, "Failed to readback texture: expected size: %llu, got %llu", expected, real);
 
-    m_streamedTextureDataResourceHandle.Reset();
+    // m_streamedTextureDataResourceHandle.Reset();
 
-    m_streamedTextureData = MakeRefCountedPtr<StreamedTextureData>(TextureData {
-                                                                       m_textureDesc,
-                                                                       std::move(resultByteBuffer) },
-        m_streamedTextureDataResourceHandle);
+    // m_streamedTextureData = MakeRefCountedPtr<StreamedTextureData>(TextureData {
+    //                                                                    m_textureDesc,
+    //                                                                    std::move(resultByteBuffer) },
+    //     m_streamedTextureDataResourceHandle);
+
+    HYP_NOT_IMPLEMENTED();
 }
 
 void Texture::Resize(const Vec3u& extent)

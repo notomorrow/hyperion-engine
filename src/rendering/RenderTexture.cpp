@@ -464,24 +464,24 @@ void RenderTexture::RenderMipmaps()
         });
 }
 
-void RenderTexture::Readback(ByteBuffer& outByteBuffer)
+void RenderTexture::EnqueueReadback(Proc<void(TResult<ByteBuffer>&&)>&& onComplete)
 {
     HYP_SCOPE;
 
     HYP_LOG(Rendering, Debug, "Readback called for texture data of size {} bytes", m_image->GetByteSize());
 
-    Task<Result> task;
-
     if (!IsInitialized())
     {
-        task.Fulfill(HYP_MAKE_ERROR(Error, "RenderTexture is not initialized, cannot readback texture data"));
+        onComplete(HYP_MAKE_ERROR(Error, "RenderTexture is not initialized, cannot readback texture data"));
 
         return;
     }
 
-    Execute([this, &outByteBuffer, promise = task.Promise()]()
+    Execute([this, onComplete = std::move(onComplete)]()
         {
             Threads::AssertOnThread(g_renderThread);
+
+            ByteBuffer byteBuffer;
 
             HYP_LOG(Rendering, Debug, "Reading back texture data of size {} bytes", m_image->GetByteSize());
 
@@ -510,28 +510,21 @@ void RenderTexture::Readback(ByteBuffer& outByteBuffer)
             {
                 HYP_LOG(Rendering, Error, "Failed to readback texture data! {}", result.GetError().GetMessage());
 
-                promise->Fulfill(result.GetError());
+                onComplete(result.GetError());
 
                 return;
             }
 
-            outByteBuffer.SetSize(gpuBuffer->Size());
-            gpuBuffer->Read(outByteBuffer.Size(), outByteBuffer.Data());
+            byteBuffer.SetSize(gpuBuffer->Size());
+            gpuBuffer->Read(byteBuffer.Size(), byteBuffer.Data());
 
             gpuBuffer->Destroy();
 
-            HYP_LOG(Rendering, Debug, "Readback texture data of size {} bytes", outByteBuffer.Size());
+            HYP_LOG(Rendering, Debug, "Readback texture data of size {} bytes", byteBuffer.Size());
 
-            promise->Fulfill(Result());
+            onComplete(std::move(byteBuffer));
         },
         /* forceOwnerThread */ true);
-
-    Result result = task.Await();
-
-    if (result.HasError())
-    {
-        HYP_FAIL("Failed to readback texture! %s", result.GetError().GetMessage().Data());
-    }
 }
 
 void RenderTexture::Resize(const Vec3u& extent)

@@ -188,14 +188,14 @@ static BoundingBox CalculateTextAABB(const FontAtlas& fontAtlas, const String& t
                 const float offsetY = (iter.cellDimensions.y - iter.glyphDimensions.y) + iter.bearingY;
 
                 characterAabb = characterAabb
-                                     .Union(Vec3f(iter.placement.x, iter.placement.y + offsetY, 0.0f))
-                                     .Union(Vec3f(iter.placement.x + iter.glyphDimensions.x, iter.placement.y + offsetY + iter.cellDimensions.y, 0.0f));
+                                    .Union(Vec3f(iter.placement.x, iter.placement.y + offsetY, 0.0f))
+                                    .Union(Vec3f(iter.placement.x + iter.glyphDimensions.x, iter.placement.y + offsetY + iter.cellDimensions.y, 0.0f));
             }
             else
             {
                 characterAabb = characterAabb
-                                     .Union(Vec3f(iter.placement.x, iter.placement.y, 0.0f))
-                                     .Union(Vec3f(iter.placement.x + iter.glyphDimensions.x, iter.placement.y + iter.cellDimensions.y, 0.0f));
+                                    .Union(Vec3f(iter.placement.x, iter.placement.y, 0.0f))
+                                    .Union(Vec3f(iter.placement.x + iter.glyphDimensions.x, iter.placement.y + iter.cellDimensions.y, 0.0f));
             }
 
             aabb = aabb.Union(characterAabb);
@@ -544,30 +544,16 @@ void UIText::OnFontAtlasUpdate_Internal()
 {
     HYP_SCOPE;
 
-    UIObject::OnFontAtlasUpdate_Internal();
-
-    {
-        UILockedUpdatesScope scope(*this, UIObjectUpdateType::UPDATE_TEXT_RENDER_DATA);
-
-        UpdateSize();
-    }
-
     SetDeferredUpdate(UIObjectUpdateType::UPDATE_TEXT_RENDER_DATA, false);
+    SetDeferredUpdate(UIObjectUpdateType::UPDATE_SIZE, false);
 }
 
 void UIText::OnTextSizeUpdate_Internal()
 {
     HYP_SCOPE;
 
-    UIObject::OnTextSizeUpdate_Internal();
-
-    {
-        UILockedUpdatesScope scope(*this, UIObjectUpdateType::UPDATE_TEXT_RENDER_DATA);
-
-        UpdateSize();
-    }
-
     SetDeferredUpdate(UIObjectUpdateType::UPDATE_TEXT_RENDER_DATA, false);
+    SetDeferredUpdate(UIObjectUpdateType::UPDATE_SIZE, false);
 }
 
 Vec2i UIText::GetParentBounds() const
