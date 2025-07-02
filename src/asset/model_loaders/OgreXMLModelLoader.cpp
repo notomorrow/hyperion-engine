@@ -17,6 +17,7 @@
 
 #include <core/logging/Logger.hpp>
 
+#include <EngineGlobals.hpp>
 #include <Engine.hpp>
 
 #include <util/xml/SAXParser.hpp>

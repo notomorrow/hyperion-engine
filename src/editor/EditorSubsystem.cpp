@@ -84,8 +84,9 @@
 #include <core/profiling/ProfileScope.hpp>
 #include <util/MeshBuilder.hpp>
 
-#include <Engine.hpp>
+#include <EngineGlobals.hpp>
 #include <HyperionEngine.hpp>
+#include <Engine.hpp>
 
 namespace hyperion {
 
@@ -1037,10 +1038,11 @@ void EditorSubsystem::OnAddedToWorld()
 
     CreateHighlightNode();
 
-    g_engine->GetScriptingService()->OnScriptStateChanged.Bind([](const ManagedScript& script)
-                                                             {
-                                                                 DebugLog(LogType::Debug, "Script state changed: now is %u\n", script.state);
-                                                             })
+    g_engine->GetScriptingService()->OnScriptStateChanged
+        .Bind([](const ManagedScript& script)
+        {
+            DebugLog(LogType::Debug, "Script state changed: now is %u\n", script.state);
+        })
         .Detach();
 
     if (Handle<AssetCollector> baseAssetCollector = g_assetManager->GetBaseAssetCollector())
