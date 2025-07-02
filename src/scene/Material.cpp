@@ -6,6 +6,7 @@
 #include <rendering/RenderMaterial.hpp>
 #include <rendering/RenderProxy.hpp>
 
+#include <rendering/backend/RenderBackend.hpp>
 #include <rendering/backend/RenderConfig.hpp>
 
 #include <core/object/HypClassUtils.hpp>
@@ -16,6 +17,7 @@
 #include <core/utilities/ByteUtil.hpp>
 #include <core/profiling/ProfileScope.hpp>
 
+#include <EngineGlobals.hpp>
 #include <Engine.hpp>
 #include <Types.hpp>
 

@@ -31,6 +31,7 @@
 #include <editor/EditorSubsystem.hpp>
 #endif
 
+#include <EngineGlobals.hpp>
 #include <Engine.hpp>
 
 #include <cstring>

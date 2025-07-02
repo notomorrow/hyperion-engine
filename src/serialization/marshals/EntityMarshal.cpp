@@ -28,6 +28,7 @@
 // temp
 #include <scene/ecs/components/MeshComponent.hpp>
 
+#include <EngineGlobals.hpp>
 #include <Engine.hpp>
 
 namespace hyperion::serialization {

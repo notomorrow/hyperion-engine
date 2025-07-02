@@ -5,7 +5,7 @@
 
 #include <scene/RenderProxyable.hpp>
 
-#include <rendering/Shader.hpp>
+#include <rendering/ShaderManager.hpp>
 #include <rendering/RenderableAttributes.hpp>
 
 #include <core/utilities/DataMutationState.hpp>

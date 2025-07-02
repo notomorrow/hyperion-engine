@@ -24,7 +24,7 @@
 
 #include <core/Defines.hpp>
 
-#include <Engine.hpp>
+#include <EngineGlobals.hpp>
 
 namespace hyperion {
 
@@ -83,7 +83,7 @@ void OnBindingChanged_ReflectionProbe(EnvProbe* envProbe, uint32 prev, uint32 ne
         HYP_LOG(Rendering, Debug, "UN setting env probe texture at index: {}", prev);
         for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
         {
-            g_renderGlobalState->GlobalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)->SetElement(NAME("EnvProbeTextures"), prev, g_renderGlobalState->PlaceholderData->DefaultTexture2D->GetRenderResource().GetImageView());
+            g_renderGlobalState->GlobalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)->SetElement(NAME("EnvProbeTextures"), prev, g_renderGlobalState->placeholderData->DefaultTexture2D->GetRenderResource().GetImageView());
         }
     }
     else

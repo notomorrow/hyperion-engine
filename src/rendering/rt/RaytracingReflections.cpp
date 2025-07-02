@@ -15,6 +15,7 @@
 #include <rendering/PlaceholderData.hpp>
 #include <rendering/SafeDeleter.hpp>
 
+#include <rendering/backend/RenderBackend.hpp>
 #include <rendering/backend/RendererFrame.hpp>
 #include <rendering/backend/RendererGpuBuffer.hpp>
 #include <rendering/backend/RendererResult.hpp>
@@ -24,7 +25,7 @@
 #include <scene/EnvProbe.hpp>
 #include <scene/EnvGrid.hpp>
 
-#include <Engine.hpp>
+#include <EngineGlobals.hpp>
 
 namespace hyperion {
 
@@ -73,7 +74,7 @@ struct RENDER_COMMAND(UnsetRTRadianceImageInGlobalDescriptorSet)
         // remove result image from global descriptor set
         for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
         {
-            g_renderGlobalState->GlobalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)->SetElement(NAME("RTRadianceResultTexture"), g_renderGlobalState->PlaceholderData->GetImageView2D1x1R8());
+            g_renderGlobalState->GlobalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)->SetElement(NAME("RTRadianceResultTexture"), g_renderGlobalState->placeholderData->GetImageView2D1x1R8());
         }
 
         return result;
@@ -156,7 +157,7 @@ void RaytracingReflections::UpdateUniforms(FrameBase* frame, const RenderSetup& 
     if (m_updates[frame->GetFrameIndex()])
     {
         const DescriptorSetRef& descriptorSet = m_raytracingPipeline->GetDescriptorTable()
-                                                     ->GetDescriptorSet(NAME("RTRadianceDescriptorSet"), frame->GetFrameIndex());
+                                                    ->GetDescriptorSet(NAME("RTRadianceDescriptorSet"), frame->GetFrameIndex());
 
         AssertThrow(descriptorSet.IsValid());
 
@@ -256,7 +257,7 @@ void RaytracingReflections::ApplyTLASUpdates(RTUpdateStateFlags flags)
     for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
     {
         const DescriptorSetRef& descriptorSet = m_raytracingPipeline->GetDescriptorTable()
-                                                     ->GetDescriptorSet(NAME("RTRadianceDescriptorSet"), frameIndex);
+                                                    ->GetDescriptorSet(NAME("RTRadianceDescriptorSet"), frameIndex);
 
         AssertThrow(descriptorSet != nullptr);
 

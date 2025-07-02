@@ -35,10 +35,10 @@ void HandleSignal(int signum)
 
     DebugLog(LogType::Debug, "%s\n", StackDump().ToString().Data());
 
-    g_engine->RequestStop();
+    Engine::GetInstance()->RequestStop();
 
     // Wait for the render loop to stop
-    while (g_engine->IsRenderLoopActive())
+    while (Engine::GetInstance()->IsRenderLoopActive())
         ;
 
     exit(signum);

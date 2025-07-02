@@ -234,13 +234,13 @@ void ParticleSpawner::CreateGraphicsPipeline()
         AssertThrow(descriptorSet != nullptr);
 
         descriptorSet->SetElement(NAME("ParticlesBuffer"), m_particleBuffer);
-        descriptorSet->SetElement(NAME("ParticleTexture"), m_params.texture ? m_params.texture->GetRenderResource().GetImageView() : g_renderGlobalState->PlaceholderData->GetImageView2D1x1R8());
+        descriptorSet->SetElement(NAME("ParticleTexture"), m_params.texture ? m_params.texture->GetRenderResource().GetImageView() : g_renderGlobalState->placeholderData->GetImageView2D1x1R8());
     }
 
     DeferCreate(descriptorTable);
 
 #if 0
-    m_graphicsPipeline = g_engine->GetGraphicsPipelineCache()->GetOrCreate(
+    m_graphicsPipeline = g_renderGlobalState->graphicsPipelineCache->GetOrCreate(
         m_shader,
         descriptorTable,
         { &m_framebuffer, 1 },

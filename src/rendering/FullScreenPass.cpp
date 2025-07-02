@@ -14,7 +14,9 @@
 #include <rendering/GBuffer.hpp>
 #include <rendering/TemporalBlending.hpp>
 #include <rendering/GraphicsPipelineCache.hpp>
+#include <rendering/RenderGlobalState.hpp>
 
+#include <rendering/backend/RenderBackend.hpp>
 #include <rendering/backend/RendererSwapchain.hpp> // temp
 #include <rendering/backend/RendererFrame.hpp>
 #include <rendering/backend/RendererFramebuffer.hpp>
@@ -26,7 +28,6 @@
 #include <core/math/MathUtil.hpp>
 
 #include <EngineGlobals.hpp>
-#include <Engine.hpp>
 #include <Types.hpp>
 
 #include <util/MeshBuilder.hpp>
@@ -372,7 +373,7 @@ void FullScreenPass::CreatePipeline(const RenderableAttributeSet& renderableAttr
 {
     HYP_SCOPE;
 
-    m_graphicsPipeline = g_engine->GetGraphicsPipelineCache()->GetOrCreate(
+    m_graphicsPipeline = g_renderGlobalState->graphicsPipelineCache->GetOrCreate(
         m_shader,
         m_descriptorTable.GetOr(DescriptorTableRef::Null()),
         { &m_framebuffer, 1 },

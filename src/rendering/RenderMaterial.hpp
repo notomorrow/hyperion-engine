@@ -3,7 +3,7 @@
 #ifndef HYPERION_RENDER_MATERIAL_HPP
 #define HYPERION_RENDER_MATERIAL_HPP
 
-#include <rendering/Shader.hpp>
+#include <rendering/ShaderManager.hpp>
 #include <rendering/RenderableAttributes.hpp>
 #include <rendering/RenderResource.hpp>
 #include <rendering/RenderProxy.hpp>

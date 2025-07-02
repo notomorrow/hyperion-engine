@@ -1,7 +1,7 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
 #include <rendering/FinalPass.hpp>
-#include <rendering/Shader.hpp>
+#include <rendering/ShaderManager.hpp>
 #include <rendering/FullScreenPass.hpp>
 #include <rendering/RenderGroup.hpp>
 #include <rendering/RenderView.hpp>
@@ -81,7 +81,7 @@ struct RENDER_COMMAND(SetUILayerImageView)
                 }
                 else
                 {
-                    descriptorSet->SetElement(NAME("InTexture"), g_renderGlobalState->PlaceholderData->DefaultTexture2D->GetRenderResource().GetImageView());
+                    descriptorSet->SetElement(NAME("InTexture"), g_renderGlobalState->placeholderData->DefaultTexture2D->GetRenderResource().GetImageView());
                 }
             }
         }
@@ -155,7 +155,7 @@ void FinalPass::Create()
         }
         else
         {
-            descriptorSet->SetElement(NAME("InTexture"), g_renderGlobalState->PlaceholderData->GetImageView2D1x1R8());
+            descriptorSet->SetElement(NAME("InTexture"), g_renderGlobalState->placeholderData->GetImageView2D1x1R8());
         }
     }
 
@@ -199,7 +199,7 @@ void FinalPass::Render(FrameBase* frame, RenderWorld* renderWorld)
     AssertDebug(descriptorSetIndex != ~0u);
 
     // Render each sub-view
-    DeferredRenderer* dr = static_cast<DeferredRenderer*>(g_renderGlobalState->Renderer);
+    DeferredRenderer* dr = static_cast<DeferredRenderer*>(g_renderGlobalState->mainRenderer);
     AssertDebug(dr != nullptr);
 
     // ordered by priority of the view

@@ -3,7 +3,7 @@
 #ifndef HYPERION_DDGI_HPP
 #define HYPERION_DDGI_HPP
 
-#include <rendering/Shader.hpp>
+#include <rendering/ShaderManager.hpp>
 
 #include <rendering/backend/RendererStructs.hpp>
 #include <rendering/backend/RenderObject.hpp>

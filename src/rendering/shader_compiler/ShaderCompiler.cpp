@@ -31,10 +31,14 @@
 
 #include <core/math/MathUtil.hpp>
 
-#include <Engine.hpp>
+#include <EngineGlobals.hpp>
 #include <HyperionEngine.hpp>
+#include <Engine.hpp>
 
 #include <rendering/backend/RenderConfig.hpp>
+#include <rendering/backend/RenderBackend.hpp>
+
+#define HYP_SHADER_REFLECTION
 
 #ifdef HYP_GLSLANG
 
@@ -42,7 +46,10 @@
 #include <glslang/Include/ResourceLimits.h>
 #include <glslang/Include/Types.h>
 #include <glslang/Public/ShaderLang.h>
+
+#ifdef HYP_SHADER_REFLECTION
 #include <glslang/MachineIndependent/reflection.h>
+#endif
 
 #endif
 
@@ -680,8 +687,8 @@ static ByteBuffer CompileToSPIRV(
         return ByteBuffer();
     }
 
-#if 0
-    glslang::TProgram* cppProgram = glslangGetCppProgram(program);
+#ifdef HYP_SHADER_REFLECTION
+    glslang::TProgram* cppProgram = glslang_get_cpp_program(program);
     if (!cppProgram->buildReflection())
     {
         GLSL_ERROR(Error, "Failed to build shader reflection!");
@@ -693,7 +700,8 @@ static ByteBuffer CompileToSPIRV(
     spvOptions.validate = true;
 
     glslang_program_SPIRV_generate_with_options(program, stage, &spvOptions);
-#if 0
+
+#ifdef HYP_SHADER_REFLECTION
     for (int i = 0; i < cppProgram->getNumUniformBlocks(); i++)
     {
         const auto& uniformBlock = cppProgram->getUniformBlock(i);
@@ -727,8 +735,8 @@ static ByteBuffer CompileToSPIRV(
                         HandleType(
                             it->type,
                             outDescriptorUsageType.AddField(
-                                                         CreateNameFromDynamicString(it->type->getFieldName().data()),
-                                                         DescriptorUsageType(CreateNameFromDynamicString(fieldTypeName)))
+                                                      CreateNameFromDynamicString(it->type->getFieldName().data()),
+                                                      DescriptorUsageType(CreateNameFromDynamicString(fieldTypeName)))
                                 .second);
                     }
                 }

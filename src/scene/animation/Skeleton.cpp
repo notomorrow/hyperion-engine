@@ -5,7 +5,6 @@
 #include <scene/animation/Animation.hpp>
 
 #include <rendering/RenderSkeleton.hpp>
-#include <rendering/RenderGlobalState.hpp>
 #include <rendering/backend/RendererResult.hpp>
 
 #include <core/object/HypClassUtils.hpp>
@@ -13,6 +12,7 @@
 #include <core/logging/Logger.hpp>
 #include <core/logging/LogChannels.hpp>
 
+#include <EngineGlobals.hpp>
 #include <Engine.hpp>
 
 namespace hyperion {

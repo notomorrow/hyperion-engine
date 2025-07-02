@@ -32,9 +32,6 @@ public:
     GraphicsPipelineCache& operator=(GraphicsPipelineCache&&) = delete;
     ~GraphicsPipelineCache();
 
-    void Initialize();
-    void Destroy();
-
     GraphicsPipelineRef GetOrCreate(
         const ShaderRef& shader,
         const DescriptorTableRef& descriptorTable,

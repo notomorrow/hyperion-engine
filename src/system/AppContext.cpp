@@ -8,10 +8,12 @@
 
 #include <core/logging/Logger.hpp>
 
+#include <rendering/backend/RenderBackend.hpp>
 #include <rendering/backend/RendererInstance.hpp>
 #include <rendering/backend/RendererDevice.hpp>
 #include <rendering/backend/RendererFeatures.hpp>
 
+#include <EngineGlobals.hpp>
 #include <Engine.hpp>
 
 #ifdef HYP_SDL

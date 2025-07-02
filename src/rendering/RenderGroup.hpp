@@ -7,7 +7,7 @@
 #include <core/object/ObjId.hpp>
 #include <core/Defines.hpp>
 
-#include <rendering/Shader.hpp>
+#include <rendering/ShaderManager.hpp>
 #include <rendering/RenderableAttributes.hpp>
 #include <rendering/CullData.hpp>
 #include <rendering/DrawCall.hpp>

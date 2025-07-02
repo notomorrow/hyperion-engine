@@ -4,7 +4,7 @@
 
 #include <core/object/HypData.hpp>
 
-#include <rendering/Shader.hpp>
+#include <rendering/ShaderManager.hpp>
 
 namespace hyperion::serialization {
 

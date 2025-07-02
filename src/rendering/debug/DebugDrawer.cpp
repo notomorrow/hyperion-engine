@@ -17,6 +17,7 @@
 
 #include <rendering/UIRenderer.hpp>
 
+#include <rendering/backend/RenderBackend.hpp>
 #include <rendering/backend/RenderConfig.hpp>
 #include <rendering/backend/RendererGraphicsPipeline.hpp>
 #include <rendering/backend/RendererFrame.hpp>
@@ -33,7 +34,7 @@
 
 #include <core/profiling/ProfileScope.hpp>
 
-#include <Engine.hpp>
+#include <EngineGlobals.hpp>
 
 namespace hyperion {
 
@@ -481,7 +482,7 @@ GraphicsPipelineRef DebugDrawer::FetchGraphicsPipeline(RenderableAttributeSet at
 
     if (!graphicsPipeline)
     {
-        graphicsPipeline = g_engine->GetGraphicsPipelineCache()->GetOrCreate(
+        graphicsPipeline = g_renderGlobalState->graphicsPipelineCache->GetOrCreate(
             m_shader,
             m_descriptorTable,
             {},

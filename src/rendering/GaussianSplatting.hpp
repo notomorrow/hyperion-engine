@@ -12,7 +12,7 @@
 
 #include <util/img/Bitmap.hpp>
 
-#include <rendering/Shader.hpp>
+#include <rendering/ShaderManager.hpp>
 
 #include <rendering/backend/RenderObject.hpp>
 

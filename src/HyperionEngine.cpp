@@ -26,6 +26,7 @@
 
 #include <rendering/SafeDeleter.hpp>
 #include <rendering/RenderGlobalState.hpp>
+#include <rendering/shader_compiler/ShaderCompiler.hpp>
 
 #ifdef HYP_VULKAN
 #include <rendering/backend/vulkan/VulkanRenderBackend.hpp>
@@ -42,13 +43,14 @@ namespace hyperion {
 
 HYP_DECLARE_LOG_CHANNEL(Core);
 
-Handle<Engine> g_engine = {};
+Handle<Engine> g_engine {};
 Handle<AssetManager> g_assetManager {};
 ShaderManager* g_shaderManager = nullptr;
 MaterialCache* g_materialSystem = nullptr;
 SafeDeleter* g_safeDeleter = nullptr;
 IRenderBackend* g_renderBackend = nullptr;
 RenderGlobalState* g_renderGlobalState = nullptr;
+ShaderCompiler* g_shaderCompiler = nullptr;
 
 static CommandLineArguments g_commandLineArguments;
 
@@ -158,6 +160,12 @@ HYP_API bool InitializeEngine(int argc, char** argv)
     g_materialSystem = new MaterialCache;
     g_safeDeleter = new SafeDeleter;
 
+    g_shaderCompiler = new ShaderCompiler;
+    if (!g_shaderCompiler->LoadShaderDefinitions())
+    {
+        HYP_LOG(Core, Error, "Failed to load shader definitions!");
+    }
+
     ComponentInterfaceRegistry::GetInstance().Initialize();
 
     return true;
@@ -179,6 +187,9 @@ HYP_API void DestroyEngine()
     AudioManager::GetInstance().Shutdown();
 
     g_assetManager.Reset();
+
+    delete g_shaderCompiler;
+    g_shaderCompiler = nullptr;
 
     delete g_shaderManager;
     g_shaderManager = nullptr;

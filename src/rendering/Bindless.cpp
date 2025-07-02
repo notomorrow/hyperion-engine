@@ -29,7 +29,7 @@ void BindlessStorage::Destroy()
 
         for (const auto& it : m_resources)
         {
-            descriptorSet->SetElement(NAME("Textures"), it.first.ToIndex(), g_renderGlobalState->PlaceholderData->GetImageView2D1x1R8());
+            descriptorSet->SetElement(NAME("Textures"), it.first.ToIndex(), g_renderGlobalState->placeholderData->GetImageView2D1x1R8());
         }
     }
 
@@ -86,7 +86,7 @@ void BindlessStorage::RemoveResource(ObjId<Texture> id)
         const DescriptorSetRef& descriptorSet = g_renderGlobalState->GlobalDescriptorTable->GetDescriptorSet(NAME("Material"), frameIndex);
         AssertDebug(descriptorSet.IsValid());
 
-        descriptorSet->SetElement(NAME("Textures"), id.ToIndex(), g_renderGlobalState->PlaceholderData->GetImageView2D1x1R8());
+        descriptorSet->SetElement(NAME("Textures"), id.ToIndex(), g_renderGlobalState->placeholderData->GetImageView2D1x1R8());
     }
 }
 

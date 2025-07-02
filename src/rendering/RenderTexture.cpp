@@ -468,6 +468,8 @@ void RenderTexture::Readback(ByteBuffer& outByteBuffer)
 {
     HYP_SCOPE;
 
+    HYP_LOG(Rendering, Debug, "Readback called for texture data of size {} bytes", m_image->GetByteSize());
+
     Task<Result> task;
 
     if (!IsInitialized())
@@ -480,6 +482,8 @@ void RenderTexture::Readback(ByteBuffer& outByteBuffer)
     Execute([this, &outByteBuffer, promise = task.Promise()]()
         {
             Threads::AssertOnThread(g_renderThread);
+
+            HYP_LOG(Rendering, Debug, "Reading back texture data of size {} bytes", m_image->GetByteSize());
 
             GpuBufferRef gpuBuffer = g_renderBackend->MakeGpuBuffer(GpuBufferType::STAGING_BUFFER, m_image->GetByteSize());
             HYPERION_ASSERT_RESULT(gpuBuffer->Create());
@@ -504,6 +508,8 @@ void RenderTexture::Readback(ByteBuffer& outByteBuffer)
 
             if (result.HasError())
             {
+                HYP_LOG(Rendering, Error, "Failed to readback texture data! {}", result.GetError().GetMessage());
+
                 promise->Fulfill(result.GetError());
 
                 return;
@@ -513,6 +519,8 @@ void RenderTexture::Readback(ByteBuffer& outByteBuffer)
             gpuBuffer->Read(outByteBuffer.Size(), outByteBuffer.Data());
 
             gpuBuffer->Destroy();
+
+            HYP_LOG(Rendering, Debug, "Readback texture data of size {} bytes", outByteBuffer.Size());
 
             promise->Fulfill(Result());
         },

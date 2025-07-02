@@ -5,6 +5,7 @@
 #include <rendering/Buffers.hpp>
 #include <rendering/RenderGlobalState.hpp>
 #include <rendering/PlaceholderData.hpp>
+#include <rendering/backend/RenderBackend.hpp>
 
 #include <rendering/backend/RendererDescriptorSet.hpp>
 
@@ -12,7 +13,7 @@
 
 #include <core/logging/Logger.hpp>
 
-#include <Engine.hpp>
+#include <EngineGlobals.hpp>
 
 namespace hyperion {
 

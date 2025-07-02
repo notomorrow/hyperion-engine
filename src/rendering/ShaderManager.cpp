@@ -1,16 +1,17 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#include <rendering/Shader.hpp>
+#include <rendering/ShaderManager.hpp>
 
 #include <rendering/backend/RendererComputePipeline.hpp>
 #include <rendering/backend/RendererShader.hpp>
+#include <rendering/backend/RenderBackend.hpp>
 
 #include <core/logging/LogChannels.hpp>
 #include <core/logging/Logger.hpp>
 
 #include <core/profiling/ProfileScope.hpp>
 
-#include <Engine.hpp>
+#include <EngineGlobals.hpp>
 
 namespace hyperion {
 
@@ -142,11 +143,7 @@ ShaderRef ShaderManager::GetOrCreate(const ShaderDefinition& definition)
 
         bool isValidCompiledShader = true;
 
-        isValidCompiledShader &= g_engine->GetShaderCompiler().GetCompiledShader(
-            definition.GetName(),
-            definition.GetProperties(),
-            *compiledShader);
-
+        isValidCompiledShader &= g_shaderCompiler->GetCompiledShader(definition.GetName(), definition.GetProperties(), *compiledShader);
         isValidCompiledShader &= compiledShader->GetDefinition().IsValid();
 
         AssertThrowMsg(
@@ -171,18 +168,14 @@ ShaderRef ShaderManager::GetOrCreate(const ShaderDefinition& definition)
     return shader;
 }
 
-ShaderRef ShaderManager::GetOrCreate(
-    Name name,
-    const ShaderProperties& props)
+ShaderRef ShaderManager::GetOrCreate(Name name, const ShaderProperties& props)
 {
-    return GetOrCreate(ShaderDefinition {
-        name,
-        props });
+    return GetOrCreate(ShaderDefinition { name, props });
 }
 
 SizeType ShaderManager::CalculateMemoryUsage() const
 {
-    HYP_NAMED_SCOPE("ShaderManager::CalculateMemoryUsage");
+    HYP_SCOPE;
 
     SizeType totalMemoryUsage = 0;
 

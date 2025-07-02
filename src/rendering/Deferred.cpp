@@ -241,7 +241,7 @@ void DeferredPass::CreatePipeline(const RenderableAttributeSet& renderableAttrib
 
         DeferCreate(descriptorTable);
 
-        GraphicsPipelineRef graphicsPipeline = g_engine->GetGraphicsPipelineCache()->GetOrCreate(
+        GraphicsPipelineRef graphicsPipeline = g_renderGlobalState->graphicsPipelineCache->GetOrCreate(
             shader,
             descriptorTable,
             { &m_framebuffer, 1 },
@@ -553,7 +553,7 @@ void EnvGridPass::CreatePipeline()
         DescriptorTableRef descriptorTable = g_renderBackend->MakeDescriptorTable(&descriptorTableDecl);
         DeferCreate(descriptorTable);
 
-        GraphicsPipelineRef graphicsPipeline = g_engine->GetGraphicsPipelineCache()->GetOrCreate(
+        GraphicsPipelineRef graphicsPipeline = g_renderGlobalState->graphicsPipelineCache->GetOrCreate(
             shader,
             descriptorTable,
             { &m_framebuffer, 1 },
@@ -727,7 +727,7 @@ void ReflectionsPass::CreatePipeline(const RenderableAttributeSet& renderableAtt
         DescriptorTableRef descriptorTable = g_renderBackend->MakeDescriptorTable(&descriptorTableDecl);
         DeferCreate(descriptorTable);
 
-        GraphicsPipelineRef graphicsPipeline = g_engine->GetGraphicsPipelineCache()->GetOrCreate(
+        GraphicsPipelineRef graphicsPipeline = g_renderGlobalState->graphicsPipelineCache->GetOrCreate(
             shader,
             descriptorTable,
             { &m_framebuffer, 1 },
@@ -1189,7 +1189,7 @@ void DeferredRenderer::CreateViewDescriptorSets(View* view, DeferredPassData& pa
         }
         else
         {
-            descriptorSet->SetElement(NAME("SSRResultTexture"), g_renderGlobalState->PlaceholderData->GetImageView2D1x1R8());
+            descriptorSet->SetElement(NAME("SSRResultTexture"), g_renderGlobalState->placeholderData->GetImageView2D1x1R8());
         }
 
         if (passData.ssgi)
@@ -1198,7 +1198,7 @@ void DeferredRenderer::CreateViewDescriptorSets(View* view, DeferredPassData& pa
         }
         else
         {
-            descriptorSet->SetElement(NAME("SSGIResultTexture"), g_renderGlobalState->PlaceholderData->GetImageView2D1x1R8());
+            descriptorSet->SetElement(NAME("SSGIResultTexture"), g_renderGlobalState->placeholderData->GetImageView2D1x1R8());
         }
 
         if (passData.hbao)
@@ -1207,7 +1207,7 @@ void DeferredRenderer::CreateViewDescriptorSets(View* view, DeferredPassData& pa
         }
         else
         {
-            descriptorSet->SetElement(NAME("SSAOResultTexture"), g_renderGlobalState->PlaceholderData->GetImageView2D1x1R8());
+            descriptorSet->SetElement(NAME("SSAOResultTexture"), g_renderGlobalState->placeholderData->GetImageView2D1x1R8());
         }
 
         descriptorSet->SetElement(NAME("DeferredResult"), passData.combinePass->GetFinalImageView());

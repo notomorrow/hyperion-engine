@@ -3,10 +3,11 @@
 #include <rendering/SafeDeleter.hpp>
 #include <rendering/RenderGlobalState.hpp>
 
+#include <rendering/backend/RenderBackend.hpp>
 #include <rendering/backend/RenderCommand.hpp>
 #include <rendering/backend/RendererFeatures.hpp>
 
-#include <Engine.hpp>
+#include <EngineGlobals.hpp>
 
 namespace hyperion {
 

@@ -48,6 +48,7 @@
 
 #include <util/MeshBuilder.hpp>
 
+#include <EngineGlobals.hpp>
 #include <Engine.hpp>
 
 namespace hyperion {
@@ -126,7 +127,7 @@ struct RENDER_COMMAND(SetFinalPassImageView)
     {
         if (!imageView)
         {
-            imageView = g_renderGlobalState->PlaceholderData->DefaultTexture2D->GetRenderResource().GetImageView();
+            imageView = g_renderGlobalState->placeholderData->DefaultTexture2D->GetRenderResource().GetImageView();
         }
 
         g_engine->GetFinalPass()->SetUILayerImageView(imageView);

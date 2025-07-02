@@ -13,6 +13,7 @@
 
 #include <rendering/rhi/CmdList.hpp>
 
+#include <rendering/backend/RenderBackend.hpp>
 #include <rendering/backend/RendererFrame.hpp>
 #include <rendering/backend/RendererDescriptorSet.hpp>
 #include <rendering/backend/RendererComputePipeline.hpp>
@@ -23,7 +24,7 @@
 
 #include <scene/Texture.hpp>
 
-#include <Engine.hpp>
+#include <EngineGlobals.hpp>
 
 namespace hyperion {
 
@@ -234,8 +235,8 @@ void SSRRenderer::CreateComputePipelines()
         descriptorSet->SetElement(NAME("GBufferMaterialTexture"), m_gbuffer->GetBucket(RB_OPAQUE).GetGBufferAttachment(GTN_MATERIAL)->GetImageView());
         descriptorSet->SetElement(NAME("GBufferVelocityTexture"), m_gbuffer->GetBucket(RB_OPAQUE).GetGBufferAttachment(GTN_VELOCITY)->GetImageView());
         descriptorSet->SetElement(NAME("GBufferDepthTexture"), m_gbuffer->GetBucket(RB_OPAQUE).GetGBufferAttachment(GTN_DEPTH)->GetImageView());
-        descriptorSet->SetElement(NAME("GBufferMipChain"), m_mipChainImageView ? m_mipChainImageView : g_renderGlobalState->PlaceholderData->GetImageView2D1x1R8());
-        descriptorSet->SetElement(NAME("DeferredResult"), m_deferredResultImageView ? m_deferredResultImageView : g_renderGlobalState->PlaceholderData->GetImageView2D1x1R8());
+        descriptorSet->SetElement(NAME("GBufferMipChain"), m_mipChainImageView ? m_mipChainImageView : g_renderGlobalState->placeholderData->GetImageView2D1x1R8());
+        descriptorSet->SetElement(NAME("DeferredResult"), m_deferredResultImageView ? m_deferredResultImageView : g_renderGlobalState->placeholderData->GetImageView2D1x1R8());
     }
 
     DeferCreate(writeUvsShaderDescriptorTable);
@@ -267,8 +268,8 @@ void SSRRenderer::CreateComputePipelines()
         descriptorSet->SetElement(NAME("GBufferMaterialTexture"), m_gbuffer->GetBucket(RB_OPAQUE).GetGBufferAttachment(GTN_MATERIAL)->GetImageView());
         descriptorSet->SetElement(NAME("GBufferVelocityTexture"), m_gbuffer->GetBucket(RB_OPAQUE).GetGBufferAttachment(GTN_VELOCITY)->GetImageView());
         descriptorSet->SetElement(NAME("GBufferDepthTexture"), m_gbuffer->GetBucket(RB_OPAQUE).GetGBufferAttachment(GTN_DEPTH)->GetImageView());
-        descriptorSet->SetElement(NAME("GBufferMipChain"), m_mipChainImageView ? m_mipChainImageView : g_renderGlobalState->PlaceholderData->GetImageView2D1x1R8());
-        descriptorSet->SetElement(NAME("DeferredResult"), m_deferredResultImageView ? m_deferredResultImageView : g_renderGlobalState->PlaceholderData->GetImageView2D1x1R8());
+        descriptorSet->SetElement(NAME("GBufferMipChain"), m_mipChainImageView ? m_mipChainImageView : g_renderGlobalState->placeholderData->GetImageView2D1x1R8());
+        descriptorSet->SetElement(NAME("DeferredResult"), m_deferredResultImageView ? m_deferredResultImageView : g_renderGlobalState->placeholderData->GetImageView2D1x1R8());
     }
 
     DeferCreate(sampleGbufferShaderDescriptorTable);

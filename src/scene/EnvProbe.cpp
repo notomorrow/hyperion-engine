@@ -14,6 +14,7 @@
 #include <rendering/RenderShadowMap.hpp>
 #include <rendering/RenderGlobalState.hpp>
 
+#include <rendering/backend/RenderBackend.hpp>
 #include <rendering/backend/RendererDescriptorSet.hpp>
 
 #include <core/logging/LogChannels.hpp>
@@ -21,6 +22,7 @@
 
 #include <core/object/HypClassUtils.hpp>
 
+#include <EngineGlobals.hpp>
 #include <Engine.hpp>
 
 namespace hyperion {

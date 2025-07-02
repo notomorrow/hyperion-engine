@@ -8,8 +8,6 @@
 
 #include <util/MeshBuilder.hpp>
 
-#include <core/math/MathUtil.hpp>
-
 #include <scene/World.hpp>
 
 #include <scene/camera/OrthoCamera.hpp>
@@ -40,6 +38,7 @@
 
 #include <core/profiling/ProfileScope.hpp>
 
+#include <EngineGlobals.hpp>
 #include <Engine.hpp>
 
 namespace hyperion {

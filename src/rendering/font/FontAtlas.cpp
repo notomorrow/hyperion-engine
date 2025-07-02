@@ -6,6 +6,7 @@
 
 #include <rendering/rhi/CmdList.hpp>
 
+#include <rendering/backend/RenderBackend.hpp>
 #include <rendering/backend/RenderCommand.hpp>
 #include <rendering/backend/RendererHelpers.hpp>
 
@@ -13,7 +14,7 @@
 
 #include <core/logging/Logger.hpp>
 
-#include <Engine.hpp>
+#include <EngineGlobals.hpp>
 
 namespace hyperion {
 
@@ -35,8 +36,6 @@ struct RENDER_COMMAND(FontAtlas_RenderCharacter)
           location(location),
           cellDimensions(cellDimensions)
     {
-        atlasTexture->GetRenderResource().IncRef();
-        glyphTexture->GetRenderResource().IncRef();
     }
 
     virtual ~RENDER_COMMAND(FontAtlas_RenderCharacter)() override
@@ -275,6 +274,10 @@ void FontAtlas::Render()
 
 void FontAtlas::RenderCharacter(const Handle<Texture>& atlasTexture, const Handle<Texture>& glyphTexture, Vec2i location, Vec2i dimensions) const
 {
+    // temp shit
+    atlasTexture->GetRenderResource().IncRef();
+    glyphTexture->GetRenderResource().IncRef();
+
     PUSH_RENDER_COMMAND(FontAtlas_RenderCharacter, atlasTexture, glyphTexture, location, dimensions);
 }
 

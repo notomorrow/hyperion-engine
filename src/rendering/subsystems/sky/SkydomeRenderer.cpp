@@ -24,7 +24,7 @@
 
 #include <asset/Assets.hpp>
 
-#include <Engine.hpp>
+#include <EngineGlobals.hpp>
 
 namespace hyperion {
 

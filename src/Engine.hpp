@@ -51,7 +51,6 @@ class PlaceholderData;
 class RenderThread;
 class SafeDeleter;
 class RenderState;
-class GraphicsPipelineCache;
 
 struct EngineDelegates
 {
@@ -106,16 +105,6 @@ public:
         return m_configuration;
     }
 
-    HYP_FORCE_INLINE ShaderCompiler& GetShaderCompiler()
-    {
-        return m_shaderCompiler;
-    }
-
-    HYP_FORCE_INLINE const ShaderCompiler& GetShaderCompiler() const
-    {
-        return m_shaderCompiler;
-    }
-
     HYP_FORCE_INLINE DebugDrawer* GetDebugDrawer() const
     {
         return m_debugDrawer.Get();
@@ -129,11 +118,6 @@ public:
     HYP_FORCE_INLINE ScriptingService* GetScriptingService() const
     {
         return m_scriptingService.Get();
-    }
-
-    HYP_FORCE_INLINE GraphicsPipelineCache* GetGraphicsPipelineCache() const
-    {
-        return m_graphicsPipelineCache.Get();
     }
 
     HYP_FORCE_INLINE EngineDelegates& GetDelegates()
@@ -177,8 +161,6 @@ private:
 
     UniquePtr<RenderThread> m_renderThread;
 
-    ShaderCompiler m_shaderCompiler;
-
     Handle<World> m_world;
 
     Configuration m_configuration;
@@ -188,8 +170,6 @@ private:
     UniquePtr<FinalPass> m_finalPass;
 
     UniquePtr<ScriptingService> m_scriptingService;
-
-    UniquePtr<GraphicsPipelineCache> m_graphicsPipelineCache;
 
     EngineDelegates m_delegates;
 

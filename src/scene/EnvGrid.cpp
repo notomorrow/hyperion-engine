@@ -28,6 +28,7 @@
 
 #include <core/object/HypClassUtils.hpp>
 
+#include <EngineGlobals.hpp>
 #include <Engine.hpp>
 
 namespace hyperion {
@@ -558,15 +559,14 @@ void EnvGrid::UpdateRenderProxy(IRenderProxy* proxy)
         ? Vec2i(m_irradianceTexture->GetExtent().GetXY())
         : Vec2i::Zero();
 
-    bufferData.irradianceOctahedronSize = Vec2i(irradianceOctahedronSize, irradianceOctahedronSize);
+    bufferData.irradianceOctahedronSize = Vec2i(irradianceOctahedronSize);
 
-    /// FIXME: Needs to be set somehow in RenderEnvGrid, as that's when we can retrieve resource bindings for the probes.
     for (uint32 index = 0; index < std::size(bufferData.probeIndices); index++)
     {
         const Handle<EnvProbe>& probe = m_envProbeCollection.GetEnvProbeOnGameThread(index);
         AssertThrow(probe.IsValid());
 
-        // @FIXME dont use render resource
+        // @FIXME dont use render resource - needs to be set when writing to GpuBufferHolder as it will need to use assigned slots for probes.
         bufferData.probeIndices[index] = probe->GetRenderResource().GetBufferIndex();
     }
 }

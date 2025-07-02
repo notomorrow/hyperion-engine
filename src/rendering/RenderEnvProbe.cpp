@@ -622,10 +622,10 @@ void ReflectionProbeRenderer::ComputePrefilteredEnvMap(FrameBase* frame, const R
 
         descriptorSet->SetElement(NAME("UniformBuffer"), uniformBuffer);
         descriptorSet->SetElement(NAME("ColorTexture"), colorAttachment->GetImageView());
-        descriptorSet->SetElement(NAME("NormalsTexture"), normalsAttachment ? normalsAttachment->GetImageView() : g_renderGlobalState->PlaceholderData->GetImageViewCube1x1R8());
-        descriptorSet->SetElement(NAME("MomentsTexture"), momentsAttachment ? momentsAttachment->GetImageView() : g_renderGlobalState->PlaceholderData->GetImageViewCube1x1R8());
-        descriptorSet->SetElement(NAME("SamplerLinear"), g_renderGlobalState->PlaceholderData->GetSamplerLinear());
-        descriptorSet->SetElement(NAME("SamplerNearest"), g_renderGlobalState->PlaceholderData->GetSamplerNearest());
+        descriptorSet->SetElement(NAME("NormalsTexture"), normalsAttachment ? normalsAttachment->GetImageView() : g_renderGlobalState->placeholderData->GetImageViewCube1x1R8());
+        descriptorSet->SetElement(NAME("MomentsTexture"), momentsAttachment ? momentsAttachment->GetImageView() : g_renderGlobalState->placeholderData->GetImageViewCube1x1R8());
+        descriptorSet->SetElement(NAME("SamplerLinear"), g_renderGlobalState->placeholderData->GetSamplerLinear());
+        descriptorSet->SetElement(NAME("SamplerNearest"), g_renderGlobalState->placeholderData->GetSamplerNearest());
         descriptorSet->SetElement(NAME("OutImage"), prefilteredEnvMap->GetRenderResource().GetImageView());
     }
 
@@ -750,8 +750,8 @@ void ReflectionProbeRenderer::ComputeSH(FrameBase* frame, const RenderSetup& ren
             AssertThrow(computeShDescriptorSet != nullptr);
 
             computeShDescriptorSet->SetElement(NAME("InColorCubemap"), colorAttachment->GetImageView());
-            computeShDescriptorSet->SetElement(NAME("InNormalsCubemap"), normalsAttachment ? normalsAttachment->GetImageView() : g_renderGlobalState->PlaceholderData->GetImageViewCube1x1R8());
-            computeShDescriptorSet->SetElement(NAME("InDepthCubemap"), depthAttachment ? depthAttachment->GetImageView() : g_renderGlobalState->PlaceholderData->GetImageViewCube1x1R8());
+            computeShDescriptorSet->SetElement(NAME("InNormalsCubemap"), normalsAttachment ? normalsAttachment->GetImageView() : g_renderGlobalState->placeholderData->GetImageViewCube1x1R8());
+            computeShDescriptorSet->SetElement(NAME("InDepthCubemap"), depthAttachment ? depthAttachment->GetImageView() : g_renderGlobalState->placeholderData->GetImageViewCube1x1R8());
             computeShDescriptorSet->SetElement(NAME("InputSHTilesBuffer"), shTilesBuffers[i]);
 
             if (i != shNumLevels - 1)

@@ -22,6 +22,7 @@
 #include <rendering/debug/DebugDrawer.hpp>
 #include <rendering/RenderGlobalState.hpp>
 
+#include <EngineGlobals.hpp>
 #include <Engine.hpp>
 
 // #define HYP_GAME_THREAD_LOCKED 1

@@ -5,7 +5,7 @@
 
 #include <Constants.hpp>
 
-#include <rendering/Shader.hpp>
+#include <rendering/ShaderManager.hpp>
 #include <rendering/TemporalBlending.hpp>
 
 #include <rendering/backend/RenderObject.hpp>

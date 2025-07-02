@@ -20,6 +20,7 @@
 #include <core/logging/LogChannels.hpp>
 #include <core/logging/Logger.hpp>
 
+#include <EngineGlobals.hpp>
 #include <Engine.hpp>
 
 namespace hyperion {
@@ -119,7 +120,7 @@ void ScreenCaptureRenderSubsystem::CaptureFrame(FrameBase* frame)
     AssertThrow(m_texture.IsValid());
     AssertThrow(m_texture->IsReady());
 
-    DeferredRenderer* deferredRenderer = static_cast<DeferredRenderer*>(g_renderGlobalState->Renderer);
+    DeferredRenderer* deferredRenderer = static_cast<DeferredRenderer*>(g_renderGlobalState->mainRenderer);
     AssertDebug(deferredRenderer != nullptr);
 
     DeferredPassData* pd = deferredRenderer->GetLastFrameData().GetPassDataForView(m_view.Get());

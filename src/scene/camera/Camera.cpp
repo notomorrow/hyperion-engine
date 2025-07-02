@@ -5,7 +5,6 @@
 
 #include <core/math/Halton.hpp>
 
-#include <rendering/RenderGlobalState.hpp>
 #include <rendering/RenderCamera.hpp>
 #include <rendering/backend/RendererFramebuffer.hpp>
 
@@ -20,6 +19,7 @@
 
 #include <core/profiling/ProfileScope.hpp>
 
+#include <EngineGlobals.hpp>
 #include <Engine.hpp>
 
 namespace hyperion {

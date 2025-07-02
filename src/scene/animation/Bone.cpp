@@ -32,7 +32,7 @@ void Bone::SetKeyframe(const Keyframe& keyframe)
 {
     m_keyframe = keyframe;
 
-    m_poseTransform = m_keyframe.GetTransform();
+    m_poseTransform = m_keyframe.transform;
 
     UpdateBoneTransform();
 }

@@ -25,7 +25,7 @@
 #include <scene/Scene.hpp>
 #include <scene/EnvProbe.hpp>
 
-#include <Engine.hpp>
+#include <EngineGlobals.hpp>
 
 namespace hyperion {
 
@@ -262,7 +262,7 @@ void RenderWorld::Render(FrameBase* frame)
     Threads::AssertOnThread(g_renderThread);
 
     RenderSetup rs { this, nullptr };
-    g_renderGlobalState->Renderer->RenderFrame(frame, rs);
+    g_renderGlobalState->mainRenderer->RenderFrame(frame, rs);
 }
 
 void RenderWorld::PostRender(FrameBase* frame)

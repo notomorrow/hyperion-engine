@@ -16,6 +16,7 @@
 #include <rendering/RenderCollection.hpp>
 #include <rendering/Renderer.hpp>
 
+#include <rendering/backend/RenderBackend.hpp>
 #include <rendering/backend/RenderObject.hpp>
 #include <rendering/backend/RenderConfig.hpp>
 #include <rendering/backend/RendererDevice.hpp>
@@ -59,6 +60,7 @@
 
 #include <system/AppContext.hpp>
 
+#include <EngineGlobals.hpp>
 #include <Engine.hpp>
 
 namespace hyperion {

@@ -11,6 +11,7 @@
 #include <rendering/Deferred.hpp>
 #include <rendering/SafeDeleter.hpp>
 #include <rendering/RenderGlobalState.hpp>
+#include <rendering/ShaderManager.hpp>
 
 #include <rendering/backend/RendererFrame.hpp>
 #include <rendering/backend/RendererComputePipeline.hpp>
@@ -21,7 +22,7 @@
 
 #include <core/profiling/ProfileScope.hpp>
 
-#include <Engine.hpp>
+#include <EngineGlobals.hpp>
 
 namespace hyperion {
 
@@ -267,10 +268,10 @@ void TemporalBlending::CreateDescriptorSets()
             ->SetElement(NAME("VelocityImage"), m_gbuffer->GetBucket(RB_OPAQUE).GetGBufferAttachment(GTN_VELOCITY)->GetImageView());
 
         m_descriptorTable->GetDescriptorSet(NAME("TemporalBlendingDescriptorSet"), frameIndex)
-            ->SetElement(NAME("SamplerLinear"), g_renderGlobalState->PlaceholderData->GetSamplerLinear());
+            ->SetElement(NAME("SamplerLinear"), g_renderGlobalState->placeholderData->GetSamplerLinear());
 
         m_descriptorTable->GetDescriptorSet(NAME("TemporalBlendingDescriptorSet"), frameIndex)
-            ->SetElement(NAME("SamplerNearest"), g_renderGlobalState->PlaceholderData->GetSamplerNearest());
+            ->SetElement(NAME("SamplerNearest"), g_renderGlobalState->placeholderData->GetSamplerNearest());
 
         m_descriptorTable->GetDescriptorSet(NAME("TemporalBlendingDescriptorSet"), frameIndex)
             ->SetElement(NAME("OutImage"), (*textures[frameIndex % 2])->GetRenderResource().GetImageView());

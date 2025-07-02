@@ -390,12 +390,12 @@ void EnvGridRenderer::CreateVoxelGridData(EnvGrid* envGrid, EnvGridPassData& pd)
         DescriptorSetRef descriptorSet = descriptorTable->GetDescriptorSet(NAME("VoxelizeProbeDescriptorSet"), frameIndex);
         AssertThrow(descriptorSet != nullptr);
 
-        descriptorSet->SetElement(NAME("InColorImage"), colorAttachment ? colorAttachment->GetImageView() : g_renderGlobalState->PlaceholderData->GetImageViewCube1x1R8());
-        descriptorSet->SetElement(NAME("InNormalsImage"), normalsAttachment ? normalsAttachment->GetImageView() : g_renderGlobalState->PlaceholderData->GetImageViewCube1x1R8());
-        descriptorSet->SetElement(NAME("InDepthImage"), depthAttachment ? depthAttachment->GetImageView() : g_renderGlobalState->PlaceholderData->GetImageViewCube1x1R8());
+        descriptorSet->SetElement(NAME("InColorImage"), colorAttachment ? colorAttachment->GetImageView() : g_renderGlobalState->placeholderData->GetImageViewCube1x1R8());
+        descriptorSet->SetElement(NAME("InNormalsImage"), normalsAttachment ? normalsAttachment->GetImageView() : g_renderGlobalState->placeholderData->GetImageViewCube1x1R8());
+        descriptorSet->SetElement(NAME("InDepthImage"), depthAttachment ? depthAttachment->GetImageView() : g_renderGlobalState->placeholderData->GetImageViewCube1x1R8());
 
-        descriptorSet->SetElement(NAME("SamplerLinear"), g_renderGlobalState->PlaceholderData->GetSamplerLinear());
-        descriptorSet->SetElement(NAME("SamplerNearest"), g_renderGlobalState->PlaceholderData->GetSamplerNearest());
+        descriptorSet->SetElement(NAME("SamplerLinear"), g_renderGlobalState->placeholderData->GetSamplerLinear());
+        descriptorSet->SetElement(NAME("SamplerNearest"), g_renderGlobalState->placeholderData->GetSamplerNearest());
 
         descriptorSet->SetElement(NAME("EnvGridBuffer"), 0, sizeof(EnvGridShaderData), g_renderGlobalState->gpuBuffers[GRB_ENV_GRIDS]->GetBuffer(frameIndex));
         descriptorSet->SetElement(NAME("EnvProbesBuffer"), g_renderGlobalState->gpuBuffers[GRB_ENV_PROBES]->GetBuffer(frameIndex));
@@ -510,9 +510,9 @@ void EnvGridRenderer::CreateSphericalHarmonicsData(EnvGrid* envGrid, EnvGridPass
             const DescriptorSetRef& computeShDescriptorSet = pd.computeShDescriptorTables[i]->GetDescriptorSet(NAME("ComputeSHDescriptorSet"), frameIndex);
             AssertThrow(computeShDescriptorSet != nullptr);
 
-            computeShDescriptorSet->SetElement(NAME("InColorCubemap"), g_renderGlobalState->PlaceholderData->DefaultCubemap->GetRenderResource().GetImageView());
-            computeShDescriptorSet->SetElement(NAME("InNormalsCubemap"), g_renderGlobalState->PlaceholderData->DefaultCubemap->GetRenderResource().GetImageView());
-            computeShDescriptorSet->SetElement(NAME("InDepthCubemap"), g_renderGlobalState->PlaceholderData->DefaultCubemap->GetRenderResource().GetImageView());
+            computeShDescriptorSet->SetElement(NAME("InColorCubemap"), g_renderGlobalState->placeholderData->DefaultCubemap->GetRenderResource().GetImageView());
+            computeShDescriptorSet->SetElement(NAME("InNormalsCubemap"), g_renderGlobalState->placeholderData->DefaultCubemap->GetRenderResource().GetImageView());
+            computeShDescriptorSet->SetElement(NAME("InDepthCubemap"), g_renderGlobalState->placeholderData->DefaultCubemap->GetRenderResource().GetImageView());
             computeShDescriptorSet->SetElement(NAME("InputSHTilesBuffer"), pd.shTilesBuffers[i]);
 
             if (i != shNumLevels - 1)
@@ -595,8 +595,8 @@ void EnvGridRenderer::CreateLightFieldData(EnvGrid* envGrid, EnvGridPassData& pd
             descriptorSet->SetElement(NAME("InColorImage"), framebuffer->GetAttachment(0)->GetImageView());
             descriptorSet->SetElement(NAME("InNormalsImage"), framebuffer->GetAttachment(1)->GetImageView());
             descriptorSet->SetElement(NAME("InDepthImage"), framebuffer->GetAttachment(2)->GetImageView());
-            descriptorSet->SetElement(NAME("SamplerLinear"), g_renderGlobalState->PlaceholderData->GetSamplerLinear());
-            descriptorSet->SetElement(NAME("SamplerNearest"), g_renderGlobalState->PlaceholderData->GetSamplerNearest());
+            descriptorSet->SetElement(NAME("SamplerLinear"), g_renderGlobalState->placeholderData->GetSamplerLinear());
+            descriptorSet->SetElement(NAME("SamplerNearest"), g_renderGlobalState->placeholderData->GetSamplerNearest());
             descriptorSet->SetElement(NAME("OutColorImage"), envGrid->GetLightFieldIrradianceTexture()->GetRenderResource().GetImageView());
             descriptorSet->SetElement(NAME("OutDepthImage"), envGrid->GetLightFieldDepthTexture()->GetRenderResource().GetImageView());
         }

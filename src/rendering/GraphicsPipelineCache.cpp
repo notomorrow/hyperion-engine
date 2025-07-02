@@ -45,25 +45,6 @@ GraphicsPipelineCache::GraphicsPipelineCache()
 
 GraphicsPipelineCache::~GraphicsPipelineCache()
 {
-    AssertThrowMsg(m_cachedPipelines->Empty(), "Graphics pipeline cache not empty!");
-    delete m_cachedPipelines;
-}
-
-void GraphicsPipelineCache::Initialize()
-{
-    HYP_SCOPE;
-
-    Threads::AssertOnThread(g_renderThread);
-}
-
-void GraphicsPipelineCache::Destroy()
-{
-    HYP_SCOPE;
-
-    Threads::AssertOnThread(g_renderThread);
-
-    Mutex::Guard guard(m_mutex);
-
     for (auto& it : *m_cachedPipelines)
     {
         for (GraphicsPipelineRef& pipeline : it.second)
@@ -73,6 +54,9 @@ void GraphicsPipelineCache::Destroy()
     }
 
     m_cachedPipelines->Clear();
+
+    AssertThrowMsg(m_cachedPipelines->Empty(), "Graphics pipeline cache not empty!");
+    delete m_cachedPipelines;
 }
 
 GraphicsPipelineRef GraphicsPipelineCache::GetOrCreate(

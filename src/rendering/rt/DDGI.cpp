@@ -89,9 +89,9 @@ struct RENDER_COMMAND(UnsetDDGIDescriptors)
         // remove result image from global descriptor set
         for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
         {
-            g_renderGlobalState->GlobalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)->SetElement(NAME("DDGIIrradianceTexture"), g_renderGlobalState->PlaceholderData->GetImageView2D1x1R8());
+            g_renderGlobalState->GlobalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)->SetElement(NAME("DDGIIrradianceTexture"), g_renderGlobalState->placeholderData->GetImageView2D1x1R8());
 
-            g_renderGlobalState->GlobalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)->SetElement(NAME("DDGIDepthTexture"), g_renderGlobalState->PlaceholderData->GetImageView2D1x1R8());
+            g_renderGlobalState->GlobalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)->SetElement(NAME("DDGIDepthTexture"), g_renderGlobalState->placeholderData->GetImageView2D1x1R8());
         }
 
         HYPERION_RETURN_OK;

@@ -5,7 +5,7 @@
 #include <rendering/backend/RendererStructs.hpp>
 #include <rendering/backend/RendererFramebuffer.hpp>
 #include <rendering/RenderBucket.hpp>
-#include <rendering/Shader.hpp>
+#include <rendering/ShaderManager.hpp>
 
 #include <core/Defines.hpp>
 #include <core/utilities/EnumFlags.hpp>

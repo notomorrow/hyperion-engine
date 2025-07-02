@@ -2,6 +2,7 @@
 #include <rendering/RenderGlobalState.hpp>
 #include <rendering/GraphicsPipelineCache.hpp>
 #include <rendering/DrawCall.hpp>
+#include <rendering/backend/RenderBackend.hpp>
 
 #include <scene/View.hpp>
 
@@ -14,7 +15,7 @@
 #include <core/logging/Logger.hpp>
 #include <core/logging/LogChannels.hpp>
 
-#include <Engine.hpp>
+#include <EngineGlobals.hpp>
 
 namespace hyperion {
 
@@ -143,7 +144,7 @@ GraphicsPipelineRef PassData::CreateGraphicsPipeline(
 
     AssertThrow(table.IsValid());
 
-    return g_engine->GetGraphicsPipelineCache()->GetOrCreate(
+    return g_renderGlobalState->graphicsPipelineCache->GetOrCreate(
         shader,
         table,
         view->GetOutputTarget().GetFramebuffers(),

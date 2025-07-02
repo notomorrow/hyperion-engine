@@ -9,7 +9,7 @@
 
 #include <core/functional/Delegate.hpp>
 
-#include <rendering/Shader.hpp>
+#include <rendering/ShaderManager.hpp>
 
 #include <rendering/backend/RenderObject.hpp>
 

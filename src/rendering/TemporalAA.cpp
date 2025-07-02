@@ -26,7 +26,7 @@
 
 #include <core/profiling/ProfileScope.hpp>
 
-#include <Engine.hpp>
+#include <EngineGlobals.hpp>
 
 namespace hyperion {
 
@@ -124,8 +124,8 @@ void TemporalAA::CreateComputePipelines()
 
         descriptorSet->SetElement(NAME("InDepthTexture"), m_gbuffer->GetBucket(RB_OPAQUE).GetGBufferAttachment(GTN_DEPTH)->GetImageView());
 
-        descriptorSet->SetElement(NAME("SamplerLinear"), g_renderGlobalState->PlaceholderData->GetSamplerLinear());
-        descriptorSet->SetElement(NAME("SamplerNearest"), g_renderGlobalState->PlaceholderData->GetSamplerNearest());
+        descriptorSet->SetElement(NAME("SamplerLinear"), g_renderGlobalState->placeholderData->GetSamplerLinear());
+        descriptorSet->SetElement(NAME("SamplerNearest"), g_renderGlobalState->placeholderData->GetSamplerNearest());
 
         descriptorSet->SetElement(NAME("OutColorImage"), (*textures[frameIndex % 2])->GetRenderResource().GetImageView());
     }

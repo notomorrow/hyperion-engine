@@ -14,9 +14,9 @@
 
 #include <scene/BVH.hpp>
 
+#include <EngineGlobals.hpp>
 #include <Engine.hpp>
 
-#include <unordered_map>
 #include <cstring>
 
 namespace hyperion {
@@ -25,7 +25,7 @@ namespace hyperion {
 
 Pair<Array<Vertex>, Array<uint32>> Mesh::CalculateIndices(const Array<Vertex>& vertices)
 {
-    std::unordered_map<Vertex, uint32> indexMap;
+    HashMap<Vertex, uint32> indexMap;
 
     Array<uint32> indices;
     indices.Reserve(vertices.Size());
@@ -37,10 +37,10 @@ Pair<Array<Vertex>, Array<uint32>> Mesh::CalculateIndices(const Array<Vertex>& v
     for (const auto& vertex : vertices)
     {
         /* Check if the vertex already exists in our map */
-        auto it = indexMap.find(vertex);
+        auto it = indexMap.Find(vertex);
 
         /* If it does, push to our indices */
-        if (it != indexMap.end())
+        if (it != indexMap.End())
         {
             indices.PushBack(it->second);
 

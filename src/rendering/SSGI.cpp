@@ -15,6 +15,7 @@
 
 #include <rendering/rhi/CmdList.hpp>
 
+#include <rendering/backend/RenderBackend.hpp>
 #include <rendering/backend/RendererFrame.hpp>
 #include <rendering/backend/RendererDescriptorSet.hpp>
 #include <rendering/backend/RendererComputePipeline.hpp>
@@ -27,7 +28,7 @@
 #include <scene/EnvProbe.hpp>
 #include <scene/Light.hpp>
 
-#include <Engine.hpp>
+#include <EngineGlobals.hpp>
 
 namespace hyperion {
 

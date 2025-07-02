@@ -2,7 +2,7 @@
 
 #include <rendering/DOFBlur.hpp>
 
-#include <rendering/Shader.hpp>
+#include <rendering/ShaderManager.hpp>
 
 #include <rendering/backend/RendererFrame.hpp>
 

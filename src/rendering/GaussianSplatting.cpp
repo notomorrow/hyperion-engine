@@ -450,7 +450,7 @@ void GaussianSplattingInstance::CreateGraphicsPipeline()
 
 #if 0
     // FIXME
-    m_graphicsPipeline = g_engine->GetGraphicsPipelineCache()->GetOrCreate(
+    m_graphicsPipeline = g_renderGlobalState->graphicsPipelineCache->GetOrCreate(
         m_shader,
         descriptorTable,
         { &m_framebuffer, 1 },

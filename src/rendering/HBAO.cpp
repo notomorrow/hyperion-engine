@@ -10,6 +10,7 @@
 #include <rendering/RenderView.hpp>
 #include <rendering/Deferred.hpp>
 #include <rendering/GraphicsPipelineCache.hpp>
+#include <rendering/RenderGlobalState.hpp>
 
 #include <rendering/backend/RenderObject.hpp>
 #include <rendering/backend/RendererFrame.hpp>
@@ -118,7 +119,7 @@ void HBAO::CreatePipeline(const RenderableAttributeSet& renderableAttributes)
 
     m_descriptorTable = descriptorTable;
 
-    m_graphicsPipeline = g_engine->GetGraphicsPipelineCache()->GetOrCreate(
+    m_graphicsPipeline = g_renderGlobalState->graphicsPipelineCache->GetOrCreate(
         m_shader,
         descriptorTable,
         { &m_framebuffer, 1 },

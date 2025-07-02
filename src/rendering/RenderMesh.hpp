@@ -16,7 +16,7 @@
 
 #include <rendering/RenderableAttributes.hpp>
 #include <rendering/RenderResource.hpp>
-#include <rendering/Shader.hpp>
+#include <rendering/ShaderManager.hpp>
 
 #include <rendering/backend/RendererStructs.hpp>
 #include <rendering/backend/RenderObject.hpp>

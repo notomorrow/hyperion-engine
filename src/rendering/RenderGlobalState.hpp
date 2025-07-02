@@ -37,6 +37,7 @@ class RenderGlobalState;
 class RenderResourceLock;
 class UIRenderer;
 class MaterialDescriptorSetManager;
+class GraphicsPipelineCache;
 
 HYP_API extern SizeType GetNumDescendants(TypeId typeId);
 HYP_API extern int GetSubclassIndex(TypeId baseTypeId, TypeId subclassTypeId);
@@ -141,17 +142,19 @@ public:
 
     UniquePtr<class ShadowMapAllocator> ShadowMapAllocator;
     UniquePtr<class GpuBufferHolderMap> GpuBufferHolderMap;
-    UniquePtr<PlaceholderData> PlaceholderData;
+    UniquePtr<PlaceholderData> placeholderData;
 
     DescriptorTableRef GlobalDescriptorTable;
 
-    RendererBase* Renderer; // main renderer
+    RendererBase* mainRenderer;
     FixedArray<Array<RendererBase*>, GRT_MAX> globalRenderers;
 
     GlobalGpuBuffers gpuBuffers;
     ResourceBindings* resourceBindings;
 
     MaterialDescriptorSetManager* materialDescriptorSetManager;
+
+    GraphicsPipelineCache* graphicsPipelineCache;
 
 private:
     void CreateBlueNoiseBuffer();

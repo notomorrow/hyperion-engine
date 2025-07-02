@@ -2,30 +2,21 @@
 
 #include <scene/animation/Keyframe.hpp>
 
+#include <core/math/MathUtil.hpp>
+
 namespace hyperion {
-
-Keyframe::Keyframe()
-    : m_time(0.0f)
-{
-}
-
-Keyframe::Keyframe(float time, const Transform& transform)
-    : m_time(time),
-      m_transform(transform)
-{
-}
 
 Keyframe Keyframe::Blend(const Keyframe& to, float blend) const
 {
-    const float time = MathUtil::Lerp(m_time, to.GetTime(), blend);
+    const float newTime = MathUtil::Lerp(time, to.time, blend);
 
-    Transform transform(m_transform);
-    transform.GetTranslation().Lerp(to.GetTransform().GetTranslation(), blend);
-    transform.GetScale().Lerp(to.GetTransform().GetScale(), blend);
-    transform.GetRotation().Slerp(to.GetTransform().GetRotation(), blend);
-    transform.UpdateMatrix();
+    Transform newTransform = transform;
+    newTransform.translation = newTransform.translation.Lerp(to.transform.translation, blend);
+    newTransform.scale = newTransform.scale.Lerp(to.transform.scale, blend);
+    newTransform.rotation = newTransform.rotation.Slerp(to.transform.rotation, blend);
+    newTransform.UpdateMatrix();
 
-    return { time, transform };
+    return { newTime, newTransform };
 }
 
 } // namespace hyperion

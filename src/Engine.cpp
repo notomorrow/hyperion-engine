@@ -245,11 +245,6 @@ HYP_API void Engine::Init()
     m_configuration.SetToDefaultConfiguration();
     m_configuration.LoadFromDefinitionsFile();
 
-    if (!m_shaderCompiler.LoadShaderDefinitions())
-    {
-        HYP_FAIL("Failed to load shaders from definitions file!");
-    }
-
 #ifdef HYP_EDITOR
     // Create script compilation service
     m_scriptingService = MakeUnique<ScriptingService>(
@@ -277,9 +272,6 @@ HYP_API void Engine::Init()
             /* endpointUrl */ GetCommandLineArguments()["TraceURL"].ToString(),
             /* enabled */ true });
     }
-
-    m_graphicsPipelineCache = MakeUnique<GraphicsPipelineCache>();
-    m_graphicsPipelineCache->Initialize();
 
     m_finalPass = MakeUnique<FinalPass>(g_renderBackend->GetSwapchain()->HandleFromThis());
     m_finalPass->Create();
@@ -393,9 +385,6 @@ void Engine::FinalizeStop()
         HYP_LOG(Tasks, Info, "Task system stopped");
     }
 
-    m_graphicsPipelineCache->Destroy();
-    m_graphicsPipelineCache.Reset();
-
     m_debugDrawer.Reset();
 
     m_finalPass.Reset();
@@ -411,6 +400,8 @@ HYP_API void Engine::RenderNextFrame()
     HYP_PROFILE_BEGIN;
 
 #ifdef HYP_ENABLE_RENDER_STATS
+    // @TODO Move to RenderGlobalState and don't use a delegate,
+    // simply write into the buffer and read from double/triple buffered data
     m_renderStatsCalculator.Advance(m_renderStats);
     OnRenderStatsUpdated(m_renderStats);
 #endif

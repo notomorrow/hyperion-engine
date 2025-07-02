@@ -9,7 +9,7 @@
 #include <scene/Texture.hpp>
 
 #include <rendering/RenderEnvironment.hpp>
-#include <rendering/Shader.hpp>
+#include <rendering/ShaderManager.hpp>
 #include <rendering/RenderScene.hpp>
 #include <rendering/RenderWorld.hpp>
 #include <rendering/RenderGlobalState.hpp>

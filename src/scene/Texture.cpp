@@ -15,6 +15,7 @@
 #include <core/logging/LogChannels.hpp>
 #include <core/logging/Logger.hpp>
 
+#include <EngineGlobals.hpp>
 #include <Engine.hpp>
 
 namespace hyperion {
@@ -167,8 +168,8 @@ void Texture::SetTextureDesc(const TextureDesc& textureDesc)
 
         // Create a new StreamedTextureData, with the newly set TextureDesc.
         m_streamedTextureData = MakeRefCountedPtr<StreamedTextureData>(TextureData {
-                                                                             m_textureDesc,
-                                                                             std::move(textureDataBuffer) },
+                                                                           m_textureDesc,
+                                                                           std::move(textureDataBuffer) },
             m_streamedTextureDataResourceHandle);
 
         // If we didn't need it before assume we don't need it now.
@@ -216,8 +217,8 @@ void Texture::Readback_Internal()
     m_streamedTextureDataResourceHandle.Reset();
 
     m_streamedTextureData = MakeRefCountedPtr<StreamedTextureData>(TextureData {
-                                                                         m_textureDesc,
-                                                                         std::move(resultByteBuffer) },
+                                                                       m_textureDesc,
+                                                                       std::move(resultByteBuffer) },
         m_streamedTextureDataResourceHandle);
 }
 

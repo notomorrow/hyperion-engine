@@ -181,7 +181,7 @@ GraphicsPipelineRef RenderGroup::CreateGraphicsPipeline(PassData* pd) const
 
     AssertThrow(descriptorTable.IsValid());
 
-    return g_engine->GetGraphicsPipelineCache()->GetOrCreate(
+    return g_renderGlobalState->graphicsPipelineCache->GetOrCreate(
         m_shader,
         descriptorTable,
         { &view->GetOutputTarget().GetFramebuffer(m_renderableAttributes.GetMaterialAttributes().bucket), 1 },

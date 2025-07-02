@@ -9,49 +9,25 @@
 namespace hyperion {
 
 HYP_STRUCT()
-
-class HYP_API Keyframe
+struct HYP_API Keyframe
 {
-public:
-    Keyframe();
+    HYP_FIELD(Property = "Time", Serialize = true)
+    float time = 0.0f;
+
+    HYP_FIELD(Property = "Transform", Serialize = true)
+    Transform transform = Transform::identity;
+
+    Keyframe() = default;
     Keyframe(const Keyframe& other) = default;
     Keyframe& operator=(const Keyframe& other) = default;
-    Keyframe(float time, const Transform& transform);
-
-    HYP_METHOD()
-
-    float GetTime() const
+    Keyframe(float time, const Transform& transform)
+        : time(time),
+          transform(transform)
     {
-        return m_time;
-    }
-
-    HYP_METHOD()
-
-    void SetTime(float time)
-    {
-        m_time = time;
-    }
-
-    HYP_METHOD()
-
-    const Transform& GetTransform() const
-    {
-        return m_transform;
-    }
-
-    HYP_METHOD()
-
-    void SetTransform(const Transform& transform)
-    {
-        m_transform = transform;
     }
 
     HYP_METHOD()
     Keyframe Blend(const Keyframe& to, float blend) const;
-
-private:
-    float m_time;
-    Transform m_transform;
 };
 
 } // namespace hyperion

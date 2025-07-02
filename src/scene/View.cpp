@@ -32,6 +32,7 @@
 #include <rendering/GBuffer.hpp>
 #include <rendering/subsystems/sky/SkydomeRenderer.hpp>
 #include <rendering/lightmapper/RenderLightmapVolume.hpp>
+#include <rendering/backend/RenderBackend.hpp>
 
 #include <core/profiling/ProfileScope.hpp>
 
@@ -40,6 +41,7 @@
 #include <core/logging/LogChannels.hpp>
 #include <core/logging/Logger.hpp>
 
+#include <EngineGlobals.hpp>
 #include <Engine.hpp>
 
 // #define HYP_DISABLE_VISIBILITY_CHECK
@@ -210,7 +212,7 @@ void View::Init()
         m_outputTarget = ViewOutputTarget(framebuffer);
     }
 
-    AssertThrowMsg(m_outputTarget.IsValid(), "View with Id #%u must have a valid output target!", Id().Value());
+    AssertThrowMsg(m_outputTarget.IsValid(), "View with id #%u must have a valid output target!", Id().Value());
 
     Array<TResourceHandle<RenderScene>> renderScenes;
     renderScenes.Reserve(m_scenes.Size());
