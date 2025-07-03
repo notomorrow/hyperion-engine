@@ -38,7 +38,19 @@ public:
 
             const TextureData& textureData = resourceHandle->GetTextureData();
 
-            out.AddChild(textureData);
+            if (textureData.buffer.Empty())
+            {
+                HYP_LOG(Serialization, Warning, "TextureData for Texture '{}' is empty!", inObject.GetName());
+            }
+            else if (textureData.buffer.Size() != inObject.GetTextureDesc().GetByteSize())
+            {
+                HYP_LOG(Serialization, Warning, "TextureData for Texture '{}' has size {}, but TextureDesc expects size {}!",
+                    inObject.GetName(), textureData.buffer.Size(), inObject.GetTextureDesc().GetByteSize());
+            }
+            else
+            {
+                out.AddChild(textureData);
+            }
         }
         else
         {

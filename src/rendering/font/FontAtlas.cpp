@@ -2,6 +2,8 @@
 
 #include <rendering/font/FontAtlas.hpp>
 #include <rendering/RenderTexture.hpp>
+#include <rendering/RenderGlobalState.hpp>
+#include <rendering/PlaceholderData.hpp>
 #include <rendering/SafeDeleter.hpp>
 
 #include <rendering/rhi/CmdList.hpp>
@@ -103,7 +105,7 @@ void FontAtlasTextureSet::AddAtlas(uint32 pixelSize, Handle<Texture> texture, bo
 {
     if (isMainAtlas)
     {
-        AssertThrowMsg(!mainAtlas.IsValid(), "Main atlas already set");
+        AssertDebug(!mainAtlas.IsValid(), "Main atlas already set");
     }
 
     if (!texture.IsValid())
@@ -222,6 +224,11 @@ Result FontAtlas::RenderAtlasTextures()
             const Vec2i index { int(i % s_symbolColumns), int(i / s_symbolColumns) };
             const Vec2i offset = index * scaledExtent;
 
+            if (index.y > s_symbolRows)
+            {
+                break;
+            }
+
             Glyph glyph { m_face, m_face->GetGlyphIndex(symbol), scale };
 
             if (isMainAtlas)
@@ -241,11 +248,6 @@ Result FontAtlas::RenderAtlasTextures()
 
             UniquePtr<GlyphBitmap> glyphBitmap = std::move(glyphRasterizeResult.GetValue());
             AssertDebug(glyphBitmap != nullptr);
-
-            if (index.y > s_symbolRows)
-            {
-                break;
-            }
 
             Rect<uint32> srcRect {
                 0, 0,
@@ -280,9 +282,11 @@ Result FontAtlas::RenderAtlasTextures()
             TWM_CLAMP_TO_EDGE
         };
 
+        ByteBuffer byteBuffer = atlasBitmap->GetUnpackedBytes(4);
+
         TextureData atlasTextureData {
             atlasTextureDesc,
-            atlasBitmap->ToByteBuffer()
+            std::move(byteBuffer)
         };
 
         Handle<Texture> atlasTexture = CreateObject<Texture>(std::move(atlasTextureData));

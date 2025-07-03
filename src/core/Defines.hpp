@@ -324,9 +324,9 @@
 
 #if HYP_ENABLE_BREAKPOINTS
 #if (defined(HYP_ARM) && HYP_ARM) || HYP_GCC
-#define HYP_BREAKPOINT    \
-    {                     \
-        __builtin_trap(); \
+#define HYP_BREAKPOINT  \
+    {                   \
+        raise(SIGTRAP); \
     }
 #else
 #define HYP_BREAKPOINT                 \

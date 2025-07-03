@@ -1151,8 +1151,6 @@ void EditorSubsystem::LoadEditorUIDefinitions()
         HYP_FAIL("Failed to create font atlas for editor UI: %s", *fontAtlasResult.GetError().GetMessage());
     }
 
-    HYP_LOG(Editor, Debug, "Font atlas size: {}", (*fontAtlasResult)->GetAtlasTextures().GetMainAtlas()->GetExtent());
-
     uiSubsystem->GetUIStage()->SetDefaultFontAtlas(*fontAtlasResult);
 
     auto loadedUiAsset = AssetManager::GetInstance()->Load<UIObject>("ui/Editor.Main.ui.xml");

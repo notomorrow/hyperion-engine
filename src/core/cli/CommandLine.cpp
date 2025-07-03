@@ -115,8 +115,7 @@ TResult<CommandLineArgumentValue> CommandLineArguments::ParseArgumentValue(const
             return json::JSONValue(json::JSONString(str));
         }
 
-        HYP_LOG(CommandLine, Error, "Failed to parse argument \"{}\": {}",
-            str, parseResult.message);
+        HYP_LOG(CommandLine, Error, "Failed to parse argument \"{}\": {}", str, parseResult.message);
 
         return HYP_MAKE_ERROR(Error, "Failed to parse argument");
     }

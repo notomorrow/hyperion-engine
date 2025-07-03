@@ -201,6 +201,8 @@ static BoundingBox CalculateTextAABB(const FontAtlas& fontAtlas, const String& t
             aabb = aabb.Union(characterAabb);
         });
 
+    HYP_LOG(UI, Debug, "CALCULATE TEXT AABB FOR FONT ATLAS WITH DIMENSIONS: {}, textSize: {}, text: {}\tAABB: {}\tparentBounds: {}", fontAtlas.GetAtlasTextures().GetMainAtlas()->GetExtent(), textSize, text, aabb, parentBounds);
+
     return aabb;
 }
 
@@ -210,23 +212,25 @@ UIText::UIText()
 {
     m_textColor = Color(Vec4f::One());
 
-    OnComputedVisibilityChange.Bind([this]()
-                                  {
-                                      if (GetComputedVisibility())
-                                      {
-                                          SetDeferredUpdate(UIObjectUpdateType::UPDATE_TEXT_RENDER_DATA, false);
-                                      }
+    OnComputedVisibilityChange
+        .Bind([this]()
+            {
+                if (GetComputedVisibility())
+                {
+                    SetDeferredUpdate(UIObjectUpdateType::UPDATE_TEXT_RENDER_DATA, false);
+                }
 
-                                      return UIEventHandlerResult::OK;
-                                  })
+                return UIEventHandlerResult::OK;
+            })
         .Detach();
 
-    OnEnabled.Bind([this]()
-                 {
-                     UpdateMaterial(false);
+    OnEnabled
+        .Bind([this]()
+            {
+                UpdateMaterial(false);
 
-                     return UIEventHandlerResult::OK;
-                 })
+                return UIEventHandlerResult::OK;
+            })
         .Detach();
 
     OnDisabled.Bind([this]()
@@ -544,16 +548,30 @@ void UIText::OnFontAtlasUpdate_Internal()
 {
     HYP_SCOPE;
 
+    UIObject::OnFontAtlasUpdate_Internal();
+
+    {
+        UILockedUpdatesScope scope(*this, UIObjectUpdateType::UPDATE_TEXT_RENDER_DATA);
+
+        UpdateSize();
+    }
+
     SetDeferredUpdate(UIObjectUpdateType::UPDATE_TEXT_RENDER_DATA, false);
-    SetDeferredUpdate(UIObjectUpdateType::UPDATE_SIZE, false);
 }
 
 void UIText::OnTextSizeUpdate_Internal()
 {
     HYP_SCOPE;
 
+    UIObject::OnTextSizeUpdate_Internal();
+
+    {
+        UILockedUpdatesScope scope(*this, UIObjectUpdateType::UPDATE_TEXT_RENDER_DATA);
+
+        UpdateSize();
+    }
+
     SetDeferredUpdate(UIObjectUpdateType::UPDATE_TEXT_RENDER_DATA, false);
-    SetDeferredUpdate(UIObjectUpdateType::UPDATE_SIZE, false);
 }
 
 Vec2i UIText::GetParentBounds() const

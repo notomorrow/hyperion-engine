@@ -110,14 +110,18 @@ if(MSVC)
     if(HYP_DEBUG_MODE)
         message(STATUS "Generating PDB for Hyperion library")
 
-        set(CMAKE_CXX_FLAGS "/Zc:preprocessor /O2 /MD /Zi /constexpr:depth1024 /bigobj")
+        set(CMAKE_CXX_FLAGS "/Zc:preprocessor /O2 /Oy /MD /Zi /constexpr:depth1024 /bigobj")
         set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS_RELEASE} /DEBUG")
         set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS_RELEASE} /DEBUG")
     else()
-        set(CMAKE_CXX_FLAGS "/Zc:preprocessor /O2 /MD /constexpr:depth1024 /bigobj")
+        set(CMAKE_CXX_FLAGS "/Zc:preprocessor /O2 /Oy /MD /constexpr:depth1024 /bigobj")
     endif()
 else()
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
+    if(HYP_DEBUG_MODE)
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O1 -g")
+    else()
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
+    endif()
     # set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g")
 
     # no exceptions
@@ -125,6 +129,7 @@ else()
 
     # for full template backtrace
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -ftemplate-backtrace-limit=0")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-omit-frame-pointer")
 
     # # address sanitizer and other debugging utilities
     # set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address -fsanitize=undefined")

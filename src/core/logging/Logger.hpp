@@ -23,8 +23,6 @@
 #include <core/threading/Mutex.hpp>
 #include <core/threading/AtomicVar.hpp>
 
-#include <core/Util.hpp> // For HYP_PRETTY_FUNCTION_NAME
-
 namespace hyperion {
 
 enum class LogChannelFlags : uint32
@@ -212,16 +210,12 @@ static inline void Log_Internal(Logger& logger, const LogChannel& channel, Args&
 
     if (logger.IsChannelEnabled(channel))
     {
-        logger.Log(
-            channel,
-            LogMessage {
-                Category.GetLevel(),
-                prefixString + utilities::Format<FormatString>(std::forward<Args>(args)...) });
+        logger.Log(channel, LogMessage { Category.GetLevel(), prefixString + utilities::Format<FormatString>(std::forward<Args>(args)...) });
     }
 
-    if constexpr (Category.GetFlags() & LogCategory::LOG_CATEGORY_FLAG_FATAL)
+    if constexpr (Category.GetFlags() & LogCategory::LCF_FATAL)
     {
-        HYP_THROW("Fatal error logged");
+        HYP_THROW("Fatal error logged! Crashing the engine...");
     }
 }
 
@@ -250,11 +244,11 @@ using logging::LogMessage;
 #undef HYP_LOG_ONCE
 #endif
 
-#define HYP_LOG_ONCE(channel, category, fmt, ...)                                                                                                                                                                                                      \
-    do                                                                                                                                                                                                                                                 \
-    {                                                                                                                                                                                                                                                  \
-        ::hyperion::logging::LogOnceHelper::ExecuteLogOnce<HYP_STATIC_STRING(__FILE__), __LINE__, HYP_PRETTY_FUNCTION_NAME, hyperion::logging::category(), HYP_STATIC_STRING(fmt "\n")>(hyperion::logging::GetLogger(), Log_##channel, ##__VA_ARGS__); \
-    }                                                                                                                                                                                                                                                  \
+#define HYP_LOG_ONCE(channel, category, fmt, ...)                                                                                                                                                                                                                      \
+    do                                                                                                                                                                                                                                                                 \
+    {                                                                                                                                                                                                                                                                  \
+        ::hyperion::logging::LogOnceHelper::ExecuteLogOnce<HYP_STATIC_STRING(__FILE__), __LINE__, HYP_STATIC_STRING(HYP_FUNCTION_NAME_LIT), hyperion::logging::category(), HYP_STATIC_STRING(fmt "\n")>(hyperion::logging::GetLogger(), Log_##channel, ##__VA_ARGS__); \
+    }                                                                                                                                                                                                                                                                  \
     while (0)
 
 #endif

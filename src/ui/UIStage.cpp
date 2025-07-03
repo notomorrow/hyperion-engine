@@ -202,7 +202,7 @@ void UIStage::SetDefaultFontAtlas(RC<FontAtlas> fontAtlas)
     m_defaultFontAtlas = std::move(fontAtlas);
 
     OnFontAtlasUpdate();
-    OnTextSizeUpdate();
+    // OnTextSizeUpdate();
 }
 
 void UIStage::Init()
