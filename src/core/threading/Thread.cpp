@@ -8,8 +8,7 @@
 #include <core/containers/HashMap.hpp>
 
 #include <core/utilities/GlobalContext.hpp>
-
-#include <core/IdGenerator.hpp>
+#include <core/utilities/IdGenerator.hpp>
 
 #include <core/Defines.hpp>
 

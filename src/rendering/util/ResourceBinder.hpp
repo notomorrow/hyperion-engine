@@ -21,10 +21,6 @@ struct ResourceBindingAllocatorBase
     ResourceBindingAllocatorBase(uint32 maxSize)
         : maxSize(maxSize)
     {
-        if (maxSize != ~0u)
-        {
-            usedIndices.Resize(maxSize);
-        }
     }
 
     uint32 AllocateIndex()
@@ -274,14 +270,14 @@ class ResourceBinder : public ResourceBinderBase
         {
             const SizeType count = MathUtil::Max(lastFrameIds.NumBits(), currentFrameIds.NumBits());
 
-            return Bitset(currentFrameIds).Resize(count) & ~Bitset(lastFrameIds).Resize(count);
+            return Bitset(currentFrameIds).SetNumBits(count) & ~Bitset(lastFrameIds).SetNumBits(count);
         }
 
         HYP_FORCE_INLINE Bitset GetRemoved() const
         {
             const SizeType count = MathUtil::Max(lastFrameIds.NumBits(), currentFrameIds.NumBits());
 
-            return Bitset(lastFrameIds).Resize(count) & ~Bitset(currentFrameIds).Resize(count);
+            return Bitset(lastFrameIds).SetNumBits(count) & ~Bitset(currentFrameIds).SetNumBits(count);
         }
 
         TypeId typeId;
@@ -303,7 +299,6 @@ public:
         // Create storage for subclass implementations
         // subclasses use a bitset (indexing by the subclass' StaticIndex) to determine which implementations are initialized
         m_subclassImpls.Resize(numDescendants);
-        m_subclassImplsInitialized.Resize(numDescendants);
     }
 
     ResourceBinder(const ResourceBinder&) = delete;

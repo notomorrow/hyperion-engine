@@ -101,8 +101,6 @@ void RenderGroup::SetShader(const ShaderRef& shader)
     SafeRelease(std::move(m_shader));
 
     m_shader = shader;
-
-    // @TODO Re-create pipeline
 }
 
 void RenderGroup::SetRenderableAttributes(const RenderableAttributeSet& renderableAttributes)

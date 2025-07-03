@@ -21,6 +21,7 @@
 namespace hyperion {
 
 class Texture;
+using FontAtlasBitmap = Bitmap<4, ubyte>;
 
 struct HYP_API FontAtlasTextureSet
 {
@@ -61,7 +62,7 @@ public:
     FontAtlas& operator=(FontAtlas&& other) noexcept = delete;
     ~FontAtlas();
 
-    HYP_API void RenderAtlasTextures(Proc<void(TResult<RC<FontAtlas>>)>&& onCompleteCallback);
+    HYP_API Result RenderAtlasTextures();
 
     HYP_FORCE_INLINE const GlyphMetricsBuffer& GetGlyphMetrics() const
     {
@@ -91,7 +92,6 @@ public:
 
 private:
     Vec2i FindMaxDimensions(const RC<FontFace>& face) const;
-    void RenderCharacter(const Handle<Texture>& atlas, const Handle<Texture>& glyphTexture, Vec2i location, Vec2i dimensions) const;
 
     RC<FontFace> m_face;
 

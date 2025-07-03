@@ -13,6 +13,7 @@
 #include <core/math/Vector3.hpp>
 #include <core/math/Vector4.hpp>
 #include <core/math/MathUtil.hpp>
+#include <core/math/Rect.hpp>
 
 #include <util/img/WriteBitmap.hpp>
 
@@ -503,6 +504,17 @@ public:
         }
     }
 
+    Bitmap(ConstByteView bytes, uint32 width, uint32 height)
+        : m_width(width),
+          m_height(height)
+    {
+        m_pixels.Resize(width * height);
+
+        AssertDebug(bytes.Size() == GetByteSize(), "Byte view size does not match bitmap size! (%u != %u)", bytes.Size(), GetByteSize());
+
+        Memory::MemCpy(m_pixels.Data(), bytes.Data(), MathUtil::Min(m_pixels.ByteSize(), bytes.Size()));
+    }
+
     Bitmap(uint32 width, uint32 height)
         : m_width(width),
           m_height(height)
@@ -850,6 +862,76 @@ public:
             {
                 err += dx;
                 y0 += sy;
+            }
+        }
+    }
+
+    /*! \brief Blit another bitmap onto this bitmap at the specified offset.
+     *
+     * \param other The bitmap to blit.
+     * \param offset The offset to blit the other bitmap at.
+     * \param extent The dimensions of the area to blit.
+     */
+    template <uint32 OtherNumComponents, class OtherPixelComponentType>
+    void Blit(const Bitmap<OtherNumComponents, OtherPixelComponentType>& other, Rect<uint32> srcRect, Rect<uint32> dstRect)
+    {
+        const int dstStartX = dstRect.x0;
+        const int dstEndX = dstRect.x1;
+
+        const int dstStartY = dstRect.y0;
+        const int dstEndY = dstRect.y1;
+
+        const int dstWidth = MathUtil::Abs(dstEndX - dstStartX);
+        const int dstHeight = MathUtil::Abs(dstEndY - dstStartY);
+
+        const int dstStepX = (dstEndX > dstStartX) ? 1 : -1;
+        const int dstStepY = (dstEndY > dstStartY) ? 1 : -1;
+
+        const float srcStartX = float(srcRect.x0);
+        const float srcEndX = float(srcRect.x1);
+        const float srcStartY = float(srcRect.y0);
+        const float srcEndY = float(srcRect.y1);
+        const float srcWidth = srcEndX - srcStartX;
+        const float srcHeight = srcEndY - srcStartY;
+
+        for (int j = 0; j < dstHeight; j++)
+        {
+            const float srcY = srcStartY + ((float(j) + 0.5f) / float(dstHeight)) * srcHeight;
+
+            int sy0 = int(MathUtil::Floor(srcY));
+            int sy1 = sy0 + 1;
+
+            const float ty = srcY - float(sy0);
+
+            sy0 = MathUtil::Max(sy0, 0);
+            sy1 = MathUtil::Max(sy1, 0);
+
+            for (int i = 0; i < dstWidth; i++)
+            {
+                const float srcX = srcStartX + ((float(i) + 0.5f) / float(dstWidth)) * srcWidth;
+
+                int sx0 = int(MathUtil::Floor(srcX));
+                int sx1 = sx0 + 1;
+
+                const float tx = srcX - float(sx0);
+
+                sx0 = MathUtil::Max(sx0, 0);
+                sx1 = MathUtil::Max(sx1, 0);
+
+                // Fetch the four neighboring source pixels and convert them to normalized RGBA (0.0 - 1.0)
+                const Vec4f c00 = sx0 < other.GetWidth() && sy0 < other.GetHeight() ? other.GetPixel(sx0, sy0).GetRGBA() : Vec4f(0.0f, 0.0f, 0.0f, 1.0f);
+                const Vec4f c10 = sx1 < other.GetWidth() && sy0 < other.GetHeight() ? other.GetPixel(sx1, sy0).GetRGBA() : Vec4f(0.0f, 0.0f, 0.0f, 1.0f);
+                const Vec4f c01 = sx0 < other.GetWidth() && sy1 < other.GetHeight() ? other.GetPixel(sx0, sy1).GetRGBA() : Vec4f(0.0f, 0.0f, 0.0f, 1.0f);
+                const Vec4f c11 = sx1 < other.GetWidth() && sy1 < other.GetHeight() ? other.GetPixel(sx1, sy1).GetRGBA() : Vec4f(0.0f, 0.0f, 0.0f, 1.0f);
+
+                // Perform bilinear interpolation.
+                const Vec4f c0 = MathUtil::Lerp(c00, c10, tx);
+                const Vec4f c1 = MathUtil::Lerp(c01, c11, tx);
+
+                Vec4f resultColor = MathUtil::Lerp(c0, c1, ty);
+
+                // Write the pixel to the destination bitmap.
+                SetPixel(uint32(dstStartX + i * dstStepX), uint32(dstStartY + j * dstStepY), PixelType(resultColor));
             }
         }
     }

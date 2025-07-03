@@ -11,8 +11,7 @@
 #include <core/math/Vector2.hpp>
 
 #include <core/utilities/EnumFlags.hpp>
-
-#include <core/IdGenerator.hpp>
+#include <core/utilities/IdGenerator.hpp>
 
 #include <util/AtlasPacker.hpp>
 

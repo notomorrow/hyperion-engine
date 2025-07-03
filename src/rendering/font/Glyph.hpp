@@ -7,6 +7,10 @@
 
 #include <core/utilities/Result.hpp>
 
+#include <core/memory/UniquePtr.hpp>
+
+#include <util/img/Bitmap.hpp>
+
 #include <rendering/font/FontEngine.hpp>
 #include <rendering/font/FontFace.hpp>
 
@@ -16,12 +20,14 @@ namespace hyperion {
 
 class Texture;
 
+using GlyphBitmap = Bitmap<4, ubyte>;
+
 struct GlyphImageData
 {
     Vec2i dimensions;
     ByteBuffer byteBuffer;
 
-    HYP_API Handle<Texture> CreateTexture() const;
+    HYP_API UniquePtr<GlyphBitmap> CreateBitmap() const;
 };
 
 class Glyph
@@ -67,7 +73,7 @@ public:
     }
 
     HYP_API void LoadMetrics();
-    HYP_API TResult<Handle<Texture>> Rasterize();
+    HYP_API TResult<UniquePtr<GlyphBitmap>> Rasterize();
 
     HYP_API Vec2i GetMax();
     HYP_API Vec2i GetMin();

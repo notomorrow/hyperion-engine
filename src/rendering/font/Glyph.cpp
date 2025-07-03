@@ -26,14 +26,9 @@ static constexpr TextureFormat g_glyphTextureFormat = TF_RGBA8;
 
 #pragma region GlyphImageData
 
-Handle<Texture> GlyphImageData::CreateTexture() const
+UniquePtr<GlyphBitmap> GlyphImageData::CreateBitmap() const
 {
-    return CreateObject<Texture>(TextureData {
-        TextureDesc {
-            TT_TEX2D,
-            g_glyphTextureFormat,
-            Vec3u { uint32(dimensions.x), uint32(dimensions.y), 1 } },
-        byteBuffer });
+    return MakeUnique<GlyphBitmap>(byteBuffer.ToByteView(), uint32(dimensions.x), uint32(dimensions.y));
 }
 
 #pragma endregion GlyphImageData
@@ -68,7 +63,7 @@ void Glyph::LoadMetrics()
 #endif
 }
 
-TResult<Handle<Texture>> Glyph::Rasterize()
+TResult<UniquePtr<GlyphBitmap>> Glyph::Rasterize()
 {
     AssertThrow(m_face != nullptr);
 
@@ -143,13 +138,7 @@ TResult<Handle<Texture>> Glyph::Rasterize()
         return HYP_MAKE_ERROR(Error, "Failed to rasterize glyph, no font data in buffer");
     }
 
-    Handle<Texture> glyphTexture = m_glyphImageData.CreateTexture();
-    if (!InitObject(glyphTexture))
-    {
-        return HYP_MAKE_ERROR(Error, "Failed to initialize glyph texture");
-    }
-
-    return std::move(glyphTexture);
+    return m_glyphImageData.CreateBitmap();
 }
 
 Vec2i Glyph::GetMax()

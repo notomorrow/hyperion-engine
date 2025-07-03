@@ -149,10 +149,6 @@ public:
         return reinterpret_cast<const ubyte*>(m_blocks.Data());
     }
 
-    /*! \brief Resizes the bitset to the given number of bits.
-        \param numBits The new number of bits in the bitset. */
-    HYP_API Bitset& Resize(SizeType numBits);
-
     /*! \brief Returns the index of the first set bit. If no bit is set, -1 is returned.
         \returns The index of the first set bit. */
     inline BitIndex FirstSetBitIndex() const
@@ -265,7 +261,7 @@ public:
         }
 
         // No free bit currently; return the first bit of the next block to be added
-        return numBlocks * numBitsPerBlock;
+        return numBlocks << numBitsPerBlockLog2;
     }
 
     inline BitIndex LastZeroBitIndex() const
@@ -290,7 +286,7 @@ public:
         }
 
         // No free bit currently; return the first bit of the next block to be added
-        return numBlocks * numBitsPerBlock;
+        return numBlocks << numBitsPerBlockLog2;
     }
 
     /*! \brief Get the value of the bit at the given index.
@@ -328,6 +324,10 @@ public:
     {
         return m_blocks.Size() * numBitsPerBlock;
     }
+
+    /*! \brief Resizes the bitset to the given number of bits.
+        \param numBits The new number of bits in the bitset.*/
+    HYP_API Bitset& SetNumBits(SizeType numBits);
 
     /*! \brief Returns the number of ones in the bitset.
         \returns The number of ones in the bitset. */

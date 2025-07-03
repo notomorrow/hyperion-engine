@@ -426,7 +426,7 @@ private:
     void InitManipulationWidgetSelection();
     void InitActiveSceneSelection();
 
-    void CreateFontAtlas(Proc<void(TResult<RC<FontAtlas>>)>&& onComplete);
+    TResult<RC<FontAtlas>> CreateFontAtlas();
 
     void UpdateCamera(float delta);
     void UpdateTasks(float delta);

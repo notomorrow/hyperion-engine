@@ -42,8 +42,7 @@ struct ClassTraits
 
 } // namespace utilities
 
-template <class... Types>
-using ClassTraits = utilities::ClassTraits;
+using utilities::ClassTraits;
 
 } // namespace hyperion
 

@@ -192,7 +192,7 @@ FontAtlas::SymbolList FontAtlas::GetDefaultSymbolList()
     return symbolList;
 }
 
-void FontAtlas::RenderAtlasTextures(Proc<void(TResult<RC<FontAtlas>>)>&& onCompleteCallback)
+Result FontAtlas::RenderAtlasTextures()
 {
     AssertThrow(m_face != nullptr);
 
@@ -204,11 +204,7 @@ void FontAtlas::RenderAtlasTextures(Proc<void(TResult<RC<FontAtlas>>)>&& onCompl
     m_glyphMetrics.Clear();
     m_glyphMetrics.Resize(m_symbolList.Size());
 
-    AtomicSemaphore* semaphore = new AtomicSemaphore();
-    Proc<void(TResult<RC<FontAtlas>>)>* onComplete = new Proc<void(TResult<RC<FontAtlas>>)>(std::move(onCompleteCallback));
-    Array<Pair<Handle<Texture>, Proc<void(TResult<ByteBuffer>&&)>>> readbackHandlerFunctions;
-
-    const auto renderGlyphs = [&](float scale, bool isMainAtlas)
+    const auto renderGlyphs = [&](float scale, bool isMainAtlas) -> Result
     {
         const Vec2i scaledExtent {
             MathUtil::Ceil<float, int>(float(m_cellDimensions.x) * scale),
@@ -217,130 +213,101 @@ void FontAtlas::RenderAtlasTextures(Proc<void(TResult<RC<FontAtlas>>)>&& onCompl
 
         HYP_LOG(Font, Info, "Rendering font atlas for pixel size {}", scaledExtent.y);
 
-        const TextureDesc atlasTextureDesc {
-            TT_TEX2D,
-            TF_RGBA8,
-            Vec3u { uint32(scaledExtent.x * s_symbolColumns), uint32(scaledExtent.y * s_symbolRows), 1 },
-            TFM_NEAREST,
-            TFM_NEAREST,
-            TWM_CLAMP_TO_EDGE
-        };
-
-        Handle<Texture> atlasTexture = CreateObject<Texture>(atlasTextureDesc);
-        InitObject(atlasTexture);
+        UniquePtr<FontAtlasBitmap> atlasBitmap = MakeUnique<FontAtlasBitmap>(uint32(scaledExtent.x * s_symbolColumns), uint32(scaledExtent.y * s_symbolRows));
 
         for (SizeType i = 0; i < m_symbolList.Size(); i++)
         {
             const auto& symbol = m_symbolList[i];
 
             const Vec2i index { int(i % s_symbolColumns), int(i / s_symbolColumns) };
-            const Vec2i position = index * scaledExtent;
+            const Vec2i offset = index * scaledExtent;
 
             Glyph glyph { m_face, m_face->GetGlyphIndex(symbol), scale };
 
             if (isMainAtlas)
             {
                 m_glyphMetrics[i] = glyph.GetMetrics();
-                m_glyphMetrics[i].imagePosition = position;
+                m_glyphMetrics[i].imagePosition = offset;
             }
 
-            TResult<Handle<Texture>> glyphRasterizeResult = glyph.Rasterize();
+            TResult<UniquePtr<GlyphBitmap>> glyphRasterizeResult = glyph.Rasterize();
 
             if (glyphRasterizeResult.HasError())
             {
                 HYP_LOG(Font, Error, "Failed to rasterize glyph for symbol '{}': {}", symbol, glyphRasterizeResult.GetError().GetMessage());
 
-                continue;
+                return glyphRasterizeResult.GetError();
             }
 
-            Handle<Texture> glyphTexture = std::move(glyphRasterizeResult.GetValue());
-            AssertDebug(glyphTexture.IsValid());
+            UniquePtr<GlyphBitmap> glyphBitmap = std::move(glyphRasterizeResult.GetValue());
+            AssertDebug(glyphBitmap != nullptr);
 
             if (index.y > s_symbolRows)
             {
                 break;
             }
 
-            // Render our character texture => atlas texture
-            RenderCharacter(atlasTexture, glyphTexture, position, scaledExtent);
+            Rect<uint32> srcRect {
+                0, 0,
+                uint32(scaledExtent.x),
+                uint32(scaledExtent.y)
+            };
+
+            Rect<uint32> dstRect {
+                uint32(offset.x),
+                uint32(offset.y),
+                uint32(offset.x + scaledExtent.x),
+                uint32(offset.y + scaledExtent.y)
+            };
+
+            atlasBitmap->Blit(*glyphBitmap, srcRect, dstRect);
         }
 
-        // Readback the texture to streamed texture data
-        readbackHandlerFunctions.EmplaceBack(atlasTexture, [fontAtlas = RefCountedPtrFromThis(), atlasTexture, semaphore, onComplete](auto&& result)
-            {
-                HYP_DEFER({
-                    semaphore->Release(1, [&]()
-                        {
-                            delete semaphore;
+        // debugging
+        if (!atlasBitmap->Write("TmpAtlas.bmp"))
+        {
+            HYP_FAIL("what");
+        }
 
-                            (*onComplete)(fontAtlas);
-                            delete onComplete;
-                        });
-                });
+        // Create the atlas texture
 
-                if (result.HasError())
-                {
-                    HYP_LOG(Font, Error, "Failed to readback texture: {}", result.GetError().GetMessage());
+        const TextureDesc atlasTextureDesc {
+            TT_TEX2D,
+            TF_RGBA8,
+            Vec3u { atlasBitmap->GetWidth(), atlasBitmap->GetHeight(), 1 },
+            TFM_NEAREST,
+            TFM_NEAREST,
+            TWM_CLAMP_TO_EDGE
+        };
 
-                    return;
-                }
+        TextureData atlasTextureData {
+            atlasTextureDesc,
+            atlasBitmap->ToByteBuffer()
+        };
 
-                ByteBuffer byteBuffer = std::move(result.GetValue());
-
-                const SizeType expected = atlasTexture->GetTextureDesc().GetByteSize();
-                const SizeType real = byteBuffer.Size();
-
-                AssertThrowMsg(expected == real, "Failed to readback texture: expected size: %llu, got %llu", expected, real);
-
-                ResourceHandle res;
-
-                TextureData newTextureData {
-                    atlasTexture->GetTextureDesc(),
-                    std::move(byteBuffer)
-                };
-
-                atlasTexture->SetStreamedTextureData(MakeRefCountedPtr<StreamedTextureData>(std::move(newTextureData), res));
-            });
+        Handle<Texture> atlasTexture = CreateObject<Texture>(std::move(atlasTextureData));
+        InitObject(atlasTexture);
 
         // Add initial atlas
         m_atlasTextures.AddAtlas(scaledExtent.y, std::move(atlasTexture), isMainAtlas);
+
+        return {};
     };
 
-    renderGlyphs(1.0f, true);
+    if (Result result = renderGlyphs(1.0f, true); result.HasError())
+    {
+        return result.GetError();
+    }
 
     for (float i = 1.1f; i <= 3.0f; i += 0.1f)
     {
-        renderGlyphs(i, false);
+        if (auto result = renderGlyphs(i, false); result.HasError())
+        {
+            return result.GetError();
+        }
     }
 
-    if (readbackHandlerFunctions.Empty())
-    {
-        delete semaphore;
-
-        (*onComplete)(RefCountedPtrFromThis());
-        delete onComplete;
-
-        return;
-    }
-
-    semaphore->SetValue(readbackHandlerFunctions.Size());
-
-    for (auto& it : readbackHandlerFunctions)
-    {
-        Handle<Texture>& texture = it.first;
-        Proc<void(TResult<ByteBuffer>&&)>& readbackFunc = it.second;
-
-        texture->GetRenderResource().EnqueueReadback(std::move(readbackFunc));
-    }
-}
-
-void FontAtlas::RenderCharacter(const Handle<Texture>& atlasTexture, const Handle<Texture>& glyphTexture, Vec2i location, Vec2i dimensions) const
-{
-    // temp shit
-    atlasTexture->GetRenderResource().IncRef();
-    glyphTexture->GetRenderResource().IncRef();
-
-    PUSH_RENDER_COMMAND(FontAtlas_RenderCharacter, atlasTexture, glyphTexture, location, dimensions);
+    return {};
 }
 
 Vec2i FontAtlas::FindMaxDimensions(const RC<FontFace>& face) const

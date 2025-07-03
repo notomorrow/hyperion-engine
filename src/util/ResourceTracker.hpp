@@ -272,7 +272,6 @@ public:
         // Setup the subclass implementations array, we initialize them as they get used
         const SizeType numDescendants = GetNumDescendants(IdType::typeIdStatic);
         m_subclassImpls.Resize(numDescendants);
-        m_subclassImplsInitialized.Resize(numDescendants);
     }
 
     ResourceTracker(const ResourceTracker& other) = delete;
@@ -656,16 +655,16 @@ protected:
 
         HYP_FORCE_INLINE Bitset GetAdded() const
         {
-            const SizeType newNubits = MathUtil::Max(previous.NumBits(), next.NumBits());
+            const SizeType newNumBits = MathUtil::Max(previous.NumBits(), next.NumBits());
 
-            return Bitset(next).Resize(newNubits) & ~Bitset(previous).Resize(newNubits);
+            return Bitset(next).SetNumBits(newNumBits) & ~Bitset(previous).SetNumBits(newNumBits);
         }
 
         HYP_FORCE_INLINE Bitset GetRemoved() const
         {
-            const SizeType newNubits = MathUtil::Max(previous.NumBits(), next.NumBits());
+            const SizeType newNumBits = MathUtil::Max(previous.NumBits(), next.NumBits());
 
-            return Bitset(previous).Resize(newNubits) & ~Bitset(next).Resize(newNubits);
+            return Bitset(previous).SetNumBits(newNumBits) & ~Bitset(next).SetNumBits(newNumBits);
         }
 
         HYP_FORCE_INLINE const Bitset& GetChanged() const

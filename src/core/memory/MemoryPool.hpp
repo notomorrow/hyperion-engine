@@ -17,7 +17,7 @@
 
 #include <core/profiling/ProfileScope.hpp>
 
-#include <core/IdGenerator.hpp>
+#include <core/utilities/IdGenerator.hpp>
 
 #include <Types.hpp>
 

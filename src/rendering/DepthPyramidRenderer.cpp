@@ -74,11 +74,7 @@ void DepthPyramidRenderer::Create()
         HYP_NAMED_SCOPE("Create depth pyramid resources");
         Threads::AssertOnThread(g_renderThread);
 
-        m_depthPyramidSampler = g_renderBackend->MakeSampler(
-            TFM_NEAREST_MIPMAP,
-            TFM_NEAREST,
-            TWM_CLAMP_TO_EDGE);
-
+        m_depthPyramidSampler = g_renderBackend->MakeSampler(TFM_NEAREST_MIPMAP, TFM_NEAREST, TWM_CLAMP_TO_EDGE);
         HYPERION_ASSERT_RESULT(m_depthPyramidSampler->Create());
 
         const ImageRef& depthImage = m_depthImageView->GetImage();

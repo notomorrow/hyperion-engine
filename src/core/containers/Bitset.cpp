@@ -198,6 +198,8 @@ void Bitset::Set(BitIndex index, bool value)
     else
     {
         m_blocks[blockIndex] &= ~GetBitMask(index);
+
+        // RemoveLeadingZeros();
     }
 }
 
@@ -206,26 +208,23 @@ void Bitset::Clear()
     m_blocks = CreateBlocks_Static_Internal<0>();
 }
 
-Bitset& Bitset::Resize(SizeType numBits)
+Bitset& Bitset::SetNumBits(SizeType numBits)
 {
     const SizeType previousNumBlocks = m_blocks.Size();
-    const SizeType newNumBlocks = (numBits + (numBitsPerBlock - 1)) / numBitsPerBlock;
+    SizeType newNumBlocks = (numBits + (numBitsPerBlock - 1)) / numBitsPerBlock;
+
+    if (newNumBlocks < numPreallocatedBlocks)
+    {
+        newNumBlocks = numPreallocatedBlocks;
+    }
+
+    if (newNumBlocks == m_blocks.Size())
+    {
+        // no need to resize if it would be the same
+        return *this;
+    }
 
     m_blocks.Resize(newNumBlocks);
-
-    const SizeType currentNumBits = NumBits();
-
-    // if (currentNumBits > numBits && !m_blocks.Empty()) {
-    //     // @FIXME: Use bitmask
-    //     for (uint32 index = numBits; index < currentNumBits; ++index) {
-    //         Set(index, false);
-    //     }
-    // }
-
-    if (m_blocks.Size() < numPreallocatedBlocks)
-    {
-        m_blocks.Resize(numPreallocatedBlocks);
-    }
 
     return *this;
 }

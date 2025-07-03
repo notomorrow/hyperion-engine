@@ -15,7 +15,6 @@
 namespace hyperion {
 
 HYP_STRUCT(Size = 224, Serialize = "bitwise")
-
 struct HYP_API Frustum
 {
     HYP_FIELD()
