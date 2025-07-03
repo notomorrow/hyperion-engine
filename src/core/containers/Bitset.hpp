@@ -265,7 +265,7 @@ public:
         }
 
         // No free bit currently; return the first bit of the next block to be added
-        return GetBlockIndex(numBlocks) * numBitsPerBlock;
+        return numBlocks * numBitsPerBlock;
     }
 
     inline BitIndex LastZeroBitIndex() const
@@ -290,7 +290,7 @@ public:
         }
 
         // No free bit currently; return the first bit of the next block to be added
-        return GetBlockIndex(m_blocks.Size()) * numBitsPerBlock;
+        return numBlocks * numBitsPerBlock;
     }
 
     /*! \brief Get the value of the bit at the given index.

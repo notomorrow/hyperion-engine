@@ -46,6 +46,13 @@
   </Type>
 
 
+  <Type Name="hyperion::containers::SparsePagedArray&lt;*,*&gt;">
+    <Expand>
+      <CustomListItems>
+        <!-- TODO: Loop through items and accumulate 1s in bitsets to get number of pages and nubmer of elements initialized -->
+      </CustomListItems>
+    </Expand>
+  </Type>
 
   <Type Name="hyperion::containers::Bitset">
     <Expand>
@@ -64,7 +71,7 @@
           </If>
 
           <If Condition="m_blocks.m_allocation.allocationType == 2 &amp;&amp; m_blocks.m_allocation.isDynamic == true">
-            <Item Name="[{ idx }]">((*(((unsigned __int32 *)m_blocks.m_allocation.dynamicAllocation.buffer) + m_blocks.m_startOffset + idx / numBitsPerBlock)) &gt; &gt; (idx % numBitsPerBlock)) &amp; 1</Item>
+            <Item Name="[{ idx }]">(* ( (unsigned __int32 *)m_blocks.m_allocation.dynamicAllocation.buffer + m_blocks.m_startOffset + (idx / numBitsPerBlock)) &gt;&gt; (idx % numBitsPerBlock)) &amp; 1</Item>
           </If>
 
           <Exec>idx++</Exec>
