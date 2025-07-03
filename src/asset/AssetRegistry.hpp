@@ -7,8 +7,6 @@
 
 #include <core/filesystem/FsUtil.hpp>
 
-#include <core/Base.hpp>
-
 #include <core/containers/HashMap.hpp>
 #include <core/containers/HashSet.hpp>
 

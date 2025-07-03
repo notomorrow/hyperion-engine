@@ -116,12 +116,12 @@ RenderShadowMap* ShadowMapAllocator::AllocateShadowMap(ShadowMapType shadowMapTy
 {
     if (shadowMapType == SMT_OMNI)
     {
-        const uint32 pointLightIndex = m_pointLightShadowMapIdGenerator.NextID() - 1;
+        const uint32 pointLightIndex = m_pointLightShadowMapIdGenerator.Next() - 1;
 
         // Cannot allocate if we ran out of IDs
         if (pointLightIndex >= maxBoundPointShadowMaps)
         {
-            m_pointLightShadowMapIdGenerator.FreeID(pointLightIndex + 1);
+            m_pointLightShadowMapIdGenerator.ReleaseId(pointLightIndex + 1);
 
             return nullptr;
         }
@@ -191,7 +191,7 @@ bool ShadowMapAllocator::FreeShadowMap(RenderShadowMap* shadowMap)
     }
     else if (atlasElement.pointLightIndex != ~0u)
     {
-        m_pointLightShadowMapIdGenerator.FreeID(atlasElement.pointLightIndex + 1);
+        m_pointLightShadowMapIdGenerator.ReleaseId(atlasElement.pointLightIndex + 1);
 
         result = true;
     }

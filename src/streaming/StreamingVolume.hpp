@@ -3,7 +3,6 @@
 #ifndef HYPERION_STREAMING_VOLUME_HPP
 #define HYPERION_STREAMING_VOLUME_HPP
 
-#include <core/Base.hpp>
 #include <core/Handle.hpp>
 #include <core/Defines.hpp>
 

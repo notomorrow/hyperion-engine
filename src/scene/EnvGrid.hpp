@@ -3,11 +3,11 @@
 #ifndef HYPERION_ENV_GRID_HPP
 #define HYPERION_ENV_GRID_HPP
 
-#include <core/Base.hpp>
-
 #include <core/config/Config.hpp>
 
 #include <core/containers/Bitset.hpp>
+
+#include <core/object/HypObject.hpp>
 
 #include <core/threading/AtomicVar.hpp>
 

@@ -3,7 +3,6 @@
 #ifndef HYPERION_UI_OBJECT_HPP
 #define HYPERION_UI_OBJECT_HPP
 
-#include <core/Base.hpp>
 #include <core/Defines.hpp>
 
 #include <core/object/HypObject.hpp>

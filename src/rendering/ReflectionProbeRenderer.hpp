@@ -2,8 +2,6 @@
 #ifndef HYPERION_REFLECTION_PROBE_HPP
 #define HYPERION_REFLECTION_PROBE_HPP
 
-#include <core/Base.hpp>
-
 #include <core/memory/resource/Resource.hpp>
 
 #include <core/math/BoundingBox.hpp>

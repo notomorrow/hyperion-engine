@@ -3,8 +3,6 @@
 #ifndef HYPERION_SKELETON_HPP
 #define HYPERION_SKELETON_HPP
 
-#include <core/Base.hpp>
-
 #include <core/Handle.hpp>
 
 #include <core/utilities/DataMutationState.hpp>

@@ -46,7 +46,7 @@ struct IdGenerator
 
     ~IdGenerator() = default;
 
-    uint32 NextID()
+    uint32 Next()
     {
         uint32 currentNumFreeIndices;
 
@@ -73,7 +73,7 @@ struct IdGenerator
         return idCounter.Increment(1, MemoryOrder::ACQUIRE_RELEASE) + 1;
     }
 
-    void FreeID(uint32 index)
+    void ReleaseId(uint32 index)
     {
         AssertThrowMsg(index != 0, "Invalid index");
 

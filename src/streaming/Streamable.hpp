@@ -3,7 +3,6 @@
 #ifndef HYPERION_STREAMABLE_HPP
 #define HYPERION_STREAMABLE_HPP
 
-#include <core/Base.hpp>
 #include <core/Handle.hpp>
 #include <core/Defines.hpp>
 #include <core/Name.hpp>

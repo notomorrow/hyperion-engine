@@ -3,8 +3,6 @@
 #ifndef HYPERION_RENDER_SUBSYSTEM_HPP
 #define HYPERION_RENDER_SUBSYSTEM_HPP
 
-#include <core/Base.hpp>
-
 #include <core/threading/AtomicVar.hpp>
 
 #include <core/memory/RefCountedPtr.hpp>

@@ -15,7 +15,6 @@
 #include <rendering/backend/RenderCommand.hpp>
 
 #include <core/Handle.hpp>
-#include <core/Base.hpp>
 
 #include <core/object/HypObject.hpp>
 

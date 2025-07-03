@@ -178,7 +178,7 @@ public:
     {
         HYP_SCOPE;
 
-        const uint32 index = m_idGenerator.NextID() - 1;
+        const uint32 index = m_idGenerator.Next() - 1;
 
         const uint32 blockIndex = index / numElementsPerBlock;
 
@@ -237,7 +237,7 @@ public:
     {
         HYP_SCOPE;
 
-        m_idGenerator.FreeID(index + 1);
+        m_idGenerator.ReleaseId(index + 1);
 
         const uint32 blockIndex = index / numElementsPerBlock;
 

@@ -3,8 +3,6 @@
 #ifndef HYPERION_LIGHTMAP_VOLUME_HPP
 #define HYPERION_LIGHTMAP_VOLUME_HPP
 
-#include <core/Base.hpp>
-
 #include <core/object/HypObject.hpp>
 
 #include <core/math/BoundingBox.hpp>

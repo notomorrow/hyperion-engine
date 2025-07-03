@@ -185,8 +185,8 @@ struct DrawCallCollection
 
     RenderGroup* renderGroup;
 
-    Array<DrawCall, InlineAllocator<16>> drawCalls;
-    Array<InstancedDrawCall, InlineAllocator<16>> instancedDrawCalls;
+    Array<DrawCall> drawCalls;
+    Array<InstancedDrawCall> instancedDrawCalls;
 
     // Map from draw call Id to index in instancedDrawCalls
     HashMap<uint64, Array<SizeType>> indexMap;

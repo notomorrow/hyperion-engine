@@ -8,7 +8,6 @@
 #include <scene/Octree.hpp>
 #include <scene/camera/Camera.hpp>
 
-#include <core/Base.hpp>
 #include <core/Name.hpp>
 
 #include <core/utilities/UUID.hpp>

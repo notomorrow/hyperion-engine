@@ -6,6 +6,8 @@
 #include <rendering/RenderGroup.hpp>
 #include <rendering/RenderMesh.hpp>
 #include <rendering/Renderer.hpp>
+#include <rendering/Bindless.hpp>
+#include <rendering/PlaceholderData.hpp>
 
 #include <rendering/rhi/CmdList.hpp>
 
@@ -80,19 +82,70 @@ struct RENDER_COMMAND(CreateTexture)
                     const TextureData& textureData = streamedTextureDataHandle->GetTextureData();
                     const TextureDesc& textureDesc = streamedTextureDataHandle->GetTextureDesc();
 
-                    AssertThrowMsg(textureData.buffer.Size() == textureDesc.GetByteSize(),
-                        "Streamed texture data buffer size mismatch in CreateTexture! Texture Id: %u, Texture name: %s, Expected: %u, Actual: %u (HashCode: %llu)",
-                        texture->Id().Value(), texture->GetName().LookupString(),
-                        textureDesc.GetByteSize(), textureData.buffer.Size(), streamedTextureDataHandle->GetDataHashCode().Value());
+                    ByteBuffer const* textureDataBuffer = &textureData.buffer;
+                    LinkedList<ByteBuffer> placeholderBuffers;
 
-                    AssertThrowMsg(streamedTextureDataHandle->GetTextureData().buffer.Size() == streamedTextureDataHandle->GetBufferSize(),
-                        "Streamed texture data buffer size mismatch! Expected: %u, Actual: %u (HashCode: %llu)",
-                        streamedTextureDataHandle->GetBufferSize(), streamedTextureDataHandle->GetTextureData().buffer.Size(),
-                        streamedTextureDataHandle->GetDataHashCode().Value());
+                    if (textureDesc != image->GetTextureDesc())
+                    {
+                        HYP_LOG(Streaming, Warning, "Streamed texture data TextureDesc not equal to Image's TextureDesc!");
+                    }
 
-                    GpuBufferRef stagingBuffer = g_renderBackend->MakeGpuBuffer(GpuBufferType::STAGING_BUFFER, textureData.buffer.Size());
+                    if (textureDataBuffer->Size() != image->GetByteSize())
+                    {
+                        HYP_LOG(Streaming, Warning, "Streamed texture data buffer size mismatch! Expected: {}, Got: {}",
+                            image->GetByteSize(), textureDesc.GetByteSize());
+
+                        // fill some placeholder data with zeros so we don't crash
+                        ByteBuffer* placeholderBuffer = &placeholderBuffers.EmplaceBack();
+                        placeholderBuffer->SetSize(image->GetByteSize());
+
+                        switch (image->GetType())
+                        {
+                        case TT_TEX2D:
+                            switch (image->GetTextureFormat())
+                            {
+                            case TF_R8:
+                                FillPlaceholderBuffer_Tex2D<TF_R8>(image->GetExtent().GetXY(), *placeholderBuffer);
+                                break;
+                            case TF_RGBA8:
+                                FillPlaceholderBuffer_Tex2D<TF_RGBA8>(image->GetExtent().GetXY(), *placeholderBuffer);
+                                break;
+                            case TF_RGBA16F:
+                                FillPlaceholderBuffer_Tex2D<TF_RGBA16F>(image->GetExtent().GetXY(), *placeholderBuffer);
+                                break;
+                            case TF_RGBA32F:
+                                FillPlaceholderBuffer_Tex2D<TF_RGBA32F>(image->GetExtent().GetXY(), *placeholderBuffer);
+                                break;
+                            default:
+                                // no FillPlaceholderBuffer method defined
+                                break;
+                            }
+                            break;
+                        case TT_CUBEMAP:
+                            switch (image->GetTextureFormat())
+                            {
+                            case TF_R8:
+                                FillPlaceholderBuffer_Cubemap<TF_R8>(image->GetExtent().GetXY(), *placeholderBuffer);
+                                break;
+                            case TF_RGBA8:
+                                FillPlaceholderBuffer_Cubemap<TF_RGBA8>(image->GetExtent().GetXY(), *placeholderBuffer);
+                                break;
+                            default:
+                                // no FillPlaceholderBuffer method defined
+                                break;
+                            }
+                            break;
+                        default:
+                            // no FillPlaceholderBuffer method defined
+                            break;
+                        }
+
+                        textureDataBuffer = placeholderBuffer;
+                    }
+
+                    GpuBufferRef stagingBuffer = g_renderBackend->MakeGpuBuffer(GpuBufferType::STAGING_BUFFER, textureDataBuffer->Size());
                     HYPERION_BUBBLE_ERRORS(stagingBuffer->Create());
-                    stagingBuffer->Copy(textureData.buffer.Size(), textureData.buffer.Data());
+                    stagingBuffer->Copy(textureDataBuffer->Size(), textureDataBuffer->Data());
 
                     HYP_DEFER({ SafeRelease(std::move(stagingBuffer)); });
 
@@ -102,9 +155,7 @@ struct RENDER_COMMAND(CreateTexture)
 
                     commands.Push([&](CmdList& cmd)
                         {
-                            cmd.Add<InsertBarrier>(
-                                image,
-                                RS_COPY_DST);
+                            cmd.Add<InsertBarrier>(image, RS_COPY_DST);
 
                             cmd.Add<CopyBufferToImage>(stagingBuffer, image);
 
@@ -113,9 +164,7 @@ struct RENDER_COMMAND(CreateTexture)
                                 cmd.Add<GenerateMipmaps>(image);
                             }
 
-                            cmd.Add<InsertBarrier>(
-                                image,
-                                initialState);
+                            cmd.Add<InsertBarrier>(image, initialState);
                         });
 
                     if (RendererResult result = commands.Execute(); result.HasError())
@@ -147,7 +196,7 @@ struct RENDER_COMMAND(CreateTexture)
 
             if (g_renderBackend->GetRenderConfig().IsBindlessSupported())
             {
-                g_renderGlobalState->BindlessTextures.AddResource(texture.Id(), imageView);
+                //g_renderGlobalState->bindlessStorage->AddResource(texture.Id(), imageView);
             }
         }
 
@@ -180,7 +229,7 @@ struct RENDER_COMMAND(DestroyTexture)
 
         if (g_renderBackend->GetRenderConfig().IsBindlessSupported())
         {
-            g_renderGlobalState->BindlessTextures.RemoveResource(texture.Id());
+            //g_renderGlobalState->bindlessStorage->RemoveResource(texture.Id());
         }
 
         HYPERION_RETURN_OK;
@@ -525,6 +574,46 @@ void RenderTexture::EnqueueReadback(Proc<void(TResult<ByteBuffer>&&)>&& onComple
             onComplete(std::move(byteBuffer));
         },
         /* forceOwnerThread */ true);
+}
+
+RendererResult RenderTexture::Readback(ByteBuffer &outByteBuffer)
+{
+    HYP_SCOPE;
+
+    GpuBufferRef gpuBuffer = g_renderBackend->MakeGpuBuffer(GpuBufferType::STAGING_BUFFER, m_image->GetByteSize());
+    HYPERION_ASSERT_RESULT(gpuBuffer->Create());
+    gpuBuffer->Map();
+
+    SingleTimeCommands commands;
+
+    commands.Push([this, &gpuBuffer](CmdList& cmd)
+        {
+            const ResourceState previousResourceState = m_image->GetResourceState();
+
+            cmd.Add<InsertBarrier>(m_image, RS_COPY_SRC);
+            cmd.Add<InsertBarrier>(gpuBuffer, RS_COPY_DST);
+
+            cmd.Add<CopyImageToBuffer>(m_image, gpuBuffer);
+
+            cmd.Add<InsertBarrier>(gpuBuffer, RS_COPY_SRC);
+            cmd.Add<InsertBarrier>(m_image, previousResourceState);
+        });
+
+    RendererResult result = commands.Execute();
+
+    if (result.HasError())
+    {
+        HYP_LOG(Rendering, Error, "Failed to readback texture data! {}", result.GetError().GetMessage());
+
+        return result;
+    }
+
+    outByteBuffer.SetSize(gpuBuffer->Size());
+    gpuBuffer->Read(outByteBuffer.Size(), outByteBuffer.Data());
+
+    gpuBuffer->Destroy();
+
+    return {};
 }
 
 void RenderTexture::Resize(const Vec3u& extent)

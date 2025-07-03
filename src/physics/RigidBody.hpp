@@ -3,7 +3,6 @@
 #ifndef HYPERION_PHYSICS_RIGID_BODY_HPP
 #define HYPERION_PHYSICS_RIGID_BODY_HPP
 
-#include <core/Base.hpp>
 #include <core/Defines.hpp>
 #include <core/Handle.hpp>
 

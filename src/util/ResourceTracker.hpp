@@ -388,8 +388,9 @@ public:
      *  \param element The element to track
      *  \param versionPtr Optional pointer to an integer that holds the version of the element. If the version does not match what is stored,
      *  the element will be considered changed and the data marked for update.
+     *  \param allowDuplicatesInSameFrame If true, allows the same ID to be tracked multiple times in the same frame. (Can have different values or versions)
      */
-    void Track(IdType id, const ElementType& element, const int* versionPtr = nullptr)
+    void Track(IdType id, const ElementType& element, const int* versionPtr = nullptr, bool allowDuplicatesInSameFrame = true)
     {
         HYP_SCOPE;
 
@@ -397,7 +398,7 @@ public:
 
         if (typeId == m_impl.typeId)
         {
-            m_impl.Track(id, element, versionPtr);
+            m_impl.Track(id, element, versionPtr, allowDuplicatesInSameFrame);
             return;
         }
 
@@ -411,7 +412,7 @@ public:
             m_subclassImplsInitialized.Set(subclassIndex, true);
         }
 
-        m_subclassImpls[subclassIndex].Get().Track(id, element, versionPtr);
+        m_subclassImpls[subclassIndex].Get().Track(id, element, versionPtr, allowDuplicatesInSameFrame);
     }
 
     bool MarkToKeep(IdType id)
@@ -672,21 +673,44 @@ protected:
             return changed;
         }
 
-        void Track(IdType id, const ElementType& value, const int* versionPtr = nullptr)
+        void Track(IdType id, const ElementType& value, const int* versionPtr = nullptr, bool allowDuplicatesInSameFrame = true)
         {
             ElementType* currentValuePtr = nullptr;
             int* currentVersionPtr = nullptr;
 
             ResourceTrackState trackState = ResourceTrackState::UNCHANGED;
 
-            AssertThrowMsg(!next.Test(id.ToIndex()), "Id #%u already marked to be added for this iteration!", id.Value());
+            if (!allowDuplicatesInSameFrame)
+            {
+                AssertThrow(!next.Test(id.ToIndex()), "Id #%u already marked to be added for this iteration!", id.Value());
+            }
 
-            if (HasElement(id))
+            if (previous.Test(id.ToIndex()) || next.Test(id.ToIndex()))
             {
                 AssertDebug(elements.HasIndex(id.ToIndex()));
 
                 currentValuePtr = &elements.Get(id.ToIndex());
                 currentVersionPtr = &versions.Get(id.ToIndex());
+
+                AssertDebug(currentValuePtr != nullptr && currentVersionPtr != nullptr);
+            }
+
+            bool isDoublyAddedThisFrame = false;
+
+            if (allowDuplicatesInSameFrame)
+            {
+                if (next.Test(id.ToIndex()))
+                {
+                    isDoublyAddedThisFrame = true;
+
+                    // already added for this iteration. check if we can just return or if we need to update
+
+                    if (value == *currentValuePtr && (versionPtr == nullptr || *versionPtr == *currentVersionPtr))
+                    {
+                        // same values, early out
+                        return;
+                    }
+                }
             }
 
             if (currentValuePtr != nullptr)
@@ -696,13 +720,14 @@ protected:
 
                 // Advance if version has changed or if elements are not equal
                 if (value != *currentValuePtr || (versionPtr != nullptr && *versionPtr != *currentVersionPtr))
-                { // element.version != iter->second.version) {
-                    // Sanity check - must not contain duplicates or it will mess up safe releasing the previous RenderProxy objects
-                    AssertDebug(!changed.Test(id.ToIndex()));
+                {
+                    if (!isDoublyAddedThisFrame)
+                    {
+                        // Mark as changed if it is found in the previous iteration
+                        changed.Set(id.ToIndex(), true);
+                    }
 
-                    // Mark as changed if it is found in the previous iteration
-                    changed.Set(id.ToIndex(), true);
-
+                    // update value and version
                     *currentValuePtr = value;
                     *currentVersionPtr = versionPtr ? *versionPtr : 0;
 
@@ -715,11 +740,14 @@ protected:
             }
             else
             {
-                // sanity check - if not in previous iteration, it must not be in the changed list
-                AssertDebug(!changed.Test(id.ToIndex()));
+                if (!isDoublyAddedThisFrame)
+                {
+                    // sanity check - if not in previous iteration, it must not be in the changed list
+                    AssertDebug(!changed.Test(id.ToIndex()));
+                }
 
                 // use emplace to destruct / reconstruct current element
-                elements.Emplace(id.ToIndex(), value);
+                elements.Set(id.ToIndex(), value);
                 versions.Set(id.ToIndex(), versionPtr ? *versionPtr : 0);
 
                 trackState = ResourceTrackState::CHANGED_ADDED;

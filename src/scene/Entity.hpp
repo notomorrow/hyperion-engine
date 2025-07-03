@@ -3,7 +3,6 @@
 #ifndef HYPERION_ENTITY_HPP
 #define HYPERION_ENTITY_HPP
 
-#include <core/Base.hpp>
 #include <core/Handle.hpp>
 
 #include <core/containers/Array.hpp>

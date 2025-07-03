@@ -3,7 +3,6 @@
 #ifndef HYPERION_POINT_LIGHT_SHADOW_RENDERER_HPP
 #define HYPERION_POINT_LIGHT_SHADOW_RENDERER_HPP
 
-#include <core/Base.hpp>
 #include <core/Handle.hpp>
 
 #include <core/object/HypObject.hpp>

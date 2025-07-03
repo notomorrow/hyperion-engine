@@ -3,7 +3,6 @@
 #ifndef HYPERION_BINDLESS_HPP
 #define HYPERION_BINDLESS_HPP
 
-#include <core/Base.hpp>
 #include <core/object/ObjId.hpp>
 
 #include <core/containers/HashMap.hpp>

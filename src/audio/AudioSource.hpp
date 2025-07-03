@@ -3,8 +3,6 @@
 #ifndef HYPERION_AUDIO_SOURCE_HPP
 #define HYPERION_AUDIO_SOURCE_HPP
 
-#include <core/Base.hpp>
-
 #include <core/object/HypObject.hpp>
 
 #include <core/math/Vector3.hpp>

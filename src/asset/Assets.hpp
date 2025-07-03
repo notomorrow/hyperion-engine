@@ -8,7 +8,6 @@
 
 #include <core/filesystem/FsUtil.hpp>
 
-#include <core/Base.hpp>
 #include <core/Handle.hpp>
 
 #include <core/object/HypObject.hpp>

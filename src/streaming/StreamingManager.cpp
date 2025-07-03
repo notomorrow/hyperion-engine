@@ -547,6 +547,8 @@ void StreamingManagerThread::ProcessCellUpdatesForLayer(LayerData& layerData)
         return;
     }
 
+    LinkedList<Proc<void()>> deferredUpdates;
+
     while (cellUpdateQueue.Any())
     {
         StreamingCellUpdate update = cellUpdateQueue.Pop();
@@ -587,7 +589,7 @@ void StreamingManagerThread::ProcessCellUpdatesForLayer(LayerData& layerData)
 
             layerData.Lock();
 
-            TaskSystem::GetInstance().Enqueue([this, &layerData, cell]()
+            deferredUpdates.EmplaceBack([this, &layerData, cell]()
                 {
                     HYP_LOG(Streaming, Debug, "Loading StreamingCell at coord: {} on thread: {} for layer: {}",
                         cell->GetPatchInfo().coord, Threads::CurrentThreadId().GetName(), layerData.layer->InstanceClass()->GetName());
@@ -617,8 +619,7 @@ void StreamingManagerThread::ProcessCellUpdatesForLayer(LayerData& layerData)
                     PostCellUpdateToGameThread(cell, StreamingCellState::LOADED);
 
                     layerData.Unlock();
-                },
-                *m_threadPool, TaskEnqueueFlags::FIRE_AND_FORGET);
+                });
 
             break;
         }
@@ -658,7 +659,7 @@ void StreamingManagerThread::ProcessCellUpdatesForLayer(LayerData& layerData)
             layerData.Lock();
 
             // Call OnStreamEnd on the cell and then Unload it
-            TaskSystem::GetInstance().Enqueue([this, cell = std::move(cell), &layerData]()
+            deferredUpdates.EmplaceBack([this, cell = std::move(cell), &layerData]()
                 {
                     HYP_LOG(Streaming, Debug, "Unloading StreamingCell at coord: {} for layer: {} on thread: {}",
                         cell->GetPatchInfo().coord, layerData.layer->InstanceClass()->GetName().LookupString(),
@@ -669,8 +670,7 @@ void StreamingManagerThread::ProcessCellUpdatesForLayer(LayerData& layerData)
                     PostCellUpdateToGameThread(cell, StreamingCellState::UNLOADED);
 
                     layerData.Unlock();
-                },
-                *m_threadPool, TaskEnqueueFlags::FIRE_AND_FORGET);
+                });
 
             break;
         }
@@ -678,6 +678,14 @@ void StreamingManagerThread::ProcessCellUpdatesForLayer(LayerData& layerData)
         {
             break;
         }
+        }
+    }
+
+    if (deferredUpdates.Any())
+    {
+        for (auto it = deferredUpdates.Begin(); it != deferredUpdates.End(); ++it)
+        {
+            TaskSystem::GetInstance().Enqueue(std::move(*it), *m_threadPool, TaskEnqueueFlags::FIRE_AND_FORGET);
         }
     }
 }

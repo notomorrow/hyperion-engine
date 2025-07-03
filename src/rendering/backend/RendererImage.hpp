@@ -95,9 +95,7 @@ public:
         return m_textureDesc.NumMipmaps();
     }
 
-    /*! \brief Returns the byte-size of the image. Note, it's possible no CPU-side memory exists
-        for the image data even if the result is non-zero. To check if any CPU-side bytes exist,
-        use HasAssignedImageData(). */
+    /*! \brief Returns the byte-size of the image, computed using the TextureDesc */
     HYP_FORCE_INLINE uint32 GetByteSize() const
     {
         return m_textureDesc.GetByteSize();

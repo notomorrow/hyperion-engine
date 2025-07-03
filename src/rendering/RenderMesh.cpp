@@ -355,57 +355,51 @@ BLASRef RenderMesh::BuildBLAS(const Handle<Material>& material) const
         AssertThrow(packedIndices[i] < packedVertices.Size());
     }
 
-    struct RENDER_COMMAND(BuildBLAS)
-        : public RenderCommand
+    struct RENDER_COMMAND(BuildBLAS) : public RenderCommand
     {
-        Task<BLASRef>* task;
+        BLASRef blas;
         Array<PackedVertex> packedVertices;
         Array<uint32> packedIndices;
         Handle<Material> material;
+        
+        GpuBufferRef packedVerticesBuffer;
+        GpuBufferRef packedIndicesBuffer;
+        GpuBufferRef verticesStagingBuffer;
+        GpuBufferRef indicesStagingBuffer;
 
-        RENDER_COMMAND(BuildBLAS)(
-            Task<BLASRef>* task,
-            Array<PackedVertex>&& packedVertices,
-            Array<uint32>&& packedIndices,
-            const Handle<Material>& material)
-            : task(task),
-              packedVertices(std::move(packedVertices)),
+        RENDER_COMMAND(BuildBLAS)(BLASRef& blas, Array<PackedVertex>&& packedVertices, Array<uint32>&& packedIndices, const Handle<Material>& material)
+            : packedVertices(std::move(packedVertices)),
               packedIndices(std::move(packedIndices)),
               material(material)
         {
-            AssertThrow(task != nullptr);
+            const SizeType packedVerticesSize = this->packedVertices.Size() * sizeof(PackedVertex);
+            const SizeType packedIndicesSize = this->packedIndices.Size() * sizeof(uint32);
+
+            packedVerticesBuffer = g_renderBackend->MakeGpuBuffer(GpuBufferType::RT_MESH_VERTEX_BUFFER, packedVerticesSize);
+            packedIndicesBuffer = g_renderBackend->MakeGpuBuffer(GpuBufferType::RT_MESH_INDEX_BUFFER, packedIndicesSize);
+
+            blas = g_renderBackend->MakeBLAS(
+                packedVerticesBuffer,
+                packedIndicesBuffer,
+                material,
+                Matrix4::identity);
+
+            this->blas = blas;
         }
 
         virtual ~RENDER_COMMAND(BuildBLAS)() override = default;
 
         virtual RendererResult operator()() override
         {
-            const SizeType packedVerticesSize = packedVertices.Size() * sizeof(PackedVertex);
-            const SizeType packedIndicesSize = packedIndices.Size() * sizeof(uint32);
-
-            GpuBufferRef verticesStagingBuffer;
-            GpuBufferRef indicesStagingBuffer;
-
-            GpuBufferRef packedVerticesBuffer = g_renderBackend->MakeGpuBuffer(GpuBufferType::RT_MESH_VERTEX_BUFFER, packedVerticesSize);
-            GpuBufferRef packedIndicesBuffer = g_renderBackend->MakeGpuBuffer(GpuBufferType::RT_MESH_INDEX_BUFFER, packedIndicesSize);
-
-            BLASRef geometry = g_renderBackend->MakeBLAS(
-                packedVerticesBuffer,
-                packedIndicesBuffer,
-                material,
-                Matrix4::identity);
-
             HYP_DEFER({
-                if (task)
-                {
-                    task->Fulfill(geometry);
-                }
-
                 SafeRelease(std::move(packedVerticesBuffer));
                 SafeRelease(std::move(packedIndicesBuffer));
                 SafeRelease(std::move(verticesStagingBuffer));
                 SafeRelease(std::move(indicesStagingBuffer));
             });
+
+            const SizeType packedVerticesSize = packedVertices.Size() * sizeof(PackedVertex);
+            const SizeType packedIndicesSize = packedIndices.Size() * sizeof(uint32);
 
             HYPERION_BUBBLE_ERRORS(packedVerticesBuffer->Create());
             HYPERION_BUBBLE_ERRORS(packedIndicesBuffer->Create());
@@ -430,18 +424,17 @@ BLASRef RenderMesh::BuildBLAS(const Handle<Material>& material) const
 
             commands.Push([&](CmdList&)
                 {
-                    geometry->Create();
+                    blas->Create();
                 });
 
             return commands.Execute();
         }
     };
 
-    Task<BLASRef> task;
+    BLASRef blas;
+    PUSH_RENDER_COMMAND(BuildBLAS, blas, std::move(packedVertices), std::move(packedIndices), material);
 
-    PUSH_RENDER_COMMAND(BuildBLAS, &task, std::move(packedVertices), std::move(packedIndices), material);
-
-    return std::move(task).Await();
+    return blas;
 }
 
 void RenderMesh::Render(CmdList& cmd, uint32 numInstances, uint32 instanceIndex) const

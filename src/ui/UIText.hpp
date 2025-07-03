@@ -6,16 +6,16 @@
 #include <ui/UIObject.hpp>
 #include <ui/UIStage.hpp>
 
-#include <core/Base.hpp>
 #include <core/containers/String.hpp>
+
 #include <core/Handle.hpp>
+
+#include <core/math/Transform.hpp>
+#include <core/math/Vector2.hpp>
 
 #include <rendering/backend/RendererStructs.hpp>
 
 #include <rendering/font/FontAtlas.hpp>
-
-#include <core/math/Transform.hpp>
-#include <core/math/Vector2.hpp>
 
 #include <scene/Scene.hpp>
 

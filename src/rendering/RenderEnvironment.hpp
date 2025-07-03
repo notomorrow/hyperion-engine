@@ -10,7 +10,6 @@
 
 #include <rendering/backend/RenderObject.hpp>
 
-#include <core/Base.hpp>
 #include <core/Name.hpp>
 
 #include <core/utilities/Pair.hpp>

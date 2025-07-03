@@ -3,7 +3,8 @@
 #ifndef HYPERION_VIEW_HPP
 #define HYPERION_VIEW_HPP
 
-#include <core/Base.hpp>
+#include <core/object/HypObject.hpp>
+
 #include <core/Handle.hpp>
 
 #include <core/math/Ray.hpp>
@@ -201,9 +202,9 @@ public:
         return m_overrideAttributes;
     }
 
-    HYP_FORCE_INLINE const typename ResourceTracker<ObjId<Entity>, RenderProxyMesh>::Diff& GetLastCollectionResult() const
+    HYP_FORCE_INLINE const typename ResourceTracker<ObjId<Entity>, RenderProxyMesh>::Diff& GetLastMeshCollectionResult() const
     {
-        return m_lastCollectionResult;
+        return m_lastMeshCollectionResult;
     }
 
     bool TestRay(const Ray& ray, RayTestResults& outResults, bool useBvh = true) const;
@@ -219,10 +220,7 @@ protected:
     void CollectEnvGrids(RenderProxyList& rpl);
     void CollectEnvProbes(RenderProxyList& rpl);
 
-    typename ResourceTracker<ObjId<Entity>, RenderProxyMesh>::Diff CollectEntities(RenderProxyList& rpl);
-    typename ResourceTracker<ObjId<Entity>, RenderProxyMesh>::Diff CollectAllEntities(RenderProxyList& rpl);
-    typename ResourceTracker<ObjId<Entity>, RenderProxyMesh>::Diff CollectDynamicEntities(RenderProxyList& rpl);
-    typename ResourceTracker<ObjId<Entity>, RenderProxyMesh>::Diff CollectStaticEntities(RenderProxyList& rpl);
+    typename ResourceTracker<ObjId<Entity>, RenderProxyMesh>::Diff CollectMeshEntities(RenderProxyList& rpl);
 
     ViewDesc m_viewDesc;
 
@@ -242,7 +240,7 @@ protected:
 
     Optional<RenderableAttributeSet> m_overrideAttributes;
 
-    typename ResourceTracker<ObjId<Entity>, RenderProxyMesh>::Diff m_lastCollectionResult;
+    typename ResourceTracker<ObjId<Entity>, RenderProxyMesh>::Diff m_lastMeshCollectionResult;
 };
 
 } // namespace hyperion

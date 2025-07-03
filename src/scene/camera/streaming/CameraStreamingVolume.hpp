@@ -5,7 +5,6 @@
 
 #include <streaming/StreamingVolume.hpp>
 
-#include <core/Base.hpp>
 #include <core/Handle.hpp>
 #include <core/Defines.hpp>
 

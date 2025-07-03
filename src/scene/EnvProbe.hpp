@@ -3,10 +3,13 @@
 #ifndef HYPERION_ENV_PROBE_HPP
 #define HYPERION_ENV_PROBE_HPP
 
-#include <core/Base.hpp>
 #include <core/containers/Bitset.hpp>
+
 #include <core/threading/AtomicVar.hpp>
+
 #include <core/utilities/EnumFlags.hpp>
+
+#include <core/object/HypObject.hpp>
 
 #include <core/math/BoundingBox.hpp>
 

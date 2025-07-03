@@ -111,18 +111,32 @@ public:
 
         T& operator*() const
         {
-            AssertDebug(page < array->m_pages.Size());
-            AssertDebug(elem < PageSize);
+#ifdef HYP_DEBUG_MODE
+            AssertDebug(array->m_validPages.Test(page));
+            Page* pg = array->m_pages[page];
 
+            AssertDebug(pg != nullptr);
+            AssertDebug(pg->initializedBits.Test(elem));
+
+            return pg->storage.GetPointer()[elem];
+#else
             return array->m_pages[page]->storage.GetPointer()[elem];
+#endif
         }
 
         T* operator->() const
         {
-            AssertDebug(page < array->m_pages.Size());
-            AssertDebug(elem < PageSize);
+#ifdef HYP_DEBUG_MODE
+            AssertDebug(array->m_validPages.Test(page));
+            Page* pg = array->m_pages[page];
 
-            return &array->m_pages[page]->storage.GetPointer()[elem];
+            AssertDebug(pg != nullptr);
+            AssertDebug(pg->initializedBits.Test(elem));
+
+            return &pg->storage.GetPointer() + elem;
+#else
+            return array->m_pages[page]->storage.GetPointer() + elem;
+#endif
         }
 
         Derived& operator++()

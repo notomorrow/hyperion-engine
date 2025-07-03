@@ -6,7 +6,6 @@
 #define NUM_KEYBOARD_KEYS 350
 #define NUM_MOUSE_BUTTONS 3
 
-#include <core/Base.hpp>
 #include <core/Defines.hpp>
 
 #include <core/object/HypObject.hpp>

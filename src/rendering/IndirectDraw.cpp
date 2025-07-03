@@ -72,22 +72,12 @@ static bool ResizeIndirectDrawCommandsBuffer(
 
     stagingBuffer->Memset(stagingBuffer->Size(), 0);
 
-    frame->GetCommandList().Add<InsertBarrier>(
-        stagingBuffer,
-        RS_COPY_SRC);
+    frame->GetCommandList().Add<InsertBarrier>(stagingBuffer, RS_COPY_SRC);
+    frame->GetCommandList().Add<InsertBarrier>(indirectBuffer, RS_COPY_DST);
 
-    frame->GetCommandList().Add<InsertBarrier>(
-        indirectBuffer,
-        RS_COPY_DST);
+    frame->GetCommandList().Add<CopyBuffer>(stagingBuffer, indirectBuffer, stagingBuffer->Size());
 
-    frame->GetCommandList().Add<CopyBuffer>(
-        stagingBuffer,
-        indirectBuffer,
-        stagingBuffer->Size());
-
-    frame->GetCommandList().Add<InsertBarrier>(
-        indirectBuffer,
-        RS_INDIRECT_ARG);
+    frame->GetCommandList().Add<InsertBarrier>(indirectBuffer, RS_INDIRECT_ARG);
 
     return true;
 }

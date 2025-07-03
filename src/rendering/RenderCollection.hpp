@@ -45,6 +45,7 @@ class LightmapVolume;
 class RenderEnvGrid;
 class RenderEnvProbe;
 class ReflectionProbe;
+class Texture;
 enum LightType : uint32;
 enum EnvProbeType : uint32;
 
@@ -154,6 +155,7 @@ struct HYP_API RenderProxyList
     ResourceTracker<ObjId<Light>, Light*> lights;
     ResourceTracker<ObjId<EnvGrid>, EnvGrid*> envGrids;
     ResourceTracker<ObjId<LightmapVolume>, LightmapVolume*> lightmapVolumes;
+    ResourceTracker<ObjId<Texture>, Texture*> textures;
 
     ParallelRenderingState* parallelRenderingStateHead;
     ParallelRenderingState* parallelRenderingStateTail;

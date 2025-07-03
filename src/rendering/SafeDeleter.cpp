@@ -2,6 +2,7 @@
 
 #include <rendering/SafeDeleter.hpp>
 #include <rendering/RenderGlobalState.hpp>
+#include <rendering/Bindless.hpp>
 
 #include <rendering/backend/RenderBackend.hpp>
 #include <rendering/backend/RenderCommand.hpp>
@@ -27,7 +28,7 @@ struct RENDER_COMMAND(RemoveTextureFromBindlessStorage)
 
     virtual RendererResult operator()() override
     {
-        g_renderGlobalState->BindlessTextures.RemoveResource(id);
+        g_renderGlobalState->bindlessStorage->RemoveResource(id);
 
         HYPERION_RETURN_OK;
     }

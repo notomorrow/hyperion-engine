@@ -3,8 +3,6 @@
 #ifndef HYPERION_TEXTURE_HPP
 #define HYPERION_TEXTURE_HPP
 
-#include <core/Base.hpp>
-
 #include <core/memory/UniquePtr.hpp>
 #include <core/memory/Pimpl.hpp>
 

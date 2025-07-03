@@ -3,8 +3,6 @@
 #ifndef HYPERION_UI_RENDERER_HPP
 #define HYPERION_UI_RENDERER_HPP
 
-#include <core/Base.hpp>
-
 #include <core/functional/Delegate.hpp>
 
 #include <core/memory/RefCountedPtr.hpp>
@@ -43,9 +41,7 @@ public:
 
     void ResetOrdering();
 
-    typename ResourceTracker<ObjId<Entity>, RenderProxyMesh>::Diff PushUpdates(
-        RenderProxyList& rpl,
-        const Optional<RenderableAttributeSet>& overrideAttributes = {});
+    void PushUpdates(RenderProxyList& rpl, const Optional<RenderableAttributeSet>& overrideAttributes = {});
 
     void ExecuteDrawCalls(FrameBase* frame, const RenderSetup& renderSetup, const FramebufferRef& framebuffer) const;
 

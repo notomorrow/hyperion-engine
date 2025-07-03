@@ -113,16 +113,8 @@ struct RENDER_COMMAND(BakeLightmapVolumeTexture)
                         cmd.Add<Blit>(
                             elementTexture->GetRenderResource().GetImage(),
                             atlasTexture->GetRenderResource().GetImage(),
-                            Rect<uint32> {
-                                .x0 = 0,
-                                .y0 = 0,
-                                .x1 = elementTexture->GetRenderResource().GetImage()->GetExtent().x,
-                                .y1 = elementTexture->GetRenderResource().GetImage()->GetExtent().y },
-                            Rect<uint32> {
-                                .x0 = element->offsetCoords.x,
-                                .y0 = element->offsetCoords.y,
-                                .x1 = element->offsetCoords.x + element->dimensions.x,
-                                .y1 = element->offsetCoords.y + element->dimensions.y },
+                            Rect<uint32> { 0, 0, elementTexture->GetRenderResource().GetImage()->GetExtent().x, elementTexture->GetRenderResource().GetImage()->GetExtent().y },
+                            Rect<uint32> { element->offsetCoords.x, element->offsetCoords.y, element->offsetCoords.x + element->dimensions.x, element->offsetCoords.y + element->dimensions.y },
                             0, /* srcMip */
                             0, /* dstMip */
                             0, /* srcFace */
@@ -150,8 +142,11 @@ struct RENDER_COMMAND(BakeLightmapVolumeTexture)
             const Handle<Texture>& atlasTexture = atlasTextures[textureTypeIndex];
 
             ByteBuffer data;
-            HYP_NOT_IMPLEMENTED(); // fixme
-            // atlasTexture->GetRenderResource().Readback(data);
+
+            if (RendererResult readbackResult = atlasTexture->GetRenderResource().Readback(data); readbackResult.HasError())
+            {
+                return readbackResult;
+            }
 
             if (data.Empty())
             {

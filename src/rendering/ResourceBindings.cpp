@@ -8,6 +8,7 @@
 #include <rendering/RenderSkeleton.hpp>
 #include <rendering/PlaceholderData.hpp>
 #include <rendering/lightmapper/RenderLightmapVolume.hpp>
+#include <rendering/Bindless.hpp>
 
 #include <scene/EnvGrid.hpp>
 #include <scene/EnvProbe.hpp>
@@ -194,16 +195,14 @@ void OnBindingChanged_Light(Light* light, uint32 prev, uint32 next)
     RenderApi_AssignResourceBinding(light, light->GetRenderResource().GetBufferIndex());
 }
 
-void OnBindingChanged_LightmapVolume(LightmapVolume* lightmapVolume, uint32 prev, uint32 next)
-{
-    RenderApi_AssignResourceBinding(lightmapVolume, next);
-}
-
-HYP_DISABLE_OPTIMIZATION;
 // @TODO: Handle update if a texture is changed
 void OnBindingChanged_Material(Material* material, uint32 prev, uint32 next)
 {
     Threads::AssertOnThread(g_renderThread);
+    
+    static const IRenderConfig& renderConfig = g_renderBackend->GetRenderConfig();
+    static const bool isBindlessSupported = renderConfig.IsBindlessSupported();
+
 
     AssertDebug(material != nullptr);
 
@@ -216,6 +215,7 @@ void OnBindingChanged_Material(Material* material, uint32 prev, uint32 next)
     HYP_LOG(Rendering, Debug, "Material {} binding changed from {} to {} for frame {}", material->Id(), prev, next, RenderApi_GetFrameIndex_RenderThread());
     // RenderApi_AssignResourceBinding(material, next);
 
+    // @TODO: How will we unbind? we don't want to unbind right after another material has taken our place here.
     // if (prev != ~0u)
     // {
     //     g_renderGlobalState->materialDescriptorSetManager->Remove(prev);
@@ -232,16 +232,44 @@ void OnBindingChanged_Material(Material* material, uint32 prev, uint32 next)
 
         RenderProxyMaterial* proxyCasted = static_cast<RenderProxyMaterial*>(proxy);
 
-        g_renderGlobalState->materialDescriptorSetManager->Allocate(
-            material->GetRenderResource().GetBufferIndex(), // next,
-            proxyCasted->boundTextureIndices.ToSpan(),
-            proxyCasted->boundTextures.ToSpan());
+        if (!isBindlessSupported)
+        {
+            g_renderGlobalState->materialDescriptorSetManager->Allocate(
+                material->GetRenderResource().GetBufferIndex(), // next,
+                proxyCasted->boundTextureIndices.ToSpan(),
+                proxyCasted->boundTextures.ToSpan());
+        }
     }
     else
     {
         RenderApi_AssignResourceBinding(material, ~0u);
     }
 }
-HYP_ENABLE_OPTIMIZATION;
+
+void OnBindingChanged_Texture(Texture *texture, uint32 prev, uint32 next)
+{
+    static const IRenderConfig& renderConfig = g_renderBackend->GetRenderConfig();
+    static const bool isBindlessSupported = renderConfig.IsBindlessSupported();
+
+    if (isBindlessSupported)
+    {
+        if (next != ~0u)
+        {
+            // temp shit
+            texture->GetRenderResource().IncRef();
+
+            g_renderGlobalState->bindlessStorage->AddResource(texture->Id(), texture->GetRenderResource().GetImageView());
+        }
+        else
+        {
+            g_renderGlobalState->bindlessStorage->RemoveResource(texture->Id());
+
+            // temp shit
+            texture->GetRenderResource().DecRef();
+        }
+    }
+
+    RenderApi_AssignResourceBinding(texture, next);
+}
 
 } // namespace hyperion

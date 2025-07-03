@@ -369,8 +369,9 @@ AssetLoadResult MTLMaterialLoader::LoadAsset(LoaderState& state) const
 
                 continue;
             }
-
-            textures.Set(it.mapping.key, std::move(texture));
+            
+            // TEMP while debugging textures.
+            //textures.Set(it.mapping.key, std::move(texture));
         }
 
         Handle<Material> material = MaterialCache::GetInstance()->GetOrCreate(

@@ -44,7 +44,7 @@ public:
 
     uint32 AllocateIndex(Name name)
     {
-        const uint32 index = m_idGenerator.NextID();
+        const uint32 index = m_idGenerator.Next();
 
         {
             Mutex::Guard guard(m_mutex);
@@ -65,7 +65,7 @@ public:
             return *indexPtr;
         }
 
-        const uint32 index = m_idGenerator.NextID();
+        const uint32 index = m_idGenerator.Next();
 
         m_nameMapping[name].PushBack(index);
         m_reverseNameMapping[index] = name;

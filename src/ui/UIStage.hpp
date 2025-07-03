@@ -5,8 +5,6 @@
 
 #include <ui/UIObject.hpp>
 
-#include <core/Base.hpp>
-
 #include <core/object/HypObject.hpp>
 
 #include <core/functional/Delegate.hpp>
@@ -20,8 +18,6 @@
 
 #include <input/Mouse.hpp>
 #include <input/Keyboard.hpp>
-
-#include <core/math/Transform.hpp>
 
 #include <GameCounter.hpp>
 #include <HashCode.hpp>

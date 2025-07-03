@@ -14,7 +14,6 @@
 
 #include <core/Handle.hpp>
 #include <core/Name.hpp>
-#include <core/Base.hpp>
 
 #include <Types.hpp>
 

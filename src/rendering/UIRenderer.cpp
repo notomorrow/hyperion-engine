@@ -251,16 +251,14 @@ void UIRenderCollector::ResetOrdering()
     proxyDepths.Clear();
 }
 
-typename ResourceTracker<ObjId<Entity>, RenderProxyMesh>::Diff UIRenderCollector::PushUpdates(RenderProxyList& rpl, const Optional<RenderableAttributeSet>& overrideAttributes)
+void UIRenderCollector::PushUpdates(RenderProxyList& rpl, const Optional<RenderableAttributeSet>& overrideAttributes)
 {
     HYP_SCOPE;
 
     // UISubsystem can have Update() called on a task thread.
     Threads::AssertOnThread(g_gameThread | ThreadCategory::THREAD_CATEGORY_TASK);
 
-    auto diff = rpl.meshes.GetDiff();
-
-    if (diff.NeedsUpdate())
+    if (auto diff = rpl.meshes.GetDiff(); diff.NeedsUpdate())
     {
         Array<RenderProxyMesh*> removed;
         rpl.meshes.GetRemoved(removed, true);
@@ -290,11 +288,28 @@ typename ResourceTracker<ObjId<Entity>, RenderProxyMesh>::Diff UIRenderCollector
         }
     }
 
+    if (auto diff = rpl.textures.GetDiff(); diff.NeedsUpdate())
+    {
+        Array<ObjId<Texture>> removed;
+        rpl.textures.GetRemoved(removed, true);
+
+        Array<Texture*> added;
+        rpl.textures.GetAdded(added, true);
+
+        for (Texture* texture : added)
+        {
+            RenderApi_AddRef(texture);
+        }
+
+        for (ObjId<Texture> id : removed)
+        {
+            RenderApi_ReleaseRef(id);
+        }
+    }
+
     BuildRenderGroups(rpl, proxyDepths, overrideAttributes);
 
     RenderCollector::CollectDrawCalls(rpl, 0);
-
-    return diff;
 }
 
 void UIRenderCollector::ExecuteDrawCalls(FrameBase* frame, const RenderSetup& renderSetup, const FramebufferRef& framebuffer) const
@@ -535,6 +550,7 @@ void UIRenderSubsystem::Update(float delta)
     rpl.viewport = m_view->GetViewport();
     rpl.priority = m_view->GetPriority();
     rpl.meshes.Advance(AdvanceAction::CLEAR);
+    rpl.textures.Advance(AdvanceAction::CLEAR);
 
     UIRenderCollector& renderCollector = m_uiRenderer->GetRenderCollector();
     renderCollector.ResetOrdering();
@@ -560,6 +576,19 @@ void UIRenderSubsystem::Update(float delta)
             // renderCollector.PushRenderProxy(meshes, *meshComponent.proxy, uiObject->GetComputedDepth());
 
             rpl.meshes.Track(meshComponent.proxy->entity.Id(), *meshComponent.proxy, &meshComponent.proxy->version);
+
+            if (meshComponent.material.IsValid())
+            {
+                for (const auto &it : meshComponent.material->GetTextures())
+                {
+                    const Handle<Texture>& texture = it.second;
+
+                    if (texture.IsValid())
+                    {
+                        rpl.textures.Track(texture.Id(), texture.Get());
+                    }
+                }
+            }
 
             renderCollector.proxyDepths.EmplaceBack(meshComponent.proxy->entity.Id(), uiObject->GetComputedDepth());
         },

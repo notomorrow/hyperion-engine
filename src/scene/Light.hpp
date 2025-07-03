@@ -3,7 +3,6 @@
 #ifndef HYPERION_LIGHT_HPP
 #define HYPERION_LIGHT_HPP
 
-#include <core/Base.hpp>
 #include <core/Handle.hpp>
 
 #include <core/containers/Bitset.hpp>

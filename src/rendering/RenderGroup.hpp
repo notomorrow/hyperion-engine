@@ -3,8 +3,11 @@
 #ifndef HYPERION_RENDER_GROUP_HPP
 #define HYPERION_RENDER_GROUP_HPP
 
-#include <core/utilities/EnumFlags.hpp>
 #include <core/object/ObjId.hpp>
+#include <core/object/HypObject.hpp>
+
+#include <core/utilities/EnumFlags.hpp>
+
 #include <core/Defines.hpp>
 
 #include <rendering/ShaderManager.hpp>
@@ -93,12 +96,6 @@ public:
     {
         return m_drawCallCollectionImpl;
     }
-
-    /*! \brief Collect drawable objects, then run the culling compute shader
-     *  to mark any occluded objects as such. Must be used with indirect rendering.
-     *  If nullptr is provided for cullData, no occlusion culling will happen.
-     */
-    void CollectDrawCalls(DrawCallCollection& drawCallCollection);
 
     void PerformRendering(FrameBase* frame, const RenderSetup& renderSetup, const DrawCallCollection& drawCallCollection, IndirectRenderer* indirectRenderer, ParallelRenderingState* parallelRenderingState);
 

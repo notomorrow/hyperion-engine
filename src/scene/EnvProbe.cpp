@@ -385,7 +385,9 @@ void EnvProbe::Update(float delta)
 
             if (octant)
             {
-                octantHashCode = octant->GetOctantID().GetHashCode().Add(octant->GetEntryListHash<EntityTag::STATIC>()).Add(octant->GetEntryListHash<EntityTag::LIGHT>());
+                octantHashCode = octant->GetOctantID().GetHashCode()
+                    .Add(octant->GetEntryListHash<EntityTag::STATIC>())
+                    .Add(octant->GetEntryListHash<EntityTag::LIGHT>());
             }
         }
         else
@@ -404,7 +406,7 @@ void EnvProbe::Update(float delta)
         m_view->UpdateVisibility();
         m_view->Update(delta);
 
-        auto diff = m_view->GetLastCollectionResult();
+        auto diff = m_view->GetLastMeshCollectionResult();
 
         if (diff.NeedsUpdate() || m_octantHashCode != octantHashCode)
         {

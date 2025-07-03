@@ -3,8 +3,6 @@
 #ifndef HYPERION_LIGHTMAPPER_HPP
 #define HYPERION_LIGHTMAPPER_HPP
 
-#include <core/Base.hpp>
-
 #include <core/containers/Queue.hpp>
 
 #include <core/threading/Mutex.hpp>

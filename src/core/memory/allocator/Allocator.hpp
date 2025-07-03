@@ -58,7 +58,9 @@ struct DynamicAllocator : Allocator<DynamicAllocator>
                 SizeType capacity;
             } dynamicAllocation;
 
-            char dataBuffer[1];
+            union {
+                char dataBuffer[1];
+            } storage;
         };
 #else
         T* buffer;

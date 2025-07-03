@@ -25,7 +25,6 @@ enum class MaterialAttributeFlags : uint32
 HYP_MAKE_ENUM_FLAGS(MaterialAttributeFlags)
 
 HYP_STRUCT()
-
 struct MaterialAttributes
 {
     HYP_FIELD()
@@ -87,7 +86,6 @@ struct MaterialAttributes
 };
 
 HYP_STRUCT()
-
 struct MeshAttributes
 {
     HYP_FIELD(Property = "VertexAttributes", Serialize = true)

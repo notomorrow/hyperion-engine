@@ -7,6 +7,7 @@
 #include <scene/Material.hpp>
 #include <scene/EnvGrid.hpp>
 #include <scene/EnvProbe.hpp>
+#include <scene/Texture.hpp>
 #include <scene/lightmapper/LightmapVolume.hpp>
 #include <scene/camera/Camera.hpp>
 #include <scene/animation/Skeleton.hpp>
@@ -285,18 +286,40 @@ void View::Update(float delta)
     RenderProxyList& rpl = RenderApi_GetProducerProxyList(this);
     rpl.viewport = m_viewport;
     rpl.priority = m_priority;
+
     rpl.meshes.Advance(AdvanceAction::CLEAR);
     rpl.envProbes.Advance(AdvanceAction::CLEAR);
     rpl.envGrids.Advance(AdvanceAction::CLEAR);
     rpl.lights.Advance(AdvanceAction::CLEAR);
     rpl.lightmapVolumes.Advance(AdvanceAction::CLEAR);
+    rpl.textures.Advance(AdvanceAction::CLEAR);
 
     CollectLights(rpl);
     CollectLightmapVolumes(rpl);
     CollectEnvGrids(rpl);
     CollectEnvProbes(rpl);
 
-    m_lastCollectionResult = CollectEntities(rpl);
+    m_lastMeshCollectionResult = CollectMeshEntities(rpl);
+
+    // Update refs for bound textures for this view
+    if (auto diff = rpl.textures.GetDiff(); diff.NeedsUpdate())
+    {
+        Array<ObjId<Texture>> removed;
+        rpl.textures.GetRemoved(removed, true);
+
+        Array<Texture*> added;
+        rpl.textures.GetAdded(added, true);
+
+        for (Texture* texture : added)
+        {
+            RenderApi_AddRef(texture);
+        }
+
+        for (ObjId<Texture> id : removed)
+        {
+            RenderApi_ReleaseRef(id);
+        }
+    }
 
     /// temp
     constexpr uint32 bucketMask = (1 << RB_OPAQUE)
@@ -369,24 +392,7 @@ void View::RemoveScene(const Handle<Scene>& scene)
     m_scenes.Erase(scene);
 }
 
-typename ResourceTracker<ObjId<Entity>, RenderProxyMesh>::Diff View::CollectEntities(RenderProxyList& rpl)
-{
-    AssertReady();
-
-    switch (uint32(m_flags & ViewFlags::COLLECT_ALL_ENTITIES))
-    {
-    case uint32(ViewFlags::COLLECT_ALL_ENTITIES):
-        return CollectAllEntities(rpl);
-    case uint32(ViewFlags::COLLECT_DYNAMIC_ENTITIES):
-        return CollectDynamicEntities(rpl);
-    case uint32(ViewFlags::COLLECT_STATIC_ENTITIES):
-        return CollectStaticEntities(rpl);
-    default:
-        HYP_UNREACHABLE();
-    }
-}
-
-typename ResourceTracker<ObjId<Entity>, RenderProxyMesh>::Diff View::CollectAllEntities(RenderProxyList& rpl)
+typename ResourceTracker<ObjId<Entity>, RenderProxyMesh>::Diff View::CollectMeshEntities(RenderProxyList& rpl)
 {
     HYP_SCOPE;
     Threads::AssertOnThread(g_gameThread | ThreadCategory::THREAD_CATEGORY_TASK);
@@ -420,39 +426,168 @@ typename ResourceTracker<ObjId<Entity>, RenderProxyMesh>::Diff View::CollectAllE
         uint32 numCollectedEntities = 0;
         uint32 numSkippedEntities = 0;
 
-        for (auto [entity, meshComponent, visibilityStateComponent] : scene->GetEntityManager()->GetEntitySet<MeshComponent, VisibilityStateComponent>().GetScopedView(DataAccessFlags::ACCESS_READ, HYP_FUNCTION_NAME_LIT))
+        switch (uint32(m_flags) & uint32(ViewFlags::COLLECT_ALL_ENTITIES))
         {
-            if (!skipFrustumCulling && !(visibilityStateComponent.flags & VISIBILITY_STATE_FLAG_ALWAYS_VISIBLE))
+        case uint32(ViewFlags::COLLECT_ALL_ENTITIES):
+            for (auto [entity, meshComponent, visibilityStateComponent] : scene->GetEntityManager()->GetEntitySet<MeshComponent, VisibilityStateComponent>().GetScopedView(DataAccessFlags::ACCESS_READ, HYP_FUNCTION_NAME_LIT))
             {
+                if (!skipFrustumCulling && !(visibilityStateComponent.flags & VISIBILITY_STATE_FLAG_ALWAYS_VISIBLE))
+                {
 #ifndef HYP_DISABLE_VISIBILITY_CHECK
-                if (!visibilityStateComponent.visibilityState)
-                {
+                    if (!visibilityStateComponent.visibilityState)
+                    {
 #ifdef HYP_VISIBILITY_CHECK_DEBUG
-                    ++numSkippedEntities;
+                        ++numSkippedEntities;
 #endif
-                    continue;
+                        continue;
+                    }
+
+                    if (!visibilityStateComponent.visibilityState->GetSnapshot(cameraId).ValidToParent(visibilityStateSnapshot))
+                    {
+#ifdef HYP_VISIBILITY_CHECK_DEBUG
+                        ++numSkippedEntities;
+#endif
+
+                        continue;
+                    }
+#endif
                 }
 
-                if (!visibilityStateComponent.visibilityState->GetSnapshot(cameraId).ValidToParent(visibilityStateSnapshot))
-                {
-#ifdef HYP_VISIBILITY_CHECK_DEBUG
-                    ++numSkippedEntities;
-#endif
+                ++numCollectedEntities;
 
-                    continue;
+                AssertDebug(meshComponent.proxy != nullptr);
+
+                AssertDebug(meshComponent.proxy->entity.IsValid());
+                AssertDebug(meshComponent.proxy->mesh.IsValid());
+                AssertDebug(meshComponent.proxy->material.IsValid());
+
+                rpl.meshes.Track(entity->Id(), *meshComponent.proxy, &meshComponent.proxy->version);
+
+                if (meshComponent.material.IsValid())
+                {
+                    for (const auto& it : meshComponent.material->GetTextures())
+                    {
+                        const Handle<Texture>& texture = it.second;
+
+                        if (!texture.IsValid())
+                        {
+                            continue;
+                        }
+
+                        rpl.textures.Track(texture.Id(), texture.Get());
+                    }
                 }
-#endif
             }
 
-            ++numCollectedEntities;
+            break;
+            
+        case uint32(ViewFlags::COLLECT_STATIC_ENTITIES):
+            for (auto [entity, meshComponent, visibilityStateComponent, _] : scene->GetEntityManager()->GetEntitySet<MeshComponent, VisibilityStateComponent, EntityTagComponent<EntityTag::STATIC>>().GetScopedView(DataAccessFlags::ACCESS_READ, HYP_FUNCTION_NAME_LIT))
+            {
+                if (!skipFrustumCulling && !(visibilityStateComponent.flags & VISIBILITY_STATE_FLAG_ALWAYS_VISIBLE))
+                {
+#ifndef HYP_DISABLE_VISIBILITY_CHECK
+                    if (!visibilityStateComponent.visibilityState)
+                    {
+#ifdef HYP_VISIBILITY_CHECK_DEBUG
+                        ++numSkippedEntities;
+#endif
+                        continue;
+                    }
 
-            AssertDebug(meshComponent.proxy != nullptr);
+                    if (!visibilityStateComponent.visibilityState->GetSnapshot(cameraId).ValidToParent(visibilityStateSnapshot))
+                    {
+#ifdef HYP_VISIBILITY_CHECK_DEBUG
+                        ++numSkippedEntities;
+#endif
 
-            AssertDebug(meshComponent.proxy->entity.IsValid());
-            AssertDebug(meshComponent.proxy->mesh.IsValid());
-            AssertDebug(meshComponent.proxy->material.IsValid());
+                        continue;
+                    }
+#endif
+                }
 
-            rpl.meshes.Track(entity->Id(), *meshComponent.proxy, &meshComponent.proxy->version);
+                ++numCollectedEntities;
+
+                AssertDebug(meshComponent.proxy != nullptr);
+
+                AssertDebug(meshComponent.proxy->entity.IsValid());
+                AssertDebug(meshComponent.proxy->mesh.IsValid());
+                AssertDebug(meshComponent.proxy->material.IsValid());
+
+                rpl.meshes.Track(entity->Id(), *meshComponent.proxy, &meshComponent.proxy->version);
+
+                if (meshComponent.material.IsValid())
+                {
+                    for (const auto& it : meshComponent.material->GetTextures())
+                    {
+                        const Handle<Texture>& texture = it.second;
+
+                        if (!texture.IsValid())
+                        {
+                            continue;
+                        }
+
+                        rpl.textures.Track(texture.Id(), texture.Get());
+                    }
+                }
+            }
+
+            break;
+            
+        case uint32(ViewFlags::COLLECT_DYNAMIC_ENTITIES):
+            for (auto [entity, meshComponent, visibilityStateComponent, _] : scene->GetEntityManager()->GetEntitySet<MeshComponent, VisibilityStateComponent, EntityTagComponent<EntityTag::DYNAMIC>>().GetScopedView(DataAccessFlags::ACCESS_READ, HYP_FUNCTION_NAME_LIT))
+            {
+                if (!skipFrustumCulling && !(visibilityStateComponent.flags & VISIBILITY_STATE_FLAG_ALWAYS_VISIBLE))
+                {
+#ifndef HYP_DISABLE_VISIBILITY_CHECK
+                    if (!visibilityStateComponent.visibilityState)
+                    {
+#ifdef HYP_VISIBILITY_CHECK_DEBUG
+                        ++numSkippedEntities;
+#endif
+                        continue;
+                    }
+
+                    if (!visibilityStateComponent.visibilityState->GetSnapshot(cameraId).ValidToParent(visibilityStateSnapshot))
+                    {
+#ifdef HYP_VISIBILITY_CHECK_DEBUG
+                        ++numSkippedEntities;
+#endif
+
+                        continue;
+                    }
+#endif
+                }
+
+                ++numCollectedEntities;
+
+                AssertDebug(meshComponent.proxy != nullptr);
+
+                AssertDebug(meshComponent.proxy->entity.IsValid());
+                AssertDebug(meshComponent.proxy->mesh.IsValid());
+                AssertDebug(meshComponent.proxy->material.IsValid());
+
+                rpl.meshes.Track(entity->Id(), *meshComponent.proxy, &meshComponent.proxy->version);
+
+                if (meshComponent.material.IsValid())
+                {
+                    for (const auto& it : meshComponent.material->GetTextures())
+                    {
+                        const Handle<Texture>& texture = it.second;
+
+                        if (!texture.IsValid())
+                        {
+                            continue;
+                        }
+
+                        rpl.textures.Track(texture.Id(), texture.Get());
+                    }
+                }
+            }
+
+            break;
+        default:
+            break;
         }
 
 #ifdef HYP_VISIBILITY_CHECK_DEBUG
@@ -460,9 +595,9 @@ typename ResourceTracker<ObjId<Entity>, RenderProxyMesh>::Diff View::CollectAllE
 #endif
     }
 
-    auto diff = rpl.meshes.GetDiff();
+    auto meshesDiff = rpl.meshes.GetDiff();
 
-    if (diff.NeedsUpdate())
+    if (meshesDiff.NeedsUpdate())
     {
         Array<RenderProxyMesh*> removed;
         rpl.meshes.GetRemoved(removed, true);
@@ -492,207 +627,7 @@ typename ResourceTracker<ObjId<Entity>, RenderProxyMesh>::Diff View::CollectAllE
         }
     }
 
-    return diff;
-}
-
-typename ResourceTracker<ObjId<Entity>, RenderProxyMesh>::Diff View::CollectDynamicEntities(RenderProxyList& rpl)
-{
-    HYP_SCOPE;
-    Threads::AssertOnThread(g_gameThread | ThreadCategory::THREAD_CATEGORY_TASK);
-
-    AssertReady();
-
-    if (!m_camera.IsValid())
-    {
-        HYP_LOG(Scene, Warning, "Camera is not valid for View with Id #%u, cannot collect dynamic entities!", Id().Value());
-        // if camera is invalid, update without adding any entities
-
-        return rpl.meshes.GetDiff();
-    }
-
-    const ObjId<Camera> cameraId = m_camera->Id();
-
-    const bool skipFrustumCulling = (m_flags & ViewFlags::SKIP_FRUSTUM_CULLING);
-
-    for (const Handle<Scene>& scene : m_scenes)
-    {
-        AssertThrow(scene.IsValid());
-        AssertThrow(scene->IsReady());
-
-        if (scene->GetFlags() & SceneFlags::DETACHED)
-        {
-            HYP_LOG(Scene, Warning, "Scene \"{}\" has DETACHED flag set, cannot collect entities for render collector!", scene->GetName());
-
-            continue;
-        }
-
-        const VisibilityStateSnapshot visibilityStateSnapshot = scene->GetOctree().GetVisibilityState().GetSnapshot(cameraId);
-
-        for (auto [entity, meshComponent, visibilityStateComponent, _] : scene->GetEntityManager()->GetEntitySet<MeshComponent, VisibilityStateComponent, EntityTagComponent<EntityTag::DYNAMIC>>().GetScopedView(DataAccessFlags::ACCESS_READ, HYP_FUNCTION_NAME_LIT))
-        {
-            if (!skipFrustumCulling && !(visibilityStateComponent.flags & VISIBILITY_STATE_FLAG_ALWAYS_VISIBLE))
-            {
-#ifndef HYP_DISABLE_VISIBILITY_CHECK
-                if (!visibilityStateComponent.visibilityState)
-                {
-                    continue;
-                }
-
-                if (!visibilityStateComponent.visibilityState->GetSnapshot(cameraId).ValidToParent(visibilityStateSnapshot))
-                {
-#ifdef HYP_VISIBILITY_CHECK_DEBUG
-                    HYP_LOG(Scene, Debug, "Skipping entity #{} for camera #{} due to visibility state being invalid.",
-                        entity->Id(), cameraId);
-#endif
-
-                    continue;
-                }
-#endif
-            }
-
-            AssertDebug(meshComponent.proxy != nullptr);
-
-            AssertDebug(meshComponent.proxy->entity.IsValid());
-            AssertDebug(meshComponent.proxy->mesh.IsValid());
-            AssertDebug(meshComponent.proxy->material.IsValid());
-
-            rpl.meshes.Track(entity->Id(), *meshComponent.proxy, &meshComponent.proxy->version);
-        }
-    }
-
-    auto diff = rpl.meshes.GetDiff();
-
-    if (diff.NeedsUpdate())
-    {
-        Array<RenderProxyMesh*> removed;
-        rpl.meshes.GetRemoved(removed, true);
-
-        Array<RenderProxyMesh*> added;
-        rpl.meshes.GetAdded(added, true);
-
-        for (RenderProxyMesh* proxy : added)
-        {
-            RenderApi_AddRef(proxy->entity.GetUnsafe());
-            RenderApi_AddRef(proxy->material.Get());
-
-            RenderApi_UpdateRenderProxy(proxy->entity.Id(), proxy);
-            RenderApi_UpdateRenderProxy(proxy->material.Id());
-
-            // for now:
-            proxy->IncRefs();
-        }
-
-        for (RenderProxyMesh* proxy : removed)
-        {
-            RenderApi_ReleaseRef(proxy->entity.Id());
-            RenderApi_ReleaseRef(proxy->material.Id());
-
-            // for now:
-            proxy->DecRefs();
-        }
-    }
-
-    return diff;
-}
-
-typename ResourceTracker<ObjId<Entity>, RenderProxyMesh>::Diff View::CollectStaticEntities(RenderProxyList& rpl)
-{
-    HYP_SCOPE;
-    Threads::AssertOnThread(g_gameThread | ThreadCategory::THREAD_CATEGORY_TASK);
-
-    AssertReady();
-
-    if (!m_camera.IsValid())
-    {
-        // if camera is invalid, update without adding any entities
-        HYP_LOG(Scene, Warning, "Camera is not valid for View with Id #%u, cannot collect static entities!", Id().Value());
-
-        return rpl.meshes.GetDiff();
-    }
-
-    const ObjId<Camera> cameraId = m_camera->Id();
-
-    const bool skipFrustumCulling = (m_flags & ViewFlags::SKIP_FRUSTUM_CULLING);
-
-    for (const Handle<Scene>& scene : m_scenes)
-    {
-        AssertThrow(scene.IsValid());
-        AssertThrow(scene->IsReady());
-
-        if (scene->GetFlags() & SceneFlags::DETACHED)
-        {
-            HYP_LOG(Scene, Warning, "Scene has DETACHED flag set, cannot collect entities for render collector!");
-
-            return {};
-        }
-
-        const VisibilityStateSnapshot visibilityStateSnapshot = scene->GetOctree().GetVisibilityState().GetSnapshot(cameraId);
-
-        for (auto [entity, meshComponent, visibilityStateComponent, _] : scene->GetEntityManager()->GetEntitySet<MeshComponent, VisibilityStateComponent, EntityTagComponent<EntityTag::STATIC>>().GetScopedView(DataAccessFlags::ACCESS_READ, HYP_FUNCTION_NAME_LIT))
-        {
-            if (!skipFrustumCulling && !(visibilityStateComponent.flags & VISIBILITY_STATE_FLAG_ALWAYS_VISIBLE))
-            {
-#ifndef HYP_DISABLE_VISIBILITY_CHECK
-                if (!visibilityStateComponent.visibilityState)
-                {
-                    continue;
-                }
-
-                if (!visibilityStateComponent.visibilityState->GetSnapshot(cameraId).ValidToParent(visibilityStateSnapshot))
-                {
-#ifdef HYP_VISIBILITY_CHECK_DEBUG
-                    HYP_LOG(Scene, Debug, "Skipping entity #{} for camera #{} due to visibility state being invalid.",
-                        entity->Id(), cameraId);
-#endif
-
-                    continue;
-                }
-#endif
-            }
-
-            AssertDebug(meshComponent.proxy != nullptr);
-
-            AssertDebug(meshComponent.proxy->entity.IsValid());
-            AssertDebug(meshComponent.proxy->mesh.IsValid());
-            AssertDebug(meshComponent.proxy->material.IsValid());
-
-            rpl.meshes.Track(entity->Id(), *meshComponent.proxy, &meshComponent.proxy->version);
-        }
-    }
-
-    auto diff = rpl.meshes.GetDiff();
-
-    if (diff.NeedsUpdate())
-    {
-        Array<RenderProxyMesh*> removed;
-        rpl.meshes.GetRemoved(removed, true);
-
-        Array<RenderProxyMesh*> added;
-        rpl.meshes.GetAdded(added, true);
-
-        for (RenderProxyMesh* proxy : added)
-        {
-            RenderApi_AddRef(proxy->entity.GetUnsafe());
-            RenderApi_AddRef(proxy->material.Get());
-
-            RenderApi_UpdateRenderProxy(proxy->entity.Id(), proxy);
-            RenderApi_UpdateRenderProxy(proxy->material.Id());
-
-            // for now:
-            proxy->IncRefs();
-        }
-
-        for (RenderProxyMesh* proxy : removed)
-        {
-            RenderApi_ReleaseRef(proxy->entity.Id());
-            RenderApi_ReleaseRef(proxy->material.Id());
-
-            // for now:
-            proxy->DecRefs();
-        }
-    }
-
-    return diff;
+    return meshesDiff;
 }
 
 void View::CollectLights(RenderProxyList& rpl)
@@ -739,13 +674,26 @@ void View::CollectLights(RenderProxyList& rpl)
             if (isLightInFrustum)
             {
                 rpl.lights.Track(light->Id(), light, light->GetRenderProxyVersionPtr());
+
+                if (light->GetMaterial().IsValid())
+                {
+                    for (const auto& it : light->GetMaterial()->GetTextures())
+                    {
+                        const Handle<Texture>& texture = it.second;
+
+                        if (!texture.IsValid())
+                        {
+                            continue;
+                        }
+
+                        rpl.textures.Track(texture->Id(), texture.Get());
+                    }
+                }
             }
         }
     }
 
-    auto diff = rpl.lights.GetDiff();
-
-    if (diff.NeedsUpdate())
+    if (auto diff = rpl.lights.GetDiff(); diff.NeedsUpdate())
     {
         Array<Light*> removed;
         rpl.lights.GetRemoved(removed, false);

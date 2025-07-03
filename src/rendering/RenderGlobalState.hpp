@@ -8,7 +8,6 @@
 #include <core/Handle.hpp>
 
 #include <rendering/Buffers.hpp>
-#include <rendering/Bindless.hpp>
 
 #include <rendering/backend/RenderObject.hpp>
 #include <rendering/backend/RendererShader.hpp>
@@ -38,6 +37,7 @@ class RenderResourceLock;
 class UIRenderer;
 class MaterialDescriptorSetManager;
 class GraphicsPipelineCache;
+class BindlessStorage;
 
 HYP_API extern SizeType GetNumDescendants(TypeId typeId);
 HYP_API extern int GetSubclassIndex(TypeId baseTypeId, TypeId subclassTypeId);
@@ -131,14 +131,12 @@ public:
     RenderGlobalState& operator=(const RenderGlobalState& other) = delete;
     ~RenderGlobalState();
 
-    void Create();
-    void Destroy();
     void UpdateBuffers(FrameBase* frame);
 
     void AddRenderer(GlobalRendererType globalRendererType, RendererBase* renderer);
     void RemoveRenderer(GlobalRendererType globalRendererType, RendererBase* renderer);
 
-    BindlessStorage BindlessTextures;
+    BindlessStorage* bindlessStorage;
 
     UniquePtr<class ShadowMapAllocator> ShadowMapAllocator;
     UniquePtr<class GpuBufferHolderMap> GpuBufferHolderMap;

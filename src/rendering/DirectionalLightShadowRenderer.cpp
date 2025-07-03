@@ -493,7 +493,7 @@ void DirectionalLightShadowRenderer::Update(float delta)
 
     Octree& octree = m_parentScene->GetOctree();
 
-    auto staticsCollectionResult = m_viewStatics->GetLastCollectionResult();
+    auto staticsCollectionResult = m_viewStatics->GetLastMeshCollectionResult();
 
     Octree const* fittingOctant = nullptr;
     octree.GetFittingOctant(m_aabb, fittingOctant);
@@ -503,7 +503,9 @@ void DirectionalLightShadowRenderer::Update(float delta)
         fittingOctant = &octree;
     }
 
-    const HashCode octantHashStatics = fittingOctant->GetOctantID().GetHashCode().Add(fittingOctant->GetEntryListHash<EntityTag::STATIC>()).Add(fittingOctant->GetEntryListHash<EntityTag::LIGHT>());
+    const HashCode octantHashStatics = fittingOctant->GetOctantID().GetHashCode()
+        .Add(fittingOctant->GetEntryListHash<EntityTag::STATIC>())
+        .Add(fittingOctant->GetEntryListHash<EntityTag::LIGHT>());
 
     // Need to re-render static objects if:
     // * octant's statics hash code has changed

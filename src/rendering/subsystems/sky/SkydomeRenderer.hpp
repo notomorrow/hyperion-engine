@@ -3,8 +3,6 @@
 #ifndef HYPERION_SKYDOME_RENDERER_HPP
 #define HYPERION_SKYDOME_RENDERER_HPP
 
-#include <core/Base.hpp>
-
 #include <core/object/HypObject.hpp>
 
 #include <rendering/backend/RenderObject.hpp>

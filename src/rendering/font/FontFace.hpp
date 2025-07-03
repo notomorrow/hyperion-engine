@@ -5,8 +5,6 @@
 
 #include <rendering/font/FontEngine.hpp>
 
-#include <core/Base.hpp>
-
 #include <core/Defines.hpp>
 #include <core/filesystem/FsUtil.hpp>
 
