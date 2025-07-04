@@ -40,8 +40,10 @@ HYP_FORCE_INLINE decltype(auto) CallHypMethod_Impl(FunctionType fn, HypData** ar
 
         if (!condition)
         {
-            HYP_FAIL("Invalid argument at index %zu: Expected %zu, Got TypeId %u",
-                Index, TypeName<NormalizedType<typename TupleElement<Index, ArgTypes...>::Type>>().Data(),
+            HYP_FAIL("Invalid argument at index %zu: Expected %s (TypeId: %zu), Got TypeId %u",
+                Index,
+                TypeName<NormalizedType<typename TupleElement<Index, ArgTypes...>::Type>>().Data(),
+                TypeId::ForType<NormalizedType<typename TupleElement<Index, ArgTypes...>::Type>>().Value(),
                 args[Index]->GetTypeId().Value());
         }
 

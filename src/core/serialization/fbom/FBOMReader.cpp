@@ -889,8 +889,6 @@ FBOMResult FBOMReader::ReadPropertyName(FBOMLoadContext& context, BufferedReader
             rootType = rootType->extends;
         }
 
-        HYP_BREAKPOINT;
-
         return FBOMResult { FBOMResult::FBOM_ERR, "Invalid property name: Expected data to be of type `Name`" };
     }
 

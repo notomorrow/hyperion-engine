@@ -39,7 +39,7 @@ Bitmap<4, float> LightmapUVMap::ToBitmapRadiance() const
 
             color /= color.w;
 
-            bitmap.GetPixelAtIndex(index).SetRGBA(color);
+            bitmap.GetPixelReference(index).SetRGBA(color);
         }
     }
 
@@ -67,7 +67,7 @@ Bitmap<4, float> LightmapUVMap::ToBitmapIrradiance() const
 
             color /= color.w;
 
-            bitmap.GetPixelAtIndex(index).SetRGBA(color);
+            bitmap.GetPixelReference(index).SetRGBA(color);
         }
     }
 

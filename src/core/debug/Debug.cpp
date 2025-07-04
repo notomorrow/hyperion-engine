@@ -24,6 +24,9 @@
 namespace hyperion {
 namespace debug {
 
+HYP_API char g_errorStringBuf[4096];
+HYP_API char* g_errorStringBufPtr = &g_errorStringBuf[0];
+
 static const char* g_logTypeTable[] = {
     "INFO",
     "WARN",

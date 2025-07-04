@@ -958,7 +958,6 @@ struct HypDataHelper<Handle<T>> : HypDataHelper<AnyHandle>
 
         if (!marshal)
         {
-            HYP_BREAKPOINT;
             return FBOMResult { FBOMResult::FBOM_ERR, "No marshal defined for handle type" };
         }
 

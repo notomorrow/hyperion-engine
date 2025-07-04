@@ -9,8 +9,9 @@
 #include <cstdio>
 
 namespace hyperion {
-
 namespace debug {
+
+HYP_API extern char* g_errorStringBufPtr;
 
 enum class LogType : int
 {
@@ -140,18 +141,17 @@ using debug::LogType;
 // Assert used for internal Hyperion libraries. Uses a simple printf-style format string, rather than the internal Hyperion formatting library.
 // Opt to use this macro over AssertDebug() and Assert() to not pollute dependency on including logging headers.
 // These assertions are stripped from released builds.
-#define HYP_CORE_ASSERT(cond, ...)                                                                                                   \
-    do                                                                                                                               \
-    {                                                                                                                                \
-        if (HYP_UNLIKELY(!(cond)))                                                                                                   \
-        {                                                                                                                            \
-            char buf[4096];                                                                                                          \
-            std::snprintf(buf, 4096, "Assertion failed in Hyperion core library!\n\tCondition: " #cond "\n\tMessage: " __VA_ARGS__); \
-            debug::LogAssert(&buf[0]);                                                                                               \
-            HYP_PRINT_STACK_TRACE();                                                                                                 \
-            std::terminate();                                                                                                        \
-        }                                                                                                                            \
-    }                                                                                                                                \
+#define HYP_CORE_ASSERT(cond, ...)                                                                                                                          \
+    do                                                                                                                                                      \
+    {                                                                                                                                                       \
+        if (HYP_UNLIKELY(!(cond)))                                                                                                                          \
+        {                                                                                                                                                   \
+            std::snprintf(debug::g_errorStringBufPtr, 4096, "Assertion failed in Hyperion core library!\n\tCondition: " #cond "\n\tMessage: " __VA_ARGS__); \
+            debug::LogAssert(debug::g_errorStringBufPtr);                                                                                                   \
+            HYP_PRINT_STACK_TRACE();                                                                                                                        \
+            std::terminate();                                                                                                                               \
+        }                                                                                                                                                   \
+    }                                                                                                                                                       \
     while (0)
 #else
 #define HYP_CORE_ASSERT(...)
@@ -164,17 +164,16 @@ using debug::LogType;
 #define HYP_PRINT_STACK_TRACE()
 #endif
 
-#define HYP_FAIL(...)                                                                        \
-    do                                                                                       \
-    {                                                                                        \
-        HYP_PRINT_STACK_TRACE();                                                             \
-        char buf[4096];                                                                      \
-        std::snprintf(buf, 4096, "\n\nAn engine crash has been triggered!\n\t" __VA_ARGS__); \
-        debug::LogAssert(&buf[0]);                                                           \
-        debug::DebugLog_FlushOutputStream();                                                 \
-                                                                                             \
-        std::terminate();                                                                    \
-    }                                                                                        \
+#define HYP_FAIL(...)                                                                                               \
+    do                                                                                                              \
+    {                                                                                                               \
+        HYP_PRINT_STACK_TRACE();                                                                                    \
+        std::snprintf(debug::g_errorStringBufPtr, 4096, "\n\nAn engine crash has been triggered!\n\t" __VA_ARGS__); \
+        debug::LogAssert(debug::g_errorStringBufPtr);                                                               \
+        debug::DebugLog_FlushOutputStream();                                                                        \
+                                                                                                                    \
+        std::terminate();                                                                                           \
+    }                                                                                                               \
     while (0)
 
 // Add to the body of virtual methods that should be overridden.

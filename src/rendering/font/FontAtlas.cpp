@@ -19,6 +19,8 @@
 #include <core/logging/Logger.hpp>
 #include <core/utilities/DeferredScope.hpp>
 
+#include <core/io/ByteWriter.hpp>
+
 #include <EngineGlobals.hpp>
 
 namespace hyperion {
@@ -232,8 +234,6 @@ Result FontAtlas::RenderAtlasTextures()
             Glyph glyph { m_face, m_face->GetGlyphIndex(symbol), scale };
             glyph.LoadMetrics();
 
-            AssertDebug(std::isspace(symbol) || (glyph.GetMetrics().width != 0 && glyph.GetMetrics().height != 0));
-
             if (isMainAtlas)
             {
                 m_glyphMetrics[i] = glyph.GetMetrics();
@@ -268,10 +268,21 @@ Result FontAtlas::RenderAtlasTextures()
             atlasBitmap->Blit(*glyphBitmap, srcRect, dstRect);
         }
 
+        // debugging
+        for (int x = 0; x < 500; x++)
+        {
+            for (int y = 0; y < 10; y++)
+            {
+                atlasBitmap->GetPixelReference(x, y).SetRGBA(Vec4f(1.0f, 0.0f, 0.0f, 1.0f));
+            }
+        }
+
         atlasBitmap->FlipVertical();
 
         // debugging
-        if (!atlasBitmap->Write("TmpAtlas.bmp"))
+        FileByteWriter byteWriter { "TmpAtlas.bmp" };
+
+        if (!atlasBitmap->Write(&byteWriter))
         {
             HYP_FAIL("what");
         }

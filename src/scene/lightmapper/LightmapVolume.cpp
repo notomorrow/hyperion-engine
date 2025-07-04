@@ -14,6 +14,8 @@
 #include <rendering/lightmapper/RenderLightmapVolume.hpp>
 #include <rendering/lightmapper/LightmapUVBuilder.hpp>
 
+#include <core/io/ByteWriter.hpp>
+
 #include <core/logging/Logger.hpp>
 #include <core/logging/LogChannels.hpp>
 
@@ -154,10 +156,7 @@ struct RENDER_COMMAND(BakeLightmapVolumeTexture)
                 continue;
             }
 
-            Bitmap<4> bitmap(
-                atlasTexture->GetExtent().x,
-                atlasTexture->GetExtent().y);
-
+            Bitmap<4> bitmap(atlasTexture->GetExtent().x, atlasTexture->GetExtent().y);
             bitmap.SetPixels(data);
 
             const String filename = HYP_FORMAT("lightmap_atlas_texture_{}_{}.bmp",
@@ -166,7 +165,8 @@ struct RENDER_COMMAND(BakeLightmapVolumeTexture)
 
             HYP_LOG(Lightmap, Info, "Writing atlas texture {} to file {}", atlasTexture->GetName(), filename);
 
-            bool res = bitmap.Write(filename.Data());
+            FileByteWriter fileByteWriter { filename };
+            bool res = bitmap.Write(&fileByteWriter);
 
             if (!res)
             {

@@ -399,7 +399,7 @@ public:
 
     T& Get(SizeType index)
     {
-        HYP_CORE_ASSERT(HasIndex(index), "Index %u is not initialized in SparsePagedArray!", index);
+        HYP_CORE_ASSERT(HasIndex(index), "Index %zu is not initialized in SparsePagedArray!", index);
 
         const SizeType pageIndex = PageIndex(index);
         const SizeType elementIndex = ElementIndex(index);

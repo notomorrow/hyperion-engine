@@ -8,11 +8,13 @@
 
 namespace hyperion {
 
+class ByteWriter;
+
 class WriteBitmap
 {
 public:
     HYP_API static bool Write(
-        const char* path,
+        ByteWriter* byteWriter,
         int width,
         int height,
         unsigned char* bytes);
