@@ -85,7 +85,6 @@ static void ForEachCharacter(const FontAtlas& fontAtlas, const String& text, con
     {
         for (const FontAtlasCharacterIterator& characterIterator : currentWordChars)
         {
-            HYP_BREAKPOINT;
             callback(characterIterator);
         }
 
@@ -195,11 +194,7 @@ static BoundingBox CalculateTextAABB(const FontAtlas& fontAtlas, const String& t
             }
 
             aabb = aabb.Union(characterAabb);
-
-            HYP_LOG(UI, Debug, "character {} has characterAabb {}", iter.charValue, characterAabb);
         });
-
-    HYP_LOG(UI, Debug, "CALCULATE TEXT AABB FOR FONT ATLAS WITH DIMENSIONS: {}, textSize: {}, text: {}\tAABB: {}\tparentBounds: {}", fontAtlas.GetAtlasTextures().GetMainAtlas()->GetExtent(), textSize, text, aabb, parentBounds);
 
     return aabb;
 }

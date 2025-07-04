@@ -86,8 +86,6 @@ public:
 
     HYP_API Optional<const Glyph::Metrics&> GetGlyphMetrics(FontFace::WChar symbol) const;
 
-    HYP_API void WriteToBuffer(uint32 pixelSize, ByteBuffer& buffer) const;
-    HYP_API Bitmap<1> GenerateBitmap(uint32 pixelSize) const;
     HYP_API json::JSONValue GenerateMetadataJSON(const String& outputDirectory) const;
 
 private:

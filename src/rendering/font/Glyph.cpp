@@ -60,6 +60,19 @@ void Glyph::LoadMetrics()
 
         return;
     }
+
+    FT_GlyphSlot glyphSlot = m_face->GetFace()->glyph;
+    Assert(glyphSlot != nullptr);
+
+    FT_Bitmap& ftBitmap = glyphSlot->bitmap;
+
+    m_metrics.width = uint16(glyphSlot->bitmap.width);
+    m_metrics.height = uint16(glyphSlot->bitmap.rows);
+    m_metrics.bearingX = int16(glyphSlot->bitmap_left);
+    m_metrics.bearingY = int16(glyphSlot->bitmap_top);
+    m_metrics.advance = uint32(glyphSlot->advance.x);
+#else
+    HYP_LOG(Font, Error, "Glyph::LoadMetrics called without FreeType support!");
 #endif
 }
 
@@ -80,16 +93,12 @@ TResult<UniquePtr<GlyphBitmap>> Glyph::Rasterize()
         return HYP_MAKE_ERROR(Error, "Error loading glyph from font face!");
     }
 
-    glyph = m_face->GetFace()->glyph;
-    FT_Bitmap& ftBitmap = glyph->bitmap;
+    FT_GlyphSlot glyphSlot = m_face->GetFace()->glyph;
+    Assert(glyphSlot != nullptr);
 
-    Assert(glyph->format == FT_GLYPH_FORMAT_BITMAP);
+    FT_Bitmap& ftBitmap = glyphSlot->bitmap;
 
-    m_metrics.width = uint16(glyph->bitmap.width);
-    m_metrics.height = uint16(glyph->bitmap.rows);
-    m_metrics.bearingX = int16(glyph->bitmap_left);
-    m_metrics.bearingY = int16(glyph->bitmap_top);
-    m_metrics.advance = uint32(glyph->advance.x);
+    Assert(glyphSlot->format == FT_GLYPH_FORMAT_BITMAP);
 #endif
 
     m_metrics.imagePosition = { 0, 0 };
