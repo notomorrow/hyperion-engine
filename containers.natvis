@@ -224,8 +224,9 @@
     </Expand>
   </Type>
 
-  <Type Name="hyperion::ID&lt;*&gt;">
+  <Type Name="hyperion::ObjId&lt;*&gt;">
     <DisplayString>{{ Value={value} }}</DisplayString>
+    <DisplayString>{{ TypeId={typeIdValue} }}</DisplayString>
   </Type>
 
   <Type Name="hyperion::Handle&lt;*&gt;">
@@ -338,7 +339,7 @@
     </Expand>
   </Type>
 
-  <Type Name="hyperion::utilities::TypeID">
+  <Type Name="hyperion::utilities::TypeId">
     <DisplayString Condition="value == 0">Void</DisplayString>
     <DisplayString Condition="value != 0">{{ Value={value} }}</DisplayString>
 

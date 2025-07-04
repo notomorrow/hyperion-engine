@@ -279,16 +279,6 @@ Result FontAtlas::RenderAtlasTextures()
 
         atlasBitmap->FlipVertical();
 
-        // debugging
-        FileByteWriter byteWriter { "TmpAtlas.bmp" };
-
-        if (!atlasBitmap->Write(&byteWriter))
-        {
-            HYP_FAIL("what");
-        }
-
-        // Create the atlas texture
-
         const TextureDesc atlasTextureDesc {
             TT_TEX2D,
             TF_RGBA8,
