@@ -44,7 +44,7 @@ VulkanComputePipeline::~VulkanComputePipeline()
 
 void VulkanComputePipeline::Bind(CommandBufferBase* commandBuffer)
 {
-    AssertThrow(m_handle != VK_NULL_HANDLE);
+    HYP_GFX_ASSERT(m_handle != VK_NULL_HANDLE);
 
     vkCmdBindPipeline(
         static_cast<VulkanCommandBuffer*>(commandBuffer)->GetVulkanHandle(),

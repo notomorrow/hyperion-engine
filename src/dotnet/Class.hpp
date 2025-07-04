@@ -363,7 +363,7 @@ public:
     ReturnType InvokeStaticMethod(UTF8StringView methodName, Args&&... args)
     {
         auto it = m_methods.FindAs(methodName);
-        AssertThrowMsg(it != m_methods.End(), "Method not found");
+        Assert(it != m_methods.End(), "Method not found");
 
         const Method& methodObject = it->second;
         const Method* methodPtr = &methodObject;

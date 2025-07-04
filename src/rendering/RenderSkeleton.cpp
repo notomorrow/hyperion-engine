@@ -34,7 +34,7 @@ void RenderSkeleton::Initialize_Internal()
 {
     HYP_SCOPE;
 
-    AssertThrow(m_skeleton != nullptr);
+    Assert(m_skeleton != nullptr);
 
     UpdateBufferData();
 }
@@ -58,7 +58,7 @@ void RenderSkeleton::UpdateBufferData()
 {
     HYP_SCOPE;
 
-    AssertThrow(m_bufferIndex != ~0u);
+    Assert(m_bufferIndex != ~0u);
 
     *static_cast<SkeletonShaderData*>(m_bufferAddress) = m_bufferData;
     GetGpuBufferHolder()->MarkDirty(m_bufferIndex);

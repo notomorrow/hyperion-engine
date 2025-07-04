@@ -106,7 +106,7 @@ void StreamedTextureData::Unpage_Internal()
 
 void StreamedTextureData::Load_Internal() const
 {
-    AssertThrow(m_streamedData != nullptr);
+    Assert(m_streamedData != nullptr);
     m_streamedData->Load();
 
     if (!m_textureData.HasValue())
@@ -148,11 +148,11 @@ void StreamedTextureData::LoadTextureData(const ByteBuffer& byteBuffer) const
     }
 
     m_textureData = textureData;
-    AssertThrow(m_textureDesc == m_textureData->desc);
+    Assert(m_textureDesc == m_textureData->desc);
 
     m_bufferSize = m_textureData->buffer.Size();
 
-    AssertThrowMsg(m_bufferSize == m_textureDesc.GetByteSize(),
+    Assert(m_bufferSize == m_textureDesc.GetByteSize(),
         "Buffer size mismatch for StreamedTextureData with hash: %llu. Expected: %u, Actual: %u",
         GetDataHashCode().Value(), m_textureDesc.GetByteSize(), m_bufferSize);
 }

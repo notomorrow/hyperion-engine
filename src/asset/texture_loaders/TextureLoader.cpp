@@ -103,7 +103,7 @@ AssetLoadResult TextureLoader::LoadAsset(LoaderState& state) const
     texture->SetName(CreateNameFromDynamicString(StringUtil::Basename(state.filepath.Data()).c_str()));
 
     AssetLoadResult result = LoadedAsset { std::move(texture) };
-    AssertThrow(result.GetValue().value.Is<Handle<Texture>>());
+    Assert(result.GetValue().value.Is<Handle<Texture>>());
 
     return result;
 }

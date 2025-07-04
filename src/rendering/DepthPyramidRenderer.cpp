@@ -58,16 +58,16 @@ void DepthPyramidRenderer::Create()
     HYP_SCOPE;
     Threads::AssertOnThread(g_renderThread);
 
-    AssertThrow(m_gbuffer != nullptr);
+    Assert(m_gbuffer != nullptr);
 
     const FramebufferRef& opaqueFramebuffer = m_gbuffer->GetBucket(RB_OPAQUE).GetFramebuffer();
-    AssertThrow(opaqueFramebuffer.IsValid());
+    Assert(opaqueFramebuffer.IsValid());
 
     AttachmentBase* depthAttachment = opaqueFramebuffer->GetAttachment(GTN_MAX - 1);
-    AssertThrow(depthAttachment != nullptr);
+    Assert(depthAttachment != nullptr);
 
     m_depthImageView = depthAttachment->GetImageView();
-    AssertThrow(m_depthImageView.IsValid());
+    Assert(m_depthImageView.IsValid());
 
     auto createDepthPyramidResources = [this]()
     {
@@ -78,7 +78,7 @@ void DepthPyramidRenderer::Create()
         HYPERION_ASSERT_RESULT(m_depthPyramidSampler->Create());
 
         const ImageRef& depthImage = m_depthImageView->GetImage();
-        AssertThrow(depthImage.IsValid());
+        Assert(depthImage.IsValid());
 
         // create depth pyramid image
         m_depthPyramid = g_renderBackend->MakeImage(TextureDesc {
@@ -135,12 +135,12 @@ void DepthPyramidRenderer::Create()
         }
 
         ShaderRef shader = g_shaderManager->GetOrCreate(NAME("GenerateDepthPyramid"), {});
-        AssertThrow(shader.IsValid());
+        Assert(shader.IsValid());
 
         const DescriptorTableDeclaration& descriptorTableDecl = shader->GetCompiledShader()->GetDescriptorTableDeclaration();
 
         const DescriptorSetDeclaration* depthPyramidDescriptorSetDecl = descriptorTableDecl.FindDescriptorSetDeclaration(NAME("DepthPyramidDescriptorSet"));
-        AssertThrow(depthPyramidDescriptorSetDecl != nullptr);
+        Assert(depthPyramidDescriptorSetDecl != nullptr);
 
         while (m_mipDescriptorTables.Size() > numMipLevels)
         {
@@ -161,7 +161,7 @@ void DepthPyramidRenderer::Create()
                 for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
                 {
                     const DescriptorSetRef& depthPyramidDescriptorSet = descriptorTable->GetDescriptorSet(NAME("DepthPyramidDescriptorSet"), frameIndex);
-                    AssertThrow(depthPyramidDescriptorSet != nullptr);
+                    Assert(depthPyramidDescriptorSet != nullptr);
 
                     if (mipLevel == 0)
                     {
@@ -170,7 +170,7 @@ void DepthPyramidRenderer::Create()
                     }
                     else
                     {
-                        AssertThrow(m_mipImageViews[mipLevel - 1] != nullptr);
+                        Assert(m_mipImageViews[mipLevel - 1] != nullptr);
 
                         depthPyramidDescriptorSet->SetElement(NAME("InImage"), m_mipImageViews[mipLevel - 1]);
                     }

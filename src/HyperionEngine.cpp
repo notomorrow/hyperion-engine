@@ -118,10 +118,10 @@ HYP_API const FilePath& GetResourceDirectory()
 #else
             path = GetExecutablePath() / "res";
 #endif
-            AssertThrowMsg(path.Exists() && path.IsDirectory(), "Resource directory does not exist or is not a directory: %s", path.Data());
+            Assert(path.Exists() && path.IsDirectory(), "Resource directory does not exist or is not a directory: %s", path.Data());
 
-            AssertThrowMsg(path.CanRead(), "Resource directory is not readable: %s", path.Data());
-            AssertThrowMsg(path.CanWrite(), "Resource directory is not writable: %s", path.Data());
+            Assert(path.CanRead(), "Resource directory is not readable: %s", path.Data());
+            Assert(path.CanWrite(), "Resource directory is not writable: %s", path.Data());
         }
     } resourceDirectoryData;
 
@@ -175,7 +175,7 @@ HYP_API void DestroyEngine()
 {
     Threads::AssertOnThread(g_mainThread);
 
-    AssertThrowMsg(
+    Assert(
         g_engine != nullptr,
         "Hyperion not initialized!");
 

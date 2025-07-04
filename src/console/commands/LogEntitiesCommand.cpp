@@ -150,7 +150,7 @@ Result LogEntitiesCommand::Execute_Impl(const CommandLineArguments& args)
                                     if (UIObject* uiObject = uiComponent->uiObject)
                                     {
                                         Handle<UIObject> uiObjectRef = uiObject->HandleFromThis();
-                                        AssertThrow(uiObjectRef.IsValid());
+                                        Assert(uiObjectRef.IsValid());
 
                                         componentJson["ui_object"] = json::JSONObject({ { "name", json::JSONString(*uiObject->GetName()) },
                                             { "type", json::JSONString(*uiObject->InstanceClass()->GetName()) },

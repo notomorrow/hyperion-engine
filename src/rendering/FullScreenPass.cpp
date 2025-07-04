@@ -30,6 +30,9 @@
 #include <EngineGlobals.hpp>
 #include <Types.hpp>
 
+#include <core/logging/Logger.hpp>
+#include <core/logging/LogChannels.hpp>
+
 #include <util/MeshBuilder.hpp>
 
 #include <core/profiling/ProfileScope.hpp>
@@ -155,7 +158,7 @@ const ImageViewRef& FullScreenPass::GetFinalImageView() const
 {
     if (UsesTemporalBlending())
     {
-        AssertThrow(m_temporalBlending != nullptr);
+        Assert(m_temporalBlending != nullptr);
 
         return m_temporalBlending->GetResultTexture()->GetRenderResource().GetImageView();
     }
@@ -202,9 +205,9 @@ void FullScreenPass::Create()
 {
     HYP_SCOPE;
 
-    AssertThrow(!m_isInitialized);
+    Assert(!m_isInitialized);
 
-    AssertThrowMsg(
+    Assert(
         m_imageFormat != TF_NONE,
         "Image format must be set before creating the full screen pass");
 
@@ -231,7 +234,7 @@ void FullScreenPass::SetShader(const ShaderRef& shader)
 
 AttachmentBase* FullScreenPass::GetAttachment(uint32 attachmentIndex) const
 {
-    AssertThrow(m_framebuffer.IsValid());
+    Assert(m_framebuffer.IsValid());
 
     return m_framebuffer->GetAttachment(attachmentIndex);
 }
@@ -256,7 +259,7 @@ void FullScreenPass::Resize_Internal(Vec2u newSize)
         return;
     }
 
-    AssertDebugMsg(newSize.Volume() != 0, "Cannot resize FullScreenPass to zero size!");
+    AssertDebug(newSize.Volume() != 0, "Cannot resize FullScreenPass to zero size!");
 
     newSize = MathUtil::Max(newSize, Vec2u::One());
     m_extent = newSize;
@@ -297,7 +300,7 @@ void FullScreenPass::CreateFramebuffer()
 
     if (m_framebuffer.IsValid())
     {
-        AssertThrow(m_framebuffer->GetExtent() == m_extent);
+        Assert(m_framebuffer->GetExtent() == m_extent);
         DeferCreate(m_framebuffer);
 
         return;
@@ -305,7 +308,7 @@ void FullScreenPass::CreateFramebuffer()
 
     if (m_extent.x * m_extent.y == 0)
     {
-        // AssertThrow(m_gbuffer != nullptr);
+        // Assert(m_gbuffer != nullptr);
         // m_extent = m_gbuffer->GetExtent();
         // TEMP HACK
         m_extent = g_renderBackend->GetSwapchain()->GetExtent();
@@ -444,7 +447,7 @@ void FullScreenPass::CreateRenderTextureToScreenPass()
     }
 
     ShaderRef renderTextureToScreenShader = g_shaderManager->GetOrCreate(NAME("RenderTextureToScreen"), shaderProperties);
-    AssertThrow(renderTextureToScreenShader.IsValid());
+    Assert(renderTextureToScreenShader.IsValid());
 
     const DescriptorTableDeclaration& descriptorTableDecl = renderTextureToScreenShader->GetCompiledShader()->GetDescriptorTableDeclaration();
     DescriptorTableRef descriptorTable = g_renderBackend->MakeDescriptorTable(&descriptorTableDecl);
@@ -452,7 +455,7 @@ void FullScreenPass::CreateRenderTextureToScreenPass()
     for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
     {
         const DescriptorSetRef& descriptorSet = descriptorTable->GetDescriptorSet(NAME("RenderTextureToScreenDescriptorSet"), frameIndex);
-        AssertThrow(descriptorSet != nullptr);
+        Assert(descriptorSet != nullptr);
 
         descriptorSet->SetElement(NAME("InTexture"), GetPreviousFrameColorImageView());
     }
@@ -490,7 +493,7 @@ void FullScreenPass::CreateMergeHalfResTexturesPass()
     }
 
     ShaderRef mergeHalfResTexturesShader = g_shaderManager->GetOrCreate(NAME("MergeHalfResTextures"));
-    AssertThrow(mergeHalfResTexturesShader.IsValid());
+    Assert(mergeHalfResTexturesShader.IsValid());
 
     const DescriptorTableDeclaration& descriptorTableDecl = mergeHalfResTexturesShader->GetCompiledShader()->GetDescriptorTableDeclaration();
     DescriptorTableRef descriptorTable = g_renderBackend->MakeDescriptorTable(&descriptorTableDecl);
@@ -498,7 +501,7 @@ void FullScreenPass::CreateMergeHalfResTexturesPass()
     for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
     {
         const DescriptorSetRef& descriptorSet = descriptorTable->GetDescriptorSet(NAME("MergeHalfResTexturesDescriptorSet"), frameIndex);
-        AssertThrow(descriptorSet != nullptr);
+        Assert(descriptorSet != nullptr);
 
         descriptorSet->SetElement(NAME("InTexture"), GetAttachment(0)->GetImageView());
         descriptorSet->SetElement(NAME("UniformBuffer"), mergeHalfResTexturesUniformBuffer);
@@ -530,7 +533,7 @@ void FullScreenPass::RenderPreviousTextureToScreen(FrameBase* frame, const Rende
 
     const uint32 frameIndex = frame->GetFrameIndex();
 
-    AssertThrow(m_renderTextureToScreenPass != nullptr);
+    Assert(m_renderTextureToScreenPass != nullptr);
 
     if (ShouldRenderHalfRes())
     {
@@ -562,7 +565,7 @@ void FullScreenPass::RenderPreviousTextureToScreen(FrameBase* frame, const Rende
 
     if (viewDescriptorSetIndex != ~0u)
     {
-        AssertThrow(renderSetup.passData != nullptr);
+        Assert(renderSetup.passData != nullptr);
 
         frame->GetCommandList().Add<BindDescriptorSet>(
             renderSetup.passData->descriptorSets[frame->GetFrameIndex()],
@@ -581,7 +584,7 @@ void FullScreenPass::CopyResultToPreviousTexture(FrameBase* frame, const RenderS
 
     const uint32 frameIndex = frame->GetFrameIndex();
 
-    AssertThrow(m_previousTexture.IsValid());
+    Assert(m_previousTexture.IsValid());
 
     const ImageRef& srcImage = m_framebuffer->GetAttachment(0)->GetImage();
     const ImageRef& dstImage = m_previousTexture->GetRenderResource().GetImage();
@@ -602,7 +605,7 @@ void FullScreenPass::MergeHalfResTextures(FrameBase* frame, const RenderSetup& r
 
     const uint32 frameIndex = frame->GetFrameIndex();
 
-    AssertThrow(m_mergeHalfResTexturesPass != nullptr);
+    Assert(m_mergeHalfResTexturesPass != nullptr);
 
     m_mergeHalfResTexturesPass->Render(frame, renderSetup);
 }
@@ -657,7 +660,7 @@ void FullScreenPass::RenderToFramebuffer(FrameBase* frame, const RenderSetup& re
 
     if (ShouldRenderHalfRes())
     {
-        AssertThrowMsg(framebuffer != nullptr, "Framebuffer must be set before rendering to it, if rendering at half res");
+        Assert(framebuffer != nullptr, "Framebuffer must be set before rendering to it, if rendering at half res");
 
         const Vec2i viewportOffset = (Vec2i(framebuffer->GetExtent().x, 0) / 2) * (renderSetup.world->GetBufferData().frameCounter & 1);
         const Vec2u viewportExtent = Vec2u(framebuffer->GetExtent().x / 2, framebuffer->GetExtent().y);
@@ -685,7 +688,7 @@ void FullScreenPass::RenderToFramebuffer(FrameBase* frame, const RenderSetup& re
 
     if (viewDescriptorSetIndex != ~0u)
     {
-        AssertThrow(renderSetup.passData != nullptr);
+        Assert(renderSetup.passData != nullptr);
 
         frame->GetCommandList().Add<BindDescriptorSet>(
             renderSetup.passData->descriptorSets[frame->GetFrameIndex()],

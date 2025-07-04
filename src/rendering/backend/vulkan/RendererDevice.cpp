@@ -1,6 +1,7 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
 #include <rendering/backend/RendererDevice.hpp>
+#include <rendering/backend/RenderBackend.hpp>
 #include <rendering/backend/RendererInstance.hpp>
 #include <rendering/backend/RendererFeatures.hpp>
 #include <rendering/backend/RendererDescriptorSet.hpp>
@@ -57,7 +58,7 @@ VkPhysicalDevice Device<Platform::vulkan>::GetPhysicalDevice()
 
 VkSurfaceKHR Device<Platform::vulkan>::GetRenderSurface()
 {
-    AssertThrowMsg(m_surface != VK_NULL_HANDLE, "Surface has not been set!");
+    HYP_GFX_ASSERT(m_surface != VK_NULL_HANDLE, "Surface has not been set!");
 
     return m_surface;
 }
@@ -166,8 +167,8 @@ QueueFamilyIndices Device<Platform::vulkan>::FindQueueFamilies(VkPhysicalDevice 
         }
     }
 
-    AssertThrowMsg(indices.presentFamily.HasValue(), "No present queue family found!");
-    AssertThrowMsg(indices.graphicsFamily.HasValue(), "No graphics queue family found that supports presentation!");
+    HYP_GFX_ASSERT(indices.presentFamily.HasValue(), "No present queue family found!");
+    HYP_GFX_ASSERT(indices.graphicsFamily.HasValue(), "No graphics queue family found that supports presentation!");
 
     if (!indices.transferFamily.HasValue())
     {
@@ -208,7 +209,7 @@ QueueFamilyIndices Device<Platform::vulkan>::FindQueueFamilies(VkPhysicalDevice 
         }
     }
 
-    AssertThrowMsg(indices.IsComplete(), "Queue indices could not be created! Indices were:\n"
+    HYP_GFX_ASSERT(indices.IsComplete(), "Queue indices could not be created! Indices were:\n"
                                          "\tGraphics: %d\n"
                                          "\tTransfer: %d\n"
                                          "\tPresent: %d\n",
@@ -414,7 +415,7 @@ RendererResult Device<Platform::vulkan>::Create(const std::set<uint32>& required
     // so for each unsupported extension, remove it from out list of extensions
     for (auto& it : unsupportedExtensions)
     {
-        AssertThrowMsg(!it.second, "Unsupported extension should not be 'required', should have failed earlier check");
+        HYP_GFX_ASSERT(!it.second, "Unsupported extension should not be 'required', should have failed earlier check");
 
         m_requiredExtensions.erase(it.first);
     }
@@ -535,7 +536,7 @@ RendererResult Device<Platform::vulkan>::Create(const std::set<uint32>& required
 
 VkQueue Device<Platform::vulkan>::GetQueue(uint32 queueFamilyIndex, uint32 queueIndex)
 {
-    AssertThrow(m_device != VK_NULL_HANDLE);
+    HYP_GFX_ASSERT(m_device != VK_NULL_HANDLE);
 
     VkQueue queue;
     vkGetDeviceQueue(m_device, queueFamilyIndex, queueIndex, &queue);

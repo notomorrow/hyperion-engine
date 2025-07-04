@@ -42,7 +42,7 @@ RendererResult VulkanAsyncCompute::Create()
 {
     HYP_SCOPE;
 
-    AssertThrow(GetRenderBackend()->GetDevice()->GetQueueFamilyIndices().IsComplete());
+    HYP_GFX_ASSERT(GetRenderBackend()->GetDevice()->GetQueueFamilyIndices().IsComplete());
 
     VulkanDeviceQueue* queue = &GetRenderBackend()->GetDevice()->GetComputeQueue();
 
@@ -57,7 +57,7 @@ RendererResult VulkanAsyncCompute::Create()
 
     for (const VulkanCommandBufferRef& commandBuffer : m_commandBuffers)
     {
-        AssertThrow(commandBuffer.IsValid());
+        HYP_GFX_ASSERT(commandBuffer.IsValid());
 
         HYPERION_BUBBLE_ERRORS(commandBuffer->Create(queue->commandPools[0]));
     }

@@ -68,7 +68,7 @@ public:
 
     void Pop()
     {
-        AssertThrow(m_position < m_tokens.Size());
+        Assert(m_position < m_tokens.Size());
 
         m_tokens.Erase(m_tokens.Begin() + m_position);
     }
@@ -80,13 +80,13 @@ public:
 
     Token Next()
     {
-        AssertThrow(m_position < m_tokens.Size());
+        Assert(m_position < m_tokens.Size());
         return m_tokens[m_position++];
     }
 
     Token Last() const
     {
-        AssertThrow(!m_tokens.Empty());
+        Assert(!m_tokens.Empty());
         return m_tokens.Back();
     }
 
@@ -112,7 +112,7 @@ public:
 
     void Rewind(SizeType n)
     {
-        AssertThrow(n <= m_position);
+        Assert(n <= m_position);
 
         m_position -= n;
     }

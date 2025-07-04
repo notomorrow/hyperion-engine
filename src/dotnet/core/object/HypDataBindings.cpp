@@ -23,14 +23,14 @@ extern "C"
 
     HYP_EXPORT void HypData_Construct(ValueStorage<HypData>* hypDataStorage)
     {
-        AssertThrow(hypDataStorage != nullptr);
+        Assert(hypDataStorage != nullptr);
 
         hypDataStorage->Construct();
     }
 
     HYP_EXPORT void HypData_Destruct(ValueStorage<HypData>* hypDataStorage)
     {
-        AssertThrow(hypDataStorage != nullptr);
+        Assert(hypDataStorage != nullptr);
 
         hypDataStorage->Destruct();
     }
@@ -73,45 +73,45 @@ extern "C"
         }
     }
 
-#define HYP_DEFINE_HYPDATA_GET(type, name)                                                   \
+#define HYP_DEFINE_HYPDATA_GET(type, name)                                                 \
     HYP_EXPORT int8 HypData_Get##name(const HypData* hypData, int8 strict, type* outValue) \
-    {                                                                                        \
+    {                                                                                      \
         if (!hypData || !outValue)                                                         \
-        {                                                                                    \
-            return false;                                                                    \
-        }                                                                                    \
-                                                                                             \
-        if (hypData->Is<type>(bool(strict)))                                                \
-        {                                                                                    \
+        {                                                                                  \
+            return false;                                                                  \
+        }                                                                                  \
+                                                                                           \
+        if (hypData->Is<type>(bool(strict)))                                               \
+        {                                                                                  \
             *outValue = hypData->Get<type>();                                              \
-                                                                                             \
-            return true;                                                                     \
-        }                                                                                    \
-                                                                                             \
-        return false;                                                                        \
+                                                                                           \
+            return true;                                                                   \
+        }                                                                                  \
+                                                                                           \
+        return false;                                                                      \
     }
 
-#define HYP_DEFINE_HYPDATA_IS(type, name)                                  \
+#define HYP_DEFINE_HYPDATA_IS(type, name)                                 \
     HYP_EXPORT int8 HypData_Is##name(const HypData* hypData, int8 strict) \
-    {                                                                      \
+    {                                                                     \
         if (!hypData)                                                     \
-        {                                                                  \
-            return false;                                                  \
-        }                                                                  \
-                                                                           \
+        {                                                                 \
+            return false;                                                 \
+        }                                                                 \
+                                                                          \
         return hypData->Is<type>(bool(strict));                           \
     }
 
-#define HYP_DEFINE_HYPDATA_SET(type, name)                           \
+#define HYP_DEFINE_HYPDATA_SET(type, name)                          \
     HYP_EXPORT int8 HypData_Set##name(HypData* hypData, type value) \
-    {                                                                \
+    {                                                               \
         if (!hypData)                                               \
-        {                                                            \
-            return false;                                            \
-        }                                                            \
-                                                                     \
+        {                                                           \
+            return false;                                           \
+        }                                                           \
+                                                                    \
         *hypData = HypData(value);                                  \
-        return true;                                                 \
+        return true;                                                \
     }
 
     HYP_DEFINE_HYPDATA_GET(int8, Int8)
@@ -416,7 +416,7 @@ extern "C"
 
         if (RC<dotnet::Class> managedClass = hypClass->GetManagedClass())
         {
-            AssertThrow(managedClass->GetMarshalObjectFunction() != nullptr);
+            Assert(managedClass->GetMarshalObjectFunction() != nullptr);
 
             *outObjectReference = managedClass->GetMarshalObjectFunction()(ref.GetPointer(), uint32(hypClass->GetSize()));
 
@@ -449,7 +449,7 @@ extern "C"
         }
 
         const HypStruct* hypStruct = dynamic_cast<const HypStruct*>(hypClass);
-        AssertThrow(hypStruct != nullptr);
+        Assert(hypStruct != nullptr);
 
         return hypStruct->ToHypData(ByteView(reinterpret_cast<ubyte*>(objectPtr), size), *hypData);
     }

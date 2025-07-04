@@ -202,7 +202,7 @@ void HyperionEditor::Init()
     //               ShaderProperties(staticMeshVertexAttributes) },
     //             .bucket = RB_OPAQUE },
     //         {}, { { MaterialTextureKey::ALBEDO_MAP, std::move(dummyLightTexture) } }));
-    //     AssertThrow(light->GetMaterial().IsValid());
+    //     Assert(light->GetMaterial().IsValid());
 
     //     InitObject(light);
 

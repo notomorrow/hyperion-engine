@@ -3,6 +3,8 @@
 #include <rendering/backend/RendererInstance.hpp>
 #include <rendering/backend/RendererDevice.hpp>
 #include <rendering/backend/RendererFeatures.hpp>
+#include <rendering/backend/RenderBackend.hpp>
+
 #include <rendering/backend/vulkan/RendererSemaphore.hpp>
 #include <rendering/backend/vulkan/RendererSwapchain.hpp>
 
@@ -92,8 +94,8 @@ static Array<VkPhysicalDevice> EnumeratePhysicalDevices(VkInstance instance)
 
     vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr);
 
-    AssertThrowMsg(deviceCount != 0, "No devices with Vulkan support found! "
-                                      "Please update your graphics drivers or install a Vulkan compatible device.\n");
+    HYP_GFX_ASSERT(deviceCount != 0, "No devices with Vulkan support found! "
+                                     "Please update your graphics drivers or install a Vulkan compatible device.\n");
 
     Array<VkPhysicalDevice> devices;
     devices.Resize(deviceCount);
@@ -328,7 +330,7 @@ RendererResult Instance<Platform::vulkan>::Initialize(const AppContextBase& appC
         "Failed to create Vulkan Instance!");
 
     /* Create our renderable surface from SDL */
-    AssertThrow(appContext.GetMainWindow() != nullptr);
+    HYP_GFX_ASSERT(appContext.GetMainWindow() != nullptr);
     m_surface = appContext.GetMainWindow()->CreateVkSurface(this);
 
     /* Find and set up an adequate GPU for rendering and presentation */

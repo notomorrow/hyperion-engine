@@ -587,7 +587,7 @@ private:
 
     SizeType Read(SizeType sz)
     {
-        AssertThrow(sz <= bufferSize);
+        HYP_CORE_ASSERT(sz <= bufferSize);
 
         if (Eof())
         {
@@ -607,11 +607,9 @@ private:
             return 0;
         }
 
-        AssertThrowMsg(m_pos + sz <= m_source->Size(),
-            "Attempt to read past end of file: %llu + %llu > %llu",
-            m_pos,
-            sz,
-            m_source->Size());
+        HYP_CORE_ASSERT(m_pos + sz <= m_source->Size(),
+            "Attempt to read past end of file: %zu + %zu > %zu",
+            m_pos, sz, m_source->Size());
 
         return m_source->Read(static_cast<ubyte*>(dest), sz, m_pos);
     }

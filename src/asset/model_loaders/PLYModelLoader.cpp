@@ -90,11 +90,11 @@ static void ReadPropertyValue(ByteBuffer& buffer, PLYModelLoader::PLYModel& mode
 {
     const auto it = model.propertyTypes.Find(propertyName);
 
-    AssertThrowMsg(it != model.propertyTypes.End(), "Property with name %s not found", propertyName.Data());
+    Assert(it != model.propertyTypes.End(), "Property with name %s not found", propertyName.Data());
 
     const SizeType offset = it->second.offset + rowOffset;
-    AssertThrowMsg(offset < buffer.Size(), "Offset out of bounds (%u > %u)", offset, buffer.Size());
-    AssertThrowMsg(offset + count <= buffer.Size(), "Offset + Size out of bounds (%u + %llu > %u)", offset, count, buffer.Size());
+    Assert(offset < buffer.Size(), "Offset out of bounds (%u > %u)", offset, buffer.Size());
+    Assert(offset + count <= buffer.Size(), "Offset + Size out of bounds (%u + %llu > %u)", offset, count, buffer.Size());
 
     buffer.Read(offset, count, static_cast<ubyte*>(outPtr));
 }
@@ -123,7 +123,7 @@ PLYModel PLYModelLoader::LoadModel(LoaderState& state)
 
             if (split[0] == "property")
             {
-                AssertThrowMsg(split.Size() >= 3, "Invalid model header -- property declaration should have at least 3 elements");
+                Assert(split.Size() >= 3, "Invalid model header -- property declaration should have at least 3 elements");
 
                 const auto propertyTypeString = split[1];
                 const auto propertyName = split[2];
@@ -136,7 +136,7 @@ PLYModel PLYModelLoader::LoadModel(LoaderState& state)
             }
             else if (split[0] == "element")
             {
-                AssertThrowMsg(split.Size() >= 3, "Invalid model header -- `element` declaration should have at least 3 elements");
+                Assert(split.Size() >= 3, "Invalid model header -- `element` declaration should have at least 3 elements");
 
                 if (split[1] == "vertex")
                 {
@@ -165,7 +165,7 @@ PLYModel PLYModelLoader::LoadModel(LoaderState& state)
 
     for (auto& it : model.propertyTypes)
     {
-        /*AssertThrowMsg(
+        /*Assert(
             it.value.offset >= model.headerLength,
             "Offset out of range of header length (%u >= %u)",
             it.value.offset,
@@ -187,7 +187,7 @@ PLYModel PLYModelLoader::LoadModel(LoaderState& state)
         }
     }
 
-    AssertThrow(buffer.Size() + model.headerLength == state.stream.Position());
+    Assert(buffer.Size() + model.headerLength == state.stream.Position());
 
     for (SizeType index = 0; index < numVertices; index++)
     {
@@ -211,7 +211,7 @@ PLYModel PLYModelLoader::LoadModel(LoaderState& state)
             }
 
             const auto customDataIt = model.customData.Find(it.first);
-            AssertThrow(customDataIt != model.customData.End());
+            Assert(customDataIt != model.customData.End());
 
             const SizeType dataTypeSize = PLYTypeSize(it.second.type);
             const SizeType offset = index * dataTypeSize;
@@ -231,7 +231,7 @@ PLYModel PLYModelLoader::LoadModel(LoaderState& state)
 
 LoadedAsset PLYModelLoader::BuildModel(LoaderState& state, PLYModel& model)
 {
-    AssertThrow(state.assetManager != nullptr);
+    Assert(state.assetManager != nullptr);
 
     RC<PLYModel> plyModelPtr = MakeRefCountedPtr<PLYModel>(model);
 

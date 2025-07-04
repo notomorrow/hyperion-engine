@@ -12,7 +12,7 @@ extern "C"
 
     HYP_EXPORT void Ptr_Get(TypeId typeId, void* ptr, ValueStorage<HypData>* outHypData)
     {
-        AssertThrow(outHypData != nullptr);
+        Assert(outHypData != nullptr);
 
         outHypData->Construct(AnyRef(typeId, ptr));
     }

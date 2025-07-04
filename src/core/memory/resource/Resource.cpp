@@ -57,7 +57,7 @@ ResourceBase::ResourceBase(ResourceBase&& other) noexcept
 ResourceBase::~ResourceBase()
 {
     // Ensure that the resources are no longer being used
-    AssertThrowMsg(m_refCounter.IsInSignalState(), "Resource destroyed while still in use, was WaitForFinalization() called?");
+    HYP_CORE_ASSERT(m_refCounter.IsInSignalState(), "Resource destroyed while still in use, was WaitForFinalization() called?");
 }
 
 bool ResourceBase::IsInitialized() const
@@ -73,7 +73,7 @@ int ResourceBase::IncRefNoInitialize()
     {
         // loop until we have exclusive access.
         uint64 state = m_initializationMask.BitOr(g_initializationMaskInitializedBit, MemoryOrder::ACQUIRE);
-        AssertDebugMsg(!(state & g_initializationMaskInitializedBit), "Attempted to initialize a resource that is already initialized");
+        HYP_CORE_ASSERT(!(state & g_initializationMaskInitializedBit), "Attempted to initialize a resource that is already initialized");
 
         while (state & g_initializationMaskReadMask)
         {
@@ -97,7 +97,7 @@ int ResourceBase::IncRef()
             HYP_NAMED_SCOPE("Initializing Resource - Initialization");
 
             uint64 state = m_initializationMask.BitOr(g_initializationMaskInitializedBit, MemoryOrder::ACQUIRE_RELEASE);
-            AssertDebugMsg(!(state & g_initializationMaskInitializedBit), "Attempted to initialize a resource that is already initialized! Initialization thread id: %s (%u)",
+            HYP_CORE_ASSERT(!(state & g_initializationMaskInitializedBit), "Attempted to initialize a resource that is already initialized! Initialization thread id: %s (%u)",
                 m_initializationThreadId.GetName().LookupString(), m_initializationThreadId.GetValue());
 
             // loop until we have exclusive access.
@@ -122,7 +122,7 @@ int ResourceBase::IncRef()
 
             while (currentUpdateCount != 0)
             {
-                AssertThrow(currentUpdateCount > 0);
+                HYP_CORE_ASSERT(currentUpdateCount > 0);
 
                 Update();
 
@@ -169,7 +169,7 @@ int ResourceBase::DecRef()
         HYP_NAMED_SCOPE("Destroying Resource");
 
         uint64 state = m_initializationMask.BitOr(g_initializationMaskInitializedBit, MemoryOrder::ACQUIRE_RELEASE);
-        AssertDebugMsg(state & g_initializationMaskInitializedBit, "ResourceBase::DecRef() called on a resource that is not initialized!");
+        HYP_CORE_ASSERT(state & g_initializationMaskInitializedBit, "ResourceBase::DecRef() called on a resource that is not initialized!");
 
         // Wait till all reads are complete before we continue
         while (state & g_initializationMaskReadMask)
@@ -185,7 +185,7 @@ int ResourceBase::DecRef()
 
         // DEBUGGING
         state = m_initializationMask.Get(MemoryOrder::ACQUIRE);
-        AssertDebugMsg(!(state & g_initializationMaskInitializedBit), "ResourceBase::DecRef() called on a resource that is still initialized! Initialization thread id: %s (%u)",
+        HYP_CORE_ASSERT(!(state & g_initializationMaskInitializedBit), "ResourceBase::DecRef() called on a resource that is still initialized! Initialization thread id: %s (%u)",
             m_initializationThreadId.GetName().LookupString(), m_initializationThreadId.GetValue());
 
         {
@@ -245,7 +245,7 @@ void ResourceBase::SetNeedsUpdate()
 
             while (currentCount != 0)
             {
-                AssertDebug(currentCount > 0);
+                HYP_CORE_ASSERT(currentCount > 0);
 
                 HYP_MT_CHECK_RW(m_dataRaceDetector);
 
@@ -318,7 +318,7 @@ void ResourceBase::WaitForTaskCompletion() const
                 FlushScheduledTasks();
             }
 
-            AssertThrow(m_completionSemaphore.IsInSignalState());
+            HYP_CORE_ASSERT(m_completionSemaphore.IsInSignalState());
         }
 
         return;
@@ -347,7 +347,7 @@ bool ResourceBase::CanExecuteInline() const
 void ResourceBase::FlushScheduledTasks() const
 {
     ThreadBase* ownerThread = GetOwnerThread();
-    AssertThrow(ownerThread != nullptr);
+    HYP_CORE_ASSERT(ownerThread != nullptr);
 
     ownerThread->GetScheduler().Flush([](auto& operation)
         {

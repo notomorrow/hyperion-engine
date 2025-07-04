@@ -756,10 +756,10 @@ Token Lexer::ReadIdentifier()
 
             if (!Operator::IsBinaryOperator(operator_token.GetValue(), op))
             {
-                AssertThrow(Operator::IsUnaryOperator(operator_token.GetValue(), op));
+                Assert(Operator::IsUnaryOperator(operator_token.GetValue(), op));
             }
 
-            AssertThrow(op != nullptr);
+            Assert(op != nullptr);
 
             if (!op->SupportsOverloading())
             {

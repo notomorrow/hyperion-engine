@@ -39,7 +39,7 @@ VulkanImageView::VulkanImageView(
 
 VulkanImageView::~VulkanImageView()
 {
-    AssertThrowMsg(m_handle == VK_NULL_HANDLE, "image view should have been destroyed");
+    HYP_GFX_ASSERT(m_handle == VK_NULL_HANDLE, "image view should have been destroyed");
 
     SafeRelease(std::move(m_image));
 }
@@ -66,7 +66,7 @@ RendererResult VulkanImageView::Create()
         return HYP_MAKE_ERROR(RendererError, "Mip index out of bounds");
     }
 
-    AssertThrow(static_cast<const VulkanImage*>(m_image.Get())->GetVulkanHandle() != VK_NULL_HANDLE);
+    HYP_GFX_ASSERT(static_cast<const VulkanImage*>(m_image.Get())->GetVulkanHandle() != VK_NULL_HANDLE);
 
     VkImageViewCreateInfo viewInfo { VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
     viewInfo.image = static_cast<const VulkanImage*>(m_image.Get())->GetVulkanHandle();
@@ -84,8 +84,8 @@ RendererResult VulkanImageView::Create()
     viewInfo.subresourceRange.baseArrayLayer = m_faceIndex;
     viewInfo.subresourceRange.layerCount = m_numFaces != 0 ? m_numFaces : m_image->NumFaces();
 
-    // AssertThrowMsg(mipmapLayer < numMipmaps, "mipmap layer out of bounds");
-    // AssertThrowMsg(faceLayer < m_numFaces, "face layer out of bounds");
+    // HYP_GFX_ASSERT(mipmapLayer < numMipmaps, "mipmap layer out of bounds");
+    // HYP_GFX_ASSERT(faceLayer < m_numFaces, "face layer out of bounds");
 
     HYPERION_VK_CHECK_MSG(
         vkCreateImageView(GetRenderBackend()->GetDevice()->GetDevice(), &viewInfo, nullptr, &m_handle),

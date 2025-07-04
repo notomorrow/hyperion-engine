@@ -32,32 +32,24 @@ struct MeshData
         : vertices(std::move(vertices)),
           indices(std::move(indices))
     {
-        // DEBUGGING
-        AssertThrowMsg(this->vertices.GetAllocation().magic == 0xBADA55u, "MeshData vertices allocation is not valid");
     }
 
     MeshData(const Array<Vertex>& vertices, const Array<uint32>& indices)
         : vertices(vertices),
           indices(indices)
     {
-        // DEBUGGING
-        AssertThrowMsg(this->vertices.GetAllocation().magic == 0xBADA55u, "MeshData vertices allocation is not valid");
     }
 
     MeshData(const MeshData& other)
         : vertices(other.vertices),
           indices(other.indices)
     {
-        // DEBUGGING
-        AssertThrowMsg(vertices.GetAllocation().magic == 0xBADA55u, "MeshData vertices allocation is not valid");
     }
 
     MeshData(MeshData&& other) noexcept
         : vertices(std::move(other.vertices)),
           indices(std::move(other.indices))
     {
-        // DEBUGGING
-        AssertThrowMsg(this->vertices.GetAllocation().magic == 0xBADA55u, "MeshData vertices allocation is not valid");
     }
 
     MeshData& operator=(const MeshData& other)
@@ -67,8 +59,6 @@ struct MeshData
             vertices = other.vertices;
             indices = other.indices;
         }
-        // DEBUGGING
-        AssertThrowMsg(vertices.GetAllocation().magic == 0xBADA55u, "MeshData vertices allocation is not valid");
 
         return *this;
     }
@@ -80,16 +70,12 @@ struct MeshData
             vertices = std::move(other.vertices);
             indices = std::move(other.indices);
         }
-        // DEBUGGING
-        AssertThrowMsg(vertices.GetAllocation().magic == 0xBADA55u, "MeshData vertices allocation is not valid");
 
         return *this;
     }
 
     ~MeshData()
     {
-        // DEBUGGING
-        AssertThrowMsg(vertices.GetAllocation().magic == 0xBADA55u, "MeshData vertices allocation is not valid");
     }
 
     HYP_FORCE_INLINE HashCode GetHashCode() const

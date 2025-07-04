@@ -6,6 +6,8 @@
 #include <core/math/MathUtil.hpp>
 #include <core/math/Vector3.hpp>
 
+#include <core/utilities/FormatFwd.hpp>
+
 #include <HashCode.hpp>
 
 namespace hyperion {
@@ -114,6 +116,40 @@ struct alignas(16) HYP_API Quaternion
         return hc;
     }
 };
+
+// Format specialization
+
+namespace utilities {
+
+template <class StringType>
+struct Formatter<StringType, Quaternion>
+{
+    auto operator()(const Quaternion& value) const
+    {
+        ubyte inlineBuf[1024];
+        ubyte* buf = &inlineBuf[0];
+
+        int resultSize = std::snprintf(reinterpret_cast<char*>(buf), 1024, "[%f %f %f %f]", value.x, value.y, value.z, value.w) + 1;
+
+        if (resultSize > HYP_ARRAY_SIZE(inlineBuf))
+        {
+            buf = new ubyte[resultSize];
+
+            resultSize = std::snprintf(reinterpret_cast<char*>(buf), resultSize, "[%f %f %f %f]", value.x, value.y, value.z, value.w) + 1;
+
+            StringType res(reinterpret_cast<char*>(buf), reinterpret_cast<char*>(buf + resultSize));
+
+            delete[] buf;
+
+            return res;
+        }
+
+        return StringType(reinterpret_cast<char*>(buf), reinterpret_cast<char*>(buf + resultSize));
+    }
+};
+
+} // namespace utilities
+
 } // namespace hyperion
 
 #endif

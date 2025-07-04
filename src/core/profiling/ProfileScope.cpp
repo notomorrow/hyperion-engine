@@ -94,7 +94,7 @@ public:
     {
         HYP_MT_CHECK_WRITE(m_dataRaceDetector);
 
-        AssertThrowMsg(!m_thread.IsRunning(), "Cannot change profiler connection parameters while profiler connection thread is running");
+        HYP_CORE_ASSERT(!m_thread.IsRunning(), "Cannot change profiler connection parameters while profiler connection thread is running");
 
         m_params = params;
     }
@@ -437,7 +437,7 @@ public:
         if (m_head != &m_rootEntry)
         {
             // m_head should not be set to nullptr
-            AssertThrow(m_head->parent != nullptr);
+            HYP_CORE_ASSERT(m_head->parent != nullptr);
             m_head = m_head->parent;
         }
     }

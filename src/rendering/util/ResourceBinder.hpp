@@ -245,7 +245,7 @@ class ResourceBinder : public ResourceBinderBase
                 }
 
                 auto insertResult = bindings.Insert(WeakHandle<T> { id }, index);
-                AssertDebugMsg(insertResult.second, "Failed to insert binding for object with Id %u - it should not already exist!", id.Value());
+                AssertDebug(insertResult.second, "Failed to insert binding for object with ID {}- it should not already exist!", id);
 
                 if (OnBindingChanged != nullptr)
                 {
@@ -339,8 +339,8 @@ public:
         }
 
         const int subclassIndex = GetSubclassIndex(baseTypeId, objectTypeId);
-        AssertDebugMsg(subclassIndex >= 0 && subclassIndex < int(m_subclassImpls.Size()),
-            "ResourceBinder<%s>: Attempted to bind object with TypeId %u which is not a subclass of the expected TypeId (%u) or has no static index",
+        AssertDebug(subclassIndex >= 0 && subclassIndex < int(m_subclassImpls.Size()),
+            "ResourceBinder<{}>: Attempted to bind object with TypeId {} which is not a subclass of the expected TypeId ({}) or has no static index",
             TypeNameWithoutNamespace<T>().Data(), objectTypeId.Value(), baseTypeId.Value());
 
         if (!m_subclassImplsInitialized.Test(subclassIndex))
@@ -367,8 +367,8 @@ public:
         else
         {
             const int subclassIndex = GetSubclassIndex(typeId, object->GetTypeId());
-            AssertDebugMsg(subclassIndex >= 0 && subclassIndex < int(m_subclassImpls.Size()),
-                "ResourceBinder<%s>: Attempted to Deconsider object with TypeId %u which is not a subclass of the expected TypeId (%u) or has no static index",
+            AssertDebug(subclassIndex >= 0 && subclassIndex < int(m_subclassImpls.Size()),
+                "ResourceBinder<{}>: Attempted to Deconsider object with TypeId {} which is not a subclass of the expected TypeId ({}) or has no static index",
                 TypeNameWithoutNamespace<T>().Data(), object->GetTypeId().Value(), typeId.Value());
 
             if (!m_subclassImplsInitialized.Test(subclassIndex))
@@ -411,8 +411,8 @@ public:
         else
         {
             const int subclassIndex = GetSubclassIndex(baseTypeId, typeId);
-            AssertDebugMsg(subclassIndex >= 0 && subclassIndex < int(m_subclassImpls.Size()),
-                "ResourceBinder<%s>: Attempted to get bound indices for TypeId %u which is not a subclass of the expected TypeId (%u) or has no static index",
+            AssertDebug(subclassIndex >= 0 && subclassIndex < int(m_subclassImpls.Size()),
+                "ResourceBinder<{}>: Attempted to get bound indices for TypeId {} which is not a subclass of the expected TypeId ({}) or has no static index",
                 TypeNameWithoutNamespace<T>().Data(), typeId.Value(), baseTypeId.Value());
 
             if (!m_subclassImplsInitialized.Test(subclassIndex))

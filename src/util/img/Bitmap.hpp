@@ -510,7 +510,7 @@ public:
     {
         m_pixels.Resize(width * height);
 
-        AssertDebug(bytes.Size() == GetByteSize(), "Byte view size does not match bitmap size! (%u != %u)", bytes.Size(), GetByteSize());
+        Assert(bytes.Size() == GetByteSize(), "Byte view size does not match bitmap size! (%u != %u)", bytes.Size(), GetByteSize());
 
         Memory::MemCpy(m_pixels.Data(), bytes.Data(), MathUtil::Min(m_pixels.ByteSize(), bytes.Size()));
     }
@@ -620,7 +620,7 @@ public:
 
     void SetPixels(const ByteBuffer& byteBuffer)
     {
-        AssertThrowMsg(byteBuffer.Size() == GetByteSize(), "Byte buffer size does not match bitmap size! (%u != %u)", byteBuffer.Size(), GetByteSize());
+        Assert(byteBuffer.Size() == GetByteSize(), "Byte buffer size does not match bitmap size! (%u != %u)", byteBuffer.Size(), GetByteSize());
 
         const uint32 numComponents = PixelType::numComponents;
 

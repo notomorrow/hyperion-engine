@@ -19,7 +19,7 @@ FBOMObject::FBOMObject()
 FBOMObject::FBOMObject(const FBOMType& loaderType)
     : m_objectType(loaderType)
 {
-    AssertThrowMsg(loaderType.IsOrExtends(FBOMBaseObjectType()), "Expected type to be an object type, got %s", loaderType.ToString().Data());
+    HYP_CORE_ASSERT(loaderType.IsOrExtends(FBOMBaseObjectType()), "Expected type to be an object type, got %s", loaderType.ToString().Data());
 }
 
 FBOMObject::FBOMObject(const FBOMObject& other)
@@ -115,7 +115,7 @@ FBOMObject& FBOMObject::SetProperty(ANSIStringView key, FBOMData&& data)
 {
     // sanity check
     // ANSIString str = key.LookupString();
-    // AssertThrowMsg(key.hashCode == str.GetHashCode().Value(),
+    // HYP_CORE_ASSERT(key.hashCode == str.GetHashCode().Value(),
     //     "Expected hash for %s (len: %u) (%llu) to equal hash of %s (len: %u) (%llu)",
     //     key.LookupString(),
     //     std::strlen(key.LookupString()),
@@ -123,7 +123,7 @@ FBOMObject& FBOMObject::SetProperty(ANSIStringView key, FBOMData&& data)
     //     str.Data(),
     //     str.Size(),
     //     str.GetHashCode().Value());
-    // AssertThrow(key.hashCode == CreateNameFromDynamicString(str).hashCode);
+    // HYP_CORE_ASSERT(key.hashCode == CreateNameFromDynamicString(str).hashCode);
 
     properties.Set(key, std::move(data));
 
@@ -137,7 +137,7 @@ FBOMObject& FBOMObject::SetProperty(ANSIStringView key, const FBOMType& type, Si
 
     if (!type.IsUnbounded())
     {
-        AssertThrowMsg(data.TotalSize() == type.size, "Expected byte count to match type size");
+        HYP_CORE_ASSERT(data.TotalSize() == type.size, "Expected byte count to match type size");
     }
 
     return SetProperty(key, std::move(data));

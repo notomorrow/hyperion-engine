@@ -2,6 +2,9 @@
 
 #include <core/debug/Debug.hpp>
 
+#include <core/logging/Logger.hpp>
+#include <core/logging/LogChannels.hpp>
+
 #include <cstdio>
 #include <cstdarg>
 #include <type_traits>
@@ -112,6 +115,11 @@ HYP_API bool IsDebuggerAttached()
     // P_TRACED flag is set when a debugger is tracing the process.
     return (info.kp_proc.p_flag & P_TRACED) != 0;
 #endif
+}
+
+HYP_API void LogAssert(const char* str)
+{
+    HYP_LOG_DYNAMIC(Core, Error, str);
 }
 
 } // namespace debug

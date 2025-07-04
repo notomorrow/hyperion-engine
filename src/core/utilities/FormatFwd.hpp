@@ -12,4 +12,11 @@ struct Formatter;
 } // namespace utilities
 } // namespace hyperion
 
+// placeholder define until Format.hpp is included and overrides this macro
+#ifndef HYP_FORMAT
+// Defines a default format macro that does nothing except returns the format string back to the caller
+// keep VA_ARGS in the expression in case they have side-effects
+#define HYP_FORMAT(fmt, ...) (__VA_ARGS__ __VA_OPT__(, ) fmt)
+#endif
+
 #endif

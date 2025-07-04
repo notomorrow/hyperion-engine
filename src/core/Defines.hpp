@@ -281,8 +281,8 @@
 #define HYP_ENABLE_IF(cond, returnType) \
     typename std::enable_if_t<cond, returnType>
 
-#define HYP_LIKELY(cond) cond
-#define HYP_UNLIKELY(cond) cond
+#define HYP_LIKELY(cond) (cond)
+#define HYP_UNLIKELY(cond) (cond)
 
 #ifdef HYP_MSVC
 #define HYP_DISABLE_OPTIMIZATION __pragma(optimize("", off))

@@ -33,7 +33,7 @@ IEditorActionFactory* EditorActionFactoryRegistry::GetFactoryByName(Name actionN
 void EditorActionFactoryRegistry::RegisterFactory(Name actionName, IEditorActionFactory* factory)
 {
     auto it = m_factories.Find(actionName);
-    AssertThrowMsg(it == m_factories.End(), "Editor action factory with name %s already registered", actionName.LookupString());
+    Assert(it == m_factories.End(), "Editor action factory with name %s already registered", actionName.LookupString());
 
     m_factories.Set(actionName, factory);
 }

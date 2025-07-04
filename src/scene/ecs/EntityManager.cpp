@@ -88,18 +88,18 @@ EntityManager::EntityManager(const ThreadId& ownerThreadId, Scene* scene, EnumFl
       m_flags(flags),
       m_rootSynchronousExecutionGroup(nullptr)
 {
-    AssertThrow(scene != nullptr);
+    Assert(scene != nullptr);
 
     // add initial component containers
     for (const IComponentInterface* componentInterface : ComponentInterfaceRegistry::GetInstance().GetComponentInterfaces())
     {
-        AssertThrow(componentInterface != nullptr);
+        Assert(componentInterface != nullptr);
 
         ComponentContainerFactoryBase* componentContainerFactory = componentInterface->GetComponentContainerFactory();
-        AssertThrow(componentContainerFactory != nullptr);
+        Assert(componentContainerFactory != nullptr);
 
         UniquePtr<ComponentContainerBase> componentContainer = componentContainerFactory->Create();
-        AssertThrow(componentContainer != nullptr);
+        Assert(componentContainer != nullptr);
 
         m_containers.Set(componentInterface->GetTypeId(), std::move(componentContainer));
     }
@@ -113,16 +113,16 @@ void EntityManager::InitializeSystem(const Handle<SystemBase>& system)
 {
     HYP_SCOPE;
 
-    AssertThrowMsg(m_world != nullptr, "EntityManager must be associated with a World before initializing systems.");
+    Assert(m_world != nullptr, "EntityManager must be associated with a World before initializing systems.");
 
-    AssertThrow(system.IsValid());
+    Assert(system.IsValid());
 
     InitObject(system);
 
     for (auto entitiesIt = m_entities.Begin(); entitiesIt != m_entities.End(); ++entitiesIt)
     {
         Entity* entity = entitiesIt->first;
-        AssertThrow(entity);
+        Assert(entity);
 
         EntityData& entityData = entitiesIt->second;
 
@@ -153,14 +153,14 @@ void EntityManager::ShutdownSystem(const Handle<SystemBase>& system)
 {
     HYP_SCOPE;
 
-    AssertThrowMsg(m_world != nullptr, "EntityManager must be associated with a World before shutting down systems.");
+    Assert(m_world != nullptr, "EntityManager must be associated with a World before shutting down systems.");
 
-    AssertThrow(system.IsValid());
+    Assert(system.IsValid());
 
     for (auto entitiesIt = m_entities.Begin(); entitiesIt != m_entities.End(); ++entitiesIt)
     {
         Entity* entity = entitiesIt->first;
-        AssertThrow(entity);
+        Assert(entity);
 
         EntityData& entityData = entitiesIt->second;
 
@@ -197,7 +197,7 @@ void EntityManager::Init()
     for (auto& entitiesIt : m_entities)
     {
         Entity* entity = entitiesIt.first;
-        AssertThrow(entity);
+        Assert(entity);
 
         entity->OnAddedToScene(m_scene);
 
@@ -214,7 +214,7 @@ void EntityManager::Init()
         for (auto& systemIt : group.GetSystems())
         {
             const Handle<SystemBase>& system = systemIt.second;
-            AssertThrow(system.IsValid());
+            Assert(system.IsValid());
 
             systems.PushBack(system);
         }
@@ -249,7 +249,7 @@ void EntityManager::Shutdown()
         for (auto& entitiesIt : m_entities)
         {
             Entity* entity = entitiesIt.first;
-            AssertThrow(entity);
+            Assert(entity);
 
             // call OnComponentRemoved() for all components of the entity
             HYP_MT_CHECK_RW(m_entitiesDataRaceDetector);
@@ -263,11 +263,11 @@ void EntityManager::Shutdown()
                 const ComponentId componentId = componentInfoPairIt->second;
 
                 auto componentContainerIt = m_containers.Find(componentTypeId);
-                AssertThrowMsg(componentContainerIt != m_containers.End(), "Component container does not exist");
-                AssertThrowMsg(componentContainerIt->second->HasComponent(componentId), "Component does not exist in component container");
+                Assert(componentContainerIt != m_containers.End(), "Component container does not exist");
+                Assert(componentContainerIt->second->HasComponent(componentId), "Component does not exist in component container");
 
                 AnyRef componentRef = componentContainerIt->second->TryGetComponent(componentId);
-                AssertThrowMsg(componentRef.HasValue(), "Component of type '%s' with Id %u does not exist in component container", *GetComponentTypeName(componentTypeId), componentId);
+                Assert(componentRef.HasValue(), "Component of type '%s' with Id %u does not exist in component container", *GetComponentTypeName(componentTypeId), componentId);
 
                 // Notify the entity that the component is being removed
                 // - needed to ensure proper lifecycle. every OnComponentRemoved() call must be matched with an OnComponentAdded() call and vice versa
@@ -310,7 +310,7 @@ void EntityManager::Shutdown()
                 for (auto& systemIt : group.GetSystems())
                 {
                     const Handle<SystemBase>& system = systemIt.second;
-                    AssertThrow(system.IsValid());
+                    Assert(system.IsValid());
 
                     systems.PushBack(system);
                 }
@@ -348,7 +348,7 @@ void EntityManager::SetWorld(World* world)
             for (auto& systemIt : group.GetSystems())
             {
                 const Handle<SystemBase>& system = systemIt.second;
-                AssertThrow(system.IsValid());
+                Assert(system.IsValid());
 
                 systems.PushBack(system);
             }
@@ -360,7 +360,7 @@ void EntityManager::SetWorld(World* world)
             for (auto& entitiesIt : m_entities)
             {
                 Entity* entity = entitiesIt.first;
-                AssertThrow(entity);
+                Assert(entity);
 
                 entity->OnRemovedFromWorld(m_world);
             }
@@ -388,7 +388,7 @@ void EntityManager::SetWorld(World* world)
                 for (auto& entitiesIt : m_entities)
                 {
                     Entity* entity = entitiesIt.first;
-                    AssertThrow(entity);
+                    Assert(entity);
 
                     entity->OnAddedToWorld(m_world);
                 }
@@ -446,8 +446,8 @@ Handle<Entity> EntityManager::AddTypedEntity(const HypClass* hypClass)
     HYP_SCOPE;
     Threads::AssertOnThread(m_ownerThreadId);
 
-    AssertThrowMsg(hypClass != nullptr, "HypClass must not be null");
-    AssertThrowMsg(hypClass->IsDerivedFrom(Entity::Class()), "HypClass must be a subclass of Entity");
+    Assert(hypClass != nullptr, "HypClass must not be null");
+    Assert(hypClass->IsDerivedFrom(Entity::Class()), "HypClass must be a subclass of Entity");
 
     HypData data;
     if (!hypClass->CreateInstance(data))
@@ -604,7 +604,7 @@ bool EntityManager::RemoveEntity(Entity* entity)
     HYP_MT_CHECK_RW(m_entitiesDataRaceDetector);
 
     const auto entitiesIt = m_entities.Find(entity);
-    AssertThrowMsg(entitiesIt != m_entities.End(), "Entity does not exist");
+    Assert(entitiesIt != m_entities.End(), "Entity does not exist");
 
     EntityData& entityData = entitiesIt->second;
     NotifySystemsOfEntityRemoved(entity, entityData.components);
@@ -615,11 +615,11 @@ bool EntityManager::RemoveEntity(Entity* entity)
         const ComponentId componentId = componentInfoPairIt->second;
 
         auto componentContainerIt = m_containers.Find(componentTypeId);
-        AssertThrowMsg(componentContainerIt != m_containers.End(), "Component container does not exist");
-        AssertThrowMsg(componentContainerIt->second->HasComponent(componentId), "Component does not exist in component container");
+        Assert(componentContainerIt != m_containers.End(), "Component container does not exist");
+        Assert(componentContainerIt->second->HasComponent(componentId), "Component does not exist in component container");
 
         AnyRef componentRef = componentContainerIt->second->TryGetComponent(componentId);
-        AssertThrowMsg(componentRef.HasValue(), "Component of type '%s' with Id %u does not exist in component container", *GetComponentTypeName(componentTypeId), componentId);
+        Assert(componentRef.HasValue(), "Component of type '%s' with Id %u does not exist in component container", *GetComponentTypeName(componentTypeId), componentId);
 
         // Notify the entity that the component is being removed
         // - needed to ensure proper lifecycle. every OnComponentRemoved() call must be matched with an OnComponentAdded() call and vice versa
@@ -681,10 +681,10 @@ void EntityManager::MoveEntity(const Handle<Entity>& entity, const Handle<Entity
 {
     HYP_SCOPE;
 
-    AssertThrow(entity.IsValid());
+    Assert(entity.IsValid());
     AssertDebug(entity->GetEntityManager() == this);
 
-    AssertThrow(other.IsValid());
+    Assert(other.IsValid());
 
     if (this == other.Get())
     {
@@ -700,7 +700,7 @@ void EntityManager::MoveEntity(const Handle<Entity>& entity, const Handle<Entity
         HYP_MT_CHECK_RW(m_entitiesDataRaceDetector);
 
         const auto entitiesIt = m_entities.Find(entity);
-        AssertThrowMsg(entitiesIt != m_entities.End(), "Entity does not exist");
+        Assert(entitiesIt != m_entities.End(), "Entity does not exist");
 
         EntityData& entityData = entitiesIt->second;
         NotifySystemsOfEntityRemoved(entity, entityData.components);
@@ -711,11 +711,11 @@ void EntityManager::MoveEntity(const Handle<Entity>& entity, const Handle<Entity
             const ComponentId componentId = componentInfoPairIt->second;
 
             auto componentContainerIt = m_containers.Find(componentTypeId);
-            AssertThrowMsg(componentContainerIt != m_containers.End(), "Component container does not exist");
-            AssertThrowMsg(componentContainerIt->second->HasComponent(componentId), "Component does not exist in component container");
+            Assert(componentContainerIt != m_containers.End(), "Component container does not exist");
+            Assert(componentContainerIt->second->HasComponent(componentId), "Component does not exist in component container");
 
             AnyRef componentRef = componentContainerIt->second->TryGetComponent(componentId);
-            AssertThrowMsg(componentRef.HasValue(), "Component of type '%s' with Id %u does not exist in component container", *GetComponentTypeName(componentTypeId), componentId);
+            Assert(componentRef.HasValue(), "Component of type '%s' with Id %u does not exist in component container", *GetComponentTypeName(componentTypeId), componentId);
 
             // Notify the entity that the component is being removed
             // - needed to ensure proper lifecycle. every OnComponentRemoved() call must be matched with an OnComponentAdded() call and vice versa
@@ -793,7 +793,7 @@ void EntityManager::MoveEntity(const Handle<Entity>& entity, const Handle<Entity
         InitObject(entity);
 
         EntityData* entityData = other->m_entities.TryGetEntityData(entity);
-        AssertThrowMsg(entityData != nullptr, "Entity with Id #%u does not exist", entity->Id().Value());
+        Assert(entityData != nullptr, "Entity with Id #%u does not exist", entity->Id().Value());
 
         TypeMap<ComponentId> componentIds;
 
@@ -818,7 +818,7 @@ void EntityManager::MoveEntity(const Handle<Entity>& entity, const Handle<Entity
             }
 
             ComponentContainerBase* container = other->TryGetContainer(componentTypeId);
-            AssertThrowMsg(container != nullptr, "Component container does not exist for component of type '%s'", *GetComponentTypeName(componentTypeId));
+            Assert(container != nullptr, "Component container does not exist for component of type '%s'", *GetComponentTypeName(componentTypeId));
 
             const ComponentId componentId = container->AddComponent(componentData);
 
@@ -827,7 +827,7 @@ void EntityManager::MoveEntity(const Handle<Entity>& entity, const Handle<Entity
             entityData->components.Set(componentTypeId, componentId);
 
             AnyRef componentRef = container->TryGetComponent(componentId);
-            AssertThrowMsg(componentRef.HasValue(), "Failed to get component of type '%s' with Id %u from component container", *GetComponentTypeName(componentTypeId), componentId);
+            Assert(componentRef.HasValue(), "Failed to get component of type '%s' with Id %u from component container", *GetComponentTypeName(componentTypeId), componentId);
 
             EntityTag tag;
             if (IsEntityTagComponent(componentTypeId, tag))
@@ -894,13 +894,13 @@ void EntityManager::AddComponent(Entity* entity, const HypData& componentData)
 
     Threads::AssertOnThread(m_ownerThreadId);
 
-    AssertThrowMsg(entity, "Invalid entity");
+    Assert(entity, "Invalid entity");
 
     Handle<Entity> entityHandle = entity->HandleFromThis();
-    AssertThrow(entityHandle.IsValid());
+    Assert(entityHandle.IsValid());
 
     EntityData* entityData = m_entities.TryGetEntityData(entity);
-    AssertThrowMsg(entityData != nullptr, "Entity with Id #%u does not exist", entity->Id().Value());
+    Assert(entityData != nullptr, "Entity with Id #%u does not exist", entity->Id().Value());
 
     const TypeId componentTypeId = componentData.GetTypeId();
     EnsureValidComponentType(componentTypeId);
@@ -923,7 +923,7 @@ void EntityManager::AddComponent(Entity* entity, const HypData& componentData)
     }
 
     ComponentContainerBase* container = TryGetContainer(componentTypeId);
-    AssertThrowMsg(container != nullptr, "Component container does not exist for component of type '%s'", *GetComponentTypeName(componentTypeId));
+    Assert(container != nullptr, "Component container does not exist for component of type '%s'", *GetComponentTypeName(componentTypeId));
 
     const ComponentId componentId = container->AddComponent(componentData);
 
@@ -949,7 +949,7 @@ void EntityManager::AddComponent(Entity* entity, const HypData& componentData)
     }
 
     AnyRef componentRef = container->TryGetComponent(componentId);
-    AssertThrowMsg(componentRef.HasValue(), "Failed to get component of type '%s' with Id %u from component container", *GetComponentTypeName(componentTypeId), componentId);
+    Assert(componentRef.HasValue(), "Failed to get component of type '%s' with Id %u from component container", *GetComponentTypeName(componentTypeId), componentId);
 
     // Note: Call before notifying systems as they are able to remove components!
 
@@ -974,13 +974,13 @@ void EntityManager::AddComponent(Entity* entity, HypData&& componentData)
 
     Threads::AssertOnThread(m_ownerThreadId);
 
-    AssertThrowMsg(entity, "Invalid entity");
+    Assert(entity, "Invalid entity");
 
     Handle<Entity> entityHandle = entity->HandleFromThis();
-    AssertThrow(entityHandle.IsValid());
+    Assert(entityHandle.IsValid());
 
     EntityData* entityData = m_entities.TryGetEntityData(entity);
-    AssertThrowMsg(entityData != nullptr, "Entity with Id #%u does not exist", entity->Id().Value());
+    Assert(entityData != nullptr, "Entity with Id #%u does not exist", entity->Id().Value());
 
     const TypeId componentTypeId = componentData.GetTypeId();
     EnsureValidComponentType(componentTypeId);
@@ -1003,7 +1003,7 @@ void EntityManager::AddComponent(Entity* entity, HypData&& componentData)
     }
 
     ComponentContainerBase* container = TryGetContainer(componentTypeId);
-    AssertThrowMsg(container != nullptr, "Component container does not exist for component of type '%s'", *GetComponentTypeName(componentTypeId));
+    Assert(container != nullptr, "Component container does not exist for component of type '%s'", *GetComponentTypeName(componentTypeId));
 
     const ComponentId componentId = container->AddComponent(std::move(componentData));
 
@@ -1029,7 +1029,7 @@ void EntityManager::AddComponent(Entity* entity, HypData&& componentData)
     }
 
     AnyRef componentRef = container->TryGetComponent(componentId);
-    AssertThrowMsg(componentRef.HasValue(), "Failed to get component of type '%s' with Id %u from component container", *GetComponentTypeName(componentTypeId), componentId);
+    Assert(componentRef.HasValue(), "Failed to get component of type '%s' with Id %u from component container", *GetComponentTypeName(componentTypeId), componentId);
 
     EntityTag tag;
     if (IsEntityTagComponent(componentTypeId, tag))
@@ -1179,7 +1179,7 @@ void EntityManager::AddTag(Entity* entity, EntityTag tag)
     }
 
     Handle<Entity> entityHandle = entity->HandleFromThis();
-    AssertThrow(entityHandle.IsValid());
+    Assert(entityHandle.IsValid());
 
     const IComponentInterface* componentInterface = ComponentInterfaceRegistry::GetInstance().GetEntityTagComponentInterface(tag);
 
@@ -1198,7 +1198,7 @@ void EntityManager::AddTag(Entity* entity, EntityTag tag)
     }
 
     ComponentContainerBase* container = TryGetContainer(componentTypeId);
-    AssertThrowMsg(container != nullptr, "Component container does not exist for component type %u", componentTypeId.Value());
+    Assert(container != nullptr, "Component container does not exist for component type %u", componentTypeId.Value());
 
     HypData componentHypData;
 
@@ -1355,7 +1355,7 @@ void EntityManager::BeginAsyncUpdate(float delta)
         TaskBatch* currentTaskBatch = systemExecutionGroup.GetTaskBatch();
         AssertDebug(currentTaskBatch != nullptr);
 
-        AssertDebugMsg(currentTaskBatch->IsCompleted(), "TaskBatch for SystemExecutionGroup is not completed: %u tasks enqueued", currentTaskBatch->numEnqueued);
+        AssertDebug(currentTaskBatch->IsCompleted(), "TaskBatch for SystemExecutionGroup is not completed: %u tasks enqueued", currentTaskBatch->numEnqueued);
 
         currentTaskBatch->ResetState();
 

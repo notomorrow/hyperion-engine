@@ -187,7 +187,7 @@ public:
 
     void WriteBufferData(uint32 index, const void* ptr, SizeType size)
     {
-        AssertDebug(size == m_structSize, "Size does not match the expected size! Size = %llu, Expected = %llu", size, m_structSize);
+        AssertDebug(size == m_structSize, "Size does not match the expected size! Size = {}, Expected = {}", size, m_structSize);
 
         WriteBufferData_Internal(index, ptr);
     }
@@ -364,7 +364,7 @@ public:
 
     virtual void ReadbackElement(uint32 frameIndex, uint32 index, void* dst) override
     {
-        AssertDebug(index < m_pool.NumAllocatedElements(), "Index out of bounds! Index = %u, Size = %u", index, m_pool.NumAllocatedElements());
+        AssertDebug(index < m_pool.NumAllocatedElements(), "Index out of bounds! Index = {}, Size = {}", index, m_pool.NumAllocatedElements());
 
         m_buffers[frameIndex]->Read(sizeof(StructType) * index, sizeof(StructType), dst);
     }
@@ -404,7 +404,7 @@ public:
 
     virtual void* GetCpuMapping(uint32 index) override
     {
-        AssertDebug(index < m_pool.NumAllocatedElements(), "Index out of bounds! Index = %u, Size = %u", index, m_pool.NumAllocatedElements());
+        AssertDebug(index < m_pool.NumAllocatedElements(), "Index out of bounds! Index = {}, Size = {}", index, m_pool.NumAllocatedElements());
 
         return &m_pool.GetElement(index);
     }

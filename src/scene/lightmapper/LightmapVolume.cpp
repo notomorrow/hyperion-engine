@@ -48,7 +48,7 @@ struct RENDER_COMMAND(BakeLightmapVolumeTexture)
     virtual RendererResult operator()() override
     {
         // Ensure the array of atlas textures are resized to the correct count
-        AssertThrow(atlasTextures.Size() == uint32(LTT_MAX));
+        Assert(atlasTextures.Size() == uint32(LTT_MAX));
 
         Array<Array<Pair<const LightmapElement*, Handle<Texture>>>> elementTextures;
         elementTextures.Resize(uint32(LTT_MAX));
@@ -69,7 +69,7 @@ struct RENDER_COMMAND(BakeLightmapVolumeTexture)
                     continue;
                 }
 
-                AssertThrow(entry.texture->IsReady());
+                Assert(entry.texture->IsReady());
 
                 elementTextures[uint32(entry.type)].EmplaceBack(&element, entry.texture);
             }

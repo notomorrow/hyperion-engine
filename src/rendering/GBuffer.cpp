@@ -67,7 +67,7 @@ static TextureFormat GetImageFormat(GBufferTargetName targetName)
         }
     }
 
-    AssertThrow(colorFormat != TF_NONE, "Invalid value set for gbuffer image format");
+    Assert(colorFormat != TF_NONE, "Invalid value set for gbuffer image format");
 
     return colorFormat;
 }
@@ -140,7 +140,7 @@ void GBuffer::CreateBucketFramebuffers()
 {
     HYP_SCOPE;
 
-    AssertThrow(m_framebuffers.Empty());
+    Assert(m_framebuffers.Empty());
 
     for (GBufferTarget& it : m_buckets)
     {
@@ -168,7 +168,7 @@ void GBuffer::CreateBucketFramebuffers()
             break;
         }
 
-        AssertThrow(it.m_framebuffer != nullptr);
+        Assert(it.m_framebuffer != nullptr);
     }
 }
 
@@ -176,7 +176,7 @@ FramebufferRef GBuffer::CreateFramebuffer(const FramebufferRef& opaqueFramebuffe
 {
     HYP_SCOPE;
 
-    AssertThrow(resolution.Volume() != 0);
+    Assert(resolution.Volume() != 0);
 
     FramebufferRef framebuffer = g_renderBackend->MakeFramebuffer(resolution);
 
@@ -201,7 +201,7 @@ FramebufferRef GBuffer::CreateFramebuffer(const FramebufferRef& opaqueFramebuffe
     auto addSharedAttachment = [&](uint32 binding)
     {
         AttachmentBase* parentAttachment = opaqueFramebuffer->GetAttachment(binding);
-        AssertThrow(parentAttachment != nullptr);
+        Assert(parentAttachment != nullptr);
 
         framebuffer->AddAttachment(
             binding,
@@ -273,8 +273,8 @@ AttachmentBase* GBuffer::GBufferTarget::GetGBufferAttachment(GBufferTargetName r
 {
     HYP_SCOPE;
 
-    AssertThrow(m_framebuffer != nullptr);
-    AssertThrow(uint32(resourceName) < uint32(GTN_MAX));
+    Assert(m_framebuffer != nullptr);
+    Assert(uint32(resourceName) < uint32(GTN_MAX));
 
     return m_framebuffer->GetAttachment(uint32(resourceName));
 }

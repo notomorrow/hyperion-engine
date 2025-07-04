@@ -83,7 +83,7 @@ struct ShaderDataOffset
 
     HYP_FORCE_INLINE operator uint32() const
     {
-        AssertDebugMsg(index != invalidIndex, "Index was ~0u when converting to uint32 for ShaderDataOffset<%s>", TypeName<T>().Data());
+        AssertDebug(index != invalidIndex, "Index was ~0u when converting to uint32 for ShaderDataOffset<{}>", TypeName<T>().Data());
 
         return uint32(sizeof(T) * index);
     }
@@ -268,7 +268,7 @@ struct DescriptorSetDeclaration
 
     HYP_FORCE_INLINE void AddDescriptorDeclaration(DescriptorDeclaration decl)
     {
-        AssertThrow(decl.slot != DESCRIPTOR_SLOT_NONE && decl.slot < DESCRIPTOR_SLOT_MAX);
+        AssertDebug(decl.slot != DESCRIPTOR_SLOT_NONE && decl.slot < DESCRIPTOR_SLOT_MAX);
 
         decl.index = uint32(slots[uint32(decl.slot) - 1].Size());
         slots[uint32(decl.slot) - 1].PushBack(std::move(decl));
@@ -341,7 +341,7 @@ struct DescriptorTableDeclaration
     {
         DeclareSet(DescriptorTableDeclaration* table, uint32 setIndex, Name name, bool isTemplate = false)
         {
-            AssertThrow(table != nullptr);
+            AssertDebug(table != nullptr);
 
             if (table->elements.Size() <= setIndex)
             {
@@ -363,7 +363,7 @@ struct DescriptorTableDeclaration
     {
         DeclareDescriptor(DescriptorTableDeclaration* table, Name setName, DescriptorSlot slotType, Name descriptorName, DescriptorDeclaration::ConditionFunction cond = nullptr, uint32 count = 1, uint32 size = ~0u, bool isDynamic = false)
         {
-            AssertThrow(table != nullptr);
+            AssertDebug(table != nullptr);
 
             uint32 setIndex = ~0u;
 
@@ -376,11 +376,11 @@ struct DescriptorTableDeclaration
                 }
             }
 
-            AssertThrowMsg(setIndex != ~0u, "Descriptor set %s not found", setName.LookupString());
+            AssertDebug(setIndex != ~0u, "Descriptor set {} not found", setName);
 
             DescriptorSetDeclaration& descriptorSetDecl = table->elements[setIndex];
-            AssertThrow(descriptorSetDecl.setIndex == setIndex);
-            AssertThrow(slotType > 0 && slotType < descriptorSetDecl.slots.Size());
+            AssertDebug(descriptorSetDecl.setIndex == setIndex);
+            AssertDebug(slotType > 0 && slotType < descriptorSetDecl.slots.Size());
 
             const uint32 slotTypeIndex = uint32(slotType) - 1;
 
@@ -658,19 +658,15 @@ protected:
     DescriptorSetElement& SetElement(Name name, uint32 index, const T& ref)
     {
         const DescriptorSetLayoutElement* layoutElement = m_layout.GetElement(name);
-        AssertThrowMsg(layoutElement != nullptr, "Invalid element: No item with name %s found", name.LookupString());
+        AssertDebug(layoutElement != nullptr, "Invalid element: No item with name {} found", name);
 
         // Type check
         static const uint32 mask = DescriptorSetElementTypeInfo<typename T::Type>::mask;
-        AssertThrowMsg(mask & (1u << uint32(layoutElement->type)), "Layout type for %s does not match given type", name.LookupString());
+        AssertDebug(mask & (1u << uint32(layoutElement->type)), "Layout type for {} does not match given type", name);
 
         // Range check
-        AssertThrowMsg(
-            index < layoutElement->count,
-            "Index %u out of range for element %s with count %u",
-            index,
-            name.LookupString(),
-            layoutElement->count);
+        AssertDebug(index < layoutElement->count, "Index {} out of range for element {} with count {}",
+            index, name, layoutElement->count);
 
         // Buffer type check, to make sure the buffer type is allowed for the given element
         if constexpr (std::is_same_v<typename T::Type, GpuBufferBase>)
@@ -679,22 +675,19 @@ protected:
             {
                 const GpuBufferType bufferType = ref->GetBufferType();
 
-                AssertThrowMsg(
+                AssertDebug(
                     (descriptorSetElementTypeToBufferType[uint32(layoutElement->type)] & (1u << uint32(bufferType))),
-                    "Buffer type %u is not in the allowed types for element %s",
-                    uint32(bufferType),
-                    name.LookupString());
+                    "Buffer type {} is not in the allowed types for element {}",
+                    uint32(bufferType), name);
 
                 if (layoutElement->size != 0 && layoutElement->size != ~0u)
                 {
                     const uint32 remainder = ref->Size() % layoutElement->size;
 
-                    AssertThrowMsg(
+                    AssertDebug(
                         remainder == 0,
-                        "Buffer size (%llu) is not a multiplier of layout size (%llu) for element %s",
-                        ref->Size(),
-                        layoutElement->size,
-                        name.LookupString());
+                        "Buffer size ({}) is not a multiplier of layout size ({}) for element {}",
+                        ref->Size(), layoutElement->size, name);
                 }
             }
         }
@@ -744,14 +737,11 @@ protected:
         }
 
         const DescriptorSetLayoutElement* layoutElement = m_layout.GetElement(name);
-        AssertThrowMsg(layoutElement != nullptr, "Invalid element: No item with name %s found", name.LookupString());
+        AssertDebug(layoutElement != nullptr, "Invalid element: No item with name {} found", name);
 
         if (isBindless)
         {
-            AssertThrowMsg(
-                layoutElement->IsBindless(),
-                "-1 given as count to prefill elements, yet %s is not specified as bindless in layout",
-                name.LookupString());
+            AssertDebug(layoutElement->IsBindless(), "-1 given as count to prefill elements, yet {} is not specified as bindless in layout", name);
         }
 
         auto it = m_elements.Find(name);
@@ -876,7 +866,7 @@ public:
                 // use FindDescriptorSetDeclaration rather than `set->GetLayout().GetDeclaration()`, since we need to know
                 // if the descriptor set is a reference to a global set
                 DescriptorSetDeclaration* decl = m_decl->FindDescriptorSetDeclaration(descriptorSetName);
-                AssertThrow(decl != nullptr);
+                AssertDebug(decl != nullptr);
 
                 if ((decl->flags & DescriptorSetDeclarationFlags::REFERENCE))
                 {

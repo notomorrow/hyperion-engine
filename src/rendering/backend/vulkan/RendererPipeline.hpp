@@ -14,7 +14,7 @@ extern HYP_API VkDescriptorSetLayout GetVkDescriptorSetLayout(const VulkanDescri
 template <class PipelineType>
 static inline Array<VkDescriptorSetLayout> GetPipelineVulkanDescriptorSetLayouts(const PipelineType& pipeline)
 {
-    AssertThrowMsg(pipeline.GetDescriptorTable().IsValid(), "Invalid DescriptorTable provided to Pipeline");
+    Assert(pipeline.GetDescriptorTable().IsValid(), "Invalid DescriptorTable provided to Pipeline");
 
     Array<VkDescriptorSetLayout> usedLayouts;
 
@@ -22,8 +22,8 @@ static inline Array<VkDescriptorSetLayout> GetPipelineVulkanDescriptorSetLayouts
     {
         VulkanDescriptorSetRef vulkanDescriptorSet = VulkanDescriptorSetRef(descriptorSet);
 
-        AssertThrow(vulkanDescriptorSet != nullptr);
-        AssertThrow(vulkanDescriptorSet->GetVulkanLayoutWrapper() != nullptr);
+        Assert(vulkanDescriptorSet != nullptr);
+        Assert(vulkanDescriptorSet->GetVulkanLayoutWrapper() != nullptr);
 
         usedLayouts.PushBack(GetVkDescriptorSetLayout(*vulkanDescriptorSet->GetVulkanLayoutWrapper()));
     }

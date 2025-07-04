@@ -64,7 +64,7 @@ struct MeshInstanceData
     {
         static_assert(isPodType<StructType>, "Struct type must a POD type");
 
-        AssertThrowMsg(bufferIndex < maxBuffers, "Buffer index %d must be less than maximum number of buffers (%u)", bufferIndex, maxBuffers);
+        AssertDebug(bufferIndex < maxBuffers, "Buffer index {} must be less than maximum number of buffers ({})", bufferIndex, maxBuffers);
 
         if (buffers.Size() <= bufferIndex)
         {

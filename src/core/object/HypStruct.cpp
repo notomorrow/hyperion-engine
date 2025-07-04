@@ -15,7 +15,7 @@ bool HypStruct::CreateStructInstance(dotnet::ObjectReference& outObjectReference
         SizeType size;
     };
 
-    AssertThrow(objectPtr != nullptr);
+    HYP_CORE_ASSERT(objectPtr != nullptr);
 
     if (dotnet::Class* managedClass = HypClass::GetManagedClass())
     {
@@ -27,7 +27,7 @@ bool HypStruct::CreateStructInstance(dotnet::ObjectReference& outObjectReference
             {
                 ManagedStructInitializerContext& context = *static_cast<ManagedStructInitializerContext*>(contextPtr);
 
-                AssertThrowMsg(objectSize == context.size, "Type size does not match managed struct size! Expected managed struct to have size of %llu but got %u",
+                HYP_CORE_ASSERT(objectSize == context.size, "Type size does not match managed struct size! Expected managed struct to have size of %zu but got %u",
                     context.size, objectSize);
 
                 Memory::MemCpy(objectPtr, context.ptr, context.size);

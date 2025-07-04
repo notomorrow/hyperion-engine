@@ -6,6 +6,9 @@
 #include <core/threading/AtomicVar.hpp>
 #include <core/threading/TaskThread.hpp>
 
+#include <core/logging/Logger.hpp>
+#include <core/logging/LogChannels.hpp>
+
 #include <core/containers/Queue.hpp>
 
 #include <mutex>
@@ -126,7 +129,7 @@ public:
         gst_init(nullptr, nullptr);
 
         GstPlugin* plugin = gst_plugin_load_by_name("app");
-        AssertThrowMsg(plugin != nullptr, "Failed to load 'app' plugin\n");
+        Assert(plugin != nullptr, "Failed to load 'app' plugin\n");
         g_object_unref(plugin);
 
         m_customData = GStreamerUserData {};
@@ -140,11 +143,13 @@ public:
         m_customData.pushDataCallback = [](void* userDataVp) -> gboolean
         {
             GStreamerUserData* userData = (GStreamerUserData*)userDataVp;
-            AssertThrow(userData != nullptr);
+            Assert(userData != nullptr);
 
             GstAppSrc* appsrc = userData->appsrc;
-            AssertThrow(appsrc != nullptr);
-            AssertThrow(GST_IS_APP_SRC(appsrc));
+            Assert(appsrc != nullptr);
+
+            const bool isAppSrc = GST_IS_APP_SRC(appsrc);
+            Assert(isAppSrc);
 
             EncoderDataQueue* inQueue = userData->inQueue;
 
@@ -159,7 +164,7 @@ public:
                 return TRUE;
             }
 
-            AssertThrow(bytes.Size() == 1080 * 720 * 4);
+            Assert(bytes.Size() == 1080 * 720 * 4);
 
             const gsize dataSize = bytes.Size();
 
@@ -185,8 +190,8 @@ public:
                 return FALSE;
             }
 
-            AssertThrow(buffer != nullptr);
-            AssertThrow(GST_IS_BUFFER(buffer));
+            Assert(buffer != nullptr);
+            Assert(GST_IS_BUFFER(buffer));
 
             GstFlowReturn ret = gst_app_src_push_buffer(GST_APP_SRC(appsrc), buffer);
 
@@ -208,7 +213,7 @@ public:
 
         m_recvDataCallback = [](GstElement* appsink, GStreamerUserData* userData) -> GstFlowReturn
         {
-            AssertThrow(userData != nullptr);
+            Assert(userData != nullptr);
 
             GstSample* sample = gst_app_sink_pull_sample(GST_APP_SINK(appsink));
 
@@ -286,10 +291,10 @@ public:
 protected:
     virtual void operator()() override
     {
-        AssertThrow(m_pipeline == nullptr);
-        AssertThrow(m_appsrc == nullptr);
-        AssertThrow(m_appsink == nullptr);
-        AssertThrow(m_loop == nullptr);
+        Assert(m_pipeline == nullptr);
+        Assert(m_appsrc == nullptr);
+        Assert(m_appsink == nullptr);
+        Assert(m_loop == nullptr);
 
         GError* error = nullptr;
 
@@ -374,7 +379,7 @@ GStreamerRTCStreamVideoEncoder::~GStreamerRTCStreamVideoEncoder()
 
 void GStreamerRTCStreamVideoEncoder::Start()
 {
-    AssertThrow(m_thread != nullptr);
+    Assert(m_thread != nullptr);
 
     if (!m_thread->IsRunning())
     {
@@ -424,7 +429,7 @@ Optional<ByteBuffer> GStreamerRTCStreamVideoEncoder::PullData()
     if (pullResult)
     {
         ByteBuffer& byteBuffer = pullResult.Get();
-        AssertThrow(byteBuffer.Size() >= 4);
+        Assert(byteBuffer.Size() >= 4);
 
         SizeType i = 0;
 
@@ -455,13 +460,13 @@ Optional<ByteBuffer> GStreamerRTCStreamVideoEncoder::PullData()
         }
         else
         {
-            AssertThrowMsg(
+            Assert(
                 false,
-                "Invalid NAL header! Read bytes: %x %x %x %x",
-                startCodeBytes[0],
-                startCodeBytes[1],
-                startCodeBytes[2],
-                startCodeBytes[3]);
+                "Invalid NAL header! Read bytes: {} {} {} {}",
+                (uint32)startCodeBytes[0],
+                (uint32)startCodeBytes[1],
+                (uint32)startCodeBytes[2],
+                (uint32)startCodeBytes[3]);
         }
 
         const uint32 nalRefIdc = (nalHeader >> 5) & 0x03;

@@ -35,7 +35,7 @@ public:
     SystemComponentDescriptors(ComponentDescriptors&&... componentDescriptors)
         : HashSet({ std::forward<ComponentDescriptors>(componentDescriptors)... })
     {
-        AssertThrowMsg(Size() == sizeof...(ComponentDescriptors), "Duplicate component descriptors found");
+        Assert(Size() == sizeof...(ComponentDescriptors), "Duplicate component descriptors found");
     }
 
     SystemComponentDescriptors(Span<ComponentInfo> componentInfos)
@@ -184,10 +184,10 @@ public:
     const ComponentInfo& GetComponentInfo(TypeId componentTypeId) const
     {
         const auto it = m_componentTypeIds.Find(componentTypeId);
-        AssertThrowMsg(it != m_componentTypeIds.End(), "Component type Id not found");
+        Assert(it != m_componentTypeIds.End(), "Component type Id not found");
 
         const SizeType index = m_componentTypeIds.IndexOf(it);
-        AssertThrowMsg(index != SizeType(-1), "Component type Id not found");
+        Assert(index != SizeType(-1), "Component type Id not found");
 
         return m_componentInfos[index];
     }

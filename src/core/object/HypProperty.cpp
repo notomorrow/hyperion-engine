@@ -14,7 +14,7 @@ const HypClass* HypProperty::GetHypClass() const
 
 HypProperty HypProperty::MakeHypProperty(const HypField* field)
 {
-    AssertThrow(field != nullptr);
+    HYP_CORE_ASSERT(field != nullptr);
 
     Name propertyName;
 
@@ -107,7 +107,7 @@ HypProperty HypProperty::MakeHypProperty(const HypMethod* getter, const HypMetho
 
         if (typeId.HasValue())
         {
-            AssertThrowMsg(*typeId == setterTypeId, "Getter TypeId (%u) does not match setter TypeId (%u)", typeId->Value(), setterTypeId.Value());
+            HYP_CORE_ASSERT(*typeId == setterTypeId, "Getter TypeId (%u) does not match setter TypeId (%u)", typeId->Value(), setterTypeId.Value());
         }
         else
         {
@@ -121,7 +121,7 @@ HypProperty HypProperty::MakeHypProperty(const HypMethod* getter, const HypMetho
 
         if (targetTypeId.HasValue())
         {
-            AssertThrowMsg(*targetTypeId == setter->GetTargetTypeId(), "Getter target TypeId (%u) does not match setter target TypeId (%u)", targetTypeId->Value(), setter->GetTargetTypeId().Value());
+            HYP_CORE_ASSERT(*targetTypeId == setter->GetTargetTypeId(), "Getter target TypeId (%u) does not match setter target TypeId (%u)", targetTypeId->Value(), setter->GetTargetTypeId().Value());
         }
         else
         {
@@ -131,8 +131,8 @@ HypProperty HypProperty::MakeHypProperty(const HypMethod* getter, const HypMetho
         result.m_attributes.Merge(setter->GetAttributes());
     }
 
-    AssertThrowMsg(propertyAttributeOpt.HasValue(), "A HypProperty composed of getter/setter pair must have at least one method that has \"Property=\" attribute");
-    AssertThrowMsg(typeId.HasValue(), "Cannot determine TypeId from getter/setter pair");
+    HYP_CORE_ASSERT(propertyAttributeOpt.HasValue(), "A HypProperty composed of getter/setter pair must have at least one method that has \"Property=\" attribute");
+    HYP_CORE_ASSERT(typeId.HasValue(), "Cannot determine TypeId from getter/setter pair");
 
     result.m_name = CreateNameFromDynamicString(*propertyAttributeOpt);
     result.m_typeId = *typeId;
@@ -149,7 +149,7 @@ HypProperty HypProperty::MakeHypProperty(const HypMethod* getter, const HypMetho
         result.m_getter.serializeProc = [getter](const HypData& target) -> FBOMData
         {
             FBOMData data;
-            AssertThrow(getter->Serialize(Span<HypData> { const_cast<HypData*>(&target), 1 }, data));
+            HYP_CORE_ASSERT(getter->Serialize(Span<HypData> { const_cast<HypData*>(&target), 1 }, data));
 
             return data;
         };
@@ -167,7 +167,7 @@ HypProperty HypProperty::MakeHypProperty(const HypMethod* getter, const HypMetho
         };
         result.m_setter.deserializeProc = [setter](FBOMLoadContext& context, HypData& target, const FBOMData& value) -> void
         {
-            AssertThrow(setter->Deserialize(context, target, value));
+            HYP_CORE_ASSERT(setter->Deserialize(context, target, value));
         };
         result.m_originalMember = setter;
     }

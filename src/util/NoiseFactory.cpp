@@ -147,7 +147,7 @@ NoiseGenerator* NoiseFactory::Capture(NoiseGenerationType type, Seed seed)
 
 void NoiseFactory::Release(NoiseGenerator* noise)
 {
-    AssertThrow(noise != nullptr);
+    Assert(noise != nullptr);
 
     Release(noise->m_type, noise->m_seed);
 }
@@ -156,7 +156,7 @@ void NoiseFactory::Release(NoiseGenerationType type, Seed seed)
 {
     const auto it = m_noiseGenerators.find(std::make_pair(type, seed));
 
-    AssertThrow(it != m_noiseGenerators.end());
+    Assert(it != m_noiseGenerators.end());
 
     if (!--it->second.uses)
     {

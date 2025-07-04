@@ -27,7 +27,7 @@ struct HaltonSequence
 
     static inline float GetHalton(uint32 index, uint32 base)
     {
-        AssertThrow(base != 0);
+        HYP_CORE_ASSERT(base != 0);
 
         float f = 1.0f;
         float r = 0.0f;

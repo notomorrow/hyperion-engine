@@ -60,7 +60,7 @@ struct FBOMDeserializedObject
     template <class T>
     HYP_FORCE_INLINE decltype(auto) Get() const
     {
-        AssertThrow(ptr != nullptr);
+        HYP_CORE_ASSERT(ptr != nullptr);
         return ptr->Get<typename SerializationWrapper<T>::Type>();
     }
 

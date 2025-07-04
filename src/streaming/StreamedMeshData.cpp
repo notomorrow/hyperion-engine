@@ -130,7 +130,7 @@ void StreamedMeshData::Load_Internal() const
 {
     HYP_MT_CHECK_RW(m_dataRaceDetector);
 
-    AssertThrow(m_streamedData != nullptr);
+    Assert(m_streamedData != nullptr);
     m_streamedData->Load();
 
     if (!m_meshData.HasValue())
@@ -143,10 +143,10 @@ void StreamedMeshData::LoadMeshData(const ByteBuffer& byteBuffer) const
 {
     HYP_MT_CHECK_RW(m_dataRaceDetector);
 
-    AssertThrow(byteBuffer.Size() >= 3);
-    AssertThrow(byteBuffer.Data()[0] == 'H');
-    AssertThrow(byteBuffer.Data()[1] == 'Y');
-    AssertThrow(byteBuffer.Data()[2] == 'P');
+    Assert(byteBuffer.Size() >= 3);
+    Assert(byteBuffer.Data()[0] == 'H');
+    Assert(byteBuffer.Data()[1] == 'Y');
+    Assert(byteBuffer.Data()[2] == 'P');
 
     MemoryBufferedReaderSource source { byteBuffer.ToByteView() };
     BufferedReader reader { &source };
@@ -197,7 +197,7 @@ const MeshData& StreamedMeshData::GetMeshData() const
 
     HYP_MT_CHECK_READ(m_dataRaceDetector);
 
-    AssertDebugMsg(ResourceBase::IsInitialized(), "StreamedMeshData: Cannot get mesh data for uninitialized resource!");
+    AssertDebug(ResourceBase::IsInitialized(), "StreamedMeshData: Cannot get mesh data for uninitialized resource!");
 
     if (!m_meshData.HasValue())
     {

@@ -33,8 +33,7 @@ public:
 /*! \brief A delegate that can be bound to a managed .NET object.
  *  \details This delegate can be bound to a managed .NET object, allowing the delegate have its behavior defined in script code.
  *  \tparam ReturnType The return type of the delegate.
- *  \tparam Args The argument types of the delegate.
- *  \note The default return value can be changed by specializing the \ref{hyperion::functional::ProcDefaultReturn} struct. */
+ *  \tparam Args The argument types of the delegate.*/
 template <class ReturnType, class... Args>
 class ScriptableDelegate final : public IScriptableDelegate, public virtual Delegate<ReturnType, Args...>
 {
@@ -64,13 +63,13 @@ public:
         return Delegate<ReturnType, Args...>::Bind([methodName = methodName, getFn = std::move(getFn)]<class... ArgTypes>(ArgTypes&&... args) mutable -> ReturnType
             {
                 ManagedObjectResource* managedObjectResource = getFn();
-                AssertThrowMsg(managedObjectResource != nullptr, "Managed object resource is null!");
+                HYP_CORE_ASSERT(managedObjectResource != nullptr, "Managed object resource is null!");
 
                 managedObjectResource->IncRef();
 
                 dotnet::Object* object = managedObjectResource->GetManagedObject();
-                AssertThrowMsg(object != nullptr, "Managed object is null!");
-                AssertThrowMsg(object->IsValid(), "Managed object is invalid!");
+                HYP_CORE_ASSERT(object != nullptr, "Managed object is null!");
+                HYP_CORE_ASSERT(object->IsValid(), "Managed object is invalid!");
 
                 if (!object->GetMethod(methodName))
                 {
@@ -105,14 +104,14 @@ public:
         return Delegate<ReturnType, Args...>::Bind([methodName = methodName, getFn = std::move(getFn), defaultReturn = std::forward<DefaultReturnType>(defaultReturn)]<class... ArgTypes>(ArgTypes&&... args) mutable -> ReturnType
             {
                 ManagedObjectResource* managedObjectResource = getFn();
-                AssertThrowMsg(managedObjectResource != nullptr, "Managed object resource is null!");
+                HYP_CORE_ASSERT(managedObjectResource != nullptr, "Managed object resource is null!");
 
                 managedObjectResource->IncRef();
                 HYP_DEFER({ managedObjectResource->DecRef(); });
 
                 dotnet::Object* object = managedObjectResource->GetManagedObject();
-                AssertThrowMsg(object != nullptr, "Managed object is null!");
-                AssertThrowMsg(object->IsValid(), "Managed object is invalid!");
+                HYP_CORE_ASSERT(object != nullptr, "Managed object is null!");
+                HYP_CORE_ASSERT(object->IsValid(), "Managed object is invalid!");
 
                 if (!object->GetMethod(methodName))
                 {
@@ -136,8 +135,8 @@ public:
                 HYP_DEFER({ managedObjectResource->DecRef(); });
 
                 dotnet::Object* object = managedObjectResource->GetManagedObject();
-                AssertThrowMsg(object != nullptr, "Managed object is null!");
-                AssertThrowMsg(object->IsValid(), "Managed object is invalid!");
+                HYP_CORE_ASSERT(object != nullptr, "Managed object is null!");
+                HYP_CORE_ASSERT(object->IsValid(), "Managed object is invalid!");
 
                 if (!object->GetMethod(methodName))
                 {
@@ -162,8 +161,8 @@ public:
                 HYP_DEFER({ managedObjectResource->DecRef(); });
 
                 dotnet::Object* object = managedObjectResource->GetManagedObject();
-                AssertThrowMsg(object != nullptr, "Managed object is null!");
-                AssertThrowMsg(object->IsValid(), "Managed object is invalid!");
+                HYP_CORE_ASSERT(object != nullptr, "Managed object is null!");
+                HYP_CORE_ASSERT(object->IsValid(), "Managed object is invalid!");
 
                 if (!object->GetMethod(methodName))
                 {
@@ -209,7 +208,6 @@ public:
     }
 
     /*! \brief Call operator overload - alias method for Broadcast().
-     *  \note The default return value can be changed by specializing the \ref{hyperion::functional::ProcDefaultReturn} struct.
      *  \tparam ArgTypes The argument types to pass to the handlers.
      *  \param args The arguments to pass to the handlers.
      *  \return The result returned from the final handler that was called, or a default constructed \ref{ReturnType} if no handlers were bound. */

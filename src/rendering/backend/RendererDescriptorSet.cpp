@@ -1,5 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
+#include <rendering/backend/RenderBackend.hpp>
 #include <rendering/backend/RendererDescriptorSet.hpp>
 #include <rendering/backend/RenderConfig.hpp>
 
@@ -26,7 +27,7 @@ DescriptorDeclaration* DescriptorSetDeclaration::FindDescriptorDeclaration(WeakN
 
 uint32 DescriptorSetDeclaration::CalculateFlatIndex(DescriptorSlot slot, WeakName name) const
 {
-    AssertThrow(slot != DESCRIPTOR_SLOT_NONE && slot < DESCRIPTOR_SLOT_MAX);
+    HYP_GFX_ASSERT(slot != DESCRIPTOR_SLOT_NONE && slot < DESCRIPTOR_SLOT_MAX);
 
     uint32 flatIndex = 0;
 
@@ -107,7 +108,7 @@ DescriptorSetLayout::DescriptorSetLayout(const DescriptorSetDeclaration* decl)
     {
         m_decl = GetStaticDescriptorTableDeclaration().FindDescriptorSetDeclaration(decl->name);
 
-        AssertThrowMsg(m_decl != nullptr, "Invalid global descriptor set reference: %s", decl->name.LookupString());
+        HYP_GFX_ASSERT(m_decl != nullptr, "Invalid global descriptor set reference: %s", decl->name.LookupString());
     }
 
     for (const Array<DescriptorDeclaration>& slot : m_decl->slots)
@@ -115,7 +116,7 @@ DescriptorSetLayout::DescriptorSetLayout(const DescriptorSetDeclaration* decl)
         for (const DescriptorDeclaration& descriptor : slot)
         {
             const uint32 descriptorIndex = m_decl->CalculateFlatIndex(descriptor.slot, descriptor.name);
-            AssertThrow(descriptorIndex != ~0u);
+            HYP_GFX_ASSERT(descriptorIndex != ~0u);
 
             if (descriptor.cond != nullptr && !descriptor.cond())
             {

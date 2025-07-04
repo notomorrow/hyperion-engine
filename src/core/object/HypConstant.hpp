@@ -76,7 +76,7 @@ public:
         {
             m_serializeProc = [valuePtr]() -> FBOMData
             {
-                AssertThrow(valuePtr != nullptr);
+                HYP_CORE_ASSERT(valuePtr != nullptr);
 
                 FBOMData out;
 

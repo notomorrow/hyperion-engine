@@ -2,8 +2,11 @@
 
 #include <core/compression/Archive.hpp>
 
+#include <core/logging/Logger.hpp>
+#include <core/logging/LogChannels.hpp>
+
 #ifdef HYP_ZLIB
-    #include <zlib.h>
+#include <zlib.h>
 #endif
 
 namespace hyperion {
@@ -59,7 +62,7 @@ Archive ArchiveBuilder::Build() const
         m_uncompressedBuffer.Data(),
         uncompressedSize);
 
-    AssertThrowMsg(compressResult == Z_OK, "zlib compression failed with error %d", compressResult);
+    Assert(compressResult == Z_OK, "zlib compression failed with error %d", compressResult);
 
     compressedBuffer.SetSize(compressedSize);
 #else

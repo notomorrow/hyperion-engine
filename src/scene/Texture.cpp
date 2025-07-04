@@ -212,7 +212,7 @@ void Texture::Readback_Internal()
     // const SizeType expected = m_textureDesc.GetByteSize();
     // const SizeType real = resultByteBuffer.Size();
 
-    // AssertThrowMsg(expected == real, "Failed to readback texture: expected size: %llu, got %llu", expected, real);
+    // Assert(expected == real, "Failed to readback texture: expected size: %llu, got %llu", expected, real);
 
     // m_streamedTextureDataResourceHandle.Reset();
 

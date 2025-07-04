@@ -54,7 +54,7 @@ struct RENDER_COMMAND(FontAtlas_RenderCharacter)
         SingleTimeCommands commands;
 
         const ImageRef& image = glyphTexture->GetRenderResource().GetImage();
-        AssertThrow(image.IsValid());
+        Assert(image.IsValid());
 
         const Vec3u& extent = image->GetExtent();
 
@@ -71,8 +71,8 @@ struct RENDER_COMMAND(FontAtlas_RenderCharacter)
             uint32(location.y + extent.y)
         };
 
-        AssertThrowMsg(cellDimensions.x >= extent.x, "Cell width (%u) is less than glyph width (%u)", cellDimensions.x, extent.x);
-        AssertThrowMsg(cellDimensions.y >= extent.y, "Cell height (%u) is less than glyph height (%u)", cellDimensions.y, extent.y);
+        Assert(cellDimensions.x >= extent.x, "Cell width (%u) is less than glyph width (%u)", cellDimensions.x, extent.x);
+        Assert(cellDimensions.y >= extent.y, "Cell height (%u) is less than glyph height (%u)", cellDimensions.y, extent.y);
 
         commands.Push([&](CmdList& cmd)
             {
@@ -150,7 +150,7 @@ FontAtlas::FontAtlas(const FontAtlasTextureSet& atlasTextures, Vec2i cellDimensi
       m_glyphMetrics(std::move(glyphMetrics)),
       m_symbolList(std::move(symbolList))
 {
-    AssertThrow(m_symbolList.Size() != 0);
+    Assert(m_symbolList.Size() != 0);
 
     for (auto& it : m_atlasTextures.atlases)
     {
@@ -167,7 +167,7 @@ FontAtlas::FontAtlas(RC<FontFace> face)
     : m_face(std::move(face)),
       m_symbolList(GetDefaultSymbolList())
 {
-    AssertThrow(m_symbolList.Size() != 0);
+    Assert(m_symbolList.Size() != 0);
 
     // Each cell will be the same size at the largest symbol
     m_cellDimensions = FindMaxDimensions(m_face);
@@ -196,7 +196,7 @@ FontAtlas::SymbolList FontAtlas::GetDefaultSymbolList()
 
 Result FontAtlas::RenderAtlasTextures()
 {
-    AssertThrow(m_face != nullptr);
+    Assert(m_face != nullptr);
 
     if ((m_symbolList.Size() / s_symbolColumns) > s_symbolRows)
     {
@@ -353,7 +353,7 @@ Optional<const Glyph::Metrics&> FontAtlas::GetGlyphMetrics(FontFace::WChar symbo
     }
 
     const auto index = std::distance(m_symbolList.Begin(), it);
-    AssertThrow(index < m_glyphMetrics.Size(), "Index (%u) out of bounds of glyph metrics buffer (%u)", index, m_glyphMetrics.Size());
+    Assert(index < m_glyphMetrics.Size(), "Index (%u) out of bounds of glyph metrics buffer (%u)", index, m_glyphMetrics.Size());
 
     return m_glyphMetrics[index];
 }
@@ -409,8 +409,8 @@ void FontAtlas::WriteToBuffer(uint32 pixelSize, ByteBuffer& buffer) const
 
             SingleTimeCommands commands;
 
-            AssertThrow(atlas);
-            AssertThrow(atlas->IsReady());
+            Assert(atlas);
+            Assert(atlas->IsReady());
 
             commands.Push([&](CmdList& cmd)
                 {

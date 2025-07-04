@@ -274,7 +274,7 @@ public:
             }
         }
 
-        AssertThrow(m_currentIndex == other.m_currentIndex);
+        HYP_CORE_ASSERT(m_currentIndex == other.m_currentIndex);
 
         other.m_currentIndex = invalidTypeIndex;
 
@@ -293,7 +293,7 @@ public:
 
         constexpr TypeId typeId = TypeId::ForType<NormalizedType<T>>();
 
-        AssertThrow(Helper::CopyConstruct(typeId, m_storage.GetPointer(), std::addressof(value)));
+        HYP_CORE_ASSERT(Helper::CopyConstruct(typeId, m_storage.GetPointer(), std::addressof(value)));
 
         m_currentIndex = TypeIndexHelper<VariantBase<Types...>> {}(typeId);
     }
@@ -306,7 +306,7 @@ public:
 
         constexpr TypeId typeId = TypeId::ForType<NormalizedType<T>>();
 
-        AssertThrow(Helper::MoveConstruct(typeId, m_storage.GetPointer(), std::addressof(value)));
+        HYP_CORE_ASSERT(Helper::MoveConstruct(typeId, m_storage.GetPointer(), std::addressof(value)));
 
         m_currentIndex = TypeIndexHelper<VariantBase<Types...>> {}(typeId);
     }
@@ -370,7 +370,7 @@ public:
     template <class T, class ReturnType = NormalizedType<T>>
     HYP_FORCE_INLINE bool Get(ReturnType* outValue) const
     {
-        AssertThrow(outValue != nullptr);
+        HYP_CORE_ASSERT(outValue != nullptr);
 
         if (Is<ReturnType>())
         {
@@ -385,7 +385,7 @@ public:
     template <class T>
     HYP_FORCE_INLINE T& Get() &
     {
-        AssertThrowMsg(Is<NormalizedType<T>>(), "Held type differs from requested type!");
+        HYP_CORE_ASSERT(Is<NormalizedType<T>>());
 
         return *static_cast<NormalizedType<T>*>(m_storage.GetPointer());
     }
@@ -393,7 +393,7 @@ public:
     template <class T>
     HYP_FORCE_INLINE const T& Get() const&
     {
-        AssertThrowMsg(Is<NormalizedType<T>>(), "Held type differs from requested type!");
+        HYP_CORE_ASSERT(Is<NormalizedType<T>>());
 
         return *static_cast<const NormalizedType<T>*>(m_storage.GetPointer());
     }
@@ -401,7 +401,7 @@ public:
     template <class T>
     HYP_FORCE_INLINE T Get() &&
     {
-        AssertThrowMsg(Is<NormalizedType<T>>(), "Held type differs from requested type!");
+        HYP_CORE_ASSERT(Is<NormalizedType<T>>());
 
         return std::move(*static_cast<NormalizedType<T>*>(m_storage.GetPointer()));
     }
@@ -460,9 +460,7 @@ public:
 
         constexpr TypeId typeId = TypeId::ForType<NormalizedType<T>>();
 
-        AssertThrowMsg(
-            Helper::CopyConstruct(typeId, m_storage.GetPointer(), &value),
-            "Not a valid type for the Variant");
+        HYP_CORE_ASSERT(Helper::CopyConstruct(typeId, m_storage.GetPointer(), &value));
 
         m_currentIndex = TypeIndexHelper<VariantBase<Types...>> {}(typeId);
     }
@@ -481,9 +479,8 @@ public:
 
         constexpr TypeId typeId = TypeId::ForType<NormalizedType<T>>();
 
-        AssertThrowMsg(
-            Helper::MoveConstruct(typeId, m_storage.GetPointer(), &value),
-            "Not a valid type for the Variant");
+        // Not a valid type for the variant
+        HYP_CORE_ASSERT(Helper::MoveConstruct(typeId, m_storage.GetPointer(), &value));
 
         m_currentIndex = TypeIndexHelper<VariantBase<Types...>> {}(typeId);
     }
@@ -583,8 +580,8 @@ public:
     {
         if (other.IsValid())
         {
-            AssertThrowMsg(Base::Helper::CopyConstruct(other.CurrentTypeId(), Base::m_storage.GetPointer(), other.m_storage.GetPointer()),
-                "Variant types not compatible");
+            // Not compatible
+            HYP_CORE_ASSERT(Base::Helper::CopyConstruct(other.CurrentTypeId(), Base::m_storage.GetPointer(), other.m_storage.GetPointer()));
 
             Base::m_currentIndex = other.m_currentIndex;
         }
@@ -601,8 +598,7 @@ public:
         {
             if (other.m_currentIndex == Base::m_currentIndex)
             {
-                AssertThrowMsg(Base::Helper::CopyAssign(Base::CurrentTypeId(), Base::m_storage.GetPointer(), other.m_storage.GetPointer()),
-                    "Variant types not compatible");
+                HYP_CORE_ASSERT(Base::Helper::CopyAssign(Base::CurrentTypeId(), Base::m_storage.GetPointer(), other.m_storage.GetPointer()));
             }
             else
             {
@@ -612,8 +608,7 @@ public:
 
                 if (other.IsValid())
                 {
-                    AssertThrowMsg(Base::Helper::CopyConstruct(other.CurrentTypeId(), Base::m_storage.GetPointer(), other.m_storage.GetPointer()),
-                        "Variant types not compatible");
+                    HYP_CORE_ASSERT(Base::Helper::CopyConstruct(other.CurrentTypeId(), Base::m_storage.GetPointer(), other.m_storage.GetPointer()));
 
                     Base::m_currentIndex = other.m_currentIndex;
                 }
@@ -621,13 +616,12 @@ public:
         }
         else if (other.IsValid())
         {
-            AssertThrowMsg(Base::Helper::CopyConstruct(other.CurrentTypeId(), Base::m_storage.GetPointer(), other.m_storage.GetPointer()),
-                "Variant types not compatible");
+            HYP_CORE_ASSERT(Base::Helper::CopyConstruct(other.CurrentTypeId(), Base::m_storage.GetPointer(), other.m_storage.GetPointer()));
 
             Base::m_currentIndex = other.m_currentIndex;
         }
 
-        AssertThrow(Base::m_currentIndex == other.m_currentIndex);
+        HYP_CORE_ASSERT(Base::m_currentIndex == other.m_currentIndex);
 
         return *this;
     }
@@ -1063,10 +1057,8 @@ struct VisitHelper<utilities::Variant<Types...>>
 
         const int typeIndex = variant.GetTypeIndex();
 
-#ifdef HYP_DEBUG_MODE
         // Sanity check
-        AssertThrow(typeIndex < sizeof...(Types));
-#endif
+        HYP_CORE_ASSERT(typeIndex < sizeof...(Types));
 
         invokeFns[typeIndex](variant, fn);
     }
@@ -1087,10 +1079,8 @@ struct VisitHelper<utilities::Variant<Types...>>
 
         const int typeIndex = variant.GetTypeIndex();
 
-#ifdef HYP_DEBUG_MODE
         // Sanity check
-        AssertThrow(typeIndex < sizeof...(Types));
-#endif
+        HYP_CORE_ASSERT(typeIndex < sizeof...(Types));
 
         invokeFns[typeIndex](variant, fn);
     }
@@ -1111,10 +1101,8 @@ struct VisitHelper<utilities::Variant<Types...>>
 
         const int typeIndex = variant.GetTypeIndex();
 
-#ifdef HYP_DEBUG_MODE
         // Sanity check
-        AssertThrow(typeIndex < sizeof...(Types));
-#endif
+        HYP_CORE_ASSERT(typeIndex < sizeof...(Types));
 
         invokeFns[typeIndex](std::move(variant), fn);
     }

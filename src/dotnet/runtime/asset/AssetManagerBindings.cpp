@@ -9,15 +9,15 @@ extern "C"
 
     HYP_EXPORT const AssetLoaderDefinition* AssetManager_GetLoaderDefinition(AssetManager* assetManager, const char* path, TypeId desiredTypeId)
     {
-        AssertThrow(assetManager != nullptr);
+        Assert(assetManager != nullptr);
 
         return assetManager->GetLoaderDefinition(path, desiredTypeId);
     }
 
     HYP_EXPORT LoadedAsset* AssetManager_Load(AssetManager* assetManager, AssetLoaderDefinition* loaderDefinition, const char* path)
     {
-        AssertThrow(assetManager != nullptr);
-        AssertThrow(loaderDefinition != nullptr);
+        Assert(assetManager != nullptr);
+        Assert(loaderDefinition != nullptr);
 
         AssetLoaderBase* loader = loaderDefinition->loader.Get();
 

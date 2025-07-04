@@ -42,7 +42,7 @@ public:
     Handle<UIObject> Create(UIObject* parent, const HypData& value) const
     {
         const HypClass* hypClass = GetClass(value.GetTypeId());
-        AssertThrowMsg(hypClass != nullptr, "No HypClass registered for TypeId %u", value.GetTypeId().Value());
+        Assert(hypClass != nullptr, "No HypClass registered for TypeId %u", value.GetTypeId().Value());
 
         if (value.IsNull())
         {
@@ -99,7 +99,7 @@ public:
             }
 
             Handle<UIObject> element = factory->CreateUIObject(parent, getterResult, {});
-            AssertThrow(element != nullptr);
+            Assert(element != nullptr);
             panel->AddChildUIObject(element);
 
             column->AddChildUIObject(panel);
@@ -501,7 +501,7 @@ public:
     Handle<UIObject> Create(UIObject* parent, const Handle<Entity>& entity) const
     {
         const EditorNodePropertyRef* context = GetContext<EditorNodePropertyRef>();
-        AssertThrow(context != nullptr);
+        Assert(context != nullptr);
 
         if (!entity.IsValid())
         {
@@ -600,7 +600,7 @@ public:
                 }
 
                 ComponentContainerBase* componentContainer = entityManager->TryGetContainer(componentTypeId);
-                AssertThrow(componentContainer != nullptr);
+                Assert(componentContainer != nullptr);
 
                 HypData componentHypData;
 
@@ -874,7 +874,7 @@ public:
                     }
 
                     Handle<AssetPackage> scriptsPackage = assetRegistry->GetPackageFromPath("Scripts", true);
-                    AssertThrow(scriptsPackage.IsValid());
+                    Assert(scriptsPackage.IsValid());
 
                     Handle<Script> script = CreateObject<Script>();
 
@@ -1008,18 +1008,18 @@ public:
         // // @TODO Implement without recreating the UI element
 
         // Handle<Node> nodeRc = value.node.Lock();
-        // AssertThrow(nodeRc != nullptr);
+        // Assert(nodeRc != nullptr);
 
         // UIElementFactoryBase* factory = GetEditorUIElementFactory(value.property->GetTypeId());
-        // AssertThrow(factory != nullptr);
+        // Assert(factory != nullptr);
 
         // Handle<UIPanel> content = uiObject->FindChildUIObject(WeakName("PropertyPanel_Content")).Cast<UIPanel>();
-        // AssertThrow(content != nullptr);
+        // Assert(content != nullptr);
 
         // content->RemoveAllChildUIObjects();
 
         // Handle<UIObject> element = factory->CreateUIObject(uiObject, value.property->Get(HypData(nodeRc)), AnyRef(const_cast<EditorNodePropertyRef&>(value)));
-        // AssertThrow(element != nullptr);
+        // Assert(element != nullptr);
 
         // content->AddChildUIObject(element);
     }

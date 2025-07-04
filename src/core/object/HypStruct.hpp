@@ -110,7 +110,7 @@ public:
 
     virtual bool GetManagedObject(const void* objectPtr, dotnet::ObjectReference& outObjectReference) const override
     {
-        AssertThrow(objectPtr != nullptr);
+        HYP_CORE_ASSERT(objectPtr != nullptr);
 
         // Construct a new instance of the struct and return an ObjectReference pointing to it.
         if (!CreateStructInstance(outObjectReference, objectPtr, sizeof(T)))
@@ -141,7 +141,7 @@ public:
         }
         else
         {
-            AssertThrow(memory.Size() == sizeof(T));
+            HYP_CORE_ASSERT(memory.Size() == sizeof(T));
 
             outHypData = HypData(std::move(*reinterpret_cast<T*>(memory.Data())));
 
@@ -152,7 +152,7 @@ public:
     virtual FBOMResult SerializeStruct(ConstAnyRef in, FBOMObject& out) const override
     {
         HYP_SCOPE;
-        AssertThrow(in.Is<T>());
+        HYP_CORE_ASSERT(in.Is<T>());
 
         const FBOMMarshalerBase* marshal = (GetSerializationMode() & HypClassSerializationMode::USE_MARSHAL_CLASS)
             ? FBOM::GetInstance().GetMarshal(TypeId::ForType<T>(), /* allowFallback */ (GetSerializationMode() & HypClassSerializationMode::MEMBERWISE))
@@ -254,7 +254,7 @@ protected:
         }
 
         const HypClassCallbackWrapper<PostLoadCallback>* callbackWrapperCasted = dynamic_cast<const HypClassCallbackWrapper<PostLoadCallback>*>(callbackWrapper);
-        AssertThrow(callbackWrapperCasted != nullptr);
+        HYP_CORE_ASSERT(callbackWrapperCasted != nullptr);
 
         callbackWrapperCasted->GetCallback()(*static_cast<T*>(objectPtr));
     }
@@ -291,8 +291,8 @@ protected:
         out = HypData(std::move(array));
 
         // debugging
-        AssertDebug(out.Is<Array<T>>());
-        AssertDebug(out.GetTypeId() == TypeId::ForType<Array<T>>());
+        HYP_CORE_ASSERT(out.Is<Array<T>>());
+        HYP_CORE_ASSERT(out.GetTypeId() == TypeId::ForType<Array<T>>());
 
         return true;
     }

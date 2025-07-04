@@ -64,7 +64,7 @@ void OnBindingChanged_ReflectionProbe(EnvProbe* envProbe, uint32 prev, uint32 ne
     AssertDebug(envProbe != nullptr);
     AssertDebug(envProbe->IsReady());
 
-    AssertThrow(envProbe->IsA<SkyProbe>() || envProbe->IsA<ReflectionProbe>(),
+    Assert(envProbe->IsA<SkyProbe>() || envProbe->IsA<ReflectionProbe>(),
         "EnvProbe must be a SkyProbe or ReflectionProbe, but is: %s", envProbe->InstanceClass()->GetName());
 
     if (!envProbe->GetPrefilteredEnvMap().IsValid())
@@ -199,10 +199,9 @@ void OnBindingChanged_Light(Light* light, uint32 prev, uint32 next)
 void OnBindingChanged_Material(Material* material, uint32 prev, uint32 next)
 {
     Threads::AssertOnThread(g_renderThread);
-    
+
     static const IRenderConfig& renderConfig = g_renderBackend->GetRenderConfig();
     static const bool isBindlessSupported = renderConfig.IsBindlessSupported();
-
 
     AssertDebug(material != nullptr);
 
@@ -228,7 +227,7 @@ void OnBindingChanged_Material(Material* material, uint32 prev, uint32 next)
         RenderApi_AssignResourceBinding(material, material->GetRenderResource().GetBufferIndex());
 
         IRenderProxy* proxy = RenderApi_GetRenderProxy(material->Id());
-        AssertThrow(proxy != nullptr);
+        Assert(proxy != nullptr);
 
         RenderProxyMaterial* proxyCasted = static_cast<RenderProxyMaterial*>(proxy);
 
@@ -246,7 +245,7 @@ void OnBindingChanged_Material(Material* material, uint32 prev, uint32 next)
     }
 }
 
-void OnBindingChanged_Texture(Texture *texture, uint32 prev, uint32 next)
+void OnBindingChanged_Texture(Texture* texture, uint32 prev, uint32 next)
 {
     static const IRenderConfig& renderConfig = g_renderBackend->GetRenderConfig();
     static const bool isBindlessSupported = renderConfig.IsBindlessSupported();

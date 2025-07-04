@@ -1,6 +1,7 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
 #include <rendering/backend/RenderCommand.hpp>
+#include <rendering/backend/RenderBackend.hpp>
 
 #include <core/threading/Threads.hpp>
 
@@ -71,7 +72,7 @@ RendererResult RenderCommands::Flush()
 #endif
 
         const RendererResult commandResult = front->Call();
-        AssertThrowMsg(commandResult, "Render command error! [%d]: %s\n", commandResult.GetError().GetErrorCode(), commandResult.GetError().GetMessage().Data());
+        HYP_GFX_ASSERT(commandResult, "Render command error! [%d]: %s\n", commandResult.GetError().GetErrorCode(), commandResult.GetError().GetMessage().Data());
         front->~RenderCommand();
     }
 
@@ -108,7 +109,7 @@ RendererResult RenderCommands::Flush()
 #endif
 
         const RendererResult commandResult = front->Call();
-        AssertThrowMsg(commandResult, "Render command error! [%d]: %s\n", commandResult.GetError().GetErrorCode(), commandResult.GetError().GetMessage().Data());
+        HYP_GFX_ASSERT(commandResult, "Render command error! [%d]: %s\n", commandResult.GetError().GetErrorCode(), commandResult.GetError().GetMessage().Data());
 
         front->~RenderCommand();
     }

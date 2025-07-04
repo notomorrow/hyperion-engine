@@ -134,14 +134,14 @@ utf::u32char SourceStream::Next(int& posChange)
 
 void SourceStream::GoBack(int n)
 {
-    AssertThrowMsg(((int)m_position - n) >= 0, "not large enough to go back");
+    HYP_CORE_ASSERT(((int)m_position - n) >= 0, "not large enough to go back");
 
     m_position -= n;
 }
 
 void SourceStream::Read(char* ptr, SizeType numBytes)
 {
-    AssertThrowMsg(m_position + numBytes < m_file->GetSize(), "attempted to read past the limit");
+    HYP_CORE_ASSERT(m_position + numBytes < m_file->GetSize(), "attempted to read past the limit");
 
     for (SizeType i = 0; i < numBytes; i++)
     {

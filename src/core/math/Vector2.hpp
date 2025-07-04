@@ -5,7 +5,10 @@
 
 #include <HashCode.hpp>
 
+#include <core/utilities/FormatFwd.hpp>
+
 #include <core/Defines.hpp>
+
 #include <Types.hpp>
 
 #include <ostream>
@@ -698,6 +701,77 @@ inline constexpr bool isVec2<Vec2u> = true;
 
 // transitional typedef
 using Vector2 = Vec2f;
+
+// Format specialization
+
+namespace utilities {
+
+template <class StringType, class T>
+struct Formatter<StringType, math::Vec2<T>>
+{
+    HYP_FORCE_INLINE static const char* GetFormatString()
+    {
+        if constexpr (std::is_floating_point_v<T>)
+        {
+            static const char* formatString = "[%f %f]";
+
+            return formatString;
+        }
+        else if constexpr (std::is_integral_v<T> && std::is_signed_v<T> && sizeof(T) <= 4)
+        {
+            static const char* formatString = "[%d %d]";
+
+            return formatString;
+        }
+        else if constexpr (std::is_integral_v<T> && std::is_signed_v<T> && sizeof(T) <= 8)
+        {
+            static const char* formatString = "[%lld %lld]";
+
+            return formatString;
+        }
+        else if constexpr (std::is_integral_v<T> && std::is_unsigned_v<T> && sizeof(T) <= 4)
+        {
+            static const char* formatString = "[%u %u]";
+
+            return formatString;
+        }
+        else if constexpr (std::is_integral_v<T> && std::is_unsigned_v<T> && sizeof(T) <= 8)
+        {
+            static const char* formatString = "[%llu %llu]";
+
+            return formatString;
+        }
+        else
+        {
+            static_assert(resolutionFailure<T>, "Cannot format Vec2 type: unknown inner type");
+        }
+    }
+
+    auto operator()(const math::Vec2<T>& value) const
+    {
+        ubyte inlineBuf[1024];
+        ubyte* buf = &inlineBuf[0];
+
+        int resultSize = std::snprintf(reinterpret_cast<char*>(buf), 1024, GetFormatString(), value.x, value.y) + 1;
+
+        if (resultSize > HYP_ARRAY_SIZE(inlineBuf))
+        {
+            buf = new ubyte[resultSize];
+
+            resultSize = std::snprintf(reinterpret_cast<char*>(buf), resultSize, GetFormatString(), value.x, value.y) + 1;
+
+            StringType res(reinterpret_cast<char*>(buf), reinterpret_cast<char*>(buf + resultSize));
+
+            delete[] buf;
+
+            return res;
+        }
+
+        return StringType(reinterpret_cast<char*>(buf), reinterpret_cast<char*>(buf + resultSize));
+    }
+};
+
+} // namespace utilities
 
 } // namespace hyperion
 

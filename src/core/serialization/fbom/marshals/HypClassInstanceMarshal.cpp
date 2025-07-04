@@ -129,7 +129,7 @@ FBOMResult HypClassInstanceMarshal::Deserialize(FBOMLoadContext& context, const 
     }
 
     AnyRef ref = out.ToRef();
-    AssertThrowMsg(ref.HasValue(), "Failed to create HypClass instance");
+    HYP_CORE_ASSERT(ref.HasValue(), "Failed to create HypClass instance");
 
     if (FBOMResult err = Deserialize_Internal(context, in, hypClass, ref))
     {
@@ -141,8 +141,8 @@ FBOMResult HypClassInstanceMarshal::Deserialize(FBOMLoadContext& context, const 
 
 FBOMResult HypClassInstanceMarshal::Deserialize_Internal(FBOMLoadContext& context, const FBOMObject& in, const HypClass* hypClass, AnyRef ref) const
 {
-    AssertThrow(hypClass != nullptr);
-    AssertThrow(ref.HasValue());
+    HYP_CORE_ASSERT(hypClass != nullptr);
+    HYP_CORE_ASSERT(ref.HasValue());
 
     HypData targetData { ref };
 
@@ -194,7 +194,7 @@ FBOMResult HypClassInstanceMarshal::Deserialize_Internal(FBOMLoadContext& contex
     // temp
     if (hypClass->GetName() == NAME("MeshComponent"))
     {
-        AssertThrowMsg(ref.Get<MeshComponent>().mesh != nullptr,
+        HYP_CORE_ASSERT(ref.Get<MeshComponent>().mesh != nullptr,
             "MeshComponent deserialized with null mesh, this is likely due to a missing 'mesh' property in the FBOM data");
     }
 

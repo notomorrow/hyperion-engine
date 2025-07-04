@@ -722,7 +722,7 @@ struct PushConstantData
     PushConstantData(const void* ptr, uint32 size)
         : size(size)
     {
-        AssertThrowMsg(size <= 128, "Push constant data size exceeds 128 bytes");
+        Assert(size <= 128, "Push constant data size exceeds 128 bytes");
 
         Memory::MemCpy(&data[0], ptr, size);
     }

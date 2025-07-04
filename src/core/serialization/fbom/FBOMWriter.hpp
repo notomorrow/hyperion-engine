@@ -191,7 +191,7 @@ private:
     HYP_FORCE_INLINE UniqueID AddStaticData(FBOMStaticData&& staticData)
     {
         const UniqueID id = staticData.GetUniqueID();
-        AssertThrow(id != UniqueID::Invalid());
+        HYP_CORE_ASSERT(id != UniqueID::Invalid());
 
         return AddStaticData(id, std::move(staticData));
     }

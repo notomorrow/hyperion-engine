@@ -219,7 +219,7 @@ Handle<Mesh> MeshBuilder::NormalizedCubeSphere(uint32 numDivisions)
 
 Handle<Mesh> MeshBuilder::ApplyTransform(const Mesh* mesh, const Transform& transform)
 {
-    AssertThrow(mesh != nullptr);
+    Assert(mesh != nullptr);
 
     StreamedMeshData* streamedMeshData = mesh->GetStreamedMeshData();
 
@@ -254,8 +254,8 @@ Handle<Mesh> MeshBuilder::ApplyTransform(const Mesh* mesh, const Transform& tran
 
 Handle<Mesh> MeshBuilder::Merge(const Mesh* a, const Mesh* b, const Transform& aTransform, const Transform& bTransform)
 {
-    AssertThrow(a != nullptr);
-    AssertThrow(b != nullptr);
+    Assert(a != nullptr);
+    Assert(b != nullptr);
 
     Handle<Mesh> transformedMeshes[] = {
         ApplyTransform(a, aTransform),
@@ -267,8 +267,8 @@ Handle<Mesh> MeshBuilder::Merge(const Mesh* a, const Mesh* b, const Transform& a
         transformedMeshes[1]->GetStreamedMeshData()
     };
 
-    AssertThrow(streamedMeshDatas[0] != nullptr);
-    AssertThrow(streamedMeshDatas[1] != nullptr);
+    Assert(streamedMeshDatas[0] != nullptr);
+    Assert(streamedMeshDatas[1] != nullptr);
 
     TResourceHandle<StreamedMeshData> streamedMeshDataRefs[] = {
         *streamedMeshDatas[0],

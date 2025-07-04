@@ -16,9 +16,9 @@ extern "C"
 #pragma region FBOMType
 
 #define FBOM_TYPE_CREATE_FUNCTION(fbomTypeName, functionSuffix) \
-    HYP_EXPORT FBOMType* FBOMType_##functionSuffix()              \
-    {                                                              \
-        return new FBOM##fbomTypeName();                         \
+    HYP_EXPORT FBOMType* FBOMType_##functionSuffix()            \
+    {                                                           \
+        return new FBOM##fbomTypeName();                        \
     }
 
     FBOM_TYPE_CREATE_FUNCTION(Unset, Unset)
@@ -148,23 +148,23 @@ extern "C"
         return data->TotalSize();
     }
 
-#define FBOM_TYPE_GET_SET_FUNCTIONS(fbomTypeName, functionSuffix, cType)         \
+#define FBOM_TYPE_GET_SET_FUNCTIONS(fbomTypeName, functionSuffix, cType)          \
     HYP_EXPORT bool FBOMData_Get##functionSuffix(FBOMData* data, cType* outValue) \
-    {                                                                                \
-        AssertThrow(data != nullptr);                                                \
-                                                                                     \
+    {                                                                             \
+        Assert(data != nullptr);                                                  \
+                                                                                  \
         if (auto err = data->Read##fbomTypeName(outValue))                        \
-        {                                                                            \
-            return false;                                                            \
-        }                                                                            \
-                                                                                     \
-        return true;                                                                 \
-    }                                                                                \
-                                                                                     \
+        {                                                                         \
+            return false;                                                         \
+        }                                                                         \
+                                                                                  \
+        return true;                                                              \
+    }                                                                             \
+                                                                                  \
     HYP_EXPORT void FBOMData_Set##functionSuffix(FBOMData* data, cType* inValue)  \
-    {                                                                                \
-        AssertThrow(data != nullptr);                                                \
-                                                                                     \
+    {                                                                             \
+        Assert(data != nullptr);                                                  \
+                                                                                  \
         *data = FBOMData::From##fbomTypeName(*inValue);                           \
     }
 
@@ -195,9 +195,9 @@ extern "C"
 
     HYP_EXPORT bool FBOMData_GetObject(FBOMLoadContext* context, FBOMData* data, FBOMObject* outPtr)
     {
-        AssertThrow(context != nullptr);
-        AssertThrow(data != nullptr);
-        AssertThrow(outPtr != nullptr);
+        Assert(context != nullptr);
+        Assert(data != nullptr);
+        Assert(outPtr != nullptr);
 
         if (auto err = data->ReadObject(*context, *outPtr))
         {
@@ -209,8 +209,8 @@ extern "C"
 
     HYP_EXPORT void FBOMData_SetObject(FBOMData* data, FBOMObject* inPtr)
     {
-        AssertThrow(data != nullptr);
-        AssertThrow(inPtr != nullptr);
+        Assert(data != nullptr);
+        Assert(inPtr != nullptr);
 
         *data = FBOMData::FromObject(*inPtr);
     }
@@ -238,9 +238,9 @@ extern "C"
 
     HYP_EXPORT bool FBOMObject_GetProperty(FBOMObject* ptr, const char* key, FBOMData* outDataPtr)
     {
-        AssertThrow(ptr != nullptr);
-        AssertThrow(key != nullptr);
-        AssertThrow(outDataPtr != nullptr);
+        Assert(ptr != nullptr);
+        Assert(key != nullptr);
+        Assert(outDataPtr != nullptr);
 
         if (!ptr->HasProperty(key))
         {
@@ -254,9 +254,9 @@ extern "C"
 
     HYP_EXPORT bool FBOMObject_SetProperty(FBOMObject* ptr, const char* name, FBOMData* dataPtr)
     {
-        AssertThrow(ptr != nullptr);
-        AssertThrow(name != nullptr);
-        AssertThrow(dataPtr != nullptr);
+        Assert(ptr != nullptr);
+        Assert(name != nullptr);
+        Assert(dataPtr != nullptr);
 
         ptr->SetProperty(name, *dataPtr);
 

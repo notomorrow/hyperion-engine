@@ -134,7 +134,7 @@ public:
         }
 
         const auto insertResult = bufferContainer.Insert(requiredSize, buffer);
-        AssertThrow(insertResult.second); // was inserted
+        AssertDebug(insertResult.second); // check was inserted
 
         return buffer;
     }

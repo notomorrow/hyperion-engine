@@ -24,7 +24,7 @@ void OctreeState<Derived, TEntry>::MarkOctantDirty(OctantId octantId)
     }
 
     // should always end up at root if it doesnt match any
-    AssertThrow(rebuildState != OctantId::Invalid());
+    Assert(rebuildState != OctantId::Invalid());
 }
 
 template <class Derived, class TEntry>
@@ -54,7 +54,7 @@ OctreeBase<Derived, TEntry>::OctreeBase(const BoundingBox& aabb, OctreeBase* par
         SetParent(parent); // call explicitly to set root ptr
     }
 
-    AssertThrow(m_octantId.GetIndex() == index);
+    Assert(m_octantId.GetIndex() == index);
 
     InitOctants();
 }
@@ -90,7 +90,7 @@ void OctreeBase<Derived, TEntry>::SetParent(OctreeBase* parent)
     {
         for (Octant& octant : m_octants)
         {
-            AssertThrow(octant.octree != nullptr);
+            Assert(octant.octree != nullptr);
 
             octant.octree->SetParent(this);
         }
@@ -196,12 +196,12 @@ OctreeBase<Derived, TEntry>* OctreeBase<Derived, TEntry>::GetChildOctant(OctantI
 template <class Derived, class TEntry>
 void OctreeBase<Derived, TEntry>::Divide()
 {
-    AssertThrow(!IsDivided());
+    Assert(!IsDivided());
 
     for (int i = 0; i < 8; i++)
     {
         Octant& octant = m_octants[i];
-        AssertThrow(octant.octree == nullptr);
+        Assert(octant.octree == nullptr);
 
         octant.octree = CreateChildOctant(octant.aabb, static_cast<Derived*>(this), uint8(i));
     }
@@ -212,12 +212,12 @@ void OctreeBase<Derived, TEntry>::Divide()
 template <class Derived, class TEntry>
 void OctreeBase<Derived, TEntry>::Undivide()
 {
-    AssertThrow(IsDivided());
-    AssertThrowMsg(m_entries.Empty(), "Undivide() should be called on octrees with no remaining entries");
+    Assert(IsDivided());
+    Assert(m_entries.Empty(), "Undivide() should be called on octrees with no remaining entries");
 
     for (Octant& octant : m_octants)
     {
-        AssertThrow(octant.octree != nullptr);
+        Assert(octant.octree != nullptr);
 
         if (octant.octree->IsDivided())
         {
@@ -239,7 +239,7 @@ void OctreeBase<Derived, TEntry>::Invalidate()
     {
         for (Octant& octant : m_octants)
         {
-            AssertThrow(octant.octree != nullptr);
+            Assert(octant.octree != nullptr);
 
             octant.octree->Invalidate();
         }
@@ -263,7 +263,7 @@ void OctreeBase<Derived, TEntry>::CollapseParents(bool allowRebuild)
     {
         for (const Octant& octant : iteration->m_octants)
         {
-            AssertThrow(octant.octree != nullptr);
+            Assert(octant.octree != nullptr);
 
             if (octant.octree.Get() == highestEmpty)
             {
@@ -316,8 +316,8 @@ void OctreeBase<Derived, TEntry>::Clear(Array<Entry>& outEntries, bool undivide)
         {
             auto entryToOctreeIt = m_state->entryToOctree.Find(entry.value);
 
-            AssertThrow(entryToOctreeIt != m_state->entryToOctree.End());
-            AssertThrow(entryToOctreeIt->second == this);
+            Assert(entryToOctreeIt != m_state->entryToOctree.End());
+            Assert(entryToOctreeIt->second == this);
 
             m_state->entryToOctree.Erase(entryToOctreeIt);
         }
@@ -334,7 +334,7 @@ void OctreeBase<Derived, TEntry>::Clear(Array<Entry>& outEntries, bool undivide)
 
     for (Octant& octant : m_octants)
     {
-        AssertThrow(octant.octree != nullptr);
+        Assert(octant.octree != nullptr);
 
         octant.octree->Clear(outEntries, /* undivide */ false);
     }
@@ -356,8 +356,8 @@ void OctreeBase<Derived, TEntry>::Clear(Array<TEntry>& outEntries, bool undivide
         {
             auto entryToOctreeIt = m_state->entryToOctree.Find(entry.value);
 
-            AssertThrow(entryToOctreeIt != m_state->entryToOctree.End());
-            AssertThrow(entryToOctreeIt->second == this);
+            Assert(entryToOctreeIt != m_state->entryToOctree.End());
+            Assert(entryToOctreeIt->second == this);
 
             m_state->entryToOctree.Erase(entryToOctreeIt);
         }
@@ -374,7 +374,7 @@ void OctreeBase<Derived, TEntry>::Clear(Array<TEntry>& outEntries, bool undivide
 
     for (Octant& octant : m_octants)
     {
-        AssertThrow(octant.octree != nullptr);
+        Assert(octant.octree != nullptr);
 
         octant.octree->Clear(outEntries, /* undivide */ false);
     }
@@ -425,7 +425,7 @@ OctreeBase<Derived, TEntry>::InsertResult OctreeBase<Derived, TEntry>::Insert(co
                         }
                     }
 
-                    AssertThrow(octant.octree != nullptr);
+                    Assert(octant.octree != nullptr);
 
                     return octant.octree->Insert(value, aabb, allowRebuild);
                 }
@@ -445,7 +445,7 @@ OctreeBase<Derived, TEntry>::InsertResult OctreeBase<Derived, TEntry>::Insert_In
 
     if (m_state != nullptr)
     {
-        AssertThrowMsg(m_state->entryToOctree.Find(value) == m_state->entryToOctree.End(), "Entry must not already be in octree hierarchy.");
+        Assert(m_state->entryToOctree.Find(value) == m_state->entryToOctree.End(), "Entry must not already be in octree hierarchy.");
 
         m_state->entryToOctree.Insert(value, this);
     }
@@ -491,7 +491,7 @@ OctreeBase<Derived, TEntry>::Result OctreeBase<Derived, TEntry>::Remove_Internal
         {
             for (Octant& octant : m_octants)
             {
-                AssertThrow(octant.octree != nullptr);
+                Assert(octant.octree != nullptr);
 
                 if (Result octantResult = octant.octree->Remove_Internal(value, allowRebuild))
                 {
@@ -507,8 +507,8 @@ OctreeBase<Derived, TEntry>::Result OctreeBase<Derived, TEntry>::Remove_Internal
     {
         auto entryToOctreeIt = m_state->entryToOctree.Find(value);
 
-        AssertThrow(entryToOctreeIt != m_state->entryToOctree.End());
-        AssertThrow(entryToOctreeIt->second == this);
+        Assert(entryToOctreeIt != m_state->entryToOctree.End());
+        Assert(entryToOctreeIt->second == this);
 
         m_state->entryToOctree.Erase(entryToOctreeIt);
     }
@@ -541,7 +541,7 @@ OctreeBase<Derived, TEntry>::Result OctreeBase<Derived, TEntry>::Remove_Internal
 
         if (lastEmptyParent != nullptr)
         {
-            AssertThrow(lastEmptyParent->EmptyDeep(DEPTH_SEARCH_INF));
+            Assert(lastEmptyParent->EmptyDeep(DEPTH_SEARCH_INF));
 
             /* At highest empty parent octant, call Undivide() to collapse entries */
             if (allowRebuild)
@@ -612,8 +612,8 @@ OctreeBase<Derived, TEntry>::InsertResult OctreeBase<Derived, TEntry>::Move(cons
                     {
                         auto entryToOctreeIt = m_state->entryToOctree.Find(value);
 
-                        AssertThrow(entryToOctreeIt != m_state->entryToOctree.End());
-                        AssertThrow(entryToOctreeIt->second == this);
+                        Assert(entryToOctreeIt != m_state->entryToOctree.End());
+                        Assert(entryToOctreeIt->second == this);
 
                         m_state->entryToOctree.Erase(entryToOctreeIt);
                     }
@@ -642,7 +642,7 @@ OctreeBase<Derived, TEntry>::InsertResult OctreeBase<Derived, TEntry>::Move(cons
         // have to _manually_ call Move() which will go to the above branch for the parent octant,
         // this invalidating `this`
 
-        AssertThrow(lastParent != nullptr);
+        Assert(lastParent != nullptr);
 
         return lastParent->Move(value, aabb, allowRebuild, lastParent->m_entries.End());
     }
@@ -662,8 +662,8 @@ OctreeBase<Derived, TEntry>::InsertResult OctreeBase<Derived, TEntry>::Move(cons
                     {
                         auto entryToOctreeIt = m_state->entryToOctree.Find(value);
 
-                        AssertThrow(entryToOctreeIt != m_state->entryToOctree.End());
-                        AssertThrow(entryToOctreeIt->second == this);
+                        Assert(entryToOctreeIt != m_state->entryToOctree.End());
+                        Assert(entryToOctreeIt->second == this);
 
                         m_state->entryToOctree.Erase(entryToOctreeIt);
                     }
@@ -683,10 +683,10 @@ OctreeBase<Derived, TEntry>::InsertResult OctreeBase<Derived, TEntry>::Move(cons
                     }
                 }
 
-                AssertThrow(octant.octree != nullptr);
+                Assert(octant.octree != nullptr);
 
                 const auto octantMoveResult = octant.octree->Move(value, aabb, allowRebuild, octant.octree->m_entries.End());
-                AssertThrow(octantMoveResult.first);
+                Assert(octantMoveResult.first);
 
                 return octantMoveResult;
             }
@@ -707,7 +707,7 @@ OctreeBase<Derived, TEntry>::InsertResult OctreeBase<Derived, TEntry>::Move(cons
 
         if (m_state != nullptr)
         {
-            AssertThrowMsg(m_state->entryToOctree.Find(value) == m_state->entryToOctree.End(), "Entry must not already be in octree hierarchy.");
+            Assert(m_state->entryToOctree.Find(value) == m_state->entryToOctree.End(), "Entry must not already be in octree hierarchy.");
 
             m_state->entryToOctree.Insert(value, this);
         }
@@ -759,7 +759,7 @@ OctreeBase<Derived, TEntry>::InsertResult OctreeBase<Derived, TEntry>::Update_In
         {
             for (Octant& octant : m_octants)
             {
-                AssertThrow(octant.octree != nullptr);
+                Assert(octant.octree != nullptr);
 
                 auto updateInternalResult = octant.octree->Update_Internal(value, aabb, forceInvalidation, allowRebuild);
 
@@ -892,7 +892,7 @@ OctreeBase<Derived, TEntry>::InsertResult OctreeBase<Derived, TEntry>::RebuildEx
 template <class Derived, class TEntry>
 void OctreeBase<Derived, TEntry>::PerformUpdates()
 {
-    AssertThrow(m_state != nullptr);
+    Assert(m_state != nullptr);
 
     if (!m_state->NeedsRebuild())
     {
@@ -901,7 +901,7 @@ void OctreeBase<Derived, TEntry>::PerformUpdates()
     }
 
     OctreeBase* octant = GetChildOctant(m_state->rebuildState);
-    AssertThrow(octant != nullptr);
+    Assert(octant != nullptr);
 
     const auto rebuildResult = octant->Rebuild();
 
@@ -926,7 +926,7 @@ void OctreeBase<Derived, TEntry>::CollectEntries(Array<const TEntry*>& outEntrie
     {
         for (const Octant& octant : m_octants)
         {
-            AssertThrow(octant.octree != nullptr);
+            Assert(octant.octree != nullptr);
 
             octant.octree->CollectEntries(outEntries);
         }
@@ -955,7 +955,7 @@ void OctreeBase<Derived, TEntry>::CollectEntries(const BoundingSphere& bounds, A
     {
         for (const Octant& octant : m_octants)
         {
-            AssertThrow(octant.octree != nullptr);
+            Assert(octant.octree != nullptr);
 
             octant.octree->CollectEntries(bounds, outEntries);
         }
@@ -984,7 +984,7 @@ void OctreeBase<Derived, TEntry>::CollectEntries(const BoundingBox& bounds, Arra
     {
         for (const Octant& octant : m_octants)
         {
-            AssertThrow(octant.octree != nullptr);
+            Assert(octant.octree != nullptr);
 
             octant.octree->CollectEntries(bounds, outEntries);
         }
@@ -1006,7 +1006,7 @@ bool OctreeBase<Derived, TEntry>::GetNearestOctants(const Vec3f& position, Fixed
 
     for (const Octant& octant : m_octants)
     {
-        AssertThrow(octant.octree != nullptr);
+        Assert(octant.octree != nullptr);
 
         if (octant.octree->GetNearestOctants(position, out))
         {
@@ -1034,7 +1034,7 @@ bool OctreeBase<Derived, TEntry>::GetNearestOctant(const Vec3f& position, Derive
     {
         for (const Octant& octant : m_octants)
         {
-            AssertThrow(octant.octree != nullptr);
+            Assert(octant.octree != nullptr);
 
             if (octant.octree->GetNearestOctant(position, out))
             {
@@ -1062,7 +1062,7 @@ bool OctreeBase<Derived, TEntry>::GetFittingOctant(const BoundingBox& aabb, Deri
     {
         for (const Octant& octant : m_octants)
         {
-            AssertThrow(octant.octree != nullptr);
+            Assert(octant.octree != nullptr);
 
             if (octant.octree->GetFittingOctant(aabb, out))
             {

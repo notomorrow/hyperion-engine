@@ -188,7 +188,7 @@ void EnvProbe::Init()
                 1,
                 IU_STORAGE | IU_SAMPLED });
 
-            AssertThrow(InitObject(m_prefilteredEnvMap));
+            Assert(InitObject(m_prefilteredEnvMap));
 
             m_prefilteredEnvMap->SetPersistentRenderResourceEnabled(true);
         }
@@ -359,7 +359,7 @@ void EnvProbe::Update(float delta)
     Threads::AssertOnThread(g_gameThread | ThreadCategory::THREAD_CATEGORY_TASK);
     AssertReady();
 
-    AssertThrow(GetScene() != nullptr);
+    Assert(GetScene() != nullptr);
 
     const Octree& octree = GetScene()->GetOctree();
 
@@ -385,9 +385,7 @@ void EnvProbe::Update(float delta)
 
             if (octant)
             {
-                octantHashCode = octant->GetOctantID().GetHashCode()
-                    .Add(octant->GetEntryListHash<EntityTag::STATIC>())
-                    .Add(octant->GetEntryListHash<EntityTag::LIGHT>());
+                octantHashCode = octant->GetOctantID().GetHashCode().Add(octant->GetEntryListHash<EntityTag::STATIC>()).Add(octant->GetEntryListHash<EntityTag::LIGHT>());
             }
         }
         else
@@ -400,7 +398,7 @@ void EnvProbe::Update(float delta)
             return;
         }
 
-        AssertThrow(m_camera.IsValid());
+        Assert(m_camera.IsValid());
         m_camera->Update(delta);
 
         m_view->UpdateVisibility();
@@ -466,7 +464,7 @@ void EnvProbe::UpdateRenderProxy(IRenderProxy* proxy)
     // /// temp shit
     // if (IsShadowProbe())
     // {
-    //     // AssertThrow(m_shadowMap);
+    //     // Assert(m_shadowMap);
 
     //     // bufferData->textureIndex = m_shadowMap->GetAtlasElement().pointLightIndex;
     // }

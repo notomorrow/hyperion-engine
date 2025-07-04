@@ -33,7 +33,7 @@ DynamicHypClassInstance::DynamicHypClassInstance(TypeId typeId, Name name, const
         SetManagedClass(classPtr->RefCountedPtrFromThis());
     }
 
-    AssertThrowMsg(parentClass != nullptr, "Parent class cannot be null for DynamicHypClassInstance");
+    Assert(parentClass != nullptr, "Parent class cannot be null for DynamicHypClassInstance");
 
     m_parent = parentClass;
     m_parentName = parentClass->GetName();
@@ -53,24 +53,24 @@ DynamicHypClassInstance::~DynamicHypClassInstance()
 
 bool DynamicHypClassInstance::IsValid() const
 {
-    AssertThrow(m_parent != nullptr);
+    Assert(m_parent != nullptr);
 
     return m_parent->IsValid();
 }
 
 HypClassAllocationMethod DynamicHypClassInstance::GetAllocationMethod() const
 {
-    AssertThrow(m_parent != nullptr);
+    Assert(m_parent != nullptr);
 
     return m_parent->GetAllocationMethod();
 }
 
 bool DynamicHypClassInstance::GetManagedObject(const void* objectPtr, dotnet::ObjectReference& outObjectReference) const
 {
-    AssertThrow(m_parent != nullptr);
+    Assert(m_parent != nullptr);
 
     const IHypObjectInitializer* initializer = m_parent->GetObjectInitializer(objectPtr);
-    AssertThrow(initializer != nullptr);
+    Assert(initializer != nullptr);
 
     if (initializer->GetManagedObjectResource() == nullptr)
     {
@@ -100,7 +100,7 @@ bool DynamicHypClassInstance::CanCreateInstance() const
 
 bool DynamicHypClassInstance::ToHypData(ByteView memory, HypData& outHypData) const
 {
-    AssertThrow(m_parent != nullptr);
+    Assert(m_parent != nullptr);
 
     return m_parent->ToHypData(memory, outHypData);
 }
@@ -116,17 +116,17 @@ void DynamicHypClassInstance::PostLoad_Internal(void* objectPtr) const
 
 IHypObjectInitializer* DynamicHypClassInstance::GetObjectInitializer_Internal(void* objectPtr) const
 {
-    AssertThrow(m_parent != nullptr);
+    Assert(m_parent != nullptr);
 
     return m_parent->GetObjectInitializer(objectPtr);
 }
 
 bool DynamicHypClassInstance::CreateInstance_Internal(HypData& out) const
 {
-    AssertThrow(m_parent != nullptr);
+    Assert(m_parent != nullptr);
 
     RC<dotnet::Class> managedClass = GetManagedClass();
-    AssertThrow(managedClass != nullptr);
+    Assert(managedClass != nullptr);
 
     { // suppress default managed object creation - we will create it ourselves
         GlobalContextScope scope(HypObjectInitializerContext { this, HypObjectInitializerFlags::SUPPRESS_MANAGED_OBJECT_CREATION });
@@ -139,12 +139,12 @@ bool DynamicHypClassInstance::CreateInstance_Internal(HypData& out) const
                 return false;
             }
 
-            AssertThrow(value.IsValid());
+            Assert(value.IsValid());
 
             if (m_parent->UseHandles())
             {
                 AnyHandle handle = std::move(value.Get<AnyHandle>());
-                AssertThrow(handle.IsValid());
+                Assert(handle.IsValid());
 
                 out = HypData(AnyHandle(this, handle.Get()));
             }
@@ -156,10 +156,10 @@ bool DynamicHypClassInstance::CreateInstance_Internal(HypData& out) const
     }
 
     void* targetAddress = out.ToRef().GetPointer();
-    AssertThrow(targetAddress != nullptr);
+    Assert(targetAddress != nullptr);
 
     IHypObjectInitializer* parentInitializer = m_parent->GetObjectInitializer(targetAddress);
-    AssertThrow(parentInitializer != nullptr);
+    Assert(parentInitializer != nullptr);
 
     DynamicHypObjectInitializer* newInitializer = new DynamicHypObjectInitializer(this, parentInitializer);
     FixupObjectInitializerPointer(targetAddress, newInitializer);
@@ -175,7 +175,7 @@ bool DynamicHypClassInstance::CreateInstance_Internal(HypData& out) const
 
 bool DynamicHypClassInstance::CreateInstanceArray_Internal(Span<HypData> elements, HypData& out) const
 {
-    AssertThrow(m_parent != nullptr);
+    Assert(m_parent != nullptr);
 
     /// \todo: Find some way to support this.
 
@@ -232,7 +232,7 @@ extern "C"
 
     HYP_EXPORT const HypClass* HypClass_GetClassByTypeHash(dotnet::Assembly* assembly, int32 typeHash)
     {
-        AssertThrow(assembly != nullptr);
+        Assert(assembly != nullptr);
 
         RC<dotnet::Class> managedClass = assembly->FindClassByTypeHash(typeHash);
 
@@ -438,16 +438,16 @@ extern "C"
 
     HYP_EXPORT HypClass* HypClass_CreateDynamicHypClass(const TypeId* typeId, const char* name, const HypClass* parentHypClass)
     {
-        AssertThrow(typeId != nullptr);
-        AssertThrow(name != nullptr);
-        AssertThrow(parentHypClass != nullptr);
+        Assert(typeId != nullptr);
+        Assert(name != nullptr);
+        Assert(parentHypClass != nullptr);
 
         return new DynamicHypClassInstance(*typeId, CreateNameFromDynamicString(name), parentHypClass, nullptr, Span<const HypClassAttribute>(), HypClassFlags::CLASS_TYPE | HypClassFlags::DYNAMIC, Span<HypMember>());
     }
 
     HYP_EXPORT void HypClass_DestroyDynamicHypClass(DynamicHypClassInstance* hypClass)
     {
-        AssertThrow(hypClass != nullptr);
+        Assert(hypClass != nullptr);
 
         delete hypClass;
     }

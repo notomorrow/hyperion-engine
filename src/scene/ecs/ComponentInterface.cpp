@@ -37,7 +37,7 @@ ComponentInterfaceRegistry::ComponentInterfaceRegistry()
 
 void ComponentInterfaceRegistry::Initialize()
 {
-    AssertThrowMsg(!m_isInitialized, "Component interface registry already initialized!");
+    Assert(!m_isInitialized, "Component interface registry already initialized!");
 
     for (auto& it : m_factories)
     {

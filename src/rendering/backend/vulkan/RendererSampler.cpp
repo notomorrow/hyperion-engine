@@ -28,7 +28,7 @@ VulkanSampler::VulkanSampler(TextureFilterMode minFilterMode, TextureFilterMode 
 
 VulkanSampler::~VulkanSampler()
 {
-    AssertThrowMsg(m_handle == VK_NULL_HANDLE, "sampler should have been destroyed");
+    HYP_GFX_ASSERT(m_handle == VK_NULL_HANDLE, "sampler should have been destroyed");
 }
 
 bool VulkanSampler::IsCreated() const
@@ -38,7 +38,7 @@ bool VulkanSampler::IsCreated() const
 
 RendererResult VulkanSampler::Create()
 {
-    AssertThrow(m_handle == VK_NULL_HANDLE);
+    HYP_GFX_ASSERT(m_handle == VK_NULL_HANDLE);
 
     VkSamplerCreateInfo samplerInfo { VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO };
     samplerInfo.magFilter = helpers::ToVkFilter(m_magFilterMode);

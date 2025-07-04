@@ -68,7 +68,7 @@ struct LoadObjectWrapper
         AssetBatchCallbacks* callbacks)
     {
         auto it = map->Find(key);
-        AssertThrow(it != map->End());
+        Assert(it != map->End());
 
         LoadedAsset& asset = it->second;
 
@@ -134,7 +134,7 @@ private:
     TResult<void, AssetLoadError> Process_Internal(AssetManagerType& assetManager, AssetMap& assetMap)
     {
         auto it = assetMap.Find(key);
-        AssertThrow(it != assetMap.End());
+        Assert(it != assetMap.End());
 
         LoadedAsset& asset = it->second;
 
@@ -192,7 +192,7 @@ public:
         {
             // all tasks must be completed or the destruction of enqueuedAssets
             // will cause a dangling ptr issue.
-            AssertThrowMsg(
+            Assert(
                 m_assetMap->Empty(),
                 "All enqueued assets must be completed before the destructor of AssetBatch is called or else dangling pointer issues will occur.");
         }

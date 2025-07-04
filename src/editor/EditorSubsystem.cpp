@@ -96,7 +96,7 @@ HYP_DEFINE_LOG_CHANNEL(Editor);
 
 Handle<UIObject> RunningEditorTask::CreateUIObject(UIStage* uiStage) const
 {
-    AssertThrow(uiStage != nullptr);
+    Assert(uiStage != nullptr);
 
     Handle<UIPanel> panel = uiStage->CreateUIObject<UIPanel>(NAME("EditorTaskPanel"), Vec2i::Zero(), UIObjectSize({ 100, UIObjectSize::FILL }, { 100, UIObjectSize::FILL }));
     panel->SetBackgroundColor(Color(0xFF0000FF)); // testing
@@ -749,7 +749,7 @@ EditorSubsystem::EditorSubsystem(const Handle<AppContextBase>& appContext)
 
                 for (const Handle<Scene>& scene : project->GetScenes())
                 {
-                    AssertThrow(scene.IsValid());
+                    Assert(scene.IsValid());
 
                     if (!activeScene.IsValid())
                     {
@@ -771,10 +771,10 @@ EditorSubsystem::EditorSubsystem(const Handle<AppContextBase>& appContext)
                 m_delegateHandlers.Add(
                     project->OnSceneAdded.Bind([this, projectWeak = project.ToWeak()](const Handle<Scene>& scene)
                         {
-                            AssertThrow(scene.IsValid());
+                            Assert(scene.IsValid());
 
                             Handle<EditorProject> project = projectWeak.Lock();
-                            AssertThrow(project.IsValid());
+                            Assert(project.IsValid());
 
                             HYP_LOG(Editor, Info, "Project {} added scene: {}", *project->GetName(), *scene->GetName());
 
@@ -799,10 +799,10 @@ EditorSubsystem::EditorSubsystem(const Handle<AppContextBase>& appContext)
                 m_delegateHandlers.Add(
                     project->OnSceneRemoved.Bind([this, projectWeak = project.ToWeak()](const Handle<Scene>& scene)
                         {
-                            AssertThrow(scene.IsValid());
+                            Assert(scene.IsValid());
 
                             Handle<EditorProject> project = projectWeak.Lock();
-                            AssertThrow(project.IsValid());
+                            Assert(project.IsValid());
 
                             HYP_LOG(Editor, Info, "Project {} removed scene: {}", *project->GetName(), *scene->GetName());
 
@@ -935,7 +935,7 @@ EditorSubsystem::EditorSubsystem(const Handle<AppContextBase>& appContext)
                     m_delegateHandlers.Remove(&subsystem->OnTextureResize);
 
                     bool removed = GetWorld()->RemoveSubsystem(subsystem);
-                    AssertThrow(removed);
+                    Assert(removed);
                 }
 
                 m_delegateHandlers.Remove("SetBuildBVHFlag");
@@ -1142,7 +1142,7 @@ void EditorSubsystem::OnSceneDetached(const Handle<Scene>& scene)
 void EditorSubsystem::LoadEditorUIDefinitions()
 {
     UISubsystem* uiSubsystem = GetWorld()->GetSubsystem<UISubsystem>();
-    AssertThrow(uiSubsystem != nullptr);
+    Assert(uiSubsystem != nullptr);
 
     TResult<RC<FontAtlas>> fontAtlasResult = CreateFontAtlas();
 
@@ -1154,10 +1154,10 @@ void EditorSubsystem::LoadEditorUIDefinitions()
     uiSubsystem->GetUIStage()->SetDefaultFontAtlas(*fontAtlasResult);
 
     auto loadedUiAsset = AssetManager::GetInstance()->Load<UIObject>("ui/Editor.Main.ui.xml");
-    AssertThrowMsg(loadedUiAsset.HasValue(), "Failed to load editor UI definitions!");
+    Assert(loadedUiAsset.HasValue(), "Failed to load editor UI definitions!");
 
     Handle<UIStage> loadedUi = ObjCast<UIStage>(loadedUiAsset->Result());
-    AssertThrowMsg(loadedUi.IsValid(), "Failed to load editor UI");
+    Assert(loadedUi.IsValid(), "Failed to load editor UI");
 
     loadedUi->SetDefaultFontAtlas(*fontAtlasResult);
 
@@ -1240,7 +1240,7 @@ void EditorSubsystem::InitViewport()
     m_views.Clear();
 
     UISubsystem* uiSubsystem = GetWorld()->GetSubsystem<UISubsystem>();
-    AssertThrow(uiSubsystem != nullptr);
+    Assert(uiSubsystem != nullptr);
 
     Handle<UIObject> sceneImageObject = uiSubsystem->GetUIStage()->FindChildUIObject(NAME("Scene_Image"));
     if (!sceneImageObject)
@@ -1312,12 +1312,12 @@ void EditorSubsystem::InitViewport()
         }));
 
     Handle<UIImage> uiImage = ObjCast<UIImage>(sceneImageObject);
-    AssertThrow(uiImage.IsValid());
+    Assert(uiImage.IsValid());
 
     m_sceneTexture.Reset();
 
     m_sceneTexture = screenCaptureRenderSubsystem->GetTexture();
-    AssertThrow(m_sceneTexture.IsValid());
+    Assert(m_sceneTexture.IsValid());
 
     m_delegateHandlers.Remove(&uiImage->OnClick);
     m_delegateHandlers.Add(uiImage->OnClick.Bind([this](const MouseEvent& event)
@@ -1477,7 +1477,7 @@ void EditorSubsystem::InitViewport()
                         }
 
                         Handle<Entity> entity { entityId };
-                        AssertThrow(entity.IsValid());
+                        Assert(entity.IsValid());
 
                         NodeLinkComponent* nodeLinkComponent = m_editorScene->GetEntityManager()->TryGetComponent<NodeLinkComponent>(entity);
 
@@ -1742,7 +1742,7 @@ void EditorSubsystem::InitSceneOutline()
 
 static void AddNodeToSceneOutline(const Handle<UIListView>& listView, Node* node)
 {
-    AssertThrow(node != nullptr);
+    Assert(node != nullptr);
 
     // if (node->GetFlags() & NodeFlags::HIDE_IN_SCENE_OUTLINE)
     // {
@@ -1796,7 +1796,7 @@ void EditorSubsystem::StartWatchingNode(const Handle<Node>& node)
         }
     }
 
-    AssertThrow(node->GetScene() != nullptr);
+    Assert(node->GetScene() != nullptr);
 
     UISubsystem* uiSubsystem = GetWorld()->GetSubsystem<UISubsystem>();
     AssertDebug(uiSubsystem != nullptr);
@@ -1832,7 +1832,7 @@ void EditorSubsystem::StartWatchingNode(const Handle<Node>& node)
             if (UIDataSourceBase* dataSource = listView->GetDataSource())
             {
                 const UIDataSourceElement* dataSourceElement = dataSource->Get(node->GetUUID());
-                AssertThrow(dataSourceElement != nullptr);
+                Assert(dataSourceElement != nullptr);
 
                 dataSource->ForceUpdate(node->GetUUID());
             }
@@ -1849,7 +1849,7 @@ void EditorSubsystem::StartWatchingNode(const Handle<Node>& node)
                 return;
             }
 
-            AssertThrow(node != nullptr);
+            Assert(node != nullptr);
 
             // if (node->GetFlags() & NodeFlags::HIDE_IN_SCENE_OUTLINE)
             // {
@@ -2153,7 +2153,7 @@ void EditorSubsystem::InitDebugOverlays()
     HYP_SCOPE;
 
     UISubsystem* uiSubsystem = GetWorld()->GetSubsystem<UISubsystem>();
-    AssertThrow(uiSubsystem != nullptr);
+    Assert(uiSubsystem != nullptr);
 
     m_debugOverlayUiObject = uiSubsystem->GetUIStage()->CreateUIObject<UIListView>(NAME("DebugOverlay"), Vec2i::Zero(), UIObjectSize({ 100, UIObjectSize::FILL }, { 0, UIObjectSize::AUTO }));
     m_debugOverlayUiObject->SetDepth(100);
@@ -2185,7 +2185,7 @@ void EditorSubsystem::InitManipulationWidgetSelection()
     HYP_SCOPE;
 
     UISubsystem* uiSubsystem = GetWorld()->GetSubsystem<UISubsystem>();
-    AssertThrow(uiSubsystem != nullptr);
+    Assert(uiSubsystem != nullptr);
 
     Handle<UIObject> manipulationWidgetSelection = uiSubsystem->GetUIStage()->FindChildUIObject(NAME("ManipulationWidgetSelection"));
     if (manipulationWidgetSelection != nullptr)
@@ -2194,7 +2194,7 @@ void EditorSubsystem::InitManipulationWidgetSelection()
     }
 
     manipulationWidgetSelection = uiSubsystem->GetUIStage()->CreateUIObject<UIMenuBar>(NAME("ManipulationWidgetSelection"), Vec2i { 0, 0 }, UIObjectSize({ 80, UIObjectSize::PIXEL }, { 12, UIObjectSize::PIXEL }));
-    AssertThrow(manipulationWidgetSelection != nullptr);
+    Assert(manipulationWidgetSelection != nullptr);
 
     manipulationWidgetSelection->SetDepth(150);
     manipulationWidgetSelection->SetTextSize(8.0f);
@@ -2216,7 +2216,7 @@ void EditorSubsystem::InitManipulationWidgetSelection()
         }
 
         Handle<UIObject> manipulationWidgetMenuItem = manipulationWidgetSelection->CreateUIObject<UIMenuItem>(manipulationWidget->InstanceClass()->GetName(), Vec2i { 0, 0 }, UIObjectSize({ 100, UIObjectSize::FILL }, { 100, UIObjectSize::PIXEL }));
-        AssertThrow(manipulationWidgetMenuItem != nullptr);
+        Assert(manipulationWidgetMenuItem != nullptr);
 
         // @TODO Add icon
         manipulationWidgetMenuItem->SetText("<widget>");
@@ -2237,7 +2237,7 @@ void EditorSubsystem::InitManipulationWidgetSelection()
     if (Handle<UIObject> sceneImageObject = uiSubsystem->GetUIStage()->FindChildUIObject(NAME("Scene_Image")))
     {
         Handle<UIImage> sceneImage = ObjCast<UIImage>(sceneImageObject);
-        AssertThrow(sceneImage != nullptr);
+        Assert(sceneImage != nullptr);
 
         sceneImage->AddChildUIObject(manipulationWidgetSelection);
     }
@@ -2252,7 +2252,7 @@ void EditorSubsystem::InitActiveSceneSelection()
     HYP_SCOPE;
 
     UISubsystem* uiSubsystem = GetWorld()->GetSubsystem<UISubsystem>();
-    AssertThrow(uiSubsystem != nullptr);
+    Assert(uiSubsystem != nullptr);
 
     Handle<UIObject> activeSceneSelection = uiSubsystem->GetUIStage()->FindChildUIObject(NAME("SetActiveScene_MenuItem"));
     if (!activeSceneSelection.IsValid())
@@ -2347,7 +2347,7 @@ void EditorSubsystem::InitActiveSceneSelection()
         }
 
         Handle<UIMenuItem> sceneMenuItem = activeSceneMenuItem->CreateUIObject<UIMenuItem>(scene->GetName(), Vec2i { 0, 0 }, UIObjectSize({ 100, UIObjectSize::FILL }, { 100, UIObjectSize::PIXEL }));
-        AssertThrow(sceneMenuItem != nullptr);
+        Assert(sceneMenuItem != nullptr);
 
         sceneMenuItem->SetNodeTag(NodeTag(NAME("Scene"), scene->GetUUID()));
 
@@ -2387,10 +2387,10 @@ void EditorSubsystem::InitContentBrowser()
     HYP_SCOPE;
 
     UISubsystem* uiSubsystem = GetWorld()->GetSubsystem<UISubsystem>();
-    AssertThrow(uiSubsystem != nullptr);
+    Assert(uiSubsystem != nullptr);
 
     m_contentBrowserDirectoryList = ObjCast<UIListView>(uiSubsystem->GetUIStage()->FindChildUIObject("ContentBrowser_Directory_List"));
-    AssertThrow(m_contentBrowserDirectoryList != nullptr);
+    Assert(m_contentBrowserDirectoryList != nullptr);
 
     m_contentBrowserDirectoryList->SetDataSource(CreateObject<UIDataSource>(TypeWrapper<AssetPackage> {}));
 
@@ -2421,16 +2421,16 @@ void EditorSubsystem::InitContentBrowser()
                 }));
 
     m_contentBrowserContents = ObjCast<UIGrid>(uiSubsystem->GetUIStage()->FindChildUIObject("ContentBrowser_Contents"));
-    AssertThrow(m_contentBrowserContents != nullptr);
+    Assert(m_contentBrowserContents != nullptr);
     m_contentBrowserContents->SetDataSource(CreateObject<UIDataSource>(TypeWrapper<AssetObject> {}));
     m_contentBrowserContents->SetIsVisible(false);
 
     m_contentBrowserContentsEmpty = uiSubsystem->GetUIStage()->FindChildUIObject("ContentBrowser_Contents_Empty");
-    AssertThrow(m_contentBrowserContentsEmpty != nullptr);
+    Assert(m_contentBrowserContentsEmpty != nullptr);
     m_contentBrowserContentsEmpty->SetIsVisible(true);
 
     Handle<UIObject> importButton = uiSubsystem->GetUIStage()->FindChildUIObject("ContentBrowser_Import_Button");
-    AssertThrow(importButton != nullptr);
+    Assert(importButton != nullptr);
 
     m_delegateHandlers.Remove(NAME("ImportClicked"));
     m_delegateHandlers.Add(
@@ -2674,7 +2674,7 @@ void EditorSubsystem::AddTask(const Handle<EditorTaskBase>& task)
     Threads::AssertOnThread(g_gameThread);
 
     UISubsystem* uiSubsystem = GetWorld()->GetSubsystem<UISubsystem>();
-    AssertThrow(uiSubsystem != nullptr);
+    Assert(uiSubsystem != nullptr);
 
     const ThreadType threadType = task->GetRunnableThreadType();
 
@@ -2738,8 +2738,8 @@ void EditorSubsystem::AddTask(const Handle<EditorTaskBase>& task)
 
     // auto CreateTaskUIObject = [](const Handle<UIObject> &parent, const HypClass *taskHypClass) -> Handle<UIObject>
     // {
-    //     AssertThrow(parent != nullptr);
-    //     AssertThrow(taskHypClass != nullptr);
+    //     Assert(parent != nullptr);
+    //     Assert(taskHypClass != nullptr);
 
     //     return parent->CreateUIObject<UIPanel>(Vec2i::Zero(), UIObjectSize({ 400, UIObjectSize::PIXEL }, { 300, UIObjectSize::PIXEL }));
     // };
@@ -2825,7 +2825,7 @@ void EditorSubsystem::AddDebugOverlay(const Handle<EditorDebugOverlayBase>& debu
     Threads::AssertOnThread(g_gameThread);
 
     UISubsystem* uiSubsystem = GetWorld()->GetSubsystem<UISubsystem>();
-    AssertThrow(uiSubsystem != nullptr);
+    Assert(uiSubsystem != nullptr);
 
     auto it = m_debugOverlays.FindIf([name = debugOverlay->GetName()](const auto& item)
         {

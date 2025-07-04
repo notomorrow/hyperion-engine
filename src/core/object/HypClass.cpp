@@ -286,7 +286,7 @@ HypClass::HypClass(TypeId typeId, Name name, int staticIndex, uint32 numDescenda
 {
     if (staticIndex >= 0)
     {
-        AssertDebug(staticIndex < g_maxStaticClassIndex, "Static index %d exceeds maximum static class index %u", staticIndex, g_maxStaticClassIndex);
+        HYP_CORE_ASSERT(staticIndex < g_maxStaticClassIndex, "Static index %d exceeds maximum static class index %u", staticIndex, g_maxStaticClassIndex);
     }
 
     if (bool(m_attributes["abstract"]))
@@ -410,7 +410,7 @@ void HypClass::Initialize()
             m_parent = GetClass(m_parentName);
         }
 
-        AssertDebug(m_parent != nullptr, "Invalid parent class: %s", m_parentName.LookupString());
+        HYP_CORE_ASSERT(m_parent != nullptr, "Invalid parent class: %s", m_parentName.LookupString());
     }
 
     HYP_LOG(Object, Info, "Initializing HypClass \"{}\"", m_name);

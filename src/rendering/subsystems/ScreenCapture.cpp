@@ -49,7 +49,7 @@ ScreenCaptureRenderSubsystem::~ScreenCaptureRenderSubsystem()
 
 void ScreenCaptureRenderSubsystem::Init()
 {
-    AssertThrow(m_view.IsValid());
+    Assert(m_view.IsValid());
 
     InitObject(m_view);
     m_view->GetRenderResource().IncRef();
@@ -63,7 +63,7 @@ void ScreenCaptureRenderSubsystem::OnAddedToWorld()
 {
     HYP_SCOPE;
 
-    AssertThrow(m_view);
+    Assert(m_view);
 
     m_texture->SetPersistentRenderResourceEnabled(true);
 
@@ -117,8 +117,8 @@ void ScreenCaptureRenderSubsystem::CaptureFrame(FrameBase* frame)
 {
     Threads::AssertOnThread(g_renderThread);
 
-    AssertThrow(m_texture.IsValid());
-    AssertThrow(m_texture->IsReady());
+    Assert(m_texture.IsValid());
+    Assert(m_texture->IsReady());
 
     DeferredRenderer* deferredRenderer = static_cast<DeferredRenderer*>(g_renderGlobalState->mainRenderer);
     AssertDebug(deferredRenderer != nullptr);
@@ -136,7 +136,7 @@ void ScreenCaptureRenderSubsystem::CaptureFrame(FrameBase* frame)
         ? pd->temporalAa->GetResultTexture()->GetRenderResource().GetImage()
         : pd->tonemapPass->GetFinalImageView()->GetImage();
 
-    AssertThrow(imageRef.IsValid());
+    Assert(imageRef.IsValid());
 
     // wait for the image to be ready
     if (imageRef->GetResourceState() == RS_UNDEFINED)
@@ -154,7 +154,7 @@ void ScreenCaptureRenderSubsystem::CaptureFrame(FrameBase* frame)
         //     {
         //         if (Handle<ScreenCaptureRenderSubsystem> subsystem = weakThis.Lock().Cast<ScreenCaptureRenderSubsystem>())
         //         {
-        //             AssertThrow(subsystem->m_texture.IsValid());
+        //             Assert(subsystem->m_texture.IsValid());
 
         //             subsystem->m_texture->Resize(newExtent);
 
@@ -172,7 +172,7 @@ void ScreenCaptureRenderSubsystem::CaptureFrame(FrameBase* frame)
     switch (m_screenCaptureMode)
     {
     case ScreenCaptureMode::TO_TEXTURE:
-        AssertThrow(m_texture->GetRenderResource().GetImage()->IsCreated());
+        Assert(m_texture->GetRenderResource().GetImage()->IsCreated());
 
         frame->GetCommandList().Add<InsertBarrier>(m_texture->GetRenderResource().GetImage(), RS_COPY_DST);
         frame->GetCommandList().Add<Blit>(imageRef, m_texture->GetRenderResource().GetImage());
@@ -180,7 +180,7 @@ void ScreenCaptureRenderSubsystem::CaptureFrame(FrameBase* frame)
 
         break;
     case ScreenCaptureMode::TO_BUFFER:
-        AssertThrow(m_buffer.IsValid() && m_buffer->Size() >= imageRef->GetByteSize());
+        Assert(m_buffer.IsValid() && m_buffer->Size() >= imageRef->GetByteSize());
 
         frame->GetCommandList().Add<InsertBarrier>(m_buffer, RS_COPY_DST);
         frame->GetCommandList().Add<CopyImageToBuffer>(imageRef, m_buffer);

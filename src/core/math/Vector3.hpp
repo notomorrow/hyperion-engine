@@ -5,6 +5,8 @@
 
 #include <core/Defines.hpp>
 
+#include <core/utilities/FormatFwd.hpp>
+
 #include <core/math/Vector2.hpp>
 
 #include <HashCode.hpp>
@@ -696,6 +698,76 @@ static_assert(sizeof(Vec3f) == 16);
 
 // Transitional typedef -- to be removed when code is updated to use Vec3f (to match Vec3i and Vec3u)
 using Vector3 = Vec3f;
+
+// Format specialization
+namespace utilities {
+
+template <class StringType, class T>
+struct Formatter<StringType, math::Vec3<T>>
+{
+    HYP_FORCE_INLINE static const char* GetFormatString()
+    {
+        if constexpr (std::is_floating_point_v<T>)
+        {
+            static const char* formatString = "[%f %f %f]";
+
+            return formatString;
+        }
+        else if constexpr (std::is_integral_v<T> && std::is_signed_v<T> && sizeof(T) <= 4)
+        {
+            static const char* formatString = "[%d %d %d]";
+
+            return formatString;
+        }
+        else if constexpr (std::is_integral_v<T> && std::is_signed_v<T> && sizeof(T) <= 8)
+        {
+            static const char* formatString = "[%lld %lld %lld]";
+
+            return formatString;
+        }
+        else if constexpr (std::is_integral_v<T> && std::is_unsigned_v<T> && sizeof(T) <= 4)
+        {
+            static const char* formatString = "[%u %u %u]";
+
+            return formatString;
+        }
+        else if constexpr (std::is_integral_v<T> && std::is_unsigned_v<T> && sizeof(T) <= 8)
+        {
+            static const char* formatString = "[%llu %llu %llu]";
+
+            return formatString;
+        }
+        else
+        {
+            static_assert(resolutionFailure<T>, "Cannot format Vec3 type: unknown inner type");
+        }
+    }
+
+    auto operator()(const math::Vec3<T>& value) const
+    {
+        ubyte inlineBuf[1024];
+        ubyte* buf = &inlineBuf[0];
+
+        int resultSize = std::snprintf(reinterpret_cast<char*>(buf), 1024, GetFormatString(), value.x, value.y, value.z) + 1;
+
+        if (resultSize > HYP_ARRAY_SIZE(inlineBuf))
+        {
+            buf = new ubyte[resultSize];
+
+            resultSize = std::snprintf(reinterpret_cast<char*>(buf), resultSize, GetFormatString(), value.x, value.y, value.z) + 1;
+
+            StringType res(reinterpret_cast<char*>(buf), reinterpret_cast<char*>(buf + resultSize));
+
+            delete[] buf;
+
+            return res;
+        }
+
+        return StringType(reinterpret_cast<char*>(buf), reinterpret_cast<char*>(buf + resultSize));
+    }
+};
+
+} // namespace utilities
 
 } // namespace hyperion
 

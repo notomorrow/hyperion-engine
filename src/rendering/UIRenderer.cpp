@@ -158,7 +158,7 @@ static RenderableAttributeSet GetMergedRenderableAttributes(const RenderableAttr
             : attributes.GetShaderDefinition();
 
 #ifdef HYP_DEBUG_MODE
-        AssertThrow(shaderDefinition.IsValid());
+        Assert(shaderDefinition.IsValid());
 #endif
 
         // Check for varying vertex attributes on the override shader compared to the entity's vertex
@@ -218,7 +218,7 @@ static void BuildRenderGroups(RenderProxyList& rpl, const Array<Pair<ObjId<Entit
             shaderDefinition.GetProperties().Set("INSTANCING");
 
             ShaderRef shader = g_shaderManager->GetOrCreate(shaderDefinition);
-            AssertThrow(shader.IsValid());
+            Assert(shader.IsValid());
 
             rg = CreateObject<RenderGroup>(shader, attributes, RenderGroupFlags::NONE);
             rg->SetDrawCallCollectionImpl(GetOrCreateDrawCallCollectionImpl<UIEntityInstanceBatch>());
@@ -358,10 +358,10 @@ void UIRenderCollector::ExecuteDrawCalls(FrameBase* frame, const RenderSetup& re
 
         const RenderableAttributeSet& attributes = it.first;
         const DrawCallCollectionMapping& mapping = it.second;
-        AssertThrow(mapping.IsValid());
+        Assert(mapping.IsValid());
 
         const Handle<RenderGroup>& renderGroup = mapping.renderGroup;
-        AssertThrow(renderGroup.IsValid());
+        Assert(renderGroup.IsValid());
 
         const DrawCallCollection& drawCallCollection = mapping.drawCallCollection;
 
@@ -415,7 +415,7 @@ void UIRenderer::RenderFrame(FrameBase* frame, const RenderSetup& renderSetup)
     }
 
     const ViewOutputTarget& outputTarget = m_view->GetOutputTarget();
-    AssertThrow(outputTarget.IsValid());
+    Assert(outputTarget.IsValid());
 
     m_renderCollector.ExecuteDrawCalls(frame, rs, outputTarget.GetFramebuffer());
 }
@@ -475,9 +475,9 @@ void UIRenderSubsystem::Init()
             subsystem->CreateFramebuffer();
         });
 
-    AssertThrow(m_uiStage != nullptr);
-    AssertThrow(m_uiStage->GetCamera().IsValid());
-    AssertThrow(m_uiStage->GetCamera()->IsReady());
+    Assert(m_uiStage != nullptr);
+    Assert(m_uiStage->GetCamera().IsValid());
+    Assert(m_uiStage->GetCamera()->IsReady());
 
     m_cameraResourceHandle = TResourceHandle<RenderCamera>(m_uiStage->GetCamera()->GetRenderResource());
 
@@ -557,10 +557,10 @@ void UIRenderSubsystem::Update(float delta)
 
     m_uiStage->CollectObjects([&renderCollector, &rpl](UIObject* uiObject)
         {
-            AssertThrow(uiObject != nullptr);
+            Assert(uiObject != nullptr);
 
             const Handle<Node>& node = uiObject->GetNode();
-            AssertThrow(node.IsValid());
+            Assert(node.IsValid());
 
             const Handle<Entity>& entity = node->GetEntity();
 
@@ -579,7 +579,7 @@ void UIRenderSubsystem::Update(float delta)
 
             if (meshComponent.material.IsValid())
             {
-                for (const auto &it : meshComponent.material->GetTextures())
+                for (const auto& it : meshComponent.material->GetTextures())
                 {
                     const Handle<Texture>& texture = it.second;
 
@@ -638,16 +638,16 @@ void UIRenderSubsystem::CreateFramebuffer()
     }
 
     const ViewOutputTarget& outputTarget = m_view->GetOutputTarget();
-    AssertThrow(outputTarget.IsValid());
+    Assert(outputTarget.IsValid());
 
     const FramebufferRef& framebuffer = outputTarget.GetFramebuffer();
-    AssertThrow(framebuffer.IsValid());
+    Assert(framebuffer.IsValid());
 
     const AttachmentBase* attachment = framebuffer->GetAttachment(0);
-    AssertThrow(attachment != nullptr);
+    Assert(attachment != nullptr);
 
-    AssertThrow(attachment->GetImageView().IsValid());
-    // AssertThrow(attachment->GetImageView()->IsCreated());
+    Assert(attachment->GetImageView().IsValid());
+    // Assert(attachment->GetImageView()->IsCreated());
 
     PUSH_RENDER_COMMAND(SetFinalPassImageView, attachment->GetImageView());
 }

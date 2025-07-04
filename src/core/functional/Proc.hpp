@@ -20,29 +20,6 @@
 namespace hyperion {
 namespace functional {
 
-template <class ReturnType, class T2 = void>
-struct ProcDefaultReturn;
-
-template <class ReturnType>
-struct ProcDefaultReturn<ReturnType, std::enable_if_t<std::is_default_constructible_v<ReturnType> && !std::is_void_v<ReturnType>>>
-{
-    static ReturnType Get()
-    {
-        return ReturnType();
-    }
-};
-
-template <class ReturnType>
-struct ProcDefaultReturn<ReturnType, std::enable_if_t<!std::is_default_constructible_v<ReturnType> && !std::is_void_v<ReturnType>>>
-{
-    static ReturnType Get()
-    {
-        HYP_FAIL("Cannot get default proc return value for type %s - type is not default constructible", TypeNameHelper<ReturnType>::value.Data());
-
-        HYP_UNREACHABLE();
-    }
-};
-
 template <class FunctionSignature, class MemoryType>
 struct Proc_Impl;
 
@@ -230,7 +207,7 @@ class Proc<ReturnType(Args...)> : ProcBase
 {
     static constexpr uint32 inlineStorageSizeBytes = 256;
 
-    using InlineStorageType = ValueStorageArray<char, inlineStorageSizeBytes>;
+    using InlineStorageType = ValueStorage<char, inlineStorageSizeBytes>;
     using Impl = Proc_Impl<ReturnType(Args...), InlineStorageType>;
 
 public:
@@ -373,7 +350,7 @@ public:
      *  \return The return value of the underlying function or lambda. If the return type is void, no value is returned. */
     HYP_FORCE_INLINE ReturnType operator()(Args... args) const
     {
-        AssertDebug(m_impl.HasValue());
+        HYP_CORE_ASSERT(m_impl.HasValue());
 
         return m_impl.invokeFn(m_impl.GetPointer(), args...);
     }
@@ -408,7 +385,7 @@ public:
             m_invokeFn = [](void* ptr, Args&... args) -> ReturnType
             {
                 const Proc<ReturnType(Args...)>& proc = *static_cast<const Proc<ReturnType(Args...)>*>(ptr);
-                AssertThrowMsg(proc.IsValid(), "Cannot invoke ProcRef referencing invalid Proc");
+                HYP_CORE_ASSERT(proc.IsValid(), "Cannot invoke ProcRef referencing invalid Proc");
 
                 return proc(args...);
             };

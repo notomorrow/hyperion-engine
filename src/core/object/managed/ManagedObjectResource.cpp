@@ -55,7 +55,7 @@ ManagedObjectResource::ManagedObjectResource(HypObjectPtr ptr, const RC<dotnet::
             m_objectPtr = m_managedClass->NewObject(m_ptr.GetClass(), address);
         }
 
-        AssertDebug(m_objectPtr != nullptr);
+        HYP_CORE_ASSERT(m_objectPtr != nullptr);
     }
 }
 
@@ -136,7 +136,7 @@ void ManagedObjectResource::Destroy()
 {
     if (m_objectPtr)
     {
-        AssertThrow(m_objectPtr->SetKeepAlive(false));
+        HYP_CORE_ASSERT(m_objectPtr->SetKeepAlive(false));
     }
 }
 

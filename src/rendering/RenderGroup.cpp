@@ -138,15 +138,15 @@ GraphicsPipelineRef RenderGroup::CreateGraphicsPipeline(PassData* pd) const
 {
     HYP_SCOPE;
 
-    AssertThrow(pd != nullptr);
+    Assert(pd != nullptr);
 
     HYP_LOG(Rendering, Debug, "Creating graphics pipeline for RenderGroup: {}", Id());
 
     Handle<View> view = pd->view.Lock();
-    AssertThrow(view.IsValid());
-    AssertThrow(view->GetOutputTarget().IsValid());
+    Assert(view.IsValid());
+    Assert(view->GetOutputTarget().IsValid());
 
-    AssertThrow(m_shader.IsValid());
+    Assert(m_shader.IsValid());
 
     DescriptorTableRef descriptorTable = m_descriptorTable;
 
@@ -165,10 +165,10 @@ GraphicsPipelineRef RenderGroup::CreateGraphicsPipeline(PassData* pd) const
             for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
             {
                 const GpuBufferRef& gpuBuffer = m_drawCallCollectionImpl->GetEntityInstanceBatchHolder()->GetBuffer(frameIndex);
-                AssertThrow(gpuBuffer.IsValid());
+                Assert(gpuBuffer.IsValid());
 
                 const DescriptorSetRef& instancingDescriptorSet = descriptorTable->GetDescriptorSet(NAME("Instancing"), frameIndex);
-                AssertThrow(instancingDescriptorSet.IsValid());
+                Assert(instancingDescriptorSet.IsValid());
 
                 instancingDescriptorSet->SetElement(NAME("EntityInstanceBatchesBuffer"), gpuBuffer);
             }
@@ -177,7 +177,7 @@ GraphicsPipelineRef RenderGroup::CreateGraphicsPipeline(PassData* pd) const
         DeferCreate(descriptorTable);
     }
 
-    AssertThrow(descriptorTable.IsValid());
+    Assert(descriptorTable.IsValid());
 
     return g_renderGlobalState->graphicsPipelineCache->GetOrCreate(
         m_shader,
@@ -188,9 +188,9 @@ GraphicsPipelineRef RenderGroup::CreateGraphicsPipeline(PassData* pd) const
 
 void RenderGroup::SetDrawCallCollectionImpl(IDrawCallCollectionImpl* drawCallCollectionImpl)
 {
-    AssertThrow(drawCallCollectionImpl != nullptr);
+    Assert(drawCallCollectionImpl != nullptr);
 
-    AssertThrowMsg(!IsInitCalled(), "Cannot use SetDrawCallCollectionImpl() after Init() has been called on RenderGroup; graphics pipeline will have been already created");
+    Assert(!IsInitCalled(), "Cannot use SetDrawCallCollectionImpl() after Init() has been called on RenderGroup; graphics pipeline will have been already created");
 
     m_drawCallCollectionImpl = drawCallCollectionImpl;
 }
@@ -222,7 +222,7 @@ static void DivideDrawCalls(Span<const T> drawCalls, uint32 numBatches, OutArray
         };
 
         // sanity check
-        AssertThrow(drawCalls.Size() >= drawCallIndex + diffToNextOrEnd);
+        Assert(drawCalls.Size() >= drawCallIndex + diffToNextOrEnd);
 
         drawCallIndex += diffToNextOrEnd;
     }
@@ -233,23 +233,23 @@ static void ValidatePipelineState(const RenderSetup& renderSetup, const Graphics
 #if 0
     HYP_SCOPE;
 
-    AssertThrow(renderSetup.IsValid());
-    AssertThrow(pipeline.IsValid());
+    Assert(renderSetup.IsValid());
+    Assert(pipeline.IsValid());
 
-    AssertThrow(renderSetup.passData != nullptr);
+    Assert(renderSetup.passData != nullptr);
 
     const Handle<View> view = renderSetup.passData->view.Lock();
-    AssertThrow(view.IsValid());
+    Assert(view.IsValid());
 
     const ViewOutputTarget& outputTarget = view->GetOutputTarget();
-    AssertThrow(outputTarget.IsValid());
+    Assert(outputTarget.IsValid());
 
     // Pipeline state validation: Does the pipeline framebuffer match the output target?
     const Array<FramebufferRef>& pipelineFramebuffers = pipeline->GetFramebuffers();
 
     for (uint32 i = 0; i < pipelineFramebuffers.Size(); ++i)
     {
-        AssertDebugMsg(pipelineFramebuffers[i] == outputTarget.GetFramebuffers()[i],
+        AssertDebug(pipelineFramebuffers[i] == outputTarget.GetFramebuffers()[i],
             "Pipeline framebuffer at index {} does not match output target framebuffer at index {}",
             i, i);
     }
@@ -319,7 +319,7 @@ static void RenderAll(
 
     if (viewDescriptorSetIndex != ~0u)
     {
-        AssertThrow(renderSetup.passData != nullptr);
+        Assert(renderSetup.passData != nullptr);
 
         frame->GetCommandList().Add<BindDescriptorSet>(
             renderSetup.passData->descriptorSets[frameIndex],
@@ -383,7 +383,7 @@ static void RenderAll(
         EntityInstanceBatch* entityInstanceBatch = drawCall.batch;
         AssertDebug(entityInstanceBatch != nullptr);
 
-        AssertThrow(instancingDescriptorSet.IsValid());
+        Assert(instancingDescriptorSet.IsValid());
 
         if (entityDescriptorSet.IsValid())
         {
@@ -499,7 +499,7 @@ static void RenderAll_Parallel(
 
     if (viewDescriptorSetIndex != ~0u)
     {
-        AssertThrow(renderSetup.passData != nullptr);
+        Assert(renderSetup.passData != nullptr);
 
         baseCommandList.Add<BindDescriptorSet>(
             renderSetup.passData->descriptorSets[frameIndex],
@@ -683,9 +683,9 @@ void RenderGroup::PerformRendering(FrameBase* frame, const RenderSetup& renderSe
     Threads::AssertOnThread(g_renderThread);
     AssertReady();
 
-    AssertDebugMsg(renderSetup.IsValid(), "RenderSetup must be valid for rendering");
-    AssertDebugMsg(renderSetup.HasView(), "RenderSetup must have a valid RenderView for rendering");
-    AssertDebugMsg(renderSetup.passData != nullptr, "RenderSetup must have valid PassData for rendering!");
+    AssertDebug(renderSetup.IsValid(), "RenderSetup must be valid for rendering");
+    AssertDebug(renderSetup.HasView(), "RenderSetup must have a valid RenderView for rendering");
+    AssertDebug(renderSetup.passData != nullptr, "RenderSetup must have valid PassData for rendering!");
 
     auto* cacheEntry = renderSetup.passData->renderGroupCache.TryGet(Id().ToIndex());
     if (!cacheEntry || cacheEntry->renderGroup.GetUnsafe() != this)
@@ -712,7 +712,7 @@ void RenderGroup::PerformRendering(FrameBase* frame, const RenderSetup& renderSe
     //     renderSetup.passData->view.GetUnsafe()->GetOutputTarget().GetFramebuffer()->GetAttachment(0)->GetFormat(),
     //     static_cast<VulkanFramebuffer*>(renderSetup.passData->view.GetUnsafe()->GetOutputTarget().GetFramebuffer().Get())->GetRenderPass().Get());
 
-    // AssertThrow(cacheEntry->graphicsPipeline->GetFramebuffers()[0]->GetAttachment(0)->GetFormat() == renderSetup.passData->view.GetUnsafe()->GetOutputTarget().GetFramebuffer()->GetAttachment(0)->GetFormat());
+    // Assert(cacheEntry->graphicsPipeline->GetFramebuffers()[0]->GetAttachment(0)->GetFormat() == renderSetup.passData->view.GetUnsafe()->GetOutputTarget().GetFramebuffer()->GetAttachment(0)->GetFormat());
 
     static const bool isIndirectRenderingEnabled = g_renderBackend->GetRenderConfig().IsIndirectRenderingEnabled();
 

@@ -145,7 +145,7 @@ Node::Node(Node&& other) noexcept
 
     for (const Handle<Node>& node : m_childNodes)
     {
-        AssertThrow(node.IsValid());
+        Assert(node.IsValid());
 
         node->m_parentNode = this;
         node->SetScene(m_scene);
@@ -204,7 +204,7 @@ Node& Node::operator=(Node&& other) noexcept
 
     for (const Handle<Node>& node : m_childNodes)
     {
-        AssertThrow(node.IsValid());
+        Assert(node.IsValid());
 
         node->m_parentNode = this;
         node->SetScene(m_scene);
@@ -331,14 +331,14 @@ void Node::SetScene(Scene* scene)
         scene = g_engine->GetDefaultWorld()->GetDetachedScene(Threads::CurrentThreadId()).Get();
     }
 
-    AssertThrow(scene != nullptr);
+    Assert(scene != nullptr);
 
     if (m_scene != scene)
     {
         Scene* previousScene = m_scene;
 
 #ifdef HYP_DEBUG_MODE
-        AssertThrowMsg(
+        Assert(
             previousScene != nullptr,
             "Previous scene is null when setting new scene for Node %s - should be set to detached world scene by default",
             m_name.LookupString());
@@ -360,7 +360,7 @@ void Node::SetScene(Scene* scene)
             {
                 if (previousScene != nullptr && previousScene->GetEntityManager() != nullptr)
                 {
-                    AssertThrow(m_scene->GetEntityManager() != nullptr);
+                    Assert(m_scene->GetEntityManager() != nullptr);
 
                     previousScene->GetEntityManager()->MoveEntity(m_entity, m_scene->GetEntityManager());
                 }
@@ -445,7 +445,7 @@ Handle<Node> Node::AddChild(const Handle<Node>& node)
         node->Remove();
     }
 
-    AssertThrowMsg(
+    Assert(
         !IsOrHasParent(node.Get()),
         "Attaching node %s to %s would create a circular reference",
         node->GetName().LookupString(),
@@ -515,8 +515,8 @@ bool Node::RemoveChild(const Node* node)
     Handle<Node> childNode = std::move(*it);
     m_childNodes.Erase(it);
 
-    AssertThrow(childNode.IsValid());
-    AssertThrow(childNode->GetParent() == this);
+    Assert(childNode.IsValid());
+    Assert(childNode->GetParent() == this);
 
     bool wasTransformLocked = false;
 
@@ -592,8 +592,8 @@ void Node::RemoveAllChildren()
     {
         if (const Handle<Node>& node = *it)
         {
-            AssertThrow(node.IsValid());
-            AssertThrow(node->GetParent() == this);
+            Assert(node.IsValid());
+            Assert(node->GetParent() == this);
 
             Node* currentParent = this;
 

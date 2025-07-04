@@ -587,7 +587,7 @@ public:
 
     HYP_FORCE_INLINE bool CreateInstance(HypData& out, bool allowAbstract = false) const
     {
-        AssertThrowMsg(CanCreateInstance() && (allowAbstract || !IsAbstract()), "Cannot create a new instance for HypClass %s!\n\tCanCreateInstance: %s\tIsAbstract: %s\tAllow abstract: %s",
+        HYP_CORE_ASSERT(CanCreateInstance() && (allowAbstract || !IsAbstract()), "Cannot create a new instance for HypClass %s!\n\tCanCreateInstance: %s\tIsAbstract: %s\tAllow abstract: %s",
             GetName().LookupString(), CanCreateInstance() ? "true" : "false", IsAbstract() ? "true" : "false", allowAbstract ? "true" : "false");
 
         return CreateInstance_Internal(out);
@@ -595,7 +595,7 @@ public:
 
     HYP_FORCE_INLINE bool CreateInstanceArray(Span<HypData> elements, HypData& out, bool allowAbstract = false) const
     {
-        AssertThrowMsg(CanCreateInstance() && (allowAbstract || !IsAbstract()), "Cannot create a new instance for HypClass %s!\n\tCanCreateInstance: %s\tIsAbstract: %s\tAllow abstract: %s",
+        HYP_CORE_ASSERT(CanCreateInstance() && (allowAbstract || !IsAbstract()), "Cannot create a new instance for HypClass %s!\n\tCanCreateInstance: %s\tIsAbstract: %s\tAllow abstract: %s",
             GetName().LookupString(), CanCreateInstance() ? "true" : "false", IsAbstract() ? "true" : "false", allowAbstract ? "true" : "false");
 
         return CreateInstanceArray_Internal(elements, out);
@@ -612,7 +612,7 @@ public:
 
     HYP_FORCE_INLINE HashCode GetInstanceHashCode(ConstAnyRef ref) const
     {
-        AssertThrowMsg(ref.GetTypeId() == GetTypeId(), "Expected HypClass instance to have type Id %u but got type Id %u",
+        HYP_CORE_ASSERT(ref.GetTypeId() == GetTypeId(), "Expected HypClass instance to have type Id %u but got type Id %u",
             ref.GetTypeId().Value(), GetTypeId().Value());
 
         return GetInstanceHashCode_Internal(ref);
@@ -763,8 +763,8 @@ public:
 
     virtual bool ToHypData(ByteView memory, HypData& outHypData) const override
     {
-        AssertThrowMsg(memory.Size() == sizeof(T),
-            "Expected memory size to be %llu but got %llu! This could indicate a type safety violation.",
+        HYP_CORE_ASSERT(memory.Size() == sizeof(T),
+            "Expected memory size to be %zu but got %zu! This could indicate a type safety violation.",
             sizeof(T), memory.Size());
 
         void* address = const_cast<void*>(reinterpret_cast<const void*>(memory.Data()));
@@ -790,7 +790,7 @@ public:
                 EnableRefCountedPtrFromThisBase<>* ptrCasted = static_cast<EnableRefCountedPtrFromThisBase<>*>(ptr);
 
                 auto* refCountData = ptrCasted->weakThis.GetRefCountData_Internal();
-                AssertDebug(refCountData != nullptr);
+                HYP_CORE_ASSERT(refCountData != nullptr);
 
                 RC<void> rc;
                 rc.SetRefCountData_Internal(ptrCasted->weakThis.GetUnsafe(), refCountData, /* incRef */ true);
@@ -817,7 +817,7 @@ public:
 protected:
     virtual void FixupPointer(void* target, IHypObjectInitializer* newInitializer) const override
     {
-        AssertThrow(target != nullptr);
+        HYP_CORE_ASSERT(target != nullptr);
 
         if constexpr (std::is_base_of_v<EnableRefCountedPtrFromThisBase<>, T>)
         {
@@ -843,7 +843,7 @@ protected:
         }
 
         const HypClassCallbackWrapper<PostLoadCallback>* callbackWrapperCasted = dynamic_cast<const HypClassCallbackWrapper<PostLoadCallback>*>(callbackWrapper);
-        AssertThrow(callbackWrapperCasted != nullptr);
+        HYP_CORE_ASSERT(callbackWrapperCasted != nullptr);
 
         callbackWrapperCasted->GetCallback()(*static_cast<T*>(objectPtr));
     }

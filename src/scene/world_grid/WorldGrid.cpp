@@ -187,7 +187,7 @@ bool WorldGrid::RemoveLayer(WorldGridLayer* layer)
 // {
 //     HYP_SCOPE;
 
-//     AssertThrow(m_streamingManager.IsValid());
+//     Assert(m_streamingManager.IsValid());
 
 //     m_patches.Clear();
 //     m_patches.Resize(m_params.gridSize.Volume());
@@ -210,7 +210,7 @@ bool WorldGrid::RemoveLayer(WorldGridLayer* layer)
 //             };
 
 //             Handle<StreamingCell> patch = CreateObject<StreamingCell>(this, patchDesc.cellInfo);
-//             AssertThrow(patch.IsValid());
+//             Assert(patch.IsValid());
 
 //             patchDesc.patch = patch;
 //         }

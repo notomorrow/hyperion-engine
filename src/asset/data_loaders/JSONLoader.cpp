@@ -10,7 +10,7 @@ namespace hyperion {
 
 AssetLoadResult JSONLoader::LoadAsset(LoaderState& state) const
 {
-    AssertThrow(state.assetManager != nullptr);
+    Assert(state.assetManager != nullptr);
     JSONValue json;
 
     const ByteBuffer byteBuffer = state.stream.ReadBytes();

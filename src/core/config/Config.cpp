@@ -303,8 +303,8 @@ void ConfigurationTable::LogErrors(UTF8StringView message) const
 
 bool ConfigurationTable::SetHypClassFields(const HypClass* hypClass, const void* ptr)
 {
-    AssertThrow(hypClass != nullptr);
-    AssertThrow(ptr != nullptr);
+    HYP_CORE_ASSERT(hypClass != nullptr);
+    HYP_CORE_ASSERT(ptr != nullptr);
 
     AnyRef targetRef(hypClass->GetTypeId(), const_cast<void*>(ptr));
     HypData targetHypData = HypData(targetRef);

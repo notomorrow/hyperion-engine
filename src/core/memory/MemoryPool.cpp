@@ -16,8 +16,8 @@ class MemoryPoolManager
 public:
     void RegisterPool(MemoryPoolBase* pool, SizeType (*getNumAllocatedBytes)(MemoryPoolBase*))
     {
-        AssertDebug(pool != nullptr);
-        AssertDebug(getNumAllocatedBytes != nullptr);
+        HYP_CORE_ASSERT(pool != nullptr);
+        HYP_CORE_ASSERT(getNumAllocatedBytes != nullptr);
 
         Mutex::Guard guard(m_mutex);
 

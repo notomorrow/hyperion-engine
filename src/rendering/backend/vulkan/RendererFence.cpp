@@ -24,12 +24,12 @@ VulkanFence::VulkanFence()
 
 VulkanFence::~VulkanFence()
 {
-    AssertThrowMsg(m_handle == VK_NULL_HANDLE, "fence should have been destroyed");
+    HYP_GFX_ASSERT(m_handle == VK_NULL_HANDLE, "fence should have been destroyed");
 }
 
 RendererResult VulkanFence::Create()
 {
-    AssertThrow(m_handle == VK_NULL_HANDLE);
+    HYP_GFX_ASSERT(m_handle == VK_NULL_HANDLE);
 
     // Create fence to ensure that the command buffer has finished executing
     VkFenceCreateInfo fenceCreateInfo { VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
@@ -53,7 +53,7 @@ RendererResult VulkanFence::Destroy()
 
 RendererResult VulkanFence::WaitForGPU(bool timeoutLoop)
 {
-    AssertThrow(m_handle != VK_NULL_HANDLE);
+    HYP_GFX_ASSERT(m_handle != VK_NULL_HANDLE);
 
     VkResult vkResult;
 

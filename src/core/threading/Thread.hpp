@@ -152,7 +152,7 @@ bool Thread<Scheduler, Args...>::Start(Args... args)
         return false;
     }
 
-    AssertThrowMsg(!m_isRunning.Get(MemoryOrder::RELAXED), "Thread is already running");
+    HYP_CORE_ASSERT(!m_isRunning.Get(MemoryOrder::RELAXED), "Thread is already running");
 
     m_isRunning.Set(true, MemoryOrder::RELAXED);
 

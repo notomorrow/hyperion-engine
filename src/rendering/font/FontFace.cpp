@@ -7,8 +7,8 @@
 
 #ifdef HYP_FREETYPE
 
-    #include <ft2build.h>
-    #include FT_FREETYPE_H
+#include <ft2build.h>
+#include FT_FREETYPE_H
 
 #endif
 
@@ -81,7 +81,7 @@ void FontFace::RequestPixelSizes(int width, int height)
 FontFace::GlyphIndex FontFace::GetGlyphIndex(WChar toFind)
 {
 #ifdef HYP_FREETYPE
-    AssertThrow(m_face != nullptr);
+    Assert(m_face != nullptr);
     return FT_Get_Char_Index(m_face, toFind);
 #else
     return -1;

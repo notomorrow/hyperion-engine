@@ -1,6 +1,7 @@
 /* Copyright (c) 2024-2025 No Tomorrow Games. All rights reserved. */
 
 #include <rendering/backend/RendererFrame.hpp>
+#include <rendering/backend/RenderBackend.hpp>
 #include <rendering/backend/RendererDescriptorSet.hpp>
 #include <rendering/backend/RenderConfig.hpp>
 
@@ -12,7 +13,7 @@
 namespace hyperion {
 void FrameBase::MarkDescriptorSetUsed(DescriptorSetBase* descriptorSet)
 {
-    AssertThrow(descriptorSet != nullptr);
+    HYP_GFX_ASSERT(descriptorSet != nullptr);
 
     m_usedDescriptorSets.Insert(descriptorSet);
 
@@ -25,7 +26,7 @@ void FrameBase::UpdateUsedDescriptorSets()
 {
     for (DescriptorSetBase* descriptorSet : m_usedDescriptorSets)
     {
-        AssertDebugMsg(descriptorSet->IsCreated(),
+        HYP_GFX_ASSERT(descriptorSet->IsCreated(),
             "Descriptor set '%s' is not yet created when updating the frame's used descriptor sets!",
             descriptorSet->GetLayout().GetName().LookupString());
 

@@ -27,6 +27,9 @@
 
 #include <core/object/HypClassUtils.hpp>
 
+#include <core/logging/Logger.hpp>
+#include <core/logging/LogChannels.hpp>
+
 #include <core/math/MathUtil.hpp>
 #include <core/math/Color.hpp>
 
@@ -217,14 +220,14 @@ void GaussianSplattingInstance::Record(FrameBase* frame, const RenderSetup& rend
     HYP_SCOPE;
     Threads::AssertOnThread(g_renderThread);
 
-    AssertThrow(IsReady());
+    Assert(IsReady());
 
     AssertDebug(renderSetup.IsValid());
     AssertDebug(renderSetup.HasView());
 
     const uint32 numPoints = static_cast<uint32>(m_model->points.Size());
 
-    AssertThrow(m_splatBuffer->Size() == sizeof(GaussianSplattingInstanceShaderData) * numPoints);
+    Assert(m_splatBuffer->Size() == sizeof(GaussianSplattingInstanceShaderData) * numPoints);
 
     { // Update splat distances from camera before we sort
 
@@ -271,7 +274,7 @@ void GaussianSplattingInstance::Record(FrameBase* frame, const RenderSetup& rend
                 return distances[a] < distances[b];
             });
 
-        AssertThrowMsg(m_splatIndicesBuffer->Size() >= m_cpuSortedIndices.Size() * sizeof(m_cpuSortedIndices[0]),
+        Assert(m_splatIndicesBuffer->Size() >= m_cpuSortedIndices.Size() * sizeof(m_cpuSortedIndices[0]),
             "Expected buffer size to be at least %llu -- got %llu.",
             m_cpuSortedIndices.Size() * sizeof(m_cpuSortedIndices[0]),
             m_splatIndicesBuffer->Size());
@@ -316,13 +319,13 @@ void GaussianSplattingInstance::Record(FrameBase* frame, const RenderSetup& rend
             workgroupSizeX = maxWorkgroupSize;
         }
 
-        AssertThrowMsg(workgroupSizeX == maxWorkgroupSize, "Not implemented for workgroup size < max_workgroup_size");
+        Assert(workgroupSizeX == maxWorkgroupSize, "Not implemented for workgroup size < max_workgroup_size");
 
         uint32 h = workgroupSizeX * 2;
         const uint32 workgroupCount = numSortableElements / (workgroupSizeX * 2);
 
-        AssertThrow(h < numSortableElements);
-        AssertThrow(h % 2 == 0);
+        Assert(h < numSortableElements);
+        Assert(h % 2 == 0);
 
         auto doPass = [this, frame, &renderSetup, pc = sortSplatsPushConstants, workgroupCount](BitonicSortStage stage, uint32 h) mutable
         {
@@ -439,7 +442,7 @@ void GaussianSplattingInstance::CreateGraphicsPipeline()
     for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
     {
         const DescriptorSetRef& descriptorSet = descriptorTable->GetDescriptorSet(NAME("GaussianSplattingDescriptorSet"), frameIndex);
-        AssertThrow(descriptorSet != nullptr);
+        Assert(descriptorSet != nullptr);
 
         descriptorSet->SetElement(NAME("SplatIndicesBuffer"), m_splatIndicesBuffer);
         descriptorSet->SetElement(NAME("SplatInstancesBuffer"), m_splatBuffer);
@@ -481,7 +484,7 @@ void GaussianSplattingInstance::CreateComputePipelines()
     for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
     {
         const DescriptorSetRef& descriptorSet = updateSplatsDescriptorTable->GetDescriptorSet(NAME("UpdateSplatsDescriptorSet"), frameIndex);
-        AssertThrow(descriptorSet != nullptr);
+        Assert(descriptorSet != nullptr);
 
         descriptorSet->SetElement(NAME("SplatIndicesBuffer"), m_splatIndicesBuffer);
         descriptorSet->SetElement(NAME("SplatInstancesBuffer"), m_splatBuffer);
@@ -508,7 +511,7 @@ void GaussianSplattingInstance::CreateComputePipelines()
     for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
     {
         const DescriptorSetRef& descriptorSet = updateSplatDistancesDescriptorTable->GetDescriptorSet(NAME("UpdateDistancesDescriptorSet"), frameIndex);
-        AssertThrow(descriptorSet != nullptr);
+        Assert(descriptorSet != nullptr);
 
         descriptorSet->SetElement(NAME("SplatIndicesBuffer"), m_splatIndicesBuffer);
         descriptorSet->SetElement(NAME("SplatInstancesBuffer"), m_splatBuffer);
@@ -538,7 +541,7 @@ void GaussianSplattingInstance::CreateComputePipelines()
         for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
         {
             const DescriptorSetRef& descriptorSet = sortSplatsDescriptorTable->GetDescriptorSet(NAME("SortSplatsDescriptorSet"), frameIndex);
-            AssertThrow(descriptorSet != nullptr);
+            Assert(descriptorSet != nullptr);
 
             descriptorSet->SetElement(NAME("SplatIndicesBuffer"), m_splatIndicesBuffer);
             descriptorSet->SetElement(NAME("SplatInstancesBuffer"), m_splatBuffer);
@@ -639,7 +642,7 @@ void GaussianSplatting::UpdateSplats(FrameBase* frame, const RenderSetup& render
         return;
     }
 
-    AssertThrow(m_gaussianSplattingInstance->GetIndirectBuffer()->Size() == sizeof(IndirectDrawCommand));
+    Assert(m_gaussianSplattingInstance->GetIndirectBuffer()->Size() == sizeof(IndirectDrawCommand));
 
     frame->GetCommandList().Add<InsertBarrier>(
         m_stagingBuffer,

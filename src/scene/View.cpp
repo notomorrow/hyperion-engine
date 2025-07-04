@@ -64,7 +64,7 @@ ViewOutputTarget::ViewOutputTarget(const FramebufferRef& framebuffer)
 ViewOutputTarget::ViewOutputTarget(GBuffer* gbuffer)
     : m_impl(gbuffer)
 {
-    AssertThrow(gbuffer != nullptr);
+    Assert(gbuffer != nullptr);
 }
 
 GBuffer* ViewOutputTarget::GetGBuffer() const
@@ -178,14 +178,14 @@ void View::Init()
             }
         }));
 
-    AssertThrowMsg(m_camera.IsValid(), "Camera is not valid for View with Id #%u", Id().Value());
+    Assert(m_camera.IsValid(), "Camera is not valid for View with Id #%u", Id().Value());
     InitObject(m_camera);
 
     const Vec2u extent = MathUtil::Max(m_viewDesc.outputTargetDesc.extent, Vec2u::One());
 
     if (m_viewDesc.flags & ViewFlags::GBUFFER)
     {
-        AssertDebugMsg(m_viewDesc.outputTargetDesc.attachments.Empty(),
+        AssertDebug(m_viewDesc.outputTargetDesc.attachments.Empty(),
             "View with GBuffer flag cannot have output target attachments defined, as it will use GBuffer instead.");
 
         m_outputTarget = ViewOutputTarget(new GBuffer(extent));
@@ -213,17 +213,17 @@ void View::Init()
         m_outputTarget = ViewOutputTarget(framebuffer);
     }
 
-    AssertThrowMsg(m_outputTarget.IsValid(), "View with id #%u must have a valid output target!", Id().Value());
+    Assert(m_outputTarget.IsValid(), "View with id #%u must have a valid output target!", Id().Value());
 
     Array<TResourceHandle<RenderScene>> renderScenes;
     renderScenes.Reserve(m_scenes.Size());
 
     for (const Handle<Scene>& scene : m_scenes)
     {
-        AssertThrowMsg(scene.IsValid(), "Scene is not valid for View with Id #%u", Id().Value());
+        Assert(scene.IsValid(), "Scene is not valid for View with Id #%u", Id().Value());
         InitObject(scene);
 
-        AssertThrow(scene->IsReady());
+        Assert(scene->IsReady());
 
         renderScenes.PushBack(TResourceHandle<RenderScene>(scene->GetRenderResource()));
     }
@@ -248,7 +248,7 @@ bool View::TestRay(const Ray& ray, RayTestResults& outResults, bool useBvh) cons
 
     for (const Handle<Scene>& scene : m_scenes)
     {
-        AssertThrow(scene.IsValid());
+        Assert(scene.IsValid());
 
         if (scene->GetOctree().TestRay(ray, outResults, useBvh))
         {
@@ -411,8 +411,8 @@ typename ResourceTracker<ObjId<Entity>, RenderProxyMesh>::Diff View::CollectMesh
 
     for (const Handle<Scene>& scene : m_scenes)
     {
-        AssertThrow(scene.IsValid());
-        AssertThrow(scene->IsReady());
+        Assert(scene.IsValid());
+        Assert(scene->IsReady());
 
         if (scene->GetFlags() & SceneFlags::DETACHED)
         {
@@ -480,7 +480,7 @@ typename ResourceTracker<ObjId<Entity>, RenderProxyMesh>::Diff View::CollectMesh
             }
 
             break;
-            
+
         case uint32(ViewFlags::COLLECT_STATIC_ENTITIES):
             for (auto [entity, meshComponent, visibilityStateComponent, _] : scene->GetEntityManager()->GetEntitySet<MeshComponent, VisibilityStateComponent, EntityTagComponent<EntityTag::STATIC>>().GetScopedView(DataAccessFlags::ACCESS_READ, HYP_FUNCTION_NAME_LIT))
             {
@@ -533,7 +533,7 @@ typename ResourceTracker<ObjId<Entity>, RenderProxyMesh>::Diff View::CollectMesh
             }
 
             break;
-            
+
         case uint32(ViewFlags::COLLECT_DYNAMIC_ENTITIES):
             for (auto [entity, meshComponent, visibilityStateComponent, _] : scene->GetEntityManager()->GetEntitySet<MeshComponent, VisibilityStateComponent, EntityTagComponent<EntityTag::DYNAMIC>>().GetScopedView(DataAccessFlags::ACCESS_READ, HYP_FUNCTION_NAME_LIT))
             {
@@ -641,8 +641,8 @@ void View::CollectLights(RenderProxyList& rpl)
 
     for (const Handle<Scene>& scene : m_scenes)
     {
-        AssertThrow(scene.IsValid());
-        AssertThrow(scene->IsReady());
+        Assert(scene.IsValid());
+        Assert(scene->IsReady());
 
         for (auto [entity, _] : scene->GetEntityManager()->GetEntitySet<EntityType<Light>>().GetScopedView(DataAccessFlags::ACCESS_READ, HYP_FUNCTION_NAME_LIT))
         {
@@ -739,8 +739,8 @@ void View::CollectLightmapVolumes(RenderProxyList& rpl)
 
     for (const Handle<Scene>& scene : m_scenes)
     {
-        AssertThrow(scene.IsValid());
-        AssertThrow(scene->IsReady());
+        Assert(scene.IsValid());
+        Assert(scene->IsReady());
 
         for (auto [entity, lightmapVolumeComponent] : scene->GetEntityManager()->GetEntitySet<LightmapVolumeComponent>().GetScopedView(DataAccessFlags::ACCESS_READ, HYP_FUNCTION_NAME_LIT))
         {
@@ -811,8 +811,8 @@ void View::CollectEnvGrids(RenderProxyList& rpl)
 
     for (const Handle<Scene>& scene : m_scenes)
     {
-        AssertThrow(scene.IsValid());
-        AssertThrow(scene->IsReady());
+        Assert(scene.IsValid());
+        Assert(scene->IsReady());
 
         for (auto [entity, _] : scene->GetEntityManager()->GetEntitySet<EntityType<EnvGrid>>().GetScopedView(DataAccessFlags::ACCESS_READ, HYP_FUNCTION_NAME_LIT))
         {
@@ -882,8 +882,8 @@ void View::CollectEnvProbes(RenderProxyList& rpl)
 
     for (const Handle<Scene>& scene : m_scenes)
     {
-        AssertThrow(scene.IsValid());
-        AssertThrow(scene->IsReady());
+        Assert(scene.IsValid());
+        Assert(scene->IsReady());
 
         for (auto [entity, _] : scene->GetEntityManager()->GetEntitySet<EntityType<EnvProbe>>().GetScopedView(DataAccessFlags::ACCESS_READ, HYP_FUNCTION_NAME_LIT))
         {
@@ -914,7 +914,7 @@ void View::CollectEnvProbes(RenderProxyList& rpl)
         {
             if (skyComponent.subsystem)
             {
-                AssertThrow(skyComponent.subsystem->GetEnvProbe()->IsA<SkyProbe>());
+                Assert(skyComponent.subsystem->GetEnvProbe()->IsA<SkyProbe>());
                 rpl.envProbes.Track(skyComponent.subsystem->GetEnvProbe()->Id(), skyComponent.subsystem->GetEnvProbe(), skyComponent.subsystem->GetEnvProbe()->GetRenderProxyVersionPtr());
             }
         }

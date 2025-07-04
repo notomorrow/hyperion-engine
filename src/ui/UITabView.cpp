@@ -150,7 +150,7 @@ void UITabView::AddChildUIObject(const Handle<UIObject>& uiObject)
     }
 
     Handle<UIObject> tab = ObjCast<UITab>(uiObject);
-    AssertThrow(tab.IsValid(), "Cast to UITab failed");
+    Assert(tab.IsValid(), "Cast to UITab failed");
 
     tab->SetSize(UIObjectSize({ 0, UIObjectSize::AUTO }, { 30, UIObjectSize::PIXEL }));
 

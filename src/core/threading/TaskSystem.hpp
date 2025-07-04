@@ -91,7 +91,7 @@ struct TaskBatch
 
     virtual ~TaskBatch()
     {
-        AssertThrowMsg(IsCompleted(), "TaskBatch must be in completed state by the time the destructor is called!");
+        HYP_CORE_ASSERT(IsCompleted(), "TaskBatch must be in completed state by the time the destructor is called!");
     }
 
     /*! \brief Add a task to be ran with this batch
@@ -140,7 +140,7 @@ struct TaskBatch
         HYP_MT_CHECK_RW(dataRaceDetector);
 #endif
 
-        AssertThrowMsg(IsCompleted(), "TaskBatch::ResetState() must be called after all tasks have been completed");
+        HYP_CORE_ASSERT(IsCompleted(), "TaskBatch::ResetState() must be called after all tasks have been completed");
 
         notifier.Reset();
         numEnqueued = 0;
@@ -304,7 +304,7 @@ public:
     template <class Function>
     auto Enqueue(const StaticMessage& debugName, Function&& fn, TaskThreadPool& pool, EnumFlags<TaskEnqueueFlags> flags = TaskEnqueueFlags::NONE) -> Task<typename FunctionTraits<Function>::ReturnType>
     {
-        AssertThrowMsg(IsRunning(), "TaskSystem::Start() must be called before enqueuing tasks");
+        HYP_CORE_ASSERT(IsRunning(), "TaskSystem::Start() must be called before enqueuing tasks");
 
         return pool.Enqueue(debugName, std::forward<Function>(fn), flags);
     }
@@ -312,7 +312,7 @@ public:
     template <class Function>
     auto Enqueue(Function&& fn, TaskThreadPool& pool, EnumFlags<TaskEnqueueFlags> flags = TaskEnqueueFlags::NONE) -> Task<typename FunctionTraits<Function>::ReturnType>
     {
-        AssertThrowMsg(IsRunning(), "TaskSystem::Start() must be called before enqueuing tasks");
+        HYP_CORE_ASSERT(IsRunning(), "TaskSystem::Start() must be called before enqueuing tasks");
 
         return pool.Enqueue(std::forward<Function>(fn), flags);
     }
@@ -320,7 +320,7 @@ public:
     template <class Function>
     auto Enqueue(const StaticMessage& debugName, Function&& fn, TaskThreadPoolName poolName = THREAD_POOL_GENERIC, EnumFlags<TaskEnqueueFlags> flags = TaskEnqueueFlags::NONE) -> Task<typename FunctionTraits<Function>::ReturnType>
     {
-        AssertThrowMsg(IsRunning(), "TaskSystem::Start() must be called before enqueuing tasks");
+        HYP_CORE_ASSERT(IsRunning(), "TaskSystem::Start() must be called before enqueuing tasks");
 
         TaskThreadPool& pool = GetPool(poolName);
 
@@ -330,7 +330,7 @@ public:
     template <class Function>
     auto Enqueue(Function&& fn, TaskThreadPoolName poolName = THREAD_POOL_GENERIC, EnumFlags<TaskEnqueueFlags> flags = TaskEnqueueFlags::NONE) -> Task<typename FunctionTraits<Function>::ReturnType>
     {
-        AssertThrowMsg(IsRunning(), "TaskSystem::Start() must be called before enqueuing tasks");
+        HYP_CORE_ASSERT(IsRunning(), "TaskSystem::Start() must be called before enqueuing tasks");
 
         TaskThreadPool& pool = GetPool(poolName);
 

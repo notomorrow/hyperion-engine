@@ -93,13 +93,14 @@ struct Extent2D
 
     Extent2D operator/(const Extent2D& other) const
     {
-        AssertThrow(other.width != 0 && other.height != 0);
+        HYP_CORE_ASSERT(other.width != 0 && other.height != 0);
+
         return Extent2D(width / other.width, height / other.height);
     }
 
     Extent2D& operator/=(const Extent2D& other)
     {
-        AssertThrow(other.width != 0 && other.height != 0);
+        HYP_CORE_ASSERT(other.width != 0 && other.height != 0);
 
         width /= other.width;
         height /= other.height;
@@ -109,14 +110,14 @@ struct Extent2D
 
     Extent2D operator/(uint32 scalar) const
     {
-        AssertThrow(scalar != 0);
+        HYP_CORE_ASSERT(scalar != 0);
 
         return Extent2D(width / scalar, height / scalar);
     }
 
     Extent2D& operator/=(uint32 scalar)
     {
-        AssertThrow(scalar != 0);
+        HYP_CORE_ASSERT(scalar != 0);
 
         width /= scalar;
         height /= scalar;
@@ -286,7 +287,8 @@ struct Extent3D
 
     Extent3D operator/(const Extent3D& other) const
     {
-        AssertThrow(other.width != 0 && other.height != 0 && other.depth != 0);
+        HYP_CORE_ASSERT(other.width != 0 && other.height != 0 && other.depth != 0);
+
         return {
             width / other.width,
             height / other.height,
@@ -296,7 +298,7 @@ struct Extent3D
 
     Extent3D& operator/=(const Extent3D& other)
     {
-        AssertThrow(other.width != 0 && other.height != 0 && other.depth != 0);
+        HYP_CORE_ASSERT(other.width != 0 && other.height != 0 && other.depth != 0);
 
         width /= other.width;
         height /= other.height;
@@ -307,7 +309,7 @@ struct Extent3D
 
     Extent3D operator/(uint32 scalar) const
     {
-        AssertThrow(scalar != 0);
+        HYP_CORE_ASSERT(scalar != 0);
 
         return {
             width / scalar,
@@ -318,7 +320,7 @@ struct Extent3D
 
     Extent3D& operator/=(uint32 scalar)
     {
-        AssertThrow(scalar != 0);
+        HYP_CORE_ASSERT(scalar != 0);
 
         width /= scalar;
         height /= scalar;

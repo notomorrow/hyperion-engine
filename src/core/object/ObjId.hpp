@@ -157,7 +157,7 @@ struct ObjId : ObjIdBase
             return ObjId<Ty>::invalid;
         }
 
-        /// \todo Add a AssertDebug here to ensure that typeId is in the hierarchy of Ty
+        /// \todo Add a HYP_CORE_ASSERT here to ensure that typeId is in the hierarchy of Ty
 
         return ObjId<Ty>(static_cast<const ObjIdBase&>(*this));
     }

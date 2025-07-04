@@ -33,7 +33,7 @@ public:
 
     json::JSONValue Pop()
     {
-        AssertThrow(!Empty());
+        HYP_CORE_ASSERT(!Empty());
 
         Mutex::Guard guard(m_mutex);
 

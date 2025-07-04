@@ -73,14 +73,14 @@ static String BuildDescriptorTableDefines(const DescriptorTableDeclaration& desc
         const DescriptorSetDeclaration* descriptorSetDeclarationPtr = &descriptorSetDeclaration;
 
         const uint32 setIndex = descriptorTableDeclaration.GetDescriptorSetIndex(descriptorSetDeclaration.name);
-        AssertThrow(setIndex != -1);
+        Assert(setIndex != -1);
 
         descriptorTableDefines += "#define HYP_DESCRIPTOR_SET_INDEX_" + String(descriptorSetDeclaration.name.LookupString()) + " " + String::ToString(setIndex) + "\n";
 
         if (descriptorSetDeclaration.flags[DescriptorSetDeclarationFlags::REFERENCE])
         {
             const DescriptorSetDeclaration* referencedDescriptorSetDeclaration = GetStaticDescriptorTableDeclaration().FindDescriptorSetDeclaration(descriptorSetDeclaration.name);
-            AssertThrow(referencedDescriptorSetDeclaration != nullptr);
+            Assert(referencedDescriptorSetDeclaration != nullptr);
 
             descriptorSetDeclarationPtr = referencedDescriptorSetDeclaration;
         }
@@ -90,7 +90,7 @@ static String BuildDescriptorTableDefines(const DescriptorTableDeclaration& desc
             for (const DescriptorDeclaration& descriptorDeclaration : descriptorDeclarations)
             {
                 const uint32 flatIndex = descriptorSetDeclarationPtr->CalculateFlatIndex(descriptorDeclaration.slot, descriptorDeclaration.name);
-                AssertThrow(flatIndex != uint32(-1));
+                Assert(flatIndex != uint32(-1));
 
                 descriptorTableDefines += "\t#define HYP_DESCRIPTOR_INDEX_" + String(descriptorSetDeclarationPtr->name.LookupString()) + "_" + descriptorDeclaration.name.LookupString() + " " + String::ToString(flatIndex) + "\n";
             }
@@ -140,7 +140,7 @@ DescriptorTableDeclaration DescriptorUsageSet::BuildDescriptorTableDeclaration()
 
     for (const DescriptorUsage& descriptorUsage : elements)
     {
-        AssertThrowMsg(descriptorUsage.slot != DescriptorSlot::DESCRIPTOR_SLOT_NONE && descriptorUsage.slot < DescriptorSlot::DESCRIPTOR_SLOT_MAX,
+        Assert(descriptorUsage.slot != DescriptorSlot::DESCRIPTOR_SLOT_NONE && descriptorUsage.slot < DescriptorSlot::DESCRIPTOR_SLOT_MAX,
             "Descriptor usage %s has invalid slot %d", descriptorUsage.descriptorName.LookupString(), descriptorUsage.slot);
 
         DescriptorSetDeclaration* descriptorSetDeclaration = table.FindDescriptorSetDeclaration(descriptorUsage.setName);
@@ -152,7 +152,7 @@ DescriptorTableDeclaration DescriptorUsageSet::BuildDescriptorTableDeclaration()
 
         if (staticDescriptorSetDeclaration != nullptr)
         {
-            AssertThrowMsg(
+            Assert(
                 staticDescriptorSetDeclaration->FindDescriptorDeclaration(descriptorUsage.descriptorName) != nullptr,
                 "Descriptor set %s is defined in the static descriptor table, but the descriptor %s is not",
                 descriptorUsage.setName.LookupString(),
@@ -707,7 +707,7 @@ static ByteBuffer CompileToSPIRV(
         const auto& uniformBlock = cppProgram->getUniformBlock(i);
 
         const glslang::TType* type = uniformBlock.getType();
-        AssertThrow(type != nullptr);
+        Assert(type != nullptr);
 
         DescriptorUsage* descriptorUsage = descriptorUsages.Find(CreateWeakNameFromDynamicString(uniformBlock.name.data()));
 
@@ -2279,7 +2279,7 @@ bool ShaderCompiler::CompileBundle(
 
             compiledShader.entryPointName = bundle.entryPointName;
 
-            AssertThrow(compiledShader.definition.IsValid());
+            Assert(compiledShader.definition.IsValid());
 
             AtomicVar<bool> anyFilesCompiled { false };
             AtomicVar<bool> anyFilesErrored { false };
@@ -2598,7 +2598,7 @@ bool ShaderCompiler::GetCompiledShader(
         finalPropertiesHash.Value(),
         finalProperties.ToString());
 
-    AssertThrow(out.GetDefinition().IsValid());
+    Assert(out.GetDefinition().IsValid());
 
     return true;
 }

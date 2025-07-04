@@ -12,8 +12,8 @@ AttributeSet::AttributeSet(Array<Attribute>&& values)
 {
     for (Attribute& attribute : m_values)
     {
-        AssertThrow(attribute.object != nullptr);
-        AssertThrow(attribute.object->GetClass() != nullptr);
+        Assert(attribute.object != nullptr);
+        Assert(attribute.object->GetClass() != nullptr);
 
         m_valuesByName.Set(attribute.object->GetClass()->GetName(), &attribute);
     }

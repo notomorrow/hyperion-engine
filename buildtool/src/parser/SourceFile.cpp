@@ -46,10 +46,10 @@ SourceFile::~SourceFile() = default;
 
 void SourceFile::ReadIntoBuffer(const ByteBuffer& input_buffer)
 {
-    AssertThrow(m_buffer.Size() >= input_buffer.Size());
+    Assert(m_buffer.Size() >= input_buffer.Size());
 
     // make sure we have enough space in the buffer
-    AssertThrowMsg(m_position + input_buffer.Size() <= m_buffer.Size(), "not enough space in buffer");
+    Assert(m_position + input_buffer.Size() <= m_buffer.Size(), "not enough space in buffer");
 
     for (SizeType i = 0; i < input_buffer.Size(); i++)
     {
@@ -59,10 +59,10 @@ void SourceFile::ReadIntoBuffer(const ByteBuffer& input_buffer)
 
 void SourceFile::ReadIntoBuffer(const ubyte* data, SizeType size)
 {
-    AssertThrow(m_buffer.Size() >= size);
+    Assert(m_buffer.Size() >= size);
 
     // make sure we have enough space in the buffer
-    AssertThrowMsg(m_position + size <= m_buffer.Size(), "not enough space in buffer");
+    Assert(m_position + size <= m_buffer.Size(), "not enough space in buffer");
 
     for (SizeType i = 0; i < size; i++)
     {

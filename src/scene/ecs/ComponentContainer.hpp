@@ -312,7 +312,7 @@ public:
     {
         HYP_MT_CHECK_READ(m_dataRaceDetector);
 
-        AssertThrowMsg(HasComponent(id), "Component of type `%s` with Id %u does not exist", TypeNameWithoutNamespace<Component>().Data(), id);
+        Assert(HasComponent(id), "Component of type `{}` with ID {} does not exist", TypeNameWithoutNamespace<Component>().Data(), id);
 
         return m_components.At(id);
     }
@@ -321,7 +321,7 @@ public:
     {
         HYP_MT_CHECK_READ(m_dataRaceDetector);
 
-        AssertThrowMsg(HasComponent(id), "Component of type `%s` with Id %u does not exist", TypeNameWithoutNamespace<Component>().Data(), id);
+        Assert(HasComponent(id), "Component of type `{}` with ID {} does not exist", TypeNameWithoutNamespace<Component>().Data(), id);
 
         return m_components.At(id);
     }
@@ -350,16 +350,16 @@ public:
 
     virtual ComponentId AddComponent(const HypData& componentData) override
     {
-        AssertThrowMsg(componentData.IsValid(), "Cannot add an invalid component");
-        AssertThrowMsg(componentData.Is<Component>(), "Component data is not of the correct type");
+        Assert(componentData.IsValid(), "Cannot add an invalid component");
+        Assert(componentData.Is<Component>(), "Component data is not of the correct type");
 
         return AddComponent(componentData.Get<Component>()).first;
     }
 
     virtual ComponentId AddComponent(HypData&& componentData) override
     {
-        AssertThrowMsg(componentData.IsValid(), "Cannot add an invalid component");
-        AssertThrowMsg(componentData.Is<Component>(), "Component is not of the correct type");
+        Assert(componentData.IsValid(), "Cannot add an invalid component");
+        Assert(componentData.Is<Component>(), "Component is not of the correct type");
 
         return AddComponent(std::move(componentData.Get<Component>())).first;
     }
@@ -400,7 +400,7 @@ public:
 
     virtual Optional<ComponentId> MoveComponent(ComponentId id, ComponentContainerBase& other) override
     {
-        AssertThrowMsg(other.GetComponentTypeId() == GetComponentTypeId(), "Component container is not of the same type");
+        Assert(other.GetComponentTypeId() == GetComponentTypeId(), "Component container is not of the same type");
 
         HYP_MT_CHECK_RW(m_dataRaceDetector);
 

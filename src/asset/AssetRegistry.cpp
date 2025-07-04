@@ -49,7 +49,7 @@ HYP_API WeakName AssetObject_KeyByFunction(const Handle<AssetObject>& assetObjec
 void AssetResourceBase::Initialize()
 {
     Handle<AssetObject> assetObject = m_assetObject.Lock();
-    AssertThrow(assetObject.IsValid());
+    Assert(assetObject.IsValid());
 
     // @TODO Loading async w/ AssetBatch
     const FilePath assetFilePath = assetObject->GetFilePath();
@@ -67,7 +67,7 @@ void AssetResourceBase::Initialize()
 void AssetResourceBase::Destroy()
 {
     Handle<AssetObject> assetObject = m_assetObject.Lock();
-    AssertThrow(assetObject.IsValid());
+    Assert(assetObject.IsValid());
 
     m_loadedAsset = {};
 }
@@ -91,7 +91,7 @@ Result AssetResourceBase::Save()
 Result ObjectAssetResourceBase::Save_Internal()
 {
     Handle<AssetObject> assetObject = m_assetObject.Lock();
-    AssertThrow(assetObject.IsValid());
+    Assert(assetObject.IsValid());
 
     FileByteWriter byteWriter(assetObject->GetFilePath());
 
@@ -100,7 +100,7 @@ Result ObjectAssetResourceBase::Save_Internal()
     FBOMWriter writer { FBOMWriterConfig {} };
 
     FBOMMarshalerBase* marshal = FBOM::GetInstance().GetMarshal(GetAssetTypeId());
-    AssertThrow(marshal != nullptr);
+    Assert(marshal != nullptr);
 
     FBOMObject object;
 
@@ -389,7 +389,7 @@ AssetRegistry::AssetRegistry(const String& rootPath)
         if (parentPackageName.IsValid())
         {
             auto parentPackageIt = m_packages.Find(parentPackageName);
-            AssertThrowMsg(parentPackageIt != m_packages.End(), "No package with name '%s' found", Name(parentPackageName).LookupString());
+            Assert(parentPackageIt != m_packages.End(), "No package with name '%s' found", Name(parentPackageName).LookupString());
 
             package->m_parentPackage = *parentPackageIt;
 

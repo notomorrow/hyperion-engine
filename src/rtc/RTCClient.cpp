@@ -167,7 +167,7 @@ LibDataChannelRTCClient::LibDataChannelRTCClient(String id, RTCServer* server)
 
 RC<RTCDataChannel> LibDataChannelRTCClient::CreateDataChannel(Name name)
 {
-    AssertThrow(m_peerConnection != nullptr);
+    Assert(m_peerConnection != nullptr);
 
     if (name == Name::Invalid())
     {
@@ -236,7 +236,7 @@ void LibDataChannelRTCClient::Disconnect()
 
 void LibDataChannelRTCClient::SetRemoteDescription(const String& type, const String& sdp)
 {
-    AssertThrow(m_peerConnection != nullptr);
+    Assert(m_peerConnection != nullptr);
 
     m_peerConnection->setRemoteDescription(rtc::Description(sdp.Data(), type.Data()));
 }

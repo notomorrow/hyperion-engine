@@ -76,7 +76,7 @@ public:
 
     virtual FBOMResult Serialize(ConstAnyRef in, FBOMObject& out) const override final
     {
-        AssertDebug(in.Is<T>(), "Cannot serialize - given object is not of expected type");
+        HYP_CORE_ASSERT(in.Is<T>(), "Cannot serialize - given object is not of expected type");
 
         if (!in.Is<T>())
         {

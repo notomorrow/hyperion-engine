@@ -110,7 +110,7 @@ public:
           light(nullptr),
           passData(nullptr)
     {
-        AssertDebugMsg(world != nullptr, "RenderSetup must have a valid RenderWorld");
+        AssertDebug(world != nullptr, "RenderSetup must have a valid RenderWorld");
     }
 
     RenderSetup(RenderWorld* world, RenderView* view)
@@ -121,7 +121,7 @@ public:
           light(nullptr),
           passData(nullptr)
     {
-        AssertDebugMsg(world != nullptr, "RenderSetup must have a valid RenderWorld");
+        AssertDebug(world != nullptr, "RenderSetup must have a valid RenderWorld");
     }
 
     RenderSetup(const RenderSetup& other) = default;

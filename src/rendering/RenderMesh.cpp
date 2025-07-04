@@ -58,7 +58,7 @@ void RenderMesh::Initialize_Internal()
 {
     HYP_SCOPE;
 
-    AssertThrow(m_mesh != nullptr);
+    Assert(m_mesh != nullptr);
 
     UploadMeshData();
 }
@@ -77,7 +77,7 @@ void RenderMesh::Update_Internal()
 {
     HYP_SCOPE;
 
-    AssertThrow(m_mesh != nullptr);
+    Assert(m_mesh != nullptr);
 
     UploadMeshData();
 }
@@ -220,12 +220,12 @@ void RenderMesh::SetStreamedMeshData(const RC<StreamedMeshData>& streamedMeshDat
 
 /* Copy our values into the packed vertex buffer, and increase the index for the next possible
  * mesh attribute. This macro helps keep the code cleaner and easier to maintain. */
-#define PACKED_SET_ATTR(rawValues, argSize)                                                           \
-    do                                                                                                  \
-    {                                                                                                   \
+#define PACKED_SET_ATTR(rawValues, argSize)                                                         \
+    do                                                                                              \
+    {                                                                                               \
         Memory::MemCpy((void*)(rawBuffer + currentOffset), (rawValues), (argSize) * sizeof(float)); \
-        currentOffset += (argSize);                                                                   \
-    }                                                                                                   \
+        currentOffset += (argSize);                                                                 \
+    }                                                                                               \
     while (0)
 
 Array<float> RenderMesh::BuildVertexBuffer(const VertexAttributeSet& vertexAttributes, const MeshData& meshData)
@@ -334,7 +334,7 @@ Array<uint32> RenderMesh::BuildPackedIndices() const
 
     const MeshData& meshData = m_streamedMeshData->GetMeshData();
 
-    AssertThrow(meshData.indices.Size() % 3 == 0);
+    Assert(meshData.indices.Size() % 3 == 0);
 
     return Array<uint32>(meshData.indices.Begin(), meshData.indices.End());
 }
@@ -352,16 +352,17 @@ BLASRef RenderMesh::BuildBLAS(const Handle<Material>& material) const
     // some assertions to prevent gpu faults down the line
     for (SizeType i = 0; i < packedIndices.Size(); i++)
     {
-        AssertThrow(packedIndices[i] < packedVertices.Size());
+        Assert(packedIndices[i] < packedVertices.Size());
     }
 
-    struct RENDER_COMMAND(BuildBLAS) : public RenderCommand
+    struct RENDER_COMMAND(BuildBLAS)
+        : public RenderCommand
     {
         BLASRef blas;
         Array<PackedVertex> packedVertices;
         Array<uint32> packedIndices;
         Handle<Material> material;
-        
+
         GpuBufferRef packedVerticesBuffer;
         GpuBufferRef packedIndicesBuffer;
         GpuBufferRef verticesStagingBuffer;

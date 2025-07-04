@@ -67,7 +67,7 @@ RendererResult ImagePlatformImpl<Platform::vulkan>::ConvertTo32BPP(
     const TextureFormat newFormat = FormatChangeNumComponents(currentDesc.format, newBpp);
 
     if (inTextureData != nullptr) {
-        AssertThrow(inTextureData->buffer.Size() == size);
+        HYP_GFX_ASSERT(inTextureData->buffer.Size() == size);
 
         ByteBuffer newByteBuffer(newSize);
 
@@ -118,7 +118,7 @@ VulkanImage::VulkanImage(const TextureDesc& textureDesc)
 
 VulkanImage::~VulkanImage()
 {
-    AssertThrow(m_handle == VK_NULL_HANDLE);
+    HYP_GFX_ASSERT(m_handle == VK_NULL_HANDLE);
 }
 
 bool VulkanImage::IsCreated() const
@@ -240,7 +240,7 @@ RendererResult VulkanImage::Create(ResourceState initialState)
 
     if (!m_isHandleOwned)
     {
-        AssertThrowMsg(m_handle != VK_NULL_HANDLE, "If is_handle_owned is set to false, the image handle must not be VK_NULL_HANDLE.");
+        HYP_GFX_ASSERT(m_handle != VK_NULL_HANDLE, "If is_handle_owned is set to false, the image handle must not be VK_NULL_HANDLE.");
 
         HYPERION_RETURN_OK;
     }
@@ -383,7 +383,7 @@ RendererResult VulkanImage::Destroy()
     {
         if (m_allocation != VK_NULL_HANDLE)
         {
-            AssertThrowMsg(m_isHandleOwned, "If allocation is not VK_NULL_HANDLE, is_handle_owned should be true");
+            HYP_GFX_ASSERT(m_isHandleOwned, "If allocation is not VK_NULL_HANDLE, is_handle_owned should be true");
 
             vmaDestroyImage(GetRenderBackend()->GetDevice()->GetAllocator(), m_handle, m_allocation);
             m_allocation = VK_NULL_HANDLE;
@@ -533,7 +533,7 @@ void VulkanImage::InsertBarrier(
 
             if (it != m_subResourceStates.End())
             {
-                AssertThrowMsg(
+                HYP_GFX_ASSERT(
                     it->second == prevResourceState,
                     "Sub resource state mismatch for image: mip %d, layer %d",
                     mipLevel,

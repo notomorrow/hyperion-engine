@@ -238,8 +238,8 @@ private:
                             continue;
                         }
 
-                        AssertThrow(it.second.static_index == -1);
-                        AssertThrow(it.second.num_descendants == 0);
+                        Assert(it.second.static_index == -1);
+                        Assert(it.second.num_descendants == 0);
 
                         const uint32 hyp_class_definition_id = uint32(hyp_class_definitions.Size());
 
@@ -266,7 +266,7 @@ private:
                         }
 
                         const uint32 parent = parent_it->second;
-                        AssertThrow(parent < hyp_class_definitions.Size());
+                        Assert(parent < hyp_class_definitions.Size());
 
                         derived[parent].PushBack(child);
                     }
@@ -301,7 +301,7 @@ private:
                 Proc<void(uint32)> TopologicalSort;
                 TopologicalSort = [&](uint32 id)
                 {
-                    AssertThrow(id < hyp_class_definitions.Size());
+                    Assert(id < hyp_class_definitions.Size());
 
                     HypClassDefinition* hyp_class_definition = hyp_class_definitions[id];
 
@@ -416,7 +416,7 @@ private:
     {
         Threads::AssertOnThread(g_mainThread);
 
-        AssertThrow(task.IsValid());
+        Assert(task.IsValid());
 
         while (!task.IsCompleted())
         {

@@ -44,7 +44,7 @@ Glyph::Glyph(RC<FontFace> face, FontFace::GlyphIndex index, float scale)
 
 void Glyph::LoadMetrics()
 {
-    AssertThrow(m_face != nullptr);
+    Assert(m_face != nullptr);
 
 #ifdef HYP_FREETYPE
     if (FT_Set_Pixel_Sizes(m_face->GetFace(), 0, MathUtil::Floor<float, uint32>(64.0f * m_scale)))
@@ -65,7 +65,7 @@ void Glyph::LoadMetrics()
 
 TResult<UniquePtr<GlyphBitmap>> Glyph::Rasterize()
 {
-    AssertThrow(m_face != nullptr);
+    Assert(m_face != nullptr);
 
     FontEngine::Glyph glyph {};
 
@@ -83,7 +83,7 @@ TResult<UniquePtr<GlyphBitmap>> Glyph::Rasterize()
     glyph = m_face->GetFace()->glyph;
     FT_Bitmap& ftBitmap = glyph->bitmap;
 
-    AssertThrow(glyph->format == FT_GLYPH_FORMAT_BITMAP);
+    Assert(glyph->format == FT_GLYPH_FORMAT_BITMAP);
 
     m_metrics.width = uint16(glyph->bitmap.width);
     m_metrics.height = uint16(glyph->bitmap.rows);
@@ -136,7 +136,7 @@ TResult<UniquePtr<GlyphBitmap>> Glyph::Rasterize()
 
 Vec2i Glyph::GetMax()
 {
-    AssertThrow(m_face != nullptr);
+    Assert(m_face != nullptr);
 
 #ifdef HYP_FREETYPE
     return MathUtil::Max({ MathUtil::Abs(m_face->GetFace()->glyph->bitmap.pitch), int(m_face->GetFace()->glyph->bitmap.rows) }, Vec2i::One());
@@ -147,7 +147,7 @@ Vec2i Glyph::GetMax()
 
 Vec2i Glyph::GetMin()
 {
-    AssertThrow(m_face != nullptr);
+    Assert(m_face != nullptr);
 
 #ifdef HYP_FREETYPE
     auto& box = m_face->GetFace()->bbox;

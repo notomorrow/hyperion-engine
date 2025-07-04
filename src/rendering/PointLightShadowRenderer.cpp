@@ -46,14 +46,14 @@ PointLightShadowRenderer::~PointLightShadowRenderer()
 
 void PointLightShadowRenderer::Init()
 {
-    AssertThrow(m_parentScene.IsValid());
-    AssertThrow(m_parentScene->IsReady());
+    Assert(m_parentScene.IsValid());
+    Assert(m_parentScene->IsReady());
 
     RenderShadowMap* shadowMap = g_renderGlobalState->ShadowMapAllocator->AllocateShadowMap(
         SMT_OMNI,
         SMF_VSM,
         m_extent);
-    AssertThrowMsg(shadowMap != nullptr, "Failed to allocate shadow map");
+    Assert(shadowMap != nullptr, "Failed to allocate shadow map");
 
     m_shadowMap = TResourceHandle<RenderShadowMap>(*shadowMap);
     m_aabb = m_light->GetAABB();
@@ -105,8 +105,8 @@ void PointLightShadowRenderer::OnUpdate(float delta)
     HYP_SCOPE;
     Threads::AssertOnThread(g_gameThread);
 
-    AssertThrow(m_envProbe.IsValid());
-    AssertThrow(m_light.IsValid());
+    Assert(m_envProbe.IsValid());
+    Assert(m_light.IsValid());
 
     const BoundingBox& envProbeAabb = m_envProbe->GetAABB();
     const BoundingBox lightAabb = m_light->GetAABB();

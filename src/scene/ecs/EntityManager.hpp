@@ -124,7 +124,7 @@ public:
      */
     bool IsValidForSystem(const SystemBase* systemPtr) const
     {
-        AssertThrow(systemPtr != nullptr);
+        Assert(systemPtr != nullptr);
 
         // If the system does not allow update calls, and we don't as well, return true as there will be no overlap.
         if (!AllowUpdate())
@@ -190,11 +190,11 @@ public:
      */
     Handle<SystemBase> AddSystem(const Handle<SystemBase>& system)
     {
-        AssertThrow(system.IsValid());
-        AssertThrowMsg(IsValidForSystem(system.Get()), "System is not valid for this SystemExecutionGroup");
+        Assert(system.IsValid());
+        Assert(IsValidForSystem(system.Get()), "System is not valid for this SystemExecutionGroup");
 
         auto it = m_systems.Find(system->GetTypeId());
-        AssertThrowMsg(it == m_systems.End(), "System already exists");
+        Assert(it == m_systems.End(), "System already exists");
 
         auto insertResult = m_systems.Set(system->GetTypeId(), system);
 
@@ -376,7 +376,7 @@ public:
         static_assert(std::is_base_of_v<Entity, T>, "T must be a subclass of Entity");
 
         Handle<T> entity = CreateObject<T>(std::forward<Args>(args)...);
-        AssertThrowMsg(entity.IsValid(), "Failed to create instance of Entity subclass %s", TypeNameWithoutNamespace<T>().Data());
+        Assert(entity.IsValid(), "Failed to create instance of Entity subclass {}", TypeNameWithoutNamespace<T>().Data());
 
         AddExistingEntity(entity);
 
@@ -519,7 +519,7 @@ public:
     {
         EnsureValidComponentType<Component>();
 
-        AssertThrowMsg(entity, "Invalid entity");
+        Assert(entity, "Invalid entity");
 
         // Threads::AssertOnThread(m_ownerThreadId);
 
@@ -527,15 +527,15 @@ public:
         HYP_MT_CHECK_READ(m_containersDataRaceDetector);
 
         EntityData* entityData = m_entities.TryGetEntityData(entity);
-        AssertThrowMsg(entityData != nullptr, "Entity does not exist");
+        Assert(entityData != nullptr, "Entity does not exist");
 
         const Optional<ComponentId> componentIdOpt = entityData->TryGetComponentId<Component>();
-        AssertThrowMsg(componentIdOpt.HasValue(), "Entity does not have component of type %s", TypeNameWithoutNamespace<Component>().Data());
+        Assert(componentIdOpt.HasValue(), "Entity does not have component of type {}", TypeNameWithoutNamespace<Component>().Data());
 
         static const TypeId componentTypeId = TypeId::ForType<Component>();
 
         auto componentContainerIt = m_containers.Find(componentTypeId);
-        AssertThrowMsg(componentContainerIt != m_containers.End(), "Component container does not exist");
+        Assert(componentContainerIt != m_containers.End(), "Component container does not exist");
 
         HYP_MT_CHECK_READ(componentContainerIt->second->GetDataRaceDetector());
 
@@ -637,7 +637,7 @@ public:
         }
 
         auto componentContainerIt = m_containers.Find(componentTypeId);
-        AssertThrowMsg(componentContainerIt != m_containers.End(), "Component container does not exist");
+        Assert(componentContainerIt != m_containers.End(), "Component container does not exist");
 
         return componentContainerIt->second->TryGetComponent(*componentIdOpt);
     }
@@ -697,22 +697,22 @@ public:
     {
         EnsureValidComponentType<Component>();
 
-        AssertThrowMsg(entity, "Invalid entity");
+        Assert(entity, "Invalid entity");
 
         Threads::AssertOnThread(m_ownerThreadId);
 
         Handle<Entity> entityHandle = entity->HandleFromThis();
-        AssertThrow(entityHandle.IsValid());
+        Assert(entityHandle.IsValid());
 
         EntityData* entityData = m_entities.TryGetEntityData(entity);
-        AssertThrow(entityData != nullptr);
+        Assert(entityData != nullptr);
 
         Component* componentPtr = nullptr;
         TypeMap<ComponentId> componentIds;
 
         auto componentIt = entityData->FindComponent<Component>();
         // @TODO: Replace the component if it already exists
-        AssertThrowMsg(componentIt == entityData->components.End(), "Entity already has component of type %s", TypeNameWithoutNamespace<Component>().Data());
+        Assert(componentIt == entityData->components.End(), "Entity already has component of type {}", TypeNameWithoutNamespace<Component>().Data());
 
         static const TypeId componentTypeId = TypeId::ForType<Component>();
 
@@ -769,7 +769,7 @@ public:
         }
 
         Handle<Entity> entityHandle = entity->HandleFromThis();
-        AssertThrow(entityHandle.IsValid());
+        Assert(entityHandle.IsValid());
 
         Threads::AssertOnThread(m_ownerThreadId);
 
@@ -864,7 +864,7 @@ public:
                 entitySetTypeId,
                 MakeUnique<EntitySet<Components...>>(m_entities, GetContainer<Components>()...));
 
-            AssertThrow(entitySetsInsertResult.second); // Make sure the element was inserted (it shouldn't already exist)
+            Assert(entitySetsInsertResult.second); // Make sure the element was inserted (it shouldn't already exist)
 
             entitySetsIt = entitySetsInsertResult.first;
 
@@ -1002,16 +1002,12 @@ private:
     template <class Component>
     static void EnsureValidComponentType()
     {
-#ifdef HYP_DEBUG_MODE
-        AssertThrowMsg(IsValidComponentType<Component>(), "Invalid component type: %s", TypeName<Component>().Data());
-#endif
+        AssertDebug(IsValidComponentType<Component>(), "Invalid component type: {}", TypeName<Component>().Data());
     }
 
     static void EnsureValidComponentType(TypeId componentTypeId)
     {
-#ifdef HYP_DEBUG_MODE
-        AssertThrowMsg(IsValidComponentType(componentTypeId), "Invalid component type: TypeId(%u)", componentTypeId.Value());
-#endif
+        AssertDebug(IsValidComponentType(componentTypeId), "Invalid component type: TypeId({})", componentTypeId.Value());
     }
 
     template <uint32... Indices>
@@ -1028,8 +1024,8 @@ private:
 
     Handle<SystemBase> AddSystemToExecutionGroup(const Handle<SystemBase>& system)
     {
-        AssertThrow(system.IsValid());
-        AssertThrow(system->m_entityManager == nullptr || system->m_entityManager == this);
+        Assert(system.IsValid());
+        Assert(system->m_entityManager == nullptr || system->m_entityManager == this);
 
         bool wasAdded = false;
 

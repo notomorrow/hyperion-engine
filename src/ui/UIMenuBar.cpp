@@ -45,7 +45,7 @@ void UIMenuItem::Init()
     UIObject::Init();
 
     Handle<UIMenuBar> menuBar = GetClosestSpawnParent<UIMenuBar>();
-    AssertThrow(menuBar != nullptr);
+    Assert(menuBar != nullptr);
 
     Handle<UIImage> iconElement = CreateUIObject<UIImage>(CreateNameFromDynamicString(HYP_FORMAT("{}_Icon", GetName())), Vec2i { 0, 0 }, UIObjectSize({ 16, UIObjectSize::PIXEL }, { 16, UIObjectSize::PIXEL }));
     iconElement->SetParentAlignment(UIObjectAlignment::TOP_LEFT);
@@ -197,7 +197,7 @@ void UIMenuItem::SetText(const String& text)
 
 void UIMenuItem::UpdateDropDownMenu()
 {
-    AssertThrow(m_dropDownMenu != nullptr);
+    Assert(m_dropDownMenu != nullptr);
 
     m_dropDownMenu->RemoveAllChildUIObjects();
 
@@ -465,7 +465,7 @@ void UIMenuBar::SetDropDirection(UIMenuBarDropDirection dropDirection)
         if (m_selectedMenuItemIndex != ~0u)
         {
             UIMenuItem* selectedMenuItem = m_menuItems[m_selectedMenuItemIndex];
-            AssertThrow(selectedMenuItem != nullptr);
+            Assert(selectedMenuItem != nullptr);
 
             const Vec2i dropDownMenuPosition = GetDropDownMenuPosition(selectedMenuItem);
 
@@ -553,10 +553,10 @@ void UIMenuBar::AddChildUIObject(const Handle<UIObject>& uiObject)
             return child == uiObject;
         });
 
-    AssertThrow(uiObjectHandle.IsValid());
+    Assert(uiObjectHandle.IsValid());
 
     Handle<UIMenuItem> menuItem = ObjCast<UIMenuItem>(uiObjectHandle);
-    AssertThrow(menuItem.IsValid(), "Cast to UIMenuItem failed");
+    Assert(menuItem.IsValid(), "Cast to UIMenuItem failed");
 
     menuItem->SetSize(UIObjectSize({ 0, UIObjectSize::AUTO }, { 100, UIObjectSize::PERCENT }));
 
@@ -737,7 +737,7 @@ void UIMenuBar::UpdateMenuItemSizes()
 
 Vec2i UIMenuBar::GetDropDownMenuPosition(UIMenuItem* menuItem) const
 {
-    AssertThrow(menuItem != nullptr);
+    Assert(menuItem != nullptr);
     Vec2f absolutePosition = menuItem->GetAbsolutePosition();
 
     if (m_dropDirection == UIMenuBarDropDirection::DOWN)

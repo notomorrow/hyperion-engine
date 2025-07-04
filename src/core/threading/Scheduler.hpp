@@ -301,7 +301,7 @@ public:
     /*! \brief Wait until the given task has been executed (no longer in the queue). */
     virtual void Await(TaskID id) override
     {
-        AssertThrow(!Threads::IsOnThread(m_ownerThread));
+        HYP_CORE_ASSERT(!Threads::IsOnThread(m_ownerThread));
 
         std::unique_lock lock(m_mutex);
 
@@ -353,10 +353,10 @@ public:
 
     virtual bool TakeOwnershipOfTask(TaskID id, TaskExecutorBase* executor) override
     {
-        AssertThrow(!Threads::IsOnThread(m_ownerThread));
+        HYP_CORE_ASSERT(!Threads::IsOnThread(m_ownerThread));
 
-        AssertThrow(id.IsValid());
-        AssertThrow(executor != nullptr);
+        HYP_CORE_ASSERT(id.IsValid());
+        HYP_CORE_ASSERT(executor != nullptr);
 
         TaskExecutorBase* executorCasted = static_cast<TaskExecutorBase*>(executor);
 
@@ -372,7 +372,7 @@ public:
                 return item.executor->GetTaskID() == id;
             });
 
-        AssertThrow(it != m_queue.End());
+        HYP_CORE_ASSERT(it != m_queue.End());
 
         // if (it == m_queue.End()) {
         //     return false;
@@ -382,8 +382,8 @@ public:
 
         if (scheduledTask.ownsExecutor)
         {
-            AssertThrow(scheduledTask.executor != nullptr);
-            AssertThrow(scheduledTask.executor != executorCasted);
+            HYP_CORE_ASSERT(scheduledTask.executor != nullptr);
+            HYP_CORE_ASSERT(scheduledTask.executor != executorCasted);
 
             delete scheduledTask.executor;
         }
@@ -411,7 +411,7 @@ public:
     // template <class Container>
     // void AcceptNext(Container &outContainer)
     // {
-    //     AssertThrow(Threads::IsOnThread(m_ownerThread));
+    //     HYP_CORE_ASSERT(Threads::IsOnThread(m_ownerThread));
 
     //     std::unique_lock lock(m_mutex);
 
@@ -428,7 +428,7 @@ public:
     template <class Container>
     void AcceptAll(Container& outContainer)
     {
-        AssertThrow(Threads::IsOnThread(m_ownerThread));
+        HYP_CORE_ASSERT(Threads::IsOnThread(m_ownerThread));
 
         std::unique_lock lock(m_mutex);
 
@@ -451,7 +451,7 @@ public:
     template <class Container>
     bool WaitForTasks(Container& outContainer)
     {
-        AssertThrow(Threads::IsOnThread(m_ownerThread));
+        HYP_CORE_ASSERT(Threads::IsOnThread(m_ownerThread));
 
         std::unique_lock lock(m_mutex);
 
@@ -479,9 +479,9 @@ public:
     template <class Lambda>
     void Flush(Lambda&& lambda)
     {
-        AssertThrow(Threads::IsOnThread(m_ownerThread));
+        HYP_CORE_ASSERT(Threads::IsOnThread(m_ownerThread));
 
-        AssertThrowMsg(
+        HYP_CORE_ASSERT(
             !m_stopRequested.Get(MemoryOrder::RELAXED),
             "Scheduler::Flush() called after stop requested");
 

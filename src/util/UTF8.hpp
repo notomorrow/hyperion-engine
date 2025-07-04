@@ -57,14 +57,14 @@ inline std::vector<char> ToMultiByte(const wchar_t* wstr)
 #define HYP_UTF8_TOMULTIBYTE(str) (str)
 #endif
 
-#define HYP_UTF8_ASSERT(cond)    \
-    do                           \
-    {                            \
-        if (!HYP_UNLIKELY(cond)) \
-        {                        \
-            HYP_BREAKPOINT;      \
-        }                        \
-    }                            \
+#define HYP_UTF8_ASSERT(cond)      \
+    do                             \
+    {                              \
+        if (!HYP_UNLIKELY((cond))) \
+        {                          \
+            HYP_BREAKPOINT;        \
+        }                          \
+    }                              \
     while (0)
 
 #define HYP_UTF8_CHECK_BOUNDS(idx, max) \

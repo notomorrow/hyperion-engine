@@ -213,7 +213,7 @@ protected:
     UIDataSourceBase(UIElementFactoryBase* elementFactory)
         : m_elementFactory(elementFactory)
     {
-        // AssertThrowMsg(elementFactory != nullptr, "No element factory registered for the data source; unable to create UIObjects");
+        // Assert(elementFactory != nullptr, "No element factory registered for the data source; unable to create UIObjects");
     }
 
 public:
@@ -330,7 +330,7 @@ public:
                 m_elementTypeId.Value());
         }
 
-        // AssertThrowMsg(value.Is<T>(), "Cannot add object not of type %s to data source", TypeName<T>().Data())
+        // Assert(value.Is<T>(), "Cannot add object not of type %s to data source", TypeName<T>().Data())
         
         auto it = m_values.FindIf([&uuid](const auto& item)
             {
@@ -392,7 +392,7 @@ public:
             HYP_FAIL("Element with UUID %s not found", uuid.ToString().Data());
         }
 
-        // AssertThrowMsg(value.Is<T>(), "Cannot add object not of type %s to data source", TypeName<T>().Data());
+        // Assert(value.Is<T>(), "Cannot add object not of type %s to data source", TypeName<T>().Data());
 
         *it = UIDataSourceElement(uuid, std::move(value));
 

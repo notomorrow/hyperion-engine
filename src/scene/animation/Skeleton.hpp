@@ -46,14 +46,14 @@ struct SkeletonBoneData
 
     void SetMatrix(uint32 index, const Matrix4& matrix)
     {
-        AssertThrow(matrices && index < matrices->Size());
+        Assert(matrices && index < matrices->Size());
 
         (*matrices)[index] = matrix;
     }
 
     const Matrix4& GetMatrix(uint32 index)
     {
-        AssertThrow(matrices && index < matrices->Size());
+        Assert(matrices && index < matrices->Size());
 
         return (*matrices)[index];
     }

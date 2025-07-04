@@ -35,7 +35,7 @@ Object::Object(const RC<Class>& classPtr, ObjectReference objectReference, EnumF
 
     if (m_objectReference.weakHandle != nullptr)
     {
-        AssertThrowMsg(m_classPtr != nullptr, "Class pointer not set!");
+        Assert(m_classPtr != nullptr, "Class pointer not set!");
 
         if (!(m_objectFlags & ObjectFlags::CREATED_FROM_MANAGED))
         {
@@ -57,7 +57,7 @@ void Object::Reset()
 
     if (IsValid() && m_keepAlive.Get(MemoryOrder::ACQUIRE))
     {
-        AssertThrowMsg(SetKeepAlive(false), "Failed to set keep alive to false!");
+        Assert(SetKeepAlive(false), "Failed to set keep alive to false!");
     }
 
     m_classPtr.Reset();
@@ -69,7 +69,7 @@ void Object::Reset()
 
 void Object::InvokeMethod_Internal(const Method* methodPtr, const HypData** argsHypData, HypData* outReturnHypData)
 {
-    AssertThrow(IsValid());
+    Assert(IsValid());
 
 #ifdef HYP_DOTNET_OBJECT_KEEP_ASSEMBLY_ALIVE
     const RC<Assembly>& assembly = m_assembly;
@@ -77,7 +77,7 @@ void Object::InvokeMethod_Internal(const Method* methodPtr, const HypData** args
     RC<Assembly> assembly = m_assembly.Lock();
 #endif
 
-    AssertThrow(assembly != nullptr && assembly->IsLoaded());
+    Assert(assembly != nullptr && assembly->IsLoaded());
 
     methodPtr->Invoke(&m_objectReference, argsHypData, outReturnHypData);
 }

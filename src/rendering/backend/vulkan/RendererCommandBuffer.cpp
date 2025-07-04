@@ -31,7 +31,7 @@ VulkanCommandBuffer::VulkanCommandBuffer(CommandBufferType type)
 
 VulkanCommandBuffer::~VulkanCommandBuffer()
 {
-    AssertThrowMsg(m_handle == VK_NULL_HANDLE, "command buffer should have been destroyed");
+    HYP_GFX_ASSERT(m_handle == VK_NULL_HANDLE, "command buffer should have been destroyed");
 }
 
 bool VulkanCommandBuffer::IsCreated() const
@@ -43,7 +43,7 @@ RendererResult VulkanCommandBuffer::Create(VkCommandPool commandPool)
 {
     if (IsCreated())
     {
-        AssertThrowMsg(m_commandPool == commandPool, "Command buffer already created with a different command pool");
+        HYP_GFX_ASSERT(m_commandPool == commandPool, "Command buffer already created with a different command pool");
 
         HYPERION_RETURN_OK;
     }
@@ -55,7 +55,7 @@ RendererResult VulkanCommandBuffer::Create(VkCommandPool commandPool)
 
 RendererResult VulkanCommandBuffer::Create()
 {
-    AssertThrow(m_commandPool != VK_NULL_HANDLE);
+    HYP_GFX_ASSERT(m_commandPool != VK_NULL_HANDLE);
 
     VkCommandBufferLevel level;
 
@@ -87,7 +87,7 @@ RendererResult VulkanCommandBuffer::Destroy()
 {
     if (m_handle != VK_NULL_HANDLE)
     {
-        AssertThrow(m_commandPool != VK_NULL_HANDLE);
+        HYP_GFX_ASSERT(m_commandPool != VK_NULL_HANDLE);
 
         vkFreeCommandBuffers(GetRenderBackend()->GetDevice()->GetDevice(), m_commandPool, 1, &m_handle);
 
@@ -176,8 +176,8 @@ RendererResult VulkanCommandBuffer::SubmitPrimary(
     submitInfo.commandBufferCount = 1;
     submitInfo.pCommandBuffers = &m_handle;
 
-    AssertThrow(fence != nullptr);
-    AssertThrow(fence->GetVulkanHandle() != VK_NULL_HANDLE);
+    HYP_GFX_ASSERT(fence != nullptr);
+    HYP_GFX_ASSERT(fence->GetVulkanHandle() != VK_NULL_HANDLE);
 
     HYPERION_VK_CHECK_MSG(
         vkQueueSubmit(queue->queue, 1, &submitInfo, fence->GetVulkanHandle()),
@@ -198,8 +198,8 @@ RendererResult VulkanCommandBuffer::SubmitSecondary(VulkanCommandBuffer* primary
 
 void VulkanCommandBuffer::BindVertexBuffer(const GpuBufferBase* buffer)
 {
-    AssertThrow(buffer != nullptr);
-    AssertThrowMsg(buffer->GetBufferType() == GpuBufferType::MESH_VERTEX_BUFFER, "Not a vertex buffer! Got buffer type: %u", uint32(buffer->GetBufferType()));
+    HYP_GFX_ASSERT(buffer != nullptr);
+    HYP_GFX_ASSERT(buffer->GetBufferType() == GpuBufferType::MESH_VERTEX_BUFFER, "Not a vertex buffer! Got buffer type: %u", uint32(buffer->GetBufferType()));
 
     const VkBuffer vertexBuffers[] = { static_cast<const VulkanGpuBuffer*>(buffer)->GetVulkanHandle() };
     static const VkDeviceSize offsets[] = { 0 };
@@ -209,8 +209,8 @@ void VulkanCommandBuffer::BindVertexBuffer(const GpuBufferBase* buffer)
 
 void VulkanCommandBuffer::BindIndexBuffer(const GpuBufferBase* buffer, GpuElemType elemType)
 {
-    AssertThrow(buffer != nullptr);
-    AssertThrowMsg(buffer->GetBufferType() == GpuBufferType::MESH_INDEX_BUFFER, "Not an index buffer! Got buffer type: %u", uint32(buffer->GetBufferType()));
+    HYP_GFX_ASSERT(buffer != nullptr);
+    HYP_GFX_ASSERT(buffer->GetBufferType() == GpuBufferType::MESH_INDEX_BUFFER, "Not an index buffer! Got buffer type: %u", uint32(buffer->GetBufferType()));
 
     vkCmdBindIndexBuffer(
         m_handle,

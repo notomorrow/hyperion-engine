@@ -23,29 +23,35 @@ using namespace hyperion;
 extern "C"
 {
 
-    HYP_EXPORT bool EntityManager_HasComponent(EntityManager* manager, uint32 componentTypeId, Entity* entity)
+    HYP_EXPORT bool EntityManager_HasComponent(EntityManager* manager, uint32 componentTypeIdValue, Entity* entity)
     {
-        AssertThrow(manager != nullptr);
-        AssertThrow(entity != nullptr);
+        Assert(manager != nullptr);
+        Assert(entity != nullptr);
 
-        return manager->HasComponent(TypeId { componentTypeId }, entity);
+        const TypeId componentTypeId { componentTypeIdValue };
+
+        return manager->HasComponent(componentTypeId, entity);
     }
 
-    HYP_EXPORT void* EntityManager_GetComponent(EntityManager* manager, uint32 componentTypeId, Entity* entity)
+    HYP_EXPORT void* EntityManager_GetComponent(EntityManager* manager, uint32 componentTypeIdValue, Entity* entity)
     {
-        AssertThrow(manager != nullptr);
-        AssertThrow(entity != nullptr);
+        Assert(manager != nullptr);
+        Assert(entity != nullptr);
 
-        return manager->TryGetComponent(TypeId { componentTypeId }, entity).GetPointer();
+        const TypeId componentTypeId { componentTypeIdValue };
+
+        return manager->TryGetComponent(componentTypeId, entity).GetPointer();
     }
 
-    HYP_EXPORT void EntityManager_AddComponent(EntityManager* manager, Entity* entity, uint32 componentTypeId, HypData* componentHypData)
+    HYP_EXPORT void EntityManager_AddComponent(EntityManager* manager, Entity* entity, uint32 componentTypeIdValue, HypData* componentHypData)
     {
-        AssertThrow(manager != nullptr);
-        AssertThrow(entity != nullptr);
-        AssertThrow(componentHypData != nullptr);
+        Assert(manager != nullptr);
+        Assert(entity != nullptr);
+        Assert(componentHypData != nullptr);
 
-        AssertThrow(manager->IsValidComponentType(TypeId { componentTypeId }));
+        const TypeId componentTypeId { componentTypeIdValue };
+
+        Assert(manager->IsValidComponentType(componentTypeId));
 
         Handle<Entity> entityHandle = entity->HandleFromThis();
 
@@ -54,9 +60,9 @@ extern "C"
 
     HYP_EXPORT int8 EntityManager_AddTypedEntity(EntityManager* manager, const HypClass* hypClass, HypData* outHypData)
     {
-        AssertThrow(manager != nullptr);
-        AssertThrow(hypClass != nullptr);
-        AssertThrow(outHypData != nullptr);
+        Assert(manager != nullptr);
+        Assert(hypClass != nullptr);
+        Assert(outHypData != nullptr);
 
         Handle<Entity> entityHandle = manager->AddTypedEntity(hypClass);
 

@@ -207,11 +207,12 @@ public:
 
     /*! \brief Raw access of the character data of the string at index.
      * \note For UTF-8 Strings, the returned value may not be a valid UTF-8 character,
-     *      so in most cases, \ref{GetChar} should be used instead.
+     *  so in most cases, you'll want to use GetChar() instead.
+     *  Returns a reference so &str[0] can be used for backwards compatibility
      *
      * \ref{index} must be less than \ref{Size()}.
      */
-    const CharType operator[](SizeType index) const;
+    const CharType& operator[](SizeType index) const;
 
     /*! \brief Get a char from the String at the given index.
      * For UTF-8 strings, the character is encoded as a 32-bit value.
@@ -596,9 +597,7 @@ public:
                     utf::u8char separatorBytes[sizeof(utf::u32char) + 1] = { '\0' };
                     utf::Char32to8(separator, separatorBytes, codepoints);
 
-#ifdef HYP_DEBUG_MODE
-                    AssertThrow(codepoints <= HYP_ARRAY_SIZE(separatorBytes));
-#endif
+                    HYP_CORE_ASSERT(codepoints <= HYP_ARRAY_SIZE(separatorBytes));
 
                     for (SizeType codepoint = 0; codepoint < codepoints; codepoint++)
                     {
@@ -634,9 +633,7 @@ public:
                     utf::u8char separatorBytes[sizeof(utf::u32char) + 1] = { '\0' };
                     utf::Char32to8(separator, separatorBytes, codepoints);
 
-#ifdef HYP_DEBUG_MODE
-                    AssertThrow(codepoints <= HYP_ARRAY_SIZE(separatorBytes));
-#endif
+                    HYP_CORE_ASSERT(codepoints <= HYP_ARRAY_SIZE(separatorBytes));
 
                     for (SizeType codepoint = 0; codepoint < codepoints; codepoint++)
                     {
@@ -879,7 +876,7 @@ public:
         SizeType resultSize;
         utf::utfToStr<Integral, CharType>(value, resultSize, nullptr);
 
-        AssertThrow(resultSize >= 1);
+        HYP_CORE_ASSERT(resultSize >= 1);
 
         String result;
         result.Reserve(resultSize - 1); // String class automatically adds 1 for null character
@@ -1029,9 +1026,7 @@ String<TStringType>::String(ConstByteView byteView)
     for (SizeType index = 0; index < size; ++index)
     {
 
-#ifdef HYP_DEBUG_MODE
-        AssertThrowMsg(byteView.Data()[index] >= 0 && byteView.Data()[index] <= 255, "Out of character range");
-#endif
+        HYP_CORE_ASSERT(byteView.Data()[index] >= 0 && byteView.Data()[index] <= 255, "Out of character range");
 
         if (byteView.Data()[index] == '\0')
         {
@@ -1216,7 +1211,7 @@ bool String<TStringType>::operator<(const String& other) const
 }
 
 template <int TStringType>
-auto String<TStringType>::operator[](SizeType index) const -> const CharType
+auto String<TStringType>::operator[](SizeType index) const -> const CharType&
 {
     return Base::operator[](index);
 }
@@ -1227,7 +1222,7 @@ auto String<TStringType>::GetChar(SizeType index) const -> WidestCharType
     const SizeType size = Size();
 
 #ifdef HYP_DEBUG_MODE
-    AssertThrow(index < size);
+    HYP_CORE_ASSERT(index < size);
 #endif
 
     if constexpr (isUtf8)
@@ -1313,7 +1308,7 @@ auto String<TStringType>::PopFront() -> typename Base::ValueType
 template <int TStringType>
 auto String<TStringType>::PopBack() -> typename Base::ValueType
 {
-    AssertDebugMsg(Base::m_size > 1, "Cannot pop back from an empty string");
+    HYP_CORE_ASSERT(Base::m_size > 1, "Cannot pop back from an empty string");
 
     CharType lastChar = 0;
     std::swap(Base::GetBuffer()[Base::m_size - 2], lastChar); // -2 because we want the last character before the null terminator

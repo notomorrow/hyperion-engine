@@ -58,7 +58,7 @@ public:
     /*! \brief Add a thread to the map. Returns false if the thread is already in the map. Returns true on success. */
     bool Add(ThreadBase* thread)
     {
-        AssertThrow(thread != nullptr);
+        HYP_CORE_ASSERT(thread != nullptr);
 
         Mutex::Guard guard(m_mutex);
 
@@ -131,8 +131,8 @@ void Threads::SetCurrentThreadId(const ThreadId& id)
 
 void Threads::RegisterThread(const ThreadId& id, ThreadBase* thread)
 {
-    AssertThrow(id.IsValid());
-    AssertThrow(thread != nullptr);
+    HYP_CORE_ASSERT(id.IsValid());
+    HYP_CORE_ASSERT(thread != nullptr);
 
     bool success = false;
 
@@ -145,7 +145,7 @@ void Threads::RegisterThread(const ThreadId& id, ThreadBase* thread)
         success = g_staticThreadMap.Add(thread);
     }
 
-    AssertThrowMsg(success, "Thread %u (%s) could not be registered",
+    HYP_CORE_ASSERT(success, "Thread %u (%s) could not be registered",
         id.GetValue(), *id.GetName());
 }
 
@@ -207,9 +207,9 @@ ThreadBase* Threads::CurrentThreadObject()
 
 void Threads::SetCurrentThreadObject(ThreadBase* thread)
 {
-    AssertThrow(thread != nullptr);
+    HYP_CORE_ASSERT(thread != nullptr);
 
-    AssertThrowMsg(IsThreadRegistered(thread->Id()), "Thread %u (%s) is not registered",
+    HYP_CORE_ASSERT(IsThreadRegistered(thread->Id()), "Thread %u (%s) is not registered",
         thread->Id().GetValue(), *thread->Id().GetName());
 
     g_currentThread = thread;
@@ -224,7 +224,7 @@ void Threads::AssertOnThread(ThreadMask mask, const char* message)
 #ifdef HYP_ENABLE_THREAD_ID
     thread_local const ThreadId& currentThreadId = CurrentThreadId();
 
-    AssertThrowMsg(
+    HYP_CORE_ASSERT(
         mask & currentThreadId.GetMask(),
         "Expected current thread to be in mask %u, but got %u (%s). Message: %s",
         mask,
@@ -244,7 +244,7 @@ void Threads::AssertOnThread(const ThreadId& threadId, const char* message)
 #ifdef HYP_ENABLE_THREAD_ID
     thread_local const ThreadId& currentThreadId = CurrentThreadId();
 
-    AssertThrowMsg(
+    HYP_CORE_ASSERT(
         threadId == currentThreadId,
         "Expected current thread to be %s, but got %s. Message: %s",
         threadId.GetName().LookupString(),

@@ -211,21 +211,21 @@ public:
 
     HYP_FORCE_INLINE T& GetValue() &
     {
-        AssertThrowMsg(HasValue(), "Result does not contain a value");
+        HYP_CORE_ASSERT(HasValue(), "Result does not contain a value");
 
         return m_value.template GetUnchecked<T>();
     }
 
     HYP_FORCE_INLINE const T& GetValue() const&
     {
-        AssertThrowMsg(HasValue(), "Result does not contain a value");
+        HYP_CORE_ASSERT(HasValue(), "Result does not contain a value");
 
         return m_value.template GetUnchecked<T>();
     }
 
     HYP_FORCE_INLINE T GetValue() &&
     {
-        AssertThrowMsg(HasValue(), "Result does not contain a value");
+        HYP_CORE_ASSERT(HasValue(), "Result does not contain a value");
 
         return std::move(m_value).template GetUnchecked<T>();
     }

@@ -49,8 +49,8 @@ public:
 
     void RegisterNotifier(StreamingNotifier* notifier)
     {
-        AssertThrow(notifier != nullptr);
-        AssertThrow(!m_notifiers.Contains(notifier));
+        Assert(notifier != nullptr);
+        Assert(!m_notifiers.Contains(notifier));
 
         m_notifiers.PushBack(notifier);
     }

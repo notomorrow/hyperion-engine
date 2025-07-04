@@ -27,7 +27,7 @@ EditorDebugOverlayBase::~EditorDebugOverlayBase()
 void EditorDebugOverlayBase::Initialize(UIObject* spawnParent)
 {
     Threads::AssertOnThread(g_gameThread);
-    AssertThrow(spawnParent != nullptr);
+    Assert(spawnParent != nullptr);
 
     m_uiObject = CreateUIObject(spawnParent);
 }

@@ -61,7 +61,7 @@ VulkanSwapchain::VulkanSwapchain()
 
 VulkanSwapchain::~VulkanSwapchain()
 {
-    AssertThrow(m_handle == VK_NULL_HANDLE);
+    HYP_GFX_ASSERT(m_handle == VK_NULL_HANDLE);
 }
 
 bool VulkanSwapchain::IsCreated() const
@@ -109,8 +109,8 @@ RendererResult VulkanSwapchain::PresentFrame(VulkanDeviceQueue* queue) const
 #ifdef HYP_DEBUG_MODE
     for (const ImageRef& image : m_images)
     {
-        AssertThrow(image.IsValid());
-        AssertThrow(image->GetResourceState() == RS_PRESENT);
+        HYP_GFX_ASSERT(image.IsValid());
+        HYP_GFX_ASSERT(image->GetResourceState() == RS_PRESENT);
     }
 #endif
 
@@ -207,7 +207,7 @@ RendererResult VulkanSwapchain::Create()
 
     for (const ImageRef& image : m_images)
     {
-        AssertThrow(image != nullptr);
+        HYP_GFX_ASSERT(image != nullptr);
 
         if (!image->IsCreated())
         {
@@ -231,7 +231,7 @@ RendererResult VulkanSwapchain::Create()
     for (uint32 i = 0; i < m_frames.Size(); i++)
     {
         VkCommandPool pool = queue->commandPools[0];
-        AssertThrow(pool != VK_NULL_HANDLE);
+        HYP_GFX_ASSERT(pool != VK_NULL_HANDLE);
 
         VulkanCommandBufferRef commandBuffer = MakeRenderObject<VulkanCommandBuffer>(CommandBufferType::COMMAND_BUFFER_PRIMARY);
         HYPERION_BUBBLE_ERRORS(commandBuffer->Create(pool));
@@ -363,7 +363,7 @@ RendererResult VulkanSwapchain::RetrieveImageHandles()
         {
             for (const ImageRef& image : m_images)
             {
-                AssertThrow(image.IsValid());
+                HYP_GFX_ASSERT(image.IsValid());
 
                 cmd.Add<InsertBarrier>(image, RS_PRESENT);
             }
@@ -374,8 +374,8 @@ RendererResult VulkanSwapchain::RetrieveImageHandles()
     // Ensure all images are in the PRESENT state
     for (const ImageRef& image : m_images)
     {
-        AssertThrow(image.IsValid());
-        AssertThrow(image->GetResourceState() == RS_PRESENT);
+        HYP_GFX_ASSERT(image.IsValid());
+        HYP_GFX_ASSERT(image->GetResourceState() == RS_PRESENT);
     }
 
     HYP_LOG(RenderingBackend, Info, "Created swapchain with {} images", m_images.Size());

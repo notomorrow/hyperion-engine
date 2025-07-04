@@ -68,13 +68,13 @@ struct VulkanAttachmentMap
 
     HYP_FORCE_INLINE VulkanAttachmentRef AddAttachment(const VulkanAttachmentRef& attachment)
     {
-        AssertThrow(attachment.IsValid());
-        AssertThrow(attachment->GetImage().IsValid());
+        Assert(attachment.IsValid());
+        Assert(attachment->GetImage().IsValid());
 
-        AssertThrowMsg(attachment->HasBinding(), "Attachment must have a binding");
+        Assert(attachment->HasBinding(), "Attachment must have a binding");
 
         const uint32 binding = attachment->GetBinding();
-        AssertThrowMsg(!attachments.Contains(binding), "Attachment already exists at binding: %u", binding);
+        Assert(!attachments.Contains(binding), "Attachment already exists at binding: {}", binding);
 
         attachments.Set(
             binding,

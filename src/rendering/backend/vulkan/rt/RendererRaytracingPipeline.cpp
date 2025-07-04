@@ -51,7 +51,7 @@ RendererResult VulkanRaytracingPipeline::Create()
         return HYP_MAKE_ERROR(RendererError, "Raytracing is not supported on this device");
     }
 
-    AssertThrow(m_shader != nullptr);
+    HYP_GFX_ASSERT(m_shader != nullptr);
 
     RendererResult result;
 
@@ -241,7 +241,7 @@ RendererResult VulkanRaytracingPipeline::CreateShaderBindingTables(VulkanShader*
 
 #undef SHADER_PRESENT_IN_GROUP
 
-        AssertThrow(shaderCount != 0);
+        HYP_GFX_ASSERT(shaderCount != 0);
 
         HYPERION_PASS_ERRORS(
             CreateShaderBindingTableEntry(
@@ -298,7 +298,7 @@ RendererResult VulkanRaytracingPipeline::CreateShaderBindingTableEntry(
 {
     const auto& properties = GetRenderBackend()->GetDevice()->GetFeatures().GetRaytracingPipelineProperties();
 
-    AssertThrow(properties.shaderGroupHandleSize != 0);
+    HYP_GFX_ASSERT(properties.shaderGroupHandleSize != 0);
 
     if (numShaders == 0)
     {

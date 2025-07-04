@@ -70,7 +70,11 @@ public:
         }
         else
         {
-            AssertThrow(m_errorSuppressionDepth > 0);
+            if (m_errorSuppressionDepth <= 0)
+            {
+                return;
+            }
+
             m_errorSuppressionDepth--;
         }
     }

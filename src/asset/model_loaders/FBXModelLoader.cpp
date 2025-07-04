@@ -637,7 +637,7 @@ static bool GetFBXObjectInMapping(FlatMap<FBXObjectID, FBXNodeMapping>& mapping,
 
 // static void AddSkeletonToEntities(const Handle<Skeleton> &skeleton, Node *fbxNode)
 // {
-//     AssertThrow(fbxNode != nullptr);
+//     Assert(fbxNode != nullptr);
 
 //     if (Handle<Entity> &entity = fbxNode->GetEntity()) {
 //         entity->SetSkeleton(skeleton);
@@ -654,7 +654,7 @@ static bool GetFBXObjectInMapping(FlatMap<FBXObjectID, FBXNodeMapping>& mapping,
 
 AssetLoadResult FBXModelLoader::LoadAsset(LoaderState& state) const
 {
-    AssertThrow(state.assetManager != nullptr);
+    Assert(state.assetManager != nullptr);
 
     Handle<Node> top = CreateObject<Node>();
     Handle<Skeleton> rootSkeleton = CreateObject<Skeleton>();
@@ -1447,7 +1447,7 @@ AssetLoadResult FBXModelLoader::LoadAsset(LoaderState& state) const
     buildNodes = [&](FBXNode::Type type, FBXNode& fbxNode, Node* parentNode)
     {
 #if 0 // temporarily disabled due to 'Internal Server Error' on MSW
-        AssertThrow(parentNode != nullptr);
+        Assert(parentNode != nullptr);
 
         if (fbxNode.type != type) {
             return;

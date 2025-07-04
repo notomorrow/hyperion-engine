@@ -84,7 +84,7 @@ public:
         : m_componentFactory(std::move(componentFactory)),
           m_componentContainerFactory(componentContainerFactory)
     {
-        AssertThrowMsg(::hyperion::GetClass(TypeId::ForType<Component>()) != nullptr, "No HypClass registered for Component of type %s", TypeName<Component>().Data());
+        Assert(::hyperion::GetClass(TypeId::ForType<Component>()) != nullptr, "No HypClass registered for Component of type {}", TypeName<Component>().Data());
     }
 
     ComponentInterface(const ComponentInterface&) = delete;
@@ -263,7 +263,7 @@ public:
 
     const IComponentInterface* GetComponentInterface(TypeId typeId) const
     {
-        AssertThrowMsg(m_isInitialized, "Component interface registry not initialized!");
+        Assert(m_isInitialized, "Component interface registry not initialized!");
 
         auto it = m_interfaces.Find(typeId);
 
@@ -277,7 +277,7 @@ public:
 
     Array<const IComponentInterface*> GetComponentInterfaces() const
     {
-        AssertThrowMsg(m_isInitialized, "Component interface registry not initialized!");
+        Assert(m_isInitialized, "Component interface registry not initialized!");
 
         Array<const IComponentInterface*> interfaces;
         interfaces.Resize(m_interfaces.Size());
@@ -294,7 +294,7 @@ public:
 
     const IComponentInterface* GetEntityTagComponentInterface(EntityTag tag) const
     {
-        AssertThrowMsg(m_isInitialized, "Component interface registry not initialized!");
+        Assert(m_isInitialized, "Component interface registry not initialized!");
 
         for (auto it = m_interfaces.Begin(); it != m_interfaces.End(); ++it)
         {

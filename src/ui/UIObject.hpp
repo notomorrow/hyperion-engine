@@ -40,7 +40,7 @@ class UIDataSource;
 template <class UIStageType>
 static inline Scene* GetScene(UIStageType* stage)
 {
-    AssertThrow(stage != nullptr);
+    Assert(stage != nullptr);
 
     return stage->GetScene().Get();
 }
@@ -450,7 +450,7 @@ struct UIObjectSpawnContext
     {
         static_assert(std::is_base_of_v<UIObject, UIObjectType>, "UIObjectType must be a subclass of UIObject");
 
-        AssertThrow(spawnParent != nullptr);
+        Assert(spawnParent != nullptr);
     }
 
     UIObjectSpawnContext(const Handle<UIObjectType>& spawnParent)
@@ -458,7 +458,7 @@ struct UIObjectSpawnContext
     {
         static_assert(std::is_base_of_v<UIObject, UIObjectType>, "UIObjectType must be a subclass of UIObject");
 
-        AssertThrow(spawnParent != nullptr);
+        Assert(spawnParent != nullptr);
     }
 
     UIObjectSpawnContext(const UIObjectSpawnContext& other) = delete;
@@ -1165,7 +1165,7 @@ public:
     {
         AssertOnOwnerThread();
 
-        AssertThrow(GetNode().IsValid());
+        Assert(GetNode().IsValid());
 
         if (!name.IsValid())
         {
@@ -1188,7 +1188,7 @@ public:
         InitObject(uiObject);
 
         Handle<T> result = ObjCast<T>(uiObject);
-        AssertThrow(result.IsValid(), "Failed to cast created UIObject to the requested type");
+        Assert(result.IsValid(), "Failed to cast created UIObject to the requested type");
 
         return result;
     }
@@ -1421,7 +1421,7 @@ private:
     template <class T>
     Handle<UIObject> CreateUIObjectInternal(Name name, Handle<Node>& node, bool init = false)
     {
-        AssertThrow(node.IsValid());
+        Assert(node.IsValid());
 
         static_assert(std::is_base_of_v<UIObject, T>, "T must be a derived class of UIObject");
 

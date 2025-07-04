@@ -190,7 +190,7 @@ void ScriptSystem::OnEntityAdded(Entity* entity)
             }
 
             dotnet::Object* object = classPtr->NewObject();
-            AssertThrow(object != nullptr);
+            Assert(object != nullptr);
 
             scriptComponent.resource = AllocateResource<ManagedObjectResource>(object, classPtr);
             scriptComponent.resource->IncRef();

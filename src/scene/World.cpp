@@ -97,7 +97,7 @@ World::~World()
         for (auto& it : m_subsystems)
         {
             const Handle<Subsystem>& subsystem = it.second;
-            AssertThrow(subsystem.IsValid());
+            Assert(subsystem.IsValid());
 
             it.second->OnRemovedFromWorld();
         }
@@ -182,7 +182,7 @@ void World::Init()
     for (auto& it : m_subsystems)
     {
         const Handle<Subsystem>& subsystem = it.second;
-        AssertThrow(subsystem.IsValid());
+        Assert(subsystem.IsValid());
 
         InitObject(subsystem);
 
@@ -316,8 +316,8 @@ void World::Update(float delta)
         }
 
         // sanity checks
-        AssertThrow(scene->GetWorld() == this);
-        AssertThrow(!(scene->GetFlags() & SceneFlags::DETACHED));
+        Assert(scene->GetWorld() == this);
+        Assert(!(scene->GetFlags() & SceneFlags::DETACHED));
 
         scene->Update(delta);
 
@@ -348,7 +348,7 @@ void World::Update(float delta)
         HYP_NAMED_SCOPE("Per-view entity collection");
 
         const Handle<View>& view = m_views[index];
-        AssertThrow(view.IsValid());
+        Assert(view.IsValid());
 
         // View must be updated on the game thread as it mutates the scene's octree state
         view->UpdateVisibility();
@@ -387,13 +387,13 @@ Handle<Subsystem> World::AddSubsystem(TypeId typeId, const Handle<Subsystem>& su
     subsystem->SetWorld(this);
 
     const auto it = m_subsystems.Find(typeId);
-    AssertThrowMsg(it == m_subsystems.End(), "Subsystem of type %s already exists in World", *subsystem->InstanceClass()->GetName());
+    Assert(it == m_subsystems.End(), "Subsystem of type %s already exists in World", *subsystem->InstanceClass()->GetName());
 
     auto insertResult = m_subsystems.Set(typeId, subsystem);
 
     // Create a new Handle, calling OnAddedToWorld() may add new subsystems which would invalidate the iterator
     Handle<Subsystem> newSubsystem = insertResult.first->second;
-    AssertThrow(newSubsystem.IsValid());
+    Assert(newSubsystem.IsValid());
 
     // If World is already initialized, initialize the subsystem
     // otherwise, it will be initialized when World::Init() is called
@@ -474,7 +474,7 @@ bool World::RemoveSubsystem(Subsystem* subsystem)
         return false;
     }
 
-    AssertThrow(it->second.Get() == subsystem);
+    Assert(it->second.Get() == subsystem);
 
     if (IsReady())
     {

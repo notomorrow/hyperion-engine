@@ -82,7 +82,7 @@ public:
      */
     HYP_FORCE_INLINE HashCode GetEntryListHash(uint32 entityTagMask) const
     {
-        AssertThrow(entityTagMask < m_entryHashes.Size());
+        Assert(entityTagMask < m_entryHashes.Size());
 
         return HashCode(m_entryHashes[entityTagMask])
             .Add(m_invalidationMarker);

@@ -23,7 +23,7 @@ namespace hyperion {
 HypObjectInitializerGuardBase::HypObjectInitializerGuardBase(HypObjectPtr ptr)
     : ptr(ptr)
 {
-    AssertThrow(ptr.IsValid());
+    HYP_CORE_ASSERT(ptr.IsValid());
 
 #ifdef HYP_DEBUG_MODE
     initializerThreadId = Threads::CurrentThreadId();
@@ -74,13 +74,12 @@ HypObjectBase::HypObjectBase()
     : m_initState(INIT_STATE_UNINITIALIZED)
 {
     HypObjectInitializerContext* context = GetGlobalContext<HypObjectInitializerContext>();
-    AssertThrow(context != nullptr);
+    HYP_CORE_ASSERT(context != nullptr);
 
     const SizeType size = context->hypClass->GetSize();
-    AssertDebug(size > 0);
-
     const SizeType alignment = context->hypClass->GetAlignment();
-    AssertDebug(alignment > 0);
+
+    HYP_CORE_ASSERT(size != 0 && alignment != 0);
 
     const SizeType headerOffset = ((sizeof(HypObjectHeader) + alignment - 1) / alignment) * alignment;
 
@@ -90,7 +89,7 @@ HypObjectBase::HypObjectBase()
 
 HypObjectBase::~HypObjectBase()
 {
-    AssertDebug(m_header != nullptr);
+    HYP_CORE_ASSERT(m_header != nullptr);
     m_header->DecRefWeak();
 }
 
@@ -106,7 +105,7 @@ HYP_API uint32 HypObjectPtr::GetRefCount_Strong() const
     }
 
     IHypObjectInitializer* initializer = m_hypClass->GetObjectInitializer(m_ptr);
-    AssertDebug(initializer != nullptr);
+    HYP_CORE_ASSERT(initializer != nullptr);
 
     return initializer->GetRefCount_Strong(m_ptr);
 }
@@ -119,27 +118,27 @@ HYP_API uint32 HypObjectPtr::GetRefCount_Weak() const
     }
 
     IHypObjectInitializer* initializer = m_hypClass->GetObjectInitializer(m_ptr);
-    AssertDebug(initializer != nullptr);
+    HYP_CORE_ASSERT(initializer != nullptr);
 
     return initializer->GetRefCount_Weak(m_ptr);
 }
 
 HYP_API void HypObjectPtr::IncRef(bool weak)
 {
-    AssertDebug(IsValid());
+    HYP_CORE_ASSERT(IsValid());
 
     IHypObjectInitializer* initializer = m_hypClass->GetObjectInitializer(m_ptr);
-    AssertDebug(initializer != nullptr);
+    HYP_CORE_ASSERT(initializer != nullptr);
 
     initializer->IncRef(m_ptr, weak);
 }
 
 HYP_API void HypObjectPtr::DecRef(bool weak)
 {
-    AssertDebug(IsValid());
+    HYP_CORE_ASSERT(IsValid());
 
     IHypObjectInitializer* initializer = m_hypClass->GetObjectInitializer(m_ptr);
-    AssertDebug(initializer != nullptr);
+    HYP_CORE_ASSERT(initializer != nullptr);
 
     initializer->DecRef(m_ptr, weak);
 }
@@ -157,15 +156,15 @@ HYP_API IHypObjectInitializer* HypObjectPtr::GetObjectInitializer() const
 HYP_API const HypClass* HypObjectPtr::GetHypClass(TypeId typeId) const
 {
     const HypClass* hypClass = ::hyperion::GetClass(typeId);
-    AssertThrow(hypClass != nullptr);
+    HYP_CORE_ASSERT(hypClass != nullptr);
 
     if (m_ptr != nullptr)
     {
         const IHypObjectInitializer* initializer = hypClass->GetObjectInitializer(m_ptr);
-        AssertThrow(initializer != nullptr);
+        HYP_CORE_ASSERT(initializer != nullptr);
 
         hypClass = initializer->GetClass();
-        AssertThrow(hypClass != nullptr);
+        HYP_CORE_ASSERT(hypClass != nullptr);
     }
 
     return hypClass;
@@ -179,17 +178,17 @@ DynamicHypObjectInitializer::DynamicHypObjectInitializer(const HypClass* hypClas
     : m_hypClass(hypClass),
       m_parentInitializer(parentInitializer)
 {
-    AssertThrow(hypClass != nullptr);
-    AssertThrow(hypClass->IsDynamic());
+    HYP_CORE_ASSERT(hypClass != nullptr);
+    HYP_CORE_ASSERT(hypClass->IsDynamic());
 
-    AssertThrowMsg(hypClass->IsReferenceCounted(),
+    HYP_CORE_ASSERT(hypClass->IsReferenceCounted(),
         "DynamicHypObjectInitializer: HypClass is not reference counted. Class: %s"
         "\n\tDynamic HypClass types must be reference counted to ensure proper cleanup and deletion of allocations.",
         *hypClass->GetName());
 
-    AssertThrow(parentInitializer != nullptr);
+    HYP_CORE_ASSERT(parentInitializer != nullptr);
 
-    AssertThrowMsg(parentInitializer->GetClass() == hypClass->GetParent(),
+    HYP_CORE_ASSERT(parentInitializer->GetClass() == hypClass->GetParent(),
         "DynamicHypObjectInitializer: Parent initializer class does not match hyp_class parent class. Parent initializer class: %s, hyp_class parent class: %s",
         *parentInitializer->GetClass()->GetName(), *hypClass->GetParent()->GetName());
 }
@@ -224,7 +223,7 @@ HYP_API void FixupObjectInitializerPointer(void* target, IHypObjectInitializer* 
         // This ensures we can properly delete the dynamic initializers up the chain, when the reference count goes to 0.
         if (parentHypClass && parentHypClass->IsDynamic())
         {
-            AssertThrowMsg(hypClass->IsDynamic(),
+            HYP_CORE_ASSERT(hypClass->IsDynamic(),
                 "Found a dynamic initializer in the chain, but the current initializer is not dynamic. Only dynamic initializers are allowed proceeding a dynamic initializer.\n\tCurrent initializer class: %s, next initializer class: %s",
                 *hypClass->GetName(), *parentHypClass->GetName());
         }

@@ -159,15 +159,15 @@ VulkanAccelerationStructureBase::VulkanAccelerationStructureBase(const Matrix4& 
 
 VulkanAccelerationStructureBase::~VulkanAccelerationStructureBase()
 {
-    AssertThrowMsg(
+    HYP_GFX_ASSERT(
         m_accelerationStructure == VK_NULL_HANDLE,
         "Expected acceleration structure to have been destroyed before destructor call");
 
-    AssertThrowMsg(
+    HYP_GFX_ASSERT(
         m_buffer == nullptr,
         "Acceleration structure buffer should have been destroyed before destructor call");
 
-    AssertThrowMsg(
+    HYP_GFX_ASSERT(
         m_scratchBuffer == nullptr,
         "Scratch buffer should have been destroyed before destructor call");
 }
@@ -181,14 +181,14 @@ RendererResult VulkanAccelerationStructureBase::CreateAccelerationStructure(
 {
     if (update)
     {
-        AssertThrow(m_accelerationStructure != VK_NULL_HANDLE);
+        HYP_GFX_ASSERT(m_accelerationStructure != VK_NULL_HANDLE);
 
         // TEMP: we should have two TLASes and two RT descriptor sets I suppose...
         // HYPERION_BUBBLE_ERRORS(instance->GetDevice()->Wait());
     }
     else
     {
-        AssertThrow(m_accelerationStructure == VK_NULL_HANDLE);
+        HYP_GFX_ASSERT(m_accelerationStructure == VK_NULL_HANDLE);
     }
 
     if (!GetRenderBackend()->GetDevice()->GetFeatures().IsRaytracingSupported())
@@ -210,7 +210,7 @@ RendererResult VulkanAccelerationStructureBase::CreateAccelerationStructure(
     geometryInfo.geometryCount = uint32(geometries.size());
     geometryInfo.pGeometries = geometries.data();
 
-    AssertThrow(primitiveCounts.size() == geometries.size());
+    HYP_GFX_ASSERT(primitiveCounts.size() == geometries.size());
 
     VkAccelerationStructureBuildSizesInfoKHR buildSizesInfo { VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR };
     GetRenderBackend()->GetDevice()->GetFeatures().dynFunctions.vkGetAccelerationStructureBuildSizesKHR(
@@ -271,7 +271,7 @@ RendererResult VulkanAccelerationStructureBase::CreateAccelerationStructure(
             buildScratchSize = MathUtil::NextMultiple(buildSizesInfo.buildScratchSize, scratchBufferAlignment);
             updateScratchSize = MathUtil::NextMultiple(buildSizesInfo.updateScratchSize, scratchBufferAlignment);
 
-            AssertThrow(m_buffer->Size() >= accelerationStructureSize);
+            HYP_GFX_ASSERT(m_buffer->Size() >= accelerationStructureSize);
         }
 
         // to be sure it's zeroed out
@@ -298,7 +298,7 @@ RendererResult VulkanAccelerationStructureBase::CreateAccelerationStructure(
         }
     }
 
-    AssertThrow(m_accelerationStructure != VK_NULL_HANDLE);
+    HYP_GFX_ASSERT(m_accelerationStructure != VK_NULL_HANDLE);
 
     VkAccelerationStructureDeviceAddressInfoKHR addressInfo { VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_DEVICE_ADDRESS_INFO_KHR };
     addressInfo.accelerationStructure = m_accelerationStructure;
@@ -447,11 +447,11 @@ VulkanTLAS::VulkanTLAS()
 
 VulkanTLAS::~VulkanTLAS()
 {
-    AssertThrowMsg(
+    HYP_GFX_ASSERT(
         m_instancesBuffer == nullptr,
         "Instances buffer should have been destroyed before destructor call");
 
-    AssertThrowMsg(m_accelerationStructure == VK_NULL_HANDLE, "Acceleration structure should have been destroyed before destructor call");
+    HYP_GFX_ASSERT(m_accelerationStructure == VK_NULL_HANDLE, "Acceleration structure should have been destroyed before destructor call");
 }
 
 std::vector<VkAccelerationStructureGeometryKHR> VulkanTLAS::GetGeometries() const
@@ -475,7 +475,7 @@ std::vector<uint32> VulkanTLAS::GetPrimitiveCounts() const
 
 RendererResult VulkanTLAS::Create()
 {
-    AssertThrow(m_accelerationStructure == VK_NULL_HANDLE);
+    HYP_GFX_ASSERT(m_accelerationStructure == VK_NULL_HANDLE);
 
     if (m_blas.Empty())
     {
@@ -504,7 +504,7 @@ RendererResult VulkanTLAS::Create()
         return result;
     }
 
-    AssertThrow(updateStateFlags & RT_UPDATE_STATE_FLAGS_UPDATE_ACCELERATION_STRUCTURE);
+    HYP_GFX_ASSERT(updateStateFlags & RT_UPDATE_STATE_FLAGS_UPDATE_ACCELERATION_STRUCTURE);
 
     HYPERION_PASS_ERRORS(
         CreateMeshDescriptionsBuffer(),
@@ -533,17 +533,17 @@ RendererResult VulkanTLAS::Destroy()
 
 void VulkanTLAS::AddBLAS(const BLASRef& blas)
 {
-    AssertThrow(blas != nullptr);
+    HYP_GFX_ASSERT(blas != nullptr);
 
     VulkanBLASRef vulkanBlas { blas };
 
-    AssertThrow(!vulkanBlas->GetGeometries().Empty());
+    HYP_GFX_ASSERT(!vulkanBlas->GetGeometries().Empty());
 
     for (const auto& geometry : vulkanBlas->GetGeometries())
     {
-        AssertThrow(geometry != nullptr);
-        AssertThrow(geometry->GetPackedVerticesBuffer() != nullptr);
-        AssertThrow(geometry->GetPackedIndicesBuffer() != nullptr);
+        HYP_GFX_ASSERT(geometry != nullptr);
+        HYP_GFX_ASSERT(geometry->GetPackedVerticesBuffer() != nullptr);
+        HYP_GFX_ASSERT(geometry->GetPackedIndicesBuffer() != nullptr);
     }
 
     m_blas.PushBack(std::move(vulkanBlas));
@@ -573,7 +573,7 @@ RendererResult VulkanTLAS::CreateOrRebuildInstancesBuffer()
     for (SizeType i = 0; i < m_blas.Size(); i++)
     {
         const VulkanBLASRef& blas = m_blas[i];
-        AssertThrow(blas != nullptr);
+        HYP_GFX_ASSERT(blas != nullptr);
 
         const uint32 instanceIndex = uint32(i); /* Index of mesh in mesh descriptions buffer. */
 
@@ -631,9 +631,9 @@ RendererResult VulkanTLAS::UpdateInstancesBuffer(uint32 first, uint32 last)
         HYPERION_RETURN_OK;
     }
 
-    AssertThrow(last > first);
-    AssertThrow(first < m_blas.Size());
-    AssertThrow(last <= m_blas.Size());
+    HYP_GFX_ASSERT(last > first);
+    HYP_GFX_ASSERT(first < m_blas.Size());
+    HYP_GFX_ASSERT(last <= m_blas.Size());
 
     Array<VkAccelerationStructureInstanceKHR> instances;
     instances.Resize(last - first);
@@ -641,7 +641,7 @@ RendererResult VulkanTLAS::UpdateInstancesBuffer(uint32 first, uint32 last)
     for (uint32 i = first; i < last; i++)
     {
         const VulkanBLASRef& blas = m_blas[i];
-        AssertThrow(blas != nullptr);
+        HYP_GFX_ASSERT(blas != nullptr);
 
         const uint32 instanceIndex = i; /* Index of mesh in mesh descriptions buffer. */
 
@@ -657,8 +657,8 @@ RendererResult VulkanTLAS::UpdateInstancesBuffer(uint32 first, uint32 last)
 
     const SizeType instancesSize = instances.Size() * sizeof(VkAccelerationStructureInstanceKHR);
 
-    AssertThrow(m_instancesBuffer != nullptr);
-    AssertThrow(m_instancesBuffer->Size() >= instancesSize);
+    HYP_GFX_ASSERT(m_instancesBuffer != nullptr);
+    HYP_GFX_ASSERT(m_instancesBuffer->Size() >= instancesSize);
 
     m_instancesBuffer->Copy(
         first * sizeof(VkAccelerationStructureInstanceKHR),
@@ -698,10 +698,10 @@ RendererResult VulkanTLAS::UpdateMeshDescriptionsBuffer()
 
 RendererResult VulkanTLAS::UpdateMeshDescriptionsBuffer(uint32 first, uint32 last)
 {
-    AssertThrow(m_meshDescriptionsBuffer != nullptr);
-    AssertThrow(m_meshDescriptionsBuffer->Size() >= sizeof(MeshDescription) * m_blas.Size());
-    AssertThrow(first < m_blas.Size());
-    AssertThrow(last <= m_blas.Size());
+    HYP_GFX_ASSERT(m_meshDescriptionsBuffer != nullptr);
+    HYP_GFX_ASSERT(m_meshDescriptionsBuffer->Size() >= sizeof(MeshDescription) * m_blas.Size());
+    HYP_GFX_ASSERT(first < m_blas.Size());
+    HYP_GFX_ASSERT(last <= m_blas.Size());
 
     if (last <= first)
     {
@@ -721,7 +721,7 @@ RendererResult VulkanTLAS::UpdateMeshDescriptionsBuffer(uint32 first, uint32 las
 
         if (blas->GetGeometries().Empty())
         {
-            AssertThrowMsg(
+            HYP_GFX_ASSERT(
                 false,
                 "No geometries added to BLAS node %u!\n",
                 i);
@@ -736,7 +736,7 @@ RendererResult VulkanTLAS::UpdateMeshDescriptionsBuffer(uint32 first, uint32 las
             {
                 /// FIXME: This needs to use new resource binding system
                 // Must be initialized (AccelerationGeometry calls IncRef() and DecRef())
-                AssertThrow(material->GetRenderResource().GetBufferIndex() != ~0u);
+                HYP_GFX_ASSERT(material->GetRenderResource().GetBufferIndex() != ~0u);
             }
 
             meshDescription.vertexBufferAddress = blas->GetGeometries()[0]->GetPackedVerticesBuffer()->GetBufferDeviceAddress();
@@ -777,7 +777,7 @@ RendererResult VulkanTLAS::UpdateStructure(RTUpdateStateFlags& outUpdateStateFla
     for (uint32 i = 0; i < uint32(m_blas.Size()); i++)
     {
         const VulkanBLASRef& blas = m_blas[i];
-        AssertThrow(blas != nullptr);
+        HYP_GFX_ASSERT(blas != nullptr);
 
         if (blas->GetFlags() & ACCELERATION_STRUCTURE_FLAGS_MATERIAL_UPDATE)
         {
@@ -822,21 +822,21 @@ RendererResult VulkanTLAS::UpdateStructure(RTUpdateStateFlags& outUpdateStateFla
 
 RendererResult VulkanTLAS::Rebuild(RTUpdateStateFlags& outUpdateStateFlags)
 {
-    AssertThrow(m_accelerationStructure != VK_NULL_HANDLE);
+    HYP_GFX_ASSERT(m_accelerationStructure != VK_NULL_HANDLE);
 
     RendererResult result;
 
     // check each BLAS, assert that it is valid.
     for (const VulkanBLASRef& blas : m_blas)
     {
-        AssertThrow(blas != nullptr);
-        AssertThrow(!blas->GetGeometries().Empty());
+        HYP_GFX_ASSERT(blas != nullptr);
+        HYP_GFX_ASSERT(!blas->GetGeometries().Empty());
 
         for (const VulkanAccelerationGeometryRef& geometry : blas->GetGeometries())
         {
-            AssertThrow(geometry != nullptr);
-            AssertThrow(geometry->GetPackedVerticesBuffer() != nullptr);
-            AssertThrow(geometry->GetPackedIndicesBuffer() != nullptr);
+            HYP_GFX_ASSERT(geometry != nullptr);
+            HYP_GFX_ASSERT(geometry->GetPackedVerticesBuffer() != nullptr);
+            HYP_GFX_ASSERT(geometry->GetPackedIndicesBuffer() != nullptr);
         }
     }
 
@@ -948,7 +948,7 @@ RendererResult VulkanBLAS::Create()
         return result;
     }
 
-    AssertThrow(updateStateFlags & RT_UPDATE_STATE_FLAGS_UPDATE_ACCELERATION_STRUCTURE);
+    HYP_GFX_ASSERT(updateStateFlags & RT_UPDATE_STATE_FLAGS_UPDATE_ACCELERATION_STRUCTURE);
 
     return result;
 }
@@ -990,7 +990,7 @@ RendererResult VulkanBLAS::Rebuild(RTUpdateStateFlags& outUpdateStateFlags)
     for (SizeType i = 0; i < m_geometries.Size(); i++)
     {
         const VulkanAccelerationGeometryRef& geometry = m_geometries[i];
-        AssertThrow(geometry != nullptr);
+        HYP_GFX_ASSERT(geometry != nullptr);
 
         geometries[i] = geometry->m_geometry;
         primitiveCounts[i] = uint32(geometry->GetPackedIndicesBuffer()->Size() / sizeof(uint32) / 3);

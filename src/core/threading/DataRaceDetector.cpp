@@ -68,7 +68,7 @@ DataRaceDetector::DataRaceDetector()
       m_writers(0),
       m_readers(0)
 {
-    AssertDebug(m_preallocatedStates.Size() == numPreallocatedStates);
+    HYP_CORE_ASSERT(m_preallocatedStates.Size() == numPreallocatedStates);
 }
 
 DataRaceDetector::~DataRaceDetector()
@@ -85,7 +85,7 @@ EnumFlags<DataAccessFlags> DataRaceDetector::AddAccess(ThreadId threadId, EnumFl
     {
         // ensure no writer from other thread
         index = static_cast<const StaticThreadId&>(threadId).GetStaticThreadIndex();
-        AssertDebug(index < numPreallocatedStates);
+        HYP_CORE_ASSERT(index < numPreallocatedStates);
 
         // disable bits that are already enabled
         accessFlags &= ~m_preallocatedStates[index].access;
@@ -104,7 +104,7 @@ EnumFlags<DataAccessFlags> DataRaceDetector::AddAccess(ThreadId threadId, EnumFl
         Mutex::Guard guard(m_dynamicStatesMutex);
 
         // debugging
-        AssertThrow(m_dynamicStates.Size() <= m_dynamicStates.Capacity());
+        HYP_CORE_ASSERT(m_dynamicStates.Size() <= m_dynamicStates.Capacity());
 
         auto it = m_dynamicStates.FindIf([threadId](const ThreadAccessState& threadAccessState)
             {
@@ -189,7 +189,7 @@ void DataRaceDetector::RemoveAccess(ThreadId threadId, EnumFlags<DataAccessFlags
     {
         // ensure no writer from other thread
         index = static_cast<const StaticThreadId&>(threadId).GetStaticThreadIndex();
-        AssertDebug(index < numPreallocatedStates);
+        HYP_CORE_ASSERT(index < numPreallocatedStates);
 
         flags = m_preallocatedStates[index].access;
         m_preallocatedStates[index].access &= ~accessFlags;
@@ -198,8 +198,7 @@ void DataRaceDetector::RemoveAccess(ThreadId threadId, EnumFlags<DataAccessFlags
     {
         Mutex::Guard guard(m_dynamicStatesMutex);
 
-        // debugging
-        AssertThrow(m_dynamicStates.Size() <= m_dynamicStates.Capacity());
+        HYP_CORE_ASSERT(m_dynamicStates.Size() <= m_dynamicStates.Capacity());
 
         auto it = m_dynamicStates.FindIf([threadId](const ThreadAccessState& threadAccessState)
             {
@@ -298,13 +297,13 @@ void DataRaceDetector::GetThreadIds(uint64 readersMask, uint64 writersMask, Arra
         if (bitIndex >= numPreallocatedStates)
         {
             const uint32 dynamicStateIndex = bitIndex - numPreallocatedStates;
-            AssertThrowMsg(dynamicStateIndex < m_dynamicStates.Size(), "Invalid dynamic state index: %u; Out of range of elements: %u", dynamicStateIndex, m_dynamicStates.Size());
+            HYP_CORE_ASSERT(dynamicStateIndex < m_dynamicStates.Size(), "Invalid dynamic state index: %u; Out of range of elements: %u", dynamicStateIndex, m_dynamicStates.Size());
 
             outReaderThreadIds.EmplaceBack(m_dynamicStates[dynamicStateIndex].threadId, m_dynamicStates[dynamicStateIndex].state);
         }
         else
         {
-            AssertThrow(bitIndex < m_preallocatedStates.Size());
+            HYP_CORE_ASSERT(bitIndex < m_preallocatedStates.Size());
 
             outReaderThreadIds.EmplaceBack(m_preallocatedStates[bitIndex].threadId, m_preallocatedStates[bitIndex].state);
         }
@@ -315,13 +314,13 @@ void DataRaceDetector::GetThreadIds(uint64 readersMask, uint64 writersMask, Arra
         if (bitIndex >= numPreallocatedStates)
         {
             const uint32 dynamicStateIndex = bitIndex - numPreallocatedStates;
-            AssertThrowMsg(dynamicStateIndex < m_dynamicStates.Size(), "Invalid dynamic state index: %u; Out of range of elements: %u", dynamicStateIndex, m_dynamicStates.Size());
+            HYP_CORE_ASSERT(dynamicStateIndex < m_dynamicStates.Size(), "Invalid dynamic state index: %u; Out of range of elements: %u", dynamicStateIndex, m_dynamicStates.Size());
 
             outWriterThreadIds.EmplaceBack(m_dynamicStates[dynamicStateIndex].threadId, m_dynamicStates[dynamicStateIndex].state);
         }
         else
         {
-            AssertThrow(bitIndex < m_preallocatedStates.Size());
+            HYP_CORE_ASSERT(bitIndex < m_preallocatedStates.Size());
 
             outWriterThreadIds.EmplaceBack(m_preallocatedStates[bitIndex].threadId, m_preallocatedStates[bitIndex].state);
         }

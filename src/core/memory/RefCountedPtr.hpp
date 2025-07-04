@@ -167,8 +167,8 @@ struct RefCountData
 #ifdef HYP_DEBUG_MODE
     HYP_FORCE_INLINE void EnsureUninitialized() const
     {
-        AssertThrow(UseCount_Strong() == 0);
-        AssertThrow(UseCount_Weak() == 0);
+        HYP_CORE_ASSERT(UseCount_Strong() == 0);
+        HYP_CORE_ASSERT(UseCount_Weak() == 0);
     }
 #endif
 

@@ -36,7 +36,7 @@ RendererResult VulkanAttachmentMap::Create()
     {
         VulkanAttachmentDef& def = it.second;
 
-        AssertThrow(def.image.IsValid());
+        HYP_GFX_ASSERT(def.image.IsValid());
 
         if (!def.image->IsCreated())
         {
@@ -45,7 +45,7 @@ RendererResult VulkanAttachmentMap::Create()
 
         imagesToTransition.PushBack(def.image);
 
-        AssertThrow(def.attachment.IsValid());
+        HYP_GFX_ASSERT(def.attachment.IsValid());
 
         if (!def.attachment->IsCreated())
         {
@@ -62,7 +62,7 @@ RendererResult VulkanAttachmentMap::Create()
             {
                 for (const VulkanImageRef& image : imagesToTransition)
                 {
-                    AssertThrow(image.IsValid());
+                    HYP_GFX_ASSERT(image.IsValid());
 
                     if (framebuffer->GetRenderPass()->GetStage() == RenderPassStage::PRESENT)
                     {
@@ -95,7 +95,7 @@ RendererResult VulkanAttachmentMap::Resize(Vec2u newSize)
     {
         VulkanAttachmentDef& def = it.second;
 
-        AssertThrow(def.image.IsValid());
+        HYP_GFX_ASSERT(def.image.IsValid());
 
         VulkanImageRef newImage = def.image;
 
@@ -154,7 +154,7 @@ RendererResult VulkanAttachmentMap::Resize(Vec2u newSize)
             {
                 for (const VulkanImageRef& image : imagesToTransition)
                 {
-                    AssertThrow(image.IsValid());
+                    HYP_GFX_ASSERT(image.IsValid());
 
                     if (framebuffer->GetRenderPass()->GetStage() == RenderPassStage::PRESENT)
                     {
@@ -192,7 +192,7 @@ VulkanFramebuffer::~VulkanFramebuffer()
 {
     for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
     {
-        AssertThrowMsg(m_handles[frameIndex] == VK_NULL_HANDLE, "Expected framebuffer to have been destroyed");
+        HYP_GFX_ASSERT(m_handles[frameIndex] == VK_NULL_HANDLE, "Expected framebuffer to have been destroyed");
     }
 }
 
@@ -214,7 +214,7 @@ RendererResult VulkanFramebuffer::Create()
     {
         const VulkanAttachmentDef& def = it.second;
 
-        AssertThrow(def.attachment.IsValid());
+        HYP_GFX_ASSERT(def.attachment.IsValid());
         m_renderPass->AddAttachment(def.attachment);
     }
 
@@ -227,9 +227,9 @@ RendererResult VulkanFramebuffer::Create()
 
     for (const auto& it : m_attachmentMap.attachments)
     {
-        AssertThrow(it.second.attachment != nullptr);
-        AssertThrow(it.second.attachment->GetImageView() != nullptr);
-        AssertThrow(it.second.attachment->GetImageView()->IsCreated());
+        HYP_GFX_ASSERT(it.second.attachment != nullptr);
+        HYP_GFX_ASSERT(it.second.attachment->GetImageView() != nullptr);
+        HYP_GFX_ASSERT(it.second.attachment->GetImageView()->IsCreated());
 
         attachmentImageViews.PushBack(static_cast<VulkanImageView*>(it.second.attachment->GetImageView().Get())->GetVulkanHandle());
     }
@@ -309,9 +309,9 @@ RendererResult VulkanFramebuffer::Resize(Vec2u newSize)
 
     for (const auto& it : m_attachmentMap.attachments)
     {
-        AssertThrow(it.second.attachment != nullptr);
-        AssertThrow(it.second.attachment->GetImageView() != nullptr);
-        AssertThrow(it.second.attachment->GetImageView()->IsCreated());
+        HYP_GFX_ASSERT(it.second.attachment != nullptr);
+        HYP_GFX_ASSERT(it.second.attachment->GetImageView() != nullptr);
+        HYP_GFX_ASSERT(it.second.attachment->GetImageView()->IsCreated());
 
         attachmentImageViews.PushBack(static_cast<VulkanImageView*>(it.second.attachment->GetImageView().Get())->GetVulkanHandle());
     }
@@ -338,7 +338,7 @@ RendererResult VulkanFramebuffer::Resize(Vec2u newSize)
 
 AttachmentRef VulkanFramebuffer::AddAttachment(const AttachmentRef& attachment)
 {
-    AssertThrowMsg(attachment->GetFramebuffer() == this,
+    HYP_GFX_ASSERT(attachment->GetFramebuffer() == this,
         "Attachment framebuffer does not match framebuffer");
 
     return m_attachmentMap.AddAttachment(VulkanAttachmentRef(attachment));

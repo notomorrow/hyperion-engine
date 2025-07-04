@@ -47,7 +47,7 @@ static AttributeSet InternManagedAttributeHolder(ManagedAttributeHolder* managed
 
     for (uint32 i = 0; i < managedAttributeHolderPtr->managedAttributesSize; i++)
     {
-        AssertThrow(managedAttributeHolderPtr->managedAttributesPtr[i].classPtr != nullptr);
+        Assert(managedAttributeHolderPtr->managedAttributesPtr[i].classPtr != nullptr);
 
         attributes.PushBack(Attribute {
             MakeUnique<Object>(
@@ -91,14 +91,14 @@ extern "C"
 
     HYP_EXPORT void NativeInterop_SetInvokeGetterFunction(ManagedGuid* assemblyGuid, Assembly* assemblyPtr, InvokeGetterFunction invokeGetterFptr)
     {
-        AssertThrow(assemblyPtr != nullptr);
+        Assert(assemblyPtr != nullptr);
 
         assemblyPtr->SetInvokeGetterFunction(invokeGetterFptr);
     }
 
     HYP_EXPORT void NativeInterop_SetInvokeSetterFunction(ManagedGuid* assemblyGuid, Assembly* assemblyPtr, InvokeSetterFunction invokeSetterFptr)
     {
-        AssertThrow(assemblyPtr != nullptr);
+        Assert(assemblyPtr != nullptr);
 
         assemblyPtr->SetInvokeSetterFunction(invokeSetterFptr);
     }
@@ -125,8 +125,8 @@ extern "C"
 
     HYP_EXPORT void NativeInterop_GetAssemblyPointer(ObjectReference* assemblyObjectReference, Assembly** outAssemblyPtr)
     {
-        AssertThrow(assemblyObjectReference != nullptr);
-        AssertThrow(outAssemblyPtr != nullptr);
+        Assert(assemblyObjectReference != nullptr);
+        Assert(outAssemblyPtr != nullptr);
 
         *outAssemblyPtr = nullptr;
 
@@ -135,17 +135,17 @@ extern "C"
 
     HYP_EXPORT void NativeInterop_AddObjectToCache(void* ptr, Class** outClassObjectPtr, ObjectReference* outObjectReference, int8 weak)
     {
-        AssertThrow(ptr != nullptr);
-        AssertThrow(outClassObjectPtr != nullptr);
-        AssertThrow(outObjectReference != nullptr);
+        Assert(ptr != nullptr);
+        Assert(outClassObjectPtr != nullptr);
+        Assert(outObjectReference != nullptr);
 
         DotNetSystem::GetInstance().GetGlobalFunctions().addObjectToCacheFunction(ptr, outClassObjectPtr, outObjectReference, weak);
     }
 
     HYP_EXPORT void ManagedClass_Create(ManagedGuid* assemblyGuid, Assembly* assemblyPtr, const HypClass* hypClass, int32 typeHash, const char* typeName, uint32 typeSize, TypeId typeId, Class* parentClass, uint32 flags, ManagedClass* outManagedClass)
     {
-        AssertThrow(assemblyGuid != nullptr);
-        AssertThrow(assemblyPtr != nullptr);
+        Assert(assemblyGuid != nullptr);
+        Assert(assemblyPtr != nullptr);
 
         HYP_LOG(DotNET, Info, "Registering .NET managed class {}", typeName);
 
@@ -154,7 +154,7 @@ extern "C"
         if (hypClass != nullptr && hypClass->IsDynamic())
         {
             const DynamicHypClassInstance* dynamicHypClass = dynamic_cast<const DynamicHypClassInstance*>(hypClass);
-            AssertThrowMsg(dynamicHypClass != nullptr, "Dynamic hyp class is not of type DynamicHypClassInstance!");
+            Assert(dynamicHypClass != nullptr, "Dynamic hyp class is not of type DynamicHypClassInstance!");
 
             if ((classObject->GetFlags() & ManagedClassFlags::ABSTRACT) && !dynamicHypClass->IsAbstract())
             {
@@ -179,9 +179,9 @@ extern "C"
 
     HYP_EXPORT int8 ManagedClass_FindByTypeHash(Assembly* assemblyPtr, int32 typeHash, Class** outManagedClassObjectPtr)
     {
-        AssertThrow(assemblyPtr != nullptr);
+        Assert(assemblyPtr != nullptr);
 
-        AssertThrow(outManagedClassObjectPtr != nullptr);
+        Assert(outManagedClassObjectPtr != nullptr);
 
         RC<Class> classObject = assemblyPtr->FindClassByTypeHash(typeHash);
 
@@ -199,7 +199,7 @@ extern "C"
 
     HYP_EXPORT void ManagedClass_SetAttributes(ManagedClass* managedClass, ManagedAttributeHolder* managedAttributeHolderPtr)
     {
-        AssertThrow(managedClass != nullptr);
+        Assert(managedClass != nullptr);
 
         if (!managedClass->classObject || !managedAttributeHolderPtr)
         {
@@ -213,8 +213,8 @@ extern "C"
 
     HYP_EXPORT void ManagedClass_AddMethod(ManagedClass* managedClass, const char* methodName, ManagedGuid guid, InvokeMethodFunction invokeFptr, ManagedAttributeHolder* managedAttributeHolderPtr)
     {
-        AssertThrow(managedClass != nullptr);
-        AssertThrow(invokeFptr != nullptr);
+        Assert(managedClass != nullptr);
+        Assert(invokeFptr != nullptr);
 
         if (!managedClass->classObject || !methodName)
         {
@@ -237,7 +237,7 @@ extern "C"
 
     HYP_EXPORT void ManagedClass_AddProperty(ManagedClass* managedClass, const char* propertyName, ManagedGuid guid, ManagedAttributeHolder* managedAttributeHolderPtr)
     {
-        AssertThrow(managedClass != nullptr);
+        Assert(managedClass != nullptr);
 
         if (!managedClass->classObject || !propertyName)
         {
@@ -260,16 +260,16 @@ extern "C"
 
     HYP_EXPORT void ManagedClass_SetNewObjectFunction(ManagedClass* managedClass, Class::NewObjectFunction newObjectFptr)
     {
-        AssertThrow(managedClass != nullptr);
-        AssertThrow(managedClass->classObject != nullptr);
+        Assert(managedClass != nullptr);
+        Assert(managedClass->classObject != nullptr);
 
         managedClass->classObject->SetNewObjectFunction(newObjectFptr);
     }
 
     HYP_EXPORT void ManagedClass_SetMarshalObjectFunction(ManagedClass* managedClass, Class::MarshalObjectFunction marshalObjectFptr)
     {
-        AssertThrow(managedClass != nullptr);
-        AssertThrow(managedClass->classObject != nullptr);
+        Assert(managedClass != nullptr);
+        Assert(managedClass->classObject != nullptr);
 
         managedClass->classObject->SetMarshalObjectFunction(marshalObjectFptr);
     }

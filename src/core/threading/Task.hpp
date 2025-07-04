@@ -306,7 +306,7 @@ public:
 
     virtual void Execute() override
     {
-        AssertThrow(m_fn.IsValid());
+        HYP_CORE_ASSERT(m_fn.IsValid());
 
         m_resultValue.Emplace(m_fn());
     }
@@ -350,7 +350,7 @@ public:
 
     virtual void Execute() override
     {
-        AssertThrow(m_fn.IsValid());
+        HYP_CORE_ASSERT(m_fn.IsValid());
 
         m_fn();
     }
@@ -389,7 +389,7 @@ public:
 
     void Fulfill(ReturnType&& value)
     {
-        AssertThrow(!Base::IsCompleted());
+        HYP_CORE_ASSERT(!Base::IsCompleted());
 
         Base::m_resultValue.Set(std::move(value));
 
@@ -405,7 +405,7 @@ public:
 
     void Fulfill(const ReturnType& value)
     {
-        AssertThrow(!Base::IsCompleted());
+        HYP_CORE_ASSERT(!Base::IsCompleted());
 
         Base::m_resultValue.Set(value);
 
@@ -454,7 +454,7 @@ public:
 
     void Fulfill()
     {
-        AssertThrow(!Base::IsCompleted());
+        HYP_CORE_ASSERT(!Base::IsCompleted());
 
         TaskCallbackChain& callbackChain = Base::GetCallbackChain();
 
@@ -688,7 +688,7 @@ public:
     template <class... ArgTypes>
     void Fulfill(ArgTypes&&... args)
     {
-        AssertThrowMsg(m_assignedScheduler == nullptr, "Cannot call Fulfill() on a task that has already been initialized");
+        HYP_CORE_ASSERT(m_assignedScheduler == nullptr, "Cannot call Fulfill() on a task that has already been initialized");
 
         TaskPromise<ReturnType>* executor = Promise();
 
@@ -734,7 +734,7 @@ protected:
 
 #ifdef HYP_DEBUG_MODE
         // Sanity Check
-        AssertThrow(IsCompleted());
+        HYP_CORE_ASSERT(IsCompleted());
 #endif
     }
 
@@ -850,7 +850,7 @@ public:
 
     void Fulfill()
     {
-        AssertThrowMsg(m_assignedScheduler == nullptr, "Cannot call Fulfill() on a task that has already been initialized");
+        HYP_CORE_ASSERT(m_assignedScheduler == nullptr, "Cannot call Fulfill() on a task that has already been initialized");
 
         TaskPromise<void>* executor = Promise();
 
@@ -869,7 +869,7 @@ protected:
 
 #ifdef HYP_DEBUG_MODE
         // Sanity Check
-        AssertThrow(IsCompleted());
+        HYP_CORE_ASSERT(IsCompleted());
 #endif
     }
 
@@ -903,134 +903,6 @@ private:
     bool m_ownsExecutor;
 };
 
-#if 0
-template <class ReturnType>
-class TaskFuture final
-{
-public:
-    friend class TaskPromise<ReturnType>;
-    friend class Task<ReturnType>;
-
-    ~TaskFuture()
-    {
-        if (m_task != nullptr)
-        {
-            delete m_task;
-        }
-    }
-
-    TaskFuture(const TaskFuture& other) = delete;
-    TaskFuture& operator=(const TaskFuture& other) = delete;
-
-    TaskFuture(TaskFuture&& other) noexcept
-        : m_task(other.m_task)
-    {
-        other.m_task = nullptr;
-    }
-
-    TaskFuture& operator=(TaskFuture&& other) noexcept
-    {
-        if (this == &other || m_task == other.m_task)
-        {
-            return *this;
-        }
-
-        AssertDebug(m_task != nullptr);
-
-        delete m_task;
-
-        m_task = other.m_task;
-        other.m_task = nullptr;
-
-        return *this;
-    }
-
-    ReturnType& Result() const&
-    {
-        AssertThrow(m_task != nullptr);
-
-        return m_task->Await();
-    }
-
-    ReturnType Result() &&
-    {
-        AssertThrow(m_task != nullptr);
-
-        ResultType result = std::move(*m_task).Await();
-
-        delete m_task;
-        m_task = nullptr;
-
-        return result;
-    }
-
-protected:
-    TaskFuture(Task<ReturnType>* task)
-        : m_task(task)
-    {
-    }
-
-    Task<ReturnType>* m_task;
-};
-
-template <>
-class TaskFuture<void> final
-{
-public:
-    friend class TaskPromise<void>;
-    friend class Task<void>;
-
-    ~TaskFuture()
-    {
-        if (m_task != nullptr)
-        {
-            delete m_task;
-        }
-    }
-
-    TaskFuture(const TaskFuture& other) = delete;
-    TaskFuture& operator=(const TaskFuture& other) = delete;
-
-    TaskFuture(TaskFuture&& other) noexcept
-        : m_task(other.m_task)
-    {
-        other.m_task = nullptr;
-    }
-
-    TaskFuture& operator=(TaskFuture&& other) noexcept
-    {
-        if (this == &other || m_task == other.m_task)
-        {
-            return *this;
-        }
-
-        AssertDebug(m_task != nullptr);
-
-        delete m_task;
-
-        m_task = other.m_task;
-        other.m_task = nullptr;
-
-        return *this;
-    }
-
-    void Result() const
-    {
-        AssertThrow(m_task != nullptr);
-
-        m_task->Await();
-    }
-
-protected:
-    TaskFuture(Task<void>* task)
-        : m_task(task)
-    {
-    }
-
-    Task<void>* m_task;
-};
-#endif
-
 #pragma region AwaitAll
 
 template <class TaskType>
@@ -1063,7 +935,7 @@ struct TaskAwaitAll_Impl<Task<ReturnType>>
         for (SizeType i = 0; i < tasks.Size(); ++i) {
             Task<ReturnType> &task = tasks[i];
 
-            AssertThrow(task.IsValid());
+            HYP_CORE_ASSERT(task.IsValid());
         }
 
         Bitset completionStates;
@@ -1095,7 +967,7 @@ struct TaskAwaitAll_Impl<Task<ReturnType>>
 
                 task.GetTaskExecutor()->GetCallbackChain().Add([&semaphore, &completionStates, &calledStates, &tasks, taskIndex = i]()
                 {
-                    AssertThrow(calledStates[taskIndex] == 0);
+                    HYP_CORE_ASSERT(calledStates[taskIndex] == 0);
 
                     calledStates[taskIndex] = 1;
                     semaphore.Release(1);
@@ -1110,7 +982,7 @@ struct TaskAwaitAll_Impl<Task<ReturnType>>
         if constexpr (std::is_void_v<ReturnType>) {
             for (SizeType i = 0; i < tasks.Size(); ++i) {
                 Task<ReturnType> &task = tasks[i];
-                AssertThrow(task.IsCompleted());
+                HYP_CORE_ASSERT(task.IsCompleted());
                 
                 task.Await();
             }
@@ -1120,7 +992,7 @@ struct TaskAwaitAll_Impl<Task<ReturnType>>
 
             for (SizeType i = 0; i < tasks.Size(); ++i) {
                 Task<ReturnType> &task = tasks[i];
-                AssertThrow(task.IsCompleted());
+                HYP_CORE_ASSERT(task.IsCompleted());
                 
                 Memory::Construct<ReturnType>(&results[i], std::move(task.Await()));
             }
@@ -1152,7 +1024,7 @@ struct TaskAwaitAll_Impl<Task<void>>
         for (SizeType i = 0; i < tasks.Size(); ++i) {
             Task<void> &task = tasks[i];
 
-            AssertThrow(task.IsValid());
+            HYP_CORE_ASSERT(task.IsValid());
         }
 
         Bitset completionStates;
@@ -1184,7 +1056,7 @@ struct TaskAwaitAll_Impl<Task<void>>
 
                 task.GetTaskExecutor()->GetCallbackChain().Add([&semaphore, &completionStates, &calledStates, &tasks, taskIndex = i]()
                 {
-                    AssertThrow(calledStates[taskIndex] == 0);
+                    HYP_CORE_ASSERT(calledStates[taskIndex] == 0);
 
                     calledStates[taskIndex] = 1;
                     semaphore.Release(1);
@@ -1198,7 +1070,7 @@ struct TaskAwaitAll_Impl<Task<void>>
 
         for (SizeType i = 0; i < tasks.Size(); ++i) {
             Task<void> &task = tasks[i];
-            AssertThrow(task.IsCompleted());
+            HYP_CORE_ASSERT(task.IsCompleted());
             
             task.Await();
         }

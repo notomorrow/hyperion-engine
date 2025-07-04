@@ -92,7 +92,7 @@ void Game::Init()
     }
 
     const Handle<World>& world = g_engine->GetWorld();
-    AssertThrow(world.IsValid());
+    Assert(world.IsValid());
     InitObject(world);
 
     Handle<UIStage> uiStage = CreateObject<UIStage>(g_gameThread);

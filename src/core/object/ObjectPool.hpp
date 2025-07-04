@@ -73,8 +73,8 @@ protected:
         : m_typeId(typeId),
           m_hypClass(hypClass)
     {
-        AssertDebug(typeId != TypeId::Void());
-        // AssertDebug(hypClass != nullptr);
+        HYP_CORE_ASSERT(typeId != TypeId::Void());
+        // HYP_CORE_ASSERT(hypClass != nullptr);
     }
 
     TypeId m_typeId;
@@ -214,7 +214,7 @@ struct HypObjectMemory final : HypObjectHeader
             }
         }
 
-        AssertDebug(count != 0);
+        HYP_CORE_ASSERT(count != 0);
 
         return count - 1;
     }
@@ -246,7 +246,7 @@ template <class T>
 static inline void ObjectContainer_OnBlockAllocated(void* ctx, HypObjectMemory<T>* elements, uint32 offset, uint32 count)
 {
     ObjectContainerBase* container = static_cast<ObjectContainer<T>*>(ctx);
-    AssertThrow(container != nullptr);
+    HYP_CORE_ASSERT(container != nullptr);
 
     for (uint32 index = 0; index < count; index++)
     {
@@ -398,7 +398,7 @@ public:
             }
 
             UniquePtr<ObjectContainerBase> container = createFn();
-            AssertThrow(container != nullptr);
+            HYP_CORE_ASSERT(container != nullptr);
 
             return *m_map.EmplaceBack(typeId, std::move(container)).second;
         }

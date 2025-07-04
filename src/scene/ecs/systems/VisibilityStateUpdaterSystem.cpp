@@ -38,7 +38,7 @@ void VisibilityStateUpdaterSystem::OnEntityAdded(Entity* entity)
 
     if (insertResult.first)
     {
-        AssertThrowMsg(insertResult.second != OctantId::Invalid(), "Invalid octant Id returned from Insert()");
+        Assert(insertResult.second != OctantId::Invalid(), "Invalid octant Id returned from Insert()");
 
         visibilityStateComponent.octantId = insertResult.second;
         visibilityStateComponent.visibilityState = nullptr;
@@ -107,7 +107,7 @@ void VisibilityStateUpdaterSystem::Process(float delta)
 
             if (insertResult.first)
             {
-                AssertThrowMsg(insertResult.second != OctantId::Invalid(), "Invalid octant Id returned from Insert()");
+                Assert(insertResult.second != OctantId::Invalid(), "Invalid octant Id returned from Insert()");
 
                 visibilityStateComponent.octantId = insertResult.second;
 
@@ -139,7 +139,7 @@ void VisibilityStateUpdaterSystem::Process(float delta)
                 return;
             }
 
-            AssertThrowMsg(updateResult.second != OctantId::Invalid(), "Invalid octant Id returned from Update()");
+            Assert(updateResult.second != OctantId::Invalid(), "Invalid octant Id returned from Update()");
         }
 
         if (visibilityStateComponent.octantId != OctantId::Invalid())

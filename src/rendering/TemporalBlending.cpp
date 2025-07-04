@@ -122,7 +122,7 @@ void TemporalBlending::Create()
         return;
     }
 
-    AssertThrow(m_gbuffer != nullptr);
+    Assert(m_gbuffer != nullptr);
 
     if (m_inputFramebuffer.IsValid())
     {
@@ -236,7 +236,7 @@ void TemporalBlending::CreateImageOutputs()
 void TemporalBlending::CreateDescriptorSets()
 {
     ShaderRef shader = g_shaderManager->GetOrCreate(NAME("TemporalBlending"), GetShaderProperties());
-    AssertThrow(shader.IsValid());
+    Assert(shader.IsValid());
 
     const DescriptorTableDeclaration& descriptorTableDecl = shader->GetCompiledShader()->GetDescriptorTableDeclaration();
 
@@ -253,7 +253,7 @@ void TemporalBlending::CreateDescriptorSets()
             ? m_inputFramebuffer->GetAttachment(0)->GetImageView()
             : m_inputImageView;
 
-        AssertThrow(inputImageView != nullptr);
+        Assert(inputImageView != nullptr);
 
         // input image
         m_descriptorTable->GetDescriptorSet(NAME("TemporalBlendingDescriptorSet"), frameIndex)
@@ -280,10 +280,10 @@ void TemporalBlending::CreateDescriptorSets()
 
 void TemporalBlending::CreateComputePipelines()
 {
-    AssertThrow(m_descriptorTable.IsValid());
+    Assert(m_descriptorTable.IsValid());
 
     ShaderRef shader = g_shaderManager->GetOrCreate(NAME("TemporalBlending"), GetShaderProperties());
-    AssertThrow(shader.IsValid());
+    Assert(shader.IsValid());
 
     m_performBlending = g_renderBackend->MakeComputePipeline(shader, m_descriptorTable);
     DeferCreate(m_performBlending);
@@ -338,7 +338,7 @@ void TemporalBlending::Render(FrameBase* frame, const RenderSetup& renderSetup)
 
     if (viewDescriptorSetIndex != ~0u)
     {
-        AssertThrow(renderSetup.passData != nullptr);
+        Assert(renderSetup.passData != nullptr);
 
         frame->GetCommandList().Add<BindDescriptorSet>(
             renderSetup.passData->descriptorSets[frame->GetFrameIndex()],

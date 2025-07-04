@@ -5,6 +5,7 @@
 #include <rendering/backend/vulkan/RendererImageView.hpp>
 #include <rendering/backend/vulkan/RendererFramebuffer.hpp>
 
+#include <rendering/backend/RenderBackend.hpp>
 #include <rendering/backend/RendererHelpers.hpp>
 
 namespace hyperion {
@@ -109,7 +110,7 @@ bool VulkanAttachment::IsCreated() const
 
 RendererResult VulkanAttachment::Create()
 {
-    AssertThrow(m_image != nullptr);
+    HYP_GFX_ASSERT(m_image != nullptr);
 
     if (!m_image->IsCreated())
     {

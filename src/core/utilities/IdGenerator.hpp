@@ -58,8 +58,8 @@ struct IdGenerator
             if (freeIndices.Count() != 0)
             {
                 Bitset::BitIndex bitIndex = freeIndices.LastSetBitIndex();
-                AssertDebug(bitIndex != Bitset::notFound);
-                AssertDebug(freeIndices.Test(bitIndex) == true);
+                HYP_CORE_ASSERT(bitIndex != Bitset::notFound);
+                HYP_CORE_ASSERT(freeIndices.Test(bitIndex) == true);
                 freeIndices.Set(bitIndex, false);
 
                 const uint32 index = bitIndex + 1;
@@ -75,11 +75,11 @@ struct IdGenerator
 
     void ReleaseId(uint32 index)
     {
-        AssertThrowMsg(index != 0, "Invalid index");
+        HYP_CORE_ASSERT(index != 0, "Invalid index");
 
         Mutex::Guard guard(freeIdMutex);
 
-        AssertDebug(!freeIndices.Test(index - 1));
+        HYP_CORE_ASSERT(!freeIndices.Test(index - 1));
 
         freeIndices.Set(index - 1, true);
         numFreeIndices.Increment(1, MemoryOrder::RELEASE);

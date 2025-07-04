@@ -61,7 +61,7 @@ void RenderView::Initialize_Internal()
 
     if (m_view)
     {
-        AssertThrow(m_view->GetCamera().IsValid());
+        Assert(m_view->GetCamera().IsValid());
 
         m_renderCamera = TResourceHandle<RenderCamera>(m_view->GetCamera()->GetRenderResource());
     }
@@ -135,7 +135,7 @@ void RenderView::PreRender(FrameBase* frame)
     HYP_SCOPE;
     Threads::AssertOnThread(g_renderThread);
 
-    AssertThrow(IsInitialized());
+    Assert(IsInitialized());
 
     // if (m_postProcessing)
     // {

@@ -25,7 +25,7 @@ RC<Assembly> Class::GetAssembly() const
 
 Object* Class::NewObject()
 {
-    AssertThrowMsg(m_newObjectFptr != nullptr, "New object function pointer not set for managed class %s", m_name.Data());
+    Assert(m_newObjectFptr != nullptr, "New object function pointer not set for managed class %s", m_name.Data());
 
     ObjectReference objectReference = m_newObjectFptr(/* keepAlive */ true, nullptr, nullptr, nullptr, nullptr);
 
@@ -34,10 +34,10 @@ Object* Class::NewObject()
 
 Object* Class::NewObject(const HypClass* hypClass, void* owningObjectPtr)
 {
-    AssertThrow(hypClass != nullptr);
-    AssertThrow(owningObjectPtr != nullptr);
+    Assert(hypClass != nullptr);
+    Assert(owningObjectPtr != nullptr);
 
-    AssertThrowMsg(m_newObjectFptr != nullptr, "New object function pointer not set for managed class %s", m_name.Data());
+    Assert(m_newObjectFptr != nullptr, "New object function pointer not set for managed class %s", m_name.Data());
 
     ObjectReference objectReference = m_newObjectFptr(/* keepAlive */ true, hypClass, owningObjectPtr, nullptr, nullptr);
 
@@ -46,7 +46,7 @@ Object* Class::NewObject(const HypClass* hypClass, void* owningObjectPtr)
 
 ObjectReference Class::NewManagedObject(void* contextPtr, InitializeObjectCallbackFunction callback)
 {
-    AssertThrowMsg(m_newObjectFptr != nullptr, "New object function pointer not set for managed class %s", m_name.Data());
+    Assert(m_newObjectFptr != nullptr, "New object function pointer not set for managed class %s", m_name.Data());
 
     return m_newObjectFptr(/* keepAlive */ false, nullptr, nullptr, contextPtr, callback);
 }

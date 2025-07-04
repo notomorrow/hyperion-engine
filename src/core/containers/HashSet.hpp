@@ -292,7 +292,7 @@ struct HashTable_PooledNodeAllocator
             return ptr;
         }
 
-        AssertDebugMsg(m_pool.Capacity() >= m_pool.Size() + 1, "Allocate() call would invalidate element pointers - Capacity should be updated before this call");
+        HYP_CORE_ASSERT(m_pool.Capacity() >= m_pool.Size() + 1, "Allocate() call would invalidate element pointers - Capacity should be updated before this call");
 
         Node* previousBase = m_pool.Data();
 
@@ -300,14 +300,14 @@ struct HashTable_PooledNodeAllocator
 
         Node* newBase = m_pool.Data();
 
-        AssertDebugMsg(previousBase == newBase, "Allocate() call would invalidate element pointers - Capacity should be updated before this call");
+        HYP_CORE_ASSERT(previousBase == newBase, "Allocate() call would invalidate element pointers - Capacity should be updated before this call");
 
         return ptr;
     }
 
     void Free(Node* node)
     {
-        AssertDebugMsg(node != nullptr, "Cannot free a null node");
+        HYP_CORE_ASSERT(node != nullptr, "Cannot free a null node");
 
         // Set the value to a default value
         node->value = Value();
@@ -636,13 +636,13 @@ public:
 
     HYP_FORCE_INLINE ValueType& Front()
     {
-        AssertDebug(m_size != 0);
+        HYP_CORE_ASSERT(m_size != 0);
         return *Begin();
     }
 
     HYP_FORCE_INLINE const ValueType& Front() const
     {
-        AssertDebug(m_size != 0);
+        HYP_CORE_ASSERT(m_size != 0);
         return *Begin();
     }
 
@@ -746,7 +746,7 @@ public:
     HYP_FORCE_INLINE Value& At(const KeyType& value)
     {
         auto it = Find(value);
-        AssertDebugMsg(it != End(), "At(): element not found");
+        HYP_CORE_ASSERT(it != End(), "At(): element not found");
 
         return *it;
     }
@@ -754,7 +754,7 @@ public:
     HYP_FORCE_INLINE const Value& At(const KeyType& value) const
     {
         auto it = Find(value);
-        AssertDebugMsg(it != End(), "At(): element not found");
+        HYP_CORE_ASSERT(it != End(), "At(): element not found");
 
         return *it;
     }

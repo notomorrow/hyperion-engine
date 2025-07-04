@@ -134,14 +134,14 @@ utf::u32char SourceStream::Next(int& pos_change)
 
 void SourceStream::GoBack(int n)
 {
-    AssertThrowMsg(((int)m_position - n) >= 0, "not large enough to go back");
+    Assert(((int)m_position - n) >= 0, "not large enough to go back");
 
     m_position -= n;
 }
 
 void SourceStream::Read(char* ptr, SizeType num_bytes)
 {
-    AssertThrowMsg(m_position + num_bytes < m_file->GetSize(), "attempted to read past the limit");
+    Assert(m_position + num_bytes < m_file->GetSize(), "attempted to read past the limit");
 
     for (SizeType i = 0; i < num_bytes; i++)
     {

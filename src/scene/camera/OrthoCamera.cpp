@@ -4,6 +4,9 @@
 
 #include <core/profiling/ProfileScope.hpp>
 
+#include <core/logging/Logger.hpp>
+#include <core/logging/LogChannels.hpp>
+
 namespace hyperion {
 OrthoCameraController::OrthoCameraController()
     : OrthoCameraController(

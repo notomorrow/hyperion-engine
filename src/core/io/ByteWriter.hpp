@@ -6,6 +6,8 @@
 #include <core/utilities/StringView.hpp>
 #include <core/filesystem/FilePath.hpp>
 
+#include <core/memory/ByteBuffer.hpp>
+
 #include <core/math/MathUtil.hpp>
 
 #include <Types.hpp>

@@ -209,7 +209,7 @@ public:
     HYP_NODISCARD HYP_FORCE_INLINE T& Get() const
     {
         const TypeId requestedTypeId = TypeId::ForType<NormalizedType<T>>();
-        AssertThrowMsg(m_typeId == requestedTypeId, "Held type not equal to requested type!");
+        HYP_CORE_ASSERT(m_typeId == requestedTypeId, "Held type not equal to requested type!");
 
         return *static_cast<NormalizedType<T>*>(m_ptr);
     }
@@ -278,7 +278,7 @@ public:
         if constexpr (!std::is_void_v<T>)
         {
             const TypeId requestedTypeId = TypeId::ForType<NormalizedType<T>>();
-            AssertThrowMsg(m_typeId == requestedTypeId, "Held type not equal to requested type!");
+            HYP_CORE_ASSERT(m_typeId == requestedTypeId, "Held type not equal to requested type!");
         }
 
         T* ptr = static_cast<T*>(m_ptr);
@@ -599,7 +599,7 @@ public:
     HYP_FORCE_INLINE T& Get() const
     {
         const TypeId requestedTypeId = TypeId::ForType<NormalizedType<T>>();
-        AssertThrowMsg(m_typeId == requestedTypeId, "Held type not equal to requested type!");
+        HYP_CORE_ASSERT(m_typeId == requestedTypeId, "Held type not equal to requested type!");
 
         return *static_cast<NormalizedType<T>*>(m_ptr);
     }
@@ -671,7 +671,7 @@ public:
         if constexpr (!std::is_void_v<T>)
         {
             const TypeId requestedTypeId = TypeId::ForType<NormalizedType<T>>();
-            AssertThrowMsg(m_typeId == requestedTypeId, "Held type not equal to requested type!");
+            HYP_CORE_ASSERT(m_typeId == requestedTypeId, "Held type not equal to requested type!");
         }
 
         T* ptr = static_cast<T*>(m_ptr);

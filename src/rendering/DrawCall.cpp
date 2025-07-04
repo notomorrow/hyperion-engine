@@ -93,7 +93,7 @@ void DrawCallCollection::PushRenderProxyInstanced(EntityInstanceBatch* batch, Dr
     AssertDebug(initialNumInstances > 0);
 
     GpuBufferHolderBase* entityInstanceBatches = impl->GetEntityInstanceBatchHolder();
-    AssertThrow(entityInstanceBatches != nullptr);
+    Assert(entityInstanceBatches != nullptr);
 
     while (numInstances != 0)
     {
@@ -203,11 +203,11 @@ void DrawCallCollection::ResetDrawCalls()
 uint32 DrawCallCollection::PushEntityToBatch(InstancedDrawCall& drawCall, ObjId<Entity> entityId, const MeshInstanceData& meshInstanceData, uint32 numInstances, uint32 instanceOffset)
 {
 #ifdef HYP_DEBUG_MODE // Sanity check
-    AssertThrow(numInstances <= meshInstanceData.numInstances);
+    Assert(numInstances <= meshInstanceData.numInstances);
 
     for (uint32 bufferIndex = 0; bufferIndex < uint32(meshInstanceData.buffers.Size()); bufferIndex++)
     {
-        AssertThrow(meshInstanceData.buffers[bufferIndex].Size() / meshInstanceData.bufferStructSizes[bufferIndex] == meshInstanceData.numInstances);
+        Assert(meshInstanceData.buffers[bufferIndex].Size() / meshInstanceData.bufferStructSizes[bufferIndex] == meshInstanceData.numInstances);
     }
 #endif
 
@@ -232,7 +232,7 @@ uint32 DrawCallCollection::PushEntityToBatch(InstancedDrawCall& drawCall, ObjId<
                 const uint32 bufferStructSize = meshInstanceData.bufferStructSizes[bufferIndex];
                 const uint32 bufferStructAlignment = meshInstanceData.bufferStructAlignments[bufferIndex];
 
-                AssertDebugMsg(meshInstanceData.buffers[bufferIndex].Size() % bufferStructSize == 0,
+                AssertDebug(meshInstanceData.buffers[bufferIndex].Size() % bufferStructSize == 0,
                     "Buffer size is not a multiple of buffer struct size! Buffer size: %u, Buffer struct size: %u",
                     meshInstanceData.buffers[bufferIndex].Size(), bufferStructSize);
 
@@ -242,10 +242,10 @@ uint32 DrawCallCollection::PushEntityToBatch(InstancedDrawCall& drawCall, ObjId<
                 void* srcPtr = reinterpret_cast<void*>(uintptr_t(meshInstanceData.buffers[bufferIndex].Data()) + (instanceOffset * bufferStructSize));
 
                 // sanity checks
-                AssertDebugMsg((uintptr_t(dstPtr) + bufferStructSize) - uintptr_t(drawCall.batch) <= batchSizeof,
+                AssertDebug((uintptr_t(dstPtr) + bufferStructSize) - uintptr_t(drawCall.batch) <= batchSizeof,
                     "Buffer struct size is larger than batch size! Buffer struct size: %u, Buffer struct alignment: %u, Batch size: %u, Entity index: %u, Field offset: %u",
                     bufferStructSize, bufferStructAlignment, batchSizeof, entityIndex, fieldOffset);
-                AssertDebugMsg(meshInstanceData.buffers[bufferIndex].Size() >= (instanceOffset + 1) * bufferStructSize,
+                AssertDebug(meshInstanceData.buffers[bufferIndex].Size() >= (instanceOffset + 1) * bufferStructSize,
                     "Buffer size is not large enough to copy data! Buffer size: %u, Buffer struct size: %u, Instance offset: %u",
                     meshInstanceData.buffers[bufferIndex].Size(), bufferStructSize, instanceOffset);
 

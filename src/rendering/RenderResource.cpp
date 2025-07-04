@@ -40,7 +40,7 @@ RenderResourceBase::~RenderResourceBase()
 
 void RenderResourceBase::Initialize()
 {
-    AssertThrow(m_bufferIndex == ~0u);
+    Assert(m_bufferIndex == ~0u);
     AcquireBufferIndex();
 
     Initialize_Internal();
@@ -110,7 +110,7 @@ void RenderResourceBase::AcquireBufferIndex()
 
     Threads::AssertOnThread(g_renderThread);
 
-    AssertThrow(m_bufferIndex == ~0u);
+    Assert(m_bufferIndex == ~0u);
 
     GpuBufferHolderBase* holder = GetGpuBufferHolder();
 
@@ -128,10 +128,10 @@ void RenderResourceBase::ReleaseBufferIndex()
 
     Threads::AssertOnThread(g_renderThread);
 
-    AssertThrow(m_bufferIndex != ~0u);
+    Assert(m_bufferIndex != ~0u);
 
     GpuBufferHolderBase* holder = GetGpuBufferHolder();
-    AssertThrow(holder != nullptr);
+    Assert(holder != nullptr);
 
     holder->ReleaseIndex(m_bufferIndex);
 

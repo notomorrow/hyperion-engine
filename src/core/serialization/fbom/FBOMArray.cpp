@@ -23,7 +23,7 @@ FBOMArray::FBOMArray(const FBOMType& elementType, const Array<FBOMData>& values)
 
         for (const FBOMData& value : m_values)
         {
-            AssertThrowMsg(
+            HYP_CORE_ASSERT(
                 value.GetType().IsOrExtends(m_elementType),
                 "Cannot add element of type '%s' to Array with element type '%s'",
                 value.GetType().name.Data(),
@@ -45,7 +45,7 @@ FBOMArray::FBOMArray(const FBOMType& elementType, Array<FBOMData>&& values)
 
         for (const FBOMData& value : m_values)
         {
-            AssertThrowMsg(
+            HYP_CORE_ASSERT(
                 value.GetType().IsOrExtends(m_elementType),
                 "Cannot add element of type '%s' to Array with element type '%s'",
                 value.GetType().name.Data(),
@@ -104,7 +104,7 @@ FBOMArray& FBOMArray::AddElement(const FBOMData& value)
         m_elementType = value.GetType();
     }
 
-    AssertThrowMsg(
+    HYP_CORE_ASSERT(
         value.GetType().IsType(m_elementType),
         "Cannot add element of type '%s' to Array with element type '%s'",
         value.GetType().name.Data(),
@@ -123,7 +123,7 @@ FBOMArray& FBOMArray::AddElement(FBOMData&& value)
         m_elementType = value.GetType();
     }
 
-    AssertThrowMsg(
+    HYP_CORE_ASSERT(
         value.GetType().IsType(m_elementType),
         "Cannot add element of type '%s' to Array with element type '%s'",
         value.GetType().name.Data(),

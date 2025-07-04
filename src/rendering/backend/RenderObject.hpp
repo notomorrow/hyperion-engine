@@ -216,9 +216,7 @@ struct RenderObjectHeader final : RenderObjectHeaderBase
 
     HYP_FORCE_INLINE T& Get()
     {
-#ifdef HYP_DEBUG_MODE
-        AssertThrowMsg(HasValue(), "Render object of type %s has no value!", TypeNameHelper<T, true>::value.Data());
-#endif
+        AssertDebug(HasValue(), "Render object of type {} has no value!", TypeNameHelper<T, true>::value.Data());
 
         return storage.Get();
     }
@@ -791,9 +789,6 @@ public:
 
     virtual ~RenderObjectBase()
     {
-        AssertDebug(m_header != nullptr);
-        AssertDebug(m_header->GetRefCountWeak() > 1); // 1 from before constructor, 1 from before destructor
-
         auto* _header = m_header;
         m_header = nullptr;
 
@@ -1165,7 +1160,7 @@ struct RenderObjectDeleter
         {
             index = s_queueIndex.Increment(1, MemoryOrder::ACQUIRE_RELEASE);
 
-            AssertThrowMsg(index < maxQueues, "Maximum number of deletion queues added");
+            Assert(index < maxQueues, "Maximum number of deletion queues added");
 
             s_queues[index] = &queue;
         }

@@ -71,7 +71,7 @@ struct DelegateHandlerEntryBase
         }
 
         ThreadBase* thread = Threads::GetThread(callingThreadId);
-        AssertThrow(thread != nullptr);
+        HYP_CORE_ASSERT(thread != nullptr);
 
         return thread;
     }
@@ -157,7 +157,7 @@ struct DelegateHandler
     {
         if (IsValid())
         {
-            AssertThrow(removeFn != nullptr);
+            HYP_CORE_ASSERT(removeFn != nullptr);
 
             removeFn(delegate, entry);
         }
@@ -172,7 +172,7 @@ struct DelegateHandler
     {
         if (IsValid())
         {
-            AssertThrow(detachFn != nullptr);
+            HYP_CORE_ASSERT(detachFn != nullptr);
 
             detachFn(delegate, std::move(*this));
         }
@@ -379,7 +379,7 @@ public:
      *  \return  A reference counted DelegateHandler object that can be used to remove the handler from the Delegate. */
     HYP_NODISCARD DelegateHandler Bind(ProcType&& proc, bool requireCurrentThread = false)
     {
-        AssertDebugMsg(std::is_void_v<ReturnType> || !requireCurrentThread, "Cannot use require_current_thread for non-void delegate return type");
+        HYP_CORE_ASSERT(std::is_void_v<ReturnType> || !requireCurrentThread, "Cannot use require_current_thread for non-void delegate return type");
 
         return Bind(std::move(proc), requireCurrentThread ? ThreadId::Current() : ThreadId::Invalid());
     }
@@ -393,12 +393,12 @@ public:
      *  \return  A reference counted DelegateHandler object that can be used to remove the handler from the Delegate. */
     HYP_NODISCARD DelegateHandler Bind(ProcType&& proc, const ThreadId& callingThreadId)
     {
-        AssertDebugMsg(std::is_void_v<ReturnType> || !callingThreadId.IsValid() || callingThreadId == ThreadId::Current(), "Cannot call a handler on a different thread if the delegate returns a value");
+        HYP_CORE_ASSERT(std::is_void_v<ReturnType> || !callingThreadId.IsValid() || callingThreadId == ThreadId::Current(), "Cannot call a handler on a different thread if the delegate returns a value");
 
 #ifdef HYP_DEBUG_MODE
         if (callingThreadId != ThreadId::Invalid())
         {
-            AssertDebugMsg(Threads::GetThread(callingThreadId) != nullptr, "Cannot bind a handler to a thread that is not registered with the Threads system");
+            HYP_CORE_ASSERT(Threads::GetThread(callingThreadId) != nullptr, "Cannot bind a handler to a thread that is not registered with the Threads system");
         }
 #endif
 
@@ -469,7 +469,7 @@ public:
             return false;
         }
 
-        AssertDebug(handle.delegate == this);
+        HYP_CORE_ASSERT(handle.delegate == this);
 
         const bool removeResult = Remove(handle.entry);
 
@@ -487,7 +487,6 @@ public:
     }
 
     /*! \brief Broadcast a message to all bound handlers.
-     *  \note The default return value can be changed by specializing the \ref{hyperion::functional::ProcDefaultReturn} struct.
      *  \tparam ArgTypes The argument types to pass to the handlers.
      *  \param args The arguments to pass to the handlers.
      *  \return The result returned from the final handler that was called, or a default constructed \ref{ReturnType} if no handlers were bound. */
@@ -499,7 +498,7 @@ public:
             // If no handlers are bound, return a default constructed object or void
             if constexpr (!std::is_void_v<ReturnType>)
             {
-                return ProcDefaultReturn<ReturnType>::Get();
+                return ReturnType();
             }
             else
             {
@@ -546,7 +545,7 @@ public:
 
             if constexpr (!std::is_void_v<ReturnType>)
             {
-                AssertDebugMsg(!current->callingThreadId.IsValid() || current->callingThreadId == currentThreadId, "Cannot call a handler on a different thread if the delegate returns a value");
+                HYP_CORE_ASSERT(!current->callingThreadId.IsValid() || current->callingThreadId == currentThreadId, "Cannot call a handler on a different thread if the delegate returns a value");
 
                 if (resultConstructed)
                 {
@@ -609,7 +608,7 @@ public:
             if (!resultConstructed)
             {
                 // If no handlers were called (due to elements being removed), return a default constructed object
-                return ProcDefaultReturn<ReturnType>::Get();
+                return ReturnType();
             }
 
             ReturnType result = std::move(resultStorage).Get();
@@ -620,7 +619,6 @@ public:
     }
 
     /*! \brief Call operator overload - alias method for Broadcast().
-     *  \note The default return value can be changed by specializing the \ref{hyperion::functional::ProcDefaultReturn} struct.
      *  \tparam ArgTypes The argument types to pass to the handlers.
      *  \param args The arguments to pass to the handlers.
      *  \return The result returned from the final handler that was called, or a default constructed \ref{ReturnType} if no handlers were bound. */

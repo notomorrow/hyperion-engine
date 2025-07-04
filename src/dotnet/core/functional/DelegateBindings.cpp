@@ -15,23 +15,23 @@ extern "C"
 
     HYP_EXPORT DelegateHandler* ScriptableDelegate_Bind(IScriptableDelegate* delegate, dotnet::Class* classObjectPtr, ObjectReference* objectReference)
     {
-        AssertThrow(delegate != nullptr);
-        AssertThrow(objectReference != nullptr);
-        AssertThrow(classObjectPtr != nullptr);
+        Assert(delegate != nullptr);
+        Assert(objectReference != nullptr);
+        Assert(classObjectPtr != nullptr);
 
         return new DelegateHandler(delegate->BindManaged("DynamicInvoke", MakeUnique<dotnet::Object>(classObjectPtr->RefCountedPtrFromThis(), *objectReference, ObjectFlags::CREATED_FROM_MANAGED)));
     }
 
     HYP_EXPORT int ScriptableDelegate_RemoveAllDetached(IScriptableDelegate* delegate)
     {
-        AssertThrow(delegate != nullptr);
+        Assert(delegate != nullptr);
 
         return delegate->RemoveAllDetached();
     }
 
     HYP_EXPORT int8 ScriptableDelegate_Remove(IScriptableDelegate* delegate, DelegateHandler* delegateHandler)
     {
-        AssertThrow(delegate != nullptr);
+        Assert(delegate != nullptr);
 
         if (!delegateHandler)
         {
@@ -43,21 +43,21 @@ extern "C"
 
     HYP_EXPORT void DelegateHandler_Detach(DelegateHandler* delegateHandler)
     {
-        AssertThrow(delegateHandler != nullptr);
+        Assert(delegateHandler != nullptr);
 
         delegateHandler->Detach();
     }
 
     HYP_EXPORT void DelegateHandler_Remove(DelegateHandler* delegateHandler)
     {
-        AssertThrow(delegateHandler != nullptr);
+        Assert(delegateHandler != nullptr);
 
         delegateHandler->Reset();
     }
 
     HYP_EXPORT void DelegateHandler_Destroy(DelegateHandler* delegateHandler)
     {
-        AssertThrow(delegateHandler != nullptr);
+        Assert(delegateHandler != nullptr);
 
         delete delegateHandler;
     }
