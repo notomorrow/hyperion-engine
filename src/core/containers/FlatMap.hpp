@@ -235,7 +235,7 @@ public:
     HYP_FORCE_INLINE Value& At(const Key& key)
     {
         const auto it = Find(key);
-        AssertDebugMsg(it != End(), "At(): Element not found");
+        HYP_CORE_ASSERT(it != End(), "At(): Element not found");
 
         return it->second;
     }
@@ -243,20 +243,20 @@ public:
     HYP_FORCE_INLINE const Value& At(const Key& key) const
     {
         const auto it = Find(key);
-        AssertDebugMsg(it != End(), "At(): Element not found");
+        HYP_CORE_ASSERT(it != End(), "At(): Element not found");
 
         return it->second;
     }
 
     HYP_FORCE_INLINE KeyValuePairType& AtIndex(SizeType index)
     {
-        AssertDebugMsg(index < Size(), "Out of bounds");
+        HYP_CORE_ASSERT(index < Size(), "Out of bounds");
         return *(Data() + index);
     }
 
     HYP_FORCE_INLINE const KeyValuePairType& AtIndex(SizeType index) const
     {
-        AssertDebugMsg(index < Size(), "Out of bounds");
+        HYP_CORE_ASSERT(index < Size(), "Out of bounds");
         return *(Data() + index);
     }
 

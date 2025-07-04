@@ -262,7 +262,7 @@ template <class AtlasElement>
 void AtlasPacker<AtlasElement>::MergeSkyline()
 {
     // Should never happen as we always add at least one free space, but this will make debugging easier
-    AssertThrow(freeSpaces.Any());
+    AssertDebug(freeSpaces.Any());
 
     for (SizeType i = 0; i < freeSpaces.Size() - 1;)
     {

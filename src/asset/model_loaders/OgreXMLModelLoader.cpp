@@ -240,7 +240,7 @@ void BuildVertices(OgreXMLModel& model)
 
 AssetLoadResult OgreXMLModelLoader::LoadAsset(LoaderState& state) const
 {
-    AssertThrow(state.assetManager != nullptr);
+    Assert(state.assetManager != nullptr);
 
     OgreXMLModel model;
     model.filepath = state.filepath;

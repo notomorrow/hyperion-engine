@@ -28,7 +28,7 @@ struct ValueStorageAlignment<void>
     static constexpr SizeType value = 1;
 };
 
-/*! \brief A storage class for arrays of values of type T with a specified count and alignment.
+/*! \brief  Provides storage values and arrays of type T, providing methods for manual construction and destruction.
  *  \details This class provides a way to store an array of values of type T in a buffer with a specified alignment.
  *  It allows for explicit construction, destruction, and retrieval of the values stored in the buffer.
  *  The alignment can be specified as a template parameter, defaulting to the alignment of T. */
@@ -40,7 +40,7 @@ struct ValueStorage;
  *  It allows for explicit construction, destruction, and retrieval of the value stored in the buffer.
  *  The alignment can be specified as a template parameter, defaulting to the alignment of T. */
 template <class T, SizeType Alignment>
-struct alignas(Alignment) ValueStorage<T, 1, Alignment>
+struct alignas(Alignment) ValueStorage<T, 1, Alignment, std::enable_if_t<!std::is_void_v<T>>>
 {
     struct ConstructTag
     {
@@ -126,7 +126,7 @@ struct ValueStorage<T, 0, Alignment>
 
 // Array specialization
 template <class T, SizeType Count, SizeType Alignment>
-struct alignas(Alignment) ValueStorage<T, Count, Alignment, typename std::enable_if_t<(Count > 1)>>
+struct alignas(Alignment) ValueStorage<T, Count, Alignment, std::enable_if_t<!std::is_void_v<T> && (Count > 1)>>
 {
     static constexpr SizeType alignment = Alignment;
 

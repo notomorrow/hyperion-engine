@@ -239,14 +239,14 @@ struct ResourceBindings
         }
 
         const HypClass* hypClass = GetClass(typeId);
-        AssertDebug(hypClass != nullptr, "TypeId %u does not have a HypClass!", typeId.Value());
+        AssertDebug(hypClass != nullptr, "TypeId {} does not have a HypClass!", typeId.Value());
 
         int staticIndex = -1;
 
         do
         {
             staticIndex = hypClass->GetStaticIndex();
-            AssertDebugMsg(staticIndex >= 0, "Invalid class: '%s' has no assigned static index!", *hypClass->GetName());
+            AssertDebug(staticIndex >= 0, "Invalid class: '{}' has no assigned static index!", *hypClass->GetName());
 
             if (SubtypeResourceBindings* bindings = subtypeBindings.TryGet(staticIndex))
             {
@@ -259,7 +259,7 @@ struct ResourceBindings
         }
         while (hypClass);
 
-        HYP_FAIL("No SubtypeBindings container found for TypeId %u (HypClass: %s)! Missing DECLARE_RENDER_DATA_CONTAINER() macro invocation for type?", typeId.Value(), *GetClass(typeId)->GetName());
+        HYP_FAIL("No SubtypeBindings container found for TypeId {} (HypClass: {})! Missing DECLARE_RENDER_DATA_CONTAINER() macro invocation for type?", typeId.Value(), *GetClass(typeId)->GetName());
     }
 };
 
@@ -330,8 +330,6 @@ struct ResourceData final
         }
     }
 };
-
-HYP_DISABLE_OPTIMIZATION;
 
 struct ResourceSubtypeData final
 {
@@ -435,8 +433,6 @@ struct ResourceSubtypeData final
     }
 };
 
-HYP_ENABLE_OPTIMIZATION;
-
 struct ResourceContainer
 {
     ResourceSubtypeData& GetSubtypeData(TypeId typeId)
@@ -448,14 +444,14 @@ struct ResourceContainer
         }
 
         const HypClass* hypClass = GetClass(typeId);
-        AssertDebug(hypClass != nullptr, "TypeId %u does not have a HypClass!", typeId.Value());
+        AssertDebug(hypClass != nullptr, "TypeId {} does not have a HypClass!", typeId.Value());
 
         int staticIndex = -1;
 
         do
         {
             staticIndex = hypClass->GetStaticIndex();
-            AssertDebugMsg(staticIndex >= 0, "Invalid class: '%s' has no assigned static index!", *hypClass->GetName());
+            AssertDebug(staticIndex >= 0, "Invalid class: '{}' has no assigned static index!", *hypClass->GetName());
 
             if (ResourceSubtypeData* subtypeData = dataByType.TryGet(staticIndex))
             {
@@ -469,7 +465,7 @@ struct ResourceContainer
         }
         while (hypClass);
 
-        HYP_FAIL("No SubtypeData container found for TypeId %u (HypClass: %s)! Missing DECLARE_RENDER_DATA_CONTAINER() macro invocation for type?", typeId.Value(), *GetClass(typeId)->GetName());
+        HYP_FAIL("No SubtypeData container found for TypeId {} (HypClass: {})! Missing DECLARE_RENDER_DATA_CONTAINER() macro invocation for type?", typeId.Value(), *GetClass(typeId)->GetName());
     }
 
     SparsePagedArray<ResourceSubtypeData, 16> dataByType;
@@ -494,8 +490,6 @@ struct ResourceContainerFactoryRegistry
         }
     }
 };
-
-HYP_DISABLE_OPTIMIZATION;
 template <class ResourceType, class ProxyType>
 struct ResourceContainerFactory
 {
@@ -504,10 +498,10 @@ struct ResourceContainerFactory
     static int GetStaticIndexOrFail()
     {
         const HypClass* hypClass = GetClass(typeId);
-        AssertDebugMsg(hypClass != nullptr, "TypeId %u does not have a HypClass!", typeId.Value());
+        AssertDebug(hypClass != nullptr, "TypeId {} does not have a HypClass!", typeId.Value());
 
         const int staticIndex = hypClass->GetStaticIndex();
-        AssertDebugMsg(staticIndex >= 0, "Invalid class: '%s' has no assigned static index!", *hypClass->GetName());
+        AssertDebug(staticIndex >= 0, "Invalid class: '{}' has no assigned static index!", *hypClass->GetName());
 
         return staticIndex;
     }
@@ -525,8 +519,8 @@ struct ResourceContainerFactory
                         resourceBindings.subtypeBindings.Emplace(staticIndex);
                     }
 
-                    AssertDebugMsg(!container.dataByType.HasIndex(staticIndex),
-                        "SubtypeData container already exists for TypeId %u (HypClass: %s)! Duplicate DECLARE_RENDER_DATA_CONTAINER() macro invocation for type?",
+                    AssertDebug(!container.dataByType.HasIndex(staticIndex),
+                        "SubtypeData container already exists for TypeId {} (HypClass: {})! Duplicate DECLARE_RENDER_DATA_CONTAINER() macro invocation for type?",
                         typeId.Value(), *GetClass(typeId)->GetName());
 
                     container.dataByType.Emplace(
@@ -556,8 +550,8 @@ struct ResourceContainerFactory
                         resourceBindings.subtypeBindings.Emplace(staticIndex, gpuBufferHolder);
                     }
 
-                    AssertDebugMsg(!container.dataByType.HasIndex(staticIndex),
-                        "SubtypeData container already exists for TypeId %u (HypClass: %s)! Duplicate DECLARE_RENDER_DATA_CONTAINER() macro invocation for type?",
+                    AssertDebug(!container.dataByType.HasIndex(staticIndex),
+                        "SubtypeData container already exists for TypeId {} (HypClass: {})! Duplicate DECLARE_RENDER_DATA_CONTAINER() macro invocation for type?",
                         typeId.Value(), *GetClass(typeId)->GetName());
 
                     container.dataByType.Emplace(
@@ -570,8 +564,6 @@ struct ResourceContainerFactory
                 });
     }
 };
-
-HYP_ENABLE_OPTIMIZATION;
 
 #define DECLARE_RENDER_DATA_CONTAINER(resourceType, proxyType, ...) \
     static ResourceContainerFactory<class resourceType, class proxyType> g_##resourceType##_container_factory { __VA_ARGS__ };
@@ -736,7 +728,7 @@ HYP_API void RenderApi_UpdateRenderProxy(ObjIdBase id)
     AssertDebug(data.count.Get(MemoryOrder::RELAXED), "expected ref count to be > 0 when calling UpdateRenderProxy()");
     AssertDebug(!subtypeData.indicesPendingDelete.Test(id.ToIndex()), "Why is it marked for delete?");
 
-    AssertDebug(subtypeData.hasProxyData, "Cannot use UpdateRenderProxy() for type which does not have proxy data! TypeId: %u, HypClass %s",
+    AssertDebug(subtypeData.hasProxyData, "Cannot use UpdateRenderProxy() for type which does not have proxy data! TypeId: {}, HypClass {}",
         subtypeData.typeId.Value(), *GetClass(subtypeData.typeId)->GetName());
 
     IRenderProxy* proxy;
@@ -799,7 +791,7 @@ HYP_API void RenderApi_UpdateRenderProxy(ObjIdBase id, const IRenderProxy* srcPr
     AssertDebug(data.count.Get(MemoryOrder::RELAXED), "expected ref count to be > 0 when calling UpdateRenderProxy()");
     AssertDebug(!subtypeData.indicesPendingDelete.Test(id.ToIndex()), "Why is it marked for delete?");
 
-    AssertDebug(subtypeData.hasProxyData, "Cannot use UpdateResource() for type which does not have proxy data! TypeId: %u, HypClass %s",
+    AssertDebug(subtypeData.hasProxyData, "Cannot use UpdateResource() for type which does not have proxy data! TypeId: {}, HypClass {}",
         subtypeData.typeId.Value(), *GetClass(subtypeData.typeId)->GetName());
 
     IRenderProxy* dstProxy;
@@ -851,7 +843,7 @@ HYP_API IRenderProxy* RenderApi_GetRenderProxy(ObjIdBase id)
     FrameData& frameData = g_frameData[slot];
 
     ResourceSubtypeData& subtypeData = frameData.resources.GetSubtypeData(id.GetTypeId());
-    AssertDebugMsg(subtypeData.hasProxyData, "Cannot use GetRenderProxy() for type which does not have a RenderProxy! TypeId: %u, HypClass %s",
+    AssertDebug(subtypeData.hasProxyData, "Cannot use GetRenderProxy() for type which does not have a RenderProxy! TypeId: {}, HypClass {}",
         subtypeData.typeId.Value(), *GetClass(subtypeData.typeId)->GetName());
 
     if (!subtypeData.proxies.HasIndex(id.ToIndex()))
@@ -1018,8 +1010,8 @@ HYP_API void RenderApi_BeginFrame_RenderThread()
                 AssertDebug(subtypeData.writeBufferDataFn != nullptr);
 
                 const Pair<uint32, void*> bindingData = g_renderGlobalState->resourceBindings->Retrieve(resourceId);
-                AssertDebug(bindingData.first != ~0u && bindingData.second != nullptr, "Failed to retrieve binding for resource: %u of type %s in frame %u, but it is marked as bound (index: %u)",
-                    resourceId.Value(), *GetClass(resourceId.GetTypeId())->GetName(), slot, i);
+                AssertDebug(bindingData.first != ~0u && bindingData.second != nullptr, "Failed to retrieve binding for resource: {} in frame {}, but it is marked as bound (index: {})",
+                    resourceId, slot, i);
 
                 IRenderProxy* proxy = subtypeData.proxies.Get(i);
                 AssertDebug(proxy != nullptr);
@@ -1093,13 +1085,13 @@ HYP_API void RenderApi_EndFrame_RenderThread()
 
             if (subtypeData.hasProxyData)
             {
-                AssertDebug(subtypeData.proxies.HasIndex(i), "proxy missing at index: %u", i);
+                AssertDebug(subtypeData.proxies.HasIndex(i), "proxy missing at index: {}", i);
 
                 IRenderProxy* proxy = subtypeData.proxies.Get(i);
                 AssertDebug(proxy != nullptr);
 
-                HYP_LOG(Rendering, Debug, "Deleting render proxy for resource id {} of type {} at index {} for frame {}",
-                    resource.Id(), GetClass(subtypeData.typeId)->GetName(), i, slot);
+                HYP_LOG(Rendering, Debug, "Deleting render proxy for resource id {} at index {} for frame {}",
+                    resource.Id(), i, slot);
 
                 subtypeData.proxies.EraseAt(i);
 

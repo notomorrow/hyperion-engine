@@ -19,7 +19,7 @@ extern "C"
 
     HYP_EXPORT void RefCountedPtr_Get(uintptr_t ctrlBlock, uintptr_t address, ValueStorage<HypData>* outHypData)
     {
-        AssertThrow(outHypData != nullptr);
+        Assert(outHypData != nullptr);
 
         auto* refCountData = reinterpret_cast<typename memory::RefCountedPtrBase<AtomicVar<uint32>>::RefCountDataType*>(ctrlBlock);
         AssertDebug(refCountData != nullptr);

@@ -68,12 +68,12 @@ struct RENDER_COMMAND(SetUILayerImageView)
         if (finalPass.m_renderTextureToScreenPass != nullptr)
         {
             const DescriptorTableRef& descriptorTable = finalPass.m_renderTextureToScreenPass->GetGraphicsPipeline()->GetDescriptorTable();
-            AssertThrow(descriptorTable.IsValid());
+            Assert(descriptorTable.IsValid());
 
             for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
             {
                 const DescriptorSetRef& descriptorSet = descriptorTable->GetDescriptorSet(NAME("RenderTextureToScreenDescriptorSet"), frameIndex);
-                AssertThrow(descriptorSet != nullptr);
+                Assert(descriptorSet != nullptr);
 
                 if (imageView != nullptr)
                 {
@@ -127,19 +127,19 @@ void FinalPass::Create()
     HYP_SCOPE;
     Threads::AssertOnThread(g_renderThread);
 
-    AssertThrow(m_swapchain != nullptr);
+    Assert(m_swapchain != nullptr);
 
     m_extent = m_swapchain->GetExtent();
     m_imageFormat = m_swapchain->GetImageFormat();
 
-    AssertThrow(m_extent.Volume() != 0);
+    Assert(m_extent.Volume() != 0);
 
     m_quadMesh = MeshBuilder::Quad();
     InitObject(m_quadMesh);
     m_quadMesh->SetPersistentRenderResourceEnabled(true);
 
     ShaderRef renderTextureToScreenShader = g_shaderManager->GetOrCreate(NAME("RenderTextureToScreen_UI"));
-    AssertThrow(renderTextureToScreenShader.IsValid());
+    Assert(renderTextureToScreenShader.IsValid());
 
     const DescriptorTableDeclaration& descriptorTableDecl = renderTextureToScreenShader->GetCompiledShader()->GetDescriptorTableDeclaration();
     DescriptorTableRef descriptorTable = g_renderBackend->MakeDescriptorTable(&descriptorTableDecl);
@@ -147,7 +147,7 @@ void FinalPass::Create()
     for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
     {
         const DescriptorSetRef& descriptorSet = descriptorTable->GetDescriptorSet(NAME("RenderTextureToScreenDescriptorSet"), frameIndex);
-        AssertThrow(descriptorSet != nullptr);
+        Assert(descriptorSet != nullptr);
 
         if (m_uiLayerImageView != nullptr)
         {

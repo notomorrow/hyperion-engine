@@ -10,23 +10,7 @@
 
 #include <core/memory/ByteBuffer.hpp>
 
-#include <core/math/Quaternion.hpp>
-
 namespace hyperion {
-
-// fwd decl for math types
-namespace math {
-template <class T>
-struct Vec2;
-
-template <class T>
-struct Vec3;
-
-template <class T>
-struct Vec4;
-
-} // namespace math
-
 namespace utilities {
 
 // Int types
@@ -189,204 +173,6 @@ struct Formatter<StringType, wchar_t*>
     auto operator()(const wchar_t* value) const
     {
         return StringType(WideStringView(value));
-    }
-};
-
-template <class StringType, class T>
-struct Formatter<StringType, math::Vec2<T>>
-{
-    HYP_FORCE_INLINE static const char* GetFormatString()
-    {
-        if constexpr (std::is_floating_point_v<T>)
-        {
-            static const char* formatString = "[%f %f]";
-
-            return formatString;
-        }
-        else if constexpr (std::is_integral_v<T> && std::is_signed_v<T> && sizeof(T) <= 4)
-        {
-            static const char* formatString = "[%d %d]";
-
-            return formatString;
-        }
-        else if constexpr (std::is_integral_v<T> && std::is_signed_v<T> && sizeof(T) <= 8)
-        {
-            static const char* formatString = "[%lld %lld]";
-
-            return formatString;
-        }
-        else if constexpr (std::is_integral_v<T> && std::is_unsigned_v<T> && sizeof(T) <= 4)
-        {
-            static const char* formatString = "[%u %u]";
-
-            return formatString;
-        }
-        else if constexpr (std::is_integral_v<T> && std::is_unsigned_v<T> && sizeof(T) <= 8)
-        {
-            static const char* formatString = "[%llu %llu]";
-
-            return formatString;
-        }
-        else
-        {
-            static_assert(resolutionFailure<T>, "Cannot format Vec2 type: unknown inner type");
-        }
-    }
-
-    auto operator()(const math::Vec2<T>& value) const
-    {
-        Array<ubyte, InlineAllocator<1024>> buf;
-        buf.Resize(1024);
-
-        int resultSize = std::snprintf(reinterpret_cast<char*>(buf.Data()), buf.Size(), GetFormatString(), value.x, value.y) + 1;
-
-        if (resultSize > buf.Size())
-        {
-            buf.Resize(resultSize);
-
-            resultSize = std::snprintf(reinterpret_cast<char*>(buf.Data()), buf.Size(), GetFormatString(), value.x, value.y) + 1;
-        }
-
-        return StringType(buf.ToByteView());
-    }
-};
-
-template <class StringType, class T>
-struct Formatter<StringType, math::Vec3<T>>
-{
-    HYP_FORCE_INLINE static const char* GetFormatString()
-    {
-        if constexpr (std::is_floating_point_v<T>)
-        {
-            static const char* formatString = "[%f %f %f]";
-
-            return formatString;
-        }
-        else if constexpr (std::is_integral_v<T> && std::is_signed_v<T> && sizeof(T) <= 4)
-        {
-            static const char* formatString = "[%d %d %d]";
-
-            return formatString;
-        }
-        else if constexpr (std::is_integral_v<T> && std::is_signed_v<T> && sizeof(T) <= 8)
-        {
-            static const char* formatString = "[%lld %lld %lld]";
-
-            return formatString;
-        }
-        else if constexpr (std::is_integral_v<T> && std::is_unsigned_v<T> && sizeof(T) <= 4)
-        {
-            static const char* formatString = "[%u %u %u]";
-
-            return formatString;
-        }
-        else if constexpr (std::is_integral_v<T> && std::is_unsigned_v<T> && sizeof(T) <= 8)
-        {
-            static const char* formatString = "[%llu %llu %llu]";
-
-            return formatString;
-        }
-        else
-        {
-            static_assert(resolutionFailure<T>, "Cannot format Vec3 type: unknown inner type");
-        }
-    }
-
-    auto operator()(const math::Vec3<T>& value) const
-    {
-        Array<ubyte, InlineAllocator<1024>> buf;
-        buf.Resize(1024);
-
-        int resultSize = std::snprintf(reinterpret_cast<char*>(buf.Data()), buf.Size(), GetFormatString(), value.x, value.y, value.z) + 1;
-
-        if (resultSize > buf.Size())
-        {
-            buf.Resize(resultSize);
-
-            resultSize = std::snprintf(reinterpret_cast<char*>(buf.Data()), buf.Size(), GetFormatString(), value.x, value.y, value.z) + 1;
-        }
-
-        return StringType(buf.ToByteView());
-    }
-};
-
-template <class StringType, class T>
-struct Formatter<StringType, math::Vec4<T>>
-{
-    HYP_FORCE_INLINE static const char* GetFormatString()
-    {
-        if constexpr (std::is_floating_point_v<T>)
-        {
-            static const char* formatString = "[%f %f %f %f]";
-
-            return formatString;
-        }
-        else if constexpr (std::is_integral_v<T> && std::is_signed_v<T> && sizeof(T) <= 4)
-        {
-            static const char* formatString = "[%d %d %d %d]";
-
-            return formatString;
-        }
-        else if constexpr (std::is_integral_v<T> && std::is_signed_v<T> && sizeof(T) <= 8)
-        {
-            static const char* formatString = "[%lld %lld %lld %lld]";
-
-            return formatString;
-        }
-        else if constexpr (std::is_integral_v<T> && std::is_unsigned_v<T> && sizeof(T) <= 4)
-        {
-            static const char* formatString = "[%u %u %u %u]";
-
-            return formatString;
-        }
-        else if constexpr (std::is_integral_v<T> && std::is_unsigned_v<T> && sizeof(T) <= 8)
-        {
-            static const char* formatString = "[%llu %llu %llu %llu]";
-
-            return formatString;
-        }
-        else
-        {
-            static_assert(resolutionFailure<T>, "Cannot format Vec4 type: unknown inner type");
-        }
-    }
-
-    auto operator()(const math::Vec4<T>& value) const
-    {
-        Array<ubyte, InlineAllocator<1024>> buf;
-        buf.Resize(1024);
-
-        int resultSize = std::snprintf(reinterpret_cast<char*>(buf.Data()), buf.Size(), GetFormatString(), value.x, value.y, value.z, value.w) + 1;
-
-        if (resultSize > buf.Size())
-        {
-            buf.Resize(resultSize);
-
-            resultSize = std::snprintf(reinterpret_cast<char*>(buf.Data()), buf.Size(), GetFormatString(), value.x, value.y, value.z, value.w) + 1;
-        }
-
-        return StringType(buf.ToByteView());
-    }
-};
-
-template <class StringType>
-struct Formatter<StringType, Quaternion>
-{
-    auto operator()(const Quaternion& value) const
-    {
-        Array<ubyte, InlineAllocator<1024>> buf;
-        buf.Resize(1024);
-
-        int resultSize = std::snprintf(reinterpret_cast<char*>(buf.Data()), buf.Size(), "[%f %f %f %f]", value.x, value.y, value.z, value.w) + 1;
-
-        if (resultSize > buf.Size())
-        {
-            buf.Resize(resultSize);
-
-            resultSize = std::snprintf(reinterpret_cast<char*>(buf.Data()), buf.Size(), "[%f %f %f %f]", value.x, value.y, value.z, value.w) + 1;
-        }
-
-        return StringType(buf.ToByteView());
     }
 };
 
@@ -648,6 +434,12 @@ using utilities::Format;
 } // namespace hyperion
 
 // Helper macro for utilities::Format< FormatString >(...)
+
+// To override FormatFwd.hpp
+#ifdef HYP_FORMAT
+#undef HYP_FORMAT
+#endif
+
 #define HYP_FORMAT(fmt, ...) Format<HYP_STATIC_STRING(fmt)>(__VA_ARGS__)
 
 #endif

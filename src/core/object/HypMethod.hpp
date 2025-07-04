@@ -40,8 +40,10 @@ HYP_FORCE_INLINE decltype(auto) CallHypMethod_Impl(FunctionType fn, HypData** ar
 
         if (!condition)
         {
-            HYP_FAIL("Invalid argument at index %u: Expected %s, Got TypeId %u",
-                Index, TypeName<NormalizedType<typename TupleElement<Index, ArgTypes...>::Type>>().Data(),
+            HYP_FAIL("Invalid argument at index %zu: Expected %s (TypeId: %zu), Got TypeId %u",
+                Index,
+                TypeName<NormalizedType<typename TupleElement<Index, ArgTypes...>::Type>>().Data(),
+                TypeId::ForType<NormalizedType<typename TupleElement<Index, ArgTypes...>::Type>>().Value(),
                 args[Index]->GetTypeId().Value());
         }
 
@@ -140,7 +142,7 @@ struct HypMethodHelper<FunctionType, std::enable_if_t<!FunctionTraits<FunctionTy
 #define HYP_METHOD_MEMBER_FN_WRAPPER(_mem_fn)                                                    \
     [_mem_fn]<class... InnerArgTypes>(TargetType* target, InnerArgTypes&&... args) -> ReturnType \
     {                                                                                            \
-        AssertThrow(target != nullptr);                                                          \
+        HYP_CORE_ASSERT(target != nullptr);                                                      \
                                                                                                  \
         return (target->*_mem_fn)(std::forward<InnerArgTypes>(args)...);                         \
     }
@@ -164,7 +166,7 @@ public:
           m_attributes(attributes),
           m_proc([memFn](HypData** args, SizeType numArgs) -> HypData
               {
-                  AssertThrow(numArgs == sizeof...(ArgTypes) + 1);
+                  HYP_CORE_ASSERT(numArgs == sizeof...(ArgTypes) + 1);
 
                   const auto fn = HYP_METHOD_MEMBER_FN_WRAPPER(memFn);
 
@@ -190,7 +192,7 @@ public:
         {
             m_serializeProc = [memFn](Span<HypData> args) -> FBOMData
             {
-                AssertThrow(args.Size() == sizeof...(ArgTypes) + 1);
+                HYP_CORE_ASSERT(args.Size() == sizeof...(ArgTypes) + 1);
 
                 const auto fn = HYP_METHOD_MEMBER_FN_WRAPPER(memFn);
 
@@ -219,7 +221,7 @@ public:
 
             m_deserializeProc = [memFn](FBOMLoadContext& context, Span<HypData> args, const FBOMData& data) -> void
             {
-                AssertThrow(args.Size() == sizeof...(ArgTypes));
+                HYP_CORE_ASSERT(args.Size() == sizeof...(ArgTypes));
 
                 if constexpr (sizeof...(ArgTypes) >= 1)
                 {
@@ -257,7 +259,7 @@ public:
           m_attributes(attributes),
           m_proc([memFn](HypData** args, SizeType numArgs) -> HypData
               {
-                  AssertThrow(numArgs == sizeof...(ArgTypes) + 1);
+                  HYP_CORE_ASSERT(numArgs == sizeof...(ArgTypes) + 1);
 
                   // replace member function with free function using target pointer as first arg
                   const auto fn = HYP_METHOD_MEMBER_FN_WRAPPER(memFn);
@@ -284,7 +286,7 @@ public:
         {
             m_serializeProc = [memFn](Span<HypData> args) -> FBOMData
             {
-                AssertThrow(args.Size() == sizeof...(ArgTypes) + 1);
+                HYP_CORE_ASSERT(args.Size() == sizeof...(ArgTypes) + 1);
 
                 const auto fn = HYP_METHOD_MEMBER_FN_WRAPPER(memFn);
 
@@ -313,7 +315,7 @@ public:
 
             m_deserializeProc = [memFn](FBOMLoadContext& context, Span<HypData> args, const FBOMData& data) -> void
             {
-                AssertThrow(args.Size() == sizeof...(ArgTypes));
+                HYP_CORE_ASSERT(args.Size() == sizeof...(ArgTypes));
 
                 if constexpr (sizeof...(ArgTypes) >= 1)
                 {
@@ -352,7 +354,7 @@ public:
           m_attributes(attributes),
           m_proc([fn](HypData** args, SizeType numArgs) -> HypData
               {
-                  AssertThrow(numArgs == sizeof...(ArgTypes));
+                  HYP_CORE_ASSERT(numArgs == sizeof...(ArgTypes));
 
                   if constexpr (std::is_void_v<ReturnType>)
                   {

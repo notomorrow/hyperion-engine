@@ -23,7 +23,7 @@ Bitmap<1> NoiseGenerator::CreateBitmap(uint32 width, uint32 height, float scale)
         for (uint32 y = 0; y < height; y++)
         {
             const auto noiseValue = GetNoise(Vector2(static_cast<float>(x), static_cast<float>(y)) * scale);
-            bitmap.GetPixel(x, y).SetR(static_cast<float>(noiseValue) * 0.5f + 0.5f);
+            bitmap.GetPixelReference(x, y).SetR(float(noiseValue) * 0.5f + 0.5f);
         }
     }
 
@@ -147,7 +147,7 @@ NoiseGenerator* NoiseFactory::Capture(NoiseGenerationType type, Seed seed)
 
 void NoiseFactory::Release(NoiseGenerator* noise)
 {
-    AssertThrow(noise != nullptr);
+    Assert(noise != nullptr);
 
     Release(noise->m_type, noise->m_seed);
 }
@@ -156,7 +156,7 @@ void NoiseFactory::Release(NoiseGenerationType type, Seed seed)
 {
     const auto it = m_noiseGenerators.find(std::make_pair(type, seed));
 
-    AssertThrow(it != m_noiseGenerators.end());
+    Assert(it != m_noiseGenerators.end());
 
     if (!--it->second.uses)
     {

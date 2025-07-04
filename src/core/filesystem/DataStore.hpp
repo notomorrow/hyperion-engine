@@ -55,7 +55,7 @@ public:
             });
 
         DataStoreType* ptrCasted = dynamic_cast<DataStoreType*>(ptr);
-        AssertThrow(ptrCasted != nullptr);
+        HYP_CORE_ASSERT(ptrCasted != nullptr);
 
         return *ptrCasted;
     }

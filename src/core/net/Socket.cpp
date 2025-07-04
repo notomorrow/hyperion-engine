@@ -44,7 +44,7 @@ SocketServer::~SocketServer()
         Stop();
     }
 
-    AssertThrow(m_thread == nullptr && !m_thread->IsRunning());
+    HYP_CORE_ASSERT(m_thread == nullptr && !m_thread->IsRunning());
 }
 
 void SocketConnection::TriggerProc(Name eventName, Array<SocketProcArgument>&& args)

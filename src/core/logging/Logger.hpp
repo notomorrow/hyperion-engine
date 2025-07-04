@@ -5,23 +5,16 @@
 #include <core/logging/LoggerFwd.hpp>
 
 #include <core/Name.hpp>
-#include <core/Defines.hpp>
 
 #include <core/utilities/StringView.hpp>
 #include <core/utilities/Format.hpp>
 #include <core/utilities/EnumFlags.hpp>
 #include <core/utilities/Time.hpp>
 
-#include <core/memory/ByteBuffer.hpp>
-#include <core/memory/NotNullPtr.hpp>
+#include <core/memory/Pimpl.hpp>
 
 #include <core/containers/String.hpp>
-#include <core/containers/HashMap.hpp>
-#include <core/containers/LinkedList.hpp>
 #include <core/containers/Bitset.hpp>
-
-#include <core/threading/Mutex.hpp>
-#include <core/threading/AtomicVar.hpp>
 
 namespace hyperion {
 
@@ -175,6 +168,8 @@ public:
     virtual void WriteError(const LogChannel& channel, const LogMessage& message) = 0;
 };
 
+class LoggerImpl;
+
 class HYP_API Logger
 {
 public:
@@ -185,7 +180,7 @@ public:
     static Logger& GetInstance();
 
     Logger();
-    Logger(NotNullPtr<ILoggerOutputStream> outputStream);
+    Logger(ILoggerOutputStream& outputStream);
 
     Logger(const Logger& other) = delete;
     Logger& operator=(const Logger& other) = delete;
@@ -193,10 +188,7 @@ public:
     Logger& operator=(Logger&& other) noexcept = delete;
     ~Logger();
 
-    HYP_FORCE_INLINE ILoggerOutputStream* GetOutputStream() const
-    {
-        return m_outputStream;
-    }
+    ILoggerOutputStream* GetOutputStream() const;
 
     void RegisterChannel(LogChannel* channel);
 
@@ -213,11 +205,7 @@ public:
     void Log(const LogChannel& channel, const LogMessage& message);
 
 private:
-    AtomicVar<ChannelMask> m_logMask;
-    FixedArray<LogChannel*, maxChannels> m_logChannels;
-    LinkedList<LogChannel> m_dynamicLogChannels;
-    mutable Mutex m_dynamicLogChannelsMutex;
-    NotNullPtr<ILoggerOutputStream> m_outputStream;
+    Pimpl<LoggerImpl> m_pImpl;
 };
 
 struct LogOnceHelper
@@ -229,14 +217,14 @@ struct LogOnceHelper
         {
             LogOnceHelper_Impl(Logger& logger, LogOnceArgTypes&&... args)
             {
-                Log_Internal<Category, ChannelArg, LogOnceFunctionName, LogOnceFormatString>(logger, std::forward<LogOnceArgTypes>(args)...);
+                LogStatic<Category, ChannelArg, LogOnceFormatString>(logger, std::forward<LogOnceArgTypes>(args)...);
             }
         } impl { logger, std::forward<LogOnceArgTypes>(args)... };
     }
 };
 
-template <LogCategory Category, auto ChannelArg, auto FunctionNameString, auto FormatString, class... Args>
-static inline void Log_Internal(Logger& logger, Args&&... args)
+template <LogCategory Category, auto ChannelArg, auto FormatString, class... Args>
+inline void LogStatic(Logger& logger, Args&&... args)
 {
     if constexpr (!Category.IsEnabled())
     {
@@ -266,24 +254,57 @@ static inline void Log_Internal(Logger& logger, Args&&... args)
     }
 }
 
-template <LogCategory Category, auto FunctionNameString, auto FormatString, class... Args>
-static inline void LogDynamicChannel(Logger& logger, const LogChannel& channel, Args&&... args)
+template <LogCategory Category, auto FormatString, class... Args>
+inline void LogStatic_Channel(Logger& logger, const LogChannel& channel, Args&&... args)
 {
     if constexpr (!Category.IsEnabled())
     {
         return;
     }
 
-    const String prefix = HYP_FORMAT("[{}:{}]: ", channel.GetName(), LogLevelToString<Category.GetLevel()>());
+    constexpr const char* colorCode = LogLevelTermColor<Category.GetLevel()>();
+
+    const String prefix = HYP_FORMAT("{}{} [{}]: ", colorCode, channel.GetName(), LogLevelToString<Category.GetLevel()>());
 
     if (logger.IsChannelEnabled(channel))
     {
-        logger.Log(channel, LogMessage { Category.GetLevel(), prefix + utilities::Format<FormatString>(std::forward<Args>(args)...) });
+        logger.Log(channel, LogMessage { Category.GetLevel(), Time::Now().ToMilliseconds(), prefix + utilities::Format<FormatString>(std::forward<Args>(args)...) });
     }
 
     if constexpr (Category.GetFlags() & LogCategory::LCF_FATAL)
     {
         HYP_THROW("Fatal error logged! Crashing the engine...");
+    }
+}
+
+template <LogCategory Category, auto ChannelArg>
+inline void LogDynamic(Logger& logger, const char* str)
+{
+    if constexpr (!Category.IsEnabled())
+    {
+        return;
+    }
+
+    constexpr const char* colorCode = LogLevelTermColor<Category.GetLevel()>();
+
+    static const LogChannel& channel = *HYP_GET_CONST_ARG(ChannelArg);
+    static const String prefix = HYP_FORMAT("{}{} [{}]: ", colorCode, channel.GetName(), LogLevelToString<Category.GetLevel()>());
+
+    if (logger.IsChannelEnabled(channel))
+    {
+        if constexpr (Memory::AreStaticStringsEqual(colorCode, ""))
+        {
+            logger.Log(channel, LogMessage { Category.GetLevel(), Time::Now().ToMilliseconds(), prefix + str });
+        }
+        else
+        {
+            logger.Log(channel, LogMessage { Category.GetLevel(), Time::Now().ToMilliseconds(), prefix + str + "\33[0m" });
+        }
+    }
+
+    if constexpr (Category.GetFlags() & LogCategory::LCF_FATAL)
+    {
+        HYP_FAIL("Fatal error logged! Crashing the engine...");
     }
 }
 

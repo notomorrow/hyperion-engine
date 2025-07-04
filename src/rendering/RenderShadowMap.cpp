@@ -179,7 +179,7 @@ bool ShadowMapAllocator::FreeShadowMap(RenderShadowMap* shadowMap)
 
     if (atlasElement.atlasIndex != ~0u)
     {
-        AssertThrow(atlasElement.atlasIndex < m_atlases.Size());
+        Assert(atlasElement.atlasIndex < m_atlases.Size());
 
         ShadowMapAtlas& atlas = m_atlases[atlasElement.atlasIndex];
         result = atlas.RemoveElement(atlasElement);
@@ -279,7 +279,7 @@ void RenderShadowMap::UpdateBufferData()
 {
     HYP_SCOPE;
 
-    AssertThrow(m_bufferIndex != ~0u);
+    Assert(m_bufferIndex != ~0u);
 
     m_bufferData.dimensionsScale = Vec4f(Vec2f(m_atlasElement.dimensions), m_atlasElement.scale);
     m_bufferData.offsetUv = m_atlasElement.offsetUv;

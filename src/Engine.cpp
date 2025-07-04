@@ -92,7 +92,7 @@ public:
     // Overrides Start() to not create a thread object. Runs the render loop on the main thread.
     bool Start()
     {
-        AssertThrow(m_isRunning.Exchange(true, MemoryOrder::ACQUIRE_RELEASE) == false);
+        Assert(m_isRunning.Exchange(true, MemoryOrder::ACQUIRE_RELEASE) == false);
 
         // Must be current thread
         Threads::AssertOnThread(g_renderThread);
@@ -118,7 +118,7 @@ public:
 private:
     virtual void operator()() override
     {
-        AssertThrow(m_appContext != nullptr);
+        Assert(m_appContext != nullptr);
 
         SystemEvent event;
 
@@ -211,12 +211,12 @@ HYP_API void Engine::Init()
     // Set ready to false after render thread stops running.
     HYP_DEFER({ SetReady(false); });
 
-    AssertThrowMsg(m_appContext != nullptr, "App context must be set before initializing the engine!");
+    Assert(m_appContext != nullptr, "App context must be set before initializing the engine!");
 
     m_renderThread = MakeUnique<RenderThread>(m_appContext);
     RenderApi_Init();
 
-    AssertThrow(m_appContext->GetMainWindow() != nullptr);
+    Assert(m_appContext->GetMainWindow() != nullptr);
 
     // m_appContext->GetMainWindow()->OnWindowSizeChanged.Bind(
     //                                                        [this](Vec2i newWindowSize)
@@ -229,7 +229,7 @@ HYP_API void Engine::Init()
 
     TaskSystem::GetInstance().Start();
 
-    AssertThrow(g_renderBackend != nullptr);
+    Assert(g_renderBackend != nullptr);
 
     g_renderBackend->GetOnSwapchainRecreatedDelegate()
         .Bind([this](SwapchainBase* swapchain)

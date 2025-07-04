@@ -483,14 +483,14 @@ public:
 
     HYP_FORCE_INLINE JSONString& AsString()
     {
-        AssertThrow(IsString());
+        HYP_CORE_ASSERT(IsString());
 
         return m_inner.GetUnchecked<JSONString>();
     }
 
     HYP_FORCE_INLINE const JSONString& AsString() const
     {
-        AssertThrow(IsString());
+        HYP_CORE_ASSERT(IsString());
 
         return m_inner.GetUnchecked<JSONString>();
     }
@@ -502,7 +502,7 @@ public:
 
     HYP_FORCE_INLINE JSONNumber AsNumber() const
     {
-        AssertThrow(IsNumber());
+        HYP_CORE_ASSERT(IsNumber());
 
         return m_inner.GetUnchecked<JSONNumber>();
     }
@@ -594,7 +594,7 @@ public:
 
     HYP_FORCE_INLINE JSONBool AsBool() const
     {
-        AssertThrow(IsBool());
+        HYP_CORE_ASSERT(IsBool());
 
         return m_inner.GetUnchecked<JSONBool>();
     }
@@ -646,14 +646,14 @@ public:
 
     HYP_FORCE_INLINE JSONArray& AsArray()
     {
-        AssertThrow(IsArray());
+        HYP_CORE_ASSERT(IsArray());
 
         return *m_inner.GetUnchecked<JSONArrayRef>();
     }
 
     HYP_FORCE_INLINE const JSONArray& AsArray() const
     {
-        AssertThrow(IsArray());
+        HYP_CORE_ASSERT(IsArray());
 
         return *m_inner.GetUnchecked<JSONArrayRef>();
     }
@@ -677,14 +677,14 @@ public:
 
     HYP_FORCE_INLINE JSONObject& AsObject()
     {
-        AssertThrow(IsObject());
+        HYP_CORE_ASSERT(IsObject());
 
         return *m_inner.GetUnchecked<JSONObjectRef>();
     }
 
     HYP_FORCE_INLINE const JSONObject& AsObject() const
     {
-        AssertThrow(IsObject());
+        HYP_CORE_ASSERT(IsObject());
 
         return *m_inner.GetUnchecked<JSONObjectRef>();
     }

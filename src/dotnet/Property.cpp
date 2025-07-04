@@ -9,8 +9,8 @@ namespace hyperion::dotnet {
 
 void Property::InvokeGetter_Internal(const Object* objectPtr, HypData* outReturnHypData)
 {
-    AssertThrow(objectPtr != nullptr);
-    AssertThrow(objectPtr->GetClass() != nullptr);
+    Assert(objectPtr != nullptr);
+    Assert(objectPtr->GetClass() != nullptr);
 
     RC<Assembly> assembly = objectPtr->GetClass()->GetAssembly();
 
@@ -19,8 +19,8 @@ void Property::InvokeGetter_Internal(const Object* objectPtr, HypData* outReturn
 
 void Property::InvokeSetter_Internal(const Object* objectPtr, const HypData** valueHypData)
 {
-    AssertThrow(objectPtr != nullptr);
-    AssertThrow(objectPtr->GetClass() != nullptr);
+    Assert(objectPtr != nullptr);
+    Assert(objectPtr->GetClass() != nullptr);
 
     RC<Assembly> assembly = objectPtr->GetClass()->GetAssembly();
 

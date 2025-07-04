@@ -325,7 +325,7 @@ public:
     /*! \brief Returns the element at the given index. No bounds checking is performed in release mode. */
     HYP_FORCE_INLINE ValueType& operator[](KeyType index)
     {
-        AssertDebugMsg(index >= 0 && index < Size(), "Index out of bounds! Index: %d, Size: %d", index, Size());
+        HYP_CORE_ASSERT(index >= 0 && index < Size(), "Index out of bounds");
 
         return GetBuffer()[m_startOffset + index];
     }
@@ -333,7 +333,7 @@ public:
     /*! \brief Returns the element at the given index. No bounds checking is performed in release mode. */
     HYP_FORCE_INLINE const ValueType& operator[](KeyType index) const
     {
-        AssertDebugMsg(index >= 0 && index < Size(), "Index out of bounds! Index: %d, Size: %d", index, Size());
+        HYP_CORE_ASSERT(index >= 0 && index < Size(), "Index out of bounds");
 
         return GetBuffer()[m_startOffset + index];
     }
@@ -825,7 +825,7 @@ void Array<T, AllocatorType>::SetCapacity(SizeType capacity, SizeType offset)
         return;
     }
 
-    AssertDebug(capacity <= SIZE_MAX / sizeof(T));
+    HYP_CORE_ASSERT(capacity <= SIZE_MAX / sizeof(T));
 
     // delete and copy all over again
     Allocation<T, AllocatorType> newAllocation;
@@ -1419,7 +1419,7 @@ auto Array<T, AllocatorType>::Insert(ConstIterator where, const ValueType& value
     }
 
 #ifdef HYP_DEBUG_MODE
-    AssertThrow(where >= Begin() && where <= End());
+    HYP_CORE_ASSERT(where >= Begin() && where <= End());
 #endif
 
     if (m_size + 1 >= Capacity())
@@ -1435,7 +1435,7 @@ auto Array<T, AllocatorType>::Insert(ConstIterator where, const ValueType& value
     }
 
 #ifdef HYP_DEBUG_MODE
-    AssertThrow(Capacity() >= m_size + 1);
+    HYP_CORE_ASSERT(Capacity() >= m_size + 1);
 #endif
 
     SizeType index;
@@ -1481,9 +1481,7 @@ auto Array<T, AllocatorType>::Insert(ConstIterator where, ValueType&& value) -> 
         return Begin();
     }
 
-#ifdef HYP_DEBUG_MODE
-    AssertThrow(where >= Begin() && where <= End());
-#endif
+    HYP_CORE_ASSERT(where >= Begin() && where <= End());
 
     if (m_size + 1 >= Capacity())
     {
@@ -1497,9 +1495,7 @@ auto Array<T, AllocatorType>::Insert(ConstIterator where, ValueType&& value) -> 
         }
     }
 
-#ifdef HYP_DEBUG_MODE
-    AssertThrow(Capacity() >= m_size + 1);
-#endif
+    HYP_CORE_ASSERT(Capacity() >= m_size + 1);
 
     SizeType index;
 
@@ -1529,9 +1525,7 @@ auto Array<T, AllocatorType>::Insert(ConstIterator where, ValueType&& value) -> 
 template <class T, class AllocatorType>
 auto Array<T, AllocatorType>::PopFront() -> ValueType
 {
-#ifdef HYP_DEBUG_MODE
-    AssertThrow(Size() != 0);
-#endif
+    HYP_CORE_ASSERT(Size() != 0);
 
     auto value = std::move(GetBuffer()[m_startOffset]);
 
@@ -1545,9 +1539,7 @@ auto Array<T, AllocatorType>::PopFront() -> ValueType
 template <class T, class AllocatorType>
 auto Array<T, AllocatorType>::PopBack() -> ValueType
 {
-#ifdef HYP_DEBUG_MODE
-    AssertThrow(m_size != 0);
-#endif
+    HYP_CORE_ASSERT(m_size != 0);
 
     auto value = std::move(GetBuffer()[m_size - 1]);
 

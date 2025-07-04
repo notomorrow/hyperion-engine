@@ -58,7 +58,8 @@ struct DynamicAllocator : Allocator<DynamicAllocator>
                 SizeType capacity;
             } dynamicAllocation;
 
-            union {
+            union
+            {
                 char dataBuffer[1];
             } storage;
         };
@@ -70,7 +71,7 @@ struct DynamicAllocator : Allocator<DynamicAllocator>
 
         void Allocate(SizeType count)
         {
-            AssertDebug(buffer == nullptr);
+            HYP_CORE_ASSERT(buffer == nullptr);
 
             if (count == 0)
             {
@@ -87,7 +88,7 @@ struct DynamicAllocator : Allocator<DynamicAllocator>
             else
             {
                 buffer = static_cast<T*>(HYP_ALLOC_ALIGNED(count * sizeof(T), alignof(T)));
-                AssertDebugMsg(buffer != nullptr, "Aligned allocation failed! Size: %zu, Alignment: %zu", count * sizeof(T), alignof(T));
+                HYP_CORE_ASSERT(buffer != nullptr, "Aligned allocation failed! Size: %zu, Alignment: %zu", count * sizeof(T), alignof(T));
             }
 
             capacity = count;
@@ -112,8 +113,8 @@ struct DynamicAllocator : Allocator<DynamicAllocator>
 
         void TakeOwnership(T* begin, T* end)
         {
-            AssertDebug(buffer == nullptr);
-            AssertDebug(end >= begin);
+            HYP_CORE_ASSERT(buffer == nullptr);
+            HYP_CORE_ASSERT(end >= begin);
 
             buffer = begin;
             capacity = end - begin;
@@ -121,11 +122,11 @@ struct DynamicAllocator : Allocator<DynamicAllocator>
 
         void InitFromRangeCopy(const T* begin, const T* end, SizeType offset = 0)
         {
-            AssertDebug(end >= begin);
+            HYP_CORE_ASSERT(end >= begin);
 
             const SizeType count = end - begin;
 
-            AssertDebug(capacity >= count + offset);
+            HYP_CORE_ASSERT(capacity >= count + offset);
 
             if constexpr (std::is_fundamental_v<T> || std::is_trivial_v<T>)
             {
@@ -142,11 +143,11 @@ struct DynamicAllocator : Allocator<DynamicAllocator>
 
         void InitFromRangeMove(T* begin, T* end, SizeType offset = 0)
         {
-            AssertDebug(end >= begin);
+            HYP_CORE_ASSERT(end >= begin);
 
             const SizeType count = end - begin;
 
-            AssertDebug(capacity >= count + offset);
+            HYP_CORE_ASSERT(capacity >= count + offset);
 
             if constexpr (std::is_fundamental_v<T> || std::is_trivial_v<T>)
             {
@@ -163,14 +164,14 @@ struct DynamicAllocator : Allocator<DynamicAllocator>
 
         void InitZeroed(SizeType count, SizeType offset = 0)
         {
-            AssertDebug(capacity >= count + offset);
+            HYP_CORE_ASSERT(capacity >= count + offset);
 
             Memory::MemSet(buffer + offset, 0, count * sizeof(T));
         }
 
         void DestructInRange(SizeType startIndex, SizeType lastIndex)
         {
-            AssertDebug(lastIndex <= capacity);
+            HYP_CORE_ASSERT(lastIndex <= capacity);
 
             if constexpr (!std::is_trivially_destructible_v<T>)
             {
@@ -205,15 +206,15 @@ struct DynamicAllocator : Allocator<DynamicAllocator>
 
     void* Allocate(SizeType size, SizeType alignment)
     {
-        AssertDebug(size > 0);
-        AssertDebug(alignment > 0);
+        HYP_CORE_ASSERT(size > 0);
+        HYP_CORE_ASSERT(alignment > 0);
 
         return HYP_ALLOC_ALIGNED(size, alignment);
     }
 
     void Free(void* ptr)
     {
-        AssertDebug(ptr != nullptr);
+        HYP_CORE_ASSERT(ptr != nullptr);
 
         HYP_FREE_ALIGNED(ptr);
     }
@@ -250,7 +251,7 @@ struct InlineAllocator : Allocator<InlineAllocator<Count, DynamicAllocatorType>>
 
         HYP_FORCE_INLINE void Allocate(SizeType count)
         {
-            AssertDebug(!isDynamic);
+            HYP_CORE_ASSERT(!isDynamic);
 
             if (count <= Count)
             {
@@ -264,7 +265,7 @@ struct InlineAllocator : Allocator<InlineAllocator<Count, DynamicAllocatorType>>
             isDynamic = true;
 
 #ifdef HYP_DEBUG_MODE
-            AssertDebugMsg(magic == 0xBADA55u, "stomp detected!");
+            HYP_CORE_ASSERT(magic == 0xBADA55u, "stomp detected!");
 #endif
         }
 
@@ -276,7 +277,7 @@ struct InlineAllocator : Allocator<InlineAllocator<Count, DynamicAllocatorType>>
             }
 
 #ifdef HYP_DEBUG_MODE
-            AssertDebugMsg(magic == 0xBADA55u, "stomp detected!");
+            HYP_CORE_ASSERT(magic == 0xBADA55u, "stomp detected!");
 #endif
 
             SetToInitialState();
@@ -284,7 +285,7 @@ struct InlineAllocator : Allocator<InlineAllocator<Count, DynamicAllocatorType>>
 
         void TakeOwnership(T* begin, T* end)
         {
-            AssertDebug(!isDynamic);
+            HYP_CORE_ASSERT(!isDynamic);
 
             dynamicAllocation = typename DynamicAllocatorType::template Allocation<T>();
             dynamicAllocation.SetToInitialState();
@@ -293,13 +294,13 @@ struct InlineAllocator : Allocator<InlineAllocator<Count, DynamicAllocatorType>>
             isDynamic = true;
 
 #ifdef HYP_DEBUG_MODE
-            AssertDebugMsg(magic == 0xBADA55u, "stomp detected!");
+            HYP_CORE_ASSERT(magic == 0xBADA55u, "stomp detected!");
 #endif
         }
 
         void InitFromRangeCopy(const T* begin, const T* end, SizeType offset = 0)
         {
-            AssertDebug(end >= begin);
+            HYP_CORE_ASSERT(end >= begin);
 
             const SizeType count = end - begin;
 
@@ -309,7 +310,7 @@ struct InlineAllocator : Allocator<InlineAllocator<Count, DynamicAllocatorType>>
             }
             else
             {
-                AssertDebug(offset + count <= Count);
+                HYP_CORE_ASSERT(offset + count <= Count);
 
                 if constexpr (std::is_fundamental_v<T> || std::is_trivial_v<T>)
                 {
@@ -326,13 +327,13 @@ struct InlineAllocator : Allocator<InlineAllocator<Count, DynamicAllocatorType>>
             }
 
 #ifdef HYP_DEBUG_MODE
-            AssertDebugMsg(magic == 0xBADA55u, "stomp detected!");
+            HYP_CORE_ASSERT(magic == 0xBADA55u, "stomp detected!");
 #endif
         }
 
         void InitFromRangeMove(T* begin, T* end, SizeType offset = 0)
         {
-            AssertDebug(end >= begin);
+            HYP_CORE_ASSERT(end >= begin);
 
             const SizeType count = end - begin;
 
@@ -342,7 +343,7 @@ struct InlineAllocator : Allocator<InlineAllocator<Count, DynamicAllocatorType>>
             }
             else
             {
-                AssertDebug(offset + count <= Count);
+                HYP_CORE_ASSERT(offset + count <= Count);
 
                 if constexpr (std::is_fundamental_v<T> || std::is_trivial_v<T>)
                 {
@@ -359,7 +360,7 @@ struct InlineAllocator : Allocator<InlineAllocator<Count, DynamicAllocatorType>>
             }
 
 #ifdef HYP_DEBUG_MODE
-            AssertDebugMsg(magic == 0xBADA55u, "stomp detected!");
+            HYP_CORE_ASSERT(magic == 0xBADA55u, "stomp detected!");
 #endif
         }
 
@@ -371,13 +372,13 @@ struct InlineAllocator : Allocator<InlineAllocator<Count, DynamicAllocatorType>>
             }
             else
             {
-                AssertDebug(offset + count <= Count);
+                HYP_CORE_ASSERT(offset + count <= Count);
 
                 Memory::MemSet(storage.GetPointer() + offset, 0, count * sizeof(T));
             }
 
 #ifdef HYP_DEBUG_MODE
-            AssertDebugMsg(magic == 0xBADA55u, "stomp detected!");
+            HYP_CORE_ASSERT(magic == 0xBADA55u, "stomp detected!");
 #endif
         }
 
@@ -389,8 +390,8 @@ struct InlineAllocator : Allocator<InlineAllocator<Count, DynamicAllocatorType>>
             }
             else
             {
-                AssertDebug(lastIndex <= Count);
-                AssertDebug(startIndex <= lastIndex);
+                HYP_CORE_ASSERT(lastIndex <= Count);
+                HYP_CORE_ASSERT(startIndex <= lastIndex);
 
                 if constexpr (!std::is_trivially_destructible_v<T>)
                 {
@@ -402,23 +403,23 @@ struct InlineAllocator : Allocator<InlineAllocator<Count, DynamicAllocatorType>>
             }
 
 #ifdef HYP_DEBUG_MODE
-            AssertDebugMsg(magic == 0xBADA55u, "stomp detected!");
+            HYP_CORE_ASSERT(magic == 0xBADA55u, "stomp detected!");
 #endif
         }
 
         void SetToInitialState()
         {
             isDynamic = false;
-            storage = ValueStorageArray<T, Count, alignof(T)>();
+            storage = ValueStorage<T, Count, alignof(T)>();
 
 #ifdef HYP_DEBUG_MODE
-            AssertDebugMsg(magic == 0xBADA55u, "stomp detected!");
+            HYP_CORE_ASSERT(magic == 0xBADA55u, "stomp detected!");
 #endif
         }
 
         union
         {
-            ValueStorageArray<T, Count, alignof(T)> storage;
+            ValueStorage<T, Count, alignof(T)> storage;
 
             typename DynamicAllocatorType::template Allocation<T> dynamicAllocation;
 
@@ -466,17 +467,17 @@ struct FixedAllocator : Allocator<FixedAllocator<Count>>
 
         HYP_FORCE_INLINE void Allocate(SizeType count)
         {
-            AssertDebugMsg(count <= Count, "Allocation size exceeds fixed capacity!");
+            HYP_CORE_ASSERT(count <= Count, "Allocation size exceeds fixed capacity!");
 
 #ifdef HYP_DEBUG_MODE
-            AssertDebugMsg(magic == 0xBADA55u, "stomp detected!");
+            HYP_CORE_ASSERT(magic == 0xBADA55u, "stomp detected!");
 #endif
         }
 
         HYP_FORCE_INLINE void Free()
         {
 #ifdef HYP_DEBUG_MODE
-            AssertDebugMsg(magic == 0xBADA55u, "stomp detected!");
+            HYP_CORE_ASSERT(magic == 0xBADA55u, "stomp detected!");
 #endif
 
             SetToInitialState();
@@ -484,7 +485,7 @@ struct FixedAllocator : Allocator<FixedAllocator<Count>>
 
         void TakeOwnership(T* begin, T* end)
         {
-            AssertDebug(end >= begin);
+            HYP_CORE_ASSERT(end >= begin);
 
             const SizeType count = end - begin;
 
@@ -502,17 +503,17 @@ struct FixedAllocator : Allocator<FixedAllocator<Count>>
             }
 
 #ifdef HYP_DEBUG_MODE
-            AssertDebugMsg(magic == 0xBADA55u, "stomp detected!");
+            HYP_CORE_ASSERT(magic == 0xBADA55u, "stomp detected!");
 #endif
         }
 
         void InitFromRangeCopy(const T* begin, const T* end, SizeType offset = 0)
         {
-            AssertDebug(end >= begin);
+            HYP_CORE_ASSERT(end >= begin);
 
             const SizeType count = end - begin;
 
-            AssertDebug(offset + count <= Count);
+            HYP_CORE_ASSERT(offset + count <= Count);
 
             if constexpr (std::is_fundamental_v<T> || std::is_trivial_v<T>)
             {
@@ -528,17 +529,17 @@ struct FixedAllocator : Allocator<FixedAllocator<Count>>
             }
 
 #ifdef HYP_DEBUG_MODE
-            AssertDebugMsg(magic == 0xBADA55u, "stomp detected!");
+            HYP_CORE_ASSERT(magic == 0xBADA55u, "stomp detected!");
 #endif
         }
 
         void InitFromRangeMove(T* begin, T* end, SizeType offset = 0)
         {
-            AssertDebug(end >= begin);
+            HYP_CORE_ASSERT(end >= begin);
 
             const SizeType count = end - begin;
 
-            AssertDebug(offset + count <= Count);
+            HYP_CORE_ASSERT(offset + count <= Count);
 
             if constexpr (std::is_fundamental_v<T> || std::is_trivial_v<T>)
             {
@@ -554,25 +555,25 @@ struct FixedAllocator : Allocator<FixedAllocator<Count>>
             }
 
 #ifdef HYP_DEBUG_MODE
-            AssertDebugMsg(magic == 0xBADA55u, "stomp detected!");
+            HYP_CORE_ASSERT(magic == 0xBADA55u, "stomp detected!");
 #endif
         }
 
         void InitZeroed(SizeType count, SizeType offset = 0)
         {
-            AssertDebug(offset + count <= Count);
+            HYP_CORE_ASSERT(offset + count <= Count);
 
             Memory::MemSet(storage.GetPointer() + offset, 0, count * sizeof(T));
 
 #ifdef HYP_DEBUG_MODE
-            AssertDebugMsg(magic == 0xBADA55u, "stomp detected!");
+            HYP_CORE_ASSERT(magic == 0xBADA55u, "stomp detected!");
 #endif
         }
 
         void DestructInRange(SizeType startIndex, SizeType lastIndex)
         {
-            AssertDebug(lastIndex <= Count);
-            AssertDebug(startIndex <= lastIndex);
+            HYP_CORE_ASSERT(lastIndex <= Count);
+            HYP_CORE_ASSERT(startIndex <= lastIndex);
 
             if constexpr (!std::is_trivially_destructible_v<T>)
             {
@@ -583,22 +584,22 @@ struct FixedAllocator : Allocator<FixedAllocator<Count>>
             }
 
 #ifdef HYP_DEBUG_MODE
-            AssertDebugMsg(magic == 0xBADA55u, "stomp detected!");
+            HYP_CORE_ASSERT(magic == 0xBADA55u, "stomp detected!");
 #endif
         }
 
         void SetToInitialState()
         {
-            storage = ValueStorageArray<T, Count, alignof(T)>();
+            storage = ValueStorage<T, Count, alignof(T)>();
 
 #ifdef HYP_DEBUG_MODE
-            AssertDebugMsg(magic == 0xBADA55u, "stomp detected!");
+            HYP_CORE_ASSERT(magic == 0xBADA55u, "stomp detected!");
 #endif
         }
 
         union
         {
-            ValueStorageArray<T, Count, alignof(T)> storage;
+            ValueStorage<T, Count, alignof(T)> storage;
 
 #ifdef HYP_DEBUG_MODE
             // The following nested union fields are unused but make natvis work correctly for arrays.

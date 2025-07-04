@@ -69,13 +69,13 @@ bool EditorActionStack::CanRedo() const
 
 void EditorActionStack::Push(const Handle<EditorActionBase>& action)
 {
-    AssertThrow(action.IsValid());
+    Assert(action.IsValid());
 
     Handle<EditorProject> editorProject = m_editorProject.Lock();
-    AssertThrow(editorProject.IsValid());
+    Assert(editorProject.IsValid());
 
     Handle<EditorSubsystem> editorSubsystem = editorProject->GetEditorSubsystem().Lock();
-    AssertThrow(editorSubsystem.IsValid());
+    Assert(editorSubsystem.IsValid());
 
     const EnumFlags<EditorActionStackState> previousState = m_currentState;
 
@@ -109,10 +109,10 @@ void EditorActionStack::Undo()
     }
 
     Handle<EditorProject> editorProject = m_editorProject.Lock();
-    AssertThrow(editorProject.IsValid());
+    Assert(editorProject.IsValid());
 
     Handle<EditorSubsystem> editorSubsystem = editorProject->GetEditorSubsystem().Lock();
-    AssertThrow(editorSubsystem.IsValid());
+    Assert(editorSubsystem.IsValid());
 
     EditorActionBase* action = m_actions[m_currentActionIndex].Get();
 
@@ -135,10 +135,10 @@ void EditorActionStack::Redo()
     }
 
     Handle<EditorProject> editorProject = m_editorProject.Lock();
-    AssertThrow(editorProject.IsValid());
+    Assert(editorProject.IsValid());
 
     Handle<EditorSubsystem> editorSubsystem = editorProject->GetEditorSubsystem().Lock();
-    AssertThrow(editorSubsystem.IsValid());
+    Assert(editorSubsystem.IsValid());
 
     EditorActionBase* action = m_actions[m_currentActionIndex + 1].Get();
 

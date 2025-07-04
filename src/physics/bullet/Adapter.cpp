@@ -3,9 +3,14 @@
 #include <physics/bullet/Adapter.hpp>
 #include <physics/PhysicsWorld.hpp>
 #include <physics/RigidBody.hpp>
+
 #include <core/memory/UniquePtr.hpp>
+
 #include <core/math/Vector3.hpp>
 #include <core/math/Quaternion.hpp>
+
+#include <core/logging/Logger.hpp>
+#include <core/logging/LogChannels.hpp>
 
 #ifdef HYP_BULLET_PHYSICS
 #include "btBulletDynamicsCommon.h"
@@ -75,20 +80,20 @@ BulletPhysicsAdapter::BulletPhysicsAdapter()
 
 BulletPhysicsAdapter::~BulletPhysicsAdapter()
 {
-    AssertThrow(m_collisionConfiguration == nullptr);
-    AssertThrow(m_dynamicsWorld == nullptr);
-    AssertThrow(m_dispatcher == nullptr);
-    AssertThrow(m_broadphase == nullptr);
-    AssertThrow(m_solver == nullptr);
+    Assert(m_collisionConfiguration == nullptr);
+    Assert(m_dynamicsWorld == nullptr);
+    Assert(m_dispatcher == nullptr);
+    Assert(m_broadphase == nullptr);
+    Assert(m_solver == nullptr);
 }
 
 void BulletPhysicsAdapter::Init(PhysicsWorldBase* world)
 {
-    AssertThrow(m_collisionConfiguration == nullptr);
-    AssertThrow(m_dynamicsWorld == nullptr);
-    AssertThrow(m_dispatcher == nullptr);
-    AssertThrow(m_broadphase == nullptr);
-    AssertThrow(m_solver == nullptr);
+    Assert(m_collisionConfiguration == nullptr);
+    Assert(m_dynamicsWorld == nullptr);
+    Assert(m_dispatcher == nullptr);
+    Assert(m_broadphase == nullptr);
+    Assert(m_solver == nullptr);
 
     m_collisionConfiguration = new btDefaultCollisionConfiguration();
     m_dispatcher = new btCollisionDispatcher(m_collisionConfiguration);
@@ -126,7 +131,7 @@ void BulletPhysicsAdapter::Teardown(PhysicsWorldBase* world)
 
 void BulletPhysicsAdapter::Tick(PhysicsWorldBase* world, double delta)
 {
-    AssertThrow(m_dynamicsWorld != nullptr);
+    Assert(m_dynamicsWorld != nullptr);
 
     m_dynamicsWorld->stepSimulation(delta);
 
@@ -148,10 +153,10 @@ void BulletPhysicsAdapter::Tick(PhysicsWorldBase* world, double delta)
 
 void BulletPhysicsAdapter::OnRigidBodyAdded(const Handle<RigidBody>& rigidBody)
 {
-    AssertThrow(m_dynamicsWorld != nullptr);
+    Assert(m_dynamicsWorld != nullptr);
 
-    AssertThrow(rigidBody.IsValid());
-    AssertThrowMsg(rigidBody->GetShape() != nullptr, "No PhysicsShape on RigidBody!");
+    Assert(rigidBody.IsValid());
+    Assert(rigidBody->GetShape() != nullptr, "No PhysicsShape on RigidBody!");
 
     if (!rigidBody->GetShape()->GetHandle())
     {
@@ -196,10 +201,10 @@ void BulletPhysicsAdapter::OnRigidBodyRemoved(const Handle<RigidBody>& rigidBody
         return;
     }
 
-    AssertThrow(m_dynamicsWorld != nullptr);
+    Assert(m_dynamicsWorld != nullptr);
 
     RigidBodyInternalData* internalData = static_cast<RigidBodyInternalData*>(rigidBody->GetHandle());
-    AssertThrow(internalData != nullptr);
+    Assert(internalData != nullptr);
 
     m_dynamicsWorld->removeRigidBody(internalData->rigidBody.Get());
 }
@@ -211,12 +216,12 @@ void BulletPhysicsAdapter::OnChangePhysicsShape(RigidBody* rigidBody)
         return;
     }
 
-    AssertThrow(m_dynamicsWorld != nullptr);
+    Assert(m_dynamicsWorld != nullptr);
 
     RigidBodyInternalData* internalData = static_cast<RigidBodyInternalData*>(rigidBody->GetHandle());
-    AssertThrow(internalData != nullptr);
+    Assert(internalData != nullptr);
 
-    AssertThrow(internalData->rigidBody != nullptr);
+    Assert(internalData->rigidBody != nullptr);
 
     btVector3 localInertia = internalData->rigidBody->getLocalInertia();
 
@@ -241,12 +246,12 @@ void BulletPhysicsAdapter::OnChangePhysicsMaterial(RigidBody* rigidBody)
         return;
     }
 
-    AssertThrow(m_dynamicsWorld != nullptr);
+    Assert(m_dynamicsWorld != nullptr);
 
     RigidBodyInternalData* internalData = static_cast<RigidBodyInternalData*>(rigidBody->GetHandle());
-    AssertThrow(internalData != nullptr);
+    Assert(internalData != nullptr);
 
-    AssertThrow(internalData->rigidBody != nullptr);
+    Assert(internalData->rigidBody != nullptr);
 
     if (!rigidBody->GetShape()->GetHandle())
     {
@@ -263,12 +268,12 @@ void BulletPhysicsAdapter::ApplyForceToBody(const RigidBody* rigidBody, const Ve
         return;
     }
 
-    AssertThrow(m_dynamicsWorld != nullptr);
+    Assert(m_dynamicsWorld != nullptr);
 
     RigidBodyInternalData* internalData = static_cast<RigidBodyInternalData*>(rigidBody->GetHandle());
-    AssertThrow(internalData != nullptr);
+    Assert(internalData != nullptr);
 
-    AssertThrow(internalData->rigidBody != nullptr);
+    Assert(internalData->rigidBody != nullptr);
 
     internalData->rigidBody->activate();
     internalData->rigidBody->applyCentralForce(ToBtVector(force));

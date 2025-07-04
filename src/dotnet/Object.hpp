@@ -103,10 +103,10 @@ public:
     template <class ReturnType, class... Args>
     HYP_FORCE_INLINE ReturnType InvokeMethodByName(UTF8StringView methodName, Args&&... args)
     {
-        AssertThrow(IsValid());
+        Assert(IsValid());
 
         const Method* methodPtr = GetMethod(methodName);
-        AssertThrowMsg(methodPtr != nullptr, "Method %s not found", methodName.Data());
+        Assert(methodPtr != nullptr, "Method {} not found", methodName);
 
         return InvokeMethod_CheckArgs<ReturnType>(methodPtr, std::forward<Args>(args)...);
     }

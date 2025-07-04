@@ -20,16 +20,6 @@
 namespace hyperion {
 namespace utilities {
 
-#define HYP_STRINGVIEW_ASSERT(cond) \
-    do                              \
-    {                               \
-        if (!HYP_UNLIKELY(cond))    \
-        {                           \
-            HYP_BREAKPOINT;         \
-        }                           \
-    }                               \
-    while (0)
-
 template <int TStringType>
 class StringView
 {
@@ -296,7 +286,6 @@ public:
     WidestCharType GetChar(SizeType index) const
     {
         const SizeType size = Size();
-        HYP_STRINGVIEW_ASSERT(index < size);
 
         if constexpr (isUtf8)
         {

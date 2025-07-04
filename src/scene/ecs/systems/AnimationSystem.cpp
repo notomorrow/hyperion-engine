@@ -37,7 +37,7 @@ void AnimationSystem::Process(float delta)
             }
 
             const Handle<Animation>& animation = meshComponent.skeleton->GetAnimation(playbackState.animationIndex);
-            AssertThrow(animation.IsValid());
+            Assert(animation.IsValid());
 
             playbackState.currentTime += delta * playbackState.speed;
 

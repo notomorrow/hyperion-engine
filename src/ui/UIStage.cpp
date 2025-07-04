@@ -149,7 +149,7 @@ void UIStage::SetScene(const Handle<Scene>& scene)
         Handle<Node> currentRootNode;
 
         currentRootNode = m_scene->GetRoot();
-        AssertThrow(currentRootNode.IsValid());
+        Assert(currentRootNode.IsValid());
 
         currentRootNode->Remove();
 
@@ -296,8 +296,8 @@ void UIStage::OnAttached_Internal(UIObject* parent)
     HYP_SCOPE;
     AssertOnOwnerThread();
 
-    AssertThrow(parent != nullptr);
-    AssertThrow(parent->GetNode() != nullptr);
+    Assert(parent != nullptr);
+    Assert(parent->GetNode() != nullptr);
 
     // Set root to be empty node proxy, now that it is attached to another object.
     m_scene->SetRoot(Handle<Node>::empty);

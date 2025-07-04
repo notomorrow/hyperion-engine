@@ -21,7 +21,7 @@ public:
             return;
         }
 
-        AssertThrow(Position() + size <= Max());
+        HYP_CORE_ASSERT(Position() + size <= Max());
 
         ReadBytes(static_cast<void*>(ptr), size);
     }

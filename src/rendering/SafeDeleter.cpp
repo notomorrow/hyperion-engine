@@ -85,7 +85,7 @@ void SafeDeleter::PerformEnqueuedDeletions()
 
         for (auto it = deletionEntries.Begin(); it != deletionEntries.End(); ++it)
         {
-            AssertThrow((*it)->PerformDeletion());
+            Assert((*it)->PerformDeletion());
 
             m_numDeletionEntries.Decrement(1, MemoryOrder::RELEASE);
         }
@@ -106,7 +106,7 @@ void SafeDeleter::ForceDeleteAll()
 
         for (auto it = deletionEntries.Begin(); it != deletionEntries.End();)
         {
-            AssertThrow((*it)->PerformDeletion(true /* force */));
+            Assert((*it)->PerformDeletion(true /* force */));
 
             it = deletionEntries.Erase(it);
 

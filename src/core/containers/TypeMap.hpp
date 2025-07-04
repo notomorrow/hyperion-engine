@@ -96,7 +96,7 @@ public:
     HYP_FORCE_INLINE Value& Get(TypeId typeId)
     {
         Iterator it = m_map.Find(typeId);
-        AssertThrow(it != m_map.End());
+        HYP_CORE_ASSERT(it != m_map.End());
 
         return it->second;
     }
@@ -148,7 +148,7 @@ public:
     {
         const auto it = Find<T>();
 
-        AssertThrow(it != m_map.End());
+        HYP_CORE_ASSERT(it != m_map.End());
 
         return it->second;
     }
@@ -158,7 +158,7 @@ public:
     {
         const auto it = Find<T>();
 
-        AssertThrow(it != m_map.End());
+        HYP_CORE_ASSERT(it != m_map.End());
 
         return it->second;
     }
@@ -167,7 +167,7 @@ public:
     {
         const auto it = Find(typeId);
 
-        AssertThrow(it != m_map.End());
+        HYP_CORE_ASSERT(it != m_map.End());
 
         return it->second;
     }
@@ -176,7 +176,7 @@ public:
     {
         const auto it = Find(typeId);
 
-        AssertThrow(it != m_map.End());
+        HYP_CORE_ASSERT(it != m_map.End());
 
         return it->second;
     }

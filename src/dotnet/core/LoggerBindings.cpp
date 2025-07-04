@@ -25,23 +25,23 @@ extern "C"
         switch (LogLevel(logLevel))
         {
         case LogLevel::DEBUG:
-            logging::LogDynamicChannel<logging::Debug(), StaticString("<script>"), StaticString("{}:{}: {}\n")>(logging::GetLogger(), *channel, funcName, line, message);
+            logging::LogStatic_Channel<logging::Debug(), StaticString("{}\n")>(logging::GetLogger(), *channel, message);
 
             break;
         case LogLevel::INFO:
-            logging::LogDynamicChannel<logging::Info(), StaticString("<script>"), StaticString("{}:{}: {}\n")>(logging::GetLogger(), *channel, funcName, line, message);
+            logging::LogStatic_Channel<logging::Info(), StaticString("{}\n")>(logging::GetLogger(), *channel, message);
 
             break;
         case LogLevel::WARNING:
-            logging::LogDynamicChannel<logging::Warning(), StaticString("<script>"), StaticString("{}:{}: {}\n")>(logging::GetLogger(), *channel, funcName, line, message);
+            logging::LogStatic_Channel<logging::Warning(), StaticString("{}\n")>(logging::GetLogger(), *channel, message);
 
             break;
         case LogLevel::ERR:
-            logging::LogDynamicChannel<logging::Error(), StaticString("<script>"), StaticString("{}:{}: {}\n")>(logging::GetLogger(), *channel, funcName, line, message);
+            logging::LogStatic_Channel<logging::Error(), StaticString("{}\n")>(logging::GetLogger(), *channel, message);
 
             break;
         case LogLevel::FATAL:
-            logging::LogDynamicChannel<logging::Fatal(), StaticString("<script>"), StaticString("{}:{}: {}")>(logging::GetLogger(), *channel, funcName, line, message);
+            logging::LogStatic_Channel<logging::Fatal(), StaticString("{}\n")>(logging::GetLogger(), *channel, message);
 
             break;
         }

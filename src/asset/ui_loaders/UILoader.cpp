@@ -390,14 +390,14 @@ public:
     UISAXHandler(LoaderState* state, UIStage* uiStage)
         : m_uiStage(uiStage)
     {
-        AssertThrow(uiStage != nullptr);
+        Assert(uiStage != nullptr);
 
         m_uiObjectStack.Push(uiStage);
     }
 
     UIObject* LastObject()
     {
-        AssertThrow(m_uiObjectStack.Any());
+        Assert(m_uiObjectStack.Any());
 
         return m_uiObjectStack.Top();
     }
@@ -411,7 +411,7 @@ public:
             parent = m_uiStage;
         }
 
-        AssertThrow(parent != nullptr);
+        Assert(parent != nullptr);
 
         const String nodeNameUpper = name.ToUpper();
 
@@ -745,7 +745,7 @@ public:
                     }
 
                     HypData targetValue { uiObject };
-                    AssertThrow(targetValue.Is<UIObject*>());
+                    Assert(targetValue.Is<UIObject*>());
 
                     switch (member.GetMemberType())
                     {
@@ -918,7 +918,7 @@ private:
 
 AssetLoadResult UILoader::LoadAsset(LoaderState& state) const
 {
-    AssertThrow(state.assetManager != nullptr);
+    Assert(state.assetManager != nullptr);
 
     Handle<UIObject> uiStage = CreateObject<UIStage>(ThreadId::Current());
     InitObject(uiStage);

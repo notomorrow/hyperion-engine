@@ -125,12 +125,12 @@ static uint32 AllocateThreadId(Name name, uint32 allocateFlags)
             ? GetStaticThreadIdCache().AllocateIndex(name)
             : GetStaticThreadIdCache().FindOrAllocateIndex(name);
 
-        AssertThrowMsg(threadIdValue < g_maxStaticThreadIds, "Maximum static thread id value exceeded!");
+        HYP_CORE_ASSERT(threadIdValue < g_maxStaticThreadIds, "Maximum static thread id value exceeded!");
 
         threadIdValue = 1u << (threadIdValue - 1);
     }
 
-    AssertThrowMsg((((threadIdValue << 4) & g_threadIdMask) >> 4) == threadIdValue,
+    HYP_CORE_ASSERT((((threadIdValue << 4) & g_threadIdMask) >> 4) == threadIdValue,
         "Thread Id value %u exceeds maximum value!",
         threadIdValue);
 

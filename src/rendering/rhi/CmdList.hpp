@@ -334,7 +334,7 @@ public:
         AssertDebug(descriptorSet->IsCreated(), "Descriptor set is not created yet");
 
         m_bindIndex = pipeline->GetDescriptorTable()->GetDescriptorSetIndex(descriptorSet->GetLayout().GetName());
-        AssertDebug(m_bindIndex != ~0u, "Invalid bind index for descriptor set %s", descriptorSet->GetLayout().GetName().LookupString());
+        AssertDebug(m_bindIndex != ~0u, "Invalid bind index for descriptor set {}", descriptorSet->GetLayout().GetName());
     }
 
     BindDescriptorSet(const DescriptorSetRef& descriptorSet, const GraphicsPipelineRef& pipeline, const ArrayMap<Name, uint32>& offsets, uint32 bindIndex)
@@ -357,7 +357,7 @@ public:
         AssertDebug(descriptorSet->IsCreated(), "Descriptor set is not created yet");
 
         m_bindIndex = pipeline->GetDescriptorTable()->GetDescriptorSetIndex(descriptorSet->GetLayout().GetName());
-        AssertDebug(m_bindIndex != ~0u, "Invalid bind index for descriptor set %s", descriptorSet->GetLayout().GetName().LookupString());
+        AssertDebug(m_bindIndex != ~0u, "Invalid bind index for descriptor set {}", descriptorSet->GetLayout().GetName());
     }
 
     BindDescriptorSet(const DescriptorSetRef& descriptorSet, const ComputePipelineRef& pipeline, const ArrayMap<Name, uint32>& offsets, uint32 bindIndex)
@@ -380,7 +380,7 @@ public:
         AssertDebug(descriptorSet->IsCreated(), "Descriptor set is not created yet");
 
         m_bindIndex = pipeline->GetDescriptorTable()->GetDescriptorSetIndex(descriptorSet->GetLayout().GetName());
-        AssertDebug(m_bindIndex != ~0u, "Invalid bind index for descriptor set %s", descriptorSet->GetLayout().GetName().LookupString());
+        AssertDebug(m_bindIndex != ~0u, "Invalid bind index for descriptor set {}", descriptorSet->GetLayout().GetName());
     }
 
     BindDescriptorSet(const DescriptorSetRef& descriptorSet, const RaytracingPipelineRef& pipeline, const ArrayMap<Name, uint32>& offsets, uint32 bindIndex)

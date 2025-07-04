@@ -1,10 +1,12 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
 #include <rendering/DOFBlur.hpp>
-
 #include <rendering/ShaderManager.hpp>
 
 #include <rendering/backend/RendererFrame.hpp>
+
+#include <core/logging/Logger.hpp>
+#include <core/logging/LogChannels.hpp>
 
 namespace hyperion {
 
@@ -19,19 +21,19 @@ DOFBlur::~DOFBlur() = default;
 void DOFBlur::Create()
 {
     ShaderRef blurHorizontalShader = ShaderManager::GetInstance()->GetOrCreate(NAME("DOFBlurDirection"), ShaderProperties({ "DIRECTION_HORIZONTAL" }));
-    AssertThrow(blurHorizontalShader.IsValid());
+    Assert(blurHorizontalShader.IsValid());
 
     m_blurHorizontalPass = MakeUnique<FullScreenPass>(blurHorizontalShader, TF_RGBA8, m_extent, m_gbuffer);
     m_blurHorizontalPass->Create();
 
     ShaderRef blurVerticalShader = ShaderManager::GetInstance()->GetOrCreate(NAME("DOFBlurDirection"), ShaderProperties({ "DIRECTION_VERTICAL" }));
-    AssertThrow(blurVerticalShader.IsValid());
+    Assert(blurVerticalShader.IsValid());
 
     m_blurVerticalPass = MakeUnique<FullScreenPass>(blurVerticalShader, TF_RGBA8, m_extent, m_gbuffer);
     m_blurVerticalPass->Create();
 
     ShaderRef blurMixShader = ShaderManager::GetInstance()->GetOrCreate(NAME("DOFBlurMix"));
-    AssertThrow(blurMixShader.IsValid());
+    Assert(blurMixShader.IsValid());
 
     m_blurMixPass = MakeUnique<FullScreenPass>(blurMixShader, TF_RGBA8, m_extent, m_gbuffer);
     m_blurMixPass->Create();

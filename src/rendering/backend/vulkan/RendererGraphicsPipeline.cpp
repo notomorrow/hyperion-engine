@@ -390,7 +390,7 @@ RendererResult VulkanGraphicsPipeline::Rebuild()
     VkGraphicsPipelineCreateInfo pipelineInfo { VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO };
 
     const Array<VkPipelineShaderStageCreateInfo>& stages = static_cast<VulkanShader*>(m_shader.Get())->GetVulkanShaderStages();
-    AssertThrowMsg(stages.Any(), "No shader stages found");
+    HYP_GFX_ASSERT(stages.Any(), "No shader stages found");
 
     pipelineInfo.stageCount = uint32(stages.Size());
     pipelineInfo.pStages = stages.Data();

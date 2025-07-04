@@ -4,6 +4,9 @@
 
 #include <core/filesystem/FilePath.hpp>
 
+#include <core/logging/Logger.hpp>
+#include <core/logging/LogChannels.hpp>
+
 #include <core/Defines.hpp>
 #include <core/debug/Debug.hpp>
 
@@ -13,14 +16,14 @@
 #include <sys/stat.h>
 
 #if defined(HYP_WINDOWS)
-    #include <direct.h>
-    #ifndef WIN32_LEAN_AND_MEAN
-        #define WIN32_LEAN_AND_MEAN 1
-    #endif
-    #include <windows.h>
-    #undef WIN32_LEAN_AND_MEAN
+#include <direct.h>
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN 1
+#endif
+#include <windows.h>
+#undef WIN32_LEAN_AND_MEAN
 #elif defined(HYP_UNIX)
-    #include <unistd.h>
+#include <unistd.h>
 #endif
 
 namespace hyperion {
@@ -46,7 +49,7 @@ FilePath FileSystem::PopDirectory()
 {
     std::lock_guard guard(s_mtx);
 
-    AssertThrow(s_filepaths.Any());
+    HYP_CORE_ASSERT(s_filepaths.Any());
 
     auto current = FilePath::Current();
 
@@ -76,15 +79,15 @@ bool FileSystem::DirExists(const std::string& path)
 int FileSystem::MkDir(const std::string& path)
 {
 #if HYP_WINDOWS
-    #define MKDIR_FUNCTION(path, mode) ::_mkdir(path)
+#define MKDIR_FUNCTION(path, mode) ::_mkdir(path)
 #else
-    #define MKDIR_FUNCTION(path, mode) ::mkdir(path, mode)
+#define MKDIR_FUNCTION(path, mode) ::mkdir(path, mode)
 #endif
 
 #ifdef HYP_UNIX
-    #define HYP_ISDIR(mode) S_ISDIR(mode)
+#define HYP_ISDIR(mode) S_ISDIR(mode)
 #elif defined(HYP_WINDOWS)
-    #define HYP_ISDIR(mode) (((mode) & _S_IFDIR) > 0)
+#define HYP_ISDIR(mode) (((mode) & _S_IFDIR) > 0)
 #endif
 
     struct stat st;

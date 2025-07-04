@@ -268,12 +268,12 @@ public:
 
     void Free(T* ptr)
     {
-        AssertThrow(ptr != nullptr);
+        HYP_CORE_ASSERT(ptr != nullptr);
 
         ptr->WaitForFinalization();
 
         const ResourceMemoryPoolHandle poolHandle = ptr->GetPoolHandle();
-        AssertThrowMsg(poolHandle, "Resource has no pool handle set - the resource was likely not allocated using the pool");
+        HYP_CORE_ASSERT(poolHandle, "Resource has no pool handle set - the resource was likely not allocated using the pool");
 
         // Invoke the destructor
         ptr->~T();
@@ -428,7 +428,7 @@ public:
 
     HYP_FORCE_INLINE IResource& operator*() const
     {
-        AssertDebug(!m_resource->IsNull());
+        HYP_CORE_ASSERT(!m_resource->IsNull());
 
         return *m_resource;
     }
@@ -509,7 +509,7 @@ public:
 
         if (!ptr)
         {
-            HYP_FAIL("Dereferenced null resource handle (Type: %s)", TypeName<ResourceType>().Data());
+            HYP_FAIL("Dereferencing null resource handle!");
         }
 
         return *ptr;

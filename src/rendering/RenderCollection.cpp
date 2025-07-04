@@ -52,10 +52,10 @@ static RenderableAttributeSet GetRenderableAttributesForProxy(const RenderProxyM
     HYP_SCOPE;
 
     const Handle<Mesh>& mesh = proxy.mesh;
-    AssertThrow(mesh.IsValid());
+    Assert(mesh.IsValid());
 
     const Handle<Material>& material = proxy.material;
-    AssertThrow(material.IsValid());
+    Assert(material.IsValid());
 
     RenderableAttributeSet attributes {
         mesh->GetMeshAttributes(),
@@ -74,7 +74,7 @@ static RenderableAttributeSet GetRenderableAttributesForProxy(const RenderProxyM
             : attributes.GetShaderDefinition();
 
 #ifdef HYP_DEBUG_MODE
-        AssertThrow(shaderDefinition.IsValid());
+        Assert(shaderDefinition.IsValid());
 #endif
 
         // Check for varying vertex attributes on the override shader compared to the entity's vertex
@@ -190,7 +190,7 @@ static void AddRenderProxy(RenderProxyList* renderProxyList, ResourceTracker<Obj
 
         if (renderGroupFlags & RenderGroupFlags::INDIRECT_RENDERING)
         {
-            AssertDebugMsg(mapping.indirectRenderer == nullptr, "Indirect renderer already exists on mapping");
+            AssertDebug(mapping.indirectRenderer == nullptr, "Indirect renderer already exists on mapping");
 
             mapping.indirectRenderer = new IndirectRenderer();
             mapping.indirectRenderer->Create(rg->GetDrawCallCollectionImpl());
@@ -211,10 +211,10 @@ static bool RemoveRenderProxy(RenderProxyList* renderProxyList, ResourceTracker<
     auto& mappings = renderProxyList->mappingsByBucket[rb];
 
     auto it = mappings.Find(attributes);
-    AssertThrow(it != mappings.End());
+    Assert(it != mappings.End());
 
     DrawCallCollectionMapping& mapping = it->second;
-    AssertThrow(mapping.IsValid());
+    Assert(mapping.IsValid());
 
     if (!mapping.meshProxies.HasIndex(proxy->entity.Id().ToIndex()))
     {
@@ -260,7 +260,7 @@ RenderProxyList::~RenderProxyList()
     Clear();
 
 #define DO_FINALIZATION_CHECK(tracker)                                                                                                    \
-    AssertThrowMsg(tracker.NumCurrent() == 0,                                                                                             \
+    Assert(tracker.NumCurrent() == 0,                                                                                                     \
         HYP_STR(tracker) " still has %u bits set. This means that there are still render proxies that have not been removed or cleared.", \
         tracker.NumCurrent())
 
@@ -379,17 +379,17 @@ void RenderProxyList::BuildRenderGroups(View* view)
 
                 const RenderBucket rb = attributes.GetMaterialAttributes().bucket;
 
-                AssertThrow(RemoveRenderProxy(this, meshes, proxy, attributes, rb));
+                Assert(RemoveRenderProxy(this, meshes, proxy, attributes, rb));
             }
 
             for (RenderProxyMesh* proxy : addedProxyPtrs)
             {
                 const Handle<Mesh>& mesh = proxy->mesh;
-                AssertThrow(mesh.IsValid());
-                AssertThrow(mesh->IsReady());
+                Assert(mesh.IsValid());
+                Assert(mesh->IsReady());
 
                 const Handle<Material>& material = proxy->material;
-                AssertThrow(material.IsValid());
+                Assert(material.IsValid());
 
                 RenderableAttributeSet attributes = GetRenderableAttributesForProxy(*proxy, overrideAttributes);
                 UpdateRenderableAttributesDynamic(proxy, attributes);
@@ -611,8 +611,8 @@ void RenderCollector::PerformOcclusionCulling(FrameBase* frame, const RenderSetu
     Threads::AssertOnThread(g_renderThread);
 
     AssertDebug(renderSetup.IsValid());
-    AssertDebugMsg(renderSetup.HasView(), "RenderSetup must have a View attached");
-    AssertDebugMsg(renderSetup.passData != nullptr, "RenderSetup must have valid PassData to perform occlusion culling");
+    AssertDebug(renderSetup.HasView(), "RenderSetup must have a View attached");
+    AssertDebug(renderSetup.passData != nullptr, "RenderSetup must have valid PassData to perform occlusion culling");
 
     HYP_MT_CHECK_RW(renderProxyList.dataRaceDetector);
 
@@ -661,7 +661,7 @@ void RenderCollector::PerformOcclusionCulling(FrameBase* frame, const RenderSetu
 void RenderCollector::ExecuteDrawCalls(FrameBase* frame, const RenderSetup& renderSetup, RenderProxyList& renderProxyList, uint32 bucketBits)
 {
     AssertDebug(renderSetup.IsValid());
-    AssertDebugMsg(renderSetup.HasView(), "RenderSetup must have a View attached");
+    AssertDebug(renderSetup.HasView(), "RenderSetup must have a View attached");
 
     if (renderSetup.view->GetView()->GetFlags() & ViewFlags::GBUFFER)
     {
@@ -671,7 +671,7 @@ void RenderCollector::ExecuteDrawCalls(FrameBase* frame, const RenderSetup& rend
     else
     {
         const FramebufferRef& framebuffer = renderSetup.view->GetView()->GetOutputTarget().GetFramebuffer();
-        AssertDebugMsg(framebuffer != nullptr, "Must have a valid framebuffer for rendering");
+        AssertDebug(framebuffer != nullptr, "Must have a valid framebuffer for rendering");
 
         ExecuteDrawCalls(frame, renderSetup, renderProxyList, framebuffer, bucketBits);
     }

@@ -109,7 +109,7 @@ void EntityRenderProxySystem_Mesh::OnEntityAdded(Entity* entity)
     InitObject(meshComponent.material);
     InitObject(meshComponent.skeleton);
 
-    AssertThrow(meshComponent.proxy == nullptr);
+    Assert(meshComponent.proxy == nullptr);
 
     if (meshComponent.mesh.IsValid() && meshComponent.material.IsValid())
     {

@@ -344,7 +344,7 @@ public:
     /* get the first supported format out of the provided list of format choices. */
     TextureFormat FindSupportedFormat(Span<TextureFormat> possibleFormats, ImageSupport supportType) const
     {
-        AssertThrowMsg(possibleFormats.Size() > 0, "Size must be greater than zero!");
+        Assert(possibleFormats.Size() > 0, "Size must be greater than zero!");
 
         DebugLog(
             LogType::Debug,
@@ -374,7 +374,7 @@ public:
     template <class Predicate>
     TextureFormat FindSupportedSurfaceFormat(const SwapchainSupportDetails& details, Span<TextureFormat> possibleFormats, Predicate&& predicate) const
     {
-        AssertThrowMsg(possibleFormats.Size() != 0, "Size must be greater than zero!");
+        Assert(possibleFormats.Size() != 0, "Size must be greater than zero!");
 
         for (const VkSurfaceFormatKHR& surfaceFormat : details.formats)
         {

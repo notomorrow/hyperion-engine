@@ -27,7 +27,7 @@ void EditorDelegates::AddNodeWatcher(Name watcherKey, Node* rootNode, Span<const
     HYP_SCOPE;
     Threads::AssertOnThread(g_gameThread);
 
-    AssertThrow(rootNode != nullptr);
+    Assert(rootNode != nullptr);
 
     NodeWatcher& nodeWatcher = m_nodeWatchers.EmplaceBack(watcherKey, NodeWatcher {}).second;
     nodeWatcher.rootNode = rootNode->WeakHandleFromThis();
@@ -44,7 +44,7 @@ int EditorDelegates::RemoveNodeWatcher(WeakName watcherKey, Node* rootNode)
     HYP_SCOPE;
     Threads::AssertOnThread(g_gameThread);
 
-    AssertThrow(rootNode != nullptr);
+    Assert(rootNode != nullptr);
 
     int numRemoved = 0;
 
@@ -86,8 +86,8 @@ int EditorDelegates::RemoveNodeWatchers(WeakName watcherKey)
 
 void EditorDelegates::OnNodeUpdate(Node* node, const HypProperty* property)
 {
-    AssertThrow(node != nullptr);
-    AssertThrow(property != nullptr);
+    Assert(node != nullptr);
+    Assert(property != nullptr);
 
     auto impl = [this, nodeWeak = node->WeakHandleFromThis(), property]()
     {

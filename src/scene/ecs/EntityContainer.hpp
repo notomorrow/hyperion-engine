@@ -124,7 +124,7 @@ public:
         HYP_MT_CHECK_RW(m_dataRaceDetector);
 
         auto it = m_entities.Insert(entity, { typeId });
-        AssertThrow(it.second);
+        Assert(it.second);
     }
 
     HYP_FORCE_INLINE EntityData* TryGetEntityData(const Entity* entity)
@@ -148,7 +148,7 @@ public:
     HYP_FORCE_INLINE EntityData& GetEntityData(const Entity* entity)
     {
         EntityData* data = TryGetEntityData(entity);
-        AssertThrow(data != nullptr);
+        Assert(data != nullptr);
 
         return *data;
     }
@@ -156,7 +156,7 @@ public:
     HYP_FORCE_INLINE const EntityData& GetEntityData(const Entity* entity) const
     {
         const EntityData* data = TryGetEntityData(entity);
-        AssertThrow(data != nullptr);
+        Assert(data != nullptr);
 
         return *data;
     }

@@ -240,7 +240,7 @@ public:
             return;
         }
 
-        AssertThrow(offset + count <= m_size);
+        HYP_CORE_ASSERT(offset + count <= m_size);
 
         Memory::MemCpy(Data() + offset, data, count);
     }
@@ -397,7 +397,7 @@ public:
      *  \return Returns true if the read was successful, false if the offset is out of bounds. */
     bool Read(SizeType offset, SizeType count, ubyte* outValues) const
     {
-        AssertThrow(outValues != nullptr);
+        HYP_CORE_ASSERT(outValues != nullptr);
 
         const SizeType size = m_size;
 
@@ -425,7 +425,7 @@ public:
     {
         static_assert(isPodType<T>, "Must be POD type");
 
-        AssertThrow(out != nullptr);
+        HYP_CORE_ASSERT(out != nullptr);
 
         constexpr SizeType count = sizeof(T);
         const SizeType size = m_size;
@@ -538,8 +538,8 @@ using FixedByteBuffer = TByteBuffer<FixedAllocator<Size>>;
 } // namespace memory
 
 using memory::ByteBuffer;
-using memory::TByteBuffer;
 using memory::FixedByteBuffer;
+using memory::TByteBuffer;
 
 } // namespace hyperion
 

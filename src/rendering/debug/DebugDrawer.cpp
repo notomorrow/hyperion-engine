@@ -107,7 +107,7 @@ void SphereDebugDrawShape::operator()(const Vec3f& position, float radius, const
 
 void AmbientProbeDebugDrawShape::operator()(const Vec3f& position, float radius, const EnvProbe& envProbe)
 {
-    AssertThrow(envProbe.IsReady());
+    Assert(envProbe.IsReady());
 
     UniquePtr<DebugDrawCommand_Probe> command = MakeUnique<DebugDrawCommand_Probe>();
     command->shape = this;
@@ -124,7 +124,7 @@ void AmbientProbeDebugDrawShape::operator()(const Vec3f& position, float radius,
 
 void ReflectionProbeDebugDrawShape::operator()(const Vec3f& position, float radius, const EnvProbe& envProbe)
 {
-    AssertThrow(envProbe.IsReady());
+    Assert(envProbe.IsReady());
 
     UniquePtr<DebugDrawCommand_Probe> command = MakeUnique<DebugDrawCommand_Probe>();
     command->shape = this;
@@ -225,7 +225,7 @@ void DebugDrawer::Initialize()
 
     Threads::AssertOnThread(g_gameThread);
 
-    AssertThrow(!m_isInitialized.Get(MemoryOrder::ACQUIRE));
+    Assert(!m_isInitialized.Get(MemoryOrder::ACQUIRE));
 
     for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
     {
@@ -239,20 +239,20 @@ void DebugDrawer::Initialize()
             staticMeshVertexAttributes,
             Array<String> { "IMMEDIATE_MODE" }));
 
-    AssertThrow(m_shader.IsValid());
+    Assert(m_shader.IsValid());
 
     const DescriptorTableDeclaration& descriptorTableDecl = m_shader->GetCompiledShader()->GetDescriptorTableDeclaration();
 
     m_descriptorTable = g_renderBackend->MakeDescriptorTable(&descriptorTableDecl);
-    AssertThrow(m_descriptorTable != nullptr);
+    Assert(m_descriptorTable != nullptr);
 
     const uint32 debugDrawerDescriptorSetIndex = m_descriptorTable->GetDescriptorSetIndex(NAME("DebugDrawerDescriptorSet"));
-    AssertThrow(debugDrawerDescriptorSetIndex != ~0u);
+    Assert(debugDrawerDescriptorSetIndex != ~0u);
 
     for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
     {
         const DescriptorSetRef& debugDrawerDescriptorSet = m_descriptorTable->GetDescriptorSet(debugDrawerDescriptorSetIndex, frameIndex);
-        AssertThrow(debugDrawerDescriptorSet != nullptr);
+        Assert(debugDrawerDescriptorSet != nullptr);
 
         debugDrawerDescriptorSet->SetElement(NAME("ImmediateDrawsBuffer"), m_instanceBuffers[frameIndex]);
     }
@@ -317,10 +317,10 @@ void DebugDrawer::Render(FrameBase* frame, const RenderSetup& renderSetup)
     }
 
     const uint32 debugDrawerDescriptorSetIndex = m_descriptorTable->GetDescriptorSetIndex(NAME("DebugDrawerDescriptorSet"));
-    AssertThrow(debugDrawerDescriptorSetIndex != ~0u);
+    Assert(debugDrawerDescriptorSetIndex != ~0u);
 
     const DescriptorSetRef& debugDrawerDescriptorSet = m_descriptorTable->GetDescriptorSet(debugDrawerDescriptorSetIndex, frameIndex);
-    AssertThrow(debugDrawerDescriptorSet != nullptr);
+    Assert(debugDrawerDescriptorSet != nullptr);
 
     // Update descriptor set if instance buffer was rebuilt
     if (wasInstanceBufferRebuilt)
@@ -440,11 +440,11 @@ void DebugDrawer::UpdateDrawCommands()
 
     SizeType size = m_drawCommandsPendingAddition.Size();
     int64 previousValue = int64(m_numDrawCommandsPendingAddition.Decrement(uint32(size), MemoryOrder::ACQUIRE_RELEASE));
-    AssertThrow(previousValue - int64(size) >= 0);
+    Assert(previousValue - int64(size) >= 0);
 
     m_drawCommands.Concat(std::move(m_drawCommandsPendingAddition));
 
-    AssertThrow(m_drawCommandsPendingAddition.Empty());
+    Assert(m_drawCommandsPendingAddition.Empty());
 }
 
 UniquePtr<DebugDrawCommandList> DebugDrawer::CreateCommandList()

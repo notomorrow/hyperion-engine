@@ -51,7 +51,7 @@ void TemporalAA::Create()
         return;
     }
 
-    AssertThrow(m_gbuffer != nullptr);
+    Assert(m_gbuffer != nullptr);
 
     CreateImages();
     CreateComputePipelines();
@@ -100,7 +100,7 @@ void TemporalAA::CreateImages()
 void TemporalAA::CreateComputePipelines()
 {
     ShaderRef shader = g_shaderManager->GetOrCreate(NAME("TemporalAA"));
-    AssertThrow(shader.IsValid());
+    Assert(shader.IsValid());
 
     const DescriptorTableDeclaration& descriptorTableDecl = shader->GetCompiledShader()->GetDescriptorTableDeclaration();
 
@@ -115,7 +115,7 @@ void TemporalAA::CreateComputePipelines()
     {
         // create descriptor sets for depth pyramid generation.
         const DescriptorSetRef& descriptorSet = descriptorTable->GetDescriptorSet(NAME("TemporalAADescriptorSet"), frameIndex);
-        AssertThrow(descriptorSet != nullptr);
+        Assert(descriptorSet != nullptr);
 
         descriptorSet->SetElement(NAME("InColorTexture"), m_inputImageView);
         descriptorSet->SetElement(NAME("InPrevColorTexture"), (*textures[(frameIndex + 1) % 2])->GetRenderResource().GetImageView());

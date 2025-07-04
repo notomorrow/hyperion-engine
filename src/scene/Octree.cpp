@@ -53,7 +53,7 @@ void Octree::SetEntityManager(const Handle<EntityManager>& entityManager)
     {
         for (Octant& octant : m_octants)
         {
-            AssertThrow(octant.octree != nullptr);
+            Assert(octant.octree != nullptr);
 
             static_cast<Octree*>(octant.octree.Get())->SetEntityManager(m_entityManager);
         }
@@ -69,7 +69,7 @@ void Octree::Clear()
 
     if (m_entityManager)
     {
-        AssertThrow(Threads::IsOnThread(m_entityManager->GetOwnerThreadId()));
+        Assert(Threads::IsOnThread(m_entityManager->GetOwnerThreadId()));
 
         for (Entry& entry : entries)
         {
@@ -96,7 +96,7 @@ Octree::InsertResult Octree::Rebuild(const BoundingBox& newAabb, bool allowGrow)
     for (auto& it : newEntries)
     {
         Entity* entity = it.value;
-        AssertThrow(entity != nullptr);
+        Assert(entity != nullptr);
 
         if (it.aabb.IsValid() && it.aabb.IsFinite())
         {
@@ -145,7 +145,7 @@ void Octree::PerformUpdates()
 {
     HYP_SCOPE;
 
-    AssertThrow(m_state != nullptr);
+    Assert(m_state != nullptr);
 
     if (!m_state->NeedsRebuild())
     {
@@ -162,7 +162,7 @@ void Octree::NextVisibilityState()
 {
     HYP_SCOPE;
 
-    AssertThrow(IsRoot());
+    Assert(IsRoot());
 
     m_visibilityState.Next();
 }
@@ -171,7 +171,7 @@ void Octree::CalculateVisibility(const Handle<Camera>& camera)
 {
     HYP_SCOPE;
 
-    AssertThrow(IsRoot());
+    Assert(IsRoot());
 
     UpdateVisibilityState(camera, m_visibilityState.validityMarker);
 }
@@ -276,7 +276,7 @@ void Octree::RebuildEntriesHash(uint32 level)
                     mask |= (1u << (uint32(tags[j]) - 1));
                 }
 
-                AssertThrow(m_entryHashes.Size() > mask);
+                Assert(m_entryHashes.Size() > mask);
 
                 m_entryHashes[mask].Add(entryHashCode);
             }
@@ -287,7 +287,7 @@ void Octree::RebuildEntriesHash(uint32 level)
     {
         for (const Octant& octant : m_octants)
         {
-            AssertThrow(octant.octree != nullptr);
+            Assert(octant.octree != nullptr);
 
             static_cast<Octree*>(octant.octree.Get())->RebuildEntriesHash(level + 1);
         }
@@ -394,7 +394,7 @@ bool Octree::TestRay(const Ray& ray, RayTestResults& outResults, bool useBvh) co
         {
             for (const Octant& octant : m_octants)
             {
-                AssertThrow(octant.octree != nullptr);
+                Assert(octant.octree != nullptr);
 
                 if (static_cast<Octree*>(octant.octree.Get())->TestRay(ray, outResults))
                 {

@@ -164,7 +164,7 @@ private:
     {
         static_assert(isPodType<NormalizedType<T>>, "T must be POD to read as raw data");
 
-        AssertThrow(outPtr != nullptr);
+        HYP_CORE_ASSERT(outPtr != nullptr);
 
         constexpr SizeType size = sizeof(NormalizedType<T>);
 

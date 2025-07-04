@@ -194,7 +194,7 @@ public:
 
     virtual void SetManagedObjectResource(ManagedObjectResource* managedObjectResource) override
     {
-        AssertThrow(m_managedObjectResource == nullptr);
+        HYP_CORE_ASSERT(m_managedObjectResource == nullptr);
         m_managedObjectResource = managedObjectResource;
     }
 
@@ -350,22 +350,22 @@ public:
 
     HYP_FORCE_INLINE ObjIdBase Id() const
     {
-        AssertDebug(m_header, "Invalid HypObject!");
+        HYP_CORE_ASSERT(m_header, "Invalid HypObject!");
 
         return ObjIdBase { m_header->container->GetObjectTypeId(), m_header->index + 1 };
     }
 
     HYP_FORCE_INLINE TypeId GetTypeId() const
     {
-        AssertDebug(m_header, "Invalid HypObject!");
+        HYP_CORE_ASSERT(m_header, "Invalid HypObject!");
 
         return m_header->container->GetObjectTypeId();
     }
 
     HYP_FORCE_INLINE const HypClass* InstanceClass() const
     {
-        AssertDebug(m_header, "Invalid HypObject!");
-        AssertDebug(m_header->container->GetHypClass(), "No HypClass defined for type");
+        HYP_CORE_ASSERT(m_header, "Invalid HypObject!");
+        HYP_CORE_ASSERT(m_header->container->GetHypClass(), "No HypClass defined for type");
 
         return m_header->container->GetHypClass();
     }
@@ -437,16 +437,12 @@ protected:
 
     HYP_FORCE_INLINE void AssertReady() const
     {
-        AssertThrow(
-            IsReady(),
-            "Object is not in ready state; maybe Init() has not been called on it, "
-            "or the component requires an event to be sent from the Engine instance to determine that "
-            "it is ready to be constructed, and this event has not yet been sent.\n");
+        HYP_CORE_ASSERT(IsReady(), "Object is not in ready state! Was InitObject() called for it?");
     }
 
     HYP_FORCE_INLINE void AssertIsInitCalled() const
     {
-        AssertThrow(IsInitCalled(), "Object has not had Init() called on it!");
+        HYP_CORE_ASSERT(IsInitCalled(), "Object has not had Init() called on it!");
     }
 
     void AddDelegateHandler(Name name, DelegateHandler&& delegateHandler)

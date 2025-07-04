@@ -17,7 +17,7 @@ extern "C"
 
     HYP_EXPORT const char* UIEventHandlerResult_GetMessage(UIEventHandlerResult* result)
     {
-        AssertThrow(result != nullptr);
+        Assert(result != nullptr);
 
         if (Optional<ANSIStringView> message = result->GetMessage())
         {
@@ -29,7 +29,7 @@ extern "C"
 
     HYP_EXPORT const char* UIEventHandlerResult_GetFunctionName(UIEventHandlerResult* result)
     {
-        AssertThrow(result != nullptr);
+        Assert(result != nullptr);
 
         if (Optional<ANSIStringView> functionName = result->GetFunctionName())
         {
@@ -41,12 +41,12 @@ extern "C"
 
     HYP_EXPORT void UIObject_Spawn(UIObject* spawnParent, const HypClass* hypClass, Name* name, Vec2i* position, UIObjectSize* size, HypData* outHypData)
     {
-        AssertThrow(spawnParent != nullptr);
-        AssertThrow(hypClass != nullptr);
-        AssertThrow(name != nullptr);
-        AssertThrow(position != nullptr);
-        AssertThrow(size != nullptr);
-        AssertThrow(outHypData != nullptr);
+        Assert(spawnParent != nullptr);
+        Assert(hypClass != nullptr);
+        Assert(name != nullptr);
+        Assert(position != nullptr);
+        Assert(size != nullptr);
+        Assert(outHypData != nullptr);
 
         Handle<UIObject> uiObject = spawnParent->CreateUIObject(hypClass, *name, *position, *size);
         *outHypData = HypData(std::move(uiObject));
@@ -54,10 +54,10 @@ extern "C"
 
     HYP_EXPORT int8 UIObject_Find(UIObject* parent, const HypClass* hypClass, Name* name, HypData* outHypData)
     {
-        AssertThrow(parent != nullptr);
-        AssertThrow(hypClass != nullptr);
-        AssertThrow(name != nullptr);
-        AssertThrow(outHypData != nullptr);
+        Assert(parent != nullptr);
+        Assert(hypClass != nullptr);
+        Assert(name != nullptr);
+        Assert(outHypData != nullptr);
 
         if (!hypClass->IsDerivedFrom(UIObject::Class()))
         {

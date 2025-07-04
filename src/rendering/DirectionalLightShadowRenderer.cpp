@@ -65,7 +65,7 @@ ShadowPass::ShadowPass(
       m_renderViewDynamics(viewDynamicsResourceHandle),
       m_rerenderSemaphore(rerenderSemaphore)
 {
-    AssertThrow(m_rerenderSemaphore != nullptr);
+    Assert(m_rerenderSemaphore != nullptr);
 
     SetShader(shader);
 }
@@ -106,10 +106,10 @@ void ShadowPass::CreateFramebuffer()
 
 void ShadowPass::CreateShadowMap()
 {
-    AssertThrow(m_worldResourceHandle);
+    Assert(m_worldResourceHandle);
 
     const ShadowMapAtlasElement& atlasElement = m_shadowMapResourceHandle->GetAtlasElement();
-    AssertThrow(atlasElement.atlasIndex != ~0u);
+    Assert(atlasElement.atlasIndex != ~0u);
 
     FixedArray<Handle<Texture>*, 2> shadowMapTextures {
         &m_shadowMapStatics,
@@ -139,7 +139,7 @@ void ShadowPass::CreateShadowMap()
 void ShadowPass::CreateCombineShadowMapsPass()
 {
     ShaderRef shader = g_shaderManager->GetOrCreate(NAME("CombineShadowMaps"), { { "STAGE_DYNAMICS" } });
-    AssertThrow(shader.IsValid());
+    Assert(shader.IsValid());
 
     const DescriptorTableDeclaration& descriptorTableDecl = shader->GetCompiledShader()->GetDescriptorTableDeclaration();
 
@@ -148,7 +148,7 @@ void ShadowPass::CreateCombineShadowMapsPass()
     for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
     {
         const DescriptorSetRef& descriptorSet = descriptorTable->GetDescriptorSet(NAME("CombineShadowMapsDescriptorSet"), frameIndex);
-        AssertThrow(descriptorSet != nullptr);
+        Assert(descriptorSet != nullptr);
 
         descriptorSet->SetElement(NAME("PrevTexture"), m_shadowMapStatics->GetRenderResource().GetImageView());
         descriptorSet->SetElement(NAME("InTexture"), m_shadowMapDynamics->GetRenderResource().GetImageView());
@@ -163,7 +163,7 @@ void ShadowPass::CreateCombineShadowMapsPass()
 void ShadowPass::CreateComputePipelines()
 {
     ShaderRef blurShadowMapShader = g_shaderManager->GetOrCreate(NAME("BlurShadowMap"));
-    AssertThrow(blurShadowMapShader.IsValid());
+    Assert(blurShadowMapShader.IsValid());
 
     const DescriptorTableDeclaration& descriptorTableDecl = blurShadowMapShader->GetCompiledShader()->GetDescriptorTableDeclaration();
 
@@ -174,7 +174,7 @@ void ShadowPass::CreateComputePipelines()
     for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
     {
         const DescriptorSetRef& descriptorSet = descriptorTable->GetDescriptorSet(NAME("BlurShadowMapDescriptorSet"), frameIndex);
-        AssertThrow(descriptorSet != nullptr);
+        Assert(descriptorSet != nullptr);
 
         descriptorSet->SetElement(NAME("InputTexture"), m_framebuffer->GetAttachment(0)->GetImageView());
         descriptorSet->SetElement(NAME("OutputTexture"), m_shadowMapResourceHandle->GetImageView());
@@ -213,7 +213,7 @@ void ShadowPass::Render(FrameBase* frame, const RenderSetup& renderSetup)
         return;
     }
 
-    AssertThrow(m_parentScene.IsValid());
+    Assert(m_parentScene.IsValid());
 
     const RenderSetup renderSetupStatics { renderSetup.world, m_renderViewStatics.Get() };
     const RenderSetup renderSetupDynamics { renderSetup.world, m_renderViewDynamics.Get() };
@@ -262,14 +262,14 @@ void ShadowPass::Render(FrameBase* frame, const RenderSetup& renderSetup)
     const ShadowMapAtlasElement& atlasElement = m_shadowMapResourceHandle->GetAtlasElement();
 
     const ImageViewRef& shadowMapImageView = m_shadowMapResourceHandle->GetImageView();
-    AssertThrow(shadowMapImageView != nullptr);
+    Assert(shadowMapImageView != nullptr);
 
     const ImageRef& shadowMapImage = shadowMapImageView->GetImage();
-    AssertThrow(shadowMapImage != nullptr);
+    Assert(shadowMapImage != nullptr);
 
     { // Combine static and dynamic shadow maps
         AttachmentBase* attachment = m_combineShadowMapsPass->GetFramebuffer()->GetAttachment(0);
-        AssertThrow(attachment != nullptr);
+        Assert(attachment != nullptr);
 
         m_combineShadowMapsPass->Render(frame, renderSetupStatics);
 
@@ -287,9 +287,9 @@ void ShadowPass::Render(FrameBase* frame, const RenderSetup& renderSetup)
                 atlasElement.offsetCoords.y,
                 atlasElement.offsetCoords.x + atlasElement.dimensions.x,
                 atlasElement.offsetCoords.y + atlasElement.dimensions.y },
-            0,                        /* srcMip */
-            0,                        /* dstMip */
-            0,                        /* srcFace */
+            0,                      /* srcMip */
+            0,                      /* dstMip */
+            0,                      /* srcFace */
             atlasElement.atlasIndex /* dstFace */
         );
 
@@ -406,7 +406,7 @@ void DirectionalLightShadowRenderer::OnAddedToWorld()
 {
 
     RenderShadowMap* shadowMap = g_renderGlobalState->ShadowMapAllocator->AllocateShadowMap(SMT_DIRECTIONAL, m_filterMode, m_resolution);
-    AssertThrowMsg(shadowMap != nullptr, "Failed to allocate shadow map");
+    Assert(shadowMap != nullptr, "Failed to allocate shadow map");
 
     m_shadowMapResourceHandle = TResourceHandle<RenderShadowMap>(*shadowMap);
 
@@ -482,7 +482,7 @@ void DirectionalLightShadowRenderer::Update(float delta)
         }
     };
 
-    AssertThrow(m_camera != nullptr);
+    Assert(m_camera != nullptr);
     m_camera->Update(delta);
 
     m_viewStatics->UpdateVisibility();
@@ -503,9 +503,7 @@ void DirectionalLightShadowRenderer::Update(float delta)
         fittingOctant = &octree;
     }
 
-    const HashCode octantHashStatics = fittingOctant->GetOctantID().GetHashCode()
-        .Add(fittingOctant->GetEntryListHash<EntityTag::STATIC>())
-        .Add(fittingOctant->GetEntryListHash<EntityTag::LIGHT>());
+    const HashCode octantHashStatics = fittingOctant->GetOctantID().GetHashCode().Add(fittingOctant->GetEntryListHash<EntityTag::STATIC>()).Add(fittingOctant->GetEntryListHash<EntityTag::LIGHT>());
 
     // Need to re-render static objects if:
     // * octant's statics hash code has changed

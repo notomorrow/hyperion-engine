@@ -95,7 +95,7 @@ struct VoxelGrid
     const Voxel& GetVoxel(uint32 x, uint32 y, uint32 z) const
     {
         const uint32 index = GetIndex(x, y, z);
-        AssertThrowMsg(index < voxels.Size(), "Voxel index out of bounds");
+        Assert(index < voxels.Size(), "Voxel index out of bounds");
 
         return voxels[index];
     }
@@ -103,7 +103,7 @@ struct VoxelGrid
     void SetVoxel(uint32 x, uint32 y, uint32 z, VoxelData data)
     {
         const uint32 index = GetIndex(x, y, z);
-        AssertThrowMsg(index < voxels.Size(), "Voxel index out of bounds");
+        Assert(index < voxels.Size(), "Voxel index out of bounds");
 
         voxels[index].filled = true;
         voxels[index].data = data;

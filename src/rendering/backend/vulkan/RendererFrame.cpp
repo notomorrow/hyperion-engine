@@ -37,7 +37,7 @@ VulkanFrame::VulkanFrame(uint32 frameIndex)
 
 VulkanFrame::~VulkanFrame()
 {
-    AssertThrowMsg(!m_queueSubmitFence.IsValid(), "fc_queue_submit should have been released");
+    HYP_GFX_ASSERT(!m_queueSubmitFence.IsValid(), "fc_queue_submit should have been released");
 }
 
 RendererResult VulkanFrame::Create()

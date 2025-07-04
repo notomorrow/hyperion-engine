@@ -199,7 +199,7 @@ void RenderEnvProbe::CreateShader()
         HYP_UNREACHABLE();
     }
 
-    AssertThrow(m_shader.IsValid());
+    Assert(m_shader.IsValid());
 }
 
 void RenderEnvProbe::Initialize_Internal()
@@ -243,7 +243,7 @@ void RenderEnvProbe::UpdateBufferData()
 
     if (m_envProbe->IsShadowProbe())
     {
-        AssertThrow(m_shadowMap);
+        Assert(m_shadowMap);
 
         bufferData->textureIndex = m_shadowMap->GetAtlasElement().pointLightIndex;
     }
@@ -312,17 +312,17 @@ void RenderEnvProbe::Render(FrameBase* frame, const RenderSetup& renderSetup)
     }
     else if (m_envProbe->IsShadowProbe())
     {
-        AssertThrow(m_shadowMap);
-        AssertThrow(m_shadowMap->GetAtlasElement().pointLightIndex != ~0u);
+        Assert(m_shadowMap);
+        Assert(m_shadowMap->GetAtlasElement().pointLightIndex != ~0u);
 
         HYP_LOG(EnvProbe, Debug, "Render shadow probe {} (pointlight index: {})",
             m_envProbe->Id(), m_shadowMap->GetAtlasElement().pointLightIndex);
 
         const ImageViewRef& shadowMapImageView = m_shadowMap->GetImageView();
-        AssertThrow(shadowMapImageView.IsValid());
+        Assert(shadowMapImageView.IsValid());
 
         const ImageRef& shadowMapImage = shadowMapImageView->GetImage();
-        AssertThrow(shadowMapImage.IsValid());
+        Assert(shadowMapImage.IsValid());
 
         const ShadowMapAtlasElement& atlasElement = m_shadowMap->GetAtlasElement();
 
@@ -452,7 +452,7 @@ void ReflectionProbeRenderer::CreateShader()
         NAME("RenderToCubemap"),
         ShaderProperties(staticMeshVertexAttributes, { "WRITE_NORMALS", "WRITE_MOMENTS" }));
 
-    AssertThrow(m_shader.IsValid());
+    Assert(m_shader.IsValid());
 }
 
 void ReflectionProbeRenderer::RenderProbe(FrameBase* frame, const RenderSetup& renderSetup, EnvProbe* envProbe)
@@ -507,11 +507,11 @@ void ReflectionProbeRenderer::RenderProbe(FrameBase* frame, const RenderSetup& r
 
     if (SkyProbe* skyProbe = ObjCast<SkyProbe>(envProbe))
     {
-        AssertThrow(skyProbe->GetSkyboxCubemap().IsValid());
+        Assert(skyProbe->GetSkyboxCubemap().IsValid());
 
         const ImageRef& dstImage = skyProbe->GetSkyboxCubemap()->GetRenderResource().GetImage();
-        AssertThrow(dstImage.IsValid());
-        AssertThrow(dstImage->IsCreated());
+        Assert(dstImage.IsValid());
+        Assert(dstImage->IsCreated());
 
         frame->GetCommandList().Add<InsertBarrier>(framebufferImage, RS_COPY_SRC);
         frame->GetCommandList().Add<InsertBarrier>(dstImage, RS_COPY_DST);
@@ -563,7 +563,7 @@ void ReflectionProbeRenderer::ComputePrefilteredEnvMap(FrameBase* frame, const R
     }
 
     const Handle<Texture>& prefilteredEnvMap = envProbe->GetPrefilteredEnvMap();
-    AssertThrow(prefilteredEnvMap.IsValid());
+    Assert(prefilteredEnvMap.IsValid());
 
     ConvolveProbeUniforms uniforms;
     uniforms.outImageDimensions = prefilteredEnvMap->GetExtent().GetXY();
@@ -606,9 +606,9 @@ void ReflectionProbeRenderer::ComputePrefilteredEnvMap(FrameBase* frame, const R
     AttachmentBase* normalsAttachment = framebuffer->GetAttachment(1);
     AttachmentBase* momentsAttachment = framebuffer->GetAttachment(2);
 
-    AssertThrow(colorAttachment != nullptr);
-    AssertThrow(normalsAttachment != nullptr);
-    AssertThrow(momentsAttachment != nullptr);
+    Assert(colorAttachment != nullptr);
+    Assert(normalsAttachment != nullptr);
+    Assert(momentsAttachment != nullptr);
 
     const DescriptorTableDeclaration& descriptorTableDecl = convolveProbeShader->GetCompiledShader()->GetDescriptorTableDeclaration();
 
@@ -618,7 +618,7 @@ void ReflectionProbeRenderer::ComputePrefilteredEnvMap(FrameBase* frame, const R
     for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
     {
         const DescriptorSetRef& descriptorSet = descriptorTable->GetDescriptorSet(NAME("ConvolveProbeDescriptorSet"), frameIndex);
-        AssertThrow(descriptorSet.IsValid());
+        Assert(descriptorSet.IsValid());
 
         descriptorSet->SetElement(NAME("UniformBuffer"), uniformBuffer);
         descriptorSet->SetElement(NAME("ColorTexture"), colorAttachment->GetImageView());
@@ -690,7 +690,7 @@ void ReflectionProbeRenderer::ComputeSH(FrameBase* frame, const RenderSetup& ren
     AssertDebug(framebuffer.IsValid());
 
     AttachmentBase* colorAttachment = framebuffer->GetAttachment(0);
-    AssertThrow(colorAttachment != nullptr);
+    Assert(colorAttachment != nullptr);
 
     AttachmentBase* normalsAttachment = framebuffer->GetAttachment(1);
     AttachmentBase* depthAttachment = framebuffer->GetAttachment(2);
@@ -727,7 +727,7 @@ void ReflectionProbeRenderer::ComputeSH(FrameBase* frame, const RenderSetup& ren
 
     for (auto& it : pipelines)
     {
-        AssertThrow(it.second.first.IsValid());
+        Assert(it.second.first.IsValid());
 
         if (!firstShader)
         {
@@ -747,7 +747,7 @@ void ReflectionProbeRenderer::ComputeSH(FrameBase* frame, const RenderSetup& ren
         for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
         {
             const DescriptorSetRef& computeShDescriptorSet = computeShDescriptorTables[i]->GetDescriptorSet(NAME("ComputeSHDescriptorSet"), frameIndex);
-            AssertThrow(computeShDescriptorSet != nullptr);
+            Assert(computeShDescriptorSet != nullptr);
 
             computeShDescriptorSet->SetElement(NAME("InColorCubemap"), colorAttachment->GetImageView());
             computeShDescriptorSet->SetElement(NAME("InNormalsCubemap"), normalsAttachment ? normalsAttachment->GetImageView() : g_renderGlobalState->placeholderData->GetImageViewCube1x1R8());
@@ -873,9 +873,9 @@ void ReflectionProbeRenderer::ComputeSH(FrameBase* frame, const RenderSetup& ren
                 MathUtil::Max(1u, shNumSamples.y >> i)
             };
 
-            AssertThrow(prevDimensions.x >= 2);
-            AssertThrow(prevDimensions.x > nextDimensions.x);
-            AssertThrow(prevDimensions.y > nextDimensions.y);
+            Assert(prevDimensions.x >= 2);
+            Assert(prevDimensions.x > nextDimensions.x);
+            Assert(prevDimensions.y > nextDimensions.y);
 
             pushConstants.levelDimensions = {
                 prevDimensions.x,

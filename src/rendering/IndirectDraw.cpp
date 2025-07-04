@@ -23,6 +23,9 @@
 
 #include <core/math/MathUtil.hpp>
 
+#include <core/logging/Logger.hpp>
+#include <core/logging/LogChannels.hpp>
+
 #include <core/profiling/ProfileScope.hpp>
 
 #include <EngineGlobals.hpp>
@@ -148,9 +151,9 @@ struct RENDER_COMMAND(CreateIndirectDrawStateBuffers)
     {
         for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
         {
-            AssertThrow(this->indirectBuffers[frameIndex].IsValid());
-            AssertThrow(this->instanceBuffers[frameIndex].IsValid());
-            AssertThrow(this->stagingBuffers[frameIndex].IsValid());
+            Assert(this->indirectBuffers[frameIndex].IsValid());
+            Assert(this->instanceBuffers[frameIndex].IsValid());
+            Assert(this->stagingBuffers[frameIndex].IsValid());
         }
     }
 
@@ -310,8 +313,8 @@ void IndirectDrawState::UpdateBufferData(FrameBase* frame, bool* outWasResized)
 
     // fill instances buffer with data of the meshes
     {
-        AssertThrow(m_stagingBuffers[frameIndex].IsValid());
-        AssertThrow(m_stagingBuffers[frameIndex]->Size() >= sizeof(IndirectDrawCommand) * m_drawCommands.Size());
+        Assert(m_stagingBuffers[frameIndex].IsValid());
+        Assert(m_stagingBuffers[frameIndex]->Size() >= sizeof(IndirectDrawCommand) * m_drawCommands.Size());
 
         m_stagingBuffers[frameIndex]->Copy(
             m_drawCommands.Size() * sizeof(IndirectDrawCommand),
@@ -335,7 +338,7 @@ void IndirectDrawState::UpdateBufferData(FrameBase* frame, bool* outWasResized)
             RS_INDIRECT_ARG);
     }
 
-    AssertThrow(m_instanceBuffers[frameIndex]->Size() >= m_objectInstances.Size() * sizeof(ObjectInstance));
+    Assert(m_instanceBuffers[frameIndex]->Size() >= m_objectInstances.Size() * sizeof(ObjectInstance));
 
     // update data for object instances (cpu - gpu)
     m_instanceBuffers[frameIndex]->Copy(
@@ -364,13 +367,13 @@ void IndirectRenderer::Create(IDrawCallCollectionImpl* impl)
     m_indirectDrawState.Create();
 
     ShaderRef objectVisibilityShader = g_shaderManager->GetOrCreate(NAME("ObjectVisibility"));
-    AssertThrow(objectVisibilityShader.IsValid());
+    Assert(objectVisibilityShader.IsValid());
 
     const DescriptorTableDeclaration& descriptorTableDecl = objectVisibilityShader->GetCompiledShader()->GetDescriptorTableDeclaration();
 
     DescriptorTableRef descriptorTable = g_renderBackend->MakeDescriptorTable(&descriptorTableDecl);
 
-    AssertThrow(impl != nullptr);
+    Assert(impl != nullptr);
 
     GpuBufferHolderBase* entityInstanceBatches = impl->GetEntityInstanceBatchHolder();
     const SizeType batchSizeof = impl->GetBatchSizeOf();
@@ -378,17 +381,17 @@ void IndirectRenderer::Create(IDrawCallCollectionImpl* impl)
     for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
     {
         const DescriptorSetRef& descriptorSet = descriptorTable->GetDescriptorSet(NAME("ObjectVisibilityDescriptorSet"), frameIndex);
-        AssertThrow(descriptorSet != nullptr);
+        Assert(descriptorSet != nullptr);
 
         auto* entityInstanceBatchesBufferElement = descriptorSet->GetLayout().GetElement(NAME("EntityInstanceBatchesBuffer"));
-        AssertThrow(entityInstanceBatchesBufferElement != nullptr);
+        Assert(entityInstanceBatchesBufferElement != nullptr);
 
         if (entityInstanceBatchesBufferElement->size != ~0u)
         {
             const SizeType entityInstanceBatchesBufferSize = entityInstanceBatchesBufferElement->size;
             const SizeType sizeMod = entityInstanceBatchesBufferSize % batchSizeof;
 
-            AssertThrowMsg(sizeMod == 0,
+            Assert(sizeMod == 0,
                 "EntityInstanceBatchesBuffer descriptor has size %llu but DrawCallCollection has batch struct size of %llu",
                 entityInstanceBatchesBufferSize,
                 batchSizeof);
@@ -440,12 +443,12 @@ void IndirectRenderer::ExecuteCullShaderInBatches(FrameBase* frame, const Render
     AssertDebug(renderSetup.HasView());
     AssertDebug(renderSetup.passData != nullptr);
 
-    AssertThrow(renderSetup.passData->cullData.depthPyramidImageView != nullptr);
+    Assert(renderSetup.passData->cullData.depthPyramidImageView != nullptr);
 
     const uint32 frameIndex = frame->GetFrameIndex();
 
-    AssertThrow(m_indirectDrawState.GetIndirectBuffer(frameIndex).IsValid());
-    AssertThrow(m_indirectDrawState.GetIndirectBuffer(frameIndex)->Size() != 0);
+    Assert(m_indirectDrawState.GetIndirectBuffer(frameIndex).IsValid());
+    Assert(m_indirectDrawState.GetIndirectBuffer(frameIndex)->Size() != 0);
 
     const SizeType numInstances = m_indirectDrawState.GetInstances().Size();
     const uint32 numBatches = (uint32(numInstances) / IndirectDrawState::batchSize) + 1;
@@ -537,7 +540,7 @@ void IndirectRenderer::RebuildDescriptors(FrameBase* frame)
     const DescriptorTableRef& descriptorTable = m_objectVisibility->GetDescriptorTable();
 
     const DescriptorSetRef& descriptorSet = descriptorTable->GetDescriptorSet(NAME("ObjectVisibilityDescriptorSet"), frameIndex);
-    AssertThrow(descriptorSet != nullptr);
+    Assert(descriptorSet != nullptr);
 
     descriptorSet->SetElement(NAME("ObjectInstancesBuffer"), m_indirectDrawState.GetInstanceBuffer(frameIndex));
     descriptorSet->SetElement(NAME("IndirectDrawCommandsBuffer"), m_indirectDrawState.GetIndirectBuffer(frameIndex));

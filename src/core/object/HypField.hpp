@@ -62,8 +62,7 @@ public:
             {
                 ConstAnyRef targetRef = targetData.ToRef();
 
-                AssertThrow(targetRef.HasValue());
-                AssertThrowMsg(targetRef.Is<ThisType>(), "Invalid target type: Expected %s (TypeId: %u), but got TypeId: %u",
+                HYP_CORE_ASSERT(targetRef.Is<ThisType>(), "Invalid target type: Expected %s (TypeId: %u), but got TypeId: %u",
                     TypeName<ThisType>().Data(), TypeId::ForType<ThisType>().Value(), targetRef.GetTypeId().Value());
 
                 return HypData(static_cast<const ThisType*>(targetRef.GetPointer())->*member);
@@ -80,8 +79,7 @@ public:
             {
                 AnyRef targetRef = targetData.ToRef();
 
-                AssertThrow(targetRef.HasValue());
-                AssertThrowMsg(targetRef.Is<ThisType>(), "Invalid target type: Expected %s (TypeId: %u), but got TypeId: %u",
+                HYP_CORE_ASSERT(targetRef.Is<ThisType>(), "Invalid target type: Expected %s (TypeId: %u), but got TypeId: %u",
                     TypeName<ThisType>().Data(), TypeId::ForType<ThisType>().Value(), targetRef.GetTypeId().Value());
 
                 ThisType* target = static_cast<ThisType*>(targetRef.GetPointer());
@@ -135,8 +133,7 @@ public:
                 {
                     ConstAnyRef targetRef = targetData.ToRef();
 
-                    AssertThrow(targetRef.HasValue());
-                    AssertThrowMsg(targetRef.Is<ThisType>(), "Invalid target type: Expected %s (TypeId: %u), but got TypeId: %u",
+                    HYP_CORE_ASSERT(targetRef.Is<ThisType>(), "Invalid target type: Expected %s (TypeId: %u), but got TypeId: %u",
                         TypeName<ThisType>().Data(), TypeId::ForType<ThisType>().Value(), targetRef.GetTypeId().Value());
 
                     if (FBOMResult err = HypDataHelper<NormalizedType<FieldType>>::Serialize(static_cast<const ThisType*>(targetRef.GetPointer())->*member, out))

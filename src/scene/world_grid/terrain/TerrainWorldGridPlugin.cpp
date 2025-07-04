@@ -351,12 +351,12 @@ void TerrainStreamingCell::OnLoaded_Impl()
     HYP_SCOPE;
     Threads::AssertOnThread(g_gameThread);
 
-    AssertThrowMsg(m_scene.IsValid(), "Invalid scene!");
-    AssertThrowMsg(m_mesh.IsValid(), "Invalid mesh!");
-    AssertThrowMsg(m_material.IsValid(), "Invalid material!");
+    Assert(m_scene.IsValid(), "Invalid scene!");
+    Assert(m_mesh.IsValid(), "Invalid mesh!");
+    Assert(m_material.IsValid(), "Invalid material!");
 
     const Handle<EntityManager>& entityManager = m_scene->GetEntityManager();
-    AssertThrow(entityManager != nullptr);
+    Assert(entityManager != nullptr);
 
     HYP_LOG(WorldGrid, Debug, "Creating terrain patch at coord {} with extent {} and scale {}, bounds: {}\tMesh Id: #{}", m_cellInfo.coord, m_cellInfo.extent, m_cellInfo.scale, m_cellInfo.bounds, m_mesh.Id().Value());
 
@@ -391,7 +391,7 @@ void TerrainStreamingCell::OnLoaded_Impl()
     HYP_LOG(WorldGrid, Debug, "Created terrain patch node: {}, aabb: {} world pos: {}", m_node->GetName(), m_node->GetEntityAABB(), m_node->GetWorldTranslation());
 
     // auto result = AssetManager::GetInstance()->Load<Node>("models/sphere16.obj");
-    // AssertThrow(result.HasValue());
+    // Assert(result.HasValue());
 
     // m_node = m_scene->GetRoot()->AddChild();
     // m_node->AddChild(result.GetValue().Result()->GetChild(0));

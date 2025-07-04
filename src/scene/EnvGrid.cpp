@@ -64,10 +64,10 @@ static Vec2u GetProbeDimensions(EnvGridType envGridType)
 
 uint32 EnvProbeCollection::AddProbe(const Handle<EnvProbe>& envProbe)
 {
-    AssertThrow(envProbe.IsValid());
-    AssertThrow(envProbe->IsReady());
+    Assert(envProbe.IsValid());
+    Assert(envProbe->IsReady());
 
-    AssertThrow(numProbes < maxBoundAmbientProbes);
+    Assert(numProbes < maxBoundAmbientProbes);
 
     const uint32 index = numProbes++;
 
@@ -82,10 +82,10 @@ uint32 EnvProbeCollection::AddProbe(const Handle<EnvProbe>& envProbe)
 // Must be called in EnvGrid::Init(), before probes are used from the render thread.
 void EnvProbeCollection::AddProbe(uint32 index, const Handle<EnvProbe>& envProbe)
 {
-    AssertThrow(envProbe.IsValid());
-    AssertThrow(envProbe->IsReady());
+    Assert(envProbe.IsValid());
+    Assert(envProbe->IsReady());
 
-    AssertThrow(index < maxBoundAmbientProbes);
+    Assert(index < maxBoundAmbientProbes);
 
     numProbes = MathUtil::Max(numProbes, index + 1);
 
@@ -144,7 +144,7 @@ void EnvGrid::Init()
         }));
 
     const Vec2u probeDimensions = GetProbeDimensions(m_options.type);
-    AssertThrow(probeDimensions.Volume() != 0);
+    Assert(probeDimensions.Volume() != 0);
 
     CreateEnvProbes();
 
@@ -284,7 +284,7 @@ void EnvGrid::Init()
 void EnvGrid::OnAttachedToNode(Node* node)
 {
     HYP_SCOPE;
-    AssertThrow(IsReady());
+    Assert(IsReady());
 
     for (const Handle<EnvProbe>& envProbe : m_envProbeCollection.envProbes)
     {
@@ -292,7 +292,7 @@ void EnvGrid::OnAttachedToNode(Node* node)
     }
 
     // debugging
-    AssertThrow(node->FindChildWithEntity(m_envProbeCollection.envProbes[0]) != nullptr);
+    Assert(node->FindChildWithEntity(m_envProbeCollection.envProbes[0]) != nullptr);
 }
 
 void EnvGrid::OnDetachedFromNode(Node* node)
@@ -332,7 +332,7 @@ void EnvGrid::CreateEnvProbes()
     const Vec3f aabbExtent = m_aabb.GetExtent();
 
     const Vec2u probeDimensions = GetProbeDimensions(m_options.type);
-    AssertThrow(probeDimensions.Volume() != 0);
+    Assert(probeDimensions.Volume() != 0);
 
     if (numAmbientProbes != 0)
     {
@@ -439,7 +439,7 @@ void EnvGrid::Translate(const BoundingBox& aabb, const Vec3f& translation)
                     + y * m_options.density.x
                     + z;
 
-                AssertThrow(scrolledClampedIndex >= 0);
+                Assert(scrolledClampedIndex >= 0);
 
                 const BoundingBox newProbeAabb {
                     m_aabb.min + (Vec3f(float(x), float(y), float(z)) * sizeOfProbe),
@@ -468,8 +468,8 @@ void EnvGrid::Translate(const BoundingBox& aabb, const Vec3f& translation)
 
     for (uint32 updateIndex = 0; updateIndex < uint32(updates.Size()); updateIndex++)
     {
-        AssertThrow(updateIndex < m_envProbeCollection.numProbes);
-        AssertThrow(updates[updateIndex] < m_envProbeCollection.numProbes);
+        Assert(updateIndex < m_envProbeCollection.numProbes);
+        Assert(updates[updateIndex] < m_envProbeCollection.numProbes);
 
         m_envProbeCollection.SetIndexOnGameThread(updateIndex, updates[updateIndex]);
     }
@@ -534,7 +534,7 @@ void EnvGrid::Update(float delta)
     for (uint32 index = 0; index < m_envProbeCollection.numProbes; index++)
     {
         const Handle<EnvProbe>& probe = m_envProbeCollection.GetEnvProbeDirect(index);
-        AssertThrow(probe.IsValid());
+        Assert(probe.IsValid());
 
         probe->SetNeedsRender(true);
         probe->SetReceivesUpdate(true);
@@ -564,7 +564,7 @@ void EnvGrid::UpdateRenderProxy(IRenderProxy* proxy)
     for (uint32 index = 0; index < std::size(bufferData.probeIndices); index++)
     {
         const Handle<EnvProbe>& probe = m_envProbeCollection.GetEnvProbeOnGameThread(index);
-        AssertThrow(probe.IsValid());
+        Assert(probe.IsValid());
 
         // @FIXME dont use render resource - needs to be set when writing to GpuBufferHolder as it will need to use assigned slots for probes.
         bufferData.probeIndices[index] = probe->GetRenderResource().GetBufferIndex();

@@ -59,14 +59,22 @@ public:
 
     Token Next()
     {
-        AssertThrow(m_position < m_tokens.Size());
-        return m_tokens[m_position++];
+        if (m_position < m_tokens.Size())
+        {
+            return m_tokens[m_position++];
+        }
+
+        return Token::empty;
     }
 
     Token Last() const
     {
-        AssertThrow(!m_tokens.Empty());
-        return m_tokens.Back();
+        if (m_tokens.Any())
+        {
+            return m_tokens.Back();
+        }
+
+        return Token::empty;
     }
 
     SizeType GetSize() const

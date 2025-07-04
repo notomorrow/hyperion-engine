@@ -22,7 +22,7 @@ TickableEditorTask::TickableEditorTask()
 void TickableEditorTask::Commit()
 {
     ThreadBase* gameThread = Threads::GetThread(g_gameThread);
-    AssertThrow(gameThread != nullptr);
+    Assert(gameThread != nullptr);
 
     m_task = gameThread->GetScheduler().Enqueue([weakThis = WeakHandleFromThis()]()
         {
@@ -53,7 +53,7 @@ void TickableEditorTask::Cancel_Impl()
         {
             HYP_LOG(Editor, Info, "Executing TickableEditorTask inline");
 
-            AssertThrow(m_task.Cancel());
+            Assert(m_task.Cancel());
 
             auto* promise = m_task.Promise();
 

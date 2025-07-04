@@ -63,8 +63,8 @@ struct RENDER_COMMAND(CreateTexture)
           image(std::move(image)),
           imageView(std::move(imageView))
     {
-        AssertThrow(this->image.IsValid());
-        AssertThrow(this->imageView.IsValid());
+        Assert(this->image.IsValid());
+        Assert(this->imageView.IsValid());
     }
 
     virtual ~RENDER_COMMAND(CreateTexture)() override = default;
@@ -196,7 +196,7 @@ struct RENDER_COMMAND(CreateTexture)
 
             if (g_renderBackend->GetRenderConfig().IsBindlessSupported())
             {
-                //g_renderGlobalState->bindlessStorage->AddResource(texture.Id(), imageView);
+                // g_renderGlobalState->bindlessStorage->AddResource(texture.Id(), imageView);
             }
         }
 
@@ -213,7 +213,7 @@ struct RENDER_COMMAND(DestroyTexture)
     RENDER_COMMAND(DestroyTexture)(const WeakHandle<Texture>& texture)
         : texture(texture)
     {
-        AssertThrow(texture.IsValid());
+        Assert(texture.IsValid());
     }
 
     virtual ~RENDER_COMMAND(DestroyTexture)() override = default;
@@ -229,7 +229,7 @@ struct RENDER_COMMAND(DestroyTexture)
 
         if (g_renderBackend->GetRenderConfig().IsBindlessSupported())
         {
-            //g_renderGlobalState->bindlessStorage->RemoveResource(texture.Id());
+            // g_renderGlobalState->bindlessStorage->RemoveResource(texture.Id());
         }
 
         HYPERION_RETURN_OK;
@@ -254,15 +254,15 @@ struct RENDER_COMMAND(RenderTextureMipmapLevels)
           m_mipImageViews(std::move(mipImageViews)),
           m_passes(std::move(passes))
     {
-        AssertThrow(m_image != nullptr);
-        AssertThrow(m_imageView != nullptr);
+        Assert(m_image != nullptr);
+        Assert(m_imageView != nullptr);
 
-        AssertThrow(m_passes.Size() == m_mipImageViews.Size());
+        Assert(m_passes.Size() == m_mipImageViews.Size());
 
         for (SizeType index = 0; index < m_mipImageViews.Size(); index++)
         {
-            AssertThrow(m_mipImageViews[index] != nullptr);
-            AssertThrow(m_passes[index] != nullptr);
+            Assert(m_mipImageViews[index] != nullptr);
+            Assert(m_passes[index] != nullptr);
         }
     }
 
@@ -283,7 +283,7 @@ struct RENDER_COMMAND(RenderTextureMipmapLevels)
                 for (uint32 mipLevel = 0; mipLevel < uint32(m_mipImageViews.Size()); mipLevel++)
                 {
                     RC<FullScreenPass>& pass = m_passes[mipLevel];
-                    AssertThrow(pass != nullptr);
+                    Assert(pass != nullptr);
 
                     const uint32 prevMipWidth = mipWidth,
                                  prevMipHeight = mipHeight;
@@ -411,7 +411,7 @@ public:
             DeferCreate(mipImageView);
 
             const DescriptorSetRef& generateMipmapsDescriptorSet = descriptorTable->GetDescriptorSet(NAME("GenerateMipmapsDescriptorSet"), 0);
-            AssertThrow(generateMipmapsDescriptorSet != nullptr);
+            Assert(generateMipmapsDescriptorSet != nullptr);
             generateMipmapsDescriptorSet->SetElement(NAME("InputTexture"), mipLevel == 0 ? m_imageView : m_mipImageViews[mipLevel - 1]);
             DeferCreate(descriptorTable);
 
@@ -576,7 +576,7 @@ void RenderTexture::EnqueueReadback(Proc<void(TResult<ByteBuffer>&&)>&& onComple
         /* forceOwnerThread */ true);
 }
 
-RendererResult RenderTexture::Readback(ByteBuffer &outByteBuffer)
+RendererResult RenderTexture::Readback(ByteBuffer& outByteBuffer)
 {
     HYP_SCOPE;
 

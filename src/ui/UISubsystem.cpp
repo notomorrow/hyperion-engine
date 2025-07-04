@@ -33,7 +33,7 @@ void UISubsystem::OnAddedToWorld()
 {
     HYP_SCOPE;
 
-    AssertThrow(m_uiStage != nullptr);
+    Assert(m_uiStage != nullptr);
 
     InitObject(m_uiStage);
 
@@ -55,8 +55,8 @@ void UISubsystem::Update(float delta)
     HYP_SCOPE;
     Threads::AssertOnThread(g_gameThread | ThreadCategory::THREAD_CATEGORY_TASK);
 
-    AssertThrow(m_uiStage != nullptr);
-    AssertThrow(m_uiRenderSubsystem != nullptr);
+    Assert(m_uiStage != nullptr);
+    Assert(m_uiRenderSubsystem != nullptr);
 }
 
 void UISubsystem::OnSceneAttached(const Handle<Scene>& scene)

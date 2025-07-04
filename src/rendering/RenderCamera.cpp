@@ -85,7 +85,7 @@ void RenderCamera::ApplyJitter(const RenderSetup& renderSetup)
 
     static const float jitterScale = 0.25f;
 
-    AssertThrow(m_bufferIndex != ~0u);
+    Assert(m_bufferIndex != ~0u);
 
     const uint32 frameCounter = renderSetup.world->GetBufferData().frameCounter + 1;
 

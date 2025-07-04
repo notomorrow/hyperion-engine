@@ -25,7 +25,9 @@
 #include <Engine.hpp>
 #include <Types.hpp>
 
-#include <core/filesystem/FsUtil.hpp>
+#include <core/logging/Logger.hpp>
+#include <core/logging/LogChannels.hpp>
+
 #include <core/utilities/ByteUtil.hpp>
 
 namespace hyperion {
@@ -212,7 +214,7 @@ void DDGI::Destroy()
 void DDGI::CreatePipelines()
 {
     m_shader = g_shaderManager->GetOrCreate(NAME("DDGI"));
-    AssertThrow(m_shader.IsValid());
+    Assert(m_shader.IsValid());
 
     const DescriptorTableDeclaration& raytracingPipelineDescriptorTableDecl = m_shader->GetCompiledShader()->GetDescriptorTableDeclaration();
 
@@ -220,10 +222,10 @@ void DDGI::CreatePipelines()
 
     for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
     {
-        AssertThrow(m_topLevelAccelerationStructures[frameIndex] != nullptr);
+        Assert(m_topLevelAccelerationStructures[frameIndex] != nullptr);
 
         const DescriptorSetRef& descriptorSet = raytracingPipelineDescriptorTable->GetDescriptorSet(NAME("DDGIDescriptorSet"), frameIndex);
-        AssertThrow(descriptorSet != nullptr);
+        Assert(descriptorSet != nullptr);
 
         descriptorSet->SetElement(NAME("TLAS"), m_topLevelAccelerationStructures[frameIndex]);
 
@@ -259,7 +261,7 @@ void DDGI::CreatePipelines()
 
     for (const Pair<ShaderRef, ComputePipelineRef&>& it : shaders)
     {
-        AssertThrow(it.first.IsValid());
+        Assert(it.first.IsValid());
 
         const DescriptorTableDeclaration& descriptorTableDecl = it.first->GetCompiledShader()->GetDescriptorTableDeclaration();
 
@@ -268,7 +270,7 @@ void DDGI::CreatePipelines()
         for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
         {
             const DescriptorSetRef& descriptorSet = descriptorTable->GetDescriptorSet(NAME("DDGIDescriptorSet"), frameIndex);
-            AssertThrow(descriptorSet != nullptr);
+            Assert(descriptorSet != nullptr);
 
             descriptorSet->SetElement(NAME("DDGIUniforms"), m_uniformBuffer);
             descriptorSet->SetElement(NAME("ProbeRayData"), m_radianceBuffer);
@@ -388,7 +390,7 @@ void DDGI::ApplyTLASUpdates(RTUpdateStateFlags flags)
     for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
     {
         const DescriptorSetRef& descriptorSet = m_pipeline->GetDescriptorTable()->GetDescriptorSet(NAME("DDGIDescriptorSet"), frameIndex);
-        AssertThrow(descriptorSet != nullptr);
+        Assert(descriptorSet != nullptr);
 
         if (flags & RT_UPDATE_STATE_FLAGS_UPDATE_ACCELERATION_STRUCTURE)
         {
@@ -430,9 +432,9 @@ void DDGI::Render(FrameBase* frame, const RenderSetup& renderSetup)
 {
     Threads::AssertOnThread(g_renderThread);
 
-    AssertThrow(renderSetup.IsValid());
-    AssertThrow(renderSetup.HasView());
-    AssertThrow(renderSetup.passData != nullptr);
+    Assert(renderSetup.IsValid());
+    Assert(renderSetup.HasView());
+    Assert(renderSetup.passData != nullptr);
 
     UpdateUniforms(frame);
 

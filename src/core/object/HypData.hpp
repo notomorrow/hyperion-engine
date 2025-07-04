@@ -275,7 +275,7 @@ struct HypData
 
             HypDataGetter_Tuple<ReturnType, T, typename HypDataHelper<T>::ConvertibleFrom> getterInstance {};
 
-            AssertThrowMsg(getterInstance(value, resultValue),
+            HYP_CORE_ASSERT(getterInstance(value, resultValue),
                 "Failed to invoke HypData Get method with T = %s - Mismatched types or T could not be converted to the held type (current TypeId = %u)",
                 TypeName<T>().Data(),
                 GetTypeId().Value());
@@ -301,7 +301,7 @@ struct HypData
 
             HypDataGetter_Tuple<ReturnType, T, typename HypDataHelper<T>::ConvertibleFrom> getterInstance {};
 
-            AssertThrowMsg(getterInstance(value, resultValue),
+            HYP_CORE_ASSERT(getterInstance(value, resultValue),
                 "Failed to invoke HypData Get method with T = %s - Mismatched types or T could not be converted to the held type (current TypeId = %u)",
                 TypeName<T>().Data(),
                 GetTypeId().Value());
@@ -360,7 +360,10 @@ struct HypData
      */
     FBOMResult Serialize(FBOMData& out) const
     {
-        AssertThrow(serializeFunction != nullptr);
+        if (serializeFunction == nullptr)
+        {
+            return { FBOMResult::FBOM_ERR, "No serialization function provided" };
+        }
 
         return serializeFunction(*this, out);
     }
@@ -955,7 +958,6 @@ struct HypDataHelper<Handle<T>> : HypDataHelper<AnyHandle>
 
         if (!marshal)
         {
-            HYP_BREAKPOINT;
             return FBOMResult { FBOMResult::FBOM_ERR, "No marshal defined for handle type" };
         }
 
@@ -1219,28 +1221,21 @@ struct HypDataHelper<T*, std::enable_if_t<!isConstPointer<T*> && !std::is_same_v
 
     HYP_FORCE_INLINE T* Get(const AnyRef& value) const
     {
-        AssertThrow(value.Is<T>());
+        HYP_CORE_ASSERT(value.Is<T>());
 
         return static_cast<T*>(value.GetPointer());
     }
 
-    // T *Get(const Any &value) const
-    // {
-    //     AssertThrow(value.Is<T>());
-
-    //     return value.Get<T>();
-    // }
-
     HYP_FORCE_INLINE T* Get(const AnyHandle& value) const
     {
-        AssertThrow(value.Is<T>());
+        HYP_CORE_ASSERT(value.Is<T>());
 
         return value.TryGet<T>();
     }
 
     HYP_FORCE_INLINE T* Get(const RC<void>& value) const
     {
-        AssertThrow(value.Is<T>());
+        HYP_CORE_ASSERT(value.Is<T>());
 
         return value.CastUnsafe_Internal<T>();
     }
@@ -2939,7 +2934,7 @@ struct HypDataPlaceholderSerializedType<Handle<T>>
             isInit = true;
 
             const HypClass* hypClass = GetClass(TypeId::ForType<T>());
-            AssertThrowMsg(hypClass, "HypClass for type %s is not registered", TypeName<T>().Data());
+            HYP_CORE_ASSERT(hypClass, "HypClass for type %s is not registered", TypeName<T>().Data());
 
             placeholderType = FBOMObjectType(hypClass);
         }

@@ -54,9 +54,9 @@ struct RENDER_COMMAND(CreateHBAOUniformBuffer)
         : uniforms(uniforms),
           uniformBuffer(uniformBuffer)
     {
-        AssertThrow(uniforms.dimension.x * uniforms.dimension.y != 0);
+        Assert(uniforms.dimension.x * uniforms.dimension.y != 0);
 
-        AssertThrow(this->uniformBuffer != nullptr);
+        Assert(this->uniformBuffer != nullptr);
     }
 
     virtual ~RENDER_COMMAND(CreateHBAOUniformBuffer)() override = default;
@@ -110,7 +110,7 @@ void HBAO::CreatePipeline(const RenderableAttributeSet& renderableAttributes)
     for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
     {
         const DescriptorSetRef& descriptorSet = descriptorTable->GetDescriptorSet(NAME("HBAODescriptorSet"), frameIndex);
-        AssertThrow(descriptorSet != nullptr);
+        Assert(descriptorSet != nullptr);
 
         descriptorSet->SetElement(NAME("UniformBuffer"), m_uniformBuffer);
     }
@@ -177,8 +177,8 @@ void HBAO::Render(FrameBase* frame, const RenderSetup& renderSetup)
 
     if (viewDescriptorSetIndex != ~0u)
     {
-        AssertThrow(renderSetup.HasView());
-        AssertThrow(renderSetup.passData != nullptr);
+        Assert(renderSetup.HasView());
+        Assert(renderSetup.passData != nullptr);
 
         frame->GetCommandList().Add<BindDescriptorSet>(
             renderSetup.passData->descriptorSets[frame->GetFrameIndex()],

@@ -93,14 +93,14 @@ public:
           m_device(device),
           m_deleteFn(deleteFn)
     {
-        AssertThrow(m_deleteFn != nullptr);
+        HYP_GFX_ASSERT(m_deleteFn != nullptr);
     }
 
     virtual ~VulkanDescriptorSetLayoutWrapper() override
     {
         if (m_handle != VK_NULL_HANDLE)
         {
-            AssertThrow(m_deleteFn != nullptr);
+            HYP_GFX_ASSERT(m_deleteFn != nullptr);
             HYPERION_ASSERT_RESULT(m_deleteFn(m_device, this));
         }
     }
@@ -112,7 +112,7 @@ public:
 
     RendererResult Create(platform::Device<Platform::vulkan>* device, const DescriptorSetLayout& layout)
     {
-        AssertThrow(m_handle == VK_NULL_HANDLE);
+        HYP_GFX_ASSERT(m_handle == VK_NULL_HANDLE);
 
         static constexpr VkDescriptorBindingFlags bindlessFlags = VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT;
 
@@ -178,7 +178,7 @@ public:
 
     RendererResult Destroy(platform::Device<Platform::vulkan>* device)
     {
-        AssertThrow(m_handle != VK_NULL_HANDLE);
+        HYP_GFX_ASSERT(m_handle != VK_NULL_HANDLE);
 
         vkDestroyDescriptorSetLayout(
             device->GetDevice(),
@@ -239,7 +239,7 @@ RendererResult VulkanDescriptorSetManager::Create(platform::Device<Platform::vul
         { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 32000 }
     };
 
-    AssertThrow(m_vkDescriptorPool == VK_NULL_HANDLE);
+    HYP_GFX_ASSERT(m_vkDescriptorPool == VK_NULL_HANDLE);
 
     VkDescriptorPoolCreateInfo poolInfo { VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO };
     poolInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT | VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT;
@@ -287,10 +287,10 @@ RendererResult VulkanDescriptorSetManager::Destroy(platform::Device<Platform::vu
 
 RendererResult VulkanDescriptorSetManager::CreateDescriptorSet(platform::Device<Platform::vulkan>* device, const VulkanDescriptorSetLayoutWrapperRef& layout, VkDescriptorSet& outVkDescriptorSet)
 {
-    AssertThrow(m_vkDescriptorPool != VK_NULL_HANDLE);
+    HYP_GFX_ASSERT(m_vkDescriptorPool != VK_NULL_HANDLE);
 
-    AssertThrow(layout != nullptr);
-    AssertThrow(layout->GetVulkanHandle() != VK_NULL_HANDLE);
+    HYP_GFX_ASSERT(layout != nullptr);
+    HYP_GFX_ASSERT(layout->GetVulkanHandle() != VK_NULL_HANDLE);
 
     VkDescriptorSetLayout layouts[] = { layout->GetVulkanHandle() };
 
@@ -314,9 +314,9 @@ RendererResult VulkanDescriptorSetManager::CreateDescriptorSet(platform::Device<
 
 RendererResult VulkanDescriptorSetManager::DestroyDescriptorSet(platform::Device<Platform::vulkan>* device, VkDescriptorSet vkDescriptorSet)
 {
-    AssertThrow(m_vkDescriptorPool != VK_NULL_HANDLE);
+    HYP_GFX_ASSERT(m_vkDescriptorPool != VK_NULL_HANDLE);
 
-    AssertThrow(vkDescriptorSet != VK_NULL_HANDLE);
+    HYP_GFX_ASSERT(vkDescriptorSet != VK_NULL_HANDLE);
 
     vkFreeDescriptorSets(
         device->GetDevice(),
@@ -468,7 +468,7 @@ FrameBase* VulkanRenderBackend::PrepareNextFrame()
         // Need to prepare frame again now that swapchain has been recreated.
         HYPERION_ASSERT_RESULT(m_instance->GetSwapchain()->PrepareFrame(m_shouldRecreateSwapchain));
 
-        AssertThrow(!m_shouldRecreateSwapchain);
+        HYP_GFX_ASSERT(!m_shouldRecreateSwapchain);
 
         frame = m_instance->GetSwapchain()->GetCurrentFrame();
 
@@ -539,7 +539,7 @@ GraphicsPipelineRef VulkanRenderBackend::MakeGraphicsPipeline(
 
     for (const FramebufferRef& framebuffer : framebuffers)
     {
-        AssertThrow(framebuffer.IsValid());
+        HYP_GFX_ASSERT(framebuffer.IsValid());
 
         VulkanFramebuffer* vulkanFramebuffer = static_cast<VulkanFramebuffer*>(framebuffer.Get());
 
@@ -567,7 +567,7 @@ GraphicsPipelineRef VulkanRenderBackend::MakeGraphicsPipeline(
         graphicsPipeline->SetShader(shader);
     }
 
-    AssertThrow(graphicsPipeline->GetDescriptorTable().IsValid());
+    HYP_GFX_ASSERT(graphicsPipeline->GetDescriptorTable().IsValid());
 
     graphicsPipeline->SetVertexAttributes(attributes.GetMeshAttributes().vertexAttributes);
     graphicsPipeline->SetTopology(attributes.GetMeshAttributes().topology);

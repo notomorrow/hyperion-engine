@@ -212,7 +212,7 @@ struct ShaderProperty
             if (HasValue())
             {
                 const String* valuePtr = value.TryGet<String>();
-                AssertThrowMsg(valuePtr != nullptr, "For a valuegroup with a default value, the default value should be of type String. Got TypeId: %u\n", value.GetTypeId().GetHashCode().Value());
+                Assert(valuePtr != nullptr, "For a valuegroup with a default value, the default value should be of type String. Got TypeId: {}", value.GetTypeId().GetHashCode().Value());
 
                 result.Insert(ShaderProperty(name + "_" + *valuePtr, false));
             }

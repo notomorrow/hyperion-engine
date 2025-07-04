@@ -53,12 +53,12 @@ using RendererResult = TResult<void, RendererError>;
     }                                         \
     while (0)
 
-#define HYPERION_PASS_ERRORS(result, outResult)       \
+#define HYPERION_PASS_ERRORS(result, outResult)        \
     do                                                 \
     {                                                  \
         ::hyperion::RendererResult _result = (result); \
-        if ((outResult) && !_result)                  \
-            (outResult) = _result;                    \
+        if ((outResult) && !_result)                   \
+            (outResult) = _result;                     \
     }                                                  \
     while (0)
 
@@ -79,12 +79,12 @@ using RendererResult = TResult<void, RendererError>;
     }                                                  \
     while (0)
 
-#define HYPERION_ASSERT_RESULT(result)                                                                                              \
-    do                                                                                                                              \
-    {                                                                                                                               \
-        auto _result = (result);                                                                                                    \
-        AssertThrowMsg(_result, "[Error Code: %d]  %s", _result.GetError().GetErrorCode(), _result.GetError().GetMessage().Data()); \
-    }                                                                                                                               \
+#define HYPERION_ASSERT_RESULT(result)                                                                                      \
+    do                                                                                                                      \
+    {                                                                                                                       \
+        auto _result = (result);                                                                                            \
+        Assert(_result, "[Error Code: {}]  {}", _result.GetError().GetErrorCode(), _result.GetError().GetMessage().Data()); \
+    }                                                                                                                       \
     while (0)
 
 } // namespace hyperion

@@ -186,7 +186,7 @@ public:
      *  so this is operation is not O(1), but O(n) where n is the number of elements in the LinkedList */
     HYP_FORCE_INLINE T& operator[](SizeType index)
     {
-        AssertThrow(index < m_size);
+        HYP_CORE_ASSERT(index < m_size);
 
         Node* node = m_head;
 
@@ -194,7 +194,7 @@ public:
 
         while (curr < index)
         {
-            AssertThrow(node != nullptr);
+            HYP_CORE_ASSERT(node != nullptr);
 
             node = node->next;
 
@@ -514,7 +514,7 @@ auto LinkedList<T>::PushFront(ValueType&& value) -> ValueType&
 template <class T>
 auto LinkedList<T>::PopBack() -> ValueType
 {
-    AssertThrow(m_size != 0);
+    HYP_CORE_ASSERT(m_size != 0);
 
     Node* prev = m_tail->previous;
 
@@ -541,7 +541,7 @@ auto LinkedList<T>::PopBack() -> ValueType
 template <class T>
 auto LinkedList<T>::PopFront() -> ValueType
 {
-    AssertThrow(m_size != 0);
+    HYP_CORE_ASSERT(m_size != 0);
 
     Node* next = m_head->next;
 

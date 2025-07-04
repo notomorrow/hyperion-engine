@@ -172,8 +172,8 @@ UIObject::~UIObject()
 
     static const auto removeUiComponent = [](Scene* scene, Handle<Entity> entity, Handle<Node> node)
     {
-        AssertThrow(scene != nullptr);
-        AssertThrow(scene->GetEntityManager() != nullptr);
+        Assert(scene != nullptr);
+        Assert(scene->GetEntityManager() != nullptr);
 
         if (UIComponent* uiComponent = scene->GetEntityManager()->TryGetComponent<UIComponent>(entity))
         {
@@ -186,7 +186,7 @@ UIObject::~UIObject()
     if (Handle<Entity> entity = GetEntity())
     {
         Scene* scene = GetScene();
-        AssertThrow(scene != nullptr);
+        Assert(scene != nullptr);
 
         if (Threads::IsOnThread(scene->GetOwnerThreadId()))
         {
@@ -235,10 +235,10 @@ void UIObject::Init()
 {
     HYP_SCOPE;
 
-    AssertThrowMsg(m_node.IsValid(), "Invalid Handle<Node> provided to UIObject!");
+    Assert(m_node.IsValid(), "Invalid Handle<Node> provided to UIObject!");
 
     const Scene* scene = GetScene();
-    AssertThrow(scene != nullptr);
+    Assert(scene != nullptr);
 
     MeshComponent meshComponent;
     meshComponent.mesh = GetQuadMesh();
@@ -344,7 +344,7 @@ void UIObject::OnAttached_Internal(UIObject* parent)
 {
     HYP_SCOPE;
 
-    AssertThrow(parent != nullptr);
+    Assert(parent != nullptr);
 
     SetStage_Internal(parent->GetStage());
 
@@ -1471,7 +1471,7 @@ void UIObject::AddChildUIObject(const Handle<UIObject>& uiObject)
         return;
     }
 
-    AssertThrow(!uiObject->IsOrHasParent(this));
+    Assert(!uiObject->IsOrHasParent(this));
 
     const Handle<Node>& node = GetNode();
 
@@ -1493,7 +1493,7 @@ void UIObject::AddChildUIObject(const Handle<UIObject>& uiObject)
         return;
     }
 
-    AssertThrow(!m_childUiObjects.Contains(uiObject));
+    Assert(!m_childUiObjects.Contains(uiObject));
     m_childUiObjects.PushBack(uiObject);
 
     uiObject->OnAttached_Internal(this);
@@ -1527,7 +1527,7 @@ bool UIObject::RemoveChildUIObject(UIObject* uiObject)
             OnChildRemoved(uiObject);
 
             auto it = m_childUiObjects.Find(uiObject);
-            AssertThrow(it != m_childUiObjects.End());
+            Assert(it != m_childUiObjects.End());
 
             m_childUiObjects.Erase(it);
         }
@@ -2441,7 +2441,7 @@ void UIObject::UpdateMaterial(bool updateChildren)
             scene->GetEntityManager()->AddTag<EntityTag::UPDATE_RENDER_PROXY>(GetEntity());
         }
 
-        AssertThrow(newMaterial->IsDynamic());
+        Assert(newMaterial->IsDynamic());
 
         if (parametersChanged)
         {
@@ -2605,7 +2605,7 @@ void UIObject::SetNodeProxy(Handle<Node> node)
     {
         if (!m_node->GetEntity().IsValid())
         {
-            AssertThrow(m_node->GetScene() != nullptr);
+            Assert(m_node->GetScene() != nullptr);
 
             m_node->SetEntity(m_node->GetScene()->GetEntityManager()->AddEntity());
         }
@@ -3018,7 +3018,7 @@ Handle<UIObject> UIObject::CreateUIObject(const HypClass* hypClass, Name name, V
         return Handle<UIObject>::empty;
     }
 
-    AssertThrowMsg(hypClass->IsDerivedFrom(UIObject::Class()), "Cannot spawn instance of class that is not a subclass of UIObject");
+    Assert(hypClass->IsDerivedFrom(UIObject::Class()), "Cannot spawn instance of class that is not a subclass of UIObject");
 
     AssertOnOwnerThread();
 
@@ -3034,10 +3034,10 @@ Handle<UIObject> UIObject::CreateUIObject(const HypClass* hypClass, Name name, V
     }
 
     Handle<UIObject> uiObject = std::move(uiObjectHypData).Get<Handle<UIObject>>();
-    AssertThrow(uiObject != nullptr);
+    Assert(uiObject != nullptr);
 
-    // AssertThrow(IsInitCalled());
-    AssertThrow(GetNode().IsValid());
+    // Assert(IsInitCalled());
+    Assert(GetNode().IsValid());
 
     if (!name.IsValid())
     {

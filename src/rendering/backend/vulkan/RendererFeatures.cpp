@@ -1,8 +1,9 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
 #include <rendering/backend/RendererFeatures.hpp>
-
+#include <rendering/backend/RenderBackend.hpp>
 namespace hyperion {
+
 Features::DynamicFunctions Features::dynFunctions = {};
 
 Features::Features()
@@ -28,7 +29,7 @@ void Features::SetPhysicalDevice(VkPhysicalDevice physicalDevice)
         vkGetPhysicalDeviceFeatures(physicalDevice, &m_features);
         vkGetPhysicalDeviceMemoryProperties(physicalDevice, &m_memoryProperties);
 
-        AssertThrow(m_features.samplerAnisotropy);
+        HYP_GFX_ASSERT(m_features.samplerAnisotropy);
 
         auto AddToFeaturesChain = [this](auto nextFeature)
         {

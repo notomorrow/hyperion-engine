@@ -114,7 +114,7 @@ void SDLApplicationWindow::Initialize(WindowOptions windowOptions)
         int(m_size.y),
         sdlFlags);
 
-    AssertThrowMsg(m_windowHandle != nullptr, "Failed to initialize window: %s", SDL_GetError());
+    Assert(m_windowHandle != nullptr, "Failed to initialize window: %s", SDL_GetError());
 }
 
 #ifdef HYP_VULKAN
@@ -123,7 +123,7 @@ VkSurfaceKHR SDLApplicationWindow::CreateVkSurface(Instance* instance)
     VkSurfaceKHR surface;
     SDL_bool result = SDL_Vulkan_CreateSurface(static_cast<SDL_Window*>(m_windowHandle), instance->GetInstance(), &surface);
 
-    AssertThrowMsg(result == SDL_TRUE, "Failed to create Vulkan surface: %s", SDL_GetError());
+    Assert(result == SDL_TRUE, "Failed to create Vulkan surface: %s", SDL_GetError());
 
     return surface;
 }

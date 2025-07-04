@@ -20,7 +20,7 @@ namespace hyperion {
 
 Bitmap<4, float> LightmapUVMap::ToBitmapRadiance() const
 {
-    AssertThrowMsg(uvs.Size() == width * height, "Invalid UV map size");
+    Assert(uvs.Size() == width * height, "Invalid UV map size");
 
     Bitmap<4, float> bitmap(width, height);
 
@@ -39,7 +39,7 @@ Bitmap<4, float> LightmapUVMap::ToBitmapRadiance() const
 
             color /= color.w;
 
-            bitmap.GetPixelAtIndex(index).SetRGBA(color);
+            bitmap.GetPixelReference(index).SetRGBA(color);
         }
     }
 
@@ -48,7 +48,7 @@ Bitmap<4, float> LightmapUVMap::ToBitmapRadiance() const
 
 Bitmap<4, float> LightmapUVMap::ToBitmapIrradiance() const
 {
-    AssertThrowMsg(uvs.Size() == width * height, "Invalid UV map size");
+    Assert(uvs.Size() == width * height, "Invalid UV map size");
 
     Bitmap<4, float> bitmap(width, height);
 
@@ -67,7 +67,7 @@ Bitmap<4, float> LightmapUVMap::ToBitmapIrradiance() const
 
             color /= color.w;
 
-            bitmap.GetPixelAtIndex(index).SetRGBA(color);
+            bitmap.GetPixelReference(index).SetRGBA(color);
         }
     }
 
@@ -134,7 +134,7 @@ LightmapUVBuilder::LightmapUVBuilder(const LightmapUVBuilderParams& params)
         m_meshVertexUvs[i].Resize(meshData.vertices.Size() * 2);
         m_meshIndices[i] = meshData.indices;
 
-        AssertThrow(m_meshIndices[i].Size() % 3 == 0);
+        Assert(m_meshIndices[i].Size() % 3 == 0);
 
         const Matrix4 normalMatrix = subElement.transform.GetMatrix().Inverted().Transpose();
 
@@ -172,7 +172,7 @@ TResult<LightmapUVMap> LightmapUVBuilder::Build()
 
     for (SizeType meshIndex = 0; meshIndex < m_meshData.Size(); meshIndex++)
     {
-        AssertThrow(meshIndex < m_meshIndices.Size());
+        Assert(meshIndex < m_meshIndices.Size());
 
         xatlas::MeshDecl meshDecl;
         meshDecl.indexData = m_meshIndices[meshIndex].Data();
@@ -229,7 +229,7 @@ TResult<LightmapUVMap> LightmapUVBuilder::Build()
 
         const xatlas::Mesh& atlasMesh = atlas->meshes[meshIndex];
 
-        AssertThrowMsg(m_meshIndices[meshIndex].Size() == atlasMesh.indexCount,
+        Assert(m_meshIndices[meshIndex].Size() == atlasMesh.indexCount,
             "Mesh index size does not match atlas mesh index count! Mesh index count: %zu, Atlas index count: %u",
             m_meshIndices[meshIndex].Size(), atlasMesh.indexCount);
 
@@ -300,9 +300,9 @@ TResult<LightmapUVMap> LightmapUVBuilder::Build()
                         m_meshIndices[meshIndex][triangleIndex * 3 + 2]
                     };
 
-                    AssertThrow(triangleIndices[0] * 3 < m_meshVertexPositions[meshIndex].Size());
-                    AssertThrow(triangleIndices[1] * 3 < m_meshVertexPositions[meshIndex].Size());
-                    AssertThrow(triangleIndices[2] * 3 < m_meshVertexPositions[meshIndex].Size());
+                    Assert(triangleIndices[0] * 3 < m_meshVertexPositions[meshIndex].Size());
+                    Assert(triangleIndices[1] * 3 < m_meshVertexPositions[meshIndex].Size());
+                    Assert(triangleIndices[2] * 3 < m_meshVertexPositions[meshIndex].Size());
 
                     const Vec3f vertexPositions[3] = {
                         Vec3f(m_meshVertexPositions[meshIndex][triangleIndices[0] * 3], m_meshVertexPositions[meshIndex][triangleIndices[0] * 3 + 1], m_meshVertexPositions[meshIndex][triangleIndices[0] * 3 + 2]),

@@ -196,7 +196,7 @@ void Mesh::Init()
             }
         }));
 
-    AssertThrowMsg(GetVertexAttributes() != 0, "No vertex attributes set on mesh");
+    Assert(GetVertexAttributes() != 0, "No vertex attributes set on mesh");
 
     m_renderResource = AllocateResource<RenderMesh>(this);
 

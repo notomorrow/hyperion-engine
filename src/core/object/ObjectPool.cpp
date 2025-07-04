@@ -25,7 +25,7 @@ ObjectContainerBase& ObjectPool::ObjectContainerMap::Get(TypeId typeId)
         HYP_FAIL("No object container for TypeId: %u", typeId.Value());
     }
 
-    AssertThrow(it->second != nullptr);
+    HYP_CORE_ASSERT(it->second != nullptr);
 
     return *it->second;
 }

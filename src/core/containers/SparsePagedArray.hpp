@@ -22,7 +22,7 @@ class SparsePagedArray : public ContainerBase<SparsePagedArray<T, PageSize>, Siz
 {
     struct Page
     {
-        ValueStorageArray<T, PageSize, alignof(T)> storage;
+        ValueStorage<T, PageSize, alignof(T)> storage;
         Bitset initializedBits;
 
         Page() = default;
@@ -69,7 +69,7 @@ public:
               page(pageIndex),
               elem(elementIndex)
         {
-            AssertDebug(array);
+            HYP_CORE_ASSERT(array);
 
             if (page >= uint32(array->m_pages.Size()))
             {
@@ -112,11 +112,11 @@ public:
         T& operator*() const
         {
 #ifdef HYP_DEBUG_MODE
-            AssertDebug(array->m_validPages.Test(page));
+            HYP_CORE_ASSERT(array->m_validPages.Test(page));
             Page* pg = array->m_pages[page];
 
-            AssertDebug(pg != nullptr);
-            AssertDebug(pg->initializedBits.Test(elem));
+            HYP_CORE_ASSERT(pg != nullptr);
+            HYP_CORE_ASSERT(pg->initializedBits.Test(elem));
 
             return pg->storage.GetPointer()[elem];
 #else
@@ -127,11 +127,11 @@ public:
         T* operator->() const
         {
 #ifdef HYP_DEBUG_MODE
-            AssertDebug(array->m_validPages.Test(page));
+            HYP_CORE_ASSERT(array->m_validPages.Test(page));
             Page* pg = array->m_pages[page];
 
-            AssertDebug(pg != nullptr);
-            AssertDebug(pg->initializedBits.Test(elem));
+            HYP_CORE_ASSERT(pg != nullptr);
+            HYP_CORE_ASSERT(pg->initializedBits.Test(elem));
 
             return &pg->storage.GetPointer() + elem;
 #else
@@ -141,7 +141,7 @@ public:
 
         Derived& operator++()
         {
-            AssertDebug(page < array->m_pages.Size());
+            HYP_CORE_ASSERT(page < array->m_pages.Size());
 
             while (true)
             {
@@ -273,7 +273,7 @@ public:
 
         for (Bitset::BitIndex bit : m_validPages)
         {
-            AssertDebug(bit < m_pages.Size());
+            HYP_CORE_ASSERT(bit < m_pages.Size());
 
             delete m_pages[bit];
             m_pages[bit] = nullptr;
@@ -289,7 +289,7 @@ public:
     {
         for (Bitset::BitIndex bit : m_validPages)
         {
-            AssertDebug(bit < m_pages.Size());
+            HYP_CORE_ASSERT(bit < m_pages.Size());
 
             delete m_pages[bit];
             m_pages[bit] = nullptr;
@@ -324,44 +324,44 @@ public:
 
     HYP_FORCE_INLINE T& Front()
     {
-        AssertDebug(m_validPages.Count() != 0);
+        HYP_CORE_ASSERT(m_validPages.Count() != 0);
 
         return *Begin();
     }
 
     HYP_FORCE_INLINE const T& Front() const
     {
-        AssertDebug(m_validPages.Count() != 0);
+        HYP_CORE_ASSERT(m_validPages.Count() != 0);
 
         return *Begin();
     }
 
     HYP_FORCE_INLINE T& Back()
     {
-        AssertDebug(m_validPages.Count() != 0);
+        HYP_CORE_ASSERT(m_validPages.Count() != 0);
 
         Page* lastPage = m_pages[m_validPages.LastSetBitIndex()];
 
-        AssertDebug(lastPage != nullptr);
-        AssertDebug(lastPage->initializedBits.Count() > 0);
+        HYP_CORE_ASSERT(lastPage != nullptr);
+        HYP_CORE_ASSERT(lastPage->initializedBits.Count() > 0);
 
         SizeType lastIndex = lastPage->initializedBits.LastSetBitIndex();
-        AssertDebug(lastIndex < PageSize);
+        HYP_CORE_ASSERT(lastIndex < PageSize);
 
         return lastPage->storage.GetPointer()[lastIndex];
     }
 
     HYP_FORCE_INLINE const T& Back() const
     {
-        AssertDebug(m_validPages.Count() != 0);
+        HYP_CORE_ASSERT(m_validPages.Count() != 0);
 
         Page* lastPage = m_pages[m_validPages.LastSetBitIndex()];
 
-        AssertDebug(lastPage != nullptr);
-        AssertDebug(lastPage->initializedBits.Count() > 0);
+        HYP_CORE_ASSERT(lastPage != nullptr);
+        HYP_CORE_ASSERT(lastPage->initializedBits.Count() > 0);
 
         SizeType lastIndex = lastPage->initializedBits.LastSetBitIndex();
-        AssertDebug(lastIndex < PageSize);
+        HYP_CORE_ASSERT(lastIndex < PageSize);
 
         return lastPage->storage.GetPointer()[lastIndex];
     }
@@ -376,7 +376,7 @@ public:
             return false;
         }
 
-        AssertDebug(m_pages[pageIndex] != nullptr);
+        HYP_CORE_ASSERT(m_pages[pageIndex] != nullptr);
 
         return m_pages[pageIndex]->initializedBits.Test(elementIndex);
     }
@@ -399,17 +399,17 @@ public:
 
     T& Get(SizeType index)
     {
-        AssertDebug(HasIndex(index), "Index %u is not initialized in SparsePagedArray!", index);
+        HYP_CORE_ASSERT(HasIndex(index), "Index %zu is not initialized in SparsePagedArray!", index);
 
         const SizeType pageIndex = PageIndex(index);
         const SizeType elementIndex = ElementIndex(index);
 
-        AssertDebug(m_validPages.Test(pageIndex));
+        HYP_CORE_ASSERT(m_validPages.Test(pageIndex));
 
         Page* page = m_pages[pageIndex];
-        AssertDebug(page != nullptr);
+        HYP_CORE_ASSERT(page != nullptr);
 
-        AssertDebug(page->initializedBits.Test(elementIndex));
+        HYP_CORE_ASSERT(page->initializedBits.Test(elementIndex));
 
         return page->storage.GetPointer()[elementIndex];
     }
@@ -429,7 +429,7 @@ public:
             return nullptr;
         }
 
-        AssertDebug(m_pages[pageIndex] != nullptr);
+        HYP_CORE_ASSERT(m_pages[pageIndex] != nullptr);
 
         if (!m_pages[pageIndex]->initializedBits.Test(elementIndex))
         {
@@ -450,7 +450,7 @@ public:
         SizeType elementIndex = ElementIndex(index);
 
         Page* page = GetOrAllocatePage(pageIndex);
-        AssertDebug(page != nullptr);
+        HYP_CORE_ASSERT(page != nullptr);
 
         if (page->initializedBits.Test(elementIndex))
         {
@@ -469,7 +469,7 @@ public:
         SizeType elementIndex = ElementIndex(index);
 
         Page* page = GetOrAllocatePage(pageIndex);
-        AssertDebug(page != nullptr);
+        HYP_CORE_ASSERT(page != nullptr);
 
         if (page->initializedBits.Test(elementIndex))
         {
@@ -489,7 +489,7 @@ public:
         SizeType elementIndex = ElementIndex(index);
 
         Page* page = GetOrAllocatePage(pageIndex);
-        AssertDebug(page != nullptr);
+        HYP_CORE_ASSERT(page != nullptr);
 
         if (page->initializedBits.Test(elementIndex))
         {
@@ -583,10 +583,10 @@ public:
     {
         for (Bitset::BitIndex bit : m_validPages)
         {
-            AssertDebug(bit < m_pages.Size());
+            HYP_CORE_ASSERT(bit < m_pages.Size());
 
             Page* page = m_pages[bit];
-            AssertDebug(page != nullptr);
+            HYP_CORE_ASSERT(page != nullptr);
 
             if (deletePages)
             {
@@ -599,7 +599,7 @@ public:
                 // we want to reuse this page later, to avoid additional reallocs!
                 for (Bitset::BitIndex elemBit : page->initializedBits)
                 {
-                    AssertDebug(elemBit < PageSize);
+                    HYP_CORE_ASSERT(elemBit < PageSize);
                     page->storage.DestructElement(elemBit);
                 }
 
@@ -634,7 +634,7 @@ protected:
     {
         if (!m_validPages.Test(pageIndex))
         {
-            AssertDebugMsg(pageIndex < UINT32_MAX, "Invalid page index requested - will cause OOM crash!");
+            HYP_CORE_ASSERT(pageIndex < UINT32_MAX, "Invalid page index requested - will cause OOM crash!");
 
             if (m_pages.Size() <= pageIndex)
             {

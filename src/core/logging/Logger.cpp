@@ -4,9 +4,15 @@
 #include <core/threading/Thread.hpp>
 #include <core/threading/Threads.hpp>
 #include <core/threading/Semaphore.hpp>
+#include <core/threading/Mutex.hpp>
+#include <core/threading/AtomicVar.hpp>
 
 #include <core/containers/HashMap.hpp>
 #include <core/containers/Bitset.hpp>
+#include <core/containers/LinkedList.hpp>
+
+#include <core/memory/ByteBuffer.hpp>
+#include <core/memory/NotNullPtr.hpp>
 
 #include <core/utilities/ByteUtil.hpp>
 
@@ -297,6 +303,29 @@ LogChannel::~LogChannel()
 
 #pragma endregion LogChannel
 
+#pragma region LoggerImpl
+
+class LoggerImpl
+{
+public:
+    friend class Logger;
+
+    LoggerImpl(ILoggerOutputStream& outputStream)
+        : m_logMask(-1),
+          m_outputStream(&outputStream)
+    {
+    }
+
+private:
+    AtomicVar<Logger::ChannelMask> m_logMask;
+    FixedArray<LogChannel*, Logger::maxChannels> m_logChannels;
+    LinkedList<LogChannel> m_dynamicLogChannels;
+    mutable Mutex m_dynamicLogChannelsMutex;
+    NotNullPtr<ILoggerOutputStream> m_outputStream;
+};
+
+#pragma endregion LoggerImpl
+
 #pragma region Logger
 
 Logger& Logger::GetInstance()
@@ -307,21 +336,25 @@ Logger& Logger::GetInstance()
 }
 
 Logger::Logger()
-    : Logger(&BasicLoggerOutputStream::GetDefaultInstance())
+    : Logger(BasicLoggerOutputStream::GetDefaultInstance())
 {
 }
 
-Logger::Logger(NotNullPtr<ILoggerOutputStream> outputStream)
-    : m_logMask(uint64(-1)),
-      m_outputStream(outputStream)
+Logger::Logger(ILoggerOutputStream& outputStream)
+    : m_pImpl(MakePimpl<LoggerImpl>(outputStream))
 {
 }
 
 Logger::~Logger() = default;
 
+ILoggerOutputStream* Logger::GetOutputStream() const
+{
+    return m_pImpl->m_outputStream;
+}
+
 const LogChannel* Logger::FindLogChannel(WeakName name) const
 {
-    for (LogChannel* channel : m_logChannels)
+    for (LogChannel* channel : m_pImpl->m_logChannels)
     {
         if (!channel)
         {
@@ -334,9 +367,9 @@ const LogChannel* Logger::FindLogChannel(WeakName name) const
         }
     }
 
-    Mutex::Guard guard(m_dynamicLogChannelsMutex);
+    Mutex::Guard guard(m_pImpl->m_dynamicLogChannelsMutex);
 
-    for (const LogChannel& channel : m_dynamicLogChannels)
+    for (const LogChannel& channel : m_pImpl->m_dynamicLogChannels)
     {
         return &channel;
     }
@@ -346,69 +379,69 @@ const LogChannel* Logger::FindLogChannel(WeakName name) const
 
 void Logger::RegisterChannel(LogChannel* channel)
 {
-    AssertThrow(channel != nullptr);
-    AssertThrow(channel->Id() < m_logChannels.Size());
+    HYP_CORE_ASSERT(channel != nullptr);
+    HYP_CORE_ASSERT(channel->Id() < m_pImpl->m_logChannels.Size());
 
-    m_logChannels[channel->Id()] = channel;
+    m_pImpl->m_logChannels[channel->Id()] = channel;
 }
 
 LogChannel* Logger::CreateDynamicLogChannel(Name name, LogChannel* parentChannel)
 {
-    Mutex::Guard guard(m_dynamicLogChannelsMutex);
+    Mutex::Guard guard(m_pImpl->m_dynamicLogChannelsMutex);
 
-    return &m_dynamicLogChannels.EmplaceBack(name, parentChannel);
+    return &m_pImpl->m_dynamicLogChannels.EmplaceBack(name, parentChannel);
 }
 
 void Logger::DestroyDynamicLogChannel(Name name)
 {
-    Mutex::Guard guard(m_dynamicLogChannelsMutex);
+    Mutex::Guard guard(m_pImpl->m_dynamicLogChannelsMutex);
 
-    auto it = m_dynamicLogChannels.FindIf([name](const auto& item)
+    auto it = m_pImpl->m_dynamicLogChannels.FindIf([name](const auto& item)
         {
             return item.GetName() == name;
         });
 
-    if (it == m_dynamicLogChannels.End())
+    if (it == m_pImpl->m_dynamicLogChannels.End())
     {
         return;
     }
 
-    m_dynamicLogChannels.Erase(it);
+    m_pImpl->m_dynamicLogChannels.Erase(it);
 }
 
 void Logger::DestroyDynamicLogChannel(LogChannel* channel)
 {
-    Mutex::Guard guard(m_dynamicLogChannelsMutex);
+    Mutex::Guard guard(m_pImpl->m_dynamicLogChannelsMutex);
 
-    auto it = m_dynamicLogChannels.FindIf([channel](const auto& item)
+    auto it = m_pImpl->m_dynamicLogChannels.FindIf([channel](const auto& item)
         {
             return &item == channel;
         });
 
-    if (it == m_dynamicLogChannels.End())
+    if (it == m_pImpl->m_dynamicLogChannels.End())
     {
         return;
     }
 
-    m_dynamicLogChannels.Erase(it);
+    m_pImpl->m_dynamicLogChannels.Erase(it);
 }
 
 bool Logger::IsChannelEnabled(const LogChannel& channel) const
 {
     const uint64 channelMaskBitset = channel.GetMaskBitset().ToUInt64();
 
-    return (m_logMask.Get(MemoryOrder::RELAXED) & channelMaskBitset) == channelMaskBitset;
+    return (m_pImpl->m_logMask.Get(MemoryOrder::RELAXED) & channelMaskBitset) == channelMaskBitset;
 }
 
 void Logger::SetChannelEnabled(const LogChannel& channel, bool enabled)
 {
     if (enabled)
     {
-        m_logMask.BitOr(1ull << channel.Id(), MemoryOrder::RELAXED);
+        m_pImpl->m_logMask.BitOr(1ull << channel.Id(), MemoryOrder::RELAXED);
     }
     else
     {
-        m_logMask.BitAnd(~(1ull << channel.Id()), MemoryOrder::RELAXED);
+        m_pImpl->m_logMask.BitAnd(~(1ull << channel.Id()), MemoryOrder::RELAXED);
     }
 }
 
@@ -416,15 +449,23 @@ void Logger::Log(const LogChannel& channel, const LogMessage& message)
 {
     if (uint32(message.level) >= uint32(LogLevel::WARNING))
     {
-        m_outputStream->WriteError(channel, message);
+        m_pImpl->m_outputStream->WriteError(channel, message);
     }
     else
     {
-        m_outputStream->Write(channel, message);
+        m_pImpl->m_outputStream->Write(channel, message);
     }
 }
 
 #pragma endregion Logger
 
 } // namespace logging
+
+HYP_DECLARE_LOG_CHANNEL(Core);
+
+namespace logging {
+// For Assert() to work with logging
+template HYP_API void LogDynamic<Debug(), HYP_MAKE_CONST_ARG(&Log_Core)>(Logger&, const char*);
+} // namespace logging
+
 } // namespace hyperion

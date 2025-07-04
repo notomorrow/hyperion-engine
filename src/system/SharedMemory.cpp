@@ -118,9 +118,9 @@ bool SharedMemory::Open()
 
 void SharedMemory::Write(const void* data, SizeType count)
 {
-    AssertThrowMsg(m_mode == Mode::READ_WRITE, "SharedMemory was not constructed with READ_WRITE mode enabled");
-    AssertThrowMsg(IsOpened(), "SharedMemory not opened!\n");
-    AssertThrow(count <= m_size);
+    Assert(m_mode == Mode::READ_WRITE, "SharedMemory was not constructed with READ_WRITE mode enabled");
+    Assert(IsOpened(), "SharedMemory not opened!\n");
+    Assert(count <= m_size);
 
     Memory::MemCpy(m_address, data, count);
 }

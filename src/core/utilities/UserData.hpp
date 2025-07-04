@@ -13,7 +13,7 @@ namespace utilities {
 template <SizeType Size, SizeType Alignment>
 struct UserData
 {
-    ValueStorageArray<ubyte, Size, Alignment> data;
+    ValueStorage<ubyte, Size, Alignment> data;
 
     UserData()
     {

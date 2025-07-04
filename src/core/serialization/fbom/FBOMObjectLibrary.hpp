@@ -56,8 +56,8 @@ struct FBOMObjectLibrary
         const uint32 nextIndex = uint32(objectData.Size());
 
         FBOMExternalObjectInfo* externalObjectInfo = object.GetExternalObjectInfo();
-        AssertThrow(externalObjectInfo != nullptr);
-        AssertThrow(!externalObjectInfo->IsLinked());
+        HYP_CORE_ASSERT(externalObjectInfo != nullptr);
+        HYP_CORE_ASSERT(!externalObjectInfo->IsLinked());
 
         externalObjectInfo->index = nextIndex;
         externalObjectInfo->libraryId = uuid;
@@ -72,8 +72,8 @@ struct FBOMObjectLibrary
         const uint32 nextIndex = uint32(objectData.Size());
 
         FBOMExternalObjectInfo* externalObjectInfo = object.GetExternalObjectInfo();
-        AssertThrow(externalObjectInfo != nullptr);
-        AssertThrow(!externalObjectInfo->IsLinked());
+        HYP_CORE_ASSERT(externalObjectInfo != nullptr);
+        HYP_CORE_ASSERT(!externalObjectInfo->IsLinked());
 
         externalObjectInfo->index = nextIndex;
         externalObjectInfo->libraryId = uuid;

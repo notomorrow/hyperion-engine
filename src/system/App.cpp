@@ -41,7 +41,7 @@ void App::LaunchGame(const Handle<Game>& game)
 {
     Threads::AssertOnThread(g_mainThread);
 
-    AssertThrow(game.IsValid());
+    Assert(game.IsValid());
 
     Handle<AppContextBase> appContext;
 
@@ -83,7 +83,7 @@ void App::LaunchGame(const Handle<Game>& game)
         HYP_LOG(Core, Info, "Running in headless mode");
     }
 
-    AssertThrow(g_renderBackend != nullptr);
+    Assert(g_renderBackend != nullptr);
     HYPERION_ASSERT_RESULT(g_renderBackend->Initialize(*appContext));
 
     RenderObjectDeleter<Platform::current>::Initialize();
@@ -98,7 +98,7 @@ void App::LaunchGame(const Handle<Game>& game)
     m_gameThread->Start();
 
     // Loop blocks the main thread until the game is done.
-    AssertThrow(g_engine->StartRenderLoop());
+    Assert(g_engine->StartRenderLoop());
 
     delete g_renderGlobalState;
     g_renderGlobalState = nullptr;

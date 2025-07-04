@@ -193,21 +193,21 @@ public:
 
     HYP_FORCE_INLINE T& Get() &
     {
-        AssertThrow(m_hasValue);
+        HYP_CORE_ASSERT(m_hasValue);
 
         return m_storage.Get();
     }
 
     HYP_FORCE_INLINE const T& Get() const&
     {
-        AssertThrow(m_hasValue);
+        HYP_CORE_ASSERT(m_hasValue);
 
         return m_storage.Get();
     }
 
     HYP_FORCE_INLINE T Get() &&
     {
-        AssertThrow(m_hasValue);
+        HYP_CORE_ASSERT(m_hasValue);
 
         return std::move(m_storage.Get());
     }
@@ -474,14 +474,14 @@ public:
 
     HYP_FORCE_INLINE typename std::remove_reference_t<T>& Get()
     {
-        AssertThrow(m_ptr != nullptr);
+        HYP_CORE_ASSERT(m_ptr != nullptr);
 
         return *m_ptr;
     }
 
     HYP_FORCE_INLINE const typename std::remove_reference_t<T>& Get() const
     {
-        AssertThrow(m_ptr != nullptr);
+        HYP_CORE_ASSERT(m_ptr != nullptr);
 
         return *m_ptr;
     }

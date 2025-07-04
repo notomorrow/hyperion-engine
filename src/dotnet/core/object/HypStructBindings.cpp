@@ -35,7 +35,7 @@ public:
 
     virtual bool GetManagedObject(const void* objectPtr, dotnet::ObjectReference& outObjectReference) const override
     {
-        AssertThrow(objectPtr != nullptr);
+        Assert(objectPtr != nullptr);
 
         // Construct a new instance of the struct and return an ObjectReference pointing to it.
         if (!CreateStructInstance(outObjectReference, objectPtr, m_size))
@@ -103,8 +103,8 @@ extern "C"
 
     HYP_EXPORT HypStruct* HypStruct_CreateDynamicHypStruct(const TypeId* typeId, const char* typeName, uint32 size, DynamicHypStructInstance_DestructFunction destructFunction)
     {
-        AssertThrow(typeId != nullptr);
-        AssertThrow(typeName != nullptr);
+        Assert(typeId != nullptr);
+        Assert(typeName != nullptr);
 
         if (size == 0)
         {
@@ -118,7 +118,7 @@ extern "C"
 
     HYP_EXPORT void HypStruct_DestroyDynamicHypStruct(HypStruct* hypStruct)
     {
-        AssertThrow(hypStruct != nullptr);
+        Assert(hypStruct != nullptr);
 
         delete hypStruct;
     }

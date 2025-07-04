@@ -106,7 +106,7 @@ bool Entity::ReceivesUpdate() const
     }
 
     EntityManager* entityManager = GetEntityManager();
-    AssertDebugMsg(entityManager != nullptr, "EntityManager is null for Entity #%u while checking receives update", Id().Value());
+    AssertDebug(entityManager != nullptr, "EntityManager is null for Entity {} while checking receives update", Id());
 
     Threads::AssertOnThread(entityManager->GetOwnerThreadId());
 
@@ -117,13 +117,13 @@ void Entity::SetReceivesUpdate(bool receivesUpdate)
 {
     if (!m_entityInitInfo.canEverUpdate)
     {
-        AssertDebugMsg(!receivesUpdate, "Entity #%u cannot receive updates, but SetReceivesUpdate() was called with true", Id().Value());
+        AssertDebug(!receivesUpdate, "Entity {} cannot receive updates, but SetReceivesUpdate() was called with true", Id());
 
         return;
     }
 
     EntityManager* entityManager = GetEntityManager();
-    AssertDebugMsg(entityManager != nullptr, "EntityManager is null for Entity #%u while setting receives update", Id().Value());
+    AssertDebug(entityManager != nullptr, "EntityManager is null for Entity {} while setting receives update", Id());
 
     Threads::AssertOnThread(entityManager->GetOwnerThreadId());
 
@@ -141,7 +141,7 @@ void Entity::Attach(const Handle<Node>& attachNode)
 {
     { // detach from node if already attached.
         EntityManager* entityManager = GetEntityManager();
-        AssertDebugMsg(entityManager != nullptr, "EntityManager is null for Entity #%u while attaching to Node", Id().Value());
+        AssertDebug(entityManager != nullptr, "EntityManager is null for Entity {} while attaching to Node", Id());
 
         Threads::AssertOnThread(entityManager->GetOwnerThreadId());
 
@@ -178,7 +178,7 @@ void Entity::Attach(const Handle<Node>& attachNode)
 void Entity::Detach()
 {
     EntityManager* entityManager = GetEntityManager();
-    AssertDebugMsg(entityManager != nullptr, "EntityManager is null for Entity #%u while detaching from Node", Id().Value());
+    AssertDebug(entityManager != nullptr, "EntityManager is null for Entity {} while detaching from Node", Id());
 
     Threads::AssertOnThread(entityManager->GetOwnerThreadId());
 
@@ -193,14 +193,14 @@ void Entity::Detach()
 
 void Entity::OnAttachedToNode(Node* node)
 {
-    AssertThrow(node != nullptr);
+    Assert(node != nullptr);
 
     // Do nothing in default implementation.
 }
 
 void Entity::OnDetachedFromNode(Node* node)
 {
-    AssertThrow(node != nullptr);
+    Assert(node != nullptr);
 
     // Do nothing in default implementation.
 }
@@ -290,7 +290,7 @@ void Entity::AttachChild(const Handle<Entity>& child)
     }
 
     EntityManager* entityManager = GetEntityManager();
-    AssertDebugMsg(entityManager != nullptr, "EntityManager is null for Entity #%u while attaching child #%u", Id().Value(), child.Id().Value());
+    AssertDebug(entityManager != nullptr, "EntityManager is null for Entity {} while attaching child {}", Id(), child.Id());
 
     Threads::AssertOnThread(entityManager->GetOwnerThreadId());
 
@@ -346,7 +346,7 @@ void Entity::DetachChild(const Handle<Entity>& child)
     }
 
     EntityManager* entityManager = GetEntityManager();
-    AssertDebugMsg(entityManager != nullptr, "EntityManager is null for Entity #%u while detaching child #%u", Id().Value(), child.Id().Value());
+    AssertDebug(entityManager != nullptr, "EntityManager is null for Entity {} while detaching child {}", Id(), child.Id());
 
     Threads::AssertOnThread(entityManager->GetOwnerThreadId());
 

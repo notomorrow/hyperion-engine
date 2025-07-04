@@ -306,7 +306,7 @@ struct EntitySetView
 
 #ifdef HYP_ENABLE_MT_CHECK
     FixedArray<DataRaceDetector*, sizeof...(Components)> m_componentDataRaceDetectors;
-    ValueStorageArray<DataRaceDetector::DataAccessScope, sizeof...(Components)> m_componentDataAccessScopes;
+    ValueStorage<DataRaceDetector::DataAccessScope, sizeof...(Components)> m_componentDataAccessScopes;
 #endif
 
 #ifdef HYP_ENABLE_MT_CHECK
@@ -342,7 +342,7 @@ struct EntitySetView
                         return info.typeId == typeId;
                     });
 
-                AssertThrowMsg(componentInfosIt != componentInfos.End(), "Component info not found for component with TypeId %u (%s)", componentTypeIds[i].Value(), componentNames[i].Data());
+                Assert(componentInfosIt != componentInfos.End(), "Component info not found for component with TypeId {} ({})", componentTypeIds[i].Value(), componentNames[i]);
 
                 EnumFlags<DataAccessFlags> accessFlags = DataAccessFlags::ACCESS_NONE;
 

@@ -116,7 +116,7 @@ public:
         explicit Parameter(const float* v, SizeType count)
             : type(Type(MATERIAL_PARAMETER_TYPE_FLOAT + (count - 1)))
         {
-            AssertThrow(count >= 1 && count <= 4);
+            Assert(count >= 1 && count <= 4);
 
             Memory::MemCpy(values.floatValues, v, count * sizeof(float));
 
@@ -160,7 +160,7 @@ public:
         explicit Parameter(const int32* v, SizeType count)
             : type(Type(MATERIAL_PARAMETER_TYPE_INT + (count - 1)))
         {
-            AssertThrow(count >= 1 && count <= 4);
+            Assert(count >= 1 && count <= 4);
 
             Memory::MemCpy(values.intValues, v, count * sizeof(int32));
 

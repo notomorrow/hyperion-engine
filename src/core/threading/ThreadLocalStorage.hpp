@@ -50,7 +50,7 @@ public:
 
         if (currentSize + size >= capacity)
         {
-            HYP_FAIL("ThreadLocalStorage: Allocating %llu bytes exceeds capacity of %llu bytes", currentSize + size, capacity);
+            HYP_FAIL("ThreadLocalStorage: Allocating %zu bytes exceeds capacity of %zu bytes", currentSize + size, capacity);
         }
 
         void* ptr = m_data.Data() + currentSize;

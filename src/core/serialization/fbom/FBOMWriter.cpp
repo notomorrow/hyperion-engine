@@ -81,8 +81,8 @@ void FBOMWriteStream::AddToObjectLibrary(FBOMObject& object)
     static constexpr SizeType desiredMaxSize = 10;
 
     FBOMExternalObjectInfo* externalObjectInfo = object.GetExternalObjectInfo();
-    AssertThrow(externalObjectInfo != nullptr);
-    AssertThrow(!externalObjectInfo->IsLinked());
+    HYP_CORE_ASSERT(externalObjectInfo != nullptr);
+    HYP_CORE_ASSERT(!externalObjectInfo->IsLinked());
 
     // FBOMData objectData = FBOMData::FromObject(object);
     // const SizeType objectDataSize = objectData.TotalSize();
@@ -109,7 +109,7 @@ void FBOMWriteStream::AddToObjectLibrary(FBOMObject& object)
     libraryPtr->Put(object);
 
     // sanity check
-    AssertThrow(externalObjectInfo->IsLinked());
+    HYP_CORE_ASSERT(externalObjectInfo->IsLinked());
 }
 
 #pragma endregion FBOMWriteStream
@@ -263,8 +263,8 @@ FBOMResult FBOMWriter::WriteExternalObjects(ByteWriter* out, const FilePath& bas
             for (const FBOMObject& object : library.objectData)
             {
                 const FBOMExternalObjectInfo* externalObjectInfo = object.GetExternalObjectInfo();
-                AssertThrow(externalObjectInfo != nullptr);
-                AssertThrow(externalObjectInfo->IsLinked());
+                HYP_CORE_ASSERT(externalObjectInfo != nullptr);
+                HYP_CORE_ASSERT(externalObjectInfo->IsLinked());
 
                 FBOMObject objectCopy(object);
 
@@ -376,8 +376,8 @@ FBOMResult FBOMWriter::AddExternalObjects(FBOMLoadContext& context, FBOMObject& 
     if (object.IsExternal())
     {
         FBOMExternalObjectInfo* externalObjectInfo = object.GetExternalObjectInfo();
-        AssertThrow(externalObjectInfo != nullptr);
-        AssertThrow(!externalObjectInfo->IsLinked());
+        HYP_CORE_ASSERT(externalObjectInfo != nullptr);
+        HYP_CORE_ASSERT(!externalObjectInfo->IsLinked());
 
         m_writeStream->AddToObjectLibrary(object);
     }
@@ -421,11 +421,11 @@ FBOMResult FBOMWriter::WriteStaticData(ByteWriter* out)
     // sanity check: make sure no duplicate offsets
     for (SizeType i = 1; i < staticDataOrdered.Size(); i++)
     {
-        AssertThrow(staticDataOrdered[i]->offset == staticDataOrdered[i - 1]->offset + 1);
+        HYP_CORE_ASSERT(staticDataOrdered[i]->offset == staticDataOrdered[i - 1]->offset + 1);
     }
 #endif
 
-    AssertThrowMsg(staticDataOrdered.Size() == m_writeStream->m_staticDataOffset,
+    HYP_CORE_ASSERT(staticDataOrdered.Size() == m_writeStream->m_staticDataOffset,
         "Values do not match, incorrect bookkeeping");
 
     MemoryByteWriter staticDataByteWriter;
@@ -434,11 +434,11 @@ FBOMResult FBOMWriter::WriteStaticData(ByteWriter* out)
 
     for (FBOMStaticData* staticData : staticDataOrdered)
     {
-        AssertThrow(staticData->offset < staticDataOrdered.Size());
+        HYP_CORE_ASSERT(staticData->offset < staticDataOrdered.Size());
 
         const SizeType bufferOffset = staticDataByteWriter.Position();
 
-        AssertThrowMsg(!staticData->IsWritten(),
+        HYP_CORE_ASSERT(!staticData->IsWritten(),
             "Static data object has already been written: %s",
             staticData->ToString().Data());
 
@@ -451,7 +451,7 @@ FBOMResult FBOMWriter::WriteStaticData(ByteWriter* out)
 
         staticData->SetIsWritten(true);
 
-        AssertThrowMsg(staticData->IsWritten(),
+        HYP_CORE_ASSERT(staticData->IsWritten(),
             "Static data object was not written: %s\t%p",
             staticData->ToString().Data(),
             staticData);
@@ -489,7 +489,7 @@ FBOMResult FBOMWriter::WriteStaticData(ByteWriter* out)
         }
         else
         {
-            AssertThrow(staticDataBufferOffsets[i + 1] >= staticDataBufferOffsets[i]);
+            HYP_CORE_ASSERT(staticDataBufferOffsets[i + 1] >= staticDataBufferOffsets[i]);
 
             out->Write<uint64>(staticDataBufferOffsets[i + 1] - staticDataBufferOffsets[i]);
         }
@@ -521,10 +521,10 @@ FBOMResult FBOMWriter::WriteHeader(ByteWriter* out)
     out->Write<uint32>(FBOM::version.value);
 
     const SizeType positionChange = SizeType(out->Position()) - positionBefore;
-    AssertThrow(positionChange <= FBOM::headerSize);
+    HYP_CORE_ASSERT(positionChange <= FBOM::headerSize);
 
     const SizeType remainingBytes = FBOM::headerSize - positionChange;
-    AssertThrow(remainingBytes < 64);
+    HYP_CORE_ASSERT(remainingBytes < 64);
 
     void* zeros = StackAlloc(remainingBytes);
     Memory::MemSet(zeros, 0, remainingBytes);
@@ -536,7 +536,7 @@ FBOMResult FBOMWriter::WriteHeader(ByteWriter* out)
 
 FBOMResult FBOMWriter::Write(ByteWriter* out, const FBOMObject& object, UniqueID id, EnumFlags<FBOMDataAttributes> attributes)
 {
-    AssertThrow(uint64(id) != 0);
+    HYP_CORE_ASSERT(uint64(id) != 0);
 
     out->Write<uint8>(FBOM_OBJECT_START);
     out->Write<uint64>(id);
@@ -565,7 +565,7 @@ FBOMResult FBOMWriter::Write(ByteWriter* out, const FBOMObject& object, UniqueID
     {
     case FBOMDataLocation::LOC_STATIC:
     {
-        AssertThrow(staticDataPtr != nullptr);
+        HYP_CORE_ASSERT(staticDataPtr != nullptr);
 
         return WriteStaticDataUsage(out, *staticDataPtr);
     }
@@ -613,8 +613,8 @@ FBOMResult FBOMWriter::Write(ByteWriter* out, const FBOMObject& object, UniqueID
     }
     case FBOMDataLocation::LOC_EXT_REF:
     {
-        AssertThrow(externalObjectInfoPtr != nullptr);
-        AssertThrow(externalObjectInfoPtr->IsLinked());
+        HYP_CORE_ASSERT(externalObjectInfoPtr != nullptr);
+        HYP_CORE_ASSERT(externalObjectInfoPtr->IsLinked());
 
         out->Write<UUID>(externalObjectInfoPtr->libraryId);
 
@@ -648,7 +648,7 @@ FBOMResult FBOMWriter::Write(ByteWriter* out, const FBOMType& type, UniqueID id,
 
     if (dataLocation == FBOMDataLocation::LOC_STATIC)
     {
-        AssertThrow(staticDataPtr != nullptr);
+        HYP_CORE_ASSERT(staticDataPtr != nullptr);
 
         return WriteStaticDataUsage(out, *staticDataPtr);
     }
@@ -706,7 +706,7 @@ FBOMResult FBOMWriter::Write(ByteWriter* out, const FBOMData& data, UniqueID id,
 
     if (dataLocation == FBOMDataLocation::LOC_STATIC)
     {
-        AssertThrow(staticDataPtr != nullptr);
+        HYP_CORE_ASSERT(staticDataPtr != nullptr);
 
         return WriteStaticDataUsage(out, *staticDataPtr);
     }
@@ -773,7 +773,7 @@ FBOMResult FBOMWriter::Write(ByteWriter* out, const FBOMArray& array, UniqueID i
 
     if (dataLocation == FBOMDataLocation::LOC_STATIC)
     {
-        AssertThrow(staticDataPtr != nullptr);
+        HYP_CORE_ASSERT(staticDataPtr != nullptr);
 
         return WriteStaticDataUsage(out, *staticDataPtr);
     }
@@ -911,16 +911,16 @@ FBOMResult FBOMWriter::WriteDataAttributes(ByteWriter* out, EnumFlags<FBOMDataAt
 FBOMResult FBOMWriter::WriteStaticDataUsage(ByteWriter* out, const FBOMStaticData& staticData) const
 {
     const auto offset = staticData.offset;
-    AssertThrow(offset < m_writeStream->m_staticDataOffset);
+    HYP_CORE_ASSERT(offset < m_writeStream->m_staticDataOffset);
 
 #ifdef HYP_DEBUG_MODE
     const auto it = m_writeStream->m_staticData.Find(staticData.GetUniqueID());
-    AssertThrow(it != m_writeStream->m_staticData.End());
+    HYP_CORE_ASSERT(it != m_writeStream->m_staticData.End());
 
-    // AssertThrow(it->second.IsWritten());
+    // HYP_CORE_ASSERT(it->second.IsWritten());
 
-    AssertThrow(it->second.type == staticData.type);
-    AssertThrow(it->second.GetHashCode() == staticData.GetHashCode());
+    HYP_CORE_ASSERT(it->second.type == staticData.type);
+    HYP_CORE_ASSERT(it->second.GetHashCode() == staticData.GetHashCode());
 #endif
 
     out->Write<uint32>(uint32(offset));
@@ -930,9 +930,9 @@ FBOMResult FBOMWriter::WriteStaticDataUsage(ByteWriter* out, const FBOMStaticDat
 
 void FBOMWriter::AddObjectData(const FBOMObject& object, UniqueID id)
 {
-    AssertThrow(uint64(id) != 0);
+    HYP_CORE_ASSERT(uint64(id) != 0);
 
-    AssertThrow(!m_writeStream->IsObjectDataWritingLocked());
+    HYP_CORE_ASSERT(!m_writeStream->IsObjectDataWritingLocked());
 
     m_writeStream->m_objectData.PushBack(object);
 
@@ -948,9 +948,9 @@ void FBOMWriter::AddObjectData(const FBOMObject& object, UniqueID id)
 
 void FBOMWriter::AddObjectData(FBOMObject&& object, UniqueID id)
 {
-    AssertThrow(uint64(id) != 0);
+    HYP_CORE_ASSERT(uint64(id) != 0);
 
-    AssertThrow(!m_writeStream->IsObjectDataWritingLocked());
+    HYP_CORE_ASSERT(!m_writeStream->IsObjectDataWritingLocked());
 
     m_writeStream->m_objectData.PushBack(std::move(object));
 
@@ -966,7 +966,7 @@ void FBOMWriter::AddObjectData(FBOMObject&& object, UniqueID id)
 
 UniqueID FBOMWriter::AddStaticData(UniqueID id, FBOMStaticData&& staticData)
 {
-    AssertThrow(!m_writeStream->IsWritingStaticData());
+    HYP_CORE_ASSERT(!m_writeStream->IsWritingStaticData());
 
     auto it = m_writeStream->m_staticData.Find(id);
 
@@ -976,7 +976,7 @@ UniqueID FBOMWriter::AddStaticData(UniqueID id, FBOMStaticData&& staticData)
         staticData.offset = int64(m_writeStream->m_staticDataOffset++);
 
         const auto insertResult = m_writeStream->m_staticData.Insert(id, std::move(staticData));
-        AssertThrow(insertResult.second);
+        HYP_CORE_ASSERT(insertResult.second);
     }
     else
     {
@@ -985,7 +985,7 @@ UniqueID FBOMWriter::AddStaticData(UniqueID id, FBOMStaticData&& staticData)
         const HashCode hashCode = staticData.GetHashCode();
         const HashCode otherHashCode = it->second.GetHashCode();
 
-        AssertThrowMsg(hashCode == otherHashCode,
+        HYP_CORE_ASSERT(hashCode == otherHashCode,
             "Hash codes do not match: %llu != %llu\n\tLeft: %s\n\tRight: %s",
             hashCode.Value(), otherHashCode.Value(),
             staticData.ToString().Data(), it->second.ToString().Data());
@@ -1026,14 +1026,14 @@ UniqueID FBOMWriter::AddStaticData(FBOMLoadContext& context, const FBOMData& dat
     if (data.IsObject())
     {
         FBOMObject object;
-        AssertThrowMsg(data.ReadObject(context, object).value == FBOMResult::FBOM_OK, "Invalid object, cannot write to stream");
+        HYP_CORE_ASSERT(data.ReadObject(context, object).value == FBOMResult::FBOM_OK, "Invalid object, cannot write to stream");
 
         AddStaticData(context, object);
     }
     else if (data.IsArray())
     {
         FBOMArray array { FBOMUnset() };
-        AssertThrowMsg(data.ReadArray(context, array).value == FBOMResult::FBOM_OK, "Invalid array, cannot write to stream");
+        HYP_CORE_ASSERT(data.ReadArray(context, array).value == FBOMResult::FBOM_OK, "Invalid array, cannot write to stream");
 
         AddStaticData(context, array);
     }

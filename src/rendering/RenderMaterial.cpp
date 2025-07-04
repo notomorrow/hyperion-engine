@@ -53,7 +53,7 @@ void RenderMaterial::Initialize_Internal()
 {
     HYP_SCOPE;
 
-    AssertThrow(m_material != nullptr);
+    Assert(m_material != nullptr);
 
     m_renderTextures.Reserve(m_textures.Size());
 
@@ -61,7 +61,7 @@ void RenderMaterial::Initialize_Internal()
     {
         if (const Handle<Texture>& texture = it.second)
         {
-            AssertThrow(texture->IsReady());
+            Assert(texture->IsReady());
 
             m_renderTextures.Set(texture->Id(), TResourceHandle<RenderTexture>(texture->GetRenderResource()));
         }
@@ -81,7 +81,7 @@ void RenderMaterial::Destroy_Internal()
 {
     HYP_SCOPE;
 
-    AssertThrow(m_material != nullptr);
+    Assert(m_material != nullptr);
 
     m_renderTextures.Clear();
 
@@ -97,7 +97,7 @@ void RenderMaterial::Update_Internal()
 {
     HYP_SCOPE;
 
-    AssertThrow(m_material != nullptr);
+    Assert(m_material != nullptr);
 
     // static const bool useBindlessTextures = g_renderBackend->GetRenderConfig().IsBindlessSupported();
 
@@ -109,11 +109,11 @@ void RenderMaterial::Update_Internal()
     //         for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
     //         {
     //             const DescriptorSetRef& descriptorSet = g_engine->ForBoundMaterialManager()->GetDescriptorSet(this, frameIndex);
-    //             AssertThrow(descriptorSet != nullptr);
+    //             Assert(descriptorSet != nullptr);
 
     //             if (texture.IsValid())
     //             {
-    //                 AssertThrow(texture->GetRenderResource().GetImageView() != nullptr);
+    //                 Assert(texture->GetRenderResource().GetImageView() != nullptr);
 
     //                 descriptorSet->SetElement(NAME("Textures"), textureIndex, texture->GetRenderResource().GetImageView());
     //             }
@@ -155,7 +155,7 @@ void RenderMaterial::CreateDescriptorSets()
 {
     HYP_SCOPE;
 
-    AssertThrow(m_material != nullptr);
+    Assert(m_material != nullptr);
 
     // FixedArray<Handle<Texture>, maxBoundTextures> textureBindings;
 
@@ -181,14 +181,14 @@ void RenderMaterial::DestroyDescriptorSets()
 {
     HYP_SCOPE;
 
-    AssertThrow(m_material != nullptr);
+    Assert(m_material != nullptr);
 }
 
 void RenderMaterial::UpdateBufferData()
 {
     HYP_SCOPE;
 
-    AssertThrow(m_bufferIndex != ~0u);
+    Assert(m_bufferIndex != ~0u);
 
     // static const bool useBindlessTextures = g_renderBackend->GetRenderConfig().IsBindlessSupported();
 
@@ -244,7 +244,7 @@ void RenderMaterial::SetTexture(MaterialTextureKey textureKey, const Handle<Text
             {
                 if (texture.IsValid())
                 {
-                    AssertThrow(texture->IsReady());
+                    Assert(texture->IsReady());
 
                     m_renderTextures.Set(texture->Id(), TResourceHandle<RenderTexture>(texture->GetRenderResource()));
                 }
@@ -270,7 +270,7 @@ void RenderMaterial::SetTextures(FlatMap<MaterialTextureKey, Handle<Texture>>&& 
                 {
                     if (it.second.IsValid())
                     {
-                        AssertThrow(it.second->IsReady());
+                        Assert(it.second->IsReady());
 
                         m_renderTextures.Set(it.second->Id(), TResourceHandle<RenderTexture>(it.second->GetRenderResource()));
                     }
@@ -339,7 +339,7 @@ void MaterialDescriptorSetManager::CreateFallbackMaterialDescriptorSet()
     }
 
     const DescriptorSetDeclaration* decl = g_renderGlobalState->GlobalDescriptorTable->GetDeclaration()->FindDescriptorSetDeclaration(NAME("Material"));
-    AssertThrow(decl != nullptr);
+    Assert(decl != nullptr);
 
     const DescriptorSetLayout layout { decl };
 
@@ -400,7 +400,7 @@ FixedArray<DescriptorSetRef, maxFramesInFlight> MaterialDescriptorSetManager::Al
     Threads::AssertOnThread(g_renderThread);
 
     const DescriptorSetDeclaration* decl = g_renderGlobalState->GlobalDescriptorTable->GetDeclaration()->FindDescriptorSetDeclaration(NAME("Material"));
-    AssertThrow(decl != nullptr);
+    Assert(decl != nullptr);
 
     DescriptorSetLayout layout { decl };
 
@@ -451,7 +451,7 @@ FixedArray<DescriptorSetRef, maxFramesInFlight> MaterialDescriptorSetManager::Al
     Threads::AssertOnThread(g_renderThread);
 
     const DescriptorSetDeclaration* decl = g_renderGlobalState->GlobalDescriptorTable->GetDeclaration()->FindDescriptorSetDeclaration(NAME("Material"));
-    AssertThrow(decl != nullptr);
+    Assert(decl != nullptr);
 
     const DescriptorSetLayout layout { decl };
 

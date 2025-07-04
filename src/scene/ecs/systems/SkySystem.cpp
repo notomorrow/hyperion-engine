@@ -38,7 +38,7 @@ void SkySystem::OnEntityAdded(Entity* entity)
 {
     SystemBase::OnEntityAdded(entity);
 
-    AssertThrow(GetWorld() != nullptr);
+    Assert(GetWorld() != nullptr);
 
     HYP_LOG(ECS, Debug, "Adding sky system for entity: #{}, Scene: {}", entity->Id(), GetScene()->GetName());
 
@@ -59,7 +59,7 @@ void SkySystem::OnEntityRemoved(Entity* entity)
 {
     SystemBase::OnEntityRemoved(entity);
 
-    AssertThrow(GetWorld() != nullptr);
+    Assert(GetWorld() != nullptr);
 
     HYP_LOG(ECS, Debug, "Removing sky system for entity: #{}, Scene: {}", entity->Id(), GetScene()->GetName());
 
@@ -95,7 +95,7 @@ void SkySystem::Process(float delta)
 
 void SkySystem::AddRenderSubsystemToEnvironment(World* world, EntityManager& mgr, Entity* entity, SkyComponent& skyComponent, MeshComponent* meshComponent)
 {
-    AssertThrow(world != nullptr);
+    Assert(world != nullptr);
 
     if (skyComponent.subsystem)
     {

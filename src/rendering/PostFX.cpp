@@ -108,7 +108,7 @@ void PostProcessing::Create()
     {
         for (auto& effect : m_effects[stageIndex])
         {
-            AssertThrow(effect.second != nullptr);
+            Assert(effect.second != nullptr);
 
             effect.second->Init();
 
@@ -139,7 +139,7 @@ void PostProcessing::Destroy()
     {
         for (auto& it : m_effects[stageIndex])
         {
-            AssertThrow(it.second != nullptr);
+            Assert(it.second != nullptr);
 
             it.second->OnRemoved();
         }
@@ -168,7 +168,7 @@ void PostProcessing::PerformUpdates()
             const TypeId typeId = it.first;
             auto& effect = it.second;
 
-            AssertThrow(effect != nullptr);
+            Assert(effect != nullptr);
 
             effect->Init();
 
@@ -185,7 +185,7 @@ void PostProcessing::PerformUpdates()
 
             if (effectsIt != m_effects[stageIndex].End())
             {
-                AssertThrow(effectsIt->second != nullptr);
+                Assert(effectsIt->second != nullptr);
 
                 effectsIt->second->OnRemoved();
 
@@ -215,11 +215,11 @@ PostProcessingUniforms PostProcessing::GetUniforms() const
 
         for (auto& it : effects)
         {
-            AssertThrow(it.second != nullptr);
+            Assert(it.second != nullptr);
 
             if (it.second->IsEnabled())
             {
-                AssertThrowMsg(it.second->GetEffectIndex() != ~0u, "Not yet initialized - index not set yet");
+                Assert(it.second->GetEffectIndex() != ~0u, "Not yet initialized - index not set yet");
 
                 postProcessingUniforms.masks[stageIndex] |= 1u << it.second->GetEffectIndex();
                 postProcessingUniforms.lastEnabledIndices[stageIndex] = MathUtil::Max(

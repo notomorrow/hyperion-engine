@@ -62,7 +62,6 @@ public:
 
     HYP_FORCE_INLINE void Invoke(ObjectReference* thisObjectReference, const HypData** argsHypData, HypData* outReturnHypData) const
     {
-        AssertDebug(m_invokeFptr != nullptr);
         m_invokeFptr(thisObjectReference, argsHypData, outReturnHypData);
     }
 

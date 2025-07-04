@@ -29,10 +29,10 @@ extern "C"
 
     HYP_EXPORT void HypObject_Initialize(const HypClass* hypClass, dotnet::Class* classObjectPtr, dotnet::ObjectReference* objectReference, void** outInstancePtr)
     {
-        AssertThrow(hypClass != nullptr);
-        AssertThrow(classObjectPtr != nullptr);
-        AssertThrow(objectReference != nullptr);
-        AssertThrow(outInstancePtr != nullptr);
+        Assert(hypClass != nullptr);
+        Assert(classObjectPtr != nullptr);
+        Assert(objectReference != nullptr);
+        Assert(outInstancePtr != nullptr);
 
         HypObjectPtr ptr;
 
@@ -47,7 +47,7 @@ extern "C"
             // Set allowAbstract to true so we can use classes marked as "Abstract"
             // allowing the managed class to override methods of an abstract class
             bool success = hypClass->CreateInstance(value, /* allowAbstract */ true);
-            AssertThrowMsg(success, "Failed to create instance of HypClass '%s'", hypClass->GetName().LookupString());
+            Assert(success, "Failed to create instance of HypClass '%s'", hypClass->GetName().LookupString());
 
             ptr = HypObjectPtr(hypClass, value.ToRef().GetPointer());
 
@@ -60,7 +60,7 @@ extern "C"
         *outInstancePtr = ptr.GetPointer();
 
         IHypObjectInitializer* initializer = ptr.GetObjectInitializer();
-        AssertThrow(initializer != nullptr);
+        Assert(initializer != nullptr);
 
         ManagedObjectResource* managedObjectResource = AllocateResource<ManagedObjectResource>(
             ptr,
@@ -73,8 +73,8 @@ extern "C"
 
     HYP_EXPORT uint32 HypObject_GetRefCount_Strong(const HypClass* hypClass, void* nativeAddress)
     {
-        AssertThrow(hypClass != nullptr);
-        AssertThrow(nativeAddress != nullptr);
+        Assert(hypClass != nullptr);
+        Assert(nativeAddress != nullptr);
 
         HypObjectPtr hypObjectPtr = HypObjectPtr(hypClass, nativeAddress);
 
@@ -83,8 +83,8 @@ extern "C"
 
     HYP_EXPORT void HypObject_IncRef(const HypClass* hypClass, void* nativeAddress, int8 isWeak)
     {
-        AssertThrow(hypClass != nullptr);
-        AssertThrow(nativeAddress != nullptr);
+        Assert(hypClass != nullptr);
+        Assert(nativeAddress != nullptr);
 
         HypObjectPtr hypObjectPtr = HypObjectPtr(hypClass, nativeAddress);
         hypObjectPtr.IncRef(isWeak);
@@ -92,8 +92,8 @@ extern "C"
 
     HYP_EXPORT void HypObject_DecRef(const HypClass* hypClass, void* nativeAddress, int8 isWeak)
     {
-        AssertThrow(hypClass != nullptr);
-        AssertThrow(nativeAddress != nullptr);
+        Assert(hypClass != nullptr);
+        Assert(nativeAddress != nullptr);
 
         HypObjectPtr hypObjectPtr = HypObjectPtr(hypClass, nativeAddress);
         hypObjectPtr.DecRef(isWeak);

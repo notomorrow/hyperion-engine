@@ -14,19 +14,19 @@ extern "C"
 
     HYP_EXPORT void UIDataSourceBase_Push(UIDataSourceBase* dataSource, const UUID* uuid, HypData* dataPtr, const UUID* parentUuid)
     {
-        AssertThrow(dataSource != nullptr);
-        AssertThrow(uuid != nullptr);
-        AssertThrow(dataPtr != nullptr);
-        AssertThrow(parentUuid != nullptr);
+        Assert(dataSource != nullptr);
+        Assert(uuid != nullptr);
+        Assert(dataPtr != nullptr);
+        Assert(parentUuid != nullptr);
 
         dataSource->Push(*uuid, std::move(*dataPtr), *parentUuid);
     }
 
     HYP_EXPORT void UIDataSource_SetElementTypeIdAndFactory(UIDataSource* dataSource, const TypeId* elementTypeId, UIElementFactoryBase* elementFactory)
     {
-        AssertThrow(dataSource != nullptr);
-        AssertThrow(elementTypeId != nullptr);
-        AssertThrow(elementFactory != nullptr);
+        Assert(dataSource != nullptr);
+        Assert(elementTypeId != nullptr);
+        Assert(elementFactory != nullptr);
 
         dataSource->SetElementTypeIdAndFactory(*elementTypeId, elementFactory);
     }

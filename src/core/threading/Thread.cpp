@@ -54,7 +54,7 @@ ThreadBase::ThreadBase(const ThreadId& id, ThreadPriorityValue priority)
       m_priority(priority),
       m_tls(new ThreadLocalStorage())
 {
-    AssertThrowMsg(id.IsValid(), "ThreadId must be valid");
+    HYP_CORE_ASSERT(id.IsValid(), "ThreadId must be valid");
 
     RegisterThread(m_id, this);
 }

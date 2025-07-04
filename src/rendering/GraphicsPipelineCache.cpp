@@ -55,7 +55,7 @@ GraphicsPipelineCache::~GraphicsPipelineCache()
 
     m_cachedPipelines->Clear();
 
-    AssertThrowMsg(m_cachedPipelines->Empty(), "Graphics pipeline cache not empty!");
+    Assert(m_cachedPipelines->Empty(), "Graphics pipeline cache not empty!");
     delete m_cachedPipelines;
 }
 
@@ -83,7 +83,7 @@ GraphicsPipelineRef GraphicsPipelineCache::GetOrCreate(
         table = descriptorTable;
         descriptorTableDecl = table->GetDeclaration();
 
-        AssertThrow(descriptorTableDecl != nullptr);
+        Assert(descriptorTableDecl != nullptr);
     }
     else
     {
@@ -141,7 +141,7 @@ GraphicsPipelineRef GraphicsPipelineCache::GetOrCreate(
             : graphicsPipeline(graphicsPipeline),
               callback(std::move(callback))
         {
-            AssertThrow(graphicsPipeline.IsValid());
+            Assert(graphicsPipeline.IsValid());
         }
 
         virtual ~RENDER_COMMAND(CreateGraphicsPipelineAndAddToCache)() override

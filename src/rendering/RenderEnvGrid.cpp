@@ -323,7 +323,7 @@ void EnvGridRenderer::CreateVoxelGridData(EnvGrid* envGrid, EnvGridPassData& pd)
     AssertDebug(outputTarget.IsValid());
 
     const FramebufferRef& framebuffer = outputTarget.GetFramebuffer();
-    AssertDebugMsg(framebuffer.IsValid(), "Framebuffer must be created before voxelizing probes");
+    AssertDebug(framebuffer.IsValid(), "Framebuffer must be created before voxelizing probes");
 
     // Create shader, descriptor sets for voxelizing probes
 
@@ -343,7 +343,7 @@ void EnvGridRenderer::CreateVoxelGridData(EnvGrid* envGrid, EnvGridPassData& pd)
     {
         // create descriptor sets for depth pyramid generation.
         DescriptorSetRef descriptorSet = descriptorTable->GetDescriptorSet(NAME("VoxelizeProbeDescriptorSet"), frameIndex);
-        AssertThrow(descriptorSet != nullptr);
+        Assert(descriptorSet != nullptr);
 
         descriptorSet->SetElement(NAME("InColorImage"), colorAttachment ? colorAttachment->GetImageView() : g_renderGlobalState->placeholderData->GetImageViewCube1x1R8());
         descriptorSet->SetElement(NAME("InNormalsImage"), normalsAttachment ? normalsAttachment->GetImageView() : g_renderGlobalState->placeholderData->GetImageViewCube1x1R8());
@@ -377,7 +377,7 @@ void EnvGridRenderer::CreateVoxelGridData(EnvGrid* envGrid, EnvGridPassData& pd)
 
     { // Compute shader to generate mipmaps for voxel grid
         ShaderRef generateVoxelGridMipmapsShader = g_shaderManager->GetOrCreate(NAME("VCTGenerateMipmap"));
-        AssertThrow(generateVoxelGridMipmapsShader.IsValid());
+        Assert(generateVoxelGridMipmapsShader.IsValid());
 
         const DescriptorTableDeclaration& generateVoxelGridMipmapsDescriptorTableDecl = generateVoxelGridMipmapsShader->GetCompiledShader()->GetDescriptorTableDeclaration();
 
@@ -399,7 +399,7 @@ void EnvGridRenderer::CreateVoxelGridData(EnvGrid* envGrid, EnvGridPassData& pd)
             for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
             {
                 const DescriptorSetRef& mipDescriptorSet = descriptorTable->GetDescriptorSet(NAME("GenerateMipmapDescriptorSet"), frameIndex);
-                AssertThrow(mipDescriptorSet != nullptr);
+                Assert(mipDescriptorSet != nullptr);
 
                 if (mipLevel == 0)
                 {
@@ -449,7 +449,7 @@ void EnvGridRenderer::CreateSphericalHarmonicsData(EnvGrid* envGrid, EnvGridPass
 
     for (const ShaderRef& shader : shaders)
     {
-        AssertThrow(shader.IsValid());
+        Assert(shader.IsValid());
     }
 
     const DescriptorTableDeclaration& descriptorTableDecl = shaders[0]->GetCompiledShader()->GetDescriptorTableDeclaration();
@@ -463,7 +463,7 @@ void EnvGridRenderer::CreateSphericalHarmonicsData(EnvGrid* envGrid, EnvGridPass
         for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
         {
             const DescriptorSetRef& computeShDescriptorSet = pd.computeShDescriptorTables[i]->GetDescriptorSet(NAME("ComputeSHDescriptorSet"), frameIndex);
-            AssertThrow(computeShDescriptorSet != nullptr);
+            Assert(computeShDescriptorSet != nullptr);
 
             computeShDescriptorSet->SetElement(NAME("InColorCubemap"), g_renderGlobalState->placeholderData->DefaultCubemap->GetRenderResource().GetImageView());
             computeShDescriptorSet->SetElement(NAME("InNormalsCubemap"), g_renderGlobalState->placeholderData->DefaultCubemap->GetRenderResource().GetImageView());
@@ -534,7 +534,7 @@ void EnvGridRenderer::CreateLightFieldData(EnvGrid* envGrid, EnvGridPassData& pd
         ShaderRef& shader = pair.first;
         ComputePipelineRef& pipeline = pair.second;
 
-        AssertThrow(shader.IsValid());
+        Assert(shader.IsValid());
 
         const DescriptorTableDeclaration& descriptorTableDecl = shader->GetCompiledShader()->GetDescriptorTableDeclaration();
 
@@ -543,7 +543,7 @@ void EnvGridRenderer::CreateLightFieldData(EnvGrid* envGrid, EnvGridPassData& pd
         for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
         {
             DescriptorSetRef descriptorSet = descriptorTable->GetDescriptorSet(NAME("LightFieldProbeDescriptorSet"), frameIndex);
-            AssertThrow(descriptorSet != nullptr);
+            Assert(descriptorSet != nullptr);
 
             descriptorSet->SetElement(NAME("UniformBuffer"), pd.uniformBuffers[frameIndex]);
 
@@ -627,7 +627,7 @@ void EnvGridRenderer::RenderFrame(FrameBase* frame, const RenderSetup& renderSet
     if (envProbeCollection.numProbes != 0)
     {
         // update probe positions in grid, choose next to render.
-        AssertThrow(pd->currentProbeIndex < envProbeCollection.numProbes);
+        Assert(pd->currentProbeIndex < envProbeCollection.numProbes);
 
         // const Vec3f &cameraPosition = cameraResourceHandle->GetBufferData().cameraPosition.GetXYZ();
 
@@ -660,7 +660,7 @@ void EnvGridRenderer::RenderFrame(FrameBase* frame, const RenderSetup& renderSet
                 const uint32 indirectIndex = envProbeCollection.GetIndexOnRenderThread(foundIndex);
 
                 const Handle<EnvProbe>& probe = envProbeCollection.GetEnvProbeDirect(indirectIndex);
-                AssertThrow(probe.IsValid());
+                Assert(probe.IsValid());
 
                 const Vec3f worldPosition = probe->GetRenderResource().GetBufferData().worldPosition.GetXYZ();
 
@@ -719,7 +719,7 @@ void EnvGridRenderer::RenderProbe(FrameBase* frame, const RenderSetup& renderSet
     const EnvProbeCollection& envProbeCollection = envGrid->GetEnvProbeCollection();
 
     const Handle<EnvProbe>& probe = envProbeCollection.GetEnvProbeDirect(probeIndex);
-    AssertThrow(probe.IsValid());
+    Assert(probe.IsValid());
 
     {
         RenderSetup rs = renderSetup;
@@ -773,20 +773,20 @@ void EnvGridRenderer::ComputeEnvProbeIrradiance_SphericalHarmonics(FrameBase* fr
     const ViewOutputTarget& outputTarget = view->GetOutputTarget();
 
     const FramebufferRef& framebuffer = outputTarget.GetFramebuffer();
-    AssertThrow(framebuffer.IsValid());
+    Assert(framebuffer.IsValid());
 
     const EnvGridOptions& options = envGrid->GetOptions();
     const EnvProbeCollection& envProbeCollection = envGrid->GetEnvProbeCollection();
 
     const uint32 gridSlot = probe->m_gridSlot;
-    AssertThrow(gridSlot != ~0u);
+    Assert(gridSlot != ~0u);
 
     AttachmentBase* colorAttachment = framebuffer->GetAttachment(0);
     AttachmentBase* normalsAttachment = framebuffer->GetAttachment(1);
     AttachmentBase* depthAttachment = framebuffer->GetAttachment(2);
 
     const Vec2u cubemapDimensions = colorAttachment->GetImage()->GetExtent().GetXY();
-    AssertThrow(cubemapDimensions.Volume() > 0);
+    Assert(cubemapDimensions.Volume() > 0);
 
     struct
     {
@@ -877,9 +877,9 @@ void EnvGridRenderer::ComputeEnvProbeIrradiance_SphericalHarmonics(FrameBase* fr
                 MathUtil::Max(1u, shNumSamples.y >> i)
             };
 
-            AssertThrow(prevDimensions.x >= 2);
-            AssertThrow(prevDimensions.x > nextDimensions.x);
-            AssertThrow(prevDimensions.y > nextDimensions.y);
+            Assert(prevDimensions.x >= 2);
+            Assert(prevDimensions.x > nextDimensions.x);
+            Assert(prevDimensions.y > nextDimensions.y);
 
             pushConstants.levelDimensions = {
                 prevDimensions.x,
@@ -972,12 +972,12 @@ void EnvGridRenderer::ComputeEnvProbeIrradiance_LightField(FrameBase* frame, con
     const ViewOutputTarget& outputTarget = view->GetOutputTarget();
 
     const FramebufferRef& framebuffer = outputTarget.GetFramebuffer();
-    AssertThrow(framebuffer.IsValid());
+    Assert(framebuffer.IsValid());
 
     RenderProxyList& rpl = RenderApi_GetConsumerProxyList(view);
 
     RenderProxyEnvGrid* proxy = static_cast<RenderProxyEnvGrid*>(RenderApi_GetRenderProxy(envGrid->Id()));
-    AssertThrow(proxy != nullptr, "EnvGrid render proxy not found!");
+    Assert(proxy != nullptr, "EnvGrid render proxy not found!");
 
     const Vec2i irradianceOctahedronSize = proxy->bufferData.irradianceOctahedronSize;
 
@@ -1097,7 +1097,7 @@ void EnvGridRenderer::OffsetVoxelGrid(FrameBase* frame, const RenderSetup& rende
     EnvGridPassData* pd = static_cast<EnvGridPassData*>(FetchViewPassData(view));
     AssertDebug(pd != nullptr);
 
-    AssertThrow(envGrid->GetVoxelGridTexture().IsValid());
+    Assert(envGrid->GetVoxelGridTexture().IsValid());
 
     struct
     {
@@ -1148,12 +1148,12 @@ void EnvGridRenderer::VoxelizeProbe(FrameBase* frame, const RenderSetup& renderS
     AssertDebug(outputTarget.IsValid());
 
     const FramebufferRef& framebuffer = outputTarget.GetFramebuffer();
-    AssertThrow(framebuffer.IsValid());
+    Assert(framebuffer.IsValid());
 
     const EnvGridOptions& options = envGrid->GetOptions();
     const EnvProbeCollection& envProbeCollection = envGrid->GetEnvProbeCollection();
 
-    AssertThrow(envGrid->GetVoxelGridTexture().IsValid());
+    Assert(envGrid->GetVoxelGridTexture().IsValid());
 
     const Vec3u& voxelGridTextureExtent = envGrid->GetVoxelGridTexture()->GetRenderResource().GetImage()->GetExtent();
 
@@ -1161,8 +1161,8 @@ void EnvGridRenderer::VoxelizeProbe(FrameBase* frame, const RenderSetup& renderS
     const Vec3u probeVoxelExtent = voxelGridTextureExtent / options.density;
 
     const Handle<EnvProbe>& probe = envProbeCollection.GetEnvProbeDirect(probeIndex);
-    AssertThrow(probe.IsValid());
-    AssertThrow(probe->IsReady());
+    Assert(probe.IsValid());
+    Assert(probe->IsReady());
 
     const ImageRef& colorImage = framebuffer->GetAttachment(0)->GetImage();
     const Vec3u cubemapDimensions = colorImage->GetExtent();

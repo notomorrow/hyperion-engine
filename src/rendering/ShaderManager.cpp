@@ -69,7 +69,7 @@ ShaderRef ShaderManager::GetOrCreate(const ShaderDefinition& definition)
         while (entry->state.Get(MemoryOrder::SEQUENTIAL) == ShaderMapEntry::State::LOADING)
         {
             // sanity check - should never happen
-            AssertThrow(entry->loadingThreadId != Threads::CurrentThreadId());
+            Assert(entry->loadingThreadId != Threads::CurrentThreadId());
 
             if (numSpins == maxSpins)
             {
@@ -146,7 +146,7 @@ ShaderRef ShaderManager::GetOrCreate(const ShaderDefinition& definition)
         isValidCompiledShader &= g_shaderCompiler->GetCompiledShader(definition.GetName(), definition.GetProperties(), *compiledShader);
         isValidCompiledShader &= compiledShader->GetDefinition().IsValid();
 
-        AssertThrowMsg(
+        Assert(
             isValidCompiledShader,
             "Failed to get compiled shader with name %s and props hash %llu!\n",
             definition.GetName().LookupString(),
@@ -155,7 +155,7 @@ ShaderRef ShaderManager::GetOrCreate(const ShaderDefinition& definition)
         shader = g_renderBackend->MakeShader(std::move(compiledShader));
 
 #ifdef HYP_DEBUG_MODE
-        AssertThrow(ensureContainsProperties(definition.GetProperties(), shader->GetCompiledShader()->GetDefinition().GetProperties()));
+        Assert(ensureContainsProperties(definition.GetProperties(), shader->GetCompiledShader()->GetDefinition().GetProperties()));
 #endif
 
         DeferCreate(shader);

@@ -49,7 +49,7 @@ void CrashHandler::Initialize()
         [](const void* dump, const uint32 size, void*)
         {
             GFSDK_Aftermath_CrashDump_Status status = GFSDK_Aftermath_CrashDump_Status_Unknown;
-            AssertThrow(GFSDK_Aftermath_GetCrashDumpStatus(&status) == GFSDK_Aftermath_Result_Success);
+            Assert(GFSDK_Aftermath_GetCrashDumpStatus(&status) == GFSDK_Aftermath_Result_Success);
 
             const auto start = std::chrono::steady_clock::now();
             auto elapsed = std::chrono::milliseconds::zero();
@@ -60,17 +60,17 @@ void CrashHandler::Initialize()
             {
                 // Sleep a couple of milliseconds and poll the status again.
                 std::this_thread::sleep_for(std::chrono::milliseconds(50));
-                AssertThrow(GFSDK_Aftermath_GetCrashDumpStatus(&status) == GFSDK_Aftermath_Result_Success);
+                Assert(GFSDK_Aftermath_GetCrashDumpStatus(&status) == GFSDK_Aftermath_Result_Success);
 
                 elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start);
             }
 
             GFSDK_Aftermath_GpuCrashDump_Decoder decoder = {};
-            AssertThrow(GFSDK_Aftermath_GpuCrashDump_CreateDecoder(
-                            GFSDK_Aftermath_Version_API,
-                            dump,
-                            size,
-                            &decoder)
+            Assert(GFSDK_Aftermath_GpuCrashDump_CreateDecoder(
+                       GFSDK_Aftermath_Version_API,
+                       dump,
+                       size,
+                       &decoder)
                 == GFSDK_Aftermath_Result_Success);
 
             // Query GPU page fault information.
@@ -160,7 +160,7 @@ void CrashHandler::Initialize()
         [](const void* info, const uint32 size, void*)
         {
             GFSDK_Aftermath_ShaderDebugInfoIdentifier identifier = {};
-            AssertThrow(GFSDK_Aftermath_GetShaderDebugInfoIdentifier(GFSDK_Aftermath_Version_API, info, size, &identifier) == GFSDK_Aftermath_Result_Success);
+            Assert(GFSDK_Aftermath_GetShaderDebugInfoIdentifier(GFSDK_Aftermath_Version_API, info, size, &identifier) == GFSDK_Aftermath_Result_Success);
 
             std::stringstream ss;
             ss << std::hex << std::setfill('0') << std::setw(2 * sizeof(uint64)) << identifier.id[0];
@@ -190,7 +190,7 @@ void CrashHandler::Initialize()
         },
         nullptr);
 
-    AssertThrow(res == GFSDK_Aftermath_Result_Success);
+    Assert(res == GFSDK_Aftermath_Result_Success);
 #endif
 }
 
@@ -205,7 +205,7 @@ void CrashHandler::HandleGPUCrash(RendererResult result)
 
 #if defined(HYP_AFTERMATH) && HYP_AFTERMATH
     GFSDK_Aftermath_CrashDump_Status status = GFSDK_Aftermath_CrashDump_Status_Unknown;
-    AssertThrow(GFSDK_Aftermath_GetCrashDumpStatus(&status) == GFSDK_Aftermath_Result_Success);
+    Assert(GFSDK_Aftermath_GetCrashDumpStatus(&status) == GFSDK_Aftermath_Result_Success);
 
     const auto start = std::chrono::steady_clock::now();
     auto elapsed = std::chrono::milliseconds::zero();
@@ -216,7 +216,7 @@ void CrashHandler::HandleGPUCrash(RendererResult result)
     {
         // Sleep a couple of milliseconds and poll the status again.
         std::this_thread::sleep_for(std::chrono::milliseconds(50));
-        AssertThrow(GFSDK_Aftermath_GetCrashDumpStatus(&status) == GFSDK_Aftermath_Result_Success);
+        Assert(GFSDK_Aftermath_GetCrashDumpStatus(&status) == GFSDK_Aftermath_Result_Success);
 
         elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start);
     }

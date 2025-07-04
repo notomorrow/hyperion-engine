@@ -34,7 +34,7 @@ VulkanRenderPass::VulkanRenderPass(RenderPassStage stage, RenderPassMode mode, u
 
 VulkanRenderPass::~VulkanRenderPass()
 {
-    AssertThrowMsg(m_handle == VK_NULL_HANDLE, "handle should have been destroyed");
+    HYP_GFX_ASSERT(m_handle == VK_NULL_HANDLE, "handle should have been destroyed");
 }
 
 void VulkanRenderPass::CreateDependencies()
@@ -73,7 +73,7 @@ void VulkanRenderPass::CreateDependencies()
 
         break;
     default:
-        AssertThrowMsg(0, "Unsupported stage type %d", m_stage);
+        HYP_GFX_ASSERT(0, "Unsupported stage type %d", m_stage);
     }
 }
 
@@ -206,7 +206,7 @@ RendererResult VulkanRenderPass::Destroy()
 
 void VulkanRenderPass::Begin(VulkanCommandBuffer* cmd, VulkanFramebuffer* framebuffer, uint32 frameIndex)
 {
-    AssertThrow(framebuffer != nullptr);
+    HYP_GFX_ASSERT(framebuffer != nullptr);
 
     VkRenderPassBeginInfo renderPassInfo { VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO };
     renderPassInfo.renderPass = m_handle;

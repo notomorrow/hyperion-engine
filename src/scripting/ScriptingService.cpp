@@ -29,10 +29,10 @@ public:
         }
 
         RC<dotnet::Assembly> managedAssembly = dotnet::DotNetSystem::GetInstance().LoadAssembly("HyperionScripting.dll");
-        AssertThrowMsg(managedAssembly != nullptr, "Failed to load HyperionScripting assembly");
+        Assert(managedAssembly != nullptr, "Failed to load HyperionScripting assembly");
 
         RC<dotnet::Class> classPtr = managedAssembly->FindClassByName("ScriptTracker");
-        AssertThrowMsg(classPtr != nullptr, "Failed to load ScriptTracker class from HyperionScripting assembly");
+        Assert(classPtr != nullptr, "Failed to load ScriptTracker class from HyperionScripting assembly");
 
         m_object = UniquePtr<dotnet::Object>(classPtr->NewObject());
         m_assembly = std::move(managedAssembly);
@@ -50,7 +50,7 @@ public:
             return;
         }
 
-        AssertThrowMsg(m_object != nullptr && m_object->IsValid(), "Cannot call InvokeUpdate(), ScriptTracker is not properly initialized");
+        Assert(m_object != nullptr && m_object->IsValid(), "Cannot call InvokeUpdate(), ScriptTracker is not properly initialized");
 
         m_object->InvokeMethodByName<void>("Update");
     }

@@ -2,6 +2,9 @@
 
 #include <core/debug/Debug.hpp>
 
+#include <core/logging/Logger.hpp>
+#include <core/logging/LogChannels.hpp>
+
 #include <cstdio>
 #include <cstdarg>
 #include <type_traits>
@@ -20,6 +23,9 @@
 
 namespace hyperion {
 namespace debug {
+
+HYP_API char g_errorStringBuf[4096];
+HYP_API char* g_errorStringBufPtr = &g_errorStringBuf[0];
 
 static const char* g_logTypeTable[] = {
     "INFO",
@@ -112,6 +118,11 @@ HYP_API bool IsDebuggerAttached()
     // P_TRACED flag is set when a debugger is tracing the process.
     return (info.kp_proc.p_flag & P_TRACED) != 0;
 #endif
+}
+
+HYP_API void LogAssert(const char* str)
+{
+    HYP_LOG_DYNAMIC(Core, Error, str);
 }
 
 } // namespace debug

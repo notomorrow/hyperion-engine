@@ -127,11 +127,14 @@ constexpr LogCategory Fatal()
     return LogCategory(LogLevel::FATAL, 1, LogCategory::LCF_FATAL);
 }
 
-template <LogCategory Category, auto FunctionNameString, auto FormatString, class... Args>
-static inline void LogDynamicChannel(Logger& logger, const LogChannel& channel, Args&&... args);
+template <LogCategory Category, auto ChannelArg, auto FormatString, class... Args>
+inline void LogStatic(Logger& logger, Args&&... args);
 
-template <LogCategory Category, auto ChannelArg, auto FunctionNameString, auto FormatString, class... Args>
-static inline void Log_Internal(Logger& logger, Args&&... args);
+template <LogCategory Category, auto FormatString, class... Args>
+inline void LogStatic_Channel(Logger& logger, const LogChannel& channel, Args&&... args);
+
+template <LogCategory Category, auto ChannelArg>
+inline void LogDynamic(Logger& logger, const char* str);
 
 HYP_API extern Logger& GetLogger();
 
@@ -140,6 +143,7 @@ HYP_API extern Logger& GetLogger();
 using logging::LogChannel;
 
 HYP_DECLARE_LOG_CHANNEL(Misc);
+HYP_DECLARE_LOG_CHANNEL(Core);
 
 } // namespace hyperion
 
@@ -148,11 +152,14 @@ HYP_DECLARE_LOG_CHANNEL(Misc);
 #endif
 
 #define HYP_LOG(channel, category, fmt, ...) \
-    hyperion::logging::Log_Internal<hyperion::logging::category(), HYP_MAKE_CONST_ARG(&Log_##channel), HYP_STATIC_STRING(HYP_FUNCTION_NAME_LIT), HYP_STATIC_STRING(fmt "\n")>(hyperion::logging::GetLogger(), ##__VA_ARGS__)
+    hyperion::logging::LogStatic<hyperion::logging::category(), HYP_MAKE_CONST_ARG(&Log_##channel), HYP_STATIC_STRING(fmt "\n")>(hyperion::logging::GetLogger(), ##__VA_ARGS__)
+
+#define HYP_LOG_DYNAMIC(channel, category, str) \
+    hyperion::logging::LogDynamic<hyperion::logging::category(), HYP_MAKE_CONST_ARG(&Log_##channel)>(hyperion::logging::GetLogger(), str)
 
 #ifdef HYP_DEBUG_MODE
 #define HYP_LOG_TEMP(fmt, ...) \
-    hyperion::logging::Log_Internal<hyperion::logging::Debug(), HYP_MAKE_CONST_ARG(&Log_Misc), HYP_STATIC_STRING(HYP_FUNCTION_NAME_LIT), HYP_STATIC_STRING(fmt "\n")>(hyperion::logging::GetLogger(), ##__VA_ARGS__)
+    hyperion::logging::LogStatic<hyperion::logging::Debug(), HYP_MAKE_CONST_ARG(&Log_Misc), HYP_STATIC_STRING(fmt "\n")>(hyperion::logging::GetLogger(), ##__VA_ARGS__)
 #else
 #define HYP_LOG_TEMP(fmt, ...)
 #endif

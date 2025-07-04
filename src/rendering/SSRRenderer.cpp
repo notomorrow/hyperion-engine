@@ -60,9 +60,9 @@ struct RENDER_COMMAND(CreateSSRUniformBuffer)
         : uniforms(uniforms),
           uniformBuffer(uniformBuffer)
     {
-        AssertThrow(uniforms.dimensions.x * uniforms.dimensions.y != 0);
+        Assert(uniforms.dimensions.x * uniforms.dimensions.y != 0);
 
-        AssertThrow(this->uniformBuffer != nullptr);
+        Assert(this->uniformBuffer != nullptr);
     }
 
     virtual ~RENDER_COMMAND(CreateSSRUniformBuffer)() override = default;
@@ -218,7 +218,7 @@ void SSRRenderer::CreateComputePipelines()
     // Write UVs pass
 
     ShaderRef writeUvsShader = g_shaderManager->GetOrCreate(NAME("SSRWriteUVs"), shaderProperties);
-    AssertThrow(writeUvsShader.IsValid());
+    Assert(writeUvsShader.IsValid());
 
     const DescriptorTableDeclaration& writeUvsShaderDescriptorTableDecl = writeUvsShader->GetCompiledShader()->GetDescriptorTableDeclaration();
     DescriptorTableRef writeUvsShaderDescriptorTable = g_renderBackend->MakeDescriptorTable(&writeUvsShaderDescriptorTableDecl);
@@ -226,7 +226,7 @@ void SSRRenderer::CreateComputePipelines()
     for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
     {
         const DescriptorSetRef& descriptorSet = writeUvsShaderDescriptorTable->GetDescriptorSet(NAME("SSRDescriptorSet"), frameIndex);
-        AssertThrow(descriptorSet != nullptr);
+        Assert(descriptorSet != nullptr);
 
         descriptorSet->SetElement(NAME("UVImage"), m_uvsTexture->GetRenderResource().GetImageView());
         descriptorSet->SetElement(NAME("UniformBuffer"), m_uniformBuffer);
@@ -250,7 +250,7 @@ void SSRRenderer::CreateComputePipelines()
     // Sample pass
 
     ShaderRef sampleGbufferShader = g_shaderManager->GetOrCreate(NAME("SSRSampleGBuffer"), shaderProperties);
-    AssertThrow(sampleGbufferShader.IsValid());
+    Assert(sampleGbufferShader.IsValid());
 
     const DescriptorTableDeclaration& sampleGbufferShaderDescriptorTableDecl = sampleGbufferShader->GetCompiledShader()->GetDescriptorTableDeclaration();
     DescriptorTableRef sampleGbufferShaderDescriptorTable = g_renderBackend->MakeDescriptorTable(&sampleGbufferShaderDescriptorTableDecl);
@@ -258,7 +258,7 @@ void SSRRenderer::CreateComputePipelines()
     for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
     {
         const DescriptorSetRef& descriptorSet = sampleGbufferShaderDescriptorTable->GetDescriptorSet(NAME("SSRDescriptorSet"), frameIndex);
-        AssertThrow(descriptorSet != nullptr);
+        Assert(descriptorSet != nullptr);
 
         descriptorSet->SetElement(NAME("UVImage"), m_uvsTexture->GetRenderResource().GetImageView());
         descriptorSet->SetElement(NAME("SampleImage"), m_sampledResultTexture->GetRenderResource().GetImageView());
@@ -314,7 +314,7 @@ void SSRRenderer::Render(FrameBase* frame, const RenderSetup& renderSetup)
 
         if (viewDescriptorSetIndex != ~0u)
         {
-            AssertThrow(renderSetup.passData != nullptr);
+            Assert(renderSetup.passData != nullptr);
 
             frame->GetCommandList().Add<BindDescriptorSet>(
                 renderSetup.passData->descriptorSets[frame->GetFrameIndex()],
@@ -348,7 +348,7 @@ void SSRRenderer::Render(FrameBase* frame, const RenderSetup& renderSetup)
 
         if (viewDescriptorSetIndex != ~0u)
         {
-            AssertThrow(renderSetup.passData != nullptr);
+            Assert(renderSetup.passData != nullptr);
 
             frame->GetCommandList().Add<BindDescriptorSet>(
                 renderSetup.passData->descriptorSets[frame->GetFrameIndex()],

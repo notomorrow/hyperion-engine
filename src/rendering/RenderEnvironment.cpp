@@ -96,7 +96,7 @@ void RenderEnvironment::ApplyTLASUpdates(FrameBase* frame, RTUpdateStateFlags fl
     Threads::AssertOnThread(g_renderThread);
 
     static const bool isRaytracingSupported = g_renderBackend->GetRenderConfig().IsRaytracingSupported();
-    AssertThrow(isRaytracingSupported);
+    Assert(isRaytracingSupported);
 
     if (m_hasRtRadiance)
     {
@@ -123,7 +123,7 @@ void RenderEnvironment::RenderDDGIProbes(FrameBase* frame, const RenderSetup& re
 {
     Threads::AssertOnThread(g_renderThread);
 
-    AssertThrow(g_renderBackend->GetRenderConfig().IsRaytracingSupported());
+    Assert(g_renderBackend->GetRenderConfig().IsRaytracingSupported());
 
     if (m_hasDdgiProbes)
     {

@@ -277,7 +277,7 @@ void UIPanel::UpdateScrollbarSize(ScrollAxis axis)
         HYP_UNREACHABLE();
     }
 
-    AssertThrow(scrollbar != nullptr);
+    Assert(scrollbar != nullptr);
 
     Handle<UIObject> thumb = scrollbar->FindChildUIObject("ScrollbarThumb", /* deep */ false);
 
@@ -294,56 +294,56 @@ void UIPanel::UpdateScrollbarSize(ScrollAxis axis)
 
         thumb->OnMouseDown
             .Bind([this, axis, thumbWeak = thumb.ToWeak()](const MouseEvent& eventData) -> UIEventHandlerResult
-            {
-                if (Handle<UIObject> thumb = thumbWeak.Lock())
                 {
-                    const int i = ScrollAxisToIndex(axis);
-                    AssertThrow(i != -1);
+                    if (Handle<UIObject> thumb = thumbWeak.Lock())
+                    {
+                        const int i = ScrollAxisToIndex(axis);
+                        Assert(i != -1);
 
-                    m_initialDragPosition[i] = Vec2i(eventData.position * Vec2f(thumb->GetActualSize()));
-                }
+                        m_initialDragPosition[i] = Vec2i(eventData.position * Vec2f(thumb->GetActualSize()));
+                    }
 
-                return UIEventHandlerResult::STOP_BUBBLING;
-            })
+                    return UIEventHandlerResult::STOP_BUBBLING;
+                })
             .Detach();
 
         thumb->OnMouseUp
             .Bind([this, axis](const MouseEvent& eventData) -> UIEventHandlerResult
-            {
-                const int i = ScrollAxisToIndex(axis);
-                AssertThrow(i != -1);
+                {
+                    const int i = ScrollAxisToIndex(axis);
+                    Assert(i != -1);
 
-                m_initialDragPosition[i] = Vec2i::Zero();
+                    m_initialDragPosition[i] = Vec2i::Zero();
 
-                return UIEventHandlerResult::STOP_BUBBLING;
-            })
+                    return UIEventHandlerResult::STOP_BUBBLING;
+                })
             .Detach();
 
         thumb->OnMouseDrag
             .Bind([this, axis, scrollbarWeak = scrollbar.ToWeak(), thumbWeak = thumb.ToWeak()](const MouseEvent& eventData) -> UIEventHandlerResult
-            {
-                if (CanScrollOnAxis(axis))
                 {
-                    Handle<UIObject> thumb = thumbWeak.Lock();
-                    Handle<UIObject> scrollbar = scrollbarWeak.Lock();
-
-                    if (thumb != nullptr && scrollbar != nullptr)
+                    if (CanScrollOnAxis(axis))
                     {
-                        const int i = ScrollAxisToIndex(axis);
-                        AssertThrow(i != -1);
+                        Handle<UIObject> thumb = thumbWeak.Lock();
+                        Handle<UIObject> scrollbar = scrollbarWeak.Lock();
 
-                        const Vec2f mousePositionRelative = Vec2f(eventData.absolutePosition - m_initialDragPosition[i]) - scrollbar->GetAbsolutePosition();
-                        const float mouseRelevantPosition = mousePositionRelative[i];
+                        if (thumb != nullptr && scrollbar != nullptr)
+                        {
+                            const int i = ScrollAxisToIndex(axis);
+                            Assert(i != -1);
 
-                        Vec2f ratios;
-                        ratios[i] = mouseRelevantPosition / float(scrollbar->GetActualSize()[i]);
+                            const Vec2f mousePositionRelative = Vec2f(eventData.absolutePosition - m_initialDragPosition[i]) - scrollbar->GetAbsolutePosition();
+                            const float mouseRelevantPosition = mousePositionRelative[i];
 
-                        SetScrollOffset(Vec2i(Vec2f(GetActualInnerSize()) * ratios), /* smooth */ false);
+                            Vec2f ratios;
+                            ratios[i] = mouseRelevantPosition / float(scrollbar->GetActualSize()[i]);
+
+                            SetScrollOffset(Vec2i(Vec2f(GetActualInnerSize()) * ratios), /* smooth */ false);
+                        }
                     }
-                }
 
-                return UIEventHandlerResult::STOP_BUBBLING;
-            })
+                    return UIEventHandlerResult::STOP_BUBBLING;
+                })
             .Detach();
 
         scrollbar->AddChildUIObject(thumb);

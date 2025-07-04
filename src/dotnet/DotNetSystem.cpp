@@ -170,7 +170,7 @@ public:
             HYP_TEXT("InitializeRuntime"),
             UNMANAGEDCALLERSONLY_METHOD);
 
-        AssertThrowMsg(
+        Assert(
             m_initializeRuntimeFptr != nullptr,
             "InitializeRuntime could not be found in HyperionInterop.dll! Ensure .NET libraries are properly compiled.");
 
@@ -180,7 +180,7 @@ public:
             HYP_TEXT("InitializeAssembly"),
             UNMANAGEDCALLERSONLY_METHOD);
 
-        AssertThrowMsg(
+        Assert(
             m_initializeAssemblyFptr != nullptr,
             "InitializeAssembly could not be found in HyperionInterop.dll! Ensure .NET libraries are properly compiled.");
 
@@ -190,7 +190,7 @@ public:
             HYP_TEXT("UnloadAssembly"),
             UNMANAGEDCALLERSONLY_METHOD);
 
-        AssertThrowMsg(
+        Assert(
             m_unloadAssemblyFptr != nullptr,
             "UnloadAssembly could not be found in HyperionInterop.dll! Ensure .NET libraries are properly compiled.");
 
@@ -394,7 +394,7 @@ private:
 
     bool InitDotNetRuntime()
     {
-        AssertThrow(m_cxt == nullptr);
+        Assert(m_cxt == nullptr);
 
         HYP_LOG(DotNET, Debug, "Initializing .NET runtime");
 
@@ -422,7 +422,7 @@ private:
 
     bool ShutdownDotNetRuntime()
     {
-        AssertThrow(m_cxt != nullptr);
+        Assert(m_cxt != nullptr);
 
         HYP_LOG(DotNET, Debug, "Shutting down .NET runtime");
 
@@ -524,7 +524,7 @@ bool DotNetSystem::EnsureInitialized() const
         return false;
     }
 
-    AssertThrow(m_impl != nullptr);
+    Assert(m_impl != nullptr);
 
     return true;
 }
@@ -593,7 +593,7 @@ void DotNetSystem::Initialize(const FilePath& basePath)
 
     HYP_NAMED_SCOPE("Initialize .NET System");
 
-    AssertThrow(m_impl == nullptr);
+    Assert(m_impl == nullptr);
 
     m_impl = MakeRefCountedPtr<DotNetImpl>();
     m_impl->Initialize(basePath);

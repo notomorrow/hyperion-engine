@@ -68,8 +68,8 @@ struct EnvProbeCollection
 
     HYP_FORCE_INLINE void SetIndexOnGameThread(uint32 index, uint32 newIndex)
     {
-        AssertThrow(index < maxBoundAmbientProbes);
-        AssertThrow(newIndex < maxBoundAmbientProbes);
+        Assert(index < maxBoundAmbientProbes);
+        Assert(newIndex < maxBoundAmbientProbes);
 
         indirectIndices[index] = newIndex;
     }
@@ -91,8 +91,8 @@ struct EnvProbeCollection
 
     HYP_FORCE_INLINE void SetIndexOnRenderThread(uint32 index, uint32 newIndex)
     {
-        AssertThrow(index < maxBoundAmbientProbes);
-        AssertThrow(newIndex < maxBoundAmbientProbes);
+        Assert(index < maxBoundAmbientProbes);
+        Assert(newIndex < maxBoundAmbientProbes);
 
         indirectIndices[maxBoundAmbientProbes + index] = newIndex;
     }

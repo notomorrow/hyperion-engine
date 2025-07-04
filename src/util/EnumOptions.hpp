@@ -236,7 +236,7 @@ public:
     EnumOptions& Set(EnumType enumKey, ValueType&& value)
     {
         OrdinalType ord = EnumToOrdinal(enumKey);
-        AssertThrow(ord < Sz);
+        Assert(ord < Sz);
 
         Base::m_values[ord] = std::move(value);
 
@@ -246,7 +246,7 @@ public:
     EnumOptions& Set(EnumType enumKey, const ValueType& value)
     {
         OrdinalType ord = EnumToOrdinal(enumKey);
-        AssertThrow(ord < Size());
+        Assert(ord < Size());
 
         Base::m_values[ord] = value;
 
@@ -256,7 +256,7 @@ public:
     EnumOptions& Unset(EnumType enumKey)
     {
         OrdinalType ord = EnumToOrdinal(enumKey);
-        AssertThrow(ord < Sz);
+        Assert(ord < Sz);
 
         Base::m_values[ord] = {};
 

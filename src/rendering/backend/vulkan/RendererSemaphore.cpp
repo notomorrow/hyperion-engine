@@ -22,7 +22,7 @@ VulkanSemaphore::VulkanSemaphore(VkPipelineStageFlags pipelineStage)
 
 VulkanSemaphore::~VulkanSemaphore()
 {
-    AssertThrowMsg(m_semaphore == nullptr, "semaphore should have been destroyed");
+    HYP_GFX_ASSERT(m_semaphore == nullptr, "semaphore should have been destroyed");
 }
 
 RendererResult VulkanSemaphore::Create()
@@ -76,14 +76,14 @@ VulkanSemaphoreChain::VulkanSemaphoreChain(
 
 VulkanSemaphoreChain::~VulkanSemaphoreChain()
 {
-    AssertThrowMsg(
+    HYP_GFX_ASSERT(
         std::all_of(m_signalSemaphores.begin(), m_signalSemaphores.end(), [](const VulkanSignalSemaphore& semaphore)
             {
                 return semaphore.m_ref == nullptr;
             }),
         "All semaphores must have ref counts decremented via Destroy() before destructor call");
 
-    AssertThrowMsg(
+    HYP_GFX_ASSERT(
         std::all_of(m_waitSemaphores.begin(), m_waitSemaphores.end(), [](const VulkanWaitSemaphore& semaphore)
             {
                 return semaphore.m_ref == nullptr;
@@ -132,7 +132,7 @@ RendererResult VulkanSemaphoreChain::Destroy()
             HYPERION_PASS_ERRORS(ref->semaphore.Destroy(), result);
 
             auto it = s_refs.find(ref);
-            AssertThrow(it != s_refs.end());
+            HYP_GFX_ASSERT(it != s_refs.end());
 
             delete *it;
             s_refs.erase(it);

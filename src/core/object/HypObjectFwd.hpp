@@ -231,7 +231,7 @@ struct HypObjectInitializerGuard : HypObjectInitializerGuardBase
         using HypObjectType = typename IsHypObject<T>::Type;
         static const HypClass* hypClass = GetClass(TypeId::ForType<HypObjectType>());
 
-        AssertThrowMsg(hypClass != nullptr, "HypClass not registered for type %s", TypeNameWithoutNamespace<T>().Data());
+        HYP_CORE_ASSERT(hypClass != nullptr, "HypClass not registered for type %s", TypeNameWithoutNamespace<T>().Data());
 
         return hypClass;
     }

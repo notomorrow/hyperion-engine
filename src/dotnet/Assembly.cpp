@@ -53,7 +53,7 @@ bool Assembly::Unload()
 
         if (const HypClass* hypClass = classObject->GetHypClass())
         {
-            AssertThrowMsg(hypClass->GetManagedClass() == classObject, "HypClass '%s' does not match the expected managed class '%s'", *hypClass->GetName(), *classObject->GetName());
+            Assert(hypClass->GetManagedClass() == classObject, "HypClass '%s' does not match the expected managed class '%s'", *hypClass->GetName(), *classObject->GetName());
 
             hypClass->SetManagedClass(nullptr);
         }

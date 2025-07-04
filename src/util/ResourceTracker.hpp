@@ -315,8 +315,8 @@ public:
         }
 
         const int subclassIndex = GetSubclassIndex(m_impl.typeId, typeId);
-        AssertDebugMsg(subclassIndex >= 0, "Invalid subclass index");
-        AssertDebugMsg(subclassIndex < m_subclassImpls.Size(), "Invalid subclass index");
+        AssertDebug(subclassIndex >= 0, "Invalid subclass index");
+        AssertDebug(subclassIndex < m_subclassImpls.Size(), "Invalid subclass index");
 
         if (m_subclassImplsInitialized.Test(subclassIndex))
         {
@@ -336,8 +336,8 @@ public:
         }
 
         const int subclassIndex = GetSubclassIndex(m_impl.typeId, typeId);
-        AssertDebugMsg(subclassIndex >= 0, "Invalid subclass index");
-        AssertDebugMsg(subclassIndex < m_subclassImpls.Size(), "Invalid subclass index");
+        AssertDebug(subclassIndex >= 0, "Invalid subclass index");
+        AssertDebug(subclassIndex < m_subclassImpls.Size(), "Invalid subclass index");
 
         if (m_subclassImplsInitialized.Test(subclassIndex))
         {
@@ -402,8 +402,8 @@ public:
         }
 
         const int subclassIndex = GetSubclassIndex(m_impl.typeId, typeId);
-        AssertDebugMsg(subclassIndex >= 0, "Invalid subclass index");
-        AssertDebugMsg(subclassIndex < m_subclassImpls.Size(), "Invalid subclass index");
+        AssertDebug(subclassIndex >= 0, "Invalid subclass index");
+        AssertDebug(subclassIndex < m_subclassImpls.Size(), "Invalid subclass index");
 
         if (!m_subclassImplsInitialized.Test(subclassIndex))
         {
@@ -426,8 +426,8 @@ public:
         }
 
         const int subclassIndex = GetSubclassIndex(m_impl.typeId, typeId);
-        AssertDebugMsg(subclassIndex >= 0, "Invalid subclass index");
-        AssertDebugMsg(subclassIndex < m_subclassImpls.Size(), "Invalid subclass index");
+        AssertDebug(subclassIndex >= 0, "Invalid subclass index");
+        AssertDebug(subclassIndex < m_subclassImpls.Size(), "Invalid subclass index");
 
         if (!m_subclassImplsInitialized.Test(subclassIndex))
         {
@@ -449,8 +449,8 @@ public:
         }
 
         const int subclassIndex = GetSubclassIndex(m_impl.typeId, typeId);
-        AssertDebugMsg(subclassIndex >= 0, "Invalid subclass index");
-        AssertDebugMsg(subclassIndex < m_subclassImpls.Size(), "Invalid subclass index");
+        AssertDebug(subclassIndex >= 0, "Invalid subclass index");
+        AssertDebug(subclassIndex < m_subclassImpls.Size(), "Invalid subclass index");
 
         if (!m_subclassImplsInitialized.Test(subclassIndex))
         {
@@ -602,8 +602,8 @@ public:
         }
 
         const int subclassIndex = GetSubclassIndex(m_impl.typeId, typeId);
-        AssertDebugMsg(subclassIndex >= 0, "Invalid subclass index");
-        AssertDebugMsg(subclassIndex < m_subclassImpls.Size(), "Invalid subclass index");
+        AssertDebug(subclassIndex >= 0, "Invalid subclass index");
+        AssertDebug(subclassIndex < m_subclassImpls.Size(), "Invalid subclass index");
 
         if (!m_subclassImplsInitialized.Test(subclassIndex))
         {
@@ -643,7 +643,7 @@ protected:
         /*! \brief Checks if it already has a proxy for the given Id from the previous frame */
         HYP_FORCE_INLINE bool HasElement(IdType id) const
         {
-            AssertDebugMsg(id.GetTypeId() == typeId, "ResourceTracker typeid mismatch");
+            AssertDebug(id.GetTypeId() == typeId, "ResourceTracker typeid mismatch");
 
             return previous.Test(id.ToIndex());
         }
@@ -681,7 +681,7 @@ protected:
 
             if (!allowDuplicatesInSameFrame)
             {
-                AssertThrow(!next.Test(id.ToIndex()), "Id #%u already marked to be added for this iteration!", id.Value());
+                AssertDebug(!next.Test(id.ToIndex()), "Element with ID: {} already marked to be added for this iteration!", id);
             }
 
             if (previous.Test(id.ToIndex()) || next.Test(id.ToIndex()))

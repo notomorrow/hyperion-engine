@@ -4,15 +4,14 @@
 #define HYPERION_DEBUG_HPP
 
 #include <core/Defines.hpp>
-#include <core/logging/LoggerFwd.hpp>
 
 #include <csignal>
+#include <cstdio>
 
 namespace hyperion {
-
-HYP_DECLARE_LOG_CHANNEL(Core);
-
 namespace debug {
+
+HYP_API extern char* g_errorStringBufPtr;
 
 enum class LogType : int
 {
@@ -49,10 +48,11 @@ extern HYP_API void WriteToStandardError(const char* msg);
 
 extern HYP_API bool IsDebuggerAttached();
 
+extern HYP_API void LogAssert(const char* str);
+
 } // namespace debug
 
 using debug::LogType;
-
 } // namespace hyperion
 
 #if defined(HYP_USE_EXCEPTIONS) && HYP_USE_EXCEPTIONS
@@ -98,50 +98,63 @@ using debug::LogType;
 
 #define HYP_SELECT_ASSERT(n) HYP_CONCAT(HYP_ASSERT, n)
 
-// #define AssertThrow(...) \
+// #define Assert(...) \
 //     HYP_EXPAND(                                                                 \
 //         HYP_SELECT_ASSERT( HYP_EXPAND( HYP_HAS_ARGS(__VA_ARGS__) ) )            \
 //     )(__VA_ARGS__)
 
 #define HYP_ASSERT0(expr) HYP_ASSERT1(expr, )
 
-#define HYP_ASSERT1(expression, ...)                                                                          \
-    do                                                                                                        \
-    {                                                                                                         \
-        if (HYP_UNLIKELY(!(expression)))                                                                      \
-        {                                                                                                     \
-            HYP_LOG(Core, Error, "Assertion failed!\n\tCondition: " #expression "\n\tMessage: " __VA_ARGS__); \
-            debug::DebugLog_FlushOutputStream();                                                              \
-                                                                                                              \
-            if (debug::IsDebuggerAttached())                                                                  \
-                HYP_BREAKPOINT;                                                                               \
-            else                                                                                              \
-            {                                                                                                 \
-                HYP_PRINT_STACK_TRACE();                                                                      \
-                std::terminate();                                                                             \
-            }                                                                                                 \
-        }                                                                                                     \
-    }                                                                                                         \
+#define HYP_ASSERT1(expression, ...)                                                                              \
+    do                                                                                                            \
+    {                                                                                                             \
+        if (HYP_UNLIKELY(!(expression)))                                                                          \
+        {                                                                                                         \
+            auto format = HYP_FORMAT("Assertion failed!\n\tCondition: " #expression "\n\tMessage: " __VA_ARGS__); \
+            debug::LogAssert(&format[0]);                                                                         \
+            debug::DebugLog_FlushOutputStream();                                                                  \
+                                                                                                                  \
+            if (debug::IsDebuggerAttached())                                                                      \
+                HYP_BREAKPOINT;                                                                                   \
+            else                                                                                                  \
+            {                                                                                                     \
+                HYP_PRINT_STACK_TRACE();                                                                          \
+                std::terminate();                                                                                 \
+            }                                                                                                     \
+        }                                                                                                         \
+    }                                                                                                             \
     while (0)
 
 #if defined(HYP_MSVC) && defined(_MSVC_TRADITIONAL) && _MSVC_TRADITIONAL
 #error "Traditional MSVC mode is not supported. Please use the new MSVC preprocessor."
 #else
-#define AssertThrow(...) HYP_CONCAT(HYP_ASSERT, HYP_HAS_ARGS(__VA_ARGS__))(__VA_ARGS__)
+#define Assert(...) HYP_CONCAT(HYP_ASSERT, HYP_HAS_ARGS(__VA_ARGS__))(__VA_ARGS__)
 #endif
 
 #ifdef HYP_DEBUG_MODE
-#define AssertDebug(...) AssertThrow(__VA_ARGS__)
+#define AssertDebug(...) Assert(__VA_ARGS__)
 #else
 #define AssertDebug(...)
 #endif
 
-#define AssertThrowMsg(...) AssertThrow(__VA_ARGS__)
-
 #ifdef HYP_DEBUG_MODE
-#define AssertDebugMsg(...) AssertThrowMsg(__VA_ARGS__)
+// Assert used for internal Hyperion libraries. Uses a simple printf-style format string, rather than the internal Hyperion formatting library.
+// Opt to use this macro over AssertDebug() and Assert() to not pollute dependency on including logging headers.
+// These assertions are stripped from released builds.
+#define HYP_CORE_ASSERT(cond, ...)                                                                                                                          \
+    do                                                                                                                                                      \
+    {                                                                                                                                                       \
+        if (HYP_UNLIKELY(!(cond)))                                                                                                                          \
+        {                                                                                                                                                   \
+            std::snprintf(debug::g_errorStringBufPtr, 4096, "Assertion failed in Hyperion core library!\n\tCondition: " #cond "\n\tMessage: " __VA_ARGS__); \
+            debug::LogAssert(debug::g_errorStringBufPtr);                                                                                                   \
+            HYP_PRINT_STACK_TRACE();                                                                                                                        \
+            std::terminate();                                                                                                                               \
+        }                                                                                                                                                   \
+    }                                                                                                                                                       \
+    while (0)
 #else
-#define AssertDebugMsg(...)
+#define HYP_CORE_ASSERT(...)
 #endif
 
 #ifdef HYP_DEBUG_MODE
@@ -151,15 +164,16 @@ using debug::LogType;
 #define HYP_PRINT_STACK_TRACE()
 #endif
 
-#define HYP_FAIL(...)                                                                    \
-    do                                                                                   \
-    {                                                                                    \
-        HYP_PRINT_STACK_TRACE();                                                         \
-        HYP_LOG(Core, Error, "\n\nAn engine crash has been triggered!\n\t" __VA_ARGS__); \
-        debug::DebugLog_FlushOutputStream();                                             \
-                                                                                         \
-        std::terminate();                                                                \
-    }                                                                                    \
+#define HYP_FAIL(...)                                                                                               \
+    do                                                                                                              \
+    {                                                                                                               \
+        HYP_PRINT_STACK_TRACE();                                                                                    \
+        std::snprintf(debug::g_errorStringBufPtr, 4096, "\n\nAn engine crash has been triggered!\n\t" __VA_ARGS__); \
+        debug::LogAssert(debug::g_errorStringBufPtr);                                                               \
+        debug::DebugLog_FlushOutputStream();                                                                        \
+                                                                                                                    \
+        std::terminate();                                                                                           \
+    }                                                                                                               \
     while (0)
 
 // Add to the body of virtual methods that should be overridden.
@@ -174,7 +188,7 @@ using debug::LogType;
     }                                                             \
     else                                                          \
     {                                                             \
-        AssertThrow(cond);                                        \
+        Assert(cond);                                             \
     }
 #define AssertStaticMsg(cond, msg) static_assert((cond), "Static assertion failed: " #cond "\n\t" #msg "\n")
 #define AssertStaticMsgCond(useStaticAssert, cond, msg)                            \
@@ -184,7 +198,7 @@ using debug::LogType;
     }                                                                              \
     else                                                                           \
     {                                                                              \
-        AssertThrowMsg(cond, msg);                                                 \
+        Assert(cond, msg);                                                         \
     }
 
 #endif // HYPERION_DEBUG_HPP

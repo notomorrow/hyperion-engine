@@ -4,6 +4,9 @@
 
 #include <core/profiling/ProfileScope.hpp>
 
+#include <core/logging/Logger.hpp>
+#include <core/logging/LogChannels.hpp>
+
 namespace hyperion {
 
 static const float mouseSensitivity = 1.0f;
@@ -17,7 +20,7 @@ static const float movementBlending = 0.01f;
 FirstPersonCameraInputHandler::FirstPersonCameraInputHandler(const WeakHandle<CameraController>& controller)
     : m_controller(WeakHandle<FirstPersonCameraController>(controller))
 {
-    AssertThrowMsg(m_controller.IsValid(), "Null camera controller or not of type FirstPersonCameraInputHandler");
+    Assert(m_controller.IsValid(), "Null camera controller or not of type FirstPersonCameraInputHandler");
 }
 
 bool FirstPersonCameraInputHandler::OnKeyDown_Impl(const KeyboardEvent& evt)

@@ -94,13 +94,13 @@ GraphicsPipelineRef PassData::CreateGraphicsPipeline(
 {
     HYP_SCOPE;
 
-    AssertThrow(pd != nullptr);
+    Assert(pd != nullptr);
 
     Handle<View> view = pd->view.Lock();
-    AssertThrow(view.IsValid());
-    AssertThrow(view->GetOutputTarget().IsValid());
+    Assert(view.IsValid());
+    Assert(view->GetOutputTarget().IsValid());
 
-    AssertThrow(shader.IsValid());
+    Assert(shader.IsValid());
 
     DescriptorTableRef table;
 
@@ -126,10 +126,10 @@ GraphicsPipelineRef PassData::CreateGraphicsPipeline(
             for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
             {
                 const GpuBufferRef& gpuBuffer = impl->GetEntityInstanceBatchHolder()->GetBuffer(frameIndex);
-                AssertThrow(gpuBuffer.IsValid());
+                Assert(gpuBuffer.IsValid());
 
                 const DescriptorSetRef& instancingDescriptorSet = table->GetDescriptorSet(NAME("Instancing"), frameIndex);
-                AssertThrow(instancingDescriptorSet.IsValid());
+                Assert(instancingDescriptorSet.IsValid());
 
                 instancingDescriptorSet->SetElement(NAME("EntityInstanceBatchesBuffer"), gpuBuffer);
             }
@@ -142,7 +142,7 @@ GraphicsPipelineRef PassData::CreateGraphicsPipeline(
         table = descriptorTable;
     }
 
-    AssertThrow(table.IsValid());
+    Assert(table.IsValid());
 
     return g_renderGlobalState->graphicsPipelineCache->GetOrCreate(
         shader,

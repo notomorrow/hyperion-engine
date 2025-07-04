@@ -96,7 +96,7 @@ struct RENDER_COMMAND(CreateParticleSpawnerBuffers)
 
         // copy bytes into noise buffer
         Array<float> unpackedFloats = noiseMap.GetUnpackedFloats();
-        AssertThrow(noiseBuffer->Size() == unpackedFloats.ByteSize());
+        Assert(noiseBuffer->Size() == unpackedFloats.ByteSize());
 
         noiseBuffer->Copy(unpackedFloats.ByteSize(), unpackedFloats.Data());
 
@@ -222,7 +222,7 @@ void ParticleSpawner::CreateBuffers()
 void ParticleSpawner::CreateGraphicsPipeline()
 {
     m_shader = g_shaderManager->GetOrCreate(NAME("Particle"));
-    AssertThrow(m_shader.IsValid());
+    Assert(m_shader.IsValid());
 
     const DescriptorTableDeclaration& descriptorTableDecl = m_shader->GetCompiledShader()->GetDescriptorTableDeclaration();
 
@@ -231,7 +231,7 @@ void ParticleSpawner::CreateGraphicsPipeline()
     for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
     {
         const DescriptorSetRef& descriptorSet = descriptorTable->GetDescriptorSet(NAME("ParticleDescriptorSet"), frameIndex);
-        AssertThrow(descriptorSet != nullptr);
+        Assert(descriptorSet != nullptr);
 
         descriptorSet->SetElement(NAME("ParticlesBuffer"), m_particleBuffer);
         descriptorSet->SetElement(NAME("ParticleTexture"), m_params.texture ? m_params.texture->GetRenderResource().GetImageView() : g_renderGlobalState->placeholderData->GetImageView2D1x1R8());
@@ -264,7 +264,7 @@ void ParticleSpawner::CreateComputePipelines()
     properties.Set("HAS_PHYSICS", m_params.hasPhysics);
 
     ShaderRef updateParticlesShader = g_shaderManager->GetOrCreate(NAME("UpdateParticles"), properties);
-    AssertThrow(updateParticlesShader.IsValid());
+    Assert(updateParticlesShader.IsValid());
 
     const DescriptorTableDeclaration& descriptorTableDecl = updateParticlesShader->GetCompiledShader()->GetDescriptorTableDeclaration();
 
@@ -273,7 +273,7 @@ void ParticleSpawner::CreateComputePipelines()
     for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
     {
         const DescriptorSetRef& descriptorSet = descriptorTable->GetDescriptorSet(NAME("UpdateParticlesDescriptorSet"), frameIndex);
-        AssertThrow(descriptorSet != nullptr);
+        Assert(descriptorSet != nullptr);
 
         descriptorSet->SetElement(NAME("ParticlesBuffer"), m_particleBuffer);
         descriptorSet->SetElement(NAME("IndirectDrawCommandsBuffer"), m_indirectBuffer);
@@ -358,8 +358,8 @@ void ParticleSystem::UpdateParticles(FrameBase* frame, const RenderSetup& render
     {
         const SizeType maxParticles = spawner->GetParams().maxParticles;
 
-        AssertThrow(spawner->GetIndirectBuffer()->Size() == sizeof(IndirectDrawCommand));
-        AssertThrow(spawner->GetParticleBuffer()->Size() >= sizeof(ParticleShaderData) * maxParticles);
+        Assert(spawner->GetIndirectBuffer()->Size() == sizeof(IndirectDrawCommand));
+        Assert(spawner->GetParticleBuffer()->Size() >= sizeof(ParticleShaderData) * maxParticles);
 
         frame->GetCommandList().Add<InsertBarrier>(
             spawner->GetIndirectBuffer(),
@@ -418,7 +418,7 @@ void ParticleSystem::UpdateParticles(FrameBase* frame, const RenderSetup& render
 
         if (viewDescriptorSetIndex != ~0u)
         {
-            AssertThrow(renderSetup.passData != nullptr);
+            Assert(renderSetup.passData != nullptr);
 
             frame->GetCommandList().Add<BindDescriptorSet>(
                 renderSetup.passData->descriptorSets[frame->GetFrameIndex()],
@@ -476,7 +476,7 @@ void ParticleSystem::Render(FrameBase* frame, const RenderSetup& renderSetup)
 
         if (viewDescriptorSetIndex != ~0u)
         {
-            AssertThrow(renderSetup.passData != nullptr);
+            Assert(renderSetup.passData != nullptr);
 
             frame->GetCommandList().Add<BindDescriptorSet>(
                 renderSetup.passData->descriptorSets[frameIndex],

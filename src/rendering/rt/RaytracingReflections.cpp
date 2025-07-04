@@ -159,7 +159,7 @@ void RaytracingReflections::UpdateUniforms(FrameBase* frame, const RenderSetup& 
         const DescriptorSetRef& descriptorSet = m_raytracingPipeline->GetDescriptorTable()
                                                     ->GetDescriptorSet(NAME("RTRadianceDescriptorSet"), frame->GetFrameIndex());
 
-        AssertThrow(descriptorSet.IsValid());
+        Assert(descriptorSet.IsValid());
 
         descriptorSet->Update();
 
@@ -259,7 +259,7 @@ void RaytracingReflections::ApplyTLASUpdates(RTUpdateStateFlags flags)
         const DescriptorSetRef& descriptorSet = m_raytracingPipeline->GetDescriptorTable()
                                                     ->GetDescriptorSet(NAME("RTRadianceDescriptorSet"), frameIndex);
 
-        AssertThrow(descriptorSet != nullptr);
+        Assert(descriptorSet != nullptr);
 
         if (flags & RT_UPDATE_STATE_FLAGS_UPDATE_ACCELERATION_STRUCTURE)
         {
@@ -288,7 +288,7 @@ void RaytracingReflections::CreateRaytracingPipeline()
         m_shader = g_shaderManager->GetOrCreate(NAME("RTRadiance"));
     }
 
-    AssertThrow(m_shader.IsValid());
+    Assert(m_shader.IsValid());
 
     const DescriptorTableDeclaration& descriptorTableDecl = m_shader->GetCompiledShader()->GetDescriptorTableDeclaration();
 
@@ -296,10 +296,10 @@ void RaytracingReflections::CreateRaytracingPipeline()
 
     for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
     {
-        AssertThrow(m_topLevelAccelerationStructures[frameIndex] != nullptr);
+        Assert(m_topLevelAccelerationStructures[frameIndex] != nullptr);
 
         const DescriptorSetRef& descriptorSet = descriptorTable->GetDescriptorSet(NAME("RTRadianceDescriptorSet"), frameIndex);
-        AssertThrow(descriptorSet != nullptr);
+        Assert(descriptorSet != nullptr);
 
         descriptorSet->SetElement(NAME("TLAS"), m_topLevelAccelerationStructures[frameIndex]);
         descriptorSet->SetElement(NAME("MeshDescriptionsBuffer"), m_topLevelAccelerationStructures[frameIndex]->GetMeshDescriptionsBuffer());

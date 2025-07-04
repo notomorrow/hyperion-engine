@@ -157,7 +157,7 @@ struct RENDER_COMMAND(LightmapRender)
 
                 for (ILightmapRenderer* lightmapRenderer : job->GetParams().renderers)
                 {
-                    AssertThrow(lightmapRenderer != nullptr);
+                    Assert(lightmapRenderer != nullptr);
 
                     lightmapRenderer->ReadHitsBuffer(frame, hitsBuffer);
 
@@ -172,7 +172,7 @@ struct RENDER_COMMAND(LightmapRender)
         {
             for (ILightmapRenderer* lightmapRenderer : job->GetParams().renderers)
             {
-                AssertThrow(lightmapRenderer != nullptr);
+                Assert(lightmapRenderer != nullptr);
 
                 lightmapRenderer->Render(frame, renderSetup, job, rays, rayOffset);
             }
@@ -297,8 +297,8 @@ public:
         : m_subElement(subElement),
           m_root(bvh)
     {
-        AssertThrow(m_subElement != nullptr);
-        AssertThrow(m_root != nullptr);
+        Assert(m_subElement != nullptr);
+        Assert(m_root != nullptr);
     }
 
     LightmapBottomLevelAccelerationStructure(const LightmapBottomLevelAccelerationStructure& other) = delete;
@@ -342,7 +342,7 @@ public:
 
     virtual LightmapRayTestResults TestRay(const Ray& ray) const override
     {
-        AssertThrow(m_root != nullptr);
+        Assert(m_root != nullptr);
 
         LightmapRayTestResults results;
 
@@ -375,7 +375,7 @@ public:
 
             for (const RayHit& rayHit : bvhResults)
             {
-                AssertThrow(rayHit.userData != nullptr);
+                Assert(rayHit.userData != nullptr);
 
                 const BVHNode* bvhNode = static_cast<const BVHNode*>(rayHit.userData);
 
@@ -557,10 +557,10 @@ void LightmapGPUPathTracer::CreateUniformBuffer()
 
 void LightmapGPUPathTracer::Create()
 {
-    AssertThrow(m_scene.IsValid());
+    Assert(m_scene.IsValid());
 
-    AssertThrow(m_scene->GetWorld() != nullptr);
-    AssertThrow(m_scene->GetWorld()->IsReady());
+    Assert(m_scene->GetWorld() != nullptr);
+    Assert(m_scene->GetWorld()->IsReady());
 
     CreateUniformBuffer();
 
@@ -586,7 +586,7 @@ void LightmapGPUPathTracer::Create()
     }
 
     ShaderRef shader = g_shaderManager->GetOrCreate(NAME("LightmapGPUPathTracer"), shaderProperties);
-    AssertThrow(shader.IsValid());
+    Assert(shader.IsValid());
 
     const DescriptorTableDeclaration& descriptorTableDecl = shader->GetCompiledShader()->GetDescriptorTableDeclaration();
 
@@ -595,10 +595,10 @@ void LightmapGPUPathTracer::Create()
     for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
     {
         const TLASRef& tlas = m_scene->GetWorld()->GetRenderResource().GetEnvironment()->GetTopLevelAccelerationStructures()[frameIndex];
-        AssertThrow(tlas != nullptr);
+        Assert(tlas != nullptr);
 
         const DescriptorSetRef& descriptorSet = descriptorTable->GetDescriptorSet(NAME("RTRadianceDescriptorSet"), frameIndex);
-        AssertThrow(descriptorSet != nullptr);
+        Assert(descriptorSet != nullptr);
 
         descriptorSet->SetElement(NAME("TLAS"), tlas);
         descriptorSet->SetElement(NAME("MeshDescriptionsBuffer"), tlas->GetMeshDescriptionsBuffer());
@@ -841,10 +841,10 @@ void LightmapCPUPathTracer::ReadHitsBuffer(FrameBase* frame, Span<LightmapHit> o
 {
     Threads::AssertOnThread(g_renderThread);
 
-    AssertThrowMsg(m_numTracingTasks.Get(MemoryOrder::ACQUIRE) == 0,
+    Assert(m_numTracingTasks.Get(MemoryOrder::ACQUIRE) == 0,
         "Cannot read hits buffer while tracing is in progress");
 
-    AssertThrow(outHits.Size() == m_hitsBuffer.Size());
+    Assert(outHits.Size() == m_hitsBuffer.Size());
 
     Memory::MemCpy(outHits.Data(), m_hitsBuffer.Data(), m_hitsBuffer.ByteSize());
 }
@@ -855,7 +855,7 @@ void LightmapCPUPathTracer::Render(FrameBase* frame, const RenderSetup& renderSe
 
     AssertDebug(renderSetup.IsValid());
 
-    AssertThrowMsg(m_numTracingTasks.Get(MemoryOrder::ACQUIRE) == 0,
+    Assert(m_numTracingTasks.Get(MemoryOrder::ACQUIRE) == 0,
         "Trace is already in progress");
 
     Handle<Texture> envProbeTexture;
@@ -949,7 +949,7 @@ void LightmapCPUPathTracer::Render(FrameBase* frame, const RenderSetup& renderSe
                         {
                             payload.throughput = Vec4f(0.0f);
 
-                            AssertThrow(bounceIndex < bounces.Size());
+                            Assert(bounceIndex < bounces.Size());
 
                             // @TODO Sample environment map
                             const Vec3f normal = bounceRay.ray.direction;
@@ -1067,12 +1067,12 @@ void LightmapCPUPathTracer::TraceSingleRayOnCPU(LightmapJob* job, const Lightmap
             continue;
         }
 
-        AssertThrow(hit.entity.IsValid());
+        Assert(hit.entity.IsValid());
 
         auto it = job->GetParams().subElementsByEntity->Find(hit.entity);
 
-        AssertThrow(it != job->GetParams().subElementsByEntity->End());
-        AssertThrow(it->second != nullptr);
+        Assert(it != job->GetParams().subElementsByEntity->End());
+        Assert(it->second != nullptr);
 
         const LightmapSubElement& subElement = *it->second;
 
@@ -1237,8 +1237,8 @@ void LightmapJob::AddTask(TaskBatch* taskBatch)
 
 void LightmapJob::Process()
 {
-    AssertThrow(IsRunning());
-    AssertThrowMsg(!m_result.HasError(), "Unhandled error in lightmap job: %s", *m_result.GetError().GetMessage());
+    Assert(IsRunning());
+    Assert(!m_result.HasError(), "Unhandled error in lightmap job: %s", *m_result.GetError().GetMessage());
 
     if (m_numConcurrentRenderingTasks.Get(MemoryOrder::ACQUIRE) >= g_maxConcurrentRenderingTasksPerJob)
     {
@@ -1252,7 +1252,7 @@ void LightmapJob::Process()
         // wait for uv map to finish building
 
         // If uv map is not valid, it must have a task that is building it
-        AssertThrow(m_buildUvMapTask.IsValid());
+        Assert(m_buildUvMapTask.IsValid());
 
         if (!m_buildUvMapTask.IsCompleted())
         {
@@ -1284,7 +1284,7 @@ void LightmapJob::Process()
             }
 
             m_elementIndex = element.index;
-            AssertThrow(m_elementIndex != ~0u);
+            Assert(m_elementIndex != ~0u);
 
             // Flatten texel indices, grouped by mesh IDs to prevent unnecessary loading/unloading
             m_texelIndices.Reserve(m_uvMap->uvs.Size());
@@ -1371,7 +1371,7 @@ void LightmapJob::Process()
 
     for (ILightmapRenderer* lightmapRenderer : m_params.renderers)
     {
-        AssertThrow(lightmapRenderer != nullptr);
+        Assert(lightmapRenderer != nullptr);
 
         lightmapRenderer->UpdateRays(rays);
     }
@@ -1404,7 +1404,7 @@ void LightmapJob::GatherRays(uint32 maxRayHits, Array<LightmapRay>& outRays)
 
 void LightmapJob::IntegrateRayHits(Span<const LightmapRay> rays, Span<const LightmapHit> hits, LightmapShadingType shadingType)
 {
-    AssertThrow(rays.Size() == hits.Size());
+    Assert(rays.Size() == hits.Size());
 
     LightmapUVMap& uvMap = GetUVMap();
 
@@ -1480,7 +1480,7 @@ Lightmapper::Lightmapper(LightmapperConfig&& config, const Handle<Scene>& scene,
         lightmapRenderer->Create();
     }
 
-    AssertThrow(m_lightmapRenderers.Any());
+    Assert(m_lightmapRenderers.Any());
 
     m_volume = CreateObject<LightmapVolume>(m_aabb);
     InitObject(m_volume);
@@ -1537,7 +1537,7 @@ void Lightmapper::PerformLightmapping()
     HYP_SCOPE;
     const uint32 idealTrianglesPerJob = m_config.idealTrianglesPerJob;
 
-    AssertThrowMsg(m_numJobs.Get(MemoryOrder::ACQUIRE) == 0, "Cannot initialize lightmap renderer -- jobs currently running!");
+    Assert(m_numJobs.Get(MemoryOrder::ACQUIRE) == 0, "Cannot initialize lightmap renderer -- jobs currently running!");
 
     // Build jobs
     HYP_LOG(Lightmap, Info, "Building graph for lightmapper");
@@ -1589,7 +1589,7 @@ void Lightmapper::PerformLightmapping()
             boundingBoxComponent.worldAabb });
     }
 
-    AssertThrow(m_accelerationStructure == nullptr);
+    Assert(m_accelerationStructure == nullptr);
     m_accelerationStructure = MakeUnique<LightmapTopLevelAccelerationStructure>();
 
     if (m_subElements.Empty())
@@ -1647,7 +1647,7 @@ void Lightmapper::Update(float delta)
 
     Mutex::Guard guard(m_queueMutex);
 
-    AssertThrow(!m_queue.Empty());
+    Assert(!m_queue.Empty());
     LightmapJob* job = m_queue.Front().Get();
 
     // Start job if not started
@@ -1694,7 +1694,7 @@ void Lightmapper::HandleCompletedJob(LightmapJob* job)
     }
 
     const LightmapElement* element = m_volume->GetElement(elementIndex);
-    AssertThrow(element != nullptr);
+    Assert(element != nullptr);
 
     HYP_LOG(Lightmap, Debug, "Lightmap job {}: Building element with index {}, UV offset: {}, Scale: {}", job->GetUUID(), elementIndex,
         element->offsetUv, element->scale);
@@ -1706,12 +1706,12 @@ void Lightmapper::HandleCompletedJob(LightmapJob* job)
         auto updateMeshData = [&]()
         {
             const Handle<Mesh>& mesh = subElement.mesh;
-            AssertThrow(mesh.IsValid());
+            Assert(mesh.IsValid());
 
-            AssertThrow(subElementIndex < job->GetUVBuilder().GetMeshData().Size());
+            Assert(subElementIndex < job->GetUVBuilder().GetMeshData().Size());
 
             const LightmapMeshData& lightmapMeshData = job->GetUVBuilder().GetMeshData()[subElementIndex];
-            AssertThrow(lightmapMeshData.mesh == mesh);
+            Assert(lightmapMeshData.mesh == mesh);
 
             MeshData newMeshData;
             newMeshData.vertices = lightmapMeshData.vertices;
@@ -1803,7 +1803,7 @@ void Lightmapper::HandleCompletedJob(LightmapJob* job)
             }
             else
             {
-                AssertThrow(newMaterial.IsValid());
+                Assert(newMaterial.IsValid());
                 InitObject(newMaterial);
 
                 MeshComponent meshComponent {};
@@ -1828,7 +1828,7 @@ void Lightmapper::HandleCompletedJob(LightmapJob* job)
         {
             // Enqueue the update to be performed on the owner thread
             ThreadBase* thread = Threads::GetThread(m_scene->GetEntityManager()->GetOwnerThreadId());
-            AssertThrow(thread != nullptr);
+            Assert(thread != nullptr);
 
             thread->GetScheduler().Enqueue(std::move(updateMeshComponent), TaskEnqueueFlags::FIRE_AND_FORGET);
         }

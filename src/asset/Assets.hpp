@@ -252,7 +252,7 @@ public:
         }
 
         const Handle<AssetLoaderBase>& loader = loaderDefinition->loader;
-        AssertThrow(loader.IsValid());
+        Assert(loader.IsValid());
 
         return AssetLoadResult(loader->Load(*this, path));
     }
@@ -273,7 +273,7 @@ public:
         }
 
         AssetLoaderBase* loader = loaderDefinition->loader.Get();
-        AssertThrow(loader != nullptr);
+        Assert(loader != nullptr);
 
         return TAssetLoadResult<T>(loader->Load(*this, path));
     }

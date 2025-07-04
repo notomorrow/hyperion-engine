@@ -2,7 +2,7 @@
 #include <rtc/RTCDataChannel.hpp>
 
 #ifdef HYP_LIBDATACHANNEL
-    #include <rtc/datachannel.hpp>
+#include <rtc/datachannel.hpp>
 #endif
 
 namespace hyperion {
@@ -21,7 +21,7 @@ void NullRTCDataChannel::Send(const ByteBuffer&)
 
 void LibDataChannelRTCDataChannel::Send(const ByteBuffer& byteBuffer)
 {
-    AssertThrow(m_dataChannel != nullptr);
+    Assert(m_dataChannel != nullptr);
 
     m_dataChannel->send(reinterpret_cast<const rtc::byte*>(byteBuffer.Data()), byteBuffer.Size());
 }

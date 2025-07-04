@@ -309,7 +309,7 @@ VulkanGpuBuffer::VulkanGpuBuffer(GpuBufferType type, SizeType size, SizeType ali
 
 VulkanGpuBuffer::~VulkanGpuBuffer()
 {
-    AssertThrowMsg(m_handle == VK_NULL_HANDLE,
+    HYP_GFX_ASSERT(m_handle == VK_NULL_HANDLE,
         "Buffer should have been destroyed! Debug name: %s",
         GetDebugName().LookupString());
 }
@@ -351,7 +351,7 @@ void VulkanGpuBuffer::Map() const
         return;
     }
 
-    AssertThrowMsg(IsCpuAccessible(), "Attempt to map a buffer that is not CPU accessible!");
+    HYP_GFX_ASSERT(IsCpuAccessible(), "Attempt to map a buffer that is not CPU accessible!");
 
     vmaMapMemory(GetRenderBackend()->GetDevice()->GetAllocator(), m_vmaAllocation, &m_mapping);
 }
@@ -411,11 +411,11 @@ RendererResult VulkanGpuBuffer::CheckCanAllocate(SizeType size) const
 
 uint64 VulkanGpuBuffer::GetBufferDeviceAddress() const
 {
-    AssertThrowMsg(
+    HYP_GFX_ASSERT(
         GetRenderBackend()->GetDevice()->GetFeatures().GetBufferDeviceAddressFeatures().bufferDeviceAddress,
         "Called GetBufferDeviceAddress() but the buffer device address extension feature is not supported or enabled!");
 
-    AssertThrow(m_handle != VK_NULL_HANDLE);
+    HYP_GFX_ASSERT(m_handle != VK_NULL_HANDLE);
 
     VkBufferDeviceAddressInfoKHR info { VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO };
     info.buffer = m_handle;
@@ -567,7 +567,7 @@ RendererResult VulkanGpuBuffer::Create()
                                            "\tYou should explicitly call Destroy() on the object before reallocating it.\n"
                                            "\tTo prevent memory leaks, calling Destroy() before allocating the memory...");
 
-        AssertDebug(false, "Create() called on a buffer that has not been destroyed!");
+        HYP_GFX_ASSERT(false, "Create() called on a buffer that has not been destroyed!");
 
         HYPERION_BUBBLE_ERRORS(Destroy());
     }
@@ -579,7 +579,7 @@ RendererResult VulkanGpuBuffer::Create()
 
     if (m_size == 0)
     {
-        AssertDebug("Creating empty gpu buffer will result in errors!");
+        HYP_GFX_ASSERT("Creating empty gpu buffer will result in errors!");
 
         return HYP_MAKE_ERROR(RendererError, "Creating empty gpu buffer will result in errors!");
     }
@@ -734,7 +734,7 @@ RendererResult VulkanGpuBuffer::CheckCanAllocate(
     /* check that we have enough space in the memory type */
     const auto& memoryProperties = features.GetPhysicalDeviceMemoryProperties();
 
-    AssertThrow(memoryTypeIndex < memoryProperties.memoryTypeCount);
+    HYP_GFX_ASSERT(memoryTypeIndex < memoryProperties.memoryTypeCount);
 
     const auto heapIndex = memoryProperties.memoryTypes[memoryTypeIndex].heapIndex;
     const auto& heap = memoryProperties.memoryHeaps[heapIndex];

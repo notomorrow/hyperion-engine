@@ -36,7 +36,7 @@ class NotNullPtr<T, std::enable_if_t<!std::is_const_v<T>>>
 public:
     NotNullPtr(T* HYP_NOTNULL ptr)
     {
-        AssertDebug(ptr);
+        HYP_CORE_ASSERT(ptr);
 
         m_ptr = ptr;
     }
@@ -68,7 +68,7 @@ public:
 
     NotNullPtr& operator=(T* HYP_NOTNULL ptr)
     {
-        AssertDebug(ptr);
+        HYP_CORE_ASSERT(ptr);
 
         m_ptr = ptr;
 

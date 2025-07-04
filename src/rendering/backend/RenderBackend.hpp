@@ -17,6 +17,19 @@
 
 #include <core/Defines.hpp>
 
+#define HYP_GFX_ASSERT(cond, ...)                                                                          \
+    do                                                                                                     \
+    {                                                                                                      \
+        if (HYP_UNLIKELY(!(cond)))                                                                         \
+        {                                                                                                  \
+            std::printf(                                                                                   \
+                "Assertion failed in graphics library!\n\tCondition: " #cond "\n\tMessage: " __VA_ARGS__); \
+            HYP_PRINT_STACK_TRACE();                                                                       \
+            std::terminate();                                                                              \
+        }                                                                                                  \
+    }                                                                                                      \
+    while (0)
+
 namespace hyperion {
 
 namespace sys {

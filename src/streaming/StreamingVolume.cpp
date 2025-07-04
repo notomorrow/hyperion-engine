@@ -9,7 +9,7 @@ void StreamingVolumeBase::NotifyUpdate()
 {
     for (StreamingNotifier* notifier : m_notifiers)
     {
-        AssertThrow(notifier != nullptr);
+        Assert(notifier != nullptr);
 
         notifier->Produce();
     }

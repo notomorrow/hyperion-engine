@@ -301,7 +301,7 @@ OBJModel OBJModelLoader::LoadModel(LoaderState& state)
 
 LoadedAsset OBJModelLoader::BuildModel(LoaderState& state, OBJModel& model)
 {
-    AssertThrow(state.assetManager != nullptr);
+    Assert(state.assetManager != nullptr);
 
     Handle<Node> top = CreateObject<Node>(CreateNameFromDynamicString(model.name));
 

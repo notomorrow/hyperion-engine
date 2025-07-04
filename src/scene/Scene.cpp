@@ -303,7 +303,7 @@ Handle<Node> Scene::FindNodeWithEntity(const Entity* entity) const
     HYP_SCOPE;
     Threads::AssertOnThread(m_ownerThreadId);
 
-    AssertThrow(m_root);
+    Assert(m_root);
 
     if (m_root->GetEntity() == entity)
     {
@@ -318,7 +318,7 @@ Handle<Node> Scene::FindNodeByName(WeakName name) const
     HYP_SCOPE;
     Threads::AssertOnThread(m_ownerThreadId);
 
-    AssertThrow(m_root);
+    Assert(m_root);
 
     if (m_root->GetName() == name)
     {

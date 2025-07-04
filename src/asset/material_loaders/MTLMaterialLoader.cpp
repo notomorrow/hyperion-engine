@@ -102,7 +102,7 @@ static bool IsTransparencyModel(IlluminationModel illumModel)
 
 AssetLoadResult MTLMaterialLoader::LoadAsset(LoaderState& state) const
 {
-    AssertThrow(state.assetManager != nullptr);
+    Assert(state.assetManager != nullptr);
 
     MaterialLibrary library;
     library.filepath = state.filepath;

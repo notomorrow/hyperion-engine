@@ -68,7 +68,7 @@ public:
 
     UIEventHandlerResult operator()(Args... args)
     {
-        AssertThrow(m_uiObject != nullptr);
+        Assert(m_uiObject != nullptr);
 
         const UIEventHandlerResult defaultResult = m_uiObject->GetDefaultEventHandlerResult();
 

@@ -340,13 +340,13 @@ struct CheckedPointer
 
     HYP_FORCE_INLINE T& operator*() const
     {
-        AssertThrowMsg(ptr != nullptr, "Dereferencing a null pointer");
+        HYP_CORE_ASSERT(ptr != nullptr, "Dereferencing a null pointer");
         return *ptr;
     }
 
     HYP_FORCE_INLINE T* operator->() const
     {
-        AssertThrowMsg(ptr != nullptr, "Dereferencing a null pointer");
+        HYP_CORE_ASSERT(ptr != nullptr, "Dereferencing a null pointer");
         return ptr;
     }
 

@@ -96,7 +96,7 @@ bool UIListViewItem::RemoveChildUIObject(UIObject* uiObject)
         {
             if (!HasSubItems())
             {
-                AssertThrow(UIObject::RemoveChildUIObject(m_expandedElement));
+                Assert(UIObject::RemoveChildUIObject(m_expandedElement));
 
                 m_expandedElement = nullptr;
             }

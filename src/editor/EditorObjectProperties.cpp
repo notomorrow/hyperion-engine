@@ -11,6 +11,9 @@
 #include <core/object/HypClass.hpp>
 #include <core/object/HypClassRegistry.hpp>
 
+#include <core/logging/Logger.hpp>
+#include <core/logging/LogChannels.hpp>
+
 namespace hyperion {
 
 #pragma region EditorObjectPropertiesBase

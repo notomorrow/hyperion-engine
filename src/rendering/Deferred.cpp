@@ -146,7 +146,7 @@ void DeferredPass::CreateShader()
         GetDeferredShaderProperties(shaderProperties);
 
         m_shader = g_shaderManager->GetOrCreate(NAME("DeferredIndirect"), shaderProperties);
-        AssertThrow(m_shader.IsValid());
+        Assert(m_shader.IsValid());
 
         break;
     }
@@ -160,7 +160,7 @@ void DeferredPass::CreateShader()
 
             m_directLightShaders[i] = g_shaderManager->GetOrCreate(NAME("DeferredDirect"), shaderProperties);
 
-            AssertThrow(m_directLightShaders[i].IsValid());
+            Assert(m_directLightShaders[i].IsValid());
         }
 
         break;
@@ -221,7 +221,7 @@ void DeferredPass::CreatePipeline(const RenderableAttributeSet& renderableAttrib
     for (uint32 i = 0; i < LT_MAX; i++)
     {
         ShaderRef& shader = m_directLightShaders[i];
-        AssertThrow(shader.IsValid());
+        Assert(shader.IsValid());
 
         const DescriptorTableDeclaration& descriptorTableDecl = shader->GetCompiledShader()->GetDescriptorTableDeclaration();
 
@@ -230,7 +230,7 @@ void DeferredPass::CreatePipeline(const RenderableAttributeSet& renderableAttrib
         for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
         {
             const DescriptorSetRef& descriptorSet = descriptorTable->GetDescriptorSet(NAME("DeferredDirectDescriptorSet"), frameIndex);
-            AssertThrow(descriptorSet.IsValid());
+            Assert(descriptorSet.IsValid());
 
             descriptorSet->SetElement(NAME("MaterialsBuffer"), g_renderGlobalState->gpuBuffers[GRB_MATERIALS]->GetBuffer(frameIndex));
 
@@ -546,7 +546,7 @@ void EnvGridPass::CreatePipeline()
     for (const auto& it : applyEnvGridPasses)
     {
         ShaderRef shader = g_shaderManager->GetOrCreate(NAME("ApplyEnvGrid"), it.second);
-        AssertThrow(shader.IsValid());
+        Assert(shader.IsValid());
 
         const DescriptorTableDeclaration& descriptorTableDecl = shader->GetCompiledShader()->GetDescriptorTableDeclaration();
 
@@ -601,7 +601,7 @@ void EnvGridPass::Render(FrameBase* frame, const RenderSetup& rs)
             ? m_graphicsPipeline
             : m_graphicsPipelines[EnvGridTypeToApplyEnvGridMode(envGrid->GetEnvGridType())];
 
-        AssertThrow(graphicsPipeline.IsValid());
+        Assert(graphicsPipeline.IsValid());
 
         const uint32 globalDescriptorSetIndex = graphicsPipeline->GetDescriptorTable()->GetDescriptorSetIndex(NAME("Global"));
         const uint32 viewDescriptorSetIndex = graphicsPipeline->GetDescriptorTable()->GetDescriptorSetIndex(NAME("View"));
@@ -720,7 +720,7 @@ void ReflectionsPass::CreatePipeline(const RenderableAttributeSet& renderableAtt
             NAME("ApplyReflectionProbe"),
             it.second);
 
-        AssertThrow(shader.IsValid());
+        Assert(shader.IsValid());
 
         const DescriptorTableDeclaration& descriptorTableDecl = shader->GetCompiledShader()->GetDescriptorTableDeclaration();
 
@@ -751,7 +751,7 @@ void ReflectionsPass::CreateSSRRenderer()
     m_ssrRenderer->Create();
 
     ShaderRef renderTextureToScreenShader = g_shaderManager->GetOrCreate(NAME("RenderTextureToScreen"));
-    AssertThrow(renderTextureToScreenShader.IsValid());
+    Assert(renderTextureToScreenShader.IsValid());
 
     const DescriptorTableDeclaration& descriptorTableDecl = renderTextureToScreenShader->GetCompiledShader()->GetDescriptorTableDeclaration();
     DescriptorTableRef descriptorTable = g_renderBackend->MakeDescriptorTable(&descriptorTableDecl);
@@ -759,7 +759,7 @@ void ReflectionsPass::CreateSSRRenderer()
     for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
     {
         const DescriptorSetRef& descriptorSet = descriptorTable->GetDescriptorSet(NAME("RenderTextureToScreenDescriptorSet"), frameIndex);
-        AssertThrow(descriptorSet != nullptr);
+        Assert(descriptorSet != nullptr);
 
         descriptorSet->SetElement(NAME("InTexture"), m_ssrRenderer->GetFinalResultTexture()->GetRenderResource().GetImageView());
     }
@@ -888,7 +888,7 @@ void ReflectionsPass::Render(FrameBase* frame, const RenderSetup& rs)
             }
 
             // RenderProxyEnvProbe* envProbeProxy = static_cast<RenderProxyEnvProbe*>(RenderApi_GetRenderProxy(envProbe->Id()));
-            // AssertThrow(envProbeProxy != nullptr);
+            // Assert(envProbeProxy != nullptr);
             // AssertDebug(envProbeProxy->bufferData.textureIndex != ~0u, "EnvProbe texture index not set: not bound for proxy %p at frame idx %u!", (void*)envProbeProxy,
             //     RenderApi_GetFrameIndex_RenderThread());
 
@@ -1001,8 +1001,8 @@ PassData* DeferredRenderer::CreateViewPassData(View* view, PassDataExt&)
 {
     HYP_SCOPE;
 
-    AssertThrow(view != nullptr);
-    AssertThrow(view->GetFlags() & ViewFlags::GBUFFER);
+    Assert(view != nullptr);
+    Assert(view->GetFlags() & ViewFlags::GBUFFER);
 
     HYP_LOG(Rendering, Debug, "Creating View pass data for View {}", view->Id());
 
@@ -1090,18 +1090,18 @@ void DeferredRenderer::CreateViewFinalPassDescriptorSet(View* view, DeferredPass
     HYP_SCOPE;
 
     ShaderRef renderTextureToScreenShader = g_shaderManager->GetOrCreate(NAME("RenderTextureToScreen_UI"));
-    AssertThrow(renderTextureToScreenShader.IsValid());
+    Assert(renderTextureToScreenShader.IsValid());
 
     const ImageViewRef& inputImageView = m_rendererConfig.taaEnabled
         ? passData.temporalAa->GetResultTexture()->GetRenderResource().GetImageView()
         : passData.combinePass->GetFinalImageView();
 
-    AssertThrow(inputImageView.IsValid());
+    Assert(inputImageView.IsValid());
 
     const DescriptorTableDeclaration& descriptorTableDecl = renderTextureToScreenShader->GetCompiledShader()->GetDescriptorTableDeclaration();
 
     DescriptorSetDeclaration* decl = descriptorTableDecl.FindDescriptorSetDeclaration(NAME("RenderTextureToScreenDescriptorSet"));
-    AssertThrow(decl != nullptr);
+    Assert(decl != nullptr);
 
     const DescriptorSetLayout layout { decl };
 
@@ -1119,7 +1119,7 @@ void DeferredRenderer::CreateViewDescriptorSets(View* view, DeferredPassData& pa
     HYP_SCOPE;
 
     const DescriptorSetDeclaration* decl = g_renderGlobalState->GlobalDescriptorTable->GetDeclaration()->FindDescriptorSetDeclaration(NAME("View"));
-    AssertThrow(decl != nullptr);
+    Assert(decl != nullptr);
 
     const DescriptorSetLayout layout { decl };
 
@@ -1142,7 +1142,7 @@ void DeferredRenderer::CreateViewDescriptorSets(View* view, DeferredPassData& pa
 
     // depth attachment goes into separate slot
     AttachmentBase* depthAttachment = opaqueFbo->GetAttachment(GTN_MAX - 1);
-    AssertThrow(depthAttachment != nullptr);
+    Assert(depthAttachment != nullptr);
 
     for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
     {
@@ -1234,10 +1234,10 @@ void DeferredRenderer::CreateViewCombinePass(View* view, DeferredPassData& passD
 
     // The combine pass will render into the translucent bucket's framebuffer with the shaded result.
     const FramebufferRef& translucentFbo = view->GetOutputTarget().GetFramebuffer(RB_TRANSLUCENT);
-    AssertThrow(translucentFbo != nullptr);
+    Assert(translucentFbo != nullptr);
 
     ShaderRef renderTextureToScreenShader = g_shaderManager->GetOrCreate(NAME("RenderTextureToScreen_UI"));
-    AssertThrow(renderTextureToScreenShader.IsValid());
+    Assert(renderTextureToScreenShader.IsValid());
 
     const DescriptorTableDeclaration& descriptorTableDecl = renderTextureToScreenShader->GetCompiledShader()->GetDescriptorTableDeclaration();
     DescriptorTableRef descriptorTable = g_renderBackend->MakeDescriptorTable(&descriptorTableDecl);
@@ -1245,7 +1245,7 @@ void DeferredRenderer::CreateViewCombinePass(View* view, DeferredPassData& passD
     for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
     {
         const DescriptorSetRef& descriptorSet = descriptorTable->GetDescriptorSet(NAME("RenderTextureToScreenDescriptorSet"), frameIndex);
-        AssertThrow(descriptorSet != nullptr);
+        Assert(descriptorSet != nullptr);
 
         descriptorSet->SetElement(NAME("InTexture"), passData.indirectPass->GetFinalImageView());
     }
@@ -1270,7 +1270,7 @@ void DeferredRenderer::ResizeView(Viewport viewport, View* view, DeferredPassDat
 
     HYP_LOG(Rendering, Debug, "Resizing View '{}' to {}x{}", view->Id(), viewport.extent.x, viewport.extent.y);
 
-    AssertThrow(viewport.extent.Volume() > 0);
+    Assert(viewport.extent.Volume() > 0);
 
     const Vec2u newSize = Vec2u(viewport.extent);
 
@@ -1321,7 +1321,7 @@ void DeferredRenderer::RenderFrame(FrameBase* frame, const RenderSetup& rs)
 {
     HYP_SCOPE;
 
-    AssertThrow(rs.IsValid());
+    Assert(rs.IsValid());
 
     EngineRenderStatsCounts counts {};
 
@@ -1348,7 +1348,7 @@ void DeferredRenderer::RenderFrame(FrameBase* frame, const RenderSetup& rs)
     // (env probes, env grids)
     for (const TResourceHandle<RenderView>& renderView : rs.world->GetViews())
     {
-        AssertThrow(renderView);
+        Assert(renderView);
 
         View* view = renderView->GetView();
 
@@ -1505,7 +1505,7 @@ void DeferredRenderer::RenderFrame(FrameBase* frame, const RenderSetup& rs)
 #if 1
     for (const TResourceHandle<RenderView>& renderView : rs.world->GetViews())
     {
-        AssertThrow(renderView);
+        Assert(renderView);
 
         View* view = renderView->GetView();
 
@@ -1543,7 +1543,7 @@ void DeferredRenderer::RenderFrame(FrameBase* frame, const RenderSetup& rs)
 }
 
 #define CHECK_FRAMEBUFFER_SIZE(fb)                                                                    \
-    AssertDebugMsg(fb->GetExtent() == pd->viewport.extent,                                            \
+    AssertDebug(fb->GetExtent() == pd->viewport.extent,                                               \
         "Deferred pass framebuffer extent does not match viewport extent! Expected %ux%u, got %ux%u", \
         pd->viewport.extent.x, pd->viewport.extent.y,                                                 \
         fb->GetExtent().x, fb->GetExtent().y)
@@ -1552,8 +1552,8 @@ void DeferredRenderer::RenderFrameForView(FrameBase* frame, const RenderSetup& r
 {
     HYP_SCOPE;
 
-    AssertThrow(rs.IsValid());
-    AssertThrow(rs.HasView());
+    Assert(rs.IsValid());
+    Assert(rs.HasView());
 
     uint32 globalFrameIndex = RenderApi_GetFrameIndex_RenderThread();
     if (m_lastFrameData.frameId != globalFrameIndex)
@@ -1839,7 +1839,7 @@ void DeferredRenderer::GenerateMipChain(FrameBase* frame, const RenderSetup& rs,
     DeferredPassData* pd = static_cast<DeferredPassData*>(rs.passData);
 
     const ImageRef& mipmappedResult = pd->mipChain->GetRenderResource().GetImage();
-    AssertThrow(mipmappedResult.IsValid());
+    Assert(mipmappedResult.IsValid());
 
     frame->GetCommandList().Add<InsertBarrier>(srcImage, RS_COPY_SRC);
     frame->GetCommandList().Add<InsertBarrier>(mipmappedResult, RS_COPY_DST);

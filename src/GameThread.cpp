@@ -37,7 +37,7 @@ GameThread::GameThread(const Handle<AppContextBase>& appContext)
     : Thread(g_gameThread, ThreadPriorityValue::HIGHEST),
       m_appContext(appContext)
 {
-    AssertThrow(m_appContext.IsValid());
+    Assert(m_appContext.IsValid());
 }
 
 void GameThread::SetGame(const Handle<Game>& game)

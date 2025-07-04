@@ -38,7 +38,7 @@ struct MemoryPoolBlock
 {
     static constexpr uint32 numElementsPerBlock = TInitInfo::numElementsPerBlock;
 
-    ValueStorageArray<ubyte, numElementsPerBlock * sizeof(ElementType), alignof(ElementType)> buffer;
+    ValueStorage<ubyte, numElementsPerBlock * sizeof(ElementType), alignof(ElementType)> buffer;
     AtomicVar<uint32> numElements { 0 };
 
 #ifdef HYP_ENABLE_MT_CHECK
@@ -251,7 +251,7 @@ public:
         {
             Mutex::Guard guard(m_blocksMutex);
 
-            AssertThrow(index < numElementsPerBlock * m_numBlocks.Get(MemoryOrder::ACQUIRE));
+            HYP_CORE_ASSERT(index < numElementsPerBlock * m_numBlocks.Get(MemoryOrder::ACQUIRE));
 
             Block& block = m_blocks[blockIndex];
             block.numElements.Decrement(1, MemoryOrder::RELEASE);
@@ -265,7 +265,7 @@ public:
     {
         HYP_SCOPE;
 
-        AssertThrow(index != s_invalidIndex);
+        HYP_CORE_ASSERT(index != s_invalidIndex);
 
         const uint32 requiredBlocks = (index + numElementsPerBlock) / numElementsPerBlock;
 
@@ -291,7 +291,7 @@ public:
     {
         HYP_SCOPE;
 
-        AssertThrow(index < NumAllocatedElements());
+        HYP_CORE_ASSERT(index < NumAllocatedElements());
 
         const uint32 blockIndex = index / numElementsPerBlock;
         const uint32 elementIndex = index % numElementsPerBlock;
@@ -318,7 +318,7 @@ public:
     {
         HYP_SCOPE;
 
-        AssertThrow(index < NumAllocatedElements());
+        HYP_CORE_ASSERT(index < NumAllocatedElements());
 
         const uint32 blockIndex = index / numElementsPerBlock;
         const uint32 elementIndex = index % numElementsPerBlock;
@@ -334,7 +334,7 @@ public:
         {
             Mutex::Guard guard(m_blocksMutex);
 
-            AssertThrow(blockIndex < m_numBlocks.Get(MemoryOrder::ACQUIRE));
+            HYP_CORE_ASSERT(blockIndex < m_numBlocks.Get(MemoryOrder::ACQUIRE));
 
             Block& block = m_blocks[blockIndex];
             HYP_MT_CHECK_RW(block.dataRaceDetectors[elementIndex]);
@@ -385,7 +385,7 @@ public:
 
             while (toRemove.Any())
             {
-                AssertThrow(&m_blocks.Back() == &*toRemove.Back());
+                HYP_CORE_ASSERT(&m_blocks.Back() == &*toRemove.Back());
 
                 m_blocks.Erase(toRemove.PopBack());
             }

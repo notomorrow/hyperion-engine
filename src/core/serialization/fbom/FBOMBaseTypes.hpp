@@ -9,6 +9,8 @@
 
 #include <core/containers/String.hpp>
 
+#include <core/memory/ByteBuffer.hpp>
+
 #include <core/Util.hpp>
 
 #include <core/serialization/fbom/FBOMType.hpp>
@@ -168,13 +170,13 @@ struct FBOMSequence : FBOMType
     FBOMSequence(const FBOMType& heldType)
         : FBOMType("seq", -1, /* no valid TypeId */ TypeId::Void())
     {
-        AssertThrowMsg(!heldType.IsUnbounded(), "Cannot create sequence of unbounded type");
+        HYP_CORE_ASSERT(!heldType.IsUnbounded(), "Cannot create sequence of unbounded type");
     }
 
     FBOMSequence(const FBOMType& heldType, SizeType count)
         : FBOMType("seq", heldType.size * count, /* no valid TypeId */ TypeId::Void())
     {
-        AssertThrowMsg(!heldType.IsUnbounded(), "Cannot create sequence of unbounded type");
+        HYP_CORE_ASSERT(!heldType.IsUnbounded(), "Cannot create sequence of unbounded type");
     }
 };
 
@@ -323,7 +325,7 @@ struct FBOMObjectType : FBOMType
     FBOMObjectType(const ANSIStringView& name, const FBOMType& extends)
         : FBOMType(name, 0, /* no valid TypeId */ TypeId::Void(), FBOMTypeFlags::CONTAINER, extends)
     {
-        AssertThrowMsg(extends.IsOrExtends(FBOMBaseObjectType()),
+        HYP_CORE_ASSERT(extends.IsOrExtends(FBOMBaseObjectType()),
             "Creating FBOMObjectType instance `%s` with parent type `%s`, but parent type does not extend `object`",
             name.Data(), extends.name.Data());
     }
@@ -331,7 +333,7 @@ struct FBOMObjectType : FBOMType
     FBOMObjectType(const ANSIStringView& name, EnumFlags<FBOMTypeFlags> flags, const FBOMType& extends)
         : FBOMType(name, 0, /* no valid TypeId */ TypeId::Void(), flags, extends)
     {
-        AssertThrowMsg(extends.IsOrExtends(FBOMBaseObjectType()),
+        HYP_CORE_ASSERT(extends.IsOrExtends(FBOMBaseObjectType()),
             "Creating FBOMObjectType instance `%s` with parent type `%s`, but parent type does not extend `object`",
             name.Data(), extends.name.Data());
     }
@@ -346,7 +348,7 @@ struct FBOMObjectType : FBOMType
     FBOMObjectType(TypeWrapper<T>, const FBOMType& extends)
         : FBOMType(TypeNameWithoutNamespace<T>(), 0, TypeId::ForType<T>(), FBOMTypeFlags::CONTAINER, extends)
     {
-        AssertThrowMsg(extends.IsOrExtends(FBOMBaseObjectType()),
+        HYP_CORE_ASSERT(extends.IsOrExtends(FBOMBaseObjectType()),
             "Creating FBOMObjectType instance `%s` with parent type `%s`, but parent type does not extend `object`",
             TypeNameWithoutNamespace<T>().Data(), extends.name.Data());
     }
@@ -355,7 +357,7 @@ struct FBOMObjectType : FBOMType
     FBOMObjectType(TypeWrapper<T>, EnumFlags<FBOMTypeFlags> flags, const FBOMType& extends)
         : FBOMType(TypeNameWithoutNamespace<T>(), 0, TypeId::ForType<T>(), flags, extends)
     {
-        AssertThrowMsg(extends.IsOrExtends(FBOMBaseObjectType()),
+        HYP_CORE_ASSERT(extends.IsOrExtends(FBOMBaseObjectType()),
             "Creating FBOMObjectType instance `%s` with parent type `%s`, but parent type does not extend `object`",
             TypeNameWithoutNamespace<T>().Data(), extends.name.Data());
     }

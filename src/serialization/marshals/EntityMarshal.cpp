@@ -120,7 +120,7 @@ public:
                 }
 
                 ConstAnyRef component = entityManager->TryGetComponent(componentTypeId, &entity);
-                AssertThrow(component.HasValue());
+                Assert(component.HasValue());
 
                 FBOMObject componentSerialized;
 
@@ -159,7 +159,7 @@ public:
     virtual FBOMResult Deserialize(FBOMLoadContext& context, const FBOMObject& in, HypData& out) const override
     {
         const HypClass* hypClass = in.GetHypClass();
-        AssertThrow(hypClass);
+        Assert(hypClass);
 
         if (!hypClass->IsDerivedFrom(Entity::Class()))
         {
@@ -286,7 +286,7 @@ public:
             {
                 HYP_LOG(Serialization, Debug, "MeshComponent deserialized for entity with Id: {}", entity->Id());
                 MeshComponent& meshComponent = child.m_deserializedObject->Get<MeshComponent>();
-                AssertThrow(meshComponent.mesh.IsValid());
+                Assert(meshComponent.mesh.IsValid());
             }
 
             entityManager->AddComponent(entity, *child.m_deserializedObject);

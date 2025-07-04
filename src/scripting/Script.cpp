@@ -2,6 +2,9 @@
 
 #include <core/math/MathUtil.hpp>
 
+#include <core/logging/Logger.hpp>
+#include <core/logging/LogChannels.hpp>
+
 namespace hyperion {
 
 Script::Script()
@@ -12,7 +15,7 @@ Script::Script()
 Script::Script(const ScriptDesc& desc)
     : m_desc(desc)
 {
-    AssertThrowMsg(m_desc.path.Size() + 1 <= scriptMaxPathLength, "Invalid script path: must be <= %llu characters", scriptMaxPathLength - 1);
+    Assert(m_desc.path.Size() + 1 <= scriptMaxPathLength, "Invalid script path: must be <= %llu characters", scriptMaxPathLength - 1);
 
     Memory::StrCpy(m_managedScript.path, m_desc.path.Data(), MathUtil::Min(m_desc.path.Size() + 1, scriptMaxPathLength));
     Memory::MemSet(m_managedScript.assemblyPath, '\0', scriptMaxPathLength);

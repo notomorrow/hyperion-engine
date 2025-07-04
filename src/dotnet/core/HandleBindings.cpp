@@ -9,15 +9,15 @@ extern "C"
 
     HYP_EXPORT void Handle_Get(HypObjectBase* ptr, ValueStorage<HypData>* outHypData)
     {
-        AssertThrow(outHypData != nullptr);
-        AssertThrow(ptr != nullptr);
+        Assert(outHypData != nullptr);
+        Assert(ptr != nullptr);
 
         outHypData->Construct(AnyRef(ptr->GetObjectHeader_Internal()->container->GetObjectTypeId(), ptr));
     }
 
     HYP_EXPORT void Handle_Set(HypData* hypData, HypObjectBase** outPtr)
     {
-        AssertThrow(outPtr != nullptr);
+        Assert(outPtr != nullptr);
 
         if (hypData != nullptr)
         {
@@ -46,7 +46,7 @@ extern "C"
 
     HYP_EXPORT uint8 WeakHandle_Lock(HypObjectBase* ptr)
     {
-        AssertThrow(ptr != nullptr);
+        Assert(ptr != nullptr);
 
         if (ptr->GetObjectHeader_Internal()->GetRefCountStrong() == 0)
         {
@@ -60,7 +60,7 @@ extern "C"
 
     HYP_EXPORT void WeakHandle_Set(HypData* hypData, HypObjectBase** outPtr)
     {
-        AssertThrow(outPtr != nullptr);
+        Assert(outPtr != nullptr);
 
         if (hypData != nullptr)
         {

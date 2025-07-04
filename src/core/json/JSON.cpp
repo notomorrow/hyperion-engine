@@ -179,7 +179,7 @@ JSONSubscriptWrapper<T> SelectHelper(const JSONSubscriptWrapper<T>& subscriptWra
 
 JSONValue& JSONSubscriptWrapper<JSONValue>::Get() const
 {
-    AssertThrow(value != nullptr);
+    HYP_CORE_ASSERT(value != nullptr);
 
     return *value;
 }
@@ -221,7 +221,7 @@ bool JSONSubscriptWrapper<JSONValue>::IsUndefined() const
 
 JSONString& JSONSubscriptWrapper<JSONValue>::AsString() const
 {
-    AssertThrow(IsString());
+    HYP_CORE_ASSERT(IsString());
 
     return value->AsString();
 }
@@ -238,7 +238,7 @@ JSONString JSONSubscriptWrapper<JSONValue>::ToString() const
 
 JSONNumber JSONSubscriptWrapper<JSONValue>::AsNumber() const
 {
-    AssertThrow(IsNumber());
+    HYP_CORE_ASSERT(IsNumber());
 
     return value->AsNumber();
 }
@@ -255,7 +255,7 @@ JSONNumber JSONSubscriptWrapper<JSONValue>::ToNumber() const
 
 JSONBool JSONSubscriptWrapper<JSONValue>::AsBool() const
 {
-    AssertThrow(IsBool());
+    HYP_CORE_ASSERT(IsBool());
 
     return value->AsBool();
 }
@@ -272,7 +272,7 @@ JSONBool JSONSubscriptWrapper<JSONValue>::ToBool() const
 
 JSONArray& JSONSubscriptWrapper<JSONValue>::AsArray() const
 {
-    AssertThrow(IsArray());
+    HYP_CORE_ASSERT(IsArray());
 
     return value->AsArray();
 }
@@ -289,7 +289,7 @@ const JSONArray& JSONSubscriptWrapper<JSONValue>::ToArray() const
 
 JSONObject& JSONSubscriptWrapper<JSONValue>::AsObject() const
 {
-    AssertThrow(IsObject());
+    HYP_CORE_ASSERT(IsObject());
 
     return value->AsObject();
 }
@@ -432,7 +432,7 @@ HashCode JSONSubscriptWrapper<JSONValue>::GetHashCode() const
 
 const JSONValue& JSONSubscriptWrapper<const JSONValue>::Get() const
 {
-    AssertThrow(value != nullptr);
+    HYP_CORE_ASSERT(value != nullptr);
 
     return *value;
 }
@@ -474,7 +474,7 @@ bool JSONSubscriptWrapper<const JSONValue>::IsUndefined() const
 
 const JSONString& JSONSubscriptWrapper<const JSONValue>::AsString() const
 {
-    AssertThrow(IsString());
+    HYP_CORE_ASSERT(IsString());
 
     return value->AsString();
 }
@@ -491,7 +491,7 @@ JSONString JSONSubscriptWrapper<const JSONValue>::ToString() const
 
 JSONNumber JSONSubscriptWrapper<const JSONValue>::AsNumber() const
 {
-    AssertThrow(IsNumber());
+    HYP_CORE_ASSERT(IsNumber());
 
     return value->AsNumber();
 }
@@ -508,7 +508,7 @@ JSONNumber JSONSubscriptWrapper<const JSONValue>::ToNumber() const
 
 JSONBool JSONSubscriptWrapper<const JSONValue>::AsBool() const
 {
-    AssertThrow(IsBool());
+    HYP_CORE_ASSERT(IsBool());
 
     return value->AsBool();
 }
@@ -525,7 +525,7 @@ JSONBool JSONSubscriptWrapper<const JSONValue>::ToBool() const
 
 const JSONArray& JSONSubscriptWrapper<const JSONValue>::AsArray() const
 {
-    AssertThrow(IsArray());
+    HYP_CORE_ASSERT(IsArray());
 
     return value->AsArray();
 }
@@ -542,7 +542,7 @@ const JSONArray& JSONSubscriptWrapper<const JSONValue>::ToArray() const
 
 const JSONObject& JSONSubscriptWrapper<const JSONValue>::AsObject() const
 {
-    AssertThrow(IsObject());
+    HYP_CORE_ASSERT(IsObject());
 
     return value->AsObject();
 }
@@ -994,25 +994,32 @@ JSONString JSONValue::ToString_Internal(bool representation, uint32 depth) const
 
         const bool isInteger = MathUtil::Fract(number) < MathUtil::epsilonD;
 
-        Array<char> chars;
+        Array<char, InlineAllocator<16>> chars;
+
+        // ensure we take up as much space as we can to avoid reallocations
+        chars.Resize(chars.Capacity());
 
         if (isInteger)
         {
-            int n = std::snprintf(nullptr, 0, "%lld", (long long)number);
-            if (n > 0)
+            int n = std::snprintf(chars.Data(), chars.Size(), "%lld", (long long)number);
+            if (n > int(chars.Size()))
             {
                 chars.Resize(SizeType(n) + 1);
-                std::sprintf(chars.Data(), "%lld", (long long)number);
+                std::snprintf(chars.Data(), chars.Size(), "%lld", (long long)number);
             }
+
+            chars.Resize(SizeType(n) + 1);
         }
         else
         {
-            int n = std::snprintf(nullptr, 0, "%f", number);
-            if (n > 0)
+            int n = std::snprintf(chars.Data(), chars.Size(), "%f", number);
+            if (n > int(chars.Size()))
             {
                 chars.Resize(SizeType(n) + 1);
-                std::sprintf(chars.Data(), "%f", number);
+                std::snprintf(chars.Data(), chars.Size(), "%f", number);
             }
+
+            chars.Resize(SizeType(n) + 1);
         }
 
         return String(chars.ToByteView());
@@ -1193,7 +1200,7 @@ ParseResult JSON::Parse(const SourceFile& sourceFile)
 
     const auto handleErrors = [&]() -> ParseResult
     {
-        AssertThrow(unit.GetErrorList().HasFatalErrors());
+        HYP_CORE_ASSERT(unit.GetErrorList().HasFatalErrors());
 
         String errorMessage;
 

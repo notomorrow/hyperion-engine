@@ -61,17 +61,17 @@ struct Handle final : HandleBase
 
             // This really shouldn't happen unless we're doing something wrong.
             // We shouldn't have an Id for a type that doesn't have a container.
-            AssertThrowMsg(container != nullptr,
+            HYP_CORE_ASSERT(container != nullptr,
                 "Container is not initialized for type! Possibly using an Id created without pointing to a valid object with TypeId %u?",
                 id.GetTypeId().Value());
 
             HypObjectHeader* header = container->GetObjectHeader(id.ToIndex());
-            AssertThrow(header != nullptr);
+            HYP_CORE_ASSERT(header != nullptr);
 
             ptr = container->GetObjectPointer(header);
-            AssertThrow(ptr != nullptr);
+            HYP_CORE_ASSERT(ptr != nullptr);
 
-            AssertDebugMsg(ptr->m_header->GetRefCountStrong() > 0, "Object is no longer alive!");
+            HYP_CORE_ASSERT(ptr->m_header->GetRefCountStrong() > 0, "Object is no longer alive!");
 
             // If strong count == 1 after incrementing, the object has already been destructed and it is invalid to create a strong reference
             ptr->m_header->IncRefStrong();
@@ -277,7 +277,7 @@ struct Handle final : HandleBase
         if (ptr)
         {
             const bool instanceOfCheck = IsA(Ty::Class(), ptr, ptr->m_header->container->GetObjectTypeId());
-            AssertThrowMsg(instanceOfCheck, "Cannot cast Handle<T> to Handle<Ty> because T is not a base class of Ty!");
+            HYP_CORE_ASSERT(instanceOfCheck, "Cannot cast Handle<T> to Handle<Ty> because T is not a base class of Ty!");
         }
 
         return reinterpret_cast<const Handle<Ty>&>(*this);
@@ -289,7 +289,7 @@ struct Handle final : HandleBase
         if (ptr)
         {
             const bool instanceOfCheck = IsA(Ty::Class(), ptr, ptr->m_header->container->GetObjectTypeId());
-            AssertThrowMsg(instanceOfCheck, "Cannot cast Handle<T> to Handle<Ty> because T is not a base class of Ty!");
+            HYP_CORE_ASSERT(instanceOfCheck, "Cannot cast Handle<T> to Handle<Ty> because T is not a base class of Ty!");
         }
 
         return reinterpret_cast<Handle<Ty>&&>(*this);
@@ -313,7 +313,7 @@ struct Handle final : HandleBase
         if (ptr)
         {
             const bool instanceOfCheck = IsA(Ty::Class(), ptr, ptr->m_header->container->GetObjectTypeId());
-            AssertThrowMsg(instanceOfCheck, "Cannot cast Handle<T> to Handle<Ty> because T is not a base class of Ty!");
+            HYP_CORE_ASSERT(instanceOfCheck, "Cannot cast Handle<T> to Handle<Ty> because T is not a base class of Ty!");
         }
 
         return reinterpret_cast<const Handle<Ty>&>(*this);
@@ -325,7 +325,7 @@ struct Handle final : HandleBase
         if (ptr)
         {
             const bool instanceOfCheck = IsA(Ty::Class(), ptr, ptr->m_header->container->GetObjectTypeId());
-            AssertThrowMsg(instanceOfCheck, "Cannot cast Handle<T> to Handle<Ty> because T is not a base class of Ty!");
+            HYP_CORE_ASSERT(instanceOfCheck, "Cannot cast Handle<T> to Handle<Ty> because T is not a base class of Ty!");
         }
 
         return reinterpret_cast<Handle<Ty>&&>(*this);
@@ -395,19 +395,19 @@ struct WeakHandle final
 
             // This really shouldn't happen unless we're doing something wrong.
             // We shouldn't have an Id for a type that doesn't have a container.
-            AssertThrowMsg(container != nullptr,
+            HYP_CORE_ASSERT(container != nullptr,
                 "Container is not initialized for type! Possibly using an Id created without pointing to a valid object with TypeId %u?",
                 id.GetTypeId().Value());
 
             HypObjectHeader* header = container->GetObjectHeader(id.ToIndex());
-            AssertThrow(header != nullptr);
+            HYP_CORE_ASSERT(header != nullptr);
 
             ptr = container->GetObjectPointer(header);
-            AssertThrow(ptr != nullptr);
+            HYP_CORE_ASSERT(ptr != nullptr);
 
             // All HypObjectBase types have an initial weak count of 1 which gets incremented when the object is created and decremented in the destructor of HypObjectBase.
             // If it is zero, it means the object is not only no longer alive - but that the Id is totally invalid and would sometimes point to the wrong object!
-            AssertDebugMsg(header->GetRefCountWeak() > 0, "Object overwriting detected! This is likely due to attempting to create a WeakHandle from an Id that is no longer valid or has been reused for another object.");
+            HYP_CORE_ASSERT(header->GetRefCountWeak() > 0, "Object overwriting detected! This is likely due to attempting to create a WeakHandle from an Id that is no longer valid or has been reused for another object.");
 
             header->IncRefWeak();
         }
@@ -650,7 +650,7 @@ struct WeakHandle final
         if (ptr)
         {
             const bool instanceOfCheck = IsA(Ty::Class(), ptr, ptr->m_header->container->GetObjectTypeId());
-            AssertThrowMsg(instanceOfCheck, "Cannot cast WeakHandle<T> to WeakHandle<Ty> because T is not a base class of Ty!");
+            HYP_CORE_ASSERT(instanceOfCheck, "Cannot cast WeakHandle<T> to WeakHandle<Ty> because T is not a base class of Ty!");
         }
 
         return reinterpret_cast<const WeakHandle<Ty>&>(*this);
@@ -662,7 +662,7 @@ struct WeakHandle final
         if (ptr)
         {
             const bool instanceOfCheck = IsA(Ty::Class(), ptr, ptr->m_header->container->GetObjectTypeId());
-            AssertThrowMsg(instanceOfCheck, "Cannot cast WeakHandle<T> to WeakHandle<Ty> because T is not a base class of Ty!");
+            HYP_CORE_ASSERT(instanceOfCheck, "Cannot cast WeakHandle<T> to WeakHandle<Ty> because T is not a base class of Ty!");
         }
 
         return reinterpret_cast<WeakHandle<Ty>&&>(*this);
@@ -865,7 +865,7 @@ public:
 
         if (ptr != nullptr)
         {
-            AssertThrowMsg(Is<T>(), "Cannot cast AnyHandle to Handle<T> because the type does not match or is not a base class of T!");
+            HYP_CORE_ASSERT(Is<T>(), "Cannot cast AnyHandle to Handle<T> because the type does not match or is not a base class of T!");
         }
 
         // This is "safe" because the typeId is checked above
@@ -880,7 +880,7 @@ public:
 
         if (ptr != nullptr)
         {
-            AssertThrowMsg(Is<T>(), "Cannot cast AnyHandle to Handle<T> because the type does not match or is not a base class of T!");
+            HYP_CORE_ASSERT(Is<T>(), "Cannot cast AnyHandle to Handle<T> because the type does not match or is not a base class of T!");
         }
 
         // This is "safe" because the typeId is checked above
@@ -957,7 +957,7 @@ inline bool InitObject(const Handle<T>& handle)
         return true;
     }
 
-    AssertDebug(!basePtr->IsReady());
+    HYP_CORE_ASSERT(!basePtr->IsReady());
 
     basePtr->Init_Internal();
 

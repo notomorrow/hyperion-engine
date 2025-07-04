@@ -347,7 +347,7 @@ void InputManager::RemoveMouseLockState(const InputMouseLockState* mouseLockStat
     Mutex::Guard guard(m_mouseLockStatesMutex);
 
     auto it = m_mouseLockStates.Find(*mouseLockState);
-    AssertThrow(it != m_mouseLockStates.End());
+    Assert(it != m_mouseLockStates.End());
 
     auto eraseIt = m_mouseLockStates.Erase(it);
 

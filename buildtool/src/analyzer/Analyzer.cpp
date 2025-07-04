@@ -650,7 +650,7 @@ static TResult<Array<HypMemberDefinition>, AnalyzerError> BuildHypClassMembers(c
             return res.GetError();
         }
 
-        AssertThrow(decl != nullptr);
+        Assert(decl != nullptr);
         AddMetadata(decl, result);
 
         result.name = decl->name;

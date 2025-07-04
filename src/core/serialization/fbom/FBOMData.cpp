@@ -140,7 +140,7 @@ FBOMData FBOMData::FromObject(const FBOMObject& object, bool keepNativeObject)
     }
 
     FBOMData value = FBOMData(FBOMBaseObjectType(), std::move(byteWriter.GetBuffer()));
-    AssertThrowMsg(value.IsObject(), "Expected value to be object: Got type: %s", value.GetType().ToString().Data());
+    HYP_CORE_ASSERT(value.IsObject(), "Expected value to be object: Got type: %s", value.GetType().ToString().Data());
 
     if (keepNativeObject)
     {
@@ -165,7 +165,7 @@ FBOMData FBOMData::FromObject(FBOMObject&& object, bool keepNativeObject)
     }
 
     FBOMData value = FBOMData(FBOMBaseObjectType(), std::move(byteWriter.GetBuffer()));
-    AssertThrowMsg(value.IsObject(), "Expected value to be object: Got type: %s", value.GetType().ToString().Data());
+    HYP_CORE_ASSERT(value.IsObject(), "Expected value to be object: Got type: %s", value.GetType().ToString().Data());
 
     if (keepNativeObject)
     {
@@ -204,7 +204,7 @@ FBOMData FBOMData::FromArray(const FBOMArray& array)
     }
 
     FBOMData value = FBOMData(FBOMArrayType(), std::move(byteWriter.GetBuffer()));
-    AssertThrowMsg(value.IsArray(), "Expected value to be array: Got type: %s", value.GetType().ToString().Data());
+    HYP_CORE_ASSERT(value.IsArray(), "Expected value to be array: Got type: %s", value.GetType().ToString().Data());
 
     return value;
 }
@@ -213,7 +213,7 @@ SizeType FBOMData::ReadBytes(SizeType n, void* out) const
 {
     if (!m_type.IsUnbounded())
     {
-        AssertThrowMsg(n <= m_bytes.Size(), "Attempt to read past max size of object");
+        HYP_CORE_ASSERT(n <= m_bytes.Size(), "Attempt to read past max size of object");
     }
 
     SizeType toRead = MathUtil::Min(n, m_bytes.Size());
@@ -230,7 +230,7 @@ ByteBuffer FBOMData::ReadBytes(SizeType n) const
 {
     if (!m_type.IsUnbounded())
     {
-        AssertThrowMsg(n <= m_bytes.Size(), "Attempt to read past max size of object");
+        HYP_CORE_ASSERT(n <= m_bytes.Size(), "Attempt to read past max size of object");
     }
 
     SizeType toRead = MathUtil::Min(n, m_bytes.Size());
@@ -242,7 +242,7 @@ void FBOMData::SetBytes(const ByteBuffer& byteBuffer)
 {
     if (!m_type.IsUnbounded())
     {
-        AssertThrowMsg(byteBuffer.Size() <= m_type.size, "Attempt to insert data past size max size of object (%llu > %llu)", byteBuffer.Size(), m_type.size);
+        HYP_CORE_ASSERT(byteBuffer.Size() <= m_type.size, "Attempt to insert data past size max size of object (%llu > %llu)", byteBuffer.Size(), m_type.size);
     }
 
     m_bytes = byteBuffer;
@@ -252,7 +252,7 @@ void FBOMData::SetBytes(SizeType count, const void* data)
 {
     if (!m_type.IsUnbounded())
     {
-        AssertThrowMsg(count <= m_type.size, "Attempt to insert data past size max size of object (%llu > %llu)", count, m_type.size);
+        HYP_CORE_ASSERT(count <= m_type.size, "Attempt to insert data past size max size of object (%llu > %llu)", count, m_type.size);
     }
 
     m_bytes.SetSize(count);

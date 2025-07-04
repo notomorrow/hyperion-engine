@@ -43,7 +43,7 @@ DataStoreBase* DataStoreBase::GetOrCreate(TypeId dataStoreTypeId, UTF8StringView
     if (dataStoreIt == it->second.End())
     {
         DataStoreBase* createResult = createFn(prefix);
-        AssertThrow(createResult != nullptr);
+        HYP_CORE_ASSERT(createResult != nullptr);
 
         dataStoreIt = it->second.Insert({ prefix, createResult }).first;
     }
@@ -63,7 +63,7 @@ int DataStoreBase::IncRef()
         {
             if (m_options.flags & DSF_WRITE)
             {
-                AssertThrowMsg(MakeDirectory(), "Failed to create directory for data store at path %s", GetDirectory().Data());
+                HYP_CORE_ASSERT(MakeDirectory(), "Failed to create directory for data store at path %s", GetDirectory().Data());
             }
         });
 }
@@ -176,8 +176,8 @@ bool DataStoreBase::MakeDirectory() const
 
 void DataStoreBase::Write(const String& key, const ByteBuffer& byteBuffer)
 {
-    AssertThrowMsg(m_refCounter.IsInSignalState(), "Cannot write to DataStore, not yet init");
-    AssertThrowMsg(m_options.flags & DSF_WRITE, "Data store is not writable");
+    HYP_CORE_ASSERT(m_refCounter.IsInSignalState(), "Cannot write to DataStore, not yet init");
+    HYP_CORE_ASSERT(m_options.flags & DSF_WRITE, "Data store is not writable");
 
     const FilePath filepath = GetDirectory() / key;
 
@@ -188,8 +188,8 @@ void DataStoreBase::Write(const String& key, const ByteBuffer& byteBuffer)
 
 bool DataStoreBase::Read(const String& key, ByteBuffer& outByteBuffer) const
 {
-    AssertThrowMsg(m_refCounter.IsInSignalState(), "Cannot read from DataStore, not yet init");
-    AssertThrowMsg(m_options.flags & DSF_READ, "Data store is not readable");
+    HYP_CORE_ASSERT(m_refCounter.IsInSignalState(), "Cannot read from DataStore, not yet init");
+    HYP_CORE_ASSERT(m_options.flags & DSF_READ, "Data store is not readable");
 
     const FilePath directory = GetDirectory();
 
@@ -222,8 +222,8 @@ bool DataStoreBase::Read(const String& key, ByteBuffer& outByteBuffer) const
 
 bool DataStoreBase::Exists(const String& key) const
 {
-    AssertThrowMsg(m_refCounter.IsInSignalState(), "Cannot read from DataStore, not yet init");
-    AssertThrowMsg(m_options.flags & DSF_READ, "Data store is not readable");
+    HYP_CORE_ASSERT(m_refCounter.IsInSignalState(), "Cannot read from DataStore, not yet init");
+    HYP_CORE_ASSERT(m_options.flags & DSF_READ, "Data store is not readable");
 
     const FilePath directory = GetDirectory();
 

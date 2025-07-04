@@ -73,7 +73,7 @@ public:
     HYP_FORCE_INLINE Value& At(const Key& key)
     {
         const auto it = Base::Find(key);
-        AssertDebugMsg(it != Base::End(), "At(): Element not found");
+        HYP_CORE_ASSERT(it != Base::End(), "At(): Element not found");
 
         return it->second;
     }
@@ -81,7 +81,7 @@ public:
     HYP_FORCE_INLINE const Value& At(const Key& key) const
     {
         const auto it = Base::Find(key);
-        AssertDebugMsg(it != Base::End(), "At(): Element not found");
+        HYP_CORE_ASSERT(it != Base::End(), "At(): Element not found");
 
         return it->second;
     }

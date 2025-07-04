@@ -27,7 +27,7 @@ void TaskBatch::AwaitCompletion()
 {
     if (numEnqueued < executors.Size())
     {
-        HYP_FAIL("TaskBatch::AwaitCompletion() called before all tasks were enqueued! Expected %llu tasks, but only %u were enqueued.",
+        HYP_FAIL("TaskBatch::AwaitCompletion() called before all tasks were enqueued! Expected %zu tasks, but only %u were enqueued.",
             executors.Size(), numEnqueued);
     }
 
@@ -40,9 +40,9 @@ void TaskBatch::AwaitCompletion()
 
         for (const TaskRef& taskRef : taskRefs)
         {
-            AssertThrow(taskRef.assignedScheduler != nullptr);
+            HYP_CORE_ASSERT(taskRef.assignedScheduler != nullptr);
 
-            AssertThrowMsg(taskRef.assignedScheduler->GetOwnerThread() != currentThreadId,
+            HYP_CORE_ASSERT(taskRef.assignedScheduler->GetOwnerThread() != currentThreadId,
                 "Cannot wait on a task that is dependent on the current thread!");
         }
     }
@@ -71,7 +71,7 @@ TaskThreadPool::TaskThreadPool(Array<UniquePtr<TaskThread>>&& threads)
 {
     for (const UniquePtr<TaskThread>& thread : threads)
     {
-        AssertThrow(thread != nullptr);
+        HYP_CORE_ASSERT(thread != nullptr);
 
         m_threadMask |= thread->Id().GetMask();
     }
@@ -81,8 +81,8 @@ TaskThreadPool::~TaskThreadPool()
 {
     for (auto& it : m_threads)
     {
-        AssertThrow(it != nullptr);
-        AssertThrowMsg(!it->IsRunning(), "TaskThreadPool::Stop() must be called before TaskThreadPool is destroyed");
+        HYP_CORE_ASSERT(it != nullptr);
+        HYP_CORE_ASSERT(!it->IsRunning(), "TaskThreadPool::Stop() must be called before TaskThreadPool is destroyed");
 
         if (it->CanJoin())
         {
@@ -100,7 +100,7 @@ bool TaskThreadPool::IsRunning() const
 
     for (auto& it : m_threads)
     {
-        AssertThrow(it != nullptr);
+        HYP_CORE_ASSERT(it != nullptr);
 
         if (it->IsRunning())
         {
@@ -113,12 +113,12 @@ bool TaskThreadPool::IsRunning() const
 
 void TaskThreadPool::Start()
 {
-    AssertThrow(m_threads.Any());
+    HYP_CORE_ASSERT(m_threads.Any());
 
     for (auto& it : m_threads)
     {
-        AssertThrow(it != nullptr);
-        AssertThrow(it->Start());
+        HYP_CORE_ASSERT(it != nullptr);
+        HYP_CORE_ASSERT(it->Start());
     }
 }
 
@@ -126,7 +126,7 @@ void TaskThreadPool::Stop()
 {
     for (auto& it : m_threads)
     {
-        AssertThrow(it != nullptr);
+        HYP_CORE_ASSERT(it != nullptr);
         it->Stop();
     }
 }
@@ -135,7 +135,7 @@ void TaskThreadPool::Stop(Array<TaskThread*>& outTaskThreads)
 {
     for (auto& it : m_threads)
     {
-        AssertThrow(it != nullptr);
+        HYP_CORE_ASSERT(it != nullptr);
         it->Stop();
 
         outTaskThreads.PushBack(it.Get());
@@ -253,7 +253,6 @@ TaskSystem& TaskSystem::GetInstance()
     return instance;
 }
 
-HYP_DISABLE_OPTIMIZATION;
 TaskSystem::TaskSystem()
 {
     m_pools.Reserve(THREAD_POOL_MAX);
@@ -267,16 +266,15 @@ TaskSystem::TaskSystem()
 
         auto threadPoolFactoriesIt = g_threadPoolFactories.Find(poolName);
 
-        AssertThrow(threadPoolFactoriesIt != endIt, "Invalid thread pool index %u", i);
+        HYP_CORE_ASSERT(threadPoolFactoriesIt != endIt, "Invalid thread pool index %u", i);
 
         m_pools.PushBack(threadPoolFactoriesIt->second());
     }
 }
-HYP_ENABLE_OPTIMIZATION;
 
 void TaskSystem::Start()
 {
-    AssertThrowMsg(!IsRunning(), "TaskSystem::Start() has already been called");
+    HYP_CORE_ASSERT(!IsRunning(), "TaskSystem::Start() has already been called");
 
     for (const UniquePtr<TaskThreadPool>& pool : m_pools)
     {
@@ -288,7 +286,7 @@ void TaskSystem::Start()
 
 void TaskSystem::Stop()
 {
-    AssertThrowMsg(IsRunning(), "TaskSystem::Start() must be called before TaskSystem::Stop()");
+    HYP_CORE_ASSERT(IsRunning(), "TaskSystem::Start() must be called before TaskSystem::Stop()");
 
     m_running.Set(false, MemoryOrder::RELAXED);
 
@@ -308,10 +306,10 @@ void TaskSystem::Stop()
 
 TaskBatch* TaskSystem::EnqueueBatch(TaskBatch* batch)
 {
-    AssertThrowMsg(IsRunning(), "TaskSystem::Start() must be called before enqueuing tasks");
+    HYP_CORE_ASSERT(IsRunning(), "TaskSystem::Start() must be called before enqueuing tasks");
 
-    AssertThrow(batch != nullptr);
-    AssertDebugMsg(batch->IsCompleted(), "TaskBatch::ResetState() must be called before enqueuing tasks");
+    HYP_CORE_ASSERT(batch != nullptr);
+    HYP_CORE_ASSERT(batch->IsCompleted(), "TaskBatch::ResetState() must be called before enqueuing tasks");
 
 #ifdef HYP_TASK_BATCH_DATA_RACE_DETECTION
     HYP_MT_CHECK_READ(batch->dataRaceDetector);
@@ -340,7 +338,7 @@ TaskBatch* TaskSystem::EnqueueBatch(TaskBatch* batch)
 
     if (batch->pool != nullptr)
     {
-        AssertThrowMsg(batch->pool->IsRunning(), "Start() must be called on a TaskThreadPool before enqueuing tasks to it");
+        HYP_CORE_ASSERT(batch->pool->IsRunning(), "Start() must be called on a TaskThreadPool before enqueuing tasks to it");
 
         pool = batch->pool;
     }
@@ -356,7 +354,7 @@ TaskBatch* TaskSystem::EnqueueBatch(TaskBatch* batch)
     for (TaskExecutorInstance<void>& executor : batch->executors)
     {
         TaskThread* taskThread = pool->GetNextTaskThread();
-        AssertThrow(taskThread != nullptr);
+        HYP_CORE_ASSERT(taskThread != nullptr);
 
         const TaskID taskId = taskThread->GetScheduler().EnqueueTaskExecutor(
             &executor,
@@ -378,9 +376,9 @@ TaskBatch* TaskSystem::EnqueueBatch(TaskBatch* batch)
 
 Array<bool> TaskSystem::DequeueBatch(TaskBatch* batch)
 {
-    AssertThrowMsg(IsRunning(), "TaskSystem::Start() must be called before dequeuing tasks");
+    HYP_CORE_ASSERT(IsRunning(), "TaskSystem::Start() must be called before dequeuing tasks");
 
-    AssertThrow(batch != nullptr);
+    HYP_CORE_ASSERT(batch != nullptr);
 
     Array<bool> results;
     results.Resize(batch->taskRefs.Size());

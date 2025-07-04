@@ -36,9 +36,8 @@ namespace serialization {
 
 FBOMResult FBOMReader::FBOMStaticDataIndexMap::Element::Initialize(FBOMLoadContext& context, FBOMReader* reader)
 {
-    AssertThrow(reader != nullptr);
-
-    AssertThrow(IsValid());
+    HYP_CORE_ASSERT(reader != nullptr);
+    HYP_CORE_ASSERT(IsValid());
 
     if (IsInitialized())
     {
@@ -92,7 +91,7 @@ FBOMResult FBOMReader::FBOMStaticDataIndexMap::Element::Initialize(FBOMLoadConte
             return err;
         }
 
-        AssertThrow(static_cast<FBOMData*>(ptr.Get())->TotalSize() != 0);
+        HYP_CORE_ASSERT(static_cast<FBOMData*>(ptr.Get())->TotalSize() != 0);
 
         break;
     }
@@ -379,7 +378,7 @@ FBOMResult FBOMReader::LoadFromFile(const String& path, HypData& out)
         return err;
     }
 
-    AssertThrow(object.m_deserializedObject != nullptr);
+    HYP_CORE_ASSERT(object.m_deserializedObject != nullptr);
 
     if (object.m_deserializedObject != nullptr)
     {
@@ -392,7 +391,7 @@ FBOMResult FBOMReader::LoadFromFile(const String& path, HypData& out)
 
 FBOMCommand FBOMReader::NextCommand(BufferedReader* reader)
 {
-    AssertThrow(!reader->Eof());
+    HYP_CORE_ASSERT(!reader->Eof());
 
     uint8 ins = -1;
     reader->Read(&ins);
@@ -403,7 +402,7 @@ FBOMCommand FBOMReader::NextCommand(BufferedReader* reader)
 
 FBOMCommand FBOMReader::PeekCommand(BufferedReader* reader)
 {
-    AssertThrow(!reader->Eof());
+    HYP_CORE_ASSERT(!reader->Eof());
 
     uint8 ins = -1;
     reader->Peek(&ins);
@@ -573,14 +572,14 @@ FBOMResult FBOMReader::ReadObjectType(FBOMLoadContext& context, BufferedReader* 
             return { FBOMResult::FBOM_ERR, "Invalid type in static data pool" };
         }
 
-        // AssertThrowMsg(offset < m_staticDataPool.Size(),
+        // HYP_CORE_ASSERT(offset < m_staticDataPool.Size(),
         //     "Offset out of bounds of static data pool: %u >= %u",
         //     offset,
         //     m_staticDataPool.Size());
 
         // // grab from static data pool
         // FBOMType *asType = m_staticDataPool[offset].data.TryGetAsDynamic<FBOMType>();
-        // AssertThrowMsg(asType != nullptr, "Invalid value in static data pool at offset %u. Type: %u", offset, m_staticDataPool[offset].data.GetTypeId().Value());
+        // HYP_CORE_ASSERT(asType != nullptr, "Invalid value in static data pool at offset %u. Type: %u", offset, m_staticDataPool[offset].data.GetTypeId().Value());
         // outType = *asType;
 
         break;
@@ -856,14 +855,14 @@ FBOMResult FBOMReader::ReadArray(FBOMLoadContext& context, BufferedReader* reade
             return { FBOMResult::FBOM_ERR, "Invalid array in static data pool" };
         }
 
-        // AssertThrowMsg(offset < m_staticDataPool.Size(),
+        // HYP_CORE_ASSERT(offset < m_staticDataPool.Size(),
         //     "Offset out of bounds of static data pool: %u >= %u",
         //     offset,
         //     m_staticDataPool.Size());
 
         // // grab from static data pool
         // FBOMArray *asArray = m_staticDataPool[offset].data.TryGetAsDynamic<FBOMArray>();
-        // AssertThrowMsg(asArray != nullptr, "Invalid value in static data pool at offset %u. Type: %u", offset, m_staticDataPool[offset].data.GetTypeId().Value());
+        // HYP_CORE_ASSERT(asArray != nullptr, "Invalid value in static data pool at offset %u. Type: %u", offset, m_staticDataPool[offset].data.GetTypeId().Value());
         // outArray = *asArray;
     }
 
@@ -879,7 +878,7 @@ FBOMResult FBOMReader::ReadPropertyName(FBOMLoadContext& context, BufferedReader
         return err;
     }
 
-    AssertThrow(nameData.TotalSize() != 0);
+    HYP_CORE_ASSERT(nameData.TotalSize() != 0);
 
     if (FBOMResult err = nameData.ReadName(&outPropertyName))
     {
@@ -889,8 +888,6 @@ FBOMResult FBOMReader::ReadPropertyName(FBOMLoadContext& context, BufferedReader
         {
             rootType = rootType->extends;
         }
-
-        HYP_BREAKPOINT;
 
         return FBOMResult { FBOMResult::FBOM_ERR, "Invalid property name: Expected data to be of type `Name`" };
     }
@@ -1157,7 +1154,7 @@ FBOMResult FBOMReader::ReadRawData(BufferedReader* reader, SizeType count, ByteB
 
 FBOMResult FBOMReader::Handle(FBOMLoadContext& context, BufferedReader* reader, FBOMCommand command, FBOMObject* root)
 {
-    AssertThrow(root != nullptr);
+    HYP_CORE_ASSERT(root != nullptr);
 
     switch (command)
     {
@@ -1181,7 +1178,7 @@ FBOMResult FBOMReader::Handle(FBOMLoadContext& context, BufferedReader* reader, 
             return { FBOMResult::FBOM_ERR, "Static data pool already exists!" };
         }
 
-        AssertThrow(!m_inStaticData);
+        HYP_CORE_ASSERT(!m_inStaticData);
 
         if (FBOMResult err = Eat(reader, FBOM_STATIC_DATA_START))
         {

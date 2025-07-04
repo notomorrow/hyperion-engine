@@ -114,7 +114,7 @@ class StreamingManagerThread final : public Thread<Scheduler, StreamingManager*>
         LayerData(const Handle<WorldGridLayer>& layer)
             : layer(layer)
         {
-            AssertThrow(layer.IsValid());
+            Assert(layer.IsValid());
         }
 
         void Lock()
@@ -125,7 +125,7 @@ class StreamingManagerThread final : public Thread<Scheduler, StreamingManager*>
         void Unlock()
         {
             uint32 value = lockCount.Decrement(1, MemoryOrder::RELEASE);
-            AssertDebugMsg(value > 0, "Lock count cannot be negative!");
+            AssertDebug(value > 0, "Lock count cannot be negative!");
         }
 
         bool IsLocked() const
@@ -192,7 +192,7 @@ public:
         if (!IsRunning() || Threads::IsOnThread(Id()))
         {
             auto it = m_volumes.FindAs(volume);
-            AssertThrowMsg(it != m_volumes.End(), "StreamingVolume not found in streaming manager!");
+            Assert(it != m_volumes.End(), "StreamingVolume not found in streaming manager!");
 
             m_volumes.Erase(it);
         }
@@ -201,7 +201,7 @@ public:
             m_scheduler.Enqueue([this, volume]()
                 {
                     auto it = m_volumes.FindAs(volume);
-                    AssertThrowMsg(it != m_volumes.End(), "StreamingVolume not found in streaming manager!");
+                    Assert(it != m_volumes.End(), "StreamingVolume not found in streaming manager!");
 
                     m_volumes.Erase(it);
                 },
@@ -225,7 +225,7 @@ public:
                     return data.layer == layer;
                 });
 
-            AssertThrowMsg(it == m_layers.End(), "WorldGridLayer already exists in streaming manager!");
+            Assert(it == m_layers.End(), "WorldGridLayer already exists in streaming manager!");
 
             m_layers.EmplaceBack(layer);
         }
@@ -238,7 +238,7 @@ public:
                             return data.layer == layer;
                         });
 
-                    AssertThrowMsg(it == m_layers.End(), "WorldGridLayer already exists in streaming manager!");
+                    Assert(it == m_layers.End(), "WorldGridLayer already exists in streaming manager!");
 
                     m_layers.EmplaceBack(layer);
                 },
@@ -257,7 +257,7 @@ public:
                     return data.layer == layer;
                 });
 
-            AssertThrowMsg(it != m_layers.End(), "WorldGridLayer not found in streaming manager!");
+            Assert(it != m_layers.End(), "WorldGridLayer not found in streaming manager!");
 
             if (it->IsLocked())
             {
@@ -276,7 +276,7 @@ public:
                             return data.layer == layer;
                         });
 
-                    AssertThrowMsg(it != m_layers.End(), "WorldGridLayer not found in streaming manager!");
+                    Assert(it != m_layers.End(), "WorldGridLayer not found in streaming manager!");
 
                     if (it->IsLocked())
                     {
@@ -375,7 +375,7 @@ private:
                         return task.GetTaskExecutor() == promise;
                     });
 
-                AssertThrowMsg(it != m_gameThreadFutures.End(), "Task not found in game thread tasks!");
+                Assert(it != m_gameThreadFutures.End(), "Task not found in game thread tasks!");
 
                 m_gameThreadFutures.Erase(it);
             },
@@ -396,8 +396,8 @@ private:
 
 void StreamingManagerThread::StartWorkerThreadPool()
 {
-    AssertThrow(m_threadPool != nullptr);
-    AssertThrow(!m_threadPool->IsRunning());
+    Assert(m_threadPool != nullptr);
+    Assert(!m_threadPool->IsRunning());
 
     m_threadPool->Start();
 
@@ -457,7 +457,7 @@ void StreamingManagerThread::DoWork(StreamingManager* streamingManager)
         }
 
         const Handle<WorldGridLayer>& layer = layerData.layer;
-        AssertThrow(layer.IsValid());
+        Assert(layer.IsValid());
 
         StreamingCellCollection& cells = layerData.cells;
         Queue<StreamingCellUpdate>& cellUpdateQueue = layerData.cellUpdateQueue;
@@ -488,7 +488,7 @@ void StreamingManagerThread::DoWork(StreamingManager* streamingManager)
 
             if (it == desiredCells.End())
             {
-                AssertThrow(cellRuntimeInfo.cell.IsValid());
+                Assert(cellRuntimeInfo.cell.IsValid());
 
                 // Lock so we can use it safely in the loop below for pushing to queue.
                 if (!cells.SetCellLockState(cellRuntimeInfo.coord, true))
@@ -510,10 +510,10 @@ void StreamingManagerThread::DoWork(StreamingManager* streamingManager)
         {
             for (const Handle<StreamingCell>& cell : cellsToRemove)
             {
-                AssertThrow(cell.IsValid());
-                AssertDebugMsg(cells.IsCellLocked(cell->GetPatchInfo().coord),
-                    "StreamingCell with coord %d,%d is not locked for unloading!",
-                    cell->GetPatchInfo().coord.x, cell->GetPatchInfo().coord.y);
+                Assert(cell.IsValid());
+                AssertDebug(cells.IsCellLocked(cell->GetPatchInfo().coord),
+                    "StreamingCell with coord {} is not locked for unloading!",
+                    cell->GetPatchInfo().coord);
 
                 // Cell is locked here -- request unloading.
                 cellUpdateQueue.Push(StreamingCellUpdate { cell->GetPatchInfo().coord, StreamingCellState::UNLOADING });
@@ -524,7 +524,7 @@ void StreamingManagerThread::DoWork(StreamingManager* streamingManager)
         {
             for (const Vec2i& coord : cellsToAdd)
             {
-                AssertThrowMsg(!cells.HasCell(coord), "StreamingCell with coord %d,%d already exists!", coord.x, coord.y);
+                Assert(!cells.HasCell(coord), "StreamingCell with coord {} already exists!", coord);
 
                 cellUpdateQueue.Push(StreamingCellUpdate { coord, StreamingCellState::WAITING });
             }
@@ -559,7 +559,7 @@ void StreamingManagerThread::ProcessCellUpdatesForLayer(LayerData& layerData)
         {
         case StreamingCellState::WAITING:
         {
-            AssertThrowMsg(!cells.HasCell(update.coord), "StreamingCell with coord %d,%d already exists!", update.coord.x, update.coord.y);
+            Assert(!cells.HasCell(update.coord), "StreamingCell with coord {} already exists!", update.coord);
 
             StreamingCellInfo cellInfo;
             cellInfo.coord = update.coord;
@@ -583,7 +583,7 @@ void StreamingManagerThread::ProcessCellUpdatesForLayer(LayerData& layerData)
             InitObject(cell);
 
             const bool wasCellAdded = cells.AddCell(cell, StreamingCellState::WAITING, /* lock */ true);
-            AssertThrowMsg(wasCellAdded, "Failed to add StreamingCell with coord: %d,%d", update.coord.x, update.coord.y);
+            Assert(wasCellAdded, "Failed to add StreamingCell with coord: {}", update.coord);
 
             PostCellUpdateToGameThread(cell, StreamingCellState::WAITING);
 
@@ -597,24 +597,23 @@ void StreamingManagerThread::ProcessCellUpdatesForLayer(LayerData& layerData)
                     bool isOk = true;
 
                     isOk &= layerData.cells.UpdateCellState(cell->GetPatchInfo().coord, StreamingCellState::LOADING);
-                    AssertDebugMsg(isOk, "Failed to update StreamingCell state to LOADING for coord: %d,%d for layer: %s",
-                        cell->GetPatchInfo().coord.x, cell->GetPatchInfo().coord.y,
-                        layerData.layer->InstanceClass()->GetName().LookupString());
+                    AssertDebug(isOk, "Failed to update StreamingCell state to LOADING for coord: {} for layer: {}",
+                        cell->GetPatchInfo().coord,
+                        layerData.layer->InstanceClass()->GetName());
 
                     PostCellUpdateToGameThread(cell, StreamingCellState::LOADING);
 
                     cell->OnStreamStart();
 
                     isOk &= layerData.cells.UpdateCellState(cell->GetPatchInfo().coord, StreamingCellState::LOADED);
-                    AssertDebugMsg(isOk, "Failed to update StreamingCell state to LOADED for coord: %d,%d for layer: %s\tCurrent state: %u",
-                        cell->GetPatchInfo().coord.x, cell->GetPatchInfo().coord.y,
-                        layerData.layer->InstanceClass()->GetName().LookupString(),
+                    AssertDebug(isOk, "Failed to update StreamingCell state to LOADED for coord: {} for layer: {}\tCurrent state: %{}",
+                        cell->GetPatchInfo().coord,
+                        layerData.layer->InstanceClass()->GetName(),
                         layerData.cells.GetCellState(cell->GetPatchInfo().coord));
 
                     isOk &= layerData.cells.SetCellLockState(cell->GetPatchInfo().coord, false);
-                    AssertDebugMsg(isOk, "Failed to unlock StreamingCell with coord: %d,%d for layer: %s",
-                        cell->GetPatchInfo().coord.x, cell->GetPatchInfo().coord.y,
-                        layerData.layer->InstanceClass()->GetName().LookupString());
+                    AssertDebug(isOk, "Failed to unlock StreamingCell with coord: {} for layer: {}",
+                        cell->GetPatchInfo().coord, layerData.layer->InstanceClass()->GetName());
 
                     PostCellUpdateToGameThread(cell, StreamingCellState::LOADED);
 
@@ -628,29 +627,29 @@ void StreamingManagerThread::ProcessCellUpdatesForLayer(LayerData& layerData)
             bool isOk = true;
 
             isOk &= cells.HasCell(update.coord);
-            AssertThrowMsg(isOk, "StreamingCell with coord %d,%d does not exist!", update.coord.x, update.coord.y);
+            Assert(isOk, "StreamingCell with coord {} does not exist!", update.coord);
 
             // Locked here - see StreamingManagerThread::DoWork where we lock before pushing UNLOADING state.
 
             isOk &= cells.IsCellLocked(update.coord);
-            AssertThrowMsg(isOk, "StreamingCell with coord %d,%d for layer %s is not locked for unloading!",
-                update.coord.x, update.coord.y, layerData.layer->InstanceClass()->GetName().LookupString());
+            Assert(isOk, "StreamingCell with coord {} for layer {} is not locked for unloading!",
+                update.coord, layerData.layer->InstanceClass()->GetName());
 
             Handle<StreamingCell> cell = cells.GetCell(update.coord);
-            AssertThrowMsg(cell.IsValid(), "StreamingCell with coord %d,%d for layer %s is not valid!",
-                update.coord.x, update.coord.y, layerData.layer->InstanceClass()->GetName().LookupString());
+            Assert(cell.IsValid(), "StreamingCell with coord {} for layer {} is not valid!",
+                update.coord, layerData.layer->InstanceClass()->GetName());
 
             isOk &= cells.UpdateCellState(cell->GetPatchInfo().coord, StreamingCellState::UNLOADING);
-            AssertDebugMsg(isOk, "Failed to update StreamingCell state to UNLOADING for coord: %d,%d for layer: %s",
-                cell->GetPatchInfo().coord.x, cell->GetPatchInfo().coord.y,
-                layerData.layer->InstanceClass()->GetName().LookupString());
+            AssertDebug(isOk, "Failed to update StreamingCell state to UNLOADING for coord: {} for layer: {}",
+                cell->GetPatchInfo().coord,
+                layerData.layer->InstanceClass()->GetName());
 
             PostCellUpdateToGameThread(cell, StreamingCellState::UNLOADING);
 
             isOk &= cells.RemoveCell(cell->GetPatchInfo().coord);
-            AssertDebugMsg(isOk, "Failed to remove StreamingCell with coord: %d,%d for layer: %s",
-                cell->GetPatchInfo().coord.x, cell->GetPatchInfo().coord.y,
-                layerData.layer->InstanceClass()->GetName().LookupString());
+            AssertDebug(isOk, "Failed to remove StreamingCell with coord: {} for layer: {}",
+                cell->GetPatchInfo().coord,
+                layerData.layer->InstanceClass()->GetName());
 
             HYP_LOG(Streaming, Debug, "Removed StreamingCell at coord: {} for layer: {} on thread: {}",
                 cell->GetPatchInfo().coord, layerData.layer->InstanceClass()->GetName().LookupString(),
@@ -762,7 +761,7 @@ void StreamingManager::AddStreamingVolume(const Handle<StreamingVolumeBase>& vol
     HYP_SCOPE;
     Threads::AssertOnThread(g_gameThread);
 
-    AssertThrow(volume.IsValid());
+    Assert(volume.IsValid());
 
     volume->RegisterNotifier(&m_thread->GetNotifier());
 
@@ -789,7 +788,7 @@ void StreamingManager::AddWorldGridLayer(const Handle<WorldGridLayer>& layer)
     HYP_SCOPE;
     // Threads::AssertOnThread(g_gameThread);
 
-    AssertThrow(layer.IsValid());
+    Assert(layer.IsValid());
 
     m_thread->AddWorldGridLayer(layer);
 }
@@ -855,7 +854,7 @@ void StreamingManager::Update(float delta)
     for (Pair<Handle<StreamingCell>, StreamingCellState>& update : updates)
     {
         Handle<StreamingCell> cell = std::move(update.first);
-        AssertThrowMsg(cell.IsValid(), "StreamingCell is not valid!");
+        Assert(cell.IsValid(), "StreamingCell is not valid!");
 
         switch (update.second)
         {

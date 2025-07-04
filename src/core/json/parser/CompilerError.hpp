@@ -170,10 +170,7 @@ class CompilerError
 
 public:
     template <typename... Args>
-    CompilerError(
-        ErrorLevel level, ErrorMessage msg,
-        const SourceLocation& location,
-        const Args&... args)
+    CompilerError(ErrorLevel level, ErrorMessage msg, const SourceLocation& location, const Args&... args)
         : m_level(level),
           m_msg(msg),
           m_location(location)

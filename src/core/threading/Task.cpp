@@ -83,15 +83,15 @@ bool TaskBase::Cancel()
 
 void TaskBase::Await_Internal() const
 {
-    AssertThrow(IsValid());
+    HYP_CORE_ASSERT(IsValid());
 
     TaskExecutorBase* executor = GetTaskExecutor();
-    AssertThrow(executor != nullptr);
+    HYP_CORE_ASSERT(executor != nullptr);
 
     executor->GetNotifier().Await();
 
 #ifdef HYP_DEBUG_MODE
-    AssertThrow(IsCompleted());
+    HYP_CORE_ASSERT(IsCompleted());
 #endif
 }
 

@@ -323,11 +323,9 @@ bool Ray::TestTriangleList(
 
     for (SizeType i = 0; i < indices.Size(); i += 3)
     {
-#ifdef HYP_DEBUG_MODE
-        AssertThrow(indices[i + 0] < vertices.Size());
-        AssertThrow(indices[i + 1] < vertices.Size());
-        AssertThrow(indices[i + 2] < vertices.Size());
-#endif
+        HYP_CORE_ASSERT(indices[i + 0] < vertices.Size());
+        HYP_CORE_ASSERT(indices[i + 1] < vertices.Size());
+        HYP_CORE_ASSERT(indices[i + 2] < vertices.Size());
 
         const Triangle triangle {
             vertices[indices[i + 0]].GetPosition() * transform.GetMatrix(),
@@ -343,7 +341,7 @@ bool Ray::TestTriangleList(
 
     if (intersected)
     {
-        AssertThrow(!tmpResults.Empty());
+        HYP_CORE_ASSERT(!tmpResults.Empty());
 
         auto& firstResult = tmpResults.Front();
 
@@ -386,7 +384,7 @@ bool Ray::TestTriangleList(
 
     if (intersected)
     {
-        AssertThrow(!tmpResults.Empty());
+        HYP_CORE_ASSERT(!tmpResults.Empty());
 
         auto& firstResult = tmpResults.Front();
 

@@ -138,9 +138,9 @@ void ShadowMapUpdaterSystem::Process(float delta)
 
 // void ShadowMapUpdaterSystem::AddRenderSubsystemToEnvironment(ShadowMapComponent& shadowMapComponent, LightComponent& lightComponent)
 // {
-//     AssertThrow(GetWorld() != nullptr);
+//     Assert(GetWorld() != nullptr);
 
-//     AssertThrow(lightComponent.light->IsReady());
+//     Assert(lightComponent.light->IsReady());
 
 //     if (shadowMapComponent.subsystem.IsValid())
 //     {

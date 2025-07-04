@@ -59,7 +59,7 @@ TResult<CSharpTypeMapping> MapToCSharpType(const Analyzer& analyzer, const ASTTy
     }
 
     type = ExtractInnerType(type);
-    AssertThrow(type != nullptr);
+    Assert(type != nullptr);
 
     if (type->type_name.HasValue())
     {
@@ -1827,7 +1827,7 @@ RC<ASTType> Parser::ParseType()
 
 RC<ASTFunctionType> Parser::ParseFunctionType(const RC<ASTType>& return_type)
 {
-    AssertThrow(return_type != nullptr);
+    Assert(return_type != nullptr);
 
     RC<ASTFunctionType> func_type = MakeRefCountedPtr<ASTFunctionType>();
     func_type->return_type = return_type;

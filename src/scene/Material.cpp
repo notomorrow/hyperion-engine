@@ -501,7 +501,7 @@ void MaterialCache::Add(const Handle<Material>& material)
         return;
     }
 
-    AssertThrowMsg(!material->IsDynamic(), "Cannot add dynamic material to cache, as changes to the material will affect all instances");
+    Assert(!material->IsDynamic(), "Cannot add dynamic material to cache, as changes to the material will affect all instances");
 
     Mutex::Guard guard(m_mutex);
 
@@ -589,7 +589,7 @@ Handle<Material> MaterialCache::GetOrCreate(
         m_map.Set(hc, handle);
     }
 
-    AssertThrow(!handle->IsDynamic());
+    Assert(!handle->IsDynamic());
     InitObject(handle);
 
     return handle;

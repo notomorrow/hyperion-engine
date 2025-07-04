@@ -175,32 +175,28 @@ struct HypPropertyGetter
 
     HypData Invoke(const HypData& target) const
     {
-        AssertThrow(IsValid());
-        AssertThrow(!target.IsNull());
+        HYP_CORE_ASSERT(IsValid());
+        HYP_CORE_ASSERT(!target.IsNull());
 
-#ifdef HYP_DEBUG_MODE
-        AssertThrowMsg(
+        HYP_CORE_ASSERT(
             target.ToRef().Is(typeInfo.targetTypeId),
             "Target type mismatch, expected TypeId %u, got %u",
             typeInfo.targetTypeId.Value(),
             target.GetTypeId().Value());
-#endif
 
         return getProc(target);
     }
 
     FBOMData Serialize(const HypData& target) const
     {
-        AssertThrow(IsValid());
-        AssertThrow(!target.IsNull());
+        HYP_CORE_ASSERT(IsValid());
+        HYP_CORE_ASSERT(!target.IsNull());
 
-#ifdef HYP_DEBUG_MODE
-        AssertThrowMsg(
+        HYP_CORE_ASSERT(
             target.ToRef().Is(typeInfo.targetTypeId),
             "Target type mismatch, expected TypeId %u, got %u",
             typeInfo.targetTypeId.Value(),
             target.GetTypeId().Value());
-#endif
 
         return serializeProc(target);
     }
@@ -331,32 +327,28 @@ struct HypPropertySetter
 
     void Invoke(HypData& target, const HypData& value) const
     {
-        AssertThrow(IsValid());
-        AssertThrow(!target.IsNull());
+        HYP_CORE_ASSERT(IsValid());
+        HYP_CORE_ASSERT(!target.IsNull());
 
-#ifdef HYP_DEBUG_MODE
-        AssertThrowMsg(
+        HYP_CORE_ASSERT(
             target.ToRef().Is(typeInfo.targetTypeId),
             "Target type mismatch, expected TypeId %u, got %u",
             typeInfo.targetTypeId.Value(),
             target.GetTypeId().Value());
-#endif
 
         setProc(target, value);
     }
 
     void Deserialize(FBOMLoadContext& context, HypData& target, const FBOMData& value) const
     {
-        AssertThrow(IsValid());
-        AssertThrow(!target.IsNull());
+        HYP_CORE_ASSERT(IsValid());
+        HYP_CORE_ASSERT(!target.IsNull());
 
-#ifdef HYP_DEBUG_MODE
-        AssertThrowMsg(
+        HYP_CORE_ASSERT(
             target.ToRef().Is(typeInfo.targetTypeId),
             "Target type mismatch, expected TypeId %u, got %u",
             typeInfo.targetTypeId.Value(),
             target.GetTypeId().Value());
-#endif
 
         deserializeProc(context, target, value);
     }
@@ -396,9 +388,7 @@ public:
           m_setter(std::move(setter)),
           m_originalMember(nullptr)
     {
-#ifdef HYP_DEBUG_MODE
-        AssertThrowMsg(m_setter.typeInfo.valueTypeId == m_typeId, "Setter value type id should match property type id");
-#endif
+        HYP_CORE_ASSERT(m_setter.typeInfo.valueTypeId == m_typeId, "Setter value type id should match property type id");
     }
 
     template <class ValueType, class TargetType, typename = std::enable_if_t<!std::is_member_function_pointer_v<ValueType TargetType::*>>>

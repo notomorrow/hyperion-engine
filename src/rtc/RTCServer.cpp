@@ -8,8 +8,8 @@
 
 #ifdef HYP_LIBDATACHANNEL
 
-    #include <rtc/rtc.hpp>
-    #include <variant>
+#include <rtc/rtc.hpp>
+#include <variant>
 
 #else
 // Stub it out
@@ -48,7 +48,7 @@ RTCServer::~RTCServer()
 
 void RTCServer::EnqueueClientRemoval(String clientId)
 {
-    AssertThrow(m_thread != nullptr && m_thread->IsRunning());
+    Assert(m_thread != nullptr && m_thread->IsRunning());
 
     m_thread->GetScheduler().Enqueue([this, id = std::move(clientId)]() mutable
         {
@@ -117,9 +117,9 @@ LibDataChannelRTCServer::~LibDataChannelRTCServer()
 
 void LibDataChannelRTCServer::Start()
 {
-    AssertThrowMsg(!m_thread->IsRunning(), "LibDataChannelRTCServer::Start() called, but server is already running!");
+    Assert(!m_thread->IsRunning(), "LibDataChannelRTCServer::Start() called, but server is already running!");
 
-    AssertThrowMsg(m_websocket == nullptr, "LibDataChannelRTCServer::Start() called, but m_websocket is not nullptr!");
+    Assert(m_websocket == nullptr, "LibDataChannelRTCServer::Start() called, but m_websocket is not nullptr!");
 
     m_websocket.Emplace();
 
@@ -216,10 +216,10 @@ RC<RTCClient> LibDataChannelRTCServer::CreateClient(String id)
 
 void LibDataChannelRTCServer::SendToSignallingServer(ByteBuffer bytes)
 {
-    AssertThrowMsg(m_thread->IsRunning(), "LibDataChannelRTCServer::SendToSignallingServer() called, but server is not running!");
+    Assert(m_thread->IsRunning(), "LibDataChannelRTCServer::SendToSignallingServer() called, but server is not running!");
 
-    AssertThrow(m_websocket != nullptr);
-    AssertThrowMsg(m_websocket->isOpen(), "Expected websocket to be open");
+    Assert(m_websocket != nullptr);
+    Assert(m_websocket->isOpen(), "Expected websocket to be open");
 
     if (!bytes.Size())
     {
@@ -244,7 +244,7 @@ void LibDataChannelRTCServer::SendToSignallingServer(ByteBuffer bytes)
 
 void LibDataChannelRTCServer::SendToClient(String clientId, const ByteBuffer& bytes)
 {
-    AssertThrowMsg(m_thread->IsRunning(), "LibDataChannelRTCServer::SendToClient() called, but server is not running!");
+    Assert(m_thread->IsRunning(), "LibDataChannelRTCServer::SendToClient() called, but server is not running!");
 
     // if (Optional<RC<RTCClient>> client = m_clientList.Get(clientId)) {
     //     client.Get()->Send(bytes);

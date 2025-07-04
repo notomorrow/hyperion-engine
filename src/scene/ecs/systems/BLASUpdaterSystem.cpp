@@ -82,7 +82,7 @@ struct RENDER_COMMAND(AddBLASToTLAS)
     virtual RendererResult operator()() override
     {
         RenderEnvironment* environment = renderWorld->GetEnvironment();
-        AssertThrow(environment != nullptr);
+        Assert(environment != nullptr);
 
         for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
         {
@@ -115,7 +115,7 @@ struct RENDER_COMMAND(RemoveBLASFromTLAS)
     virtual RendererResult operator()() override
     {
         RenderEnvironment* environment = renderWorld->GetEnvironment();
-        AssertThrow(environment != nullptr);
+        Assert(environment != nullptr);
 
         for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
         {
@@ -168,13 +168,13 @@ void BLASUpdaterSystem::OnEntityAdded(Entity* entity)
         return;
     }
 
-    AssertThrow(meshComponent.raytracingData == nullptr);
+    Assert(meshComponent.raytracingData == nullptr);
 
     InitObject(meshComponent.mesh);
-    AssertThrow(meshComponent.mesh->IsReady());
+    Assert(meshComponent.mesh->IsReady());
 
     InitObject(meshComponent.material);
-    AssertThrow(meshComponent.material->IsReady());
+    Assert(meshComponent.material->IsReady());
 
     BLASRef blas;
 

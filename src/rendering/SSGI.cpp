@@ -24,6 +24,9 @@
 
 #include <core/threading/Threads.hpp>
 
+#include <core/logging/Logger.hpp>
+#include <core/logging/LogChannels.hpp>
+
 #include <scene/Texture.hpp>
 #include <scene/EnvProbe.hpp>
 #include <scene/Light.hpp>
@@ -67,7 +70,7 @@ struct RENDER_COMMAND(CreateSSGIUniformBuffers)
         : uniforms(uniforms),
           uniformBuffers(uniformBuffers)
     {
-        AssertThrow(uniforms.dimensions.x * uniforms.dimensions.y != 0);
+        Assert(uniforms.dimensions.x * uniforms.dimensions.y != 0);
     }
 
     virtual ~RENDER_COMMAND(CreateSSGIUniformBuffers)() override = default;
@@ -76,7 +79,7 @@ struct RENDER_COMMAND(CreateSSGIUniformBuffers)
     {
         for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
         {
-            AssertThrow(uniformBuffers[frameIndex] != nullptr);
+            Assert(uniformBuffers[frameIndex] != nullptr);
 
             HYPERION_BUBBLE_ERRORS(uniformBuffers[frameIndex]->Create());
 
@@ -188,7 +191,7 @@ void SSGI::CreateComputePipelines()
     const ShaderProperties shaderProperties = GetShaderProperties();
 
     ShaderRef shader = g_shaderManager->GetOrCreate(NAME("SSGI"), shaderProperties);
-    AssertThrow(shader.IsValid());
+    Assert(shader.IsValid());
 
     const DescriptorTableDeclaration& descriptorTableDecl = shader->GetCompiledShader()->GetDescriptorTableDeclaration();
     DescriptorTableRef descriptorTable = g_renderBackend->MakeDescriptorTable(&descriptorTableDecl);
@@ -196,7 +199,7 @@ void SSGI::CreateComputePipelines()
     for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
     {
         const DescriptorSetRef& descriptorSet = descriptorTable->GetDescriptorSet(NAME("SSGIDescriptorSet"), frameIndex);
-        AssertThrow(descriptorSet != nullptr);
+        Assert(descriptorSet != nullptr);
 
         descriptorSet->SetElement(NAME("OutImage"), m_resultTexture->GetRenderResource().GetImageView());
         descriptorSet->SetElement(NAME("UniformBuffer"), m_uniformBuffers[frameIndex]);
@@ -247,7 +250,7 @@ void SSGI::Render(FrameBase* frame, const RenderSetup& renderSetup)
 
     if (viewDescriptorSetIndex != ~0u)
     {
-        AssertThrow(renderSetup.passData != nullptr);
+        Assert(renderSetup.passData != nullptr);
 
         frame->GetCommandList().Add<BindDescriptorSet>(
             renderSetup.passData->descriptorSets[frame->GetFrameIndex()],

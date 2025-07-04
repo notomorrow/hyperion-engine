@@ -265,7 +265,7 @@ public:
     HYP_FORCE_INLINE T& Get() const
     {
         constexpr TypeId requestedTypeId = TypeId::ForType<NormalizedType<T>>();
-        AssertThrowMsg(m_typeId == requestedTypeId || IsA(GetClass(requestedTypeId), m_ptr, m_typeId), "Held type not equal to requested type!");
+        HYP_CORE_ASSERT(m_typeId == requestedTypeId || IsA(GetClass(requestedTypeId), m_ptr, m_typeId), "Held type not equal to requested type!");
 
         return *static_cast<NormalizedType<T>*>(m_ptr);
     }
@@ -418,7 +418,7 @@ public:
     HYP_FORCE_INLINE const T& Get() const
     {
         const TypeId requestedTypeId = TypeId::ForType<NormalizedType<T>>();
-        AssertThrowMsg(m_typeId == requestedTypeId || IsA(GetClass(requestedTypeId), m_ptr, m_typeId), "Held type not equal to requested type!");
+        HYP_CORE_ASSERT(m_typeId == requestedTypeId || IsA(GetClass(requestedTypeId), m_ptr, m_typeId), "Held type not equal to requested type!");
 
         return *static_cast<const NormalizedType<T>*>(m_ptr);
     }

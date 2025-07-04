@@ -33,22 +33,22 @@ enum RenderCommandExecuteStage : uint32
 
 /*! \brief Pushes a render command to the render command queue. This is a wrapper around RenderCommands::Push.
  *  If called from the render thread, the command is executed immediately. */
-#define PUSH_RENDER_COMMAND(name, ...)                                                                                                                               \
-    if (::hyperion::Threads::IsOnThread(::hyperion::g_renderThread))                                                                                                \
-    {                                                                                                                                                                \
-        const ::hyperion::RendererResult commandResult = RENDER_COMMAND(name)(__VA_ARGS__).Call();                                                                  \
-        AssertThrowMsg(commandResult, "Render command error! [%d]: %s\n", commandResult.GetError().GetErrorCode(), commandResult.GetError().GetMessage().Data()); \
-    }                                                                                                                                                                \
-    else                                                                                                                                                             \
-    {                                                                                                                                                                \
-        ::hyperion::RenderCommands::Push<RENDER_COMMAND(name)>(__VA_ARGS__);                                                                                         \
+#define PUSH_RENDER_COMMAND(name, ...)                                                                                                                  \
+    if (::hyperion::Threads::IsOnThread(::hyperion::g_renderThread))                                                                                    \
+    {                                                                                                                                                   \
+        const ::hyperion::RendererResult commandResult = RENDER_COMMAND(name)(__VA_ARGS__).Call();                                                      \
+        Assert(commandResult, "Render command error! [{}]: {}", commandResult.GetError().GetErrorCode(), commandResult.GetError().GetMessage().Data()); \
+    }                                                                                                                                                   \
+    else                                                                                                                                                \
+    {                                                                                                                                                   \
+        ::hyperion::RenderCommands::Push<RENDER_COMMAND(name)>(__VA_ARGS__);                                                                            \
     }
 
 /*! \brief If not on the render thread, waits for the render thread to finish executing all render commands. */
-#define HYP_SYNC_RENDER(...)                                           \
+#define HYP_SYNC_RENDER(...)                                          \
     if (!::hyperion::Threads::IsOnThread(::hyperion::g_renderThread)) \
-    {                                                                  \
-        ::hyperion::RenderCommands::Wait();                            \
+    {                                                                 \
+        ::hyperion::RenderCommands::Wait();                           \
     }
 
 constexpr uint32 maxRenderCommandTypes = 128;
@@ -299,7 +299,7 @@ private:
 
                     const uint32 commandTypeIndex = buffer.renderCommandTypeIndex.Increment(1, MemoryOrder::ACQUIRE_RELEASE);
 
-                    AssertThrowMsg(
+                    AssertDebug(
                         commandTypeIndex < maxRenderCommandTypes - 1,
                         "Maximum number of render command types initialized (%llu). Increase the buffer size?",
                         maxRenderCommandTypes - 1);
