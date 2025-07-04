@@ -33,24 +33,15 @@ struct GlyphImageData
 class Glyph
 {
 public:
-    struct PackedMetrics
-    {
-        uint16 width;
-        uint16 height;
-        int16 bearingX;
-        int16 bearingY;
-        uint32 advance;
-    };
-
     struct Metrics
     {
-        PackedMetrics metrics;
-        Vec2i imagePosition;
+        uint16 width = 0;
+        uint16 height = 0;
+        int16 bearingX = 0;
+        int16 bearingY = 0;
+        uint32 advance = 0;
 
-        HYP_FORCE_INLINE PackedMetrics GetPackedMetrics() const
-        {
-            return metrics;
-        }
+        Vec2i imagePosition;
     };
 
     HYP_API Glyph(RC<FontFace> face, FontFace::GlyphIndex index, float scale);
@@ -84,7 +75,7 @@ private:
     float m_scale;
 
     GlyphImageData m_glyphImageData;
-    Metrics m_metrics { 0 };
+    Metrics m_metrics {};
 };
 
 }; // namespace hyperion

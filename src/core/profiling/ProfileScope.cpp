@@ -181,7 +181,7 @@ public:
         object["trace_id"] = m_traceId.ToString();
 
         Task<HTTPResponse> startRequest = HTTPRequest(m_params.endpointUrl + "/start", json::JSONValue(std::move(object)), HTTPMethod::POST)
-                                               .Send();
+                                              .Send();
 
         HYP_LOG(Profile, Info, "Waiting for profiler connection request to finish");
 
@@ -374,7 +374,7 @@ static void DebugLogProfileScopeEntry(ProfileScopeEntry* entry, int depth = 0)
             putchar(int(' '));
         }
 
-        DebugLog(LogType::Debug, "Profile scope entry '%s': %llu us\n", entry->label.Data(), entry->measuredTimeUs);
+        HYP_LOG(Profile, Debug, "Profile scope entry '{}': {} us\n", entry->label, entry->measuredTimeUs);
     }
 
     for (ProfileScopeEntry& child : entry->children)

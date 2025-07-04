@@ -1098,7 +1098,6 @@ struct TaskAwaitAll_Impl<Task<ReturnType>>
                     AssertThrow(calledStates[taskIndex] == 0);
 
                     calledStates[taskIndex] = 1;
-                    DebugLog(LogType::Debug, "Call OnCompleted for task index %u (executor ptr: %p)\n", taskIndex, tasks[taskIndex].GetTaskExecutor());
                     semaphore.Release(1);
                 });
 
@@ -1188,7 +1187,6 @@ struct TaskAwaitAll_Impl<Task<void>>
                     AssertThrow(calledStates[taskIndex] == 0);
 
                     calledStates[taskIndex] = 1;
-                    DebugLog(LogType::Debug, "Call OnCompleted for task index %u (executor ptr: %p)\n", taskIndex, tasks[taskIndex].GetTaskExecutor());
                     semaphore.Release(1);
                 });
 

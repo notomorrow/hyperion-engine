@@ -3,6 +3,9 @@
 #ifndef HYPERION_UTF8_HPP
 #define HYPERION_UTF8_HPP
 
+#include <core/Defines.hpp>
+#include <Types.hpp>
+
 #include <iostream>
 #include <algorithm>
 #include <fstream>
@@ -11,19 +14,17 @@
 #include <cstdint>
 #include <cstring>
 
-#include <core/debug/Debug.hpp>
-
 // #ifdef __MINGW32__
 // #undef _WIN32
 // #endif
 
 #ifdef _WIN32
-    #define WIN32_LEAN_AND_MEAN
-    #define NOMINMAX // do not allow windows.h to define 'max' and 'min'
-    #include <windows.h>
-    #include <fcntl.h>
-    #include <io.h>
-    #include <cwchar>
+#define WIN32_LEAN_AND_MEAN
+#define NOMINMAX // do not allow windows.h to define 'max' and 'min'
+#include <windows.h>
+#include <fcntl.h>
+#include <io.h>
+#include <cwchar>
 #endif
 
 namespace hyperion {
@@ -47,18 +48,24 @@ inline std::vector<char> ToMultiByte(const wchar_t* wstr)
     return buffer;
 }
 
-    #define HYP_UTF8_WIDE
-    #define HYP_UTF8_TOWIDE(str) utf::ToWide(str).data()
-    #define HYP_UTF8_TOMULTIBYTE(str) utf::ToMultiByte(str).data()
+#define HYP_UTF8_WIDE
+#define HYP_UTF8_TOWIDE(str) utf::ToWide(str).data()
+#define HYP_UTF8_TOMULTIBYTE(str) utf::ToMultiByte(str).data()
 
 #else
-    #define HYP_UTF8_TOWIDE(str) (str)
-    #define HYP_UTF8_TOMULTIBYTE(str) (str)
+#define HYP_UTF8_TOWIDE(str) (str)
+#define HYP_UTF8_TOMULTIBYTE(str) (str)
 #endif
 
-using u32char = uint32;
-using u16char = uint16;
-using u8char = uint8;
+#define HYP_UTF8_ASSERT(cond)    \
+    do                           \
+    {                            \
+        if (!HYP_UNLIKELY(cond)) \
+        {                        \
+            HYP_BREAKPOINT;      \
+        }                        \
+    }                            \
+    while (0)
 
 #define HYP_UTF8_CHECK_BOUNDS(idx, max) \
     do                                  \
@@ -69,6 +76,10 @@ using u8char = uint8;
         }                               \
     }                                   \
     while (0)
+
+using u32char = uint32;
+using u16char = uint16;
+using u8char = uint8;
 
 inline void Init()
 {
@@ -715,13 +726,13 @@ inline SizeType utf16ToUtf8(const u16char* start, const u16char* end, u8char* re
         if (HYP_UTF_IS_LEAD_SURROGATE(cp))
         {
             const uint32 trailSurrogate = HYP_UTF_MASK16(*start++);
-            AssertThrow(HYP_UTF_IS_TRAIL_SURROGATE(trailSurrogate));
+            HYP_UTF8_ASSERT(HYP_UTF_IS_TRAIL_SURROGATE(trailSurrogate));
             cp = (cp << 10) + trailSurrogate + HYP_UTF_SURROGATE_OFFSET;
         }
         else
         {
             // Lone trail surrogate
-            AssertThrow(!HYP_UTF_IS_TRAIL_SURROGATE(cp));
+            HYP_UTF8_ASSERT(!HYP_UTF_IS_TRAIL_SURROGATE(cp));
         }
 
         len += utf8Append(cp, result);
@@ -984,14 +995,14 @@ inline void utfToStr(T value, SizeType& bufferLength, CharType* result)
         return; // return after writing bufferLength
     }
 
-    AssertThrow(bufferLength != 0);
+    HYP_UTF8_ASSERT(bufferLength != 0);
 
     // don't modify passed in value any more
     SizeType bufferLengthRemaining = bufferLength - 1;
 
     if (isNegative)
     {
-        AssertThrow(bufferLength != 1);
+        HYP_UTF8_ASSERT(bufferLength != 1);
         result[bufferIndex++] = CharType('-');
         value *= -1;
 

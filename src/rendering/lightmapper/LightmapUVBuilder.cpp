@@ -190,11 +190,9 @@ TResult<LightmapUVMap> LightmapUVBuilder::Build()
 
         if (error != xatlas::AddMeshError::Success)
         {
-            DebugLog(LogType::Error, "Error adding mesh: %s\n", xatlas::StringForEnum(error));
-
             xatlas::Destroy(atlas);
 
-            return HYP_MAKE_ERROR(Error, "Error adding mesh");
+            return HYP_MAKE_ERROR(Error, "Error adding mesh: {}", 0, xatlas::StringForEnum(error));
         }
 
         xatlas::AddMeshJoin(atlas);

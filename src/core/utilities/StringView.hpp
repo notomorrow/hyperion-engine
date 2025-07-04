@@ -4,7 +4,8 @@
 #define HYPERION_STRING_VIEW_HPP
 
 #include <core/memory/Memory.hpp>
-#include <core/memory/ByteBuffer.hpp>
+
+#include <core/utilities/Span.hpp>
 
 #include <core/containers/StringFwd.hpp>
 
@@ -18,6 +19,16 @@
 
 namespace hyperion {
 namespace utilities {
+
+#define HYP_STRINGVIEW_ASSERT(cond) \
+    do                              \
+    {                               \
+        if (!HYP_UNLIKELY(cond))    \
+        {                           \
+            HYP_BREAKPOINT;         \
+        }                           \
+    }                               \
+    while (0)
 
 template <int TStringType>
 class StringView
@@ -184,13 +195,6 @@ public:
     // {
     // }
 
-    constexpr StringView(const ByteBuffer& byteBuffer)
-        : m_begin(reinterpret_cast<const CharType*>(byteBuffer.Data())),
-          m_end(reinterpret_cast<const CharType*>(byteBuffer.Data() + byteBuffer.Size())),
-          m_length(utf::utfStrlen<CharType, isUtf8>(reinterpret_cast<const CharType*>(byteBuffer.Data())))
-    {
-    }
-
     constexpr StringView(ConstByteView byteView)
         : m_begin(reinterpret_cast<const CharType*>(byteView.Data())),
           m_end(reinterpret_cast<const CharType*>(byteView.Data() + byteView.Size())),
@@ -292,10 +296,7 @@ public:
     WidestCharType GetChar(SizeType index) const
     {
         const SizeType size = Size();
-
-#ifdef HYP_DEBUG_MODE
-        AssertThrow(index < size);
-#endif
+        HYP_STRINGVIEW_ASSERT(index < size);
 
         if constexpr (isUtf8)
         {

@@ -292,11 +292,7 @@ protected:
 
         // debugging
         AssertDebug(out.Is<Array<T>>());
-        AssertThrow(out.GetTypeId() == TypeId::ForType<Array<T>>());
-        DebugLog(LogType::Debug, "Created HypData for array type: %s from array with size %zu, TypeId: %u",
-            TypeNameWithoutNamespace<decltype(array)>().Data(),
-            out.Get<Array<T>>().Size(),
-            TypeId::ForType<decltype(array)>().Value());
+        AssertDebug(out.GetTypeId() == TypeId::ForType<Array<T>>());
 
         return true;
     }

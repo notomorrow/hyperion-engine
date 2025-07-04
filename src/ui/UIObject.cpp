@@ -260,6 +260,10 @@ void UIObject::Update(float delta)
 
     AssertReady();
 
+    /// @TODO: Built a tree structure of objects that need to be updated
+    // in the next tick. sorted by breadth in the child nodes list
+    // built it out as we mark updates as needed.
+
     if (NeedsUpdate())
     {
         Update_Internal(delta);

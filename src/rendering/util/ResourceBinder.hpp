@@ -131,7 +131,6 @@ class ResourceBinder : public ResourceBinderBase
 
         void ReleaseBindings(ResourceBindingAllocatorBase* allocator)
         {
-            DebugLog(LogType::Debug, "ResourceBinder<%s>::ReleaseBindings() called\n", TypeNameWithoutNamespace<T>().Data());
             // Unbind all objects that were bound in the last frame
             for (Bitset::BitIndex i : lastFrameIds)
             {
@@ -238,7 +237,7 @@ class ResourceBinder : public ResourceBinderBase
                 const uint32 index = allocator->AllocateIndex();
                 if (index == ResourceBindingAllocatorBase::invalidBinding)
                 {
-                    DebugLog(LogType::Warn, "ResourceBinder<%s>: Maximum size of %u reached, cannot bind more objects!\n",
+                    HYP_LOG(Core, Warning, "ResourceBinder<{}>: Maximum size of {} reached, cannot bind more objects!",
                         TypeNameWithoutNamespace<T>().Data(),
                         allocator->maxSize);
 

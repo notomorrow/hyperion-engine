@@ -285,12 +285,6 @@ public:
             return false;
         }
 
-        DebugLog(
-            LogType::Debug,
-            "Checking support for format %d with support_type %d.\n",
-            int(format),
-            int(supportType));
-
         const VkFormat vulkanFormat = helpers::ToVkFormat(format);
 
         VkFormatFeatureFlags featureFlags = 0;

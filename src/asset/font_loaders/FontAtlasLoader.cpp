@@ -140,11 +140,11 @@ AssetLoadResult FontAtlasLoader::LoadAsset(LoaderState& state) const
         {
             Glyph::Metrics metrics {};
 
-            metrics.metrics.width = uint16(glyphMetricValue["width"].ToNumber());
-            metrics.metrics.height = uint16(glyphMetricValue["height"].ToNumber());
-            metrics.metrics.bearingX = int16(glyphMetricValue["bearing_x"].ToNumber());
-            metrics.metrics.bearingY = int16(glyphMetricValue["bearing_y"].ToNumber());
-            metrics.metrics.advance = uint8(glyphMetricValue["advance"].ToNumber());
+            metrics.width = uint16(glyphMetricValue["width"].ToNumber());
+            metrics.height = uint16(glyphMetricValue["height"].ToNumber());
+            metrics.bearingX = int16(glyphMetricValue["bearing_x"].ToNumber());
+            metrics.bearingY = int16(glyphMetricValue["bearing_y"].ToNumber());
+            metrics.advance = uint8(glyphMetricValue["advance"].ToNumber());
 
             metrics.imagePosition.x = int32(glyphMetricValue["image_position"]["x"].ToNumber());
             metrics.imagePosition.y = int32(glyphMetricValue["image_position"]["y"].ToNumber());

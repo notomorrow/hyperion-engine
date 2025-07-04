@@ -158,13 +158,13 @@ void HyperionEditor::Init()
     SizeType totalMemoryPoolUsage = 0;
     for (SizeType i = 0; i < memoryUsagePerPool.Size(); i++)
     {
-        DebugLog(LogType::Debug, "Memory Usage for pool %d : %f MiB\n", i, double(memoryUsagePerPool[i]) / 1024 / 1024);
+        HYP_LOG(Editor, Debug, "Memory Usage for pool {} : {} MiB", i, double(memoryUsagePerPool[i]) / 1024 / 1024);
         totalMemoryPoolUsage += memoryUsagePerPool[i];
     }
 
-    DebugLog(LogType::Debug, "Total Memory Usage for pools : %f MiB\n", double(totalMemoryPoolUsage) / 1024 / 1024);
+    HYP_LOG(Editor, Debug, "Total Memory Usage for pools : {} MiB", double(totalMemoryPoolUsage) / 1024 / 1024);
 
-    DebugLog(LogType::Debug, "ShaderManager memory usage: %f MiB\n",
+    HYP_LOG(Editor, Debug, "ShaderManager memory usage: {} MiB",
         double(ShaderManager::GetInstance()->CalculateMemoryUsage()) / 1024 / 1024);
 
     // return;

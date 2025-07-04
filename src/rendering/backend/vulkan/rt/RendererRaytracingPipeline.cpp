@@ -64,12 +64,6 @@ RendererResult VulkanRaytracingPipeline::Create()
 
     if (usedLayouts.Size() > maxSetLayouts)
     {
-        DebugLog(
-            LogType::Debug,
-            "Device max bound descriptor sets exceeded (%llu > %u)\n",
-            usedLayouts.Size(),
-            maxSetLayouts);
-
         return HYP_MAKE_ERROR(RendererError, "Device max bound descriptor sets exceeded");
     }
 
@@ -278,15 +272,15 @@ RendererResult VulkanRaytracingPipeline::CreateShaderBindingTables(VulkanShader*
 
     m_shaderBindingTableBuffers = std::move(buffers);
 
-#define GET_STRIDED_DEVICE_ADDRESS_REGION(type, out)                                       \
-    do                                                                                     \
-    {                                                                                      \
-        auto it = m_shaderBindingTableBuffers.find(type);                               \
-        if (it != m_shaderBindingTableBuffers.end())                                    \
-        {                                                                                  \
+#define GET_STRIDED_DEVICE_ADDRESS_REGION(type, out)                                 \
+    do                                                                               \
+    {                                                                                \
+        auto it = m_shaderBindingTableBuffers.find(type);                            \
+        if (it != m_shaderBindingTableBuffers.end())                                 \
+        {                                                                            \
             m_shaderBindingTableEntries.out = it->second.stridedDeviceAddressRegion; \
-        }                                                                                  \
-    }                                                                                      \
+        }                                                                            \
+    }                                                                                \
     while (0)
 
     GET_STRIDED_DEVICE_ADDRESS_REGION(SMT_RAY_GEN, rayGen);

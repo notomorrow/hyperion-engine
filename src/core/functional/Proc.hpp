@@ -6,7 +6,10 @@
 #include <core/Defines.hpp>
 #include <core/Util.hpp>
 
+#include <core/debug/Debug.hpp>
+
 #include <core/memory/Memory.hpp>
+#include <core/utilities/ValueStorage.hpp>
 
 #include <Types.hpp>
 #include <Constants.hpp>
@@ -227,8 +230,8 @@ class Proc<ReturnType(Args...)> : ProcBase
 {
     static constexpr uint32 inlineStorageSizeBytes = 256;
 
-    using InlineStorage = ValueStorageArray<char, inlineStorageSizeBytes>;
-    using Impl = Proc_Impl<ReturnType(Args...), InlineStorage>;
+    using InlineStorageType = ValueStorageArray<char, inlineStorageSizeBytes>;
+    using Impl = Proc_Impl<ReturnType(Args...), InlineStorageType>;
 
 public:
     friend class ProcRef<ReturnType(Args...)>;
@@ -256,9 +259,9 @@ public:
         m_impl.invokeFn = &Invoker<ReturnType, Args...>::template InvokeFn<FuncNormalized>;
         m_impl.moveFn = nullptr;
 
-        if (sizeof(FuncNormalized) <= sizeof(InlineStorage))
+        if (sizeof(FuncNormalized) <= sizeof(InlineStorageType))
         {
-            m_impl.memory = InlineStorage();
+            m_impl.memory = InlineStorageType();
 
             void* ptr = &m_impl.memory;
             const uintptr_t addressAligned = HYP_ALIGN_ADDRESS(ptr, alignof(FuncNormalized));
@@ -269,16 +272,16 @@ public:
 
                 m_impl.moveFn = [](Impl* src, Impl* dest)
                 {
-                    // Gauranteed that src is this - so we can safely get InlineStorage from src
+                    // Gauranteed that src is this - so we can safely get InlineStorageType from src
 
-                    dest->memory = InlineStorage();
+                    dest->memory = InlineStorageType();
 
                     FuncNormalized* srcData = HYP_ALIGN_PTR_AS(&src->memory, FuncNormalized);
 
                     // Dest would already have its memory destroyed or not yet constructed, so we can safely construct into it here.
                     new (HYP_ALIGN_PTR_AS(&dest->memory, FuncNormalized)) FuncNormalized(std::move(*srcData));
 
-                    // Destruct the source data after moving it - now InlineStorage will not hold any valid data.
+                    // Destruct the source data after moving it - now InlineStorageType will not hold any valid data.
                     srcData->~FuncNormalized();
 
                     // Proc_Impl handles setting the invokeFn, moveFn, and deleteFn members after this is called.

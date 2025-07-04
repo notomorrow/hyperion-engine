@@ -4,10 +4,14 @@
 #define HYPERION_DEBUG_HPP
 
 #include <core/Defines.hpp>
+#include <core/logging/LoggerFwd.hpp>
 
 #include <csignal>
 
 namespace hyperion {
+
+HYP_DECLARE_LOG_CHANNEL(Core);
+
 namespace debug {
 
 enum class LogType : int
@@ -68,8 +72,7 @@ using debug::LogType;
 #endif
 #endif
 
-#define HYP_UNREACHABLE() \
-    HYP_THROW("Unreachable code hit in function " HYP_STR(HYP_DEBUG_FUNC))
+#define HYP_UNREACHABLE() HYP_FAIL("Expected this section to be unreached!")
 
 #if defined(HYP_USE_EXCEPTIONS) && HYP_USE_EXCEPTIONS
 #define HYP_NOT_IMPLEMENTED()                                            \
@@ -102,23 +105,23 @@ using debug::LogType;
 
 #define HYP_ASSERT0(expr) HYP_ASSERT1(expr, )
 
-#define HYP_ASSERT1(expression, ...)                                                                              \
-    do                                                                                                            \
-    {                                                                                                             \
-        if (HYP_UNLIKELY(!(expression)))                                                                          \
-        {                                                                                                         \
-            DebugLog(LogType::Error, "Assertion failed!\n\tCondition: " #expression "\n\tMessage: " __VA_ARGS__); \
-            debug::DebugLog_FlushOutputStream();                                                                  \
-                                                                                                                  \
-            if (debug::IsDebuggerAttached())                                                                      \
-                HYP_BREAKPOINT;                                                                                   \
-            else                                                                                                  \
-            {                                                                                                     \
-                HYP_PRINT_STACK_TRACE();                                                                          \
-                std::terminate();                                                                                 \
-            }                                                                                                     \
-        }                                                                                                         \
-    }                                                                                                             \
+#define HYP_ASSERT1(expression, ...)                                                                          \
+    do                                                                                                        \
+    {                                                                                                         \
+        if (HYP_UNLIKELY(!(expression)))                                                                      \
+        {                                                                                                     \
+            HYP_LOG(Core, Error, "Assertion failed!\n\tCondition: " #expression "\n\tMessage: " __VA_ARGS__); \
+            debug::DebugLog_FlushOutputStream();                                                              \
+                                                                                                              \
+            if (debug::IsDebuggerAttached())                                                                  \
+                HYP_BREAKPOINT;                                                                               \
+            else                                                                                              \
+            {                                                                                                 \
+                HYP_PRINT_STACK_TRACE();                                                                      \
+                std::terminate();                                                                             \
+            }                                                                                                 \
+        }                                                                                                     \
+    }                                                                                                         \
     while (0)
 
 #if defined(HYP_MSVC) && defined(_MSVC_TRADITIONAL) && _MSVC_TRADITIONAL
@@ -148,15 +151,15 @@ using debug::LogType;
 #define HYP_PRINT_STACK_TRACE()
 #endif
 
-#define HYP_FAIL(...)                                                                        \
-    do                                                                                       \
-    {                                                                                        \
-        HYP_PRINT_STACK_TRACE();                                                             \
-        DebugLog(LogType::Error, "\n\nAn engine crash has been triggered!\n\t" __VA_ARGS__); \
-        debug::DebugLog_FlushOutputStream();                                                 \
-                                                                                             \
-        std::terminate();                                                                    \
-    }                                                                                        \
+#define HYP_FAIL(...)                                                                    \
+    do                                                                                   \
+    {                                                                                    \
+        HYP_PRINT_STACK_TRACE();                                                         \
+        HYP_LOG(Core, Error, "\n\nAn engine crash has been triggered!\n\t" __VA_ARGS__); \
+        debug::DebugLog_FlushOutputStream();                                             \
+                                                                                         \
+        std::terminate();                                                                \
+    }                                                                                    \
     while (0)
 
 // Add to the body of virtual methods that should be overridden.

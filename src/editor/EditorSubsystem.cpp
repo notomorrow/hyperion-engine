@@ -1040,7 +1040,7 @@ void EditorSubsystem::OnAddedToWorld()
 
     g_engine->GetScriptingService()->OnScriptStateChanged.Bind([](const ManagedScript& script)
                                                              {
-                                                                 DebugLog(LogType::Debug, "Script state changed: now is %u\n", script.state);
+                                                                 DebugLog(LogType::Debug, "Script state changed: now is %u", script.state);
                                                              })
         .Detach();
 

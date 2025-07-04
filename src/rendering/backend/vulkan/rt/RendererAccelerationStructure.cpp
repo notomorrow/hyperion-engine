@@ -17,6 +17,9 @@
 #include <core/utilities/Range.hpp>
 #include <core/math/MathUtil.hpp>
 
+#include <core/logging/Logger.hpp>
+#include <core/logging/LogChannels.hpp>
+
 namespace hyperion {
 
 extern IRenderBackend* g_renderBackend;
@@ -592,11 +595,8 @@ RendererResult VulkanTLAS::CreateOrRebuildInstancesBuffer()
 
     if (m_instancesBuffer && m_instancesBuffer->Size() != instancesBufferSize)
     {
-        DebugLog(
-            LogType::Debug,
-            "Resizing TLAS instances buffer from %llu to %llu\n",
-            m_instancesBuffer->Size(),
-            instancesBufferSize);
+        HYP_LOG(RenderingBackend, Info, "Resizing TLAS instances buffer from {} to {}",
+            m_instancesBuffer->Size(), instancesBufferSize);
 
         SafeRelease(std::move(m_instancesBuffer));
     }

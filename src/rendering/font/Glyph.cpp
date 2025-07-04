@@ -68,7 +68,6 @@ TResult<UniquePtr<GlyphBitmap>> Glyph::Rasterize()
     AssertThrow(m_face != nullptr);
 
     FontEngine::Glyph glyph {};
-    PackedMetrics packedMetrics {};
 
 #ifdef HYP_FREETYPE
     if (FT_Set_Pixel_Sizes(m_face->GetFace(), 0, MathUtil::Floor<float, uint32>(64.0f * m_scale)))
@@ -86,19 +85,16 @@ TResult<UniquePtr<GlyphBitmap>> Glyph::Rasterize()
 
     AssertThrow(glyph->format == FT_GLYPH_FORMAT_BITMAP);
 
-    packedMetrics = {
-        .width = uint16(glyph->bitmap.width),
-        .height = uint16(glyph->bitmap.rows),
-        .bearingX = int16(glyph->bitmap_left),
-        .bearingY = int16(glyph->bitmap_top),
-        .advance = uint32(glyph->advance.x)
-    };
+    m_metrics.width = uint16(glyph->bitmap.width);
+    m_metrics.height = uint16(glyph->bitmap.rows);
+    m_metrics.bearingX = int16(glyph->bitmap_left);
+    m_metrics.bearingY = int16(glyph->bitmap_top);
+    m_metrics.advance = uint32(glyph->advance.x);
 #endif
 
-    m_metrics = {
-        .metrics = packedMetrics,
-        .imagePosition = { 0, 0 }
-    };
+    m_metrics.imagePosition = { 0, 0 };
+
+    AssertDebug(m_metrics.width != 0 && m_metrics.height != 0);
 
 #ifdef HYP_FREETYPE
     const Vec2i dimensions = GetMax();
@@ -127,10 +123,7 @@ TResult<UniquePtr<GlyphBitmap>> Glyph::Rasterize()
         }
     }
 
-    m_glyphImageData = GlyphImageData {
-        dimensions,
-        std::move(byteBuffer)
-    };
+    m_glyphImageData = GlyphImageData { dimensions, std::move(byteBuffer) };
 #endif
 
     if (m_glyphImageData.byteBuffer.Empty())

@@ -5,12 +5,12 @@
 #include <core/logging/LoggerFwd.hpp>
 
 #include <core/Name.hpp>
-#include <core/debug/Debug.hpp>
 #include <core/Defines.hpp>
 
 #include <core/utilities/StringView.hpp>
 #include <core/utilities/Format.hpp>
 #include <core/utilities/EnumFlags.hpp>
+#include <core/utilities/Time.hpp>
 
 #include <core/memory/ByteBuffer.hpp>
 #include <core/memory/NotNullPtr.hpp>
@@ -37,6 +37,7 @@ namespace logging {
 struct LogMessage
 {
     LogLevel level;
+    uint64 timestamp;
     StringView<StringType::UTF8> message;
 };
 
@@ -47,23 +48,23 @@ static constexpr auto LogLevelToString()
 {
     if constexpr (Level == LogLevel::DEBUG)
     {
-        return HYP_STATIC_STRING("DBG");
+        return HYP_STATIC_STRING("Debug");
     }
     else if constexpr (Level == LogLevel::INFO)
     {
-        return HYP_STATIC_STRING("INF");
+        return HYP_STATIC_STRING("Info");
     }
     else if constexpr (Level == LogLevel::WARNING)
     {
-        return HYP_STATIC_STRING("WARN");
+        return HYP_STATIC_STRING("Warning");
     }
     else if constexpr (Level == LogLevel::ERR)
     {
-        return HYP_STATIC_STRING("ERR");
+        return HYP_STATIC_STRING("Error");
     }
     else if constexpr (Level == LogLevel::FATAL)
     {
-        return HYP_STATIC_STRING("CRIT");
+        return HYP_STATIC_STRING("Fatal");
     }
     else
     {
@@ -251,11 +252,11 @@ static inline void Log_Internal(Logger& logger, Args&&... args)
     {
         if constexpr (Memory::AreStaticStringsEqual(colorCode, ""))
         {
-            logger.Log(channel, LogMessage { Category.GetLevel(), prefix + utilities::Format<FormatString>(std::forward<Args>(args)...) });
+            logger.Log(channel, LogMessage { Category.GetLevel(), Time::Now().ToMilliseconds(), prefix + utilities::Format<FormatString>(std::forward<Args>(args)...) });
         }
         else
         {
-            logger.Log(channel, LogMessage { Category.GetLevel(), prefix + utilities::Format<FormatString>(std::forward<Args>(args)...) + "\33[0m" });
+            logger.Log(channel, LogMessage { Category.GetLevel(), Time::Now().ToMilliseconds(), prefix + utilities::Format<FormatString>(std::forward<Args>(args)...) + "\33[0m" });
         }
     }
 

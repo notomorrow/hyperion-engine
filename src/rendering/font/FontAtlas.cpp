@@ -235,6 +235,8 @@ Result FontAtlas::RenderAtlasTextures()
             {
                 m_glyphMetrics[i] = glyph.GetMetrics();
                 m_glyphMetrics[i].imagePosition = offset;
+
+                AssertDebug(m_glyphMetrics[i].width != 0 && m_glyphMetrics[i].height != 0);
             }
 
             TResult<UniquePtr<GlyphBitmap>> glyphRasterizeResult = glyph.Rasterize();
@@ -341,7 +343,7 @@ Vec2i FontAtlas::FindMaxDimensions(const RC<FontFace>& face) const
     return highestDimensions;
 }
 
-Optional<Glyph::Metrics> FontAtlas::GetGlyphMetrics(FontFace::WChar symbol) const
+Optional<const Glyph::Metrics&> FontAtlas::GetGlyphMetrics(FontFace::WChar symbol) const
 {
     const auto it = m_symbolList.Find(symbol);
 
@@ -351,7 +353,7 @@ Optional<Glyph::Metrics> FontAtlas::GetGlyphMetrics(FontFace::WChar symbol) cons
     }
 
     const auto index = std::distance(m_symbolList.Begin(), it);
-    AssertThrowMsg(index < m_glyphMetrics.Size(), "Index (%u) out of bounds of glyph metrics buffer (%u)", index, m_glyphMetrics.Size());
+    AssertThrow(index < m_glyphMetrics.Size(), "Index (%u) out of bounds of glyph metrics buffer (%u)", index, m_glyphMetrics.Size());
 
     return m_glyphMetrics[index];
 }
@@ -497,11 +499,11 @@ json::JSONValue FontAtlas::GenerateMetadataJSON(const String& outputDirectory) c
     for (const Glyph::Metrics& metric : m_glyphMetrics)
     {
         metricsArray.PushBack(json::JSONObject {
-            { "width", json::JSONNumber(metric.metrics.width) },
-            { "height", json::JSONNumber(metric.metrics.height) },
-            { "bearing_x", json::JSONNumber(metric.metrics.bearingX) },
-            { "bearing_y", json::JSONNumber(metric.metrics.bearingY) },
-            { "advance", json::JSONNumber(metric.metrics.advance) },
+            { "width", json::JSONNumber(metric.width) },
+            { "height", json::JSONNumber(metric.height) },
+            { "bearing_x", json::JSONNumber(metric.bearingX) },
+            { "bearing_y", json::JSONNumber(metric.bearingY) },
+            { "advance", json::JSONNumber(metric.advance) },
             { "image_position", json::JSONObject { { "x", json::JSONNumber(metric.imagePosition.x) }, { "y", json::JSONNumber(metric.imagePosition.y) } } } });
     }
 

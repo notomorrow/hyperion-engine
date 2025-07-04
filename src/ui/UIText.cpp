@@ -60,7 +60,6 @@ static void ForEachCharacter(const FontAtlas& fontAtlas, const String& text, con
     Vec2f placement = Vec2f::Zero();
 
     const SizeType length = text.Length();
-    HYP_LOG_TEMP("ForEachCharacter: text length: {}", length);
 
     if (outCharacterPlacements)
     {
@@ -86,6 +85,7 @@ static void ForEachCharacter(const FontAtlas& fontAtlas, const String& text, con
     {
         for (const FontAtlasCharacterIterator& characterIterator : currentWordChars)
         {
+            HYP_BREAKPOINT;
             callback(characterIterator);
         }
 
@@ -136,10 +136,10 @@ static void ForEachCharacter(const FontAtlas& fontAtlas, const String& text, con
             continue;
         }
 
-        Optional<Glyph::Metrics> glyphMetrics = fontAtlas.GetGlyphMetrics(ch);
-        AssertDebug(glyphMetrics.HasValue());
+        Optional<const Glyph::Metrics&> glyphMetrics = fontAtlas.GetGlyphMetrics(ch);
+        AssertDebug(glyphMetrics.HasValue() && (glyphMetrics->width != 0 && glyphMetrics->height != 0));
 
-        if (!glyphMetrics.HasValue() || (glyphMetrics->metrics.width == 0 || glyphMetrics->metrics.height == 0))
+        if (!glyphMetrics.HasValue() || (glyphMetrics->width == 0 || glyphMetrics->height == 0))
         {
             if (outCharacterPlacements)
             {
@@ -155,10 +155,10 @@ static void ForEachCharacter(const FontAtlas& fontAtlas, const String& text, con
         characterIterator.atlasPixelSize = atlasPixelSize;
         characterIterator.cellDimensions = cellDimensions;
         characterIterator.charOffset = glyphMetrics->imagePosition;
-        characterIterator.glyphDimensions = Vec2f(float(glyphMetrics->metrics.width), float(glyphMetrics->metrics.height)) / 64.0f;
+        characterIterator.glyphDimensions = Vec2f(float(glyphMetrics->width), float(glyphMetrics->height)) / 64.0f;
         characterIterator.glyphScaling = Vec2f(characterIterator.glyphDimensions) / MathUtil::Min(Vec2f(cellDimensions), Vec2f(MathUtil::epsilonF));
-        characterIterator.bearingY = float(glyphMetrics->metrics.height - glyphMetrics->metrics.bearingY) / 64.0f;
-        characterIterator.charWidth = float(glyphMetrics->metrics.advance / 64) / 64.0f;
+        characterIterator.bearingY = float(glyphMetrics->height - glyphMetrics->bearingY) / 64.0f;
+        characterIterator.charWidth = float(glyphMetrics->advance / 64) / 64.0f;
 
         placement.x += characterIterator.charWidth;
 

@@ -169,14 +169,6 @@ public:
         m_maxPos = m_file->tellg();
         m_file->seekg(begin);
         m_pos = m_file->tellg();
-
-        if (Eof())
-        {
-            DebugLog(
-                LogType::Warn,
-                "File could not be opened at path %s\n",
-                filepath.c_str());
-        }
     }
 
     virtual ~FileByteReader() override

@@ -84,7 +84,7 @@ public:
         return m_symbolList;
     }
 
-    HYP_API Optional<Glyph::Metrics> GetGlyphMetrics(FontFace::WChar symbol) const;
+    HYP_API Optional<const Glyph::Metrics&> GetGlyphMetrics(FontFace::WChar symbol) const;
 
     HYP_API void WriteToBuffer(uint32 pixelSize, ByteBuffer& buffer) const;
     HYP_API Bitmap<1> GenerateBitmap(uint32 pixelSize) const;

@@ -52,7 +52,7 @@ static const char* g_logColourTable[] = {
 };
 
 #ifndef HYP_DEBUG_MODE
-HYP_API void DebugLog_Write(LogType type, const char* fmt, ...)
+HYP_DEPRECATED HYP_API void DebugLog_Write(LogType type, const char* fmt, ...)
 {
     /* Coloured files are less that ideal */
     const int typeN = static_cast<std::underlying_type_t<LogType>>(type);
@@ -64,7 +64,7 @@ HYP_API void DebugLog_Write(LogType type, const char* fmt, ...)
     va_end(args);
 }
 #else
-HYP_API void DebugLog_Write(LogType type, const char* callee, uint32_t line, const char* fmt, ...)
+HYP_DEPRECATED HYP_API void DebugLog_Write(LogType type, const char* callee, uint32_t line, const char* fmt, ...)
 {
     const int typeN = static_cast<std::underlying_type_t<LogType>>(type);
     /* Coloured files are less than ideal */

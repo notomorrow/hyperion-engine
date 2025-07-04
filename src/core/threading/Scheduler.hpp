@@ -453,13 +453,6 @@ public:
     {
         AssertThrow(Threads::IsOnThread(m_ownerThread));
 
-#ifdef HYP_DEBUG_MODE
-        if (!outContainer.Empty())
-        {
-            DebugLog(LogType::Warn, "Warning: Container is not empty when calling WaitForTasks().");
-        }
-#endif
-
         std::unique_lock lock(m_mutex);
 
         if (!SchedulerBase::WaitForTasks(lock))

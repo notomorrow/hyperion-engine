@@ -73,7 +73,6 @@ DataRaceDetector::DataRaceDetector()
 
 DataRaceDetector::~DataRaceDetector()
 {
-    DebugLog(LogType::Debug, "DataRaceDetector destroyed : %p\n", this);
 }
 
 EnumFlags<DataAccessFlags> DataRaceDetector::AddAccess(ThreadId threadId, EnumFlags<DataAccessFlags> accessFlags, const DataAccessState& state)

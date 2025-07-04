@@ -887,8 +887,6 @@ FBOMResult FBOMReader::ReadPropertyName(FBOMLoadContext& context, BufferedReader
 
         while (rootType != nullptr)
         {
-            DebugLog(LogType::Error, "root_type: %s\n", rootType->name.Data());
-
             rootType = rootType->extends;
         }
 

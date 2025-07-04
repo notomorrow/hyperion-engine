@@ -31,8 +31,6 @@ void CameraTrackController::UpdateLogic(double dt)
 
     const Vector3 viewVector = (pivot.transform.GetRotation() * -Vector3::UnitZ()).Normalized();
 
-    DebugLog(LogType::Debug, "CameraTrackController::UpdateLogic() %f %f %f\n", viewVector.x, viewVector.y, viewVector.z);
-
     m_camera->SetNextTranslation(pivot.transform.GetTranslation());
     m_camera->SetDirection(viewVector);
 }

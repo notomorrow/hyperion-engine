@@ -4,7 +4,8 @@
 #define HYPERION_UTIL_LOGGER_FWD_HPP
 
 #include <core/Defines.hpp>
-#include <core/debug/Debug.hpp>
+
+#include <core/containers/StaticString.hpp>
 
 #include <Types.hpp>
 

@@ -129,16 +129,16 @@ void Features::SetPhysicalDevice(VkPhysicalDevice physicalDevice)
 
 void Features::LoadDynamicFunctions(Device* device)
 {
-#define HYP_LOAD_FN(name)                                                            \
-    do                                                                               \
-    {                                                                                \
-        auto procAddr = vkGetDeviceProcAddr(device->GetDevice(), #name);            \
-        if (procAddr == nullptr)                                                    \
-        {                                                                            \
-            DebugLog(LogType::Error, "Failed to load dynamic function " #name "\n"); \
-        }                                                                            \
-        dynFunctions.name = reinterpret_cast<PFN_##name>(procAddr);                \
-    }                                                                                \
+#define HYP_LOAD_FN(name)                                                               \
+    do                                                                                  \
+    {                                                                                   \
+        auto procAddr = vkGetDeviceProcAddr(device->GetDevice(), #name);                \
+        if (procAddr == nullptr)                                                        \
+        {                                                                               \
+            HYP_LOG(RenderingBackend, Error, "Failed to load dynamic function " #name); \
+        }                                                                               \
+        dynFunctions.name = reinterpret_cast<PFN_##name>(procAddr);                     \
+    }                                                                                   \
     while (0)
 
 #if defined(HYP_FEATURES_ENABLE_RAYTRACING) && defined(HYP_FEATURES_BINDLESS_TEXTURES)
