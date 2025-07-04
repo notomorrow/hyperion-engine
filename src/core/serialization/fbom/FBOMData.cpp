@@ -136,7 +136,7 @@ FBOMData FBOMData::FromObject(const FBOMObject& object, bool keepNativeObject)
 
     if (FBOMResult err = object.Visit(&serializer, &byteWriter))
     {
-        AssertThrowMsg(false, "Failed to serialize object: %s", err.message.Data());
+        HYP_FAIL("Failed to serialize object: %s", err.message.Data());
     }
 
     FBOMData value = FBOMData(FBOMBaseObjectType(), std::move(byteWriter.GetBuffer()));
@@ -161,7 +161,7 @@ FBOMData FBOMData::FromObject(FBOMObject&& object, bool keepNativeObject)
 
     if (FBOMResult err = object.Visit(&serializer, &byteWriter))
     {
-        AssertThrowMsg(false, "Failed to serialize object: %s", err.message.Data());
+        HYP_FAIL("Failed to serialize object: %s", err.message.Data());
     }
 
     FBOMData value = FBOMData(FBOMBaseObjectType(), std::move(byteWriter.GetBuffer()));
@@ -200,7 +200,7 @@ FBOMData FBOMData::FromArray(const FBOMArray& array)
 
     if (FBOMResult err = array.Visit(&serializer, &byteWriter))
     {
-        AssertThrowMsg(false, "Failed to serialize array: %s", err.message.Data());
+        HYP_FAIL("Failed to serialize array: %s", err.message.Data());
     }
 
     FBOMData value = FBOMData(FBOMArrayType(), std::move(byteWriter.GetBuffer()));

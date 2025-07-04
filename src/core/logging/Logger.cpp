@@ -21,6 +21,11 @@ HYP_API Logger& GetLogger()
     return Logger::GetInstance();
 }
 
+HYP_API ANSIStringView GetCurrentThreadName()
+{
+    return *Threads::CurrentThreadId().GetName();
+}
+
 class LogChannelIdGenerator
 {
 public:

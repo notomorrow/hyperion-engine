@@ -191,9 +191,7 @@ ShaderProperties TemporalBlending::GetShaderProperties() const
         shaderProperties.Set("OUTPUT_RGBA32F");
         break;
     default:
-        AssertThrowMsg(false, "Unsupported format for temporal blending: %u\n", uint32(m_imageFormat));
-
-        break;
+        HYP_NOT_IMPLEMENTED();
     }
 
     static const String feedbackStrings[] = { "LOW", "MEDIUM", "HIGH" };

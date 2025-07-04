@@ -186,7 +186,7 @@ RC<RTCDataChannel> LibDataChannelRTCClient::CreateDataChannel(Name name)
             }
             else
             {
-                AssertThrow(false);
+                HYP_FAIL("Failed to lock data channel for onOpen callback");
             }
         });
 

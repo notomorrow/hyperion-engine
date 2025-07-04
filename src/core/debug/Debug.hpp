@@ -109,9 +109,14 @@ using debug::LogType;
         {                                                                                                         \
             DebugLog(LogType::Error, "Assertion failed!\n\tCondition: " #expression "\n\tMessage: " __VA_ARGS__); \
             debug::DebugLog_FlushOutputStream();                                                                  \
-            HYP_PRINT_STACK_TRACE();                                                                              \
-            if (debug::IsDebuggerAttached()) { HYP_BREAKPOINT; }                                                  \
-            std::terminate();                                                                                     \
+                                                                                                                  \
+            if (debug::IsDebuggerAttached())                                                                      \
+                HYP_BREAKPOINT;                                                                                   \
+            else                                                                                                  \
+            {                                                                                                     \
+                HYP_PRINT_STACK_TRACE();                                                                          \
+                std::terminate();                                                                                 \
+            }                                                                                                     \
         }                                                                                                         \
     }                                                                                                             \
     while (0)
@@ -143,15 +148,24 @@ using debug::LogType;
 #define HYP_PRINT_STACK_TRACE()
 #endif
 
-#define HYP_FAIL(...) AssertThrow(false, ##__VA_ARGS__)
+#define HYP_FAIL(...)                                                                        \
+    do                                                                                       \
+    {                                                                                        \
+        HYP_PRINT_STACK_TRACE();                                                             \
+        DebugLog(LogType::Error, "\n\nAn engine crash has been triggered!\n\t" __VA_ARGS__); \
+        debug::DebugLog_FlushOutputStream();                                                 \
+                                                                                             \
+        std::terminate();                                                                    \
+    }                                                                                        \
+    while (0)
 
 // Add to the body of virtual methods that should be overridden.
 // Used to allow instances of the class to be created from the managed runtime for providing managed method implementations.
 #define HYP_PURE_VIRTUAL() HYP_FAIL("Pure virtual function call: " HYP_STR(HYP_DEBUG_FUNC_SHORT) " is missing an implementation ")
 
 #define AssertStatic(cond) static_assert((cond), "Static assertion failed: " #cond)
-#define AssertStaticCond(useStaticAssert, cond)                 \
-    if constexpr ((useStaticAssert))                            \
+#define AssertStaticCond(useStaticAssert, cond)                   \
+    if constexpr ((useStaticAssert))                              \
     {                                                             \
         static_assert((cond), "Static assertion failed: " #cond); \
     }                                                             \
@@ -160,8 +174,8 @@ using debug::LogType;
         AssertThrow(cond);                                        \
     }
 #define AssertStaticMsg(cond, msg) static_assert((cond), "Static assertion failed: " #cond "\n\t" #msg "\n")
-#define AssertStaticMsgCond(useStaticAssert, cond, msg)                          \
-    if constexpr ((useStaticAssert))                                             \
+#define AssertStaticMsgCond(useStaticAssert, cond, msg)                            \
+    if constexpr ((useStaticAssert))                                               \
     {                                                                              \
         static_assert((cond), "Static assertion failed: " #cond "\n\t" #msg "\n"); \
     }                                                                              \

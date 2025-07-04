@@ -3,13 +3,13 @@
 #include <rtc/RTCClient.hpp>
 
 #ifdef HYP_LIBDATACHANNEL
-    #include <rtc/description.hpp>
-    #include <rtc/peerconnection.hpp>
-    #include <rtc/rtppacketizationconfig.hpp>
-    #include <rtc/h264rtppacketizer.hpp>
-    #include <rtc/h264packetizationhandler.hpp>
-    #include <rtc/rtcpsrreporter.hpp>
-    #include <rtc/rtcpnackresponder.hpp>
+#include <rtc/description.hpp>
+#include <rtc/peerconnection.hpp>
+#include <rtc/rtppacketizationconfig.hpp>
+#include <rtc/h264rtppacketizer.hpp>
+#include <rtc/h264packetizationhandler.hpp>
+#include <rtc/rtcpsrreporter.hpp>
+#include <rtc/rtcpnackresponder.hpp>
 #endif // HYP_LIBDATACHANNEL
 
 namespace hyperion {
@@ -87,7 +87,7 @@ void LibDataChannelRTCTrack::PrepareTrack(RTCClient* client)
     }
 
     default:
-        AssertThrowMsg(false, "Invalid track type");
+        HYP_UNREACHABLE();
     }
 }
 

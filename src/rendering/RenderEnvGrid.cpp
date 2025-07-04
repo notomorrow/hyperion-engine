@@ -173,51 +173,6 @@ struct LightFieldUniforms
 
 #pragma endregion Uniform buffer structs
 
-#pragma region Render commands
-
-struct RENDER_COMMAND(SetElementInGlobalDescriptorSet)
-    : RenderCommand
-{
-    Name setName;
-    Name elementName;
-    DescriptorSetElement::ValueType value;
-
-    RENDER_COMMAND(SetElementInGlobalDescriptorSet)(
-        Name setName,
-        Name elementName,
-        DescriptorSetElement::ValueType value)
-        : setName(setName),
-          elementName(elementName),
-          value(std::move(value))
-    {
-    }
-
-    virtual ~RENDER_COMMAND(SetElementInGlobalDescriptorSet)() override = default;
-
-    virtual RendererResult operator()() override
-    {
-        for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
-        {
-            if (value.Is<GpuBufferRef>())
-            {
-                g_renderGlobalState->GlobalDescriptorTable->GetDescriptorSet(setName, frameIndex)->SetElement(elementName, value.Get<GpuBufferRef>());
-            }
-            else if (value.Is<ImageViewRef>())
-            {
-                g_renderGlobalState->GlobalDescriptorTable->GetDescriptorSet(setName, frameIndex)->SetElement(elementName, value.Get<ImageViewRef>());
-            }
-            else
-            {
-                AssertThrowMsg(false, "Not implemented");
-            }
-        }
-
-        HYPERION_RETURN_OK;
-    }
-};
-
-#pragma endregion Render commands
-
 #pragma region RenderEnvGrid
 
 RenderEnvGrid::RenderEnvGrid(EnvGrid* envGrid)

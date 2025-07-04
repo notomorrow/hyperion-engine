@@ -71,9 +71,7 @@ VulkanDescriptorSet::VulkanDescriptorSet(const DescriptorSetLayout& layout)
 
             break;
         default:
-            AssertThrowMsg(false, "Unhandled descriptor set element type in layout: %d", int(element.type));
-
-            break;
+            HYP_UNREACHABLE();
         }
     }
 }

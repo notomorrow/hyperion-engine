@@ -324,15 +324,9 @@
 
 #if HYP_ENABLE_BREAKPOINTS
 #if (defined(HYP_ARM) && HYP_ARM) || HYP_GCC
-#define HYP_BREAKPOINT  \
-    {                   \
-        raise(SIGTRAP); \
-    }
+#define HYP_BREAKPOINT __builtin_debugtrap()
 #else
-#define HYP_BREAKPOINT                 \
-    {                                  \
-        __asm__ volatile("int $0x03"); \
-    }
+#define HYP_BREAKPOINT __asm__ volatile("int $0x03")
 #endif
 #endif
 #elif defined(HYP_MSVC) && HYP_MSVC

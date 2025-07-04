@@ -586,7 +586,7 @@ FBOMResult FBOMReader::ReadObjectType(FBOMLoadContext& context, BufferedReader* 
         break;
     }
     default:
-        AssertThrowMsg(false, "Invalid data location type");
+        HYP_FAIL("Invalid data location type");
         break;
     }
 
@@ -1277,7 +1277,7 @@ FBOMResult FBOMReader::Handle(FBOMLoadContext& context, BufferedReader* reader, 
         break;
     }
     default:
-        AssertThrowMsg(false, "Cannot process command %d in top level at position: %u", int(command), reader->Position() - sizeof(FBOMCommand));
+        HYP_FAIL("Cannot process command %d in top level at position: %u", int(command), reader->Position() - sizeof(FBOMCommand));
 
         break;
     }

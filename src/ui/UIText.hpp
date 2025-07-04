@@ -43,13 +43,6 @@ struct UITextOptions
     float lineHeight = 1.0f;
 };
 
-struct UITextCharacter
-{
-    Matrix4 transform;
-    Vec2f texcoordStart;
-    Vec2f texcoordEnd;
-};
-
 HYP_CLASS()
 class HYP_API UIText : public UIObject
 {

@@ -118,7 +118,7 @@ VkFormat ToVkFormat(TextureFormat fmt)
         break;
     }
 
-    AssertThrowMsg(false, "Unhandled texture format case %d", int(fmt));
+    HYP_FAIL("Unhandled texture format case %d", int(fmt));
 }
 
 VkFilter ToVkFilter(TextureFilterMode filterMode)
@@ -136,7 +136,7 @@ VkFilter ToVkFilter(TextureFilterMode filterMode)
         break;
     }
 
-    AssertThrowMsg(false, "Unhandled texture filter mode case %d", int(filterMode));
+    HYP_FAIL("Unhandled texture filter mode case %d", int(filterMode));
 }
 
 VkSamplerAddressMode ToVkSamplerAddressMode(TextureWrapMode textureWrapMode)
@@ -220,7 +220,7 @@ VkDescriptorType ToVkDescriptorType(DescriptorSetElementType type)
     case DescriptorSetElementType::TLAS:
         return VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
     default:
-        AssertThrowMsg(false, "Unsupported descriptor type for Vulkan");
+        HYP_UNREACHABLE();
     }
 }
 

@@ -68,7 +68,7 @@ RendererResult VulkanCommandBuffer::Create()
         level = VK_COMMAND_BUFFER_LEVEL_SECONDARY;
         break;
     default:
-        AssertThrowMsg(false, "Unsupported command buffer type");
+        HYP_UNREACHABLE();
     }
 
     VkCommandBufferAllocateInfo allocInfo { VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };

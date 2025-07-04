@@ -130,7 +130,7 @@ NoiseGenerator* NoiseFactory::Capture(NoiseGenerationType type, Seed seed)
             ref.noise = new WorleyNoiseGenerator(seed);
             break;
         default:
-            AssertThrowMsg(false, "Unsupported noise type");
+            HYP_UNREACHABLE();
         }
 
         ref.uses = 1;

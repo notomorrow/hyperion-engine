@@ -516,7 +516,7 @@ RendererResult Device<Platform::vulkan>::Create(const std::set<uint32>& required
                     familyIndex = m_queueFamilyIndices.presentFamily.Get();
                     break;
                 default:
-                    AssertThrowMsg(false, "Unknown queue type");
+                    HYP_UNREACHABLE();
                 }
 
                 VkCommandPoolCreateInfo poolInfo { VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO };

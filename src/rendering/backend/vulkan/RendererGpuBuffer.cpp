@@ -43,7 +43,7 @@ static uint32 FindMemoryType(uint32 vkTypeFilter, VkMemoryPropertyFlags vkMemory
         }
     }
 
-    AssertThrowMsg(false, "Could not find suitable memory type!\n");
+    HYP_FAIL("Could not find suitable memory type!");
 }
 
 VkImageLayout GetVkImageLayout(ResourceState state)
@@ -73,8 +73,7 @@ VkImageLayout GetVkImageLayout(ResourceState state)
     case RS_PRESENT:
         return VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
     default:
-        AssertThrowMsg(false, "Unknown resource state");
-        return VkImageLayout(-1);
+        HYP_UNREACHABLE();
     }
 }
 
@@ -112,8 +111,7 @@ VkAccessFlags GetVkAccessMask(ResourceState state)
     case RS_RESOLVE_SRC:
         return VK_ACCESS_COLOR_ATTACHMENT_READ_BIT;
     default:
-        AssertThrowMsg(false, "Unknown resource state");
-        return VkAccessFlagBits(-1);
+        HYP_UNREACHABLE();
     }
 }
 
@@ -181,8 +179,7 @@ VkPipelineStageFlags GetVkShaderStageMask(ResourceState state, bool src, ShaderM
     case RS_PRESENT:
         return src ? (VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT | VK_PIPELINE_STAGE_ALL_COMMANDS_BIT) : VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
     default:
-        AssertThrowMsg(false, "Unknown resource state");
-        return VkPipelineStageFlags(-1);
+        HYP_UNREACHABLE();
     }
 }
 
@@ -570,9 +567,7 @@ RendererResult VulkanGpuBuffer::Create()
                                            "\tYou should explicitly call Destroy() on the object before reallocating it.\n"
                                            "\tTo prevent memory leaks, calling Destroy() before allocating the memory...");
 
-#ifdef HYP_DEBUG_MODE
-        AssertThrowMsg(false, "Create() called on a buffer that has not been destroyed!");
-#endif
+        AssertDebug(false, "Create() called on a buffer that has not been destroyed!");
 
         HYPERION_BUBBLE_ERRORS(Destroy());
     }
@@ -584,9 +579,7 @@ RendererResult VulkanGpuBuffer::Create()
 
     if (m_size == 0)
     {
-#ifdef HYP_DEBUG_MODE
-        AssertThrowMsg(false, "Creating empty gpu buffer will result in errors!");
-#endif
+        AssertDebug("Creating empty gpu buffer will result in errors!");
 
         return HYP_MAKE_ERROR(RendererError, "Creating empty gpu buffer will result in errors!");
     }

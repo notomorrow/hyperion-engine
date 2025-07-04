@@ -166,8 +166,7 @@ DescriptorSetLayout::DescriptorSetLayout(const DescriptorSetDeclaration* decl)
 
                 break;
             default:
-                AssertThrowMsg(false, "Invalid descriptor slot");
-                break;
+                HYP_UNREACHABLE();
             }
         }
     }

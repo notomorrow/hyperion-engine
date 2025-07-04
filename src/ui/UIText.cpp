@@ -41,8 +41,6 @@ struct FontAtlasCharacterIterator
     Vec2f atlasPixelSize;
     Vec2f cellDimensions;
 
-    utf::u32char charValue;
-
     Vec2i charOffset;
 
     Vec2f glyphDimensions;
@@ -50,6 +48,8 @@ struct FontAtlasCharacterIterator
 
     float bearingY;
     float charWidth;
+
+    utf::u32char charValue;
 };
 
 template <class Callback>
@@ -60,6 +60,7 @@ static void ForEachCharacter(const FontAtlas& fontAtlas, const String& text, con
     Vec2f placement = Vec2f::Zero();
 
     const SizeType length = text.Length();
+    HYP_LOG_TEMP("ForEachCharacter: text length: {}", length);
 
     if (outCharacterPlacements)
     {
@@ -68,40 +69,36 @@ static void ForEachCharacter(const FontAtlas& fontAtlas, const String& text, con
     }
 
     const Vec2f cellDimensions = Vec2f(fontAtlas.GetCellDimensions()) / 64.0f;
-    AssertThrowMsg(cellDimensions.x * cellDimensions.y != 0.0f, "Cell dimensions are invalid");
-
-    const float cellDimensionsRatio = cellDimensions.x / cellDimensions.y;
 
     const Handle<Texture>& mainTextureAtlas = fontAtlas.GetAtlasTextures().GetMainAtlas();
-    AssertThrowMsg(mainTextureAtlas.IsValid(), "Main texture atlas is invalid");
+    AssertDebug(mainTextureAtlas.IsValid(), "Main texture atlas is invalid");
 
-    const Vec2f atlasPixelSize = Vec2f::One() / Vec2f(mainTextureAtlas->GetExtent().GetXY());
+    Vec2f atlasPixelSize;
 
-    struct
+    if (mainTextureAtlas->GetExtent().Volume() != 0)
     {
-        Array<FontAtlasCharacterIterator> chars;
-    } currentWord;
+        atlasPixelSize = Vec2f::One() / Vec2f(mainTextureAtlas->GetExtent().GetXY());
+    }
 
-    const auto iterateCurrentWord = [&currentWord, &callback]()
+    Array<FontAtlasCharacterIterator> currentWordChars;
+
+    const auto iterateCurrentWord = [&currentWordChars, &callback]()
     {
-        for (const FontAtlasCharacterIterator& characterIterator : currentWord.chars)
+        for (const FontAtlasCharacterIterator& characterIterator : currentWordChars)
         {
             callback(characterIterator);
         }
 
-        currentWord = {};
+        currentWordChars.Clear();
     };
 
     for (SizeType i = 0; i < length; i++)
     {
-        UITextCharacter character {};
-
         const utf::u32char ch = text.GetChar(i);
 
         if (ch == utf::u32char(' '))
         {
-
-            if (currentWord.chars.Any() && parentBounds.x != 0 && (currentWord.chars.Back().placement.x + currentWord.chars.Back().charWidth) * textSize >= float(parentBounds.x))
+            if (currentWordChars.Any() && parentBounds.x != 0 && (currentWordChars.Back().placement.x + currentWordChars.Back().charWidth) * textSize >= float(parentBounds.x))
             {
                 // newline
                 placement.x = 0.0f;
@@ -140,6 +137,7 @@ static void ForEachCharacter(const FontAtlas& fontAtlas, const String& text, con
         }
 
         Optional<Glyph::Metrics> glyphMetrics = fontAtlas.GetGlyphMetrics(ch);
+        AssertDebug(glyphMetrics.HasValue());
 
         if (!glyphMetrics.HasValue() || (glyphMetrics->metrics.width == 0 || glyphMetrics->metrics.height == 0))
         {
@@ -151,14 +149,14 @@ static void ForEachCharacter(const FontAtlas& fontAtlas, const String& text, con
             continue;
         }
 
-        FontAtlasCharacterIterator& characterIterator = currentWord.chars.EmplaceBack();
+        FontAtlasCharacterIterator& characterIterator = currentWordChars.EmplaceBack();
         characterIterator.charValue = ch;
         characterIterator.placement = placement;
         characterIterator.atlasPixelSize = atlasPixelSize;
         characterIterator.cellDimensions = cellDimensions;
         characterIterator.charOffset = glyphMetrics->imagePosition;
-        characterIterator.glyphDimensions = Vec2f { float(glyphMetrics->metrics.width), float(glyphMetrics->metrics.height) } / 64.0f;
-        characterIterator.glyphScaling = Vec2f(characterIterator.glyphDimensions) / (Vec2f(cellDimensions));
+        characterIterator.glyphDimensions = Vec2f(float(glyphMetrics->metrics.width), float(glyphMetrics->metrics.height)) / 64.0f;
+        characterIterator.glyphScaling = Vec2f(characterIterator.glyphDimensions) / MathUtil::Min(Vec2f(cellDimensions), Vec2f(MathUtil::epsilonF));
         characterIterator.bearingY = float(glyphMetrics->metrics.height - glyphMetrics->metrics.bearingY) / 64.0f;
         characterIterator.charWidth = float(glyphMetrics->metrics.advance / 64) / 64.0f;
 
@@ -177,28 +175,28 @@ static BoundingBox CalculateTextAABB(const FontAtlas& fontAtlas, const String& t
 {
     HYP_SCOPE;
 
-    BoundingBox aabb;
+    BoundingBox aabb = BoundingBox::Zero();
 
     ForEachCharacter(fontAtlas, text, parentBounds, textSize, outCharacterPlacements, [includeBearing, &aabb](const FontAtlasCharacterIterator& iter)
         {
-            BoundingBox characterAabb;
+            BoundingBox characterAabb = BoundingBox::Zero();
 
             if (includeBearing)
             {
                 const float offsetY = (iter.cellDimensions.y - iter.glyphDimensions.y) + iter.bearingY;
 
-                characterAabb = characterAabb
-                                    .Union(Vec3f(iter.placement.x, iter.placement.y + offsetY, 0.0f))
-                                    .Union(Vec3f(iter.placement.x + iter.glyphDimensions.x, iter.placement.y + offsetY + iter.cellDimensions.y, 0.0f));
+                characterAabb = characterAabb.Union(Vec3f(iter.placement.x, iter.placement.y + offsetY, 0.0f));
+                characterAabb = characterAabb.Union(Vec3f(iter.placement.x + iter.glyphDimensions.x, iter.placement.y + offsetY + iter.cellDimensions.y, 0.0f));
             }
             else
             {
-                characterAabb = characterAabb
-                                    .Union(Vec3f(iter.placement.x, iter.placement.y, 0.0f))
-                                    .Union(Vec3f(iter.placement.x + iter.glyphDimensions.x, iter.placement.y + iter.cellDimensions.y, 0.0f));
+                characterAabb = characterAabb.Union(Vec3f(iter.placement.x, iter.placement.y, 0.0f));
+                characterAabb = characterAabb.Union(Vec3f(iter.placement.x + iter.glyphDimensions.x, iter.placement.y + iter.cellDimensions.y, 0.0f));
             }
 
             aabb = aabb.Union(characterAabb);
+
+            HYP_LOG(UI, Debug, "character {} has characterAabb {}", iter.charValue, characterAabb);
         });
 
     HYP_LOG(UI, Debug, "CALCULATE TEXT AABB FOR FONT ATLAS WITH DIMENSIONS: {}, textSize: {}, text: {}\tAABB: {}\tparentBounds: {}", fontAtlas.GetAtlasTextures().GetMainAtlas()->GetExtent(), textSize, text, aabb, parentBounds);
@@ -344,7 +342,7 @@ void UIText::UpdateTextAABB()
         m_textAabbWithBearing = CalculateTextAABB(*fontAtlas, m_text, parentBounds, textSize, true, nullptr);
         m_textAabbWithoutBearing = CalculateTextAABB(*fontAtlas, m_text, parentBounds, textSize, false, &m_characterOffsets);
 
-        AssertThrow(m_characterOffsets.Size() == m_text.Length() + 1);
+        AssertDebug(m_characterOffsets.Size() == m_text.Length() + 1);
     }
     else
     {
@@ -526,12 +524,13 @@ void UIText::UpdateSize_Internal(bool updateChildren)
 
     UIObject::UpdateSize_Internal(updateChildren);
 
-    const Vec3f extentWithBearing = m_textAabbWithBearing.GetExtent();
-    const Vec3f extentWithoutBearing = m_textAabbWithoutBearing.GetExtent();
+    const Vec2f extentWithBearing = m_textAabbWithBearing.GetExtent().GetXY();
+    const Vec2f extentWithoutBearing = m_textAabbWithoutBearing.GetExtent().GetXY();
 
     if (extentWithBearing.y <= MathUtil::epsilonF || extentWithoutBearing.y <= MathUtil::epsilonF)
     {
-        HYP_LOG(UI, Warning, "Text AABB has zero height, cannot update size for UIText {}", GetName());
+        HYP_LOG_ONCE(UI, Warning, "Text AABB has zero height, cannot update size for UIText {}\tExtent with bearing: {}\tExtent without bearing: {}",
+            GetName(), extentWithBearing, extentWithoutBearing);
 
         return;
     }
@@ -576,7 +575,7 @@ void UIText::OnTextSizeUpdate_Internal()
 
 Vec2i UIText::GetParentBounds() const
 {
-    Vec2i parentBounds;
+    Vec2i parentBounds = Vec2i::Zero();
 
     if (const UIObject* parent = GetParentUIObject())
     {

@@ -628,8 +628,7 @@ FBOMResult FBOMWriter::Write(ByteWriter* out, const FBOMObject& object, UniqueID
         break;
     }
     default:
-        AssertThrowMsg(false, "Invalid data location type");
-        break;
+        HYP_UNREACHABLE();
     }
 
     return FBOMResult::FBOM_OK;

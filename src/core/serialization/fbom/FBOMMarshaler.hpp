@@ -76,12 +76,10 @@ public:
 
     virtual FBOMResult Serialize(ConstAnyRef in, FBOMObject& out) const override final
     {
+        AssertDebug(in.Is<T>(), "Cannot serialize - given object is not of expected type");
+
         if (!in.Is<T>())
         {
-#ifdef HYP_DEBUG_MODE
-            AssertThrowMsg(false, "Cannot serialize - given object is not of expected type");
-#endif
-
             return { FBOMResult::FBOM_ERR, "Cannot serialize - given object is not of expected type" };
         }
 
@@ -100,9 +98,9 @@ public:
     virtual FBOMResult Deserialize(FBOMLoadContext& context, const FBOMObject& in, HypData& out) const override;
 };
 
-#define HYP_DEFINE_MARSHAL(T, MarshalType)                                                             \
+#define HYP_DEFINE_MARSHAL(T, MarshalType)                                                            \
     static ::hyperion::FBOMMarshalerRegistration<T, MarshalType> HYP_UNIQUE_NAME(marshalRegistration) \
-    {                                                                                                  \
+    {                                                                                                 \
     }
 
 } // namespace hyperion::serialization

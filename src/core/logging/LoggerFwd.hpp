@@ -8,6 +8,9 @@
 
 #include <Types.hpp>
 
+#define HYP_DECLARE_LOG_CHANNEL(name) \
+    extern hyperion::logging::LogChannel Log_##name
+
 namespace hyperion {
 namespace logging {
 
@@ -16,11 +19,13 @@ class LogChannel;
 
 enum LogLevel : uint32
 {
-    DEBUG,
+    DEBUG = 0,
     INFO,
     WARNING,
     ERR,
-    FATAL
+    FATAL,
+
+    MAX
 };
 
 struct LogCategory
@@ -122,7 +127,10 @@ constexpr LogCategory Fatal()
 }
 
 template <LogCategory Category, auto FunctionNameString, auto FormatString, class... Args>
-static inline void Log_Internal(Logger& logger, const LogChannel& channel, Args&&... args);
+static inline void LogDynamicChannel(Logger& logger, const LogChannel& channel, Args&&... args);
+
+template <LogCategory Category, auto ChannelArg, auto FunctionNameString, auto FormatString, class... Args>
+static inline void Log_Internal(Logger& logger, Args&&... args);
 
 HYP_API extern Logger& GetLogger();
 
@@ -130,18 +138,23 @@ HYP_API extern Logger& GetLogger();
 
 using logging::LogChannel;
 
-} // namespace hyperion
+HYP_DECLARE_LOG_CHANNEL(Misc);
 
-// Helper macros
-#define HYP_DECLARE_LOG_CHANNEL(name) \
-    extern hyperion::logging::LogChannel Log_##name
+} // namespace hyperion
 
 #ifdef HYP_LOG
 #error "HYP_LOG already defined!"
 #endif
 
 #define HYP_LOG(channel, category, fmt, ...) \
-    hyperion::logging::Log_Internal<hyperion::logging::category(), HYP_STATIC_STRING(HYP_FUNCTION_NAME_LIT), HYP_STATIC_STRING(fmt "\n")>(hyperion::logging::GetLogger(), Log_##channel, ##__VA_ARGS__)
+    hyperion::logging::Log_Internal<hyperion::logging::category(), HYP_MAKE_CONST_ARG(&Log_##channel), HYP_STATIC_STRING(HYP_FUNCTION_NAME_LIT), HYP_STATIC_STRING(fmt "\n")>(hyperion::logging::GetLogger(), ##__VA_ARGS__)
+
+#ifdef HYP_DEBUG_MODE
+#define HYP_LOG_TEMP(fmt, ...) \
+    hyperion::logging::Log_Internal<hyperion::logging::Debug(), HYP_MAKE_CONST_ARG(&Log_Misc), HYP_STATIC_STRING(HYP_FUNCTION_NAME_LIT), HYP_STATIC_STRING(fmt "\n")>(hyperion::logging::GetLogger(), ##__VA_ARGS__)
+#else
+#define HYP_LOG_TEMP(fmt, ...)
+#endif
 
 #ifndef HYP_LOG_ONCE
 #define HYP_LOG_ONCE(channel, category, fmt, ...)

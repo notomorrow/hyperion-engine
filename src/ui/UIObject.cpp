@@ -810,9 +810,6 @@ void UIObject::SetScrollOffset(Vec2i scrollOffset, bool smooth)
         ? MathUtil::Clamp(scrollOffset.y, 0, m_actualInnerSize.y - m_actualSize.y)
         : 0;
 
-    HYP_LOG(UI, Debug, "Setting scroll offset to {} for {}. Inner size: {}, Size: {}", scrollOffset, GetName(),
-        m_actualInnerSize, m_actualSize);
-
     m_scrollOffset.SetTarget(Vec2f(scrollOffset));
 
     if (!smooth)
@@ -2133,7 +2130,7 @@ void UIObject::ComputeActualSize(const UIObjectSize& inSize, Vec2i& actualSize, 
         // If the inner AABB is not valid, we can't calculate the size
         actualSize = Vec2i { 0, 0 };
 
-        HYP_LOG(UI, Warning, "UIObject '{}' has an invalid inner AABB. Cannot compute size.", GetName());
+        HYP_LOG_ONCE(UI, Warning, "UIObject '{}' has an invalid inner AABB. Cannot compute size.", GetName());
 
         return;
     }

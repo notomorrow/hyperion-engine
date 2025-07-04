@@ -10,6 +10,7 @@ namespace hyperion {
 // Parent channel of all following in the region
 HYP_DECLARE_LOG_CHANNEL(Core);
 
+HYP_DECLARE_LOG_CHANNEL(Misc);
 HYP_DECLARE_LOG_CHANNEL(Engine);
 HYP_DECLARE_LOG_CHANNEL(Config);
 HYP_DECLARE_LOG_CHANNEL(Object);

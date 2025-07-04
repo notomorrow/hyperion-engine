@@ -40,32 +40,73 @@ struct LogMessage
     StringView<StringType::UTF8> message;
 };
 
+HYP_API extern ANSIStringView GetCurrentThreadName();
+
 template <LogLevel Level>
 static constexpr auto LogLevelToString()
 {
     if constexpr (Level == LogLevel::DEBUG)
     {
-        return HYP_STATIC_STRING("Debug");
+        return HYP_STATIC_STRING("DBG");
     }
     else if constexpr (Level == LogLevel::INFO)
     {
-        return HYP_STATIC_STRING("Info");
+        return HYP_STATIC_STRING("INF");
     }
     else if constexpr (Level == LogLevel::WARNING)
     {
-        return HYP_STATIC_STRING("Warning");
+        return HYP_STATIC_STRING("WARN");
     }
     else if constexpr (Level == LogLevel::ERR)
     {
-        return HYP_STATIC_STRING("Error");
+        return HYP_STATIC_STRING("ERR");
     }
     else if constexpr (Level == LogLevel::FATAL)
     {
-        return HYP_STATIC_STRING("Fatal");
+        return HYP_STATIC_STRING("CRIT");
     }
     else
     {
-        return HYP_STATIC_STRING("Unknown");
+        return HYP_STATIC_STRING("?");
+    }
+}
+
+template <LogLevel Level>
+static constexpr const char* LogLevelTermColor()
+{
+    // constexpr const char* table[uint32(LogLevel::MAX)] = {
+    //     ""          // DEBUG
+    //     "",         // INFO
+    //     "\33[33m",  // WARNING
+    //     "\33[31m",  // ERR
+    //     "\33[31;4m" // FATAL
+    // };
+
+    // return table[uint32(Level)];
+
+    if constexpr (Level == LogLevel::DEBUG)
+    {
+        return "";
+    }
+    else if constexpr (Level == LogLevel::INFO)
+    {
+        return "";
+    }
+    else if constexpr (Level == LogLevel::WARNING)
+    {
+        return "\33[33m";
+    }
+    else if constexpr (Level == LogLevel::ERR)
+    {
+        return "\33[31m";
+    }
+    else if constexpr (Level == LogLevel::FATAL)
+    {
+        return "\33[31;4m";
+    }
+    else
+    {
+        return "?";
     }
 }
 
@@ -136,7 +177,9 @@ public:
 class HYP_API Logger
 {
 public:
-    static constexpr uint32 maxChannels = 64;
+    using ChannelMask = uint64;
+
+    static constexpr uint32 maxChannels = sizeof(ChannelMask) * CHAR_BIT;
 
     static Logger& GetInstance();
 
@@ -169,7 +212,7 @@ public:
     void Log(const LogChannel& channel, const LogMessage& message);
 
 private:
-    AtomicVar<uint64> m_logMask;
+    AtomicVar<ChannelMask> m_logMask;
     FixedArray<LogChannel*, maxChannels> m_logChannels;
     LinkedList<LogChannel> m_dynamicLogChannels;
     mutable Mutex m_dynamicLogChannelsMutex;
@@ -178,39 +221,63 @@ private:
 
 struct LogOnceHelper
 {
-    template <auto LogOnceFileName, int32 LogOnceLineNumber, auto LogOnceFunctionName, LogCategory Category, auto LogOnceFormatString, class... LogOnceArgTypes>
-    static void ExecuteLogOnce(Logger& logger, const LogChannel& channel, LogOnceArgTypes&&... args)
+    template <auto LogOnceFileName, int32 LogOnceLineNumber, auto LogOnceFunctionName, LogCategory Category, auto ChannelArg, auto LogOnceFormatString, class... LogOnceArgTypes>
+    static void ExecuteLogOnce(Logger& logger, LogOnceArgTypes&&... args)
     {
         static struct LogOnceHelper_Impl
         {
-            LogOnceHelper_Impl(Logger& logger, const LogChannel& channel, LogOnceArgTypes&&... args)
+            LogOnceHelper_Impl(Logger& logger, LogOnceArgTypes&&... args)
             {
-                Log_Internal<Category, LogOnceFunctionName, LogOnceFormatString>(logger, channel, std::forward<LogOnceArgTypes>(args)...);
+                Log_Internal<Category, ChannelArg, LogOnceFunctionName, LogOnceFormatString>(logger, std::forward<LogOnceArgTypes>(args)...);
             }
-        } impl { logger, channel, std::forward<LogOnceArgTypes>(args)... };
+        } impl { logger, std::forward<LogOnceArgTypes>(args)... };
     }
 };
 
-template <LogCategory Category, auto FunctionNameString, auto FormatString, class... Args>
-static inline void Log_Internal(Logger& logger, const LogChannel& channel, Args&&... args)
+template <LogCategory Category, auto ChannelArg, auto FunctionNameString, auto FormatString, class... Args>
+static inline void Log_Internal(Logger& logger, Args&&... args)
 {
     if constexpr (!Category.IsEnabled())
     {
         return;
     }
 
-    static const auto prefixStaticString = containers::helpers::Concat<
-        StaticString("["),
-        LogLevelToString<Category.GetLevel()>(),
-        StaticString("] "),
-        FunctionNameString,
-        StaticString(": ")>::value;
+    constexpr const char* colorCode = LogLevelTermColor<Category.GetLevel()>();
 
-    static const String prefixString = String(prefixStaticString.Data());
+    static const LogChannel& channel = *HYP_GET_CONST_ARG(ChannelArg);
+    static const String prefix = HYP_FORMAT("{}{} [{}]: ", colorCode, channel.GetName(), LogLevelToString<Category.GetLevel()>());
 
     if (logger.IsChannelEnabled(channel))
     {
-        logger.Log(channel, LogMessage { Category.GetLevel(), prefixString + utilities::Format<FormatString>(std::forward<Args>(args)...) });
+        if constexpr (Memory::AreStaticStringsEqual(colorCode, ""))
+        {
+            logger.Log(channel, LogMessage { Category.GetLevel(), prefix + utilities::Format<FormatString>(std::forward<Args>(args)...) });
+        }
+        else
+        {
+            logger.Log(channel, LogMessage { Category.GetLevel(), prefix + utilities::Format<FormatString>(std::forward<Args>(args)...) + "\33[0m" });
+        }
+    }
+
+    if constexpr (Category.GetFlags() & LogCategory::LCF_FATAL)
+    {
+        HYP_FAIL("Fatal error logged! Crashing the engine...");
+    }
+}
+
+template <LogCategory Category, auto FunctionNameString, auto FormatString, class... Args>
+static inline void LogDynamicChannel(Logger& logger, const LogChannel& channel, Args&&... args)
+{
+    if constexpr (!Category.IsEnabled())
+    {
+        return;
+    }
+
+    const String prefix = HYP_FORMAT("[{}:{}]: ", channel.GetName(), LogLevelToString<Category.GetLevel()>());
+
+    if (logger.IsChannelEnabled(channel))
+    {
+        logger.Log(channel, LogMessage { Category.GetLevel(), prefix + utilities::Format<FormatString>(std::forward<Args>(args)...) });
     }
 
     if constexpr (Category.GetFlags() & LogCategory::LCF_FATAL)
@@ -244,11 +311,11 @@ using logging::LogMessage;
 #undef HYP_LOG_ONCE
 #endif
 
-#define HYP_LOG_ONCE(channel, category, fmt, ...)                                                                                                                                                                                                                      \
-    do                                                                                                                                                                                                                                                                 \
-    {                                                                                                                                                                                                                                                                  \
-        ::hyperion::logging::LogOnceHelper::ExecuteLogOnce<HYP_STATIC_STRING(__FILE__), __LINE__, HYP_STATIC_STRING(HYP_FUNCTION_NAME_LIT), hyperion::logging::category(), HYP_STATIC_STRING(fmt "\n")>(hyperion::logging::GetLogger(), Log_##channel, ##__VA_ARGS__); \
-    }                                                                                                                                                                                                                                                                  \
+#define HYP_LOG_ONCE(channel, category, fmt, ...)                                                                                                                                                                                                                                           \
+    do                                                                                                                                                                                                                                                                                      \
+    {                                                                                                                                                                                                                                                                                       \
+        ::hyperion::logging::LogOnceHelper::ExecuteLogOnce<HYP_STATIC_STRING(__FILE__), __LINE__, HYP_STATIC_STRING(HYP_FUNCTION_NAME_LIT), hyperion::logging::category(), HYP_MAKE_CONST_ARG(&Log_##channel), HYP_STATIC_STRING(fmt "\n")>(hyperion::logging::GetLogger(), ##__VA_ARGS__); \
+    }                                                                                                                                                                                                                                                                                       \
     while (0)
 
 #endif

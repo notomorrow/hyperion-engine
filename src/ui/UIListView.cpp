@@ -26,16 +26,17 @@ UIListViewItem::UIListViewItem()
 {
     SetSize(UIObjectSize({ 0, UIObjectSize::AUTO }, { 0, UIObjectSize::AUTO }));
 
-    OnClick.Bind([this](...)
-               {
-                   if (HasSubItems())
-                   {
-                       SetIsExpanded(!IsExpanded());
-                   }
+    OnClick
+        .Bind([this](...)
+            {
+                if (HasSubItems())
+                {
+                    SetIsExpanded(!IsExpanded());
+                }
 
-                   // allow bubbling up to the UIListViewItem parent
-                   return UIEventHandlerResult::OK;
-               })
+                // allow bubbling up to the UIListViewItem parent
+                return UIEventHandlerResult::OK;
+            })
         .Detach();
 }
 

@@ -60,7 +60,7 @@ static UniquePtr<btCollisionShape> CreatePhysicsShapeHandle(PhysicsShape* physic
             static_cast<ConvexHullPhysicsShape*>(physicsShape)->NumVertices(),
             sizeof(float) * 3);
     default:
-        AssertThrowMsg(false, "Unknown PhysicsShapeType!");
+        HYP_UNREACHABLE();
     }
 }
 
