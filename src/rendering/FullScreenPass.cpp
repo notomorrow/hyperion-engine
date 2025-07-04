@@ -366,7 +366,7 @@ void FullScreenPass::CreatePipeline()
         MaterialAttributes {
             .fillMode = FM_FILL,
             .blendFunction = m_blendFunction,
-            .flags = MaterialAttributeFlags::NONE }));
+            .flags = MAF_NONE }));
 }
 
 void FullScreenPass::CreatePipeline(const RenderableAttributeSet& renderableAttributes)

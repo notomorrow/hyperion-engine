@@ -24,7 +24,7 @@ UITextbox::UITextbox()
     SetBackgroundColor(Vec4f::One());
 
     // For now
-    SetIsScrollEnabled(UIObjectScrollbarOrientation::ALL, false);
+    SetIsScrollEnabled(SA_ALL, false);
 
     OnKeyDown.Bind([this](const KeyboardEvent& eventData) -> UIEventHandlerResult
                  {

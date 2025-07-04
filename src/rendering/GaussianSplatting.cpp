@@ -462,7 +462,7 @@ void GaussianSplattingInstance::CreateGraphicsPipeline()
                 .bucket = RB_TRANSLUCENT,
                 .blendFunction = BlendFunction::Additive(),
                 .cullFaces = FCM_NONE,
-                .flags = MaterialAttributeFlags::NONE }));
+                .flags = MAF_NONE }));
 #endif
 }
 

@@ -29,25 +29,28 @@ public:
     HYP_METHOD()
     HYP_FORCE_INLINE bool IsHorizontalScrollEnabled() const
     {
-        return m_isScrollEnabled & UIObjectScrollbarOrientation::HORIZONTAL;
+        return bool(m_isScrollEnabled & SA_HORIZONTAL);
     }
 
     HYP_METHOD()
     HYP_FORCE_INLINE bool IsVerticalScrollEnabled() const
     {
-        return m_isScrollEnabled & UIObjectScrollbarOrientation::VERTICAL;
+        return bool(m_isScrollEnabled & SA_VERTICAL);
     }
 
     HYP_METHOD()
-    void SetIsScrollEnabled(UIObjectScrollbarOrientation orientation, bool isScrollEnabled);
+    void SetIsScrollEnabled(ScrollAxis axis, bool isScrollEnabled);
 
-    virtual bool CanScroll(UIObjectScrollbarOrientation orientation) const override
+    virtual bool CanScrollOnAxis(ScrollAxis axis) const override
     {
-        const int orientationIndex = UIObjectScrollbarOrientationToIndex(orientation);
-        AssertThrow(orientationIndex != -1);
+        const int i = ScrollAxisToIndex(axis);
+        if (i == -1)
+        {
+            return false;
+        }
 
-        return (m_isScrollEnabled & orientation)
-            && GetActualInnerSize()[orientationIndex] > GetActualSize()[orientationIndex];
+        return (m_isScrollEnabled & axis)
+            && GetActualInnerSize()[i] > GetActualSize()[i];
     }
 
 protected:
@@ -64,15 +67,15 @@ protected:
     virtual Material::TextureSet GetMaterialTextures() const override;
 
 private:
-    void SetScrollbarVisible(UIObjectScrollbarOrientation orientation, bool visible);
+    void SetScrollbarVisible(ScrollAxis axis, bool visible);
 
     void UpdateScrollbarSizes();
-    void UpdateScrollbarSize(UIObjectScrollbarOrientation orientation);
-    void UpdateScrollbarThumbPosition(UIObjectScrollbarOrientation orientation);
+    void UpdateScrollbarSize(ScrollAxis axis);
+    void UpdateScrollbarThumbPosition(ScrollAxis axis);
 
     UIEventHandlerResult HandleScroll(const MouseEvent& eventData);
 
-    EnumFlags<UIObjectScrollbarOrientation> m_isScrollEnabled;
+    EnumFlags<ScrollAxis> m_isScrollEnabled;
     DelegateHandler m_onScrollHandler;
 
     FixedArray<Vec2i, 2> m_initialDragPosition;

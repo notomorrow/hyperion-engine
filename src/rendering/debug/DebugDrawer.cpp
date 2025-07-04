@@ -47,7 +47,7 @@ static RenderableAttributeSet GetRenderableAttributes()
             .bucket = RB_TRANSLUCENT,
             .fillMode = FM_FILL,
             .blendFunction = BlendFunction::None(),
-            .flags = MaterialAttributeFlags::DEPTH_TEST,
+            .flags = MAF_DEPTH_TEST,
             .stencilFunction = StencilFunction {
                 .passOp = SO_KEEP,
                 .failOp = SO_KEEP,

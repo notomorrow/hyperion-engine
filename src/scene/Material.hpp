@@ -623,7 +623,7 @@ public:
      *  \return True if depth writing is enabled, false otherwise. */
     HYP_FORCE_INLINE bool IsDepthWriteEnabled() const
     {
-        return bool(m_renderAttributes.flags & MaterialAttributeFlags::DEPTH_WRITE);
+        return bool(m_renderAttributes.flags & MAF_DEPTH_WRITE);
     }
 
     /*! \brief Set whether depth writing is enabled for this Material.
@@ -632,11 +632,11 @@ public:
     {
         if (isDepthWriteEnabled)
         {
-            m_renderAttributes.flags |= MaterialAttributeFlags::DEPTH_WRITE;
+            m_renderAttributes.flags |= MAF_DEPTH_WRITE;
         }
         else
         {
-            m_renderAttributes.flags &= ~MaterialAttributeFlags::DEPTH_WRITE;
+            m_renderAttributes.flags &= ~MAF_DEPTH_WRITE;
         }
     }
 
@@ -644,7 +644,7 @@ public:
      *  \return True if depth testing is enabled, false otherwise. */
     HYP_FORCE_INLINE bool IsDepthTestEnabled() const
     {
-        return bool(m_renderAttributes.flags & MaterialAttributeFlags::DEPTH_TEST);
+        return bool(m_renderAttributes.flags & MAF_DEPTH_TEST);
     }
 
     /*! \brief Set whether depth testing is enabled for this Material.
@@ -653,11 +653,11 @@ public:
     {
         if (isDepthTestEnabled)
         {
-            m_renderAttributes.flags |= MaterialAttributeFlags::DEPTH_TEST;
+            m_renderAttributes.flags |= MAF_DEPTH_TEST;
         }
         else
         {
-            m_renderAttributes.flags &= ~MaterialAttributeFlags::DEPTH_TEST;
+            m_renderAttributes.flags &= ~MAF_DEPTH_TEST;
         }
     }
 

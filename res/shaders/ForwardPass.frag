@@ -188,10 +188,12 @@ void main()
     {
         vec4 albedo_texture = SAMPLE_TEXTURE(CURRENT_MATERIAL, MATERIAL_TEXTURE_ALBEDO_map, texcoord);
 
+#ifdef ALPHA_DISCARD
         if (albedo_texture.a < alpha_threshold)
         {
             discard;
         }
+#endif
 
         gbuffer_albedo *= albedo_texture;
     }

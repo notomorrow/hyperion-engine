@@ -23,9 +23,8 @@ public:
     BindlessStorage(BindlessStorage&& other) noexcept = delete;
     BindlessStorage& operator=(BindlessStorage&& other) noexcept = delete;
     ~BindlessStorage();
-
-    void Create();
-    void Destroy();
+    
+    void UnsetAllResources();
 
     /*! \brief Add a texture to the bindless descriptor set. */
     void AddResource(ObjId<Texture> id, const ImageViewRef& imageView);

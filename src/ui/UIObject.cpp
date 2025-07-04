@@ -131,7 +131,6 @@ UIObject::UIObject(const ThreadId& ownerThreadId)
       m_computedVisibility(false),
       m_isEnabled(true),
       m_acceptsFocus(true),
-      m_receivesUpdate(true),
       m_affectsParentSize(true),
       m_needsRepaint(true),
       m_isPositionAbsolute(false),
@@ -261,7 +260,7 @@ void UIObject::Update(float delta)
 
     AssertReady();
 
-    if (ReceivesUpdate())
+    if (NeedsUpdate())
     {
         Update_Internal(delta);
     }
@@ -269,7 +268,7 @@ void UIObject::Update(float delta)
     // update in breadth-first order
     ForEachChildUIObject([this, delta](UIObject* child)
         {
-            if (child->ReceivesUpdate())
+            if (child->NeedsUpdate())
             {
                 child->Update_Internal(delta);
             }
@@ -1838,7 +1837,7 @@ MaterialAttributes UIObject::GetMaterialAttributes() const
         .blendFunction = BlendFunction(BMF_SRC_ALPHA, BMF_ONE_MINUS_SRC_ALPHA,
             BMF_ONE, BMF_ONE_MINUS_SRC_ALPHA),
         .cullFaces = FCM_BACK,
-        .flags = MaterialAttributeFlags::NONE
+        .flags = MAF_NONE
     };
 }
 

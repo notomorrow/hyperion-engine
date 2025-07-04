@@ -96,7 +96,7 @@ public:
         m_loadedAsset = std::move(value);
     }
 
-    template <class T, typename = std::enable_if_t<!is_hypdata_v<NormalizedType<T>>>>
+    template <class T, typename = std::enable_if_t<!isHypData<NormalizedType<T>>>>
     ObjectAssetResourceBase(T&& value)
         : AssetResourceBase(std::forward<T>(value)),
           m_assetTypeId(TypeId::ForType<T>())
@@ -140,7 +140,7 @@ public:
         m_resource = AllocateResource<ObjectAssetResourceBase>(std::move(data));
     }
 
-    template <class T, typename = std::enable_if_t<!is_hypdata_v<NormalizedType<T>>>>
+    template <class T, typename = std::enable_if_t<!isHypData<NormalizedType<T>>>>
     AssetObject(Name name, T&& value)
         : AssetObject(name)
     {

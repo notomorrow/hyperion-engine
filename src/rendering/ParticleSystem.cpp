@@ -251,7 +251,7 @@ void ParticleSpawner::CreateGraphicsPipeline()
                 .bucket = RB_TRANSLUCENT,
                 .blendFunction = BlendFunction::Additive(),
                 .cullFaces = FCM_FRONT,
-                .flags = MaterialAttributeFlags::DEPTH_TEST }));
+                .flags = MAF_DEPTH_TEST }));
 #endif
 
     // // @FIXME: needs to be per view!

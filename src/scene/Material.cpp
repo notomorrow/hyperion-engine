@@ -57,7 +57,7 @@ Material::Material()
           .fillMode = FM_FILL,
           .blendFunction = BlendFunction::None(),
           .cullFaces = FCM_BACK,
-          .flags = MaterialAttributeFlags::DEPTH_WRITE | MaterialAttributeFlags::DEPTH_TEST
+          .flags = MAF_DEPTH_WRITE | MAF_DEPTH_TEST
       },
       m_isDynamic(false),
       m_mutationState(DataMutationState::CLEAN),

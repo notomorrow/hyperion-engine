@@ -395,7 +395,7 @@ struct HypData
 };
 
 template <class T>
-constexpr bool is_hypdata_v = std::is_same_v<NormalizedType<T>, HypData>;
+constexpr bool isHypData = std::is_same_v<NormalizedType<T>, HypData>;
 
 template <class T>
 struct DefaultHypDataSerializeFunction
@@ -1551,12 +1551,12 @@ struct HypDataHelper<WeakName> : HypDataHelper<Name>
 };
 
 template <class T, class AllocatorType>
-struct HypDataHelperDecl<Array<T, AllocatorType>, std::enable_if_t<!std::is_const_v<T> && !is_hypdata_v<T>>>
+struct HypDataHelperDecl<Array<T, AllocatorType>, std::enable_if_t<!std::is_const_v<T> && !isHypData<T>>>
 {
 };
 
 template <class T, class AllocatorType>
-struct HypDataHelper<Array<T, AllocatorType>, std::enable_if_t<!std::is_const_v<T> && !is_hypdata_v<T>>> : HypDataHelper<Any>
+struct HypDataHelper<Array<T, AllocatorType>, std::enable_if_t<!std::is_const_v<T> && !isHypData<T>>> : HypDataHelper<Any>
 {
     using ConvertibleFrom = Tuple<>;
 

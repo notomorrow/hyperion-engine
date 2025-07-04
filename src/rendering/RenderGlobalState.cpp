@@ -1169,8 +1169,6 @@ RenderGlobalState::RenderGlobalState()
 
     GlobalDescriptorTable->Create();
 
-    bindlessStorage->Create();
-
     mainRenderer = new DeferredRenderer();
     mainRenderer->Initialize();
 
@@ -1185,7 +1183,7 @@ RenderGlobalState::~RenderGlobalState()
 {
     delete resourceBindings;
 
-    bindlessStorage->Destroy();
+    bindlessStorage->UnsetAllResources();
     delete bindlessStorage;
     bindlessStorage = nullptr;
 

@@ -250,23 +250,23 @@ enum class UIObjectUpdateType : uint32
 HYP_MAKE_ENUM_FLAGS(UIObjectUpdateType)
 
 HYP_ENUM()
-enum class UIObjectScrollbarOrientation : uint8
+enum ScrollAxis : uint8
 {
-    NONE = 0x0,
-    HORIZONTAL = 0x1,
-    VERTICAL = 0x2,
-    ALL = HORIZONTAL | VERTICAL
+    SA_NONE = 0x0,
+    SA_HORIZONTAL = 0x1,
+    SA_VERTICAL = 0x2,
+    SA_ALL = SA_HORIZONTAL | SA_VERTICAL
 };
 
-HYP_MAKE_ENUM_FLAGS(UIObjectScrollbarOrientation)
+HYP_MAKE_ENUM_FLAGS(ScrollAxis)
 
-static constexpr inline int UIObjectScrollbarOrientationToIndex(UIObjectScrollbarOrientation orientation)
+static constexpr int g_scrollAxisIndices[4] = {
+    -1, 0, 1, -1
+};
+
+static constexpr inline int ScrollAxisToIndex(ScrollAxis axis)
 {
-    return (orientation == UIObjectScrollbarOrientation::HORIZONTAL)
-        ? 0
-        : (orientation == UIObjectScrollbarOrientation::VERTICAL)
-        ? 1
-        : -1;
+    return g_scrollAxisIndices[uint8(axis)];
 }
 
 HYP_STRUCT()
@@ -642,7 +642,7 @@ public:
     }
 
     HYP_METHOD()
-    virtual bool CanScroll(UIObjectScrollbarOrientation orientation) const
+    virtual bool CanScrollOnAxis(ScrollAxis axis) const
     {
         return false;
     }
@@ -681,12 +681,11 @@ public:
     HYP_METHOD(Property = "AcceptsFocus")
     void SetAcceptsFocus(bool acceptsFocus);
 
-    /*! \brief Check if the UI object receives update events.
-     *  \return True if the UI object receives update events, false otherwise */
-    HYP_METHOD(Property = "ReceivesUpdate")
-    virtual bool ReceivesUpdate() const
+    HYP_METHOD()
+    virtual bool NeedsUpdate() const
     {
-        return m_receivesUpdate;
+        return m_deferredUpdates
+            || ((CanScrollOnAxis(SA_HORIZONTAL) || CanScrollOnAxis(SA_VERTICAL)) && m_scrollOffset.GetTarget() != m_scrollOffset.GetValue());
     }
 
     /*! \brief Set the focus to this UI object, if AcceptsFocus() returns true.
@@ -1276,12 +1275,6 @@ protected:
     Handle<UIObject> GetClosestParentUIObject_Proc(const ProcRef<bool(UIObject*)>& proc) const;
     Handle<UIObject> GetClosestSpawnParent_Proc(const ProcRef<bool(UIObject*)>& proc) const;
 
-    HYP_METHOD(Property = "ReceivesUpdate")
-    HYP_FORCE_INLINE void SetReceivesUpdate(bool receivesUpdate)
-    {
-        m_receivesUpdate = receivesUpdate;
-    }
-
     virtual void UpdateSize_Internal(bool updateChildren);
 
     virtual void SetDataSource_Internal(UIDataSourceBase* dataSource);
@@ -1482,7 +1475,6 @@ private:
     bool m_computedVisibility : 1;
     bool m_isEnabled : 1;
     bool m_acceptsFocus : 1;
-    bool m_receivesUpdate : 1;
     bool m_affectsParentSize : 1;
     bool m_isPositionAbsolute : 1;
 

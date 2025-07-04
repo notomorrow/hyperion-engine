@@ -398,7 +398,7 @@ void TonemapPass::CreatePipeline()
         MaterialAttributes {
             .fillMode = FM_FILL,
             .blendFunction = BlendFunction::None(),
-            .flags = MaterialAttributeFlags::NONE });
+            .flags = MAF_NONE });
 
     m_shader = g_shaderManager->GetOrCreate(NAME("Tonemap"));
 
@@ -454,7 +454,7 @@ void LightmapPass::CreatePipeline()
             .blendFunction = BlendFunction(
                 BMF_SRC_ALPHA, BMF_ONE_MINUS_SRC_ALPHA,
                 BMF_ONE, BMF_ONE_MINUS_SRC_ALPHA),
-            .flags = MaterialAttributeFlags::NONE });
+            .flags = MAF_NONE });
 
     m_shader = g_shaderManager->GetOrCreate(NAME("ApplyLightmap"));
 
@@ -526,7 +526,7 @@ void EnvGridPass::CreatePipeline()
             .fillMode = FM_FILL,
             .blendFunction = BlendFunction(BMF_SRC_ALPHA, BMF_ONE_MINUS_SRC_ALPHA,
                 BMF_ONE, BMF_ONE_MINUS_SRC_ALPHA),
-            .flags = MaterialAttributeFlags::NONE });
+            .flags = MAF_NONE });
 
     if (m_mode == EGPM_RADIANCE)
     {
@@ -699,7 +699,7 @@ void ReflectionsPass::CreatePipeline()
             .fillMode = FM_FILL,
             .blendFunction = BlendFunction(BMF_SRC_ALPHA, BMF_ONE_MINUS_SRC_ALPHA,
                 BMF_ONE, BMF_ONE_MINUS_SRC_ALPHA),
-            .flags = MaterialAttributeFlags::NONE }));
+            .flags = MAF_NONE }));
 }
 
 void ReflectionsPass::CreatePipeline(const RenderableAttributeSet& renderableAttributes)

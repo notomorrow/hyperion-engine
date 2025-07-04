@@ -3,22 +3,23 @@
 #include <rendering/Bindless.hpp>
 #include <rendering/PlaceholderData.hpp>
 #include <rendering/RenderGlobalState.hpp>
+#include <rendering/RenderTexture.hpp>
 
 #include <rendering/backend/RendererDescriptorSet.hpp>
+
+#include <scene/Texture.hpp>
 
 #include <EngineGlobals.hpp>
 
 namespace hyperion {
 
 BindlessStorage::BindlessStorage() = default;
-BindlessStorage::~BindlessStorage() = default;
-
-void BindlessStorage::Create()
+BindlessStorage::~BindlessStorage()
 {
-    Threads::AssertOnThread(g_renderThread);
+    
 }
 
-void BindlessStorage::Destroy()
+void BindlessStorage::UnsetAllResources()
 {
     Threads::AssertOnThread(g_renderThread);
 
@@ -27,9 +28,10 @@ void BindlessStorage::Destroy()
         const DescriptorSetRef& descriptorSet = g_renderGlobalState->GlobalDescriptorTable->GetDescriptorSet(NAME("Material"), frameIndex);
         AssertDebug(descriptorSet.IsValid());
 
+        // Unset all active textures
         for (const auto& it : m_resources)
         {
-            descriptorSet->SetElement(NAME("Textures"), it.first.ToIndex(), g_renderGlobalState->placeholderData->GetImageView2D1x1R8());
+            descriptorSet->SetElement(NAME("Textures"), it.first.ToIndex(), g_renderGlobalState->placeholderData->DefaultTexture2D->GetRenderResource().GetImageView());
         }
     }
 
@@ -86,7 +88,7 @@ void BindlessStorage::RemoveResource(ObjId<Texture> id)
         const DescriptorSetRef& descriptorSet = g_renderGlobalState->GlobalDescriptorTable->GetDescriptorSet(NAME("Material"), frameIndex);
         AssertDebug(descriptorSet.IsValid());
 
-        descriptorSet->SetElement(NAME("Textures"), id.ToIndex(), g_renderGlobalState->placeholderData->GetImageView2D1x1R8());
+        descriptorSet->SetElement(NAME("Textures"), id.ToIndex(), g_renderGlobalState->placeholderData->DefaultTexture2D->GetRenderResource().GetImageView());
     }
 }
 

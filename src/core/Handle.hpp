@@ -167,8 +167,8 @@ struct Handle final : HandleBase
         return ptr != nullptr ? IdType(ObjIdBase { ptr->m_header->container->GetObjectTypeId(), ptr->m_header->index + 1 }) : IdType();
     }
 
-    /*! \brief Get a referenceable Id for the object that the handle is referencing.
-     *  \return The Id of the object. */
+    /*! \brief Get the runtime ID of the object that the handle is referencing.
+     *  \return The runtime ID of the object. */
     HYP_FORCE_INLINE IdType Id() const
     {
         return IdType(*this);

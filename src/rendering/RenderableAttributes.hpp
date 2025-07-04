@@ -15,11 +15,14 @@
 
 namespace hyperion {
 
-enum class MaterialAttributeFlags : uint32
+HYP_ENUM()
+enum MaterialAttributeFlags : uint32
 {
-    NONE = 0x0,
-    DEPTH_WRITE = 0x1,
-    DEPTH_TEST = 0x2
+    MAF_NONE = 0x0,
+
+    MAF_DEPTH_WRITE = 0x1,
+    MAF_DEPTH_TEST = 0x2,
+    MAF_ALPHA_DISCARD = 0x4
 };
 
 HYP_MAKE_ENUM_FLAGS(MaterialAttributeFlags)
@@ -43,7 +46,7 @@ struct MaterialAttributes
     FaceCullMode cullFaces = FCM_BACK;
 
     HYP_FIELD()
-    EnumFlags<MaterialAttributeFlags> flags = MaterialAttributeFlags::DEPTH_WRITE | MaterialAttributeFlags::DEPTH_TEST;
+    EnumFlags<MaterialAttributeFlags> flags = MAF_DEPTH_WRITE | MAF_DEPTH_TEST;
 
     HYP_FIELD()
     StencilFunction stencilFunction;

@@ -172,7 +172,7 @@ struct TransformArgument<FilePath>
 template <class T>
 static inline const HypData* SetArg_HypData(HypData* arr, SizeType index, T&& arg)
 {
-    if constexpr (is_hypdata_v<T>)
+    if constexpr (isHypData<T>)
     {
         return &arg;
     }

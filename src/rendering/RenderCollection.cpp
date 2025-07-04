@@ -109,6 +109,7 @@ static void UpdateRenderableAttributesDynamic(const RenderProxyMesh* proxy, Rend
         {
             bool hasInstancing : 1;
             bool hasForwardLighting : 1;
+            bool hasAlphaDiscard : 1;
         };
 
         uint64 overridden;
@@ -118,6 +119,7 @@ static void UpdateRenderableAttributesDynamic(const RenderProxyMesh* proxy, Rend
 
     hasInstancing = proxy->instanceData.enableAutoInstancing || proxy->instanceData.numInstances > 1;
     hasForwardLighting = attributes.GetMaterialAttributes().bucket == RB_TRANSLUCENT;
+    hasAlphaDiscard = bool(attributes.GetMaterialAttributes().flags & MAF_ALPHA_DISCARD);
 
     if (!overridden)
     {
@@ -136,6 +138,12 @@ static void UpdateRenderableAttributesDynamic(const RenderProxyMesh* proxy, Rend
     if (hasForwardLighting)
     {
         shaderDefinition.GetProperties().Set("FORWARD_LIGHTING");
+        shaderDefinitionChanged = true;
+    }
+
+    if (hasAlphaDiscard)
+    {
+        shaderDefinition.GetProperties().Set("ALPHA_DISCARD");
         shaderDefinitionChanged = true;
     }
 

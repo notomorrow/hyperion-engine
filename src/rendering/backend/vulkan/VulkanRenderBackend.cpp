@@ -575,8 +575,8 @@ GraphicsPipelineRef VulkanRenderBackend::MakeGraphicsPipeline(
     graphicsPipeline->SetFillMode(attributes.GetMaterialAttributes().fillMode);
     graphicsPipeline->SetBlendFunction(attributes.GetMaterialAttributes().blendFunction);
     graphicsPipeline->SetStencilFunction(attributes.GetMaterialAttributes().stencilFunction);
-    graphicsPipeline->SetDepthTest(bool(attributes.GetMaterialAttributes().flags & MaterialAttributeFlags::DEPTH_TEST));
-    graphicsPipeline->SetDepthWrite(bool(attributes.GetMaterialAttributes().flags & MaterialAttributeFlags::DEPTH_WRITE));
+    graphicsPipeline->SetDepthTest(bool(attributes.GetMaterialAttributes().flags & MAF_DEPTH_TEST));
+    graphicsPipeline->SetDepthWrite(bool(attributes.GetMaterialAttributes().flags & MAF_DEPTH_WRITE));
     graphicsPipeline->SetRenderPass(renderPass);
     graphicsPipeline->SetFramebuffers(framebuffers);
 
