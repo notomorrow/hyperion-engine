@@ -82,6 +82,8 @@ public:
     HYP_API VulkanAccelerationStructureBase(const Matrix4& transform = Matrix4::Identity());
     HYP_API virtual ~VulkanAccelerationStructureBase();
 
+    HYP_API bool IsCreated() const;
+
     HYP_FORCE_INLINE const VulkanGpuBufferRef& GetBuffer() const
     {
         return m_buffer;
@@ -160,7 +162,7 @@ protected:
         const std::vector<uint32>& primitiveCounts,
         bool update,
         RTUpdateStateFlags& outUpdateStateFlags);
-
+    
     VulkanGpuBufferRef m_buffer;
     VulkanGpuBufferRef m_scratchBuffer;
     Array<VulkanAccelerationGeometryRef> m_geometries;
@@ -207,6 +209,7 @@ public:
 
     HYP_API virtual void AddBLAS(const BLASRef& blas) override;
     HYP_API virtual void RemoveBLAS(const BLASRef& blas) override;
+    HYP_API virtual bool HasBLAS(const BLASRef& blas) override;
 
     HYP_API virtual RendererResult Create() override;
     HYP_API virtual RendererResult Destroy() override;

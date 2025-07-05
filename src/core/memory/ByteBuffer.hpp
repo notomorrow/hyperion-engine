@@ -233,7 +233,7 @@ public:
      *  \param count The number of bytes to write to the ByteBuffer.
      *  \param offset The offset in the ByteBuffer to write to.
      *  \param data A pointer to the data to write to the ByteBuffer. It must be a pointer to a valid memory location with at least \ref{count} bytes of data. */
-    void Write(SizeType count, SizeType offset, const void* data)
+    HYP_FORCE_INLINE void Write(SizeType count, SizeType offset, const void* data)
     {
         if (count == 0)
         {
@@ -247,11 +247,15 @@ public:
 
     /*! \brief Returns a copy of the ByteBuffer's data as an Array of ubyte.
      *  \return An Array of ubyte containing the ByteBuffer's data, copied from the ByteBuffer. */
-    Array<ubyte> ToArray() const
+    HYP_FORCE_INLINE Array<ubyte> ToArray() const
     {
         Array<ubyte> byteArray;
-        byteArray.Resize(m_size);
-        Memory::MemCpy(byteArray.Data(), Data(), m_size);
+
+        if (m_size != 0)
+        {
+            byteArray.Resize(m_size);
+            Memory::MemCpy(byteArray.Data(), Data(), m_size);
+        }
 
         return byteArray;
     }
@@ -260,7 +264,7 @@ public:
      *  \param offset The offset in the ByteBuffer to start the view from.
      *  \param size The size of the view. If size is larger than the ByteBuffer's size, it will be clamped to the ByteBuffer's size.
      *  \return A ByteView of the ByteBuffer's data. */
-    ByteView ToByteView(SizeType offset = 0, SizeType size = ~0ull)
+    HYP_FORCE_INLINE ByteView ToByteView(SizeType offset = 0, SizeType size = ~0ull)
     {
         if (size > m_size)
         {
@@ -274,7 +278,7 @@ public:
      *  \param offset The offset in the ByteBuffer to start the view from.
      *  \param size The size of the view. If size is larger than the ByteBuffer's size, it will be clamped to the ByteBuffer's size.
      *  \return A ConstByteView of the ByteBuffer's data. */
-    ConstByteView ToByteView(SizeType offset = 0, SizeType size = ~0ull) const
+    HYP_FORCE_INLINE ConstByteView ToByteView(SizeType offset = 0, SizeType size = ~0ull) const
     {
         if (size > m_size)
         {
@@ -284,15 +288,13 @@ public:
         return ConstByteView(Data() + offset, size);
     }
 
-    /*! \brief Returns a pointer to the ByteBuffer's data. The pointer will point to the same data as the ByteBuffer, so changes to the ByteBuffer will be reflected in the pointer.
-     *  \return A pointer to the ByteBuffer's data. */
+    /*! \brief Returns a pointer to the ByteBuffer's data  */
     HYP_FORCE_INLINE ubyte* Data()
     {
         return m_allocation.GetBuffer();
     }
 
-    /*! \brief Returns a pointer to the ByteBuffer's data. The pointer will point to the same data as the ByteBuffer, so changes to the ByteBuffer will be reflected in the pointer.
-     *  \return A pointer to the ByteBuffer's data. */
+    /*! \brief Returns a pointer to the ByteBuffer's data  */
     HYP_FORCE_INLINE const ubyte* Data() const
     {
         return m_allocation.GetBuffer();
@@ -316,7 +318,7 @@ public:
         m_allocation.InitFromRangeCopy(reinterpret_cast<const ubyte*>(data), reinterpret_cast<const ubyte*>(data) + count);
     }
 
-    /*! \brief Gets the current size of the ByteBuffer.
+    /*! \brief Gets the current size of the ByteBuffer in bytes.
      *  \return The current size of the ByteBuffer. */
     HYP_FORCE_INLINE SizeType Size() const
     {
@@ -395,7 +397,7 @@ public:
      *  \param count The number of bytes to read from the ByteBuffer.
      *  \param outValues The output buffer to write the read values to.
      *  \return Returns true if the read was successful, false if the offset is out of bounds. */
-    bool Read(SizeType offset, SizeType count, ubyte* outValues) const
+    HYP_FORCE_INLINE bool Read(SizeType offset, SizeType count, ubyte* outValues) const
     {
         HYP_CORE_ASSERT(outValues != nullptr);
 
@@ -421,7 +423,7 @@ public:
      *  \param out The output buffer to write the read value to.
      *  \return Returns true if the read was successful, false if the offset is out of bounds. */
     template <class T>
-    bool Read(SizeType offset, T* out) const
+    HYP_FORCE_INLINE bool Read(SizeType offset, T* out) const
     {
         static_assert(isPodType<T>, "Must be POD type");
 

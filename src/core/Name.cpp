@@ -14,6 +14,12 @@ namespace hyperion {
 class NameRegistry
 {
 public:
+    using Bucket = typename HashMap<NameID, Pair<ANSIString, uint32>>::Bucket;
+    using Node = typename HashMap<NameID, Pair<ANSIString, uint32>>::Node;
+
+    static Bucket* g_nullBucket;
+    static Node* g_nullNode;
+
     NameRegistry() = default;
     NameRegistry(const NameRegistry& other) = delete;
     NameRegistry& operator=(const NameRegistry& other) = delete;
@@ -29,6 +35,9 @@ private:
     HashMap<NameID, Pair<ANSIString, uint32>> m_nameMap;
     mutable Mutex m_mutex;
 };
+
+NameRegistry::Bucket* NameRegistry::g_nullBucket = nullptr;
+NameRegistry::Node* NameRegistry::g_nullNode = nullptr;
 
 Name NameRegistry::RegisterName(NameID id, const ANSIString& str, bool lock)
 {
@@ -138,11 +147,13 @@ HYP_API const ANSIString& LookupStringForName(const NameRegistry* nameRegistry, 
 
 #pragma region Name
 
+NameRegistry* Name::s_registry = nullptr;
+
 NameRegistry* Name::GetRegistry()
 {
     static NameRegistry nameRegistry;
 
-    return &nameRegistry;
+    return (s_registry = &nameRegistry);
 }
 
 Name Name::Unique(ANSIStringView prefix)

@@ -754,11 +754,63 @@ public:
     JSONObject& operator=(JSONObject&& other) noexcept = default;
 
     ~JSONObject() = default;
-
+    
+    /*! \brief Merge another JSONObject into this one.
+     *  If a key exists in both objects, the value from the other object is used.
+     *  If the value is an object, it is replaced with the other object's value.
+     *
+     *  \param other The other JSONObject to merge.
+     *  \return A reference to this JSONObject.
+     */
     template <class OtherContainerType>
     JSONObject& Merge(OtherContainerType&& other)
     {
         Base::Merge(std::forward<OtherContainerType>(other));
+
+        return *this;
+    }
+
+    /*! \brief Merge another JSONObject into this one, recursively merging objects.
+     *  If a key exists in both objects and the value is an object, the values are merged.
+     *  Otherwise, the value from the other object is used.
+     *
+     *  \param other The other JSONObject to merge.
+     *  \return A reference to this JSONObject.
+     */
+    template <class OtherContainerType>
+    JSONObject& MergeDeep(const JSONObject& other)
+    {
+        if (this == std::addressof(other))
+        {
+            return *this;
+        }
+
+        for (const auto& kv : other)
+        {
+            const JSONString& key = kv.first;
+            const JSONValue& value = kv.second;
+
+            if (value.IsObject())
+            {
+                auto it = Find(key);
+                
+                if (it != End())
+                {
+                    if (it->second.IsObject())
+                    {
+                        it->second.AsObject().MergeDeep(value.AsObject());
+                    }
+                    else
+                    {
+                        it->second = value;
+                    }
+
+                    continue;
+                }
+            }
+
+            Set(key, value);
+        }
 
         return *this;
     }

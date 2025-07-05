@@ -10,33 +10,6 @@
 
 namespace hyperion {
 
-HYP_CLASS(NoScriptBindings)
-class BLASUpdaterSystem : public SystemBase
-{
-    HYP_OBJECT_BODY(BLASUpdaterSystem);
-
-public:
-    BLASUpdaterSystem(EntityManager& entityManager);
-    virtual ~BLASUpdaterSystem() override = default;
-
-    virtual bool ShouldCreateForScene(Scene* scene) const override;
-
-    virtual void OnEntityAdded(Entity* entity) override;
-    virtual void OnEntityRemoved(Entity* entity) override;
-
-    virtual void Process(float delta) override;
-
-private:
-    virtual SystemComponentDescriptors GetComponentDescriptors() const override
-    {
-        return {
-            ComponentDescriptor<MeshComponent, COMPONENT_RW_FLAGS_READ_WRITE> {},
-            ComponentDescriptor<TransformComponent, COMPONENT_RW_FLAGS_READ> {},
-
-            ComponentDescriptor<EntityTagComponent<EntityTag::UPDATE_BLAS>, COMPONENT_RW_FLAGS_READ, false> {}
-        };
-    }
-};
 
 } // namespace hyperion
 

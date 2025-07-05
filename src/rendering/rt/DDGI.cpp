@@ -157,9 +157,24 @@ DDGI::DDGI(DDGIInfo&& gridInfo)
 
 DDGI::~DDGI()
 {
+    m_shader.Reset();
+
+    SafeRelease(std::move(m_uniformBuffer));
+    SafeRelease(std::move(m_radianceBuffer));
+    SafeRelease(std::move(m_irradianceImage));
+    SafeRelease(std::move(m_irradianceImageView));
+    SafeRelease(std::move(m_depthImage));
+    SafeRelease(std::move(m_depthImageView));
+    SafeRelease(std::move(m_pipeline));
+    SafeRelease(std::move(m_updateIrradiance));
+    SafeRelease(std::move(m_updateDepth));
+    SafeRelease(std::move(m_copyBorderTexelsIrradiance));
+    SafeRelease(std::move(m_copyBorderTexelsDepth));
+
+    PUSH_RENDER_COMMAND(UnsetDDGIDescriptors);
 }
 
-void DDGI::Init()
+void DDGI::Create()
 {
     const Vec3u grid = m_gridInfo.NumProbesPerDimension();
     m_probes.Resize(m_gridInfo.NumProbes());
@@ -188,27 +203,6 @@ void DDGI::Init()
         m_uniformBuffer,
         m_irradianceImageView,
         m_depthImageView);
-}
-
-void DDGI::Destroy()
-{
-    m_shader.Reset();
-
-    SafeRelease(std::move(m_uniformBuffer));
-    SafeRelease(std::move(m_radianceBuffer));
-    SafeRelease(std::move(m_irradianceImage));
-    SafeRelease(std::move(m_irradianceImageView));
-    SafeRelease(std::move(m_depthImage));
-    SafeRelease(std::move(m_depthImageView));
-    SafeRelease(std::move(m_pipeline));
-    SafeRelease(std::move(m_updateIrradiance));
-    SafeRelease(std::move(m_updateDepth));
-    SafeRelease(std::move(m_copyBorderTexelsIrradiance));
-    SafeRelease(std::move(m_copyBorderTexelsDepth));
-
-    PUSH_RENDER_COMMAND(UnsetDDGIDescriptors);
-
-    HYP_SYNC_RENDER();
 }
 
 void DDGI::CreatePipelines()
@@ -471,28 +465,17 @@ void DDGI::Render(FrameBase* frame, const RenderSetup& renderSetup)
         renderSetup.passData->descriptorSets[frame->GetFrameIndex()],
         m_pipeline);
 
-    frame->GetCommandList().Add<TraceRays>(
-        m_pipeline,
-        Vec3u {
-            m_gridInfo.NumProbes(),
-            m_gridInfo.numRaysPerProbe,
-            1u });
+    frame->GetCommandList().Add<TraceRays>(m_pipeline, Vec3u { m_gridInfo.NumProbes(), m_gridInfo.numRaysPerProbe, 1u });
 
-    frame->GetCommandList().Add<InsertBarrier>(
-        m_radianceBuffer,
-        RS_UNORDERED_ACCESS);
+    frame->GetCommandList().Add<InsertBarrier>(m_radianceBuffer, RS_UNORDERED_ACCESS);
 
     // Compute irradiance for ray traced probes
 
     const Vec3u probeCounts = m_gridInfo.NumProbesPerDimension();
 
-    frame->GetCommandList().Add<InsertBarrier>(
-        m_irradianceImage,
-        RS_UNORDERED_ACCESS);
+    frame->GetCommandList().Add<InsertBarrier>(m_irradianceImage, RS_UNORDERED_ACCESS);
 
-    frame->GetCommandList().Add<InsertBarrier>(
-        m_depthImage,
-        RS_UNORDERED_ACCESS);
+    frame->GetCommandList().Add<InsertBarrier>(m_depthImage, RS_UNORDERED_ACCESS);
 
     frame->GetCommandList().Add<BindComputePipeline>(m_updateIrradiance);
 
@@ -502,12 +485,7 @@ void DDGI::Render(FrameBase* frame, const RenderSetup& renderSetup)
         ArrayMap<Name, ArrayMap<Name, uint32>> {},
         frame->GetFrameIndex());
 
-    frame->GetCommandList().Add<DispatchCompute>(
-        m_updateIrradiance,
-        Vec3u {
-            probeCounts.x * probeCounts.y,
-            probeCounts.z,
-            1u });
+    frame->GetCommandList().Add<DispatchCompute>(m_updateIrradiance, Vec3u { probeCounts.x * probeCounts.y, probeCounts.z, 1u });
 
     frame->GetCommandList().Add<BindComputePipeline>(m_updateDepth);
 
@@ -522,12 +500,7 @@ void DDGI::Render(FrameBase* frame, const RenderSetup& renderSetup)
                     { NAME("CurrentEnvProbe"), ShaderDataOffset<EnvProbeShaderData>(renderSetup.envProbe, 0) } } } },
         frame->GetFrameIndex());
 
-    frame->GetCommandList().Add<DispatchCompute>(
-        m_updateDepth,
-        Vec3u {
-            probeCounts.x * probeCounts.y,
-            probeCounts.z,
-            1u });
+    frame->GetCommandList().Add<DispatchCompute>(m_updateDepth, Vec3u { probeCounts.x * probeCounts.y, probeCounts.z, 1u });
 
 #if 0 // @FIXME: Properly implement an optimized way to copy border texels without invoking for each pixel in the images.
     m_irradianceImage->InsertBarrier(

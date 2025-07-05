@@ -92,18 +92,6 @@ RaytracingReflections::RaytracingReflections(RaytracingReflectionsConfig&& confi
 
 RaytracingReflections::~RaytracingReflections()
 {
-}
-
-void RaytracingReflections::Create()
-{
-    CreateImages();
-    CreateUniformBuffer();
-    CreateTemporalBlending();
-    CreateRaytracingPipeline();
-}
-
-void RaytracingReflections::Destroy()
-{
     m_shader.Reset();
 
     SafeRelease(std::move(m_raytracingPipeline));
@@ -114,8 +102,14 @@ void RaytracingReflections::Destroy()
     g_safeDeleter->SafeRelease(std::move(m_texture));
 
     PUSH_RENDER_COMMAND(UnsetRTRadianceImageInGlobalDescriptorSet);
+}
 
-    HYP_SYNC_RENDER();
+void RaytracingReflections::Create()
+{
+    CreateImages();
+    CreateUniformBuffer();
+    CreateTemporalBlending();
+    CreateRaytracingPipeline();
 }
 
 void RaytracingReflections::UpdateUniforms(FrameBase* frame, const RenderSetup& renderSetup)
@@ -156,9 +150,7 @@ void RaytracingReflections::UpdateUniforms(FrameBase* frame, const RenderSetup& 
 
     if (m_updates[frame->GetFrameIndex()])
     {
-        const DescriptorSetRef& descriptorSet = m_raytracingPipeline->GetDescriptorTable()
-                                                    ->GetDescriptorSet(NAME("RTRadianceDescriptorSet"), frame->GetFrameIndex());
-
+        const DescriptorSetRef& descriptorSet = m_raytracingPipeline->GetDescriptorTable()->GetDescriptorSet(NAME("RTRadianceDescriptorSet"), frame->GetFrameIndex());
         Assert(descriptorSet.IsValid());
 
         descriptorSet->Update();
@@ -174,6 +166,9 @@ void RaytracingReflections::Render(FrameBase* frame, const RenderSetup& renderSe
 
     UpdateUniforms(frame, renderSetup);
 
+    const uint32 viewDescriptorSetIndex = m_raytracingPipeline->GetDescriptorTable()->GetDescriptorSetIndex(NAME("View"));
+    AssertDebug(viewDescriptorSetIndex != ~0u);
+
     frame->GetCommandList().Add<BindRaytracingPipeline>(m_raytracingPipeline);
 
     frame->GetCommandList().Add<BindDescriptorTable>(
@@ -187,6 +182,12 @@ void RaytracingReflections::Render(FrameBase* frame, const RenderSetup& renderSe
                     { NAME("CurrentEnvProbe"), ShaderDataOffset<EnvProbeShaderData>(renderSetup.envProbe, 0) } } } },
         frame->GetFrameIndex());
 
+    frame->GetCommandList().Add<BindDescriptorSet>(
+        renderSetup.passData->descriptorSets[frame->GetFrameIndex()],
+        m_raytracingPipeline,
+        ArrayMap<Name, uint32> {},
+        viewDescriptorSetIndex);
+
     frame->GetCommandList().Add<InsertBarrier>(m_texture->GetRenderResource().GetImage(), RS_UNORDERED_ACCESS);
 
     const Vec3u imageExtent = m_texture->GetRenderResource().GetImage()->GetExtent();
@@ -194,13 +195,8 @@ void RaytracingReflections::Render(FrameBase* frame, const RenderSetup& renderSe
     const SizeType numPixels = imageExtent.Volume();
     // const SizeType halfNumPixels = numPixels / 2;
 
-    frame->GetCommandList().Add<TraceRays>(
-        m_raytracingPipeline,
-        Vec3u { uint32(numPixels), 1, 1 });
-
-    frame->GetCommandList().Add<InsertBarrier>(
-        m_texture->GetRenderResource().GetImage(),
-        RS_SHADER_RESOURCE);
+    frame->GetCommandList().Add<TraceRays>(m_raytracingPipeline, Vec3u { uint32(numPixels), 1, 1 });
+    frame->GetCommandList().Add<InsertBarrier>(m_texture->GetRenderResource().GetImage(), RS_SHADER_RESOURCE);
 
     // Reset progressive blending if the camera view matrix has changed (for path tracing)
     if (IsPathTracer() && renderSetup.view->GetCamera()->GetBufferData().view != m_previousViewMatrix)

@@ -5,7 +5,9 @@
         "enabled": true
       },
       "reflections": {
-        "enabled": false
+        "Extent": [1024, 1024],
+        "PathTracing": false,
+        "enabled": true
       },
       "gi": {
         "enabled": false

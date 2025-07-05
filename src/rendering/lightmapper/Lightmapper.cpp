@@ -594,7 +594,9 @@ void LightmapGPUPathTracer::Create()
 
     for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
     {
-        const TLASRef& tlas = m_scene->GetWorld()->GetRenderResource().GetEnvironment()->GetTopLevelAccelerationStructures()[frameIndex];
+        HYP_NOT_IMPLEMENTED();
+        // TEMP FIX ME!!!! build new TLAS for the scene (not attached to view pass data)
+        const TLASRef& tlas = TLASRef::Null(); //m_scene->GetWorld()->GetRenderResource().GetEnvironment()->GetTopLevelAccelerationStructures()[frameIndex];
         Assert(tlas != nullptr);
 
         const DescriptorSetRef& descriptorSet = descriptorTable->GetDescriptorSet(NAME("RTRadianceDescriptorSet"), frameIndex);
@@ -1573,12 +1575,15 @@ void Lightmapper::PerformLightmapping()
 
         if (m_config.traceMode == LightmapTraceMode::GPU_PATH_TRACING)
         {
-            if (!meshComponent.raytracingData)
+            HYP_NOT_IMPLEMENTED();
+            // FIXME!!
+
+            /*if (!meshComponent.raytracingData)
             {
                 HYP_LOG(Lightmap, Info, "Skipping Entity {} because it has no raytracing data set", entity->Id());
 
                 continue;
-            }
+            }*/
         }
 
         m_subElements.PushBack(LightmapSubElement {

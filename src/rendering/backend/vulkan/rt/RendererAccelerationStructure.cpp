@@ -179,6 +179,11 @@ VulkanAccelerationStructureBase::~VulkanAccelerationStructureBase()
         "Scratch buffer should have been destroyed before destructor call");
 }
 
+HYP_API bool VulkanAccelerationStructureBase::IsCreated() const
+{
+    return m_accelerationStructure != VK_NULL_HANDLE;
+}
+
 RendererResult VulkanAccelerationStructureBase::CreateAccelerationStructure(
     AccelerationStructureType type,
     const std::vector<VkAccelerationStructureGeometryKHR>& geometries,
@@ -244,7 +249,7 @@ RendererResult VulkanAccelerationStructureBase::CreateAccelerationStructure(
         accelerationStructureSize,
         &wasRebuilt));
 
-    // force recreate (for debug)
+    // set to true to force recreate (for debug)
     wasRebuilt = true;
 
     if (wasRebuilt)
@@ -382,7 +387,7 @@ RendererResult VulkanAccelerationStructureBase::CreateAccelerationStructure(
 
     ClearFlag(ACCELERATION_STRUCTURE_FLAGS_NEEDS_REBUILDING);
 
-    HYPERION_RETURN_OK;
+    return result;
 }
 
 RendererResult VulkanAccelerationStructureBase::Destroy()
@@ -482,11 +487,23 @@ std::vector<uint32> VulkanTLAS::GetPrimitiveCounts() const
 
 RendererResult VulkanTLAS::Create()
 {
+    if (IsCreated())
+    {
+        return {};
+    }
+
     HYP_GFX_ASSERT(m_accelerationStructure == VK_NULL_HANDLE);
 
     if (m_blas.Empty())
     {
         return HYP_MAKE_ERROR(RendererError, "Top level acceleration structure must have at least one BLAS");
+    }
+
+    for (VulkanBLASRef& blas : m_blas)
+    {
+        HYP_GFX_ASSERT(blas.IsValid());
+
+        HYPERION_BUBBLE_ERRORS(blas->Create());
     }
 
     HYPERION_BUBBLE_ERRORS(CreateOrRebuildInstancesBuffer());
@@ -513,10 +530,7 @@ RendererResult VulkanTLAS::Create()
 
     HYP_GFX_ASSERT(updateStateFlags & RT_UPDATE_STATE_FLAGS_UPDATE_ACCELERATION_STRUCTURE);
 
-    HYPERION_PASS_ERRORS(
-        CreateMeshDescriptionsBuffer(),
-        result);
-
+    HYPERION_PASS_ERRORS(CreateMeshDescriptionsBuffer(), result);
     updateStateFlags |= RT_UPDATE_STATE_FLAGS_UPDATE_MESH_DESCRIPTIONS;
 
     return result;
@@ -524,6 +538,11 @@ RendererResult VulkanTLAS::Create()
 
 RendererResult VulkanTLAS::Destroy()
 {
+    if (IsCreated())
+    {
+        return {};
+    }
+
     RendererResult result;
 
     SafeRelease(std::move(m_instancesBuffer));
@@ -531,9 +550,7 @@ RendererResult VulkanTLAS::Destroy()
     SafeRelease(std::move(m_scratchBuffer));
     SafeRelease(std::move(m_blas));
 
-    HYPERION_PASS_ERRORS(
-        VulkanAccelerationStructureBase::Destroy(),
-        result);
+    HYPERION_PASS_ERRORS(VulkanAccelerationStructureBase::Destroy(), result);
 
     return result;
 }
@@ -542,16 +559,31 @@ void VulkanTLAS::AddBLAS(const BLASRef& blas)
 {
     HYP_GFX_ASSERT(blas != nullptr);
 
+    if (m_blas.FindAs(blas) != m_blas.End())
+    {
+        return;
+    }
+
     VulkanBLASRef vulkanBlas { blas };
 
+    HYP_GFX_ASSERT(vulkanBlas->IsCreated());
     HYP_GFX_ASSERT(!vulkanBlas->GetGeometries().Empty());
 
-    for (const auto& geometry : vulkanBlas->GetGeometries())
+    for (const VulkanAccelerationGeometryRef& geometry : vulkanBlas->GetGeometries())
     {
         HYP_GFX_ASSERT(geometry != nullptr);
         HYP_GFX_ASSERT(geometry->GetPackedVerticesBuffer() != nullptr);
         HYP_GFX_ASSERT(geometry->GetPackedIndicesBuffer() != nullptr);
     }
+
+    /*if (IsCreated())
+    {
+        // If the TLAS is already created, we need to ensure that the BLAS is created as well.
+        if (!vulkanBlas->IsCreated())
+        {
+            HYPERION_ASSERT_RESULT(vulkanBlas->Create());
+        }
+    }*/
 
     m_blas.PushBack(std::move(vulkanBlas));
 
@@ -560,14 +592,27 @@ void VulkanTLAS::AddBLAS(const BLASRef& blas)
 
 void VulkanTLAS::RemoveBLAS(const BLASRef& blas)
 {
-    auto it = std::find(m_blas.begin(), m_blas.end(), blas);
+    auto it = m_blas.FindAs(blas);
 
-    if (it != m_blas.end())
+    if (it != m_blas.End())
     {
+        VulkanBLASRef& vulkanBlas = *it;
         m_blas.Erase(it);
+
+        SafeRelease(std::move(vulkanBlas));
 
         SetFlag(ACCELERATION_STRUCTURE_FLAGS_NEEDS_REBUILDING);
     }
+}
+
+bool VulkanTLAS::HasBLAS(const BLASRef& blas)
+{
+    if (!blas.IsValid())
+    {
+        return false;
+    }
+
+    return m_blas.Contains(blas);
 }
 
 RendererResult VulkanTLAS::CreateOrRebuildInstancesBuffer()
@@ -728,10 +773,7 @@ RendererResult VulkanTLAS::UpdateMeshDescriptionsBuffer(uint32 first, uint32 las
 
         if (blas->GetGeometries().Empty())
         {
-            HYP_GFX_ASSERT(
-                false,
-                "No geometries added to BLAS node %u!\n",
-                i);
+            HYP_GFX_ASSERT(false, "No geometries added to BLAS node %u!", i);
 
             meshDescription = {};
         }
@@ -837,6 +879,7 @@ RendererResult VulkanTLAS::Rebuild(RTUpdateStateFlags& outUpdateStateFlags)
     for (const VulkanBLASRef& blas : m_blas)
     {
         HYP_GFX_ASSERT(blas != nullptr);
+        HYP_GFX_ASSERT(blas->IsCreated());
         HYP_GFX_ASSERT(!blas->GetGeometries().Empty());
 
         for (const VulkanAccelerationGeometryRef& geometry : blas->GetGeometries())
@@ -848,6 +891,7 @@ RendererResult VulkanTLAS::Rebuild(RTUpdateStateFlags& outUpdateStateFlags)
     }
 
     HYPERION_BUBBLE_ERRORS(CreateOrRebuildInstancesBuffer());
+    outUpdateStateFlags |= RT_UPDATE_STATE_FLAGS_UPDATE_INSTANCES;
 
     HYPERION_PASS_ERRORS(
         CreateAccelerationStructure(
@@ -865,10 +909,7 @@ RendererResult VulkanTLAS::Rebuild(RTUpdateStateFlags& outUpdateStateFlags)
         return result;
     }
 
-    HYPERION_PASS_ERRORS(
-        RebuildMeshDescriptionsBuffer(),
-        result);
-
+    HYPERION_PASS_ERRORS(RebuildMeshDescriptionsBuffer(), result);
     outUpdateStateFlags |= RT_UPDATE_STATE_FLAGS_UPDATE_MESH_DESCRIPTIONS;
 
     return result;
@@ -898,6 +939,11 @@ VulkanBLAS::~VulkanBLAS() = default;
 
 RendererResult VulkanBLAS::Create()
 {
+    if (IsCreated())
+    {
+        return {};
+    }
+
     RendererResult result;
 
     std::vector<VkAccelerationStructureGeometryKHR> geometries(m_geometries.Size());
@@ -962,6 +1008,11 @@ RendererResult VulkanBLAS::Create()
 
 RendererResult VulkanBLAS::Destroy()
 {
+    if (!IsCreated())
+    {
+        return {};
+    }
+
     SafeRelease(std::move(m_packedVerticesBuffer));
     SafeRelease(std::move(m_packedIndicesBuffer));
 

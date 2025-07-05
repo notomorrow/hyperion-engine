@@ -91,6 +91,7 @@ public:
     Handle<Material> material;
     Handle<Skeleton> skeleton;
     MeshInstanceData instanceData;
+    MeshRaytracingData raytracingData;
 
     EntityShaderData bufferData {};
 

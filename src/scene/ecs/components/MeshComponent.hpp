@@ -67,7 +67,7 @@ struct MeshComponent
     // 208
 
     HYP_FIELD()
-    MeshRaytracingData* raytracingData = nullptr;
+    MeshRaytracingData* UNUSED_raytracingData = nullptr;
 
     // 224
 

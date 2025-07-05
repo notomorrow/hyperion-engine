@@ -388,17 +388,16 @@ BLASRef RenderMesh::BuildBLAS(const Handle<Material>& material) const
             this->blas = blas;
         }
 
-        virtual ~RENDER_COMMAND(BuildBLAS)() override = default;
+        virtual ~RENDER_COMMAND(BuildBLAS)() override
+        {
+            SafeRelease(std::move(packedVerticesBuffer));
+            SafeRelease(std::move(packedIndicesBuffer));
+            SafeRelease(std::move(verticesStagingBuffer));
+            SafeRelease(std::move(indicesStagingBuffer));
+        }
 
         virtual RendererResult operator()() override
         {
-            HYP_DEFER({
-                SafeRelease(std::move(packedVerticesBuffer));
-                SafeRelease(std::move(packedIndicesBuffer));
-                SafeRelease(std::move(verticesStagingBuffer));
-                SafeRelease(std::move(indicesStagingBuffer));
-            });
-
             const SizeType packedVerticesSize = packedVertices.Size() * sizeof(PackedVertex);
             const SizeType packedIndicesSize = packedIndices.Size() * sizeof(uint32);
 
@@ -423,12 +422,14 @@ BLASRef RenderMesh::BuildBLAS(const Handle<Material>& material) const
                     cmd.Add<CopyBuffer>(indicesStagingBuffer, packedIndicesBuffer, packedIndicesSize);
                 });
 
-            commands.Push([&](CmdList&)
-                {
-                    blas->Create();
-                });
+            RendererResult copyBuffersResult = commands.Execute();
 
-            return commands.Execute();
+            if (!copyBuffersResult)
+            {
+                return copyBuffersResult;
+            }
+
+            return blas->Create();
         }
     };
 
