@@ -195,7 +195,9 @@ void main()
         }
 #endif
 
-        gbuffer_albedo *= albedo_texture;
+        // gbuffer_albedo *= albedo_texture;
+        gbuffer_albedo = UINT_TO_VEC4(object.material_index);
+        gbuffer_albedo.a = 1.0;
     }
 
     gbuffer_albedo.a = max(gbuffer_albedo.a, 0.005);

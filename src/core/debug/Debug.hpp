@@ -11,7 +11,7 @@
 namespace hyperion {
 namespace debug {
 
-HYP_API extern char* g_errorStringBufPtr;
+HYP_API extern char* GetErrorStringBuffer();
 
 enum class LogType : int
 {
@@ -146,8 +146,8 @@ using debug::LogType;
     {                                                                                                                                                       \
         if (HYP_UNLIKELY(!(cond)))                                                                                                                          \
         {                                                                                                                                                   \
-            std::snprintf(debug::g_errorStringBufPtr, 4096, "Assertion failed in Hyperion core library!\n\tCondition: " #cond "\n\tMessage: " __VA_ARGS__); \
-            debug::LogAssert(debug::g_errorStringBufPtr);                                                                                                   \
+            std::snprintf(debug::GetErrorStringBuffer(), 4096, "Assertion failed in Hyperion core library!\n\tCondition: " #cond "\n\tMessage: " __VA_ARGS__); \
+            debug::LogAssert(debug::GetErrorStringBuffer());                                                                                                   \
             HYP_PRINT_STACK_TRACE();                                                                                                                        \
             std::terminate();                                                                                                                               \
         }                                                                                                                                                   \
@@ -168,8 +168,8 @@ using debug::LogType;
     do                                                                                                              \
     {                                                                                                               \
         HYP_PRINT_STACK_TRACE();                                                                                    \
-        std::snprintf(debug::g_errorStringBufPtr, 4096, "\n\nAn engine crash has been triggered!\n\t" __VA_ARGS__); \
-        debug::LogAssert(debug::g_errorStringBufPtr);                                                               \
+        std::snprintf(debug::GetErrorStringBuffer(), 4096, "\n\nAn engine crash has been triggered!\n\t" __VA_ARGS__); \
+        debug::LogAssert(debug::GetErrorStringBuffer());                                                               \
         debug::DebugLog_FlushOutputStream();                                                                        \
                                                                                                                     \
         std::terminate();                                                                                           \

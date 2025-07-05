@@ -19,8 +19,6 @@
 #include <core/logging/LogChannels.hpp>
 #include <core/logging/Logger.hpp>
 
-#include <core/algorithm/Map.hpp>
-
 // For CompiledShader
 #include <rendering/shader_compiler/ShaderCompiler.hpp>
 

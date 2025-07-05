@@ -10,9 +10,6 @@
 
 #include <core/containers/HeapArray.hpp>
 
-#include <core/algorithm/AnyOf.hpp>
-#include <core/algorithm/Every.hpp>
-
 #include <core/math/Vertex.hpp>
 
 #include <rendering/backend/RendererShader.hpp>

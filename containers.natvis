@@ -1,10 +1,15 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
 
-  <Type Name="hyperion::utilities::ValueStorage&lt;*&gt;">
+  <Type Name="hyperion::utilities::ValueStorage&lt;*,*,*,*&gt;">
     <DisplayString>{($T1 *)dataBuffer}</DisplayString>
     <Expand>
-      <ExpandedItem>($T1 *)dataBuffer</ExpandedItem>
+      <Item Name="[Count]">($T2)</Item>
+
+      <ArrayItems>
+        <Size>($T2)</Size>
+        <ValuePointer>(($T1 *)dataBuffer)</ValuePointer>
+      </ArrayItems>
     </Expand>
   </Type>
 
@@ -189,6 +194,13 @@
       <Item Name="[Strong Count]">(m_ref.m_ptr-&gt;strongCount)</Item>
       <Item Name="[Weak Count]">(m_ref.m_ptr-&gt;weakCount)</Item>
       <ExpandedItem>($T1 *)m_ptr</ExpandedItem>
+    </Expand>
+  </Type>
+
+  <Type Name="hyperion::memory::Pimpl&lt;*&gt;">
+    <DisplayString>{{ {($T1 *)(&amp;((Allocation *)m_allocation)-&gt;storage)} }}</DisplayString>
+    <Expand>
+      <ExpandedItem>($T1 *)(&amp;((Allocation *)m_allocation)-&gt;storage)</ExpandedItem>
     </Expand>
   </Type>
 

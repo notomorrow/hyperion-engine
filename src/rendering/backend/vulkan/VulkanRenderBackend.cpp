@@ -17,8 +17,6 @@
 
 #include <rendering/RenderableAttributes.hpp>
 
-#include <core/algorithm/Map.hpp>
-
 #include <system/AppContext.hpp>
 
 #include <vulkan/vulkan.h>

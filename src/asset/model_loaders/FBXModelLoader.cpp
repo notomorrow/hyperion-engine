@@ -16,8 +16,6 @@
 #include <scene/ecs/components/BoundingBoxComponent.hpp>
 #include <scene/ecs/components/VisibilityStateComponent.hpp>
 
-#include <core/algorithm/AnyOf.hpp>
-
 #include <core/functional/Proc.hpp>
 
 #include <core/filesystem/FsUtil.hpp>

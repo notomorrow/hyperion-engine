@@ -70,7 +70,7 @@ struct CommandLineArgumentDefinition
 
 struct CommandLineArgumentDefinitionsImpl;
 
-HYP_STRUCT(Size = 16)
+HYP_STRUCT(Size = 8)
 struct HYP_API CommandLineArgumentDefinitions
 {
     Pimpl<CommandLineArgumentDefinitionsImpl> m_impl;

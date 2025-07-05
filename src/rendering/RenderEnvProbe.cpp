@@ -926,12 +926,13 @@ void ReflectionProbeRenderer::ComputeSH(FrameBase* frame, const RenderSetup& ren
     *delegateHandle = frame->OnFrameEnd.Bind([renderEnvProbe = TResourceHandle<RenderEnvProbe>(envProbe->GetRenderResource()), pipelines = std::move(pipelines), descriptorTables = std::move(computeShDescriptorTables), delegateHandle](FrameBase* frame) mutable
         {
             HYP_NAMED_SCOPE("EnvProbe::ComputeSH - Buffer readback");
-
-            AssertDebug(renderEnvProbe->GetBufferIndex() != ~0u);
+            
+            const uint32 boundIndex = RenderApi_RetrieveResourceBinding(renderEnvProbe->GetEnvProbe());
+            Assert(boundIndex != ~0u);
 
             EnvProbeShaderData readbackBuffer;
 
-            g_renderGlobalState->gpuBuffers[GRB_ENV_PROBES]->ReadbackElement(frame->GetFrameIndex(), renderEnvProbe->GetBufferIndex(), &readbackBuffer);
+            g_renderGlobalState->gpuBuffers[GRB_ENV_PROBES]->ReadbackElement(frame->GetFrameIndex(), boundIndex, &readbackBuffer);
 
             Memory::MemCpy(renderEnvProbe->m_sphericalHarmonics.values, readbackBuffer.sh.values, sizeof(EnvProbeSphericalHarmonics::values));
 

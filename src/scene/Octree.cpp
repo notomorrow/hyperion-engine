@@ -14,8 +14,6 @@
 
 #include <scene/camera/Camera.hpp>
 
-#include <core/algorithm/Every.hpp>
-
 #include <core/logging/LogChannels.hpp>
 #include <core/logging/Logger.hpp>
 

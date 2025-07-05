@@ -9,9 +9,6 @@
 #include <core/utilities/Format.hpp>
 #include <core/utilities/StringView.hpp>
 
-#include <core/algorithm/Map.hpp>
-#include <core/algorithm/Filter.hpp>
-
 #include <core/containers/HashMap.hpp>
 #include <core/containers/HashSet.hpp>
 #include <core/containers/Forest.hpp>

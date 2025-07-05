@@ -55,7 +55,7 @@ class ResourceTracker
             // find valid element - first check m_impl then try subclasses if not found
             if (subclassImplIndex == Bitset::notFound)
             {
-                elementIndex = FindNextSet(tracker->m_impl.GetCurrentBits(), elementIndex);
+                elementIndex = FindNextSet(tracker->m_impl.previous, elementIndex);
 
                 if (elementIndex != Bitset::notFound)
                 {
@@ -77,7 +77,7 @@ class ResourceTracker
                 AssertDebug(subclassImplIndex < tracker->m_subclassImpls.Size());
 
                 auto& impl = tracker->m_subclassImpls[subclassImplIndex].Get();
-                elementIndex = FindNextSet(impl.GetCurrentBits(), elementIndex);
+                elementIndex = FindNextSet(impl.previous, elementIndex);
 
                 // Found valid element in subclass impl.
                 if (elementIndex != Bitset::notFound)
@@ -105,7 +105,7 @@ class ResourceTracker
 
             if (subclassImplIndex == Bitset::notFound)
             {
-                elementIndex = FindNextSet(tracker->m_impl.GetCurrentBits(), elementIndex + 1);
+                elementIndex = FindNextSet(tracker->m_impl.previous, elementIndex + 1);
 
                 if (elementIndex != Bitset::notFound)
                 {
@@ -125,7 +125,7 @@ class ResourceTracker
 
                 auto& impl = tracker->m_subclassImpls[subclassImplIndex].Get();
 
-                elementIndex = FindNextSet(impl.GetCurrentBits(), elementIndex + 1);
+                elementIndex = FindNextSet(impl.previous, elementIndex + 1);
 
                 if (elementIndex != Bitset::notFound)
                 {
@@ -295,13 +295,13 @@ public:
     {
         HYP_SCOPE;
 
-        uint32 count = m_impl.GetCurrentBits().Count();
+        uint32 count = m_impl.next.Count();
 
         for (Bitset::BitIndex i : m_subclassImplsInitialized)
         {
             AssertDebug(i < m_subclassImpls.Size());
 
-            count += m_subclassImpls[i].Get().GetCurrentBits().Count();
+            count += m_subclassImpls[i].Get().next.Count();
         }
 
         return count;
@@ -311,7 +311,7 @@ public:
     {
         if (typeId == IdType::typeIdStatic)
         {
-            return m_impl.GetCurrentBits().Count();
+            return m_impl.next.Count();
         }
 
         const int subclassIndex = GetSubclassIndex(m_impl.typeId, typeId);
@@ -320,7 +320,7 @@ public:
 
         if (m_subclassImplsInitialized.Test(subclassIndex))
         {
-            return m_subclassImpls[subclassIndex].Get().GetCurrent().Count();
+            return m_subclassImpls[subclassIndex].Get().next.Count();
         }
 
         return 0;
@@ -364,7 +364,7 @@ public:
     {
         HYP_SCOPE;
 
-        Diff diff;
+        Diff diff {};
 
         diff.numAdded = m_impl.GetAdded().Count();
         diff.numRemoved = m_impl.GetRemoved().Count();
@@ -394,6 +394,7 @@ public:
         HYP_SCOPE;
 
         TypeId typeId = id.GetTypeId();
+        AssertDebug(typeId != TypeId::Void());
 
         if (typeId == m_impl.typeId)
         {
@@ -419,6 +420,7 @@ public:
         HYP_SCOPE;
 
         TypeId typeId = id.GetTypeId();
+        AssertDebug(typeId != TypeId::Void());
 
         if (typeId == m_impl.typeId)
         {
@@ -440,6 +442,7 @@ public:
     void MarkToRemove(IdType id)
     {
         TypeId typeId = id.GetTypeId();
+        AssertDebug(typeId != TypeId::Void());
 
         if (typeId == m_impl.typeId)
         {
@@ -646,11 +649,6 @@ protected:
             AssertDebug(id.GetTypeId() == typeId, "ResourceTracker typeid mismatch");
 
             return previous.Test(id.ToIndex());
-        }
-
-        HYP_FORCE_INLINE const Bitset& GetCurrentBits() const
-        {
-            return previous;
         }
 
         HYP_FORCE_INLINE Bitset GetAdded() const

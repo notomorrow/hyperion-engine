@@ -314,6 +314,7 @@ public:
         : m_logMask(-1),
           m_outputStream(&outputStream)
     {
+        Fill(m_logChannels.Begin(), m_logChannels.End(), nullptr);
     }
 
 private:

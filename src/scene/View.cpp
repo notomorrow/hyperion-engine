@@ -37,8 +37,6 @@
 
 #include <core/profiling/ProfileScope.hpp>
 
-#include <core/algorithm/Map.hpp>
-
 #include <core/logging/LogChannels.hpp>
 #include <core/logging/Logger.hpp>
 
@@ -900,7 +898,7 @@ void View::CollectEnvProbes(RenderProxyList& rpl)
                     continue;
                 }
 
-                if (!m_camera->GetFrustum().ContainsAABB(probeAabb))
+                if (!(m_flags & ViewFlags::SKIP_FRUSTUM_CULLING) && !m_camera->GetFrustum().ContainsAABB(probeAabb))
                 {
                     continue;
                 }
@@ -914,7 +912,8 @@ void View::CollectEnvProbes(RenderProxyList& rpl)
         {
             if (skyComponent.subsystem)
             {
-                Assert(skyComponent.subsystem->GetEnvProbe()->IsA<SkyProbe>());
+                AssertDebug(skyComponent.subsystem->GetEnvProbe()->IsA<SkyProbe>());
+
                 rpl.envProbes.Track(skyComponent.subsystem->GetEnvProbe()->Id(), skyComponent.subsystem->GetEnvProbe(), skyComponent.subsystem->GetEnvProbe()->GetRenderProxyVersionPtr());
             }
         }

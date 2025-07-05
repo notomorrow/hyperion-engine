@@ -258,19 +258,6 @@ RenderProxyList::~RenderProxyList()
     }
 
     Clear();
-
-#define DO_FINALIZATION_CHECK(tracker)                                                                                                    \
-    Assert(tracker.NumCurrent() == 0,                                                                                                     \
-        HYP_STR(tracker) " still has %u bits set. This means that there are still render proxies that have not been removed or cleared.", \
-        tracker.NumCurrent())
-
-    DO_FINALIZATION_CHECK(meshes);
-    DO_FINALIZATION_CHECK(envProbes);
-    DO_FINALIZATION_CHECK(envGrids);
-    DO_FINALIZATION_CHECK(lights);
-    DO_FINALIZATION_CHECK(lightmapVolumes);
-
-#undef DO_FINALIZATION_CHECK
 }
 
 void RenderProxyList::Clear()

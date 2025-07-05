@@ -25,8 +25,6 @@
 
 #include <core/utilities/ForEach.hpp>
 
-#include <core/algorithm/Map.hpp>
-
 #include <core/profiling/ProfileScope.hpp>
 
 #include <util/octree/Octree.hpp>

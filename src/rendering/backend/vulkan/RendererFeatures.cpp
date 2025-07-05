@@ -2,6 +2,10 @@
 
 #include <rendering/backend/RendererFeatures.hpp>
 #include <rendering/backend/RenderBackend.hpp>
+
+#include <core/logging/Logger.hpp>
+#include <core/logging/LogChannels.hpp>
+
 namespace hyperion {
 
 Features::DynamicFunctions Features::dynFunctions = {};
@@ -147,7 +151,7 @@ void Features::LoadDynamicFunctions(Device* device)
 
     if (IsRaytracingSupported() && !IsRaytracingDisabled())
     {
-        DebugLog(LogType::Debug, "Raytracing supported, loading raytracing-specific dynamic functions.\n");
+        HYP_LOG(RenderingBackend, Info, "Raytracing supported, loading raytracing-specific dynamic functions.");
 
         HYP_LOAD_FN(vkCmdBuildAccelerationStructuresKHR);
         HYP_LOAD_FN(vkBuildAccelerationStructuresKHR);

@@ -185,6 +185,7 @@ public:
 
     WeakHandle<EnvGrid> envGrid;
     EnvGridShaderData bufferData {};
+    ObjId<EnvProbe> envProbes[maxBoundAmbientProbes];
 };
 
 struct LightShaderData

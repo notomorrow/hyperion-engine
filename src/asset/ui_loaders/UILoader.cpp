@@ -31,9 +31,6 @@
 #include <core/containers/FlatMap.hpp>
 #include <core/containers/String.hpp>
 
-#include <core/algorithm/Map.hpp>
-#include <core/algorithm/FindIf.hpp>
-
 #include <core/object/HypClass.hpp>
 #include <core/object/HypData.hpp>
 #include <core/object/HypProperty.hpp>
