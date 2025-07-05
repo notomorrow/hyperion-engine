@@ -44,11 +44,6 @@ public:
     RenderEnvironment& operator=(const RenderEnvironment& other) = delete;
     ~RenderEnvironment();
 
-    const FixedArray<TLASRef, maxFramesInFlight>& GetTopLevelAccelerationStructures() const
-    {
-        return m_topLevelAccelerationStructures;
-    }
-
     const Handle<ParticleSystem>& GetParticleSystem() const
     {
         return m_particleSystem;
@@ -60,9 +55,6 @@ public:
     }
 
     void Initialize();
-
-    void RenderRTRadiance(FrameBase* frame, const RenderSetup& renderSetup);
-    void RenderDDGIProbes(FrameBase* frame, const RenderSetup& renderSetup);
 
 private:
     HYP_FORCE_INLINE void AddUpdateMarker(RenderEnvironmentUpdates value, ThreadType threadType)
@@ -80,23 +72,11 @@ private:
         return m_updateMarker.Get(MemoryOrder::ACQUIRE) & (value << (RENDER_ENVIRONMENT_UPDATES_THREAD_MASK * uint64(threadType)));
     }
 
-    void ApplyTLASUpdates(FrameBase* frame, RTUpdateStateFlags flags);
-
-    void InitializeRT();
-    bool CreateTopLevelAccelerationStructures();
-
     AtomicVar<RenderEnvironmentUpdates> m_updateMarker { RENDER_ENVIRONMENT_UPDATES_NONE };
 
     Handle<ParticleSystem> m_particleSystem;
 
     Handle<GaussianSplatting> m_gaussianSplatting;
-
-    UniquePtr<RaytracingReflections> m_rtRadiance;
-    DDGI m_ddgi;
-    bool m_hasRtRadiance;
-    bool m_hasDdgiProbes;
-    bool m_rtInitialized;
-    FixedArray<TLASRef, maxFramesInFlight> m_topLevelAccelerationStructures;
 };
 
 } // namespace hyperion

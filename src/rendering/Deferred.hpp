@@ -50,6 +50,7 @@ class HBAO;
 class DOFBlur;
 class Texture;
 class RaytracingReflections;
+class DDGI;
 struct RenderSetup;
 class RenderGroup;
 class IDrawCallCollectionImpl;
@@ -312,6 +313,10 @@ struct DeferredPassData : PassData
     UniquePtr<FullScreenPass> combinePass;
     UniquePtr<DepthPyramidRenderer> depthPyramidRenderer;
     UniquePtr<DOFBlur> dofBlur;
+    UniquePtr<RaytracingReflections> raytracingReflections;
+    UniquePtr<DDGI> ddgi;
+    
+    FixedArray<TLASRef, maxFramesInFlight> topLevelAccelerationStructures;
 
     virtual ~DeferredPassData() override;
 };
@@ -369,6 +374,7 @@ private:
     void CreateViewFinalPassDescriptorSet(View* view, DeferredPassData& passData);
     void CreateViewDescriptorSets(View* view, DeferredPassData& passData);
     void CreateViewCombinePass(View* view, DeferredPassData& passData);
+    void CreateViewTopLevelAccelerationStructures(View* view, DeferredPassData& passData);
 
     void ResizeView(Viewport viewport, View* view, DeferredPassData& passData);
 

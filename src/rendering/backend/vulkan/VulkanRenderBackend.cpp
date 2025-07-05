@@ -34,7 +34,7 @@ class VulkanRenderConfig final : public IRenderConfig
 {
 public:
     VulkanRenderConfig(VulkanRenderBackend* renderingApi)
-        : m_renderingApi(renderingApi)
+        : m_renderBackend(renderingApi)
     {
     }
 
@@ -47,12 +47,12 @@ public:
 
     virtual bool IsBindlessSupported() const override
     {
-        return m_renderingApi->GetDevice()->GetFeatures().SupportsBindlessTextures();
+        return m_renderBackend->GetDevice()->GetFeatures().SupportsBindlessTextures();
     }
 
     virtual bool IsRaytracingSupported() const override
     {
-        return m_renderingApi->GetDevice()->GetFeatures().IsRaytracingSupported();
+        return m_renderBackend->GetDevice()->GetFeatures().IsRaytracingSupported();
     }
 
     virtual bool IsIndirectRenderingEnabled() const override
@@ -67,11 +67,11 @@ public:
 
     virtual bool IsDynamicDescriptorIndexingSupported() const override
     {
-        return false; // m_renderingApi->GetDevice()->GetFeatures().SupportsDynamicDescriptorIndexing();
+        return false; // m_renderBackend->GetDevice()->GetFeatures().SupportsDynamicDescriptorIndexing();
     }
 
 private:
-    VulkanRenderBackend* m_renderingApi;
+    VulkanRenderBackend* m_renderBackend;
 };
 
 #pragma endregion VulkanRenderConfig

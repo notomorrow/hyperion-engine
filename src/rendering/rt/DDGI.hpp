@@ -141,8 +141,7 @@ public:
         return m_irradianceImageView;
     }
 
-    HYP_API void Init();
-    HYP_API void Destroy();
+    HYP_API void Create();
 
     HYP_API void Render(FrameBase* frame, const RenderSetup& renderSetup);
 

@@ -65,7 +65,6 @@ public:
     HYP_API void ApplyTLASUpdates(RTUpdateStateFlags flags);
 
     HYP_API void Create();
-    HYP_API void Destroy();
 
     HYP_API void Render(FrameBase* frame, const RenderSetup& renderSetup);
 

@@ -886,6 +886,7 @@ public:
         return floats;
     }
 
+    /*! \brief Writes the Bitmap's data as a BMP file to the output stream */
     bool Write(ByteWriter* byteWriter) const
     {
         // WriteBitmap uses 3 bytes per pixel

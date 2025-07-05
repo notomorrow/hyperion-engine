@@ -1,6 +1,7 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#include "core/Defines.hpp"
+#include <core/Defines.hpp>
+
 #include <rendering/Deferred.hpp>
 #include <rendering/RenderEnvironment.hpp>
 #include <rendering/RenderGroup.hpp>
@@ -21,6 +22,8 @@
 #include <rendering/SSRRenderer.hpp>
 #include <rendering/SSGI.hpp>
 #include <rendering/PlaceholderData.hpp>
+#include <rendering/rt/RaytracingReflections.hpp>
+#include <rendering/rt/DDGI.hpp>
 
 #include <rendering/debug/DebugDrawer.hpp>
 
@@ -53,6 +56,8 @@
 #include <system/AppContext.hpp>
 
 #include <util/Float16.hpp>
+
+#include <util/MeshBuilder.hpp>
 
 #include <EngineGlobals.hpp>
 #include <Engine.hpp>
@@ -944,8 +949,6 @@ void ReflectionsPass::Render(FrameBase* frame, const RenderSetup& rs)
 
 DeferredPassData::~DeferredPassData()
 {
-    SafeRelease(std::move(finalPassDescriptorSet));
-
     depthPyramidRenderer.Reset();
 
     hbao.Reset();
@@ -971,6 +974,12 @@ DeferredPassData::~DeferredPassData()
     mipChain.Reset();
     indirectPass.Reset();
     directPass.Reset();
+
+    raytracingReflections.Reset();
+    ddgi.Reset();
+
+    SafeRelease(std::move(finalPassDescriptorSet));
+    SafeRelease(std::move(topLevelAccelerationStructures));
 }
 
 #pragma endregion DeferredPassData
@@ -1079,8 +1088,18 @@ PassData* DeferredRenderer::CreateViewPassData(View* view, PassDataExt&)
     pd->temporalAa = MakeUnique<TemporalAA>(pd->tonemapPass->GetFinalImageView(), pd->viewport.extent, gbuffer);
     pd->temporalAa->Create();
 
+
     CreateViewDescriptorSets(view, *pd);
     CreateViewFinalPassDescriptorSet(view, *pd);
+    CreateViewTopLevelAccelerationStructures(view, *pd);
+
+    pd->raytracingReflections = MakeUnique<RaytracingReflections>(RaytracingReflectionsConfig::FromConfig(), gbuffer);
+    pd->raytracingReflections->SetTopLevelAccelerationStructures(pd->topLevelAccelerationStructures);
+    pd->raytracingReflections->Create();
+
+    pd->ddgi = MakeUnique<DDGI>(DDGIInfo { .aabb = { { -45.0f, -5.0f, -45.0f }, { 45.0f, 60.0f, 45.0f } } });
+    pd->ddgi->SetTopLevelAccelerationStructures(pd->topLevelAccelerationStructures);
+    pd->ddgi->Create();
 
     return pd;
 }
@@ -1263,6 +1282,46 @@ void DeferredRenderer::CreateViewCombinePass(View* view, DeferredPassData& passD
     passData.combinePass->Create();
 }
 
+void DeferredRenderer::CreateViewTopLevelAccelerationStructures(View* view, DeferredPassData& passData)
+{
+    SafeRelease(std::move(passData.topLevelAccelerationStructures));
+
+    if (!g_engine->GetAppContext()->GetConfiguration().Get("rendering.rt.enabled").ToBool())
+    {
+        HYP_LOG(Rendering, Debug, "Ray tracing is disabled, skipping creation of TLAS for View '{}'", view->Id());
+
+        return;
+    }
+
+    // @FIXME: Hack solution since TLAS can only be created if it has a non-zero number of BLASes.
+    // This whole thing should be reworked
+    Handle<Mesh> defaultMesh = MeshBuilder::Cube();
+    InitObject(defaultMesh);
+
+    Handle<Material> defaultMaterial = CreateObject<Material>();
+    InitObject(defaultMaterial);
+
+    BLASRef blas;
+
+    {
+        TResourceHandle<RenderMesh> meshResourceHandle(defaultMesh->GetRenderResource());
+
+        blas = meshResourceHandle->BuildBLAS(defaultMaterial);
+    }
+
+    DeferCreate(blas);
+
+    for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
+    {
+        TLASRef& tlas = passData.topLevelAccelerationStructures[frameIndex];
+
+        tlas = g_renderBackend->MakeTLAS();
+        tlas->AddBLAS(blas);
+
+        DeferCreate(tlas);
+    }
+}
+
 void DeferredRenderer::ResizeView(Viewport viewport, View* view, DeferredPassData& passData)
 {
     HYP_SCOPE;
@@ -1365,6 +1424,8 @@ void DeferredRenderer::RenderFrame(FrameBase* frame, const RenderSetup& rs)
         {
             ResizeView(view->GetRenderResource().GetViewport(), view, *pd);
         }
+
+        // @TODO Call ApplyTLASUpdates on DDGI, RT reflections if need be
 
         pd->priority = view->GetRenderResource().GetPriority();
 
@@ -1574,6 +1635,37 @@ void DeferredRenderer::RenderFrameForView(FrameBase* frame, const RenderSetup& r
     DeferredPassData* pd = static_cast<DeferredPassData*>(rs.passData);
     AssertDebug(pd != nullptr);
 
+    if (TLASRef& tlas = pd->topLevelAccelerationStructures[frame->GetFrameIndex()])
+    {
+        RTUpdateStateFlags updateStateFlags = RTUpdateStateFlagBits::RT_UPDATE_STATE_FLAGS_NONE;
+        tlas->UpdateStructure(updateStateFlags);
+        pd->raytracingReflections->ApplyTLASUpdates(updateStateFlags);
+    }
+
+    // HACK TEST HACK TEST HACK TEST HACK TEST
+    /*if (TLASRef& tlas = pd->topLevelAccelerationStructures[frame->GetFrameIndex()])
+    {
+        for (RenderProxyMesh& proxyMesh : rpl.meshes.GetElements<Entity>())
+        {
+            BLASRef& blas = proxyMesh.raytracingData.bottomLevelAccelerationStructures[frame->GetFrameIndex()];
+
+            if (!blas)
+            {
+                blas = proxyMesh.mesh->GetRenderResource().BuildBLAS(proxyMesh.material);
+                blas->SetTransform(proxyMesh.bufferData.modelMatrix);
+                HYPERION_ASSERT_RESULT(blas->Create());
+            }
+
+            if (!tlas->HasBLAS(blas))
+            {
+                tlas->AddBLAS(blas);
+            }
+        }
+        RTUpdateStateFlags updateStateFlags = RTUpdateStateFlagBits::RT_UPDATE_STATE_FLAGS_NONE;
+        tlas->UpdateStructure(updateStateFlags);
+        pd->raytracingReflections->ApplyTLASUpdates(updateStateFlags);
+    }*/
+
     const uint32 frameIndex = frame->GetFrameIndex();
 
     // @TODO: Refactor to put this in the RenderWorld
@@ -1590,8 +1682,8 @@ void DeferredRenderer::RenderFrameForView(FrameBase* frame, const RenderSetup& r
     const bool doParticles = true;
     const bool doGaussianSplatting = false; // environment && environment->IsReady();
 
-    const bool useRtRadiance = m_rendererConfig.pathTracerEnabled || m_rendererConfig.rtReflectionsEnabled;
-    const bool useDdgi = m_rendererConfig.rtGiEnabled;
+    const bool useRtRadiance = (m_rendererConfig.pathTracerEnabled || m_rendererConfig.rtReflectionsEnabled) && pd->raytracingReflections != nullptr;
+    const bool useDdgi = m_rendererConfig.rtGiEnabled && pd->ddgi != nullptr;
     const bool useHbao = m_rendererConfig.hbaoEnabled;
     const bool useHbil = m_rendererConfig.hbilEnabled;
     const bool useSsgi = m_rendererConfig.ssgiEnabled;
@@ -1673,18 +1765,14 @@ void DeferredRenderer::RenderFrameForView(FrameBase* frame, const RenderSetup& r
         pd->reflectionsPass->Render(frame, rs);
     }
 
-    // @FIXME: RT Radiance should be moved away from the RenderEnvironment and be part of the RenderView,
-    // otherwise the same pass will be executed for each view (shared).
-    // DDGI Should be a RenderSubsystem instead of existing on the RenderEnvironment directly,
-    // so it is rendered with the RenderWorld rather than the RenderView.
     if (useRtRadiance)
     {
-        environment->RenderRTRadiance(frame, rs);
+        pd->raytracingReflections->Render(frame, rs);
     }
 
     if (useDdgi)
     {
-        environment->RenderDDGIProbes(frame, rs);
+        pd->ddgi->Render(frame, rs);
     }
 
     if (useHbao || useHbil)

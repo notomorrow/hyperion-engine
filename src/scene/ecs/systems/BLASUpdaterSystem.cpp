@@ -12,6 +12,9 @@
 #include <rendering/RenderScene.hpp>
 #include <rendering/RenderWorld.hpp>
 #include <rendering/RenderEnvironment.hpp>
+#include <rendering/RenderView.hpp>
+#include <rendering/RenderGlobalState.hpp>
+#include <rendering/Deferred.hpp>
 
 #include <rendering/backend/RenderCommand.hpp>
 #include <rendering/backend/rt/RendererAccelerationStructure.hpp>
@@ -29,6 +32,7 @@ namespace hyperion {
 
 HYP_DECLARE_LOG_CHANNEL(Rendering);
 
+#if 0
 #pragma region Render commands
 
 struct RENDER_COMMAND(UpdateBLASTransform)
@@ -63,8 +67,7 @@ struct RENDER_COMMAND(UpdateBLASTransform)
     }
 };
 
-struct RENDER_COMMAND(AddBLASToTLAS)
-    : RenderCommand
+struct RENDER_COMMAND(AddBLASToTLAS) : RenderCommand
 {
     TResourceHandle<RenderWorld> renderWorld;
     FixedArray<BLASRef, maxFramesInFlight> bottomLevelAccelerationStructures;
@@ -88,7 +91,22 @@ struct RENDER_COMMAND(AddBLASToTLAS)
         {
             if (bottomLevelAccelerationStructures[frameIndex].IsValid())
             {
-                environment->GetTopLevelAccelerationStructures()[frameIndex]->AddBLAS(bottomLevelAccelerationStructures[frameIndex]);
+                // TEMPORARY STOPGAP HACK!!!!!
+                for (const TResourceHandle<RenderView>& renderView : renderWorld->GetViews())
+                {
+                    if (renderView->GetGBuffer() != nullptr)
+                    {
+                        DeferredRenderer* deferredRenderer = static_cast<DeferredRenderer*>(g_renderGlobalState->mainRenderer);
+                        DeferredPassData* lastFramePassData = deferredRenderer->GetLastFrameData().GetPassDataForView(renderView->GetView());
+
+                        AssertDebug(lastFramePassData != nullptr);
+
+                        TLASRef& tlas = lastFramePassData->topLevelAccelerationStructures[frameIndex];
+                        AssertDebug(tlas);
+
+                        tlas->AddBLAS(bottomLevelAccelerationStructures[frameIndex]);
+                    }
+                }
             }
         }
 
@@ -96,8 +114,7 @@ struct RENDER_COMMAND(AddBLASToTLAS)
     }
 };
 
-struct RENDER_COMMAND(RemoveBLASFromTLAS)
-    : RenderCommand
+struct RENDER_COMMAND(RemoveBLASFromTLAS) : RenderCommand
 {
     TResourceHandle<RenderWorld> renderWorld;
     FixedArray<BLASRef, maxFramesInFlight> bottomLevelAccelerationStructures;
@@ -121,7 +138,22 @@ struct RENDER_COMMAND(RemoveBLASFromTLAS)
         {
             if (bottomLevelAccelerationStructures[frameIndex].IsValid())
             {
-                environment->GetTopLevelAccelerationStructures()[frameIndex]->RemoveBLAS(bottomLevelAccelerationStructures[frameIndex]);
+                // TEMPORARY STOPGAP HACK!!!!!
+                for (const TResourceHandle<RenderView>& renderView : renderWorld->GetViews())
+                {
+                    if (renderView->GetGBuffer() != nullptr)
+                    {
+                        DeferredRenderer* deferredRenderer = static_cast<DeferredRenderer*>(g_renderGlobalState->mainRenderer);
+                        DeferredPassData* lastFramePassData = deferredRenderer->GetLastFrameData().GetPassDataForView(renderView->GetView());
+
+                        AssertDebug(lastFramePassData != nullptr);
+
+                        TLASRef& tlas = lastFramePassData->topLevelAccelerationStructures[frameIndex];
+                        AssertDebug(tlas);
+
+                        tlas->RemoveBLAS(bottomLevelAccelerationStructures[frameIndex]);
+                    }
+                }
             }
         }
 
@@ -168,7 +200,7 @@ void BLASUpdaterSystem::OnEntityAdded(Entity* entity)
         return;
     }
 
-    Assert(meshComponent.raytracingData == nullptr);
+    Assert(meshComponent.proxy != nullptr);
 
     InitObject(meshComponent.mesh);
     Assert(meshComponent.mesh->IsReady());
@@ -194,21 +226,19 @@ void BLASUpdaterSystem::OnEntityAdded(Entity* entity)
     blas->SetTransform(transformComponent.transform.GetMatrix());
     DeferCreate(blas);
 
-    MeshRaytracingData* meshRaytracingData = new MeshRaytracingData;
+    MeshRaytracingData& meshRaytracingData = meshComponent.proxy->raytracingData;
 
     for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
     {
-        meshRaytracingData->bottomLevelAccelerationStructures[frameIndex] = blas;
+        meshRaytracingData.bottomLevelAccelerationStructures[frameIndex] = blas;
     }
-
-    meshComponent.raytracingData = meshRaytracingData;
 
     if (!GetWorld())
     {
         return;
     }
 
-    PUSH_RENDER_COMMAND(AddBLASToTLAS, TResourceHandle<RenderWorld>(GetWorld()->GetRenderResource()), meshComponent.raytracingData->bottomLevelAccelerationStructures);
+    //PUSH_RENDER_COMMAND(AddBLASToTLAS, TResourceHandle<RenderWorld>(GetWorld()->GetRenderResource()), meshComponent.proxy->raytracingData->bottomLevelAccelerationStructures);
 
     GetEntityManager().RemoveTag<EntityTag::UPDATE_BLAS>(entity);
 }
@@ -219,25 +249,13 @@ void BLASUpdaterSystem::OnEntityRemoved(Entity* entity)
 
     MeshComponent& meshComponent = GetEntityManager().GetComponent<MeshComponent>(entity);
 
-    if (!meshComponent.raytracingData)
+    if (!meshComponent.proxy)
     {
         return;
     }
 
-    PUSH_RENDER_COMMAND(RemoveBLASFromTLAS, TResourceHandle<RenderWorld>(GetWorld()->GetRenderResource()), meshComponent.raytracingData->bottomLevelAccelerationStructures);
+    //PUSH_RENDER_COMMAND(RemoveBLASFromTLAS, TResourceHandle<RenderWorld>(GetWorld()->GetRenderResource()), meshComponent.proxy->raytracingData->bottomLevelAccelerationStructures);
 
-    for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
-    {
-        BLASRef& blas = meshComponent.raytracingData->bottomLevelAccelerationStructures[frameIndex];
-
-        if (blas.IsValid())
-        {
-            SafeRelease(std::move(blas));
-        }
-    }
-
-    delete meshComponent.raytracingData;
-    meshComponent.raytracingData = nullptr;
 }
 
 void BLASUpdaterSystem::Process(float delta)
@@ -251,7 +269,7 @@ void BLASUpdaterSystem::Process(float delta)
 
     for (auto [entity, meshComponent, transformComponent, _] : GetEntityManager().GetEntitySet<MeshComponent, TransformComponent, EntityTagComponent<EntityTag::UPDATE_BLAS>>().GetScopedView(GetComponentInfos()))
     {
-        if (!meshComponent.raytracingData)
+        if (!meshComponent.proxy)
         {
             continue;
         }
@@ -265,9 +283,9 @@ void BLASUpdaterSystem::Process(float delta)
         //     blasComponent.blas->SetMaterial(meshComponent.material);
         // }
 
-        PUSH_RENDER_COMMAND(UpdateBLASTransform, meshComponent.raytracingData->bottomLevelAccelerationStructures, transformComponent.transform.GetMatrix());
+        //PUSH_RENDER_COMMAND(UpdateBLASTransform, meshComponent.raytracingData->bottomLevelAccelerationStructures, transformComponent.transform.GetMatrix());
 
-        updatedEntities.Insert(entity->WeakHandleFromThis());
+        //updatedEntities.Insert(entity->WeakHandleFromThis());
     }
 
     if (updatedEntities.Any())
@@ -281,5 +299,5 @@ void BLASUpdaterSystem::Process(float delta)
             });
     }
 }
-
+#endif
 } // namespace hyperion

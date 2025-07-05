@@ -233,7 +233,6 @@ void Scene::Init()
     AddSystemIfApplicable<AnimationSystem>();
     AddSystemIfApplicable<SkySystem>();
     AddSystemIfApplicable<AudioSystem>();
-    AddSystemIfApplicable<BLASUpdaterSystem>();
     AddSystemIfApplicable<PhysicsSystem>();
     AddSystemIfApplicable<ScriptSystem>();
 

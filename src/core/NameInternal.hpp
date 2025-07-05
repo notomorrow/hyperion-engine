@@ -54,6 +54,8 @@ struct Name
     friend constexpr bool operator>=(const Name& lhs, const Name& rhs);
     friend constexpr bool operator>=(const Name& lhs, const WeakName& rhs);
 
+    static NameRegistry* s_registry;
+
     HashCode::ValueType hashCode;
 
     constexpr Name()

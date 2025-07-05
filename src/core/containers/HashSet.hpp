@@ -425,16 +425,16 @@ class HashSet : public ContainerBase<HashSet<Value, KeyBy, NodeAllocatorType>, d
 public:
     static constexpr bool isContiguous = false;
 
-protected:
     static constexpr SizeType initialBucketSize = 8;
     static constexpr double desiredLoadFactor = 0.75;
-
-    static constexpr FunctionWrapper<decltype(KeyBy)> keyByFn { KeyBy };
 
     using Node = HashSetElement<Value>;
     using Bucket = HashSetBucket<Value>;
 
     using BucketArray = Array<Bucket, InlineAllocator<initialBucketSize>>;
+
+protected:
+    static constexpr FunctionWrapper<decltype(KeyBy)> keyByFn { KeyBy };
 
     static_assert(std::is_trivial_v<Bucket>, "Bucket must be a trivial type");
 
@@ -781,7 +781,7 @@ public:
     {
         for (const auto& item : other)
         {
-            Insert(item);
+            Set(item);
         }
 
         return *this;
@@ -792,7 +792,7 @@ public:
     {
         for (auto& item : other)
         {
-            Insert(std::move(item));
+            Set(std::move(item));
         }
 
         other.Clear();
