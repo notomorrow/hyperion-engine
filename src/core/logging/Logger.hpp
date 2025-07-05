@@ -31,7 +31,7 @@ struct LogMessage
 {
     LogLevel level;
     uint64 timestamp;
-    StringView<StringType::UTF8> message;
+    Span<StringView<StringType::UTF8>> chunks;
 };
 
 HYP_API extern ANSIStringView GetCurrentThreadName();
@@ -240,11 +240,11 @@ inline void LogStatic(Logger& logger, Args&&... args)
     {
         if constexpr (Memory::AreStaticStringsEqual(colorCode, ""))
         {
-            logger.Log(channel, LogMessage { Category.GetLevel(), Time::Now().ToMilliseconds(), prefix + utilities::Format<FormatString>(std::forward<Args>(args)...) });
+            logger.Log(channel, LogMessage { Category.GetLevel(), Time::Now().ToMilliseconds(), Span<StringView<StringType::UTF8>> { { prefix, utilities::Format<FormatString>(std::forward<Args>(args)...) } } });
         }
         else
         {
-            logger.Log(channel, LogMessage { Category.GetLevel(), Time::Now().ToMilliseconds(), prefix + utilities::Format<FormatString>(std::forward<Args>(args)...) + "\33[0m" });
+            logger.Log(channel, LogMessage { Category.GetLevel(), Time::Now().ToMilliseconds(), Span<StringView<StringType::UTF8>> { { prefix, utilities::Format<FormatString>(std::forward<Args>(args)...), "\33[0m" } } });
         }
     }
 
@@ -268,7 +268,7 @@ inline void LogStatic_Channel(Logger& logger, const LogChannel& channel, Args&&.
 
     if (logger.IsChannelEnabled(channel))
     {
-        logger.Log(channel, LogMessage { Category.GetLevel(), Time::Now().ToMilliseconds(), prefix + utilities::Format<FormatString>(std::forward<Args>(args)...) });
+        logger.Log(channel, LogMessage { Category.GetLevel(), Time::Now().ToMilliseconds(), Span<StringView<StringType::UTF8>> { { prefix, utilities::Format<FormatString>(std::forward<Args>(args)...), "\33[0m" } } });
     }
 
     if constexpr (Category.GetFlags() & LogCategory::LCF_FATAL)
@@ -294,11 +294,11 @@ inline void LogDynamic(Logger& logger, const char* str)
     {
         if constexpr (Memory::AreStaticStringsEqual(colorCode, ""))
         {
-            logger.Log(channel, LogMessage { Category.GetLevel(), Time::Now().ToMilliseconds(), prefix + str });
+            logger.Log(channel, LogMessage { Category.GetLevel(), Time::Now().ToMilliseconds(), Span<StringView<StringType::UTF8>> { { prefix, str } } });
         }
         else
         {
-            logger.Log(channel, LogMessage { Category.GetLevel(), Time::Now().ToMilliseconds(), prefix + str + "\33[0m" });
+            logger.Log(channel, LogMessage { Category.GetLevel(), Time::Now().ToMilliseconds(), Span<StringView<StringType::UTF8>> { { prefix, str, "\33[0m" } } });
         }
     }
 

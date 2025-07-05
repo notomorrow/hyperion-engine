@@ -119,7 +119,14 @@ ConsoleUI::ConsoleUI()
 
             if (consoleUi->m_history)
             {
-                consoleUi->m_history->AddEntry(message.message, ConsoleHistoryEntryType::TEXT);
+                String text;
+
+                for (const auto& chunk : message.chunks)
+                {
+                    text.Append(chunk);
+                }
+
+                consoleUi->m_history->AddEntry(text, ConsoleHistoryEntryType::TEXT);
             }
         },
         [](void* context, const LogChannel& channel, const LogMessage& message)
@@ -128,7 +135,14 @@ ConsoleUI::ConsoleUI()
 
             if (consoleUi->m_history)
             {
-                consoleUi->m_history->AddEntry(message.message, ConsoleHistoryEntryType::ERR);
+                String text;
+
+                for (const auto& chunk : message.chunks)
+                {
+                    text.Append(chunk);
+                }
+
+                consoleUi->m_history->AddEntry(text, ConsoleHistoryEntryType::ERR);
             }
         });
 }

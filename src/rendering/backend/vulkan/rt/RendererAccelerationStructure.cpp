@@ -52,11 +52,9 @@ static VkAccelerationStructureTypeKHR ToVkAccelerationStructureType(Acceleration
 
 #pragma region VulkanAccelerationGeometry
 
-VulkanAccelerationGeometry::VulkanAccelerationGeometry(
-    const VulkanGpuBufferRef& packedVerticesBuffer,
-    const VulkanGpuBufferRef& packedIndicesBuffer,
-    const Handle<Material>& material)
-    : m_packedVerticesBuffer(packedVerticesBuffer),
+VulkanAccelerationGeometry::VulkanAccelerationGeometry(const VulkanGpuBufferRef& packedVerticesBuffer, const VulkanGpuBufferRef& packedIndicesBuffer, const Handle<Material>& material)
+    : m_isCreated(false),
+      m_packedVerticesBuffer(packedVerticesBuffer),
       m_packedIndicesBuffer(packedIndicesBuffer),
       m_material(material),
       m_geometry {}
@@ -69,11 +67,16 @@ VulkanAccelerationGeometry::~VulkanAccelerationGeometry()
 
 bool VulkanAccelerationGeometry::IsCreated() const
 {
-    return true;
+    return m_isCreated;
 }
 
 RendererResult VulkanAccelerationGeometry::Create()
 {
+    if (m_isCreated)
+    {
+        return {};
+    }
+
     if (m_material.IsValid())
     {
         m_material->GetRenderResource().IncRef();
@@ -127,7 +130,9 @@ RendererResult VulkanAccelerationGeometry::Create()
             .transformData = { {} } }
     };
 
-    HYPERION_RETURN_OK;
+    m_isCreated = true;
+
+    return {};
 }
 
 RendererResult VulkanAccelerationGeometry::Destroy()
@@ -141,6 +146,8 @@ RendererResult VulkanAccelerationGeometry::Destroy()
 
     SafeRelease(std::move(m_packedVerticesBuffer));
     SafeRelease(std::move(m_packedIndicesBuffer));
+
+    m_isCreated = false;
 
     return result;
 }

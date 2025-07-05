@@ -224,9 +224,13 @@ public:
             return {};
         }
 
+        HYP_LOG_TEMP("Loaded config data:\n\n{}\n\n", result.ConfigurationTable::ToString());
+
         if (result.IsChanged())
         {
             const bool saveResult = result.Save();
+
+            HYP_LOG_TEMP("Loaded config data:\n\n{}\n\n", result.ConfigurationTable::ToString());
 
             if (!saveResult)
             {

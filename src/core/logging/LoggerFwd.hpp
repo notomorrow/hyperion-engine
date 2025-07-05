@@ -136,13 +136,14 @@ inline void LogStatic_Channel(Logger& logger, const LogChannel& channel, Args&&.
 template <LogCategory Category, auto ChannelArg>
 inline void LogDynamic(Logger& logger, const char* str);
 
+HYP_API extern void LogTemp(Logger& logger, const char* str);
+
 HYP_API extern Logger& GetLogger();
 
 } // namespace logging
 
 using logging::LogChannel;
 
-HYP_DECLARE_LOG_CHANNEL(Misc);
 HYP_DECLARE_LOG_CHANNEL(Core);
 
 } // namespace hyperion
@@ -159,7 +160,7 @@ HYP_DECLARE_LOG_CHANNEL(Core);
 
 #ifdef HYP_DEBUG_MODE
 #define HYP_LOG_TEMP(fmt, ...) \
-    hyperion::logging::LogStatic<hyperion::logging::Debug(), HYP_MAKE_CONST_ARG(&Log_Misc), HYP_STATIC_STRING(fmt "\n")>(hyperion::logging::GetLogger(), ##__VA_ARGS__)
+    hyperion::logging::LogTemp(hyperion::logging::GetLogger(), &(HYP_FORMAT(fmt "\n", ##__VA_ARGS__))[0])
 #else
 #define HYP_LOG_TEMP(fmt, ...)
 #endif
