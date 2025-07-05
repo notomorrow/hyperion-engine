@@ -193,13 +193,14 @@ void WriteBufferData_EnvGrid(GpuBufferHolderBase* gpuBufferHolder, uint32 idx, I
     EnvGrid* envGrid = proxyCasted->envGrid.GetUnsafe();
     AssertDebug(envGrid != nullptr);
     
-    uint32 i = 0;
+    uint32 offset = 0;
+
     for (auto it = std::begin(proxyCasted->envProbes); it != std::end(proxyCasted->envProbes); ++it)
     {
         // at first non-valid id, just set all remaining probe indices to -1
         if (!it->IsValid())
         {
-            std::fill(proxyCasted->bufferData.probeIndices + i, std::end(proxyCasted->bufferData.probeIndices), ~0u);
+            std::fill(proxyCasted->bufferData.probeIndices + offset, std::end(proxyCasted->bufferData.probeIndices), ~0u);
         
             break;
         }
@@ -208,10 +209,12 @@ void WriteBufferData_EnvGrid(GpuBufferHolderBase* gpuBufferHolder, uint32 idx, I
 
         if (boundIndex == ~0u)
         {
+            HYP_LOG(Rendering, Warning, "EnvProbe {} not currently bound when writing buffer data for EnvGrid {}", *it, envGrid->Id());
+
             continue;
         }
 
-        proxyCasted->bufferData.probeIndices[++i] = boundIndex;
+        proxyCasted->bufferData.probeIndices[offset++] = boundIndex;
     }
 
     gpuBufferHolder->WriteBufferData(idx, &proxyCasted->bufferData, sizeof(proxyCasted->bufferData));

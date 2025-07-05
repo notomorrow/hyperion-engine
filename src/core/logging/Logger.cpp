@@ -19,6 +19,8 @@
 namespace hyperion {
 
 HYP_DECLARE_LOG_CHANNEL(Core);
+HYP_DECLARE_LOG_CHANNEL(Misc);
+HYP_DECLARE_LOG_CHANNEL(Temp);
 
 namespace logging {
 
@@ -116,7 +118,7 @@ public:
             m_writeErrorFnptrTable[bitIndex] = writeErrorFnptr;
         }
 
-        m_redirectEnabledMask.BitOr(1ull << channelMask.LastSetBitIndex(), MemoryOrder::RELEASE);
+        m_redirectEnabledMask |= (1ull << channelMask.LastSetBitIndex());
 
         m_rwMarker.BitAnd(~writeFlag, MemoryOrder::RELEASE);
 
@@ -155,7 +157,7 @@ public:
 
         m_redirects.Erase(it);
 
-        m_redirectEnabledMask.BitAnd(~(1ull << it->second.channelMask.LastSetBitIndex()), MemoryOrder::RELEASE);
+        m_redirectEnabledMask &= ~(1ull << it->second.channelMask.LastSetBitIndex());
 
         m_rwMarker.BitAnd(~writeFlag, MemoryOrder::RELEASE);
     }
@@ -166,18 +168,25 @@ public:
 
         if (channel.Id() >= Logger::maxChannels)
         {
-            channelPtr = &Log_Core;
+            // log channel overflow! revert to Log_Misc
+            channelPtr = &Log_Misc;
             return;
         }
 
-        // set read flags
-        uint64 state;
-        while (((state = m_rwMarker.Increment(2, MemoryOrder::ACQUIRE)) & writeFlag))
+        uint64 rwMarkerState;
+
+        do
         {
-            m_rwMarker.Decrement(2, MemoryOrder::RELAXED);
-            // wait for write flag to be released
-            HYP_WAIT_IDLE();
-        }
+            rwMarkerState = m_rwMarker.Increment(2, MemoryOrder::ACQUIRE);
+
+            if (HYP_UNLIKELY(rwMarkerState & writeFlag))
+            {
+                m_rwMarker.Decrement(2, MemoryOrder::RELAXED);
+
+                // spin to wait for write flag to be released
+                HYP_WAIT_IDLE();
+            }
+        } while (HYP_UNLIKELY(rwMarkerState & writeFlag));
 
         void* context = m_contexts[channelPtr->Id()];
         LoggerWriteFnPtr fnptr = m_writeFnptrTable[channelPtr->Id()];
@@ -187,7 +196,7 @@ public:
 
         while ((bitIndex = ByteUtil::HighestSetBitIndex(mask)) != -1)
         {
-            if (m_redirectEnabledMask.Get(MemoryOrder::ACQUIRE) & (1ull << bitIndex))
+            if (m_redirectEnabledMask & (1ull << bitIndex))
             {
                 context = m_contexts[bitIndex];
                 fnptr = m_writeFnptrTable[bitIndex];
@@ -209,18 +218,25 @@ public:
 
         if (channel.Id() >= Logger::maxChannels)
         {
-            channelPtr = &Log_Core;
+            // log channel overflow! revert to Log_Misc
+            channelPtr = &Log_Misc;
             return;
         }
 
-        // set read flags
-        uint64 state;
-        while (((state = m_rwMarker.Increment(2, MemoryOrder::ACQUIRE)) & writeFlag))
+        uint64 rwMarkerState;
+
+        do
         {
-            m_rwMarker.Decrement(2, MemoryOrder::RELAXED);
-            // wait for write flag to be released
-            HYP_WAIT_IDLE();
-        }
+            rwMarkerState = m_rwMarker.Increment(2, MemoryOrder::ACQUIRE);
+
+            if (HYP_UNLIKELY(rwMarkerState & writeFlag))
+            {
+                m_rwMarker.Decrement(2, MemoryOrder::RELAXED);
+
+                // spin to wait for write flag to be released
+                HYP_WAIT_IDLE();
+            }
+        } while (HYP_UNLIKELY(rwMarkerState & writeFlag));
 
         void* context = m_contexts[channelPtr->Id()];
         LoggerWriteFnPtr fnptr = m_writeErrorFnptrTable[channelPtr->Id()];
@@ -230,7 +246,7 @@ public:
 
         while ((bitIndex = ByteUtil::HighestSetBitIndex(mask)) != -1)
         {
-            if (m_redirectEnabledMask.Get(MemoryOrder::ACQUIRE) & (1ull << bitIndex))
+            if (m_redirectEnabledMask & (1ull << bitIndex))
             {
                 context = m_contexts[bitIndex];
                 fnptr = m_writeErrorFnptrTable[bitIndex];
@@ -249,12 +265,18 @@ public:
 private:
     static void Write_Static(void* context, const LogChannel& channel, const LogMessage& message)
     {
-        std::fwrite(*message.message, 1, message.message.Size(), ((BasicLoggerOutputStream*)context)->m_output);
+        for (auto it = message.chunks.Begin(); it != message.chunks.End(); ++it)
+        {
+            std::fwrite(**it, 1, it->Size(), ((BasicLoggerOutputStream*)context)->m_output);
+        }
     }
 
     static void WriteError_Static(void* context, const LogChannel& channel, const LogMessage& message)
     {
-        std::fwrite(*message.message, 1, message.message.Size(), ((BasicLoggerOutputStream*)context)->m_outputError);
+        for (auto it = message.chunks.Begin(); it != message.chunks.End(); ++it)
+        {
+            std::fwrite(**it, 1, it->Size(), ((BasicLoggerOutputStream*)context)->m_outputError);
+        }
     }
 
     AtomicVar<uint64> m_rwMarker;
@@ -269,7 +291,7 @@ private:
 
     Mutex m_mutex;
     HashMap<int, LoggerRedirect> m_redirects;
-    AtomicVar<uint64> m_redirectEnabledMask;
+    uint64 m_redirectEnabledMask;
     int m_redirectIdCounter;
 };
 
@@ -462,11 +484,15 @@ void Logger::Log(const LogChannel& channel, const LogMessage& message)
 
 } // namespace logging
 
-HYP_DECLARE_LOG_CHANNEL(Core);
-
 namespace logging {
-// For Assert() to work with logging
-template HYP_API void LogDynamic<Debug(), HYP_MAKE_CONST_ARG(&Log_Core)>(Logger&, const char*);
+// // For Assert() to work with logging
+//template HYP_API void LogDynamic<Debug(), HYP_MAKE_CONST_ARG(&Log_Core)>(Logger&, const char*);
+
+HYP_API void LogTemp(Logger& logger, const char* str)
+{
+    LogDynamic<Debug(), HYP_MAKE_CONST_ARG(&Log_Misc)>(logger, str);
+}
+
 } // namespace logging
 
 } // namespace hyperion

@@ -63,6 +63,8 @@ public:
     HYP_API RendererResult Destroy();
 
 private:
+    bool m_isCreated;
+
     VulkanGpuBufferRef m_packedVerticesBuffer;
     VulkanGpuBufferRef m_packedIndicesBuffer;
 
