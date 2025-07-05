@@ -79,6 +79,7 @@ HYP_API extern IRenderProxy* RenderApi_GetRenderProxy(ObjIdBase id);
 HYP_API extern void RenderApi_AssignResourceBinding(HypObjectBase* resource, uint32 binding);
 // used on render thread only - retrieves the binding set for the given resource (~0u if unset)
 HYP_API extern uint32 RenderApi_RetrieveResourceBinding(const HypObjectBase* resource);
+HYP_API extern uint32 RenderApi_RetrieveResourceBinding(ObjIdBase id);
 
 struct ResourceBindings;
 

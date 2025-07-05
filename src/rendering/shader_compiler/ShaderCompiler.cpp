@@ -18,8 +18,6 @@
 
 #include <core/functional/Proc.hpp>
 
-#include <core/algorithm/Map.hpp>
-
 #include <core/logging/LogChannels.hpp>
 #include <core/logging/Logger.hpp>
 

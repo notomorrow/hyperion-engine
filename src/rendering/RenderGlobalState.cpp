@@ -114,6 +114,7 @@ extern void OnBindingChanged_AmbientProbe(EnvProbe* envProbe, uint32 prev, uint3
 extern void WriteBufferData_EnvProbe(GpuBufferHolderBase* gpuBufferHolder, uint32 idx, IRenderProxy* proxy);
 
 extern void OnBindingChanged_EnvGrid(EnvGrid* envGrid, uint32 prev, uint32 next);
+extern void WriteBufferData_EnvGrid(GpuBufferHolderBase* gpuBufferHolder, uint32 idx, IRenderProxy* proxy);
 
 extern void OnBindingChanged_Light(Light* light, uint32 prev, uint32 next);
 
@@ -121,18 +122,22 @@ extern void OnBindingChanged_Material(Material* lightmapVolume, uint32 prev, uin
 
 extern void OnBindingChanged_Texture(Texture* texture, uint32 prev, uint32 next);
 
+HYP_DISABLE_OPTIMIZATION;
 struct ResourceBindings
 {
     struct SubtypeResourceBindings
     {
+        const HypClass* resourceClass;
         GpuBufferHolderBase* gpuBufferHolder;
 
         // Element binding index to mapping in CPU memory (only if gpuBufferHolder is not null)
         SparsePagedArray<Pair<uint32, void*>, 1024> indexAndMapping;
 
-        SubtypeResourceBindings(GpuBufferHolderBase* gpuBufferHolder)
-            : gpuBufferHolder(gpuBufferHolder)
+        SubtypeResourceBindings(const HypClass* resourceClass, GpuBufferHolderBase* gpuBufferHolder)
+            : resourceClass(resourceClass),
+              gpuBufferHolder(gpuBufferHolder)
         {
+            AssertDebug(resourceClass != nullptr);
         }
     };
 
@@ -178,6 +183,11 @@ struct ResourceBindings
 
         SubtypeResourceBindings& bindings = GetSubtypeBindings(id.GetTypeId());
 
+        if (bindings.resourceClass == EnvProbe::Class())
+        {
+            HYP_LOG(Rendering, Debug, "Setting EnvProbe {} binding to {}", resource->Id(), binding);
+        }
+
         if (binding == ~0u)
         {
             bindings.indexAndMapping.EraseAt(id.ToIndex());
@@ -199,7 +209,7 @@ struct ResourceBindings
         bindings.indexAndMapping.Emplace(id.ToIndex(), binding, cpuMapping);
     }
 
-    HYP_FORCE_INLINE Pair<uint32, void*> Retrieve(const HypObjectBase* resource) const
+    Pair<uint32, void*> Retrieve(const HypObjectBase* resource) const
     {
 #ifdef HYP_DEBUG_MODE
         Threads::AssertOnThread(g_renderThread | ThreadCategory::THREAD_CATEGORY_TASK);
@@ -208,7 +218,7 @@ struct ResourceBindings
         return resource ? Retrieve(resource->Id()) : Pair<uint32, void*>(~0u, nullptr);
     }
 
-    HYP_FORCE_INLINE Pair<uint32, void*> Retrieve(ObjIdBase id) const
+    Pair<uint32, void*> Retrieve(ObjIdBase id) const
     {
 #ifdef HYP_DEBUG_MODE
         Threads::AssertOnThread(g_renderThread | ThreadCategory::THREAD_CATEGORY_TASK);
@@ -259,10 +269,11 @@ struct ResourceBindings
         }
         while (hypClass);
 
-        HYP_FAIL("No SubtypeBindings container found for TypeId {} (HypClass: {})! Missing DECLARE_RENDER_DATA_CONTAINER() macro invocation for type?", typeId.Value(), *GetClass(typeId)->GetName());
+        HYP_FAIL("No SubtypeBindings container found for TypeId %u (HypClass: %s). Missing DECLARE_RENDER_DATA_CONTAINER() macro invocation for type?", typeId.Value(), *GetClass(typeId)->GetName());
     }
 };
 
+HYP_ENABLE_OPTIMIZATION;
 #pragma endregion ResourceBindings
 
 #pragma region ResourceContainer
@@ -495,41 +506,10 @@ struct ResourceContainerFactory
 {
     static constexpr TypeId typeId = TypeId::ForType<ResourceType>();
 
-    static int GetStaticIndexOrFail()
+    static const HypClass* GetResourceClass()
     {
-        const HypClass* hypClass = GetClass(typeId);
-        AssertDebug(hypClass != nullptr, "TypeId {} does not have a HypClass!", typeId.Value());
-
-        const int staticIndex = hypClass->GetStaticIndex();
-        AssertDebug(staticIndex >= 0, "Invalid class: '{}' has no assigned static index!", *hypClass->GetName());
-
-        return staticIndex;
+        return GetClass(typeId);
     }
-
-#if 0
-    ResourceContainerFactory()
-    {
-        ResourceContainerFactoryRegistry::GetInstance()
-            .funcs.PushBack([](ResourceBindings& resourceBindings, ResourceContainer& container)
-                {
-                    const int staticIndex = GetStaticIndexOrFail();
-
-                    if (!resourceBindings.subtypeBindings.HasIndex(staticIndex))
-                    {
-                        resourceBindings.subtypeBindings.Emplace(staticIndex);
-                    }
-
-                    AssertDebug(!container.dataByType.HasIndex(staticIndex),
-                        "SubtypeData container already exists for TypeId {} (HypClass: {})! Duplicate DECLARE_RENDER_DATA_CONTAINER() macro invocation for type?",
-                        typeId.Value(), *GetClass(typeId)->GetName());
-
-                    container.dataByType.Emplace(
-                        staticIndex,
-                        TypeWrapper<ResourceType>(),
-                        TypeWrapper<ProxyType>());
-                });
-    }
-#endif
 
     template <class ResourceBinderType>
     ResourceContainerFactory(
@@ -540,14 +520,19 @@ struct ResourceContainerFactory
         ResourceContainerFactoryRegistry::GetInstance()
             .funcs.PushBack([=](ResourceBindings& resourceBindings, ResourceContainer& container)
                 {
-                    const int staticIndex = GetStaticIndexOrFail();
+                    const HypClass* resourceClass = GetResourceClass();
+                    AssertDebug(resourceClass != nullptr, "Class not found for TypeId '{}'!", typeId.Value());
+
+                    const int staticIndex = resourceClass->GetStaticIndex();
+                    AssertDebug(staticIndex >= 0, "Invalid class: '{}' has no assigned static index!", *resourceClass->GetName());
 
                     GpuBufferHolderBase* gpuBufferHolder = buf < GRB_MAX ? g_renderGlobalState->gpuBuffers[buf] : nullptr;
                     ResourceBinderType* resourceBinder = memResourceBinder ? &(resourceBindings.*memResourceBinder) : nullptr;
 
                     if (!resourceBindings.subtypeBindings.HasIndex(staticIndex))
                     {
-                        resourceBindings.subtypeBindings.Emplace(staticIndex, gpuBufferHolder);
+                        // add new ResourceSubtypeBindings slot for the given class
+                        resourceBindings.subtypeBindings.Emplace(staticIndex, resourceClass, gpuBufferHolder);
                     }
 
                     AssertDebug(!container.dataByType.HasIndex(staticIndex),
@@ -876,6 +861,16 @@ HYP_API uint32 RenderApi_RetrieveResourceBinding(const HypObjectBase* resource)
 #endif
 
     return g_renderGlobalState->resourceBindings->Retrieve(resource).first;
+}
+
+HYP_API uint32 RenderApi_RetrieveResourceBinding(ObjIdBase id)
+{
+#ifdef HYP_DEBUG_MODE
+    // FIXME: Add better check to ensure it is from a render task thread.
+    Threads::AssertOnThread(g_renderThread | ThreadCategory::THREAD_CATEGORY_TASK);
+#endif
+
+    return g_renderGlobalState->resourceBindings->Retrieve(id).first;
 }
 
 HYP_API void RenderApi_BeginFrame_GameThread()
@@ -1388,7 +1383,7 @@ void RenderGlobalState::SetDefaultDescriptorSetElements(uint32 frameIndex)
 #pragma endregion RenderGlobalState
 
 DECLARE_RENDER_DATA_CONTAINER(Entity, RenderProxyMesh, GRB_ENTITIES, &ResourceBindings::meshEntityBinder, &WriteBufferData_MeshEntity);
-DECLARE_RENDER_DATA_CONTAINER(EnvGrid, RenderProxyEnvGrid, GRB_ENV_GRIDS, &ResourceBindings::envGridBinder);
+DECLARE_RENDER_DATA_CONTAINER(EnvGrid, RenderProxyEnvGrid, GRB_ENV_GRIDS, &ResourceBindings::envGridBinder, &WriteBufferData_EnvGrid);
 DECLARE_RENDER_DATA_CONTAINER(ReflectionProbe, RenderProxyEnvProbe, GRB_ENV_PROBES, &ResourceBindings::reflectionProbeBinder, &WriteBufferData_EnvProbe);
 DECLARE_RENDER_DATA_CONTAINER(SkyProbe, RenderProxyEnvProbe, GRB_ENV_PROBES, &ResourceBindings::reflectionProbeBinder, &WriteBufferData_EnvProbe);
 DECLARE_RENDER_DATA_CONTAINER(EnvProbe, RenderProxyEnvProbe, GRB_ENV_PROBES, &ResourceBindings::ambientProbeBinder, &WriteBufferData_EnvProbe);

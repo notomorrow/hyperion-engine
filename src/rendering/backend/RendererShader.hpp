@@ -9,8 +9,6 @@
 #include <core/containers/Array.hpp>
 #include <core/containers/String.hpp>
 
-#include <core/algorithm/AnyOf.hpp>
-
 #include <core/Defines.hpp>
 
 #include <rendering/backend/Platform.hpp>

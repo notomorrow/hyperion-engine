@@ -329,7 +329,151 @@ public:
     }
 };
 
+template <class IteratorType, class ValueType>
+static inline void Fill(IteratorType begin, IteratorType end, const ValueType& value)
+{
+    for (auto it = begin; it != end; ++it)
+    {
+        *begin = value;
+    }
+}
+
+template <class IteratorType, class Predicate>
+IteratorType FindIf(IteratorType begin, IteratorType end, Predicate&& predicate)
+{
+    FunctionWrapper<NormalizedType<Predicate>> fn { std::forward<Predicate>(predicate) };
+
+    for (auto it = begin; it != end; ++it)
+    {
+        if (fn(*it))
+        {
+            return it;
+        }
+    }
+
+    return end;
+}
+
+template <class ContainerType, class Predicate>
+typename ContainerType::Iterator FindIf(ContainerType& container, Predicate&& predicate)
+{
+    FunctionWrapper<NormalizedType<Predicate>> fn { std::forward<Predicate>(predicate) };
+
+    typename ContainerType::Iterator begin = container.Begin();
+    typename ContainerType::Iterator end = container.End();
+
+    for (auto it = begin; it != end; ++it)
+    {
+        if (fn(*it))
+        {
+            return it;
+        }
+    }
+
+    return end;
+}
+
+template <class IteratorType, class ValueType>
+HYP_FORCE_INLINE IteratorType Find(IteratorType _begin, IteratorType _end, ValueType&& value)
+{
+    for (auto it = _begin; it != _end; ++it)
+    {
+        if (*it == value)
+        {
+            return it;
+        }
+    }
+
+    return _end;
+}
+
+template <class ContainerType, class Predicate>
+typename ContainerType::ConstIterator FindIf(const ContainerType& container, Predicate&& predicate)
+{
+    FunctionWrapper<NormalizedType<Predicate>> fn { std::forward<Predicate>(predicate) };
+
+    typename ContainerType::ConstIterator begin = container.Begin();
+    typename ContainerType::ConstIterator end = container.End();
+
+    for (auto it = begin; it != end; ++it)
+    {
+        if (fn(*it))
+        {
+            return it;
+        }
+    }
+
+    return end;
+}
+
+template <class Container, class Predicate>
+bool AnyOf(const Container& container, Predicate&& predicate)
+{
+    FunctionWrapper<NormalizedType<Predicate>> fn { std::forward<Predicate>(predicate) };
+
+    const auto _begin = container.Begin();
+    const auto _end = container.End();
+
+    for (auto it = _begin; it != _end; ++it)
+    {
+        if (fn(*it))
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+template <class Container, class Predicate>
+bool Every(const Container& container, Predicate&& predicate)
+{
+    FunctionWrapper<NormalizedType<Predicate>> fn { std::forward<Predicate>(predicate) };
+
+    const auto _begin = container.Begin();
+    const auto _end = container.End();
+
+    for (auto it = _begin; it != _end; ++it)
+    {
+        if (!fn(*it))
+        {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+/*! \brief A sum function that computes the total of all elements in a container.
+ *  \param container The container to sum over.
+ *  \return The total sum of the container's elements.
+ */
+template <class ContainerType, class Func>
+auto Sum(ContainerType&& container, Func&& func)
+{
+    using ContainerElementType = typename NormalizedType<ContainerType>::ValueType;
+    using SumResultType = decltype(std::declval<FunctionWrapper<NormalizedType<Func>>>()(std::declval<ContainerElementType>()));
+
+    FunctionWrapper<NormalizedType<Func>> fn { std::forward<Func>(func) };
+
+    SumResultType total = SumResultType(0);
+
+    for (auto it = container.Begin(); it != container.End(); ++it)
+    {
+        total += fn(*it);
+    }
+
+    return total;
+}
+
 } // namespace containers
+
+using containers::Fill;
+using containers::Find;
+using containers::FindIf;
+using containers::AnyOf;
+using containers::Sum;
+
 } // namespace hyperion
 
 #endif

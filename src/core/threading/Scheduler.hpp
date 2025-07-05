@@ -9,8 +9,6 @@
 #include <core/utilities/EnumFlags.hpp>
 #include <core/utilities/StaticMessage.hpp>
 
-#include <core/algorithm/AnyOf.hpp>
-
 #include <core/threading/SchedulerFwd.hpp>
 #include <core/threading/AtomicVar.hpp>
 #include <core/threading/Thread.hpp>

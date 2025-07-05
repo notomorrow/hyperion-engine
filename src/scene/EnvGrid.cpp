@@ -479,6 +479,7 @@ void EnvGrid::Translate(const BoundingBox& aabb, const Vec3f& translation)
     m_renderResource->SetProbeIndices(std::move(updates));
 }
 
+HYP_DISABLE_OPTIMIZATION;
 void EnvGrid::Update(float delta)
 {
     HYP_SCOPE;
@@ -528,6 +529,14 @@ void EnvGrid::Update(float delta)
     m_view->UpdateVisibility();
     m_view->Update(delta);
 
+    // Make sure all our probes were collected - if this doesn't match up, down the line when we try to receive resource binding indices they wouldn't be found
+    RenderProxyList& rpl = RenderApi_GetProducerProxyList(m_view);
+    AssertDebug(rpl.envProbes.NumCurrent() >= m_envProbeCollection.numProbes,
+        "View only collected {} EnvProbes but EnvGrid {} has {} EnvProbes",
+        rpl.envProbes.NumCurrent(),
+        Id(),
+        m_envProbeCollection.numProbes);
+
     HYP_LOG(EnvGrid, Debug, "Updating EnvGrid {} with {} probes\t lights: {}", Id(), m_envProbeCollection.numProbes,
         RenderApi_GetProducerProxyList(m_view).lights.NumCurrent());
 
@@ -540,6 +549,7 @@ void EnvGrid::Update(float delta)
         probe->SetReceivesUpdate(true);
     }
 }
+HYP_ENABLE_OPTIMIZATION;
 
 void EnvGrid::UpdateRenderProxy(IRenderProxy* proxy)
 {
@@ -561,13 +571,14 @@ void EnvGrid::UpdateRenderProxy(IRenderProxy* proxy)
 
     bufferData.irradianceOctahedronSize = Vec2i(irradianceOctahedronSize);
 
-    for (uint32 index = 0; index < std::size(bufferData.probeIndices); index++)
+    Memory::MemSet(&proxyCasted->envProbes[0], 0, sizeof(proxyCasted->envProbes));
+
+    for (uint32 index = 0; index < m_envProbeCollection.numProbes; index++)
     {
         const Handle<EnvProbe>& probe = m_envProbeCollection.GetEnvProbeOnGameThread(index);
         Assert(probe.IsValid());
 
-        // @FIXME dont use render resource - needs to be set when writing to GpuBufferHolder as it will need to use assigned slots for probes.
-        bufferData.probeIndices[index] = probe->GetRenderResource().GetBufferIndex();
+        proxyCasted->envProbes[index] = probe->Id();
     }
 }
 

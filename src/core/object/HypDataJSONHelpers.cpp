@@ -9,8 +9,6 @@
 #include <core/object/HypField.hpp>
 #include <core/object/HypConstant.hpp>
 
-#include <core/algorithm/FindIf.hpp>
-
 #include <core/utilities/Format.hpp>
 
 #include <core/logging/LogChannels.hpp>

@@ -10,8 +10,6 @@
 #include <core/object/HypConstant.hpp>
 #include <core/object/HypDataJSONHelpers.hpp>
 
-#include <core/algorithm/FindIf.hpp>
-
 #include <core/utilities/Format.hpp>
 
 #include <core/io/ByteWriter.hpp>

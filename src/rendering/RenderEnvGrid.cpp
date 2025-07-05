@@ -797,7 +797,7 @@ void EnvGridRenderer::ComputeEnvProbeIrradiance_SphericalHarmonics(FrameBase* fr
         uint32 envProbeIndex;
     } pushConstants;
 
-    pushConstants.envProbeIndex = RenderApi_RetrieveResourceBinding(probe);
+    pushConstants.envProbeIndex = RenderApi_RetrieveResourceBinding(probe.Id());
 
     pushConstants.probeGridPosition = {
         gridSlot % options.density.x,
@@ -936,7 +936,10 @@ void EnvGridRenderer::ComputeEnvProbeIrradiance_SphericalHarmonics(FrameBase* fr
 
             EnvProbeShaderData readbackBuffer;
 
-            g_renderGlobalState->gpuBuffers[GRB_ENV_PROBES]->ReadbackElement(frame->GetFrameIndex(), resourceHandle->GetBufferIndex(), &readbackBuffer);
+            const uint32 boundIndex = RenderApi_RetrieveResourceBinding(resourceHandle->GetEnvProbe());
+            Assert(boundIndex != ~0u);
+
+            g_renderGlobalState->gpuBuffers[GRB_ENV_PROBES]->ReadbackElement(frame->GetFrameIndex(), boundIndex, &readbackBuffer);
 
             // Log out SH data
             HYP_LOG(EnvGrid, Info, "EnvProbe {} SH data:\n\t{}\n\t{}\n\t{}\n\t{}\n",
@@ -995,7 +998,7 @@ void EnvGridRenderer::ComputeEnvProbeIrradiance_LightField(FrameBase* frame, con
             probeIndex % options.density.x,
             (probeIndex % (options.density.x * options.density.y)) / options.density.x,
             probeIndex / (options.density.x * options.density.y),
-            RenderApi_RetrieveResourceBinding(probe)
+            RenderApi_RetrieveResourceBinding(probe.Id())
         };
 
         uniforms.dimensionPerProbe = {
@@ -1179,7 +1182,7 @@ void EnvGridRenderer::VoxelizeProbe(FrameBase* frame, const RenderSetup& renderS
         probeIndex % options.density.x,
         (probeIndex % (options.density.x * options.density.y)) / options.density.x,
         probeIndex / (options.density.x * options.density.y),
-        RenderApi_RetrieveResourceBinding(probe)
+        RenderApi_RetrieveResourceBinding(probe.Id())
     };
 
     pushConstants.voxelTextureDimensions = Vec4u(voxelGridTextureExtent, 0);

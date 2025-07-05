@@ -50,7 +50,7 @@ void WriteBufferData_MeshEntity(GpuBufferHolderBase* gpuBufferHolder, uint32 idx
     AssertDebug(idx == proxyCasted->entity.Id().ToIndex());
 
     proxyCasted->bufferData.entityIndex = proxyCasted->entity.Id().ToIndex();
-    proxyCasted->bufferData.materialIndex = RenderApi_RetrieveResourceBinding(proxyCasted->material);
+    proxyCasted->bufferData.materialIndex = RenderApi_RetrieveResourceBinding(proxyCasted->material.Id());
 
     // temp shit:
     proxyCasted->bufferData.skeletonIndex = proxyCasted->skeleton ? proxyCasted->skeleton->GetRenderResource().GetBufferIndex() : ~0u;
@@ -84,7 +84,8 @@ void OnBindingChanged_ReflectionProbe(EnvProbe* envProbe, uint32 prev, uint32 ne
         HYP_LOG(Rendering, Debug, "UN setting env probe texture at index: {}", prev);
         for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
         {
-            g_renderGlobalState->GlobalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)->SetElement(NAME("EnvProbeTextures"), prev, g_renderGlobalState->placeholderData->DefaultTexture2D->GetRenderResource().GetImageView());
+            g_renderGlobalState->GlobalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)
+                ->SetElement(NAME("EnvProbeTextures"), prev, g_renderGlobalState->placeholderData->DefaultTexture2D->GetRenderResource().GetImageView());
         }
     }
     else
@@ -93,9 +94,7 @@ void OnBindingChanged_ReflectionProbe(EnvProbe* envProbe, uint32 prev, uint32 ne
         envProbe->GetPrefilteredEnvMap()->GetRenderResource().IncRef();
     }
 
-    // temp shit
-    AssertDebug(envProbe->GetRenderResource().GetBufferIndex() != ~0u);
-    RenderApi_AssignResourceBinding(envProbe, envProbe->GetRenderResource().GetBufferIndex());
+    RenderApi_AssignResourceBinding(envProbe, next);
 
     if (next != ~0u)
     {
@@ -135,18 +134,14 @@ void OnBindingChanged_AmbientProbe(EnvProbe* envProbe, uint32 prev, uint32 next)
 
     AssertDebug(envProbe->GetEnvProbeType() == EPT_AMBIENT);
 
-    // temp shit
-    RenderApi_AssignResourceBinding(envProbe, envProbe->GetRenderResource().GetBufferIndex());
+    RenderApi_AssignResourceBinding(envProbe, next);
 }
 
 void OnBindingChanged_EnvGrid(EnvGrid* envGrid, uint32 prev, uint32 next)
 {
     AssertDebug(envGrid != nullptr);
 
-    // temp shit
-
-    AssertDebug(envGrid->GetRenderResource().GetBufferIndex() != ~0u);
-    RenderApi_AssignResourceBinding(envGrid, envGrid->GetRenderResource().GetBufferIndex());
+    RenderApi_AssignResourceBinding(envGrid, next);
 
     // if (next != ~0u)
     // {
@@ -187,6 +182,41 @@ void OnBindingChanged_EnvGrid(EnvGrid* envGrid, uint32 prev, uint32 next)
     // }
 }
 
+void WriteBufferData_EnvGrid(GpuBufferHolderBase* gpuBufferHolder, uint32 idx, IRenderProxy* proxy)
+{
+    AssertDebug(gpuBufferHolder != nullptr);
+    AssertDebug(idx != ~0u);
+
+    RenderProxyEnvGrid* proxyCasted = static_cast<RenderProxyEnvGrid*>(proxy);
+    AssertDebug(proxyCasted != nullptr);
+
+    EnvGrid* envGrid = proxyCasted->envGrid.GetUnsafe();
+    AssertDebug(envGrid != nullptr);
+    
+    uint32 i = 0;
+    for (auto it = std::begin(proxyCasted->envProbes); it != std::end(proxyCasted->envProbes); ++it)
+    {
+        // at first non-valid id, just set all remaining probe indices to -1
+        if (!it->IsValid())
+        {
+            std::fill(proxyCasted->bufferData.probeIndices + i, std::end(proxyCasted->bufferData.probeIndices), ~0u);
+        
+            break;
+        }
+
+        const uint32 boundIndex = RenderApi_RetrieveResourceBinding(*it);
+
+        if (boundIndex == ~0u)
+        {
+            continue;
+        }
+
+        proxyCasted->bufferData.probeIndices[++i] = boundIndex;
+    }
+
+    gpuBufferHolder->WriteBufferData(idx, &proxyCasted->bufferData, sizeof(proxyCasted->bufferData));
+}
+
 void OnBindingChanged_Light(Light* light, uint32 prev, uint32 next)
 {
     AssertDebug(light != nullptr);
@@ -222,9 +252,7 @@ void OnBindingChanged_Material(Material* material, uint32 prev, uint32 next)
 
     if (next != ~0u)
     {
-        // temp shit
-        AssertDebug(material->GetRenderResource().GetBufferIndex() != ~0u);
-        RenderApi_AssignResourceBinding(material, material->GetRenderResource().GetBufferIndex());
+        RenderApi_AssignResourceBinding(material, next);
 
         IRenderProxy* proxy = RenderApi_GetRenderProxy(material->Id());
         Assert(proxy != nullptr);
@@ -234,7 +262,7 @@ void OnBindingChanged_Material(Material* material, uint32 prev, uint32 next)
         if (!isBindlessSupported)
         {
             g_renderGlobalState->materialDescriptorSetManager->Allocate(
-                material->GetRenderResource().GetBufferIndex(), // next,
+                next,
                 proxyCasted->boundTextureIndices.ToSpan(),
                 proxyCasted->boundTextures.ToSpan());
         }

@@ -4,8 +4,6 @@
 #include <rendering/backend/Platform.hpp>
 #include <rendering/backend/RendererCommandBuffer.hpp>
 
-#include <core/algorithm/AnyOf.hpp>
-
 #include <core/logging/Logger.hpp>
 #include <core/logging/LogChannels.hpp>
 

@@ -9,8 +9,7 @@
       },
       "gi": {
         "enabled": false
-      },
-      "enabled": false
+      }
     },
     "ssr": {
       "ConeTracing": false,

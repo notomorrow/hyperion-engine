@@ -21,8 +21,6 @@
 
 #include <core/threading/Threads.hpp>
 
-#include <core/algorithm/AnyOf.hpp>
-
 #include <Engine.hpp>
 
 namespace hyperion {
