@@ -179,11 +179,6 @@ VulkanAccelerationStructureBase::~VulkanAccelerationStructureBase()
         "Scratch buffer should have been destroyed before destructor call");
 }
 
-HYP_API bool VulkanAccelerationStructureBase::IsCreated() const
-{
-    return m_accelerationStructure != VK_NULL_HANDLE;
-}
-
 RendererResult VulkanAccelerationStructureBase::CreateAccelerationStructure(
     AccelerationStructureType type,
     const std::vector<VkAccelerationStructureGeometryKHR>& geometries,
@@ -466,6 +461,11 @@ VulkanTLAS::~VulkanTLAS()
     HYP_GFX_ASSERT(m_accelerationStructure == VK_NULL_HANDLE, "Acceleration structure should have been destroyed before destructor call");
 }
 
+HYP_API bool VulkanTLAS::IsCreated() const
+{
+    return m_accelerationStructure != VK_NULL_HANDLE;
+}
+
 std::vector<VkAccelerationStructureGeometryKHR> VulkanTLAS::GetGeometries() const
 {
     return {
@@ -650,7 +650,7 @@ RendererResult VulkanTLAS::CreateOrRebuildInstancesBuffer()
         HYP_LOG(RenderingBackend, Info, "Resizing TLAS instances buffer from {} to {}",
             m_instancesBuffer->Size(), instancesBufferSize);
 
-        SafeRelease(std::move(m_instancesBuffer));
+        m_instancesBuffer->EnsureCapacity(instancesBufferSize);
     }
 
     if (!m_instancesBuffer)
@@ -936,6 +936,11 @@ VulkanBLAS::VulkanBLAS(
 }
 
 VulkanBLAS::~VulkanBLAS() = default;
+
+HYP_API bool VulkanBLAS::IsCreated() const
+{
+    return m_accelerationStructure != VK_NULL_HANDLE;
+}
 
 RendererResult VulkanBLAS::Create()
 {

@@ -52,6 +52,8 @@ public:
         return m_meshDescriptionsBuffer;
     }
 
+    HYP_API virtual bool IsCreated() const = 0;
+
     HYP_API virtual void AddBLAS(const BLASRef& blas) = 0;
     HYP_API virtual void RemoveBLAS(const BLASRef& blas) = 0;
     HYP_API virtual bool HasBLAS(const BLASRef& blas) = 0;
@@ -74,6 +76,8 @@ public:
     {
         return AccelerationStructureType::BOTTOM_LEVEL;
     }
+
+    HYP_API virtual bool IsCreated() const = 0;
 
     HYP_API virtual RendererResult Create() = 0;
     HYP_API virtual RendererResult Destroy() = 0;
