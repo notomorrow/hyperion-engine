@@ -1635,15 +1635,15 @@ void DeferredRenderer::RenderFrameForView(FrameBase* frame, const RenderSetup& r
     DeferredPassData* pd = static_cast<DeferredPassData*>(rs.passData);
     AssertDebug(pd != nullptr);
 
-    if (TLASRef& tlas = pd->topLevelAccelerationStructures[frame->GetFrameIndex()])
+    /*if (TLASRef& tlas = pd->topLevelAccelerationStructures[frame->GetFrameIndex()])
     {
         RTUpdateStateFlags updateStateFlags = RTUpdateStateFlagBits::RT_UPDATE_STATE_FLAGS_NONE;
         tlas->UpdateStructure(updateStateFlags);
         pd->raytracingReflections->ApplyTLASUpdates(updateStateFlags);
-    }
+    }*/
 
     // HACK TEST HACK TEST HACK TEST HACK TEST
-    /*if (TLASRef& tlas = pd->topLevelAccelerationStructures[frame->GetFrameIndex()])
+    if (TLASRef& tlas = pd->topLevelAccelerationStructures[frame->GetFrameIndex()])
     {
         for (RenderProxyMesh& proxyMesh : rpl.meshes.GetElements<Entity>())
         {
@@ -1653,7 +1653,11 @@ void DeferredRenderer::RenderFrameForView(FrameBase* frame, const RenderSetup& r
             {
                 blas = proxyMesh.mesh->GetRenderResource().BuildBLAS(proxyMesh.material);
                 blas->SetTransform(proxyMesh.bufferData.modelMatrix);
-                HYPERION_ASSERT_RESULT(blas->Create());
+
+                if (!blas->IsCreated())
+                {
+                    HYPERION_ASSERT_RESULT(blas->Create());
+                }
             }
 
             if (!tlas->HasBLAS(blas))
@@ -1664,7 +1668,7 @@ void DeferredRenderer::RenderFrameForView(FrameBase* frame, const RenderSetup& r
         RTUpdateStateFlags updateStateFlags = RTUpdateStateFlagBits::RT_UPDATE_STATE_FLAGS_NONE;
         tlas->UpdateStructure(updateStateFlags);
         pd->raytracingReflections->ApplyTLASUpdates(updateStateFlags);
-    }*/
+    }
 
     const uint32 frameIndex = frame->GetFrameIndex();
 

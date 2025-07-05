@@ -429,7 +429,7 @@ BLASRef RenderMesh::BuildBLAS(const Handle<Material>& material) const
                 return copyBuffersResult;
             }
 
-            return blas->Create();
+            return {};
         }
     };
 
