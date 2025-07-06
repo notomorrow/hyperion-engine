@@ -1659,6 +1659,10 @@ void DeferredRenderer::RenderFrameForView(FrameBase* frame, const RenderSetup& r
                     HYPERION_ASSERT_RESULT(blas->Create());
                 }
             }
+            else
+            {
+                blas->SetTransform(proxyMesh.bufferData.modelMatrix);
+            }
 
             if (!tlas->HasBLAS(blas))
             {
