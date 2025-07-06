@@ -19,7 +19,7 @@
 #include <rendering/RenderResource.hpp>
 #include <rendering/RenderCollection.hpp>
 
-#include <rendering/EngineRenderStats.hpp>
+#include <rendering/RenderStats.hpp>
 
 #include <rendering/RenderFrame.hpp>
 
@@ -72,8 +72,8 @@ public:
     void AddScene(TResourceHandle<RenderScene>&& renderScene);
     void RemoveScene(RenderScene* renderScene);
 
-    const EngineRenderStats& GetRenderStats() const;
-    void SetRenderStats(const EngineRenderStats& renderStats);
+    const RenderStats& GetRenderStats() const;
+    void SetRenderStats(const RenderStats& renderStats);
 
     HYP_FORCE_INLINE RenderEnvironment* GetEnvironment() const
     {
@@ -110,7 +110,7 @@ private:
 
     UniquePtr<RenderEnvironment> m_renderEnvironment;
 
-    FixedArray<EngineRenderStats, ThreadType::THREAD_TYPE_MAX> m_renderStats;
+    FixedArray<RenderStats, ThreadType::THREAD_TYPE_MAX> m_renderStats;
 
     WorldShaderData m_bufferData;
 };

@@ -16,7 +16,7 @@ namespace hyperion {
 
 class RenderWorld;
 class EditorDelegates;
-struct EngineRenderStats;
+struct RenderStats;
 class View;
 class WorldGrid;
 
@@ -76,7 +76,7 @@ public:
     }
 
     HYP_METHOD()
-    EngineRenderStats* GetRenderStats() const;
+    RenderStats* GetRenderStats() const;
 
     /*! \brief Get the placeholder Scene, used for Entities that are not attached to a Scene.
      *  This version of the function allows the caller to specify the thread the Scene uses for entity management.

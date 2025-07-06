@@ -19,7 +19,7 @@
 #include <rendering/RenderableAttributes.hpp>
 #include <rendering/DrawCall.hpp>
 #include <rendering/RenderProxy.hpp>
-#include <rendering/EngineRenderStats.hpp>
+#include <rendering/RenderStats.hpp>
 #include <rendering/IndirectDraw.hpp>
 
 #include <rendering/rhi/CmdList.hpp>
@@ -60,7 +60,7 @@ struct ParallelRenderingState
     CmdList baseCommandList;
 
     FixedArray<CmdList, maxBatches> commandLists {};
-    FixedArray<EngineRenderStatsCounts, maxBatches> renderStatsCounts {};
+    FixedArray<RenderStatsCounts, maxBatches> renderStatsCounts {};
 
     // Temporary storage for data that will be executed in parallel during the frame
     Array<Span<const DrawCall>, FixedAllocator<maxBatches>> drawCalls;

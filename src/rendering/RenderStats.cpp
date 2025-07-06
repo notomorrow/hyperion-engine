@@ -1,6 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#include <rendering/EngineRenderStats.hpp>
+#include <rendering/RenderStats.hpp>
 
 #include <core/math/MathUtil.hpp>
 
@@ -16,9 +16,9 @@
 
 namespace hyperion {
 
-#pragma region SuppressEngineRenderStatsScope
+#pragma region SuppressRenderStatsScope
 
-SuppressEngineRenderStatsScope::SuppressEngineRenderStatsScope()
+SuppressRenderStatsScope::SuppressRenderStatsScope()
 {
     HYP_SCOPE;
     Threads::AssertOnThread(g_renderThread);
@@ -26,7 +26,7 @@ SuppressEngineRenderStatsScope::SuppressEngineRenderStatsScope()
     g_engine->GetRenderStatsCalculator().Suppress();
 }
 
-SuppressEngineRenderStatsScope::~SuppressEngineRenderStatsScope()
+SuppressRenderStatsScope::~SuppressRenderStatsScope()
 {
     HYP_SCOPE;
     Threads::AssertOnThread(g_renderThread);
@@ -34,11 +34,11 @@ SuppressEngineRenderStatsScope::~SuppressEngineRenderStatsScope()
     g_engine->GetRenderStatsCalculator().Unsuppress();
 }
 
-#pragma endregion SuppressEngineRenderStatsScope
+#pragma endregion SuppressRenderStatsScope
 
-#pragma region EngineRenderStatsCalculator
+#pragma region RenderStatsCalculator
 
-void EngineRenderStatsCalculator::AddCounts(const EngineRenderStatsCounts& counts)
+void RenderStatsCalculator::AddCounts(const RenderStatsCounts& counts)
 {
 #if defined(HYP_ENABLE_RENDER_STATS) && defined(HYP_ENABLE_RENDER_STATS_COUNTERS)
     HYP_SCOPE;
@@ -56,7 +56,7 @@ void EngineRenderStatsCalculator::AddCounts(const EngineRenderStatsCounts& count
 #endif
 }
 
-void EngineRenderStatsCalculator::AddSample(double delta)
+void RenderStatsCalculator::AddSample(double delta)
 {
     HYP_SCOPE;
     Threads::AssertOnThread(g_renderThread);
@@ -71,7 +71,7 @@ void EngineRenderStatsCalculator::AddSample(double delta)
     m_samples[sampleIndex % maxSamples] = delta;
 }
 
-void EngineRenderStatsCalculator::Advance(EngineRenderStats& renderStats)
+void RenderStatsCalculator::Advance(RenderStats& renderStats)
 {
     HYP_SCOPE;
     Threads::AssertOnThread(g_renderThread);
@@ -83,7 +83,7 @@ void EngineRenderStatsCalculator::Advance(EngineRenderStats& renderStats)
 
     AddSample(m_counter.delta);
 
-    EngineRenderStats newRenderStats;
+    RenderStats newRenderStats;
     newRenderStats.framesPerSecond = CalculateFramesPerSecond();
     newRenderStats.millisecondsPerFrame = m_counter.delta * 1000.0;
     newRenderStats.millisecondsPerFrameAvg = CalculateMillisecondsPerFrame();
@@ -105,7 +105,7 @@ void EngineRenderStatsCalculator::Advance(EngineRenderStats& renderStats)
     Memory::MemSet(m_counts.counts, 0, sizeof(m_counts.counts[0]) * ERS_MAX);
 }
 
-double EngineRenderStatsCalculator::CalculateFramesPerSecond() const
+double RenderStatsCalculator::CalculateFramesPerSecond() const
 {
     HYP_SCOPE;
     Threads::AssertOnThread(g_renderThread);
@@ -126,7 +126,7 @@ double EngineRenderStatsCalculator::CalculateFramesPerSecond() const
     return total / MathUtil::Max(double(count), MathUtil::epsilonD);
 }
 
-double EngineRenderStatsCalculator::CalculateMillisecondsPerFrame() const
+double RenderStatsCalculator::CalculateMillisecondsPerFrame() const
 {
     HYP_SCOPE;
     Threads::AssertOnThread(g_renderThread);
@@ -147,6 +147,6 @@ double EngineRenderStatsCalculator::CalculateMillisecondsPerFrame() const
     return total / MathUtil::Max(double(count), MathUtil::epsilonD);
 }
 
-#pragma endregion EngineRenderStatsCalculator
+#pragma endregion RenderStatsCalculator
 
 } // namespace hyperion

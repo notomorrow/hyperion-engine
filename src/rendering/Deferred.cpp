@@ -1384,7 +1384,7 @@ void DeferredRenderer::RenderFrame(FrameBase* frame, const RenderSetup& rs)
 
     Assert(rs.IsValid());
 
-    EngineRenderStatsCounts counts {};
+    RenderStatsCounts counts {};
 
     Array<RenderProxyList*> renderProxyLists;
 

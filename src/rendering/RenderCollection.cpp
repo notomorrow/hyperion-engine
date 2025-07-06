@@ -458,11 +458,11 @@ void RenderProxyList::CommitParallelRenderingState(CmdList& outCommandList)
         }
 
         // Add render stats counts to the engine's render stats
-        for (EngineRenderStatsCounts& counts : state->renderStatsCounts)
+        for (RenderStatsCounts& counts : state->renderStatsCounts)
         {
             g_engine->GetRenderStatsCalculator().AddCounts(counts);
 
-            counts = EngineRenderStatsCounts(); // Reset counts after adding for next use
+            counts = RenderStatsCounts(); // Reset counts after adding for next use
         }
 
         state->drawCalls.Clear();

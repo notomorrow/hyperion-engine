@@ -13,7 +13,7 @@
 
 #include <core/containers/SparsePagedArray.hpp>
 
-#include <rendering/EngineRenderStats.hpp>
+#include <rendering/RenderStats.hpp>
 #include <rendering/CullData.hpp>
 
 #include <rendering/RenderObject.hpp>

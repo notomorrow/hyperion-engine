@@ -10,7 +10,7 @@
 #include <rendering/Deferred.hpp>
 #include <rendering/RenderView.hpp>
 #include <rendering/RenderWorld.hpp>
-#include <rendering/EngineRenderStats.hpp>
+#include <rendering/RenderStats.hpp>
 #include <rendering/PlaceholderData.hpp>
 #include <rendering/RenderGlobalState.hpp>
 #include <rendering/Renderer.hpp>
@@ -366,7 +366,7 @@ void UIRenderCollector::ExecuteDrawCalls(FrameBase* frame, const RenderSetup& re
         const DrawCallCollection& drawCallCollection = mapping.drawCallCollection;
 
         // Don't count draw calls for UI
-        SuppressEngineRenderStatsScope suppressRenderStatsScope;
+        SuppressRenderStatsScope suppressRenderStatsScope;
 
         renderGroup->PerformRendering(frame, renderSetup, drawCallCollection, nullptr, nullptr);
     }

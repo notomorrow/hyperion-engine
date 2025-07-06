@@ -166,20 +166,6 @@ struct RENDER_COMMAND(CreateIndirectDrawStateBuffers)
 
     virtual RendererResult operator()() override
     {
-        // FrameBase* frame = g_renderBackend->GetCurrentFrame();
-
-        // if (!ResizeIndirectDrawCommandsBuffer(frame, IndirectDrawState::initialCount, indirectBuffers[frame->GetFrameIndex()], stagingBuffers[frame->GetFrameIndex()]))
-        // {
-        //     HYP_FAIL("Failed to create indirect draw commands buffer!");
-        // }
-
-        // if (!ResizeInstancesBuffer(frame, IndirectDrawState::initialCount, instanceBuffers[frame->GetFrameIndex()], stagingBuffers[frame->GetFrameIndex()]))
-        // {
-        //     HYP_FAIL("Failed to create instances buffer!");
-        // }
-
-        // return {};
-
         UniquePtr<SingleTimeCommands> singleTimeCommands = g_renderBackend->GetSingleTimeCommands();
 
         singleTimeCommands->Push([&](CmdList& cmd) -> RendererResult

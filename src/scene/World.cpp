@@ -153,7 +153,7 @@ void World::Init()
 
     // Update RenderWorld's RenderStats - done on the game thread so both the game thread and render thread can access it.
     // It is copied, so it will be delayed by 1-2 frames for the render thread to see the updated stats.
-    AddDelegateHandler(g_engine->OnRenderStatsUpdated.Bind([thisWeak = WeakHandleFromThis()](EngineRenderStats renderStats)
+    AddDelegateHandler(g_engine->OnRenderStatsUpdated.Bind([thisWeak = WeakHandleFromThis()](RenderStats renderStats)
         {
             Threads::AssertOnThread(g_gameThread);
 
@@ -738,14 +738,14 @@ void World::RemoveView(const Handle<View>& view)
     }
 }
 
-EngineRenderStats* World::GetRenderStats() const
+RenderStats* World::GetRenderStats() const
 {
     if (!IsReady())
     {
         return nullptr;
     }
 
-    return &const_cast<EngineRenderStats&>(m_renderResource->GetRenderStats());
+    return &const_cast<RenderStats&>(m_renderResource->GetRenderStats());
 }
 
 } // namespace hyperion

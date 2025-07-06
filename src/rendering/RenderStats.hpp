@@ -15,7 +15,7 @@
 
 namespace hyperion {
 
-enum EngineRenderStatsCountType : uint32
+enum RenderStatsCountType : uint32
 {
     ERS_DRAW_CALLS = 0,
     ERS_INSTANCED_DRAW_CALLS,
@@ -31,49 +31,49 @@ enum EngineRenderStatsCountType : uint32
     ERS_MAX
 };
 
-static_assert(ERS_MAX <= 16, "EngineRenderStatsCountType must not exceed 16 types");
+static_assert(ERS_MAX <= 16, "RenderStatsCountType must not exceed 16 types");
 
-struct EngineRenderStatsCounts
+struct RenderStatsCounts
 {
     uint32 counts[16] = { 0 };
 
-    HYP_FORCE_INLINE constexpr uint32& operator[](EngineRenderStatsCountType type)
+    HYP_FORCE_INLINE constexpr uint32& operator[](RenderStatsCountType type)
     {
         return counts[type];
     }
 
-    HYP_FORCE_INLINE constexpr uint32 operator[](EngineRenderStatsCountType type) const
+    HYP_FORCE_INLINE constexpr uint32 operator[](RenderStatsCountType type) const
     {
         return counts[type];
     }
 };
 
 HYP_STRUCT()
-struct EngineRenderStats
+struct RenderStats
 {
     double framesPerSecond = 0.0;
     double millisecondsPerFrame = 0.0;
     double millisecondsPerFrameAvg = 0.0;
     double millisecondsPerFrameMax = 0.0;
     double millisecondsPerFrameMin = DBL_MAX;
-    EngineRenderStatsCounts counts;
+    RenderStatsCounts counts;
 };
 
-struct HYP_API SuppressEngineRenderStatsScope
+struct HYP_API SuppressRenderStatsScope
 {
-    SuppressEngineRenderStatsScope();
-    ~SuppressEngineRenderStatsScope();
+    SuppressRenderStatsScope();
+    ~SuppressRenderStatsScope();
 };
 
-class EngineRenderStatsCalculator
+class RenderStatsCalculator
 {
     static constexpr uint32 maxSamples = 512;
 
 public:
-    friend struct SuppressEngineRenderStatsScope;
+    friend struct SuppressRenderStatsScope;
 
-    void AddCounts(const EngineRenderStatsCounts& counts);
-    void Advance(EngineRenderStats& renderStats);
+    void AddCounts(const RenderStatsCounts& counts);
+    void Advance(RenderStats& renderStats);
 
 private:
     HYP_FORCE_INLINE void Suppress()
@@ -98,7 +98,7 @@ private:
     double m_deltaAccum = 0.0;
     FixedArray<double, maxSamples> m_samples { 0.0 };
     uint32 m_numSamples = 0;
-    EngineRenderStatsCounts m_counts;
+    RenderStatsCounts m_counts;
 
     int m_suppressCount = 0;
 };

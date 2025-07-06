@@ -298,7 +298,7 @@ static void RenderAll(
     const uint32 instancingDescriptorSetIndex = pipeline->GetDescriptorTable()->GetDescriptorSetIndex(NAME("Instancing"));
     const DescriptorSetRef& instancingDescriptorSet = pipeline->GetDescriptorTable()->GetDescriptorSet(NAME("Instancing"), frameIndex);
 
-    EngineRenderStatsCounts counts;
+    RenderStatsCounts counts;
 
     frame->GetCommandList().Add<BindGraphicsPipeline>(pipeline);
 
@@ -767,7 +767,7 @@ void RenderGroup::PerformRendering(FrameBase* frame, const RenderSetup& renderSe
     }
 
 #if defined(HYP_ENABLE_RENDER_STATS) && defined(HYP_ENABLE_RENDER_STATS_COUNTERS)
-    EngineRenderStatsCounts counts;
+    RenderStatsCounts counts;
     counts[ERS_RENDER_GROUPS] = 1;
 
     g_engine->GetRenderStatsCalculator().AddCounts(counts);

@@ -159,7 +159,7 @@ void RenderWorld::RemoveScene(RenderScene* renderScene)
 //     }, /* forceOwnerThread */ true);
 // }
 
-const EngineRenderStats& RenderWorld::GetRenderStats() const
+const RenderStats& RenderWorld::GetRenderStats() const
 {
     HYP_SCOPE;
     if (Threads::IsOnThread(g_renderThread))
@@ -176,7 +176,7 @@ const EngineRenderStats& RenderWorld::GetRenderStats() const
     }
 }
 
-void RenderWorld::SetRenderStats(const EngineRenderStats& renderStats)
+void RenderWorld::SetRenderStats(const RenderStats& renderStats)
 {
     HYP_SCOPE;
     Threads::AssertOnThread(g_gameThread);

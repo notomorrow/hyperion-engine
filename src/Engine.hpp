@@ -6,7 +6,7 @@
 #include <Config.hpp>
 #include <Types.hpp>
 
-#include <rendering/EngineRenderStats.hpp>
+#include <rendering/RenderStats.hpp>
 
 #include <rendering/RenderBackend.hpp>
 
@@ -128,7 +128,7 @@ public:
         return m_delegates;
     }
 
-    HYP_FORCE_INLINE EngineRenderStatsCalculator& GetRenderStatsCalculator()
+    HYP_FORCE_INLINE RenderStatsCalculator& GetRenderStatsCalculator()
     {
         return m_renderStatsCalculator;
     }
@@ -146,7 +146,7 @@ public:
     
     void FinalizeStop();
     
-    Delegate<void, EngineRenderStats> OnRenderStatsUpdated;
+    Delegate<void, RenderStats> OnRenderStatsUpdated;
     
 private:
     HYP_API void Init() override;
@@ -171,8 +171,8 @@ private:
 
     EngineDelegates m_delegates;
 
-    EngineRenderStatsCalculator m_renderStatsCalculator;
-    EngineRenderStats m_renderStats;
+    RenderStatsCalculator m_renderStatsCalculator;
+    RenderStats m_renderStats;
 
     AtomicVar<bool> m_isShuttingDown;
     bool m_shouldRecreateSwapchain;
