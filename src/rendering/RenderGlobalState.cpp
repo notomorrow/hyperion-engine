@@ -3,7 +3,6 @@
 #include <rendering/RenderGlobalState.hpp>
 #include <rendering/RenderWorld.hpp>
 #include <rendering/RenderCamera.hpp>
-#include <rendering/RenderLight.hpp>
 #include <rendering/RenderMaterial.hpp>
 #include <rendering/RenderEnvProbe.hpp>
 #include <rendering/RenderShadowMap.hpp>
@@ -1175,6 +1174,8 @@ RenderGlobalState::RenderGlobalState()
     globalRenderers[GRT_ENV_PROBE][EPT_SKY] = new ReflectionProbeRenderer();
 
     globalRenderers[GRT_ENV_GRID].PushBack(new EnvGridRenderer());
+
+    globalRenderers[GRT_SHADOW_MAP].Resize(LT_MAX); // 1 ShadowMapRenderer per LightType
 }
 
 RenderGlobalState::~RenderGlobalState()

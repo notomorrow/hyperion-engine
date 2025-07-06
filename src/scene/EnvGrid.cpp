@@ -351,6 +351,13 @@ void EnvGrid::CreateEnvProbes()
 
                     Handle<EnvProbe> envProbe = CreateObject<EnvProbe>(EPT_AMBIENT, envProbeAabb, probeDimensions);
                     envProbe->m_gridSlot = index;
+                    envProbe->m_positionInGrid = Vec4i {
+
+                        int32(index % m_options.density.x),
+                        int32((index % (m_options.density.x * m_options.density.y)) / m_options.density.x),
+                        int32(index / (m_options.density.x * m_options.density.y)),
+                        int32(index)
+                    };
 
                     InitObject(envProbe);
 

@@ -29,11 +29,6 @@ void RenderProxyMesh::SafeRelease()
 
 void RenderProxyMesh::IncRefs() const
 {
-    if (material.IsValid())
-    {
-        material->GetRenderResource().IncRef();
-    }
-
     if (mesh.IsValid())
     {
         mesh->GetRenderResource().IncRef();
@@ -42,11 +37,6 @@ void RenderProxyMesh::IncRefs() const
 
 void RenderProxyMesh::DecRefs() const
 {
-    if (material.IsValid())
-    {
-        material->GetRenderResource().DecRef();
-    }
-
     if (mesh.IsValid())
     {
         mesh->GetRenderResource().DecRef();

@@ -8,7 +8,6 @@
 #include <rendering/RenderWorld.hpp>
 #include <rendering/RenderTexture.hpp>
 #include <rendering/RenderView.hpp>
-#include <rendering/RenderLight.hpp>
 #include <rendering/RenderShadowMap.hpp>
 #include <rendering/RenderGlobalState.hpp>
 #include <rendering/Renderer.hpp>
@@ -412,7 +411,7 @@ void DirectionalLightShadowRenderer::OnAddedToWorld()
 
     if (InitObject(m_light))
     {
-        m_light->GetRenderResource().SetShadowMap(TResourceHandle<RenderShadowMap>(m_shadowMapResourceHandle));
+        // m_light->GetRenderResource().SetShadowMap(TResourceHandle<RenderShadowMap>(m_shadowMapResourceHandle));
     }
 
     m_shadowPass = MakeUnique<ShadowPass>(
@@ -432,7 +431,7 @@ void DirectionalLightShadowRenderer::OnRemovedFromWorld()
 {
     if (m_light.IsValid())
     {
-        m_light->GetRenderResource().SetShadowMap(TResourceHandle<RenderShadowMap>());
+        // m_light->GetRenderResource().SetShadowMap(TResourceHandle<RenderShadowMap>());
     }
 
     m_shadowPass.Reset();

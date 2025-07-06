@@ -472,7 +472,7 @@ void EnvProbe::UpdateRenderProxy(IRenderProxy* proxy)
     //     bufferData.textureIndex = m_renderResource->GetTextureSlot();
     // }
 
-    // bufferData.positionInGrid = m_renderResource->GetPositionInGrid();
+    bufferData.positionInGrid = m_positionInGrid;
 }
 
 #pragma region SkyProbe

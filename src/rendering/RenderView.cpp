@@ -8,7 +8,6 @@
 #include <rendering/RenderEnvProbe.hpp>
 #include <rendering/RenderCamera.hpp>
 #include <rendering/RenderEnvGrid.hpp>
-#include <rendering/RenderLight.hpp>
 #include <rendering/RenderGroup.hpp>
 #include <rendering/Deferred.hpp>
 #include <rendering/DepthPyramidRenderer.hpp>

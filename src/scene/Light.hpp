@@ -24,7 +24,6 @@ namespace hyperion {
 class Engine;
 class Camera;
 class Material;
-class RenderLight;
 
 HYP_ENUM()
 enum LightType : uint32
@@ -68,11 +67,6 @@ public:
     Light& operator=(Light&& other) noexcept = delete;
 
     ~Light();
-
-    HYP_FORCE_INLINE RenderLight& GetRenderResource() const
-    {
-        return *m_renderResource;
-    }
 
     /*! \brief Get the type of the light.
      *
@@ -259,8 +253,6 @@ private:
     Pair<Vec3f, Vec3f> CalculateAreaLightRect() const;
 
     mutable DataMutationState m_mutationState;
-
-    RenderLight* m_renderResource;
 };
 
 } // namespace hyperion

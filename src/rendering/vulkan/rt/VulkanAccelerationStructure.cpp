@@ -76,10 +76,11 @@ RendererResult VulkanAccelerationGeometry::Create()
         return {};
     }
 
-    if (m_material.IsValid())
-    {
-        m_material->GetRenderResource().IncRef();
-    }
+    /// FIXME!!!
+    // if (m_material.IsValid())
+    // {
+    //     m_material->GetRenderResource().IncRef();
+    // }
 
     if (!GetRenderBackend()->GetDevice()->GetFeatures().IsRaytracingSupported())
     {
@@ -138,7 +139,8 @@ RendererResult VulkanAccelerationGeometry::Destroy()
 {
     if (m_material.IsValid())
     {
-        m_material->GetRenderResource().DecRef();
+        /// FIXME!!!
+        // m_material->GetRenderResource().DecRef();
     }
 
     RendererResult result;
@@ -749,15 +751,16 @@ RendererResult VulkanTLAS::BuildMeshDescriptionsBuffer(uint32 first, uint32 last
 
         if (material.IsValid())
         {
-            /// FIXME: This needs to use new resource binding system
-            // Must be initialized (AccelerationGeometry calls IncRef() and DecRef())
-            HYP_GFX_ASSERT(material->GetRenderResource().GetBufferIndex() != ~0u);
+            // /// FIXME: This needs to use new resource binding system
+            // // Must be initialized (AccelerationGeometry calls IncRef() and DecRef())
+            // HYP_GFX_ASSERT(material->GetRenderResource().GetBufferIndex() != ~0u);
         }
 
         meshDescription.vertexBufferAddress = blas->GetGeometries()[0]->GetPackedVerticesBuffer()->GetBufferDeviceAddress();
         meshDescription.indexBufferAddress = blas->GetGeometries()[0]->GetPackedIndicesBuffer()->GetBufferDeviceAddress();
         /// FIXME: This needs to use new resource binding system
-        meshDescription.materialIndex = material.IsValid() ? material->GetRenderResource().GetBufferIndex() : ~0u;
+        meshDescription.materialIndex = ~0u;
+        // meshDescription.materialIndex = material.IsValid() ? material->GetRenderResource().GetBufferIndex() : ~0u;
         meshDescription.numIndices = uint32(blas->GetGeometries()[0]->GetPackedIndicesBuffer()->Size() / sizeof(uint32));
         meshDescription.numVertices = uint32(blas->GetGeometries()[0]->GetPackedVerticesBuffer()->Size() / sizeof(PackedVertex));
     }

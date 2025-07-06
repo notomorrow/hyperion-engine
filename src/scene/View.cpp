@@ -25,7 +25,6 @@
 
 #include <rendering/RenderView.hpp>
 #include <rendering/RenderCamera.hpp>
-#include <rendering/RenderLight.hpp>
 #include <rendering/RenderEnvGrid.hpp>
 #include <rendering/RenderEnvProbe.hpp>
 #include <rendering/RenderGlobalState.hpp>
@@ -695,18 +694,12 @@ void View::CollectLights(RenderProxyList& rpl)
 
         for (Light* light : added)
         {
-            // temp shit
-            light->GetRenderResource().IncRef();
-
             RenderApi_AddRef(light);
             RenderApi_UpdateRenderProxy(light->Id());
         }
 
         for (Light* light : removed)
         {
-            // temp shit
-            light->GetRenderResource().DecRef();
-
             RenderApi_ReleaseRef(light->Id());
         }
 

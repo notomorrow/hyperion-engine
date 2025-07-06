@@ -2,7 +2,6 @@
 #include <rendering/RenderGlobalState.hpp>
 #include <rendering/RenderEnvGrid.hpp>
 #include <rendering/RenderEnvProbe.hpp>
-#include <rendering/RenderLight.hpp>
 #include <rendering/RenderMaterial.hpp>
 #include <rendering/RenderTexture.hpp>
 #include <rendering/PlaceholderData.hpp>
@@ -85,6 +84,7 @@ void OnBindingChanged_ReflectionProbe(EnvProbe* envProbe, uint32 prev, uint32 ne
     }
     else
     {
+        // Temp shit
         envProbe->GetRenderResource().IncRef();
         envProbe->GetPrefilteredEnvMap()->GetRenderResource().IncRef();
     }
@@ -117,7 +117,14 @@ void WriteBufferData_EnvProbe(GpuBufferHolderBase* gpuBufferHolder, uint32 idx, 
     RenderProxyEnvProbe* proxyCasted = static_cast<RenderProxyEnvProbe*>(proxy);
     AssertDebug(proxyCasted != nullptr);
 
-    proxyCasted->bufferData.textureIndex = idx;
+    if (proxyCasted->envProbe.GetUnsafe()->IsA<SkyProbe>() || proxyCasted->envProbe.GetUnsafe()->IsA<ReflectionProbe>())
+    {
+        proxyCasted->bufferData.textureIndex = idx;
+    }
+    else
+    {
+        proxyCasted->bufferData.textureIndex = ~0u;
+    }
 
     gpuBufferHolder->WriteBufferData(idx, &proxyCasted->bufferData, sizeof(proxyCasted->bufferData));
 }
@@ -219,8 +226,10 @@ void OnBindingChanged_Light(Light* light, uint32 prev, uint32 next)
 {
     AssertDebug(light != nullptr);
 
-    // temp shit
-    RenderApi_AssignResourceBinding(light, light->GetRenderResource().GetBufferIndex());
+    RenderApi_AssignResourceBinding(light, next);
+
+    /// TODO: If next != ~0u, acquire shadow map from ShadowMapAllocator (if the light casts shadows.)
+    /// Then in DeferredRenderer, when we collect all the Lights across Views, we can render using ShadowMapRenderer (derived for the specific type of Light).
 }
 
 void WriteBufferData_Light(GpuBufferHolderBase* gpuBufferHolder, uint32 idx, IRenderProxy* proxy)

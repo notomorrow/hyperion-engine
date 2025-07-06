@@ -58,18 +58,6 @@ struct ShaderDataOffset
     {
     }
 
-    template <class RenderResourceType, typename = std::enable_if_t<!std::is_base_of_v<HypObjectBase, NormalizedType<RenderResourceType>>>>
-    HYP_DEPRECATED explicit ShaderDataOffset(const RenderResourceType* renderResource, uint32 indexIfNull = invalidIndex)
-        : index(renderResource != nullptr ? renderResource->GetBufferIndex() : indexIfNull)
-    {
-    }
-
-    template <class RenderResourceType, typename = std::enable_if_t<!std::is_pointer_v<NormalizedType<RenderResourceType>> && !std::is_integral_v<NormalizedType<RenderResourceType>>>>
-    HYP_DEPRECATED explicit ShaderDataOffset(const RenderResourceType& renderResource)
-        : index(renderResource.GetBufferIndex())
-    {
-    }
-
     explicit ShaderDataOffset(const HypObjectBase* resource, uint32 indexIfNull = invalidIndex)
         : index(indexIfNull)
     {

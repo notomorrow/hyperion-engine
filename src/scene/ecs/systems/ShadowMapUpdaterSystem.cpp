@@ -12,7 +12,6 @@
 #include <rendering/DirectionalLightShadowRenderer.hpp>
 #include <rendering/PointLightShadowRenderer.hpp>
 #include <rendering/RenderWorld.hpp>
-#include <rendering/RenderLight.hpp>
 #include <rendering/RenderShadowMap.hpp>
 
 #include <core/math/MathUtil.hpp>

@@ -220,6 +220,7 @@ public:
     virtual void UpdateRenderProxy(IRenderProxy* proxy) override;
 
     uint32 m_gridSlot = ~0u; // temp
+    Vec4i m_positionInGrid; // temp
 
 protected:
     virtual void OnAddedToWorld(World* world) override;

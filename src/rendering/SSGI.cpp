@@ -3,7 +3,6 @@
 #include <rendering/SSGI.hpp>
 #include <rendering/RenderCamera.hpp>
 #include <rendering/RenderTexture.hpp>
-#include <rendering/RenderLight.hpp>
 #include <rendering/RenderEnvProbe.hpp>
 #include <rendering/RenderView.hpp>
 #include <rendering/RenderWorld.hpp>
@@ -240,8 +239,8 @@ void SSGI::Render(FrameBase* frame, const RenderSetup& renderSetup)
         m_computePipeline,
         ArrayMap<Name, ArrayMap<Name, uint32>> {
             { NAME("Global"),
-                { { NAME("WorldsBuffer"), ShaderDataOffset<WorldShaderData>(*renderSetup.world) },
-                    { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(*renderSetup.view->GetCamera()) },
+                { { NAME("WorldsBuffer"), ShaderDataOffset<WorldShaderData>(renderSetup.world->GetBufferIndex()) },
+                    { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(renderSetup.view->GetCamera()->GetBufferIndex()) },
                     { NAME("CurrentEnvProbe"), ShaderDataOffset<EnvProbeShaderData>(renderSetup.envProbe, 0) } } } },
         frameIndex);
 
@@ -308,7 +307,7 @@ void SSGI::FillUniformBufferData(RenderView* view, SSGIUniforms& outUniforms) co
                 break;
             }
 
-            outUniforms.lightIndices[numBoundLights++] = light->GetRenderResource().GetBufferIndex();
+            outUniforms.lightIndices[numBoundLights++] = RenderApi_RetrieveResourceBinding(light);
         }
     }
 

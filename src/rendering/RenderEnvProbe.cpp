@@ -2,7 +2,6 @@
 
 #include <rendering/RenderEnvProbe.hpp>
 #include <rendering/RenderCamera.hpp>
-#include <rendering/RenderLight.hpp>
 #include <rendering/RenderTexture.hpp>
 #include <rendering/RenderShadowMap.hpp>
 #include <rendering/RenderView.hpp>
@@ -586,7 +585,7 @@ void ReflectionProbeRenderer::ComputePrefilteredEnvMap(FrameBase* frame, const R
             break;
         }
 
-        uniforms.lightIndices[numBoundLights++] = light->GetRenderResource().GetBufferIndex();
+        uniforms.lightIndices[numBoundLights++] = RenderApi_RetrieveResourceBinding(light);
     }
 
     uniforms.numBoundLights = numBoundLights;
@@ -786,7 +785,7 @@ void ReflectionProbeRenderer::ComputeSH(FrameBase* frame, const RenderSetup& ren
     {
         if (light->GetLightType() == LT_DIRECTIONAL)
         {
-            AssertDebug(light->GetRenderResource().GetBufferIndex() != ~0u);
+            AssertDebug(RenderApi_RetrieveResourceBinding(light) != ~0u, "Light not bound!");
 
             directionalLight = light;
 

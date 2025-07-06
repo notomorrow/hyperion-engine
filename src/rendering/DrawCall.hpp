@@ -28,7 +28,6 @@ class IndirectDrawState;
 class GpuBufferHolderBase;
 struct MeshInstanceData;
 class RenderMesh;
-class RenderMaterial;
 
 extern HYP_API GpuBufferHolderMap* GetGpuBufferHolderMap();
 

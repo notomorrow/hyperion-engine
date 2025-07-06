@@ -8,7 +8,6 @@
 #include <rendering/RenderMesh.hpp>
 #include <rendering/RenderMaterial.hpp>
 #include <rendering/RenderWorld.hpp>
-#include <rendering/RenderLight.hpp>
 #include <rendering/RenderProxy.hpp>
 #include <rendering/RenderView.hpp>
 #include <rendering/RenderEnvGrid.hpp>
@@ -306,8 +305,8 @@ static void RenderAll(
             globalDescriptorSet,
             pipeline,
             ArrayMap<Name, uint32> {
-                { NAME("WorldsBuffer"), ShaderDataOffset<WorldShaderData>(*renderSetup.world) },
-                { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(*renderSetup.view->GetCamera()) },
+                { NAME("WorldsBuffer"), ShaderDataOffset<WorldShaderData>(renderSetup.world->GetBufferIndex()) },
+                { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(renderSetup.view->GetCamera()->GetBufferIndex()) },
                 { NAME("EnvGridsBuffer"), ShaderDataOffset<EnvGridShaderData>(renderSetup.envGrid, 0) },
                 { NAME("CurrentLight"), ShaderDataOffset<LightShaderData>(renderSetup.light, 0) },
                 { NAME("CurrentEnvProbe"), ShaderDataOffset<EnvProbeShaderData>(renderSetup.envProbe, 0) } },
@@ -486,8 +485,8 @@ static void RenderAll_Parallel(
             globalDescriptorSet,
             pipeline,
             ArrayMap<Name, uint32> {
-                { NAME("WorldsBuffer"), ShaderDataOffset<WorldShaderData>(*renderSetup.world) },
-                { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(*renderSetup.view->GetCamera()) },
+                { NAME("WorldsBuffer"), ShaderDataOffset<WorldShaderData>(renderSetup.world->GetBufferIndex()) },
+                { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(renderSetup.view->GetCamera()->GetBufferIndex()) },
                 { NAME("EnvGridsBuffer"), ShaderDataOffset<EnvGridShaderData>(renderSetup.envGrid, 0) },
                 { NAME("CurrentLight"), ShaderDataOffset<LightShaderData>(renderSetup.light, 0) },
                 { NAME("CurrentEnvProbe"), ShaderDataOffset<EnvProbeShaderData>(renderSetup.envProbe, 0) } },

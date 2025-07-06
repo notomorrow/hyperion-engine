@@ -51,7 +51,7 @@
     },
     "env_grid": {
       "gi": {
-        "enabled": false
+        "enabled": true
       },
       "reflections": {
         "enabled": false
