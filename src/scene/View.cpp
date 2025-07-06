@@ -31,7 +31,6 @@
 #include <rendering/RenderGlobalState.hpp>
 #include <rendering/GBuffer.hpp>
 #include <rendering/subsystems/sky/SkydomeRenderer.hpp>
-#include <rendering/lightmapper/RenderLightmapVolume.hpp>
 #include <rendering/RenderBackend.hpp>
 
 #include <core/profiling/ProfileScope.hpp>
@@ -278,6 +277,7 @@ void View::Update(float delta)
     rpl.lightmapVolumes.Advance();
     rpl.materials.Advance();
     rpl.textures.Advance();
+    rpl.skeletons.Advance();
 
     CollectLights(rpl);
     CollectLightmapVolumes(rpl);
@@ -286,47 +286,9 @@ void View::Update(float delta)
 
     m_lastMeshCollectionResult = CollectMeshEntities(rpl);
 
-    // Update refs for materials for this view
-    if (auto diff = rpl.materials.GetDiff(); diff.NeedsUpdate())
-    {
-        Array<ObjId<Material>> removed;
-        rpl.materials.GetRemoved(removed, true);
-
-        Array<Material*> added;
-        rpl.materials.GetAdded(added, true);
-
-        for (Material* material : added)
-        {
-            RenderApi_AddRef(material);
-
-            RenderApi_UpdateRenderProxy(material->Id());
-        }
-
-        for (ObjId<Material> id : removed)
-        {
-            RenderApi_ReleaseRef(id);
-        }
-    }
-
-    // Update refs for bound textures for this view
-    if (auto diff = rpl.textures.GetDiff(); diff.NeedsUpdate())
-    {
-        Array<ObjId<Texture>> removed;
-        rpl.textures.GetRemoved(removed, true);
-
-        Array<Texture*> added;
-        rpl.textures.GetAdded(added, true);
-
-        for (Texture* texture : added)
-        {
-            RenderApi_AddRef(texture);
-        }
-
-        for (ObjId<Texture> id : removed)
-        {
-            RenderApi_ReleaseRef(id);
-        }
-    }
+    RenderApi_UpdateTrackedResources(rpl.materials);
+    RenderApi_UpdateTrackedResources(rpl.skeletons);
+    RenderApi_UpdateTrackedResources(rpl.textures);
 
     /// temp
     constexpr uint32 bucketMask = (1 << RB_OPAQUE)
@@ -487,6 +449,11 @@ typename ResourceTracker<ObjId<Entity>, RenderProxyMesh>::Diff View::CollectMesh
                         rpl.textures.Track(texture.Id(), texture.Get());
                     }
                 }
+
+                if (const Handle<Skeleton>& skeleton = meshComponent.proxy->skeleton)
+                {
+                    rpl.skeletons.Track(skeleton.Id(), skeleton.Get(), skeleton->GetRenderProxyVersionPtr(), /* allowDuplicatesInSameFrame */ true);
+                }
             }
 
             break;
@@ -543,6 +510,11 @@ typename ResourceTracker<ObjId<Entity>, RenderProxyMesh>::Diff View::CollectMesh
                         rpl.textures.Track(texture.Id(), texture.Get());
                     }
                 }
+
+                if (const Handle<Skeleton>& skeleton = meshComponent.proxy->skeleton)
+                {
+                    rpl.skeletons.Track(skeleton.Id(), skeleton.Get(), skeleton->GetRenderProxyVersionPtr(), /* allowDuplicatesInSameFrame */ true);
+                }
             }
 
             break;
@@ -598,6 +570,11 @@ typename ResourceTracker<ObjId<Entity>, RenderProxyMesh>::Diff View::CollectMesh
 
                         rpl.textures.Track(texture.Id(), texture.Get());
                     }
+                }
+
+                if (const Handle<Skeleton>& skeleton = meshComponent.proxy->skeleton)
+                {
+                    rpl.skeletons.Track(skeleton.Id(), skeleton.Get(), skeleton->GetRenderProxyVersionPtr(), /* allowDuplicatesInSameFrame */ true);
                 }
             }
 

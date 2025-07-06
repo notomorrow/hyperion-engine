@@ -1294,6 +1294,4 @@ void EnvGridRenderer::VoxelizeProbe(FrameBase* frame, const RenderSetup& renderS
 
 #pragma endregion EnvGridRenderer
 
-HYP_DESCRIPTOR_CBUFF(Global, EnvGridsBuffer, 1, sizeof(EnvGridShaderData), true);
-
 } // namespace hyperion

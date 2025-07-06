@@ -29,7 +29,6 @@ class GpuBufferHolderBase;
 struct MeshInstanceData;
 class RenderMesh;
 class RenderMaterial;
-class RenderSkeleton;
 
 extern HYP_API GpuBufferHolderMap* GetGpuBufferHolderMap();
 
@@ -109,7 +108,7 @@ struct DrawCallBase
 
     RenderMesh* renderMesh = nullptr;
     Material* material = nullptr;
-    RenderSkeleton* renderSkeleton = nullptr;
+    Skeleton* skeleton = nullptr;
 
     uint32 drawCommandIndex = 0;
 };

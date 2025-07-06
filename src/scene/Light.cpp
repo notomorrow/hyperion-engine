@@ -264,6 +264,8 @@ void Light::UpdateRenderProxy(IRenderProxy* proxy)
     RenderProxyLight* proxyCasted = static_cast<RenderProxyLight*>(proxy);
     proxyCasted->light = WeakHandleFromThis();
 
+    proxyCasted->lightMaterial = m_material.ToWeak();
+
     const BoundingBox aabb = GetAABB();
 
     LightShaderData& bufferData = proxyCasted->bufferData;
@@ -276,7 +278,7 @@ void Light::UpdateRenderProxy(IRenderProxy* proxy)
     bufferData.positionIntensity = Vec4f(m_position, m_intensity);
     bufferData.normal = Vec4f(m_normal, 0.0f);
     bufferData.spotAngles = m_spotAngles;
-    bufferData.materialIndex = ~0u; // set in RenderLight, TODO: Refactor so it is set when light is bound
+    bufferData.materialIndex = ~0u; // materialIndex gets set in WriteBufferData_Light()
     bufferData.aabbMin = Vec4f(aabb.min, 1.0f);
     bufferData.aabbMax = Vec4f(aabb.max, 1.0f);
     bufferData.shadowMapIndex = ~0u; // @TODO

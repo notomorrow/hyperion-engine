@@ -66,7 +66,7 @@ public:
     template <class T>
     static constexpr TypeId ForType()
     {
-        return TypeId { TypeId_Impl<T, TypeIdFlags::TYPE_ID_FLAGS_NONE>::value };
+        return TypeId { TypeId_Impl<NormalizedType<T>, TypeIdFlags::TYPE_ID_FLAGS_NONE>::value };
     }
 
     static constexpr TypeId ForManagedType(const char* str)

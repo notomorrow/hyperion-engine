@@ -2,8 +2,6 @@
 
 #pragma once
 
-#include <core/memory/UniquePtr.hpp>
-
 #include <core/Handle.hpp>
 
 namespace hyperion {
@@ -51,16 +49,6 @@ struct ResourceBindingAllocatorBase
         }
 
         usedIndices.Set(index, false);
-    }
-
-    HYP_FORCE_INLINE uint32 GetHighestUsedIndex() const
-    {
-        if (!usedIndices.AnyBitsSet())
-        {
-            return 0;
-        }
-
-        return usedIndices.LastSetBitIndex();
     }
 
     // the maximum size of this allocator, i.e. the maximum number of bindings that can be allocated in a single frame

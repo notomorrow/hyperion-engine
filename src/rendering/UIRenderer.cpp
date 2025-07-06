@@ -271,16 +271,9 @@ void UIRenderCollector::PushUpdates(RenderProxyList& rpl, const Optional<Rendera
 
         for (RenderProxyMesh* proxy : added)
         {
-            // // debugging
-            // AssertDebug(!removed.Contains(proxy));
-
-            uint32 entityRefCount = RenderApi_AddRef(proxy->entity.GetUnsafe());
-            // uint32 materialRefCount = RenderApi_AddRef(proxy->material.Get());
-            // HYP_LOG_TEMP("Add ref for material {} on game thread frame {} -- was changed? {}   material RefCount: {}   entity ref count: {}",
-            //     proxy->material->Id(), RenderApi_GetFrameIndex_GameThread(), changed.Contains(proxy), materialRefCount, entityRefCount);
+            RenderApi_AddRef(proxy->entity.GetUnsafe());
 
             RenderApi_UpdateRenderProxy(proxy->entity.Id(), proxy);
-            // RenderApi_UpdateRenderProxy(proxy->material.Id());
 
             // for now:
             proxy->IncRefs();
@@ -288,58 +281,15 @@ void UIRenderCollector::PushUpdates(RenderProxyList& rpl, const Optional<Rendera
 
         for (RenderProxyMesh* proxy : removed)
         {
-            // // debugging
-            // AssertDebug(!added.Contains(proxy));
-
-            uint32 entityRefCount = RenderApi_ReleaseRef(proxy->entity.Id());
-            // uint32 materialRefCount = RenderApi_ReleaseRef(proxy->material.Id());
-            // HYP_LOG_TEMP("remove ref for material {} on game thread frame {} -- was changed? {}   material RefCount: {}   entity ref count: {}",
-            //     proxy->material->Id(), RenderApi_GetFrameIndex_GameThread(), changed.Contains(proxy), materialRefCount, entityRefCount);
+            RenderApi_ReleaseRef(proxy->entity.Id());
 
             // for now:
             proxy->DecRefs();
         }
     }
 
-    if (auto diff = rpl.materials.GetDiff(); diff.NeedsUpdate())
-    {
-        Array<ObjId<Material>> removed;
-        rpl.materials.GetRemoved(removed, true);
-
-        Array<Material*> added;
-        rpl.materials.GetAdded(added, true);
-
-        for (Material* material : added)
-        {
-            RenderApi_AddRef(material);
-
-            RenderApi_UpdateRenderProxy(material->Id());
-        }
-
-        for (ObjId<Material> id : removed)
-        {
-            RenderApi_ReleaseRef(id);
-        }
-    }
-
-    if (auto diff = rpl.textures.GetDiff(); diff.NeedsUpdate())
-    {
-        Array<ObjId<Texture>> removed;
-        rpl.textures.GetRemoved(removed, true);
-
-        Array<Texture*> added;
-        rpl.textures.GetAdded(added, true);
-
-        for (Texture* texture : added)
-        {
-            RenderApi_AddRef(texture);
-        }
-
-        for (ObjId<Texture> id : removed)
-        {
-            RenderApi_ReleaseRef(id);
-        }
-    }
+    RenderApi_UpdateTrackedResources(rpl.materials);
+    RenderApi_UpdateTrackedResources(rpl.textures);
 
     BuildRenderGroups(rpl, proxyDepths, overrideAttributes);
 
@@ -602,6 +552,7 @@ void UIRenderSubsystem::Update(float delta)
     rpl.meshes.Advance();
     rpl.materials.Advance();
     rpl.textures.Advance();
+    rpl.skeletons.Advance();
 
     UIRenderCollector& renderCollector = m_uiRenderer->GetRenderCollector();
     renderCollector.ResetOrdering();
@@ -628,7 +579,7 @@ void UIRenderSubsystem::Update(float delta)
 
             rpl.meshes.Track(meshComponent.proxy->entity.Id(), *meshComponent.proxy, &meshComponent.proxy->version, /* allowDuplicatesInSameFrame */ false);
 
-            if (const Handle<Material>& material = meshComponent.material)
+            if (const Handle<Material>& material = meshComponent.proxy->material)
             {
                 rpl.materials.Track(material.Id(), material.Get(), material->GetRenderProxyVersionPtr(), /* allowDuplicatesInSameFrame */ true);
 

@@ -51,65 +51,6 @@ extern HYP_API const HypClass* GetClass(TypeId typeId);
 extern HYP_API bool IsA(const HypClass* hypClass, const void* ptr, TypeId typeId);
 extern HYP_API bool IsA(const HypClass* hypClass, const HypClass* instanceHypClass);
 
-template <class ExpectedType>
-bool IsA(const HypClass* instanceHypClass)
-{
-    if (!instanceHypClass)
-    {
-        return false;
-    }
-
-    const HypClass* hypClass = GetClass(TypeId::ForType<ExpectedType>());
-
-    if (!hypClass)
-    {
-        return false;
-    }
-
-    return IsA(hypClass, instanceHypClass);
-}
-
-template <class ExpectedType, class InstanceType>
-bool IsA(const InstanceType* instance)
-{
-    static_assert(
-        std::is_convertible_v<ExpectedType*, InstanceType*>,
-        "IsA() check will never return true as the compared types are fundamentally different.");
-
-    if (!instance)
-    {
-        return false;
-    }
-
-    const HypClass* instanceHypClass = GetClass(TypeId::ForType<InstanceType>());
-
-    if (!instanceHypClass)
-    {
-        return false;
-    }
-
-    const HypClass* hypClass = GetClass(TypeId::ForType<ExpectedType>());
-
-    if (!hypClass)
-    {
-        return false;
-    }
-
-    // Short-circuit with compile time checking
-    if constexpr (std::is_same_v<ExpectedType, InstanceType> || std::is_base_of_v<ExpectedType, InstanceType>)
-    {
-        return true;
-    }
-
-    return IsA(hypClass, instanceHypClass);
-}
-
-template <class ExpectedType, class InstanceType, typename = std::enable_if_t<!std::is_pointer_v<InstanceType>>>
-bool IsA(const InstanceType& instance)
-{
-    return IsA<ExpectedType, InstanceType>(&instance);
-}
-
 class HYP_API DynamicHypObjectInitializer final : public IHypObjectInitializer
 {
 public:

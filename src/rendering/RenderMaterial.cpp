@@ -534,7 +534,4 @@ void MaterialDescriptorSetManager::Remove(uint32 boundIndex)
 
 #pragma endregion MaterialDescriptorSetManager
 
-HYP_DESCRIPTOR_SSBO_COND(Object, MaterialsBuffer, 1, ~0u, false, !g_renderBackend->GetRenderConfig().ShouldCollectUniqueDrawCallPerMaterial());
-HYP_DESCRIPTOR_SSBO_COND(Object, MaterialsBuffer, 1, sizeof(MaterialShaderData), true, g_renderBackend->GetRenderConfig().ShouldCollectUniqueDrawCallPerMaterial());
-
 } // namespace hyperion

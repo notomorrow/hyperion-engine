@@ -14,6 +14,8 @@
 
 #include <rendering/util/ResourceBinder.hpp>
 
+#include <util/ResourceTracker.hpp>
+
 namespace hyperion {
 
 class Engine;
@@ -37,6 +39,7 @@ class UIRenderer;
 class MaterialDescriptorSetManager;
 class GraphicsPipelineCache;
 class BindlessStorage;
+class RenderProxyable;
 
 HYP_API extern SizeType GetNumDescendants(TypeId typeId);
 HYP_API extern int GetSubclassIndex(TypeId baseTypeId, TypeId subclassTypeId);
@@ -79,6 +82,39 @@ HYP_API extern void RenderApi_AssignResourceBinding(HypObjectBase* resource, uin
 // used on render thread only - retrieves the binding set for the given resource (~0u if unset)
 HYP_API extern uint32 RenderApi_RetrieveResourceBinding(const HypObjectBase* resource);
 HYP_API extern uint32 RenderApi_RetrieveResourceBinding(ObjIdBase id);
+
+/*! \brief Register added/removed/changed resources with the rendering system for the next frame to be rendered */
+template <class ElementType>
+static inline void RenderApi_UpdateTrackedResources(ResourceTracker<ObjId<ElementType>, ElementType*>& resourceTracker)
+{
+    // Update refs for materials for this view
+    if (auto diff = resourceTracker.GetDiff(); diff.NeedsUpdate())
+    {
+        static const bool shouldUpdateRenderProxy = IsA<RenderProxyable, ElementType>();
+
+        Array<ObjId<ElementType>> removed;
+        resourceTracker.GetRemoved(removed, /* includeChanged */ shouldUpdateRenderProxy);
+
+        Array<ElementType*> added;
+        resourceTracker.GetAdded(added, /* includeChanged */ shouldUpdateRenderProxy);
+
+        for (ElementType* elem : added)
+        {
+            RenderApi_AddRef(elem);
+
+            // Update proxies for changed and added items
+            if (shouldUpdateRenderProxy)
+            {
+                RenderApi_UpdateRenderProxy(elem->Id());
+            }
+        }
+
+        for (ObjId<ElementType> id : removed)
+        {
+            RenderApi_ReleaseRef(id);
+        }
+    }
+}
 
 struct ResourceBindings;
 

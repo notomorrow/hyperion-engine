@@ -2,6 +2,8 @@
 
 #pragma once
 
+#include <scene/RenderProxyable.hpp>
+
 #include <core/Handle.hpp>
 
 #include <core/utilities/DataMutationState.hpp>
@@ -24,7 +26,6 @@ namespace hyperion {
 class Engine;
 class Bone;
 class Animation;
-class RenderSkeleton;
 
 struct SkeletonBoneData
 {
@@ -59,9 +60,12 @@ struct SkeletonBoneData
 };
 
 HYP_CLASS()
-class HYP_API Skeleton final : public HypObject<Skeleton>
+class HYP_API Skeleton final : public RenderProxyable
 {
     HYP_OBJECT_BODY(Skeleton);
+
+    friend class Bone;
+    friend class AnimationSystem;
 
 public:
     Skeleton();
@@ -69,25 +73,6 @@ public:
     Skeleton(const Skeleton& other) = delete;
     Skeleton& operator=(const Skeleton& other) = delete;
     ~Skeleton();
-
-    HYP_FORCE_INLINE RenderSkeleton& GetRenderResource() const
-    {
-        return *m_renderResource;
-    }
-
-    /*! \brief Get the mutation state of this skeleton.
-     *  \returns The mutation state of this skeleton. */
-    HYP_FORCE_INLINE DataMutationState GetMutationState() const
-    {
-        return m_mutationState;
-    }
-
-    /*! \brief Set the mutation state of this skeleton. To be called by the Bone class.
-     *  \note This is not intended to be called by the user. */
-    HYP_FORCE_INLINE void SetMutationState(DataMutationState state)
-    {
-        m_mutationState = state;
-    }
 
     /*! \brief Look up a bone with the given name/tag. If no root bone was set,
      *  or the bone could not be found, nullptr is returned. Otherwise, the resulting bone
@@ -166,19 +151,12 @@ public:
      */
     const Animation* FindAnimation(UTF8StringView name, uint32* outIndex) const;
 
-    void Update(float delta);
-
 private:
     void Init() override;
-
-    SkeletonBoneData m_boneData;
+    void UpdateRenderProxy(IRenderProxy* proxy) override;
 
     Handle<Bone> m_rootBone;
     Array<Handle<Animation>> m_animations;
-
-    mutable DataMutationState m_mutationState;
-
-    RenderSkeleton* m_renderResource;
 };
 
 } // namespace hyperion

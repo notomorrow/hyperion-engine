@@ -18,7 +18,6 @@
 #include <rendering/SSRRenderer.hpp>
 #include <rendering/PlaceholderData.hpp>
 #include <rendering/RenderGlobalState.hpp>
-#include <rendering/lightmapper/RenderLightmapVolume.hpp>
 #include <rendering/debug/DebugDrawer.hpp>
 
 #include <scene/View.hpp>

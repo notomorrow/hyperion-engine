@@ -174,7 +174,7 @@ void Bone::UpdateBoneTransform()
 
     if (m_skeleton != nullptr)
     {
-        m_skeleton->SetMutationState(DataMutationState::DIRTY);
+        m_skeleton->SetNeedsRenderProxyUpdate();
     }
 }
 

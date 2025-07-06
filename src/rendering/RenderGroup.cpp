@@ -7,7 +7,6 @@
 #include <rendering/RenderCamera.hpp>
 #include <rendering/RenderMesh.hpp>
 #include <rendering/RenderMaterial.hpp>
-#include <rendering/RenderSkeleton.hpp>
 #include <rendering/RenderWorld.hpp>
 #include <rendering/RenderLight.hpp>
 #include <rendering/RenderProxy.hpp>
@@ -341,7 +340,7 @@ static void RenderAll(
         if (entityDescriptorSet.IsValid())
         {
             ArrayMap<Name, uint32> offsets;
-            offsets[NAME("SkeletonsBuffer")] = ShaderDataOffset<SkeletonShaderData>(drawCall.renderSkeleton != nullptr ? drawCall.renderSkeleton->GetBufferIndex() : 0);
+            offsets[NAME("SkeletonsBuffer")] = ShaderDataOffset<SkeletonShaderData>(drawCall.skeleton, 0);
             offsets[NAME("CurrentObject")] = ShaderDataOffset<EntityShaderData>(drawCall.entityId.ToIndex());
 
             if (g_renderBackend->GetRenderConfig().ShouldCollectUniqueDrawCallPerMaterial())
@@ -386,7 +385,7 @@ static void RenderAll(
         if (entityDescriptorSet.IsValid())
         {
             ArrayMap<Name, uint32> offsets;
-            offsets[NAME("SkeletonsBuffer")] = ShaderDataOffset<SkeletonShaderData>(drawCall.renderSkeleton != nullptr ? drawCall.renderSkeleton->GetBufferIndex() : 0);
+            offsets[NAME("SkeletonsBuffer")] = ShaderDataOffset<SkeletonShaderData>(drawCall.skeleton, 0);
 
             if (g_renderBackend->GetRenderConfig().ShouldCollectUniqueDrawCallPerMaterial())
             {
@@ -541,7 +540,7 @@ static void RenderAll_Parallel(
                     if (entityDescriptorSet.IsValid())
                     {
                         ArrayMap<Name, uint32> offsets;
-                        offsets[NAME("SkeletonsBuffer")] = ShaderDataOffset<SkeletonShaderData>(drawCall.renderSkeleton != nullptr ? drawCall.renderSkeleton->GetBufferIndex() : 0);
+                        offsets[NAME("SkeletonsBuffer")] = ShaderDataOffset<SkeletonShaderData>(drawCall.skeleton, 0);
                         offsets[NAME("CurrentObject")] = ShaderDataOffset<EntityShaderData>(drawCall.entityId.ToIndex());
 
                         if (g_renderBackend->GetRenderConfig().ShouldCollectUniqueDrawCallPerMaterial())
@@ -614,7 +613,7 @@ static void RenderAll_Parallel(
                     if (entityDescriptorSet.IsValid())
                     {
                         ArrayMap<Name, uint32> offsets;
-                        offsets[NAME("SkeletonsBuffer")] = ShaderDataOffset<SkeletonShaderData>(drawCall.renderSkeleton != nullptr ? drawCall.renderSkeleton->GetBufferIndex() : 0);
+                        offsets[NAME("SkeletonsBuffer")] = ShaderDataOffset<SkeletonShaderData>(drawCall.skeleton, 0);
 
                         if (g_renderBackend->GetRenderConfig().ShouldCollectUniqueDrawCallPerMaterial())
                         {

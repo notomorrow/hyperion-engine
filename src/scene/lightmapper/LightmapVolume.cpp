@@ -12,7 +12,6 @@
 #include <rendering/RenderHelpers.hpp>
 #include <rendering/RenderBackend.hpp>
 
-#include <rendering/lightmapper/RenderLightmapVolume.hpp>
 #include <rendering/lightmapper/LightmapUVBuilder.hpp>
 
 #include <core/io/ByteWriter.hpp>

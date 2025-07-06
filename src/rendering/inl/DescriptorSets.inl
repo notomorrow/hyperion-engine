@@ -9,10 +9,20 @@ HYP_DESCRIPTOR_SSBO(Global, ObjectsBuffer, 1, ~0u, false); // For instanced obje
 HYP_DESCRIPTOR_SRV(Global, VoxelGridTexture, 1);
 HYP_DESCRIPTOR_SRV(Global, LightFieldColorTexture, 1);
 HYP_DESCRIPTOR_SRV(Global, LightFieldDepthTexture, 1);
+HYP_DESCRIPTOR_SSBO(Global, CurrentLight, 1, sizeof(LightShaderData), true);
+HYP_DESCRIPTOR_SSBO(Global, LightsBuffer, 1, sizeof(LightShaderData), false);
+HYP_DESCRIPTOR_SSBO(Global, LightmapVolumesBuffer, 1, ~0u, false);
+HYP_DESCRIPTOR_SSBO(Global, EnvProbesBuffer, 1, ~0u, false);
+HYP_DESCRIPTOR_SSBO(Global, CurrentEnvProbe, 1, sizeof(EnvProbeShaderData), true);
+HYP_DESCRIPTOR_CBUFF(Global, EnvGridsBuffer, 1, sizeof(EnvGridShaderData), true);
+HYP_DESCRIPTOR_CBUFF(Global, CamerasBuffer, 1, sizeof(CameraShaderData), true);
 
 HYP_DESCRIPTOR_SRV(Object, LightmapVolumeIrradianceTexture, 1);
 HYP_DESCRIPTOR_SRV(Object, LightmapVolumeRadianceTexture, 1);
 HYP_DESCRIPTOR_SSBO(Object, CurrentObject, 1, sizeof(EntityShaderData), true); // For non-instanced objects
+HYP_DESCRIPTOR_SSBO(Object, SkeletonsBuffer, 1, sizeof(SkeletonShaderData), true);
+HYP_DESCRIPTOR_SSBO_COND(Object, MaterialsBuffer, 1, ~0u, false, !g_renderBackend->GetRenderConfig().ShouldCollectUniqueDrawCallPerMaterial());
+HYP_DESCRIPTOR_SSBO_COND(Object, MaterialsBuffer, 1, sizeof(MaterialShaderData), true, g_renderBackend->GetRenderConfig().ShouldCollectUniqueDrawCallPerMaterial());
 
 HYP_DESCRIPTOR_SRV_COND(View, GBufferTextures, numGbufferTargets, g_renderBackend->GetRenderConfig().IsDynamicDescriptorIndexingSupported());
 HYP_DESCRIPTOR_SRV_COND(View, GBufferAlbedoTexture, 1, !g_renderBackend->GetRenderConfig().IsDynamicDescriptorIndexingSupported());

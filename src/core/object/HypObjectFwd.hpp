@@ -13,6 +13,8 @@
 #include <core/threading/Threads.hpp>
 #endif
 
+#include <Constants.hpp>
+
 #include <type_traits>
 
 namespace hyperion {
@@ -239,7 +241,7 @@ struct HypObjectInitializerGuard : HypObjectInitializerGuardBase
 template <class T>
 struct HypClassRegistration;
 
-/// Casts
+/// Casts ///
 
 template <class Other, class T>
 static inline Other* ObjCast(T* objectPtr)
@@ -347,6 +349,82 @@ static inline WeakHandle<Other> ObjCast(WeakHandle<T>&& handle)
     }
 
     return WeakHandle<Other>::empty;
+}
+
+/// IsA() checks ///
+
+// NOTE: These overloads are implemented in HypClass.cpp
+extern HYP_API bool IsA(const HypClass* hypClass, const void* ptr, TypeId typeId);
+extern HYP_API bool IsA(const HypClass* hypClass, const HypClass* instanceHypClass);
+
+template <class ExpectedType, class InstanceType>
+static inline bool IsA()
+{
+    static_assert(implementationExists<ExpectedType>, "Implementation does not exist for the expected type! Ensure proper headers are included.");
+    static_assert(implementationExists<InstanceType>, "Implementation does not exist for the instance type! Ensure proper headers are included.");
+
+    static const HypClass* instanceHypClass = GetClass(TypeId::ForType<InstanceType>());
+
+    if (!instanceHypClass)
+    {
+        return false;
+    }
+
+    static const HypClass* hypClass = GetClass(TypeId::ForType<ExpectedType>());
+
+    if (!hypClass)
+    {
+        return false;
+    }
+
+    // Short-circuit with compile time checking
+    if constexpr (std::is_same_v<ExpectedType, InstanceType> || std::is_base_of_v<ExpectedType, InstanceType>)
+    {
+        return true;
+    }
+
+    static const bool cachedCheck = ::hyperion::IsA(hypClass, instanceHypClass);
+
+    return cachedCheck || IsA(hypClass, instanceHypClass);
+}
+
+template <class ExpectedType>
+static inline bool IsA(const HypClass* instanceHypClass)
+{
+    if (!instanceHypClass)
+    {
+        return false;
+    }
+
+    const HypClass* hypClass = GetClass(TypeId::ForType<ExpectedType>());
+
+    if (!hypClass)
+    {
+        return false;
+    }
+
+    return IsA(hypClass, instanceHypClass);
+}
+
+template <class ExpectedType, class InstanceType>
+static inline bool IsA(const InstanceType* instance)
+{
+    if (!instance)
+    {
+        return false;
+    }
+
+    // first check caches w/ static
+    // second uses the actual instance type (can be more derived)
+    return ::hyperion::IsA<ExpectedType, InstanceType>() || instance->template IsA<ExpectedType>();
+}
+
+template <class ExpectedType, class InstanceType, typename = std::enable_if_t<!std::is_pointer_v<InstanceType>>>
+static inline bool IsA(const InstanceType& instance)
+{
+    // first check caches w/ static
+    // second uses the actual instance type (can be more derived)
+    return ::hyperion::IsA<ExpectedType, InstanceType>() || instance.template IsA<ExpectedType>();
 }
 
 } // namespace hyperion

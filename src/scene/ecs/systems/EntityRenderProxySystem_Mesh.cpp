@@ -10,7 +10,6 @@
 #include <scene/Material.hpp>
 
 #include <rendering/RenderGlobalState.hpp>
-#include <rendering/RenderSkeleton.hpp>
 #include <rendering/RenderMaterial.hpp>
 
 #include <rendering/RenderCommand.hpp>

@@ -961,7 +961,4 @@ void ReflectionProbeRenderer::ComputeSH(FrameBase* frame, const RenderSetup& ren
 
 #pragma endregion ReflectionProbeRenderer
 
-HYP_DESCRIPTOR_SSBO(Global, EnvProbesBuffer, 1, ~0u, false);
-HYP_DESCRIPTOR_SSBO(Global, CurrentEnvProbe, 1, sizeof(EnvProbeShaderData), true);
-
 } // namespace hyperion

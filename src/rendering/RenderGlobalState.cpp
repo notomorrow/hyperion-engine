@@ -3,7 +3,6 @@
 #include <rendering/RenderGlobalState.hpp>
 #include <rendering/RenderWorld.hpp>
 #include <rendering/RenderCamera.hpp>
-#include <rendering/RenderSkeleton.hpp>
 #include <rendering/RenderLight.hpp>
 #include <rendering/RenderMaterial.hpp>
 #include <rendering/RenderEnvProbe.hpp>
@@ -18,8 +17,6 @@
 #include <rendering/PlaceholderData.hpp>
 #include <rendering/GraphicsPipelineCache.hpp>
 #include <rendering/Bindless.hpp>
-
-#include <rendering/lightmapper/RenderLightmapVolume.hpp>
 
 #include <rendering/rt/DDGI.hpp>
 
@@ -36,6 +33,7 @@
 #include <scene/Material.hpp>
 #include <scene/Light.hpp>
 #include <scene/lightmapper/LightmapVolume.hpp>
+#include <scene/animation/Skeleton.hpp>
 
 #include <core/object/HypClass.hpp>
 
@@ -116,6 +114,7 @@ extern void OnBindingChanged_EnvGrid(EnvGrid* envGrid, uint32 prev, uint32 next)
 extern void WriteBufferData_EnvGrid(GpuBufferHolderBase* gpuBufferHolder, uint32 idx, IRenderProxy* proxy);
 
 extern void OnBindingChanged_Light(Light* light, uint32 prev, uint32 next);
+extern void WriteBufferData_Light(GpuBufferHolderBase* gpuBufferHolder, uint32 idx, IRenderProxy* proxy);
 
 extern void OnBindingChanged_Material(Material* lightmapVolume, uint32 prev, uint32 next);
 
@@ -150,8 +149,8 @@ struct ResourceBindings
     ResourceBindingAllocator<maxBoundReflectionProbes> reflectionProbeBindingsAllocator;
     ResourceBinder<EnvProbe, &OnBindingChanged_ReflectionProbe> reflectionProbeBinder { &reflectionProbeBindingsAllocator };
 
-    // ambient probes
-    ResourceBindingAllocator<> ambientProbeBindingsAllocator;
+    // ambient probes bind to their own slot since they don't set image data
+    ResourceBindingAllocator<maxBoundAmbientProbes> ambientProbeBindingsAllocator;
     ResourceBinder<EnvProbe, &OnBindingChanged_AmbientProbe> ambientProbeBinder { &ambientProbeBindingsAllocator };
 
     ResourceBindingAllocator<16> envGridBindingsAllocator;
@@ -168,6 +167,9 @@ struct ResourceBindings
 
     ResourceBindingAllocator<> textureBindingsAllocator;
     ResourceBinder<Texture, &OnBindingChanged_Texture> textureBinder { &textureBindingsAllocator };
+
+    ResourceBindingAllocator<> skeletonBindingsAllocator;
+    ResourceBinder<Skeleton, &OnBindingChanged_Default<Skeleton>> skeletonBinder { &skeletonBindingsAllocator };
 
     void Assign(HypObjectBase* resource, uint32 binding)
     {
@@ -972,6 +974,7 @@ HYP_API void RenderApi_BeginFrame_RenderThread()
     g_renderGlobalState->resourceBindings->lightmapVolumeBinder.ApplyUpdates();
     g_renderGlobalState->resourceBindings->materialBinder.ApplyUpdates();
     g_renderGlobalState->resourceBindings->textureBinder.ApplyUpdates();
+    g_renderGlobalState->resourceBindings->skeletonBinder.ApplyUpdates();
 
     HYP_LOG(Rendering, Debug, "Mesh entities: {} bound", g_renderGlobalState->resourceBindings->meshEntityBinder.TotalBoundResources());
     HYP_LOG(Rendering, Debug, "Ambient probes: {} bound", g_renderGlobalState->resourceBindings->ambientProbeBinder.TotalBoundResources());
@@ -981,6 +984,7 @@ HYP_API void RenderApi_BeginFrame_RenderThread()
     HYP_LOG(Rendering, Debug, "Lightmap volumes: {} bound", g_renderGlobalState->resourceBindings->lightmapVolumeBinder.TotalBoundResources());
     HYP_LOG(Rendering, Debug, "Materials: {} bound", g_renderGlobalState->resourceBindings->materialBinder.TotalBoundResources());
     HYP_LOG(Rendering, Debug, "Textures: {} bound", g_renderGlobalState->resourceBindings->textureBinder.TotalBoundResources());
+    HYP_LOG(Rendering, Debug, "Skeletons: {} bound", g_renderGlobalState->resourceBindings->skeletonBinder.TotalBoundResources());
 
     for (ResourceSubtypeData& subtypeData : frameData.resources.dataByType)
     {
@@ -1394,9 +1398,10 @@ DECLARE_RENDER_DATA_CONTAINER(EnvGrid, RenderProxyEnvGrid, GRB_ENV_GRIDS, &Resou
 DECLARE_RENDER_DATA_CONTAINER(ReflectionProbe, RenderProxyEnvProbe, GRB_ENV_PROBES, &ResourceBindings::reflectionProbeBinder, &WriteBufferData_EnvProbe);
 DECLARE_RENDER_DATA_CONTAINER(SkyProbe, RenderProxyEnvProbe, GRB_ENV_PROBES, &ResourceBindings::reflectionProbeBinder, &WriteBufferData_EnvProbe);
 DECLARE_RENDER_DATA_CONTAINER(EnvProbe, RenderProxyEnvProbe, GRB_ENV_PROBES, &ResourceBindings::ambientProbeBinder, &WriteBufferData_EnvProbe);
-DECLARE_RENDER_DATA_CONTAINER(Light, RenderProxyLight, GRB_LIGHTS, &ResourceBindings::lightBinder);
+DECLARE_RENDER_DATA_CONTAINER(Light, RenderProxyLight, GRB_LIGHTS, &ResourceBindings::lightBinder, &WriteBufferData_Light);
 DECLARE_RENDER_DATA_CONTAINER(LightmapVolume, RenderProxyLightmapVolume, GRB_LIGHTMAP_VOLUMES, &ResourceBindings::lightmapVolumeBinder);
 DECLARE_RENDER_DATA_CONTAINER(Material, RenderProxyMaterial, GRB_MATERIALS, &ResourceBindings::materialBinder);
 DECLARE_RENDER_DATA_CONTAINER(Texture, NullProxy, GRB_INVALID, &ResourceBindings::textureBinder);
+DECLARE_RENDER_DATA_CONTAINER(Skeleton, RenderProxySkeleton, GRB_SKELETONS, &ResourceBindings::skeletonBinder);
 
 } // namespace hyperion

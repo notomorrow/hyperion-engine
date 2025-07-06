@@ -353,7 +353,6 @@ Handle<Material> Material::Clone() const
     return material;
 }
 
-HYP_DISABLE_OPTIMIZATION;
 void Material::UpdateRenderProxy(IRenderProxy* proxy)
 {
     RenderProxyMaterial* proxyCasted = static_cast<RenderProxyMaterial*>(proxy);
@@ -425,7 +424,6 @@ void Material::UpdateRenderProxy(IRenderProxy* proxy)
         }
     }
 }
-HYP_ENABLE_OPTIMIZATION;
 
 HashCode Material::GetHashCode() const
 {
