@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_DOTNET_INTEROP_MANAGED_ATTRIBUTE_HPP
-#define HYPERION_DOTNET_INTEROP_MANAGED_ATTRIBUTE_HPP
 
 #include <core/memory/UniquePtr.hpp>
 
@@ -37,4 +36,3 @@ extern "C"
 
 } // namespace hyperion::dotnet
 
-#endif

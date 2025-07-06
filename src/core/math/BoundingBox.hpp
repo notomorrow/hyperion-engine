@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_BOUNDING_BOX_HPP
-#define HYPERION_BOUNDING_BOX_HPP
 
 #include <core/math/Vector3.hpp>
 #include <core/math/Transform.hpp>
@@ -182,4 +181,3 @@ struct Formatter<StringType, BoundingBox>
 
 } // namespace hyperion
 
-#endif

@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_FLOAT16_HPP
-#define HYPERION_FLOAT16_HPP
 
 #include <core/Defines.hpp>
 
@@ -212,4 +211,3 @@ static_assert(sizeof(Float16) == 2, "float16 must be 2 bytes in size");
 
 } // namespace hyperion
 
-#endif

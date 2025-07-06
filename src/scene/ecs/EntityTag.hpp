@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_ECS_ENTITY_TAG_HPP
-#define HYPERION_ECS_ENTITY_TAG_HPP
 
 #include <core/Defines.hpp>
 
@@ -105,4 +104,3 @@ using EntityType = EntityTagComponent<EntityType_Impl<T>::value>;
 
 } // namespace hyperion
 
-#endif

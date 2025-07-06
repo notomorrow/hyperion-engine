@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_FBOM_DESERIALIZED_OBJECT_HPP
-#define HYPERION_FBOM_DESERIALIZED_OBJECT_HPP
 
 #include <core/memory/RefCountedPtr.hpp>
 #include <core/memory/UniquePtr.hpp>
@@ -79,4 +78,3 @@ struct FBOMDeserializedObject
 
 } // namespace hyperion::serialization
 
-#endif

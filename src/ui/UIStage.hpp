@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_UI_STAGE_HPP
-#define HYPERION_UI_STAGE_HPP
 
 #include <ui/UIObject.hpp>
 
@@ -174,4 +173,3 @@ private:
 
 } // namespace hyperion
 
-#endif

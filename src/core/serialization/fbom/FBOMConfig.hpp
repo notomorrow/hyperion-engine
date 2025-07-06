@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_FBOM_CONFIG_HPP
-#define HYPERION_FBOM_CONFIG_HPP
 
 #include <core/containers/FlatMap.hpp>
 
@@ -51,4 +50,3 @@ struct FBOMReaderConfig : public IFBOMConfig
 } // namespace serialization
 } // namespace hyperion
 
-#endif

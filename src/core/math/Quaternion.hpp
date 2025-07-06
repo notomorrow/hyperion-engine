@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_QUATERNION_HPP
-#define HYPERION_QUATERNION_HPP
 
 #include <core/math/MathUtil.hpp>
 #include <core/math/Vector3.hpp>
@@ -152,4 +151,3 @@ struct Formatter<StringType, Quaternion>
 
 } // namespace hyperion
 
-#endif

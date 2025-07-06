@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_SCREEN_CAPTURE_HPP
-#define HYPERION_SCREEN_CAPTURE_HPP
 
 #include <scene/Subsystem.hpp>
 #include <scene/Scene.hpp>
@@ -75,4 +74,3 @@ private:
 
 } // namespace hyperion
 
-#endif

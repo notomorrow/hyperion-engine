@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_CORE_NAME_HPP
-#define HYPERION_CORE_NAME_HPP
 
 #include <core/containers/HashMap.hpp>
 #include <core/containers/String.hpp>
@@ -134,4 +133,3 @@ constexpr WeakName operator "" _nw(const char *, SizeType);
 
 } // namespace hyperion
 
-#endif

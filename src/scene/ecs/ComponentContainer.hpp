@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_ECS_COMPONENT_CONTAINER_HPP
-#define HYPERION_ECS_COMPONENT_CONTAINER_HPP
 
 #include <core/containers/Array.hpp>
 #include <core/containers/FlatMap.hpp>
@@ -445,4 +444,3 @@ typename ComponentContainer<Component>::Factory ComponentContainer<Component>::s
 
 } // namespace hyperion
 
-#endif

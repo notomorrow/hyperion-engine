@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_SORTED_ARRAY_HPP
-#define HYPERION_SORTED_ARRAY_HPP
 
 #include <core/containers/ContainerBase.hpp>
 #include <core/containers/Array.hpp>
@@ -224,4 +223,3 @@ using SortedArray = containers::SortedArray<T>;
 
 } // namespace hyperion
 
-#endif

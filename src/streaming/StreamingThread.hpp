@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_STREAMING_THREAD_HPP
-#define HYPERION_STREAMING_THREAD_HPP
 
 #include <core/threading/TaskThread.hpp>
 
@@ -21,4 +20,3 @@ HYP_API const RC<StreamingThread>& GetGlobalStreamingThread();
 
 } // namespace hyperion
 
-#endif

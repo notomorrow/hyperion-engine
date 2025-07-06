@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024-2025 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_RENDER_GLOBAL_STATE_HPP
-#define HYPERION_RENDER_GLOBAL_STATE_HPP
 
 #include <core/memory/UniquePtr.hpp>
 
@@ -164,4 +163,3 @@ private:
 
 } // namespace hyperion
 
-#endif

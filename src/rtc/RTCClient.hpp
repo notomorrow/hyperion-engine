@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_RTC_CLIENT_HPP
-#define HYPERION_RTC_CLIENT_HPP
 
 #include <core/containers/String.hpp>
 #include <core/containers/FlatMap.hpp>
@@ -177,4 +176,3 @@ using LibDataChannelRTCClient = NullRTCClient;
 
 } // namespace hyperion
 
-#endif

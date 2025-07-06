@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_OBJ_MODEL_LOADER_HPP
-#define HYPERION_OBJ_MODEL_LOADER_HPP
 
 #include <asset/Assets.hpp>
 
@@ -102,4 +101,3 @@ struct hash<hyperion::OBJIndex>
 };
 } // namespace std
 
-#endif

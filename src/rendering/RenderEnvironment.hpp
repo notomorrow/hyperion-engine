@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_ENVIRONMENT_HPP
-#define HYPERION_ENVIRONMENT_HPP
 
 #include <rendering/ParticleSystem.hpp>
 #include <rendering/GaussianSplatting.hpp>
@@ -81,4 +80,3 @@ private:
 
 } // namespace hyperion
 
-#endif

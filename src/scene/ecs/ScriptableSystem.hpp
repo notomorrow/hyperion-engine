@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_ECS_SCRIPTABLE_SYSTEM_HPP
-#define HYPERION_ECS_SCRIPTABLE_SYSTEM_HPP
 
 #include <scene/ecs/System.hpp>
 
@@ -113,4 +112,3 @@ private:
 
 } // namespace hyperion
 
-#endif

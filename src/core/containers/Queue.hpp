@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_QUEUE_HPP
-#define HYPERION_QUEUE_HPP
 
 #include <core/containers/Array.hpp>
 #include <core/Defines.hpp>
@@ -186,4 +185,3 @@ using Queue = containers::Queue<T>;
 
 } // namespace hyperion
 
-#endif

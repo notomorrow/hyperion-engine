@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_ECS_ENTITY_SET_HPP
-#define HYPERION_ECS_ENTITY_SET_HPP
 
 #include <core/containers/FlatMap.hpp>
 #include <core/containers/Array.hpp>
@@ -390,4 +389,3 @@ struct EntitySetView
 
 } // namespace hyperion
 
-#endif

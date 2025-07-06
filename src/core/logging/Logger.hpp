@@ -1,6 +1,5 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef HYPERION_UTIL_LOGGER_HPP
-#define HYPERION_UTIL_LOGGER_HPP
 
 #include <core/logging/LoggerFwd.hpp>
 
@@ -340,4 +339,3 @@ using logging::LogMessage;
     }                                                                                                                                                                                                                                                                                       \
     while (0)
 
-#endif

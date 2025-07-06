@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_CORE_DLL_DYNAMIC_LIBRARY_HPP
-#define HYPERION_CORE_DLL_DYNAMIC_LIBRARY_HPP
 
 #include <core/memory/UniquePtr.hpp>
 #include <core/containers/String.hpp>
@@ -34,4 +33,3 @@ private:
 
 } // namespace hyperion
 
-#endif

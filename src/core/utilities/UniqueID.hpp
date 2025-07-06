@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_UNIQUE_ID_HPP
-#define HYPERION_UNIQUE_ID_HPP
 
 #include <core/Defines.hpp>
 
@@ -104,4 +103,3 @@ using utilities::UniqueID;
 
 HYP_DEF_STL_HASH(hyperion::UniqueID);
 
-#endif

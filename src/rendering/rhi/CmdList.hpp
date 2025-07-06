@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024-2025 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_RHI_CMD_LIST_HPP
-#define HYPERION_RHI_CMD_LIST_HPP
 
 #include <core/memory/MemoryPool.hpp>
 
@@ -758,4 +757,3 @@ private:
 
 } // namespace hyperion
 
-#endif

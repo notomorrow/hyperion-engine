@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_CORE_HYP_DATA_HPP
-#define HYPERION_CORE_HYP_DATA_HPP
 
 #include <core/Defines.hpp>
 
@@ -3021,4 +3020,3 @@ static_assert(sizeof(HypData) == 40, "sizeof(HypData) must match C# struct size"
 
 } // namespace hyperion
 
-#endif

@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_PHYSICS_RIGID_BODY_HPP
-#define HYPERION_PHYSICS_RIGID_BODY_HPP
 
 #include <core/Defines.hpp>
 #include <core/Handle.hpp>
@@ -282,4 +281,3 @@ using physics::SpherePhysicsShape;
 
 } // namespace hyperion
 
-#endif

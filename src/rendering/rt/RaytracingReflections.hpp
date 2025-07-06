@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_RAYTRACING_REFLECTIONS_RENDERER_HPP
-#define HYPERION_RAYTRACING_REFLECTIONS_RENDERER_HPP
 
 #include <Constants.hpp>
 
@@ -96,4 +95,3 @@ private:
 
 } // namespace hyperion
 
-#endif

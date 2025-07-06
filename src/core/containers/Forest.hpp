@@ -1,5 +1,4 @@
-#ifndef HYPERION_FOREST_HPP
-#define HYPERION_FOREST_HPP
+#pragma once
 
 #include <core/containers/Queue.hpp>
 
@@ -467,4 +466,3 @@ using containers::Forest;
 
 } // namespace hyperion
 
-#endif

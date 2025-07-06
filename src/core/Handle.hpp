@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_CORE_HANDLE_HPP
-#define HYPERION_CORE_HANDLE_HPP
 
 #include <core/object/ObjId.hpp>
 #include <core/object/ObjectPool.hpp>
@@ -987,4 +986,3 @@ inline bool InitObject(const Handle<T>& handle)
 
 } // namespace hyperion
 
-#endif

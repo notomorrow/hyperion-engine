@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef SIMPLEX_HPP
-#define SIMPLEX_HPP
 
 #include <thirdparty/OpenSimplexNoise.hpp>
 
@@ -18,4 +17,3 @@ struct SimplexNoiseData
 };
 } // namespace hyperion
 
-#endif

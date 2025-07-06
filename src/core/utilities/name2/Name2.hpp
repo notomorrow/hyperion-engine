@@ -1,5 +1,4 @@
-#ifndef HYPERION_NAME2_HPP
-#define HYPERION_NAME2_HPP
+#pragma once
 
 #include <core/Defines.hpp>
 #include <Types.hpp>
@@ -15,4 +14,3 @@ struct SName
 } // namespace utilities
 } // namespace hyperion
 
-#endif

@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_OGRE_XML_SKELETON_LOADER_HPP
-#define HYPERION_OGRE_XML_SKELETON_LOADER_HPP
 
 #include <asset/Assets.hpp>
 
@@ -59,4 +58,3 @@ public:
 
 } // namespace hyperion
 
-#endif

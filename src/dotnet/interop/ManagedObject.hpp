@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_DOTNET_INTEROP_MANAGED_OBJECT_HPP
-#define HYPERION_DOTNET_INTEROP_MANAGED_OBJECT_HPP
 
 #include <dotnet/interop/ManagedGuid.hpp>
 
@@ -27,4 +26,3 @@ extern "C"
 
 } // namespace hyperion::dotnet
 
-#endif

@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_BACKEND_RENDERER_RENDER_OBJECT_HPP
-#define HYPERION_BACKEND_RENDERER_RENDER_OBJECT_HPP
 
 #include <core/Defines.hpp>
 
@@ -1240,4 +1239,3 @@ static inline void SafeRelease(HashSet<RenderObjectHandle_Strong<T>, KeyBy>&& ha
 
 } // namespace hyperion
 
-#endif

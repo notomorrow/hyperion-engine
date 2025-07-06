@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_BACKEND_RENDERER_STRUCTS_HPP
-#define HYPERION_BACKEND_RENDERER_STRUCTS_HPP
 
 #include <core/containers/String.hpp>
 
@@ -863,4 +862,3 @@ struct Viewport
 
 } // namespace hyperion
 
-#endif

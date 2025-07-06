@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_REF_COUNTED_PTR_HPP
-#define HYPERION_REF_COUNTED_PTR_HPP
 
 #include <core/Defines.hpp>
 
@@ -1913,4 +1912,3 @@ using EnableRefCountedPtrFromThis = memory::EnableRefCountedPtrFromThis<T, Count
 
 } // namespace hyperion
 
-#endif

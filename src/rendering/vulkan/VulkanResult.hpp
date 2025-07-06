@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef RENDERER_RESULT_HPP
-#define RENDERER_RESULT_HPP
 
 #include <core/debug/Debug.hpp>
 
@@ -40,4 +39,3 @@ namespace hyperion {
 
 } // namespace hyperion
 
-#endif

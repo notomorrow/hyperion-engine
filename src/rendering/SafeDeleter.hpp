@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_SAFE_DELETER_HPP
-#define HYPERION_SAFE_DELETER_HPP
 
 #include <core/containers/LinkedList.hpp>
 #include <core/threading/AtomicVar.hpp>
@@ -192,4 +191,3 @@ private:
 
 } // namespace hyperion
 
-#endif

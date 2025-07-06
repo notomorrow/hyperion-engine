@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_GAUSSIAN_SPLATTING_HPP
-#define HYPERION_GAUSSIAN_SPLATTING_HPP
 
 #include <core/threading/Threads.hpp>
 
@@ -153,4 +152,3 @@ private:
 
 } // namespace hyperion
 
-#endif

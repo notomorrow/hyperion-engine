@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_RENDERER_BACKEND_VULKAN_QUEUE_HPP
-#define HYPERION_RENDERER_BACKEND_VULKAN_QUEUE_HPP
 
 #include <core/containers/FixedArray.hpp>
 #include <Types.hpp>
@@ -26,4 +25,3 @@ struct VulkanDeviceQueue
 
 } // namespace hyperion
 
-#endif

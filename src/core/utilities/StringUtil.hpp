@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef STRING_UTIL_HPP
-#define STRING_UTIL_HPP
 
 #include <core/containers/Array.hpp>
 #include <core/containers/String.hpp>
@@ -380,4 +379,3 @@ using utilities::StringUtil;
 
 } // namespace hyperion
 
-#endif

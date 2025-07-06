@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_POST_FX_HPP
-#define HYPERION_POST_FX_HPP
 
 #include <core/containers/TypeMap.hpp>
 #include <core/threading/Threads.hpp>
@@ -254,4 +253,3 @@ private:
 
 } // namespace hyperion
 
-#endif // HYPERION_POST_FX_HPP

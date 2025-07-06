@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_STRING_HPP
-#define HYPERION_STRING_HPP
 
 #include <core/math/MathUtil.hpp>
 
@@ -1864,4 +1863,3 @@ HYP_DEF_STL_HASH(hyperion::WideString);
 HYP_DEF_STL_HASH(hyperion::UTF16String);
 HYP_DEF_STL_HASH(hyperion::UTF32String);
 
-#endif

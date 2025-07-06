@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_FRUSTUM_HPP
-#define HYPERION_FRUSTUM_HPP
 
 #include <core/math/Matrix4.hpp>
 #include <core/math/Vector4.hpp>
@@ -70,4 +69,3 @@ struct HYP_API Frustum
 
 } // namespace hyperion
 
-#endif

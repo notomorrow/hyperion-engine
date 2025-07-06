@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_DDGI_HPP
-#define HYPERION_DDGI_HPP
 
 #include <rendering/ShaderManager.hpp>
 
@@ -183,4 +182,3 @@ private:
 
 } // namespace hyperion
 
-#endif

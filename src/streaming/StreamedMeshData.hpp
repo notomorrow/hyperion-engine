@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_STREAMED_MESH_DATA_HPP
-#define HYPERION_STREAMED_MESH_DATA_HPP
 
 #include <streaming/StreamedData.hpp>
 
@@ -143,4 +142,3 @@ private:
 
 } // namespace hyperion
 
-#endif

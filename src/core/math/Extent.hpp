@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_MATH_EXTENT_HPP
-#define HYPERION_MATH_EXTENT_HPP
 
 #include <core/math/Vector2.hpp>
 #include <core/math/Vector3.hpp>
@@ -384,4 +383,3 @@ static_assert(sizeof(Extent3D) == 16);
 
 } //  namespace hyperion
 
-#endif

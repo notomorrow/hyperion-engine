@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_ECS_MESH_COMPONENT_HPP
-#define HYPERION_ECS_MESH_COMPONENT_HPP
 
 #include <core/Handle.hpp>
 #include <core/utilities/UserData.hpp>
@@ -126,4 +125,3 @@ struct MeshComponent
 
 } // namespace hyperion
 
-#endif

@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_MATHUTIL_HPP
-#define HYPERION_MATHUTIL_HPP
 
 #include <core/math/Vector2.hpp>
 #include <core/math/Vector3.hpp>
@@ -727,4 +726,3 @@ public:
 
 } // namespace hyperion
 
-#endif

@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_RENDER_ENV_PROBE_HPP
-#define HYPERION_RENDER_ENV_PROBE_HPP
 
 #include <core/Handle.hpp>
 
@@ -160,4 +159,3 @@ protected:
 
 } // namespace hyperion
 
-#endif

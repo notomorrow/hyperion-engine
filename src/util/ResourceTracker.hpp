@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2025 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_RESOURCE_TRACKER_HPP
-#define HYPERION_RESOURCE_TRACKER_HPP
 
 #include <core/object/ObjId.hpp>
 #include <core/Defines.hpp>
@@ -1107,4 +1106,3 @@ protected:
 
 } // namespace hyperion
 
-#endif

@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024-2025 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_RENDERER_BACKEND_VULKAN_ASYNC_COMPUTE_HPP
-#define HYPERION_RENDERER_BACKEND_VULKAN_ASYNC_COMPUTE_HPP
 
 #include <rendering/AsyncCompute.hpp>
 #include <rendering/vulkan/VulkanFence.hpp>
@@ -35,4 +34,3 @@ private:
 
 } // namespace hyperion
 
-#endif

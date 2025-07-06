@@ -1,6 +1,5 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef NOISE_FACTORY_HPP
-#define NOISE_FACTORY_HPP
 
 #include <util/random/Simplex.hpp>
 #include <util/random/WorleyNoise.hpp>
@@ -287,4 +286,3 @@ private:
 
 } // namespace hyperion
 
-#endif

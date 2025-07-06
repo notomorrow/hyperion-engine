@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_TRANSFORM_HPP
-#define HYPERION_TRANSFORM_HPP
 
 #include <core/math/Vector3.hpp>
 #include <core/math/Quaternion.hpp>
@@ -122,4 +121,3 @@ struct alignas(16) HYP_API Transform
 
 } // namespace hyperion
 
-#endif

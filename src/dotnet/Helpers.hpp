@@ -1,5 +1,4 @@
-#ifndef HYPERION_DOTNET_HELPERS_HPP
-#define HYPERION_DOTNET_HELPERS_HPP
+#pragma once
 
 #include <core/Defines.hpp>
 
@@ -197,4 +196,3 @@ static inline void SetArgs_HypData(std::index_sequence<Indices...>, HypData* arr
 
 } // namespace hyperion::dotnet
 
-#endif

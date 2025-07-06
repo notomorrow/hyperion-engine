@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_PHYSICS_NULL_ADAPTER_HPP
-#define HYPERION_PHYSICS_NULL_ADAPTER_HPP
 
 #include <physics/Adapter.hpp>
 
@@ -28,4 +27,3 @@ public:
 
 } // namespace hyperion::physics
 
-#endif

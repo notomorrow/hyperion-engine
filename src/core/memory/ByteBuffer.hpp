@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_BYTE_BUFFER_HPP
-#define HYPERION_BYTE_BUFFER_HPP
 
 #include <core/containers/Array.hpp>
 #include <core/utilities/Span.hpp>
@@ -545,4 +544,3 @@ using memory::TByteBuffer;
 
 } // namespace hyperion
 
-#endif

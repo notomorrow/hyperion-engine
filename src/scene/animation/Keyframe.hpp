@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_KEYFRAME_HPP
-#define HYPERION_KEYFRAME_HPP
 
 #include <core/math/Transform.hpp>
 #include <Types.hpp>
@@ -32,4 +31,3 @@ struct HYP_API Keyframe
 
 } // namespace hyperion
 
-#endif

@@ -1,5 +1,4 @@
-#ifndef HYPERION_THREAD_SIGNAL_HPP
-#define HYPERION_THREAD_SIGNAL_HPP
+#pragma once
 
 #include <core/threading/AtomicVar.hpp>
 #include <core/threading/Thread.hpp>
@@ -50,4 +49,3 @@ using threading::ThreadSignal;
 
 } // namespace hyperion
 
-#endif

@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_BITSET_HPP
-#define HYPERION_BITSET_HPP
 
 #include <core/containers/Array.hpp>
 #include <core/utilities/FormatFwd.hpp>
@@ -542,4 +541,3 @@ struct Formatter<StringType, Bitset>
 
 } // namespace hyperion
 
-#endif

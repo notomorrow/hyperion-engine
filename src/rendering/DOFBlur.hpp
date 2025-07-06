@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_DOF_BLUR_HPP
-#define HYPERION_DOF_BLUR_HPP
 
 #include <rendering/FullScreenPass.hpp>
 
@@ -50,4 +49,3 @@ private:
 
 } // namespace hyperion
 
-#endif

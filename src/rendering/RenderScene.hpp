@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_RENDERING_SCENE_HPP
-#define HYPERION_RENDERING_SCENE_HPP
 
 #include <rendering/RenderResource.hpp>
 
@@ -53,4 +52,3 @@ struct ResourceMemoryPoolInitInfo<RenderScene> : MemoryPoolInitInfo<RenderScene>
 
 } // namespace hyperion
 
-#endif

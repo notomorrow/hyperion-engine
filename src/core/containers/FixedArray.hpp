@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_FIXED_ARRAY_HPP
-#define HYPERION_FIXED_ARRAY_HPP
 
 #include <core/containers/ContainerBase.hpp>
 
@@ -369,4 +368,3 @@ constexpr inline FixedArray<T, N> MakeFixedArray(T* _begin, T* _end)
 
 } // namespace hyperion
 
-#endif

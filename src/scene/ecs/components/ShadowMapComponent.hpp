@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_ECS_SHADOW_MAP_COMPONENT_HPP
-#define HYPERION_ECS_SHADOW_MAP_COMPONENT_HPP
 
 #include <core/Name.hpp>
 #include <core/memory/RefCountedPtr.hpp>
@@ -52,4 +51,3 @@ struct ShadowMapComponent
 
 } // namespace hyperion
 
-#endif

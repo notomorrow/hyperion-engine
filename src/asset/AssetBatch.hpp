@@ -1,6 +1,5 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef HYPERION_ASSET_BATCH_HPP
-#define HYPERION_ASSET_BATCH_HPP
 
 #include <asset/AssetLoader.hpp>
 
@@ -235,4 +234,3 @@ private:
 
 } // namespace hyperion
 
-#endif

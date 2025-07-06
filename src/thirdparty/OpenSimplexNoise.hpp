@@ -1,5 +1,4 @@
-#ifndef OPEN_SIMPLEX_NOISE_H__
-#define OPEN_SIMPLEX_NOISE_H__
+#pragma once
 
 /*
  * OpenSimplex (Simplectic) Noise in C.
@@ -48,4 +47,3 @@ extern "C"
 }
 #endif
 
-#endif

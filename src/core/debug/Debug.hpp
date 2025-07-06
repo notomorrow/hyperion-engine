@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_DEBUG_HPP
-#define HYPERION_DEBUG_HPP
 
 #include <core/Defines.hpp>
 
@@ -201,4 +200,3 @@ using debug::LogType;
         Assert(cond, msg);                                                         \
     }
 
-#endif // HYPERION_DEBUG_HPP

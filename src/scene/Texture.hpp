@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_TEXTURE_HPP
-#define HYPERION_TEXTURE_HPP
 
 #include <core/memory/UniquePtr.hpp>
 #include <core/memory/Pimpl.hpp>
@@ -188,4 +187,3 @@ protected:
 
 } // namespace hyperion
 
-#endif

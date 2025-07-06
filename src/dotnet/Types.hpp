@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYP_DOTNET_TYPES_HPP
-#define HYP_DOTNET_TYPES_HPP
 
 #include <dotnet/interop/ManagedGuid.hpp>
 
@@ -25,4 +24,3 @@ using InvokeSetterFunction = void (*)(ManagedGuid, ObjectReference*, const HypDa
 } // namespace dotnet
 } // namespace hyperion
 
-#endif

@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_ENGINE_RENDER_STATS_HPP
-#define HYPERION_ENGINE_RENDER_STATS_HPP
 
 #include <core/containers/FixedArray.hpp>
 
@@ -105,4 +104,3 @@ private:
 
 } // namespace hyperion
 
-#endif // HYPERION_ENGINE_RENDER_STATS_HPP

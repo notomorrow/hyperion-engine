@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_CAMERA_TRACK_CONTROLLER_HPP
-#define HYPERION_CAMERA_TRACK_CONTROLLER_HPP
 
 #include <core/memory/RefCountedPtr.hpp>
 
@@ -42,4 +41,3 @@ private:
 
 } // namespace hyperion
 
-#endif

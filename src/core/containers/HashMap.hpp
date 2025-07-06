@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_HASH_MAP_HPP
-#define HYPERION_HASH_MAP_HPP
 
 #include <core/containers/HashSet.hpp>
 
@@ -337,4 +336,3 @@ using containers::HashMap;
 
 } // namespace hyperion
 
-#endif

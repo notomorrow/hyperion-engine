@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_THREAD_LOCAL_STORAGE_HPP
-#define HYPERION_THREAD_LOCAL_STORAGE_HPP
 
 #include <core/Defines.hpp>
 
@@ -79,4 +78,3 @@ using threading::ThreadLocalStorage;
 
 } // namespace hyperion
 
-#endif

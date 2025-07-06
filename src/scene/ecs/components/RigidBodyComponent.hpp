@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_ECS_RIGID_BODY_COMPONENT_HPP
-#define HYPERION_ECS_RIGID_BODY_COMPONENT_HPP
 
 #include <core/Handle.hpp>
 #include <physics/RigidBody.hpp>
@@ -49,4 +48,3 @@ struct RigidBodyComponent
 
 } // namespace hyperion
 
-#endif

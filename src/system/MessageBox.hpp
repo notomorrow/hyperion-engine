@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_MESSAGE_BOX_HPP
-#define HYPERION_MESSAGE_BOX_HPP
 
 #include <core/Defines.hpp>
 
@@ -66,4 +65,3 @@ using sys::SystemMessageBox;
 
 } // namespace hyperion
 
-#endif

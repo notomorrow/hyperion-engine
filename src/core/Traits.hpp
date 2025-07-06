@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_TRAITS_HPP
-#define HYPERION_TRAITS_HPP
 
 #include <core/utilities/Tuple.hpp>
 
@@ -325,4 +324,3 @@ struct FunctionTraits<T const volatile> : public FunctionTraits<T>
 
 } // namespace hyperion
 
-#endif

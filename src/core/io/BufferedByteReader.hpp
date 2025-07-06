@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef BUFFERED_BYTE_READER_HPP
-#define BUFFERED_BYTE_READER_HPP
 
 #include <core/Defines.hpp>
 
@@ -619,4 +618,3 @@ using BufferedByteReader = BufferedReader;
 
 } // namespace hyperion
 
-#endif

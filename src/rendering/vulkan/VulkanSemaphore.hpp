@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_RENDERER_BACKEND_VULKAN_SEMAPHORE_HPP
-#define HYPERION_RENDERER_BACKEND_VULKAN_SEMAPHORE_HPP
 
 #include <rendering/RenderResult.hpp>
 
@@ -258,4 +257,3 @@ private:
 
 } // namespace hyperion
 
-#endif

@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_STRING_FWD_HPP
-#define HYPERION_STRING_FWD_HPP
 
 #include <util/UTF8.hpp>
 
@@ -109,4 +108,3 @@ struct IsString<containers::String<TStringType>>
 
 } // namespace hyperion
 
-#endif

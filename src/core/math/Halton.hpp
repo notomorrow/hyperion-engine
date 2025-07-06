@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_MATH_HALTON_HPP
-#define HYPERION_MATH_HALTON_HPP
 
 #include <core/math/Vector2.hpp>
 
@@ -47,4 +46,3 @@ struct HaltonSequence
 
 } // namespace hyperion
 
-#endif

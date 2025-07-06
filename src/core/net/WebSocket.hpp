@@ -1,9 +1,8 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
 #if 0
 
-    #ifndef HYPERION_CORE_NET_WEB_SOCKET_HPP
-        #define HYPERION_CORE_NET_WEB_SOCKET_HPP
 
         #include <core/Defines.hpp>
 
@@ -66,6 +65,5 @@ using net::WebSocketThread;
 
 } // namespace hyperion
 
-    #endif
 
 #endif

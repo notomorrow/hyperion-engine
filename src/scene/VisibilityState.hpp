@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_VISIBILITY_STATE_HPP
-#define HYPERION_VISIBILITY_STATE_HPP
 
 #include <core/object/ObjId.hpp>
 
@@ -67,4 +66,3 @@ struct VisibilityState
 
 } // namespace hyperion
 
-#endif

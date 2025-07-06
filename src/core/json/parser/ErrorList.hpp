@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYP_JSON_ERROR_LIST_HPP
-#define HYP_JSON_ERROR_LIST_HPP
 
 #include <core/containers/FlatSet.hpp>
 
@@ -88,4 +87,3 @@ private:
 
 } // namespace hyperion::json
 
-#endif

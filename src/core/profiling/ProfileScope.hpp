@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_PROFILE_SCOPE_HPP
-#define HYPERION_PROFILE_SCOPE_HPP
 
 #include <core/utilities/Time.hpp>
 
@@ -91,4 +90,3 @@ using profiling::StopProfilerConnectionThread;
 
 } // namespace hyperion
 
-#endif

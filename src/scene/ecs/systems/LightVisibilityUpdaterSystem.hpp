@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_ECS_LIGHT_VISIBILITY_UPDATER_SYSTEM_HPP
-#define HYPERION_ECS_LIGHT_VISIBILITY_UPDATER_SYSTEM_HPP
 
 #if 0
 
@@ -59,4 +58,3 @@ private:
 } // namespace hyperion
 #endif
 
-#endif

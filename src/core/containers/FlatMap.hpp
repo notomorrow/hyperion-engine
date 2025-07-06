@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_FLAT_MAP_HPP
-#define HYPERION_FLAT_MAP_HPP
 
 #include <core/containers/FlatSet.hpp>
 #include <core/containers/Array.hpp>
@@ -453,4 +452,3 @@ using FlatMap = containers::FlatMap<Key, Value>;
 
 } // namespace hyperion
 
-#endif

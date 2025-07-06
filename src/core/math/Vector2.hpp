@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_VECTOR2_HPP
-#define HYPERION_VECTOR2_HPP
 
 #include <HashCode.hpp>
 
@@ -777,4 +776,3 @@ struct Formatter<StringType, math::Vec2<T>>
 
 HYP_DEF_STL_HASH(hyperion::Vector2);
 
-#endif

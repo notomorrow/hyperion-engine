@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_GRAPHICS_PIPELINE_CACHE_HPP
-#define HYPERION_GRAPHICS_PIPELINE_CACHE_HPP
 
 #include <core/containers/Array.hpp>
 #include <core/containers/FixedArray.hpp>
@@ -51,4 +50,3 @@ private:
 
 } // namespace hyperion
 
-#endif

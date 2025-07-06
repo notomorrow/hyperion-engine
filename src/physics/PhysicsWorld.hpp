@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_PHYSICS_WORLD_HPP
-#define HYPERION_PHYSICS_WORLD_HPP
 
 #include <physics/Adapter.hpp>
 #include <physics/RigidBody.hpp>
@@ -136,4 +135,3 @@ using PhysicsWorld = physics::PhysicsWorld<physics::NullPhysicsAdapter>;
 
 #endif
 
-#endif

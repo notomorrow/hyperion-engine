@@ -1,6 +1,5 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef HYPERION_INDIRECT_DRAW_HPP
-#define HYPERION_INDIRECT_DRAW_HPP
 
 #include <core/containers/FixedArray.hpp>
 #include <core/containers/Array.hpp>
@@ -132,4 +131,3 @@ private:
 
 } // namespace hyperion
 
-#endif

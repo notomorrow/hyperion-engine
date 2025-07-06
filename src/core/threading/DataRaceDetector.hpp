@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_DATA_RACE_DETECTOR_HPP
-#define HYPERION_DATA_RACE_DETECTOR_HPP
 
 #include <core/Defines.hpp>
 
@@ -142,4 +141,3 @@ using threading::DataRaceDetector;
 
 } // namespace hyperion
 
-#endif

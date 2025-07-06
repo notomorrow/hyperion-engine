@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_ECS_LIGHTMAP_SYSTEM_HPP
-#define HYPERION_ECS_LIGHTMAP_SYSTEM_HPP
 
 #include <scene/ecs/System.hpp>
 #include <scene/ecs/components/LightmapVolumeComponent.hpp>
@@ -47,4 +46,3 @@ private:
 
 } // namespace hyperion
 
-#endif

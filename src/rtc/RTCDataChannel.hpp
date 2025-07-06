@@ -1,6 +1,5 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef HYPERION_RTC_DATA_CHANNEL_HPP
-#define HYPERION_RTC_DATA_CHANNEL_HPP
 
 #include <core/memory/ByteBuffer.hpp>
 #include <core/containers/String.hpp>
@@ -78,4 +77,3 @@ using LibDataChannelRTCDataChannel = NullRTCDataChannel;
 
 } // namespace hyperion
 
-#endif

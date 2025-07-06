@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_DATA_STORE_HPP
-#define HYPERION_DATA_STORE_HPP
 
 #include <core/filesystem/FilePath.hpp>
 
@@ -185,4 +184,3 @@ using filesystem::GetDataStore;
 
 } // namespace hyperion
 
-#endif

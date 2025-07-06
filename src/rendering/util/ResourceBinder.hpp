@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2025 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_RESOURCE_BINDER_HPP
-#define HYPERION_RESOURCE_BINDER_HPP
 
 #include <core/memory/UniquePtr.hpp>
 
@@ -448,4 +447,3 @@ protected:
 
 } // namespace hyperion
 
-#endif

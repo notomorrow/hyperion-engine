@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_GBUFFER_HPP
-#define HYPERION_GBUFFER_HPP
 
 #include <Constants.hpp>
 
@@ -141,4 +140,3 @@ private:
 
 } // namespace hyperion
 
-#endif

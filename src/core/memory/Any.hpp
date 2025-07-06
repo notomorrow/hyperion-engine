@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_ANY_HPP
-#define HYPERION_ANY_HPP
 
 #include <core/utilities/TypeId.hpp>
 #include <core/memory/AnyRef.hpp>
@@ -765,4 +764,3 @@ using memory::CopyableAny;
 
 } // namespace hyperion
 
-#endif

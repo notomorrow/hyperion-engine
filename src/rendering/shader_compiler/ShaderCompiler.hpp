@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_SHADER_COMPILER_HPP
-#define HYPERION_SHADER_COMPILER_HPP
 
 #include <core/Name.hpp>
 #include <core/Defines.hpp>
@@ -1442,4 +1441,3 @@ private:
 
 } // namespace hyperion
 
-#endif

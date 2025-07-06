@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_SPAN_HPP
-#define HYPERION_SPAN_HPP
 
 #include <core/Defines.hpp>
 #include <HashCode.hpp>
@@ -399,4 +398,3 @@ using ConstByteView = utilities::ConstByteView;
 
 } // namespace hyperion
 
-#endif

@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_RENDERER_BACKEND_VULKAN_RENDER_PASS_HPP
-#define HYPERION_RENDERER_BACKEND_VULKAN_RENDER_PASS_HPP
 
 #include <rendering/vulkan/VulkanImage.hpp>
 #include <rendering/vulkan/VulkanImageView.hpp>
@@ -90,4 +89,3 @@ using VulkanRenderPassWeakRef = RenderObjectHandle_Weak<VulkanRenderPass>;
 
 } // namespace hyperion
 
-#endif

@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_STATIC_ARRAY_HPP
-#define HYPERION_STATIC_ARRAY_HPP
 
 #include <core/Defines.hpp>
 
@@ -128,4 +127,3 @@ using containers::ConcatStaticArrays;
 
 } // namespace hyperion
 
-#endif

@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_FILE_PATH_HPP
-#define HYPERION_FILE_PATH_HPP
 
 #include <core/containers/String.hpp>
 #include <core/containers/ContainerBase.hpp>
@@ -203,4 +202,3 @@ struct Formatter<StringType, FilePath>
 
 } // namespace hyperion
 
-#endif

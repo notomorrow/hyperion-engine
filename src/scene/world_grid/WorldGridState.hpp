@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_WORLD_GRID_STATE_HPP
-#define HYPERION_WORLD_GRID_STATE_HPP
 
 #include <streaming/StreamingCell.hpp>
 
@@ -60,4 +59,3 @@ struct WorldGridState
 
 } // namespace hyperion
 
-#endif

@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_BACKEND_RENDERER_DESCRIPTOR_SET_HPP
-#define HYPERION_BACKEND_RENDERER_DESCRIPTOR_SET_HPP
 
 #include <core/Name.hpp>
 
@@ -1010,4 +1009,3 @@ protected:
 #define HYP_DESCRIPTOR_ACCELERATION_STRUCTURE(setName, name, count) HYP_DESCRIPTOR_ACCELERATION_STRUCTURE_COND(setName, name, count, true)
 #define HYP_DESCRIPTOR_SAMPLER(setName, name, count) HYP_DESCRIPTOR_SAMPLER_COND(setName, name, count, true)
 
-#endif

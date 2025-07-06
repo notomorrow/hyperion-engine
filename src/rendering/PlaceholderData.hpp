@@ -1,6 +1,5 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef HYPERION_DUMMY_DATA_HPP
-#define HYPERION_DUMMY_DATA_HPP
 
 #include <core/containers/FlatMap.hpp>
 #include <core/containers/TypeMap.hpp>
@@ -147,4 +146,3 @@ private:
 
 } // namespace hyperion
 
-#endif

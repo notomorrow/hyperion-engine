@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_ASSET_REGISTRY_HPP
-#define HYPERION_ASSET_REGISTRY_HPP
 
 #include <asset/AssetLoader.hpp>
 
@@ -392,4 +391,3 @@ struct AssetRegistryRootPathContext
 
 } // namespace hyperion
 
-#endif

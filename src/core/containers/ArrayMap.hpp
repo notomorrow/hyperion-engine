@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_ARRAY_MAP_HPP
-#define HYPERION_ARRAY_MAP_HPP
 
 #include <core/containers/Array.hpp>
 #include <core/utilities/Pair.hpp>
@@ -313,4 +312,3 @@ using ArrayMap = containers::ArrayMap<Key, Value>;
 
 } // namespace hyperion
 
-#endif

@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_CONSTANTS_HPP
-#define HYPERION_CONSTANTS_HPP
 
 #include <core/Defines.hpp>
 #include <Types.hpp>
@@ -162,4 +161,3 @@ constexpr int64 SwapEndianness(int64 value)
 
 } // namespace hyperion
 
-#endif

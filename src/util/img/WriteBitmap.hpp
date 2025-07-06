@@ -1,5 +1,4 @@
-#ifndef WRITE_BITMAP_HPP
-#define WRITE_BITMAP_HPP
+#pragma once
 
 #include <core/Defines.hpp>
 
@@ -22,4 +21,3 @@ public:
 
 } // namespace hyperion
 
-#endif

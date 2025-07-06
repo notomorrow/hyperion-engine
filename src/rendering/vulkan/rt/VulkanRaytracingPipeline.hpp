@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_RENDERER_BACKEND_VULKAN_RAYTRACING_PIPELINE_HPP
-#define HYPERION_RENDERER_BACKEND_VULKAN_RAYTRACING_PIPELINE_HPP
 
 #include <rendering/rt/RenderRaytracingPipeline.hpp>
 #include <rendering/vulkan/VulkanPipeline.hpp>
@@ -59,4 +58,3 @@ private:
 
 } // namespace hyperion
 
-#endif // HYPERION_RENDERER_BACKEND_VULKAN_RAYTRACING_PIPELINE_HPP

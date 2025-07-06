@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_CORE_HYP_OBJECT_FWD_HPP
-#define HYPERION_CORE_HYP_OBJECT_FWD_HPP
 
 #include <core/Defines.hpp>
 
@@ -352,4 +351,3 @@ static inline WeakHandle<Other> ObjCast(WeakHandle<T>&& handle)
 
 } // namespace hyperion
 
-#endif

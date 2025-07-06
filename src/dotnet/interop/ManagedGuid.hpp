@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_DOTNET_INTEROP_MANAGED_GUID_HPP
-#define HYPERION_DOTNET_INTEROP_MANAGED_GUID_HPP
 
 #include <core/utilities/UUID.hpp>
 
@@ -66,4 +65,3 @@ struct Formatter<StringType, dotnet::ManagedGuid>
 
 } // namespace hyperion
 
-#endif

@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024-2025 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_ENV_GRID_HPP
-#define HYPERION_ENV_GRID_HPP
 
 #include <core/config/Config.hpp>
 
@@ -239,4 +238,3 @@ private:
 
 } // namespace hyperion
 
-#endif // !HYPERION_ENV_GRID_HPP

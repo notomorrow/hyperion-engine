@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_COLOR_HPP
-#define HYPERION_COLOR_HPP
 
 #include <core/math/Vector4.hpp>
 
@@ -235,4 +234,3 @@ struct Formatter<StringType, Color>
 
 HYP_DEF_STL_HASH(hyperion::Color);
 
-#endif

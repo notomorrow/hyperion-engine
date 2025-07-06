@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_RENDER_SUBSYSTEM_HPP
-#define HYPERION_RENDER_SUBSYSTEM_HPP
 
 #include <core/threading/AtomicVar.hpp>
 
@@ -78,4 +77,3 @@ private:
 
 } // namespace hyperion
 
-#endif

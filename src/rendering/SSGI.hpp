@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_SSGI_HPP
-#define HYPERION_SSGI_HPP
 
 #include <rendering/TemporalBlending.hpp>
 #include <rendering/FullScreenPass.hpp>
@@ -95,4 +94,3 @@ private:
 
 } // namespace hyperion
 
-#endif

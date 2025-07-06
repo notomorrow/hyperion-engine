@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_ARRAY_HPP
-#define HYPERION_ARRAY_HPP
 
 #include <core/containers/ContainerBase.hpp>
 #include <core/containers/FixedArray.hpp>
@@ -1644,4 +1643,3 @@ struct IsArray<Array<T, AllocatorType>>
 
 } // namespace hyperion
 
-#endif

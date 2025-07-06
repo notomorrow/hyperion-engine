@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_UTIL_LOGGER_FWD_HPP
-#define HYPERION_UTIL_LOGGER_FWD_HPP
 
 #include <core/Defines.hpp>
 
@@ -169,4 +168,3 @@ HYP_DECLARE_LOG_CHANNEL(Core);
 #define HYP_LOG_ONCE(channel, category, fmt, ...)
 #endif
 
-#endif

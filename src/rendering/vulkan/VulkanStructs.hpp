@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_RENDERER_BACKEND_VULKAN_STRUCTS_HPP
-#define HYPERION_RENDERER_BACKEND_VULKAN_STRUCTS_HPP
 
 #include <core/utilities/Optional.hpp>
 #include <core/containers/Array.hpp>
@@ -61,4 +60,3 @@ static_assert(sizeof(IndirectDrawCommand) == 20, "Verify size of struct in shade
 
 } // namespace hyperion
 
-#endif // HYPERION_RENDERER_BACKEND_VULKAN_STRUCTS_HPP

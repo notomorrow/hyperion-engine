@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_DOTNET_METHOD_HPP
-#define HYPERION_DOTNET_METHOD_HPP
 
 #include <dotnet/Attribute.hpp>
 #include <dotnet/Helpers.hpp>
@@ -73,4 +72,3 @@ private:
 
 } // namespace hyperion::dotnet
 
-#endif

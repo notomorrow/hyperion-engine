@@ -1,6 +1,5 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef HYPERION_RENDERABLE_ATTRIBUTES_HPP
-#define HYPERION_RENDERABLE_ATTRIBUTES_HPP
 
 #include <rendering/RenderStructs.hpp>
 #include <rendering/RenderFramebuffer.hpp>
@@ -236,4 +235,3 @@ private:
 
 } // namespace hyperion
 
-#endif

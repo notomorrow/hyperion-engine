@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_TEMPORAL_BLENDING_HPP
-#define HYPERION_TEMPORAL_BLENDING_HPP
 
 #include <Constants.hpp>
 
@@ -128,4 +127,3 @@ private:
 
 } // namespace hyperion
 
-#endif

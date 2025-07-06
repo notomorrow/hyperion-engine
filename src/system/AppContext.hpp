@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_APP_CONTEXT_HPP
-#define HYPERION_APP_CONTEXT_HPP
 
 #ifdef HYP_SDL
 #include <SDL2/SDL_vulkan.h>
@@ -243,4 +242,3 @@ using sys::SDLApplicationWindow;
 
 } // namespace hyperion
 
-#endif

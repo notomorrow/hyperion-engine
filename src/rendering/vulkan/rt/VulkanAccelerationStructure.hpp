@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_RENDERER_BACKEND_RENDERER_VULKAN_ACCELERATION_STRUCTURE_HPP
-#define HYPERION_RENDERER_BACKEND_RENDERER_VULKAN_ACCELERATION_STRUCTURE_HPP
 
 #include <core/math/Matrix4.hpp>
 
@@ -246,4 +245,3 @@ private:
 
 } // namespace hyperion
 
-#endif

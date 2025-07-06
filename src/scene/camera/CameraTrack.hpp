@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_CAMERA_TRACK_HPP
-#define HYPERION_CAMERA_TRACK_HPP
 
 #include <core/math/Transform.hpp>
 #include <core/containers/SortedArray.hpp>
@@ -51,4 +50,3 @@ private:
 
 } // namespace hyperion
 
-#endif

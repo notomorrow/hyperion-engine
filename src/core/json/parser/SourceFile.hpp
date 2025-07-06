@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYP_JSON_SOURCE_FILE_HPP
-#define HYP_JSON_SOURCE_FILE_HPP
 
 #include <Types.hpp>
 #include <core/containers/String.hpp>
@@ -54,4 +53,3 @@ private:
 
 } // namespace hyperion::json
 
-#endif

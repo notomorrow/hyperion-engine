@@ -1,5 +1,4 @@
-#ifndef HYPERION_LOG_CHANNELS_HPP
-#define HYPERION_LOG_CHANNELS_HPP
+#pragma once
 
 #include <core/logging/LoggerFwd.hpp>
 
@@ -97,4 +96,3 @@ HYP_DECLARE_LOG_CHANNEL(Serialization);
 
 } // namespace hyperion
 
-#endif

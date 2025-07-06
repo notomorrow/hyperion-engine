@@ -1,5 +1,4 @@
-#ifndef WORLEY_NOISE_HPP
-#define WORLEY_NOISE_HPP
+#pragma once
 
 #include <core/math/Vector3.hpp>
 
@@ -45,4 +44,3 @@ private:
 };
 } // namespace hyperion
 
-#endif

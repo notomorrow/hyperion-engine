@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_GAME_COUNTER_HPP
-#define HYPERION_GAME_COUNTER_HPP
 
 #include <core/Defines.hpp>
 #include <Types.hpp>
@@ -65,4 +64,3 @@ struct LockstepGameCounter : GameCounter
 
 } // namespace hyperion
 
-#endif

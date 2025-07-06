@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_MEMORY_HPP
-#define HYPERION_MEMORY_HPP
 
 #include <core/Defines.hpp>
 #include <Types.hpp>
@@ -301,4 +300,3 @@ using memory::Memory;
 
 #define StackAlloc(size) alloca(size)
 
-#endif

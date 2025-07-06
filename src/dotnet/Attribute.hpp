@@ -1,5 +1,4 @@
-#ifndef HYPERION_DOTNET_ATTRIBUTE_HPP
-#define HYPERION_DOTNET_ATTRIBUTE_HPP
+#pragma once
 
 #include <core/memory/UniquePtr.hpp>
 
@@ -90,4 +89,3 @@ private:
 
 } // namespace hyperion::dotnet
 
-#endif

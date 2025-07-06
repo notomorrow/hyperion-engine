@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYP_FONT_FONTENGINE_HPP
-#define HYP_FONT_FONTENGINE_HPP
 
 #include <core/filesystem/FilePath.hpp>
 
@@ -43,4 +42,3 @@ private:
 
 } // namespace hyperion
 
-#endif // HYP_FONT_FONTENGINE_HPP

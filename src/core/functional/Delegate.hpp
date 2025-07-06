@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_DELEGATE_HPP
-#define HYPERION_DELEGATE_HPP
 
 #include <core/functional/Proc.hpp>
 
@@ -700,4 +699,3 @@ using functional::IDelegate;
 
 } // namespace hyperion
 
-#endif

@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_FUNCTION_WRAPPER_HPP
-#define HYPERION_FUNCTION_WRAPPER_HPP
 
 #include <core/Traits.hpp>
 
@@ -255,4 +254,3 @@ using functional::FunctionWrapper;
 
 } // namespace hyperion
 
-#endif

@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_BACKEND_RENDERER_RESULT_HPP
-#define HYPERION_BACKEND_RENDERER_RESULT_HPP
 
 #include <core/Defines.hpp>
 
@@ -95,4 +94,3 @@ using RendererResult = TResult<void, RendererError>;
 #error Unsupported rendering backend
 #endif
 
-#endif

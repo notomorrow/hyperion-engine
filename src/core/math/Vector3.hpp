@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_VECTOR3_HPP
-#define HYPERION_VECTOR3_HPP
 
 #include <core/Defines.hpp>
 
@@ -773,4 +772,3 @@ struct Formatter<StringType, math::Vec3<T>>
 
 HYP_DEF_STL_HASH(hyperion::Vector3);
 
-#endif

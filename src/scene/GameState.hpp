@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_GAME_STATE_HPP
-#define HYPERION_GAME_STATE_HPP
 
 #include <core/Defines.hpp>
 
@@ -40,4 +39,3 @@ struct GameState
 
 } // namespace hyperion
 
-#endif

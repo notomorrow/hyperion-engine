@@ -1,3 +1,4 @@
+#pragma once
 //
 // Copyright (c) 2017-2022 Advanced Micro Devices, Inc. All rights reserved.
 //
@@ -20,8 +21,6 @@
 // THE SOFTWARE.
 //
 
-#ifndef VMA_USAGE_H_
-#define VMA_USAGE_H_
 
 #ifdef _WIN32
 
@@ -98,4 +97,3 @@ include all public interface declarations. Example:
 #pragma warning(pop)
 #endif
 
-#endif

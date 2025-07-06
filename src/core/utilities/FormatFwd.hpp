@@ -1,5 +1,4 @@
-#ifndef HYPERION_FORMAT_FWD_HPP
-#define HYPERION_FORMAT_FWD_HPP
+#pragma once
 
 // Forward declaration for Formatter struct (for specialization)
 
@@ -19,4 +18,3 @@ struct Formatter;
 #define HYP_FORMAT(fmt, ...) (__VA_ARGS__ __VA_OPT__(, ) fmt)
 #endif
 
-#endif

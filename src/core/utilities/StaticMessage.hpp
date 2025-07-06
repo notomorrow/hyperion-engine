@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_STATIC_MESSAGE_HPP
-#define HYPERION_STATIC_MESSAGE_HPP
 
 #include <core/containers/StaticString.hpp>
 
@@ -59,4 +58,3 @@ inline const StaticMessage& MakeStaticMessage()
 
 } // namespace hyperion
 
-#endif

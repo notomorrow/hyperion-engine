@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_HEAP_ARRAY_HPP
-#define HYPERION_HEAP_ARRAY_HPP
 
 #include <core/containers/ContainerBase.hpp>
 #include <core/Defines.hpp>
@@ -161,4 +160,3 @@ using containers::HeapArray;
 
 } // namespace hyperion
 
-#endif

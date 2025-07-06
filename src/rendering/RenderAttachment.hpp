@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_BACKEND_RENDERER_ATTACHMENT_HPP
-#define HYPERION_BACKEND_RENDERER_ATTACHMENT_HPP
 
 #include <core/Defines.hpp>
 
@@ -160,4 +159,3 @@ protected:
 
 } // namespace hyperion
 
-#endif

@@ -1,3 +1,4 @@
+#pragma once
 /* stb_image - v2.25 - public domain image loader - http://nothings.org/stb
                                   no warranty implied; use at your own risk
 
@@ -111,8 +112,6 @@ RECENT REVISION HISTORY:
     Blazej Dariusz Roszkowski                  Alexander Veselov
 */
 
-#ifndef STBI_INCLUDE_STB_IMAGE_H
-#define STBI_INCLUDE_STB_IMAGE_H
 
 // DOCUMENTATION
 //
@@ -493,7 +492,6 @@ STBIDEF int   stbi_zlib_decode_noheader_buffer(char *obuffer, int olen, const ch
 //
 //
 ////   end header file   /////////////////////////////////////////////////////
-#endif // STBI_INCLUDE_STB_IMAGE_H
 
 #ifdef STB_IMAGE_IMPLEMENTATION
 

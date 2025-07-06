@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_IMAGE_UTIL_HPP
-#define HYPERION_IMAGE_UTIL_HPP
 
 #include <core/math/MathUtil.hpp>
 #include <Types.hpp>
@@ -46,4 +45,3 @@ public:
 
 } // namespace hyperion
 
-#endif

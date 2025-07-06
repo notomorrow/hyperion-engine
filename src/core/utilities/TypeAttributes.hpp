@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_TYPE_ATTRIBUTES_HPP
-#define HYPERION_TYPE_ATTRIBUTES_HPP
 
 #include <core/utilities/TypeId.hpp>
 #include <core/utilities/EnumFlags.hpp>
@@ -173,4 +172,3 @@ using utilities::TypeAttributes;
 
 } // namespace hyperion
 
-#endif

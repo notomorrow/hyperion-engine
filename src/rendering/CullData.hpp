@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_CULL_DATA_HPP
-#define HYPERION_CULL_DATA_HPP
 
 #include <core/math/Extent.hpp>
 
@@ -42,4 +41,3 @@ struct CullData
 
 } // namespace hyperion
 
-#endif

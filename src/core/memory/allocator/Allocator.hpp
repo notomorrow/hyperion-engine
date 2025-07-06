@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_ALLOCATOR_HPP
-#define HYPERION_ALLOCATOR_HPP
 
 #include <core/Defines.hpp>
 
@@ -633,4 +632,3 @@ using Allocation = typename AllocatorType::template Allocation<T>;
 
 } // namespace hyperion
 
-#endif

@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_PIMPL_HPP
-#define HYPERION_PIMPL_HPP
 
 #include <core/Defines.hpp>
 
@@ -208,4 +207,3 @@ HYP_FORCE_INLINE Pimpl<T> MakePimpl(Args&&... args)
 
 } // namespace hyperion
 
-#endif

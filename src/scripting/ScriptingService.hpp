@@ -1,5 +1,4 @@
-#ifndef HYPERION_SCRIPTING_SERVICE_HPP
-#define HYPERION_SCRIPTING_SERVICE_HPP
+#pragma once
 
 #include <scripting/Script.hpp>
 
@@ -67,4 +66,3 @@ private:
 
 } // namespace hyperion
 
-#endif

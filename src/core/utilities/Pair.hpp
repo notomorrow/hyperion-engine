@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_PAIR_HPP
-#define HYPERION_PAIR_HPP
 
 #include <core/Traits.hpp>
 
@@ -899,4 +898,3 @@ using Pair = utilities::Pair<K, V>;
 
 } // namespace hyperion
 
-#endif

@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_FBOM_ENUMS_HPP
-#define HYPERION_FBOM_ENUMS_HPP
 
 #include <core/utilities/EnumFlags.hpp>
 
@@ -48,4 +47,3 @@ enum FBOMCommand : uint8
 
 } // namespace hyperion
 
-#endif

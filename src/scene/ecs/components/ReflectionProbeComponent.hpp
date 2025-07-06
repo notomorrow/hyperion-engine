@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_ECS_REFLECTION_PROBE_COMPONENT_HPP
-#define HYPERION_ECS_REFLECTION_PROBE_COMPONENT_HPP
 
 #include <core/Name.hpp>
 #include <core/Handle.hpp>
@@ -36,4 +35,3 @@ struct ReflectionProbeComponent
 
 } // namespace hyperion
 
-#endif

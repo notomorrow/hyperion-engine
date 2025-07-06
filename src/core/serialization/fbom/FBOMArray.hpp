@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_FBOM_ARRAY_HPP
-#define HYPERION_FBOM_ARRAY_HPP
 
 #include <core/containers/String.hpp>
 #include <core/containers/Array.hpp>
@@ -68,4 +67,3 @@ private:
 } // namespace serialization
 } // namespace hyperion
 
-#endif

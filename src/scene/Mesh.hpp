@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_MESH_HPP
-#define HYPERION_MESH_HPP
 
 #include <core/object/HypObject.hpp>
 
@@ -167,4 +166,3 @@ private:
 
 } // namespace hyperion
 
-#endif // HYPERION_MESH_HPP

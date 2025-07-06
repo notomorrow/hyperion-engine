@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_RENDERER_BACKEND_VULKAN_SWAPCHAIN_HPP
-#define HYPERION_RENDERER_BACKEND_VULKAN_SWAPCHAIN_HPP
 
 #include <core/containers/Array.hpp>
 
@@ -78,4 +77,3 @@ private:
 
 } // namespace hyperion
 
-#endif // HYPERION_RENDERER_BACKEND_VULKAN_SWAPCHAIN_HPP

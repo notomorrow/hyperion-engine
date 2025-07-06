@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_FBOM_HYP_CLASS_INSTANCE_MARSHAL_HPP
-#define HYPERION_FBOM_HYP_CLASS_INSTANCE_MARSHAL_HPP
 
 #include <core/Util.hpp>
 
@@ -56,4 +55,3 @@ protected:
 
 } // namespace hyperion::serialization
 
-#endif

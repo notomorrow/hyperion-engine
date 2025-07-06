@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_CONTAINER_BASE_HPP
-#define HYPERION_CONTAINER_BASE_HPP
 
 #include <core/memory/Memory.hpp>
 
@@ -476,4 +475,3 @@ using containers::Sum;
 
 } // namespace hyperion
 
-#endif

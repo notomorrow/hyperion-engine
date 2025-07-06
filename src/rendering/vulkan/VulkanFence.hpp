@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_RENDERER_BACKEND_VULKAN_FENCE_HPP
-#define HYPERION_RENDERER_BACKEND_VULKAN_FENCE_HPP
 
 #include <rendering/RenderObject.hpp>
 
@@ -39,4 +38,3 @@ using VulkanFenceWeakRef = RenderObjectHandle_Weak<VulkanFence>;
 
 } // namespace hyperion
 
-#endif

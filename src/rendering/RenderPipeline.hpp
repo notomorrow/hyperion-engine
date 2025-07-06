@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_BACKEND_RENDERER_PIPELINE_HPP
-#define HYPERION_BACKEND_RENDERER_PIPELINE_HPP
 
 #include <rendering/RenderStructs.hpp>
 #include <rendering/RenderDescriptorSet.hpp>
@@ -18,4 +17,3 @@ namespace hyperion {
 
 } // namespace hyperion
 
-#endif

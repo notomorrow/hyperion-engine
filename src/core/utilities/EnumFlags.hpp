@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_ENUM_FLAGS_HPP
-#define HYPERION_ENUM_FLAGS_HPP
 
 #include <Constants.hpp>
 #include <Types.hpp>
@@ -343,4 +342,3 @@ struct MergeEnumFlags
         static constexpr bool isEnumFlags = true; \
     };
 
-#endif

@@ -1,5 +1,4 @@
-#ifndef HYPERION_APP_HPP
-#define HYPERION_APP_HPP
+#pragma once
 
 #include <core/Defines.hpp>
 
@@ -50,4 +49,3 @@ using sys::App;
 
 } // namespace hyperion
 
-#endif

@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_OPTIONAL_HPP
-#define HYPERION_OPTIONAL_HPP
 
 #include <core/utilities/ValueStorage.hpp>
 #include <core/debug/Debug.hpp>
@@ -622,4 +621,3 @@ using utilities::Optional;
 
 } // namespace hyperion
 
-#endif

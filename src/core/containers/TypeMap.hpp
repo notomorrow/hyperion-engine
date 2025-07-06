@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_TYPE_MAP_HPP
-#define HYPERION_TYPE_MAP_HPP
 
 #include <core/containers/ContainerBase.hpp>
 #include <core/containers/FlatMap.hpp>
@@ -282,4 +281,3 @@ using TypeMap = containers::TypeMap<Value>;
 
 } // namespace hyperion
 
-#endif

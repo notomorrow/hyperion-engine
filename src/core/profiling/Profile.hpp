@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_PROFILE_HPP
-#define HYPERION_PROFILE_HPP
 
 #include <core/containers/Array.hpp>
 
@@ -60,4 +59,3 @@ using profiling::Profile;
 
 } // namespace hyperion
 
-#endif

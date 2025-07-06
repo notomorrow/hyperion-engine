@@ -1,7 +1,6 @@
+#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_VALUE_STORAGE_HPP
-#define HYPERION_VALUE_STORAGE_HPP
 
 #include <core/memory/Memory.hpp>
 
@@ -183,4 +182,3 @@ using utilities::ValueStorage;
 
 } // namespace hyperion
 
-#endif
