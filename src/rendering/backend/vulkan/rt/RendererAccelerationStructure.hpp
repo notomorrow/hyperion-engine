@@ -7,6 +7,8 @@
 
 #include <core/containers/Array.hpp>
 
+#include <core/utilities/Span.hpp>
+
 #include <core/Handle.hpp>
 
 #include <rendering/backend/rt/RendererAccelerationStructure.hpp>
@@ -19,9 +21,6 @@
 #include <streaming/StreamedMeshData.hpp>
 
 #include <Types.hpp>
-
-#include <vector>
-#include <memory>
 
 namespace hyperion {
 
@@ -119,6 +118,11 @@ public:
 
     HYP_FORCE_INLINE void AddGeometry(const VulkanAccelerationGeometryRef& geometry)
     {
+        if (!geometry || m_geometries.Contains(geometry))
+        {
+            return;
+        }
+
         m_geometries.PushBack(geometry);
         SetNeedsRebuildFlag();
     }
@@ -137,6 +141,12 @@ public:
 
     HYP_FORCE_INLINE void SetTransform(const Matrix4& transform)
     {
+        if (m_transform == transform)
+        {
+            // same transforms, don't set the flag
+            return;
+        }
+
         m_transform = transform;
         SetTransformUpdateFlag();
     }
@@ -156,8 +166,8 @@ protected:
 
     RendererResult CreateAccelerationStructure(
         AccelerationStructureType type,
-        const std::vector<VkAccelerationStructureGeometryKHR>& geometries,
-        const std::vector<uint32>& primitiveCounts,
+        Span<const VkAccelerationStructureGeometryKHR> geometries,
+        Span<const uint32> primitiveCounts,
         bool update,
         RTUpdateStateFlags& outUpdateStateFlags);
     
@@ -222,16 +232,14 @@ public:
 private:
     RendererResult Rebuild(RTUpdateStateFlags& outUpdateStateFlags);
 
-    std::vector<VkAccelerationStructureGeometryKHR> GetGeometries() const;
-    std::vector<uint32> GetPrimitiveCounts() const;
+    Array<VkAccelerationStructureGeometryKHR> GetGeometries() const;
+    Array<uint32> GetPrimitiveCounts() const;
 
-    RendererResult CreateOrRebuildInstancesBuffer();
-    RendererResult UpdateInstancesBuffer(uint32 first, uint32 last);
+    RendererResult BuildInstancesBuffer();
+    RendererResult BuildInstancesBuffer(uint32 first, uint32 last);
 
-    RendererResult CreateMeshDescriptionsBuffer();
-    RendererResult UpdateMeshDescriptionsBuffer();
-    RendererResult UpdateMeshDescriptionsBuffer(uint32 first, uint32 last);
-    RendererResult RebuildMeshDescriptionsBuffer();
+    RendererResult BuildMeshDescriptionsBuffer();
+    RendererResult BuildMeshDescriptionsBuffer(uint32 first, uint32 last);
 
     Array<VulkanBLASRef> m_blas;
     VulkanGpuBufferRef m_instancesBuffer;

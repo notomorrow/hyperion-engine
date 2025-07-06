@@ -147,16 +147,6 @@ void RaytracingReflections::UpdateUniforms(FrameBase* frame, const RenderSetup& 
     uniforms.numBoundLights = numBoundLights;
 
     m_uniformBuffers[frame->GetFrameIndex()]->Copy(sizeof(uniforms), &uniforms);
-
-    if (m_updates[frame->GetFrameIndex()])
-    {
-        const DescriptorSetRef& descriptorSet = m_raytracingPipeline->GetDescriptorTable()->GetDescriptorSet(NAME("RTRadianceDescriptorSet"), frame->GetFrameIndex());
-        Assert(descriptorSet.IsValid());
-
-        descriptorSet->Update();
-
-        m_updates[frame->GetFrameIndex()] = RT_RADIANCE_UPDATES_NONE;
-    }
 }
 
 void RaytracingReflections::Render(FrameBase* frame, const RenderSetup& renderSetup)

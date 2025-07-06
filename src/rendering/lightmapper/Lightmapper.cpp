@@ -596,7 +596,7 @@ void LightmapGPUPathTracer::Create()
     {
         HYP_NOT_IMPLEMENTED();
         // TEMP FIX ME!!!! build new TLAS for the scene (not attached to view pass data)
-        const TLASRef& tlas = TLASRef::Null(); //m_scene->GetWorld()->GetRenderResource().GetEnvironment()->GetTopLevelAccelerationStructures()[frameIndex];
+        const TLASRef& tlas = TLASRef::Null(); // m_scene->GetWorld()->GetRenderResource().GetEnvironment()->GetTopLevelAccelerationStructures()[frameIndex];
         Assert(tlas != nullptr);
 
         const DescriptorSetRef& descriptorSet = descriptorTable->GetDescriptorSet(NAME("RTRadianceDescriptorSet"), frameIndex);
@@ -1135,15 +1135,19 @@ LightmapJob::LightmapJob(LightmapJobParams&& params)
         .attachments = { { TF_RGBA8 } }
     };
 
-    m_view = CreateObject<View>(ViewDesc {
+    ViewDesc viewDesc {
         .flags = ViewFlags::COLLECT_STATIC_ENTITIES
             | ViewFlags::SKIP_FRUSTUM_CULLING
             | ViewFlags::SKIP_ENV_GRIDS
-            | ViewFlags::SKIP_LIGHTMAP_VOLUMES,
+            | ViewFlags::SKIP_LIGHTMAP_VOLUMES
+            | ViewFlags::ENABLE_RAYTRACING,
         .viewport = Viewport { .extent = Vec2u::One(), .position = Vec2i::Zero() },
         .outputTargetDesc = outputTargetDesc,
         .scenes = { m_params.scene },
-        .camera = camera });
+        .camera = camera
+    };
+
+    m_view = CreateObject<View>(viewDesc);
 
     InitObject(m_view);
 }

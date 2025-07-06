@@ -1088,18 +1088,21 @@ PassData* DeferredRenderer::CreateViewPassData(View* view, PassDataExt&)
     pd->temporalAa = MakeUnique<TemporalAA>(pd->tonemapPass->GetFinalImageView(), pd->viewport.extent, gbuffer);
     pd->temporalAa->Create();
 
-
     CreateViewDescriptorSets(view, *pd);
     CreateViewFinalPassDescriptorSet(view, *pd);
-    CreateViewTopLevelAccelerationStructures(view, *pd);
 
-    pd->raytracingReflections = MakeUnique<RaytracingReflections>(RaytracingReflectionsConfig::FromConfig(), gbuffer);
-    pd->raytracingReflections->SetTopLevelAccelerationStructures(pd->topLevelAccelerationStructures);
-    pd->raytracingReflections->Create();
+    if ((view->GetFlags() & ViewFlags::ENABLE_RAYTRACING) && g_renderBackend->GetRenderConfig().IsRaytracingSupported())
+    {
+        CreateViewTopLevelAccelerationStructures(view, *pd);
 
-    pd->ddgi = MakeUnique<DDGI>(DDGIInfo { .aabb = { { -45.0f, -5.0f, -45.0f }, { 45.0f, 60.0f, 45.0f } } });
-    pd->ddgi->SetTopLevelAccelerationStructures(pd->topLevelAccelerationStructures);
-    pd->ddgi->Create();
+        pd->raytracingReflections = MakeUnique<RaytracingReflections>(RaytracingReflectionsConfig::FromConfig(), gbuffer);
+        pd->raytracingReflections->SetTopLevelAccelerationStructures(pd->topLevelAccelerationStructures);
+        pd->raytracingReflections->Create();
+
+        pd->ddgi = MakeUnique<DDGI>(DDGIInfo { .aabb = { { -45.0f, -5.0f, -45.0f }, { 45.0f, 60.0f, 45.0f } } });
+        pd->ddgi->SetTopLevelAccelerationStructures(pd->topLevelAccelerationStructures);
+        pd->ddgi->Create();
+    }
 
     return pd;
 }
@@ -1659,6 +1662,10 @@ void DeferredRenderer::RenderFrameForView(FrameBase* frame, const RenderSetup& r
                     HYPERION_ASSERT_RESULT(blas->Create());
                 }
             }
+            else
+            {
+                blas->SetTransform(proxyMesh.bufferData.modelMatrix);
+            }
 
             if (!tlas->HasBLAS(blas))
             {
@@ -1686,8 +1693,13 @@ void DeferredRenderer::RenderFrameForView(FrameBase* frame, const RenderSetup& r
     const bool doParticles = true;
     const bool doGaussianSplatting = false; // environment && environment->IsReady();
 
-    const bool useRtRadiance = (m_rendererConfig.pathTracerEnabled || m_rendererConfig.rtReflectionsEnabled) && pd->raytracingReflections != nullptr;
-    const bool useDdgi = m_rendererConfig.rtGiEnabled && pd->ddgi != nullptr;
+    const bool useRaytracingReflections = (m_rendererConfig.pathTracer || m_rendererConfig.raytracingReflections)
+        && (view->GetFlags() & ViewFlags::ENABLE_RAYTRACING)
+        && pd->raytracingReflections != nullptr;
+
+    const bool useRaytracingGlobalIllumination = m_rendererConfig.raytracingGlobalIllumination
+        && (view->GetFlags() & ViewFlags::ENABLE_RAYTRACING) && pd->ddgi != nullptr;
+
     const bool useHbao = m_rendererConfig.hbaoEnabled;
     const bool useHbil = m_rendererConfig.hbilEnabled;
     const bool useSsgi = m_rendererConfig.ssgiEnabled;
@@ -1719,8 +1731,8 @@ void DeferredRenderer::RenderFrameForView(FrameBase* frame, const RenderSetup& r
 
     deferredData.flags |= useHbao ? DEFERRED_FLAGS_HBAO_ENABLED : 0;
     deferredData.flags |= useHbil ? DEFERRED_FLAGS_HBIL_ENABLED : 0;
-    deferredData.flags |= useRtRadiance ? DEFERRED_FLAGS_RT_RADIANCE_ENABLED : 0;
-    deferredData.flags |= useDdgi ? DEFERRED_FLAGS_DDGI_ENABLED : 0;
+    deferredData.flags |= useRaytracingReflections ? DEFERRED_FLAGS_RT_RADIANCE_ENABLED : 0;
+    deferredData.flags |= useRaytracingGlobalIllumination ? DEFERRED_FLAGS_DDGI_ENABLED : 0;
 
     deferredData.screenWidth = view->GetRenderResource().GetViewport().extent.x;  // rpl.viewport.extent.x;
     deferredData.screenHeight = view->GetRenderResource().GetViewport().extent.y; // rpl.viewport.extent.y;
@@ -1769,13 +1781,15 @@ void DeferredRenderer::RenderFrameForView(FrameBase* frame, const RenderSetup& r
         pd->reflectionsPass->Render(frame, rs);
     }
 
-    if (useRtRadiance)
+    if (useRaytracingReflections)
     {
+        AssertDebug(pd->raytracingReflections != nullptr);
         pd->raytracingReflections->Render(frame, rs);
     }
 
-    if (useDdgi)
+    if (useRaytracingGlobalIllumination)
     {
+        AssertDebug(pd->ddgi != nullptr);
         pd->ddgi->Render(frame, rs);
     }
 

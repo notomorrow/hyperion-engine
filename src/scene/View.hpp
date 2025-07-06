@@ -36,12 +36,6 @@ class EnvProbe;
 class RenderEnvProbe;
 class GBuffer;
 
-// /// ViewID is used to identify a View in a single frame. When a View is used in a frame, the global render state assigns an Id to it.
-// /// It is not persistent across frames, and should not be used to identify a View across multiple frames.
-// using ViewID = uint32;
-// constexpr ViewID invalidViewId = ViewID(-1);
-// constexpr ViewID maxViewId = 15;
-
 enum class ViewFlags : uint32
 {
     NONE = 0x0,
@@ -59,6 +53,9 @@ enum class ViewFlags : uint32
     SKIP_ENV_GRIDS = 0x40,         //!< If set, the view will not collect EnvGrids.
     SKIP_LIGHTS = 0x80,            //!< If set, the view will not collect Lights.
     SKIP_LIGHTMAP_VOLUMES = 0x100, //!< If set, the view will not collect LightmapVolumes.
+
+    // enable flags
+    ENABLE_RAYTRACING = 0x100000, //!< Should raytracing features be enabled for rendering this View? (Only for Views with GBUFFER enabled). Raytracing must be enabled in the global renderer config
 
     DEFAULT = ALL_WORLD_SCENES | COLLECT_ALL_ENTITIES
 };
