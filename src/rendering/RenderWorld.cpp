@@ -2,7 +2,6 @@
 
 #include <rendering/RenderWorld.hpp>
 #include <rendering/RenderCamera.hpp>
-#include <rendering/RenderScene.hpp>
 #include <rendering/RenderView.hpp>
 #include <rendering/RenderEnvProbe.hpp>
 #include <rendering/RenderEnvGrid.hpp>
@@ -82,44 +81,6 @@ void RenderWorld::RemoveView(RenderView* renderView)
                 it->Reset();
 
                 m_renderViews.Erase(it);
-            }
-        });
-}
-
-void RenderWorld::AddScene(TResourceHandle<RenderScene>&& renderScene)
-{
-    HYP_SCOPE;
-
-    if (!renderScene)
-    {
-        return;
-    }
-
-    Execute([this, renderScene = std::move(renderScene)]()
-        {
-            m_renderScenes.PushBack(std::move(renderScene));
-        });
-}
-
-void RenderWorld::RemoveScene(RenderScene* renderScene)
-{
-    HYP_SCOPE;
-
-    if (!renderScene)
-    {
-        return;
-    }
-
-    Execute([this, renderScene]()
-        {
-            auto it = m_renderScenes.FindIf([renderScene](const TResourceHandle<RenderScene>& item)
-                {
-                    return item.Get() == renderScene;
-                });
-
-            if (it != m_renderScenes.End())
-            {
-                m_renderScenes.Erase(it);
             }
         });
 }

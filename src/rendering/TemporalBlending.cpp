@@ -2,7 +2,6 @@
 
 #include <rendering/TemporalBlending.hpp>
 #include <rendering/GBuffer.hpp>
-#include <rendering/RenderScene.hpp>
 #include <rendering/RenderCamera.hpp>
 #include <rendering/RenderTexture.hpp>
 #include <rendering/RenderView.hpp>

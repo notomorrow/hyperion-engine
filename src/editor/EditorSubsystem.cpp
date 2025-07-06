@@ -58,7 +58,6 @@
 #include <core/logging/LogChannels.hpp>
 
 #include <rendering/UIRenderer.hpp>
-#include <rendering/RenderScene.hpp>
 #include <rendering/RenderEnvironment.hpp>
 #include <rendering/RenderCamera.hpp>
 #include <rendering/RenderWorld.hpp>

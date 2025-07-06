@@ -6,7 +6,6 @@
 
 #include <rendering/RenderEnvironment.hpp>
 #include <rendering/RenderWorld.hpp>
-#include <rendering/RenderScene.hpp>
 
 // temp
 #include <rendering/ParticleSystem.hpp>

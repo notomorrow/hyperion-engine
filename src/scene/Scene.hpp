@@ -32,7 +32,6 @@ class World;
 class Scene;
 class EntityManager;
 class WorldGrid;
-class RenderScene;
 
 struct FogParams
 {
@@ -94,11 +93,6 @@ public:
     Scene(const Scene& other) = delete;
     Scene& operator=(const Scene& other) = delete;
     ~Scene();
-
-    HYP_FORCE_INLINE RenderScene& GetRenderResource() const
-    {
-        return *m_renderResource;
-    }
 
     /*! \brief Get the thread Id that owns this Scene. */
     HYP_FORCE_INLINE ThreadId GetOwnerThreadId() const
@@ -259,8 +253,6 @@ private:
     bool m_isAudioListener;
 
     float m_previousDelta;
-
-    RenderScene* m_renderResource;
 };
 
 } // namespace hyperion

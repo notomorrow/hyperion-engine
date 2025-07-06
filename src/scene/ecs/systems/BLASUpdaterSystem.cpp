@@ -9,7 +9,6 @@
 #include <scene/World.hpp>
 
 #include <rendering/RenderMesh.hpp>
-#include <rendering/RenderScene.hpp>
 #include <rendering/RenderWorld.hpp>
 #include <rendering/RenderEnvironment.hpp>
 #include <rendering/RenderView.hpp>

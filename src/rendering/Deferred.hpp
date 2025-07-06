@@ -29,7 +29,6 @@ class ShaderProperties;
 class View;
 class DeferredRenderer;
 class RenderWorld;
-class RenderScene;
 class RenderCamera;
 class RenderLight;
 class RenderEnvGrid;

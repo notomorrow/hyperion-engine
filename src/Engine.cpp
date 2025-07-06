@@ -11,7 +11,6 @@
 #include <rendering/RenderView.hpp>
 #include <rendering/FinalPass.hpp>
 #include <rendering/RenderWorld.hpp>
-#include <rendering/RenderScene.hpp>
 #include <rendering/RenderMaterial.hpp>
 #include <rendering/RenderTexture.hpp>
 #include <rendering/SafeDeleter.hpp>

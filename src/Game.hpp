@@ -31,7 +31,6 @@ class Object;
 class Engine;
 class GameThread;
 class UISubsystem;
-class RenderScene;
 
 struct ManagedGameInfo
 {

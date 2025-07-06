@@ -5,7 +5,6 @@
 #include <rendering/RenderMesh.hpp>
 #include <rendering/RenderGlobalState.hpp>
 #include <rendering/DepthPyramidRenderer.hpp>
-#include <rendering/RenderScene.hpp>
 #include <rendering/RenderCamera.hpp>
 #include <rendering/RenderEnvGrid.hpp>
 #include <rendering/RenderEnvProbe.hpp>

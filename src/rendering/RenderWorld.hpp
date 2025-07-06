@@ -32,7 +32,6 @@ class World;
 class Scene;
 class RenderEnvironment;
 class RenderCamera;
-class RenderScene;
 class RenderShadowMap;
 class ShadowMapAllocator;
 class FinalPass;
@@ -68,9 +67,6 @@ public:
     void AddView(TResourceHandle<RenderView>&& renderView);
     void RemoveView(RenderView* renderView);
 
-    void AddScene(TResourceHandle<RenderScene>&& renderScene);
-    void RemoveScene(RenderScene* renderScene);
-
     const RenderStats& GetRenderStats() const;
     void SetRenderStats(const RenderStats& renderStats);
 
@@ -105,7 +101,6 @@ private:
     World* m_world;
 
     Array<TResourceHandle<RenderView>> m_renderViews;
-    Array<TResourceHandle<RenderScene>> m_renderScenes;
 
     UniquePtr<RenderEnvironment> m_renderEnvironment;
 

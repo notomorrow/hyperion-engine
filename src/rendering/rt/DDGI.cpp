@@ -2,7 +2,6 @@
 
 #include <rendering/rt/DDGI.hpp>
 #include <rendering/RenderGlobalState.hpp>
-#include <rendering/RenderScene.hpp>
 #include <rendering/RenderCamera.hpp>
 #include <rendering/RenderLight.hpp>
 #include <rendering/RenderEnvProbe.hpp>

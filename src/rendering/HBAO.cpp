@@ -2,7 +2,6 @@
 
 #include <rendering/HBAO.hpp>
 #include <rendering/RenderGroup.hpp>
-#include <rendering/RenderScene.hpp>
 #include <rendering/RenderWorld.hpp>
 #include <rendering/RenderMesh.hpp>
 #include <rendering/RenderCamera.hpp>

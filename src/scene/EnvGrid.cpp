@@ -16,7 +16,6 @@
 #include <rendering/RenderEnvProbe.hpp>
 #include <rendering/RenderCamera.hpp>
 #include <rendering/RenderView.hpp>
-#include <rendering/RenderScene.hpp>
 #include <rendering/RenderGlobalState.hpp>
 #include <rendering/RenderShadowMap.hpp>
 #include <rendering/PlaceholderData.hpp>

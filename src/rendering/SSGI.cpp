@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
 #include <rendering/SSGI.hpp>
-#include <rendering/RenderScene.hpp>
 #include <rendering/RenderCamera.hpp>
 #include <rendering/RenderTexture.hpp>
 #include <rendering/RenderLight.hpp>

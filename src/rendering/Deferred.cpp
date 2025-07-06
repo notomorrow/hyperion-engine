@@ -9,7 +9,6 @@
 #include <rendering/DepthPyramidRenderer.hpp>
 #include <rendering/RenderEnvGrid.hpp>
 #include <rendering/RenderEnvProbe.hpp>
-#include <rendering/RenderScene.hpp>
 #include <rendering/RenderCamera.hpp>
 #include <rendering/RenderWorld.hpp>
 #include <rendering/RenderMaterial.hpp>

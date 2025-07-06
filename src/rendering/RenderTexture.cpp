@@ -297,15 +297,8 @@ struct RENDER_COMMAND(RenderTextureMipmapLevels)
             const ImageRef& srcImage = pass->GetAttachment(0)->GetImage();
 
             // Blit into mip level
-            cmd.Add<InsertBarrier>(
-                dstImage,
-                RS_COPY_DST,
-                ImageSubResource { .baseMipLevel = mipLevel });
-
-            cmd.Add<InsertBarrier>(
-                srcImage,
-                RS_COPY_SRC,
-                ImageSubResource { .baseMipLevel = mipLevel });
+            cmd.Add<InsertBarrier>(dstImage, RS_COPY_DST, ImageSubResource { .baseMipLevel = mipLevel });
+            cmd.Add<InsertBarrier>(srcImage, RS_COPY_SRC, ImageSubResource { .baseMipLevel = mipLevel });
 
             cmd.Add<BlitRect>(
                 srcImage,
@@ -313,15 +306,8 @@ struct RENDER_COMMAND(RenderTextureMipmapLevels)
                 Rect<uint32> { 0, 0, srcImage->GetExtent().x, srcImage->GetExtent().y },
                 Rect<uint32> { 0, 0, dstImage->GetExtent().x, dstImage->GetExtent().y });
 
-            cmd.Add<InsertBarrier>(
-                srcImage,
-                RS_SHADER_RESOURCE,
-                ImageSubResource { .baseMipLevel = mipLevel });
-
-            cmd.Add<InsertBarrier>(
-                dstImage,
-                RS_SHADER_RESOURCE,
-                ImageSubResource { .baseMipLevel = mipLevel });
+            cmd.Add<InsertBarrier>(srcImage, RS_SHADER_RESOURCE, ImageSubResource { .baseMipLevel = mipLevel });
+            cmd.Add<InsertBarrier>(dstImage, RS_SHADER_RESOURCE, ImageSubResource { .baseMipLevel = mipLevel });
         }
 
         // all mip levels have been transitioned into this state
@@ -335,7 +321,7 @@ struct RENDER_COMMAND(RenderTextureMipmapLevels)
 
 #pragma region TextureMipmapRenderer
 
-class TextureMipmapRenderer // Come back to this for: UI rendering (caching each object as its own texture)
+class TextureMipmapRenderer
 {
 public:
     TextureMipmapRenderer(ImageRef image, ImageViewRef imageView)

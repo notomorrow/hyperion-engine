@@ -7,7 +7,6 @@
 
 #include <scene/camera/Camera.hpp>
 
-#include <rendering/RenderScene.hpp>
 #include <rendering/RenderCamera.hpp>
 
 #include <core/logging/Logger.hpp>

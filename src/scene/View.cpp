@@ -24,7 +24,6 @@
 #include <scene/ecs/components/SkyComponent.hpp>
 
 #include <rendering/RenderView.hpp>
-#include <rendering/RenderScene.hpp>
 #include <rendering/RenderCamera.hpp>
 #include <rendering/RenderLight.hpp>
 #include <rendering/RenderEnvGrid.hpp>
@@ -212,19 +211,6 @@ void View::Init()
     }
 
     Assert(m_outputTarget.IsValid(), "View with id #%u must have a valid output target!", Id().Value());
-
-    Array<TResourceHandle<RenderScene>> renderScenes;
-    renderScenes.Reserve(m_scenes.Size());
-
-    for (const Handle<Scene>& scene : m_scenes)
-    {
-        Assert(scene.IsValid(), "Scene is not valid for View with Id #%u", Id().Value());
-        InitObject(scene);
-
-        Assert(scene->IsReady());
-
-        renderScenes.PushBack(TResourceHandle<RenderScene>(scene->GetRenderResource()));
-    }
 
     m_renderResource = AllocateResource<RenderView>(this);
     m_renderResource->SetViewport(m_viewport);

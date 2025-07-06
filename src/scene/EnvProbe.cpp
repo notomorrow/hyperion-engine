@@ -10,7 +10,6 @@
 #include <rendering/RenderCamera.hpp>
 #include <rendering/RenderView.hpp>
 #include <rendering/RenderWorld.hpp>
-#include <rendering/RenderScene.hpp>
 #include <rendering/RenderShadowMap.hpp>
 #include <rendering/RenderGlobalState.hpp>
 

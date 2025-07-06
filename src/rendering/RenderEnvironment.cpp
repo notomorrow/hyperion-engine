@@ -2,7 +2,6 @@
 
 #include <rendering/RenderEnvironment.hpp>
 #include <rendering/DirectionalLightShadowRenderer.hpp>
-#include <rendering/RenderScene.hpp>
 #include <rendering/RenderMesh.hpp>
 #include <rendering/RenderView.hpp>
 #include <rendering/Deferred.hpp>

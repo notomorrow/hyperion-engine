@@ -31,7 +31,6 @@ namespace hyperion {
 using RerenderShadowsSemaphore = Semaphore<int32, SemaphoreDirection::WAIT_FOR_POSITIVE, threading::AtomicSemaphoreImpl<int32, SemaphoreDirection::WAIT_FOR_POSITIVE>>;
 
 class RenderCamera;
-class RenderScene;
 class RenderWorld;
 class RenderLight;
 class View;

@@ -7,7 +7,6 @@
 #include <rendering/RenderEnvironment.hpp>
 #include <rendering/RenderEnvProbe.hpp>
 #include <rendering/RenderCamera.hpp>
-#include <rendering/RenderScene.hpp>
 #include <rendering/RenderEnvGrid.hpp>
 #include <rendering/RenderLight.hpp>
 #include <rendering/RenderGroup.hpp>

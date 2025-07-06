@@ -19,7 +19,6 @@ namespace hyperion {
 class Light;
 class EnvProbe;
 class Scene;
-class RenderScene;
 class RenderShadowMap;
 class RenderLight;
 

@@ -3,7 +3,6 @@
 #include <rendering/FullScreenPass.hpp>
 #include <rendering/RenderGroup.hpp>
 #include <rendering/RenderCamera.hpp>
-#include <rendering/RenderScene.hpp>
 #include <rendering/RenderWorld.hpp>
 #include <rendering/RenderMesh.hpp>
 #include <rendering/RenderTexture.hpp>

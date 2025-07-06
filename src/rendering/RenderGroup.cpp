@@ -4,7 +4,6 @@
 #include <rendering/RenderGlobalState.hpp>
 #include <rendering/GBuffer.hpp>
 #include <rendering/Deferred.hpp>
-#include <rendering/RenderScene.hpp>
 #include <rendering/RenderCamera.hpp>
 #include <rendering/RenderMesh.hpp>
 #include <rendering/RenderMaterial.hpp>

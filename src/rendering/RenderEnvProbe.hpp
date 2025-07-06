@@ -20,7 +20,6 @@ class EnvProbe;
 class RenderEnvProbe;
 class Texture;
 class RenderCamera;
-class RenderScene;
 class RenderShadowMap;
 class RenderView;
 

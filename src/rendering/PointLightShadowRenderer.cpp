@@ -3,7 +3,6 @@
 #include <rendering/PointLightShadowRenderer.hpp>
 #include <rendering/RenderEnvironment.hpp>
 #include <rendering/RenderLight.hpp>
-#include <rendering/RenderScene.hpp>
 #include <rendering/RenderCamera.hpp>
 #include <rendering/RenderWorld.hpp>
 #include <rendering/RenderEnvProbe.hpp>

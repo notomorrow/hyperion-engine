@@ -25,7 +25,6 @@
 
 #include <rendering/RenderEnvironment.hpp>
 #include <rendering/RenderWorld.hpp>
-#include <rendering/RenderScene.hpp>
 #include <rendering/RenderView.hpp>
 
 #include <core/profiling/ProfileScope.hpp>
@@ -223,8 +222,6 @@ void World::Init()
                 view->AddScene(scene);
             }
         }
-
-        m_renderResource->AddScene(TResourceHandle<RenderScene>(scene->GetRenderResource()));
     }
 
     m_renderResource->IncRef();
@@ -580,8 +577,6 @@ void World::AddScene(const Handle<Scene>& scene)
                 view->AddScene(scene);
             }
         }
-
-        m_renderResource->AddScene(TResourceHandle<RenderScene>(scene->GetRenderResource()));
     }
 
     m_scenes.PushBack(scene);
@@ -612,8 +607,6 @@ bool World::RemoveScene(const Handle<Scene>& scene)
 
         if (IsReady())
         {
-            m_renderResource->RemoveScene(&scene->GetRenderResource());
-
             for (auto& it : m_subsystems)
             {
                 it.second->OnSceneDetached(scene);

@@ -2,7 +2,6 @@
 
 #include <rendering/RenderGlobalState.hpp>
 #include <rendering/RenderWorld.hpp>
-#include <rendering/RenderScene.hpp>
 #include <rendering/RenderCamera.hpp>
 #include <rendering/RenderSkeleton.hpp>
 #include <rendering/RenderLight.hpp>

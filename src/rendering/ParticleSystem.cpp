@@ -7,7 +7,6 @@
 #include <rendering/RenderEnvironment.hpp>
 #include <rendering/RenderableAttributes.hpp>
 #include <rendering/GBuffer.hpp>
-#include <rendering/RenderScene.hpp>
 #include <rendering/RenderWorld.hpp>
 #include <rendering/RenderCamera.hpp>
 #include <rendering/RenderMesh.hpp>
