@@ -444,7 +444,10 @@ RendererResult VulkanRenderBackend::Destroy()
 
 FrameBase* VulkanRenderBackend::GetCurrentFrame() const
 {
-    return m_instance->GetSwapchain()->GetCurrentFrame().Get();
+    FrameBase* frame = m_instance->GetSwapchain()->GetCurrentFrame().Get();
+    AssertDebug(frame != nullptr);
+
+    return frame;
 }
 
 FrameBase* VulkanRenderBackend::PrepareNextFrame()

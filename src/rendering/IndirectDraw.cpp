@@ -166,41 +166,47 @@ struct RENDER_COMMAND(CreateIndirectDrawStateBuffers)
 
     virtual RendererResult operator()() override
     {
-        FrameBase* frame = g_renderBackend->GetCurrentFrame();
+        // FrameBase* frame = g_renderBackend->GetCurrentFrame();
 
-        if (!ResizeIndirectDrawCommandsBuffer(frame, IndirectDrawState::initialCount, indirectBuffers[frame->GetFrameIndex()], stagingBuffers[frame->GetFrameIndex()]))
-        {
-            HYP_FAIL("Failed to create indirect draw commands buffer!");
-        }
+        // if (!ResizeIndirectDrawCommandsBuffer(frame, IndirectDrawState::initialCount, indirectBuffers[frame->GetFrameIndex()], stagingBuffers[frame->GetFrameIndex()]))
+        // {
+        //     HYP_FAIL("Failed to create indirect draw commands buffer!");
+        // }
 
-        if (!ResizeInstancesBuffer(frame, IndirectDrawState::initialCount, instanceBuffers[frame->GetFrameIndex()], stagingBuffers[frame->GetFrameIndex()]))
-        {
-            HYP_FAIL("Failed to create instances buffer!");
-        }
+        // if (!ResizeInstancesBuffer(frame, IndirectDrawState::initialCount, instanceBuffers[frame->GetFrameIndex()], stagingBuffers[frame->GetFrameIndex()]))
+        // {
+        //     HYP_FAIL("Failed to create instances buffer!");
+        // }
 
-        return {};
+        // return {};
 
-        //         for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
-        //         {
-        //             FrameRef frame = g_renderBackend->MakeFrame(frameIndex);
+        UniquePtr<SingleTimeCommands> singleTimeCommands = g_renderBackend->GetSingleTimeCommands();
 
-        //             if (!ResizeIndirectDrawCommandsBuffer(frame, IndirectDrawState::initialCount, indirectBuffers[frameIndex], stagingBuffers[frameIndex]))
-        //             {
-        //                 HYP_FAIL("Failed to create indirect draw commands buffer!");
-        //             }
+        singleTimeCommands->Push([&](CmdList& cmd) -> RendererResult
+            {
+                for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
+                {
+                    FrameRef frame = g_renderBackend->MakeFrame(frameIndex);
 
-        //             if (!ResizeInstancesBuffer(frame, IndirectDrawState::initialCount, instanceBuffers[frameIndex], stagingBuffers[frameIndex]))
-        //             {
-        //                 HYP_FAIL("Failed to create instances buffer!");
-        //             }
+                    if (!ResizeIndirectDrawCommandsBuffer(frame, IndirectDrawState::initialCount, indirectBuffers[frameIndex], stagingBuffers[frameIndex]))
+                    {
+                        HYP_FAIL("Failed to create indirect draw commands buffer!");
+                    }
 
-        //             cmd.Concat(std::move(frame->GetCommandList()));
+                    if (!ResizeInstancesBuffer(frame, IndirectDrawState::initialCount, instanceBuffers[frameIndex], stagingBuffers[frameIndex]))
+                    {
+                        HYP_FAIL("Failed to create instances buffer!");
+                    }
 
-        //             HYPERION_ASSERT_RESULT(frame->Destroy());
-        //         }
-        //     });
+                    cmd.Concat(std::move(frame->GetCommandList()));
 
-        // return commands.Execute();
+                    HYPERION_ASSERT_RESULT(frame->Destroy());
+                }
+
+                return {};
+            });
+
+        return singleTimeCommands->Execute();
     }
 };
 

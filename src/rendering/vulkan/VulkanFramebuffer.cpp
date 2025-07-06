@@ -57,22 +57,28 @@ RendererResult VulkanAttachmentMap::Create()
     // Transition image layout immediately on creation
     if (imagesToTransition.Any())
     {
-        FrameBase* frame = GetRenderBackend()->GetCurrentFrame();
-        CmdList& cmd = frame->GetCommandList();
+        UniquePtr<SingleTimeCommands> singleTimeCommands = g_renderBackend->GetSingleTimeCommands();
 
-        for (const VulkanImageRef& image : imagesToTransition)
-        {
-            HYP_GFX_ASSERT(image.IsValid());
+        singleTimeCommands->Push([&](CmdList& cmd) -> RendererResult
+            {
+                for (const VulkanImageRef& image : imagesToTransition)
+                {
+                    HYP_GFX_ASSERT(image.IsValid());
 
-            if (framebuffer->GetRenderPass()->GetStage() == RenderPassStage::PRESENT)
-            {
-                cmd.Add<InsertBarrier>(image, RS_PRESENT);
-            }
-            else
-            {
-                cmd.Add<InsertBarrier>(image, RS_SHADER_RESOURCE);
-            }
-        }
+                    if (framebuffer->GetRenderPass()->GetStage() == RenderPassStage::PRESENT)
+                    {
+                        cmd.Add<InsertBarrier>(image, RS_PRESENT);
+                    }
+                    else
+                    {
+                        cmd.Add<InsertBarrier>(image, RS_SHADER_RESOURCE);
+                    }
+                }
+
+                return {};
+            });
+
+        HYPERION_BUBBLE_ERRORS(singleTimeCommands->Execute());
     }
 
     return {};
