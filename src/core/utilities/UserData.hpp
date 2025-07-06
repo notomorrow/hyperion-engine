@@ -1,6 +1,6 @@
-#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
+#pragma once
 
 #include <core/utilities/ValueStorage.hpp>
 
@@ -125,4 +125,3 @@ template <SizeType Size, SizeType Alignment = alignof(ubyte)>
 using UserData = utilities::UserData<Size, Alignment>;
 
 } // namespace hyperion
-

@@ -1,5 +1,4 @@
 #pragma once
-
 #include <core/Defines.hpp>
 
 #include <Game.hpp>

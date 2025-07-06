@@ -1,6 +1,6 @@
-#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
+#pragma once
 
 #include <core/threading/TaskThread.hpp>
 
@@ -19,4 +19,3 @@ HYP_API void SetGlobalStreamingThread(const RC<StreamingThread>& streamingThread
 HYP_API const RC<StreamingThread>& GetGlobalStreamingThread();
 
 } // namespace hyperion
-

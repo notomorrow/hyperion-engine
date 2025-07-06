@@ -1,6 +1,6 @@
-#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
+#pragma once
 
 #include <asset/AssetLoader.hpp>
 
@@ -187,10 +187,9 @@ public:
     HYP_METHOD()
     Result Save() const;
 
-    
 private:
     void Init() override;
-    
+
     HYP_FIELD(Property = "UUID", Serialize = true)
     UUID m_uuid;
 
@@ -293,10 +292,9 @@ public:
     HYP_METHOD(Scriptable)
     Name GetUniqueAssetName(Name baseName) const;
 
-    
     Delegate<void, AssetObject*> OnAssetObjectAdded;
     Delegate<void, AssetObject*> OnAssetObjectRemoved;
-    
+
 private:
     void Init() override;
 
@@ -369,9 +367,8 @@ public:
     HYP_METHOD()
     Handle<AssetPackage> GetPackageFromPath(const UTF8StringView& path, bool createIfNotExist = true);
 
-    
     Delegate<void, const Handle<AssetPackage>&> OnPackageAdded;
-    
+
 private:
     void Init() override;
 

@@ -1,6 +1,6 @@
-#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
+#pragma once
 
 #include <core/containers/Array.hpp>
 #include <core/containers/ContainerBase.hpp>
@@ -1317,4 +1317,3 @@ using containers::HashTable_DynamicNodeAllocator;
 using containers::HashTable_PooledNodeAllocator;
 
 } // namespace hyperion
-

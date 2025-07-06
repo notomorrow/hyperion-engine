@@ -1,6 +1,6 @@
-#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
+#pragma once
 
 #include <Config.hpp>
 #include <Types.hpp>
@@ -142,11 +142,11 @@ public:
 
     HYP_API void RenderNextFrame();
     HYP_API void RequestStop();
-    
+
     void FinalizeStop();
-    
+
     Delegate<void, RenderStats> OnRenderStatsUpdated;
-    
+
 private:
     HYP_API void Init() override;
 

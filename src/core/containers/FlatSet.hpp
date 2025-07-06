@@ -1,6 +1,6 @@
-#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
+#pragma once
 
 #include <core/containers/ContainerBase.hpp>
 #include <core/containers/SortedArray.hpp>
@@ -339,4 +339,3 @@ template <class T>
 using FlatSet = containers::FlatSet<T>;
 
 } // namespace hyperion
-

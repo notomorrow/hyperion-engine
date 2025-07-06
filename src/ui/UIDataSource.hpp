@@ -1,6 +1,6 @@
-#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
+#pragma once
 
 #include <core/Defines.hpp>
 
@@ -330,7 +330,7 @@ public:
         }
 
         // Assert(value.Is<T>(), "Cannot add object not of type %s to data source", TypeName<T>().Data())
-        
+
         auto it = m_values.FindIf([&uuid](const auto& item)
             {
                 return item.GetUUID() == uuid;

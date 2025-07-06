@@ -1,4 +1,3 @@
-#pragma once
 //
 // Copyright (c) 2017-2022 Advanced Micro Devices, Inc. All rights reserved.
 //
@@ -21,6 +20,7 @@
 // THE SOFTWARE.
 //
 
+#pragma once
 
 #ifdef _WIN32
 
@@ -96,4 +96,3 @@ include all public interface declarations. Example:
 #ifdef _MSVC_LANG
 #pragma warning(pop)
 #endif
-

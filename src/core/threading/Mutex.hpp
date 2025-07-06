@@ -1,9 +1,9 @@
-#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
+#pragma once
 
 #ifdef HYP_UNIX
-    #include <pthread.h>
+#include <pthread.h>
 #endif
 
 #include <mutex>
@@ -75,4 +75,3 @@ private:
 using threading::Mutex;
 
 } // namespace hyperion
-

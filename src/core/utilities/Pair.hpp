@@ -1,6 +1,6 @@
-#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
+#pragma once
 
 #include <core/Traits.hpp>
 
@@ -897,4 +897,3 @@ template <class K, class V>
 using Pair = utilities::Pair<K, V>;
 
 } // namespace hyperion
-

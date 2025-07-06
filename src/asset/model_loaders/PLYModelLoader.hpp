@@ -1,6 +1,6 @@
-#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
+#pragma once
 
 #include <asset/Assets.hpp>
 #include <scene/Node.hpp>
@@ -13,7 +13,7 @@ HYP_CLASS(NoScriptBindings)
 class PLYModelLoader : public AssetLoaderBase
 {
     HYP_OBJECT_BODY(PLYModelLoader);
-    
+
 public:
     enum PLYType
     {

@@ -1,6 +1,6 @@
-#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
+#pragma once
 
 #include <core/functional/ScriptableDelegateFwd.hpp>
 #include <core/functional/Delegate.hpp>
@@ -219,4 +219,3 @@ public:
 
 } // namespace functional
 } // namespace hyperion
-

@@ -1,5 +1,4 @@
 #pragma once
-
 #include <input/Mouse.hpp>
 #include <input/Keyboard.hpp>
 
@@ -149,4 +148,3 @@ using sys::SystemEventType;
 using sys::SystemWindowEventType;
 
 } // namespace hyperion
-

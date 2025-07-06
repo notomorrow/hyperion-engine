@@ -1,6 +1,6 @@
-#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
+#pragma once
 
 #include <core/Handle.hpp>
 
@@ -231,7 +231,7 @@ public:
     BoundingBox GetAABB() const;
 
     BoundingSphere GetBoundingSphere() const;
-    
+
 protected:
     void Init() override;
     void UpdateRenderProxy(IRenderProxy* proxy) override;

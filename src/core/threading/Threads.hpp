@@ -1,6 +1,6 @@
-#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
+#pragma once
 
 #include <core/Defines.hpp>
 
@@ -69,4 +69,3 @@ HYP_API extern const StaticThreadId g_renderThread;
 HYP_API extern const StaticThreadId g_gameThread;
 
 } // namespace hyperion
-

@@ -1,6 +1,6 @@
-#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
+#pragma once
 
 #include <core/containers/Array.hpp>
 #include <core/Defines.hpp>
@@ -152,4 +152,3 @@ template <class T>
 using Stack = containers::Stack<T>;
 
 } // namespace hyperion
-

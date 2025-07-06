@@ -1,6 +1,6 @@
-#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
+#pragma once
 
 #include <core/math/Vector2.hpp>
 #include <core/math/Vector4.hpp>
@@ -281,4 +281,3 @@ void AtlasPacker<AtlasElement>::MergeSkyline()
 }
 
 } // namespace hyperion
-

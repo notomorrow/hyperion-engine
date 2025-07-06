@@ -1,6 +1,6 @@
-#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
+#pragma once
 
 #include <Constants.hpp>
 #include <Types.hpp>
@@ -38,4 +38,3 @@ using utilities::DeferredScope;
 } // namespace hyperion
 
 #define HYP_DEFER(...) DeferredScope HYP_UNIQUE_NAME(scope)([&] __VA_ARGS__)
-

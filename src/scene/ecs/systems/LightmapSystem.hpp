@@ -1,6 +1,6 @@
-#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
+#pragma once
 
 #include <scene/ecs/System.hpp>
 #include <scene/ecs/components/LightmapVolumeComponent.hpp>

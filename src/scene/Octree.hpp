@@ -1,6 +1,6 @@
-#pragma once
 /* Copyright (c) 2024-2025 No Tomorrow Games. All rights reserved. */
 
+#pragma once
 
 #include <util/octree/Octree.hpp>
 
@@ -122,4 +122,3 @@ private:
 };
 
 } // namespace hyperion
-

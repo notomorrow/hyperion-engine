@@ -1,5 +1,4 @@
 #pragma once
-
 #include <core/math/Vector2.hpp>
 #include <core/utilities/EnumFlags.hpp>
 
@@ -111,4 +110,3 @@ struct InputMouseLockScope
 };
 
 } // namespace hyperion
-

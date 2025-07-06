@@ -1,6 +1,6 @@
-#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
+#pragma once
 
 #define NUM_KEYBOARD_KEYS 350
 #define NUM_MOUSE_BUTTONS 3

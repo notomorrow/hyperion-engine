@@ -1,6 +1,6 @@
-#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
+#pragma once
 
 #include <core/containers/TypeMap.hpp>
 #include <core/containers/FlatMap.hpp>
@@ -197,4 +197,3 @@ public:
 
 } // namespace serialization
 } // namespace hyperion
-

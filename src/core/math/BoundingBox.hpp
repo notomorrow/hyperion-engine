@@ -1,6 +1,6 @@
-#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
+#pragma once
 
 #include <core/math/Vector3.hpp>
 #include <core/math/Transform.hpp>
@@ -180,4 +180,3 @@ struct Formatter<StringType, BoundingBox>
 } // namespace utilities
 
 } // namespace hyperion
-

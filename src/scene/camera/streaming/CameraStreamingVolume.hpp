@@ -1,6 +1,6 @@
-#pragma once
 /* Copyright (c) 2025 No Tomorrow Games. All rights reserved. */
 
+#pragma once
 
 #include <streaming/StreamingVolume.hpp>
 
@@ -28,12 +28,12 @@ public:
         {
             return;
         }
-        
+
         m_aabb = aabb;
 
         NotifyUpdate();
     }
-    
+
 protected:
     HYP_METHOD()
     virtual StreamingVolumeShape GetShape_Impl() const override

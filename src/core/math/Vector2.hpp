@@ -1,6 +1,6 @@
-#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
+#pragma once
 
 #include <HashCode.hpp>
 
@@ -775,4 +775,3 @@ struct Formatter<StringType, math::Vec2<T>>
 } // namespace hyperion
 
 HYP_DEF_STL_HASH(hyperion::Vector2);
-

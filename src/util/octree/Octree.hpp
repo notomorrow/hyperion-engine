@@ -1,6 +1,6 @@
-#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
+#pragma once
 
 #include <core/containers/Array.hpp>
 #include <core/containers/FixedArray.hpp>
@@ -435,4 +435,3 @@ private:
 #include <util/octree/Octree.inl>
 
 } // namespace hyperion
-

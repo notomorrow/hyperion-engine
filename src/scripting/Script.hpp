@@ -1,5 +1,4 @@
 #pragma once
-
 #include <core/containers/String.hpp>
 
 #include <core/utilities/EnumFlags.hpp>

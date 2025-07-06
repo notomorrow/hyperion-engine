@@ -1,6 +1,6 @@
-#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
+#pragma once
 
 #include <core/utilities/UUID.hpp>
 #include <core/utilities/EnumFlags.hpp>
@@ -108,4 +108,3 @@ struct FBOMObjectLibrary
 
 } // namespace serialization
 } // namespace hyperion
-

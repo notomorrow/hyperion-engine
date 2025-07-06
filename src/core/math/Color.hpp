@@ -1,6 +1,6 @@
-#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
+#pragma once
 
 #include <core/math/Vector4.hpp>
 
@@ -233,4 +233,3 @@ struct Formatter<StringType, Color>
 } // namespace hyperion
 
 HYP_DEF_STL_HASH(hyperion::Color);
-

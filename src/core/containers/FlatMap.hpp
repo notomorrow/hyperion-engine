@@ -1,6 +1,6 @@
-#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
+#pragma once
 
 #include <core/containers/FlatSet.hpp>
 #include <core/containers/Array.hpp>
@@ -451,4 +451,3 @@ template <class Key, class Value>
 using FlatMap = containers::FlatMap<Key, Value>;
 
 } // namespace hyperion
-

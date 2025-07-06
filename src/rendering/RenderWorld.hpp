@@ -1,6 +1,6 @@
-#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
+#pragma once
 
 #include <core/math/Vector4.hpp>
 #include <core/math/Matrix4.hpp>
@@ -122,4 +122,3 @@ struct ResourceMemoryPoolInitInfo<RenderWorld> : MemoryPoolInitInfo<RenderWorld>
 };
 
 } // namespace hyperion
-

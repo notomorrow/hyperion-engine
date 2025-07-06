@@ -1,5 +1,3 @@
-#pragma once
-
 /*
  * OpenSimplex (Simplectic) Noise in C.
  * Ported to C from Kurt Spencer's java implementation by Stephen M. Cameron
@@ -19,15 +17,17 @@
  *   will be the same when ported to other languages.
  */
 
+#pragma once
+
 #if ((__GNUC_STDC_INLINE__) || (__STDC_VERSION__ >= 199901L))
-    #include <stdint.h>
-    #define INLINE inline
+#include <stdint.h>
+#define INLINE inline
 #elif (defined(_MSC_VER) || defined(__GNUC_GNU_INLINE__))
-    #include <stdint.h>
-    #define INLINE __inline
+#include <stdint.h>
+#define INLINE __inline
 #else
-    /* ANSI C doesn't have inline or stdint.h. */
-    #define INLINE
+/* ANSI C doesn't have inline or stdint.h. */
+#define INLINE
 #endif
 
 #ifdef __cplusplus
@@ -46,4 +46,3 @@ extern "C"
 #ifdef __cplusplus
 }
 #endif
-

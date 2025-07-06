@@ -1,6 +1,6 @@
-#pragma once
 /* Copyright (c) 2025 No Tomorrow Games. All rights reserved. */
 
+#pragma once
 
 #include <core/Handle.hpp>
 
@@ -33,4 +33,3 @@ extern ShaderCompiler* g_shaderCompiler;
 #endif
 
 } // namespace hyperion
-

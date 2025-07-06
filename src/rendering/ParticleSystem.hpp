@@ -1,6 +1,6 @@
-#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
+#pragma once
 
 #include <Constants.hpp>
 
@@ -75,7 +75,7 @@ public:
     {
         return BoundingSphere(m_params.origin, m_params.radius);
     }
-    
+
 private:
     void Init() override;
 

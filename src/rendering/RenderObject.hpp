@@ -1,6 +1,6 @@
-#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
+#pragma once
 
 #include <core/Defines.hpp>
 
@@ -1238,4 +1238,3 @@ static inline void SafeRelease(HashSet<RenderObjectHandle_Strong<T>, KeyBy>&& ha
 }
 
 } // namespace hyperion
-

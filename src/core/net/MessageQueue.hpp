@@ -1,6 +1,6 @@
-#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
+#pragma once
 
 #include <core/threading/AtomicVar.hpp>
 #include <core/threading/Mutex.hpp>
@@ -63,4 +63,3 @@ private:
 using net::MessageQueue;
 
 } // namespace hyperion
-

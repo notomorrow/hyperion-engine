@@ -1,6 +1,6 @@
-#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
+#pragma once
 
 #include <core/Defines.hpp>
 
@@ -1911,4 +1911,3 @@ template <class T, class CountType = AtomicVar<uint32>>
 using EnableRefCountedPtrFromThis = memory::EnableRefCountedPtrFromThis<T, CountType>;
 
 } // namespace hyperion
-

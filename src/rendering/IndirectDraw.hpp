@@ -1,5 +1,6 @@
-#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
+
+#pragma once
 
 #include <core/containers/FixedArray.hpp>
 #include <core/containers/Array.hpp>
@@ -130,4 +131,3 @@ private:
 };
 
 } // namespace hyperion
-

@@ -1,6 +1,6 @@
-#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
+#pragma once
 
 #include <core/object/HypObject.hpp>
 
@@ -151,7 +151,7 @@ private:
 
     HYP_FIELD(Serialize = true)
     HashMap<LightmapTextureType, Handle<Texture>> m_atlasTextures;
-    
+
     HYP_FIELD(Serialize = true)
     LightmapVolumeAtlas m_atlas;
 };

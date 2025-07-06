@@ -1,6 +1,6 @@
-#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
+#pragma once
 
 #include <core/Defines.hpp>
 
@@ -126,4 +126,3 @@ using StaticArray = containers::StaticArray<T, Size>;
 using containers::ConcatStaticArrays;
 
 } // namespace hyperion
-

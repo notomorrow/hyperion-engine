@@ -1,6 +1,6 @@
-#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
+#pragma once
 
 #include <core/math/Transform.hpp>
 #include <Types.hpp>
@@ -30,4 +30,3 @@ struct HYP_API Keyframe
 };
 
 } // namespace hyperion
-

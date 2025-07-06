@@ -1,6 +1,4 @@
 #pragma once
-
-
 #include <Types.hpp>
 
 namespace hyperion {
@@ -15,4 +13,3 @@ enum class HypClassAllocationMethod : uint8
 };
 
 } // namespace hyperion
-

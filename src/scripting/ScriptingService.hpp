@@ -1,5 +1,4 @@
 #pragma once
-
 #include <scripting/Script.hpp>
 
 #include <core/containers/FlatMap.hpp>
@@ -65,4 +64,3 @@ private:
 };
 
 } // namespace hyperion
-

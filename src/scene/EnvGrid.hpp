@@ -1,6 +1,6 @@
-#pragma once
 /* Copyright (c) 2024-2025 No Tomorrow Games. All rights reserved. */
 
+#pragma once
 
 #include <core/config/Config.hpp>
 
@@ -191,7 +191,7 @@ public:
     void Translate(const BoundingBox& aabb, const Vec3f& translation);
 
     virtual void UpdateRenderProxy(IRenderProxy* proxy) override;
-    
+
 private:
     virtual void OnAttachedToNode(Node* node) override;
     virtual void OnDetachedFromNode(Node* node) override;

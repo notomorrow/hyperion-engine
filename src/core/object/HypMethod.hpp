@@ -1,6 +1,6 @@
-#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
+#pragma once
 
 #include <core/object/HypData.hpp>
 #include <core/object/HypClassAttribute.hpp>
@@ -497,4 +497,3 @@ private:
 #undef HYP_METHOD_MEMBER_FN_WRAPPER
 
 } // namespace hyperion
-

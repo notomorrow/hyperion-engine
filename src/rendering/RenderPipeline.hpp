@@ -1,6 +1,6 @@
-#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
+#pragma once
 
 #include <rendering/RenderStructs.hpp>
 #include <rendering/RenderDescriptorSet.hpp>
@@ -16,4 +16,3 @@
 namespace hyperion {
 
 } // namespace hyperion
-

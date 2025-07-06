@@ -1,6 +1,6 @@
-#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
+#pragma once
 
 #include <core/containers/Array.hpp>
 #include <core/containers/String.hpp>
@@ -697,7 +697,7 @@ protected:
 #endif
 
     Type m_type = Type::NODE;
-    
+
     EnumFlags<NodeFlags> m_flags = NodeFlags::NONE;
 
     HYP_FIELD(Property = "Name", Serialize = true, Editor = true, Label = "Name", Description = "The name of the node.")

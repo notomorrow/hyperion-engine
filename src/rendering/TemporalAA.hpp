@@ -1,6 +1,6 @@
-#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
+#pragma once
 
 #include <scene/Scene.hpp>
 
@@ -67,4 +67,3 @@ private:
 };
 
 } // namespace hyperion
-

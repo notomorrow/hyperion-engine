@@ -1,6 +1,6 @@
-#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
+#pragma once
 
 #include <asset/AssetBatch.hpp>
 
@@ -15,4 +15,3 @@ extern "C"
         AssetMap* map;
     };
 } // extern "C"
-

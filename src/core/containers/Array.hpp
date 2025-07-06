@@ -1,6 +1,6 @@
-#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
+#pragma once
 
 #include <core/containers/ContainerBase.hpp>
 #include <core/containers/FixedArray.hpp>
@@ -1619,8 +1619,8 @@ auto Map(ContainerType&& container, Func&& func)
 } // namespace containers
 
 using containers::Array;
-using containers::Map;
 using containers::Filter;
+using containers::Map;
 
 // traits
 template <class T>
@@ -1642,4 +1642,3 @@ struct IsArray<Array<T, AllocatorType>>
 };
 
 } // namespace hyperion
-

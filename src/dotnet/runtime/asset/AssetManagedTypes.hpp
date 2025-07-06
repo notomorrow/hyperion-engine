@@ -1,6 +1,6 @@
-#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
+#pragma once
 
 #include <type_traits>
 
@@ -11,4 +11,3 @@ extern "C"
 } // extern "C"
 
 } // namespace hyperion
-

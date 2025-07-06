@@ -1,6 +1,6 @@
-#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
+#pragma once
 
 #pragma region Compiler and Platform Switches
 
@@ -499,4 +499,3 @@
 #define HYP_FIELD(...)
 
 #pragma endregion
-

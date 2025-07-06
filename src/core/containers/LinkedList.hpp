@@ -1,6 +1,6 @@
-#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
+#pragma once
 
 #include <core/containers/ContainerBase.hpp>
 #include <core/utilities/ValueStorage.hpp>
@@ -630,4 +630,3 @@ template <class T>
 using LinkedList = containers::LinkedList<T>;
 
 } // namespace hyperion
-

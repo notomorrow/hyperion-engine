@@ -1,6 +1,6 @@
-#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
+#pragma once
 
 #include <core/Name.hpp>
 
@@ -1008,4 +1008,3 @@ protected:
 #define HYP_DESCRIPTOR_SSBO(setName, name, count, size, isDynamic) HYP_DESCRIPTOR_SSBO_COND(setName, name, count, size, isDynamic, true)
 #define HYP_DESCRIPTOR_ACCELERATION_STRUCTURE(setName, name, count) HYP_DESCRIPTOR_ACCELERATION_STRUCTURE_COND(setName, name, count, true)
 #define HYP_DESCRIPTOR_SAMPLER(setName, name, count) HYP_DESCRIPTOR_SAMPLER_COND(setName, name, count, true)
-

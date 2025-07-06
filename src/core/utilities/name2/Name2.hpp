@@ -1,5 +1,4 @@
 #pragma once
-
 #include <core/Defines.hpp>
 #include <Types.hpp>
 
@@ -13,4 +12,3 @@ struct SName
 
 } // namespace utilities
 } // namespace hyperion
-

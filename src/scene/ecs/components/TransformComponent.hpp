@@ -1,6 +1,6 @@
-#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
+#pragma once
 
 #include <core/math/Transform.hpp>
 
@@ -28,4 +28,3 @@ struct TransformComponent
 static_assert(sizeof(TransformComponent) == 112, "TransformComponent must be 112 bytes to match C# struct size");
 
 } // namespace hyperion
-

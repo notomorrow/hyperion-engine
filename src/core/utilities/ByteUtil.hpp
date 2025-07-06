@@ -1,6 +1,6 @@
-#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
+#pragma once
 
 #include <core/math/MathUtil.hpp>
 #include <core/math/Vector4.hpp>
@@ -173,4 +173,3 @@ using utilities::BitCast;
 using utilities::ByteUtil;
 
 } // namespace hyperion
-

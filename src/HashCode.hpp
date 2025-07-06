@@ -1,6 +1,6 @@
-#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
+#pragma once
 
 #include <Types.hpp>
 #include <Constants.hpp>
@@ -261,4 +261,3 @@ struct hash<hyperion::HashCode>
 };
 
 } // namespace std
-

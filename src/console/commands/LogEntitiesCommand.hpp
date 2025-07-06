@@ -1,7 +1,6 @@
-#pragma once
 /* Copyright (c) 2024-2025 No Tomorrow Games. All rights reserved. */
 
-
+#pragma once
 #include <console/ConsoleCommand.hpp>
 
 namespace hyperion {

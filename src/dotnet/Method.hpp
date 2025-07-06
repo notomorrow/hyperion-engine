@@ -1,6 +1,6 @@
-#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
+#pragma once
 
 #include <dotnet/Attribute.hpp>
 #include <dotnet/Helpers.hpp>
@@ -71,4 +71,3 @@ private:
 };
 
 } // namespace hyperion::dotnet
-

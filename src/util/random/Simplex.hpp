@@ -1,6 +1,6 @@
-#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
+#pragma once
 
 #include <thirdparty/OpenSimplexNoise.hpp>
 
@@ -16,4 +16,3 @@ struct SimplexNoiseData
     double amplitudes[OSN_OCTAVE_COUNT];
 };
 } // namespace hyperion
-

@@ -1,5 +1,4 @@
 #pragma once
-
 #include <core/Defines.hpp>
 
 // just a quick BMP writer for testing
@@ -20,4 +19,3 @@ public:
 };
 
 } // namespace hyperion
-

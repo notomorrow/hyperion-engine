@@ -1,6 +1,6 @@
-#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
+#pragma once
 
 #include <core/utilities/TypeId.hpp>
 #include <core/utilities/UniqueID.hpp>
@@ -189,4 +189,3 @@ struct Formatter<StringType, ObjIdBase>
 } // namespace utilities
 
 } // namespace hyperion
-

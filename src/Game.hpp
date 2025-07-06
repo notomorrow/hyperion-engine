@@ -1,6 +1,6 @@
-#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
+#pragma once
 
 #include <GameCounter.hpp>
 
@@ -64,10 +64,10 @@ public:
 
     virtual void Update(float delta) final;
     virtual void HandleEvent(SystemEvent&& event) final;
-    
+
 protected:
     virtual void Init() override;
-    
+
     virtual void Logic(float delta) = 0;
     virtual void OnInputEvent(const SystemEvent& event);
 

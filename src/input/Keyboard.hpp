@@ -1,5 +1,4 @@
 #pragma once
-
 #include <core/Defines.hpp>
 
 #include <Types.hpp>
@@ -102,4 +101,3 @@ struct KeyboardEvent
 };
 
 } // namespace hyperion
-

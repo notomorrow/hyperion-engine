@@ -1,7 +1,6 @@
-#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-
+#pragma once
 #ifdef HYP_SDL
 #include <SDL2/SDL_vulkan.h>
 #include <SDL2/SDL.h>
@@ -165,7 +164,7 @@ public:
     {
         return m_name;
     }
-    
+
     HYP_FORCE_INLINE GlobalConfig& GetConfiguration()
     {
         return m_configuration;

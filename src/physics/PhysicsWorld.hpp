@@ -1,6 +1,6 @@
-#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
+#pragma once
 
 #include <physics/Adapter.hpp>
 #include <physics/RigidBody.hpp>
@@ -134,4 +134,3 @@ using PhysicsWorld = physics::PhysicsWorld<physics::NullPhysicsAdapter>;
 } // namespace hyperion
 
 #endif
-

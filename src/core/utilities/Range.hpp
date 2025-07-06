@@ -1,6 +1,6 @@
-#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
+#pragma once
 
 #include <core/math/MathUtil.hpp>
 
@@ -170,4 +170,3 @@ private:
 using utilities::Range;
 
 } // namespace hyperion
-

@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
 #pragma once
-
 #include <core/Handle.hpp>
 #include <core/Defines.hpp>
 

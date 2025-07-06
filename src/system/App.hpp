@@ -1,5 +1,4 @@
 #pragma once
-
 #include <core/Defines.hpp>
 
 #include <core/Handle.hpp>
@@ -48,4 +47,3 @@ private:
 using sys::App;
 
 } // namespace hyperion
-

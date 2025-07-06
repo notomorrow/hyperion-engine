@@ -1,6 +1,6 @@
-#pragma once
-
 // Forward declaration for Formatter struct (for specialization)
+
+#pragma once
 
 namespace hyperion {
 namespace utilities {
@@ -17,4 +17,3 @@ struct Formatter;
 // keep VA_ARGS in the expression in case they have side-effects
 #define HYP_FORMAT(fmt, ...) (__VA_ARGS__ __VA_OPT__(, ) fmt)
 #endif
-

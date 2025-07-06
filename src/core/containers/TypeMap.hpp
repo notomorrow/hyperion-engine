@@ -1,6 +1,6 @@
-#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
+#pragma once
 
 #include <core/containers/ContainerBase.hpp>
 #include <core/containers/FlatMap.hpp>
@@ -280,4 +280,3 @@ template <class Value>
 using TypeMap = containers::TypeMap<Value>;
 
 } // namespace hyperion
-

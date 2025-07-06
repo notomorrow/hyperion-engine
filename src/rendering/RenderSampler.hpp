@@ -1,7 +1,6 @@
-#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-
+#pragma once
 #include <rendering/RenderObject.hpp>
 #include <rendering/RenderResult.hpp>
 #include <rendering/RenderStructs.hpp>
@@ -41,4 +40,3 @@ protected:
 };
 
 } // namespace hyperion
-

@@ -1,6 +1,6 @@
-#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
+#pragma once
 
 #include <core/utilities/TypeId.hpp>
 #include <core/utilities/Optional.hpp>
@@ -359,4 +359,3 @@ struct ComponentInterfaceRegistration<EntityTagComponent<Tag>, ShouldSerialize>
     }
 
 } // namespace hyperion
-

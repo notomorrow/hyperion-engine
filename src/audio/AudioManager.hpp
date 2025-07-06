@@ -1,6 +1,6 @@
-#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
+#pragma once
 
 #include <AL/al.h>
 #include <AL/alc.h>
@@ -51,4 +51,3 @@ private:
     ALCcontext* m_context;
 };
 } // namespace hyperion
-

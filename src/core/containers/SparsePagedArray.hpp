@@ -1,6 +1,6 @@
-#pragma once
 /* Copyright (c) 2025 No Tomorrow Games. All rights reserved. */
 
+#pragma once
 
 #include <core/containers/Array.hpp>
 #include <core/containers/Bitset.hpp>
@@ -657,4 +657,3 @@ template <class T, uint32 PageSize = 16>
 using SparsePagedArray = containers::SparsePagedArray<T, PageSize>;
 
 } // namespace hyperion
-

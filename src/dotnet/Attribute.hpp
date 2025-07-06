@@ -1,5 +1,4 @@
 #pragma once
-
 #include <core/memory/UniquePtr.hpp>
 
 #include <core/containers/Array.hpp>
@@ -88,4 +87,3 @@ private:
 };
 
 } // namespace hyperion::dotnet
-

@@ -1,6 +1,6 @@
-#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
+#pragma once
 
 #include <core/Defines.hpp>
 #include <core/utilities/Pair.hpp>
@@ -990,4 +990,3 @@ using containers::StaticString;
 
 #define HYP_STATIC_STRING(text) \
     ::hyperion::StaticString<sizeof(text)>(text)
-

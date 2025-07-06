@@ -1,5 +1,6 @@
-#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
+
+#pragma once
 
 #include <core/memory/ByteBuffer.hpp>
 #include <core/containers/String.hpp>
@@ -10,7 +11,7 @@ namespace rtc {
 class DataChannel;
 } // namespace rtc
 
-    #include <memory>
+#include <memory>
 
 class LibDataChannelRTCClient;
 
@@ -76,4 +77,3 @@ using LibDataChannelRTCDataChannel = NullRTCDataChannel;
 #endif
 
 } // namespace hyperion
-

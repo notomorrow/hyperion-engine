@@ -1,6 +1,6 @@
-#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
+#pragma once
 
 #include <core/containers/StaticString.hpp>
 #include <core/Defines.hpp>
@@ -361,4 +361,3 @@ struct HashedName
 };
 
 } // namespace hyperion
-

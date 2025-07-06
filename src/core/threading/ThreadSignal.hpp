@@ -1,5 +1,4 @@
 #pragma once
-
 #include <core/threading/AtomicVar.hpp>
 #include <core/threading/Thread.hpp>
 
@@ -48,4 +47,3 @@ struct ThreadSignal
 using threading::ThreadSignal;
 
 } // namespace hyperion
-

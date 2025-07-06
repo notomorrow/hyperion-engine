@@ -1,6 +1,6 @@
-#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
+#pragma once
 
 #include <core/memory/Memory.hpp>
 #include <core/memory/AnyRef.hpp>
@@ -1123,4 +1123,3 @@ using Variant = utilities::Variant<Types...>;
 using utilities::Visit;
 
 } // namespace hyperion
-

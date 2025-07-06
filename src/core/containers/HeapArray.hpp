@@ -1,6 +1,6 @@
-#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
+#pragma once
 
 #include <core/containers/ContainerBase.hpp>
 #include <core/Defines.hpp>
@@ -159,4 +159,3 @@ HeapArray<T, Sz>::~HeapArray()
 using containers::HeapArray;
 
 } // namespace hyperion
-

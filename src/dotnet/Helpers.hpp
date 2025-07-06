@@ -1,5 +1,4 @@
 #pragma once
-
 #include <core/Defines.hpp>
 
 #include <core/containers/String.hpp>
@@ -195,4 +194,3 @@ static inline void SetArgs_HypData(std::index_sequence<Indices...>, HypData* arr
 // NOLINTEND
 
 } // namespace hyperion::dotnet
-

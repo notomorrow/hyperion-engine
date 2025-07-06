@@ -1,6 +1,6 @@
-#pragma once
 /* Copyright (c) 2024-2025 No Tomorrow Games. All rights reserved. */
 
+#pragma once
 
 #include <core/object/HypObject.hpp>
 
@@ -210,7 +210,7 @@ public:
 
 protected:
     void Init() override;
-    
+
     void CollectLights(RenderProxyList& rpl);
     void CollectLightmapVolumes(RenderProxyList& rpl);
     void CollectEnvGrids(RenderProxyList& rpl);

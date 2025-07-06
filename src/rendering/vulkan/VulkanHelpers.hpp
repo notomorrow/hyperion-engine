@@ -1,7 +1,6 @@
-#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-
+#pragma once
 #include <rendering/vulkan/VulkanDevice.hpp>
 
 #include <rendering/RenderHelpers.hpp>
@@ -36,4 +35,3 @@ public:
 };
 
 } // namespace hyperion
-

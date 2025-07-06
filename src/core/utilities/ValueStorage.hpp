@@ -1,6 +1,6 @@
-#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
+#pragma once
 
 #include <core/memory/Memory.hpp>
 
@@ -181,4 +181,3 @@ struct alignas(Alignment) ValueStorage<T, Count, Alignment, std::enable_if_t<!st
 using utilities::ValueStorage;
 
 } // namespace hyperion
-

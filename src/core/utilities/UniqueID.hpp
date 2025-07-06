@@ -1,6 +1,6 @@
-#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
+#pragma once
 
 #include <core/Defines.hpp>
 
@@ -102,4 +102,3 @@ using utilities::UniqueID;
 } // namespace hyperion
 
 HYP_DEF_STL_HASH(hyperion::UniqueID);
-

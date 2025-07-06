@@ -1,7 +1,6 @@
-#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-
+#pragma once
 #include <core/utilities/Optional.hpp>
 #include <core/containers/Array.hpp>
 #include <Types.hpp>
@@ -59,4 +58,3 @@ static_assert(std::is_standard_layout_v<IndirectDrawCommand>, "IndirectDrawComma
 static_assert(sizeof(IndirectDrawCommand) == 20, "Verify size of struct in shader");
 
 } // namespace hyperion
-

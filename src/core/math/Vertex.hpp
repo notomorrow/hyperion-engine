@@ -1,6 +1,6 @@
-#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
+#pragma once
 
 #define MAX_BONE_WEIGHTS 4
 #define MAX_BONE_INDICES 4
@@ -551,4 +551,3 @@ static_assert(alignof(Vertex) == 16, "Vertex alignment is not 16 bytes, ensure s
 } // namespace hyperion
 
 HYP_DEF_STL_HASH(hyperion::Vertex);
-

@@ -1,6 +1,6 @@
-#pragma once
 /* Copyright (c) 2024-2025 No Tomorrow Games. All rights reserved. */
 
+#pragma once
 
 #include <core/object/HypClass.hpp>
 #include <core/object/HypStruct.hpp>
@@ -210,4 +210,3 @@ EnumType GetEnumMemberValue(WeakName memberName, EnumType errorValue = EnumType(
 }
 
 } // namespace hyperion
-

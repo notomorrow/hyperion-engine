@@ -1,5 +1,6 @@
-#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
+
+#pragma once
 
 #include <rtc/RTCClientList.hpp>
 #include <rtc/RTCServer.hpp>
@@ -35,4 +36,3 @@ private:
 };
 
 } // namespace hyperion
-

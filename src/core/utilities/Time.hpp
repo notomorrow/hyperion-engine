@@ -1,5 +1,4 @@
 #pragma once
-
 #include <core/Defines.hpp>
 
 #include <HashCode.hpp>
@@ -208,4 +207,3 @@ using utilities::Time;
 using utilities::TimeDiff;
 
 } // namespace hyperion
-

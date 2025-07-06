@@ -1,6 +1,6 @@
-#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
+#pragma once
 
 #include <core/utilities/TypeId.hpp>
 #include <core/Defines.hpp>
@@ -462,4 +462,3 @@ using memory::AnyRef;
 using memory::ConstAnyRef;
 
 } // namespace hyperion
-

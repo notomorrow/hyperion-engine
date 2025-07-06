@@ -1,5 +1,4 @@
 #pragma once
-
 #include <core/utilities/EnumFlags.hpp>
 
 namespace hyperion {
@@ -44,4 +43,3 @@ struct ClassTraits
 using utilities::ClassTraits;
 
 } // namespace hyperion
-

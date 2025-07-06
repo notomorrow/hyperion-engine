@@ -1,7 +1,6 @@
-#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-
+#pragma once
 #include <core/memory/ByteBuffer.hpp>
 #include <core/memory/RefCountedPtr.hpp>
 
@@ -96,4 +95,3 @@ protected:
 };
 
 } // namespace hyperion
-

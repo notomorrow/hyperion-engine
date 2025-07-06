@@ -1,6 +1,6 @@
-#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
+#pragma once
 
 #include <asset/Assets.hpp>
 
@@ -16,7 +16,7 @@ HYP_CLASS(NoScriptBindings)
 class FontFaceLoader : public AssetLoaderBase
 {
     HYP_OBJECT_BODY(FontFaceLoader);
-    
+
 public:
     virtual ~FontFaceLoader() = default;
 

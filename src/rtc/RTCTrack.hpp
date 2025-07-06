@@ -1,5 +1,6 @@
-#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
+
+#pragma once
 
 #include <core/containers/String.hpp>
 #include <core/memory/ByteBuffer.hpp>
@@ -13,7 +14,7 @@ class RtcpSrReporter;
 class RtpPacketizationConfig;
 } // namespace rtc
 
-    #include <memory>
+#include <memory>
 #endif // HYP_LIBDATACHANNEL
 
 namespace hyperion {
@@ -113,4 +114,3 @@ using LibDataChannelRTCTrack = NullRTCTrack;
 #endif // HYP_LIBDATACHANNEL
 
 } // namespace hyperion
-

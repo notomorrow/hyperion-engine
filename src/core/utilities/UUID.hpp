@@ -1,5 +1,4 @@
 #pragma once
-
 #include <core/containers/String.hpp>
 #include <core/utilities/FormatFwd.hpp>
 
@@ -104,4 +103,3 @@ constexpr UUID SwapEndianness(UUID value)
 }
 
 } // namespace hyperion
-

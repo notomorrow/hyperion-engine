@@ -1,5 +1,4 @@
 #pragma once
-
 #include <Constants.hpp>
 #include <Types.hpp>
 
@@ -637,4 +636,3 @@ struct tuple_element<Index, hyperion::utilities::Tuple<Types...>>
 };
 
 } // namespace std
-

@@ -1,6 +1,6 @@
-#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
+#pragma once
 
 #include <rendering/RenderDevice.hpp>
 #include <rendering/RenderGpuBuffer.hpp>
@@ -33,4 +33,3 @@ public:
 };
 
 } // namespace hyperion
-

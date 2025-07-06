@@ -1,6 +1,6 @@
-#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
+#pragma once
 
 #include <core/containers/HashSet.hpp>
 
@@ -335,4 +335,3 @@ auto HashMap<Key, Value, NodeAllocatorType>::Insert(KeyValuePair<Key, Value>&& p
 using containers::HashMap;
 
 } // namespace hyperion
-

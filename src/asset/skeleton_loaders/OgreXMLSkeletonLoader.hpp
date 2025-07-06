@@ -1,6 +1,6 @@
-#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
+#pragma once
 
 #include <asset/Assets.hpp>
 
@@ -14,7 +14,7 @@ HYP_CLASS(NoScriptBindings)
 class OgreXMLSkeletonLoader : public AssetLoaderBase
 {
     HYP_OBJECT_BODY(OgreXMLSkeletonLoader);
-    
+
 public:
     struct OgreXMLSkeleton
     {

@@ -1,6 +1,6 @@
-#pragma once
 /* Copyright (c) 2025 No Tomorrow Games. All rights reserved. */
 
+#pragma once
 
 #include <core/object/HypObject.hpp>
 
@@ -12,7 +12,7 @@ HYP_CLASS(Abstract)
 class HYP_API RenderProxyable : public HypObject<RenderProxyable>
 {
     HYP_OBJECT_BODY(RenderProxyable);
-    
+
 public:
     virtual ~RenderProxyable() override = default;
 
@@ -31,7 +31,6 @@ protected:
 private:
     int m_renderProxyVersion;
 };
-
 
 } // namespace hyperion
 

@@ -1,6 +1,6 @@
-#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
+#pragma once
 
 #include <core/threading/Thread.hpp>
 #include <core/threading/Scheduler.hpp>
@@ -20,4 +20,3 @@ private:
 };
 
 } // namespace hyperion
-

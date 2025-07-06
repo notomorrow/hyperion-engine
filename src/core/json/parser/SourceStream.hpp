@@ -1,6 +1,6 @@
-#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
+#pragma once
 
 #include <core/json/parser/SourceFile.hpp>
 #include <util/UTF8.hpp>
@@ -40,4 +40,3 @@ private:
 };
 
 } // namespace hyperion::json
-

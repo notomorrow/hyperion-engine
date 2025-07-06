@@ -1,6 +1,6 @@
-#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
+#pragma once
 
 #include <core/Defines.hpp>
 
@@ -167,4 +167,3 @@ HYP_DECLARE_LOG_CHANNEL(Core);
 #ifndef HYP_LOG_ONCE
 #define HYP_LOG_ONCE(channel, category, fmt, ...)
 #endif
-

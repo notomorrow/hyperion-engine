@@ -1,6 +1,6 @@
-#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
+#pragma once
 
 #include <core/object/ObjId.hpp>
 #include <core/object/HypObject.hpp>
@@ -100,7 +100,7 @@ public:
 
 private:
     void Init() override;
-    
+
     GraphicsPipelineRef CreateGraphicsPipeline(PassData* pd) const;
 
     EnumFlags<RenderGroupFlags> m_flags;

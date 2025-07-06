@@ -1,6 +1,6 @@
-#pragma once
 /* Copyright (c) 2024-2025 No Tomorrow Games. All rights reserved. */
 
+#pragma once
 
 #include <core/utilities/TypeId.hpp>
 
@@ -29,4 +29,3 @@ bool ObjectToJSON(const HypClass* hypClass, const HypData& target, json::JSONObj
 bool JSONToObject(const json::JSONObject& jsonObject, const HypClass* hypClass, HypData& target);
 
 } // namespace hyperion
-

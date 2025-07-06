@@ -1,6 +1,6 @@
-#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
+#pragma once
 
 #include <core/Traits.hpp>
 
@@ -253,4 +253,3 @@ struct FunctionWrapper
 using functional::FunctionWrapper;
 
 } // namespace hyperion
-

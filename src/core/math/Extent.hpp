@@ -1,7 +1,6 @@
-#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-
+#pragma once
 #include <core/math/Vector2.hpp>
 #include <core/math/Vector3.hpp>
 
@@ -382,4 +381,3 @@ struct Extent3D
 static_assert(sizeof(Extent3D) == 16);
 
 } //  namespace hyperion
-

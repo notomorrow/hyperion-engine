@@ -1,6 +1,6 @@
-#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
+#pragma once
 
 #include <core/math/Vector4.hpp>
 
@@ -27,4 +27,3 @@ struct alignas(8) Rect
 };
 
 } // namespace hyperion
-

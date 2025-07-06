@@ -1,6 +1,6 @@
-#pragma once
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
+#pragma once
 
 #include <core/utilities/ValueStorage.hpp>
 #include <core/debug/Debug.hpp>
@@ -620,4 +620,3 @@ private:
 using utilities::Optional;
 
 } // namespace hyperion
-
