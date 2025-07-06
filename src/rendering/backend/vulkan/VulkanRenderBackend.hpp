@@ -13,15 +13,8 @@
 #include <core/memory/RefCountedPtr.hpp>
 
 namespace hyperion {
-namespace platform {
 
-template <PlatformType PLATFORM>
-class Instance;
-
-template <PlatformType PLATFORM>
-class Device;
-
-} // namespace platform
+class VulkanInstance;
 
 class VulkanDescriptorSetLayoutWrapper;
 using VulkanDescriptorSetLayoutWrapperRef = RenderObjectHandle_Strong<VulkanDescriptorSetLayoutWrapper>;
@@ -37,12 +30,12 @@ public:
     VulkanRenderBackend();
     virtual ~VulkanRenderBackend() override;
 
-    HYP_FORCE_INLINE platform::Instance<Platform::vulkan>* GetInstance() const
+    HYP_FORCE_INLINE VulkanInstance* GetInstance() const
     {
         return m_instance;
     }
 
-    platform::Device<Platform::vulkan>* GetDevice() const;
+    const VulkanDeviceRef& GetDevice() const;
 
     virtual RendererResult Initialize(AppContextBase& appContext) override;
     virtual RendererResult Destroy() override;
@@ -123,7 +116,7 @@ public:
 private:
     Delegate<void, SwapchainBase*> OnSwapchainRecreated;
 
-    platform::Instance<Platform::vulkan>* m_instance;
+    VulkanInstance* m_instance;
 
     IRenderConfig* m_renderConfig;
 

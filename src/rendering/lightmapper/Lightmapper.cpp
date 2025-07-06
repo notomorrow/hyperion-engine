@@ -20,7 +20,6 @@
 #include <rendering/backend/RenderObject.hpp>
 #include <rendering/backend/RenderConfig.hpp>
 #include <rendering/backend/RendererDevice.hpp>
-#include <rendering/backend/RendererInstance.hpp>
 #include <rendering/backend/RendererFeatures.hpp>
 
 #include <scene/BVH.hpp>

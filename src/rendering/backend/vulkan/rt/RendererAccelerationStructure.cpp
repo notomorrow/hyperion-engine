@@ -3,10 +3,10 @@
 #include <rendering/backend/vulkan/rt/RendererAccelerationStructure.hpp>
 #include <rendering/backend/vulkan/RendererFence.hpp>
 #include <rendering/backend/vulkan/RendererCommandBuffer.hpp>
+#include <rendering/backend/vulkan/RendererInstance.hpp>
 #include <rendering/backend/vulkan/VulkanRenderBackend.hpp>
 
 #include <rendering/backend/RendererDevice.hpp>
-#include <rendering/backend/RendererInstance.hpp>
 #include <rendering/backend/RendererFeatures.hpp>
 
 #include <rendering/RenderMaterial.hpp>
@@ -621,7 +621,7 @@ RendererResult VulkanTLAS::BuildInstancesBuffer(uint32 first, uint32 last)
     }
 
     last = MathUtil::Min(m_blas.Size(), last);
- 
+
     constexpr SizeType minInstancesBufferSize = sizeof(VkAccelerationStructureInstanceKHR);
     const SizeType instancesBufferSize = MathUtil::Max(minInstancesBufferSize, m_blas.Size() * sizeof(VkAccelerationStructureInstanceKHR));
 
@@ -682,7 +682,7 @@ RendererResult VulkanTLAS::BuildInstancesBuffer(uint32 first, uint32 last)
         first * sizeof(VkAccelerationStructureInstanceKHR),
         instances.Size() * sizeof(VkAccelerationStructureInstanceKHR),
         instances.Data());
-    
+
     return {};
 }
 
@@ -770,7 +770,7 @@ RendererResult VulkanTLAS::BuildMeshDescriptionsBuffer(uint32 first, uint32 last
         first * sizeof(MeshDescription),
         meshDescriptions.Size() * sizeof(MeshDescription),
         meshDescriptions.Data());
-    
+
     return {};
 }
 

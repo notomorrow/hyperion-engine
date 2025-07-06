@@ -1,12 +1,12 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#include <rendering/backend/RendererInstance.hpp>
-#include <rendering/backend/RendererDevice.hpp>
-#include <rendering/backend/RendererFeatures.hpp>
-#include <rendering/backend/RenderBackend.hpp>
-
+#include <rendering/backend/vulkan/RendererInstance.hpp>
+#include <rendering/backend/vulkan/RendererDevice.hpp>
 #include <rendering/backend/vulkan/RendererSemaphore.hpp>
 #include <rendering/backend/vulkan/RendererSwapchain.hpp>
+
+#include <rendering/backend/RendererFeatures.hpp>
+#include <rendering/backend/RenderBackend.hpp>
 
 #include <core/containers/Array.hpp>
 #include <core/utilities/Span.hpp>
@@ -33,7 +33,6 @@
 #endif
 
 namespace hyperion {
-namespace platform {
 
 static VkPhysicalDevice PickPhysicalDevice(Span<VkPhysicalDevice> devices)
 {
@@ -145,7 +144,7 @@ static Array<const char*> CheckValidationLayerSupport(const Array<const char*>& 
     return supportedLayers;
 }
 
-ExtensionMap Instance<Platform::vulkan>::GetExtensionMap()
+ExtensionMap VulkanInstance::GetExtensionMap()
 {
     return {
 #if defined(HYP_FEATURES_ENABLE_RAYTRACING) && defined(HYP_FEATURES_BINDLESS_TEXTURES)
@@ -162,7 +161,7 @@ ExtensionMap Instance<Platform::vulkan>::GetExtensionMap()
     };
 }
 
-void Instance<Platform::vulkan>::SetValidationLayers(Array<const char*> validationLayers)
+void VulkanInstance::SetValidationLayers(Array<const char*> validationLayers)
 {
     this->validationLayers = std::move(validationLayers);
 }
@@ -223,7 +222,7 @@ static VkResult CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugU
 
 #endif
 
-RendererResult Instance<Platform::vulkan>::SetupDebug()
+RendererResult VulkanInstance::SetupDebug()
 {
     static const Array<const char*> layers {
         "VK_LAYER_KHRONOS_validation"
@@ -240,14 +239,14 @@ RendererResult Instance<Platform::vulkan>::SetupDebug()
     HYPERION_RETURN_OK;
 }
 
-Instance<Platform::vulkan>::Instance()
+VulkanInstance::VulkanInstance()
     : m_surface(VK_NULL_HANDLE),
       m_instance(VK_NULL_HANDLE),
       m_swapchain(MakeRenderObject<VulkanSwapchain>())
 {
 }
 
-RendererResult Instance<Platform::vulkan>::SetupDebugMessenger()
+RendererResult VulkanInstance::SetupDebugMessenger()
 {
 #ifndef HYPERION_BUILD_RELEASE
     VkDebugUtilsMessengerCreateInfoEXT messengerInfo { VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT };
@@ -263,7 +262,7 @@ RendererResult Instance<Platform::vulkan>::SetupDebugMessenger()
     HYPERION_RETURN_OK;
 }
 
-RendererResult Instance<Platform::vulkan>::Initialize(const AppContextBase& appContext, bool loadDebugLayers)
+RendererResult VulkanInstance::Initialize(const AppContextBase& appContext, bool loadDebugLayers)
 {
     /* Set up our debug and validation layers */
     if (loadDebugLayers)
@@ -357,7 +356,7 @@ static void DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMesse
     }
 }
 
-RendererResult Instance<Platform::vulkan>::Destroy()
+RendererResult VulkanInstance::Destroy()
 {
     RendererResult result;
 
@@ -370,8 +369,7 @@ RendererResult Instance<Platform::vulkan>::Destroy()
     vkDestroySurfaceKHR(m_instance, m_surface, nullptr);
 
     m_device->Destroy();
-    delete m_device;
-    m_device = nullptr;
+    m_device.Reset();
 
 #ifndef HYPERION_BUILD_RELEASE
     DestroyDebugUtilsMessengerEXT(m_instance, this->debugMessenger, nullptr);
@@ -383,7 +381,7 @@ RendererResult Instance<Platform::vulkan>::Destroy()
     return result;
 }
 
-RendererResult Instance<Platform::vulkan>::CreateDevice(VkPhysicalDevice physicalDevice)
+RendererResult VulkanInstance::CreateDevice(VkPhysicalDevice physicalDevice)
 {
     /* If no physical device passed in, we select one */
     if (physicalDevice == VK_NULL_HANDLE)
@@ -392,13 +390,13 @@ RendererResult Instance<Platform::vulkan>::CreateDevice(VkPhysicalDevice physica
         physicalDevice = PickPhysicalDevice(Span<VkPhysicalDevice>(devices.Begin(), devices.End()));
     }
 
-    m_device = new Device<Platform::vulkan>(physicalDevice, m_surface);
+    m_device = MakeRenderObject<VulkanDevice>(physicalDevice, m_surface);
     m_device->SetRequiredExtensions(GetExtensionMap());
 
     const QueueFamilyIndices& familyIndices = m_device->GetQueueFamilyIndices();
 
     /* Put into a set so we don't have any duplicate indices */
-    const std::set<uint32> requiredQueueFamilyIndices {
+    const uint32 requiredQueueFamilyIndices[] = {
         familyIndices.graphicsFamily.Get(),
         familyIndices.transferFamily.Get(),
         familyIndices.presentFamily.Get(),
@@ -413,7 +411,7 @@ RendererResult Instance<Platform::vulkan>::CreateDevice(VkPhysicalDevice physica
     HYPERION_RETURN_OK;
 }
 
-RendererResult Instance<Platform::vulkan>::CreateSwapchain()
+RendererResult VulkanInstance::CreateSwapchain()
 {
     if (m_surface == VK_NULL_HANDLE)
     {
@@ -426,7 +424,7 @@ RendererResult Instance<Platform::vulkan>::CreateSwapchain()
     HYPERION_RETURN_OK;
 }
 
-RendererResult Instance<Platform::vulkan>::RecreateSwapchain()
+RendererResult VulkanInstance::RecreateSwapchain()
 {
     if (m_swapchain.IsValid())
     {
@@ -452,7 +450,5 @@ RendererResult Instance<Platform::vulkan>::RecreateSwapchain()
 
     HYPERION_RETURN_OK;
 }
-
-} // namespace platform
 
 } // namespace hyperion

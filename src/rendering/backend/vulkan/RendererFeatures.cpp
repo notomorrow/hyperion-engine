@@ -132,7 +132,7 @@ void Features::SetPhysicalDevice(VkPhysicalDevice physicalDevice)
     }
 }
 
-void Features::LoadDynamicFunctions(Device* device)
+void Features::LoadDynamicFunctions(VulkanDevice* device)
 {
 #define HYP_LOAD_FN(name)                                                               \
     do                                                                                  \
@@ -178,7 +178,7 @@ void Features::LoadDynamicFunctions(Device* device)
 #undef HYP_LOAD_FN
 }
 
-void Features::SetDeviceFeatures(Device* device)
+void Features::SetDeviceFeatures(VulkanDevice* device)
 {
 #if defined(HYP_MOLTENVK) && HYP_MOLTENVK && HYP_MOLTENVK_LINKED
     MVKConfiguration* mvkConfig = nullptr;

@@ -3,15 +3,10 @@
 #ifndef HYPERION_RENDERER_BACKEND_VULKAN_HELPERS_HPP
 #define HYPERION_RENDERER_BACKEND_VULKAN_HELPERS_HPP
 
-#include <core/functional/Proc.hpp>
+#include <rendering/backend/vulkan/RendererDevice.hpp>
 
 #include <rendering/backend/RenderObject.hpp>
-
-#include <rendering/backend/RendererResult.hpp>
-#include <rendering/backend/RendererDevice.hpp>
 #include <rendering/backend/RendererStructs.hpp>
-#include <rendering/backend/RendererImage.hpp>
-#include <rendering/backend/RendererCommandBuffer.hpp>
 
 #include <vulkan/vulkan.h>
 

@@ -36,15 +36,10 @@
 namespace hyperion {
 
 class Game;
-namespace platform {
 
-// forward declare Instance
-template <PlatformType PLATFORM>
-class Instance;
-
-} // namespace platform
-
-using Instance = platform::Instance<Platform::current>;
+#ifdef HYP_VULKAN
+class VulkanInstance;
+#endif
 
 enum class WindowFlags : uint32
 {
@@ -115,7 +110,7 @@ public:
     }
 
 #ifdef HYP_VULKAN
-    virtual VkSurfaceKHR CreateVkSurface(Instance* instance) = 0;
+    virtual VkSurfaceKHR CreateVkSurface(VulkanInstance* instance) = 0;
 #endif
 
     Delegate<void, Vec2i> OnWindowSizeChanged;
@@ -153,7 +148,7 @@ public:
     }
 
 #ifdef HYP_VULKAN
-    virtual VkSurfaceKHR CreateVkSurface(Instance* instance) override;
+    virtual VkSurfaceKHR CreateVkSurface(VulkanInstance* instance) override;
 #endif
 
 private:

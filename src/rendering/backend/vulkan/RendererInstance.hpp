@@ -5,8 +5,9 @@
 
 #include <core/Defines.hpp>
 
+#include <rendering/backend/vulkan/RendererDevice.hpp>
+
 #include <rendering/backend/RenderObject.hpp>
-#include <rendering/backend/RendererDevice.hpp>
 
 #include <system/vma/VmaUsage.hpp>
 
@@ -21,10 +22,8 @@ class AppContextBase;
 } // namespace sys
 
 using sys::AppContextBase;
-namespace platform {
 
-template <>
-class Instance<Platform::vulkan>
+class VulkanInstance
 {
     static ExtensionMap GetExtensionMap();
 
@@ -33,7 +32,8 @@ class Instance<Platform::vulkan>
     RendererResult SetupDebugMessenger();
 
 public:
-    Instance();
+    VulkanInstance();
+
     RendererResult Initialize(const AppContextBase& appContext, bool loadDebugLayers = false);
 
     HYP_FORCE_INLINE VkInstance GetInstance() const
@@ -41,7 +41,7 @@ public:
         return m_instance;
     }
 
-    HYP_FORCE_INLINE Device<Platform::vulkan>* GetDevice() const
+    HYP_FORCE_INLINE const VulkanDeviceRef& GetDevice() const
     {
         return m_device;
     }
@@ -75,7 +75,7 @@ private:
 
     VmaAllocator allocator = nullptr;
 
-    Device<Platform::vulkan>* m_device = nullptr;
+    VulkanDeviceRef m_device;
     VulkanSwapchainRef m_swapchain;
 
     Array<const char*> validationLayers;
@@ -84,8 +84,6 @@ private:
     VkDebugUtilsMessengerEXT debugMessenger;
 #endif
 };
-
-} // namespace platform
 
 } // namespace hyperion
 

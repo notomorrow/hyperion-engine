@@ -6,13 +6,14 @@
 #include <rendering/backend/vulkan/RendererGraphicsPipeline.hpp>
 #include <rendering/backend/vulkan/RendererComputePipeline.hpp>
 #include <rendering/backend/vulkan/RendererDescriptorSet.hpp>
+#include <rendering/backend/vulkan/RendererInstance.hpp>
+#include <rendering/backend/vulkan/RendererDevice.hpp>
 #include <rendering/backend/vulkan/rt/RendererRaytracingPipeline.hpp>
 #include <rendering/backend/vulkan/rt/RendererAccelerationStructure.hpp>
 #include <rendering/backend/vulkan/RendererShader.hpp>
 #include <rendering/backend/vulkan/AsyncCompute.hpp>
 
 #include <rendering/backend/RendererHelpers.hpp>
-#include <rendering/backend/RendererInstance.hpp>
 #include <rendering/backend/RendererFeatures.hpp>
 
 #include <rendering/RenderableAttributes.hpp>
@@ -81,11 +82,11 @@ private:
 class VulkanDescriptorSetLayoutWrapper : public RenderObject<VulkanDescriptorSetLayoutWrapper>
 {
     VkDescriptorSetLayout m_handle;
-    platform::Device<Platform::vulkan>* m_device;
-    RendererResult (*m_deleteFn)(platform::Device<Platform::vulkan>* device, VulkanDescriptorSetLayoutWrapper*);
+    VulkanDevice* m_device;
+    RendererResult (*m_deleteFn)(VulkanDevice* device, VulkanDescriptorSetLayoutWrapper*);
 
 public:
-    VulkanDescriptorSetLayoutWrapper(platform::Device<Platform::vulkan>* device, RendererResult (*deleteFn)(platform::Device<Platform::vulkan>* device, VulkanDescriptorSetLayoutWrapper*))
+    VulkanDescriptorSetLayoutWrapper(VulkanDevice* device, RendererResult (*deleteFn)(VulkanDevice*, VulkanDescriptorSetLayoutWrapper*))
         : RenderObject<VulkanDescriptorSetLayoutWrapper>(),
           m_handle(VK_NULL_HANDLE),
           m_device(device),
@@ -108,7 +109,7 @@ public:
         return m_handle;
     }
 
-    RendererResult Create(platform::Device<Platform::vulkan>* device, const DescriptorSetLayout& layout)
+    RendererResult Create(VulkanDevice* device, const DescriptorSetLayout& layout)
     {
         HYP_GFX_ASSERT(m_handle == VK_NULL_HANDLE);
 
@@ -174,7 +175,7 @@ public:
         return RendererResult {};
     }
 
-    RendererResult Destroy(platform::Device<Platform::vulkan>* device)
+    RendererResult Destroy(VulkanDevice* device)
     {
         HYP_GFX_ASSERT(m_handle != VK_NULL_HANDLE);
 
@@ -201,13 +202,13 @@ public:
     VulkanDescriptorSetManager();
     virtual ~VulkanDescriptorSetManager() override;
 
-    RendererResult Create(platform::Device<Platform::vulkan>* device);
-    RendererResult Destroy(platform::Device<Platform::vulkan>* device);
+    RendererResult Create(VulkanDevice* device);
+    RendererResult Destroy(VulkanDevice* device);
 
-    RendererResult CreateDescriptorSet(platform::Device<Platform::vulkan>* device, const VulkanDescriptorSetLayoutWrapperRef& layout, VkDescriptorSet& outVkDescriptorSet);
-    RendererResult DestroyDescriptorSet(platform::Device<Platform::vulkan>* device, VkDescriptorSet vkDescriptorSet);
+    RendererResult CreateDescriptorSet(VulkanDevice* device, const VulkanDescriptorSetLayoutWrapperRef& layout, VkDescriptorSet& outVkDescriptorSet);
+    RendererResult DestroyDescriptorSet(VulkanDevice* device, VkDescriptorSet vkDescriptorSet);
 
-    VulkanDescriptorSetLayoutWrapperRef GetOrCreateVkDescriptorSetLayout(platform::Device<Platform::vulkan>* device, const DescriptorSetLayout& layout);
+    VulkanDescriptorSetLayoutWrapperRef GetOrCreateVkDescriptorSetLayout(VulkanDevice* device, const DescriptorSetLayout& layout);
 
 private:
     Mutex m_mutex;
@@ -223,7 +224,7 @@ VulkanDescriptorSetManager::VulkanDescriptorSetManager()
 
 VulkanDescriptorSetManager::~VulkanDescriptorSetManager() = default;
 
-RendererResult VulkanDescriptorSetManager::Create(platform::Device<Platform::vulkan>* device)
+RendererResult VulkanDescriptorSetManager::Create(VulkanDevice* device)
 {
     static const Array<VkDescriptorPoolSize> poolSizes = {
         { VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR, 1 },
@@ -254,7 +255,7 @@ RendererResult VulkanDescriptorSetManager::Create(platform::Device<Platform::vul
     return RendererResult {};
 }
 
-RendererResult VulkanDescriptorSetManager::Destroy(platform::Device<Platform::vulkan>* device)
+RendererResult VulkanDescriptorSetManager::Destroy(VulkanDevice* device)
 {
     RendererResult result = RendererResult {};
 
@@ -283,7 +284,7 @@ RendererResult VulkanDescriptorSetManager::Destroy(platform::Device<Platform::vu
     return result;
 }
 
-RendererResult VulkanDescriptorSetManager::CreateDescriptorSet(platform::Device<Platform::vulkan>* device, const VulkanDescriptorSetLayoutWrapperRef& layout, VkDescriptorSet& outVkDescriptorSet)
+RendererResult VulkanDescriptorSetManager::CreateDescriptorSet(VulkanDevice* device, const VulkanDescriptorSetLayoutWrapperRef& layout, VkDescriptorSet& outVkDescriptorSet)
 {
     HYP_GFX_ASSERT(m_vkDescriptorPool != VK_NULL_HANDLE);
 
@@ -310,7 +311,7 @@ RendererResult VulkanDescriptorSetManager::CreateDescriptorSet(platform::Device<
     return RendererResult {};
 }
 
-RendererResult VulkanDescriptorSetManager::DestroyDescriptorSet(platform::Device<Platform::vulkan>* device, VkDescriptorSet vkDescriptorSet)
+RendererResult VulkanDescriptorSetManager::DestroyDescriptorSet(VulkanDevice* device, VkDescriptorSet vkDescriptorSet)
 {
     HYP_GFX_ASSERT(m_vkDescriptorPool != VK_NULL_HANDLE);
 
@@ -325,7 +326,7 @@ RendererResult VulkanDescriptorSetManager::DestroyDescriptorSet(platform::Device
     return RendererResult {};
 }
 
-VulkanDescriptorSetLayoutWrapperRef VulkanDescriptorSetManager::GetOrCreateVkDescriptorSetLayout(platform::Device<Platform::vulkan>* device, const DescriptorSetLayout& layout)
+VulkanDescriptorSetLayoutWrapperRef VulkanDescriptorSetManager::GetOrCreateVkDescriptorSetLayout(VulkanDevice* device, const DescriptorSetLayout& layout)
 {
     const HashCode hashCode = layout.GetHashCode();
 
@@ -345,7 +346,7 @@ VulkanDescriptorSetLayoutWrapperRef VulkanDescriptorSetManager::GetOrCreateVkDes
         return vkDescriptorSetLayout;
     }
 
-    vkDescriptorSetLayout = MakeRenderObject<VulkanDescriptorSetLayoutWrapper>(device, [](platform::Device<Platform::vulkan>* device, VulkanDescriptorSetLayoutWrapper* wrapper)
+    vkDescriptorSetLayout = MakeRenderObject<VulkanDescriptorSetLayoutWrapper>(device, [](VulkanDevice* device, VulkanDescriptorSetLayoutWrapper* wrapper)
         {
             return wrapper->Destroy(device);
         });
@@ -376,7 +377,7 @@ VulkanRenderBackend::~VulkanRenderBackend()
     delete m_descriptorSetManager;
 }
 
-platform::Device<Platform::vulkan>* VulkanRenderBackend::GetDevice() const
+const VulkanDeviceRef& VulkanRenderBackend::GetDevice() const
 {
     return m_instance->GetDevice();
 }
@@ -388,7 +389,7 @@ SwapchainBase* VulkanRenderBackend::GetSwapchain() const
 
 RendererResult VulkanRenderBackend::Initialize(AppContextBase& appContext)
 {
-    m_instance = new platform::Instance<Platform::vulkan>();
+    m_instance = new VulkanInstance();
     HYPERION_BUBBLE_ERRORS(m_instance->Initialize(appContext, g_useDebugLayers));
 
     m_crashHandler.Initialize();

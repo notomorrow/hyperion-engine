@@ -32,12 +32,6 @@
 namespace hyperion {
 
 class Engine;
-namespace platform {
-
-template <PlatformType PLATFORM>
-class Device;
-
-} // namespace platform
 
 template <class T>
 struct RenderObjectHeader;

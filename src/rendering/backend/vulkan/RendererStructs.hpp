@@ -42,22 +42,6 @@ struct MeshBindingDescription
     }
 };
 
-struct QueueFamilyIndices
-{
-    Optional<uint32> graphicsFamily;
-    Optional<uint32> transferFamily;
-    Optional<uint32> presentFamily;
-    Optional<uint32> computeFamily;
-
-    bool IsComplete() const
-    {
-        return graphicsFamily.HasValue()
-            && transferFamily.HasValue()
-            && presentFamily.HasValue()
-            && computeFamily.HasValue();
-    }
-};
-
 struct SwapchainSupportDetails
 {
     VkSurfaceCapabilitiesKHR capabilities;

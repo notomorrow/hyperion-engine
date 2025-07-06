@@ -1,8 +1,10 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#include <rendering/backend/RendererDevice.hpp>
+#include <rendering/backend/vulkan/RendererDevice.hpp>
+#include <rendering/backend/vulkan/RendererInstance.hpp>
+#include <rendering/backend/vulkan/RendererInstance.hpp>
+
 #include <rendering/backend/RenderBackend.hpp>
-#include <rendering/backend/RendererInstance.hpp>
 #include <rendering/backend/RendererFeatures.hpp>
 #include <rendering/backend/RendererDescriptorSet.hpp>
 #include <rendering/backend/AsyncCompute.hpp>
@@ -10,17 +12,12 @@
 #include <core/logging/LogChannels.hpp>
 #include <core/logging/Logger.hpp>
 
-#include <cstring>
-#include <algorithm>
-#include <iterator>
-
 #include <core/debug/Debug.hpp>
 #include <core/Defines.hpp>
 
 namespace hyperion {
-namespace platform {
 
-Device<Platform::vulkan>::Device(VkPhysicalDevice physical, VkSurfaceKHR surface)
+VulkanDevice::VulkanDevice(VkPhysicalDevice physical, VkSurfaceKHR surface)
     : m_device(VK_NULL_HANDLE),
       m_physical(physical),
       m_surface(surface),
@@ -32,38 +29,38 @@ Device<Platform::vulkan>::Device(VkPhysicalDevice physical, VkSurfaceKHR surface
     m_queueFamilyIndices = FindQueueFamilies(m_physical, m_surface);
 }
 
-Device<Platform::vulkan>::~Device()
+VulkanDevice::~VulkanDevice()
 {
 }
 
-void Device<Platform::vulkan>::SetRenderSurface(const VkSurfaceKHR& surface)
+void VulkanDevice::SetRenderSurface(const VkSurfaceKHR& surface)
 {
     m_surface = surface;
 }
 
-void Device<Platform::vulkan>::SetRequiredExtensions(const ExtensionMap& extensions)
+void VulkanDevice::SetRequiredExtensions(const ExtensionMap& extensions)
 {
     m_requiredExtensions = extensions;
 }
 
-VkDevice Device<Platform::vulkan>::GetDevice()
+VkDevice VulkanDevice::GetDevice()
 {
     return m_device;
 }
 
-VkPhysicalDevice Device<Platform::vulkan>::GetPhysicalDevice()
+VkPhysicalDevice VulkanDevice::GetPhysicalDevice()
 {
     return m_physical;
 }
 
-VkSurfaceKHR Device<Platform::vulkan>::GetRenderSurface()
+VkSurfaceKHR VulkanDevice::GetRenderSurface()
 {
     HYP_GFX_ASSERT(m_surface != VK_NULL_HANDLE, "Surface has not been set!");
 
     return m_surface;
 }
 
-QueueFamilyIndices Device<Platform::vulkan>::FindQueueFamilies(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface)
+QueueFamilyIndices VulkanDevice::FindQueueFamilies(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface)
 {
     QueueFamilyIndices indices {};
 
@@ -222,7 +219,7 @@ QueueFamilyIndices Device<Platform::vulkan>::FindQueueFamilies(VkPhysicalDevice 
     return indices;
 }
 
-Array<VkExtensionProperties> Device<Platform::vulkan>::GetSupportedExtensions()
+Array<VkExtensionProperties> VulkanDevice::GetSupportedExtensions()
 {
     uint32 extensionCount = 0;
     vkEnumerateDeviceExtensionProperties(m_physical, nullptr, &extensionCount, nullptr);
@@ -235,12 +232,12 @@ Array<VkExtensionProperties> Device<Platform::vulkan>::GetSupportedExtensions()
     return supportedExtensions;
 }
 
-ExtensionMap Device<Platform::vulkan>::GetUnsupportedExtensions()
+ExtensionMap VulkanDevice::GetUnsupportedExtensions()
 {
     const Array<VkExtensionProperties> extensionsSupported = GetSupportedExtensions();
     ExtensionMap unsupportedExtensions;
 
-    for (const auto& requiredExt : m_requiredExtensions)
+    for (const KeyValuePair<String, bool>& requiredExt : m_requiredExtensions)
     {
         auto supportedIt = extensionsSupported.FindIf(
             [&requiredExt](const auto& it)
@@ -250,16 +247,16 @@ ExtensionMap Device<Platform::vulkan>::GetUnsupportedExtensions()
 
         if (supportedIt == extensionsSupported.end())
         {
-            unsupportedExtensions.emplace(requiredExt);
+            unsupportedExtensions.Insert(requiredExt);
         }
     }
 
     return unsupportedExtensions;
 }
 
-RendererResult Device<Platform::vulkan>::CheckDeviceSuitable(const ExtensionMap& unsupportedExtensions)
+RendererResult VulkanDevice::CheckDeviceSuitable(const ExtensionMap& unsupportedExtensions)
 {
-    if (!unsupportedExtensions.empty())
+    if (unsupportedExtensions.Any())
     {
         HYP_LOG(RenderingBackend, Warning, "--- Unsupported Extensions ---\n");
 
@@ -269,13 +266,13 @@ RendererResult Device<Platform::vulkan>::CheckDeviceSuitable(const ExtensionMap&
         {
             if (extension.second)
             {
-                HYP_LOG(RenderingBackend, Error, "\t{} [REQUIRED]", extension.first.c_str());
+                HYP_LOG(RenderingBackend, Error, "\t{} [REQUIRED]", extension.first);
 
                 anyRequired = true;
             }
             else
             {
-                HYP_LOG(RenderingBackend, Warning, "\t{}", extension.first.c_str());
+                HYP_LOG(RenderingBackend, Warning, "\t{}", extension.first);
             }
         }
 
@@ -301,7 +298,7 @@ RendererResult Device<Platform::vulkan>::CheckDeviceSuitable(const ExtensionMap&
     HYPERION_RETURN_OK;
 }
 
-RendererResult Device<Platform::vulkan>::SetupAllocator(Instance<Platform::vulkan>* instance)
+RendererResult VulkanDevice::SetupAllocator(VulkanInstance* instance)
 {
     VmaVulkanFunctions vkfuncs {};
     vkfuncs.vkGetInstanceProcAddr = &vkGetInstanceProcAddr;
@@ -320,7 +317,7 @@ RendererResult Device<Platform::vulkan>::SetupAllocator(Instance<Platform::vulka
     HYPERION_RETURN_OK;
 }
 
-void Device<Platform::vulkan>::DebugLogAllocatorStats() const
+void VulkanDevice::DebugLogAllocatorStats() const
 {
     if (m_allocator != VK_NULL_HANDLE)
     {
@@ -333,7 +330,7 @@ void Device<Platform::vulkan>::DebugLogAllocatorStats() const
     }
 }
 
-RendererResult Device<Platform::vulkan>::DestroyAllocator()
+RendererResult VulkanDevice::DestroyAllocator()
 {
     if (m_allocator != VK_NULL_HANDLE)
     {
@@ -346,7 +343,7 @@ RendererResult Device<Platform::vulkan>::DestroyAllocator()
     HYPERION_RETURN_OK;
 }
 
-RendererResult Device<Platform::vulkan>::Wait() const
+RendererResult VulkanDevice::Wait() const
 {
     RendererResult result = RendererResult {};
 
@@ -375,7 +372,7 @@ RendererResult Device<Platform::vulkan>::Wait() const
     return result;
 }
 
-RendererResult Device<Platform::vulkan>::Create(const std::set<uint32>& requiredQueueFamilies)
+RendererResult VulkanDevice::Create(Span<const uint32> requiredQueueFamilies)
 {
     HYP_LOG(RenderingBackend, Debug, "Memory properties:\n");
     const auto& memoryProperties = m_features->GetPhysicalDeviceMemoryProperties();
@@ -417,20 +414,21 @@ RendererResult Device<Platform::vulkan>::Create(const std::set<uint32>& required
     {
         HYP_GFX_ASSERT(!it.second, "Unsupported extension should not be 'required', should have failed earlier check");
 
-        m_requiredExtensions.erase(it.first);
+        m_requiredExtensions.Erase(it.first);
     }
 
     Array<const char*> extensionNames;
-    extensionNames.Reserve(m_requiredExtensions.size());
+    extensionNames.Reserve(m_requiredExtensions.Size());
 
     for (const auto& it : m_requiredExtensions)
     {
-        extensionNames.PushBack(it.first.c_str());
+        extensionNames.PushBack(it.first.Data());
     }
 
     // Vulkan 1.3 requires VK_KHR_portability_subset to be enabled if it is found in vkEnumerateDeviceExtensionProperties()
     // https://vulkan.lunarg.com/doc/view/1.3.211.0/mac/1.3-extensions/vkspec.html#VUID-VkDeviceCreateInfo-pProperties-04451
     {
+
         auto protabilitySubsetIt = supportedExtensions.FindIf(
             [](const auto& it)
             {
@@ -534,7 +532,7 @@ RendererResult Device<Platform::vulkan>::Create(const std::set<uint32>& required
     HYPERION_RETURN_OK;
 }
 
-VkQueue Device<Platform::vulkan>::GetQueue(uint32 queueFamilyIndex, uint32 queueIndex)
+VkQueue VulkanDevice::GetQueue(uint32 queueFamilyIndex, uint32 queueIndex)
 {
     HYP_GFX_ASSERT(m_device != VK_NULL_HANDLE);
 
@@ -544,7 +542,7 @@ VkQueue Device<Platform::vulkan>::GetQueue(uint32 queueFamilyIndex, uint32 queue
     return queue;
 }
 
-void Device<Platform::vulkan>::Destroy()
+void VulkanDevice::Destroy()
 {
     VulkanDeviceQueue* queues[] = { &m_queueGraphics, &m_queueTransfer, &m_queueCompute, &m_queuePresent };
 
@@ -567,7 +565,5 @@ void Device<Platform::vulkan>::Destroy()
         vkDestroyDevice(m_device, nullptr);
     }
 }
-
-} // namespace platform
 
 } // namespace hyperion

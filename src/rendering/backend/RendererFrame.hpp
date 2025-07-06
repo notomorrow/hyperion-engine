@@ -4,9 +4,8 @@
 #define HYPERION_BACKEND_RENDERER_FRAME_HPP
 
 #include <rendering/backend/RendererResult.hpp>
-#include <rendering/backend/Platform.hpp>
-#include <rendering/backend/RendererSemaphore.hpp>
 #include <rendering/backend/RenderObject.hpp>
+#include <rendering/backend/Platform.hpp>
 
 #include <rendering/rhi/CmdList.hpp>
 

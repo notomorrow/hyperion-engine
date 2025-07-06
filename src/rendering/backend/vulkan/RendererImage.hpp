@@ -5,6 +5,9 @@
 
 #include <rendering/backend/RendererImage.hpp>
 #include <rendering/backend/RendererGpuBuffer.hpp>
+
+#include <system/vma/VmaUsage.hpp>
+
 #include <core/math/MathUtil.hpp>
 
 #include <Types.hpp>

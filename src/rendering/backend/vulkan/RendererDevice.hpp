@@ -3,49 +3,61 @@
 #ifndef HYPERION_RENDERER_BACKEND_VULKAN_DEVICE_HPP
 #define HYPERION_RENDERER_BACKEND_VULKAN_DEVICE_HPP
 
-#include <set>
-#include <unordered_map>
-#include <string>
-
 #include <core/memory/UniquePtr.hpp>
+
 #include <core/containers/Array.hpp>
+#include <core/containers/HashMap.hpp>
+#include <core/containers/String.hpp>
+
+#include <core/utilities/Span.hpp>
+#include <core/utilities/Optional.hpp>
 
 #include <rendering/backend/vulkan/RendererQueue.hpp>
 
 #include <rendering/backend/RenderObject.hpp>
+#include <rendering/backend/RendererDevice.hpp>
 #include <rendering/backend/RendererResult.hpp>
 #include <rendering/backend/RendererStructs.hpp>
 
 #include <system/vma/VmaUsage.hpp>
 
 namespace hyperion {
+
 class Features;
 class DescriptorPool;
+class VulkanInstance;
 
-using ExtensionMap = std::unordered_map<std::string, bool>;
+using ExtensionMap = HashMap<String, bool>;
 
-namespace platform {
+struct QueueFamilyIndices
+{
+    Optional<uint32> graphicsFamily;
+    Optional<uint32> transferFamily;
+    Optional<uint32> presentFamily;
+    Optional<uint32> computeFamily;
 
-template <PlatformType PLATFORM>
-class Instance;
+    bool IsComplete() const
+    {
+        return graphicsFamily.HasValue()
+            && transferFamily.HasValue()
+            && presentFamily.HasValue()
+            && computeFamily.HasValue();
+    }
+};
 
-template <PlatformType PLATFORM>
-class DescriptorSetManager;
-
-template <>
-class Device<Platform::vulkan> final
+class VulkanDevice : public DeviceBase
 {
     static QueueFamilyIndices FindQueueFamilies(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface);
 
 public:
     static constexpr PlatformType platform = Platform::vulkan;
 
-    Device(VkPhysicalDevice physical, VkSurfaceKHR surface);
-    Device(const Device&) = delete;
-    Device& operator=(const Device&) = delete;
-    Device(Device&&) noexcept = delete;
-    Device& operator=(Device&&) noexcept = delete;
-    ~Device();
+    VulkanDevice(VkPhysicalDevice physical, VkSurfaceKHR surface);
+    VulkanDevice(const VulkanDevice&) = delete;
+    VulkanDevice& operator=(const VulkanDevice&) = delete;
+    VulkanDevice(VulkanDevice&&) noexcept = delete;
+    VulkanDevice& operator=(VulkanDevice&&) noexcept = delete;
+    virtual ~VulkanDevice() override;
 
     void Destroy();
 
@@ -58,7 +70,7 @@ public:
 
     void DebugLogAllocatorStats() const;
 
-    RendererResult SetupAllocator(Instance<Platform::vulkan>* instance);
+    RendererResult SetupAllocator(VulkanInstance* instance);
     RendererResult DestroyAllocator();
 
     VmaAllocator GetAllocator() const
@@ -118,7 +130,7 @@ public:
 
     VkQueue GetQueue(uint32 queueFamilyIndex, uint32 queueIndex = 0);
 
-    RendererResult Create(const std::set<uint32_t>& requiredQueueFamilies);
+    RendererResult Create(Span<const uint32> requiredQueueFamilies);
     RendererResult CheckDeviceSuitable(const ExtensionMap& unsupportedExtensions);
 
     /*! \brief Wait for the device to be idle */
@@ -147,8 +159,6 @@ private:
 
     UniquePtr<DescriptorPool> m_descriptorPool;
 };
-
-} // namespace platform
 
 } // namespace hyperion
 

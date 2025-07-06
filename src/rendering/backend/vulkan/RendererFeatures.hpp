@@ -220,8 +220,8 @@ public:
         return m_features.shaderSampledImageArrayDynamicIndexing;
     }
 
-    void LoadDynamicFunctions(Device* device);
-    void SetDeviceFeatures(Device* device);
+    void LoadDynamicFunctions(VulkanDevice* device);
+    void SetDeviceFeatures(VulkanDevice* device);
 
     SwapchainSupportDetails QuerySwapchainSupport(VkSurfaceKHR _surface) const
     {

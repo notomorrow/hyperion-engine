@@ -3,6 +3,7 @@
 #include <rendering/backend/vulkan/RendererRenderPass.hpp>
 #include <rendering/backend/vulkan/RendererFramebuffer.hpp>
 #include <rendering/backend/vulkan/RendererCommandBuffer.hpp>
+#include <rendering/backend/vulkan/RendererDevice.hpp>
 #include <rendering/backend/vulkan/VulkanRenderBackend.hpp>
 
 #include <core/containers/HashSet.hpp>
@@ -73,7 +74,7 @@ void VulkanRenderPass::CreateDependencies()
 
         break;
     default:
-        HYP_GFX_ASSERT(0, "Unsupported stage type %d", m_stage);
+        HYP_GFX_ASSERT(0, "Unsupported stage type %d", int(m_stage));
     }
 }
 

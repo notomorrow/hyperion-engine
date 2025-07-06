@@ -19,10 +19,13 @@
 #define HYP_ENABLE_VSYNC 0
 
 namespace hyperion {
+
+struct VulkanDeviceQueue;
+
 class VulkanSwapchain final : public SwapchainBase
 {
 public:
-    friend class platform::Instance<Platform::vulkan>;
+    friend class VulkanInstance;
 
     HYP_API VulkanSwapchain();
     HYP_API virtual ~VulkanSwapchain() override;

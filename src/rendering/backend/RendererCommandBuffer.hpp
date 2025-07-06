@@ -5,7 +5,6 @@
 
 #include <rendering/backend/RendererDevice.hpp>
 #include <rendering/backend/RendererRenderPass.hpp>
-#include <rendering/backend/RendererSemaphore.hpp>
 #include <rendering/backend/RendererGpuBuffer.hpp>
 #include <rendering/backend/Platform.hpp>
 

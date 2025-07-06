@@ -2,6 +2,7 @@
 
 #include <rendering/backend/vulkan/AsyncCompute.hpp>
 #include <rendering/backend/vulkan/RendererFrame.hpp>
+#include <rendering/backend/vulkan/RendererDevice.hpp>
 #include <rendering/backend/vulkan/RendererCommandBuffer.hpp>
 #include <rendering/backend/vulkan/RendererComputePipeline.hpp>
 #include <rendering/backend/vulkan/RendererDescriptorSet.hpp>

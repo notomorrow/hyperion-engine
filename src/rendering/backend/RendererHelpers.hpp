@@ -23,9 +23,6 @@ uint32 MipmapSize(uint32 srcSize, int lod);
 namespace platform {
 
 template <PlatformType PLATFORM>
-class Device;
-
-template <PlatformType PLATFORM>
 struct SingleTimeCommandsPlatformImpl;
 
 template <PlatformType PLATFORM>
@@ -49,7 +46,7 @@ public:
 private:
     SingleTimeCommandsPlatformImpl<PLATFORM> m_platformImpl;
 
-    Device<PLATFORM>* m_device;
+    DeviceRef m_device;
     Array<Proc<void(CmdList& commandList)>> m_functions;
 };
 

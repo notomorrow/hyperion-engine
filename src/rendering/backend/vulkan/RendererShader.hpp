@@ -5,7 +5,10 @@
 
 #include <rendering/backend/RendererShader.hpp>
 
+#include <vulkan/vulkan.h>
+
 namespace hyperion {
+
 struct VulkanShaderModule
 {
     ShaderModuleType type;

@@ -18,8 +18,10 @@
 #include <Types.hpp>
 
 namespace hyperion {
+
 class VulkanSemaphoreChain;
 class VulkanRenderPass;
+struct VulkanDeviceQueue;
 
 class VulkanCommandBuffer final : public CommandBufferBase
 {

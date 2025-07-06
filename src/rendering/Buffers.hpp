@@ -21,19 +21,6 @@
 #include <Constants.hpp>
 #include <Types.hpp>
 
-#include <mutex>
-
-namespace hyperion {
-
-namespace platform {
-template <PlatformType PLATFORM>
-class Device;
-} // namespace platform
-
-using Device = platform::Device<Platform::current>;
-
-} // namespace hyperion
-
 namespace hyperion {
 
 static constexpr SizeType maxProbesInShGridBuffer = maxBoundAmbientProbes;

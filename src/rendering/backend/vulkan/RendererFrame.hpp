@@ -11,8 +11,11 @@
 #include <rendering/backend/RenderObject.hpp>
 
 namespace hyperion {
+
 class VulkanFence;
 using VulkanFenceRef = RenderObjectHandle_Strong<VulkanFence>;
+
+struct VulkanDeviceQueue;
 
 class VulkanFrame final : public FrameBase
 {

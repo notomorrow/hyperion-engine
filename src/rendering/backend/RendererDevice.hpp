@@ -3,33 +3,17 @@
 #ifndef HYPERION_BACKEND_RENDERER_DEVICE_HPP
 #define HYPERION_BACKEND_RENDERER_DEVICE_HPP
 
-#include <rendering/backend/Platform.hpp>
 #include <rendering/backend/RenderObject.hpp>
 
 #include <core/Defines.hpp>
 
 namespace hyperion {
-namespace platform {
 
-template <PlatformType PLATFORM>
-class Device : public RenderObject<Device<PLATFORM>>
+class DeviceBase : public RenderObject<DeviceBase>
 {
 public:
-    static constexpr PlatformType platform = PLATFORM;
+    virtual ~DeviceBase() override = default;
 };
-
-} // namespace platform
-
-} // namespace hyperion
-
-#if HYP_VULKAN
-#include <rendering/backend/vulkan/RendererDevice.hpp>
-#else
-#error Unsupported rendering backend
-#endif
-
-namespace hyperion {
-using Device = platform::Device<Platform::current>;
 
 } // namespace hyperion
 

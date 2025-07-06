@@ -10,7 +10,6 @@
 
 #include <rendering/backend/RenderBackend.hpp>
 
-#include <rendering/backend/RendererInstance.hpp>
 #include <rendering/backend/RenderObject.hpp>
 #include <rendering/backend/RenderCommand.hpp>
 

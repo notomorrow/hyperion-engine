@@ -2,6 +2,7 @@
 
 #include <rendering/backend/vulkan/RendererFence.hpp>
 #include <rendering/backend/vulkan/VulkanRenderBackend.hpp>
+#include <rendering/backend/vulkan/RendererDevice.hpp>
 
 #include <rendering/backend/RendererDevice.hpp>
 
