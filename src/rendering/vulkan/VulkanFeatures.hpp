@@ -3,10 +3,10 @@
 #ifndef HYPERION_RENDERER_BACKEND_VULKAN_FEATURES_HPP
 #define HYPERION_RENDERER_BACKEND_VULKAN_FEATURES_HPP
 
-#include <rendering/RenderResult.hpp>
-#include <rendering/RenderImage.hpp>
-#include <rendering/RenderStructs.hpp>
-#include <rendering/RenderHelpers.hpp>
+#include <rendering/vulkan/VulkanResult.hpp>
+#include <rendering/vulkan/VulkanImage.hpp>
+#include <rendering/vulkan/VulkanStructs.hpp>
+#include <rendering/vulkan/VulkanHelpers.hpp>
 
 #include <core/memory/UniquePtr.hpp>
 #include <core/containers/Array.hpp>
@@ -23,7 +23,8 @@
 #endif
 
 namespace hyperion {
-class Features
+
+class VulkanFeatures
 {
 public:
     struct DynamicFunctions
@@ -57,12 +58,12 @@ public:
 
     static DynamicFunctions dynFunctions;
 
-    Features();
-    Features(VkPhysicalDevice);
+    VulkanFeatures();
+    VulkanFeatures(VkPhysicalDevice);
 
-    Features(const Features& other) = delete;
-    Features& operator=(const Features& other) = delete;
-    ~Features() = default;
+    VulkanFeatures(const VulkanFeatures& other) = delete;
+    VulkanFeatures& operator=(const VulkanFeatures& other) = delete;
+    ~VulkanFeatures() = default;
 
     void SetPhysicalDevice(VkPhysicalDevice);
 
@@ -223,9 +224,9 @@ public:
     void LoadDynamicFunctions(VulkanDevice* device);
     void SetDeviceFeatures(VulkanDevice* device);
 
-    SwapchainSupportDetails QuerySwapchainSupport(VkSurfaceKHR _surface) const
+    VulkanSwapchainSupportDetails QuerySwapchainSupport(VkSurfaceKHR _surface) const
     {
-        SwapchainSupportDetails details {};
+        VulkanSwapchainSupportDetails details {};
 
         if (m_physicalDevice == nullptr)
         {
@@ -285,7 +286,7 @@ public:
             return false;
         }
 
-        const VkFormat vulkanFormat = helpers::ToVkFormat(format);
+        const VkFormat vulkanFormat = ToVkFormat(format);
 
         VkFormatFeatureFlags featureFlags = 0;
 
@@ -372,7 +373,7 @@ public:
 
     /* get the first supported format out of the provided list of format choices. */
     template <class Predicate>
-    TextureFormat FindSupportedSurfaceFormat(const SwapchainSupportDetails& details, Span<TextureFormat> possibleFormats, Predicate&& predicate) const
+    TextureFormat FindSupportedSurfaceFormat(const VulkanSwapchainSupportDetails& details, Span<TextureFormat> possibleFormats, Predicate&& predicate) const
     {
         Assert(possibleFormats.Size() != 0, "Size must be greater than zero!");
 
@@ -392,7 +393,7 @@ public:
                 "Try format: %d\n",
                 format);
 
-            const VkFormat vkFormat = helpers::ToVkFormat(format);
+            const VkFormat vkFormat = ToVkFormat(format);
 
             if (AnyOf(details.formats, [&](auto&& surfaceFormat)
                     {

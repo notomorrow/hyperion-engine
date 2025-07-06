@@ -4,9 +4,9 @@
 #include <rendering/vulkan/VulkanCommandBuffer.hpp>
 #include <rendering/vulkan/VulkanInstance.hpp>
 #include <rendering/vulkan/VulkanRenderBackend.hpp>
-
-#include <rendering/RenderDevice.hpp>
-#include <rendering/RenderHelpers.hpp>
+#include <rendering/vulkan/VulkanHelpers.hpp>
+#include <rendering/vulkan/VulkanDevice.hpp>
+#include <rendering/vulkan/VulkanFeatures.hpp>
 
 #include <core/logging/LogChannels.hpp>
 #include <core/logging/Logger.hpp>
@@ -716,7 +716,7 @@ RendererResult VulkanGpuBuffer::CheckCanAllocate(
     const VmaAllocationCreateInfo& allocationCreateInfo,
     SizeType size) const
 {
-    const Features& features = GetRenderBackend()->GetDevice()->GetFeatures();
+    const VulkanFeatures& features = GetRenderBackend()->GetDevice()->GetFeatures();
 
     RendererResult result;
 

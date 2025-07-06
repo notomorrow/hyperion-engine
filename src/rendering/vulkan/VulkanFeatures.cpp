@@ -1,5 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
+#include <rendering/vulkan/VulkanFeatures.hpp>
 #include <rendering/RenderBackend.hpp>
 
 #include <core/logging/Logger.hpp>
@@ -7,22 +8,22 @@
 
 namespace hyperion {
 
-Features::DynamicFunctions Features::dynFunctions = {};
+VulkanFeatures::DynamicFunctions VulkanFeatures::dynFunctions = {};
 
-Features::Features()
+VulkanFeatures::VulkanFeatures()
     : m_physicalDevice(nullptr),
       m_properties({}),
       m_features({})
 {
 }
 
-Features::Features(VkPhysicalDevice physicalDevice)
-    : Features()
+VulkanFeatures::VulkanFeatures(VkPhysicalDevice physicalDevice)
+    : VulkanFeatures()
 {
     SetPhysicalDevice(physicalDevice);
 }
 
-void Features::SetPhysicalDevice(VkPhysicalDevice physicalDevice)
+void VulkanFeatures::SetPhysicalDevice(VkPhysicalDevice physicalDevice)
 {
     if ((m_physicalDevice = physicalDevice))
     {
@@ -131,7 +132,7 @@ void Features::SetPhysicalDevice(VkPhysicalDevice physicalDevice)
     }
 }
 
-void Features::LoadDynamicFunctions(VulkanDevice* device)
+void VulkanFeatures::LoadDynamicFunctions(VulkanDevice* device)
 {
 #define HYP_LOAD_FN(name)                                                               \
     do                                                                                  \
@@ -177,7 +178,7 @@ void Features::LoadDynamicFunctions(VulkanDevice* device)
 #undef HYP_LOAD_FN
 }
 
-void Features::SetDeviceFeatures(VulkanDevice* device)
+void VulkanFeatures::SetDeviceFeatures(VulkanDevice* device)
 {
 #if defined(HYP_MOLTENVK) && HYP_MOLTENVK && HYP_MOLTENVK_LINKED
     MVKConfiguration* mvkConfig = nullptr;

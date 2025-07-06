@@ -3,9 +3,10 @@
 #include <rendering/vulkan/VulkanSwapchain.hpp>
 #include <rendering/vulkan/VulkanFrame.hpp>
 #include <rendering/vulkan/VulkanImage.hpp>
+#include <rendering/vulkan/VulkanHelpers.hpp>
+#include <rendering/vulkan/VulkanDevice.hpp>
+#include <rendering/vulkan/VulkanFeatures.hpp>
 #include <rendering/vulkan/VulkanRenderBackend.hpp>
-
-#include <rendering/RenderDevice.hpp>
 
 #include <core/debug/Debug.hpp>
 
@@ -356,9 +357,9 @@ RendererResult VulkanSwapchain::RetrieveImageHandles()
     }
 
     // Transition each image to PRESENT state
-    SingleTimeCommands commands;
+    UniquePtr<SingleTimeCommands> singleTimeCommands = GetRenderBackend()->GetSingleTimeCommands();
 
-    commands.Push([&](CmdList& cmd)
+    singleTimeCommands->Push([&](CmdList& cmd)
         {
             for (const ImageRef& image : m_images)
             {
@@ -368,7 +369,7 @@ RendererResult VulkanSwapchain::RetrieveImageHandles()
             }
         });
 
-    HYPERION_BUBBLE_ERRORS(commands.Execute());
+    HYPERION_BUBBLE_ERRORS(singleTimeCommands->Execute());
 
     // Ensure all images are in the PRESENT state
     for (const ImageRef& image : m_images)

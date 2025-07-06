@@ -4,8 +4,10 @@
 #include <rendering/vulkan/VulkanCommandBuffer.hpp>
 #include <rendering/vulkan/VulkanShader.hpp>
 #include <rendering/vulkan/VulkanRenderBackend.hpp>
+#include <rendering/vulkan/VulkanFeatures.hpp>
 
 #include <core/debug/Debug.hpp>
+
 #include <core/math/MathUtil.hpp>
 #include <core/math/Transform.hpp>
 

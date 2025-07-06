@@ -2,7 +2,8 @@
 
 #include <rendering/vulkan/VulkanDevice.hpp>
 #include <rendering/vulkan/VulkanInstance.hpp>
-#include <rendering/vulkan/VulkanInstance.hpp>
+#include <rendering/vulkan/VulkanFeatures.hpp>
+#include <rendering/vulkan/VulkanStructs.hpp>
 
 #include <rendering/RenderBackend.hpp>
 #include <rendering/RenderDescriptorSet.hpp>
@@ -21,7 +22,7 @@ VulkanDevice::VulkanDevice(VkPhysicalDevice physical, VkSurfaceKHR surface)
       m_physical(physical),
       m_surface(surface),
       m_allocator(VK_NULL_HANDLE),
-      m_features(MakeUnique<Features>())
+      m_features(MakeUnique<VulkanFeatures>())
 {
     m_features->SetPhysicalDevice(m_physical);
 
@@ -281,7 +282,7 @@ RendererResult VulkanDevice::CheckDeviceSuitable(const ExtensionMap& unsupported
         }
     }
 
-    const SwapchainSupportDetails swapchainSupport = m_features->QuerySwapchainSupport(m_surface);
+    const VulkanSwapchainSupportDetails swapchainSupport = m_features->QuerySwapchainSupport(m_surface);
     const bool swapchainsAvailable = swapchainSupport.formats.Any() && swapchainSupport.presentModes.Any();
 
     if (!m_queueFamilyIndices.IsComplete())

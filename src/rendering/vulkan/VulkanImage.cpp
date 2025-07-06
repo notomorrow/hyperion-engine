@@ -4,10 +4,12 @@
 #include <rendering/vulkan/VulkanCommandBuffer.hpp>
 #include <rendering/vulkan/VulkanRenderBackend.hpp>
 #include <rendering/vulkan/VulkanInstance.hpp>
-
-#include <rendering/RenderGraphicsPipeline.hpp>
-#include <rendering/RenderHelpers.hpp>
-#include <rendering/RenderDevice.hpp>
+#include <rendering/vulkan/VulkanFrame.hpp>
+#include <rendering/vulkan/VulkanDevice.hpp>
+#include <rendering/vulkan/VulkanFeatures.hpp>
+#include <rendering/vulkan/VulkanGraphicsPipeline.hpp>
+#include <rendering/vulkan/VulkanHelpers.hpp>
+#include <rendering/vulkan/VulkanResult.hpp>
 
 #include <rendering/rhi/CmdList.hpp>
 
@@ -98,7 +100,7 @@ RendererResult ImagePlatformImpl<Platform::vulkan>::ConvertTo32BPP(
     m_bpp = newBpp;
     m_size = newSize;
 
-    *outFormat = helpers::ToVkFormat(m_textureDesc.format);
+    *outFormat = ToVkFormat(m_textureDesc.format);
 
     HYPERION_RETURN_OK;
 }
@@ -263,8 +265,8 @@ RendererResult VulkanImage::Create(ResourceState initialState)
         return HYP_MAKE_ERROR(RendererError, "Invalid image extent - width*height*depth cannot equal zero");
     }
 
-    VkFormat vkFormat = helpers::ToVkFormat(format);
-    VkImageType vkImageType = helpers::ToVkImageType(type);
+    VkFormat vkFormat = ToVkFormat(format);
+    VkImageType vkImageType = ToVkImageType(type);
     VkImageCreateFlags vkImageCreateFlags = 0;
     VkFormatFeatureFlags vkFormatFeatures = 0;
     VkImageFormatProperties vkImageFormatProperties {};
@@ -439,18 +441,13 @@ RendererResult VulkanImage::Resize(const Vec3u& extent)
         {
             SetResourceState(RS_UNDEFINED);
 
-            SingleTimeCommands commands;
-
-            commands.Push([this, previousResourceState](CmdList& cmd)
-                {
-                    cmd.Add<::hyperion::InsertBarrier>(HandleFromThis(), previousResourceState);
-                });
-
-            HYPERION_BUBBLE_ERRORS(commands.Execute());
+            FrameBase* frame = GetRenderBackend()->GetCurrentFrame();
+            CmdList& cmd = frame->GetCommandList();
+            cmd.Add<::hyperion::InsertBarrier>(HandleFromThis(), previousResourceState);
         }
     }
 
-    HYPERION_RETURN_OK;
+    return {};
 }
 
 void VulkanImage::SetResourceState(ResourceState newState)
@@ -614,16 +611,8 @@ RendererResult VulkanImage::Blit(
     return Blit(
         commandBuffer,
         src,
-        Rect<uint32> {
-            .x0 = 0,
-            .y0 = 0,
-            .x1 = src->GetExtent().x,
-            .y1 = src->GetExtent().y },
-        Rect<uint32> {
-            .x0 = 0,
-            .y0 = 0,
-            .x1 = m_textureDesc.extent.x,
-            .y1 = m_textureDesc.extent.y });
+        Rect<uint32> { 0, 0, src->GetExtent().x, src->GetExtent().y },
+        Rect<uint32> { 0, 0, m_textureDesc.extent.x, m_textureDesc.extent.y });
 }
 
 RendererResult VulkanImage::Blit(
@@ -637,16 +626,8 @@ RendererResult VulkanImage::Blit(
     return Blit(
         commandBuffer,
         srcImage,
-        Rect<uint32> {
-            .x0 = 0,
-            .y0 = 0,
-            .x1 = srcImage->GetExtent().x,
-            .y1 = srcImage->GetExtent().y },
-        Rect<uint32> {
-            .x0 = 0,
-            .y0 = 0,
-            .x1 = m_textureDesc.extent.x,
-            .y1 = m_textureDesc.extent.y },
+        Rect<uint32> { 0, 0, srcImage->GetExtent().x, srcImage->GetExtent().y },
+        Rect<uint32> { 0, 0, m_textureDesc.extent.x, m_textureDesc.extent.y },
         srcMip, dstMip, srcFace, dstFace);
 }
 
@@ -702,7 +683,7 @@ RendererResult VulkanImage::Blit(
             m_handle,
             GetVkImageLayout(dstResourceState),
             1, &blit,
-            helpers::ToVkFilter(GetMinFilterMode()));
+            ToVkFilter(GetMinFilterMode()));
     }
 
     HYPERION_RETURN_OK;
@@ -762,7 +743,7 @@ RendererResult VulkanImage::Blit(
         m_handle,
         GetVkImageLayout(dstResourceState),
         1, &blit,
-        helpers::ToVkFilter(GetMinFilterMode()));
+        ToVkFilter(GetMinFilterMode()));
 
     HYPERION_RETURN_OK;
 }

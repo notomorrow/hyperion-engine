@@ -14,8 +14,4 @@ uint32 MipmapSize(uint32 srcSize, int lod)
 
 } // namespace helpers
 
-namespace platform {
-
-} // namespace platform
-
 } // namespace hyperion

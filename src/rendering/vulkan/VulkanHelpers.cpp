@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#include <rendering/RenderHelpers.hpp>
-
+#include <rendering/vulkan/VulkanHelpers.hpp>
 #include <rendering/vulkan/VulkanCommandBuffer.hpp>
 #include <rendering/vulkan/VulkanDevice.hpp>
 #include <rendering/vulkan/VulkanFence.hpp>
@@ -16,16 +15,10 @@ namespace hyperion {
 
 extern IRenderBackend* g_renderBackend;
 
-namespace platform {
-
 static inline VulkanRenderBackend* GetRenderBackend()
 {
     return static_cast<VulkanRenderBackend*>(g_renderBackend);
 }
-
-} // namespace platform
-
-namespace helpers {
 
 VkIndexType ToVkIndexType(GpuElemType elemType)
 {
@@ -225,25 +218,9 @@ VkDescriptorType ToVkDescriptorType(DescriptorSetElementType type)
     }
 }
 
-} // namespace helpers
+#pragma region VulkanSingleTimeCommands
 
-namespace platform {
-
-#pragma region SingleTimeCommands
-
-template <>
-SingleTimeCommands<Platform::vulkan>::SingleTimeCommands()
-    : m_platformImpl { this }
-{
-}
-
-template <>
-SingleTimeCommands<Platform::vulkan>::~SingleTimeCommands()
-{
-}
-
-template <>
-RendererResult SingleTimeCommands<Platform::vulkan>::Execute()
+RendererResult VulkanSingleTimeCommands::Execute()
 {
     CmdList commandList;
 
@@ -293,8 +270,6 @@ RendererResult SingleTimeCommands<Platform::vulkan>::Execute()
     return result;
 }
 
-#pragma endregion SingleTimeCommands
-
-} // namespace platform
+#pragma endregion VulkanSingleTimeCommands
 
 } // namespace hyperion

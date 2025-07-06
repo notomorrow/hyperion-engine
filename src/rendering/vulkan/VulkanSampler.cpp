@@ -1,10 +1,10 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
 #include <rendering/vulkan/VulkanSampler.hpp>
+#include <rendering/vulkan/VulkanDevice.hpp>
+#include <rendering/vulkan/VulkanHelpers.hpp>
+#include <rendering/vulkan/VulkanFeatures.hpp>
 #include <rendering/vulkan/VulkanRenderBackend.hpp>
-
-#include <rendering/RenderDevice.hpp>
-#include <rendering/RenderHelpers.hpp>
 
 #include <core/debug/Debug.hpp>
 
@@ -40,11 +40,11 @@ RendererResult VulkanSampler::Create()
     HYP_GFX_ASSERT(m_handle == VK_NULL_HANDLE);
 
     VkSamplerCreateInfo samplerInfo { VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO };
-    samplerInfo.magFilter = helpers::ToVkFilter(m_magFilterMode);
-    samplerInfo.minFilter = helpers::ToVkFilter(m_minFilterMode);
-    samplerInfo.addressModeU = helpers::ToVkSamplerAddressMode(m_wrapMode);
-    samplerInfo.addressModeV = helpers::ToVkSamplerAddressMode(m_wrapMode);
-    samplerInfo.addressModeW = helpers::ToVkSamplerAddressMode(m_wrapMode);
+    samplerInfo.magFilter = ToVkFilter(m_magFilterMode);
+    samplerInfo.minFilter = ToVkFilter(m_minFilterMode);
+    samplerInfo.addressModeU = ToVkSamplerAddressMode(m_wrapMode);
+    samplerInfo.addressModeV = ToVkSamplerAddressMode(m_wrapMode);
+    samplerInfo.addressModeW = ToVkSamplerAddressMode(m_wrapMode);
 
     // if (device->GetFeatures().GetPhysicalDeviceFeatures().samplerAnisotropy) {
     //     samplerInfo.anisotropyEnable = VK_TRUE;

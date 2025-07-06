@@ -13,13 +13,13 @@
 #include <rendering/RenderEnvProbe.hpp>
 #include <rendering/RenderEnvGrid.hpp>
 #include <rendering/RenderView.hpp>
+#include <rendering/RenderHelpers.hpp>
 #include <rendering/RenderCollection.hpp>
-#include <rendering/Renderer.hpp>
-
 #include <rendering/RenderBackend.hpp>
 #include <rendering/RenderObject.hpp>
 #include <rendering/RenderConfig.hpp>
 #include <rendering/RenderDevice.hpp>
+#include <rendering/Renderer.hpp>
 
 #include <scene/BVH.hpp>
 #include <scene/Mesh.hpp>
@@ -674,9 +674,9 @@ void LightmapGPUPathTracer::ReadHitsBuffer(FrameBase* frame, Span<LightmapHit> o
     HYPERION_ASSERT_RESULT(stagingBuffer->Create());
     stagingBuffer->Memset(outHits.Size() * sizeof(LightmapHit), 0);
 
-    SingleTimeCommands commands;
+    UniquePtr<SingleTimeCommands> singleTimeCommands = g_renderBackend->GetSingleTimeCommands();
 
-    commands.Push([&](CmdList& cmd)
+    singleTimeCommands->Push([&](CmdList& cmd)
         {
             const ResourceState previousResourceState = hitsBuffer->GetResourceState();
 
@@ -693,7 +693,7 @@ void LightmapGPUPathTracer::ReadHitsBuffer(FrameBase* frame, Span<LightmapHit> o
             cmd.Add<InsertBarrier>(hitsBuffer, previousResourceState);
         });
 
-    HYPERION_ASSERT_RESULT(commands.Execute());
+    HYPERION_ASSERT_RESULT(singleTimeCommands->Execute());
 
     stagingBuffer->Read(sizeof(LightmapHit) * outHits.Size(), outHits.Data());
 

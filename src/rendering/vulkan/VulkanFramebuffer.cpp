@@ -3,9 +3,10 @@
 #include <rendering/vulkan/VulkanFramebuffer.hpp>
 #include <rendering/vulkan/VulkanRenderBackend.hpp>
 #include <rendering/vulkan/VulkanInstance.hpp>
-
-#include <rendering/RenderDevice.hpp>
-#include <rendering/RenderHelpers.hpp>
+#include <rendering/vulkan/VulkanDevice.hpp>
+#include <rendering/vulkan/VulkanFrame.hpp>
+#include <rendering/vulkan/VulkanHelpers.hpp>
+#include <rendering/vulkan/VulkanResult.hpp>
 
 #include <rendering/rhi/CmdList.hpp>
 
@@ -56,29 +57,25 @@ RendererResult VulkanAttachmentMap::Create()
     // Transition image layout immediately on creation
     if (imagesToTransition.Any())
     {
-        SingleTimeCommands commands;
+        FrameBase* frame = GetRenderBackend()->GetCurrentFrame();
+        CmdList& cmd = frame->GetCommandList();
 
-        commands.Push([this, &framebuffer, &imagesToTransition](CmdList& cmd)
+        for (const VulkanImageRef& image : imagesToTransition)
+        {
+            HYP_GFX_ASSERT(image.IsValid());
+
+            if (framebuffer->GetRenderPass()->GetStage() == RenderPassStage::PRESENT)
             {
-                for (const VulkanImageRef& image : imagesToTransition)
-                {
-                    HYP_GFX_ASSERT(image.IsValid());
-
-                    if (framebuffer->GetRenderPass()->GetStage() == RenderPassStage::PRESENT)
-                    {
-                        cmd.Add<InsertBarrier>(image, RS_PRESENT);
-                    }
-                    else
-                    {
-                        cmd.Add<InsertBarrier>(image, RS_SHADER_RESOURCE);
-                    }
-                }
-            });
-
-        HYPERION_ASSERT_RESULT(commands.Execute());
+                cmd.Add<InsertBarrier>(image, RS_PRESENT);
+            }
+            else
+            {
+                cmd.Add<InsertBarrier>(image, RS_SHADER_RESOURCE);
+            }
+        }
     }
 
-    HYPERION_RETURN_OK;
+    return {};
 }
 
 RendererResult VulkanAttachmentMap::Resize(Vec2u newSize)
@@ -148,9 +145,9 @@ RendererResult VulkanAttachmentMap::Resize(Vec2u newSize)
     // Transition image layout immediately on resize
     if (imagesToTransition.Any())
     {
-        SingleTimeCommands commands;
+        UniquePtr<SingleTimeCommands> singleTimeCommands = g_renderBackend->GetSingleTimeCommands();
 
-        commands.Push([this, &framebuffer, &imagesToTransition](CmdList& cmd)
+        singleTimeCommands->Push([this, &framebuffer, &imagesToTransition](CmdList& cmd)
             {
                 for (const VulkanImageRef& image : imagesToTransition)
                 {
@@ -167,10 +164,10 @@ RendererResult VulkanAttachmentMap::Resize(Vec2u newSize)
                 }
             });
 
-        HYPERION_ASSERT_RESULT(commands.Execute());
+        HYPERION_ASSERT_RESULT(singleTimeCommands->Execute());
     }
 
-    HYPERION_RETURN_OK;
+    return {};
 }
 
 #pragma endregion VulkanAttachmentMap

@@ -4,9 +4,9 @@
 #include <rendering/vulkan/VulkanFence.hpp>
 #include <rendering/vulkan/VulkanCommandBuffer.hpp>
 #include <rendering/vulkan/VulkanInstance.hpp>
+#include <rendering/vulkan/VulkanDevice.hpp>
+#include <rendering/vulkan/VulkanFeatures.hpp>
 #include <rendering/vulkan/VulkanRenderBackend.hpp>
-
-#include <rendering/RenderDevice.hpp>
 
 #include <rendering/RenderMaterial.hpp>
 

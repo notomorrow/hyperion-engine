@@ -2,21 +2,20 @@
 
 #include <rendering/RenderTexture.hpp>
 #include <rendering/RenderGlobalState.hpp>
+#include <rendering/RenderHelpers.hpp>
+#include <rendering/RenderBackend.hpp>
 #include <rendering/FullScreenPass.hpp>
 #include <rendering/RenderGroup.hpp>
 #include <rendering/RenderMesh.hpp>
 #include <rendering/Renderer.hpp>
 #include <rendering/Bindless.hpp>
 #include <rendering/PlaceholderData.hpp>
-
-#include <rendering/rhi/CmdList.hpp>
-
-#include <rendering/RenderBackend.hpp>
 #include <rendering/RenderFrame.hpp>
 #include <rendering/RenderCommand.hpp>
 #include <rendering/RenderImage.hpp>
 #include <rendering/RenderImageView.hpp>
 #include <rendering/RenderGraphicsPipeline.hpp>
+#include <rendering/rhi/CmdList.hpp>
 
 #include <scene/Texture.hpp>
 #include <scene/Mesh.hpp>
@@ -150,41 +149,27 @@ struct RENDER_COMMAND(CreateTexture)
 
                     // @FIXME add back ConvertTo32BPP
 
-                    SingleTimeCommands commands;
+                    FrameBase* frame = g_renderBackend->GetCurrentFrame();
+                    CmdList& cmd = frame->GetCommandList();
 
-                    commands.Push([&](CmdList& cmd)
-                        {
-                            cmd.Add<InsertBarrier>(image, RS_COPY_DST);
+                    cmd.Add<InsertBarrier>(image, RS_COPY_DST);
 
-                            cmd.Add<CopyBufferToImage>(stagingBuffer, image);
+                    cmd.Add<CopyBufferToImage>(stagingBuffer, image);
 
-                            if (textureData.desc.HasMipmaps())
-                            {
-                                cmd.Add<GenerateMipmaps>(image);
-                            }
-
-                            cmd.Add<InsertBarrier>(image, initialState);
-                        });
-
-                    if (RendererResult result = commands.Execute(); result.HasError())
+                    if (textureData.desc.HasMipmaps())
                     {
-                        return result;
+                        cmd.Add<GenerateMipmaps>(image);
                     }
+
+                    cmd.Add<InsertBarrier>(image, initialState);
                 }
                 else if (initialState != RS_UNDEFINED)
                 {
-                    SingleTimeCommands commands;
+                    FrameBase* frame = g_renderBackend->GetCurrentFrame();
+                    CmdList& cmd = frame->GetCommandList();
 
-                    commands.Push([&](CmdList& cmd)
-                        {
-                            // Transition to initial state
-                            cmd.Add<InsertBarrier>(image, initialState);
-                        });
-
-                    if (RendererResult result = commands.Execute(); result.HasError())
-                    {
-                        return result;
-                    }
+                    // Transition to initial state
+                    cmd.Add<InsertBarrier>(image, initialState);
                 }
             }
 
@@ -192,14 +177,9 @@ struct RENDER_COMMAND(CreateTexture)
             {
                 HYPERION_BUBBLE_ERRORS(imageView->Create());
             }
-
-            if (g_renderBackend->GetRenderConfig().IsBindlessSupported())
-            {
-                // g_renderGlobalState->bindlessStorage->AddResource(texture.Id(), imageView);
-            }
         }
 
-        HYPERION_RETURN_OK;
+        return {};
     }
 };
 
@@ -268,106 +248,86 @@ struct RENDER_COMMAND(RenderTextureMipmapLevels)
     virtual RendererResult operator()() override
     {
         // draw a quad for each level
-        SingleTimeCommands commands;
+        FrameBase* frame = g_renderBackend->GetCurrentFrame();
+        CmdList& cmd = frame->GetCommandList();
 
-        commands.Push([this](CmdList& cmd)
+        const Vec3u extent = m_image->GetExtent();
+
+        uint32 mipWidth = extent.x,
+               mipHeight = extent.y;
+
+        ImageRef& dstImage = m_image;
+
+        for (uint32 mipLevel = 0; mipLevel < uint32(m_mipImageViews.Size()); mipLevel++)
+        {
+            RC<FullScreenPass>& pass = m_passes[mipLevel];
+            Assert(pass != nullptr);
+
+            const uint32 prevMipWidth = mipWidth,
+                         prevMipHeight = mipHeight;
+
+            mipWidth = MathUtil::Max(1u, extent.x >> (mipLevel));
+            mipHeight = MathUtil::Max(1u, extent.y >> (mipLevel));
+
+            struct
             {
-                const Vec3u extent = m_image->GetExtent();
+                Vec4u dimensions;
+                Vec4u prevDimensions;
+                uint32 mipLevel;
+            } pushConstants;
 
-                uint32 mipWidth = extent.x,
-                       mipHeight = extent.y;
+            pushConstants.dimensions = { mipWidth, mipHeight, 0, 0 };
+            pushConstants.prevDimensions = { prevMipWidth, prevMipHeight, 0, 0 };
+            pushConstants.mipLevel = mipLevel;
 
-                ImageRef& dstImage = m_image;
+            {
+                pass->GetGraphicsPipeline()->SetPushConstants(&pushConstants, sizeof(pushConstants));
+                pass->Begin(frame, NullRenderSetup());
 
-                for (uint32 mipLevel = 0; mipLevel < uint32(m_mipImageViews.Size()); mipLevel++)
-                {
-                    RC<FullScreenPass>& pass = m_passes[mipLevel];
-                    Assert(pass != nullptr);
+                cmd.Add<BindDescriptorTable>(
+                    pass->GetGraphicsPipeline()->GetDescriptorTable(),
+                    pass->GetGraphicsPipeline(),
+                    ArrayMap<Name, ArrayMap<Name, uint32>> {},
+                    frame->GetFrameIndex());
 
-                    const uint32 prevMipWidth = mipWidth,
-                                 prevMipHeight = mipHeight;
+                pass->GetQuadMesh()->GetRenderResource().Render(cmd);
+                pass->End(frame, NullRenderSetup());
+            }
 
-                    mipWidth = MathUtil::Max(1u, extent.x >> (mipLevel));
-                    mipHeight = MathUtil::Max(1u, extent.y >> (mipLevel));
+            const ImageRef& srcImage = pass->GetAttachment(0)->GetImage();
 
-                    struct
-                    {
-                        Vec4u dimensions;
-                        Vec4u prevDimensions;
-                        uint32 mipLevel;
-                    } pushConstants;
+            // Blit into mip level
+            cmd.Add<InsertBarrier>(
+                dstImage,
+                RS_COPY_DST,
+                ImageSubResource { .baseMipLevel = mipLevel });
 
-                    pushConstants.dimensions = { mipWidth, mipHeight, 0, 0 };
-                    pushConstants.prevDimensions = { prevMipWidth, prevMipHeight, 0, 0 };
-                    pushConstants.mipLevel = mipLevel;
+            cmd.Add<InsertBarrier>(
+                srcImage,
+                RS_COPY_SRC,
+                ImageSubResource { .baseMipLevel = mipLevel });
 
-                    {
-                        FrameRef tempFrame = g_renderBackend->MakeFrame(0);
+            cmd.Add<BlitRect>(
+                srcImage,
+                dstImage,
+                Rect<uint32> { 0, 0, srcImage->GetExtent().x, srcImage->GetExtent().y },
+                Rect<uint32> { 0, 0, dstImage->GetExtent().x, dstImage->GetExtent().y });
 
-                        pass->GetGraphicsPipeline()->SetPushConstants(&pushConstants, sizeof(pushConstants));
-                        pass->Begin(tempFrame, NullRenderSetup());
+            cmd.Add<InsertBarrier>(
+                srcImage,
+                RS_SHADER_RESOURCE,
+                ImageSubResource { .baseMipLevel = mipLevel });
 
-                        tempFrame->GetCommandList().Add<BindDescriptorTable>(
-                            pass->GetGraphicsPipeline()->GetDescriptorTable(),
-                            pass->GetGraphicsPipeline(),
-                            ArrayMap<Name, ArrayMap<Name, uint32>> {},
-                            tempFrame->GetFrameIndex());
+            cmd.Add<InsertBarrier>(
+                dstImage,
+                RS_SHADER_RESOURCE,
+                ImageSubResource { .baseMipLevel = mipLevel });
+        }
 
-                        pass->GetQuadMesh()->GetRenderResource().Render(tempFrame->GetCommandList());
-                        pass->End(tempFrame, NullRenderSetup());
+        // all mip levels have been transitioned into this state
+        cmd.Add<InsertBarrier>(dstImage, RS_SHADER_RESOURCE);
 
-                        cmd.Concat(std::move(tempFrame->GetCommandList()));
-
-                        HYPERION_ASSERT_RESULT(tempFrame->Destroy());
-                    }
-
-                    const ImageRef& srcImage = pass->GetAttachment(0)->GetImage();
-
-                    // Blit into mip level
-                    cmd.Add<InsertBarrier>(
-                        dstImage,
-                        RS_COPY_DST,
-                        ImageSubResource { .baseMipLevel = mipLevel });
-
-                    cmd.Add<InsertBarrier>(
-                        srcImage,
-                        RS_COPY_SRC,
-                        ImageSubResource { .baseMipLevel = mipLevel });
-
-                    cmd.Add<BlitRect>(
-                        srcImage,
-                        dstImage,
-                        Rect<uint32> {
-                            .x0 = 0,
-                            .y0 = 0,
-                            .x1 = srcImage->GetExtent().x,
-                            .y1 = srcImage->GetExtent().y },
-                        Rect<uint32> {
-                            .x0 = 0,
-                            .y0 = 0,
-                            .x1 = dstImage->GetExtent().x,
-                            .y1 = dstImage->GetExtent().y });
-
-                    cmd.Add<InsertBarrier>(
-                        srcImage,
-                        RS_SHADER_RESOURCE,
-                        ImageSubResource { .baseMipLevel = mipLevel });
-
-                    cmd.Add<InsertBarrier>(
-                        dstImage,
-                        RS_SHADER_RESOURCE,
-                        ImageSubResource { .baseMipLevel = mipLevel });
-                }
-
-                // all mip levels have been transitioned into this state
-                cmd.Add<InsertBarrier>(
-                    dstImage,
-                    RS_SHADER_RESOURCE);
-
-                HYPERION_RETURN_OK;
-            });
-
-        return commands.Execute();
+        return {};
     }
 };
 
@@ -537,9 +497,9 @@ void RenderTexture::EnqueueReadback(Proc<void(TResult<ByteBuffer>&&)>&& onComple
             HYPERION_ASSERT_RESULT(gpuBuffer->Create());
             gpuBuffer->Map();
 
-            SingleTimeCommands commands;
+            UniquePtr<SingleTimeCommands> singleTimeCommands = g_renderBackend->GetSingleTimeCommands();
 
-            commands.Push([this, &gpuBuffer](CmdList& cmd)
+            singleTimeCommands->Push([this, &gpuBuffer](CmdList& cmd)
                 {
                     const ResourceState previousResourceState = m_image->GetResourceState();
 
@@ -552,7 +512,7 @@ void RenderTexture::EnqueueReadback(Proc<void(TResult<ByteBuffer>&&)>&& onComple
                     cmd.Add<InsertBarrier>(m_image, previousResourceState);
                 });
 
-            RendererResult result = commands.Execute();
+            RendererResult result = singleTimeCommands->Execute();
 
             if (result.HasError())
             {
@@ -579,13 +539,15 @@ RendererResult RenderTexture::Readback(ByteBuffer& outByteBuffer)
 {
     HYP_SCOPE;
 
+    Threads::AssertOnThread(g_renderThread);
+
     GpuBufferRef gpuBuffer = g_renderBackend->MakeGpuBuffer(GpuBufferType::STAGING_BUFFER, m_image->GetByteSize());
     HYPERION_ASSERT_RESULT(gpuBuffer->Create());
     gpuBuffer->Map();
 
-    SingleTimeCommands commands;
+    UniquePtr<SingleTimeCommands> singleTimeCommands = g_renderBackend->GetSingleTimeCommands();
 
-    commands.Push([this, &gpuBuffer](CmdList& cmd)
+    singleTimeCommands->Push([this, &gpuBuffer](CmdList& cmd)
         {
             const ResourceState previousResourceState = m_image->GetResourceState();
 
@@ -598,7 +560,7 @@ RendererResult RenderTexture::Readback(ByteBuffer& outByteBuffer)
             cmd.Add<InsertBarrier>(m_image, previousResourceState);
         });
 
-    RendererResult result = commands.Execute();
+    RendererResult result = singleTimeCommands->Execute();
 
     if (result.HasError())
     {

@@ -476,7 +476,7 @@ struct ResourceContainer
         }
         while (hypClass);
 
-        HYP_FAIL("No SubtypeData container found for TypeId {} (HypClass: {})! Missing DECLARE_RENDER_DATA_CONTAINER() macro invocation for type?", typeId.Value(), *GetClass(typeId)->GetName());
+        HYP_FAIL("No SubtypeData container found for TypeId %u (HypClass: %s)! Missing DECLARE_RENDER_DATA_CONTAINER() macro invocation for type?", typeId.Value(), *GetClass(typeId)->GetName());
     }
 
     SparsePagedArray<ResourceSubtypeData, 16> dataByType;

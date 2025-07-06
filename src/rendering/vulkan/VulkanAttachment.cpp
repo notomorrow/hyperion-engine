@@ -4,9 +4,9 @@
 #include <rendering/vulkan/VulkanImage.hpp>
 #include <rendering/vulkan/VulkanImageView.hpp>
 #include <rendering/vulkan/VulkanFramebuffer.hpp>
+#include <rendering/vulkan/VulkanHelpers.hpp>
 
 #include <rendering/RenderBackend.hpp>
-#include <rendering/RenderHelpers.hpp>
 
 namespace hyperion {
 #pragma region Helpers
@@ -125,13 +125,13 @@ RendererResult VulkanAttachment::Destroy()
     SafeRelease(std::move(m_image));
     SafeRelease(std::move(m_imageView));
 
-    HYPERION_RETURN_OK;
+    return {};
 }
 
 VkAttachmentDescription VulkanAttachment::GetVulkanAttachmentDescription() const
 {
     return VkAttachmentDescription {
-        .format = helpers::ToVkFormat(GetFormat()),
+        .format = ToVkFormat(GetFormat()),
         .samples = VK_SAMPLE_COUNT_1_BIT,
         .loadOp = ToVkLoadOp(GetLoadOperation()),
         .storeOp = ToVkStoreOp(GetStoreOperation()),

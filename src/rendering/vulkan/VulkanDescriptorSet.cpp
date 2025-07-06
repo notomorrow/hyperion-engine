@@ -1,6 +1,9 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
 #include <rendering/vulkan/VulkanDescriptorSet.hpp>
+#include <rendering/vulkan/VulkanRenderBackend.hpp>
+#include <rendering/vulkan/VulkanDevice.hpp>
+#include <rendering/vulkan/VulkanHelpers.hpp>
 #include <rendering/vulkan/VulkanCommandBuffer.hpp>
 #include <rendering/vulkan/VulkanImageView.hpp>
 #include <rendering/vulkan/VulkanSampler.hpp>
@@ -8,10 +11,6 @@
 #include <rendering/vulkan/VulkanComputePipeline.hpp>
 #include <rendering/vulkan/rt/VulkanRaytracingPipeline.hpp>
 #include <rendering/vulkan/rt/VulkanAccelerationStructure.hpp>
-#include <rendering/vulkan/VulkanRenderBackend.hpp>
-
-#include <rendering/RenderDevice.hpp>
-#include <rendering/RenderHelpers.hpp>
 
 #include <rendering/RenderGlobalState.hpp>
 
@@ -152,7 +151,7 @@ void VulkanDescriptorSet::UpdateDirtyState(bool* outIsDirty)
                 VulkanDescriptorElementInfo& descriptorElementInfo = localDescriptorElementInfos.EmplaceBack();
                 descriptorElementInfo.binding = layoutElement->binding;
                 descriptorElementInfo.index = index;
-                descriptorElementInfo.descriptorType = helpers::ToVkDescriptorType(layoutElement->type);
+                descriptorElementInfo.descriptorType = ToVkDescriptorType(layoutElement->type);
 
                 descriptorElementInfo.bufferInfo = VkDescriptorBufferInfo {
                     .buffer = static_cast<VulkanGpuBuffer*>(ref.Get())->GetVulkanHandle(),
@@ -176,7 +175,7 @@ void VulkanDescriptorSet::UpdateDirtyState(bool* outIsDirty)
                 VulkanDescriptorElementInfo& descriptorElementInfo = localDescriptorElementInfos.EmplaceBack();
                 descriptorElementInfo.binding = layoutElement->binding;
                 descriptorElementInfo.index = index;
-                descriptorElementInfo.descriptorType = helpers::ToVkDescriptorType(layoutElement->type);
+                descriptorElementInfo.descriptorType = ToVkDescriptorType(layoutElement->type);
 
                 const ImageViewRef& ref = value.Get<ImageViewRef>();
                 HYP_GFX_ASSERT(ref.IsValid(), "Invalid image view reference for descriptor set element: %s.%s[%u]", m_layout.GetName().LookupString(), name.LookupString(), index);
@@ -201,7 +200,7 @@ void VulkanDescriptorSet::UpdateDirtyState(bool* outIsDirty)
                 VulkanDescriptorElementInfo& descriptorElementInfo = localDescriptorElementInfos.EmplaceBack();
                 descriptorElementInfo.binding = layoutElement->binding;
                 descriptorElementInfo.index = index;
-                descriptorElementInfo.descriptorType = helpers::ToVkDescriptorType(layoutElement->type);
+                descriptorElementInfo.descriptorType = ToVkDescriptorType(layoutElement->type);
 
                 const SamplerRef& ref = value.Get<SamplerRef>();
                 HYP_GFX_ASSERT(ref.IsValid(), "Invalid sampler reference for descriptor set element: %s.%s[%u]", m_layout.GetName().LookupString(), name.LookupString(), index);
@@ -227,7 +226,7 @@ void VulkanDescriptorSet::UpdateDirtyState(bool* outIsDirty)
                 VulkanDescriptorElementInfo& descriptorElementInfo = localDescriptorElementInfos.EmplaceBack();
                 descriptorElementInfo.binding = layoutElement->binding;
                 descriptorElementInfo.index = index;
-                descriptorElementInfo.descriptorType = helpers::ToVkDescriptorType(layoutElement->type);
+                descriptorElementInfo.descriptorType = ToVkDescriptorType(layoutElement->type);
 
                 const TLASRef& ref = value.Get<TLASRef>();
                 HYP_GFX_ASSERT(ref.IsValid(), "Invalid TLAS reference for descriptor set element: %s.%s[%u]", m_layout.GetName().LookupString(), name.LookupString(), index);

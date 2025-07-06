@@ -47,6 +47,7 @@ class FrameBase;
 class SwapchainBase;
 class AsyncComputeBase;
 struct TextureDesc;
+class SingleTimeCommands;
 
 class DescriptorSetLayout;
 struct DescriptorTableDeclaration;
@@ -136,6 +137,8 @@ public:
     virtual TextureFormat FindSupportedFormat(Span<TextureFormat> possibleFormats, ImageSupport supportType) const = 0;
 
     virtual QueryImageCapabilitiesResult QueryImageCapabilities(const TextureDesc& textureDesc) const = 0;
+
+    virtual UniquePtr<SingleTimeCommands> GetSingleTimeCommands() = 0;
 
     virtual Delegate<void, SwapchainBase*>& GetOnSwapchainRecreatedDelegate() = 0;
 };

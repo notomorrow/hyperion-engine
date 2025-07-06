@@ -105,6 +105,8 @@ public:
 
     virtual QueryImageCapabilitiesResult QueryImageCapabilities(const TextureDesc& textureDesc) const override;
 
+    virtual UniquePtr<SingleTimeCommands> GetSingleTimeCommands() override;
+
     virtual Delegate<void, SwapchainBase*>& GetOnSwapchainRecreatedDelegate() override
     {
         return OnSwapchainRecreated;

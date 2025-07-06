@@ -2,10 +2,9 @@
 
 #include <rendering/vulkan/VulkanImageView.hpp>
 #include <rendering/vulkan/VulkanImage.hpp>
+#include <rendering/vulkan/VulkanDevice.hpp>
+#include <rendering/vulkan/VulkanHelpers.hpp>
 #include <rendering/vulkan/VulkanRenderBackend.hpp>
-
-#include <rendering/RenderDevice.hpp>
-#include <rendering/RenderHelpers.hpp>
 
 #include <core/debug/Debug.hpp>
 
@@ -70,15 +69,15 @@ RendererResult VulkanImageView::Create()
 
     VkImageViewCreateInfo viewInfo { VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
     viewInfo.image = static_cast<const VulkanImage*>(m_image.Get())->GetVulkanHandle();
-    viewInfo.viewType = helpers::ToVkImageViewType(m_image->GetType());
-    viewInfo.format = helpers::ToVkFormat(m_image->GetTextureFormat());
+    viewInfo.viewType = ToVkImageViewType(m_image->GetType());
+    viewInfo.format = ToVkFormat(m_image->GetTextureFormat());
 
     viewInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
     viewInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
     viewInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
     viewInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
 
-    viewInfo.subresourceRange.aspectMask = helpers::ToVkImageAspect(m_image->GetTextureFormat());
+    viewInfo.subresourceRange.aspectMask = ToVkImageAspect(m_image->GetTextureFormat());
     viewInfo.subresourceRange.baseMipLevel = m_mipIndex;
     viewInfo.subresourceRange.levelCount = m_numMips != 0 ? m_numMips : m_image->NumMipmaps();
     viewInfo.subresourceRange.baseArrayLayer = m_faceIndex;

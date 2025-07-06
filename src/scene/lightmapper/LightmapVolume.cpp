@@ -10,6 +10,7 @@
 
 #include <rendering/RenderCommand.hpp>
 #include <rendering/RenderHelpers.hpp>
+#include <rendering/RenderBackend.hpp>
 
 #include <rendering/lightmapper/RenderLightmapVolume.hpp>
 #include <rendering/lightmapper/LightmapUVBuilder.hpp>
@@ -21,6 +22,7 @@
 
 #include <core/threading/Threads.hpp>
 
+#include <EngineGlobals.hpp>
 #include <Engine.hpp>
 
 namespace hyperion {
@@ -75,9 +77,9 @@ struct RENDER_COMMAND(BakeLightmapVolumeTexture)
             }
         }
 
-        SingleTimeCommands commands;
+        UniquePtr<SingleTimeCommands> singleTimeCommands = g_renderBackend->GetSingleTimeCommands();
 
-        commands.Push([&](CmdList& cmd)
+        singleTimeCommands->Push([&](CmdList& cmd)
             {
                 for (uint32 textureTypeIndex = 0; textureTypeIndex < uint32(LTT_MAX); textureTypeIndex++)
                 {
@@ -128,7 +130,7 @@ struct RENDER_COMMAND(BakeLightmapVolumeTexture)
                 }
             });
 
-        HYPERION_ASSERT_RESULT(commands.Execute());
+        HYPERION_ASSERT_RESULT(singleTimeCommands->Execute());
 
         // DEBUGGING: Save each atlas texture to a file for debugging purposes
         HYP_LOG(Lightmap, Info, "Saving atlas textures to disk for debugging");

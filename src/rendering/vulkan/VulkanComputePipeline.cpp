@@ -2,8 +2,10 @@
 
 #include <rendering/vulkan/VulkanComputePipeline.hpp>
 #include <rendering/vulkan/VulkanCommandBuffer.hpp>
-#include <rendering/vulkan/VulkanShader.hpp>
 #include <rendering/vulkan/VulkanRenderBackend.hpp>
+#include <rendering/vulkan/VulkanFeatures.hpp>
+#include <rendering/vulkan/VulkanDevice.hpp>
+#include <rendering/vulkan/VulkanShader.hpp>
 
 #include <core/debug/Debug.hpp>
 

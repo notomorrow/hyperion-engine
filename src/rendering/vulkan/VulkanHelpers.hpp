@@ -5,6 +5,7 @@
 
 #include <rendering/vulkan/VulkanDevice.hpp>
 
+#include <rendering/RenderHelpers.hpp>
 #include <rendering/RenderObject.hpp>
 #include <rendering/RenderStructs.hpp>
 
@@ -13,9 +14,8 @@
 #include <Types.hpp>
 
 namespace hyperion {
-enum class DescriptorSetElementType : uint32;
 
-namespace helpers {
+enum class DescriptorSetElementType : uint32;
 
 VkIndexType ToVkIndexType(GpuElemType);
 VkFormat ToVkFormat(TextureFormat);
@@ -26,19 +26,15 @@ VkImageType ToVkImageType(TextureType);
 VkImageViewType ToVkImageViewType(TextureType type);
 VkDescriptorType ToVkDescriptorType(DescriptorSetElementType type);
 
-} // namespace helpers
-
-namespace platform {
-
-template <>
-struct SingleTimeCommandsPlatformImpl<Platform::vulkan>
+class VulkanSingleTimeCommands : public SingleTimeCommands
 {
-    SingleTimeCommands<Platform::vulkan>* self = nullptr;
-    VkCommandPool pool {};
-    QueueFamilyIndices familyIndices {};
-};
+public:
+    VulkanSingleTimeCommands() = default;
 
-} // namespace platform
+    virtual ~VulkanSingleTimeCommands() override = default;
+
+    virtual RendererResult Execute() override;
+};
 
 } // namespace hyperion
 

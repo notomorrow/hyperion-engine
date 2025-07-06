@@ -8,12 +8,12 @@
 #include <rendering/vulkan/VulkanDescriptorSet.hpp>
 #include <rendering/vulkan/VulkanInstance.hpp>
 #include <rendering/vulkan/VulkanDevice.hpp>
+#include <rendering/vulkan/VulkanHelpers.hpp>
+#include <rendering/vulkan/VulkanShader.hpp>
+#include <rendering/vulkan/VulkanFeatures.hpp>
+#include <rendering/vulkan/VulkanAsyncCompute.hpp>
 #include <rendering/vulkan/rt/VulkanRaytracingPipeline.hpp>
 #include <rendering/vulkan/rt/VulkanAccelerationStructure.hpp>
-#include <rendering/vulkan/VulkanShader.hpp>
-#include <rendering/vulkan/VulkanAsyncCompute.hpp>
-
-#include <rendering/RenderHelpers.hpp>
 
 #include <rendering/RenderableAttributes.hpp>
 
@@ -138,7 +138,7 @@ public:
 
             VkDescriptorSetLayoutBinding binding {};
             binding.descriptorCount = descriptorCount;
-            binding.descriptorType = helpers::ToVkDescriptorType(element.type);
+            binding.descriptorType = ToVkDescriptorType(element.type);
             binding.pImmutableSamplers = nullptr;
             binding.stageFlags = VK_SHADER_STAGE_ALL;
             binding.binding = element.binding;
@@ -703,8 +703,8 @@ QueryImageCapabilitiesResult VulkanRenderBackend::QueryImageCapabilities(const T
     const uint32 numMipmaps = textureDesc.NumMipmaps();
     const uint32 numFaces = textureDesc.NumFaces();
 
-    VkFormat vkFormat = helpers::ToVkFormat(format);
-    VkImageType vkImageType = helpers::ToVkImageType(type);
+    VkFormat vkFormat = ToVkFormat(format);
+    VkImageType vkImageType = ToVkImageType(type);
     VkImageCreateFlags vkImageCreateFlags = 0;
     VkFormatFeatureFlags vkFormatFeatures = 0;
     VkImageFormatProperties vkImageFormatProperties {};
@@ -785,6 +785,11 @@ RendererResult VulkanRenderBackend::GetOrCreateVkDescriptorSetLayout(const Descr
     }
 
     return HYP_MAKE_ERROR(RendererError, "Failed to get or create Vulkan descriptor set layout");
+}
+
+UniquePtr<SingleTimeCommands> VulkanRenderBackend::GetSingleTimeCommands()
+{
+    return MakeUnique<VulkanSingleTimeCommands>();
 }
 
 #pragma endregion VulkanRenderBackend

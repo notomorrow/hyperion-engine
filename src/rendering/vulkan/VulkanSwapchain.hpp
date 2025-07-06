@@ -73,7 +73,7 @@ private:
     VkSurfaceKHR m_surface;
     VkSurfaceFormatKHR m_surfaceFormat;
     VkPresentModeKHR m_presentMode;
-    SwapchainSupportDetails m_supportDetails;
+    VulkanSwapchainSupportDetails m_supportDetails;
 };
 
 } // namespace hyperion

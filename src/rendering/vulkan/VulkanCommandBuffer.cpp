@@ -3,12 +3,16 @@
 #include <rendering/vulkan/VulkanCommandBuffer.hpp>
 #include <rendering/vulkan/VulkanRenderPass.hpp>
 #include <rendering/vulkan/VulkanSemaphore.hpp>
+#include <rendering/vulkan/VulkanDevice.hpp>
 #include <rendering/vulkan/VulkanRenderBackend.hpp>
+#include <rendering/vulkan/VulkanResult.hpp>
+#include <rendering/vulkan/VulkanStructs.hpp>
+#include <rendering/vulkan/VulkanHelpers.hpp>
+#include <rendering/vulkan/VulkanFeatures.hpp>
 
 #include <rendering/RenderComputePipeline.hpp>
 #include <rendering/RenderGraphicsPipeline.hpp>
 #include <rendering/rt/RenderRaytracingPipeline.hpp>
-#include <rendering/RenderStructs.hpp>
 
 #include <Types.hpp>
 
@@ -21,7 +25,7 @@ static inline VulkanRenderBackend* GetRenderBackend()
     return static_cast<VulkanRenderBackend*>(g_renderBackend);
 }
 
-VulkanCommandBuffer::VulkanCommandBuffer(VkCommandBufferType type)
+VulkanCommandBuffer::VulkanCommandBuffer(VkCommandBufferLevel type)
     : m_type(type),
       m_handle(VK_NULL_HANDLE),
       m_commandPool(VK_NULL_HANDLE)
@@ -201,7 +205,7 @@ void VulkanCommandBuffer::BindIndexBuffer(const GpuBufferBase* buffer, GpuElemTy
         m_handle,
         static_cast<const VulkanGpuBuffer*>(buffer)->GetVulkanHandle(),
         0,
-        helpers::ToVkIndexType(elemType));
+        ToVkIndexType(elemType));
 }
 
 void VulkanCommandBuffer::DrawIndexed(
@@ -232,7 +236,7 @@ void VulkanCommandBuffer::DrawIndexedIndirect(
 
 void VulkanCommandBuffer::DebugMarkerBegin(const char* markerName) const
 {
-    if (Features::dynFunctions.vkCmdDebugMarkerBeginEXT)
+    if (VulkanFeatures::dynFunctions.vkCmdDebugMarkerBeginEXT)
     {
         const VkDebugMarkerMarkerInfoEXT marker {
             .sType = VK_STRUCTURE_TYPE_DEBUG_MARKER_MARKER_INFO_EXT,
@@ -240,15 +244,15 @@ void VulkanCommandBuffer::DebugMarkerBegin(const char* markerName) const
             .pMarkerName = markerName
         };
 
-        Features::dynFunctions.vkCmdDebugMarkerBeginEXT(m_handle, &marker);
+        VulkanFeatures::dynFunctions.vkCmdDebugMarkerBeginEXT(m_handle, &marker);
     }
 }
 
 void VulkanCommandBuffer::DebugMarkerEnd() const
 {
-    if (Features::dynFunctions.vkCmdDebugMarkerEndEXT)
+    if (VulkanFeatures::dynFunctions.vkCmdDebugMarkerEndEXT)
     {
-        Features::dynFunctions.vkCmdDebugMarkerEndEXT(m_handle);
+        VulkanFeatures::dynFunctions.vkCmdDebugMarkerEndEXT(m_handle);
     }
 }
 

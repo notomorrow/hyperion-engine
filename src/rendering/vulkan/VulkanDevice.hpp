@@ -23,9 +23,9 @@
 
 namespace hyperion {
 
-class Features;
 class DescriptorPool;
 class VulkanInstance;
+class VulkanFeatures;
 
 using ExtensionMap = HashMap<String, bool>;
 
@@ -50,8 +50,6 @@ class VulkanDevice : public DeviceBase
     static QueueFamilyIndices FindQueueFamilies(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface);
 
 public:
-    static constexpr PlatformType platform = Platform::vulkan;
-
     VulkanDevice(VkPhysicalDevice physical, VkSurfaceKHR surface);
     VulkanDevice(const VulkanDevice&) = delete;
     VulkanDevice& operator=(const VulkanDevice&) = delete;
@@ -83,7 +81,7 @@ public:
         return m_queueFamilyIndices;
     }
 
-    const Features& GetFeatures() const
+    const VulkanFeatures& GetFeatures() const
     {
         return *m_features;
     }
@@ -147,7 +145,7 @@ private:
     VkSurfaceKHR m_surface;
     VmaAllocator m_allocator;
 
-    UniquePtr<Features> m_features;
+    UniquePtr<VulkanFeatures> m_features;
     QueueFamilyIndices m_queueFamilyIndices;
 
     VulkanDeviceQueue m_queueGraphics;

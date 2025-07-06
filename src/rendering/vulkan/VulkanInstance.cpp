@@ -4,16 +4,24 @@
 #include <rendering/vulkan/VulkanDevice.hpp>
 #include <rendering/vulkan/VulkanSemaphore.hpp>
 #include <rendering/vulkan/VulkanSwapchain.hpp>
+#include <rendering/vulkan/VulkanFeatures.hpp>
+#include <rendering/vulkan/VulkanHelpers.hpp>
+#include <rendering/vulkan/VulkanStructs.hpp>
 
 #include <rendering/RenderBackend.hpp>
 
 #include <core/containers/Array.hpp>
+
 #include <core/utilities/Span.hpp>
+
 #include <core/logging/LogChannels.hpp>
 #include <core/logging/Logger.hpp>
-#include <system/AppContext.hpp>
+
 #include <core/debug/Debug.hpp>
+
 #include <core/Defines.hpp>
+
+#include <system/AppContext.hpp>
 
 #include <system/vma/VmaUsage.hpp>
 
@@ -40,11 +48,9 @@ static VkPhysicalDevice PickPhysicalDevice(Span<VkPhysicalDevice> devices)
         return VK_NULL_HANDLE;
     }
 
-    Features::DeviceRequirementsResult deviceRequirementsResult(
-        Features::DeviceRequirementsResult::DEVICE_REQUIREMENTS_ERR,
-        "No device found");
+    VulkanFeatures::DeviceRequirementsResult deviceRequirementsResult(VulkanFeatures::DeviceRequirementsResult::DEVICE_REQUIREMENTS_ERR, "No device found");
 
-    Features deviceFeatures;
+    VulkanFeatures deviceFeatures;
 
     /* Check for a discrete/dedicated GPU with geometry shaders */
     for (VkPhysicalDevice device : devices)
@@ -323,9 +329,7 @@ RendererResult VulkanInstance::Initialize(const AppContextBase& appContext, bool
     VkResult instanceResult = vkCreateInstance(&createInfo, nullptr, &m_instance);
 
     DebugLog(LogType::Info, "Instance result: %d\n", instanceResult);
-    HYPERION_VK_CHECK_MSG(
-        instanceResult,
-        "Failed to create Vulkan Instance!");
+    HYPERION_VK_CHECK_MSG(instanceResult, "Failed to create Vulkan Instance!");
 
     /* Create our renderable surface from SDL */
     HYP_GFX_ASSERT(appContext.GetMainWindow() != nullptr);

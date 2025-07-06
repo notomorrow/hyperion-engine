@@ -21,48 +21,21 @@ uint32 MipmapSize(uint32 srcSize, int lod);
 
 } // namespace helpers
 
-namespace platform {
-
-template <PlatformType PLATFORM>
-struct SingleTimeCommandsPlatformImpl;
-
-template <PlatformType PLATFORM>
 class SingleTimeCommands
 {
 public:
-    HYP_API SingleTimeCommands();
-    SingleTimeCommands(const SingleTimeCommands& other) = delete;
-    SingleTimeCommands& operator=(const SingleTimeCommands& other) = delete;
-    SingleTimeCommands(SingleTimeCommands&& other) noexcept = delete;
-    SingleTimeCommands& operator=(SingleTimeCommands&& other) noexcept = delete;
-    HYP_API ~SingleTimeCommands();
+    HYP_API virtual ~SingleTimeCommands() = default;
 
     void Push(Proc<void(CmdList& commandList)>&& fn)
     {
         m_functions.PushBack(std::move(fn));
     }
 
-    RendererResult Execute();
+    virtual RendererResult Execute() = 0;
 
-private:
-    SingleTimeCommandsPlatformImpl<PLATFORM> m_platformImpl;
-
-    DeviceRef m_device;
+protected:
     Array<Proc<void(CmdList& commandList)>> m_functions;
 };
-
-} // namespace platform
-
-} // namespace hyperion
-
-#if HYP_VULKAN
-#include <rendering/vulkan/VulkanHelpers.hpp>
-#else
-#error Unsupported rendering backend
-#endif
-
-namespace hyperion {
-using SingleTimeCommands = platform::SingleTimeCommands<Platform::current>;
 
 } // namespace hyperion
 

@@ -42,7 +42,7 @@ struct MeshBindingDescription
     }
 };
 
-struct SwapchainSupportDetails
+struct VulkanSwapchainSupportDetails
 {
     VkSurfaceCapabilitiesKHR capabilities;
     Array<VkQueueFamilyProperties> queueFamilyProperties;
