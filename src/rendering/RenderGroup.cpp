@@ -25,9 +25,9 @@
 #include <rendering/backend/RenderBackend.hpp>
 
 // temp
-#include <rendering/backend/vulkan/RendererGraphicsPipeline.hpp>
-#include <rendering/backend/vulkan/RendererRenderPass.hpp>
-#include <rendering/backend/vulkan/RendererFramebuffer.hpp>
+#include <rendering/vulkan/VulkanGraphicsPipeline.hpp>
+#include <rendering/vulkan/VulkanRenderPass.hpp>
+#include <rendering/vulkan/VulkanFramebuffer.hpp>
 
 #include <scene/Entity.hpp>
 #include <scene/Mesh.hpp>

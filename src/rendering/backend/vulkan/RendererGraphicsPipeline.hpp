@@ -7,10 +7,10 @@
 
 #include <rendering/backend/RendererGraphicsPipeline.hpp>
 
-#include <rendering/backend/vulkan/RendererPipeline.hpp>
-#include <rendering/backend/vulkan/RendererGpuBuffer.hpp>
-#include <rendering/backend/vulkan/RendererDescriptorSet.hpp>
-#include <rendering/backend/vulkan/RendererCommandBuffer.hpp>
+#include <rendering/vulkan/VulkanPipeline.hpp>
+#include <rendering/vulkan/VulkanGpuBuffer.hpp>
+#include <rendering/vulkan/VulkanDescriptorSet.hpp>
+#include <rendering/vulkan/VulkanCommandBuffer.hpp>
 
 #include <rendering/backend/RendererPipeline.hpp>
 #include <rendering/backend/RendererDevice.hpp>

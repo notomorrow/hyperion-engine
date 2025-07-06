@@ -5,8 +5,8 @@
 
 #include <rendering/backend/RendererCommandBuffer.hpp>
 
-#include <rendering/backend/vulkan/RendererGpuBuffer.hpp>
-#include <rendering/backend/vulkan/RendererFence.hpp>
+#include <rendering/vulkan/VulkanGpuBuffer.hpp>
+#include <rendering/vulkan/VulkanFence.hpp>
 
 #include <rendering/backend/RendererDevice.hpp>
 #include <rendering/backend/Platform.hpp>

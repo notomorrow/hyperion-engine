@@ -1,11 +1,11 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#include <rendering/backend/vulkan/RendererDescriptorSet.hpp>
-#include <rendering/backend/vulkan/RendererCommandBuffer.hpp>
-#include <rendering/backend/vulkan/RendererImageView.hpp>
-#include <rendering/backend/vulkan/RendererSampler.hpp>
-#include <rendering/backend/vulkan/RendererGraphicsPipeline.hpp>
-#include <rendering/backend/vulkan/RendererComputePipeline.hpp>
+#include <rendering/vulkan/VulkanDescriptorSet.hpp>
+#include <rendering/vulkan/VulkanCommandBuffer.hpp>
+#include <rendering/vulkan/VulkanImageView.hpp>
+#include <rendering/vulkan/VulkanSampler.hpp>
+#include <rendering/vulkan/VulkanGraphicsPipeline.hpp>
+#include <rendering/vulkan/VulkanComputePipeline.hpp>
 #include <rendering/backend/vulkan/rt/RendererRaytracingPipeline.hpp>
 #include <rendering/backend/vulkan/rt/RendererAccelerationStructure.hpp>
 #include <rendering/backend/vulkan/VulkanRenderBackend.hpp>

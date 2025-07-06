@@ -4,7 +4,7 @@
 #define HYPERION_RENDERER_BACKEND_VULKAN_ASYNC_COMPUTE_HPP
 
 #include <rendering/backend/AsyncCompute.hpp>
-#include <rendering/backend/vulkan/RendererFence.hpp>
+#include <rendering/vulkan/VulkanFence.hpp>
 
 #include <vulkan/vulkan.h>
 

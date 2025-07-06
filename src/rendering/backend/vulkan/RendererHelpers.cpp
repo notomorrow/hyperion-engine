@@ -2,10 +2,10 @@
 
 #include <rendering/backend/RendererHelpers.hpp>
 
-#include <rendering/backend/vulkan/RendererCommandBuffer.hpp>
-#include <rendering/backend/vulkan/RendererDevice.hpp>
-#include <rendering/backend/vulkan/RendererFence.hpp>
-#include <rendering/backend/vulkan/RendererFrame.hpp>
+#include <rendering/vulkan/VulkanCommandBuffer.hpp>
+#include <rendering/vulkan/VulkanDevice.hpp>
+#include <rendering/vulkan/VulkanFence.hpp>
+#include <rendering/vulkan/VulkanFrame.hpp>
 #include <rendering/backend/vulkan/VulkanRenderBackend.hpp>
 
 #include <rendering/rhi/CmdList.hpp>

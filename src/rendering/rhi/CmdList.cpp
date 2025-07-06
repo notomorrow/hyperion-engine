@@ -5,8 +5,8 @@
 
 #if defined(HYP_DEBUG_MODE) && defined(HYP_VULKAN)
 // for debugging
-#include <rendering/backend/vulkan/RendererFramebuffer.hpp>
-#include <rendering/backend/vulkan/RendererGraphicsPipeline.hpp>
+#include <rendering/vulkan/VulkanFramebuffer.hpp>
+#include <rendering/vulkan/VulkanGraphicsPipeline.hpp>
 #endif
 
 #include <core/logging/Logger.hpp>

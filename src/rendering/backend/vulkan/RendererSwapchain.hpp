@@ -8,8 +8,8 @@
 #include <rendering/backend/RendererSwapchain.hpp>
 
 #include <rendering/backend/RenderObject.hpp>
-#include <rendering/backend/vulkan/RendererSemaphore.hpp>
-#include <rendering/backend/vulkan/RendererFramebuffer.hpp>
+#include <rendering/vulkan/VulkanSemaphore.hpp>
+#include <rendering/vulkan/VulkanFramebuffer.hpp>
 
 #include <rendering/backend/RendererStructs.hpp>
 

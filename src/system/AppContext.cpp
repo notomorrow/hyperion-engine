@@ -13,7 +13,7 @@
 #include <rendering/backend/RendererFeatures.hpp>
 
 #ifdef HYP_VULKAN
-#include <rendering/backend/vulkan/RendererInstance.hpp>
+#include <rendering/vulkan/VulkanInstance.hpp>
 #endif
 
 #include <EngineGlobals.hpp>

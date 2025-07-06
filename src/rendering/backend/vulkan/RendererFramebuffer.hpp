@@ -5,10 +5,10 @@
 
 #include <rendering/backend/RendererFramebuffer.hpp>
 
-#include <rendering/backend/vulkan/RendererAttachment.hpp>
-#include <rendering/backend/vulkan/RendererImage.hpp>
-#include <rendering/backend/vulkan/RendererCommandBuffer.hpp>
-#include <rendering/backend/vulkan/RendererRenderPass.hpp>
+#include <rendering/vulkan/VulkanAttachment.hpp>
+#include <rendering/vulkan/VulkanImage.hpp>
+#include <rendering/vulkan/VulkanCommandBuffer.hpp>
+#include <rendering/vulkan/VulkanRenderPass.hpp>
 
 #include <core/containers/FlatMap.hpp>
 

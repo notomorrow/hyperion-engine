@@ -5,7 +5,7 @@
 
 #include <core/Defines.hpp>
 
-#include <rendering/backend/vulkan/RendererDevice.hpp>
+#include <rendering/vulkan/VulkanDevice.hpp>
 
 #include <rendering/backend/RenderObject.hpp>
 

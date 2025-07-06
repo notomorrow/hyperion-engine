@@ -3,7 +3,7 @@
 #ifndef HYPERION_RENDERER_BACKEND_VULKAN_HELPERS_HPP
 #define HYPERION_RENDERER_BACKEND_VULKAN_HELPERS_HPP
 
-#include <rendering/backend/vulkan/RendererDevice.hpp>
+#include <rendering/vulkan/VulkanDevice.hpp>
 
 #include <rendering/backend/RenderObject.hpp>
 #include <rendering/backend/RendererStructs.hpp>

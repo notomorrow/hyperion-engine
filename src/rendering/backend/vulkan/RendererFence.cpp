@@ -1,8 +1,8 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#include <rendering/backend/vulkan/RendererFence.hpp>
+#include <rendering/vulkan/VulkanFence.hpp>
 #include <rendering/backend/vulkan/VulkanRenderBackend.hpp>
-#include <rendering/backend/vulkan/RendererDevice.hpp>
+#include <rendering/vulkan/VulkanDevice.hpp>
 
 #include <rendering/backend/RendererDevice.hpp>
 

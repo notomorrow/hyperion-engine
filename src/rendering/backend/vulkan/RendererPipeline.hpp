@@ -3,7 +3,7 @@
 #ifndef HYPERION_RENDERER_BACKEND_VULKAN_PIPELINE_HPP
 #define HYPERION_RENDERER_BACKEND_VULKAN_PIPELINE_HPP
 
-#include <rendering/backend/vulkan/RendererDescriptorSet.hpp>
+#include <rendering/vulkan/VulkanDescriptorSet.hpp>
 #include <rendering/backend/RenderObject.hpp>
 
 #include <vulkan/vulkan.h>
