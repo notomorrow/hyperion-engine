@@ -2,17 +2,17 @@
   "rendering": {
     "rt": {
       "path_tracing": {
-        "enabled": true
+        "enabled": false
       },
       "reflections": {
         "Extent": [1024, 1024],
         "PathTracing": false,
-        "enabled": true
+        "enabled": false
       },
       "gi": {
         "enabled": false
       },
-      "enabled": true
+      "enabled": false
     },
     "ssr": {
       "ConeTracing": false,

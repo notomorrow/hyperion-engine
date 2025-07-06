@@ -47,13 +47,13 @@ HYP_STRUCT(ConfigName = "app", JSONPath = "rendering")
 struct RendererConfig : public ConfigBase<RendererConfig>
 {
     HYP_FIELD(JSONPath = "rt.path_tracing.enabled")
-    bool pathTracerEnabled = false;
+    bool pathTracer = false;
 
     HYP_FIELD(JSONPath = "rt.reflections.enabled")
-    bool rtReflectionsEnabled = false;
+    bool raytracingReflections = false;
 
     HYP_FIELD(JSONPath = "rt.gi.enabled")
-    bool rtGiEnabled = false;
+    bool raytracingGlobalIllumination = false;
 
     HYP_FIELD(JSONPath = "hbao.enabled")
     bool hbaoEnabled = false;

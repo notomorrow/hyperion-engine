@@ -754,7 +754,7 @@ public:
     JSONObject& operator=(JSONObject&& other) noexcept = default;
 
     ~JSONObject() = default;
-    
+
     /*! \brief Merge another JSONObject into this one.
      *  If a key exists in both objects, the value from the other object is used.
      *  If the value is an object, it is replaced with the other object's value.
@@ -777,7 +777,6 @@ public:
      *  \param other The other JSONObject to merge.
      *  \return A reference to this JSONObject.
      */
-    template <class OtherContainerType>
     JSONObject& MergeDeep(const JSONObject& other)
     {
         if (this == std::addressof(other))
@@ -793,7 +792,7 @@ public:
             if (value.IsObject())
             {
                 auto it = Find(key);
-                
+
                 if (it != End())
                 {
                     if (it->second.IsObject())

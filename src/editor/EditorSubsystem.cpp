@@ -1257,7 +1257,7 @@ void EditorSubsystem::InitViewport()
     Vec2u viewportSize = MathUtil::Max(Vec2u(sceneImageObject->GetActualSize()), Vec2u::One());
 
     Handle<View> view = CreateObject<View>(ViewDesc {
-        .flags = ViewFlags::DEFAULT | ViewFlags::GBUFFER,
+        .flags = ViewFlags::DEFAULT | ViewFlags::GBUFFER | ViewFlags::ENABLE_RAYTRACING,
         .viewport = Viewport { .extent = viewportSize, .position = Vec2i::Zero() },
         .outputTargetDesc = { .extent = viewportSize },
         .camera = m_camera });
