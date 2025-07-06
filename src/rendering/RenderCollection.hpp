@@ -24,9 +24,8 @@
 
 #include <rendering/rhi/CmdList.hpp>
 
-#include <rendering/backend/Platform.hpp>
-#include <rendering/backend/RendererStructs.hpp>
-#include <rendering/backend/RenderObject.hpp>
+#include <rendering/RenderStructs.hpp>
+#include <rendering/RenderObject.hpp>
 
 #include <Types.hpp>
 

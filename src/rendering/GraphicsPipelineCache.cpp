@@ -2,10 +2,10 @@
 
 #include <rendering/GraphicsPipelineCache.hpp>
 #include <rendering/RenderableAttributes.hpp>
-#include <rendering/backend/RenderBackend.hpp>
-#include <rendering/backend/RenderCommand.hpp>
-#include <rendering/backend/RendererGraphicsPipeline.hpp>
-#include <rendering/backend/RendererResult.hpp>
+#include <rendering/RenderBackend.hpp>
+#include <rendering/RenderCommand.hpp>
+#include <rendering/RenderGraphicsPipeline.hpp>
+#include <rendering/RenderResult.hpp>
 
 #include <core/threading/Threads.hpp>
 #include <core/threading/Task.hpp>

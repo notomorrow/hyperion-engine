@@ -3,7 +3,7 @@
 #include <rendering/DOFBlur.hpp>
 #include <rendering/ShaderManager.hpp>
 
-#include <rendering/backend/RendererFrame.hpp>
+#include <rendering/RenderFrame.hpp>
 
 #include <core/logging/Logger.hpp>
 #include <core/logging/LogChannels.hpp>

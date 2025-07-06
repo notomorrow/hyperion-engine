@@ -3,7 +3,7 @@
 #ifndef HYPERION_RENDERER_BACKEND_VULKAN_RAYTRACING_PIPELINE_HPP
 #define HYPERION_RENDERER_BACKEND_VULKAN_RAYTRACING_PIPELINE_HPP
 
-#include <rendering/backend/rt/RendererRaytracingPipeline.hpp>
+#include <rendering/rt/RenderRaytracingPipeline.hpp>
 #include <rendering/vulkan/VulkanPipeline.hpp>
 
 #include <core/containers/Array.hpp>

@@ -9,7 +9,7 @@
 
 #include <core/containers/TypeMap.hpp>
 
-#include <rendering/backend/RendererGpuBuffer.hpp>
+#include <rendering/RenderGpuBuffer.hpp>
 
 namespace hyperion {
 

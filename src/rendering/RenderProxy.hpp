@@ -19,7 +19,7 @@
 
 #include <rendering/RenderableAttributes.hpp>
 #include <rendering/MeshInstanceData.hpp>
-#include <rendering/backend/RenderObject.hpp>
+#include <rendering/RenderObject.hpp>
 
 #include <util/ResourceTracker.hpp>
 

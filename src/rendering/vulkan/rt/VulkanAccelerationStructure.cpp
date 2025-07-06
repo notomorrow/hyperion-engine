@@ -1,13 +1,12 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#include <rendering/backend/vulkan/rt/RendererAccelerationStructure.hpp>
+#include <rendering/vulkan/rt/VulkanAccelerationStructure.hpp>
 #include <rendering/vulkan/VulkanFence.hpp>
 #include <rendering/vulkan/VulkanCommandBuffer.hpp>
 #include <rendering/vulkan/VulkanInstance.hpp>
-#include <rendering/backend/vulkan/VulkanRenderBackend.hpp>
+#include <rendering/vulkan/VulkanRenderBackend.hpp>
 
-#include <rendering/backend/RendererDevice.hpp>
-#include <rendering/backend/RendererFeatures.hpp>
+#include <rendering/RenderDevice.hpp>
 
 #include <rendering/RenderMaterial.hpp>
 
@@ -356,7 +355,7 @@ RendererResult VulkanAccelerationStructureBase::CreateAccelerationStructure(
 
     VulkanFenceRef fence = MakeRenderObject<VulkanFence>();
 
-    VulkanCommandBufferRef commandBuffer = MakeRenderObject<VulkanCommandBuffer>(CommandBufferType::COMMAND_BUFFER_PRIMARY);
+    VulkanCommandBufferRef commandBuffer = MakeRenderObject<VulkanCommandBuffer>(VK_COMMAND_BUFFER_LEVEL_PRIMARY);
     HYPERION_BUBBLE_ERRORS(commandBuffer->Create(GetRenderBackend()->GetDevice()->GetGraphicsQueue().commandPools[0]));
 
     HYPERION_BUBBLE_ERRORS(commandBuffer->Begin());

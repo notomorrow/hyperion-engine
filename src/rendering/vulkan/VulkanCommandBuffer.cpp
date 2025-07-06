@@ -3,13 +3,12 @@
 #include <rendering/vulkan/VulkanCommandBuffer.hpp>
 #include <rendering/vulkan/VulkanRenderPass.hpp>
 #include <rendering/vulkan/VulkanSemaphore.hpp>
-#include <rendering/backend/vulkan/VulkanRenderBackend.hpp>
+#include <rendering/vulkan/VulkanRenderBackend.hpp>
 
-#include <rendering/backend/RendererComputePipeline.hpp>
-#include <rendering/backend/RendererGraphicsPipeline.hpp>
-#include <rendering/backend/rt/RendererRaytracingPipeline.hpp>
-#include <rendering/backend/RendererStructs.hpp>
-#include <rendering/backend/RendererFeatures.hpp>
+#include <rendering/RenderComputePipeline.hpp>
+#include <rendering/RenderGraphicsPipeline.hpp>
+#include <rendering/rt/RenderRaytracingPipeline.hpp>
+#include <rendering/RenderStructs.hpp>
 
 #include <Types.hpp>
 
@@ -22,7 +21,7 @@ static inline VulkanRenderBackend* GetRenderBackend()
     return static_cast<VulkanRenderBackend*>(g_renderBackend);
 }
 
-VulkanCommandBuffer::VulkanCommandBuffer(CommandBufferType type)
+VulkanCommandBuffer::VulkanCommandBuffer(VkCommandBufferType type)
     : m_type(type),
       m_handle(VK_NULL_HANDLE),
       m_commandPool(VK_NULL_HANDLE)
@@ -57,22 +56,8 @@ RendererResult VulkanCommandBuffer::Create()
 {
     HYP_GFX_ASSERT(m_commandPool != VK_NULL_HANDLE);
 
-    VkCommandBufferLevel level;
-
-    switch (m_type)
-    {
-    case COMMAND_BUFFER_PRIMARY:
-        level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-        break;
-    case COMMAND_BUFFER_SECONDARY:
-        level = VK_COMMAND_BUFFER_LEVEL_SECONDARY;
-        break;
-    default:
-        HYP_UNREACHABLE();
-    }
-
     VkCommandBufferAllocateInfo allocInfo { VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
-    allocInfo.level = level;
+    allocInfo.level = m_type;
     allocInfo.commandPool = m_commandPool;
     allocInfo.commandBufferCount = 1;
 
@@ -106,7 +91,7 @@ RendererResult VulkanCommandBuffer::Begin(const VulkanRenderPass* renderPass)
 
     VkCommandBufferBeginInfo beginInfo { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
 
-    if (m_type == COMMAND_BUFFER_SECONDARY)
+    if (m_type == VK_COMMAND_BUFFER_LEVEL_SECONDARY)
     {
         if (renderPass == nullptr)
         {

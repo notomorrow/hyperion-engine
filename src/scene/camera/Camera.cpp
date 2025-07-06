@@ -6,7 +6,7 @@
 #include <core/math/Halton.hpp>
 
 #include <rendering/RenderCamera.hpp>
-#include <rendering/backend/RendererFramebuffer.hpp>
+#include <rendering/RenderFramebuffer.hpp>
 
 #include <core/object/HypClassUtils.hpp>
 

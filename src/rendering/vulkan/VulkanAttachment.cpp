@@ -5,8 +5,8 @@
 #include <rendering/vulkan/VulkanImageView.hpp>
 #include <rendering/vulkan/VulkanFramebuffer.hpp>
 
-#include <rendering/backend/RenderBackend.hpp>
-#include <rendering/backend/RendererHelpers.hpp>
+#include <rendering/RenderBackend.hpp>
+#include <rendering/RenderHelpers.hpp>
 
 namespace hyperion {
 #pragma region Helpers

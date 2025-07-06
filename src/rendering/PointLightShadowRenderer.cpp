@@ -10,9 +10,8 @@
 #include <rendering/RenderShadowMap.hpp>
 #include <rendering/RenderGlobalState.hpp>
 #include <rendering/Renderer.hpp>
-#include <rendering/backend/RenderBackend.hpp>
-#include <rendering/backend/RenderCommand.hpp>
-#include <rendering/backend/RendererFeatures.hpp>
+#include <rendering/RenderBackend.hpp>
+#include <rendering/RenderCommand.hpp>
 
 #include <scene/ecs/EntityManager.hpp>
 #include <scene/Light.hpp>

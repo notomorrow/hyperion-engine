@@ -27,12 +27,11 @@
 
 #include <rendering/debug/DebugDrawer.hpp>
 
-#include <rendering/backend/RenderObject.hpp>
-#include <rendering/backend/RendererGpuBuffer.hpp>
-#include <rendering/backend/RendererFeatures.hpp>
-#include <rendering/backend/RendererDevice.hpp>
-#include <rendering/backend/RendererDescriptorSet.hpp>
-#include <rendering/backend/RendererGraphicsPipeline.hpp>
+#include <rendering/RenderObject.hpp>
+#include <rendering/RenderGpuBuffer.hpp>
+#include <rendering/RenderDevice.hpp>
+#include <rendering/RenderDescriptorSet.hpp>
+#include <rendering/RenderGraphicsPipeline.hpp>
 
 #include <scene/World.hpp>
 #include <scene/Mesh.hpp>

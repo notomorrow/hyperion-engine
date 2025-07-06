@@ -13,7 +13,7 @@
 #include <core/math/Transform.hpp>
 #include <core/math/Vector2.hpp>
 
-#include <rendering/backend/RendererStructs.hpp>
+#include <rendering/RenderStructs.hpp>
 
 #include <rendering/font/FontAtlas.hpp>
 

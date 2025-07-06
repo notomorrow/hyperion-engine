@@ -8,8 +8,8 @@
 
 #include <rendering/rhi/CmdList.hpp>
 
-#include <rendering/backend/RenderCommand.hpp>
-#include <rendering/backend/RendererHelpers.hpp>
+#include <rendering/RenderCommand.hpp>
+#include <rendering/RenderHelpers.hpp>
 
 #include <rendering/lightmapper/RenderLightmapVolume.hpp>
 #include <rendering/lightmapper/LightmapUVBuilder.hpp>

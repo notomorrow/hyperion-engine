@@ -14,7 +14,7 @@
 
 #include <scene/ecs/components/UIComponent.hpp>
 
-#include <rendering/backend/RendererStructs.hpp>
+#include <rendering/RenderStructs.hpp>
 
 #include <input/Mouse.hpp>
 #include <input/Keyboard.hpp>

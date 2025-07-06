@@ -3,7 +3,7 @@
 #ifndef HYPERION_RENDERER_BACKEND_VULKAN_FBO_HPP
 #define HYPERION_RENDERER_BACKEND_VULKAN_FBO_HPP
 
-#include <rendering/backend/RendererFramebuffer.hpp>
+#include <rendering/RenderFramebuffer.hpp>
 
 #include <rendering/vulkan/VulkanAttachment.hpp>
 #include <rendering/vulkan/VulkanImage.hpp>

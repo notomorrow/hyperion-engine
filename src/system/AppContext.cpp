@@ -8,9 +8,8 @@
 
 #include <core/logging/Logger.hpp>
 
-#include <rendering/backend/RenderBackend.hpp>
-#include <rendering/backend/RendererDevice.hpp>
-#include <rendering/backend/RendererFeatures.hpp>
+#include <rendering/RenderBackend.hpp>
+#include <rendering/RenderDevice.hpp>
 
 #ifdef HYP_VULKAN
 #include <rendering/vulkan/VulkanInstance.hpp>

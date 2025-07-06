@@ -11,10 +11,9 @@
 
 #include <core/Defines.hpp>
 
-#include <rendering/backend/RendererStructs.hpp>
-#include <rendering/backend/RenderObject.hpp>
-#include <rendering/backend/RendererGpuBuffer.hpp>
-#include <rendering/backend/Platform.hpp>
+#include <rendering/RenderStructs.hpp>
+#include <rendering/RenderObject.hpp>
+#include <rendering/RenderGpuBuffer.hpp>
 
 #include <core/math/Matrix4.hpp>
 

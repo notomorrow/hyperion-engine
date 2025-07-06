@@ -3,8 +3,7 @@
 #ifndef HYPERION_RENDERER_BACKEND_VULKAN_FENCE_HPP
 #define HYPERION_RENDERER_BACKEND_VULKAN_FENCE_HPP
 
-#include <rendering/backend/RenderObject.hpp>
-#include <rendering/backend/Platform.hpp>
+#include <rendering/RenderObject.hpp>
 
 #include <vulkan/vulkan.h>
 

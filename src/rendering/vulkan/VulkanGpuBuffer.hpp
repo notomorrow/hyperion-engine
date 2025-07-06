@@ -3,7 +3,7 @@
 #ifndef HYPERION_RENDERER_BACKEND_VULKAN_BUFFER_HPP
 #define HYPERION_RENDERER_BACKEND_VULKAN_BUFFER_HPP
 
-#include <rendering/backend/RendererGpuBuffer.hpp>
+#include <rendering/RenderGpuBuffer.hpp>
 
 #include <system/vma/VmaUsage.hpp>
 

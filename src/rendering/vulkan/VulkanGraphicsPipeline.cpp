@@ -4,9 +4,7 @@
 #include <rendering/vulkan/VulkanRenderPass.hpp>
 #include <rendering/vulkan/VulkanFramebuffer.hpp>
 #include <rendering/vulkan/VulkanShader.hpp>
-#include <rendering/backend/vulkan/VulkanRenderBackend.hpp>
-
-#include <rendering/backend/RendererFeatures.hpp>
+#include <rendering/vulkan/VulkanRenderBackend.hpp>
 
 #include <rendering/shader_compiler/ShaderCompiler.hpp> // For CompiledShader
 

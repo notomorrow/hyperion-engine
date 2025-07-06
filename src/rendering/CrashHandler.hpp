@@ -5,7 +5,7 @@
 
 #include <core/Defines.hpp>
 
-#include <rendering/backend/RendererResult.hpp>
+#include <rendering/RenderResult.hpp>
 
 namespace hyperion {
 

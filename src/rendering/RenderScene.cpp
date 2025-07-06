@@ -4,7 +4,7 @@
 #include <rendering/RenderWorld.hpp>
 #include <rendering/RenderEnvironment.hpp>
 
-#include <rendering/backend/RendererDescriptorSet.hpp>
+#include <rendering/RenderDescriptorSet.hpp>
 
 #include <scene/World.hpp>
 

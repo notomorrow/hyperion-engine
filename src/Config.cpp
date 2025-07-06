@@ -9,8 +9,6 @@
 
 #include <core/utilities/Format.hpp>
 
-#include <rendering/backend/RendererFeatures.hpp>
-
 #include <HyperionEngine.hpp>
 
 namespace hyperion {

@@ -10,7 +10,7 @@
 #include <rendering/SafeDeleter.hpp>
 
 #include <rendering/RenderResource.hpp>
-#include <rendering/backend/RenderObject.hpp>
+#include <rendering/RenderObject.hpp>
 
 #include <Types.hpp>
 

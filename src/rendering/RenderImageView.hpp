@@ -3,9 +3,8 @@
 #ifndef HYPERION_BACKEND_RENDERER_IMAGE_VIEW_HPP
 #define HYPERION_BACKEND_RENDERER_IMAGE_VIEW_HPP
 
-#include <rendering/backend/Platform.hpp>
-#include <rendering/backend/RendererResult.hpp>
-#include <rendering/backend/RenderObject.hpp>
+#include <rendering/RenderResult.hpp>
+#include <rendering/RenderObject.hpp>
 #include <core/Defines.hpp>
 
 namespace hyperion {

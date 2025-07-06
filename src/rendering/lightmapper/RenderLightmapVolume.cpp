@@ -3,8 +3,8 @@
 #include <rendering/lightmapper/RenderLightmapVolume.hpp>
 #include <rendering/RenderGlobalState.hpp>
 #include <rendering/RenderTexture.hpp>
-#include <rendering/backend/RendererHelpers.hpp>
-#include <rendering/backend/RendererImage.hpp>
+#include <rendering/RenderHelpers.hpp>
+#include <rendering/RenderImage.hpp>
 #include <rendering/rhi/CmdList.hpp>
 
 #include <scene/lightmapper/LightmapVolume.hpp>

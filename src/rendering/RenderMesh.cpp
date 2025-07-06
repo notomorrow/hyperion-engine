@@ -4,12 +4,12 @@
 
 #include <rendering/rhi/CmdList.hpp>
 
-#include <rendering/backend/RenderBackend.hpp>
-#include <rendering/backend/RenderCommand.hpp>
-#include <rendering/backend/RenderObject.hpp>
-#include <rendering/backend/RendererGpuBuffer.hpp>
-#include <rendering/backend/RendererHelpers.hpp>
-#include <rendering/backend/rt/RendererAccelerationStructure.hpp>
+#include <rendering/RenderBackend.hpp>
+#include <rendering/RenderCommand.hpp>
+#include <rendering/RenderObject.hpp>
+#include <rendering/RenderGpuBuffer.hpp>
+#include <rendering/RenderHelpers.hpp>
+#include <rendering/rt/RenderAccelerationStructure.hpp>
 
 #include <scene/Mesh.hpp>
 

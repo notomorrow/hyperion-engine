@@ -3,10 +3,9 @@
 #include <rendering/vulkan/VulkanSwapchain.hpp>
 #include <rendering/vulkan/VulkanFrame.hpp>
 #include <rendering/vulkan/VulkanImage.hpp>
-#include <rendering/backend/vulkan/VulkanRenderBackend.hpp>
+#include <rendering/vulkan/VulkanRenderBackend.hpp>
 
-#include <rendering/backend/RendererDevice.hpp>
-#include <rendering/backend/RendererFeatures.hpp>
+#include <rendering/RenderDevice.hpp>
 
 #include <core/debug/Debug.hpp>
 
@@ -233,7 +232,7 @@ RendererResult VulkanSwapchain::Create()
         VkCommandPool pool = queue->commandPools[0];
         HYP_GFX_ASSERT(pool != VK_NULL_HANDLE);
 
-        VulkanCommandBufferRef commandBuffer = MakeRenderObject<VulkanCommandBuffer>(CommandBufferType::COMMAND_BUFFER_PRIMARY);
+        VulkanCommandBufferRef commandBuffer = MakeRenderObject<VulkanCommandBuffer>(VK_COMMAND_BUFFER_LEVEL_PRIMARY);
         HYPERION_BUBBLE_ERRORS(commandBuffer->Create(pool));
         m_commandBuffers[i] = std::move(commandBuffer);
 

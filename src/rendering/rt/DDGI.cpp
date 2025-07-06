@@ -12,11 +12,11 @@
 #include <rendering/RenderWorld.hpp>
 #include <rendering/Deferred.hpp>
 
-#include <rendering/backend/RendererFrame.hpp>
-#include <rendering/backend/RendererGpuBuffer.hpp>
-#include <rendering/backend/RendererComputePipeline.hpp>
-#include <rendering/backend/RendererDescriptorSet.hpp>
-#include <rendering/backend/RendererImage.hpp>
+#include <rendering/RenderFrame.hpp>
+#include <rendering/RenderGpuBuffer.hpp>
+#include <rendering/RenderComputePipeline.hpp>
+#include <rendering/RenderDescriptorSet.hpp>
+#include <rendering/RenderImage.hpp>
 
 #include <scene/EnvProbe.hpp>
 #include <scene/EnvGrid.hpp>

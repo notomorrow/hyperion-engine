@@ -1,8 +1,7 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#include <rendering/backend/RenderObject.hpp>
-#include <rendering/backend/Platform.hpp>
-#include <rendering/backend/RendererCommandBuffer.hpp>
+#include <rendering/RenderObject.hpp>
+#include <rendering/RenderCommandBuffer.hpp>
 
 #include <core/logging/Logger.hpp>
 #include <core/logging/LogChannels.hpp>
@@ -23,16 +22,17 @@ RenderObjectContainerBase::RenderObjectContainerBase(ANSIStringView renderObject
 
 #pragma region RenderObjectDeleter
 
-template <>
-void RenderObjectDeleter<Platform::current>::Initialize()
+FixedArray<DeletionQueueBase*, RenderObjectDeleter::maxQueues + 1> RenderObjectDeleter::s_queues = {};
+AtomicVar<uint16> RenderObjectDeleter::s_queueIndex = { 0 };
+
+void RenderObjectDeleter::Initialize()
 {
     // Command buffer should be deleted first so that no
     // buffers that will be deleted are used in the command buffers
     (void)GetQueue<CommandBufferBase>();
 }
 
-template <>
-void RenderObjectDeleter<Platform::current>::Iterate()
+void RenderObjectDeleter::Iterate()
 {
     HYP_NAMED_SCOPE("Destroy enqueued rendering resources");
 
@@ -45,8 +45,7 @@ void RenderObjectDeleter<Platform::current>::Iterate()
     }
 }
 
-template <>
-void RenderObjectDeleter<Platform::current>::RemoveAllNow(bool force)
+void RenderObjectDeleter::RemoveAllNow(bool force)
 {
     HYP_NAMED_SCOPE("Force delete all rendering resources");
 

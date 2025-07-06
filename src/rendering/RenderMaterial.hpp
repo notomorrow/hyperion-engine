@@ -8,8 +8,8 @@
 #include <rendering/RenderResource.hpp>
 #include <rendering/RenderProxy.hpp>
 
-#include <rendering/backend/RendererFrame.hpp>
-#include <rendering/backend/RenderObject.hpp>
+#include <rendering/RenderFrame.hpp>
+#include <rendering/RenderObject.hpp>
 
 #include <core/containers/FixedArray.hpp>
 #include <core/containers/String.hpp>

@@ -2,9 +2,9 @@
 
 #include <rendering/ShaderManager.hpp>
 
-#include <rendering/backend/RendererComputePipeline.hpp>
-#include <rendering/backend/RendererShader.hpp>
-#include <rendering/backend/RenderBackend.hpp>
+#include <rendering/RenderComputePipeline.hpp>
+#include <rendering/RenderShader.hpp>
+#include <rendering/RenderBackend.hpp>
 
 #include <core/logging/LogChannels.hpp>
 #include <core/logging/Logger.hpp>

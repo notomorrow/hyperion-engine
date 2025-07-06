@@ -15,10 +15,10 @@
 #include <rendering/PlaceholderData.hpp>
 #include <rendering/SafeDeleter.hpp>
 
-#include <rendering/backend/RenderBackend.hpp>
-#include <rendering/backend/RendererFrame.hpp>
-#include <rendering/backend/RendererGpuBuffer.hpp>
-#include <rendering/backend/RendererResult.hpp>
+#include <rendering/RenderBackend.hpp>
+#include <rendering/RenderFrame.hpp>
+#include <rendering/RenderGpuBuffer.hpp>
+#include <rendering/RenderResult.hpp>
 
 #include <scene/Texture.hpp>
 #include <scene/Light.hpp>

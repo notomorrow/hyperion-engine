@@ -22,10 +22,9 @@
 
 #include <rendering/rhi/CmdList.hpp>
 
-#include <rendering/backend/RendererFrame.hpp>
-#include <rendering/backend/RendererComputePipeline.hpp>
-#include <rendering/backend/RendererGraphicsPipeline.hpp>
-#include <rendering/backend/RendererFeatures.hpp>
+#include <rendering/RenderFrame.hpp>
+#include <rendering/RenderComputePipeline.hpp>
+#include <rendering/RenderGraphicsPipeline.hpp>
 
 #include <scene/Mesh.hpp>
 #include <scene/Texture.hpp>

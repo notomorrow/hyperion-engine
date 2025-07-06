@@ -1,7 +1,7 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#include <rendering/backend/RenderCommand.hpp>
-#include <rendering/backend/RenderBackend.hpp>
+#include <rendering/RenderCommand.hpp>
+#include <rendering/RenderBackend.hpp>
 
 #include <core/threading/Threads.hpp>
 

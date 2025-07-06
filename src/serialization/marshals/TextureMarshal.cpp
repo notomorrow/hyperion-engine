@@ -12,7 +12,7 @@
 
 #include <streaming/StreamedTextureData.hpp>
 
-#include <rendering/backend/RendererImage.hpp>
+#include <rendering/RenderImage.hpp>
 
 namespace hyperion::serialization {
 

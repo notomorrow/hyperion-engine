@@ -9,9 +9,8 @@
 #include <core/threading/Mutex.hpp>
 #include <core/Defines.hpp>
 
-#include <rendering/backend/RendererDescriptorSet.hpp>
-#include <rendering/backend/Platform.hpp>
-#include <rendering/backend/RenderObject.hpp>
+#include <rendering/RenderDescriptorSet.hpp>
+#include <rendering/RenderObject.hpp>
 
 #include <Types.hpp>
 #include <Constants.hpp>
@@ -19,6 +18,7 @@
 #include <vulkan/vulkan.h>
 
 namespace hyperion {
+
 class VulkanDescriptorSetLayoutWrapper;
 using VulkanDescriptorSetLayoutWrapperRef = RenderObjectHandle_Strong<VulkanDescriptorSetLayoutWrapper>;
 

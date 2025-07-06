@@ -12,9 +12,9 @@
 #include <rendering/RenderMesh.hpp>
 #include <rendering/RenderProxy.hpp>
 
-#include <rendering/backend/RendererDevice.hpp>
-#include <rendering/backend/RendererGpuBuffer.hpp>
-#include <rendering/backend/RenderObject.hpp>
+#include <rendering/RenderDevice.hpp>
+#include <rendering/RenderGpuBuffer.hpp>
+#include <rendering/RenderObject.hpp>
 
 namespace hyperion {
 

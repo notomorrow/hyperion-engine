@@ -12,7 +12,7 @@
 
 #include <core/utilities/Span.hpp>
 
-#include <rendering/backend/RenderObject.hpp>
+#include <rendering/RenderObject.hpp>
 
 #include <Constants.hpp>
 

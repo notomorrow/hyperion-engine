@@ -11,9 +11,8 @@
 
 #include <core/Defines.hpp>
 
-#include <rendering/backend/Platform.hpp>
-#include <rendering/backend/RenderObject.hpp>
-#include <rendering/backend/RendererDevice.hpp>
+#include <rendering/RenderObject.hpp>
+#include <rendering/RenderDevice.hpp>
 
 #include <HashCode.hpp>
 #include <Types.hpp>

@@ -3,7 +3,7 @@
 #ifndef HYPERION_BACKEND_RENDERER_DEVICE_HPP
 #define HYPERION_BACKEND_RENDERER_DEVICE_HPP
 
-#include <rendering/backend/RenderObject.hpp>
+#include <rendering/RenderObject.hpp>
 
 #include <core/Defines.hpp>
 

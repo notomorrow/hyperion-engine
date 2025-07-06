@@ -17,11 +17,11 @@
 
 #include <rendering/UIRenderer.hpp>
 
-#include <rendering/backend/RenderBackend.hpp>
-#include <rendering/backend/RenderConfig.hpp>
-#include <rendering/backend/RendererGraphicsPipeline.hpp>
-#include <rendering/backend/RendererFrame.hpp>
-#include <rendering/backend/RendererGpuBuffer.hpp>
+#include <rendering/RenderBackend.hpp>
+#include <rendering/RenderConfig.hpp>
+#include <rendering/RenderGraphicsPipeline.hpp>
+#include <rendering/RenderFrame.hpp>
+#include <rendering/RenderGpuBuffer.hpp>
 
 #include <scene/Mesh.hpp>
 #include <scene/Scene.hpp>

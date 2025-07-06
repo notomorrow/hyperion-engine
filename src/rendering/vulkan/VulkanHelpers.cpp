@@ -1,12 +1,12 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#include <rendering/backend/RendererHelpers.hpp>
+#include <rendering/RenderHelpers.hpp>
 
 #include <rendering/vulkan/VulkanCommandBuffer.hpp>
 #include <rendering/vulkan/VulkanDevice.hpp>
 #include <rendering/vulkan/VulkanFence.hpp>
 #include <rendering/vulkan/VulkanFrame.hpp>
-#include <rendering/backend/vulkan/VulkanRenderBackend.hpp>
+#include <rendering/vulkan/VulkanRenderBackend.hpp>
 
 #include <rendering/rhi/CmdList.hpp>
 
@@ -263,7 +263,7 @@ RendererResult SingleTimeCommands<Platform::vulkan>::Execute()
 
     tempFrame->UpdateUsedDescriptorSets();
 
-    VulkanCommandBufferRef commandBuffer = MakeRenderObject<VulkanCommandBuffer>(CommandBufferType::COMMAND_BUFFER_PRIMARY);
+    VulkanCommandBufferRef commandBuffer = MakeRenderObject<VulkanCommandBuffer>(VK_COMMAND_BUFFER_LEVEL_PRIMARY);
     HYPERION_BUBBLE_ERRORS(commandBuffer->Create(GetRenderBackend()->GetDevice()->GetGraphicsQueue().commandPools[0]));
 
     HYPERION_BUBBLE_ERRORS(commandBuffer->Begin());

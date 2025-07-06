@@ -7,7 +7,7 @@
 
 #include <rendering/vulkan/VulkanDevice.hpp>
 
-#include <rendering/backend/RenderObject.hpp>
+#include <rendering/RenderObject.hpp>
 
 #include <system/vma/VmaUsage.hpp>
 

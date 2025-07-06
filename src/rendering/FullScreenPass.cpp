@@ -16,11 +16,11 @@
 #include <rendering/GraphicsPipelineCache.hpp>
 #include <rendering/RenderGlobalState.hpp>
 
-#include <rendering/backend/RenderBackend.hpp>
-#include <rendering/backend/RendererSwapchain.hpp> // temp
-#include <rendering/backend/RendererFrame.hpp>
-#include <rendering/backend/RendererFramebuffer.hpp>
-#include <rendering/backend/RendererGraphicsPipeline.hpp>
+#include <rendering/RenderBackend.hpp>
+#include <rendering/RenderSwapchain.hpp> // temp
+#include <rendering/RenderFrame.hpp>
+#include <rendering/RenderFramebuffer.hpp>
+#include <rendering/RenderGraphicsPipeline.hpp>
 
 #include <scene/Mesh.hpp>
 #include <scene/Texture.hpp>

@@ -12,9 +12,9 @@
 #include <rendering/GraphicsPipelineCache.hpp>
 #include <rendering/RenderGlobalState.hpp>
 
-#include <rendering/backend/RenderObject.hpp>
-#include <rendering/backend/RendererFrame.hpp>
-#include <rendering/backend/RendererGraphicsPipeline.hpp>
+#include <rendering/RenderObject.hpp>
+#include <rendering/RenderFrame.hpp>
+#include <rendering/RenderGraphicsPipeline.hpp>
 
 #include <scene/Mesh.hpp>
 

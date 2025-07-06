@@ -12,8 +12,8 @@
 
 #include <core/math/Vertex.hpp>
 
-#include <rendering/backend/RendererShader.hpp>
-#include <rendering/backend/RendererDescriptorSet.hpp>
+#include <rendering/RenderShader.hpp>
+#include <rendering/RenderDescriptorSet.hpp>
 
 #include <util/ini/INIFile.hpp>
 

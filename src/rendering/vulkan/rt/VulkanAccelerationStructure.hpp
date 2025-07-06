@@ -11,12 +11,11 @@
 
 #include <core/Handle.hpp>
 
-#include <rendering/backend/rt/RendererAccelerationStructure.hpp>
+#include <rendering/rt/RenderAccelerationStructure.hpp>
 
-#include <rendering/backend/Platform.hpp>
-#include <rendering/backend/RendererResult.hpp>
-#include <rendering/backend/RendererGpuBuffer.hpp>
-#include <rendering/backend/RendererStructs.hpp>
+#include <rendering/RenderResult.hpp>
+#include <rendering/RenderGpuBuffer.hpp>
+#include <rendering/RenderStructs.hpp>
 
 #include <streaming/StreamedMeshData.hpp>
 
@@ -170,7 +169,7 @@ protected:
         Span<const uint32> primitiveCounts,
         bool update,
         RTUpdateStateFlags& outUpdateStateFlags);
-    
+
     VulkanGpuBufferRef m_buffer;
     VulkanGpuBufferRef m_scratchBuffer;
     Array<VulkanAccelerationGeometryRef> m_geometries;

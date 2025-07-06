@@ -29,8 +29,6 @@
 #include <input/Mouse.hpp>
 #include <input/InputManager.hpp>
 
-#include <rendering/backend/Platform.hpp>
-
 #include <Types.hpp>
 
 namespace hyperion {

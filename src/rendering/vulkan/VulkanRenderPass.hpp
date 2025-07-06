@@ -3,12 +3,12 @@
 #ifndef HYPERION_RENDERER_BACKEND_VULKAN_RENDER_PASS_HPP
 #define HYPERION_RENDERER_BACKEND_VULKAN_RENDER_PASS_HPP
 
-#include <rendering/backend/vulkan/RendererImage.hpp>
-#include <rendering/backend/vulkan/RendererImageView.hpp>
-#include <rendering/backend/vulkan/RendererSampler.hpp>
-#include <rendering/backend/vulkan/RendererAttachment.hpp>
+#include <rendering/vulkan/VulkanImage.hpp>
+#include <rendering/vulkan/VulkanImageView.hpp>
+#include <rendering/vulkan/VulkanSampler.hpp>
+#include <rendering/vulkan/VulkanAttachment.hpp>
 
-#include <rendering/backend/RenderObject.hpp>
+#include <rendering/RenderObject.hpp>
 
 #include <core/math/Vector4.hpp>
 #include <core/containers/Array.hpp>

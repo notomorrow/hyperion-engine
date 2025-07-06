@@ -19,10 +19,9 @@
 #include <rendering/RenderCollection.hpp>
 #include <rendering/GraphicsPipelineCache.hpp>
 
-#include <rendering/backend/RendererGraphicsPipeline.hpp>
-#include <rendering/backend/RendererFeatures.hpp>
-#include <rendering/backend/RenderConfig.hpp>
-#include <rendering/backend/RenderBackend.hpp>
+#include <rendering/RenderGraphicsPipeline.hpp>
+#include <rendering/RenderConfig.hpp>
+#include <rendering/RenderBackend.hpp>
 
 // temp
 #include <rendering/vulkan/VulkanGraphicsPipeline.hpp>

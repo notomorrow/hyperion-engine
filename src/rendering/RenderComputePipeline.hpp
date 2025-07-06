@@ -3,7 +3,7 @@
 #ifndef HYPERION_BACKEND_RENDERER_COMPUTE_PIPELINE_HPP
 #define HYPERION_BACKEND_RENDERER_COMPUTE_PIPELINE_HPP
 
-#include <rendering/backend/RenderObject.hpp>
+#include <rendering/RenderObject.hpp>
 
 #include <core/Defines.hpp>
 

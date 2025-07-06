@@ -1,10 +1,10 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
 #include <rendering/vulkan/VulkanFence.hpp>
-#include <rendering/backend/vulkan/VulkanRenderBackend.hpp>
+#include <rendering/vulkan/VulkanRenderBackend.hpp>
 #include <rendering/vulkan/VulkanDevice.hpp>
 
-#include <rendering/backend/RendererDevice.hpp>
+#include <rendering/RenderDevice.hpp>
 
 #define DEFAULT_FENCE_TIMEOUT 100000000000
 

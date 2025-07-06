@@ -5,18 +5,18 @@
 
 #include <vulkan/vulkan.h>
 
-#include <rendering/backend/RendererGraphicsPipeline.hpp>
+#include <rendering/RenderGraphicsPipeline.hpp>
 
 #include <rendering/vulkan/VulkanPipeline.hpp>
 #include <rendering/vulkan/VulkanGpuBuffer.hpp>
 #include <rendering/vulkan/VulkanDescriptorSet.hpp>
 #include <rendering/vulkan/VulkanCommandBuffer.hpp>
 
-#include <rendering/backend/RendererPipeline.hpp>
-#include <rendering/backend/RendererDevice.hpp>
-#include <rendering/backend/RendererShader.hpp>
-#include <rendering/backend/RendererStructs.hpp>
-#include <rendering/backend/RendererHelpers.hpp>
+#include <rendering/RenderPipeline.hpp>
+#include <rendering/RenderDevice.hpp>
+#include <rendering/RenderShader.hpp>
+#include <rendering/RenderStructs.hpp>
+#include <rendering/RenderHelpers.hpp>
 
 #include <core/containers/Array.hpp>
 

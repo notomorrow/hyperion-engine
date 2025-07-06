@@ -13,8 +13,8 @@
 
 #include <rendering/RenderBucket.hpp>
 
-#include <rendering/backend/RendererImage.hpp>
-#include <rendering/backend/RendererStructs.hpp>
+#include <rendering/RenderImage.hpp>
+#include <rendering/RenderStructs.hpp>
 
 #include <Types.hpp>
 

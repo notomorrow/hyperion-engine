@@ -3,8 +3,8 @@
 #ifndef RENDERER_BACKEND_RENDERER_VULKAN_IMAGE_HPP
 #define RENDERER_BACKEND_RENDERER_VULKAN_IMAGE_HPP
 
-#include <rendering/backend/RendererImage.hpp>
-#include <rendering/backend/RendererGpuBuffer.hpp>
+#include <rendering/RenderImage.hpp>
+#include <rendering/RenderGpuBuffer.hpp>
 
 #include <system/vma/VmaUsage.hpp>
 

@@ -31,8 +31,7 @@
 #include <rendering/ReflectionProbeRenderer.hpp>
 #include <rendering/RenderGlobalState.hpp>
 
-#include <rendering/backend/RendererFeatures.hpp>
-#include <rendering/backend/rt/RendererAccelerationStructure.hpp>
+#include <rendering/rt/RenderAccelerationStructure.hpp>
 
 #include <core/logging/LogChannels.hpp>
 #include <core/logging/Logger.hpp>

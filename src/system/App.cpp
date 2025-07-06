@@ -7,7 +7,7 @@
 #include <core/logging/Logger.hpp>
 
 #include <rendering/RenderGlobalState.hpp>
-#include <rendering/backend/RenderBackend.hpp>
+#include <rendering/RenderBackend.hpp>
 
 #include <Game.hpp>
 #include <GameThread.hpp>
@@ -86,7 +86,7 @@ void App::LaunchGame(const Handle<Game>& game)
     Assert(g_renderBackend != nullptr);
     HYPERION_ASSERT_RESULT(g_renderBackend->Initialize(*appContext));
 
-    RenderObjectDeleter<Platform::current>::Initialize();
+    RenderObjectDeleter::Initialize();
 
     g_renderGlobalState = new RenderGlobalState();
 
@@ -103,7 +103,7 @@ void App::LaunchGame(const Handle<Game>& game)
     delete g_renderGlobalState;
     g_renderGlobalState = nullptr;
 
-    RenderObjectDeleter<Platform::current>::RemoveAllNow(/* force */ true);
+    RenderObjectDeleter::RemoveAllNow(/* force */ true);
 
     HYPERION_ASSERT_RESULT(g_renderBackend->Destroy());
 }

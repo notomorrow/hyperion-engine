@@ -21,7 +21,7 @@
 
 #include <rendering/EngineRenderStats.hpp>
 
-#include <rendering/backend/RendererFrame.hpp>
+#include <rendering/RenderFrame.hpp>
 
 #include <util/AtlasPacker.hpp>
 

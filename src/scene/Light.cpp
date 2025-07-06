@@ -7,7 +7,7 @@
 #include <rendering/RenderLight.hpp>
 #include <rendering/RenderGlobalState.hpp>
 
-#include <rendering/backend/RendererDescriptorSet.hpp>
+#include <rendering/RenderDescriptorSet.hpp>
 
 #include <core/object/HypClassUtils.hpp>
 

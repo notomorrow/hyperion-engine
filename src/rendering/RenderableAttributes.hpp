@@ -2,8 +2,8 @@
 #ifndef HYPERION_RENDERABLE_ATTRIBUTES_HPP
 #define HYPERION_RENDERABLE_ATTRIBUTES_HPP
 
-#include <rendering/backend/RendererStructs.hpp>
-#include <rendering/backend/RendererFramebuffer.hpp>
+#include <rendering/RenderStructs.hpp>
+#include <rendering/RenderFramebuffer.hpp>
 #include <rendering/RenderBucket.hpp>
 #include <rendering/ShaderManager.hpp>
 

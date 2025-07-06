@@ -17,13 +17,12 @@
 
 #include <core/Defines.hpp>
 
-#include <rendering/backend/Platform.hpp>
-#include <rendering/backend/RendererResult.hpp>
-#include <rendering/backend/RenderObject.hpp>
-#include <rendering/backend/RendererGpuBuffer.hpp>
-#include <rendering/backend/RendererImageView.hpp>
-#include <rendering/backend/RendererSampler.hpp>
-#include <rendering/backend/rt/RendererAccelerationStructure.hpp>
+#include <rendering/RenderResult.hpp>
+#include <rendering/RenderObject.hpp>
+#include <rendering/RenderGpuBuffer.hpp>
+#include <rendering/RenderImageView.hpp>
+#include <rendering/RenderSampler.hpp>
+#include <rendering/rt/RenderAccelerationStructure.hpp>
 
 #include <Types.hpp>
 #include <HashCode.hpp>
@@ -587,9 +586,6 @@ struct DescriptorSetElement
         return bool(dirtyRange);
     }
 };
-
-template <PlatformType PLATFORM>
-struct DescriptorSetPlatformImpl;
 
 class DescriptorSetBase : public RenderObject<DescriptorSetBase>
 {

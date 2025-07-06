@@ -7,7 +7,7 @@
 #include <rendering/RenderWorld.hpp>
 #include <rendering/Renderer.hpp>
 
-#include <rendering/backend/RendererFrame.hpp>
+#include <rendering/RenderFrame.hpp>
 
 #include <scene/World.hpp>
 #include <scene/Texture.hpp>

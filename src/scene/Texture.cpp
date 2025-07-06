@@ -4,9 +4,9 @@
 
 #include <rendering/RenderTexture.hpp>
 
-#include <rendering/backend/RenderObject.hpp>
-#include <rendering/backend/RendererImage.hpp>
-#include <rendering/backend/RendererSampler.hpp>
+#include <rendering/RenderObject.hpp>
+#include <rendering/RenderImage.hpp>
+#include <rendering/RenderSampler.hpp>
 
 #include <streaming/StreamedTextureData.hpp>
 

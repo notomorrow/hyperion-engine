@@ -3,12 +3,12 @@
 #ifndef HYPERION_RENDERER_BACKEND_VULKAN_FRAME_HPP
 #define HYPERION_RENDERER_BACKEND_VULKAN_FRAME_HPP
 
-#include <rendering/backend/RendererFrame.hpp>
+#include <rendering/RenderFrame.hpp>
 
-#include <rendering/backend/vulkan/RendererFrame.hpp>
-#include <rendering/backend/vulkan/RendererSemaphore.hpp>
+#include <rendering/vulkan/VulkanFrame.hpp>
+#include <rendering/vulkan/VulkanSemaphore.hpp>
 
-#include <rendering/backend/RenderObject.hpp>
+#include <rendering/RenderObject.hpp>
 
 namespace hyperion {
 

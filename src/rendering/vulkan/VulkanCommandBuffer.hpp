@@ -3,13 +3,11 @@
 #ifndef HYPERION_RENDERER_BACKEND_VULKAN_COMMAND_BUFFER_HPP
 #define HYPERION_RENDERER_BACKEND_VULKAN_COMMAND_BUFFER_HPP
 
-#include <rendering/backend/RendererCommandBuffer.hpp>
+#include <rendering/RenderCommandBuffer.hpp>
+#include <rendering/RenderDevice.hpp>
 
 #include <rendering/vulkan/VulkanGpuBuffer.hpp>
 #include <rendering/vulkan/VulkanFence.hpp>
-
-#include <rendering/backend/RendererDevice.hpp>
-#include <rendering/backend/Platform.hpp>
 
 #include <core/containers/FixedArray.hpp>
 
@@ -26,7 +24,7 @@ struct VulkanDeviceQueue;
 class VulkanCommandBuffer final : public CommandBufferBase
 {
 public:
-    HYP_API explicit VulkanCommandBuffer(CommandBufferType type);
+    HYP_API explicit VulkanCommandBuffer(VkCommandBufferLevel type);
     HYP_API virtual ~VulkanCommandBuffer() override;
 
     HYP_FORCE_INLINE VkCommandBuffer GetVulkanHandle() const
@@ -39,7 +37,7 @@ public:
         return m_commandPool;
     }
 
-    HYP_FORCE_INLINE CommandBufferType GetType() const
+    HYP_FORCE_INLINE VkCommandBufferLevel GetType() const
     {
         return m_type;
     }
@@ -88,7 +86,7 @@ public:
     }
 
 private:
-    CommandBufferType m_type;
+    VkCommandBufferLevel m_type;
     VkCommandBuffer m_handle;
     VkCommandPool m_commandPool;
 };

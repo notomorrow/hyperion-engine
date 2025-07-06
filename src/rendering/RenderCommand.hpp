@@ -3,7 +3,7 @@
 #ifndef HYPERION_BACKEND_RENDER_COMMAND_HPP
 #define HYPERION_BACKEND_RENDER_COMMAND_HPP
 
-#include <rendering/backend/RendererResult.hpp>
+#include <rendering/RenderResult.hpp>
 
 #include <core/debug/Debug.hpp>
 

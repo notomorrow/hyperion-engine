@@ -12,12 +12,12 @@
 #include <core/utilities/Span.hpp>
 #include <core/utilities/Optional.hpp>
 
-#include <rendering/backend/vulkan/RendererQueue.hpp>
+#include <rendering/vulkan/VulkanQueue.hpp>
 
-#include <rendering/backend/RenderObject.hpp>
-#include <rendering/backend/RendererDevice.hpp>
-#include <rendering/backend/RendererResult.hpp>
-#include <rendering/backend/RendererStructs.hpp>
+#include <rendering/RenderObject.hpp>
+#include <rendering/RenderDevice.hpp>
+#include <rendering/RenderResult.hpp>
+#include <rendering/RenderStructs.hpp>
 
 #include <system/vma/VmaUsage.hpp>
 

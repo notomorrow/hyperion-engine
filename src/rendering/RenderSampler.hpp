@@ -3,10 +3,10 @@
 #ifndef HYPERION_BACKEND_RENDERER_SAMPLER_HPP
 #define HYPERION_BACKEND_RENDERER_SAMPLER_HPP
 
-#include <rendering/backend/Platform.hpp>
-#include <rendering/backend/RenderObject.hpp>
-#include <rendering/backend/RendererResult.hpp>
-#include <rendering/backend/RendererStructs.hpp>
+#include <rendering/RenderObject.hpp>
+#include <rendering/RenderResult.hpp>
+#include <rendering/RenderStructs.hpp>
+
 #include <core/Defines.hpp>
 
 namespace hyperion {

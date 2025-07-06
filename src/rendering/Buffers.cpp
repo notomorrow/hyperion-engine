@@ -2,7 +2,7 @@
 
 #include <rendering/Buffers.hpp>
 
-#include <rendering/backend/RenderBackend.hpp>
+#include <rendering/RenderBackend.hpp>
 
 #include <core/utilities/ByteUtil.hpp>
 

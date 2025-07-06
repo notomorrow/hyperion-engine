@@ -3,9 +3,8 @@
 #ifndef HYPERION_BACKEND_RENDERER_SWAPCHAIN_HPP
 #define HYPERION_BACKEND_RENDERER_SWAPCHAIN_HPP
 
-#include <rendering/backend/Platform.hpp>
-#include <rendering/backend/RenderObject.hpp>
-#include <rendering/backend/RendererImage.hpp>
+#include <rendering/RenderObject.hpp>
+#include <rendering/RenderImage.hpp>
 
 #include <core/functional/Proc.hpp>
 
@@ -14,6 +13,7 @@
 #include <core/Defines.hpp>
 
 namespace hyperion {
+
 class SwapchainBase : public RenderObject<SwapchainBase>
 {
 public:

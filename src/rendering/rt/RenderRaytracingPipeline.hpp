@@ -3,8 +3,7 @@
 #ifndef HYPERION_BACKEND_RENDERER_RAYTRACING_PIPELINE_HPP
 #define HYPERION_BACKEND_RENDERER_RAYTRACING_PIPELINE_HPP
 
-#include <rendering/backend/Platform.hpp>
-#include <rendering/backend/RenderObject.hpp>
+#include <rendering/RenderObject.hpp>
 #include <core/Defines.hpp>
 
 namespace hyperion {

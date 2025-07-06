@@ -3,14 +3,15 @@
 #ifndef HYPERION_RENDERER_BACKEND_VULKAN_RENDERING_API_HPP
 #define HYPERION_RENDERER_BACKEND_VULKAN_RENDERING_API_HPP
 
-#include <rendering/backend/RenderBackend.hpp>
-#include <rendering/backend/Platform.hpp>
+#include <rendering/RenderBackend.hpp>
 
 #include <rendering/CrashHandler.hpp>
 
 #include <core/containers/HashMap.hpp>
 
 #include <core/memory/RefCountedPtr.hpp>
+
+#include <vulkan/vulkan.h>
 
 namespace hyperion {
 

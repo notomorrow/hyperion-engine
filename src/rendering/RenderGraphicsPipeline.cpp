@@ -1,9 +1,9 @@
 /* Copyright (c) 2024-2025 No Tomorrow Games. All rights reserved. */
 
-#include <rendering/backend/RendererGraphicsPipeline.hpp>
-#include <rendering/backend/RendererFramebuffer.hpp>
-#include <rendering/backend/RendererDescriptorSet.hpp>
-#include <rendering/backend/RendererShader.hpp>
+#include <rendering/RenderGraphicsPipeline.hpp>
+#include <rendering/RenderFramebuffer.hpp>
+#include <rendering/RenderDescriptorSet.hpp>
+#include <rendering/RenderShader.hpp>
 
 #include <rendering/shader_compiler/ShaderCompiler.hpp>
 

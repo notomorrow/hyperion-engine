@@ -3,10 +3,10 @@
 #ifndef HYPERION_RENDERER_BACKEND_VULKAN_FEATURES_HPP
 #define HYPERION_RENDERER_BACKEND_VULKAN_FEATURES_HPP
 
-#include <rendering/backend/RendererResult.hpp>
-#include <rendering/backend/RendererImage.hpp>
-#include <rendering/backend/RendererStructs.hpp>
-#include <rendering/backend/RendererHelpers.hpp>
+#include <rendering/RenderResult.hpp>
+#include <rendering/RenderImage.hpp>
+#include <rendering/RenderStructs.hpp>
+#include <rendering/RenderHelpers.hpp>
 
 #include <core/memory/UniquePtr.hpp>
 #include <core/containers/Array.hpp>

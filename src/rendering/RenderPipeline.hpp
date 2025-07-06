@@ -3,8 +3,8 @@
 #ifndef HYPERION_BACKEND_RENDERER_PIPELINE_HPP
 #define HYPERION_BACKEND_RENDERER_PIPELINE_HPP
 
-#include <rendering/backend/RendererStructs.hpp>
-#include <rendering/backend/RendererDescriptorSet.hpp>
+#include <rendering/RenderStructs.hpp>
+#include <rendering/RenderDescriptorSet.hpp>
 
 #include <core/containers/Array.hpp>
 #include <core/utilities/Optional.hpp>

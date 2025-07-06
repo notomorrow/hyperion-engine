@@ -3,19 +3,12 @@
 #ifndef HYPERION_BACKEND_RENDERER_COMMAND_BUFFER_HPP
 #define HYPERION_BACKEND_RENDERER_COMMAND_BUFFER_HPP
 
-#include <rendering/backend/RendererDevice.hpp>
-#include <rendering/backend/RendererRenderPass.hpp>
-#include <rendering/backend/RendererGpuBuffer.hpp>
-#include <rendering/backend/Platform.hpp>
+#include <rendering/RenderDevice.hpp>
+#include <rendering/RenderGpuBuffer.hpp>
 
 #include <core/Defines.hpp>
 
 namespace hyperion {
-enum CommandBufferType
-{
-    COMMAND_BUFFER_PRIMARY,
-    COMMAND_BUFFER_SECONDARY
-};
 
 class CommandBufferBase : public RenderObject<CommandBufferBase>
 {

@@ -4,10 +4,9 @@
 #include <rendering/vulkan/VulkanInstance.hpp>
 #include <rendering/vulkan/VulkanInstance.hpp>
 
-#include <rendering/backend/RenderBackend.hpp>
-#include <rendering/backend/RendererFeatures.hpp>
-#include <rendering/backend/RendererDescriptorSet.hpp>
-#include <rendering/backend/AsyncCompute.hpp>
+#include <rendering/RenderBackend.hpp>
+#include <rendering/RenderDescriptorSet.hpp>
+#include <rendering/AsyncCompute.hpp>
 
 #include <core/logging/LogChannels.hpp>
 #include <core/logging/Logger.hpp>

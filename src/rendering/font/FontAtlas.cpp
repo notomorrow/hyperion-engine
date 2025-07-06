@@ -8,9 +8,9 @@
 
 #include <rendering/rhi/CmdList.hpp>
 
-#include <rendering/backend/RenderBackend.hpp>
-#include <rendering/backend/RenderCommand.hpp>
-#include <rendering/backend/RendererHelpers.hpp>
+#include <rendering/RenderBackend.hpp>
+#include <rendering/RenderCommand.hpp>
+#include <rendering/RenderHelpers.hpp>
 
 #include <streaming/StreamedTextureData.hpp>
 

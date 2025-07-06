@@ -4,8 +4,7 @@
 #define HYPERION_RENDERING_SHADOW_MAP_HPP
 
 #include <rendering/RenderResource.hpp>
-
-#include <rendering/backend/RenderObject.hpp>
+#include <rendering/RenderObject.hpp>
 
 #include <core/math/Matrix4.hpp>
 #include <core/math/Vector2.hpp>

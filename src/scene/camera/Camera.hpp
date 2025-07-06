@@ -22,7 +22,7 @@
 
 #include <input/InputHandler.hpp>
 
-#include <rendering/backend/RenderObject.hpp>
+#include <rendering/RenderObject.hpp>
 
 #include <GameCounter.hpp>
 

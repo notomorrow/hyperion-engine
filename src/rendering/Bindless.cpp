@@ -5,7 +5,7 @@
 #include <rendering/RenderGlobalState.hpp>
 #include <rendering/RenderTexture.hpp>
 
-#include <rendering/backend/RendererDescriptorSet.hpp>
+#include <rendering/RenderDescriptorSet.hpp>
 
 #include <scene/Texture.hpp>
 
@@ -16,7 +16,6 @@ namespace hyperion {
 BindlessStorage::BindlessStorage() = default;
 BindlessStorage::~BindlessStorage()
 {
-    
 }
 
 void BindlessStorage::UnsetAllResources()

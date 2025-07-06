@@ -24,11 +24,11 @@
 
 #include <rendering/rt/DDGI.hpp>
 
-#include <rendering/backend/RenderObject.hpp>
-#include <rendering/backend/RendererComputePipeline.hpp>
-#include <rendering/backend/RendererShader.hpp>
-#include <rendering/backend/RendererImage.hpp>
-#include <rendering/backend/RenderBackend.hpp>
+#include <rendering/RenderObject.hpp>
+#include <rendering/RenderComputePipeline.hpp>
+#include <rendering/RenderShader.hpp>
+#include <rendering/RenderImage.hpp>
+#include <rendering/RenderBackend.hpp>
 
 #include <scene/Texture.hpp>
 #include <scene/View.hpp>

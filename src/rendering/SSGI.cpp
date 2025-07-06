@@ -15,10 +15,10 @@
 
 #include <rendering/rhi/CmdList.hpp>
 
-#include <rendering/backend/RenderBackend.hpp>
-#include <rendering/backend/RendererFrame.hpp>
-#include <rendering/backend/RendererDescriptorSet.hpp>
-#include <rendering/backend/RendererComputePipeline.hpp>
+#include <rendering/RenderBackend.hpp>
+#include <rendering/RenderFrame.hpp>
+#include <rendering/RenderDescriptorSet.hpp>
+#include <rendering/RenderComputePipeline.hpp>
 
 #include <core/profiling/ProfileScope.hpp>
 

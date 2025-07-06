@@ -33,7 +33,7 @@
 #include <rendering/GBuffer.hpp>
 #include <rendering/subsystems/sky/SkydomeRenderer.hpp>
 #include <rendering/lightmapper/RenderLightmapVolume.hpp>
-#include <rendering/backend/RenderBackend.hpp>
+#include <rendering/RenderBackend.hpp>
 
 #include <core/profiling/ProfileScope.hpp>
 

@@ -7,7 +7,8 @@
 
 #include <core/functional/Proc.hpp>
 
-#include <rendering/backend/RenderObject.hpp>
+#include <rendering/RenderObject.hpp>
+#include <rendering/Platform.hpp>
 
 #include <Types.hpp>
 
@@ -55,7 +56,7 @@ private:
 } // namespace hyperion
 
 #if HYP_VULKAN
-#include <rendering/backend/vulkan/RendererHelpers.hpp>
+#include <rendering/vulkan/VulkanHelpers.hpp>
 #else
 #error Unsupported rendering backend
 #endif

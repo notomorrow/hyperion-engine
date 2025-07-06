@@ -10,10 +10,9 @@
 
 #include <rendering/debug/DebugDrawer.hpp>
 
-#include <rendering/backend/RendererFrame.hpp>
-#include <rendering/backend/RendererFeatures.hpp>
+#include <rendering/RenderFrame.hpp>
 
-#include <rendering/backend/rt/RendererAccelerationStructure.hpp>
+#include <rendering/rt/RenderAccelerationStructure.hpp>
 
 #include <system/AppContext.hpp>
 

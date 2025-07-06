@@ -3,9 +3,9 @@
 #ifndef HYPERION_RENDERER_BACKEND_VULKAN_COMPUTE_PIPELINE_HPP
 #define HYPERION_RENDERER_BACKEND_VULKAN_COMPUTE_PIPELINE_HPP
 
-#include <rendering/backend/RendererComputePipeline.hpp>
+#include <rendering/RenderComputePipeline.hpp>
 
-#include <rendering/backend/vulkan/RendererPipeline.hpp>
+#include <rendering/vulkan/VulkanPipeline.hpp>
 
 #include <vulkan/vulkan.h>
 

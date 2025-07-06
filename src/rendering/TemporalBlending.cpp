@@ -13,8 +13,8 @@
 #include <rendering/RenderGlobalState.hpp>
 #include <rendering/ShaderManager.hpp>
 
-#include <rendering/backend/RendererFrame.hpp>
-#include <rendering/backend/RendererComputePipeline.hpp>
+#include <rendering/RenderFrame.hpp>
+#include <rendering/RenderComputePipeline.hpp>
 
 #include <scene/Texture.hpp>
 

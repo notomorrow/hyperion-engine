@@ -3,10 +3,10 @@
 #include <rendering/vulkan/VulkanFrame.hpp>
 #include <rendering/vulkan/VulkanFence.hpp>
 #include <rendering/vulkan/VulkanCommandBuffer.hpp>
-#include <rendering/backend/vulkan/VulkanRenderBackend.hpp>
+#include <rendering/vulkan/VulkanRenderBackend.hpp>
 
-#include <rendering/backend/RendererDevice.hpp>
-#include <rendering/backend/RenderObject.hpp>
+#include <rendering/RenderDevice.hpp>
+#include <rendering/RenderObject.hpp>
 
 #include <core/logging/Logger.hpp>
 #include <core/logging/LogChannels.hpp>

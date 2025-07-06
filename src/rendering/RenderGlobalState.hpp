@@ -9,9 +9,9 @@
 
 #include <rendering/Buffers.hpp>
 
-#include <rendering/backend/RenderObject.hpp>
-#include <rendering/backend/RendererShader.hpp>
-#include <rendering/backend/RendererGpuBuffer.hpp>
+#include <rendering/RenderObject.hpp>
+#include <rendering/RenderShader.hpp>
+#include <rendering/RenderGpuBuffer.hpp>
 
 #include <rendering/util/ResourceBinder.hpp>
 

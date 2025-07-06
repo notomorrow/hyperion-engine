@@ -2,9 +2,9 @@
 
 #include <rendering/vulkan/VulkanSemaphore.hpp>
 #include <rendering/vulkan/VulkanDevice.hpp>
-#include <rendering/backend/vulkan/VulkanRenderBackend.hpp>
+#include <rendering/vulkan/VulkanRenderBackend.hpp>
 
-#include <rendering/backend/RendererDevice.hpp>
+#include <rendering/RenderDevice.hpp>
 
 namespace hyperion {
 

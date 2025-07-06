@@ -15,7 +15,7 @@
 
 #include <util/img/Bitmap.hpp>
 
-#include <rendering/backend/RenderObject.hpp>
+#include <rendering/RenderObject.hpp>
 
 namespace hyperion {
 

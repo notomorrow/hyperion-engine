@@ -2,7 +2,7 @@
 
 #include <rendering/vulkan/VulkanPipeline.hpp>
 #include <rendering/vulkan/VulkanDevice.hpp>
-#include <rendering/backend/vulkan/VulkanRenderBackend.hpp>
+#include <rendering/vulkan/VulkanRenderBackend.hpp>
 
 #include <core/containers/FlatSet.hpp>
 

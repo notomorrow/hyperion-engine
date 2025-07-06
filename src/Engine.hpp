@@ -8,10 +8,10 @@
 
 #include <rendering/EngineRenderStats.hpp>
 
-#include <rendering/backend/RenderBackend.hpp>
+#include <rendering/RenderBackend.hpp>
 
-#include <rendering/backend/RenderObject.hpp>
-#include <rendering/backend/RenderCommand.hpp>
+#include <rendering/RenderObject.hpp>
+#include <rendering/RenderCommand.hpp>
 
 #include <core/Handle.hpp>
 

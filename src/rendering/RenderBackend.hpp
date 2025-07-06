@@ -3,10 +3,10 @@
 #ifndef HYPERION_BACKEND_RENDERING_API_HPP
 #define HYPERION_BACKEND_RENDERING_API_HPP
 
-#include <rendering/backend/RendererStructs.hpp>
-#include <rendering/backend/RendererResult.hpp>
-#include <rendering/backend/RenderObject.hpp>
-#include <rendering/backend/RenderConfig.hpp>
+#include <rendering/RenderStructs.hpp>
+#include <rendering/RenderResult.hpp>
+#include <rendering/RenderObject.hpp>
+#include <rendering/RenderConfig.hpp>
 
 #include <core/functional/Proc.hpp>
 #include <core/functional/Delegate.hpp>

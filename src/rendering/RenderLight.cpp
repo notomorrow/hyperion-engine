@@ -6,7 +6,7 @@
 #include <rendering/RenderGlobalState.hpp>
 #include <rendering/SafeDeleter.hpp>
 
-#include <rendering/backend/RendererDescriptorSet.hpp>
+#include <rendering/RenderDescriptorSet.hpp>
 
 #include <scene/Material.hpp>
 #include <scene/Light.hpp>

@@ -13,7 +13,7 @@
 #include <rendering/HBAO.hpp>
 #include <rendering/TemporalAA.hpp>
 
-#include <rendering/backend/RenderObject.hpp>
+#include <rendering/RenderObject.hpp>
 
 #include <scene/Light.hpp> // For LightType
 
@@ -315,7 +315,7 @@ struct DeferredPassData : PassData
     UniquePtr<DOFBlur> dofBlur;
     UniquePtr<RaytracingReflections> raytracingReflections;
     UniquePtr<DDGI> ddgi;
-    
+
     FixedArray<TLASRef, maxFramesInFlight> topLevelAccelerationStructures;
 
     virtual ~DeferredPassData() override;

@@ -12,15 +12,15 @@
 
 #include <core/threading/Mutex.hpp>
 
-#include <rendering/backend/RendererGraphicsPipeline.hpp>
-#include <rendering/backend/RendererComputePipeline.hpp>
-#include <rendering/backend/rt/RendererRaytracingPipeline.hpp>
-#include <rendering/backend/RendererDescriptorSet.hpp>
-#include <rendering/backend/RendererFramebuffer.hpp>
-#include <rendering/backend/RendererImage.hpp>
-#include <rendering/backend/RendererGpuBuffer.hpp>
-#include <rendering/backend/RendererCommandBuffer.hpp>
-#include <rendering/backend/RenderObject.hpp>
+#include <rendering/RenderGraphicsPipeline.hpp>
+#include <rendering/RenderComputePipeline.hpp>
+#include <rendering/rt/RenderRaytracingPipeline.hpp>
+#include <rendering/RenderDescriptorSet.hpp>
+#include <rendering/RenderFramebuffer.hpp>
+#include <rendering/RenderImage.hpp>
+#include <rendering/RenderGpuBuffer.hpp>
+#include <rendering/RenderCommandBuffer.hpp>
+#include <rendering/RenderObject.hpp>
 
 // #define HYP_RHI_COMMAND_STACK_TRACE
 

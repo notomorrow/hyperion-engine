@@ -20,7 +20,7 @@
 #include <rendering/RenderResource.hpp>
 #include <rendering/RenderCollection.hpp>
 
-#include <rendering/backend/RenderCommand.hpp>
+#include <rendering/RenderCommand.hpp>
 
 #include <GameCounter.hpp>
 #include <HashCode.hpp>

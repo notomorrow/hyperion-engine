@@ -3,11 +3,10 @@
 #ifndef HYPERION_BACKEND_RENDERER_FBO_HPP
 #define HYPERION_BACKEND_RENDERER_FBO_HPP
 
-#include <rendering/backend/RendererAttachment.hpp>
-#include <rendering/backend/RendererImage.hpp>
-#include <rendering/backend/RendererImageView.hpp>
-#include <rendering/backend/RendererSampler.hpp>
-#include <rendering/backend/Platform.hpp>
+#include <rendering/RenderAttachment.hpp>
+#include <rendering/RenderImage.hpp>
+#include <rendering/RenderImageView.hpp>
+#include <rendering/RenderSampler.hpp>
 
 #include <core/Defines.hpp>
 

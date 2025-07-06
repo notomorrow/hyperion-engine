@@ -16,11 +16,10 @@
 #include <rendering/RenderCollection.hpp>
 #include <rendering/Renderer.hpp>
 
-#include <rendering/backend/RenderBackend.hpp>
-#include <rendering/backend/RenderObject.hpp>
-#include <rendering/backend/RenderConfig.hpp>
-#include <rendering/backend/RendererDevice.hpp>
-#include <rendering/backend/RendererFeatures.hpp>
+#include <rendering/RenderBackend.hpp>
+#include <rendering/RenderObject.hpp>
+#include <rendering/RenderConfig.hpp>
+#include <rendering/RenderDevice.hpp>
 
 #include <scene/BVH.hpp>
 #include <scene/Mesh.hpp>

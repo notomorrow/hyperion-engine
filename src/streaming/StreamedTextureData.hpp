@@ -5,7 +5,7 @@
 
 #include <streaming/StreamedData.hpp>
 
-#include <rendering/backend/RendererStructs.hpp>
+#include <rendering/RenderStructs.hpp>
 
 #include <core/memory/RefCountedPtr.hpp>
 #include <core/containers/Array.hpp>

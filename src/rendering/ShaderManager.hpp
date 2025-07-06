@@ -8,7 +8,7 @@
 
 #include <core/threading/Mutex.hpp>
 
-#include <rendering/backend/RenderObject.hpp>
+#include <rendering/RenderObject.hpp>
 
 #include <rendering/shader_compiler/ShaderCompiler.hpp>
 

@@ -5,8 +5,8 @@
 
 #include <rendering/vulkan/VulkanDevice.hpp>
 
-#include <rendering/backend/RenderObject.hpp>
-#include <rendering/backend/RendererStructs.hpp>
+#include <rendering/RenderObject.hpp>
+#include <rendering/RenderStructs.hpp>
 
 #include <vulkan/vulkan.h>
 

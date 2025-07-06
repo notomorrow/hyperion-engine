@@ -3,7 +3,7 @@
 #ifndef HYPERION_RENDERER_BACKEND_VULKAN_IMAGE_VIEW_HPP
 #define HYPERION_RENDERER_BACKEND_VULKAN_IMAGE_VIEW_HPP
 
-#include <rendering/backend/RendererImageView.hpp>
+#include <rendering/RenderImageView.hpp>
 
 #include <vulkan/vulkan.h>
 

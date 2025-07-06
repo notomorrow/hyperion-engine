@@ -21,7 +21,7 @@
 #include <rendering/RenderShadowMap.hpp>
 #include <rendering/PlaceholderData.hpp>
 
-#include <rendering/backend/RendererDescriptorSet.hpp>
+#include <rendering/RenderDescriptorSet.hpp>
 
 #include <core/logging/LogChannels.hpp>
 #include <core/logging/Logger.hpp>

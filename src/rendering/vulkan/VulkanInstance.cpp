@@ -5,8 +5,7 @@
 #include <rendering/vulkan/VulkanSemaphore.hpp>
 #include <rendering/vulkan/VulkanSwapchain.hpp>
 
-#include <rendering/backend/RendererFeatures.hpp>
-#include <rendering/backend/RenderBackend.hpp>
+#include <rendering/RenderBackend.hpp>
 
 #include <core/containers/Array.hpp>
 #include <core/utilities/Span.hpp>

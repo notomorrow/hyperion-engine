@@ -18,9 +18,9 @@
 
 #include <streaming/StreamedData.hpp>
 
-#include <rendering/backend/RenderObject.hpp>
-#include <rendering/backend/RendererImage.hpp>
-#include <rendering/backend/RendererImageView.hpp>
+#include <rendering/RenderObject.hpp>
+#include <rendering/RenderImage.hpp>
+#include <rendering/RenderImageView.hpp>
 
 #include <scene/VisibilityState.hpp>
 

@@ -1,6 +1,6 @@
 #include <rendering/RenderResource.hpp>
 #include <rendering/Buffers.hpp>
-#include <rendering/backend/RenderCommand.hpp>
+#include <rendering/RenderCommand.hpp>
 
 #include <core/containers/TypeMap.hpp>
 

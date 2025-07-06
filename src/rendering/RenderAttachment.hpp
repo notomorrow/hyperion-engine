@@ -7,9 +7,8 @@
 
 #include <core/containers/Array.hpp>
 
-#include <rendering/backend/RenderObject.hpp>
-#include <rendering/backend/RendererImage.hpp>
-#include <rendering/backend/Platform.hpp>
+#include <rendering/RenderObject.hpp>
+#include <rendering/RenderImage.hpp>
 
 #include <Types.hpp>
 

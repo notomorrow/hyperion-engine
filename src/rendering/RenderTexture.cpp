@@ -11,13 +11,12 @@
 
 #include <rendering/rhi/CmdList.hpp>
 
-#include <rendering/backend/RenderBackend.hpp>
-#include <rendering/backend/RendererFrame.hpp>
-#include <rendering/backend/RenderCommand.hpp>
-#include <rendering/backend/RendererImage.hpp>
-#include <rendering/backend/RendererImageView.hpp>
-#include <rendering/backend/RendererFeatures.hpp>
-#include <rendering/backend/RendererGraphicsPipeline.hpp>
+#include <rendering/RenderBackend.hpp>
+#include <rendering/RenderFrame.hpp>
+#include <rendering/RenderCommand.hpp>
+#include <rendering/RenderImage.hpp>
+#include <rendering/RenderImageView.hpp>
+#include <rendering/RenderGraphicsPipeline.hpp>
 
 #include <scene/Texture.hpp>
 #include <scene/Mesh.hpp>

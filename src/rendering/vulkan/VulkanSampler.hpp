@@ -3,7 +3,7 @@
 #ifndef HYPERION_RENDERER_BACKEND_RENDERER_VULKAN_SAMPLER_HPP
 #define HYPERION_RENDERER_BACKEND_RENDERER_VULKAN_SAMPLER_HPP
 
-#include <rendering/backend/RendererSampler.hpp>
+#include <rendering/RenderSampler.hpp>
 
 #include <vulkan/vulkan.h>
 

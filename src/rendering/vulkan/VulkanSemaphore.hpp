@@ -3,8 +3,7 @@
 #ifndef HYPERION_RENDERER_BACKEND_VULKAN_SEMAPHORE_HPP
 #define HYPERION_RENDERER_BACKEND_VULKAN_SEMAPHORE_HPP
 
-#include <rendering/backend/Platform.hpp>
-#include <rendering/backend/RendererResult.hpp>
+#include <rendering/RenderResult.hpp>
 
 #include <vector>
 #include <set>

@@ -5,7 +5,7 @@
 
 #include <core/object/HypObject.hpp>
 
-#include <rendering/backend/RenderObject.hpp>
+#include <rendering/RenderObject.hpp>
 
 #include <scene/Scene.hpp>
 #include <scene/EnvProbe.hpp>

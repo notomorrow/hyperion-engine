@@ -2,13 +2,12 @@
 
 #include <rendering/vulkan/VulkanImage.hpp>
 #include <rendering/vulkan/VulkanCommandBuffer.hpp>
-#include <rendering/backend/vulkan/VulkanRenderBackend.hpp>
+#include <rendering/vulkan/VulkanRenderBackend.hpp>
 #include <rendering/vulkan/VulkanInstance.hpp>
 
-#include <rendering/backend/RendererGraphicsPipeline.hpp>
-#include <rendering/backend/RendererHelpers.hpp>
-#include <rendering/backend/RendererDevice.hpp>
-#include <rendering/backend/RendererFeatures.hpp>
+#include <rendering/RenderGraphicsPipeline.hpp>
+#include <rendering/RenderHelpers.hpp>
+#include <rendering/RenderDevice.hpp>
 
 #include <rendering/rhi/CmdList.hpp>
 

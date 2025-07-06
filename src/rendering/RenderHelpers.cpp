@@ -1,6 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#include <rendering/backend/RendererHelpers.hpp>
+#include <rendering/RenderHelpers.hpp>
 
 #include <core/math/MathUtil.hpp>
 

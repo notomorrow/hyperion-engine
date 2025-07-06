@@ -7,7 +7,7 @@
 
 #include <core/containers/HashMap.hpp>
 
-#include <rendering/backend/RenderObject.hpp>
+#include <rendering/RenderObject.hpp>
 
 namespace hyperion {
 
@@ -23,7 +23,7 @@ public:
     BindlessStorage(BindlessStorage&& other) noexcept = delete;
     BindlessStorage& operator=(BindlessStorage&& other) noexcept = delete;
     ~BindlessStorage();
-    
+
     void UnsetAllResources();
 
     /*! \brief Add a texture to the bindless descriptor set. */

@@ -23,9 +23,8 @@
 #include <Constants.hpp>
 #include <Types.hpp>
 
-#include <rendering/backend/RenderCommand.hpp>
-#include <rendering/backend/RendererResult.hpp>
-#include <rendering/backend/Platform.hpp>
+#include <rendering/RenderCommand.hpp>
+#include <rendering/RenderResult.hpp>
 
 #include <mutex>
 
@@ -997,7 +996,7 @@ static inline void DeferCreate(RefType ref, Args&&... args)
     using T##WeakRef = T##WeakRef##_WEBGPU
 #endif
 
-#include <rendering/backend/inl/RenderObjectDefinitions.inl>
+#include <rendering/inl/RenderObjectDefinitions.inl>
 
 #undef DEF_RENDER_OBJECT
 #undef DEF_RENDER_OBJECT_WITH_BASE_CLASS
@@ -1023,7 +1022,6 @@ struct DeletionQueueBase
     virtual int32 RemoveAllNow(bool force = false) = 0;
 };
 
-template <PlatformType PLATFORM>
 struct RenderObjectDeleter
 {
     static constexpr uint32 initialCyclesRemaining = maxFramesInFlight + 1;
@@ -1183,12 +1181,6 @@ struct RenderObjectDeleter
     static void RemoveAllNow(bool force = false);
 };
 
-template <PlatformType PLATFORM>
-FixedArray<DeletionQueueBase*, RenderObjectDeleter<PLATFORM>::maxQueues + 1> RenderObjectDeleter<PLATFORM>::s_queues = {};
-
-template <PlatformType PLATFORM>
-AtomicVar<uint16> RenderObjectDeleter<PLATFORM>::s_queueIndex = { 0 };
-
 template <class T>
 static inline void SafeRelease(RenderObjectHandle_Strong<T>&& handle)
 {
@@ -1197,7 +1189,7 @@ static inline void SafeRelease(RenderObjectHandle_Strong<T>&& handle)
         return;
     }
 
-    RenderObjectDeleter<Platform::current>::template GetQueue<typename T::Type>().Push(std::move(handle));
+    RenderObjectDeleter::GetQueue<typename T::Type>().Push(std::move(handle));
 }
 
 template <class T, class AllocatorType>
@@ -1210,7 +1202,7 @@ static inline void SafeRelease(Array<RenderObjectHandle_Strong<T>, AllocatorType
             continue;
         }
 
-        RenderObjectDeleter<Platform::current>::template GetQueue<typename T::Type>().Push(std::move(it));
+        RenderObjectDeleter::GetQueue<typename T::Type>().Push(std::move(it));
     }
 
     handles.Clear();
@@ -1226,7 +1218,7 @@ static inline void SafeRelease(FixedArray<RenderObjectHandle_Strong<T>, Sz>&& ha
             continue;
         }
 
-        RenderObjectDeleter<Platform::current>::template GetQueue<typename T::Type>().Push(std::move(it));
+        RenderObjectDeleter::GetQueue<typename T::Type>().Push(std::move(it));
     }
 }
 
@@ -1240,7 +1232,7 @@ static inline void SafeRelease(HashSet<RenderObjectHandle_Strong<T>, KeyBy>&& ha
             continue;
         }
 
-        RenderObjectDeleter<Platform::current>::template GetQueue<typename T::Type>().Push(std::move(it));
+        RenderObjectDeleter::GetQueue<typename T::Type>().Push(std::move(it));
     }
 
     handles.Clear();

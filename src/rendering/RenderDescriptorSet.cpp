@@ -1,8 +1,8 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#include <rendering/backend/RenderBackend.hpp>
-#include <rendering/backend/RendererDescriptorSet.hpp>
-#include <rendering/backend/RenderConfig.hpp>
+#include <rendering/RenderBackend.hpp>
+#include <rendering/RenderDescriptorSet.hpp>
+#include <rendering/RenderConfig.hpp>
 
 #include <rendering/Buffers.hpp>
 

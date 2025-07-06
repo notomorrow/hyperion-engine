@@ -1,6 +1,6 @@
 /* Copyright (c) 2024-2025 No Tomorrow Games. All rights reserved. */
 
-#include <rendering/backend/vulkan/VulkanRenderBackend.hpp>
+#include <rendering/vulkan/VulkanRenderBackend.hpp>
 #include <rendering/vulkan/VulkanSwapchain.hpp>
 #include <rendering/vulkan/VulkanFrame.hpp>
 #include <rendering/vulkan/VulkanGraphicsPipeline.hpp>
@@ -8,13 +8,12 @@
 #include <rendering/vulkan/VulkanDescriptorSet.hpp>
 #include <rendering/vulkan/VulkanInstance.hpp>
 #include <rendering/vulkan/VulkanDevice.hpp>
-#include <rendering/backend/vulkan/rt/RendererRaytracingPipeline.hpp>
-#include <rendering/backend/vulkan/rt/RendererAccelerationStructure.hpp>
+#include <rendering/vulkan/rt/VulkanRaytracingPipeline.hpp>
+#include <rendering/vulkan/rt/VulkanAccelerationStructure.hpp>
 #include <rendering/vulkan/VulkanShader.hpp>
-#include <rendering/backend/vulkan/AsyncCompute.hpp>
+#include <rendering/vulkan/VulkanAsyncCompute.hpp>
 
-#include <rendering/backend/RendererHelpers.hpp>
-#include <rendering/backend/RendererFeatures.hpp>
+#include <rendering/RenderHelpers.hpp>
 
 #include <rendering/RenderableAttributes.hpp>
 

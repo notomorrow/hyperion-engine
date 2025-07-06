@@ -1,13 +1,13 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#include <rendering/backend/vulkan/AsyncCompute.hpp>
+#include <rendering/vulkan/VulkanAsyncCompute.hpp>
 #include <rendering/vulkan/VulkanFrame.hpp>
 #include <rendering/vulkan/VulkanDevice.hpp>
 #include <rendering/vulkan/VulkanCommandBuffer.hpp>
 #include <rendering/vulkan/VulkanComputePipeline.hpp>
 #include <rendering/vulkan/VulkanDescriptorSet.hpp>
 #include <rendering/vulkan/VulkanGpuBuffer.hpp>
-#include <rendering/backend/vulkan/VulkanRenderBackend.hpp>
+#include <rendering/vulkan/VulkanRenderBackend.hpp>
 
 #include <core/logging/LogChannels.hpp>
 #include <core/logging/Logger.hpp>
@@ -24,10 +24,9 @@ static inline VulkanRenderBackend* GetRenderBackend()
 }
 
 VulkanAsyncCompute::VulkanAsyncCompute()
-    : m_commandBuffers({ MakeRenderObject<VulkanCommandBuffer>(CommandBufferType::COMMAND_BUFFER_PRIMARY),
-          MakeRenderObject<VulkanCommandBuffer>(CommandBufferType::COMMAND_BUFFER_PRIMARY) }),
-      m_fences({ MakeRenderObject<VulkanFence>(),
-          MakeRenderObject<VulkanFence>() }),
+    : m_commandBuffers({ MakeRenderObject<VulkanCommandBuffer>(VK_COMMAND_BUFFER_LEVEL_PRIMARY),
+          MakeRenderObject<VulkanCommandBuffer>(VK_COMMAND_BUFFER_LEVEL_PRIMARY) }),
+      m_fences({ MakeRenderObject<VulkanFence>(), MakeRenderObject<VulkanFence>() }),
       m_isSupported(false),
       m_isFallback(false)
 {

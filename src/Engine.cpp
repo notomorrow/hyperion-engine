@@ -20,12 +20,11 @@
 
 #include <rendering/debug/DebugDrawer.hpp>
 
-#include <rendering/backend/AsyncCompute.hpp>
-#include <rendering/backend/RendererFeatures.hpp>
-#include <rendering/backend/RendererDescriptorSet.hpp>
-#include <rendering/backend/RendererDevice.hpp>
-#include <rendering/backend/RendererSwapchain.hpp>
-#include <rendering/backend/RenderConfig.hpp>
+#include <rendering/AsyncCompute.hpp>
+#include <rendering/RenderDescriptorSet.hpp>
+#include <rendering/RenderDevice.hpp>
+#include <rendering/RenderSwapchain.hpp>
+#include <rendering/RenderConfig.hpp>
 
 #include <asset/Assets.hpp>
 
@@ -433,7 +432,7 @@ void Engine::PreFrameUpdate(FrameBase* frame)
     if (m_world->IsReady())
         m_world->GetRenderResource().PreRender(frame);
 
-    RenderObjectDeleter<Platform::current>::Iterate();
+    RenderObjectDeleter::Iterate();
 
     g_safeDeleter->PerformEnqueuedDeletions();
 }

@@ -1,6 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#include <rendering/backend/RendererGpuBuffer.hpp>
+#include <rendering/RenderGpuBuffer.hpp>
 
 namespace hyperion {
 

@@ -15,8 +15,8 @@
 #include <core/memory/resource/Resource.hpp>
 
 #include <rendering/RenderCollection.hpp>
-#include <rendering/backend/RendererStructs.hpp>
-#include <rendering/backend/RenderObject.hpp>
+#include <rendering/RenderStructs.hpp>
+#include <rendering/RenderObject.hpp>
 
 #include <GameCounter.hpp>
 

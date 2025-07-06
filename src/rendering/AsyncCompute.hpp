@@ -10,10 +10,9 @@
 
 #include <rendering/rhi/CmdList.hpp>
 
-#include <rendering/backend/Platform.hpp>
-#include <rendering/backend/RenderObject.hpp>
-#include <rendering/backend/RendererResult.hpp>
-#include <rendering/backend/RendererGpuBuffer.hpp>
+#include <rendering/RenderObject.hpp>
+#include <rendering/RenderResult.hpp>
+#include <rendering/RenderGpuBuffer.hpp>
 
 #include <core/math/MathUtil.hpp>
 #include <core/math/Extent.hpp>

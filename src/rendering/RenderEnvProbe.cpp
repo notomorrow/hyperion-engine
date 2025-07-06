@@ -10,12 +10,12 @@
 #include <rendering/PlaceholderData.hpp>
 #include <rendering/RenderGlobalState.hpp>
 
-#include <rendering/backend/RenderBackend.hpp>
-#include <rendering/backend/RendererFrame.hpp>
-#include <rendering/backend/RendererImage.hpp>
-#include <rendering/backend/RendererImageView.hpp>
-#include <rendering/backend/RendererGpuBuffer.hpp>
-#include <rendering/backend/AsyncCompute.hpp>
+#include <rendering/RenderBackend.hpp>
+#include <rendering/RenderFrame.hpp>
+#include <rendering/RenderImage.hpp>
+#include <rendering/RenderImageView.hpp>
+#include <rendering/RenderGpuBuffer.hpp>
+#include <rendering/AsyncCompute.hpp>
 
 #include <scene/Texture.hpp>
 #include <scene/View.hpp>
@@ -926,7 +926,7 @@ void ReflectionProbeRenderer::ComputeSH(FrameBase* frame, const RenderSetup& ren
     *delegateHandle = frame->OnFrameEnd.Bind([renderEnvProbe = TResourceHandle<RenderEnvProbe>(envProbe->GetRenderResource()), pipelines = std::move(pipelines), descriptorTables = std::move(computeShDescriptorTables), delegateHandle](FrameBase* frame) mutable
         {
             HYP_NAMED_SCOPE("EnvProbe::ComputeSH - Buffer readback");
-            
+
             const uint32 boundIndex = RenderApi_RetrieveResourceBinding(renderEnvProbe->GetEnvProbe());
             Assert(boundIndex != ~0u);
 

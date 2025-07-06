@@ -14,7 +14,7 @@
 #include <rendering/Renderer.hpp>
 #include <rendering/RenderCollection.hpp>
 
-#include <rendering/backend/RenderObject.hpp>
+#include <rendering/RenderObject.hpp>
 
 #include <scene/Scene.hpp>
 #include <scene/Subsystem.hpp>

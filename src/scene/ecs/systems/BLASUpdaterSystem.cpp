@@ -16,8 +16,8 @@
 #include <rendering/RenderGlobalState.hpp>
 #include <rendering/Deferred.hpp>
 
-#include <rendering/backend/RenderCommand.hpp>
-#include <rendering/backend/rt/RendererAccelerationStructure.hpp>
+#include <rendering/RenderCommand.hpp>
+#include <rendering/rt/RenderAccelerationStructure.hpp>
 
 #include <core/containers/HashSet.hpp>
 

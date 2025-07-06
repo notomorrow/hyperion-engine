@@ -3,7 +3,7 @@
 #ifndef HYPERION_RENDERER_BACKEND_VULKAN_SHADER_HPP
 #define HYPERION_RENDERER_BACKEND_VULKAN_SHADER_HPP
 
-#include <rendering/backend/RendererShader.hpp>
+#include <rendering/RenderShader.hpp>
 
 #include <vulkan/vulkan.h>
 

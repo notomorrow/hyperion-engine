@@ -5,8 +5,8 @@
 #include <rendering/RenderGlobalState.hpp>
 #include <rendering/Renderer.hpp>
 
-#include <rendering/backend/RenderBackend.hpp>
-#include <rendering/backend/RendererDescriptorSet.hpp>
+#include <rendering/RenderBackend.hpp>
+#include <rendering/RenderDescriptorSet.hpp>
 
 #include <core/math/Matrix4.hpp>
 

@@ -8,9 +8,9 @@
 #include <rendering/ShaderManager.hpp>
 #include <rendering/TemporalBlending.hpp>
 
-#include <rendering/backend/RenderObject.hpp>
-#include <rendering/backend/RendererStructs.hpp>
-#include <rendering/backend/rt/RendererRaytracingPipeline.hpp>
+#include <rendering/RenderObject.hpp>
+#include <rendering/RenderStructs.hpp>
+#include <rendering/rt/RenderRaytracingPipeline.hpp>
 
 #include <core/config/Config.hpp>
 

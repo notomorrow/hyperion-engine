@@ -7,13 +7,13 @@
 
 #include <core/Handle.hpp>
 
-#include <rendering/backend/RenderBackend.hpp>
-#include <rendering/backend/RendererImage.hpp>
-#include <rendering/backend/RendererImageView.hpp>
-#include <rendering/backend/RendererSampler.hpp>
-#include <rendering/backend/RendererGpuBuffer.hpp>
-#include <rendering/backend/RendererDevice.hpp>
-#include <rendering/backend/RenderObject.hpp>
+#include <rendering/RenderBackend.hpp>
+#include <rendering/RenderImage.hpp>
+#include <rendering/RenderImageView.hpp>
+#include <rendering/RenderSampler.hpp>
+#include <rendering/RenderGpuBuffer.hpp>
+#include <rendering/RenderDevice.hpp>
+#include <rendering/RenderObject.hpp>
 
 #include <core/math/MathUtil.hpp>
 

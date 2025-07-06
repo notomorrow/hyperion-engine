@@ -13,7 +13,7 @@
 #include <rendering/RenderSkeleton.hpp>
 #include <rendering/RenderMaterial.hpp>
 
-#include <rendering/backend/RenderCommand.hpp>
+#include <rendering/RenderCommand.hpp>
 
 #include <core/containers/HashSet.hpp>
 

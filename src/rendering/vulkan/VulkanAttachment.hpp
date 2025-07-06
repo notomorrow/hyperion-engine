@@ -3,8 +3,8 @@
 #ifndef HYPERION_RENDERER_BACKEND_VULKAN_ATTACHMENT_HPP
 #define HYPERION_RENDERER_BACKEND_VULKAN_ATTACHMENT_HPP
 
-#include <rendering/backend/RendererAttachment.hpp>
-#include <rendering/backend/RenderObject.hpp>
+#include <rendering/RenderAttachment.hpp>
+#include <rendering/RenderObject.hpp>
 
 #include <core/math/MathUtil.hpp>
 

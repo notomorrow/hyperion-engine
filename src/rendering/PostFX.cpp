@@ -2,8 +2,8 @@
 
 #include <rendering/PostFX.hpp>
 
-#include <rendering/backend/RenderBackend.hpp>
-#include <rendering/backend/RendererDescriptorSet.hpp>
+#include <rendering/RenderBackend.hpp>
+#include <rendering/RenderDescriptorSet.hpp>
 
 #include <core/object/HypClassUtils.hpp>
 

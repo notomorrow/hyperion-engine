@@ -13,12 +13,12 @@
 
 #include <rendering/debug/DebugDrawer.hpp>
 
-#include <rendering/backend/RenderBackend.hpp>
-#include <rendering/backend/RendererFrame.hpp>
-#include <rendering/backend/RendererImage.hpp>
-#include <rendering/backend/RendererImageView.hpp>
-#include <rendering/backend/RendererGpuBuffer.hpp>
-#include <rendering/backend/AsyncCompute.hpp>
+#include <rendering/RenderBackend.hpp>
+#include <rendering/RenderFrame.hpp>
+#include <rendering/RenderImage.hpp>
+#include <rendering/RenderImageView.hpp>
+#include <rendering/RenderGpuBuffer.hpp>
+#include <rendering/AsyncCompute.hpp>
 
 #include <scene/EnvGrid.hpp>
 #include <scene/EnvProbe.hpp>

@@ -3,9 +3,8 @@
 #ifndef HYPERION_BACKEND_RENDERER_FRAME_HPP
 #define HYPERION_BACKEND_RENDERER_FRAME_HPP
 
-#include <rendering/backend/RendererResult.hpp>
-#include <rendering/backend/RenderObject.hpp>
-#include <rendering/backend/Platform.hpp>
+#include <rendering/RenderResult.hpp>
+#include <rendering/RenderObject.hpp>
 
 #include <rendering/rhi/CmdList.hpp>
 
@@ -20,6 +19,7 @@
 // #define HYP_DEBUG_USED_DESCRIPTOR_SETS
 
 namespace hyperion {
+
 class FrameBase : public RenderObject<FrameBase>
 {
 public:

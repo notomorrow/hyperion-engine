@@ -14,7 +14,7 @@
 #include <rendering/font/FontEngine.hpp>
 #include <rendering/font/FontFace.hpp>
 
-#include <rendering/backend/RendererStructs.hpp>
+#include <rendering/RenderStructs.hpp>
 
 namespace hyperion {
 
