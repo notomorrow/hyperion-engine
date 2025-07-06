@@ -1,6 +1,4 @@
-#ifndef HYPERION_SCRIPT_HPP
-#define HYPERION_SCRIPT_HPP
-
+#pragma once
 #include <core/containers/String.hpp>
 
 #include <core/utilities/EnumFlags.hpp>
@@ -127,4 +125,3 @@ private:
 
 } // namespace hyperion
 
-#endif

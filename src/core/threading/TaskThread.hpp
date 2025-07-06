@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_TASK_THREAD_HPP
-#define HYPERION_TASK_THREAD_HPP
+#pragma once
 
 #include <core/threading/Thread.hpp>
 #include <core/threading/Scheduler.hpp>
@@ -62,5 +61,3 @@ protected:
 using threading::TaskThread;
 
 } // namespace hyperion
-
-#endif

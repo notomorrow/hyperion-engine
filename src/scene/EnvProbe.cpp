@@ -10,12 +10,11 @@
 #include <rendering/RenderCamera.hpp>
 #include <rendering/RenderView.hpp>
 #include <rendering/RenderWorld.hpp>
-#include <rendering/RenderScene.hpp>
 #include <rendering/RenderShadowMap.hpp>
 #include <rendering/RenderGlobalState.hpp>
 
-#include <rendering/backend/RenderBackend.hpp>
-#include <rendering/backend/RendererDescriptorSet.hpp>
+#include <rendering/RenderBackend.hpp>
+#include <rendering/RenderDescriptorSet.hpp>
 
 #include <core/logging/LogChannels.hpp>
 #include <core/logging/Logger.hpp>
@@ -473,7 +472,7 @@ void EnvProbe::UpdateRenderProxy(IRenderProxy* proxy)
     //     bufferData.textureIndex = m_renderResource->GetTextureSlot();
     // }
 
-    // bufferData.positionInGrid = m_renderResource->GetPositionInGrid();
+    bufferData.positionInGrid = m_positionInGrid;
 }
 
 #pragma region SkyProbe

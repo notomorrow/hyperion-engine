@@ -1,8 +1,6 @@
 /* Copyright (c) 2024-2025 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_LOG_ENTITIES_COMMAND_HPP
-#define HYPERION_LOG_ENTITIES_COMMAND_HPP
-
+#pragma once
 #include <console/ConsoleCommand.hpp>
 
 namespace hyperion {
@@ -23,4 +21,3 @@ protected:
 
 } // namespace hyperion
 
-#endif

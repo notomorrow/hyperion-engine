@@ -1,6 +1,4 @@
-#ifndef HYPERION_FORMAT_HPP
-#define HYPERION_FORMAT_HPP
-
+#pragma once
 #include <core/utilities/FormatFwd.hpp>
 #include <core/utilities/StringView.hpp>
 #include <core/utilities/Tuple.hpp>
@@ -441,5 +439,3 @@ using utilities::Format;
 #endif
 
 #define HYP_FORMAT(fmt, ...) Format<HYP_STATIC_STRING(fmt)>(__VA_ARGS__)
-
-#endif

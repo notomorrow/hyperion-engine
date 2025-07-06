@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_CORE_NAME_HPP
-#define HYPERION_CORE_NAME_HPP
+#pragma once
 
 #include <core/containers/HashMap.hpp>
 #include <core/containers/String.hpp>
@@ -110,28 +109,26 @@ constexpr WeakName operator "" _nw(const char *, SizeType);
 
 #if defined(HYP_COMPILE_TIME_NAME_HASHING) && HYP_COMPILE_TIME_NAME_HASHING
 
-    #define HYP_HASHED_NAME2(name) ::hyperion::HashedName<::hyperion::StaticString<sizeof(name)>(name)>()
-    #define HYP_NAME_UNSAFE2(name) ::hyperion::CreateNameFromStaticString_NoLock(HYP_HASHED_NAME2(name))
-    #define HYP_WEAK_NAME2(name) ::hyperion::Name(HYP_HASHED_NAME2(name).hashCode.Value())
-    #define HYP_NAME2(name) ::hyperion::CreateNameFromStaticString_WithLock(HYP_HASHED_NAME2(name))
+#define HYP_HASHED_NAME2(name) ::hyperion::HashedName<::hyperion::StaticString<sizeof(name)>(name)>()
+#define HYP_NAME_UNSAFE2(name) ::hyperion::CreateNameFromStaticString_NoLock(HYP_HASHED_NAME2(name))
+#define HYP_WEAK_NAME2(name) ::hyperion::Name(HYP_HASHED_NAME2(name).hashCode.Value())
+#define HYP_NAME2(name) ::hyperion::CreateNameFromStaticString_WithLock(HYP_HASHED_NAME2(name))
 
-    #define HYP_HASHED_NAME(name) ::hyperion::HashedName<::hyperion::StaticString<sizeof(HYP_STR(name))>(HYP_STR(name))>()
-    #define HYP_NAME_UNSAFE(name) ::hyperion::CreateNameFromStaticString_NoLock(HYP_HASHED_NAME(name))
-    #define HYP_WEAK_NAME(name) ::hyperion::Name(HYP_HASHED_NAME(name).hashCode.Value())
-    #define HYP_NAME(name) ::hyperion::CreateNameFromStaticString_WithLock(HYP_HASHED_NAME(name))
+#define HYP_HASHED_NAME(name) ::hyperion::HashedName<::hyperion::StaticString<sizeof(HYP_STR(name))>(HYP_STR(name))>()
+#define HYP_NAME_UNSAFE(name) ::hyperion::CreateNameFromStaticString_NoLock(HYP_HASHED_NAME(name))
+#define HYP_WEAK_NAME(name) ::hyperion::Name(HYP_HASHED_NAME(name).hashCode.Value())
+#define HYP_NAME(name) ::hyperion::CreateNameFromStaticString_WithLock(HYP_HASHED_NAME(name))
 
-    #define NAME(str) HYP_NAME2(str)
+#define NAME(str) HYP_NAME2(str)
 
 #else
-    #define HYP_NAME(name) ::hyperion::Name(HashCode::GetHashCode(HYP_STR(name)).Value())
-    #define HYP_NAME_UNSAFE(name) HYP_NAME(name)
-    #define HYP_WEAK_NAME(name) HYP_NAME(name)
+#define HYP_NAME(name) ::hyperion::Name(HashCode::GetHashCode(HYP_STR(name)).Value())
+#define HYP_NAME_UNSAFE(name) HYP_NAME(name)
+#define HYP_WEAK_NAME(name) HYP_NAME(name)
 
-    #define NAME(str) HYP_NAME(str)
+#define NAME(str) HYP_NAME(str)
 #endif
 
 #define NAME_FMT(fmt, ...) CreateNameFromDynamicString(HYP_FORMAT(fmt, ##__VA_ARGS__).Data())
 
 } // namespace hyperion
-
-#endif

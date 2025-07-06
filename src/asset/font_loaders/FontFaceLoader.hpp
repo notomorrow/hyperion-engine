@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_FONT_FACE_LOADER_HPP
-#define HYPERION_FONT_FACE_LOADER_HPP
+#pragma once
 
 #include <asset/Assets.hpp>
 
@@ -17,7 +16,7 @@ HYP_CLASS(NoScriptBindings)
 class FontFaceLoader : public AssetLoaderBase
 {
     HYP_OBJECT_BODY(FontFaceLoader);
-    
+
 public:
     virtual ~FontFaceLoader() = default;
 
@@ -26,4 +25,3 @@ public:
 
 } // namespace hyperion
 
-#endif

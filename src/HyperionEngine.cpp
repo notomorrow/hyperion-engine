@@ -29,7 +29,7 @@
 #include <rendering/shader_compiler/ShaderCompiler.hpp>
 
 #ifdef HYP_VULKAN
-#include <rendering/backend/vulkan/VulkanRenderBackend.hpp>
+#include <rendering/vulkan/VulkanRenderBackend.hpp>
 #endif
 
 #include <audio/AudioManager.hpp>

@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_PHYSICS_ADAPTER_HPP
-#define HYPERION_PHYSICS_ADAPTER_HPP
+#pragma once
 
 #include <core/Handle.hpp>
 #include <GameCounter.hpp>
@@ -67,5 +66,3 @@ public:
 };
 
 } // namespace hyperion::physics
-
-#endif

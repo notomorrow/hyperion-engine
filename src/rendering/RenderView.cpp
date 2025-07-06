@@ -7,9 +7,7 @@
 #include <rendering/RenderEnvironment.hpp>
 #include <rendering/RenderEnvProbe.hpp>
 #include <rendering/RenderCamera.hpp>
-#include <rendering/RenderScene.hpp>
 #include <rendering/RenderEnvGrid.hpp>
-#include <rendering/RenderLight.hpp>
 #include <rendering/RenderGroup.hpp>
 #include <rendering/Deferred.hpp>
 #include <rendering/DepthPyramidRenderer.hpp>
@@ -19,7 +17,6 @@
 #include <rendering/SSRRenderer.hpp>
 #include <rendering/PlaceholderData.hpp>
 #include <rendering/RenderGlobalState.hpp>
-#include <rendering/lightmapper/RenderLightmapVolume.hpp>
 #include <rendering/debug/DebugDrawer.hpp>
 
 #include <scene/View.hpp>

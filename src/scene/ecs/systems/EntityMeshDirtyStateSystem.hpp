@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_ECS_ENTITY_MESH_DIRTY_STATE_SYSTEM_HPP
-#define HYPERION_ECS_ENTITY_MESH_DIRTY_STATE_SYSTEM_HPP
+#pragma once
 
 #include <scene/ecs/System.hpp>
 #include <scene/ecs/EntityTag.hpp>
@@ -46,4 +45,3 @@ private:
 
 } // namespace hyperion
 
-#endif

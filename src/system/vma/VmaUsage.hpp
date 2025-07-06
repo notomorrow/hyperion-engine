@@ -20,8 +20,7 @@
 // THE SOFTWARE.
 //
 
-#ifndef VMA_USAGE_H_
-#define VMA_USAGE_H_
+#pragma once
 
 #ifdef _WIN32
 
@@ -96,6 +95,4 @@ include all public interface declarations. Example:
 
 #ifdef _MSVC_LANG
 #pragma warning(pop)
-#endif
-
 #endif

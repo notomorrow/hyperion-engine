@@ -1,14 +1,14 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef HYPERION_INDIRECT_DRAW_HPP
-#define HYPERION_INDIRECT_DRAW_HPP
+
+#pragma once
 
 #include <core/containers/FixedArray.hpp>
 #include <core/containers/Array.hpp>
 
 #include <rendering/CullData.hpp>
 
-#include <rendering/backend/RendererStructs.hpp>
-#include <rendering/backend/RenderObject.hpp>
+#include <rendering/RenderStructs.hpp>
+#include <rendering/RenderObject.hpp>
 
 #include <Constants.hpp>
 #include <Types.hpp>
@@ -131,5 +131,3 @@ private:
 };
 
 } // namespace hyperion
-
-#endif

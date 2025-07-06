@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_RENDER_COLLECTION_HPP
-#define HYPERION_RENDER_COLLECTION_HPP
+#pragma once
 
 #include <core/containers/FlatMap.hpp>
 #include <core/containers/ArrayMap.hpp>
@@ -19,14 +18,13 @@
 #include <rendering/RenderableAttributes.hpp>
 #include <rendering/DrawCall.hpp>
 #include <rendering/RenderProxy.hpp>
-#include <rendering/EngineRenderStats.hpp>
+#include <rendering/RenderStats.hpp>
 #include <rendering/IndirectDraw.hpp>
 
 #include <rendering/rhi/CmdList.hpp>
 
-#include <rendering/backend/Platform.hpp>
-#include <rendering/backend/RendererStructs.hpp>
-#include <rendering/backend/RenderObject.hpp>
+#include <rendering/RenderStructs.hpp>
+#include <rendering/RenderObject.hpp>
 
 #include <Types.hpp>
 
@@ -46,6 +44,7 @@ class RenderEnvGrid;
 class RenderEnvProbe;
 class ReflectionProbe;
 class Texture;
+class Skeleton;
 enum LightType : uint32;
 enum EnvProbeType : uint32;
 
@@ -61,7 +60,7 @@ struct ParallelRenderingState
     CmdList baseCommandList;
 
     FixedArray<CmdList, maxBatches> commandLists {};
-    FixedArray<EngineRenderStatsCounts, maxBatches> renderStatsCounts {};
+    FixedArray<RenderStatsCounts, maxBatches> renderStatsCounts {};
 
     // Temporary storage for data that will be executed in parallel during the frame
     Array<Span<const DrawCall>, FixedAllocator<maxBatches>> drawCalls;
@@ -155,7 +154,9 @@ struct HYP_API RenderProxyList
     ResourceTracker<ObjId<Light>, Light*> lights;
     ResourceTracker<ObjId<EnvGrid>, EnvGrid*> envGrids;
     ResourceTracker<ObjId<LightmapVolume>, LightmapVolume*> lightmapVolumes;
+    ResourceTracker<ObjId<Material>, Material*> materials;
     ResourceTracker<ObjId<Texture>, Texture*> textures;
+    ResourceTracker<ObjId<Skeleton>, Skeleton*> skeletons;
 
     ParallelRenderingState* parallelRenderingStateHead;
     ParallelRenderingState* parallelRenderingStateTail;
@@ -182,5 +183,3 @@ public:
 };
 
 } // namespace hyperion
-
-#endif

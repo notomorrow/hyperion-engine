@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_FINAL_PASS_HPP
-#define HYPERION_FINAL_PASS_HPP
+#pragma once
 
 #include <Config.hpp>
 
@@ -10,7 +9,7 @@
 #include <rendering/SafeDeleter.hpp>
 
 #include <rendering/RenderResource.hpp>
-#include <rendering/backend/RenderObject.hpp>
+#include <rendering/RenderObject.hpp>
 
 #include <Types.hpp>
 
@@ -48,5 +47,3 @@ private:
     uint8 m_dirtyFrameIndices;
 };
 } // namespace hyperion
-
-#endif

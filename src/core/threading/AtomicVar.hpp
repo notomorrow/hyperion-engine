@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_ATOMIC_VAR_HPP
-#define HYPERION_ATOMIC_VAR_HPP
+#pragma once
 
 #include <core/Defines.hpp>
 
@@ -171,5 +170,3 @@ public:
 using threading::AtomicVar;
 
 } // namespace hyperion
-
-#endif

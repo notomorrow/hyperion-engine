@@ -1,6 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef ENUM_OPTIONS_HPP
-#define ENUM_OPTIONS_HPP
+
+#pragma once
 
 #include <core/containers/FixedArray.hpp>
 #include <core/containers/Array.hpp>
@@ -290,5 +290,3 @@ public:
 };
 
 } // namespace hyperion
-
-#endif

@@ -9,7 +9,7 @@
 #include <rendering/FinalPass.hpp>
 #include <rendering/TemporalAA.hpp>
 
-#include <rendering/backend/RendererFrame.hpp>
+#include <rendering/RenderFrame.hpp>
 
 #include <scene/Texture.hpp>
 #include <scene/World.hpp>

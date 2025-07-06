@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_DRAW_CALL_HPP
-#define HYPERION_DRAW_CALL_HPP
+#pragma once
 
 #include <core/Defines.hpp>
 #include <core/object/ObjId.hpp>
@@ -11,7 +10,7 @@
 
 #include <rendering/GpuBufferHolderMap.hpp>
 
-#include <rendering/backend/RenderObject.hpp>
+#include <rendering/RenderObject.hpp>
 
 #include <Types.hpp>
 
@@ -29,8 +28,6 @@ class IndirectDrawState;
 class GpuBufferHolderBase;
 struct MeshInstanceData;
 class RenderMesh;
-class RenderMaterial;
-class RenderSkeleton;
 
 extern HYP_API GpuBufferHolderMap* GetGpuBufferHolderMap();
 
@@ -110,7 +107,7 @@ struct DrawCallBase
 
     RenderMesh* renderMesh = nullptr;
     Material* material = nullptr;
-    RenderSkeleton* renderSkeleton = nullptr;
+    Skeleton* skeleton = nullptr;
 
     uint32 drawCommandIndex = 0;
 };
@@ -250,5 +247,3 @@ IDrawCallCollectionImpl* GetOrCreateDrawCallCollectionImpl()
 }
 
 } // namespace hyperion
-
-#endif

@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_RUNTIME_DOTNET_MANAGED_ASSET_TYPES_HPP
-#define HYPERION_RUNTIME_DOTNET_MANAGED_ASSET_TYPES_HPP
+#pragma once
 
 #include <type_traits>
 
@@ -12,5 +11,3 @@ extern "C"
 } // extern "C"
 
 } // namespace hyperion
-
-#endif

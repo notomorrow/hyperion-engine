@@ -1,7 +1,6 @@
 /* Copyright (c) 2025 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_RESOURCE_TRACKER_HPP
-#define HYPERION_RESOURCE_TRACKER_HPP
+#pragma once
 
 #include <core/object/ObjId.hpp>
 #include <core/Defines.hpp>
@@ -19,13 +18,6 @@ namespace hyperion {
 
 HYP_API extern SizeType GetNumDescendants(TypeId typeId);
 HYP_API extern int GetSubclassIndex(TypeId baseTypeId, TypeId subclassTypeId);
-
-/*! \brief The action to take on call to Advance for a ResourceTracker. */
-enum class AdvanceAction : uint32
-{
-    CLEAR,  //! Clear the 'next' elements, so on next iteration, any elements that have not been re-added are marked for removal.
-    PERSIST //! Copy the previous elements over to next. To remove elements, `RemoveProxy` needs to be manually called.
-};
 
 template <class IdType, class ElementType>
 class ResourceTracker
@@ -616,15 +608,15 @@ public:
         return m_subclassImpls[subclassIndex].Get().GetElement(id);
     }
 
-    void Advance(AdvanceAction action)
+    void Advance()
     {
         HYP_SCOPE;
 
-        m_impl.Advance(action);
+        m_impl.Advance();
 
         for (Bitset::BitIndex i : m_subclassImplsInitialized)
         {
-            m_subclassImpls[i].Get().Advance(action);
+            m_subclassImpls[i].Get().Advance();
         }
     }
 
@@ -702,11 +694,11 @@ protected:
 
                     // already added for this iteration. check if we can just return or if we need to update
 
-                    if (value == *currentValuePtr && (versionPtr == nullptr || *versionPtr == *currentVersionPtr))
-                    {
-                        // same values, early out
-                        return;
-                    }
+                    // if (value == *currentValuePtr && (versionPtr == nullptr || *versionPtr == *currentVersionPtr))
+                    // {
+                    //     // same values, early out
+                    //     return;
+                    // }
                 }
             }
 
@@ -718,7 +710,7 @@ protected:
                 // Advance if version has changed or if elements are not equal
                 if (value != *currentValuePtr || (versionPtr != nullptr && *versionPtr != *currentVersionPtr))
                 {
-                    if (!isDoublyAddedThisFrame)
+                    if (!next.Test(id.ToIndex()) && previous.Test(id.ToIndex()))
                     {
                         // Mark as changed if it is found in the previous iteration
                         changed.Set(id.ToIndex(), true);
@@ -790,6 +782,8 @@ protected:
             {
                 const IdType id = IdType(ObjIdBase { typeId, uint32(firstSetBitIndex + 1) });
 
+                AssertDebug(!outIds.Contains(id));
+
                 outIds.PushBack(id);
 
                 removedBits.Set(firstSetBitIndex, false);
@@ -847,6 +841,8 @@ protected:
 
                 const ElementType* elem = elements.TryGet(id.ToIndex());
                 AssertDebug(elem != nullptr);
+
+                AssertDebug(out.FindAs(elem) == out.End());
 
                 out.PushBack(const_cast<ElementType*>(elem));
 
@@ -906,6 +902,8 @@ protected:
                 const ElementType* elem = elements.TryGet(id.ToIndex());
                 AssertDebug(elem != nullptr);
 
+                AssertDebug(out.FindAs(elem) == out.End());
+
                 out.PushBack(const_cast<ElementType*>(elem));
 
                 newlyAddedBits.Set(firstSetBitIndex, false);
@@ -926,6 +924,8 @@ protected:
             while ((firstSetBitIndex = changedBits.FirstSetBitIndex()) != -1)
             {
                 const IdType id = IdType(ObjIdBase { typeId, uint32(firstSetBitIndex + 1) });
+
+                AssertDebug(!outIds.Contains(id));
 
                 outIds.PushBack(id);
 
@@ -975,6 +975,8 @@ protected:
                 const ElementType* elem = elements.TryGet(id.ToIndex());
                 AssertDebug(elem != nullptr);
 
+                AssertDebug(out.FindAs(elem) == out.End());
+
                 out.PushBack(const_cast<ElementType*>(elem));
 
                 changedBits.Set(firstSetBitIndex, false);
@@ -1023,6 +1025,8 @@ protected:
                 const ElementType* elem = elements.TryGet(id.ToIndex());
                 AssertDebug(elem != nullptr);
 
+                AssertDebug(out.FindAs(elem) == out.End());
+
                 out.PushBack(const_cast<ElementType*>(elem));
 
                 currentBits.Set(firstSetBitIndex, false);
@@ -1041,7 +1045,7 @@ protected:
             return elements.TryGet(id.ToIndex());
         }
 
-        void Advance(AdvanceAction action)
+        void Advance()
         {
             HYP_SCOPE;
 
@@ -1055,23 +1059,9 @@ protected:
                 }
             }
 
-            switch (action)
-            {
-            case AdvanceAction::CLEAR:
-                // Next state starts out zeroed out -- and next call to Advance will remove proxies for these objs
-                previous = std::move(next);
-
-                break;
-            case AdvanceAction::PERSIST:
-                previous = next;
-
-                break;
-            default:
-                HYP_UNREACHABLE();
-
-                break;
-            }
-
+            // Next state starts out zeroed out -- and next call to Advance will remove proxies for these objs
+            previous = std::move(next);
+            next.Clear();
             changed.Clear();
         }
 
@@ -1106,5 +1096,3 @@ protected:
 };
 
 } // namespace hyperion
-
-#endif

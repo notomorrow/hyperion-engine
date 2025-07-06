@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_UI_STAGE_HPP
-#define HYPERION_UI_STAGE_HPP
+#pragma once
 
 #include <ui/UIObject.hpp>
 
@@ -14,7 +13,7 @@
 
 #include <scene/ecs/components/UIComponent.hpp>
 
-#include <rendering/backend/RendererStructs.hpp>
+#include <rendering/RenderStructs.hpp>
 
 #include <input/Mouse.hpp>
 #include <input/Keyboard.hpp>
@@ -174,4 +173,3 @@ private:
 
 } // namespace hyperion
 
-#endif

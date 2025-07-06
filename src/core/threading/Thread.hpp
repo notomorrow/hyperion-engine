@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_THREAD_HPP
-#define HYPERION_THREAD_HPP
+#pragma once
 
 #include <core/threading/ThreadId.hpp>
 
@@ -219,5 +218,3 @@ using threading::ThreadBase;
 using threading::ThreadPriorityValue;
 
 } // namespace hyperion
-
-#endif

@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_FBOM_MODEL_LOADER_HPP
-#define HYPERION_FBOM_MODEL_LOADER_HPP
+#pragma once
 
 #include <asset/Assets.hpp>
 #include <scene/Node.hpp>
@@ -23,4 +22,3 @@ public:
 
 } // namespace hyperion
 
-#endif

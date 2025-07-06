@@ -2,7 +2,7 @@
 
 #include <core/serialization/fbom/FBOM.hpp>
 
-#include <rendering/backend/RendererStructs.hpp>
+#include <rendering/RenderStructs.hpp>
 
 #include <core/object/HypData.hpp>
 

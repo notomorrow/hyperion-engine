@@ -2,17 +2,14 @@
 
 #include <rendering/PointLightShadowRenderer.hpp>
 #include <rendering/RenderEnvironment.hpp>
-#include <rendering/RenderLight.hpp>
-#include <rendering/RenderScene.hpp>
 #include <rendering/RenderCamera.hpp>
 #include <rendering/RenderWorld.hpp>
 #include <rendering/RenderEnvProbe.hpp>
 #include <rendering/RenderShadowMap.hpp>
 #include <rendering/RenderGlobalState.hpp>
 #include <rendering/Renderer.hpp>
-#include <rendering/backend/RenderBackend.hpp>
-#include <rendering/backend/RenderCommand.hpp>
-#include <rendering/backend/RendererFeatures.hpp>
+#include <rendering/RenderBackend.hpp>
+#include <rendering/RenderCommand.hpp>
 
 #include <scene/ecs/EntityManager.hpp>
 #include <scene/Light.hpp>
@@ -67,7 +64,7 @@ void PointLightShadowRenderer::Init()
     {
         InitObject(m_light);
 
-        m_light->GetRenderResource().SetShadowMap(TResourceHandle<RenderShadowMap>(m_shadowMap));
+        // m_light->GetRenderResource().SetShadowMap(TResourceHandle<RenderShadowMap>(m_shadowMap));
     }
 }
 
@@ -75,7 +72,7 @@ void PointLightShadowRenderer::OnRemoved()
 {
     if (m_light.IsValid())
     {
-        m_light->GetRenderResource().SetShadowMap(TResourceHandle<RenderShadowMap>());
+        // m_light->GetRenderResource().SetShadowMap(TResourceHandle<RenderShadowMap>());
     }
 
     // if (m_envProbe.IsValid())

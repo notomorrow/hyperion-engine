@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_RANGE_HPP
-#define HYPERION_RANGE_HPP
+#pragma once
 
 #include <core/math/MathUtil.hpp>
 
@@ -171,5 +170,3 @@ private:
 using utilities::Range;
 
 } // namespace hyperion
-
-#endif

@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_OCTREE_HPP
-#define HYPERION_OCTREE_HPP
+#pragma once
 
 #include <core/containers/Array.hpp>
 #include <core/containers/FixedArray.hpp>
@@ -436,5 +435,3 @@ private:
 #include <util/octree/Octree.inl>
 
 } // namespace hyperion
-
-#endif

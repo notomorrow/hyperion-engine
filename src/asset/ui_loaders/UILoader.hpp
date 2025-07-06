@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_UI_LOADER_HPP
-#define HYPERION_UI_LOADER_HPP
+#pragma once
 
 #include <asset/Assets.hpp>
 
@@ -13,7 +12,7 @@ HYP_CLASS(NoScriptBindings)
 class UILoader : public AssetLoaderBase
 {
     HYP_OBJECT_BODY(UILoader);
-    
+
 public:
     virtual ~UILoader() = default;
 
@@ -22,4 +21,3 @@ public:
 
 } // namespace hyperion
 
-#endif

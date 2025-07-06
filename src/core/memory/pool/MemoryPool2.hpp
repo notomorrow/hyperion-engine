@@ -1,7 +1,6 @@
 /* Copyright (c) 2025 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_MEMORY_POOL2_HPP
-#define HYPERION_MEMORY_POOL2_HPP
+#pragma once
 
 #include <core/containers/Array.hpp>
 #include <core/containers/Bitset.hpp>
@@ -71,5 +70,3 @@ template <uint32 PageSize = 8192>
 using Pool = memory::Pool<PageSize>;
 
 } // namespace hyperion
-
-#endif

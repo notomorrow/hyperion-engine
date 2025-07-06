@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_PERFORMANCE_CLOCK_HPP
-#define HYPERION_PERFORMANCE_CLOCK_HPP
+#pragma once
 
 #include <core/Defines.hpp>
 
@@ -43,5 +42,3 @@ private:
 using profiling::PerformanceClock;
 
 } // namespace hyperion
-
-#endif

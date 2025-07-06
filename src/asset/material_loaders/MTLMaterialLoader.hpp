@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_MTL_MATERIAL_LOADER_HPP
-#define HYPERION_MTL_MATERIAL_LOADER_HPP
+#pragma once
 
 #include <asset/Assets.hpp>
 
@@ -13,7 +12,7 @@ HYP_CLASS(NoScriptBindings)
 class MTLMaterialLoader : public AssetLoaderBase
 {
     HYP_OBJECT_BODY(MTLMaterialLoader);
-    
+
 public:
     struct MaterialLibrary
     {
@@ -53,4 +52,3 @@ public:
 
 } // namespace hyperion
 
-#endif

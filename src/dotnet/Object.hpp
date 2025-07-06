@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_DOTNET_OBJECT_HPP
-#define HYPERION_DOTNET_OBJECT_HPP
+#pragma once
 
 #include <core/utilities/StringView.hpp>
 #include <core/utilities/EnumFlags.hpp>
@@ -186,5 +185,3 @@ private:
 };
 
 } // namespace hyperion::dotnet
-
-#endif

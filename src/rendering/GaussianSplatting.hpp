@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_GAUSSIAN_SPLATTING_HPP
-#define HYPERION_GAUSSIAN_SPLATTING_HPP
+#pragma once
 
 #include <core/threading/Threads.hpp>
 
@@ -14,7 +13,7 @@
 
 #include <rendering/ShaderManager.hpp>
 
-#include <rendering/backend/RenderObject.hpp>
+#include <rendering/RenderObject.hpp>
 
 #include <Constants.hpp>
 
@@ -153,4 +152,3 @@ private:
 
 } // namespace hyperion
 
-#endif

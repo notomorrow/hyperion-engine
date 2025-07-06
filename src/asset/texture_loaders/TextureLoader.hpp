@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_TEXTURE_LOADER_HPP
-#define HYPERION_TEXTURE_LOADER_HPP
+#pragma once
 
 #include <asset/Assets.hpp>
 #include <scene/Node.hpp>
@@ -14,7 +13,7 @@ HYP_CLASS(NoScriptBindings)
 class TextureLoader : public AssetLoaderBase
 {
     HYP_OBJECT_BODY(TextureLoader);
-    
+
 public:
     virtual ~TextureLoader() = default;
 
@@ -23,4 +22,3 @@ public:
 
 } // namespace hyperion
 
-#endif

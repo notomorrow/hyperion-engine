@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_GPU_BUFFER_HOLDER_MAP_HPP
-#define HYPERION_GPU_BUFFER_HOLDER_MAP_HPP
+#pragma once
 
 #include <core/Defines.hpp>
 
@@ -9,7 +8,7 @@
 
 #include <core/containers/TypeMap.hpp>
 
-#include <rendering/backend/RendererGpuBuffer.hpp>
+#include <rendering/RenderGpuBuffer.hpp>
 
 namespace hyperion {
 
@@ -50,5 +49,3 @@ private:
 };
 
 } // namespace hyperion
-
-#endif

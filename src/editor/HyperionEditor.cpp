@@ -6,7 +6,6 @@
 
 #include <rendering/RenderEnvironment.hpp>
 #include <rendering/RenderWorld.hpp>
-#include <rendering/RenderScene.hpp>
 
 // temp
 #include <rendering/ParticleSystem.hpp>
@@ -261,7 +260,7 @@ void HyperionEditor::Init()
     batch->Add("test_model", "models/sponza/sponza.obj");
     // batch->Add("test_model", "models/pica_pica/pica_pica.obj");
     // batch->Add("test_model", "models/testbed/testbed.obj");
-    // batch->Add("zombie", "models/ogrexml/dragger_Body.mesh.xml");
+    batch->Add("zombie", "models/ogrexml/dragger_Body.mesh.xml");
     // batch->Add("house", "models/house.obj");
 
     Handle<Entity> rootEntity = scene->GetEntityManager()->AddEntity();

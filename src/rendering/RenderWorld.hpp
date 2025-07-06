@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_RENDERING_WORLD_HPP
-#define HYPERION_RENDERING_WORLD_HPP
+#pragma once
 
 #include <core/math/Vector4.hpp>
 #include <core/math/Matrix4.hpp>
@@ -19,9 +18,9 @@
 #include <rendering/RenderResource.hpp>
 #include <rendering/RenderCollection.hpp>
 
-#include <rendering/EngineRenderStats.hpp>
+#include <rendering/RenderStats.hpp>
 
-#include <rendering/backend/RendererFrame.hpp>
+#include <rendering/RenderFrame.hpp>
 
 #include <util/AtlasPacker.hpp>
 
@@ -33,7 +32,6 @@ class World;
 class Scene;
 class RenderEnvironment;
 class RenderCamera;
-class RenderScene;
 class RenderShadowMap;
 class ShadowMapAllocator;
 class FinalPass;
@@ -69,11 +67,8 @@ public:
     void AddView(TResourceHandle<RenderView>&& renderView);
     void RemoveView(RenderView* renderView);
 
-    void AddScene(TResourceHandle<RenderScene>&& renderScene);
-    void RemoveScene(RenderScene* renderScene);
-
-    const EngineRenderStats& GetRenderStats() const;
-    void SetRenderStats(const EngineRenderStats& renderStats);
+    const RenderStats& GetRenderStats() const;
+    void SetRenderStats(const RenderStats& renderStats);
 
     HYP_FORCE_INLINE RenderEnvironment* GetEnvironment() const
     {
@@ -106,11 +101,10 @@ private:
     World* m_world;
 
     Array<TResourceHandle<RenderView>> m_renderViews;
-    Array<TResourceHandle<RenderScene>> m_renderScenes;
 
     UniquePtr<RenderEnvironment> m_renderEnvironment;
 
-    FixedArray<EngineRenderStats, ThreadType::THREAD_TYPE_MAX> m_renderStats;
+    FixedArray<RenderStats, ThreadType::THREAD_TYPE_MAX> m_renderStats;
 
     WorldShaderData m_bufferData;
 };
@@ -123,5 +117,3 @@ struct ResourceMemoryPoolInitInfo<RenderWorld> : MemoryPoolInitInfo<RenderWorld>
 };
 
 } // namespace hyperion
-
-#endif

@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_SAFE_DELETER_HPP
-#define HYPERION_SAFE_DELETER_HPP
+#pragma once
 
 #include <core/containers/LinkedList.hpp>
 #include <core/threading/AtomicVar.hpp>
@@ -12,9 +11,9 @@
 #include <rendering/RenderMesh.hpp>
 #include <rendering/RenderProxy.hpp>
 
-#include <rendering/backend/RendererDevice.hpp>
-#include <rendering/backend/RendererGpuBuffer.hpp>
-#include <rendering/backend/RenderObject.hpp>
+#include <rendering/RenderDevice.hpp>
+#include <rendering/RenderGpuBuffer.hpp>
+#include <rendering/RenderObject.hpp>
 
 namespace hyperion {
 
@@ -191,5 +190,3 @@ private:
 };
 
 } // namespace hyperion
-
-#endif

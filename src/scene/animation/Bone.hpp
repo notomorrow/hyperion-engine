@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_BONE_HPP
-#define HYPERION_BONE_HPP
+#pragma once
 
 #include <scene/Node.hpp>
 #include <scene/animation/Keyframe.hpp>
@@ -84,4 +83,3 @@ private:
 
 } // namespace hyperion
 
-#endif

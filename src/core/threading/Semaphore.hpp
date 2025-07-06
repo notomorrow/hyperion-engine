@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_SEMAPHORE_HPP
-#define HYPERION_SEMAPHORE_HPP
+#pragma once
 
 #include <core/Defines.hpp>
 
@@ -535,5 +534,3 @@ using threading::Semaphore;
 using threading::SemaphoreDirection;
 
 } // namespace hyperion
-
-#endif

@@ -1,12 +1,11 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_HBAO_HPP
-#define HYPERION_HBAO_HPP
+#pragma once
 
 #include <rendering/TemporalBlending.hpp>
 #include <rendering/FullScreenPass.hpp>
 
-#include <rendering/backend/RenderObject.hpp>
+#include <rendering/RenderObject.hpp>
 
 #include <core/config/Config.hpp>
 
@@ -79,5 +78,3 @@ private:
 };
 
 } // namespace hyperion
-
-#endif

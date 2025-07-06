@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_ECS_CAMERA_COMPONENT_HPP
-#define HYPERION_ECS_CAMERA_COMPONENT_HPP
+#pragma once
 
 #include <core/Handle.hpp>
 
@@ -22,5 +21,3 @@ struct CameraComponent
 };
 
 } // namespace hyperion
-
-#endif

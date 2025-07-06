@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_DEFERRED_HPP
-#define HYPERION_DEFERRED_HPP
+#pragma once
 
 #include <rendering/Renderer.hpp>
 #include <rendering/FullScreenPass.hpp>
@@ -13,7 +12,7 @@
 #include <rendering/HBAO.hpp>
 #include <rendering/TemporalAA.hpp>
 
-#include <rendering/backend/RenderObject.hpp>
+#include <rendering/RenderObject.hpp>
 
 #include <scene/Light.hpp> // For LightType
 
@@ -30,7 +29,6 @@ class ShaderProperties;
 class View;
 class DeferredRenderer;
 class RenderWorld;
-class RenderScene;
 class RenderCamera;
 class RenderLight;
 class RenderEnvGrid;
@@ -315,7 +313,7 @@ struct DeferredPassData : PassData
     UniquePtr<DOFBlur> dofBlur;
     UniquePtr<RaytracingReflections> raytracingReflections;
     UniquePtr<DDGI> ddgi;
-    
+
     FixedArray<TLASRef, maxFramesInFlight> topLevelAccelerationStructures;
 
     virtual ~DeferredPassData() override;
@@ -388,5 +386,3 @@ private:
 };
 
 } // namespace hyperion
-
-#endif

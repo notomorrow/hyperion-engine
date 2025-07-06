@@ -1,6 +1,4 @@
-#ifndef HYPERION_CLASS_TRAITS_HPP
-#define HYPERION_CLASS_TRAITS_HPP
-
+#pragma once
 #include <core/utilities/EnumFlags.hpp>
 
 namespace hyperion {
@@ -45,5 +43,3 @@ struct ClassTraits
 using utilities::ClassTraits;
 
 } // namespace hyperion
-
-#endif

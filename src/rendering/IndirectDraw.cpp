@@ -5,19 +5,18 @@
 #include <rendering/RenderMesh.hpp>
 #include <rendering/RenderGlobalState.hpp>
 #include <rendering/DepthPyramidRenderer.hpp>
-#include <rendering/RenderScene.hpp>
 #include <rendering/RenderCamera.hpp>
 #include <rendering/RenderEnvGrid.hpp>
 #include <rendering/RenderEnvProbe.hpp>
 #include <rendering/RenderWorld.hpp>
 #include <rendering/RenderView.hpp>
 #include <rendering/Deferred.hpp>
-#include <rendering/backend/RenderBackend.hpp>
+#include <rendering/RenderBackend.hpp>
 
-#include <rendering/backend/RendererFrame.hpp>
-#include <rendering/backend/RendererComputePipeline.hpp>
-#include <rendering/backend/RendererGpuBuffer.hpp>
-#include <rendering/backend/RendererHelpers.hpp>
+#include <rendering/RenderFrame.hpp>
+#include <rendering/RenderComputePipeline.hpp>
+#include <rendering/RenderGpuBuffer.hpp>
+#include <rendering/RenderHelpers.hpp>
 
 #include <scene/Mesh.hpp>
 
@@ -166,9 +165,9 @@ struct RENDER_COMMAND(CreateIndirectDrawStateBuffers)
 
     virtual RendererResult operator()() override
     {
-        SingleTimeCommands commands;
+        UniquePtr<SingleTimeCommands> singleTimeCommands = g_renderBackend->GetSingleTimeCommands();
 
-        commands.Push([this](CmdList& cmd)
+        singleTimeCommands->Push([&](CmdList& cmd) -> RendererResult
             {
                 for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
                 {
@@ -188,9 +187,11 @@ struct RENDER_COMMAND(CreateIndirectDrawStateBuffers)
 
                     HYPERION_ASSERT_RESULT(frame->Destroy());
                 }
+
+                return {};
             });
 
-        return commands.Execute();
+        return singleTimeCommands->Execute();
     }
 };
 
@@ -488,8 +489,8 @@ void IndirectRenderer::ExecuteCullShaderInBatches(FrameBase* frame, const Render
         m_objectVisibility,
         ArrayMap<Name, ArrayMap<Name, uint32>> {
             { NAME("Global"),
-                { { NAME("WorldsBuffer"), ShaderDataOffset<WorldShaderData>(*renderSetup.world) },
-                    { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(*renderSetup.view->GetCamera()) } } } },
+                { { NAME("WorldsBuffer"), ShaderDataOffset<WorldShaderData>(renderSetup.world->GetBufferIndex()) },
+                    { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(renderSetup.view->GetCamera()->GetBufferIndex()) } } } },
         frameIndex);
 
     const uint32 viewDescriptorSetIndex = m_objectVisibility->GetDescriptorTable()->GetDescriptorSetIndex(NAME("View"));

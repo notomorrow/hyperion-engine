@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_UI_OBJECT_HPP
-#define HYPERION_UI_OBJECT_HPP
+#pragma once
 
 #include <core/Defines.hpp>
 
@@ -1524,4 +1523,3 @@ struct UILockedUpdatesScope
 
 } // namespace hyperion
 
-#endif

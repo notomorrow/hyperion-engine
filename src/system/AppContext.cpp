@@ -8,10 +8,12 @@
 
 #include <core/logging/Logger.hpp>
 
-#include <rendering/backend/RenderBackend.hpp>
-#include <rendering/backend/RendererInstance.hpp>
-#include <rendering/backend/RendererDevice.hpp>
-#include <rendering/backend/RendererFeatures.hpp>
+#include <rendering/RenderBackend.hpp>
+#include <rendering/RenderDevice.hpp>
+
+#ifdef HYP_VULKAN
+#include <rendering/vulkan/VulkanInstance.hpp>
+#endif
 
 #include <EngineGlobals.hpp>
 #include <Engine.hpp>
@@ -118,7 +120,7 @@ void SDLApplicationWindow::Initialize(WindowOptions windowOptions)
 }
 
 #ifdef HYP_VULKAN
-VkSurfaceKHR SDLApplicationWindow::CreateVkSurface(Instance* instance)
+VkSurfaceKHR SDLApplicationWindow::CreateVkSurface(VulkanInstance* instance)
 {
     VkSurfaceKHR surface;
     SDL_bool result = SDL_Vulkan_CreateSurface(static_cast<SDL_Window*>(m_windowHandle), instance->GetInstance(), &surface);

@@ -1,14 +1,13 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_ENVIRONMENT_HPP
-#define HYPERION_ENVIRONMENT_HPP
+#pragma once
 
 #include <rendering/ParticleSystem.hpp>
 #include <rendering/GaussianSplatting.hpp>
 #include <rendering/rt/RaytracingReflections.hpp>
 #include <rendering/rt/DDGI.hpp>
 
-#include <rendering/backend/RenderObject.hpp>
+#include <rendering/RenderObject.hpp>
 
 #include <core/Name.hpp>
 
@@ -80,5 +79,3 @@ private:
 };
 
 } // namespace hyperion
-
-#endif

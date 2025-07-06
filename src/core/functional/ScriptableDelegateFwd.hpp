@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_SCRIPTABLE_DELEGATE_FWD_HPP
-#define HYPERION_SCRIPTABLE_DELEGATE_FWD_HPP
+#pragma once
 
 namespace hyperion {
 
@@ -22,5 +21,3 @@ using functional::IScriptableDelegate;
 using functional::ScriptableDelegate;
 
 } // namespace hyperion
-
-#endif

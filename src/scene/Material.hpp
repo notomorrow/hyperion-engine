@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_MATERIAL_HPP
-#define HYPERION_MATERIAL_HPP
+#pragma once
 
 #include <scene/RenderProxyable.hpp>
 
@@ -28,7 +27,6 @@
 namespace hyperion {
 
 class Texture;
-class RenderMaterial;
 
 enum class MaterialTextureKey : uint64
 {
@@ -77,8 +75,6 @@ class HYP_API Material final : public RenderProxyable
 public:
     static constexpr uint32 maxParameters = 32u;
     static constexpr uint32 maxTextures = 32u;
-
-    friend class RenderMaterial;
 
     struct Parameter
     {
@@ -462,11 +458,6 @@ public:
         m_name = name;
     }
 
-    HYP_FORCE_INLINE RenderMaterial& GetRenderResource() const
-    {
-        return *m_renderResource;
-    }
-
     /*! \brief Get the current mutation state of this Material.
         \return The current mutation state of this Material */
     HYP_FORCE_INLINE DataMutationState GetMutationState() const
@@ -748,8 +739,6 @@ private:
     bool m_isDynamic;
 
     mutable DataMutationState m_mutationState;
-
-    RenderMaterial* m_renderResource;
 };
 
 HYP_CLASS()
@@ -829,4 +818,3 @@ private:
 
 } // namespace hyperion
 
-#endif

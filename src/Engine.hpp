@@ -1,18 +1,16 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_ENGINE_HPP
-#define HYPERION_ENGINE_HPP
+#pragma once
 
 #include <Config.hpp>
 #include <Types.hpp>
 
-#include <rendering/EngineRenderStats.hpp>
+#include <rendering/RenderStats.hpp>
 
-#include <rendering/backend/RenderBackend.hpp>
+#include <rendering/RenderBackend.hpp>
 
-#include <rendering/backend/RendererInstance.hpp>
-#include <rendering/backend/RenderObject.hpp>
-#include <rendering/backend/RenderCommand.hpp>
+#include <rendering/RenderObject.hpp>
+#include <rendering/RenderCommand.hpp>
 
 #include <core/Handle.hpp>
 
@@ -129,7 +127,7 @@ public:
         return m_delegates;
     }
 
-    HYP_FORCE_INLINE EngineRenderStatsCalculator& GetRenderStatsCalculator()
+    HYP_FORCE_INLINE RenderStatsCalculator& GetRenderStatsCalculator()
     {
         return m_renderStatsCalculator;
     }
@@ -144,11 +142,11 @@ public:
 
     HYP_API void RenderNextFrame();
     HYP_API void RequestStop();
-    
+
     void FinalizeStop();
-    
-    Delegate<void, EngineRenderStats> OnRenderStatsUpdated;
-    
+
+    Delegate<void, RenderStats> OnRenderStatsUpdated;
+
 private:
     HYP_API void Init() override;
 
@@ -172,8 +170,8 @@ private:
 
     EngineDelegates m_delegates;
 
-    EngineRenderStatsCalculator m_renderStatsCalculator;
-    EngineRenderStats m_renderStats;
+    RenderStatsCalculator m_renderStatsCalculator;
+    RenderStats m_renderStats;
 
     AtomicVar<bool> m_isShuttingDown;
     bool m_shouldRecreateSwapchain;
@@ -181,4 +179,3 @@ private:
 
 } // namespace hyperion
 
-#endif

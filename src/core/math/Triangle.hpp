@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_TRIANGLE_HPP
-#define HYPERION_TRIANGLE_HPP
+#pragma once
 
 #include <core/math/Vertex.hpp>
 #include <core/math/BoundingBox.hpp>
@@ -79,5 +78,3 @@ struct HYP_API Triangle
     bool ContainsPoint(const Vec3f& pt) const;
 };
 } // namespace hyperion
-
-#endif

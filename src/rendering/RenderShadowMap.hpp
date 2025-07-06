@@ -1,11 +1,9 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_RENDERING_SHADOW_MAP_HPP
-#define HYPERION_RENDERING_SHADOW_MAP_HPP
+#pragma once
 
 #include <rendering/RenderResource.hpp>
-
-#include <rendering/backend/RenderObject.hpp>
+#include <rendering/RenderObject.hpp>
 
 #include <core/math/Matrix4.hpp>
 #include <core/math/Vector2.hpp>
@@ -280,5 +278,3 @@ private:
 };
 
 } // namespace hyperion
-
-#endif

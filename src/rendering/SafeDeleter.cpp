@@ -4,9 +4,8 @@
 #include <rendering/RenderGlobalState.hpp>
 #include <rendering/Bindless.hpp>
 
-#include <rendering/backend/RenderBackend.hpp>
-#include <rendering/backend/RenderCommand.hpp>
-#include <rendering/backend/RendererFeatures.hpp>
+#include <rendering/RenderBackend.hpp>
+#include <rendering/RenderCommand.hpp>
 
 #include <EngineGlobals.hpp>
 

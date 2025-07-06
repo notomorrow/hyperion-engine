@@ -1,20 +1,19 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
+#pragma once
+
 #if 0
 
-    #ifndef HYPERION_CORE_NET_WEB_SOCKET_HPP
-        #define HYPERION_CORE_NET_WEB_SOCKET_HPP
+#include <core/Defines.hpp>
 
-        #include <core/Defines.hpp>
+#include <core/memory/UniquePtr.hpp>
 
-        #include <core/memory/UniquePtr.hpp>
+#include <core/containers/String.hpp>
 
-        #include <core/containers/String.hpp>
+#include <core/threading/Thread.hpp>
+#include <core/threading/Scheduler.hpp>
 
-        #include <core/threading/Thread.hpp>
-        #include <core/threading/Scheduler.hpp>
-
-        #include <Types.hpp>
+#include <Types.hpp>
 
 namespace hyperion {
 namespace net {
@@ -65,7 +64,5 @@ using net::WebSocket;
 using net::WebSocketThread;
 
 } // namespace hyperion
-
-    #endif
 
 #endif

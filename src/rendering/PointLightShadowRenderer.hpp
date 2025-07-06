@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_POINT_LIGHT_SHADOW_RENDERER_HPP
-#define HYPERION_POINT_LIGHT_SHADOW_RENDERER_HPP
+#pragma once
 
 #include <core/Handle.hpp>
 
@@ -11,7 +10,7 @@
 
 #include <rendering/RenderSubsystem.hpp>
 
-#include <rendering/backend/RenderObject.hpp>
+#include <rendering/RenderObject.hpp>
 
 #include <core/math/BoundingBox.hpp>
 
@@ -20,7 +19,6 @@ namespace hyperion {
 class Light;
 class EnvProbe;
 class Scene;
-class RenderScene;
 class RenderShadowMap;
 class RenderLight;
 
@@ -53,4 +51,3 @@ private:
 
 } // namespace hyperion
 
-#endif

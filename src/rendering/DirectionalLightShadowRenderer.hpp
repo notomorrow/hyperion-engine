@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_DIRECTIONAL_LIGHT_SHADOW_RENDERER_HPP
-#define HYPERION_DIRECTIONAL_LIGHT_SHADOW_RENDERER_HPP
+#pragma once
 
 #include <scene/Scene.hpp>
 #include <scene/Light.hpp>
@@ -21,7 +20,7 @@
 #include <rendering/RenderResource.hpp>
 #include <rendering/RenderShadowMap.hpp>
 
-#include <rendering/backend/RenderObject.hpp>
+#include <rendering/RenderObject.hpp>
 
 #include <core/math/BoundingBox.hpp>
 
@@ -32,7 +31,6 @@ namespace hyperion {
 using RerenderShadowsSemaphore = Semaphore<int32, SemaphoreDirection::WAIT_FOR_POSITIVE, threading::AtomicSemaphoreImpl<int32, SemaphoreDirection::WAIT_FOR_POSITIVE>>;
 
 class RenderCamera;
-class RenderScene;
 class RenderWorld;
 class RenderLight;
 class View;
@@ -170,4 +168,3 @@ private:
 
 } // namespace hyperion
 
-#endif

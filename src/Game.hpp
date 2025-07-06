@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_GAME_HPP
-#define HYPERION_GAME_HPP
+#pragma once
 
 #include <GameCounter.hpp>
 
@@ -20,7 +19,7 @@
 
 #include <scene/Scene.hpp>
 
-#include <rendering/backend/RenderObject.hpp>
+#include <rendering/RenderObject.hpp>
 
 namespace hyperion {
 
@@ -32,7 +31,6 @@ class Object;
 class Engine;
 class GameThread;
 class UISubsystem;
-class RenderScene;
 
 struct ManagedGameInfo
 {
@@ -65,10 +63,10 @@ public:
 
     virtual void Update(float delta) final;
     virtual void HandleEvent(SystemEvent&& event) final;
-    
+
 protected:
     virtual void Init() override;
-    
+
     virtual void Logic(float delta) = 0;
     virtual void OnInputEvent(const SystemEvent& event);
 
@@ -90,4 +88,3 @@ private:
 
 } // namespace hyperion
 
-#endif

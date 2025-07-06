@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_UI_TEXTBOX_HPP
-#define HYPERION_UI_TEXTBOX_HPP
+#pragma once
 
 #include <ui/UIPanel.hpp>
 #include <ui/UIText.hpp>
@@ -76,4 +75,3 @@ protected:
 
 } // namespace hyperion
 
-#endif

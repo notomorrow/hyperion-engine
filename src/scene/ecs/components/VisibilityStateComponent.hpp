@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_ECS_VISIBILITY_STATE_COMPONENT_HPP
-#define HYPERION_ECS_VISIBILITY_STATE_COMPONENT_HPP
+#pragma once
 
 #include <core/memory/RefCountedPtr.hpp>
 
@@ -41,5 +40,3 @@ struct VisibilityStateComponent
 };
 
 } // namespace hyperion
-
-#endif

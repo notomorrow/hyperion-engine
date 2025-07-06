@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_CONFIG2_HPP
-#define HYPERION_CONFIG2_HPP
+#pragma once
 
 #include <core/Defines.hpp>
 
@@ -298,5 +297,3 @@ using config::ConfigurationValueKey;
 using config::GlobalConfig;
 
 } // namespace hyperion
-
-#endif

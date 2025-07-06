@@ -1,0 +1,34 @@
+/* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
+
+#pragma once
+
+#include <rendering/RenderSampler.hpp>
+
+#include <vulkan/vulkan.h>
+
+namespace hyperion {
+class VulkanSampler final : public SamplerBase
+{
+public:
+    HYP_API VulkanSampler(
+        TextureFilterMode minFilterMode = TFM_NEAREST,
+        TextureFilterMode magFilterMode = TFM_NEAREST,
+        TextureWrapMode wrapMode = TWM_CLAMP_TO_EDGE);
+
+    HYP_API virtual ~VulkanSampler() override;
+
+    HYP_FORCE_INLINE VkSampler GetVulkanHandle() const
+    {
+        return m_handle;
+    }
+
+    HYP_API virtual bool IsCreated() const override;
+
+    HYP_API virtual RendererResult Create() override;
+    HYP_API virtual RendererResult Destroy() override;
+
+private:
+    VkSampler m_handle;
+};
+
+} // namespace hyperion

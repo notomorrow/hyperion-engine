@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef TYPES_HPP
-#define TYPES_HPP
+#pragma once
 
 #include <cstdint>
 #include <memory>
@@ -35,5 +34,3 @@ using TChar = char;
 #endif
 
 } // namespace hyperion
-
-#endif

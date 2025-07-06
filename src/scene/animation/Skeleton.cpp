@@ -4,8 +4,8 @@
 #include <scene/animation/Bone.hpp>
 #include <scene/animation/Animation.hpp>
 
-#include <rendering/RenderSkeleton.hpp>
-#include <rendering/backend/RendererResult.hpp>
+#include <rendering/RenderProxy.hpp>
+#include <rendering/RenderResult.hpp>
 
 #include <core/object/HypClassUtils.hpp>
 
@@ -18,15 +18,11 @@
 namespace hyperion {
 
 Skeleton::Skeleton()
-    : HypObject(),
-      m_mutationState(DataMutationState::CLEAN)
 {
 }
 
 Skeleton::Skeleton(const Handle<Bone>& rootBone)
-    : HypObject(),
-      m_rootBone(rootBone),
-      m_mutationState(DataMutationState::CLEAN)
+    : m_rootBone(rootBone)
 {
     if (m_rootBone)
     {
@@ -36,13 +32,6 @@ Skeleton::Skeleton(const Handle<Bone>& rootBone)
 
 Skeleton::~Skeleton()
 {
-    if (m_renderResource != nullptr)
-    {
-        FreeResource(m_renderResource);
-
-        m_renderResource = nullptr;
-    }
-
     if (m_rootBone)
     {
         m_rootBone->SetSkeleton(nullptr);
@@ -53,61 +42,7 @@ Skeleton::~Skeleton()
 
 void Skeleton::Init()
 {
-    AddDelegateHandler(g_engine->GetDelegates().OnShutdown.Bind([this]()
-        {
-            if (m_renderResource != nullptr)
-            {
-                FreeResource(m_renderResource);
-
-                m_renderResource = nullptr;
-            }
-        }));
-
-    m_renderResource = AllocateResource<RenderSkeleton>(this);
-
-    m_mutationState |= DataMutationState::DIRTY;
-
-    Update(0.0166f);
-
     SetReady(true);
-}
-
-void Skeleton::Update(float)
-{
-    if (!m_mutationState.IsDirty())
-    {
-        return;
-    }
-
-    const SizeType numBones = MathUtil::Min(SkeletonShaderData::maxBones, NumBones());
-
-    if (numBones != 0)
-    {
-        SkeletonShaderData shaderData {};
-        shaderData.bones[0] = m_rootBone->GetBoneMatrix();
-
-        for (SizeType i = 1; i < numBones; i++)
-        {
-            if (Node* descendent = m_rootBone->GetDescendants()[i - 1])
-            {
-                if (!descendent)
-                {
-                    continue;
-                }
-
-                if (descendent->GetType() != Node::Type::BONE)
-                {
-                    continue;
-                }
-
-                shaderData.bones[i] = static_cast<const Bone*>(descendent)->GetBoneMatrix();
-            }
-        }
-
-        m_renderResource->SetBufferData(shaderData);
-    }
-
-    m_mutationState = DataMutationState::CLEAN;
 }
 
 Bone* Skeleton::FindBone(WeakName name) const
@@ -262,6 +197,38 @@ const Animation* Skeleton::FindAnimation(UTF8StringView name, uint32* outIndex) 
     }
 
     return it->Get();
+}
+
+void Skeleton::UpdateRenderProxy(IRenderProxy* proxy)
+{
+    RenderProxySkeleton* proxyCasted = static_cast<RenderProxySkeleton*>(proxy);
+    proxyCasted->skeleton = WeakHandleFromThis();
+
+    const SizeType numBones = MathUtil::Min(SkeletonShaderData::maxBones, NumBones());
+
+    if (numBones != 0)
+    {
+        SkeletonShaderData& bufferData = proxyCasted->bufferData;
+        bufferData.bones[0] = m_rootBone->GetBoneMatrix();
+
+        for (SizeType i = 1; i < numBones; i++)
+        {
+            if (Node* descendent = m_rootBone->GetDescendants()[i - 1])
+            {
+                if (!descendent)
+                {
+                    continue;
+                }
+
+                if (descendent->GetType() != Node::Type::BONE)
+                {
+                    continue;
+                }
+
+                bufferData.bones[i] = static_cast<const Bone*>(descendent)->GetBoneMatrix();
+            }
+        }
+    }
 }
 
 } // namespace hyperion

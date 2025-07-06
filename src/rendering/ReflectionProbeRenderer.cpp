@@ -8,8 +8,7 @@
 
 #include <rendering/debug/DebugDrawer.hpp>
 
-#include <rendering/backend/RenderCommand.hpp>
-#include <rendering/backend/RendererFeatures.hpp>
+#include <rendering/RenderCommand.hpp>
 
 #include <system/AppContext.hpp>
 

@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_FBOM_DATA_HPP
-#define HYPERION_FBOM_DATA_HPP
+#pragma once
 
 #include <core/Name.hpp>
 
@@ -599,5 +598,3 @@ private:
 
 #undef FBOM_RETURN_OK
 #undef FBOM_ASSERT
-
-#endif

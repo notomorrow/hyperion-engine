@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_FLAT_MAP_HPP
-#define HYPERION_FLAT_MAP_HPP
+#pragma once
 
 #include <core/containers/FlatSet.hpp>
 #include <core/containers/Array.hpp>
@@ -452,5 +451,3 @@ template <class Key, class Value>
 using FlatMap = containers::FlatMap<Key, Value>;
 
 } // namespace hyperion
-
-#endif

@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_REF_COUNTED_PTR_HPP
-#define HYPERION_REF_COUNTED_PTR_HPP
+#pragma once
 
 #include <core/Defines.hpp>
 
@@ -1912,5 +1911,3 @@ template <class T, class CountType = AtomicVar<uint32>>
 using EnableRefCountedPtrFromThis = memory::EnableRefCountedPtrFromThis<T, CountType>;
 
 } // namespace hyperion
-
-#endif

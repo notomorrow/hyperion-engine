@@ -1,6 +1,4 @@
-#ifndef HYPERION_EDITOR_HPP
-#define HYPERION_EDITOR_HPP
-
+#pragma once
 #include <core/Defines.hpp>
 
 #include <Game.hpp>
@@ -39,4 +37,3 @@ using editor::HyperionEditor;
 
 } // namespace hyperion
 
-#endif

@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_DEBUG_HPP
-#define HYPERION_DEBUG_HPP
+#pragma once
 
 #include <core/Defines.hpp>
 
@@ -141,17 +140,17 @@ using debug::LogType;
 // Assert used for internal Hyperion libraries. Uses a simple printf-style format string, rather than the internal Hyperion formatting library.
 // Opt to use this macro over AssertDebug() and Assert() to not pollute dependency on including logging headers.
 // These assertions are stripped from released builds.
-#define HYP_CORE_ASSERT(cond, ...)                                                                                                                          \
-    do                                                                                                                                                      \
-    {                                                                                                                                                       \
-        if (HYP_UNLIKELY(!(cond)))                                                                                                                          \
-        {                                                                                                                                                   \
+#define HYP_CORE_ASSERT(cond, ...)                                                                                                                             \
+    do                                                                                                                                                         \
+    {                                                                                                                                                          \
+        if (HYP_UNLIKELY(!(cond)))                                                                                                                             \
+        {                                                                                                                                                      \
             std::snprintf(debug::GetErrorStringBuffer(), 4096, "Assertion failed in Hyperion core library!\n\tCondition: " #cond "\n\tMessage: " __VA_ARGS__); \
             debug::LogAssert(debug::GetErrorStringBuffer());                                                                                                   \
-            HYP_PRINT_STACK_TRACE();                                                                                                                        \
-            std::terminate();                                                                                                                               \
-        }                                                                                                                                                   \
-    }                                                                                                                                                       \
+            HYP_PRINT_STACK_TRACE();                                                                                                                           \
+            std::terminate();                                                                                                                                  \
+        }                                                                                                                                                      \
+    }                                                                                                                                                          \
     while (0)
 #else
 #define HYP_CORE_ASSERT(...)
@@ -164,16 +163,16 @@ using debug::LogType;
 #define HYP_PRINT_STACK_TRACE()
 #endif
 
-#define HYP_FAIL(...)                                                                                               \
-    do                                                                                                              \
-    {                                                                                                               \
-        HYP_PRINT_STACK_TRACE();                                                                                    \
+#define HYP_FAIL(...)                                                                                                  \
+    do                                                                                                                 \
+    {                                                                                                                  \
+        HYP_PRINT_STACK_TRACE();                                                                                       \
         std::snprintf(debug::GetErrorStringBuffer(), 4096, "\n\nAn engine crash has been triggered!\n\t" __VA_ARGS__); \
         debug::LogAssert(debug::GetErrorStringBuffer());                                                               \
-        debug::DebugLog_FlushOutputStream();                                                                        \
-                                                                                                                    \
-        std::terminate();                                                                                           \
-    }                                                                                                               \
+        debug::DebugLog_FlushOutputStream();                                                                           \
+                                                                                                                       \
+        std::terminate();                                                                                              \
+    }                                                                                                                  \
     while (0)
 
 // Add to the body of virtual methods that should be overridden.
@@ -200,5 +199,3 @@ using debug::LogType;
     {                                                                              \
         Assert(cond, msg);                                                         \
     }
-
-#endif // HYPERION_DEBUG_HPP

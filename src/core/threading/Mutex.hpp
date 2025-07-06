@@ -1,10 +1,9 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_MUTEX_HPP
-#define HYPERION_MUTEX_HPP
+#pragma once
 
 #ifdef HYP_UNIX
-    #include <pthread.h>
+#include <pthread.h>
 #endif
 
 #include <mutex>
@@ -76,5 +75,3 @@ private:
 using threading::Mutex;
 
 } // namespace hyperion
-
-#endif

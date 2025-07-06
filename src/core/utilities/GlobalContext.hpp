@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_GLOBAL_CONTEXT_HPP
-#define HYPERION_GLOBAL_CONTEXT_HPP
+#pragma once
 
 #include <core/containers/Stack.hpp>
 #include <core/containers/TypeMap.hpp>
@@ -175,5 +174,3 @@ using utilities::PopGlobalContext;
 using utilities::PushGlobalContext;
 
 } // namespace hyperion
-
-#endif

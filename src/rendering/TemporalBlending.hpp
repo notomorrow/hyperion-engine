@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_TEMPORAL_BLENDING_HPP
-#define HYPERION_TEMPORAL_BLENDING_HPP
+#pragma once
 
 #include <Constants.hpp>
 
@@ -11,7 +10,7 @@
 
 #include <rendering/ShaderManager.hpp>
 
-#include <rendering/backend/RenderObject.hpp>
+#include <rendering/RenderObject.hpp>
 
 namespace hyperion {
 
@@ -127,5 +126,3 @@ private:
 };
 
 } // namespace hyperion
-
-#endif

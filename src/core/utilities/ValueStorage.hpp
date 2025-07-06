@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_VALUE_STORAGE_HPP
-#define HYPERION_VALUE_STORAGE_HPP
+#pragma once
 
 #include <core/memory/Memory.hpp>
 
@@ -182,5 +181,3 @@ struct alignas(Alignment) ValueStorage<T, Count, Alignment, std::enable_if_t<!st
 using utilities::ValueStorage;
 
 } // namespace hyperion
-
-#endif

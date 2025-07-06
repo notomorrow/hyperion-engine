@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_TEMPORAL_AA_HPP
-#define HYPERION_TEMPORAL_AA_HPP
+#pragma once
 
 #include <scene/Scene.hpp>
 
@@ -9,7 +8,7 @@
 
 #include <core/functional/Delegate.hpp>
 
-#include <rendering/backend/RenderObject.hpp>
+#include <rendering/RenderObject.hpp>
 
 namespace hyperion {
 
@@ -68,5 +67,3 @@ private:
 };
 
 } // namespace hyperion
-
-#endif

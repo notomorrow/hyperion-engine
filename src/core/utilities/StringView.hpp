@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_STRING_VIEW_HPP
-#define HYPERION_STRING_VIEW_HPP
+#pragma once
 
 #include <core/memory/Memory.hpp>
 
@@ -538,5 +537,3 @@ constexpr bool operator==(const StringView<TStringType>& lhs, const StringView<T
 
 } // namespace utilities
 } // namespace hyperion
-
-#endif

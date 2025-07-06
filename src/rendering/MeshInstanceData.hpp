@@ -1,7 +1,6 @@
 /* Copyright (c) 2025 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_MESH_INSTANCE_DATA_HPP
-#define HYPERION_MESH_INSTANCE_DATA_HPP
+#pragma once
 
 #include <core/memory/ByteBuffer.hpp>
 #include <core/memory/Memory.hpp>
@@ -91,5 +90,3 @@ struct MeshInstanceData
 };
 
 } // namespace hyperion
-
-#endif

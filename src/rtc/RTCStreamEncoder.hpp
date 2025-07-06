@@ -1,6 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef HYPERION_RTC_STREAM_ENCODER_HPP
-#define HYPERION_RTC_STREAM_ENCODER_HPP
+
+#pragma once
 
 #include <core/containers/String.hpp>
 #include <core/memory/ByteBuffer.hpp>
@@ -98,5 +98,3 @@ using GStreamerRTCStreamVideoEncoder = NullRTCStreamVideoEncoder;
 #endif
 
 } // namespace hyperion
-
-#endif

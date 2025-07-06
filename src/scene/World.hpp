@@ -1,8 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_WORLD_HPP
-#define HYPERION_WORLD_HPP
-
+#pragma once
 #include <scene/Scene.hpp>
 #include <scene/Subsystem.hpp>
 #include <scene/GameState.hpp>
@@ -16,7 +14,7 @@ namespace hyperion {
 
 class RenderWorld;
 class EditorDelegates;
-struct EngineRenderStats;
+struct RenderStats;
 class View;
 class WorldGrid;
 
@@ -76,7 +74,7 @@ public:
     }
 
     HYP_METHOD()
-    EngineRenderStats* GetRenderStats() const;
+    RenderStats* GetRenderStats() const;
 
     /*! \brief Get the placeholder Scene, used for Entities that are not attached to a Scene.
      *  This version of the function allows the caller to specify the thread the Scene uses for entity management.
@@ -213,4 +211,3 @@ private:
 
 } // namespace hyperion
 
-#endif

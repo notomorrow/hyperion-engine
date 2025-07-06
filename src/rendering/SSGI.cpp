@@ -1,10 +1,8 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
 #include <rendering/SSGI.hpp>
-#include <rendering/RenderScene.hpp>
 #include <rendering/RenderCamera.hpp>
 #include <rendering/RenderTexture.hpp>
-#include <rendering/RenderLight.hpp>
 #include <rendering/RenderEnvProbe.hpp>
 #include <rendering/RenderView.hpp>
 #include <rendering/RenderWorld.hpp>
@@ -15,10 +13,10 @@
 
 #include <rendering/rhi/CmdList.hpp>
 
-#include <rendering/backend/RenderBackend.hpp>
-#include <rendering/backend/RendererFrame.hpp>
-#include <rendering/backend/RendererDescriptorSet.hpp>
-#include <rendering/backend/RendererComputePipeline.hpp>
+#include <rendering/RenderBackend.hpp>
+#include <rendering/RenderFrame.hpp>
+#include <rendering/RenderDescriptorSet.hpp>
+#include <rendering/RenderComputePipeline.hpp>
 
 #include <core/profiling/ProfileScope.hpp>
 
@@ -241,8 +239,8 @@ void SSGI::Render(FrameBase* frame, const RenderSetup& renderSetup)
         m_computePipeline,
         ArrayMap<Name, ArrayMap<Name, uint32>> {
             { NAME("Global"),
-                { { NAME("WorldsBuffer"), ShaderDataOffset<WorldShaderData>(*renderSetup.world) },
-                    { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(*renderSetup.view->GetCamera()) },
+                { { NAME("WorldsBuffer"), ShaderDataOffset<WorldShaderData>(renderSetup.world->GetBufferIndex()) },
+                    { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(renderSetup.view->GetCamera()->GetBufferIndex()) },
                     { NAME("CurrentEnvProbe"), ShaderDataOffset<EnvProbeShaderData>(renderSetup.envProbe, 0) } } } },
         frameIndex);
 
@@ -309,7 +307,7 @@ void SSGI::FillUniformBufferData(RenderView* view, SSGIUniforms& outUniforms) co
                 break;
             }
 
-            outUniforms.lightIndices[numBoundLights++] = light->GetRenderResource().GetBufferIndex();
+            outUniforms.lightIndices[numBoundLights++] = RenderApi_RetrieveResourceBinding(light);
         }
     }
 

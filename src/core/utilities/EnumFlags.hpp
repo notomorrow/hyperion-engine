@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_ENUM_FLAGS_HPP
-#define HYPERION_ENUM_FLAGS_HPP
+#pragma once
 
 #include <Constants.hpp>
 #include <Types.hpp>
@@ -327,20 +326,18 @@ struct MergeEnumFlags
 
 } // namespace hyperion
 
-#define HYP_MAKE_ENUM_FLAGS_PUBLIC(_enum)           \
-    namespace hyperion {                            \
-    template <>                                     \
-    struct EnumFlagsDecl<_enum>                     \
-    {                                               \
+#define HYP_MAKE_ENUM_FLAGS_PUBLIC(_enum)         \
+    namespace hyperion {                          \
+    template <>                                   \
+    struct EnumFlagsDecl<_enum>                   \
+    {                                             \
         static constexpr bool isEnumFlags = true; \
-    };                                              \
+    };                                            \
     }
 
-#define HYP_MAKE_ENUM_FLAGS(_enum)                  \
-    template <>                                     \
-    struct ::hyperion::EnumFlagsDecl<_enum>         \
-    {                                               \
+#define HYP_MAKE_ENUM_FLAGS(_enum)                \
+    template <>                                   \
+    struct ::hyperion::EnumFlagsDecl<_enum>       \
+    {                                             \
         static constexpr bool isEnumFlags = true; \
     };
-
-#endif

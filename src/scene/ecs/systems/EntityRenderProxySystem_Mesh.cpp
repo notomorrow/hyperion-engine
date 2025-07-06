@@ -10,10 +10,9 @@
 #include <scene/Material.hpp>
 
 #include <rendering/RenderGlobalState.hpp>
-#include <rendering/RenderSkeleton.hpp>
 #include <rendering/RenderMaterial.hpp>
 
-#include <rendering/backend/RenderCommand.hpp>
+#include <rendering/RenderCommand.hpp>
 
 #include <core/containers/HashSet.hpp>
 

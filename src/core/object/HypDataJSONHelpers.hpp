@@ -1,7 +1,6 @@
 /* Copyright (c) 2024-2025 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_HYP_DATA_JSON_HELPERS_HPP
-#define HYPERION_HYP_DATA_JSON_HELPERS_HPP
+#pragma once
 
 #include <core/utilities/TypeId.hpp>
 
@@ -30,5 +29,3 @@ bool ObjectToJSON(const HypClass* hypClass, const HypData& target, json::JSONObj
 bool JSONToObject(const json::JSONObject& jsonObject, const HypClass* hypClass, HypData& target);
 
 } // namespace hyperion
-
-#endif

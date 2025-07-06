@@ -1,15 +1,14 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_POST_FX_HPP
-#define HYPERION_POST_FX_HPP
+#pragma once
 
 #include <core/containers/TypeMap.hpp>
 #include <core/threading/Threads.hpp>
 
 #include <rendering/FullScreenPass.hpp>
 
-#include <rendering/backend/RenderObject.hpp>
-#include <rendering/backend/RendererStructs.hpp>
+#include <rendering/RenderObject.hpp>
+#include <rendering/RenderStructs.hpp>
 
 #include <Types.hpp>
 
@@ -22,9 +21,9 @@ class GBuffer;
 
 struct alignas(16) PostProcessingUniforms
 {
-    Vec2u effectCounts;        // pre, post
+    Vec2u effectCounts;       // pre, post
     Vec2u lastEnabledIndices; // pre, post
-    Vec2u masks;                // pre, post
+    Vec2u masks;              // pre, post
 };
 
 static_assert(sizeof(PostProcessingUniforms) == 32);
@@ -253,5 +252,3 @@ private:
 };
 
 } // namespace hyperion
-
-#endif // HYPERION_POST_FX_HPP

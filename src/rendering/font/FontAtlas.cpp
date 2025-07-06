@@ -8,9 +8,9 @@
 
 #include <rendering/rhi/CmdList.hpp>
 
-#include <rendering/backend/RenderBackend.hpp>
-#include <rendering/backend/RenderCommand.hpp>
-#include <rendering/backend/RendererHelpers.hpp>
+#include <rendering/RenderBackend.hpp>
+#include <rendering/RenderCommand.hpp>
+#include <rendering/RenderHelpers.hpp>
 
 #include <streaming/StreamedTextureData.hpp>
 
@@ -26,72 +26,6 @@
 namespace hyperion {
 
 HYP_DECLARE_LOG_CHANNEL(Font);
-
-#pragma region Render commands
-
-struct RENDER_COMMAND(FontAtlas_RenderCharacter)
-    : RenderCommand
-{
-    Handle<Texture> atlasTexture;
-    Handle<Texture> glyphTexture;
-    Vec2i location;
-    Vec2i cellDimensions;
-
-    RENDER_COMMAND(FontAtlas_RenderCharacter)(const Handle<Texture>& atlasTexture, const Handle<Texture>& glyphTexture, Vec2i location, Vec2i cellDimensions)
-        : atlasTexture(atlasTexture),
-          glyphTexture(glyphTexture),
-          location(location),
-          cellDimensions(cellDimensions)
-    {
-    }
-
-    virtual ~RENDER_COMMAND(FontAtlas_RenderCharacter)() override
-    {
-        atlasTexture->GetRenderResource().DecRef();
-        glyphTexture->GetRenderResource().DecRef();
-    }
-
-    virtual RendererResult operator()() override
-    {
-        SingleTimeCommands commands;
-
-        const ImageRef& image = glyphTexture->GetRenderResource().GetImage();
-        Assert(image.IsValid());
-
-        const Vec3u& extent = image->GetExtent();
-
-        Rect<uint32> srcRect {
-            0, 0,
-            extent.x,
-            extent.y
-        };
-
-        Rect<uint32> destRect {
-            uint32(location.x),
-            uint32(location.y),
-            uint32(location.x + extent.x),
-            uint32(location.y + extent.y)
-        };
-
-        Assert(cellDimensions.x >= extent.x, "Cell width (%u) is less than glyph width (%u)", cellDimensions.x, extent.x);
-        Assert(cellDimensions.y >= extent.y, "Cell height (%u) is less than glyph height (%u)", cellDimensions.y, extent.y);
-
-        commands.Push([&](CmdList& cmd)
-            {
-                // put src image in state for copying from
-                cmd.Add<InsertBarrier>(image, RS_COPY_SRC);
-
-                // put dst image in state for copying to
-                cmd.Add<InsertBarrier>(atlasTexture->GetRenderResource().GetImage(), RS_COPY_DST);
-
-                cmd.Add<BlitRect>(image, atlasTexture->GetRenderResource().GetImage(), srcRect, destRect);
-            });
-
-        return commands.Execute();
-    }
-};
-
-#pragma endregion Render commands
 
 #pragma region FontAtlasTextureSet
 

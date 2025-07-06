@@ -3,7 +3,7 @@
 #include <rendering/lightmapper/LightmapperSubsystem.hpp>
 #include <rendering/lightmapper/Lightmapper.hpp>
 
-#include <rendering/backend/RenderConfig.hpp>
+#include <rendering/RenderConfig.hpp>
 
 #include <core/threading/TaskSystem.hpp>
 

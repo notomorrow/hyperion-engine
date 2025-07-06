@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_EDITOR_PROPERTY_PANEL_HPP
-#define HYPERION_EDITOR_PROPERTY_PANEL_HPP
+#pragma once
 
 #include <core/object/HypObject.hpp>
 
@@ -42,4 +41,3 @@ protected:
 
 } // namespace hyperion
 
-#endif

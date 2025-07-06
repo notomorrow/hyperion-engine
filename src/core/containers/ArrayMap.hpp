@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_ARRAY_MAP_HPP
-#define HYPERION_ARRAY_MAP_HPP
+#pragma once
 
 #include <core/containers/Array.hpp>
 #include <core/utilities/Pair.hpp>
@@ -312,5 +311,3 @@ template <class Key, class Value>
 using ArrayMap = containers::ArrayMap<Key, Value>;
 
 } // namespace hyperion
-
-#endif

@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_CORE_HYP_METHOD_HPP
-#define HYPERION_CORE_HYP_METHOD_HPP
+#pragma once
 
 #include <core/object/HypData.hpp>
 #include <core/object/HypClassAttribute.hpp>
@@ -40,7 +39,7 @@ HYP_FORCE_INLINE decltype(auto) CallHypMethod_Impl(FunctionType fn, HypData** ar
 
         if (!condition)
         {
-            HYP_FAIL("Invalid argument at index %zu: Expected %s (TypeId: %zu), Got TypeId %u",
+            HYP_FAIL("Invalid argument at index %zu: Expected %s (TypeId: %u), Got TypeId %u",
                 Index,
                 TypeName<NormalizedType<typename TupleElement<Index, ArgTypes...>::Type>>().Data(),
                 TypeId::ForType<NormalizedType<typename TupleElement<Index, ArgTypes...>::Type>>().Value(),
@@ -498,5 +497,3 @@ private:
 #undef HYP_METHOD_MEMBER_FN_WRAPPER
 
 } // namespace hyperion
-
-#endif

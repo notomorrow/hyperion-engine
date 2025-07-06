@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_FS_UTIL_HPP
-#define HYPERION_FS_UTIL_HPP
+#pragma once
 
 #include <core/Defines.hpp>
 #include <core/utilities/StringUtil.hpp>
@@ -73,5 +72,3 @@ public:
 using filesystem::FileSystem;
 
 } // namespace hyperion
-
-#endif

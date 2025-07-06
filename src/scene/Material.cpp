@@ -5,9 +5,10 @@
 
 #include <rendering/RenderMaterial.hpp>
 #include <rendering/RenderProxy.hpp>
+#include <rendering/RenderTexture.hpp>
 
-#include <rendering/backend/RenderBackend.hpp>
-#include <rendering/backend/RenderConfig.hpp>
+#include <rendering/RenderBackend.hpp>
+#include <rendering/RenderConfig.hpp>
 
 #include <core/object/HypClassUtils.hpp>
 
@@ -60,8 +61,7 @@ Material::Material()
           .flags = MAF_DEPTH_WRITE | MAF_DEPTH_TEST
       },
       m_isDynamic(false),
-      m_mutationState(DataMutationState::CLEAN),
-      m_renderResource(nullptr)
+      m_mutationState(DataMutationState::CLEAN)
 {
     ResetParameters();
 }
@@ -73,8 +73,7 @@ Material::Material(Name name, RenderBucket rb)
           .bucket = rb
       },
       m_isDynamic(false),
-      m_mutationState(DataMutationState::CLEAN),
-      m_renderResource(nullptr)
+      m_mutationState(DataMutationState::CLEAN)
 {
     ResetParameters();
 }
@@ -90,21 +89,12 @@ Material::Material(Name name, const MaterialAttributes& attributes, const Parame
       m_textures(textures),
       m_renderAttributes(attributes),
       m_isDynamic(false),
-      m_mutationState(DataMutationState::CLEAN),
-      m_renderResource(nullptr)
+      m_mutationState(DataMutationState::CLEAN)
 {
 }
 
 Material::~Material()
 {
-    if (m_renderResource != nullptr)
-    {
-        // temp shit
-        m_renderResource->DecRef();
-
-        FreeResource(m_renderResource);
-    }
-
     SetReady(false);
 
     for (SizeType i = 0; i < m_textures.Size(); i++)
@@ -115,8 +105,6 @@ Material::~Material()
 
 void Material::Init()
 {
-    m_renderResource = AllocateResource<RenderMaterial>(this);
-
     FlatMap<MaterialTextureKey, Handle<Texture>> textures;
 
     for (SizeType i = 0; i < m_textures.Size(); i++)
@@ -127,13 +115,12 @@ void Material::Init()
         {
             InitObject(texture);
 
+            // temp shit
+            m_textures.ValueAt(i)->GetRenderResource().IncRef();
+
             textures.Set(key, texture);
         }
     }
-
-    m_renderResource->SetTextures(std::move(textures));
-    // temp shit
-    m_renderResource->IncRef();
 
     m_mutationState |= DataMutationState::DIRTY;
 
@@ -154,24 +141,6 @@ void Material::EnqueueRenderUpdates()
 
         return;
     }
-
-    // MaterialShaderData bufferData {
-    //     .albedo = GetParameter<Vec4f>(MATERIAL_KEY_ALBEDO),
-    //     .packedParams = Vec4u(
-    //         ByteUtil::PackVec4f(Vec4f(
-    //             GetParameter<float>(MATERIAL_KEY_ROUGHNESS),
-    //             GetParameter<float>(MATERIAL_KEY_METALNESS),
-    //             GetParameter<float>(MATERIAL_KEY_TRANSMISSION),
-    //             GetParameter<float>(MATERIAL_KEY_NORMAL_MAP_INTENSITY))),
-    //         ByteUtil::PackVec4f(Vec4f(
-    //             GetParameter<float>(MATERIAL_KEY_ALPHA_THRESHOLD))),
-    //         ByteUtil::PackVec4f(Vec4f {}),
-    //         ByteUtil::PackVec4f(Vec4f {})),
-    //     .uvScale = GetParameter<Vec2f>(MATERIAL_KEY_UV_SCALE),
-    //     .parallaxHeight = GetParameter<float>(MATERIAL_KEY_PARALLAX_HEIGHT)
-    // };
-
-    // m_renderResource->SetBufferData(bufferData);
 
     SetNeedsRenderProxyUpdate();
 
@@ -264,7 +233,8 @@ void Material::SetTexture(MaterialTextureKey key, const Handle<Texture>& texture
     {
         InitObject(texture);
 
-        m_renderResource->SetTexture(key, texture);
+        // temp shit
+        texture->GetRenderResource().IncRef();
 
         SetNeedsRenderProxyUpdate();
 
@@ -304,23 +274,9 @@ void Material::SetTextures(const TextureSet& textures)
             }
 
             InitObject(m_textures.ValueAt(i));
-        }
 
-        if (!g_renderBackend->GetRenderConfig().IsBindlessSupported())
-        {
-            FlatMap<MaterialTextureKey, Handle<Texture>> textures;
-
-            for (SizeType i = 0; i < m_textures.Size(); i++)
-            {
-                MaterialTextureKey key = m_textures.KeyAt(i);
-
-                if (Handle<Texture>& texture = m_textures.ValueAt(i))
-                {
-                    textures.Set(key, texture);
-                }
-            }
-
-            m_renderResource->SetTextures(std::move(textures));
+            // temp shit
+            m_textures.ValueAt(i)->GetRenderResource().IncRef();
         }
 
         SetNeedsRenderProxyUpdate();
@@ -353,7 +309,6 @@ Handle<Material> Material::Clone() const
     return material;
 }
 
-HYP_DISABLE_OPTIMIZATION;
 void Material::UpdateRenderProxy(IRenderProxy* proxy)
 {
     RenderProxyMaterial* proxyCasted = static_cast<RenderProxyMaterial*>(proxy);
@@ -425,7 +380,6 @@ void Material::UpdateRenderProxy(IRenderProxy* proxy)
         }
     }
 }
-HYP_ENABLE_OPTIMIZATION;
 
 HashCode Material::GetHashCode() const
 {

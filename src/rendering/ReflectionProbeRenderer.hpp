@@ -1,6 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef HYPERION_REFLECTION_PROBE_HPP
-#define HYPERION_REFLECTION_PROBE_HPP
+
+#pragma once
 
 #include <core/memory/resource/Resource.hpp>
 
@@ -10,7 +10,7 @@
 
 #include <rendering/RenderSubsystem.hpp>
 
-#include <rendering/backend/RenderObject.hpp>
+#include <rendering/RenderObject.hpp>
 
 namespace hyperion {
 
@@ -38,5 +38,3 @@ private:
 #endif
 
 } // namespace hyperion
-
-#endif

@@ -1,6 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef HYPERION_TASK_HPP
-#define HYPERION_TASK_HPP
+
+#pragma once
 
 #include <core/containers/Bitset.hpp>
 
@@ -983,7 +983,7 @@ struct TaskAwaitAll_Impl<Task<ReturnType>>
             for (SizeType i = 0; i < tasks.Size(); ++i) {
                 Task<ReturnType> &task = tasks[i];
                 HYP_CORE_ASSERT(task.IsCompleted());
-                
+
                 task.Await();
             }
         } else {
@@ -993,7 +993,7 @@ struct TaskAwaitAll_Impl<Task<ReturnType>>
             for (SizeType i = 0; i < tasks.Size(); ++i) {
                 Task<ReturnType> &task = tasks[i];
                 HYP_CORE_ASSERT(task.IsCompleted());
-                
+
                 Memory::Construct<ReturnType>(&results[i], std::move(task.Await()));
             }
 
@@ -1071,7 +1071,7 @@ struct TaskAwaitAll_Impl<Task<void>>
         for (SizeType i = 0; i < tasks.Size(); ++i) {
             Task<void> &task = tasks[i];
             HYP_CORE_ASSERT(task.IsCompleted());
-            
+
             task.Await();
         }
 #endif
@@ -1100,5 +1100,3 @@ using threading::TaskID;
 using threading::TaskPromise;
 
 } // namespace hyperion
-
-#endif

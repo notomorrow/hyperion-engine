@@ -1,7 +1,6 @@
 /* Copyright (c) 2025 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_STREAMABLE_HPP
-#define HYPERION_STREAMABLE_HPP
+#pragma once
 
 #include <core/Handle.hpp>
 #include <core/Defines.hpp>
@@ -106,4 +105,3 @@ protected:
 
 } // namespace hyperion
 
-#endif

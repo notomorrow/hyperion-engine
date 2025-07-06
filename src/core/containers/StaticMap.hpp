@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_STATIC_MAP_HPP
-#define HYPERION_STATIC_MAP_HPP
+#pragma once
 
 #include <core/Defines.hpp>
 
@@ -133,5 +132,3 @@ using StaticMap = containers::StaticMap<Key, Value, Size>;
 using containers::ConcatStaticMaps;
 
 } // namespace hyperion
-
-#endif

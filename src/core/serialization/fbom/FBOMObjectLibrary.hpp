@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_FBOM_OBJECT_LIBRARY_HPP
-#define HYPERION_FBOM_OBJECT_LIBRARY_HPP
+#pragma once
 
 #include <core/utilities/UUID.hpp>
 #include <core/utilities/EnumFlags.hpp>
@@ -109,5 +108,3 @@ struct FBOMObjectLibrary
 
 } // namespace serialization
 } // namespace hyperion
-
-#endif

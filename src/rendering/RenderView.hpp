@@ -1,7 +1,6 @@
 /* Copyright (c) 2024-2025 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_RENDERING_VIEW_HPP
-#define HYPERION_RENDERING_VIEW_HPP
+#pragma once
 
 #include <core/memory/UniquePtr.hpp>
 #include <core/Handle.hpp>
@@ -12,8 +11,8 @@
 #include <rendering/RenderCollection.hpp>
 #include <rendering/CullData.hpp>
 
-#include <rendering/backend/RenderObject.hpp>
-#include <rendering/backend/RendererStructs.hpp>
+#include <rendering/RenderObject.hpp>
+#include <rendering/RenderStructs.hpp>
 
 #include <HashCode.hpp>
 
@@ -22,7 +21,6 @@ namespace hyperion {
 class View;
 class DeferredRenderer;
 class RenderWorld;
-class RenderScene;
 class RenderCamera;
 class RenderLight;
 class RenderEnvGrid;
@@ -108,5 +106,3 @@ protected:
 };
 
 } // namespace hyperion
-
-#endif

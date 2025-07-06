@@ -11,10 +11,10 @@
 #include <rendering/RenderMaterial.hpp>
 #include <rendering/RenderView.hpp>
 
-#include <rendering/backend/RenderBackend.hpp>
-#include <rendering/backend/RendererFrame.hpp>
-#include <rendering/backend/RendererGraphicsPipeline.hpp>
-#include <rendering/backend/RenderConfig.hpp>
+#include <rendering/RenderBackend.hpp>
+#include <rendering/RenderFrame.hpp>
+#include <rendering/RenderGraphicsPipeline.hpp>
+#include <rendering/RenderConfig.hpp>
 
 #include <scene/Scene.hpp>
 #include <scene/Mesh.hpp>
@@ -458,11 +458,11 @@ void RenderProxyList::CommitParallelRenderingState(CmdList& outCommandList)
         }
 
         // Add render stats counts to the engine's render stats
-        for (EngineRenderStatsCounts& counts : state->renderStatsCounts)
+        for (RenderStatsCounts& counts : state->renderStatsCounts)
         {
             g_engine->GetRenderStatsCalculator().AddCounts(counts);
 
-            counts = EngineRenderStatsCounts(); // Reset counts after adding for next use
+            counts = RenderStatsCounts(); // Reset counts after adding for next use
         }
 
         state->drawCalls.Clear();
@@ -748,6 +748,16 @@ void RenderCollector::ExecuteDrawCalls(FrameBase* frame, const RenderSetup& rend
             AssertDebug(renderGroup.IsValid());
 
             const DrawCallCollection& drawCallCollection = mapping.drawCallCollection;
+
+            // debugging
+            for (const DrawCall& drawCall : drawCallCollection.drawCalls)
+            {
+                AssertDebug(RenderApi_RetrieveResourceBinding(drawCall.material) != ~0u);
+            }
+            for (const InstancedDrawCall& drawCall : drawCallCollection.instancedDrawCalls)
+            {
+                AssertDebug(RenderApi_RetrieveResourceBinding(drawCall.material) != ~0u);
+            }
 
             IndirectRenderer* indirectRenderer = mapping.indirectRenderer;
 

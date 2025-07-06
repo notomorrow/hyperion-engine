@@ -1,9 +1,9 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef HYPERION_RENDERABLE_ATTRIBUTES_HPP
-#define HYPERION_RENDERABLE_ATTRIBUTES_HPP
 
-#include <rendering/backend/RendererStructs.hpp>
-#include <rendering/backend/RendererFramebuffer.hpp>
+#pragma once
+
+#include <rendering/RenderStructs.hpp>
+#include <rendering/RenderFramebuffer.hpp>
 #include <rendering/RenderBucket.hpp>
 #include <rendering/ShaderManager.hpp>
 
@@ -235,5 +235,3 @@ private:
 };
 
 } // namespace hyperion
-
-#endif

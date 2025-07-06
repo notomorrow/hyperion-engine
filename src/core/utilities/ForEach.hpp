@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_UTIL_FOREACH_HPP
-#define HYPERION_UTIL_FOREACH_HPP
+#pragma once
 
 #include <core/math/MathUtil.hpp>
 #include <Types.hpp>
@@ -98,5 +97,3 @@ static inline void ForEachInBatches(Container&& container, uint32 numBatches, Ca
 }
 
 } // namespace hyperion
-
-#endif

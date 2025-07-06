@@ -1,0 +1,45 @@
+/* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
+
+#pragma once
+
+#include <rendering/RenderAttachment.hpp>
+#include <rendering/RenderObject.hpp>
+
+#include <core/math/MathUtil.hpp>
+
+#include <HashCode.hpp>
+#include <Types.hpp>
+
+#include <vulkan/vulkan.h>
+
+namespace hyperion {
+class VulkanAttachment final : public AttachmentBase
+{
+public:
+    HYP_API VulkanAttachment(
+        const VulkanImageRef& image,
+        const VulkanFramebufferWeakRef& framebuffer,
+        RenderPassStage stage,
+        LoadOperation loadOperation = LoadOperation::CLEAR,
+        StoreOperation storeOperation = StoreOperation::STORE,
+        BlendFunction blendFunction = BlendFunction::None());
+    HYP_API virtual ~VulkanAttachment() override;
+
+    HYP_API VkAttachmentReference GetVulkanHandle() const;
+    HYP_API VkAttachmentDescription GetVulkanAttachmentDescription() const;
+
+    HYP_FORCE_INLINE RenderPassStage GetRenderPassStage() const
+    {
+        return m_stage;
+    }
+
+    HYP_API virtual bool IsCreated() const override;
+
+    HYP_API virtual RendererResult Create() override;
+    HYP_API virtual RendererResult Destroy() override;
+
+private:
+    RenderPassStage m_stage;
+};
+
+} // namespace hyperion

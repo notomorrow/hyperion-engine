@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_OGRE_XML_SKELETON_LOADER_HPP
-#define HYPERION_OGRE_XML_SKELETON_LOADER_HPP
+#pragma once
 
 #include <asset/Assets.hpp>
 
@@ -15,7 +14,7 @@ HYP_CLASS(NoScriptBindings)
 class OgreXMLSkeletonLoader : public AssetLoaderBase
 {
     HYP_OBJECT_BODY(OgreXMLSkeletonLoader);
-    
+
 public:
     struct OgreXMLSkeleton
     {
@@ -59,4 +58,3 @@ public:
 
 } // namespace hyperion
 
-#endif

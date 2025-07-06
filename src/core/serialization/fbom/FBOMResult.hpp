@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_FBOM_RESULT_HPP
-#define HYPERION_FBOM_RESULT_HPP
+#pragma once
 
 #include <core/containers/String.hpp>
 
@@ -52,5 +51,3 @@ struct FBOMResult
 };
 
 } // namespace hyperion::serialization
-
-#endif

@@ -1,6 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef HYPERION_CORE_SCHEDULER_FWD_HPP
-#define HYPERION_CORE_SCHEDULER_FWD_HPP
+
+#pragma once
 
 #include <core/Defines.hpp>
 
@@ -12,5 +12,3 @@ namespace threading {
 } // namespace threading
 
 } // namespace hyperion
-
-#endif

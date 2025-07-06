@@ -1,7 +1,4 @@
-
-#ifndef HYPERION_CORE_HYP_OBJECT_ENUMS_HPP
-#define HYPERION_CORE_HYP_OBJECT_ENUMS_HPP
-
+#pragma once
 #include <Types.hpp>
 
 namespace hyperion {
@@ -16,5 +13,3 @@ enum class HypClassAllocationMethod : uint8
 };
 
 } // namespace hyperion
-
-#endif

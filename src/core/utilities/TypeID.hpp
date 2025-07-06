@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_TYPE_ID_HPP
-#define HYPERION_TYPE_ID_HPP
+#pragma once
 
 #include <core/Name.hpp>
 #include <core/Util.hpp>
@@ -67,7 +66,7 @@ public:
     template <class T>
     static constexpr TypeId ForType()
     {
-        return TypeId { TypeId_Impl<T, TypeIdFlags::TYPE_ID_FLAGS_NONE>::value };
+        return TypeId { TypeId_Impl<NormalizedType<T>, TypeIdFlags::TYPE_ID_FLAGS_NONE>::value };
     }
 
     static constexpr TypeId ForManagedType(const char* str)
@@ -180,5 +179,3 @@ public:
 using utilities::TypeId;
 
 } // namespace hyperion
-
-#endif

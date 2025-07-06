@@ -1,11 +1,10 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_CRASH_HANDLER_HPP
-#define HYPERION_CRASH_HANDLER_HPP
+#pragma once
 
 #include <core/Defines.hpp>
 
-#include <rendering/backend/RendererResult.hpp>
+#include <rendering/RenderResult.hpp>
 
 namespace hyperion {
 
@@ -22,5 +21,3 @@ private:
 };
 
 } // namespace hyperion
-
-#endif

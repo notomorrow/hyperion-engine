@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_FIRST_PERSON_CAMERA_HPP
-#define HYPERION_FIRST_PERSON_CAMERA_HPP
+#pragma once
 
 #include <scene/camera/PerspectiveCamera.hpp>
 
@@ -91,4 +90,3 @@ protected:
 
 } // namespace hyperion
 
-#endif

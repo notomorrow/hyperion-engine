@@ -2,7 +2,6 @@
 #include <rendering/RenderProxy.hpp>
 #include <rendering/RenderMaterial.hpp>
 #include <rendering/RenderMesh.hpp>
-#include <rendering/RenderSkeleton.hpp>
 
 #include <scene/Entity.hpp>
 #include <scene/Mesh.hpp>
@@ -30,37 +29,17 @@ void RenderProxyMesh::SafeRelease()
 
 void RenderProxyMesh::IncRefs() const
 {
-    if (material.IsValid())
-    {
-        material->GetRenderResource().IncRef();
-    }
-
     if (mesh.IsValid())
     {
         mesh->GetRenderResource().IncRef();
-    }
-
-    if (skeleton.IsValid())
-    {
-        skeleton->GetRenderResource().IncRef();
     }
 }
 
 void RenderProxyMesh::DecRefs() const
 {
-    if (material.IsValid())
-    {
-        material->GetRenderResource().DecRef();
-    }
-
     if (mesh.IsValid())
     {
         mesh->GetRenderResource().DecRef();
-    }
-
-    if (skeleton.IsValid())
-    {
-        skeleton->GetRenderResource().DecRef();
     }
 }
 

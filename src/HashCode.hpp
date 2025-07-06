@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HASH_CODE_HPP
-#define HASH_CODE_HPP
+#pragma once
 
 #include <Types.hpp>
 #include <Constants.hpp>
@@ -262,5 +261,3 @@ struct hash<hyperion::HashCode>
 };
 
 } // namespace std
-
-#endif

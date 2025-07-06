@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_TEXTURE_HPP
-#define HYPERION_TEXTURE_HPP
+#pragma once
 
 #include <core/memory/UniquePtr.hpp>
 #include <core/memory/Pimpl.hpp>
@@ -18,9 +17,9 @@
 
 #include <streaming/StreamedData.hpp>
 
-#include <rendering/backend/RenderObject.hpp>
-#include <rendering/backend/RendererImage.hpp>
-#include <rendering/backend/RendererImageView.hpp>
+#include <rendering/RenderObject.hpp>
+#include <rendering/RenderImage.hpp>
+#include <rendering/RenderImageView.hpp>
 
 #include <scene/VisibilityState.hpp>
 
@@ -188,4 +187,3 @@ protected:
 
 } // namespace hyperion
 
-#endif

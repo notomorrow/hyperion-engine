@@ -1,13 +1,12 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_BINDLESS_HPP
-#define HYPERION_BINDLESS_HPP
+#pragma once
 
 #include <core/object/ObjId.hpp>
 
 #include <core/containers/HashMap.hpp>
 
-#include <rendering/backend/RenderObject.hpp>
+#include <rendering/RenderObject.hpp>
 
 namespace hyperion {
 
@@ -23,7 +22,7 @@ public:
     BindlessStorage(BindlessStorage&& other) noexcept = delete;
     BindlessStorage& operator=(BindlessStorage&& other) noexcept = delete;
     ~BindlessStorage();
-    
+
     void UnsetAllResources();
 
     /*! \brief Add a texture to the bindless descriptor set. */
@@ -36,5 +35,3 @@ private:
 };
 
 } // namespace hyperion
-
-#endif

@@ -1,7 +1,6 @@
 /* Copyright (c) 2025 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_STREAMING_CELL_COLLECTION_HPP
-#define HYPERION_STREAMING_CELL_COLLECTION_HPP
+#pragma once
 
 #include <streaming/StreamingCell.hpp>
 
@@ -201,5 +200,3 @@ public:
 };
 
 } // namespace hyperion
-
-#endif

@@ -1,6 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef HYPERION_UTIL_LOGGER_HPP
-#define HYPERION_UTIL_LOGGER_HPP
+
+#pragma once
 
 #include <core/logging/LoggerFwd.hpp>
 
@@ -339,5 +339,3 @@ using logging::LogMessage;
         ::hyperion::logging::LogOnceHelper::ExecuteLogOnce<HYP_STATIC_STRING(__FILE__), __LINE__, HYP_STATIC_STRING(HYP_FUNCTION_NAME_LIT), hyperion::logging::category(), HYP_MAKE_CONST_ARG(&Log_##channel), HYP_STATIC_STRING(fmt "\n")>(hyperion::logging::GetLogger(), ##__VA_ARGS__); \
     }                                                                                                                                                                                                                                                                                       \
     while (0)
-
-#endif

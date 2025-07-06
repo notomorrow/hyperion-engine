@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_CORE_HYP_DATA_HPP
-#define HYPERION_CORE_HYP_DATA_HPP
+#pragma once
 
 #include <core/Defines.hpp>
 
@@ -3020,5 +3019,3 @@ struct HypDataGetter_Tuple<ReturnType, T, Tuple<ConvertibleFrom...>>
 static_assert(sizeof(HypData) == 40, "sizeof(HypData) must match C# struct size");
 
 } // namespace hyperion
-
-#endif

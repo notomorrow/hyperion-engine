@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_RENDER_ENV_PROBE_HPP
-#define HYPERION_RENDER_ENV_PROBE_HPP
+#pragma once
 
 #include <core/Handle.hpp>
 
@@ -11,7 +10,7 @@
 #include <rendering/RenderResource.hpp>
 #include <rendering/RenderCollection.hpp>
 
-#include <rendering/backend/RenderObject.hpp>
+#include <rendering/RenderObject.hpp>
 
 #include <Types.hpp>
 
@@ -21,7 +20,6 @@ class EnvProbe;
 class RenderEnvProbe;
 class Texture;
 class RenderCamera;
-class RenderScene;
 class RenderShadowMap;
 class RenderView;
 
@@ -159,5 +157,3 @@ protected:
 };
 
 } // namespace hyperion
-
-#endif

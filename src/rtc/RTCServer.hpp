@@ -1,6 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef HYPERION_RTC_SERVER_HPP
-#define HYPERION_RTC_SERVER_HPP
+
+#pragma once
 
 #include <core/memory/ByteBuffer.hpp>
 #include <core/memory/UniquePtr.hpp>
@@ -151,5 +151,3 @@ using LibDataChannelRTCServer = NullRTCServer;
 #endif // HYP_LIBDATACHANNEL
 
 } // namespace hyperion
-
-#endif

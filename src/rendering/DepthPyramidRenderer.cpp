@@ -5,13 +5,13 @@
 #include <rendering/Deferred.hpp>
 #include <rendering/PlaceholderData.hpp>
 
-#include <rendering/backend/RendererAttachment.hpp>
-#include <rendering/backend/RendererComputePipeline.hpp>
-#include <rendering/backend/RendererDescriptorSet.hpp>
-#include <rendering/backend/RendererFrame.hpp>
-#include <rendering/backend/RendererImage.hpp>
-#include <rendering/backend/RendererImageView.hpp>
-#include <rendering/backend/RendererSampler.hpp>
+#include <rendering/RenderAttachment.hpp>
+#include <rendering/RenderComputePipeline.hpp>
+#include <rendering/RenderDescriptorSet.hpp>
+#include <rendering/RenderFrame.hpp>
+#include <rendering/RenderImage.hpp>
+#include <rendering/RenderImageView.hpp>
+#include <rendering/RenderSampler.hpp>
 
 #include <core/profiling/ProfileScope.hpp>
 

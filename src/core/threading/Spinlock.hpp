@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_SPINLOCK_HPP
-#define HYPERION_SPINLOCK_HPP
+#pragma once
 
 #include <core/Defines.hpp>
 
@@ -70,5 +69,3 @@ private:
 using threading::Spinlock;
 
 } // namespace hyperion
-
-#endif

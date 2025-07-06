@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_ECS_ANIMATION_SYSTEM_HPP
-#define HYPERION_ECS_ANIMATION_SYSTEM_HPP
+#pragma once
 
 #include <scene/ecs/System.hpp>
 #include <scene/ecs/components/AnimationComponent.hpp>
@@ -38,4 +37,3 @@ private:
 
 } // namespace hyperion
 
-#endif

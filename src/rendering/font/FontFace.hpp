@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYP_FONT_FACE_HPP
-#define HYP_FONT_FACE_HPP
+#pragma once
 
 #include <rendering/font/FontEngine.hpp>
 
@@ -44,5 +43,3 @@ private:
 };
 
 } // namespace hyperion
-
-#endif // HYP_FONT_FACE_HPP

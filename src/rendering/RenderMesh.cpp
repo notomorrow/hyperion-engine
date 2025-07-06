@@ -1,15 +1,14 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
 #include <rendering/RenderMesh.hpp>
-
+#include <rendering/RenderBackend.hpp>
+#include <rendering/RenderCommand.hpp>
+#include <rendering/RenderFrame.hpp>
+#include <rendering/RenderObject.hpp>
+#include <rendering/RenderGpuBuffer.hpp>
+#include <rendering/RenderHelpers.hpp>
+#include <rendering/rt/RenderAccelerationStructure.hpp>
 #include <rendering/rhi/CmdList.hpp>
-
-#include <rendering/backend/RenderBackend.hpp>
-#include <rendering/backend/RenderCommand.hpp>
-#include <rendering/backend/RenderObject.hpp>
-#include <rendering/backend/RendererGpuBuffer.hpp>
-#include <rendering/backend/RendererHelpers.hpp>
-#include <rendering/backend/rt/RendererAccelerationStructure.hpp>
 
 #include <scene/Mesh.hpp>
 
@@ -85,6 +84,8 @@ void RenderMesh::Update_Internal()
 void RenderMesh::UploadMeshData()
 {
     HYP_SCOPE;
+
+    Threads::AssertOnThread(g_renderThread);
 
     HYP_LOG(Rendering, Debug, "Uploading mesh data: {}", m_mesh->Id());
 
@@ -168,22 +169,14 @@ void RenderMesh::UploadMeshData()
     HYPERION_ASSERT_RESULT(stagingBufferIndices->Create());
     stagingBufferIndices->Copy(packedIndicesSize, indexBuffer.Data());
 
-    SingleTimeCommands commands;
+    FrameBase* frame = g_renderBackend->GetCurrentFrame();
+    CmdList& cmd = frame->GetCommandList();
 
-    commands.Push([&](CmdList& cmd)
-        {
-            cmd.Add<CopyBuffer>(stagingBufferVertices, m_vbo, packedBufferSize);
-        });
+    cmd.Add<CopyBuffer>(stagingBufferVertices, m_vbo, packedBufferSize);
+    cmd.Add<CopyBuffer>(stagingBufferIndices, m_ibo, packedIndicesSize);
 
-    commands.Push([&](CmdList& cmd)
-        {
-            cmd.Add<CopyBuffer>(stagingBufferIndices, m_ibo, packedIndicesSize);
-        });
-
-    HYPERION_ASSERT_RESULT(commands.Execute());
-
-    stagingBufferVertices->Destroy();
-    stagingBufferIndices->Destroy();
+    SafeRelease(std::move(stagingBufferVertices));
+    SafeRelease(std::move(stagingBufferIndices));
 }
 
 void RenderMesh::SetVertexAttributes(const VertexAttributeSet& vertexAttributes)
@@ -414,20 +407,11 @@ BLASRef RenderMesh::BuildBLAS(const Handle<Material>& material) const
             indicesStagingBuffer->Memset(packedIndicesSize, 0); // zero out
             indicesStagingBuffer->Copy(packedIndices.Size() * sizeof(uint32), packedIndices.Data());
 
-            SingleTimeCommands commands;
+            FrameBase* frame = g_renderBackend->GetCurrentFrame();
+            CmdList& cmd = frame->GetCommandList();
 
-            commands.Push([&](CmdList& cmd)
-                {
-                    cmd.Add<CopyBuffer>(verticesStagingBuffer, packedVerticesBuffer, packedVerticesSize);
-                    cmd.Add<CopyBuffer>(indicesStagingBuffer, packedIndicesBuffer, packedIndicesSize);
-                });
-
-            RendererResult copyBuffersResult = commands.Execute();
-
-            if (!copyBuffersResult)
-            {
-                return copyBuffersResult;
-            }
+            cmd.Add<CopyBuffer>(verticesStagingBuffer, packedVerticesBuffer, packedVerticesSize);
+            cmd.Add<CopyBuffer>(indicesStagingBuffer, packedIndicesBuffer, packedIndicesSize);
 
             return {};
         }

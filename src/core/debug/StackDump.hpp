@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_STACK_DUMP_HPP
-#define HYPERION_STACK_DUMP_HPP
+#pragma once
 
 #include <core/containers/Array.hpp>
 #include <core/containers/String.hpp>
@@ -40,5 +39,3 @@ private:
 using debug::StackDump;
 
 } // namespace hyperion
-
-#endif

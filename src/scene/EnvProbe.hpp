@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_ENV_PROBE_HPP
-#define HYPERION_ENV_PROBE_HPP
+#pragma once
 
 #include <core/containers/Bitset.hpp>
 
@@ -17,7 +16,7 @@
 
 #include <rendering/RenderCollection.hpp>
 
-#include <rendering/backend/RenderCommand.hpp>
+#include <rendering/RenderCommand.hpp>
 
 #include <GameCounter.hpp>
 #include <HashCode.hpp>
@@ -221,6 +220,7 @@ public:
     virtual void UpdateRenderProxy(IRenderProxy* proxy) override;
 
     uint32 m_gridSlot = ~0u; // temp
+    Vec4i m_positionInGrid; // temp
 
 protected:
     virtual void OnAddedToWorld(World* world) override;
@@ -325,4 +325,3 @@ private:
 
 } // namespace hyperion
 
-#endif // !HYPERION_ENV_PROBE_HPP

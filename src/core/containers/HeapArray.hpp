@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_HEAP_ARRAY_HPP
-#define HYPERION_HEAP_ARRAY_HPP
+#pragma once
 
 #include <core/containers/ContainerBase.hpp>
 #include <core/Defines.hpp>
@@ -160,5 +159,3 @@ HeapArray<T, Sz>::~HeapArray()
 using containers::HeapArray;
 
 } // namespace hyperion
-
-#endif

@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_MESH_BUILDER_HPP
-#define HYPERION_MESH_BUILDER_HPP
+#pragma once
 
 #include <core/containers/Array.hpp>
 
@@ -129,5 +128,3 @@ public:
 };
 
 } // namespace hyperion
-
-#endif

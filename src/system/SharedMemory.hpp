@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_SHARED_MEMORY_HPP
-#define HYPERION_SHARED_MEMORY_HPP
+#pragma once
 
 #include <core/containers/String.hpp>
 #include <core/Defines.hpp>
@@ -82,5 +81,3 @@ private:
 using sys::SharedMemory;
 
 } // namespace hyperion
-
-#endif

@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_ECS_ENTITY_MANAGER_HPP
-#define HYPERION_ECS_ENTITY_MANAGER_HPP
+#pragma once
 
 #include <core/containers/Array.hpp>
 #include <core/containers/FlatMap.hpp>
@@ -1112,4 +1111,3 @@ private:
 
 } // namespace hyperion
 
-#endif

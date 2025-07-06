@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_IMMEDIATE_MODE_HPP
-#define HYPERION_IMMEDIATE_MODE_HPP
+#pragma once
 
 #include <Constants.hpp>
 
@@ -26,8 +25,8 @@
 #include <rendering/Buffers.hpp>
 #include <rendering/RenderCollection.hpp>
 
-#include <rendering/backend/RenderObject.hpp>
-#include <rendering/backend/RendererStructs.hpp>
+#include <rendering/RenderObject.hpp>
+#include <rendering/RenderStructs.hpp>
 
 #include <GameCounter.hpp>
 
@@ -267,5 +266,3 @@ private:
 };
 
 } // namespace hyperion
-
-#endif

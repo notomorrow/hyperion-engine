@@ -9,11 +9,9 @@
 #include <rendering/DepthPyramidRenderer.hpp>
 #include <rendering/RenderEnvGrid.hpp>
 #include <rendering/RenderEnvProbe.hpp>
-#include <rendering/RenderScene.hpp>
 #include <rendering/RenderCamera.hpp>
 #include <rendering/RenderWorld.hpp>
 #include <rendering/RenderMaterial.hpp>
-#include <rendering/RenderLight.hpp>
 #include <rendering/RenderTexture.hpp>
 #include <rendering/RenderGlobalState.hpp>
 #include <rendering/SafeDeleter.hpp>
@@ -27,12 +25,11 @@
 
 #include <rendering/debug/DebugDrawer.hpp>
 
-#include <rendering/backend/RenderObject.hpp>
-#include <rendering/backend/RendererGpuBuffer.hpp>
-#include <rendering/backend/RendererFeatures.hpp>
-#include <rendering/backend/RendererDevice.hpp>
-#include <rendering/backend/RendererDescriptorSet.hpp>
-#include <rendering/backend/RendererGraphicsPipeline.hpp>
+#include <rendering/RenderObject.hpp>
+#include <rendering/RenderGpuBuffer.hpp>
+#include <rendering/RenderDevice.hpp>
+#include <rendering/RenderDescriptorSet.hpp>
+#include <rendering/RenderGraphicsPipeline.hpp>
 
 #include <scene/World.hpp>
 #include <scene/Mesh.hpp>
@@ -344,8 +341,8 @@ void DeferredPass::Render(FrameBase* frame, const RenderSetup& rs)
                 pipeline->GetDescriptorTable()->GetDescriptorSet(NAME("Global"), frame->GetFrameIndex()),
                 pipeline,
                 ArrayMap<Name, uint32> {
-                    { NAME("WorldsBuffer"), ShaderDataOffset<WorldShaderData>(*rs.world) },
-                    { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(*rs.view->GetCamera()) },
+                    { NAME("WorldsBuffer"), ShaderDataOffset<WorldShaderData>(rs.world->GetBufferIndex()) },
+                    { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(rs.view->GetCamera()->GetBufferIndex()) },
                     { NAME("CurrentLight"), ShaderDataOffset<LightShaderData>(light, 0) } },
                 globalDescriptorSetIndex);
 
@@ -629,8 +626,8 @@ void EnvGridPass::Render(FrameBase* frame, const RenderSetup& rs)
             graphicsPipeline->GetDescriptorTable()->GetDescriptorSet(NAME("Global"), frameIndex),
             graphicsPipeline,
             ArrayMap<Name, uint32> {
-                { NAME("WorldsBuffer"), ShaderDataOffset<WorldShaderData>(*rs.world) },
-                { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(*rs.view->GetCamera()) },
+                { NAME("WorldsBuffer"), ShaderDataOffset<WorldShaderData>(rs.world->GetBufferIndex()) },
+                { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(rs.view->GetCamera()->GetBufferIndex()) },
                 { NAME("EnvGridsBuffer"), ShaderDataOffset<EnvGridShaderData>(envGrid, 0) } },
             globalDescriptorSetIndex);
 
@@ -901,8 +898,8 @@ void ReflectionsPass::Render(FrameBase* frame, const RenderSetup& rs)
                 graphicsPipeline->GetDescriptorTable()->GetDescriptorSet(NAME("Global"), frameIndex),
                 graphicsPipeline,
                 ArrayMap<Name, uint32> {
-                    { NAME("WorldsBuffer"), ShaderDataOffset<WorldShaderData>(*rs.world) },
-                    { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(*rs.view->GetCamera()) },
+                    { NAME("WorldsBuffer"), ShaderDataOffset<WorldShaderData>(rs.world->GetBufferIndex()) },
+                    { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(rs.view->GetCamera()->GetBufferIndex()) },
                     { NAME("CurrentEnvProbe"), ShaderDataOffset<EnvProbeShaderData>(envProbe) } },
                 globalDescriptorSetIndex);
 
@@ -1385,7 +1382,7 @@ void DeferredRenderer::RenderFrame(FrameBase* frame, const RenderSetup& rs)
 
     Assert(rs.IsValid());
 
-    EngineRenderStatsCounts counts {};
+    RenderStatsCounts counts {};
 
     Array<RenderProxyList*> renderProxyLists;
 
@@ -1499,7 +1496,20 @@ void DeferredRenderer::RenderFrame(FrameBase* frame, const RenderSetup& rs)
     // Render global environment probes and grids and set fallbacks
     RenderSetup newRs = rs;
 
-#if 1
+    // Render shadow maps for shadow casting lights
+    for (uint32 lightType = 0; lightType < LT_MAX; lightType++)
+    {
+        if (!lights[lightType].Any() || g_renderGlobalState->globalRenderers[GRT_SHADOW_MAP][lightType])
+        {
+            // No lights of that LightType bound or there is no defined ShadowMapRenderer
+            continue;
+        }
+
+        /// TODO: Trigger rendering shadow map.
+        /// We'll need a new PassData type (ShadowPassData ?) in order to store the textures / image views (in the case of atlas textures)
+        /// and we'll need some state to tell if we need to re-render the shadows.
+    }
+
     {
         // Set sky as fallback probe
         if (envProbes[EPT_SKY].Any())
@@ -1561,7 +1571,6 @@ void DeferredRenderer::RenderFrame(FrameBase* frame, const RenderSetup& rs)
             }
         }
     }
-#endif
 
     // reset renderer state back to what it was before
     newRs = rs;

@@ -181,24 +181,24 @@ namespace Hyperion
                 if (countersTextElement != null)
                 {
                     StringBuilder sb = new StringBuilder();
-                    sb.AppendFormat("DrawCalls: {0}", renderStats.counts[EngineRenderStatsCountType.DrawCalls]);
+                    sb.AppendFormat("DrawCalls: {0}", renderStats.counts[RenderStatsCountType.DrawCalls]);
 
-                    if (renderStats.counts[EngineRenderStatsCountType.InstancedDrawCalls] > 0)
-                        sb.AppendFormat(", InstancedDrawCalls: {0}", renderStats.counts[EngineRenderStatsCountType.InstancedDrawCalls]);
+                    if (renderStats.counts[RenderStatsCountType.InstancedDrawCalls] > 0)
+                        sb.AppendFormat(", InstancedDrawCalls: {0}", renderStats.counts[RenderStatsCountType.InstancedDrawCalls]);
                         
-                    sb.AppendFormat(", Tris: {0}", renderStats.counts[EngineRenderStatsCountType.Triangles]);
-                    sb.AppendFormat(", RenderGroups: {0}", renderStats.counts[EngineRenderStatsCountType.RenderGroups]);
-                    sb.AppendFormat(", Views: {0}", renderStats.counts[EngineRenderStatsCountType.Views]);
-                    sb.AppendFormat(", Scenes: {0}", renderStats.counts[EngineRenderStatsCountType.Scenes]);
+                    sb.AppendFormat(", Tris: {0}", renderStats.counts[RenderStatsCountType.Triangles]);
+                    sb.AppendFormat(", RenderGroups: {0}", renderStats.counts[RenderStatsCountType.RenderGroups]);
+                    sb.AppendFormat(", Views: {0}", renderStats.counts[RenderStatsCountType.Views]);
+                    sb.AppendFormat(", Scenes: {0}", renderStats.counts[RenderStatsCountType.Scenes]);
 
-                    if (renderStats.counts[EngineRenderStatsCountType.Lights] > 0)
-                        sb.AppendFormat(", Lights: {0}", renderStats.counts[EngineRenderStatsCountType.Lights]);
+                    if (renderStats.counts[RenderStatsCountType.Lights] > 0)
+                        sb.AppendFormat(", Lights: {0}", renderStats.counts[RenderStatsCountType.Lights]);
 
-                    if (renderStats.counts[EngineRenderStatsCountType.LightmapVolumes] > 0)
-                        sb.AppendFormat(", LightmapVolumes: {0}", renderStats.counts[EngineRenderStatsCountType.LightmapVolumes]);
+                    if (renderStats.counts[RenderStatsCountType.LightmapVolumes] > 0)
+                        sb.AppendFormat(", LightmapVolumes: {0}", renderStats.counts[RenderStatsCountType.LightmapVolumes]);
 
-                    if (renderStats.counts[EngineRenderStatsCountType.EnvProbes] > 0)
-                        sb.AppendFormat(", EnvProbes: {0}", renderStats.counts[EngineRenderStatsCountType.EnvProbes]);
+                    if (renderStats.counts[RenderStatsCountType.EnvProbes] > 0)
+                        sb.AppendFormat(", EnvProbes: {0}", renderStats.counts[RenderStatsCountType.EnvProbes]);
 
                     ((UIText)countersTextElement).SetText(sb.ToString());
                 }

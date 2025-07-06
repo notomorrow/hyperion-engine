@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_RENDER_SUBSYSTEM_HPP
-#define HYPERION_RENDER_SUBSYSTEM_HPP
+#pragma once
 
 #include <core/threading/AtomicVar.hpp>
 
@@ -13,7 +12,7 @@
 
 #include <scene/Entity.hpp>
 
-#include <rendering/backend/RenderObject.hpp>
+#include <rendering/RenderObject.hpp>
 
 #include <GameCounter.hpp>
 #include <Constants.hpp>
@@ -78,4 +77,3 @@ private:
 
 } // namespace hyperion
 
-#endif

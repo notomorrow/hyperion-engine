@@ -1,14 +1,13 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_SHADER_MANAGER_HPP
-#define HYPERION_SHADER_MANAGER_HPP
+#pragma once
 
 #include <core/Name.hpp>
 #include <core/Handle.hpp>
 
 #include <core/threading/Mutex.hpp>
 
-#include <rendering/backend/RenderObject.hpp>
+#include <rendering/RenderObject.hpp>
 
 #include <rendering/shader_compiler/ShaderCompiler.hpp>
 
@@ -51,5 +50,3 @@ private:
 };
 
 } // namespace hyperion
-
-#endif // !HYPERION_SHADER_HPP

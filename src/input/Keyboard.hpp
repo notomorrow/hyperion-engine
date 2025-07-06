@@ -1,6 +1,4 @@
-#ifndef HYPERION_KEYBOARD_HPP
-#define HYPERION_KEYBOARD_HPP
-
+#pragma once
 #include <core/Defines.hpp>
 
 #include <Types.hpp>
@@ -103,5 +101,3 @@ struct KeyboardEvent
 };
 
 } // namespace hyperion
-
-#endif

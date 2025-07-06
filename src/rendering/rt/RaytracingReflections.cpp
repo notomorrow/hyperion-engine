@@ -3,9 +3,7 @@
 #include <rendering/rt/RaytracingReflections.hpp>
 #include <rendering/rt/DDGI.hpp>
 #include <rendering/RenderGlobalState.hpp>
-#include <rendering/RenderScene.hpp>
 #include <rendering/RenderCamera.hpp>
-#include <rendering/RenderLight.hpp>
 #include <rendering/RenderEnvProbe.hpp>
 #include <rendering/RenderTexture.hpp>
 #include <rendering/RenderEnvGrid.hpp>
@@ -15,10 +13,10 @@
 #include <rendering/PlaceholderData.hpp>
 #include <rendering/SafeDeleter.hpp>
 
-#include <rendering/backend/RenderBackend.hpp>
-#include <rendering/backend/RendererFrame.hpp>
-#include <rendering/backend/RendererGpuBuffer.hpp>
-#include <rendering/backend/RendererResult.hpp>
+#include <rendering/RenderBackend.hpp>
+#include <rendering/RenderFrame.hpp>
+#include <rendering/RenderGpuBuffer.hpp>
+#include <rendering/RenderResult.hpp>
 
 #include <scene/Texture.hpp>
 #include <scene/Light.hpp>
@@ -141,7 +139,7 @@ void RaytracingReflections::UpdateUniforms(FrameBase* frame, const RenderSetup& 
             break;
         }
 
-        uniforms.lightIndices[numBoundLights++] = light->GetRenderResource().GetBufferIndex();
+        uniforms.lightIndices[numBoundLights++] = RenderApi_RetrieveResourceBinding(light);
     }
 
     uniforms.numBoundLights = numBoundLights;
@@ -166,8 +164,8 @@ void RaytracingReflections::Render(FrameBase* frame, const RenderSetup& renderSe
         m_raytracingPipeline,
         ArrayMap<Name, ArrayMap<Name, uint32>> {
             { NAME("Global"),
-                { { NAME("WorldsBuffer"), ShaderDataOffset<WorldShaderData>(*renderSetup.world) },
-                    { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(*renderSetup.view->GetCamera()) },
+                { { NAME("WorldsBuffer"), ShaderDataOffset<WorldShaderData>(renderSetup.world->GetBufferIndex()) },
+                    { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(renderSetup.view->GetCamera()->GetBufferIndex()) },
                     { NAME("EnvGridsBuffer"), ShaderDataOffset<EnvGridShaderData>(renderSetup.envGrid, 0) },
                     { NAME("CurrentEnvProbe"), ShaderDataOffset<EnvProbeShaderData>(renderSetup.envProbe, 0) } } } },
         frame->GetFrameIndex());

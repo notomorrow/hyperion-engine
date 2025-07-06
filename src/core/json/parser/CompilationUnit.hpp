@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYP_JSON_COMPILATION_UNIT_HPP
-#define HYP_JSON_COMPILATION_UNIT_HPP
+#pragma once
 
 #include <core/json/parser/ErrorList.hpp>
 
@@ -29,5 +28,3 @@ private:
 };
 
 } // namespace hyperion::json
-
-#endif

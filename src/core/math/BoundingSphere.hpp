@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_BOUNDING_SPHERE_HPP
-#define HYPERION_BOUNDING_SPHERE_HPP
+#pragma once
 
 #include <core/math/Vector3.hpp>
 #include <core/math/BoundingBox.hpp>
@@ -93,5 +92,3 @@ public:
 };
 
 } // namespace hyperion
-
-#endif

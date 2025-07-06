@@ -1,6 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef HYPERION_RTC_INSTANCE_HPP
-#define HYPERION_RTC_INSTANCE_HPP
+
+#pragma once
 
 #include <rtc/RTCClientList.hpp>
 #include <rtc/RTCServer.hpp>
@@ -36,5 +36,3 @@ private:
 };
 
 } // namespace hyperion
-
-#endif

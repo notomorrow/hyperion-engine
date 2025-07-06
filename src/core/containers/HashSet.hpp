@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_HASH_SET_HPP
-#define HYPERION_HASH_SET_HPP
+#pragma once
 
 #include <core/containers/Array.hpp>
 #include <core/containers/ContainerBase.hpp>
@@ -1318,5 +1317,3 @@ using containers::HashTable_DynamicNodeAllocator;
 using containers::HashTable_PooledNodeAllocator;
 
 } // namespace hyperion
-
-#endif

@@ -3,7 +3,7 @@
 #include <rendering/RenderSubsystem.hpp>
 #include <rendering/RenderEnvironment.hpp>
 
-#include <rendering/backend/RenderCommand.hpp>
+#include <rendering/RenderCommand.hpp>
 
 #include <core/threading/Threads.hpp>
 

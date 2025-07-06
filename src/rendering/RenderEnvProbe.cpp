@@ -2,7 +2,6 @@
 
 #include <rendering/RenderEnvProbe.hpp>
 #include <rendering/RenderCamera.hpp>
-#include <rendering/RenderLight.hpp>
 #include <rendering/RenderTexture.hpp>
 #include <rendering/RenderShadowMap.hpp>
 #include <rendering/RenderView.hpp>
@@ -10,12 +9,12 @@
 #include <rendering/PlaceholderData.hpp>
 #include <rendering/RenderGlobalState.hpp>
 
-#include <rendering/backend/RenderBackend.hpp>
-#include <rendering/backend/RendererFrame.hpp>
-#include <rendering/backend/RendererImage.hpp>
-#include <rendering/backend/RendererImageView.hpp>
-#include <rendering/backend/RendererGpuBuffer.hpp>
-#include <rendering/backend/AsyncCompute.hpp>
+#include <rendering/RenderBackend.hpp>
+#include <rendering/RenderFrame.hpp>
+#include <rendering/RenderImage.hpp>
+#include <rendering/RenderImageView.hpp>
+#include <rendering/RenderGpuBuffer.hpp>
+#include <rendering/AsyncCompute.hpp>
 
 #include <scene/Texture.hpp>
 #include <scene/View.hpp>
@@ -586,7 +585,7 @@ void ReflectionProbeRenderer::ComputePrefilteredEnvMap(FrameBase* frame, const R
             break;
         }
 
-        uniforms.lightIndices[numBoundLights++] = light->GetRenderResource().GetBufferIndex();
+        uniforms.lightIndices[numBoundLights++] = RenderApi_RetrieveResourceBinding(light);
     }
 
     uniforms.numBoundLights = numBoundLights;
@@ -786,7 +785,7 @@ void ReflectionProbeRenderer::ComputeSH(FrameBase* frame, const RenderSetup& ren
     {
         if (light->GetLightType() == LT_DIRECTIONAL)
         {
-            AssertDebug(light->GetRenderResource().GetBufferIndex() != ~0u);
+            AssertDebug(RenderApi_RetrieveResourceBinding(light) != ~0u, "Light not bound!");
 
             directionalLight = light;
 
@@ -926,7 +925,7 @@ void ReflectionProbeRenderer::ComputeSH(FrameBase* frame, const RenderSetup& ren
     *delegateHandle = frame->OnFrameEnd.Bind([renderEnvProbe = TResourceHandle<RenderEnvProbe>(envProbe->GetRenderResource()), pipelines = std::move(pipelines), descriptorTables = std::move(computeShDescriptorTables), delegateHandle](FrameBase* frame) mutable
         {
             HYP_NAMED_SCOPE("EnvProbe::ComputeSH - Buffer readback");
-            
+
             const uint32 boundIndex = RenderApi_RetrieveResourceBinding(renderEnvProbe->GetEnvProbe());
             Assert(boundIndex != ~0u);
 
@@ -960,8 +959,5 @@ void ReflectionProbeRenderer::ComputeSH(FrameBase* frame, const RenderSetup& ren
 }
 
 #pragma endregion ReflectionProbeRenderer
-
-HYP_DESCRIPTOR_SSBO(Global, EnvProbesBuffer, 1, ~0u, false);
-HYP_DESCRIPTOR_SSBO(Global, CurrentEnvProbe, 1, sizeof(EnvProbeShaderData), true);
 
 } // namespace hyperion

@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_RECT_HPP
-#define HYPERION_RECT_HPP
+#pragma once
 
 #include <core/math/Vector4.hpp>
 
@@ -28,5 +27,3 @@ struct alignas(8) Rect
 };
 
 } // namespace hyperion
-
-#endif

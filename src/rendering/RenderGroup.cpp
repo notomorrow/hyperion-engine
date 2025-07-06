@@ -4,13 +4,10 @@
 #include <rendering/RenderGlobalState.hpp>
 #include <rendering/GBuffer.hpp>
 #include <rendering/Deferred.hpp>
-#include <rendering/RenderScene.hpp>
 #include <rendering/RenderCamera.hpp>
 #include <rendering/RenderMesh.hpp>
 #include <rendering/RenderMaterial.hpp>
-#include <rendering/RenderSkeleton.hpp>
 #include <rendering/RenderWorld.hpp>
-#include <rendering/RenderLight.hpp>
 #include <rendering/RenderProxy.hpp>
 #include <rendering/RenderView.hpp>
 #include <rendering/RenderEnvGrid.hpp>
@@ -19,15 +16,14 @@
 #include <rendering/RenderCollection.hpp>
 #include <rendering/GraphicsPipelineCache.hpp>
 
-#include <rendering/backend/RendererGraphicsPipeline.hpp>
-#include <rendering/backend/RendererFeatures.hpp>
-#include <rendering/backend/RenderConfig.hpp>
-#include <rendering/backend/RenderBackend.hpp>
+#include <rendering/RenderGraphicsPipeline.hpp>
+#include <rendering/RenderConfig.hpp>
+#include <rendering/RenderBackend.hpp>
 
 // temp
-#include <rendering/backend/vulkan/RendererGraphicsPipeline.hpp>
-#include <rendering/backend/vulkan/RendererRenderPass.hpp>
-#include <rendering/backend/vulkan/RendererFramebuffer.hpp>
+#include <rendering/vulkan/VulkanGraphicsPipeline.hpp>
+#include <rendering/vulkan/VulkanRenderPass.hpp>
+#include <rendering/vulkan/VulkanFramebuffer.hpp>
 
 #include <scene/Entity.hpp>
 #include <scene/Mesh.hpp>
@@ -299,7 +295,7 @@ static void RenderAll(
     const uint32 instancingDescriptorSetIndex = pipeline->GetDescriptorTable()->GetDescriptorSetIndex(NAME("Instancing"));
     const DescriptorSetRef& instancingDescriptorSet = pipeline->GetDescriptorTable()->GetDescriptorSet(NAME("Instancing"), frameIndex);
 
-    EngineRenderStatsCounts counts;
+    RenderStatsCounts counts;
 
     frame->GetCommandList().Add<BindGraphicsPipeline>(pipeline);
 
@@ -309,8 +305,8 @@ static void RenderAll(
             globalDescriptorSet,
             pipeline,
             ArrayMap<Name, uint32> {
-                { NAME("WorldsBuffer"), ShaderDataOffset<WorldShaderData>(*renderSetup.world) },
-                { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(*renderSetup.view->GetCamera()) },
+                { NAME("WorldsBuffer"), ShaderDataOffset<WorldShaderData>(renderSetup.world->GetBufferIndex()) },
+                { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(renderSetup.view->GetCamera()->GetBufferIndex()) },
                 { NAME("EnvGridsBuffer"), ShaderDataOffset<EnvGridShaderData>(renderSetup.envGrid, 0) },
                 { NAME("CurrentLight"), ShaderDataOffset<LightShaderData>(renderSetup.light, 0) },
                 { NAME("CurrentEnvProbe"), ShaderDataOffset<EnvProbeShaderData>(renderSetup.envProbe, 0) } },
@@ -343,7 +339,7 @@ static void RenderAll(
         if (entityDescriptorSet.IsValid())
         {
             ArrayMap<Name, uint32> offsets;
-            offsets[NAME("SkeletonsBuffer")] = ShaderDataOffset<SkeletonShaderData>(drawCall.renderSkeleton != nullptr ? drawCall.renderSkeleton->GetBufferIndex() : 0);
+            offsets[NAME("SkeletonsBuffer")] = ShaderDataOffset<SkeletonShaderData>(drawCall.skeleton, 0);
             offsets[NAME("CurrentObject")] = ShaderDataOffset<EntityShaderData>(drawCall.entityId.ToIndex());
 
             if (g_renderBackend->GetRenderConfig().ShouldCollectUniqueDrawCallPerMaterial())
@@ -388,7 +384,7 @@ static void RenderAll(
         if (entityDescriptorSet.IsValid())
         {
             ArrayMap<Name, uint32> offsets;
-            offsets[NAME("SkeletonsBuffer")] = ShaderDataOffset<SkeletonShaderData>(drawCall.renderSkeleton != nullptr ? drawCall.renderSkeleton->GetBufferIndex() : 0);
+            offsets[NAME("SkeletonsBuffer")] = ShaderDataOffset<SkeletonShaderData>(drawCall.skeleton, 0);
 
             if (g_renderBackend->GetRenderConfig().ShouldCollectUniqueDrawCallPerMaterial())
             {
@@ -489,8 +485,8 @@ static void RenderAll_Parallel(
             globalDescriptorSet,
             pipeline,
             ArrayMap<Name, uint32> {
-                { NAME("WorldsBuffer"), ShaderDataOffset<WorldShaderData>(*renderSetup.world) },
-                { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(*renderSetup.view->GetCamera()) },
+                { NAME("WorldsBuffer"), ShaderDataOffset<WorldShaderData>(renderSetup.world->GetBufferIndex()) },
+                { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(renderSetup.view->GetCamera()->GetBufferIndex()) },
                 { NAME("EnvGridsBuffer"), ShaderDataOffset<EnvGridShaderData>(renderSetup.envGrid, 0) },
                 { NAME("CurrentLight"), ShaderDataOffset<LightShaderData>(renderSetup.light, 0) },
                 { NAME("CurrentEnvProbe"), ShaderDataOffset<EnvProbeShaderData>(renderSetup.envProbe, 0) } },
@@ -543,7 +539,7 @@ static void RenderAll_Parallel(
                     if (entityDescriptorSet.IsValid())
                     {
                         ArrayMap<Name, uint32> offsets;
-                        offsets[NAME("SkeletonsBuffer")] = ShaderDataOffset<SkeletonShaderData>(drawCall.renderSkeleton != nullptr ? drawCall.renderSkeleton->GetBufferIndex() : 0);
+                        offsets[NAME("SkeletonsBuffer")] = ShaderDataOffset<SkeletonShaderData>(drawCall.skeleton, 0);
                         offsets[NAME("CurrentObject")] = ShaderDataOffset<EntityShaderData>(drawCall.entityId.ToIndex());
 
                         if (g_renderBackend->GetRenderConfig().ShouldCollectUniqueDrawCallPerMaterial())
@@ -616,7 +612,7 @@ static void RenderAll_Parallel(
                     if (entityDescriptorSet.IsValid())
                     {
                         ArrayMap<Name, uint32> offsets;
-                        offsets[NAME("SkeletonsBuffer")] = ShaderDataOffset<SkeletonShaderData>(drawCall.renderSkeleton != nullptr ? drawCall.renderSkeleton->GetBufferIndex() : 0);
+                        offsets[NAME("SkeletonsBuffer")] = ShaderDataOffset<SkeletonShaderData>(drawCall.skeleton, 0);
 
                         if (g_renderBackend->GetRenderConfig().ShouldCollectUniqueDrawCallPerMaterial())
                         {
@@ -768,7 +764,7 @@ void RenderGroup::PerformRendering(FrameBase* frame, const RenderSetup& renderSe
     }
 
 #if defined(HYP_ENABLE_RENDER_STATS) && defined(HYP_ENABLE_RENDER_STATS_COUNTERS)
-    EngineRenderStatsCounts counts;
+    RenderStatsCounts counts;
     counts[ERS_RENDER_GROUPS] = 1;
 
     g_engine->GetRenderStatsCalculator().AddCounts(counts);

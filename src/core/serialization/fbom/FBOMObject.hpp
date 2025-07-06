@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_FBOM_OBJECT_HPP
-#define HYPERION_FBOM_OBJECT_HPP
+#pragma once
 
 #include <core/memory/Any.hpp>
 
@@ -418,5 +417,3 @@ struct FBOMObjectSerialize_Impl<T, std::enable_if_t<!std::is_same_v<FBOMObject, 
 
 } // namespace serialization
 } // namespace hyperion
-
-#endif

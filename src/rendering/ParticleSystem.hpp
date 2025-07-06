@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_PARTICLE_SYSTEM_HPP
-#define HYPERION_PARTICLE_SYSTEM_HPP
+#pragma once
 
 #include <Constants.hpp>
 
@@ -15,7 +14,7 @@
 
 #include <util/img/Bitmap.hpp>
 
-#include <rendering/backend/RenderObject.hpp>
+#include <rendering/RenderObject.hpp>
 
 namespace hyperion {
 
@@ -76,7 +75,7 @@ public:
     {
         return BoundingSphere(m_params.origin, m_params.radius);
     }
-    
+
 private:
     void Init() override;
 
@@ -138,4 +137,3 @@ private:
 
 } // namespace hyperion
 
-#endif

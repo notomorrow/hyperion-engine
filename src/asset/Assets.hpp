@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_ASSETS_HPP
-#define HYPERION_ASSETS_HPP
+#pragma once
 
 #include <asset/AssetLoader.hpp>
 #include <asset/AssetCache.hpp>
@@ -347,4 +346,3 @@ private:
 
 } // namespace hyperion
 
-#endif

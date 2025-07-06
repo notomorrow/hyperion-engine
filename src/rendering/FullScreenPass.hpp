@@ -1,14 +1,13 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_FULL_SCREEN_PASS_HPP
-#define HYPERION_FULL_SCREEN_PASS_HPP
+#pragma once
 
 #include <rendering/RenderableAttributes.hpp>
 
 #include <rendering/rhi/CmdList.hpp>
 
-#include <rendering/backend/RenderObject.hpp>
-#include <rendering/backend/RendererStructs.hpp>
+#include <rendering/RenderObject.hpp>
+#include <rendering/RenderStructs.hpp>
 
 #include <core/memory/UniquePtr.hpp>
 
@@ -201,5 +200,3 @@ private:
 };
 
 } // namespace hyperion
-
-#endif

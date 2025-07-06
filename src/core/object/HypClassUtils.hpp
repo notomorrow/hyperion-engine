@@ -1,7 +1,6 @@
 /* Copyright (c) 2024-2025 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_CORE_HYP_CLASS_UTILS_HPP
-#define HYPERION_CORE_HYP_CLASS_UTILS_HPP
+#pragma once
 
 #include <core/object/HypClass.hpp>
 #include <core/object/HypStruct.hpp>
@@ -211,5 +210,3 @@ EnumType GetEnumMemberValue(WeakName memberName, EnumType errorValue = EnumType(
 }
 
 } // namespace hyperion
-
-#endif

@@ -1,7 +1,6 @@
 /* Copyright (c) 2025 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_ENGINE_GLOBALS_HPP
-#define HYPERION_ENGINE_GLOBALS_HPP
+#pragma once
 
 #include <core/Handle.hpp>
 
@@ -34,5 +33,3 @@ extern ShaderCompiler* g_shaderCompiler;
 #endif
 
 } // namespace hyperion
-
-#endif

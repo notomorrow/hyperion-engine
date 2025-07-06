@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_FLOAT16_HPP
-#define HYPERION_FLOAT16_HPP
+#pragma once
 
 #include <core/Defines.hpp>
 
@@ -211,5 +210,3 @@ struct alignas(2) Float16
 static_assert(sizeof(Float16) == 2, "float16 must be 2 bytes in size");
 
 } // namespace hyperion
-
-#endif

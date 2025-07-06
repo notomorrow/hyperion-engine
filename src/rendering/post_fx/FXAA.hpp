@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_FXAA_HPP
-#define HYPERION_FXAA_HPP
+#pragma once
 
 #include <rendering/PostFX.hpp>
 #include <Types.hpp>
@@ -25,5 +24,3 @@ protected:
 };
 
 } // namespace hyperion
-
-#endif

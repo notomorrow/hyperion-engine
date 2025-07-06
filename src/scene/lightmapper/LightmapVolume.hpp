@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_LIGHTMAP_VOLUME_HPP
-#define HYPERION_LIGHTMAP_VOLUME_HPP
+#pragma once
 
 #include <core/object/HypObject.hpp>
 
@@ -152,11 +151,10 @@ private:
 
     HYP_FIELD(Serialize = true)
     HashMap<LightmapTextureType, Handle<Texture>> m_atlasTextures;
-    
+
     HYP_FIELD(Serialize = true)
     LightmapVolumeAtlas m_atlas;
 };
 
 } // namespace hyperion
 
-#endif

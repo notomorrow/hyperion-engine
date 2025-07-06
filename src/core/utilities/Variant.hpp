@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_VARIANT_HPP
-#define HYPERION_VARIANT_HPP
+#pragma once
 
 #include <core/memory/Memory.hpp>
 #include <core/memory/AnyRef.hpp>
@@ -1124,5 +1123,3 @@ using Variant = utilities::Variant<Types...>;
 using utilities::Visit;
 
 } // namespace hyperion
-
-#endif

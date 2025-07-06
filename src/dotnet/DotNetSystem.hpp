@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_DOTNET_DOT_NET_SYSTEM_HPP
-#define HYPERION_DOTNET_DOT_NET_SYSTEM_HPP
+#pragma once
 
 #include <core/memory/RefCountedPtr.hpp>
 
@@ -79,5 +78,3 @@ private:
 
 } // namespace dotnet
 } // namespace hyperion
-
-#endif

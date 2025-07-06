@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_TRAITS_HPP
-#define HYPERION_TRAITS_HPP
+#pragma once
 
 #include <core/utilities/Tuple.hpp>
 
@@ -324,5 +323,3 @@ struct FunctionTraits<T const volatile> : public FunctionTraits<T>
 #define HYP_HAS_STATIC_METHOD(T, methodName) HasStaticMethod_##methodName<T>::value
 
 } // namespace hyperion
-
-#endif

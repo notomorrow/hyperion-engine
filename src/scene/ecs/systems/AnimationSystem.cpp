@@ -55,7 +55,7 @@ void AnimationSystem::Process(float delta)
             animation->ApplyBlended(playbackState.currentTime, 0.5f);
         }
 
-        meshComponent.skeleton->Update(delta);
+        meshComponent.skeleton->SetNeedsRenderProxyUpdate();
     }
 }
 

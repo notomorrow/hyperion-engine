@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_FLAT_SET_HPP
-#define HYPERION_FLAT_SET_HPP
+#pragma once
 
 #include <core/containers/ContainerBase.hpp>
 #include <core/containers/SortedArray.hpp>
@@ -340,5 +339,3 @@ template <class T>
 using FlatSet = containers::FlatSet<T>;
 
 } // namespace hyperion
-
-#endif

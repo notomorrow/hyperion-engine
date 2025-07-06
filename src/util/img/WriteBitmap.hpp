@@ -1,6 +1,4 @@
-#ifndef WRITE_BITMAP_HPP
-#define WRITE_BITMAP_HPP
-
+#pragma once
 #include <core/Defines.hpp>
 
 // just a quick BMP writer for testing
@@ -21,5 +19,3 @@ public:
 };
 
 } // namespace hyperion
-
-#endif

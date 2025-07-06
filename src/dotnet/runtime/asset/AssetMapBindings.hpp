@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_RUNTIME_DOTNET_ASSET_MAP_BINDINGS_HPP
-#define HYPERION_RUNTIME_DOTNET_ASSET_MAP_BINDINGS_HPP
+#pragma once
 
 #include <asset/AssetBatch.hpp>
 
@@ -16,5 +15,3 @@ extern "C"
         AssetMap* map;
     };
 } // extern "C"
-
-#endif

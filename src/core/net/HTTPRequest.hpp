@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_CORE_NET_HTTP_REQUEST_HPP
-#define HYPERION_CORE_NET_HTTP_REQUEST_HPP
+#pragma once
 
 #include <core/Defines.hpp>
 
@@ -117,5 +116,3 @@ using net::HTTPRequest;
 using net::HTTPResponse;
 
 } // namespace hyperion
-
-#endif

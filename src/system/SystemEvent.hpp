@@ -1,6 +1,4 @@
-#ifndef HYPERION_SYSTEM_EVENT_HPP
-#define HYPERION_SYSTEM_EVENT_HPP
-
+#pragma once
 #include <input/Mouse.hpp>
 #include <input/Keyboard.hpp>
 
@@ -150,5 +148,3 @@ using sys::SystemEventType;
 using sys::SystemWindowEventType;
 
 } // namespace hyperion
-
-#endif

@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_ANY_HPP
-#define HYPERION_ANY_HPP
+#pragma once
 
 #include <core/utilities/TypeId.hpp>
 #include <core/memory/AnyRef.hpp>
@@ -764,5 +763,3 @@ using memory::Any;
 using memory::CopyableAny;
 
 } // namespace hyperion
-
-#endif

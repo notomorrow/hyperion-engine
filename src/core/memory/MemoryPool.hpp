@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_MEMORY_POOL_HPP
-#define HYPERION_MEMORY_POOL_HPP
+#pragma once
 
 #include <core/containers/LinkedList.hpp>
 #include <core/containers/FixedArray.hpp>
@@ -425,5 +424,3 @@ using memory::MemoryPool;
 using memory::MemoryPoolInitInfo;
 
 } // namespace hyperion
-
-#endif

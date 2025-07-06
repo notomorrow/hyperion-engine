@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_FBOM_MARSHALER_HPP
-#define HYPERION_FBOM_MARSHALER_HPP
+#pragma once
 
 #include <core/memory/UniquePtr.hpp>
 #include <core/memory/Any.hpp>
@@ -104,5 +103,3 @@ public:
     }
 
 } // namespace hyperion::serialization
-
-#endif

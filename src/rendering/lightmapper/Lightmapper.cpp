@@ -4,24 +4,20 @@
 
 #include <rendering/RenderEnvironment.hpp>
 #include <rendering/RenderGlobalState.hpp>
-#include <rendering/RenderScene.hpp>
 #include <rendering/RenderCamera.hpp>
-#include <rendering/RenderLight.hpp>
 #include <rendering/RenderWorld.hpp>
 #include <rendering/RenderMesh.hpp>
 #include <rendering/RenderTexture.hpp>
 #include <rendering/RenderEnvProbe.hpp>
 #include <rendering/RenderEnvGrid.hpp>
 #include <rendering/RenderView.hpp>
+#include <rendering/RenderHelpers.hpp>
 #include <rendering/RenderCollection.hpp>
+#include <rendering/RenderBackend.hpp>
+#include <rendering/RenderObject.hpp>
+#include <rendering/RenderConfig.hpp>
+#include <rendering/RenderDevice.hpp>
 #include <rendering/Renderer.hpp>
-
-#include <rendering/backend/RenderBackend.hpp>
-#include <rendering/backend/RenderObject.hpp>
-#include <rendering/backend/RenderConfig.hpp>
-#include <rendering/backend/RendererDevice.hpp>
-#include <rendering/backend/RendererInstance.hpp>
-#include <rendering/backend/RendererFeatures.hpp>
 
 #include <scene/BVH.hpp>
 #include <scene/Mesh.hpp>
@@ -676,9 +672,9 @@ void LightmapGPUPathTracer::ReadHitsBuffer(FrameBase* frame, Span<LightmapHit> o
     HYPERION_ASSERT_RESULT(stagingBuffer->Create());
     stagingBuffer->Memset(outHits.Size() * sizeof(LightmapHit), 0);
 
-    SingleTimeCommands commands;
+    UniquePtr<SingleTimeCommands> singleTimeCommands = g_renderBackend->GetSingleTimeCommands();
 
-    commands.Push([&](CmdList& cmd)
+    singleTimeCommands->Push([&](CmdList& cmd)
         {
             const ResourceState previousResourceState = hitsBuffer->GetResourceState();
 
@@ -695,7 +691,7 @@ void LightmapGPUPathTracer::ReadHitsBuffer(FrameBase* frame, Span<LightmapHit> o
             cmd.Add<InsertBarrier>(hitsBuffer, previousResourceState);
         });
 
-    HYPERION_ASSERT_RESULT(commands.Execute());
+    HYPERION_ASSERT_RESULT(singleTimeCommands->Execute());
 
     stagingBuffer->Read(sizeof(LightmapHit) * outHits.Size(), outHits.Data());
 
@@ -757,7 +753,7 @@ void LightmapGPUPathTracer::Render(FrameBase* frame, const RenderSetup& renderSe
         m_raytracingPipeline,
         ArrayMap<Name, ArrayMap<Name, uint32>> {
             { NAME("Global"),
-                { { NAME("WorldsBuffer"), ShaderDataOffset<WorldShaderData>(*renderSetup.world) },
+                { { NAME("WorldsBuffer"), ShaderDataOffset<WorldShaderData>(renderSetup.world->GetBufferIndex()) },
                     { NAME("EnvGridsBuffer"), ShaderDataOffset<EnvGridShaderData>(renderSetup.envGrid, 0) },
                     { NAME("CurrentEnvProbe"), ShaderDataOffset<EnvProbeShaderData>(renderSetup.envProbe, 0) } } } },
         frame->GetFrameIndex());

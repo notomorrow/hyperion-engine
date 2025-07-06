@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_BLUE_NOISE_HPP
-#define HYPERION_BLUE_NOISE_HPP
+#pragma once
 
 #include <Types.hpp>
 
@@ -22,5 +21,3 @@ struct BlueNoise
 };
 
 } // namespace hyperion
-
-#endif

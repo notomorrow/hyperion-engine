@@ -1,7 +1,6 @@
 /* Copyright (c) 2024-2025 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_SCENE_OCTREE_HPP
-#define HYPERION_SCENE_OCTREE_HPP
+#pragma once
 
 #include <util/octree/Octree.hpp>
 
@@ -123,5 +122,3 @@ private:
 };
 
 } // namespace hyperion
-
-#endif

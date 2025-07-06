@@ -1,13 +1,12 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_DEPTH_PYRAMID_RENDERER_HPP
-#define HYPERION_DEPTH_PYRAMID_RENDERER_HPP
+#pragma once
 
 #include <core/containers/Array.hpp>
 
 #include <core/functional/Delegate.hpp>
 
-#include <rendering/backend/RenderObject.hpp>
+#include <rendering/RenderObject.hpp>
 
 #include <core/math/Extent.hpp>
 
@@ -54,5 +53,3 @@ private:
 };
 
 } // namespace hyperion
-
-#endif

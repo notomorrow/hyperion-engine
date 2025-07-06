@@ -13,10 +13,10 @@
 
 #include <rendering/rhi/CmdList.hpp>
 
-#include <rendering/backend/RendererFrame.hpp>
-#include <rendering/backend/RendererDescriptorSet.hpp>
-#include <rendering/backend/RendererComputePipeline.hpp>
-#include <rendering/backend/RendererFramebuffer.hpp>
+#include <rendering/RenderFrame.hpp>
+#include <rendering/RenderDescriptorSet.hpp>
+#include <rendering/RenderComputePipeline.hpp>
+#include <rendering/RenderFramebuffer.hpp>
 
 #include <scene/Texture.hpp>
 

@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_AUDIO_MANAGER_HPP
-#define HYPERION_AUDIO_MANAGER_HPP
+#pragma once
 
 #include <AL/al.h>
 #include <AL/alc.h>
@@ -52,5 +51,3 @@ private:
     ALCcontext* m_context;
 };
 } // namespace hyperion
-
-#endif

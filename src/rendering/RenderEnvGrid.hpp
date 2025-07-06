@@ -1,7 +1,6 @@
 /* Copyright (c) 2024-2025 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_RENDER_ENV_GRID_HPP
-#define HYPERION_RENDER_ENV_GRID_HPP
+#pragma once
 
 #include <core/Handle.hpp>
 
@@ -12,7 +11,7 @@
 #include <rendering/RenderResource.hpp>
 #include <rendering/RenderCollection.hpp>
 
-#include <rendering/backend/RenderObject.hpp>
+#include <rendering/RenderObject.hpp>
 
 #include <Types.hpp>
 
@@ -20,7 +19,6 @@ namespace hyperion {
 
 class EnvGrid;
 class RenderView;
-class RenderScene;
 
 class RenderEnvGrid final : public RenderResourceBase
 {
@@ -127,5 +125,3 @@ protected:
 };
 
 } // namespace hyperion
-
-#endif

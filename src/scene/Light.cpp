@@ -4,10 +4,7 @@
 #include <scene/Material.hpp>
 #include <scene/ecs/EntityTag.hpp>
 
-#include <rendering/RenderLight.hpp>
-#include <rendering/RenderGlobalState.hpp>
-
-#include <rendering/backend/RendererDescriptorSet.hpp>
+#include <rendering/RenderProxy.hpp>
 
 #include <core/object/HypClassUtils.hpp>
 
@@ -36,8 +33,7 @@ Light::Light(LightType type, const Vec3f& position, const Color& color, float in
       m_intensity(intensity),
       m_radius(radius),
       m_falloff(1.0f),
-      m_spotAngles(Vec2f::Zero()),
-      m_renderResource(nullptr)
+      m_spotAngles(Vec2f::Zero())
 {
     m_entityInitInfo.canEverUpdate = false;
     m_entityInitInfo.receivesUpdate = false;
@@ -54,8 +50,7 @@ Light::Light(LightType type, const Vec3f& position, const Vec3f& normal, const V
       m_intensity(intensity),
       m_radius(radius),
       m_falloff(1.0f),
-      m_spotAngles(Vec2f::Zero()),
-      m_renderResource(nullptr)
+      m_spotAngles(Vec2f::Zero())
 {
     m_entityInitInfo.canEverUpdate = false;
     m_entityInitInfo.receivesUpdate = false;
@@ -65,27 +60,14 @@ Light::Light(LightType type, const Vec3f& position, const Vec3f& normal, const V
 
 Light::~Light()
 {
-    if (m_renderResource != nullptr)
-    {
-        // temp shit
-        m_renderResource->DecRef();
-        FreeResource(m_renderResource);
-    }
 }
 
 void Light::Init()
 {
-    m_renderResource = AllocateResource<RenderLight>(this);
-
     if (m_material.IsValid())
     {
         InitObject(m_material);
-
-        m_renderResource->SetMaterial(m_material);
     }
-
-    // temp shit
-    m_renderResource->IncRef();
 
     SetReady(true);
 }
@@ -200,8 +182,6 @@ void Light::SetMaterial(Handle<Material> material)
         InitObject(m_material);
 
         SetNeedsRenderProxyUpdate();
-
-        m_renderResource->SetMaterial(m_material);
     }
 }
 
@@ -264,6 +244,8 @@ void Light::UpdateRenderProxy(IRenderProxy* proxy)
     RenderProxyLight* proxyCasted = static_cast<RenderProxyLight*>(proxy);
     proxyCasted->light = WeakHandleFromThis();
 
+    proxyCasted->lightMaterial = m_material.ToWeak();
+
     const BoundingBox aabb = GetAABB();
 
     LightShaderData& bufferData = proxyCasted->bufferData;
@@ -276,7 +258,7 @@ void Light::UpdateRenderProxy(IRenderProxy* proxy)
     bufferData.positionIntensity = Vec4f(m_position, m_intensity);
     bufferData.normal = Vec4f(m_normal, 0.0f);
     bufferData.spotAngles = m_spotAngles;
-    bufferData.materialIndex = ~0u; // set in RenderLight, TODO: Refactor so it is set when light is bound
+    bufferData.materialIndex = ~0u; // materialIndex gets set in WriteBufferData_Light()
     bufferData.aabbMin = Vec4f(aabb.min, 1.0f);
     bufferData.aabbMax = Vec4f(aabb.max, 1.0f);
     bufferData.shadowMapIndex = ~0u; // @TODO

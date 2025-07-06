@@ -1,6 +1,4 @@
-#ifndef HYPERION_APP_HPP
-#define HYPERION_APP_HPP
-
+#pragma once
 #include <core/Defines.hpp>
 
 #include <core/Handle.hpp>
@@ -49,5 +47,3 @@ private:
 using sys::App;
 
 } // namespace hyperion
-
-#endif

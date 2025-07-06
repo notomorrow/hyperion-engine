@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_PIMPL_HPP
-#define HYPERION_PIMPL_HPP
+#pragma once
 
 #include <core/Defines.hpp>
 
@@ -109,7 +108,7 @@ public:
     HYP_FORCE_INLINE T* Get() const
     {
         return m_allocation ? ((Allocation*)m_allocation)->storage.GetPointer() : nullptr;
-        //return HYP_ALIGN_PTR_AS(reinterpret_cast<uintptr_t>(m_allocation) + offsetof(Allocation, storage), T);
+        // return HYP_ALIGN_PTR_AS(reinterpret_cast<uintptr_t>(m_allocation) + offsetof(Allocation, storage), T);
     }
 
     HYP_FORCE_INLINE T* operator->() const
@@ -207,5 +206,3 @@ HYP_FORCE_INLINE Pimpl<T> MakePimpl(Args&&... args)
 }
 
 } // namespace hyperion
-
-#endif

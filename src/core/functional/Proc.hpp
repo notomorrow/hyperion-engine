@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_PROC_HPP
-#define HYPERION_PROC_HPP
+#pragma once
 
 #include <core/Defines.hpp>
 #include <core/Util.hpp>
@@ -510,5 +509,3 @@ using functional::Proc;
 using functional::ProcRef;
 
 } // namespace hyperion
-
-#endif

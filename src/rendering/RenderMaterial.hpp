@@ -1,15 +1,14 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_RENDER_MATERIAL_HPP
-#define HYPERION_RENDER_MATERIAL_HPP
+#pragma once
 
 #include <rendering/ShaderManager.hpp>
 #include <rendering/RenderableAttributes.hpp>
 #include <rendering/RenderResource.hpp>
 #include <rendering/RenderProxy.hpp>
 
-#include <rendering/backend/RendererFrame.hpp>
-#include <rendering/backend/RenderObject.hpp>
+#include <rendering/RenderFrame.hpp>
+#include <rendering/RenderObject.hpp>
 
 #include <core/containers/FixedArray.hpp>
 #include <core/containers/String.hpp>
@@ -27,52 +26,6 @@ class Texture;
 class RenderTexture;
 
 enum class MaterialTextureKey : uint64;
-
-class RenderMaterial final : public RenderResourceBase
-{
-public:
-    RenderMaterial(Material* material);
-    RenderMaterial(RenderMaterial&& other) noexcept;
-    virtual ~RenderMaterial() override;
-
-    HYP_FORCE_INLINE Material* GetMaterial() const
-    {
-        return m_material;
-    }
-
-    // /*! \note Only call this method from the render thread or task initiated by the render thread */
-    // HYP_FORCE_INLINE const FixedArray<DescriptorSetRef, maxFramesInFlight>& GetDescriptorSets() const
-    // {
-    //     return m_descriptorSets;
-    // }
-
-    void SetTexture(MaterialTextureKey textureKey, const Handle<Texture>& texture);
-    void SetTextures(FlatMap<MaterialTextureKey, Handle<Texture>>&& textures);
-
-    void SetBoundTextureIDs(const Array<ObjId<Texture>>& boundTextureIds);
-
-    void SetBufferData(const MaterialShaderData& bufferData);
-
-protected:
-    virtual void Initialize_Internal() override;
-    virtual void Destroy_Internal() override;
-    virtual void Update_Internal() override;
-
-    virtual GpuBufferHolderBase* GetGpuBufferHolder() const override;
-
-private:
-    void CreateDescriptorSets();
-    void DestroyDescriptorSets();
-
-    void UpdateBufferData();
-
-    Material* m_material;
-    FlatMap<MaterialTextureKey, Handle<Texture>> m_textures;
-    HashMap<ObjId<Texture>, TResourceHandle<RenderTexture>> m_renderTextures;
-    Array<ObjId<Texture>> m_boundTextureIds;
-    MaterialShaderData m_bufferData;
-    // FixedArray<DescriptorSetRef, maxFramesInFlight> m_descriptorSets;
-};
 
 class HYP_API MaterialDescriptorSetManager
 {
@@ -105,5 +58,3 @@ private:
 };
 
 } // namespace hyperion
-
-#endif

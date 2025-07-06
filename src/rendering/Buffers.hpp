@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_BUFFERS_HPP
-#define HYPERION_BUFFERS_HPP
+#pragma once
 
 #include <core/memory/MemoryPool.hpp>
 
@@ -11,28 +10,14 @@
 
 #include <core/Defines.hpp>
 
-#include <rendering/backend/RendererStructs.hpp>
-#include <rendering/backend/RenderObject.hpp>
-#include <rendering/backend/RendererGpuBuffer.hpp>
-#include <rendering/backend/Platform.hpp>
+#include <rendering/RenderStructs.hpp>
+#include <rendering/RenderObject.hpp>
+#include <rendering/RenderGpuBuffer.hpp>
 
 #include <core/math/Matrix4.hpp>
 
 #include <Constants.hpp>
 #include <Types.hpp>
-
-#include <mutex>
-
-namespace hyperion {
-
-namespace platform {
-template <PlatformType PLATFORM>
-class Device;
-} // namespace platform
-
-using Device = platform::Device<Platform::current>;
-
-} // namespace hyperion
 
 namespace hyperion {
 
@@ -419,5 +404,3 @@ private:
 };
 
 } // namespace hyperion
-
-#endif

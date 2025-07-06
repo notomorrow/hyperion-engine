@@ -1,6 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef HYPERION_RTC_TRACK_HPP
-#define HYPERION_RTC_TRACK_HPP
+
+#pragma once
 
 #include <core/containers/String.hpp>
 #include <core/memory/ByteBuffer.hpp>
@@ -14,7 +14,7 @@ class RtcpSrReporter;
 class RtpPacketizationConfig;
 } // namespace rtc
 
-    #include <memory>
+#include <memory>
 #endif // HYP_LIBDATACHANNEL
 
 namespace hyperion {
@@ -114,5 +114,3 @@ using LibDataChannelRTCTrack = NullRTCTrack;
 #endif // HYP_LIBDATACHANNEL
 
 } // namespace hyperion
-
-#endif

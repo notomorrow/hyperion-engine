@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_ECS_UI_COMPONENT_HPP
-#define HYPERION_ECS_UI_COMPONENT_HPP
+#pragma once
 
 #include <core/memory/RefCountedPtr.hpp>
 
@@ -29,5 +28,3 @@ struct UIComponent
 };
 
 } // namespace hyperion
-
-#endif

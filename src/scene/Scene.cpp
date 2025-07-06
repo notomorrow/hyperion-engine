@@ -24,15 +24,13 @@
 #include <scene/ecs/systems/ScriptSystem.hpp>
 #include <scene/ecs/systems/ScenePrimaryCameraSystem.hpp>
 
-#include <rendering/RenderScene.hpp>
 #include <rendering/RenderWorld.hpp>
 #include <rendering/RenderCamera.hpp>
 #include <rendering/RenderEnvironment.hpp>
 #include <rendering/ReflectionProbeRenderer.hpp>
 #include <rendering/RenderGlobalState.hpp>
 
-#include <rendering/backend/RendererFeatures.hpp>
-#include <rendering/backend/rt/RendererAccelerationStructure.hpp>
+#include <rendering/rt/RenderAccelerationStructure.hpp>
 
 #include <core/logging/LogChannels.hpp>
 #include <core/logging/Logger.hpp>
@@ -145,8 +143,7 @@ Scene::Scene(World* world, ThreadId ownerThreadId, EnumFlags<SceneFlags> flags)
       m_isAudioListener(false),
       m_entityManager(CreateObject<EntityManager>(ownerThreadId, this)),
       m_octree(m_entityManager, BoundingBox(Vec3f(-250.0f), Vec3f(250.0f))),
-      m_previousDelta(0.01667f),
-      m_renderResource(nullptr)
+      m_previousDelta(0.01667f)
 {
     m_root = CreateObject<Node>(NAME("<ROOT>"), Handle<Entity>::empty, Transform::identity, this);
 }
@@ -195,30 +192,11 @@ Scene::~Scene()
 
         entityManager.Reset();
     }
-
-    if (m_renderResource != nullptr)
-    {
-        FreeResource(m_renderResource);
-
-        m_renderResource = nullptr;
-    }
 }
 
 void Scene::Init()
 {
-    AddDelegateHandler(g_engine->GetDelegates().OnShutdown.Bind([this]
-        {
-            if (m_renderResource != nullptr)
-            {
-                FreeResource(m_renderResource);
-
-                m_renderResource = nullptr;
-            }
-        }));
-
     m_entityManager->SetWorld(m_world);
-
-    m_renderResource = AllocateResource<RenderScene>(this);
 
     AddSystemIfApplicable<CameraSystem>();
     AddSystemIfApplicable<ScenePrimaryCameraSystem>();

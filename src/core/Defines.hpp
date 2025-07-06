@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_DEFINES_HPP
-#define HYPERION_DEFINES_HPP
+#pragma once
 
 #pragma region Compiler and Platform Switches
 
@@ -500,5 +499,3 @@
 #define HYP_FIELD(...)
 
 #pragma endregion
-
-#endif // !HYPERION_DEFINES_HPP

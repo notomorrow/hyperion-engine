@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_FBX_MODEL_LOADER_HPP
-#define HYPERION_FBX_MODEL_LOADER_HPP
+#pragma once
 
 #include <asset/Assets.hpp>
 #include <scene/Node.hpp>
@@ -14,7 +13,7 @@ HYP_CLASS(NoScriptBindings)
 class FBXModelLoader : public AssetLoaderBase
 {
     HYP_OBJECT_BODY(FBXModelLoader);
-    
+
 public:
     virtual ~FBXModelLoader() = default;
 
@@ -23,4 +22,3 @@ public:
 
 } // namespace hyperion
 
-#endif

@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_VECTOR4_HPP
-#define HYPERION_VECTOR4_HPP
+#pragma once
 
 #include <core/math/Vector2.hpp>
 #include <core/math/Vector3.hpp>
@@ -817,5 +816,3 @@ struct Formatter<StringType, math::Vec4<T>>
 } // namespace hyperion
 
 HYP_DEF_STL_HASH(hyperion::Vector4);
-
-#endif

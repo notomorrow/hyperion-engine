@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_OGRE_XML_MODEL_LOADER_HPP
-#define HYPERION_OGRE_XML_MODEL_LOADER_HPP
+#pragma once
 
 #include <asset/Assets.hpp>
 #include <scene/Node.hpp>
@@ -14,7 +13,7 @@ HYP_CLASS(NoScriptBindings)
 class OgreXMLModelLoader : public AssetLoaderBase
 {
     HYP_OBJECT_BODY(OgreXMLModelLoader);
-    
+
 public:
     struct OgreXMLModel
     {
@@ -51,4 +50,3 @@ public:
 
 } // namespace hyperion
 
-#endif

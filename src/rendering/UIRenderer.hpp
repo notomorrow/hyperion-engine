@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_UI_RENDERER_HPP
-#define HYPERION_UI_RENDERER_HPP
+#pragma once
 
 #include <core/functional/Delegate.hpp>
 
@@ -14,7 +13,7 @@
 #include <rendering/Renderer.hpp>
 #include <rendering/RenderCollection.hpp>
 
-#include <rendering/backend/RenderObject.hpp>
+#include <rendering/RenderObject.hpp>
 
 #include <scene/Scene.hpp>
 #include <scene/Subsystem.hpp>
@@ -118,4 +117,3 @@ private:
 
 } // namespace hyperion
 
-#endif

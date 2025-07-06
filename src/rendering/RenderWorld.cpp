@@ -2,7 +2,6 @@
 
 #include <rendering/RenderWorld.hpp>
 #include <rendering/RenderCamera.hpp>
-#include <rendering/RenderScene.hpp>
 #include <rendering/RenderView.hpp>
 #include <rendering/RenderEnvProbe.hpp>
 #include <rendering/RenderEnvGrid.hpp>
@@ -86,44 +85,6 @@ void RenderWorld::RemoveView(RenderView* renderView)
         });
 }
 
-void RenderWorld::AddScene(TResourceHandle<RenderScene>&& renderScene)
-{
-    HYP_SCOPE;
-
-    if (!renderScene)
-    {
-        return;
-    }
-
-    Execute([this, renderScene = std::move(renderScene)]()
-        {
-            m_renderScenes.PushBack(std::move(renderScene));
-        });
-}
-
-void RenderWorld::RemoveScene(RenderScene* renderScene)
-{
-    HYP_SCOPE;
-
-    if (!renderScene)
-    {
-        return;
-    }
-
-    Execute([this, renderScene]()
-        {
-            auto it = m_renderScenes.FindIf([renderScene](const TResourceHandle<RenderScene>& item)
-                {
-                    return item.Get() == renderScene;
-                });
-
-            if (it != m_renderScenes.End())
-            {
-                m_renderScenes.Erase(it);
-            }
-        });
-}
-
 // void RenderWorld::RenderAddShadowMap(const TResourceHandle<RenderShadowMap> &shadowMapResourceHandle)
 // {
 //     HYP_SCOPE;
@@ -159,7 +120,7 @@ void RenderWorld::RemoveScene(RenderScene* renderScene)
 //     }, /* forceOwnerThread */ true);
 // }
 
-const EngineRenderStats& RenderWorld::GetRenderStats() const
+const RenderStats& RenderWorld::GetRenderStats() const
 {
     HYP_SCOPE;
     if (Threads::IsOnThread(g_renderThread))
@@ -176,7 +137,7 @@ const EngineRenderStats& RenderWorld::GetRenderStats() const
     }
 }
 
-void RenderWorld::SetRenderStats(const EngineRenderStats& renderStats)
+void RenderWorld::SetRenderStats(const RenderStats& renderStats)
 {
     HYP_SCOPE;
     Threads::AssertOnThread(g_gameThread);

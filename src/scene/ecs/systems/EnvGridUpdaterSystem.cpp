@@ -14,11 +14,10 @@
 #include <rendering/RenderEnvironment.hpp>
 #include <rendering/RenderCollection.hpp>
 #include <rendering/RenderSubsystem.hpp>
-#include <rendering/RenderScene.hpp>
 #include <rendering/RenderWorld.hpp>
 #include <rendering/RenderEnvGrid.hpp>
 
-#include <rendering/backend/RendererShader.hpp>
+#include <rendering/RenderShader.hpp>
 
 #include <core/math/MathUtil.hpp>
 

@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_WORLD_GRID_LAYER_HPP
-#define HYPERION_WORLD_GRID_LAYER_HPP
+#pragma once
 
 #include <core/Defines.hpp>
 
@@ -126,4 +125,3 @@ private:
 
 } // namespace hyperion
 
-#endif

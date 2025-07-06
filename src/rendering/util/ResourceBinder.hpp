@@ -1,9 +1,6 @@
 /* Copyright (c) 2025 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_RESOURCE_BINDER_HPP
-#define HYPERION_RESOURCE_BINDER_HPP
-
-#include <core/memory/UniquePtr.hpp>
+#pragma once
 
 #include <core/Handle.hpp>
 
@@ -52,16 +49,6 @@ struct ResourceBindingAllocatorBase
         }
 
         usedIndices.Set(index, false);
-    }
-
-    HYP_FORCE_INLINE uint32 GetHighestUsedIndex() const
-    {
-        if (!usedIndices.AnyBitsSet())
-        {
-            return 0;
-        }
-
-        return usedIndices.LastSetBitIndex();
     }
 
     // the maximum size of this allocator, i.e. the maximum number of bindings that can be allocated in a single frame
@@ -447,5 +434,3 @@ protected:
 };
 
 } // namespace hyperion
-
-#endif

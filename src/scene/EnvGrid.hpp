@@ -1,7 +1,6 @@
 /* Copyright (c) 2024-2025 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_ENV_GRID_HPP
-#define HYPERION_ENV_GRID_HPP
+#pragma once
 
 #include <core/config/Config.hpp>
 
@@ -20,7 +19,7 @@
 #include <rendering/RenderResource.hpp>
 #include <rendering/RenderCollection.hpp>
 
-#include <rendering/backend/RenderCommand.hpp>
+#include <rendering/RenderCommand.hpp>
 
 #include <GameCounter.hpp>
 #include <HashCode.hpp>
@@ -192,7 +191,7 @@ public:
     void Translate(const BoundingBox& aabb, const Vec3f& translation);
 
     virtual void UpdateRenderProxy(IRenderProxy* proxy) override;
-    
+
 private:
     virtual void OnAttachedToNode(Node* node) override;
     virtual void OnDetachedFromNode(Node* node) override;
@@ -239,4 +238,3 @@ private:
 
 } // namespace hyperion
 
-#endif // !HYPERION_ENV_GRID_HPP

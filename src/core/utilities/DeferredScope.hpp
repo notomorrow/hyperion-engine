@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_DEFERRED_SCOPE_HPP
-#define HYPERION_DEFERRED_SCOPE_HPP
+#pragma once
 
 #include <Constants.hpp>
 #include <Types.hpp>
@@ -39,5 +38,3 @@ using utilities::DeferredScope;
 } // namespace hyperion
 
 #define HYP_DEFER(...) DeferredScope HYP_UNIQUE_NAME(scope)([&] __VA_ARGS__)
-
-#endif

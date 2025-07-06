@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_BVH_HPP
-#define HYPERION_BVH_HPP
+#pragma once
 
 #include <core/containers/Array.hpp>
 #include <core/containers/LinkedList.hpp>
@@ -138,5 +137,3 @@ private:
 };
 
 } // namespace hyperion
-
-#endif

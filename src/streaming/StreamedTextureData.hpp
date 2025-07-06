@@ -1,11 +1,10 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_STREAMED_TEXTURE_DATA_HPP
-#define HYPERION_STREAMED_TEXTURE_DATA_HPP
+#pragma once
 
 #include <streaming/StreamedData.hpp>
 
-#include <rendering/backend/RendererStructs.hpp>
+#include <rendering/RenderStructs.hpp>
 
 #include <core/memory/RefCountedPtr.hpp>
 #include <core/containers/Array.hpp>
@@ -59,5 +58,3 @@ private:
 };
 
 } // namespace hyperion
-
-#endif

@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_EDITOR_UI_HPP
-#define HYPERION_EDITOR_UI_HPP
+#pragma once
 
 #include <core/utilities/TypeId.hpp>
 #include <core/utilities/Optional.hpp>
@@ -36,5 +35,3 @@ static UIElementFactoryBase* GetEditorUIElementFactory()
 }
 
 } // namespace hyperion
-
-#endif

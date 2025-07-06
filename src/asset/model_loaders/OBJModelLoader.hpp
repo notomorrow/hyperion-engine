@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_OBJ_MODEL_LOADER_HPP
-#define HYPERION_OBJ_MODEL_LOADER_HPP
+#pragma once
 
 #include <asset/Assets.hpp>
 
@@ -19,7 +18,7 @@ HYP_CLASS(NoScriptBindings)
 class OBJModelLoader : public AssetLoaderBase
 {
     HYP_OBJECT_BODY(OBJModelLoader);
-    
+
 public:
     struct OBJModel
     {
@@ -102,4 +101,3 @@ struct hash<hyperion::OBJIndex>
 };
 } // namespace std
 
-#endif

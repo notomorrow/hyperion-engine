@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_CORE_NAME_INTERNAL_HPP
-#define HYPERION_CORE_NAME_INTERNAL_HPP
+#pragma once
 
 #include <core/containers/StaticString.hpp>
 #include <core/Defines.hpp>
@@ -362,5 +361,3 @@ struct HashedName
 };
 
 } // namespace hyperion
-
-#endif

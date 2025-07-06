@@ -33,8 +33,8 @@
 #include <HyperionEngine.hpp>
 #include <Engine.hpp>
 
-#include <rendering/backend/RenderConfig.hpp>
-#include <rendering/backend/RenderBackend.hpp>
+#include <rendering/RenderConfig.hpp>
+#include <rendering/RenderBackend.hpp>
 
 #define HYP_SHADER_REFLECTION
 

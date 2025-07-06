@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_ECS_BOUNDING_BOX_COMPONENT_HPP
-#define HYPERION_ECS_BOUNDING_BOX_COMPONENT_HPP
+#pragma once
 
 #include <core/math/BoundingBox.hpp>
 #include <HashCode.hpp>
@@ -30,5 +29,3 @@ struct BoundingBoxComponent
 };
 
 } // namespace hyperion
-
-#endif

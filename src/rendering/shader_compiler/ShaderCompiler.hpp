@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_SHADER_COMPILER_HPP
-#define HYPERION_SHADER_COMPILER_HPP
+#pragma once
 
 #include <core/Name.hpp>
 #include <core/Defines.hpp>
@@ -12,8 +11,8 @@
 
 #include <core/math/Vertex.hpp>
 
-#include <rendering/backend/RendererShader.hpp>
-#include <rendering/backend/RendererDescriptorSet.hpp>
+#include <rendering/RenderShader.hpp>
+#include <rendering/RenderDescriptorSet.hpp>
 
 #include <util/ini/INIFile.hpp>
 
@@ -1441,5 +1440,3 @@ private:
 };
 
 } // namespace hyperion
-
-#endif

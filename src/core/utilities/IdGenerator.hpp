@@ -1,6 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef HYPERION_CORE_ID_GENERATOR_HPP
-#define HYPERION_CORE_ID_GENERATOR_HPP
+
+#pragma once
 
 #include <core/Defines.hpp>
 
@@ -96,5 +96,3 @@ struct IdGenerator
 };
 
 } // namespace hyperion
-
-#endif

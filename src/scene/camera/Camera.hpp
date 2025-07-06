@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_CAMERA_HPP
-#define HYPERION_CAMERA_HPP
+#pragma once
 
 #include <core/Handle.hpp>
 
@@ -22,7 +21,7 @@
 
 #include <input/InputHandler.hpp>
 
-#include <rendering/backend/RenderObject.hpp>
+#include <rendering/RenderObject.hpp>
 
 #include <GameCounter.hpp>
 
@@ -642,4 +641,3 @@ private:
 
 } // namespace hyperion
 
-#endif

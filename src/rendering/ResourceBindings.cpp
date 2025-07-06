@@ -2,12 +2,9 @@
 #include <rendering/RenderGlobalState.hpp>
 #include <rendering/RenderEnvGrid.hpp>
 #include <rendering/RenderEnvProbe.hpp>
-#include <rendering/RenderLight.hpp>
 #include <rendering/RenderMaterial.hpp>
 #include <rendering/RenderTexture.hpp>
-#include <rendering/RenderSkeleton.hpp>
 #include <rendering/PlaceholderData.hpp>
-#include <rendering/lightmapper/RenderLightmapVolume.hpp>
 #include <rendering/Bindless.hpp>
 
 #include <scene/EnvGrid.hpp>
@@ -51,10 +48,7 @@ void WriteBufferData_MeshEntity(GpuBufferHolderBase* gpuBufferHolder, uint32 idx
 
     proxyCasted->bufferData.entityIndex = proxyCasted->entity.Id().ToIndex();
     proxyCasted->bufferData.materialIndex = RenderApi_RetrieveResourceBinding(proxyCasted->material.Id());
-
-    // temp shit:
-    proxyCasted->bufferData.skeletonIndex = proxyCasted->skeleton ? proxyCasted->skeleton->GetRenderResource().GetBufferIndex() : ~0u;
-    // proxyCasted->bufferData.skeletonIndex = RenderApi_RetrieveResourceBinding(proxyCasted->skeleton);
+    proxyCasted->bufferData.skeletonIndex = RenderApi_RetrieveResourceBinding(proxyCasted->skeleton.Id());
 
     gpuBufferHolder->WriteBufferData(idx, &proxyCasted->bufferData, sizeof(proxyCasted->bufferData));
 }
@@ -90,6 +84,7 @@ void OnBindingChanged_ReflectionProbe(EnvProbe* envProbe, uint32 prev, uint32 ne
     }
     else
     {
+        // Temp shit
         envProbe->GetRenderResource().IncRef();
         envProbe->GetPrefilteredEnvMap()->GetRenderResource().IncRef();
     }
@@ -122,7 +117,14 @@ void WriteBufferData_EnvProbe(GpuBufferHolderBase* gpuBufferHolder, uint32 idx, 
     RenderProxyEnvProbe* proxyCasted = static_cast<RenderProxyEnvProbe*>(proxy);
     AssertDebug(proxyCasted != nullptr);
 
-    proxyCasted->bufferData.textureIndex = idx;
+    if (proxyCasted->envProbe.GetUnsafe()->IsA<SkyProbe>() || proxyCasted->envProbe.GetUnsafe()->IsA<ReflectionProbe>())
+    {
+        proxyCasted->bufferData.textureIndex = idx;
+    }
+    else
+    {
+        proxyCasted->bufferData.textureIndex = ~0u;
+    }
 
     gpuBufferHolder->WriteBufferData(idx, &proxyCasted->bufferData, sizeof(proxyCasted->bufferData));
 }
@@ -192,7 +194,7 @@ void WriteBufferData_EnvGrid(GpuBufferHolderBase* gpuBufferHolder, uint32 idx, I
 
     EnvGrid* envGrid = proxyCasted->envGrid.GetUnsafe();
     AssertDebug(envGrid != nullptr);
-    
+
     uint32 offset = 0;
 
     for (auto it = std::begin(proxyCasted->envProbes); it != std::end(proxyCasted->envProbes); ++it)
@@ -201,7 +203,7 @@ void WriteBufferData_EnvGrid(GpuBufferHolderBase* gpuBufferHolder, uint32 idx, I
         if (!it->IsValid())
         {
             std::fill(proxyCasted->bufferData.probeIndices + offset, std::end(proxyCasted->bufferData.probeIndices), ~0u);
-        
+
             break;
         }
 
@@ -224,8 +226,36 @@ void OnBindingChanged_Light(Light* light, uint32 prev, uint32 next)
 {
     AssertDebug(light != nullptr);
 
-    // temp shit
-    RenderApi_AssignResourceBinding(light, light->GetRenderResource().GetBufferIndex());
+    RenderApi_AssignResourceBinding(light, next);
+
+    /// TODO: If next != ~0u, acquire shadow map from ShadowMapAllocator (if the light casts shadows.)
+    /// Then in DeferredRenderer, when we collect all the Lights across Views, we can render using ShadowMapRenderer (derived for the specific type of Light).
+}
+
+void WriteBufferData_Light(GpuBufferHolderBase* gpuBufferHolder, uint32 idx, IRenderProxy* proxy)
+{
+    AssertDebug(gpuBufferHolder != nullptr);
+    AssertDebug(idx != ~0u);
+
+    RenderProxyLight* proxyCasted = static_cast<RenderProxyLight*>(proxy);
+    AssertDebug(proxyCasted != nullptr);
+
+    LightShaderData& bufferData = proxyCasted->bufferData;
+
+    // textured area lights can have a material attached
+    if (proxyCasted->lightMaterial.IsValid())
+    {
+        const uint32 materialBoundIndex = RenderApi_RetrieveResourceBinding(proxyCasted->lightMaterial.GetUnsafe());
+        AssertDebug(materialBoundIndex != ~0u, "Light uses Material {} but it is not bound", proxyCasted->lightMaterial.Id());
+
+        bufferData.materialIndex = materialBoundIndex;
+    }
+    else
+    {
+        bufferData.materialIndex = ~0u;
+    }
+
+    gpuBufferHolder->WriteBufferData(idx, &bufferData, sizeof(bufferData));
 }
 
 // @TODO: Handle update if a texture is changed

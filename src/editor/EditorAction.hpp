@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_EDITOR_ACTION_HPP
-#define HYPERION_EDITOR_ACTION_HPP
+#pragma once
 
 #include <core/Name.hpp>
 
@@ -162,4 +161,3 @@ struct EditorActionFactoryRegistration : public EditorActionFactoryRegistrationB
     static ::hyperion::EditorActionFactoryRegistration<EditorAction_##actionName> EditorActionFactory_##actionName {}; \
     class EditorAction_##actionName : public ::hyperion::EditorAction
 
-#endif

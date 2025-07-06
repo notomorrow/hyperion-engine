@@ -1,7 +1,6 @@
 /* Copyright (c) 2025 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_STREAMING_MANAGER_HPP
-#define HYPERION_STREAMING_MANAGER_HPP
+#pragma once
 
 #include <streaming/Streamable.hpp>
 
@@ -79,4 +78,3 @@ private:
 
 } // namespace hyperion
 
-#endif

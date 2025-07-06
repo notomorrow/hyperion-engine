@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_FONT_ATLAS_LOADER_HPP
-#define HYPERION_FONT_ATLAS_LOADER_HPP
+#pragma once
 
 #include <asset/Assets.hpp>
 
@@ -18,7 +17,7 @@ HYP_CLASS(NoScriptBindings)
 class FontAtlasLoader : public AssetLoaderBase
 {
     HYP_OBJECT_BODY(FontAtlasLoader);
-    
+
 public:
     virtual ~FontAtlasLoader() = default;
 
@@ -27,4 +26,3 @@ public:
 
 } // namespace hyperion
 
-#endif

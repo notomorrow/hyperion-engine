@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_LINKED_LIST_HPP
-#define HYPERION_LINKED_LIST_HPP
+#pragma once
 
 #include <core/containers/ContainerBase.hpp>
 #include <core/utilities/ValueStorage.hpp>
@@ -631,5 +630,3 @@ template <class T>
 using LinkedList = containers::LinkedList<T>;
 
 } // namespace hyperion
-
-#endif

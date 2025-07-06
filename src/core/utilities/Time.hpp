@@ -1,6 +1,4 @@
-#ifndef HYPERION_TIME_HPP
-#define HYPERION_TIME_HPP
-
+#pragma once
 #include <core/Defines.hpp>
 
 #include <HashCode.hpp>
@@ -209,5 +207,3 @@ using utilities::Time;
 using utilities::TimeDiff;
 
 } // namespace hyperion
-
-#endif

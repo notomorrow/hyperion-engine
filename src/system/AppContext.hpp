@@ -1,8 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_APP_CONTEXT_HPP
-#define HYPERION_APP_CONTEXT_HPP
-
+#pragma once
 #ifdef HYP_SDL
 #include <SDL2/SDL_vulkan.h>
 #include <SDL2/SDL.h>
@@ -29,22 +27,15 @@
 #include <input/Mouse.hpp>
 #include <input/InputManager.hpp>
 
-#include <rendering/backend/Platform.hpp>
-
 #include <Types.hpp>
 
 namespace hyperion {
 
 class Game;
-namespace platform {
 
-// forward declare Instance
-template <PlatformType PLATFORM>
-class Instance;
-
-} // namespace platform
-
-using Instance = platform::Instance<Platform::current>;
+#ifdef HYP_VULKAN
+class VulkanInstance;
+#endif
 
 enum class WindowFlags : uint32
 {
@@ -115,7 +106,7 @@ public:
     }
 
 #ifdef HYP_VULKAN
-    virtual VkSurfaceKHR CreateVkSurface(Instance* instance) = 0;
+    virtual VkSurfaceKHR CreateVkSurface(VulkanInstance* instance) = 0;
 #endif
 
     Delegate<void, Vec2i> OnWindowSizeChanged;
@@ -153,7 +144,7 @@ public:
     }
 
 #ifdef HYP_VULKAN
-    virtual VkSurfaceKHR CreateVkSurface(Instance* instance) override;
+    virtual VkSurfaceKHR CreateVkSurface(VulkanInstance* instance) override;
 #endif
 
 private:
@@ -173,7 +164,7 @@ public:
     {
         return m_name;
     }
-    
+
     HYP_FORCE_INLINE GlobalConfig& GetConfiguration()
     {
         return m_configuration;
@@ -250,4 +241,3 @@ using sys::SDLApplicationWindow;
 
 } // namespace hyperion
 
-#endif

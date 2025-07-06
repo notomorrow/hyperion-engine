@@ -1,6 +1,4 @@
-#ifndef HYPERION_FOREST_HPP
-#define HYPERION_FOREST_HPP
-
+#pragma once
 #include <core/containers/Queue.hpp>
 
 #include <core/memory/UniquePtr.hpp>
@@ -466,5 +464,3 @@ private:
 using containers::Forest;
 
 } // namespace hyperion
-
-#endif

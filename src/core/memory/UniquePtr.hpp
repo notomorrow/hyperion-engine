@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_UNIQUE_PTR_HPP
-#define HYPERION_UNIQUE_PTR_HPP
+#pragma once
 
 #include <core/Defines.hpp>
 
@@ -655,5 +654,3 @@ HYP_FORCE_INLINE UniquePtr<T> MakeUnique(Args&&... args)
 }
 
 } // namespace hyperion
-
-#endif

@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_RENDER_GROUP_HPP
-#define HYPERION_RENDER_GROUP_HPP
+#pragma once
 
 #include <core/object/ObjId.hpp>
 #include <core/object/HypObject.hpp>
@@ -16,7 +15,7 @@
 #include <rendering/DrawCall.hpp>
 #include <rendering/RenderProxy.hpp>
 
-#include <rendering/backend/RenderObject.hpp>
+#include <rendering/RenderObject.hpp>
 
 #include <Constants.hpp>
 
@@ -101,7 +100,7 @@ public:
 
 private:
     void Init() override;
-    
+
     GraphicsPipelineRef CreateGraphicsPipeline(PassData* pd) const;
 
     EnumFlags<RenderGroupFlags> m_flags;
@@ -117,4 +116,3 @@ private:
 
 } // namespace hyperion
 
-#endif

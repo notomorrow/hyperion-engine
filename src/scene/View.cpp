@@ -24,16 +24,13 @@
 #include <scene/ecs/components/SkyComponent.hpp>
 
 #include <rendering/RenderView.hpp>
-#include <rendering/RenderScene.hpp>
 #include <rendering/RenderCamera.hpp>
-#include <rendering/RenderLight.hpp>
 #include <rendering/RenderEnvGrid.hpp>
 #include <rendering/RenderEnvProbe.hpp>
 #include <rendering/RenderGlobalState.hpp>
 #include <rendering/GBuffer.hpp>
 #include <rendering/subsystems/sky/SkydomeRenderer.hpp>
-#include <rendering/lightmapper/RenderLightmapVolume.hpp>
-#include <rendering/backend/RenderBackend.hpp>
+#include <rendering/RenderBackend.hpp>
 
 #include <core/profiling/ProfileScope.hpp>
 
@@ -213,19 +210,6 @@ void View::Init()
 
     Assert(m_outputTarget.IsValid(), "View with id #%u must have a valid output target!", Id().Value());
 
-    Array<TResourceHandle<RenderScene>> renderScenes;
-    renderScenes.Reserve(m_scenes.Size());
-
-    for (const Handle<Scene>& scene : m_scenes)
-    {
-        Assert(scene.IsValid(), "Scene is not valid for View with Id #%u", Id().Value());
-        InitObject(scene);
-
-        Assert(scene->IsReady());
-
-        renderScenes.PushBack(TResourceHandle<RenderScene>(scene->GetRenderResource()));
-    }
-
     m_renderResource = AllocateResource<RenderView>(this);
     m_renderResource->SetViewport(m_viewport);
 
@@ -285,12 +269,14 @@ void View::Update(float delta)
     rpl.viewport = m_viewport;
     rpl.priority = m_priority;
 
-    rpl.meshes.Advance(AdvanceAction::CLEAR);
-    rpl.envProbes.Advance(AdvanceAction::CLEAR);
-    rpl.envGrids.Advance(AdvanceAction::CLEAR);
-    rpl.lights.Advance(AdvanceAction::CLEAR);
-    rpl.lightmapVolumes.Advance(AdvanceAction::CLEAR);
-    rpl.textures.Advance(AdvanceAction::CLEAR);
+    rpl.meshes.Advance();
+    rpl.envProbes.Advance();
+    rpl.envGrids.Advance();
+    rpl.lights.Advance();
+    rpl.lightmapVolumes.Advance();
+    rpl.materials.Advance();
+    rpl.textures.Advance();
+    rpl.skeletons.Advance();
 
     CollectLights(rpl);
     CollectLightmapVolumes(rpl);
@@ -299,25 +285,9 @@ void View::Update(float delta)
 
     m_lastMeshCollectionResult = CollectMeshEntities(rpl);
 
-    // Update refs for bound textures for this view
-    if (auto diff = rpl.textures.GetDiff(); diff.NeedsUpdate())
-    {
-        Array<ObjId<Texture>> removed;
-        rpl.textures.GetRemoved(removed, true);
-
-        Array<Texture*> added;
-        rpl.textures.GetAdded(added, true);
-
-        for (Texture* texture : added)
-        {
-            RenderApi_AddRef(texture);
-        }
-
-        for (ObjId<Texture> id : removed)
-        {
-            RenderApi_ReleaseRef(id);
-        }
-    }
+    RenderApi_UpdateTrackedResources(rpl.materials);
+    RenderApi_UpdateTrackedResources(rpl.skeletons);
+    RenderApi_UpdateTrackedResources(rpl.textures);
 
     /// temp
     constexpr uint32 bucketMask = (1 << RB_OPAQUE)
@@ -458,12 +428,15 @@ typename ResourceTracker<ObjId<Entity>, RenderProxyMesh>::Diff View::CollectMesh
                 AssertDebug(meshComponent.proxy->entity.IsValid());
                 AssertDebug(meshComponent.proxy->mesh.IsValid());
                 AssertDebug(meshComponent.proxy->material.IsValid());
+                // AssertDebug(meshComponent.proxy->material == meshComponent.material);
 
                 rpl.meshes.Track(entity->Id(), *meshComponent.proxy, &meshComponent.proxy->version);
 
-                if (meshComponent.material.IsValid())
+                if (const Handle<Material>& material = meshComponent.proxy->material)
                 {
-                    for (const auto& it : meshComponent.material->GetTextures())
+                    rpl.materials.Track(material.Id(), material.Get(), material->GetRenderProxyVersionPtr(), /* allowDuplicatesInSameFrame */ true);
+
+                    for (const auto& it : material->GetTextures())
                     {
                         const Handle<Texture>& texture = it.second;
 
@@ -474,6 +447,11 @@ typename ResourceTracker<ObjId<Entity>, RenderProxyMesh>::Diff View::CollectMesh
 
                         rpl.textures.Track(texture.Id(), texture.Get());
                     }
+                }
+
+                if (const Handle<Skeleton>& skeleton = meshComponent.proxy->skeleton)
+                {
+                    rpl.skeletons.Track(skeleton.Id(), skeleton.Get(), skeleton->GetRenderProxyVersionPtr(), /* allowDuplicatesInSameFrame */ true);
                 }
             }
 
@@ -511,12 +489,15 @@ typename ResourceTracker<ObjId<Entity>, RenderProxyMesh>::Diff View::CollectMesh
                 AssertDebug(meshComponent.proxy->entity.IsValid());
                 AssertDebug(meshComponent.proxy->mesh.IsValid());
                 AssertDebug(meshComponent.proxy->material.IsValid());
+                // AssertDebug(meshComponent.proxy->material == meshComponent.material);
 
                 rpl.meshes.Track(entity->Id(), *meshComponent.proxy, &meshComponent.proxy->version);
 
-                if (meshComponent.material.IsValid())
+                if (const Handle<Material>& material = meshComponent.proxy->material)
                 {
-                    for (const auto& it : meshComponent.material->GetTextures())
+                    rpl.materials.Track(material.Id(), material.Get(), material->GetRenderProxyVersionPtr(), /* allowDuplicatesInSameFrame */ true);
+
+                    for (const auto& it : material->GetTextures())
                     {
                         const Handle<Texture>& texture = it.second;
 
@@ -527,6 +508,11 @@ typename ResourceTracker<ObjId<Entity>, RenderProxyMesh>::Diff View::CollectMesh
 
                         rpl.textures.Track(texture.Id(), texture.Get());
                     }
+                }
+
+                if (const Handle<Skeleton>& skeleton = meshComponent.proxy->skeleton)
+                {
+                    rpl.skeletons.Track(skeleton.Id(), skeleton.Get(), skeleton->GetRenderProxyVersionPtr(), /* allowDuplicatesInSameFrame */ true);
                 }
             }
 
@@ -564,12 +550,15 @@ typename ResourceTracker<ObjId<Entity>, RenderProxyMesh>::Diff View::CollectMesh
                 AssertDebug(meshComponent.proxy->entity.IsValid());
                 AssertDebug(meshComponent.proxy->mesh.IsValid());
                 AssertDebug(meshComponent.proxy->material.IsValid());
+                // AssertDebug(meshComponent.proxy->material == meshComponent.material);
 
                 rpl.meshes.Track(entity->Id(), *meshComponent.proxy, &meshComponent.proxy->version);
 
-                if (meshComponent.material.IsValid())
+                if (const Handle<Material>& material = meshComponent.proxy->material)
                 {
-                    for (const auto& it : meshComponent.material->GetTextures())
+                    rpl.materials.Track(material.Id(), material.Get(), material->GetRenderProxyVersionPtr(), /* allowDuplicatesInSameFrame */ true);
+
+                    for (const auto& it : material->GetTextures())
                     {
                         const Handle<Texture>& texture = it.second;
 
@@ -580,6 +569,11 @@ typename ResourceTracker<ObjId<Entity>, RenderProxyMesh>::Diff View::CollectMesh
 
                         rpl.textures.Track(texture.Id(), texture.Get());
                     }
+                }
+
+                if (const Handle<Skeleton>& skeleton = meshComponent.proxy->skeleton)
+                {
+                    rpl.skeletons.Track(skeleton.Id(), skeleton.Get(), skeleton->GetRenderProxyVersionPtr(), /* allowDuplicatesInSameFrame */ true);
                 }
             }
 
@@ -606,10 +600,8 @@ typename ResourceTracker<ObjId<Entity>, RenderProxyMesh>::Diff View::CollectMesh
         for (RenderProxyMesh* proxy : added)
         {
             RenderApi_AddRef(proxy->entity.GetUnsafe());
-            RenderApi_AddRef(proxy->material.Get());
 
             RenderApi_UpdateRenderProxy(proxy->entity.Id(), proxy);
-            RenderApi_UpdateRenderProxy(proxy->material.Id());
 
             // for now:
             proxy->IncRefs();
@@ -618,7 +610,6 @@ typename ResourceTracker<ObjId<Entity>, RenderProxyMesh>::Diff View::CollectMesh
         for (RenderProxyMesh* proxy : removed)
         {
             RenderApi_ReleaseRef(proxy->entity.Id());
-            RenderApi_ReleaseRef(proxy->material.Id());
 
             // for now:
             proxy->DecRefs();
@@ -675,6 +666,8 @@ void View::CollectLights(RenderProxyList& rpl)
 
                 if (light->GetMaterial().IsValid())
                 {
+                    rpl.materials.Track(light->GetMaterial()->Id(), light->GetMaterial().Get());
+
                     for (const auto& it : light->GetMaterial()->GetTextures())
                     {
                         const Handle<Texture>& texture = it.second;
@@ -701,18 +694,12 @@ void View::CollectLights(RenderProxyList& rpl)
 
         for (Light* light : added)
         {
-            // temp shit
-            light->GetRenderResource().IncRef();
-
             RenderApi_AddRef(light);
             RenderApi_UpdateRenderProxy(light->Id());
         }
 
         for (Light* light : removed)
         {
-            // temp shit
-            light->GetRenderResource().DecRef();
-
             RenderApi_ReleaseRef(light->Id());
         }
 

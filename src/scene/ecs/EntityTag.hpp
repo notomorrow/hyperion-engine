@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_ECS_ENTITY_TAG_HPP
-#define HYPERION_ECS_ENTITY_TAG_HPP
+#pragma once
 
 #include <core/Defines.hpp>
 
@@ -104,5 +103,3 @@ template <class T>
 using EntityType = EntityTagComponent<EntityType_Impl<T>::value>;
 
 } // namespace hyperion
-
-#endif

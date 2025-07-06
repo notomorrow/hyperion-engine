@@ -67,7 +67,7 @@ void DrawCallCollection::PushRenderProxy(DrawCallID id, const RenderProxyMesh& r
     drawCall.id = id;
     drawCall.renderMesh = &renderProxy.mesh->GetRenderResource();
     drawCall.material = renderProxy.material.Get();
-    drawCall.renderSkeleton = renderProxy.skeleton.IsValid() ? &renderProxy.skeleton->GetRenderResource() : nullptr;
+    drawCall.skeleton = renderProxy.skeleton.Get();
     drawCall.entityId = renderProxy.entity.Id();
     drawCall.drawCommandIndex = ~0u;
 }
@@ -125,7 +125,7 @@ void DrawCallCollection::PushRenderProxyInstanced(EntityInstanceBatch* batch, Dr
             drawCall->drawCommandIndex = ~0u;
             drawCall->renderMesh = &renderProxy.mesh->GetRenderResource();
             drawCall->material = renderProxy.material.Get();
-            drawCall->renderSkeleton = renderProxy.skeleton.IsValid() ? &renderProxy.skeleton->GetRenderResource() : nullptr;
+            drawCall->skeleton = renderProxy.skeleton.Get();
             drawCall->count = 0;
 
             indexMapIt->second.PushBack(instancedDrawCalls.Size() - 1);

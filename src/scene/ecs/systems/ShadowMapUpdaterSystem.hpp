@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_ECS_SHADOW_MAP_UPDATER_SYSTEM_HPP
-#define HYPERION_ECS_SHADOW_MAP_UPDATER_SYSTEM_HPP
+#pragma once
 
 #include <scene/ecs/System.hpp>
 #include <scene/ecs/components/ShadowMapComponent.hpp>
@@ -41,4 +40,3 @@ private:
 
 } // namespace hyperion
 
-#endif

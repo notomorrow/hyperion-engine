@@ -3,7 +3,6 @@
 #include <rendering/RenderEnvGrid.hpp>
 #include <rendering/RenderEnvProbe.hpp>
 #include <rendering/RenderCamera.hpp>
-#include <rendering/RenderLight.hpp>
 #include <rendering/RenderTexture.hpp>
 #include <rendering/RenderShadowMap.hpp>
 #include <rendering/RenderView.hpp>
@@ -13,12 +12,12 @@
 
 #include <rendering/debug/DebugDrawer.hpp>
 
-#include <rendering/backend/RenderBackend.hpp>
-#include <rendering/backend/RendererFrame.hpp>
-#include <rendering/backend/RendererImage.hpp>
-#include <rendering/backend/RendererImageView.hpp>
-#include <rendering/backend/RendererGpuBuffer.hpp>
-#include <rendering/backend/AsyncCompute.hpp>
+#include <rendering/RenderBackend.hpp>
+#include <rendering/RenderFrame.hpp>
+#include <rendering/RenderImage.hpp>
+#include <rendering/RenderImageView.hpp>
+#include <rendering/RenderGpuBuffer.hpp>
+#include <rendering/AsyncCompute.hpp>
 
 #include <scene/EnvGrid.hpp>
 #include <scene/EnvProbe.hpp>
@@ -618,6 +617,8 @@ void EnvGridRenderer::RenderFrame(FrameBase* frame, const RenderSetup& renderSet
         }
     }
 
+    HYP_LOG(EnvGrid, Debug, "Rendering EnvGrid with {} probes", envProbeCollection.numProbes);
+
     // render enqueued probes
     while (pd->nextRenderIndices.Any())
     {
@@ -670,15 +671,6 @@ void EnvGridRenderer::RenderFrame(FrameBase* frame, const RenderSetup& renderSet
                 {
                     if (pd->nextRenderIndices.Size() < maxQueuedProbesForRender)
                     {
-                        const Vec4i positionInGrid = Vec4i {
-                            int32(indirectIndex % options.density.x),
-                            int32((indirectIndex % (options.density.x * options.density.y)) / options.density.x),
-                            int32(indirectIndex / (options.density.x * options.density.y)),
-                            int32(indirectIndex)
-                        };
-
-                        probe->GetRenderResource().SetPositionInGrid(positionInGrid);
-
                         // render this probe in the next frame, since the data will have been updated on the gpu on start of the frame
                         pd->nextRenderIndices.Push(indirectIndex);
 
@@ -720,6 +712,15 @@ void EnvGridRenderer::RenderProbe(FrameBase* frame, const RenderSetup& renderSet
 
     const Handle<EnvProbe>& probe = envProbeCollection.GetEnvProbeDirect(probeIndex);
     Assert(probe.IsValid());
+
+    const uint32 probeBoundIndex = RenderApi_RetrieveResourceBinding(probe.Id());
+    AssertDebug(probeBoundIndex != ~0u, "EnvProbe {} is not bound when rendering EnvGrid!", probe.Id());
+
+    RenderProxyEnvProbe* probeProxy = static_cast<RenderProxyEnvProbe*>(RenderApi_GetRenderProxy(probe.Id()));
+    AssertDebug(probeProxy != nullptr, "No render proxy for EnvProbe {} when rendering EnvGrid!", probe.Id());
+
+    HYP_LOG(EnvGrid, Debug, "Rendering EnvProbe {} with {} draw calls collected",
+        probe->Id(), rpl.NumDrawCallsCollected());
 
     {
         RenderSetup rs = renderSetup;
@@ -1030,7 +1031,7 @@ void EnvGridRenderer::ComputeEnvProbeIrradiance_LightField(FrameBase* frame, con
                 break;
             }
 
-            uniforms.lightIndices[numBoundLights++] = light->GetRenderResource().GetBufferIndex();
+            uniforms.lightIndices[numBoundLights++] = RenderApi_RetrieveResourceBinding(light);
         }
 
         uniforms.numBoundLights = numBoundLights;
@@ -1293,7 +1294,5 @@ void EnvGridRenderer::VoxelizeProbe(FrameBase* frame, const RenderSetup& renderS
 }
 
 #pragma endregion EnvGridRenderer
-
-HYP_DESCRIPTOR_CBUFF(Global, EnvGridsBuffer, 1, sizeof(EnvGridShaderData), true);
 
 } // namespace hyperion

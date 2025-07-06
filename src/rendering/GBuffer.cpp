@@ -4,9 +4,8 @@
 #include <rendering/RenderGroup.hpp>
 #include <rendering/Deferred.hpp>
 
-#include <rendering/backend/RenderBackend.hpp>
-#include <rendering/backend/RendererFeatures.hpp>
-#include <rendering/backend/RendererSwapchain.hpp>
+#include <rendering/RenderBackend.hpp>
+#include <rendering/RenderSwapchain.hpp>
 
 #include <system/App.hpp>
 #include <system/AppContext.hpp>

@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_SAX_PARSER_HPP
-#define HYPERION_SAX_PARSER_HPP
+#pragma once
 
 #include <core/containers/HashMap.hpp>
 #include <core/containers/String.hpp>
@@ -70,5 +69,3 @@ private:
 
 } // namespace xml
 } // namespace hyperion
-
-#endif

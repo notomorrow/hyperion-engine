@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_FUNCTION_WRAPPER_HPP
-#define HYPERION_FUNCTION_WRAPPER_HPP
+#pragma once
 
 #include <core/Traits.hpp>
 
@@ -254,5 +253,3 @@ struct FunctionWrapper
 using functional::FunctionWrapper;
 
 } // namespace hyperion
-
-#endif

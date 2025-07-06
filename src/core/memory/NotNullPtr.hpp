@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_NOT_NULL_PTR_HPP
-#define HYPERION_NOT_NULL_PTR_HPP
+#pragma once
 
 #include <core/Defines.hpp>
 
@@ -226,5 +225,3 @@ HYP_FORCE_INLINE void Swap(NotNullPtr<T>& a, NotNullPtr<T>& b)
 }
 
 } // namespace hyperion
-
-#endif

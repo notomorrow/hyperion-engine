@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_MATRIX3_HPP
-#define HYPERION_MATRIX3_HPP
+#pragma once
 
 #include <core/math/Vector3.hpp>
 
@@ -93,5 +92,3 @@ public:
 };
 
 } // namespace hyperion
-
-#endif

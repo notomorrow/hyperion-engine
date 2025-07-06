@@ -2,7 +2,6 @@
 
 #include <rendering/HBAO.hpp>
 #include <rendering/RenderGroup.hpp>
-#include <rendering/RenderScene.hpp>
 #include <rendering/RenderWorld.hpp>
 #include <rendering/RenderMesh.hpp>
 #include <rendering/RenderCamera.hpp>
@@ -12,9 +11,9 @@
 #include <rendering/GraphicsPipelineCache.hpp>
 #include <rendering/RenderGlobalState.hpp>
 
-#include <rendering/backend/RenderObject.hpp>
-#include <rendering/backend/RendererFrame.hpp>
-#include <rendering/backend/RendererGraphicsPipeline.hpp>
+#include <rendering/RenderObject.hpp>
+#include <rendering/RenderFrame.hpp>
+#include <rendering/RenderGraphicsPipeline.hpp>
 
 #include <scene/Mesh.hpp>
 
@@ -169,8 +168,8 @@ void HBAO::Render(FrameBase* frame, const RenderSetup& renderSetup)
         m_graphicsPipeline,
         ArrayMap<Name, ArrayMap<Name, uint32>> {
             { NAME("Global"),
-                { { NAME("WorldsBuffer"), ShaderDataOffset<WorldShaderData>(*renderSetup.world) },
-                    { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(*renderSetup.view->GetCamera()) } } } },
+                { { NAME("WorldsBuffer"), ShaderDataOffset<WorldShaderData>(renderSetup.world->GetBufferIndex()) },
+                    { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(renderSetup.view->GetCamera()->GetBufferIndex()) } } } },
         frameIndex);
 
     const uint32 viewDescriptorSetIndex = m_graphicsPipeline->GetDescriptorTable()->GetDescriptorSetIndex(NAME("View"));

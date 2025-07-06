@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_JSON_LOADER_HPP
-#define HYPERION_JSON_LOADER_HPP
+#pragma once
 
 #include <asset/Assets.hpp>
 #include <core/json/JSON.hpp>
@@ -16,7 +15,7 @@ HYP_CLASS(NoScriptBindings)
 class JSONLoader : public AssetLoaderBase
 {
     HYP_OBJECT_BODY(JSONLoader);
-    
+
 public:
     virtual ~JSONLoader() = default;
 
@@ -25,4 +24,3 @@ public:
 
 } // namespace hyperion
 
-#endif

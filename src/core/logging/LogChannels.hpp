@@ -1,6 +1,4 @@
-#ifndef HYPERION_LOG_CHANNELS_HPP
-#define HYPERION_LOG_CHANNELS_HPP
-
+#pragma once
 #include <core/logging/LoggerFwd.hpp>
 
 namespace hyperion {
@@ -96,5 +94,3 @@ HYP_DECLARE_LOG_CHANNEL(Serialization);
 #pragma endregion Assets
 
 } // namespace hyperion
-
-#endif

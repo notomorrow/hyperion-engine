@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_PHYSICS_BULLET_ADAPTER_HPP
-#define HYPERION_PHYSICS_BULLET_ADAPTER_HPP
+#pragma once
 
 #include <physics/Adapter.hpp>
 
@@ -40,5 +39,3 @@ private:
 };
 
 } // namespace hyperion::physics
-
-#endif

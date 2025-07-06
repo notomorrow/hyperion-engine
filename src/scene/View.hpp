@@ -1,7 +1,6 @@
 /* Copyright (c) 2024-2025 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_VIEW_HPP
-#define HYPERION_VIEW_HPP
+#pragma once
 
 #include <core/object/HypObject.hpp>
 
@@ -15,8 +14,8 @@
 #include <core/memory/resource/Resource.hpp>
 
 #include <rendering/RenderCollection.hpp>
-#include <rendering/backend/RendererStructs.hpp>
-#include <rendering/backend/RenderObject.hpp>
+#include <rendering/RenderStructs.hpp>
+#include <rendering/RenderObject.hpp>
 
 #include <GameCounter.hpp>
 
@@ -211,7 +210,7 @@ public:
 
 protected:
     void Init() override;
-    
+
     void CollectLights(RenderProxyList& rpl);
     void CollectLightmapVolumes(RenderProxyList& rpl);
     void CollectEnvGrids(RenderProxyList& rpl);
@@ -242,4 +241,3 @@ protected:
 
 } // namespace hyperion
 
-#endif

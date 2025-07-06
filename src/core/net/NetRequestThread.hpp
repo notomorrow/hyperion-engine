@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_CORE_NET_NET_REQUEST_THREAD_HPP
-#define HYPERION_CORE_NET_NET_REQUEST_THREAD_HPP
+#pragma once
 
 #include <core/threading/TaskThread.hpp>
 
@@ -27,5 +26,3 @@ using net::NetRequestThread;
 using net::SetGlobalNetRequestThread;
 
 } // namespace hyperion
-
-#endif // HYPERION_CORE_NET_NET_REQUEST_THREAD_HPP

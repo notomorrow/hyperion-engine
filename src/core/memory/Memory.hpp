@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_MEMORY_HPP
-#define HYPERION_MEMORY_HPP
+#pragma once
 
 #include <core/Defines.hpp>
 #include <Types.hpp>
@@ -300,5 +299,3 @@ using memory::Memory;
 } // namespace hyperion
 
 #define StackAlloc(size) alloca(size)
-
-#endif

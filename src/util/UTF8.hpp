@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_UTF8_HPP
-#define HYPERION_UTF8_HPP
+#pragma once
 
 #include <core/Defines.hpp>
 #include <Types.hpp>
@@ -1043,5 +1042,3 @@ inline char* asUtf8Char(u32char& ch)
 } // namespace hyperion
 
 #undef NOMINMAX
-
-#endif

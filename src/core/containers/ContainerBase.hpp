@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_CONTAINER_BASE_HPP
-#define HYPERION_CONTAINER_BASE_HPP
+#pragma once
 
 #include <core/memory/Memory.hpp>
 
@@ -468,12 +467,10 @@ auto Sum(ContainerType&& container, Func&& func)
 
 } // namespace containers
 
+using containers::AnyOf;
 using containers::Fill;
 using containers::Find;
 using containers::FindIf;
-using containers::AnyOf;
 using containers::Sum;
 
 } // namespace hyperion
-
-#endif

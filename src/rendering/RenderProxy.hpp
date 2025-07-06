@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_RENDER_PROXY_HPP
-#define HYPERION_RENDER_PROXY_HPP
+#pragma once
 
 #include <core/object/ObjId.hpp>
 
@@ -19,7 +18,7 @@
 
 #include <rendering/RenderableAttributes.hpp>
 #include <rendering/MeshInstanceData.hpp>
-#include <rendering/backend/RenderObject.hpp>
+#include <rendering/RenderObject.hpp>
 
 #include <util/ResourceTracker.hpp>
 
@@ -224,6 +223,7 @@ public:
     ~RenderProxyLight() override = default;
 
     WeakHandle<Light> light;
+    WeakHandle<Material> lightMaterial; // for textured area lights
     LightShaderData bufferData {};
 };
 
@@ -290,6 +290,53 @@ public:
     Array<Handle<Texture>> boundTextures;
 };
 
-} // namespace hyperion
+struct SkeletonShaderData
+{
+    static constexpr SizeType maxBones = 256;
 
-#endif
+    Matrix4 bones[maxBones];
+};
+
+class RenderProxySkeleton : public IRenderProxy
+{
+public:
+    RenderProxySkeleton()
+    {
+        for (SizeType i = 0; i < SkeletonShaderData::maxBones; ++i)
+        {
+            bufferData.bones[i] = Matrix4::Identity();
+        }
+    }
+
+    ~RenderProxySkeleton() override = default;
+
+    WeakHandle<Skeleton> skeleton;
+    SkeletonShaderData bufferData {};
+};
+
+struct CameraShaderData
+{
+    Matrix4 view;
+    Matrix4 projection;
+    Matrix4 previousView;
+
+    Vec4u dimensions;
+    Vec4f cameraPosition;
+    Vec4f cameraDirection;
+    Vec4f jitter;
+
+    float cameraNear;
+    float cameraFar;
+    float cameraFov;
+    uint32 id;
+
+    Vec4f _pad1;
+    Vec4f _pad2;
+    Vec4f _pad3;
+
+    Matrix4 _pad4;
+    Matrix4 _pad5;
+    Matrix4 _pad6;
+};
+
+} // namespace hyperion

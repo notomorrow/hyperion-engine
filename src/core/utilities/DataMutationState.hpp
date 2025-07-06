@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_DATA_MUTATION_STATE_HPP
-#define HYPERION_DATA_MUTATION_STATE_HPP
+#pragma once
 
 #include <core/threading/AtomicVar.hpp>
 
@@ -81,5 +80,3 @@ private:
 using DataMutationState = utilities::DataMutationState;
 
 } // namespace hyperion
-
-#endif

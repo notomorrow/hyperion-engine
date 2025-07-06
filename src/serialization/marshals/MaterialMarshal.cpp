@@ -14,7 +14,7 @@
 #include <scene/Material.hpp>
 #include <scene/Texture.hpp>
 
-#include <rendering/backend/RendererShader.hpp>
+#include <rendering/RenderShader.hpp>
 
 #include <EngineGlobals.hpp>
 

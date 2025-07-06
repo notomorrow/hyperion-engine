@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_TASK_SYSTEM_HPP
-#define HYPERION_TASK_SYSTEM_HPP
+#pragma once
 
 #include <core/containers/String.hpp>
 #include <core/containers/Array.hpp>
@@ -694,5 +693,3 @@ using TaskThreadPool = threading::TaskThreadPool;
 using TaskThreadPoolName = threading::TaskThreadPoolName;
 
 } // namespace hyperion
-
-#endif

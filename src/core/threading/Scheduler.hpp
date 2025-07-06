@@ -1,6 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef HYPERION_CORE_SCHEDULER_HPP
-#define HYPERION_CORE_SCHEDULER_HPP
+
+#pragma once
 
 #include <core/containers/Array.hpp>
 
@@ -541,5 +541,3 @@ using threading::Scheduler;
 using threading::SchedulerBase;
 
 } // namespace hyperion
-
-#endif

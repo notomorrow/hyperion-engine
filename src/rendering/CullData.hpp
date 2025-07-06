@@ -1,11 +1,10 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_CULL_DATA_HPP
-#define HYPERION_CULL_DATA_HPP
+#pragma once
 
 #include <core/math/Extent.hpp>
 
-#include <rendering/backend/RenderObject.hpp>
+#include <rendering/RenderObject.hpp>
 
 namespace hyperion {
 
@@ -41,5 +40,3 @@ struct CullData
 };
 
 } // namespace hyperion
-
-#endif

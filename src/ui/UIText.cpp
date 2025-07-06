@@ -5,10 +5,10 @@
 
 #include <rendering/RenderGlobalState.hpp>
 
-#include <rendering/backend/RenderCommand.hpp>
-#include <rendering/backend/RenderConfig.hpp>
-#include <rendering/backend/RendererFrame.hpp>
-#include <rendering/backend/RendererGraphicsPipeline.hpp>
+#include <rendering/RenderCommand.hpp>
+#include <rendering/RenderConfig.hpp>
+#include <rendering/RenderFrame.hpp>
+#include <rendering/RenderGraphicsPipeline.hpp>
 
 #include <scene/Texture.hpp>
 

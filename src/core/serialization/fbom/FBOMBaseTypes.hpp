@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_FBOM_BASE_TYPES_HPP
-#define HYPERION_FBOM_BASE_TYPES_HPP
+#pragma once
 
 #include <core/Name.hpp>
 
@@ -407,5 +406,3 @@ struct FBOMArrayType : FBOMType
 };
 
 } // namespace hyperion::serialization
-
-#endif
