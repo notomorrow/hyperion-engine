@@ -369,7 +369,7 @@ const DescriptorSetRef& MaterialDescriptorSetManager::ForBoundMaterial(const Mat
     {
         boundIndex = RenderApi_RetrieveResourceBinding(material);
 
-        AssertDebug(boundIndex != ~0u, "Material with ID: %u is not bound for this frame! (Current frame: %u)", material->Id().Value(), RenderApi_GetFrameIndex_RenderThread());
+        AssertDebug(boundIndex != ~0u, "Material {} is not bound for this frame! (Current frame: {})", material->Id(), RenderApi_GetFrameIndex_RenderThread());
     }
 
     if (boundIndex != ~0u)

@@ -266,13 +266,21 @@ void UIRenderCollector::PushUpdates(RenderProxyList& rpl, const Optional<Rendera
         Array<RenderProxyMesh*> added;
         rpl.meshes.GetAdded(added, true);
 
+        Array<RenderProxyMesh*> changed;
+        rpl.meshes.GetChanged(changed);
+
         for (RenderProxyMesh* proxy : added)
         {
-            RenderApi_AddRef(proxy->entity.GetUnsafe());
-            RenderApi_AddRef(proxy->material.Get());
+            // // debugging
+            // AssertDebug(!removed.Contains(proxy));
+
+            uint32 entityRefCount = RenderApi_AddRef(proxy->entity.GetUnsafe());
+            // uint32 materialRefCount = RenderApi_AddRef(proxy->material.Get());
+            // HYP_LOG_TEMP("Add ref for material {} on game thread frame {} -- was changed? {}   material RefCount: {}   entity ref count: {}",
+            //     proxy->material->Id(), RenderApi_GetFrameIndex_GameThread(), changed.Contains(proxy), materialRefCount, entityRefCount);
 
             RenderApi_UpdateRenderProxy(proxy->entity.Id(), proxy);
-            RenderApi_UpdateRenderProxy(proxy->material.Id());
+            // RenderApi_UpdateRenderProxy(proxy->material.Id());
 
             // for now:
             proxy->IncRefs();
@@ -280,11 +288,37 @@ void UIRenderCollector::PushUpdates(RenderProxyList& rpl, const Optional<Rendera
 
         for (RenderProxyMesh* proxy : removed)
         {
-            RenderApi_ReleaseRef(proxy->entity.Id());
-            RenderApi_ReleaseRef(proxy->material.Id());
+            // // debugging
+            // AssertDebug(!added.Contains(proxy));
+
+            uint32 entityRefCount = RenderApi_ReleaseRef(proxy->entity.Id());
+            // uint32 materialRefCount = RenderApi_ReleaseRef(proxy->material.Id());
+            // HYP_LOG_TEMP("remove ref for material {} on game thread frame {} -- was changed? {}   material RefCount: {}   entity ref count: {}",
+            //     proxy->material->Id(), RenderApi_GetFrameIndex_GameThread(), changed.Contains(proxy), materialRefCount, entityRefCount);
 
             // for now:
             proxy->DecRefs();
+        }
+    }
+
+    if (auto diff = rpl.materials.GetDiff(); diff.NeedsUpdate())
+    {
+        Array<ObjId<Material>> removed;
+        rpl.materials.GetRemoved(removed, true);
+
+        Array<Material*> added;
+        rpl.materials.GetAdded(added, true);
+
+        for (Material* material : added)
+        {
+            RenderApi_AddRef(material);
+
+            RenderApi_UpdateRenderProxy(material->Id());
+        }
+
+        for (ObjId<Material> id : removed)
+        {
+            RenderApi_ReleaseRef(id);
         }
     }
 
@@ -312,6 +346,7 @@ void UIRenderCollector::PushUpdates(RenderProxyList& rpl, const Optional<Rendera
     RenderCollector::CollectDrawCalls(rpl, 0);
 }
 
+HYP_DISABLE_OPTIMIZATION;
 void UIRenderCollector::ExecuteDrawCalls(FrameBase* frame, const RenderSetup& renderSetup, const FramebufferRef& framebuffer) const
 {
     HYP_SCOPE;
@@ -365,6 +400,16 @@ void UIRenderCollector::ExecuteDrawCalls(FrameBase* frame, const RenderSetup& re
 
         const DrawCallCollection& drawCallCollection = mapping.drawCallCollection;
 
+        // debugging
+        for (const DrawCall& drawCall : drawCallCollection.drawCalls)
+        {
+            AssertDebug(RenderApi_RetrieveResourceBinding(drawCall.material) != ~0u);
+        }
+        for (const InstancedDrawCall& drawCall : drawCallCollection.instancedDrawCalls)
+        {
+            AssertDebug(RenderApi_RetrieveResourceBinding(drawCall.material) != ~0u);
+        }
+
         // Don't count draw calls for UI
         SuppressRenderStatsScope suppressRenderStatsScope;
 
@@ -376,6 +421,7 @@ void UIRenderCollector::ExecuteDrawCalls(FrameBase* frame, const RenderSetup& re
         frame->GetCommandList().Add<EndFramebuffer>(framebuffer, frameIndex);
     }
 }
+HYP_ENABLE_OPTIMIZATION;
 
 #pragma endregion UIRenderCollector
 
@@ -416,6 +462,10 @@ void UIRenderer::RenderFrame(FrameBase* frame, const RenderSetup& renderSetup)
 
     const ViewOutputTarget& outputTarget = m_view->GetOutputTarget();
     Assert(outputTarget.IsValid());
+
+    // // temp
+    // RenderProxyList& rpl = RenderApi_GetConsumerProxyList(m_view);
+    // RenderCollector::ExecuteDrawCalls(frame, rs, rpl, 0);
 
     m_renderCollector.ExecuteDrawCalls(frame, rs, outputTarget.GetFramebuffer());
 }
@@ -549,8 +599,9 @@ void UIRenderSubsystem::Update(float delta)
     RenderProxyList& rpl = RenderApi_GetProducerProxyList(m_view);
     rpl.viewport = m_view->GetViewport();
     rpl.priority = m_view->GetPriority();
-    rpl.meshes.Advance(AdvanceAction::CLEAR);
-    rpl.textures.Advance(AdvanceAction::CLEAR);
+    rpl.meshes.Advance();
+    rpl.materials.Advance();
+    rpl.textures.Advance();
 
     UIRenderCollector& renderCollector = m_uiRenderer->GetRenderCollector();
     renderCollector.ResetOrdering();
@@ -575,18 +626,22 @@ void UIRenderSubsystem::Update(float delta)
             // have the same depth but should be rendered in a different order.
             // renderCollector.PushRenderProxy(meshes, *meshComponent.proxy, uiObject->GetComputedDepth());
 
-            rpl.meshes.Track(meshComponent.proxy->entity.Id(), *meshComponent.proxy, &meshComponent.proxy->version);
+            rpl.meshes.Track(meshComponent.proxy->entity.Id(), *meshComponent.proxy, &meshComponent.proxy->version, /* allowDuplicatesInSameFrame */ false);
 
-            if (meshComponent.material.IsValid())
+            if (const Handle<Material>& material = meshComponent.material)
             {
-                for (const auto& it : meshComponent.material->GetTextures())
+                rpl.materials.Track(material.Id(), material.Get(), material->GetRenderProxyVersionPtr(), /* allowDuplicatesInSameFrame */ true);
+
+                for (const auto& it : material->GetTextures())
                 {
                     const Handle<Texture>& texture = it.second;
 
-                    if (texture.IsValid())
+                    if (!texture.IsValid())
                     {
-                        rpl.textures.Track(texture.Id(), texture.Get());
+                        continue;
                     }
+
+                    rpl.textures.Track(texture.Id(), texture.Get());
                 }
             }
 

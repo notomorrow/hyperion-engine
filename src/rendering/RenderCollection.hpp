@@ -153,6 +153,7 @@ struct HYP_API RenderProxyList
     ResourceTracker<ObjId<Light>, Light*> lights;
     ResourceTracker<ObjId<EnvGrid>, EnvGrid*> envGrids;
     ResourceTracker<ObjId<LightmapVolume>, LightmapVolume*> lightmapVolumes;
+    ResourceTracker<ObjId<Material>, Material*> materials;
     ResourceTracker<ObjId<Texture>, Texture*> textures;
 
     ParallelRenderingState* parallelRenderingStateHead;

@@ -271,12 +271,13 @@ void View::Update(float delta)
     rpl.viewport = m_viewport;
     rpl.priority = m_priority;
 
-    rpl.meshes.Advance(AdvanceAction::CLEAR);
-    rpl.envProbes.Advance(AdvanceAction::CLEAR);
-    rpl.envGrids.Advance(AdvanceAction::CLEAR);
-    rpl.lights.Advance(AdvanceAction::CLEAR);
-    rpl.lightmapVolumes.Advance(AdvanceAction::CLEAR);
-    rpl.textures.Advance(AdvanceAction::CLEAR);
+    rpl.meshes.Advance();
+    rpl.envProbes.Advance();
+    rpl.envGrids.Advance();
+    rpl.lights.Advance();
+    rpl.lightmapVolumes.Advance();
+    rpl.materials.Advance();
+    rpl.textures.Advance();
 
     CollectLights(rpl);
     CollectLightmapVolumes(rpl);
@@ -284,6 +285,28 @@ void View::Update(float delta)
     CollectEnvProbes(rpl);
 
     m_lastMeshCollectionResult = CollectMeshEntities(rpl);
+
+    // Update refs for materials for this view
+    if (auto diff = rpl.materials.GetDiff(); diff.NeedsUpdate())
+    {
+        Array<ObjId<Material>> removed;
+        rpl.materials.GetRemoved(removed, true);
+
+        Array<Material*> added;
+        rpl.materials.GetAdded(added, true);
+
+        for (Material* material : added)
+        {
+            RenderApi_AddRef(material);
+
+            RenderApi_UpdateRenderProxy(material->Id());
+        }
+
+        for (ObjId<Material> id : removed)
+        {
+            RenderApi_ReleaseRef(id);
+        }
+    }
 
     // Update refs for bound textures for this view
     if (auto diff = rpl.textures.GetDiff(); diff.NeedsUpdate())
@@ -447,9 +470,11 @@ typename ResourceTracker<ObjId<Entity>, RenderProxyMesh>::Diff View::CollectMesh
 
                 rpl.meshes.Track(entity->Id(), *meshComponent.proxy, &meshComponent.proxy->version);
 
-                if (meshComponent.material.IsValid())
+                if (const Handle<Material>& material = meshComponent.material)
                 {
-                    for (const auto& it : meshComponent.material->GetTextures())
+                    rpl.materials.Track(material.Id(), material.Get(), material->GetRenderProxyVersionPtr(), /* allowDuplicatesInSameFrame */ true);
+
+                    for (const auto& it : material->GetTextures())
                     {
                         const Handle<Texture>& texture = it.second;
 
@@ -500,9 +525,11 @@ typename ResourceTracker<ObjId<Entity>, RenderProxyMesh>::Diff View::CollectMesh
 
                 rpl.meshes.Track(entity->Id(), *meshComponent.proxy, &meshComponent.proxy->version);
 
-                if (meshComponent.material.IsValid())
+                if (const Handle<Material>& material = meshComponent.material)
                 {
-                    for (const auto& it : meshComponent.material->GetTextures())
+                    rpl.materials.Track(material.Id(), material.Get(), material->GetRenderProxyVersionPtr(), /* allowDuplicatesInSameFrame */ true);
+
+                    for (const auto& it : material->GetTextures())
                     {
                         const Handle<Texture>& texture = it.second;
 
@@ -553,9 +580,11 @@ typename ResourceTracker<ObjId<Entity>, RenderProxyMesh>::Diff View::CollectMesh
 
                 rpl.meshes.Track(entity->Id(), *meshComponent.proxy, &meshComponent.proxy->version);
 
-                if (meshComponent.material.IsValid())
+                if (const Handle<Material>& material = meshComponent.material)
                 {
-                    for (const auto& it : meshComponent.material->GetTextures())
+                    rpl.materials.Track(material.Id(), material.Get(), material->GetRenderProxyVersionPtr(), /* allowDuplicatesInSameFrame */ true);
+
+                    for (const auto& it : material->GetTextures())
                     {
                         const Handle<Texture>& texture = it.second;
 
@@ -592,10 +621,8 @@ typename ResourceTracker<ObjId<Entity>, RenderProxyMesh>::Diff View::CollectMesh
         for (RenderProxyMesh* proxy : added)
         {
             RenderApi_AddRef(proxy->entity.GetUnsafe());
-            RenderApi_AddRef(proxy->material.Get());
 
             RenderApi_UpdateRenderProxy(proxy->entity.Id(), proxy);
-            RenderApi_UpdateRenderProxy(proxy->material.Id());
 
             // for now:
             proxy->IncRefs();
@@ -604,7 +631,6 @@ typename ResourceTracker<ObjId<Entity>, RenderProxyMesh>::Diff View::CollectMesh
         for (RenderProxyMesh* proxy : removed)
         {
             RenderApi_ReleaseRef(proxy->entity.Id());
-            RenderApi_ReleaseRef(proxy->material.Id());
 
             // for now:
             proxy->DecRefs();
@@ -661,6 +687,8 @@ void View::CollectLights(RenderProxyList& rpl)
 
                 if (light->GetMaterial().IsValid())
                 {
+                    rpl.materials.Track(light->GetMaterial()->Id(), light->GetMaterial().Get());
+
                     for (const auto& it : light->GetMaterial()->GetTextures())
                     {
                         const Handle<Texture>& texture = it.second;

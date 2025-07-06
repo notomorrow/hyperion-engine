@@ -232,6 +232,8 @@ struct ResourceBindings
 
         const auto* elem = bindings.indexAndMapping.TryGet(id.ToIndex());
 
+        AssertDebug(elem != nullptr, "Failed to retrieve resource binding for resource with ID: {} for frame {}!", id, RenderApi_GetFrameIndex_RenderThread());
+
         return elem ? *elem : Pair<uint32, void*>(~0u, nullptr);
     }
 
@@ -638,11 +640,11 @@ HYP_API RenderProxyList& RenderApi_GetConsumerProxyList(View* view)
     return vd->renderProxyList;
 }
 
-HYP_API void RenderApi_AddRef(HypObjectBase* resource)
+HYP_API uint32 RenderApi_AddRef(HypObjectBase* resource)
 {
     if (!resource)
     {
-        return;
+        return 0;
     }
 
     Threads::AssertOnThread(g_gameThread);
@@ -661,16 +663,18 @@ HYP_API void RenderApi_AddRef(HypObjectBase* resource)
         rd = &*subtypeData.data.Emplace(resourceId.ToIndex(), resource);
     }
 
-    rd->count.Increment(1, MemoryOrder::RELAXED);
+    uint32 count = rd->count.Increment(1, MemoryOrder::RELAXED);
 
     subtypeData.indicesPendingDelete.Set(resourceId.ToIndex(), false);
+
+    return count + 1;
 }
 
-HYP_API void RenderApi_ReleaseRef(ObjIdBase id)
+HYP_API uint32 RenderApi_ReleaseRef(ObjIdBase id)
 {
     if (!id.IsValid())
     {
-        return;
+        return ~0u;
     }
 
     Threads::AssertOnThread(g_gameThread);
@@ -684,13 +688,17 @@ HYP_API void RenderApi_ReleaseRef(ObjIdBase id)
 
     if (!rd)
     {
-        return; // no ref count for this resource
+        return ~0u; // no ref count for this resource
     }
 
-    if (rd->count.Decrement(1, MemoryOrder::RELAXED) == 1)
+    uint32 count;
+
+    if ((count = rd->count.Decrement(1, MemoryOrder::RELAXED)) == 1)
     {
         subtypeData.indicesPendingDelete.Set(id.ToIndex(), true);
     }
+
+    return count - 1;
 }
 
 HYP_API void RenderApi_UpdateRenderProxy(ObjIdBase id)

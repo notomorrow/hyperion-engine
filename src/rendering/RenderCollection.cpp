@@ -749,6 +749,16 @@ void RenderCollector::ExecuteDrawCalls(FrameBase* frame, const RenderSetup& rend
 
             const DrawCallCollection& drawCallCollection = mapping.drawCallCollection;
 
+            // debugging
+            for (const DrawCall& drawCall : drawCallCollection.drawCalls)
+            {
+                AssertDebug(RenderApi_RetrieveResourceBinding(drawCall.material) != ~0u);
+            }
+            for (const InstancedDrawCall& drawCall : drawCallCollection.instancedDrawCalls)
+            {
+                AssertDebug(RenderApi_RetrieveResourceBinding(drawCall.material) != ~0u);
+            }
+
             IndirectRenderer* indirectRenderer = mapping.indirectRenderer;
 
             ParallelRenderingState* parallelRenderingState = nullptr;
