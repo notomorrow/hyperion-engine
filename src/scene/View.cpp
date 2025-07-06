@@ -467,10 +467,11 @@ typename ResourceTracker<ObjId<Entity>, RenderProxyMesh>::Diff View::CollectMesh
                 AssertDebug(meshComponent.proxy->entity.IsValid());
                 AssertDebug(meshComponent.proxy->mesh.IsValid());
                 AssertDebug(meshComponent.proxy->material.IsValid());
+                // AssertDebug(meshComponent.proxy->material == meshComponent.material);
 
                 rpl.meshes.Track(entity->Id(), *meshComponent.proxy, &meshComponent.proxy->version);
 
-                if (const Handle<Material>& material = meshComponent.material)
+                if (const Handle<Material>& material = meshComponent.proxy->material)
                 {
                     rpl.materials.Track(material.Id(), material.Get(), material->GetRenderProxyVersionPtr(), /* allowDuplicatesInSameFrame */ true);
 
@@ -522,10 +523,11 @@ typename ResourceTracker<ObjId<Entity>, RenderProxyMesh>::Diff View::CollectMesh
                 AssertDebug(meshComponent.proxy->entity.IsValid());
                 AssertDebug(meshComponent.proxy->mesh.IsValid());
                 AssertDebug(meshComponent.proxy->material.IsValid());
+                // AssertDebug(meshComponent.proxy->material == meshComponent.material);
 
                 rpl.meshes.Track(entity->Id(), *meshComponent.proxy, &meshComponent.proxy->version);
 
-                if (const Handle<Material>& material = meshComponent.material)
+                if (const Handle<Material>& material = meshComponent.proxy->material)
                 {
                     rpl.materials.Track(material.Id(), material.Get(), material->GetRenderProxyVersionPtr(), /* allowDuplicatesInSameFrame */ true);
 
@@ -577,10 +579,11 @@ typename ResourceTracker<ObjId<Entity>, RenderProxyMesh>::Diff View::CollectMesh
                 AssertDebug(meshComponent.proxy->entity.IsValid());
                 AssertDebug(meshComponent.proxy->mesh.IsValid());
                 AssertDebug(meshComponent.proxy->material.IsValid());
+                // AssertDebug(meshComponent.proxy->material == meshComponent.material);
 
                 rpl.meshes.Track(entity->Id(), *meshComponent.proxy, &meshComponent.proxy->version);
 
-                if (const Handle<Material>& material = meshComponent.material)
+                if (const Handle<Material>& material = meshComponent.proxy->material)
                 {
                     rpl.materials.Track(material.Id(), material.Get(), material->GetRenderProxyVersionPtr(), /* allowDuplicatesInSameFrame */ true);
 
