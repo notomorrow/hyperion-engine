@@ -183,11 +183,6 @@ struct ResourceBindings
 
         SubtypeResourceBindings& bindings = GetSubtypeBindings(id.GetTypeId());
 
-        if (bindings.resourceClass == EnvProbe::Class())
-        {
-            HYP_LOG(Rendering, Debug, "Setting EnvProbe {} binding to {}", resource->Id(), binding);
-        }
-
         if (binding == ~0u)
         {
             bindings.indexAndMapping.EraseAt(id.ToIndex());

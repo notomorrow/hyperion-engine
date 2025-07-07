@@ -280,8 +280,6 @@ private:
 
 struct HYP_API ShadowPassData : PassData
 {
-    RenderShadowMap* shadowMap = nullptr;
-
     virtual ~ShadowPassData() override;
 };
 
@@ -318,7 +316,19 @@ public:
 protected:
     ShadowRendererBase();
 
-    virtual PassData* CreateViewPassData(View* view, PassDataExt&) override = 0;
+    virtual int RunCleanupCycle(int maxIter) override;
+
+    virtual PassData* CreateViewPassData(View* view, PassDataExt&) override;
+
+    virtual RenderShadowMap* AllocateShadowMap(Light* light) = 0;
+
+private:
+    // Shadow maps cached per-light.
+    // Since Lights can have multiple shadow views that blit into one final shadow map
+    // we store the shadow maps here rather than on the per-view PassData
+
+    /// @TODO Clean up elements that have expired after a few frames
+    HashMap<WeakHandle<Light>, RenderShadowMap*> m_cachedShadowMaps;
 };
 
 class PointShadowRenderer : public ShadowRendererBase
@@ -328,7 +338,7 @@ public:
     virtual ~PointShadowRenderer() override = default;
 
 protected:
-    virtual PassData* CreateViewPassData(View* view, PassDataExt&) override;
+    virtual RenderShadowMap* AllocateShadowMap(Light* light) override;
 };
 
 class DirectionalShadowRenderer : public ShadowRendererBase
@@ -338,7 +348,7 @@ public:
     virtual ~DirectionalShadowRenderer() override = default;
 
 protected:
-    virtual PassData* CreateViewPassData(View* view, PassDataExt&) override;
+    virtual RenderShadowMap* AllocateShadowMap(Light* light) override;
 };
 
 } // namespace hyperion

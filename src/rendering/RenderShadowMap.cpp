@@ -314,13 +314,6 @@ void RenderShadowMap::UpdateBufferData()
 
 ShadowPassData::~ShadowPassData()
 {
-    if (shadowMap != nullptr)
-    {
-        bool freeShadowMapResult = g_renderGlobalState->shadowMapAllocator->FreeShadowMap(shadowMap);
-        AssertDebug(freeShadowMapResult);
-
-        shadowMap = nullptr;
-    }
 }
 
 #pragma endregion ShadowPassData
@@ -335,6 +328,47 @@ void ShadowRendererBase::Initialize()
 
 void ShadowRendererBase::Shutdown()
 {
+    HashSet<RenderShadowMap*> shadowMaps;
+
+    for (const KeyValuePair<WeakHandle<Light>, RenderShadowMap*>& it : m_cachedShadowMaps)
+    {
+        if (!it.second)
+        {
+            continue;
+        }
+
+        shadowMaps.Insert(it.second);
+    }
+
+    m_cachedShadowMaps.Clear();
+
+    if (shadowMaps.Any())
+    {
+        for (RenderShadowMap* shadowMap : shadowMaps)
+        {
+            bool shadowMapFreed = g_renderGlobalState->shadowMapAllocator->FreeShadowMap(shadowMap);
+            AssertDebug(shadowMapFreed, "Failed to free shadow map");
+        }
+    }
+}
+
+int ShadowRendererBase::RunCleanupCycle(int maxIter)
+{
+    int numCycles = RendererBase::RunCleanupCycle(maxIter);
+
+    for (auto it = m_cachedShadowMaps.Begin(); it != m_cachedShadowMaps.End() && numCycles < maxIter; numCycles++)
+    {
+        if (!(it->first.Lock()))
+        {
+            it = m_cachedShadowMaps.Erase(it);
+            HYP_LOG(Rendering, Debug, "Removing cached shadow map for Light {} as it is no longer valid.", it->first.Id());
+            continue;
+        }
+
+        ++it;
+    }
+
+    return numCycles;
 }
 
 void ShadowRendererBase::RenderFrame(FrameBase* frame, const RenderSetup& renderSetup)
@@ -345,66 +379,84 @@ void ShadowRendererBase::RenderFrame(FrameBase* frame, const RenderSetup& render
     AssertDebug(renderSetup.IsValid());
     AssertDebug(renderSetup.light != nullptr);
 
-    RenderProxyLight* lightProxy = static_cast<RenderProxyLight*>(RenderApi_GetRenderProxy(renderSetup.light->Id()));
-    AssertDebug(lightProxy != nullptr, "Proxy for Light {} not found when rendering shadows!", renderSetup.light->Id());
-    AssertDebug(lightProxy->shadowViews.Any(), "Light {} proxy has no shadow view attached!", renderSetup.light->Id());
+    Light* light = renderSetup.light;
+    RenderShadowMap* shadowMap = nullptr;
+
+    auto shadowMapIt = m_cachedShadowMaps.FindAs(light->Id());
+
+    if (shadowMapIt == m_cachedShadowMaps.End())
+    {
+        WeakHandle<Light> lightWeak = light->WeakHandleFromThis();
+
+        shadowMap = AllocateShadowMap(light);
+        Assert(shadowMap != nullptr, "Failed to allocate shadow map for Light {}!", light->Id());
+
+        m_cachedShadowMaps.Insert(lightWeak, shadowMap);
+
+        /// TODO: Add re-alloc of shadow maps if parameters have changed
+    }
+    else
+    {
+        shadowMap = shadowMapIt->second;
+        AssertDebug(shadowMap != nullptr);
+    }
+
+    RenderProxyLight* lightProxy = static_cast<RenderProxyLight*>(RenderApi_GetRenderProxy(light->Id()));
+    Assert(lightProxy != nullptr, "Proxy for Light {} not found when rendering shadows!", light->Id());
+    Assert(lightProxy->shadowViews.Any(), "Light {} proxy has no shadow view attached!", light->Id());
 
     for (const WeakHandle<View>& shadowViewWeak : lightProxy->shadowViews)
     {
         View* shadowView = shadowViewWeak.Lock();
-        AssertDebug(shadowView != nullptr);
+        Assert(shadowView != nullptr);
 
         RenderSetup rs = renderSetup;
         rs.view = &shadowView->GetRenderResource(); // temp
-        rs.passData = FetchViewPassData(rs.view->GetView());
+        rs.passData = FetchViewPassData(shadowView);
 
         ShadowPassData* pd = static_cast<ShadowPassData*>(rs.passData);
         AssertDebug(pd != nullptr);
 
-        AssertDebug(pd->shadowMap != nullptr);
-
-        HYP_LOG_TEMP("Render Shadow map here for light {}", renderSetup.light->Id());
+        HYP_LOG_TEMP("Render Shadow map here for light {}\t into view: {}\tShadow map atlas index: {} elem index: {} point idx: {}\frame {}",
+            renderSetup.light->Id(),
+            shadowView->Id(),
+            shadowMap->GetAtlasElement().atlasIndex, shadowMap->GetAtlasElement().index,
+            shadowMap->GetAtlasElement().pointLightIndex,
+            RenderApi_GetFrameIndex_RenderThread());
     }
+}
+
+PassData* ShadowRendererBase::CreateViewPassData(View* view, PassDataExt& ext)
+{
+    ShadowPassData* pd = new ShadowPassData;
+    pd->view = view->WeakHandleFromThis();
+    pd->viewport = view->GetRenderResource().GetViewport();
+
+    return pd;
 }
 
 #pragma endregion ShadowRendererBase
 
 #pragma region PointShadowRenderer
 
-PassData* PointShadowRenderer::CreateViewPassData(View* view, PassDataExt& ext)
+RenderShadowMap* PointShadowRenderer::AllocateShadowMap(Light* light)
 {
-    ShadowPassDataExt* extCasted = ext.AsType<ShadowPassDataExt>();
-    AssertDebug(extCasted != nullptr, "ShadowPassDataExt must be provided for PointShadowRenderer");
-    AssertDebug(extCasted->light != nullptr);
-
-    ShadowPassData* pd = new ShadowPassData;
-    pd->view = view->WeakHandleFromThis();
-    pd->viewport = view->GetRenderResource().GetViewport();
-
-    RenderShadowMap* shadowMap = g_renderGlobalState->shadowMapAllocator->AllocateShadowMap(
+    return g_renderGlobalState->shadowMapAllocator->AllocateShadowMap(
         ShadowMapType::SMT_OMNI,
-        extCasted->light->GetShadowMapFilter(),
-        pd->viewport.extent);
-
-    AssertDebug(shadowMap != nullptr);
-    pd->shadowMap = shadowMap;
-
-    return pd;
+        light->GetShadowMapFilter(),
+        Vec2u(256, 256)); /// TEMP! fixme
 }
 
 #pragma endregion PointShadowRenderer
 
 #pragma region DirectionalShadowRenderer
 
-PassData* DirectionalShadowRenderer::CreateViewPassData(View* view, PassDataExt&)
+RenderShadowMap* DirectionalShadowRenderer::AllocateShadowMap(Light* light)
 {
-    ShadowPassData* pd = new ShadowPassData;
-    pd->view = view->WeakHandleFromThis();
-    pd->viewport = view->GetRenderResource().GetViewport();
-
-    /// @TODO: Create shadow atlas element and imageviews
-
-    return pd;
+    return g_renderGlobalState->shadowMapAllocator->AllocateShadowMap(
+        ShadowMapType::SMT_DIRECTIONAL,
+        light->GetShadowMapFilter(),
+        Vec2u(256, 256)); /// TEMP! fixme
 }
 
 #pragma endregion DirectionalShadowRenderer

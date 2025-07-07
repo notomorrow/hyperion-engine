@@ -184,10 +184,7 @@ void Light::CreateShadowViews()
         90.0f,
         -int(shadowMapDimensions.x), int(shadowMapDimensions.y),
         0.001f, 250.0f);
-
     shadowMapCamera->SetName(Name::Unique("ShadowMapCamera"));
-    shadowMapCamera->SetViewMatrix(Matrix4::LookAt(Vec3f(0.0f, 0.0f, 1.0f), GetAABB().GetCenter(), Vec3f(0.0f, 1.0f, 0.0f)));
-
     InitObject(shadowMapCamera);
 
     const RenderableAttributeSet overrideAttributes(
@@ -266,7 +263,7 @@ void Light::Update(float delta)
         for (int i = 0; i < int(m_shadowViews.Size()); i++)
         {
             /// Update shadow camera position
-            BoundingBox shadowViewAabb;
+            BoundingBox aabb;
 
             switch (m_type)
             {
@@ -274,9 +271,9 @@ void Light::Update(float delta)
                 ShadowCameraHelper::UpdateShadowCameraDirectional(
                     m_shadowViews[i]->GetCamera(),
                     Vec3f::Zero(), /// @TODO: Clip to player
-                    GetPosition(),
-                    150.0f, /// TODO
-                    shadowViewAabb);
+                    GetPosition().Normalized(),
+                    40.0f, /// TODO shadow map radius
+                    aabb);
 
                 break;
             default:

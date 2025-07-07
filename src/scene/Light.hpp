@@ -57,7 +57,7 @@ enum LightFlags : uint32
 HYP_MAKE_ENUM_FLAGS(LightFlags);
 
 HYP_CLASS()
-class HYP_API Light final : public Entity
+class HYP_API Light : public Entity
 {
     HYP_OBJECT_BODY(Light);
 
@@ -86,7 +86,7 @@ public:
     Light(Light&& other) noexcept = delete;
     Light& operator=(Light&& other) noexcept = delete;
 
-    ~Light();
+    virtual ~Light() override;
 
     /*! \brief Get the type of the light.
      *
@@ -309,6 +309,93 @@ protected:
 
 private:
     Pair<Vec3f, Vec3f> CalculateAreaLightRect() const;
+};
+
+HYP_CLASS()
+class HYP_API DirectionalLight : public Light
+{
+    HYP_OBJECT_BODY(DirectionalLight);
+
+public:
+    DirectionalLight()
+        : Light(LT_DIRECTIONAL, Vec3f(0.0f, 1.0f, 0.0f), Color::White(), 1.0f, INFINITY)
+    {
+    }
+
+    DirectionalLight(const Vec3f& direction, const Color& color, float intensity)
+        : Light(LT_DIRECTIONAL, direction, color, intensity, INFINITY)
+    {
+    }
+
+    virtual ~DirectionalLight() override = default;
+
+    HYP_METHOD()
+    const Vec3f& GetDirection() const
+    {
+        return Light::GetPosition();
+    }
+
+    HYP_METHOD()
+    void SetDirection(const Vec3f& direction)
+    {
+        Light::SetPosition(direction.Normalized());
+    }
+};
+
+HYP_CLASS()
+class HYP_API PointLight : public Light
+{
+    HYP_OBJECT_BODY(PointLight);
+
+public:
+    PointLight()
+        : Light(LT_POINT, Vec3f(0.0f), Color::White(), 1.0f, 10.0f)
+    {
+    }
+
+    PointLight(const Vec3f& position, const Color& color, float intensity, float radius)
+        : Light(LT_POINT, position, color, intensity, radius)
+    {
+    }
+
+    virtual ~PointLight() override = default;
+};
+
+HYP_CLASS()
+class HYP_API SpotLight : public Light
+{
+    HYP_OBJECT_BODY(SpotLight);
+public:
+    SpotLight()
+        : Light(LT_SPOT, Vec3f(0.0f), Vec3f(0.0f, 0.0f, -1.0f), Vec2f(30.0f, 15.0f), Color::White(), 1.0f, 10.0f)
+    {
+    }
+
+    SpotLight(const Vec3f& position, const Vec3f& direction, const Vec2f& angles, const Color& color, float intensity, float radius)
+        : Light(LT_SPOT, position, direction, angles, color, intensity, radius)
+    {
+    }
+
+    virtual ~SpotLight() override = default;
+};
+
+HYP_CLASS()
+class HYP_API AreaRectLight : public Light
+{
+    HYP_OBJECT_BODY(AreaRectLight);
+
+public:
+    AreaRectLight()
+        : Light(LT_AREA_RECT, Vec3f(0.0f), Vec3f(0.0f, 0.0f, -1.0f), Vec2f(1.0f, 1.0f), Color::White(), 1.0f, 10.0f)
+    {
+    }
+
+    AreaRectLight(const Vec3f& position, const Vec3f& normal, const Vec2f& areaSize, const Color& color, float intensity, float radius)
+        : Light(LT_AREA_RECT, position, normal, areaSize, color, intensity, radius)
+    {
+    }
+
+    virtual ~AreaRectLight() override = default;
 };
 
 } // namespace hyperion

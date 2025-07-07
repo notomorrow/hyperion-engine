@@ -219,10 +219,6 @@ void HyperionEditor::Init()
 
 // add sun
 #if 1
-    auto sun = CreateObject<Light>();
-
-    InitObject(sun);
-
     Handle<Node> sunNode = scene->GetRoot()->AddChild();
     sunNode->SetName(NAME("Sun"));
 

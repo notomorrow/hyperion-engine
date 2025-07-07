@@ -61,6 +61,9 @@
 
 namespace hyperion {
 
+// iterations per frame for cleaning up unused resources for passes
+static constexpr int g_frameCleanupBudget = 16;
+
 static constexpr TextureFormat envGridRadianceFormat = TF_RGBA8;
 static constexpr TextureFormat envGridIrradianceFormat = TF_R11G11B10F;
 
@@ -1621,7 +1624,6 @@ void DeferredRenderer::RenderFrame(FrameBase* frame, const RenderSetup& rs)
     // reset renderer state back to what it was before
     newRs = rs;
 
-#if 1
     for (const TResourceHandle<RenderView>& renderView : rs.world->GetViews())
     {
         Assert(renderView);
@@ -1644,8 +1646,6 @@ void DeferredRenderer::RenderFrame(FrameBase* frame, const RenderSetup& rs)
         newRs.view = nullptr;
         newRs.passData = nullptr;
 
-        pd->CullUnusedGraphicsPipelines();
-
 #ifdef HYP_ENABLE_RENDER_STATS
         RenderProxyList& rpl = RenderApi_GetConsumerProxyList(view);
         rpl.BeginRead();
@@ -1660,7 +1660,21 @@ void DeferredRenderer::RenderFrame(FrameBase* frame, const RenderSetup& rs)
     }
 
     g_engine->GetRenderStatsCalculator().AddCounts(counts);
-#endif
+
+    /// TODO: Have an iterator stored so we can maintain state for the next frame and don't start over from the first index.
+    int numCleanupCycles = g_frameCleanupBudget;
+    numCleanupCycles -= g_renderGlobalState->mainRenderer->RunCleanupCycle(numCleanupCycles);
+
+    for (uint32 i = 0; i < GRT_MAX && numCleanupCycles > 0; i++)
+    {
+        for (uint32 j = 0; j < g_renderGlobalState->globalRenderers[i].Size() && numCleanupCycles > 0; j++)
+        {
+            if (RendererBase* renderer = g_renderGlobalState->globalRenderers[i][j])
+            {
+                numCleanupCycles -= renderer->RunCleanupCycle(numCleanupCycles);
+            }
+        }
+    }
 }
 
 #define CHECK_FRAMEBUFFER_SIZE(fb)                                                                    \

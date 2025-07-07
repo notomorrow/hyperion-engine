@@ -32,6 +32,8 @@
 #include <rendering/subsystems/sky/SkydomeRenderer.hpp>
 #include <rendering/RenderBackend.hpp>
 
+#include <core/object/HypClass.hpp>
+
 #include <core/profiling/ProfileScope.hpp>
 
 #include <core/logging/LogChannels.hpp>
@@ -688,6 +690,7 @@ void View::CollectLights(RenderProxyList& rpl)
 
             if (isLightInFrustum)
             {
+                HYP_LOG(Scene, Debug, "Collecting light {} of type {} in view {}", light->Id(), light->InstanceClass()->GetName(), Id());
                 rpl.lights.Track(light->Id(), light, light->GetRenderProxyVersionPtr());
 
                 if (light->GetMaterial().IsValid())

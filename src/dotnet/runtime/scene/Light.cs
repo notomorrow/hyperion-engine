@@ -38,4 +38,36 @@ namespace Hyperion
             Logger.Log(LogType.Warn, "Destroying Light with Id: {0}", this.Id);
         }
     }
+
+    [HypClassBinding(Name = "DirectionalLight")]
+    public class DirectionalLight : Light
+    {
+        public DirectionalLight()
+        {
+        }
+    }
+
+    [HypClassBinding(Name = "PointLight")]
+    public class PointLight : Light
+    {
+        public PointLight()
+        {
+        }
+    }
+
+    [HypClassBinding(Name = "SpotLight")]
+    public class SpotLight : Light
+    {
+        public SpotLight()
+        {
+        }
+    }
+
+    [HypClassBinding(Name = "AreaRectLight")]
+    public class AreaRectLight : Light
+    {
+        public AreaRectLight()
+        {
+        }
+    }
 }

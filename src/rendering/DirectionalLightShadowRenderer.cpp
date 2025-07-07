@@ -403,6 +403,7 @@ void DirectionalLightShadowRenderer::Init()
 
 void DirectionalLightShadowRenderer::OnAddedToWorld()
 {
+    return;
 
     RenderShadowMap* shadowMap = g_renderGlobalState->shadowMapAllocator->AllocateShadowMap(SMT_DIRECTIONAL, m_filterMode, m_resolution);
     Assert(shadowMap != nullptr, "Failed to allocate shadow map");
