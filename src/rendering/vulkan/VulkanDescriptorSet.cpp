@@ -663,7 +663,7 @@ VulkanDescriptorTable::VulkanDescriptorTable(const DescriptorTableDeclaration* d
 
             for (uint32 frameIndex = 0; frameIndex < g_framesInFlight; frameIndex++)
             {
-                DescriptorSetRef descriptorSet = g_renderGlobalState->GlobalDescriptorTable->GetDescriptorSet(referencedDescriptorSetDeclaration->name, frameIndex);
+                DescriptorSetRef descriptorSet = g_renderGlobalState->globalDescriptorTable->GetDescriptorSet(referencedDescriptorSetDeclaration->name, frameIndex);
                 HYP_GFX_ASSERT(descriptorSet.IsValid(), "Invalid global descriptor set reference: %s", referencedDescriptorSetDeclaration->name.LookupString());
 
                 m_sets[frameIndex].PushBack(std::move(descriptorSet));

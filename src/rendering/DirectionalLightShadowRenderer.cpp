@@ -404,7 +404,7 @@ void DirectionalLightShadowRenderer::Init()
 void DirectionalLightShadowRenderer::OnAddedToWorld()
 {
 
-    RenderShadowMap* shadowMap = g_renderGlobalState->ShadowMapAllocator->AllocateShadowMap(SMT_DIRECTIONAL, m_filterMode, m_resolution);
+    RenderShadowMap* shadowMap = g_renderGlobalState->shadowMapAllocator->AllocateShadowMap(SMT_DIRECTIONAL, m_filterMode, m_resolution);
     Assert(shadowMap != nullptr, "Failed to allocate shadow map");
 
     m_shadowMapResourceHandle = TResourceHandle<RenderShadowMap>(*shadowMap);
@@ -443,7 +443,7 @@ void DirectionalLightShadowRenderer::OnRemovedFromWorld()
 
         m_shadowMapResourceHandle.Reset();
 
-        if (!g_renderGlobalState->ShadowMapAllocator->FreeShadowMap(shadowMap))
+        if (!g_renderGlobalState->shadowMapAllocator->FreeShadowMap(shadowMap))
         {
             HYP_LOG(Shadows, Error, "Failed to free shadow map!");
         }

@@ -53,8 +53,9 @@ enum class ViewFlags : uint32
     SKIP_LIGHTS = 0x80,            //!< If set, the view will not collect Lights.
     SKIP_LIGHTMAP_VOLUMES = 0x100, //!< If set, the view will not collect LightmapVolumes.
 
-    DISABLE_BUFFER = 0x1000, //!< Disables double / triple buffering for the RenderProxyList this View writes to.
-                             //  --- Use ONLY for Views that are not written to every frame, and instead are written to and read once (or very infrequently); e.g EnvProbes.
+    NOT_MULTI_BUFFERED = 0x1000, //!< Disables double / triple buffering for the RenderProxyList this View writes to.
+                                 //  --- Use ONLY for Views that are not written to every frame, and instead are written to and read once (or infrequently); e.g EnvProbes.
+                                 //  --- Use of these is still threadsafe, however it uses a spinlock instead of multiple buffering so contentions will eat up cpu cycles.
 
     // enable flags
     ENABLE_RAYTRACING = 0x100000, //!< Should raytracing features be enabled for rendering this View? (Only for Views with GBUFFER enabled). Raytracing must be enabled in the global renderer config

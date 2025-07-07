@@ -1134,29 +1134,29 @@ HYP_API void RenderApi_EndFrame_RenderThread()
 #pragma region RenderGlobalState
 
 RenderGlobalState::RenderGlobalState()
-    : ShadowMapAllocator(MakeUnique<class ShadowMapAllocator>()),
-      GpuBufferHolderMap(MakeUnique<class GpuBufferHolderMap>()),
+    : shadowMapAllocator(MakeUnique<ShadowMapAllocator>()),
+      gpuBufferHolders(MakeUnique<GpuBufferHolderMap>()),
       placeholderData(MakeUnique<PlaceholderData>()),
       resourceBindings(new ResourceBindings()),
       materialDescriptorSetManager(new MaterialDescriptorSetManager()),
       graphicsPipelineCache(new GraphicsPipelineCache()),
       bindlessStorage(new BindlessStorage())
 {
-    gpuBuffers.buffers[GRB_WORLDS] = GpuBufferHolderMap->GetOrCreate<WorldShaderData, GpuBufferType::CBUFF>();
-    gpuBuffers.buffers[GRB_CAMERAS] = GpuBufferHolderMap->GetOrCreate<CameraShaderData, GpuBufferType::CBUFF>();
-    gpuBuffers.buffers[GRB_LIGHTS] = GpuBufferHolderMap->GetOrCreate<LightShaderData, GpuBufferType::SSBO>();
-    gpuBuffers.buffers[GRB_ENTITIES] = GpuBufferHolderMap->GetOrCreate<EntityShaderData, GpuBufferType::SSBO>();
-    gpuBuffers.buffers[GRB_MATERIALS] = GpuBufferHolderMap->GetOrCreate<MaterialShaderData, GpuBufferType::SSBO>();
-    gpuBuffers.buffers[GRB_SKELETONS] = GpuBufferHolderMap->GetOrCreate<SkeletonShaderData, GpuBufferType::SSBO>();
-    gpuBuffers.buffers[GRB_SHADOW_MAPS] = GpuBufferHolderMap->GetOrCreate<ShadowMapShaderData, GpuBufferType::SSBO>();
-    gpuBuffers.buffers[GRB_ENV_PROBES] = GpuBufferHolderMap->GetOrCreate<EnvProbeShaderData, GpuBufferType::SSBO>();
-    gpuBuffers.buffers[GRB_ENV_GRIDS] = GpuBufferHolderMap->GetOrCreate<EnvGridShaderData, GpuBufferType::CBUFF>();
-    gpuBuffers.buffers[GRB_LIGHTMAP_VOLUMES] = GpuBufferHolderMap->GetOrCreate<LightmapVolumeShaderData, GpuBufferType::SSBO>();
+    gpuBuffers.buffers[GRB_WORLDS] = gpuBufferHolders->GetOrCreate<WorldShaderData, GpuBufferType::CBUFF>();
+    gpuBuffers.buffers[GRB_CAMERAS] = gpuBufferHolders->GetOrCreate<CameraShaderData, GpuBufferType::CBUFF>();
+    gpuBuffers.buffers[GRB_LIGHTS] = gpuBufferHolders->GetOrCreate<LightShaderData, GpuBufferType::SSBO>();
+    gpuBuffers.buffers[GRB_ENTITIES] = gpuBufferHolders->GetOrCreate<EntityShaderData, GpuBufferType::SSBO>();
+    gpuBuffers.buffers[GRB_MATERIALS] = gpuBufferHolders->GetOrCreate<MaterialShaderData, GpuBufferType::SSBO>();
+    gpuBuffers.buffers[GRB_SKELETONS] = gpuBufferHolders->GetOrCreate<SkeletonShaderData, GpuBufferType::SSBO>();
+    gpuBuffers.buffers[GRB_SHADOW_MAPS] = gpuBufferHolders->GetOrCreate<ShadowMapShaderData, GpuBufferType::SSBO>();
+    gpuBuffers.buffers[GRB_ENV_PROBES] = gpuBufferHolders->GetOrCreate<EnvProbeShaderData, GpuBufferType::SSBO>();
+    gpuBuffers.buffers[GRB_ENV_GRIDS] = gpuBufferHolders->GetOrCreate<EnvGridShaderData, GpuBufferType::CBUFF>();
+    gpuBuffers.buffers[GRB_LIGHTMAP_VOLUMES] = gpuBufferHolders->GetOrCreate<LightmapVolumeShaderData, GpuBufferType::SSBO>();
 
-    GlobalDescriptorTable = g_renderBackend->MakeDescriptorTable(&GetStaticDescriptorTableDeclaration());
+    globalDescriptorTable = g_renderBackend->MakeDescriptorTable(&GetStaticDescriptorTableDeclaration());
 
     placeholderData->Create();
-    ShadowMapAllocator->Initialize();
+    shadowMapAllocator->Initialize();
 
     for (uint32 frameIndex = 0; frameIndex < g_framesInFlight; frameIndex++)
     {
@@ -1166,7 +1166,7 @@ RenderGlobalState::RenderGlobalState()
     CreateSphereSamplesBuffer();
     CreateBlueNoiseBuffer();
 
-    GlobalDescriptorTable->Create();
+    globalDescriptorTable->Create();
 
     mainRenderer = new DeferredRenderer();
     mainRenderer->Initialize();
@@ -1188,8 +1188,8 @@ RenderGlobalState::~RenderGlobalState()
     delete bindlessStorage;
     bindlessStorage = nullptr;
 
-    ShadowMapAllocator->Destroy();
-    GlobalDescriptorTable->Destroy();
+    shadowMapAllocator->Destroy();
+    globalDescriptorTable->Destroy();
     placeholderData->Destroy();
 
     for (uint32 i = 0; i < GRT_MAX; i++)
@@ -1220,7 +1220,7 @@ void RenderGlobalState::UpdateBuffers(FrameBase* frame)
     HYP_SCOPE;
     Threads::AssertOnThread(g_renderThread);
 
-    for (auto& it : GpuBufferHolderMap->GetItems())
+    for (auto& it : gpuBufferHolders->GetItems())
     {
         it.second->UpdateBufferSize(frame->GetFrameIndex());
         it.second->UpdateBufferData(frame->GetFrameIndex());
@@ -1282,7 +1282,7 @@ void RenderGlobalState::CreateBlueNoiseBuffer()
 
     for (uint32 frameIndex = 0; frameIndex < g_framesInFlight; frameIndex++)
     {
-        GlobalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)
+        globalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)
             ->SetElement(NAME("BlueNoiseBuffer"), blueNoiseBuffer);
     }
 }
@@ -1314,7 +1314,7 @@ void RenderGlobalState::CreateSphereSamplesBuffer()
 
     for (uint32 frameIndex = 0; frameIndex < g_framesInFlight; frameIndex++)
     {
-        GlobalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)
+        globalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)
             ->SetElement(NAME("SphereSamplesBuffer"), sphereSamplesBuffer);
     }
 }
@@ -1325,62 +1325,62 @@ void RenderGlobalState::SetDefaultDescriptorSetElements(uint32 frameIndex)
     Threads::AssertOnThread(g_renderThread);
 
     // Global
-    GlobalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)->SetElement(NAME("WorldsBuffer"), gpuBuffers[GRB_WORLDS]->GetBuffer(frameIndex));
-    GlobalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)->SetElement(NAME("LightsBuffer"), gpuBuffers[GRB_LIGHTS]->GetBuffer(frameIndex));
-    GlobalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)->SetElement(NAME("CurrentLight"), gpuBuffers[GRB_LIGHTS]->GetBuffer(frameIndex));
-    GlobalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)->SetElement(NAME("ObjectsBuffer"), gpuBuffers[GRB_ENTITIES]->GetBuffer(frameIndex));
-    GlobalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)->SetElement(NAME("CamerasBuffer"), gpuBuffers[GRB_CAMERAS]->GetBuffer(frameIndex));
-    GlobalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)->SetElement(NAME("EnvGridsBuffer"), gpuBuffers[GRB_ENV_GRIDS]->GetBuffer(frameIndex));
-    GlobalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)->SetElement(NAME("EnvProbesBuffer"), gpuBuffers[GRB_ENV_PROBES]->GetBuffer(frameIndex));
-    GlobalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)->SetElement(NAME("CurrentEnvProbe"), gpuBuffers[GRB_ENV_PROBES]->GetBuffer(frameIndex));
+    globalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)->SetElement(NAME("WorldsBuffer"), gpuBuffers[GRB_WORLDS]->GetBuffer(frameIndex));
+    globalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)->SetElement(NAME("LightsBuffer"), gpuBuffers[GRB_LIGHTS]->GetBuffer(frameIndex));
+    globalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)->SetElement(NAME("CurrentLight"), gpuBuffers[GRB_LIGHTS]->GetBuffer(frameIndex));
+    globalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)->SetElement(NAME("ObjectsBuffer"), gpuBuffers[GRB_ENTITIES]->GetBuffer(frameIndex));
+    globalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)->SetElement(NAME("CamerasBuffer"), gpuBuffers[GRB_CAMERAS]->GetBuffer(frameIndex));
+    globalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)->SetElement(NAME("EnvGridsBuffer"), gpuBuffers[GRB_ENV_GRIDS]->GetBuffer(frameIndex));
+    globalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)->SetElement(NAME("EnvProbesBuffer"), gpuBuffers[GRB_ENV_PROBES]->GetBuffer(frameIndex));
+    globalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)->SetElement(NAME("CurrentEnvProbe"), gpuBuffers[GRB_ENV_PROBES]->GetBuffer(frameIndex));
 
-    GlobalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)->SetElement(NAME("VoxelGridTexture"), placeholderData->GetImageView3D1x1x1R8());
+    globalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)->SetElement(NAME("VoxelGridTexture"), placeholderData->GetImageView3D1x1x1R8());
 
-    GlobalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)->SetElement(NAME("LightFieldColorTexture"), placeholderData->GetImageView2D1x1R8());
-    GlobalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)->SetElement(NAME("LightFieldDepthTexture"), placeholderData->GetImageView2D1x1R8());
+    globalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)->SetElement(NAME("LightFieldColorTexture"), placeholderData->GetImageView2D1x1R8());
+    globalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)->SetElement(NAME("LightFieldDepthTexture"), placeholderData->GetImageView2D1x1R8());
 
-    GlobalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)->SetElement(NAME("BlueNoiseBuffer"), GpuBufferRef::Null());
-    GlobalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)->SetElement(NAME("SphereSamplesBuffer"), GpuBufferRef::Null());
+    globalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)->SetElement(NAME("BlueNoiseBuffer"), GpuBufferRef::Null());
+    globalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)->SetElement(NAME("SphereSamplesBuffer"), GpuBufferRef::Null());
 
-    GlobalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)->SetElement(NAME("ShadowMapsTextureArray"), placeholderData->GetImageView2D1x1R8Array());
-    GlobalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)->SetElement(NAME("PointLightShadowMapsTextureArray"), placeholderData->GetImageViewCube1x1R8Array());
-    GlobalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)->SetElement(NAME("ShadowMapsBuffer"), gpuBuffers[GRB_SHADOW_MAPS]->GetBuffer(frameIndex));
-    GlobalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)->SetElement(NAME("LightmapVolumesBuffer"), gpuBuffers[GRB_LIGHTMAP_VOLUMES]->GetBuffer(frameIndex));
+    globalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)->SetElement(NAME("ShadowMapsTextureArray"), placeholderData->GetImageView2D1x1R8Array());
+    globalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)->SetElement(NAME("PointLightShadowMapsTextureArray"), placeholderData->GetImageViewCube1x1R8Array());
+    globalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)->SetElement(NAME("ShadowMapsBuffer"), gpuBuffers[GRB_SHADOW_MAPS]->GetBuffer(frameIndex));
+    globalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)->SetElement(NAME("LightmapVolumesBuffer"), gpuBuffers[GRB_LIGHTMAP_VOLUMES]->GetBuffer(frameIndex));
 
     for (uint32 i = 0; i < g_maxBoundReflectionProbes; i++)
     {
-        GlobalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)->SetElement(NAME("EnvProbeTextures"), i, placeholderData->DefaultTexture2D->GetRenderResource().GetImageView());
+        globalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)->SetElement(NAME("EnvProbeTextures"), i, placeholderData->DefaultTexture2D->GetRenderResource().GetImageView());
     }
 
-    GlobalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)->SetElement(NAME("DDGIUniforms"), placeholderData->GetOrCreateBuffer(GpuBufferType::CBUFF, sizeof(DDGIUniforms), true /* exact size */));
-    GlobalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)->SetElement(NAME("DDGIIrradianceTexture"), placeholderData->GetImageView2D1x1R8());
-    GlobalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)->SetElement(NAME("DDGIDepthTexture"), placeholderData->GetImageView2D1x1R8());
+    globalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)->SetElement(NAME("DDGIUniforms"), placeholderData->GetOrCreateBuffer(GpuBufferType::CBUFF, sizeof(DDGIUniforms), true /* exact size */));
+    globalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)->SetElement(NAME("DDGIIrradianceTexture"), placeholderData->GetImageView2D1x1R8());
+    globalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)->SetElement(NAME("DDGIDepthTexture"), placeholderData->GetImageView2D1x1R8());
 
-    GlobalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)->SetElement(NAME("RTRadianceResultTexture"), placeholderData->GetImageView2D1x1R8());
+    globalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)->SetElement(NAME("RTRadianceResultTexture"), placeholderData->GetImageView2D1x1R8());
 
-    GlobalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)->SetElement(NAME("SamplerNearest"), placeholderData->GetSamplerNearest());
-    GlobalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)->SetElement(NAME("SamplerLinear"), placeholderData->GetSamplerLinearMipmap());
+    globalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)->SetElement(NAME("SamplerNearest"), placeholderData->GetSamplerNearest());
+    globalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)->SetElement(NAME("SamplerLinear"), placeholderData->GetSamplerLinearMipmap());
 
-    GlobalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)->SetElement(NAME("UITexture"), placeholderData->GetImageView2D1x1R8());
+    globalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)->SetElement(NAME("UITexture"), placeholderData->GetImageView2D1x1R8());
 
-    GlobalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)->SetElement(NAME("FinalOutputTexture"), placeholderData->GetImageView2D1x1R8());
+    globalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)->SetElement(NAME("FinalOutputTexture"), placeholderData->GetImageView2D1x1R8());
 
-    GlobalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)->SetElement(NAME("ShadowMapsTextureArray"), ShadowMapAllocator->GetAtlasImageView());
-    GlobalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)->SetElement(NAME("PointLightShadowMapsTextureArray"), ShadowMapAllocator->GetPointLightShadowMapImageView());
+    globalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)->SetElement(NAME("ShadowMapsTextureArray"), shadowMapAllocator->GetAtlasImageView());
+    globalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)->SetElement(NAME("PointLightShadowMapsTextureArray"), shadowMapAllocator->GetPointLightShadowMapImageView());
 
     // Object
-    GlobalDescriptorTable->GetDescriptorSet(NAME("Object"), frameIndex)->SetElement(NAME("CurrentObject"), gpuBuffers[GRB_ENTITIES]->GetBuffer(frameIndex));
-    GlobalDescriptorTable->GetDescriptorSet(NAME("Object"), frameIndex)->SetElement(NAME("MaterialsBuffer"), gpuBuffers[GRB_MATERIALS]->GetBuffer(frameIndex));
-    GlobalDescriptorTable->GetDescriptorSet(NAME("Object"), frameIndex)->SetElement(NAME("SkeletonsBuffer"), gpuBuffers[GRB_SKELETONS]->GetBuffer(frameIndex));
-    GlobalDescriptorTable->GetDescriptorSet(NAME("Object"), frameIndex)->SetElement(NAME("LightmapVolumeIrradianceTexture"), placeholderData->GetImageView2D1x1R8());
-    GlobalDescriptorTable->GetDescriptorSet(NAME("Object"), frameIndex)->SetElement(NAME("LightmapVolumeRadianceTexture"), placeholderData->GetImageView2D1x1R8());
+    globalDescriptorTable->GetDescriptorSet(NAME("Object"), frameIndex)->SetElement(NAME("CurrentObject"), gpuBuffers[GRB_ENTITIES]->GetBuffer(frameIndex));
+    globalDescriptorTable->GetDescriptorSet(NAME("Object"), frameIndex)->SetElement(NAME("MaterialsBuffer"), gpuBuffers[GRB_MATERIALS]->GetBuffer(frameIndex));
+    globalDescriptorTable->GetDescriptorSet(NAME("Object"), frameIndex)->SetElement(NAME("SkeletonsBuffer"), gpuBuffers[GRB_SKELETONS]->GetBuffer(frameIndex));
+    globalDescriptorTable->GetDescriptorSet(NAME("Object"), frameIndex)->SetElement(NAME("LightmapVolumeIrradianceTexture"), placeholderData->GetImageView2D1x1R8());
+    globalDescriptorTable->GetDescriptorSet(NAME("Object"), frameIndex)->SetElement(NAME("LightmapVolumeRadianceTexture"), placeholderData->GetImageView2D1x1R8());
 
     // Material
     if (g_renderBackend->GetRenderConfig().IsBindlessSupported())
     {
         for (uint32 textureIndex = 0; textureIndex < g_maxBindlessResources; textureIndex++)
         {
-            GlobalDescriptorTable->GetDescriptorSet(NAME("Material"), frameIndex)
+            globalDescriptorTable->GetDescriptorSet(NAME("Material"), frameIndex)
                 ->SetElement(NAME("Textures"), textureIndex, placeholderData->DefaultTexture2D->GetRenderResource().GetImageView());
         }
     }
@@ -1388,7 +1388,7 @@ void RenderGlobalState::SetDefaultDescriptorSetElements(uint32 frameIndex)
     {
         for (uint32 textureIndex = 0; textureIndex < g_maxBoundTextures; textureIndex++)
         {
-            GlobalDescriptorTable->GetDescriptorSet(NAME("Material"), frameIndex)
+            globalDescriptorTable->GetDescriptorSet(NAME("Material"), frameIndex)
                 ->SetElement(NAME("Textures"), textureIndex, placeholderData->DefaultTexture2D->GetRenderResource().GetImageView());
         }
     }

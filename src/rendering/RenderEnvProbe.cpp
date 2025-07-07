@@ -662,7 +662,7 @@ void ReflectionProbeRenderer::ComputePrefilteredEnvMap(FrameBase* frame, const R
 
     // for (uint32 frameIndex = 0; frameIndex < g_framesInFlight; frameIndex++)
     // {
-    //     g_renderGlobalState->GlobalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)->SetElement(NAME("EnvProbeTextures"), m_textureSlot, prefilteredEnvMap->GetRenderResource().GetImageView());
+    //     g_renderGlobalState->globalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)->SetElement(NAME("EnvProbeTextures"), m_textureSlot, prefilteredEnvMap->GetRenderResource().GetImageView());
     //     HYP_LOG(EnvProbe, Debug, "Set EnvProbe texture slot {} for envprobe {} in global descriptor table",
     //         m_envProbe->GetTextureSlot(), m_envProbe->Id());
     // }

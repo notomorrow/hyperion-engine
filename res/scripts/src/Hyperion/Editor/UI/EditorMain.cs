@@ -75,8 +75,7 @@ namespace Hyperion
                 new KeyValuePair<int, Color>(60, new Color(1.0f, 1.0f, 0.0f, 1.0f)),
                 new KeyValuePair<int, Color>(int.MaxValue, new Color(0.0f, 1.0f, 0.0f, 1.0f))
             };
-
-            private UIText? tpsTextElement;
+            
             private UIText? memoryUsageTextElement;
             private UIText? fpsTextElement;
             private UIText? countersTextElement;
@@ -113,13 +112,6 @@ namespace Hyperion
                 renderListView.AddChildUIObject(countersTextElement);
                 this.countersTextElement = countersTextElement;
 
-                UIText tpsTextElement = renderListView.Spawn<UIText>(new Name("FPSCounterDebugOverlay_TPS"), new Vec2i(0, 0), new UIObjectSize(UIObjectSize.Auto));
-                tpsTextElement.SetText("Game:");
-                tpsTextElement.SetTextColor(new Color(1.0f, 1.0f, 1.0f, 1.0f));
-                tpsTextElement.SetPadding(new Vec2i(5, 5));
-                renderListView.AddChildUIObject(tpsTextElement);
-                this.tpsTextElement = tpsTextElement;
-
                 UIText memoryUsageTextElement = renderListView.Spawn<UIText>(new Name("FPSCounterDebugOverlay_MemoryUsage"), new Vec2i(0, 0), new UIObjectSize(UIObjectSize.Auto));
                 memoryUsageTextElement.SetText(".NET Memory Usage: 0 MB");
                 memoryUsageTextElement.SetTextColor(new Color(1.0f, 1.0f, 1.0f, 1.0f));
@@ -149,14 +141,6 @@ namespace Hyperion
 
                 if (deltaAccumGame >= 1.0f)
                 {
-                    if (tpsTextElement != null)
-                    {
-                        int ticksPerSecondGame = (int)(1.0f / (deltaAccumGame / (float)numTicksGame));
-
-                        ((UIText)tpsTextElement).SetText(string.Format("Game: {0} ticks/sec", ticksPerSecondGame));
-                        tpsTextElement.SetTextColor(GetFPSColor(ticksPerSecondGame));
-                    }
-
                     if (memoryUsageTextElement != null)
                     {
                         long memoryUsage = GC.GetTotalMemory(false) / 1024 / 1024;
@@ -172,7 +156,7 @@ namespace Hyperion
 
                 if (fpsTextElement != null)
                 {
-                    ((UIText)fpsTextElement).SetText(string.Format("Render: {0} frames/sec, {1:0.00} ms/frame (avg: {2:0.00}, min: {3:0.00}, max: {4:0.00})",
+                    ((UIText)fpsTextElement).SetText(string.Format("{0} fps, {1:0.00} ms/frame (avg: {2:0.00}, min: {3:0.00}, max: {4:0.00})",
                         (int)renderStats.framesPerSecond, renderStats.millisecondsPerFrame,
                         renderStats.millisecondsPerFrameAvg, renderStats.millisecondsPerFrameMin, renderStats.millisecondsPerFrameMax));
                     fpsTextElement.SetTextColor(GetFPSColor((int)renderStats.framesPerSecond));

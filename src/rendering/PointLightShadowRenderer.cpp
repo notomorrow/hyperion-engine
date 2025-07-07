@@ -46,7 +46,7 @@ void PointLightShadowRenderer::Init()
     Assert(m_parentScene.IsValid());
     Assert(m_parentScene->IsReady());
 
-    RenderShadowMap* shadowMap = g_renderGlobalState->ShadowMapAllocator->AllocateShadowMap(
+    RenderShadowMap* shadowMap = g_renderGlobalState->shadowMapAllocator->AllocateShadowMap(
         SMT_OMNI,
         SMF_VSM,
         m_extent);
@@ -90,7 +90,7 @@ void PointLightShadowRenderer::OnRemoved()
 
         m_shadowMap.Reset();
 
-        if (!g_renderGlobalState->ShadowMapAllocator->FreeShadowMap(shadowMap))
+        if (!g_renderGlobalState->shadowMapAllocator->FreeShadowMap(shadowMap))
         {
             HYP_FAIL("Failed to free shadow map!");
         }

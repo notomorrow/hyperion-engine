@@ -20,7 +20,7 @@ extern RenderGlobalState* g_renderGlobalState;
 
 HYP_API GpuBufferHolderMap* GetGpuBufferHolderMap()
 {
-    return g_renderGlobalState->GpuBufferHolderMap.Get();
+    return g_renderGlobalState->gpuBufferHolders.Get();
 }
 
 #pragma region DrawCallCollection

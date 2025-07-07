@@ -620,8 +620,6 @@ void EnvGridRenderer::RenderFrame(FrameBase* frame, const RenderSetup& renderSet
         }
     }
 
-    HYP_LOG(EnvGrid, Debug, "Rendering EnvGrid with {} probes", envProbeCollection.numProbes);
-
     // render enqueued probes
     while (pd->nextRenderIndices.Any())
     {
