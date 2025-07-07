@@ -97,10 +97,12 @@ struct RENDER_COMMAND(CreateTexture)
                         ByteBuffer* placeholderBuffer = &placeholderBuffers.EmplaceBack();
                         placeholderBuffer->SetSize(image->GetByteSize());
 
-                        switch (image->GetType())
+                        const TextureFormat nonSrgbFormat = ChangeFormatSrgb(image->GetTextureFormat(), false);
+
+                        switch (texture->GetType())
                         {
                         case TT_TEX2D:
-                            switch (image->GetTextureFormat())
+                            switch (nonSrgbFormat)
                             {
                             case TF_R8:
                                 FillPlaceholderBuffer_Tex2D<TF_R8>(image->GetExtent().GetXY(), *placeholderBuffer);
@@ -120,7 +122,7 @@ struct RENDER_COMMAND(CreateTexture)
                             }
                             break;
                         case TT_CUBEMAP:
-                            switch (image->GetTextureFormat())
+                            switch (nonSrgbFormat)
                             {
                             case TF_R8:
                                 FillPlaceholderBuffer_Cubemap<TF_R8>(image->GetExtent().GetXY(), *placeholderBuffer);
@@ -180,38 +182,6 @@ struct RENDER_COMMAND(CreateTexture)
         }
 
         return {};
-    }
-};
-
-struct RENDER_COMMAND(DestroyTexture)
-    : RenderCommand
-{
-    // Keep weak handle around to ensure the Id persists
-    WeakHandle<Texture> texture;
-
-    RENDER_COMMAND(DestroyTexture)(const WeakHandle<Texture>& texture)
-        : texture(texture)
-    {
-        Assert(texture.IsValid());
-    }
-
-    virtual ~RENDER_COMMAND(DestroyTexture)() override = default;
-
-    virtual RendererResult operator()() override
-    {
-        // If shutting down, skip removing the resource here,
-        // render data may have already been destroyed
-        if (g_engine->IsShuttingDown())
-        {
-            HYPERION_RETURN_OK;
-        }
-
-        if (g_renderBackend->GetRenderConfig().IsBindlessSupported())
-        {
-            // g_renderGlobalState->bindlessStorage->RemoveResource(texture.Id());
-        }
-
-        HYPERION_RETURN_OK;
     }
 };
 
@@ -436,8 +406,6 @@ void RenderTexture::Initialize_Internal()
 void RenderTexture::Destroy_Internal()
 {
     HYP_SCOPE;
-
-    PUSH_RENDER_COMMAND(DestroyTexture, m_texture->WeakHandleFromThis());
 }
 
 void RenderTexture::Update_Internal()

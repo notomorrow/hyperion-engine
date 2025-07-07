@@ -4,7 +4,7 @@
       "name": "Microsoft.NETCore.App",
       "version": "8.0.1"
     },
-    "additionalProbingPaths": ["../res/data/dotnet/lib", "."],
+    "additionalProbingPaths": ["..\\..\\..\\res\\data\\dotnet\\lib", ""],
     "tfm": "net8.0"
   }
 }

@@ -346,17 +346,7 @@ AssetLoadResult MTLMaterialLoader::LoadAsset(LoaderState& state) const
 
             if (it.mapping.srgb)
             {
-                switch (textureDesc.format)
-                {
-                case TF_RGB8:
-                    textureDesc.format = TF_RGB8_SRGB;
-                    break;
-                case TF_RGBA8:
-                    textureDesc.format = TF_RGBA8_SRGB;
-                    break;
-                default:
-                    break;
-                }
+                textureDesc.format = ChangeFormatSrgb(textureDesc.format, /* makeSrgb */ true);
             }
 
             texture->SetTextureDesc(textureDesc);

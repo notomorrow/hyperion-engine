@@ -372,6 +372,7 @@ private:
     void CreateViewFinalPassDescriptorSet(View* view, DeferredPassData& passData);
     void CreateViewDescriptorSets(View* view, DeferredPassData& passData);
     void CreateViewCombinePass(View* view, DeferredPassData& passData);
+    void CreateViewRaytracingData(View* view, DeferredPassData& passData);
     void CreateViewTopLevelAccelerationStructures(View* view, DeferredPassData& passData);
 
     void ResizeView(Viewport viewport, View* view, DeferredPassData& passData);

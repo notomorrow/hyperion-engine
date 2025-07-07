@@ -296,7 +296,6 @@ void UIRenderCollector::PushUpdates(RenderProxyList& rpl, const Optional<Rendera
     RenderCollector::CollectDrawCalls(rpl, 0);
 }
 
-HYP_DISABLE_OPTIMIZATION;
 void UIRenderCollector::ExecuteDrawCalls(FrameBase* frame, const RenderSetup& renderSetup, const FramebufferRef& framebuffer) const
 {
     HYP_SCOPE;
@@ -371,7 +370,6 @@ void UIRenderCollector::ExecuteDrawCalls(FrameBase* frame, const RenderSetup& re
         frame->GetCommandList().Add<EndFramebuffer>(framebuffer, frameIndex);
     }
 }
-HYP_ENABLE_OPTIMIZATION;
 
 #pragma endregion UIRenderCollector
 

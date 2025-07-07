@@ -133,8 +133,6 @@ void Material::EnqueueRenderUpdates()
 {
     AssertReady();
 
-    static const bool isBindlessSupported = g_renderBackend->GetRenderConfig().IsBindlessSupported();
-
     if (!m_mutationState.IsDirty())
     {
         HYP_LOG_ONCE(Material, Warning, "EnqueueRenderUpdates called on material with Id {} (name: {}) that is not dirty", Id(), GetName());

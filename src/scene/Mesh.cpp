@@ -7,6 +7,8 @@
 
 #include <core/object/HypClassUtils.hpp>
 
+#include <core/containers/SparsePagedArray.hpp>
+
 #include <core/logging/LogChannels.hpp>
 #include <core/logging/Logger.hpp>
 
@@ -348,6 +350,16 @@ void Mesh::SetPersistentRenderResourceEnabled(bool enabled)
     }
 }
 
+#define ADD_NORMAL(ary, idx, normal) \
+    do { \
+        auto* idx_it = ary.TryGet(idx); \
+        if (!idx_it) \
+        { \
+            idx_it = &*ary.Emplace(idx); \
+        } \
+        idx_it->PushBack(normal); \
+    } while (0)
+
 void Mesh::CalculateNormals(bool weighted)
 {
     HYP_SCOPE;
@@ -381,7 +393,7 @@ void Mesh::CalculateNormals(bool weighted)
 
     MeshData meshData = m_streamedMeshData->GetMeshData();
 
-    std::unordered_map<uint32, Array<Vec3f>> normals;
+    SparsePagedArray<Array<Vec3f, InlineAllocator<3>>, 1 << 6> normals;
 
     // compute per-face normals (facet normals)
     for (SizeType i = 0; i < meshData.indices.Size(); i += 3)
@@ -398,20 +410,22 @@ void Mesh::CalculateNormals(bool weighted)
         const Vec3f v = p1 - p0;
         const Vec3f n = v.Cross(u).Normalize();
 
-        normals[i0].PushBack(n);
-        normals[i1].PushBack(n);
-        normals[i2].PushBack(n);
+        ADD_NORMAL(normals, i0, n);
+        ADD_NORMAL(normals, i1, n);
+        ADD_NORMAL(normals, i2, n);
     }
 
     for (SizeType i = 0; i < meshData.vertices.Size(); i++)
     {
+        AssertDebug(normals.HasIndex(uint32(i)));
+
         if (weighted)
         {
-            meshData.vertices[i].SetNormal(normals[i].Sum());
+            meshData.vertices[i].SetNormal(normals.Get(uint32(i)).Sum());
         }
         else
         {
-            meshData.vertices[i].SetNormal(normals[i].Sum().Normalize());
+            meshData.vertices[i].SetNormal(normals.Get(uint32(i)).Sum().Normalize());
         }
     }
 
@@ -425,7 +439,7 @@ void Mesh::CalculateNormals(bool weighted)
         return;
     }
 
-    normals.clear();
+    normals.Clear();
 
     // weighted (smooth) normals
 
@@ -506,23 +520,37 @@ void Mesh::CalculateNormals(bool weighted)
             // }
         }
 
-        normals[i0].PushBack(weightedNormals[0].Normalized());
-        normals[i1].PushBack(weightedNormals[1].Normalized());
-        normals[i2].PushBack(weightedNormals[2].Normalized());
+        ADD_NORMAL(normals, i0, weightedNormals[0].Normalized());
+        ADD_NORMAL(normals, i1, weightedNormals[1].Normalized());
+        ADD_NORMAL(normals, i2, weightedNormals[2].Normalized());
     }
 
     for (SizeType i = 0; i < meshData.vertices.Size(); i++)
     {
-        meshData.vertices[i].SetNormal(normals[i].Sum().Normalized());
+        AssertDebug(normals.HasIndex(i));
+
+        meshData.vertices[i].SetNormal(normals.Get(i).Sum().Normalized());
     }
 
-    normals.clear();
+    normals.Clear();
 
     m_streamedMeshDataResourceHandle.Reset();
 
     m_streamedMeshData->WaitForFinalization();
     m_streamedMeshData.Emplace(std::move(meshData), m_streamedMeshDataResourceHandle);
 }
+
+#undef ADD_NORMAL
+
+#define ADD_TANGENTS(ary, idx, tangents) \
+    do { \
+        auto* idx_it = ary.TryGet(idx); \
+        if (!idx_it) \
+        { \
+            idx_it = &*ary.Emplace(idx); \
+        } \
+        idx_it->PushBack(tangents); \
+    } while (0)
 
 void Mesh::CalculateTangents()
 {
@@ -556,7 +584,9 @@ void Mesh::CalculateTangents()
         Vec3f bitangent;
     };
 
-    std::unordered_map<uint32, Array<TangentBitangentPair>> data;
+    static const Array<TangentBitangentPair, InlineAllocator<1>> placeholderTangentBitangents {};
+
+    SparsePagedArray<Array<TangentBitangentPair, InlineAllocator<1>>, 1 << 6> data;
 
     for (SizeType i = 0; i < meshData.indices.Size();)
     {
@@ -591,9 +621,9 @@ void Mesh::CalculateTangents()
                 .bitangent = ((edge1 * edge2uv.x - edge2 * edge1uv.x) * mul).Normalize()
             };
 
-            data[i0].PushBack(tangentBitangent);
-            data[i1].PushBack(tangentBitangent);
-            data[i2].PushBack(tangentBitangent);
+            ADD_TANGENTS(data, i0, tangentBitangent);
+            ADD_TANGENTS(data, i1, tangentBitangent);
+            ADD_TANGENTS(data, i2, tangentBitangent);
         }
 
         i += count;
@@ -601,15 +631,20 @@ void Mesh::CalculateTangents()
 
     for (SizeType i = 0; i < meshData.vertices.Size(); i++)
     {
-        const auto& tangentBitangents = data[i];
+        const Array<TangentBitangentPair, InlineAllocator<1>>* tangentBitangents = data.TryGet(i);
+
+        if (!tangentBitangents)
+        {
+            tangentBitangents = &placeholderTangentBitangents;
+        }
 
         // find average
         Vec3f averageTangent, averageBitangent;
 
-        for (const auto& item : tangentBitangents)
+        for (const auto& item : *tangentBitangents)
         {
-            averageTangent += item.tangent * (1.0f / tangentBitangents.Size());
-            averageBitangent += item.bitangent * (1.0f / tangentBitangents.Size());
+            averageTangent += item.tangent * (1.0f / tangentBitangents->Size());
+            averageBitangent += item.bitangent * (1.0f / tangentBitangents->Size());
         }
 
         averageTangent.Normalize();
@@ -627,6 +662,8 @@ void Mesh::CalculateTangents()
     m_streamedMeshData->WaitForFinalization();
     m_streamedMeshData.Emplace(std::move(meshData), m_streamedMeshDataResourceHandle);
 }
+
+#undef ADD_TANGENTS
 
 void Mesh::InvertNormals()
 {

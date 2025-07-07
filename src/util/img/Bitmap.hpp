@@ -34,20 +34,20 @@ struct PixelReference
 
     ubyte* byteOffset;
 
-    PixelReference() = default;
+    HYP_FORCE_INLINE PixelReference() = default;
 
-    PixelReference(ubyte* byteOffset)
+    HYP_FORCE_INLINE PixelReference(ubyte* byteOffset)
         : byteOffset(byteOffset)
     {
     }
 
-    PixelReference(const PixelReference& other) = default;
-    PixelReference& operator=(const PixelReference& other) = default;
-    PixelReference(PixelReference&& other) noexcept = default;
-    PixelReference& operator=(PixelReference&& other) noexcept = default;
-    ~PixelReference() = default;
+    HYP_FORCE_INLINE PixelReference(const PixelReference& other) = default;
+    HYP_FORCE_INLINE PixelReference& operator=(const PixelReference& other) = default;
+    HYP_FORCE_INLINE PixelReference(PixelReference&& other) noexcept = default;
+    HYP_FORCE_INLINE PixelReference& operator=(PixelReference&& other) noexcept = default;
+    HYP_FORCE_INLINE ~PixelReference() = default;
 
-    float GetComponent(uint32 index) const
+    HYP_FORCE_INLINE float GetComponent(uint32 index) const
     {
         if (index >= numComponents || !byteOffset)
         {
@@ -64,7 +64,7 @@ struct PixelReference
         }
     }
 
-    void SetComponent(uint32 index, float value)
+    HYP_FORCE_INLINE void SetComponent(uint32 index, float value)
     {
         if (index >= numComponents || !byteOffset)
         {
@@ -81,47 +81,47 @@ struct PixelReference
         }
     }
 
-    float GetR() const
+    HYP_FORCE_INLINE float GetR() const
     {
         return GetComponent(0);
     }
 
-    void SetR(float r)
+    HYP_FORCE_INLINE void SetR(float r)
     {
         SetComponent(0, r);
     }
 
-    float GetG() const
+    HYP_FORCE_INLINE float GetG() const
     {
         return GetComponent(1);
     }
 
-    void SetG(float g)
+    HYP_FORCE_INLINE void SetG(float g)
     {
         SetComponent(1, g);
     }
 
-    float GetB() const
+    HYP_FORCE_INLINE float GetB() const
     {
         return GetComponent(2);
     }
 
-    void SetB(float b)
+    HYP_FORCE_INLINE void SetB(float b)
     {
         SetComponent(2, b);
     }
 
-    float GetA() const
+    HYP_FORCE_INLINE float GetA() const
     {
         return GetComponent(3);
     }
 
-    void SetA(float a)
+    HYP_FORCE_INLINE void SetA(float a)
     {
         SetComponent(3, a);
     }
 
-    Vec2f GetRG() const
+    HYP_FORCE_INLINE Vec2f GetRG() const
     {
         Vec2f rg = Vec2f(0.0f, 0.0f);
 
@@ -152,12 +152,12 @@ struct PixelReference
         return rg;
     }
 
-    void SetRG(const Vec2f& rg)
+    HYP_FORCE_INLINE void SetRG(const Vec2f& rg)
     {
         SetRG(rg.x, rg.y);
     }
 
-    void SetRG(float r, float g)
+    HYP_FORCE_INLINE void SetRG(float r, float g)
     {
         if (HYP_UNLIKELY(!byteOffset))
         {
@@ -184,7 +184,7 @@ struct PixelReference
         }
     }
 
-    Vec3f GetRGB() const
+    HYP_FORCE_INLINE Vec3f GetRGB() const
     {
         Vec3f rgb = Vec3f(0.0f, 0.0f, 0.0f);
 
@@ -225,12 +225,12 @@ struct PixelReference
         return rgb;
     }
 
-    void SetRGB(const Vec3f& rgb)
+    HYP_FORCE_INLINE void SetRGB(const Vec3f& rgb)
     {
         SetRGB(rgb.x, rgb.y, rgb.z);
     }
 
-    void SetRGB(float r, float g, float b)
+    HYP_FORCE_INLINE void SetRGB(float r, float g, float b)
     {
         if (HYP_UNLIKELY(!byteOffset))
         {
@@ -267,7 +267,7 @@ struct PixelReference
         }
     }
 
-    Vec4f GetRGBA() const
+    HYP_FORCE_INLINE Vec4f GetRGBA() const
     {
         Vec4f rgba = Vec4f(0.0f, 0.0f, 0.0f, 1.0f);
 
@@ -318,12 +318,12 @@ struct PixelReference
         return rgba;
     }
 
-    void SetRGBA(const Vec4f& rgba)
+    HYP_FORCE_INLINE void SetRGBA(const Vec4f& rgba)
     {
         SetRGBA(rgba.x, rgba.y, rgba.z, rgba.w);
     }
 
-    void SetRGBA(float r, float g, float b, float a)
+    HYP_FORCE_INLINE void SetRGBA(float r, float g, float b, float a)
     {
         if (HYP_UNLIKELY(!byteOffset))
         {
@@ -370,7 +370,7 @@ struct PixelReference
         }
     }
 
-    void SetScalar(float scalar)
+    HYP_FORCE_INLINE void SetScalar(float scalar)
     {
         SetRGBA(Vec4f(scalar));
     }
@@ -427,44 +427,33 @@ struct ConstPixelReference
 
     const ubyte* byteOffset;
 
-    ConstPixelReference()
+    HYP_FORCE_INLINE ConstPixelReference()
         : byteOffset(nullptr)
     {
     }
 
-    ConstPixelReference(const ubyte* byteOffset)
+    HYP_FORCE_INLINE ConstPixelReference(const ubyte* byteOffset)
         : byteOffset(byteOffset)
     {
     }
 
-    ConstPixelReference(const ConstPixelReference<ComponentType, NumComponents>& other) = default;
-    ConstPixelReference& operator=(const ConstPixelReference<ComponentType, NumComponents>& other) = delete;
+    HYP_FORCE_INLINE ConstPixelReference(const ConstPixelReference<ComponentType, NumComponents>& other) = default;
+    HYP_FORCE_INLINE ConstPixelReference& operator=(const ConstPixelReference<ComponentType, NumComponents>& other) = default;
+    HYP_FORCE_INLINE ConstPixelReference(ConstPixelReference<ComponentType, NumComponents>&& other) noexcept = default;
+    HYP_FORCE_INLINE ConstPixelReference& operator=(ConstPixelReference<ComponentType, NumComponents>&& other) noexcept = default;
 
-    ConstPixelReference(const PixelReference<ComponentType, NumComponents>& other)
+    HYP_FORCE_INLINE ConstPixelReference(const PixelReference<ComponentType, NumComponents>& other)
         : byteOffset(other.byteOffset)
     {
     }
 
-    ConstPixelReference& operator=(const PixelReference<ComponentType, NumComponents>& other)
+    HYP_FORCE_INLINE ConstPixelReference& operator=(const PixelReference<ComponentType, NumComponents>& other)
     {
         byteOffset = other.byteOffset;
         return *this;
     }
 
-    ConstPixelReference(ConstPixelReference<ComponentType, NumComponents>&& other) noexcept
-        : byteOffset(other.byteOffset)
-    {
-        other.byteOffset = nullptr;
-    }
-
-    ConstPixelReference& operator=(ConstPixelReference<ComponentType, NumComponents>&& other)
-    {
-        byteOffset = other.byteOffset;
-        other.byteOffset = nullptr;
-        return *this;
-    }
-
-    float GetComponent(uint32 index) const
+    HYP_FORCE_INLINE float GetComponent(uint32 index) const
     {
         if (index >= numComponents || !byteOffset)
         {
@@ -481,27 +470,27 @@ struct ConstPixelReference
         }
     }
 
-    float GetR() const
+    HYP_FORCE_INLINE float GetR() const
     {
         return GetComponent(0);
     }
 
-    float GetG() const
+    HYP_FORCE_INLINE float GetG() const
     {
         return GetComponent(1);
     }
 
-    float GetB() const
+    HYP_FORCE_INLINE float GetB() const
     {
         return GetComponent(2);
     }
 
-    float GetA() const
+    HYP_FORCE_INLINE float GetA() const
     {
         return GetComponent(3);
     }
 
-    Vec2f GetRG() const
+    HYP_FORCE_INLINE Vec2f GetRG() const
     {
         Vec2f rg = Vec2f(0.0f, 0.0f);
 
@@ -532,7 +521,7 @@ struct ConstPixelReference
         return rg;
     }
 
-    Vec3f GetRGB() const
+    HYP_FORCE_INLINE Vec3f GetRGB() const
     {
         Vec3f rgb = Vec3f(0.0f, 0.0f, 0.0f);
 
@@ -573,7 +562,7 @@ struct ConstPixelReference
         return rgb;
     }
 
-    Vec4f GetRGBA() const
+    HYP_FORCE_INLINE Vec4f GetRGBA() const
     {
         Vec4f rgba = Vec4f(0.0f, 0.0f, 0.0f, 1.0f);
 

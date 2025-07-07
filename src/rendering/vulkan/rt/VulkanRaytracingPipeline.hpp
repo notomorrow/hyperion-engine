@@ -6,6 +6,7 @@
 #include <rendering/vulkan/VulkanPipeline.hpp>
 
 #include <core/containers/Array.hpp>
+#include <core/containers/HashMap.hpp>
 
 #include <Types.hpp>
 
@@ -23,10 +24,7 @@ public:
     HYP_API virtual RendererResult Destroy() override;
 
     HYP_API virtual void Bind(CommandBufferBase* commandBuffer) override;
-
-    HYP_API virtual void TraceRays(
-        CommandBufferBase* commandBuffer,
-        const Vec3u& extent) const override;
+    HYP_API virtual void TraceRays(CommandBufferBase* commandBuffer, const Vec3u& extent) const override;
 
     HYP_API virtual void SetPushConstants(const void* data, SizeType size) override;
 
@@ -45,13 +43,10 @@ private:
         VkStridedDeviceAddressRegionKHR callable {};
     } m_shaderBindingTableEntries;
 
-    using ShaderBindingTableMap = std::unordered_map<ShaderModuleType, ShaderBindingTableEntry>;
+    using ShaderBindingTableMap = HashMap<ShaderModuleType, ShaderBindingTableEntry>;
 
     RendererResult CreateShaderBindingTables(VulkanShader* shader);
-
-    RendererResult CreateShaderBindingTableEntry(
-        uint32 numShaders,
-        ShaderBindingTableEntry& out);
+    RendererResult CreateShaderBindingTableEntry(uint32 numShaders, ShaderBindingTableEntry& out);
 
     ShaderBindingTableMap m_shaderBindingTableBuffers;
 };

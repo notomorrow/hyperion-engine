@@ -699,7 +699,7 @@ QueryImageCapabilitiesResult VulkanRenderBackend::QueryImageCapabilities(const T
     const bool isRwTexture = textureDesc.imageUsage[IU_STORAGE];
 
     const bool isDepthStencil = textureDesc.IsDepthStencil();
-    const bool isSrgb = textureDesc.IsSRGB();
+    const bool isSrgb = textureDesc.IsSrgb();
     const bool isBlended = textureDesc.imageUsage[IU_BLENDED];
 
     const bool hasMipmaps = textureDesc.HasMipmaps();

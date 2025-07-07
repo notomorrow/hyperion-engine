@@ -572,7 +572,6 @@ void EnvGridPass::Resize_Internal(Vec2u newSize)
     FullScreenPass::Resize_Internal(newSize);
 }
 
-HYP_DISABLE_OPTIMIZATION;
 void EnvGridPass::Render(FrameBase* frame, const RenderSetup& rs)
 {
     HYP_SCOPE;
@@ -659,7 +658,6 @@ void EnvGridPass::Render(FrameBase* frame, const RenderSetup& rs)
 
     m_isFirstFrame = false;
 }
-HYP_ENABLE_OPTIMIZATION;
 
 #pragma endregion Env grid pass
 
@@ -1087,19 +1085,7 @@ PassData* DeferredRenderer::CreateViewPassData(View* view, PassDataExt&)
 
     CreateViewDescriptorSets(view, *pd);
     CreateViewFinalPassDescriptorSet(view, *pd);
-
-    if ((view->GetFlags() & ViewFlags::ENABLE_RAYTRACING) && g_renderBackend->GetRenderConfig().IsRaytracingSupported())
-    {
-        CreateViewTopLevelAccelerationStructures(view, *pd);
-
-        pd->raytracingReflections = MakeUnique<RaytracingReflections>(RaytracingReflectionsConfig::FromConfig(), gbuffer);
-        pd->raytracingReflections->SetTopLevelAccelerationStructures(pd->topLevelAccelerationStructures);
-        pd->raytracingReflections->Create();
-
-        pd->ddgi = MakeUnique<DDGI>(DDGIInfo { .aabb = { { -45.0f, -5.0f, -45.0f }, { 45.0f, 60.0f, 45.0f } } });
-        pd->ddgi->SetTopLevelAccelerationStructures(pd->topLevelAccelerationStructures);
-        pd->ddgi->Create();
-    }
+    CreateViewRaytracingData(view, *pd);
 
     return pd;
 }
@@ -1282,16 +1268,49 @@ void DeferredRenderer::CreateViewCombinePass(View* view, DeferredPassData& passD
     passData.combinePass->Create();
 }
 
-void DeferredRenderer::CreateViewTopLevelAccelerationStructures(View* view, DeferredPassData& passData)
+void DeferredRenderer::CreateViewRaytracingData(View* view, DeferredPassData& passData)
 {
+    // Is hardware ray tracing supported at all?
+    // We could still create TLAS without necessarily creating reflection and global illumination pass data,
+    // and then ray tracing features could be dynamically enabled or disabled.
+    static const bool shouldEnableRaytracingStatic = g_renderBackend->GetRenderConfig().IsRaytracingSupported();
+    
     SafeRelease(std::move(passData.topLevelAccelerationStructures));
 
-    if (!g_engine->GetAppContext()->GetConfiguration().Get("rendering.rt.enabled").ToBool())
+    if (!shouldEnableRaytracingStatic)
     {
-        HYP_LOG(Rendering, Debug, "Ray tracing is disabled, skipping creation of TLAS for View '{}'", view->Id());
+        return;
+    }
+
+    const bool shouldEnableRaytracingForView = g_engine->GetAppContext()->GetConfiguration().Get("rendering.rt.enabled").ToBool()
+        && (view->GetFlags() & ViewFlags::ENABLE_RAYTRACING);
+
+    CreateViewTopLevelAccelerationStructures(view, passData);
+
+    if (!shouldEnableRaytracingForView)
+    {
+        passData.raytracingReflections.Reset();
+        passData.ddgi.Reset();
 
         return;
     }
+    
+    GBuffer* gbuffer = view->GetOutputTarget().GetGBuffer();
+    AssertDebug(gbuffer != nullptr);
+
+    passData.raytracingReflections = MakeUnique<RaytracingReflections>(RaytracingReflectionsConfig::FromConfig(), gbuffer);
+    passData.raytracingReflections->SetTopLevelAccelerationStructures(passData.topLevelAccelerationStructures);
+    passData.raytracingReflections->Create();
+
+    /// FIXME: Proper AABB for DDGI
+    passData.ddgi = MakeUnique<DDGI>(DDGIInfo { .aabb = { { -45.0f, -5.0f, -45.0f }, { 45.0f, 60.0f, 45.0f } } });
+    passData.ddgi->SetTopLevelAccelerationStructures(passData.topLevelAccelerationStructures);
+    passData.ddgi->Create();
+}
+
+void DeferredRenderer::CreateViewTopLevelAccelerationStructures(View* view, DeferredPassData& passData)
+{
+    SafeRelease(std::move(passData.topLevelAccelerationStructures));
 
     // @FIXME: Hack solution since TLAS can only be created if it has a non-zero number of BLASes.
     // This whole thing should be reworked
@@ -1371,6 +1390,8 @@ void DeferredRenderer::ResizeView(Viewport viewport, View* view, DeferredPassDat
 
     SafeRelease(std::move(passData.finalPassDescriptorSet));
     CreateViewFinalPassDescriptorSet(view, passData);
+
+    CreateViewRaytracingData(view, passData);
 
     passData.view = view->WeakHandleFromThis();
     passData.viewport = viewport;
@@ -1683,7 +1704,11 @@ void DeferredRenderer::RenderFrameForView(FrameBase* frame, const RenderSetup& r
         }
         RTUpdateStateFlags updateStateFlags = RTUpdateStateFlagBits::RT_UPDATE_STATE_FLAGS_NONE;
         tlas->UpdateStructure(updateStateFlags);
-        pd->raytracingReflections->ApplyTLASUpdates(updateStateFlags);
+
+        if (pd->raytracingReflections)
+        {
+            pd->raytracingReflections->ApplyTLASUpdates(updateStateFlags);
+        }
     }
 
     const uint32 frameIndex = frame->GetFrameIndex();
@@ -1717,9 +1742,6 @@ void DeferredRenderer::RenderFrameForView(FrameBase* frame, const RenderSetup& r
     const bool useEnvGridRadiance = rpl.envGrids.NumCurrent() && m_rendererConfig.envGridRadianceEnabled;
 
     const bool useTemporalAa = pd->temporalAa != nullptr && m_rendererConfig.taaEnabled;
-
-    // const bool useReflectionProbes = rpl.trackedEnvProbes.NumCurrent(TypeId::ForType<SkyProbe>()) != 0
-    //     || rpl.trackedEnvProbes.NumCurrent(TypeId::ForType<ReflectionProbe>()) != 0;
 
     const bool useReflectionProbes = rpl.envProbes.GetElements<SkyProbe>().Any()
         || rpl.envProbes.GetElements<ReflectionProbe>().Any();
