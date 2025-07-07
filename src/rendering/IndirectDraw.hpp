@@ -128,6 +128,7 @@ private:
     ComputePipelineRef m_objectVisibility;
     CullData m_cachedCullData;
     uint8 m_cachedCullDataUpdatedBits;
+    IDrawCallCollectionImpl* m_drawCallCollectionImpl;
 };
 
 } // namespace hyperion

@@ -34,6 +34,7 @@ class RenderEnvGrid;
 class EnvProbe;
 class RenderEnvProbe;
 class GBuffer;
+class IDrawCallCollectionImpl;
 
 enum class ViewFlags : uint32
 {
@@ -46,7 +47,7 @@ enum class ViewFlags : uint32
     COLLECT_DYNAMIC_ENTITIES = 0x8, //!< If set, the view will collect dynamic entities (those that are not static). Static entities are those that do not move and are not animated.
     COLLECT_ALL_ENTITIES = COLLECT_STATIC_ENTITIES | COLLECT_DYNAMIC_ENTITIES,
 
-    SKIP_FRUSTUM_CULLING = 0x10, //!< If set, the view will not perform frustum culling. This is useful for debugging or when you want to render everything regardless of visibility.
+    NO_FRUSTUM_CULLING = 0x10, //!< If set, the view will not perform frustum culling. This is useful for debugging or when you want to render everything regardless of visibility.
 
     SKIP_ENV_PROBES = 0x20,        //!< If set, the view will not collect EnvProbes. Use for RenderEnvProbe, so that it does not collect itself!
     SKIP_ENV_GRIDS = 0x40,         //!< If set, the view will not collect EnvGrids.
@@ -90,6 +91,7 @@ struct ViewDesc
     Handle<Camera> camera;
     int priority = 0;
     Optional<RenderableAttributeSet> overrideAttributes;
+    IDrawCallCollectionImpl* drawCallCollectionImpl = nullptr;
 };
 
 class HYP_API ViewOutputTarget
@@ -202,7 +204,7 @@ public:
         return m_overrideAttributes;
     }
 
-    HYP_FORCE_INLINE const typename ResourceTracker<ObjId<Entity>, RenderProxyMesh>::Diff& GetLastMeshCollectionResult() const
+    HYP_FORCE_INLINE const ResourceTrackerDiff& GetLastMeshCollectionResult() const
     {
         return m_lastMeshCollectionResult;
     }
@@ -225,7 +227,7 @@ protected:
     void CollectEnvGrids(RenderProxyList& rpl);
     void CollectEnvProbes(RenderProxyList& rpl);
 
-    typename ResourceTracker<ObjId<Entity>, RenderProxyMesh>::Diff CollectMeshEntities(RenderProxyList& rpl);
+    ResourceTrackerDiff CollectMeshEntities(RenderProxyList& rpl);
 
     ViewDesc m_viewDesc;
 
@@ -247,7 +249,7 @@ protected:
 
     Optional<RenderableAttributeSet> m_overrideAttributes;
 
-    typename ResourceTracker<ObjId<Entity>, RenderProxyMesh>::Diff m_lastMeshCollectionResult;
+    ResourceTrackerDiff m_lastMeshCollectionResult;
 };
 
 } // namespace hyperion

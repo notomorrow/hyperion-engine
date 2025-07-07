@@ -61,25 +61,28 @@
 
 namespace hyperion {
 
-static constexpr TextureFormat envGridRadianceFormat = TF_RGBA8;
-static constexpr TextureFormat envGridIrradianceFormat = TF_R11G11B10F;
+// iterations per frame for cleaning up unused resources for passes
+static constexpr int g_frameCleanupBudget = 16;
 
-static constexpr TextureFormat envGridPassFormats[EGPM_MAX] = {
-    envGridRadianceFormat,  // EGPM_RADIANCE
-    envGridIrradianceFormat // EGPM_IRRADIANCE
+static constexpr TextureFormat g_envGridRadianceFormat = TF_RGBA8;
+static constexpr TextureFormat g_envGridIrradianceFormat = TF_R11G11B10F;
+
+static constexpr TextureFormat g_envGridPassFormats[EGPM_MAX] = {
+    g_envGridRadianceFormat,  // EGPM_RADIANCE
+    g_envGridIrradianceFormat // EGPM_IRRADIANCE
 };
 
-static const Float16 s_ltcMatrix[] = {
+static const Float16 g_ltcMatrix[] = {
 #include <rendering/inl/LTCMatrix.inl>
 };
 
-static_assert(sizeof(s_ltcMatrix) == 64 * 64 * 4 * 2, "Invalid LTC matrix size");
+static_assert(sizeof(g_ltcMatrix) == 64 * 64 * 4 * 2, "Invalid LTC matrix size");
 
-static const Float16 s_ltcBrdf[] = {
+static const Float16 g_ltcBrdf[] = {
 #include <rendering/inl/LTCBRDF.inl>
 };
 
-static_assert(sizeof(s_ltcBrdf) == 64 * 64 * 4 * 2, "Invalid LTC BRDF size");
+static_assert(sizeof(g_ltcBrdf) == 64 * 64 * 4 * 2, "Invalid LTC BRDF size");
 
 void GetDeferredShaderProperties(ShaderProperties& outShaderProperties)
 {
@@ -187,7 +190,7 @@ void DeferredPass::CreatePipeline(const RenderableAttributeSet& renderableAttrib
 
         DeferCreate(m_ltcSampler);
 
-        ByteBuffer ltcMatrixData(sizeof(s_ltcMatrix), s_ltcMatrix);
+        ByteBuffer ltcMatrixData(sizeof(g_ltcMatrix), g_ltcMatrix);
 
         m_ltcMatrixTexture = CreateObject<Texture>(TextureData {
             TextureDesc {
@@ -203,7 +206,7 @@ void DeferredPass::CreatePipeline(const RenderableAttributeSet& renderableAttrib
 
         m_ltcMatrixTexture->SetPersistentRenderResourceEnabled(true);
 
-        ByteBuffer ltcBrdfData(sizeof(s_ltcBrdf), s_ltcBrdf);
+        ByteBuffer ltcBrdfData(sizeof(g_ltcBrdf), g_ltcBrdf);
 
         m_ltcBrdfTexture = CreateObject<Texture>(TextureData {
             TextureDesc {
@@ -282,6 +285,8 @@ void DeferredPass::Render(FrameBase* frame, const RenderSetup& rs)
     rpl.BeginRead();
 
     HYP_DEFER({ rpl.EndRead(); });
+
+    HYP_LOG_TEMP("Num lights : {}", rpl.lights.NumCurrent());
 
     // no lights bound, do not render direct shading at all
     if (rpl.lights.NumCurrent() == 0)
@@ -496,7 +501,7 @@ static EnvGridApplyMode EnvGridTypeToApplyEnvGridMode(EnvGridType type)
 }
 
 EnvGridPass::EnvGridPass(EnvGridPassMode mode, Vec2u extent, GBuffer* gbuffer)
-    : FullScreenPass(envGridPassFormats[mode], extent, gbuffer),
+    : FullScreenPass(g_envGridPassFormats[mode], extent, gbuffer),
       m_mode(mode),
       m_isFirstFrame(true)
 {
@@ -722,10 +727,7 @@ void ReflectionsPass::CreatePipeline(const RenderableAttributeSet& renderableAtt
 
     for (const auto& it : applyReflectionProbePasses)
     {
-        ShaderRef shader = g_shaderManager->GetOrCreate(
-            NAME("ApplyReflectionProbe"),
-            it.second);
-
+        ShaderRef shader = g_shaderManager->GetOrCreate(NAME("ApplyReflectionProbe"), it.second);
         Assert(shader.IsValid());
 
         const DescriptorTableDeclaration& descriptorTableDecl = shader->GetCompiledShader()->GetDescriptorTableDeclaration();
@@ -1530,21 +1532,35 @@ void DeferredRenderer::RenderFrame(FrameBase* frame, const RenderSetup& rs)
     // Render global environment probes and grids and set fallbacks
     RenderSetup newRs = rs;
 
-    // Render shadow maps for shadow casting lights
+#if 0
+    // Render shadows for shadow casting lights
     for (uint32 lightType = 0; lightType < LT_MAX; lightType++)
     {
-        if (!lights[lightType].Any() || g_renderGlobalState->globalRenderers[GRT_SHADOW_MAP][lightType])
+        RendererBase* shadowRenderer = g_renderGlobalState->globalRenderers[GRT_SHADOW_MAP][lightType];
+
+        if (!lights[lightType].Any() || !shadowRenderer)
         {
-            // No lights of that LightType bound or there is no defined ShadowMapRenderer
+            // No lights of that LightType bound or there is no defined ShadowRenderer
             continue;
         }
 
-        /// TODO: Trigger rendering shadow map.
-        /// We'll need a new PassData type (ShadowPassData ?) in order to store the textures / image views (in the case of atlas textures)
+        /// TODO: We'll need a new PassData type (ShadowPassData ?) in order to store the textures / image views (in the case of atlas textures)
         /// and we'll need some state to tell if we need to re-render the shadows.
-    }
+        for (Light* light : lights[lightType])
+        {
+            AssertDebug(light != nullptr);
 
+            if (light->GetLightFlags() & LF_SHADOW)
+            {
+                newRs.light = light;
+                shadowRenderer->RenderFrame(frame, newRs);
+                newRs.light = nullptr;
+            }
+        }
+    }
+#endif
     {
+#if 1
         // Set sky as fallback probe
         if (envProbes[EPT_SKY].Any())
         {
@@ -1583,7 +1599,9 @@ void DeferredRenderer::RenderFrame(FrameBase* frame, const RenderSetup& rs)
                 }
             }
         }
+#endif
 
+#if 1
         if (envGrids.Any())
         {
             for (EnvGrid* envGrid : envGrids)
@@ -1604,12 +1622,12 @@ void DeferredRenderer::RenderFrame(FrameBase* frame, const RenderSetup& rs)
                 counts[ERS_ENV_GRIDS]++;
             }
         }
+#endif
     }
 
     // reset renderer state back to what it was before
     newRs = rs;
 
-#if 1
     for (const TResourceHandle<RenderView>& renderView : rs.world->GetViews())
     {
         Assert(renderView);
@@ -1632,8 +1650,6 @@ void DeferredRenderer::RenderFrame(FrameBase* frame, const RenderSetup& rs)
         newRs.view = nullptr;
         newRs.passData = nullptr;
 
-        pd->CullUnusedGraphicsPipelines();
-
 #ifdef HYP_ENABLE_RENDER_STATS
         RenderProxyList& rpl = RenderApi_GetConsumerProxyList(view);
         rpl.BeginRead();
@@ -1648,7 +1664,21 @@ void DeferredRenderer::RenderFrame(FrameBase* frame, const RenderSetup& rs)
     }
 
     g_engine->GetRenderStatsCalculator().AddCounts(counts);
-#endif
+
+    /// TODO: Have an iterator stored so we can maintain state for the next frame and don't start over from the first index.
+    int numCleanupCycles = g_frameCleanupBudget;
+    numCleanupCycles -= g_renderGlobalState->mainRenderer->RunCleanupCycle(numCleanupCycles);
+
+    for (uint32 i = 0; i < GRT_MAX && numCleanupCycles > 0; i++)
+    {
+        for (uint32 j = 0; j < g_renderGlobalState->globalRenderers[i].Size() && numCleanupCycles > 0; j++)
+        {
+            if (RendererBase* renderer = g_renderGlobalState->globalRenderers[i][j])
+            {
+                numCleanupCycles -= renderer->RunCleanupCycle(numCleanupCycles);
+            }
+        }
+    }
 }
 
 #define CHECK_FRAMEBUFFER_SIZE(fb)                                                                    \
@@ -1664,7 +1694,7 @@ void DeferredRenderer::RenderFrameForView(FrameBase* frame, const RenderSetup& r
     Assert(rs.IsValid());
     Assert(rs.HasView());
 
-    uint32 globalFrameIndex = RenderApi_GetFrameIndex_RenderThread();
+    uint32 globalFrameIndex = RenderApi_GetFrameIndex();
     if (m_lastFrameData.frameId != globalFrameIndex)
     {
         m_lastFrameData.frameId = globalFrameIndex;
@@ -1681,6 +1711,8 @@ void DeferredRenderer::RenderFrameForView(FrameBase* frame, const RenderSetup& r
     RenderProxyList& rpl = RenderApi_GetConsumerProxyList(view);
     rpl.BeginRead();
     HYP_DEFER({ rpl.EndRead(); });
+
+    RenderCollector& renderCollector = RenderApi_GetRenderCollector(view);
 
     DeferredPassData* pd = static_cast<DeferredPassData*>(rs.passData);
     AssertDebug(pd != nullptr);
@@ -1785,7 +1817,7 @@ void DeferredRenderer::RenderFrameForView(FrameBase* frame, const RenderSetup& r
     deferredData.screenWidth = view->GetRenderResource().GetViewport().extent.x;  // rpl.viewport.extent.x;
     deferredData.screenHeight = view->GetRenderResource().GetViewport().extent.y; // rpl.viewport.extent.y;
 
-    PerformOcclusionCulling(frame, rs, rpl);
+    PerformOcclusionCulling(frame, rs, renderCollector);
 
     if (doParticles)
     {
@@ -1803,7 +1835,7 @@ void DeferredRenderer::RenderFrameForView(FrameBase* frame, const RenderSetup& r
     { // render opaque objects into separate framebuffer
         frame->GetCommandList().Add<BeginFramebuffer>(opaqueFbo, frameIndex);
 
-        ExecuteDrawCalls(frame, rs, rpl, (1u << RB_OPAQUE));
+        ExecuteDrawCalls(frame, rs, renderCollector, (1u << RB_OPAQUE));
 
         frame->GetCommandList().Add<EndFramebuffer>(opaqueFbo, frameIndex);
     }
@@ -1879,14 +1911,14 @@ void DeferredRenderer::RenderFrameForView(FrameBase* frame, const RenderSetup& r
         // The lightmap bucket's framebuffer has a color attachment that will write into the opaque framebuffer's color attachment.
         frame->GetCommandList().Add<BeginFramebuffer>(lightmapFbo, frameIndex);
 
-        ExecuteDrawCalls(frame, rs, rpl, (1u << RB_LIGHTMAP));
+        ExecuteDrawCalls(frame, rs, renderCollector, (1u << RB_LIGHTMAP));
 
         frame->GetCommandList().Add<EndFramebuffer>(lightmapFbo, frameIndex);
     }
 
     { // generate mipchain after rendering opaque objects' lighting, now we can use it for transmission
         const ImageRef& srcImage = deferredPassFramebuffer->GetAttachment(0)->GetImage();
-        GenerateMipChain(frame, rs, rpl, srcImage);
+        GenerateMipChain(frame, rs, renderCollector, srcImage);
     }
 
     { // translucent objects
@@ -1909,8 +1941,8 @@ void DeferredRenderer::RenderFrameForView(FrameBase* frame, const RenderSetup& r
         pd->lightmapPass->RenderToFramebuffer(frame, rs, translucentFbo);
 
         // begin translucent with forward rendering
-        ExecuteDrawCalls(frame, rs, rpl, (1u << RB_TRANSLUCENT));
-        ExecuteDrawCalls(frame, rs, rpl, (1u << RB_DEBUG));
+        ExecuteDrawCalls(frame, rs, renderCollector, (1u << RB_TRANSLUCENT));
+        ExecuteDrawCalls(frame, rs, renderCollector, (1u << RB_DEBUG));
 
         // if (doParticles)
         // {
@@ -1922,7 +1954,7 @@ void DeferredRenderer::RenderFrameForView(FrameBase* frame, const RenderSetup& r
         //     environment->GetGaussianSplatting()->Render(frame, rs);
         // }
 
-        ExecuteDrawCalls(frame, rs, rpl, (1u << RB_SKYBOX));
+        ExecuteDrawCalls(frame, rs, renderCollector, (1u << RB_SKYBOX));
 
         // // render debug draw
         // g_engine->GetDebugDrawer()->Render(frame, rs);
@@ -1964,7 +1996,7 @@ void DeferredRenderer::RenderFrameForView(FrameBase* frame, const RenderSetup& r
 
 #undef CHECK_FRAMEBUFFER_SIZE
 
-void DeferredRenderer::PerformOcclusionCulling(FrameBase* frame, const RenderSetup& rs, RenderProxyList& rpl)
+void DeferredRenderer::PerformOcclusionCulling(FrameBase* frame, const RenderSetup& rs, RenderCollector& renderCollector)
 {
     HYP_SCOPE;
 
@@ -1974,17 +2006,17 @@ void DeferredRenderer::PerformOcclusionCulling(FrameBase* frame, const RenderSet
         | (1 << RB_TRANSLUCENT)
         | (1 << RB_DEBUG);
 
-    RenderCollector::PerformOcclusionCulling(frame, rs, rpl, bucketMask);
+    renderCollector.PerformOcclusionCulling(frame, rs, bucketMask);
 }
 
-void DeferredRenderer::ExecuteDrawCalls(FrameBase* frame, const RenderSetup& rs, RenderProxyList& rpl, uint32 bucketMask)
+void DeferredRenderer::ExecuteDrawCalls(FrameBase* frame, const RenderSetup& rs, RenderCollector& renderCollector, uint32 bucketMask)
 {
     HYP_SCOPE;
 
-    RenderCollector::ExecuteDrawCalls(frame, rs, rpl, bucketMask);
+    renderCollector.ExecuteDrawCalls(frame, rs, bucketMask);
 }
 
-void DeferredRenderer::GenerateMipChain(FrameBase* frame, const RenderSetup& rs, RenderProxyList& rpl, const ImageRef& srcImage)
+void DeferredRenderer::GenerateMipChain(FrameBase* frame, const RenderSetup& rs, RenderCollector& renderCollector, const ImageRef& srcImage)
 {
     HYP_SCOPE;
 

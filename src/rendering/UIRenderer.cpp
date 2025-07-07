@@ -25,10 +25,15 @@
 #include <ui/UIStage.hpp>
 #include <ui/UIText.hpp>
 
+/// Includes needed for RenderCollection
 #include <scene/Mesh.hpp>
 #include <scene/View.hpp>
 #include <scene/Texture.hpp>
 #include <scene/World.hpp>
+#include <scene/EnvProbe.hpp>
+#include <scene/EnvGrid.hpp>
+#include <scene/lightmapper/LightmapVolume.hpp>
+#include <scene/animation/Skeleton.hpp>
 
 #include <scene/ecs/EntityManager.hpp>
 #include <scene/ecs/components/UIComponent.hpp>
@@ -184,9 +189,9 @@ static RenderableAttributeSet GetMergedRenderableAttributes(const RenderableAttr
     return attributes;
 }
 
-static void BuildRenderGroups(RenderProxyList& rpl, const Array<Pair<ObjId<Entity>, int>>& proxyDepths, const Optional<RenderableAttributeSet>& overrideAttributes)
+static void BuildRenderGroups(RenderCollector& renderCollector, RenderProxyList& rpl, const Array<Pair<ObjId<Entity>, int>>& proxyDepths, const Optional<RenderableAttributeSet>& overrideAttributes)
 {
-    rpl.Clear();
+    renderCollector.Clear();
 
     for (const Pair<ObjId<Entity>, int>& pair : proxyDepths)
     {
@@ -211,7 +216,7 @@ static void BuildRenderGroups(RenderProxyList& rpl, const Array<Pair<ObjId<Entit
 
         attributes.SetDrawableLayer(pair.second);
 
-        DrawCallCollectionMapping& mapping = rpl.mappingsByBucket[rb][attributes];
+        DrawCallCollectionMapping& mapping = renderCollector.mappingsByBucket[rb][attributes];
         Handle<RenderGroup>& rg = mapping.renderGroup;
 
         if (!rg.IsValid())
@@ -223,7 +228,6 @@ static void BuildRenderGroups(RenderProxyList& rpl, const Array<Pair<ObjId<Entit
             Assert(shader.IsValid());
 
             rg = CreateObject<RenderGroup>(shader, attributes, RenderGroupFlags::NONE);
-            rg->SetDrawCallCollectionImpl(GetOrCreateDrawCallCollectionImpl<UIEntityInstanceBatch>());
 
 #ifdef HYP_DEBUG_MODE
             if (!rg.IsValid())
@@ -241,64 +245,59 @@ static void BuildRenderGroups(RenderProxyList& rpl, const Array<Pair<ObjId<Entit
     }
 }
 
-UIRenderCollector::UIRenderCollector()
-    : RenderCollector()
-{
-}
-
-UIRenderCollector::~UIRenderCollector() = default;
-
 void UIRenderCollector::ResetOrdering()
 {
     proxyDepths.Clear();
 }
 
-void UIRenderCollector::PushUpdates(RenderProxyList& rpl, const Optional<RenderableAttributeSet>& overrideAttributes)
+void UIRenderCollector::PushUpdates(View* view, RenderProxyList& rpl, const Optional<RenderableAttributeSet>& overrideAttributes)
 {
     HYP_SCOPE;
 
     // UISubsystem can have Update() called on a task thread.
     Threads::AssertOnThread(g_gameThread | ThreadCategory::THREAD_CATEGORY_TASK);
 
-    if (auto diff = rpl.meshes.GetDiff(); diff.NeedsUpdate())
-    {
-        Array<RenderProxyMesh*> removed;
-        rpl.meshes.GetRemoved(removed, true);
+    // if (auto diff = rpl.meshes.GetDiff(); diff.NeedsUpdate())
+    // {
+    //     Array<RenderProxyMesh*> removed;
+    //     rpl.meshes.GetRemoved(removed, true);
 
-        Array<RenderProxyMesh*> added;
-        rpl.meshes.GetAdded(added, true);
+    //     Array<RenderProxyMesh*> added;
+    //     rpl.meshes.GetAdded(added, true);
 
-        Array<RenderProxyMesh*> changed;
-        rpl.meshes.GetChanged(changed);
+    //     Array<RenderProxyMesh*> changed;
+    //     rpl.meshes.GetChanged(changed);
 
-        for (RenderProxyMesh* proxy : added)
-        {
-            RenderApi_AddRef(proxy->entity.GetUnsafe());
+    //     for (RenderProxyMesh* proxy : added)
+    //     {
+    //         RenderApi_AddRef(proxy->entity.GetUnsafe());
 
-            RenderApi_UpdateRenderProxy(proxy->entity.Id(), proxy);
+    //         RenderApi_UpdateRenderProxy(proxy->entity.Id(), proxy);
 
-            // for now:
-            proxy->IncRefs();
-        }
+    //         // for now:
+    //         proxy->IncRefs();
+    //     }
 
-        for (RenderProxyMesh* proxy : removed)
-        {
-            RenderApi_ReleaseRef(proxy->entity.Id());
+    //     for (RenderProxyMesh* proxy : removed)
+    //     {
+    //         RenderApi_ReleaseRef(proxy->entity.Id());
 
-            // for now:
-            proxy->DecRefs();
-        }
-    }
+    //         // for now:
+    //         proxy->DecRefs();
+    //     }
+    // }
 
-    RenderApi_UpdateTrackedResources(rpl.materials);
-    RenderApi_UpdateTrackedResources(rpl.textures);
+    // RenderApi_UpdateTrackedResources(rpl.materials);
+    // RenderApi_UpdateTrackedResources(rpl.textures);
 
-    BuildRenderGroups(rpl, proxyDepths, overrideAttributes);
+    /// TEMP: Come back to it. maybe BuildRenderGroups needs to be virtual
+    // RenderCollector& renderCollector = RenderApi_GetRenderCollector(view);
+    // ::hyperion::BuildRenderGroups(renderCollector, rpl, proxyDepths, overrideAttributes);
 
-    RenderCollector::CollectDrawCalls(rpl, 0);
+    // RenderCollector::CollectDrawCalls(rpl, 0);
 }
 
-void UIRenderCollector::ExecuteDrawCalls(FrameBase* frame, const RenderSetup& renderSetup, const FramebufferRef& framebuffer) const
+void UIRenderCollector::ExecuteDrawCalls(FrameBase* frame, const RenderSetup& renderSetup, const FramebufferRef& framebuffer, uint32 bucketBits)
 {
     HYP_SCOPE;
 
@@ -312,6 +311,8 @@ void UIRenderCollector::ExecuteDrawCalls(FrameBase* frame, const RenderSetup& re
 
     HYP_DEFER({ rpl.EndRead(); });
 
+    // RenderCollector& renderCollector = RenderApi_GetRenderCollector(renderSetup.view->GetView());
+
     const uint32 frameIndex = frame->GetFrameIndex();
 
     if (framebuffer.IsValid())
@@ -322,7 +323,7 @@ void UIRenderCollector::ExecuteDrawCalls(FrameBase* frame, const RenderSetup& re
     using IteratorType = FlatMap<RenderableAttributeSet, DrawCallCollectionMapping>::ConstIterator;
     Array<IteratorType> iterators;
 
-    for (const auto& mappings : rpl.mappingsByBucket)
+    for (const auto& mappings : mappingsByBucket)
     {
         for (const auto& it : mappings)
         {
@@ -364,11 +365,28 @@ void UIRenderCollector::ExecuteDrawCalls(FrameBase* frame, const RenderSetup& re
             AssertDebug(RenderApi_RetrieveResourceBinding(drawCall.material) != ~0u);
         }
 
+        ParallelRenderingState* parallelRenderingState = nullptr;
+
+        if (renderGroup->GetFlags() & RenderGroupFlags::PARALLEL_RENDERING)
+        {
+            parallelRenderingState = AcquireNextParallelRenderingState();
+        }
+
         // Don't count draw calls for UI
         SuppressRenderStatsScope suppressRenderStatsScope;
 
-        renderGroup->PerformRendering(frame, renderSetup, drawCallCollection, nullptr, nullptr);
+        renderGroup->PerformRendering(frame, renderSetup, drawCallCollection, nullptr, parallelRenderingState);
+
+        if (parallelRenderingState != nullptr)
+        {
+            AssertDebug(parallelRenderingState->taskBatch != nullptr);
+
+            TaskSystem::GetInstance().EnqueueBatch(parallelRenderingState->taskBatch);
+        }
     }
+
+    // Wait for all parallel rendering tasks to finish
+    CommitParallelRenderingState(frame->GetCommandList());
 
     if (framebuffer.IsValid())
     {
@@ -403,6 +421,11 @@ void UIRenderer::RenderFrame(FrameBase* frame, const RenderSetup& renderSetup)
     rs.view = &m_view->GetRenderResource();
     rs.passData = pd;
 
+    RenderProxyList& rpl = RenderApi_GetConsumerProxyList(m_view);
+    rpl.BeginRead();
+
+    // RenderCollector& renderCollector = RenderApi_GetRenderCollector(m_view);
+
     if (pd->viewport != m_view->GetRenderResource().GetViewport())
     {
         /// @TODO: Implement me!
@@ -413,10 +436,19 @@ void UIRenderer::RenderFrame(FrameBase* frame, const RenderSetup& renderSetup)
         // ResizeView(view->GetRenderResource().GetViewport(), view, *pd);
     }
 
+    // Don't include UI rendering in global render stats
+    SuppressRenderStatsScope suppressRenderStatsScope;
+
     const ViewOutputTarget& outputTarget = m_view->GetOutputTarget();
     Assert(outputTarget.IsValid());
 
-    m_renderCollector.ExecuteDrawCalls(frame, rs, outputTarget.GetFramebuffer());
+    // renderCollector.BuildRenderGroups(m_view, rpl);
+    ::hyperion::BuildRenderGroups(renderCollector, rpl, renderCollector.proxyDepths, {});
+
+    rpl.EndRead();
+
+    renderCollector.BuildDrawCalls(0);
+    renderCollector.ExecuteDrawCalls(frame, rs, outputTarget.GetFramebuffer(), 0);
 }
 
 PassData* UIRenderer::CreateViewPassData(View* view, PassDataExt&)
@@ -493,7 +525,8 @@ void UIRenderSubsystem::Init()
         .viewport = Viewport { .extent = surfaceSize, .position = Vec2i::Zero() },
         .outputTargetDesc = outputTargetDesc,
         .scenes = { m_uiStage->GetScene()->HandleFromThis() },
-        .camera = m_uiStage->GetCamera()
+        .camera = m_uiStage->GetCamera(),
+        .drawCallCollectionImpl = GetOrCreateDrawCallCollectionImpl<UIEntityInstanceBatch>()
     };
 
     m_view = CreateObject<View>(viewDesc);
@@ -505,6 +538,7 @@ void UIRenderSubsystem::Init()
     CreateFramebuffer();
 
     m_uiRenderer = new UIRenderer(m_view);
+    m_uiRenderer->renderCollector.drawCallCollectionImpl = viewDesc.drawCallCollectionImpl;
 
     PUSH_RENDER_COMMAND(AddUIRenderer, m_uiRenderer);
 }
@@ -545,18 +579,22 @@ void UIRenderSubsystem::Update(float delta)
     m_view->UpdateVisibility();
 
     RenderProxyList& rpl = RenderApi_GetProducerProxyList(m_view);
+    rpl.TEMP_disableBuildRenderCollection = true;
     rpl.BeginWrite();
     rpl.viewport = m_view->GetViewport();
     rpl.priority = m_view->GetPriority();
-    rpl.meshes.Advance();
-    rpl.materials.Advance();
-    rpl.textures.Advance();
-    rpl.skeletons.Advance();
+    // rpl.meshes.Advance();
+    // rpl.materials.Advance();
+    // rpl.textures.Advance();
+    // rpl.skeletons.Advance();
 
-    UIRenderCollector& renderCollector = m_uiRenderer->GetRenderCollector();
+    // rpl.useOrdering = true;
+    // rpl.orderedMeshEntities.Clear();
+
+    UIRenderCollector& renderCollector = m_uiRenderer->renderCollector;
     renderCollector.ResetOrdering();
 
-    m_uiStage->CollectObjects([&renderCollector, &rpl](UIObject* uiObject)
+    m_uiStage->CollectObjects([&rpl, &renderCollector](UIObject* uiObject)
         {
             Assert(uiObject != nullptr);
 
@@ -596,10 +634,26 @@ void UIRenderSubsystem::Update(float delta)
             }
 
             renderCollector.proxyDepths.EmplaceBack(meshComponent.proxy->entity.Id(), uiObject->GetComputedDepth());
+
+            // rpl.orderedMeshEntities.EmplaceBack(meshComponent.proxy->entity.Id(), uiObject->GetComputedDepth());
         },
         /* onlyVisible */ true);
 
-    renderCollector.PushUpdates(rpl);
+    // temp
+    if (auto diff = rpl.meshes.GetDiff(); diff.NeedsUpdate())
+    {
+        Array<RenderProxyMesh*> added;
+        rpl.meshes.GetAdded(added, true);
+
+        for (RenderProxyMesh* proxy : added)
+        {
+            rpl.meshes.SetProxy(proxy->entity.Id(), RenderProxyMesh(*proxy));
+        }
+    }
+
+    UpdateRefs(rpl);
+
+    renderCollector.PushUpdates(m_view, rpl);
 
     rpl.EndWrite();
 }

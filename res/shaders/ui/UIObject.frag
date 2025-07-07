@@ -4,13 +4,14 @@
 #extension GL_EXT_nonuniform_qualifier : require
 #extension GL_EXT_scalar_block_layout : require
 
-#define INSTANCING
-
 layout(location = 0) in vec3 v_position;
 layout(location = 1) in vec3 v_screen_space_position;
 layout(location = 2) in vec2 v_texcoord0;
-layout(location = 3) in flat uint v_object_index;
-layout(location = 4) in vec4 v_color;
+layout(location = 3) in vec4 v_color;
+
+#ifdef INSTANCING
+layout(location = 4) in flat uint v_object_index;
+#endif
 
 layout(location = 0) out vec4 gbuffer_albedo;
 layout(location = 5) out vec4 gbuffer_mask;
@@ -29,10 +30,21 @@ HYP_DESCRIPTOR_CBUFF_DYNAMIC(Global, CamerasBuffer) uniform CamerasBuffer
     Camera camera;
 };
 
+#ifdef INSTANCING
+
 HYP_DESCRIPTOR_SSBO(Global, ObjectsBuffer) readonly buffer ObjectsBuffer
 {
     Object objects[HYP_MAX_ENTITIES];
 };
+
+#else
+
+HYP_DESCRIPTOR_SSBO_DYNAMIC(Global, ObjectsBuffer) readonly buffer ObjectsBuffer
+{
+    Object object;
+};
+
+#endif
 
 HYP_DESCRIPTOR_SAMPLER(Global, SamplerLinear)
 uniform sampler sampler_linear;

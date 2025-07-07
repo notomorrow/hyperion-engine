@@ -247,8 +247,9 @@ struct HYP_API PassData
 
     /*! \brief Safely remove unused graphics pipelines that are no longer used from the cache.
      *  A graphics pipeline is considered unused if the RenderGroup it is associated with has no more references remaining
-     *  \param maxIter The maximum number of graphics pipelines to iterate over for this frame. */
-    void CullUnusedGraphicsPipelines(uint32 maxIter = 10);
+     *  \param maxIter The maximum number of graphics pipelines to iterate over for this frame.
+     *  \returns The number of graphics pipelines that were culled */
+    int CullUnusedGraphicsPipelines(int maxIter = 10);
 
     static GraphicsPipelineRef CreateGraphicsPipeline(
         PassData* pd,
@@ -268,7 +269,13 @@ public:
 
     virtual void RenderFrame(FrameBase* frame, const RenderSetup& renderSetup) = 0;
 
+    /*! \brief Cleans up data no longer used for rendering, amortised.
+     *  Returns number of cleanup iterations used by this execution */
+    virtual int RunCleanupCycle(int maxIter = 10);
+
 protected:
+    RendererBase();
+
     virtual PassData* CreateViewPassData(View* view, PassDataExt& ext) = 0;
 
     PassData* TryGetViewPassData(View* view);
@@ -276,6 +283,7 @@ protected:
 
 private:
     SparsePagedArray<PassData*, 16> m_viewPassData;
+    typename SparsePagedArray<PassData*, 16>::Iterator m_viewPassDataCleanupIterator;
 };
 
 } // namespace hyperion

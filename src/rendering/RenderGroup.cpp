@@ -56,8 +56,7 @@ namespace hyperion {
 
 RenderGroup::RenderGroup()
     : HypObject(),
-      m_flags(RenderGroupFlags::NONE),
-      m_drawCallCollectionImpl(GetOrCreateDrawCallCollectionImpl<EntityInstanceBatch>())
+      m_flags(RenderGroupFlags::NONE)
 {
 }
 
@@ -65,8 +64,7 @@ RenderGroup::RenderGroup(const ShaderRef& shader, const RenderableAttributeSet& 
     : HypObject(),
       m_flags(flags),
       m_shader(shader),
-      m_renderableAttributes(renderableAttributes),
-      m_drawCallCollectionImpl(GetOrCreateDrawCallCollectionImpl<EntityInstanceBatch>())
+      m_renderableAttributes(renderableAttributes)
 {
 }
 
@@ -75,8 +73,7 @@ RenderGroup::RenderGroup(const ShaderRef& shader, const RenderableAttributeSet& 
       m_flags(flags),
       m_shader(shader),
       m_descriptorTable(descriptorTable),
-      m_renderableAttributes(renderableAttributes),
-      m_drawCallCollectionImpl(GetOrCreateDrawCallCollectionImpl<EntityInstanceBatch>())
+      m_renderableAttributes(renderableAttributes)
 {
 }
 
@@ -130,11 +127,12 @@ void RenderGroup::Init()
     SetReady(true);
 }
 
-GraphicsPipelineRef RenderGroup::CreateGraphicsPipeline(PassData* pd) const
+GraphicsPipelineRef RenderGroup::CreateGraphicsPipeline(PassData* pd, IDrawCallCollectionImpl* drawCallCollectionImpl) const
 {
     HYP_SCOPE;
 
     Assert(pd != nullptr);
+    Assert(drawCallCollectionImpl != nullptr);
 
     HYP_LOG(Rendering, Debug, "Creating graphics pipeline for RenderGroup: {}", Id());
 
@@ -160,7 +158,7 @@ GraphicsPipelineRef RenderGroup::CreateGraphicsPipeline(PassData* pd) const
         {
             for (uint32 frameIndex = 0; frameIndex < g_framesInFlight; frameIndex++)
             {
-                const GpuBufferRef& gpuBuffer = m_drawCallCollectionImpl->GetEntityInstanceBatchHolder()->GetBuffer(frameIndex);
+                const GpuBufferRef& gpuBuffer = drawCallCollectionImpl->GetEntityInstanceBatchHolder()->GetBuffer(frameIndex);
                 Assert(gpuBuffer.IsValid());
 
                 const DescriptorSetRef& instancingDescriptorSet = descriptorTable->GetDescriptorSet(NAME("Instancing"), frameIndex);
@@ -181,16 +179,6 @@ GraphicsPipelineRef RenderGroup::CreateGraphicsPipeline(PassData* pd) const
         { &view->GetOutputTarget().GetFramebuffer(m_renderableAttributes.GetMaterialAttributes().bucket), 1 },
         m_renderableAttributes);
 }
-
-void RenderGroup::SetDrawCallCollectionImpl(IDrawCallCollectionImpl* drawCallCollectionImpl)
-{
-    Assert(drawCallCollectionImpl != nullptr);
-
-    Assert(!IsInitCalled(), "Cannot use SetDrawCallCollectionImpl() after Init() has been called on RenderGroup; graphics pipeline will have been already created");
-
-    m_drawCallCollectionImpl = drawCallCollectionImpl;
-}
-
 template <class T, class OutArray, typename = std::enable_if_t<std::is_base_of_v<DrawCallBase, T>>>
 static void DivideDrawCalls(Span<const T> drawCalls, uint32 numBatches, OutArray& outDividedDrawCalls)
 {
@@ -398,7 +386,7 @@ static void RenderAll(
                 entityDescriptorSetIndex);
         }
 
-        const SizeType offset = entityInstanceBatch->batchIndex * drawCallCollection.impl->GetBatchSizeOf();
+        const SizeType offset = entityInstanceBatch->batchIndex * drawCallCollection.impl->GetStructSize();
 
         frame->GetCommandList().Add<BindDescriptorSet>(
             instancingDescriptorSet,
@@ -625,7 +613,7 @@ static void RenderAll_Parallel(
                             entityDescriptorSetIndex);
                     }
 
-                    const SizeType offset = entityInstanceBatch->batchIndex * drawCallCollection.impl->GetBatchSizeOf();
+                    const SizeType offset = entityInstanceBatch->batchIndex * drawCallCollection.impl->GetStructSize();
 
                     commandList.Add<BindDescriptorSet>(
                         instancingDescriptorSet,
@@ -694,7 +682,7 @@ void RenderGroup::PerformRendering(FrameBase* frame, const RenderSetup& renderSe
 
         *cacheEntry = PassData::RenderGroupCacheEntry {
             WeakHandleFromThis(),
-            CreateGraphicsPipeline(renderSetup.passData)
+            CreateGraphicsPipeline(renderSetup.passData, drawCallCollection.impl)
         };
     }
 

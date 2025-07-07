@@ -19,22 +19,42 @@ namespace hyperion {
 HYP_API extern SizeType GetNumDescendants(TypeId typeId);
 HYP_API extern int GetSubclassIndex(TypeId baseTypeId, TypeId subclassTypeId);
 
-template <class IdType, class ElementType>
+class NullProxy;
+
+struct ResourceTrackerDiff
+{
+    uint32 numAdded = 0;
+    uint32 numRemoved = 0;
+    uint32 numChanged = 0;
+
+    HYP_FORCE_INLINE bool NeedsUpdate() const
+    {
+        return numAdded > 0 || numRemoved > 0 || numChanged > 0;
+    }
+};
+
+template <class IdType, class ElementType, class ProxyType = NullProxy>
 class ResourceTracker
 {
+public:
+    struct Impl;
+
     template <class Derived, bool IsConst>
     struct IteratorBase
     {
         using ResourceTrackerType = std::conditional_t<IsConst, const ResourceTracker, ResourceTracker>;
+        using ImplType = typename ResourceTrackerType::Impl;
 
         ResourceTrackerType* tracker;
+        Bitset(ImplType::* memPtr) = nullptr;
 
-        // index into m_subclassImpls (and m_subclassImplsInitialized)
+        // index into subclassImpls (and subclassIndices)
         SizeType subclassImplIndex;
         SizeType elementIndex;
 
-        IteratorBase(ResourceTrackerType* tracker, SizeType subclassIdx, SizeType elemIdx)
+        IteratorBase(ResourceTrackerType* tracker, Bitset(ImplType::* memPtr), SizeType subclassIdx, SizeType elemIdx)
             : tracker(tracker),
+              memPtr(memPtr),
               subclassImplIndex(subclassIdx),
               elementIndex(elemIdx)
         {
@@ -44,10 +64,10 @@ class ResourceTracker
                 return;
             }
 
-            // find valid element - first check m_impl then try subclasses if not found
+            // find valid element - first check baseImpl then try subclasses if not found
             if (subclassImplIndex == Bitset::notFound)
             {
-                elementIndex = FindNextSet(tracker->m_impl.previous, elementIndex);
+                elementIndex = FindNextSet(tracker->baseImpl.*memPtr, elementIndex);
 
                 if (elementIndex != Bitset::notFound)
                 {
@@ -62,14 +82,14 @@ class ResourceTracker
 
             // Find first subclass that is set (if it exists),
             // next part will handle finding the element index.
-            subclassImplIndex = FindNextSet(tracker->m_subclassImplsInitialized, subclassImplIndex);
+            subclassImplIndex = FindNextSet(tracker->subclassIndices, subclassImplIndex);
 
             while (subclassImplIndex != Bitset::notFound)
             {
-                AssertDebug(subclassImplIndex < tracker->m_subclassImpls.Size());
+                AssertDebug(subclassImplIndex < tracker->subclassImpls.Size());
 
-                auto& impl = tracker->m_subclassImpls[subclassImplIndex].Get();
-                elementIndex = FindNextSet(impl.previous, elementIndex);
+                auto& impl = tracker->subclassImpls[subclassImplIndex].Get();
+                elementIndex = FindNextSet(impl.*memPtr, elementIndex);
 
                 // Found valid element in subclass impl.
                 if (elementIndex != Bitset::notFound)
@@ -78,7 +98,7 @@ class ResourceTracker
                 }
 
                 // If we are at the end of the current subclass impl, move to the next one.
-                subclassImplIndex = FindNextSet(tracker->m_subclassImplsInitialized, subclassImplIndex + 1);
+                subclassImplIndex = FindNextSet(tracker->subclassIndices, subclassImplIndex + 1);
                 elementIndex = 0;
             }
 
@@ -97,7 +117,7 @@ class ResourceTracker
 
             if (subclassImplIndex == Bitset::notFound)
             {
-                elementIndex = FindNextSet(tracker->m_impl.previous, elementIndex + 1);
+                elementIndex = FindNextSet(tracker->baseImpl.*memPtr, elementIndex + 1);
 
                 if (elementIndex != Bitset::notFound)
                 {
@@ -107,17 +127,17 @@ class ResourceTracker
 
                 // Find first subclass that is set (if it exists),
                 // next part will handle finding the element index.
-                subclassImplIndex = FindNextSet(tracker->m_subclassImplsInitialized, 0);
-                elementIndex = SizeType(-1); // wrap around for next
+                subclassImplIndex = FindNextSet(tracker->subclassIndices, 0);
+                elementIndex = Bitset::BitIndex(-1); // wrap around for next
             }
 
             while (subclassImplIndex != Bitset::notFound)
             {
-                AssertDebug(subclassImplIndex < tracker->m_subclassImpls.Size());
+                AssertDebug(subclassImplIndex < tracker->subclassImpls.Size());
 
-                auto& impl = tracker->m_subclassImpls[subclassImplIndex].Get();
+                auto& impl = tracker->subclassImpls[subclassImplIndex].Get();
 
-                elementIndex = FindNextSet(impl.previous, elementIndex + 1);
+                elementIndex = FindNextSet(impl.*memPtr, elementIndex + 1);
 
                 if (elementIndex != Bitset::notFound)
                 {
@@ -126,8 +146,8 @@ class ResourceTracker
                 }
 
                 // If we are at the end of the current subclass impl, move to the next one.
-                subclassImplIndex = FindNextSet(tracker->m_subclassImplsInitialized, subclassImplIndex + 1);
-                elementIndex = SizeType(-1); // wrap around for next
+                subclassImplIndex = FindNextSet(tracker->subclassIndices, subclassImplIndex + 1);
+                elementIndex = Bitset::BitIndex(-1); // wrap around for next
             }
 
             // exhausted all subclass elements
@@ -153,13 +173,13 @@ class ResourceTracker
 
             if (subclassImplIndex == Bitset::notFound) // primary search phase
             {
-                return tracker->m_impl.elements.Get(elementIndex);
+                return tracker->baseImpl.elements.Get(elementIndex);
             }
             else
             {
-                AssertDebug(subclassImplIndex < tracker->m_subclassImpls.Size());
+                AssertDebug(subclassImplIndex < tracker->subclassImpls.Size());
 
-                return tracker->m_subclassImpls[subclassImplIndex].Get().elements.Get(elementIndex);
+                return tracker->subclassImpls[subclassImplIndex].Get().elements.Get(elementIndex);
             }
 
             HYP_FAIL("Invalid iterator phase");
@@ -173,6 +193,7 @@ class ResourceTracker
         bool operator==(const Derived& other) const
         {
             return tracker == other.tracker
+                && memPtr == other.memPtr
                 && subclassImplIndex == other.subclassImplIndex
                 && elementIndex == other.elementIndex;
         }
@@ -180,6 +201,7 @@ class ResourceTracker
         bool operator!=(const Derived& other) const
         {
             return tracker != other.tracker
+                || memPtr != other.memPtr
                 || subclassImplIndex != other.subclassImplIndex
                 || elementIndex != other.elementIndex;
         }
@@ -191,7 +213,7 @@ class ResourceTracker
                 && elementIndex == Bitset::notFound;
         }
 
-        HYP_FORCE_INLINE static Bitset::BitIndex FindNextSet(const Bitset& bs, Bitset::BitIndex idx)
+        static HYP_FORCE_INLINE Bitset::BitIndex FindNextSet(const Bitset& bs, Bitset::BitIndex idx)
         {
             return bs.NextSetBitIndex(idx);
         }
@@ -202,10 +224,12 @@ public:
 
     struct Iterator : IteratorBase<Iterator, false>
     {
+        using ImplType = typename ResourceTracker::Impl;
+
         Iterator() = delete;
 
-        Iterator(ResourceTracker* tracker, SizeType subclassImplIndex, SizeType elementIndex)
-            : IteratorBase<Iterator, false>(tracker, subclassImplIndex, elementIndex)
+        Iterator(ResourceTracker* tracker, Bitset(ImplType::* memPtr), SizeType subclassImplIndex, SizeType elementIndex)
+            : IteratorBase<Iterator, false>(tracker, memPtr, subclassImplIndex, elementIndex)
         {
         }
 
@@ -214,6 +238,7 @@ public:
         {
             return ConstIterator(
                 IteratorBase<Iterator, false>::tracker,
+                IteratorBase<Iterator, false>::memPtr,
                 IteratorBase<Iterator, false>::subclassImplIndex,
                 IteratorBase<Iterator, false>::elementIndex);
         }
@@ -221,10 +246,12 @@ public:
 
     struct ConstIterator : IteratorBase<ConstIterator, true>
     {
+        using ImplType = typename ResourceTracker::Impl;
+
         ConstIterator() = delete;
 
-        ConstIterator(const ResourceTracker* tracker, SizeType subclassImplIndex, SizeType elementIndex)
-            : IteratorBase<ConstIterator, true>(tracker, subclassImplIndex, elementIndex)
+        ConstIterator(const ResourceTracker* tracker, Bitset(ImplType::* memPtr), SizeType subclassImplIndex, SizeType elementIndex)
+            : IteratorBase<ConstIterator, true>(tracker, memPtr, subclassImplIndex, elementIndex)
         {
         }
     };
@@ -238,18 +265,6 @@ public:
         CHANGED = CHANGED_ADDED | CHANGED_MODIFIED
     };
 
-    struct Diff
-    {
-        uint32 numAdded = 0;
-        uint32 numRemoved = 0;
-        uint32 numChanged = 0;
-
-        HYP_FORCE_INLINE bool NeedsUpdate() const
-        {
-            return numAdded > 0 || numRemoved > 0 || numChanged > 0;
-        }
-    };
-
     // use a sparse array so we can use IDs as indices
     // without worring about hashing for lookups and allowing us to
     // still iterate over the elements (mostly) linearly.
@@ -259,11 +274,11 @@ public:
     static_assert(std::is_base_of_v<ObjIdBase, IdType>, "IdType must be derived from ObjIdBase (must use numeric id)");
 
     ResourceTracker()
-        : m_impl(IdType::typeIdStatic) // default impl for base class
+        : baseImpl(IdType::typeIdStatic) // default impl for base class
     {
         // Setup the subclass implementations array, we initialize them as they get used
         const SizeType numDescendants = GetNumDescendants(IdType::typeIdStatic);
-        m_subclassImpls.Resize(numDescendants);
+        subclassImpls.Resize(numDescendants);
     }
 
     ResourceTracker(const ResourceTracker& other) = delete;
@@ -275,11 +290,11 @@ public:
     ~ResourceTracker()
     {
         // destruct subtype containers
-        for (Bitset::BitIndex i : m_subclassImplsInitialized)
+        for (Bitset::BitIndex i : subclassIndices)
         {
-            AssertDebug(i < m_subclassImpls.Size());
+            AssertDebug(i < subclassImpls.Size());
 
-            m_subclassImpls[i].Destruct();
+            subclassImpls[i].Destruct();
         }
     }
 
@@ -287,13 +302,13 @@ public:
     {
         HYP_SCOPE;
 
-        uint32 count = m_impl.next.Count();
+        uint32 count = baseImpl.next.Count();
 
-        for (Bitset::BitIndex i : m_subclassImplsInitialized)
+        for (Bitset::BitIndex i : subclassIndices)
         {
-            AssertDebug(i < m_subclassImpls.Size());
+            AssertDebug(i < subclassImpls.Size());
 
-            count += m_subclassImpls[i].Get().next.Count();
+            count += subclassImpls[i].Get().next.Count();
         }
 
         return count;
@@ -303,16 +318,16 @@ public:
     {
         if (typeId == IdType::typeIdStatic)
         {
-            return m_impl.next.Count();
+            return baseImpl.next.Count();
         }
 
-        const int subclassIndex = GetSubclassIndex(m_impl.typeId, typeId);
+        const int subclassIndex = GetSubclassIndex(baseImpl.typeId, typeId);
         AssertDebug(subclassIndex >= 0, "Invalid subclass index");
-        AssertDebug(subclassIndex < m_subclassImpls.Size(), "Invalid subclass index");
+        AssertDebug(subclassIndex < subclassImpls.Size(), "Invalid subclass index");
 
-        if (m_subclassImplsInitialized.Test(subclassIndex))
+        if (subclassIndices.Test(subclassIndex))
         {
-            return m_subclassImpls[subclassIndex].Get().next.Count();
+            return subclassImpls[subclassIndex].Get().next.Count();
         }
 
         return 0;
@@ -324,16 +339,16 @@ public:
 
         if (typeId == IdType::typeIdStatic)
         {
-            return m_impl.elements;
+            return baseImpl.elements;
         }
 
-        const int subclassIndex = GetSubclassIndex(m_impl.typeId, typeId);
+        const int subclassIndex = GetSubclassIndex(baseImpl.typeId, typeId);
         AssertDebug(subclassIndex >= 0, "Invalid subclass index");
-        AssertDebug(subclassIndex < m_subclassImpls.Size(), "Invalid subclass index");
+        AssertDebug(subclassIndex < subclassImpls.Size(), "Invalid subclass index");
 
-        if (m_subclassImplsInitialized.Test(subclassIndex))
+        if (subclassIndices.Test(subclassIndex))
         {
-            return m_subclassImpls[subclassIndex].Get().elements;
+            return subclassImpls[subclassIndex].Get().elements;
         }
 
         return emptyArray;
@@ -349,26 +364,25 @@ public:
 
     HYP_FORCE_INLINE const Bitset& GetSubclassBits() const
     {
-        return m_subclassImplsInitialized;
+        return subclassIndices;
     }
 
-    Diff GetDiff() const
+    ResourceTrackerDiff GetDiff() const
     {
         HYP_SCOPE;
 
-        Diff diff {};
+        ResourceTrackerDiff diff {};
+        diff.numAdded = baseImpl.GetAdded().Count();
+        diff.numRemoved = baseImpl.GetRemoved().Count();
+        diff.numChanged = baseImpl.GetChanged().Count();
 
-        diff.numAdded = m_impl.GetAdded().Count();
-        diff.numRemoved = m_impl.GetRemoved().Count();
-        diff.numChanged = m_impl.GetChanged().Count();
-
-        for (Bitset::BitIndex i : m_subclassImplsInitialized)
+        for (Bitset::BitIndex i : subclassIndices)
         {
-            AssertDebug(i < m_subclassImpls.Size());
+            AssertDebug(i < subclassImpls.Size());
 
-            diff.numAdded += m_subclassImpls[i].Get().GetAdded().Count();
-            diff.numRemoved += m_subclassImpls[i].Get().GetRemoved().Count();
-            diff.numChanged += m_subclassImpls[i].Get().GetChanged().Count();
+            diff.numAdded += subclassImpls[i].Get().GetAdded().Count();
+            diff.numRemoved += subclassImpls[i].Get().GetRemoved().Count();
+            diff.numChanged += subclassImpls[i].Get().GetChanged().Count();
         }
 
         return diff;
@@ -388,23 +402,23 @@ public:
         TypeId typeId = id.GetTypeId();
         AssertDebug(typeId != TypeId::Void());
 
-        if (typeId == m_impl.typeId)
+        if (typeId == baseImpl.typeId)
         {
-            m_impl.Track(id, element, versionPtr, allowDuplicatesInSameFrame);
+            baseImpl.Track(id, element, versionPtr, allowDuplicatesInSameFrame);
             return;
         }
 
-        const int subclassIndex = GetSubclassIndex(m_impl.typeId, typeId);
+        const int subclassIndex = GetSubclassIndex(baseImpl.typeId, typeId);
         AssertDebug(subclassIndex >= 0, "Invalid subclass index");
-        AssertDebug(subclassIndex < m_subclassImpls.Size(), "Invalid subclass index");
+        AssertDebug(subclassIndex < subclassImpls.Size(), "Invalid subclass index");
 
-        if (!m_subclassImplsInitialized.Test(subclassIndex))
+        if (!subclassIndices.Test(subclassIndex))
         {
-            m_subclassImpls[subclassIndex].Construct(typeId);
-            m_subclassImplsInitialized.Set(subclassIndex, true);
+            subclassImpls[subclassIndex].Construct(typeId);
+            subclassIndices.Set(subclassIndex, true);
         }
 
-        m_subclassImpls[subclassIndex].Get().Track(id, element, versionPtr, allowDuplicatesInSameFrame);
+        subclassImpls[subclassIndex].Get().Track(id, element, versionPtr, allowDuplicatesInSameFrame);
     }
 
     bool MarkToKeep(IdType id)
@@ -414,21 +428,21 @@ public:
         TypeId typeId = id.GetTypeId();
         AssertDebug(typeId != TypeId::Void());
 
-        if (typeId == m_impl.typeId)
+        if (typeId == baseImpl.typeId)
         {
-            return m_impl.MarkToKeep(id);
+            return baseImpl.MarkToKeep(id);
         }
 
-        const int subclassIndex = GetSubclassIndex(m_impl.typeId, typeId);
+        const int subclassIndex = GetSubclassIndex(baseImpl.typeId, typeId);
         AssertDebug(subclassIndex >= 0, "Invalid subclass index");
-        AssertDebug(subclassIndex < m_subclassImpls.Size(), "Invalid subclass index");
+        AssertDebug(subclassIndex < subclassImpls.Size(), "Invalid subclass index");
 
-        if (!m_subclassImplsInitialized.Test(subclassIndex))
+        if (!subclassIndices.Test(subclassIndex))
         {
             return false;
         }
 
-        return m_subclassImpls[subclassIndex].Get().MarkToKeep(id);
+        return subclassImpls[subclassIndex].Get().MarkToKeep(id);
     }
 
     void MarkToRemove(IdType id)
@@ -436,23 +450,23 @@ public:
         TypeId typeId = id.GetTypeId();
         AssertDebug(typeId != TypeId::Void());
 
-        if (typeId == m_impl.typeId)
+        if (typeId == baseImpl.typeId)
         {
-            m_impl.MarkToRemove(id);
+            baseImpl.MarkToRemove(id);
 
             return;
         }
 
-        const int subclassIndex = GetSubclassIndex(m_impl.typeId, typeId);
+        const int subclassIndex = GetSubclassIndex(baseImpl.typeId, typeId);
         AssertDebug(subclassIndex >= 0, "Invalid subclass index");
-        AssertDebug(subclassIndex < m_subclassImpls.Size(), "Invalid subclass index");
+        AssertDebug(subclassIndex < subclassImpls.Size(), "Invalid subclass index");
 
-        if (!m_subclassImplsInitialized.Test(subclassIndex))
+        if (!subclassIndices.Test(subclassIndex))
         {
             return;
         }
 
-        m_subclassImpls[subclassIndex].Get().MarkToRemove(id);
+        subclassImpls[subclassIndex].Get().MarkToRemove(id);
     }
 
     template <class AllocatorType>
@@ -460,11 +474,11 @@ public:
     {
         HYP_SCOPE;
 
-        m_impl.GetRemoved(outIds, includeChanged);
+        baseImpl.GetRemoved(outIds, includeChanged);
 
-        for (Bitset::BitIndex bitIndex : m_subclassImplsInitialized)
+        for (Bitset::BitIndex bitIndex : subclassIndices)
         {
-            m_subclassImpls[bitIndex].Get().GetRemoved(outIds, includeChanged);
+            subclassImpls[bitIndex].Get().GetRemoved(outIds, includeChanged);
         }
     }
 
@@ -473,11 +487,11 @@ public:
     {
         HYP_SCOPE;
 
-        m_impl.GetRemoved(out, includeChanged);
+        baseImpl.GetRemoved(out, includeChanged);
 
-        for (Bitset::BitIndex i : m_subclassImplsInitialized)
+        for (Bitset::BitIndex i : subclassIndices)
         {
-            m_subclassImpls[i].Get().GetRemoved(out, includeChanged);
+            subclassImpls[i].Get().GetRemoved(out, includeChanged);
         }
     }
 
@@ -486,11 +500,11 @@ public:
     {
         HYP_SCOPE;
 
-        m_impl.GetRemoved(out, includeChanged);
+        baseImpl.GetRemoved(out, includeChanged);
 
-        for (Bitset::BitIndex i : m_subclassImplsInitialized)
+        for (Bitset::BitIndex i : subclassIndices)
         {
-            m_subclassImpls[i].Get().GetRemoved(out, includeChanged);
+            subclassImpls[i].Get().GetRemoved(out, includeChanged);
         }
     }
 
@@ -499,11 +513,11 @@ public:
     {
         HYP_SCOPE;
 
-        m_impl.GetAdded(out, includeChanged);
+        baseImpl.GetAdded(out, includeChanged);
 
-        for (Bitset::BitIndex i : m_subclassImplsInitialized)
+        for (Bitset::BitIndex i : subclassIndices)
         {
-            m_subclassImpls[i].Get().GetAdded(out, includeChanged);
+            subclassImpls[i].Get().GetAdded(out, includeChanged);
         }
     }
 
@@ -512,11 +526,11 @@ public:
     {
         HYP_SCOPE;
 
-        m_impl.GetAdded(out, includeChanged);
+        baseImpl.GetAdded(out, includeChanged);
 
-        for (Bitset::BitIndex i : m_subclassImplsInitialized)
+        for (Bitset::BitIndex i : subclassIndices)
         {
-            m_subclassImpls[i].Get().GetAdded(out, includeChanged);
+            subclassImpls[i].Get().GetAdded(out, includeChanged);
         }
     }
 
@@ -525,11 +539,11 @@ public:
     {
         HYP_SCOPE;
 
-        m_impl.GetChanged(outIds);
+        baseImpl.GetChanged(outIds);
 
-        for (Bitset::BitIndex i : m_subclassImplsInitialized)
+        for (Bitset::BitIndex i : subclassIndices)
         {
-            m_subclassImpls[i].Get().GetChanged(outIds);
+            subclassImpls[i].Get().GetChanged(outIds);
         }
     }
 
@@ -538,11 +552,11 @@ public:
     {
         HYP_SCOPE;
 
-        m_impl.GetChanged(out);
+        baseImpl.GetChanged(out);
 
-        for (Bitset::BitIndex i : m_subclassImplsInitialized)
+        for (Bitset::BitIndex i : subclassIndices)
         {
-            m_subclassImpls[i].Get().GetChanged(out);
+            subclassImpls[i].Get().GetChanged(out);
         }
     }
 
@@ -551,11 +565,11 @@ public:
     {
         HYP_SCOPE;
 
-        m_impl.GetChanged(out);
+        baseImpl.GetChanged(out);
 
-        for (Bitset::BitIndex i : m_subclassImplsInitialized)
+        for (Bitset::BitIndex i : subclassIndices)
         {
-            m_subclassImpls[i].Get().GetChanged(out);
+            subclassImpls[i].Get().GetChanged(out);
         }
     }
 
@@ -564,11 +578,11 @@ public:
     {
         HYP_SCOPE;
 
-        m_impl.GetCurrent(out);
+        baseImpl.GetCurrent(out);
 
-        for (Bitset::BitIndex i : m_subclassImplsInitialized)
+        for (Bitset::BitIndex i : subclassIndices)
         {
-            m_subclassImpls[i].Get().GetCurrent(out);
+            subclassImpls[i].Get().GetCurrent(out);
         }
     }
 
@@ -577,11 +591,11 @@ public:
     {
         HYP_SCOPE;
 
-        m_impl.GetCurrent(out);
+        baseImpl.GetCurrent(out);
 
-        for (Bitset::BitIndex i : m_subclassImplsInitialized)
+        for (Bitset::BitIndex i : subclassIndices)
         {
-            m_subclassImpls[i].Get().GetCurrent(out);
+            subclassImpls[i].Get().GetCurrent(out);
         }
     }
 
@@ -591,48 +605,128 @@ public:
 
         TypeId typeId = id.GetTypeId();
 
-        if (typeId == m_impl.typeId)
+        if (typeId == baseImpl.typeId)
         {
-            return m_impl.GetElement(id);
+            return baseImpl.GetElement(id);
         }
 
-        const int subclassIndex = GetSubclassIndex(m_impl.typeId, typeId);
+        const int subclassIndex = GetSubclassIndex(baseImpl.typeId, typeId);
         AssertDebug(subclassIndex >= 0, "Invalid subclass index");
-        AssertDebug(subclassIndex < m_subclassImpls.Size(), "Invalid subclass index");
+        AssertDebug(subclassIndex < subclassImpls.Size(), "Invalid subclass index");
 
-        if (!m_subclassImplsInitialized.Test(subclassIndex))
+        if (!subclassIndices.Test(subclassIndex))
         {
             return nullptr;
         }
 
-        return m_subclassImpls[subclassIndex].Get().GetElement(id);
+        return subclassImpls[subclassIndex].Get().GetElement(id);
+    }
+
+    const ElementType* GetElement(IdType id) const
+    {
+        return const_cast<ResourceTracker*>(this)->GetElement(id);
+    }
+
+    ProxyType* GetProxy(IdType id)
+    {
+        HYP_SCOPE;
+
+        TypeId typeId = id.GetTypeId();
+
+        if (typeId == baseImpl.typeId)
+        {
+            return baseImpl.GetProxy(id);
+        }
+
+        const int subclassIndex = GetSubclassIndex(baseImpl.typeId, typeId);
+        AssertDebug(subclassIndex >= 0, "Invalid subclass index");
+        AssertDebug(subclassIndex < subclassImpls.Size(), "Invalid subclass index");
+
+        if (!subclassIndices.Test(subclassIndex))
+        {
+            return nullptr;
+        }
+
+        return subclassImpls[subclassIndex].Get().GetProxy(id);
+    }
+
+    const ProxyType* GetProxy(IdType id) const
+    {
+        return const_cast<ResourceTracker*>(this)->GetProxy(id);
+    }
+
+    ProxyType* SetProxy(IdType id, ProxyType&& proxy)
+    {
+        HYP_SCOPE;
+
+        TypeId typeId = id.GetTypeId();
+
+        if (typeId == baseImpl.typeId)
+        {
+            return baseImpl.SetProxy(id, std::move(proxy));
+        }
+
+        const int subclassIndex = GetSubclassIndex(baseImpl.typeId, typeId);
+        AssertDebug(subclassIndex >= 0, "Invalid subclass index");
+        AssertDebug(subclassIndex < subclassImpls.Size(), "Invalid subclass index");
+
+        if (!subclassIndices.Test(subclassIndex))
+        {
+            subclassImpls[subclassIndex].Construct(typeId);
+            subclassIndices.Set(subclassIndex, true);
+        }
+
+        return subclassImpls[subclassIndex].Get().SetProxy(id, std::move(proxy));
+    }
+
+    void RemoveProxy(IdType id)
+    {
+        HYP_SCOPE;
+
+        TypeId typeId = id.GetTypeId();
+
+        if (typeId == baseImpl.typeId)
+        {
+            baseImpl.RemoveProxy(id);
+            return;
+        }
+
+        const int subclassIndex = GetSubclassIndex(baseImpl.typeId, typeId);
+        AssertDebug(subclassIndex >= 0, "Invalid subclass index");
+        AssertDebug(subclassIndex < subclassImpls.Size(), "Invalid subclass index");
+
+        if (!subclassIndices.Test(subclassIndex))
+        {
+            return;
+        }
+
+        subclassImpls[subclassIndex].Get().RemoveProxy(id);
     }
 
     void Advance()
     {
         HYP_SCOPE;
 
-        m_impl.Advance();
+        baseImpl.Advance();
 
-        for (Bitset::BitIndex i : m_subclassImplsInitialized)
+        for (Bitset::BitIndex i : subclassIndices)
         {
-            m_subclassImpls[i].Get().Advance();
+            subclassImpls[i].Get().Advance();
         }
     }
 
     void Reset()
     {
-        m_impl.Reset();
+        baseImpl.Reset();
 
-        for (Bitset::BitIndex i : m_subclassImplsInitialized)
+        for (Bitset::BitIndex i : subclassIndices)
         {
-            m_subclassImpls[i].Get().Reset();
+            subclassImpls[i].Get().Reset();
         }
     }
 
-    HYP_DEF_STL_BEGIN_END(Iterator(const_cast<ResourceTracker*>(this), Bitset::notFound, 0), Iterator(const_cast<ResourceTracker*>(this), Bitset::notFound, Bitset::notFound))
+    HYP_DEF_STL_BEGIN_END(Iterator(const_cast<ResourceTracker*>(this), &Impl::next, Bitset::notFound, 0), Iterator(const_cast<ResourceTracker*>(this), &Impl::next, Bitset::notFound, Bitset::notFound))
 
-protected:
     struct Impl final
     {
         /*! \brief Checks if it already has a proxy for the given Id from the previous frame */
@@ -1012,7 +1106,7 @@ protected:
         {
             HYP_SCOPE;
 
-            Bitset currentBits = previous;
+            Bitset currentBits = next;
 
             out.Reserve(out.Size() + currentBits.Count());
 
@@ -1045,6 +1139,56 @@ protected:
             return elements.TryGet(id.ToIndex());
         }
 
+        ProxyType* GetProxy(IdType id)
+        {
+            AssertDebug(id.GetTypeId() == typeId);
+
+            if (id.GetTypeId() != typeId)
+            {
+                return nullptr;
+            }
+
+            return proxies.TryGet(id.ToIndex());
+        }
+
+        const ProxyType* GetProxy(IdType id) const
+        {
+            AssertDebug(id.GetTypeId() == typeId);
+
+            if (id.GetTypeId() != typeId)
+            {
+                return nullptr;
+            }
+
+            return proxies.TryGet(id.ToIndex());
+        }
+
+        ProxyType* SetProxy(IdType id, ProxyType&& proxy)
+        {
+            HYP_SCOPE;
+
+            AssertDebug(id.GetTypeId() == typeId);
+
+            if (id.GetTypeId() != typeId)
+            {
+                return nullptr;
+            }
+
+            return &*proxies.Emplace(id.ToIndex(), std::move(proxy));
+        }
+
+        void RemoveProxy(IdType id)
+        {
+            AssertDebug(id.GetTypeId() == typeId);
+
+            if (id.GetTypeId() != typeId)
+            {
+                return;
+            }
+
+            proxies.EraseAt(id.ToIndex());
+        }
+
         void Advance()
         {
             HYP_SCOPE;
@@ -1071,6 +1215,8 @@ protected:
             elements.Clear();
             versions.Clear();
 
+            proxies.Clear();
+
             previous.Clear();
             next.Clear();
             changed.Clear();
@@ -1082,17 +1228,99 @@ protected:
         // per-element version identifier array - mirrors elements array
         VersionArrayType versions;
 
+        SparsePagedArray<ProxyType, 1024> proxies;
+
         Bitset previous;
         Bitset next;
         Bitset changed;
     };
 
     // base class impl
-    Impl m_impl;
+    Impl baseImpl;
 
     // per-subtype implementations (only constructed and setup on first Bind() call with that type)
-    Array<ValueStorage<Impl>> m_subclassImpls;
-    Bitset m_subclassImplsInitialized;
+    Array<ValueStorage<Impl>> subclassImpls;
+    Bitset subclassIndices;
 };
+
+template <class IdType, class ElementType, class ProxyType>
+static inline void GetAddedElements(ResourceTracker<IdType, ElementType, ProxyType>& lhs, ResourceTracker<IdType, ElementType, ProxyType>& rhs, Array<ElementType*>& outElements)
+{
+    auto impl = [&outElements](typename ResourceTracker<IdType, ElementType, ProxyType>::Impl& lhsImpl, typename ResourceTracker<IdType, ElementType, ProxyType>::Impl& rhsImpl)
+    {
+        const SizeType newNumBits = MathUtil::Max(lhsImpl.next.NumBits(), rhsImpl.next.NumBits());
+        Bitset addedBits = Bitset(rhsImpl.next).SetNumBits(newNumBits) & ~Bitset(lhsImpl.next).SetNumBits(newNumBits);
+
+        if (!addedBits.AnyBitsSet())
+        {
+            return;
+        }
+
+        outElements.Reserve(outElements.Size() + addedBits.Count());
+
+        for (Bitset::BitIndex i : addedBits)
+        {
+            const IdType id = IdType(ObjIdBase { rhsImpl.typeId, uint32(i + 1) });
+
+            ElementType* elem = rhsImpl.elements.TryGet(id.ToIndex());
+            AssertDebug(elem != nullptr);
+
+            outElements.PushBack(elem);
+        }
+    };
+
+    impl(lhs.baseImpl, rhs.baseImpl);
+
+    for (Bitset::BitIndex i : rhs.subclassIndices)
+    {
+        if (!lhs.subclassIndices.Test(i))
+        {
+            lhs.subclassImpls[i].Construct();
+            lhs.subclassIndices.Set(i, true);
+        }
+
+        impl(lhs.subclassImpls[i].Get(), rhs.subclassImpls[i].Get());
+    }
+}
+
+template <class IdType, class ElementType, class ProxyType>
+static inline void GetRemovedElements(ResourceTracker<IdType, ElementType, ProxyType>& lhs, ResourceTracker<IdType, ElementType, ProxyType>& rhs, Array<ElementType*>& outElements)
+{
+    auto impl = [&outElements](typename ResourceTracker<IdType, ElementType, ProxyType>::Impl& lhsImpl, typename ResourceTracker<IdType, ElementType, ProxyType>::Impl& rhsImpl)
+    {
+        const SizeType newNumBits = MathUtil::Max(lhsImpl.next.NumBits(), rhsImpl.next.NumBits());
+        Bitset removedBits = Bitset(lhsImpl.next).SetNumBits(newNumBits) & ~Bitset(rhsImpl.next).SetNumBits(newNumBits);
+
+        if (!removedBits.AnyBitsSet())
+        {
+            return;
+        }
+
+        outElements.Reserve(outElements.Size() + removedBits.Count());
+
+        for (Bitset::BitIndex i : removedBits)
+        {
+            const IdType id = IdType(ObjIdBase { rhsImpl.typeId, uint32(i + 1) });
+
+            ElementType* elem = rhsImpl.elements.TryGet(id.ToIndex());
+            AssertDebug(elem != nullptr);
+
+            outElements.PushBack(elem);
+        }
+    };
+
+    impl(lhs.baseImpl, rhs.baseImpl);
+
+    for (Bitset::BitIndex i : lhs.subclassIndices)
+    {
+        if (!rhs.subclassIndices.Test(i))
+        {
+            lhs.subclassImpls[i].Construct();
+            lhs.subclassIndices.Set(i, true);
+        }
+
+        impl(lhs.subclassImpls[i].Get(), rhs.subclassImpls[i].Get());
+    }
+}
 
 } // namespace hyperion

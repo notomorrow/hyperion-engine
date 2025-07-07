@@ -2,9 +2,16 @@
 
 #include <scene/Light.hpp>
 #include <scene/Material.hpp>
+#include <scene/View.hpp>
+#include <scene/Scene.hpp>
+#include <scene/camera/Camera.hpp>
 #include <scene/ecs/EntityTag.hpp>
 
+#include <rendering/RenderShadowMap.hpp>
 #include <rendering/RenderProxy.hpp>
+#include <rendering/RenderBackend.hpp>
+#include <rendering/RenderGlobalState.hpp>
+#include <rendering/util/ShadowCameraHelper.hpp>
 
 #include <core/object/HypClassUtils.hpp>
 
@@ -15,9 +22,23 @@
 
 #include <core/profiling/ProfileScope.hpp>
 
+#include <EngineGlobals.hpp>
 #include <Engine.hpp>
 
 namespace hyperion {
+
+static const TextureFormat g_pointLightShadowFormat = TF_RG32F;
+static const TextureFormat g_directionalLightShadowFormats[SMF_MAX] = {
+    TF_R32F, // STANDARD
+    TF_R32F, // PCF
+    TF_R32F, // CONTACT_HARDENING
+    TF_RG32F // VSM
+};
+
+static constexpr const char* g_shadowMapFilterPropertyNames[SMF_MAX] = { "MODE_STANDARD", "MODE_PCF", "MODE_CONTACT_HARDENED", "MODE_VSM" };
+
+static constexpr EnumFlags<ViewFlags> g_defaultShadowViewFlags = ViewFlags::NOT_MULTI_BUFFERED | ViewFlags::SKIP_LIGHTS
+    | ViewFlags::SKIP_LIGHTMAP_VOLUMES | ViewFlags::SKIP_ENV_PROBES | ViewFlags::SKIP_ENV_GRIDS;
 
 #pragma region Light
 
@@ -28,6 +49,7 @@ Light::Light()
 
 Light::Light(LightType type, const Vec3f& position, const Color& color, float intensity, float radius)
     : m_type(type),
+      m_flags(LF_DEFAULT),
       m_position(position),
       m_color(color),
       m_intensity(intensity),
@@ -35,14 +57,15 @@ Light::Light(LightType type, const Vec3f& position, const Color& color, float in
       m_falloff(1.0f),
       m_spotAngles(Vec2f::Zero())
 {
-    m_entityInitInfo.canEverUpdate = false;
-    m_entityInitInfo.receivesUpdate = false;
+    m_entityInitInfo.canEverUpdate = true;
+    m_entityInitInfo.receivesUpdate = true;
     m_entityInitInfo.bvhDepth = 0; // No BVH for lights
     m_entityInitInfo.initialTags = { EntityTag::LIGHT };
 }
 
 Light::Light(LightType type, const Vec3f& position, const Vec3f& normal, const Vec2f& areaSize, const Color& color, float intensity, float radius)
     : m_type(type),
+      m_flags(LF_DEFAULT),
       m_position(position),
       m_normal(normal),
       m_areaSize(areaSize),
@@ -52,8 +75,8 @@ Light::Light(LightType type, const Vec3f& position, const Vec3f& normal, const V
       m_falloff(1.0f),
       m_spotAngles(Vec2f::Zero())
 {
-    m_entityInitInfo.canEverUpdate = false;
-    m_entityInitInfo.receivesUpdate = false;
+    m_entityInitInfo.canEverUpdate = true;
+    m_entityInitInfo.receivesUpdate = true;
     m_entityInitInfo.bvhDepth = 0; // No BVH for lights
     m_entityInitInfo.initialTags = { EntityTag::LIGHT };
 }
@@ -69,7 +92,204 @@ void Light::Init()
         InitObject(m_material);
     }
 
+    if (m_flags & LF_SHADOW)
+    {
+        CreateShadowViews();
+    }
+
     SetReady(true);
+}
+
+void Light::CreateShadowViews()
+{
+    m_shadowViews.Clear();
+
+    if (!(m_flags & LF_SHADOW))
+    {
+        return;
+    }
+
+    const ShadowMapFilter shadowMapFilter = GetShadowMapFilter();
+    AssertDebug(shadowMapFilter < std::size(g_shadowMapFilterPropertyNames));
+
+    const Vec2u shadowMapDimensions = Vec2u { 256, 256 };
+
+    // Per shadow view flags
+    Array<EnumFlags<ViewFlags>> shadowViewFlags = { { ViewFlags::COLLECT_ALL_ENTITIES } };
+
+    ShaderDefinition shaderDefinition;
+
+    ShaderProperties shaderProperties;
+    shaderProperties.SetRequiredVertexAttributes(staticMeshVertexAttributes);
+    shaderProperties.Set("MODE_SHADOWS");
+    shaderProperties.Set(g_shadowMapFilterPropertyNames[shadowMapFilter]);
+
+    ViewOutputTargetDesc outputTargetDesc {};
+    outputTargetDesc.extent = shadowMapDimensions;
+
+    switch (m_type)
+    {
+    case LT_POINT:
+    {
+        // Frustum culling for cubemap views not currently supported.
+        shadowViewFlags[0] |= ViewFlags::NO_FRUSTUM_CULLING;
+
+        outputTargetDesc.numViews = 6;
+
+        // depth, depth^2 texture (for variance shadow map)
+        ViewOutputTargetAttachmentDesc& attachmentDesc = outputTargetDesc.attachments.EmplaceBack();
+        attachmentDesc.format = g_pointLightShadowFormat;
+        attachmentDesc.imageType = TT_CUBEMAP;
+        attachmentDesc.loadOp = LoadOperation::CLEAR;
+        attachmentDesc.storeOp = StoreOperation::STORE;
+        attachmentDesc.clearColor = MathUtil::Infinity<Vec4f>();
+
+        ViewOutputTargetAttachmentDesc& depthAttachmentDesc = outputTargetDesc.attachments.EmplaceBack();
+        depthAttachmentDesc.format = g_renderBackend->GetDefaultFormat(DIF_DEPTH);
+        depthAttachmentDesc.imageType = TT_CUBEMAP;
+        depthAttachmentDesc.loadOp = LoadOperation::CLEAR;
+        depthAttachmentDesc.storeOp = StoreOperation::STORE;
+
+        shaderDefinition = ShaderDefinition(NAME("Shadows"), shaderProperties);
+
+        break;
+    }
+    case LT_DIRECTIONAL:
+    {
+        // For directional lights, we have one for static objects and one for dynamic objects
+        shadowViewFlags = { { ViewFlags::COLLECT_STATIC_ENTITIES, ViewFlags::COLLECT_DYNAMIC_ENTITIES } };
+
+        // depth, depth^2 texture (for variance shadow map)
+        ViewOutputTargetAttachmentDesc& attachmentDesc = outputTargetDesc.attachments.EmplaceBack();
+        attachmentDesc.format = g_directionalLightShadowFormats[shadowMapFilter];
+        attachmentDesc.imageType = TT_TEX2D;
+        attachmentDesc.loadOp = LoadOperation::CLEAR;
+        attachmentDesc.storeOp = StoreOperation::STORE;
+        attachmentDesc.clearColor = MathUtil::Infinity<Vec4f>();
+
+        ViewOutputTargetAttachmentDesc& depthAttachmentDesc = outputTargetDesc.attachments.EmplaceBack();
+        depthAttachmentDesc.format = g_renderBackend->GetDefaultFormat(DIF_DEPTH);
+        depthAttachmentDesc.imageType = TT_TEX2D;
+        depthAttachmentDesc.loadOp = LoadOperation::CLEAR;
+        depthAttachmentDesc.storeOp = StoreOperation::STORE;
+
+        shaderDefinition = ShaderDefinition(NAME("RenderToCubemap"), shaderProperties);
+
+        break;
+    }
+    default:
+    {
+        // no shadow mapping implementation
+        return;
+    }
+    }
+
+    AssertDebug(shaderDefinition.IsValid(), "Shader definition is not valid for light type {}", EnumToString(m_type));
+
+    Handle<Camera> shadowMapCamera = CreateObject<Camera>(90.0f, -int(shadowMapDimensions.x), int(shadowMapDimensions.y), 0.001f, 250.0f);
+    shadowMapCamera->SetName(Name::Unique("ShadowMapCamera"));
+    InitObject(shadowMapCamera);
+
+    AssertDebug(shadowViewFlags.Size() >= 1);
+    m_shadowViews.Resize(shadowViewFlags.Size());
+
+    const RenderableAttributeSet overrideAttributes(
+        MeshAttributes {},
+        MaterialAttributes {
+            .shaderDefinition = shaderDefinition,
+            .cullFaces = shadowMapFilter == SMF_VSM ? FCM_BACK : FCM_FRONT });
+
+    for (int i = 0; i < int(shadowViewFlags.Size()); i++)
+    {
+        ViewDesc viewDesc {
+            .flags = shadowViewFlags[i] | g_defaultShadowViewFlags,
+            .viewport = Viewport { .extent = shadowMapDimensions, .position = Vec2i::Zero() },
+            .outputTargetDesc = outputTargetDesc,
+            .scenes = {},
+            .camera = shadowMapCamera,
+            .overrideAttributes = overrideAttributes
+        };
+
+        m_shadowViews[i] = CreateObject<View>(viewDesc);
+
+        if (Scene* scene = GetScene())
+        {
+            m_shadowViews[i]->AddScene(scene->HandleFromThis());
+        }
+
+        InitObject(m_shadowViews[i]);
+    }
+}
+
+void Light::OnAddedToScene(Scene* scene)
+{
+    Entity::OnAddedToScene(scene);
+
+    if (m_flags & LF_SHADOW)
+    {
+        for (const Handle<View>& shadowView : m_shadowViews)
+        {
+            if (!shadowView.IsValid())
+            {
+                continue;
+            }
+
+            shadowView->AddScene(scene->HandleFromThis());
+        }
+    }
+}
+
+void Light::OnRemovedFromScene(Scene* scene)
+{
+    Entity::OnRemovedFromScene(scene);
+
+    if (m_flags & LF_SHADOW)
+    {
+        for (const Handle<View>& shadowView : m_shadowViews)
+        {
+            if (!shadowView.IsValid())
+            {
+                continue;
+            }
+
+            shadowView->RemoveScene(scene->HandleFromThis());
+        }
+    }
+}
+
+void Light::Update(float delta)
+{
+    if (m_flags & LF_SHADOW)
+    {
+        return; // TEMP
+
+        /// TODO: Make update turn on/off dep. on octree changes (see EnvGrid)
+        for (int i = 0; i < int(m_shadowViews.Size()); i++)
+        {
+            /// Update shadow camera position
+            BoundingBox aabb;
+
+            switch (m_type)
+            {
+            case LT_DIRECTIONAL:
+                ShadowCameraHelper::UpdateShadowCameraDirectional(
+                    m_shadowViews[i]->GetCamera(),
+                    Vec3f::Zero(), /// @TODO: Clip to player
+                    GetPosition().Normalized(),
+                    40.0f, /// TODO shadow map radius
+                    aabb);
+
+                break;
+            default:
+                break;
+            }
+
+            m_shadowViews[i]->UpdateVisibility();
+            m_shadowViews[i]->Collect();
+
+            HYP_LOG_TEMP("Update Light {} shadow view ({}), {} drawcalls found", Id(), i, RenderApi_GetRenderCollector(m_shadowViews[i].Get()).NumDrawCallsCollected());
+        }
+    }
 }
 
 void Light::SetPosition(const Vec3f& position)
@@ -243,8 +463,8 @@ void Light::UpdateRenderProxy(IRenderProxy* proxy)
 {
     RenderProxyLight* proxyCasted = static_cast<RenderProxyLight*>(proxy);
     proxyCasted->light = WeakHandleFromThis();
-
     proxyCasted->lightMaterial = m_material.ToWeak();
+    proxyCasted->shadowViews = Map(m_shadowViews, &Handle<View>::ToWeak);
 
     const BoundingBox aabb = GetAABB();
 

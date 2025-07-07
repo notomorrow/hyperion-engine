@@ -40,6 +40,8 @@ public:
     HYP_FORCE_INLINE static constexpr uint64 GetBlockIndex(BitIndex bit)
     {
         return bit / CHAR_BIT / sizeof(BlockType);
+        // + 3 is log2(CHAR_BIT)
+        // return bit >> (numBitsPerBlockLog2 + 3);
     }
 
 private:
@@ -321,7 +323,7 @@ public:
         \returns The total number of bits in the bitset. */
     HYP_FORCE_INLINE SizeType NumBits() const
     {
-        return m_blocks.Size() * numBitsPerBlock;
+        return m_blocks.Size() << numBitsPerBlockLog2;
     }
 
     /*! \brief Resizes the bitset to the given number of bits.

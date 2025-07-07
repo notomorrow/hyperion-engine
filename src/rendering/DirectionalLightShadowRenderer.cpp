@@ -37,6 +37,8 @@
 
 namespace hyperion {
 
+#if 0
+
 static const TextureFormat shadowMapFormats[uint32(SMF_MAX)] = {
     TF_R32F, // STANDARD
     TF_R32F, // PCF
@@ -403,6 +405,7 @@ void DirectionalLightShadowRenderer::Init()
 
 void DirectionalLightShadowRenderer::OnAddedToWorld()
 {
+    return;
 
     RenderShadowMap* shadowMap = g_renderGlobalState->shadowMapAllocator->AllocateShadowMap(SMT_DIRECTIONAL, m_filterMode, m_resolution);
     Assert(shadowMap != nullptr, "Failed to allocate shadow map");
@@ -561,5 +564,7 @@ void DirectionalLightShadowRenderer::CreateShader()
 }
 
 #pragma endregion DirectionalLightShadowRenderer
+
+#endif
 
 } // namespace hyperion

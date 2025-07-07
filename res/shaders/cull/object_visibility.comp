@@ -64,14 +64,15 @@ HYP_DESCRIPTOR_SSBO(ObjectVisibilityDescriptorSet, IndirectDrawCommandsBuffer, s
 
 HYP_DESCRIPTOR_SSBO(ObjectVisibilityDescriptorSet, EntityInstanceBatchesBuffer) buffer EntityInstanceBatchesBuffer
 {
-    EntityInstanceBatch entity_instance_batches[];
+    uvec4 entityInstanceBatchDataRaw[];
 };
 
 layout(push_constant) uniform ObjectVisibilityData
 {
+    uvec2 depth_pyramid_dimensions;
     uint batch_offset;
     uint num_instances;
-    uvec2 depth_pyramid_dimensions;
+    uint batch_stride;
 }
 push_constants;
 
@@ -186,9 +187,11 @@ void main()
 
         if (object_instance.batch_index != ~0u && instance_index < MAX_ENTITIES_PER_INSTANCE_BATCH)
         {
-            atomicExchange(
-                entity_instance_batches[object_instance.batch_index].indices[instance_index >> 2][instance_index & 3],
-                entity_id - 1);
+            uint bufferOffsetWords = object_instance.batch_index * push_constants.batch_stride / 4;
+            // `indices` member of EntityInstanceBatch has offset of 16 bytes (4 words)
+            uint indicesOffsetWords = bufferOffsetWords + 4 + instance_index;
+
+            atomicExchange(entityInstanceBatchDataRaw[indicesOffsetWords >> 2][indicesOffsetWords & 3], entity_id - 1);
         }
     }
 }

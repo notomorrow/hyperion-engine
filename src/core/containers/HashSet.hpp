@@ -424,7 +424,7 @@ class HashSet : public ContainerBase<HashSet<Value, KeyBy, NodeAllocatorType>, d
 public:
     static constexpr bool isContiguous = false;
 
-    static constexpr SizeType initialBucketSize = 8;
+    static constexpr SizeType initialBucketSize = 16;
     static constexpr double desiredLoadFactor = 0.75;
 
     using Node = HashSetElement<Value>;

@@ -58,7 +58,7 @@ struct FunctionWrapper<T, std::enable_if_t<FunctionTraits<T>::isNonconstMemberFu
     {
     }
 
-    constexpr decltype(auto) operator()(typename FunctionWrapper_MemberFunctionHelper<T>::TargetType* value) const
+    HYP_FORCE_INLINE constexpr decltype(auto) operator()(typename FunctionWrapper_MemberFunctionHelper<T>::TargetType* value) const
     {
         if (!value)
         {
@@ -68,12 +68,12 @@ struct FunctionWrapper<T, std::enable_if_t<FunctionTraits<T>::isNonconstMemberFu
         return (value->*memFn)();
     }
 
-    constexpr decltype(auto) operator()(typename FunctionWrapper_MemberFunctionHelper<T>::TargetType& value) const
+    HYP_FORCE_INLINE constexpr decltype(auto) operator()(typename FunctionWrapper_MemberFunctionHelper<T>::TargetType& value) const
     {
         return (value.*memFn)();
     }
 
-    constexpr decltype(auto) operator()(const typename FunctionWrapper_MemberFunctionHelper<T>::TargetType* value) const
+    HYP_FORCE_INLINE constexpr decltype(auto) operator()(const typename FunctionWrapper_MemberFunctionHelper<T>::TargetType* value) const
     {
         if (!value)
         {
@@ -83,7 +83,7 @@ struct FunctionWrapper<T, std::enable_if_t<FunctionTraits<T>::isNonconstMemberFu
         return (value->*memFn)();
     }
 
-    constexpr decltype(auto) operator()(const typename FunctionWrapper_MemberFunctionHelper<T>::TargetType& value) const
+    HYP_FORCE_INLINE constexpr decltype(auto) operator()(const typename FunctionWrapper_MemberFunctionHelper<T>::TargetType& value) const
     {
         return (value.*memFn)();
     }
@@ -104,7 +104,7 @@ struct FunctionWrapper<T, std::enable_if_t<FunctionTraits<T>::isConstMemberFunct
     {
     }
 
-    constexpr decltype(auto) operator()(const typename FunctionWrapper_MemberFunctionHelper<T>::TargetType* value) const
+    HYP_FORCE_INLINE constexpr decltype(auto) operator()(const typename FunctionWrapper_MemberFunctionHelper<T>::TargetType* value) const
     {
         if (!value)
         {
@@ -114,7 +114,7 @@ struct FunctionWrapper<T, std::enable_if_t<FunctionTraits<T>::isConstMemberFunct
         return (value->*memFn)();
     }
 
-    constexpr decltype(auto) operator()(const typename FunctionWrapper_MemberFunctionHelper<T>::TargetType& value) const
+    HYP_FORCE_INLINE constexpr decltype(auto) operator()(const typename FunctionWrapper_MemberFunctionHelper<T>::TargetType& value) const
     {
         return (value.*memFn)();
     }
@@ -135,7 +135,7 @@ struct FunctionWrapper<T, std::enable_if_t<std::is_member_object_pointer_v<T>>>
     {
     }
 
-    constexpr decltype(auto) operator()(typename FunctionWrapper_MemberHelper<T>::TargetType* value) const
+    HYP_FORCE_INLINE constexpr decltype(auto) operator()(typename FunctionWrapper_MemberHelper<T>::TargetType* value) const
     {
         if (!value)
         {
@@ -145,12 +145,12 @@ struct FunctionWrapper<T, std::enable_if_t<std::is_member_object_pointer_v<T>>>
         return value->*member;
     }
 
-    constexpr decltype(auto) operator()(typename FunctionWrapper_MemberHelper<T>::TargetType& value) const
+    HYP_FORCE_INLINE constexpr decltype(auto) operator()(typename FunctionWrapper_MemberHelper<T>::TargetType& value) const
     {
         return value.*member;
     }
 
-    constexpr decltype(auto) operator()(const typename FunctionWrapper_MemberHelper<T>::TargetType* value) const
+    HYP_FORCE_INLINE constexpr decltype(auto) operator()(const typename FunctionWrapper_MemberHelper<T>::TargetType* value) const
     {
         if (!value)
         {
@@ -160,7 +160,7 @@ struct FunctionWrapper<T, std::enable_if_t<std::is_member_object_pointer_v<T>>>
         return value->*member;
     }
 
-    constexpr decltype(auto) operator()(const typename FunctionWrapper_MemberHelper<T>::TargetType& value) const
+    HYP_FORCE_INLINE constexpr decltype(auto) operator()(const typename FunctionWrapper_MemberHelper<T>::TargetType& value) const
     {
         return value.*member;
     }
@@ -173,12 +173,12 @@ struct FunctionWrapper<ReturnType (*)(TargetType)>
 
     Type func;
 
-    constexpr FunctionWrapper(Type func)
+    HYP_FORCE_INLINE constexpr FunctionWrapper(Type func)
         : func(func)
     {
     }
 
-    constexpr decltype(auto) operator()(const TargetType& value) const
+    HYP_FORCE_INLINE constexpr decltype(auto) operator()(const TargetType& value) const
     {
         return func(value);
     }
@@ -199,7 +199,7 @@ struct FunctionWrapper<ReturnType (*)(TargetType&)>
     {
     }
 
-    constexpr decltype(auto) operator()(TargetType& value) const
+    HYP_FORCE_INLINE constexpr decltype(auto) operator()(TargetType& value) const
     {
         return func(value);
     }
@@ -220,7 +220,7 @@ struct FunctionWrapper<ReturnType (*)(const TargetType&)>
     {
     }
 
-    constexpr decltype(auto) operator()(const TargetType& value) const
+    HYP_FORCE_INLINE constexpr decltype(auto) operator()(const TargetType& value) const
     {
         return func(value);
     }
@@ -242,7 +242,7 @@ struct FunctionWrapper
     }
 
     template <class... Args>
-    constexpr decltype(auto) operator()(Args&&... args) const
+    HYP_FORCE_INLINE constexpr decltype(auto) operator()(Args&&... args) const
     {
         return func(std::forward<Args>(args)...);
     }

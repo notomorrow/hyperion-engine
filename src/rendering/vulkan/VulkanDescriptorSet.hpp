@@ -37,7 +37,7 @@ struct VulkanDescriptorElementInfo
 
 class VulkanDescriptorSet final : public DescriptorSetBase
 {
-    using ElementCache = HashMap<Name, Array<VulkanDescriptorElementInfo>, HashTable_DynamicNodeAllocator<KeyValuePair<Name, Array<VulkanDescriptorElementInfo>>>>;
+    using ElementCache = HashMap<Name, Array<VulkanDescriptorElementInfo>>;
 
 public:
     HYP_API VulkanDescriptorSet(const DescriptorSetLayout& layout);

@@ -138,7 +138,8 @@ class IDrawCallCollectionImpl
 public:
     virtual ~IDrawCallCollectionImpl() = default;
 
-    virtual SizeType GetBatchSizeOf() const = 0;
+    virtual SizeType GetStructSize() const = 0;
+    virtual SizeType GetStructAlignment() const = 0;
     virtual EntityInstanceBatch* AcquireBatch() const = 0;
     virtual void ReleaseBatch(EntityInstanceBatch* batch) const = 0;
     virtual GpuBufferHolderBase* GetEntityInstanceBatchHolder() const = 0;
@@ -194,6 +195,7 @@ class DrawCallCollectionImpl final : public IDrawCallCollectionImpl
 {
 public:
     static_assert(std::is_base_of_v<EntityInstanceBatch, EntityInstanceBatchType>, "EntityInstanceBatchType must be a derived struct type of EntityInstanceBatch");
+    static_assert(offsetof(EntityInstanceBatchType, indices) == 16, "offsetof for member `indices` of the derived EntityInstanceBatch type must be 16 or shader calculations will be incorrect!");
 
     DrawCallCollectionImpl()
         : m_entityInstanceBatches(GetGpuBufferHolderMap()->GetOrCreate<EntityInstanceBatchType>())
@@ -202,9 +204,14 @@ public:
 
     virtual ~DrawCallCollectionImpl() override = default;
 
-    virtual SizeType GetBatchSizeOf() const override
+    virtual SizeType GetStructSize() const override
     {
         return sizeof(EntityInstanceBatchType);
+    }
+
+    virtual SizeType GetStructAlignment() const override
+    {
+        return alignof(EntityInstanceBatchType);
     }
 
     virtual EntityInstanceBatch* AcquireBatch() const override

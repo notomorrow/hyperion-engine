@@ -52,6 +52,12 @@ public:
 #endif
 };
 
+class NullProxy : public IRenderProxy
+{
+public:
+    char bufferData[1];
+};
+
 struct EntityShaderData
 {
     Matrix4 modelMatrix;
@@ -223,8 +229,10 @@ public:
     ~RenderProxyLight() override = default;
 
     WeakHandle<Light> light;
-    WeakHandle<Material> lightMaterial; // for textured area lights
+    WeakHandle<Material> lightMaterial;  // for textured area lights
+    Array<WeakHandle<View>> shadowViews; // optional, for lights casting shadow
     LightShaderData bufferData {};
+    class RenderShadowMap* shadowMap = nullptr;
 };
 
 struct LightmapVolumeShaderData

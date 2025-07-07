@@ -1140,7 +1140,7 @@ LightmapJob::LightmapJob(LightmapJobParams&& params)
 
     ViewDesc viewDesc {
         .flags = ViewFlags::COLLECT_STATIC_ENTITIES
-            | ViewFlags::SKIP_FRUSTUM_CULLING
+            | ViewFlags::NO_FRUSTUM_CULLING
             | ViewFlags::SKIP_ENV_GRIDS
             | ViewFlags::SKIP_LIGHTMAP_VOLUMES
             | ViewFlags::ENABLE_RAYTRACING

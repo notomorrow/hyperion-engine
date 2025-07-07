@@ -11,7 +11,6 @@ layout(location = 1) in vec3 v_normal;
 layout(location = 2) in vec2 v_texcoord0;
 layout(location = 7) in flat vec3 v_camera_position;
 layout(location = 11) in flat uint v_object_index;
-layout(location = 12) in flat vec3 v_env_probe_extent;
 layout(location = 13) in flat uint v_cube_face_index;
 
 layout(location = 0) out vec4 output_color;
@@ -56,11 +55,6 @@ HYP_DESCRIPTOR_SRV(Global, ShadowMapsTextureArray) uniform texture2DArray shadow
 HYP_DESCRIPTOR_SRV(Global, PointLightShadowMapsTextureArray) uniform textureCubeArray point_shadow_maps;
 
 #undef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
-
-HYP_DESCRIPTOR_SSBO_DYNAMIC(Global, CurrentEnvProbe) readonly buffer CurrentEnvProbe
-{
-    EnvProbe current_env_probe;
-};
 
 #ifdef INSTANCING
 
@@ -134,7 +128,7 @@ void main()
 
 #if defined(WRITE_MOMENTS) || defined(MODE_SHADOWS)
     // Write distance, mean distance for variance.
-    const float dist = distance(v_position, current_env_probe.world_position.xyz);
+    const float dist = distance(v_position, v_camera_position);
 
     vec2 moments = vec2(dist, HYP_FMATH_SQR(dist));
 #endif

@@ -40,6 +40,7 @@ class MaterialDescriptorSetManager;
 class GraphicsPipelineCache;
 class BindlessStorage;
 class RenderProxyable;
+class RenderCollector;
 
 HYP_API extern SizeType GetNumDescendants(TypeId typeId);
 HYP_API extern int GetSubclassIndex(TypeId baseTypeId, TypeId subclassTypeId);
@@ -47,9 +48,10 @@ HYP_API extern int GetSubclassIndex(TypeId baseTypeId, TypeId subclassTypeId);
 // Call at start of engine before render / game thread start ticking.
 // Allocates containers declared in RenderGlobalState.cpp via DECLARE_RENDER_DATA_CONTAINER
 HYP_API extern void RenderApi_Init();
+HYP_API extern void RenderApi_Shutdown();
 
-HYP_API extern uint32 RenderApi_GetFrameIndex_RenderThread();
-HYP_API extern uint32 RenderApi_GetFrameIndex_GameThread();
+HYP_API extern uint32 RenderApi_GetFrameIndex();
+HYP_API extern uint32 RenderApi_GetFrameCounter();
 
 HYP_API extern void RenderApi_BeginFrame_GameThread();
 HYP_API extern void RenderApi_EndFrame_GameThread();
@@ -67,12 +69,8 @@ HYP_API extern RenderProxyList& RenderApi_GetProducerProxyList(View* view);
  *  \note This is only valid to call from the render thread, or from a task that is initiated by the render thread. */
 HYP_API extern RenderProxyList& RenderApi_GetConsumerProxyList(View* view);
 
-// Call on game (producer) thread
-HYP_API extern uint32 RenderApi_AddRef(HypObjectBase* resource);
-HYP_API extern uint32 RenderApi_ReleaseRef(ObjIdBase id);
-
-HYP_API extern void RenderApi_UpdateRenderProxy(ObjIdBase id);
-HYP_API extern void RenderApi_UpdateRenderProxy(ObjIdBase id, const IRenderProxy* srcProxy);
+/*! \brief Thread-safe, but only usable on game thread and render thread */
+HYP_API extern RenderCollector& RenderApi_GetRenderCollector(View* view);
 
 // Call on render thread or render thread tasks only (consumer)
 HYP_API extern IRenderProxy* RenderApi_GetRenderProxy(ObjIdBase id);
@@ -82,39 +80,6 @@ HYP_API extern void RenderApi_AssignResourceBinding(HypObjectBase* resource, uin
 // used on render thread only - retrieves the binding set for the given resource (~0u if unset)
 HYP_API extern uint32 RenderApi_RetrieveResourceBinding(const HypObjectBase* resource);
 HYP_API extern uint32 RenderApi_RetrieveResourceBinding(ObjIdBase id);
-
-/*! \brief Register added/removed/changed resources with the rendering system for the next frame to be rendered */
-template <class ElementType>
-static inline void RenderApi_UpdateTrackedResources(ResourceTracker<ObjId<ElementType>, ElementType*>& resourceTracker)
-{
-    // Update refs for materials for this view
-    if (auto diff = resourceTracker.GetDiff(); diff.NeedsUpdate())
-    {
-        static const bool shouldUpdateRenderProxy = IsA<RenderProxyable, ElementType>();
-
-        Array<ObjId<ElementType>> removed;
-        resourceTracker.GetRemoved(removed, /* includeChanged */ shouldUpdateRenderProxy);
-
-        Array<ElementType*> added;
-        resourceTracker.GetAdded(added, /* includeChanged */ shouldUpdateRenderProxy);
-
-        for (ElementType* elem : added)
-        {
-            RenderApi_AddRef(elem);
-
-            // Update proxies for changed and added items
-            if (shouldUpdateRenderProxy)
-            {
-                RenderApi_UpdateRenderProxy(elem->Id());
-            }
-        }
-
-        for (ObjId<ElementType> id : removed)
-        {
-            RenderApi_ReleaseRef(id);
-        }
-    }
-}
 
 struct ResourceBindings;
 

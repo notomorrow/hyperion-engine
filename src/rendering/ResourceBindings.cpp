@@ -4,6 +4,7 @@
 #include <rendering/RenderEnvProbe.hpp>
 #include <rendering/RenderMaterial.hpp>
 #include <rendering/RenderTexture.hpp>
+#include <rendering/RenderShadowMap.hpp>
 #include <rendering/PlaceholderData.hpp>
 #include <rendering/Bindless.hpp>
 
@@ -227,9 +228,6 @@ void OnBindingChanged_Light(Light* light, uint32 prev, uint32 next)
     AssertDebug(light != nullptr);
 
     RenderApi_AssignResourceBinding(light, next);
-
-    /// TODO: If next != ~0u, acquire shadow map from ShadowMapAllocator (if the light casts shadows.)
-    /// Then in DeferredRenderer, when we collect all the Lights across Views, we can render using ShadowMapRenderer (derived for the specific type of Light).
 }
 
 void WriteBufferData_Light(GpuBufferHolderBase* gpuBufferHolder, uint32 idx, IRenderProxy* proxy)
@@ -274,8 +272,7 @@ void OnBindingChanged_Material(Material* material, uint32 prev, uint32 next)
     //     HYP_BREAKPOINT;
     // }
 
-    HYP_LOG(Rendering, Debug, "Material {} binding changed from {} to {} for frame {}", material->Id(), prev, next, RenderApi_GetFrameIndex_RenderThread());
-    // RenderApi_AssignResourceBinding(material, next);
+    HYP_LOG(Rendering, Debug, "Material {} binding changed from {} to {}", material->Id(), prev, next);
 
     RenderApi_AssignResourceBinding(material, next);
 

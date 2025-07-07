@@ -26,6 +26,8 @@
 #include <rendering/RenderStructs.hpp>
 #include <rendering/RenderObject.hpp>
 
+#include <scene/RenderProxyable.hpp>
+
 #include <Types.hpp>
 
 namespace hyperion {
@@ -45,6 +47,9 @@ class RenderEnvProbe;
 class ReflectionProbe;
 class Texture;
 class Skeleton;
+class RenderCollector;
+struct ResourceContainer;
+enum class RenderGroupFlags : uint32;
 enum LightType : uint32;
 enum EnvProbeType : uint32;
 
@@ -106,51 +111,19 @@ struct HYP_API RenderProxyList
 
     ~RenderProxyList();
 
-#ifdef HYP_DEBUG_MODE
-    HYP_FORCE_INLINE SizeType NumDrawCallsCollected() const
-    {
-        SizeType numDrawCalls = 0;
-
-        for (const auto& mappings : mappingsByBucket)
-        {
-            for (const KeyValuePair<RenderableAttributeSet, DrawCallCollectionMapping>& it : mappings)
-            {
-                const DrawCallCollectionMapping& mapping = it.second;
-
-                numDrawCalls += mapping.drawCallCollection.drawCalls.Size()
-                    + mapping.drawCallCollection.instancedDrawCalls.Size();
-            }
-        }
-
-        return numDrawCalls;
-    }
-#endif
-
-    void Clear();
-    void RemoveEmptyRenderGroups();
-
-    /*! \brief Counts the number of render groups in the list. */
-    uint32 NumRenderGroups() const;
-
-    /*! \brief Builds RenderGroups for proxies, based on renderable attributes */
-    void BuildRenderGroups(View* view);
-
-    ParallelRenderingState* AcquireNextParallelRenderingState();
-    void CommitParallelRenderingState(CmdList& outCommandList);
-
     void BeginWrite()
     {
         uint64 rwMarkerState = rwMarker.BitOr(writeFlag, MemoryOrder::ACQUIRE);
-        while (rwMarkerState & readMask)
+        while (HYP_UNLIKELY(rwMarkerState & readMask))
         {
-            HYP_LOG_TEMP("Waiting for read marker to be released."
+            HYP_LOG_TEMP("Busy waiting for read marker to be released! "
                          "If this is occuring frequently, the View that owns this RenderProxyList should have double / triple buffering enabled");
 
             rwMarkerState = rwMarker.Get(MemoryOrder::ACQUIRE);
             HYP_WAIT_IDLE();
         }
 
-        AssertDebug(state != CS_READING);
+        AssertDebug(state != CS_READING, "Got state == CS_READING, race condition! (rwMarkerState = {})", rwMarkerState);
         state = CS_WRITING;
     }
 
@@ -191,7 +164,12 @@ struct HYP_API RenderProxyList
     {
         AssertDebug(state == CS_READING);
 
-        if (((rwMarker.Decrement(2, MemoryOrder::ACQUIRE_RELEASE) - 2) & readMask) == 0)
+        uint64 rwMarkerState = rwMarker.Decrement(2, MemoryOrder::ACQUIRE_RELEASE);
+        AssertDebug(rwMarkerState & readMask, "Invalid state, expected read mask to be set when calling EndRead()");
+
+        /// FIXME: If BeginRead() is called on other thread between the check and setting state to CS_DONE,
+        /// we could set state to done when it isn't actually.
+        if (((rwMarkerState - 2) & readMask) == 0)
         {
             state = CS_DONE;
         }
@@ -208,22 +186,23 @@ struct HYP_API RenderProxyList
 
     CollectionState state : 2 = CS_DONE;
 
+    // are mesh entities sorted using an indirect array to map sort order?
+    bool useOrdering : 1 = false;
+    bool TEMP_disableBuildRenderCollection : 1 = false;
+
     Viewport viewport;
     int priority;
 
-    ResourceTracker<ObjId<Entity>, RenderProxyMesh> meshes;
-    ResourceTracker<ObjId<EnvProbe>, EnvProbe*> envProbes;
-    ResourceTracker<ObjId<Light>, Light*> lights;
-    ResourceTracker<ObjId<EnvGrid>, EnvGrid*> envGrids;
-    ResourceTracker<ObjId<LightmapVolume>, LightmapVolume*> lightmapVolumes;
-    ResourceTracker<ObjId<Material>, Material*> materials;
+    ResourceTracker<ObjId<Entity>, RenderProxyMesh, RenderProxyMesh> meshes;
+    ResourceTracker<ObjId<EnvProbe>, EnvProbe*, RenderProxyEnvProbe> envProbes;
+    ResourceTracker<ObjId<Light>, Light*, RenderProxyLight> lights;
+    ResourceTracker<ObjId<EnvGrid>, EnvGrid*, RenderProxyEnvGrid> envGrids;
+    ResourceTracker<ObjId<LightmapVolume>, LightmapVolume*, RenderProxyLightmapVolume> lightmapVolumes;
+    ResourceTracker<ObjId<Material>, Material*, RenderProxyMaterial> materials;
+    ResourceTracker<ObjId<Skeleton>, Skeleton*, RenderProxySkeleton> skeletons;
     ResourceTracker<ObjId<Texture>, Texture*> textures;
-    ResourceTracker<ObjId<Skeleton>, Skeleton*> skeletons;
 
-    ParallelRenderingState* parallelRenderingStateHead;
-    ParallelRenderingState* parallelRenderingStateTail;
-
-    FixedArray<FlatMap<RenderableAttributeSet, DrawCallCollectionMapping>, RB_MAX> mappingsByBucket;
+    HashMap<ObjId<Entity>, int> meshEntityOrdering;
 
     // marker to set to locked when game thread is writing to this list.
     // this only really comes into play with non-buffered Views that do not double/triple buffer their RenderProxyLists
@@ -234,18 +213,154 @@ struct HYP_API RenderProxyList
 #endif
 };
 
-class RenderCollector
+class HYP_API RenderCollector
 {
 public:
-    static void CollectDrawCalls(RenderProxyList& renderProxyList, uint32 bucketBits);
+    RenderCollector();
+    RenderCollector(const RenderCollector& other) = delete;
+    RenderCollector& operator=(const RenderCollector& other) = delete;
+    RenderCollector(RenderCollector&& other) noexcept = delete;
+    RenderCollector& operator=(RenderCollector&& other) noexcept = delete;
+    ~RenderCollector();
 
-    static void PerformOcclusionCulling(FrameBase* frame, const RenderSetup& renderSetup, RenderProxyList& renderProxyList, uint32 bucketBits);
+#ifdef HYP_DEBUG_MODE
+    HYP_FORCE_INLINE SizeType NumDrawCallsCollected() const
+    {
+        SizeType numDrawCalls = 0;
+
+        for (const auto& mappings : mappingsByBucket)
+        {
+            for (const KeyValuePair<RenderableAttributeSet, DrawCallCollectionMapping>& it : mappings)
+            {
+                const DrawCallCollectionMapping& mapping = it.second;
+
+                numDrawCalls += mapping.drawCallCollection.drawCalls.Size()
+                    + mapping.drawCallCollection.instancedDrawCalls.Size();
+            }
+        }
+
+        return numDrawCalls;
+    }
+#endif
+
+    void Clear(bool freeMemory = true);
+
+    ParallelRenderingState* parallelRenderingStateHead;
+    ParallelRenderingState* parallelRenderingStateTail;
+
+    FixedArray<FlatMap<RenderableAttributeSet, DrawCallCollectionMapping>, RB_MAX> mappingsByBucket;
+
+    IDrawCallCollectionImpl* drawCallCollectionImpl;
+    EnumFlags<RenderGroupFlags> renderGroupFlags;
+
+    ParallelRenderingState* AcquireNextParallelRenderingState();
+    void CommitParallelRenderingState(CmdList& outCommandList);
+
+    void PerformOcclusionCulling(FrameBase* frame, const RenderSetup& renderSetup, uint32 bucketBits);
 
     // Writes commands into the frame's command list to execute the draw calls in the given bucket mask.
-    static void ExecuteDrawCalls(FrameBase* frame, const RenderSetup& renderSetup, RenderProxyList& renderProxyList, uint32 bucketBits);
+    void ExecuteDrawCalls(FrameBase* frame, const RenderSetup& renderSetup, uint32 bucketBits);
 
     // Writes commands into the frame's command list to execute the draw calls in the given bucket mask.
-    static void ExecuteDrawCalls(FrameBase* frame, const RenderSetup& renderSetup, RenderProxyList& renderProxyList, const FramebufferRef& framebuffer, uint32 bucketBits);
+    void ExecuteDrawCalls(FrameBase* frame, const RenderSetup& renderSetup, const FramebufferRef& framebuffer, uint32 bucketBits);
+
+    void RemoveEmptyRenderGroups();
+
+    /*! \brief Counts the number of render groups in the list. */
+    uint32 NumRenderGroups() const;
+
+    /*! \brief Builds RenderGroups for proxies, based on renderable attributes */
+    void BuildRenderGroups(View* view, const RenderProxyList& renderProxyList);
+
+    void BuildDrawCalls(uint32 bucketBits);
 };
+
+template <class T>
+static inline void UpdateRefs(T& renderProxyList)
+{
+    const auto impl = []<class ElementType, class ProxyType>(ResourceTracker<ObjId<ElementType>, ElementType*, ProxyType>& resourceTracker)
+    {
+        static const bool shouldUpdateRenderProxy = IsA<RenderProxyable, ElementType>();
+
+        auto diff = resourceTracker.GetDiff();
+        if (!diff.NeedsUpdate())
+        {
+            return;
+        }
+
+        Array<ElementType*> removed;
+        resourceTracker.GetRemoved(removed, false);
+
+        Array<ElementType*> added;
+        resourceTracker.GetAdded(added, false);
+
+        for (ElementType* resource : added)
+        {
+            resource->GetObjectHeader_Internal()->IncRefStrong();
+
+            if constexpr (!std::is_same_v<ProxyType, NullProxy>)
+            {
+                ProxyType* pProxy = resourceTracker.GetProxy(ObjId<ElementType>(resource->Id()));
+
+                if (!pProxy)
+                {
+                    ProxyType newProxy;
+                    pProxy = resourceTracker.SetProxy(ObjId<ElementType>(resource->Id()), std::move(newProxy));
+                }
+
+                AssertDebug(pProxy != nullptr);
+
+                if (shouldUpdateRenderProxy)
+                {
+                    HYP_LOG_TEMP("Update RenderProxy for {}", resource->Id());
+                    static_cast<RenderProxyable*>(resource)->UpdateRenderProxy(pProxy);
+                }
+            }
+        }
+
+        for (ElementType* resource : removed)
+        {
+            resource->GetObjectHeader_Internal()->DecRefStrong();
+
+            if constexpr (!std::is_same_v<ProxyType, NullProxy>)
+            {
+                resourceTracker.RemoveProxy(ObjId<ElementType>(resource->Id()));
+            }
+        }
+
+        if constexpr (!std::is_same_v<ProxyType, NullProxy>)
+        {
+            if (shouldUpdateRenderProxy)
+            {
+                Array<ObjId<ElementType>> changedIds;
+                resourceTracker.GetChanged(changedIds);
+
+                for (const ObjId<ElementType>& id : changedIds)
+                {
+                    ElementType** ppResource = resourceTracker.GetElement(id);
+                    AssertDebug(ppResource && *ppResource);
+
+                    HYP_LOG_TEMP("Update RenderProxy for {}", id);
+
+                    ElementType& resource = **ppResource;
+
+                    ProxyType* pProxy = resourceTracker.GetProxy(id);
+                    AssertDebug(pProxy != nullptr);
+
+                    static_cast<RenderProxyable&>(resource).UpdateRenderProxy(pProxy);
+                }
+            }
+        }
+    };
+
+    // impl(renderProxyList.meshes);
+    impl(renderProxyList.lights);
+    impl(renderProxyList.materials);
+    impl(renderProxyList.skeletons);
+    impl(renderProxyList.textures);
+    impl(renderProxyList.lightmapVolumes);
+    impl(renderProxyList.envProbes);
+    impl(renderProxyList.envGrids);
+}
 
 } // namespace hyperion

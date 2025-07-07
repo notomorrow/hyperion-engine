@@ -47,7 +47,7 @@ PassData::~PassData()
     SafeRelease(std::move(descriptorSets));
 }
 
-void PassData::CullUnusedGraphicsPipelines(uint32 maxIter)
+int PassData::CullUnusedGraphicsPipelines(int maxIter)
 {
     HYP_SCOPE;
     Threads::AssertOnThread(g_renderThread);
@@ -66,7 +66,9 @@ void PassData::CullUnusedGraphicsPipelines(uint32 maxIter)
         renderGroupCacheIterator = renderGroupCache.Begin();
     }
 
-    for (uint32 i = 0; renderGroupCacheIterator != renderGroupCache.End() && i < maxIter; i++)
+    int numCycles = 0;
+
+    for (; renderGroupCacheIterator != renderGroupCache.End() && numCycles < maxIter; numCycles++)
     {
         RenderGroupCacheEntry& entry = *renderGroupCacheIterator;
 
@@ -83,6 +85,8 @@ void PassData::CullUnusedGraphicsPipelines(uint32 maxIter)
 
         ++renderGroupCacheIterator;
     }
+
+    return numCycles;
 }
 
 GraphicsPipelineRef PassData::CreateGraphicsPipeline(
@@ -163,12 +167,62 @@ struct NullPassDataExt final : PassDataExt
     }
 };
 
+RendererBase::RendererBase()
+    : m_viewPassDataCleanupIterator(m_viewPassData.End())
+{
+}
+
 RendererBase::~RendererBase()
 {
     for (PassData* pd : m_viewPassData)
     {
         delete pd;
     }
+}
+
+int RendererBase::RunCleanupCycle(int maxIter)
+{
+    // Ensures the iterator is valid: the Iterator type for SparsePagedArray will find the next available slot in the constructor
+    // elements may have been added in the middle or removed in the meantime.
+    // elements that were added will be handled after the next time this loops around; elements that were removed will be skipped over to find the next valid entry.
+    m_viewPassDataCleanupIterator = typename SparsePagedArray<PassData*, 16>::Iterator(
+        &m_viewPassData,
+        m_viewPassDataCleanupIterator.page,
+        m_viewPassDataCleanupIterator.elem);
+
+    // Loop around to the beginning of the container when the end is reached.
+    if (m_viewPassDataCleanupIterator == m_viewPassData.End())
+    {
+        m_viewPassDataCleanupIterator = m_viewPassData.Begin();
+    }
+
+    int numCycles = 0;
+
+    while (m_viewPassDataCleanupIterator != m_viewPassData.End() && numCycles < maxIter)
+    {
+        PassData* pd = *m_viewPassDataCleanupIterator;
+
+        int numLocalCycles = 1;
+
+        if (!pd->view.Lock())
+        {
+            HYP_LOG(Rendering, Debug, "Removing PassData for View {} as it is no longer valid.", pd->view.Id());
+
+            delete pd;
+
+            m_viewPassDataCleanupIterator = m_viewPassData.Erase(m_viewPassDataCleanupIterator);
+        }
+        else
+        {
+            numLocalCycles += pd->CullUnusedGraphicsPipelines(maxIter - numCycles - 1);
+
+            ++m_viewPassDataCleanupIterator;
+        }
+
+        numCycles += numLocalCycles;
+    }
+
+    return numCycles;
 }
 
 PassData* RendererBase::TryGetViewPassData(View* view)

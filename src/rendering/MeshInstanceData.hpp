@@ -30,10 +30,10 @@ struct MeshInstanceData
     Array<ByteBuffer, DynamicAllocator> buffers;
 
     HYP_FIELD(Property = "BufferStructSizes", Serialize = true)
-    FixedArray<uint32, maxBuffers> bufferStructSizes;
+    FixedArray<uint32, maxBuffers> bufferStructSizes {};
 
     HYP_FIELD(Property = "BufferStructAlignments", Serialize = true)
-    FixedArray<uint32, maxBuffers> bufferStructAlignments;
+    FixedArray<uint32, maxBuffers> bufferStructAlignments {};
 
     HYP_FORCE_INLINE bool operator==(const MeshInstanceData& other) const
     {

@@ -135,6 +135,8 @@ Mesh& Mesh::operator=(Mesh&& other) noexcept
 
     if (m_renderResource != nullptr)
     {
+        // temp shit
+        m_renderResource->DecRef();
         FreeResource(m_renderResource);
     }
 
@@ -160,6 +162,8 @@ Mesh::~Mesh()
 
         if (m_renderResource != nullptr)
         {
+            // temp shit
+            m_renderResource->DecRef();
             FreeResource(m_renderResource);
         }
     }
@@ -184,6 +188,8 @@ void Mesh::Init()
 
             if (m_renderResource != nullptr)
             {
+                // temp shit
+                m_renderResource->DecRef();
                 FreeResource(m_renderResource);
 
                 m_renderResource = nullptr;
@@ -220,6 +226,8 @@ void Mesh::Init()
         HYP_LOG(Mesh, Debug, "Resetting streamed mesh data resource handle for mesh {}", Id().Value());
         m_streamedMeshDataResourceHandle.Reset();
     }
+    // temp shit
+    m_renderResource->IncRef();
 
     SetReady(true);
 }
@@ -350,15 +358,17 @@ void Mesh::SetPersistentRenderResourceEnabled(bool enabled)
     }
 }
 
-#define ADD_NORMAL(ary, idx, normal) \
-    do { \
-        auto* idx_it = ary.TryGet(idx); \
-        if (!idx_it) \
-        { \
+#define ADD_NORMAL(ary, idx, normal)     \
+    do                                   \
+    {                                    \
+        auto* idx_it = ary.TryGet(idx);  \
+        if (!idx_it)                     \
+        {                                \
             idx_it = &*ary.Emplace(idx); \
-        } \
-        idx_it->PushBack(normal); \
-    } while (0)
+        }                                \
+        idx_it->PushBack(normal);        \
+    }                                    \
+    while (0)
 
 void Mesh::CalculateNormals(bool weighted)
 {
@@ -543,14 +553,16 @@ void Mesh::CalculateNormals(bool weighted)
 #undef ADD_NORMAL
 
 #define ADD_TANGENTS(ary, idx, tangents) \
-    do { \
-        auto* idx_it = ary.TryGet(idx); \
-        if (!idx_it) \
-        { \
+    do                                   \
+    {                                    \
+        auto* idx_it = ary.TryGet(idx);  \
+        if (!idx_it)                     \
+        {                                \
             idx_it = &*ary.Emplace(idx); \
-        } \
-        idx_it->PushBack(tangents); \
-    } while (0)
+        }                                \
+        idx_it->PushBack(tangents);      \
+    }                                    \
+    while (0)
 
 void Mesh::CalculateTangents()
 {

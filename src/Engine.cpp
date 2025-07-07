@@ -305,6 +305,8 @@ bool Engine::StartRenderLoop()
 
     m_renderThread->Start();
 
+    RenderApi_Shutdown();
+
     return true;
 }
 

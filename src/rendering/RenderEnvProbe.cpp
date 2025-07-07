@@ -179,7 +179,7 @@ void RenderEnvProbe::CreateShader()
     {
         m_shader = g_shaderManager->GetOrCreate(
             NAME("RenderToCubemap"),
-            ShaderProperties(staticMeshVertexAttributes, { "WRITE_NORMALS", "WRITE_MOMENTS" }));
+            ShaderProperties(staticMeshVertexAttributes, { "ENV_PROBE", "WRITE_NORMALS", "WRITE_MOMENTS" }));
     }
     else if (m_envProbe->IsSkyProbe())
     {
@@ -290,7 +290,7 @@ void RenderEnvProbe::Render(FrameBase* frame, const RenderSetup& renderSetup)
     {
         newRenderSetup.envProbe = m_envProbe;
 
-        RenderCollector::ExecuteDrawCalls(frame, newRenderSetup, rpl, ((1u << RB_OPAQUE) | (1u << RB_TRANSLUCENT)));
+        renderCollector.ExecuteDrawCalls(frame, newRenderSetup, ((1u << RB_OPAQUE) | (1u << RB_TRANSLUCENT)));
 
         newRenderSetup.envProbe = nullptr;
     }
@@ -469,8 +469,7 @@ void ReflectionProbeRenderer::RenderProbe(FrameBase* frame, const RenderSetup& r
     rpl.BeginRead();
     HYP_DEFER({ rpl.EndRead(); });
 
-    HYP_LOG(EnvProbe, Debug, "Rendering EnvProbe {} (type: {})",
-        envProbe->Id(), envProbe->GetEnvProbeType());
+    RenderCollector& renderCollector = RenderApi_GetRenderCollector(view);
 
 #ifdef HYP_DEBUG_MODE
     if (envProbe->IsA<SkyProbe>())
@@ -486,7 +485,7 @@ void ReflectionProbeRenderer::RenderProbe(FrameBase* frame, const RenderSetup& r
     }
 #endif
 
-    RenderCollector::ExecuteDrawCalls(frame, renderSetup, rpl, ((1u << RB_OPAQUE) | (1u << RB_TRANSLUCENT)));
+    renderCollector.ExecuteDrawCalls(frame, renderSetup, ((1u << RB_OPAQUE) | (1u << RB_TRANSLUCENT)));
 
     const ViewOutputTarget& outputTarget = view->GetOutputTarget();
     AssertDebug(outputTarget.IsValid());

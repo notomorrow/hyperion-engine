@@ -12,6 +12,7 @@
 
 #include <core/math/Color.hpp>
 #include <core/math/Vector3.hpp>
+#include <core/math/MathUtil.hpp>
 #include <core/math/BoundingBox.hpp>
 #include <core/math/BoundingSphere.hpp>
 
@@ -24,6 +25,9 @@ namespace hyperion {
 class Engine;
 class Camera;
 class Material;
+class View;
+
+enum ShadowMapFilter : uint32;
 
 HYP_ENUM()
 enum LightType : uint32
@@ -36,8 +40,24 @@ enum LightType : uint32
     LT_MAX
 };
 
+HYP_ENUM()
+enum LightFlags : uint32
+{
+    LF_NONE = 0x0,
+
+    LF_SHADOW = 0x1,
+    LF_SHADOW_PCF = 0x2,
+    LF_SHADOW_CONTACT_HARDENING = 0x4,
+    LF_SHADOW_VSM = 0x8,
+    LF_SHADOW_FILTER_MASK = (LF_SHADOW_PCF | LF_SHADOW_CONTACT_HARDENING | LF_SHADOW_VSM),
+
+    LF_DEFAULT = LF_SHADOW | LF_SHADOW_PCF
+};
+
+HYP_MAKE_ENUM_FLAGS(LightFlags);
+
 HYP_CLASS()
-class HYP_API Light final : public Entity
+class HYP_API Light : public Entity
 {
     HYP_OBJECT_BODY(Light);
 
@@ -66,7 +86,7 @@ public:
     Light(Light&& other) noexcept = delete;
     Light& operator=(Light&& other) noexcept = delete;
 
-    ~Light();
+    virtual ~Light() override;
 
     /*! \brief Get the type of the light.
      *
@@ -76,6 +96,24 @@ public:
     LightType GetLightType() const
     {
         return m_type;
+    }
+
+    HYP_METHOD()
+    EnumFlags<LightFlags> GetLightFlags() const
+    {
+        return m_flags;
+    }
+
+    HYP_METHOD()
+    void SetLightFlags(EnumFlags<LightFlags> flags)
+    {
+        if (m_flags == flags)
+        {
+            return;
+        }
+
+        m_flags = flags;
+        SetNeedsRenderProxyUpdate();
     }
 
     /*! \brief Get the position for the light. For directional lights, this is the direction the light is pointing.
@@ -224,21 +262,32 @@ public:
     HYP_METHOD()
     BoundingBox GetAABB() const;
 
+    HYP_FORCE_INLINE ShadowMapFilter GetShadowMapFilter() const
+    {
+        return (ShadowMapFilter)((uint32(m_flags) & LF_SHADOW_FILTER_MASK)
+            ? MathUtil::FastLog2(uint32(m_flags) & LF_SHADOW_FILTER_MASK)
+            : 0);
+    }
+
     BoundingSphere GetBoundingSphere() const;
 
 protected:
     void Init() override;
+    void Update(float delta) override;
+
+    void OnAddedToScene(Scene* scene) override;
+    void OnRemovedFromScene(Scene* scene) override;
+
     void UpdateRenderProxy(IRenderProxy* proxy) override;
 
-    // For managed code only - to be removed at some point
-    HYP_METHOD()
-    void SetLightType(LightType type)
-    {
-        m_type = type;
-    }
+    void CreateShadowViews();
 
-    HYP_FIELD(Property = "Type", Serialize = true)
+    HYP_FIELD()
     LightType m_type;
+
+    HYP_FIELD(Property="LightFlags", Serialize)
+    EnumFlags<LightFlags> m_flags;
+
     Vec3f m_position;
     Vec3f m_normal;
     Vec2f m_areaSize;
@@ -248,11 +297,98 @@ protected:
     float m_falloff;
     Vec2f m_spotAngles;
     Handle<Material> m_material;
+    
+    Array<Handle<View>> m_shadowViews;
 
 private:
     Pair<Vec3f, Vec3f> CalculateAreaLightRect() const;
+};
 
-    mutable DataMutationState m_mutationState;
+HYP_CLASS()
+class HYP_API DirectionalLight : public Light
+{
+    HYP_OBJECT_BODY(DirectionalLight);
+
+public:
+    DirectionalLight()
+        : Light(LT_DIRECTIONAL, Vec3f(0.0f, 1.0f, 0.0f), Color::White(), 1.0f, 0.0f)
+    {
+    }
+
+    DirectionalLight(const Vec3f& direction, const Color& color, float intensity)
+        : Light(LT_DIRECTIONAL, direction, color, intensity, 0.0f)
+    {
+    }
+
+    virtual ~DirectionalLight() override = default;
+
+    HYP_METHOD()
+    const Vec3f& GetDirection() const
+    {
+        return Light::GetPosition();
+    }
+
+    HYP_METHOD()
+    void SetDirection(const Vec3f& direction)
+    {
+        Light::SetPosition(direction.Normalized());
+    }
+};
+
+HYP_CLASS()
+class HYP_API PointLight : public Light
+{
+    HYP_OBJECT_BODY(PointLight);
+
+public:
+    PointLight()
+        : Light(LT_POINT, Vec3f(0.0f), Color::White(), 1.0f, 10.0f)
+    {
+    }
+
+    PointLight(const Vec3f& position, const Color& color, float intensity, float radius)
+        : Light(LT_POINT, position, color, intensity, radius)
+    {
+    }
+
+    virtual ~PointLight() override = default;
+};
+
+HYP_CLASS()
+class HYP_API SpotLight : public Light
+{
+    HYP_OBJECT_BODY(SpotLight);
+public:
+    SpotLight()
+        : Light(LT_SPOT, Vec3f(0.0f), Vec3f(0.0f, 0.0f, -1.0f), Vec2f(30.0f, 15.0f), Color::White(), 1.0f, 10.0f)
+    {
+    }
+
+    SpotLight(const Vec3f& position, const Vec3f& direction, const Vec2f& angles, const Color& color, float intensity, float radius)
+        : Light(LT_SPOT, position, direction, angles, color, intensity, radius)
+    {
+    }
+
+    virtual ~SpotLight() override = default;
+};
+
+HYP_CLASS()
+class HYP_API AreaRectLight : public Light
+{
+    HYP_OBJECT_BODY(AreaRectLight);
+
+public:
+    AreaRectLight()
+        : Light(LT_AREA_RECT, Vec3f(0.0f), Vec3f(0.0f, 0.0f, -1.0f), Vec2f(1.0f, 1.0f), Color::White(), 1.0f, 10.0f)
+    {
+    }
+
+    AreaRectLight(const Vec3f& position, const Vec3f& normal, const Vec2f& areaSize, const Color& color, float intensity, float radius)
+        : Light(LT_AREA_RECT, position, normal, areaSize, color, intensity, radius)
+    {
+    }
+
+    virtual ~AreaRectLight() override = default;
 };
 
 } // namespace hyperion

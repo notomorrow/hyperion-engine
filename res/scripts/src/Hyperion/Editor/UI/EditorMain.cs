@@ -623,8 +623,7 @@ namespace Hyperion
                     return UIEventHandlerResult.Error;
                 }
 
-                Light light = activeScene.GetEntityManager().AddEntity<Light>();
-                light.SetLightType(LightType.Point);
+                PointLight light = activeScene.GetEntityManager().AddEntity<PointLight>();
                 light.SetPosition(new Vec3f(0.0f, 5.0f, 0.0f));
                 light.SetColor(new Color(1.0f, 1.0f, 1.0f, 1.0f));
                 light.SetRadius(30.0f);
@@ -807,8 +806,7 @@ namespace Hyperion
                     return UIEventHandlerResult.Error;
                 }
 
-                Light light = activeScene.GetEntityManager().AddEntity<Light>();
-                light.SetLightType(LightType.AreaRect);
+                AreaRectLight light = activeScene.GetEntityManager().AddEntity<AreaRectLight>();
                 light.SetPosition(new Vec3f(0.0f, 5.0f, 0.0f));
                 light.SetColor(new Color(1.0f, 1.0f, 1.0f, 1.0f));
                 light.SetRadius(30.0f);

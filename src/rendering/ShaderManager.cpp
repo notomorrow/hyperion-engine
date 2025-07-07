@@ -142,13 +142,10 @@ ShaderRef ShaderManager::GetOrCreate(const ShaderDefinition& definition)
     { // loading / compilation of shader (outside of mutex lock)
 
         bool isValidCompiledShader = true;
-
         isValidCompiledShader &= g_shaderCompiler->GetCompiledShader(definition.GetName(), definition.GetProperties(), *compiledShader);
         isValidCompiledShader &= compiledShader->GetDefinition().IsValid();
 
-        Assert(
-            isValidCompiledShader,
-            "Failed to get compiled shader with name %s and props hash %llu!\n",
+        Assert(isValidCompiledShader, "Compiled shader '{}' with properties hash {} is not a valid compiled shader",
             definition.GetName().LookupString(),
             definition.GetProperties().GetHashCode().Value());
 

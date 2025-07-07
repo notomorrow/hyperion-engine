@@ -63,6 +63,8 @@
 
 #include <util/MeshBuilder.hpp>
 
+#include <scene/Mesh.hpp>
+
 #include <rendering/lightmapper/LightmapperSubsystem.hpp>
 #include <rendering/lightmapper/LightmapUVBuilder.hpp>
 
@@ -89,37 +91,6 @@ namespace editor {
 HyperionEditor::HyperionEditor()
     : Game()
 {
-    /*// paged array testing
-
-     Array<int*> tmpPtrs;
-
-     Pool<int, 2048> pool;
-     for (int i = 0; i < 5000; i++)
-     {
-         int& j = pool.PushBack(100 + i);
-
-         if (i % 2 == 0)
-         {
-             tmpPtrs.PushBack(&j);
-         }
-     }
-
-     for (int i = 0; i < tmpPtrs.Size(); i++)
-     {
-         pool.Free(tmpPtrs[i]);
-     }
-
-     for (int i = 0; i < 3000; i++)
-     {
-         pool.PushBack(100 + i);
-     }
-
-     for (auto&& it : pool)
-     {
-         HYP_LOG(Editor, Debug, "item : {}", it);
-     }
-
-     HYP_BREAKPOINT;*/
 }
 
 HyperionEditor::~HyperionEditor()
@@ -219,19 +190,13 @@ void HyperionEditor::Init()
 
 // add sun
 #if 1
-    auto sun = CreateObject<Light>();
-
-    InitObject(sun);
-
     Handle<Node> sunNode = scene->GetRoot()->AddChild();
     sunNode->SetName(NAME("Sun"));
 
-    Handle<Light> sunEntity = scene->GetEntityManager()->AddEntity<Light>(
-        LT_DIRECTIONAL,
+    Handle<DirectionalLight> sunEntity = scene->GetEntityManager()->AddEntity<DirectionalLight>(
         Vec3f(-0.4f, 0.8f, 0.0f).Normalize(),
         Color(Vec4f(1.0f, 0.9f, 0.8f, 1.0f)),
-        5.0f,
-        0.0f);
+        5.0f);
     sunNode->SetWorldTranslation(Vec3f { -0.4f, 0.8f, 0.0f }.Normalize());
 
     sunEntity->Attach(sunNode);
@@ -278,7 +243,7 @@ void HyperionEditor::Init()
 
                 scene->GetRoot()->AddChild(node);
 
-#if 1
+#if 0
                 Handle<Node> envGridNode = scene->GetRoot()->AddChild();
                 envGridNode->SetName(NAME("EnvGrid2"));
 

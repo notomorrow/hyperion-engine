@@ -300,7 +300,7 @@ void EnvProbe::CreateView()
 
     ViewDesc viewDesc {
         .flags = (OnlyCollectStaticEntities() ? ViewFlags::COLLECT_STATIC_ENTITIES : ViewFlags::COLLECT_ALL_ENTITIES)
-            | ViewFlags::SKIP_FRUSTUM_CULLING
+            | ViewFlags::NO_FRUSTUM_CULLING
             | ViewFlags::SKIP_ENV_PROBES
             | ViewFlags::SKIP_ENV_GRIDS
             | ViewFlags::NOT_MULTI_BUFFERED,
