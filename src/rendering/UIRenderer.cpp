@@ -542,7 +542,6 @@ void UIRenderSubsystem::Update(float delta)
     m_uiStage->Update(delta);
 
     m_view->UpdateVisibility();
-    // m_view->Update(delta);
 
     RenderProxyList& rpl = RenderApi_GetProducerProxyList(m_view);
     rpl.viewport = m_view->GetViewport();

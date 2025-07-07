@@ -193,7 +193,7 @@ VulkanFramebuffer::VulkanFramebuffer(
 
 VulkanFramebuffer::~VulkanFramebuffer()
 {
-    for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
+    for (uint32 frameIndex = 0; frameIndex < g_framesInFlight; frameIndex++)
     {
         HYP_GFX_ASSERT(m_handles[frameIndex] == VK_NULL_HANDLE, "Expected framebuffer to have been destroyed");
     }
@@ -245,7 +245,7 @@ RendererResult VulkanFramebuffer::Create()
     framebufferCreateInfo.height = m_extent.y;
     framebufferCreateInfo.layers = numLayers;
 
-    for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
+    for (uint32 frameIndex = 0; frameIndex < g_framesInFlight; frameIndex++)
     {
         HYPERION_VK_CHECK(vkCreateFramebuffer(
             GetRenderBackend()->GetDevice()->GetDevice(),
@@ -264,7 +264,7 @@ RendererResult VulkanFramebuffer::Destroy()
         HYPERION_RETURN_OK;
     }
 
-    for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
+    for (uint32 frameIndex = 0; frameIndex < g_framesInFlight; frameIndex++)
     {
         if (m_handles[frameIndex] != VK_NULL_HANDLE)
         {
@@ -296,7 +296,7 @@ RendererResult VulkanFramebuffer::Resize(Vec2u newSize)
 
     HYPERION_BUBBLE_ERRORS(m_attachmentMap.Resize(newSize));
 
-    for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
+    for (uint32 frameIndex = 0; frameIndex < g_framesInFlight; frameIndex++)
     {
         if (m_handles[frameIndex] != VK_NULL_HANDLE)
         {
@@ -327,7 +327,7 @@ RendererResult VulkanFramebuffer::Resize(Vec2u newSize)
     framebufferCreateInfo.height = newSize.y;
     framebufferCreateInfo.layers = numLayers;
 
-    for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
+    for (uint32 frameIndex = 0; frameIndex < g_framesInFlight; frameIndex++)
     {
         HYPERION_VK_CHECK(vkCreateFramebuffer(
             GetRenderBackend()->GetDevice()->GetDevice(),

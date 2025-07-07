@@ -70,7 +70,7 @@ struct RENDER_COMMAND(SetUILayerImageView)
             const DescriptorTableRef& descriptorTable = finalPass.m_renderTextureToScreenPass->GetGraphicsPipeline()->GetDescriptorTable();
             Assert(descriptorTable.IsValid());
 
-            for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
+            for (uint32 frameIndex = 0; frameIndex < g_framesInFlight; frameIndex++)
             {
                 const DescriptorSetRef& descriptorSet = descriptorTable->GetDescriptorSet(NAME("RenderTextureToScreenDescriptorSet"), frameIndex);
                 Assert(descriptorSet != nullptr);
@@ -87,7 +87,7 @@ struct RENDER_COMMAND(SetUILayerImageView)
         }
 
         // Set frames to be dirty so the descriptor sets get updated before we render the UI
-        finalPass.m_dirtyFrameIndices = (1u << maxFramesInFlight) - 1;
+        finalPass.m_dirtyFrameIndices = (1u << g_framesInFlight) - 1;
         finalPass.m_uiLayerImageView = imageView;
 
         HYPERION_RETURN_OK;
@@ -144,7 +144,7 @@ void FinalPass::Create()
     const DescriptorTableDeclaration& descriptorTableDecl = renderTextureToScreenShader->GetCompiledShader()->GetDescriptorTableDeclaration();
     DescriptorTableRef descriptorTable = g_renderBackend->MakeDescriptorTable(&descriptorTableDecl);
 
-    for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
+    for (uint32 frameIndex = 0; frameIndex < g_framesInFlight; frameIndex++)
     {
         const DescriptorSetRef& descriptorSet = descriptorTable->GetDescriptorSet(NAME("RenderTextureToScreenDescriptorSet"), frameIndex);
         Assert(descriptorSet != nullptr);

@@ -35,7 +35,7 @@ HYP_STRUCT()
 struct MeshRaytracingData
 {
     HYP_FIELD()
-    FixedArray<BLASRef, maxFramesInFlight> bottomLevelAccelerationStructures;
+    FixedArray<BLASRef, g_framesInFlight> bottomLevelAccelerationStructures;
 };
 
 class IRenderProxy
@@ -162,7 +162,7 @@ public:
 
 struct EnvGridShaderData
 {
-    uint32 probeIndices[maxBoundAmbientProbes];
+    uint32 probeIndices[g_maxBoundAmbientProbes];
 
     Vec4f center;
     Vec4f extent;
@@ -185,7 +185,7 @@ public:
 
     WeakHandle<EnvGrid> envGrid;
     EnvGridShaderData bufferData {};
-    ObjId<EnvProbe> envProbes[maxBoundAmbientProbes];
+    ObjId<EnvProbe> envProbes[g_maxBoundAmbientProbes];
 };
 
 struct LightShaderData
@@ -276,7 +276,7 @@ class RenderProxyMaterial : public IRenderProxy
 public:
     RenderProxyMaterial()
     {
-        for (uint32 i = 0; i < maxBoundTextures; ++i)
+        for (uint32 i = 0; i < g_maxBoundTextures; ++i)
         {
             boundTextureIndices[i] = ~0u;
         }
@@ -286,7 +286,7 @@ public:
 
     WeakHandle<Material> material;
     MaterialShaderData bufferData {};
-    FixedArray<uint32, maxBoundTextures> boundTextureIndices;
+    FixedArray<uint32, g_maxBoundTextures> boundTextureIndices;
     Array<Handle<Texture>> boundTextures;
 };
 

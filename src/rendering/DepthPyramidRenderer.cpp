@@ -158,7 +158,7 @@ void DepthPyramidRenderer::Create()
 
             const auto setDescriptorSetElements = [&]()
             {
-                for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
+                for (uint32 frameIndex = 0; frameIndex < g_framesInFlight; frameIndex++)
                 {
                     const DescriptorSetRef& depthPyramidDescriptorSet = descriptorTable->GetDescriptorSet(NAME("DepthPyramidDescriptorSet"), frameIndex);
                     Assert(depthPyramidDescriptorSet != nullptr);
@@ -193,7 +193,7 @@ void DepthPyramidRenderer::Create()
             {
                 setDescriptorSetElements();
 
-                for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
+                for (uint32 frameIndex = 0; frameIndex < g_framesInFlight; frameIndex++)
                 {
                     descriptorTable->Update(frameIndex);
                 }

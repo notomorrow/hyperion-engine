@@ -715,7 +715,7 @@ protected:
 
         if (count == ~0u)
         {
-            count = maxBindlessResources;
+            count = g_maxBindlessResources;
             isBindless = true;
         }
 
@@ -780,7 +780,7 @@ public:
         return m_decl;
     }
 
-    HYP_FORCE_INLINE const FixedArray<Array<DescriptorSetRef>, maxFramesInFlight>& GetSets() const
+    HYP_FORCE_INLINE const FixedArray<Array<DescriptorSetRef>, g_framesInFlight>& GetSets() const
     {
         return m_sets;
     }
@@ -840,7 +840,7 @@ public:
 
         RendererResult result;
 
-        for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
+        for (uint32 frameIndex = 0; frameIndex < g_framesInFlight; frameIndex++)
         {
             for (const DescriptorSetRef& set : m_sets[frameIndex])
             {
@@ -969,7 +969,7 @@ protected:
     }
 
     const DescriptorTableDeclaration* m_decl;
-    FixedArray<Array<DescriptorSetRef>, maxFramesInFlight> m_sets;
+    FixedArray<Array<DescriptorSetRef>, g_framesInFlight> m_sets;
 };
 
 } // namespace hyperion

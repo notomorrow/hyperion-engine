@@ -83,7 +83,7 @@ private:
 
     Handle<Texture> m_resultTexture;
 
-    FixedArray<GpuBufferRef, maxFramesInFlight> m_uniformBuffers;
+    FixedArray<GpuBufferRef, g_framesInFlight> m_uniformBuffers;
 
     ComputePipelineRef m_computePipeline;
 

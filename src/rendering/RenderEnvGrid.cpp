@@ -141,7 +141,7 @@ static EnvProbeGridIndex GetProbeBindingIndex(const Vec3f& probePosition, const 
 
     EnvProbeGridIndex calculatedProbeIndex = invalidProbeIndex;
 
-    if (probeIndexAtPoint >= 0 && uint32(probeIndexAtPoint) < maxBoundAmbientProbes)
+    if (probeIndexAtPoint >= 0 && uint32(probeIndexAtPoint) < g_maxBoundAmbientProbes)
     {
         calculatedProbeIndex = EnvProbeGridIndex(
             Vec3u { uint32(diffUnits.x), uint32(diffUnits.y), uint32(diffUnits.z) },
@@ -338,7 +338,7 @@ void EnvGridRenderer::CreateVoxelGridData(EnvGrid* envGrid, EnvGridPassData& pd)
 
     DescriptorTableRef descriptorTable = g_renderBackend->MakeDescriptorTable(&descriptorTableDecl);
 
-    for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
+    for (uint32 frameIndex = 0; frameIndex < g_framesInFlight; frameIndex++)
     {
         // create descriptor sets for depth pyramid generation.
         DescriptorSetRef descriptorSet = descriptorTable->GetDescriptorSet(NAME("VoxelizeProbeDescriptorSet"), frameIndex);
@@ -395,7 +395,7 @@ void EnvGridRenderer::CreateVoxelGridData(EnvGrid* envGrid, EnvGridPassData& pd)
             // create descriptor sets for mip generation.
             DescriptorTableRef descriptorTable = g_renderBackend->MakeDescriptorTable(&generateVoxelGridMipmapsDescriptorTableDecl);
 
-            for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
+            for (uint32 frameIndex = 0; frameIndex < g_framesInFlight; frameIndex++)
             {
                 const DescriptorSetRef& mipDescriptorSet = descriptorTable->GetDescriptorSet(NAME("GenerateMipmapDescriptorSet"), frameIndex);
                 Assert(mipDescriptorSet != nullptr);
@@ -459,7 +459,7 @@ void EnvGridRenderer::CreateSphericalHarmonicsData(EnvGrid* envGrid, EnvGridPass
     {
         pd.computeShDescriptorTables[i] = g_renderBackend->MakeDescriptorTable(&descriptorTableDecl);
 
-        for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
+        for (uint32 frameIndex = 0; frameIndex < g_framesInFlight; frameIndex++)
         {
             const DescriptorSetRef& computeShDescriptorSet = pd.computeShDescriptorTables[i]->GetDescriptorSet(NAME("ComputeSHDescriptorSet"), frameIndex);
             Assert(computeShDescriptorSet != nullptr);
@@ -510,7 +510,7 @@ void EnvGridRenderer::CreateLightFieldData(EnvGrid* envGrid, EnvGridPassData& pd
 
     const EnvGridOptions& options = envGrid->GetOptions();
 
-    for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
+    for (uint32 frameIndex = 0; frameIndex < g_framesInFlight; frameIndex++)
     {
         GpuBufferRef lightFieldUniforms = g_renderBackend->MakeGpuBuffer(GpuBufferType::CBUFF, sizeof(LightFieldUniforms));
         DeferCreate(lightFieldUniforms);
@@ -539,7 +539,7 @@ void EnvGridRenderer::CreateLightFieldData(EnvGrid* envGrid, EnvGridPassData& pd
 
         DescriptorTableRef descriptorTable = g_renderBackend->MakeDescriptorTable(&descriptorTableDecl);
 
-        for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
+        for (uint32 frameIndex = 0; frameIndex < g_framesInFlight; frameIndex++)
         {
             DescriptorSetRef descriptorSet = descriptorTable->GetDescriptorSet(NAME("LightFieldProbeDescriptorSet"), frameIndex);
             Assert(descriptorSet != nullptr);

@@ -298,11 +298,12 @@ void EnvProbe::CreateView()
         .loadOp = LoadOperation::CLEAR,
         .storeOp = StoreOperation::STORE });
 
-    m_view = CreateObject<View>(ViewDesc {
+    ViewDesc viewDesc {
         .flags = (OnlyCollectStaticEntities() ? ViewFlags::COLLECT_STATIC_ENTITIES : ViewFlags::COLLECT_ALL_ENTITIES)
             | ViewFlags::SKIP_FRUSTUM_CULLING
             | ViewFlags::SKIP_ENV_PROBES
-            | ViewFlags::SKIP_ENV_GRIDS,
+            | ViewFlags::SKIP_ENV_GRIDS
+            | ViewFlags::DISABLE_BUFFER,
         .viewport = Viewport { .extent = m_dimensions, .position = Vec2i::Zero() },
         .outputTargetDesc = outputTargetDesc,
         .scenes = {},
@@ -312,7 +313,10 @@ void EnvProbe::CreateView()
             MaterialAttributes {
                 .shaderDefinition = m_renderResource->GetShader()->GetCompiledShader()->GetDefinition(),
                 .blendFunction = BlendFunction::AlphaBlending(),
-                .cullFaces = FCM_NONE }) });
+                .cullFaces = FCM_NONE })
+    };
+
+    m_view = CreateObject<View>(viewDesc);
 
     InitObject(m_view);
 
@@ -401,7 +405,7 @@ void EnvProbe::Update(float delta)
         m_camera->Update(delta);
 
         m_view->UpdateVisibility();
-        m_view->Update(delta);
+        m_view->Collect();
 
         auto diff = m_view->GetLastMeshCollectionResult();
 

@@ -353,10 +353,10 @@ void World::Update(float delta)
 #ifdef HYP_WORLD_ASYNC_VIEW_UPDATES
         updateViewsTasks.PushBack(TaskSystem::GetInstance().Enqueue([view = m_views[index].Get(), delta]
             {
-                view->Update(delta);
+                view->Collect();
             }));
 #else
-        view->Update(delta);
+        view->Collect();
 #endif
     }
 

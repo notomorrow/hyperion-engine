@@ -106,7 +106,7 @@ void HBAO::CreatePipeline(const RenderableAttributeSet& renderableAttributes)
 
     DescriptorTableRef descriptorTable = g_renderBackend->MakeDescriptorTable(&descriptorTableDecl);
 
-    for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
+    for (uint32 frameIndex = 0; frameIndex < g_framesInFlight; frameIndex++)
     {
         const DescriptorSetRef& descriptorSet = descriptorTable->GetDescriptorSet(NAME("HBAODescriptorSet"), frameIndex);
         Assert(descriptorSet != nullptr);

@@ -451,7 +451,7 @@ void FullScreenPass::CreateRenderTextureToScreenPass()
     const DescriptorTableDeclaration& descriptorTableDecl = renderTextureToScreenShader->GetCompiledShader()->GetDescriptorTableDeclaration();
     DescriptorTableRef descriptorTable = g_renderBackend->MakeDescriptorTable(&descriptorTableDecl);
 
-    for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
+    for (uint32 frameIndex = 0; frameIndex < g_framesInFlight; frameIndex++)
     {
         const DescriptorSetRef& descriptorSet = descriptorTable->GetDescriptorSet(NAME("RenderTextureToScreenDescriptorSet"), frameIndex);
         Assert(descriptorSet != nullptr);
@@ -497,7 +497,7 @@ void FullScreenPass::CreateMergeHalfResTexturesPass()
     const DescriptorTableDeclaration& descriptorTableDecl = mergeHalfResTexturesShader->GetCompiledShader()->GetDescriptorTableDeclaration();
     DescriptorTableRef descriptorTable = g_renderBackend->MakeDescriptorTable(&descriptorTableDecl);
 
-    for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
+    for (uint32 frameIndex = 0; frameIndex < g_framesInFlight; frameIndex++)
     {
         const DescriptorSetRef& descriptorSet = descriptorTable->GetDescriptorSet(NAME("MergeHalfResTexturesDescriptorSet"), frameIndex);
         Assert(descriptorSet != nullptr);

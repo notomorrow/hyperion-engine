@@ -50,7 +50,7 @@ enum EnvProbeType : uint32;
 
 struct ParallelRenderingState
 {
-    static constexpr uint32 maxBatches = numAsyncRenderingCommandBuffers;
+    static constexpr uint32 maxBatches = g_numAsyncRenderingCommandBuffers;
 
     TaskBatch* taskBatch = nullptr;
 
@@ -93,6 +93,9 @@ struct DrawCallCollectionMapping
 /*! \brief A collection of renderable objects and setup for a specific View, proxied so the render thread can work with it. */
 struct HYP_API RenderProxyList
 {
+    static constexpr uint64 writeFlag = 0x1;
+    static constexpr uint64 readMask = uint64(-1) & ~writeFlag;
+
     RenderProxyList();
 
     RenderProxyList(const RenderProxyList& other) = delete;
@@ -135,6 +138,63 @@ struct HYP_API RenderProxyList
     ParallelRenderingState* AcquireNextParallelRenderingState();
     void CommitParallelRenderingState(CmdList& outCommandList);
 
+    void BeginWrite()
+    {
+        uint64 rwMarkerState = rwMarker.BitOr(writeFlag, MemoryOrder::ACQUIRE);
+        while (rwMarkerState & readMask)
+        {
+            HYP_LOG_TEMP("Waiting for read marker to be released."
+                         "If this is occuring frequently, the View that owns this RenderProxyList should have double / triple buffering enabled");
+
+            rwMarkerState = rwMarker.Get(MemoryOrder::ACQUIRE);
+            HYP_WAIT_IDLE();
+        }
+
+        AssertDebug(state != RenderProxyList::CS_READING);
+        state = RenderProxyList::CS_WRITING;
+    }
+
+    void EndWrite()
+    {
+        AssertDebug(state == RenderProxyList::CS_WRITING);
+
+        state = RenderProxyList::CS_WRITTEN;
+
+        rwMarker.BitAnd(~writeFlag, MemoryOrder::RELEASE);
+    }
+
+    void BeginRead()
+    {
+        uint64 rwMarkerState;
+
+        do
+        {
+            rwMarkerState = rwMarker.Increment(2, MemoryOrder::ACQUIRE);
+
+            if (HYP_UNLIKELY(rwMarkerState & writeFlag))
+            {
+                HYP_LOG_TEMP("Waiting for write marker to be released."
+                             "If this is occurring frequently, the View that owns this RenderProxyList should have double / triple buffering enabled");
+
+                rwMarker.Decrement(2, MemoryOrder::RELAXED);
+
+                // spin to wait for write flag to be released
+                HYP_WAIT_IDLE();
+            }
+        }
+        while (HYP_UNLIKELY(rwMarkerState & writeFlag));
+
+        state = RenderProxyList::CS_READING;
+    }
+
+    void EndRead()
+    {
+        AssertDebug(state == RenderProxyList::CS_READING);
+        state = RenderProxyList::CS_DONE;
+
+        rwMarker.Decrement(2, MemoryOrder::RELEASE);
+    }
+
     // State for tracking transitions from writing (game thread) to reading (render thread).
     enum CollectionState : uint8
     {
@@ -162,6 +222,10 @@ struct HYP_API RenderProxyList
     ParallelRenderingState* parallelRenderingStateTail;
 
     FixedArray<FlatMap<RenderableAttributeSet, DrawCallCollectionMapping>, RB_MAX> mappingsByBucket;
+
+    // marker to set to locked when game thread is writing to this list.
+    // this only really comes into play with non-buffered Views that do not double/triple buffer their RenderProxyLists
+    AtomicVar<uint64> rwMarker { 0 };
 
 #ifdef HYP_ENABLE_MT_CHECK
     HYP_DECLARE_MT_CHECK(dataRaceDetector);

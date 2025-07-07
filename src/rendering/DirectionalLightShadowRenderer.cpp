@@ -144,7 +144,7 @@ void ShadowPass::CreateCombineShadowMapsPass()
 
     DescriptorTableRef descriptorTable = g_renderBackend->MakeDescriptorTable(&descriptorTableDecl);
 
-    for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
+    for (uint32 frameIndex = 0; frameIndex < g_framesInFlight; frameIndex++)
     {
         const DescriptorSetRef& descriptorSet = descriptorTable->GetDescriptorSet(NAME("CombineShadowMapsDescriptorSet"), frameIndex);
         Assert(descriptorSet != nullptr);
@@ -170,7 +170,7 @@ void ShadowPass::CreateComputePipelines()
 
     // have to create descriptor sets specifically for compute shader,
     // holding framebuffer attachment image (src), and our final shadowmap image (dst)
-    for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
+    for (uint32 frameIndex = 0; frameIndex < g_framesInFlight; frameIndex++)
     {
         const DescriptorSetRef& descriptorSet = descriptorTable->GetDescriptorSet(NAME("BlurShadowMapDescriptorSet"), frameIndex);
         Assert(descriptorSet != nullptr);
@@ -485,10 +485,10 @@ void DirectionalLightShadowRenderer::Update(float delta)
     m_camera->Update(delta);
 
     m_viewStatics->UpdateVisibility();
-    m_viewStatics->Update(delta);
+    m_viewStatics->Collect();
 
     m_viewDynamics->UpdateVisibility();
-    m_viewDynamics->Update(delta);
+    m_viewDynamics->Collect();
 
     Octree& octree = m_parentScene->GetOctree();
 

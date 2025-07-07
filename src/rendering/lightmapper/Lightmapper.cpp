@@ -130,7 +130,7 @@ struct RENDER_COMMAND(LightmapRender)
         }
 
         const uint32 frameIndex = frame->GetFrameIndex();
-        const uint32 previousFrameIndex = (frameIndex + maxFramesInFlight - 1) % maxFramesInFlight;
+        const uint32 previousFrameIndex = (frameIndex + g_framesInFlight - 1) % g_framesInFlight;
 
         if (rpl)
         {
@@ -514,8 +514,8 @@ private:
     Handle<Scene> m_scene;
     LightmapShadingType m_shadingType;
 
-    FixedArray<GpuBufferRef, maxFramesInFlight> m_uniformBuffers;
-    FixedArray<GpuBufferRef, maxFramesInFlight> m_raysBuffers;
+    FixedArray<GpuBufferRef, g_framesInFlight> m_uniformBuffers;
+    FixedArray<GpuBufferRef, g_framesInFlight> m_raysBuffers;
 
     GpuBufferRef m_hitsBufferGpu;
 
@@ -543,7 +543,7 @@ LightmapGPUPathTracer::~LightmapGPUPathTracer()
 
 void LightmapGPUPathTracer::CreateUniformBuffer()
 {
-    for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
+    for (uint32 frameIndex = 0; frameIndex < g_framesInFlight; frameIndex++)
     {
         m_uniformBuffers[frameIndex] = g_renderBackend->MakeGpuBuffer(GpuBufferType::CBUFF, sizeof(RTRadianceUniforms));
 
@@ -562,7 +562,7 @@ void LightmapGPUPathTracer::Create()
 
     DeferCreate(m_hitsBufferGpu);
 
-    for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
+    for (uint32 frameIndex = 0; frameIndex < g_framesInFlight; frameIndex++)
     {
         DeferCreate(m_raysBuffers[frameIndex]);
     }
@@ -588,7 +588,7 @@ void LightmapGPUPathTracer::Create()
 
     DescriptorTableRef descriptorTable = g_renderBackend->MakeDescriptorTable(&descriptorTableDecl);
 
-    for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
+    for (uint32 frameIndex = 0; frameIndex < g_framesInFlight; frameIndex++)
     {
         HYP_NOT_IMPLEMENTED();
         // TEMP FIX ME!!!! build new TLAS for the scene (not attached to view pass data)
@@ -706,7 +706,7 @@ void LightmapGPUPathTracer::Render(FrameBase* frame, const RenderSetup& renderSe
     AssertDebug(renderSetup.IsValid());
 
     const uint32 frameIndex = frame->GetFrameIndex();
-    const uint32 previousFrameIndex = (frame->GetFrameIndex() + maxFramesInFlight - 1) % maxFramesInFlight;
+    const uint32 previousFrameIndex = (frame->GetFrameIndex() + g_framesInFlight - 1) % g_framesInFlight;
 
     UpdateUniforms(frame, rayOffset);
 
@@ -1311,7 +1311,7 @@ void LightmapJob::Process()
     if (m_view.IsValid())
     {
         m_view->UpdateVisibility();
-        m_view->Update(0.0f);
+        m_view->Collect();
     }
 
     {

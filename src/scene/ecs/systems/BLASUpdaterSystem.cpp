@@ -37,11 +37,11 @@ HYP_DECLARE_LOG_CHANNEL(Rendering);
 struct RENDER_COMMAND(UpdateBLASTransform)
     : RenderCommand
 {
-    FixedArray<BLASRef, maxFramesInFlight> bottomLevelAccelerationStructures;
+    FixedArray<BLASRef, g_framesInFlight> bottomLevelAccelerationStructures;
     Matrix4 transform;
 
     RENDER_COMMAND(UpdateBLASTransform)(
-        const FixedArray<BLASRef, maxFramesInFlight>& bottomLevelAccelerationStructures,
+        const FixedArray<BLASRef, g_framesInFlight>& bottomLevelAccelerationStructures,
         const Matrix4& transform)
         : bottomLevelAccelerationStructures(bottomLevelAccelerationStructures),
           transform(transform)
@@ -52,7 +52,7 @@ struct RENDER_COMMAND(UpdateBLASTransform)
 
     virtual RendererResult operator()() override
     {
-        for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
+        for (uint32 frameIndex = 0; frameIndex < g_framesInFlight; frameIndex++)
         {
             if (!bottomLevelAccelerationStructures[frameIndex].IsValid())
             {
@@ -69,11 +69,11 @@ struct RENDER_COMMAND(UpdateBLASTransform)
 struct RENDER_COMMAND(AddBLASToTLAS) : RenderCommand
 {
     TResourceHandle<RenderWorld> renderWorld;
-    FixedArray<BLASRef, maxFramesInFlight> bottomLevelAccelerationStructures;
+    FixedArray<BLASRef, g_framesInFlight> bottomLevelAccelerationStructures;
 
     RENDER_COMMAND(AddBLASToTLAS)(
         const TResourceHandle<RenderWorld>& renderWorld,
-        const FixedArray<BLASRef, maxFramesInFlight>& bottomLevelAccelerationStructures)
+        const FixedArray<BLASRef, g_framesInFlight>& bottomLevelAccelerationStructures)
         : renderWorld(renderWorld),
           bottomLevelAccelerationStructures(bottomLevelAccelerationStructures)
     {
@@ -86,7 +86,7 @@ struct RENDER_COMMAND(AddBLASToTLAS) : RenderCommand
         RenderEnvironment* environment = renderWorld->GetEnvironment();
         Assert(environment != nullptr);
 
-        for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
+        for (uint32 frameIndex = 0; frameIndex < g_framesInFlight; frameIndex++)
         {
             if (bottomLevelAccelerationStructures[frameIndex].IsValid())
             {
@@ -116,11 +116,11 @@ struct RENDER_COMMAND(AddBLASToTLAS) : RenderCommand
 struct RENDER_COMMAND(RemoveBLASFromTLAS) : RenderCommand
 {
     TResourceHandle<RenderWorld> renderWorld;
-    FixedArray<BLASRef, maxFramesInFlight> bottomLevelAccelerationStructures;
+    FixedArray<BLASRef, g_framesInFlight> bottomLevelAccelerationStructures;
 
     RENDER_COMMAND(RemoveBLASFromTLAS)(
         const TResourceHandle<RenderWorld>& renderWorld,
-        const FixedArray<BLASRef, maxFramesInFlight>& bottomLevelAccelerationStructures)
+        const FixedArray<BLASRef, g_framesInFlight>& bottomLevelAccelerationStructures)
         : renderWorld(renderWorld),
           bottomLevelAccelerationStructures(bottomLevelAccelerationStructures)
     {
@@ -133,7 +133,7 @@ struct RENDER_COMMAND(RemoveBLASFromTLAS) : RenderCommand
         RenderEnvironment* environment = renderWorld->GetEnvironment();
         Assert(environment != nullptr);
 
-        for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
+        for (uint32 frameIndex = 0; frameIndex < g_framesInFlight; frameIndex++)
         {
             if (bottomLevelAccelerationStructures[frameIndex].IsValid())
             {
@@ -227,7 +227,7 @@ void BLASUpdaterSystem::OnEntityAdded(Entity* entity)
 
     MeshRaytracingData& meshRaytracingData = meshComponent.proxy->raytracingData;
 
-    for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
+    for (uint32 frameIndex = 0; frameIndex < g_framesInFlight; frameIndex++)
     {
         meshRaytracingData.bottomLevelAccelerationStructures[frameIndex] = blas;
     }

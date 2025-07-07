@@ -59,9 +59,10 @@
 
 namespace hyperion {
 
-static constexpr uint32 numFrames = 3; // number of frames in the ring buffer
-static constexpr uint32 maxViewsPerFrame = 16;
-static constexpr uint32 maxFramesBeforeDiscard = 4; // number of frames before ViewData is discarded if not written to
+static constexpr uint32 g_numFrames = g_tripleBuffer ? 3 : 2;
+
+static constexpr uint32 g_maxViewsPerFrame = 16;
+static constexpr uint32 g_maxFramesBeforeDiscard = 4; // number of frames before ViewData is discarded if not written to
 
 static std::atomic_uint g_producerIndex { 0 }; // game thread frame index
 static std::atomic_uint g_consumerIndex { 0 }; // render thread frame index
@@ -70,8 +71,8 @@ static std::atomic_uint g_consumerIndex { 0 }; // render thread frame index
 // @NOTE: thread local so initialized to 0 on each thread by default
 thread_local std::atomic_uint* g_threadFrameIndex;
 
-static std::counting_semaphore<numFrames> g_fullSemaphore { 0 };
-static std::counting_semaphore<numFrames> g_freeSemaphore { numFrames };
+static std::counting_semaphore<g_numFrames> g_fullSemaphore { 0 };
+static std::counting_semaphore<g_numFrames> g_freeSemaphore { g_numFrames };
 
 #pragma region ResourceBindings
 
@@ -144,11 +145,11 @@ struct ResourceBindings
     ResourceBinder<Entity, &OnBindingChanged_MeshEntity> meshEntityBinder { &meshEntityBindingsAllocator };
 
     // Shared index allocator for reflection probes and sky probes.
-    ResourceBindingAllocator<maxBoundReflectionProbes> reflectionProbeBindingsAllocator;
+    ResourceBindingAllocator<g_maxBoundReflectionProbes> reflectionProbeBindingsAllocator;
     ResourceBinder<EnvProbe, &OnBindingChanged_ReflectionProbe> reflectionProbeBinder { &reflectionProbeBindingsAllocator };
 
     // ambient probes bind to their own slot since they don't set image data
-    ResourceBindingAllocator<maxBoundAmbientProbes> ambientProbeBindingsAllocator;
+    ResourceBindingAllocator<g_maxBoundAmbientProbes> ambientProbeBindingsAllocator;
     ResourceBinder<EnvProbe, &OnBindingChanged_AmbientProbe> ambientProbeBinder { &ambientProbeBindingsAllocator };
 
     ResourceBindingAllocator<16> envGridBindingsAllocator;
@@ -557,8 +558,8 @@ struct ResourceContainerFactory
 
 struct ViewData
 {
-    RenderProxyList renderProxyList;
-    uint32 framesSinceWrite : 4; // framesSinceWrite of this view in the current frame, used to determine if the view is still alive if not reset to zero.
+    RenderProxyList* renderProxyList = nullptr;
+    uint32 framesSinceWrite : 4 = 0; // framesSinceWrite of this view in the current frame, used to determine if the view is still alive if not reset to zero.
 };
 
 struct FrameData
@@ -568,7 +569,7 @@ struct FrameData
     ResourceContainer resources;
 };
 
-static FrameData g_frameData[numFrames];
+static FrameData g_frameData[g_numFrames];
 
 HYP_API void RenderApi_Init()
 {
@@ -576,7 +577,7 @@ HYP_API void RenderApi_Init()
 
     ResourceContainerFactoryRegistry& registry = ResourceContainerFactoryRegistry::GetInstance();
 
-    for (uint32 i = 0; i < numFrames; i++)
+    for (uint32 i = 0; i < g_numFrames; i++)
     {
         registry.InvokeAll(*g_renderGlobalState->resourceBindings, g_frameData[i].resources);
     }
@@ -610,13 +611,17 @@ HYP_API RenderProxyList& RenderApi_GetProducerProxyList(View* view)
     {
         // create a new pool for this view
         vd = &g_frameData[slot].perViewData.EmplaceBack();
-        vd->renderProxyList.state = RenderProxyList::CS_WRITING;
+
+        vd->renderProxyList = view->GetRenderProxyList(slot);
+        AssertDebug(vd->renderProxyList != nullptr);
+
+        vd->renderProxyList->state = RenderProxyList::CS_WRITING;
     }
 
     // reset the framesSinceWrite counter
     vd->framesSinceWrite = 0;
 
-    return vd->renderProxyList;
+    return *vd->renderProxyList;
 }
 
 HYP_API RenderProxyList& RenderApi_GetConsumerProxyList(View* view)
@@ -633,10 +638,14 @@ HYP_API RenderProxyList& RenderApi_GetConsumerProxyList(View* view)
     {
         // create a new pool for this view
         vd = &g_frameData[slot].perViewData.EmplaceBack();
-        vd->renderProxyList.state = RenderProxyList::CS_READING;
+
+        vd->renderProxyList = view->GetRenderProxyList(slot);
+        AssertDebug(vd->renderProxyList != nullptr);
+
+        vd->renderProxyList->state = RenderProxyList::CS_READING;
     }
 
-    return vd->renderProxyList;
+    return *vd->renderProxyList;
 }
 
 HYP_API uint32 RenderApi_AddRef(HypObjectBase* resource)
@@ -894,8 +903,10 @@ HYP_API void RenderApi_BeginFrame_GameThread()
     for (auto it = frameData.perViewData.Begin(); it != frameData.perViewData.End(); ++it)
     {
         ViewData& vd = *it;
-        AssertDebug(vd.renderProxyList.state != RenderProxyList::CS_READING);
-        vd.renderProxyList.state = RenderProxyList::CS_WRITING;
+
+        AssertDebug(vd.renderProxyList != nullptr);
+
+        vd.renderProxyList->BeginWrite();
     }
 }
 
@@ -913,11 +924,13 @@ HYP_API void RenderApi_EndFrame_GameThread()
     for (auto it = frameData.perViewData.Begin(); it != frameData.perViewData.End(); ++it)
     {
         ViewData& vd = *it;
-        AssertDebug(vd.renderProxyList.state == RenderProxyList::CS_WRITING);
-        vd.renderProxyList.state = RenderProxyList::CS_WRITTEN;
+
+        AssertDebug(vd.renderProxyList != nullptr);
+
+        vd.renderProxyList->EndWrite();
     }
 
-    g_producerIndex.store((g_producerIndex.load(std::memory_order_relaxed) + 1) % numFrames, std::memory_order_relaxed);
+    g_producerIndex.store((g_producerIndex.load(std::memory_order_relaxed) + 1) % g_numFrames, std::memory_order_relaxed);
 
     g_fullSemaphore.release();
 }
@@ -946,7 +959,9 @@ HYP_API void RenderApi_BeginFrame_RenderThread()
     for (auto it = frameData.perViewData.Begin(); it != frameData.perViewData.End(); ++it)
     {
         ViewData& vd = *it;
-        vd.renderProxyList.state = RenderProxyList::CS_READING;
+        AssertDebug(vd.renderProxyList != nullptr);
+
+        vd.renderProxyList->BeginRead();
     }
 
     for (ResourceSubtypeData& subtypeData : frameData.resources.dataByType)
@@ -1042,13 +1057,14 @@ HYP_API void RenderApi_EndFrame_RenderThread()
     for (auto it = frameData.perViewData.Begin(); it != frameData.perViewData.End();)
     {
         ViewData& vd = *it;
-        AssertDebug(vd.renderProxyList.state == RenderProxyList::CS_READING);
-        vd.renderProxyList.state = RenderProxyList::CS_DONE;
+        AssertDebug(vd.renderProxyList != nullptr);
 
-        vd.renderProxyList.RemoveEmptyRenderGroups();
+        vd.renderProxyList->RemoveEmptyRenderGroups();
+
+        vd.renderProxyList->EndRead();
 
         // Clear out data for views that haven't been written to for a while
-        if (vd.framesSinceWrite == maxFramesBeforeDiscard)
+        if (vd.framesSinceWrite == g_maxFramesBeforeDiscard)
         {
             auto viewIt = frameData.views.FindIf([&vd](const auto& pair)
                 {
@@ -1122,7 +1138,7 @@ HYP_API void RenderApi_EndFrame_RenderThread()
         subtypeData.indicesPendingDelete.Clear();
     }
 
-    g_consumerIndex.store((slot + 1) % numFrames, std::memory_order_relaxed);
+    g_consumerIndex.store((slot + 1) % g_numFrames, std::memory_order_relaxed);
 
     g_freeSemaphore.release();
 }
@@ -1154,7 +1170,7 @@ RenderGlobalState::RenderGlobalState()
     placeholderData->Create();
     ShadowMapAllocator->Initialize();
 
-    for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
+    for (uint32 frameIndex = 0; frameIndex < g_framesInFlight; frameIndex++)
     {
         SetDefaultDescriptorSetElements(frameIndex);
     }
@@ -1276,7 +1292,7 @@ void RenderGlobalState::CreateBlueNoiseBuffer()
     blueNoiseBuffer->Copy(scramblingTileOffset, scramblingTileSize, &BlueNoise::scramblingTile[0]);
     blueNoiseBuffer->Copy(rankingTileOffset, rankingTileSize, &BlueNoise::rankingTile[0]);
 
-    for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
+    for (uint32 frameIndex = 0; frameIndex < g_framesInFlight; frameIndex++)
     {
         GlobalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)
             ->SetElement(NAME("BlueNoiseBuffer"), blueNoiseBuffer);
@@ -1308,7 +1324,7 @@ void RenderGlobalState::CreateSphereSamplesBuffer()
 
     delete[] sphereSamples;
 
-    for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
+    for (uint32 frameIndex = 0; frameIndex < g_framesInFlight; frameIndex++)
     {
         GlobalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)
             ->SetElement(NAME("SphereSamplesBuffer"), sphereSamplesBuffer);
@@ -1343,7 +1359,7 @@ void RenderGlobalState::SetDefaultDescriptorSetElements(uint32 frameIndex)
     GlobalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)->SetElement(NAME("ShadowMapsBuffer"), gpuBuffers[GRB_SHADOW_MAPS]->GetBuffer(frameIndex));
     GlobalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)->SetElement(NAME("LightmapVolumesBuffer"), gpuBuffers[GRB_LIGHTMAP_VOLUMES]->GetBuffer(frameIndex));
 
-    for (uint32 i = 0; i < maxBoundReflectionProbes; i++)
+    for (uint32 i = 0; i < g_maxBoundReflectionProbes; i++)
     {
         GlobalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)->SetElement(NAME("EnvProbeTextures"), i, placeholderData->DefaultTexture2D->GetRenderResource().GetImageView());
     }
@@ -1374,7 +1390,7 @@ void RenderGlobalState::SetDefaultDescriptorSetElements(uint32 frameIndex)
     // Material
     if (g_renderBackend->GetRenderConfig().IsBindlessSupported())
     {
-        for (uint32 textureIndex = 0; textureIndex < maxBindlessResources; textureIndex++)
+        for (uint32 textureIndex = 0; textureIndex < g_maxBindlessResources; textureIndex++)
         {
             GlobalDescriptorTable->GetDescriptorSet(NAME("Material"), frameIndex)
                 ->SetElement(NAME("Textures"), textureIndex, placeholderData->DefaultTexture2D->GetRenderResource().GetImageView());
@@ -1382,7 +1398,7 @@ void RenderGlobalState::SetDefaultDescriptorSetElements(uint32 frameIndex)
     }
     else
     {
-        for (uint32 textureIndex = 0; textureIndex < maxBoundTextures; textureIndex++)
+        for (uint32 textureIndex = 0; textureIndex < g_maxBoundTextures; textureIndex++)
         {
             GlobalDescriptorTable->GetDescriptorSet(NAME("Material"), frameIndex)
                 ->SetElement(NAME("Textures"), textureIndex, placeholderData->DefaultTexture2D->GetRenderResource().GetImageView());

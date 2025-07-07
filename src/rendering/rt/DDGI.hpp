@@ -118,7 +118,7 @@ public:
         return m_probes;
     }
 
-    HYP_FORCE_INLINE void SetTopLevelAccelerationStructures(const FixedArray<TLASRef, maxFramesInFlight>& topLevelAccelerationStructures)
+    HYP_FORCE_INLINE void SetTopLevelAccelerationStructures(const FixedArray<TLASRef, g_framesInFlight>& topLevelAccelerationStructures)
     {
         m_topLevelAccelerationStructures = topLevelAccelerationStructures;
     }
@@ -153,7 +153,7 @@ private:
     DDGIInfo m_gridInfo;
     Array<Probe> m_probes;
 
-    FixedArray<uint32, maxFramesInFlight> m_updates;
+    FixedArray<uint32, g_framesInFlight> m_updates;
 
     ComputePipelineRef m_updateIrradiance;
     ComputePipelineRef m_updateDepth;
@@ -172,7 +172,7 @@ private:
     ImageRef m_depthImage;
     ImageViewRef m_depthImageView;
 
-    FixedArray<TLASRef, maxFramesInFlight> m_topLevelAccelerationStructures;
+    FixedArray<TLASRef, g_framesInFlight> m_topLevelAccelerationStructures;
 
     DDGIUniforms m_uniforms;
 

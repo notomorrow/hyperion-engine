@@ -5,12 +5,12 @@
         "enabled": false
       },
       "reflections": {
-        "enabled": true
+        "enabled": false
       },
       "gi": {
         "enabled": false
       },
-      "enabled": true
+      "enabled": false
     },
     "ssr": {
       "num_iterations": 64,
@@ -50,8 +50,11 @@
     },
     "hbao": {
       "temporal_blending": false,
+      "Radius": 2.500000,
       "radius": 2.500000,
+      "Power": 0.800000,
       "power": 0.800000,
+      "UseTemporalBlending": false,
       "enabled": false
     },
     "ssgi": {

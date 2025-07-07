@@ -39,10 +39,10 @@ enum RTRadianceUpdates : uint32
 struct RENDER_COMMAND(SetRTRadianceImageInGlobalDescriptorSet)
     : RenderCommand
 {
-    FixedArray<ImageViewRef, maxFramesInFlight> imageViews;
+    FixedArray<ImageViewRef, g_framesInFlight> imageViews;
 
     RENDER_COMMAND(SetRTRadianceImageInGlobalDescriptorSet)(
-        const FixedArray<ImageViewRef, maxFramesInFlight>& imageViews)
+        const FixedArray<ImageViewRef, g_framesInFlight>& imageViews)
         : imageViews(imageViews)
     {
     }
@@ -51,7 +51,7 @@ struct RENDER_COMMAND(SetRTRadianceImageInGlobalDescriptorSet)
 
     virtual RendererResult operator()() override
     {
-        for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
+        for (uint32 frameIndex = 0; frameIndex < g_framesInFlight; frameIndex++)
         {
             g_renderGlobalState->GlobalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)->SetElement(NAME("RTRadianceResultTexture"), imageViews[frameIndex]);
         }
@@ -70,7 +70,7 @@ struct RENDER_COMMAND(UnsetRTRadianceImageInGlobalDescriptorSet)
         RendererResult result;
 
         // remove result image from global descriptor set
-        for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
+        for (uint32 frameIndex = 0; frameIndex < g_framesInFlight; frameIndex++)
         {
             g_renderGlobalState->GlobalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)->SetElement(NAME("RTRadianceResultTexture"), g_renderGlobalState->placeholderData->GetImageView2D1x1R8());
         }
@@ -224,7 +224,7 @@ void RaytracingReflections::CreateUniformBuffer()
         g_renderBackend->MakeGpuBuffer(GpuBufferType::CBUFF, sizeof(RTRadianceUniforms))
     };
 
-    for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
+    for (uint32 frameIndex = 0; frameIndex < g_framesInFlight; frameIndex++)
     {
         HYPERION_ASSERT_RESULT(m_uniformBuffers[frameIndex]->Create());
         m_uniformBuffers[frameIndex]->Copy(sizeof(uniforms), &uniforms);
@@ -238,7 +238,7 @@ void RaytracingReflections::ApplyTLASUpdates(RTUpdateStateFlags flags)
         return;
     }
 
-    for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
+    for (uint32 frameIndex = 0; frameIndex < g_framesInFlight; frameIndex++)
     {
         const DescriptorSetRef& descriptorSet = m_raytracingPipeline->GetDescriptorTable()
                                                     ->GetDescriptorSet(NAME("RTRadianceDescriptorSet"), frameIndex);
@@ -278,7 +278,7 @@ void RaytracingReflections::CreateRaytracingPipeline()
 
     DescriptorTableRef descriptorTable = g_renderBackend->MakeDescriptorTable(&descriptorTableDecl);
 
-    for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
+    for (uint32 frameIndex = 0; frameIndex < g_framesInFlight; frameIndex++)
     {
         Assert(m_topLevelAccelerationStructures[frameIndex] != nullptr);
 
@@ -305,7 +305,7 @@ void RaytracingReflections::CreateRaytracingPipeline()
 
     PUSH_RENDER_COMMAND(
         SetRTRadianceImageInGlobalDescriptorSet,
-        FixedArray<ImageViewRef, maxFramesInFlight> {
+        FixedArray<ImageViewRef, g_framesInFlight> {
             m_temporalBlending->GetResultTexture()->GetRenderResource().GetImageView(),
             m_temporalBlending->GetResultTexture()->GetRenderResource().GetImageView() });
 }

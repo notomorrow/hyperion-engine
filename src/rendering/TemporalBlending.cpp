@@ -246,7 +246,7 @@ void TemporalBlending::CreateDescriptorSets()
         &m_historyTexture
     };
 
-    for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
+    for (uint32 frameIndex = 0; frameIndex < g_framesInFlight; frameIndex++)
     {
         const ImageViewRef& inputImageView = m_inputFramebuffer.IsValid()
             ? m_inputFramebuffer->GetAttachment(0)->GetImageView()

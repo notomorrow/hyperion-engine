@@ -614,7 +614,7 @@ void ReflectionProbeRenderer::ComputePrefilteredEnvMap(FrameBase* frame, const R
     DescriptorTableRef descriptorTable = g_renderBackend->MakeDescriptorTable(&descriptorTableDecl);
     descriptorTable->SetDebugName(NAME_FMT("ConvolveProbeDescriptorTable_{}", envProbe->Id().Value()));
 
-    for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
+    for (uint32 frameIndex = 0; frameIndex < g_framesInFlight; frameIndex++)
     {
         const DescriptorSetRef& descriptorSet = descriptorTable->GetDescriptorSet(NAME("ConvolveProbeDescriptorSet"), frameIndex);
         Assert(descriptorSet.IsValid());
@@ -656,7 +656,7 @@ void ReflectionProbeRenderer::ComputePrefilteredEnvMap(FrameBase* frame, const R
 
     frame->GetCommandList().Add<InsertBarrier>(prefilteredEnvMap->GetRenderResource().GetImage(), RS_SHADER_RESOURCE);
 
-    // for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
+    // for (uint32 frameIndex = 0; frameIndex < g_framesInFlight; frameIndex++)
     // {
     //     g_renderGlobalState->GlobalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)->SetElement(NAME("EnvProbeTextures"), m_textureSlot, prefilteredEnvMap->GetRenderResource().GetImageView());
     //     HYP_LOG(EnvProbe, Debug, "Set EnvProbe texture slot {} for envprobe {} in global descriptor table",
@@ -743,7 +743,7 @@ void ReflectionProbeRenderer::ComputeSH(FrameBase* frame, const RenderSetup& ren
     {
         computeShDescriptorTables[i] = g_renderBackend->MakeDescriptorTable(&descriptorTableDecl);
 
-        for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
+        for (uint32 frameIndex = 0; frameIndex < g_framesInFlight; frameIndex++)
         {
             const DescriptorSetRef& computeShDescriptorSet = computeShDescriptorTables[i]->GetDescriptorSet(NAME("ComputeSHDescriptorSet"), frameIndex);
             Assert(computeShDescriptorSet != nullptr);

@@ -24,7 +24,7 @@ void GpuBufferHolderBase::CreateBuffers(GpuBufferType type, SizeType initialCoun
         initialCount = 1;
     }
 
-    for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
+    for (uint32 frameIndex = 0; frameIndex < g_framesInFlight; frameIndex++)
     {
         m_buffers[frameIndex] = g_renderBackend->MakeGpuBuffer(type, size * initialCount, alignment);
 

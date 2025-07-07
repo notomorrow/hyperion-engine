@@ -104,6 +104,22 @@ public:
      *  \param value The value to count the bits of.
      *  \return The number of bits set in the value. */
     static inline uint64 BitCount(uint64 value);
+
+    static inline bool IsBigEndian()
+    {
+        constexpr union
+        {
+            uint32 i;
+            uint8 ch[sizeof(uint32)];
+        } u = { 0x01020304 };
+
+        return u.ch[0] == 1;
+    }
+
+    static inline bool IsLittleEndian()
+    {
+        return !ByteUtil::IsBigEndian();
+    }
 };
 
 uint32 ByteUtil::LowestSetBitIndex(uint64 bits)
@@ -165,11 +181,84 @@ static HYP_FORCE_INLINE To BitCast(const From& from)
     return ValueStorage<To>(&from).Get();
 }
 
+/// Endian swap functions - Free functions so new overloads can be easily added
+
+static inline constexpr uint8 SwapEndian(uint8 value)
+{
+    return value;
+}
+
+static inline constexpr uint16 SwapEndian(uint16 value)
+{
+    return uint16(((value >> 8u) & 0xffu) | ((value & 0xffu) << 8u));
+}
+
+static inline constexpr uint32 SwapEndian(uint32 value)
+{
+    return ((value & 0xff000000u) >> 24u) | ((value & 0x00ff0000u) >> 8u) | ((value & 0x0000ff00u) << 8u) | ((value & 0x000000ffu) << 24u);
+}
+
+static inline constexpr uint64 SwapEndian(uint64 value)
+{
+    return ((value & 0xff00000000000000ull) >> 56ull) | ((value & 0x00ff000000000000ull) >> 40ull) | ((value & 0x0000ff0000000000ull) >> 24ull) | ((value & 0x000000ff00000000ull) >> 8ull) | ((value & 0x00000000ff000000ull) << 8ull) | ((value & 0x0000000000ff0000ull) << 24ull) | ((value & 0x000000000000ff00ull) << 40ull) | ((value & 0x00000000000000ffull) << 56ull);
+}
+
+static inline constexpr int8 SwapEndian(int8 value)
+{
+    return value;
+}
+
+static inline constexpr int16 SwapEndian(int16 value)
+{
+    union
+    {
+        uint16 u;
+        int16 i;
+    };
+
+    i = value;
+
+    u = SwapEndian(u);
+
+    return i;
+}
+
+static inline constexpr int32 SwapEndian(int32 value)
+{
+    union
+    {
+        uint32 u;
+        int32 i;
+    };
+
+    i = value;
+
+    u = SwapEndian(u);
+
+    return i;
+}
+
+static inline constexpr int64 SwapEndian(int64 value)
+{
+    union
+    {
+        uint64 u;
+        int64 i;
+    };
+
+    i = value;
+
+    u = SwapEndian(u);
+
+    return i;
+}
+
 #define FOR_EACH_BIT(_num, _iter) for (uint64 ITER_BITMASK = (_num), _iter; (_iter = ByteUtil::LowestSetBitIndex(ITER_BITMASK)) != uint32(-1); (ITER_BITMASK &= ~(uint64(1) << _iter)))
 
 } // namespace utilities
 
 using utilities::BitCast;
 using utilities::ByteUtil;
+using utilities::SwapEndian;
 
 } // namespace hyperion

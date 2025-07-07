@@ -1,6 +1,11 @@
+/* Copyright (c) 2024-2025 No Tomorrow Games. All rights reserved. */
+
 #pragma once
+
 #include <core/containers/String.hpp>
+
 #include <core/utilities/FormatFwd.hpp>
+#include <core/utilities/ByteUtil.hpp>
 
 #include <HashCode.hpp>
 #include <Types.hpp>
@@ -91,15 +96,15 @@ struct Formatter<StringType, UUID>
     }
 };
 
-} // namespace utilities
-
-constexpr UUID SwapEndianness(UUID value)
+constexpr UUID SwapEndian(UUID value)
 {
     UUID result = UUID::Invalid();
-    result.data0 = SwapEndianness(value.data0);
-    result.data1 = SwapEndianness(value.data1);
+    result.data0 = SwapEndian(value.data0);
+    result.data1 = SwapEndian(value.data1);
 
     return result;
 }
+
+} // namespace utilities
 
 } // namespace hyperion

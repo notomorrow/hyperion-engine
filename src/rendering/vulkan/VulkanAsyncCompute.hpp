@@ -26,8 +26,8 @@ public:
     HYP_API RendererResult WaitForFence(VulkanFrame* frame);
 
 private:
-    FixedArray<VulkanCommandBufferRef, maxFramesInFlight> m_commandBuffers;
-    FixedArray<VulkanFenceRef, maxFramesInFlight> m_fences;
+    FixedArray<VulkanCommandBufferRef, g_framesInFlight> m_commandBuffers;
+    FixedArray<VulkanFenceRef, g_framesInFlight> m_fences;
     bool m_isSupported;
     bool m_isFallback;
 };

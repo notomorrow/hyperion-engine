@@ -314,7 +314,7 @@ struct DeferredPassData : PassData
     UniquePtr<RaytracingReflections> raytracingReflections;
     UniquePtr<DDGI> ddgi;
 
-    FixedArray<TLASRef, maxFramesInFlight> topLevelAccelerationStructures;
+    FixedArray<TLASRef, g_framesInFlight> topLevelAccelerationStructures;
 
     virtual ~DeferredPassData() override;
 };

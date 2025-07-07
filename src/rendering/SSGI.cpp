@@ -60,11 +60,11 @@ struct RENDER_COMMAND(CreateSSGIUniformBuffers)
     : RenderCommand
 {
     SSGIUniforms uniforms;
-    FixedArray<GpuBufferRef, maxFramesInFlight> uniformBuffers;
+    FixedArray<GpuBufferRef, g_framesInFlight> uniformBuffers;
 
     RENDER_COMMAND(CreateSSGIUniformBuffers)(
         const SSGIUniforms& uniforms,
-        const FixedArray<GpuBufferRef, maxFramesInFlight>& uniformBuffers)
+        const FixedArray<GpuBufferRef, g_framesInFlight>& uniformBuffers)
         : uniforms(uniforms),
           uniformBuffers(uniformBuffers)
     {
@@ -75,7 +75,7 @@ struct RENDER_COMMAND(CreateSSGIUniformBuffers)
 
     virtual RendererResult operator()() override
     {
-        for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
+        for (uint32 frameIndex = 0; frameIndex < g_framesInFlight; frameIndex++)
         {
             Assert(uniformBuffers[frameIndex] != nullptr);
 
@@ -176,7 +176,7 @@ void SSGI::CreateUniformBuffers()
     SSGIUniforms uniforms;
     FillUniformBufferData(nullptr, uniforms);
 
-    for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
+    for (uint32 frameIndex = 0; frameIndex < g_framesInFlight; frameIndex++)
     {
         m_uniformBuffers[frameIndex] = g_renderBackend->MakeGpuBuffer(GpuBufferType::CBUFF, sizeof(uniforms));
     }
@@ -194,7 +194,7 @@ void SSGI::CreateComputePipelines()
     const DescriptorTableDeclaration& descriptorTableDecl = shader->GetCompiledShader()->GetDescriptorTableDeclaration();
     DescriptorTableRef descriptorTable = g_renderBackend->MakeDescriptorTable(&descriptorTableDecl);
 
-    for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
+    for (uint32 frameIndex = 0; frameIndex < g_framesInFlight; frameIndex++)
     {
         const DescriptorSetRef& descriptorSet = descriptorTable->GetDescriptorSet(NAME("SSGIDescriptorSet"), frameIndex);
         Assert(descriptorSet != nullptr);

@@ -515,7 +515,7 @@ FBOMResult FBOMWriter::WriteHeader(ByteWriter* out)
     out->Write(FBOM::headerIdentifier, sizeof(FBOM::headerIdentifier));
 
     // endianness
-    out->Write<uint8>(IsBigEndian());
+    out->Write<uint8>(ByteUtil::IsBigEndian());
 
     // binary version
     out->Write<uint32>(FBOM::version.value);
