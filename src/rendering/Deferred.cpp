@@ -279,6 +279,9 @@ void DeferredPass::Render(FrameBase* frame, const RenderSetup& rs)
     }
 
     RenderProxyList& rpl = RenderApi_GetConsumerProxyList(rs.view->GetView());
+    rpl.BeginRead();
+
+    HYP_DEFER({ rpl.EndRead(); });
 
     // no lights bound, do not render direct shading at all
     if (rpl.lights.NumCurrent() == 0)
@@ -582,6 +585,9 @@ void EnvGridPass::Render(FrameBase* frame, const RenderSetup& rs)
     AssertDebug(rs.passData != nullptr);
 
     RenderProxyList& rpl = RenderApi_GetConsumerProxyList(rs.view->GetView());
+    rpl.BeginRead();
+
+    HYP_DEFER({ rpl.EndRead(); });
 
     // shouldn't be called if no env grids are present
     AssertDebug(rpl.envGrids.NumCurrent() != 0);
@@ -805,6 +811,9 @@ void ReflectionsPass::Render(FrameBase* frame, const RenderSetup& rs)
     const uint32 frameIndex = frame->GetFrameIndex();
 
     RenderProxyList& rpl = RenderApi_GetConsumerProxyList(rs.view->GetView());
+    rpl.BeginRead();
+
+    HYP_DEFER({ rpl.EndRead(); });
 
     if (ShouldRenderSSR())
     {
@@ -1407,6 +1416,8 @@ void DeferredRenderer::RenderFrame(FrameBase* frame, const RenderSetup& rs)
 
     Array<RenderProxyList*> renderProxyLists;
 
+    HYP_DEFER({ for (RenderProxyList* rpl : renderProxyLists) rpl->EndRead(); });
+
     // Collect view-independent renderable types from all views, binned
     /// @TODO: We could use the existing binning by subclass that ResourceTracker now provides.
     FixedArray<Array<EnvProbe*>, EPT_MAX> envProbes;
@@ -1438,6 +1449,8 @@ void DeferredRenderer::RenderFrame(FrameBase* frame, const RenderSetup& rs)
         }
 
         RenderProxyList& rpl = RenderApi_GetConsumerProxyList(view);
+        rpl.BeginRead();
+
         renderProxyLists.PushBack(&rpl);
 
         DeferredPassData* pd = static_cast<DeferredPassData*>(FetchViewPassData(view));
@@ -1623,6 +1636,8 @@ void DeferredRenderer::RenderFrame(FrameBase* frame, const RenderSetup& rs)
 
 #ifdef HYP_ENABLE_RENDER_STATS
         RenderProxyList& rpl = RenderApi_GetConsumerProxyList(view);
+        rpl.BeginRead();
+        HYP_DEFER({ rpl.EndRead(); });
 
         counts[ERS_VIEWS]++;
         counts[ERS_LIGHTMAP_VOLUMES] += rpl.lightmapVolumes.NumCurrent();
@@ -1664,6 +1679,8 @@ void DeferredRenderer::RenderFrameForView(FrameBase* frame, const RenderSetup& r
     }
 
     RenderProxyList& rpl = RenderApi_GetConsumerProxyList(view);
+    rpl.BeginRead();
+    HYP_DEFER({ rpl.EndRead(); });
 
     DeferredPassData* pd = static_cast<DeferredPassData*>(rs.passData);
     AssertDebug(pd != nullptr);
@@ -1768,7 +1785,7 @@ void DeferredRenderer::RenderFrameForView(FrameBase* frame, const RenderSetup& r
     deferredData.screenWidth = view->GetRenderResource().GetViewport().extent.x;  // rpl.viewport.extent.x;
     deferredData.screenHeight = view->GetRenderResource().GetViewport().extent.y; // rpl.viewport.extent.y;
 
-    PerformOcclusionCulling(frame, rs);
+    PerformOcclusionCulling(frame, rs, rpl);
 
     if (doParticles)
     {
@@ -1786,7 +1803,7 @@ void DeferredRenderer::RenderFrameForView(FrameBase* frame, const RenderSetup& r
     { // render opaque objects into separate framebuffer
         frame->GetCommandList().Add<BeginFramebuffer>(opaqueFbo, frameIndex);
 
-        ExecuteDrawCalls(frame, rs, (1u << RB_OPAQUE));
+        ExecuteDrawCalls(frame, rs, rpl, (1u << RB_OPAQUE));
 
         frame->GetCommandList().Add<EndFramebuffer>(opaqueFbo, frameIndex);
     }
@@ -1862,14 +1879,14 @@ void DeferredRenderer::RenderFrameForView(FrameBase* frame, const RenderSetup& r
         // The lightmap bucket's framebuffer has a color attachment that will write into the opaque framebuffer's color attachment.
         frame->GetCommandList().Add<BeginFramebuffer>(lightmapFbo, frameIndex);
 
-        ExecuteDrawCalls(frame, rs, (1u << RB_LIGHTMAP));
+        ExecuteDrawCalls(frame, rs, rpl, (1u << RB_LIGHTMAP));
 
         frame->GetCommandList().Add<EndFramebuffer>(lightmapFbo, frameIndex);
     }
 
     { // generate mipchain after rendering opaque objects' lighting, now we can use it for transmission
         const ImageRef& srcImage = deferredPassFramebuffer->GetAttachment(0)->GetImage();
-        GenerateMipChain(frame, rs, srcImage);
+        GenerateMipChain(frame, rs, rpl, srcImage);
     }
 
     { // translucent objects
@@ -1892,8 +1909,8 @@ void DeferredRenderer::RenderFrameForView(FrameBase* frame, const RenderSetup& r
         pd->lightmapPass->RenderToFramebuffer(frame, rs, translucentFbo);
 
         // begin translucent with forward rendering
-        ExecuteDrawCalls(frame, rs, (1u << RB_TRANSLUCENT));
-        ExecuteDrawCalls(frame, rs, (1u << RB_DEBUG));
+        ExecuteDrawCalls(frame, rs, rpl, (1u << RB_TRANSLUCENT));
+        ExecuteDrawCalls(frame, rs, rpl, (1u << RB_DEBUG));
 
         // if (doParticles)
         // {
@@ -1905,7 +1922,7 @@ void DeferredRenderer::RenderFrameForView(FrameBase* frame, const RenderSetup& r
         //     environment->GetGaussianSplatting()->Render(frame, rs);
         // }
 
-        ExecuteDrawCalls(frame, rs, (1u << RB_SKYBOX));
+        ExecuteDrawCalls(frame, rs, rpl, (1u << RB_SKYBOX));
 
         // // render debug draw
         // g_engine->GetDebugDrawer()->Render(frame, rs);
@@ -1947,7 +1964,7 @@ void DeferredRenderer::RenderFrameForView(FrameBase* frame, const RenderSetup& r
 
 #undef CHECK_FRAMEBUFFER_SIZE
 
-void DeferredRenderer::PerformOcclusionCulling(FrameBase* frame, const RenderSetup& rs)
+void DeferredRenderer::PerformOcclusionCulling(FrameBase* frame, const RenderSetup& rs, RenderProxyList& rpl)
 {
     HYP_SCOPE;
 
@@ -1957,17 +1974,17 @@ void DeferredRenderer::PerformOcclusionCulling(FrameBase* frame, const RenderSet
         | (1 << RB_TRANSLUCENT)
         | (1 << RB_DEBUG);
 
-    RenderCollector::PerformOcclusionCulling(frame, rs, RenderApi_GetConsumerProxyList(rs.view->GetView()), bucketMask);
+    RenderCollector::PerformOcclusionCulling(frame, rs, rpl, bucketMask);
 }
 
-void DeferredRenderer::ExecuteDrawCalls(FrameBase* frame, const RenderSetup& rs, uint32 bucketMask)
+void DeferredRenderer::ExecuteDrawCalls(FrameBase* frame, const RenderSetup& rs, RenderProxyList& rpl, uint32 bucketMask)
 {
     HYP_SCOPE;
 
-    RenderCollector::ExecuteDrawCalls(frame, rs, RenderApi_GetConsumerProxyList(rs.view->GetView()), bucketMask);
+    RenderCollector::ExecuteDrawCalls(frame, rs, rpl, bucketMask);
 }
 
-void DeferredRenderer::GenerateMipChain(FrameBase* frame, const RenderSetup& rs, const ImageRef& srcImage)
+void DeferredRenderer::GenerateMipChain(FrameBase* frame, const RenderSetup& rs, RenderProxyList& rpl, const ImageRef& srcImage)
 {
     HYP_SCOPE;
 

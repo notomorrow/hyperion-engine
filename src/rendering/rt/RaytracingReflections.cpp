@@ -23,6 +23,8 @@
 #include <scene/EnvProbe.hpp>
 #include <scene/EnvGrid.hpp>
 
+#include <core/utilities/DeferredScope.hpp>
+
 #include <EngineGlobals.hpp>
 
 namespace hyperion {
@@ -113,6 +115,9 @@ void RaytracingReflections::Create()
 void RaytracingReflections::UpdateUniforms(FrameBase* frame, const RenderSetup& renderSetup)
 {
     RenderProxyList& rpl = RenderApi_GetConsumerProxyList(renderSetup.view->GetView());
+    rpl.BeginRead();
+
+    HYP_DEFER({ rpl.EndRead(); });
 
     RTRadianceUniforms uniforms {};
 

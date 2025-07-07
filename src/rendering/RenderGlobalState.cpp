@@ -614,8 +614,6 @@ HYP_API RenderProxyList& RenderApi_GetProducerProxyList(View* view)
 
         vd->renderProxyList = view->GetRenderProxyList(slot);
         AssertDebug(vd->renderProxyList != nullptr);
-
-        vd->renderProxyList->state = RenderProxyList::CS_WRITING;
     }
 
     // reset the framesSinceWrite counter
@@ -641,8 +639,6 @@ HYP_API RenderProxyList& RenderApi_GetConsumerProxyList(View* view)
 
         vd->renderProxyList = view->GetRenderProxyList(slot);
         AssertDebug(vd->renderProxyList != nullptr);
-
-        vd->renderProxyList->state = RenderProxyList::CS_READING;
     }
 
     return *vd->renderProxyList;
@@ -905,8 +901,6 @@ HYP_API void RenderApi_BeginFrame_GameThread()
         ViewData& vd = *it;
 
         AssertDebug(vd.renderProxyList != nullptr);
-
-        vd.renderProxyList->BeginWrite();
     }
 }
 
@@ -926,8 +920,6 @@ HYP_API void RenderApi_EndFrame_GameThread()
         ViewData& vd = *it;
 
         AssertDebug(vd.renderProxyList != nullptr);
-
-        vd.renderProxyList->EndWrite();
     }
 
     g_producerIndex.store((g_producerIndex.load(std::memory_order_relaxed) + 1) % g_numFrames, std::memory_order_relaxed);
@@ -960,8 +952,6 @@ HYP_API void RenderApi_BeginFrame_RenderThread()
     {
         ViewData& vd = *it;
         AssertDebug(vd.renderProxyList != nullptr);
-
-        vd.renderProxyList->BeginRead();
     }
 
     for (ResourceSubtypeData& subtypeData : frameData.resources.dataByType)
@@ -1060,8 +1050,6 @@ HYP_API void RenderApi_EndFrame_RenderThread()
         AssertDebug(vd.renderProxyList != nullptr);
 
         vd.renderProxyList->RemoveEmptyRenderGroups();
-
-        vd.renderProxyList->EndRead();
 
         // Clear out data for views that haven't been written to for a while
         if (vd.framesSinceWrite == g_maxFramesBeforeDiscard)

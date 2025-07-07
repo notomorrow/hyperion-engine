@@ -288,6 +288,8 @@ void View::Collect()
     AssertReady();
 
     RenderProxyList& rpl = RenderApi_GetProducerProxyList(this);
+    rpl.BeginWrite();
+
     rpl.viewport = m_viewport;
     rpl.priority = m_priority;
 
@@ -321,6 +323,8 @@ void View::Collect()
     rpl.BuildRenderGroups(this);
 
     RenderCollector::CollectDrawCalls(rpl, bucketMask);
+
+    rpl.EndWrite();
 }
 
 void View::SetViewport(const Viewport& viewport)

@@ -36,6 +36,8 @@
 #include <scene/ecs/components/TransformComponent.hpp>
 #include <scene/ecs/components/MeshComponent.hpp>
 
+#include <core/utilities/DeferredScope.hpp>
+
 #include <core/logging/Logger.hpp>
 
 #include <core/threading/TaskSystem.hpp>
@@ -306,6 +308,9 @@ void UIRenderCollector::ExecuteDrawCalls(FrameBase* frame, const RenderSetup& re
     AssertDebug(renderSetup.HasView());
 
     RenderProxyList& rpl = RenderApi_GetConsumerProxyList(renderSetup.view->GetView());
+    rpl.BeginRead();
+
+    HYP_DEFER({ rpl.EndRead(); });
 
     const uint32 frameIndex = frame->GetFrameIndex();
 
@@ -410,10 +415,6 @@ void UIRenderer::RenderFrame(FrameBase* frame, const RenderSetup& renderSetup)
 
     const ViewOutputTarget& outputTarget = m_view->GetOutputTarget();
     Assert(outputTarget.IsValid());
-
-    // // temp
-    // RenderProxyList& rpl = RenderApi_GetConsumerProxyList(m_view);
-    // RenderCollector::ExecuteDrawCalls(frame, rs, rpl, 0);
 
     m_renderCollector.ExecuteDrawCalls(frame, rs, outputTarget.GetFramebuffer());
 }
@@ -544,6 +545,7 @@ void UIRenderSubsystem::Update(float delta)
     m_view->UpdateVisibility();
 
     RenderProxyList& rpl = RenderApi_GetProducerProxyList(m_view);
+    rpl.BeginWrite();
     rpl.viewport = m_view->GetViewport();
     rpl.priority = m_view->GetPriority();
     rpl.meshes.Advance();
@@ -598,6 +600,8 @@ void UIRenderSubsystem::Update(float delta)
         /* onlyVisible */ true);
 
     renderCollector.PushUpdates(rpl);
+
+    rpl.EndWrite();
 }
 
 void UIRenderSubsystem::CreateFramebuffer()
