@@ -254,13 +254,14 @@ RendererResult VulkanAccelerationStructureBase::CreateAccelerationStructure(
 
         if (update)
         {
-            HYPERION_BUBBLE_ERRORS(GetRenderBackend()->GetDevice()->Wait()); // To prevent deletion while in use
-
-            // delete the current acceleration structure
-            GetRenderBackend()->GetDevice()->GetFeatures().dynFunctions.vkDestroyAccelerationStructureKHR(
-                GetRenderBackend()->GetDevice()->GetDevice(),
-                m_accelerationStructure,
-                nullptr);
+            // delete the current acceleration structure once the frame is done, rather than stalling the gpu here
+            GetRenderBackend()->GetCurrentFrame()->OnFrameEnd.Bind([oldAccelerationStructure = m_accelerationStructure](...)
+                {
+                    GetRenderBackend()->GetDevice()->GetFeatures().dynFunctions.vkDestroyAccelerationStructureKHR(
+                        GetRenderBackend()->GetDevice()->GetDevice(),
+                        oldAccelerationStructure,
+                        nullptr);
+                }).Detach();
 
             m_accelerationStructure = VK_NULL_HANDLE;
 
