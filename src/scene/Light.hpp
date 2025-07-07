@@ -12,6 +12,7 @@
 
 #include <core/math/Color.hpp>
 #include <core/math/Vector3.hpp>
+#include <core/math/MathUtil.hpp>
 #include <core/math/BoundingBox.hpp>
 #include <core/math/BoundingSphere.hpp>
 
@@ -25,6 +26,8 @@ class Engine;
 class Camera;
 class Material;
 class View;
+
+enum ShadowMapFilter : uint32;
 
 HYP_ENUM()
 enum LightType : uint32
@@ -258,6 +261,13 @@ public:
 
     HYP_METHOD()
     BoundingBox GetAABB() const;
+
+    HYP_FORCE_INLINE ShadowMapFilter GetShadowMapFilter() const
+    {
+        return (ShadowMapFilter)((uint32(m_flags) & LF_SHADOW_FILTER_MASK)
+            ? MathUtil::FastLog2(uint32(m_flags) & LF_SHADOW_FILTER_MASK)
+            : 0);
+    }
 
     BoundingSphere GetBoundingSphere() const;
 

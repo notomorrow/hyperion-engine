@@ -278,6 +278,33 @@ private:
     ShadowMapShaderData m_bufferData;
 };
 
+struct HYP_API ShadowPassData : PassData
+{
+    RenderShadowMap* shadowMap = nullptr;
+
+    virtual ~ShadowPassData() override;
+};
+
+struct ShadowPassDataExt : PassDataExt
+{
+    Light* light = nullptr;
+
+    ShadowPassDataExt()
+        : PassDataExt(TypeId::ForType<ShadowPassDataExt>())
+    {
+    }
+
+    virtual ~ShadowPassDataExt() override = default;
+
+    virtual PassDataExt* Clone() override
+    {
+        ShadowPassDataExt* clone = new ShadowPassDataExt;
+        clone->light = light;
+
+        return clone;
+    }
+};
+
 class ShadowRendererBase : public RendererBase
 {
 public:
@@ -292,6 +319,26 @@ protected:
     ShadowRendererBase();
 
     virtual PassData* CreateViewPassData(View* view, PassDataExt&) override = 0;
+};
+
+class PointShadowRenderer : public ShadowRendererBase
+{
+public:
+    PointShadowRenderer() = default;
+    virtual ~PointShadowRenderer() override = default;
+
+protected:
+    virtual PassData* CreateViewPassData(View* view, PassDataExt&) override;
+};
+
+class DirectionalShadowRenderer : public ShadowRendererBase
+{
+public:
+    DirectionalShadowRenderer() = default;
+    virtual ~DirectionalShadowRenderer() override = default;
+
+protected:
+    virtual PassData* CreateViewPassData(View* view, PassDataExt&) override;
 };
 
 } // namespace hyperion

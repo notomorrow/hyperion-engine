@@ -1533,15 +1533,27 @@ void DeferredRenderer::RenderFrame(FrameBase* frame, const RenderSetup& rs)
     // Render shadows for shadow casting lights
     for (uint32 lightType = 0; lightType < LT_MAX; lightType++)
     {
-        if (!lights[lightType].Any() || g_renderGlobalState->globalRenderers[GRT_SHADOW_MAP][lightType])
+        RendererBase* shadowRenderer = g_renderGlobalState->globalRenderers[GRT_SHADOW_MAP][lightType];
+
+        if (!lights[lightType].Any() || !shadowRenderer)
         {
-            // No lights of that LightType bound or there is no defined ShadowMapRenderer
+            // No lights of that LightType bound or there is no defined ShadowRenderer
             continue;
         }
 
-        /// TODO: Trigger rendering shadow map.
-        /// We'll need a new PassData type (ShadowPassData ?) in order to store the textures / image views (in the case of atlas textures)
+        /// TODO: We'll need a new PassData type (ShadowPassData ?) in order to store the textures / image views (in the case of atlas textures)
         /// and we'll need some state to tell if we need to re-render the shadows.
+        for (Light* light : lights[lightType])
+        {
+            AssertDebug(light != nullptr);
+
+            if (light->GetLightFlags() & LF_SHADOW)
+            {
+                newRs.light = light;
+                shadowRenderer->RenderFrame(frame, newRs);
+                newRs.light = nullptr;
+            }
+        }
     }
 
     {

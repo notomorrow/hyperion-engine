@@ -11,6 +11,7 @@
 #include <rendering/RenderProxy.hpp>
 #include <rendering/RenderBackend.hpp>
 #include <rendering/RenderGlobalState.hpp>
+#include <rendering/util/ShadowCameraHelper.hpp>
 
 #include <core/object/HypClassUtils.hpp>
 
@@ -111,10 +112,7 @@ void Light::CreateShadowViews()
         return;
     }
 
-    const ShadowMapFilter shadowMapFilter = (ShadowMapFilter)(((uint32)m_flags & LF_SHADOW_FILTER_MASK)
-            ? MathUtil::FastLog2(((uint32)m_flags) & LF_SHADOW_FILTER_MASK)
-            : SMF_STANDARD);
-
+    const ShadowMapFilter shadowMapFilter = GetShadowMapFilter();
     AssertDebug(shadowMapFilter < std::size(g_shadowMapFilterPropertyNames));
 
     const Vec2u shadowMapDimensions = Vec2u { 256, 256 };
@@ -212,7 +210,6 @@ void Light::CreateShadowViews()
             .overrideAttributes = overrideAttributes
         };
 
-        /// TODO Should have static and dynamic shadow views, so we can avoid rendering to what's not needed
         m_shadowViews[i] = CreateObject<View>(viewDesc);
 
         if (Scene* scene = GetScene())
@@ -264,11 +261,28 @@ void Light::Update(float delta)
 {
     if (m_flags & LF_SHADOW)
     {
-        /// TODO: Update shadow camera position (could be useful / cleaner to put this in another class, like a helper)
 
         /// TODO: Make update turn on/off dep. on octree changes (see EnvGrid)
         for (int i = 0; i < int(m_shadowViews.Size()); i++)
         {
+            /// Update shadow camera position
+            BoundingBox shadowViewAabb;
+
+            switch (m_type)
+            {
+            case LT_DIRECTIONAL:
+                ShadowCameraHelper::UpdateShadowCameraDirectional(
+                    m_shadowViews[i]->GetCamera(),
+                    Vec3f::Zero(), /// @TODO: Clip to player
+                    GetPosition(),
+                    150.0f, /// TODO
+                    shadowViewAabb);
+
+                break;
+            default:
+                break;
+            }
+
             m_shadowViews[i]->UpdateVisibility();
             m_shadowViews[i]->Collect();
 

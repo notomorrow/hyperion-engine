@@ -1178,6 +1178,8 @@ RenderGlobalState::RenderGlobalState()
     globalRenderers[GRT_ENV_GRID].PushBack(new EnvGridRenderer());
 
     globalRenderers[GRT_SHADOW_MAP].Resize(LT_MAX); // 1 ShadowMapRenderer per LightType
+    globalRenderers[GRT_SHADOW_MAP][LT_POINT] = new PointShadowRenderer();
+    globalRenderers[GRT_SHADOW_MAP][LT_DIRECTIONAL] = new DirectionalShadowRenderer();
 }
 
 RenderGlobalState::~RenderGlobalState()

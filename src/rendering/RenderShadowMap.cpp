@@ -310,6 +310,21 @@ void RenderShadowMap::UpdateBufferData()
 
 #pragma endregion RenderShadowMap
 
+#pragma region ShadowPassData
+
+ShadowPassData::~ShadowPassData()
+{
+    if (shadowMap != nullptr)
+    {
+        bool freeShadowMapResult = g_renderGlobalState->shadowMapAllocator->FreeShadowMap(shadowMap);
+        AssertDebug(freeShadowMapResult);
+
+        shadowMap = nullptr;
+    }
+}
+
+#pragma endregion ShadowPassData
+
 #pragma region ShadowRendererBase
 
 ShadowRendererBase::ShadowRendererBase() = default;
@@ -329,9 +344,7 @@ void ShadowRendererBase::RenderFrame(FrameBase* frame, const RenderSetup& render
 
     AssertDebug(renderSetup.IsValid());
     AssertDebug(renderSetup.light != nullptr);
-    AssertDebug(renderSetup.view != nullptr);
 
-    // @TODO: Implementation
     RenderProxyLight* lightProxy = static_cast<RenderProxyLight*>(RenderApi_GetRenderProxy(renderSetup.light->Id()));
     AssertDebug(lightProxy != nullptr, "Proxy for Light {} not found when rendering shadows!", renderSetup.light->Id());
     AssertDebug(lightProxy->shadowViews.Any(), "Light {} proxy has no shadow view attached!", renderSetup.light->Id());
@@ -345,11 +358,56 @@ void ShadowRendererBase::RenderFrame(FrameBase* frame, const RenderSetup& render
         rs.view = &shadowView->GetRenderResource(); // temp
         rs.passData = FetchViewPassData(rs.view->GetView());
 
-        /// TODO: Render the view
+        ShadowPassData* pd = static_cast<ShadowPassData*>(rs.passData);
+        AssertDebug(pd != nullptr);
+
+        AssertDebug(pd->shadowMap != nullptr);
+
+        HYP_LOG_TEMP("Render Shadow map here for light {}", renderSetup.light->Id());
     }
 }
 
 #pragma endregion ShadowRendererBase
+
+#pragma region PointShadowRenderer
+
+PassData* PointShadowRenderer::CreateViewPassData(View* view, PassDataExt& ext)
+{
+    ShadowPassDataExt* extCasted = ext.AsType<ShadowPassDataExt>();
+    AssertDebug(extCasted != nullptr, "ShadowPassDataExt must be provided for PointShadowRenderer");
+    AssertDebug(extCasted->light != nullptr);
+
+    ShadowPassData* pd = new ShadowPassData;
+    pd->view = view->WeakHandleFromThis();
+    pd->viewport = view->GetRenderResource().GetViewport();
+
+    RenderShadowMap* shadowMap = g_renderGlobalState->shadowMapAllocator->AllocateShadowMap(
+        ShadowMapType::SMT_OMNI,
+        extCasted->light->GetShadowMapFilter(),
+        pd->viewport.extent);
+
+    AssertDebug(shadowMap != nullptr);
+    pd->shadowMap = shadowMap;
+
+    return pd;
+}
+
+#pragma endregion PointShadowRenderer
+
+#pragma region DirectionalShadowRenderer
+
+PassData* DirectionalShadowRenderer::CreateViewPassData(View* view, PassDataExt&)
+{
+    ShadowPassData* pd = new ShadowPassData;
+    pd->view = view->WeakHandleFromThis();
+    pd->viewport = view->GetRenderResource().GetViewport();
+
+    /// @TODO: Create shadow atlas element and imageviews
+
+    return pd;
+}
+
+#pragma endregion DirectionalShadowRenderer
 
 HYP_DESCRIPTOR_SRV(Global, ShadowMapsTextureArray, 1);
 HYP_DESCRIPTOR_SRV(Global, PointLightShadowMapsTextureArray, 1);
