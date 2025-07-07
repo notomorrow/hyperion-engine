@@ -62,7 +62,7 @@ void PostFXPass::CreateDescriptors()
     //     ? NAME("PostFXPreStack")
     //     : NAME("PostFXPostStack");
 
-    // for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++) {
+    // for (uint32 frameIndex = 0; frameIndex < g_framesInFlight; frameIndex++) {
     //     g_renderGlobalState->GlobalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)
     //         ->SetElement(descriptorName, m_effectIndex, m_framebuffer->GetAttachment(0)->GetImageView());
     // }

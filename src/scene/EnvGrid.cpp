@@ -66,14 +66,14 @@ uint32 EnvProbeCollection::AddProbe(const Handle<EnvProbe>& envProbe)
     Assert(envProbe.IsValid());
     Assert(envProbe->IsReady());
 
-    Assert(numProbes < maxBoundAmbientProbes);
+    Assert(numProbes < g_maxBoundAmbientProbes);
 
     const uint32 index = numProbes++;
 
     envProbes[index] = envProbe;
     envRenderProbes[index] = TResourceHandle<RenderEnvProbe>(envProbe->GetRenderResource());
     indirectIndices[index] = index;
-    indirectIndices[maxBoundAmbientProbes + index] = index;
+    indirectIndices[g_maxBoundAmbientProbes + index] = index;
 
     return index;
 }
@@ -84,14 +84,14 @@ void EnvProbeCollection::AddProbe(uint32 index, const Handle<EnvProbe>& envProbe
     Assert(envProbe.IsValid());
     Assert(envProbe->IsReady());
 
-    Assert(index < maxBoundAmbientProbes);
+    Assert(index < g_maxBoundAmbientProbes);
 
     numProbes = MathUtil::Max(numProbes, index + 1);
 
     envProbes[index] = envProbe;
     envRenderProbes[index] = TResourceHandle<RenderEnvProbe>(envProbe->GetRenderResource());
     indirectIndices[index] = index;
-    indirectIndices[maxBoundAmbientProbes + index] = index;
+    indirectIndices[g_maxBoundAmbientProbes + index] = index;
 }
 
 #pragma region EnvProbeCollection
@@ -263,17 +263,21 @@ void EnvGrid::Init()
         .numViews = 6
     };
 
-    m_view = CreateObject<View>(ViewDesc {
+    ViewDesc viewDesc {
         .flags = ViewFlags::COLLECT_STATIC_ENTITIES
             | ViewFlags::SKIP_FRUSTUM_CULLING
-            | ViewFlags::SKIP_ENV_GRIDS,
+            | ViewFlags::SKIP_ENV_GRIDS
+            | ViewFlags::DISABLE_BUFFER,
         .viewport = Viewport { .extent = probeDimensions, .position = Vec2i::Zero() },
         .outputTargetDesc = outputTargetDesc,
         .scenes = {},
         .camera = m_camera,
         .overrideAttributes = RenderableAttributeSet(
             MeshAttributes {},
-            MaterialAttributes { .shaderDefinition = shaderDefinition, .cullFaces = FCM_BACK }) });
+            MaterialAttributes { .shaderDefinition = shaderDefinition, .cullFaces = FCM_BACK })
+    };
+
+    m_view = CreateObject<View>(viewDesc);
 
     InitObject(m_view);
 
@@ -524,9 +528,6 @@ void EnvGrid::Update(float delta)
         shouldRecollectEntites = true;
     }
 
-    /// FIXME: View not updating every frame is causing us to have holes in the RenderProxyLists - every 3 frames we have data, others, none
-    shouldRecollectEntites = true;
-
     if (!shouldRecollectEntites)
     {
         return;
@@ -535,7 +536,7 @@ void EnvGrid::Update(float delta)
     m_camera->Update(delta);
 
     m_view->UpdateVisibility();
-    m_view->Update(delta);
+    m_view->Collect();
 
     // Make sure all our probes were collected - if this doesn't match up, down the line when we try to receive resource binding indices they wouldn't be found
     RenderProxyList& rpl = RenderApi_GetProducerProxyList(m_view);

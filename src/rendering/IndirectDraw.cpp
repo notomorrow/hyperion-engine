@@ -105,9 +105,9 @@ static bool ResizeInstancesBuffer(
 
 static bool ResizeIfNeeded(
     FrameBase* frame,
-    const FixedArray<GpuBufferRef, maxFramesInFlight>& indirectBuffers,
-    const FixedArray<GpuBufferRef, maxFramesInFlight>& instanceBuffers,
-    const FixedArray<GpuBufferRef, maxFramesInFlight>& stagingBuffers,
+    const FixedArray<GpuBufferRef, g_framesInFlight>& indirectBuffers,
+    const FixedArray<GpuBufferRef, g_framesInFlight>& instanceBuffers,
+    const FixedArray<GpuBufferRef, g_framesInFlight>& stagingBuffers,
     uint32 numDrawCommands,
     uint32 numObjectInstances,
     uint8 dirtyBits)
@@ -136,19 +136,19 @@ static bool ResizeIfNeeded(
 struct RENDER_COMMAND(CreateIndirectDrawStateBuffers)
     : RenderCommand
 {
-    FixedArray<GpuBufferRef, maxFramesInFlight> indirectBuffers;
-    FixedArray<GpuBufferRef, maxFramesInFlight> instanceBuffers;
-    FixedArray<GpuBufferRef, maxFramesInFlight> stagingBuffers;
+    FixedArray<GpuBufferRef, g_framesInFlight> indirectBuffers;
+    FixedArray<GpuBufferRef, g_framesInFlight> instanceBuffers;
+    FixedArray<GpuBufferRef, g_framesInFlight> stagingBuffers;
 
     RENDER_COMMAND(CreateIndirectDrawStateBuffers)(
-        const FixedArray<GpuBufferRef, maxFramesInFlight>& indirectBuffers,
-        const FixedArray<GpuBufferRef, maxFramesInFlight>& instanceBuffers,
-        const FixedArray<GpuBufferRef, maxFramesInFlight>& stagingBuffers)
+        const FixedArray<GpuBufferRef, g_framesInFlight>& indirectBuffers,
+        const FixedArray<GpuBufferRef, g_framesInFlight>& instanceBuffers,
+        const FixedArray<GpuBufferRef, g_framesInFlight>& stagingBuffers)
         : indirectBuffers(indirectBuffers),
           instanceBuffers(instanceBuffers),
           stagingBuffers(stagingBuffers)
     {
-        for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
+        for (uint32 frameIndex = 0; frameIndex < g_framesInFlight; frameIndex++)
         {
             Assert(this->indirectBuffers[frameIndex].IsValid());
             Assert(this->instanceBuffers[frameIndex].IsValid());
@@ -169,7 +169,7 @@ struct RENDER_COMMAND(CreateIndirectDrawStateBuffers)
 
         singleTimeCommands->Push([&](CmdList& cmd) -> RendererResult
             {
-                for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
+                for (uint32 frameIndex = 0; frameIndex < g_framesInFlight; frameIndex++)
                 {
                     FrameRef frame = g_renderBackend->MakeFrame(frameIndex);
 
@@ -204,7 +204,7 @@ IndirectDrawState::IndirectDrawState()
       m_dirtyBits(0x3)
 {
     // Allocate used buffers so they can be set in descriptor sets
-    for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
+    for (uint32 frameIndex = 0; frameIndex < g_framesInFlight; frameIndex++)
     {
         m_indirectBuffers[frameIndex] = g_renderBackend->MakeGpuBuffer(GpuBufferType::INDIRECT_ARGS_BUFFER, sizeof(IndirectDrawCommand));
         m_instanceBuffers[frameIndex] = g_renderBackend->MakeGpuBuffer(GpuBufferType::SSBO, sizeof(ObjectInstance));
@@ -379,7 +379,7 @@ void IndirectRenderer::Create(IDrawCallCollectionImpl* impl)
     GpuBufferHolderBase* entityInstanceBatches = impl->GetEntityInstanceBatchHolder();
     const SizeType batchSizeof = impl->GetBatchSizeOf();
 
-    for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
+    for (uint32 frameIndex = 0; frameIndex < g_framesInFlight; frameIndex++)
     {
         const DescriptorSetRef& descriptorSet = descriptorTable->GetDescriptorSet(NAME("ObjectVisibilityDescriptorSet"), frameIndex);
         Assert(descriptorSet != nullptr);

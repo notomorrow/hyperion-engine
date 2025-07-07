@@ -1023,7 +1023,7 @@ struct DeletionQueueBase
 
 struct RenderObjectDeleter
 {
-    static constexpr uint32 initialCyclesRemaining = maxFramesInFlight + 1;
+    static constexpr uint32 initialCyclesRemaining = g_framesInFlight + 1;
     static constexpr SizeType maxQueues = 63;
 
     static FixedArray<DeletionQueueBase*, maxQueues + 1> s_queues;
@@ -1034,7 +1034,7 @@ struct RenderObjectDeleter
     {
         using Base = DeletionQueueBase;
 
-        static constexpr uint32 initialCyclesRemaining = maxFramesInFlight + 1;
+        static constexpr uint32 initialCyclesRemaining = g_framesInFlight + 1;
 
         Array<Pair<RenderObjectHandle_Strong<T>, uint8>> items;
         Queue<RenderObjectHandle_Strong<T>> toDelete;

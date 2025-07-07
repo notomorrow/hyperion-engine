@@ -64,8 +64,8 @@ private:
     RendererResult RetrieveSupportDetails();
     RendererResult RetrieveImageHandles();
 
-    FixedArray<VulkanFrameRef, maxFramesInFlight> m_frames;
-    FixedArray<VulkanCommandBufferRef, maxFramesInFlight> m_commandBuffers;
+    FixedArray<VulkanFrameRef, g_framesInFlight> m_frames;
+    FixedArray<VulkanCommandBufferRef, g_framesInFlight> m_commandBuffers;
 
     VkSwapchainKHR m_handle;
     VkSurfaceKHR m_surface;

@@ -21,7 +21,7 @@
 
 namespace hyperion {
 
-static constexpr SizeType maxProbesInShGridBuffer = maxBoundAmbientProbes;
+static constexpr SizeType maxProbesInShGridBuffer = g_maxBoundAmbientProbes;
 
 struct alignas(16) ParticleShaderData
 {
@@ -198,8 +198,8 @@ protected:
     TypeId m_structTypeId;
     SizeType m_structSize;
 
-    FixedArray<GpuBufferRef, maxFramesInFlight> m_buffers;
-    FixedArray<Range<uint32>, maxFramesInFlight> m_dirtyRanges;
+    FixedArray<GpuBufferRef, g_framesInFlight> m_buffers;
+    FixedArray<Range<uint32>, g_framesInFlight> m_dirtyRanges;
 };
 
 template <class StructType>

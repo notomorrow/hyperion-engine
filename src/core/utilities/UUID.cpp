@@ -4,6 +4,7 @@
 #include <core/threading/Threads.hpp>
 
 #include <core/utilities/Time.hpp>
+#include <core/utilities/ByteUtil.hpp>
 
 #include <Types.hpp>
 
@@ -51,8 +52,8 @@ ANSIString UUID::ToString() const
         uint64 data[2];
         uint8 bytes[16];
     } u {
-        IsLittleEndian() ? data0 : SwapEndianness(data0),
-        IsLittleEndian() ? data1 : SwapEndianness(data1)
+        ByteUtil::IsLittleEndian() ? data0 : SwapEndian(data0),
+        ByteUtil::IsLittleEndian() ? data1 : SwapEndian(data1)
     };
 
     char buffer[37] = { '\0' };

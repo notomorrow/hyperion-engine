@@ -85,7 +85,7 @@ void ShadowMapAllocator::Initialize()
         TFM_NEAREST,
         TFM_NEAREST,
         TWM_CLAMP_TO_EDGE,
-        maxBoundPointShadowMaps * 6,
+        g_maxBoundPointShadowMaps * 6,
         IU_SAMPLED | IU_STORAGE });
 
     HYPERION_ASSERT_RESULT(m_pointLightShadowMapImage->Create());
@@ -119,7 +119,7 @@ RenderShadowMap* ShadowMapAllocator::AllocateShadowMap(ShadowMapType shadowMapTy
         const uint32 pointLightIndex = m_pointLightShadowMapIdGenerator.Next() - 1;
 
         // Cannot allocate if we ran out of IDs
-        if (pointLightIndex >= maxBoundPointShadowMaps)
+        if (pointLightIndex >= g_maxBoundPointShadowMaps)
         {
             m_pointLightShadowMapIdGenerator.ReleaseId(pointLightIndex + 1);
 

@@ -54,9 +54,9 @@ enum EnvGridType : uint32
 struct EnvProbeCollection
 {
     uint32 numProbes = 0;
-    FixedArray<uint32, maxBoundAmbientProbes * 2> indirectIndices = { 0 };
-    FixedArray<Handle<EnvProbe>, maxBoundAmbientProbes> envProbes = {};
-    FixedArray<TResourceHandle<RenderEnvProbe>, maxBoundAmbientProbes> envRenderProbes = {};
+    FixedArray<uint32, g_maxBoundAmbientProbes * 2> indirectIndices = { 0 };
+    FixedArray<Handle<EnvProbe>, g_maxBoundAmbientProbes> envProbes = {};
+    FixedArray<TResourceHandle<RenderEnvProbe>, g_maxBoundAmbientProbes> envRenderProbes = {};
 
     // Must be called in EnvGrid::Init(), before probes are used from the render thread.
     // returns the index
@@ -67,8 +67,8 @@ struct EnvProbeCollection
 
     HYP_FORCE_INLINE void SetIndexOnGameThread(uint32 index, uint32 newIndex)
     {
-        Assert(index < maxBoundAmbientProbes);
-        Assert(newIndex < maxBoundAmbientProbes);
+        Assert(index < g_maxBoundAmbientProbes);
+        Assert(newIndex < g_maxBoundAmbientProbes);
 
         indirectIndices[index] = newIndex;
     }
@@ -90,20 +90,20 @@ struct EnvProbeCollection
 
     HYP_FORCE_INLINE void SetIndexOnRenderThread(uint32 index, uint32 newIndex)
     {
-        Assert(index < maxBoundAmbientProbes);
-        Assert(newIndex < maxBoundAmbientProbes);
+        Assert(index < g_maxBoundAmbientProbes);
+        Assert(newIndex < g_maxBoundAmbientProbes);
 
-        indirectIndices[maxBoundAmbientProbes + index] = newIndex;
+        indirectIndices[g_maxBoundAmbientProbes + index] = newIndex;
     }
 
     HYP_FORCE_INLINE uint32 GetIndexOnRenderThread(uint32 index) const
     {
-        return indirectIndices[maxBoundAmbientProbes + index];
+        return indirectIndices[g_maxBoundAmbientProbes + index];
     }
 
     HYP_FORCE_INLINE const Handle<EnvProbe>& GetEnvProbeOnRenderThread(uint32 index) const
     {
-        return envProbes[indirectIndices[maxBoundAmbientProbes + index]];
+        return envProbes[indirectIndices[g_maxBoundAmbientProbes + index]];
     }
 };
 

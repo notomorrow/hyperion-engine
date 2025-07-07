@@ -62,7 +62,7 @@ struct RENDER_COMMAND(SetDDGIDescriptors)
 
     virtual RendererResult operator()() override
     {
-        for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
+        for (uint32 frameIndex = 0; frameIndex < g_framesInFlight; frameIndex++)
         {
             g_renderGlobalState->GlobalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)->SetElement(NAME("DDGIUniforms"), uniformBuffer);
 
@@ -87,7 +87,7 @@ struct RENDER_COMMAND(UnsetDDGIDescriptors)
     virtual RendererResult operator()() override
     {
         // remove result image from global descriptor set
-        for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
+        for (uint32 frameIndex = 0; frameIndex < g_framesInFlight; frameIndex++)
         {
             g_renderGlobalState->GlobalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)->SetElement(NAME("DDGIIrradianceTexture"), g_renderGlobalState->placeholderData->GetImageView2D1x1R8());
 
@@ -212,7 +212,7 @@ void DDGI::CreatePipelines()
 
     DescriptorTableRef raytracingPipelineDescriptorTable = g_renderBackend->MakeDescriptorTable(&raytracingPipelineDescriptorTableDecl);
 
-    for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
+    for (uint32 frameIndex = 0; frameIndex < g_framesInFlight; frameIndex++)
     {
         Assert(m_topLevelAccelerationStructures[frameIndex] != nullptr);
 
@@ -259,7 +259,7 @@ void DDGI::CreatePipelines()
 
         DescriptorTableRef descriptorTable = g_renderBackend->MakeDescriptorTable(&descriptorTableDecl);
 
-        for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
+        for (uint32 frameIndex = 0; frameIndex < g_framesInFlight; frameIndex++)
         {
             const DescriptorSetRef& descriptorSet = descriptorTable->GetDescriptorSet(NAME("DDGIDescriptorSet"), frameIndex);
             Assert(descriptorSet != nullptr);
@@ -379,7 +379,7 @@ void DDGI::ApplyTLASUpdates(RTUpdateStateFlags flags)
         return;
     }
 
-    for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
+    for (uint32 frameIndex = 0; frameIndex < g_framesInFlight; frameIndex++)
     {
         const DescriptorSetRef& descriptorSet = m_pipeline->GetDescriptorTable()->GetDescriptorSet(NAME("DDGIDescriptorSet"), frameIndex);
         Assert(descriptorSet != nullptr);

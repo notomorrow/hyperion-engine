@@ -82,7 +82,7 @@ void EntityRenderProxySystem_Mesh::OnEntityRemoved(Entity* entity)
 
     if (meshComponent.proxy)
     {
-        for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
+        for (uint32 frameIndex = 0; frameIndex < g_framesInFlight; frameIndex++)
         {
             BLASRef& blas = meshComponent.proxy->raytracingData.bottomLevelAccelerationStructures[frameIndex];
 

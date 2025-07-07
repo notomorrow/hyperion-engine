@@ -222,7 +222,7 @@ void SSRRenderer::CreateComputePipelines()
     const DescriptorTableDeclaration& writeUvsShaderDescriptorTableDecl = writeUvsShader->GetCompiledShader()->GetDescriptorTableDeclaration();
     DescriptorTableRef writeUvsShaderDescriptorTable = g_renderBackend->MakeDescriptorTable(&writeUvsShaderDescriptorTableDecl);
 
-    for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
+    for (uint32 frameIndex = 0; frameIndex < g_framesInFlight; frameIndex++)
     {
         const DescriptorSetRef& descriptorSet = writeUvsShaderDescriptorTable->GetDescriptorSet(NAME("SSRDescriptorSet"), frameIndex);
         Assert(descriptorSet != nullptr);
@@ -254,7 +254,7 @@ void SSRRenderer::CreateComputePipelines()
     const DescriptorTableDeclaration& sampleGbufferShaderDescriptorTableDecl = sampleGbufferShader->GetCompiledShader()->GetDescriptorTableDeclaration();
     DescriptorTableRef sampleGbufferShaderDescriptorTable = g_renderBackend->MakeDescriptorTable(&sampleGbufferShaderDescriptorTableDecl);
 
-    for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
+    for (uint32 frameIndex = 0; frameIndex < g_framesInFlight; frameIndex++)
     {
         const DescriptorSetRef& descriptorSet = sampleGbufferShaderDescriptorTable->GetDescriptorSet(NAME("SSRDescriptorSet"), frameIndex);
         Assert(descriptorSet != nullptr);

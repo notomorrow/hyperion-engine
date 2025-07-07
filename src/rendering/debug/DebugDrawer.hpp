@@ -262,7 +262,7 @@ private:
     AtomicVar<uint32> m_numDrawCommandsPendingAddition;
     Mutex m_drawCommandsMutex;
 
-    FixedArray<GpuBufferRef, maxFramesInFlight> m_instanceBuffers;
+    FixedArray<GpuBufferRef, g_framesInFlight> m_instanceBuffers;
 };
 
 } // namespace hyperion

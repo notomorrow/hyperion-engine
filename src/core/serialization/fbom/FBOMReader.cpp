@@ -218,7 +218,7 @@ FBOMResult FBOMReader::Deserialize(FBOMLoadContext& context, BufferedReader& rea
         const ubyte endianness = headerBytes[sizeof(FBOM::headerIdentifier)];
 
         // set if it needs to swap endianness.
-        m_swapEndianness = bool(endianness) != IsBigEndian();
+        m_swapEndianness = bool(endianness) != ByteUtil::IsBigEndian();
 
         // get version info
         FBOMVersion binaryVersion;

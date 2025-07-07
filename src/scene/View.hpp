@@ -18,7 +18,7 @@
 #include <rendering/RenderObject.hpp>
 
 #include <GameCounter.hpp>
-
+#include <Constants.hpp>
 #include <Types.hpp>
 
 namespace hyperion {
@@ -52,6 +52,9 @@ enum class ViewFlags : uint32
     SKIP_ENV_GRIDS = 0x40,         //!< If set, the view will not collect EnvGrids.
     SKIP_LIGHTS = 0x80,            //!< If set, the view will not collect Lights.
     SKIP_LIGHTMAP_VOLUMES = 0x100, //!< If set, the view will not collect LightmapVolumes.
+
+    DISABLE_BUFFER = 0x1000, //!< Disables double / triple buffering for the RenderProxyList this View writes to.
+                             //  --- Use ONLY for Views that are not written to every frame, and instead are written to and read once (or very infrequently); e.g EnvProbes.
 
     // enable flags
     ENABLE_RAYTRACING = 0x100000, //!< Should raytracing features be enabled for rendering this View? (Only for Views with GBUFFER enabled). Raytracing must be enabled in the global renderer config
@@ -203,10 +206,15 @@ public:
         return m_lastMeshCollectionResult;
     }
 
+    HYP_FORCE_INLINE RenderProxyList* GetRenderProxyList(uint32 index) const
+    {
+        return m_renderProxyLists[index];
+    }
+
     bool TestRay(const Ray& ray, RayTestResults& outResults, bool useBvh = true) const;
 
     void UpdateVisibility();
-    void Update(float delta);
+    void Collect();
 
 protected:
     void Init() override;
@@ -229,6 +237,8 @@ protected:
     Array<Handle<Scene>> m_scenes;
     Handle<Camera> m_camera;
     ViewOutputTarget m_outputTarget;
+
+    RenderProxyList* m_renderProxyLists[g_tripleBuffer ? 3 : 2];
 
     // ViewID m_viewId; // unique Id for this view in the current frame
 

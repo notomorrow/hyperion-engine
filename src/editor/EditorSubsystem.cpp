@@ -1424,6 +1424,8 @@ void EditorSubsystem::InitViewport()
                 }
             }
 
+            HYP_LOG_TEMP("mouse drag, {} , is hovering ? {}", event.position, IsHoveringManipulationWidget());
+
             m_camera->GetCameraController()->GetInputHandler()->OnMouseDrag(event);
 
             return UIEventHandlerResult::OK;

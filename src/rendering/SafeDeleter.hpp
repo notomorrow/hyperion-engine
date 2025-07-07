@@ -153,7 +153,7 @@ class SafeDeleter
 {
 
 public:
-    static constexpr uint8 initialCyclesRemaining = uint8(maxFramesInFlight + 1);
+    static constexpr uint8 initialCyclesRemaining = uint8(g_framesInFlight + 1);
 
     template <class T>
     void SafeRelease(T&& resource)

@@ -131,6 +131,17 @@ View::View(const ViewDesc& viewDesc)
       m_priority(viewDesc.priority),
       m_overrideAttributes(viewDesc.overrideAttributes)
 {
+    for (auto it = std::begin(m_renderProxyLists); it != std::end(m_renderProxyLists); ++it)
+    {
+        if ((m_flags & ViewFlags::DISABLE_BUFFER) && it != std::begin(m_renderProxyLists))
+        {
+            *it = *(it - 1);
+
+            continue;
+        }
+
+        *it = new RenderProxyList;
+    }
 }
 
 View::~View()
@@ -146,6 +157,17 @@ View::~View()
         m_outputTarget = ViewOutputTarget();
 
         SafeRelease(std::move(framebuffer));
+    }
+
+    for (auto it = std::begin(m_renderProxyLists); it != std::end(m_renderProxyLists); ++it)
+    {
+        // if render proxy lists aren't unique, we just delete the first one and break the loop
+        if (it != std::begin(m_renderProxyLists) && *it == *(it - 1))
+        {
+            break;
+        }
+
+        delete *it;
     }
 
     if (m_renderResource)
@@ -259,7 +281,7 @@ void View::UpdateVisibility()
     }
 }
 
-void View::Update(float delta)
+void View::Collect()
 {
     HYP_SCOPE;
     Threads::AssertOnThread(g_gameThread | ThreadCategory::THREAD_CATEGORY_TASK);

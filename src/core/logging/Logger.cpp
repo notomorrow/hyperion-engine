@@ -186,7 +186,8 @@ public:
                 // spin to wait for write flag to be released
                 HYP_WAIT_IDLE();
             }
-        } while (HYP_UNLIKELY(rwMarkerState & writeFlag));
+        }
+        while (HYP_UNLIKELY(rwMarkerState & writeFlag));
 
         void* context = m_contexts[channelPtr->Id()];
         LoggerWriteFnPtr fnptr = m_writeFnptrTable[channelPtr->Id()];
@@ -236,7 +237,8 @@ public:
                 // spin to wait for write flag to be released
                 HYP_WAIT_IDLE();
             }
-        } while (HYP_UNLIKELY(rwMarkerState & writeFlag));
+        }
+        while (HYP_UNLIKELY(rwMarkerState & writeFlag));
 
         void* context = m_contexts[channelPtr->Id()];
         LoggerWriteFnPtr fnptr = m_writeErrorFnptrTable[channelPtr->Id()];
@@ -486,7 +488,7 @@ void Logger::Log(const LogChannel& channel, const LogMessage& message)
 
 namespace logging {
 // // For Assert() to work with logging
-//template HYP_API void LogDynamic<Debug(), HYP_MAKE_CONST_ARG(&Log_Core)>(Logger&, const char*);
+// template HYP_API void LogDynamic<Debug(), HYP_MAKE_CONST_ARG(&Log_Core)>(Logger&, const char*);
 
 HYP_API void LogTemp(Logger& logger, const char* str)
 {

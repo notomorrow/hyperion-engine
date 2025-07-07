@@ -232,7 +232,7 @@ struct HYP_API PassData
     Viewport viewport;
 
     // per-View descriptor sets
-    FixedArray<DescriptorSetRef, maxFramesInFlight> descriptorSets;
+    FixedArray<DescriptorSetRef, g_framesInFlight> descriptorSets;
 
     CullData cullData;
 

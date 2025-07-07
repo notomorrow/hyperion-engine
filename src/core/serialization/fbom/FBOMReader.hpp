@@ -32,12 +32,11 @@
 
 #include <core/filesystem/FsUtil.hpp>
 
+#include <core/utilities/ByteUtil.hpp>
+
 #include <Constants.hpp>
 #include <Types.hpp>
 #include <HashCode.hpp>
-
-#include <type_traits>
-#include <cstring>
 
 namespace hyperion {
 
@@ -136,7 +135,7 @@ private:
         }
         else if (m_swapEndianness)
         {
-            SwapEndianness(value);
+            SwapEndian(value);
         }
     }
 

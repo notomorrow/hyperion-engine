@@ -56,7 +56,7 @@ public:
         return m_config.pathTracing;
     }
 
-    HYP_FORCE_INLINE void SetTopLevelAccelerationStructures(const FixedArray<TLASRef, maxFramesInFlight>& tlas)
+    HYP_FORCE_INLINE void SetTopLevelAccelerationStructures(const FixedArray<TLASRef, g_framesInFlight>& tlas)
     {
         m_topLevelAccelerationStructures = tlas;
     }
@@ -78,9 +78,9 @@ private:
 
     GBuffer* m_gbuffer;
 
-    FixedArray<TLASRef, maxFramesInFlight> m_topLevelAccelerationStructures;
+    FixedArray<TLASRef, g_framesInFlight> m_topLevelAccelerationStructures;
 
-    FixedArray<uint32, maxFramesInFlight> m_updates;
+    FixedArray<uint32, g_framesInFlight> m_updates;
 
     ShaderRef m_shader;
 
@@ -88,7 +88,7 @@ private:
     UniquePtr<TemporalBlending> m_temporalBlending;
 
     RaytracingPipelineRef m_raytracingPipeline;
-    FixedArray<GpuBufferRef, maxFramesInFlight> m_uniformBuffers;
+    FixedArray<GpuBufferRef, g_framesInFlight> m_uniformBuffers;
 
     Matrix4 m_previousViewMatrix;
 };

@@ -111,7 +111,7 @@ void TemporalAA::CreateComputePipelines()
         &m_historyTexture
     };
 
-    for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
+    for (uint32 frameIndex = 0; frameIndex < g_framesInFlight; frameIndex++)
     {
         // create descriptor sets for depth pyramid generation.
         const DescriptorSetRef& descriptorSet = descriptorTable->GetDescriptorSet(NAME("TemporalAADescriptorSet"), frameIndex);

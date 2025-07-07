@@ -123,7 +123,7 @@ GraphicsPipelineRef PassData::CreateGraphicsPipeline(
 
             AssertDebug(impl != nullptr);
 
-            for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
+            for (uint32 frameIndex = 0; frameIndex < g_framesInFlight; frameIndex++)
             {
                 const GpuBufferRef& gpuBuffer = impl->GetEntityInstanceBatchHolder()->GetBuffer(frameIndex);
                 Assert(gpuBuffer.IsValid());
