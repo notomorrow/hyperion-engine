@@ -489,6 +489,11 @@ UIEventHandlerResult UIStage::OnInputEvent(
         { // mouse drag event
             UIEventHandlerResult mouseDragEventHandlerResult = UIEventHandlerResult::OK;
 
+            if (m_mouseButtonPressedStates.Any())
+            {
+                HYP_LOG_TEMP("Mouse drag in UIStage: {}", GetName());
+            }
+
             for (const Pair<WeakHandle<UIObject>, UIObjectPressedState>& it : m_mouseButtonPressedStates)
             {
                 if (it.second.heldTime >= 0.05f)

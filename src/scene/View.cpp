@@ -133,7 +133,7 @@ View::View(const ViewDesc& viewDesc)
 {
     for (auto it = std::begin(m_renderProxyLists); it != std::end(m_renderProxyLists); ++it)
     {
-        if ((m_flags & ViewFlags::DISABLE_BUFFER) && it != std::begin(m_renderProxyLists))
+        if ((m_flags & ViewFlags::NOT_MULTI_BUFFERED) && it != std::begin(m_renderProxyLists))
         {
             *it = *(it - 1);
 
@@ -917,7 +917,7 @@ void View::CollectEnvProbes(RenderProxyList& rpl)
                 }
             }
 
-            rpl.envProbes.Track(probe->Id(), probe, probe->GetRenderProxyVersionPtr());
+            rpl.envProbes.Track(probe->Id(), probe, probe->GetRenderProxyVersionPtr(), /* allowDuplicatesInSameFrame */ false);
         }
 
         // TEMP SHIT
@@ -927,7 +927,7 @@ void View::CollectEnvProbes(RenderProxyList& rpl)
             {
                 AssertDebug(skyComponent.subsystem->GetEnvProbe()->IsA<SkyProbe>());
 
-                rpl.envProbes.Track(skyComponent.subsystem->GetEnvProbe()->Id(), skyComponent.subsystem->GetEnvProbe(), skyComponent.subsystem->GetEnvProbe()->GetRenderProxyVersionPtr());
+                rpl.envProbes.Track(skyComponent.subsystem->GetEnvProbe()->Id(), skyComponent.subsystem->GetEnvProbe(), skyComponent.subsystem->GetEnvProbe()->GetRenderProxyVersionPtr(), /* allowDuplicatesInSameFrame */ false);
             }
         }
     }
@@ -939,10 +939,10 @@ void View::CollectEnvProbes(RenderProxyList& rpl)
     if (diff.NeedsUpdate())
     {
         Array<EnvProbe*> removed;
-        rpl.envProbes.GetRemoved(removed, false);
+        rpl.envProbes.GetRemoved(removed, true);
 
         Array<EnvProbe*> added;
-        rpl.envProbes.GetAdded(added, false);
+        rpl.envProbes.GetAdded(added, true);
 
         for (EnvProbe* probe : added)
         {
@@ -953,14 +953,6 @@ void View::CollectEnvProbes(RenderProxyList& rpl)
         for (EnvProbe* probe : removed)
         {
             RenderApi_ReleaseRef(probe->Id());
-        }
-
-        Array<ObjId<EnvProbe>> changedIds;
-        rpl.envProbes.GetChanged(changedIds);
-
-        for (ObjId<EnvProbe> id : changedIds)
-        {
-            RenderApi_UpdateRenderProxy(id);
         }
     }
 }

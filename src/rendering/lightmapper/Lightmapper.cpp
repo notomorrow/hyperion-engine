@@ -1143,7 +1143,8 @@ LightmapJob::LightmapJob(LightmapJobParams&& params)
             | ViewFlags::SKIP_FRUSTUM_CULLING
             | ViewFlags::SKIP_ENV_GRIDS
             | ViewFlags::SKIP_LIGHTMAP_VOLUMES
-            | ViewFlags::ENABLE_RAYTRACING,
+            | ViewFlags::ENABLE_RAYTRACING
+            | ViewFlags::NOT_MULTI_BUFFERED,
         .viewport = Viewport { .extent = Vec2u::One(), .position = Vec2i::Zero() },
         .outputTargetDesc = outputTargetDesc,
         .scenes = { m_params.scene },

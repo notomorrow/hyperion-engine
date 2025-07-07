@@ -303,7 +303,7 @@ void EnvProbe::CreateView()
             | ViewFlags::SKIP_FRUSTUM_CULLING
             | ViewFlags::SKIP_ENV_PROBES
             | ViewFlags::SKIP_ENV_GRIDS
-            | ViewFlags::DISABLE_BUFFER,
+            | ViewFlags::NOT_MULTI_BUFFERED,
         .viewport = Viewport { .extent = m_dimensions, .position = Vec2i::Zero() },
         .outputTargetDesc = outputTargetDesc,
         .scenes = {},

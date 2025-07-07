@@ -489,7 +489,7 @@ void UIRenderSubsystem::Init()
     };
 
     ViewDesc viewDesc {
-        .flags = ViewFlags::DEFAULT & ~ViewFlags::ALL_WORLD_SCENES,
+        .flags = ViewFlags::DEFAULT & ~(ViewFlags::ALL_WORLD_SCENES | ViewFlags::ENABLE_RAYTRACING),
         .viewport = Viewport { .extent = surfaceSize, .position = Vec2i::Zero() },
         .outputTargetDesc = outputTargetDesc,
         .scenes = { m_uiStage->GetScene()->HandleFromThis() },

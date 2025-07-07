@@ -145,6 +145,12 @@ protected:
 
     virtual void SetStage_Internal(UIStage* stage) override;
 
+    virtual bool NeedsUpdate() const override
+    {
+        return m_mouseButtonPressedStates.Any() // to update mouse down timers
+            || UIObject::NeedsUpdate();
+    }
+
 private:
     virtual void ComputeActualSize(const UIObjectSize& inSize, Vec2i& outActualSize, UpdateSizePhase phase, bool isInner) override;
 

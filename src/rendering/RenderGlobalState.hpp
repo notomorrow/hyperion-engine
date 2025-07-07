@@ -175,11 +175,12 @@ public:
 
     BindlessStorage* bindlessStorage;
 
-    UniquePtr<class ShadowMapAllocator> ShadowMapAllocator;
-    UniquePtr<class GpuBufferHolderMap> GpuBufferHolderMap;
+    UniquePtr<ShadowMapAllocator> shadowMapAllocator;
     UniquePtr<PlaceholderData> placeholderData;
 
-    DescriptorTableRef GlobalDescriptorTable;
+    UniquePtr<GpuBufferHolderMap> gpuBufferHolders;
+
+    DescriptorTableRef globalDescriptorTable;
 
     RendererBase* mainRenderer;
     FixedArray<Array<RendererBase*>, GRT_MAX> globalRenderers;

@@ -24,7 +24,7 @@ void BindlessStorage::UnsetAllResources()
 
     for (uint32 frameIndex = 0; frameIndex < g_framesInFlight; frameIndex++)
     {
-        const DescriptorSetRef& descriptorSet = g_renderGlobalState->GlobalDescriptorTable->GetDescriptorSet(NAME("Material"), frameIndex);
+        const DescriptorSetRef& descriptorSet = g_renderGlobalState->globalDescriptorTable->GetDescriptorSet(NAME("Material"), frameIndex);
         AssertDebug(descriptorSet.IsValid());
 
         // Unset all active textures
@@ -57,7 +57,7 @@ void BindlessStorage::AddResource(ObjId<Texture> id, const ImageViewRef& imageVi
 
     for (uint32 frameIndex = 0; frameIndex < g_framesInFlight; frameIndex++)
     {
-        const DescriptorSetRef& descriptorSet = g_renderGlobalState->GlobalDescriptorTable->GetDescriptorSet(NAME("Material"), frameIndex);
+        const DescriptorSetRef& descriptorSet = g_renderGlobalState->globalDescriptorTable->GetDescriptorSet(NAME("Material"), frameIndex);
         AssertDebug(descriptorSet.IsValid());
 
         descriptorSet->SetElement(NAME("Textures"), id.ToIndex(), imageView);
@@ -84,7 +84,7 @@ void BindlessStorage::RemoveResource(ObjId<Texture> id)
 
     for (uint32 frameIndex = 0; frameIndex < g_framesInFlight; frameIndex++)
     {
-        const DescriptorSetRef& descriptorSet = g_renderGlobalState->GlobalDescriptorTable->GetDescriptorSet(NAME("Material"), frameIndex);
+        const DescriptorSetRef& descriptorSet = g_renderGlobalState->globalDescriptorTable->GetDescriptorSet(NAME("Material"), frameIndex);
         AssertDebug(descriptorSet.IsValid());
 
         descriptorSet->SetElement(NAME("Textures"), id.ToIndex(), g_renderGlobalState->placeholderData->DefaultTexture2D->GetRenderResource().GetImageView());
