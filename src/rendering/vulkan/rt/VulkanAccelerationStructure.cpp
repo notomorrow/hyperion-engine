@@ -356,11 +356,33 @@ RendererResult VulkanAccelerationStructureBase::CreateAccelerationStructure(
     }
 
     VulkanFenceRef fence = MakeRenderObject<VulkanFence>();
+    HYPERION_PASS_ERRORS(fence->Create(), result);
+    HYPERION_PASS_ERRORS(fence->Reset(), result);
 
     VulkanCommandBufferRef commandBuffer = MakeRenderObject<VulkanCommandBuffer>(VK_COMMAND_BUFFER_LEVEL_PRIMARY);
     HYPERION_BUBBLE_ERRORS(commandBuffer->Create(GetRenderBackend()->GetDevice()->GetGraphicsQueue().commandPools[0]));
 
     HYPERION_BUBBLE_ERRORS(commandBuffer->Begin());
+
+    /*class VulkanBuildAccelerationStructure final : public CmdBase
+    {
+    public:
+        VulkanBuildAccelerationStructure(const VulkanAccelerationStructureRef& accelerationStructure)
+            : m_accelerationStructure(accelerationStructure)
+        {
+        }
+
+        virtual void Execute(const CommandBufferRef& cmd) override
+        {
+            VulkanCommandBuffer* vulkanCommandBuffer = static_cast<VulkanCommandBuffer*>(cmd.Get());
+        }
+
+    private:
+        VulkanAccelerationStructureRef m_accelerationStructure;
+    };*/
+
+    /*FrameBase* frame = GetRenderBackend()->GetCurrentFrame();
+    CmdList& cmdList = frame->GetCommandList();*/
 
     GetRenderBackend()->GetDevice()->GetFeatures().dynFunctions.vkCmdBuildAccelerationStructuresKHR(
         commandBuffer->GetVulkanHandle(),
@@ -370,16 +392,10 @@ RendererResult VulkanAccelerationStructureBase::CreateAccelerationStructure(
 
     HYPERION_PASS_ERRORS(commandBuffer->End(), result);
 
-    HYPERION_PASS_ERRORS(fence->Create(), result);
-
-    HYPERION_PASS_ERRORS(fence->Reset(), result);
-
     HYPERION_PASS_ERRORS(commandBuffer->SubmitPrimary(&GetRenderBackend()->GetDevice()->GetGraphicsQueue(), fence, nullptr), result);
 
-    HYPERION_PASS_ERRORS(fence->WaitForGPU(), result);
-    HYPERION_PASS_ERRORS(fence->Destroy(), result);
-
-    HYPERION_PASS_ERRORS(commandBuffer->Destroy(), result);
+    SafeRelease(std::move(commandBuffer));
+    SafeRelease(std::move(fence));
 
     ClearFlag(ACCELERATION_STRUCTURE_FLAGS_NEEDS_REBUILDING);
 
