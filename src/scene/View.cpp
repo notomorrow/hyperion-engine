@@ -401,7 +401,7 @@ typename ResourceTracker<ObjId<Entity>, RenderProxyMesh>::Diff View::CollectMesh
 
     const ObjId<Camera> cameraId = m_camera->Id();
 
-    const bool skipFrustumCulling = (m_flags & ViewFlags::SKIP_FRUSTUM_CULLING);
+    const bool skipFrustumCulling = (m_flags & ViewFlags::NO_FRUSTUM_CULLING);
 
     for (const Handle<Scene>& scene : m_scenes)
     {
@@ -911,7 +911,7 @@ void View::CollectEnvProbes(RenderProxyList& rpl)
                     continue;
                 }
 
-                if (!(m_flags & ViewFlags::SKIP_FRUSTUM_CULLING) && !m_camera->GetFrustum().ContainsAABB(probeAabb))
+                if (!(m_flags & ViewFlags::NO_FRUSTUM_CULLING) && !m_camera->GetFrustum().ContainsAABB(probeAabb))
                 {
                     continue;
                 }

@@ -6,8 +6,11 @@
 #include <rendering/RenderGlobalState.hpp>
 #include <rendering/PlaceholderData.hpp>
 #include <rendering/RenderBackend.hpp>
-
+#include <rendering/RenderView.hpp>
 #include <rendering/RenderDescriptorSet.hpp>
+
+#include <scene/Light.hpp>
+#include <scene/View.hpp>
 
 #include <core/profiling/ProfileScope.hpp>
 
@@ -306,6 +309,47 @@ void RenderShadowMap::UpdateBufferData()
 }
 
 #pragma endregion RenderShadowMap
+
+#pragma region ShadowRendererBase
+
+ShadowRendererBase::ShadowRendererBase() = default;
+
+void ShadowRendererBase::Initialize()
+{
+}
+
+void ShadowRendererBase::Shutdown()
+{
+}
+
+void ShadowRendererBase::RenderFrame(FrameBase* frame, const RenderSetup& renderSetup)
+{
+    HYP_SCOPE;
+    Threads::AssertOnThread(g_renderThread);
+
+    AssertDebug(renderSetup.IsValid());
+    AssertDebug(renderSetup.light != nullptr);
+    AssertDebug(renderSetup.view != nullptr);
+
+    // @TODO: Implementation
+    RenderProxyLight* lightProxy = static_cast<RenderProxyLight*>(RenderApi_GetRenderProxy(renderSetup.light->Id()));
+    AssertDebug(lightProxy != nullptr, "Proxy for Light {} not found when rendering shadows!", renderSetup.light->Id());
+    AssertDebug(lightProxy->shadowViews.Any(), "Light {} proxy has no shadow view attached!", renderSetup.light->Id());
+
+    for (const WeakHandle<View>& shadowViewWeak : lightProxy->shadowViews)
+    {
+        View* shadowView = shadowViewWeak.Lock();
+        AssertDebug(shadowView != nullptr);
+
+        RenderSetup rs = renderSetup;
+        rs.view = &shadowView->GetRenderResource(); // temp
+        rs.passData = FetchViewPassData(rs.view->GetView());
+
+        /// TODO: Render the view
+    }
+}
+
+#pragma endregion ShadowRendererBase
 
 HYP_DESCRIPTOR_SRV(Global, ShadowMapsTextureArray, 1);
 HYP_DESCRIPTOR_SRV(Global, PointLightShadowMapsTextureArray, 1);

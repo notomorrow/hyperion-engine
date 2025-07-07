@@ -223,7 +223,8 @@ public:
     ~RenderProxyLight() override = default;
 
     WeakHandle<Light> light;
-    WeakHandle<Material> lightMaterial; // for textured area lights
+    WeakHandle<Material> lightMaterial;  // for textured area lights
+    Array<WeakHandle<View>> shadowViews; // optional, for lights casting shadow
     LightShaderData bufferData {};
 };
 

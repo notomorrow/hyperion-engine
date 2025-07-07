@@ -265,7 +265,7 @@ void EnvGrid::Init()
 
     ViewDesc viewDesc {
         .flags = ViewFlags::COLLECT_STATIC_ENTITIES
-            | ViewFlags::SKIP_FRUSTUM_CULLING
+            | ViewFlags::NO_FRUSTUM_CULLING
             | ViewFlags::SKIP_ENV_GRIDS
             | ViewFlags::NOT_MULTI_BUFFERED,
         .viewport = Viewport { .extent = probeDimensions, .position = Vec2i::Zero() },

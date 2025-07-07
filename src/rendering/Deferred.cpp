@@ -1530,7 +1530,7 @@ void DeferredRenderer::RenderFrame(FrameBase* frame, const RenderSetup& rs)
     // Render global environment probes and grids and set fallbacks
     RenderSetup newRs = rs;
 
-    // Render shadow maps for shadow casting lights
+    // Render shadows for shadow casting lights
     for (uint32 lightType = 0; lightType < LT_MAX; lightType++)
     {
         if (!lights[lightType].Any() || g_renderGlobalState->globalRenderers[GRT_SHADOW_MAP][lightType])

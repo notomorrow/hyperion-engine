@@ -4,6 +4,7 @@
 
 #include <rendering/RenderResource.hpp>
 #include <rendering/RenderObject.hpp>
+#include <rendering/Renderer.hpp>
 
 #include <core/math/Matrix4.hpp>
 #include <core/math/Vector2.hpp>
@@ -275,6 +276,22 @@ private:
     ShadowMapAtlasElement m_atlasElement;
     ImageViewRef m_imageView;
     ShadowMapShaderData m_bufferData;
+};
+
+class ShadowRendererBase : public RendererBase
+{
+public:
+    virtual ~ShadowRendererBase() override = default;
+
+    virtual void Initialize() override;
+    virtual void Shutdown() override;
+
+    virtual void RenderFrame(FrameBase* frame, const RenderSetup& renderSetup) override final;
+
+protected:
+    ShadowRendererBase();
+
+    virtual PassData* CreateViewPassData(View* view, PassDataExt&) override = 0;
 };
 
 } // namespace hyperion

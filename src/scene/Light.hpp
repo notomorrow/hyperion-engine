@@ -24,6 +24,7 @@ namespace hyperion {
 class Engine;
 class Camera;
 class Material;
+class View;
 
 HYP_ENUM()
 enum LightType : uint32
@@ -35,6 +36,22 @@ enum LightType : uint32
 
     LT_MAX
 };
+
+HYP_ENUM()
+enum LightFlags : uint32
+{
+    LF_NONE = 0x0,
+
+    LF_SHADOW = 0x1,
+    LF_SHADOW_PCF = 0x2,
+    LF_SHADOW_CONTACT_HARDENING = 0x4,
+    LF_SHADOW_VSM = 0x8,
+    LF_SHADOW_FILTER_MASK = (LF_SHADOW_PCF | LF_SHADOW_CONTACT_HARDENING | LF_SHADOW_VSM),
+
+    LF_DEFAULT = LF_SHADOW | LF_SHADOW_PCF
+};
+
+HYP_MAKE_ENUM_FLAGS(LightFlags);
 
 HYP_CLASS()
 class HYP_API Light final : public Entity
@@ -76,6 +93,24 @@ public:
     LightType GetLightType() const
     {
         return m_type;
+    }
+
+    HYP_METHOD()
+    EnumFlags<LightFlags> GetLightFlags() const
+    {
+        return m_flags;
+    }
+
+    HYP_METHOD()
+    void SetLightFlags(EnumFlags<LightFlags> flags)
+    {
+        if (m_flags == flags)
+        {
+            return;
+        }
+
+        m_flags = flags;
+        SetNeedsRenderProxyUpdate();
     }
 
     /*! \brief Get the position for the light. For directional lights, this is the direction the light is pointing.
@@ -228,7 +263,14 @@ public:
 
 protected:
     void Init() override;
+    void Update(float delta) override;
+
+    void OnAddedToScene(Scene* scene) override;
+    void OnRemovedFromScene(Scene* scene) override;
+
     void UpdateRenderProxy(IRenderProxy* proxy) override;
+
+    void CreateShadowViews();
 
     // For managed code only - to be removed at some point
     HYP_METHOD()
@@ -237,8 +279,12 @@ protected:
         m_type = type;
     }
 
-    HYP_FIELD(Property = "Type", Serialize = true)
+    HYP_FIELD(Property="LightType", Serialize)
     LightType m_type;
+
+    HYP_FIELD(Property="LightFlags", Serialize)
+    EnumFlags<LightFlags> m_flags;
+
     Vec3f m_position;
     Vec3f m_normal;
     Vec2f m_areaSize;
@@ -248,11 +294,11 @@ protected:
     float m_falloff;
     Vec2f m_spotAngles;
     Handle<Material> m_material;
+    
+    Array<Handle<View>> m_shadowViews;
 
 private:
     Pair<Vec3f, Vec3f> CalculateAreaLightRect() const;
-
-    mutable DataMutationState m_mutationState;
 };
 
 } // namespace hyperion
