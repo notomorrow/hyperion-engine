@@ -18,6 +18,8 @@
 #include <rendering/RenderDescriptorSet.hpp>
 #include <rendering/RenderComputePipeline.hpp>
 
+#include <core/utilities/DeferredScope.hpp>
+
 #include <core/profiling/ProfileScope.hpp>
 
 #include <core/threading/Threads.hpp>
@@ -290,6 +292,9 @@ void SSGI::FillUniformBufferData(RenderView* view, SSGIUniforms& outUniforms) co
     if (view)
     {
         RenderProxyList& rpl = RenderApi_GetConsumerProxyList(view->GetView());
+        rpl.BeginRead();
+
+        HYP_DEFER({ rpl.EndRead(); });
 
         const uint32 maxBoundLights = ArraySize(outUniforms.lightIndices);
 

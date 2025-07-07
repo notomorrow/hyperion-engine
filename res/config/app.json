@@ -50,10 +50,10 @@
     },
     "hbao": {
       "temporal_blending": false,
-      "Radius": 2.500000,
       "radius": 2.500000,
-      "Power": 0.800000,
+      "Radius": 2.500000,
       "power": 0.800000,
+      "Power": 0.800000,
       "UseTemporalBlending": false,
       "enabled": false
     },

@@ -52,6 +52,7 @@ class DDGI;
 struct RenderSetup;
 class RenderGroup;
 class IDrawCallCollectionImpl;
+class RenderProxyList;
 enum LightType : uint32;
 enum EnvProbeType : uint32;
 
@@ -377,9 +378,9 @@ private:
 
     void ResizeView(Viewport viewport, View* view, DeferredPassData& passData);
 
-    void PerformOcclusionCulling(FrameBase* frame, const RenderSetup& rs);
-    void ExecuteDrawCalls(FrameBase* frame, const RenderSetup& rs, uint32 bucketMask);
-    void GenerateMipChain(FrameBase* frame, const RenderSetup& rs, const ImageRef& srcImage);
+    void PerformOcclusionCulling(FrameBase* frame, const RenderSetup& rs, RenderProxyList& rpl);
+    void ExecuteDrawCalls(FrameBase* frame, const RenderSetup& rs, RenderProxyList& rpl, uint32 bucketMask);
+    void GenerateMipChain(FrameBase* frame, const RenderSetup& rs, RenderProxyList& rpl, const ImageRef& srcImage);
 
     LastFrameData m_lastFrameData;
 

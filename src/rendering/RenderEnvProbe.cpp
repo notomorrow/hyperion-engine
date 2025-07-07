@@ -466,6 +466,8 @@ void ReflectionProbeRenderer::RenderProbe(FrameBase* frame, const RenderSetup& r
     AssertDebug(view != nullptr);
 
     RenderProxyList& rpl = RenderApi_GetConsumerProxyList(view);
+    rpl.BeginRead();
+    HYP_DEFER({ rpl.EndRead(); });
 
     HYP_LOG(EnvProbe, Debug, "Rendering EnvProbe {} (type: {})",
         envProbe->Id(), envProbe->GetEnvProbeType());
@@ -538,6 +540,8 @@ void ReflectionProbeRenderer::ComputePrefilteredEnvMap(FrameBase* frame, const R
     AssertDebug(view != nullptr);
 
     RenderProxyList& rpl = RenderApi_GetConsumerProxyList(view);
+    rpl.BeginRead();
+    HYP_DEFER({ rpl.EndRead(); });
 
     struct ConvolveProbeUniforms
     {
@@ -682,6 +686,8 @@ void ReflectionProbeRenderer::ComputeSH(FrameBase* frame, const RenderSetup& ren
     AssertDebug(view != nullptr);
 
     RenderProxyList& rpl = RenderApi_GetConsumerProxyList(view);
+    rpl.BeginRead();
+    HYP_DEFER({ rpl.EndRead(); });
 
     const ViewOutputTarget& outputTarget = envProbe->GetView()->GetOutputTarget();
 

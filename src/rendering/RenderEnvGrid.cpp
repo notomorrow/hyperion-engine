@@ -584,6 +584,9 @@ void EnvGridRenderer::RenderFrame(FrameBase* frame, const RenderSetup& renderSet
     rs.passData = pd;
 
     RenderProxyList& rpl = RenderApi_GetConsumerProxyList(envGrid->GetView());
+    rpl.BeginRead();
+
+    HYP_DEFER({ rpl.EndRead(); });
 
     /// FIXME: Not thread safe; use render proxy
     const BoundingBox gridAabb = envGrid->GetAABB();
@@ -706,6 +709,8 @@ void EnvGridRenderer::RenderProbe(FrameBase* frame, const RenderSetup& renderSet
     AssertDebug(view != nullptr);
 
     RenderProxyList& rpl = RenderApi_GetConsumerProxyList(view);
+    rpl.BeginRead();
+    HYP_DEFER({ rpl.EndRead(); });
 
     const EnvGridOptions& options = envGrid->GetOptions();
     const EnvProbeCollection& envProbeCollection = envGrid->GetEnvProbeCollection();
@@ -716,8 +721,8 @@ void EnvGridRenderer::RenderProbe(FrameBase* frame, const RenderSetup& renderSet
     const uint32 probeBoundIndex = RenderApi_RetrieveResourceBinding(probe.Id());
     AssertDebug(probeBoundIndex != ~0u, "EnvProbe {} is not bound when rendering EnvGrid!", probe.Id());
 
-    RenderProxyEnvProbe* probeProxy = static_cast<RenderProxyEnvProbe*>(RenderApi_GetRenderProxy(probe.Id()));
-    AssertDebug(probeProxy != nullptr, "No render proxy for EnvProbe {} when rendering EnvGrid!", probe.Id());
+    // RenderProxyEnvProbe* probeProxy = static_cast<RenderProxyEnvProbe*>(RenderApi_GetRenderProxy(probe.Id()));
+    // AssertDebug(probeProxy != nullptr, "No render proxy for EnvProbe {} when rendering EnvGrid!", probe.Id());
 
     HYP_LOG(EnvGrid, Debug, "Rendering EnvProbe {} with {} draw calls collected",
         probe->Id(), rpl.NumDrawCallsCollected());
@@ -979,6 +984,8 @@ void EnvGridRenderer::ComputeEnvProbeIrradiance_LightField(FrameBase* frame, con
     Assert(framebuffer.IsValid());
 
     RenderProxyList& rpl = RenderApi_GetConsumerProxyList(view);
+    rpl.BeginRead();
+    HYP_DEFER({ rpl.EndRead(); });
 
     RenderProxyEnvGrid* proxy = static_cast<RenderProxyEnvGrid*>(RenderApi_GetRenderProxy(envGrid->Id()));
     Assert(proxy != nullptr, "EnvGrid render proxy not found!");

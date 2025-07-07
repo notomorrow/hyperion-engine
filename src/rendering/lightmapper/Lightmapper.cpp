@@ -129,6 +129,13 @@ struct RENDER_COMMAND(LightmapRender)
             rpl = &RenderApi_GetConsumerProxyList(view->GetView());
         }
 
+        if (rpl)
+        {
+            rpl->BeginRead();
+        }
+
+        HYP_DEFER({ if (rpl) rpl->EndRead(); });
+
         const uint32 frameIndex = frame->GetFrameIndex();
         const uint32 previousFrameIndex = (frameIndex + g_framesInFlight - 1) % g_framesInFlight;
 

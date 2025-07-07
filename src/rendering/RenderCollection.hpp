@@ -150,15 +150,14 @@ struct HYP_API RenderProxyList
             HYP_WAIT_IDLE();
         }
 
-        AssertDebug(state != RenderProxyList::CS_READING);
-        state = RenderProxyList::CS_WRITING;
+        AssertDebug(state != CS_READING);
+        state = CS_WRITING;
     }
 
     void EndWrite()
     {
-        AssertDebug(state == RenderProxyList::CS_WRITING);
-
-        state = RenderProxyList::CS_WRITTEN;
+        AssertDebug(state == CS_WRITING);
+        state = CS_WRITTEN;
 
         rwMarker.BitAnd(~writeFlag, MemoryOrder::RELEASE);
     }
@@ -184,15 +183,18 @@ struct HYP_API RenderProxyList
         }
         while (HYP_UNLIKELY(rwMarkerState & writeFlag));
 
-        state = RenderProxyList::CS_READING;
+        AssertDebug(state != CS_WRITING);
+        state = CS_READING;
     }
 
     void EndRead()
     {
-        AssertDebug(state == RenderProxyList::CS_READING);
-        state = RenderProxyList::CS_DONE;
+        AssertDebug(state == CS_READING);
 
-        rwMarker.Decrement(2, MemoryOrder::RELEASE);
+        if (((rwMarker.Decrement(2, MemoryOrder::ACQUIRE_RELEASE) - 2) & readMask) == 0)
+        {
+            state = CS_DONE;
+        }
     }
 
     // State for tracking transitions from writing (game thread) to reading (render thread).
