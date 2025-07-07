@@ -254,7 +254,7 @@ RendererResult VulkanImage::Create(ResourceState initialState)
     const bool isRwTexture = m_textureDesc.imageUsage[IU_STORAGE];
     const bool isDepthStencil = m_textureDesc.IsDepthStencil();
     const bool isBlended = m_textureDesc.IsBlended();
-    const bool isSrgb = m_textureDesc.IsSRGB();
+    const bool isSrgb = m_textureDesc.IsSrgb();
 
     const bool hasMipmaps = m_textureDesc.HasMipmaps();
     const uint32 numMipmaps = m_textureDesc.NumMipmaps();

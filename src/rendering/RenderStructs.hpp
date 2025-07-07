@@ -58,7 +58,7 @@ enum TextureType : uint32
     TT_MAX
 };
 
-enum TextureFormatBase : uint32
+enum TextureBaseFormat : uint32
 {
     TFB_NONE,
     TFB_R,
@@ -168,7 +168,7 @@ enum ResourceState : uint32
     RS_PREDICATION
 };
 
-static inline constexpr TextureFormatBase GetBaseFormat(TextureFormat fmt)
+static inline constexpr TextureBaseFormat GetBaseFormat(TextureFormat fmt)
 {
     switch (fmt)
     {
@@ -219,7 +219,7 @@ static inline constexpr TextureFormatBase GetBaseFormat(TextureFormat fmt)
     }
 }
 
-static inline constexpr uint32 NumComponents(TextureFormatBase format)
+static inline constexpr uint32 NumComponents(TextureBaseFormat format)
 {
     switch (format)
     {
@@ -313,7 +313,7 @@ static inline constexpr TextureFormat FormatChangeNumComponents(TextureFormat fm
     return TextureFormat(int(fmt) + int(newNumComponents) - currentNumComponents);
 }
 
-static inline constexpr bool IsDepthFormat(TextureFormatBase fmt)
+static inline constexpr bool IsDepthFormat(TextureBaseFormat fmt)
 {
     return fmt == TFB_DEPTH;
 }
@@ -323,9 +323,40 @@ static inline constexpr bool IsDepthFormat(TextureFormat fmt)
     return IsDepthFormat(GetBaseFormat(fmt));
 }
 
-static inline constexpr bool IsSRGBFormat(TextureFormat fmt)
+static inline constexpr bool IsSrgbFormat(TextureFormat fmt)
 {
     return fmt >= TF_SRGB && fmt < TF_DEPTH;
+}
+
+/*! \brief Converts srgb formats to non-srgb variants and vice versa. Only for SRGB supported formats. */
+static inline constexpr TextureFormat ChangeFormatSrgb(TextureFormat fmt, bool makeSrgb = true)
+{
+    if (IsSrgbFormat(fmt) == makeSrgb)
+    {
+        return fmt;
+    }
+
+    constexpr uint32 dist = uint32(TF_SRGB) - uint32(TF_NONE);
+
+    if (makeSrgb)
+    {
+        TextureFormat srgbVersion = static_cast<TextureFormat>(uint32(fmt) + dist);
+
+        if (IsSrgbFormat(srgbVersion))
+        {
+            return srgbVersion;
+        }
+    }
+    else
+    {
+        int iFmt = int(fmt);
+        if (iFmt - int(dist) >= int(TF_NONE))
+        {
+            return static_cast<TextureFormat>(iFmt - int(dist));
+        }
+    }
+
+    return fmt;
 }
 
 HYP_STRUCT()
@@ -377,9 +408,9 @@ struct TextureDesc
         return IsDepthFormat(format);
     }
 
-    HYP_FORCE_INLINE bool IsSRGB() const
+    HYP_FORCE_INLINE bool IsSrgb() const
     {
-        return IsSRGBFormat(format);
+        return IsSrgbFormat(format);
     }
 
     HYP_FORCE_INLINE bool IsBlended() const

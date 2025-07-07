@@ -372,7 +372,7 @@ RendererResult VulkanDevice::Wait() const
     return result;
 }
 
-RendererResult VulkanDevice::Create(Span<const uint32> requiredQueueFamilies)
+RendererResult VulkanDevice::Create(uint32 requiredQueueFamilies)
 {
     HYP_LOG(RenderingBackend, Debug, "Memory properties:\n");
     const auto& memoryProperties = m_features->GetPhysicalDeviceMemoryProperties();
@@ -391,14 +391,15 @@ RendererResult VulkanDevice::Create(Span<const uint32> requiredQueueFamilies)
 
     Array<VkDeviceQueueCreateInfo> queueCreateInfos;
     const float priorities[] = { 1.0f };
+
     // for each queue family(for separate threads) we add them to
     // our device initialization data
-    for (uint32 family : requiredQueueFamilies)
+    FOR_EACH_BIT(requiredQueueFamilies, familyIndex)
     {
         VkDeviceQueueCreateInfo queueInfo { VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO };
         queueInfo.pQueuePriorities = priorities;
         queueInfo.queueCount = 1;
-        queueInfo.queueFamilyIndex = family;
+        queueInfo.queueFamilyIndex = uint32(familyIndex);
 
         queueCreateInfos.PushBack(queueInfo);
     }

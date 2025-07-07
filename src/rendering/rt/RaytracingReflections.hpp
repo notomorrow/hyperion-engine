@@ -25,10 +25,10 @@ struct RenderCommand_CreateRTRadianceImageOutputs;
 HYP_STRUCT(ConfigName = "app", JSONPath = "rendering.rt.reflections")
 struct RaytracingReflectionsConfig : public ConfigBase<RaytracingReflectionsConfig>
 {
-    HYP_FIELD()
+    HYP_FIELD(JSONIgnore)
     Vec2u extent = { 1024, 1024 };
 
-    HYP_FIELD()
+    HYP_FIELD(JSONIgnore)
     bool pathTracing = false;
 
     virtual ~RaytracingReflectionsConfig() override = default;

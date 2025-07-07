@@ -5,29 +5,20 @@
         "enabled": false
       },
       "reflections": {
-        "Extent": [1024, 1024],
-        "PathTracing": false,
-        "enabled": false
+        "enabled": true
       },
       "gi": {
         "enabled": false
       },
-      "enabled": false
+      "enabled": true
     },
     "ssr": {
-      "ConeTracing": false,
+      "num_iterations": 64,
       "eye_fade": [0.980000, 0.990000],
       "ray_step": 3.200000,
-      "NumIterations": 64,
-      "quality": 2,
-      "Quality": 2,
-      "RayStep": 3.200000,
-      "RoughnessScattering": true,
-      "num_iterations": 64,
       "screen_edge_fade": [0.960000, 0.990000],
+      "quality": 2,
       "roughness_scattering": true,
-      "EyeFade": [0.980000, 0.990000],
-      "ScreenEdgeFade": [0.960000, 0.990000],
       "enabled": false,
       "cone_tracing": false
     },
@@ -58,10 +49,10 @@
       }
     },
     "hbao": {
-      "Radius": 2.500000,
-      "Power": 0.800000,
-      "enabled": false,
-      "UseTemporalBlending": false
+      "temporal_blending": false,
+      "radius": 2.500000,
+      "power": 0.800000,
+      "enabled": false
     },
     "ssgi": {
       "Quality": 0,

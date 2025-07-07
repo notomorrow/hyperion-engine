@@ -176,6 +176,7 @@ class ResourceBinder : public ResourceBinderBase
 
             AssertDebug(after.Count() <= allocator->maxSize);
 
+            // NOTE: We do removed bits first, to free up slots for the newly added elements to claim a binding index.
             if (removed.AnyBitsSet())
             {
                 Array<KeyValuePair<WeakHandle<T>, uint32>> removedElements;

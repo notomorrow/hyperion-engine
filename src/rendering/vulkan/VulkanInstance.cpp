@@ -399,15 +399,14 @@ RendererResult VulkanInstance::CreateDevice(VkPhysicalDevice physicalDevice)
     const QueueFamilyIndices& familyIndices = m_device->GetQueueFamilyIndices();
 
     /* Put into a set so we don't have any duplicate indices */
-    const uint32 requiredQueueFamilyIndices[] = {
-        familyIndices.graphicsFamily.Get(),
-        familyIndices.transferFamily.Get(),
-        familyIndices.presentFamily.Get(),
-        familyIndices.computeFamily.Get()
-    };
+    Bitset queueFamilyIndices;
+    queueFamilyIndices.Set(familyIndices.graphicsFamily.Get(), true);
+    queueFamilyIndices.Set(familyIndices.transferFamily.Get(), true);
+    queueFamilyIndices.Set(familyIndices.presentFamily.Get(), true);
+    queueFamilyIndices.Set(familyIndices.computeFamily.Get(), true);
 
     /* Create a logical device to operate on */
-    HYPERION_BUBBLE_ERRORS(m_device->Create(requiredQueueFamilyIndices));
+    HYPERION_BUBBLE_ERRORS(m_device->Create(queueFamilyIndices.ToUInt64()));
 
     /* Get the internal queues from our device */
 

@@ -1,6 +1,7 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
 #pragma once
+
 #include <core/memory/UniquePtr.hpp>
 
 #include <core/containers/Array.hpp>
@@ -126,7 +127,7 @@ public:
 
     VkQueue GetQueue(uint32 queueFamilyIndex, uint32 queueIndex = 0);
 
-    RendererResult Create(Span<const uint32> requiredQueueFamilies);
+    RendererResult Create(uint32 requiredQueueFamilies);
     RendererResult CheckDeviceSuitable(const ExtensionMap& unsupportedExtensions);
 
     /*! \brief Wait for the device to be idle */

@@ -119,7 +119,6 @@ extern void OnBindingChanged_Material(Material* lightmapVolume, uint32 prev, uin
 
 extern void OnBindingChanged_Texture(Texture* texture, uint32 prev, uint32 next);
 
-HYP_DISABLE_OPTIMIZATION;
 struct ResourceBindings
 {
     struct SubtypeResourceBindings
@@ -275,7 +274,6 @@ struct ResourceBindings
     }
 };
 
-HYP_ENABLE_OPTIMIZATION;
 #pragma endregion ResourceBindings
 
 #pragma region ResourceContainer

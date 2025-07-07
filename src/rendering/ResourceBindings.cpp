@@ -276,33 +276,28 @@ void OnBindingChanged_Material(Material* material, uint32 prev, uint32 next)
 
     HYP_LOG(Rendering, Debug, "Material {} binding changed from {} to {} for frame {}", material->Id(), prev, next, RenderApi_GetFrameIndex_RenderThread());
     // RenderApi_AssignResourceBinding(material, next);
+    
+    RenderApi_AssignResourceBinding(material, next);
 
-    // @TODO: How will we unbind? we don't want to unbind right after another material has taken our place here.
-    // if (prev != ~0u)
-    // {
-    //     g_renderGlobalState->materialDescriptorSetManager->Remove(prev);
-    // }
-
-    if (next != ~0u)
+    if (!isBindlessSupported)
     {
-        RenderApi_AssignResourceBinding(material, next);
-
-        IRenderProxy* proxy = RenderApi_GetRenderProxy(material->Id());
-        Assert(proxy != nullptr);
-
-        RenderProxyMaterial* proxyCasted = static_cast<RenderProxyMaterial*>(proxy);
-
-        if (!isBindlessSupported)
+        if (prev != ~0u)
         {
+            g_renderGlobalState->materialDescriptorSetManager->Remove(prev);
+        }
+
+        if (next != ~0u)
+        {
+            IRenderProxy* proxy = RenderApi_GetRenderProxy(material->Id());
+            Assert(proxy != nullptr);
+
+            RenderProxyMaterial* proxyCasted = static_cast<RenderProxyMaterial*>(proxy);
+
             g_renderGlobalState->materialDescriptorSetManager->Allocate(
                 next,
                 proxyCasted->boundTextureIndices.ToSpan(),
                 proxyCasted->boundTextures.ToSpan());
         }
-    }
-    else
-    {
-        RenderApi_AssignResourceBinding(material, ~0u);
     }
 }
 

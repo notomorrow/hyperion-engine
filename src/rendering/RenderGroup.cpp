@@ -605,7 +605,6 @@ static void RenderAll_Parallel(
 
                 for (const InstancedDrawCall& drawCall : drawCalls)
                 {
-                    // @TODO: Skip using an EntityInstanceBatch if the draw call is not instanced
                     EntityInstanceBatch* entityInstanceBatch = drawCall.batch;
                     AssertDebug(entityInstanceBatch != nullptr);
 

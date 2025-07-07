@@ -485,7 +485,6 @@ void EnvGrid::Translate(const BoundingBox& aabb, const Vec3f& translation)
     m_renderResource->SetProbeIndices(std::move(updates));
 }
 
-HYP_DISABLE_OPTIMIZATION;
 void EnvGrid::Update(float delta)
 {
     HYP_SCOPE;
@@ -525,6 +524,9 @@ void EnvGrid::Update(float delta)
         shouldRecollectEntites = true;
     }
 
+    /// FIXME: View not updating every frame is causing us to have holes in the RenderProxyLists - every 3 frames we have data, others, none
+    shouldRecollectEntites = true;
+
     if (!shouldRecollectEntites)
     {
         return;
@@ -555,7 +557,6 @@ void EnvGrid::Update(float delta)
         probe->SetReceivesUpdate(true);
     }
 }
-HYP_ENABLE_OPTIMIZATION;
 
 void EnvGrid::UpdateRenderProxy(IRenderProxy* proxy)
 {

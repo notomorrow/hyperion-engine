@@ -243,17 +243,11 @@ RendererResult VulkanRaytracingPipeline::CreateShaderBindingTables(VulkanShader*
 
         HYP_GFX_ASSERT(shaderCount != 0);
 
-        HYPERION_PASS_ERRORS(
-            CreateShaderBindingTableEntry(
-                shaderCount,
-                entry),
-            result);
+        HYPERION_PASS_ERRORS(CreateShaderBindingTableEntry(shaderCount, entry), result);
 
         if (result)
         {
-            entry.buffer->Copy(
-                handleSize,
-                &shaderHandleStorage[offset]);
+            entry.buffer->Copy(handleSize, &shaderHandleStorage[offset]);
 
             offset += handleSize;
         }
@@ -275,8 +269,8 @@ RendererResult VulkanRaytracingPipeline::CreateShaderBindingTables(VulkanShader*
 #define GET_STRIDED_DEVICE_ADDRESS_REGION(type, out)                                 \
     do                                                                               \
     {                                                                                \
-        auto it = m_shaderBindingTableBuffers.find(type);                            \
-        if (it != m_shaderBindingTableBuffers.end())                                 \
+        auto it = m_shaderBindingTableBuffers.Find(type);                            \
+        if (it != m_shaderBindingTableBuffers.End())                                 \
         {                                                                            \
             m_shaderBindingTableEntries.out = it->second.stridedDeviceAddressRegion; \
         }                                                                            \
