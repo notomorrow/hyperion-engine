@@ -177,6 +177,9 @@ protected:
     AccelerationStructureFlags m_flags;
 };
 
+using VulkanAccelerationStructureRef = RenderObjectHandle_Strong<VulkanAccelerationStructureBase>;
+using VulkanAccelerationStructureWeakRef = RenderObjectHandle_Weak<VulkanAccelerationStructureBase>;
+
 class VulkanBLAS final : public BLASBase, public VulkanAccelerationStructureBase
 {
 public:
