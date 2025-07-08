@@ -417,9 +417,12 @@ void ShadowRendererBase::RenderFrame(FrameBase* frame, const RenderSetup& render
         ShadowPassData* pd = static_cast<ShadowPassData*>(rs.passData);
         AssertDebug(pd != nullptr);
 
-        HYP_LOG_TEMP("Render Shadow map here for light {}\t into view: {}\tShadow map atlas index: {} elem index: {} point idx: {}\frame {}",
+        RenderProxyList& rpl = RenderApi_GetConsumerProxyList(shadowView);
+
+        HYP_LOG_TEMP("Render Shadow map here for light {}\t into view: {} for {} entities\t\tShadow map atlas index: {} elem index: {} point idx: {}\frame {}",
             renderSetup.light->Id(),
             shadowView->Id(),
+            rpl.NumDrawCallsCollected(),
             shadowMap->GetAtlasElement().atlasIndex, shadowMap->GetAtlasElement().index,
             shadowMap->GetAtlasElement().pointLightIndex,
             RenderApi_GetFrameIndex_RenderThread());

@@ -13,7 +13,6 @@ layout(location = 5) out vec3 v_bitangent;
 layout(location = 7) out flat vec3 v_camera_position;
 layout(location = 8) out mat3 v_tbn_matrix;
 layout(location = 11) out flat uint v_object_index;
-layout(location = 12) out flat vec3 v_env_probe_extent;
 layout(location = 13) out flat uint v_cube_face_index;
 layout(location = 14) out vec2 v_cube_face_uv;
 
@@ -139,8 +138,6 @@ void main()
 #ifdef INSTANCING
     v_object_index = OBJECT_INDEX;
 #endif
-
-    v_env_probe_extent = current_env_probe.aabb_max.xyz - current_env_probe.aabb_min.xyz;
 
     gl_Position = projection_matrix * view_matrix * position;
 

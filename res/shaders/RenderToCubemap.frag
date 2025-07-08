@@ -11,7 +11,6 @@ layout(location = 1) in vec3 v_normal;
 layout(location = 2) in vec2 v_texcoord0;
 layout(location = 7) in flat vec3 v_camera_position;
 layout(location = 11) in flat uint v_object_index;
-layout(location = 12) in flat vec3 v_env_probe_extent;
 layout(location = 13) in flat uint v_cube_face_index;
 
 layout(location = 0) out vec4 output_color;

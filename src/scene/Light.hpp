@@ -282,14 +282,7 @@ protected:
 
     void CreateShadowViews();
 
-    // For managed code only - to be removed at some point
-    HYP_METHOD()
-    void SetLightType(LightType type)
-    {
-        m_type = type;
-    }
-
-    HYP_FIELD(Property="LightType", Serialize)
+    HYP_FIELD()
     LightType m_type;
 
     HYP_FIELD(Property="LightFlags", Serialize)
@@ -318,12 +311,12 @@ class HYP_API DirectionalLight : public Light
 
 public:
     DirectionalLight()
-        : Light(LT_DIRECTIONAL, Vec3f(0.0f, 1.0f, 0.0f), Color::White(), 1.0f, INFINITY)
+        : Light(LT_DIRECTIONAL, Vec3f(0.0f, 1.0f, 0.0f), Color::White(), 1.0f, 0.0f)
     {
     }
 
     DirectionalLight(const Vec3f& direction, const Color& color, float intensity)
-        : Light(LT_DIRECTIONAL, direction, color, intensity, INFINITY)
+        : Light(LT_DIRECTIONAL, direction, color, intensity, 0.0f)
     {
     }
 

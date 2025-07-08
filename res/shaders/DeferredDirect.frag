@@ -303,4 +303,7 @@ void main()
 #else
     output_color = vec4(result);
 #endif
+
+    // // temp debug
+    // output_color = vec4(1.0, 0.0, 0.0, 1.0)
 }

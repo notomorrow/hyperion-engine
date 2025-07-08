@@ -10,7 +10,6 @@ layout(location = 1) out vec3 v_normal;
 layout(location = 2) out vec2 v_texcoord0;
 layout(location = 7) out flat vec3 v_camera_position;
 layout(location = 11) out flat uint v_object_index;
-layout(location = 12) out flat vec3 v_env_probe_extent;
 layout(location = 13) out flat uint v_cube_face_index;
 
 HYP_ATTRIBUTE(0) vec3 a_position;
@@ -72,6 +71,33 @@ HYP_DESCRIPTOR_SSBO_DYNAMIC(Object, CurrentObject) readonly buffer ObjectsBuffer
 
 #endif
 
+// pairs of cubemap forward direction and up direction (interleaved order)
+const vec3 cubemap_directions[12] = vec3[](
+    vec3(1.0, 0.0, 0.0), vec3(0.0, 1.0, 0.0),
+    vec3(-1.0, 0.0, 0.0), vec3(0.0, 1.0, 0.0),
+    vec3(0.0, 1.0, 0.0), vec3(0.0, 0.0, -1.0),
+    vec3(0.0, -1.0, 0.0), vec3(0.0, 0.0, 1.0),
+    vec3(0.0, 0.0, 1.0), vec3(0.0, 1.0, 0.0),
+    vec3(0.0, 0.0, -1.0), vec3(0.0, 1.0, 0.0));
+
+mat4 LookAt(vec3 pos, vec3 target, vec3 up)
+{
+    mat4 lookat;
+
+    vec3 zaxis = normalize(target - pos);     // Forward
+    vec3 xaxis = normalize(cross(up, zaxis)); // Right
+    vec3 yaxis = cross(zaxis, xaxis);         // Up
+
+    vec3 t = -vec3(dot(xaxis, pos), // translation
+        dot(yaxis, pos),
+        dot(zaxis, pos));
+
+    return mat4(vec4(xaxis, 0.0),
+        vec4(yaxis, 0.0),
+        vec4(zaxis, 0.0),
+        vec4(t, 1.0));
+}
+
 #ifdef VERTEX_SKINNING_ENABLED
 
 HYP_DESCRIPTOR_SSBO_DYNAMIC(Object, SkeletonsBuffer) readonly buffer SkeletonsBuffer
@@ -124,14 +150,15 @@ void main()
     v_texcoord0 = vec2(a_texcoord0.x, 1.0 - a_texcoord0.y);
     v_camera_position = camera.position.xyz;
 
+    const vec3 forward_direction = cubemap_directions[gl_ViewIndex * 2];
+    const vec3 up_direction = cubemap_directions[gl_ViewIndex * 2 + 1];
+
     mat4 projection_matrix = camera.projection;
-    mat4 view_matrix = current_env_probe.face_view_matrices[gl_ViewIndex];
+    mat4 view_matrix = LookAt(current_env_probe.world_position.xyz, current_env_probe.world_position.xyz + forward_direction, up_direction);
 
 #ifdef INSTANCING
     v_object_index = OBJECT_INDEX;
 #endif
-
-    v_env_probe_extent = current_env_probe.aabb_max.xyz - current_env_probe.aabb_min.xyz;
 
     gl_Position = projection_matrix * view_matrix * position;
 

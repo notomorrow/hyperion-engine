@@ -238,7 +238,6 @@ struct ResourceBindings
 #ifdef HYP_DEBUG_MODE
         Threads::AssertOnThread(g_renderThread | ThreadCategory::THREAD_CATEGORY_TASK);
 #endif
-
         auto cacheIt = cache.Find(typeId);
         if (cacheIt != cache.End())
         {
@@ -247,6 +246,28 @@ struct ResourceBindings
 
         const HypClass* hypClass = GetClass(typeId);
         AssertDebug(hypClass != nullptr, "TypeId {} does not have a HypClass!", typeId.Value());
+
+        int staticIndex = hypClass->GetStaticIndex();
+        AssertDebug(staticIndex >= 0, "Invalid class: '{}' has no assigned static index!", *hypClass->GetName());
+
+        SubtypeResourceBindings* bindings = subtypeBindings.TryGet(staticIndex);
+        AssertDebug(bindings != nullptr, "No SubtypeBindings container found for {}", hypClass->GetName());
+
+        cache[typeId] = bindings;
+
+        return *bindings;
+
+#if 0
+        auto cacheIt = cache.Find(typeId);
+        if (cacheIt != cache.End())
+        {
+            return *cacheIt->second;
+        }
+
+        const HypClass* hypClass = GetClass(typeId);
+        AssertDebug(hypClass != nullptr, "TypeId {} does not have a HypClass!", typeId.Value());
+
+        const HypClass* originalClass = hypClass;
 
         int staticIndex = -1;
 
@@ -257,14 +278,18 @@ struct ResourceBindings
 
             if (SubtypeResourceBindings* bindings = subtypeBindings.TryGet(staticIndex))
             {
+                HYP_LOG_TEMP("Subtype bindings for {} = {}", originalClass->GetName(), bindings->resourceClass->GetName());
                 cache[typeId] = bindings;
 
                 return *bindings;
             }
 
+            HYP_LOG_TEMP("Could not find subtype bindings for {}", hypClass->GetName());
+
             hypClass = hypClass->GetParent();
         }
         while (hypClass);
+#endif
 
         HYP_FAIL("No SubtypeBindings container found for TypeId %u (HypClass: %s). Missing DECLARE_RENDER_DATA_CONTAINER() macro invocation for type?", typeId.Value(), *GetClass(typeId)->GetName());
     }
@@ -1394,14 +1419,25 @@ void RenderGlobalState::SetDefaultDescriptorSetElements(uint32 frameIndex)
 #pragma endregion RenderGlobalState
 
 DECLARE_RENDER_DATA_CONTAINER(Entity, RenderProxyMesh, GRB_ENTITIES, &ResourceBindings::meshEntityBinder, &WriteBufferData_MeshEntity);
+
 DECLARE_RENDER_DATA_CONTAINER(EnvGrid, RenderProxyEnvGrid, GRB_ENV_GRIDS, &ResourceBindings::envGridBinder, &WriteBufferData_EnvGrid);
+
 DECLARE_RENDER_DATA_CONTAINER(ReflectionProbe, RenderProxyEnvProbe, GRB_ENV_PROBES, &ResourceBindings::reflectionProbeBinder, &WriteBufferData_EnvProbe);
 DECLARE_RENDER_DATA_CONTAINER(SkyProbe, RenderProxyEnvProbe, GRB_ENV_PROBES, &ResourceBindings::reflectionProbeBinder, &WriteBufferData_EnvProbe);
 DECLARE_RENDER_DATA_CONTAINER(EnvProbe, RenderProxyEnvProbe, GRB_ENV_PROBES, &ResourceBindings::ambientProbeBinder, &WriteBufferData_EnvProbe);
+
 DECLARE_RENDER_DATA_CONTAINER(Light, RenderProxyLight, GRB_LIGHTS, &ResourceBindings::lightBinder, &WriteBufferData_Light);
+DECLARE_RENDER_DATA_CONTAINER(DirectionalLight, RenderProxyLight, GRB_LIGHTS, &ResourceBindings::lightBinder, &WriteBufferData_Light);
+DECLARE_RENDER_DATA_CONTAINER(PointLight, RenderProxyLight, GRB_LIGHTS, &ResourceBindings::lightBinder, &WriteBufferData_Light);
+DECLARE_RENDER_DATA_CONTAINER(AreaRectLight, RenderProxyLight, GRB_LIGHTS, &ResourceBindings::lightBinder, &WriteBufferData_Light);
+DECLARE_RENDER_DATA_CONTAINER(SpotLight, RenderProxyLight, GRB_LIGHTS, &ResourceBindings::lightBinder, &WriteBufferData_Light);
+
 DECLARE_RENDER_DATA_CONTAINER(LightmapVolume, RenderProxyLightmapVolume, GRB_LIGHTMAP_VOLUMES, &ResourceBindings::lightmapVolumeBinder);
+
 DECLARE_RENDER_DATA_CONTAINER(Material, RenderProxyMaterial, GRB_MATERIALS, &ResourceBindings::materialBinder);
+
 DECLARE_RENDER_DATA_CONTAINER(Texture, NullProxy, GRB_INVALID, &ResourceBindings::textureBinder);
+
 DECLARE_RENDER_DATA_CONTAINER(Skeleton, RenderProxySkeleton, GRB_SKELETONS, &ResourceBindings::skeletonBinder);
 
 } // namespace hyperion

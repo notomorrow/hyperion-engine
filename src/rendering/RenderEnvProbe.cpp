@@ -575,12 +575,6 @@ void ReflectionProbeRenderer::ComputePrefilteredEnvMap(FrameBase* frame, const R
     const uint32 maxBoundLights = ArraySize(uniforms.lightIndices);
     uint32 numBoundLights = 0;
 
-    uint32 nLights = rpl.lights.GetElements<Light>().Count();
-    uint32 nDirectionalLights = rpl.lights.GetElements<DirectionalLight>().Count();
-    uint32 nPointLights = rpl.lights.GetElements<PointLight>().Count();
-
-    HYP_LOG_TEMP("Num lights: {}, Num directional lights: {}, num point lights: {}", nLights, nDirectionalLights, nPointLights);
-
     for (Light* light : rpl.lights)
     {
         const LightType lightType = light->GetLightType();
