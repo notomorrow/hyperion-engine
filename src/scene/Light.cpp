@@ -37,11 +37,8 @@ static const TextureFormat g_directionalLightShadowFormats[SMF_MAX] = {
 
 static constexpr const char* g_shadowMapFilterPropertyNames[SMF_MAX] = { "MODE_STANDARD", "MODE_PCF", "MODE_CONTACT_HARDENED", "MODE_VSM" };
 
-static constexpr EnumFlags<ViewFlags> g_defaultShadowViewFlags = ViewFlags::NOT_MULTI_BUFFERED
-    | ViewFlags::SKIP_LIGHTS
-    | ViewFlags::SKIP_LIGHTMAP_VOLUMES
-    | ViewFlags::SKIP_ENV_PROBES
-    | ViewFlags::SKIP_ENV_GRIDS;
+static constexpr EnumFlags<ViewFlags> g_defaultShadowViewFlags = ViewFlags::NOT_MULTI_BUFFERED | ViewFlags::SKIP_LIGHTS
+    | ViewFlags::SKIP_LIGHTMAP_VOLUMES | ViewFlags::SKIP_ENV_PROBES | ViewFlags::SKIP_ENV_GRIDS;
 
 #pragma region Light
 

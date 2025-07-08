@@ -18,6 +18,8 @@
 
 namespace hyperion {
 
+class FullScreenPass;
+
 struct ShadowMapShaderData
 {
     Matrix4 projection;
@@ -275,7 +277,9 @@ private:
     ShadowMapFilter m_filterMode;
     ShadowMapAtlasElement m_atlasElement;
     ImageViewRef m_imageView;
-    ShadowMapShaderData m_bufferData;
+    ShadowMapShaderData m_bufferData; // temp
+
+    UniquePtr<FullScreenPass> m_combineShadowMapsPass;
 };
 
 struct HYP_API ShadowPassData : PassData
@@ -326,9 +330,16 @@ private:
     // Shadow maps cached per-light.
     // Since Lights can have multiple shadow views that blit into one final shadow map
     // we store the shadow maps here rather than on the per-view PassData
+    struct CachedShadowMapData
+    {
+        RenderShadowMap* shadowMap = nullptr;
+        UniquePtr<FullScreenPass> combineShadowMapsPass; // Pass to combine shadow maps for this light (optional)
+        ImageRef combinedShadowMapsBlurred;
+        ComputePipelineRef csBlurShadowMap; // compute pipeline for blurring VSM shadow maps
+    };
 
-    /// @TODO Clean up elements that have expired after a few frames
-    HashMap<WeakHandle<Light>, RenderShadowMap*> m_cachedShadowMaps;
+    /// Cached per-light shadow map rendering data that is cleaned up when no longer used
+    HashMap<WeakHandle<Light>, CachedShadowMapData> m_cachedShadowMapData;
 };
 
 class PointShadowRenderer : public ShadowRendererBase
