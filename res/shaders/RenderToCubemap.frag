@@ -56,11 +56,6 @@ HYP_DESCRIPTOR_SRV(Global, PointLightShadowMapsTextureArray) uniform textureCube
 
 #undef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 
-HYP_DESCRIPTOR_SSBO_DYNAMIC(Global, CurrentEnvProbe) readonly buffer CurrentEnvProbe
-{
-    EnvProbe current_env_probe;
-};
-
 #ifdef INSTANCING
 
 HYP_DESCRIPTOR_SSBO(Global, ObjectsBuffer) readonly buffer ObjectsBuffer
@@ -133,7 +128,7 @@ void main()
 
 #if defined(WRITE_MOMENTS) || defined(MODE_SHADOWS)
     // Write distance, mean distance for variance.
-    const float dist = distance(v_position, current_env_probe.world_position.xyz);
+    const float dist = distance(v_position, v_camera_position);
 
     vec2 moments = vec2(dist, HYP_FMATH_SQR(dist));
 #endif

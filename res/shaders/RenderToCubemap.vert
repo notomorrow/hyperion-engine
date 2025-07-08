@@ -30,7 +30,6 @@ HYP_ATTRIBUTE_OPTIONAL(7) vec4 a_bone_indices;
 #include "include/scene.inc"
 
 #include "include/object.inc"
-#include "include/env_probe.inc"
 
 #define HYP_ENABLE_SKINNING
 
@@ -45,10 +44,16 @@ HYP_DESCRIPTOR_CBUFF_DYNAMIC(Global, CamerasBuffer) uniform CameraShaderData
     Camera camera;
 };
 
+#ifdef ENV_PROBE
+
+#include "include/env_probe.inc"
+
 HYP_DESCRIPTOR_SSBO_DYNAMIC(Global, CurrentEnvProbe) readonly buffer CurrentEnvProbe
 {
     EnvProbe current_env_probe;
 };
+
+#endif
 
 #ifdef INSTANCING
 
@@ -148,13 +153,18 @@ void main()
     v_position = position.xyz;
     v_normal = (normal_matrix * vec4(a_normal, 0.0)).xyz;
     v_texcoord0 = vec2(a_texcoord0.x, 1.0 - a_texcoord0.y);
+
+#ifdef ENV_PROBE
+    v_camera_position = current_env_probe.world_position.xyz;
+#else
     v_camera_position = camera.position.xyz;
+#endif
 
     const vec3 forward_direction = cubemap_directions[gl_ViewIndex * 2];
     const vec3 up_direction = cubemap_directions[gl_ViewIndex * 2 + 1];
 
     mat4 projection_matrix = camera.projection;
-    mat4 view_matrix = LookAt(current_env_probe.world_position.xyz, current_env_probe.world_position.xyz + forward_direction, up_direction);
+    mat4 view_matrix = LookAt(v_camera_position, v_camera_position + forward_direction, up_direction);
 
 #ifdef INSTANCING
     v_object_index = OBJECT_INDEX;

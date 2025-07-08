@@ -156,7 +156,7 @@ void EnvGrid::Init()
     m_camera->SetTranslation(m_aabb.GetCenter());
     InitObject(m_camera);
 
-    ShaderProperties shaderProperties(staticMeshVertexAttributes, { "WRITE_NORMALS", "WRITE_MOMENTS" });
+    ShaderProperties shaderProperties(staticMeshVertexAttributes, { "ENV_PROBE", "WRITE_NORMALS", "WRITE_MOMENTS" });
     ShaderDefinition shaderDefinition { NAME("RenderToCubemap"), shaderProperties };
 
     switch (GetEnvGridType())

@@ -8,6 +8,7 @@
 #include <core/object/HypMember.hpp>
 
 #include <core/utilities/EnumFlags.hpp>
+#include <core/utilities/FormatFwd.hpp>
 
 #include <Constants.hpp>
 
@@ -155,11 +156,12 @@ void ForEachEnumMember(Function&& function)
 }
 
 /*! \brief Find the name of an enum member for a given HypEnum, using the members' value.
- *  \tparam EnumType The enum type the member is a part of. The enum must have a HypEnum associated with it, otherwise this function will do nothing.
- *  \param value The value of the enum member to find the name of.
+ *  \tparam EnumType The enum type the member is a part of. The enum must have a HypEnum associated with it, otherwise this function will return an empty String.
+ *  If the member is not found in the registered HypEnum, this function will return a default string (e.g "EnumType(value)").
+ *  \param value The string value of the enum member to find the name of, or EnumName(value) if the member is not found.
  */
 template <class EnumType, typename = std::enable_if_t<std::is_enum_v<EnumType>>>
-Name GetEnumMemberName(EnumType value)
+String EnumToString(EnumType value)
 {
     using EnumUnderlyingType = std::underlying_type_t<EnumType>;
 
@@ -167,7 +169,7 @@ Name GetEnumMemberName(EnumType value)
 
     if (!hypClass || !hypClass->IsEnumType())
     {
-        return Name::Invalid();
+        return String::empty;
     }
 
     for (IHypMember& member : hypClass->GetMembers(HypMemberType::TYPE_CONSTANT))
@@ -177,11 +179,12 @@ Name GetEnumMemberName(EnumType value)
         // If the function sets stopIteration to true, stop iteration
         if (static_cast<EnumType>(memberConstant.Get().Get<EnumUnderlyingType>()) == value)
         {
-            return memberConstant.GetName();
+            return *memberConstant.GetName();
         }
     }
 
-    return Name::Invalid();
+    // If no member found return a string in the format EnumType(value)
+    return HYP_FORMAT("{}({})", TypeNameHelper<EnumType, true>::value.Data(), EnumUnderlyingType(value));
 }
 
 /*! \brief Get the value of an enum member for a given HypEnum dynamically, given the name of the enum member.
@@ -190,7 +193,7 @@ Name GetEnumMemberName(EnumType value)
  *  \param errorValue The value to return if the member is not found.
  */
 template <class EnumType, typename = std::enable_if_t<std::is_enum_v<EnumType>>>
-EnumType GetEnumMemberValue(WeakName memberName, EnumType errorValue = EnumType())
+EnumType EnumValue(WeakName memberName, EnumType errorValue = EnumType())
 {
     using EnumUnderlyingType = std::underlying_type_t<EnumType>;
 

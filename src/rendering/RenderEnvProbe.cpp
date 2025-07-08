@@ -179,7 +179,7 @@ void RenderEnvProbe::CreateShader()
     {
         m_shader = g_shaderManager->GetOrCreate(
             NAME("RenderToCubemap"),
-            ShaderProperties(staticMeshVertexAttributes, { "WRITE_NORMALS", "WRITE_MOMENTS" }));
+            ShaderProperties(staticMeshVertexAttributes, { "ENV_PROBE", "WRITE_NORMALS", "WRITE_MOMENTS" }));
     }
     else if (m_envProbe->IsSkyProbe())
     {

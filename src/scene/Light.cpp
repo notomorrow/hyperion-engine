@@ -120,6 +120,13 @@ void Light::CreateShadowViews()
     // Per shadow view flags
     Array<EnumFlags<ViewFlags>> shadowViewFlags = { { ViewFlags::COLLECT_ALL_ENTITIES } };
 
+    ShaderDefinition shaderDefinition;
+
+    ShaderProperties shaderProperties;
+    shaderProperties.SetRequiredVertexAttributes(staticMeshVertexAttributes);
+    shaderProperties.Set("MODE_SHADOWS");
+    shaderProperties.Set(g_shadowMapFilterPropertyNames[shadowMapFilter]);
+
     ViewOutputTargetDesc outputTargetDesc {};
     outputTargetDesc.extent = shadowMapDimensions;
 
@@ -146,6 +153,8 @@ void Light::CreateShadowViews()
         depthAttachmentDesc.loadOp = LoadOperation::CLEAR;
         depthAttachmentDesc.storeOp = StoreOperation::STORE;
 
+        shaderDefinition = ShaderDefinition(NAME("Shadows"), shaderProperties);
+
         break;
     }
     case LT_DIRECTIONAL:
@@ -167,6 +176,8 @@ void Light::CreateShadowViews()
         depthAttachmentDesc.loadOp = LoadOperation::CLEAR;
         depthAttachmentDesc.storeOp = StoreOperation::STORE;
 
+        shaderDefinition = ShaderDefinition(NAME("RenderToCubemap"), shaderProperties);
+
         break;
     }
     default:
@@ -176,25 +187,20 @@ void Light::CreateShadowViews()
     }
     }
 
-    ShaderProperties shaderProperties;
-    shaderProperties.SetRequiredVertexAttributes(staticMeshVertexAttributes);
-    shaderProperties.Set(g_shadowMapFilterPropertyNames[shadowMapFilter]);
+    AssertDebug(shaderDefinition.IsValid(), "Shader definition is not valid for light type {}", EnumToString(m_type));
 
-    Handle<Camera> shadowMapCamera = CreateObject<Camera>(
-        90.0f,
-        -int(shadowMapDimensions.x), int(shadowMapDimensions.y),
-        0.001f, 250.0f);
+    Handle<Camera> shadowMapCamera = CreateObject<Camera>(90.0f, -int(shadowMapDimensions.x), int(shadowMapDimensions.y), 0.001f, 250.0f);
     shadowMapCamera->SetName(Name::Unique("ShadowMapCamera"));
     InitObject(shadowMapCamera);
+
+    AssertDebug(shadowViewFlags.Size() >= 1);
+    m_shadowViews.Resize(shadowViewFlags.Size());
 
     const RenderableAttributeSet overrideAttributes(
         MeshAttributes {},
         MaterialAttributes {
-            .shaderDefinition = ShaderDefinition(NAME("Shadows"), shaderProperties),
+            .shaderDefinition = shaderDefinition,
             .cullFaces = shadowMapFilter == SMF_VSM ? FCM_BACK : FCM_FRONT });
-
-    AssertDebug(shadowViewFlags.Size() >= 1);
-    m_shadowViews.Resize(shadowViewFlags.Size());
 
     for (int i = 0; i < int(shadowViewFlags.Size()); i++)
     {
