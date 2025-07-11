@@ -608,6 +608,11 @@ public:
         return m_subclassImpls[subclassIndex].Get().GetElement(id);
     }
 
+    const ElementType* GetElement(IdType id) const
+    {
+        return const_cast<ResourceTracker*>(this)->GetElement(id);
+    }
+
     void Advance()
     {
         HYP_SCOPE;

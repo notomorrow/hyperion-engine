@@ -286,7 +286,7 @@ void Light::Update(float delta)
             m_shadowViews[i]->UpdateVisibility();
             m_shadowViews[i]->Collect();
 
-            HYP_LOG_TEMP("Update Light {} shadow view ({}), {} drawcalls found", Id(), i, RenderApi_GetProducerProxyList(m_shadowViews[i].Get()).NumDrawCallsCollected());
+            HYP_LOG_TEMP("Update Light {} shadow view ({}), {} drawcalls found", Id(), i, RenderApi_GetRenderCollector(m_shadowViews[i].Get()).NumDrawCallsCollected());
         }
     }
 }

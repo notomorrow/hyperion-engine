@@ -1708,6 +1708,8 @@ void DeferredRenderer::RenderFrameForView(FrameBase* frame, const RenderSetup& r
     rpl.BeginRead();
     HYP_DEFER({ rpl.EndRead(); });
 
+    RenderCollector& renderCollector = RenderApi_GetRenderCollector(view);
+
     DeferredPassData* pd = static_cast<DeferredPassData*>(rs.passData);
     AssertDebug(pd != nullptr);
 
@@ -1811,7 +1813,7 @@ void DeferredRenderer::RenderFrameForView(FrameBase* frame, const RenderSetup& r
     deferredData.screenWidth = view->GetRenderResource().GetViewport().extent.x;  // rpl.viewport.extent.x;
     deferredData.screenHeight = view->GetRenderResource().GetViewport().extent.y; // rpl.viewport.extent.y;
 
-    PerformOcclusionCulling(frame, rs, rpl);
+    PerformOcclusionCulling(frame, rs, renderCollector);
 
     if (doParticles)
     {
@@ -1829,7 +1831,7 @@ void DeferredRenderer::RenderFrameForView(FrameBase* frame, const RenderSetup& r
     { // render opaque objects into separate framebuffer
         frame->GetCommandList().Add<BeginFramebuffer>(opaqueFbo, frameIndex);
 
-        ExecuteDrawCalls(frame, rs, rpl, (1u << RB_OPAQUE));
+        ExecuteDrawCalls(frame, rs, renderCollector, (1u << RB_OPAQUE));
 
         frame->GetCommandList().Add<EndFramebuffer>(opaqueFbo, frameIndex);
     }
@@ -1905,14 +1907,14 @@ void DeferredRenderer::RenderFrameForView(FrameBase* frame, const RenderSetup& r
         // The lightmap bucket's framebuffer has a color attachment that will write into the opaque framebuffer's color attachment.
         frame->GetCommandList().Add<BeginFramebuffer>(lightmapFbo, frameIndex);
 
-        ExecuteDrawCalls(frame, rs, rpl, (1u << RB_LIGHTMAP));
+        ExecuteDrawCalls(frame, rs, renderCollector, (1u << RB_LIGHTMAP));
 
         frame->GetCommandList().Add<EndFramebuffer>(lightmapFbo, frameIndex);
     }
 
     { // generate mipchain after rendering opaque objects' lighting, now we can use it for transmission
         const ImageRef& srcImage = deferredPassFramebuffer->GetAttachment(0)->GetImage();
-        GenerateMipChain(frame, rs, rpl, srcImage);
+        GenerateMipChain(frame, rs, renderCollector, srcImage);
     }
 
     { // translucent objects
@@ -1935,8 +1937,8 @@ void DeferredRenderer::RenderFrameForView(FrameBase* frame, const RenderSetup& r
         pd->lightmapPass->RenderToFramebuffer(frame, rs, translucentFbo);
 
         // begin translucent with forward rendering
-        ExecuteDrawCalls(frame, rs, rpl, (1u << RB_TRANSLUCENT));
-        ExecuteDrawCalls(frame, rs, rpl, (1u << RB_DEBUG));
+        ExecuteDrawCalls(frame, rs, renderCollector, (1u << RB_TRANSLUCENT));
+        ExecuteDrawCalls(frame, rs, renderCollector, (1u << RB_DEBUG));
 
         // if (doParticles)
         // {
@@ -1948,7 +1950,7 @@ void DeferredRenderer::RenderFrameForView(FrameBase* frame, const RenderSetup& r
         //     environment->GetGaussianSplatting()->Render(frame, rs);
         // }
 
-        ExecuteDrawCalls(frame, rs, rpl, (1u << RB_SKYBOX));
+        ExecuteDrawCalls(frame, rs, renderCollector, (1u << RB_SKYBOX));
 
         // // render debug draw
         // g_engine->GetDebugDrawer()->Render(frame, rs);
@@ -1990,7 +1992,7 @@ void DeferredRenderer::RenderFrameForView(FrameBase* frame, const RenderSetup& r
 
 #undef CHECK_FRAMEBUFFER_SIZE
 
-void DeferredRenderer::PerformOcclusionCulling(FrameBase* frame, const RenderSetup& rs, RenderProxyList& rpl)
+void DeferredRenderer::PerformOcclusionCulling(FrameBase* frame, const RenderSetup& rs, RenderCollector& renderCollector)
 {
     HYP_SCOPE;
 
@@ -2000,17 +2002,17 @@ void DeferredRenderer::PerformOcclusionCulling(FrameBase* frame, const RenderSet
         | (1 << RB_TRANSLUCENT)
         | (1 << RB_DEBUG);
 
-    RenderCollector::PerformOcclusionCulling(frame, rs, rpl, bucketMask);
+    renderCollector.PerformOcclusionCulling(frame, rs, bucketMask);
 }
 
-void DeferredRenderer::ExecuteDrawCalls(FrameBase* frame, const RenderSetup& rs, RenderProxyList& rpl, uint32 bucketMask)
+void DeferredRenderer::ExecuteDrawCalls(FrameBase* frame, const RenderSetup& rs, RenderCollector& renderCollector, uint32 bucketMask)
 {
     HYP_SCOPE;
 
-    RenderCollector::ExecuteDrawCalls(frame, rs, rpl, bucketMask);
+    renderCollector.ExecuteDrawCalls(frame, rs, bucketMask);
 }
 
-void DeferredRenderer::GenerateMipChain(FrameBase* frame, const RenderSetup& rs, RenderProxyList& rpl, const ImageRef& srcImage)
+void DeferredRenderer::GenerateMipChain(FrameBase* frame, const RenderSetup& rs, RenderCollector& renderCollector, const ImageRef& srcImage)
 {
     HYP_SCOPE;
 

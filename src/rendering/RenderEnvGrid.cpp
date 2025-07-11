@@ -710,6 +710,8 @@ void EnvGridRenderer::RenderProbe(FrameBase* frame, const RenderSetup& renderSet
     rpl.BeginRead();
     HYP_DEFER({ rpl.EndRead(); });
 
+    RenderCollector& renderCollector = RenderApi_GetRenderCollector(view);
+
     const EnvGridOptions& options = envGrid->GetOptions();
     const EnvProbeCollection& envProbeCollection = envGrid->GetEnvProbeCollection();
 
@@ -723,13 +725,13 @@ void EnvGridRenderer::RenderProbe(FrameBase* frame, const RenderSetup& renderSet
     // AssertDebug(probeProxy != nullptr, "No render proxy for EnvProbe {} when rendering EnvGrid!", probe.Id());
 
     HYP_LOG(EnvGrid, Debug, "Rendering EnvProbe {} with {} draw calls collected",
-        probe->Id(), rpl.NumDrawCallsCollected());
+        probe->Id(), renderCollector.NumDrawCallsCollected());
 
     {
         RenderSetup rs = renderSetup;
         rs.envProbe = probe;
 
-        RenderCollector::ExecuteDrawCalls(frame, rs, rpl, (1u << RB_OPAQUE));
+        renderCollector.ExecuteDrawCalls(frame, rs, (1u << RB_OPAQUE));
     }
 
     switch (envGrid->GetEnvGridType())

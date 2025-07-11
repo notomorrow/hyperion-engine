@@ -578,7 +578,9 @@ struct ResourceContainerFactory
 
 struct ViewData
 {
+    View* view = nullptr;
     RenderProxyList* renderProxyList = nullptr;
+    RenderCollector renderCollector;
     uint32 framesSinceWrite : 4 = 0; // framesSinceWrite of this view in the current frame, used to determine if the view is still alive if not reset to zero.
 };
 
@@ -617,13 +619,13 @@ HYP_API uint32 RenderApi_GetFrameIndex_GameThread()
     return g_producerIndex.load(std::memory_order_relaxed);
 }
 
-HYP_API RenderProxyList& RenderApi_GetProducerProxyList(View* view)
+static ViewData* GetCurrentFrameViewData(View* view)
 {
     HYP_SCOPE;
 
     AssertDebug(view != nullptr);
 
-    const uint32 slot = g_producerIndex.load(std::memory_order_relaxed);
+    const uint32 slot = g_threadFrameIndex->load(std::memory_order_relaxed);
 
     ViewData*& vd = g_frameData[slot].views[view];
 
@@ -631,10 +633,33 @@ HYP_API RenderProxyList& RenderApi_GetProducerProxyList(View* view)
     {
         // create a new pool for this view
         vd = &g_frameData[slot].perViewData.EmplaceBack();
+        vd->view = view;
+
+        if (view->GetViewDesc().drawCallCollectionImpl != nullptr)
+        {
+            vd->renderCollector.drawCallCollectionImpl = view->GetViewDesc().drawCallCollectionImpl;
+        }
+        else
+        {
+            vd->renderCollector.drawCallCollectionImpl = GetOrCreateDrawCallCollectionImpl<EntityInstanceBatch>();
+        }
 
         vd->renderProxyList = view->GetRenderProxyList(slot);
         AssertDebug(vd->renderProxyList != nullptr);
     }
+
+    return vd;
+}
+
+HYP_API RenderProxyList& RenderApi_GetProducerProxyList(View* view)
+{
+    HYP_SCOPE;
+
+#ifdef HYP_DEBUG_MODE
+    Threads::AssertOnThread(g_gameThread);
+#endif
+
+    ViewData* vd = GetCurrentFrameViewData(view);
 
     // reset the framesSinceWrite counter
     vd->framesSinceWrite = 0;
@@ -646,22 +671,22 @@ HYP_API RenderProxyList& RenderApi_GetConsumerProxyList(View* view)
 {
     HYP_SCOPE;
 
+#ifdef HYP_DEBUG_MODE
+    Threads::AssertOnThread(g_renderThread);
+#endif
+
+    return *GetCurrentFrameViewData(view)->renderProxyList;
+}
+
+HYP_API RenderCollector& RenderApi_GetRenderCollector(View* view)
+{
     AssertDebug(view != nullptr);
 
-    const uint32 slot = g_consumerIndex.load(std::memory_order_relaxed);
+#ifdef HYP_DEBUG_MODE
+    Threads::AssertOnThread(g_renderThread | g_gameThread);
+#endif
 
-    ViewData*& vd = g_frameData[slot].views[view];
-
-    if (!vd)
-    {
-        // create a new pool for this view
-        vd = &g_frameData[slot].perViewData.EmplaceBack();
-
-        vd->renderProxyList = view->GetRenderProxyList(slot);
-        AssertDebug(vd->renderProxyList != nullptr);
-    }
-
-    return *vd->renderProxyList;
+    return GetCurrentFrameViewData(view)->renderCollector;
 }
 
 HYP_API uint32 RenderApi_AddRef(HypObjectBase* resource)
@@ -947,10 +972,6 @@ HYP_API void RenderApi_EndFrame_GameThread()
     g_fullSemaphore.release();
 }
 
-static void RenderApi_UpdateBoundResources()
-{
-}
-
 HYP_API void RenderApi_BeginFrame_RenderThread()
 {
     HYP_SCOPE;
@@ -967,12 +988,6 @@ HYP_API void RenderApi_BeginFrame_RenderThread()
     FrameData& frameData = g_frameData[slot];
 
     HYPERION_ASSERT_RESULT(RenderCommands::Flush());
-
-    for (auto it = frameData.perViewData.Begin(); it != frameData.perViewData.End(); ++it)
-    {
-        ViewData& vd = *it;
-        AssertDebug(vd.renderProxyList != nullptr);
-    }
 
     for (ResourceSubtypeData& subtypeData : frameData.resources.dataByType)
     {
@@ -1007,6 +1022,21 @@ HYP_API void RenderApi_BeginFrame_RenderThread()
     HYP_LOG(Rendering, Debug, "Materials: {} bound", g_renderGlobalState->resourceBindings->materialBinder.TotalBoundResources());
     HYP_LOG(Rendering, Debug, "Textures: {} bound", g_renderGlobalState->resourceBindings->textureBinder.TotalBoundResources());
     HYP_LOG(Rendering, Debug, "Skeletons: {} bound", g_renderGlobalState->resourceBindings->skeletonBinder.TotalBoundResources());
+
+    // Build draw calls
+    for (auto it = frameData.perViewData.Begin(); it != frameData.perViewData.End(); ++it)
+    {
+        ViewData& vd = *it;
+
+        AssertDebug(vd.view != nullptr);
+        AssertDebug(vd.renderProxyList != nullptr);
+
+        /// TODO: Use View's bucket mask property to pass to BuildDrawCalls().
+        vd.renderProxyList->BeginRead();
+        vd.renderCollector.BuildRenderGroups(vd.view, *vd.renderProxyList);
+        vd.renderCollector.BuildDrawCalls(0);
+        vd.renderProxyList->EndRead();
+    }
 
     for (ResourceSubtypeData& subtypeData : frameData.resources.dataByType)
     {
@@ -1067,9 +1097,7 @@ HYP_API void RenderApi_EndFrame_RenderThread()
     for (auto it = frameData.perViewData.Begin(); it != frameData.perViewData.End();)
     {
         ViewData& vd = *it;
-        AssertDebug(vd.renderProxyList != nullptr);
-
-        vd.renderProxyList->RemoveEmptyRenderGroups();
+        vd.renderCollector.RemoveEmptyRenderGroups();
 
         // Clear out data for views that haven't been written to for a while
         if (vd.framesSinceWrite == g_maxFramesBeforeDiscard)

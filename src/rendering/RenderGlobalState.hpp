@@ -40,6 +40,7 @@ class MaterialDescriptorSetManager;
 class GraphicsPipelineCache;
 class BindlessStorage;
 class RenderProxyable;
+class RenderCollector;
 
 HYP_API extern SizeType GetNumDescendants(TypeId typeId);
 HYP_API extern int GetSubclassIndex(TypeId baseTypeId, TypeId subclassTypeId);
@@ -66,6 +67,9 @@ HYP_API extern RenderProxyList& RenderApi_GetProducerProxyList(View* view);
 /*! \brief Get the RenderProxyList for the Render thread to read from for the current frame, for the given view.
  *  \note This is only valid to call from the render thread, or from a task that is initiated by the render thread. */
 HYP_API extern RenderProxyList& RenderApi_GetConsumerProxyList(View* view);
+
+/*! \brief Thread-safe, but only usable on game thread and render thread */
+HYP_API extern RenderCollector& RenderApi_GetRenderCollector(View* view);
 
 // Call on game (producer) thread
 HYP_API extern uint32 RenderApi_AddRef(HypObjectBase* resource);

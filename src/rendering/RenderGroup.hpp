@@ -89,19 +89,12 @@ public:
         return m_flags;
     }
 
-    void SetDrawCallCollectionImpl(IDrawCallCollectionImpl* drawCallCollectionImpl);
-
-    HYP_FORCE_INLINE IDrawCallCollectionImpl* GetDrawCallCollectionImpl() const
-    {
-        return m_drawCallCollectionImpl;
-    }
-
     void PerformRendering(FrameBase* frame, const RenderSetup& renderSetup, const DrawCallCollection& drawCallCollection, IndirectRenderer* indirectRenderer, ParallelRenderingState* parallelRenderingState);
 
 private:
     void Init() override;
 
-    GraphicsPipelineRef CreateGraphicsPipeline(PassData* pd) const;
+    GraphicsPipelineRef CreateGraphicsPipeline(PassData* pd, IDrawCallCollectionImpl* drawCallCollectionImpl) const;
 
     EnumFlags<RenderGroupFlags> m_flags;
 
@@ -110,8 +103,6 @@ private:
     DescriptorTableRef m_descriptorTable;
 
     RenderableAttributeSet m_renderableAttributes;
-
-    IDrawCallCollectionImpl* m_drawCallCollectionImpl;
 };
 
 } // namespace hyperion

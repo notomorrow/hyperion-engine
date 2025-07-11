@@ -37,6 +37,8 @@
 
 namespace hyperion {
 
+#if 0
+
 static const TextureFormat shadowMapFormats[uint32(SMF_MAX)] = {
     TF_R32F, // STANDARD
     TF_R32F, // PCF
@@ -562,5 +564,7 @@ void DirectionalLightShadowRenderer::CreateShader()
 }
 
 #pragma endregion DirectionalLightShadowRenderer
+
+#endif
 
 } // namespace hyperion

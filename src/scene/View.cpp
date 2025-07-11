@@ -322,10 +322,6 @@ void View::Collect()
         | (1 << RB_TRANSLUCENT)
         | (1 << RB_DEBUG);
 
-    rpl.BuildRenderGroups(this);
-
-    RenderCollector::CollectDrawCalls(rpl, bucketMask);
-
     rpl.EndWrite();
 }
 

@@ -5,13 +5,14 @@
 #extension GL_EXT_nonuniform_qualifier : enable
 #extension GL_EXT_scalar_block_layout : enable
 
-#define INSTANCING
-
 layout(location = 0) out vec3 v_position;
 layout(location = 1) out vec3 v_screen_space_position;
 layout(location = 2) out vec2 v_texcoord0;
-layout(location = 3) out flat uint v_object_index;
-layout(location = 4) out vec4 v_color;
+layout(location = 3) out vec4 v_color;
+
+#ifdef INSTANCING
+layout(location = 4) out flat uint v_object_index;
+#endif
 
 HYP_ATTRIBUTE(0) vec3 a_position;
 HYP_ATTRIBUTE(1) vec3 a_normal;
@@ -31,6 +32,8 @@ HYP_DESCRIPTOR_CBUFF_DYNAMIC(Global, CamerasBuffer) uniform CamerasBuffer
     Camera camera;
 };
 
+#ifdef INSTANCING
+
 HYP_DESCRIPTOR_SSBO(Global, ObjectsBuffer) readonly buffer ObjectsBuffer
 {
     Object objects[HYP_MAX_ENTITIES];
@@ -43,6 +46,15 @@ HYP_DESCRIPTOR_SSBO_DYNAMIC(Instancing, EntityInstanceBatchesBuffer) readonly bu
 
 #undef OBJECT_INDEX
 #define OBJECT_INDEX (entity_instance_batch.batch.indices[gl_InstanceIndex >> 2][gl_InstanceIndex & 3])
+
+#else
+
+HYP_DESCRIPTOR_SSBO_DYNAMIC(Global, ObjectsBuffer) readonly buffer ObjectsBuffer
+{
+    Object object;
+};
+
+#endif
 
 void main()
 {
@@ -57,15 +69,13 @@ void main()
     model_matrix[3][1] = 0.0;
     model_matrix[3][3] = 1.0;
 
+#ifdef INSTANCING
     vec2 clamped_offset = entity_instance_batch.offsets[gl_InstanceIndex].xy;
     vec2 size = entity_instance_batch.sizes[gl_InstanceIndex].xy;
     vec2 clamped_size = entity_instance_batch.sizes[gl_InstanceIndex].zw;
 
     vec4 position = entity_instance_batch.batch.transforms[gl_InstanceIndex] * model_matrix * vec4(a_position, 1.0);
     vec4 ndc_position = camera.projection * camera.view * position;
-
-    v_position = position.xyz;
-    v_screen_space_position = vec3(ndc_position.xy * 0.5 + 0.5, ndc_position.z);
 
     // // scale texcoord based on the size diff - need to do this because the quad mesh is always 1x1
     vec4 instance_texcoords = entity_instance_batch.texcoords[gl_InstanceIndex];
@@ -75,9 +85,20 @@ void main()
 
     v_texcoord0 = instance_texcoords.xy - (clamped_offset / clamped_size * clamped_instance_texcoord_size) + (a_texcoord0 * clamped_instance_texcoord_size);
 
-    v_color = vec4(1.0);
-
     v_object_index = OBJECT_INDEX;
+#else
+    // texcoord / clamping not implemented for non-instanced UI objects
+
+    vec4 position = model_matrix * vec4(a_position, 1.0);
+    vec4 ndc_position = camera.projection * camera.view * position;
+
+    v_texcoord0 = a_texcoord0;
+#endif
+
+    v_position = position.xyz;
+    v_screen_space_position = vec3(ndc_position.xy * 0.5 + 0.5, ndc_position.z);
+
+    v_color = vec4(1.0);
 
     gl_Position = ndc_position;
 }

@@ -194,6 +194,7 @@ class DrawCallCollectionImpl final : public IDrawCallCollectionImpl
 {
 public:
     static_assert(std::is_base_of_v<EntityInstanceBatch, EntityInstanceBatchType>, "EntityInstanceBatchType must be a derived struct type of EntityInstanceBatch");
+    static_assert(offsetof(EntityInstanceBatchType, indices) == 16, "offsetof for member `indices` of the derived EntityInstanceBatch type must be 16 or shader calculations will be incorrect!");
 
     DrawCallCollectionImpl()
         : m_entityInstanceBatches(GetGpuBufferHolderMap()->GetOrCreate<EntityInstanceBatchType>())

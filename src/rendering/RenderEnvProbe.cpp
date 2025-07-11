@@ -290,7 +290,7 @@ void RenderEnvProbe::Render(FrameBase* frame, const RenderSetup& renderSetup)
     {
         newRenderSetup.envProbe = m_envProbe;
 
-        RenderCollector::ExecuteDrawCalls(frame, newRenderSetup, rpl, ((1u << RB_OPAQUE) | (1u << RB_TRANSLUCENT)));
+        renderCollector.ExecuteDrawCalls(frame, newRenderSetup, ((1u << RB_OPAQUE) | (1u << RB_TRANSLUCENT)));
 
         newRenderSetup.envProbe = nullptr;
     }
@@ -469,6 +469,8 @@ void ReflectionProbeRenderer::RenderProbe(FrameBase* frame, const RenderSetup& r
     rpl.BeginRead();
     HYP_DEFER({ rpl.EndRead(); });
 
+    RenderCollector& renderCollector = RenderApi_GetRenderCollector(view);
+
     HYP_LOG(EnvProbe, Debug, "Rendering EnvProbe {} (type: {})",
         envProbe->Id(), envProbe->GetEnvProbeType());
 
@@ -486,7 +488,7 @@ void ReflectionProbeRenderer::RenderProbe(FrameBase* frame, const RenderSetup& r
     }
 #endif
 
-    RenderCollector::ExecuteDrawCalls(frame, renderSetup, rpl, ((1u << RB_OPAQUE) | (1u << RB_TRANSLUCENT)));
+    renderCollector.ExecuteDrawCalls(frame, renderSetup, ((1u << RB_OPAQUE) | (1u << RB_TRANSLUCENT)));
 
     const ViewOutputTarget& outputTarget = view->GetOutputTarget();
     AssertDebug(outputTarget.IsValid());

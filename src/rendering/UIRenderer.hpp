@@ -28,21 +28,17 @@ class RenderView;
 struct RenderSetup;
 struct UIPassData;
 
-class UIRenderCollector : RenderCollector
+class UIRenderCollector : public RenderCollector
 {
 public:
-    UIRenderCollector();
-    UIRenderCollector(const UIRenderCollector& other) = delete;
-    UIRenderCollector& operator=(const UIRenderCollector& other) = delete;
-    UIRenderCollector(UIRenderCollector&& other) noexcept = default;
-    UIRenderCollector& operator=(UIRenderCollector&& other) noexcept = default;
-    ~UIRenderCollector();
+    UIRenderCollector() = default;
+    ~UIRenderCollector() = default;
 
     void ResetOrdering();
 
-    void PushUpdates(RenderProxyList& rpl, const Optional<RenderableAttributeSet>& overrideAttributes = {});
+    void PushUpdates(View* view, RenderProxyList& rpl, const Optional<RenderableAttributeSet>& overrideAttributes = {});
 
-    void ExecuteDrawCalls(FrameBase* frame, const RenderSetup& renderSetup, const FramebufferRef& framebuffer) const;
+    void ExecuteDrawCalls(FrameBase* frame, const RenderSetup& renderSetup, const FramebufferRef& framebuffer, uint32 bucketBits);
 
     Array<Pair<ObjId<Entity>, int>> proxyDepths;
 };
@@ -53,26 +49,17 @@ public:
     UIRenderer(const Handle<View>& view);
     virtual ~UIRenderer() = default;
 
-    HYP_FORCE_INLINE UIRenderCollector& GetRenderCollector()
-    {
-        return m_renderCollector;
-    }
-
-    HYP_FORCE_INLINE const UIRenderCollector& GetRenderCollector() const
-    {
-        return m_renderCollector;
-    }
-
     virtual void Initialize() override;
     virtual void Shutdown() override;
 
     virtual void RenderFrame(FrameBase* frame, const RenderSetup& renderSetup) override;
 
+    UIRenderCollector renderCollector;
+
 protected:
     PassData* CreateViewPassData(View* view, PassDataExt&) override;
 
     Handle<View> m_view;
-    UIRenderCollector m_renderCollector;
 };
 
 HYP_CLASS(NoScriptBindings)

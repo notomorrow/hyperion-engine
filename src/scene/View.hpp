@@ -34,6 +34,7 @@ class RenderEnvGrid;
 class EnvProbe;
 class RenderEnvProbe;
 class GBuffer;
+class IDrawCallCollectionImpl;
 
 enum class ViewFlags : uint32
 {
@@ -90,6 +91,7 @@ struct ViewDesc
     Handle<Camera> camera;
     int priority = 0;
     Optional<RenderableAttributeSet> overrideAttributes;
+    IDrawCallCollectionImpl* drawCallCollectionImpl = nullptr;
 };
 
 class HYP_API ViewOutputTarget

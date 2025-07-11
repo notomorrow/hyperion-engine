@@ -45,6 +45,8 @@ class RenderEnvProbe;
 class ReflectionProbe;
 class Texture;
 class Skeleton;
+class RenderCollector;
+enum class RenderGroupFlags : uint32;
 enum LightType : uint32;
 enum EnvProbeType : uint32;
 
@@ -105,38 +107,6 @@ struct HYP_API RenderProxyList
     RenderProxyList& operator=(RenderProxyList&& other) noexcept = delete;
 
     ~RenderProxyList();
-
-#ifdef HYP_DEBUG_MODE
-    HYP_FORCE_INLINE SizeType NumDrawCallsCollected() const
-    {
-        SizeType numDrawCalls = 0;
-
-        for (const auto& mappings : mappingsByBucket)
-        {
-            for (const KeyValuePair<RenderableAttributeSet, DrawCallCollectionMapping>& it : mappings)
-            {
-                const DrawCallCollectionMapping& mapping = it.second;
-
-                numDrawCalls += mapping.drawCallCollection.drawCalls.Size()
-                    + mapping.drawCallCollection.instancedDrawCalls.Size();
-            }
-        }
-
-        return numDrawCalls;
-    }
-#endif
-
-    void Clear();
-    void RemoveEmptyRenderGroups();
-
-    /*! \brief Counts the number of render groups in the list. */
-    uint32 NumRenderGroups() const;
-
-    /*! \brief Builds RenderGroups for proxies, based on renderable attributes */
-    void BuildRenderGroups(View* view);
-
-    ParallelRenderingState* AcquireNextParallelRenderingState();
-    void CommitParallelRenderingState(CmdList& outCommandList);
 
     void BeginWrite()
     {
@@ -208,6 +178,9 @@ struct HYP_API RenderProxyList
 
     CollectionState state : 2 = CS_DONE;
 
+    // are mesh entities sorted using an indirect array to map sort order?
+    bool useOrdering : 1 = false;
+
     Viewport viewport;
     int priority;
 
@@ -220,10 +193,7 @@ struct HYP_API RenderProxyList
     ResourceTracker<ObjId<Texture>, Texture*> textures;
     ResourceTracker<ObjId<Skeleton>, Skeleton*> skeletons;
 
-    ParallelRenderingState* parallelRenderingStateHead;
-    ParallelRenderingState* parallelRenderingStateTail;
-
-    FixedArray<FlatMap<RenderableAttributeSet, DrawCallCollectionMapping>, RB_MAX> mappingsByBucket;
+    Array<Pair<ObjId<Entity>, int>, DynamicAllocator> orderedMeshEntities;
 
     // marker to set to locked when game thread is writing to this list.
     // this only really comes into play with non-buffered Views that do not double/triple buffer their RenderProxyLists
@@ -234,18 +204,66 @@ struct HYP_API RenderProxyList
 #endif
 };
 
-class RenderCollector
+class HYP_API RenderCollector
 {
 public:
-    static void CollectDrawCalls(RenderProxyList& renderProxyList, uint32 bucketBits);
+    RenderCollector();
+    RenderCollector(const RenderCollector& other) = delete;
+    RenderCollector& operator=(const RenderCollector& other) = delete;
+    RenderCollector(RenderCollector&& other) noexcept = delete;
+    RenderCollector& operator=(RenderCollector&& other) noexcept = delete;
+    ~RenderCollector();
 
-    static void PerformOcclusionCulling(FrameBase* frame, const RenderSetup& renderSetup, RenderProxyList& renderProxyList, uint32 bucketBits);
+#ifdef HYP_DEBUG_MODE
+    HYP_FORCE_INLINE SizeType NumDrawCallsCollected() const
+    {
+        SizeType numDrawCalls = 0;
+
+        for (const auto& mappings : mappingsByBucket)
+        {
+            for (const KeyValuePair<RenderableAttributeSet, DrawCallCollectionMapping>& it : mappings)
+            {
+                const DrawCallCollectionMapping& mapping = it.second;
+
+                numDrawCalls += mapping.drawCallCollection.drawCalls.Size()
+                    + mapping.drawCallCollection.instancedDrawCalls.Size();
+            }
+        }
+
+        return numDrawCalls;
+    }
+#endif
+
+    void Clear(bool deleteIndirectRenderers = true);
+
+    ParallelRenderingState* parallelRenderingStateHead;
+    ParallelRenderingState* parallelRenderingStateTail;
+
+    FixedArray<FlatMap<RenderableAttributeSet, DrawCallCollectionMapping>, RB_MAX> mappingsByBucket;
+
+    IDrawCallCollectionImpl* drawCallCollectionImpl;
+    EnumFlags<RenderGroupFlags> renderGroupFlags;
+
+    ParallelRenderingState* AcquireNextParallelRenderingState();
+    void CommitParallelRenderingState(CmdList& outCommandList);
+
+    void PerformOcclusionCulling(FrameBase* frame, const RenderSetup& renderSetup, uint32 bucketBits);
 
     // Writes commands into the frame's command list to execute the draw calls in the given bucket mask.
-    static void ExecuteDrawCalls(FrameBase* frame, const RenderSetup& renderSetup, RenderProxyList& renderProxyList, uint32 bucketBits);
+    void ExecuteDrawCalls(FrameBase* frame, const RenderSetup& renderSetup, uint32 bucketBits);
 
     // Writes commands into the frame's command list to execute the draw calls in the given bucket mask.
-    static void ExecuteDrawCalls(FrameBase* frame, const RenderSetup& renderSetup, RenderProxyList& renderProxyList, const FramebufferRef& framebuffer, uint32 bucketBits);
+    void ExecuteDrawCalls(FrameBase* frame, const RenderSetup& renderSetup, const FramebufferRef& framebuffer, uint32 bucketBits);
+
+    void RemoveEmptyRenderGroups();
+
+    /*! \brief Counts the number of render groups in the list. */
+    uint32 NumRenderGroups() const;
+
+    /*! \brief Builds RenderGroups for proxies, based on renderable attributes */
+    void BuildRenderGroups(View* view, const RenderProxyList& renderProxyList);
+
+    void BuildDrawCalls(uint32 bucketBits);
 };
 
 } // namespace hyperion
