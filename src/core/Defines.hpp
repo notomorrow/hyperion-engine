@@ -327,6 +327,27 @@
 #else
 #define HYP_BREAKPOINT __asm__ volatile("int $0x03")
 #endif
+
+namespace hyperion {
+namespace debug {
+
+template <auto FileName, int LineNumber, auto FunctionName>
+static HYP_FORCE_INLINE void ExecuteBreakpointOnce()
+{
+    static struct Impl
+    {
+        Impl()
+        {
+            HYP_BREAKPOINT;
+        }
+    } impl;
+}
+
+} // namespace debug
+} // namespace hyperion
+
+#define HYP_BREAKPOINT_ONCE ::hyperion::debug::ExecuteBreakpointOnce<HYP_STATIC_STRING(__FILE__), __LINE__, HYP_STATIC_STRING(HYP_FUNCTION_NAME_LIT)>()
+
 #endif
 #elif defined(HYP_MSVC) && HYP_MSVC
 #define HYP_DEBUG_FUNC_SHORT (__FUNCTION__)

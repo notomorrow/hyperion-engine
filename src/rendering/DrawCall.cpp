@@ -211,7 +211,7 @@ uint32 DrawCallCollection::PushEntityToBatch(InstancedDrawCall& drawCall, ObjId<
     }
 #endif
 
-    const SizeType batchSizeof = impl->GetBatchSizeOf();
+    const SizeType batchSizeof = impl->GetStructSize();
 
     bool dirty = false;
 

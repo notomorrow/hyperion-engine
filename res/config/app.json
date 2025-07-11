@@ -35,7 +35,7 @@
       "hbil": false,
       "ssgi": false,
       "hbao": false,
-      "irradiance": true
+      "irradiance": false
     },
     "hbil": {
       "enabled": false

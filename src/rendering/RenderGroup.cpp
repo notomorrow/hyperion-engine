@@ -386,7 +386,7 @@ static void RenderAll(
                 entityDescriptorSetIndex);
         }
 
-        const SizeType offset = entityInstanceBatch->batchIndex * drawCallCollection.impl->GetBatchSizeOf();
+        const SizeType offset = entityInstanceBatch->batchIndex * drawCallCollection.impl->GetStructSize();
 
         frame->GetCommandList().Add<BindDescriptorSet>(
             instancingDescriptorSet,
@@ -613,7 +613,7 @@ static void RenderAll_Parallel(
                             entityDescriptorSetIndex);
                     }
 
-                    const SizeType offset = entityInstanceBatch->batchIndex * drawCallCollection.impl->GetBatchSizeOf();
+                    const SizeType offset = entityInstanceBatch->batchIndex * drawCallCollection.impl->GetStructSize();
 
                     commandList.Add<BindDescriptorSet>(
                         instancingDescriptorSet,

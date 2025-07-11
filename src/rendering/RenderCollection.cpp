@@ -281,7 +281,7 @@ RenderCollector::~RenderCollector()
     Clear(true);
 }
 
-void RenderCollector::Clear(bool deleteIndirectRenderers)
+void RenderCollector::Clear(bool freeMemory)
 {
     HYP_SCOPE;
 
@@ -291,9 +291,9 @@ void RenderCollector::Clear(bool deleteIndirectRenderers)
         for (auto& it : mappings)
         {
             DrawCallCollectionMapping& mapping = it.second;
-            mapping.meshProxies.Clear();
+            mapping.meshProxies.Clear(/* deletePages */ freeMemory);
 
-            if (deleteIndirectRenderers && mapping.indirectRenderer)
+            if (freeMemory && mapping.indirectRenderer)
             {
                 delete mapping.indirectRenderer;
                 mapping.indirectRenderer = nullptr;
@@ -642,6 +642,7 @@ void RenderCollector::BuildRenderGroups(View* view, const RenderProxyList& rende
     HYP_SCOPE;
 
     AssertDebug(view != nullptr);
+    AssertDebug(renderProxyList.state == RenderProxyList::CS_READING);
 
     const RenderableAttributeSet* overrideAttributes = view->GetOverrideAttributes().TryGet();
 
@@ -651,7 +652,8 @@ void RenderCollector::BuildRenderGroups(View* view, const RenderProxyList& rende
         // needs to clear and rebuild the entire list of entities,
         // as we won't be able to maintain structure needed to make use of diffing
 
-        Clear(/* deleteIndirectRenderers */ false);
+        // keep memory around for next frame so we aren't allocating as much during the frame.
+        Clear(/* freeMemory */ false);
 
         if (renderProxyList.useOrdering)
         {
@@ -676,13 +678,20 @@ void RenderCollector::BuildRenderGroups(View* view, const RenderProxyList& rende
             return;
         }
 
+        int i = 0;
         for (const RenderProxyMesh& proxy : renderProxyList.meshes)
         {
             RenderableAttributeSet attributes = GetRenderableAttributesForProxy(proxy, overrideAttributes);
             UpdateRenderableAttributesDynamic(&proxy, attributes);
 
             AddRenderProxy(this, const_cast<RenderProxyMesh*>(&proxy), attributes);
+
+            i++;
         }
+
+        Array<RenderProxyMesh*> rpm;
+        renderProxyList.meshes.GetCurrent(rpm);
+        HYP_LOG_TEMP("Render {} mesh entities (non multi buffered) : num current: {}", i, rpm.Size());
 
         return;
     }

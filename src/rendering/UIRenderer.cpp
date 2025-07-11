@@ -574,6 +574,7 @@ void UIRenderSubsystem::Update(float delta)
     m_view->UpdateVisibility();
 
     RenderProxyList& rpl = RenderApi_GetProducerProxyList(m_view);
+    rpl.TEMP_disableBuildRenderCollection = true;
     rpl.BeginWrite();
     rpl.viewport = m_view->GetViewport();
     rpl.priority = m_view->GetPriority();

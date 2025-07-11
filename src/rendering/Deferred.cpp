@@ -64,25 +64,25 @@ namespace hyperion {
 // iterations per frame for cleaning up unused resources for passes
 static constexpr int g_frameCleanupBudget = 16;
 
-static constexpr TextureFormat envGridRadianceFormat = TF_RGBA8;
-static constexpr TextureFormat envGridIrradianceFormat = TF_R11G11B10F;
+static constexpr TextureFormat g_envGridRadianceFormat = TF_RGBA8;
+static constexpr TextureFormat g_envGridIrradianceFormat = TF_R11G11B10F;
 
-static constexpr TextureFormat envGridPassFormats[EGPM_MAX] = {
-    envGridRadianceFormat,  // EGPM_RADIANCE
-    envGridIrradianceFormat // EGPM_IRRADIANCE
+static constexpr TextureFormat g_envGridPassFormats[EGPM_MAX] = {
+    g_envGridRadianceFormat,  // EGPM_RADIANCE
+    g_envGridIrradianceFormat // EGPM_IRRADIANCE
 };
 
-static const Float16 s_ltcMatrix[] = {
+static const Float16 g_ltcMatrix[] = {
 #include <rendering/inl/LTCMatrix.inl>
 };
 
-static_assert(sizeof(s_ltcMatrix) == 64 * 64 * 4 * 2, "Invalid LTC matrix size");
+static_assert(sizeof(g_ltcMatrix) == 64 * 64 * 4 * 2, "Invalid LTC matrix size");
 
-static const Float16 s_ltcBrdf[] = {
+static const Float16 g_ltcBrdf[] = {
 #include <rendering/inl/LTCBRDF.inl>
 };
 
-static_assert(sizeof(s_ltcBrdf) == 64 * 64 * 4 * 2, "Invalid LTC BRDF size");
+static_assert(sizeof(g_ltcBrdf) == 64 * 64 * 4 * 2, "Invalid LTC BRDF size");
 
 void GetDeferredShaderProperties(ShaderProperties& outShaderProperties)
 {
@@ -190,7 +190,7 @@ void DeferredPass::CreatePipeline(const RenderableAttributeSet& renderableAttrib
 
         DeferCreate(m_ltcSampler);
 
-        ByteBuffer ltcMatrixData(sizeof(s_ltcMatrix), s_ltcMatrix);
+        ByteBuffer ltcMatrixData(sizeof(g_ltcMatrix), g_ltcMatrix);
 
         m_ltcMatrixTexture = CreateObject<Texture>(TextureData {
             TextureDesc {
@@ -206,7 +206,7 @@ void DeferredPass::CreatePipeline(const RenderableAttributeSet& renderableAttrib
 
         m_ltcMatrixTexture->SetPersistentRenderResourceEnabled(true);
 
-        ByteBuffer ltcBrdfData(sizeof(s_ltcBrdf), s_ltcBrdf);
+        ByteBuffer ltcBrdfData(sizeof(g_ltcBrdf), g_ltcBrdf);
 
         m_ltcBrdfTexture = CreateObject<Texture>(TextureData {
             TextureDesc {
@@ -285,6 +285,8 @@ void DeferredPass::Render(FrameBase* frame, const RenderSetup& rs)
     rpl.BeginRead();
 
     HYP_DEFER({ rpl.EndRead(); });
+
+    HYP_LOG_TEMP("Num lights : {}", rpl.lights.NumCurrent());
 
     // no lights bound, do not render direct shading at all
     if (rpl.lights.NumCurrent() == 0)
@@ -499,7 +501,7 @@ static EnvGridApplyMode EnvGridTypeToApplyEnvGridMode(EnvGridType type)
 }
 
 EnvGridPass::EnvGridPass(EnvGridPassMode mode, Vec2u extent, GBuffer* gbuffer)
-    : FullScreenPass(envGridPassFormats[mode], extent, gbuffer),
+    : FullScreenPass(g_envGridPassFormats[mode], extent, gbuffer),
       m_mode(mode),
       m_isFirstFrame(true)
 {
@@ -725,10 +727,7 @@ void ReflectionsPass::CreatePipeline(const RenderableAttributeSet& renderableAtt
 
     for (const auto& it : applyReflectionProbePasses)
     {
-        ShaderRef shader = g_shaderManager->GetOrCreate(
-            NAME("ApplyReflectionProbe"),
-            it.second);
-
+        ShaderRef shader = g_shaderManager->GetOrCreate(NAME("ApplyReflectionProbe"), it.second);
         Assert(shader.IsValid());
 
         const DescriptorTableDeclaration& descriptorTableDecl = shader->GetCompiledShader()->GetDescriptorTableDeclaration();
@@ -1533,6 +1532,7 @@ void DeferredRenderer::RenderFrame(FrameBase* frame, const RenderSetup& rs)
     // Render global environment probes and grids and set fallbacks
     RenderSetup newRs = rs;
 
+#if 1
     // Render shadows for shadow casting lights
     for (uint32 lightType = 0; lightType < LT_MAX; lightType++)
     {
@@ -1558,6 +1558,7 @@ void DeferredRenderer::RenderFrame(FrameBase* frame, const RenderSetup& rs)
             }
         }
     }
+#endif
 
     {
         // Set sky as fallback probe
@@ -1599,6 +1600,7 @@ void DeferredRenderer::RenderFrame(FrameBase* frame, const RenderSetup& rs)
             }
         }
 
+#if 1
         if (envGrids.Any())
         {
             for (EnvGrid* envGrid : envGrids)
@@ -1619,6 +1621,7 @@ void DeferredRenderer::RenderFrame(FrameBase* frame, const RenderSetup& rs)
                 counts[ERS_ENV_GRIDS]++;
             }
         }
+#endif
     }
 
     // reset renderer state back to what it was before

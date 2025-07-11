@@ -22,19 +22,26 @@ HYP_API extern int GetSubclassIndex(TypeId baseTypeId, TypeId subclassTypeId);
 template <class IdType, class ElementType>
 class ResourceTracker
 {
+protected:
+    struct Impl;
+
+public:
     template <class Derived, bool IsConst>
     struct IteratorBase
     {
         using ResourceTrackerType = std::conditional_t<IsConst, const ResourceTracker, ResourceTracker>;
+        using ImplType = typename ResourceTrackerType::Impl;
 
         ResourceTrackerType* tracker;
+        Bitset(ImplType::* memPtr) = nullptr;
 
         // index into m_subclassImpls (and m_subclassImplsInitialized)
         SizeType subclassImplIndex;
         SizeType elementIndex;
 
-        IteratorBase(ResourceTrackerType* tracker, SizeType subclassIdx, SizeType elemIdx)
+        IteratorBase(ResourceTrackerType* tracker, Bitset(ImplType::* memPtr), SizeType subclassIdx, SizeType elemIdx)
             : tracker(tracker),
+              memPtr(memPtr),
               subclassImplIndex(subclassIdx),
               elementIndex(elemIdx)
         {
@@ -47,7 +54,7 @@ class ResourceTracker
             // find valid element - first check m_impl then try subclasses if not found
             if (subclassImplIndex == Bitset::notFound)
             {
-                elementIndex = FindNextSet(tracker->m_impl.previous, elementIndex);
+                elementIndex = FindNextSet(tracker->m_impl.*memPtr, elementIndex);
 
                 if (elementIndex != Bitset::notFound)
                 {
@@ -69,7 +76,7 @@ class ResourceTracker
                 AssertDebug(subclassImplIndex < tracker->m_subclassImpls.Size());
 
                 auto& impl = tracker->m_subclassImpls[subclassImplIndex].Get();
-                elementIndex = FindNextSet(impl.previous, elementIndex);
+                elementIndex = FindNextSet(impl.*memPtr, elementIndex);
 
                 // Found valid element in subclass impl.
                 if (elementIndex != Bitset::notFound)
@@ -97,7 +104,7 @@ class ResourceTracker
 
             if (subclassImplIndex == Bitset::notFound)
             {
-                elementIndex = FindNextSet(tracker->m_impl.previous, elementIndex + 1);
+                elementIndex = FindNextSet(tracker->m_impl.*memPtr, elementIndex + 1);
 
                 if (elementIndex != Bitset::notFound)
                 {
@@ -108,7 +115,7 @@ class ResourceTracker
                 // Find first subclass that is set (if it exists),
                 // next part will handle finding the element index.
                 subclassImplIndex = FindNextSet(tracker->m_subclassImplsInitialized, 0);
-                elementIndex = SizeType(-1); // wrap around for next
+                elementIndex = Bitset::BitIndex(-1); // wrap around for next
             }
 
             while (subclassImplIndex != Bitset::notFound)
@@ -117,7 +124,7 @@ class ResourceTracker
 
                 auto& impl = tracker->m_subclassImpls[subclassImplIndex].Get();
 
-                elementIndex = FindNextSet(impl.previous, elementIndex + 1);
+                elementIndex = FindNextSet(impl.*memPtr, elementIndex + 1);
 
                 if (elementIndex != Bitset::notFound)
                 {
@@ -127,7 +134,7 @@ class ResourceTracker
 
                 // If we are at the end of the current subclass impl, move to the next one.
                 subclassImplIndex = FindNextSet(tracker->m_subclassImplsInitialized, subclassImplIndex + 1);
-                elementIndex = SizeType(-1); // wrap around for next
+                elementIndex = Bitset::BitIndex(-1); // wrap around for next
             }
 
             // exhausted all subclass elements
@@ -173,6 +180,7 @@ class ResourceTracker
         bool operator==(const Derived& other) const
         {
             return tracker == other.tracker
+                && memPtr == other.memPtr
                 && subclassImplIndex == other.subclassImplIndex
                 && elementIndex == other.elementIndex;
         }
@@ -180,6 +188,7 @@ class ResourceTracker
         bool operator!=(const Derived& other) const
         {
             return tracker != other.tracker
+                || memPtr != other.memPtr
                 || subclassImplIndex != other.subclassImplIndex
                 || elementIndex != other.elementIndex;
         }
@@ -191,7 +200,7 @@ class ResourceTracker
                 && elementIndex == Bitset::notFound;
         }
 
-        HYP_FORCE_INLINE static Bitset::BitIndex FindNextSet(const Bitset& bs, Bitset::BitIndex idx)
+        static HYP_FORCE_INLINE Bitset::BitIndex FindNextSet(const Bitset& bs, Bitset::BitIndex idx)
         {
             return bs.NextSetBitIndex(idx);
         }
@@ -202,10 +211,12 @@ public:
 
     struct Iterator : IteratorBase<Iterator, false>
     {
+        using ImplType = typename ResourceTracker::Impl;
+
         Iterator() = delete;
 
-        Iterator(ResourceTracker* tracker, SizeType subclassImplIndex, SizeType elementIndex)
-            : IteratorBase<Iterator, false>(tracker, subclassImplIndex, elementIndex)
+        Iterator(ResourceTracker* tracker, Bitset(ImplType::* memPtr), SizeType subclassImplIndex, SizeType elementIndex)
+            : IteratorBase<Iterator, false>(tracker, memPtr, subclassImplIndex, elementIndex)
         {
         }
 
@@ -214,6 +225,7 @@ public:
         {
             return ConstIterator(
                 IteratorBase<Iterator, false>::tracker,
+                IteratorBase<Iterator, false>::memPtr,
                 IteratorBase<Iterator, false>::subclassImplIndex,
                 IteratorBase<Iterator, false>::elementIndex);
         }
@@ -221,10 +233,12 @@ public:
 
     struct ConstIterator : IteratorBase<ConstIterator, true>
     {
+        using ImplType = typename ResourceTracker::Impl;
+
         ConstIterator() = delete;
 
-        ConstIterator(const ResourceTracker* tracker, SizeType subclassImplIndex, SizeType elementIndex)
-            : IteratorBase<ConstIterator, true>(tracker, subclassImplIndex, elementIndex)
+        ConstIterator(const ResourceTracker* tracker, Bitset(ImplType::* memPtr), SizeType subclassImplIndex, SizeType elementIndex)
+            : IteratorBase<ConstIterator, true>(tracker, memPtr, subclassImplIndex, elementIndex)
         {
         }
     };
@@ -635,7 +649,7 @@ public:
         }
     }
 
-    HYP_DEF_STL_BEGIN_END(Iterator(const_cast<ResourceTracker*>(this), Bitset::notFound, 0), Iterator(const_cast<ResourceTracker*>(this), Bitset::notFound, Bitset::notFound))
+    HYP_DEF_STL_BEGIN_END(Iterator(const_cast<ResourceTracker*>(this), &Impl::next, Bitset::notFound, 0), Iterator(const_cast<ResourceTracker*>(this), &Impl::next, Bitset::notFound, Bitset::notFound))
 
 protected:
     struct Impl final
@@ -1017,7 +1031,7 @@ protected:
         {
             HYP_SCOPE;
 
-            Bitset currentBits = previous;
+            Bitset currentBits = next;
 
             out.Reserve(out.Size() + currentBits.Count());
 

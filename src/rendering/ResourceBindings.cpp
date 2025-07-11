@@ -273,7 +273,6 @@ void OnBindingChanged_Material(Material* material, uint32 prev, uint32 next)
     // }
 
     HYP_LOG(Rendering, Debug, "Material {} binding changed from {} to {} for frame {}", material->Id(), prev, next, RenderApi_GetFrameIndex_RenderThread());
-    // RenderApi_AssignResourceBinding(material, next);
 
     RenderApi_AssignResourceBinding(material, next);
 

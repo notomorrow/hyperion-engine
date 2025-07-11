@@ -138,7 +138,8 @@ class IDrawCallCollectionImpl
 public:
     virtual ~IDrawCallCollectionImpl() = default;
 
-    virtual SizeType GetBatchSizeOf() const = 0;
+    virtual SizeType GetStructSize() const = 0;
+    virtual SizeType GetStructAlignment() const = 0;
     virtual EntityInstanceBatch* AcquireBatch() const = 0;
     virtual void ReleaseBatch(EntityInstanceBatch* batch) const = 0;
     virtual GpuBufferHolderBase* GetEntityInstanceBatchHolder() const = 0;
@@ -203,9 +204,14 @@ public:
 
     virtual ~DrawCallCollectionImpl() override = default;
 
-    virtual SizeType GetBatchSizeOf() const override
+    virtual SizeType GetStructSize() const override
     {
         return sizeof(EntityInstanceBatchType);
+    }
+
+    virtual SizeType GetStructAlignment() const override
+    {
+        return alignof(EntityInstanceBatchType);
     }
 
     virtual EntityInstanceBatch* AcquireBatch() const override

@@ -528,6 +528,11 @@ void ShadowRendererBase::RenderFrame(FrameBase* frame, const RenderSetup& render
 
     const bool useVsm = shadowMap->GetFilterMode() == SMF_VSM;
 
+    Array<RenderProxyList*> renderProxyLists;
+    renderProxyLists.Reserve(shadowViews.Size());
+
+    HYP_DEFER({ for (RenderProxyList* rpl : renderProxyLists) rpl->EndRead(); });
+
     for (const Handle<View>& shadowView : shadowViews)
     {
         const ViewOutputTarget& outputTarget = shadowView->GetOutputTarget();
@@ -543,7 +548,13 @@ void ShadowRendererBase::RenderFrame(FrameBase* frame, const RenderSetup& render
         ShadowPassData* pd = static_cast<ShadowPassData*>(rs.passData);
         AssertDebug(pd != nullptr);
 
+        RenderProxyList& rpl = RenderApi_GetConsumerProxyList(shadowView);
+        rpl.BeginRead();
+
+        renderProxyLists.PushBack(&rpl);
+
         RenderCollector& renderCollector = RenderApi_GetRenderCollector(shadowView);
+        HYP_LOG_TEMP("shadow render collector  {}", (void*)&renderCollector);
 
         HYP_LOG_TEMP("Render Shadow map here for light {}\t into view: {} for {} entities\t\tShadow map atlas index: {} elem index: {} point idx: {}\frame {}",
             renderSetup.light->Id(),

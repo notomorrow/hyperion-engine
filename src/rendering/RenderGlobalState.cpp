@@ -64,15 +64,21 @@ static constexpr uint32 g_numFrames = g_tripleBuffer ? 3 : 2;
 static constexpr uint32 g_maxViewsPerFrame = 16;
 static constexpr uint32 g_maxFramesBeforeDiscard = 4; // number of frames before ViewData is discarded if not written to
 
-static std::atomic_uint g_producerIndex { 0 }; // game thread frame index
-static std::atomic_uint g_consumerIndex { 0 }; // render thread frame index
-
 // thread-local frame index for the game and render threads
 // @NOTE: thread local so initialized to 0 on each thread by default
-thread_local std::atomic_uint* g_threadFrameIndex;
+thread_local uint32* g_threadFrameIndex;
+thread_local uint32* g_threadFrameCounter;
+static uint32 g_frameCounter[2] = { 0 };
+static uint32 g_frameIndex[2] = { 0 };
 
 static std::counting_semaphore<g_numFrames> g_fullSemaphore { 0 };
 static std::counting_semaphore<g_numFrames> g_freeSemaphore { g_numFrames };
+
+enum
+{
+    PRODUCER,
+    CONSUMER
+};
 
 #pragma region ResourceBindings
 
@@ -228,7 +234,7 @@ struct ResourceBindings
 
         const auto* elem = bindings.indexAndMapping.TryGet(id.ToIndex());
 
-        AssertDebug(elem != nullptr, "Failed to retrieve resource binding for resource with ID: {} for frame {}!", id, RenderApi_GetFrameIndex_RenderThread());
+        AssertDebug(elem != nullptr, "Failed to retrieve resource binding for resource with ID: {}", id);
 
         return elem ? *elem : Pair<uint32, void*>(~0u, nullptr);
     }
@@ -609,14 +615,16 @@ HYP_API void RenderApi_Init()
     g_renderGlobalState->materialDescriptorSetManager->CreateFallbackMaterialDescriptorSet();
 }
 
-HYP_API uint32 RenderApi_GetFrameIndex_RenderThread()
+HYP_API uint32 RenderApi_GetFrameIndex()
 {
-    return g_consumerIndex.load(std::memory_order_relaxed);
+    AssertDebug(g_threadFrameIndex != nullptr, "Called from invalid thread or before frame began!");
+    return *g_threadFrameIndex;
 }
 
-HYP_API uint32 RenderApi_GetFrameIndex_GameThread()
+HYP_API uint32 RenderApi_GetFrameCounter()
 {
-    return g_producerIndex.load(std::memory_order_relaxed);
+    AssertDebug(g_threadFrameCounter != nullptr, "Called from invalid thread or before frame began!");
+    return *g_threadFrameCounter;
 }
 
 static ViewData* GetCurrentFrameViewData(View* view)
@@ -625,7 +633,7 @@ static ViewData* GetCurrentFrameViewData(View* view)
 
     AssertDebug(view != nullptr);
 
-    const uint32 slot = g_threadFrameIndex->load(std::memory_order_relaxed);
+    const uint32 slot = *g_threadFrameIndex;
 
     ViewData*& vd = g_frameData[slot].views[view];
 
@@ -700,7 +708,9 @@ HYP_API uint32 RenderApi_AddRef(HypObjectBase* resource)
 
     const ObjIdBase resourceId = resource->Id();
 
-    const uint32 slot = g_producerIndex.load(std::memory_order_relaxed);
+    const uint32 slot = g_frameIndex[PRODUCER];
+
+    HYP_LOG_TEMP("Add ref for {} for frame {}", resourceId, slot);
 
     FrameData& fd = g_frameData[slot];
 
@@ -728,7 +738,9 @@ HYP_API uint32 RenderApi_ReleaseRef(ObjIdBase id)
 
     Threads::AssertOnThread(g_gameThread);
 
-    const uint32 slot = g_producerIndex.load(std::memory_order_relaxed);
+    const uint32 slot = g_frameIndex[PRODUCER];
+
+    HYP_LOG_TEMP("Release ref for {} for frame {}", id, slot);
 
     FrameData& fd = g_frameData[slot];
 
@@ -759,7 +771,7 @@ HYP_API void RenderApi_UpdateRenderProxy(ObjIdBase id)
 
     Threads::AssertOnThread(g_gameThread);
 
-    const uint32 slot = g_producerIndex.load(std::memory_order_relaxed);
+    const uint32 slot = g_frameIndex[PRODUCER];
 
     FrameData& fd = g_frameData[slot];
 
@@ -822,7 +834,7 @@ HYP_API void RenderApi_UpdateRenderProxy(ObjIdBase id, const IRenderProxy* srcPr
 
     Threads::AssertOnThread(g_gameThread);
 
-    const uint32 slot = g_producerIndex.load(std::memory_order_relaxed);
+    const uint32 slot = g_frameIndex[PRODUCER];
 
     FrameData& fd = g_frameData[slot];
 
@@ -879,7 +891,7 @@ HYP_API IRenderProxy* RenderApi_GetRenderProxy(ObjIdBase id)
 
     Threads::AssertOnThread(g_renderThread);
 
-    uint32 slot = g_consumerIndex.load(std::memory_order_relaxed);
+    const uint32 slot = g_frameIndex[CONSUMER];
 
     FrameData& frameData = g_frameData[slot];
 
@@ -933,11 +945,12 @@ HYP_API void RenderApi_BeginFrame_GameThread()
 {
     HYP_SCOPE;
 
-    g_threadFrameIndex = &g_producerIndex;
+    g_threadFrameIndex = &g_frameIndex[PRODUCER];
+    g_threadFrameCounter = &g_frameCounter[PRODUCER];
 
     g_freeSemaphore.acquire();
 
-    uint32 slot = g_producerIndex.load(std::memory_order_relaxed);
+    const uint32 slot = g_frameIndex[PRODUCER];
 
     FrameData& frameData = g_frameData[slot];
 
@@ -956,9 +969,7 @@ HYP_API void RenderApi_EndFrame_GameThread()
     Threads::AssertOnThread(g_gameThread);
 #endif
 
-    uint32 slot = g_producerIndex.load(std::memory_order_relaxed);
-
-    FrameData& frameData = g_frameData[slot];
+    FrameData& frameData = g_frameData[g_frameIndex[PRODUCER]];
 
     for (auto it = frameData.perViewData.Begin(); it != frameData.perViewData.End(); ++it)
     {
@@ -967,7 +978,7 @@ HYP_API void RenderApi_EndFrame_GameThread()
         AssertDebug(vd.renderProxyList != nullptr);
     }
 
-    g_producerIndex.store((g_producerIndex.load(std::memory_order_relaxed) + 1) % g_numFrames, std::memory_order_relaxed);
+    g_frameIndex[PRODUCER] = (g_frameIndex[PRODUCER] + 1) % g_numFrames;
 
     g_fullSemaphore.release();
 }
@@ -979,11 +990,12 @@ HYP_API void RenderApi_BeginFrame_RenderThread()
     Threads::AssertOnThread(g_renderThread);
 #endif
 
-    g_threadFrameIndex = &g_consumerIndex;
+    g_threadFrameIndex = &g_frameIndex[CONSUMER];
+    g_threadFrameCounter = &g_frameCounter[CONSUMER];
 
     g_fullSemaphore.acquire();
 
-    uint32 slot = g_consumerIndex.load(std::memory_order_relaxed);
+    const uint32 slot = g_frameIndex[CONSUMER];
 
     FrameData& frameData = g_frameData[slot];
 
@@ -1032,10 +1044,14 @@ HYP_API void RenderApi_BeginFrame_RenderThread()
         AssertDebug(vd.renderProxyList != nullptr);
 
         /// TODO: Use View's bucket mask property to pass to BuildDrawCalls().
-        vd.renderProxyList->BeginRead();
-        vd.renderCollector.BuildRenderGroups(vd.view, *vd.renderProxyList);
-        vd.renderCollector.BuildDrawCalls(0);
-        vd.renderProxyList->EndRead();
+        if (!vd.renderProxyList->TEMP_disableBuildRenderCollection)
+        {
+            HYP_LOG_TEMP("Building list for {}", (void*)&vd.renderCollector);
+            vd.renderProxyList->BeginRead();
+            vd.renderCollector.BuildRenderGroups(vd.view, *vd.renderProxyList);
+            vd.renderCollector.BuildDrawCalls(0);
+            vd.renderProxyList->EndRead();
+        }
     }
 
     for (ResourceSubtypeData& subtypeData : frameData.resources.dataByType)
@@ -1089,7 +1105,7 @@ HYP_API void RenderApi_EndFrame_RenderThread()
     Threads::AssertOnThread(g_renderThread);
 #endif
 
-    uint32 slot = g_consumerIndex.load(std::memory_order_relaxed);
+    const uint32 slot = g_frameIndex[CONSUMER];
 
     FrameData& frameData = g_frameData[slot];
 
@@ -1174,7 +1190,7 @@ HYP_API void RenderApi_EndFrame_RenderThread()
         subtypeData.indicesPendingDelete.Clear();
     }
 
-    g_consumerIndex.store((slot + 1) % g_numFrames, std::memory_order_relaxed);
+    g_frameIndex[CONSUMER] = (g_frameIndex[CONSUMER] + 1) % g_numFrames;
 
     g_freeSemaphore.release();
 }

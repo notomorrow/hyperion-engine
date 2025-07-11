@@ -471,9 +471,6 @@ void ReflectionProbeRenderer::RenderProbe(FrameBase* frame, const RenderSetup& r
 
     RenderCollector& renderCollector = RenderApi_GetRenderCollector(view);
 
-    HYP_LOG(EnvProbe, Debug, "Rendering EnvProbe {} (type: {})",
-        envProbe->Id(), envProbe->GetEnvProbeType());
-
 #ifdef HYP_DEBUG_MODE
     if (envProbe->IsA<SkyProbe>())
     {

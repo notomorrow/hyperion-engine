@@ -180,6 +180,7 @@ struct HYP_API RenderProxyList
 
     // are mesh entities sorted using an indirect array to map sort order?
     bool useOrdering : 1 = false;
+    bool TEMP_disableBuildRenderCollection : 1 = false;
 
     Viewport viewport;
     int priority;
@@ -234,7 +235,7 @@ public:
     }
 #endif
 
-    void Clear(bool deleteIndirectRenderers = true);
+    void Clear(bool freeMemory = true);
 
     ParallelRenderingState* parallelRenderingStateHead;
     ParallelRenderingState* parallelRenderingStateTail;

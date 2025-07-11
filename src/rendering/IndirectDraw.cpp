@@ -381,23 +381,35 @@ void IndirectRenderer::Create(IDrawCallCollectionImpl* impl)
     Assert(impl != nullptr);
 
     GpuBufferHolderBase* entityInstanceBatches = impl->GetEntityInstanceBatchHolder();
-    const SizeType batchSizeof = impl->GetBatchSizeOf();
+    const SizeType batchSizeof = impl->GetStructSize();
 
     for (uint32 frameIndex = 0; frameIndex < g_framesInFlight; frameIndex++)
     {
         const DescriptorSetRef& descriptorSet = descriptorTable->GetDescriptorSet(NAME("ObjectVisibilityDescriptorSet"), frameIndex);
         Assert(descriptorSet != nullptr);
 
-        auto* entityInstanceBatchesBufferElement = descriptorSet->GetLayout().GetElement(NAME("EntityInstanceBatchesBuffer"));
-        Assert(entityInstanceBatchesBufferElement != nullptr);
+        auto* shaderBufferElement = descriptorSet->GetLayout().GetElement(NAME("EntityInstanceBatchesBuffer"));
+        Assert(shaderBufferElement != nullptr);
 
-        if (entityInstanceBatchesBufferElement->size != ~0u)
+        if (shaderBufferElement->size != ~0u)
         {
-            const SizeType entityInstanceBatchesBufferSize = entityInstanceBatchesBufferElement->size;
-            const SizeType sizeMod = entityInstanceBatchesBufferSize % batchSizeof;
+            // case 1: the EntityInstanceBatchesBuffer is an array of EntityInstanceBatch structs
 
-            Assert(sizeMod == 0, "EntityInstanceBatchesBuffer descriptor has size {} but DrawCallCollection has batch struct size of {}",
-                entityInstanceBatchesBufferSize, batchSizeof);
+            const SizeType shaderBufferSize = shaderBufferElement->size;
+
+            if (shaderBufferSize >= batchSizeof)
+            {
+                const SizeType sizeMod = shaderBufferSize % batchSizeof;
+
+                Assert(sizeMod == 0, "EntityInstanceBatchesBuffer descriptor has size {} but DrawCallCollection has batch struct size of {}",
+                    shaderBufferSize, batchSizeof);
+            }
+            else
+            {
+                // case 2: packing the EntityInstanceBatch buffer data into scalar data
+                Assert(shaderBufferSize == 16, "Expected EntityInstanceBatchesBuffer descriptor to have size 16 (uvec4), but got {}", shaderBufferSize);
+                Assert(batchSizeof % 16 == 0, "Expected batch struct size to be divisible by 16!");
+            }
         }
 
         descriptorSet->SetElement(NAME("ObjectInstancesBuffer"), m_indirectDrawState.GetInstanceBuffer(frameIndex));
@@ -512,18 +524,18 @@ void IndirectRenderer::ExecuteCullShaderInBatches(FrameBase* frame, const Render
 
     struct
     {
+        Vec2u depthPyramidDimensions;
         uint32 batchOffset;
         uint32 numInstances;
         uint32 entityInstanceBatchStride;
-        Vec2u depthPyramidDimensions;
     } pushConstants;
 
-    AssertDebug(m_drawCallCollectionImpl->GetBatchSizeOf() % 4 == 0);
+    AssertDebug(m_drawCallCollectionImpl->GetStructSize() % 4 == 0);
 
+    pushConstants.depthPyramidDimensions = static_cast<DeferredPassData*>(renderSetup.passData)->depthPyramidRenderer->GetExtent();
     pushConstants.batchOffset = 0;
     pushConstants.numInstances = numInstances;
-    pushConstants.entityInstanceBatchStride = m_drawCallCollectionImpl->GetBatchSizeOf();
-    pushConstants.depthPyramidDimensions = static_cast<DeferredPassData*>(renderSetup.passData)->depthPyramidRenderer->GetExtent();
+    pushConstants.entityInstanceBatchStride = ByteUtil::AlignAs(m_drawCallCollectionImpl->GetStructSize(), m_drawCallCollectionImpl->GetStructAlignment());
 
     m_objectVisibility->SetPushConstants(&pushConstants, sizeof(pushConstants));
 
