@@ -292,9 +292,6 @@ void View::Collect()
     RenderProxyList& rpl = RenderApi_GetProducerProxyList(this);
     rpl.BeginWrite();
 
-    rpl.viewport = m_viewport;
-    rpl.priority = m_priority;
-
     rpl.meshes.Advance();
     rpl.envProbes.Advance();
     rpl.envGrids.Advance();
@@ -304,6 +301,9 @@ void View::Collect()
     rpl.textures.Advance();
     rpl.skeletons.Advance();
 
+    rpl.viewport = m_viewport;
+    rpl.priority = m_priority;
+
     CollectLights(rpl);
     CollectLightmapVolumes(rpl);
     CollectEnvGrids(rpl);
@@ -311,9 +311,9 @@ void View::Collect()
 
     m_lastMeshCollectionResult = CollectMeshEntities(rpl);
 
-    RenderApi_UpdateTrackedResources(rpl.materials);
-    RenderApi_UpdateTrackedResources(rpl.skeletons);
-    RenderApi_UpdateTrackedResources(rpl.textures);
+    // RenderApi_UpdateTrackedResources(rpl.materials);
+    // RenderApi_UpdateTrackedResources(rpl.skeletons);
+    // RenderApi_UpdateTrackedResources(rpl.textures);
 
     /// temp
     constexpr uint32 bucketMask = (1 << RB_OPAQUE)
@@ -321,6 +321,8 @@ void View::Collect()
         | (1 << RB_SKYBOX)
         | (1 << RB_TRANSLUCENT)
         | (1 << RB_DEBUG);
+
+    rpl.UpdateRefs();
 
     rpl.EndWrite();
 }
@@ -623,20 +625,18 @@ typename ResourceTracker<ObjId<Entity>, RenderProxyMesh>::Diff View::CollectMesh
 
         for (RenderProxyMesh* proxy : added)
         {
-            RenderApi_AddRef(proxy->entity.GetUnsafe());
+            // RenderApi_AddRef(proxy->entity.GetUnsafe());
 
             RenderApi_UpdateRenderProxy(proxy->entity.Id(), proxy);
-
             // for now:
-            proxy->IncRefs();
+            // proxy->IncRefs();
         }
 
         for (RenderProxyMesh* proxy : removed)
         {
-            RenderApi_ReleaseRef(proxy->entity.Id());
-
+            // RenderApi_ReleaseRef(proxy->entity.Id());
             // for now:
-            proxy->DecRefs();
+            // proxy->DecRefs();
         }
     }
 
@@ -712,28 +712,20 @@ void View::CollectLights(RenderProxyList& rpl)
     if (auto diff = rpl.lights.GetDiff(); diff.NeedsUpdate())
     {
         Array<Light*> removed;
-        rpl.lights.GetRemoved(removed, false);
+        rpl.lights.GetRemoved(removed, true);
 
         Array<Light*> added;
-        rpl.lights.GetAdded(added, false);
+        rpl.lights.GetAdded(added, true);
 
         for (Light* light : added)
         {
-            RenderApi_AddRef(light);
+            // RenderApi_AddRef(light);
             RenderApi_UpdateRenderProxy(light->Id());
         }
 
         for (Light* light : removed)
         {
-            RenderApi_ReleaseRef(light->Id());
-        }
-
-        Array<ObjId<Light>> changedIds;
-        rpl.lights.GetChanged(changedIds);
-
-        for (ObjId<Light> id : changedIds)
-        {
-            RenderApi_UpdateRenderProxy(id);
+            // RenderApi_ReleaseRef(light->Id());
         }
     }
 }
@@ -780,32 +772,23 @@ void View::CollectLightmapVolumes(RenderProxyList& rpl)
 
     auto diff = rpl.lightmapVolumes.GetDiff();
 
-    // temp shit
     if (diff.NeedsUpdate())
     {
         Array<LightmapVolume*> removed;
-        rpl.lightmapVolumes.GetRemoved(removed, false);
+        rpl.lightmapVolumes.GetRemoved(removed, true);
 
         Array<LightmapVolume*> added;
-        rpl.lightmapVolumes.GetAdded(added, false);
+        rpl.lightmapVolumes.GetAdded(added, true);
 
         for (LightmapVolume* volume : added)
         {
-            RenderApi_AddRef(volume);
+            // RenderApi_AddRef(volume);
             RenderApi_UpdateRenderProxy(volume->Id());
         }
 
         for (LightmapVolume* volume : removed)
         {
-            RenderApi_ReleaseRef(volume->Id());
-        }
-
-        Array<ObjId<LightmapVolume>> changedIds;
-        rpl.lightmapVolumes.GetChanged(changedIds);
-
-        for (ObjId<LightmapVolume> id : changedIds)
-        {
-            RenderApi_UpdateRenderProxy(id);
+            // RenderApi_ReleaseRef(volume->Id());
         }
     }
 }
@@ -855,28 +838,20 @@ void View::CollectEnvGrids(RenderProxyList& rpl)
     if (diff.NeedsUpdate())
     {
         Array<EnvGrid*> removed;
-        rpl.envGrids.GetRemoved(removed, false);
+        rpl.envGrids.GetRemoved(removed, true);
 
         Array<EnvGrid*> added;
-        rpl.envGrids.GetAdded(added, false);
+        rpl.envGrids.GetAdded(added, true);
 
         for (EnvGrid* envGrid : added)
         {
-            RenderApi_AddRef(envGrid);
+            // RenderApi_AddRef(envGrid);
             RenderApi_UpdateRenderProxy(envGrid->Id());
         }
 
         for (EnvGrid* envGrid : removed)
         {
-            RenderApi_ReleaseRef(envGrid->Id());
-        }
-
-        Array<ObjId<EnvGrid>> changedIds;
-        rpl.envGrids.GetChanged(changedIds);
-
-        for (ObjId<EnvGrid> id : changedIds)
-        {
-            RenderApi_UpdateRenderProxy(id);
+            // RenderApi_ReleaseRef(envGrid->Id());
         }
     }
 }
@@ -945,13 +920,13 @@ void View::CollectEnvProbes(RenderProxyList& rpl)
 
         for (EnvProbe* probe : added)
         {
-            RenderApi_AddRef(probe);
+            // RenderApi_AddRef(probe);
             RenderApi_UpdateRenderProxy(probe->Id());
         }
 
         for (EnvProbe* probe : removed)
         {
-            RenderApi_ReleaseRef(probe->Id());
+            // RenderApi_ReleaseRef(probe->Id());
         }
     }
 }

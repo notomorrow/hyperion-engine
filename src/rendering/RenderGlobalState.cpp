@@ -36,6 +36,8 @@
 
 #include <core/object/HypClass.hpp>
 
+#include <core/utilities/DeferredScope.hpp>
+
 #include <core/containers/LinkedList.hpp>
 #include <core/containers/HashMap.hpp>
 #include <core/containers/SparsePagedArray.hpp>
@@ -152,7 +154,9 @@ struct ResourceBindings
 
     // Shared index allocator for reflection probes and sky probes.
     ResourceBindingAllocator<g_maxBoundReflectionProbes> reflectionProbeBindingsAllocator;
-    ResourceBinder<EnvProbe, &OnBindingChanged_ReflectionProbe> reflectionProbeBinder { &reflectionProbeBindingsAllocator };
+    ResourceBinder<EnvProbe, &OnBindingChanged_ReflectionProbe> reflectionProbeBinder {
+        &reflectionProbeBindingsAllocator
+    };
 
     // ambient probes bind to their own slot since they don't set image data
     ResourceBindingAllocator<g_maxBoundAmbientProbes> ambientProbeBindingsAllocator;
@@ -165,7 +169,9 @@ struct ResourceBindings
     ResourceBinder<Light, &OnBindingChanged_Light> lightBinder { &lightBindingsAllocator };
 
     ResourceBindingAllocator<> lightmapVolumeBindingsAllocator;
-    ResourceBinder<LightmapVolume, &OnBindingChanged_Default<LightmapVolume>> lightmapVolumeBinder { &lightmapVolumeBindingsAllocator };
+    ResourceBinder<LightmapVolume, &OnBindingChanged_Default<LightmapVolume>> lightmapVolumeBinder {
+        &lightmapVolumeBindingsAllocator
+    };
 
     ResourceBindingAllocator<> materialBindingsAllocator;
     ResourceBinder<Material, &OnBindingChanged_Material> materialBinder { &materialBindingsAllocator };
@@ -230,7 +236,8 @@ struct ResourceBindings
             return Pair<uint32, void*>(~0u, nullptr); // invalid resource
         }
 
-        const SubtypeResourceBindings& bindings = const_cast<ResourceBindings*>(this)->GetSubtypeBindings(id.GetTypeId());
+        const SubtypeResourceBindings& bindings =
+            const_cast<ResourceBindings*>(this)->GetSubtypeBindings(id.GetTypeId());
 
         const auto* elem = bindings.indexAndMapping.TryGet(id.ToIndex());
 
@@ -297,7 +304,9 @@ struct ResourceBindings
         while (hypClass);
 #endif
 
-        HYP_FAIL("No SubtypeBindings container found for TypeId %u (HypClass: %s). Missing DECLARE_RENDER_DATA_CONTAINER() macro invocation for type?", typeId.Value(), *GetClass(typeId)->GetName());
+        HYP_FAIL(
+            "No SubtypeBindings container found for TypeId %u (HypClass: %s). Missing DECLARE_RENDER_DATA_CONTAINER() macro invocation for type?",
+            typeId.Value(), *GetClass(typeId)->GetName());
     }
 };
 
@@ -394,11 +403,8 @@ struct ResourceSubtypeData final
     bool hasProxyData : 1;
 
     template <class ResourceType, class ProxyType>
-    ResourceSubtypeData(
-        TypeWrapper<ResourceType>,
-        TypeWrapper<ProxyType>,
-        GpuBufferHolderBase* gpuBufferHolder = nullptr,
-        ResourceBinderBase* resourceBinder = nullptr,
+    ResourceSubtypeData(TypeWrapper<ResourceType>, TypeWrapper<ProxyType>,
+        GpuBufferHolderBase* gpuBufferHolder = nullptr, ResourceBinderBase* resourceBinder = nullptr,
         WriteBufferDataFunction writeBufferDataFn = nullptr)
         : typeId(TypeId::ForType<ResourceType>()),
           hasProxyData(false),
@@ -503,7 +509,9 @@ struct ResourceContainer
         }
         while (hypClass);
 
-        HYP_FAIL("No SubtypeData container found for TypeId %u (HypClass: %s)! Missing DECLARE_RENDER_DATA_CONTAINER() macro invocation for type?", typeId.Value(), *GetClass(typeId)->GetName());
+        HYP_FAIL(
+            "No SubtypeData container found for TypeId %u (HypClass: %s)! Missing DECLARE_RENDER_DATA_CONTAINER() macro invocation for type?",
+            typeId.Value(), *GetClass(typeId)->GetName());
     }
 
     SparsePagedArray<ResourceSubtypeData, 16> dataByType;
@@ -528,6 +536,7 @@ struct ResourceContainerFactoryRegistry
         }
     }
 };
+
 template <class ResourceType, class ProxyType>
 struct ResourceContainerFactory
 {
@@ -539,46 +548,43 @@ struct ResourceContainerFactory
     }
 
     template <class ResourceBinderType>
-    ResourceContainerFactory(
-        GlobalRenderBuffer buf,
-        ResourceBinderType ResourceBindings::* memResourceBinder,
+    ResourceContainerFactory(GlobalRenderBuffer buf, ResourceBinderType ResourceBindings::* memResourceBinder,
         WriteBufferDataFunction writeBufferDataFn = nullptr)
     {
-        ResourceContainerFactoryRegistry::GetInstance()
-            .funcs.PushBack([=](ResourceBindings& resourceBindings, ResourceContainer& container)
+        ResourceContainerFactoryRegistry::GetInstance().funcs.PushBack(
+            [=](ResourceBindings& resourceBindings, ResourceContainer& container)
+            {
+                const HypClass* resourceClass = GetResourceClass();
+                AssertDebug(resourceClass != nullptr, "Class not found for TypeId '{}'!", typeId.Value());
+
+                const int staticIndex = resourceClass->GetStaticIndex();
+                AssertDebug(
+                    staticIndex >= 0, "Invalid class: '{}' has no assigned static index!", *resourceClass->GetName());
+
+                GpuBufferHolderBase* gpuBufferHolder = buf < GRB_MAX ? g_renderGlobalState->gpuBuffers[buf] : nullptr;
+                ResourceBinderType* resourceBinder =
+                    memResourceBinder ? &(resourceBindings.*memResourceBinder) : nullptr;
+
+                if (!resourceBindings.subtypeBindings.HasIndex(staticIndex))
                 {
-                    const HypClass* resourceClass = GetResourceClass();
-                    AssertDebug(resourceClass != nullptr, "Class not found for TypeId '{}'!", typeId.Value());
+                    // add new ResourceSubtypeBindings slot for the given class
+                    resourceBindings.subtypeBindings.Emplace(staticIndex, resourceClass, gpuBufferHolder);
+                }
 
-                    const int staticIndex = resourceClass->GetStaticIndex();
-                    AssertDebug(staticIndex >= 0, "Invalid class: '{}' has no assigned static index!", *resourceClass->GetName());
+                AssertDebug(!container.dataByType.HasIndex(staticIndex),
+                    "SubtypeData container already exists for TypeId {} (HypClass: {})! Duplicate DECLARE_RENDER_DATA_CONTAINER() macro invocation for type?",
+                    typeId.Value(), *GetClass(typeId)->GetName());
 
-                    GpuBufferHolderBase* gpuBufferHolder = buf < GRB_MAX ? g_renderGlobalState->gpuBuffers[buf] : nullptr;
-                    ResourceBinderType* resourceBinder = memResourceBinder ? &(resourceBindings.*memResourceBinder) : nullptr;
-
-                    if (!resourceBindings.subtypeBindings.HasIndex(staticIndex))
-                    {
-                        // add new ResourceSubtypeBindings slot for the given class
-                        resourceBindings.subtypeBindings.Emplace(staticIndex, resourceClass, gpuBufferHolder);
-                    }
-
-                    AssertDebug(!container.dataByType.HasIndex(staticIndex),
-                        "SubtypeData container already exists for TypeId {} (HypClass: {})! Duplicate DECLARE_RENDER_DATA_CONTAINER() macro invocation for type?",
-                        typeId.Value(), *GetClass(typeId)->GetName());
-
-                    container.dataByType.Emplace(
-                        staticIndex,
-                        TypeWrapper<ResourceType>(),
-                        TypeWrapper<ProxyType>(),
-                        gpuBufferHolder,
-                        resourceBinder,
-                        writeBufferDataFn);
-                });
+                container.dataByType.Emplace(staticIndex, TypeWrapper<ResourceType>(), TypeWrapper<ProxyType>(),
+                    gpuBufferHolder, resourceBinder, writeBufferDataFn);
+            });
     }
 };
 
-#define DECLARE_RENDER_DATA_CONTAINER(resourceType, proxyType, ...) \
-    static ResourceContainerFactory<class resourceType, class proxyType> g_##resourceType##_container_factory { __VA_ARGS__ };
+#define DECLARE_RENDER_DATA_CONTAINER(resourceType, proxyType, ...)                                             \
+    static ResourceContainerFactory<class resourceType, class proxyType> g_##resourceType##_container_factory { \
+        __VA_ARGS__                                                                                             \
+    };
 
 #pragma endregion ResourceContainer
 
@@ -587,7 +593,8 @@ struct ViewData
     View* view = nullptr;
     RenderProxyList* renderProxyList = nullptr;
     RenderCollector renderCollector;
-    uint32 framesSinceWrite : 4 = 0; // framesSinceWrite of this view in the current frame, used to determine if the view is still alive if not reset to zero.
+    uint32 framesSinceWrite : 4 = 0; // framesSinceWrite of this view in the current frame, used to determine if the
+                                     // view is still alive if not reset to zero.
 };
 
 struct FrameData
@@ -659,6 +666,174 @@ static ViewData* GetCurrentFrameViewData(View* view)
     return vd;
 }
 
+/// Copy resources from resourceTracker to the frames data
+template <class ElementType>
+static inline void RenderApi_UpdateTrackedResources(FrameData& fd, ResourceTracker<ObjId<ElementType>, ElementType*>& resourceTracker)
+{
+    auto diff = resourceTracker.GetDiff();
+    if (!diff.NeedsUpdate())
+    {
+        return;
+    }
+
+    Array<ObjId<ElementType>> removed;
+    resourceTracker.GetRemoved(removed, false);
+
+    Array<ElementType*> added;
+    resourceTracker.GetAdded(added, false);
+
+    for (ElementType* resource : added)
+    {
+        const ObjId<ElementType> resourceId = resource->Id();
+
+        ResourceSubtypeData& subtypeData = fd.resources.GetSubtypeData(resourceId.GetTypeId());
+        ResourceData* rd = subtypeData.data.TryGet(resourceId.ToIndex());
+
+        if (!rd)
+        {
+            rd = &*subtypeData.data.Emplace(resourceId.ToIndex(), resource);
+        }
+
+        subtypeData.indicesPendingDelete.Set(resourceId.ToIndex(), false);
+
+        rd->count.Increment(1, MemoryOrder::RELAXED);
+    }
+
+    for (ObjId<ElementType> id : removed)
+    {
+        ResourceSubtypeData& subtypeData = fd.resources.GetSubtypeData(id.GetTypeId());
+        ResourceData* rd = subtypeData.data.TryGet(id.ToIndex());
+
+        if (!rd)
+        {
+            continue; // no ref count for this resource
+        }
+
+        uint32 count;
+
+        if ((count = rd->count.Decrement(1, MemoryOrder::RELAXED)) == 1)
+        {
+            subtypeData.indicesPendingDelete.Set(id.ToIndex(), true);
+        }
+    }
+}
+
+/// Copy a ResourceContainer's resources and refs to the FrameData's resource container so those resources can be
+/// used when rendering the frame
+static void RenderApi_CopyFrameResources(FrameData& fd, RenderProxyList& rpl)
+{
+    Threads::AssertOnThread(g_renderThread);
+
+    RenderApi_UpdateTrackedResources(fd, rpl.lights);
+    RenderApi_UpdateTrackedResources(fd, rpl.materials);
+    RenderApi_UpdateTrackedResources(fd, rpl.skeletons);
+    RenderApi_UpdateTrackedResources(fd, rpl.textures);
+    RenderApi_UpdateTrackedResources(fd, rpl.lightmapVolumes);
+    RenderApi_UpdateTrackedResources(fd, rpl.envProbes);
+    RenderApi_UpdateTrackedResources(fd, rpl.envGrids);
+
+    // temp. special handling for meshes
+    if (auto diff = rpl.meshes.GetDiff(); diff.NeedsUpdate())
+    {
+        Array<RenderProxyMesh*> removed;
+        rpl.meshes.GetRemoved(removed, true);
+
+        Array<RenderProxyMesh*> added;
+        rpl.meshes.GetAdded(added, true);
+
+        for (RenderProxyMesh* proxy : added)
+        {
+            const ObjId<Entity> resourceId = proxy->entity.Id();
+
+            ResourceSubtypeData& subtypeData = fd.resources.GetSubtypeData(resourceId.GetTypeId());
+            ResourceData* rd = subtypeData.data.TryGet(resourceId.ToIndex());
+
+            if (!rd)
+            {
+                rd = &*subtypeData.data.Emplace(resourceId.ToIndex(), proxy->entity.GetUnsafe());
+            }
+
+            subtypeData.indicesPendingDelete.Set(resourceId.ToIndex(), false);
+
+            rd->count.Increment(1, MemoryOrder::RELAXED);
+
+            // for now:
+            proxy->IncRefs();
+        }
+
+        for (RenderProxyMesh* proxy : removed)
+        {
+            const ObjId<Entity> resourceId = proxy->entity.Id();
+
+            ResourceSubtypeData& subtypeData = fd.resources.GetSubtypeData(resourceId.GetTypeId());
+            ResourceData* rd = subtypeData.data.TryGet(resourceId.ToIndex());
+
+            if (!rd)
+            {
+                continue; // no ref count for this resource
+            }
+
+            uint32 count;
+
+            if ((count = rd->count.Decrement(1, MemoryOrder::RELAXED)) == 1)
+            {
+                subtypeData.indicesPendingDelete.Set(resourceId.ToIndex(), true);
+            }
+
+            // for now:
+            proxy->DecRefs();
+        }
+    }
+
+    // for (auto it = rhs.dataByType.Begin(); it != rhs.dataByType.End(); ++it)
+    // {
+    //     const SizeType idx = rhs.dataByType.IndexOf(it);
+    //     AssertDebug(idx != SizeType(-1));
+
+    //     ResourceSubtypeData& lhsSubdata = lhs.dataByType.Get(idx);
+    //     const ResourceSubtypeData& rhsSubdata = *it;
+
+    //     AssertDebug(lhsSubdata.typeId == rhsSubdata.typeId,
+    //         "Cannot concat ResourceSubtypeData with different TypeIds: {} != {}",
+    //         lhsSubdata.typeId.Value(), rhsSubdata.typeId.Value());
+
+    //     // merge the data
+    //     for (auto jt = rhsSubdata.data.Begin(); jt != rhsSubdata.data.End(); ++jt)
+    //     {
+    //         const SizeType jIdx = rhsSubdata.data.IndexOf(jt);
+    //         AssertDebug(jIdx != SizeType(-1));
+
+    //         AssertDebug(!lhsSubdata.data.HasIndex(jIdx),
+    //             "ResourceSubtypeData already has data for index {} (TypeId: {})! Duplicate resource ID?",
+    //             jIdx, lhsSubdata.typeId.Value());
+
+    //         lhsSubdata.data.Emplace(jIdx, jt->resource);
+    //     }
+
+    //     // copy proxies
+    //     for (auto jt = rhsSubdata.proxies.Begin(); jt != rhsSubdata.proxies.End(); ++jt)
+    //     {
+    //         AssertDebug(*jt != nullptr, "Null proxy found in ResourceSubtypeData!");
+
+    //         const SizeType jIdx = rhsSubdata.proxies.IndexOf(jt);
+    //         AssertDebug(jIdx != SizeType(-1));
+
+    //         IRenderProxy* proxy = *jt;
+
+    //         void* proxyPtr = lhsSubdata.proxyAllocator.Alloc();
+    //         AssertDebug(proxyPtr != nullptr);
+
+    //         IRenderProxy* newProxy = lhsSubdata.constructProxyFn(proxyPtr);
+    //         AssertDebug(newProxy != nullptr);
+
+    //         lhsSubdata.assignProxyFn(newProxy, proxy);
+
+    //         AssertDebug(!lhsSubdata.proxies.HasIndex(jIdx));
+    //         lhsSubdata.proxies.Emplace(jIdx, newProxy);
+    //     }
+    // }
+}
+
 HYP_API RenderProxyList& RenderApi_GetProducerProxyList(View* view)
 {
     HYP_SCOPE;
@@ -697,11 +872,11 @@ HYP_API RenderCollector& RenderApi_GetRenderCollector(View* view)
     return GetCurrentFrameViewData(view)->renderCollector;
 }
 
-HYP_API uint32 RenderApi_AddRef(HypObjectBase* resource)
+HYP_API void RenderApi_AddRef(HypObjectBase* resource)
 {
     if (!resource)
     {
-        return 0;
+        return;
     }
 
     Threads::AssertOnThread(g_gameThread);
@@ -722,18 +897,16 @@ HYP_API uint32 RenderApi_AddRef(HypObjectBase* resource)
         rd = &*subtypeData.data.Emplace(resourceId.ToIndex(), resource);
     }
 
-    uint32 count = rd->count.Increment(1, MemoryOrder::RELAXED);
-
     subtypeData.indicesPendingDelete.Set(resourceId.ToIndex(), false);
 
-    return count + 1;
+    rd->count.Increment(1, MemoryOrder::RELAXED);
 }
 
-HYP_API uint32 RenderApi_ReleaseRef(ObjIdBase id)
+HYP_API void RenderApi_ReleaseRef(ObjIdBase id)
 {
     if (!id.IsValid())
     {
-        return ~0u;
+        return;
     }
 
     Threads::AssertOnThread(g_gameThread);
@@ -749,7 +922,7 @@ HYP_API uint32 RenderApi_ReleaseRef(ObjIdBase id)
 
     if (!rd)
     {
-        return ~0u; // no ref count for this resource
+        return; // no ref count for this resource
     }
 
     uint32 count;
@@ -758,8 +931,6 @@ HYP_API uint32 RenderApi_ReleaseRef(ObjIdBase id)
     {
         subtypeData.indicesPendingDelete.Set(id.ToIndex(), true);
     }
-
-    return count - 1;
 }
 
 HYP_API void RenderApi_UpdateRenderProxy(ObjIdBase id)
@@ -781,7 +952,8 @@ HYP_API void RenderApi_UpdateRenderProxy(ObjIdBase id)
     AssertDebug(data.count.Get(MemoryOrder::RELAXED), "expected ref count to be > 0 when calling UpdateRenderProxy()");
     AssertDebug(!subtypeData.indicesPendingDelete.Test(id.ToIndex()), "Why is it marked for delete?");
 
-    AssertDebug(subtypeData.hasProxyData, "Cannot use UpdateRenderProxy() for type which does not have proxy data! TypeId: {}, HypClass {}",
+    AssertDebug(subtypeData.hasProxyData,
+        "Cannot use UpdateRenderProxy() for type which does not have proxy data! TypeId: {}, HypClass {}",
         subtypeData.typeId.Value(), *GetClass(subtypeData.typeId)->GetName());
 
     IRenderProxy* proxy;
@@ -801,8 +973,8 @@ HYP_API void RenderApi_UpdateRenderProxy(ObjIdBase id)
 
         subtypeData.proxies.Emplace(id.ToIndex(), proxy);
 
-        HYP_LOG(Rendering, Debug, "Created render proxy for resource id {} of type {} at index {} for frame {}",
-            id, GetClass(subtypeData.typeId)->GetName(), id.ToIndex(), slot);
+        HYP_LOG(Rendering, Debug, "Created render proxy for resource id {} of type {} at index {} for frame {}", id,
+            GetClass(subtypeData.typeId)->GetName(), id.ToIndex(), slot);
     }
 
     AssertDebug(proxy);
@@ -818,7 +990,8 @@ HYP_API void RenderApi_UpdateRenderProxy(ObjIdBase id)
     }
     else
     {
-        HYP_LOG(Rendering, Warning, "UpdateRenderProxy called for resource id {} of type {} which is not a RenderProxyable! Skipping proxy update.\n",
+        HYP_LOG(Rendering, Warning,
+            "UpdateRenderProxy called for resource id {} of type {} which is not a RenderProxyable! Skipping proxy update.\n",
             id, GetClass(subtypeData.typeId)->GetName());
     }
 }
@@ -844,7 +1017,8 @@ HYP_API void RenderApi_UpdateRenderProxy(ObjIdBase id, const IRenderProxy* srcPr
     AssertDebug(data.count.Get(MemoryOrder::RELAXED), "expected ref count to be > 0 when calling UpdateRenderProxy()");
     AssertDebug(!subtypeData.indicesPendingDelete.Test(id.ToIndex()), "Why is it marked for delete?");
 
-    AssertDebug(subtypeData.hasProxyData, "Cannot use UpdateResource() for type which does not have proxy data! TypeId: {}, HypClass {}",
+    AssertDebug(subtypeData.hasProxyData,
+        "Cannot use UpdateResource() for type which does not have proxy data! TypeId: {}, HypClass {}",
         subtypeData.typeId.Value(), *GetClass(subtypeData.typeId)->GetName());
 
     IRenderProxy* dstProxy;
@@ -863,8 +1037,8 @@ HYP_API void RenderApi_UpdateRenderProxy(ObjIdBase id, const IRenderProxy* srcPr
 
         subtypeData.proxies.Emplace(id.ToIndex(), dstProxy);
 
-        HYP_LOG(Rendering, Debug, "Created render proxy for resource id {} of type {} at index {} for frame {}",
-            id, GetClass(subtypeData.typeId)->GetName(), id.ToIndex(), slot);
+        HYP_LOG(Rendering, Debug, "Created render proxy for resource id {} of type {} at index {} for frame {}", id,
+            GetClass(subtypeData.typeId)->GetName(), id.ToIndex(), slot);
     }
 
     subtypeData.assignProxyFn(dstProxy, srcProxy);
@@ -879,7 +1053,8 @@ HYP_API void RenderApi_UpdateRenderProxy(ObjIdBase id, const IRenderProxy* srcPr
     }
     else
     {
-        HYP_LOG(Rendering, Warning, "UpdateRenderProxy called for resource id {} of type {} which is not a RenderProxyable! Skipping proxy update.\n",
+        HYP_LOG(Rendering, Warning,
+            "UpdateRenderProxy called for resource id {} of type {} which is not a RenderProxyable! Skipping proxy update.\n",
             id, GetClass(subtypeData.typeId)->GetName());
     }
 }
@@ -896,7 +1071,8 @@ HYP_API IRenderProxy* RenderApi_GetRenderProxy(ObjIdBase id)
     FrameData& frameData = g_frameData[slot];
 
     ResourceSubtypeData& subtypeData = frameData.resources.GetSubtypeData(id.GetTypeId());
-    AssertDebug(subtypeData.hasProxyData, "Cannot use GetRenderProxy() for type which does not have a RenderProxy! TypeId: {}, HypClass {}",
+    AssertDebug(subtypeData.hasProxyData,
+        "Cannot use GetRenderProxy() for type which does not have a RenderProxy! TypeId: {}, HypClass {}",
         subtypeData.typeId.Value(), *GetClass(subtypeData.typeId)->GetName());
 
     if (!subtypeData.proxies.HasIndex(id.ToIndex()))
@@ -1001,6 +1177,33 @@ HYP_API void RenderApi_BeginFrame_RenderThread()
 
     HYPERION_ASSERT_RESULT(RenderCommands::Flush());
 
+    Array<Pair<RenderProxyList*, ViewData*>> renderProxyLists;
+
+    for (auto it = frameData.perViewData.Begin(); it != frameData.perViewData.End(); ++it)
+    {
+        ViewData& vd = *it;
+
+        AssertDebug(vd.view != nullptr);
+        AssertDebug(vd.renderProxyList != nullptr);
+
+        /// TODO: Use View's bucket mask property to pass to BuildDrawCalls().
+        if (!vd.renderProxyList->TEMP_disableBuildRenderCollection)
+        {
+            HYP_LOG_TEMP("Building list for {}", (void*)&vd.renderCollector);
+            vd.renderProxyList->BeginRead();
+            renderProxyLists.EmplaceBack(vd.renderProxyList, &vd);
+        }
+    }
+
+    // Concat dependencies
+    for (auto& it : renderProxyLists)
+    {
+        RenderProxyList& rpl = *it.first;
+        ViewData& vd = *it.second;
+
+        RenderApi_CopyFrameResources(frameData, rpl);
+    }
+
     for (ResourceSubtypeData& subtypeData : frameData.resources.dataByType)
     {
         if (subtypeData.resourceBinder)
@@ -1025,33 +1228,43 @@ HYP_API void RenderApi_BeginFrame_RenderThread()
     g_renderGlobalState->resourceBindings->textureBinder.ApplyUpdates();
     g_renderGlobalState->resourceBindings->skeletonBinder.ApplyUpdates();
 
-    HYP_LOG(Rendering, Debug, "Mesh entities: {} bound", g_renderGlobalState->resourceBindings->meshEntityBinder.TotalBoundResources());
-    HYP_LOG(Rendering, Debug, "Ambient probes: {} bound", g_renderGlobalState->resourceBindings->ambientProbeBinder.TotalBoundResources());
-    HYP_LOG(Rendering, Debug, "Reflection probes: {} bound", g_renderGlobalState->resourceBindings->reflectionProbeBinder.TotalBoundResources());
-    HYP_LOG(Rendering, Debug, "Env grids: {} bound", g_renderGlobalState->resourceBindings->envGridBinder.TotalBoundResources());
-    HYP_LOG(Rendering, Debug, "Lights: {} bound", g_renderGlobalState->resourceBindings->lightBinder.TotalBoundResources());
-    HYP_LOG(Rendering, Debug, "Lightmap volumes: {} bound", g_renderGlobalState->resourceBindings->lightmapVolumeBinder.TotalBoundResources());
-    HYP_LOG(Rendering, Debug, "Materials: {} bound", g_renderGlobalState->resourceBindings->materialBinder.TotalBoundResources());
-    HYP_LOG(Rendering, Debug, "Textures: {} bound", g_renderGlobalState->resourceBindings->textureBinder.TotalBoundResources());
-    HYP_LOG(Rendering, Debug, "Skeletons: {} bound", g_renderGlobalState->resourceBindings->skeletonBinder.TotalBoundResources());
+    HYP_LOG(Rendering, Debug, "Mesh entities: {} bound",
+        g_renderGlobalState->resourceBindings->meshEntityBinder.TotalBoundResources());
+    HYP_LOG(Rendering, Debug, "Ambient probes: {} bound",
+        g_renderGlobalState->resourceBindings->ambientProbeBinder.TotalBoundResources());
+    HYP_LOG(Rendering, Debug, "Reflection probes: {} bound",
+        g_renderGlobalState->resourceBindings->reflectionProbeBinder.TotalBoundResources());
+    HYP_LOG(Rendering, Debug, "Env grids: {} bound",
+        g_renderGlobalState->resourceBindings->envGridBinder.TotalBoundResources());
+    HYP_LOG(
+        Rendering, Debug, "Lights: {} bound", g_renderGlobalState->resourceBindings->lightBinder.TotalBoundResources());
+    HYP_LOG(Rendering, Debug, "Lightmap volumes: {} bound",
+        g_renderGlobalState->resourceBindings->lightmapVolumeBinder.TotalBoundResources());
+    HYP_LOG(Rendering, Debug, "Materials: {} bound",
+        g_renderGlobalState->resourceBindings->materialBinder.TotalBoundResources());
+    HYP_LOG(Rendering, Debug, "Textures: {} bound",
+        g_renderGlobalState->resourceBindings->textureBinder.TotalBoundResources());
+    HYP_LOG(Rendering, Debug, "Skeletons: {} bound",
+        g_renderGlobalState->resourceBindings->skeletonBinder.TotalBoundResources());
 
-    // Build draw calls
-    for (auto it = frameData.perViewData.Begin(); it != frameData.perViewData.End(); ++it)
+    // Build draw call lists
+    for (auto& it : renderProxyLists)
     {
-        ViewData& vd = *it;
+        RenderProxyList& rpl = *it.first;
+        ViewData& vd = *it.second;
 
         AssertDebug(vd.view != nullptr);
-        AssertDebug(vd.renderProxyList != nullptr);
 
         /// TODO: Use View's bucket mask property to pass to BuildDrawCalls().
-        if (!vd.renderProxyList->TEMP_disableBuildRenderCollection)
-        {
-            HYP_LOG_TEMP("Building list for {}", (void*)&vd.renderCollector);
-            vd.renderProxyList->BeginRead();
-            vd.renderCollector.BuildRenderGroups(vd.view, *vd.renderProxyList);
-            vd.renderCollector.BuildDrawCalls(0);
-            vd.renderProxyList->EndRead();
-        }
+        HYP_LOG_TEMP("Building list for {}", (void*)&vd.renderCollector);
+
+        vd.renderCollector.BuildRenderGroups(vd.view, rpl);
+        vd.renderCollector.BuildDrawCalls(0);
+    }
+
+    for (auto& it : renderProxyLists)
+    {
+        it.first->EndRead();
     }
 
     for (ResourceSubtypeData& subtypeData : frameData.resources.dataByType)
@@ -1069,8 +1282,7 @@ HYP_API void RenderApi_BeginFrame_RenderThread()
             }
 
             // Handle proxies that were updated on game thread
-            for (Bitset::BitIndex i = subtypeData.indicesPendingUpdate.FirstSetBitIndex();
-                i != Bitset::notFound;
+            for (Bitset::BitIndex i = subtypeData.indicesPendingUpdate.FirstSetBitIndex(); i != Bitset::notFound;
                 i = subtypeData.indicesPendingUpdate.NextSetBitIndex(i + 1))
             {
                 if (!currentBoundIndices.Test(i))
@@ -1084,7 +1296,8 @@ HYP_API void RenderApi_BeginFrame_RenderThread()
                 AssertDebug(subtypeData.writeBufferDataFn != nullptr);
 
                 const Pair<uint32, void*> bindingData = g_renderGlobalState->resourceBindings->Retrieve(resourceId);
-                AssertDebug(bindingData.first != ~0u && bindingData.second != nullptr, "Failed to retrieve binding for resource: {} in frame {}, but it is marked as bound (index: {})",
+                AssertDebug(bindingData.first != ~0u && bindingData.second != nullptr,
+                    "Failed to retrieve binding for resource: {} in frame {}, but it is marked as bound (index: {})",
                     resourceId, slot, i);
 
                 IRenderProxy* proxy = subtypeData.proxies.Get(i);
@@ -1118,7 +1331,8 @@ HYP_API void RenderApi_EndFrame_RenderThread()
         // Clear out data for views that haven't been written to for a while
         if (vd.framesSinceWrite == g_maxFramesBeforeDiscard)
         {
-            auto viewIt = frameData.views.FindIf([&vd](const auto& pair)
+            auto viewIt = frameData.views.FindIf(
+                [&vd](const auto& pair)
                 {
                     return pair.second == &vd;
                 });
@@ -1145,7 +1359,8 @@ HYP_API void RenderApi_EndFrame_RenderThread()
             AssertDebug(rd.resource != nullptr);
             AssertDebug(rd.count.Get(MemoryOrder::RELAXED) == 0, "Ref count should be 0 before deletion");
 
-            // if we delete it, we want to make sure it is not in marked for update state (don't want to iterate over dead items)
+            // if we delete it, we want to make sure it is not in marked for update state (don't want to iterate over
+            // dead items)
             subtypeData.indicesPendingUpdate.Set(i, false);
 
             subtypeData.resourceBinder->Deconsider(rd.resource);
@@ -1215,7 +1430,8 @@ RenderGlobalState::RenderGlobalState()
     gpuBuffers.buffers[GRB_SHADOW_MAPS] = gpuBufferHolders->GetOrCreate<ShadowMapShaderData, GpuBufferType::SSBO>();
     gpuBuffers.buffers[GRB_ENV_PROBES] = gpuBufferHolders->GetOrCreate<EnvProbeShaderData, GpuBufferType::SSBO>();
     gpuBuffers.buffers[GRB_ENV_GRIDS] = gpuBufferHolders->GetOrCreate<EnvGridShaderData, GpuBufferType::CBUFF>();
-    gpuBuffers.buffers[GRB_LIGHTMAP_VOLUMES] = gpuBufferHolders->GetOrCreate<LightmapVolumeShaderData, GpuBufferType::SSBO>();
+    gpuBuffers.buffers[GRB_LIGHTMAP_VOLUMES] =
+        gpuBufferHolders->GetOrCreate<LightmapVolumeShaderData, GpuBufferType::SSBO>();
 
     globalDescriptorTable = g_renderBackend->MakeDescriptorTable(&GetStaticDescriptorTableDeclaration());
 
@@ -1338,7 +1554,10 @@ void RenderGlobalState::CreateBlueNoiseBuffer()
     constexpr SizeType rankingTileOffset = offsetof(BlueNoiseBuffer, rankingTile);
     constexpr SizeType rankingTileSize = sizeof(BlueNoise::rankingTile);
 
-    static_assert(blueNoiseBufferSize == (sobol256spp256dOffset + sobol256spp256dSize) + ((scramblingTileOffset - (sobol256spp256dOffset + sobol256spp256dSize)) + scramblingTileSize) + ((rankingTileOffset - (scramblingTileOffset + scramblingTileSize)) + rankingTileSize));
+    static_assert(blueNoiseBufferSize
+        == (sobol256spp256dOffset + sobol256spp256dSize)
+            + ((scramblingTileOffset - (sobol256spp256dOffset + sobol256spp256dSize)) + scramblingTileSize)
+            + ((rankingTileOffset - (scramblingTileOffset + scramblingTileSize)) + rankingTileSize));
 
     GpuBufferRef blueNoiseBuffer = g_renderBackend->MakeGpuBuffer(GpuBufferType::SSBO, sizeof(BlueNoiseBuffer));
     HYPERION_ASSERT_RESULT(blueNoiseBuffer->Create());
@@ -1366,10 +1585,8 @@ void RenderGlobalState::CreateSphereSamplesBuffer()
 
     for (uint32 i = 0; i < 4096; i++)
     {
-        Vec3f sample = MathUtil::RandomInSphere(Vec3f {
-            MathUtil::RandomFloat(seed),
-            MathUtil::RandomFloat(seed),
-            MathUtil::RandomFloat(seed) });
+        Vec3f sample = MathUtil::RandomInSphere(
+            Vec3f { MathUtil::RandomFloat(seed), MathUtil::RandomFloat(seed), MathUtil::RandomFloat(seed) });
 
         sphereSamples[i] = Vec4f(sample, 0.0f);
     }
@@ -1391,55 +1608,90 @@ void RenderGlobalState::SetDefaultDescriptorSetElements(uint32 frameIndex)
     Threads::AssertOnThread(g_renderThread);
 
     // Global
-    globalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)->SetElement(NAME("WorldsBuffer"), gpuBuffers[GRB_WORLDS]->GetBuffer(frameIndex));
-    globalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)->SetElement(NAME("LightsBuffer"), gpuBuffers[GRB_LIGHTS]->GetBuffer(frameIndex));
-    globalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)->SetElement(NAME("CurrentLight"), gpuBuffers[GRB_LIGHTS]->GetBuffer(frameIndex));
-    globalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)->SetElement(NAME("ObjectsBuffer"), gpuBuffers[GRB_ENTITIES]->GetBuffer(frameIndex));
-    globalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)->SetElement(NAME("CamerasBuffer"), gpuBuffers[GRB_CAMERAS]->GetBuffer(frameIndex));
-    globalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)->SetElement(NAME("EnvGridsBuffer"), gpuBuffers[GRB_ENV_GRIDS]->GetBuffer(frameIndex));
-    globalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)->SetElement(NAME("EnvProbesBuffer"), gpuBuffers[GRB_ENV_PROBES]->GetBuffer(frameIndex));
-    globalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)->SetElement(NAME("CurrentEnvProbe"), gpuBuffers[GRB_ENV_PROBES]->GetBuffer(frameIndex));
+    globalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)
+        ->SetElement(NAME("WorldsBuffer"), gpuBuffers[GRB_WORLDS]->GetBuffer(frameIndex));
+    globalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)
+        ->SetElement(NAME("LightsBuffer"), gpuBuffers[GRB_LIGHTS]->GetBuffer(frameIndex));
+    globalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)
+        ->SetElement(NAME("CurrentLight"), gpuBuffers[GRB_LIGHTS]->GetBuffer(frameIndex));
+    globalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)
+        ->SetElement(NAME("ObjectsBuffer"), gpuBuffers[GRB_ENTITIES]->GetBuffer(frameIndex));
+    globalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)
+        ->SetElement(NAME("CamerasBuffer"), gpuBuffers[GRB_CAMERAS]->GetBuffer(frameIndex));
+    globalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)
+        ->SetElement(NAME("EnvGridsBuffer"), gpuBuffers[GRB_ENV_GRIDS]->GetBuffer(frameIndex));
+    globalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)
+        ->SetElement(NAME("EnvProbesBuffer"), gpuBuffers[GRB_ENV_PROBES]->GetBuffer(frameIndex));
+    globalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)
+        ->SetElement(NAME("CurrentEnvProbe"), gpuBuffers[GRB_ENV_PROBES]->GetBuffer(frameIndex));
 
-    globalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)->SetElement(NAME("VoxelGridTexture"), placeholderData->GetImageView3D1x1x1R8());
+    globalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)
+        ->SetElement(NAME("VoxelGridTexture"), placeholderData->GetImageView3D1x1x1R8());
 
-    globalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)->SetElement(NAME("LightFieldColorTexture"), placeholderData->GetImageView2D1x1R8());
-    globalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)->SetElement(NAME("LightFieldDepthTexture"), placeholderData->GetImageView2D1x1R8());
+    globalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)
+        ->SetElement(NAME("LightFieldColorTexture"), placeholderData->GetImageView2D1x1R8());
+    globalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)
+        ->SetElement(NAME("LightFieldDepthTexture"), placeholderData->GetImageView2D1x1R8());
 
-    globalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)->SetElement(NAME("BlueNoiseBuffer"), GpuBufferRef::Null());
-    globalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)->SetElement(NAME("SphereSamplesBuffer"), GpuBufferRef::Null());
+    globalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)
+        ->SetElement(NAME("BlueNoiseBuffer"), GpuBufferRef::Null());
+    globalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)
+        ->SetElement(NAME("SphereSamplesBuffer"), GpuBufferRef::Null());
 
-    globalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)->SetElement(NAME("ShadowMapsTextureArray"), placeholderData->GetImageView2D1x1R8Array());
-    globalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)->SetElement(NAME("PointLightShadowMapsTextureArray"), placeholderData->GetImageViewCube1x1R8Array());
-    globalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)->SetElement(NAME("ShadowMapsBuffer"), gpuBuffers[GRB_SHADOW_MAPS]->GetBuffer(frameIndex));
-    globalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)->SetElement(NAME("LightmapVolumesBuffer"), gpuBuffers[GRB_LIGHTMAP_VOLUMES]->GetBuffer(frameIndex));
+    globalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)
+        ->SetElement(NAME("ShadowMapsTextureArray"), placeholderData->GetImageView2D1x1R8Array());
+    globalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)
+        ->SetElement(NAME("PointLightShadowMapsTextureArray"), placeholderData->GetImageViewCube1x1R8Array());
+    globalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)
+        ->SetElement(NAME("ShadowMapsBuffer"), gpuBuffers[GRB_SHADOW_MAPS]->GetBuffer(frameIndex));
+    globalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)
+        ->SetElement(NAME("LightmapVolumesBuffer"), gpuBuffers[GRB_LIGHTMAP_VOLUMES]->GetBuffer(frameIndex));
 
     for (uint32 i = 0; i < g_maxBoundReflectionProbes; i++)
     {
-        globalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)->SetElement(NAME("EnvProbeTextures"), i, placeholderData->DefaultTexture2D->GetRenderResource().GetImageView());
+        globalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)
+            ->SetElement(
+                NAME("EnvProbeTextures"), i, placeholderData->DefaultTexture2D->GetRenderResource().GetImageView());
     }
 
-    globalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)->SetElement(NAME("DDGIUniforms"), placeholderData->GetOrCreateBuffer(GpuBufferType::CBUFF, sizeof(DDGIUniforms), true /* exact size */));
-    globalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)->SetElement(NAME("DDGIIrradianceTexture"), placeholderData->GetImageView2D1x1R8());
-    globalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)->SetElement(NAME("DDGIDepthTexture"), placeholderData->GetImageView2D1x1R8());
+    globalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)
+        ->SetElement(NAME("DDGIUniforms"),
+            placeholderData->GetOrCreateBuffer(GpuBufferType::CBUFF, sizeof(DDGIUniforms), true /* exact size */));
+    globalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)
+        ->SetElement(NAME("DDGIIrradianceTexture"), placeholderData->GetImageView2D1x1R8());
+    globalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)
+        ->SetElement(NAME("DDGIDepthTexture"), placeholderData->GetImageView2D1x1R8());
 
-    globalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)->SetElement(NAME("RTRadianceResultTexture"), placeholderData->GetImageView2D1x1R8());
+    globalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)
+        ->SetElement(NAME("RTRadianceResultTexture"), placeholderData->GetImageView2D1x1R8());
 
-    globalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)->SetElement(NAME("SamplerNearest"), placeholderData->GetSamplerNearest());
-    globalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)->SetElement(NAME("SamplerLinear"), placeholderData->GetSamplerLinearMipmap());
+    globalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)
+        ->SetElement(NAME("SamplerNearest"), placeholderData->GetSamplerNearest());
+    globalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)
+        ->SetElement(NAME("SamplerLinear"), placeholderData->GetSamplerLinearMipmap());
 
-    globalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)->SetElement(NAME("UITexture"), placeholderData->GetImageView2D1x1R8());
+    globalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)
+        ->SetElement(NAME("UITexture"), placeholderData->GetImageView2D1x1R8());
 
-    globalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)->SetElement(NAME("FinalOutputTexture"), placeholderData->GetImageView2D1x1R8());
+    globalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)
+        ->SetElement(NAME("FinalOutputTexture"), placeholderData->GetImageView2D1x1R8());
 
-    globalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)->SetElement(NAME("ShadowMapsTextureArray"), shadowMapAllocator->GetAtlasImageView());
-    globalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)->SetElement(NAME("PointLightShadowMapsTextureArray"), shadowMapAllocator->GetPointLightShadowMapImageView());
+    globalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)
+        ->SetElement(NAME("ShadowMapsTextureArray"), shadowMapAllocator->GetAtlasImageView());
+    globalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)
+        ->SetElement(NAME("PointLightShadowMapsTextureArray"), shadowMapAllocator->GetPointLightShadowMapImageView());
 
     // Object
-    globalDescriptorTable->GetDescriptorSet(NAME("Object"), frameIndex)->SetElement(NAME("CurrentObject"), gpuBuffers[GRB_ENTITIES]->GetBuffer(frameIndex));
-    globalDescriptorTable->GetDescriptorSet(NAME("Object"), frameIndex)->SetElement(NAME("MaterialsBuffer"), gpuBuffers[GRB_MATERIALS]->GetBuffer(frameIndex));
-    globalDescriptorTable->GetDescriptorSet(NAME("Object"), frameIndex)->SetElement(NAME("SkeletonsBuffer"), gpuBuffers[GRB_SKELETONS]->GetBuffer(frameIndex));
-    globalDescriptorTable->GetDescriptorSet(NAME("Object"), frameIndex)->SetElement(NAME("LightmapVolumeIrradianceTexture"), placeholderData->GetImageView2D1x1R8());
-    globalDescriptorTable->GetDescriptorSet(NAME("Object"), frameIndex)->SetElement(NAME("LightmapVolumeRadianceTexture"), placeholderData->GetImageView2D1x1R8());
+    globalDescriptorTable->GetDescriptorSet(NAME("Object"), frameIndex)
+        ->SetElement(NAME("CurrentObject"), gpuBuffers[GRB_ENTITIES]->GetBuffer(frameIndex));
+    globalDescriptorTable->GetDescriptorSet(NAME("Object"), frameIndex)
+        ->SetElement(NAME("MaterialsBuffer"), gpuBuffers[GRB_MATERIALS]->GetBuffer(frameIndex));
+    globalDescriptorTable->GetDescriptorSet(NAME("Object"), frameIndex)
+        ->SetElement(NAME("SkeletonsBuffer"), gpuBuffers[GRB_SKELETONS]->GetBuffer(frameIndex));
+    globalDescriptorTable->GetDescriptorSet(NAME("Object"), frameIndex)
+        ->SetElement(NAME("LightmapVolumeIrradianceTexture"), placeholderData->GetImageView2D1x1R8());
+    globalDescriptorTable->GetDescriptorSet(NAME("Object"), frameIndex)
+        ->SetElement(NAME("LightmapVolumeRadianceTexture"), placeholderData->GetImageView2D1x1R8());
 
     // Material
     if (g_renderBackend->GetRenderConfig().IsBindlessSupported())
@@ -1447,7 +1699,8 @@ void RenderGlobalState::SetDefaultDescriptorSetElements(uint32 frameIndex)
         for (uint32 textureIndex = 0; textureIndex < g_maxBindlessResources; textureIndex++)
         {
             globalDescriptorTable->GetDescriptorSet(NAME("Material"), frameIndex)
-                ->SetElement(NAME("Textures"), textureIndex, placeholderData->DefaultTexture2D->GetRenderResource().GetImageView());
+                ->SetElement(NAME("Textures"), textureIndex,
+                    placeholderData->DefaultTexture2D->GetRenderResource().GetImageView());
         }
     }
     else
@@ -1455,7 +1708,8 @@ void RenderGlobalState::SetDefaultDescriptorSetElements(uint32 frameIndex)
         for (uint32 textureIndex = 0; textureIndex < g_maxBoundTextures; textureIndex++)
         {
             globalDescriptorTable->GetDescriptorSet(NAME("Material"), frameIndex)
-                ->SetElement(NAME("Textures"), textureIndex, placeholderData->DefaultTexture2D->GetRenderResource().GetImageView());
+                ->SetElement(NAME("Textures"), textureIndex,
+                    placeholderData->DefaultTexture2D->GetRenderResource().GetImageView());
         }
     }
 }

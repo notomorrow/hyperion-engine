@@ -242,6 +242,54 @@ RenderProxyList::RenderProxyList()
 
 RenderProxyList::~RenderProxyList()
 {
+    const auto removeRefsImpl = []<class ElementType>(ResourceTracker<ObjId<ElementType>, ElementType*>& resourceTracker)
+    {
+        HYP_NOT_IMPLEMENTED();
+    };
+
+    removeRefsImpl(lights);
+    removeRefsImpl(materials);
+    removeRefsImpl(skeletons);
+    removeRefsImpl(textures);
+    removeRefsImpl(lightmapVolumes);
+    removeRefsImpl(envProbes);
+    removeRefsImpl(envGrids);
+}
+
+void RenderProxyList::UpdateRefs()
+{
+    const auto impl = []<class ElementType>(ResourceTracker<ObjId<ElementType>, ElementType*>& resourceTracker)
+    {
+        auto diff = resourceTracker.GetDiff();
+        if (!diff.NeedsUpdate())
+        {
+            return;
+        }
+
+        Array<ElementType*> removed;
+        resourceTracker.GetRemoved(removed, false);
+
+        Array<ElementType*> added;
+        resourceTracker.GetAdded(added, false);
+
+        for (ElementType* resource : added)
+        {
+            reinterpret_cast<HypObjectBase*>(resource)->GetObjectHeader_Internal()->IncRefStrong();
+        }
+
+        for (ElementType* resource : removed)
+        {
+            reinterpret_cast<HypObjectBase*>(resource)->GetObjectHeader_Internal()->DecRefStrong();
+        }
+    };
+
+    impl(lights);
+    impl(materials);
+    impl(skeletons);
+    impl(textures);
+    impl(lightmapVolumes);
+    impl(envProbes);
+    impl(envGrids);
 }
 
 #pragma endregion RenderProxyList

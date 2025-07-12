@@ -46,6 +46,7 @@ class ReflectionProbe;
 class Texture;
 class Skeleton;
 class RenderCollector;
+struct ResourceContainer;
 enum class RenderGroupFlags : uint32;
 enum LightType : uint32;
 enum EnvProbeType : uint32;
@@ -107,6 +108,8 @@ struct HYP_API RenderProxyList
     RenderProxyList& operator=(RenderProxyList&& other) noexcept = delete;
 
     ~RenderProxyList();
+
+    void UpdateRefs();
 
     void BeginWrite()
     {
@@ -199,6 +202,8 @@ struct HYP_API RenderProxyList
     // marker to set to locked when game thread is writing to this list.
     // this only really comes into play with non-buffered Views that do not double/triple buffer their RenderProxyLists
     AtomicVar<uint64> rwMarker { 0 };
+    // for non-multibuffered lists
+    ResourceContainer* resourceContainer = nullptr;
 
 #ifdef HYP_ENABLE_MT_CHECK
     HYP_DECLARE_MT_CHECK(dataRaceDetector);

@@ -644,20 +644,20 @@ void UIRenderSubsystem::Update(float delta)
 
         for (RenderProxyMesh* proxy : added)
         {
-            RenderApi_AddRef(proxy->entity.GetUnsafe());
+            // RenderApi_AddRef(proxy->entity.GetUnsafe());
 
             RenderApi_UpdateRenderProxy(proxy->entity.Id(), proxy);
 
-            // for now:
-            proxy->IncRefs();
+            // // for now:
+            // proxy->IncRefs();
         }
 
         for (RenderProxyMesh* proxy : removed)
         {
-            RenderApi_ReleaseRef(proxy->entity.Id());
+            // RenderApi_ReleaseRef(proxy->entity.Id());
 
-            // for now:
-            proxy->DecRefs();
+            // // for now:
+            // proxy->DecRefs();
         }
     }
 
