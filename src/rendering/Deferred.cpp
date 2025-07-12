@@ -1693,7 +1693,7 @@ void DeferredRenderer::RenderFrameForView(FrameBase* frame, const RenderSetup& r
     Assert(rs.IsValid());
     Assert(rs.HasView());
 
-    uint32 globalFrameIndex = RenderApi_GetFrameIndex_RenderThread();
+    uint32 globalFrameIndex = RenderApi_GetFrameIndex();
     if (m_lastFrameData.frameId != globalFrameIndex)
     {
         m_lastFrameData.frameId = globalFrameIndex;
