@@ -572,6 +572,18 @@ public:
         return End();
     }
 
+    SizeType IndexOf(ConstIterator iter) const
+    {
+        AssertDebug(iter.array == this, "Iterator does not belong to this SparsePagedArray!");
+
+        if (iter.elem >= PageSize || iter.page >= m_pages.Size())
+        {
+            return SizeType(-1);
+        }
+
+        return SizeType(iter.page * PageSize + iter.elem);
+    }
+
     template <class Predicate>
     ConstIterator FindIf(Predicate&& predicate) const
     {
