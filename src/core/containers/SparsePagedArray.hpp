@@ -5,6 +5,8 @@
 #include <core/containers/Array.hpp>
 #include <core/containers/Bitset.hpp>
 
+#include <core/math/MathUtil.hpp>
+
 #include <core/Defines.hpp>
 
 #include <Types.hpp>
@@ -19,6 +21,8 @@ namespace containers {
 template <class T, uint32 PageSize>
 class SparsePagedArray : public ContainerBase<SparsePagedArray<T, PageSize>, SizeType>
 {
+    static_assert(MathUtil::IsPowerOfTwo(PageSize), "PageSize must be power of two!");
+
     struct Page
     {
         ValueStorage<T, PageSize, alignof(T)> storage;
@@ -631,14 +635,16 @@ public:
     HYP_DEF_STL_BEGIN_END(Iterator(const_cast<SparsePagedArray*>(this), 0, 0), Iterator(const_cast<SparsePagedArray*>(this), m_pages.Size(), PageSize));
 
 protected:
+    static constexpr uint64 pageSizeBits = MathUtil::FastLog2_Pow2(PageSize);
+
     HYP_FORCE_INLINE static constexpr SizeType PageIndex(SizeType index)
     {
-        return index / PageSize;
+        return index >> pageSizeBits;
     }
 
     HYP_FORCE_INLINE static constexpr SizeType ElementIndex(SizeType index)
     {
-        return index % PageSize;
+        return index & (PageSize - 1);
     }
 
     Page* GetOrAllocatePage(SizeType pageIndex)

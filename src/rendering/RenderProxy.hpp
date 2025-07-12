@@ -52,6 +52,12 @@ public:
 #endif
 };
 
+class NullProxy : public IRenderProxy
+{
+public:
+    char bufferData[1];
+};
+
 struct EntityShaderData
 {
     Matrix4 modelMatrix;

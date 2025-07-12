@@ -314,11 +314,6 @@ struct ResourceBindings
 
 #pragma region ResourceContainer
 
-class NullProxy : public IRenderProxy
-{
-    char bufferData[1];
-};
-
 struct RenderProxyAllocator
 {
     SizeType classSize = 0;
@@ -591,7 +586,8 @@ struct ResourceContainerFactory
 struct ViewData
 {
     View* view = nullptr;
-    RenderProxyList* renderProxyList = nullptr;
+    RenderProxyList rplRender;
+    RenderProxyList* rplShared = nullptr;
     RenderCollector renderCollector;
     uint32 framesSinceWrite : 4 = 0; // framesSinceWrite of this view in the current frame, used to determine if the
                                      // view is still alive if not reset to zero.
@@ -622,6 +618,15 @@ HYP_API void RenderApi_Init()
     g_renderGlobalState->materialDescriptorSetManager->CreateFallbackMaterialDescriptorSet();
 }
 
+HYP_API void RenderApi_Shutdown()
+{
+    Threads::AssertOnThread(g_mainThread);
+
+    for (uint32 i = 0; i < g_numFrames; i++)
+    {
+    }
+}
+
 HYP_API uint32 RenderApi_GetFrameIndex()
 {
     AssertDebug(g_threadFrameIndex != nullptr, "Called from invalid thread or before frame began!");
@@ -634,13 +639,11 @@ HYP_API uint32 RenderApi_GetFrameCounter()
     return *g_threadFrameCounter;
 }
 
-static ViewData* GetCurrentFrameViewData(View* view)
+static ViewData* GetCurrentFrameViewData(View* view, uint32 slot)
 {
     HYP_SCOPE;
 
     AssertDebug(view != nullptr);
-
-    const uint32 slot = *g_threadFrameIndex;
 
     ViewData*& vd = g_frameData[slot].views[view];
 
@@ -659,118 +662,210 @@ static ViewData* GetCurrentFrameViewData(View* view)
             vd->renderCollector.drawCallCollectionImpl = GetOrCreateDrawCallCollectionImpl<EntityInstanceBatch>();
         }
 
-        vd->renderProxyList = view->GetRenderProxyList(slot);
-        AssertDebug(vd->renderProxyList != nullptr);
+        vd->rplShared = view->GetRenderProxyList(slot);
+        AssertDebug(vd->rplShared != nullptr);
     }
 
     return vd;
 }
 
-/// Copy resources from resourceTracker to the frames data
 template <class ElementType>
-static inline void RenderApi_UpdateTrackedResources(FrameData& fd, ResourceTracker<ObjId<ElementType>, ElementType*>& resourceTracker)
+static inline void CopyRenderProxy(ResourceSubtypeData& subtypeData, const ObjId<ElementType>& id, const IRenderProxy* pProxy)
 {
-    auto diff = resourceTracker.GetDiff();
-    if (!diff.NeedsUpdate())
+    AssertDebug(pProxy != nullptr);
+
+    const uint32 idx = id.ToIndex();
+
+    IRenderProxy** ppCurrentProxy = subtypeData.proxies.TryGet(idx);
+
+    if (ppCurrentProxy && *ppCurrentProxy)
     {
-        return;
+        // assign existing proxy
+        subtypeData.assignProxyFn(*ppCurrentProxy, pProxy);
+    }
+    else
+    {
+        void* vpNewProxy = subtypeData.proxyAllocator.Alloc();
+        AssertDebug(vpNewProxy != nullptr);
+
+        IRenderProxy* pNewProxy = subtypeData.constructProxyFn(vpNewProxy);
+        AssertDebug(pNewProxy != nullptr);
+
+        subtypeData.assignProxyFn(pNewProxy, pProxy);
+
+        subtypeData.proxies.Emplace(idx, pNewProxy);
     }
 
-    Array<ObjId<ElementType>> removed;
-    resourceTracker.GetRemoved(removed, false);
+    subtypeData.indicesPendingUpdate.Set(idx, true);
+}
 
-    Array<ElementType*> added;
-    resourceTracker.GetAdded(added, false);
+/// Sync resources from shared resources to render thread resources
+template <class ElementType, class ProxyType>
+static inline void UpdateResources(FrameData& fd, ResourceTracker<ObjId<ElementType>, ElementType*, ProxyType>& lhs, ResourceTracker<ObjId<ElementType>, ElementType*, ProxyType>& rhs)
+{
+    lhs.Advance();
 
-    for (ElementType* resource : added)
+    /// TODO: Preallocate these arrays
+    Array<ElementType**> removed;
+    GetRemovedElements(lhs, rhs, removed);
+
+    Array<ElementType**> added;
+    GetAddedElements(lhs, rhs, added);
+
+    for (ElementType** ppResource : added)
     {
-        const ObjId<ElementType> resourceId = resource->Id();
+        ElementType& resource = **ppResource;
+
+        const ObjId<ElementType> resourceId = resource.Id();
 
         ResourceSubtypeData& subtypeData = fd.resources.GetSubtypeData(resourceId.GetTypeId());
         ResourceData* rd = subtypeData.data.TryGet(resourceId.ToIndex());
 
         if (!rd)
         {
-            rd = &*subtypeData.data.Emplace(resourceId.ToIndex(), resource);
+            rd = &*subtypeData.data.Emplace(resourceId.ToIndex(), &resource);
         }
 
         subtypeData.indicesPendingDelete.Set(resourceId.ToIndex(), false);
 
         rd->count.Increment(1, MemoryOrder::RELAXED);
+
+        lhs.Track(resourceId, &resource);
+
+        if constexpr (!std::is_same_v<ProxyType, NullProxy>)
+        {
+            const ProxyType* pProxy = rhs.GetProxy(resourceId);
+            AssertDebug(pProxy != nullptr);
+
+            CopyRenderProxy(subtypeData, resourceId, pProxy);
+        }
     }
 
-    for (ObjId<ElementType> id : removed)
+    for (ElementType** ppResource : removed)
     {
-        ResourceSubtypeData& subtypeData = fd.resources.GetSubtypeData(id.GetTypeId());
-        ResourceData* rd = subtypeData.data.TryGet(id.ToIndex());
+        ElementType& resource = **ppResource;
+
+        const ObjId<ElementType> resourceId = resource.Id();
+
+        ResourceSubtypeData& subtypeData = fd.resources.GetSubtypeData(resourceId.GetTypeId());
+        ResourceData* rd = subtypeData.data.TryGet(resourceId.ToIndex());
+        AssertDebug(rd != nullptr, "No resource data for {}", resourceId);
 
         if (!rd)
         {
-            continue; // no ref count for this resource
+            continue;
         }
 
         uint32 count;
 
         if ((count = rd->count.Decrement(1, MemoryOrder::RELAXED)) == 1)
         {
-            subtypeData.indicesPendingDelete.Set(id.ToIndex(), true);
+            subtypeData.indicesPendingDelete.Set(resourceId.ToIndex(), true);
         }
+
+        AssertDebug(count != 0);
+    }
+
+    Array<ObjId<ElementType>> changedIds;
+
+    if constexpr (!std::is_same_v<ProxyType, NullProxy>)
+    {
+        rhs.GetChanged(changedIds);
+
+        if (changedIds.Any())
+        {
+            for (const ObjId<ElementType>& id : changedIds)
+            {
+                const ProxyType* pProxy = rhs.GetProxy(id);
+                AssertDebug(pProxy != nullptr);
+
+                if (!pProxy)
+                {
+                    continue;
+                }
+
+                ResourceSubtypeData& subtypeData = fd.resources.GetSubtypeData(id.GetTypeId());
+
+                CopyRenderProxy(subtypeData, id, pProxy);
+            }
+        }
+    }
+
+    rhs.Advance();
+
+    if (added.Any() || removed.Any() || changedIds.Any())
+    {
+        HYP_LOG_TEMP("Updated resources for {}: added={}, removed={}, changed={}",
+            TypeNameWithoutNamespace<ElementType>().Data(),
+            added.Size(), removed.Size(), changedIds.Size());
     }
 }
 
-/// Copy a ResourceContainer's resources and refs to the FrameData's resource container so those resources can be
-/// used when rendering the frame
-static void RenderApi_CopyFrameResources(FrameData& fd, RenderProxyList& rpl)
+static void CopyFrameResources(FrameData& fd, ViewData& vd, RenderProxyList& rpl)
 {
-    Threads::AssertOnThread(g_renderThread);
+    UpdateResources(fd, vd.rplRender.lights, rpl.lights);
+    UpdateResources(fd, vd.rplRender.materials, rpl.materials);
+    UpdateResources(fd, vd.rplRender.skeletons, rpl.skeletons);
+    UpdateResources(fd, vd.rplRender.textures, rpl.textures);
+    UpdateResources(fd, vd.rplRender.lightmapVolumes, rpl.lightmapVolumes);
+    UpdateResources(fd, vd.rplRender.envProbes, rpl.envProbes);
+    UpdateResources(fd, vd.rplRender.envGrids, rpl.envGrids);
 
-    RenderApi_UpdateTrackedResources(fd, rpl.lights);
-    RenderApi_UpdateTrackedResources(fd, rpl.materials);
-    RenderApi_UpdateTrackedResources(fd, rpl.skeletons);
-    RenderApi_UpdateTrackedResources(fd, rpl.textures);
-    RenderApi_UpdateTrackedResources(fd, rpl.lightmapVolumes);
-    RenderApi_UpdateTrackedResources(fd, rpl.envProbes);
-    RenderApi_UpdateTrackedResources(fd, rpl.envGrids);
-
-    // temp. special handling for meshes
-    if (auto diff = rpl.meshes.GetDiff(); diff.NeedsUpdate())
+    // temp. special handling for meshes (until refactored)
     {
+        using ElementType = RenderProxyMesh;
+        auto& resourceTracker = rpl.meshes;
+        auto& lhs = vd.rplRender.meshes;
+        auto& rhs = rpl.meshes;
+
+        lhs.Advance();
+
         Array<RenderProxyMesh*> removed;
-        rpl.meshes.GetRemoved(removed, true);
+        GetRemovedElements(lhs, rhs, removed);
 
         Array<RenderProxyMesh*> added;
-        rpl.meshes.GetAdded(added, true);
+        GetAddedElements(lhs, rhs, added);
 
-        for (RenderProxyMesh* proxy : added)
+        for (ElementType* resource : added)
         {
-            const ObjId<Entity> resourceId = proxy->entity.Id();
+            const auto resourceId = resource->entity.Id();
 
             ResourceSubtypeData& subtypeData = fd.resources.GetSubtypeData(resourceId.GetTypeId());
             ResourceData* rd = subtypeData.data.TryGet(resourceId.ToIndex());
 
             if (!rd)
             {
-                rd = &*subtypeData.data.Emplace(resourceId.ToIndex(), proxy->entity.GetUnsafe());
+                rd = &*subtypeData.data.Emplace(resourceId.ToIndex(), resource->entity.GetUnsafe());
             }
 
             subtypeData.indicesPendingDelete.Set(resourceId.ToIndex(), false);
 
             rd->count.Increment(1, MemoryOrder::RELAXED);
 
-            // for now:
-            proxy->IncRefs();
+            lhs.Track(resourceId, *resource);
+
+            const RenderProxyMesh* pProxy = resourceTracker.GetElement(resourceId);
+            AssertDebug(pProxy != nullptr);
+
+            if (!pProxy)
+            {
+                continue;
+            }
+
+            CopyRenderProxy(subtypeData, resourceId, pProxy);
         }
 
-        for (RenderProxyMesh* proxy : removed)
+        for (ElementType* resource : removed)
         {
-            const ObjId<Entity> resourceId = proxy->entity.Id();
+            const auto resourceId = resource->entity.Id();
 
             ResourceSubtypeData& subtypeData = fd.resources.GetSubtypeData(resourceId.GetTypeId());
             ResourceData* rd = subtypeData.data.TryGet(resourceId.ToIndex());
+            AssertDebug(rd != nullptr, "No resource data for {}", resourceId);
 
             if (!rd)
             {
-                continue; // no ref count for this resource
+                continue;
             }
 
             uint32 count;
@@ -779,97 +874,70 @@ static void RenderApi_CopyFrameResources(FrameData& fd, RenderProxyList& rpl)
             {
                 subtypeData.indicesPendingDelete.Set(resourceId.ToIndex(), true);
             }
+        }
 
-            // for now:
-            proxy->DecRefs();
+        Array<ObjId<Entity>> changedIds;
+        resourceTracker.GetChanged(changedIds);
+
+        if (changedIds.Any())
+        {
+            for (const ObjId<Entity>& id : changedIds)
+            {
+                const RenderProxyMesh* pProxy = resourceTracker.GetElement(id);
+                AssertDebug(pProxy != nullptr);
+
+                if (!pProxy)
+                {
+                    continue;
+                }
+
+                ResourceSubtypeData& subtypeData = fd.resources.GetSubtypeData(id.GetTypeId());
+
+                CopyRenderProxy(subtypeData, id, pProxy);
+            }
+        }
+
+        rhs.Advance();
+
+        if (added.Any() || removed.Any() || changedIds.Any())
+        {
+            HYP_LOG_TEMP("Updated resources for {}: added={}, removed={}, changed={}",
+                TypeNameWithoutNamespace<ElementType>().Data(),
+                added.Size(), removed.Size(), changedIds.Size());
         }
     }
-
-    // for (auto it = rhs.dataByType.Begin(); it != rhs.dataByType.End(); ++it)
-    // {
-    //     const SizeType idx = rhs.dataByType.IndexOf(it);
-    //     AssertDebug(idx != SizeType(-1));
-
-    //     ResourceSubtypeData& lhsSubdata = lhs.dataByType.Get(idx);
-    //     const ResourceSubtypeData& rhsSubdata = *it;
-
-    //     AssertDebug(lhsSubdata.typeId == rhsSubdata.typeId,
-    //         "Cannot concat ResourceSubtypeData with different TypeIds: {} != {}",
-    //         lhsSubdata.typeId.Value(), rhsSubdata.typeId.Value());
-
-    //     // merge the data
-    //     for (auto jt = rhsSubdata.data.Begin(); jt != rhsSubdata.data.End(); ++jt)
-    //     {
-    //         const SizeType jIdx = rhsSubdata.data.IndexOf(jt);
-    //         AssertDebug(jIdx != SizeType(-1));
-
-    //         AssertDebug(!lhsSubdata.data.HasIndex(jIdx),
-    //             "ResourceSubtypeData already has data for index {} (TypeId: {})! Duplicate resource ID?",
-    //             jIdx, lhsSubdata.typeId.Value());
-
-    //         lhsSubdata.data.Emplace(jIdx, jt->resource);
-    //     }
-
-    //     // copy proxies
-    //     for (auto jt = rhsSubdata.proxies.Begin(); jt != rhsSubdata.proxies.End(); ++jt)
-    //     {
-    //         AssertDebug(*jt != nullptr, "Null proxy found in ResourceSubtypeData!");
-
-    //         const SizeType jIdx = rhsSubdata.proxies.IndexOf(jt);
-    //         AssertDebug(jIdx != SizeType(-1));
-
-    //         IRenderProxy* proxy = *jt;
-
-    //         void* proxyPtr = lhsSubdata.proxyAllocator.Alloc();
-    //         AssertDebug(proxyPtr != nullptr);
-
-    //         IRenderProxy* newProxy = lhsSubdata.constructProxyFn(proxyPtr);
-    //         AssertDebug(newProxy != nullptr);
-
-    //         lhsSubdata.assignProxyFn(newProxy, proxy);
-
-    //         AssertDebug(!lhsSubdata.proxies.HasIndex(jIdx));
-    //         lhsSubdata.proxies.Emplace(jIdx, newProxy);
-    //     }
-    // }
 }
 
 HYP_API RenderProxyList& RenderApi_GetProducerProxyList(View* view)
 {
-    HYP_SCOPE;
-
 #ifdef HYP_DEBUG_MODE
     Threads::AssertOnThread(g_gameThread);
 #endif
 
-    ViewData* vd = GetCurrentFrameViewData(view);
+    ViewData* vd = GetCurrentFrameViewData(view, g_frameIndex[PRODUCER]);
 
     // reset the framesSinceWrite counter
     vd->framesSinceWrite = 0;
 
-    return *vd->renderProxyList;
+    return *vd->rplShared;
 }
 
 HYP_API RenderProxyList& RenderApi_GetConsumerProxyList(View* view)
 {
-    HYP_SCOPE;
-
 #ifdef HYP_DEBUG_MODE
     Threads::AssertOnThread(g_renderThread);
 #endif
 
-    return *GetCurrentFrameViewData(view)->renderProxyList;
+    return GetCurrentFrameViewData(view, g_frameIndex[CONSUMER])->rplRender;
 }
 
 HYP_API RenderCollector& RenderApi_GetRenderCollector(View* view)
 {
-    AssertDebug(view != nullptr);
-
 #ifdef HYP_DEBUG_MODE
     Threads::AssertOnThread(g_renderThread | g_gameThread);
 #endif
 
-    return GetCurrentFrameViewData(view)->renderCollector;
+    return GetCurrentFrameViewData(view, *g_threadFrameIndex)->renderCollector;
 }
 
 HYP_API void RenderApi_AddRef(HypObjectBase* resource)
@@ -1125,17 +1193,6 @@ HYP_API void RenderApi_BeginFrame_GameThread()
     g_threadFrameCounter = &g_frameCounter[PRODUCER];
 
     g_freeSemaphore.acquire();
-
-    const uint32 slot = g_frameIndex[PRODUCER];
-
-    FrameData& frameData = g_frameData[slot];
-
-    for (auto it = frameData.perViewData.Begin(); it != frameData.perViewData.End(); ++it)
-    {
-        ViewData& vd = *it;
-
-        AssertDebug(vd.renderProxyList != nullptr);
-    }
 }
 
 HYP_API void RenderApi_EndFrame_GameThread()
@@ -1151,13 +1208,15 @@ HYP_API void RenderApi_EndFrame_GameThread()
     {
         ViewData& vd = *it;
 
-        AssertDebug(vd.renderProxyList != nullptr);
+        AssertDebug(vd.rplShared != nullptr);
     }
 
     g_frameIndex[PRODUCER] = (g_frameIndex[PRODUCER] + 1) % g_numFrames;
 
     g_fullSemaphore.release();
 }
+
+static Array<Pair<RenderProxyList*, ViewData*>> g_currentRenderProxyLists;
 
 HYP_API void RenderApi_BeginFrame_RenderThread()
 {
@@ -1173,38 +1232,31 @@ HYP_API void RenderApi_BeginFrame_RenderThread()
 
     const uint32 slot = g_frameIndex[CONSUMER];
 
-    FrameData& frameData = g_frameData[slot];
+    FrameData& fd = g_frameData[slot];
 
     HYPERION_ASSERT_RESULT(RenderCommands::Flush());
 
-    Array<Pair<RenderProxyList*, ViewData*>> renderProxyLists;
+    g_currentRenderProxyLists.Clear();
+    g_currentRenderProxyLists.Reserve(fd.perViewData.Size());
 
-    for (auto it = frameData.perViewData.Begin(); it != frameData.perViewData.End(); ++it)
+    for (auto it = fd.perViewData.Begin(); it != fd.perViewData.End(); ++it)
     {
         ViewData& vd = *it;
 
         AssertDebug(vd.view != nullptr);
-        AssertDebug(vd.renderProxyList != nullptr);
+        AssertDebug(vd.rplShared != nullptr);
 
-        /// TODO: Use View's bucket mask property to pass to BuildDrawCalls().
-        if (!vd.renderProxyList->TEMP_disableBuildRenderCollection)
-        {
-            HYP_LOG_TEMP("Building list for {}", (void*)&vd.renderCollector);
-            vd.renderProxyList->BeginRead();
-            renderProxyLists.EmplaceBack(vd.renderProxyList, &vd);
-        }
+        g_currentRenderProxyLists.EmplaceBack(vd.rplShared, &vd);
+
+        vd.rplShared->BeginRead();
+
+        // copy dependencies from shared to ViewData
+        CopyFrameResources(fd, vd, *vd.rplShared);
+
+        vd.rplShared->EndRead();
     }
 
-    // Concat dependencies
-    for (auto& it : renderProxyLists)
-    {
-        RenderProxyList& rpl = *it.first;
-        ViewData& vd = *it.second;
-
-        RenderApi_CopyFrameResources(frameData, rpl);
-    }
-
-    for (ResourceSubtypeData& subtypeData : frameData.resources.dataByType)
+    for (ResourceSubtypeData& subtypeData : fd.resources.dataByType)
     {
         if (subtypeData.resourceBinder)
         {
@@ -1248,26 +1300,27 @@ HYP_API void RenderApi_BeginFrame_RenderThread()
         g_renderGlobalState->resourceBindings->skeletonBinder.TotalBoundResources());
 
     // Build draw call lists
-    for (auto& it : renderProxyLists)
+    for (auto& it : g_currentRenderProxyLists)
     {
         RenderProxyList& rpl = *it.first;
         ViewData& vd = *it.second;
 
         AssertDebug(vd.view != nullptr);
 
-        /// TODO: Use View's bucket mask property to pass to BuildDrawCalls().
-        HYP_LOG_TEMP("Building list for {}", (void*)&vd.renderCollector);
+        vd.rplRender.state = RenderProxyList::CS_READING;
 
-        vd.renderCollector.BuildRenderGroups(vd.view, rpl);
-        vd.renderCollector.BuildDrawCalls(0);
+        if (!rpl.TEMP_disableBuildRenderCollection)
+        {
+            vd.renderCollector.BuildRenderGroups(vd.view, vd.rplRender);
+
+            /// TODO: Use View's bucket mask property to pass to BuildDrawCalls().
+            vd.renderCollector.BuildDrawCalls(0);
+        }
+
+        vd.rplRender.state = RenderProxyList::CS_DONE;
     }
 
-    for (auto& it : renderProxyLists)
-    {
-        it.first->EndRead();
-    }
-
-    for (ResourceSubtypeData& subtypeData : frameData.resources.dataByType)
+    for (ResourceSubtypeData& subtypeData : fd.resources.dataByType)
     {
         if (subtypeData.indicesPendingUpdate.Count() != 0)
         {
@@ -1371,7 +1424,7 @@ HYP_API void RenderApi_EndFrame_RenderThread()
 
             if (subtypeData.hasProxyData)
             {
-                AssertDebug(subtypeData.proxies.HasIndex(i), "proxy missing at index: {}", i);
+                AssertDebug(subtypeData.proxies.HasIndex(i), "Proxy missing for resource {}", resource.Id());
 
                 IRenderProxy* proxy = subtypeData.proxies.Get(i);
                 AssertDebug(proxy != nullptr);

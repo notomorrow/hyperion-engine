@@ -25,10 +25,15 @@
 #include <ui/UIStage.hpp>
 #include <ui/UIText.hpp>
 
+/// Includes needed for RenderCollection
 #include <scene/Mesh.hpp>
 #include <scene/View.hpp>
 #include <scene/Texture.hpp>
 #include <scene/World.hpp>
+#include <scene/EnvProbe.hpp>
+#include <scene/EnvGrid.hpp>
+#include <scene/lightmapper/LightmapVolume.hpp>
+#include <scene/animation/Skeleton.hpp>
 
 #include <scene/ecs/EntityManager.hpp>
 #include <scene/ecs/components/UIComponent.hpp>
@@ -578,10 +583,10 @@ void UIRenderSubsystem::Update(float delta)
     rpl.BeginWrite();
     rpl.viewport = m_view->GetViewport();
     rpl.priority = m_view->GetPriority();
-    rpl.meshes.Advance();
-    rpl.materials.Advance();
-    rpl.textures.Advance();
-    rpl.skeletons.Advance();
+    // rpl.meshes.Advance();
+    // rpl.materials.Advance();
+    // rpl.textures.Advance();
+    // rpl.skeletons.Advance();
 
     // rpl.useOrdering = true;
     // rpl.orderedMeshEntities.Clear();
@@ -644,9 +649,11 @@ void UIRenderSubsystem::Update(float delta)
 
         for (RenderProxyMesh* proxy : added)
         {
+            rpl.meshes.SetProxy(proxy->entity.Id(), RenderProxyMesh(*proxy));
+
             // RenderApi_AddRef(proxy->entity.GetUnsafe());
 
-            RenderApi_UpdateRenderProxy(proxy->entity.Id(), proxy);
+            // RenderApi_UpdateRenderProxy(proxy->entity.Id(), proxy);
 
             // // for now:
             // proxy->IncRefs();
@@ -661,8 +668,10 @@ void UIRenderSubsystem::Update(float delta)
         }
     }
 
-    RenderApi_UpdateTrackedResources(rpl.materials);
-    RenderApi_UpdateTrackedResources(rpl.textures);
+    // RenderApi_UpdateTrackedResources(rpl.materials);
+    // RenderApi_UpdateTrackedResources(rpl.textures);
+
+    UpdateRefs(rpl);
 
     renderCollector.PushUpdates(m_view, rpl);
 

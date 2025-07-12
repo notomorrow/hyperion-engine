@@ -292,14 +292,14 @@ void View::Collect()
     RenderProxyList& rpl = RenderApi_GetProducerProxyList(this);
     rpl.BeginWrite();
 
-    rpl.meshes.Advance();
-    rpl.envProbes.Advance();
-    rpl.envGrids.Advance();
-    rpl.lights.Advance();
-    rpl.lightmapVolumes.Advance();
-    rpl.materials.Advance();
-    rpl.textures.Advance();
-    rpl.skeletons.Advance();
+    // rpl.meshes.Advance();
+    // rpl.envProbes.Advance();
+    // rpl.envGrids.Advance();
+    // rpl.lights.Advance();
+    // rpl.lightmapVolumes.Advance();
+    // rpl.materials.Advance();
+    // rpl.textures.Advance();
+    // rpl.skeletons.Advance();
 
     rpl.viewport = m_viewport;
     rpl.priority = m_priority;
@@ -322,7 +322,7 @@ void View::Collect()
         | (1 << RB_TRANSLUCENT)
         | (1 << RB_DEBUG);
 
-    rpl.UpdateRefs();
+    UpdateRefs(rpl);
 
     rpl.EndWrite();
 }
@@ -386,7 +386,7 @@ void View::RemoveScene(const Handle<Scene>& scene)
     m_scenes.Erase(scene);
 }
 
-typename ResourceTracker<ObjId<Entity>, RenderProxyMesh>::Diff View::CollectMeshEntities(RenderProxyList& rpl)
+ResourceTrackerDiff View::CollectMeshEntities(RenderProxyList& rpl)
 {
     HYP_SCOPE;
     Threads::AssertOnThread(g_gameThread | ThreadCategory::THREAD_CATEGORY_TASK);
@@ -613,7 +613,7 @@ typename ResourceTracker<ObjId<Entity>, RenderProxyMesh>::Diff View::CollectMesh
 #endif
     }
 
-    auto meshesDiff = rpl.meshes.GetDiff();
+    ResourceTrackerDiff meshesDiff = rpl.meshes.GetDiff();
 
     if (meshesDiff.NeedsUpdate())
     {
@@ -625,9 +625,11 @@ typename ResourceTracker<ObjId<Entity>, RenderProxyMesh>::Diff View::CollectMesh
 
         for (RenderProxyMesh* proxy : added)
         {
+            // temp
+            rpl.meshes.SetProxy(proxy->entity.Id(), RenderProxyMesh(*proxy));
             // RenderApi_AddRef(proxy->entity.GetUnsafe());
 
-            RenderApi_UpdateRenderProxy(proxy->entity.Id(), proxy);
+            // RenderApi_UpdateRenderProxy(proxy->entity.Id(), proxy);
             // for now:
             // proxy->IncRefs();
         }
@@ -720,7 +722,7 @@ void View::CollectLights(RenderProxyList& rpl)
         for (Light* light : added)
         {
             // RenderApi_AddRef(light);
-            RenderApi_UpdateRenderProxy(light->Id());
+            // RenderApi_UpdateRenderProxy(light->Id());
         }
 
         for (Light* light : removed)
@@ -783,7 +785,7 @@ void View::CollectLightmapVolumes(RenderProxyList& rpl)
         for (LightmapVolume* volume : added)
         {
             // RenderApi_AddRef(volume);
-            RenderApi_UpdateRenderProxy(volume->Id());
+            // RenderApi_UpdateRenderProxy(volume->Id());
         }
 
         for (LightmapVolume* volume : removed)
@@ -846,7 +848,7 @@ void View::CollectEnvGrids(RenderProxyList& rpl)
         for (EnvGrid* envGrid : added)
         {
             // RenderApi_AddRef(envGrid);
-            RenderApi_UpdateRenderProxy(envGrid->Id());
+            // RenderApi_UpdateRenderProxy(envGrid->Id());
         }
 
         for (EnvGrid* envGrid : removed)
@@ -921,7 +923,7 @@ void View::CollectEnvProbes(RenderProxyList& rpl)
         for (EnvProbe* probe : added)
         {
             // RenderApi_AddRef(probe);
-            RenderApi_UpdateRenderProxy(probe->Id());
+            // RenderApi_UpdateRenderProxy(probe->Id());
         }
 
         for (EnvProbe* probe : removed)

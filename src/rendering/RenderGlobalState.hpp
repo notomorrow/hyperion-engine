@@ -48,6 +48,7 @@ HYP_API extern int GetSubclassIndex(TypeId baseTypeId, TypeId subclassTypeId);
 // Call at start of engine before render / game thread start ticking.
 // Allocates containers declared in RenderGlobalState.cpp via DECLARE_RENDER_DATA_CONTAINER
 HYP_API extern void RenderApi_Init();
+HYP_API extern void RenderApi_Shutdown();
 
 HYP_API extern uint32 RenderApi_GetFrameIndex();
 HYP_API extern uint32 RenderApi_GetFrameCounter();
@@ -87,6 +88,7 @@ HYP_API extern void RenderApi_AssignResourceBinding(HypObjectBase* resource, uin
 HYP_API extern uint32 RenderApi_RetrieveResourceBinding(const HypObjectBase* resource);
 HYP_API extern uint32 RenderApi_RetrieveResourceBinding(ObjIdBase id);
 
+#if 0
 /*! \brief Register added/removed/changed resources with the rendering system for the next frame to be rendered */
 template <class ElementType>
 static inline void RenderApi_UpdateTrackedResources(ResourceTracker<ObjId<ElementType>, ElementType*>& resourceTracker)
@@ -119,6 +121,7 @@ static inline void RenderApi_UpdateTrackedResources(ResourceTracker<ObjId<Elemen
         }
     }
 }
+#endif
 
 struct ResourceBindings;
 

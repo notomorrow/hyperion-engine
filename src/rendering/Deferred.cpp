@@ -1532,7 +1532,7 @@ void DeferredRenderer::RenderFrame(FrameBase* frame, const RenderSetup& rs)
     // Render global environment probes and grids and set fallbacks
     RenderSetup newRs = rs;
 
-#if 1
+#if 0
     // Render shadows for shadow casting lights
     for (uint32 lightType = 0; lightType < LT_MAX; lightType++)
     {
@@ -1559,8 +1559,8 @@ void DeferredRenderer::RenderFrame(FrameBase* frame, const RenderSetup& rs)
         }
     }
 #endif
-
     {
+#if 1
         // Set sky as fallback probe
         if (envProbes[EPT_SKY].Any())
         {
@@ -1599,6 +1599,7 @@ void DeferredRenderer::RenderFrame(FrameBase* frame, const RenderSetup& rs)
                 }
             }
         }
+#endif
 
 #if 1
         if (envGrids.Any())

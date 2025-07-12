@@ -204,7 +204,7 @@ public:
         return m_overrideAttributes;
     }
 
-    HYP_FORCE_INLINE const typename ResourceTracker<ObjId<Entity>, RenderProxyMesh>::Diff& GetLastMeshCollectionResult() const
+    HYP_FORCE_INLINE const ResourceTrackerDiff& GetLastMeshCollectionResult() const
     {
         return m_lastMeshCollectionResult;
     }
@@ -227,7 +227,7 @@ protected:
     void CollectEnvGrids(RenderProxyList& rpl);
     void CollectEnvProbes(RenderProxyList& rpl);
 
-    typename ResourceTracker<ObjId<Entity>, RenderProxyMesh>::Diff CollectMeshEntities(RenderProxyList& rpl);
+    ResourceTrackerDiff CollectMeshEntities(RenderProxyList& rpl);
 
     ViewDesc m_viewDesc;
 
@@ -249,7 +249,7 @@ protected:
 
     Optional<RenderableAttributeSet> m_overrideAttributes;
 
-    typename ResourceTracker<ObjId<Entity>, RenderProxyMesh>::Diff m_lastMeshCollectionResult;
+    ResourceTrackerDiff m_lastMeshCollectionResult;
 };
 
 } // namespace hyperion

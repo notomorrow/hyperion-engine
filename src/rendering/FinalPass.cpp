@@ -22,6 +22,7 @@
 
 #include <scene/Mesh.hpp>
 #include <scene/Texture.hpp>
+#include <scene/RenderProxyable.hpp>
 
 #include <util/MeshBuilder.hpp>
 
