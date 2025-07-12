@@ -72,13 +72,6 @@ HYP_API extern RenderProxyList& RenderApi_GetConsumerProxyList(View* view);
 /*! \brief Thread-safe, but only usable on game thread and render thread */
 HYP_API extern RenderCollector& RenderApi_GetRenderCollector(View* view);
 
-// Call on game (producer) thread
-HYP_API extern void RenderApi_AddRef(HypObjectBase* resource);
-HYP_API extern void RenderApi_ReleaseRef(ObjIdBase id);
-
-HYP_API extern void RenderApi_UpdateRenderProxy(ObjIdBase id);
-HYP_API extern void RenderApi_UpdateRenderProxy(ObjIdBase id, const IRenderProxy* srcProxy);
-
 // Call on render thread or render thread tasks only (consumer)
 HYP_API extern IRenderProxy* RenderApi_GetRenderProxy(ObjIdBase id);
 
@@ -87,41 +80,6 @@ HYP_API extern void RenderApi_AssignResourceBinding(HypObjectBase* resource, uin
 // used on render thread only - retrieves the binding set for the given resource (~0u if unset)
 HYP_API extern uint32 RenderApi_RetrieveResourceBinding(const HypObjectBase* resource);
 HYP_API extern uint32 RenderApi_RetrieveResourceBinding(ObjIdBase id);
-
-#if 0
-/*! \brief Register added/removed/changed resources with the rendering system for the next frame to be rendered */
-template <class ElementType>
-static inline void RenderApi_UpdateTrackedResources(ResourceTracker<ObjId<ElementType>, ElementType*>& resourceTracker)
-{
-    // Update refs for materials for this view
-    if (auto diff = resourceTracker.GetDiff(); diff.NeedsUpdate())
-    {
-        static const bool shouldUpdateRenderProxy = IsA<RenderProxyable, ElementType>();
-
-        Array<ObjId<ElementType>> removed;
-        resourceTracker.GetRemoved(removed, /* includeChanged */ shouldUpdateRenderProxy);
-
-        Array<ElementType*> added;
-        resourceTracker.GetAdded(added, /* includeChanged */ shouldUpdateRenderProxy);
-
-        for (ElementType* elem : added)
-        {
-            RenderApi_AddRef(elem);
-
-            // Update proxies for changed and added items
-            if (shouldUpdateRenderProxy)
-            {
-                RenderApi_UpdateRenderProxy(elem->Id());
-            }
-        }
-
-        for (ObjId<ElementType> id : removed)
-        {
-            RenderApi_ReleaseRef(id);
-        }
-    }
-}
-#endif
 
 struct ResourceBindings;
 

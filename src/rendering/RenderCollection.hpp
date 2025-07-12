@@ -202,7 +202,7 @@ struct HYP_API RenderProxyList
     ResourceTracker<ObjId<Skeleton>, Skeleton*, RenderProxySkeleton> skeletons;
     ResourceTracker<ObjId<Texture>, Texture*> textures;
 
-    Array<Pair<ObjId<Entity>, int>, DynamicAllocator> orderedMeshEntities;
+    HashMap<ObjId<Entity>, int> meshEntityOrdering;
 
     // marker to set to locked when game thread is writing to this list.
     // this only really comes into play with non-buffered Views that do not double/triple buffer their RenderProxyLists

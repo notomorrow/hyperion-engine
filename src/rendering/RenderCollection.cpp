@@ -658,92 +658,40 @@ void RenderCollector::BuildRenderGroups(View* view, const RenderProxyList& rende
 
     const RenderableAttributeSet* overrideAttributes = view->GetOverrideAttributes().TryGet();
 
-    if (renderProxyList.useOrdering || (view->GetFlags() & ViewFlags::NOT_MULTI_BUFFERED))
+    auto diff = renderProxyList.meshes.GetDiff();
+
+    if (!diff.NeedsUpdate())
     {
-        // non multi buffered implementation:
-        // needs to clear and rebuild the entire list of entities,
-        // as we won't be able to maintain structure needed to make use of diffing
-
-        // keep memory around for next frame so we aren't allocating as much during the frame.
-        Clear(/* freeMemory */ false);
-
-        if (renderProxyList.useOrdering)
-        {
-            HYP_LOG_TEMP("Render {} ordered mesh entities", renderProxyList.orderedMeshEntities.Size());
-
-            for (const Pair<ObjId<Entity>, int>& pair : renderProxyList.orderedMeshEntities)
-            {
-                const RenderProxyMesh* proxy = renderProxyList.meshes.GetElement(pair.first);
-
-                if (!proxy)
-                {
-                    continue;
-                }
-
-                RenderableAttributeSet attributes = GetRenderableAttributesForProxy(*proxy, overrideAttributes);
-                attributes.SetDrawableLayer(pair.second);
-                UpdateRenderableAttributesDynamic(proxy, attributes);
-
-                AddRenderProxy(this, const_cast<RenderProxyMesh*>(proxy), attributes);
-            }
-
-            return;
-        }
-
-        int i = 0;
-        for (const RenderProxyMesh& proxy : renderProxyList.meshes)
-        {
-            RenderableAttributeSet attributes = GetRenderableAttributesForProxy(proxy, overrideAttributes);
-            UpdateRenderableAttributesDynamic(&proxy, attributes);
-
-            AddRenderProxy(this, const_cast<RenderProxyMesh*>(&proxy), attributes);
-
-            i++;
-        }
-
-        Array<RenderProxyMesh*> rpm;
-        renderProxyList.meshes.GetCurrent(rpm);
-        HYP_LOG_TEMP("Render {} mesh entities (non multi buffered) : num current: {}", i, rpm.Size());
-
         return;
     }
 
-    auto diff = renderProxyList.meshes.GetDiff();
+    Array<RenderProxyMesh*> removedProxies;
+    renderProxyList.meshes.GetRemoved(removedProxies, true /* includeChanged */);
 
-    if (diff.NeedsUpdate())
+    Array<RenderProxyMesh*> addedProxyPtrs;
+    renderProxyList.meshes.GetAdded(addedProxyPtrs, true /* includeChanged */);
+
+    if (removedProxies.Any())
     {
-        Array<RenderProxyMesh*> removedProxies;
-        renderProxyList.meshes.GetRemoved(removedProxies, true /* includeChanged */);
-
-        Array<RenderProxyMesh*> addedProxyPtrs;
-        renderProxyList.meshes.GetAdded(addedProxyPtrs, true /* includeChanged */);
-
-        if (addedProxyPtrs.Any() || removedProxies.Any())
+        for (RenderProxyMesh* proxy : removedProxies)
         {
-            for (RenderProxyMesh* proxy : removedProxies)
-            {
-                AssertDebug(proxy);
+            AssertDebug(proxy);
 
-                RenderableAttributeSet attributes = GetRenderableAttributesForProxy(*proxy, overrideAttributes);
-                UpdateRenderableAttributesDynamic(proxy, attributes);
+            RenderableAttributeSet attributes = GetRenderableAttributesForProxy(*proxy, overrideAttributes);
+            UpdateRenderableAttributesDynamic(proxy, attributes);
 
-                Assert(RemoveRenderProxy(this, proxy, attributes));
-            }
+            Assert(RemoveRenderProxy(this, proxy, attributes));
+        }
+    }
 
-            for (RenderProxyMesh* proxy : addedProxyPtrs)
-            {
-                const Handle<Mesh>& mesh = proxy->mesh;
-                Assert(mesh.IsValid());
-                Assert(mesh->IsReady());
+    if (addedProxyPtrs.Any())
+    {
+        for (RenderProxyMesh* proxy : addedProxyPtrs)
+        {
+            RenderableAttributeSet attributes = GetRenderableAttributesForProxy(*proxy, overrideAttributes);
+            UpdateRenderableAttributesDynamic(proxy, attributes);
 
-                const Handle<Material>& material = proxy->material;
-                Assert(material.IsValid());
-
-                RenderableAttributeSet attributes = GetRenderableAttributesForProxy(*proxy, overrideAttributes);
-                UpdateRenderableAttributesDynamic(proxy, attributes);
-
-                AddRenderProxy(this, proxy, attributes);
-            }
+            AddRenderProxy(this, proxy, attributes);
         }
     }
 }

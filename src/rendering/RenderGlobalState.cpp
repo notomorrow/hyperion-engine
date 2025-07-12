@@ -583,24 +583,57 @@ struct ResourceContainerFactory
 
 #pragma endregion ResourceContainer
 
+// Render thread owned View data
 struct ViewData
 {
     View* view = nullptr;
     RenderProxyList rplRender;
-    RenderProxyList* rplShared = nullptr;
     RenderCollector renderCollector;
     uint32 framesSinceWrite : 4 = 0; // framesSinceWrite of this view in the current frame, used to determine if the
-                                     // view is still alive if not reset to zero.
+    // view is still alive if not reset to zero.
+};
+
+// Data for views that is buffered over multiple frames
+struct ViewFrameData
+{
+    View* view = nullptr;
+    RenderProxyList* rplShared = nullptr;
+
+    // Only render thread touches this member, since ViewData is created from the render thread
+    ViewData* viewData = nullptr;
 };
 
 struct FrameData
 {
-    LinkedList<ViewData> perViewData;
-    HashMap<View*, ViewData*> views;
+    HashMap<View*, ViewFrameData*> viewFrameData;
     ResourceContainer resources;
 };
 
 static FrameData g_frameData[g_numFrames];
+static HashMap<View*, ViewData*> g_viewData;
+
+static ViewData* GetViewData(View* view)
+{
+    AssertDebug(view != nullptr);
+
+#ifdef HYP_DEBUG_MODE
+    Threads::AssertOnThread(g_renderThread);
+#endif
+
+    auto viewDataIt = g_viewData.Find(view);
+    if (viewDataIt == g_viewData.End())
+    {
+        ViewData* vd = new ViewData();
+        vd->view = view;
+        vd->framesSinceWrite = 0;
+        vd->renderCollector.drawCallCollectionImpl = view->GetViewDesc().drawCallCollectionImpl;
+
+        viewDataIt = g_viewData.Set(view, vd).first;
+    }
+
+    AssertDebug(viewDataIt->second != nullptr);
+    return viewDataIt->second;
+}
 
 HYP_API void RenderApi_Init()
 {
@@ -624,7 +657,20 @@ HYP_API void RenderApi_Shutdown()
 
     for (uint32 i = 0; i < g_numFrames; i++)
     {
+        for (auto& it : g_frameData[i].viewFrameData)
+        {
+            delete it.second;
+        }
+
+        g_frameData[i].viewFrameData.Clear();
     }
+
+    for (auto& it : g_viewData)
+    {
+        delete it.second;
+    }
+
+    g_viewData.Clear();
 }
 
 HYP_API uint32 RenderApi_GetFrameIndex()
@@ -639,34 +685,25 @@ HYP_API uint32 RenderApi_GetFrameCounter()
     return *g_threadFrameCounter;
 }
 
-static ViewData* GetCurrentFrameViewData(View* view, uint32 slot)
+static ViewFrameData* GetViewFrameData(View* view, uint32 slot)
 {
     HYP_SCOPE;
 
     AssertDebug(view != nullptr);
 
-    ViewData*& vd = g_frameData[slot].views[view];
+    ViewFrameData*& vfd = g_frameData[slot].viewFrameData[view];
 
-    if (!vd)
+    if (!vfd)
     {
         // create a new pool for this view
-        vd = &g_frameData[slot].perViewData.EmplaceBack();
-        vd->view = view;
+        vfd = new ViewFrameData();
+        vfd->view = view;
 
-        if (view->GetViewDesc().drawCallCollectionImpl != nullptr)
-        {
-            vd->renderCollector.drawCallCollectionImpl = view->GetViewDesc().drawCallCollectionImpl;
-        }
-        else
-        {
-            vd->renderCollector.drawCallCollectionImpl = GetOrCreateDrawCallCollectionImpl<EntityInstanceBatch>();
-        }
-
-        vd->rplShared = view->GetRenderProxyList(slot);
-        AssertDebug(vd->rplShared != nullptr);
+        vfd->rplShared = view->GetRenderProxyList(slot);
+        AssertDebug(vfd->rplShared != nullptr);
     }
 
-    return vd;
+    return vfd;
 }
 
 template <class ElementType>
@@ -699,9 +736,8 @@ static inline void CopyRenderProxy(ResourceSubtypeData& subtypeData, const ObjId
     subtypeData.indicesPendingUpdate.Set(idx, true);
 }
 
-/// Sync resources from shared resources to render thread resources
 template <class ElementType, class ProxyType>
-static inline void UpdateResources(FrameData& fd, ResourceTracker<ObjId<ElementType>, ElementType*, ProxyType>& lhs, ResourceTracker<ObjId<ElementType>, ElementType*, ProxyType>& rhs)
+static inline void SyncResources(FrameData& fd, ResourceTracker<ObjId<ElementType>, ElementType*, ProxyType>& lhs, ResourceTracker<ObjId<ElementType>, ElementType*, ProxyType>& rhs)
 {
     lhs.Advance();
 
@@ -801,15 +837,15 @@ static inline void UpdateResources(FrameData& fd, ResourceTracker<ObjId<ElementT
     }
 }
 
-static void CopyFrameResources(FrameData& fd, ViewData& vd, RenderProxyList& rpl)
+static void CopyDependencies(FrameData& fd, ViewData& vd, RenderProxyList& rpl)
 {
-    UpdateResources(fd, vd.rplRender.lights, rpl.lights);
-    UpdateResources(fd, vd.rplRender.materials, rpl.materials);
-    UpdateResources(fd, vd.rplRender.skeletons, rpl.skeletons);
-    UpdateResources(fd, vd.rplRender.textures, rpl.textures);
-    UpdateResources(fd, vd.rplRender.lightmapVolumes, rpl.lightmapVolumes);
-    UpdateResources(fd, vd.rplRender.envProbes, rpl.envProbes);
-    UpdateResources(fd, vd.rplRender.envGrids, rpl.envGrids);
+    SyncResources(fd, vd.rplRender.lights, rpl.lights);
+    SyncResources(fd, vd.rplRender.materials, rpl.materials);
+    SyncResources(fd, vd.rplRender.skeletons, rpl.skeletons);
+    SyncResources(fd, vd.rplRender.textures, rpl.textures);
+    SyncResources(fd, vd.rplRender.lightmapVolumes, rpl.lightmapVolumes);
+    SyncResources(fd, vd.rplRender.envProbes, rpl.envProbes);
+    SyncResources(fd, vd.rplRender.envGrids, rpl.envGrids);
 
     // temp. special handling for meshes (until refactored)
     {
@@ -914,217 +950,29 @@ HYP_API RenderProxyList& RenderApi_GetProducerProxyList(View* view)
     Threads::AssertOnThread(g_gameThread);
 #endif
 
-    ViewData* vd = GetCurrentFrameViewData(view, g_frameIndex[PRODUCER]);
-
-    // reset the framesSinceWrite counter
-    vd->framesSinceWrite = 0;
+    ViewFrameData* vd = GetViewFrameData(view, g_frameIndex[PRODUCER]);
 
     return *vd->rplShared;
 }
 
 HYP_API RenderProxyList& RenderApi_GetConsumerProxyList(View* view)
 {
+    AssertDebug(view != nullptr);
+
 #ifdef HYP_DEBUG_MODE
     Threads::AssertOnThread(g_renderThread);
 #endif
 
-    return GetCurrentFrameViewData(view, g_frameIndex[CONSUMER])->rplRender;
+    return GetViewData(view)->rplRender;
 }
 
 HYP_API RenderCollector& RenderApi_GetRenderCollector(View* view)
 {
 #ifdef HYP_DEBUG_MODE
-    Threads::AssertOnThread(g_renderThread | g_gameThread);
+    Threads::AssertOnThread(g_renderThread);
 #endif
 
-    return GetCurrentFrameViewData(view, *g_threadFrameIndex)->renderCollector;
-}
-
-HYP_API void RenderApi_AddRef(HypObjectBase* resource)
-{
-    if (!resource)
-    {
-        return;
-    }
-
-    Threads::AssertOnThread(g_gameThread);
-
-    const ObjIdBase resourceId = resource->Id();
-
-    const uint32 slot = g_frameIndex[PRODUCER];
-
-    HYP_LOG_TEMP("Add ref for {} for frame {}", resourceId, slot);
-
-    FrameData& fd = g_frameData[slot];
-
-    ResourceSubtypeData& subtypeData = fd.resources.GetSubtypeData(resourceId.GetTypeId());
-    ResourceData* rd = subtypeData.data.TryGet(resourceId.ToIndex());
-
-    if (!rd)
-    {
-        rd = &*subtypeData.data.Emplace(resourceId.ToIndex(), resource);
-    }
-
-    subtypeData.indicesPendingDelete.Set(resourceId.ToIndex(), false);
-
-    rd->count.Increment(1, MemoryOrder::RELAXED);
-}
-
-HYP_API void RenderApi_ReleaseRef(ObjIdBase id)
-{
-    if (!id.IsValid())
-    {
-        return;
-    }
-
-    Threads::AssertOnThread(g_gameThread);
-
-    const uint32 slot = g_frameIndex[PRODUCER];
-
-    HYP_LOG_TEMP("Release ref for {} for frame {}", id, slot);
-
-    FrameData& fd = g_frameData[slot];
-
-    ResourceSubtypeData& subtypeData = fd.resources.GetSubtypeData(id.GetTypeId());
-    ResourceData* rd = subtypeData.data.TryGet(id.ToIndex());
-
-    if (!rd)
-    {
-        return; // no ref count for this resource
-    }
-
-    uint32 count;
-
-    if ((count = rd->count.Decrement(1, MemoryOrder::RELAXED)) == 1)
-    {
-        subtypeData.indicesPendingDelete.Set(id.ToIndex(), true);
-    }
-}
-
-HYP_API void RenderApi_UpdateRenderProxy(ObjIdBase id)
-{
-    if (!id.IsValid())
-    {
-        return;
-    }
-
-    Threads::AssertOnThread(g_gameThread);
-
-    const uint32 slot = g_frameIndex[PRODUCER];
-
-    FrameData& fd = g_frameData[slot];
-
-    ResourceSubtypeData& subtypeData = fd.resources.GetSubtypeData(id.GetTypeId());
-    ResourceData& data = subtypeData.data.Get(id.ToIndex());
-
-    AssertDebug(data.count.Get(MemoryOrder::RELAXED), "expected ref count to be > 0 when calling UpdateRenderProxy()");
-    AssertDebug(!subtypeData.indicesPendingDelete.Test(id.ToIndex()), "Why is it marked for delete?");
-
-    AssertDebug(subtypeData.hasProxyData,
-        "Cannot use UpdateRenderProxy() for type which does not have proxy data! TypeId: {}, HypClass {}",
-        subtypeData.typeId.Value(), *GetClass(subtypeData.typeId)->GetName());
-
-    IRenderProxy* proxy;
-
-    if (IRenderProxy** p = subtypeData.proxies.TryGet(id.ToIndex()))
-    {
-        proxy = *p;
-    }
-    else
-    {
-        void* ptr = subtypeData.proxyAllocator.Alloc();
-        AssertDebug(ptr != nullptr, "Failed to allocate render proxy!");
-
-        // construct proxy object
-        AssertDebug(subtypeData.constructProxyFn != nullptr);
-        proxy = subtypeData.constructProxyFn(ptr);
-
-        subtypeData.proxies.Emplace(id.ToIndex(), proxy);
-
-        HYP_LOG(Rendering, Debug, "Created render proxy for resource id {} of type {} at index {} for frame {}", id,
-            GetClass(subtypeData.typeId)->GetName(), id.ToIndex(), slot);
-    }
-
-    AssertDebug(proxy);
-    AssertDebug(data.resource);
-
-    if (data.resource->InstanceClass()->IsDerivedFrom(RenderProxyable::Class()))
-    {
-        RenderProxyable* renderProxyable = static_cast<RenderProxyable*>(data.resource);
-        renderProxyable->UpdateRenderProxy(proxy);
-
-        // mark for buffer data update from render thread
-        subtypeData.indicesPendingUpdate.Set(id.ToIndex(), true);
-    }
-    else
-    {
-        HYP_LOG(Rendering, Warning,
-            "UpdateRenderProxy called for resource id {} of type {} which is not a RenderProxyable! Skipping proxy update.\n",
-            id, GetClass(subtypeData.typeId)->GetName());
-    }
-}
-
-HYP_API void RenderApi_UpdateRenderProxy(ObjIdBase id, const IRenderProxy* srcProxy)
-{
-    if (!id.IsValid())
-    {
-        return;
-    }
-
-    AssertDebug(srcProxy != nullptr);
-
-    Threads::AssertOnThread(g_gameThread);
-
-    const uint32 slot = g_frameIndex[PRODUCER];
-
-    FrameData& fd = g_frameData[slot];
-
-    ResourceSubtypeData& subtypeData = fd.resources.GetSubtypeData(id.GetTypeId());
-    ResourceData& data = subtypeData.data.Get(id.ToIndex());
-
-    AssertDebug(data.count.Get(MemoryOrder::RELAXED), "expected ref count to be > 0 when calling UpdateRenderProxy()");
-    AssertDebug(!subtypeData.indicesPendingDelete.Test(id.ToIndex()), "Why is it marked for delete?");
-
-    AssertDebug(subtypeData.hasProxyData,
-        "Cannot use UpdateResource() for type which does not have proxy data! TypeId: {}, HypClass {}",
-        subtypeData.typeId.Value(), *GetClass(subtypeData.typeId)->GetName());
-
-    IRenderProxy* dstProxy;
-
-    if (IRenderProxy** p = subtypeData.proxies.TryGet(id.ToIndex()))
-    {
-        dstProxy = *p;
-    }
-    else
-    {
-        void* ptr = subtypeData.proxyAllocator.Alloc();
-        AssertDebug(ptr != nullptr, "Failed to allocate render proxy!");
-
-        // construct proxy object
-        dstProxy = subtypeData.constructProxyFn(ptr);
-
-        subtypeData.proxies.Emplace(id.ToIndex(), dstProxy);
-
-        HYP_LOG(Rendering, Debug, "Created render proxy for resource id {} of type {} at index {} for frame {}", id,
-            GetClass(subtypeData.typeId)->GetName(), id.ToIndex(), slot);
-    }
-
-    subtypeData.assignProxyFn(dstProxy, srcProxy);
-
-    if (data.resource->InstanceClass()->IsDerivedFrom(RenderProxyable::Class()))
-    {
-        RenderProxyable* renderProxyable = static_cast<RenderProxyable*>(data.resource);
-        renderProxyable->UpdateRenderProxy(dstProxy);
-
-        // mark for buffer data update from render thread
-        subtypeData.indicesPendingUpdate.Set(id.ToIndex(), true);
-    }
-    else
-    {
-        HYP_LOG(Rendering, Warning,
-            "UpdateRenderProxy called for resource id {} of type {} which is not a RenderProxyable! Skipping proxy update.\n",
-            id, GetClass(subtypeData.typeId)->GetName());
-    }
+    return GetViewData(view)->renderCollector;
 }
 
 HYP_API IRenderProxy* RenderApi_GetRenderProxy(ObjIdBase id)
@@ -1204,19 +1052,10 @@ HYP_API void RenderApi_EndFrame_GameThread()
 
     FrameData& frameData = g_frameData[g_frameIndex[PRODUCER]];
 
-    for (auto it = frameData.perViewData.Begin(); it != frameData.perViewData.End(); ++it)
-    {
-        ViewData& vd = *it;
-
-        AssertDebug(vd.rplShared != nullptr);
-    }
-
     g_frameIndex[PRODUCER] = (g_frameIndex[PRODUCER] + 1) % g_numFrames;
 
     g_fullSemaphore.release();
 }
-
-static Array<Pair<RenderProxyList*, ViewData*>> g_currentRenderProxyLists;
 
 HYP_API void RenderApi_BeginFrame_RenderThread()
 {
@@ -1236,24 +1075,22 @@ HYP_API void RenderApi_BeginFrame_RenderThread()
 
     HYPERION_ASSERT_RESULT(RenderCommands::Flush());
 
-    g_currentRenderProxyLists.Clear();
-    g_currentRenderProxyLists.Reserve(fd.perViewData.Size());
-
-    for (auto it = fd.perViewData.Begin(); it != fd.perViewData.End(); ++it)
+    for (auto it = fd.viewFrameData.Begin(); it != fd.viewFrameData.End(); ++it)
     {
-        ViewData& vd = *it;
+        ViewFrameData& vfd = *it->second;
+        AssertDebug(vfd.rplShared != nullptr);
 
-        AssertDebug(vd.view != nullptr);
-        AssertDebug(vd.rplShared != nullptr);
+        if (!vfd.viewData)
+        {
+            vfd.viewData = GetViewData(vfd.view);
+        }
 
-        g_currentRenderProxyLists.EmplaceBack(vd.rplShared, &vd);
-
-        vd.rplShared->BeginRead();
+        vfd.rplShared->BeginRead();
 
         // copy dependencies from shared to ViewData
-        CopyFrameResources(fd, vd, *vd.rplShared);
+        CopyDependencies(fd, *vfd.viewData, *vfd.rplShared);
 
-        vd.rplShared->EndRead();
+        vfd.rplShared->EndRead();
     }
 
     for (ResourceSubtypeData& subtypeData : fd.resources.dataByType)
@@ -1300,16 +1137,18 @@ HYP_API void RenderApi_BeginFrame_RenderThread()
         g_renderGlobalState->resourceBindings->skeletonBinder.TotalBoundResources());
 
     // Build draw call lists
-    for (auto& it : g_currentRenderProxyLists)
-    {
-        RenderProxyList& rpl = *it.first;
-        ViewData& vd = *it.second;
 
-        AssertDebug(vd.view != nullptr);
+    for (auto it = fd.viewFrameData.Begin(); it != fd.viewFrameData.End(); ++it)
+    {
+        ViewFrameData& vfd = *it->second;
+        AssertDebug(vfd.rplShared != nullptr);
+        AssertDebug(vfd.viewData != nullptr);
+
+        ViewData& vd = *vfd.viewData;
 
         vd.rplRender.state = RenderProxyList::CS_READING;
 
-        if (!rpl.TEMP_disableBuildRenderCollection)
+        if (!vfd.rplShared->TEMP_disableBuildRenderCollection)
         {
             vd.renderCollector.BuildRenderGroups(vd.view, vd.rplRender);
 
@@ -1376,25 +1215,21 @@ HYP_API void RenderApi_EndFrame_RenderThread()
     FrameData& frameData = g_frameData[slot];
 
     // cull ViewData that hasn't been written to for a while
-    for (auto it = frameData.perViewData.Begin(); it != frameData.perViewData.End();)
+    for (auto it = frameData.viewFrameData.Begin(); it != frameData.viewFrameData.End();)
     {
-        ViewData& vd = *it;
+        ViewFrameData& vfd = *it->second;
+        AssertDebug(vfd.viewData != nullptr);
+
+        ViewData& vd = *vfd.viewData;
+
         vd.renderCollector.RemoveEmptyRenderGroups();
 
         // Clear out data for views that haven't been written to for a while
         if (vd.framesSinceWrite == g_maxFramesBeforeDiscard)
         {
-            auto viewIt = frameData.views.FindIf(
-                [&vd](const auto& pair)
-                {
-                    return pair.second == &vd;
-                });
+            delete &vfd;
 
-            AssertDebug(viewIt != frameData.views.End());
-
-            frameData.views.Erase(viewIt);
-
-            it = frameData.perViewData.Erase(it);
+            it = frameData.viewFrameData.Erase(it);
 
             continue;
         }

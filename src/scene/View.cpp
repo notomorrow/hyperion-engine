@@ -311,10 +311,6 @@ void View::Collect()
 
     m_lastMeshCollectionResult = CollectMeshEntities(rpl);
 
-    // RenderApi_UpdateTrackedResources(rpl.materials);
-    // RenderApi_UpdateTrackedResources(rpl.skeletons);
-    // RenderApi_UpdateTrackedResources(rpl.textures);
-
     /// temp
     constexpr uint32 bucketMask = (1 << RB_OPAQUE)
         | (1 << RB_LIGHTMAP)
@@ -615,11 +611,9 @@ ResourceTrackerDiff View::CollectMeshEntities(RenderProxyList& rpl)
 
     ResourceTrackerDiff meshesDiff = rpl.meshes.GetDiff();
 
+    // temp
     if (meshesDiff.NeedsUpdate())
     {
-        Array<RenderProxyMesh*> removed;
-        rpl.meshes.GetRemoved(removed, true);
-
         Array<RenderProxyMesh*> added;
         rpl.meshes.GetAdded(added, true);
 
@@ -627,18 +621,6 @@ ResourceTrackerDiff View::CollectMeshEntities(RenderProxyList& rpl)
         {
             // temp
             rpl.meshes.SetProxy(proxy->entity.Id(), RenderProxyMesh(*proxy));
-            // RenderApi_AddRef(proxy->entity.GetUnsafe());
-
-            // RenderApi_UpdateRenderProxy(proxy->entity.Id(), proxy);
-            // for now:
-            // proxy->IncRefs();
-        }
-
-        for (RenderProxyMesh* proxy : removed)
-        {
-            // RenderApi_ReleaseRef(proxy->entity.Id());
-            // for now:
-            // proxy->DecRefs();
         }
     }
 
@@ -710,26 +692,6 @@ void View::CollectLights(RenderProxyList& rpl)
             }
         }
     }
-
-    if (auto diff = rpl.lights.GetDiff(); diff.NeedsUpdate())
-    {
-        Array<Light*> removed;
-        rpl.lights.GetRemoved(removed, true);
-
-        Array<Light*> added;
-        rpl.lights.GetAdded(added, true);
-
-        for (Light* light : added)
-        {
-            // RenderApi_AddRef(light);
-            // RenderApi_UpdateRenderProxy(light->Id());
-        }
-
-        for (Light* light : removed)
-        {
-            // RenderApi_ReleaseRef(light->Id());
-        }
-    }
 }
 
 void View::CollectLightmapVolumes(RenderProxyList& rpl)
@@ -771,28 +733,6 @@ void View::CollectLightmapVolumes(RenderProxyList& rpl)
                 lightmapVolumeComponent.volume->GetRenderProxyVersionPtr());
         }
     }
-
-    auto diff = rpl.lightmapVolumes.GetDiff();
-
-    if (diff.NeedsUpdate())
-    {
-        Array<LightmapVolume*> removed;
-        rpl.lightmapVolumes.GetRemoved(removed, true);
-
-        Array<LightmapVolume*> added;
-        rpl.lightmapVolumes.GetAdded(added, true);
-
-        for (LightmapVolume* volume : added)
-        {
-            // RenderApi_AddRef(volume);
-            // RenderApi_UpdateRenderProxy(volume->Id());
-        }
-
-        for (LightmapVolume* volume : removed)
-        {
-            // RenderApi_ReleaseRef(volume->Id());
-        }
-    }
 }
 
 void View::CollectEnvGrids(RenderProxyList& rpl)
@@ -832,28 +772,6 @@ void View::CollectEnvGrids(RenderProxyList& rpl)
             }
 
             rpl.envGrids.Track(envGrid->Id(), envGrid, envGrid->GetRenderProxyVersionPtr());
-        }
-    }
-
-    auto diff = rpl.envGrids.GetDiff();
-
-    if (diff.NeedsUpdate())
-    {
-        Array<EnvGrid*> removed;
-        rpl.envGrids.GetRemoved(removed, true);
-
-        Array<EnvGrid*> added;
-        rpl.envGrids.GetAdded(added, true);
-
-        for (EnvGrid* envGrid : added)
-        {
-            // RenderApi_AddRef(envGrid);
-            // RenderApi_UpdateRenderProxy(envGrid->Id());
-        }
-
-        for (EnvGrid* envGrid : removed)
-        {
-            // RenderApi_ReleaseRef(envGrid->Id());
         }
     }
 }
@@ -909,28 +827,6 @@ void View::CollectEnvProbes(RenderProxyList& rpl)
     }
 
     /// TODO: point light Shadow maps
-
-    auto diff = rpl.envProbes.GetDiff();
-
-    if (diff.NeedsUpdate())
-    {
-        Array<EnvProbe*> removed;
-        rpl.envProbes.GetRemoved(removed, true);
-
-        Array<EnvProbe*> added;
-        rpl.envProbes.GetAdded(added, true);
-
-        for (EnvProbe* probe : added)
-        {
-            // RenderApi_AddRef(probe);
-            // RenderApi_UpdateRenderProxy(probe->Id());
-        }
-
-        for (EnvProbe* probe : removed)
-        {
-            // RenderApi_ReleaseRef(probe->Id());
-        }
-    }
 }
 
 #pragma endregion View

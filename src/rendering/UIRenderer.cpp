@@ -639,37 +639,17 @@ void UIRenderSubsystem::Update(float delta)
         },
         /* onlyVisible */ true);
 
+    // temp
     if (auto diff = rpl.meshes.GetDiff(); diff.NeedsUpdate())
     {
-        Array<RenderProxyMesh*> removed;
-        rpl.meshes.GetRemoved(removed, true);
-
         Array<RenderProxyMesh*> added;
         rpl.meshes.GetAdded(added, true);
 
         for (RenderProxyMesh* proxy : added)
         {
             rpl.meshes.SetProxy(proxy->entity.Id(), RenderProxyMesh(*proxy));
-
-            // RenderApi_AddRef(proxy->entity.GetUnsafe());
-
-            // RenderApi_UpdateRenderProxy(proxy->entity.Id(), proxy);
-
-            // // for now:
-            // proxy->IncRefs();
-        }
-
-        for (RenderProxyMesh* proxy : removed)
-        {
-            // RenderApi_ReleaseRef(proxy->entity.Id());
-
-            // // for now:
-            // proxy->DecRefs();
         }
     }
-
-    // RenderApi_UpdateTrackedResources(rpl.materials);
-    // RenderApi_UpdateTrackedResources(rpl.textures);
 
     UpdateRefs(rpl);
 
