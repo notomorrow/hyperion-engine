@@ -17,6 +17,7 @@
 
 #include <scene/ecs/components/MeshComponent.hpp>
 #include <scene/ecs/components/TransformComponent.hpp>
+#include <scene/ecs/components/BoundingBoxComponent.hpp>
 #include <scene/ecs/components/VisibilityStateComponent.hpp>
 #include <scene/ecs/components/LightmapVolumeComponent.hpp>
 #include <scene/ecs/components/ShadowMapComponent.hpp>
@@ -445,16 +446,9 @@ ResourceTrackerDiff View::CollectMeshEntities(RenderProxyList& rpl)
 
                 ++numCollectedEntities;
 
-                AssertDebug(meshComponent.proxy != nullptr);
+                rpl.meshes.Track(entity->Id(), entity, entity->GetRenderProxyVersionPtr());
 
-                AssertDebug(meshComponent.proxy->entity.IsValid());
-                AssertDebug(meshComponent.proxy->mesh.IsValid());
-                AssertDebug(meshComponent.proxy->material.IsValid());
-                // AssertDebug(meshComponent.proxy->material == meshComponent.material);
-
-                rpl.meshes.Track(entity->Id(), *meshComponent.proxy, &meshComponent.proxy->version);
-
-                if (const Handle<Material>& material = meshComponent.proxy->material)
+                if (const Handle<Material>& material = meshComponent.material)
                 {
                     rpl.materials.Track(material.Id(), material.Get(), material->GetRenderProxyVersionPtr(), /* allowDuplicatesInSameFrame */ true);
 
@@ -471,7 +465,7 @@ ResourceTrackerDiff View::CollectMeshEntities(RenderProxyList& rpl)
                     }
                 }
 
-                if (const Handle<Skeleton>& skeleton = meshComponent.proxy->skeleton)
+                if (const Handle<Skeleton>& skeleton = meshComponent.skeleton)
                 {
                     rpl.skeletons.Track(skeleton.Id(), skeleton.Get(), skeleton->GetRenderProxyVersionPtr(), /* allowDuplicatesInSameFrame */ true);
                 }
@@ -506,16 +500,9 @@ ResourceTrackerDiff View::CollectMeshEntities(RenderProxyList& rpl)
 
                 ++numCollectedEntities;
 
-                AssertDebug(meshComponent.proxy != nullptr);
+                rpl.meshes.Track(entity->Id(), entity, entity->GetRenderProxyVersionPtr());
 
-                AssertDebug(meshComponent.proxy->entity.IsValid());
-                AssertDebug(meshComponent.proxy->mesh.IsValid());
-                AssertDebug(meshComponent.proxy->material.IsValid());
-                // AssertDebug(meshComponent.proxy->material == meshComponent.material);
-
-                rpl.meshes.Track(entity->Id(), *meshComponent.proxy, &meshComponent.proxy->version);
-
-                if (const Handle<Material>& material = meshComponent.proxy->material)
+                if (const Handle<Material>& material = meshComponent.material)
                 {
                     rpl.materials.Track(material.Id(), material.Get(), material->GetRenderProxyVersionPtr(), /* allowDuplicatesInSameFrame */ true);
 
@@ -532,7 +519,7 @@ ResourceTrackerDiff View::CollectMeshEntities(RenderProxyList& rpl)
                     }
                 }
 
-                if (const Handle<Skeleton>& skeleton = meshComponent.proxy->skeleton)
+                if (const Handle<Skeleton>& skeleton = meshComponent.skeleton)
                 {
                     rpl.skeletons.Track(skeleton.Id(), skeleton.Get(), skeleton->GetRenderProxyVersionPtr(), /* allowDuplicatesInSameFrame */ true);
                 }
@@ -567,16 +554,9 @@ ResourceTrackerDiff View::CollectMeshEntities(RenderProxyList& rpl)
 
                 ++numCollectedEntities;
 
-                AssertDebug(meshComponent.proxy != nullptr);
+                rpl.meshes.Track(entity->Id(), entity, entity->GetRenderProxyVersionPtr());
 
-                AssertDebug(meshComponent.proxy->entity.IsValid());
-                AssertDebug(meshComponent.proxy->mesh.IsValid());
-                AssertDebug(meshComponent.proxy->material.IsValid());
-                // AssertDebug(meshComponent.proxy->material == meshComponent.material);
-
-                rpl.meshes.Track(entity->Id(), *meshComponent.proxy, &meshComponent.proxy->version);
-
-                if (const Handle<Material>& material = meshComponent.proxy->material)
+                if (const Handle<Material>& material = meshComponent.material)
                 {
                     rpl.materials.Track(material.Id(), material.Get(), material->GetRenderProxyVersionPtr(), /* allowDuplicatesInSameFrame */ true);
 
@@ -593,7 +573,7 @@ ResourceTrackerDiff View::CollectMeshEntities(RenderProxyList& rpl)
                     }
                 }
 
-                if (const Handle<Skeleton>& skeleton = meshComponent.proxy->skeleton)
+                if (const Handle<Skeleton>& skeleton = meshComponent.skeleton)
                 {
                     rpl.skeletons.Track(skeleton.Id(), skeleton.Get(), skeleton->GetRenderProxyVersionPtr(), /* allowDuplicatesInSameFrame */ true);
                 }
@@ -611,16 +591,28 @@ ResourceTrackerDiff View::CollectMeshEntities(RenderProxyList& rpl)
 
     ResourceTrackerDiff meshesDiff = rpl.meshes.GetDiff();
 
-    // temp
     if (meshesDiff.NeedsUpdate())
     {
-        Array<RenderProxyMesh*> added;
-        rpl.meshes.GetAdded(added, true);
+        Array<Entity*> added;
+        rpl.meshes.GetAdded(added, /* includeChanged */ true);
 
-        for (RenderProxyMesh* proxy : added)
+        for (Entity* entity : added)
         {
-            // temp
-            rpl.meshes.SetProxy(proxy->entity.Id(), RenderProxyMesh(*proxy));
+            auto&& [meshComponent, transformComponent, boundingBoxComponent] = entity->GetEntityManager()->TryGetComponents<MeshComponent, TransformComponent, BoundingBoxComponent>(entity);
+            AssertDebug(meshComponent != nullptr);
+
+            RenderProxyMesh& meshProxy = *rpl.meshes.SetProxy(entity->Id(), RenderProxyMesh());
+            meshProxy.entity = entity->WeakHandleFromThis();
+            meshProxy.mesh = meshComponent->mesh;
+            meshProxy.material = meshComponent->material;
+            meshProxy.skeleton = meshComponent->skeleton;
+            meshProxy.instanceData = meshComponent->instanceData;
+            meshProxy.version = *entity->GetRenderProxyVersionPtr();
+            meshProxy.bufferData.modelMatrix = transformComponent ? transformComponent->transform.GetMatrix() : Matrix4::Identity();
+            meshProxy.bufferData.previousModelMatrix = meshComponent->previousModelMatrix;
+            meshProxy.bufferData.worldAabbMax = boundingBoxComponent ? boundingBoxComponent->worldAabb.max : MathUtil::MinSafeValue<Vec3f>();
+            meshProxy.bufferData.worldAabbMin = boundingBoxComponent ? boundingBoxComponent->worldAabb.min : MathUtil::MaxSafeValue<Vec3f>();
+            meshProxy.bufferData.userData = reinterpret_cast<EntityShaderData::EntityUserData&>(meshComponent->userData);
         }
     }
 

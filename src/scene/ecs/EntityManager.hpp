@@ -654,6 +654,18 @@ public:
     }
 
     template <class... Components>
+    HYP_FORCE_INLINE Tuple<Components*...> TryGetComponents(const Entity* entity)
+    {
+        return Tuple<Components*...>(TryGetComponent<Components>(entity)...);
+    }
+
+    template <class... Components>
+    HYP_FORCE_INLINE Tuple<const Components*...> TryGetComponents(const Entity* entity) const
+    {
+        return Tuple<const Components*...>(TryGetComponent<Components>(entity)...);
+    }
+
+    template <class... Components>
     HYP_FORCE_INLINE Tuple<Components&...> GetComponents(const Entity* entity)
     {
         return Tie(GetComponent<Components>(entity)...);

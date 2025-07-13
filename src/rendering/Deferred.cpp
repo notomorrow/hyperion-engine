@@ -992,9 +992,6 @@ DeferredPassData::~DeferredPassData()
 
 #pragma region DeferredRenderer
 
-constexpr Vec2u mipChainExtent { 512, 512 };
-constexpr TextureFormat mipChainFormat = TF_R10G10B10A2;
-
 DeferredRenderer::DeferredRenderer()
     : m_rendererConfig(RendererConfig::FromConfig())
 {
@@ -1063,8 +1060,8 @@ PassData* DeferredRenderer::CreateViewPassData(View* view, PassDataExt&)
 
     pd->mipChain = CreateObject<Texture>(TextureDesc {
         TT_TEX2D,
-        mipChainFormat,
-        Vec3u { mipChainExtent.x, mipChainExtent.y, 1 },
+        opaqueFbo->GetAttachment(0)->GetFormat(),
+        Vec3u(opaqueFbo->GetExtent(), 1),
         TFM_LINEAR_MIPMAP,
         TFM_LINEAR_MIPMAP,
         TWM_CLAMP_TO_EDGE });
@@ -1532,7 +1529,7 @@ void DeferredRenderer::RenderFrame(FrameBase* frame, const RenderSetup& rs)
     // Render global environment probes and grids and set fallbacks
     RenderSetup newRs = rs;
 
-#if 0
+#if 1
     // Render shadows for shadow casting lights
     for (uint32 lightType = 0; lightType < LT_MAX; lightType++)
     {
@@ -1727,14 +1724,19 @@ void DeferredRenderer::RenderFrameForView(FrameBase* frame, const RenderSetup& r
     // HACK TEST HACK TEST HACK TEST HACK TEST
     if (TLASRef& tlas = pd->topLevelAccelerationStructures[frame->GetFrameIndex()])
     {
-        for (RenderProxyMesh& proxyMesh : rpl.meshes.GetElements<Entity>())
+        for (Entity* entity : rpl.meshes.GetElements<Entity>())
         {
-            BLASRef& blas = proxyMesh.raytracingData.bottomLevelAccelerationStructures[frame->GetFrameIndex()];
+            Assert(entity);
+
+            RenderProxyMesh* meshProxy = rpl.meshes.GetProxy(entity->Id());
+            Assert(meshProxy);
+
+            BLASRef& blas = meshProxy->raytracingData.bottomLevelAccelerationStructures[frame->GetFrameIndex()];
 
             if (!blas)
             {
-                blas = proxyMesh.mesh->GetRenderResource().BuildBLAS(proxyMesh.material);
-                blas->SetTransform(proxyMesh.bufferData.modelMatrix);
+                blas = meshProxy->mesh->GetRenderResource().BuildBLAS(meshProxy->material);
+                blas->SetTransform(meshProxy->bufferData.modelMatrix);
 
                 if (!blas->IsCreated())
                 {
@@ -1743,7 +1745,7 @@ void DeferredRenderer::RenderFrameForView(FrameBase* frame, const RenderSetup& r
             }
             else
             {
-                blas->SetTransform(proxyMesh.bufferData.modelMatrix);
+                blas->SetTransform(meshProxy->bufferData.modelMatrix);
             }
 
             if (!tlas->HasBLAS(blas))

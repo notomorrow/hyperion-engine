@@ -195,15 +195,16 @@ static void BuildRenderGroups(RenderCollector& renderCollector, RenderProxyList&
 
     for (const Pair<ObjId<Entity>, int>& pair : proxyDepths)
     {
-        RenderProxyMesh* proxy = rpl.meshes.GetElement(pair.first);
+        RenderProxyMesh* meshProxy = rpl.meshes.GetProxy(pair.first);
+        AssertDebug(meshProxy != nullptr);
 
-        if (!proxy)
+        if (!meshProxy)
         {
             continue;
         }
 
-        const Handle<Mesh>& mesh = proxy->mesh;
-        const Handle<Material>& material = proxy->material;
+        const Handle<Mesh>& mesh = meshProxy->mesh;
+        const Handle<Material>& material = meshProxy->material;
 
         if (!mesh.IsValid() || !material.IsValid())
         {
@@ -241,13 +242,8 @@ static void BuildRenderGroups(RenderCollector& renderCollector, RenderProxyList&
             InitObject(rg);
         }
 
-        mapping.meshProxies.Set(proxy->entity.Id().ToIndex(), proxy);
+        mapping.meshProxies.Set(meshProxy->entity.Id().ToIndex(), meshProxy);
     }
-}
-
-void UIRenderCollector::ResetOrdering()
-{
-    proxyDepths.Clear();
 }
 
 void UIRenderCollector::PushUpdates(View* view, RenderProxyList& rpl, const Optional<RenderableAttributeSet>& overrideAttributes)
@@ -443,7 +439,7 @@ void UIRenderer::RenderFrame(FrameBase* frame, const RenderSetup& renderSetup)
     Assert(outputTarget.IsValid());
 
     // renderCollector.BuildRenderGroups(m_view, rpl);
-    ::hyperion::BuildRenderGroups(renderCollector, rpl, renderCollector.proxyDepths, {});
+    ::hyperion::BuildRenderGroups(renderCollector, rpl, rpl.meshEntityOrdering, {});
 
     rpl.EndRead();
 
@@ -579,22 +575,15 @@ void UIRenderSubsystem::Update(float delta)
     m_view->UpdateVisibility();
 
     RenderProxyList& rpl = RenderApi_GetProducerProxyList(m_view);
-    rpl.TEMP_disableBuildRenderCollection = true;
     rpl.BeginWrite();
+    rpl.TEMP_disableBuildRenderCollection = true;
+    rpl.useOrdering = true;
     rpl.viewport = m_view->GetViewport();
     rpl.priority = m_view->GetPriority();
-    // rpl.meshes.Advance();
-    // rpl.materials.Advance();
-    // rpl.textures.Advance();
-    // rpl.skeletons.Advance();
 
-    // rpl.useOrdering = true;
-    // rpl.orderedMeshEntities.Clear();
+    rpl.meshEntityOrdering.Clear();
 
-    UIRenderCollector& renderCollector = m_uiRenderer->renderCollector;
-    renderCollector.ResetOrdering();
-
-    m_uiStage->CollectObjects([&rpl, &renderCollector](UIObject* uiObject)
+    m_uiStage->CollectObjects([&rpl](UIObject* uiObject)
         {
             Assert(uiObject != nullptr);
 
@@ -605,18 +594,11 @@ void UIRenderSubsystem::Update(float delta)
 
             MeshComponent& meshComponent = node->GetScene()->GetEntityManager()->GetComponent<MeshComponent>(entity);
 
-            if (!meshComponent.proxy)
-            {
-                return;
-            }
-
             // @TODO Include a way to determine the parent tree of the UI Object because some objects will
             // have the same depth but should be rendered in a different order.
-            // renderCollector.PushRenderProxy(meshes, *meshComponent.proxy, uiObject->GetComputedDepth());
+            rpl.meshes.Track(entity.Id(), entity, entity->GetRenderProxyVersionPtr(), /* allowDuplicatesInSameFrame */ false);
 
-            rpl.meshes.Track(meshComponent.proxy->entity.Id(), *meshComponent.proxy, &meshComponent.proxy->version, /* allowDuplicatesInSameFrame */ false);
-
-            if (const Handle<Material>& material = meshComponent.proxy->material)
+            if (const Handle<Material>& material = meshComponent.material)
             {
                 rpl.materials.Track(material.Id(), material.Get(), material->GetRenderProxyVersionPtr(), /* allowDuplicatesInSameFrame */ true);
 
@@ -633,27 +615,38 @@ void UIRenderSubsystem::Update(float delta)
                 }
             }
 
-            renderCollector.proxyDepths.EmplaceBack(meshComponent.proxy->entity.Id(), uiObject->GetComputedDepth());
-
-            // rpl.orderedMeshEntities.EmplaceBack(meshComponent.proxy->entity.Id(), uiObject->GetComputedDepth());
+            rpl.meshEntityOrdering.EmplaceBack(entity.Id(), uiObject->GetComputedDepth());
         },
         /* onlyVisible */ true);
 
-    // temp
-    if (auto diff = rpl.meshes.GetDiff(); diff.NeedsUpdate())
-    {
-        Array<RenderProxyMesh*> added;
-        rpl.meshes.GetAdded(added, true);
+    ResourceTrackerDiff meshesDiff = rpl.meshes.GetDiff();
 
-        for (RenderProxyMesh* proxy : added)
+    if (meshesDiff.NeedsUpdate())
+    {
+        Array<Entity*> added;
+        rpl.meshes.GetAdded(added, /* includeChanged */ true);
+
+        for (Entity* entity : added)
         {
-            rpl.meshes.SetProxy(proxy->entity.Id(), RenderProxyMesh(*proxy));
+            auto&& [meshComponent, transformComponent, boundingBoxComponent] = entity->GetEntityManager()->TryGetComponents<MeshComponent, TransformComponent, BoundingBoxComponent>(entity);
+            AssertDebug(meshComponent != nullptr);
+
+            RenderProxyMesh& meshProxy = *rpl.meshes.SetProxy(entity->Id(), RenderProxyMesh());
+            meshProxy.entity = entity->WeakHandleFromThis();
+            meshProxy.mesh = meshComponent->mesh;
+            meshProxy.material = meshComponent->material;
+            meshProxy.skeleton = meshComponent->skeleton;
+            meshProxy.instanceData = meshComponent->instanceData;
+            meshProxy.version = *entity->GetRenderProxyVersionPtr();
+            meshProxy.bufferData.modelMatrix = transformComponent ? transformComponent->transform.GetMatrix() : Matrix4::Identity();
+            meshProxy.bufferData.previousModelMatrix = meshComponent->previousModelMatrix;
+            meshProxy.bufferData.worldAabbMax = boundingBoxComponent ? boundingBoxComponent->worldAabb.max : MathUtil::MinSafeValue<Vec3f>();
+            meshProxy.bufferData.worldAabbMin = boundingBoxComponent ? boundingBoxComponent->worldAabb.min : MathUtil::MaxSafeValue<Vec3f>();
+            meshProxy.bufferData.userData = reinterpret_cast<EntityShaderData::EntityUserData&>(meshComponent->userData);
         }
     }
 
     UpdateRefs(rpl);
-
-    renderCollector.PushUpdates(m_view, rpl);
 
     rpl.EndWrite();
 }

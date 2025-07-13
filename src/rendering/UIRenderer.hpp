@@ -34,13 +34,9 @@ public:
     UIRenderCollector() = default;
     ~UIRenderCollector() = default;
 
-    void ResetOrdering();
-
     void PushUpdates(View* view, RenderProxyList& rpl, const Optional<RenderableAttributeSet>& overrideAttributes = {});
 
     void ExecuteDrawCalls(FrameBase* frame, const RenderSetup& renderSetup, const FramebufferRef& framebuffer, uint32 bucketBits);
-
-    Array<Pair<ObjId<Entity>, int>> proxyDepths;
 };
 
 class UIRenderer : public RendererBase

@@ -402,7 +402,7 @@ RendererResult VulkanRenderBackend::Initialize(AppContextBase& appContext)
     m_defaultFormats.Set(
         DIF_COLOR,
         m_instance->GetDevice()->GetFeatures().FindSupportedFormat(
-            { { TF_RGBA8, TF_R10G10B10A2, TF_RGBA16F } },
+            { { TF_RGBA8, TF_RGBA16F } },
             IS_SRV));
 
     m_defaultFormats.Set(

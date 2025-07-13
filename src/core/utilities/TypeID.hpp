@@ -165,7 +165,7 @@ public:
 
     HYP_FORCE_INLINE constexpr HashCode GetHashCode() const
     {
-        return HashCode::GetHashCode(m_value);
+        return HashCode(HashCode::ValueType(m_value));
     }
 
     HYP_FORCE_INLINE static constexpr TypeId Void()

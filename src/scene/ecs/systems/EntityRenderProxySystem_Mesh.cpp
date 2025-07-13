@@ -37,30 +37,7 @@ void EntityRenderProxySystem_Mesh::OnEntityAdded(Entity* entity)
     InitObject(meshComponent.material);
     InitObject(meshComponent.skeleton);
 
-    Assert(meshComponent.proxy == nullptr);
-
-    if (meshComponent.mesh.IsValid() && meshComponent.material.IsValid())
-    {
-        meshComponent.proxy = new RenderProxyMesh;
-        meshComponent.proxy->entity = entity->WeakHandleFromThis();
-        meshComponent.proxy->mesh = meshComponent.mesh;
-        meshComponent.proxy->material = meshComponent.material;
-        meshComponent.proxy->skeleton = meshComponent.skeleton;
-        meshComponent.proxy->instanceData = meshComponent.instanceData;
-        meshComponent.proxy->version = 0;
-        meshComponent.proxy->bufferData.bucket = meshComponent.material.IsValid() ? meshComponent.material->GetRenderAttributes().bucket : RB_NONE;
-        meshComponent.proxy->bufferData.flags = meshComponent.skeleton.IsValid() ? ENTITY_GPU_FLAG_HAS_SKELETON : ENTITY_GPU_FLAG_NONE;
-        meshComponent.proxy->bufferData.modelMatrix = Matrix4::Identity();
-        meshComponent.proxy->bufferData.previousModelMatrix = Matrix4::Identity();
-        meshComponent.proxy->bufferData.worldAabbMax = BoundingBox::Empty().max;
-        meshComponent.proxy->bufferData.worldAabbMin = BoundingBox::Empty().min;
-        meshComponent.proxy->bufferData.userData = reinterpret_cast<EntityShaderData::EntityUserData&>(meshComponent.userData);
-
-        // PUSH_RENDER_COMMAND(UpdateEntityDrawData, Array<RenderProxyMesh*> { meshComponent.proxy });
-
-        GetEntityManager().RemoveTag<EntityTag::UPDATE_RENDER_PROXY>(entity);
-    }
-    else
+    if (!meshComponent.mesh.IsValid() || !meshComponent.material.IsValid())
     {
         if (!meshComponent.mesh.IsValid())
         {
@@ -71,36 +48,32 @@ void EntityRenderProxySystem_Mesh::OnEntityAdded(Entity* entity)
         {
             HYP_LOG(ECS, Warning, "Material not valid for entity #{}!", entity->Id());
         }
+
+        return;
+    }
+
+    entity->SetNeedsRenderProxyUpdate();
+
+    TransformComponent* transformComponent = GetEntityManager().TryGetComponent<TransformComponent>(entity);
+
+    if (transformComponent && meshComponent.previousModelMatrix == transformComponent->transform.GetMatrix())
+    {
+        GetEntityManager().RemoveTag<EntityTag::UPDATE_RENDER_PROXY>(entity);
+    }
+    else
+    {
+        meshComponent.previousModelMatrix = transformComponent->transform.GetMatrix();
     }
 }
 
 void EntityRenderProxySystem_Mesh::OnEntityRemoved(Entity* entity)
 {
     SystemBase::OnEntityRemoved(entity);
-
-    MeshComponent& meshComponent = GetEntityManager().GetComponent<MeshComponent>(entity);
-
-    if (meshComponent.proxy)
-    {
-        for (uint32 frameIndex = 0; frameIndex < g_framesInFlight; frameIndex++)
-        {
-            BLASRef& blas = meshComponent.proxy->raytracingData.bottomLevelAccelerationStructures[frameIndex];
-
-            if (blas.IsValid())
-            {
-                SafeRelease(std::move(blas));
-            }
-        }
-
-        delete meshComponent.proxy;
-        meshComponent.proxy = nullptr;
-    }
 }
 
 void EntityRenderProxySystem_Mesh::Process(float delta)
 {
     HashSet<WeakHandle<Entity>> updatedEntities;
-    Array<RenderProxyMesh*> renderProxyPtrs;
 
     for (auto [entity, meshComponent, transformComponent, boundingBoxComponent, _] : GetEntityManager().GetEntitySet<MeshComponent, TransformComponent, BoundingBoxComponent, EntityTagComponent<EntityTag::UPDATE_RENDER_PROXY>>().GetScopedView(GetComponentInfos()))
     {
@@ -108,45 +81,14 @@ void EntityRenderProxySystem_Mesh::Process(float delta)
 
         if (!meshComponent.mesh.IsValid() || !meshComponent.material.IsValid())
         {
-            if (meshComponent.proxy)
-            {
-                HYP_LOG(ECS, Warning, "Mesh or material not valid for entity #{}!", entity->Id());
+            HYP_LOG(ECS, Warning, "Mesh or material not valid for entity #{}!", entity->Id());
 
-                delete meshComponent.proxy;
-                meshComponent.proxy = nullptr;
-
-                updatedEntities.Insert(entity->WeakHandleFromThis());
-            }
+            updatedEntities.Insert(entity->WeakHandleFromThis());
 
             continue;
         }
 
-        if (!meshComponent.proxy)
-        {
-            meshComponent.proxy = new RenderProxyMesh {};
-        }
-
-        const uint32 renderProxyVersion = meshComponent.proxy->version + 1;
-
-        // Update MeshComponent's proxy
-        // @TODO: Include RT info on RenderProxy, add a system that will update BLAS on the render thread.
-        // @TODO Add Lightmap volume info
-        RenderProxyMesh& proxy = *meshComponent.proxy;
-
-        proxy.entity = entity->WeakHandleFromThis();
-        proxy.mesh = meshComponent.mesh;
-        proxy.material = meshComponent.material;
-        proxy.skeleton = meshComponent.skeleton;
-        proxy.instanceData = meshComponent.instanceData;
-        proxy.version = renderProxyVersion;
-
-        proxy.bufferData.modelMatrix = transformComponent.transform.GetMatrix();
-        proxy.bufferData.previousModelMatrix = meshComponent.previousModelMatrix;
-        proxy.bufferData.worldAabbMax = boundingBoxComponent.worldAabb.max;
-        proxy.bufferData.worldAabbMin = boundingBoxComponent.worldAabb.min;
-        proxy.bufferData.userData = reinterpret_cast<EntityShaderData::EntityUserData&>(meshComponent.userData);
-
-        renderProxyPtrs.PushBack(meshComponent.proxy);
+        entity->SetNeedsRenderProxyUpdate();
 
         if (meshComponent.previousModelMatrix == transformComponent.transform.GetMatrix())
         {
@@ -167,11 +109,6 @@ void EntityRenderProxySystem_Mesh::Process(float delta)
                     GetEntityManager().RemoveTag<EntityTag::UPDATE_RENDER_PROXY>(entityWeak.GetUnsafe());
                 }
             });
-    }
-
-    if (renderProxyPtrs.Any())
-    {
-        // PUSH_RENDER_COMMAND(UpdateEntityDrawData, std::move(renderProxyPtrs));
     }
 }
 

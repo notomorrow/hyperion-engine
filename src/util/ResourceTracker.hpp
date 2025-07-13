@@ -676,6 +676,8 @@ public:
             subclassIndices.Set(subclassIndex, true);
         }
 
+        AssertDebug(subclassImpls[subclassIndex].Get().typeId == typeId,
+            "TypeId mismatch: expected {}, got {}", typeId.Value(), subclassImpls[subclassIndex].Get().typeId.Value());
         return subclassImpls[subclassIndex].Get().SetProxy(id, std::move(proxy));
     }
 
@@ -729,6 +731,11 @@ public:
 
     struct Impl final
     {
+        Impl(TypeId typeId)
+            : typeId(typeId)
+        {
+        }
+
         /*! \brief Checks if it already has a proxy for the given Id from the previous frame */
         HYP_FORCE_INLINE bool HasElement(IdType id) const
         {
@@ -1275,7 +1282,7 @@ static inline void GetAddedElements(ResourceTracker<IdType, ElementType, ProxyTy
     {
         if (!lhs.subclassIndices.Test(i))
         {
-            lhs.subclassImpls[i].Construct();
+            lhs.subclassImpls[i].Construct(rhs.subclassImpls[i].Get().typeId);
             lhs.subclassIndices.Set(i, true);
         }
 
@@ -1315,7 +1322,7 @@ static inline void GetRemovedElements(ResourceTracker<IdType, ElementType, Proxy
     {
         if (!rhs.subclassIndices.Test(i))
         {
-            lhs.subclassImpls[i].Construct();
+            lhs.subclassImpls[i].Construct(rhs.subclassImpls[i].Get().typeId);
             lhs.subclassIndices.Set(i, true);
         }
 

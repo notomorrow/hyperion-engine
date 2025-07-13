@@ -195,8 +195,10 @@ static Handle<RenderGroup> CreateRenderGroup(RenderCollector* renderCollector, D
     return rg;
 }
 
-static void AddRenderProxy(RenderCollector* renderCollector, RenderProxyMesh* proxy, const RenderableAttributeSet& attributes)
+static void AddRenderProxy(RenderCollector* renderCollector, const RenderProxyMesh* meshProxy, const RenderableAttributeSet& attributes)
 {
+    AssertDebug(meshProxy != nullptr);
+
     // Add proxy to group
     DrawCallCollectionMapping& mapping = renderCollector->mappingsByBucket[attributes.GetMaterialAttributes().bucket][attributes];
     Handle<RenderGroup>& rg = mapping.renderGroup;
@@ -206,14 +208,16 @@ static void AddRenderProxy(RenderCollector* renderCollector, RenderProxyMesh* pr
         rg = CreateRenderGroup(renderCollector, mapping, attributes);
     }
 
-    AssertDebug(proxy->mesh.IsValid() && proxy->material.IsValid());
+    AssertDebug(meshProxy->mesh.IsValid() && meshProxy->material.IsValid());
 
-    mapping.meshProxies.Set(proxy->entity.Id().ToIndex(), proxy);
+    mapping.meshProxies.Set(meshProxy->entity.Id().ToIndex(), const_cast<RenderProxyMesh*>(meshProxy));
 }
 
-static bool RemoveRenderProxy(RenderCollector* renderCollector, RenderProxyMesh* proxy, const RenderableAttributeSet& attributes)
+static bool RemoveRenderProxy(RenderCollector* renderCollector, const RenderProxyMesh* meshProxy, const RenderableAttributeSet& attributes)
 {
     HYP_SCOPE;
+
+    AssertDebug(meshProxy != nullptr);
 
     auto& mappings = renderCollector->mappingsByBucket[attributes.GetMaterialAttributes().bucket];
 
@@ -223,13 +227,14 @@ static bool RemoveRenderProxy(RenderCollector* renderCollector, RenderProxyMesh*
     DrawCallCollectionMapping& mapping = it->second;
     Assert(mapping.IsValid());
 
-    if (!mapping.meshProxies.HasIndex(proxy->entity.Id().ToIndex()))
+    if (!mapping.meshProxies.HasIndex(meshProxy->entity.Id().ToIndex()))
     {
-        HYP_LOG(Rendering, Warning, "Render proxy not found in mapping for entity {}", proxy->entity.Id());
+        HYP_LOG(Rendering, Warning, "Render proxy not found in mapping for entity {}", meshProxy->entity.Id());
+
         return false;
     }
 
-    mapping.meshProxies.EraseAt(proxy->entity.Id().ToIndex());
+    mapping.meshProxies.EraseAt(meshProxy->entity.Id().ToIndex());
 
     return true;
 }
@@ -665,33 +670,46 @@ void RenderCollector::BuildRenderGroups(View* view, const RenderProxyList& rende
         return;
     }
 
-    Array<RenderProxyMesh*> removedProxies;
-    renderProxyList.meshes.GetRemoved(removedProxies, true /* includeChanged */);
+    Array<Entity*> removed;
+    renderProxyList.meshes.GetRemoved(removed, true /* includeChanged */);
 
-    Array<RenderProxyMesh*> addedProxyPtrs;
-    renderProxyList.meshes.GetAdded(addedProxyPtrs, true /* includeChanged */);
+    Array<Entity*> added;
+    renderProxyList.meshes.GetAdded(added, true /* includeChanged */);
 
-    if (removedProxies.Any())
+    if (removed.Any())
     {
-        for (RenderProxyMesh* proxy : removedProxies)
+        for (Entity* entity : removed)
         {
-            AssertDebug(proxy);
+            AssertDebug(entity != nullptr);
 
-            RenderableAttributeSet attributes = GetRenderableAttributesForProxy(*proxy, overrideAttributes);
-            UpdateRenderableAttributesDynamic(proxy, attributes);
+            const RenderProxyMesh* meshProxy = renderProxyList.meshes.GetProxy(entity->Id());
+            AssertDebug(meshProxy != nullptr);
 
-            Assert(RemoveRenderProxy(this, proxy, attributes));
+            if (!meshProxy)
+            {
+                continue;
+            }
+
+            RenderableAttributeSet attributes = GetRenderableAttributesForProxy(*meshProxy, overrideAttributes);
+            UpdateRenderableAttributesDynamic(meshProxy, attributes);
+
+            Assert(RemoveRenderProxy(this, meshProxy, attributes));
         }
     }
 
-    if (addedProxyPtrs.Any())
+    if (added.Any())
     {
-        for (RenderProxyMesh* proxy : addedProxyPtrs)
+        for (Entity* entity : added)
         {
-            RenderableAttributeSet attributes = GetRenderableAttributesForProxy(*proxy, overrideAttributes);
-            UpdateRenderableAttributesDynamic(proxy, attributes);
+            AssertDebug(entity != nullptr);
 
-            AddRenderProxy(this, proxy, attributes);
+            const RenderProxyMesh* meshProxy = renderProxyList.meshes.GetProxy(entity->Id());
+            AssertDebug(meshProxy != nullptr);
+
+            RenderableAttributeSet attributes = GetRenderableAttributesForProxy(*meshProxy, overrideAttributes);
+            UpdateRenderableAttributesDynamic(meshProxy, attributes);
+
+            AddRenderProxy(this, meshProxy, attributes);
         }
     }
 }

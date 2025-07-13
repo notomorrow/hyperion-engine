@@ -193,7 +193,7 @@ struct HYP_API RenderProxyList
     Viewport viewport;
     int priority;
 
-    ResourceTracker<ObjId<Entity>, RenderProxyMesh, RenderProxyMesh> meshes;
+    ResourceTracker<ObjId<Entity>, Entity*, RenderProxyMesh> meshes;
     ResourceTracker<ObjId<EnvProbe>, EnvProbe*, RenderProxyEnvProbe> envProbes;
     ResourceTracker<ObjId<Light>, Light*, RenderProxyLight> lights;
     ResourceTracker<ObjId<EnvGrid>, EnvGrid*, RenderProxyEnvGrid> envGrids;
@@ -202,7 +202,7 @@ struct HYP_API RenderProxyList
     ResourceTracker<ObjId<Skeleton>, Skeleton*, RenderProxySkeleton> skeletons;
     ResourceTracker<ObjId<Texture>, Texture*> textures;
 
-    HashMap<ObjId<Entity>, int> meshEntityOrdering;
+    Array<Pair<ObjId<Entity>, int>> meshEntityOrdering;
 
     // marker to set to locked when game thread is writing to this list.
     // this only really comes into play with non-buffered Views that do not double/triple buffer their RenderProxyLists
