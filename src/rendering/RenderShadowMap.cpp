@@ -7,11 +7,13 @@
 #include <rendering/PlaceholderData.hpp>
 #include <rendering/RenderBackend.hpp>
 #include <rendering/RenderView.hpp>
+#include <rendering/RenderTexture.hpp>
 #include <rendering/RenderDescriptorSet.hpp>
 #include <rendering/FullScreenPass.hpp>
 
 #include <scene/Light.hpp>
 #include <scene/View.hpp>
+#include <scene/Texture.hpp>
 
 #include <core/utilities/DeferredScope.hpp>
 
@@ -327,7 +329,7 @@ static UniquePtr<FullScreenPass> CreateCombineShadowMapsPass(TextureFormat forma
 {
     AssertDebug(views.Size() >= 2, "Combine pass requires 2 views (one for static objects, one for dynamic objects)");
 
-    ShaderRef shader = g_shaderManager->GetOrCreate(NAME("CombineShadowMaps"), { { "STAGE_DYNAMICS" } });
+    ShaderRef shader = g_shaderManager->GetOrCreate(NAME("CombineShadowMaps"));
     Assert(shader.IsValid());
 
     const DescriptorTableDeclaration& descriptorTableDecl = shader->GetCompiledShader()->GetDescriptorTableDeclaration();
@@ -599,6 +601,9 @@ void ShadowRendererBase::RenderFrame(FrameBase* frame, const RenderSetup& render
         AttachmentBase* attachment = combineShadowMapsPass->GetFramebuffer()->GetAttachment(0);
         Assert(attachment != nullptr);
 
+        const ImageRef& srcImage = attachment->GetImage();
+        Assert(srcImage.IsValid());
+
         RenderSetup rs = renderSetup;
         // FullScreenPass needs a View set
         rs.view = &shadowViews[0]->GetRenderResource();
@@ -607,14 +612,14 @@ void ShadowRendererBase::RenderFrame(FrameBase* frame, const RenderSetup& render
         combineShadowMapsPass->Render(frame, rs);
 
         // Copy combined shadow map to the final shadow map
-        frame->GetCommandList().Add<InsertBarrier>(attachment->GetImage(), RS_COPY_SRC);
+        frame->GetCommandList().Add<InsertBarrier>(srcImage, RS_COPY_SRC);
         frame->GetCommandList().Add<InsertBarrier>(shadowMapImage, RS_COPY_DST, ImageSubResource { .baseArrayLayer = atlasElement.atlasIndex });
 
         // copy the image
         frame->GetCommandList().Add<Blit>(
-            attachment->GetImage(),
+            srcImage,
             shadowMapImage,
-            Rect<uint32> { 0, 0, shadowMap->GetExtent().x, shadowMap->GetExtent().y },
+            Rect<uint32> { 0, 0, srcImage->GetExtent().x, srcImage->GetExtent().y },
             Rect<uint32> {
                 atlasElement.offsetCoords.x,
                 atlasElement.offsetCoords.y,
@@ -627,7 +632,7 @@ void ShadowRendererBase::RenderFrame(FrameBase* frame, const RenderSetup& render
         );
 
         // put the images back into a state for reading
-        frame->GetCommandList().Add<InsertBarrier>(attachment->GetImage(), RS_SHADER_RESOURCE);
+        frame->GetCommandList().Add<InsertBarrier>(srcImage, RS_SHADER_RESOURCE);
         frame->GetCommandList().Add<InsertBarrier>(shadowMapImage, RS_SHADER_RESOURCE, ImageSubResource { .baseArrayLayer = atlasElement.atlasIndex });
     }
 

@@ -281,13 +281,14 @@ void PlaceholderData::Create()
     DefaultTexture2DArray = CreateObject<Texture>(TextureData {
         TextureDesc {
             TT_TEX2D_ARRAY,
-            TF_R8,
+            TF_RGBA8,
             Vec3u::One(),
             TFM_NEAREST,
             TFM_NEAREST,
             TWM_CLAMP_TO_EDGE,
             1,
-            IU_SAMPLED | IU_STORAGE } });
+            IU_SAMPLED | IU_STORAGE },
+        placeholderBufferTex2dRgba8 });
 
     DefaultTexture2DArray->SetName(NAME("Placeholder_Texture_2D_1x1_R8_Array"));
     InitObject(DefaultTexture2DArray);
@@ -296,13 +297,14 @@ void PlaceholderData::Create()
     DefaultCubemapArray = CreateObject<Texture>(TextureData {
         TextureDesc {
             TT_CUBEMAP_ARRAY,
-            TF_R8,
+            TF_RGBA8,
             Vec3u::One(),
             TFM_NEAREST,
             TFM_NEAREST,
             TWM_CLAMP_TO_EDGE,
             1,
-            IU_SAMPLED | IU_STORAGE } });
+            IU_SAMPLED | IU_STORAGE },
+        placeholderBufferCubemapRgba8 });
 
     DefaultCubemapArray->SetName(NAME("Placeholder_Texture_Cube_1x1_R8_Array"));
     InitObject(DefaultCubemapArray);

@@ -1257,8 +1257,7 @@ RenderGlobalState::RenderGlobalState()
     gpuBuffers.buffers[GRB_SHADOW_MAPS] = gpuBufferHolders->GetOrCreate<ShadowMapShaderData, GpuBufferType::SSBO>();
     gpuBuffers.buffers[GRB_ENV_PROBES] = gpuBufferHolders->GetOrCreate<EnvProbeShaderData, GpuBufferType::SSBO>();
     gpuBuffers.buffers[GRB_ENV_GRIDS] = gpuBufferHolders->GetOrCreate<EnvGridShaderData, GpuBufferType::CBUFF>();
-    gpuBuffers.buffers[GRB_LIGHTMAP_VOLUMES] =
-        gpuBufferHolders->GetOrCreate<LightmapVolumeShaderData, GpuBufferType::SSBO>();
+    gpuBuffers.buffers[GRB_LIGHTMAP_VOLUMES] = gpuBufferHolders->GetOrCreate<LightmapVolumeShaderData, GpuBufferType::SSBO>();
 
     globalDescriptorTable = g_renderBackend->MakeDescriptorTable(&GetStaticDescriptorTableDeclaration());
 
@@ -1465,10 +1464,6 @@ void RenderGlobalState::SetDefaultDescriptorSetElements(uint32 frameIndex)
     globalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)
         ->SetElement(NAME("SphereSamplesBuffer"), GpuBufferRef::Null());
 
-    globalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)
-        ->SetElement(NAME("ShadowMapsTextureArray"), placeholderData->GetImageView2D1x1R8Array());
-    globalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)
-        ->SetElement(NAME("PointLightShadowMapsTextureArray"), placeholderData->GetImageViewCube1x1R8Array());
     globalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)
         ->SetElement(NAME("ShadowMapsBuffer"), gpuBuffers[GRB_SHADOW_MAPS]->GetBuffer(frameIndex));
     globalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)

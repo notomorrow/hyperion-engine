@@ -150,7 +150,7 @@ void Light::CreateShadowViews()
         depthAttachmentDesc.loadOp = LoadOperation::CLEAR;
         depthAttachmentDesc.storeOp = StoreOperation::STORE;
 
-        shaderDefinition = ShaderDefinition(NAME("Shadows"), shaderProperties);
+        shaderDefinition = ShaderDefinition(NAME("RenderToCubemap"), shaderProperties);
 
         break;
     }
@@ -173,7 +173,7 @@ void Light::CreateShadowViews()
         depthAttachmentDesc.loadOp = LoadOperation::CLEAR;
         depthAttachmentDesc.storeOp = StoreOperation::STORE;
 
-        shaderDefinition = ShaderDefinition(NAME("RenderToCubemap"), shaderProperties);
+        shaderDefinition = ShaderDefinition(NAME("Shadows"), shaderProperties);
 
         break;
     }
@@ -261,8 +261,6 @@ void Light::Update(float delta)
 {
     if (m_flags & LF_SHADOW)
     {
-        return; // TEMP
-
         /// TODO: Make update turn on/off dep. on octree changes (see EnvGrid)
         for (int i = 0; i < int(m_shadowViews.Size()); i++)
         {
@@ -286,8 +284,6 @@ void Light::Update(float delta)
 
             m_shadowViews[i]->UpdateVisibility();
             m_shadowViews[i]->Collect();
-
-            HYP_LOG_TEMP("Update Light {} shadow view ({}), {} drawcalls found", Id(), i, RenderApi_GetRenderCollector(m_shadowViews[i].Get()).NumDrawCallsCollected());
         }
     }
 }

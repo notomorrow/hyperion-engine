@@ -26,6 +26,8 @@ HYP_DESCRIPTOR_SRV(View, GBufferWSNormalsTexture) uniform texture2D gbuffer_ws_n
 HYP_DESCRIPTOR_SRV(View, GBufferTranslucentTexture) uniform texture2D gbuffer_albedo_texture_translucent;
 #endif
 
+HYP_DESCRIPTOR_SRV(Global, ShadowMapsTextureArray) uniform texture2DArray shadow_maps;
+
 HYP_DESCRIPTOR_SRV(View, GBufferMipChain) uniform texture2D gbuffer_mip_chain;
 HYP_DESCRIPTOR_SRV(View, GBufferDepthTexture) uniform texture2D gbuffer_depth_texture;
 HYP_DESCRIPTOR_SAMPLER(Global, SamplerNearest) uniform sampler sampler_nearest;
@@ -81,4 +83,7 @@ void main()
 
     color_output = SampleLastEffectInChain(HYP_STAGE_POST, texcoord, color_output);
     color_output = vec4(Tonemap(color_output.rgb), 1.0);
+
+    color_output = textureLod(sampler2DArray(shadow_maps, HYP_SAMPLER_NEAREST), vec3(texcoord, 0.0), 0.0);
+    color_output.a = 1.0;
 }
