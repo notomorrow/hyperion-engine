@@ -156,13 +156,17 @@ struct RENDER_COMMAND(CreateGaussianSplattingIndirectBuffers)
 
     virtual RendererResult operator()() override
     {
-        HYPERION_BUBBLE_ERRORS(stagingBuffer->Create());
+        ByteBuffer byteBuffer;
+        g_renderBackend->PopulateIndirectDrawCommandsBuffer(quadMesh->GetVertexBuffer(), quadMesh->GetIndexBuffer(), 0, byteBuffer);
 
-        IndirectDrawCommand emptyDrawCommand {};
-        quadMesh->GetRenderResource().PopulateIndirectDrawCommand(emptyDrawCommand);
+        if (!stagingBuffer->IsCreated())
+        {
+            HYPERION_BUBBLE_ERRORS(stagingBuffer->Create());
+        }
 
-        // copy zeros to buffer
-        stagingBuffer->Copy(sizeof(IndirectDrawCommand), &emptyDrawCommand);
+        HYPERION_BUBBLE_ERRORS(stagingBuffer->EnsureCapacity(byteBuffer.Size()));
+
+        stagingBuffer->Copy(byteBuffer.Size(), byteBuffer.Data());
 
         HYPERION_RETURN_OK;
     }
@@ -417,7 +421,7 @@ void GaussianSplattingInstance::CreateBuffers()
     m_splatBuffer = g_renderBackend->MakeGpuBuffer(GpuBufferType::SSBO, numPoints * sizeof(GaussianSplattingInstanceShaderData));
     m_splatIndicesBuffer = g_renderBackend->MakeGpuBuffer(GpuBufferType::SSBO, MathUtil::NextPowerOf2(numPoints) * sizeof(GaussianSplatIndex));
     m_sceneBuffer = g_renderBackend->MakeGpuBuffer(GpuBufferType::CBUFF, sizeof(GaussianSplattingSceneShaderData));
-    m_indirectBuffer = g_renderBackend->MakeGpuBuffer(GpuBufferType::INDIRECT_ARGS_BUFFER, sizeof(IndirectDrawCommand));
+    m_indirectBuffer = g_renderBackend->MakeGpuBuffer(GpuBufferType::INDIRECT_ARGS_BUFFER, 0);
 
     PUSH_RENDER_COMMAND(
         CreateGaussianSplattingInstanceBuffers,
@@ -690,9 +694,9 @@ void GaussianSplatting::Render(FrameBase* frame, const RenderSetup& renderSetup)
                     { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(renderSetup.view->GetCamera()->GetBufferIndex()) } } } },
         frameIndex);
 
-    m_quadMesh->GetRenderResource().RenderIndirect(
-        frame->GetCommandList(),
-        m_gaussianSplattingInstance->GetIndirectBuffer());
+    frame->GetCommandList().Add<BindVertexBuffer>(m_quadMesh->GetVertexBuffer());
+    frame->GetCommandList().Add<BindIndexBuffer>(m_quadMesh->GetIndexBuffer());
+    frame->GetCommandList().Add<DrawIndexedIndirect>(m_gaussianSplattingInstance->GetIndirectBuffer(), 0);
 }
 
 } // namespace hyperion

@@ -210,9 +210,7 @@ void BLASUpdaterSystem::OnEntityAdded(Entity* entity)
     BLASRef blas;
 
     {
-        TResourceHandle<RenderMesh> meshResourceHandle(meshComponent.mesh->GetRenderResource());
-
-        blas = meshResourceHandle->BuildBLAS(meshComponent.material);
+        blas = meshComponent.mesh->BuildBLAS(meshComponent.material);
 
         if (!blas)
         {

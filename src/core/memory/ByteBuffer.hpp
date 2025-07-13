@@ -514,6 +514,14 @@ public:
         return TByteBuffer(m_size, Data());
     }
 
+    /*! \brief Clears the ByteBuffer, freeing the allocated memory and resetting the size to zero.
+     *  After calling this function, the ByteBuffer will be empty and no memory will be allocated. */
+    void Clear()
+    {
+        m_allocation.Free();
+        m_size = 0;
+    }
+
     /*! \brief Generates a HashCode based on all bytes in the buffer. Returns an empty HashCode if the ByteBuffer is empty.
      *  \return A HashCode representing the contents of the ByteBuffer. */
     HYP_FORCE_INLINE HashCode GetHashCode() const

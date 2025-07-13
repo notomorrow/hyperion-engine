@@ -27,22 +27,6 @@ void RenderProxyMesh::SafeRelease()
     g_safeDeleter->SafeRelease(std::move(skeleton));
 }
 
-void RenderProxyMesh::IncRefs() const
-{
-    if (mesh.IsValid())
-    {
-        mesh->GetRenderResource().IncRef();
-    }
-}
-
-void RenderProxyMesh::DecRefs() const
-{
-    if (mesh.IsValid())
-    {
-        mesh->GetRenderResource().DecRef();
-    }
-}
-
 #pragma endregion RenderProxy
 
 } // namespace hyperion

@@ -4,6 +4,8 @@
 
 #include <rendering/RenderMesh.hpp>
 #include <rendering/RenderGlobalState.hpp>
+#include <rendering/RenderFrame.hpp>
+#include <rendering/RenderCommand.hpp>
 
 #include <core/object/HypClassUtils.hpp>
 
@@ -64,8 +66,7 @@ Pair<Array<Vertex>, Array<uint32>> Mesh::CalculateIndices(const Array<Vertex>& v
 Mesh::Mesh()
     : HypObject(),
       m_meshAttributes { .vertexAttributes = staticMeshVertexAttributes, .topology = TOP_TRIANGLES },
-      m_aabb(BoundingBox::Empty()),
-      m_renderResource(nullptr)
+      m_aabb(BoundingBox::Empty())
 {
 }
 
@@ -73,8 +74,7 @@ Mesh::Mesh(RC<StreamedMeshData> streamedMeshData, Topology topology, const Verte
     : HypObject(),
       m_meshAttributes { .vertexAttributes = vertexAttributes, .topology = topology },
       m_streamedMeshData(std::move(streamedMeshData)),
-      m_aabb(BoundingBox::Empty()),
-      m_renderResource(nullptr)
+      m_aabb(BoundingBox::Empty())
 {
     if (m_streamedMeshData != nullptr)
     {
@@ -109,8 +109,7 @@ Mesh::Mesh(
           MakeRefCountedPtr<StreamedMeshData>(
               MeshData { std::move(vertices), std::move(indices) },
               m_streamedMeshDataResourceHandle)),
-      m_aabb(BoundingBox::Empty()),
-      m_renderResource(nullptr)
+      m_aabb(BoundingBox::Empty())
 {
     CalculateAABB();
 }
@@ -119,11 +118,9 @@ Mesh::Mesh(Mesh&& other) noexcept
     : m_meshAttributes(other.m_meshAttributes),
       m_streamedMeshData(std::move(other.m_streamedMeshData)),
       m_streamedMeshDataResourceHandle(std::move(other.m_streamedMeshDataResourceHandle)),
-      m_aabb(other.m_aabb),
-      m_renderResource(other.m_renderResource)
+      m_aabb(other.m_aabb)
 {
     other.m_aabb = BoundingBox::Empty();
-    other.m_renderResource = nullptr;
 }
 
 Mesh& Mesh::operator=(Mesh&& other) noexcept
@@ -133,21 +130,12 @@ Mesh& Mesh::operator=(Mesh&& other) noexcept
         return *this;
     }
 
-    if (m_renderResource != nullptr)
-    {
-        // temp shit
-        m_renderResource->DecRef();
-        FreeResource(m_renderResource);
-    }
-
     m_meshAttributes = other.m_meshAttributes;
     m_streamedMeshData = std::move(other.m_streamedMeshData);
     m_streamedMeshDataResourceHandle = std::move(other.m_streamedMeshDataResourceHandle);
     m_aabb = other.m_aabb;
-    m_renderResource = other.m_renderResource;
 
     other.m_aabb = BoundingBox::Empty();
-    other.m_renderResource = nullptr;
 
     return *this;
 }
@@ -157,21 +145,10 @@ Mesh::~Mesh()
     if (IsInitCalled())
     {
         SetReady(false);
-
-        m_renderPersistent.Reset();
-
-        if (m_renderResource != nullptr)
-        {
-            // temp shit
-            m_renderResource->DecRef();
-            FreeResource(m_renderResource);
-        }
     }
 
     m_streamedMeshDataResourceHandle.Reset();
 
-    // @NOTE Must be after we free the m_renderResource,
-    // since m_renderResource would be using our streamed mesh data
     if (m_streamedMeshData != nullptr)
     {
         m_streamedMeshData->WaitForFinalization();
@@ -184,17 +161,6 @@ void Mesh::Init()
     AddDelegateHandler(g_engine->GetDelegates().OnShutdown.Bind(
         [this]()
         {
-            m_renderPersistent.Reset();
-
-            if (m_renderResource != nullptr)
-            {
-                // temp shit
-                m_renderResource->DecRef();
-                FreeResource(m_renderResource);
-
-                m_renderResource = nullptr;
-            }
-
             m_streamedMeshDataResourceHandle.Reset();
 
             if (m_streamedMeshData != nullptr)
@@ -206,8 +172,6 @@ void Mesh::Init()
 
     Assert(GetVertexAttributes() != 0, "No vertex attributes set on mesh");
 
-    m_renderResource = AllocateResource<RenderMesh>(this);
-
     {
         HYP_MT_CHECK_RW(m_dataRaceDetector, "Streamed mesh data");
 
@@ -218,18 +182,129 @@ void Mesh::Init()
             m_streamedMeshData.Emplace();
         }
 
-        m_renderResource->SetVertexAttributes(GetVertexAttributes());
-        m_renderResource->SetStreamedMeshData(m_streamedMeshData);
-
-        // Data passed to render resource to be uploaded,
-        // Reset the resource handle now that we no longer need it in CPU-side memory
-        HYP_LOG(Mesh, Debug, "Resetting streamed mesh data resource handle for mesh {}", Id().Value());
-        m_streamedMeshDataResourceHandle.Reset();
+        CreateGpuBuffers();
     }
-    // temp shit
-    m_renderResource->IncRef();
+
+    m_streamedMeshDataResourceHandle.Reset();
 
     SetReady(true);
+}
+
+void Mesh::CreateGpuBuffers()
+{
+    Array<float> vertices;
+    Array<uint32> indices;
+
+    if (m_streamedMeshData != nullptr)
+    {
+        ResourceHandle streamedMeshDataHandle = m_streamedMeshDataResourceHandle;
+
+        if (!streamedMeshDataHandle)
+        {
+            streamedMeshDataHandle = ResourceHandle(*m_streamedMeshData);
+        }
+
+        const MeshData& meshData = m_streamedMeshData->GetMeshData();
+
+        vertices = BuildVertexBuffer(m_meshAttributes.vertexAttributes, meshData);
+        indices = meshData.indices;
+    }
+
+    // Ensure vertex buffer is not empty
+    if (vertices.Empty())
+    {
+        vertices.Resize(1);
+    }
+
+    // Ensure indices exist and are a multiple of 3
+    if (indices.Empty())
+    {
+        indices.Resize(3);
+    }
+    else if (indices.Size() % 3 != 0)
+    {
+        indices.Resize(indices.Size() + (3 - (indices.Size() % 3)));
+    }
+
+    const SizeType packedBufferSize = vertices.ByteSize();
+    const SizeType packedIndicesSize = indices.ByteSize();
+
+    if (!m_vertexBuffer.IsValid() || m_vertexBuffer->Size() != packedBufferSize)
+    {
+        SafeRelease(std::move(m_vertexBuffer));
+
+        m_vertexBuffer = g_renderBackend->MakeGpuBuffer(GpuBufferType::MESH_VERTEX_BUFFER, packedBufferSize);
+
+#ifdef HYP_DEBUG_MODE
+        m_vertexBuffer->SetDebugName(NAME_FMT("Mesh_VertexBuffer_{}", Id().Value()));
+#endif
+    }
+
+    DeferCreate(m_vertexBuffer);
+
+    if (!m_indexBuffer.IsValid() || m_indexBuffer->Size() != packedIndicesSize)
+    {
+        SafeRelease(std::move(m_indexBuffer));
+
+        m_indexBuffer = g_renderBackend->MakeGpuBuffer(GpuBufferType::MESH_INDEX_BUFFER, packedIndicesSize);
+
+#ifdef HYP_DEBUG_MODE
+        m_indexBuffer->SetDebugName(NAME_FMT("Mesh_IndexBuffer_{}", Id().Value()));
+#endif
+    }
+
+    DeferCreate(m_indexBuffer);
+
+    struct RENDER_COMMAND(CopyMeshGpuData)
+        : public RenderCommand
+    {
+        Array<float> vertices;
+        Array<uint32> indices;
+
+        GpuBufferRef vertexBuffer;
+        GpuBufferRef indexBuffer;
+
+        RENDER_COMMAND(CopyMeshGpuData)(Array<float>&& vertices, Array<uint32>&& indices, const GpuBufferRef& vertexBuffer, const GpuBufferRef& indexBuffer)
+            : vertices(std::move(vertices)),
+              indices(std::move(indices)),
+              vertexBuffer(vertexBuffer),
+              indexBuffer(indexBuffer)
+        {
+        }
+
+        virtual ~RENDER_COMMAND(CopyMeshGpuData)() override
+        {
+            SafeRelease(std::move(vertexBuffer));
+            SafeRelease(std::move(indexBuffer));
+        }
+
+        virtual RendererResult operator()() override
+        {
+            const SizeType packedBufferSize = vertices.ByteSize();
+            const SizeType packedIndicesSize = indices.ByteSize();
+
+            GpuBufferRef stagingBufferVertices = g_renderBackend->MakeGpuBuffer(GpuBufferType::STAGING_BUFFER, packedBufferSize);
+            HYPERION_ASSERT_RESULT(stagingBufferVertices->Create());
+            stagingBufferVertices->Copy(packedBufferSize, vertices.Data());
+
+            GpuBufferRef stagingBufferIndices = g_renderBackend->MakeGpuBuffer(GpuBufferType::STAGING_BUFFER, packedIndicesSize);
+            HYPERION_ASSERT_RESULT(stagingBufferIndices->Create());
+            stagingBufferIndices->Copy(packedIndicesSize, indices.Data());
+
+            FrameBase* frame = g_renderBackend->GetCurrentFrame();
+            CmdList& cmd = frame->GetCommandList();
+
+            cmd.Add<CopyBuffer>(stagingBufferVertices, vertexBuffer, packedBufferSize);
+            cmd.Add<CopyBuffer>(stagingBufferIndices, indexBuffer, packedIndicesSize);
+
+            SafeRelease(std::move(stagingBufferVertices));
+            SafeRelease(std::move(stagingBufferIndices));
+
+            return {};
+        }
+    };
+
+    PUSH_RENDER_COMMAND(CopyMeshGpuData, std::move(vertices), std::move(indices), m_vertexBuffer, m_indexBuffer);
 }
 
 void Mesh::SetVertices(Span<const Vertex> vertices)
@@ -278,13 +353,6 @@ void Mesh::SetStreamedMeshData(RC<StreamedMeshData> streamedMeshData)
 
     if (m_streamedMeshData != nullptr)
     {
-        // Set render resource's streamed mesh data to null first
-        // -- FreeResource will wait for usage to finish
-        if (m_renderResource != nullptr)
-        {
-            m_renderResource->SetStreamedMeshData(nullptr);
-        }
-
         m_streamedMeshData->WaitForFinalization();
     }
 
@@ -301,7 +369,7 @@ void Mesh::SetStreamedMeshData(RC<StreamedMeshData> streamedMeshData)
                 MeshData { Array<Vertex> {}, Array<uint32> {} }, m_streamedMeshDataResourceHandle);
         }
 
-        m_renderResource->SetStreamedMeshData(m_streamedMeshData);
+        CreateGpuBuffers();
     }
 }
 
@@ -318,11 +386,16 @@ void Mesh::SetVertexAttributes(const VertexAttributeSet& vertexAttributes)
     HYP_SCOPE;
     HYP_MT_CHECK_RW(m_dataRaceDetector, "Attributes");
 
+    if (m_meshAttributes.vertexAttributes == vertexAttributes)
+    {
+        return;
+    }
+
     m_meshAttributes.vertexAttributes = vertexAttributes;
 
     if (IsInitCalled())
     {
-        m_renderResource->SetVertexAttributes(vertexAttributes);
+        CreateGpuBuffers();
     }
 }
 
@@ -331,31 +404,235 @@ void Mesh::SetMeshAttributes(const MeshAttributes& attributes)
     HYP_SCOPE;
     HYP_MT_CHECK_RW(m_dataRaceDetector, "Attributes");
 
+    if (m_meshAttributes == attributes)
+    {
+        return;
+    }
+
     m_meshAttributes = attributes;
 
     if (IsInitCalled())
     {
-        m_renderResource->SetVertexAttributes(attributes.vertexAttributes);
+        CreateGpuBuffers();
     }
+}
+
+/* Copy our values into the packed vertex buffer, and increase the index for the next possible
+ * mesh attribute. This macro helps keep the code cleaner and easier to maintain. */
+#define PACKED_SET_ATTR(rawValues, argSize)                                                           \
+    do                                                                                                \
+    {                                                                                                 \
+        Memory::MemCpy((void*)(floatBuffer + currentOffset), (rawValues), (argSize) * sizeof(float)); \
+        currentOffset += (argSize);                                                                   \
+    }                                                                                                 \
+    while (0)
+
+Array<float> Mesh::BuildVertexBuffer(const VertexAttributeSet& vertexAttributes, const MeshData& meshData)
+{
+    const SizeType vertexSize = vertexAttributes.CalculateVertexSize();
+
+    Array<float> packedBuffer;
+    packedBuffer.Resize(vertexSize * meshData.vertices.Size());
+
+    float* floatBuffer = packedBuffer.Data();
+    SizeType currentOffset = 0;
+
+    for (SizeType i = 0; i < meshData.vertices.Size(); i++)
+    {
+        const Vertex& vertex = meshData.vertices[i];
+        /* Offset aligned to the current vertex */
+        // currentOffset = i * vertexSize;
+
+        /* Position and normals */
+        if (vertexAttributes & VertexAttribute::MESH_INPUT_ATTRIBUTE_POSITION)
+            PACKED_SET_ATTR(vertex.GetPosition().values, 3);
+        if (vertexAttributes & VertexAttribute::MESH_INPUT_ATTRIBUTE_NORMAL)
+            PACKED_SET_ATTR(vertex.GetNormal().values, 3);
+        /* Texture coordinates */
+        if (vertexAttributes & VertexAttribute::MESH_INPUT_ATTRIBUTE_TEXCOORD0)
+            PACKED_SET_ATTR(vertex.GetTexCoord0().values, 2);
+        if (vertexAttributes & VertexAttribute::MESH_INPUT_ATTRIBUTE_TEXCOORD1)
+            PACKED_SET_ATTR(vertex.GetTexCoord1().values, 2);
+        /* Tangents and Bitangents */
+        if (vertexAttributes & VertexAttribute::MESH_INPUT_ATTRIBUTE_TANGENT)
+            PACKED_SET_ATTR(vertex.GetTangent().values, 3);
+        if (vertexAttributes & VertexAttribute::MESH_INPUT_ATTRIBUTE_BITANGENT)
+            PACKED_SET_ATTR(vertex.GetBitangent().values, 3);
+
+        /* TODO: modify GetBoneIndex/GetBoneWeight to return a Vector4. */
+        if (vertexAttributes & VertexAttribute::MESH_INPUT_ATTRIBUTE_BONE_WEIGHTS)
+        {
+            float weights[4] = {
+                vertex.GetBoneWeight(0), vertex.GetBoneWeight(1),
+                vertex.GetBoneWeight(2), vertex.GetBoneWeight(3)
+            };
+            PACKED_SET_ATTR(weights, std::size(weights));
+        }
+
+        if (vertexAttributes & VertexAttribute::MESH_INPUT_ATTRIBUTE_BONE_INDICES)
+        {
+            float indices[4] = {
+                (float)vertex.GetBoneIndex(0), (float)vertex.GetBoneIndex(1),
+                (float)vertex.GetBoneIndex(2), (float)vertex.GetBoneIndex(3)
+            };
+            PACKED_SET_ATTR(indices, std::size(indices));
+        }
+    }
+
+    return packedBuffer;
+}
+
+#undef PACKED_SET_ATTR
+
+Array<PackedVertex> Mesh::BuildPackedVertices() const
+{
+    HYP_SCOPE;
+
+    if (!m_streamedMeshData)
+    {
+        return {};
+    }
+
+    ResourceHandle streamedMeshDataHandle(*m_streamedMeshData);
+
+    const MeshData& meshData = m_streamedMeshData->GetMeshData();
+
+    Array<PackedVertex> packedVertices;
+    packedVertices.Resize(meshData.vertices.Size());
+
+    for (SizeType i = 0; i < meshData.vertices.Size(); i++)
+    {
+        const auto& vertex = meshData.vertices[i];
+
+        packedVertices[i] = PackedVertex {
+            .positionX = vertex.GetPosition().x,
+            .positionY = vertex.GetPosition().y,
+            .positionZ = vertex.GetPosition().z,
+            .normalX = vertex.GetNormal().x,
+            .normalY = vertex.GetNormal().y,
+            .normalZ = vertex.GetNormal().z,
+            .texcoord0X = vertex.GetTexCoord0().x,
+            .texcoord0Y = vertex.GetTexCoord0().y
+        };
+    }
+
+    return packedVertices;
+}
+
+Array<uint32> Mesh::BuildPackedIndices() const
+{
+    HYP_SCOPE;
+
+    if (!m_streamedMeshData)
+    {
+        return {};
+    }
+
+    ResourceHandle streamedMeshDataHandle(*m_streamedMeshData);
+
+    const MeshData& meshData = m_streamedMeshData->GetMeshData();
+
+    Assert(meshData.indices.Size() % 3 == 0);
+
+    return Array<uint32>(meshData.indices.Begin(), meshData.indices.End());
+}
+
+BLASRef Mesh::BuildBLAS(const Handle<Material>& material) const
+{
+    Array<PackedVertex> packedVertices = BuildPackedVertices();
+    Array<uint32> packedIndices = BuildPackedIndices();
+
+    if (packedVertices.Empty() || packedIndices.Empty())
+    {
+        return nullptr;
+    }
+
+    // some assertions to prevent gpu faults down the line
+    for (SizeType i = 0; i < packedIndices.Size(); i++)
+    {
+        Assert(packedIndices[i] < packedVertices.Size());
+    }
+
+    struct RENDER_COMMAND(BuildBLAS)
+        : public RenderCommand
+    {
+        BLASRef blas;
+        Array<PackedVertex> packedVertices;
+        Array<uint32> packedIndices;
+        Handle<Material> material;
+
+        GpuBufferRef packedVerticesBuffer;
+        GpuBufferRef packedIndicesBuffer;
+        GpuBufferRef verticesStagingBuffer;
+        GpuBufferRef indicesStagingBuffer;
+
+        RENDER_COMMAND(BuildBLAS)(BLASRef& blas, Array<PackedVertex>&& packedVertices, Array<uint32>&& packedIndices, const Handle<Material>& material)
+            : packedVertices(std::move(packedVertices)),
+              packedIndices(std::move(packedIndices)),
+              material(material)
+        {
+            const SizeType packedVerticesSize = this->packedVertices.Size() * sizeof(PackedVertex);
+            const SizeType packedIndicesSize = this->packedIndices.Size() * sizeof(uint32);
+
+            packedVerticesBuffer = g_renderBackend->MakeGpuBuffer(GpuBufferType::RT_MESH_VERTEX_BUFFER, packedVerticesSize);
+            packedIndicesBuffer = g_renderBackend->MakeGpuBuffer(GpuBufferType::RT_MESH_INDEX_BUFFER, packedIndicesSize);
+
+            blas = g_renderBackend->MakeBLAS(
+                packedVerticesBuffer,
+                packedIndicesBuffer,
+                material,
+                Matrix4::identity);
+
+            this->blas = blas;
+        }
+
+        virtual ~RENDER_COMMAND(BuildBLAS)() override
+        {
+            SafeRelease(std::move(packedVerticesBuffer));
+            SafeRelease(std::move(packedIndicesBuffer));
+            SafeRelease(std::move(verticesStagingBuffer));
+            SafeRelease(std::move(indicesStagingBuffer));
+        }
+
+        virtual RendererResult operator()() override
+        {
+            const SizeType packedVerticesSize = packedVertices.Size() * sizeof(PackedVertex);
+            const SizeType packedIndicesSize = packedIndices.Size() * sizeof(uint32);
+
+            HYPERION_BUBBLE_ERRORS(packedVerticesBuffer->Create());
+            HYPERION_BUBBLE_ERRORS(packedIndicesBuffer->Create());
+
+            verticesStagingBuffer = g_renderBackend->MakeGpuBuffer(GpuBufferType::STAGING_BUFFER, packedVerticesSize);
+            HYPERION_BUBBLE_ERRORS(verticesStagingBuffer->Create());
+            verticesStagingBuffer->Memset(packedVerticesSize, 0); // zero out
+            verticesStagingBuffer->Copy(packedVertices.Size() * sizeof(PackedVertex), packedVertices.Data());
+
+            indicesStagingBuffer = g_renderBackend->MakeGpuBuffer(GpuBufferType::STAGING_BUFFER, packedIndicesSize);
+            HYPERION_BUBBLE_ERRORS(indicesStagingBuffer->Create());
+            indicesStagingBuffer->Memset(packedIndicesSize, 0); // zero out
+            indicesStagingBuffer->Copy(packedIndices.Size() * sizeof(uint32), packedIndices.Data());
+
+            FrameBase* frame = g_renderBackend->GetCurrentFrame();
+            CmdList& cmd = frame->GetCommandList();
+
+            cmd.Add<CopyBuffer>(verticesStagingBuffer, packedVerticesBuffer, packedVerticesSize);
+            cmd.Add<CopyBuffer>(indicesStagingBuffer, packedIndicesBuffer, packedIndicesSize);
+
+            return {};
+        }
+    };
+
+    BLASRef blas;
+    PUSH_RENDER_COMMAND(BuildBLAS, blas, std::move(packedVertices), std::move(packedIndices), material);
+
+    return blas;
 }
 
 void Mesh::SetPersistentRenderResourceEnabled(bool enabled)
 {
     AssertIsInitCalled();
 
-    HYP_MT_CHECK_RW(m_dataRaceDetector, "m_render_persistent");
-
-    if (enabled)
-    {
-        if (!m_renderPersistent)
-        {
-            m_renderPersistent = ResourceHandle(*m_renderResource);
-        }
-    }
-    else
-    {
-        m_renderPersistent.Reset();
-    }
+    /// No longer used
 }
 
 #define ADD_NORMAL(ary, idx, normal)     \

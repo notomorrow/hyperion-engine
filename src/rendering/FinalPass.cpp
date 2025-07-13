@@ -203,6 +203,9 @@ void FinalPass::Render(FrameBase* frame, RenderWorld* renderWorld)
     DeferredRenderer* dr = static_cast<DeferredRenderer*>(g_renderGlobalState->mainRenderer);
     AssertDebug(dr != nullptr);
 
+    frame->GetCommandList().Add<BindVertexBuffer>(m_quadMesh->GetVertexBuffer());
+    frame->GetCommandList().Add<BindIndexBuffer>(m_quadMesh->GetIndexBuffer());
+
     // ordered by priority of the view
     for (const Pair<View*, DeferredPassData*>& it : dr->GetLastFrameData().passData)
     {
@@ -220,7 +223,7 @@ void FinalPass::Render(FrameBase* frame, RenderWorld* renderWorld)
             ArrayMap<Name, uint32> {},
             descriptorSetIndex);
 
-        m_quadMesh->GetRenderResource().Render(frame->GetCommandList());
+        frame->GetCommandList().Add<DrawIndexed>(m_quadMesh->NumIndices());
     }
 
 #ifdef HYP_RENDER_UI_IN_FINAL_PASS
@@ -241,7 +244,7 @@ void FinalPass::Render(FrameBase* frame, RenderWorld* renderWorld)
             ArrayMap<Name, uint32> {},
             descriptorSetIndex);
 
-        m_quadMesh->GetRenderResource().Render(frame->GetCommandList());
+        frame->GetCommandList().Add<DrawIndexed>(m_quadMesh->NumIndices());
 
         // DebugLog(LogType::Debug, "Rendering UI layer to screen for frame index %u\n", frameIndex);
     }

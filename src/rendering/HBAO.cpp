@@ -186,7 +186,10 @@ void HBAO::Render(FrameBase* frame, const RenderSetup& renderSetup)
             viewDescriptorSetIndex);
     }
 
-    GetQuadMesh()->GetRenderResource().Render(frame->GetCommandList());
+    frame->GetCommandList().Add<BindVertexBuffer>(m_fullScreenQuad->GetVertexBuffer());
+    frame->GetCommandList().Add<BindIndexBuffer>(m_fullScreenQuad->GetIndexBuffer());
+    frame->GetCommandList().Add<DrawIndexed>(m_fullScreenQuad->NumIndices());
+
     End(frame, renderSetup);
 }
 

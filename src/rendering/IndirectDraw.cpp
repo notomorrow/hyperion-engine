@@ -241,12 +241,11 @@ void IndirectDrawState::PushDrawCall(const DrawCall& drawCall, DrawCommandData& 
 
     out.drawCommandIndex = drawCommandIndex;
 
-    if (m_drawCommands.Size() < m_numDrawCommands)
-    {
-        m_drawCommands.Resize(m_numDrawCommands);
-    }
-
-    drawCall.renderMesh->PopulateIndirectDrawCommand(m_drawCommands[drawCommandIndex]);
+    g_renderBackend->PopulateIndirectDrawCommandsBuffer(
+        drawCall.mesh->GetVertexBuffer(),
+        drawCall.mesh->GetIndexBuffer(),
+        drawCommandIndex,
+        m_drawCommandsBuffer);
 
     m_dirtyBits |= 0x3;
 }
@@ -267,12 +266,11 @@ void IndirectDrawState::PushInstancedDrawCall(const InstancedDrawCall& drawCall,
 
     out.drawCommandIndex = drawCommandIndex;
 
-    if (m_drawCommands.Size() < m_numDrawCommands)
-    {
-        m_drawCommands.Resize(m_numDrawCommands);
-    }
-
-    drawCall.renderMesh->PopulateIndirectDrawCommand(m_drawCommands[drawCommandIndex]);
+    g_renderBackend->PopulateIndirectDrawCommandsBuffer(
+        drawCall.mesh->GetVertexBuffer(),
+        drawCall.mesh->GetIndexBuffer(),
+        drawCommandIndex,
+        m_drawCommandsBuffer);
 
     m_dirtyBits |= 0x3;
 }
@@ -284,7 +282,9 @@ void IndirectDrawState::ResetDrawState()
     m_numDrawCommands = 0;
 
     m_objectInstances.Clear();
-    m_drawCommands.Clear();
+
+    // use SetSize() to keep the memory allocated
+    m_drawCommandsBuffer.SetSize(0);
 
     m_dirtyBits |= 0x3;
 }
@@ -315,36 +315,22 @@ void IndirectDrawState::UpdateBufferData(FrameBase* frame, bool* outWasResized)
     // fill instances buffer with data of the meshes
     {
         Assert(m_stagingBuffers[frameIndex].IsValid());
-        Assert(m_stagingBuffers[frameIndex]->Size() >= sizeof(IndirectDrawCommand) * m_drawCommands.Size());
+        Assert(m_stagingBuffers[frameIndex]->Size() >= m_drawCommandsBuffer.Size());
 
-        m_stagingBuffers[frameIndex]->Copy(
-            m_drawCommands.Size() * sizeof(IndirectDrawCommand),
-            m_drawCommands.Data());
+        m_stagingBuffers[frameIndex]->Copy(m_drawCommandsBuffer.Size(), m_drawCommandsBuffer.Data());
 
-        frame->GetCommandList().Add<InsertBarrier>(
-            m_stagingBuffers[frameIndex],
-            RS_COPY_SRC);
+        frame->GetCommandList().Add<InsertBarrier>(m_stagingBuffers[frameIndex], RS_COPY_SRC);
+        frame->GetCommandList().Add<InsertBarrier>(m_indirectBuffers[frameIndex], RS_COPY_DST);
 
-        frame->GetCommandList().Add<InsertBarrier>(
-            m_indirectBuffers[frameIndex],
-            RS_COPY_DST);
+        frame->GetCommandList().Add<CopyBuffer>(m_stagingBuffers[frameIndex], m_indirectBuffers[frameIndex], m_stagingBuffers[frameIndex]->Size());
 
-        frame->GetCommandList().Add<CopyBuffer>(
-            m_stagingBuffers[frameIndex],
-            m_indirectBuffers[frameIndex],
-            m_stagingBuffers[frameIndex]->Size());
-
-        frame->GetCommandList().Add<InsertBarrier>(
-            m_indirectBuffers[frameIndex],
-            RS_INDIRECT_ARG);
+        frame->GetCommandList().Add<InsertBarrier>(m_indirectBuffers[frameIndex], RS_INDIRECT_ARG);
     }
 
     Assert(m_instanceBuffers[frameIndex]->Size() >= m_objectInstances.Size() * sizeof(ObjectInstance));
 
     // update data for object instances (cpu - gpu)
-    m_instanceBuffers[frameIndex]->Copy(
-        m_objectInstances.Size() * sizeof(ObjectInstance),
-        m_objectInstances.Data());
+    m_instanceBuffers[frameIndex]->Copy(m_objectInstances.Size() * sizeof(ObjectInstance), m_objectInstances.Data());
 
     m_dirtyBits &= ~(1u << frameIndex);
 }

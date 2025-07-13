@@ -164,9 +164,9 @@ private:
 class DrawIndexed final : public CmdBase
 {
 public:
-    DrawIndexed(uint32 numIndices, uint32 numInstance, uint32 instanceIndex)
+    DrawIndexed(uint32 numIndices, uint32 numInstances = 1, uint32 instanceIndex = 0)
         : m_numIndices(numIndices),
-          m_numInstances(numInstance),
+          m_numInstances(numInstances),
           m_instanceIndex(instanceIndex)
     {
     }

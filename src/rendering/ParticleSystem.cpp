@@ -137,13 +137,11 @@ struct RENDER_COMMAND(CreateParticleSystemBuffers)
     : RenderCommand
 {
     GpuBufferRef stagingBuffer;
-    Handle<Mesh> quadMesh;
+    ByteBuffer indirectDrawCommandsBuffer;
 
-    RENDER_COMMAND(CreateParticleSystemBuffers)(
-        GpuBufferRef stagingBuffer,
-        Handle<Mesh> quadMesh)
+    RENDER_COMMAND(CreateParticleSystemBuffers)(GpuBufferRef stagingBuffer, ByteBuffer&& indirectDrawCommandsBuffer)
         : stagingBuffer(std::move(stagingBuffer)),
-          quadMesh(std::move(quadMesh))
+          indirectDrawCommandsBuffer(std::move(indirectDrawCommandsBuffer))
     {
     }
 
@@ -153,11 +151,8 @@ struct RENDER_COMMAND(CreateParticleSystemBuffers)
     {
         HYPERION_BUBBLE_ERRORS(stagingBuffer->Create());
 
-        IndirectDrawCommand emptyDrawCommand {};
-        quadMesh->GetRenderResource().PopulateIndirectDrawCommand(emptyDrawCommand);
-
         // copy zeros to buffer
-        stagingBuffer->Copy(sizeof(IndirectDrawCommand), &emptyDrawCommand);
+        stagingBuffer->Copy(indirectDrawCommandsBuffer.Size(), indirectDrawCommandsBuffer.Data());
 
         HYPERION_RETURN_OK;
     }
@@ -323,12 +318,15 @@ void ParticleSystem::Init()
 
 void ParticleSystem::CreateBuffers()
 {
-    m_stagingBuffer = g_renderBackend->MakeGpuBuffer(GpuBufferType::STAGING_BUFFER, sizeof(IndirectDrawCommand));
+    ByteBuffer indirectDrawCommandsBuffer;
+    g_renderBackend->PopulateIndirectDrawCommandsBuffer(
+        m_quadMesh->GetVertexBuffer(),
+        m_quadMesh->GetIndexBuffer(),
+        0, indirectDrawCommandsBuffer);
 
-    PUSH_RENDER_COMMAND(
-        CreateParticleSystemBuffers,
-        m_stagingBuffer,
-        m_quadMesh);
+    m_stagingBuffer = g_renderBackend->MakeGpuBuffer(GpuBufferType::STAGING_BUFFER, indirectDrawCommandsBuffer.Size());
+
+    PUSH_RENDER_COMMAND(CreateParticleSystemBuffers, m_stagingBuffer, std::move(indirectDrawCommandsBuffer));
 }
 
 void ParticleSystem::UpdateParticles(FrameBase* frame, const RenderSetup& renderSetup)
@@ -483,7 +481,9 @@ void ParticleSystem::Render(FrameBase* frame, const RenderSetup& renderSetup)
                 viewDescriptorSetIndex);
         }
 
-        m_quadMesh->GetRenderResource().RenderIndirect(frame->GetCommandList(), particleSpawner->GetIndirectBuffer());
+        frame->GetCommandList().Add<BindVertexBuffer>(m_quadMesh->GetVertexBuffer());
+        frame->GetCommandList().Add<BindIndexBuffer>(m_quadMesh->GetIndexBuffer());
+        frame->GetCommandList().Add<DrawIndexedIndirect>(particleSpawner->GetIndirectBuffer(), 0);
     }
 }
 

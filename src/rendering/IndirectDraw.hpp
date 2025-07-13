@@ -82,7 +82,7 @@ public:
 
 private:
     Array<ObjectInstance> m_objectInstances;
-    Array<IndirectDrawCommand> m_drawCommands;
+    ByteBuffer m_drawCommandsBuffer;
 
     FixedArray<GpuBufferRef, g_framesInFlight> m_indirectBuffers;
     FixedArray<GpuBufferRef, g_framesInFlight> m_instanceBuffers;

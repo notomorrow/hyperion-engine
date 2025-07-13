@@ -106,9 +106,6 @@ public:
 
     HYP_API virtual void SafeRelease() override;
 
-    void IncRefs() const;
-    void DecRefs() const;
-
     HYP_FORCE_INLINE bool operator==(const RenderProxyMesh& other) const
     {
         return version == other.version

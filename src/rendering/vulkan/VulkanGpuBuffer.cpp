@@ -562,13 +562,8 @@ RendererResult VulkanGpuBuffer::Create()
 {
     if (IsCreated())
     {
-        HYP_LOG(RenderingBackend, Warning, "Create() called on a buffer that has not been destroyed!\n"
-                                           "\tYou should explicitly call Destroy() on the object before reallocating it.\n"
-                                           "\tTo prevent memory leaks, calling Destroy() before allocating the memory...");
-
-        HYP_GFX_ASSERT(false, "Create() called on a buffer that has not been destroyed!");
-
-        HYPERION_BUBBLE_ERRORS(Destroy());
+        // already created
+        return {};
     }
 
     m_vkBufferUsageFlags = GetVkUsageFlags(m_type);
@@ -620,7 +615,7 @@ RendererResult VulkanGpuBuffer::Create()
         Memset(m_size, 0);
     }
 
-    HYPERION_RETURN_OK;
+    return {};
 }
 
 RendererResult VulkanGpuBuffer::EnsureCapacity(
@@ -630,12 +625,12 @@ RendererResult VulkanGpuBuffer::EnsureCapacity(
 {
     if (minimumSize == 0)
     {
-        HYPERION_RETURN_OK;
+        return {};
     }
 
     RendererResult result;
 
-    if (minimumSize <= m_size)
+    if (!IsCreated() && minimumSize <= m_size)
     {
         if (outSizeChanged != nullptr)
         {

@@ -573,7 +573,9 @@ void FullScreenPass::RenderPreviousTextureToScreen(FrameBase* frame, const Rende
             viewDescriptorSetIndex);
     }
 
-    m_fullScreenQuad->GetRenderResource().Render(frame->GetCommandList());
+    frame->GetCommandList().Add<BindVertexBuffer>(m_fullScreenQuad->GetVertexBuffer());
+    frame->GetCommandList().Add<BindIndexBuffer>(m_fullScreenQuad->GetIndexBuffer());
+    frame->GetCommandList().Add<DrawIndexed>(m_fullScreenQuad->NumIndices());
 }
 
 void FullScreenPass::CopyResultToPreviousTexture(FrameBase* frame, const RenderSetup& renderSetup)
@@ -696,7 +698,9 @@ void FullScreenPass::RenderToFramebuffer(FrameBase* frame, const RenderSetup& re
             viewDescriptorSetIndex);
     }
 
-    m_fullScreenQuad->GetRenderResource().Render(frame->GetCommandList());
+    frame->GetCommandList().Add<BindVertexBuffer>(m_fullScreenQuad->GetVertexBuffer());
+    frame->GetCommandList().Add<BindIndexBuffer>(m_fullScreenQuad->GetIndexBuffer());
+    frame->GetCommandList().Add<DrawIndexed>(m_fullScreenQuad->NumIndices());
 
     m_isFirstFrame = false;
 }

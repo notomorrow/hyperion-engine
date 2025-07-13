@@ -419,7 +419,9 @@ void DebugDrawer::Render(FrameBase* frame, const RenderSetup& renderSetup)
         {
             MeshDebugDrawShapeBase* meshShape = static_cast<MeshDebugDrawShapeBase*>(drawCommand.shape);
 
-            meshShape->GetMesh()->GetRenderResource().Render(frame->GetCommandList());
+            frame->GetCommandList().Add<BindVertexBuffer>(meshShape->GetMesh()->GetVertexBuffer());
+            frame->GetCommandList().Add<BindIndexBuffer>(meshShape->GetMesh()->GetIndexBuffer());
+            frame->GetCommandList().Add<DrawIndexed>(meshShape->GetMesh()->NumIndices());
 
             break;
         }

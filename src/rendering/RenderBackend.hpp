@@ -10,6 +10,8 @@
 #include <core/functional/Proc.hpp>
 #include <core/functional/Delegate.hpp>
 
+#include <core/memory/ByteBuffer.hpp>
+
 #include <core/utilities/Span.hpp>
 
 #include <core/Handle.hpp>
@@ -129,6 +131,8 @@ public:
         const Handle<Material>& material,
         const Matrix4& transform) = 0;
     virtual TLASRef MakeTLAS() = 0;
+
+    virtual void PopulateIndirectDrawCommandsBuffer(const GpuBufferRef& vertexBuffer, const GpuBufferRef& indexBuffer, uint32 instanceOffset, ByteBuffer& outByteBuffer) = 0;
 
     virtual TextureFormat GetDefaultFormat(DefaultImageFormat type) const = 0;
 

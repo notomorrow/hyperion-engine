@@ -348,18 +348,21 @@ static void RenderAll(
 
         if (UseIndirectRendering && drawCall.drawCommandIndex != ~0u)
         {
-            drawCall.renderMesh->RenderIndirect(
-                frame->GetCommandList(),
+            frame->GetCommandList().Add<BindVertexBuffer>(drawCall.mesh->GetVertexBuffer());
+            frame->GetCommandList().Add<BindIndexBuffer>(drawCall.mesh->GetIndexBuffer());
+            frame->GetCommandList().Add<DrawIndexedIndirect>(
                 indirectRenderer->GetDrawState().GetIndirectBuffer(frameIndex),
                 drawCall.drawCommandIndex * uint32(sizeof(IndirectDrawCommand)));
         }
         else
         {
-            drawCall.renderMesh->Render(frame->GetCommandList(), 1);
+            frame->GetCommandList().Add<BindVertexBuffer>(drawCall.mesh->GetVertexBuffer());
+            frame->GetCommandList().Add<BindIndexBuffer>(drawCall.mesh->GetIndexBuffer());
+            frame->GetCommandList().Add<DrawIndexed>(drawCall.mesh->NumIndices(), 1);
         }
 
         counts[ERS_DRAW_CALLS]++;
-        counts[ERS_TRIANGLES] += drawCall.renderMesh->NumIndices() / 3;
+        counts[ERS_TRIANGLES] += drawCall.mesh->NumIndices() / 3;
     }
 
     for (const InstancedDrawCall& drawCall : drawCallCollection.instancedDrawCalls)
@@ -409,19 +412,22 @@ static void RenderAll(
 
         if (UseIndirectRendering && drawCall.drawCommandIndex != ~0u)
         {
-            drawCall.renderMesh->RenderIndirect(
-                frame->GetCommandList(),
+            frame->GetCommandList().Add<BindVertexBuffer>(drawCall.mesh->GetVertexBuffer());
+            frame->GetCommandList().Add<BindIndexBuffer>(drawCall.mesh->GetIndexBuffer());
+            frame->GetCommandList().Add<DrawIndexedIndirect>(
                 indirectRenderer->GetDrawState().GetIndirectBuffer(frameIndex),
                 drawCall.drawCommandIndex * uint32(sizeof(IndirectDrawCommand)));
         }
         else
         {
-            drawCall.renderMesh->Render(frame->GetCommandList(), entityInstanceBatch->numEntities);
+            frame->GetCommandList().Add<BindVertexBuffer>(drawCall.mesh->GetVertexBuffer());
+            frame->GetCommandList().Add<BindIndexBuffer>(drawCall.mesh->GetIndexBuffer());
+            frame->GetCommandList().Add<DrawIndexed>(drawCall.mesh->NumIndices(), entityInstanceBatch->numEntities);
         }
 
         counts[ERS_DRAW_CALLS]++;
         counts[ERS_INSTANCED_DRAW_CALLS]++;
-        counts[ERS_TRIANGLES] += drawCall.renderMesh->NumIndices() / 3;
+        counts[ERS_TRIANGLES] += drawCall.mesh->NumIndices() / 3;
     }
 
     g_engine->GetRenderStatsCalculator().AddCounts(counts);
@@ -548,17 +554,20 @@ static void RenderAll_Parallel(
 
                     if (UseIndirectRendering && drawCall.drawCommandIndex != ~0u)
                     {
-                        drawCall.renderMesh->RenderIndirect(
-                            commandList,
+                        commandList.Add<BindVertexBuffer>(drawCall.mesh->GetVertexBuffer());
+                        commandList.Add<BindIndexBuffer>(drawCall.mesh->GetIndexBuffer());
+                        commandList.Add<DrawIndexedIndirect>(
                             indirectRenderer->GetDrawState().GetIndirectBuffer(frameIndex),
                             drawCall.drawCommandIndex * uint32(sizeof(IndirectDrawCommand)));
                     }
                     else
                     {
-                        drawCall.renderMesh->Render(commandList, 1);
+                        commandList.Add<BindVertexBuffer>(drawCall.mesh->GetVertexBuffer());
+                        commandList.Add<BindIndexBuffer>(drawCall.mesh->GetIndexBuffer());
+                        commandList.Add<DrawIndexed>(drawCall.mesh->NumIndices(), 1);
                     }
 
-                    parallelRenderingState->renderStatsCounts[index][ERS_TRIANGLES] += drawCall.renderMesh->NumIndices() / 3;
+                    parallelRenderingState->renderStatsCounts[index][ERS_TRIANGLES] += drawCall.mesh->NumIndices() / 3;
                     parallelRenderingState->renderStatsCounts[index][ERS_DRAW_CALLS]++;
                 }
             });
@@ -636,17 +645,20 @@ static void RenderAll_Parallel(
 
                     if (UseIndirectRendering && drawCall.drawCommandIndex != ~0u)
                     {
-                        drawCall.renderMesh->RenderIndirect(
-                            commandList,
+                        commandList.Add<BindVertexBuffer>(drawCall.mesh->GetVertexBuffer());
+                        commandList.Add<BindIndexBuffer>(drawCall.mesh->GetIndexBuffer());
+                        commandList.Add<DrawIndexedIndirect>(
                             indirectRenderer->GetDrawState().GetIndirectBuffer(frameIndex),
                             drawCall.drawCommandIndex * uint32(sizeof(IndirectDrawCommand)));
                     }
                     else
                     {
-                        drawCall.renderMesh->Render(commandList, entityInstanceBatch->numEntities);
+                        commandList.Add<BindVertexBuffer>(drawCall.mesh->GetVertexBuffer());
+                        commandList.Add<BindIndexBuffer>(drawCall.mesh->GetIndexBuffer());
+                        commandList.Add<DrawIndexed>(drawCall.mesh->NumIndices(), entityInstanceBatch->numEntities);
                     }
 
-                    parallelRenderingState->renderStatsCounts[index][ERS_TRIANGLES] += drawCall.renderMesh->NumIndices() / 3;
+                    parallelRenderingState->renderStatsCounts[index][ERS_TRIANGLES] += drawCall.mesh->NumIndices() / 3;
                     parallelRenderingState->renderStatsCounts[index][ERS_DRAW_CALLS]++;
                     parallelRenderingState->renderStatsCounts[index][ERS_INSTANCED_DRAW_CALLS]++;
                 }

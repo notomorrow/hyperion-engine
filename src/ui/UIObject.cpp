@@ -94,9 +94,6 @@ const Handle<Mesh>& UIObjectQuadMeshHelper::GetQuadMesh()
             mesh = CreateObject<Mesh>(std::move(vertices), indices);
             mesh->SetName(NAME("UIObject_QuadMesh"));
             InitObject(mesh);
-
-            // Since it will be reused a lot, keep the RenderMesh around.
-            mesh->SetPersistentRenderResourceEnabled(true);
         }
 
         Handle<Mesh> mesh;

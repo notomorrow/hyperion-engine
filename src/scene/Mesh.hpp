@@ -29,6 +29,7 @@ namespace hyperion {
 
 class BVHNode;
 class RenderMesh;
+class Material;
 
 /*! \brief Represents a 3D mesh in the engine from the Game thread, containing vertex data, indices, and rendering attributes.
  *  \details This class is used to manage mesh data, including streamed meshes, and provides methods for manipulating mesh data at runtime. */
@@ -68,11 +69,6 @@ public:
         m_name = name;
     }
 
-    HYP_FORCE_INLINE RenderMesh& GetRenderResource() const
-    {
-        return *m_renderResource;
-    }
-
     void SetVertices(Span<const Vertex> vertices);
     void SetVertices(Span<const Vertex> vertices, Span<const uint32> indices);
 
@@ -82,6 +78,18 @@ public:
 
     HYP_METHOD()
     uint32 NumIndices() const;
+
+    /*! \note Only to be called from render thread or render task */
+    HYP_FORCE_INLINE const GpuBufferRef& GetVertexBuffer() const
+    {
+        return m_vertexBuffer;
+    }
+
+    /*! \note Only to be called from render thread or render task */
+    HYP_FORCE_INLINE const GpuBufferRef& GetIndexBuffer() const
+    {
+        return m_indexBuffer;
+    }
 
     HYP_METHOD(Property = "VertexAttributes")
     HYP_FORCE_INLINE const VertexAttributeSet& GetVertexAttributes() const
@@ -130,7 +138,7 @@ public:
 
     /*! \brief Set the mesh to be able to have Render* methods called without needing to have its resources claimed.
      *  \note Init() must be called before this method. */
-    void SetPersistentRenderResourceEnabled(bool enabled);
+    HYP_DEPRECATED void SetPersistentRenderResourceEnabled(bool enabled);
 
     HYP_FORCE_INLINE const BVHNode& GetBVH() const
     {
@@ -140,10 +148,18 @@ public:
     HYP_METHOD()
     bool BuildBVH(int maxDepth = 3);
 
-private:
-    void Init() override;
+    BLASRef BuildBLAS(const Handle<Material>& material) const;
 
+private:
+    static Array<float> BuildVertexBuffer(const VertexAttributeSet& vertexAttributes, const MeshData& meshData);
+
+    void Init() override;
     void CalculateAABB();
+
+    void CreateGpuBuffers();
+
+    Array<PackedVertex> BuildPackedVertices() const;
+    Array<uint32> BuildPackedIndices() const;
 
     HYP_FIELD(Serialize, Editor)
     Name m_name;
@@ -159,8 +175,8 @@ private:
     HYP_FIELD(Serialize)
     BVHNode m_bvh;
 
-    RenderMesh* m_renderResource;
-    ResourceHandle m_renderPersistent;
+    GpuBufferRef m_vertexBuffer;
+    GpuBufferRef m_indexBuffer;
 
     HYP_DECLARE_MT_CHECK(m_dataRaceDetector);
 };

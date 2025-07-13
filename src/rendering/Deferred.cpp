@@ -342,6 +342,9 @@ void DeferredPass::Render(FrameBase* frame, const RenderSetup& rs)
                         deferredDirectDescriptorSetIndex);
                 }
 
+                frame->GetCommandList().Add<BindVertexBuffer>(m_fullScreenQuad->GetVertexBuffer());
+                frame->GetCommandList().Add<BindIndexBuffer>(m_fullScreenQuad->GetIndexBuffer());
+
                 isFirstLight = false;
             }
 
@@ -372,7 +375,7 @@ void DeferredPass::Render(FrameBase* frame, const RenderSetup& rs)
                     materialDescriptorSetIndex);
             }
 
-            m_fullScreenQuad->GetRenderResource().Render(frame->GetCommandList());
+            frame->GetCommandList().Add<DrawIndexed>(m_fullScreenQuad->NumIndices());
         }
     }
 }
@@ -647,7 +650,9 @@ void EnvGridPass::Render(FrameBase* frame, const RenderSetup& rs)
             ArrayMap<Name, uint32> {},
             viewDescriptorSetIndex);
 
-        m_fullScreenQuad->GetRenderResource().Render(frame->GetCommandList());
+        frame->GetCommandList().Add<BindVertexBuffer>(m_fullScreenQuad->GetVertexBuffer());
+        frame->GetCommandList().Add<BindIndexBuffer>(m_fullScreenQuad->GetIndexBuffer());
+        frame->GetCommandList().Add<DrawIndexed>(m_fullScreenQuad->NumIndices());
     }
 
     frame->GetCommandList().Add<EndFramebuffer>(m_framebuffer, frameIndex);
@@ -918,7 +923,9 @@ void ReflectionsPass::Render(FrameBase* frame, const RenderSetup& rs)
                 ArrayMap<Name, uint32> {},
                 viewDescriptorSetIndex);
 
-            m_fullScreenQuad->GetRenderResource().Render(frame->GetCommandList());
+            frame->GetCommandList().Add<BindVertexBuffer>(m_fullScreenQuad->GetVertexBuffer());
+            frame->GetCommandList().Add<BindIndexBuffer>(m_fullScreenQuad->GetIndexBuffer());
+            frame->GetCommandList().Add<DrawIndexed>(m_fullScreenQuad->NumIndices());
 
             ++numRenderedEnvProbes;
         }
@@ -1328,14 +1335,7 @@ void DeferredRenderer::CreateViewTopLevelAccelerationStructures(View* view, Defe
     Handle<Material> defaultMaterial = CreateObject<Material>();
     InitObject(defaultMaterial);
 
-    BLASRef blas;
-
-    {
-        TResourceHandle<RenderMesh> meshResourceHandle(defaultMesh->GetRenderResource());
-
-        blas = meshResourceHandle->BuildBLAS(defaultMaterial);
-    }
-
+    BLASRef blas = defaultMesh->BuildBLAS(defaultMaterial);
     DeferCreate(blas);
 
     for (uint32 frameIndex = 0; frameIndex < g_framesInFlight; frameIndex++)
@@ -1735,7 +1735,7 @@ void DeferredRenderer::RenderFrameForView(FrameBase* frame, const RenderSetup& r
 
             if (!blas)
             {
-                blas = meshProxy->mesh->GetRenderResource().BuildBLAS(meshProxy->material);
+                blas = meshProxy->mesh->BuildBLAS(meshProxy->material);
                 blas->SetTransform(meshProxy->bufferData.modelMatrix);
 
                 if (!blas->IsCreated())
@@ -1753,6 +1753,7 @@ void DeferredRenderer::RenderFrameForView(FrameBase* frame, const RenderSetup& r
                 tlas->AddBLAS(blas);
             }
         }
+
         RTUpdateStateFlags updateStateFlags = RTUpdateStateFlagBits::RT_UPDATE_STATE_FLAGS_NONE;
         tlas->UpdateStructure(updateStateFlags);
 
@@ -1935,7 +1936,9 @@ void DeferredRenderer::RenderFrameForView(FrameBase* frame, const RenderSetup& r
                 ArrayMap<Name, ArrayMap<Name, uint32>> {},
                 frameIndex);
 
-            pd->combinePass->GetQuadMesh()->GetRenderResource().Render(frame->GetCommandList());
+            frame->GetCommandList().Add<BindVertexBuffer>(pd->combinePass->GetQuadMesh()->GetVertexBuffer());
+            frame->GetCommandList().Add<BindIndexBuffer>(pd->combinePass->GetQuadMesh()->GetIndexBuffer());
+            frame->GetCommandList().Add<DrawIndexed>(pd->combinePass->GetQuadMesh()->NumIndices());
         }
 
         // Render the objects to have lightmaps applied into the translucent pass framebuffer with a full screen quad.

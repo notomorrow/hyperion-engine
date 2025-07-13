@@ -27,7 +27,6 @@ struct DrawCommandData;
 class IndirectDrawState;
 class GpuBufferHolderBase;
 struct MeshInstanceData;
-class RenderMesh;
 
 extern HYP_API GpuBufferHolderMap* GetGpuBufferHolderMap();
 
@@ -105,7 +104,7 @@ struct DrawCallBase
 {
     DrawCallID id;
 
-    RenderMesh* renderMesh = nullptr;
+    Mesh* mesh = nullptr;
     Material* material = nullptr;
     Skeleton* skeleton = nullptr;
 

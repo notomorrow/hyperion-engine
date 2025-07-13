@@ -260,7 +260,10 @@ struct RENDER_COMMAND(RenderTextureMipmapLevels)
                     ArrayMap<Name, ArrayMap<Name, uint32>> {},
                     frame->GetFrameIndex());
 
-                pass->GetQuadMesh()->GetRenderResource().Render(cmd);
+                frame->GetCommandList().Add<BindVertexBuffer>(pass->GetQuadMesh()->GetVertexBuffer());
+                frame->GetCommandList().Add<BindIndexBuffer>(pass->GetQuadMesh()->GetIndexBuffer());
+                frame->GetCommandList().Add<DrawIndexed>(pass->GetQuadMesh()->NumIndices());
+
                 pass->End(frame, NullRenderSetup());
             }
 

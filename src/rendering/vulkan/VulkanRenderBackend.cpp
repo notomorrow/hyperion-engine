@@ -667,6 +667,22 @@ TLASRef VulkanRenderBackend::MakeTLAS()
     return MakeRenderObject<VulkanTLAS>();
 }
 
+void VulkanRenderBackend::PopulateIndirectDrawCommandsBuffer(const GpuBufferRef& vertexBuffer, const GpuBufferRef& indexBuffer, uint32 instanceOffset, ByteBuffer& outByteBuffer)
+{
+    HYP_GFX_ASSERT(vertexBuffer.IsValid() && indexBuffer.IsValid());
+
+    const SizeType requiredSize = (SizeType(instanceOffset) + 1) * sizeof(VkDrawIndexedIndirectCommand);
+
+    if (outByteBuffer.Size() < requiredSize)
+    {
+        outByteBuffer.SetSize(requiredSize);
+    }
+
+    VkDrawIndexedIndirectCommand* commandPtr = reinterpret_cast<VkDrawIndexedIndirectCommand*>(outByteBuffer.Data()) + instanceOffset;
+    *commandPtr = VkDrawIndexedIndirectCommand {};
+    commandPtr->indexCount = indexBuffer->Size() / sizeof(uint32);
+}
+
 TextureFormat VulkanRenderBackend::GetDefaultFormat(DefaultImageFormat type) const
 {
     auto it = m_defaultFormats.Find(type);

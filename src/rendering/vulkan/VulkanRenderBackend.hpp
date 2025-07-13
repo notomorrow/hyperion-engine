@@ -97,6 +97,8 @@ public:
         const Matrix4& transform) override;
     virtual TLASRef MakeTLAS() override;
 
+    virtual void PopulateIndirectDrawCommandsBuffer(const GpuBufferRef& vertexBuffer, const GpuBufferRef& indexBuffer, uint32 instanceOffset, ByteBuffer& outByteBuffer) override;
+
     virtual TextureFormat GetDefaultFormat(DefaultImageFormat type) const override;
 
     virtual bool IsSupportedFormat(TextureFormat format, ImageSupport supportType) const override;
