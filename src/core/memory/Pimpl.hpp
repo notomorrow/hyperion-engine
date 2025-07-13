@@ -107,7 +107,7 @@ public:
 
     HYP_FORCE_INLINE T* Get() const
     {
-        return m_allocation ? ((Allocation*)m_allocation)->storage.GetPointer() : nullptr;
+        return m_allocation ? (static_cast<Allocation*>(m_allocation))->storage.GetPointer() : nullptr;
         // return HYP_ALIGN_PTR_AS(reinterpret_cast<uintptr_t>(m_allocation) + offsetof(Allocation, storage), T);
     }
 
@@ -169,11 +169,11 @@ public:
         Pimpl pimpl;
 
         Allocation* allocation = Memory::Allocate<Allocation>();
-        allocation->storage.Construct(std::forward<Args>(args)...);
         allocation->destructObject = [](void* allocation)
         {
             static_cast<Allocation*>(allocation)->storage.Destruct();
         };
+        allocation->storage.Construct(std::forward<Args>(args)...);
 
         pimpl.m_allocation = allocation;
 

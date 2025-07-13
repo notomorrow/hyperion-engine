@@ -14,7 +14,9 @@ if(MSVC)
     # set to path of vcpkg
     set(CMAKE_TOOLCHAIN_FILE, "${VCPKG_INSTALLED_DIR}/../scripts/buildsystems/vcpkg.cmake")
 else()
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -O0 -fpermissive")
+    # set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -O3")
+    # for debugging
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -O0 -fpermissive -fsanitize=address,undefined -fno-omit-frame-pointer -fno-optimize-sibling-calls -fno-inline -fno-inline-small-functions -fno-inline-functions-called-once -fno-builtin")
 endif()
 
 set(OpenGL_GL_PREFERENCE GLVND)
@@ -22,6 +24,7 @@ set(OpenGL_GL_PREFERENCE GLVND)
 link_directories(${CMAKE_SOURCE_DIR}/../lib /usr/local/lib)
 
 add_definitions(-DHYP_ROOT_DIR="${CMAKE_CURRENT_LIST_DIR}")
+add_definitions(-DHYP_DEBUG_MODE=1)
 add_definitions(-DSDL_MAIN_HANDLED=1)
 add_definitions(-DVMA_DYNAMIC_VULKAN_FUNCTIONS=1)
 

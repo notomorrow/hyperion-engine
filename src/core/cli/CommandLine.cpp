@@ -333,29 +333,19 @@ CommandLineArgumentDefinitions& CommandLineArgumentDefinitions::Add(
             return item.name == name;
         });
 
-    if (it != m_impl->definitions.End())
+    if (it == m_impl->definitions.End())
     {
-        *it = CommandLineArgumentDefinition {
-            name,
-            shorthand.Empty() ? Optional<String>() : shorthand,
-            description.Empty() ? Optional<String>() : description,
-            flags,
-            CommandLineArgumentType::ENUM,
-            defaultValue,
-            enumValues
-        };
-
-        return *this;
+        it = &m_impl->definitions.EmplaceBack();
     }
 
-    m_impl->definitions.PushBack(CommandLineArgumentDefinition {
-        name,
-        shorthand.Empty() ? Optional<String>() : shorthand,
-        description.Empty() ? Optional<String>() : description,
-        flags,
-        CommandLineArgumentType::ENUM,
-        defaultValue,
-        enumValues });
+    *it = {};
+    it->name = name;
+    it->type = CommandLineArgumentType::ENUM;
+    it->shorthand = shorthand.Empty() ? Optional<String>() : shorthand;
+    it->description = description.Empty() ? Optional<String>() : description;
+    it->flags = flags;
+    it->defaultValue = defaultValue;
+    it->enumValues = enumValues;
 
     return *this;
 }

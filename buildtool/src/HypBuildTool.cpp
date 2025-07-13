@@ -452,6 +452,8 @@ using namespace buildtool;
 
 int main(int argc, char** argv)
 {
+    Threads::SetCurrentThreadId(g_mainThread);
+
     static const CommandLineArgumentDefinitions definitions = []()
     {
         CommandLineArgumentDefinitions result;

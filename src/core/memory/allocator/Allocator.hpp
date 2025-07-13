@@ -41,7 +41,6 @@ struct DynamicAllocator : Allocator<DynamicAllocator>
         static constexpr AllocationType allocationType = AT_DYNAMIC;
         static constexpr bool isDynamic = true;
 
-#ifdef HYP_DEBUG_MODE
         union
         {
             struct
@@ -62,11 +61,6 @@ struct DynamicAllocator : Allocator<DynamicAllocator>
                 char dataBuffer[1];
             } storage;
         };
-#else
-        T* buffer;
-
-        SizeType capacity;
-#endif
 
         void Allocate(SizeType count)
         {
@@ -263,9 +257,7 @@ struct InlineAllocator : Allocator<InlineAllocator<Count, DynamicAllocatorType>>
 
             isDynamic = true;
 
-#ifdef HYP_DEBUG_MODE
             HYP_CORE_ASSERT(magic == 0xBADA55u, "stomp detected!");
-#endif
         }
 
         HYP_FORCE_INLINE void Free()
@@ -275,9 +267,7 @@ struct InlineAllocator : Allocator<InlineAllocator<Count, DynamicAllocatorType>>
                 dynamicAllocation.Free();
             }
 
-#ifdef HYP_DEBUG_MODE
             HYP_CORE_ASSERT(magic == 0xBADA55u, "stomp detected!");
-#endif
 
             SetToInitialState();
         }
@@ -292,9 +282,7 @@ struct InlineAllocator : Allocator<InlineAllocator<Count, DynamicAllocatorType>>
 
             isDynamic = true;
 
-#ifdef HYP_DEBUG_MODE
             HYP_CORE_ASSERT(magic == 0xBADA55u, "stomp detected!");
-#endif
         }
 
         void InitFromRangeCopy(const T* begin, const T* end, SizeType offset = 0)
@@ -325,9 +313,7 @@ struct InlineAllocator : Allocator<InlineAllocator<Count, DynamicAllocatorType>>
                 }
             }
 
-#ifdef HYP_DEBUG_MODE
             HYP_CORE_ASSERT(magic == 0xBADA55u, "stomp detected!");
-#endif
         }
 
         void InitFromRangeMove(T* begin, T* end, SizeType offset = 0)
@@ -358,9 +344,7 @@ struct InlineAllocator : Allocator<InlineAllocator<Count, DynamicAllocatorType>>
                 }
             }
 
-#ifdef HYP_DEBUG_MODE
             HYP_CORE_ASSERT(magic == 0xBADA55u, "stomp detected!");
-#endif
         }
 
         void InitZeroed(SizeType count, SizeType offset = 0)
@@ -376,9 +360,7 @@ struct InlineAllocator : Allocator<InlineAllocator<Count, DynamicAllocatorType>>
                 Memory::MemSet(storage.GetPointer() + offset, 0, count * sizeof(T));
             }
 
-#ifdef HYP_DEBUG_MODE
             HYP_CORE_ASSERT(magic == 0xBADA55u, "stomp detected!");
-#endif
         }
 
         void DestructInRange(SizeType startIndex, SizeType lastIndex)
@@ -401,9 +383,7 @@ struct InlineAllocator : Allocator<InlineAllocator<Count, DynamicAllocatorType>>
                 }
             }
 
-#ifdef HYP_DEBUG_MODE
             HYP_CORE_ASSERT(magic == 0xBADA55u, "stomp detected!");
-#endif
         }
 
         void SetToInitialState()
@@ -411,9 +391,7 @@ struct InlineAllocator : Allocator<InlineAllocator<Count, DynamicAllocatorType>>
             isDynamic = false;
             storage = ValueStorage<T, Count, alignof(T)>();
 
-#ifdef HYP_DEBUG_MODE
             HYP_CORE_ASSERT(magic == 0xBADA55u, "stomp detected!");
-#endif
         }
 
         union
@@ -422,15 +400,11 @@ struct InlineAllocator : Allocator<InlineAllocator<Count, DynamicAllocatorType>>
 
             typename DynamicAllocatorType::template Allocation<T> dynamicAllocation;
 
-#ifdef HYP_DEBUG_MODE
             T* buffer; // for natvis
-#endif
         };
 
-#ifdef HYP_DEBUG_MODE
         // for debugging - to ensure we haven't written past the structure; // to ensure that the union is not empty and has a valid size
         uint32 magic : 31 = 0xBADA55u;
-#endif
         bool isDynamic : 1 = false;
     };
 };
@@ -468,16 +442,12 @@ struct FixedAllocator : Allocator<FixedAllocator<Count>>
         {
             HYP_CORE_ASSERT(count <= Count, "Allocation size exceeds fixed capacity!");
 
-#ifdef HYP_DEBUG_MODE
             HYP_CORE_ASSERT(magic == 0xBADA55u, "stomp detected!");
-#endif
         }
 
         HYP_FORCE_INLINE void Free()
         {
-#ifdef HYP_DEBUG_MODE
             HYP_CORE_ASSERT(magic == 0xBADA55u, "stomp detected!");
-#endif
 
             SetToInitialState();
         }
@@ -501,9 +471,7 @@ struct FixedAllocator : Allocator<FixedAllocator<Count>>
                 }
             }
 
-#ifdef HYP_DEBUG_MODE
             HYP_CORE_ASSERT(magic == 0xBADA55u, "stomp detected!");
-#endif
         }
 
         void InitFromRangeCopy(const T* begin, const T* end, SizeType offset = 0)
@@ -527,9 +495,7 @@ struct FixedAllocator : Allocator<FixedAllocator<Count>>
                 }
             }
 
-#ifdef HYP_DEBUG_MODE
             HYP_CORE_ASSERT(magic == 0xBADA55u, "stomp detected!");
-#endif
         }
 
         void InitFromRangeMove(T* begin, T* end, SizeType offset = 0)
@@ -553,9 +519,7 @@ struct FixedAllocator : Allocator<FixedAllocator<Count>>
                 }
             }
 
-#ifdef HYP_DEBUG_MODE
             HYP_CORE_ASSERT(magic == 0xBADA55u, "stomp detected!");
-#endif
         }
 
         void InitZeroed(SizeType count, SizeType offset = 0)
@@ -564,9 +528,7 @@ struct FixedAllocator : Allocator<FixedAllocator<Count>>
 
             Memory::MemSet(storage.GetPointer() + offset, 0, count * sizeof(T));
 
-#ifdef HYP_DEBUG_MODE
             HYP_CORE_ASSERT(magic == 0xBADA55u, "stomp detected!");
-#endif
         }
 
         void DestructInRange(SizeType startIndex, SizeType lastIndex)
@@ -582,25 +544,20 @@ struct FixedAllocator : Allocator<FixedAllocator<Count>>
                 }
             }
 
-#ifdef HYP_DEBUG_MODE
             HYP_CORE_ASSERT(magic == 0xBADA55u, "stomp detected!");
-#endif
         }
 
         void SetToInitialState()
         {
             storage = ValueStorage<T, Count, alignof(T)>();
 
-#ifdef HYP_DEBUG_MODE
             HYP_CORE_ASSERT(magic == 0xBADA55u, "stomp detected!");
-#endif
         }
 
         union
         {
             ValueStorage<T, Count, alignof(T)> storage;
 
-#ifdef HYP_DEBUG_MODE
             // The following nested union fields are unused but make natvis work correctly for arrays.
             union
             {
@@ -609,14 +566,11 @@ struct FixedAllocator : Allocator<FixedAllocator<Count>>
             } dynamicAllocation;
 
             T* buffer; // for natvis
-#endif
         };
 
-#ifdef HYP_DEBUG_MODE
         // for debugging - to ensure we haven't written past the structure; // to ensure that the union is not empty and has a valid size
         uint32 magic : 31 = 0xBADA55u;
         bool isDynamic : 1 = false;
-#endif
     };
 };
 
