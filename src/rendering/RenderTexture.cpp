@@ -6,7 +6,6 @@
 #include <rendering/RenderBackend.hpp>
 #include <rendering/FullScreenPass.hpp>
 #include <rendering/RenderGroup.hpp>
-#include <rendering/RenderMesh.hpp>
 #include <rendering/Renderer.hpp>
 #include <rendering/Bindless.hpp>
 #include <rendering/PlaceholderData.hpp>

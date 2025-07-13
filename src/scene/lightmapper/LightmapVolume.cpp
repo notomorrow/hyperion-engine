@@ -141,6 +141,7 @@ struct RENDER_COMMAND(BakeLightmapVolumeTexture)
             }
 
             const Handle<Texture>& atlasTexture = atlasTextures[textureTypeIndex];
+            Assert(atlasTexture.IsValid() && atlasTexture->IsReady());
 
             ByteBuffer data;
 

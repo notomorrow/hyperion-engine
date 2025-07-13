@@ -8,7 +8,6 @@
 #include <core/object/ObjId.hpp>
 
 #include <rendering/Bindless.hpp>
-#include <rendering/RenderMesh.hpp>
 #include <rendering/RenderProxy.hpp>
 
 #include <rendering/RenderDevice.hpp>

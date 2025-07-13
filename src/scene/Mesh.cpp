@@ -2,7 +2,6 @@
 
 #include <scene/Mesh.hpp>
 
-#include <rendering/RenderMesh.hpp>
 #include <rendering/RenderGlobalState.hpp>
 #include <rendering/RenderFrame.hpp>
 #include <rendering/RenderCommand.hpp>

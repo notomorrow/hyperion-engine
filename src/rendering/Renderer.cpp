@@ -100,6 +100,8 @@ GraphicsPipelineRef PassData::CreateGraphicsPipeline(
 
     Assert(pd != nullptr);
 
+    HYP_LOG(Rendering, Debug, "Creating graphics pipeline for View: {}, RenderableAttributeSet hash: {}", pd->view.Id(), renderableAttributes.GetHashCode().Value());
+
     Handle<View> view = pd->view.Lock();
     Assert(view.IsValid());
     Assert(view->GetOutputTarget().IsValid());

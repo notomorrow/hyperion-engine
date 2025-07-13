@@ -1096,15 +1096,17 @@ HYP_API void RenderApi_BeginFrame_RenderThread()
 
         ViewData& vd = *vfd.viewData;
 
+        if (vfd.rplShared->TEMP_disableBuildRenderCollection || (vfd.view->GetFlags() & ViewFlags::NO_GFX))
+        {
+            continue;
+        }
+
         vd.rplRender.state = RenderProxyList::CS_READING;
 
-        if (!vfd.rplShared->TEMP_disableBuildRenderCollection)
-        {
-            vd.renderCollector.BuildRenderGroups(vd.view, vd.rplRender);
+        vd.renderCollector.BuildRenderGroups(vd.view, vd.rplRender);
 
-            /// TODO: Use View's bucket mask property to pass to BuildDrawCalls().
-            vd.renderCollector.BuildDrawCalls(0);
-        }
+        /// TODO: Use View's bucket mask property to pass to BuildDrawCalls().
+        vd.renderCollector.BuildDrawCalls(0);
 
         vd.rplRender.state = RenderProxyList::CS_DONE;
     }

@@ -1,7 +1,5 @@
 #include <rendering/SafeDeleter.hpp>
 #include <rendering/RenderProxy.hpp>
-#include <rendering/RenderMaterial.hpp>
-#include <rendering/RenderMesh.hpp>
 
 #include <scene/Entity.hpp>
 #include <scene/Mesh.hpp>

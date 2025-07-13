@@ -57,6 +57,7 @@ enum class ViewFlags : uint32
     NOT_MULTI_BUFFERED = 0x1000, //!< Disables double / triple buffering for the RenderProxyList this View writes to.
                                  //  --- Use ONLY for Views that are not written to every frame, and instead are written to and read once (or infrequently); e.g EnvProbes.
                                  //  --- Use of these is still threadsafe, however it uses a spinlock instead of multiple buffering so contentions will eat up cpu cycles.
+    NO_GFX = 0x2000,             //!< If set, the view will not perform any graphics rendering
 
     // enable flags
     ENABLE_RAYTRACING = 0x100000, //!< Should raytracing features be enabled for rendering this View? (Only for Views with GBUFFER enabled). Raytracing must be enabled in the global renderer config

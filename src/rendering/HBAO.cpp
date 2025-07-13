@@ -3,7 +3,6 @@
 #include <rendering/HBAO.hpp>
 #include <rendering/RenderGroup.hpp>
 #include <rendering/RenderWorld.hpp>
-#include <rendering/RenderMesh.hpp>
 #include <rendering/RenderCamera.hpp>
 #include <rendering/PlaceholderData.hpp>
 #include <rendering/RenderView.hpp>

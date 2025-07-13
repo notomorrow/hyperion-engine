@@ -8,7 +8,6 @@
 #include <rendering/RenderGroup.hpp>
 #include <rendering/GBuffer.hpp>
 #include <rendering/Deferred.hpp>
-#include <rendering/RenderMesh.hpp>
 #include <rendering/RenderEnvironment.hpp>
 #include <rendering/RenderView.hpp>
 #include <rendering/RenderWorld.hpp>

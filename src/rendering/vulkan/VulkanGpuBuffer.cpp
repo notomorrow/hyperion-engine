@@ -628,52 +628,37 @@ RendererResult VulkanGpuBuffer::EnsureCapacity(
         return {};
     }
 
-    RendererResult result;
-
-    if (!IsCreated() && minimumSize <= m_size)
+    if (minimumSize <= m_size)
     {
         if (outSizeChanged != nullptr)
         {
             *outSizeChanged = false;
         }
 
-        HYPERION_RETURN_OK;
+        return {};
     }
 
-    if (m_handle != VK_NULL_HANDLE)
+    bool shouldCreate = IsCreated();
+
+    if (shouldCreate)
     {
-        HYPERION_PASS_ERRORS(Destroy(), result);
-
-        if (!result)
-        {
-            if (outSizeChanged != nullptr)
-            {
-                *outSizeChanged = false;
-            }
-
-            return result;
-        }
+        HYPERION_BUBBLE_ERRORS(Destroy());
     }
 
     m_size = minimumSize;
     m_alignment = alignment;
 
-    HYPERION_PASS_ERRORS(Create(), result);
-
-    if (result)
+    if (outSizeChanged != nullptr)
     {
-        if (outSizeChanged != nullptr)
-        {
-            *outSizeChanged = true;
-        }
-    }
-    else
-    {
-        m_size = 0;
-        m_alignment = 0;
+        *outSizeChanged = true;
     }
 
-    return result;
+    if (shouldCreate)
+    {
+        HYPERION_BUBBLE_ERRORS(Create());
+    }
+
+    return {};
 }
 
 RendererResult VulkanGpuBuffer::EnsureCapacity(

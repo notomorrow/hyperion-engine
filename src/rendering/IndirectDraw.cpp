@@ -2,7 +2,6 @@
 
 #include <rendering/IndirectDraw.hpp>
 #include <rendering/DrawCall.hpp>
-#include <rendering/RenderMesh.hpp>
 #include <rendering/RenderGlobalState.hpp>
 #include <rendering/DepthPyramidRenderer.hpp>
 #include <rendering/RenderCamera.hpp>
@@ -45,24 +44,30 @@ static bool ResizeBuffer(
 
     HYPERION_ASSERT_RESULT(buffer->EnsureCapacity(newBufferSize, &sizeChanged));
 
+    if (!buffer->IsCreated())
+    {
+        HYPERION_ASSERT_RESULT(buffer->Create());
+
+        sizeChanged = true;
+    }
+
     return sizeChanged;
 }
 
 static bool ResizeIndirectDrawCommandsBuffer(
     FrameBase* frame,
-    uint32 numDrawCommands,
+    const ByteBuffer& drawCommandsBuffer,
     const GpuBufferRef& indirectBuffer,
     const GpuBufferRef& stagingBuffer)
 {
-    const bool wasCreatedOrResized = ResizeBuffer(
-        frame,
-        indirectBuffer,
-        numDrawCommands * sizeof(IndirectDrawCommand));
+    const bool wasCreatedOrResized = ResizeBuffer(frame, indirectBuffer, drawCommandsBuffer.Size());
 
     if (!wasCreatedOrResized)
     {
         return false;
     }
+
+    HYPERION_ASSERT_RESULT(stagingBuffer->EnsureCapacity(indirectBuffer->Size()));
 
     // upload zeros to the buffer using a staging buffer.
     if (!stagingBuffer->IsCreated())
@@ -70,8 +75,7 @@ static bool ResizeIndirectDrawCommandsBuffer(
         HYPERION_ASSERT_RESULT(stagingBuffer->Create());
     }
 
-    HYPERION_ASSERT_RESULT(stagingBuffer->EnsureCapacity(indirectBuffer->Size()));
-
+    // set all to zero
     stagingBuffer->Memset(stagingBuffer->Size(), 0);
 
     frame->GetCommandList().Add<InsertBarrier>(stagingBuffer, RS_COPY_SRC);
@@ -108,8 +112,8 @@ static bool ResizeIfNeeded(
     const FixedArray<GpuBufferRef, g_framesInFlight>& indirectBuffers,
     const FixedArray<GpuBufferRef, g_framesInFlight>& instanceBuffers,
     const FixedArray<GpuBufferRef, g_framesInFlight>& stagingBuffers,
-    uint32 numDrawCommands,
     uint32 numObjectInstances,
+    const ByteBuffer& drawCommandsBuffer,
     uint8 dirtyBits)
 {
     bool resizeHappened = false;
@@ -120,7 +124,7 @@ static bool ResizeIfNeeded(
 
     if ((dirtyBits & (1u << frame->GetFrameIndex())) || !indirectBuffers[frame->GetFrameIndex()].IsValid())
     {
-        resizeHappened |= ResizeIndirectDrawCommandsBuffer(frame, numDrawCommands, indirectBuffer, stagingBuffer);
+        resizeHappened |= ResizeIndirectDrawCommandsBuffer(frame, drawCommandsBuffer, indirectBuffer, stagingBuffer);
     }
 
     if ((dirtyBits & (1u << frame->GetFrameIndex())) || !instanceBuffers[frame->GetFrameIndex()].IsValid())
@@ -133,68 +137,6 @@ static bool ResizeIfNeeded(
 
 #pragma region Render commands
 
-struct RENDER_COMMAND(CreateIndirectDrawStateBuffers)
-    : RenderCommand
-{
-    FixedArray<GpuBufferRef, g_framesInFlight> indirectBuffers;
-    FixedArray<GpuBufferRef, g_framesInFlight> instanceBuffers;
-    FixedArray<GpuBufferRef, g_framesInFlight> stagingBuffers;
-
-    RENDER_COMMAND(CreateIndirectDrawStateBuffers)(
-        const FixedArray<GpuBufferRef, g_framesInFlight>& indirectBuffers,
-        const FixedArray<GpuBufferRef, g_framesInFlight>& instanceBuffers,
-        const FixedArray<GpuBufferRef, g_framesInFlight>& stagingBuffers)
-        : indirectBuffers(indirectBuffers),
-          instanceBuffers(instanceBuffers),
-          stagingBuffers(stagingBuffers)
-    {
-        for (uint32 frameIndex = 0; frameIndex < g_framesInFlight; frameIndex++)
-        {
-            Assert(this->indirectBuffers[frameIndex].IsValid());
-            Assert(this->instanceBuffers[frameIndex].IsValid());
-            Assert(this->stagingBuffers[frameIndex].IsValid());
-        }
-    }
-
-    virtual ~RENDER_COMMAND(CreateIndirectDrawStateBuffers)() override
-    {
-        SafeRelease(std::move(indirectBuffers));
-        SafeRelease(std::move(instanceBuffers));
-        SafeRelease(std::move(stagingBuffers));
-    }
-
-    virtual RendererResult operator()() override
-    {
-        UniquePtr<SingleTimeCommands> singleTimeCommands = g_renderBackend->GetSingleTimeCommands();
-
-        singleTimeCommands->Push([&](CmdList& cmd) -> RendererResult
-            {
-                for (uint32 frameIndex = 0; frameIndex < g_framesInFlight; frameIndex++)
-                {
-                    FrameRef frame = g_renderBackend->MakeFrame(frameIndex);
-
-                    if (!ResizeIndirectDrawCommandsBuffer(frame, IndirectDrawState::initialCount, indirectBuffers[frameIndex], stagingBuffers[frameIndex]))
-                    {
-                        HYP_FAIL("Failed to create indirect draw commands buffer!");
-                    }
-
-                    if (!ResizeInstancesBuffer(frame, IndirectDrawState::initialCount, instanceBuffers[frameIndex], stagingBuffers[frameIndex]))
-                    {
-                        HYP_FAIL("Failed to create instances buffer!");
-                    }
-
-                    cmd.Concat(std::move(frame->GetCommandList()));
-
-                    HYPERION_ASSERT_RESULT(frame->Destroy());
-                }
-
-                return {};
-            });
-
-        return singleTimeCommands->Execute();
-    }
-};
-
 #pragma endregion Render commands
 
 #pragma region IndirectDrawState
@@ -203,13 +145,6 @@ IndirectDrawState::IndirectDrawState()
     : m_numDrawCommands(0),
       m_dirtyBits(0x3)
 {
-    // Allocate used buffers so they can be set in descriptor sets
-    for (uint32 frameIndex = 0; frameIndex < g_framesInFlight; frameIndex++)
-    {
-        m_indirectBuffers[frameIndex] = g_renderBackend->MakeGpuBuffer(GpuBufferType::INDIRECT_ARGS_BUFFER, sizeof(IndirectDrawCommand));
-        m_instanceBuffers[frameIndex] = g_renderBackend->MakeGpuBuffer(GpuBufferType::SSBO, sizeof(ObjectInstance));
-        m_stagingBuffers[frameIndex] = g_renderBackend->MakeGpuBuffer(GpuBufferType::STAGING_BUFFER, sizeof(IndirectDrawCommand));
-    }
 }
 
 IndirectDrawState::~IndirectDrawState()
@@ -221,11 +156,21 @@ IndirectDrawState::~IndirectDrawState()
 
 void IndirectDrawState::Create()
 {
-    PUSH_RENDER_COMMAND(
-        CreateIndirectDrawStateBuffers,
-        m_indirectBuffers,
-        m_instanceBuffers,
-        m_stagingBuffers);
+
+    ByteBuffer drawCommandsBuffer;
+    g_renderBackend->PopulateIndirectDrawCommandsBuffer(GpuBufferRef::Null(), GpuBufferRef::Null(), 0, drawCommandsBuffer);
+
+    for (uint32 frameIndex = 0; frameIndex < g_framesInFlight; frameIndex++)
+    {
+        m_instanceBuffers[frameIndex] = g_renderBackend->MakeGpuBuffer(GpuBufferType::SSBO, sizeof(ObjectInstance));
+        DeferCreate(m_instanceBuffers[frameIndex]);
+
+        m_indirectBuffers[frameIndex] = g_renderBackend->MakeGpuBuffer(GpuBufferType::INDIRECT_ARGS_BUFFER, drawCommandsBuffer.Size());
+        DeferCreate(m_indirectBuffers[frameIndex]);
+
+        m_stagingBuffers[frameIndex] = g_renderBackend->MakeGpuBuffer(GpuBufferType::STAGING_BUFFER, drawCommandsBuffer.Size());
+        DeferCreate(m_stagingBuffers[frameIndex]);
+    }
 }
 
 void IndirectDrawState::PushDrawCall(const DrawCall& drawCall, DrawCommandData& out)
@@ -300,8 +245,8 @@ void IndirectDrawState::UpdateBufferData(FrameBase* frame, bool* outWasResized)
              m_indirectBuffers,
              m_instanceBuffers,
              m_stagingBuffers,
-             m_numDrawCommands,
              m_objectInstances.Size(),
+             m_drawCommandsBuffer,
              m_dirtyBits)))
     {
         m_dirtyBits |= (1u << frameIndex);
@@ -405,11 +350,7 @@ void IndirectRenderer::Create(IDrawCallCollectionImpl* impl)
 
     DeferCreate(descriptorTable);
 
-    m_objectVisibility = g_renderBackend->MakeComputePipeline(
-        objectVisibilityShader,
-        descriptorTable);
-
-    // use DeferCreate because our Shader might not be ready yet
+    m_objectVisibility = g_renderBackend->MakeComputePipeline(objectVisibilityShader, descriptorTable);
     DeferCreate(m_objectVisibility);
 }
 

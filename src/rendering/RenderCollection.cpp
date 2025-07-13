@@ -7,7 +7,6 @@
 #include <rendering/GBuffer.hpp>
 #include <rendering/Deferred.hpp>
 #include <rendering/RenderCamera.hpp>
-#include <rendering/RenderMesh.hpp>
 #include <rendering/RenderMaterial.hpp>
 #include <rendering/RenderView.hpp>
 
@@ -689,19 +688,67 @@ void RenderCollector::BuildRenderGroups(View* view, const RenderProxyList& rende
         return;
     }
 
-    Array<Entity*> removed;
-    renderProxyList.meshes.GetRemoved(removed, true /* includeChanged */);
+    Array<ObjId<Entity>> changedIds;
+    renderProxyList.meshes.GetChanged(changedIds);
 
-    Array<Entity*> added;
-    renderProxyList.meshes.GetAdded(added, true /* includeChanged */);
+    if (changedIds.Any())
+    {
+        for (const ObjId<Entity>& id : changedIds)
+        {
+            const uint32 idx = id.ToIndex();
+
+            RenderableAttributeSet* cachedAttributes = previousAttributes.TryGet(id.ToIndex());
+            AssertDebug(cachedAttributes != nullptr);
+
+            // remove from prev
+            auto& prevMappings = mappingsByBucket[cachedAttributes->GetMaterialAttributes().bucket];
+
+            auto it = prevMappings.Find(*cachedAttributes);
+            Assert(it != prevMappings.End());
+
+            DrawCallCollectionMapping& prevMapping = it->second;
+
+            RenderProxyMesh* meshProxy = prevMapping.meshProxies.Get(idx);
+            AssertDebug(meshProxy != nullptr);
+
+            RenderableAttributeSet newAttributes = GetRenderableAttributesForProxy(*meshProxy, overrideAttributes);
+            UpdateRenderableAttributesDynamic(meshProxy, newAttributes);
+
+            if (newAttributes == *cachedAttributes)
+            {
+                // not changed, skip
+                continue;
+            }
+
+            // Add proxy to group
+            DrawCallCollectionMapping& newMapping = mappingsByBucket[newAttributes.GetMaterialAttributes().bucket][newAttributes];
+            Handle<RenderGroup>& rg = newMapping.renderGroup;
+
+            if (!rg.IsValid())
+            {
+                rg = CreateRenderGroup(this, newMapping, newAttributes);
+            }
+
+            AssertDebug(meshProxy->mesh.IsValid() && meshProxy->material.IsValid());
+
+            newMapping.meshProxies.Set(idx, meshProxy);
+            prevMapping.meshProxies.EraseAt(idx);
+
+            *cachedAttributes = newAttributes;
+        }
+    }
+
+    Array<ObjId<Entity>> removed;
+    renderProxyList.meshes.GetRemoved(removed, false /* includeChanged */);
+
+    Array<ObjId<Entity>> added;
+    renderProxyList.meshes.GetAdded(added, false /* includeChanged */);
 
     if (removed.Any())
     {
-        for (Entity* entity : removed)
+        for (const ObjId<Entity>& id : removed)
         {
-            AssertDebug(entity != nullptr);
-
-            const RenderProxyMesh* meshProxy = renderProxyList.meshes.GetProxy(entity->Id());
+            const RenderProxyMesh* meshProxy = renderProxyList.meshes.GetProxy(id);
             AssertDebug(meshProxy != nullptr);
 
             if (!meshProxy)
@@ -709,23 +756,57 @@ void RenderCollector::BuildRenderGroups(View* view, const RenderProxyList& rende
                 continue;
             }
 
-            Assert(RemoveRenderProxy(this, meshProxy));
+            const uint32 idx = id.ToIndex();
+
+            AssertDebug(previousAttributes.HasIndex(idx));
+
+            const RenderableAttributeSet& attributes = previousAttributes.Get(idx);
+
+            auto& mappings = mappingsByBucket[attributes.GetMaterialAttributes().bucket];
+
+            auto it = mappings.Find(attributes);
+            Assert(it != mappings.End());
+
+            DrawCallCollectionMapping& mapping = it->second;
+            Assert(mapping.IsValid());
+
+            if (!mapping.meshProxies.HasIndex(idx))
+            {
+                HYP_LOG(Rendering, Warning, "Render proxy not found in mapping for entity {}", id);
+
+                continue;
+            }
+
+            mapping.meshProxies.EraseAt(idx);
+            previousAttributes.EraseAt(idx);
         }
     }
 
     if (added.Any())
     {
-        for (Entity* entity : added)
+        for (const ObjId<Entity>& id : added)
         {
-            AssertDebug(entity != nullptr);
-
-            const RenderProxyMesh* meshProxy = renderProxyList.meshes.GetProxy(entity->Id());
+            const RenderProxyMesh* meshProxy = renderProxyList.meshes.GetProxy(id);
             AssertDebug(meshProxy != nullptr);
 
             RenderableAttributeSet attributes = GetRenderableAttributesForProxy(*meshProxy, overrideAttributes);
             UpdateRenderableAttributesDynamic(meshProxy, attributes);
 
-            AddRenderProxy(this, meshProxy, attributes);
+            // Add proxy to group
+            DrawCallCollectionMapping& mapping = mappingsByBucket[attributes.GetMaterialAttributes().bucket][attributes];
+            Handle<RenderGroup>& rg = mapping.renderGroup;
+
+            if (!rg.IsValid())
+            {
+                rg = CreateRenderGroup(this, mapping, attributes);
+            }
+
+            AssertDebug(meshProxy->mesh.IsValid() && meshProxy->material.IsValid());
+
+            const uint32 idx = id.ToIndex();
+
+            mapping.meshProxies.Set(idx, const_cast<RenderProxyMesh*>(meshProxy));
+            previousAttributes.Set(idx, attributes);
         }
     }
 }

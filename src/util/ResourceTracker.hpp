@@ -509,6 +509,19 @@ public:
     }
 
     template <class AllocatorType>
+    void GetAdded(Array<IdType, AllocatorType>& outIds, bool includeChanged) const
+    {
+        HYP_SCOPE;
+
+        baseImpl.GetAdded(outIds, includeChanged);
+
+        for (Bitset::BitIndex bitIndex : subclassIndices)
+        {
+            subclassImpls[bitIndex].Get().GetAdded(outIds, includeChanged);
+        }
+    }
+
+    template <class AllocatorType>
     void GetAdded(Array<ElementType, AllocatorType>& out, bool includeChanged) const
     {
         HYP_SCOPE;
@@ -877,17 +890,11 @@ public:
 
             outIds.Reserve(removedBits.Count());
 
-            SizeType firstSetBitIndex;
-
-            while ((firstSetBitIndex = removedBits.FirstSetBitIndex()) != -1)
+            for (Bitset::BitIndex i : removedBits)
             {
-                const IdType id = IdType(ObjIdBase { typeId, uint32(firstSetBitIndex + 1) });
-
-                AssertDebug(!outIds.Contains(id));
+                const IdType id = IdType(ObjIdBase { typeId, uint32(i + 1) });
 
                 outIds.PushBack(id);
-
-                removedBits.Set(firstSetBitIndex, false);
             }
         }
 
@@ -905,18 +912,14 @@ public:
 
             out.Reserve(out.Size() + removedBits.Count());
 
-            Bitset::BitIndex firstSetBitIndex;
-
-            while ((firstSetBitIndex = removedBits.FirstSetBitIndex()) != Bitset::notFound)
+            for (Bitset::BitIndex i : removedBits)
             {
-                const IdType id = IdType(ObjIdBase { typeId, uint32(firstSetBitIndex + 1) });
+                const IdType id = IdType(ObjIdBase { typeId, uint32(i + 1) });
 
                 const ElementType* elem = elements.TryGet(id.ToIndex());
                 AssertDebug(elem != nullptr);
 
                 out.PushBack(*elem);
-
-                removedBits.Set(firstSetBitIndex, false);
             }
         }
 
@@ -934,20 +937,36 @@ public:
 
             out.Reserve(out.Size() + removedBits.Count());
 
-            Bitset::BitIndex firstSetBitIndex;
-
-            while ((firstSetBitIndex = removedBits.FirstSetBitIndex()) != Bitset::notFound)
+            for (Bitset::BitIndex i : removedBits)
             {
-                const IdType id = IdType(ObjIdBase { typeId, uint32(firstSetBitIndex + 1) });
+                const IdType id = IdType(ObjIdBase { typeId, uint32(i + 1) });
 
                 const ElementType* elem = elements.TryGet(id.ToIndex());
                 AssertDebug(elem != nullptr);
 
-                AssertDebug(out.FindAs(elem) == out.End());
-
                 out.PushBack(const_cast<ElementType*>(elem));
+            }
+        }
 
-                removedBits.Set(firstSetBitIndex, false);
+        template <class AllocatorType>
+        void GetAdded(Array<IdType, AllocatorType>& outIds, bool includeChanged) const
+        {
+            HYP_SCOPE;
+
+            Bitset newlyAddedBits = GetAdded();
+
+            if (includeChanged)
+            {
+                newlyAddedBits |= GetChanged();
+            }
+
+            outIds.Reserve(outIds.Size() + newlyAddedBits.Count());
+
+            for (Bitset::BitIndex i : newlyAddedBits)
+            {
+                const IdType id = IdType(ObjIdBase { typeId, uint32(i + 1) });
+
+                outIds.PushBack(id);
             }
         }
 
@@ -965,18 +984,14 @@ public:
 
             out.Reserve(out.Size() + newlyAddedBits.Count());
 
-            Bitset::BitIndex firstSetBitIndex;
-
-            while ((firstSetBitIndex = newlyAddedBits.FirstSetBitIndex()) != Bitset::notFound)
+            for (Bitset::BitIndex i : newlyAddedBits)
             {
-                const IdType id = IdType(ObjIdBase { typeId, uint32(firstSetBitIndex + 1) });
+                const IdType id = IdType(ObjIdBase { typeId, uint32(i + 1) });
 
                 const ElementType* elem = elements.TryGet(id.ToIndex());
                 AssertDebug(elem != nullptr);
 
                 out.PushBack(*elem);
-
-                newlyAddedBits.Set(firstSetBitIndex, false);
             }
         }
 
@@ -994,20 +1009,14 @@ public:
 
             out.Reserve(out.Size() + newlyAddedBits.Count());
 
-            Bitset::BitIndex firstSetBitIndex;
-
-            while ((firstSetBitIndex = newlyAddedBits.FirstSetBitIndex()) != Bitset::notFound)
+            for (Bitset::BitIndex i : newlyAddedBits)
             {
-                const IdType id = IdType(ObjIdBase { typeId, uint32(firstSetBitIndex + 1) });
+                const IdType id = IdType(ObjIdBase { typeId, uint32(i + 1) });
 
                 const ElementType* elem = elements.TryGet(id.ToIndex());
                 AssertDebug(elem != nullptr);
 
-                AssertDebug(out.FindAs(elem) == out.End());
-
                 out.PushBack(const_cast<ElementType*>(elem));
-
-                newlyAddedBits.Set(firstSetBitIndex, false);
             }
         }
 
@@ -1020,17 +1029,11 @@ public:
 
             outIds.Reserve(changedBits.Count());
 
-            SizeType firstSetBitIndex;
-
-            while ((firstSetBitIndex = changedBits.FirstSetBitIndex()) != -1)
+            for (Bitset::BitIndex i : changedBits)
             {
-                const IdType id = IdType(ObjIdBase { typeId, uint32(firstSetBitIndex + 1) });
-
-                AssertDebug(!outIds.Contains(id));
+                const IdType id = IdType(ObjIdBase { typeId, uint32(i + 1) });
 
                 outIds.PushBack(id);
-
-                changedBits.Set(firstSetBitIndex, false);
             }
         }
 
@@ -1043,18 +1046,14 @@ public:
 
             out.Reserve(out.Size() + changedBits.Count());
 
-            Bitset::BitIndex firstSetBitIndex;
-
-            while ((firstSetBitIndex = changedBits.FirstSetBitIndex()) != Bitset::notFound)
+            for (Bitset::BitIndex i : changedBits)
             {
-                const IdType id = IdType(ObjIdBase { typeId, uint32(firstSetBitIndex + 1) });
+                const IdType id = IdType(ObjIdBase { typeId, uint32(i + 1) });
 
                 const ElementType* elem = elements.TryGet(id.ToIndex());
                 AssertDebug(elem != nullptr);
 
                 out.PushBack(*elem);
-
-                changedBits.Set(firstSetBitIndex, false);
             }
         }
 
@@ -1067,70 +1066,14 @@ public:
 
             out.Reserve(out.Size() + changedBits.Count());
 
-            Bitset::BitIndex firstSetBitIndex;
-
-            while ((firstSetBitIndex = changedBits.FirstSetBitIndex()) != Bitset::notFound)
+            for (Bitset::BitIndex i : changedBits)
             {
-                const IdType id = IdType(ObjIdBase { typeId, uint32(firstSetBitIndex + 1) });
+                const IdType id = IdType(ObjIdBase { typeId, uint32(i + 1) });
 
                 const ElementType* elem = elements.TryGet(id.ToIndex());
                 AssertDebug(elem != nullptr);
-
-                AssertDebug(out.FindAs(elem) == out.End());
 
                 out.PushBack(const_cast<ElementType*>(elem));
-
-                changedBits.Set(firstSetBitIndex, false);
-            }
-        }
-
-        template <class AllocatorType>
-        void GetCurrent(Array<ElementType, AllocatorType>& out) const
-        {
-            HYP_SCOPE;
-
-            Bitset currentBits = previous;
-
-            out.Reserve(out.Size() + currentBits.Count());
-
-            Bitset::BitIndex firstSetBitIndex;
-
-            while ((firstSetBitIndex = currentBits.FirstSetBitIndex()) != Bitset::notFound)
-            {
-                const IdType id = IdType(ObjIdBase { typeId, uint32(firstSetBitIndex + 1) });
-
-                const ElementType* elem = elements.TryGet(id.ToIndex());
-                AssertDebug(elem != nullptr);
-
-                out.PushBack(*elem);
-
-                currentBits.Set(firstSetBitIndex, false);
-            }
-        }
-
-        template <class AllocatorType>
-        void GetCurrent(Array<ElementType*, AllocatorType>& out) const
-        {
-            HYP_SCOPE;
-
-            Bitset currentBits = next;
-
-            out.Reserve(out.Size() + currentBits.Count());
-
-            Bitset::BitIndex firstSetBitIndex;
-
-            while ((firstSetBitIndex = currentBits.FirstSetBitIndex()) != Bitset::notFound)
-            {
-                const IdType id = IdType(ObjIdBase { typeId, uint32(firstSetBitIndex + 1) });
-
-                const ElementType* elem = elements.TryGet(id.ToIndex());
-                AssertDebug(elem != nullptr);
-
-                AssertDebug(out.FindAs(elem) == out.End());
-
-                out.PushBack(const_cast<ElementType*>(elem));
-
-                currentBits.Set(firstSetBitIndex, false);
             }
         }
 

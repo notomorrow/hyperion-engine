@@ -5,7 +5,6 @@
 #include <rendering/GBuffer.hpp>
 #include <rendering/Deferred.hpp>
 #include <rendering/RenderCamera.hpp>
-#include <rendering/RenderMesh.hpp>
 #include <rendering/RenderMaterial.hpp>
 #include <rendering/RenderWorld.hpp>
 #include <rendering/RenderProxy.hpp>

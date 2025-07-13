@@ -9,7 +9,6 @@
 #include <rendering/GBuffer.hpp>
 #include <rendering/RenderWorld.hpp>
 #include <rendering/RenderCamera.hpp>
-#include <rendering/RenderMesh.hpp>
 #include <rendering/RenderEnvProbe.hpp>
 #include <rendering/RenderView.hpp>
 #include <rendering/RenderTexture.hpp>

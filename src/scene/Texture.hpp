@@ -34,8 +34,6 @@ namespace hyperion {
 class StreamedTextureData;
 class RenderTexture;
 
-/*! \brief Game-thread side representation of a texture in the engine.
- *  \details This class is used to manage texture data, including streamed textures, and provides methods for sampling and manipulating texture data at runtime. */
 HYP_CLASS()
 class HYP_API Texture final : public HypObject<Texture>
 {

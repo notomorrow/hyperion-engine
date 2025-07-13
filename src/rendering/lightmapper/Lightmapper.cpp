@@ -6,7 +6,6 @@
 #include <rendering/RenderGlobalState.hpp>
 #include <rendering/RenderCamera.hpp>
 #include <rendering/RenderWorld.hpp>
-#include <rendering/RenderMesh.hpp>
 #include <rendering/RenderTexture.hpp>
 #include <rendering/RenderEnvProbe.hpp>
 #include <rendering/RenderEnvGrid.hpp>
@@ -1144,7 +1143,8 @@ LightmapJob::LightmapJob(LightmapJobParams&& params)
             | ViewFlags::SKIP_ENV_GRIDS
             | ViewFlags::SKIP_LIGHTMAP_VOLUMES
             | ViewFlags::ENABLE_RAYTRACING
-            | ViewFlags::NOT_MULTI_BUFFERED,
+            | ViewFlags::NOT_MULTI_BUFFERED
+            | ViewFlags::NO_GFX,
         .viewport = Viewport { .extent = Vec2u::One(), .position = Vec2i::Zero() },
         .outputTargetDesc = outputTargetDesc,
         .scenes = { m_params.scene },
@@ -1152,8 +1152,10 @@ LightmapJob::LightmapJob(LightmapJobParams&& params)
     };
 
     m_view = CreateObject<View>(viewDesc);
-
     InitObject(m_view);
+
+    m_view->UpdateVisibility();
+    m_view->Collect();
 }
 
 LightmapJob::~LightmapJob()
@@ -1248,7 +1250,7 @@ void LightmapJob::AddTask(TaskBatch* taskBatch)
 void LightmapJob::Process()
 {
     Assert(IsRunning());
-    Assert(!m_result.HasError(), "Unhandled error in lightmap job: %s", *m_result.GetError().GetMessage());
+    Assert(!m_result.HasError(), "Unhandled error in lightmap job: {}", *m_result.GetError().GetMessage());
 
     if (m_numConcurrentRenderingTasks.Get(MemoryOrder::ACQUIRE) >= g_maxConcurrentRenderingTasksPerJob)
     {
@@ -1314,12 +1316,6 @@ void LightmapJob::Process()
         }
 
         return;
-    }
-
-    if (m_view.IsValid())
-    {
-        m_view->UpdateVisibility();
-        m_view->Collect();
     }
 
     {

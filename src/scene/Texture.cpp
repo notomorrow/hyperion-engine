@@ -74,8 +74,10 @@ Texture::~Texture()
 {
     m_renderPersistent.Reset();
 
+    // temp shit
     if (m_renderResource)
     {
+        m_renderResource->DecRef();
         FreeResource(m_renderResource);
         m_renderResource = nullptr;
     }
@@ -97,6 +99,8 @@ void Texture::Init()
 
             if (m_renderResource)
             {
+                // temp shit
+                m_renderResource->DecRef();
                 FreeResource(m_renderResource);
                 m_renderResource = nullptr;
             }
@@ -111,6 +115,9 @@ void Texture::Init()
         }));
 
     m_renderResource = AllocateResource<RenderTexture>(this);
+
+    // temp shit
+    m_renderResource->IncRef();
 
     m_streamedTextureDataResourceHandle.Reset();
 

@@ -8,7 +8,6 @@
 #include <scene/Material.hpp>
 #include <scene/World.hpp>
 
-#include <rendering/RenderMesh.hpp>
 #include <rendering/RenderWorld.hpp>
 #include <rendering/RenderEnvironment.hpp>
 #include <rendering/RenderView.hpp>
