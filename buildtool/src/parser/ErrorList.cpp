@@ -11,37 +11,37 @@
 namespace hyperion::buildtool {
 
 ErrorList::ErrorList()
-    : m_error_suppression_depth(0)
+    : m_errorSuppressionDepth(0)
 {
 }
 
 ErrorList::ErrorList(const ErrorList& other)
     : m_errors(other.m_errors),
-      m_error_suppression_depth(other.m_error_suppression_depth)
+      m_errorSuppressionDepth(other.m_errorSuppressionDepth)
 {
 }
 
 ErrorList& ErrorList::operator=(const ErrorList& other)
 {
     m_errors = other.m_errors;
-    m_error_suppression_depth = other.m_error_suppression_depth;
+    m_errorSuppressionDepth = other.m_errorSuppressionDepth;
 
     return *this;
 }
 
 ErrorList::ErrorList(ErrorList&& other) noexcept
     : m_errors(std::move(other.m_errors)),
-      m_error_suppression_depth(other.m_error_suppression_depth)
+      m_errorSuppressionDepth(other.m_errorSuppressionDepth)
 {
-    other.m_error_suppression_depth = 0;
+    other.m_errorSuppressionDepth = 0;
 }
 
 ErrorList& ErrorList::operator=(ErrorList&& other) noexcept
 {
     m_errors = std::move(other.m_errors);
-    m_error_suppression_depth = other.m_error_suppression_depth;
+    m_errorSuppressionDepth = other.m_errorSuppressionDepth;
 
-    other.m_error_suppression_depth = 0;
+    other.m_errorSuppressionDepth = 0;
 
     return *this;
 }

@@ -166,7 +166,7 @@ enum ErrorMessage
 
 class CompilerError
 {
-    static const HashMap<ErrorMessage, String> error_message_strings;
+    static const HashMap<ErrorMessage, String> errorMessageStrings;
 
 public:
     template <typename... Args>
@@ -178,8 +178,8 @@ public:
           m_msg(msg),
           m_location(location)
     {
-        String msg_str = error_message_strings.At(m_msg);
-        MakeMessage(msg_str.Data(), args...);
+        String msgStr = errorMessageStrings.At(m_msg);
+        MakeMessage(msgStr.Data(), args...);
     }
 
     CompilerError(const CompilerError& other);

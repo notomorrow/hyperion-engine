@@ -52,9 +52,9 @@ public:
         return m_tokens[pos];
     }
 
-    void Push(const Token& token, bool insert_at_position = false)
+    void Push(const Token& token, bool insertAtPosition = false)
     {
-        if (!insert_at_position || m_tokens.Size() <= m_position)
+        if (!insertAtPosition || m_tokens.Size() <= m_position)
         {
             m_tokens.PushBack(token);
         }

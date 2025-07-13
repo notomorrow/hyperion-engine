@@ -33,16 +33,16 @@ struct HypMemberDefinition
 {
     HypMemberType type;
     String name;
-    String friendly_name;
+    String friendlyName;
     Array<Pair<String, HypClassAttributeValue>> attributes;
-    RC<ASTType> cxx_type;
+    RC<ASTType> cxxType;
     String source;
 
     bool HasAttribute(UTF8StringView key) const
     {
-        auto it = attributes.FindIf([key_lower = String(key).ToLower()](const auto& item)
+        auto it = attributes.FindIf([keyLower = String(key).ToLower()](const auto& item)
             {
-                return item.first.ToLower() == key_lower;
+                return item.first.ToLower() == keyLower;
             });
 
         return it != attributes.End();
@@ -50,9 +50,9 @@ struct HypMemberDefinition
 
     const HypClassAttributeValue& GetAttribute(UTF8StringView key) const
     {
-        auto it = attributes.FindIf([key_lower = String(key).ToLower()](const auto& item)
+        auto it = attributes.FindIf([keyLower = String(key).ToLower()](const auto& item)
             {
-                return item.first.ToLower() == key_lower;
+                return item.first.ToLower() == keyLower;
             });
 
         return it != attributes.End()
@@ -77,18 +77,18 @@ struct HypClassDefinition
 {
     HypClassDefinitionType type;
     String name;
-    int static_index = -1;
-    uint32 num_descendants = 0;
+    int staticIndex = -1;
+    uint32 numDescendants = 0;
     Array<Pair<String, HypClassAttributeValue>> attributes;
-    Array<String> base_class_names;
+    Array<String> baseClassNames;
     Array<HypMemberDefinition> members;
     String source;
 
     HYP_FORCE_INLINE bool HasAttribute(UTF8StringView key) const
     {
-        auto it = attributes.FindIf([key_lower = String(key).ToLower()](const auto& item)
+        auto it = attributes.FindIf([keyLower = String(key).ToLower()](const auto& item)
             {
-                return item.first.ToLower() == key_lower;
+                return item.first.ToLower() == keyLower;
             });
 
         return it != attributes.End();
@@ -96,9 +96,9 @@ struct HypClassDefinition
 
     HYP_FORCE_INLINE const HypClassAttributeValue& GetAttribute(UTF8StringView key) const
     {
-        auto it = attributes.FindIf([key_lower = String(key).ToLower()](const auto& item)
+        auto it = attributes.FindIf([keyLower = String(key).ToLower()](const auto& item)
             {
-                return item.first.ToLower() == key_lower;
+                return item.first.ToLower() == keyLower;
             });
 
         return it != attributes.End()

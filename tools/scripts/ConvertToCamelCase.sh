@@ -31,7 +31,7 @@ if [ ${#files[@]} -eq 0 ]; then
             [[ $f == *"$p"* ]] && { skip=1; break; }
         done
         (( skip )) || files+=("$f")
-    done < <(find src -type f \( \
+    done < <(find buildtool -type f \( \
         -name '*.cpp' -o -name '*.hpp' -o -name '*.h' -o -name '*.inl' -o -name '*.natvis' \
     \) -print0)
 fi

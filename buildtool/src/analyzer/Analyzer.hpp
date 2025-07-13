@@ -39,62 +39,62 @@ public:
 
     HYP_FORCE_INLINE const FilePath& GetWorkingDirectory() const
     {
-        return m_working_directory;
+        return m_workingDirectory;
     }
 
-    HYP_FORCE_INLINE void SetWorkingDirectory(const FilePath& working_directory)
+    HYP_FORCE_INLINE void SetWorkingDirectory(const FilePath& workingDirectory)
     {
-        m_working_directory = working_directory;
+        m_workingDirectory = workingDirectory;
     }
 
     HYP_FORCE_INLINE const FilePath& GetSourceDirectory() const
     {
-        return m_source_directory;
+        return m_sourceDirectory;
     }
 
-    HYP_FORCE_INLINE void SetSourceDirectory(const FilePath& source_directory)
+    HYP_FORCE_INLINE void SetSourceDirectory(const FilePath& sourceDirectory)
     {
-        m_source_directory = source_directory;
+        m_sourceDirectory = sourceDirectory;
     }
 
     HYP_FORCE_INLINE const FilePath& GetCXXOutputDirectory() const
     {
-        return m_cxx_output_directory;
+        return m_cxxOutputDirectory;
     }
 
-    HYP_FORCE_INLINE void SetCXXOutputDirectory(const FilePath& cxx_output_directory)
+    HYP_FORCE_INLINE void SetCXXOutputDirectory(const FilePath& cxxOutputDirectory)
     {
-        m_cxx_output_directory = cxx_output_directory;
+        m_cxxOutputDirectory = cxxOutputDirectory;
     }
 
     HYP_FORCE_INLINE const FilePath& GetCSharpOutputDirectory() const
     {
-        return m_csharp_output_directory;
+        return m_csharpOutputDirectory;
     }
 
-    HYP_FORCE_INLINE void SetCSharpOutputDirectory(const FilePath& csharp_output_directory)
+    HYP_FORCE_INLINE void SetCSharpOutputDirectory(const FilePath& csharpOutputDirectory)
     {
-        m_csharp_output_directory = csharp_output_directory;
+        m_csharpOutputDirectory = csharpOutputDirectory;
     }
 
     HYP_FORCE_INLINE const HashSet<FilePath>& GetExcludeDirectories() const
     {
-        return m_exclude_directories;
+        return m_excludeDirectories;
     }
 
-    HYP_FORCE_INLINE void SetExcludeDirectories(const HashSet<FilePath>& exclude_directories)
+    HYP_FORCE_INLINE void SetExcludeDirectories(const HashSet<FilePath>& excludeDirectories)
     {
-        m_exclude_directories = exclude_directories;
+        m_excludeDirectories = excludeDirectories;
     }
 
     HYP_FORCE_INLINE const HashSet<FilePath>& GetExcludeFiles() const
     {
-        return m_exclude_files;
+        return m_excludeFiles;
     }
 
-    HYP_FORCE_INLINE void SetExcludeFiles(const HashSet<FilePath>& exclude_files)
+    HYP_FORCE_INLINE void SetExcludeFiles(const HashSet<FilePath>& excludeFiles)
     {
-        m_exclude_files = exclude_files;
+        m_excludeFiles = excludeFiles;
     }
 
     HYP_FORCE_INLINE const AnalyzerState& GetState() const
@@ -109,22 +109,22 @@ public:
 
     HYP_FORCE_INLINE const HashMap<String, String>& GetGlobalDefines() const
     {
-        return m_global_defines;
+        return m_globalDefines;
     }
 
-    HYP_FORCE_INLINE void SetGlobalDefines(HashMap<String, String>&& global_defines)
+    HYP_FORCE_INLINE void SetGlobalDefines(HashMap<String, String>&& globalDefines)
     {
-        m_global_defines = std::move(global_defines);
+        m_globalDefines = std::move(globalDefines);
     }
 
     HYP_FORCE_INLINE const HashSet<String>& GetIncludePaths() const
     {
-        return m_include_paths;
+        return m_includePaths;
     }
 
-    HYP_FORCE_INLINE void SetIncludePaths(HashSet<String>&& include_paths)
+    HYP_FORCE_INLINE void SetIncludePaths(HashSet<String>&& includePaths)
     {
-        m_include_paths = std::move(include_paths);
+        m_includePaths = std::move(includePaths);
     }
 
     HYP_FORCE_INLINE void AddError(const AnalyzerError& error)
@@ -134,26 +134,26 @@ public:
         m_state.errors.PushBack(error);
     }
 
-    const HypClassDefinition* FindHypClassDefinition(UTF8StringView class_name) const;
+    const HypClassDefinition* FindHypClassDefinition(UTF8StringView className) const;
 
     Module* AddModule(const FilePath& path);
 
     TResult<void, AnalyzerError> ProcessModule(Module& mod);
 
 private:
-    FilePath m_working_directory;
-    FilePath m_source_directory;
-    FilePath m_cxx_output_directory;
-    FilePath m_csharp_output_directory;
+    FilePath m_workingDirectory;
+    FilePath m_sourceDirectory;
+    FilePath m_cxxOutputDirectory;
+    FilePath m_csharpOutputDirectory;
 
-    HashSet<FilePath> m_exclude_directories;
-    HashSet<FilePath> m_exclude_files;
+    HashSet<FilePath> m_excludeDirectories;
+    HashSet<FilePath> m_excludeFiles;
 
     AnalyzerState m_state;
     Array<UniquePtr<Module>> m_modules;
     mutable Mutex m_mutex;
-    HashMap<String, String> m_global_defines;
-    HashSet<String> m_include_paths;
+    HashMap<String, String> m_globalDefines;
+    HashSet<String> m_includePaths;
 };
 
 } // namespace buildtool

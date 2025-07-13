@@ -22,13 +22,13 @@ namespace buildtool {
 
 HYP_DECLARE_LOG_CHANNEL(BuildTool);
 
-static const HashMap<HypClassDefinitionType, String> g_start_macro_names = {
+static const HashMap<HypClassDefinitionType, String> g_startMacroNames = {
     { HypClassDefinitionType::CLASS, "HYP_BEGIN_CLASS" },
     { HypClassDefinitionType::STRUCT, "HYP_BEGIN_STRUCT" },
     { HypClassDefinitionType::ENUM, "HYP_BEGIN_ENUM" }
 };
 
-static const HashMap<HypClassDefinitionType, String> g_end_macro_names = {
+static const HashMap<HypClassDefinitionType, String> g_endMacroNames = {
     { HypClassDefinitionType::CLASS, "HYP_END_CLASS" },
     { HypClassDefinitionType::STRUCT, "HYP_END_STRUCT" },
     { HypClassDefinitionType::ENUM, "HYP_END_ENUM" }
@@ -36,42 +36,42 @@ static const HashMap<HypClassDefinitionType, String> g_end_macro_names = {
 
 FilePath CXXModuleGenerator::GetOutputFilePath(const Analyzer& analyzer, const Module& mod) const
 {
-    FilePath relative_path = FilePath(FileSystem::RelativePath(mod.GetPath().Data(), analyzer.GetSourceDirectory().Data()).c_str());
+    FilePath relativePath = FilePath(FileSystem::RelativePath(mod.GetPath().Data(), analyzer.GetSourceDirectory().Data()).c_str());
 
-    return analyzer.GetCXXOutputDirectory() / relative_path.BasePath() / StringUtil::StripExtension(relative_path.Basename()) + ".generated.cpp";
+    return analyzer.GetCXXOutputDirectory() / relativePath.BasePath() / StringUtil::StripExtension(relativePath.Basename()) + ".generated.cpp";
 }
 
 Result CXXModuleGenerator::Generate_Internal(const Analyzer& analyzer, const Module& mod, ByteWriter& writer) const
 {
-    FilePath relative_path = FilePath(FileSystem::RelativePath(mod.GetPath().Data(), analyzer.GetSourceDirectory().Data()).c_str());
+    FilePath relativePath = FilePath(FileSystem::RelativePath(mod.GetPath().Data(), analyzer.GetSourceDirectory().Data()).c_str());
 
-    writer.WriteString(HYP_FORMAT("/* Generated from: {} */\n\n", relative_path));
+    writer.WriteString(HYP_FORMAT("/* Generated from: {} */\n\n", relativePath));
 
     writer.WriteString("#include <core/object/HypClassUtils.hpp>\n");
-    writer.WriteString(HYP_FORMAT("#include <{}>\n\n", relative_path));
+    writer.WriteString(HYP_FORMAT("#include <{}>\n\n", relativePath));
 
     for (const Pair<String, HypClassDefinition>& pair : mod.GetHypClasses())
     {
-        const HypClassDefinition& hyp_class = pair.second;
+        const HypClassDefinition& hypClass = pair.second;
 
-        const bool is_component = hyp_class.HasAttribute("component");
-        const bool is_entity = mod.HasBaseClass(hyp_class, "Entity");
-        const bool has_scriptable_methods = hyp_class.HasScriptableMethods();
+        const bool isComponent = hypClass.HasAttribute("component");
+        const bool isEntity = mod.HasBaseClass(hypClass, "Entity");
+        const bool hasScriptableMethods = hypClass.HasScriptableMethods();
 
-        const HypClassAttributeValue& struct_size_attribute_value = hyp_class.GetAttribute("size");
-        const HypClassAttributeValue& post_load_attribute_value = hyp_class.GetAttribute("postload");
+        const HypClassAttributeValue& structSizeAttributeValue = hypClass.GetAttribute("size");
+        const HypClassAttributeValue& postLoadAttributeValue = hypClass.GetAttribute("postload");
 
-        if (is_component || is_entity)
+        if (isComponent || isEntity)
         {
             writer.WriteString("#include <scene/ecs/ComponentInterface.hpp>\n");
         }
 
-        if (is_entity)
+        if (isEntity)
         {
             writer.WriteString("#include <scene/ecs/EntityTag.hpp>\n");
         }
 
-        if (has_scriptable_methods)
+        if (hasScriptableMethods)
         {
             writer.WriteString("#include <core/object/managed/ManagedObjectResource.hpp>\n");
             writer.WriteString("\n");
@@ -82,147 +82,147 @@ Result CXXModuleGenerator::Generate_Internal(const Analyzer& analyzer, const Mod
 
         writer.WriteString("\nnamespace hyperion {\n\n");
 
-        writer.WriteString(HYP_FORMAT("#pragma region {} Reflection Data\n\n", hyp_class.name));
+        writer.WriteString(HYP_FORMAT("#pragma region {} Reflection Data\n\n", hypClass.name));
 
-        Array<String> class_attributes;
+        Array<String> classAttributes;
 
-        for (const Pair<String, HypClassAttributeValue>& attribute_pair : hyp_class.attributes)
+        for (const Pair<String, HypClassAttributeValue>& attributePair : hypClass.attributes)
         {
-            const String& name = attribute_pair.first;
-            const HypClassAttributeValue& value = attribute_pair.second;
+            const String& name = attributePair.first;
+            const HypClassAttributeValue& value = attributePair.second;
 
-            class_attributes.PushBack(HYP_FORMAT("HypClassAttribute(\"{}\", {})", name.ToLower(), value.ToString()));
+            classAttributes.PushBack(HYP_FORMAT("HypClassAttribute(\"{}\", {})", name.ToLower(), value.ToString()));
         }
 
-        writer.WriteString(HYP_FORMAT("{}({}, {}, {}", g_start_macro_names.At(hyp_class.type), hyp_class.name, hyp_class.static_index, hyp_class.num_descendants));
+        writer.WriteString(HYP_FORMAT("{}({}, {}, {}", g_startMacroNames.At(hypClass.type), hypClass.name, hypClass.staticIndex, hypClass.numDescendants));
 
-        HashSet<const HypClassDefinition*> base_class_definitions;
+        HashSet<const HypClassDefinition*> baseClassDefinitions;
 
-        if (hyp_class.base_class_names.Any())
+        if (hypClass.baseClassNames.Any())
         {
-            for (const String& base_class_name : hyp_class.base_class_names)
+            for (const String& baseClassName : hypClass.baseClassNames)
             {
-                const HypClassDefinition* base_class_definition = analyzer.FindHypClassDefinition(base_class_name);
+                const HypClassDefinition* baseClassDefinition = analyzer.FindHypClassDefinition(baseClassName);
 
-                if (base_class_definition)
+                if (baseClassDefinition)
                 {
-                    base_class_definitions.Insert(base_class_definition);
+                    baseClassDefinitions.Insert(baseClassDefinition);
                 }
             }
         }
 
-        if (base_class_definitions.Any())
+        if (baseClassDefinitions.Any())
         {
-            if (base_class_definitions.Size() > 1)
+            if (baseClassDefinitions.Size() > 1)
             {
                 return HYP_MAKE_ERROR(Error, "Multiple base classes not supported");
             }
 
-            const HypClassDefinition* base_class_definition = *base_class_definitions.Begin();
+            const HypClassDefinition* baseClassDefinition = *baseClassDefinitions.Begin();
 
-            writer.WriteString(HYP_FORMAT(", NAME(\"{}\")", base_class_definition->name));
+            writer.WriteString(HYP_FORMAT(", NAME(\"{}\")", baseClassDefinition->name));
         }
         else
         {
             writer.WriteString(", {}");
         }
 
-        if (class_attributes.Any())
+        if (classAttributes.Any())
         {
-            writer.WriteString(", " + String::Join(class_attributes, ','));
+            writer.WriteString(", " + String::Join(classAttributes, ','));
         }
 
         writer.WriteString(")\n");
 
-        for (SizeType i = 0; i < hyp_class.members.Size(); ++i)
+        for (SizeType i = 0; i < hypClass.members.Size(); ++i)
         {
-            const HypMemberDefinition& member = hyp_class.members[i];
+            const HypMemberDefinition& member = hypClass.members[i];
 
             // if (member.type == HypMemberType::TYPE_METHOD && member.HasAttribute("Scriptable")) {
             //     continue;
             // }
 
-            String attributes_string;
+            String attributesString;
 
             if (member.attributes.Any())
             {
-                attributes_string = "Span<const HypClassAttribute> { {";
+                attributesString = "Span<const HypClassAttribute> { {";
 
                 for (SizeType i = 0; i < member.attributes.Size(); i++)
                 {
                     const String& name = member.attributes[i].first;
                     const HypClassAttributeValue& value = member.attributes[i].second;
 
-                    attributes_string += HYP_FORMAT("HypClassAttribute(\"{}\", {})", name.ToLower(), value.ToString());
+                    attributesString += HYP_FORMAT("HypClassAttribute(\"{}\", {})", name.ToLower(), value.ToString());
 
                     if (i != member.attributes.Size() - 1)
                     {
-                        attributes_string += ", ";
+                        attributesString += ", ";
                     }
                 }
 
-                attributes_string += " } }";
+                attributesString += " } }";
             }
 
             if (member.type == HypMemberType::TYPE_FIELD)
             {
-                if (member.cxx_type->is_static)
+                if (member.cxxType->isStatic)
                 {
-                    if (!member.cxx_type->is_const && !member.cxx_type->is_constexpr)
+                    if (!member.cxxType->isConst && !member.cxxType->isConstexpr)
                     {
                         return HYP_MAKE_ERROR(Error, "Static fields must be const or constexpr");
                     }
 
-                    writer.WriteString(HYP_FORMAT("    HypConstant(NAME(HYP_STR({})), &{}::{}", member.friendly_name, hyp_class.name, member.name));
+                    writer.WriteString(HYP_FORMAT("    HypConstant(NAME(HYP_STR({})), &{}::{}", member.friendlyName, hypClass.name, member.name));
                 }
                 else
                 {
-                    writer.WriteString(HYP_FORMAT("    HypField(NAME(HYP_STR({})), &{}::{}, offsetof({}, {})", member.friendly_name, hyp_class.name, member.name, hyp_class.name, member.name));
+                    writer.WriteString(HYP_FORMAT("    HypField(NAME(HYP_STR({})), &{}::{}, offsetof({}, {})", member.friendlyName, hypClass.name, member.name, hypClass.name, member.name));
                 }
 
-                if (attributes_string.Any())
+                if (attributesString.Any())
                 {
-                    writer.WriteString(", " + attributes_string);
+                    writer.WriteString(", " + attributesString);
                 }
 
                 writer.WriteString(")");
             }
             else if (member.type == HypMemberType::TYPE_METHOD)
             {
-                writer.WriteString(HYP_FORMAT("    HypMethod(NAME(HYP_STR({})), &{}::{}", member.name, hyp_class.name, member.name));
+                writer.WriteString(HYP_FORMAT("    HypMethod(NAME(HYP_STR({})), &{}::{}", member.name, hypClass.name, member.name));
 
-                if (attributes_string.Any())
+                if (attributesString.Any())
                 {
-                    writer.WriteString(", " + attributes_string);
+                    writer.WriteString(", " + attributesString);
                 }
 
                 writer.WriteString(")");
             }
             else if (member.type == HypMemberType::TYPE_PROPERTY)
             {
-                String property_args_string;
+                String propertyArgsString;
 
                 if (member.attributes.Any())
                 {
                     for (SizeType i = 0; i < member.attributes.Size(); i++)
                     {
-                        property_args_string += member.attributes[i].first;
+                        propertyArgsString += member.attributes[i].first;
 
                         if (i != member.attributes.Size() - 1)
                         {
-                            property_args_string += ", ";
+                            propertyArgsString += ", ";
                         }
                     }
                 }
 
-                writer.WriteString(HYP_FORMAT("    HypProperty(NAME(HYP_STR({})){})", member.name, property_args_string.Any() ? ", " + property_args_string : ""));
+                writer.WriteString(HYP_FORMAT("    HypProperty(NAME(HYP_STR({})){})", member.name, propertyArgsString.Any() ? ", " + propertyArgsString : ""));
             }
             else if (member.type == HypMemberType::TYPE_CONSTANT)
             {
-                writer.WriteString(HYP_FORMAT("    HypConstant(NAME(HYP_STR({})), {}::{})", member.friendly_name, hyp_class.name, member.name));
+                writer.WriteString(HYP_FORMAT("    HypConstant(NAME(HYP_STR({})), {}::{})", member.friendlyName, hypClass.name, member.name));
             }
 
-            if (i != hyp_class.members.Size() - 1)
+            if (i != hypClass.members.Size() - 1)
             {
                 writer.WriteString(",");
             }
@@ -230,55 +230,55 @@ Result CXXModuleGenerator::Generate_Internal(const Analyzer& analyzer, const Mod
             writer.WriteString("\n");
         }
 
-        writer.WriteString(HYP_FORMAT("{}\n\n", g_end_macro_names.At(hyp_class.type)));
+        writer.WriteString(HYP_FORMAT("{}\n\n", g_endMacroNames.At(hypClass.type)));
 
-        writer.WriteString(HYP_FORMAT("#pragma endregion {} Reflection Data\n\n", hyp_class.name));
+        writer.WriteString(HYP_FORMAT("#pragma endregion {} Reflection Data\n\n", hypClass.name));
 
-        if (has_scriptable_methods)
+        if (hasScriptableMethods)
         {
-            writer.WriteString(HYP_FORMAT("#pragma region {} Scriptable Methods\n\n", hyp_class.name));
+            writer.WriteString(HYP_FORMAT("#pragma region {} Scriptable Methods\n\n", hypClass.name));
 
-            for (const HypMemberDefinition& member : hyp_class.members)
+            for (const HypMemberDefinition& member : hypClass.members)
             {
                 if (member.type == HypMemberType::TYPE_METHOD && member.HasAttribute("Scriptable"))
                 {
-                    if (!member.cxx_type)
+                    if (!member.cxxType)
                     {
                         return HYP_MAKE_ERROR(Error, "Missing C++ type for member; Parsing failed");
                     }
 
-                    if (!member.cxx_type->is_function || member.cxx_type->is_static)
+                    if (!member.cxxType->isFunction || member.cxxType->isStatic)
                     {
                         return HYP_MAKE_ERROR(Error, "Scriptable attribute can only be applied to instance methods");
                     }
 
-                    const ASTFunctionType* function_type = dynamic_cast<const ASTFunctionType*>(member.cxx_type.Get());
+                    const ASTFunctionType* functionType = dynamic_cast<const ASTFunctionType*>(member.cxxType.Get());
 
-                    if (!function_type)
+                    if (!functionType)
                     {
                         return HYP_MAKE_ERROR(Error, "Internal error: failed cast to ASTFunctionType");
                     }
 
-                    String method_args_string_sig;
-                    String method_args_string_call;
+                    String methodArgsStringSig;
+                    String methodArgsStringCall;
 
-                    for (SizeType i = 0; i < function_type->parameters.Size(); ++i)
+                    for (SizeType i = 0; i < functionType->parameters.Size(); ++i)
                     {
-                        method_args_string_sig += function_type->parameters[i]->type->FormatDecl(function_type->parameters[i]->name);
-                        method_args_string_call += function_type->parameters[i]->name;
+                        methodArgsStringSig += functionType->parameters[i]->type->FormatDecl(functionType->parameters[i]->name);
+                        methodArgsStringCall += functionType->parameters[i]->name;
 
-                        if (i != function_type->parameters.Size() - 1)
+                        if (i != functionType->parameters.Size() - 1)
                         {
-                            method_args_string_sig += ", ";
-                            method_args_string_call += ", ";
+                            methodArgsStringSig += ", ";
+                            methodArgsStringCall += ", ";
                         }
                     }
 
-                    String return_type_string = function_type->return_type->Format();
+                    String returnTypeString = functionType->returnType->Format();
 
-                    if (function_type->return_type->IsVoid())
+                    if (functionType->returnType->IsVoid())
                     {
-                        writer.WriteString(HYP_FORMAT("void {}::{}({}){}", hyp_class.name, member.name, method_args_string_sig, function_type->is_const_method ? " const" : ""));
+                        writer.WriteString(HYP_FORMAT("void {}::{}({}){}", hypClass.name, member.name, methodArgsStringSig, functionType->isConstMethod ? " const" : ""));
                         writer.WriteString("\n");
                         writer.WriteString("{\n");
                         writer.WriteString("    if (ManagedObjectResource *managed_object_resource = GetManagedObjectResource()) {\n");
@@ -287,18 +287,18 @@ Result CXXModuleGenerator::Generate_Internal(const Analyzer& analyzer, const Mod
                         writer.WriteString("            TResourceHandle<ManagedObjectResource> resource_handle(*managed_object_resource);\n");
                         writer.WriteString("            dotnet::Object *managed_object = managed_object_resource->GetManagedObject();\n");
                         writer.WriteString("\n");
-                        writer.WriteString(HYP_FORMAT("            managed_object->InvokeMethod<void>(method_ptr{});\n", method_args_string_call.Any() ? ", " + method_args_string_call : ""));
+                        writer.WriteString(HYP_FORMAT("            managed_object->InvokeMethod<void>(method_ptr{});\n", methodArgsStringCall.Any() ? ", " + methodArgsStringCall : ""));
                         writer.WriteString("            return;\n");
                         writer.WriteString("        }\n");
                         // writer.WriteString(HYP_FORMAT("        HYP_FAIL(\"No method '{}' on managed object of type %s\", managed_object->GetClass()->GetName().Data());\n", member.name));
                         writer.WriteString("    }\n");
                         writer.WriteString("\n");
-                        writer.WriteString(HYP_FORMAT("    {}_Impl({});\n", member.name, method_args_string_call));
+                        writer.WriteString(HYP_FORMAT("    {}_Impl({});\n", member.name, methodArgsStringCall));
                         writer.WriteString("}\n");
                     }
                     else
                     {
-                        writer.WriteString(HYP_FORMAT("{} {}::{}({}){}", return_type_string, hyp_class.name, member.name, method_args_string_sig, function_type->is_const_method ? " const" : ""));
+                        writer.WriteString(HYP_FORMAT("{} {}::{}({}){}", returnTypeString, hypClass.name, member.name, methodArgsStringSig, functionType->isConstMethod ? " const" : ""));
                         writer.WriteString("\n");
                         writer.WriteString("{\n");
                         writer.WriteString("    if (ManagedObjectResource *managed_object_resource = GetManagedObjectResource()) {\n");
@@ -307,38 +307,38 @@ Result CXXModuleGenerator::Generate_Internal(const Analyzer& analyzer, const Mod
                         writer.WriteString("            TResourceHandle<ManagedObjectResource> resource_handle(*managed_object_resource);\n");
                         writer.WriteString("            dotnet::Object *managed_object = managed_object_resource->GetManagedObject();\n");
                         writer.WriteString("\n");
-                        writer.WriteString(HYP_FORMAT("            return managed_object->InvokeMethod<{}>(method_ptr{});\n", return_type_string, method_args_string_call.Any() ? ", " + method_args_string_call : ""));
+                        writer.WriteString(HYP_FORMAT("            return managed_object->InvokeMethod<{}>(method_ptr{});\n", returnTypeString, methodArgsStringCall.Any() ? ", " + methodArgsStringCall : ""));
                         writer.WriteString("        }\n");
                         // writer.WriteString(HYP_FORMAT("        HYP_FAIL(\"No method '{}' on managed object of type %s\", managed_object->GetClass()->GetName().Data());\n", member.name));
                         writer.WriteString("    }\n");
                         writer.WriteString("\n");
-                        writer.WriteString(HYP_FORMAT("    return {}_Impl({});\n", member.name, method_args_string_call));
+                        writer.WriteString(HYP_FORMAT("    return {}_Impl({});\n", member.name, methodArgsStringCall));
                         writer.WriteString("}\n");
                     }
                 }
             }
 
-            writer.WriteString(HYP_FORMAT("#pragma endregion {} Scriptable Methods\n", hyp_class.name));
+            writer.WriteString(HYP_FORMAT("#pragma endregion {} Scriptable Methods\n", hypClass.name));
         }
 
-        if (is_component)
+        if (isComponent)
         {
-            writer.WriteString(HYP_FORMAT("HYP_REGISTER_COMPONENT({});\n", hyp_class.name));
+            writer.WriteString(HYP_FORMAT("HYP_REGISTER_COMPONENT({});\n", hypClass.name));
         }
 
-        if (is_entity)
+        if (isEntity)
         {
-            writer.WriteString(HYP_FORMAT("HYP_REGISTER_ENTITY_TYPE({});\n", hyp_class.name));
+            writer.WriteString(HYP_FORMAT("HYP_REGISTER_ENTITY_TYPE({});\n", hypClass.name));
         }
 
-        if (struct_size_attribute_value.IsValid())
+        if (structSizeAttributeValue.IsValid())
         {
-            writer.WriteString(HYP_FORMAT("static_assert(sizeof({}) == {}, \"Expected sizeof({}) to be {} bytes\");\n", hyp_class.name, struct_size_attribute_value.ToString(), hyp_class.name, struct_size_attribute_value.ToString()));
+            writer.WriteString(HYP_FORMAT("static_assert(sizeof({}) == {}, \"Expected sizeof({}) to be {} bytes\");\n", hypClass.name, structSizeAttributeValue.ToString(), hypClass.name, structSizeAttributeValue.ToString()));
         }
 
-        if (post_load_attribute_value.IsValid())
+        if (postLoadAttributeValue.IsValid())
         {
-            writer.WriteString(HYP_FORMAT("static const HypClassCallbackRegistration<HypClassCallbackType::ON_POST_LOAD> g_post_load_{}(TypeId::ForType<{}>(), ValueWrapper<{}>());\n", hyp_class.name, hyp_class.name, post_load_attribute_value.GetString()));
+            writer.WriteString(HYP_FORMAT("static const HypClassCallbackRegistration<HypClassCallbackType::ON_POST_LOAD> g_post_load_{}(TypeId::ForType<{}>(), ValueWrapper<{}>());\n", hypClass.name, hypClass.name, postLoadAttributeValue.GetString()));
         }
 
         writer.WriteString("} // namespace hyperion\n\n");

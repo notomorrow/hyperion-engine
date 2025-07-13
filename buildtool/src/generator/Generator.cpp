@@ -16,35 +16,35 @@ HYP_DECLARE_LOG_CHANNEL(BuildTool);
 
 Result GeneratorBase::Generate(const Analyzer& analyzer, const Module& mod) const
 {
-    const FilePath output_file_path = GetOutputFilePath(analyzer, mod);
+    const FilePath outputFilePath = GetOutputFilePath(analyzer, mod);
 
-    if (output_file_path.Empty())
+    if (outputFilePath.Empty())
     {
         return HYP_MAKE_ERROR(Error, "Output file path is empty");
     }
 
-    const FilePath base_path = output_file_path.BasePath();
+    const FilePath basePath = outputFilePath.BasePath();
 
-    if (!base_path.IsDirectory())
+    if (!basePath.IsDirectory())
     {
-        base_path.MkDir();
+        basePath.MkDir();
     }
 
-    if (!base_path.IsDirectory())
+    if (!basePath.IsDirectory())
     {
-        HYP_LOG(BuildTool, Error, "Failed to create output directory: {}", base_path);
+        HYP_LOG(BuildTool, Error, "Failed to create output directory: {}", basePath);
 
         return HYP_MAKE_ERROR(Error, "Failed to create output directory");
     }
 
-    MemoryByteWriter memory_writer;
+    MemoryByteWriter memoryWriter;
 
-    Result res = Generate_Internal(analyzer, mod, memory_writer);
+    Result res = Generate_Internal(analyzer, mod, memoryWriter);
 
     if (!res.HasError())
     {
-        FileByteWriter file_writer { output_file_path };
-        file_writer.Write(memory_writer.GetBuffer());
+        FileByteWriter fileWriter { outputFilePath };
+        fileWriter.Write(memoryWriter.GetBuffer());
     }
 
     return res;

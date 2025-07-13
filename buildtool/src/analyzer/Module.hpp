@@ -32,23 +32,23 @@ public:
 
     HYP_FORCE_INLINE HashMap<String, HypClassDefinition>& GetHypClasses()
     {
-        return m_hyp_classes;
+        return m_hypClasses;
     }
 
     HYP_FORCE_INLINE const HashMap<String, HypClassDefinition>& GetHypClasses() const
     {
-        return m_hyp_classes;
+        return m_hypClasses;
     }
 
-    Result AddHypClassDefinition(HypClassDefinition&& hyp_class_definition);
+    Result AddHypClassDefinition(HypClassDefinition&& hypClassDefinition);
 
-    const HypClassDefinition* FindHypClassDefinition(UTF8StringView class_name) const;
+    const HypClassDefinition* FindHypClassDefinition(UTF8StringView className) const;
 
-    bool HasBaseClass(const HypClassDefinition& hyp_class_definition, UTF8StringView base_class_name) const;
+    bool HasBaseClass(const HypClassDefinition& hypClassDefinition, UTF8StringView baseClassName) const;
 
 private:
     FilePath m_path;
-    HashMap<String, HypClassDefinition> m_hyp_classes;
+    HashMap<String, HypClassDefinition> m_hypClasses;
     mutable Mutex m_mutex;
 };
 

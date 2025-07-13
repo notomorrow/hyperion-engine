@@ -37,8 +37,8 @@ Array<String> ExtractCXXBaseClasses(const String& line)
 
     if (std::regex_search(str, match, pattern))
     {
-        std::string base_classes = match[1].str();
-        std::stringstream ss(base_classes);
+        std::string baseClasses = match[1].str();
+        std::stringstream ss(baseClasses);
         std::string part;
 
         while (std::getline(ss, part, ','))

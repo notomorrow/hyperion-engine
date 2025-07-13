@@ -20,13 +20,13 @@ HYP_DEFINE_LOG_SUBCHANNEL(Parser, BuildTool);
 
 const ASTType* ExtractInnerType(const ASTType* type)
 {
-    if (type->is_pointer)
+    if (type->isPointer)
     {
-        return ExtractInnerType(type->ptr_to.Get());
+        return ExtractInnerType(type->ptrTo.Get());
     }
-    else if (type->is_lvalue_reference || type->is_rvalue_reference)
+    else if (type->isLvalueReference || type->isRvalueReference)
     {
-        return ExtractInnerType(type->ref_to.Get());
+        return ExtractInnerType(type->refTo.Get());
     }
     else
     {
@@ -36,34 +36,34 @@ const ASTType* ExtractInnerType(const ASTType* type)
 
 TResult<CSharpTypeMapping> MapToCSharpType(const Analyzer& analyzer, const ASTType* type)
 {
-    if (type->is_pointer && type->ptr_to->IsVoid())
+    if (type->isPointer && type->ptrTo->IsVoid())
     {
         return CSharpTypeMapping { "IntPtr", "ReadIntPtr" };
     }
 
-    if (type->is_array)
+    if (type->isArray)
     {
-        if (!type->array_of)
+        if (!type->arrayOf)
         {
             return HYP_MAKE_ERROR(Error, "Array type has no inner type");
         }
 
-        if (auto res = MapToCSharpType(analyzer, type->array_of.Get()); res.HasError())
+        if (auto res = MapToCSharpType(analyzer, type->arrayOf.Get()); res.HasError())
         {
             return res.GetError();
         }
         else
         {
-            return CSharpTypeMapping { res.GetValue().type_name + "[]" };
+            return CSharpTypeMapping { res.GetValue().typeName + "[]" };
         }
     }
 
     type = ExtractInnerType(type);
     Assert(type != nullptr);
 
-    if (type->type_name.HasValue())
+    if (type->typeName.HasValue())
     {
-        if (type->type_name->parts.Empty())
+        if (type->typeName->parts.Empty())
         {
             return HYP_MAKE_ERROR(Error, "Type name has no parts");
         }
@@ -99,68 +99,68 @@ TResult<CSharpTypeMapping> MapToCSharpType(const Analyzer& analyzer, const ASTTy
             { "ConstAnyRef", { "object" } }
         };
 
-        const String type_name_string = type->type_name->ToString(/* include_namespace */ false);
+        const String typeNameString = type->typeName->ToString(/* includeNamespace */ false);
 
-        auto it = mapping.Find(type_name_string);
+        auto it = mapping.Find(typeNameString);
 
         if (it != mapping.End())
         {
             return it->second;
         }
 
-        if (type->is_template)
+        if (type->isTemplate)
         {
-            const String template_name = type->type_name->parts.Back();
+            const String templateName = type->typeName->parts.Back();
 
-            if (template_name == "Array")
+            if (templateName == "Array")
             {
                 return CSharpTypeMapping { "Array" };
             }
 
-            // if (template_name == "ObjId")
+            // if (templateName == "ObjId")
             // {
             //     return
             // }
 
-            if (template_name == "RC"
-                || template_name == "Handle"
-                || template_name == "EnumFlags")
+            if (templateName == "RC"
+                || templateName == "Handle"
+                || templateName == "EnumFlags")
             {
-                if (type->template_arguments.Empty())
+                if (type->templateArguments.Empty())
                 {
                     return HYP_MAKE_ERROR(Error, "Type missing template argument");
                 }
 
-                if (!type->template_arguments[0]->type)
+                if (!type->templateArguments[0]->type)
                 {
                     return HYP_MAKE_ERROR(Error, "Type template argument is not a type");
                 }
 
-                return MapToCSharpType(analyzer, type->template_arguments[0]->type.Get());
+                return MapToCSharpType(analyzer, type->templateArguments[0]->type.Get());
             }
 
-            HYP_LOG(Parser, Error, "Template type is unable to be mapped to a C# type: {}  (type name string = {})", type->Format(), type_name_string);
+            HYP_LOG(Parser, Error, "Template type is unable to be mapped to a C# type: {}  (type name string = {})", type->Format(), typeNameString);
 
             return HYP_MAKE_ERROR(Error, "Template type is unable to be mapped to a C# type");
         }
 
         // Find a HypClass with the same name. HypObjects (classes deriving HypObject.cs) and structs with HypClassBinding
         // attribute can use custom overloads to try and get a specific method for reading the value.
-        const HypClassDefinition* definition = analyzer.FindHypClassDefinition(type_name_string);
+        const HypClassDefinition* definition = analyzer.FindHypClassDefinition(typeNameString);
 
         if (definition)
         {
             if (definition->type == HypClassDefinitionType::CLASS)
             {
-                return CSharpTypeMapping { type_name_string, HYP_FORMAT("ReadObject<{}>", definition->name) };
+                return CSharpTypeMapping { typeNameString, HYP_FORMAT("ReadObject<{}>", definition->name) };
             }
             else if (definition->type == HypClassDefinitionType::STRUCT)
             {
-                return CSharpTypeMapping { type_name_string, HYP_FORMAT("ReadStruct<{}>", definition->name) };
+                return CSharpTypeMapping { typeNameString, HYP_FORMAT("ReadStruct<{}>", definition->name) };
             }
         }
 
-        return CSharpTypeMapping { type_name_string };
+        return CSharpTypeMapping { typeNameString };
     }
 
     HYP_LOG(Parser, Error, "Type is unable to be mapped to a C# type: {}", type->Format());
@@ -172,14 +172,14 @@ TResult<CSharpTypeMapping> MapToCSharpType(const Analyzer& analyzer, const ASTTy
 
 #pragma region QualifiedName
 
-String QualifiedName::ToString(bool include_namespace) const
+String QualifiedName::ToString(bool includeNamespace) const
 {
     if (parts.Empty())
     {
         return "";
     }
 
-    if (include_namespace)
+    if (includeNamespace)
     {
         String result = parts[0];
 
@@ -205,12 +205,12 @@ void ASTUnaryExpr::ToJSON(json::JSONValue& out) const
     json::JSONObject object;
     object["node_type"] = "ASTUnaryExpr";
 
-    json::JSONValue expr_json;
-    expr->ToJSON(expr_json);
-    object["expr"] = std::move(expr_json);
+    json::JSONValue exprJson;
+    expr->ToJSON(exprJson);
+    object["expr"] = std::move(exprJson);
 
     object["op"] = op->LookupStringValue();
-    object["is_prefix"] = is_prefix;
+    object["is_prefix"] = isPrefix;
 
     out = std::move(object);
 }
@@ -220,13 +220,13 @@ void ASTBinExpr::ToJSON(json::JSONValue& out) const
     json::JSONObject object;
     object["node_type"] = "ASTBinExpr";
 
-    json::JSONValue left_json;
-    left->ToJSON(left_json);
-    object["left"] = std::move(left_json);
+    json::JSONValue leftJson;
+    left->ToJSON(leftJson);
+    object["left"] = std::move(leftJson);
 
-    json::JSONValue right_json;
-    right->ToJSON(right_json);
-    object["right"] = std::move(right_json);
+    json::JSONValue rightJson;
+    right->ToJSON(rightJson);
+    object["right"] = std::move(rightJson);
 
     object["op"] = op->LookupStringValue();
 
@@ -238,17 +238,17 @@ void ASTTernaryExpr::ToJSON(json::JSONValue& out) const
     json::JSONObject object;
     object["node_type"] = "ASTTernaryExpr";
 
-    json::JSONValue true_expr_json;
-    true_expr->ToJSON(true_expr_json);
-    object["true_expr"] = std::move(true_expr_json);
+    json::JSONValue trueExprJson;
+    trueExpr->ToJSON(trueExprJson);
+    object["true_expr"] = std::move(trueExprJson);
 
-    json::JSONValue false_expr_json;
-    false_expr->ToJSON(false_expr_json);
-    object["false_expr"] = std::move(false_expr_json);
+    json::JSONValue falseExprJson;
+    falseExpr->ToJSON(falseExprJson);
+    object["false_expr"] = std::move(falseExprJson);
 
-    json::JSONValue conditional_json;
-    conditional->ToJSON(conditional_json);
-    object["conditional"] = std::move(conditional_json);
+    json::JSONValue conditionalJson;
+    conditional->ToJSON(conditionalJson);
+    object["conditional"] = std::move(conditionalJson);
 
     out = std::move(object);
 }
@@ -294,19 +294,19 @@ void ASTIdentifier::ToJSON(json::JSONValue& out) const
     json::JSONObject object;
     object["node_type"] = "ASTIdentifier";
 
-    json::JSONObject type_name_json;
-    type_name_json["is_global"] = name.is_global;
+    json::JSONObject typeNameJson;
+    typeNameJson["is_global"] = name.isGlobal;
 
-    json::JSONArray type_name_parts_array;
+    json::JSONArray typeNamePartsArray;
 
     for (const String& part : name.parts)
     {
-        type_name_parts_array.PushBack(json::JSONString(part));
+        typeNamePartsArray.PushBack(json::JSONString(part));
     }
 
-    type_name_json["parts"] = std::move(type_name_parts_array);
+    typeNameJson["parts"] = std::move(typeNamePartsArray);
 
-    object["name"] = std::move(type_name_json);
+    object["name"] = std::move(typeNameJson);
 
     out = std::move(object);
 }
@@ -316,16 +316,16 @@ void ASTInitializerExpr::ToJSON(json::JSONValue& out) const
     json::JSONObject object;
     object["node_type"] = "ASTInitializerExpr";
 
-    json::JSONArray values_array;
+    json::JSONArray valuesArray;
 
     for (const RC<ASTExpr>& value : values)
     {
-        json::JSONValue value_json;
-        value->ToJSON(value_json);
-        values_array.PushBack(std::move(value_json));
+        json::JSONValue valueJson;
+        value->ToJSON(valueJson);
+        valuesArray.PushBack(std::move(valueJson));
     }
 
-    object["values"] = std::move(values_array);
+    object["values"] = std::move(valuesArray);
 
     out = std::move(object);
 }
@@ -337,80 +337,80 @@ void ASTTemplateArgument::ToJSON(json::JSONValue& out) const
 
     if (type)
     {
-        json::JSONValue type_json;
-        type->ToJSON(type_json);
-        object["type"] = std::move(type_json);
+        json::JSONValue typeJson;
+        type->ToJSON(typeJson);
+        object["type"] = std::move(typeJson);
     }
     else if (expr)
     {
-        json::JSONValue expr_json;
-        expr->ToJSON(expr_json);
-        object["expr"] = std::move(expr_json);
+        json::JSONValue exprJson;
+        expr->ToJSON(exprJson);
+        object["expr"] = std::move(exprJson);
     }
 
     out = std::move(object);
 }
 
-String ASTType::Format(bool use_csharp_syntax) const
+String ASTType::Format(bool useCsharpSyntax) const
 {
-    if (use_csharp_syntax)
+    if (useCsharpSyntax)
     {
-        String csharp_type = "object";
-        if (type_name.HasValue() && !type_name->parts.Empty())
+        String csharpType = "object";
+        if (typeName.HasValue() && !typeName->parts.Empty())
         {
-            csharp_type = type_name->parts[type_name->parts.Size() - 1];
+            csharpType = typeName->parts[typeName->parts.Size() - 1];
         }
-        if (is_array)
+        if (isArray)
         {
-            csharp_type += "[]";
+            csharpType += "[]";
         }
         // Simple generic handling (only surface-level):
-        if (is_template && template_arguments.Any())
+        if (isTemplate && templateArguments.Any())
         {
-            csharp_type += "<";
-            for (int i = 0; i < template_arguments.Size(); ++i)
+            csharpType += "<";
+            for (int i = 0; i < templateArguments.Size(); ++i)
             {
                 if (i > 0)
                 {
-                    csharp_type += ", ";
+                    csharpType += ", ";
                 }
-                csharp_type += "object"; // Or produce a more robust mapping here
+                csharpType += "object"; // Or produce a more robust mapping here
             }
-            csharp_type += ">";
+            csharpType += ">";
         }
 
-        return csharp_type;
+        return csharpType;
     }
 
     String prefix;
-    if (is_const)
+    if (isConst)
         prefix += "const ";
-    if (is_volatile)
+    if (isVolatile)
         prefix += "volatile ";
-    if (is_inline)
+    if (isInline)
         prefix += "inline ";
-    if (is_static)
+    if (isStatic)
         prefix += "static ";
-    if (is_thread_local)
+    if (isThreadLocal)
         prefix += "thread_local ";
-    if (is_virtual)
+    if (isVirtual)
         prefix += "virtual ";
-    if (is_constexpr)
+    if (isConstexpr)
         prefix += "constexpr ";
 
     // Build base name (e.g. "int", "MyClass", etc.)
     String base;
-    if (type_name.HasValue())
+    if (typeName.HasValue())
     {
-        if (type_name->is_global)
+        if (typeName->isGlobal)
         {
             base = "::";
         }
-        for (SizeType i = 0; i < type_name->parts.Size(); i++)
+        for (SizeType i = 0; i < typeName->parts.Size(); i++)
         {
             if (i > 0)
                 base += "::";
-            base += type_name->parts[i];
+            base += typeName->parts[i];
         }
     }
     else
@@ -419,27 +419,27 @@ String ASTType::Format(bool use_csharp_syntax) const
     }
 
     // Handle arrays
-    if (is_array)
+    if (isArray)
     {
         base += "[]";
     }
 
     // Handle template parameters
-    if (is_template && template_arguments.Any())
+    if (isTemplate && templateArguments.Any())
     {
         base += "<";
 
-        for (int i = 0; i < template_arguments.Size(); ++i)
+        for (int i = 0; i < templateArguments.Size(); ++i)
         {
             if (i > 0)
             {
                 base += ", ";
             }
-            if (template_arguments[i]->type)
+            if (templateArguments[i]->type)
             {
-                base += template_arguments[i]->type->Format(use_csharp_syntax);
+                base += templateArguments[i]->type->Format(useCsharpSyntax);
             }
-            else if (template_arguments[i]->expr)
+            else if (templateArguments[i]->expr)
             {
                 base += "<expr>";
             }
@@ -449,73 +449,73 @@ String ASTType::Format(bool use_csharp_syntax) const
     }
 
     // If we reference another type (pointer/reference), recursively build
-    if (ptr_to)
+    if (ptrTo)
     {
         // Combine pointer syntax with any qualifiers
-        String ptr_qual;
+        String ptrQual;
 
-        if (is_const)
-            ptr_qual += " const";
+        if (isConst)
+            ptrQual += " const";
 
-        if (is_volatile)
-            ptr_qual += " volatile";
+        if (isVolatile)
+            ptrQual += " volatile";
 
-        return ptr_to->FormatDecl("*" + ptr_qual, use_csharp_syntax);
+        return ptrTo->FormatDecl("*" + ptrQual, useCsharpSyntax);
     }
-    else if (ref_to)
+    else if (refTo)
     {
         // Combine reference syntax with any qualifiers
-        String ref_qual;
+        String refQual;
 
-        if (is_const)
-            ref_qual += " const";
+        if (isConst)
+            refQual += " const";
 
-        if (is_volatile)
-            ref_qual += " volatile";
+        if (isVolatile)
+            refQual += " volatile";
 
-        return ref_to->FormatDecl("&" + ref_qual, use_csharp_syntax);
+        return refTo->FormatDecl("&" + refQual, useCsharpSyntax);
     }
 
-    // Fall back to just prefix + base + decl_name
+    // Fall back to just prefix + base + declName
     return (prefix.Trimmed() + " " + base).Trimmed();
 }
 
-String ASTType::FormatDecl(const String& decl_name, bool use_csharp_syntax) const
+String ASTType::FormatDecl(const String& declName, bool useCsharpSyntax) const
 {
-    if (use_csharp_syntax)
+    if (useCsharpSyntax)
     {
-        return Format(true) + " " + decl_name;
+        return Format(true) + " " + declName;
     }
 
     String prefix;
-    if (is_const)
+    if (isConst)
         prefix += "const ";
-    if (is_volatile)
+    if (isVolatile)
         prefix += "volatile ";
-    if (is_inline)
+    if (isInline)
         prefix += "inline ";
-    if (is_static)
+    if (isStatic)
         prefix += "static ";
-    if (is_thread_local)
+    if (isThreadLocal)
         prefix += "thread_local ";
-    if (is_virtual)
+    if (isVirtual)
         prefix += "virtual ";
-    if (is_constexpr)
+    if (isConstexpr)
         prefix += "constexpr ";
 
     // Build base name (e.g. "int", "MyClass", etc.)
     String base;
-    if (type_name.HasValue())
+    if (typeName.HasValue())
     {
-        if (type_name->is_global)
+        if (typeName->isGlobal)
         {
             base = "::";
         }
-        for (SizeType i = 0; i < type_name->parts.Size(); i++)
+        for (SizeType i = 0; i < typeName->parts.Size(); i++)
         {
             if (i > 0)
                 base += "::";
-            base += type_name->parts[i];
+            base += typeName->parts[i];
         }
     }
     else
@@ -524,27 +524,27 @@ String ASTType::FormatDecl(const String& decl_name, bool use_csharp_syntax) cons
     }
 
     // Handle arrays
-    if (is_array)
+    if (isArray)
     {
         base += "[]";
     }
 
     // Handle template parameters
-    if (is_template && template_arguments.Any())
+    if (isTemplate && templateArguments.Any())
     {
         base += "<";
 
-        for (int i = 0; i < template_arguments.Size(); ++i)
+        for (int i = 0; i < templateArguments.Size(); ++i)
         {
             if (i > 0)
             {
                 base += ", ";
             }
-            if (template_arguments[i]->type)
+            if (templateArguments[i]->type)
             {
-                base += template_arguments[i]->type->Format(use_csharp_syntax);
+                base += templateArguments[i]->type->Format(useCsharpSyntax);
             }
-            else if (template_arguments[i]->expr)
+            else if (templateArguments[i]->expr)
             {
                 base += "<expr>";
             }
@@ -554,35 +554,35 @@ String ASTType::FormatDecl(const String& decl_name, bool use_csharp_syntax) cons
     }
 
     // If we reference another type (pointer/reference), recursively build
-    if (ptr_to)
+    if (ptrTo)
     {
         // Combine pointer syntax with any qualifiers
-        String ptr_qual;
+        String ptrQual;
 
-        if (is_const)
-            ptr_qual += " const";
+        if (isConst)
+            ptrQual += " const";
 
-        if (is_volatile)
-            ptr_qual += " volatile";
+        if (isVolatile)
+            ptrQual += " volatile";
 
-        return ptr_to->FormatDecl("*" + ptr_qual + " " + decl_name, use_csharp_syntax);
+        return ptrTo->FormatDecl("*" + ptrQual + " " + declName, useCsharpSyntax);
     }
-    else if (ref_to)
+    else if (refTo)
     {
         // Combine reference syntax with any qualifiers
-        String ref_qual;
+        String refQual;
 
-        if (is_const)
-            ref_qual += " const";
+        if (isConst)
+            refQual += " const";
 
-        if (is_volatile)
-            ref_qual += " volatile";
+        if (isVolatile)
+            refQual += " volatile";
 
-        return ref_to->FormatDecl("&" + ref_qual + " " + decl_name, use_csharp_syntax);
+        return refTo->FormatDecl("&" + refQual + " " + declName, useCsharpSyntax);
     }
 
-    // Fall back to just prefix + base + decl_name
-    return (prefix.Trimmed() + " " + base + " " + decl_name).Trimmed();
+    // Fall back to just prefix + base + declName
+    return (prefix.Trimmed() + " " + base + " " + declName).Trimmed();
 }
 
 void ASTType::ToJSON(json::JSONValue& out) const
@@ -590,80 +590,80 @@ void ASTType::ToJSON(json::JSONValue& out) const
     json::JSONObject object;
     object["node_type"] = "ASTType";
 
-    object["is_const"] = is_const;
-    object["is_volatile"] = is_volatile;
-    object["is_virtual"] = is_virtual;
-    object["is_inline"] = is_inline;
-    object["is_static"] = is_static;
-    object["is_thread_local"] = is_thread_local;
-    object["is_constexpr"] = is_constexpr;
-    object["is_lvalue_reference"] = is_lvalue_reference;
-    object["is_rvalue_reference"] = is_rvalue_reference;
-    object["is_pointer"] = is_pointer;
-    object["is_array"] = is_array;
-    object["is_template"] = is_template;
-    object["is_function_pointer"] = is_function_pointer;
-    object["is_function"] = is_function;
+    object["is_const"] = isConst;
+    object["is_volatile"] = isVolatile;
+    object["is_virtual"] = isVirtual;
+    object["is_inline"] = isInline;
+    object["is_static"] = isStatic;
+    object["is_thread_local"] = isThreadLocal;
+    object["is_constexpr"] = isConstexpr;
+    object["is_lvalue_reference"] = isLvalueReference;
+    object["is_rvalue_reference"] = isRvalueReference;
+    object["is_pointer"] = isPointer;
+    object["is_array"] = isArray;
+    object["is_template"] = isTemplate;
+    object["is_function_pointer"] = isFunctionPointer;
+    object["is_function"] = isFunction;
 
-    if (is_array)
+    if (isArray)
     {
-        json::JSONValue array_expr_json;
+        json::JSONValue arrayExprJson;
 
-        if (array_expr)
+        if (arrayExpr)
         {
-            array_expr->ToJSON(array_expr_json);
+            arrayExpr->ToJSON(arrayExprJson);
         }
         else
         {
-            array_expr_json = json::JSONNull();
+            arrayExprJson = json::JSONNull();
         }
 
-        object["array_expr"] = std::move(array_expr_json);
+        object["array_expr"] = std::move(arrayExprJson);
     }
 
-    if (ptr_to)
+    if (ptrTo)
     {
-        json::JSONValue ptr_to_json;
-        ptr_to->ToJSON(ptr_to_json);
-        object["ptr_to"] = std::move(ptr_to_json);
+        json::JSONValue ptrToJson;
+        ptrTo->ToJSON(ptrToJson);
+        object["ptr_to"] = std::move(ptrToJson);
     }
 
-    if (ref_to)
+    if (refTo)
     {
-        json::JSONValue ref_to_json;
-        ref_to->ToJSON(ref_to_json);
-        object["ref_to"] = std::move(ref_to_json);
+        json::JSONValue refToJson;
+        refTo->ToJSON(refToJson);
+        object["ref_to"] = std::move(refToJson);
     }
 
-    if (type_name.HasValue())
+    if (typeName.HasValue())
     {
-        json::JSONObject type_name_json;
-        type_name_json["is_global"] = type_name->is_global;
+        json::JSONObject typeNameJson;
+        typeNameJson["is_global"] = typeName->isGlobal;
 
-        json::JSONArray type_name_parts_array;
+        json::JSONArray typeNamePartsArray;
 
-        for (const String& part : type_name->parts)
+        for (const String& part : typeName->parts)
         {
-            type_name_parts_array.PushBack(json::JSONString(part));
+            typeNamePartsArray.PushBack(json::JSONString(part));
         }
 
-        type_name_json["parts"] = std::move(type_name_parts_array);
+        typeNameJson["parts"] = std::move(typeNamePartsArray);
 
-        object["type_name"] = std::move(type_name_json);
+        object["type_name"] = std::move(typeNameJson);
     }
 
-    if (is_template)
+    if (isTemplate)
     {
-        json::JSONArray template_arguments_array;
+        json::JSONArray templateArgumentsArray;
 
-        for (const RC<ASTTemplateArgument>& template_argument : template_arguments)
+        for (const RC<ASTTemplateArgument>& templateArgument : templateArguments)
         {
-            json::JSONValue template_argument_json;
-            template_argument->ToJSON(template_argument_json);
-            template_arguments_array.PushBack(std::move(template_argument_json));
+            json::JSONValue templateArgumentJson;
+            templateArgument->ToJSON(templateArgumentJson);
+            templateArgumentsArray.PushBack(std::move(templateArgumentJson));
         }
 
-        object["template_arguments"] = std::move(template_arguments_array);
+        object["template_arguments"] = std::move(templateArgumentsArray);
     }
 
     out = std::move(object);
@@ -676,15 +676,15 @@ void ASTMemberDecl::ToJSON(json::JSONValue& out) const
 
     object["name"] = name;
 
-    json::JSONValue type_json;
-    type->ToJSON(type_json);
-    object["type"] = std::move(type_json);
+    json::JSONValue typeJson;
+    type->ToJSON(typeJson);
+    object["type"] = std::move(typeJson);
 
     if (value)
     {
-        json::JSONValue value_json;
-        value->ToJSON(value_json);
-        object["value"] = std::move(value_json);
+        json::JSONValue valueJson;
+        value->ToJSON(valueJson);
+        object["value"] = std::move(valueJson);
     }
     else
     {
@@ -694,9 +694,9 @@ void ASTMemberDecl::ToJSON(json::JSONValue& out) const
     out = std::move(object);
 }
 
-String ASTFunctionType::Format(bool use_csharp_syntax) const
+String ASTFunctionType::Format(bool useCsharpSyntax) const
 {
-    if (use_csharp_syntax)
+    if (useCsharpSyntax)
     {
         String params;
 
@@ -706,12 +706,12 @@ String ASTFunctionType::Format(bool use_csharp_syntax) const
             {
                 params += ", ";
             }
-            params += parameters[i]->type->Format(use_csharp_syntax);
+            params += parameters[i]->type->Format(useCsharpSyntax);
         }
 
-        String return_type_string = return_type->Format(use_csharp_syntax);
+        String returnTypeString = returnType->Format(useCsharpSyntax);
 
-        String result = return_type_string + " " + "(" + params + ")";
+        String result = returnTypeString + " " + "(" + params + ")";
 
         return result;
     }
@@ -724,40 +724,40 @@ String ASTFunctionType::Format(bool use_csharp_syntax) const
         {
             params += ", ";
         }
-        params += parameters[i]->type->FormatDecl(parameters[i]->name, use_csharp_syntax);
+        params += parameters[i]->type->FormatDecl(parameters[i]->name, useCsharpSyntax);
     }
 
-    String return_type_string = return_type->Format(use_csharp_syntax);
+    String returnTypeString = returnType->Format(useCsharpSyntax);
 
-    String result = return_type_string + "(" + params + ")";
+    String result = returnTypeString + "(" + params + ")";
 
-    if (is_const_method)
+    if (isConstMethod)
         result += " const";
 
-    if (is_noexcept_method)
+    if (isNoexceptMethod)
         result += " noexcept";
 
-    if (is_rvalue_method)
+    if (isRvalueMethod)
         result += " &&";
-    else if (is_lvalue_method)
+    else if (isLvalueMethod)
         result += " &";
 
-    if (is_override_method)
+    if (isOverrideMethod)
         result += " override";
 
-    if (is_pure_virtual_method)
+    if (isPureVirtualMethod)
         result += " = 0";
-    else if (is_defaulted_method)
+    else if (isDefaultedMethod)
         result += " = default";
-    else if (is_deleted_method)
+    else if (isDeletedMethod)
         result += " = delete";
 
     return result;
 }
 
-String ASTFunctionType::FormatDecl(const String& decl_name, bool use_csharp_syntax) const
+String ASTFunctionType::FormatDecl(const String& declName, bool useCsharpSyntax) const
 {
-    if (use_csharp_syntax)
+    if (useCsharpSyntax)
     {
         String params;
 
@@ -767,12 +767,12 @@ String ASTFunctionType::FormatDecl(const String& decl_name, bool use_csharp_synt
             {
                 params += ", ";
             }
-            params += parameters[i]->type->Format(use_csharp_syntax);
+            params += parameters[i]->type->Format(useCsharpSyntax);
         }
 
-        String return_type_string = return_type->Format(use_csharp_syntax);
+        String returnTypeString = returnType->Format(useCsharpSyntax);
 
-        String result = return_type_string + " " + decl_name + "(" + params + ")";
+        String result = returnTypeString + " " + declName + "(" + params + ")";
 
         return result;
     }
@@ -785,32 +785,32 @@ String ASTFunctionType::FormatDecl(const String& decl_name, bool use_csharp_synt
         {
             params += ", ";
         }
-        params += parameters[i]->type->FormatDecl(parameters[i]->name, use_csharp_syntax);
+        params += parameters[i]->type->FormatDecl(parameters[i]->name, useCsharpSyntax);
     }
 
-    String return_type_string = return_type->Format(use_csharp_syntax);
+    String returnTypeString = returnType->Format(useCsharpSyntax);
 
-    String result = return_type_string + " " + decl_name + "(" + params + ")";
+    String result = returnTypeString + " " + declName + "(" + params + ")";
 
-    if (is_const_method)
+    if (isConstMethod)
         result += " const";
 
-    if (is_noexcept_method)
+    if (isNoexceptMethod)
         result += " noexcept";
 
-    if (is_rvalue_method)
+    if (isRvalueMethod)
         result += " &&";
-    else if (is_lvalue_method)
+    else if (isLvalueMethod)
         result += " &";
 
-    if (is_override_method)
+    if (isOverrideMethod)
         result += " override";
 
-    if (is_pure_virtual_method)
+    if (isPureVirtualMethod)
         result += " = 0";
-    else if (is_defaulted_method)
+    else if (isDefaultedMethod)
         result += " = default";
-    else if (is_deleted_method)
+    else if (isDeletedMethod)
         result += " = delete";
 
     return result;
@@ -818,99 +818,99 @@ String ASTFunctionType::FormatDecl(const String& decl_name, bool use_csharp_synt
 
 void ASTFunctionType::ToJSON(json::JSONValue& out) const
 {
-    json::JSONValue type_json;
-    ASTType::ToJSON(type_json);
+    json::JSONValue typeJson;
+    ASTType::ToJSON(typeJson);
 
     json::JSONObject object;
     object["node_type"] = "ASTFunctionType";
 
-    object["is_const_method"] = is_const_method;
-    object["is_override_method"] = is_override_method;
-    object["is_noexcept_method"] = is_noexcept_method;
-    object["is_defaulted_method"] = is_defaulted_method;
-    object["is_deleted_method"] = is_deleted_method;
-    object["is_pure_virtual_method"] = is_pure_virtual_method;
-    object["is_rvalue_method"] = is_rvalue_method;
-    object["is_lvalue_method"] = is_lvalue_method;
+    object["is_const_method"] = isConstMethod;
+    object["is_override_method"] = isOverrideMethod;
+    object["is_noexcept_method"] = isNoexceptMethod;
+    object["is_defaulted_method"] = isDefaultedMethod;
+    object["is_deleted_method"] = isDeletedMethod;
+    object["is_pure_virtual_method"] = isPureVirtualMethod;
+    object["is_rvalue_method"] = isRvalueMethod;
+    object["is_lvalue_method"] = isLvalueMethod;
 
-    json::JSONValue return_type_json;
-    return_type->ToJSON(return_type_json);
-    object["return_type"] = std::move(return_type_json);
+    json::JSONValue returnTypeJson;
+    returnType->ToJSON(returnTypeJson);
+    object["return_type"] = std::move(returnTypeJson);
 
-    json::JSONArray parameters_array;
+    json::JSONArray parametersArray;
 
     for (const RC<ASTMemberDecl>& parameter : parameters)
     {
-        json::JSONValue parameter_json;
-        parameter->ToJSON(parameter_json);
-        parameters_array.PushBack(std::move(parameter_json));
+        json::JSONValue parameterJson;
+        parameter->ToJSON(parameterJson);
+        parametersArray.PushBack(std::move(parameterJson));
     }
 
-    object["parameters"] = std::move(parameters_array);
+    object["parameters"] = std::move(parametersArray);
 
-    out = json::JSONObject(type_json.ToObject()).Merge(std::move(object));
+    out = json::JSONObject(typeJson.ToObject()).Merge(std::move(object));
 }
 
 #pragma endregion JSON conversion
 
-Parser::Parser(TokenStream* token_stream, CompilationUnit* compilation_unit)
-    : m_token_stream(token_stream),
-      m_compilation_unit(compilation_unit),
-      m_template_argument_depth(0)
+Parser::Parser(TokenStream* tokenStream, CompilationUnit* compilationUnit)
+    : m_tokenStream(tokenStream),
+      m_compilationUnit(compilationUnit),
+      m_templateArgumentDepth(0)
 {
-    if (m_compilation_unit->GetPreprocessorDefinitions().Any())
+    if (m_compilationUnit->GetPreprocessorDefinitions().Any())
     {
-        TokenStream new_token_stream { m_token_stream->GetInfo() };
+        TokenStream newTokenStream { m_tokenStream->GetInfo() };
 
-        while (m_token_stream->HasNext())
+        while (m_tokenStream->HasNext())
         {
-            Token token = m_token_stream->Next();
+            Token token = m_tokenStream->Next();
 
             if (token.GetTokenClass() == TokenClass::TK_IDENT)
             {
-                auto preprocessor_definitions_it = m_compilation_unit->GetPreprocessorDefinitions().Find(token.GetValue());
+                auto preprocessorDefinitionsIt = m_compilationUnit->GetPreprocessorDefinitions().Find(token.GetValue());
 
-                if (preprocessor_definitions_it != m_compilation_unit->GetPreprocessorDefinitions().End())
+                if (preprocessorDefinitionsIt != m_compilationUnit->GetPreprocessorDefinitions().End())
                 {
-                    SourceFile macro_source_file("<macro>", preprocessor_definitions_it->second.Size());
+                    SourceFile macroSourceFile("<macro>", preprocessorDefinitionsIt->second.Size());
 
-                    ByteBuffer temp(preprocessor_definitions_it->second.Size(), preprocessor_definitions_it->second.Data());
-                    macro_source_file.ReadIntoBuffer(temp);
+                    ByteBuffer temp(preprocessorDefinitionsIt->second.Size(), preprocessorDefinitionsIt->second.Data());
+                    macroSourceFile.ReadIntoBuffer(temp);
 
-                    TokenStream macro_token_stream { TokenStreamInfo { "<input>" } };
-                    CompilationUnit macro_compilation_unit;
+                    TokenStream macroTokenStream { TokenStreamInfo { "<input>" } };
+                    CompilationUnit macroCompilationUnit;
 
-                    Lexer macro_lexer(SourceStream(&macro_source_file), &macro_token_stream, &macro_compilation_unit);
-                    macro_lexer.Analyze();
+                    Lexer macroLexer(SourceStream(&macroSourceFile), &macroTokenStream, &macroCompilationUnit);
+                    macroLexer.Analyze();
 
-                    while (macro_token_stream.HasNext())
+                    while (macroTokenStream.HasNext())
                     {
-                        Token macro_token = macro_token_stream.Next();
+                        Token macroToken = macroTokenStream.Next();
 
-                        new_token_stream.Push(macro_token);
+                        newTokenStream.Push(macroToken);
                     }
 
                     continue;
                 }
             }
 
-            new_token_stream.Push(token);
+            newTokenStream.Push(token);
         }
 
-        *m_token_stream = std::move(new_token_stream);
-        m_token_stream->SetPosition(0);
+        *m_tokenStream = std::move(newTokenStream);
+        m_tokenStream->SetPosition(0);
     }
 }
 
-Token Parser::Match(TokenClass token_class, bool read)
+Token Parser::Match(TokenClass tokenClass, bool read)
 {
-    Token peek = m_token_stream->Peek();
+    Token peek = m_tokenStream->Peek();
 
-    if (peek && peek.GetTokenClass() == token_class)
+    if (peek && peek.GetTokenClass() == tokenClass)
     {
-        if (read && m_token_stream->HasNext())
+        if (read && m_tokenStream->HasNext())
         {
-            m_token_stream->Next();
+            m_tokenStream->Next();
         }
 
         return peek;
@@ -919,11 +919,11 @@ Token Parser::Match(TokenClass token_class, bool read)
     return Token::EMPTY;
 }
 
-Token Parser::MatchAhead(TokenClass token_class, int n)
+Token Parser::MatchAhead(TokenClass tokenClass, int n)
 {
-    Token peek = m_token_stream->Peek(n);
+    Token peek = m_tokenStream->Peek(n);
 
-    if (peek && peek.GetTokenClass() == token_class)
+    if (peek && peek.GetTokenClass() == tokenClass)
     {
         return peek;
     }
@@ -933,15 +933,15 @@ Token Parser::MatchAhead(TokenClass token_class, int n)
 
 Token Parser::MatchOperator(const String& op, bool read)
 {
-    Token peek = m_token_stream->Peek();
+    Token peek = m_tokenStream->Peek();
 
     if (peek && peek.GetTokenClass() == TK_OPERATOR)
     {
         if (peek.GetValue() == op)
         {
-            if (read && m_token_stream->HasNext())
+            if (read && m_tokenStream->HasNext())
             {
-                m_token_stream->Next();
+                m_tokenStream->Next();
             }
 
             return peek;
@@ -953,7 +953,7 @@ Token Parser::MatchOperator(const String& op, bool read)
 
 Token Parser::MatchOperatorAhead(const String& op, int n)
 {
-    Token peek = m_token_stream->Peek(n);
+    Token peek = m_tokenStream->Peek(n);
 
     if (peek && peek.GetTokenClass() == TK_OPERATOR)
     {
@@ -966,33 +966,33 @@ Token Parser::MatchOperatorAhead(const String& op, int n)
     return Token::EMPTY;
 }
 
-Token Parser::Expect(TokenClass token_class, bool read)
+Token Parser::Expect(TokenClass tokenClass, bool read)
 {
-    Token token = Match(token_class, read);
+    Token token = Match(tokenClass, read);
 
     if (!token)
     {
         const SourceLocation location = CurrentLocation();
 
-        ErrorMessage error_msg;
-        String error_str;
+        ErrorMessage errorMsg;
+        String errorStr;
 
-        switch (token_class)
+        switch (tokenClass)
         {
         case TK_IDENT:
-            error_msg = Msg_expected_identifier;
-            error_str = Token::TokenTypeToString(m_token_stream->Peek().GetTokenClass());
+            errorMsg = Msg_expected_identifier;
+            errorStr = Token::TokenTypeToString(m_tokenStream->Peek().GetTokenClass());
             break;
         default:
-            error_msg = Msg_expected_token;
-            error_str = Token::TokenTypeToString(token_class);
+            errorMsg = Msg_expected_token;
+            errorStr = Token::TokenTypeToString(tokenClass);
         }
 
-        m_compilation_unit->GetErrorList().AddError(CompilerError(
+        m_compilationUnit->GetErrorList().AddError(CompilerError(
             LEVEL_ERROR,
-            error_msg,
+            errorMsg,
             location,
-            error_str));
+            errorStr));
     }
 
     return token;
@@ -1006,12 +1006,12 @@ Token Parser::ExpectOperator(const String& op, bool read)
     {
         const SourceLocation location = CurrentLocation();
 
-        if (read && m_token_stream->HasNext())
+        if (read && m_tokenStream->HasNext())
         {
-            m_token_stream->Next();
+            m_tokenStream->Next();
         }
 
-        m_compilation_unit->GetErrorList().AddError(CompilerError(
+        m_compilationUnit->GetErrorList().AddError(CompilerError(
             LEVEL_ERROR,
             Msg_expected_token,
             location,
@@ -1029,9 +1029,9 @@ Token Parser::MatchIdentifier(const UTF8StringView& value, bool read)
     {
         if (ident && ident.GetValue() == value)
         {
-            if (read && m_token_stream->HasNext())
+            if (read && m_tokenStream->HasNext())
             {
-                m_token_stream->Next();
+                m_tokenStream->Next();
             }
 
             return ident;
@@ -1039,9 +1039,9 @@ Token Parser::MatchIdentifier(const UTF8StringView& value, bool read)
     }
     else
     {
-        if (read && m_token_stream->HasNext())
+        if (read && m_tokenStream->HasNext())
         {
-            m_token_stream->Next();
+            m_tokenStream->Next();
         }
     }
 
@@ -1056,7 +1056,7 @@ Token Parser::ExpectIdentifier(const UTF8StringView& value, bool read)
     {
         const SourceLocation location = CurrentLocation();
 
-        m_compilation_unit->GetErrorList().AddError(CompilerError(
+        m_compilationUnit->GetErrorList().AddError(CompilerError(
             LEVEL_ERROR,
             Msg_expected_identifier,
             location));
@@ -1071,7 +1071,7 @@ bool Parser::ExpectEndOfStmt()
 
     if (!Match(TK_SEMICOLON, true) && !Match(TK_CLOSE_BRACE, false))
     {
-        m_compilation_unit->GetErrorList().AddError(CompilerError(
+        m_compilationUnit->GetErrorList().AddError(CompilerError(
             LEVEL_ERROR,
             Msg_expected_end_of_statement,
             location));
@@ -1084,12 +1084,12 @@ bool Parser::ExpectEndOfStmt()
 
 SourceLocation Parser::CurrentLocation() const
 {
-    if (m_token_stream->GetSize() != 0 && !m_token_stream->HasNext())
+    if (m_tokenStream->GetSize() != 0 && !m_tokenStream->HasNext())
     {
-        return m_token_stream->Last().GetLocation();
+        return m_tokenStream->Last().GetLocation();
     }
 
-    return m_token_stream->Peek().GetLocation();
+    return m_tokenStream->Peek().GetLocation();
 }
 
 void Parser::SkipStatementTerminators()
@@ -1103,14 +1103,14 @@ int Parser::OperatorPrecedence(const Operator*& out)
 {
     out = nullptr;
 
-    Token token = m_token_stream->Peek();
+    Token token = m_tokenStream->Peek();
 
     if (token && token.GetTokenClass() == TK_OPERATOR)
     {
         if (!Operator::IsBinaryOperator(token.GetValue(), out))
         {
             // internal error: operator not defined
-            m_compilation_unit->GetErrorList().AddError(CompilerError(
+            m_compilationUnit->GetErrorList().AddError(CompilerError(
                 LEVEL_ERROR,
                 Msg_internal_error,
                 token.GetLocation()));
@@ -1127,17 +1127,17 @@ int Parser::OperatorPrecedence(const Operator*& out)
 
 QualifiedName Parser::ReadQualifiedName()
 {
-    QualifiedName qualified_name;
+    QualifiedName qualifiedName;
 
     if (Match(TK_DOUBLE_COLON, true))
     {
-        qualified_name.is_global = true;
+        qualifiedName.isGlobal = true;
     }
 
     while (true)
     {
         Token ident = Expect(TK_IDENT, true);
-        qualified_name.parts.PushBack(ident.GetValue());
+        qualifiedName.parts.PushBack(ident.GetValue());
 
         if (!Match(TK_DOUBLE_COLON, true))
         {
@@ -1145,7 +1145,7 @@ QualifiedName Parser::ReadQualifiedName()
         }
     }
 
-    return qualified_name;
+    return qualifiedName;
 }
 
 RC<ASTExpr> Parser::ParseExpr()
@@ -1155,7 +1155,7 @@ RC<ASTExpr> Parser::ParseExpr()
     if (Match(TK_OPERATOR, false))
     {
         // drop out of expression, return to parent call
-        if (m_template_argument_depth > 0)
+        if (m_templateArgumentDepth > 0)
         {
             if (MatchOperator(">", false) || MatchOperator(">>", false))
             {
@@ -1176,18 +1176,18 @@ RC<ASTExpr> Parser::ParseExpr()
 
 RC<ASTExpr> Parser::ParseTerm()
 {
-    Token token = m_token_stream->Peek();
+    Token token = m_tokenStream->Peek();
 
     if (!token)
     {
-        m_compilation_unit->GetErrorList().AddError(CompilerError(
+        m_compilationUnit->GetErrorList().AddError(CompilerError(
             LEVEL_ERROR,
             Msg_unexpected_eof,
             CurrentLocation()));
 
-        if (m_token_stream->HasNext())
+        if (m_tokenStream->HasNext())
         {
-            m_token_stream->Next();
+            m_tokenStream->Next();
         }
 
         return nullptr;
@@ -1237,28 +1237,28 @@ RC<ASTExpr> Parser::ParseTerm()
     }
     else
     {
-        m_compilation_unit->GetErrorList().AddError(CompilerError(
+        m_compilationUnit->GetErrorList().AddError(CompilerError(
             LEVEL_ERROR,
             Msg_unexpected_token,
             token.GetLocation(),
             token.GetValue()));
 
-        if (m_token_stream->HasNext())
+        if (m_tokenStream->HasNext())
         {
-            m_token_stream->Next();
+            m_tokenStream->Next();
         }
 
         return nullptr;
     }
 
-    Token operator_token = Token::EMPTY;
+    Token operatorToken = Token::EMPTY;
 
-    while (expr != nullptr && (((operator_token = Match(TK_OPERATOR)) && Operator::IsUnaryOperator(operator_token.GetValue(), OperatorType::POSTFIX))))
+    while (expr != nullptr && (((operatorToken = Match(TK_OPERATOR)) && Operator::IsUnaryOperator(operatorToken.GetValue(), OperatorType::POSTFIX))))
     {
-        if (operator_token)
+        if (operatorToken)
         {
             expr = ParseUnaryExprPostfix(expr);
-            operator_token = Token::EMPTY;
+            operatorToken = Token::EMPTY;
         }
     }
 
@@ -1278,7 +1278,7 @@ RC<ASTExpr> Parser::ParseUnaryExprPrefix()
                 RC<ASTUnaryExpr> expr = MakeRefCountedPtr<ASTUnaryExpr>();
                 expr->expr = term;
                 expr->op = op;
-                expr->is_prefix = true;
+                expr->isPrefix = true;
 
                 return expr;
             }
@@ -1288,7 +1288,7 @@ RC<ASTExpr> Parser::ParseUnaryExprPrefix()
         else
         {
             // internal error: operator not defined
-            m_compilation_unit->GetErrorList().AddError(CompilerError(
+            m_compilationUnit->GetErrorList().AddError(CompilerError(
                 LEVEL_ERROR,
                 Msg_illegal_operator,
                 token.GetLocation(),
@@ -1299,7 +1299,7 @@ RC<ASTExpr> Parser::ParseUnaryExprPrefix()
     return nullptr;
 }
 
-RC<ASTExpr> Parser::ParseUnaryExprPostfix(const RC<ASTExpr>& inner_expr)
+RC<ASTExpr> Parser::ParseUnaryExprPostfix(const RC<ASTExpr>& innerExpr)
 {
     // read the operator token
     if (Token token = Expect(TK_OPERATOR, true))
@@ -1308,16 +1308,16 @@ RC<ASTExpr> Parser::ParseUnaryExprPostfix(const RC<ASTExpr>& inner_expr)
         if (Operator::IsUnaryOperator(token.GetValue(), op))
         {
             RC<ASTUnaryExpr> expr = MakeRefCountedPtr<ASTUnaryExpr>();
-            expr->expr = inner_expr;
+            expr->expr = innerExpr;
             expr->op = op;
-            expr->is_prefix = false;
+            expr->isPrefix = false;
 
             return expr;
         }
         else
         {
             // internal error: operator not defined
-            m_compilation_unit->GetErrorList().AddError(CompilerError(
+            m_compilationUnit->GetErrorList().AddError(CompilerError(
                 LEVEL_ERROR,
                 Msg_illegal_operator,
                 token.GetLocation(),
@@ -1328,14 +1328,14 @@ RC<ASTExpr> Parser::ParseUnaryExprPostfix(const RC<ASTExpr>& inner_expr)
     return nullptr;
 }
 
-RC<ASTExpr> Parser::ParseBinaryExpr(int expr_precedence, RC<ASTExpr> left)
+RC<ASTExpr> Parser::ParseBinaryExpr(int exprPrecedence, RC<ASTExpr> left)
 {
     while (true)
     {
         // get precedence
         const Operator* op = nullptr;
         int precedence = OperatorPrecedence(op);
-        if (precedence < expr_precedence)
+        if (precedence < exprPrecedence)
         {
             return left;
         }
@@ -1346,10 +1346,10 @@ RC<ASTExpr> Parser::ParseBinaryExpr(int expr_precedence, RC<ASTExpr> left)
         if (auto right = ParseTerm())
         {
             // next part of expression's precedence
-            const Operator* next_op = nullptr;
+            const Operator* nextOp = nullptr;
 
-            int next_precedence = OperatorPrecedence(next_op);
-            if (precedence < next_precedence)
+            int nextPrecedence = OperatorPrecedence(nextOp);
+            if (precedence < nextPrecedence)
             {
                 right = ParseBinaryExpr(precedence + 1, right);
                 if (right == nullptr)
@@ -1358,12 +1358,12 @@ RC<ASTExpr> Parser::ParseBinaryExpr(int expr_precedence, RC<ASTExpr> left)
                 }
             }
 
-            RC<ASTBinExpr> bin_expr = MakeRefCountedPtr<ASTBinExpr>();
-            bin_expr->left = left;
-            bin_expr->right = right;
-            bin_expr->op = op;
+            RC<ASTBinExpr> binExpr = MakeRefCountedPtr<ASTBinExpr>();
+            binExpr->left = left;
+            binExpr->right = right;
+            binExpr->op = op;
 
-            left = std::move(bin_expr);
+            left = std::move(binExpr);
         }
     }
 
@@ -1376,9 +1376,9 @@ RC<ASTExpr> Parser::ParseTernaryExpr(const RC<ASTExpr>& conditional)
     {
         // parse next ('true' part)
 
-        RC<ASTExpr> true_expr = ParseExpr();
+        RC<ASTExpr> trueExpr = ParseExpr();
 
-        if (true_expr == nullptr)
+        if (trueExpr == nullptr)
         {
             return nullptr;
         }
@@ -1388,17 +1388,17 @@ RC<ASTExpr> Parser::ParseTernaryExpr(const RC<ASTExpr>& conditional)
             return nullptr;
         }
 
-        RC<ASTExpr> false_expr = ParseExpr();
+        RC<ASTExpr> falseExpr = ParseExpr();
 
-        if (false_expr == nullptr)
+        if (falseExpr == nullptr)
         {
             return nullptr;
         }
 
         RC<ASTTernaryExpr> ternary = MakeRefCountedPtr<ASTTernaryExpr>();
         ternary->conditional = conditional;
-        ternary->true_expr = true_expr;
-        ternary->false_expr = false_expr;
+        ternary->trueExpr = trueExpr;
+        ternary->falseExpr = falseExpr;
 
         return ternary;
     }
@@ -1468,7 +1468,7 @@ RC<ASTIdentifier> Parser::ParseIdentifier()
 
 RC<ASTInitializerExpr> Parser::ParseInitializerExpr()
 {
-    RC<ASTInitializerExpr> initializer_expr = MakeRefCountedPtr<ASTInitializerExpr>();
+    RC<ASTInitializerExpr> initializerExpr = MakeRefCountedPtr<ASTInitializerExpr>();
 
     if (Expect(TK_OPEN_BRACE, true))
     {
@@ -1476,7 +1476,7 @@ RC<ASTInitializerExpr> Parser::ParseInitializerExpr()
         {
             while (true)
             {
-                initializer_expr->values.PushBack(ParseExpr());
+                initializerExpr->values.PushBack(ParseExpr());
 
                 if (!Match(TK_COMMA, true))
                 {
@@ -1488,191 +1488,191 @@ RC<ASTInitializerExpr> Parser::ParseInitializerExpr()
         Expect(TK_CLOSE_BRACE, true);
     }
 
-    return initializer_expr;
+    return initializerExpr;
 }
 
 RC<ASTMemberDecl> Parser::ParseMemberDecl()
 {
-    RC<ASTMemberDecl> member_decl = MakeRefCountedPtr<ASTMemberDecl>();
+    RC<ASTMemberDecl> memberDecl = MakeRefCountedPtr<ASTMemberDecl>();
 
-    bool is_inline = false;
-    bool is_virtual = false;
-    bool is_static = false;
-    bool is_thread_local = false;
-    bool is_constexpr = false;
-    bool is_function = false;
+    bool isInline = false;
+    bool isVirtual = false;
+    bool isStatic = false;
+    bool isThreadLocal = false;
+    bool isConstexpr = false;
+    bool isFunction = false;
 
-    bool keep_reading = true;
-    while (keep_reading)
+    bool keepReading = true;
+    while (keepReading)
     {
         if (MatchIdentifier("inline", true))
         {
-            is_inline = true;
-            is_function = true;
+            isInline = true;
+            isFunction = true;
         }
         else if (MatchIdentifier("virtual", true))
         {
-            is_virtual = true;
-            is_function = true;
+            isVirtual = true;
+            isFunction = true;
         }
         else if (MatchIdentifier("static", true))
         {
-            is_static = true;
+            isStatic = true;
         }
         else if (MatchIdentifier("thread_local", true))
         {
-            is_thread_local = true;
+            isThreadLocal = true;
         }
         else if (MatchIdentifier("constexpr", true))
         {
-            is_constexpr = true;
+            isConstexpr = true;
         }
         else
         {
-            keep_reading = false;
+            keepReading = false;
         }
     }
 
-    member_decl->type = ParseType();
+    memberDecl->type = ParseType();
 
-    if (member_decl->type->is_function_pointer)
+    if (memberDecl->type->isFunctionPointer)
     {
         // Need to implement function pointer parsing
         HYP_NOT_IMPLEMENTED();
     }
 
-    if (Token name_token = Expect(TK_IDENT, true))
+    if (Token nameToken = Expect(TK_IDENT, true))
     {
-        member_decl->name = name_token.GetValue();
+        memberDecl->name = nameToken.GetValue();
     }
 
-    Token open_parenth_token = Token::EMPTY;
+    Token openParenthToken = Token::EMPTY;
 
-    if (is_function)
+    if (isFunction)
     {
-        open_parenth_token = Expect(TK_OPEN_PARENTH, false);
+        openParenthToken = Expect(TK_OPEN_PARENTH, false);
     }
     else
     {
-        open_parenth_token = Match(TK_OPEN_PARENTH, false);
+        openParenthToken = Match(TK_OPEN_PARENTH, false);
     }
 
-    if (open_parenth_token)
+    if (openParenthToken)
     {
-        member_decl->type = ParseFunctionType(member_decl->type);
+        memberDecl->type = ParseFunctionType(memberDecl->type);
     }
     else if (Match(TK_OPEN_BRACKET, true))
     {
-        RC<ASTType> array_type = MakeRefCountedPtr<ASTType>();
-        array_type->array_of = member_decl->type;
-        array_type->is_array = true;
+        RC<ASTType> arrayType = MakeRefCountedPtr<ASTType>();
+        arrayType->arrayOf = memberDecl->type;
+        arrayType->isArray = true;
 
         if (!Match(TK_CLOSE_BRACKET, false))
         {
-            array_type->array_expr = ParseExpr();
+            arrayType->arrayExpr = ParseExpr();
         }
 
-        member_decl->type = array_type;
+        memberDecl->type = arrayType;
 
         Expect(TK_CLOSE_BRACKET, true);
     }
 
-    if (!member_decl->type->is_function)
+    if (!memberDecl->type->isFunction)
     {
         if (MatchOperator("=", true))
         {
-            member_decl->value = ParseExpr();
+            memberDecl->value = ParseExpr();
         }
         else if (Match(TK_OPEN_BRACE, false))
         {
-            member_decl->value = ParseInitializerExpr();
+            memberDecl->value = ParseInitializerExpr();
         }
     }
 
-    member_decl->type->is_virtual = is_virtual;
-    member_decl->type->is_inline = is_inline;
-    member_decl->type->is_static = is_static;
-    member_decl->type->is_thread_local = is_thread_local;
-    member_decl->type->is_constexpr = is_constexpr;
+    memberDecl->type->isVirtual = isVirtual;
+    memberDecl->type->isInline = isInline;
+    memberDecl->type->isStatic = isStatic;
+    memberDecl->type->isThreadLocal = isThreadLocal;
+    memberDecl->type->isConstexpr = isConstexpr;
 
-    return member_decl;
+    return memberDecl;
 }
 
-RC<ASTMemberDecl> Parser::ParseEnumMemberDecl(const RC<ASTType>& underlying_type)
+RC<ASTMemberDecl> Parser::ParseEnumMemberDecl(const RC<ASTType>& underlyingType)
 {
-    RC<ASTMemberDecl> member_decl = MakeRefCountedPtr<ASTMemberDecl>();
-    member_decl->type = underlying_type;
+    RC<ASTMemberDecl> memberDecl = MakeRefCountedPtr<ASTMemberDecl>();
+    memberDecl->type = underlyingType;
 
-    if (!member_decl->type)
+    if (!memberDecl->type)
     {
-        member_decl->type = MakeRefCountedPtr<ASTType>();
-        member_decl->type->type_name = QualifiedName { { "int" } };
+        memberDecl->type = MakeRefCountedPtr<ASTType>();
+        memberDecl->type->typeName = QualifiedName { { "int" } };
     }
 
-    if (Token name_token = Expect(TK_IDENT, true))
+    if (Token nameToken = Expect(TK_IDENT, true))
     {
-        member_decl->name = name_token.GetValue();
+        memberDecl->name = nameToken.GetValue();
     }
 
     if (MatchOperator("=", true))
     {
-        member_decl->value = ParseExpr();
+        memberDecl->value = ParseExpr();
     }
 
-    return member_decl;
+    return memberDecl;
 }
 
 RC<ASTType> Parser::ParseType()
 {
     // Start by creating our root type instance
-    RC<ASTType> root_type = MakeRefCountedPtr<ASTType>();
+    RC<ASTType> rootType = MakeRefCountedPtr<ASTType>();
 
-    bool keep_reading = true;
-    while (keep_reading)
+    bool keepReading = true;
+    while (keepReading)
     {
         if (MatchIdentifier("const", true))
         {
-            root_type->is_const = true;
+            rootType->isConst = true;
         }
         else if (MatchIdentifier("volatile", true))
         {
-            root_type->is_volatile = true;
+            rootType->isVolatile = true;
         }
         if (MatchIdentifier("constexpr", true))
         {
-            root_type->is_constexpr = true;
+            rootType->isConstexpr = true;
         }
         else
         {
-            keep_reading = false;
+            keepReading = false;
         }
     }
 
-    root_type->type_name = ReadQualifiedName();
+    rootType->typeName = ReadQualifiedName();
 
     if (MatchOperator("<<", false))
     {
-        m_token_stream->Pop();
+        m_tokenStream->Pop();
 
         for (int i = 0; i < 2; i++)
         {
-            m_token_stream->Push(Token(TK_OPERATOR, "<", m_token_stream->Peek().GetLocation()), /* insert_at_position */ true);
+            m_tokenStream->Push(Token(TK_OPERATOR, "<", m_tokenStream->Peek().GetLocation()), /* insertAtPosition */ true);
         }
     }
 
     if (MatchOperator("<", true))
     {
-        ++m_template_argument_depth;
+        ++m_templateArgumentDepth;
 
-        root_type->is_template = true;
+        rootType->isTemplate = true;
 
         if (MatchOperator(">>", false))
         {
-            m_token_stream->Pop();
+            m_tokenStream->Pop();
 
             for (int i = 0; i < 2; i++)
             {
-                m_token_stream->Push(Token(TK_OPERATOR, ">", m_token_stream->Peek().GetLocation()), /* insert_at_position */ true);
+                m_tokenStream->Push(Token(TK_OPERATOR, ">", m_tokenStream->Peek().GetLocation()), /* insertAtPosition */ true);
             }
         }
 
@@ -1680,30 +1680,30 @@ RC<ASTType> Parser::ParseType()
         {
             while (true)
             {
-                RC<ASTTemplateArgument> template_argument = MakeRefCountedPtr<ASTTemplateArgument>();
+                RC<ASTTemplateArgument> templateArgument = MakeRefCountedPtr<ASTTemplateArgument>();
 
                 if (Match(TK_INTEGER, false))
                 {
-                    template_argument->expr = ParseLiteralInt();
+                    templateArgument->expr = ParseLiteralInt();
                 }
                 else if (Match(TK_FLOAT, false))
                 {
-                    template_argument->expr = ParseLiteralFloat();
+                    templateArgument->expr = ParseLiteralFloat();
                 }
                 else if (Match(TK_STRING, false))
                 {
-                    template_argument->expr = ParseLiteralString();
+                    templateArgument->expr = ParseLiteralString();
                 }
                 else if (Match(TK_OPEN_PARENTH, false))
                 {
-                    template_argument->expr = ParseExpr();
+                    templateArgument->expr = ParseExpr();
                 }
                 else
                 {
-                    template_argument->type = ParseType();
+                    templateArgument->type = ParseType();
                 }
 
-                root_type->template_arguments.PushBack(template_argument);
+                rootType->templateArguments.PushBack(templateArgument);
 
                 if (!Match(TK_COMMA, true))
                 {
@@ -1714,17 +1714,17 @@ RC<ASTType> Parser::ParseType()
 
         if (MatchOperator(">>", false))
         {
-            m_token_stream->Pop();
+            m_tokenStream->Pop();
 
             for (int i = 0; i < 2; i++)
             {
-                m_token_stream->Push(Token(TK_OPERATOR, ">", m_token_stream->Peek().GetLocation()), /* insert_at_position */ true);
+                m_tokenStream->Push(Token(TK_OPERATOR, ">", m_tokenStream->Peek().GetLocation()), /* insertAtPosition */ true);
             }
         }
 
         if (ExpectOperator(">", true))
         {
-            --m_template_argument_depth;
+            --m_templateArgumentDepth;
         }
     }
 
@@ -1733,75 +1733,75 @@ RC<ASTType> Parser::ParseType()
         // Reference
         if (MatchOperator("&", true))
         {
-            RC<ASTType> ref_type = MakeRefCountedPtr<ASTType>();
-            ref_type->is_lvalue_reference = true;
-            ref_type->ref_to = root_type;
+            RC<ASTType> refType = MakeRefCountedPtr<ASTType>();
+            refType->isLvalueReference = true;
+            refType->refTo = rootType;
             // Optional cv-qualifiers after '&'
-            bool more_cv = true;
-            while (more_cv)
+            bool moreCv = true;
+            while (moreCv)
             {
                 if (MatchIdentifier("const", true))
                 {
-                    ref_type->is_const = true;
+                    refType->isConst = true;
                 }
                 else if (MatchIdentifier("volatile", true))
                 {
-                    ref_type->is_volatile = true;
+                    refType->isVolatile = true;
                 }
                 else
                 {
-                    more_cv = false;
+                    moreCv = false;
                 }
             }
-            root_type = ref_type;
+            rootType = refType;
         }
         else if (MatchOperator("&&", true))
         {
-            RC<ASTType> ref_type = MakeRefCountedPtr<ASTType>();
-            ref_type->is_rvalue_reference = true;
-            ref_type->ref_to = root_type;
+            RC<ASTType> refType = MakeRefCountedPtr<ASTType>();
+            refType->isRvalueReference = true;
+            refType->refTo = rootType;
             // Optional cv-qualifiers after '&&'
-            bool more_cv = true;
-            while (more_cv)
+            bool moreCv = true;
+            while (moreCv)
             {
                 if (MatchIdentifier("const", true))
                 {
-                    ref_type->is_const = true;
+                    refType->isConst = true;
                 }
                 else if (MatchIdentifier("volatile", true))
                 {
-                    ref_type->is_volatile = true;
+                    refType->isVolatile = true;
                 }
                 else
                 {
-                    more_cv = false;
+                    moreCv = false;
                 }
             }
-            root_type = ref_type;
+            rootType = refType;
         }
         else if (MatchOperator("*", true))
         {
-            RC<ASTType> ptr_type = MakeRefCountedPtr<ASTType>();
-            ptr_type->is_pointer = true;
-            ptr_type->ptr_to = root_type;
+            RC<ASTType> ptrType = MakeRefCountedPtr<ASTType>();
+            ptrType->isPointer = true;
+            ptrType->ptrTo = rootType;
             // Optional cv-qualifiers after '*'
-            bool more_cv = true;
-            while (more_cv)
+            bool moreCv = true;
+            while (moreCv)
             {
                 if (MatchIdentifier("const", true))
                 {
-                    ptr_type->is_const = true;
+                    ptrType->isConst = true;
                 }
                 else if (MatchIdentifier("volatile", true))
                 {
-                    ptr_type->is_volatile = true;
+                    ptrType->isVolatile = true;
                 }
                 else
                 {
-                    more_cv = false;
+                    moreCv = false;
                 }
             }
-            root_type = ptr_type;
+            rootType = ptrType;
         }
         else
         {
@@ -1812,25 +1812,25 @@ RC<ASTType> Parser::ParseType()
     // if (Match(TK_OPEN_PARENTH, false)) {
     //     if (MatchOperatorAhead("*", 1)) {
     //         // Function pointer
-    //         RC<ASTType> func_ptr_type = MakeRefCountedPtr<ASTType>();
-    //         func_ptr_type->is_function_pointer = true;
-    //         func_ptr_type->ptr_to = root_type;
-    //         root_type = func_ptr_type;
+    //         RC<ASTType> funcPtrType = MakeRefCountedPtr<ASTType>();
+    //         funcPtrType->isFunctionPointer = true;
+    //         funcPtrType->ptrTo = rootType;
+    //         rootType = funcPtrType;
 
     //         // Need to implement function pointer parsing
     //         HYP_NOT_IMPLEMENTED();
     //     }
     // }
 
-    return root_type;
+    return rootType;
 }
 
-RC<ASTFunctionType> Parser::ParseFunctionType(const RC<ASTType>& return_type)
+RC<ASTFunctionType> Parser::ParseFunctionType(const RC<ASTType>& returnType)
 {
-    Assert(return_type != nullptr);
+    Assert(returnType != nullptr);
 
-    RC<ASTFunctionType> func_type = MakeRefCountedPtr<ASTFunctionType>();
-    func_type->return_type = return_type;
+    RC<ASTFunctionType> funcType = MakeRefCountedPtr<ASTFunctionType>();
+    funcType->returnType = returnType;
 
     if (Expect(TK_OPEN_PARENTH, true))
     {
@@ -1838,7 +1838,7 @@ RC<ASTFunctionType> Parser::ParseFunctionType(const RC<ASTType>& return_type)
         {
             while (true)
             {
-                func_type->parameters.PushBack(ParseMemberDecl());
+                funcType->parameters.PushBack(ParseMemberDecl());
 
                 if (!Match(TK_COMMA, true))
                 {
@@ -1849,33 +1849,33 @@ RC<ASTFunctionType> Parser::ParseFunctionType(const RC<ASTType>& return_type)
 
         Expect(TK_CLOSE_PARENTH, true);
 
-        bool keep_reading = true;
+        bool keepReading = true;
 
-        while (keep_reading)
+        while (keepReading)
         {
             if (MatchIdentifier("const", true))
             {
-                func_type->is_const_method = true;
+                funcType->isConstMethod = true;
             }
             else if (MatchIdentifier("override", true))
             {
-                func_type->is_override_method = true;
+                funcType->isOverrideMethod = true;
             }
             else if (MatchIdentifier("noexcept", true))
             {
-                func_type->is_noexcept_method = true;
+                funcType->isNoexceptMethod = true;
             }
             else if (MatchOperator("&&", true))
             {
-                func_type->is_rvalue_method = true;
+                funcType->isRvalueMethod = true;
             }
             else if (MatchOperator("&", true))
             {
-                func_type->is_lvalue_method = true;
+                funcType->isLvalueMethod = true;
             }
             else
             {
-                keep_reading = false;
+                keepReading = false;
             }
         }
 
@@ -1884,25 +1884,25 @@ RC<ASTFunctionType> Parser::ParseFunctionType(const RC<ASTType>& return_type)
         {
             if (MatchIdentifier("default", true))
             {
-                func_type->is_defaulted_method = true;
+                funcType->isDefaultedMethod = true;
             }
             else if (MatchIdentifier("delete", true))
             {
-                func_type->is_deleted_method = true;
+                funcType->isDeletedMethod = true;
             }
-            else if (Token integer_token = Match(TK_INTEGER, true))
+            else if (Token integerToken = Match(TK_INTEGER, true))
             {
-                if (integer_token.GetValue() == "0")
+                if (integerToken.GetValue() == "0")
                 {
-                    func_type->is_pure_virtual_method = true;
+                    funcType->isPureVirtualMethod = true;
                 }
                 else
                 {
-                    m_compilation_unit->GetErrorList().AddError(CompilerError(
+                    m_compilationUnit->GetErrorList().AddError(CompilerError(
                         LEVEL_ERROR,
                         Msg_unexpected_character,
-                        integer_token.GetLocation(),
-                        integer_token.GetValue()));
+                        integerToken.GetLocation(),
+                        integerToken.GetValue()));
                 }
             }
         }
@@ -1912,7 +1912,7 @@ RC<ASTFunctionType> Parser::ParseFunctionType(const RC<ASTType>& return_type)
         }
     }
 
-    return func_type;
+    return funcType;
 }
 
 } // namespace hyperion::buildtool

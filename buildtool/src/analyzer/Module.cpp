@@ -12,29 +12,29 @@ Module::Module(const FilePath& path)
 {
 }
 
-Result Module::AddHypClassDefinition(HypClassDefinition&& hyp_class_definition)
+Result Module::AddHypClassDefinition(HypClassDefinition&& hypClassDefinition)
 {
     Mutex::Guard guard(m_mutex);
 
-    auto it = m_hyp_classes.Find(hyp_class_definition.name);
+    auto it = m_hypClasses.Find(hypClassDefinition.name);
 
-    if (it != m_hyp_classes.End())
+    if (it != m_hypClasses.End())
     {
         return HYP_MAKE_ERROR(Error, "HypClassDefinition already exists");
     }
 
-    m_hyp_classes.Insert(hyp_class_definition.name, std::move(hyp_class_definition));
+    m_hypClasses.Insert(hypClassDefinition.name, std::move(hypClassDefinition));
 
     return {};
 }
 
-const HypClassDefinition* Module::FindHypClassDefinition(UTF8StringView class_name) const
+const HypClassDefinition* Module::FindHypClassDefinition(UTF8StringView className) const
 {
     Mutex::Guard guard(m_mutex);
 
-    const auto it = m_hyp_classes.Find(class_name);
+    const auto it = m_hypClasses.Find(className);
 
-    if (it == m_hyp_classes.End())
+    if (it == m_hypClasses.End())
     {
         return nullptr;
     }
@@ -42,15 +42,15 @@ const HypClassDefinition* Module::FindHypClassDefinition(UTF8StringView class_na
     return &it->second;
 }
 
-bool Module::HasBaseClass(const HypClassDefinition& hyp_class_definition, UTF8StringView base_class_name) const
+bool Module::HasBaseClass(const HypClassDefinition& hypClassDefinition, UTF8StringView baseClassName) const
 {
     Mutex::Guard guard(m_mutex);
 
-    auto find_definition = [this](UTF8StringView name) -> const HypClassDefinition*
+    auto findDefinition = [this](UTF8StringView name) -> const HypClassDefinition*
     {
-        auto it = m_hyp_classes.Find(name);
+        auto it = m_hypClasses.Find(name);
 
-        if (it != m_hyp_classes.End())
+        if (it != m_hypClasses.End())
         {
             return &it->second;
         }
@@ -58,22 +58,22 @@ bool Module::HasBaseClass(const HypClassDefinition& hyp_class_definition, UTF8St
         return nullptr;
     };
 
-    Proc<bool(const HypClassDefinition&, UTF8StringView)> perform_check;
+    Proc<bool(const HypClassDefinition&, UTF8StringView)> performCheck;
 
-    perform_check = [&perform_check, &find_definition](const HypClassDefinition& hyp_class_definition, UTF8StringView base_class_name) -> bool
+    performCheck = [&performCheck, &findDefinition](const HypClassDefinition& hypClassDefinition, UTF8StringView baseClassName) -> bool
     {
-        auto it = hyp_class_definition.base_class_names.FindAs(base_class_name);
+        auto it = hypClassDefinition.baseClassNames.FindAs(baseClassName);
 
-        if (it != hyp_class_definition.base_class_names.End())
+        if (it != hypClassDefinition.baseClassNames.End())
         {
             return true;
         }
 
-        for (const String& base_class : hyp_class_definition.base_class_names)
+        for (const String& baseClass : hypClassDefinition.baseClassNames)
         {
-            const HypClassDefinition* base_class_definition = find_definition(base_class);
+            const HypClassDefinition* baseClassDefinition = findDefinition(baseClass);
 
-            if (base_class_definition && perform_check(*base_class_definition, base_class_name))
+            if (baseClassDefinition && performCheck(*baseClassDefinition, baseClassName))
             {
                 return true;
             }
@@ -82,7 +82,7 @@ bool Module::HasBaseClass(const HypClassDefinition& hyp_class_definition, UTF8St
         return false;
     };
 
-    return perform_check(hyp_class_definition, base_class_name);
+    return performCheck(hypClassDefinition, baseClassName);
 }
 
 } // namespace buildtool

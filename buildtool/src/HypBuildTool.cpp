@@ -53,44 +53,44 @@ class HypBuildTool
 {
 public:
     HypBuildTool(
-        const FilePath& working_directory,
-        const FilePath& source_directory,
-        const FilePath& cxx_output_directory,
-        const FilePath& csharp_output_directory,
-        const HashSet<FilePath>& exclude_directories,
-        const HashSet<FilePath>& exclude_files)
+        const FilePath& workingDirectory,
+        const FilePath& sourceDirectory,
+        const FilePath& cxxOutputDirectory,
+        const FilePath& csharpOutputDirectory,
+        const HashSet<FilePath>& excludeDirectories,
+        const HashSet<FilePath>& excludeFiles)
     {
-        m_analyzer.SetWorkingDirectory(working_directory);
-        m_analyzer.SetSourceDirectory(source_directory);
-        m_analyzer.SetCXXOutputDirectory(cxx_output_directory);
-        m_analyzer.SetCSharpOutputDirectory(csharp_output_directory);
+        m_analyzer.SetWorkingDirectory(workingDirectory);
+        m_analyzer.SetSourceDirectory(sourceDirectory);
+        m_analyzer.SetCXXOutputDirectory(cxxOutputDirectory);
+        m_analyzer.SetCSharpOutputDirectory(csharpOutputDirectory);
 
-        m_analyzer.SetExcludeDirectories(exclude_directories);
-        m_analyzer.SetExcludeFiles(exclude_files);
+        m_analyzer.SetExcludeDirectories(excludeDirectories);
+        m_analyzer.SetExcludeFiles(excludeFiles);
 
         m_analyzer.SetGlobalDefines(GetGlobalDefines());
         m_analyzer.SetIncludePaths(GetIncludePaths());
 
-        m_thread_pool.Start();
+        m_threadPool.Start();
     }
 
     ~HypBuildTool()
     {
-        m_thread_pool.Stop();
+        m_threadPool.Stop();
     }
 
     Result Run()
     {
         FindModules();
 
-        Task process_modules = ProcessModules();
-        WaitWhileTaskRunning(process_modules);
+        Task processModules = ProcessModules();
+        WaitWhileTaskRunning(processModules);
 
-        Task build_class_tree = BuildClassTree();
-        WaitWhileTaskRunning(build_class_tree);
+        Task buildClassTree = BuildClassTree();
+        WaitWhileTaskRunning(buildClassTree);
 
-        Task generate_output_files = GenerateOutputFiles();
-        WaitWhileTaskRunning(generate_output_files);
+        Task generateOutputFiles = GenerateOutputFiles();
+        WaitWhileTaskRunning(generateOutputFiles);
 
         if (m_analyzer.GetState().HasErrors())
         {
@@ -128,61 +128,61 @@ private:
 
     HashSet<String> GetIncludePaths() const
     {
-        const FilePath& working_directory = m_analyzer.GetWorkingDirectory();
+        const FilePath& workingDirectory = m_analyzer.GetWorkingDirectory();
 
         return {
-            working_directory / "src",
-            working_directory / "include"
+            workingDirectory / "src",
+            workingDirectory / "include"
         };
     }
 
     void FindModules()
     {
-        Proc<void(const FilePath&)> IterateFilesAndSubdirectories;
+        Proc<void(const FilePath&)> iterateFilesAndSubdirectories;
 
-        IterateFilesAndSubdirectories = [&](const FilePath& dir)
+        iterateFilesAndSubdirectories = [&](const FilePath& dir)
         {
-            for (const String& exclude_dir : m_analyzer.GetExcludeDirectories())
+            for (const String& excludeDir : m_analyzer.GetExcludeDirectories())
             {
-                const FilePath relative_path = FilePath(FileSystem::RelativePath(dir.Data(), m_analyzer.GetSourceDirectory().Data()).c_str());
+                const FilePath relativePath = FilePath(FileSystem::RelativePath(dir.Data(), m_analyzer.GetSourceDirectory().Data()).c_str());
 
-                if (relative_path.StartsWith(exclude_dir))
+                if (relativePath.StartsWith(excludeDir))
                 {
                     return;
                 }
             }
 
-            Array<Module*> local_modules;
+            Array<Module*> localModules;
 
             for (const FilePath& file : dir.GetAllFilesInDirectory())
             {
                 if (file.EndsWith(".hpp"))
                 {
-                    const FilePath relative_path = FilePath(FileSystem::RelativePath(file.Data(), m_analyzer.GetSourceDirectory().Data()).c_str());
+                    const FilePath relativePath = FilePath(FileSystem::RelativePath(file.Data(), m_analyzer.GetSourceDirectory().Data()).c_str());
 
-                    if (m_analyzer.GetExcludeFiles().Contains(relative_path))
+                    if (m_analyzer.GetExcludeFiles().Contains(relativePath))
                     {
                         continue;
                     }
 
-                    local_modules.PushBack(m_analyzer.AddModule(file));
+                    localModules.PushBack(m_analyzer.AddModule(file));
                 }
             }
 
-            Array<FilePath> local_subdirectories = dir.GetSubdirectories();
+            Array<FilePath> localSubdirectories = dir.GetSubdirectories();
 
-            if (local_subdirectories.Empty())
+            if (localSubdirectories.Empty())
             {
                 return;
             }
 
-            for (const FilePath& subdirectory : local_subdirectories)
+            for (const FilePath& subdirectory : localSubdirectories)
             {
-                IterateFilesAndSubdirectories(subdirectory);
+                iterateFilesAndSubdirectories(subdirectory);
             }
         };
 
-        IterateFilesAndSubdirectories(m_analyzer.GetSourceDirectory());
+        iterateFilesAndSubdirectories(m_analyzer.GetSourceDirectory());
     }
 
     Task<void> ProcessModules()
@@ -190,7 +190,7 @@ private:
         Task<void> task;
 
         TaskBatch* batch = new TaskBatch();
-        batch->pool = &m_thread_pool;
+        batch->pool = &m_threadPool;
         batch->OnComplete
             .Bind([batch, promise = task.Promise()]()
                 {
@@ -224,56 +224,56 @@ private:
     {
         return TaskSystem::GetInstance().Enqueue([this]()
             {
-                Array<HypClassDefinition*> hyp_class_definitions;
-                HashMap<String, uint32> hyp_class_definition_ids;
+                Array<HypClassDefinition*> hypClassDefinitions;
+                HashMap<String, uint32> hypClassDefinitionIds;
 
                 for (const UniquePtr<Module>& mod : m_analyzer.GetModules())
                 {
                     for (auto& it : mod->GetHypClasses())
                     {
-                        if (hyp_class_definition_ids.Contains(it.second.name))
+                        if (hypClassDefinitionIds.Contains(it.second.name))
                         {
                             m_analyzer.AddError(HYP_MAKE_ERROR(AnalyzerError, "Duplicate HypClassDefinition name found: {}", mod->GetPath(), 0, it.second.name));
 
                             continue;
                         }
 
-                        Assert(it.second.static_index == -1);
-                        Assert(it.second.num_descendants == 0);
+                        Assert(it.second.staticIndex == -1);
+                        Assert(it.second.numDescendants == 0);
 
-                        const uint32 hyp_class_definition_id = uint32(hyp_class_definitions.Size());
+                        const uint32 hypClassDefinitionId = uint32(hypClassDefinitions.Size());
 
-                        hyp_class_definition_ids[it.second.name] = hyp_class_definition_id;
+                        hypClassDefinitionIds[it.second.name] = hypClassDefinitionId;
 
-                        hyp_class_definitions.PushBack(&it.second);
+                        hypClassDefinitions.PushBack(&it.second);
                     }
                 }
 
                 Array<Array<uint32>, DynamicAllocator> derived;
-                derived.Resize(hyp_class_definitions.Size());
+                derived.Resize(hypClassDefinitions.Size());
 
-                for (const HypClassDefinition* hyp_class_definition : hyp_class_definitions)
+                for (const HypClassDefinition* hypClassDefinition : hypClassDefinitions)
                 {
-                    const uint32 child = hyp_class_definition_ids.At(hyp_class_definition->name);
+                    const uint32 child = hypClassDefinitionIds.At(hypClassDefinition->name);
 
-                    for (const String& base_class_name : hyp_class_definition->base_class_names)
+                    for (const String& baseClassName : hypClassDefinition->baseClassNames)
                     {
-                        const auto parent_it = hyp_class_definition_ids.Find(base_class_name);
+                        const auto parentIt = hypClassDefinitionIds.Find(baseClassName);
 
-                        if (parent_it == hyp_class_definition_ids.End())
+                        if (parentIt == hypClassDefinitionIds.End())
                         {
                             continue;
                         }
 
-                        const uint32 parent = parent_it->second;
-                        Assert(parent < hyp_class_definitions.Size());
+                        const uint32 parent = parentIt->second;
+                        Assert(parent < hypClassDefinitions.Size());
 
                         derived[parent].PushBack(child);
                     }
                 }
 
                 Array<uint32> indeg;
-                indeg.Resize(hyp_class_definitions.Size());
+                indeg.Resize(hypClassDefinitions.Size());
 
                 for (const Array<uint32>& children : derived)
                 {
@@ -294,26 +294,26 @@ private:
                 }
 
                 Array<uint32> stack;
-                stack.Reserve(hyp_class_definitions.Size());
+                stack.Reserve(hypClassDefinitions.Size());
 
-                uint32 next_out = 0;
+                uint32 nextOut = 0;
 
                 Proc<void(uint32)> TopologicalSort;
                 TopologicalSort = [&](uint32 id)
                 {
-                    Assert(id < hyp_class_definitions.Size());
+                    Assert(id < hypClassDefinitions.Size());
 
-                    HypClassDefinition* hyp_class_definition = hyp_class_definitions[id];
+                    HypClassDefinition* hypClassDefinition = hypClassDefinitions[id];
 
-                    uint32 start = next_out;
+                    uint32 start = nextOut;
 
-                    hyp_class_definition->static_index = int(next_out++);
+                    hypClassDefinition->staticIndex = int(nextOut++);
 
                     stack.PushBack(id);
 
                     for (uint32 child : derived[id])
                     {
-                        if (hyp_class_definitions[child]->static_index == -1)
+                        if (hypClassDefinitions[child]->staticIndex == -1)
                         {
                             TopologicalSort(child);
                         }
@@ -321,8 +321,8 @@ private:
 
                     stack.PopBack();
 
-                    hyp_class_definition->num_descendants = next_out - start - 1;
-                    hyp_class_definition->static_index = int(start + 1);
+                    hypClassDefinition->numDescendants = nextOut - start - 1;
+                    hypClassDefinition->staticIndex = int(start + 1);
                 };
 
                 for (uint32 root : roots)
@@ -331,14 +331,14 @@ private:
                 }
 
                 // Log out the class hierarchy with static indices
-                for (const HypClassDefinition* hyp_class_definition : hyp_class_definitions)
+                for (const HypClassDefinition* hypClassDefinition : hypClassDefinitions)
                 {
                     HYP_LOG(BuildTool, Info, "Class: {}, Type: {}, Static Index: {}, Num Descendants: {}, Parent: {}",
-                        hyp_class_definition->name,
-                        HypClassDefinitionTypeToString(hyp_class_definition->type),
-                        hyp_class_definition->static_index,
-                        hyp_class_definition->num_descendants,
-                        String::Join(hyp_class_definition->base_class_names, ", "));
+                        hypClassDefinition->name,
+                        HypClassDefinitionTypeToString(hypClassDefinition->type),
+                        hypClassDefinition->staticIndex,
+                        hypClassDefinition->numDescendants,
+                        String::Join(hypClassDefinition->baseClassNames, ", "));
                 }
             });
     }
@@ -348,7 +348,7 @@ private:
         Task<void> task;
 
         TaskBatch* batch = new TaskBatch();
-        batch->pool = &m_thread_pool;
+        batch->pool = &m_threadPool;
         batch->OnComplete
             .Bind([batch, promise = task.Promise()]()
                 {
@@ -358,8 +358,8 @@ private:
                 })
             .Detach();
 
-        RC<CXXModuleGenerator> cxx_module_generator = MakeRefCountedPtr<CXXModuleGenerator>();
-        RC<CSharpModuleGenerator> csharp_module_generator = MakeRefCountedPtr<CSharpModuleGenerator>();
+        RC<CXXModuleGenerator> cxxModuleGenerator = MakeRefCountedPtr<CXXModuleGenerator>();
+        RC<CSharpModuleGenerator> csharpModuleGenerator = MakeRefCountedPtr<CSharpModuleGenerator>();
 
         for (const UniquePtr<Module>& mod : m_analyzer.GetModules())
         {
@@ -368,14 +368,14 @@ private:
                 continue;
             }
 
-            batch->AddTask([this, cxx_module_generator, csharp_module_generator, mod = mod.Get()]()
+            batch->AddTask([this, cxxModuleGenerator, csharpModuleGenerator, mod = mod.Get()]()
                 {
-                    if (Result res = cxx_module_generator->Generate(m_analyzer, *mod); res.HasError())
+                    if (Result res = cxxModuleGenerator->Generate(m_analyzer, *mod); res.HasError())
                     {
                         m_analyzer.AddError(AnalyzerError(res.GetError(), mod->GetPath()));
                     }
 
-                    if (Result res = csharp_module_generator->Generate(m_analyzer, *mod); res.HasError())
+                    if (Result res = csharpModuleGenerator->Generate(m_analyzer, *mod); res.HasError())
                     {
                         m_analyzer.AddError(AnalyzerError(res.GetError(), mod->GetPath()));
                     }
@@ -391,22 +391,22 @@ private:
     {
         for (const UniquePtr<Module>& mod : m_analyzer.GetModules())
         {
-            for (const Pair<String, HypClassDefinition>& hyp_class : mod->GetHypClasses())
+            for (const Pair<String, HypClassDefinition>& hypClass : mod->GetHypClasses())
             {
-                HYP_LOG(BuildTool, Info, "Class: {}", hyp_class.first);
+                HYP_LOG(BuildTool, Info, "Class: {}", hypClass.first);
 
                 // Log out all members
-                for (const HypMemberDefinition& hyp_member : hyp_class.second.members)
+                for (const HypMemberDefinition& hypMember : hypClass.second.members)
                 {
-                    if (!hyp_member.cxx_type)
+                    if (!hypMember.cxxType)
                     {
                         continue;
                     }
 
                     json::JSONValue json;
-                    hyp_member.cxx_type->ToJSON(json);
+                    hypMember.cxxType->ToJSON(json);
 
-                    HYP_LOG(BuildTool, Info, "\tMember: {}\t{}", hyp_member.name, json.ToString(true));
+                    HYP_LOG(BuildTool, Info, "\tMember: {}\t{}", hypMember.name, json.ToString(true));
                 }
             }
         }
@@ -440,7 +440,7 @@ private:
             TaskThreadPoolName::THREAD_POOL_BACKGROUND, TaskEnqueueFlags::FIRE_AND_FORGET);
     }
 
-    WorkerThreadPool m_thread_pool;
+    WorkerThreadPool m_threadPool;
     Analyzer m_analyzer;
 };
 
@@ -468,66 +468,66 @@ int main(int argc, char** argv)
         return result;
     }();
 
-    CommandLineParser command_line_parser { &definitions };
+    CommandLineParser commandLineParser { &definitions };
 
-    if (auto parse_result = command_line_parser.Parse(argc, argv))
+    if (auto parseResult = commandLineParser.Parse(argc, argv))
     {
         TaskSystem::GetInstance().Start();
 
-        const FilePath working_directory = FilePath(parse_result.GetValue()["WorkingDirectory"].AsString());
+        const FilePath workingDirectory = FilePath(parseResult.GetValue()["WorkingDirectory"].AsString());
 
-        if (!working_directory.IsDirectory())
+        if (!workingDirectory.IsDirectory())
         {
-            HYP_LOG(BuildTool, Error, "Working directory is not a directory: {}", working_directory);
+            HYP_LOG(BuildTool, Error, "Working directory is not a directory: {}", workingDirectory);
 
             return 1;
         }
 
-        const FilePath source_directory = FilePath(parse_result.GetValue()["SourceDirectory"].AsString());
+        const FilePath sourceDirectory = FilePath(parseResult.GetValue()["SourceDirectory"].AsString());
 
-        if (!source_directory.IsDirectory())
+        if (!sourceDirectory.IsDirectory())
         {
-            HYP_LOG(BuildTool, Error, "Source directory is not a directory: {}", source_directory);
+            HYP_LOG(BuildTool, Error, "Source directory is not a directory: {}", sourceDirectory);
 
             return 1;
         }
 
-        const FilePath cxx_output_directory = FilePath(parse_result.GetValue()["CXXOutputDirectory"].AsString());
-        const FilePath csharp_output_directory = FilePath(parse_result.GetValue()["CSharpOutputDirectory"].AsString());
+        const FilePath cxxOutputDirectory = FilePath(parseResult.GetValue()["CXXOutputDirectory"].AsString());
+        const FilePath csharpOutputDirectory = FilePath(parseResult.GetValue()["CSharpOutputDirectory"].AsString());
 
-        HashSet<FilePath> exclude_directories;
-        HashSet<FilePath> exclude_files;
+        HashSet<FilePath> excludeDirectories;
+        HashSet<FilePath> excludeFiles;
 
-        if (parse_result.GetValue().Contains("ExcludeDirectories"))
+        if (parseResult.GetValue().Contains("ExcludeDirectories"))
         {
-            const json::JSONArray exclude_directories_json = parse_result.GetValue()["ExcludeDirectories"].ToArray();
+            const json::JSONArray excludeDirectoriesJson = parseResult.GetValue()["ExcludeDirectories"].ToArray();
 
-            for (const json::JSONValue& value : exclude_directories_json)
+            for (const json::JSONValue& value : excludeDirectoriesJson)
             {
-                exclude_directories.Insert(FilePath(FileSystem::RelativePath(value.ToString().Data(), source_directory.Data()).c_str()));
+                excludeDirectories.Insert(FilePath(FileSystem::RelativePath(value.ToString().Data(), sourceDirectory.Data()).c_str()));
             }
         }
 
-        if (parse_result.GetValue().Contains("ExcludeFiles"))
+        if (parseResult.GetValue().Contains("ExcludeFiles"))
         {
-            const json::JSONArray exclude_files_json = parse_result.GetValue()["ExcludeFiles"].ToArray();
+            const json::JSONArray excludeFilesJson = parseResult.GetValue()["ExcludeFiles"].ToArray();
 
-            for (const json::JSONValue& value : exclude_files_json)
+            for (const json::JSONValue& value : excludeFilesJson)
             {
-                exclude_files.Insert(FilePath(FileSystem::RelativePath(value.ToString().Data(), source_directory.Data()).c_str()));
+                excludeFiles.Insert(FilePath(FileSystem::RelativePath(value.ToString().Data(), sourceDirectory.Data()).c_str()));
             }
         }
 
-        buildtool::HypBuildTool build_tool {
-            working_directory,
-            source_directory,
-            cxx_output_directory,
-            csharp_output_directory,
-            exclude_directories,
-            exclude_files
+        buildtool::HypBuildTool buildTool {
+            workingDirectory,
+            sourceDirectory,
+            cxxOutputDirectory,
+            csharpOutputDirectory,
+            excludeDirectories,
+            excludeFiles
         };
 
-        Result res = build_tool.Run();
+        Result res = buildTool.Run();
 
         TaskSystem::GetInstance().Stop();
 
@@ -538,7 +538,7 @@ int main(int argc, char** argv)
     }
     else
     {
-        HYP_LOG(BuildTool, Error, "Failed to parse arguments!\n\t{}", parse_result.GetError().GetMessage());
+        HYP_LOG(BuildTool, Error, "Failed to parse arguments!\n\t{}", parseResult.GetError().GetMessage());
 
         return 1;
     }

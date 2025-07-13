@@ -14,7 +14,7 @@
 namespace hyperion {
 namespace buildtool {
 
-static const HashMap<String, String> g_getvalue_overloads = {
+static const HashMap<String, String> g_getvalueOverloads = {
     { "bool", "ReadBool" },
     { "sbyte", "ReadInt8" },
     { "byte", "ReadUInt8" },
@@ -34,9 +34,9 @@ static const HashMap<String, String> g_getvalue_overloads = {
 
 FilePath CSharpModuleGenerator::GetOutputFilePath(const Analyzer& analyzer, const Module& mod) const
 {
-    FilePath relative_path = FilePath(FileSystem::RelativePath(mod.GetPath().Data(), analyzer.GetSourceDirectory().Data()).c_str());
+    FilePath relativePath = FilePath(FileSystem::RelativePath(mod.GetPath().Data(), analyzer.GetSourceDirectory().Data()).c_str());
 
-    return analyzer.GetCSharpOutputDirectory() / relative_path.BasePath() / StringUtil::StripExtension(relative_path.Basename()) + ".cs";
+    return analyzer.GetCSharpOutputDirectory() / relativePath.BasePath() / StringUtil::StripExtension(relativePath.Basename()) + ".cs";
 }
 
 Result CSharpModuleGenerator::Generate_Internal(const Analyzer& analyzer, const Module& mod, ByteWriter& writer) const
@@ -49,19 +49,19 @@ Result CSharpModuleGenerator::Generate_Internal(const Analyzer& analyzer, const 
 
     for (const Pair<String, HypClassDefinition>& pair : mod.GetHypClasses())
     {
-        const HypClassDefinition& hyp_class = pair.second;
+        const HypClassDefinition& hypClass = pair.second;
 
-        if (const HypClassAttributeValue& attr = hyp_class.GetAttribute("NoScriptBindings"); attr.GetBool())
+        if (const HypClassAttributeValue& attr = hypClass.GetAttribute("NoScriptBindings"); attr.GetBool())
         {
             continue;
         }
 
-        writer.WriteString(HYP_FORMAT("    public static class {}Extensions\n", hyp_class.name));
+        writer.WriteString(HYP_FORMAT("    public static class {}Extensions\n", hypClass.name));
         writer.WriteString("    {\n");
 
-        for (SizeType i = 0; i < hyp_class.members.Size(); ++i)
+        for (SizeType i = 0; i < hypClass.members.Size(); ++i)
         {
-            const HypMemberDefinition& member = hyp_class.members[i];
+            const HypMemberDefinition& member = hypClass.members[i];
 
             if (const HypClassAttributeValue& attr = member.GetAttribute("NoScriptBindings"); attr.GetBool())
             {
@@ -69,51 +69,51 @@ Result CSharpModuleGenerator::Generate_Internal(const Analyzer& analyzer, const 
                 continue;
             }
 
-            String managed_name = member.friendly_name;
+            String managedName = member.friendlyName;
 
             if (const HypClassAttributeValue& attr = member.GetAttribute("ManagedName"); attr.IsValid() && attr.IsString())
             {
-                managed_name = attr.GetString();
+                managedName = attr.GetString();
             }
 
             if (member.type == HypMemberType::TYPE_METHOD)
             {
-                if (!member.cxx_type->is_function)
+                if (!member.cxxType->isFunction)
                 {
                     return HYP_MAKE_ERROR(Error, "Cannot generate script bindings for non-function type");
                 }
 
-                if (member.cxx_type->is_static)
+                if (member.cxxType->isStatic)
                 {
                     continue;
                 }
 
-                const ASTFunctionType* function_type = dynamic_cast<const ASTFunctionType*>(member.cxx_type.Get());
+                const ASTFunctionType* functionType = dynamic_cast<const ASTFunctionType*>(member.cxxType.Get());
 
-                if (!function_type)
+                if (!functionType)
                 {
                     return HYP_MAKE_ERROR(Error, "Internal error: failed cast to ASTFunctionType");
                 }
 
-                CSharpTypeMapping return_type_mapping;
+                CSharpTypeMapping returnTypeMapping;
 
-                if (TResult<CSharpTypeMapping> res = MapToCSharpType(analyzer, function_type->return_type); res.HasError())
+                if (TResult<CSharpTypeMapping> res = MapToCSharpType(analyzer, functionType->returnType); res.HasError())
                 {
                     return res.GetError();
                 }
                 else
                 {
-                    return_type_mapping = res.GetValue();
+                    returnTypeMapping = res.GetValue();
                 }
 
-                Array<String> method_arg_decls;
-                Array<String> method_arg_names;
+                Array<String> methodArgDecls;
+                Array<String> methodArgNames;
 
-                for (SizeType i = 0; i < function_type->parameters.Size(); ++i)
+                for (SizeType i = 0; i < functionType->parameters.Size(); ++i)
                 {
-                    const ASTMemberDecl* parameter = function_type->parameters[i];
+                    const ASTMemberDecl* parameter = functionType->parameters[i];
 
-                    CSharpTypeMapping parameter_type_mapping;
+                    CSharpTypeMapping parameterTypeMapping;
 
                     if (TResult<CSharpTypeMapping> res = MapToCSharpType(analyzer, parameter->type); res.HasError())
                     {
@@ -121,27 +121,27 @@ Result CSharpModuleGenerator::Generate_Internal(const Analyzer& analyzer, const 
                     }
                     else
                     {
-                        parameter_type_mapping = res.GetValue();
+                        parameterTypeMapping = res.GetValue();
                     }
 
-                    method_arg_decls.PushBack(HYP_FORMAT("{} {}", parameter_type_mapping.type_name, parameter->name));
-                    method_arg_names.PushBack(parameter->name);
+                    methodArgDecls.PushBack(HYP_FORMAT("{} {}", parameterTypeMapping.typeName, parameter->name));
+                    methodArgNames.PushBack(parameter->name);
                 }
 
-                writer.WriteString(HYP_FORMAT("        public static {} {}(this {} obj{})\n", return_type_mapping.type_name, managed_name, hyp_class.name, method_arg_decls.Any() ? ", " + String::Join(method_arg_decls, ", ") : ""));
+                writer.WriteString(HYP_FORMAT("        public static {} {}(this {} obj{})\n", returnTypeMapping.typeName, managedName, hypClass.name, methodArgDecls.Any() ? ", " + String::Join(methodArgDecls, ", ") : ""));
                 writer.WriteString("        {\n");
 
-                if (function_type->return_type->IsVoid())
+                if (functionType->returnType->IsVoid())
                 {
-                    if (hyp_class.type == HypClassDefinitionType::STRUCT)
+                    if (hypClass.type == HypClassDefinitionType::STRUCT)
                     {
                         writer.WriteString(HYP_FORMAT("            HypObject.GetMethod(HypClass.GetClass<{}>(), new Name({})).InvokeNative(obj{});\n",
-                            hyp_class.name, uint64(CreateWeakNameFromDynamicString(member.name.Data())), method_arg_names.Any() ? ", " + String::Join(method_arg_names, ", ") : ""));
+                            hypClass.name, uint64(CreateWeakNameFromDynamicString(member.name.Data())), methodArgNames.Any() ? ", " + String::Join(methodArgNames, ", ") : ""));
                     }
-                    else if (hyp_class.type == HypClassDefinitionType::CLASS)
+                    else if (hypClass.type == HypClassDefinitionType::CLASS)
                     {
                         writer.WriteString(HYP_FORMAT("            obj.GetMethod(new Name({})).InvokeNative(obj{});\n",
-                            uint64(CreateWeakNameFromDynamicString(member.name.Data())), method_arg_names.Any() ? ", " + String::Join(method_arg_names, ", ") : ""));
+                            uint64(CreateWeakNameFromDynamicString(member.name.Data())), methodArgNames.Any() ? ", " + String::Join(methodArgNames, ", ") : ""));
                     }
                     else
                     {
@@ -150,36 +150,36 @@ Result CSharpModuleGenerator::Generate_Internal(const Analyzer& analyzer, const 
                 }
                 else
                 {
-                    if (hyp_class.type == HypClassDefinitionType::STRUCT)
+                    if (hypClass.type == HypClassDefinitionType::STRUCT)
                     {
                         writer.WriteString(HYP_FORMAT("            using (HypDataBuffer resultData = HypObject.GetMethod(HypClass.GetClass<{}>(), new Name({})).InvokeNative(obj{}))\n",
-                            hyp_class.name, uint64(CreateWeakNameFromDynamicString(member.name.Data())), method_arg_names.Any() ? ", " + String::Join(method_arg_names, ", ") : ""));
+                            hypClass.name, uint64(CreateWeakNameFromDynamicString(member.name.Data())), methodArgNames.Any() ? ", " + String::Join(methodArgNames, ", ") : ""));
                         writer.WriteString("            {\n");
 
-                        if (return_type_mapping.get_value_overload.HasValue())
+                        if (returnTypeMapping.getValueOverload.HasValue())
                         {
-                            writer.WriteString(HYP_FORMAT("                return resultData.{}();\n", return_type_mapping.get_value_overload.Get()));
+                            writer.WriteString(HYP_FORMAT("                return resultData.{}();\n", returnTypeMapping.getValueOverload.Get()));
                         }
                         else
                         {
-                            writer.WriteString(HYP_FORMAT("                return ({})resultData.GetValue();\n", return_type_mapping.type_name));
+                            writer.WriteString(HYP_FORMAT("                return ({})resultData.GetValue();\n", returnTypeMapping.typeName));
                         }
 
                         writer.WriteString("            }\n");
                     }
-                    else if (hyp_class.type == HypClassDefinitionType::CLASS)
+                    else if (hypClass.type == HypClassDefinitionType::CLASS)
                     {
                         writer.WriteString(HYP_FORMAT("            using (HypDataBuffer resultData = obj.GetMethod(new Name({})).InvokeNative(obj{}))\n",
-                            uint64(CreateWeakNameFromDynamicString(member.name.Data())), method_arg_names.Any() ? ", " + String::Join(method_arg_names, ", ") : ""));
+                            uint64(CreateWeakNameFromDynamicString(member.name.Data())), methodArgNames.Any() ? ", " + String::Join(methodArgNames, ", ") : ""));
                         writer.WriteString("            {\n");
 
-                        if (return_type_mapping.get_value_overload.HasValue())
+                        if (returnTypeMapping.getValueOverload.HasValue())
                         {
-                            writer.WriteString(HYP_FORMAT("                return resultData.{}();\n", return_type_mapping.get_value_overload.Get()));
+                            writer.WriteString(HYP_FORMAT("                return resultData.{}();\n", returnTypeMapping.getValueOverload.Get()));
                         }
                         else
                         {
-                            writer.WriteString(HYP_FORMAT("                return ({})resultData.GetValue();\n", return_type_mapping.type_name));
+                            writer.WriteString(HYP_FORMAT("                return ({})resultData.GetValue();\n", returnTypeMapping.typeName));
                         }
 
                         writer.WriteString("            }\n");
@@ -196,12 +196,12 @@ Result CSharpModuleGenerator::Generate_Internal(const Analyzer& analyzer, const 
             }
 
             // Generate code to get a ScriptableDelegate C# object corresponding to the C++ object
-            if (member.type == HypMemberType::TYPE_FIELD && member.cxx_type->IsScriptableDelegate())
+            if (member.type == HypMemberType::TYPE_FIELD && member.cxxType->IsScriptableDelegate())
             {
-                writer.WriteString(HYP_FORMAT("        public static ScriptableDelegate Get{}Delegate(this {} obj)\n", managed_name, hyp_class.name));
+                writer.WriteString(HYP_FORMAT("        public static ScriptableDelegate Get{}Delegate(this {} obj)\n", managedName, hypClass.name));
                 writer.WriteString("        {\n");
 
-                writer.WriteString(HYP_FORMAT("            HypField field = (HypField)obj.HypClass.GetField(new Name({}));\n", uint64(CreateWeakNameFromDynamicString(member.friendly_name.Data()))));
+                writer.WriteString(HYP_FORMAT("            HypField field = (HypField)obj.HypClass.GetField(new Name({}));\n", uint64(CreateWeakNameFromDynamicString(member.friendlyName.Data()))));
                 writer.WriteString("            IntPtr fieldAddress = obj.NativeAddress + ((IntPtr)((HypField)field).Offset);\n\n");
                 writer.WriteString("            return new ScriptableDelegate(obj, fieldAddress);\n");
 

@@ -32,13 +32,13 @@ HYP_DECLARE_LOG_CHANNEL(BuildTool);
 
 using namespace json;
 
-static const HashMap<String, HypClassDefinitionType> g_hyp_class_definition_types = {
+static const HashMap<String, HypClassDefinitionType> g_hypClassDefinitionTypes = {
     { "HYP_CLASS", HypClassDefinitionType::CLASS },
     { "HYP_STRUCT", HypClassDefinitionType::STRUCT },
     { "HYP_ENUM", HypClassDefinitionType::ENUM }
 };
 
-static const HashMap<String, HypMemberType> g_hyp_member_definition_types = {
+static const HashMap<String, HypMemberType> g_hypMemberDefinitionTypes = {
     { "HYP_FIELD", HypMemberType::TYPE_FIELD },
     { "HYP_METHOD", HypMemberType::TYPE_METHOD },
     { "HYP_PROPERTY", HypMemberType::TYPE_PROPERTY }
@@ -46,12 +46,12 @@ static const HashMap<String, HypMemberType> g_hyp_member_definition_types = {
 
 const String& HypClassDefinitionTypeToString(HypClassDefinitionType type)
 {
-    auto it = g_hyp_class_definition_types.FindIf([type](const Pair<String, HypClassDefinitionType>& pair)
+    auto it = g_hypClassDefinitionTypes.FindIf([type](const Pair<String, HypClassDefinitionType>& pair)
         {
             return pair.second == type;
         });
 
-    if (it != g_hyp_class_definition_types.End())
+    if (it != g_hypClassDefinitionTypes.End())
     {
         return it->first;
     }
@@ -59,92 +59,92 @@ const String& HypClassDefinitionTypeToString(HypClassDefinitionType type)
     return String::empty;
 }
 
-static void ParseInnerContent(const String& content, String& out_result)
+static void ParseInnerContent(const String& content, String& outResult)
 {
-    int is_in_comment = 0; // 0 = no comment, 1 = line comment, 2 = block comment
-    bool is_in_string = false;
-    bool is_escaped = false;
-    int brace_depth = 0;
-    int parenthesis_depth = 0;
+    int isInComment = 0; // 0 = no comment, 1 = line comment, 2 = block comment
+    bool isInString = false;
+    bool isEscaped = false;
+    int braceDepth = 0;
+    int parenDepth = 0;
 
-    for (SizeType char_index = 0; char_index < content.Length(); char_index++)
+    for (SizeType charIndex = 0; charIndex < content.Length(); charIndex++)
     {
-        const utf::u32char ch = content.GetChar(char_index);
+        const utf::u32char ch = content.GetChar(charIndex);
 
         if (ch == 0)
         {
             break;
         }
 
-        out_result.Append(ch);
+        outResult.Append(ch);
 
-        if (is_escaped)
+        if (isEscaped)
         {
-            is_escaped = false;
+            isEscaped = false;
 
             continue;
         }
 
         if (ch == '\\')
         {
-            is_escaped = true;
+            isEscaped = true;
         }
-        else if (ch == '\n' && is_in_comment == 1)
+        else if (ch == '\n' && isInComment == 1)
         {
-            is_in_comment = 0;
+            isInComment = 0;
         }
-        else if (ch == '"' && !is_in_comment)
+        else if (ch == '"' && !isInComment)
         {
-            is_in_string = !is_in_string;
+            isInString = !isInString;
         }
-        else if (ch == '/' && !is_in_string && !is_in_comment && char_index + 1 < content.Length())
+        else if (ch == '/' && !isInString && !isInComment && charIndex + 1 < content.Length())
         {
-            if (content.GetChar(char_index + 1) == '/')
+            if (content.GetChar(charIndex + 1) == '/')
             {
-                is_in_comment = 1;
-                out_result.Append(content.GetChar(++char_index)); // Append the '/' to the result
+                isInComment = 1;
+                outResult.Append(content.GetChar(++charIndex)); // Append the '/' to the result
                 continue;
             }
-            else if (content.GetChar(char_index + 1) == '*')
+            else if (content.GetChar(charIndex + 1) == '*')
             {
-                is_in_comment = 2;
-                out_result.Append(content.GetChar(++char_index)); // Append the '/' to the result
-                continue;
-            }
-        }
-        else if (ch == '*' && !is_in_string && is_in_comment == 2 && char_index + 1 < content.Length())
-        {
-            if (content.GetChar(char_index + 1) == '/')
-            {
-                is_in_comment = 0;
-                out_result.Append(content.GetChar(++char_index)); // Append the '/' to the result
+                isInComment = 2;
+                outResult.Append(content.GetChar(++charIndex)); // Append the '/' to the result
                 continue;
             }
         }
-        else if (!is_in_string && !is_in_comment)
+        else if (ch == '*' && !isInString && isInComment == 2 && charIndex + 1 < content.Length())
+        {
+            if (content.GetChar(charIndex + 1) == '/')
+            {
+                isInComment = 0;
+                outResult.Append(content.GetChar(++charIndex)); // Append the '/' to the result
+                continue;
+            }
+        }
+        else if (!isInString && !isInComment)
         {
             if (ch == '{')
             {
-                brace_depth++;
+                braceDepth++;
             }
             else if (ch == '}')
             {
-                brace_depth--;
+                braceDepth--;
 
-                if (brace_depth <= 0 && parenthesis_depth <= 0)
+                if (braceDepth <= 0 && parenDepth <= 0)
                 {
                     break;
                 }
             }
             else if (ch == '(')
             {
-                parenthesis_depth++;
+                parenDepth++;
             }
             else if (ch == ')')
             {
-                parenthesis_depth--;
+                parenDepth--;
             }
-            else if (ch == ';' && brace_depth <= 0)
+            else if (ch == ';' && braceDepth <= 0)
             {
                 break;
             }
@@ -154,12 +154,12 @@ static void ParseInnerContent(const String& content, String& out_result)
 
 const String& HypMemberTypeToString(HypMemberType type)
 {
-    auto it = g_hyp_member_definition_types.FindIf([type](const Pair<String, HypMemberType>& pair)
+    auto it = g_hypMemberDefinitionTypes.FindIf([type](const Pair<String, HypMemberType>& pair)
         {
             return pair.second == type;
         });
 
-    if (it != g_hyp_member_definition_types.End())
+    if (it != g_hypMemberDefinitionTypes.End())
     {
         return it->first;
     }
@@ -167,55 +167,55 @@ const String& HypMemberTypeToString(HypMemberType type)
     return String::empty;
 }
 
-static TResult<Array<Pair<String, HypClassAttributeValue>>> BuildHypClassAttributes(const String& attributes_string)
+static TResult<Array<Pair<String, HypClassAttributeValue>>> BuildHypClassAttributes(const String& attributesString)
 {
     Array<Pair<String, HypClassAttributeValue>> results;
 
     Array<String> attributes;
 
     {
-        String current_string;
-        char previous_char = 0;
-        bool in_string = false;
+        String currentString;
+        char previousChar = 0;
+        bool inString = false;
 
-        for (char ch : attributes_string)
+        for (char ch : attributesString)
         {
-            if (ch == '"' && previous_char != '\\')
+            if (ch == '"' && previousChar != '\\')
             {
-                in_string = !in_string;
+                inString = !inString;
             }
 
-            if (ch == ',' && !in_string)
+            if (ch == ',' && !inString)
             {
-                current_string = current_string.Trimmed();
+                currentString = currentString.Trimmed();
 
-                if (current_string.Any())
+                if (currentString.Any())
                 {
-                    attributes.PushBack(current_string);
-                    current_string.Clear();
+                    attributes.PushBack(currentString);
+                    currentString.Clear();
                 }
             }
             else
             {
-                current_string.Append(ch);
+                currentString.Append(ch);
             }
 
-            previous_char = ch;
+            previousChar = ch;
         }
 
-        current_string = current_string.Trimmed();
+        currentString = currentString.Trimmed();
 
-        if (current_string.Any())
+        if (currentString.Any())
         {
-            attributes.PushBack(current_string);
+            attributes.PushBack(currentString);
         }
     }
 
     for (const String& attribute : attributes)
     {
-        const SizeType equals_index = attribute.FindFirstIndex('=');
+        const SizeType equalsIndex = attribute.FindFirstIndex('=');
 
-        if (equals_index == String::notFound)
+        if (equalsIndex == String::notFound)
         {
             // No equals sign, so it's a boolean attribute (true)
             results.PushBack(Pair<String, HypClassAttributeValue> { attribute, HypClassAttributeValue(true) });
@@ -223,93 +223,93 @@ static TResult<Array<Pair<String, HypClassAttributeValue>>> BuildHypClassAttribu
             continue;
         }
 
-        const String key = String(attribute.Substr(0, equals_index)).Trimmed();
-        const String value = String(attribute.Substr(equals_index + 1)).Trimmed();
+        const String key = String(attribute.Substr(0, equalsIndex)).Trimmed();
+        const String value = String(attribute.Substr(equalsIndex + 1)).Trimmed();
 
         if (key.Empty() || value.Empty())
         {
             return HYP_MAKE_ERROR(Error, "Empty key or value in HypClass attribute");
         }
 
-        HypClassAttributeType hyp_class_attribute_value_type = HypClassAttributeType::NONE;
-        String hyp_class_attribute_value_string;
+        HypClassAttributeType hypClassAttributeValueType = HypClassAttributeType::NONE;
+        String hypClassAttributeValueString;
 
-        bool is_in_string = false;
+        bool isInString = false;
 
-        bool found_escape = false;
-        bool in_quotes = false;
-        bool has_decimal = false;
-        bool is_numeric = false;
+        bool foundEscape = false;
+        bool inQuotes = false;
+        bool hasDecimal = false;
+        bool isNumeric = false;
 
         for (SizeType i = 0; i < value.Size(); i++)
         {
             const char c = value[i];
 
-            if (c == '"' && !found_escape)
+            if (c == '"' && !foundEscape)
             {
-                in_quotes = !in_quotes;
+                inQuotes = !inQuotes;
 
-                hyp_class_attribute_value_type = HypClassAttributeType::STRING;
+                hypClassAttributeValueType = HypClassAttributeType::STRING;
 
                 continue;
             }
 
-            if (found_escape)
+            if (foundEscape)
             {
-                found_escape = false;
+                foundEscape = false;
             }
 
             if (c == '\\')
             {
-                found_escape = true;
+                foundEscape = true;
                 continue;
             }
 
-            if (isdigit(c) && !in_quotes)
+            if (isdigit(c) && !inQuotes)
             {
-                if (!is_numeric)
+                if (!isNumeric)
                 {
-                    is_numeric = true;
-                    hyp_class_attribute_value_type = HypClassAttributeType::INT;
+                    isNumeric = true;
+                    hypClassAttributeValueType = HypClassAttributeType::INT;
                 }
             }
-            else if (c == '.' && !in_quotes && is_numeric && hyp_class_attribute_value_type == HypClassAttributeType::INT)
+            else if (c == '.' && !inQuotes && isNumeric && hypClassAttributeValueType == HypClassAttributeType::INT)
             {
-                hyp_class_attribute_value_type = HypClassAttributeType::FLOAT;
-                has_decimal = true;
+                hypClassAttributeValueType = HypClassAttributeType::FLOAT;
+                hasDecimal = true;
             }
 
-            hyp_class_attribute_value_string.Append(c);
+            hypClassAttributeValueString.Append(c);
         }
 
-        if (hyp_class_attribute_value_type == HypClassAttributeType::NONE)
+        if (hypClassAttributeValueType == HypClassAttributeType::NONE)
         {
-            const String lower = hyp_class_attribute_value_string.ToLower();
+            const String lower = hypClassAttributeValueString.ToLower();
 
             if (lower == "true" || lower == "false")
             {
-                hyp_class_attribute_value_type = HypClassAttributeType::BOOLEAN;
+                hypClassAttributeValueType = HypClassAttributeType::BOOLEAN;
 
-                hyp_class_attribute_value_string = lower;
+                hypClassAttributeValueString = lower;
             }
             else
             {
                 // Fallback to string
-                hyp_class_attribute_value_type = HypClassAttributeType::STRING;
+                hypClassAttributeValueType = HypClassAttributeType::STRING;
             }
         }
 
-        switch (hyp_class_attribute_value_type)
+        switch (hypClassAttributeValueType)
         {
         case HypClassAttributeType::STRING:
-            results.PushBack(Pair<String, HypClassAttributeValue> { key, HypClassAttributeValue(hyp_class_attribute_value_string) });
+            results.PushBack(Pair<String, HypClassAttributeValue> { key, HypClassAttributeValue(hypClassAttributeValueString) });
             break;
 
         case HypClassAttributeType::INT:
         {
             int int_value;
 
-            if (!StringUtil::Parse<int>(hyp_class_attribute_value_string, &int_value))
+            if (!StringUtil::Parse<int>(hypClassAttributeValueString, &int_value))
             {
                 return HYP_MAKE_ERROR(Error, "Failed to parse int in HypClass attribute");
             }
@@ -321,7 +321,7 @@ static TResult<Array<Pair<String, HypClassAttributeValue>>> BuildHypClassAttribu
         {
             double float_value;
 
-            if (!StringUtil::Parse<double>(hyp_class_attribute_value_string, &float_value))
+            if (!StringUtil::Parse<double>(hypClassAttributeValueString, &float_value))
             {
                 return HYP_MAKE_ERROR(Error, "Failed to parse float in HypClass attribute");
             }
@@ -333,11 +333,11 @@ static TResult<Array<Pair<String, HypClassAttributeValue>>> BuildHypClassAttribu
         {
             bool bool_value;
 
-            if (hyp_class_attribute_value_string == "true")
+            if (hypClassAttributeValueString == "true")
             {
                 bool_value = true;
             }
-            else if (hyp_class_attribute_value_string == "false")
+            else if (hypClassAttributeValueString == "false")
             {
                 bool_value = false;
             }
@@ -359,25 +359,25 @@ static TResult<Array<Pair<String, HypClassAttributeValue>>> BuildHypClassAttribu
 }
 
 template <typename E, typename = std::enable_if_t<std::is_enum_v<E>>>
-static TResult<Pair<E, Array<Pair<String, HypClassAttributeValue>>>> ParseHypMacro(const HashMap<String, E>& usable_macros, const String& line, SizeType& out_start_index, SizeType& out_end_index, bool require_parentheses = true)
+static TResult<Pair<E, Array<Pair<String, HypClassAttributeValue>>>> ParseHypMacro(const HashMap<String, E>& usableMacros, const String& line, SizeType& outStartIndex, SizeType& outEndIndex, bool require_parentheses = true)
 {
-    out_start_index = String::notFound;
-    out_end_index = String::notFound;
+    outStartIndex = String::notFound;
+    outEndIndex = String::notFound;
 
-    for (const Pair<String, E>& it : usable_macros)
+    for (const Pair<String, E>& it : usableMacros)
     {
-        SizeType macro_start_index = line.FindFirstIndex(it.first);
+        SizeType macroStartIndex = line.FindFirstIndex(it.first);
 
-        if (macro_start_index != String::notFound)
+        if (macroStartIndex != String::notFound)
         {
             Array<Pair<String, HypClassAttributeValue>> attributes;
 
-            out_start_index = macro_start_index;
-            out_end_index = out_start_index + it.first.Length();
+            outStartIndex = macroStartIndex;
+            outEndIndex = outStartIndex + it.first.Length();
 
-            const SizeType parenthesis_index = line.Substr(out_end_index).FindFirstIndex("(");
+            const SizeType parenIndex = line.Substr(outEndIndex).FindFirstIndex("(");
 
-            if (parenthesis_index == String::notFound)
+            if (parenIndex == String::notFound)
             {
                 if (require_parentheses)
                 {
@@ -389,41 +389,41 @@ static TResult<Pair<E, Array<Pair<String, HypClassAttributeValue>>>> ParseHypMac
             }
             else
             {
-                out_end_index = out_end_index + parenthesis_index + 1;
+                outEndIndex = outEndIndex + parenIndex + 1;
 
-                int parenthesis_depth = 1;
-                String attributes_string;
+                int parenDepth = 1;
+                String attributesString;
 
-                for (; out_end_index < line.Size(); out_end_index++)
+                for (; outEndIndex < line.Size(); outEndIndex++)
                 {
-                    if (line[out_end_index] == '(')
+                    if (line[outEndIndex] == '(')
                     {
-                        parenthesis_depth++;
+                        parenDepth++;
                     }
-                    else if (line[out_end_index] == ')')
+                    else if (line[outEndIndex] == ')')
                     {
-                        parenthesis_depth--;
+                        parenDepth--;
 
-                        if (parenthesis_depth <= 0)
+                        if (parenDepth <= 0)
                         {
-                            out_end_index++; // Include the closing parenthesis
+                            outEndIndex++; // Include the closing parenthesis
                             break;
                         }
                     }
                     else
                     {
-                        attributes_string.Append(line[out_end_index]);
+                        attributesString.Append(line[outEndIndex]);
                     }
                 }
 
-                auto build_attributes_result = BuildHypClassAttributes(attributes_string);
+                auto buildAttributesResult = BuildHypClassAttributes(attributesString);
 
-                if (build_attributes_result.HasError())
+                if (buildAttributesResult.HasError())
                 {
-                    return build_attributes_result.GetError();
+                    return buildAttributesResult.GetError();
                 }
 
-                attributes = build_attributes_result.GetValue();
+                attributes = buildAttributesResult.GetValue();
             }
 
             return Pair<E, Array<Pair<String, HypClassAttributeValue>>> { it.second, attributes };
@@ -452,67 +452,67 @@ static TResult<Array<HypClassDefinition>, AnalyzerError> BuildHypClasses(const A
         return HYP_MAKE_ERROR(AnalyzerError, "Failed to open module file", mod.GetPath());
     }
 
-    Array<HypClassDefinition> hyp_class_definitions;
+    Array<HypClassDefinition> hypClassDefinitions;
 
     Array<String> lines = reader.ReadAllLines();
 
     for (SizeType i = 0; i < lines.Size(); i++)
     {
-        HypClassDefinition hyp_class_definition;
+        HypClassDefinition hypClassDefinition;
 
-        SizeType macro_start_index;
-        SizeType macro_end_index;
+        SizeType macroStartIndex;
+        SizeType macroEndIndex;
 
-        auto parse_macro_result = ParseHypMacro(g_hyp_class_definition_types, lines[i], macro_start_index, macro_end_index, true);
+        auto parseMacroResult = ParseHypMacro(g_hypClassDefinitionTypes, lines[i], macroStartIndex, macroEndIndex, true);
 
-        if (parse_macro_result.HasError())
+        if (parseMacroResult.HasError())
         {
-            return AnalyzerError(parse_macro_result.GetError(), mod.GetPath());
+            return AnalyzerError(parseMacroResult.GetError(), mod.GetPath());
         }
 
-        if (parse_macro_result.GetValue().first == HypClassDefinitionType::NONE)
+        if (parseMacroResult.GetValue().first == HypClassDefinitionType::NONE)
         {
             // no match; continue
             continue;
         }
 
-        hyp_class_definition.type = parse_macro_result.GetValue().first;
-        hyp_class_definition.attributes = parse_macro_result.GetValue().second;
-        hyp_class_definition.static_index = -1;
+        hypClassDefinition.type = parseMacroResult.GetValue().first;
+        hypClassDefinition.attributes = parseMacroResult.GetValue().second;
+        hypClassDefinition.staticIndex = -1;
 
-        const String content_to_end = String::Join(lines.Slice(i, lines.Size()), '\n');
+        const String contentToEnd = String::Join(lines.Slice(i, lines.Size()), '\n');
 
-        const SizeType brace_index = content_to_end.FindFirstIndex("{");
+        const SizeType braceIndex = contentToEnd.FindFirstIndex("{");
 
-        hyp_class_definition.source = content_to_end.Substr(0, brace_index);
+        hypClassDefinition.source = contentToEnd.Substr(0, braceIndex);
 
-        Optional<String> class_name_opt = ExtractCXXClassName(hyp_class_definition.source);
-        if (!class_name_opt.HasValue())
+        Optional<String> optClassName = ExtractCXXClassName(hypClassDefinition.source);
+        if (!optClassName.HasValue())
         {
-            HYP_LOG(BuildTool, Error, "Failed to extract class name from source: {}", hyp_class_definition.source);
+            HYP_LOG(BuildTool, Error, "Failed to extract class name from source: {}", hypClassDefinition.source);
 
             return HYP_MAKE_ERROR(AnalyzerError, "Failed to extract class name", mod.GetPath());
         }
 
-        hyp_class_definition.name = *class_name_opt;
+        hypClassDefinition.name = *optClassName;
 
-        Array<String> base_class_names = ExtractCXXBaseClasses(hyp_class_definition.source);
-        for (const String& base_class_name : base_class_names)
+        Array<String> baseClassNames = ExtractCXXBaseClasses(hypClassDefinition.source);
+        for (const String& baseClassName : baseClassNames)
         {
-            hyp_class_definition.base_class_names.PushBack(base_class_name);
+            hypClassDefinition.baseClassNames.PushBack(baseClassName);
         }
 
-        if (brace_index != String::notFound)
+        if (braceIndex != String::notFound)
         {
-            const String remaining_content = content_to_end.Substr(brace_index, content_to_end.Size());
+            const String remainingContent = contentToEnd.Substr(braceIndex, contentToEnd.Size());
 
-            ParseInnerContent(remaining_content, hyp_class_definition.source);
+            ParseInnerContent(remainingContent, hypClassDefinition.source);
         }
 
-        hyp_class_definitions.PushBack(std::move(hyp_class_definition));
+        hypClassDefinitions.PushBack(std::move(hypClassDefinition));
     }
 
-    return hyp_class_definitions;
+    return hypClassDefinitions;
 }
 
 // Add attributes to allow the runtime to access metadata on the member
@@ -537,17 +537,17 @@ static TResult<void, AnalyzerError> CreateParser(const Analyzer& analyzer, const
         return HYP_MAKE_ERROR(AnalyzerError, "Source code is empty", mod.GetPath());
     }
 
-    SourceFile source_file(mod.GetPath().Basename(), source.Size());
+    SourceFile sourceFile(mod.GetPath().Basename(), source.Size());
 
     ByteBuffer temp(source.Size(), source.Data());
-    source_file.ReadIntoBuffer(temp);
+    sourceFile.ReadIntoBuffer(temp);
 
-    TokenStream token_stream(TokenStreamInfo { mod.GetPath().Basename() });
+    TokenStream tokenStream(TokenStreamInfo { mod.GetPath().Basename() });
 
     CompilationUnit unit;
     unit.SetPreprocessorDefinitions(analyzer.GetGlobalDefines());
 
-    const auto check_errors = [&]() -> TResult<void, AnalyzerError>
+    const auto checkErrors = [&]() -> TResult<void, AnalyzerError>
     {
         String error_message;
 
@@ -566,57 +566,57 @@ static TResult<void, AnalyzerError> CreateParser(const Analyzer& analyzer, const
         return {};
     };
 
-    Lexer lexer(SourceStream(&source_file), &token_stream, &unit);
+    Lexer lexer(SourceStream(&sourceFile), &tokenStream, &unit);
     lexer.Analyze();
 
-    if (auto res = check_errors(); res.HasError())
+    if (auto res = checkErrors(); res.HasError())
     {
         return res.GetError();
     }
 
-    if (token_stream.Eof())
+    if (tokenStream.Eof())
     {
         return HYP_MAKE_ERROR(AnalyzerError, "Token stream is empty", mod.GetPath());
     }
 
-    Parser parser(&token_stream, &unit);
+    Parser parser(&tokenStream, &unit);
 
     if (auto res = function(parser); res.HasError())
     {
         return res.GetError();
     }
 
-    return check_errors();
+    return checkErrors();
 }
 
-static TResult<Array<HypMemberDefinition>, AnalyzerError> BuildHypClassMembers(const Analyzer& analyzer, const Module& mod, const HypClassDefinition& hyp_class_definition)
+static TResult<Array<HypMemberDefinition>, AnalyzerError> BuildHypClassMembers(const Analyzer& analyzer, const Module& mod, const HypClassDefinition& hypClassDefinition)
 {
     Array<HypMemberDefinition> results;
 
-    Array<String> lines = hyp_class_definition.source.Split('\n');
+    Array<String> lines = hypClassDefinition.source.Split('\n');
 
     for (SizeType i = 0; i < lines.Size(); i++)
     {
         const String& line = lines[i];
 
-        SizeType macro_start_index;
-        SizeType macro_end_index;
+        SizeType macroStartIndex;
+        SizeType macroEndIndex;
 
-        auto parse_macro_result = ParseHypMacro(g_hyp_member_definition_types, line, macro_start_index, macro_end_index, false);
+        auto parseMacroResult = ParseHypMacro(g_hypMemberDefinitionTypes, line, macroStartIndex, macroEndIndex, false);
 
-        if (parse_macro_result.HasError())
+        if (parseMacroResult.HasError())
         {
-            return AnalyzerError(parse_macro_result.GetError(), mod.GetPath());
+            return AnalyzerError(parseMacroResult.GetError(), mod.GetPath());
         }
 
-        if (parse_macro_result.GetValue().first == HypMemberType::NONE)
+        if (parseMacroResult.GetValue().first == HypMemberType::NONE)
         {
             continue;
         }
 
         HypMemberDefinition& result = results.EmplaceBack();
-        result.type = parse_macro_result.GetValue().first;
-        result.attributes = parse_macro_result.GetValue().second;
+        result.type = parseMacroResult.GetValue().first;
+        result.attributes = parseMacroResult.GetValue().second;
 
         if (result.type == HypMemberType::TYPE_PROPERTY)
         {
@@ -630,8 +630,8 @@ static TResult<Array<HypMemberDefinition>, AnalyzerError> BuildHypClassMembers(c
             continue;
         }
 
-        const String content_to_end = String(line.Substr(macro_end_index)) + "\n" + String::Join(lines.Slice(i + 1, lines.Size()), '\n');
-        ParseInnerContent(content_to_end, result.source);
+        const String contentToEnd = String(line.Substr(macroEndIndex)) + "\n" + String::Join(lines.Slice(i + 1, lines.Size()), '\n');
+        ParseInnerContent(contentToEnd, result.source);
 
         RC<ASTMemberDecl> decl;
 
@@ -651,40 +651,40 @@ static TResult<Array<HypMemberDefinition>, AnalyzerError> BuildHypClassMembers(c
         AddMetadata(decl, result);
 
         result.name = decl->name;
-        result.cxx_type = decl->type;
+        result.cxxType = decl->type;
     }
 
     return results;
 }
 
-static TResult<Array<HypMemberDefinition>, AnalyzerError> BuildHypEnumMembers(const Analyzer& analyzer, const Module& mod, const HypClassDefinition& hyp_class_definition)
+static TResult<Array<HypMemberDefinition>, AnalyzerError> BuildHypEnumMembers(const Analyzer& analyzer, const Module& mod, const HypClassDefinition& hypClassDefinition)
 {
     Array<HypMemberDefinition> results;
 
-    String inner_content;
-    ParseInnerContent(hyp_class_definition.source, inner_content);
+    String innerContent;
+    ParseInnerContent(hypClassDefinition.source, innerContent);
 
-    SizeType opening_brace_index = inner_content.FindFirstIndex('{');
+    SizeType openingBraceIndex = innerContent.FindFirstIndex('{');
 
-    if (opening_brace_index == String::notFound)
+    if (openingBraceIndex == String::notFound)
     {
         return HYP_MAKE_ERROR(AnalyzerError, "Failed to find opening brace for enum", mod.GetPath());
     }
 
     // Extract the content inside the braces
-    inner_content = inner_content.Substr(opening_brace_index + 1);
+    innerContent = innerContent.Substr(openingBraceIndex + 1);
 
     // Find the closing brace
-    SizeType closing_brace_index = inner_content.FindLastIndex('}');
+    SizeType closingBraceIndex = innerContent.FindLastIndex('}');
 
-    if (closing_brace_index == String::notFound)
+    if (closingBraceIndex == String::notFound)
     {
         return HYP_MAKE_ERROR(AnalyzerError, "Failed to find closing brace for enum", mod.GetPath());
     }
     // Extract the content inside the braces
-    inner_content = inner_content.Substr(0, closing_brace_index);
+    innerContent = innerContent.Substr(0, closingBraceIndex);
 
-    auto res = CreateParser(analyzer, mod, inner_content, [&](Parser& parser) -> TResult<void, AnalyzerError>
+    auto res = CreateParser(analyzer, mod, innerContent, [&](Parser& parser) -> TResult<void, AnalyzerError>
         {
             RC<ASTMemberDecl> member_decl;
 
@@ -703,7 +703,7 @@ static TResult<Array<HypMemberDefinition>, AnalyzerError> BuildHypEnumMembers(co
                 }
 
                 hyp_member_definition.name = member_decl->name;
-                hyp_member_definition.cxx_type = member_decl->type;
+                hyp_member_definition.cxxType = member_decl->type;
 
                 if (hyp_member_definition.name.Empty())
                 {
@@ -761,21 +761,21 @@ TResult<void, AnalyzerError> Analyzer::ProcessModule(Module& mod)
         return res.GetError();
     }
 
-    for (HypClassDefinition& hyp_class_definition : res.GetValue())
+    for (HypClassDefinition& hypClassDefinition : res.GetValue())
     {
         TResult<Array<HypMemberDefinition>, AnalyzerError> res = Array<HypMemberDefinition> {};
 
-        HYP_LOG(BuildTool, Info, "Building class definition: {} ({})", hyp_class_definition.name, HypClassDefinitionTypeToString(hyp_class_definition.type));
+        HYP_LOG(BuildTool, Info, "Building class definition: {} ({})", hypClassDefinition.name, HypClassDefinitionTypeToString(hypClassDefinition.type));
 
-        switch (hyp_class_definition.type)
+        switch (hypClassDefinition.type)
         {
         case HypClassDefinitionType::CLASS:
         case HypClassDefinitionType::STRUCT: // fallthrough
-            res = BuildHypClassMembers(*this, mod, hyp_class_definition);
+            res = BuildHypClassMembers(*this, mod, hypClassDefinition);
 
             break;
         case HypClassDefinitionType::ENUM:
-            res = BuildHypEnumMembers(*this, mod, hyp_class_definition);
+            res = BuildHypEnumMembers(*this, mod, hypClassDefinition);
 
             break;
         }
@@ -796,39 +796,39 @@ TResult<void, AnalyzerError> Analyzer::ProcessModule(Module& mod)
             case HypMemberType::TYPE_CONSTANT:
             case HypMemberType::TYPE_FIELD: // fallthrough
             {
-                bool preserve_case = true;
+                bool preserveCase = true;
 
-                if (hyp_class_definition.type == HypClassDefinitionType::ENUM)
+                if (hypClassDefinition.type == HypClassDefinitionType::ENUM)
                 {
                     // ensure ALL_CAPS enum members get converted to PascalCase. don't preserve their casing.
-                    preserve_case = false;
+                    preserveCase = false;
                 }
-                else if (definition.cxx_type->is_static && (definition.cxx_type->is_const || definition.cxx_type->is_constexpr))
+                else if (definition.cxxType->isStatic && (definition.cxxType->isConst || definition.cxxType->isConstexpr))
                 {
                     // static const / constexpr members could be in ALL_CAPS case, although we generally don't use that style
-                    preserve_case = false;
+                    preserveCase = false;
                 }
 
-                String name_without_prefix = definition.name;
+                String nameWithoutPrefix = definition.name;
 
-                if (name_without_prefix.StartsWith("m_") || name_without_prefix.StartsWith("s_") || name_without_prefix.StartsWith("g_"))
+                if (nameWithoutPrefix.StartsWith("m_") || nameWithoutPrefix.StartsWith("s_") || nameWithoutPrefix.StartsWith("g_"))
                 {
-                    name_without_prefix = name_without_prefix.Substr(2);
+                    nameWithoutPrefix = nameWithoutPrefix.Substr(2);
                 }
 
-                definition.friendly_name = StringUtil::ToPascalCase(name_without_prefix, preserve_case);
+                definition.friendlyName = StringUtil::ToPascalCase(nameWithoutPrefix, preserveCase);
 
                 break;
             }
             default:
-                definition.friendly_name = definition.name;
+                definition.friendlyName = definition.name;
                 break;
             }
         }
 
-        hyp_class_definition.members = std::move(members);
+        hypClassDefinition.members = std::move(members);
 
-        mod.AddHypClassDefinition(std::move(hyp_class_definition));
+        mod.AddHypClassDefinition(std::move(hypClassDefinition));
     }
 
     return {};

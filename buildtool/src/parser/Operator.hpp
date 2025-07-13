@@ -70,32 +70,32 @@ class Operator
 public:
     using OperatorMap = HashMap<String, Operator, HashTable_DynamicNodeAllocator<KeyValuePair<String, Operator>>>;
 
-    static const OperatorMap s_binary_operators;
-    static const OperatorMap s_unary_operators;
+    static const OperatorMap s_binaryOperators;
+    static const OperatorMap s_unaryOperators;
 
-    static bool IsBinaryOperator(UTF8StringView str, OperatorTypeBits match_bits = 0);
+    static bool IsBinaryOperator(UTF8StringView str, OperatorTypeBits matchBits = 0);
     static bool IsBinaryOperator(UTF8StringView str, const Operator*& out);
-    static bool IsBinaryOperator(UTF8StringView str, OperatorTypeBits match_bits, const Operator*& out);
+    static bool IsBinaryOperator(UTF8StringView str, OperatorTypeBits matchBits, const Operator*& out);
 
-    static bool IsUnaryOperator(UTF8StringView str, OperatorTypeBits match_bits = 0);
+    static bool IsUnaryOperator(UTF8StringView str, OperatorTypeBits matchBits = 0);
     static bool IsUnaryOperator(UTF8StringView str, const Operator*& out);
-    static bool IsUnaryOperator(UTF8StringView str, OperatorTypeBits match_bits, const Operator*& out);
+    static bool IsUnaryOperator(UTF8StringView str, OperatorTypeBits matchBits, const Operator*& out);
 
     static const Operator* FindBinaryOperator(Operators op);
     static const Operator* FindUnaryOperator(Operators op);
 
 public:
     Operator(
-        Operators op_type,
+        Operators opType,
         int precedence,
         int type,
-        bool modifies_value = false,
-        bool supports_overloading = false);
+        bool modifiesValue = false,
+        bool supportsOverloading = false);
     Operator(const Operator& other);
 
     Operators GetOperatorType() const
     {
-        return m_op_type;
+        return m_opType;
     }
 
     int GetType() const
@@ -115,12 +115,12 @@ public:
 
     bool ModifiesValue() const
     {
-        return m_modifies_value;
+        return m_modifiesValue;
     }
 
     bool SupportsOverloading() const
     {
-        return m_supports_overloading;
+        return m_supportsOverloading;
     }
 
     String LookupStringValue() const;
@@ -129,21 +129,21 @@ public:
     {
         HashCode hc;
 
-        hc.Add(m_op_type);
+        hc.Add(m_opType);
         hc.Add(m_precedence);
         hc.Add(m_type);
-        hc.Add(m_modifies_value);
-        hc.Add(m_supports_overloading);
+        hc.Add(m_modifiesValue);
+        hc.Add(m_supportsOverloading);
 
         return hc;
     }
 
 private:
-    Operators m_op_type;
+    Operators m_opType;
     int m_precedence;
     int m_type;
-    bool m_modifies_value;
-    bool m_supports_overloading;
+    bool m_modifiesValue;
+    bool m_supportsOverloading;
 };
 
 } // namespace hyperion::buildtool

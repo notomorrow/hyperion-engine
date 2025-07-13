@@ -4,7 +4,7 @@
 
 namespace hyperion::buildtool {
 
-const HashMap<ErrorMessage, String> CompilerError::error_message_strings {
+const HashMap<ErrorMessage, String> CompilerError::errorMessageStrings {
     /* Fatal errors */
     { Msg_internal_error, "Internal error" },
     { Msg_custom_error, "%" },

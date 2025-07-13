@@ -18,27 +18,27 @@ public:
 
     HYP_FORCE_INLINE ErrorList& GetErrorList()
     {
-        return m_error_list;
+        return m_errorList;
     }
 
     HYP_FORCE_INLINE const ErrorList& GetErrorList() const
     {
-        return m_error_list;
+        return m_errorList;
     }
 
     HYP_FORCE_INLINE const HashMap<String, String>& GetPreprocessorDefinitions() const
     {
-        return m_preprocessor_definitions;
+        return m_preprocessorDefinitions;
     }
 
-    HYP_FORCE_INLINE void SetPreprocessorDefinitions(const HashMap<String, String>& preprocessor_definitions)
+    HYP_FORCE_INLINE void SetPreprocessorDefinitions(const HashMap<String, String>& preprocessorDefinitions)
     {
-        m_preprocessor_definitions = preprocessor_definitions;
+        m_preprocessorDefinitions = preprocessorDefinitions;
     }
 
 private:
-    ErrorList m_error_list;
-    HashMap<String, String> m_preprocessor_definitions;
+    ErrorList m_errorList;
+    HashMap<String, String> m_preprocessorDefinitions;
 };
 
 } // namespace hyperion::buildtool
