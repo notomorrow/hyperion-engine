@@ -39,18 +39,15 @@ void main()
     // extrude along normal
     vec4 extendedPosition = vec4(a_position + a_normal * OUTLINE_WIDTH, 1.0);
 
-    if (bool(object.flags & ENTITY_GPU_FLAG_HAS_SKELETON))
-    {
-        mat4 skinning_matrix = CreateSkinningMatrix(ivec4(a_bone_indices), a_bone_weights);
+#ifdef SKINNING
+    mat4 skinning_matrix = CreateSkinningMatrix(ivec4(a_bone_indices), a_bone_weights);
 
-        position = object.model_matrix * skinning_matrix * extendedPosition;
-        normal_matrix = transpose(inverse(object.model_matrix * skinning_matrix));
-    }
-    else
-    {
-        position = object.model_matrix * extendedPosition;
-        normal_matrix = transpose(inverse(object.model_matrix));
-    }
+    position = object.model_matrix * skinning_matrix * extendedPosition;
+    normal_matrix = transpose(inverse(object.model_matrix * skinning_matrix));
+#else
+    position = object.model_matrix * extendedPosition;
+    normal_matrix = transpose(inverse(object.model_matrix));
+#endif
 
     v_position = position.xyz;
     v_normal = (normal_matrix * vec4(a_normal, 0.0)).xyz;

@@ -40,21 +40,18 @@ void main()
     displaced_position += vec3(sin(world_shader_data.game_time * 2.0) * 0.1, 0.0, cos(world_shader_data.game_time * 2.0) * 0.1) * movement;
     displaced_position += vec3(sin(world_shader_data.game_time * 0.5) * 0.4, 0.0, cos(world_shader_data.game_time * 0.5) * 0.4) * movement;
 
-    if (bool(object.flags & ENTITY_GPU_FLAG_HAS_SKELETON))
-    {
-        mat4 skinning_matrix = CreateSkinningMatrix(ivec4(a_bone_indices), a_bone_weights);
+#ifdef SKINNING
+    mat4 skinning_matrix = CreateSkinningMatrix(ivec4(a_bone_indices), a_bone_weights);
 
-        position = object.model_matrix * skinning_matrix * vec4(displaced_position, 1.0);
-        previous_position = object.previous_model_matrix * skinning_matrix * vec4(displaced_position, 1.0);
-        normal_matrix = transpose(inverse(object.model_matrix * skinning_matrix));
-    }
-    else
-    {
-        // This is not valid calc for prevous position with displacement
-        position = object.model_matrix * vec4(displaced_position, 1.0);
-        previous_position = object.previous_model_matrix * vec4(displaced_position, 1.0);
-        normal_matrix = transpose(inverse(object.model_matrix));
-    }
+    position = object.model_matrix * skinning_matrix * vec4(displaced_position, 1.0);
+    previous_position = object.previous_model_matrix * skinning_matrix * vec4(displaced_position, 1.0);
+    normal_matrix = transpose(inverse(object.model_matrix * skinning_matrix));
+#else
+    // This is not valid calc for prevous position with displacement
+    position = object.model_matrix * vec4(displaced_position, 1.0);
+    previous_position = object.previous_model_matrix * vec4(displaced_position, 1.0);
+    normal_matrix = transpose(inverse(object.model_matrix));
+#endif
 
     v_position = position.xyz;
     v_normal = (normal_matrix * vec4(a_normal, 0.0)).xyz;

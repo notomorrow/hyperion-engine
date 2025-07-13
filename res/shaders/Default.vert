@@ -103,22 +103,17 @@ void main()
     mat4 model_matrix = object.model_matrix;
 #endif
 
-#ifdef VERTEX_SKINNING_ENABLED
-    if (bool(object.flags & ENTITY_GPU_FLAG_HAS_SKELETON))
-    {
-        mat4 skinning_matrix = CreateSkinningMatrix(ivec4(a_bone_indices), a_bone_weights);
+#ifdef SKINNING
+    mat4 skinning_matrix = CreateSkinningMatrix(ivec4(a_bone_indices), a_bone_weights);
 
-        position = model_matrix * skinning_matrix * vec4(a_position, 1.0);
-        previous_position = object.previous_model_matrix * skinning_matrix * vec4(a_position, 1.0);
-        normal_matrix = transpose(inverse(model_matrix * skinning_matrix));
-    }
-    else
+    position = model_matrix * skinning_matrix * vec4(a_position, 1.0);
+    previous_position = object.previous_model_matrix * skinning_matrix * vec4(a_position, 1.0);
+    normal_matrix = transpose(inverse(model_matrix * skinning_matrix));
+#else
+    position = model_matrix * vec4(a_position, 1.0);
+    previous_position = object.previous_model_matrix * vec4(a_position, 1.0);
+    normal_matrix = transpose(inverse(model_matrix));
 #endif
-    {
-        position = model_matrix * vec4(a_position, 1.0);
-        previous_position = object.previous_model_matrix * vec4(a_position, 1.0);
-        normal_matrix = transpose(inverse(model_matrix));
-    }
 
     v_position = position.xyz / position.w;
     v_normal = (normal_matrix * vec4(a_normal, 0.0)).xyz;

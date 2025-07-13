@@ -58,12 +58,6 @@ struct CubemapUniforms
 
 static_assert(sizeof(CubemapUniforms) % 256 == 0);
 
-enum EntityGPUDataFlags : uint32
-{
-    ENTITY_GPU_FLAG_NONE = 0x0,
-    ENTITY_GPU_FLAG_HAS_SKELETON = 0x1
-};
-
 struct ImmediateDrawShaderData
 {
     Matrix4 transform;

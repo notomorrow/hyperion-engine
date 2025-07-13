@@ -110,6 +110,7 @@ static void UpdateRenderableAttributesDynamic(const RenderProxyMesh* proxy, Rend
             bool hasInstancing : 1;
             bool hasForwardLighting : 1;
             bool hasAlphaDiscard : 1;
+            bool hasSkinning : 1;
         };
 
         uint64 overridden;
@@ -120,6 +121,7 @@ static void UpdateRenderableAttributesDynamic(const RenderProxyMesh* proxy, Rend
     hasInstancing = proxy->instanceData.enableAutoInstancing || proxy->instanceData.numInstances > 1;
     hasForwardLighting = attributes.GetMaterialAttributes().bucket == RB_TRANSLUCENT;
     hasAlphaDiscard = bool(attributes.GetMaterialAttributes().flags & MAF_ALPHA_DISCARD);
+    hasSkinning = proxy->skeleton.IsValid() && proxy->skeleton->NumBones() > 0;
 
     if (!overridden)
     {
@@ -129,21 +131,27 @@ static void UpdateRenderableAttributesDynamic(const RenderProxyMesh* proxy, Rend
     bool shaderDefinitionChanged = false;
     ShaderDefinition shaderDefinition = attributes.GetShaderDefinition();
 
-    if (hasInstancing)
+    if (hasInstancing && !shaderDefinition.GetProperties().Has("INSTANCING"))
     {
         shaderDefinition.GetProperties().Set("INSTANCING");
         shaderDefinitionChanged = true;
     }
 
-    if (hasForwardLighting)
+    if (hasForwardLighting && !shaderDefinition.GetProperties().Has("FORWARD_LIGHTING"))
     {
         shaderDefinition.GetProperties().Set("FORWARD_LIGHTING");
         shaderDefinitionChanged = true;
     }
 
-    if (hasAlphaDiscard)
+    if (hasAlphaDiscard && !shaderDefinition.GetProperties().Has("ALPHA_DISCARD"))
     {
         shaderDefinition.GetProperties().Set("ALPHA_DISCARD");
+        shaderDefinitionChanged = true;
+    }
+
+    if (hasSkinning && !shaderDefinition.GetProperties().Has("SKINNING"))
+    {
+        shaderDefinition.GetProperties().Set("SKINNING");
         shaderDefinitionChanged = true;
     }
 
@@ -210,14 +218,24 @@ static void AddRenderProxy(RenderCollector* renderCollector, const RenderProxyMe
 
     AssertDebug(meshProxy->mesh.IsValid() && meshProxy->material.IsValid());
 
-    mapping.meshProxies.Set(meshProxy->entity.Id().ToIndex(), const_cast<RenderProxyMesh*>(meshProxy));
+    const uint32 idx = meshProxy->entity.Id().ToIndex();
+
+    mapping.meshProxies.Set(idx, const_cast<RenderProxyMesh*>(meshProxy));
+
+    renderCollector->previousAttributes.Set(idx, attributes);
 }
 
-static bool RemoveRenderProxy(RenderCollector* renderCollector, const RenderProxyMesh* meshProxy, const RenderableAttributeSet& attributes)
+static bool RemoveRenderProxy(RenderCollector* renderCollector, const RenderProxyMesh* meshProxy)
 {
     HYP_SCOPE;
 
     AssertDebug(meshProxy != nullptr);
+
+    const uint32 idx = meshProxy->entity.Id().ToIndex();
+
+    AssertDebug(renderCollector->previousAttributes.HasIndex(idx));
+
+    const RenderableAttributeSet& attributes = renderCollector->previousAttributes.Get(idx);
 
     auto& mappings = renderCollector->mappingsByBucket[attributes.GetMaterialAttributes().bucket];
 
@@ -234,7 +252,8 @@ static bool RemoveRenderProxy(RenderCollector* renderCollector, const RenderProx
         return false;
     }
 
-    mapping.meshProxies.EraseAt(meshProxy->entity.Id().ToIndex());
+    mapping.meshProxies.EraseAt(idx);
+    renderCollector->previousAttributes.EraseAt(idx);
 
     return true;
 }
@@ -690,10 +709,7 @@ void RenderCollector::BuildRenderGroups(View* view, const RenderProxyList& rende
                 continue;
             }
 
-            RenderableAttributeSet attributes = GetRenderableAttributesForProxy(*meshProxy, overrideAttributes);
-            UpdateRenderableAttributesDynamic(meshProxy, attributes);
-
-            Assert(RemoveRenderProxy(this, meshProxy, attributes));
+            Assert(RemoveRenderProxy(this, meshProxy));
         }
     }
 

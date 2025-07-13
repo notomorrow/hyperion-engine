@@ -3,9 +3,6 @@
 
 #include "defines.inc"
 
-#define ENTITY_GPU_FLAG_NONE 0x0
-#define ENTITY_GPU_FLAG_HAS_SKELETON 0x1
-
 struct Object
 {
     mat4 model_matrix;
@@ -22,7 +19,7 @@ struct Object
     uint skeleton_index;
 
     uint bucket;
-    uint flags;
+    uint _pad2;
     uint _pad3;
     uint _pad4;
 

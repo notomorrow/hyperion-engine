@@ -133,21 +133,14 @@ void main()
     vec4 position;
     mat4 normal_matrix;
 
-#ifdef VERTEX_SKINNING_ENABLED
-    if (bool(object.flags & ENTITY_GPU_FLAG_HAS_SKELETON))
-    {
-        mat4 skinning_matrix = CreateSkinningMatrix(ivec4(a_bone_indices), a_bone_weights);
+#ifdef SKINNING
+    mat4 skinning_matrix = CreateSkinningMatrix(ivec4(a_bone_indices), a_bone_weights);
 
-        position = object.model_matrix * skinning_matrix * vec4(a_position, 1.0);
-        normal_matrix = transpose(inverse(object.model_matrix * skinning_matrix));
-    }
-    else
-    {
-#endif
-        position = object.model_matrix * vec4(a_position, 1.0);
-        normal_matrix = transpose(inverse(object.model_matrix));
-#ifdef VERTEX_SKINNING_ENABLED
-    }
+    position = object.model_matrix * skinning_matrix * vec4(a_position, 1.0);
+    normal_matrix = transpose(inverse(object.model_matrix * skinning_matrix));
+#else
+    position = object.model_matrix * vec4(a_position, 1.0);
+    normal_matrix = transpose(inverse(object.model_matrix));
 #endif
 
     v_position = position.xyz;

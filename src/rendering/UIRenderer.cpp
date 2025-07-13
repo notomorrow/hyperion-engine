@@ -246,53 +246,6 @@ static void BuildRenderGroups(RenderCollector& renderCollector, RenderProxyList&
     }
 }
 
-void UIRenderCollector::PushUpdates(View* view, RenderProxyList& rpl, const Optional<RenderableAttributeSet>& overrideAttributes)
-{
-    HYP_SCOPE;
-
-    // UISubsystem can have Update() called on a task thread.
-    Threads::AssertOnThread(g_gameThread | ThreadCategory::THREAD_CATEGORY_TASK);
-
-    // if (auto diff = rpl.meshes.GetDiff(); diff.NeedsUpdate())
-    // {
-    //     Array<RenderProxyMesh*> removed;
-    //     rpl.meshes.GetRemoved(removed, true);
-
-    //     Array<RenderProxyMesh*> added;
-    //     rpl.meshes.GetAdded(added, true);
-
-    //     Array<RenderProxyMesh*> changed;
-    //     rpl.meshes.GetChanged(changed);
-
-    //     for (RenderProxyMesh* proxy : added)
-    //     {
-    //         RenderApi_AddRef(proxy->entity.GetUnsafe());
-
-    //         RenderApi_UpdateRenderProxy(proxy->entity.Id(), proxy);
-
-    //         // for now:
-    //         proxy->IncRefs();
-    //     }
-
-    //     for (RenderProxyMesh* proxy : removed)
-    //     {
-    //         RenderApi_ReleaseRef(proxy->entity.Id());
-
-    //         // for now:
-    //         proxy->DecRefs();
-    //     }
-    // }
-
-    // RenderApi_UpdateTrackedResources(rpl.materials);
-    // RenderApi_UpdateTrackedResources(rpl.textures);
-
-    /// TEMP: Come back to it. maybe BuildRenderGroups needs to be virtual
-    // RenderCollector& renderCollector = RenderApi_GetRenderCollector(view);
-    // ::hyperion::BuildRenderGroups(renderCollector, rpl, proxyDepths, overrideAttributes);
-
-    // RenderCollector::CollectDrawCalls(rpl, 0);
-}
-
 void UIRenderCollector::ExecuteDrawCalls(FrameBase* frame, const RenderSetup& renderSetup, const FramebufferRef& framebuffer, uint32 bucketBits)
 {
     HYP_SCOPE;
