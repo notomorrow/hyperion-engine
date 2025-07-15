@@ -1,6 +1,6 @@
 /* Copyright (c) 2025 No Tomorrow Games. All rights reserved. */
 
-#include <scene/RenderProxyable.hpp>
+#include <rendering/RenderProxyable.hpp>
 
 namespace hyperion {
 

@@ -3,10 +3,10 @@
 #include <scene/ecs/systems/SkySystem.hpp>
 #include <scene/ecs/EntityManager.hpp>
 
-#include <scene/Mesh.hpp>
-#include <scene/Material.hpp>
+#include <rendering/Mesh.hpp>
+#include <rendering/Material.hpp>
 #include <scene/World.hpp>
-#include <scene/Texture.hpp>
+#include <rendering/Texture.hpp>
 
 #include <rendering/RenderEnvironment.hpp>
 #include <rendering/ShaderManager.hpp>

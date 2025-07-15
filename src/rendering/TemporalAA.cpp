@@ -18,7 +18,7 @@
 #include <rendering/RenderComputePipeline.hpp>
 #include <rendering/RenderFramebuffer.hpp>
 
-#include <scene/Texture.hpp>
+#include <rendering/Texture.hpp>
 
 #include <core/math/MathUtil.hpp>
 

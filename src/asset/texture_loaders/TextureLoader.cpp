@@ -6,7 +6,7 @@
 
 #include <core/utilities/StringUtil.hpp>
 
-#include <scene/Texture.hpp>
+#include <rendering/Texture.hpp>
 
 #include <thirdparty/stb_image.h>
 

@@ -328,14 +328,14 @@ function(collect_sources_and_modules dir out_sources out_modules)
         set(${out_sources} "${local_sources}" PARENT_SCOPE)
         set(${out_modules} "${local_modules}" PARENT_SCOPE)
 
+        source_group("hyperion-${subdir_basename} Library Code" FILES ${local_sources})
+
         return()
     endif()
 
     file(GLOB current_sources RELATIVE ${CMAKE_SOURCE_DIR} 
-         "${dir}/*.cpp" "${dir}/*.cxx" "${dir}/*.cc" "${dir}/*.c" "${dir}/*.mm" "${dir}/*.m")
+         "${dir}/*.cpp" "${dir}/*.cxx" "${dir}/*.cc" "${dir}/*.c" "${dir}/*.h" "${dir}/*.hpp" "${dir}/*.hxx" "${dir}/*.hxx" "${dir}/*.inl" "${dir}/*.mm" "${dir}/*.m")
     list(APPEND local_sources ${current_sources})
-
-    message(STATUS "Adding sources from ${dir}: ${current_sources}")
 
     file(GLOB children LIST_DIRECTORIES true "${dir}/*")
     foreach(child ${children})
@@ -352,6 +352,7 @@ endfunction()
 
 set(SUB_LIBRARIES "")
 collect_sources_and_modules(${CMAKE_SOURCE_DIR}/src SOURCES SUB_LIBRARIES)
+source_group(TREE ${CMAKE_SOURCE_DIR}/src PREFIX "Engine Code" FILES ${SOURCES})
 
 file(GLOB_RECURSE PLATFORM_FILES "src/system/platform/**/*")
 foreach(PLATFORM_FILE ${PLATFORM_FILES})
@@ -572,6 +573,7 @@ add_definitions(-DHYP_BUILD_LIBRARY=1)
 
 file(GLOB_RECURSE REFLECTION_GENERATED_SOURCES "${HYP_GENERATED_DIR}/*.cpp")
 message(STATUS "Reflection generated sources directory: ${HYP_GENERATED_DIR}")
+source_group(TREE ${HYP_GENERATED_DIR} PREFIX "Generated Code" FILES ${REFLECTION_GENERATED_SOURCES})
 
 foreach(GENERATED_SOURCE ${REFLECTION_GENERATED_SOURCES})
     message(STATUS "Adding generated source file: ${GENERATED_SOURCE}")

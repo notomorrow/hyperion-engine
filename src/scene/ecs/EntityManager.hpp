@@ -410,7 +410,7 @@ public:
             return false;
         }
 
-        return m_entities.Find(entity) != m_entities.End();
+        return m_entities.HasEntity(entity);
     }
 
     void AddTag(Entity* entity, EntityTag tag);
@@ -689,13 +689,14 @@ public:
 
         Threads::AssertOnThread(m_ownerThreadId);
 
-        auto it = m_entities.Find(entity);
-        if (it == m_entities.End())
+        const EntityData* entityData = m_entities.TryGetEntityData(entity);
+        
+        if (!entityData)
         {
             return {};
         }
-
-        return it->second.components;
+        
+        return entityData->components;
     }
 
     void AddComponent(Entity* entity, const HypData& componentData);

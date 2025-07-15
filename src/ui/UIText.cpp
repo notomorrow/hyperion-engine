@@ -10,7 +10,7 @@
 #include <rendering/RenderFrame.hpp>
 #include <rendering/RenderGraphicsPipeline.hpp>
 
-#include <scene/Texture.hpp>
+#include <rendering/Texture.hpp>
 
 #include <scene/camera/OrthoCamera.hpp>
 

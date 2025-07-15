@@ -13,7 +13,7 @@
 
 #include <scene/Light.hpp>
 #include <scene/View.hpp>
-#include <scene/Texture.hpp>
+#include <rendering/Texture.hpp>
 
 #include <core/utilities/DeferredScope.hpp>
 

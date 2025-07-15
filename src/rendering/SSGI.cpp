@@ -27,7 +27,7 @@
 #include <core/logging/Logger.hpp>
 #include <core/logging/LogChannels.hpp>
 
-#include <scene/Texture.hpp>
+#include <rendering/Texture.hpp>
 #include <scene/EnvProbe.hpp>
 #include <scene/Light.hpp>
 

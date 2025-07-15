@@ -26,9 +26,9 @@
 #include <ui/UIText.hpp>
 
 /// Includes needed for RenderCollection
-#include <scene/Mesh.hpp>
+#include <rendering/Mesh.hpp>
 #include <scene/View.hpp>
-#include <scene/Texture.hpp>
+#include <rendering/Texture.hpp>
 #include <scene/World.hpp>
 #include <scene/EnvProbe.hpp>
 #include <scene/EnvGrid.hpp>
@@ -590,7 +590,6 @@ void UIRenderSubsystem::Update(float delta)
             meshProxy.material = meshComponent->material;
             meshProxy.skeleton = meshComponent->skeleton;
             meshProxy.instanceData = meshComponent->instanceData;
-            meshProxy.version = *entity->GetRenderProxyVersionPtr();
             meshProxy.bufferData.modelMatrix = transformComponent ? transformComponent->transform.GetMatrix() : Matrix4::Identity();
             meshProxy.bufferData.previousModelMatrix = meshComponent->previousModelMatrix;
             meshProxy.bufferData.worldAabbMax = boundingBoxComponent ? boundingBoxComponent->worldAabb.max : MathUtil::MinSafeValue<Vec3f>();

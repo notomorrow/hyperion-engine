@@ -3,7 +3,7 @@
 #include <scene/Octree.hpp>
 #include <scene/Entity.hpp>
 #include <scene/Node.hpp>
-#include <scene/Mesh.hpp>
+#include <rendering/Mesh.hpp>
 #include <scene/BVH.hpp>
 
 #include <scene/ecs/EntityManager.hpp>

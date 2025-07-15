@@ -16,8 +16,8 @@
 #include <rendering/RenderConfig.hpp>
 
 #include <scene/Scene.hpp>
-#include <scene/Mesh.hpp>
-#include <scene/Material.hpp>
+#include <rendering/Mesh.hpp>
+#include <rendering/Material.hpp>
 #include <scene/View.hpp>
 #include <scene/Light.hpp>    // For LightType
 #include <scene/EnvProbe.hpp> // For EnvProbeType
@@ -200,61 +200,6 @@ static Handle<RenderGroup> CreateRenderGroup(RenderCollector* renderCollector, D
     InitObject(rg);
 
     return rg;
-}
-
-static void AddRenderProxy(RenderCollector* renderCollector, const RenderProxyMesh* meshProxy, const RenderableAttributeSet& attributes)
-{
-    AssertDebug(meshProxy != nullptr);
-
-    // Add proxy to group
-    DrawCallCollectionMapping& mapping = renderCollector->mappingsByBucket[attributes.GetMaterialAttributes().bucket][attributes];
-    Handle<RenderGroup>& rg = mapping.renderGroup;
-
-    if (!rg.IsValid())
-    {
-        rg = CreateRenderGroup(renderCollector, mapping, attributes);
-    }
-
-    AssertDebug(meshProxy->mesh.IsValid() && meshProxy->material.IsValid());
-
-    const uint32 idx = meshProxy->entity.Id().ToIndex();
-
-    mapping.meshProxies.Set(idx, const_cast<RenderProxyMesh*>(meshProxy));
-
-    renderCollector->previousAttributes.Set(idx, attributes);
-}
-
-static bool RemoveRenderProxy(RenderCollector* renderCollector, const RenderProxyMesh* meshProxy)
-{
-    HYP_SCOPE;
-
-    AssertDebug(meshProxy != nullptr);
-
-    const uint32 idx = meshProxy->entity.Id().ToIndex();
-
-    AssertDebug(renderCollector->previousAttributes.HasIndex(idx));
-
-    const RenderableAttributeSet& attributes = renderCollector->previousAttributes.Get(idx);
-
-    auto& mappings = renderCollector->mappingsByBucket[attributes.GetMaterialAttributes().bucket];
-
-    auto it = mappings.Find(attributes);
-    Assert(it != mappings.End());
-
-    DrawCallCollectionMapping& mapping = it->second;
-    Assert(mapping.IsValid());
-
-    if (!mapping.meshProxies.HasIndex(meshProxy->entity.Id().ToIndex()))
-    {
-        HYP_LOG(Rendering, Warning, "Render proxy not found in mapping for entity {}", meshProxy->entity.Id());
-
-        return false;
-    }
-
-    mapping.meshProxies.EraseAt(idx);
-    renderCollector->previousAttributes.EraseAt(idx);
-
-    return true;
 }
 
 RenderProxyList::RenderProxyList()
@@ -721,6 +666,8 @@ void RenderCollector::BuildRenderGroups(View* view, const RenderProxyList& rende
 
             // Add proxy to group
             DrawCallCollectionMapping& newMapping = mappingsByBucket[newAttributes.GetMaterialAttributes().bucket][newAttributes];
+            AssertDebug(&newMapping != &prevMapping);
+
             Handle<RenderGroup>& rg = newMapping.renderGroup;
 
             if (!rg.IsValid())
@@ -730,8 +677,8 @@ void RenderCollector::BuildRenderGroups(View* view, const RenderProxyList& rende
 
             AssertDebug(meshProxy->mesh.IsValid() && meshProxy->material.IsValid());
 
-            newMapping.meshProxies.Set(idx, meshProxy);
             prevMapping.meshProxies.EraseAt(idx);
+            newMapping.meshProxies.Set(idx, meshProxy);
 
             *cachedAttributes = newAttributes;
         }
@@ -769,14 +716,9 @@ void RenderCollector::BuildRenderGroups(View* view, const RenderProxyList& rende
             DrawCallCollectionMapping& mapping = it->second;
             Assert(mapping.IsValid());
 
-            if (!mapping.meshProxies.HasIndex(idx))
-            {
-                HYP_LOG(Rendering, Warning, "Render proxy not found in mapping for entity {}", id);
-
-                continue;
-            }
-
+            AssertDebug(mapping.meshProxies.HasIndex(idx));
             mapping.meshProxies.EraseAt(idx);
+
             previousAttributes.EraseAt(idx);
         }
     }
@@ -816,6 +758,11 @@ void RenderCollector::BuildDrawCalls(uint32 bucketBits)
     HYP_SCOPE;
     Threads::AssertOnThread(g_renderThread);
 
+    HYP_LOG(Rendering, Debug, "Building Draw Calls for RenderCollector {}, num mappings : {}", (void*)this, Sum(mappingsByBucket, [](auto&& items)
+                                                                                                                {
+                                                                                                                    return items.Size();
+                                                                                                                }));
+
     static const bool uniquePerMaterial = g_renderBackend->GetRenderConfig().ShouldCollectUniqueDrawCallPerMaterial();
 
     if (bucketBits == 0)
@@ -846,6 +793,8 @@ void RenderCollector::BuildDrawCalls(uint32 bucketBits)
 
     if (iterators.Empty())
     {
+        HYP_LOG(Rendering, Warning, "No iterators when building draw call list");
+
         return;
     }
 
@@ -861,11 +810,11 @@ void RenderCollector::BuildDrawCalls(uint32 bucketBits)
         DrawCallCollectionMapping& mapping = it->second;
         AssertDebug(mapping.IsValid());
 
+        DrawCallCollection previousDrawState = std::move(mapping.drawCallCollection);
+
         DrawCallCollection& drawCallCollection = mapping.drawCallCollection;
         drawCallCollection.impl = drawCallCollectionImpl;
         drawCallCollection.renderGroup = mapping.renderGroup;
-
-        DrawCallCollection previousDrawState = std::move(drawCallCollection);
 
         for (RenderProxyMesh* meshProxy : mapping.meshProxies)
         {
@@ -897,23 +846,29 @@ void RenderCollector::BuildDrawCalls(uint32 bucketBits)
 
             EntityInstanceBatch* batch = nullptr;
 
-            // take a batch for reuse if a draw call was using one
-            if ((batch = previousDrawState.TakeDrawCallBatch(drawCallId)) != nullptr)
+            if (previousDrawState.IsValid())
             {
-                const uint32 batchIndex = batch->batchIndex;
-                AssertDebug(batchIndex != ~0u);
+                // take a batch for reuse if a draw call was using one
+                if ((batch = previousDrawState.TakeDrawCallBatch(drawCallId)) != nullptr)
+                {
+                    const uint32 batchIndex = batch->batchIndex;
+                    AssertDebug(batchIndex != ~0u);
 
-                // Reset it
-                *batch = EntityInstanceBatch { batchIndex };
+                    // Reset it
+                    *batch = EntityInstanceBatch { batchIndex };
 
-                drawCallCollection.impl->GetEntityInstanceBatchHolder()->MarkDirty(batch->batchIndex);
+                    drawCallCollection.impl->GetEntityInstanceBatchHolder()->MarkDirty(batch->batchIndex);
+                }
             }
 
             drawCallCollection.PushRenderProxyInstanced(batch, drawCallId, *meshProxy);
         }
 
-        // Any draw calls that were not reused from the previous state, clear them out and release batch indices.
-        previousDrawState.ResetDrawCalls();
+        if (previousDrawState.IsValid())
+        {
+            // Any draw calls that were not reused from the previous state, clear them out and release batch indices.
+            previousDrawState.ResetDrawCalls();
+        }
     }
 }
 

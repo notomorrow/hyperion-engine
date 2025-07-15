@@ -5,7 +5,7 @@
 
 #include <core/math/Vector2.hpp>
 
-#include <scene/Texture.hpp>
+#include <rendering/Texture.hpp>
 
 #include <util/img/Bitmap.hpp>
 

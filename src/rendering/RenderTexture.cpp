@@ -16,8 +16,8 @@
 #include <rendering/RenderGraphicsPipeline.hpp>
 #include <rendering/RenderQueue.hpp>
 
-#include <scene/Texture.hpp>
-#include <scene/Mesh.hpp>
+#include <rendering/Texture.hpp>
+#include <rendering/Mesh.hpp>
 
 #include <streaming/StreamedTextureData.hpp>
 

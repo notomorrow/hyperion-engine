@@ -2,7 +2,7 @@
 
 #include <rendering/lightmapper/LightmapUVBuilder.hpp>
 
-#include <scene/Mesh.hpp>
+#include <rendering/Mesh.hpp>
 
 #include <streaming/StreamedMeshData.hpp>
 

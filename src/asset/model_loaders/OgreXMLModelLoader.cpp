@@ -3,8 +3,8 @@
 #include <asset/model_loaders/OgreXMLModelLoader.hpp>
 
 #include <scene/World.hpp>
-#include <scene/Mesh.hpp>
-#include <scene/Material.hpp>
+#include <rendering/Mesh.hpp>
+#include <rendering/Material.hpp>
 
 #include <scene/animation/Skeleton.hpp>
 

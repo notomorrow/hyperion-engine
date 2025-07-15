@@ -97,10 +97,7 @@ public:
     Handle<Skeleton> skeleton;
     MeshInstanceData instanceData;
     MeshRaytracingData raytracingData;
-
     EntityShaderData bufferData {};
-
-    int version = 0;
 
     ~RenderProxyMesh() override = default;
 
@@ -108,8 +105,7 @@ public:
 
     HYP_FORCE_INLINE bool operator==(const RenderProxyMesh& other) const
     {
-        return version == other.version
-            && entity == other.entity
+        return entity == other.entity
             && mesh == other.mesh
             && material == other.material
             && skeleton == other.skeleton
@@ -119,8 +115,7 @@ public:
 
     HYP_FORCE_INLINE bool operator!=(const RenderProxyMesh& other) const
     {
-        return version != other.version
-            || entity != other.entity
+        return entity != other.entity
             || mesh != other.mesh
             || material != other.material
             || skeleton != other.skeleton

@@ -21,7 +21,7 @@
 #include <rendering/RenderFrame.hpp>
 #include <rendering/RenderGpuBuffer.hpp>
 
-#include <scene/Mesh.hpp>
+#include <rendering/Mesh.hpp>
 #include <scene/Scene.hpp>
 #include <scene/EnvProbe.hpp>
 #include <scene/EnvGrid.hpp>

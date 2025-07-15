@@ -20,7 +20,8 @@ class Entity;
 
 struct EntityData
 {
-    TypeId typeId;
+    // Keep a weak handle around so the Entity pointer doesn't get invalidated and reused
+    WeakHandle<Entity> entityWeak;
     TypeMap<ComponentId> components;
 
     template <class Component>
@@ -118,12 +119,49 @@ public:
     using Iterator = HashMap<Entity*, EntityData>::Iterator;
     using ConstIterator = HashMap<Entity*, EntityData>::ConstIterator;
 
-    HYP_FORCE_INLINE void Add(TypeId typeId, Entity* entity)
+    HYP_FORCE_INLINE void Add(Entity* entity)
     {
         HYP_MT_CHECK_RW(m_dataRaceDetector);
 
-        auto it = m_entities.Insert(entity, { typeId });
-        Assert(it.second);
+        AssertDebug(entity != nullptr);
+        {
+            auto it = m_entities.Find(entity);
+            AssertDebug(it == m_entities.End(), "Entity with ID {} already exists in EntityContainer! Found: {}", entity->Id(), it->first->Id());
+        }
+
+        m_entities[entity] = { entity->WeakHandleFromThis() };
+    }
+
+    HYP_FORCE_INLINE bool Remove(const Entity* entity)
+    {
+        if (!entity)
+        {
+            return false;
+        }
+
+        HYP_MT_CHECK_RW(m_dataRaceDetector);
+
+        auto it = m_entities.FindAs(entity);
+        if (it == m_entities.End())
+        {
+            return false;
+        }
+
+        m_entities.Erase(it);
+
+        return true;
+    }
+
+    HYP_FORCE_INLINE bool HasEntity(const Entity* entity) const
+    {
+        if (!entity)
+        {
+            return false;
+        }
+
+        HYP_MT_CHECK_READ(m_dataRaceDetector);
+
+        return m_entities.FindAs(entity) != m_entities.End();
     }
 
     HYP_FORCE_INLINE EntityData* TryGetEntityData(const Entity* entity)
@@ -158,27 +196,6 @@ public:
         Assert(data != nullptr);
 
         return *data;
-    }
-
-    HYP_FORCE_INLINE Iterator Find(const Entity* entity)
-    {
-        HYP_MT_CHECK_READ(m_dataRaceDetector);
-
-        return m_entities.FindAs(entity);
-    }
-
-    HYP_FORCE_INLINE ConstIterator Find(const Entity* entity) const
-    {
-        HYP_MT_CHECK_READ(m_dataRaceDetector);
-
-        return m_entities.FindAs(entity);
-    }
-
-    HYP_FORCE_INLINE void Erase(ConstIterator it)
-    {
-        HYP_MT_CHECK_RW(m_dataRaceDetector);
-
-        m_entities.Erase(it);
     }
 
     HYP_DEF_STL_BEGIN_END(m_entities.Begin(), m_entities.End())

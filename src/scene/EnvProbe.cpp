@@ -4,7 +4,7 @@
 #include <scene/View.hpp>
 #include <scene/World.hpp>
 #include <scene/Scene.hpp>
-#include <scene/Texture.hpp>
+#include <rendering/Texture.hpp>
 
 #include <rendering/RenderEnvProbe.hpp>
 #include <rendering/RenderCamera.hpp>

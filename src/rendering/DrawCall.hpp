@@ -166,6 +166,11 @@ struct DrawCallCollection
 
     ~DrawCallCollection();
 
+    HYP_FORCE_INLINE bool IsValid() const
+    {
+        return impl != nullptr;
+    }
+
     void PushRenderProxy(DrawCallID id, const RenderProxyMesh& renderProxy);
     void PushRenderProxyInstanced(EntityInstanceBatch* batch, DrawCallID id, const RenderProxyMesh& renderProxy);
 
@@ -185,8 +190,8 @@ struct DrawCallCollection
     Array<DrawCall> drawCalls;
     Array<InstancedDrawCall> instancedDrawCalls;
 
-    // Map from draw call Id to index in instancedDrawCalls
-    HashMap<uint64, Array<SizeType>, HashTable_DynamicNodeAllocator<KeyValuePair<uint64, Array<SizeType>>>> indexMap;
+    // Map from draw call id to the index in instancedDrawCalls
+    HashMap<uint64, Array<SizeType>> instancedDrawCallIndexMap;
 };
 
 template <class EntityInstanceBatchType>

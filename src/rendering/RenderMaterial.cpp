@@ -11,8 +11,8 @@
 #include <rendering/RenderDescriptorSet.hpp>
 #include <rendering/RenderConfig.hpp>
 
-#include <scene/Material.hpp>
-#include <scene/Texture.hpp>
+#include <rendering/Material.hpp>
+#include <rendering/Texture.hpp>
 
 #include <core/object/HypClassUtils.hpp>
 

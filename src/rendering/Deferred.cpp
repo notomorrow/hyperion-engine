@@ -32,9 +32,9 @@
 #include <rendering/RenderGraphicsPipeline.hpp>
 
 #include <scene/World.hpp>
-#include <scene/Mesh.hpp>
-#include <scene/Material.hpp>
-#include <scene/Texture.hpp>
+#include <rendering/Mesh.hpp>
+#include <rendering/Material.hpp>
+#include <rendering/Texture.hpp>
 #include <scene/View.hpp>
 #include <scene/EnvGrid.hpp>
 #include <scene/EnvProbe.hpp>

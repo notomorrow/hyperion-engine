@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include <scene/RenderProxyable.hpp>
+#include <rendering/RenderProxyable.hpp>
 
 #include <core/Handle.hpp>
 

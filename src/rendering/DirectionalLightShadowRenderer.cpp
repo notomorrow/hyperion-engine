@@ -23,7 +23,7 @@
 #include <core/logging/LogChannels.hpp>
 #include <core/logging/Logger.hpp>
 
-#include <scene/Texture.hpp>
+#include <rendering/Texture.hpp>
 #include <scene/World.hpp>
 #include <scene/View.hpp>
 #include <scene/Light.hpp>

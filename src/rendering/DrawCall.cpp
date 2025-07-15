@@ -5,8 +5,8 @@
 #include <rendering/RenderGlobalState.hpp>
 #include <rendering/RenderProxy.hpp>
 
-#include <scene/Mesh.hpp>
-#include <scene/Material.hpp>
+#include <rendering/Mesh.hpp>
+#include <rendering/Material.hpp>
 
 #include <scene/animation/Skeleton.hpp>
 
@@ -29,7 +29,7 @@ DrawCallCollection::DrawCallCollection(DrawCallCollection&& other) noexcept
     : impl(other.impl),
       drawCalls(std::move(other.drawCalls)),
       instancedDrawCalls(std::move(other.instancedDrawCalls)),
-      indexMap(std::move(other.indexMap))
+      instancedDrawCallIndexMap(std::move(other.instancedDrawCallIndexMap))
 {
 }
 
@@ -45,7 +45,7 @@ DrawCallCollection& DrawCallCollection::operator=(DrawCallCollection&& other) no
     impl = other.impl;
     drawCalls = std::move(other.drawCalls);
     instancedDrawCalls = std::move(other.instancedDrawCalls);
-    indexMap = std::move(other.indexMap);
+    instancedDrawCallIndexMap = std::move(other.instancedDrawCallIndexMap);
 
     return *this;
 }
@@ -75,14 +75,14 @@ void DrawCallCollection::PushRenderProxy(DrawCallID id, const RenderProxyMesh& r
 void DrawCallCollection::PushRenderProxyInstanced(EntityInstanceBatch* batch, DrawCallID id, const RenderProxyMesh& renderProxy)
 {
     // Auto-instancing: check if we already have a drawcall we can use for the given DrawCallID.
-    auto indexMapIt = indexMap.Find(uint64(id));
+    auto indexMapIt = instancedDrawCallIndexMap.Find(uint64(id));
 
-    if (indexMapIt == indexMap.End())
+    if (indexMapIt == instancedDrawCallIndexMap.End())
     {
-        indexMapIt = indexMap.Insert(uint64(id), {}).first;
+        indexMapIt = instancedDrawCallIndexMap.Insert(uint64(id), {}).first;
     }
 
-    const uint32 initialIndexMapSize = indexMapIt->second.Size();
+    const uint32 initialIndexMapSize = uint32(indexMapIt->second.Size());
 
     uint32 indexMapIndex = 0;
     uint32 instanceOffset = 0;
@@ -149,9 +149,9 @@ void DrawCallCollection::PushRenderProxyInstanced(EntityInstanceBatch* batch, Dr
 
 EntityInstanceBatch* DrawCallCollection::TakeDrawCallBatch(DrawCallID id)
 {
-    const auto it = indexMap.Find(id.Value());
+    const auto it = instancedDrawCallIndexMap.Find(id.Value());
 
-    if (it != indexMap.End())
+    if (it != instancedDrawCallIndexMap.End())
     {
         for (SizeType drawCallIndex : it->second)
         {
@@ -197,7 +197,7 @@ void DrawCallCollection::ResetDrawCalls()
 
     drawCalls.Clear();
     instancedDrawCalls.Clear();
-    indexMap.Clear();
+    instancedDrawCallIndexMap.Clear();
 }
 
 uint32 DrawCallCollection::PushEntityToBatch(InstancedDrawCall& drawCall, ObjId<Entity> entityId, const MeshInstanceData& meshInstanceData, uint32 numInstances, uint32 instanceOffset)

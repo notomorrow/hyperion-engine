@@ -35,7 +35,7 @@
 #include <util/MeshBuilder.hpp>
 
 #include <scene/World.hpp>
-#include <scene/Texture.hpp>
+#include <rendering/Texture.hpp>
 
 #include <core/debug/StackDump.hpp>
 #include <system/SystemEvent.hpp>

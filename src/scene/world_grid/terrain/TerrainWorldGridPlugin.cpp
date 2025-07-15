@@ -12,9 +12,9 @@
 #include <scene/ecs/EntityTag.hpp>
 
 #include <scene/Scene.hpp>
-#include <scene/Mesh.hpp>
-#include <scene/Material.hpp>
-#include <scene/Texture.hpp>
+#include <rendering/Mesh.hpp>
+#include <rendering/Material.hpp>
+#include <rendering/Texture.hpp>
 #include <scene/Node.hpp>
 #include <scene/World.hpp>
 

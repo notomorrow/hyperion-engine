@@ -5,7 +5,7 @@
 #include <scene/View.hpp>
 #include <scene/Scene.hpp>
 #include <scene/World.hpp>
-#include <scene/Texture.hpp>
+#include <rendering/Texture.hpp>
 
 #include <scene/camera/Camera.hpp>
 
@@ -253,8 +253,7 @@ void EnvGrid::Init()
                 TF_RG16F,
                 TT_CUBEMAP,
                 LoadOperation::CLEAR,
-                StoreOperation::STORE,
-                MathUtil::Infinity<Vec4f>() },
+                StoreOperation::STORE },
             ViewOutputTargetAttachmentDesc {
                 g_renderBackend->GetDefaultFormat(DIF_DEPTH),
                 TT_CUBEMAP,
@@ -528,9 +527,6 @@ void EnvGrid::Update(float delta)
         shouldRecollectEntites = true;
     }
 
-    // temp
-    shouldRecollectEntites = true;
-
     if (!shouldRecollectEntites)
     {
         return;
@@ -541,6 +537,8 @@ void EnvGrid::Update(float delta)
     m_view->UpdateVisibility();
     m_view->Collect();
 
+    HYP_LOG(EnvGrid, Debug, "View::Collect() for EnvGrid {}", Id());
+
     // Make sure all our probes were collected - if this doesn't match up, down the line when we try to receive resource binding indices they wouldn't be found
     RenderProxyList& rpl = RenderApi_GetProducerProxyList(m_view);
     AssertDebug(rpl.envProbes.NumCurrent() >= m_envProbeCollection.numProbes,
@@ -549,8 +547,8 @@ void EnvGrid::Update(float delta)
         Id(),
         m_envProbeCollection.numProbes);
 
-    HYP_LOG(EnvGrid, Debug, "Updating EnvGrid {} with {} probes\t lights: {}", Id(), m_envProbeCollection.numProbes,
-        RenderApi_GetProducerProxyList(m_view).lights.NumCurrent());
+    HYP_LOG(EnvGrid, Debug, "Updating EnvGrid {} with {} probes\t Found {} meshes", Id(), m_envProbeCollection.numProbes,
+        RenderApi_GetProducerProxyList(m_view).meshes.NumCurrent());
 
     for (uint32 index = 0; index < m_envProbeCollection.numProbes; index++)
     {

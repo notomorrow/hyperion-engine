@@ -20,8 +20,8 @@
 #include <rendering/RenderBackend.hpp>
 
 #include <scene/Entity.hpp>
-#include <scene/Mesh.hpp>
-#include <scene/Material.hpp>
+#include <rendering/Mesh.hpp>
+#include <rendering/Material.hpp>
 #include <scene/EnvProbe.hpp>
 #include <scene/EnvGrid.hpp>
 #include <scene/Light.hpp>

@@ -12,10 +12,10 @@
 
 #include <scene/Scene.hpp>
 #include <scene/World.hpp>
-#include <scene/Mesh.hpp>
+#include <rendering/Mesh.hpp>
 #include <scene/View.hpp>
 #include <scene/Light.hpp>
-#include <scene/Texture.hpp>
+#include <rendering/Texture.hpp>
 
 #include <scene/ecs/EntityManager.hpp>
 #include <scene/ecs/components/NodeLinkComponent.hpp>

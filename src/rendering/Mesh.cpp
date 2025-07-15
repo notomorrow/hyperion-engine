@@ -1,6 +1,6 @@
 /* Copyright (c) 2024-2025 No Tomorrow Games. All rights reserved. */
 
-#include <scene/Mesh.hpp>
+#include <rendering/Mesh.hpp>
 
 #include <rendering/RenderGlobalState.hpp>
 #include <rendering/RenderFrame.hpp>

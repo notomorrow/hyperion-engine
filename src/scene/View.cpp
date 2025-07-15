@@ -3,11 +3,11 @@
 #include <scene/View.hpp>
 #include <scene/Scene.hpp>
 #include <scene/Light.hpp>
-#include <scene/Mesh.hpp>
-#include <scene/Material.hpp>
+#include <rendering/Mesh.hpp>
+#include <rendering/Material.hpp>
 #include <scene/EnvGrid.hpp>
 #include <scene/EnvProbe.hpp>
-#include <scene/Texture.hpp>
+#include <rendering/Texture.hpp>
 #include <scene/lightmapper/LightmapVolume.hpp>
 #include <scene/camera/Camera.hpp>
 #include <scene/animation/Skeleton.hpp>
@@ -292,15 +292,6 @@ void View::Collect()
 
     RenderProxyList& rpl = RenderApi_GetProducerProxyList(this);
     rpl.BeginWrite();
-
-    // rpl.meshes.Advance();
-    // rpl.envProbes.Advance();
-    // rpl.envGrids.Advance();
-    // rpl.lights.Advance();
-    // rpl.lightmapVolumes.Advance();
-    // rpl.materials.Advance();
-    // rpl.textures.Advance();
-    // rpl.skeletons.Advance();
 
     rpl.viewport = m_viewport;
     rpl.priority = m_priority;
@@ -607,7 +598,6 @@ ResourceTrackerDiff View::CollectMeshEntities(RenderProxyList& rpl)
             meshProxy.material = meshComponent->material;
             meshProxy.skeleton = meshComponent->skeleton;
             meshProxy.instanceData = meshComponent->instanceData;
-            meshProxy.version = *entity->GetRenderProxyVersionPtr();
             meshProxy.bufferData.modelMatrix = transformComponent ? transformComponent->transform.GetMatrix() : Matrix4::Identity();
             meshProxy.bufferData.previousModelMatrix = meshComponent->previousModelMatrix;
             meshProxy.bufferData.worldAabbMax = boundingBoxComponent ? boundingBoxComponent->worldAabb.max : MathUtil::MinSafeValue<Vec3f>();

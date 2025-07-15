@@ -17,7 +17,7 @@
 #include <rendering/RenderGpuBuffer.hpp>
 #include <rendering/RenderHelpers.hpp>
 
-#include <scene/Mesh.hpp>
+#include <rendering/Mesh.hpp>
 
 #include <core/math/MathUtil.hpp>
 

@@ -15,7 +15,7 @@
 #include <rendering/RenderFrame.hpp>
 #include <rendering/RenderComputePipeline.hpp>
 
-#include <scene/Texture.hpp>
+#include <rendering/Texture.hpp>
 
 #include <core/threading/Threads.hpp>
 

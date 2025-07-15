@@ -1,7 +1,7 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#include <scene/Material.hpp>
-#include <scene/Texture.hpp>
+#include <rendering/Material.hpp>
+#include <rendering/Texture.hpp>
 
 #include <rendering/RenderMaterial.hpp>
 #include <rendering/RenderProxy.hpp>

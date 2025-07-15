@@ -4,7 +4,7 @@
 
 #include <asset/Assets.hpp>
 
-#include <scene/Material.hpp>
+#include <rendering/Material.hpp>
 
 namespace hyperion {
 

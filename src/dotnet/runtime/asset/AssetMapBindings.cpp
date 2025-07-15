@@ -3,7 +3,7 @@
 #include <dotnet/runtime/asset/AssetMapBindings.hpp>
 
 #include <scene/Node.hpp>
-#include <scene/Material.hpp>
+#include <rendering/Material.hpp>
 
 #include <scene/animation/Skeleton.hpp>
 

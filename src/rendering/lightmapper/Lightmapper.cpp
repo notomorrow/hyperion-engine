@@ -19,12 +19,12 @@
 #include <rendering/Renderer.hpp>
 
 #include <scene/BVH.hpp>
-#include <scene/Mesh.hpp>
-#include <scene/Material.hpp>
+#include <rendering/Mesh.hpp>
+#include <rendering/Material.hpp>
 #include <scene/World.hpp>
 #include <scene/EnvProbe.hpp>
 #include <scene/EnvGrid.hpp>
-#include <scene/Texture.hpp>
+#include <rendering/Texture.hpp>
 #include <scene/View.hpp>
 
 #include <scene/lightmapper/LightmapVolume.hpp>

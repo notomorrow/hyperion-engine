@@ -20,8 +20,8 @@
 #include <core/logging/Logger.hpp>
 #include <core/logging/LogChannels.hpp>
 
-#include <scene/Mesh.hpp>
-#include <scene/Material.hpp>
+#include <rendering/Mesh.hpp>
+#include <rendering/Material.hpp>
 
 #include <util/MeshBuilder.hpp>
 

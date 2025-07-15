@@ -6,8 +6,8 @@
 #include <scene/animation/Skeleton.hpp>
 
 #include <scene/Scene.hpp>
-#include <scene/Mesh.hpp>
-#include <scene/Material.hpp>
+#include <rendering/Mesh.hpp>
+#include <rendering/Material.hpp>
 
 #include <rendering/RenderGlobalState.hpp>
 #include <rendering/RenderMaterial.hpp>

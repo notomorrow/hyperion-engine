@@ -18,7 +18,7 @@
 
 #include <scene/Node.hpp>
 #include <scene/Scene.hpp>
-#include <scene/Material.hpp>
+#include <rendering/Material.hpp>
 
 #include <core/math/Color.hpp>
 #include <core/math/BlendVar.hpp>

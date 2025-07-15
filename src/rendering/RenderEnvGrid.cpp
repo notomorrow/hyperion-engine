@@ -21,7 +21,7 @@
 
 #include <scene/EnvGrid.hpp>
 #include <scene/EnvProbe.hpp>
-#include <scene/Texture.hpp>
+#include <rendering/Texture.hpp>
 #include <scene/View.hpp>
 #include <scene/Light.hpp>
 
@@ -585,7 +585,6 @@ void EnvGridRenderer::RenderFrame(FrameBase* frame, const RenderSetup& renderSet
 
     RenderProxyList& rpl = RenderApi_GetConsumerProxyList(envGrid->GetView());
     rpl.BeginRead();
-
     HYP_DEFER({ rpl.EndRead(); });
 
     /// FIXME: Not thread safe; use render proxy
@@ -687,8 +686,6 @@ void EnvGridRenderer::RenderFrame(FrameBase* frame, const RenderSetup& renderSet
                     HYP_LOG(EnvGrid, Warning, "EnvProbe {} out of range of max bound env probes (position: {}, world position: {}",
                         probe->Id(), bindingIndex.position, worldPosition);
                 }
-
-                probe->SetNeedsRender(false);
             }
         }
     }
@@ -724,8 +721,8 @@ void EnvGridRenderer::RenderProbe(FrameBase* frame, const RenderSetup& renderSet
     // RenderProxyEnvProbe* probeProxy = static_cast<RenderProxyEnvProbe*>(RenderApi_GetRenderProxy(probe.Id()));
     // AssertDebug(probeProxy != nullptr, "No render proxy for EnvProbe {} when rendering EnvGrid!", probe.Id());
 
-    HYP_LOG(EnvGrid, Debug, "Rendering EnvProbe {} with {} draw calls collected",
-        probe->Id(), renderCollector.NumDrawCallsCollected());
+    HYP_LOG(EnvGrid, Debug, "Rendering EnvProbe {} with {} draw calls collected, render collector = {}, rpl = {}",
+        probe->Id(), renderCollector.NumDrawCallsCollected(), (void*)&renderCollector, (void*)&rpl);
 
     {
         RenderSetup rs = renderSetup;

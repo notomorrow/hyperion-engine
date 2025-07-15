@@ -25,11 +25,11 @@
 #include <rendering/RenderImage.hpp>
 #include <rendering/RenderBackend.hpp>
 
-#include <scene/Texture.hpp>
+#include <rendering/Texture.hpp>
 #include <scene/View.hpp>
 #include <scene/EnvProbe.hpp>
 #include <scene/EnvGrid.hpp>
-#include <scene/Material.hpp>
+#include <rendering/Material.hpp>
 #include <scene/Light.hpp>
 #include <scene/lightmapper/LightmapVolume.hpp>
 #include <scene/animation/Skeleton.hpp>
@@ -313,17 +313,14 @@ struct ResourceBindings
 
 #pragma region ResourceContainer
 
-/*! \brief Holds points to used resources and use count (for rendering).
- *  When the use count reaches zero, it is marked for deferred deletion from
- *  the render thread to ensure no frames are currently using it for rendering as it gets deleted */
 struct ResourceData final
 {
     HypObjectBase* resource;
-    AtomicVar<uint32> count;
+    uint32 useCount;
 
     ResourceData(HypObjectBase* resource)
         : resource(resource),
-          count(0)
+          useCount(0)
     {
         AssertDebug(resource);
 
@@ -529,7 +526,8 @@ struct ViewData
     View* view = nullptr;
     RenderProxyList rplRender;
     RenderCollector renderCollector;
-    uint32 framesSinceWrite : 4 = 0; // framesSinceWrite of this view in the current frame, used to determine if the
+    uint32 framesSinceUsed : 4 = 0;
+    uint32 numRefs : 4 = 0; // number of ViewFrameData holding refs to this
     // view is still alive if not reset to zero.
 };
 
@@ -563,9 +561,11 @@ static ViewData* GetViewData(View* view)
     auto viewDataIt = g_viewData.Find(view);
     if (viewDataIt == g_viewData.End())
     {
+        HYP_LOG(Rendering, Debug, "Allocating new ViewData for View {}", view->Id());
+
         ViewData* vd = new ViewData();
         vd->view = view;
-        vd->framesSinceWrite = 0;
+        vd->framesSinceUsed = 0;
 
         if (view->GetViewDesc().drawCallCollectionImpl != nullptr)
         {
@@ -578,10 +578,11 @@ static ViewData* GetViewData(View* view)
 
         AssertDebug(vd->renderCollector.drawCallCollectionImpl != nullptr);
 
-        viewDataIt = g_viewData.Set(view, vd).first;
+        viewDataIt = g_viewData.Insert(view, vd).first;
     }
 
     AssertDebug(viewDataIt->second != nullptr);
+
     return viewDataIt->second;
 }
 
@@ -694,7 +695,7 @@ static inline void SyncResources(ResourceTracker<ObjId<ElementType>, ElementType
 
         subtypeData.indicesPendingDelete.Set(resourceId.ToIndex(), false);
 
-        rd->count.Increment(1, MemoryOrder::RELAXED);
+        ++rd->useCount;
 
         lhs.Track(resourceId, &resource);
 
@@ -728,14 +729,12 @@ static inline void SyncResources(ResourceTracker<ObjId<ElementType>, ElementType
             continue;
         }
 
-        uint32 count;
+        AssertDebug(rd->useCount != 0);
 
-        if ((count = rd->count.Decrement(1, MemoryOrder::RELAXED)) == 1)
+        if (!(--rd->useCount))
         {
             subtypeData.indicesPendingDelete.Set(resourceId.ToIndex(), true);
         }
-
-        AssertDebug(count != 0);
     }
 
     Array<ObjId<ElementType>> changedIds;
@@ -765,8 +764,6 @@ static inline void SyncResources(ResourceTracker<ObjId<ElementType>, ElementType
             }
         }
     }
-
-    rhs.Advance();
 
     // if (added.Any() || removed.Any() || changedIds.Any())
     // {
@@ -959,6 +956,7 @@ HYP_API void RenderApi_BeginFrame_RenderThread()
         if (!vfd.viewData)
         {
             vfd.viewData = GetViewData(vfd.view);
+            ++vfd.viewData->numRefs;
         }
 
         vfd.rplShared->BeginRead();
@@ -1100,11 +1098,31 @@ HYP_API void RenderApi_EndFrame_RenderThread()
 
         ViewData& vd = *vfd.viewData;
 
+        View* view = vd.view;
+        AssertDebug(view != nullptr);
+
         vd.renderCollector.RemoveEmptyRenderGroups();
 
         // Clear out data for views that haven't been written to for a while
-        if (vd.framesSinceWrite == g_maxFramesBeforeDiscard)
+        if (vd.framesSinceUsed == g_maxFramesBeforeDiscard)
         {
+            HYP_LOG(Rendering, Debug, "Discarding ViewData for view {} after {} frames",
+                view->Id(), g_maxFramesBeforeDiscard);
+
+            // Decrement ref count on the ViewData,
+            // if we hit zero there are no more ViewFrameData holding refs to the ViewData so we delete it
+            AssertDebug(vd.numRefs > 0);
+
+            if ((--vd.numRefs) == 0)
+            {
+                auto viewDataIt = g_viewData.Find(view);
+                AssertDebug(viewDataIt != g_viewData.End() && viewDataIt->second == &vd);
+
+                g_viewData.Erase(viewDataIt);
+
+                delete &vd;
+            }
+
             delete &vfd;
 
             it = frameData.viewFrameData.Erase(it);
@@ -1117,13 +1135,11 @@ HYP_API void RenderApi_EndFrame_RenderThread()
 
     for (ResourceSubtypeData& subtypeData : g_resources.dataByType)
     {
-        // @TODO: for deletion, have a fixed number to iterate over per frame so we don't spend too much time on it.
-        // Remove resources pending deletion via SafeRelease() for indices marked for deletion from the game thread
         for (Bitset::BitIndex i : subtypeData.indicesPendingDelete)
         {
             ResourceData& rd = subtypeData.data.Get(i);
             AssertDebug(rd.resource != nullptr);
-            AssertDebug(rd.count.Get(MemoryOrder::RELAXED) == 0, "Ref count should be 0 before deletion");
+            AssertDebug(rd.useCount == 0, "Use count should be 0 before deletion");
 
             // if we delete it, we want to make sure it is not in marked for update state (don't want to iterate over
             // dead items)

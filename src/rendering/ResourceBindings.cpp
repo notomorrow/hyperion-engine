@@ -11,8 +11,8 @@
 #include <scene/EnvGrid.hpp>
 #include <scene/EnvProbe.hpp>
 #include <scene/Light.hpp>
-#include <scene/Texture.hpp>
-#include <scene/Material.hpp>
+#include <rendering/Texture.hpp>
+#include <rendering/Material.hpp>
 #include <scene/animation/Skeleton.hpp>
 #include <scene/lightmapper/LightmapVolume.hpp>
 

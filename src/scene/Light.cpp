@@ -1,7 +1,7 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
 #include <scene/Light.hpp>
-#include <scene/Material.hpp>
+#include <rendering/Material.hpp>
 #include <scene/View.hpp>
 #include <scene/Scene.hpp>
 #include <scene/camera/Camera.hpp>

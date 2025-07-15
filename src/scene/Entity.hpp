@@ -13,7 +13,7 @@
 
 #include <core/math/Matrix4.hpp>
 
-#include <scene/RenderProxyable.hpp>
+#include <rendering/RenderProxyable.hpp>
 
 namespace hyperion {
 

@@ -14,7 +14,7 @@
 
 #include <rendering/font/FontAtlas.hpp>
 
-#include <scene/Texture.hpp>
+#include <rendering/Texture.hpp>
 
 namespace hyperion::serialization {
 

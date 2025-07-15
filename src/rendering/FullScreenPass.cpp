@@ -20,8 +20,8 @@
 #include <rendering/RenderFramebuffer.hpp>
 #include <rendering/RenderGraphicsPipeline.hpp>
 
-#include <scene/Mesh.hpp>
-#include <scene/Texture.hpp>
+#include <rendering/Mesh.hpp>
+#include <rendering/Texture.hpp>
 
 #include <core/math/MathUtil.hpp>
 

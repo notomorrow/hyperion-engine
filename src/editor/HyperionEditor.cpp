@@ -14,7 +14,7 @@
 
 #include <scene/World.hpp>
 #include <scene/Light.hpp>
-#include <scene/Texture.hpp>
+#include <rendering/Texture.hpp>
 #include <scene/EnvGrid.hpp>
 
 #include <scene/ecs/EntityManager.hpp>
@@ -63,7 +63,7 @@
 
 #include <util/MeshBuilder.hpp>
 
-#include <scene/Mesh.hpp>
+#include <rendering/Mesh.hpp>
 
 #include <rendering/lightmapper/LightmapperSubsystem.hpp>
 #include <rendering/lightmapper/LightmapUVBuilder.hpp>

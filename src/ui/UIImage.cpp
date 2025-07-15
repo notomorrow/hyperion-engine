@@ -4,7 +4,7 @@
 
 #include <rendering/SafeDeleter.hpp>
 
-#include <scene/Texture.hpp>
+#include <rendering/Texture.hpp>
 
 #include <Engine.hpp>
 

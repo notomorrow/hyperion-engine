@@ -372,7 +372,7 @@ public:
         for (Bitset::BitIndex i : subclassIndices)
         {
             AssertDebug(i < subclassImpls.Size());
-            
+
             auto& impl = *subclassImpls[i];
 
             diff.numAdded += impl.GetAdded().Count();

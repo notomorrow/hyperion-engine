@@ -3,7 +3,7 @@
 #include <asset/material_loaders/MTLMaterialLoader.hpp>
 #include <asset/AssetBatch.hpp>
 
-#include <scene/Texture.hpp>
+#include <rendering/Texture.hpp>
 
 #include <rendering/RenderTexture.hpp>
 

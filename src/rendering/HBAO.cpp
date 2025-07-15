@@ -14,7 +14,7 @@
 #include <rendering/RenderFrame.hpp>
 #include <rendering/RenderGraphicsPipeline.hpp>
 
-#include <scene/Mesh.hpp>
+#include <rendering/Mesh.hpp>
 
 #include <system/AppContext.hpp>
 

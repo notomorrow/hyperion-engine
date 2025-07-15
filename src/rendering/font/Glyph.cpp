@@ -6,7 +6,7 @@
 
 #include <streaming/StreamedTextureData.hpp>
 
-#include <scene/Texture.hpp>
+#include <rendering/Texture.hpp>
 
 #include <core/logging/Logger.hpp>
 

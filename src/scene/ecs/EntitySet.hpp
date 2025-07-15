@@ -227,7 +227,7 @@ public:
 
             EntityData& entityData = m_entities.GetEntityData(entity);
 
-            m_elements.EmplaceBack(entity, entityData.typeId, FixedArray<ComponentId, sizeof...(Components)> { entityData.template GetComponentId<Components>()... });
+            m_elements.EmplaceBack(entity, entityData.entityWeak.GetTypeId(), FixedArray<ComponentId, sizeof...(Components)> { entityData.template GetComponentId<Components>()... });
         }
         else
         {

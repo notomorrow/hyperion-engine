@@ -4,8 +4,8 @@
 #include <scene/ecs/EntityManager.hpp>
 
 #include <scene/Scene.hpp>
-#include <scene/Mesh.hpp>
-#include <scene/Material.hpp>
+#include <rendering/Mesh.hpp>
+#include <rendering/Material.hpp>
 #include <scene/BVH.hpp>
 
 #include <core/containers/HashSet.hpp>

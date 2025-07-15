@@ -19,9 +19,9 @@
 #include <rendering/debug/DebugDrawer.hpp>
 
 #include <scene/View.hpp>
-#include <scene/Texture.hpp>
-#include <scene/Mesh.hpp>
-#include <scene/Material.hpp>
+#include <rendering/Texture.hpp>
+#include <rendering/Mesh.hpp>
+#include <rendering/Material.hpp>
 #include <scene/EnvGrid.hpp>
 #include <scene/EnvProbe.hpp>
 #include <scene/Light.hpp>

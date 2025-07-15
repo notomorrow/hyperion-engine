@@ -13,7 +13,7 @@
 #include <scene/camera/OrthoCamera.hpp>
 #include <scene/camera/PerspectiveCamera.hpp>
 
-#include <scene/Texture.hpp>
+#include <rendering/Texture.hpp>
 
 #include <scene/ecs/EntityManager.hpp>
 

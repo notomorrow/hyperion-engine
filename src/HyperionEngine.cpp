@@ -6,7 +6,7 @@
 
 #include <dotnet/DotNetSystem.hpp>
 
-#include <scene/Material.hpp>
+#include <rendering/Material.hpp>
 
 #include <scene/ecs/ComponentInterface.hpp>
 

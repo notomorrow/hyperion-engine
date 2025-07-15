@@ -72,7 +72,7 @@ HYP_DESCRIPTOR_SRV(Global, PointLightShadowMapsTextureArray) uniform textureCube
 #include "../include/shadows.inc"
 #include "../include/Octahedron.glsl"
 
-// #define LIGHTING
+#define LIGHTING
 
 vec2 NormalizeOctahedralCoord(uvec2 local_coord)
 {
@@ -149,7 +149,7 @@ vec4 ConvoleProbe(uvec2 local_coord)
 
 #ifdef LIGHTING
         // Sample the sky in the direction of the normal to get a rough approximation of indirect lighting.
-        vec4 irradiance = SampleSky(normal) * albedo * 0.25;
+        vec4 irradiance = SampleSky(normal) * albedo * 0.08;
 
         vec4 radiance = vec4(0.0);
 
@@ -181,9 +181,6 @@ void main(void)
     const uvec2 local_coord = gl_GlobalInvocationID.xy;
 
     vec4 color = ConvoleProbe(local_coord);
-
-    // temp
-    color = vec4(1.0, 0.0, 0.0, 1.0);
 
     const uvec2 coord = probe_offset_coord.xy + local_coord;
 

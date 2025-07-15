@@ -16,7 +16,7 @@
 #include <rendering/RenderGpuBuffer.hpp>
 #include <rendering/AsyncCompute.hpp>
 
-#include <scene/Texture.hpp>
+#include <rendering/Texture.hpp>
 #include <scene/View.hpp>
 #include <scene/EnvProbe.hpp>
 #include <scene/Light.hpp>

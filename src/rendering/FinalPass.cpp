@@ -20,9 +20,9 @@
 
 #include <core/logging/Logger.hpp>
 
-#include <scene/Mesh.hpp>
-#include <scene/Texture.hpp>
-#include <scene/RenderProxyable.hpp>
+#include <rendering/Mesh.hpp>
+#include <rendering/Texture.hpp>
+#include <rendering/RenderProxyable.hpp>
 
 #include <util/MeshBuilder.hpp>
 

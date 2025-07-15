@@ -410,7 +410,7 @@ Handle<Entity> EntityManager::AddBasicEntity()
 
     HYP_MT_CHECK_RW(m_entitiesDataRaceDetector);
 
-    m_entities.Add(Entity::Class()->GetTypeId(), entity);
+    m_entities.Add(entity);
 
     entity->m_scene = m_scene;
     InitObject(entity);
@@ -468,7 +468,7 @@ Handle<Entity> EntityManager::AddTypedEntity(const HypClass* hypClass)
 
     HYP_MT_CHECK_RW(m_entitiesDataRaceDetector);
 
-    m_entities.Add(entity->InstanceClass()->GetTypeId(), entity);
+    m_entities.Add(entity);
 
     entity->m_scene = m_scene;
     InitObject(entity);
@@ -543,7 +543,7 @@ void EntityManager::AddExistingEntity_Internal(const Handle<Entity>& entity)
 
     HYP_MT_CHECK_RW(m_entitiesDataRaceDetector);
 
-    m_entities.Add(entity->InstanceClass()->GetTypeId(), entity);
+    m_entities.Add(entity);
 
     entity->m_scene = m_scene;
     InitObject(entity);
@@ -603,13 +603,12 @@ bool EntityManager::RemoveEntity(Entity* entity)
 
     HYP_MT_CHECK_RW(m_entitiesDataRaceDetector);
 
-    const auto entitiesIt = m_entities.Find(entity);
-    Assert(entitiesIt != m_entities.End(), "Entity does not exist");
+    EntityData* entityData = m_entities.TryGetEntityData(entity);
+    Assert(entityData != nullptr, "Entity does not exist");
 
-    EntityData& entityData = entitiesIt->second;
-    NotifySystemsOfEntityRemoved(entity, entityData.components);
+    NotifySystemsOfEntityRemoved(entity, entityData->components);
 
-    for (auto componentInfoPairIt = entityData.components.Begin(); componentInfoPairIt != entityData.components.End();)
+    for (auto componentInfoPairIt = entityData->components.Begin(); componentInfoPairIt != entityData->components.End();)
     {
         const TypeId componentTypeId = componentInfoPairIt->first;
         const ComponentId componentId = componentInfoPairIt->second;
@@ -643,7 +642,7 @@ bool EntityManager::RemoveEntity(Entity* entity)
         componentHypDatas.Set(componentTypeId, std::move(componentHypData));
 
         // Update iterator, erase the component from the entity's component map
-        componentInfoPairIt = entityData.components.Erase(componentInfoPairIt);
+        componentInfoPairIt = entityData->components.Erase(componentInfoPairIt);
     }
 
     /// @NOTE: Do not call OnRemovedFromWorld() or OnRemovedFromScene() here as they are virtual functions
@@ -669,10 +668,10 @@ bool EntityManager::RemoveEntity(Entity* entity)
                 }
             }
         }
-
-        entity->m_scene = nullptr;
-        m_entities.Erase(entitiesIt);
     }
+
+    entity->m_scene = nullptr;
+    m_entities.Remove(entity);
 
     return true;
 }
@@ -699,13 +698,12 @@ void EntityManager::MoveEntity(const Handle<Entity>& entity, const Handle<Entity
     { // Remove components and entity from this and store them to be added to the other EntityManager
         HYP_MT_CHECK_RW(m_entitiesDataRaceDetector);
 
-        const auto entitiesIt = m_entities.Find(entity);
-        Assert(entitiesIt != m_entities.End(), "Entity does not exist");
+        EntityData* entityData = m_entities.TryGetEntityData(entity);
+        Assert(entityData != nullptr, "Entity does not exist");
 
-        EntityData& entityData = entitiesIt->second;
-        NotifySystemsOfEntityRemoved(entity, entityData.components);
+        NotifySystemsOfEntityRemoved(entity, entityData->components);
 
-        for (auto componentInfoPairIt = entityData.components.Begin(); componentInfoPairIt != entityData.components.End();)
+        for (auto componentInfoPairIt = entityData->components.Begin(); componentInfoPairIt != entityData->components.End();)
         {
             const TypeId componentTypeId = componentInfoPairIt->first;
             const ComponentId componentId = componentInfoPairIt->second;
@@ -739,7 +737,7 @@ void EntityManager::MoveEntity(const Handle<Entity>& entity, const Handle<Entity
             componentHypDatas.PushBack(std::move(componentHypData));
 
             // Update iterator, erase the component from the entity's component map
-            componentInfoPairIt = entityData.components.Erase(componentInfoPairIt);
+            componentInfoPairIt = entityData->components.Erase(componentInfoPairIt);
         }
 
         if (IsInitCalled())
@@ -752,29 +750,32 @@ void EntityManager::MoveEntity(const Handle<Entity>& entity, const Handle<Entity
             entity->OnRemovedFromScene(m_scene);
         }
 
-        Mutex::Guard entitySetsGuard(m_entitySetsMutex);
-
-        for (const HypData& componentData : componentHypDatas)
         {
-            const TypeId componentTypeId = componentData.GetTypeId();
-            EnsureValidComponentType(componentTypeId);
+            Mutex::Guard entitySetsGuard(m_entitySetsMutex);
 
-            // Update our entity sets to reflect the change
-            auto componentEntitySetsIt = m_componentEntitySets.Find(componentTypeId);
-
-            if (componentEntitySetsIt != m_componentEntitySets.End())
+            for (const HypData& componentData : componentHypDatas)
             {
-                for (TypeId entitySetTypeId : componentEntitySetsIt->second)
-                {
-                    EntitySetBase& entitySet = *m_entitySets.At(entitySetTypeId);
+                const TypeId componentTypeId = componentData.GetTypeId();
+                EnsureValidComponentType(componentTypeId);
 
-                    entitySet.OnEntityUpdated(entity);
+                // Update our entity sets to reflect the change
+                auto componentEntitySetsIt = m_componentEntitySets.Find(componentTypeId);
+
+                if (componentEntitySetsIt != m_componentEntitySets.End())
+                {
+                    for (TypeId entitySetTypeId : componentEntitySetsIt->second)
+                    {
+                        EntitySetBase& entitySet = *m_entitySets.At(entitySetTypeId);
+
+                        entitySet.OnEntityUpdated(entity);
+                    }
                 }
             }
         }
 
         entity->m_scene = nullptr;
-        m_entities.Erase(entitiesIt);
+
+        m_entities.Remove(entity);
     }
 
     // Add the entity and its components to the other EntityManager
@@ -787,7 +788,7 @@ void EntityManager::MoveEntity(const Handle<Entity>& entity, const Handle<Entity
 
         HYP_MT_CHECK_RW(other->m_entitiesDataRaceDetector);
 
-        other->m_entities.Add(entity->InstanceClass()->GetTypeId(), entity);
+        other->m_entities.Add(entity);
         entity->m_scene = other->m_scene;
 
         InitObject(entity);
@@ -1150,7 +1151,7 @@ bool EntityManager::HasTag(const Entity* entity, EntityTag tag) const
             return false;
         }
 
-        return GetTypeIdFromEntityTag(tag) == entityData->typeId;
+        return GetTypeIdFromEntityTag(tag) == entityData->entityWeak.GetTypeId();
     }
 
     const IComponentInterface* componentInterface = ComponentInterfaceRegistry::GetInstance().GetEntityTagComponentInterface(tag);

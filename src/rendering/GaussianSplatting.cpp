@@ -18,7 +18,7 @@
 #include <rendering/RenderComputePipeline.hpp>
 #include <rendering/RenderGraphicsPipeline.hpp>
 
-#include <scene/Mesh.hpp>
+#include <rendering/Mesh.hpp>
 
 #include <scene/camera/OrthoCamera.hpp>
 

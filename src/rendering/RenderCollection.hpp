@@ -26,7 +26,7 @@
 #include <rendering/RenderStructs.hpp>
 #include <rendering/RenderObject.hpp>
 
-#include <scene/RenderProxyable.hpp>
+#include <rendering/RenderProxyable.hpp>
 
 #include <Types.hpp>
 
@@ -128,6 +128,17 @@ struct HYP_API RenderProxyList
 
         AssertDebug(state != CS_READING, "Got state == CS_READING, race condition! (rwMarkerState = {})", rwMarkerState);
         state = CS_WRITING;
+
+        // advance all trackers to the next state before we write into them.
+        // this clears their 'next' bits and sets their 'previous' bits so we can tell what changed.
+        meshes.Advance();
+        envProbes.Advance();
+        lights.Advance();
+        envGrids.Advance();
+        envProbes.Advance();
+        lightmapVolumes.Advance();
+        materials.Advance();
+        skeletons.Advance();
     }
 
     void EndWrite()

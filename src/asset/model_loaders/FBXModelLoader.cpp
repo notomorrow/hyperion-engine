@@ -3,8 +3,8 @@
 #include <asset/model_loaders/FBXModelLoader.hpp>
 
 #include <scene/Entity.hpp>
-#include <scene/Mesh.hpp>
-#include <scene/Material.hpp>
+#include <rendering/Mesh.hpp>
+#include <rendering/Material.hpp>
 
 #include <scene/animation/Bone.hpp>
 #include <scene/animation/Skeleton.hpp>

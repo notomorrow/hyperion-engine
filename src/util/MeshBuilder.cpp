@@ -4,7 +4,7 @@
 
 #include <core/math/Triangle.hpp>
 
-#include <scene/Mesh.hpp>
+#include <rendering/Mesh.hpp>
 
 namespace hyperion {
 
