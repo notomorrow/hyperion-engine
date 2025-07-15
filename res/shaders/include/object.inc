@@ -40,7 +40,7 @@ struct EntityInstanceBatch
     mat4 transforms[MAX_ENTITIES_PER_INSTANCE_BATCH];
 };
 
-// can use up to 16 bits.
+// can use up to 10 bits.
 #define OBJECT_MASK_OPAQUE (0x01)
 #define OBJECT_MASK_TRANSLUCENT (0x02)
 #define OBJECT_MASK_PARTICLE (0x04)
@@ -51,7 +51,7 @@ struct EntityInstanceBatch
 #define OBJECT_MASK_LIGHTMAP_RADIANCE (0x80)
 #define OBJECT_MASK_LIGHTMAP_IRRADIANCE (0x100)
 #define OBJECT_MASK_LIGHTMAP (OBJECT_MASK_LIGHTMAP_RADIANCE | OBJECT_MASK_LIGHTMAP_IRRADIANCE)
-#define OBJECT_MASK_DEBUG (0x400)
+#define OBJECT_MASK_DEBUG (0x200)
 
 #define GET_OBJECT_BUCKET(obj)                                                              \
     ((uint((obj).bucket == HYP_OBJECT_BUCKET_OPAQUE) * (OBJECT_MASK_OPAQUE))                \

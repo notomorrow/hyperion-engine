@@ -13,9 +13,9 @@ layout(location = 3) in flat uint v_object_index;
 
 layout(location = 0) out vec4 gbuffer_albedo;
 layout(location = 1) out vec4 gbuffer_normals;
-layout(location = 2) out vec4 gbuffer_material;
+layout(location = 2) out uvec2 gbuffer_material;
 layout(location = 4) out vec2 gbuffer_velocity;
-layout(location = 5) out vec4 gbuffer_mask;
+layout(location = 5) out uint gbuffer_mask;
 layout(location = 6) out vec4 gbuffer_ws_normals;
 
 HYP_DESCRIPTOR_SAMPLER(Global, SamplerLinear) uniform sampler texture_sampler;
@@ -71,9 +71,15 @@ void main()
     gbuffer_albedo = vec4(0.0);
 #endif
 
+    GBufferMaterialParams materialParams;
+    materialParams.roughness = 0.0;
+    materialParams.metalness = 0.0;
+    materialParams.transmission = 0.0;
+    materialParams.ao = 1.0;
+    materialParams.mask = OBJECT_MASK_SKY;
+
     gbuffer_normals = EncodeNormal(normal);
-    gbuffer_material = vec4(0.0, 0.0, 0.0, 1.0);
+    gbuffer_material = GBufferPackMaterialParams(materialParams);
     gbuffer_velocity = vec2(0.0);
-    gbuffer_mask = UINT_TO_VEC4(OBJECT_MASK_SKY);
     gbuffer_ws_normals = vec4(0.0);
 }

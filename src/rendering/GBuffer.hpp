@@ -28,9 +28,8 @@ enum GBufferTargetName : uint32
     GTN_ALBEDO = 0,
     GTN_NORMALS,
     GTN_MATERIAL,
-    GTN_TANGENTS,
+    GTN_LIGHTMAP,
     GTN_VELOCITY,
-    GTN_MASK,
     GTN_WS_NORMALS,
     GTN_DEPTH,
 

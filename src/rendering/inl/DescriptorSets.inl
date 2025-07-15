@@ -30,7 +30,6 @@ HYP_DESCRIPTOR_SRV_COND(View, GBufferNormalsTexture, 1, !g_renderBackend->GetRen
 HYP_DESCRIPTOR_SRV_COND(View, GBufferMaterialTexture, 1, !g_renderBackend->GetRenderConfig().IsDynamicDescriptorIndexingSupported());
 HYP_DESCRIPTOR_SRV_COND(View, GBufferLightmapTexture, 1, !g_renderBackend->GetRenderConfig().IsDynamicDescriptorIndexingSupported());
 HYP_DESCRIPTOR_SRV_COND(View, GBufferVelocityTexture, 1, !g_renderBackend->GetRenderConfig().IsDynamicDescriptorIndexingSupported());
-HYP_DESCRIPTOR_SRV_COND(View, GBufferMaskTexture, 1, !g_renderBackend->GetRenderConfig().IsDynamicDescriptorIndexingSupported());
 HYP_DESCRIPTOR_SRV_COND(View, GBufferWSNormalsTexture, 1, !g_renderBackend->GetRenderConfig().IsDynamicDescriptorIndexingSupported());
 HYP_DESCRIPTOR_SRV_COND(View, GBufferTranslucentTexture, 1, !g_renderBackend->GetRenderConfig().IsDynamicDescriptorIndexingSupported());
 HYP_DESCRIPTOR_SRV(View, GBufferDepthTexture, 1);

@@ -347,11 +347,6 @@ void FullScreenPass::CreateFramebuffer()
         ShouldRenderHalfRes() ? LoadOperation::LOAD : LoadOperation::CLEAR,
         StoreOperation::STORE);
 
-    if (m_blendFunction != BlendFunction::None())
-    {
-        attachment->SetAllowBlending(true);
-    }
-
     DeferCreate(attachment);
 
     DeferCreate(m_framebuffer);

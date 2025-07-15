@@ -55,22 +55,20 @@ VkFormat ToVkFormat(TextureFormat fmt)
         return VK_FORMAT_R8G8B8_SRGB;
     case TF_RGBA8_SRGB:
         return VK_FORMAT_R8G8B8A8_SRGB;
-    case TF_R32_:
-        return VK_FORMAT_R32_UINT;
-    case TF_RG16_:
-        return VK_FORMAT_R16G16_UNORM;
     case TF_R11G11B10F:
         return VK_FORMAT_B10G11R11_UFLOAT_PACK32;
     case TF_R10G10B10A2:
         return VK_FORMAT_A2R10G10B10_UNORM_PACK32;
     case TF_R16:
-        return VK_FORMAT_R16_UNORM;
+        return VK_FORMAT_R16_UINT;
+    case TF_RG16_: // fallthrough
     case TF_RG16:
-        return VK_FORMAT_R16G16_UNORM;
+        return VK_FORMAT_R16G16_UINT;
     case TF_RGB16:
-        return VK_FORMAT_R16G16B16_UNORM;
+        return VK_FORMAT_R16G16B16_UINT;
     case TF_RGBA16:
-        return VK_FORMAT_R16G16B16A16_UNORM;
+        return VK_FORMAT_R16G16B16A16_UINT;
+    case TF_R32_: // fallthrough
     case TF_R32:
         return VK_FORMAT_R32_UINT;
     case TF_RG32:

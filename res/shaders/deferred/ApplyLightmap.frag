@@ -12,14 +12,13 @@ layout(location = 0) out vec4 color_output;
 #define HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 
 #ifdef HYP_FEATURES_DYNAMIC_DESCRIPTOR_INDEXING
-HYP_DESCRIPTOR_SRV(View, GBufferTextures, count = 8) uniform texture2D gbuffer_textures[8];
+HYP_DESCRIPTOR_SRV(View, GBufferTextures, count = 7) uniform texture2D gbuffer_textures[NUM_GBUFFER_TEXTURES];
 #else
 HYP_DESCRIPTOR_SRV(View, GBufferAlbedoTexture) uniform texture2D gbuffer_albedo_texture;
 HYP_DESCRIPTOR_SRV(View, GBufferNormalsTexture) uniform texture2D gbuffer_normals_texture;
-HYP_DESCRIPTOR_SRV(View, GBufferMaterialTexture) uniform texture2D gbuffer_material_texture;
+HYP_DESCRIPTOR_SRV(View, GBufferMaterialTexture) uniform utexture2D gbuffer_material_texture;
 HYP_DESCRIPTOR_SRV(View, GBufferVelocityTexture) uniform texture2D gbuffer_velocity_texture;
 HYP_DESCRIPTOR_SRV(View, GBufferLightmapTexture) uniform texture2D gbuffer_albedo_lightmap_texture;
-HYP_DESCRIPTOR_SRV(View, GBufferMaskTexture) uniform texture2D gbuffer_mask_texture;
 HYP_DESCRIPTOR_SRV(View, GBufferWSNormalsTexture) uniform texture2D gbuffer_ws_normals_texture;
 HYP_DESCRIPTOR_SRV(View, GBufferTranslucentTexture) uniform texture2D gbuffer_albedo_texture_translucent;
 #endif
@@ -117,12 +116,18 @@ void main()
     vec4 result = vec4(0.0);
 
     vec4 albedo = Texture2D(HYP_SAMPLER_NEAREST, gbuffer_albedo_texture, texcoord);
-    vec4 material = Texture2D(HYP_SAMPLER_NEAREST, gbuffer_material_texture, texcoord);
 
-    const float roughness = material.r;
-    const float metalness = material.g;
-    const float transmission = material.b;
-    const float ao = material.a;
+    uvec2 materialData = texture(usampler2D(gbuffer_material_texture, HYP_SAMPLER_NEAREST), texcoord).rg;
+
+    GBufferMaterialParams materialParams;
+    GBufferUnpackMaterialParams(materialData, materialParams);
+
+    const float roughness = materialParams.roughness;
+    const float metalness = materialParams.metalness;
+    const float transmission = materialParams.transmission;
+    const float ao = materialParams.ao;
+    const uint object_mask = materialParams.mask;
+
     const float perceptual_roughness = sqrt(roughness);
 
     const mat4 inverse_proj = inverse(camera.projection);
@@ -133,8 +138,6 @@ void main()
     const vec3 P = ReconstructWorldSpacePositionFromDepth(inverse_proj, inverse_view, texcoord, depth).xyz;
     const vec3 V = normalize(camera.position.xyz - P);
     const vec3 R = normalize(reflect(-V, N));
-
-    const uint object_mask = VEC4_TO_UINT(Texture2D(HYP_SAMPLER_NEAREST, gbuffer_mask_texture, texcoord));
 
     // apply reflections to lightmapped objects
     if (bool(object_mask & OBJECT_MASK_LIGHTMAP))

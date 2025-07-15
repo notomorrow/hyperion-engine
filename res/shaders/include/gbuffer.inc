@@ -3,7 +3,7 @@
 
 #include "defines.inc"
 
-#define NUM_GBUFFER_TEXTURES 8
+#define NUM_GBUFFER_TEXTURES 7
 #define HYP_GBUFFER_FLIP_Y 0
 
 #include "shared.inc"
@@ -27,9 +27,38 @@
 #define gbuffer_material_texture HYP_GBUFFER_TEXTURE(2)
 #define gbuffer_albedo_lightmap_texture HYP_GBUFFER_TEXTURE(3)
 #define gbuffer_velocity_texture HYP_GBUFFER_TEXTURE(4)
-#define gbuffer_mask_texture HYP_GBUFFER_TEXTURE(5)
-#define gbuffer_ws_normals_texture HYP_GBUFFER_TEXTURE(6)
+#define gbuffer_ws_normals_texture HYP_GBUFFER_TEXTURE(5)
 #define gbuffer_albedo_texture_translucent HYP_GBUFFER_TEXTURE(NUM_GBUFFER_TEXTURES - 1)
 #endif
+
+struct GBufferMaterialParams
+{
+    float roughness;
+    float metalness;
+    float transmission;
+    float ao;
+    uint mask;
+};
+
+uvec2 GBufferPackMaterialParams(in GBufferMaterialParams params)
+{
+    uvec2 vec = uvec2(0.0);
+    vec.x = HYP_QUANTIZE(params.roughness, 6)
+        | (HYP_QUANTIZE(params.metalness, 6) << 6)
+        | (HYP_QUANTIZE(params.transmission, 6) << 12)
+        | (HYP_QUANTIZE(1.0 - params.ao, 4) << 18)
+        | ((params.mask & 0x3FFu) << 22);
+
+    return vec;
+}
+
+void GBufferUnpackMaterialParams(in uvec2 vec, out GBufferMaterialParams params)
+{
+    params.roughness = HYP_UNQUANTIZE(vec.x & 0x3Fu, 6);
+    params.metalness = HYP_UNQUANTIZE((vec.x >> 6) & 0x3Fu, 6);
+    params.transmission = HYP_UNQUANTIZE((vec.x >> 12) & 0x3Fu, 6);
+    params.ao = 1.0 - HYP_UNQUANTIZE((vec.x >> 18) & 0xFu, 4);
+    params.mask = (vec.x >> 22) & 0x3FFu;
+}
 
 #endif

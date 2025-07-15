@@ -26,17 +26,13 @@ HYP_ATTRIBUTE(5) vec3 a_bitangent;
 HYP_ATTRIBUTE_OPTIONAL(6) vec4 a_bone_weights;
 HYP_ATTRIBUTE_OPTIONAL(7) vec4 a_bone_indices;
 
-#if defined(HYP_ATTRIBUTE_a_bone_weights) && defined(HYP_ATTRIBUTE_a_bone_indices)
-#define VERTEX_SKINNING_ENABLED
-#endif
-
 #define HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 
 #include "include/scene.inc"
 
 #include "include/object.inc"
 
-#ifdef VERTEX_SKINNING_ENABLED
+#ifdef SKINNING
 #include "include/Skeleton.glsl"
 #endif
 
@@ -68,7 +64,7 @@ HYP_DESCRIPTOR_SSBO_DYNAMIC(Object, CurrentObject) readonly buffer ObjectsBuffer
 
 #endif
 
-#ifdef VERTEX_SKINNING_ENABLED
+#ifdef SKINNING
 HYP_DESCRIPTOR_SSBO_DYNAMIC(Object, SkeletonsBuffer) readonly buffer SkeletonsBuffer
 {
     Skeleton skeleton;
@@ -103,7 +99,7 @@ void main()
     mat4 model_matrix = object.model_matrix;
 #endif
 
-#ifdef SKINNING
+#if defined(SKINNING) && defined(HYP_ATTRIBUTE_a_bone_weights) && defined(HYP_ATTRIBUTE_a_bone_indices)
     mat4 skinning_matrix = CreateSkinningMatrix(ivec4(a_bone_indices), a_bone_weights);
 
     position = model_matrix * skinning_matrix * vec4(a_position, 1.0);

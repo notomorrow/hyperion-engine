@@ -276,7 +276,7 @@ RendererResult VulkanGraphicsPipeline::Rebuild()
             continue;
         }
 
-        const bool blendEnabled = attachment->AllowBlending() && m_blendFunction != BlendFunction::None();
+        const bool blendEnabled = m_blendFunction != BlendFunction::None() && FormatSupportsBlending(attachment->GetFormat());
 
         static const VkBlendOp colorBlendOps[] = { VK_BLEND_OP_ADD, VK_BLEND_OP_ADD, VK_BLEND_OP_ADD };
         static const VkBlendOp alphaBlendOps[] = { VK_BLEND_OP_ADD, VK_BLEND_OP_ADD, VK_BLEND_OP_ADD };

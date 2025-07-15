@@ -22,9 +22,8 @@ layout(location = 16) in flat uint v_object_mask;
 
 layout(location = 0) out vec4 gbuffer_albedo;
 layout(location = 1) out vec4 gbuffer_normals;
-layout(location = 2) out vec4 gbuffer_material;
+layout(location = 2) out uvec2 gbuffer_material;
 layout(location = 4) out vec2 gbuffer_velocity;
-layout(location = 5) out vec4 gbuffer_mask;
 layout(location = 6) out vec4 gbuffer_ws_normals;
 
 HYP_DESCRIPTOR_SAMPLER(Global, SamplerLinear) uniform sampler sampler_linear;
@@ -224,8 +223,14 @@ void main()
 
     vec2 velocity = vec2(((v_position_ndc.xy / v_position_ndc.w) * 0.5 + 0.5) - ((v_previous_position_ndc.xy / v_previous_position_ndc.w) * 0.5 + 0.5));
 
+    GBufferMaterialParams materialParams;
+    materialParams.roughness = roughness;
+    materialParams.metalness = metalness;
+    materialParams.transmission = transmission;
+    materialParams.ao = ao;
+    materialParams.mask = GET_OBJECT_BUCKET(object) | OBJECT_MASK_TERRAIN;
+
     gbuffer_normals = EncodeNormal(normal);
-    gbuffer_material = vec4(roughness, metalness, transmission, ao);
+    gbuffer_material = GBufferPackMaterialParams(materialParams);
     gbuffer_velocity = velocity;
-    gbuffer_mask = UINT_TO_VEC4(GET_OBJECT_BUCKET(object) | OBJECT_MASK_TERRAIN);
 }

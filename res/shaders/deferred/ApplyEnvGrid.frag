@@ -12,14 +12,13 @@ layout(location = 1) in vec2 v_texcoord;
 layout(location = 0) out vec4 color_output;
 
 #ifdef HYP_FEATURES_DYNAMIC_DESCRIPTOR_INDEXING
-HYP_DESCRIPTOR_SRV(View, GBufferTextures, count = 8) uniform texture2D gbuffer_textures[8];
+HYP_DESCRIPTOR_SRV(View, GBufferTextures, count = 7) uniform texture2D gbuffer_textures[NUM_GBUFFER_TEXTURES];
 #else
 HYP_DESCRIPTOR_SRV(View, GBufferAlbedoTexture) uniform texture2D gbuffer_albedo_texture;
 HYP_DESCRIPTOR_SRV(View, GBufferNormalsTexture) uniform texture2D gbuffer_normals_texture;
-HYP_DESCRIPTOR_SRV(View, GBufferMaterialTexture) uniform texture2D gbuffer_material_texture;
+HYP_DESCRIPTOR_SRV(View, GBufferMaterialTexture) uniform utexture2D gbuffer_material_texture;
 HYP_DESCRIPTOR_SRV(View, GBufferVelocityTexture) uniform texture2D gbuffer_velocity_texture;
 HYP_DESCRIPTOR_SRV(View, GBufferLightmapTexture) uniform texture2D gbuffer_albedo_lightmap_texture;
-HYP_DESCRIPTOR_SRV(View, GBufferMaskTexture) uniform texture2D gbuffer_mask_texture;
 HYP_DESCRIPTOR_SRV(View, GBufferWSNormalsTexture) uniform texture2D gbuffer_ws_normals_texture;
 HYP_DESCRIPTOR_SRV(View, GBufferTranslucentTexture) uniform texture2D gbuffer_albedo_texture_translucent;
 #endif
@@ -105,8 +104,12 @@ void main()
     const vec3 V = normalize(camera.position.xyz - P);
 
 #if defined(MODE_RADIANCE) || defined(IRRADIANCE_MODE_VOXEL)
-    const vec4 material = Texture2D(sampler_nearest, gbuffer_material_texture, texcoord);
-    const float roughness = material.r;
+    uvec2 materialData = texture(usampler2D(gbuffer_material_texture, HYP_SAMPLER_NEAREST), texcoord).rg;
+
+    GBufferMaterialParams materialParams;
+    GBufferUnpackMaterialParams(materialData, materialParams);
+
+    float roughness = materialParams.roughness;
 
     AABB voxel_grid_aabb;
     voxel_grid_aabb.min = env_grid.voxel_grid_aabb_min.xyz;

@@ -121,7 +121,6 @@ void Light::CreateShadowViews()
 
     ShaderProperties shaderProperties;
     shaderProperties.SetRequiredVertexAttributes(staticMeshVertexAttributes);
-    shaderProperties.Set("MODE_SHADOWS");
     shaderProperties.Set(g_shadowMapFilterPropertyNames[shadowMapFilter]);
 
     ViewOutputTargetDesc outputTargetDesc {};
@@ -150,6 +149,7 @@ void Light::CreateShadowViews()
         depthAttachmentDesc.loadOp = LoadOperation::CLEAR;
         depthAttachmentDesc.storeOp = StoreOperation::STORE;
 
+        shaderProperties.Set("MODE_SHADOWS");
         shaderDefinition = ShaderDefinition(NAME("RenderToCubemap"), shaderProperties);
 
         break;

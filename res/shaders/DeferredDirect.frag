@@ -15,14 +15,13 @@ layout(location = 0) out vec4 output_color;
 #define HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 
 #ifdef HYP_FEATURES_DYNAMIC_DESCRIPTOR_INDEXING
-HYP_DESCRIPTOR_SRV(View, GBufferTextures, count = 8) uniform texture2D gbuffer_textures[8];
+HYP_DESCRIPTOR_SRV(View, GBufferTextures, count = 7) uniform texture2D gbuffer_textures[NUM_GBUFFER_TEXTURES];
 #else
 HYP_DESCRIPTOR_SRV(View, GBufferAlbedoTexture) uniform texture2D gbuffer_albedo_texture;
 HYP_DESCRIPTOR_SRV(View, GBufferNormalsTexture) uniform texture2D gbuffer_normals_texture;
-HYP_DESCRIPTOR_SRV(View, GBufferMaterialTexture) uniform texture2D gbuffer_material_texture;
+HYP_DESCRIPTOR_SRV(View, GBufferMaterialTexture) uniform utexture2D gbuffer_material_texture;
 HYP_DESCRIPTOR_SRV(View, GBufferVelocityTexture) uniform texture2D gbuffer_velocity_texture;
 HYP_DESCRIPTOR_SRV(View, GBufferLightmapTexture) uniform texture2D gbuffer_albedo_lightmap_texture;
-HYP_DESCRIPTOR_SRV(View, GBufferMaskTexture) uniform texture2D gbuffer_mask_texture;
 HYP_DESCRIPTOR_SRV(View, GBufferWSNormalsTexture) uniform texture2D gbuffer_ws_normals_texture;
 HYP_DESCRIPTOR_SRV(View, GBufferTranslucentTexture) uniform texture2D gbuffer_albedo_texture_translucent;
 #endif
@@ -108,7 +107,6 @@ layout(push_constant) uniform PushConstant
 void main()
 {
     vec4 albedo = Texture2D(HYP_SAMPLER_NEAREST, gbuffer_albedo_texture, texcoord);
-    uint mask = VEC4_TO_UINT(Texture2D(HYP_SAMPLER_NEAREST, gbuffer_mask_texture, texcoord));
     vec3 normal = DecodeNormal(Texture2D(HYP_SAMPLER_NEAREST, gbuffer_normals_texture, texcoord));
 
     vec3 tangent;
@@ -122,10 +120,14 @@ void main()
     vec4 position = inverse(camera.view) * view_space_position;
     position /= position.w;
 
-    vec4 material = Texture2D(HYP_SAMPLER_NEAREST, gbuffer_material_texture, texcoord); /* r = roughness, g = metalness, b = transmission, a = AO */
+    uvec2 materialData = texture(usampler2D(gbuffer_material_texture, HYP_SAMPLER_NEAREST), texcoord).rg; /* r = roughness, g = metalness, b = transmission, a = AO */
 
-    const float roughness = material.r;
-    const float metalness = material.g;
+    GBufferMaterialParams materialParams;
+    GBufferUnpackMaterialParams(materialData, materialParams);
+
+    const float roughness = materialParams.roughness;
+    const float metalness = materialParams.metalness;
+    const uint mask = materialParams.mask;
 
     bool perform_lighting = !bool(mask & (OBJECT_MASK_LIGHTMAP | OBJECT_MASK_SKY | OBJECT_MASK_TRANSLUCENT));
     vec4 result = vec4(0.0);
@@ -153,7 +155,7 @@ void main()
         float shadow = 1.0;
 
         const vec4 ssao_data = Texture2D(HYP_SAMPLER_NEAREST, ssao_gi_result, texcoord);
-        ao = min(mix(1.0, ssao_data.a, bool(deferred_params.flags & DEFERRED_FLAGS_HBAO_ENABLED)), material.a);
+        ao = min(mix(1.0, ssao_data.a, bool(deferred_params.flags & DEFERRED_FLAGS_HBAO_ENABLED)), materialParams.ao);
 
         vec4 area_light_radiance;
 

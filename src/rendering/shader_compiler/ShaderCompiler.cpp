@@ -117,7 +117,7 @@ static String BuildPreamble(const ShaderProperties& properties)
             continue;
         }
 
-        preamble += "#define " + property.name + "\n";
+        preamble += "#define " + property.name + " 1\n";
     }
 
     return preamble;
@@ -1706,12 +1706,12 @@ ShaderCompiler::ProcessResult ShaderCompiler::ProcessShaderSource(
 
                 bool optional = false;
 
-                if (parts.Size() != 3)
-                {
-                    result.errors.PushBack(ProcessError { "Invalid attribute: Requires format HYP_ATTRIBUTE(location) type name" });
+                // if (parts.Size() != 3)
+                // {
+                //     result.errors.PushBack(ProcessError { "Invalid attribute: Requires format HYP_ATTRIBUTE(location) type name" });
 
-                    break;
-                }
+                //     break;
+                // }
 
                 char ch;
 

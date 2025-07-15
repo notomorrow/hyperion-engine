@@ -26,7 +26,7 @@ HYP_DESCRIPTOR_CBUFF(SSRDescriptorSet, UniformBuffer) uniform UniformBuffer
 ssr_params;
 
 HYP_DESCRIPTOR_SRV(SSRDescriptorSet, GBufferNormalsTexture) uniform texture2D gbuffer_normals_texture;
-HYP_DESCRIPTOR_SRV(SSRDescriptorSet, GBufferMaterialTexture) uniform texture2D gbuffer_material_texture;
+HYP_DESCRIPTOR_SRV(SSRDescriptorSet, GBufferMaterialTexture) uniform utexture2D gbuffer_material_texture;
 HYP_DESCRIPTOR_SRV(SSRDescriptorSet, GBufferVelocityTexture) uniform texture2D gbuffer_velocity_texture;
 HYP_DESCRIPTOR_SRV(SSRDescriptorSet, GBufferMipChain) uniform texture2D gbuffer_mip_chain;
 HYP_DESCRIPTOR_SRV(SSRDescriptorSet, GBufferDepthTexture) uniform texture2D gbuffer_depth_texture;
@@ -119,7 +119,12 @@ void main(void)
 
     if (alpha > HYP_FMATH_EPSILON)
     {
-        roughness = Texture2D(sampler_nearest, gbuffer_material_texture, texcoord).r;
+        uvec2 materialData = texture(usampler2D(gbuffer_material_texture, HYP_SAMPLER_NEAREST), texcoord).rg;
+
+        GBufferMaterialParams materialParams;
+        GBufferUnpackMaterialParams(materialData, materialParams);
+
+        roughness = materialParams.roughness;
         roughness = clamp(roughness, 0.001, 0.999);
 
         const float perceptual_roughness = sqrt(roughness);

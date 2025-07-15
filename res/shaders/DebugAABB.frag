@@ -22,9 +22,9 @@ layout(location = 18) in flat uint v_env_probe_type;
 
 layout(location = 0) out vec4 gbuffer_albedo;
 layout(location = 1) out vec4 gbuffer_normals;
-layout(location = 2) out vec4 gbuffer_material;
+layout(location = 2) out uvec2 gbuffer_material;
 layout(location = 4) out vec2 gbuffer_velocity;
-layout(location = 5) out vec4 gbuffer_mask;
+layout(location = 5) out uint gbuffer_mask;
 layout(location = 6) out vec4 gbuffer_ws_normals;
 
 #define HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
@@ -115,13 +115,13 @@ void main()
 
     gbuffer_albedo = vec4(0.0, 1.0, 0.0, 1.0);
     gbuffer_normals = EncodeNormal(normal);
-    gbuffer_material = vec4(0.0, 0.0, 0.0, 1.0);
+    gbuffer_material = uvec2(0);
     gbuffer_velocity = vec2(velocity);
     gbuffer_ws_normals = EncodeNormal(normal);
 
 #ifdef IMMEDIATE_MODE
     gbuffer_albedo = vec4(v_color.rgb, 1.0);
-    gbuffer_mask = UINT_TO_VEC4(OBJECT_MASK_TRANSLUCENT | OBJECT_MASK_DEBUG);
+    gbuffer_mask = OBJECT_MASK_TRANSLUCENT | OBJECT_MASK_DEBUG;
 
     if (v_env_probe_index != ~0u && v_env_probe_type == ENV_PROBE_TYPE_REFLECTION)
     {
@@ -145,6 +145,6 @@ void main()
         gbuffer_albedo.rgb = ibl.rgb;
     }
 #else
-    gbuffer_mask = UINT_TO_VEC4(GET_OBJECT_BUCKET(object));
+    gbuffer_mask = GET_OBJECT_BUCKET(object);
 #endif
 }

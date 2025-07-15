@@ -223,14 +223,20 @@ public:
         return a + r;
     }
 
-    static constexpr uint32 RandomUInt32(uint32& seed)
+    static constexpr uint32 Rand32(uint32& seed)
     {
         return (seed = 1664525 * seed + 1013904223);
     }
 
+    static constexpr uint64 Rand64(uint64& seed)
+    {
+        // 64-bit linear congruential generator (LCG)
+        return (seed = 6364136223846793005ULL * seed + 1442695040888963407ULL);
+    }
+
     static constexpr float RandomFloat(uint32& seed)
     {
-        return (float(RandomUInt32(seed) & 0x00FFFFFF) / float(0x01000000));
+        return (float(Rand32(seed) & 0x00FFFFFF) / float(0x01000000));
     }
 
     template <class T>

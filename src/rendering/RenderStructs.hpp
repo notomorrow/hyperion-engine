@@ -249,7 +249,7 @@ static inline constexpr uint32 NumComponents(TextureFormat format)
     return NumComponents(GetBaseFormat(format));
 }
 
-static inline constexpr uint32 NumBytes(TextureFormat format)
+static inline constexpr uint32 BytesPerComponent(TextureFormat format)
 {
     switch (format)
     {
@@ -359,6 +359,50 @@ static inline constexpr TextureFormat ChangeFormatSrgb(TextureFormat fmt, bool m
     return fmt;
 }
 
+static inline constexpr bool FormatSupportsBlending(TextureFormat fmt)
+{
+    switch (fmt)
+    {
+    case TF_R8:
+    case TF_R8_SRGB:
+    case TF_RG8:
+    case TF_RG8_SRGB:
+    case TF_RGB8:
+    case TF_RGB8_SRGB:
+    case TF_BGR8_SRGB:
+    case TF_RGBA8:
+    case TF_RGBA8_SRGB:
+    case TF_R10G10B10A2:
+    case TF_R11G11B10F:
+    case TF_BGRA8:
+    case TF_BGRA8_SRGB:
+    case TF_R16F:
+    case TF_RG16F:
+    case TF_RGB16F:
+    case TF_RGBA16F:
+    case TF_R32F:
+    case TF_RG32F:
+    case TF_RGB32F:
+    case TF_RGBA32F:
+        return true;
+    case TF_R16:
+    case TF_RG16:
+    case TF_RGB16:
+    case TF_RGBA16:
+    case TF_R32:
+    case TF_RG32:
+    case TF_RGB32:
+    case TF_RGBA32:
+    case TF_R32_:
+    case TF_RG16_:
+    case TF_DEPTH_16:
+    case TF_DEPTH_24:
+    case TF_DEPTH_32F:
+    default:
+        return false;
+    }
+}
+
 HYP_STRUCT()
 struct TextureDesc
 {
@@ -465,8 +509,8 @@ struct TextureDesc
     HYP_FORCE_INLINE uint32 GetByteSize() const
     {
         return uint32(extent.x * extent.y * extent.z)
+            * BytesPerComponent(format)
             * NumComponents(format)
-            * NumBytes(format)
             * NumFaces();
     }
 

@@ -104,16 +104,6 @@ public:
         return m_binding != MathUtil::MaxSafeValue<uint32>();
     }
 
-    HYP_FORCE_INLINE bool AllowBlending() const
-    {
-        return m_allowBlending;
-    }
-
-    HYP_FORCE_INLINE void SetAllowBlending(bool allowBlending)
-    {
-        m_allowBlending = allowBlending;
-    }
-
     HYP_FORCE_INLINE const FramebufferWeakRef& GetFramebuffer() const
     {
         return m_framebuffer;
@@ -153,8 +143,6 @@ protected:
     Vec4f m_clearColor;
 
     uint32 m_binding = MathUtil::MaxSafeValue<uint32>();
-
-    bool m_allowBlending = true;
 };
 
 } // namespace hyperion

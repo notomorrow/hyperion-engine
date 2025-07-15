@@ -37,19 +37,20 @@ float LightRayMarch(uint shadow_map_index, vec2 uv, vec3 L, vec3 ray_origin, vec
 
     float volumetric = 0.0;
     float extinction = 0.0;
-    
+
     float cos_angle = dot(ray_dir, L);
 
     float r = rand(ray_origin.xy + ray_origin.z);
     vec3 marching_position = ray_origin + (ray_delta_step * (1.0 + r));
 
-    for (int i = 0; i < VOLUMETRIC_LIGHTING_STEPS; i++) {
+    for (int i = 0; i < VOLUMETRIC_LIGHTING_STEPS; i++)
+    {
         float attenuation = LightRayAttenuation(shadow_map_index, marching_position, cos_angle);
 
         float density = LightRayDensity(marching_position);
         float scattering = scattering_value * step_size * density;
         extinction += extinction_value * step_size * density;
-        
+
         volumetric += attenuation * scattering * density * exp(-extinction);
         marching_position += ray_delta_step;
     }
@@ -86,18 +87,25 @@ float LightRays2(vec2 uv, vec2 ss_L, vec3 P, vec3 camera_position)
 
     vec2 delta_uv = uv - ss_L;
     delta_uv *= (1.0 / float(VOLUMETRIC_LIGHTING_STEPS)) * density;
-    
+
     vec2 march_uv = uv;
 
     float illum_decay = 1.0;
 
     float attenuation = 0.0;
 
-    for (int i = 0; i < VOLUMETRIC_LIGHTING_STEPS; i++) {
+    for (int i = 0; i < VOLUMETRIC_LIGHTING_STEPS; i++)
+    {
         march_uv -= delta_uv;
 
-        uint ss_object_mask = VEC4_TO_UINT(Texture2D(sampler_linear, gbuffer_mask_texture, march_uv));
-        bool occluded = !bool(ss_object_mask & (0x01 | 0x02));
+        uvec2 materialData = texture(usampler2D(gbuffer_material_texture, sampler_nearest), march_uv).rg; /* r = roughness, g = metalness, b = transmission, a = AO */
+
+        GBufferMaterialParams materialParams;
+        GBufferUnpackMaterialParams(materialData, materialParams);
+
+        const uint mask = materialParams.mask;
+
+        bool occluded = !bool(mask & (0x01 | 0x02));
         float occlusion = float(occluded);
         occlusion *= illum_decay;
 

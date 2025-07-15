@@ -14,7 +14,7 @@ layout(location = 4) in flat uint v_object_index;
 #endif
 
 layout(location = 0) out vec4 gbuffer_albedo;
-layout(location = 5) out vec4 gbuffer_mask;
+layout(location = 5) out uint gbuffer_mask;
 
 #include "../include/defines.inc"
 #include "../include/shared.inc"
@@ -117,8 +117,6 @@ void main()
 
     ui_color.a *= mix(1.0, roundedness, 1.0 - step(properties.border_radius, 0.0));
 
-    uint mask = GET_OBJECT_BUCKET(object) | OBJECT_MASK_UI;
-
     gbuffer_albedo = ui_color * v_color;
-    gbuffer_mask = UINT_TO_VEC4(mask);
+    gbuffer_mask = GET_OBJECT_BUCKET(object) | OBJECT_MASK_UI;
 }

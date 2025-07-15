@@ -18,7 +18,7 @@ template <TextureFormat Format>
 struct TextureFormatHelper
 {
     static constexpr uint32 numComponents = NumComponents(Format);
-    static constexpr uint32 numBytes = NumBytes(Format);
+    static constexpr uint32 bytesPerComponent = BytesPerComponent(Format);
     static constexpr bool isFloatType = uint32(Format) >= TF_RGBA16F && uint32(Format) <= TF_RGBA32F;
 
     using ElementType = std::conditional_t<isFloatType, float, ubyte>;
@@ -46,7 +46,7 @@ HYP_API void FillPlaceholderBuffer_Tex2D(Vec2u dimensions, ByteBuffer& outBuffer
     }
     else
     {
-        outBuffer = bitmap.GetUnpackedBytes(Helper::numBytes * Helper::numComponents);
+        outBuffer = bitmap.GetUnpackedBytes(Helper::bytesPerComponent * Helper::numComponents);
     }
 }
 
@@ -67,7 +67,7 @@ HYP_API void FillPlaceholderBuffer_Cubemap(Vec2u dimensions, ByteBuffer& outBuff
         }
     }
 
-    ByteBuffer faceByteBuffer = bitmap.GetUnpackedBytes(Helper::numBytes * Helper::numComponents);
+    ByteBuffer faceByteBuffer = bitmap.GetUnpackedBytes(Helper::bytesPerComponent * Helper::numComponents);
 
     outBuffer.SetSize(faceByteBuffer.Size() * 6);
 

@@ -27,14 +27,13 @@ HYP_DESCRIPTOR_CBUFF(SSGIDescriptorSet, UniformBuffer) uniform UniformBuffer
 ssr_params;
 
 #ifdef HYP_FEATURES_DYNAMIC_DESCRIPTOR_INDEXING
-HYP_DESCRIPTOR_SRV(View, GBufferTextures, count = 8) uniform texture2D gbuffer_textures[8];
+HYP_DESCRIPTOR_SRV(View, GBufferTextures, count = 7) uniform texture2D gbuffer_textures[NUM_GBUFFER_TEXTURES];
 #else
 HYP_DESCRIPTOR_SRV(View, GBufferAlbedoTexture) uniform texture2D gbuffer_albedo_texture;
 HYP_DESCRIPTOR_SRV(View, GBufferNormalsTexture) uniform texture2D gbuffer_normals_texture;
-HYP_DESCRIPTOR_SRV(View, GBufferMaterialTexture) uniform texture2D gbuffer_material_texture;
+HYP_DESCRIPTOR_SRV(View, GBufferMaterialTexture) uniform utexture2D gbuffer_material_texture;
 HYP_DESCRIPTOR_SRV(View, GBufferVelocityTexture) uniform texture2D gbuffer_velocity_texture;
 HYP_DESCRIPTOR_SRV(View, GBufferLightmapTexture) uniform texture2D gbuffer_albedo_lightmap_texture;
-HYP_DESCRIPTOR_SRV(View, GBufferMaskTexture) uniform texture2D gbuffer_mask_texture;
 HYP_DESCRIPTOR_SRV(View, GBufferWSNormalsTexture) uniform texture2D gbuffer_ws_normals_texture;
 HYP_DESCRIPTOR_SRV(View, GBufferTranslucentTexture) uniform texture2D gbuffer_albedo_texture_translucent;
 #endif
@@ -231,8 +230,13 @@ void main(void)
 
     const vec2 texcoord = saturate((vec2(coord) + 0.5) / (vec2(ssr_params.dimension.xy)));
 
-    const vec4 material_info = Texture2D(sampler_nearest, gbuffer_material_texture, texcoord);
-    const float roughness = material_info.r;
+    uvec2 materialData = texture(usampler2D(gbuffer_material_texture, HYP_SAMPLER_NEAREST), texcoord).rg;
+
+    GBufferMaterialParams materialParams;
+    GBufferUnpackMaterialParams(materialData, materialParams);
+
+    const float roughness = materialParams.roughness;
+
     const float perceptual_roughness = sqrt(roughness);
     const float depth = Texture2D(sampler_nearest, gbuffer_depth_texture, texcoord).r;
 

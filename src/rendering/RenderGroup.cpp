@@ -133,7 +133,7 @@ GraphicsPipelineRef RenderGroup::CreateGraphicsPipeline(PassData* pd, IDrawCallC
     Assert(pd != nullptr);
     Assert(drawCallCollectionImpl != nullptr);
 
-    HYP_LOG(Rendering, Debug, "Creating graphics pipeline for RenderGroup: {}", Id());
+    HYP_LOG(Rendering, Debug, "Creating graphics pipeline for RenderGroup with Shader: {}", m_shader->GetCompiledShader()->GetName());
 
     Handle<View> view = pd->view.Lock();
     Assert(view.IsValid());

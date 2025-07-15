@@ -321,11 +321,11 @@ Vec4f Texture::Sample(Vec3f uvw, uint32 faceIndex)
         uint32(uvw.z * float(textureData->desc.extent.z - 1) + 0.5f)
     };
 
-    const uint32 bytesPerPixel = NumBytes(textureData->desc.format);
+    const uint32 bytesPerComponent = BytesPerComponent(textureData->desc.format);
 
-    if (bytesPerPixel != 1)
+    if (bytesPerComponent != 1)
     {
-        HYP_LOG(Texture, Warning, "Unsupported bytes per pixel to use with Sample(): {}", bytesPerPixel);
+        HYP_LOG(Texture, Warning, "Unsupported bytes per component to use with Sample(): {}", bytesPerComponent);
 
         HYP_BREAKPOINT;
 
@@ -334,10 +334,10 @@ Vec4f Texture::Sample(Vec3f uvw, uint32 faceIndex)
 
     const uint32 numComponents = NumComponents(textureData->desc.format);
 
-    const uint32 index = faceIndex * (textureData->desc.extent.x * textureData->desc.extent.y * textureData->desc.extent.z * bytesPerPixel * numComponents)
-        + coord.z * (textureData->desc.extent.x * textureData->desc.extent.y * bytesPerPixel * numComponents)
-        + coord.y * (textureData->desc.extent.x * bytesPerPixel * numComponents)
-        + coord.x * bytesPerPixel * numComponents;
+    const uint32 index = faceIndex * (textureData->desc.extent.x * textureData->desc.extent.y * textureData->desc.extent.z * bytesPerComponent * numComponents)
+        + coord.z * (textureData->desc.extent.x * textureData->desc.extent.y * bytesPerComponent * numComponents)
+        + coord.y * (textureData->desc.extent.x * bytesPerComponent * numComponents)
+        + coord.x * bytesPerComponent * numComponents;
 
     if (index >= textureData->buffer.Size())
     {

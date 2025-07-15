@@ -22,12 +22,6 @@ HYP_ATTRIBUTE(2) vec2 a_texcoord0;
 HYP_ATTRIBUTE(3) vec2 a_texcoord1;
 HYP_ATTRIBUTE(4) vec3 a_tangent;
 HYP_ATTRIBUTE(5) vec3 a_bitangent;
-HYP_ATTRIBUTE_OPTIONAL(6) vec4 a_bone_weights;
-HYP_ATTRIBUTE_OPTIONAL(7) vec4 a_bone_indices;
-
-#if defined(HYP_ATTRIBUTE_a_bone_weights) && defined(HYP_ATTRIBUTE_a_bone_indices)
-#define VERTEX_SKINNING_ENABLED
-#endif
 
 #define HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 
@@ -35,12 +29,6 @@ HYP_ATTRIBUTE_OPTIONAL(7) vec4 a_bone_indices;
 
 #include "../include/object.inc"
 #include "../include/env_probe.inc"
-
-#define HYP_ENABLE_SKINNING
-
-#ifdef VERTEX_SKINNING_ENABLED
-#include "../include/Skeleton.glsl"
-#endif
 
 #undef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 
@@ -69,31 +57,6 @@ HYP_DESCRIPTOR_SSBO_DYNAMIC(Object, CurrentObject) readonly buffer ObjectsBuffer
 {
     Object object;
 };
-#endif
-
-#ifdef VERTEX_SKINNING_ENABLED
-
-HYP_DESCRIPTOR_SSBO_DYNAMIC(Object, SkeletonsBuffer) readonly buffer SkeletonsBuffer
-{
-    Skeleton skeleton;
-};
-
-mat4 CreateSkinningMatrix(ivec4 bone_indices, vec4 bone_weights)
-{
-    mat4 skinning = mat4(0.0);
-
-    int index0 = min(bone_indices.x, HYP_MAX_BONES - 1);
-    skinning += bone_weights.x * skeleton.bones[index0];
-    int index1 = min(bone_indices.y, HYP_MAX_BONES - 1);
-    skinning += bone_weights.y * skeleton.bones[index1];
-    int index2 = min(bone_indices.z, HYP_MAX_BONES - 1);
-    skinning += bone_weights.z * skeleton.bones[index2];
-    int index3 = min(bone_indices.w, HYP_MAX_BONES - 1);
-    skinning += bone_weights.w * skeleton.bones[index3];
-
-    return skinning;
-}
-
 #endif
 
 void main()

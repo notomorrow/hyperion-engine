@@ -109,7 +109,7 @@ TResult<UniquePtr<GlyphBitmap>> Glyph::Rasterize()
     const Vec2i dimensions = GetMax();
 
     ByteBuffer byteBuffer;
-    byteBuffer.SetSize(dimensions.Volume() * NumComponents(g_glyphTextureFormat) * NumBytes(g_glyphTextureFormat));
+    byteBuffer.SetSize(dimensions.Volume() * BytesPerComponent(g_glyphTextureFormat) * NumComponents(g_glyphTextureFormat));
 
     if (ftBitmap.buffer != nullptr)
     {
@@ -117,14 +117,14 @@ TResult<UniquePtr<GlyphBitmap>> Glyph::Rasterize()
         {
             for (uint32 col = 0; col < ftBitmap.width; ++col)
             {
-                ubyte* dstOffset = byteBuffer.Data() + (row * dimensions.x + col) * NumComponents(g_glyphTextureFormat) * NumBytes(g_glyphTextureFormat);
+                ubyte* dstOffset = byteBuffer.Data() + (row * dimensions.x + col) * BytesPerComponent(g_glyphTextureFormat) * NumComponents(g_glyphTextureFormat);
 
                 // Copy the grayscale value into the RGBA channels
                 for (uint32 componentIndex = 0; componentIndex < NumComponents(g_glyphTextureFormat); componentIndex++)
                 {
-                    for (uint32 byteIndex = 0; byteIndex < NumBytes(g_glyphTextureFormat); byteIndex++)
+                    for (uint32 byteIndex = 0; byteIndex < BytesPerComponent(g_glyphTextureFormat); byteIndex++)
                     {
-                        dstOffset[componentIndex * NumBytes(g_glyphTextureFormat) + byteIndex] = ftBitmap.buffer[row * ftBitmap.pitch + col];
+                        dstOffset[componentIndex * BytesPerComponent(g_glyphTextureFormat) + byteIndex] = ftBitmap.buffer[row * ftBitmap.pitch + col];
                     }
                 }
                 // byteBuffer.Data()[row * dimensions.x + col] = ftBitmap.buffer[row * ftBitmap.pitch + col];

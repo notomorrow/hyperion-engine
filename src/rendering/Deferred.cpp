@@ -1151,7 +1151,6 @@ void DeferredRenderer::CreateViewDescriptorSets(View* view, DeferredPassData& pa
         NAME("GBufferMaterialTexture"),
         NAME("GBufferLightmapTexture"),
         NAME("GBufferVelocityTexture"),
-        NAME("GBufferMaskTexture"),
         NAME("GBufferWSNormalsTexture"),
         NAME("GBufferTranslucentTexture")
     };
