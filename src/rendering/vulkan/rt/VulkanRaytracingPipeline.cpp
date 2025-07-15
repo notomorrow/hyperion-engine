@@ -93,8 +93,8 @@ RendererResult VulkanRaytracingPipeline::Create()
 
     VkRayTracingPipelineCreateInfoKHR pipelineInfo { VK_STRUCTURE_TYPE_RAY_TRACING_PIPELINE_CREATE_INFO_KHR };
 
-    const Array<VkPipelineShaderStageCreateInfo>& stages = static_cast<VulkanShader*>(m_shader.Get())->GetVulkanShaderStages();
-    const Array<VulkanShaderGroup>& shaderGroups = static_cast<VulkanShader*>(m_shader.Get())->GetShaderGroups();
+    const Array<VkPipelineShaderStageCreateInfo>& stages = VULKAN_CAST(m_shader.Get())->GetVulkanShaderStages();
+    const Array<VulkanShaderGroup>& shaderGroups = VULKAN_CAST(m_shader.Get())->GetShaderGroups();
 
     Array<VkRayTracingShaderGroupCreateInfoKHR> shaderGroupCreateInfos;
     shaderGroupCreateInfos.Resize(shaderGroups.Size());
@@ -130,7 +130,7 @@ RendererResult VulkanRaytracingPipeline::Create()
         return result;
     }
 
-    HYPERION_PASS_ERRORS(CreateShaderBindingTables(static_cast<VulkanShader*>(m_shader.Get())), result);
+    HYPERION_PASS_ERRORS(CreateShaderBindingTables(VULKAN_CAST(m_shader.Get())), result);
 
     if (!result)
     {
@@ -172,14 +172,14 @@ RendererResult VulkanRaytracingPipeline::Destroy()
 void VulkanRaytracingPipeline::Bind(CommandBufferBase* commandBuffer)
 {
     vkCmdBindPipeline(
-        static_cast<VulkanCommandBuffer*>(commandBuffer)->GetVulkanHandle(),
+        VULKAN_CAST(commandBuffer)->GetVulkanHandle(),
         VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR,
         m_handle);
 
     if (m_pushConstants)
     {
         vkCmdPushConstants(
-            static_cast<VulkanCommandBuffer*>(commandBuffer)->GetVulkanHandle(),
+            VULKAN_CAST(commandBuffer)->GetVulkanHandle(),
             m_layout,
             pushConstantStageFlags,
             0,
@@ -191,7 +191,7 @@ void VulkanRaytracingPipeline::Bind(CommandBufferBase* commandBuffer)
 void VulkanRaytracingPipeline::TraceRays(CommandBufferBase* commandBuffer, const Vec3u& extent) const
 {
     GetRenderBackend()->GetDevice()->GetFeatures().dynFunctions.vkCmdTraceRaysKHR(
-        static_cast<VulkanCommandBuffer*>(commandBuffer)->GetVulkanHandle(),
+        VULKAN_CAST(commandBuffer)->GetVulkanHandle(),
         &m_shaderBindingTableEntries.rayGen,
         &m_shaderBindingTableEntries.rayMiss,
         &m_shaderBindingTableEntries.closestHit,

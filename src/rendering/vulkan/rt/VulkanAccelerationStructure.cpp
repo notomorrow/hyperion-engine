@@ -256,12 +256,13 @@ RendererResult VulkanAccelerationStructureBase::CreateAccelerationStructure(
         {
             // delete the current acceleration structure once the frame is done, rather than stalling the gpu here
             GetRenderBackend()->GetCurrentFrame()->OnFrameEnd.Bind([oldAccelerationStructure = m_accelerationStructure](...)
-                {
-                    GetRenderBackend()->GetDevice()->GetFeatures().dynFunctions.vkDestroyAccelerationStructureKHR(
-                        GetRenderBackend()->GetDevice()->GetDevice(),
-                        oldAccelerationStructure,
-                        nullptr);
-                }).Detach();
+                                                                 {
+                                                                     GetRenderBackend()->GetDevice()->GetFeatures().dynFunctions.vkDestroyAccelerationStructureKHR(
+                                                                         GetRenderBackend()->GetDevice()->GetDevice(),
+                                                                         oldAccelerationStructure,
+                                                                         nullptr);
+                                                                 })
+                .Detach();
 
             m_accelerationStructure = VK_NULL_HANDLE;
 
@@ -364,26 +365,6 @@ RendererResult VulkanAccelerationStructureBase::CreateAccelerationStructure(
     HYPERION_BUBBLE_ERRORS(commandBuffer->Create(GetRenderBackend()->GetDevice()->GetGraphicsQueue().commandPools[0]));
 
     HYPERION_BUBBLE_ERRORS(commandBuffer->Begin());
-
-    /*class VulkanBuildAccelerationStructure final : public CmdBase
-    {
-    public:
-        VulkanBuildAccelerationStructure(const VulkanAccelerationStructureRef& accelerationStructure)
-            : m_accelerationStructure(accelerationStructure)
-        {
-        }
-
-        virtual void Execute(const CommandBufferRef& cmd) override
-        {
-            VulkanCommandBuffer* vulkanCommandBuffer = static_cast<VulkanCommandBuffer*>(cmd.Get());
-        }
-
-    private:
-        VulkanAccelerationStructureRef m_accelerationStructure;
-    };*/
-
-    /*FrameBase* frame = GetRenderBackend()->GetCurrentFrame();
-    CmdList& cmdList = frame->GetCommandList();*/
 
     GetRenderBackend()->GetDevice()->GetFeatures().dynFunctions.vkCmdBuildAccelerationStructuresKHR(
         commandBuffer->GetVulkanHandle(),

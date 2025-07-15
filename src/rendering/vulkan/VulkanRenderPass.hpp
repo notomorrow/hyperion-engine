@@ -60,7 +60,7 @@ public:
     RendererResult Create();
     RendererResult Destroy();
 
-    void Begin(VulkanCommandBuffer* cmd, VulkanFramebuffer* framebuffer, uint32 frameIndex);
+    void Begin(VulkanCommandBuffer* cmd, VulkanFramebuffer* framebuffer);
     void End(VulkanCommandBuffer* cmd);
 
 private:

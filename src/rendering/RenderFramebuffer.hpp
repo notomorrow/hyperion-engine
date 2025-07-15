@@ -49,8 +49,10 @@ public:
     HYP_API virtual bool RemoveAttachment(uint32 binding) = 0;
     HYP_API virtual AttachmentBase* GetAttachment(uint32 binding) const = 0;
 
-    HYP_API virtual void BeginCapture(CommandBufferBase* commandBuffer, uint32 frameIndex) = 0;
-    HYP_API virtual void EndCapture(CommandBufferBase* commandBuffer, uint32 frameIndex) = 0;
+    HYP_API virtual void BeginCapture(CommandBufferBase* commandBuffer) = 0;
+    HYP_API virtual void EndCapture(CommandBufferBase* commandBuffer) = 0;
+
+    HYP_API virtual void Clear(CommandBufferBase* commandBuffer) = 0;
 
 protected:
     FramebufferBase(Vec2u extent)

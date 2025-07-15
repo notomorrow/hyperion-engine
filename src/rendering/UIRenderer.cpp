@@ -266,7 +266,7 @@ void UIRenderCollector::ExecuteDrawCalls(FrameBase* frame, const RenderSetup& re
 
     if (framebuffer.IsValid())
     {
-        frame->GetCommandList().Add<BeginFramebuffer>(framebuffer, frameIndex);
+        frame->GetCommandList().Add<BeginFramebuffer>(framebuffer);
     }
 
     using IteratorType = FlatMap<RenderableAttributeSet, DrawCallCollectionMapping>::ConstIterator;
@@ -339,7 +339,7 @@ void UIRenderCollector::ExecuteDrawCalls(FrameBase* frame, const RenderSetup& re
 
     if (framebuffer.IsValid())
     {
-        frame->GetCommandList().Add<EndFramebuffer>(framebuffer, frameIndex);
+        frame->GetCommandList().Add<EndFramebuffer>(framebuffer);
     }
 }
 

@@ -862,84 +862,41 @@ public:
     }
 };
 
-#define DEF_RENDER_PLATFORM_OBJECT_(_platform, T, _max_size)                 \
-                                                                             \
-    using T##_##_platform = platform::T<Platform::_platform>;                \
-    using T##_##_platform = T##_##_platform;                                 \
-    using T##Ref##_##_platform = RenderObjectHandle_Strong<T##_##_platform>; \
-    using T##WeakRef##_##_platform = RenderObjectHandle_Weak<T##_##_platform>;
-
-#define DEF_RENDER_PLATFORM_OBJECT2_(_platform, T, _max_size)          \
-                                                                       \
-    class _platform##T;                                                \
-    using _platform##T = _platform##T;                                 \
-    using _platform##T##Ref = RenderObjectHandle_Strong<_platform##T>; \
-    using _platform##T##WeakRef = RenderObjectHandle_Weak<_platform##T>;
-
-#define DEF_RENDER_PLATFORM_OBJECT_NAMED_(_platform, name, T, _max_size)           \
-                                                                                   \
-    using name##_##_platform = platform::T<Platform::_platform>;                   \
-    using name##_##_platform = name##_##_platform;                                 \
-    using name##Ref##_##_platform = RenderObjectHandle_Strong<name##_##_platform>; \
-    using name##WeakRef##_##_platform = RenderObjectHandle_Weak<name##_##_platform>;
-
-#define DEF_RENDER_PLATFORM_OBJECT(T, _max_size)              \
-                                                              \
-    namespace platform {                                      \
-    template <PlatformType PLATFORM>                          \
-    class T;                                                  \
-    }                                                         \
-    DEF_RENDER_PLATFORM_OBJECT_(VULKAN, T, _max_size)         \
-    DEF_RENDER_PLATFORM_OBJECT_(WEBGPU, T, _max_size)         \
-                                                              \
-    namespace platform {                                      \
-    template <PlatformType _platform>                         \
-    using T##Ref = RenderObjectHandle_Strong<T<_platform>>;   \
-    template <PlatformType _platform>                         \
-    using T##WeakRef = RenderObjectHandle_Weak<T<_platform>>; \
+#define DECLARE_SHARED_GFX_TYPE(T)                                                          \
+    class T##Base;                                                                          \
+    class Vulkan##T;                                                                        \
+                                                                                            \
+    using T##Ref = RenderObjectHandle_Strong<T##Base>;                                      \
+    using T##WeakRef = RenderObjectHandle_Weak<T##Base>;                                    \
+                                                                                            \
+    using Vulkan##T##Ref = RenderObjectHandle_Strong<Vulkan##T>;                            \
+    using Vulkan##T##WeakRef = RenderObjectHandle_Weak<Vulkan##T>;                          \
+                                                                                            \
+    template <class Base, typename = std::enable_if_t<std::is_same_v<Base, T##Base>>>       \
+    static inline Vulkan##T* VulkanCastImpl(Base* ptr)                                      \
+    {                                                                                       \
+        return static_cast<Vulkan##T*>(ptr);                                                \
+    }                                                                                       \
+                                                                                            \
+    template <class Base, typename = std::enable_if_t<std::is_same_v<Base, T##Base>>>       \
+    static inline const Vulkan##T* VulkanCastImpl(const Base* ptr)                          \
+    {                                                                                       \
+        return static_cast<const Vulkan##T*>(ptr);                                          \
+    }                                                                                       \
+                                                                                            \
+    template <class Base, typename = std::enable_if_t<std::is_same_v<Base, T##Base>>>       \
+    static inline Vulkan##T##Ref VulkanCastImpl(const RenderObjectHandle_Strong<Base>& ref) \
+    {                                                                                       \
+        return Vulkan##T##Ref(ref);                                                         \
     }
 
-#define DEF_RENDER_PLATFORM_OBJECT_WITH_BASE_CLASS(T, _max_size) \
+#define DECLARE_VULKAN_GFX_TYPE(T)                               \
+    class Vulkan##T;                                             \
                                                                  \
-    class T##Base;                                               \
-    namespace platform {                                         \
-    template <PlatformType PLATFORM>                             \
-    class T;                                                     \
-    }                                                            \
-    DEF_RENDER_PLATFORM_OBJECT_(VULKAN, T, _max_size)            \
-    DEF_RENDER_PLATFORM_OBJECT_(WEBGPU, T, _max_size)            \
-                                                                 \
-    namespace platform {                                         \
-    template <PlatformType _platform>                            \
-    using T##Ref = RenderObjectHandle_Strong<T<_platform>>;      \
-    template <PlatformType _platform>                            \
-    using T##WeakRef = RenderObjectHandle_Weak<T<_platform>>;    \
-    }
+    using Vulkan##T##Ref = RenderObjectHandle_Strong<Vulkan##T>; \
+    using Vulkan##T##WeakRef = RenderObjectHandle_Weak<Vulkan##T>;
 
-#define DEF_RENDER_PLATFORM_OBJECT_WITH_BASE_CLASS2(T, _max_size) \
-                                                                  \
-    class T##Base;                                                \
-    DEF_RENDER_PLATFORM_OBJECT2_(Vulkan, T, _max_size)            \
-    DEF_RENDER_PLATFORM_OBJECT2_(WGPU, T, _max_size)              \
-                                                                  \
-    using T##Ref = RenderObjectHandle_Strong<T##Base>;            \
-    using T##WeakRef = RenderObjectHandle_Weak<T##Base>;
-
-#define DEF_RENDER_PLATFORM_OBJECT_NAMED(name, T, _max_size)      \
-                                                                  \
-    namespace platform {                                          \
-    template <PlatformType PLATFORM>                              \
-    class T;                                                      \
-    }                                                             \
-    DEF_RENDER_PLATFORM_OBJECT_NAMED_(VULKAN, name, T, _max_size) \
-    DEF_RENDER_PLATFORM_OBJECT_NAMED_(WEBGPU, name, T, _max_size) \
-                                                                  \
-    namespace platform {                                          \
-    template <PlatformType _platform>                             \
-    using name##Ref = RenderObjectHandle_Strong<T<_platform>>;    \
-    template <PlatformType _platform>                             \
-    using name##WeakRef = RenderObjectHandle_Weak<T<_platform>>;  \
-    }
+#define VULKAN_CAST(a) VulkanCastImpl(a)
 
 /*! \brief Enqueues a render object to be created with the given args on the render thread, or creates it immediately if already on the render thread.
  *

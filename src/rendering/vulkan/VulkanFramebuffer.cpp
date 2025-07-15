@@ -21,6 +21,26 @@ static inline VulkanRenderBackend* GetRenderBackend()
     return static_cast<VulkanRenderBackend*>(g_renderBackend);
 }
 
+static void TransitionFramebufferAttachments(CmdList& cmdList, VulkanFramebuffer* framebuffer, Span<VulkanAttachmentDef*> attachmentDefs)
+{
+    Assert(framebuffer != nullptr);
+
+    for (const VulkanAttachmentDef* attachmentDef : attachmentDefs)
+    {
+        const VulkanImageRef& image = attachmentDef->image;
+        HYP_GFX_ASSERT(image.IsValid());
+
+        if (framebuffer->GetRenderPass()->GetStage() == RenderPassStage::PRESENT)
+        {
+            cmdList.Add<InsertBarrier>(image, RS_PRESENT);
+        }
+        else
+        {
+            cmdList.Add<InsertBarrier>(image, RS_SHADER_RESOURCE);
+        }
+    }
+}
+
 #pragma region VulkanAttachmentMap
 
 RendererResult VulkanAttachmentMap::Create()
@@ -31,7 +51,7 @@ RendererResult VulkanAttachmentMap::Create()
         return HYP_MAKE_ERROR(RendererError, "Framebuffer is not valid");
     }
 
-    Array<VulkanImageRef> imagesToTransition;
+    Array<VulkanAttachmentDef*> attachmentDefs;
 
     for (KeyValuePair<uint32, VulkanAttachmentDef>& it : attachments)
     {
@@ -44,7 +64,7 @@ RendererResult VulkanAttachmentMap::Create()
             HYPERION_BUBBLE_ERRORS(def.image->Create());
         }
 
-        imagesToTransition.PushBack(def.image);
+        attachmentDefs.PushBack(&def);
 
         HYP_GFX_ASSERT(def.attachment.IsValid());
 
@@ -54,34 +74,28 @@ RendererResult VulkanAttachmentMap::Create()
         }
     }
 
-    // Transition image layout immediately on creation
-    if (imagesToTransition.Any())
+    FrameBase* frame = GetRenderBackend()->GetCurrentFrame();
+
+    // frame may be nullptr if we are creating a swapchain
+    if (frame != nullptr)
     {
-        UniquePtr<SingleTimeCommands> singleTimeCommands = g_renderBackend->GetSingleTimeCommands();
+        CmdList& cmdList = frame->GetCommandList();
 
-        singleTimeCommands->Push([&](CmdList& cmd) -> RendererResult
-            {
-                for (const VulkanImageRef& image : imagesToTransition)
-                {
-                    HYP_GFX_ASSERT(image.IsValid());
+        TransitionFramebufferAttachments(cmdList, framebuffer, attachmentDefs.ToSpan());
 
-                    if (framebuffer->GetRenderPass()->GetStage() == RenderPassStage::PRESENT)
-                    {
-                        cmd.Add<InsertBarrier>(image, RS_PRESENT);
-                    }
-                    else
-                    {
-                        cmd.Add<InsertBarrier>(image, RS_SHADER_RESOURCE);
-                    }
-                }
-
-                return {};
-            });
-
-        HYPERION_BUBBLE_ERRORS(singleTimeCommands->Execute());
+        return {};
     }
 
-    return {};
+    UniquePtr<SingleTimeCommands> singleTimeCommands = GetRenderBackend()->GetSingleTimeCommands();
+
+    singleTimeCommands->Push([&](CmdList& cmdList) -> RendererResult
+        {
+            TransitionFramebufferAttachments(cmdList, framebuffer, attachmentDefs.ToSpan());
+
+            return {};
+        });
+
+    return singleTimeCommands->Execute();
 }
 
 RendererResult VulkanAttachmentMap::Resize(Vec2u newSize)
@@ -92,7 +106,7 @@ RendererResult VulkanAttachmentMap::Resize(Vec2u newSize)
         return HYP_MAKE_ERROR(RendererError, "Framebuffer is not valid");
     }
 
-    Array<VulkanImageRef> imagesToTransition;
+    Array<VulkanAttachmentDef*> attachmentDefs;
 
     for (KeyValuePair<uint32, VulkanAttachmentDef>& it : attachments)
     {
@@ -109,8 +123,6 @@ RendererResult VulkanAttachmentMap::Resize(Vec2u newSize)
 
             newImage = MakeRenderObject<VulkanImage>(textureDesc);
             HYPERION_ASSERT_RESULT(newImage->Create());
-
-            imagesToTransition.PushBack(newImage);
 
             if (def.image.IsValid())
             {
@@ -146,46 +158,41 @@ RendererResult VulkanAttachmentMap::Resize(Vec2u newSize)
             std::move(newImage),
             std::move(newAttachment)
         };
+
+        attachmentDefs.PushBack(&def);
     }
 
-    // Transition image layout immediately on resize
-    if (imagesToTransition.Any())
+    FrameBase* frame = GetRenderBackend()->GetCurrentFrame();
+
+    // frame may be nullptr if we are creating a swapchain
+    if (frame != nullptr)
     {
-        UniquePtr<SingleTimeCommands> singleTimeCommands = g_renderBackend->GetSingleTimeCommands();
+        CmdList& cmdList = frame->GetCommandList();
 
-        singleTimeCommands->Push([this, &framebuffer, &imagesToTransition](CmdList& cmd)
-            {
-                for (const VulkanImageRef& image : imagesToTransition)
-                {
-                    HYP_GFX_ASSERT(image.IsValid());
+        TransitionFramebufferAttachments(cmdList, framebuffer, attachmentDefs.ToSpan());
 
-                    if (framebuffer->GetRenderPass()->GetStage() == RenderPassStage::PRESENT)
-                    {
-                        cmd.Add<InsertBarrier>(image, RS_PRESENT);
-                    }
-                    else
-                    {
-                        cmd.Add<InsertBarrier>(image, RS_SHADER_RESOURCE);
-                    }
-                }
-            });
-
-        HYPERION_ASSERT_RESULT(singleTimeCommands->Execute());
+        return {};
     }
 
-    return {};
+    UniquePtr<SingleTimeCommands> singleTimeCommands = GetRenderBackend()->GetSingleTimeCommands();
+
+    singleTimeCommands->Push([&](CmdList& cmdList) -> RendererResult
+        {
+            TransitionFramebufferAttachments(cmdList, framebuffer, attachmentDefs.ToSpan());
+
+            return {};
+        });
+
+    return singleTimeCommands->Execute();
 }
 
 #pragma endregion VulkanAttachmentMap
 
 #pragma region VulkanFramebuffer
 
-VulkanFramebuffer::VulkanFramebuffer(
-    Vec2u extent,
-    RenderPassStage stage,
-    uint32 numMultiviewLayers)
+VulkanFramebuffer::VulkanFramebuffer(Vec2u extent, RenderPassStage stage, uint32 numMultiviewLayers)
     : FramebufferBase(extent),
-      m_handles { VK_NULL_HANDLE },
+      m_handle(VK_NULL_HANDLE),
       m_renderPass(MakeRenderObject<VulkanRenderPass>(stage, RenderPassMode::RENDER_PASS_INLINE, numMultiviewLayers))
 {
     m_attachmentMap.framebufferWeak = VulkanFramebufferWeakRef(WeakHandleFromThis());
@@ -193,15 +200,12 @@ VulkanFramebuffer::VulkanFramebuffer(
 
 VulkanFramebuffer::~VulkanFramebuffer()
 {
-    for (uint32 frameIndex = 0; frameIndex < g_framesInFlight; frameIndex++)
-    {
-        HYP_GFX_ASSERT(m_handles[frameIndex] == VK_NULL_HANDLE, "Expected framebuffer to have been destroyed");
-    }
+    HYP_GFX_ASSERT(m_handle == VK_NULL_HANDLE, "Expected framebuffer to have been destroyed");
 }
 
 bool VulkanFramebuffer::IsCreated() const
 {
-    return m_handles[0] != VK_NULL_HANDLE;
+    return m_handle != VK_NULL_HANDLE;
 }
 
 RendererResult VulkanFramebuffer::Create()
@@ -234,7 +238,9 @@ RendererResult VulkanFramebuffer::Create()
         HYP_GFX_ASSERT(it.second.attachment->GetImageView() != nullptr);
         HYP_GFX_ASSERT(it.second.attachment->GetImageView()->IsCreated());
 
-        attachmentImageViews.PushBack(static_cast<VulkanImageView*>(it.second.attachment->GetImageView().Get())->GetVulkanHandle());
+        auto foo = VULKAN_CAST(it.second.attachment->GetImageView());
+
+        attachmentImageViews.PushBack(VULKAN_CAST(it.second.attachment->GetImageView())->GetVulkanHandle());
     }
 
     VkFramebufferCreateInfo framebufferCreateInfo { VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO };
@@ -251,10 +257,29 @@ RendererResult VulkanFramebuffer::Create()
             GetRenderBackend()->GetDevice()->GetDevice(),
             &framebufferCreateInfo,
             nullptr,
-            &m_handles[frameIndex]));
+            &m_handle));
     }
 
-    HYPERION_RETURN_OK;
+    FrameBase* frame = GetRenderBackend()->GetCurrentFrame();
+
+    if (frame != nullptr)
+    {
+        CmdList& cmdList = frame->GetCommandList();
+        cmdList.Add<ClearFramebuffer>(HandleFromThis());
+
+        return {};
+    }
+
+    UniquePtr<SingleTimeCommands> singleTimeCommands = GetRenderBackend()->GetSingleTimeCommands();
+
+    singleTimeCommands->Push([&](CmdList& cmdList) -> RendererResult
+        {
+            cmdList.Add<ClearFramebuffer>(HandleFromThis());
+
+            return {};
+        });
+
+    return singleTimeCommands->Execute();
 }
 
 RendererResult VulkanFramebuffer::Destroy()
@@ -264,13 +289,10 @@ RendererResult VulkanFramebuffer::Destroy()
         HYPERION_RETURN_OK;
     }
 
-    for (uint32 frameIndex = 0; frameIndex < g_framesInFlight; frameIndex++)
+    if (m_handle != VK_NULL_HANDLE)
     {
-        if (m_handles[frameIndex] != VK_NULL_HANDLE)
-        {
-            vkDestroyFramebuffer(GetRenderBackend()->GetDevice()->GetDevice(), m_handles[frameIndex], nullptr);
-            m_handles[frameIndex] = VK_NULL_HANDLE;
-        }
+        vkDestroyFramebuffer(GetRenderBackend()->GetDevice()->GetDevice(), m_handle, nullptr);
+        m_handle = VK_NULL_HANDLE;
     }
 
     SafeRelease(std::move(m_renderPass));
@@ -296,13 +318,10 @@ RendererResult VulkanFramebuffer::Resize(Vec2u newSize)
 
     HYPERION_BUBBLE_ERRORS(m_attachmentMap.Resize(newSize));
 
-    for (uint32 frameIndex = 0; frameIndex < g_framesInFlight; frameIndex++)
+    if (m_handle != VK_NULL_HANDLE)
     {
-        if (m_handles[frameIndex] != VK_NULL_HANDLE)
-        {
-            vkDestroyFramebuffer(GetRenderBackend()->GetDevice()->GetDevice(), m_handles[frameIndex], nullptr);
-            m_handles[frameIndex] = VK_NULL_HANDLE;
-        }
+        vkDestroyFramebuffer(GetRenderBackend()->GetDevice()->GetDevice(), m_handle, nullptr);
+        m_handle = VK_NULL_HANDLE;
     }
 
     Array<VkImageView> attachmentImageViews;
@@ -316,7 +335,7 @@ RendererResult VulkanFramebuffer::Resize(Vec2u newSize)
         HYP_GFX_ASSERT(it.second.attachment->GetImageView() != nullptr);
         HYP_GFX_ASSERT(it.second.attachment->GetImageView()->IsCreated());
 
-        attachmentImageViews.PushBack(static_cast<VulkanImageView*>(it.second.attachment->GetImageView().Get())->GetVulkanHandle());
+        attachmentImageViews.PushBack(VULKAN_CAST(it.second.attachment->GetImageView().Get())->GetVulkanHandle());
     }
 
     VkFramebufferCreateInfo framebufferCreateInfo { VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO };
@@ -327,14 +346,14 @@ RendererResult VulkanFramebuffer::Resize(Vec2u newSize)
     framebufferCreateInfo.height = newSize.y;
     framebufferCreateInfo.layers = numLayers;
 
-    for (uint32 frameIndex = 0; frameIndex < g_framesInFlight; frameIndex++)
-    {
-        HYPERION_VK_CHECK(vkCreateFramebuffer(
-            GetRenderBackend()->GetDevice()->GetDevice(),
-            &framebufferCreateInfo,
-            nullptr,
-            &m_handles[frameIndex]));
-    }
+    HYPERION_VK_CHECK(vkCreateFramebuffer(
+        GetRenderBackend()->GetDevice()->GetDevice(),
+        &framebufferCreateInfo,
+        nullptr,
+        &m_handle));
+
+    CmdList& cmdList = g_renderBackend->GetCurrentFrame()->GetCommandList();
+    cmdList.Add<ClearFramebuffer>(HandleFromThis());
 
     HYPERION_RETURN_OK;
 }
@@ -403,14 +422,73 @@ AttachmentBase* VulkanFramebuffer::GetAttachment(uint32 binding) const
     return m_attachmentMap.GetAttachment(binding).Get();
 }
 
-void VulkanFramebuffer::BeginCapture(CommandBufferBase* commandBuffer, uint32 frameIndex)
+void VulkanFramebuffer::BeginCapture(CommandBufferBase* commandBuffer)
 {
-    m_renderPass->Begin(static_cast<VulkanCommandBuffer*>(commandBuffer), this, frameIndex);
+    HYP_GFX_ASSERT(!VULKAN_CAST(commandBuffer)->IsInRenderPass());
+
+    VULKAN_CAST(commandBuffer)->m_isInRenderPass = true;
+
+    m_renderPass->Begin(VULKAN_CAST(commandBuffer), this);
 }
 
-void VulkanFramebuffer::EndCapture(CommandBufferBase* commandBuffer, uint32 frameIndex)
+void VulkanFramebuffer::EndCapture(CommandBufferBase* commandBuffer)
 {
-    m_renderPass->End(static_cast<VulkanCommandBuffer*>(commandBuffer));
+    HYP_GFX_ASSERT(VULKAN_CAST(commandBuffer)->IsInRenderPass());
+
+    m_renderPass->End(VULKAN_CAST(commandBuffer));
+
+    VULKAN_CAST(commandBuffer)->m_isInRenderPass = false;
+}
+
+void VulkanFramebuffer::Clear(CommandBufferBase* commandBuffer)
+{
+    bool shouldCapture = !VULKAN_CAST(commandBuffer)->IsInRenderPass();
+
+    if (shouldCapture)
+    {
+        BeginCapture(commandBuffer);
+    }
+
+    VkCommandBuffer vkCommandBuffer = VULKAN_CAST(commandBuffer)->GetVulkanHandle();
+
+    for (const auto& it : m_attachmentMap.attachments)
+    {
+        const VulkanAttachmentRef& attachment = it.second.attachment;
+        HYP_GFX_ASSERT(attachment.IsValid() && attachment->IsCreated());
+        HYP_GFX_ASSERT(attachment->GetImage().IsValid());
+
+        VkClearAttachment clearAttachment = {};
+
+        VkClearRect clearRect = {};
+        clearRect.rect.offset.x = 0;
+        clearRect.rect.offset.y = 0;
+        clearRect.rect.extent.width = m_extent.x;
+        clearRect.rect.extent.height = m_extent.y;
+        clearRect.layerCount = 1;
+
+        if (attachment->IsDepthAttachment())
+        {
+            clearAttachment.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
+            clearAttachment.colorAttachment = VK_ATTACHMENT_UNUSED;
+            clearAttachment.clearValue.depthStencil = { 1.0f, 0 };
+        }
+        else
+        {
+            clearAttachment.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+            clearAttachment.colorAttachment = attachment->GetBinding();
+            clearAttachment.clearValue.color.float32[0] = attachment->GetClearColor().x;
+            clearAttachment.clearValue.color.float32[1] = attachment->GetClearColor().y;
+            clearAttachment.clearValue.color.float32[2] = attachment->GetClearColor().z;
+            clearAttachment.clearValue.color.float32[3] = attachment->GetClearColor().w;
+        }
+
+        vkCmdClearAttachments(vkCommandBuffer, 1, &clearAttachment, 1, &clearRect);
+    }
+
+    if (shouldCapture)
+    {
+        EndCapture(commandBuffer);
+    }
 }
 
 #pragma endregion VulkanFramebuffer

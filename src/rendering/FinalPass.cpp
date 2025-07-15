@@ -187,7 +187,7 @@ void FinalPass::Render(FrameBase* frame, RenderWorld* renderWorld)
     const FramebufferRef& framebuffer = m_swapchain->GetFramebuffers()[acquiredImageIndex];
     AssertDebug(framebuffer != nullptr);
 
-    frame->GetCommandList().Add<BeginFramebuffer>(framebuffer, 0);
+    frame->GetCommandList().Add<BeginFramebuffer>(framebuffer);
     frame->GetCommandList().Add<BindGraphicsPipeline>(m_renderTextureToScreenPass->GetGraphicsPipeline());
 
     frame->GetCommandList().Add<BindDescriptorTable>(
@@ -250,7 +250,7 @@ void FinalPass::Render(FrameBase* frame, RenderWorld* renderWorld)
     }
 #endif
 
-    frame->GetCommandList().Add<EndFramebuffer>(framebuffer, 0);
+    frame->GetCommandList().Add<EndFramebuffer>(framebuffer);
 }
 
 #pragma endregion FinalPass

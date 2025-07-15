@@ -202,15 +202,6 @@ Result FontAtlas::RenderAtlasTextures()
             atlasBitmap->Blit(*glyphBitmap, srcRect, dstRect);
         }
 
-        // debugging
-        for (int x = 0; x < 500; x++)
-        {
-            for (int y = 0; y < 10; y++)
-            {
-                atlasBitmap->GetPixelReference(x, y).SetRGBA(Vec4f(1.0f, 0.0f, 0.0f, 1.0f));
-            }
-        }
-
         atlasBitmap->FlipVertical();
 
         const TextureDesc atlasTextureDesc {

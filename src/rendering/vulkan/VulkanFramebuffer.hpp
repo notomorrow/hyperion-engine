@@ -126,9 +126,9 @@ public:
 
     HYP_API virtual ~VulkanFramebuffer() override;
 
-    HYP_FORCE_INLINE const FixedArray<VkFramebuffer, g_framesInFlight>& GetVulkanHandles() const
+    HYP_FORCE_INLINE const VkFramebuffer& GetVulkanHandle() const
     {
-        return m_handles;
+        return m_handle;
     }
 
     HYP_FORCE_INLINE const VulkanRenderPassRef& GetRenderPass() const
@@ -162,11 +162,13 @@ public:
 
     HYP_API virtual RendererResult Resize(Vec2u newSize) override;
 
-    HYP_API virtual void BeginCapture(CommandBufferBase* commandBuffer, uint32 frameIndex) override;
-    HYP_API virtual void EndCapture(CommandBufferBase* commandBuffer, uint32 frameIndex) override;
+    HYP_API virtual void BeginCapture(CommandBufferBase* commandBuffer) override;
+    HYP_API virtual void EndCapture(CommandBufferBase* commandBuffer) override;
+
+    HYP_API virtual void Clear(CommandBufferBase* commandBuffer) override;
 
 private:
-    FixedArray<VkFramebuffer, g_framesInFlight> m_handles;
+    VkFramebuffer m_handle;
     VulkanRenderPassRef m_renderPass;
     VulkanAttachmentMap m_attachmentMap;
 };

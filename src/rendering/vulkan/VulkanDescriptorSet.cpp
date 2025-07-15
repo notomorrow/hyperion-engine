@@ -154,7 +154,7 @@ void VulkanDescriptorSet::UpdateDirtyState(bool* outIsDirty)
                 descriptorElementInfo.descriptorType = ToVkDescriptorType(layoutElement->type);
 
                 descriptorElementInfo.bufferInfo = VkDescriptorBufferInfo {
-                    .buffer = static_cast<VulkanGpuBuffer*>(ref.Get())->GetVulkanHandle(),
+                    .buffer = VULKAN_CAST(ref.Get())->GetVulkanHandle(),
                     .offset = 0,
                     .range = layoutHasSize ? layoutElement->size : ref->Size()
                 };
@@ -179,11 +179,11 @@ void VulkanDescriptorSet::UpdateDirtyState(bool* outIsDirty)
 
                 const ImageViewRef& ref = value.Get<ImageViewRef>();
                 HYP_GFX_ASSERT(ref.IsValid(), "Invalid image view reference for descriptor set element: %s.%s[%u]", m_layout.GetName().LookupString(), name.LookupString(), index);
-                HYP_GFX_ASSERT(static_cast<VulkanImageView*>(ref.Get())->GetVulkanHandle() != VK_NULL_HANDLE, "Invalid image view for descriptor set element: %s.%s[%u]", m_layout.GetName().LookupString(), name.LookupString(), index);
+                HYP_GFX_ASSERT(VULKAN_CAST(ref.Get())->GetVulkanHandle() != VK_NULL_HANDLE, "Invalid image view for descriptor set element: %s.%s[%u]", m_layout.GetName().LookupString(), name.LookupString(), index);
 
                 descriptorElementInfo.imageInfo = VkDescriptorImageInfo {
                     .sampler = VK_NULL_HANDLE,
-                    .imageView = static_cast<VulkanImageView*>(ref.Get())->GetVulkanHandle(),
+                    .imageView = VULKAN_CAST(ref.Get())->GetVulkanHandle(),
                     .imageLayout = isStorageImage ? VK_IMAGE_LAYOUT_GENERAL : VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
                 };
             }
@@ -205,10 +205,10 @@ void VulkanDescriptorSet::UpdateDirtyState(bool* outIsDirty)
                 const SamplerRef& ref = value.Get<SamplerRef>();
                 HYP_GFX_ASSERT(ref.IsValid(), "Invalid sampler reference for descriptor set element: %s.%s[%u]", m_layout.GetName().LookupString(), name.LookupString(), index);
 
-                HYP_GFX_ASSERT(static_cast<VulkanSampler*>(ref.Get())->GetVulkanHandle() != VK_NULL_HANDLE, "Invalid sampler for descriptor set element: %s.%s[%u]", m_layout.GetName().LookupString(), name.LookupString(), index);
+                HYP_GFX_ASSERT(VULKAN_CAST(ref.Get())->GetVulkanHandle() != VK_NULL_HANDLE, "Invalid sampler for descriptor set element: %s.%s[%u]", m_layout.GetName().LookupString(), name.LookupString(), index);
 
                 descriptorElementInfo.imageInfo = VkDescriptorImageInfo {
-                    .sampler = static_cast<VulkanSampler*>(ref.Get())->GetVulkanHandle(),
+                    .sampler = VULKAN_CAST(ref.Get())->GetVulkanHandle(),
                     .imageView = VK_NULL_HANDLE,
                     .imageLayout = VK_IMAGE_LAYOUT_UNDEFINED
                 };
@@ -231,13 +231,13 @@ void VulkanDescriptorSet::UpdateDirtyState(bool* outIsDirty)
                 const TLASRef& ref = value.Get<TLASRef>();
                 HYP_GFX_ASSERT(ref.IsValid(), "Invalid TLAS reference for descriptor set element: %s.%s[%u]", m_layout.GetName().LookupString(), name.LookupString(), index);
 
-                HYP_GFX_ASSERT(static_cast<VulkanTLAS*>(ref.Get())->GetVulkanHandle() != VK_NULL_HANDLE, "Invalid TLAS for descriptor set element: %s.%s[%u]", m_layout.GetName().LookupString(), name.LookupString(), index);
+                HYP_GFX_ASSERT(VULKAN_CAST(ref.Get())->GetVulkanHandle() != VK_NULL_HANDLE, "Invalid TLAS for descriptor set element: %s.%s[%u]", m_layout.GetName().LookupString(), name.LookupString(), index);
 
                 descriptorElementInfo.accelerationStructureInfo = VkWriteDescriptorSetAccelerationStructureKHR {
                     .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET_ACCELERATION_STRUCTURE_KHR,
                     .pNext = nullptr,
                     .accelerationStructureCount = 1,
-                    .pAccelerationStructures = &static_cast<VulkanTLAS*>(ref.Get())->GetVulkanHandle()
+                    .pAccelerationStructures = &VULKAN_CAST(ref.Get())->GetVulkanHandle()
                 };
             }
 

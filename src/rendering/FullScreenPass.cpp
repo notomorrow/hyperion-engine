@@ -615,11 +615,11 @@ void FullScreenPass::Render(FrameBase* frame, const RenderSetup& renderSetup)
 
     const uint32 frameIndex = frame->GetFrameIndex();
 
-    frame->GetCommandList().Add<BeginFramebuffer>(m_framebuffer, frameIndex);
+    frame->GetCommandList().Add<BeginFramebuffer>(m_framebuffer);
 
     RenderToFramebuffer(frame, renderSetup, m_framebuffer);
 
-    frame->GetCommandList().Add<EndFramebuffer>(m_framebuffer, frameIndex);
+    frame->GetCommandList().Add<EndFramebuffer>(m_framebuffer);
 
     if (ShouldRenderHalfRes())
     {
@@ -709,7 +709,7 @@ void FullScreenPass::Begin(FrameBase* frame, const RenderSetup& renderSetup)
 
     const uint32 frameIndex = frame->GetFrameIndex();
 
-    frame->GetCommandList().Add<BeginFramebuffer>(m_framebuffer, frameIndex);
+    frame->GetCommandList().Add<BeginFramebuffer>(m_framebuffer);
 
     if (ShouldRenderHalfRes())
     {
@@ -743,7 +743,7 @@ void FullScreenPass::End(FrameBase* frame, const RenderSetup& renderSetup)
         RenderPreviousTextureToScreen(frame, renderSetup);
     }
 
-    frame->GetCommandList().Add<EndFramebuffer>(m_framebuffer, frameIndex);
+    frame->GetCommandList().Add<EndFramebuffer>(m_framebuffer);
 
     if (ShouldRenderHalfRes())
     {

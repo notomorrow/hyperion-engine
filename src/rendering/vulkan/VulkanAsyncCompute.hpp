@@ -4,6 +4,7 @@
 
 #include <rendering/AsyncCompute.hpp>
 #include <rendering/vulkan/VulkanFence.hpp>
+#include <rendering/RenderObject.hpp>
 
 #include <vulkan/vulkan.h>
 

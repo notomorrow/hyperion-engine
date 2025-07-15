@@ -205,48 +205,61 @@ class BeginFramebuffer final : public CmdBase
 {
 public:
 #ifdef HYP_DEBUG_MODE
-    HYP_API BeginFramebuffer(const FramebufferRef& framebuffer, uint32 frameIndex);
+    HYP_API BeginFramebuffer(const FramebufferRef& framebuffer);
     HYP_API virtual void Prepare(FrameBase* frame) override;
 #else
-    BeginFramebuffer(const FramebufferRef& framebuffer, uint32 frameIndex)
-        : m_framebuffer(framebuffer),
-          m_frameIndex(frameIndex)
+    BeginFramebuffer(const FramebufferRef& framebuffer)
+        : m_framebuffer(framebuffer)
     {
     }
 #endif
 
     virtual void Execute(const CommandBufferRef& cmd) override
     {
-        m_framebuffer->BeginCapture(cmd, m_frameIndex);
+        m_framebuffer->BeginCapture(cmd);
     }
 
 private:
     FramebufferRef m_framebuffer;
-    uint32 m_frameIndex;
 };
 
 class EndFramebuffer final : public CmdBase
 {
 public:
 #ifdef HYP_DEBUG_MODE
-    HYP_API EndFramebuffer(const FramebufferRef& framebuffer, uint32 frameIndex);
+    HYP_API EndFramebuffer(const FramebufferRef& framebuffer);
     HYP_API virtual void Prepare(FrameBase* frame) override;
 #else
-    EndFramebuffer(const FramebufferRef& framebuffer, uint32 frameIndex)
-        : m_framebuffer(framebuffer),
-          m_frameIndex(frameIndex)
+    EndFramebuffer(const FramebufferRef& framebuffer)
+        : m_framebuffer(framebuffer)
     {
     }
 #endif
 
     virtual void Execute(const CommandBufferRef& cmd) override
     {
-        m_framebuffer->EndCapture(cmd, m_frameIndex);
+        m_framebuffer->EndCapture(cmd);
     }
 
 private:
     FramebufferRef m_framebuffer;
-    uint32 m_frameIndex;
+};
+
+class ClearFramebuffer final : public CmdBase
+{
+public:
+    HYP_API ClearFramebuffer(const FramebufferRef& framebuffer)
+        : m_framebuffer(framebuffer)
+    {
+    }
+
+    virtual void Execute(const CommandBufferRef& cmd) override
+    {
+        m_framebuffer->Clear(cmd);
+    }
+
+private:
+    FramebufferRef m_framebuffer;
 };
 
 class BindGraphicsPipeline final : public CmdBase

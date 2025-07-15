@@ -557,7 +557,7 @@ void RenderCollector::ExecuteDrawCalls(FrameBase* frame, const RenderSetup& rend
 
     if (framebuffer)
     {
-        frame->GetCommandList().Add<BeginFramebuffer>(framebuffer, frameIndex);
+        frame->GetCommandList().Add<BeginFramebuffer>(framebuffer);
     }
 
     for (const auto& mappings : groupsView)
@@ -618,7 +618,7 @@ void RenderCollector::ExecuteDrawCalls(FrameBase* frame, const RenderSetup& rend
 
     if (framebuffer)
     {
-        frame->GetCommandList().Add<EndFramebuffer>(framebuffer, frameIndex);
+        frame->GetCommandList().Add<EndFramebuffer>(framebuffer);
     }
 }
 

@@ -22,6 +22,8 @@ struct VulkanDeviceQueue;
 class VulkanCommandBuffer final : public CommandBufferBase
 {
 public:
+    friend class VulkanFramebuffer;
+    
     HYP_API explicit VulkanCommandBuffer(VkCommandBufferLevel type);
     HYP_API virtual ~VulkanCommandBuffer() override;
 
@@ -38,6 +40,11 @@ public:
     HYP_FORCE_INLINE VkCommandBufferLevel GetType() const
     {
         return m_type;
+    }
+    
+    HYP_FORCE_INLINE bool IsInRenderPass() const
+    {
+        return m_isInRenderPass;
     }
 
     HYP_API virtual bool IsCreated() const override;
@@ -87,6 +94,8 @@ private:
     VkCommandBufferLevel m_type;
     VkCommandBuffer m_handle;
     VkCommandPool m_commandPool;
+    
+    bool m_isInRenderPass : 1;
 };
 
 } // namespace hyperion

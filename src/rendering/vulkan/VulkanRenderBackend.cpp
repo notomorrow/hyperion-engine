@@ -387,7 +387,7 @@ public:
     const ImageViewRef& GetOrCreate(const Handle<Texture>& texture, const ImageSubResource& subResource)
     {
         Threads::AssertOnThread(g_renderThread);
-            
+
         HYP_GFX_ASSERT(texture.IsValid());
 
         const SizeType idx = texture.Id().ToIndex();
@@ -404,28 +404,28 @@ public:
 
         if (it == textureImageViews.End())
         {
-            
+
             VulkanImageViewRef imageView = MakeRenderObject<VulkanImageView>(
                 VulkanImageRef(texture->GetRenderResource().GetImage()),
                 subResource.baseMipLevel,
                 subResource.numLevels,
                 subResource.baseArrayLayer,
                 subResource.numLayers);
-            
+
             HYP_GFX_ASSERT(imageView->Create());
-            
+
             it = textureImageViews.Set(subResource, imageView).first;
         }
-        
+
         HYP_GFX_ASSERT(it->second.IsValid());
-        
+
         return it->second;
     }
 
     void RemoveTexture(const Handle<Texture>& texture)
     {
         Threads::AssertOnThread(g_renderThread);
-        
+
         if (!texture.IsValid())
         {
             return;
@@ -448,7 +448,7 @@ public:
     void CleanupUnusedTextures()
     {
         Threads::AssertOnThread(g_renderThread);
-        
+
         constexpr uint32 maxCycles = 32;
 
         cleanupIterator = typename decltype(weakTextureHandles)::Iterator {
@@ -587,10 +587,7 @@ RendererResult VulkanRenderBackend::Destroy()
 
 FrameBase* VulkanRenderBackend::GetCurrentFrame() const
 {
-    FrameBase* frame = m_instance->GetSwapchain()->GetCurrentFrame().Get();
-    AssertDebug(frame != nullptr);
-
-    return frame;
+    return m_instance->GetSwapchain()->GetCurrentFrame().Get();
 }
 
 FrameBase* VulkanRenderBackend::PrepareNextFrame()
@@ -637,8 +634,8 @@ void VulkanRenderBackend::PresentFrame(FrameBase* frame)
 {
     const CommandBufferRef& commandBuffer = m_instance->GetSwapchain()->GetCurrentCommandBuffer();
 
-    VulkanFrame* vulkanFrame = static_cast<VulkanFrame*>(frame);
-    VulkanCommandBufferRef vulkanCommandBuffer = VulkanCommandBufferRef(commandBuffer);
+    VulkanFrame* vulkanFrame = VULKAN_CAST(frame);
+    VulkanCommandBufferRef vulkanCommandBuffer = VULKAN_CAST(commandBuffer);
     VulkanAsyncCompute* vulkanAsyncCompute = static_cast<VulkanAsyncCompute*>(m_asyncCompute);
 
     RendererResult submitResult = vulkanFrame->Submit(&m_instance->GetDevice()->GetGraphicsQueue(), vulkanCommandBuffer);
@@ -687,7 +684,7 @@ GraphicsPipelineRef VulkanRenderBackend::MakeGraphicsPipeline(
     {
         HYP_GFX_ASSERT(framebuffer.IsValid());
 
-        VulkanFramebuffer* vulkanFramebuffer = static_cast<VulkanFramebuffer*>(framebuffer.Get());
+        VulkanFramebuffer* vulkanFramebuffer = VULKAN_CAST(framebuffer.Get());
 
         if (vulkanFramebuffer->GetRenderPass() != nullptr)
         {
@@ -827,7 +824,7 @@ const ImageViewRef& VulkanRenderBackend::GetTextureImageView(const Handle<Textur
 
     const ImageViewRef& imageView = m_textureCache->GetOrCreate(texture, subResource);
     HYP_GFX_ASSERT(imageView.IsValid());
-    
+
     return imageView;
 }
 

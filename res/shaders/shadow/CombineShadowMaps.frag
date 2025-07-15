@@ -18,15 +18,14 @@ layout(location = 0) out vec4 color_output;
 
 #undef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 
-HYP_DESCRIPTOR_SRV(CombineShadowMapsDescriptorSet, PrevTexture) uniform texture2D prev_texture;
-
-HYP_DESCRIPTOR_SRV(CombineShadowMapsDescriptorSet, InTexture) uniform texture2D src_texture;
+HYP_DESCRIPTOR_SRV(CombineShadowMapsDescriptorSet, Src0) uniform texture2D src0;
+HYP_DESCRIPTOR_SRV(CombineShadowMapsDescriptorSet, Src1) uniform texture2D src1;
 HYP_DESCRIPTOR_SAMPLER(Global, SamplerNearest) uniform sampler sampler_nearest;
 
 void main()
 {
-    color_output = Texture2D(sampler_nearest, src_texture, v_texcoord);
-    vec4 prev_color = Texture2D(sampler_nearest, prev_texture, v_texcoord);
+    vec4 color0 = Texture2D(sampler_nearest, src0, v_texcoord);
+    vec4 color1 = Texture2D(sampler_nearest, src1, v_texcoord);
 
-    color_output = color_output.r < prev_color.r ? color_output : prev_color;
+    color_output = color0.r < color1.r ? color0 : color1;
 }

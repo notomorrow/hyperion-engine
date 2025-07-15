@@ -28,7 +28,8 @@ static inline VulkanRenderBackend* GetRenderBackend()
 VulkanCommandBuffer::VulkanCommandBuffer(VkCommandBufferLevel type)
     : m_type(type),
       m_handle(VK_NULL_HANDLE),
-      m_commandPool(VK_NULL_HANDLE)
+      m_commandPool(VK_NULL_HANDLE),
+      m_isInRenderPass(false)
 {
 }
 

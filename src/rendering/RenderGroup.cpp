@@ -19,11 +19,6 @@
 #include <rendering/RenderConfig.hpp>
 #include <rendering/RenderBackend.hpp>
 
-// temp
-#include <rendering/vulkan/VulkanGraphicsPipeline.hpp>
-#include <rendering/vulkan/VulkanRenderPass.hpp>
-#include <rendering/vulkan/VulkanFramebuffer.hpp>
-
 #include <scene/Entity.hpp>
 #include <scene/Mesh.hpp>
 #include <scene/Material.hpp>
@@ -696,17 +691,6 @@ void RenderGroup::PerformRendering(FrameBase* frame, const RenderSetup& renderSe
             CreateGraphicsPipeline(renderSetup.passData, drawCallCollection.impl)
         };
     }
-
-    VulkanGraphicsPipeline* vulkanGraphicsPipeline = static_cast<VulkanGraphicsPipeline*>(cacheEntry->graphicsPipeline.Get());
-
-    // DebugLog(LogType::Debug, "PerformRendering() for RenderGroup #%u w/ with renderpass format: %u for pipeline %p\tand view renderpass format: %u for renderpass %p\n",
-    //     Id().Value(),
-    //     vulkanGraphicsPipeline->GetRenderPass()->GetAttachments()[0]->GetFormat(),
-    //     vulkanGraphicsPipeline,
-    //     renderSetup.passData->view.GetUnsafe()->GetOutputTarget().GetFramebuffer()->GetAttachment(0)->GetFormat(),
-    //     static_cast<VulkanFramebuffer*>(renderSetup.passData->view.GetUnsafe()->GetOutputTarget().GetFramebuffer().Get())->GetRenderPass().Get());
-
-    // Assert(cacheEntry->graphicsPipeline->GetFramebuffers()[0]->GetAttachment(0)->GetFormat() == renderSetup.passData->view.GetUnsafe()->GetOutputTarget().GetFramebuffer()->GetAttachment(0)->GetFormat());
 
     static const bool isIndirectRenderingEnabled = g_renderBackend->GetRenderConfig().IsIndirectRenderingEnabled();
 

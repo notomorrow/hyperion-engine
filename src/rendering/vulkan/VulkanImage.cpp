@@ -206,7 +206,7 @@ RendererResult VulkanImage::GenerateMipmaps(CommandBufferBase* commandBuffer)
             };
 
             vkCmdBlitImage(
-                static_cast<VulkanCommandBuffer*>(commandBuffer)->GetVulkanHandle(),
+                VULKAN_CAST(commandBuffer)->GetVulkanHandle(),
                 m_handle,
                 GetVkImageLayout(RS_COPY_SRC),
                 m_handle,
@@ -562,7 +562,7 @@ void VulkanImage::InsertBarrier(
     barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 
     vkCmdPipelineBarrier(
-        static_cast<VulkanCommandBuffer*>(commandBuffer)->GetVulkanHandle(),
+        VULKAN_CAST(commandBuffer)->GetVulkanHandle(),
         GetVkShaderStageMask(prevResourceState, true, shaderModuleType),
         GetVkShaderStageMask(newState, false, shaderModuleType),
         0,
@@ -677,8 +677,8 @@ RendererResult VulkanImage::Blit(
         };
 
         vkCmdBlitImage(
-            static_cast<VulkanCommandBuffer*>(commandBuffer)->GetVulkanHandle(),
-            static_cast<const VulkanImage*>(srcImage)->GetVulkanHandle(),
+            VULKAN_CAST(commandBuffer)->GetVulkanHandle(),
+            VULKAN_CAST(srcImage)->GetVulkanHandle(),
             GetVkImageLayout(srcResourceState),
             m_handle,
             GetVkImageLayout(dstResourceState),
@@ -737,8 +737,8 @@ RendererResult VulkanImage::Blit(
     };
 
     vkCmdBlitImage(
-        static_cast<VulkanCommandBuffer*>(commandBuffer)->GetVulkanHandle(),
-        static_cast<const VulkanImage*>(srcImage)->GetVulkanHandle(),
+        VULKAN_CAST(commandBuffer)->GetVulkanHandle(),
+        VULKAN_CAST(srcImage)->GetVulkanHandle(),
         GetVkImageLayout(srcResourceState),
         m_handle,
         GetVkImageLayout(dstResourceState),
@@ -777,8 +777,8 @@ void VulkanImage::CopyFromBuffer(CommandBufferBase* commandBuffer, const GpuBuff
         region.imageExtent = VkExtent3D { m_textureDesc.extent.x, m_textureDesc.extent.y, m_textureDesc.extent.z };
 
         vkCmdCopyBufferToImage(
-            static_cast<VulkanCommandBuffer*>(commandBuffer)->GetVulkanHandle(),
-            static_cast<const VulkanGpuBuffer*>(srcBuffer)->GetVulkanHandle(),
+            VULKAN_CAST(commandBuffer)->GetVulkanHandle(),
+            VULKAN_CAST(srcBuffer)->GetVulkanHandle(),
             m_handle,
             GetVkImageLayout(m_resourceState),
             1,
@@ -815,10 +815,10 @@ void VulkanImage::CopyToBuffer(CommandBufferBase* commandBuffer, GpuBufferBase* 
         region.imageExtent = VkExtent3D { m_textureDesc.extent.x, m_textureDesc.extent.y, m_textureDesc.extent.z };
 
         vkCmdCopyImageToBuffer(
-            static_cast<VulkanCommandBuffer*>(commandBuffer)->GetVulkanHandle(),
+            VULKAN_CAST(commandBuffer)->GetVulkanHandle(),
             m_handle,
             GetVkImageLayout(m_resourceState),
-            static_cast<VulkanGpuBuffer*>(dstBuffer)->GetVulkanHandle(),
+            VULKAN_CAST(dstBuffer)->GetVulkanHandle(),
             1,
             &region);
     }

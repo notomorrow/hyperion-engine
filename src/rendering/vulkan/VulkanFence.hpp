@@ -1,6 +1,7 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
 #pragma once
+
 #include <rendering/RenderObject.hpp>
 
 #include <vulkan/vulkan.h>
@@ -31,8 +32,5 @@ private:
     VkFence m_handle = VK_NULL_HANDLE;
     VkResult m_lastFrameResult = VK_SUCCESS;
 };
-
-using VulkanFenceRef = RenderObjectHandle_Strong<VulkanFence>;
-using VulkanFenceWeakRef = RenderObjectHandle_Weak<VulkanFence>;
 
 } // namespace hyperion

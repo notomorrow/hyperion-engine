@@ -327,7 +327,7 @@ ShadowPassData::~ShadowPassData()
 
 static UniquePtr<FullScreenPass> CreateCombineShadowMapsPass(TextureFormat format, Vec2u dimensions, Span<Handle<View>> views)
 {
-    AssertDebug(views.Size() >= 2, "Combine pass requires 2 views (one for static objects, one for dynamic objects)");
+    AssertDebug(views.Size() == 2, "Combine pass requires 2 views (one for static objects, one for dynamic objects)");
 
     ShaderRef shader = g_shaderManager->GetOrCreate(NAME("CombineShadowMaps"));
     Assert(shader.IsValid());
@@ -341,8 +341,8 @@ static UniquePtr<FullScreenPass> CreateCombineShadowMapsPass(TextureFormat forma
         const DescriptorSetRef& descriptorSet = descriptorTable->GetDescriptorSet(NAME("CombineShadowMapsDescriptorSet"), frameIndex);
         Assert(descriptorSet != nullptr);
 
-        descriptorSet->SetElement(NAME("PrevTexture"), views[0]->GetOutputTarget().GetFramebuffer()->GetAttachment(0)->GetImageView());
-        descriptorSet->SetElement(NAME("InTexture"), views[1]->GetOutputTarget().GetFramebuffer()->GetAttachment(0)->GetImageView());
+        descriptorSet->SetElement(NAME("Src0"), views[0]->GetOutputTarget().GetFramebuffer()->GetAttachment(0)->GetImageView());
+        descriptorSet->SetElement(NAME("Src1"), views[1]->GetOutputTarget().GetFramebuffer()->GetAttachment(0)->GetImageView());
     }
 
     DeferCreate(descriptorTable);
@@ -598,18 +598,18 @@ void ShadowRendererBase::RenderFrame(FrameBase* frame, const RenderSetup& render
 
     if (combineShadowMapsPass)
     {
-        AttachmentBase* attachment = combineShadowMapsPass->GetFramebuffer()->GetAttachment(0);
-        Assert(attachment != nullptr);
-
-        const ImageRef& srcImage = attachment->GetImage();
-        Assert(srcImage.IsValid());
-
         RenderSetup rs = renderSetup;
         // FullScreenPass needs a View set
         rs.view = &shadowViews[0]->GetRenderResource();
 
         // Combine passes into one
         combineShadowMapsPass->Render(frame, rs);
+
+        AttachmentBase* attachment = combineShadowMapsPass->GetFramebuffer()->GetAttachment(0);
+        Assert(attachment != nullptr);
+
+        const ImageRef& srcImage = attachment->GetImage();
+        Assert(srcImage.IsValid());
 
         // Copy combined shadow map to the final shadow map
         frame->GetCommandList().Add<InsertBarrier>(srcImage, RS_COPY_SRC);

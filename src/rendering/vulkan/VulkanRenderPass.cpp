@@ -205,13 +205,13 @@ RendererResult VulkanRenderPass::Destroy()
     return result;
 }
 
-void VulkanRenderPass::Begin(VulkanCommandBuffer* cmd, VulkanFramebuffer* framebuffer, uint32 frameIndex)
+void VulkanRenderPass::Begin(VulkanCommandBuffer* cmd, VulkanFramebuffer* framebuffer)
 {
     HYP_GFX_ASSERT(framebuffer != nullptr);
 
     VkRenderPassBeginInfo renderPassInfo { VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO };
     renderPassInfo.renderPass = m_handle;
-    renderPassInfo.framebuffer = framebuffer->GetVulkanHandles()[frameIndex]; /// @TODO: Revisit
+    renderPassInfo.framebuffer = framebuffer->GetVulkanHandle();
     renderPassInfo.renderArea.offset = { 0, 0 };
     renderPassInfo.renderArea.extent = VkExtent2D { framebuffer->GetWidth(), framebuffer->GetHeight() };
     renderPassInfo.clearValueCount = uint32(m_vkClearValues.Size());

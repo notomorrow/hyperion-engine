@@ -47,14 +47,14 @@ void VulkanComputePipeline::Bind(CommandBufferBase* commandBuffer)
     HYP_GFX_ASSERT(m_handle != VK_NULL_HANDLE);
 
     vkCmdBindPipeline(
-        static_cast<VulkanCommandBuffer*>(commandBuffer)->GetVulkanHandle(),
+        VULKAN_CAST(commandBuffer)->GetVulkanHandle(),
         VK_PIPELINE_BIND_POINT_COMPUTE,
         m_handle);
 
     if (m_pushConstants)
     {
         vkCmdPushConstants(
-            static_cast<VulkanCommandBuffer*>(commandBuffer)->GetVulkanHandle(),
+            VULKAN_CAST(commandBuffer)->GetVulkanHandle(),
             m_layout,
             VK_SHADER_STAGE_COMPUTE_BIT,
             0,
@@ -68,7 +68,7 @@ void VulkanComputePipeline::Dispatch(
     const Vec3u& groupSize) const
 {
     vkCmdDispatch(
-        static_cast<VulkanCommandBuffer*>(commandBuffer)->GetVulkanHandle(),
+        VULKAN_CAST(commandBuffer)->GetVulkanHandle(),
         groupSize.x,
         groupSize.y,
         groupSize.z);
@@ -80,8 +80,8 @@ void VulkanComputePipeline::DispatchIndirect(
     SizeType offset) const
 {
     vkCmdDispatchIndirect(
-        static_cast<VulkanCommandBuffer*>(commandBuffer)->GetVulkanHandle(),
-        static_cast<VulkanGpuBuffer*>(indirectBuffer.Get())->GetVulkanHandle(),
+        VULKAN_CAST(commandBuffer)->GetVulkanHandle(),
+        VULKAN_CAST(indirectBuffer.Get())->GetVulkanHandle(),
         offset);
 }
 
@@ -137,7 +137,7 @@ RendererResult VulkanComputePipeline::Create()
         return HYP_MAKE_ERROR(RendererError, "Compute shader not provided to pipeline");
     }
 
-    const Array<VkPipelineShaderStageCreateInfo>& stages = static_cast<VulkanShader*>(m_shader.Get())->GetVulkanShaderStages();
+    const Array<VkPipelineShaderStageCreateInfo>& stages = VULKAN_CAST(m_shader.Get())->GetVulkanShaderStages();
 
     if (stages.Size() == 0)
     {

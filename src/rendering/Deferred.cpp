@@ -240,8 +240,8 @@ void DeferredPass::CreatePipeline(const RenderableAttributeSet& renderableAttrib
             descriptorSet->SetElement(NAME("MaterialsBuffer"), g_renderGlobalState->gpuBuffers[GRB_MATERIALS]->GetBuffer(frameIndex));
 
             descriptorSet->SetElement(NAME("LTCSampler"), m_ltcSampler);
-            descriptorSet->SetElement(NAME("LTCMatrixTexture"), m_ltcMatrixTexture->GetRenderResource().GetImageView());
-            descriptorSet->SetElement(NAME("LTCBRDFTexture"), m_ltcBrdfTexture->GetRenderResource().GetImageView());
+            descriptorSet->SetElement(NAME("LTCMatrixTexture"), g_renderBackend->GetTextureImageView(m_ltcMatrixTexture));
+            descriptorSet->SetElement(NAME("LTCBRDFTexture"), g_renderBackend->GetTextureImageView(m_ltcBrdfTexture));
         }
 
         DeferCreate(descriptorTable);
@@ -602,7 +602,7 @@ void EnvGridPass::Render(FrameBase* frame, const RenderSetup& rs)
 
     const uint32 frameIndex = frame->GetFrameIndex();
 
-    frame->GetCommandList().Add<BeginFramebuffer>(m_framebuffer, frameIndex);
+    frame->GetCommandList().Add<BeginFramebuffer>(m_framebuffer);
 
     // render previous frame's result to screen
     if (!m_isFirstFrame && m_renderTextureToScreenPass != nullptr)
@@ -655,7 +655,7 @@ void EnvGridPass::Render(FrameBase* frame, const RenderSetup& rs)
         frame->GetCommandList().Add<DrawIndexed>(m_fullScreenQuad->NumIndices());
     }
 
-    frame->GetCommandList().Add<EndFramebuffer>(m_framebuffer, frameIndex);
+    frame->GetCommandList().Add<EndFramebuffer>(m_framebuffer);
 
     if (ShouldRenderHalfRes())
     {
@@ -774,7 +774,7 @@ void ReflectionsPass::CreateSSRRenderer()
         const DescriptorSetRef& descriptorSet = descriptorTable->GetDescriptorSet(NAME("RenderTextureToScreenDescriptorSet"), frameIndex);
         Assert(descriptorSet != nullptr);
 
-        descriptorSet->SetElement(NAME("InTexture"), m_ssrRenderer->GetFinalResultTexture()->GetRenderResource().GetImageView());
+        descriptorSet->SetElement(NAME("InTexture"), g_renderBackend->GetTextureImageView(m_ssrRenderer->GetFinalResultTexture()));
     }
 
     DeferCreate(descriptorTable);
@@ -852,7 +852,7 @@ void ReflectionsPass::Render(FrameBase* frame, const RenderSetup& rs)
         }
     }
 
-    frame->GetCommandList().Add<BeginFramebuffer>(GetFramebuffer(), frameIndex);
+    frame->GetCommandList().Add<BeginFramebuffer>(GetFramebuffer());
 
     // render previous frame's result to screen
     if (!m_isFirstFrame && m_renderTextureToScreenPass != nullptr)
@@ -936,7 +936,7 @@ void ReflectionsPass::Render(FrameBase* frame, const RenderSetup& rs)
         m_renderSsrToScreenPass->RenderToFramebuffer(frame, rs, GetFramebuffer());
     }
 
-    frame->GetCommandList().Add<EndFramebuffer>(GetFramebuffer(), frameIndex);
+    frame->GetCommandList().Add<EndFramebuffer>(GetFramebuffer());
 
     if (ShouldRenderHalfRes())
     {
@@ -1085,7 +1085,7 @@ PassData* DeferredRenderer::CreateViewPassData(View* view, PassDataExt&)
 
     CreateViewCombinePass(view, *pd);
 
-    pd->reflectionsPass = MakeUnique<ReflectionsPass>(pd->viewport.extent, gbuffer, pd->mipChain->GetRenderResource().GetImageView(), pd->combinePass->GetFinalImageView());
+    pd->reflectionsPass = MakeUnique<ReflectionsPass>(pd->viewport.extent, gbuffer, g_renderBackend->GetTextureImageView(pd->mipChain), pd->combinePass->GetFinalImageView());
     pd->reflectionsPass->Create();
 
     pd->tonemapPass = MakeUnique<TonemapPass>(pd->viewport.extent, gbuffer);
@@ -1113,7 +1113,7 @@ void DeferredRenderer::CreateViewFinalPassDescriptorSet(View* view, DeferredPass
     Assert(renderTextureToScreenShader.IsValid());
 
     const ImageViewRef& inputImageView = m_rendererConfig.taaEnabled
-        ? passData.temporalAa->GetResultTexture()->GetRenderResource().GetImageView()
+        ? g_renderBackend->GetTextureImageView(passData.temporalAa->GetResultTexture())
         : passData.combinePass->GetFinalImageView();
 
     Assert(inputImageView.IsValid());
@@ -1194,17 +1194,17 @@ void DeferredRenderer::CreateViewDescriptorSets(View* view, DeferredPassData& pa
 
         descriptorSet->SetElement(NAME("GBufferDepthTexture"), depthAttachment->GetImageView());
 
-        descriptorSet->SetElement(NAME("GBufferMipChain"), passData.mipChain->GetRenderResource().GetImageView());
+        descriptorSet->SetElement(NAME("GBufferMipChain"), g_renderBackend->GetTextureImageView(passData.mipChain));
 
         descriptorSet->SetElement(NAME("PostProcessingUniforms"), passData.postProcessing->GetUniformBuffer());
 
         descriptorSet->SetElement(NAME("DepthPyramidResult"), passData.depthPyramidRenderer->GetResultImageView());
 
-        descriptorSet->SetElement(NAME("TAAResultTexture"), passData.temporalAa->GetResultTexture()->GetRenderResource().GetImageView());
+        descriptorSet->SetElement(NAME("TAAResultTexture"), g_renderBackend->GetTextureImageView(passData.temporalAa->GetResultTexture()));
 
         if (passData.reflectionsPass->ShouldRenderSSR())
         {
-            descriptorSet->SetElement(NAME("SSRResultTexture"), passData.reflectionsPass->GetSSRRenderer()->GetFinalResultTexture()->GetRenderResource().GetImageView());
+            descriptorSet->SetElement(NAME("SSRResultTexture"), g_renderBackend->GetTextureImageView(passData.reflectionsPass->GetSSRRenderer()->GetFinalResultTexture()));
         }
         else
         {
@@ -1835,11 +1835,11 @@ void DeferredRenderer::RenderFrameForView(FrameBase* frame, const RenderSetup& r
     pd->directPass->SetPushConstants(&deferredData, sizeof(deferredData));
 
     { // render opaque objects into separate framebuffer
-        frame->GetCommandList().Add<BeginFramebuffer>(opaqueFbo, frameIndex);
+        frame->GetCommandList().Add<BeginFramebuffer>(opaqueFbo);
 
         ExecuteDrawCalls(frame, rs, renderCollector, (1u << RB_OPAQUE));
 
-        frame->GetCommandList().Add<EndFramebuffer>(opaqueFbo, frameIndex);
+        frame->GetCommandList().Add<EndFramebuffer>(opaqueFbo);
     }
 
     if (useEnvGridIrradiance || useEnvGridRadiance)
@@ -1900,22 +1900,22 @@ void DeferredRenderer::RenderFrameForView(FrameBase* frame, const RenderSetup& r
     CHECK_FRAMEBUFFER_SIZE(deferredPassFramebuffer);
 
     { // deferred lighting on opaque objects
-        frame->GetCommandList().Add<BeginFramebuffer>(deferredPassFramebuffer, frameIndex);
+        frame->GetCommandList().Add<BeginFramebuffer>(deferredPassFramebuffer);
 
         pd->indirectPass->Render(frame, rs);
         pd->directPass->Render(frame, rs);
 
-        frame->GetCommandList().Add<EndFramebuffer>(deferredPassFramebuffer, frameIndex);
+        frame->GetCommandList().Add<EndFramebuffer>(deferredPassFramebuffer);
     }
 
     if (rpl.lightmapVolumes.NumCurrent())
     { // render objects to be lightmapped, separate from the opaque objects.
         // The lightmap bucket's framebuffer has a color attachment that will write into the opaque framebuffer's color attachment.
-        frame->GetCommandList().Add<BeginFramebuffer>(lightmapFbo, frameIndex);
+        frame->GetCommandList().Add<BeginFramebuffer>(lightmapFbo);
 
         ExecuteDrawCalls(frame, rs, renderCollector, (1u << RB_LIGHTMAP));
 
-        frame->GetCommandList().Add<EndFramebuffer>(lightmapFbo, frameIndex);
+        frame->GetCommandList().Add<EndFramebuffer>(lightmapFbo);
     }
 
     { // generate mipchain after rendering opaque objects' lighting, now we can use it for transmission
@@ -1924,7 +1924,7 @@ void DeferredRenderer::RenderFrameForView(FrameBase* frame, const RenderSetup& r
     }
 
     { // translucent objects
-        frame->GetCommandList().Add<BeginFramebuffer>(translucentFbo, frameIndex);
+        frame->GetCommandList().Add<BeginFramebuffer>(translucentFbo);
 
         { // Render the deferred lighting into the translucent pass framebuffer with a full screen quad.
             frame->GetCommandList().Add<BindGraphicsPipeline>(pd->combinePass->GetGraphicsPipeline());
@@ -1963,7 +1963,7 @@ void DeferredRenderer::RenderFrameForView(FrameBase* frame, const RenderSetup& r
         // // render debug draw
         // g_engine->GetDebugDrawer()->Render(frame, rs);
 
-        frame->GetCommandList().Add<EndFramebuffer>(translucentFbo, frameIndex);
+        frame->GetCommandList().Add<EndFramebuffer>(translucentFbo);
     }
 
     { // render depth pyramid

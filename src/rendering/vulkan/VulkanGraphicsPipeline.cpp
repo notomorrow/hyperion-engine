@@ -139,18 +139,18 @@ void VulkanGraphicsPipeline::Bind(CommandBufferBase* cmd, Vec2i viewportOffset, 
         viewport.position = viewportOffset;
         viewport.extent = viewportExtent;
 
-        UpdateViewport(static_cast<VulkanCommandBuffer*>(cmd), viewport);
+        UpdateViewport(VULKAN_CAST(cmd), viewport);
     }
 
     vkCmdBindPipeline(
-        static_cast<VulkanCommandBuffer*>(cmd)->GetVulkanHandle(),
+        VULKAN_CAST(cmd)->GetVulkanHandle(),
         VK_PIPELINE_BIND_POINT_GRAPHICS,
         VulkanPipelineBase::m_handle);
 
     if (m_pushConstants)
     {
         vkCmdPushConstants(
-            static_cast<VulkanCommandBuffer*>(cmd)->GetVulkanHandle(),
+            VULKAN_CAST(cmd)->GetVulkanHandle(),
             VulkanPipelineBase::m_layout,
             VK_SHADER_STAGE_ALL_GRAPHICS,
             0,
@@ -389,7 +389,7 @@ RendererResult VulkanGraphicsPipeline::Rebuild()
 
     VkGraphicsPipelineCreateInfo pipelineInfo { VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO };
 
-    const Array<VkPipelineShaderStageCreateInfo>& stages = static_cast<VulkanShader*>(m_shader.Get())->GetVulkanShaderStages();
+    const Array<VkPipelineShaderStageCreateInfo>& stages = VULKAN_CAST(m_shader.Get())->GetVulkanShaderStages();
     HYP_GFX_ASSERT(stages.Any(), "No shader stages found");
 
     pipelineInfo.stageCount = uint32(stages.Size());
