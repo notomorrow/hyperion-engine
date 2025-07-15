@@ -56,8 +56,8 @@ public:
     CmdBase() = default;
     CmdBase(const CmdBase& other) = delete;
     CmdBase& operator=(const CmdBase& other) = delete;
-    CmdBase(CmdBase&& other) noexcept = delete;
-    CmdBase& operator=(CmdBase&& other) noexcept = delete;
+    CmdBase(CmdBase&& other) noexcept = default;
+    CmdBase& operator=(CmdBase&& other) noexcept = default;
     virtual ~CmdBase() = default;
 
     virtual void Prepare(FrameBase* frame)
@@ -733,6 +733,37 @@ private:
 
 class RenderQueue
 {
+    using InvokeCmdFnPtr = void (*)(CmdBase*, const CommandBufferRef&);
+    using PrepareCmdFnPtr = void (*)(CmdBase*, FrameBase* frame);
+    using MoveCmdFnPtr = void (*)(CmdBase*, void* where);
+
+    struct CmdHeader
+    {
+        uint32 dataOffset;
+        InvokeCmdFnPtr invokeFnPtr;
+        PrepareCmdFnPtr prepareFnPtr;
+        MoveCmdFnPtr moveFnPtr;
+    };
+
+    template <class CmdType>
+    static inline void InvokeCmdStatic(CmdBase* cmd, const CommandBufferRef& commandBuffer)
+    {
+        static_cast<CmdType*>(cmd)->Execute(commandBuffer);
+    }
+
+    template <class CmdType>
+    static inline void PrepareCmdStatic(CmdBase* cmd, FrameBase* frame)
+    {
+        static_cast<CmdType*>(cmd)->Prepare(frame);
+    }
+    
+    template <class CmdType>
+    static inline void MoveCmdStatic(CmdBase* cmd, void* where)
+    {
+        new (where) CmdType(std::move(*static_cast<CmdType*>(cmd)));
+        static_cast<CmdType*>(cmd)->~CmdType();
+    }
+
 public:
     RenderQueue();
     RenderQueue(const RenderQueue& other) = delete;
@@ -744,23 +775,116 @@ public:
     template <class CmdType, class... Args>
     void Add(Args&&... args)
     {
-        static CmdMemoryPool<CmdType>& pool = CmdMemoryPool<CmdType>::GetInstance();
+        using TCmd = NormalizedType<CmdType>;
+        static_assert(alignof(TCmd) <= 16, "CmdType should have alignment <= 16!");
 
-        m_commands.PushBack(pool.NewCommand(std::forward<Args>(args)...));
+        constexpr SizeType cmdSize = sizeof(TCmd);
+
+        const uint32 alignedOffset = ByteUtil::AlignAs(m_offset, alignof(TCmd));
+
+        if (m_buffer.Size() < alignedOffset + cmdSize)
+        {
+            ubyte* prevPtr = m_buffer.Data();
+            
+            ByteBuffer newBuffer;
+            newBuffer.SetSize(MathUtil::NextPowerOf2(alignedOffset + cmdSize));
+            
+            ubyte* newPtr = newBuffer.Data();
+            
+            ReconstructCommands(m_cmdHeaders.ToSpan(), prevPtr, newPtr);
+            
+            m_buffer = std::move(newBuffer);
+            
+            AssertDebug(m_buffer.Data() == newPtr);
+        }
+
+        void* startPtr = m_buffer.Data() + alignedOffset;
+        new (startPtr) TCmd(std::forward<Args>(args)...);
+
+        m_cmdHeaders.PushBack(CmdHeader {
+            alignedOffset,
+            &InvokeCmdStatic<TCmd>,
+            &PrepareCmdStatic<TCmd>,
+            &MoveCmdStatic<TCmd> });
+
+        m_offset = alignedOffset + cmdSize;
     }
 
     void Concat(RenderQueue&& other)
     {
-        m_commands.Concat(std::move(other.m_commands));
+        m_cmdHeaders.Reserve(m_cmdHeaders.Size() + other.m_cmdHeaders.Size());
+
+        // since we guarantee <= 16 byte alignment, we should just align our offset to 16 to make sure everything fits
+        const uint32 newStartOffset = ByteUtil::AlignAs(m_offset, 16);
+        
+        if (m_buffer.GetCapacity() < newStartOffset + other.m_offset)
+        {
+            ubyte* prevPtr = m_buffer.Data();
+            
+            ByteBuffer newBuffer;
+            newBuffer.SetSize(MathUtil::NextPowerOf2(newStartOffset + other.m_offset));
+            
+            ubyte* newPtr = newBuffer.Data();
+            
+            ReconstructCommands(m_cmdHeaders.ToSpan(), prevPtr, newPtr);
+            
+            m_buffer = std::move(newBuffer);
+            
+            AssertDebug(m_buffer.Data() == newPtr);
+        }
+        else
+        {
+            ubyte* prevPtr = m_buffer.Data();
+            
+            // No need to reconstruct commands if the allocation did not change
+            m_buffer.SetSize(newStartOffset + other.m_offset);
+            
+            // Sanity check to ensure SetSize() did not change our capacity. (it shouldn't)
+            AssertDebug(m_buffer.Data() == prevPtr);
+        }
+        
+        SizeType cmdsOffset = m_cmdHeaders.Size();
+        
+        // Reconstruct the commands into our memory
+        ReconstructCommands(other.m_cmdHeaders.ToSpan(), other.m_buffer.Data(), m_buffer.Data() + newStartOffset);
+
+        // Add headers and update offsets
+        for (const CmdHeader& cmdHeader : other.m_cmdHeaders)
+        {
+            CmdHeader& newCmdHeader = m_cmdHeaders.PushBack(cmdHeader);
+            newCmdHeader.dataOffset = newStartOffset + cmdHeader.dataOffset;
+        }
+
+//        // Copy from other buffer, starting at the new offset
+//        m_buffer.Write(other.m_offset, newStartOffset, other.m_buffer.Data());
+        
+        m_offset = newStartOffset + other.m_offset;
+
+        // clear out allocation
+        other.m_buffer = ByteBuffer();
+        other.m_cmdHeaders.Clear();
+        other.m_offset = 0;
     }
 
     void Prepare(FrameBase* frame);
     void Execute(const CommandBufferRef& cmd);
 
 private:
-    void FreeCommand(CmdBase* command);
-
-    Array<CmdBase*> m_commands;
+    // Call when buffer is resized to ensure proper move of resources into new memory locations
+    static void ReconstructCommands(Span<CmdHeader> cmdHeaders, void* prevPtr, void* newPtr)
+    {
+        const uintptr_t uPrevPtr = reinterpret_cast<uintptr_t>(prevPtr);
+        const uintptr_t uNewPtr = reinterpret_cast<uintptr_t>(newPtr);
+        
+        for (CmdHeader& cmdHeader : cmdHeaders)
+        {
+            cmdHeader.moveFnPtr(reinterpret_cast<CmdBase*>(uPrevPtr + cmdHeader.dataOffset), reinterpret_cast<void*>(uNewPtr + cmdHeader.dataOffset));
+        }
+    }
+    
+    Array<CmdHeader> m_cmdHeaders;
+    ByteBuffer m_buffer;
+    uint32 m_offset;
 };
 
 } // namespace hyperion

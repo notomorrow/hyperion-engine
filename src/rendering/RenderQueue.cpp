@@ -22,9 +22,12 @@ RenderQueue::RenderQueue()
 
 RenderQueue::~RenderQueue()
 {
-    for (CmdBase* command : m_commands)
+    for (CmdHeader& cmdHeader : m_cmdHeaders)
     {
-        FreeCommand(command);
+        CmdBase* cmdDataPtr = reinterpret_cast<CmdBase*>(m_buffer.Data() + cmdHeader.dataOffset);
+        AssertDebug(cmdHeader.dataOffset < m_buffer.Size());
+
+        cmdDataPtr->~CmdBase();
     }
 }
 
@@ -32,9 +35,12 @@ void RenderQueue::Prepare(FrameBase* frame)
 {
     Assert(frame != nullptr);
 
-    for (CmdBase* command : m_commands)
+    for (CmdHeader& cmdHeader : m_cmdHeaders)
     {
-        command->Prepare(frame);
+        CmdBase* cmdDataPtr = reinterpret_cast<CmdBase*>(m_buffer.Data() + cmdHeader.dataOffset);
+        AssertDebug(cmdHeader.dataOffset < m_buffer.Size());
+
+        cmdHeader.prepareFnPtr(cmdDataPtr, frame);
     }
 }
 
@@ -42,24 +48,18 @@ void RenderQueue::Execute(const CommandBufferRef& cmd)
 {
     Assert(cmd != nullptr);
 
-    for (CmdBase* command : m_commands)
+    for (CmdHeader& cmdHeader : m_cmdHeaders)
     {
-        command->Execute(cmd);
+        CmdBase* cmdDataPtr = reinterpret_cast<CmdBase*>(m_buffer.Data() + cmdHeader.dataOffset);
+        AssertDebug(cmdHeader.dataOffset < m_buffer.Size());
 
-        FreeCommand(command);
+        cmdHeader.invokeFnPtr(cmdDataPtr, cmd);
+
+        cmdDataPtr->~CmdBase();
     }
 
-    m_commands.Clear();
-}
-
-void RenderQueue::FreeCommand(CmdBase* command)
-{
-    Assert(command != nullptr);
-
-    CmdMemoryPoolBase* pool = command->m_poolHandle.pool;
-    Assert(pool != nullptr);
-
-    pool->FreeCommand(command);
+    m_cmdHeaders.Clear();
+    m_offset = 0;
 }
 
 #pragma endregion RenderQueue
