@@ -9,6 +9,7 @@
 #include <core/containers/HashMap.hpp>
 
 #include <core/memory/RefCountedPtr.hpp>
+#include <core/memory/Pimpl.hpp>
 
 #include <vulkan/vulkan.h>
 
@@ -23,6 +24,8 @@ using VulkanDescriptorSetLayoutWrapperWeakRef = RenderObjectHandle_Weak<VulkanDe
 class VulkanDescriptorSetManager;
 
 extern HYP_API VkDescriptorSetLayout GetVkDescriptorSetLayout(const VulkanDescriptorSetLayoutWrapper& layout);
+
+class VulkanTextureCache;
 
 class VulkanRenderBackend final : public IRenderBackend
 {
@@ -97,6 +100,8 @@ public:
         const Matrix4& transform) override;
     virtual TLASRef MakeTLAS() override;
 
+    virtual const ImageViewRef& GetTextureImageView(const Handle<Texture>& texture, uint32 mipIndex = 0, uint32 numMips = ~0u, uint32 faceIndex = 0, uint32 numFaces = ~0u) override;
+
     virtual void PopulateIndirectDrawCommandsBuffer(const GpuBufferRef& vertexBuffer, const GpuBufferRef& indexBuffer, uint32 instanceOffset, ByteBuffer& outByteBuffer) override;
 
     virtual TextureFormat GetDefaultFormat(DefaultImageFormat type) const override;
@@ -131,6 +136,8 @@ private:
     AsyncComputeBase* m_asyncCompute;
 
     HashMap<DefaultImageFormat, TextureFormat> m_defaultFormats;
+
+    Pimpl<VulkanTextureCache> m_textureCache;
 
     bool m_shouldRecreateSwapchain;
 };

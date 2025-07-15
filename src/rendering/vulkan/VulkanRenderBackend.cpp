@@ -15,7 +15,15 @@
 #include <rendering/vulkan/rt/VulkanRaytracingPipeline.hpp>
 #include <rendering/vulkan/rt/VulkanAccelerationStructure.hpp>
 
+#include <rendering/RenderTexture.hpp>
 #include <rendering/RenderableAttributes.hpp>
+
+#include <core/containers/SparsePagedArray.hpp>
+
+#include <core/logging/Logger.hpp>
+#include <core/logging/LogChannels.hpp>
+
+#include <scene/Texture.hpp>
 
 #include <system/AppContext.hpp>
 
@@ -359,12 +367,147 @@ VulkanDescriptorSetLayoutWrapperRef VulkanDescriptorSetManager::GetOrCreateVkDes
 
 #pragma endregion VulkanDescriptorSetManager
 
+#pragma region VulkanTextureCache
+
+class VulkanTextureCache
+{
+public:
+    // map texture ID -> image views
+    SparsePagedArray<HashMap<ImageSubResource, ImageViewRef>, 1024> imageViews;
+    // to keep texture IDs as valid
+    SparsePagedArray<WeakHandle<Texture>, 1024> weakTextureHandles;
+
+    typename decltype(weakTextureHandles)::Iterator cleanupIterator;
+
+    VulkanTextureCache()
+    {
+        cleanupIterator = weakTextureHandles.End();
+    }
+
+    const ImageViewRef& GetOrCreate(const Handle<Texture>& texture, const ImageSubResource& subResource)
+    {
+        Threads::AssertOnThread(g_renderThread);
+            
+        HYP_GFX_ASSERT(texture.IsValid());
+
+        const SizeType idx = texture.Id().ToIndex();
+
+        if (!imageViews.HasIndex(idx))
+        {
+            imageViews.Emplace(idx);
+            weakTextureHandles.Emplace(idx, texture.ToWeak());
+        }
+
+        auto& textureImageViews = imageViews.Get(idx);
+
+        auto it = textureImageViews.Find(subResource);
+
+        if (it == textureImageViews.End())
+        {
+            
+            VulkanImageViewRef imageView = MakeRenderObject<VulkanImageView>(
+                VulkanImageRef(texture->GetRenderResource().GetImage()),
+                subResource.baseMipLevel,
+                subResource.numLevels,
+                subResource.baseArrayLayer,
+                subResource.numLayers);
+            
+            HYP_GFX_ASSERT(imageView->Create());
+            
+            it = textureImageViews.Set(subResource, imageView).first;
+        }
+        
+        HYP_GFX_ASSERT(it->second.IsValid());
+        
+        return it->second;
+    }
+
+    void RemoveTexture(const Handle<Texture>& texture)
+    {
+        Threads::AssertOnThread(g_renderThread);
+        
+        if (!texture.IsValid())
+        {
+            return;
+        }
+
+        const SizeType idx = texture.Id().ToIndex();
+
+        if (imageViews.HasIndex(idx))
+        {
+            for (auto& it : imageViews.Get(idx))
+            {
+                SafeRelease(std::move(it.second));
+            }
+
+            imageViews.EraseAt(idx);
+            weakTextureHandles.EraseAt(idx);
+        }
+    }
+
+    void CleanupUnusedTextures()
+    {
+        Threads::AssertOnThread(g_renderThread);
+        
+        constexpr uint32 maxCycles = 32;
+
+        cleanupIterator = typename decltype(weakTextureHandles)::Iterator {
+            &weakTextureHandles,
+            cleanupIterator.page,
+            cleanupIterator.elem
+        };
+
+        if (cleanupIterator == weakTextureHandles.End())
+        {
+            cleanupIterator = weakTextureHandles.Begin();
+        }
+
+        uint32 numRemoved = 0;
+
+        for (uint32 i = 0; cleanupIterator != weakTextureHandles.End() && i < maxCycles; i++)
+        {
+            auto& entry = *cleanupIterator;
+
+            if (!entry.Lock())
+            {
+                const SizeType idx = weakTextureHandles.IndexOf(cleanupIterator);
+
+                HYP_GFX_ASSERT(imageViews.HasIndex(idx));
+                HYP_GFX_ASSERT(weakTextureHandles.HasIndex(idx));
+
+                for (auto& it : imageViews.Get(idx))
+                {
+                    SafeRelease(std::move(it.second));
+                }
+
+                imageViews.EraseAt(idx);
+
+                cleanupIterator = weakTextureHandles.Erase(cleanupIterator);
+
+                ++numRemoved;
+
+                continue;
+            }
+
+            ++cleanupIterator;
+        }
+
+        if (numRemoved != 0)
+        {
+            HYP_LOG(RenderingBackend, Debug, "VulkanTextureCache: Cleaned up {} unused textures", numRemoved);
+        }
+    }
+};
+
+#pragma endregion VulkanTextureCache
+
 #pragma region VulkanRenderBackend
 
 VulkanRenderBackend::VulkanRenderBackend()
     : m_instance(nullptr),
       m_renderConfig(new VulkanRenderConfig(this)),
       m_descriptorSetManager(new VulkanDescriptorSetManager()),
+      m_textureCache(MakePimpl<VulkanTextureCache>()),
       m_asyncCompute(nullptr),
       m_shouldRecreateSwapchain(false)
 {
@@ -508,6 +651,8 @@ void VulkanRenderBackend::PresentFrame(FrameBase* frame)
     }
 
     HYPERION_ASSERT_RESULT(vulkanAsyncCompute->Submit(vulkanFrame));
+
+    m_textureCache->CleanupUnusedTextures();
 
     m_instance->GetSwapchain()->PresentFrame(&m_instance->GetDevice()->GetGraphicsQueue());
     m_instance->GetSwapchain()->NextFrame();
@@ -665,6 +810,25 @@ BLASRef VulkanRenderBackend::MakeBLAS(
 TLASRef VulkanRenderBackend::MakeTLAS()
 {
     return MakeRenderObject<VulkanTLAS>();
+}
+
+const ImageViewRef& VulkanRenderBackend::GetTextureImageView(const Handle<Texture>& texture, uint32 mipIndex, uint32 numMips, uint32 faceIndex, uint32 numFaces)
+{
+    if (!texture.IsValid())
+    {
+        return ImageViewRef::Null();
+    }
+
+    ImageSubResource subResource {};
+    subResource.numLevels = MathUtil::Min(numMips, texture->GetTextureDesc().NumMipmaps());
+    subResource.baseMipLevel = MathUtil::Min(mipIndex, numMips - 1);
+    subResource.numLayers = MathUtil::Min(numFaces, texture->GetTextureDesc().NumFaces());
+    subResource.baseArrayLayer = MathUtil::Min(faceIndex, numFaces - 1);
+
+    const ImageViewRef& imageView = m_textureCache->GetOrCreate(texture, subResource);
+    HYP_GFX_ASSERT(imageView.IsValid());
+    
+    return imageView;
 }
 
 void VulkanRenderBackend::PopulateIndirectDrawCommandsBuffer(const GpuBufferRef& vertexBuffer, const GpuBufferRef& indexBuffer, uint32 instanceOffset, ByteBuffer& outByteBuffer)

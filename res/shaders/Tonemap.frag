@@ -83,6 +83,9 @@ void main()
     color_output = SampleLastEffectInChain(HYP_STAGE_POST, texcoord, color_output);
     color_output = vec4(Tonemap(color_output.rgb), 1.0);
 
-    color_output = UINT_TO_VEC4(texture(usampler2D(gbuffer_material_texture, HYP_SAMPLER_NEAREST), texcoord).x);
+    color_output = texture(sampler2DArray(shadow_maps, HYP_SAMPLER_NEAREST), vec3(texcoord, 0.0)).rrrr;
     color_output.a = 1.0;
+
+    // color_output = UINT_TO_VEC4(texture(usampler2D(gbuffer_material_texture, HYP_SAMPLER_NEAREST), texcoord).x);
+    // color_output.a = 1.0;
 }

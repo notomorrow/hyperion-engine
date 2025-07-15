@@ -49,6 +49,7 @@ class SwapchainBase;
 class AsyncComputeBase;
 struct TextureDesc;
 class SingleTimeCommands;
+class Texture;
 
 class DescriptorSetLayout;
 struct DescriptorTableDeclaration;
@@ -131,6 +132,8 @@ public:
         const Handle<Material>& material,
         const Matrix4& transform) = 0;
     virtual TLASRef MakeTLAS() = 0;
+
+    virtual const ImageViewRef& GetTextureImageView(const Handle<Texture>& texture, uint32 mipIndex = 0, uint32 numMips = ~0u, uint32 faceIndex = 0, uint32 numFaces = ~0u) = 0;
 
     virtual void PopulateIndirectDrawCommandsBuffer(const GpuBufferRef& vertexBuffer, const GpuBufferRef& indexBuffer, uint32 instanceOffset, ByteBuffer& outByteBuffer) = 0;
 

@@ -201,9 +201,9 @@ FixedArray<DescriptorSetRef, g_framesInFlight> MaterialDescriptorSetManager::All
 
             const Handle<Texture>& texture = textures[textureIndex];
 
-            if (texture.IsValid() && texture->GetRenderResource().GetImageView() != nullptr)
+            if (texture.IsValid())
             {
-                descriptorSet->SetElement(NAME("Textures"), textureIndex, texture->GetRenderResource().GetImageView());
+                descriptorSet->SetElement(NAME("Textures"), textureIndex, g_renderBackend->GetTextureImageView(texture));
             }
         }
 
