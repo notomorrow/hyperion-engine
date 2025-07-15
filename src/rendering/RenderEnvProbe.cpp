@@ -326,8 +326,8 @@ void RenderEnvProbe::Render(FrameBase* frame, const RenderSetup& renderSetup)
         const ShadowMapAtlasElement& atlasElement = m_shadowMap->GetAtlasElement();
 
         // Copy combined shadow map to the final shadow map
-        frame->GetCommandList().Add<InsertBarrier>(framebufferImage, RS_COPY_SRC);
-        frame->GetCommandList().Add<InsertBarrier>(
+        frame->renderQueue.Add<InsertBarrier>(framebufferImage, RS_COPY_SRC);
+        frame->renderQueue.Add<InsertBarrier>(
             shadowMapImage,
             RS_COPY_DST,
             ImageSubResource { .baseArrayLayer = atlasElement.pointLightIndex * 6, .numLayers = 6 });
@@ -335,7 +335,7 @@ void RenderEnvProbe::Render(FrameBase* frame, const RenderSetup& renderSetup)
         // copy the image
         for (uint32 i = 0; i < 6; i++)
         {
-            frame->GetCommandList().Add<Blit>(
+            frame->renderQueue.Add<Blit>(
                 framebufferImage,
                 shadowMapImage,
                 Rect<uint32> { 0, 0, framebufferImage->GetExtent().x, framebufferImage->GetExtent().y },
@@ -352,8 +352,8 @@ void RenderEnvProbe::Render(FrameBase* frame, const RenderSetup& renderSetup)
         }
 
         // put the images back into a state for reading
-        frame->GetCommandList().Add<InsertBarrier>(framebufferImage, RS_SHADER_RESOURCE);
-        frame->GetCommandList().Add<InsertBarrier>(
+        frame->renderQueue.Add<InsertBarrier>(framebufferImage, RS_SHADER_RESOURCE);
+        frame->renderQueue.Add<InsertBarrier>(
             shadowMapImage,
             RS_SHADER_RESOURCE,
             ImageSubResource { .baseArrayLayer = atlasElement.pointLightIndex * 6, .numLayers = 6 });
@@ -513,18 +513,18 @@ void ReflectionProbeRenderer::RenderProbe(FrameBase* frame, const RenderSetup& r
         Assert(dstImage.IsValid());
         Assert(dstImage->IsCreated());
 
-        frame->GetCommandList().Add<InsertBarrier>(framebufferImage, RS_COPY_SRC);
-        frame->GetCommandList().Add<InsertBarrier>(dstImage, RS_COPY_DST);
+        frame->renderQueue.Add<InsertBarrier>(framebufferImage, RS_COPY_SRC);
+        frame->renderQueue.Add<InsertBarrier>(dstImage, RS_COPY_DST);
 
-        frame->GetCommandList().Add<Blit>(framebufferImage, dstImage);
+        frame->renderQueue.Add<Blit>(framebufferImage, dstImage);
 
         if (dstImage->HasMipmaps())
         {
-            frame->GetCommandList().Add<GenerateMipmaps>(dstImage);
+            frame->renderQueue.Add<GenerateMipmaps>(dstImage);
         }
 
-        frame->GetCommandList().Add<InsertBarrier>(framebufferImage, RS_SHADER_RESOURCE);
-        frame->GetCommandList().Add<InsertBarrier>(dstImage, RS_SHADER_RESOURCE);
+        frame->renderQueue.Add<InsertBarrier>(framebufferImage, RS_SHADER_RESOURCE);
+        frame->renderQueue.Add<InsertBarrier>(dstImage, RS_SHADER_RESOURCE);
     }
 }
 
@@ -636,28 +636,28 @@ void ReflectionProbeRenderer::ComputePrefilteredEnvMap(FrameBase* frame, const R
     ComputePipelineRef convolveProbeComputePipeline = g_renderBackend->MakeComputePipeline(convolveProbeShader, descriptorTable);
     HYPERION_ASSERT_RESULT(convolveProbeComputePipeline->Create());
 
-    frame->GetCommandList().Add<InsertBarrier>(prefilteredEnvMap->GetRenderResource().GetImage(), RS_UNORDERED_ACCESS);
+    frame->renderQueue.Add<InsertBarrier>(prefilteredEnvMap->GetRenderResource().GetImage(), RS_UNORDERED_ACCESS);
 
-    frame->GetCommandList().Add<BindComputePipeline>(convolveProbeComputePipeline);
+    frame->renderQueue.Add<BindComputePipeline>(convolveProbeComputePipeline);
 
-    frame->GetCommandList().Add<BindDescriptorTable>(
+    frame->renderQueue.Add<BindDescriptorTable>(
         descriptorTable,
         convolveProbeComputePipeline,
         ArrayMap<Name, ArrayMap<Name, uint32>> {
             { NAME("Global"), { { NAME("CurrentEnvProbe"), ShaderDataOffset<EnvProbeShaderData>(renderSetup.envProbe, 0) } } } },
         frame->GetFrameIndex());
 
-    frame->GetCommandList().Add<DispatchCompute>(
+    frame->renderQueue.Add<DispatchCompute>(
         convolveProbeComputePipeline,
         Vec3u { (prefilteredEnvMap->GetExtent().x + 7) / 8, (prefilteredEnvMap->GetExtent().y + 7) / 8, 1 });
 
     if (prefilteredEnvMap->GetTextureDesc().HasMipmaps())
     {
-        frame->GetCommandList().Add<InsertBarrier>(prefilteredEnvMap->GetRenderResource().GetImage(), RS_COPY_DST);
-        frame->GetCommandList().Add<GenerateMipmaps>(prefilteredEnvMap->GetRenderResource().GetImage());
+        frame->renderQueue.Add<InsertBarrier>(prefilteredEnvMap->GetRenderResource().GetImage(), RS_COPY_DST);
+        frame->renderQueue.Add<GenerateMipmaps>(prefilteredEnvMap->GetRenderResource().GetImage());
     }
 
-    frame->GetCommandList().Add<InsertBarrier>(prefilteredEnvMap->GetRenderResource().GetImage(), RS_SHADER_RESOURCE);
+    frame->renderQueue.Add<InsertBarrier>(prefilteredEnvMap->GetRenderResource().GetImage(), RS_SHADER_RESOURCE);
 
     // for (uint32 frameIndex = 0; frameIndex < g_framesInFlight; frameIndex++)
     // {
@@ -826,7 +826,7 @@ void ReflectionProbeRenderer::ComputeSH(FrameBase* frame, const RenderSetup& ren
     pipelines[NAME("Clear")].second->SetPushConstants(&pushConstants, sizeof(pushConstants));
     pipelines[NAME("BuildCoeffs")].second->SetPushConstants(&pushConstants, sizeof(pushConstants));
 
-    CmdList& asyncComputeCommandList = g_renderBackend->GetAsyncCompute()->GetCommandList();
+    RenderQueue& asyncComputeCommandList = g_renderBackend->GetAsyncCompute()->renderQueue;
 
     asyncComputeCommandList.Add<InsertBarrier>(shTilesBuffers[0], RS_UNORDERED_ACCESS, SMT_COMPUTE);
     asyncComputeCommandList.Add<InsertBarrier>(g_renderGlobalState->gpuBuffers[GRB_ENV_PROBES]->GetBuffer(frame->GetFrameIndex()), RS_UNORDERED_ACCESS, SMT_COMPUTE);

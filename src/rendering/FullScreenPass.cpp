@@ -534,7 +534,7 @@ void FullScreenPass::RenderPreviousTextureToScreen(FrameBase* frame, const Rende
         const Vec2u viewportExtent = Vec2u(m_framebuffer->GetExtent().x / 2, m_framebuffer->GetExtent().y);
 
         // render previous frame's result to screen
-        frame->GetCommandList().Add<BindGraphicsPipeline>(
+        frame->renderQueue.Add<BindGraphicsPipeline>(
             m_renderTextureToScreenPass->GetGraphicsPipeline(),
             viewportOffset,
             viewportExtent);
@@ -542,10 +542,10 @@ void FullScreenPass::RenderPreviousTextureToScreen(FrameBase* frame, const Rende
     else
     {
         // render previous frame's result to screen
-        frame->GetCommandList().Add<BindGraphicsPipeline>(m_renderTextureToScreenPass->GetGraphicsPipeline());
+        frame->renderQueue.Add<BindGraphicsPipeline>(m_renderTextureToScreenPass->GetGraphicsPipeline());
     }
 
-    frame->GetCommandList().Add<BindDescriptorTable>(
+    frame->renderQueue.Add<BindDescriptorTable>(
         m_renderTextureToScreenPass->GetGraphicsPipeline()->GetDescriptorTable(),
         m_renderTextureToScreenPass->GetGraphicsPipeline(),
         ArrayMap<Name, ArrayMap<Name, uint32>> {
@@ -560,16 +560,16 @@ void FullScreenPass::RenderPreviousTextureToScreen(FrameBase* frame, const Rende
     {
         Assert(renderSetup.passData != nullptr);
 
-        frame->GetCommandList().Add<BindDescriptorSet>(
+        frame->renderQueue.Add<BindDescriptorSet>(
             renderSetup.passData->descriptorSets[frame->GetFrameIndex()],
             m_renderTextureToScreenPass->GetGraphicsPipeline(),
             ArrayMap<Name, uint32> {},
             viewDescriptorSetIndex);
     }
 
-    frame->GetCommandList().Add<BindVertexBuffer>(m_fullScreenQuad->GetVertexBuffer());
-    frame->GetCommandList().Add<BindIndexBuffer>(m_fullScreenQuad->GetIndexBuffer());
-    frame->GetCommandList().Add<DrawIndexed>(m_fullScreenQuad->NumIndices());
+    frame->renderQueue.Add<BindVertexBuffer>(m_fullScreenQuad->GetVertexBuffer());
+    frame->renderQueue.Add<BindIndexBuffer>(m_fullScreenQuad->GetIndexBuffer());
+    frame->renderQueue.Add<DrawIndexed>(m_fullScreenQuad->NumIndices());
 }
 
 void FullScreenPass::CopyResultToPreviousTexture(FrameBase* frame, const RenderSetup& renderSetup)
@@ -584,13 +584,13 @@ void FullScreenPass::CopyResultToPreviousTexture(FrameBase* frame, const RenderS
     const ImageRef& srcImage = m_framebuffer->GetAttachment(0)->GetImage();
     const ImageRef& dstImage = m_previousTexture->GetRenderResource().GetImage();
 
-    frame->GetCommandList().Add<InsertBarrier>(srcImage, RS_COPY_SRC);
-    frame->GetCommandList().Add<InsertBarrier>(dstImage, RS_COPY_DST);
+    frame->renderQueue.Add<InsertBarrier>(srcImage, RS_COPY_SRC);
+    frame->renderQueue.Add<InsertBarrier>(dstImage, RS_COPY_DST);
 
-    frame->GetCommandList().Add<Blit>(srcImage, dstImage);
+    frame->renderQueue.Add<Blit>(srcImage, dstImage);
 
-    frame->GetCommandList().Add<InsertBarrier>(srcImage, RS_SHADER_RESOURCE);
-    frame->GetCommandList().Add<InsertBarrier>(dstImage, RS_SHADER_RESOURCE);
+    frame->renderQueue.Add<InsertBarrier>(srcImage, RS_SHADER_RESOURCE);
+    frame->renderQueue.Add<InsertBarrier>(dstImage, RS_SHADER_RESOURCE);
 }
 
 void FullScreenPass::MergeHalfResTextures(FrameBase* frame, const RenderSetup& renderSetup)
@@ -615,11 +615,11 @@ void FullScreenPass::Render(FrameBase* frame, const RenderSetup& renderSetup)
 
     const uint32 frameIndex = frame->GetFrameIndex();
 
-    frame->GetCommandList().Add<BeginFramebuffer>(m_framebuffer);
+    frame->renderQueue.Add<BeginFramebuffer>(m_framebuffer);
 
     RenderToFramebuffer(frame, renderSetup, m_framebuffer);
 
-    frame->GetCommandList().Add<EndFramebuffer>(m_framebuffer);
+    frame->renderQueue.Add<EndFramebuffer>(m_framebuffer);
 
     if (ShouldRenderHalfRes())
     {
@@ -660,17 +660,17 @@ void FullScreenPass::RenderToFramebuffer(FrameBase* frame, const RenderSetup& re
         const Vec2i viewportOffset = (Vec2i(framebuffer->GetExtent().x, 0) / 2) * (renderSetup.world->GetBufferData().frameCounter & 1);
         const Vec2u viewportExtent = Vec2u(framebuffer->GetExtent().x / 2, framebuffer->GetExtent().y);
 
-        frame->GetCommandList().Add<BindGraphicsPipeline>(
+        frame->renderQueue.Add<BindGraphicsPipeline>(
             m_graphicsPipeline,
             viewportOffset,
             viewportExtent);
     }
     else
     {
-        frame->GetCommandList().Add<BindGraphicsPipeline>(m_graphicsPipeline);
+        frame->renderQueue.Add<BindGraphicsPipeline>(m_graphicsPipeline);
     }
 
-    frame->GetCommandList().Add<BindDescriptorTable>(
+    frame->renderQueue.Add<BindDescriptorTable>(
         m_graphicsPipeline->GetDescriptorTable(),
         m_graphicsPipeline,
         ArrayMap<Name, ArrayMap<Name, uint32>> {
@@ -685,16 +685,16 @@ void FullScreenPass::RenderToFramebuffer(FrameBase* frame, const RenderSetup& re
     {
         Assert(renderSetup.passData != nullptr);
 
-        frame->GetCommandList().Add<BindDescriptorSet>(
+        frame->renderQueue.Add<BindDescriptorSet>(
             renderSetup.passData->descriptorSets[frame->GetFrameIndex()],
             m_graphicsPipeline,
             ArrayMap<Name, uint32> {},
             viewDescriptorSetIndex);
     }
 
-    frame->GetCommandList().Add<BindVertexBuffer>(m_fullScreenQuad->GetVertexBuffer());
-    frame->GetCommandList().Add<BindIndexBuffer>(m_fullScreenQuad->GetIndexBuffer());
-    frame->GetCommandList().Add<DrawIndexed>(m_fullScreenQuad->NumIndices());
+    frame->renderQueue.Add<BindVertexBuffer>(m_fullScreenQuad->GetVertexBuffer());
+    frame->renderQueue.Add<BindIndexBuffer>(m_fullScreenQuad->GetIndexBuffer());
+    frame->renderQueue.Add<DrawIndexed>(m_fullScreenQuad->NumIndices());
 
     m_isFirstFrame = false;
 }
@@ -709,21 +709,21 @@ void FullScreenPass::Begin(FrameBase* frame, const RenderSetup& renderSetup)
 
     const uint32 frameIndex = frame->GetFrameIndex();
 
-    frame->GetCommandList().Add<BeginFramebuffer>(m_framebuffer);
+    frame->renderQueue.Add<BeginFramebuffer>(m_framebuffer);
 
     if (ShouldRenderHalfRes())
     {
         const Vec2i viewportOffset = (Vec2i(m_framebuffer->GetExtent().x, 0) / 2) * (renderSetup.world->GetBufferData().frameCounter & 1);
         const Vec2u viewportExtent = Vec2u(m_framebuffer->GetExtent().x / 2, m_framebuffer->GetExtent().y);
 
-        frame->GetCommandList().Add<BindGraphicsPipeline>(
+        frame->renderQueue.Add<BindGraphicsPipeline>(
             m_graphicsPipeline,
             viewportOffset,
             viewportExtent);
     }
     else
     {
-        frame->GetCommandList().Add<BindGraphicsPipeline>(m_graphicsPipeline);
+        frame->renderQueue.Add<BindGraphicsPipeline>(m_graphicsPipeline);
     }
 }
 
@@ -743,7 +743,7 @@ void FullScreenPass::End(FrameBase* frame, const RenderSetup& renderSetup)
         RenderPreviousTextureToScreen(frame, renderSetup);
     }
 
-    frame->GetCommandList().Add<EndFramebuffer>(m_framebuffer);
+    frame->renderQueue.Add<EndFramebuffer>(m_framebuffer);
 
     if (ShouldRenderHalfRes())
     {

@@ -86,7 +86,7 @@ public:
 class HYP_API MeshDebugDrawShapeBase : public IDebugDrawShape
 {
 public:
-    MeshDebugDrawShapeBase(IDebugDrawCommandList& commandList, const Handle<Mesh>& mesh);
+    MeshDebugDrawShapeBase(IDebugDrawCommandList& renderQueue, const Handle<Mesh>& mesh);
 
     virtual ~MeshDebugDrawShapeBase() override = default;
 
@@ -101,14 +101,14 @@ public:
     }
 
 protected:
-    IDebugDrawCommandList& m_commandList;
+    IDebugDrawCommandList& renderQueue;
     Handle<Mesh> m_mesh;
 };
 
 class HYP_API SphereDebugDrawShape : public MeshDebugDrawShapeBase
 {
 public:
-    SphereDebugDrawShape(IDebugDrawCommandList& commandList);
+    SphereDebugDrawShape(IDebugDrawCommandList& renderQueue);
 
     virtual ~SphereDebugDrawShape() override = default;
 
@@ -119,8 +119,8 @@ public:
 class HYP_API AmbientProbeDebugDrawShape : public SphereDebugDrawShape
 {
 public:
-    AmbientProbeDebugDrawShape(IDebugDrawCommandList& commandList)
-        : SphereDebugDrawShape(commandList)
+    AmbientProbeDebugDrawShape(IDebugDrawCommandList& renderQueue)
+        : SphereDebugDrawShape(renderQueue)
     {
     }
 
@@ -132,8 +132,8 @@ public:
 class HYP_API ReflectionProbeDebugDrawShape : public SphereDebugDrawShape
 {
 public:
-    ReflectionProbeDebugDrawShape(IDebugDrawCommandList& commandList)
-        : SphereDebugDrawShape(commandList)
+    ReflectionProbeDebugDrawShape(IDebugDrawCommandList& renderQueue)
+        : SphereDebugDrawShape(renderQueue)
     {
     }
 
@@ -145,7 +145,7 @@ public:
 class HYP_API BoxDebugDrawShape : public MeshDebugDrawShapeBase
 {
 public:
-    BoxDebugDrawShape(IDebugDrawCommandList& commandList);
+    BoxDebugDrawShape(IDebugDrawCommandList& renderQueue);
 
     virtual ~BoxDebugDrawShape() override = default;
 
@@ -156,7 +156,7 @@ public:
 class HYP_API PlaneDebugDrawShape : public MeshDebugDrawShapeBase
 {
 public:
-    PlaneDebugDrawShape(IDebugDrawCommandList& commandList);
+    PlaneDebugDrawShape(IDebugDrawCommandList& renderQueue);
 
     virtual ~PlaneDebugDrawShape() override = default;
 
@@ -233,7 +233,7 @@ public:
     virtual void Render(FrameBase* frame, const RenderSetup& renderSetup) override;
 
     UniquePtr<DebugDrawCommandList> CreateCommandList();
-    void CommitCommands(DebugDrawCommandList& commandList);
+    void CommitCommands(DebugDrawCommandList& renderQueue);
 
 private:
     void UpdateDrawCommands();

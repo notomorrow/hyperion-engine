@@ -359,13 +359,13 @@ RendererResult VulkanSwapchain::RetrieveImageHandles()
     // Transition each image to PRESENT state
     UniquePtr<SingleTimeCommands> singleTimeCommands = GetRenderBackend()->GetSingleTimeCommands();
 
-    singleTimeCommands->Push([&](CmdList& cmd)
+    singleTimeCommands->Push([&](RenderQueue& renderQueue)
         {
             for (const ImageRef& image : m_images)
             {
                 HYP_GFX_ASSERT(image.IsValid());
 
-                cmd.Add<InsertBarrier>(image, RS_PRESENT);
+                renderQueue.Add<InsertBarrier>(image, RS_PRESENT);
             }
         });
 

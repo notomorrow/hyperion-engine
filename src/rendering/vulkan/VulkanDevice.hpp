@@ -11,7 +11,7 @@
 #include <core/utilities/Span.hpp>
 #include <core/utilities/Optional.hpp>
 
-#include <rendering/vulkan/VulkanQueue.hpp>
+#include <rendering/vulkan/VulkanDeviceQueue.hpp>
 
 #include <rendering/RenderObject.hpp>
 #include <rendering/RenderDevice.hpp>

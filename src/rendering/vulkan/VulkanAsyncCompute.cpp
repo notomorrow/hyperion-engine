@@ -76,10 +76,10 @@ RendererResult VulkanAsyncCompute::Submit(VulkanFrame* frame)
 
     const uint32 frameIndex = frame->GetFrameIndex();
 
-    // @TODO: Call CmdList::Prepare to set descriptor sets to be used for the frame.
+    // @TODO: Call RenderQueue::Prepare to set descriptor sets to be used for the frame.
 
     HYPERION_BUBBLE_ERRORS(m_commandBuffers[frameIndex]->Begin());
-    m_commandList.Execute(m_commandBuffers[frameIndex]);
+    renderQueue.Execute(m_commandBuffers[frameIndex]);
     HYPERION_BUBBLE_ERRORS(m_commandBuffers[frameIndex]->End());
 
     VulkanDeviceQueue& computeQueue = GetRenderBackend()->GetDevice()->GetComputeQueue();

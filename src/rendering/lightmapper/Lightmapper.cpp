@@ -680,21 +680,21 @@ void LightmapGPUPathTracer::ReadHitsBuffer(FrameBase* frame, Span<LightmapHit> o
 
     UniquePtr<SingleTimeCommands> singleTimeCommands = g_renderBackend->GetSingleTimeCommands();
 
-    singleTimeCommands->Push([&](CmdList& cmd)
+    singleTimeCommands->Push([&](RenderQueue& renderQueue)
         {
             const ResourceState previousResourceState = hitsBuffer->GetResourceState();
 
             // put src image in state for copying from
-            cmd.Add<InsertBarrier>(hitsBuffer, RS_COPY_SRC);
+            renderQueue.Add<InsertBarrier>(hitsBuffer, RS_COPY_SRC);
 
             // put dst buffer in state for copying to
-            cmd.Add<InsertBarrier>(stagingBuffer, RS_COPY_DST);
+            renderQueue.Add<InsertBarrier>(stagingBuffer, RS_COPY_DST);
 
-            cmd.Add<CopyBuffer>(stagingBuffer, hitsBuffer, outHits.Size() * sizeof(LightmapHit));
+            renderQueue.Add<CopyBuffer>(stagingBuffer, hitsBuffer, outHits.Size() * sizeof(LightmapHit));
 
-            cmd.Add<InsertBarrier>(stagingBuffer, RS_COPY_SRC);
+            renderQueue.Add<InsertBarrier>(stagingBuffer, RS_COPY_SRC);
 
-            cmd.Add<InsertBarrier>(hitsBuffer, previousResourceState);
+            renderQueue.Add<InsertBarrier>(hitsBuffer, previousResourceState);
         });
 
     HYPERION_ASSERT_RESULT(singleTimeCommands->Execute());
@@ -752,9 +752,9 @@ void LightmapGPUPathTracer::Render(FrameBase* frame, const RenderSetup& renderSe
         }
     }
 
-    frame->GetCommandList().Add<BindRaytracingPipeline>(m_raytracingPipeline);
+    frame->renderQueue.Add<BindRaytracingPipeline>(m_raytracingPipeline);
 
-    frame->GetCommandList().Add<BindDescriptorTable>(
+    frame->renderQueue.Add<BindDescriptorTable>(
         m_raytracingPipeline->GetDescriptorTable(),
         m_raytracingPipeline,
         ArrayMap<Name, ArrayMap<Name, uint32>> {
@@ -764,13 +764,13 @@ void LightmapGPUPathTracer::Render(FrameBase* frame, const RenderSetup& renderSe
                     { NAME("CurrentEnvProbe"), ShaderDataOffset<EnvProbeShaderData>(renderSetup.envProbe, 0) } } } },
         frame->GetFrameIndex());
 
-    frame->GetCommandList().Add<InsertBarrier>(m_hitsBufferGpu, RS_UNORDERED_ACCESS);
+    frame->renderQueue.Add<InsertBarrier>(m_hitsBufferGpu, RS_UNORDERED_ACCESS);
 
-    frame->GetCommandList().Add<TraceRays>(
+    frame->renderQueue.Add<TraceRays>(
         m_raytracingPipeline,
         Vec3u { uint32(rays.Size()), 1, 1 });
 
-    frame->GetCommandList().Add<InsertBarrier>(m_hitsBufferGpu, RS_UNORDERED_ACCESS);
+    frame->renderQueue.Add<InsertBarrier>(m_hitsBufferGpu, RS_UNORDERED_ACCESS);
 }
 
 #pragma endregion LightmapGPUPathTracer

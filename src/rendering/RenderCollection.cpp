@@ -387,7 +387,7 @@ ParallelRenderingState* RenderCollector::AcquireNextParallelRenderingState()
     return curr;
 }
 
-void RenderCollector::CommitParallelRenderingState(CmdList& outCommandList)
+void RenderCollector::CommitParallelRenderingState(RenderQueue& renderQueue)
 {
     ParallelRenderingState* state = parallelRenderingStateHead;
 
@@ -397,12 +397,11 @@ void RenderCollector::CommitParallelRenderingState(CmdList& outCommandList)
 
         state->taskBatch->AwaitCompletion();
 
-        outCommandList.Concat(std::move(state->baseCommandList));
+        renderQueue.Concat(std::move(state->rootQueue));
 
-        // Add command lists to the frame's command list
-        for (CmdList& commandList : state->commandLists)
+        for (RenderQueue& localQueue : state->localQueues)
         {
-            outCommandList.Concat(std::move(commandList));
+            renderQueue.Concat(std::move(localQueue));
         }
 
         // Add render stats counts to the engine's render stats
@@ -557,7 +556,7 @@ void RenderCollector::ExecuteDrawCalls(FrameBase* frame, const RenderSetup& rend
 
     if (framebuffer)
     {
-        frame->GetCommandList().Add<BeginFramebuffer>(framebuffer);
+        frame->renderQueue.Add<BeginFramebuffer>(framebuffer);
     }
 
     for (const auto& mappings : groupsView)
@@ -614,11 +613,11 @@ void RenderCollector::ExecuteDrawCalls(FrameBase* frame, const RenderSetup& rend
     }
 
     // Wait for all parallel rendering tasks to finish
-    CommitParallelRenderingState(frame->GetCommandList());
+    CommitParallelRenderingState(frame->renderQueue);
 
     if (framebuffer)
     {
-        frame->GetCommandList().Add<EndFramebuffer>(framebuffer);
+        frame->renderQueue.Add<EndFramebuffer>(framebuffer);
     }
 }
 

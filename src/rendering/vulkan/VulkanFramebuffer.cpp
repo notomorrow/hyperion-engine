@@ -8,7 +8,7 @@
 #include <rendering/vulkan/VulkanHelpers.hpp>
 #include <rendering/vulkan/VulkanResult.hpp>
 
-#include <rendering/rhi/CmdList.hpp>
+#include <rendering/RenderQueue.hpp>
 
 #include <core/math/MathUtil.hpp>
 
@@ -21,7 +21,7 @@ static inline VulkanRenderBackend* GetRenderBackend()
     return static_cast<VulkanRenderBackend*>(g_renderBackend);
 }
 
-static void TransitionFramebufferAttachments(CmdList& cmdList, VulkanFramebuffer* framebuffer, Span<VulkanAttachmentDef*> attachmentDefs)
+static void TransitionFramebufferAttachments(RenderQueue& renderQueue, VulkanFramebuffer* framebuffer, Span<VulkanAttachmentDef*> attachmentDefs)
 {
     Assert(framebuffer != nullptr);
 
@@ -32,11 +32,11 @@ static void TransitionFramebufferAttachments(CmdList& cmdList, VulkanFramebuffer
 
         if (framebuffer->GetRenderPass()->GetStage() == RenderPassStage::PRESENT)
         {
-            cmdList.Add<InsertBarrier>(image, RS_PRESENT);
+            renderQueue.Add<InsertBarrier>(image, RS_PRESENT);
         }
         else
         {
-            cmdList.Add<InsertBarrier>(image, RS_SHADER_RESOURCE);
+            renderQueue.Add<InsertBarrier>(image, RS_SHADER_RESOURCE);
         }
     }
 }
@@ -79,18 +79,18 @@ RendererResult VulkanAttachmentMap::Create()
     // frame may be nullptr if we are creating a swapchain
     if (frame != nullptr)
     {
-        CmdList& cmdList = frame->GetCommandList();
+        RenderQueue& renderQueue = frame->renderQueue;
 
-        TransitionFramebufferAttachments(cmdList, framebuffer, attachmentDefs.ToSpan());
+        TransitionFramebufferAttachments(renderQueue, framebuffer, attachmentDefs.ToSpan());
 
         return {};
     }
 
     UniquePtr<SingleTimeCommands> singleTimeCommands = GetRenderBackend()->GetSingleTimeCommands();
 
-    singleTimeCommands->Push([&](CmdList& cmdList) -> RendererResult
+    singleTimeCommands->Push([&](RenderQueue& renderQueue) -> RendererResult
         {
-            TransitionFramebufferAttachments(cmdList, framebuffer, attachmentDefs.ToSpan());
+            TransitionFramebufferAttachments(renderQueue, framebuffer, attachmentDefs.ToSpan());
 
             return {};
         });
@@ -167,18 +167,18 @@ RendererResult VulkanAttachmentMap::Resize(Vec2u newSize)
     // frame may be nullptr if we are creating a swapchain
     if (frame != nullptr)
     {
-        CmdList& cmdList = frame->GetCommandList();
+        RenderQueue& renderQueue = frame->renderQueue;
 
-        TransitionFramebufferAttachments(cmdList, framebuffer, attachmentDefs.ToSpan());
+        TransitionFramebufferAttachments(renderQueue, framebuffer, attachmentDefs.ToSpan());
 
         return {};
     }
 
     UniquePtr<SingleTimeCommands> singleTimeCommands = GetRenderBackend()->GetSingleTimeCommands();
 
-    singleTimeCommands->Push([&](CmdList& cmdList) -> RendererResult
+    singleTimeCommands->Push([&](RenderQueue& renderQueue) -> RendererResult
         {
-            TransitionFramebufferAttachments(cmdList, framebuffer, attachmentDefs.ToSpan());
+            TransitionFramebufferAttachments(renderQueue, framebuffer, attachmentDefs.ToSpan());
 
             return {};
         });
@@ -264,17 +264,17 @@ RendererResult VulkanFramebuffer::Create()
 
     if (frame != nullptr)
     {
-        CmdList& cmdList = frame->GetCommandList();
-        cmdList.Add<ClearFramebuffer>(HandleFromThis());
+        RenderQueue& renderQueue = frame->renderQueue;
+        renderQueue.Add<ClearFramebuffer>(HandleFromThis());
 
         return {};
     }
 
     UniquePtr<SingleTimeCommands> singleTimeCommands = GetRenderBackend()->GetSingleTimeCommands();
 
-    singleTimeCommands->Push([&](CmdList& cmdList) -> RendererResult
+    singleTimeCommands->Push([&](RenderQueue& renderQueue) -> RendererResult
         {
-            cmdList.Add<ClearFramebuffer>(HandleFromThis());
+            renderQueue.Add<ClearFramebuffer>(HandleFromThis());
 
             return {};
         });
@@ -352,8 +352,8 @@ RendererResult VulkanFramebuffer::Resize(Vec2u newSize)
         nullptr,
         &m_handle));
 
-    CmdList& cmdList = g_renderBackend->GetCurrentFrame()->GetCommandList();
-    cmdList.Add<ClearFramebuffer>(HandleFromThis());
+    RenderQueue& renderQueue = g_renderBackend->GetCurrentFrame()->renderQueue;
+    renderQueue.Add<ClearFramebuffer>(HandleFromThis());
 
     HYPERION_RETURN_OK;
 }

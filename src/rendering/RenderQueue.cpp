@@ -1,6 +1,6 @@
 /* Copyright (c) 2024-2025 No Tomorrow Games. All rights reserved. */
 
-#include <rendering/rhi/CmdList.hpp>
+#include <rendering/RenderQueue.hpp>
 #include <rendering/RenderFrame.hpp>
 
 #if defined(HYP_DEBUG_MODE) && defined(HYP_VULKAN)
@@ -14,13 +14,13 @@
 
 namespace hyperion {
 
-#pragma region CmdList
+#pragma region RenderQueue
 
-CmdList::CmdList()
+RenderQueue::RenderQueue()
 {
 }
 
-CmdList::~CmdList()
+RenderQueue::~RenderQueue()
 {
     for (CmdBase* command : m_commands)
     {
@@ -28,7 +28,7 @@ CmdList::~CmdList()
     }
 }
 
-void CmdList::Prepare(FrameBase* frame)
+void RenderQueue::Prepare(FrameBase* frame)
 {
     Assert(frame != nullptr);
 
@@ -38,7 +38,7 @@ void CmdList::Prepare(FrameBase* frame)
     }
 }
 
-void CmdList::Execute(const CommandBufferRef& cmd)
+void RenderQueue::Execute(const CommandBufferRef& cmd)
 {
     Assert(cmd != nullptr);
 
@@ -52,7 +52,7 @@ void CmdList::Execute(const CommandBufferRef& cmd)
     m_commands.Clear();
 }
 
-void CmdList::FreeCommand(CmdBase* command)
+void RenderQueue::FreeCommand(CmdBase* command)
 {
     Assert(command != nullptr);
 
@@ -62,7 +62,7 @@ void CmdList::FreeCommand(CmdBase* command)
     pool->FreeCommand(command);
 }
 
-#pragma endregion CmdList
+#pragma endregion RenderQueue
 
 #pragma region BindDescriptorSet
 

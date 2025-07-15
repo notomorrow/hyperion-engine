@@ -266,7 +266,7 @@ void UIRenderCollector::ExecuteDrawCalls(FrameBase* frame, const RenderSetup& re
 
     if (framebuffer.IsValid())
     {
-        frame->GetCommandList().Add<BeginFramebuffer>(framebuffer);
+        frame->renderQueue.Add<BeginFramebuffer>(framebuffer);
     }
 
     using IteratorType = FlatMap<RenderableAttributeSet, DrawCallCollectionMapping>::ConstIterator;
@@ -335,11 +335,11 @@ void UIRenderCollector::ExecuteDrawCalls(FrameBase* frame, const RenderSetup& re
     }
 
     // Wait for all parallel rendering tasks to finish
-    CommitParallelRenderingState(frame->GetCommandList());
+    CommitParallelRenderingState(frame->renderQueue);
 
     if (framebuffer.IsValid())
     {
-        frame->GetCommandList().Add<EndFramebuffer>(framebuffer);
+        frame->renderQueue.Add<EndFramebuffer>(framebuffer);
     }
 }
 

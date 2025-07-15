@@ -21,7 +21,7 @@
 #include <rendering/RenderStats.hpp>
 #include <rendering/IndirectDraw.hpp>
 
-#include <rendering/rhi/CmdList.hpp>
+#include <rendering/RenderQueue.hpp>
 
 #include <rendering/RenderStructs.hpp>
 #include <rendering/RenderObject.hpp>
@@ -62,9 +62,11 @@ struct ParallelRenderingState
     uint32 numBatches = 0;
 
     // Non-async rendering command list - used for binding state at the start of the pass before async stuff
-    CmdList baseCommandList;
+    RenderQueue rootQueue;
 
-    FixedArray<CmdList, maxBatches> commandLists {};
+    // per-thread RenderQueue
+    FixedArray<RenderQueue, maxBatches> localQueues {};
+
     FixedArray<RenderStatsCounts, maxBatches> renderStatsCounts {};
 
     // Temporary storage for data that will be executed in parallel during the frame
@@ -258,7 +260,7 @@ public:
     EnumFlags<RenderGroupFlags> renderGroupFlags;
 
     ParallelRenderingState* AcquireNextParallelRenderingState();
-    void CommitParallelRenderingState(CmdList& outCommandList);
+    void CommitParallelRenderingState(RenderQueue& renderQueue);
 
     void PerformOcclusionCulling(FrameBase* frame, const RenderSetup& renderSetup, uint32 bucketBits);
 

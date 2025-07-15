@@ -7,7 +7,7 @@
 #include <rendering/vulkan/VulkanFrame.hpp>
 #include <rendering/vulkan/VulkanRenderBackend.hpp>
 
-#include <rendering/rhi/CmdList.hpp>
+#include <rendering/RenderQueue.hpp>
 
 #include <core/math/MathUtil.hpp>
 
@@ -220,11 +220,11 @@ VkDescriptorType ToVkDescriptorType(DescriptorSetElementType type)
 
 RendererResult VulkanSingleTimeCommands::Execute()
 {
-    CmdList commandList;
+    RenderQueue renderQueue;
 
     for (auto& fn : m_functions)
     {
-        fn(commandList);
+        fn(renderQueue);
     }
 
     m_functions.Clear();
@@ -234,7 +234,7 @@ RendererResult VulkanSingleTimeCommands::Execute()
     VulkanFrameRef tempFrame = VulkanFrameRef(GetRenderBackend()->MakeFrame(0));
     HYPERION_BUBBLE_ERRORS(tempFrame->Create());
 
-    commandList.Prepare(tempFrame);
+    renderQueue.Prepare(tempFrame);
 
     tempFrame->UpdateUsedDescriptorSets();
 
@@ -244,7 +244,7 @@ RendererResult VulkanSingleTimeCommands::Execute()
     HYPERION_BUBBLE_ERRORS(commandBuffer->Begin());
 
     // Execute the command list
-    commandList.Execute(commandBuffer);
+    renderQueue.Execute(commandBuffer);
 
     HYPERION_PASS_ERRORS(commandBuffer->End(), result);
 

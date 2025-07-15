@@ -11,7 +11,7 @@
 #include <rendering/RenderGlobalState.hpp>
 #include <rendering/GBuffer.hpp>
 
-#include <rendering/rhi/CmdList.hpp>
+#include <rendering/RenderQueue.hpp>
 
 #include <rendering/RenderBackend.hpp>
 #include <rendering/RenderFrame.hpp>
@@ -232,11 +232,11 @@ void SSGI::Render(FrameBase* frame, const RenderSetup& renderSetup)
     const uint32 numDispatchCalls = (totalPixelsInImage + 255) / 256;
 
     // put sample image in writeable state
-    frame->GetCommandList().Add<InsertBarrier>(m_resultTexture->GetRenderResource().GetImage(), RS_UNORDERED_ACCESS);
+    frame->renderQueue.Add<InsertBarrier>(m_resultTexture->GetRenderResource().GetImage(), RS_UNORDERED_ACCESS);
 
-    frame->GetCommandList().Add<BindComputePipeline>(m_computePipeline);
+    frame->renderQueue.Add<BindComputePipeline>(m_computePipeline);
 
-    frame->GetCommandList().Add<BindDescriptorTable>(
+    frame->renderQueue.Add<BindDescriptorTable>(
         m_computePipeline->GetDescriptorTable(),
         m_computePipeline,
         ArrayMap<Name, ArrayMap<Name, uint32>> {
@@ -252,17 +252,17 @@ void SSGI::Render(FrameBase* frame, const RenderSetup& renderSetup)
     {
         Assert(renderSetup.passData != nullptr);
 
-        frame->GetCommandList().Add<BindDescriptorSet>(
+        frame->renderQueue.Add<BindDescriptorSet>(
             renderSetup.passData->descriptorSets[frame->GetFrameIndex()],
             m_computePipeline,
             ArrayMap<Name, uint32> {},
             viewDescriptorSetIndex);
     }
 
-    frame->GetCommandList().Add<DispatchCompute>(m_computePipeline, Vec3u { numDispatchCalls, 1, 1 });
+    frame->renderQueue.Add<DispatchCompute>(m_computePipeline, Vec3u { numDispatchCalls, 1, 1 });
 
     // transition sample image back into read state
-    frame->GetCommandList().Add<InsertBarrier>(m_resultTexture->GetRenderResource().GetImage(), RS_SHADER_RESOURCE);
+    frame->renderQueue.Add<InsertBarrier>(m_resultTexture->GetRenderResource().GetImage(), RS_SHADER_RESOURCE);
 
     if (useTemporalBlending && m_temporalBlending != nullptr)
     {

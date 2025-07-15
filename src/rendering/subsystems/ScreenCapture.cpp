@@ -167,31 +167,31 @@ void ScreenCaptureRenderSubsystem::CaptureFrame(FrameBase* frame)
 
     const ResourceState previousResourceState = imageRef->GetResourceState();
 
-    frame->GetCommandList().Add<InsertBarrier>(imageRef, RS_COPY_SRC);
+    frame->renderQueue.Add<InsertBarrier>(imageRef, RS_COPY_SRC);
 
     switch (m_screenCaptureMode)
     {
     case ScreenCaptureMode::TO_TEXTURE:
         Assert(m_texture->GetRenderResource().GetImage()->IsCreated());
 
-        frame->GetCommandList().Add<InsertBarrier>(m_texture->GetRenderResource().GetImage(), RS_COPY_DST);
-        frame->GetCommandList().Add<Blit>(imageRef, m_texture->GetRenderResource().GetImage());
-        frame->GetCommandList().Add<InsertBarrier>(m_texture->GetRenderResource().GetImage(), RS_SHADER_RESOURCE);
+        frame->renderQueue.Add<InsertBarrier>(m_texture->GetRenderResource().GetImage(), RS_COPY_DST);
+        frame->renderQueue.Add<Blit>(imageRef, m_texture->GetRenderResource().GetImage());
+        frame->renderQueue.Add<InsertBarrier>(m_texture->GetRenderResource().GetImage(), RS_SHADER_RESOURCE);
 
         break;
     case ScreenCaptureMode::TO_BUFFER:
         Assert(m_buffer.IsValid() && m_buffer->Size() >= imageRef->GetByteSize());
 
-        frame->GetCommandList().Add<InsertBarrier>(m_buffer, RS_COPY_DST);
-        frame->GetCommandList().Add<CopyImageToBuffer>(imageRef, m_buffer);
-        frame->GetCommandList().Add<InsertBarrier>(m_buffer, RS_COPY_SRC);
+        frame->renderQueue.Add<InsertBarrier>(m_buffer, RS_COPY_DST);
+        frame->renderQueue.Add<CopyImageToBuffer>(imageRef, m_buffer);
+        frame->renderQueue.Add<InsertBarrier>(m_buffer, RS_COPY_SRC);
 
         break;
     default:
         HYP_THROW("Invalid screen capture mode");
     }
 
-    frame->GetCommandList().Add<InsertBarrier>(imageRef, previousResourceState);
+    frame->renderQueue.Add<InsertBarrier>(imageRef, previousResourceState);
 }
 
 } // namespace hyperion

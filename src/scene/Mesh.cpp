@@ -291,10 +291,10 @@ void Mesh::CreateGpuBuffers()
             stagingBufferIndices->Copy(packedIndicesSize, indices.Data());
 
             FrameBase* frame = g_renderBackend->GetCurrentFrame();
-            CmdList& cmd = frame->GetCommandList();
+            RenderQueue& renderQueue = frame->renderQueue;
 
-            cmd.Add<CopyBuffer>(stagingBufferVertices, vertexBuffer, packedBufferSize);
-            cmd.Add<CopyBuffer>(stagingBufferIndices, indexBuffer, packedIndicesSize);
+            renderQueue.Add<CopyBuffer>(stagingBufferVertices, vertexBuffer, packedBufferSize);
+            renderQueue.Add<CopyBuffer>(stagingBufferIndices, indexBuffer, packedIndicesSize);
 
             SafeRelease(std::move(stagingBufferVertices));
             SafeRelease(std::move(stagingBufferIndices));
@@ -612,10 +612,10 @@ BLASRef Mesh::BuildBLAS(const Handle<Material>& material) const
             indicesStagingBuffer->Copy(packedIndices.Size() * sizeof(uint32), packedIndices.Data());
 
             FrameBase* frame = g_renderBackend->GetCurrentFrame();
-            CmdList& cmd = frame->GetCommandList();
+            RenderQueue& renderQueue = frame->renderQueue;
 
-            cmd.Add<CopyBuffer>(verticesStagingBuffer, packedVerticesBuffer, packedVerticesSize);
-            cmd.Add<CopyBuffer>(indicesStagingBuffer, packedIndicesBuffer, packedIndicesSize);
+            renderQueue.Add<CopyBuffer>(verticesStagingBuffer, packedVerticesBuffer, packedVerticesSize);
+            renderQueue.Add<CopyBuffer>(indicesStagingBuffer, packedIndicesBuffer, packedIndicesSize);
 
             return {};
         }

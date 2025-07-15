@@ -48,7 +48,7 @@ struct CmdPoolHandle
 class CmdBase
 {
 public:
-    friend class CmdList;
+    friend class RenderQueue;
 
     template <class T>
     friend class CmdMemoryPool;
@@ -731,20 +731,15 @@ private:
     Vec3u m_workgroupCount;
 };
 
-class CmdList
+class RenderQueue
 {
 public:
-    CmdList();
-    CmdList(const CmdList& other) = delete;
-    CmdList& operator=(const CmdList& other) = delete;
-    CmdList(CmdList&& other) noexcept = delete;
-    CmdList& operator=(CmdList&& other) noexcept = delete;
-    ~CmdList();
-
-    HYP_FORCE_INLINE const Array<CmdBase*>& GetCommands() const
-    {
-        return m_commands;
-    }
+    RenderQueue();
+    RenderQueue(const RenderQueue& other) = delete;
+    RenderQueue& operator=(const RenderQueue& other) = delete;
+    RenderQueue(RenderQueue&& other) noexcept = delete;
+    RenderQueue& operator=(RenderQueue&& other) noexcept = delete;
+    ~RenderQueue();
 
     template <class CmdType, class... Args>
     void Add(Args&&... args)
@@ -754,7 +749,7 @@ public:
         m_commands.PushBack(pool.NewCommand(std::forward<Args>(args)...));
     }
 
-    void Concat(CmdList&& other)
+    void Concat(RenderQueue&& other)
     {
         m_commands.Concat(std::move(other.m_commands));
     }

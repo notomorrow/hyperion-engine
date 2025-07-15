@@ -11,7 +11,7 @@
 #include <rendering/vulkan/VulkanHelpers.hpp>
 #include <rendering/vulkan/VulkanResult.hpp>
 
-#include <rendering/rhi/CmdList.hpp>
+#include <rendering/RenderQueue.hpp>
 
 #include <util/img/ImageUtil.hpp>
 
@@ -442,8 +442,8 @@ RendererResult VulkanImage::Resize(const Vec3u& extent)
             SetResourceState(RS_UNDEFINED);
 
             FrameBase* frame = GetRenderBackend()->GetCurrentFrame();
-            CmdList& cmd = frame->GetCommandList();
-            cmd.Add<::hyperion::InsertBarrier>(HandleFromThis(), previousResourceState);
+            RenderQueue& renderQueue = frame->renderQueue;
+            renderQueue.Add<::hyperion::InsertBarrier>(HandleFromThis(), previousResourceState);
         }
     }
 

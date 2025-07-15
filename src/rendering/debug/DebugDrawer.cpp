@@ -66,8 +66,8 @@ struct DebugDrawCommand_Probe : DebugDrawCommand
 
 #pragma region MeshDebugDrawShapeBase
 
-MeshDebugDrawShapeBase::MeshDebugDrawShapeBase(IDebugDrawCommandList& commandList, const Handle<Mesh>& mesh)
-    : m_commandList(commandList),
+MeshDebugDrawShapeBase::MeshDebugDrawShapeBase(IDebugDrawCommandList& renderQueue, const Handle<Mesh>& mesh)
+    : renderQueue(renderQueue),
       m_mesh(mesh)
 {
     if (InitObject(mesh))
@@ -80,8 +80,8 @@ MeshDebugDrawShapeBase::MeshDebugDrawShapeBase(IDebugDrawCommandList& commandLis
 
 #pragma region SphereDebugDrawShape
 
-SphereDebugDrawShape::SphereDebugDrawShape(IDebugDrawCommandList& commandList)
-    : MeshDebugDrawShapeBase(commandList, MeshBuilder::NormalizedCubeSphere(4))
+SphereDebugDrawShape::SphereDebugDrawShape(IDebugDrawCommandList& renderQueue)
+    : MeshDebugDrawShapeBase(renderQueue, MeshBuilder::NormalizedCubeSphere(4))
 {
 }
 
@@ -92,7 +92,7 @@ void SphereDebugDrawShape::operator()(const Vec3f& position, float radius, const
 
 void SphereDebugDrawShape::operator()(const Vec3f& position, float radius, const Color& color, const RenderableAttributeSet& attributes)
 {
-    m_commandList.Push(MakeUnique<DebugDrawCommand>(DebugDrawCommand {
+    renderQueue.Push(MakeUnique<DebugDrawCommand>(DebugDrawCommand {
         this,
         Transform(position, radius, Quaternion::Identity()).GetMatrix(),
         color,
@@ -113,7 +113,7 @@ void AmbientProbeDebugDrawShape::operator()(const Vec3f& position, float radius,
     command->color = Color::White();
     command->envProbeResourceHandle = TResourceHandle<RenderEnvProbe>(envProbe.GetRenderResource());
 
-    m_commandList.Push(std::move(command));
+    renderQueue.Push(std::move(command));
 }
 
 #pragma endregion AmbientProbeDebugDrawShape
@@ -130,15 +130,15 @@ void ReflectionProbeDebugDrawShape::operator()(const Vec3f& position, float radi
     command->color = Color::White();
     command->envProbeResourceHandle = TResourceHandle<RenderEnvProbe>(envProbe.GetRenderResource());
 
-    m_commandList.Push(std::move(command));
+    renderQueue.Push(std::move(command));
 }
 
 #pragma endregion ReflectionProbeDebugDrawShape
 
 #pragma region BoxDebugDrawShape
 
-BoxDebugDrawShape::BoxDebugDrawShape(IDebugDrawCommandList& commandList)
-    : MeshDebugDrawShapeBase(commandList, MeshBuilder::Cube())
+BoxDebugDrawShape::BoxDebugDrawShape(IDebugDrawCommandList& renderQueue)
+    : MeshDebugDrawShapeBase(renderQueue, MeshBuilder::Cube())
 {
 }
 
@@ -149,7 +149,7 @@ void BoxDebugDrawShape::operator()(const Vec3f& position, const Vec3f& size, con
 
 void BoxDebugDrawShape::operator()(const Vec3f& position, const Vec3f& size, const Color& color, const RenderableAttributeSet& attributes)
 {
-    m_commandList.Push(MakeUnique<DebugDrawCommand>(DebugDrawCommand {
+    renderQueue.Push(MakeUnique<DebugDrawCommand>(DebugDrawCommand {
         this,
         Transform(position, size, Quaternion::Identity()).GetMatrix(),
         color,
@@ -160,8 +160,8 @@ void BoxDebugDrawShape::operator()(const Vec3f& position, const Vec3f& size, con
 
 #pragma region PlaneDebugDrawShape
 
-PlaneDebugDrawShape::PlaneDebugDrawShape(IDebugDrawCommandList& commandList)
-    : MeshDebugDrawShapeBase(commandList, MeshBuilder::Quad())
+PlaneDebugDrawShape::PlaneDebugDrawShape(IDebugDrawCommandList& renderQueue)
+    : MeshDebugDrawShapeBase(renderQueue, MeshBuilder::Quad())
 {
 }
 
@@ -184,7 +184,7 @@ void PlaneDebugDrawShape::operator()(const FixedArray<Vec3f, 4>& points, const C
     transformMatrix.rows[2] = Vec4f(z, 0.0f);
     transformMatrix.rows[3] = Vec4f(center, 1.0f);
 
-    m_commandList.Push(MakeUnique<DebugDrawCommand>(DebugDrawCommand {
+    renderQueue.Push(MakeUnique<DebugDrawCommand>(DebugDrawCommand {
         this,
         transformMatrix,
         color,
@@ -386,9 +386,9 @@ void DebugDrawer::Render(FrameBase* frame, const RenderSetup& renderSetup)
 
         if (isNewGraphicsPipeline)
         {
-            frame->GetCommandList().Add<BindGraphicsPipeline>(graphicsPipeline);
+            frame->renderQueue.Add<BindGraphicsPipeline>(graphicsPipeline);
 
-            frame->GetCommandList().Add<BindDescriptorTable>(
+            frame->renderQueue.Add<BindDescriptorTable>(
                 m_descriptorTable,
                 graphicsPipeline,
                 ArrayMap<Name, ArrayMap<Name, uint32>> {
@@ -405,7 +405,7 @@ void DebugDrawer::Render(FrameBase* frame, const RenderSetup& renderSetup)
                 frameIndex);
         }
 
-        frame->GetCommandList().Add<BindDescriptorSet>(
+        frame->renderQueue.Add<BindDescriptorSet>(
             debugDrawerDescriptorSet,
             graphicsPipeline,
             ArrayMap<Name, uint32> {
@@ -418,9 +418,9 @@ void DebugDrawer::Render(FrameBase* frame, const RenderSetup& renderSetup)
         {
             MeshDebugDrawShapeBase* meshShape = static_cast<MeshDebugDrawShapeBase*>(drawCommand.shape);
 
-            frame->GetCommandList().Add<BindVertexBuffer>(meshShape->GetMesh()->GetVertexBuffer());
-            frame->GetCommandList().Add<BindIndexBuffer>(meshShape->GetMesh()->GetIndexBuffer());
-            frame->GetCommandList().Add<DrawIndexed>(meshShape->GetMesh()->NumIndices());
+            frame->renderQueue.Add<BindVertexBuffer>(meshShape->GetMesh()->GetVertexBuffer());
+            frame->renderQueue.Add<BindIndexBuffer>(meshShape->GetMesh()->GetIndexBuffer());
+            frame->renderQueue.Add<DrawIndexed>(meshShape->GetMesh()->NumIndices());
 
             break;
         }
@@ -454,15 +454,15 @@ UniquePtr<DebugDrawCommandList> DebugDrawer::CreateCommandList()
     return MakeUnique<DebugDrawCommandList>(*this);
 }
 
-void DebugDrawer::CommitCommands(DebugDrawCommandList& commandList)
+void DebugDrawer::CommitCommands(DebugDrawCommandList& renderQueue)
 {
     HYP_SCOPE;
 
     Mutex::Guard guard(m_drawCommandsMutex);
 
-    const SizeType numAddedItems = commandList.m_drawCommands.Size();
+    const SizeType numAddedItems = renderQueue.m_drawCommands.Size();
     m_numDrawCommandsPendingAddition.Increment(uint32(numAddedItems), MemoryOrder::RELEASE);
-    m_drawCommandsPendingAddition.Concat(std::move(commandList.m_drawCommands));
+    m_drawCommandsPendingAddition.Concat(std::move(renderQueue.m_drawCommands));
 }
 
 GraphicsPipelineRef DebugDrawer::FetchGraphicsPipeline(RenderableAttributeSet attributes, uint32 drawableLayer)

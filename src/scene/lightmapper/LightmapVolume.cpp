@@ -6,7 +6,7 @@
 #include <rendering/RenderTexture.hpp>
 #include <rendering/RenderProxy.hpp>
 
-#include <rendering/rhi/CmdList.hpp>
+#include <rendering/RenderQueue.hpp>
 
 #include <rendering/RenderCommand.hpp>
 #include <rendering/RenderHelpers.hpp>
@@ -78,7 +78,7 @@ struct RENDER_COMMAND(BakeLightmapVolumeTexture)
 
         UniquePtr<SingleTimeCommands> singleTimeCommands = g_renderBackend->GetSingleTimeCommands();
 
-        singleTimeCommands->Push([&](CmdList& cmd)
+        singleTimeCommands->Push([&](RenderQueue& renderQueue)
             {
                 for (uint32 textureTypeIndex = 0; textureTypeIndex < uint32(LTT_MAX); textureTypeIndex++)
                 {
@@ -89,7 +89,7 @@ struct RENDER_COMMAND(BakeLightmapVolumeTexture)
 
                     const Handle<Texture>& atlasTexture = atlasTextures[textureTypeIndex];
 
-                    cmd.Add<InsertBarrier>(atlasTexture->GetRenderResource().GetImage(), RS_COPY_DST);
+                    renderQueue.Add<InsertBarrier>(atlasTexture->GetRenderResource().GetImage(), RS_COPY_DST);
 
                     for (const auto& elementTexturePair : elementTextures[textureTypeIndex])
                     {
@@ -109,9 +109,9 @@ struct RENDER_COMMAND(BakeLightmapVolumeTexture)
                         AssertDebug(element->offsetCoords.x + element->dimensions.x <= atlasTexture->GetExtent().x);
                         AssertDebug(element->offsetCoords.y + element->dimensions.y <= atlasTexture->GetExtent().y);
 
-                        cmd.Add<InsertBarrier>(elementTexture->GetRenderResource().GetImage(), RS_COPY_SRC);
+                        renderQueue.Add<InsertBarrier>(elementTexture->GetRenderResource().GetImage(), RS_COPY_SRC);
 
-                        cmd.Add<Blit>(
+                        renderQueue.Add<Blit>(
                             elementTexture->GetRenderResource().GetImage(),
                             atlasTexture->GetRenderResource().GetImage(),
                             Rect<uint32> { 0, 0, elementTexture->GetRenderResource().GetImage()->GetExtent().x, elementTexture->GetRenderResource().GetImage()->GetExtent().y },
@@ -122,10 +122,10 @@ struct RENDER_COMMAND(BakeLightmapVolumeTexture)
                             0  /* dstFace */
                         );
 
-                        cmd.Add<InsertBarrier>(elementTexture->GetRenderResource().GetImage(), RS_SHADER_RESOURCE);
+                        renderQueue.Add<InsertBarrier>(elementTexture->GetRenderResource().GetImage(), RS_SHADER_RESOURCE);
                     }
 
-                    cmd.Add<InsertBarrier>(atlasTexture->GetRenderResource().GetImage(), RS_SHADER_RESOURCE);
+                    renderQueue.Add<InsertBarrier>(atlasTexture->GetRenderResource().GetImage(), RS_SHADER_RESOURCE);
                 }
             });
 

@@ -279,11 +279,11 @@ static void RenderAll(
 
     RenderStatsCounts counts;
 
-    frame->GetCommandList().Add<BindGraphicsPipeline>(pipeline);
+    frame->renderQueue.Add<BindGraphicsPipeline>(pipeline);
 
     if (globalDescriptorSetIndex != ~0u)
     {
-        frame->GetCommandList().Add<BindDescriptorSet>(
+        frame->renderQueue.Add<BindDescriptorSet>(
             globalDescriptorSet,
             pipeline,
             ArrayMap<Name, uint32> {
@@ -299,7 +299,7 @@ static void RenderAll(
     {
         Assert(renderSetup.passData != nullptr);
 
-        frame->GetCommandList().Add<BindDescriptorSet>(
+        frame->renderQueue.Add<BindDescriptorSet>(
             renderSetup.passData->descriptorSets[frameIndex],
             pipeline,
             ArrayMap<Name, uint32> {},
@@ -309,7 +309,7 @@ static void RenderAll(
     // Bind textures globally (bindless)
     if (materialDescriptorSetIndex != ~0u && useBindlessTextures)
     {
-        frame->GetCommandList().Add<BindDescriptorSet>(
+        frame->renderQueue.Add<BindDescriptorSet>(
             materialDescriptorSet,
             pipeline,
             ArrayMap<Name, uint32> {},
@@ -331,7 +331,7 @@ static void RenderAll(
                 offsets[NAME("MaterialsBuffer")] = ShaderDataOffset<MaterialShaderData>(drawCall.material, 0);
             }
 
-            frame->GetCommandList().Add<BindDescriptorSet>(entityDescriptorSet, pipeline, offsets, entityDescriptorSetIndex);
+            frame->renderQueue.Add<BindDescriptorSet>(entityDescriptorSet, pipeline, offsets, entityDescriptorSetIndex);
         }
 
         // Bind material descriptor set
@@ -339,24 +339,24 @@ static void RenderAll(
         {
             const DescriptorSetRef& materialDescriptorSet = g_renderGlobalState->materialDescriptorSetManager->ForBoundMaterial(drawCall.material, frame->GetFrameIndex());
 
-            frame->GetCommandList().Add<BindDescriptorSet>(materialDescriptorSet, pipeline, ArrayMap<Name, uint32> {}, materialDescriptorSetIndex);
+            frame->renderQueue.Add<BindDescriptorSet>(materialDescriptorSet, pipeline, ArrayMap<Name, uint32> {}, materialDescriptorSetIndex);
         }
 
         if (!prevDrawCall || prevDrawCall->mesh != drawCall.mesh)
         {
-            frame->GetCommandList().Add<BindVertexBuffer>(drawCall.mesh->GetVertexBuffer());
-            frame->GetCommandList().Add<BindIndexBuffer>(drawCall.mesh->GetIndexBuffer());
+            frame->renderQueue.Add<BindVertexBuffer>(drawCall.mesh->GetVertexBuffer());
+            frame->renderQueue.Add<BindIndexBuffer>(drawCall.mesh->GetIndexBuffer());
         }
 
         if (UseIndirectRendering && drawCall.drawCommandIndex != ~0u)
         {
-            frame->GetCommandList().Add<DrawIndexedIndirect>(
+            frame->renderQueue.Add<DrawIndexedIndirect>(
                 indirectRenderer->GetDrawState().GetIndirectBuffer(frameIndex),
                 drawCall.drawCommandIndex * uint32(sizeof(IndirectDrawCommand)));
         }
         else
         {
-            frame->GetCommandList().Add<DrawIndexed>(drawCall.mesh->NumIndices(), 1);
+            frame->renderQueue.Add<DrawIndexed>(drawCall.mesh->NumIndices(), 1);
         }
 
         prevDrawCall = &drawCall;
@@ -382,7 +382,7 @@ static void RenderAll(
                 offsets[NAME("MaterialsBuffer")] = ShaderDataOffset<MaterialShaderData>(drawCall.material, 0);
             }
 
-            frame->GetCommandList().Add<BindDescriptorSet>(
+            frame->renderQueue.Add<BindDescriptorSet>(
                 entityDescriptorSet,
                 pipeline,
                 offsets,
@@ -394,7 +394,7 @@ static void RenderAll(
         {
             const DescriptorSetRef& materialDescriptorSet = g_renderGlobalState->materialDescriptorSetManager->ForBoundMaterial(drawCall.material, frameIndex);
 
-            frame->GetCommandList().Add<BindDescriptorSet>(
+            frame->renderQueue.Add<BindDescriptorSet>(
                 materialDescriptorSet,
                 pipeline,
                 ArrayMap<Name, uint32> {},
@@ -403,7 +403,7 @@ static void RenderAll(
 
         const SizeType offset = entityInstanceBatch->batchIndex * drawCallCollection.impl->GetStructSize();
 
-        frame->GetCommandList().Add<BindDescriptorSet>(
+        frame->renderQueue.Add<BindDescriptorSet>(
             instancingDescriptorSet,
             pipeline,
             ArrayMap<Name, uint32> {
@@ -412,19 +412,19 @@ static void RenderAll(
 
         if (!prevDrawCall || prevDrawCall->mesh != drawCall.mesh)
         {
-            frame->GetCommandList().Add<BindVertexBuffer>(drawCall.mesh->GetVertexBuffer());
-            frame->GetCommandList().Add<BindIndexBuffer>(drawCall.mesh->GetIndexBuffer());
+            frame->renderQueue.Add<BindVertexBuffer>(drawCall.mesh->GetVertexBuffer());
+            frame->renderQueue.Add<BindIndexBuffer>(drawCall.mesh->GetIndexBuffer());
         }
 
         if (UseIndirectRendering && drawCall.drawCommandIndex != ~0u)
         {
-            frame->GetCommandList().Add<DrawIndexedIndirect>(
+            frame->renderQueue.Add<DrawIndexedIndirect>(
                 indirectRenderer->GetDrawState().GetIndirectBuffer(frameIndex),
                 drawCall.drawCommandIndex * uint32(sizeof(IndirectDrawCommand)));
         }
         else
         {
-            frame->GetCommandList().Add<DrawIndexed>(drawCall.mesh->NumIndices(), entityInstanceBatch->numEntities);
+            frame->renderQueue.Add<DrawIndexed>(drawCall.mesh->NumIndices(), entityInstanceBatch->numEntities);
         }
 
         prevDrawCall = &drawCall;
@@ -473,13 +473,13 @@ static void RenderAll_Parallel(
     const uint32 viewDescriptorSetIndex = pipeline->GetDescriptorTable()->GetDescriptorSetIndex(NAME("View"));
     const uint32 materialDescriptorSetIndex = pipeline->GetDescriptorTable()->GetDescriptorSetIndex(NAME("Material"));
 
-    CmdList& baseCommandList = parallelRenderingState->baseCommandList;
+    RenderQueue& rootQueue = parallelRenderingState->rootQueue;
 
-    baseCommandList.Add<BindGraphicsPipeline>(pipeline);
+    rootQueue.Add<BindGraphicsPipeline>(pipeline);
 
     if (globalDescriptorSetIndex != ~0u)
     {
-        baseCommandList.Add<BindDescriptorSet>(
+        rootQueue.Add<BindDescriptorSet>(
             globalDescriptorSet,
             pipeline,
             ArrayMap<Name, uint32> {
@@ -495,7 +495,7 @@ static void RenderAll_Parallel(
     {
         Assert(renderSetup.passData != nullptr);
 
-        baseCommandList.Add<BindDescriptorSet>(
+        rootQueue.Add<BindDescriptorSet>(
             renderSetup.passData->descriptorSets[frameIndex],
             pipeline,
             ArrayMap<Name, uint32> {},
@@ -508,7 +508,7 @@ static void RenderAll_Parallel(
         const DescriptorSetRef& materialDescriptorSet = pipeline->GetDescriptorTable()->GetDescriptorSet(NAME("Material"), frameIndex);
         AssertDebug(materialDescriptorSet.IsValid());
 
-        baseCommandList.Add<BindDescriptorSet>(
+        rootQueue.Add<BindDescriptorSet>(
             materialDescriptorSet,
             pipeline,
             ArrayMap<Name, uint32> {},
@@ -527,7 +527,7 @@ static void RenderAll_Parallel(
                     return;
                 }
 
-                CmdList& commandList = parallelRenderingState->commandLists[index];
+                RenderQueue& renderQueue = parallelRenderingState->localQueues[index];
 
                 const uint32 entityDescriptorSetIndex = pipeline->GetDescriptorTable()->GetDescriptorSetIndex(NAME("Object"));
                 const DescriptorSetRef& entityDescriptorSet = pipeline->GetDescriptorTable()->GetDescriptorSet(NAME("Object"), frameIndex);
@@ -547,7 +547,7 @@ static void RenderAll_Parallel(
                             offsets[NAME("MaterialsBuffer")] = ShaderDataOffset<MaterialShaderData>(drawCall.material, 0);
                         }
 
-                        commandList.Add<BindDescriptorSet>(entityDescriptorSet, pipeline, offsets, entityDescriptorSetIndex);
+                        renderQueue.Add<BindDescriptorSet>(entityDescriptorSet, pipeline, offsets, entityDescriptorSetIndex);
                     }
 
                     // Bind material descriptor set
@@ -555,24 +555,24 @@ static void RenderAll_Parallel(
                     {
                         const DescriptorSetRef& materialDescriptorSet = g_renderGlobalState->materialDescriptorSetManager->ForBoundMaterial(drawCall.material, frameIndex);
 
-                        commandList.Add<BindDescriptorSet>(materialDescriptorSet, pipeline, ArrayMap<Name, uint32> {}, materialDescriptorSetIndex);
+                        renderQueue.Add<BindDescriptorSet>(materialDescriptorSet, pipeline, ArrayMap<Name, uint32> {}, materialDescriptorSetIndex);
                     }
 
                     if (!prevDrawCall || prevDrawCall->mesh != drawCall.mesh)
                     {
-                        commandList.Add<BindVertexBuffer>(drawCall.mesh->GetVertexBuffer());
-                        commandList.Add<BindIndexBuffer>(drawCall.mesh->GetIndexBuffer());
+                        renderQueue.Add<BindVertexBuffer>(drawCall.mesh->GetVertexBuffer());
+                        renderQueue.Add<BindIndexBuffer>(drawCall.mesh->GetIndexBuffer());
                     }
 
                     if (UseIndirectRendering && drawCall.drawCommandIndex != ~0u)
                     {
-                        commandList.Add<DrawIndexedIndirect>(
+                        renderQueue.Add<DrawIndexedIndirect>(
                             indirectRenderer->GetDrawState().GetIndirectBuffer(frameIndex),
                             drawCall.drawCommandIndex * uint32(sizeof(IndirectDrawCommand)));
                     }
                     else
                     {
-                        commandList.Add<DrawIndexed>(drawCall.mesh->NumIndices(), 1);
+                        renderQueue.Add<DrawIndexed>(drawCall.mesh->NumIndices(), 1);
                     }
 
                     parallelRenderingState->renderStatsCounts[index][ERS_TRIANGLES] += drawCall.mesh->NumIndices() / 3;
@@ -600,7 +600,7 @@ static void RenderAll_Parallel(
                     return;
                 }
 
-                CmdList& commandList = parallelRenderingState->commandLists[index];
+                RenderQueue& renderQueue = parallelRenderingState->localQueues[index];
 
                 const uint32 entityDescriptorSetIndex = pipeline->GetDescriptorTable()->GetDescriptorSetIndex(NAME("Object"));
                 const DescriptorSetRef& entityDescriptorSet = pipeline->GetDescriptorTable()->GetDescriptorSet(NAME("Object"), frameIndex);
@@ -627,7 +627,7 @@ static void RenderAll_Parallel(
                             offsets[NAME("MaterialsBuffer")] = ShaderDataOffset<MaterialShaderData>(drawCall.material, 0);
                         }
 
-                        commandList.Add<BindDescriptorSet>(
+                        renderQueue.Add<BindDescriptorSet>(
                             entityDescriptorSet,
                             pipeline,
                             offsets,
@@ -639,7 +639,7 @@ static void RenderAll_Parallel(
                     {
                         const DescriptorSetRef& materialDescriptorSet = g_renderGlobalState->materialDescriptorSetManager->ForBoundMaterial(drawCall.material, frameIndex);
 
-                        commandList.Add<BindDescriptorSet>(
+                        renderQueue.Add<BindDescriptorSet>(
                             materialDescriptorSet,
                             pipeline,
                             ArrayMap<Name, uint32> {},
@@ -648,7 +648,7 @@ static void RenderAll_Parallel(
 
                     const SizeType offset = entityInstanceBatch->batchIndex * drawCallCollection.impl->GetStructSize();
 
-                    commandList.Add<BindDescriptorSet>(
+                    renderQueue.Add<BindDescriptorSet>(
                         instancingDescriptorSet,
                         pipeline,
                         ArrayMap<Name, uint32> {
@@ -657,19 +657,19 @@ static void RenderAll_Parallel(
 
                     if (!prevDrawCall || prevDrawCall->mesh != drawCall.mesh)
                     {
-                        commandList.Add<BindVertexBuffer>(drawCall.mesh->GetVertexBuffer());
-                        commandList.Add<BindIndexBuffer>(drawCall.mesh->GetIndexBuffer());
+                        renderQueue.Add<BindVertexBuffer>(drawCall.mesh->GetVertexBuffer());
+                        renderQueue.Add<BindIndexBuffer>(drawCall.mesh->GetIndexBuffer());
                     }
 
                     if (UseIndirectRendering && drawCall.drawCommandIndex != ~0u)
                     {
-                        commandList.Add<DrawIndexedIndirect>(
+                        renderQueue.Add<DrawIndexedIndirect>(
                             indirectRenderer->GetDrawState().GetIndirectBuffer(frameIndex),
                             drawCall.drawCommandIndex * uint32(sizeof(IndirectDrawCommand)));
                     }
                     else
                     {
-                        commandList.Add<DrawIndexed>(drawCall.mesh->NumIndices(), entityInstanceBatch->numEntities);
+                        renderQueue.Add<DrawIndexed>(drawCall.mesh->NumIndices(), entityInstanceBatch->numEntities);
                     }
 
                     prevDrawCall = &drawCall;

@@ -10,7 +10,7 @@
 #include <rendering/Deferred.hpp>
 #include <rendering/GBuffer.hpp>
 
-#include <rendering/rhi/CmdList.hpp>
+#include <rendering/RenderQueue.hpp>
 
 #include <rendering/RenderBackend.hpp>
 #include <rendering/RenderFrame.hpp>
@@ -296,11 +296,11 @@ void SSRRenderer::Render(FrameBase* frame, const RenderSetup& renderSetup)
 
     { // PASS 1 -- write UVs
 
-        frame->GetCommandList().Add<InsertBarrier>(m_uvsTexture->GetRenderResource().GetImage(), RS_UNORDERED_ACCESS);
+        frame->renderQueue.Add<InsertBarrier>(m_uvsTexture->GetRenderResource().GetImage(), RS_UNORDERED_ACCESS);
 
-        frame->GetCommandList().Add<BindComputePipeline>(m_writeUvs);
+        frame->renderQueue.Add<BindComputePipeline>(m_writeUvs);
 
-        frame->GetCommandList().Add<BindDescriptorTable>(
+        frame->renderQueue.Add<BindDescriptorTable>(
             m_writeUvs->GetDescriptorTable(),
             m_writeUvs,
             ArrayMap<Name, ArrayMap<Name, uint32>> {
@@ -315,26 +315,26 @@ void SSRRenderer::Render(FrameBase* frame, const RenderSetup& renderSetup)
         {
             Assert(renderSetup.passData != nullptr);
 
-            frame->GetCommandList().Add<BindDescriptorSet>(
+            frame->renderQueue.Add<BindDescriptorSet>(
                 renderSetup.passData->descriptorSets[frame->GetFrameIndex()],
                 m_writeUvs,
                 ArrayMap<Name, uint32> {},
                 viewDescriptorSetIndex);
         }
 
-        frame->GetCommandList().Add<DispatchCompute>(m_writeUvs, Vec3u { numDispatchCalls, 1, 1 });
+        frame->renderQueue.Add<DispatchCompute>(m_writeUvs, Vec3u { numDispatchCalls, 1, 1 });
 
         // transition the UV image back into read state
-        frame->GetCommandList().Add<InsertBarrier>(m_uvsTexture->GetRenderResource().GetImage(), RS_SHADER_RESOURCE);
+        frame->renderQueue.Add<InsertBarrier>(m_uvsTexture->GetRenderResource().GetImage(), RS_SHADER_RESOURCE);
     }
 
     { // PASS 2 - sample textures
         // put sample image in writeable state
-        frame->GetCommandList().Add<InsertBarrier>(m_sampledResultTexture->GetRenderResource().GetImage(), RS_UNORDERED_ACCESS);
+        frame->renderQueue.Add<InsertBarrier>(m_sampledResultTexture->GetRenderResource().GetImage(), RS_UNORDERED_ACCESS);
 
-        frame->GetCommandList().Add<BindComputePipeline>(m_sampleGbuffer);
+        frame->renderQueue.Add<BindComputePipeline>(m_sampleGbuffer);
 
-        frame->GetCommandList().Add<BindDescriptorTable>(
+        frame->renderQueue.Add<BindDescriptorTable>(
             m_sampleGbuffer->GetDescriptorTable(),
             m_sampleGbuffer,
             ArrayMap<Name, ArrayMap<Name, uint32>> {
@@ -349,17 +349,17 @@ void SSRRenderer::Render(FrameBase* frame, const RenderSetup& renderSetup)
         {
             Assert(renderSetup.passData != nullptr);
 
-            frame->GetCommandList().Add<BindDescriptorSet>(
+            frame->renderQueue.Add<BindDescriptorSet>(
                 renderSetup.passData->descriptorSets[frame->GetFrameIndex()],
                 m_sampleGbuffer,
                 ArrayMap<Name, uint32> {},
                 viewDescriptorSetIndex);
         }
 
-        frame->GetCommandList().Add<DispatchCompute>(m_sampleGbuffer, Vec3u { numDispatchCalls, 1, 1 });
+        frame->renderQueue.Add<DispatchCompute>(m_sampleGbuffer, Vec3u { numDispatchCalls, 1, 1 });
 
         // transition sample image back into read state
-        frame->GetCommandList().Add<InsertBarrier>(m_sampledResultTexture->GetRenderResource().GetImage(), RS_SHADER_RESOURCE);
+        frame->renderQueue.Add<InsertBarrier>(m_sampledResultTexture->GetRenderResource().GetImage(), RS_SHADER_RESOURCE);
     }
 
     if (useTemporalBlending && m_temporalBlending != nullptr)

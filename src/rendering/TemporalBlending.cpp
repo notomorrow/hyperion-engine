@@ -300,7 +300,7 @@ void TemporalBlending::Render(FrameBase* frame, const RenderSetup& renderSetup)
         ? m_resultTexture->GetRenderResource().GetImage()
         : m_historyTexture->GetRenderResource().GetImage();
 
-    frame->GetCommandList().Add<InsertBarrier>(activeImage, RS_UNORDERED_ACCESS);
+    frame->renderQueue.Add<InsertBarrier>(activeImage, RS_UNORDERED_ACCESS);
 
     const Vec3u& extent = activeImage->GetExtent();
     const Vec3u depthTextureDimensions = m_gbuffer->GetBucket(RB_OPAQUE)
@@ -322,9 +322,9 @@ void TemporalBlending::Render(FrameBase* frame, const RenderSetup& renderSetup)
 
     m_performBlending->SetPushConstants(&pushConstants, sizeof(pushConstants));
 
-    frame->GetCommandList().Add<BindComputePipeline>(m_performBlending);
+    frame->renderQueue.Add<BindComputePipeline>(m_performBlending);
 
-    frame->GetCommandList().Add<BindDescriptorTable>(
+    frame->renderQueue.Add<BindDescriptorTable>(
         m_descriptorTable,
         m_performBlending,
         ArrayMap<Name, ArrayMap<Name, uint32>> {
@@ -339,14 +339,14 @@ void TemporalBlending::Render(FrameBase* frame, const RenderSetup& renderSetup)
     {
         Assert(renderSetup.passData != nullptr);
 
-        frame->GetCommandList().Add<BindDescriptorSet>(
+        frame->renderQueue.Add<BindDescriptorSet>(
             renderSetup.passData->descriptorSets[frame->GetFrameIndex()],
             m_performBlending,
             ArrayMap<Name, uint32> {},
             viewDescriptorSetIndex);
     }
 
-    frame->GetCommandList().Add<DispatchCompute>(
+    frame->renderQueue.Add<DispatchCompute>(
         m_performBlending,
         Vec3u {
             (extent.x + 7) / 8,
@@ -354,7 +354,7 @@ void TemporalBlending::Render(FrameBase* frame, const RenderSetup& renderSetup)
             1 });
 
     // set it to be able to be used as texture2D for next pass, or outside of this
-    frame->GetCommandList().Add<InsertBarrier>(activeImage, RS_SHADER_RESOURCE);
+    frame->renderQueue.Add<InsertBarrier>(activeImage, RS_SHADER_RESOURCE);
 
     m_blendingFrameCounter = m_technique == TemporalBlendTechnique::TECHNIQUE_4
         ? m_blendingFrameCounter + 1

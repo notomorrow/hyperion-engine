@@ -187,10 +187,10 @@ void FinalPass::Render(FrameBase* frame, RenderWorld* renderWorld)
     const FramebufferRef& framebuffer = m_swapchain->GetFramebuffers()[acquiredImageIndex];
     AssertDebug(framebuffer != nullptr);
 
-    frame->GetCommandList().Add<BeginFramebuffer>(framebuffer);
-    frame->GetCommandList().Add<BindGraphicsPipeline>(m_renderTextureToScreenPass->GetGraphicsPipeline());
+    frame->renderQueue.Add<BeginFramebuffer>(framebuffer);
+    frame->renderQueue.Add<BindGraphicsPipeline>(m_renderTextureToScreenPass->GetGraphicsPipeline());
 
-    frame->GetCommandList().Add<BindDescriptorTable>(
+    frame->renderQueue.Add<BindDescriptorTable>(
         m_renderTextureToScreenPass->GetGraphicsPipeline()->GetDescriptorTable(),
         m_renderTextureToScreenPass->GetGraphicsPipeline(),
         ArrayMap<Name, ArrayMap<Name, uint32>> {},
@@ -203,8 +203,8 @@ void FinalPass::Render(FrameBase* frame, RenderWorld* renderWorld)
     DeferredRenderer* dr = static_cast<DeferredRenderer*>(g_renderGlobalState->mainRenderer);
     AssertDebug(dr != nullptr);
 
-    frame->GetCommandList().Add<BindVertexBuffer>(m_quadMesh->GetVertexBuffer());
-    frame->GetCommandList().Add<BindIndexBuffer>(m_quadMesh->GetIndexBuffer());
+    frame->renderQueue.Add<BindVertexBuffer>(m_quadMesh->GetVertexBuffer());
+    frame->renderQueue.Add<BindIndexBuffer>(m_quadMesh->GetIndexBuffer());
 
     // ordered by priority of the view
     for (const Pair<View*, DeferredPassData*>& it : dr->GetLastFrameData().passData)
@@ -217,13 +217,13 @@ void FinalPass::Render(FrameBase* frame, RenderWorld* renderWorld)
 
         AssertDebug(pd->finalPassDescriptorSet);
 
-        frame->GetCommandList().Add<BindDescriptorSet>(
+        frame->renderQueue.Add<BindDescriptorSet>(
             pd->finalPassDescriptorSet,
             m_renderTextureToScreenPass->GetGraphicsPipeline(),
             ArrayMap<Name, uint32> {},
             descriptorSetIndex);
 
-        frame->GetCommandList().Add<DrawIndexed>(m_quadMesh->NumIndices());
+        frame->renderQueue.Add<DrawIndexed>(m_quadMesh->NumIndices());
     }
 
 #ifdef HYP_RENDER_UI_IN_FINAL_PASS
@@ -238,19 +238,19 @@ void FinalPass::Render(FrameBase* frame, RenderWorld* renderWorld)
             m_dirtyFrameIndices &= ~(1u << frameIndex);
         }
 
-        frame->GetCommandList().Add<BindDescriptorSet>(
+        frame->renderQueue.Add<BindDescriptorSet>(
             m_renderTextureToScreenPass->GetGraphicsPipeline()->GetDescriptorTable()->GetDescriptorSet(NAME("RenderTextureToScreenDescriptorSet"), frameIndex),
             m_renderTextureToScreenPass->GetGraphicsPipeline(),
             ArrayMap<Name, uint32> {},
             descriptorSetIndex);
 
-        frame->GetCommandList().Add<DrawIndexed>(m_quadMesh->NumIndices());
+        frame->renderQueue.Add<DrawIndexed>(m_quadMesh->NumIndices());
 
         // DebugLog(LogType::Debug, "Rendering UI layer to screen for frame index %u\n", frameIndex);
     }
 #endif
 
-    frame->GetCommandList().Add<EndFramebuffer>(framebuffer);
+    frame->renderQueue.Add<EndFramebuffer>(framebuffer);
 }
 
 #pragma endregion FinalPass

@@ -162,9 +162,9 @@ void RaytracingReflections::Render(FrameBase* frame, const RenderSetup& renderSe
     const uint32 viewDescriptorSetIndex = m_raytracingPipeline->GetDescriptorTable()->GetDescriptorSetIndex(NAME("View"));
     AssertDebug(viewDescriptorSetIndex != ~0u);
 
-    frame->GetCommandList().Add<BindRaytracingPipeline>(m_raytracingPipeline);
+    frame->renderQueue.Add<BindRaytracingPipeline>(m_raytracingPipeline);
 
-    frame->GetCommandList().Add<BindDescriptorTable>(
+    frame->renderQueue.Add<BindDescriptorTable>(
         m_raytracingPipeline->GetDescriptorTable(),
         m_raytracingPipeline,
         ArrayMap<Name, ArrayMap<Name, uint32>> {
@@ -175,21 +175,21 @@ void RaytracingReflections::Render(FrameBase* frame, const RenderSetup& renderSe
                     { NAME("CurrentEnvProbe"), ShaderDataOffset<EnvProbeShaderData>(renderSetup.envProbe, 0) } } } },
         frame->GetFrameIndex());
 
-    frame->GetCommandList().Add<BindDescriptorSet>(
+    frame->renderQueue.Add<BindDescriptorSet>(
         renderSetup.passData->descriptorSets[frame->GetFrameIndex()],
         m_raytracingPipeline,
         ArrayMap<Name, uint32> {},
         viewDescriptorSetIndex);
 
-    frame->GetCommandList().Add<InsertBarrier>(m_texture->GetRenderResource().GetImage(), RS_UNORDERED_ACCESS);
+    frame->renderQueue.Add<InsertBarrier>(m_texture->GetRenderResource().GetImage(), RS_UNORDERED_ACCESS);
 
     const Vec3u imageExtent = m_texture->GetRenderResource().GetImage()->GetExtent();
 
     const SizeType numPixels = imageExtent.Volume();
     // const SizeType halfNumPixels = numPixels / 2;
 
-    frame->GetCommandList().Add<TraceRays>(m_raytracingPipeline, Vec3u { uint32(numPixels), 1, 1 });
-    frame->GetCommandList().Add<InsertBarrier>(m_texture->GetRenderResource().GetImage(), RS_SHADER_RESOURCE);
+    frame->renderQueue.Add<TraceRays>(m_raytracingPipeline, Vec3u { uint32(numPixels), 1, 1 });
+    frame->renderQueue.Add<InsertBarrier>(m_texture->GetRenderResource().GetImage(), RS_SHADER_RESOURCE);
 
     // Reset progressive blending if the camera view matrix has changed (for path tracing)
     if (IsPathTracer() && renderSetup.view->GetCamera()->GetBufferData().view != m_previousViewMatrix)

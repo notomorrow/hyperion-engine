@@ -7,7 +7,7 @@
 #include <core/containers/FixedArray.hpp>
 #include <core/containers/ArrayMap.hpp>
 
-#include <rendering/rhi/CmdList.hpp>
+#include <rendering/RenderQueue.hpp>
 
 #include <rendering/RenderObject.hpp>
 #include <rendering/RenderResult.hpp>
@@ -27,18 +27,7 @@ public:
 
     virtual bool IsSupported() const = 0;
 
-    HYP_FORCE_INLINE CmdList& GetCommandList()
-    {
-        return m_commandList;
-    }
-
-    HYP_FORCE_INLINE const CmdList& GetCommandList(uint32 frameIndex) const
-    {
-        return m_commandList;
-    }
-
-protected:
-    CmdList m_commandList;
+    RenderQueue renderQueue;
 };
 
 } // namespace hyperion

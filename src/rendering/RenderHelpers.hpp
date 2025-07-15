@@ -13,7 +13,7 @@
 
 namespace hyperion {
 
-class CmdList;
+class RenderQueue;
 namespace helpers {
 
 uint32 MipmapSize(uint32 srcSize, int lod);
@@ -25,7 +25,7 @@ class SingleTimeCommands
 public:
     HYP_API virtual ~SingleTimeCommands() = default;
 
-    void Push(Proc<void(CmdList& commandList)>&& fn)
+    void Push(Proc<void(RenderQueue& renderQueue)>&& fn)
     {
         m_functions.PushBack(std::move(fn));
     }
@@ -33,7 +33,7 @@ public:
     virtual RendererResult Execute() = 0;
 
 protected:
-    Array<Proc<void(CmdList& commandList)>> m_functions;
+    Array<Proc<void(RenderQueue& renderQueue)>> m_functions;
 };
 
 } // namespace hyperion

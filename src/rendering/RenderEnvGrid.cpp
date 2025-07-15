@@ -833,7 +833,7 @@ void EnvGridRenderer::ComputeEnvProbeIrradiance_SphericalHarmonics(FrameBase* fr
     pd->clearSh->SetPushConstants(&pushConstants, sizeof(pushConstants));
     pd->computeSh->SetPushConstants(&pushConstants, sizeof(pushConstants));
 
-    CmdList& asyncComputeCommandList = g_renderBackend->GetAsyncCompute()->GetCommandList();
+    RenderQueue& asyncComputeCommandList = g_renderBackend->GetAsyncCompute()->renderQueue;
 
     asyncComputeCommandList.Add<InsertBarrier>(pd->shTilesBuffers[0], RS_UNORDERED_ACCESS, SMT_COMPUTE);
     asyncComputeCommandList.Add<InsertBarrier>(g_renderGlobalState->gpuBuffers[GRB_ENV_PROBES]->GetBuffer(frame->GetFrameIndex()), RS_UNORDERED_ACCESS, SMT_COMPUTE);
@@ -1046,10 +1046,10 @@ void EnvGridRenderer::ComputeEnvProbeIrradiance_LightField(FrameBase* frame, con
         pd->uniformBuffers[frame->GetFrameIndex()]->Copy(sizeof(uniforms), &uniforms);
     }
 
-    frame->GetCommandList().Add<InsertBarrier>(envGrid->GetLightFieldIrradianceTexture()->GetRenderResource().GetImage(), RS_UNORDERED_ACCESS);
-    frame->GetCommandList().Add<BindComputePipeline>(pd->computeIrradiance);
+    frame->renderQueue.Add<InsertBarrier>(envGrid->GetLightFieldIrradianceTexture()->GetRenderResource().GetImage(), RS_UNORDERED_ACCESS);
+    frame->renderQueue.Add<BindComputePipeline>(pd->computeIrradiance);
 
-    frame->GetCommandList().Add<BindDescriptorTable>(
+    frame->renderQueue.Add<BindDescriptorTable>(
         pd->computeIrradiance->GetDescriptorTable(),
         pd->computeIrradiance,
         ArrayMap<Name, ArrayMap<Name, uint32>> {
@@ -1058,11 +1058,11 @@ void EnvGridRenderer::ComputeEnvProbeIrradiance_LightField(FrameBase* frame, con
                     { NAME("CurrentEnvProbe"), ShaderDataOffset<EnvProbeShaderData>(renderSetup.envProbe, 0) } } } },
         frame->GetFrameIndex());
 
-    frame->GetCommandList().Add<DispatchCompute>(pd->computeIrradiance, Vec3u { uint32(irradianceOctahedronSize.x + 7) / 8, uint32(irradianceOctahedronSize.y + 7) / 8, 1 });
+    frame->renderQueue.Add<DispatchCompute>(pd->computeIrradiance, Vec3u { uint32(irradianceOctahedronSize.x + 7) / 8, uint32(irradianceOctahedronSize.y + 7) / 8, 1 });
 
-    frame->GetCommandList().Add<BindComputePipeline>(pd->computeFilteredDepth);
+    frame->renderQueue.Add<BindComputePipeline>(pd->computeFilteredDepth);
 
-    frame->GetCommandList().Add<BindDescriptorTable>(
+    frame->renderQueue.Add<BindDescriptorTable>(
         pd->computeFilteredDepth->GetDescriptorTable(),
         pd->computeFilteredDepth,
         ArrayMap<Name, ArrayMap<Name, uint32>> {
@@ -1071,12 +1071,12 @@ void EnvGridRenderer::ComputeEnvProbeIrradiance_LightField(FrameBase* frame, con
                     { NAME("CurrentEnvProbe"), ShaderDataOffset<EnvProbeShaderData>(renderSetup.envProbe, 0) } } } },
         frame->GetFrameIndex());
 
-    frame->GetCommandList().Add<DispatchCompute>(pd->computeFilteredDepth, Vec3u { uint32(irradianceOctahedronSize.x + 7) / 8, uint32(irradianceOctahedronSize.y + 7) / 8, 1 });
+    frame->renderQueue.Add<DispatchCompute>(pd->computeFilteredDepth, Vec3u { uint32(irradianceOctahedronSize.x + 7) / 8, uint32(irradianceOctahedronSize.y + 7) / 8, 1 });
 
-    frame->GetCommandList().Add<InsertBarrier>(envGrid->GetLightFieldDepthTexture()->GetRenderResource().GetImage(), RS_UNORDERED_ACCESS);
+    frame->renderQueue.Add<InsertBarrier>(envGrid->GetLightFieldDepthTexture()->GetRenderResource().GetImage(), RS_UNORDERED_ACCESS);
 
-    frame->GetCommandList().Add<BindComputePipeline>(pd->copyBorderTexels);
-    frame->GetCommandList().Add<BindDescriptorTable>(
+    frame->renderQueue.Add<BindComputePipeline>(pd->copyBorderTexels);
+    frame->renderQueue.Add<BindDescriptorTable>(
         pd->copyBorderTexels->GetDescriptorTable(),
         pd->copyBorderTexels,
         ArrayMap<Name, ArrayMap<Name, uint32>> {
@@ -1085,10 +1085,10 @@ void EnvGridRenderer::ComputeEnvProbeIrradiance_LightField(FrameBase* frame, con
                     { NAME("CurrentEnvProbe"), ShaderDataOffset<EnvProbeShaderData>(renderSetup.envProbe, 0) } } } },
         frame->GetFrameIndex());
 
-    frame->GetCommandList().Add<DispatchCompute>(pd->copyBorderTexels, Vec3u { uint32((irradianceOctahedronSize.x * 4) + 255) / 256, 1, 1 });
+    frame->renderQueue.Add<DispatchCompute>(pd->copyBorderTexels, Vec3u { uint32((irradianceOctahedronSize.x * 4) + 255) / 256, 1, 1 });
 
-    frame->GetCommandList().Add<InsertBarrier>(envGrid->GetLightFieldIrradianceTexture()->GetRenderResource().GetImage(), RS_SHADER_RESOURCE);
-    frame->GetCommandList().Add<InsertBarrier>(envGrid->GetLightFieldDepthTexture()->GetRenderResource().GetImage(), RS_SHADER_RESOURCE);
+    frame->renderQueue.Add<InsertBarrier>(envGrid->GetLightFieldIrradianceTexture()->GetRenderResource().GetImage(), RS_SHADER_RESOURCE);
+    frame->renderQueue.Add<InsertBarrier>(envGrid->GetLightFieldDepthTexture()->GetRenderResource().GetImage(), RS_SHADER_RESOURCE);
 }
 
 void EnvGridRenderer::OffsetVoxelGrid(FrameBase* frame, const RenderSetup& renderSetup, Vec3i offset)
@@ -1123,10 +1123,10 @@ void EnvGridRenderer::OffsetVoxelGrid(FrameBase* frame, const RenderSetup& rende
 
     pd->offsetVoxelGrid->SetPushConstants(&pushConstants, sizeof(pushConstants));
 
-    frame->GetCommandList().Add<InsertBarrier>(envGrid->GetVoxelGridTexture()->GetRenderResource().GetImage(), RS_UNORDERED_ACCESS);
-    frame->GetCommandList().Add<BindComputePipeline>(pd->offsetVoxelGrid);
+    frame->renderQueue.Add<InsertBarrier>(envGrid->GetVoxelGridTexture()->GetRenderResource().GetImage(), RS_UNORDERED_ACCESS);
+    frame->renderQueue.Add<BindComputePipeline>(pd->offsetVoxelGrid);
 
-    frame->GetCommandList().Add<BindDescriptorTable>(
+    frame->renderQueue.Add<BindDescriptorTable>(
         pd->offsetVoxelGrid->GetDescriptorTable(),
         pd->offsetVoxelGrid,
         ArrayMap<Name, ArrayMap<Name, uint32>> {
@@ -1134,8 +1134,8 @@ void EnvGridRenderer::OffsetVoxelGrid(FrameBase* frame, const RenderSetup& rende
                 { { NAME("EnvGridsBuffer"), ShaderDataOffset<EnvGridShaderData>(envGrid) } } } },
         frame->GetFrameIndex());
 
-    frame->GetCommandList().Add<DispatchCompute>(pd->offsetVoxelGrid, (envGrid->GetVoxelGridTexture()->GetRenderResource().GetImage()->GetExtent() + Vec3u(7)) / Vec3u(8));
-    frame->GetCommandList().Add<InsertBarrier>(envGrid->GetVoxelGridTexture()->GetRenderResource().GetImage(), RS_SHADER_RESOURCE);
+    frame->renderQueue.Add<DispatchCompute>(pd->offsetVoxelGrid, (envGrid->GetVoxelGridTexture()->GetRenderResource().GetImage()->GetExtent() + Vec3u(7)) / Vec3u(8));
+    frame->renderQueue.Add<InsertBarrier>(envGrid->GetVoxelGridTexture()->GetRenderResource().GetImage(), RS_SHADER_RESOURCE);
 }
 
 void EnvGridRenderer::VoxelizeProbe(FrameBase* frame, const RenderSetup& renderSetup, uint32 probeIndex)
@@ -1197,17 +1197,17 @@ void EnvGridRenderer::VoxelizeProbe(FrameBase* frame, const RenderSetup& renderS
     pushConstants.cubemapDimensions = Vec4u(cubemapDimensions, 0);
     pushConstants.worldPosition = probe->GetRenderResource().GetBufferData().worldPosition;
 
-    frame->GetCommandList().Add<InsertBarrier>(colorImage, RS_SHADER_RESOURCE);
+    frame->renderQueue.Add<InsertBarrier>(colorImage, RS_SHADER_RESOURCE);
 
     if (false)
     { // Clear our voxel grid at the start of each probe
         pd->clearVoxels->SetPushConstants(&pushConstants, sizeof(pushConstants));
 
-        frame->GetCommandList().Add<InsertBarrier>(envGrid->GetVoxelGridTexture()->GetRenderResource().GetImage(), RS_UNORDERED_ACCESS);
+        frame->renderQueue.Add<InsertBarrier>(envGrid->GetVoxelGridTexture()->GetRenderResource().GetImage(), RS_UNORDERED_ACCESS);
 
-        frame->GetCommandList().Add<BindComputePipeline>(pd->clearVoxels);
+        frame->renderQueue.Add<BindComputePipeline>(pd->clearVoxels);
 
-        frame->GetCommandList().Add<BindDescriptorTable>(
+        frame->renderQueue.Add<BindDescriptorTable>(
             pd->clearVoxels->GetDescriptorTable(),
             pd->clearVoxels,
             ArrayMap<Name, ArrayMap<Name, uint32>> {
@@ -1215,16 +1215,16 @@ void EnvGridRenderer::VoxelizeProbe(FrameBase* frame, const RenderSetup& renderS
                     { { NAME("EnvGridsBuffer"), ShaderDataOffset<EnvGridShaderData>(envGrid) } } } },
             frame->GetFrameIndex());
 
-        frame->GetCommandList().Add<DispatchCompute>(pd->clearVoxels, (probeVoxelExtent + Vec3u(7)) / Vec3u(8));
+        frame->renderQueue.Add<DispatchCompute>(pd->clearVoxels, (probeVoxelExtent + Vec3u(7)) / Vec3u(8));
     }
 
     { // Voxelize probe
         pd->voxelizeProbe->SetPushConstants(&pushConstants, sizeof(pushConstants));
 
-        frame->GetCommandList().Add<InsertBarrier>(envGrid->GetVoxelGridTexture()->GetRenderResource().GetImage(), RS_UNORDERED_ACCESS);
-        frame->GetCommandList().Add<BindComputePipeline>(pd->voxelizeProbe);
+        frame->renderQueue.Add<InsertBarrier>(envGrid->GetVoxelGridTexture()->GetRenderResource().GetImage(), RS_UNORDERED_ACCESS);
+        frame->renderQueue.Add<BindComputePipeline>(pd->voxelizeProbe);
 
-        frame->GetCommandList().Add<BindDescriptorTable>(
+        frame->renderQueue.Add<BindDescriptorTable>(
             pd->voxelizeProbe->GetDescriptorTable(),
             pd->voxelizeProbe,
             ArrayMap<Name, ArrayMap<Name, uint32>> {
@@ -1232,7 +1232,7 @@ void EnvGridRenderer::VoxelizeProbe(FrameBase* frame, const RenderSetup& renderS
                     { { NAME("EnvGridsBuffer"), ShaderDataOffset<EnvGridShaderData>(envGrid) } } } },
             frame->GetFrameIndex());
 
-        frame->GetCommandList().Add<DispatchCompute>(
+        frame->renderQueue.Add<DispatchCompute>(
             pd->voxelizeProbe,
             Vec3u {
                 (probeVoxelExtent.x + 31) / 32,
@@ -1241,7 +1241,7 @@ void EnvGridRenderer::VoxelizeProbe(FrameBase* frame, const RenderSetup& renderS
     }
 
     { // Generate mipmaps for the voxel grid
-        frame->GetCommandList().Add<InsertBarrier>(envGrid->GetVoxelGridTexture()->GetRenderResource().GetImage(), RS_SHADER_RESOURCE);
+        frame->renderQueue.Add<InsertBarrier>(envGrid->GetVoxelGridTexture()->GetRenderResource().GetImage(), RS_SHADER_RESOURCE);
 
         const uint32 numMipLevels = envGrid->GetVoxelGridTexture()->GetRenderResource().GetImage()->NumMipmaps();
 
@@ -1270,13 +1270,13 @@ void EnvGridRenderer::VoxelizeProbe(FrameBase* frame, const RenderSetup& renderS
             if (mipLevel != 0)
             {
                 // put the mip into writeable state
-                frame->GetCommandList().Add<InsertBarrier>(
+                frame->renderQueue.Add<InsertBarrier>(
                     envGrid->GetVoxelGridTexture()->GetRenderResource().GetImage(),
                     RS_UNORDERED_ACCESS,
                     ImageSubResource { .baseMipLevel = mipLevel });
             }
 
-            frame->GetCommandList().Add<BindDescriptorTable>(
+            frame->renderQueue.Add<BindDescriptorTable>(
                 pd->generateVoxelGridMipmapsDescriptorTables[mipLevel],
                 pd->generateVoxelGridMipmaps,
                 ArrayMap<Name, ArrayMap<Name, uint32>> {},
@@ -1284,19 +1284,19 @@ void EnvGridRenderer::VoxelizeProbe(FrameBase* frame, const RenderSetup& renderS
 
             pd->generateVoxelGridMipmaps->SetPushConstants(&pushConstantData, sizeof(pushConstantData));
 
-            frame->GetCommandList().Add<BindComputePipeline>(pd->generateVoxelGridMipmaps);
+            frame->renderQueue.Add<BindComputePipeline>(pd->generateVoxelGridMipmaps);
 
-            frame->GetCommandList().Add<DispatchCompute>(pd->generateVoxelGridMipmaps, (mipExtent + Vec3u(7)) / Vec3u(8));
+            frame->renderQueue.Add<DispatchCompute>(pd->generateVoxelGridMipmaps, (mipExtent + Vec3u(7)) / Vec3u(8));
 
             // put this mip into readable state
-            frame->GetCommandList().Add<InsertBarrier>(
+            frame->renderQueue.Add<InsertBarrier>(
                 envGrid->GetVoxelGridTexture()->GetRenderResource().GetImage(),
                 RS_SHADER_RESOURCE,
                 ImageSubResource { .baseMipLevel = mipLevel });
         }
 
         // all mip levels have been transitioned into this state
-        frame->GetCommandList().Add<InsertBarrier>(envGrid->GetVoxelGridTexture()->GetRenderResource().GetImage(), RS_SHADER_RESOURCE);
+        frame->renderQueue.Add<InsertBarrier>(envGrid->GetVoxelGridTexture()->GetRenderResource().GetImage(), RS_SHADER_RESOURCE);
     }
 }
 

@@ -321,12 +321,12 @@ void DeferredPass::Render(FrameBase* frame, const RenderSetup& rs)
             {
                 pipeline->SetPushConstants(m_pushConstantData.Data(), m_pushConstantData.Size());
 
-                frame->GetCommandList().Add<BindGraphicsPipeline>(pipeline);
+                frame->renderQueue.Add<BindGraphicsPipeline>(pipeline);
 
                 // Bind textures globally (bindless)
                 if (materialDescriptorSetIndex != ~0u && useBindlessTextures)
                 {
-                    frame->GetCommandList().Add<BindDescriptorSet>(
+                    frame->renderQueue.Add<BindDescriptorSet>(
                         pipeline->GetDescriptorTable()->GetDescriptorSet(NAME("Material"), frame->GetFrameIndex()),
                         pipeline,
                         ArrayMap<Name, uint32> {},
@@ -335,20 +335,20 @@ void DeferredPass::Render(FrameBase* frame, const RenderSetup& rs)
 
                 if (deferredDirectDescriptorSetIndex != ~0u)
                 {
-                    frame->GetCommandList().Add<BindDescriptorSet>(
+                    frame->renderQueue.Add<BindDescriptorSet>(
                         pipeline->GetDescriptorTable()->GetDescriptorSet(NAME("DeferredDirectDescriptorSet"), frame->GetFrameIndex()),
                         pipeline,
                         ArrayMap<Name, uint32> {},
                         deferredDirectDescriptorSetIndex);
                 }
 
-                frame->GetCommandList().Add<BindVertexBuffer>(m_fullScreenQuad->GetVertexBuffer());
-                frame->GetCommandList().Add<BindIndexBuffer>(m_fullScreenQuad->GetIndexBuffer());
+                frame->renderQueue.Add<BindVertexBuffer>(m_fullScreenQuad->GetVertexBuffer());
+                frame->renderQueue.Add<BindIndexBuffer>(m_fullScreenQuad->GetIndexBuffer());
 
                 isFirstLight = false;
             }
 
-            frame->GetCommandList().Add<BindDescriptorSet>(
+            frame->renderQueue.Add<BindDescriptorSet>(
                 pipeline->GetDescriptorTable()->GetDescriptorSet(NAME("Global"), frame->GetFrameIndex()),
                 pipeline,
                 ArrayMap<Name, uint32> {
@@ -357,7 +357,7 @@ void DeferredPass::Render(FrameBase* frame, const RenderSetup& rs)
                     { NAME("CurrentLight"), ShaderDataOffset<LightShaderData>(light, 0) } },
                 globalDescriptorSetIndex);
 
-            frame->GetCommandList().Add<BindDescriptorSet>(
+            frame->renderQueue.Add<BindDescriptorSet>(
                 rs.passData->descriptorSets[frame->GetFrameIndex()],
                 pipeline,
                 ArrayMap<Name, uint32> {},
@@ -368,14 +368,14 @@ void DeferredPass::Render(FrameBase* frame, const RenderSetup& rs)
             {
                 const DescriptorSetRef& materialDescriptorSet = g_renderGlobalState->materialDescriptorSetManager->ForBoundMaterial(light->GetMaterial(), frame->GetFrameIndex());
 
-                frame->GetCommandList().Add<BindDescriptorSet>(
+                frame->renderQueue.Add<BindDescriptorSet>(
                     materialDescriptorSet,
                     pipeline,
                     ArrayMap<Name, uint32> {},
                     materialDescriptorSetIndex);
             }
 
-            frame->GetCommandList().Add<DrawIndexed>(m_fullScreenQuad->NumIndices());
+            frame->renderQueue.Add<DrawIndexed>(m_fullScreenQuad->NumIndices());
         }
     }
 }
@@ -602,7 +602,7 @@ void EnvGridPass::Render(FrameBase* frame, const RenderSetup& rs)
 
     const uint32 frameIndex = frame->GetFrameIndex();
 
-    frame->GetCommandList().Add<BeginFramebuffer>(m_framebuffer);
+    frame->renderQueue.Add<BeginFramebuffer>(m_framebuffer);
 
     // render previous frame's result to screen
     if (!m_isFirstFrame && m_renderTextureToScreenPass != nullptr)
@@ -628,14 +628,14 @@ void EnvGridPass::Render(FrameBase* frame, const RenderSetup& rs)
             const Vec2i viewportOffset = (Vec2i(m_framebuffer->GetExtent().x, 0) / 2) * (rs.world->GetBufferData().frameCounter & 1);
             const Vec2u viewportExtent = Vec2u(m_framebuffer->GetExtent().x / 2, m_framebuffer->GetExtent().y);
 
-            frame->GetCommandList().Add<BindGraphicsPipeline>(graphicsPipeline, viewportOffset, viewportExtent);
+            frame->renderQueue.Add<BindGraphicsPipeline>(graphicsPipeline, viewportOffset, viewportExtent);
         }
         else
         {
-            frame->GetCommandList().Add<BindGraphicsPipeline>(graphicsPipeline);
+            frame->renderQueue.Add<BindGraphicsPipeline>(graphicsPipeline);
         }
 
-        frame->GetCommandList().Add<BindDescriptorSet>(
+        frame->renderQueue.Add<BindDescriptorSet>(
             graphicsPipeline->GetDescriptorTable()->GetDescriptorSet(NAME("Global"), frameIndex),
             graphicsPipeline,
             ArrayMap<Name, uint32> {
@@ -644,18 +644,18 @@ void EnvGridPass::Render(FrameBase* frame, const RenderSetup& rs)
                 { NAME("EnvGridsBuffer"), ShaderDataOffset<EnvGridShaderData>(envGrid, 0) } },
             globalDescriptorSetIndex);
 
-        frame->GetCommandList().Add<BindDescriptorSet>(
+        frame->renderQueue.Add<BindDescriptorSet>(
             rs.passData->descriptorSets[frameIndex],
             graphicsPipeline,
             ArrayMap<Name, uint32> {},
             viewDescriptorSetIndex);
 
-        frame->GetCommandList().Add<BindVertexBuffer>(m_fullScreenQuad->GetVertexBuffer());
-        frame->GetCommandList().Add<BindIndexBuffer>(m_fullScreenQuad->GetIndexBuffer());
-        frame->GetCommandList().Add<DrawIndexed>(m_fullScreenQuad->NumIndices());
+        frame->renderQueue.Add<BindVertexBuffer>(m_fullScreenQuad->GetVertexBuffer());
+        frame->renderQueue.Add<BindIndexBuffer>(m_fullScreenQuad->GetIndexBuffer());
+        frame->renderQueue.Add<DrawIndexed>(m_fullScreenQuad->NumIndices());
     }
 
-    frame->GetCommandList().Add<EndFramebuffer>(m_framebuffer);
+    frame->renderQueue.Add<EndFramebuffer>(m_framebuffer);
 
     if (ShouldRenderHalfRes())
     {
@@ -852,7 +852,7 @@ void ReflectionsPass::Render(FrameBase* frame, const RenderSetup& rs)
         }
     }
 
-    frame->GetCommandList().Add<BeginFramebuffer>(GetFramebuffer());
+    frame->renderQueue.Add<BeginFramebuffer>(GetFramebuffer());
 
     // render previous frame's result to screen
     if (!m_isFirstFrame && m_renderTextureToScreenPass != nullptr)
@@ -884,11 +884,11 @@ void ReflectionsPass::Render(FrameBase* frame, const RenderSetup& rs)
             const Vec2i viewportOffset = (Vec2i(m_framebuffer->GetExtent().x, 0) / 2) * (rs.world->GetBufferData().frameCounter & 1);
             const Vec2u viewportExtent = Vec2u(m_framebuffer->GetExtent().x / 2, m_framebuffer->GetExtent().y);
 
-            frame->GetCommandList().Add<BindGraphicsPipeline>(graphicsPipeline, viewportOffset, viewportExtent);
+            frame->renderQueue.Add<BindGraphicsPipeline>(graphicsPipeline, viewportOffset, viewportExtent);
         }
         else
         {
-            frame->GetCommandList().Add<BindGraphicsPipeline>(graphicsPipeline);
+            frame->renderQueue.Add<BindGraphicsPipeline>(graphicsPipeline);
         }
 
         const uint32 globalDescriptorSetIndex = graphicsPipeline->GetDescriptorTable()->GetDescriptorSetIndex(NAME("Global"));
@@ -908,7 +908,7 @@ void ReflectionsPass::Render(FrameBase* frame, const RenderSetup& rs)
             // AssertDebug(envProbeProxy->bufferData.textureIndex != ~0u, "EnvProbe texture index not set: not bound for proxy %p at frame idx %u!", (void*)envProbeProxy,
             //     RenderApi_GetFrameIndex_RenderThread());
 
-            frame->GetCommandList().Add<BindDescriptorSet>(
+            frame->renderQueue.Add<BindDescriptorSet>(
                 graphicsPipeline->GetDescriptorTable()->GetDescriptorSet(NAME("Global"), frameIndex),
                 graphicsPipeline,
                 ArrayMap<Name, uint32> {
@@ -917,15 +917,15 @@ void ReflectionsPass::Render(FrameBase* frame, const RenderSetup& rs)
                     { NAME("CurrentEnvProbe"), ShaderDataOffset<EnvProbeShaderData>(envProbe) } },
                 globalDescriptorSetIndex);
 
-            frame->GetCommandList().Add<BindDescriptorSet>(
+            frame->renderQueue.Add<BindDescriptorSet>(
                 rs.passData->descriptorSets[frameIndex],
                 graphicsPipeline,
                 ArrayMap<Name, uint32> {},
                 viewDescriptorSetIndex);
 
-            frame->GetCommandList().Add<BindVertexBuffer>(m_fullScreenQuad->GetVertexBuffer());
-            frame->GetCommandList().Add<BindIndexBuffer>(m_fullScreenQuad->GetIndexBuffer());
-            frame->GetCommandList().Add<DrawIndexed>(m_fullScreenQuad->NumIndices());
+            frame->renderQueue.Add<BindVertexBuffer>(m_fullScreenQuad->GetVertexBuffer());
+            frame->renderQueue.Add<BindIndexBuffer>(m_fullScreenQuad->GetIndexBuffer());
+            frame->renderQueue.Add<DrawIndexed>(m_fullScreenQuad->NumIndices());
 
             ++numRenderedEnvProbes;
         }
@@ -936,7 +936,7 @@ void ReflectionsPass::Render(FrameBase* frame, const RenderSetup& rs)
         m_renderSsrToScreenPass->RenderToFramebuffer(frame, rs, GetFramebuffer());
     }
 
-    frame->GetCommandList().Add<EndFramebuffer>(GetFramebuffer());
+    frame->renderQueue.Add<EndFramebuffer>(GetFramebuffer());
 
     if (ShouldRenderHalfRes())
     {
@@ -1835,11 +1835,11 @@ void DeferredRenderer::RenderFrameForView(FrameBase* frame, const RenderSetup& r
     pd->directPass->SetPushConstants(&deferredData, sizeof(deferredData));
 
     { // render opaque objects into separate framebuffer
-        frame->GetCommandList().Add<BeginFramebuffer>(opaqueFbo);
+        frame->renderQueue.Add<BeginFramebuffer>(opaqueFbo);
 
         ExecuteDrawCalls(frame, rs, renderCollector, (1u << RB_OPAQUE));
 
-        frame->GetCommandList().Add<EndFramebuffer>(opaqueFbo);
+        frame->renderQueue.Add<EndFramebuffer>(opaqueFbo);
     }
 
     if (useEnvGridIrradiance || useEnvGridRadiance)
@@ -1900,22 +1900,22 @@ void DeferredRenderer::RenderFrameForView(FrameBase* frame, const RenderSetup& r
     CHECK_FRAMEBUFFER_SIZE(deferredPassFramebuffer);
 
     { // deferred lighting on opaque objects
-        frame->GetCommandList().Add<BeginFramebuffer>(deferredPassFramebuffer);
+        frame->renderQueue.Add<BeginFramebuffer>(deferredPassFramebuffer);
 
         pd->indirectPass->Render(frame, rs);
         pd->directPass->Render(frame, rs);
 
-        frame->GetCommandList().Add<EndFramebuffer>(deferredPassFramebuffer);
+        frame->renderQueue.Add<EndFramebuffer>(deferredPassFramebuffer);
     }
 
     if (rpl.lightmapVolumes.NumCurrent())
     { // render objects to be lightmapped, separate from the opaque objects.
         // The lightmap bucket's framebuffer has a color attachment that will write into the opaque framebuffer's color attachment.
-        frame->GetCommandList().Add<BeginFramebuffer>(lightmapFbo);
+        frame->renderQueue.Add<BeginFramebuffer>(lightmapFbo);
 
         ExecuteDrawCalls(frame, rs, renderCollector, (1u << RB_LIGHTMAP));
 
-        frame->GetCommandList().Add<EndFramebuffer>(lightmapFbo);
+        frame->renderQueue.Add<EndFramebuffer>(lightmapFbo);
     }
 
     { // generate mipchain after rendering opaque objects' lighting, now we can use it for transmission
@@ -1924,20 +1924,20 @@ void DeferredRenderer::RenderFrameForView(FrameBase* frame, const RenderSetup& r
     }
 
     { // translucent objects
-        frame->GetCommandList().Add<BeginFramebuffer>(translucentFbo);
+        frame->renderQueue.Add<BeginFramebuffer>(translucentFbo);
 
         { // Render the deferred lighting into the translucent pass framebuffer with a full screen quad.
-            frame->GetCommandList().Add<BindGraphicsPipeline>(pd->combinePass->GetGraphicsPipeline());
+            frame->renderQueue.Add<BindGraphicsPipeline>(pd->combinePass->GetGraphicsPipeline());
 
-            frame->GetCommandList().Add<BindDescriptorTable>(
+            frame->renderQueue.Add<BindDescriptorTable>(
                 pd->combinePass->GetGraphicsPipeline()->GetDescriptorTable(),
                 pd->combinePass->GetGraphicsPipeline(),
                 ArrayMap<Name, ArrayMap<Name, uint32>> {},
                 frameIndex);
 
-            frame->GetCommandList().Add<BindVertexBuffer>(pd->combinePass->GetQuadMesh()->GetVertexBuffer());
-            frame->GetCommandList().Add<BindIndexBuffer>(pd->combinePass->GetQuadMesh()->GetIndexBuffer());
-            frame->GetCommandList().Add<DrawIndexed>(pd->combinePass->GetQuadMesh()->NumIndices());
+            frame->renderQueue.Add<BindVertexBuffer>(pd->combinePass->GetQuadMesh()->GetVertexBuffer());
+            frame->renderQueue.Add<BindIndexBuffer>(pd->combinePass->GetQuadMesh()->GetIndexBuffer());
+            frame->renderQueue.Add<DrawIndexed>(pd->combinePass->GetQuadMesh()->NumIndices());
         }
 
         // Render the objects to have lightmaps applied into the translucent pass framebuffer with a full screen quad.
@@ -1963,7 +1963,7 @@ void DeferredRenderer::RenderFrameForView(FrameBase* frame, const RenderSetup& r
         // // render debug draw
         // g_engine->GetDebugDrawer()->Render(frame, rs);
 
-        frame->GetCommandList().Add<EndFramebuffer>(translucentFbo);
+        frame->renderQueue.Add<EndFramebuffer>(translucentFbo);
     }
 
     { // render depth pyramid
@@ -2031,19 +2031,19 @@ void DeferredRenderer::GenerateMipChain(FrameBase* frame, const RenderSetup& rs,
     const ImageRef& mipmappedResult = pd->mipChain->GetRenderResource().GetImage();
     Assert(mipmappedResult.IsValid());
 
-    frame->GetCommandList().Add<InsertBarrier>(srcImage, RS_COPY_SRC);
-    frame->GetCommandList().Add<InsertBarrier>(mipmappedResult, RS_COPY_DST);
+    frame->renderQueue.Add<InsertBarrier>(srcImage, RS_COPY_SRC);
+    frame->renderQueue.Add<InsertBarrier>(mipmappedResult, RS_COPY_DST);
 
     // Blit into the mipmap chain img
-    frame->GetCommandList().Add<BlitRect>(
+    frame->renderQueue.Add<BlitRect>(
         srcImage,
         mipmappedResult,
         Rect<uint32> { 0, 0, srcImage->GetExtent().x, srcImage->GetExtent().y },
         Rect<uint32> { 0, 0, mipmappedResult->GetExtent().x, mipmappedResult->GetExtent().y });
 
-    frame->GetCommandList().Add<GenerateMipmaps>(mipmappedResult);
+    frame->renderQueue.Add<GenerateMipmaps>(mipmappedResult);
 
-    frame->GetCommandList().Add<InsertBarrier>(srcImage, RS_SHADER_RESOURCE);
+    frame->renderQueue.Add<InsertBarrier>(srcImage, RS_SHADER_RESOURCE);
 }
 
 #pragma endregion DeferredRenderer

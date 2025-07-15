@@ -4,7 +4,7 @@
 
 #include <rendering/RenderableAttributes.hpp>
 
-#include <rendering/rhi/CmdList.hpp>
+#include <rendering/RenderQueue.hpp>
 
 #include <rendering/RenderObject.hpp>
 #include <rendering/RenderStructs.hpp>

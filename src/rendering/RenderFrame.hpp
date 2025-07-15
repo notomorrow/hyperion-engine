@@ -5,7 +5,7 @@
 #include <rendering/RenderResult.hpp>
 #include <rendering/RenderObject.hpp>
 
-#include <rendering/rhi/CmdList.hpp>
+#include <rendering/RenderQueue.hpp>
 
 #include <core/Defines.hpp>
 
@@ -36,20 +36,12 @@ public:
         return m_frameIndex;
     }
 
-    HYP_FORCE_INLINE CmdList& GetCommandList()
-    {
-        return m_commandList;
-    }
-
-    HYP_FORCE_INLINE const CmdList& GetCommandList() const
-    {
-        return m_commandList;
-    }
-
     void MarkDescriptorSetUsed(DescriptorSetBase* descriptorSet);
 
     Delegate<void, FrameBase*> OnPresent;
     Delegate<void, FrameBase*> OnFrameEnd;
+
+    RenderQueue renderQueue;
 
 protected:
     FrameBase(uint32 frameIndex)
@@ -58,7 +50,6 @@ protected:
     }
 
     uint32 m_frameIndex;
-    CmdList m_commandList;
     HashSet<DescriptorSetBase*> m_usedDescriptorSets;
 };
 

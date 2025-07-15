@@ -240,7 +240,7 @@ void DepthPyramidRenderer::Render(FrameBase* frame)
         // level 0 == write just-rendered depth image into mip 0
 
         // put the mip into writeable state
-        frame->GetCommandList().Add<InsertBarrier>(
+        frame->renderQueue.Add<InsertBarrier>(
             m_depthPyramid,
             RS_UNORDERED_ACCESS,
             ImageSubResource { .baseMipLevel = mipLevel });
@@ -251,16 +251,16 @@ void DepthPyramidRenderer::Render(FrameBase* frame)
         mipWidth = MathUtil::Max(1u, depthPyramidExtent.x >> (mipLevel));
         mipHeight = MathUtil::Max(1u, depthPyramidExtent.y >> (mipLevel));
 
-        frame->GetCommandList().Add<BindDescriptorTable>(
+        frame->renderQueue.Add<BindDescriptorTable>(
             m_mipDescriptorTables[mipLevel],
             m_generateDepthPyramid,
             ArrayMap<Name, ArrayMap<Name, uint32>> {},
             frameIndex);
 
         // set push constant data for the current mip level
-        frame->GetCommandList().Add<BindComputePipeline>(m_generateDepthPyramid);
+        frame->renderQueue.Add<BindComputePipeline>(m_generateDepthPyramid);
 
-        frame->GetCommandList().Add<DispatchCompute>(
+        frame->renderQueue.Add<DispatchCompute>(
             m_generateDepthPyramid,
             Vec3u {
                 (mipWidth + 31) / 32,
@@ -268,13 +268,13 @@ void DepthPyramidRenderer::Render(FrameBase* frame)
                 1 });
 
         // put this mip into readable state
-        frame->GetCommandList().Add<InsertBarrier>(
+        frame->renderQueue.Add<InsertBarrier>(
             m_depthPyramid,
             RS_SHADER_RESOURCE,
             ImageSubResource { .baseMipLevel = mipLevel });
     }
 
-    frame->GetCommandList().Add<InsertBarrier>(
+    frame->renderQueue.Add<InsertBarrier>(
         m_depthPyramid,
         RS_SHADER_RESOURCE);
 

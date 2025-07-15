@@ -16,7 +16,7 @@
 #include <rendering/CullData.hpp>
 
 #include <rendering/RenderObject.hpp>
-#include <rendering/rhi/CmdList.hpp>
+#include <rendering/RenderQueue.hpp>
 
 namespace hyperion {
 

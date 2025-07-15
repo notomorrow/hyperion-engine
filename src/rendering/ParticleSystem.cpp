@@ -18,7 +18,7 @@
 #include <rendering/RenderGlobalState.hpp>
 #include <rendering/GraphicsPipelineCache.hpp>
 
-#include <rendering/rhi/CmdList.hpp>
+#include <rendering/RenderQueue.hpp>
 
 #include <rendering/RenderFrame.hpp>
 #include <rendering/RenderComputePipeline.hpp>
@@ -347,7 +347,7 @@ void ParticleSystem::UpdateParticles(FrameBase* frame, const RenderSetup& render
         return;
     }
 
-    frame->GetCommandList().Add<InsertBarrier>(m_stagingBuffer, RS_COPY_SRC);
+    frame->renderQueue.Add<InsertBarrier>(m_stagingBuffer, RS_COPY_SRC);
 
     for (auto& spawner : m_particleSpawners)
     {
@@ -356,17 +356,17 @@ void ParticleSystem::UpdateParticles(FrameBase* frame, const RenderSetup& render
         Assert(spawner->GetIndirectBuffer()->Size() == sizeof(IndirectDrawCommand));
         Assert(spawner->GetParticleBuffer()->Size() >= sizeof(ParticleShaderData) * maxParticles);
 
-        frame->GetCommandList().Add<InsertBarrier>(
+        frame->renderQueue.Add<InsertBarrier>(
             spawner->GetIndirectBuffer(),
             RS_COPY_DST);
 
         // copy zeros to buffer (to reset instance count)
-        frame->GetCommandList().Add<CopyBuffer>(
+        frame->renderQueue.Add<CopyBuffer>(
             m_stagingBuffer,
             spawner->GetIndirectBuffer(),
             sizeof(IndirectDrawCommand));
 
-        frame->GetCommandList().Add<InsertBarrier>(
+        frame->renderQueue.Add<InsertBarrier>(
             spawner->GetIndirectBuffer(),
             RS_INDIRECT_ARG);
 
@@ -398,9 +398,9 @@ void ParticleSystem::UpdateParticles(FrameBase* frame, const RenderSetup& render
 
         spawner->GetComputePipeline()->SetPushConstants(&pushConstants, sizeof(pushConstants));
 
-        frame->GetCommandList().Add<BindComputePipeline>(spawner->GetComputePipeline());
+        frame->renderQueue.Add<BindComputePipeline>(spawner->GetComputePipeline());
 
-        frame->GetCommandList().Add<BindDescriptorTable>(
+        frame->renderQueue.Add<BindDescriptorTable>(
             spawner->GetComputePipeline()->GetDescriptorTable(),
             spawner->GetComputePipeline(),
             ArrayMap<Name, ArrayMap<Name, uint32>> {
@@ -415,18 +415,18 @@ void ParticleSystem::UpdateParticles(FrameBase* frame, const RenderSetup& render
         {
             Assert(renderSetup.passData != nullptr);
 
-            frame->GetCommandList().Add<BindDescriptorSet>(
+            frame->renderQueue.Add<BindDescriptorSet>(
                 renderSetup.passData->descriptorSets[frame->GetFrameIndex()],
                 spawner->GetComputePipeline(),
                 ArrayMap<Name, uint32> {},
                 viewDescriptorSetIndex);
         }
 
-        frame->GetCommandList().Add<DispatchCompute>(
+        frame->renderQueue.Add<DispatchCompute>(
             spawner->GetComputePipeline(),
             Vec3u { uint32((maxParticles + 255) / 256), 1, 1 });
 
-        frame->GetCommandList().Add<InsertBarrier>(
+        frame->renderQueue.Add<InsertBarrier>(
             spawner->GetIndirectBuffer(),
             RS_INDIRECT_ARG);
     }
@@ -456,9 +456,9 @@ void ParticleSystem::Render(FrameBase* frame, const RenderSetup& renderSetup)
     {
         const GraphicsPipelineRef& graphicsPipeline = particleSpawner->GetGraphicsPipeline();
 
-        frame->GetCommandList().Add<BindGraphicsPipeline>(graphicsPipeline);
+        frame->renderQueue.Add<BindGraphicsPipeline>(graphicsPipeline);
 
-        frame->GetCommandList().Add<BindDescriptorTable>(
+        frame->renderQueue.Add<BindDescriptorTable>(
             graphicsPipeline->GetDescriptorTable(),
             graphicsPipeline,
             ArrayMap<Name, ArrayMap<Name, uint32>> {
@@ -473,16 +473,16 @@ void ParticleSystem::Render(FrameBase* frame, const RenderSetup& renderSetup)
         {
             Assert(renderSetup.passData != nullptr);
 
-            frame->GetCommandList().Add<BindDescriptorSet>(
+            frame->renderQueue.Add<BindDescriptorSet>(
                 renderSetup.passData->descriptorSets[frameIndex],
                 graphicsPipeline,
                 ArrayMap<Name, uint32> {},
                 viewDescriptorSetIndex);
         }
 
-        frame->GetCommandList().Add<BindVertexBuffer>(m_quadMesh->GetVertexBuffer());
-        frame->GetCommandList().Add<BindIndexBuffer>(m_quadMesh->GetIndexBuffer());
-        frame->GetCommandList().Add<DrawIndexedIndirect>(particleSpawner->GetIndirectBuffer(), 0);
+        frame->renderQueue.Add<BindVertexBuffer>(m_quadMesh->GetVertexBuffer());
+        frame->renderQueue.Add<BindIndexBuffer>(m_quadMesh->GetIndexBuffer());
+        frame->renderQueue.Add<DrawIndexedIndirect>(particleSpawner->GetIndirectBuffer(), 0);
     }
 }
 

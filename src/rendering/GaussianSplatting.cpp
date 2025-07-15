@@ -12,7 +12,7 @@
 #include <rendering/Renderer.hpp>
 #include <rendering/GraphicsPipelineCache.hpp>
 
-#include <rendering/rhi/CmdList.hpp>
+#include <rendering/RenderQueue.hpp>
 
 #include <rendering/RenderFrame.hpp>
 #include <rendering/RenderComputePipeline.hpp>
@@ -243,9 +243,9 @@ void GaussianSplattingInstance::Record(FrameBase* frame, const RenderSetup& rend
             &updateSplatsDistancesPushConstants,
             sizeof(updateSplatsDistancesPushConstants));
 
-        frame->GetCommandList().Add<BindComputePipeline>(m_updateSplatDistances);
+        frame->renderQueue.Add<BindComputePipeline>(m_updateSplatDistances);
 
-        frame->GetCommandList().Add<BindDescriptorTable>(
+        frame->renderQueue.Add<BindDescriptorTable>(
             m_updateSplatDistances->GetDescriptorTable(),
             m_updateSplatDistances,
             ArrayMap<Name, ArrayMap<Name, uint32>> {
@@ -254,11 +254,11 @@ void GaussianSplattingInstance::Record(FrameBase* frame, const RenderSetup& rend
                         { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(renderSetup.view->GetCamera()->GetBufferIndex()) } } } },
             frame->GetFrameIndex());
 
-        frame->GetCommandList().Add<DispatchCompute>(
+        frame->renderQueue.Add<DispatchCompute>(
             m_updateSplatDistances,
             Vec3u { uint32((numPoints + 255) / 256), 1, 1 });
 
-        frame->GetCommandList().Add<InsertBarrier>(
+        frame->renderQueue.Add<InsertBarrier>(
             m_splatIndicesBuffer,
             RS_UNORDERED_ACCESS);
     }
@@ -304,7 +304,7 @@ void GaussianSplattingInstance::Record(FrameBase* frame, const RenderSetup& rend
 
         sortSplatsPushConstants.numPoints = numPoints;
 
-        frame->GetCommandList().Add<InsertBarrier>(
+        frame->renderQueue.Add<InsertBarrier>(
             m_splatIndicesBuffer,
             RS_UNORDERED_ACCESS);
 
@@ -335,9 +335,9 @@ void GaussianSplattingInstance::Record(FrameBase* frame, const RenderSetup& rend
 
             m_sortSplats->SetPushConstants(&pc, sizeof(pc));
 
-            frame->GetCommandList().Add<BindComputePipeline>(m_sortSplats);
+            frame->renderQueue.Add<BindComputePipeline>(m_sortSplats);
 
-            frame->GetCommandList().Add<BindDescriptorTable>(
+            frame->renderQueue.Add<BindDescriptorTable>(
                 m_sortSplats->GetDescriptorTable(),
                 m_sortSplats,
                 ArrayMap<Name, ArrayMap<Name, uint32>> {
@@ -346,11 +346,11 @@ void GaussianSplattingInstance::Record(FrameBase* frame, const RenderSetup& rend
                             { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(renderSetup.view->GetCamera()->GetBufferIndex()) } } } },
                 frame->GetFrameIndex());
 
-            frame->GetCommandList().Add<DispatchCompute>(
+            frame->renderQueue.Add<DispatchCompute>(
                 m_sortSplats,
                 Vec3u { workgroupCount, 1, 1 });
 
-            frame->GetCommandList().Add<InsertBarrier>(
+            frame->renderQueue.Add<InsertBarrier>(
                 m_splatIndicesBuffer,
                 RS_UNORDERED_ACCESS);
         };
@@ -392,9 +392,9 @@ void GaussianSplattingInstance::Record(FrameBase* frame, const RenderSetup& rend
             &updateSplatsPushConstants,
             sizeof(updateSplatsPushConstants));
 
-        frame->GetCommandList().Add<BindComputePipeline>(m_updateSplats);
+        frame->renderQueue.Add<BindComputePipeline>(m_updateSplats);
 
-        frame->GetCommandList().Add<BindDescriptorTable>(
+        frame->renderQueue.Add<BindDescriptorTable>(
             m_updateSplats->GetDescriptorTable(),
             m_updateSplats,
             ArrayMap<Name, ArrayMap<Name, uint32>> {
@@ -403,11 +403,11 @@ void GaussianSplattingInstance::Record(FrameBase* frame, const RenderSetup& rend
                         { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(renderSetup.view->GetCamera()->GetBufferIndex()) } } } },
             frame->GetFrameIndex());
 
-        frame->GetCommandList().Add<DispatchCompute>(
+        frame->renderQueue.Add<DispatchCompute>(
             m_updateSplats,
             Vec3u { uint32((numPoints + 255) / 256), 1, 1 });
 
-        frame->GetCommandList().Add<InsertBarrier>(
+        frame->renderQueue.Add<InsertBarrier>(
             m_indirectBuffer,
             RS_INDIRECT_ARG);
     }
@@ -645,20 +645,20 @@ void GaussianSplatting::UpdateSplats(FrameBase* frame, const RenderSetup& render
 
     Assert(m_gaussianSplattingInstance->GetIndirectBuffer()->Size() == sizeof(IndirectDrawCommand));
 
-    frame->GetCommandList().Add<InsertBarrier>(
+    frame->renderQueue.Add<InsertBarrier>(
         m_stagingBuffer,
         RS_COPY_SRC);
 
-    frame->GetCommandList().Add<InsertBarrier>(
+    frame->renderQueue.Add<InsertBarrier>(
         m_gaussianSplattingInstance->GetIndirectBuffer(),
         RS_COPY_DST);
 
-    frame->GetCommandList().Add<CopyBuffer>(
+    frame->renderQueue.Add<CopyBuffer>(
         m_stagingBuffer,
         m_gaussianSplattingInstance->GetIndirectBuffer(),
         sizeof(IndirectDrawCommand));
 
-    frame->GetCommandList().Add<InsertBarrier>(
+    frame->renderQueue.Add<InsertBarrier>(
         m_gaussianSplattingInstance->GetIndirectBuffer(),
         RS_INDIRECT_ARG);
 
@@ -682,9 +682,9 @@ void GaussianSplatting::Render(FrameBase* frame, const RenderSetup& renderSetup)
 
     const GraphicsPipelineRef& graphicsPipeline = m_gaussianSplattingInstance->GetGraphicsPipeline();
 
-    frame->GetCommandList().Add<BindGraphicsPipeline>(graphicsPipeline);
+    frame->renderQueue.Add<BindGraphicsPipeline>(graphicsPipeline);
 
-    frame->GetCommandList().Add<BindDescriptorTable>(
+    frame->renderQueue.Add<BindDescriptorTable>(
         graphicsPipeline->GetDescriptorTable(),
         graphicsPipeline,
         ArrayMap<Name, ArrayMap<Name, uint32>> {
@@ -693,9 +693,9 @@ void GaussianSplatting::Render(FrameBase* frame, const RenderSetup& renderSetup)
                     { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(renderSetup.view->GetCamera()->GetBufferIndex()) } } } },
         frameIndex);
 
-    frame->GetCommandList().Add<BindVertexBuffer>(m_quadMesh->GetVertexBuffer());
-    frame->GetCommandList().Add<BindIndexBuffer>(m_quadMesh->GetIndexBuffer());
-    frame->GetCommandList().Add<DrawIndexedIndirect>(m_gaussianSplattingInstance->GetIndirectBuffer(), 0);
+    frame->renderQueue.Add<BindVertexBuffer>(m_quadMesh->GetVertexBuffer());
+    frame->renderQueue.Add<BindIndexBuffer>(m_quadMesh->GetIndexBuffer());
+    frame->renderQueue.Add<DrawIndexedIndirect>(m_gaussianSplattingInstance->GetIndirectBuffer(), 0);
 }
 
 } // namespace hyperion
