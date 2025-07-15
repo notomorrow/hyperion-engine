@@ -131,26 +131,30 @@ void VulkanGraphicsPipeline::Bind(CommandBufferBase* cmd)
     Bind(cmd, viewportOffset, viewportExtent);
 }
 
-void VulkanGraphicsPipeline::Bind(CommandBufferBase* cmd, Vec2i viewportOffset, Vec2u viewportExtent)
+void VulkanGraphicsPipeline::Bind(CommandBufferBase* commandBuffer, Vec2i viewportOffset, Vec2u viewportExtent)
 {
+    HYP_GFX_ASSERT(m_handle != VK_NULL_HANDLE);
+
+    VULKAN_CAST(commandBuffer)->ResetBoundDescriptorSets();
+
     if (viewportExtent != Vec2u::Zero())
     {
         Viewport viewport;
         viewport.position = viewportOffset;
         viewport.extent = viewportExtent;
 
-        UpdateViewport(VULKAN_CAST(cmd), viewport);
+        UpdateViewport(VULKAN_CAST(commandBuffer), viewport);
     }
 
     vkCmdBindPipeline(
-        VULKAN_CAST(cmd)->GetVulkanHandle(),
+        VULKAN_CAST(commandBuffer)->GetVulkanHandle(),
         VK_PIPELINE_BIND_POINT_GRAPHICS,
         VulkanPipelineBase::m_handle);
 
     if (m_pushConstants)
     {
         vkCmdPushConstants(
-            VULKAN_CAST(cmd)->GetVulkanHandle(),
+            VULKAN_CAST(commandBuffer)->GetVulkanHandle(),
             VulkanPipelineBase::m_layout,
             VK_SHADER_STAGE_ALL_GRAPHICS,
             0,
@@ -159,10 +163,8 @@ void VulkanGraphicsPipeline::Bind(CommandBufferBase* cmd, Vec2i viewportOffset, 
     }
 }
 
-static int g_tmpNumGraphicsPipelines = 0;
 RendererResult VulkanGraphicsPipeline::Rebuild()
 {
-    ++g_tmpNumGraphicsPipelines;
     Array<VkVertexInputAttributeDescription> vkVertexAttributes;
     Array<VkVertexInputBindingDescription> vkVertexBindingDescriptions;
 
@@ -423,17 +425,12 @@ RendererResult VulkanGraphicsPipeline::Rebuild()
         vkCreateGraphicsPipelines(GetRenderBackend()->GetDevice()->GetDevice(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &m_handle),
         "Failed to create graphics pipeline");
 
-    HYP_LOG(Rendering, Debug, "Created graphics pipeline #{}", g_tmpNumGraphicsPipelines);
-
     HYPERION_RETURN_OK;
 }
 
 RendererResult VulkanGraphicsPipeline::Destroy()
 {
     SafeRelease(std::move(m_renderPass));
-
-    HYP_LOG(Rendering, Debug, "Deleting graphics pipeline, now #{}", g_tmpNumGraphicsPipelines);
-    --g_tmpNumGraphicsPipelines;
 
     return VulkanPipelineBase::Destroy();
 }

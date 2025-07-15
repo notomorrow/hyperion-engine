@@ -205,14 +205,15 @@ struct HashCode
     }
 
     template <class T, typename = std::enable_if_t<!std::is_same_v<T, char>>>
-    static constexpr inline HashCode GetHashCode(const T* ptr)
+    static inline HashCode GetHashCode(T* ptr)
     {
-        return GetHashCode(uintptr_t(ptr));
+        return GetHashCode(reinterpret_cast<uintptr_t>(ptr));
     }
 
-    static constexpr inline HashCode GetHashCode(const HashCode& hashCode)
+    template <class T, typename = std::enable_if_t<!std::is_same_v<T, char>>>
+    static inline HashCode GetHashCode(const T* ptr)
     {
-        return hashCode;
+        return GetHashCode(reinterpret_cast<uintptr_t>(ptr));
     }
 
     template <SizeType Size>
@@ -234,6 +235,11 @@ struct HashCode
     static inline HashCode GetHashCode(const ubyte* _begin, const ubyte* _end)
     {
         return HashCode(FNV1::HashBytes(_begin, _end));
+    }
+
+    static constexpr inline HashCode GetHashCode(const HashCode& hashCode)
+    {
+        return hashCode;
     }
 
     constexpr HashCode Combine(const HashCode& other) const

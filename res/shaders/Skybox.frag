@@ -15,8 +15,7 @@ layout(location = 0) out vec4 gbuffer_albedo;
 layout(location = 1) out vec4 gbuffer_normals;
 layout(location = 2) out uvec2 gbuffer_material;
 layout(location = 4) out vec2 gbuffer_velocity;
-layout(location = 5) out uint gbuffer_mask;
-layout(location = 6) out vec4 gbuffer_ws_normals;
+layout(location = 5) out vec4 gbuffer_ws_normals;
 
 HYP_DESCRIPTOR_SAMPLER(Global, SamplerLinear) uniform sampler texture_sampler;
 

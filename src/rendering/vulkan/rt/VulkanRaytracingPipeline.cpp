@@ -171,6 +171,10 @@ RendererResult VulkanRaytracingPipeline::Destroy()
 
 void VulkanRaytracingPipeline::Bind(CommandBufferBase* commandBuffer)
 {
+    HYP_GFX_ASSERT(m_handle != VK_NULL_HANDLE);
+
+    VULKAN_CAST(commandBuffer)->ResetBoundDescriptorSets();
+
     vkCmdBindPipeline(
         VULKAN_CAST(commandBuffer)->GetVulkanHandle(),
         VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR,

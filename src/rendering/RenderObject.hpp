@@ -862,32 +862,38 @@ public:
     }
 };
 
-#define DECLARE_SHARED_GFX_TYPE(T)                                                          \
-    class T##Base;                                                                          \
-    class Vulkan##T;                                                                        \
-                                                                                            \
-    using T##Ref = RenderObjectHandle_Strong<T##Base>;                                      \
-    using T##WeakRef = RenderObjectHandle_Weak<T##Base>;                                    \
-                                                                                            \
-    using Vulkan##T##Ref = RenderObjectHandle_Strong<Vulkan##T>;                            \
-    using Vulkan##T##WeakRef = RenderObjectHandle_Weak<Vulkan##T>;                          \
-                                                                                            \
-    template <class Base, typename = std::enable_if_t<std::is_same_v<Base, T##Base>>>       \
-    static inline Vulkan##T* VulkanCastImpl(Base* ptr)                                      \
-    {                                                                                       \
-        return static_cast<Vulkan##T*>(ptr);                                                \
-    }                                                                                       \
-                                                                                            \
-    template <class Base, typename = std::enable_if_t<std::is_same_v<Base, T##Base>>>       \
-    static inline const Vulkan##T* VulkanCastImpl(const Base* ptr)                          \
-    {                                                                                       \
-        return static_cast<const Vulkan##T*>(ptr);                                          \
-    }                                                                                       \
-                                                                                            \
-    template <class Base, typename = std::enable_if_t<std::is_same_v<Base, T##Base>>>       \
-    static inline Vulkan##T##Ref VulkanCastImpl(const RenderObjectHandle_Strong<Base>& ref) \
-    {                                                                                       \
-        return Vulkan##T##Ref(ref);                                                         \
+#define DECLARE_SHARED_GFX_TYPE(T)                                                            \
+    class T##Base;                                                                            \
+    class Vulkan##T;                                                                          \
+                                                                                              \
+    using T##Ref = RenderObjectHandle_Strong<T##Base>;                                        \
+    using T##WeakRef = RenderObjectHandle_Weak<T##Base>;                                      \
+                                                                                              \
+    using Vulkan##T##Ref = RenderObjectHandle_Strong<Vulkan##T>;                              \
+    using Vulkan##T##WeakRef = RenderObjectHandle_Weak<Vulkan##T>;                            \
+                                                                                              \
+    template <class Base, typename = std::enable_if_t<std::is_same_v<Base, T##Base>>>         \
+    static inline Vulkan##T* VulkanCastImpl(Base* ptr)                                        \
+    {                                                                                         \
+        return static_cast<Vulkan##T*>(ptr);                                                  \
+    }                                                                                         \
+                                                                                              \
+    template <class Base, typename = std::enable_if_t<std::is_same_v<Base, T##Base>>>         \
+    static inline const Vulkan##T* VulkanCastImpl(const Base* ptr)                            \
+    {                                                                                         \
+        return static_cast<const Vulkan##T*>(ptr);                                            \
+    }                                                                                         \
+                                                                                              \
+    template <class Base, typename = std::enable_if_t<std::is_same_v<Base, T##Base>>>         \
+    static inline Vulkan##T##Ref VulkanCastImpl(const RenderObjectHandle_Strong<Base>& ref)   \
+    {                                                                                         \
+        return Vulkan##T##Ref(ref);                                                           \
+    }                                                                                         \
+                                                                                              \
+    template <class Base, typename = std::enable_if_t<std::is_same_v<Base, T##Base>>>         \
+    static inline Vulkan##T##WeakRef VulkanCastImpl(const RenderObjectHandle_Weak<Base>& ref) \
+    {                                                                                         \
+        return Vulkan##T##WeakRef(ref);                                                       \
     }
 
 #define DECLARE_VULKAN_GFX_TYPE(T)                               \

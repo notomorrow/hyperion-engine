@@ -18,12 +18,40 @@ namespace hyperion {
 class VulkanSemaphoreChain;
 class VulkanRenderPass;
 struct VulkanDeviceQueue;
+class VulkanPipelineBase;
+
+struct VulkanCachedDescriptorSetBinding
+{
+    VkDescriptorSet descriptorSet;
+    VkPipeline pipeline;
+    VkPipelineLayout pipelineLayout;
+
+    // usually we use at most 5 dynamic offsets
+    Array<uint32, InlineAllocator<5>> dynamicOffsets;
+
+    HYP_FORCE_INLINE bool operator==(const VulkanCachedDescriptorSetBinding& other) const
+    {
+        return GetHashCode() == other.GetHashCode();
+    }
+
+    HYP_FORCE_INLINE bool operator!=(const VulkanCachedDescriptorSetBinding& other) const
+    {
+        return !(*this == other);
+    }
+
+    HashCode GetHashCode() const
+    {
+        return HashCode::GetHashCode(reinterpret_cast<const ubyte*>(this), reinterpret_cast<const ubyte*>(this) + offsetof(VulkanCachedDescriptorSetBinding, dynamicOffsets))
+            .Combine(dynamicOffsets.GetHashCode());
+    }
+};
 
 class VulkanCommandBuffer final : public CommandBufferBase
 {
 public:
     friend class VulkanFramebuffer;
-    
+    friend class VulkanDescriptorSet;
+
     HYP_API explicit VulkanCommandBuffer(VkCommandBufferLevel type);
     HYP_API virtual ~VulkanCommandBuffer() override;
 
@@ -41,7 +69,7 @@ public:
     {
         return m_type;
     }
-    
+
     HYP_FORCE_INLINE bool IsInRenderPass() const
     {
         return m_isInRenderPass;
@@ -90,11 +118,18 @@ public:
         return result;
     }
 
+    void ResetBoundDescriptorSets()
+    {
+        m_boundDescriptorSets.Clear();
+    }
+
 private:
     VkCommandBufferLevel m_type;
     VkCommandBuffer m_handle;
     VkCommandPool m_commandPool;
-    
+
+    Array<VulkanCachedDescriptorSetBinding> m_boundDescriptorSets;
+
     bool m_isInRenderPass : 1;
 };
 

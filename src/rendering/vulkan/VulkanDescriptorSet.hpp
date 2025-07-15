@@ -64,12 +64,12 @@ public:
     HYP_API virtual DescriptorSetRef Clone() const override;
 
 protected:
-    virtual void Bind(const CommandBufferBase* commandBuffer, const GraphicsPipelineBase* pipeline, uint32 bindIndex) const override;
-    virtual void Bind(const CommandBufferBase* commandBuffer, const GraphicsPipelineBase* pipeline, const ArrayMap<Name, uint32>& offsets, uint32 bindIndex) const override;
-    virtual void Bind(const CommandBufferBase* commandBuffer, const ComputePipelineBase* pipeline, uint32 bindIndex) const override;
-    virtual void Bind(const CommandBufferBase* commandBuffer, const ComputePipelineBase* pipeline, const ArrayMap<Name, uint32>& offsets, uint32 bindIndex) const override;
-    virtual void Bind(const CommandBufferBase* commandBuffer, const RaytracingPipelineBase* pipeline, uint32 bindIndex) const override;
-    virtual void Bind(const CommandBufferBase* commandBuffer, const RaytracingPipelineBase* pipeline, const ArrayMap<Name, uint32>& offsets, uint32 bindIndex) const override;
+    virtual void Bind(CommandBufferBase* commandBuffer, const GraphicsPipelineBase* pipeline, uint32 bindIndex) const override;
+    virtual void Bind(CommandBufferBase* commandBuffer, const GraphicsPipelineBase* pipeline, const ArrayMap<Name, uint32>& offsets, uint32 bindIndex) const override;
+    virtual void Bind(CommandBufferBase* commandBuffer, const ComputePipelineBase* pipeline, uint32 bindIndex) const override;
+    virtual void Bind(CommandBufferBase* commandBuffer, const ComputePipelineBase* pipeline, const ArrayMap<Name, uint32>& offsets, uint32 bindIndex) const override;
+    virtual void Bind(CommandBufferBase* commandBuffer, const RaytracingPipelineBase* pipeline, uint32 bindIndex) const override;
+    virtual void Bind(CommandBufferBase* commandBuffer, const RaytracingPipelineBase* pipeline, const ArrayMap<Name, uint32>& offsets, uint32 bindIndex) const override;
 
     VkDescriptorSet m_handle;
     ElementCache m_cachedElements;
@@ -77,7 +77,7 @@ protected:
     Array<VulkanDescriptorElementInfo> m_vkDescriptorElementInfos;
 };
 
-class VulkanDescriptorTable : public DescriptorTableBase
+class VulkanDescriptorTable final : public DescriptorTableBase
 {
 public:
     HYP_API VulkanDescriptorTable(const DescriptorTableDeclaration* decl);

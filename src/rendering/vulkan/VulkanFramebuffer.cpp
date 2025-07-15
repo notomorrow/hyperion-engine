@@ -427,6 +427,7 @@ void VulkanFramebuffer::BeginCapture(CommandBufferBase* commandBuffer)
     HYP_GFX_ASSERT(!VULKAN_CAST(commandBuffer)->IsInRenderPass());
 
     VULKAN_CAST(commandBuffer)->m_isInRenderPass = true;
+    VULKAN_CAST(commandBuffer)->ResetBoundDescriptorSets();
 
     m_renderPass->Begin(VULKAN_CAST(commandBuffer), this);
 }

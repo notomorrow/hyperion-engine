@@ -400,7 +400,7 @@ bool VulkanDescriptorSet::IsCreated() const
     return m_handle != VK_NULL_HANDLE;
 }
 
-void VulkanDescriptorSet::Bind(const CommandBufferBase* commandBuffer, const GraphicsPipelineBase* pipeline, uint32 bindIndex) const
+void VulkanDescriptorSet::Bind(CommandBufferBase* commandBuffer, const GraphicsPipelineBase* pipeline, uint32 bindIndex) const
 {
     HYP_GFX_ASSERT(m_handle != VK_NULL_HANDLE);
 
@@ -413,25 +413,49 @@ void VulkanDescriptorSet::Bind(const CommandBufferBase* commandBuffer, const Gra
     }
 #endif
 
+    VulkanCachedDescriptorSetBinding cachedBinding {};
+    cachedBinding.descriptorSet = m_handle;
+    cachedBinding.pipeline = VULKAN_CAST(pipeline)->GetVulkanHandle();
+    cachedBinding.pipelineLayout = VULKAN_CAST(pipeline)->GetVulkanPipelineLayout();
+    cachedBinding.dynamicOffsets.Resize(m_layout.GetDynamicElements().Size());
+
+    auto& boundDescriptorSets = VULKAN_CAST(commandBuffer)->m_boundDescriptorSets;
+
+    if (boundDescriptorSets.Size() <= bindIndex)
+    {
+        boundDescriptorSets.Resize(bindIndex + 1);
+    }
+    else if (boundDescriptorSets[bindIndex] == cachedBinding)
+    {
+        // no sense in binding it again if nothing has changed.
+        return;
+    }
+
     vkCmdBindDescriptorSets(
-        static_cast<const VulkanCommandBuffer*>(commandBuffer)->GetVulkanHandle(),
+        VULKAN_CAST(commandBuffer)->GetVulkanHandle(),
         VK_PIPELINE_BIND_POINT_GRAPHICS,
-        static_cast<const VulkanGraphicsPipeline*>(pipeline)->GetVulkanPipelineLayout(),
+        VULKAN_CAST(pipeline)->GetVulkanPipelineLayout(),
         bindIndex,
         1,
         &m_handle,
-        0,
-        nullptr);
+        uint32(cachedBinding.dynamicOffsets.Size()),
+        cachedBinding.dynamicOffsets.Data());
+
+    boundDescriptorSets[bindIndex] = cachedBinding;
 }
 
-void VulkanDescriptorSet::Bind(const CommandBufferBase* commandBuffer, const GraphicsPipelineBase* pipeline, const ArrayMap<Name, uint32>& offsets, uint32 bindIndex) const
+void VulkanDescriptorSet::Bind(CommandBufferBase* commandBuffer, const GraphicsPipelineBase* pipeline, const ArrayMap<Name, uint32>& offsets, uint32 bindIndex) const
 {
     HYP_GFX_ASSERT(m_handle != VK_NULL_HANDLE);
 
+    VulkanCachedDescriptorSetBinding cachedBinding {};
+    cachedBinding.descriptorSet = m_handle;
+    cachedBinding.pipeline = VULKAN_CAST(pipeline)->GetVulkanHandle();
+    cachedBinding.pipelineLayout = VULKAN_CAST(pipeline)->GetVulkanPipelineLayout();
+
     HashSet<Name> usedOffsets;
 
-    Array<uint32> offsetsFlat;
-    offsetsFlat.Resize(m_layout.GetDynamicElements().Size());
+    cachedBinding.dynamicOffsets.ResizeZeroed(m_layout.GetDynamicElements().Size());
 
     for (SizeType i = 0; i < m_layout.GetDynamicElements().Size(); i++)
     {
@@ -441,13 +465,13 @@ void VulkanDescriptorSet::Bind(const CommandBufferBase* commandBuffer, const Gra
 
         if (it != offsets.End())
         {
-            offsetsFlat[i] = it->second;
+            cachedBinding.dynamicOffsets[i] = it->second;
 
             usedOffsets.Insert(dynamicElementName);
         }
         else
         {
-            offsetsFlat[i] = 0;
+            cachedBinding.dynamicOffsets[i] = 0;
 
 #if defined(HYP_DEBUG_MODE) && false
             HYP_LOG(RenderingBackend, Warning, "Missing dynamic offset for descriptor set element: {}", dynamicElementName);
@@ -465,18 +489,32 @@ void VulkanDescriptorSet::Bind(const CommandBufferBase* commandBuffer, const Gra
     }
 #endif
 
+    auto& boundDescriptorSets = VULKAN_CAST(commandBuffer)->m_boundDescriptorSets;
+
+    if (boundDescriptorSets.Size() <= bindIndex)
+    {
+        boundDescriptorSets.Resize(bindIndex + 1);
+    }
+    else if (boundDescriptorSets[bindIndex] == cachedBinding)
+    {
+        // no sense in binding it again if nothing has changed.
+        return;
+    }
+
     vkCmdBindDescriptorSets(
-        static_cast<const VulkanCommandBuffer*>(commandBuffer)->GetVulkanHandle(),
+        VULKAN_CAST(commandBuffer)->GetVulkanHandle(),
         VK_PIPELINE_BIND_POINT_GRAPHICS,
-        static_cast<const VulkanGraphicsPipeline*>(pipeline)->GetVulkanPipelineLayout(),
+        VULKAN_CAST(pipeline)->GetVulkanPipelineLayout(),
         bindIndex,
         1,
         &m_handle,
-        uint32(offsetsFlat.Size()),
-        offsetsFlat.Data());
+        uint32(cachedBinding.dynamicOffsets.Size()),
+        cachedBinding.dynamicOffsets.Data());
+
+    boundDescriptorSets[bindIndex] = cachedBinding;
 }
 
-void VulkanDescriptorSet::Bind(const CommandBufferBase* commandBuffer, const ComputePipelineBase* pipeline, uint32 bindIndex) const
+void VulkanDescriptorSet::Bind(CommandBufferBase* commandBuffer, const ComputePipelineBase* pipeline, uint32 bindIndex) const
 {
     HYP_GFX_ASSERT(m_handle != VK_NULL_HANDLE);
 
@@ -489,25 +527,49 @@ void VulkanDescriptorSet::Bind(const CommandBufferBase* commandBuffer, const Com
     }
 #endif
 
+    VulkanCachedDescriptorSetBinding cachedBinding {};
+    cachedBinding.descriptorSet = m_handle;
+    cachedBinding.pipeline = VULKAN_CAST(pipeline)->GetVulkanHandle();
+    cachedBinding.pipelineLayout = VULKAN_CAST(pipeline)->GetVulkanPipelineLayout();
+    cachedBinding.dynamicOffsets.Resize(m_layout.GetDynamicElements().Size());
+
+    auto& boundDescriptorSets = VULKAN_CAST(commandBuffer)->m_boundDescriptorSets;
+
+    if (boundDescriptorSets.Size() <= bindIndex)
+    {
+        boundDescriptorSets.Resize(bindIndex + 1);
+    }
+    else if (boundDescriptorSets[bindIndex] == cachedBinding)
+    {
+        // no sense in binding it again if nothing has changed.
+        return;
+    }
+
     vkCmdBindDescriptorSets(
-        static_cast<const VulkanCommandBuffer*>(commandBuffer)->GetVulkanHandle(),
+        VULKAN_CAST(commandBuffer)->GetVulkanHandle(),
         VK_PIPELINE_BIND_POINT_COMPUTE,
-        static_cast<const VulkanComputePipeline*>(pipeline)->GetVulkanPipelineLayout(),
+        VULKAN_CAST(pipeline)->GetVulkanPipelineLayout(),
         bindIndex,
         1,
         &m_handle,
-        0,
-        nullptr);
+        uint32(cachedBinding.dynamicOffsets.Size()),
+        cachedBinding.dynamicOffsets.Data());
+
+    boundDescriptorSets[bindIndex] = cachedBinding;
 }
 
-void VulkanDescriptorSet::Bind(const CommandBufferBase* commandBuffer, const ComputePipelineBase* pipeline, const ArrayMap<Name, uint32>& offsets, uint32 bindIndex) const
+void VulkanDescriptorSet::Bind(CommandBufferBase* commandBuffer, const ComputePipelineBase* pipeline, const ArrayMap<Name, uint32>& offsets, uint32 bindIndex) const
 {
     HYP_GFX_ASSERT(m_handle != VK_NULL_HANDLE);
 
+    VulkanCachedDescriptorSetBinding cachedBinding {};
+    cachedBinding.descriptorSet = m_handle;
+    cachedBinding.pipeline = VULKAN_CAST(pipeline)->GetVulkanHandle();
+    cachedBinding.pipelineLayout = VULKAN_CAST(pipeline)->GetVulkanPipelineLayout();
+
     HashSet<Name> usedOffsets;
 
-    Array<uint32> offsetsFlat;
-    offsetsFlat.Resize(m_layout.GetDynamicElements().Size());
+    cachedBinding.dynamicOffsets.ResizeZeroed(m_layout.GetDynamicElements().Size());
 
     for (SizeType i = 0; i < m_layout.GetDynamicElements().Size(); i++)
     {
@@ -517,13 +579,13 @@ void VulkanDescriptorSet::Bind(const CommandBufferBase* commandBuffer, const Com
 
         if (it != offsets.End())
         {
-            offsetsFlat[i] = it->second;
+            cachedBinding.dynamicOffsets[i] = it->second;
 
             usedOffsets.Insert(dynamicElementName);
         }
         else
         {
-            offsetsFlat[i] = 0;
+            cachedBinding.dynamicOffsets[i] = 0;
 
 #if defined(HYP_DEBUG_MODE) && false
             HYP_LOG(RenderingBackend, Warning, "Missing dynamic offset for descriptor set element: {}", dynamicElementName);
@@ -541,18 +603,32 @@ void VulkanDescriptorSet::Bind(const CommandBufferBase* commandBuffer, const Com
     }
 #endif
 
+    auto& boundDescriptorSets = VULKAN_CAST(commandBuffer)->m_boundDescriptorSets;
+
+    if (boundDescriptorSets.Size() <= bindIndex)
+    {
+        boundDescriptorSets.Resize(bindIndex + 1);
+    }
+    else if (boundDescriptorSets[bindIndex] == cachedBinding)
+    {
+        // no sense in binding it again if nothing has changed.
+        return;
+    }
+
     vkCmdBindDescriptorSets(
-        static_cast<const VulkanCommandBuffer*>(commandBuffer)->GetVulkanHandle(),
+        VULKAN_CAST(commandBuffer)->GetVulkanHandle(),
         VK_PIPELINE_BIND_POINT_COMPUTE,
-        static_cast<const VulkanComputePipeline*>(pipeline)->GetVulkanPipelineLayout(),
+        VULKAN_CAST(pipeline)->GetVulkanPipelineLayout(),
         bindIndex,
         1,
         &m_handle,
-        uint32(offsetsFlat.Size()),
-        offsetsFlat.Data());
+        uint32(cachedBinding.dynamicOffsets.Size()),
+        cachedBinding.dynamicOffsets.Data());
+
+    boundDescriptorSets[bindIndex] = cachedBinding;
 }
 
-void VulkanDescriptorSet::Bind(const CommandBufferBase* commandBuffer, const RaytracingPipelineBase* pipeline, uint32 bindIndex) const
+void VulkanDescriptorSet::Bind(CommandBufferBase* commandBuffer, const RaytracingPipelineBase* pipeline, uint32 bindIndex) const
 {
     HYP_GFX_ASSERT(m_handle != VK_NULL_HANDLE);
 
@@ -565,25 +641,49 @@ void VulkanDescriptorSet::Bind(const CommandBufferBase* commandBuffer, const Ray
     }
 #endif
 
+    VulkanCachedDescriptorSetBinding cachedBinding {};
+    cachedBinding.descriptorSet = m_handle;
+    cachedBinding.pipeline = VULKAN_CAST(pipeline)->GetVulkanHandle();
+    cachedBinding.pipelineLayout = VULKAN_CAST(pipeline)->GetVulkanPipelineLayout();
+    cachedBinding.dynamicOffsets.ResizeZeroed(m_layout.GetDynamicElements().Size());
+
+    auto& boundDescriptorSets = VULKAN_CAST(commandBuffer)->m_boundDescriptorSets;
+
+    if (boundDescriptorSets.Size() <= bindIndex)
+    {
+        boundDescriptorSets.Resize(bindIndex + 1);
+    }
+    else if (boundDescriptorSets[bindIndex] == cachedBinding)
+    {
+        // no sense in binding it again if nothing has changed.
+        return;
+    }
+
     vkCmdBindDescriptorSets(
-        static_cast<const VulkanCommandBuffer*>(commandBuffer)->GetVulkanHandle(),
+        VULKAN_CAST(commandBuffer)->GetVulkanHandle(),
         VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR,
-        static_cast<const VulkanRaytracingPipeline*>(pipeline)->GetVulkanPipelineLayout(),
+        VULKAN_CAST(pipeline)->GetVulkanPipelineLayout(),
         bindIndex,
         1,
         &m_handle,
-        0,
-        nullptr);
+        uint32(cachedBinding.dynamicOffsets.Size()),
+        cachedBinding.dynamicOffsets.Data());
+
+    boundDescriptorSets[bindIndex] = cachedBinding;
 }
 
-void VulkanDescriptorSet::Bind(const CommandBufferBase* commandBuffer, const RaytracingPipelineBase* pipeline, const ArrayMap<Name, uint32>& offsets, uint32 bindIndex) const
+void VulkanDescriptorSet::Bind(CommandBufferBase* commandBuffer, const RaytracingPipelineBase* pipeline, const ArrayMap<Name, uint32>& offsets, uint32 bindIndex) const
 {
     HYP_GFX_ASSERT(m_handle != VK_NULL_HANDLE);
 
+    VulkanCachedDescriptorSetBinding cachedBinding {};
+    cachedBinding.descriptorSet = m_handle;
+    cachedBinding.pipeline = VULKAN_CAST(pipeline)->GetVulkanHandle();
+    cachedBinding.pipelineLayout = VULKAN_CAST(pipeline)->GetVulkanPipelineLayout();
+
     HashSet<Name> usedOffsets;
 
-    Array<uint32> offsetsFlat;
-    offsetsFlat.Resize(m_layout.GetDynamicElements().Size());
+    cachedBinding.dynamicOffsets.ResizeZeroed(m_layout.GetDynamicElements().Size());
 
     for (SizeType i = 0; i < m_layout.GetDynamicElements().Size(); i++)
     {
@@ -593,13 +693,13 @@ void VulkanDescriptorSet::Bind(const CommandBufferBase* commandBuffer, const Ray
 
         if (it != offsets.End())
         {
-            offsetsFlat[i] = it->second;
+            cachedBinding.dynamicOffsets[i] = it->second;
 
             usedOffsets.Insert(dynamicElementName);
         }
         else
         {
-            offsetsFlat[i] = 0;
+            cachedBinding.dynamicOffsets[i] = 0;
 
 #if defined(HYP_DEBUG_MODE) && false
             HYP_LOG(RenderingBackend, Warning, "Missing dynamic offset for descriptor set element: {}", dynamicElementName);
@@ -617,15 +717,29 @@ void VulkanDescriptorSet::Bind(const CommandBufferBase* commandBuffer, const Ray
     }
 #endif
 
+    auto& boundDescriptorSets = VULKAN_CAST(commandBuffer)->m_boundDescriptorSets;
+
+    if (boundDescriptorSets.Size() <= bindIndex)
+    {
+        boundDescriptorSets.Resize(bindIndex + 1);
+    }
+    else if (boundDescriptorSets[bindIndex] == cachedBinding)
+    {
+        // no sense in binding it again if nothing has changed.
+        return;
+    }
+
     vkCmdBindDescriptorSets(
-        static_cast<const VulkanCommandBuffer*>(commandBuffer)->GetVulkanHandle(),
+        VULKAN_CAST(commandBuffer)->GetVulkanHandle(),
         VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR,
-        static_cast<const VulkanRaytracingPipeline*>(pipeline)->GetVulkanPipelineLayout(),
+        VULKAN_CAST(pipeline)->GetVulkanPipelineLayout(),
         bindIndex,
         1,
         &m_handle,
-        uint32(offsetsFlat.Size()),
-        offsetsFlat.Data());
+        uint32(cachedBinding.dynamicOffsets.Size()),
+        cachedBinding.dynamicOffsets.Data());
+
+    boundDescriptorSets[bindIndex] = cachedBinding;
 }
 
 DescriptorSetRef VulkanDescriptorSet::Clone() const

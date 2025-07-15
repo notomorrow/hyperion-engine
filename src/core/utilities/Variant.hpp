@@ -1041,11 +1041,11 @@ template <class... Types>
 struct VisitHelper<utilities::Variant<Types...>>
 {
     template <class FunctionType>
-    void operator()(utilities::Variant<Types...>& variant, FunctionType&& fn) const
+    HYP_FORCE_INLINE static inline void Invoke(utilities::Variant<Types...>& variant, FunctionType&& fn)
     {
         using InvokeFunctionWrapper = std::add_pointer_t<void(utilities::Variant<Types...>&, FunctionType&)>;
 
-        static const InvokeFunctionWrapper invokeFns[sizeof...(Types)] = {
+        constexpr InvokeFunctionWrapper invokeFns[sizeof...(Types)] = {
             &Variant_InvokeFunction<utilities::Variant<Types...>, FunctionType, Types>...
         };
 
@@ -1063,11 +1063,11 @@ struct VisitHelper<utilities::Variant<Types...>>
     }
 
     template <class FunctionType>
-    void operator()(const utilities::Variant<Types...>& variant, FunctionType&& fn) const
+    HYP_FORCE_INLINE static inline void Invoke(const utilities::Variant<Types...>& variant, FunctionType&& fn)
     {
         using InvokeFunctionWrapper = std::add_pointer_t<void(const utilities::Variant<Types...>&, FunctionType&)>;
 
-        static const InvokeFunctionWrapper invokeFns[sizeof...(Types)] = {
+        constexpr InvokeFunctionWrapper invokeFns[sizeof...(Types)] = {
             &Variant_InvokeFunction<utilities::Variant<Types...>, FunctionType, Types>...
         };
 
@@ -1085,11 +1085,11 @@ struct VisitHelper<utilities::Variant<Types...>>
     }
 
     template <class FunctionType>
-    void operator()(utilities::Variant<Types...>&& variant, FunctionType&& fn) const
+    HYP_FORCE_INLINE static inline void Invoke(utilities::Variant<Types...>&& variant, FunctionType&& fn)
     {
         using InvokeFunctionWrapper = std::add_pointer_t<void(utilities::Variant<Types...>&&, FunctionType&)>;
 
-        static const InvokeFunctionWrapper invokeFns[sizeof...(Types)] = {
+        constexpr InvokeFunctionWrapper invokeFns[sizeof...(Types)] = {
             &Variant_InvokeFunction<utilities::Variant<Types...>, FunctionType, Types>...
         };
 
@@ -1110,9 +1110,9 @@ struct VisitHelper<utilities::Variant<Types...>>
 #pragma endregion VisitHelper
 
 template <class VariantType, class FunctionType>
-static inline void Visit(VariantType&& variant, FunctionType&& fn)
+HYP_FORCE_INLINE static inline void Visit(VariantType&& variant, FunctionType&& fn)
 {
-    VisitHelper<NormalizedType<VariantType>> {}(std::forward<VariantType>(variant), std::forward<FunctionType>(fn));
+    VisitHelper<NormalizedType<VariantType>>::Invoke(std::forward<VariantType>(variant), std::forward<FunctionType>(fn));
 }
 
 } // namespace utilities

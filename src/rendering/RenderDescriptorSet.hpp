@@ -624,12 +624,12 @@ public:
     void SetElement(Name name, uint32 index, const TLASRef& ref);
     void SetElement(Name name, const TLASRef& ref);
 
-    virtual void Bind(const CommandBufferBase* commandBuffer, const GraphicsPipelineBase* pipeline, uint32 bindIndex) const = 0;
-    virtual void Bind(const CommandBufferBase* commandBuffer, const GraphicsPipelineBase* pipeline, const ArrayMap<Name, uint32>& offsets, uint32 bindIndex) const = 0;
-    virtual void Bind(const CommandBufferBase* commandBuffer, const ComputePipelineBase* pipeline, uint32 bindIndex) const = 0;
-    virtual void Bind(const CommandBufferBase* commandBuffer, const ComputePipelineBase* pipeline, const ArrayMap<Name, uint32>& offsets, uint32 bindIndex) const = 0;
-    virtual void Bind(const CommandBufferBase* commandBuffer, const RaytracingPipelineBase* pipeline, uint32 bindIndex) const = 0;
-    virtual void Bind(const CommandBufferBase* commandBuffer, const RaytracingPipelineBase* pipeline, const ArrayMap<Name, uint32>& offsets, uint32 bindIndex) const = 0;
+    virtual void Bind(CommandBufferBase* commandBuffer, const GraphicsPipelineBase* pipeline, uint32 bindIndex) const = 0;
+    virtual void Bind(CommandBufferBase* commandBuffer, const GraphicsPipelineBase* pipeline, const ArrayMap<Name, uint32>& offsets, uint32 bindIndex) const = 0;
+    virtual void Bind(CommandBufferBase* commandBuffer, const ComputePipelineBase* pipeline, uint32 bindIndex) const = 0;
+    virtual void Bind(CommandBufferBase* commandBuffer, const ComputePipelineBase* pipeline, const ArrayMap<Name, uint32>& offsets, uint32 bindIndex) const = 0;
+    virtual void Bind(CommandBufferBase* commandBuffer, const RaytracingPipelineBase* pipeline, uint32 bindIndex) const = 0;
+    virtual void Bind(CommandBufferBase* commandBuffer, const RaytracingPipelineBase* pipeline, const ArrayMap<Name, uint32>& offsets, uint32 bindIndex) const = 0;
 
 protected:
     DescriptorSetBase(const DescriptorSetLayout& layout)
@@ -942,23 +942,19 @@ public:
 
             const uint32 setIndex = GetDescriptorSetIndex(descriptorSetName);
 
-            if (set->GetLayout().GetDynamicElements().Empty())
+            if (set->GetLayout().GetDynamicElements().Any() && offsets.Any())
             {
-                set->Bind(commandBuffer, pipeline, setIndex);
-
-                continue;
+                const auto offsetsIt = offsets.Find(descriptorSetName);
+                
+                if (offsetsIt != offsets.End())
+                {
+                    set->Bind(commandBuffer, pipeline, offsetsIt->second, setIndex);
+                    
+                    continue;
+                }
             }
 
-            const auto offsetsIt = offsets.Find(descriptorSetName);
-
-            if (offsetsIt != offsets.End())
-            {
-                set->Bind(commandBuffer, pipeline, offsetsIt->second, setIndex);
-
-                continue;
-            }
-
-            set->Bind(commandBuffer, pipeline, {}, setIndex);
+            set->Bind(commandBuffer, pipeline, setIndex);
         }
     }
 

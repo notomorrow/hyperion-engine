@@ -316,6 +316,8 @@ static void RenderAll(
             materialDescriptorSetIndex);
     }
 
+    const DrawCallBase* prevDrawCall = nullptr;
+
     for (const DrawCall& drawCall : drawCallCollection.drawCalls)
     {
         if (entityDescriptorSet.IsValid())
@@ -340,20 +342,24 @@ static void RenderAll(
             frame->GetCommandList().Add<BindDescriptorSet>(materialDescriptorSet, pipeline, ArrayMap<Name, uint32> {}, materialDescriptorSetIndex);
         }
 
-        if (UseIndirectRendering && drawCall.drawCommandIndex != ~0u)
+        if (!prevDrawCall || prevDrawCall->mesh != drawCall.mesh)
         {
             frame->GetCommandList().Add<BindVertexBuffer>(drawCall.mesh->GetVertexBuffer());
             frame->GetCommandList().Add<BindIndexBuffer>(drawCall.mesh->GetIndexBuffer());
+        }
+
+        if (UseIndirectRendering && drawCall.drawCommandIndex != ~0u)
+        {
             frame->GetCommandList().Add<DrawIndexedIndirect>(
                 indirectRenderer->GetDrawState().GetIndirectBuffer(frameIndex),
                 drawCall.drawCommandIndex * uint32(sizeof(IndirectDrawCommand)));
         }
         else
         {
-            frame->GetCommandList().Add<BindVertexBuffer>(drawCall.mesh->GetVertexBuffer());
-            frame->GetCommandList().Add<BindIndexBuffer>(drawCall.mesh->GetIndexBuffer());
             frame->GetCommandList().Add<DrawIndexed>(drawCall.mesh->NumIndices(), 1);
         }
+
+        prevDrawCall = &drawCall;
 
         counts[ERS_DRAW_CALLS]++;
         counts[ERS_TRIANGLES] += drawCall.mesh->NumIndices() / 3;
@@ -383,15 +389,6 @@ static void RenderAll(
                 entityDescriptorSetIndex);
         }
 
-        const SizeType offset = entityInstanceBatch->batchIndex * drawCallCollection.impl->GetStructSize();
-
-        frame->GetCommandList().Add<BindDescriptorSet>(
-            instancingDescriptorSet,
-            pipeline,
-            ArrayMap<Name, uint32> {
-                { NAME("EntityInstanceBatchesBuffer"), uint32(offset) } },
-            instancingDescriptorSetIndex);
-
         // Bind material descriptor set
         if (materialDescriptorSetIndex != ~0u && !useBindlessTextures)
         {
@@ -404,20 +401,33 @@ static void RenderAll(
                 materialDescriptorSetIndex);
         }
 
-        if (UseIndirectRendering && drawCall.drawCommandIndex != ~0u)
+        const SizeType offset = entityInstanceBatch->batchIndex * drawCallCollection.impl->GetStructSize();
+
+        frame->GetCommandList().Add<BindDescriptorSet>(
+            instancingDescriptorSet,
+            pipeline,
+            ArrayMap<Name, uint32> {
+                { NAME("EntityInstanceBatchesBuffer"), uint32(offset) } },
+            instancingDescriptorSetIndex);
+
+        if (!prevDrawCall || prevDrawCall->mesh != drawCall.mesh)
         {
             frame->GetCommandList().Add<BindVertexBuffer>(drawCall.mesh->GetVertexBuffer());
             frame->GetCommandList().Add<BindIndexBuffer>(drawCall.mesh->GetIndexBuffer());
+        }
+
+        if (UseIndirectRendering && drawCall.drawCommandIndex != ~0u)
+        {
             frame->GetCommandList().Add<DrawIndexedIndirect>(
                 indirectRenderer->GetDrawState().GetIndirectBuffer(frameIndex),
                 drawCall.drawCommandIndex * uint32(sizeof(IndirectDrawCommand)));
         }
         else
         {
-            frame->GetCommandList().Add<BindVertexBuffer>(drawCall.mesh->GetVertexBuffer());
-            frame->GetCommandList().Add<BindIndexBuffer>(drawCall.mesh->GetIndexBuffer());
             frame->GetCommandList().Add<DrawIndexed>(drawCall.mesh->NumIndices(), entityInstanceBatch->numEntities);
         }
+
+        prevDrawCall = &drawCall;
 
         counts[ERS_DRAW_CALLS]++;
         counts[ERS_INSTANCED_DRAW_CALLS]++;
@@ -522,6 +532,8 @@ static void RenderAll_Parallel(
                 const uint32 entityDescriptorSetIndex = pipeline->GetDescriptorTable()->GetDescriptorSetIndex(NAME("Object"));
                 const DescriptorSetRef& entityDescriptorSet = pipeline->GetDescriptorTable()->GetDescriptorSet(NAME("Object"), frameIndex);
 
+                const DrawCallBase* prevDrawCall = nullptr;
+
                 for (const DrawCall& drawCall : drawCalls)
                 {
                     if (entityDescriptorSet.IsValid())
@@ -546,23 +558,27 @@ static void RenderAll_Parallel(
                         commandList.Add<BindDescriptorSet>(materialDescriptorSet, pipeline, ArrayMap<Name, uint32> {}, materialDescriptorSetIndex);
                     }
 
-                    if (UseIndirectRendering && drawCall.drawCommandIndex != ~0u)
+                    if (!prevDrawCall || prevDrawCall->mesh != drawCall.mesh)
                     {
                         commandList.Add<BindVertexBuffer>(drawCall.mesh->GetVertexBuffer());
                         commandList.Add<BindIndexBuffer>(drawCall.mesh->GetIndexBuffer());
+                    }
+
+                    if (UseIndirectRendering && drawCall.drawCommandIndex != ~0u)
+                    {
                         commandList.Add<DrawIndexedIndirect>(
                             indirectRenderer->GetDrawState().GetIndirectBuffer(frameIndex),
                             drawCall.drawCommandIndex * uint32(sizeof(IndirectDrawCommand)));
                     }
                     else
                     {
-                        commandList.Add<BindVertexBuffer>(drawCall.mesh->GetVertexBuffer());
-                        commandList.Add<BindIndexBuffer>(drawCall.mesh->GetIndexBuffer());
                         commandList.Add<DrawIndexed>(drawCall.mesh->NumIndices(), 1);
                     }
 
                     parallelRenderingState->renderStatsCounts[index][ERS_TRIANGLES] += drawCall.mesh->NumIndices() / 3;
                     parallelRenderingState->renderStatsCounts[index][ERS_DRAW_CALLS]++;
+
+                    prevDrawCall = &drawCall;
                 }
             });
 
@@ -592,6 +608,8 @@ static void RenderAll_Parallel(
                 const uint32 instancingDescriptorSetIndex = pipeline->GetDescriptorTable()->GetDescriptorSetIndex(NAME("Instancing"));
                 const DescriptorSetRef& instancingDescriptorSet = pipeline->GetDescriptorTable()->GetDescriptorSet(NAME("Instancing"), frameIndex);
 
+                const DrawCallBase* prevDrawCall = nullptr;
+
                 AssertDebug(instancingDescriptorSet.IsValid());
 
                 for (const InstancedDrawCall& drawCall : drawCalls)
@@ -616,15 +634,6 @@ static void RenderAll_Parallel(
                             entityDescriptorSetIndex);
                     }
 
-                    const SizeType offset = entityInstanceBatch->batchIndex * drawCallCollection.impl->GetStructSize();
-
-                    commandList.Add<BindDescriptorSet>(
-                        instancingDescriptorSet,
-                        pipeline,
-                        ArrayMap<Name, uint32> {
-                            { NAME("EntityInstanceBatchesBuffer"), uint32(offset) } },
-                        instancingDescriptorSetIndex);
-
                     // Bind material descriptor set
                     if (materialDescriptorSetIndex != ~0u && !useBindlessTextures)
                     {
@@ -637,20 +646,33 @@ static void RenderAll_Parallel(
                             materialDescriptorSetIndex);
                     }
 
-                    if (UseIndirectRendering && drawCall.drawCommandIndex != ~0u)
+                    const SizeType offset = entityInstanceBatch->batchIndex * drawCallCollection.impl->GetStructSize();
+
+                    commandList.Add<BindDescriptorSet>(
+                        instancingDescriptorSet,
+                        pipeline,
+                        ArrayMap<Name, uint32> {
+                            { NAME("EntityInstanceBatchesBuffer"), uint32(offset) } },
+                        instancingDescriptorSetIndex);
+
+                    if (!prevDrawCall || prevDrawCall->mesh != drawCall.mesh)
                     {
                         commandList.Add<BindVertexBuffer>(drawCall.mesh->GetVertexBuffer());
                         commandList.Add<BindIndexBuffer>(drawCall.mesh->GetIndexBuffer());
+                    }
+
+                    if (UseIndirectRendering && drawCall.drawCommandIndex != ~0u)
+                    {
                         commandList.Add<DrawIndexedIndirect>(
                             indirectRenderer->GetDrawState().GetIndirectBuffer(frameIndex),
                             drawCall.drawCommandIndex * uint32(sizeof(IndirectDrawCommand)));
                     }
                     else
                     {
-                        commandList.Add<BindVertexBuffer>(drawCall.mesh->GetVertexBuffer());
-                        commandList.Add<BindIndexBuffer>(drawCall.mesh->GetIndexBuffer());
                         commandList.Add<DrawIndexed>(drawCall.mesh->NumIndices(), entityInstanceBatch->numEntities);
                     }
+
+                    prevDrawCall = &drawCall;
 
                     parallelRenderingState->renderStatsCounts[index][ERS_TRIANGLES] += drawCall.mesh->NumIndices() / 3;
                     parallelRenderingState->renderStatsCounts[index][ERS_DRAW_CALLS]++;

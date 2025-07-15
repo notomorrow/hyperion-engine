@@ -7,7 +7,7 @@
 #include <vulkan/vulkan.h>
 
 namespace hyperion {
-class VulkanFence : public RenderObject<VulkanFence>
+class VulkanFence final : public RenderObject<VulkanFence>
 {
 public:
     HYP_API VulkanFence();

@@ -90,6 +90,8 @@ RendererResult VulkanCommandBuffer::Destroy()
 
 RendererResult VulkanCommandBuffer::Begin(const VulkanRenderPass* renderPass)
 {
+    m_boundDescriptorSets.Clear();
+
     VkCommandBufferInheritanceInfo inheritanceInfo { VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO };
     inheritanceInfo.subpass = 0;
     inheritanceInfo.framebuffer = VK_NULL_HANDLE;
@@ -123,6 +125,8 @@ RendererResult VulkanCommandBuffer::Begin(const VulkanRenderPass* renderPass)
 
 RendererResult VulkanCommandBuffer::End()
 {
+    m_boundDescriptorSets.Clear();
+
     HYPERION_VK_CHECK_MSG(
         vkEndCommandBuffer(m_handle),
         "Failed to end command buffer");
@@ -132,6 +136,8 @@ RendererResult VulkanCommandBuffer::End()
 
 RendererResult VulkanCommandBuffer::Reset()
 {
+    m_boundDescriptorSets.Clear();
+
     HYPERION_VK_CHECK_MSG(
         vkResetCommandBuffer(m_handle, 0),
         "Failed to reset command buffer");
@@ -144,6 +150,8 @@ RendererResult VulkanCommandBuffer::SubmitPrimary(
     VulkanFence* fence,
     VulkanSemaphoreChain* semaphoreChain)
 {
+    m_boundDescriptorSets.Clear();
+
     VkSubmitInfo submitInfo { VK_STRUCTURE_TYPE_SUBMIT_INFO };
 
     if (semaphoreChain != nullptr)
@@ -178,6 +186,8 @@ RendererResult VulkanCommandBuffer::SubmitPrimary(
 
 RendererResult VulkanCommandBuffer::SubmitSecondary(VulkanCommandBuffer* primary)
 {
+    m_boundDescriptorSets.Clear();
+
     vkCmdExecuteCommands(
         primary->GetVulkanHandle(),
         1,

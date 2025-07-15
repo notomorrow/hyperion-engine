@@ -528,6 +528,12 @@ public:
             return false;
         }
 
+        if constexpr (std::is_fundamental_v<T> || std::is_enum_v<T>)
+        {
+            // if T is a fundamental type, we can compare the memory directly
+            return Memory::MemCmp(Data(), other.Data(), ByteSize()) == 0;
+        }
+
         auto it = Begin();
         auto otherIt = other.Begin();
         const auto _end = End();
@@ -556,13 +562,19 @@ public:
             return true;
         }
 
+        if constexpr (std::is_fundamental_v<T> || std::is_enum_v<T>)
+        {
+            // if T is a fundamental type, we can compare the memory directly
+            return Memory::MemCmp(Data(), other.Data(), ByteSize()) != 0;
+        }
+
         auto it = Begin();
         auto otherIt = other.Begin();
         const auto _end = End();
 
         for (; it != _end; ++it, ++otherIt)
         {
-            if (!(*it == *otherIt))
+            if (*it != *otherIt)
             {
                 return true;
             }
