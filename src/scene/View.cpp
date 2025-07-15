@@ -450,7 +450,7 @@ ResourceTrackerDiff View::CollectMeshEntities(RenderProxyList& rpl)
 
                 if (const Handle<Material>& material = meshComponent.material)
                 {
-                    rpl.materials.Track(material.Id(), material.Get(), material->GetRenderProxyVersionPtr(), /* allowDuplicatesInSameFrame */ true);
+                    rpl.materials.Track(material.Id(), material.Get(), material->GetRenderProxyVersionPtr());
 
                     for (const auto& it : material->GetTextures())
                     {
@@ -467,7 +467,7 @@ ResourceTrackerDiff View::CollectMeshEntities(RenderProxyList& rpl)
 
                 if (const Handle<Skeleton>& skeleton = meshComponent.skeleton)
                 {
-                    rpl.skeletons.Track(skeleton.Id(), skeleton.Get(), skeleton->GetRenderProxyVersionPtr(), /* allowDuplicatesInSameFrame */ true);
+                    rpl.skeletons.Track(skeleton.Id(), skeleton.Get(), skeleton->GetRenderProxyVersionPtr());
                 }
             }
 
@@ -504,7 +504,7 @@ ResourceTrackerDiff View::CollectMeshEntities(RenderProxyList& rpl)
 
                 if (const Handle<Material>& material = meshComponent.material)
                 {
-                    rpl.materials.Track(material.Id(), material.Get(), material->GetRenderProxyVersionPtr(), /* allowDuplicatesInSameFrame */ true);
+                    rpl.materials.Track(material.Id(), material.Get(), material->GetRenderProxyVersionPtr());
 
                     for (const auto& it : material->GetTextures())
                     {
@@ -521,7 +521,7 @@ ResourceTrackerDiff View::CollectMeshEntities(RenderProxyList& rpl)
 
                 if (const Handle<Skeleton>& skeleton = meshComponent.skeleton)
                 {
-                    rpl.skeletons.Track(skeleton.Id(), skeleton.Get(), skeleton->GetRenderProxyVersionPtr(), /* allowDuplicatesInSameFrame */ true);
+                    rpl.skeletons.Track(skeleton.Id(), skeleton.Get(), skeleton->GetRenderProxyVersionPtr());
                 }
             }
 
@@ -558,7 +558,7 @@ ResourceTrackerDiff View::CollectMeshEntities(RenderProxyList& rpl)
 
                 if (const Handle<Material>& material = meshComponent.material)
                 {
-                    rpl.materials.Track(material.Id(), material.Get(), material->GetRenderProxyVersionPtr(), /* allowDuplicatesInSameFrame */ true);
+                    rpl.materials.Track(material.Id(), material.Get(), material->GetRenderProxyVersionPtr());
 
                     for (const auto& it : material->GetTextures())
                     {
@@ -575,7 +575,7 @@ ResourceTrackerDiff View::CollectMeshEntities(RenderProxyList& rpl)
 
                 if (const Handle<Skeleton>& skeleton = meshComponent.skeleton)
                 {
-                    rpl.skeletons.Track(skeleton.Id(), skeleton.Get(), skeleton->GetRenderProxyVersionPtr(), /* allowDuplicatesInSameFrame */ true);
+                    rpl.skeletons.Track(skeleton.Id(), skeleton.Get(), skeleton->GetRenderProxyVersionPtr());
                 }
             }
 
@@ -803,7 +803,7 @@ void View::CollectEnvProbes(RenderProxyList& rpl)
                 }
             }
 
-            rpl.envProbes.Track(probe->Id(), probe, probe->GetRenderProxyVersionPtr(), /* allowDuplicatesInSameFrame */ false);
+            rpl.envProbes.Track(probe->Id(), probe, probe->GetRenderProxyVersionPtr());
         }
 
         // TEMP SHIT: Refactor rendering of sky probes into new SkyRenderer class, and just use the above loop to collect SkyProbe
@@ -813,7 +813,7 @@ void View::CollectEnvProbes(RenderProxyList& rpl)
             {
                 AssertDebug(skyComponent.subsystem->GetEnvProbe()->IsA<SkyProbe>());
 
-                rpl.envProbes.Track(skyComponent.subsystem->GetEnvProbe()->Id(), skyComponent.subsystem->GetEnvProbe(), skyComponent.subsystem->GetEnvProbe()->GetRenderProxyVersionPtr(), /* allowDuplicatesInSameFrame */ false);
+                rpl.envProbes.Track(skyComponent.subsystem->GetEnvProbe()->Id(), skyComponent.subsystem->GetEnvProbe(), skyComponent.subsystem->GetEnvProbe()->GetRenderProxyVersionPtr());
             }
         }
     }

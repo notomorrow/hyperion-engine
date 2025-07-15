@@ -46,11 +46,6 @@ uniform sampler sampler_nearest;
 
 #define HYP_CUBEMAP_AMBIENT 0.005
 
-HYP_DESCRIPTOR_SSBO(Global, ShadowMapsBuffer) readonly buffer ShadowMapsBuffer
-{
-    ShadowMap shadow_map_data[];
-};
-
 HYP_DESCRIPTOR_SRV(Global, ShadowMapsTextureArray) uniform texture2DArray shadow_maps;
 HYP_DESCRIPTOR_SRV(Global, PointLightShadowMapsTextureArray) uniform textureCubeArray point_shadow_maps;
 

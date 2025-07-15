@@ -8,6 +8,8 @@
 #include <core/containers/SparsePagedArray.hpp>
 #include <core/containers/HashMap.hpp>
 
+#include <core/memory/Pimpl.hpp>
+
 #include <core/utilities/TypeId.hpp>
 
 #include <core/profiling/ProfileScope.hpp>
@@ -88,7 +90,7 @@ public:
             {
                 AssertDebug(subclassImplIndex < tracker->subclassImpls.Size());
 
-                auto& impl = tracker->subclassImpls[subclassImplIndex].Get();
+                auto& impl = *tracker->subclassImpls[subclassImplIndex];
                 elementIndex = FindNextSet(impl.*memPtr, elementIndex);
 
                 // Found valid element in subclass impl.
@@ -135,7 +137,7 @@ public:
             {
                 AssertDebug(subclassImplIndex < tracker->subclassImpls.Size());
 
-                auto& impl = tracker->subclassImpls[subclassImplIndex].Get();
+                auto& impl = *tracker->subclassImpls[subclassImplIndex];
 
                 elementIndex = FindNextSet(impl.*memPtr, elementIndex + 1);
 
@@ -179,7 +181,7 @@ public:
             {
                 AssertDebug(subclassImplIndex < tracker->subclassImpls.Size());
 
-                return tracker->subclassImpls[subclassImplIndex].Get().elements.Get(elementIndex);
+                return tracker->subclassImpls[subclassImplIndex]->elements.Get(elementIndex);
             }
 
             HYP_FAIL("Invalid iterator phase");
@@ -287,16 +289,7 @@ public:
     ResourceTracker(ResourceTracker&& other) noexcept = delete;
     ResourceTracker& operator=(ResourceTracker&& other) noexcept = delete;
 
-    ~ResourceTracker()
-    {
-        // destruct subtype containers
-        for (Bitset::BitIndex i : subclassIndices)
-        {
-            AssertDebug(i < subclassImpls.Size());
-
-            subclassImpls[i].Destruct();
-        }
-    }
+    ~ResourceTracker() = default;
 
     uint32 NumCurrent() const
     {
@@ -308,7 +301,7 @@ public:
         {
             AssertDebug(i < subclassImpls.Size());
 
-            count += subclassImpls[i].Get().next.Count();
+            count += subclassImpls[i]->next.Count();
         }
 
         return count;
@@ -327,7 +320,7 @@ public:
 
         if (subclassIndices.Test(subclassIndex))
         {
-            return subclassImpls[subclassIndex].Get().next.Count();
+            return subclassImpls[subclassIndex]->next.Count();
         }
 
         return 0;
@@ -348,7 +341,7 @@ public:
 
         if (subclassIndices.Test(subclassIndex))
         {
-            return subclassImpls[subclassIndex].Get().elements;
+            return subclassImpls[subclassIndex]->elements;
         }
 
         return emptyArray;
@@ -379,10 +372,12 @@ public:
         for (Bitset::BitIndex i : subclassIndices)
         {
             AssertDebug(i < subclassImpls.Size());
+            
+            auto& impl = *subclassImpls[i];
 
-            diff.numAdded += subclassImpls[i].Get().GetAdded().Count();
-            diff.numRemoved += subclassImpls[i].Get().GetRemoved().Count();
-            diff.numChanged += subclassImpls[i].Get().GetChanged().Count();
+            diff.numAdded += impl.GetAdded().Count();
+            diff.numRemoved += impl.GetRemoved().Count();
+            diff.numChanged += impl.GetChanged().Count();
         }
 
         return diff;
@@ -414,11 +409,11 @@ public:
 
         if (!subclassIndices.Test(subclassIndex))
         {
-            subclassImpls[subclassIndex].Construct(typeId);
+            subclassImpls[subclassIndex] = MakePimpl<Impl>(typeId);
             subclassIndices.Set(subclassIndex, true);
         }
 
-        subclassImpls[subclassIndex].Get().Track(id, element, versionPtr, allowDuplicatesInSameFrame);
+        subclassImpls[subclassIndex]->Track(id, element, versionPtr, allowDuplicatesInSameFrame);
     }
 
     bool MarkToKeep(IdType id)
@@ -442,7 +437,7 @@ public:
             return false;
         }
 
-        return subclassImpls[subclassIndex].Get().MarkToKeep(id);
+        return subclassImpls[subclassIndex]->MarkToKeep(id);
     }
 
     void MarkToRemove(IdType id)
@@ -466,7 +461,7 @@ public:
             return;
         }
 
-        subclassImpls[subclassIndex].Get().MarkToRemove(id);
+        subclassImpls[subclassIndex]->MarkToRemove(id);
     }
 
     template <class AllocatorType>
@@ -478,7 +473,7 @@ public:
 
         for (Bitset::BitIndex bitIndex : subclassIndices)
         {
-            subclassImpls[bitIndex].Get().GetRemoved(outIds, includeChanged);
+            subclassImpls[bitIndex]->GetRemoved(outIds, includeChanged);
         }
     }
 
@@ -491,7 +486,7 @@ public:
 
         for (Bitset::BitIndex i : subclassIndices)
         {
-            subclassImpls[i].Get().GetRemoved(out, includeChanged);
+            subclassImpls[i]->GetRemoved(out, includeChanged);
         }
     }
 
@@ -504,7 +499,7 @@ public:
 
         for (Bitset::BitIndex i : subclassIndices)
         {
-            subclassImpls[i].Get().GetRemoved(out, includeChanged);
+            subclassImpls[i]->GetRemoved(out, includeChanged);
         }
     }
 
@@ -517,7 +512,7 @@ public:
 
         for (Bitset::BitIndex bitIndex : subclassIndices)
         {
-            subclassImpls[bitIndex].Get().GetAdded(outIds, includeChanged);
+            subclassImpls[bitIndex]->GetAdded(outIds, includeChanged);
         }
     }
 
@@ -530,7 +525,7 @@ public:
 
         for (Bitset::BitIndex i : subclassIndices)
         {
-            subclassImpls[i].Get().GetAdded(out, includeChanged);
+            subclassImpls[i]->GetAdded(out, includeChanged);
         }
     }
 
@@ -543,7 +538,7 @@ public:
 
         for (Bitset::BitIndex i : subclassIndices)
         {
-            subclassImpls[i].Get().GetAdded(out, includeChanged);
+            subclassImpls[i]->GetAdded(out, includeChanged);
         }
     }
 
@@ -556,7 +551,7 @@ public:
 
         for (Bitset::BitIndex i : subclassIndices)
         {
-            subclassImpls[i].Get().GetChanged(outIds);
+            subclassImpls[i]->GetChanged(outIds);
         }
     }
 
@@ -569,7 +564,7 @@ public:
 
         for (Bitset::BitIndex i : subclassIndices)
         {
-            subclassImpls[i].Get().GetChanged(out);
+            subclassImpls[i]->GetChanged(out);
         }
     }
 
@@ -582,7 +577,7 @@ public:
 
         for (Bitset::BitIndex i : subclassIndices)
         {
-            subclassImpls[i].Get().GetChanged(out);
+            subclassImpls[i]->GetChanged(out);
         }
     }
 
@@ -595,7 +590,7 @@ public:
 
         for (Bitset::BitIndex i : subclassIndices)
         {
-            subclassImpls[i].Get().GetCurrent(out);
+            subclassImpls[i]->GetCurrent(out);
         }
     }
 
@@ -608,7 +603,7 @@ public:
 
         for (Bitset::BitIndex i : subclassIndices)
         {
-            subclassImpls[i].Get().GetCurrent(out);
+            subclassImpls[i]->GetCurrent(out);
         }
     }
 
@@ -632,7 +627,7 @@ public:
             return nullptr;
         }
 
-        return subclassImpls[subclassIndex].Get().GetElement(id);
+        return subclassImpls[subclassIndex]->GetElement(id);
     }
 
     const ElementType* GetElement(IdType id) const
@@ -660,7 +655,7 @@ public:
             return nullptr;
         }
 
-        return subclassImpls[subclassIndex].Get().GetProxy(id);
+        return subclassImpls[subclassIndex]->GetProxy(id);
     }
 
     const ProxyType* GetProxy(IdType id) const
@@ -685,13 +680,13 @@ public:
 
         if (!subclassIndices.Test(subclassIndex))
         {
-            subclassImpls[subclassIndex].Construct(typeId);
+            subclassImpls[subclassIndex] = MakePimpl<Impl>(typeId);
             subclassIndices.Set(subclassIndex, true);
         }
 
-        AssertDebug(subclassImpls[subclassIndex].Get().typeId == typeId,
-            "TypeId mismatch: expected {}, got {}", typeId.Value(), subclassImpls[subclassIndex].Get().typeId.Value());
-        return subclassImpls[subclassIndex].Get().SetProxy(id, std::move(proxy));
+        AssertDebug(subclassImpls[subclassIndex]->typeId == typeId,
+            "TypeId mismatch: expected {}, got {}", typeId.Value(), subclassImpls[subclassIndex]->typeId.Value());
+        return subclassImpls[subclassIndex]->SetProxy(id, std::move(proxy));
     }
 
     void RemoveProxy(IdType id)
@@ -715,7 +710,7 @@ public:
             return;
         }
 
-        subclassImpls[subclassIndex].Get().RemoveProxy(id);
+        subclassImpls[subclassIndex]->RemoveProxy(id);
     }
 
     void Advance()
@@ -726,7 +721,7 @@ public:
 
         for (Bitset::BitIndex i : subclassIndices)
         {
-            subclassImpls[i].Get().Advance();
+            subclassImpls[i]->Advance();
         }
     }
 
@@ -736,7 +731,7 @@ public:
 
         for (Bitset::BitIndex i : subclassIndices)
         {
-            subclassImpls[i].Get().Reset();
+            subclassImpls[i]->Reset();
         }
     }
 
@@ -1189,7 +1184,7 @@ public:
     Impl baseImpl;
 
     // per-subtype implementations (only constructed and setup on first Bind() call with that type)
-    Array<ValueStorage<Impl>> subclassImpls;
+    Array<Pimpl<Impl>> subclassImpls;
     Bitset subclassIndices;
 };
 
@@ -1225,11 +1220,11 @@ static inline void GetAddedElements(ResourceTracker<IdType, ElementType, ProxyTy
     {
         if (!lhs.subclassIndices.Test(i))
         {
-            lhs.subclassImpls[i].Construct(rhs.subclassImpls[i].Get().typeId);
+            lhs.subclassImpls[i] = MakePimpl<typename ResourceTracker<IdType, ElementType, ProxyType>::Impl>(rhs.subclassImpls[i]->typeId);
             lhs.subclassIndices.Set(i, true);
         }
 
-        impl(lhs.subclassImpls[i].Get(), rhs.subclassImpls[i].Get());
+        impl(*lhs.subclassImpls[i], *rhs.subclassImpls[i]);
     }
 }
 
@@ -1265,11 +1260,11 @@ static inline void GetRemovedElements(ResourceTracker<IdType, ElementType, Proxy
     {
         if (!rhs.subclassIndices.Test(i))
         {
-            lhs.subclassImpls[i].Construct(rhs.subclassImpls[i].Get().typeId);
+            lhs.subclassImpls[i] = MakePimpl<typename ResourceTracker<IdType, ElementType, ProxyType>::Impl>(rhs.subclassImpls[i]->typeId);
             lhs.subclassIndices.Set(i, true);
         }
 
-        impl(lhs.subclassImpls[i].Get(), rhs.subclassImpls[i].Get());
+        impl(*lhs.subclassImpls[i], *rhs.subclassImpls[i]);
     }
 }
 

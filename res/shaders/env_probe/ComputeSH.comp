@@ -43,10 +43,6 @@ HYP_DESCRIPTOR_SSBO(Global, EnvProbesBuffer) buffer EnvProbesBuffer
     EnvProbe env_probes[];
 };
 
-HYP_DESCRIPTOR_SSBO(Global, ShadowMapsBuffer) readonly buffer ShadowMapsBuffer
-{
-    ShadowMap shadow_map_data[];
-};
 HYP_DESCRIPTOR_SRV(Global, ShadowMapsTextureArray) uniform texture2DArray shadow_maps;
 HYP_DESCRIPTOR_SRV(Global, PointLightShadowMapsTextureArray) uniform textureCubeArray point_shadow_maps;
 
@@ -204,9 +200,9 @@ vec4 CalculateDirectLighting(in vec3 P, in vec3 N, in vec3 V)
 
     float shadow = 1.0;
 
-    if (light.shadow_map_index != ~0u)
+    if (bool(light.flags & LF_SHADOW))
     {
-        shadow = GetShadowStandard(light.shadow_map_index, P, vec2(0.0), NdotL);
+        shadow = GetShadowStandard(light, P, vec2(0.0), NdotL);
     }
 
     return light_color * NdotL * shadow * light.position_intensity.w;

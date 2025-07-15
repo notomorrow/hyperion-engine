@@ -9,10 +9,10 @@
 #define VOLUMETRIC_LIGHTING_FADE_END 0.9
 #define VOLUMETRIC_LIGHTING_INTENSITY 0.9
 
-float LightRayAttenuation(uint shadow_map_index, vec3 P, float NdotL)
+float LightRayAttenuation(in Light light, vec3 P, float NdotL)
 {
     // Get shadow
-    return GetShadowStandard(shadow_map_index, P, vec2(0.0), NdotL);
+    return GetShadowStandard(light, P, vec2(0.0), NdotL);
 }
 
 float LightRayDensity(vec3 position)
@@ -27,7 +27,7 @@ float LightRayScattering(float f_cos, float f_cos2, float g, float g2)
     return 1.5 * ((1.0 - g2) / (2.0 + g2)) * (1.0 + f_cos2) / pow(1.0 + g2 - 2.0 * g * f_cos, 1.5);
 }
 
-float LightRayMarch(uint shadow_map_index, vec2 uv, vec3 L, vec3 ray_origin, vec3 ray_dir, float ray_len)
+float LightRayMarch(in Light light, vec2 uv, vec3 L, vec3 ray_origin, vec3 ray_dir, float ray_len)
 {
     float step_size = ray_len / float(VOLUMETRIC_LIGHTING_STEPS);
     vec3 ray_delta_step = ray_dir * step_size;
@@ -45,7 +45,7 @@ float LightRayMarch(uint shadow_map_index, vec2 uv, vec3 L, vec3 ray_origin, vec
 
     for (int i = 0; i < VOLUMETRIC_LIGHTING_STEPS; i++)
     {
-        float attenuation = LightRayAttenuation(shadow_map_index, marching_position, cos_angle);
+        float attenuation = LightRayAttenuation(light, marching_position, cos_angle);
 
         float density = LightRayDensity(marching_position);
         float scattering = scattering_value * step_size * density;
@@ -63,7 +63,7 @@ float LightRayMarch(uint shadow_map_index, vec2 uv, vec3 L, vec3 ray_origin, vec
     return volumetric;
 }
 
-float LightRays(uint shadow_map_index, vec2 uv, vec3 L, vec3 P, vec3 camera_position, float depth)
+float LightRays(in Light light, vec2 uv, vec3 L, vec3 P, vec3 camera_position, float depth)
 {
     float linear_depth = Linear01Depth(depth, camera.near, camera.far);
 
@@ -77,7 +77,7 @@ float LightRays(uint shadow_map_index, vec2 uv, vec3 L, vec3 P, vec3 camera_posi
 
     ray_len = min(ray_len, 120.0);
 
-    return LightRayMarch(shadow_map_index, uv, L, ray_start, ray_dir, ray_len);
+    return LightRayMarch(light, uv, L, ray_start, ray_dir, ray_len);
 }
 
 float LightRays2(vec2 uv, vec2 ss_L, vec3 P, vec3 camera_position)

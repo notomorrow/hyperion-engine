@@ -123,7 +123,7 @@ void main()
     irradiance = CalculateEnvGridIrradiance(P, N, V);
 #endif
 
-    color_output = vec4(irradiance, 1.0);
+    // color_output = vec4(irradiance, 1.0);
 #elif defined(MODE_RADIANCE)
     vec4 radiance = ComputeVoxelRadiance(P, N, V, roughness, pixel_coord, screen_resolution, world_shader_data.frame_counter, ivec3(env_grid.density.xyz), voxel_grid_aabb);
 

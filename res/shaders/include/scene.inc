@@ -43,46 +43,34 @@ struct Light
     uint id;
     uint type;
     uint color_encoded;
-    float radius;
+    uint radius_falloff; // packed as half
 
-    float falloff;
-    uint shadow_map_index; // ~0 == no shadow map
-    vec2 area_size;        // for area lights
+    vec2 area_size; // for area lights
 
     vec4 position_intensity; // position or direction
     vec4 normal;             // for area lights
 
     vec2 spot_angles;    // for spot lights (x = outer, y = inner)
     uint material_index; // for area lights - ~0u == no material
-    uint _pad2;
+    uint flags;
 
-    vec4 aabb_min;
-    vec4 aabb_max;
-    uvec4 _pad5;
-};
-
-#define SHADOW_FLAGS_PCF 0x1
-#define SHADOW_FLAGS_VSM 0x2
-#define SHADOW_FLAGS_CONTACT_HARDENED 0x4
-#define SHADOW_FLAGS_TYPE_MASK (SHADOW_FLAGS_PCF | SHADOW_FLAGS_VSM | SHADOW_FLAGS_CONTACT_HARDENED)
-
-struct ShadowMap
-{
     mat4 projection;
     mat4 view;
-    vec4 aabb_max;
     vec4 aabb_min;
-
+    vec4 aabb_max;
     vec4 dimensions_scale; // xy = slice dimensions in pixels, zw = slice dimensions relative to the atlas dimensions
     vec2 offset_uv;
     uint layer_index; // atlas index, also used for point light shadow map index
-    uint flags;
-
-    vec4 _pad1;
-    vec4 _pad2;
-    vec4 _pad3;
-    vec4 _pad4;
 };
+
+// Maps to LightFlags
+#define LF_NONE 0x0
+#define LF_SHADOW 0x1
+#define LF_SHADOW_PCF 0x2
+#define LF_SHADOW_CONTACT_HARDENING 0x4
+#define LF_SHADOW_VSM 0x8
+#define LF_SHADOW_FILTER_MASK (LF_SHADOW_PCF | LF_SHADOW_CONTACT_HARDENING | LF_SHADOW_VSM)
+#define LF_DEFAULT (LF_SHADOW | LF_SHADOW_PCF)
 
 struct LightmapVolume
 {

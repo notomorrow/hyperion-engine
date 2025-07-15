@@ -73,13 +73,16 @@ HYP_API extern RenderProxyList& RenderApi_GetConsumerProxyList(View* view);
 HYP_API extern RenderCollector& RenderApi_GetRenderCollector(View* view);
 
 // Call on render thread or render thread tasks only (consumer)
-HYP_API extern IRenderProxy* RenderApi_GetRenderProxy(ObjIdBase id);
+HYP_API extern IRenderProxy* RenderApi_GetRenderProxy(ObjIdBase resourceId);
+
+/*! \brief Render thread only - update GPU data to match RenderProxy's buffer data for the resource with the given ID */
+HYP_API extern void RenderApi_UpdateGpuData(ObjIdBase resourceId);
 
 // used on render thread only - assigns all render proxy for the given object to the given binding
 HYP_API extern void RenderApi_AssignResourceBinding(HypObjectBase* resource, uint32 binding);
 // used on render thread only - retrieves the binding set for the given resource (~0u if unset)
 HYP_API extern uint32 RenderApi_RetrieveResourceBinding(const HypObjectBase* resource);
-HYP_API extern uint32 RenderApi_RetrieveResourceBinding(ObjIdBase id);
+HYP_API extern uint32 RenderApi_RetrieveResourceBinding(ObjIdBase resourceId);
 
 struct ResourceBindings;
 
@@ -93,7 +96,6 @@ enum GlobalRenderBuffer : uint8
     GRB_ENTITIES,
     GRB_MATERIALS,
     GRB_SKELETONS,
-    GRB_SHADOW_MAPS,
     GRB_ENV_PROBES,
     GRB_ENV_GRIDS,
     GRB_LIGHTMAP_VOLUMES,

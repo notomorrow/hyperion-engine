@@ -33,11 +33,6 @@ HYP_DESCRIPTOR_SAMPLER(Global, SamplerLinear) uniform sampler sampler_linear;
 HYP_DESCRIPTOR_SRV(Global, ShadowMapsTextureArray) uniform texture2DArray shadow_maps;
 HYP_DESCRIPTOR_SRV(Global, PointLightShadowMapsTextureArray) uniform textureCubeArray point_shadow_maps;
 
-HYP_DESCRIPTOR_SSBO(Global, ShadowMapsBuffer) readonly buffer ShadowMapsBuffer
-{
-    ShadowMap shadow_map_data[];
-};
-
 #define HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 #include "../include/shadows.inc"
 #undef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
@@ -220,15 +215,19 @@ void main()
 
         const vec3 L = CalculateLightDirection(light, position);
         const float NdotL = max(dot(normal, L), 0.00001);
+
+        const vec2 radiusFalloff = unpackHalf2x16(light.radius_falloff);
+        const float radius = radiusFalloff.x;
+        const float falloff = radiusFalloff.y;
         
         const float attenuation = light.type == HYP_LIGHT_TYPE_POINT
-            ? GetSquareFalloffAttenuation(position.xyz, light.position_intensity.xyz, light.radius)
+            ? GetSquareFalloffAttenuation(position.xyz, light.position_intensity.xyz, radius)
             : 1.0;
 
         vec4 local_light = vec4(NdotL) * UINT_TO_VEC4(light.color_encoded) * light.position_intensity.w * attenuation;
 
-        if (light.type == HYP_LIGHT_TYPE_DIRECTIONAL && light.shadow_map_index != ~0u) {
-            local_light *= GetShadowStandard(light.shadow_map_index, position.xyz);
+        if (light.type == HYP_LIGHT_TYPE_DIRECTIONAL && bool(light.flags & LF_SHADOW)) {
+            local_light *= GetShadowStandard(light, position.xyz);
         }
 
         direct_lighting += material_color * local_light;

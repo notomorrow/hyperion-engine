@@ -74,10 +74,7 @@ HYP_DESCRIPTOR_SSBO(Global, LightsBuffer) readonly buffer LightsBuffer
 {
     Light lights[];
 };
-HYP_DESCRIPTOR_SSBO(Global, ShadowMapsBuffer) readonly buffer ShadowMapsBuffer
-{
-    ShadowMap shadow_map_data[];
-};
+
 HYP_DESCRIPTOR_SRV(Global, ShadowMapsTextureArray) uniform texture2DArray shadow_maps;
 HYP_DESCRIPTOR_SRV(Global, PointLightShadowMapsTextureArray) uniform textureCubeArray point_shadow_maps;
 
@@ -183,25 +180,27 @@ float CalculateAlpha(
 
 vec4 CalculateDirectLighting(uint light_index, in vec4 albedo, in vec3 P, in vec3 N)
 {
-    if (lights[light_index].type != HYP_LIGHT_TYPE_DIRECTIONAL)
+    Light light = lights[light_index];
+
+    if (light.type != HYP_LIGHT_TYPE_DIRECTIONAL)
     {
         return vec4(0.0);
     }
 
-    const vec4 light_color = vec4(UINT_TO_VEC4(lights[light_index].color_encoded).rgb, 1.0);
+    const vec4 light_color = vec4(UINT_TO_VEC4(light.color_encoded).rgb, 1.0);
 
-    vec3 L = normalize(lights[light_index].position_intensity.xyz);
+    vec3 L = normalize(light.position_intensity.xyz);
 
     float NdotL = max(0.0001, dot(N, L));
 
     float shadow = 1.0;
 
-    if (lights[light_index].type == HYP_LIGHT_TYPE_DIRECTIONAL && lights[light_index].shadow_map_index != ~0u)
+    if (light.type == HYP_LIGHT_TYPE_DIRECTIONAL && bool(light.flags & LF_SHADOW))
     {
-        shadow = GetShadowStandard(lights[light_index].shadow_map_index, P, vec2(0.0), NdotL);
+        shadow = GetShadowStandard(light, P, vec2(0.0), NdotL);
     }
 
-    return light_color * NdotL * shadow * lights[light_index].position_intensity.w;
+    return light_color * NdotL * shadow * light.position_intensity.w;
 }
 
 vec4 SampleSky(vec3 dir)

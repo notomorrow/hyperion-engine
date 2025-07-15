@@ -528,6 +528,9 @@ void EnvGrid::Update(float delta)
         shouldRecollectEntites = true;
     }
 
+    // temp
+    shouldRecollectEntites = true;
+
     if (!shouldRecollectEntites)
     {
         return;

@@ -53,10 +53,7 @@ HYP_DESCRIPTOR_SSBO(Global, LightsBuffer) readonly buffer LightsBuffer
 {
     Light lights[];
 };
-HYP_DESCRIPTOR_SSBO(Global, ShadowMapsBuffer) readonly buffer ShadowMapsBuffer
-{
-    ShadowMap shadow_map_data[];
-};
+
 HYP_DESCRIPTOR_SRV(Global, ShadowMapsTextureArray) uniform texture2DArray shadow_maps;
 HYP_DESCRIPTOR_SRV(Global, PointLightShadowMapsTextureArray) uniform textureCubeArray point_shadow_maps;
 
@@ -82,10 +79,11 @@ vec4 SampleSky(vec3 dir)
 
 vec4 CalculateDirectLighting(uint light_index, in vec4 albedo, in vec3 P, in vec3 N, in vec3 V)
 {
-    const vec4 light_color = UINT_TO_VEC4(lights[light_index].color_encoded);
-    const vec4 light_position_intensity = lights[light_index].position_intensity;
-    const uint light_shadow_map_index = lights[light_index].shadow_map_index;
-    const uint light_type = lights[light_index].type;
+    Light light = lights[light_index];
+
+    const vec4 light_color = UINT_TO_VEC4(light.color_encoded);
+    const vec4 light_position_intensity = light.position_intensity;
+    const uint light_type = light.type;
 
     vec3 L = light_position_intensity.xyz;
     const vec3 world_to_light = P - L;
@@ -98,20 +96,25 @@ vec4 CalculateDirectLighting(uint light_index, in vec4 albedo, in vec3 P, in vec
     float shadow = 1.0;
     float attenuation = 1.0;
 
+    const vec2 radiusFalloff = unpackHalf2x16(light.radius_falloff);
+    const float radius = radiusFalloff.x;
+    const float falloff = radiusFalloff.y;
+
     switch (light_type)
     {
     case HYP_LIGHT_TYPE_DIRECTIONAL:
-        if (light_shadow_map_index != ~0u)
+        if (bool(light.flags & LF_SHADOW))
         {
-            shadow = GetShadowStandard(light_shadow_map_index, P, vec2(0.0), NdotL);
+            shadow = GetShadowStandard(light, P, vec2(0.0), NdotL);
         }
         break;
     case HYP_LIGHT_TYPE_POINT:
-        if (light_shadow_map_index != ~0u)
+        if (bool(light.flags & LF_SHADOW))
         {
-            shadow = GetPointShadow(light_shadow_map_index, world_to_light, NdotL);
+            shadow = GetPointShadow(light, world_to_light, NdotL);
         }
-        attenuation = GetSquareFalloffAttenuation(P, light_position_intensity.xyz, lights[light_index].radius);
+
+        attenuation = GetSquareFalloffAttenuation(P, light_position_intensity.xyz, radius);
         break;
     default:
         return vec4(0.0);

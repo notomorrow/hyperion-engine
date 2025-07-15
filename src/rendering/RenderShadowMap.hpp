@@ -19,29 +19,6 @@
 namespace hyperion {
 
 class FullScreenPass;
-
-struct ShadowMapShaderData
-{
-    Matrix4 projection;
-    Matrix4 view;
-    Vec4f aabbMax;
-    Vec4f aabbMin;
-    Vec4f dimensionsScale; // xy = shadow map dimensions in pixels, zw = shadow map dimensions relative to the atlas dimensions
-    Vec2f offsetUv;        // offset in the atlas texture array
-    uint32 layerIndex;     // index of the atlas in the shadow map texture array, or cubemap index for point lights
-    uint32 flags;
-
-    Vec4f _pad1;
-    Vec4f _pad2;
-    Vec4f _pad3;
-    Vec4f _pad4;
-};
-
-static_assert(sizeof(ShadowMapShaderData) == 256);
-
-/* max number of shadow maps, based on size in kb */
-static const SizeType maxShadowMaps = (4ull * 1024ull) / sizeof(ShadowMapShaderData);
-
 class RenderWorld;
 class RenderShadowMap;
 
@@ -54,16 +31,6 @@ enum ShadowMapFilter : uint32
 
     SMF_MAX
 };
-
-enum ShadowFlags : uint32
-{
-    SF_NONE = 0x0,
-    SF_PCF = 0x1,
-    SF_VSM = 0x2,
-    SF_CONTACT_HARDENED = 0x4
-};
-
-HYP_MAKE_ENUM_FLAGS(ShadowFlags)
 
 enum ShadowMapType : uint32
 {
@@ -261,8 +228,6 @@ public:
         return m_imageView;
     }
 
-    void SetBufferData(const ShadowMapShaderData& bufferData);
-
 protected:
     virtual void Initialize_Internal() override;
     virtual void Destroy_Internal() override;
@@ -277,7 +242,6 @@ private:
     ShadowMapFilter m_filterMode;
     ShadowMapAtlasElement m_atlasElement;
     ImageViewRef m_imageView;
-    ShadowMapShaderData m_bufferData; // temp
 
     UniquePtr<FullScreenPass> m_combineShadowMapsPass;
 };

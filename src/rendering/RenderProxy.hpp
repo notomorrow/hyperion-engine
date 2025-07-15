@@ -191,16 +191,14 @@ public:
     ObjId<EnvProbe> envProbes[g_maxBoundAmbientProbes];
 };
 
-struct LightShaderData
+struct alignas(16) LightShaderData
 {
     uint32 lightId;
     uint32 lightType;
     uint32 colorPacked;
-    float radius;
+    uint32 radiusFalloffPacked;
     // 16
 
-    float falloff;
-    uint32 shadowMapIndex;
     Vec2f areaSize;
     // 32
 
@@ -210,15 +208,19 @@ struct LightShaderData
 
     Vec2f spotAngles;
     uint32 materialIndex;
-    uint32 _pad2;
+    uint32 flags;
 
+    // Shadow map data
+    Matrix4 projection;
+    Matrix4 view;
     Vec4f aabbMin;
     Vec4f aabbMax;
-
-    Vec4u pad5;
+    Vec4f dimensionsScale; // xy = shadow map dimensions in pixels, zw = shadow map dimensions relative to the atlas dimensions
+    Vec2f offsetUv;        // offset in the atlas texture array
+    uint32 layerIndex;     // index of the atlas in the shadow map texture array, or cubemap index for point lights
 };
 
-static_assert(sizeof(LightShaderData) == 128);
+static_assert(sizeof(LightShaderData) == 272);
 
 class RenderProxyLight : public IRenderProxy
 {

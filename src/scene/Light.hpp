@@ -299,6 +299,7 @@ protected:
     Handle<Material> m_material;
     
     Array<Handle<View>> m_shadowViews;
+    BoundingBox m_shadowAabb;
 
 private:
     Pair<Vec3f, Vec3f> CalculateAreaLightRect() const;

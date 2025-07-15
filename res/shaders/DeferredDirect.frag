@@ -60,11 +60,6 @@ HYP_DESCRIPTOR_CBUFF_DYNAMIC(Global, WorldsBuffer) uniform WorldsBuffer
     WorldShaderData world_shader_data;
 };
 
-HYP_DESCRIPTOR_SSBO(Global, ShadowMapsBuffer) readonly buffer ShadowMapsBuffer
-{
-    ShadowMap shadow_map_data[];
-};
-
 HYP_DESCRIPTOR_SSBO_DYNAMIC(Global, CurrentLight) readonly buffer CurrentLight
 {
     Light light;
@@ -230,22 +225,22 @@ void main()
         vec4 light_color = UINT_TO_VEC4(light.color_encoded);
 
 #ifdef LIGHT_TYPE_POINT
-        if (light.shadow_map_index != ~0u)
+        if (bool(light.flags & LF_SHADOW))
         {
             const vec3 world_to_light = position.xyz - light.position_intensity.xyz;
 
-            shadow = GetPointShadow(light.shadow_map_index, world_to_light, NdotL);
+            shadow = GetPointShadow(light, world_to_light, NdotL);
         }
 #elif defined(LIGHT_TYPE_DIRECTIONAL)
-        if (light.shadow_map_index != ~0u)
+        if (bool(light.flags & LF_SHADOW))
         {
-            shadow = GetShadow(light.shadow_map_index, position.xyz, texcoord, camera.dimensions.xy, NdotL);
+            shadow = GetShadow(light, position.xyz, texcoord, camera.dimensions.xy, NdotL);
 
             // #ifdef LIGHT_RAYS_ENABLED
             //             const float linear_eye_depth = ViewDepth(depth, camera.near, camera.far);
 
             //             const float light_ray_attenuation = LightRays(
-            //                 light.shadow_map_index,
+            //                 light,
             //                 texcoord,
             //                 L,
             //                 position.xyz,
@@ -269,7 +264,11 @@ void main()
         const vec4 specular_lobe = D * G * F;
 
 #if defined(LIGHT_TYPE_POINT) || defined(LIGHT_TYPE_SPOT)
-        float attenuation = GetSquareFalloffAttenuation(position.xyz, light.position_intensity.xyz, light.radius);
+        const vec2 radiusFalloff = unpackHalf2x16(light.radius_falloff);
+        const float radius = radiusFalloff.x;
+        const float falloff = radiusFalloff.y;
+
+        float attenuation = GetSquareFalloffAttenuation(position.xyz, light.position_intensity.xyz, radius);
 
 #ifdef LIGHT_TYPE_SPOT
         float theta = max(dot(-L, normalize(light.normal.xyz)), 0.0);

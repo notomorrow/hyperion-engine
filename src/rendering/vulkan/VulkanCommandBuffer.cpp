@@ -242,7 +242,7 @@ void VulkanCommandBuffer::DrawIndexedIndirect(
         static_cast<const VulkanGpuBuffer*>(buffer)->GetVulkanHandle(),
         bufferOffset,
         1,
-        uint32(sizeof(IndirectDrawCommand)));
+        uint32(sizeof(VkDrawIndexedIndirectCommand)));
 }
 
 void VulkanCommandBuffer::DebugMarkerBegin(const char* markerName) const

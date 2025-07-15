@@ -22,6 +22,8 @@
 
 #include <core/profiling/ProfileScope.hpp>
 
+#include <util/Float16.hpp>
+
 #include <EngineGlobals.hpp>
 #include <Engine.hpp>
 
@@ -265,8 +267,6 @@ void Light::Update(float delta)
         for (int i = 0; i < int(m_shadowViews.Size()); i++)
         {
             /// Update shadow camera position
-            BoundingBox aabb;
-
             switch (m_type)
             {
             case LT_DIRECTIONAL:
@@ -275,7 +275,7 @@ void Light::Update(float delta)
                     Vec3f::Zero(), /// @TODO: Clip to player
                     GetPosition().Normalized(),
                     40.0f, /// TODO shadow map radius
-                    aabb);
+                    m_shadowAabb);
 
                 break;
             default:
@@ -468,16 +468,28 @@ void Light::UpdateRenderProxy(IRenderProxy* proxy)
     bufferData.lightId = Id().Value();
     bufferData.lightType = uint32(m_type);
     bufferData.colorPacked = uint32(m_color);
-    bufferData.radius = m_radius;
-    bufferData.falloff = m_falloff;
+    bufferData.radiusFalloffPacked = (uint32(Float16(m_radius).Raw()) << 16) | Float16(m_falloff).Raw();
     bufferData.areaSize = m_areaSize;
     bufferData.positionIntensity = Vec4f(m_position, m_intensity);
     bufferData.normal = Vec4f(m_normal, 0.0f);
     bufferData.spotAngles = m_spotAngles;
     bufferData.materialIndex = ~0u; // materialIndex gets set in WriteBufferData_Light()
-    bufferData.aabbMin = Vec4f(aabb.min, 1.0f);
-    bufferData.aabbMax = Vec4f(aabb.max, 1.0f);
-    bufferData.shadowMapIndex = ~0u; // @TODO
+    bufferData.flags = m_flags;
+
+    if (m_shadowViews.Any())
+    {
+        bufferData.projection = m_shadowViews[0]->GetCamera()->GetProjectionMatrix();
+        bufferData.view = m_shadowViews[0]->GetCamera()->GetViewMatrix();
+        bufferData.aabbMin = Vec4f(m_shadowAabb.min, 1.0f);
+        bufferData.aabbMax = Vec4f(m_shadowAabb.max, 1.0f);
+    }
+    else
+    {
+        bufferData.projection = Matrix4::Identity();
+        bufferData.view = Matrix4::Identity();
+        bufferData.aabbMin = MathUtil::MaxSafeValue<Vec4f>();
+        bufferData.aabbMax = MathUtil::MinSafeValue<Vec4f>();
+    }
 }
 
 #pragma endregion Light

@@ -40,29 +40,27 @@ const vec2 shadow_pcf_kernel[16] = vec2[16](
     vec2(-0.24188840, 0.99706507),
     vec2(-0.81409955, 0.91437590),
     vec2(0.19984126, 0.78641367),
-    vec2(0.14383161, -0.14100790)
-);
+    vec2(0.14383161, -0.14100790));
 
-const mat4 shadow_bias_matrix = mat4( 
+const mat4 shadow_bias_matrix = mat4(
     0.5, 0.0, 0.0, 0.0,
     0.0, 0.5, 0.0, 0.0,
     0.0, 0.0, 1.0, 0.0,
-    0.5, 0.5, 0.0, 1.0
-);
+    0.5, 0.5, 0.0, 1.0);
 
-vec3 GetShadowCoord(uint index, vec3 pos)
+vec3 GetShadowCoord(in Light light, vec3 pos)
 {
-    mat4 shadow_matrix = shadow_bias_matrix * shadow_map_data[index].projection * shadow_map_data[index].view;
+    mat4 shadow_matrix = shadow_bias_matrix * light.projection * light.view;
     vec4 shadow_position = shadow_matrix * vec4(pos, 1.0);
     shadow_position.xyz /= shadow_position.w;
-  
+
     return shadow_position.xyz;
 }
 
-float GetShadowStandard(uint index, vec3 pos, vec2 offset, float NdotL)
+float GetShadowStandard(in Light light, vec3 pos, vec2 offset, float NdotL)
 {
-    const vec3 coord = GetShadowCoord(index, pos);
-    const vec4 shadow_sample = texture(sampler2DArray(shadow_maps, HYP_SAMPLER_NEAREST), vec3(((coord.xy + offset) * shadow_map_data[index].dimensions_scale.zw) + shadow_map_data[index].offset_uv, float(shadow_map_data[index].layer_index)));
+    const vec3 coord = GetShadowCoord(light, pos);
+    const vec4 shadow_sample = texture(sampler2DArray(shadow_maps, HYP_SAMPLER_NEAREST), vec3(((coord.xy + offset) * light.dimensions_scale.zw) + light.offset_uv, float(light.layer_index)));
     const float shadow_depth = shadow_sample.r;
 
     float bias = HYP_SHADOW_BIAS;
@@ -75,10 +73,10 @@ float GetShadowStandard(uint index, vec3 pos, vec2 offset, float NdotL)
     return max(step(coord.z - bias, shadow_depth), 0.0);
 }
 
-float GetShadowStandard(uint index, vec3 pos)
+float GetShadowStandard(in Light light, vec3 pos)
 {
-    const vec3 coord = GetShadowCoord(index, pos);
-    const vec4 shadow_sample = texture(sampler2DArray(shadow_maps, HYP_SAMPLER_NEAREST), vec3(coord.xy * shadow_map_data[index].dimensions_scale.zw, float(shadow_map_data[index].layer_index)));
+    const vec3 coord = GetShadowCoord(light, pos);
+    const vec4 shadow_sample = texture(sampler2DArray(shadow_maps, HYP_SAMPLER_NEAREST), vec3(coord.xy * light.dimensions_scale.zw, float(light.layer_index)));
     const float shadow_depth = shadow_sample.r;
 
     const float bias = HYP_SHADOW_BIAS;
@@ -100,50 +98,27 @@ float GetShadowStandard(vec4 shadow_sample, vec3 coord, float NdotL)
     return max(step(coord.z - bias, shadow_depth), 0.0);
 }
 
-float GetShadowPCF(uint index, vec3 pos, vec2 texcoord, vec2 screen_dimensions, float NdotL)
+float GetShadowPCF(in Light light, vec3 pos, vec2 texcoord, vec2 screen_dimensions, float NdotL)
 {
 #define HYP_1_OVER_16 0.0625
 
-    // float shadow = 0.0;
-
-    // const float radius = 0.0003;
-
-    // shadow += GetShadowStandard(index, pos, shadow_pcf_kernel[0] * radius, NdotL) * HYP_1_OVER_16;
-    // shadow += GetShadowStandard(index, pos, shadow_pcf_kernel[1] * radius, NdotL) * HYP_1_OVER_16;
-    // shadow += GetShadowStandard(index, pos, shadow_pcf_kernel[2] * radius, NdotL) * HYP_1_OVER_16;
-    // shadow += GetShadowStandard(index, pos, shadow_pcf_kernel[3] * radius, NdotL) * HYP_1_OVER_16;
-    // shadow += GetShadowStandard(index, pos, shadow_pcf_kernel[4] * radius, NdotL) * HYP_1_OVER_16;
-    // shadow += GetShadowStandard(index, pos, shadow_pcf_kernel[5] * radius, NdotL) * HYP_1_OVER_16;
-    // shadow += GetShadowStandard(index, pos, shadow_pcf_kernel[6] * radius, NdotL) * HYP_1_OVER_16;
-    // shadow += GetShadowStandard(index, pos, shadow_pcf_kernel[7] * radius, NdotL) * HYP_1_OVER_16;
-    // shadow += GetShadowStandard(index, pos, shadow_pcf_kernel[8] * radius, NdotL) * HYP_1_OVER_16;
-    // shadow += GetShadowStandard(index, pos, shadow_pcf_kernel[9] * radius, NdotL) * HYP_1_OVER_16;
-    // shadow += GetShadowStandard(index, pos, shadow_pcf_kernel[10] * radius, NdotL) * HYP_1_OVER_16;
-    // shadow += GetShadowStandard(index, pos, shadow_pcf_kernel[11] * radius, NdotL) * HYP_1_OVER_16;
-    // shadow += GetShadowStandard(index, pos, shadow_pcf_kernel[12] * radius, NdotL) * HYP_1_OVER_16;
-    // shadow += GetShadowStandard(index, pos, shadow_pcf_kernel[13] * radius, NdotL) * HYP_1_OVER_16;
-    // shadow += GetShadowStandard(index, pos, shadow_pcf_kernel[14] * radius, NdotL) * HYP_1_OVER_16;
-    // shadow += GetShadowStandard(index, pos, shadow_pcf_kernel[15] * radius, NdotL) * HYP_1_OVER_16;
-
-    // return shadow;
-
-
     AABB aabb;
-    aabb.min = shadow_map_data[index].aabb_min.xyz;
-    aabb.max = shadow_map_data[index].aabb_max.xyz;
+    aabb.min = light.aabb_min.xyz;
+    aabb.max = light.aabb_max.xyz;
 
-    const uint layer_index = shadow_map_data[index].layer_index;
+    const uint layer_index = light.layer_index;
 
-    const vec2 offset_uv = shadow_map_data[index].offset_uv;
-    const vec2 dimensions = shadow_map_data[index].dimensions_scale.xy;
-    const vec2 uv_scale = shadow_map_data[index].dimensions_scale.zw;
+    const vec2 offset_uv = light.offset_uv;
+    const vec2 dimensions = light.dimensions_scale.xy;
+    const vec2 uv_scale = light.dimensions_scale.zw;
 
-    if (!AABBContainsPoint(aabb, pos)) {
+    if (!AABBContainsPoint(aabb, pos))
+    {
         return 1.0;
     }
 
-    const vec3 coord = GetShadowCoord(index, pos);
-    
+    const vec3 coord = GetShadowCoord(light, pos);
+
     const vec2 texel_size = vec2(1.0) / dimensions;
 
     const vec2 a = fract(dimensions * coord.xy);
@@ -155,31 +130,39 @@ float GetShadowPCF(uint index, vec3 pos, vec2 texcoord, vec2 screen_dimensions, 
     const float gradient_noise = InterleavedGradientNoise(texcoord * screen_dimensions - 0.5);
 
 #if defined(HYP_SHADOW_SAMPLES_16)
-    #define HYP_SHADOW_SAMPLE_COUNT 16
+#define HYP_SHADOW_SAMPLE_COUNT 16
 #elif defined(HYP_SHADOW_SAMPLES_8)
-    #define HYP_SHADOW_SAMPLE_COUNT 8
+#define HYP_SHADOW_SAMPLE_COUNT 8
 #elif defined(HYP_SHADOW_SAMPLES_4)
-    #define HYP_SHADOW_SAMPLE_COUNT 4
+#define HYP_SHADOW_SAMPLE_COUNT 4
 #endif
 
 #ifdef HYP_SHADOW_SAMPLE_COUNT
-    #define HYP_DEF_VOGEL_DISK(iter_index) \
-        vec2 vogel_##iter_index = VogelDisk(iter_index, HYP_SHADOW_SAMPLE_COUNT, gradient_noise)
+#define HYP_DEF_VOGEL_DISK(iter_index) \
+    vec2 vogel_##iter_index = VogelDisk(iter_index, HYP_SHADOW_SAMPLE_COUNT, gradient_noise)
 
-    HYP_DEF_VOGEL_DISK(0); HYP_DEF_VOGEL_DISK(1);
-    HYP_DEF_VOGEL_DISK(2); HYP_DEF_VOGEL_DISK(3);
+    HYP_DEF_VOGEL_DISK(0);
+    HYP_DEF_VOGEL_DISK(1);
+    HYP_DEF_VOGEL_DISK(2);
+    HYP_DEF_VOGEL_DISK(3);
 
 #if defined(HYP_SHADOW_SAMPLES_8) || defined(HYP_SHADOW_SAMPLES_16)
-    HYP_DEF_VOGEL_DISK(4); HYP_DEF_VOGEL_DISK(5);
-    HYP_DEF_VOGEL_DISK(6); HYP_DEF_VOGEL_DISK(7);
+    HYP_DEF_VOGEL_DISK(4);
+    HYP_DEF_VOGEL_DISK(5);
+    HYP_DEF_VOGEL_DISK(6);
+    HYP_DEF_VOGEL_DISK(7);
 #endif
 
 #if defined(HYP_SHADOW_SAMPLES_16)
     // TODO: Precalculate vogel disk for a a set number of random values.
-    HYP_DEF_VOGEL_DISK(8); HYP_DEF_VOGEL_DISK(9);
-    HYP_DEF_VOGEL_DISK(10); HYP_DEF_VOGEL_DISK(11);
-    HYP_DEF_VOGEL_DISK(12); HYP_DEF_VOGEL_DISK(13);
-    HYP_DEF_VOGEL_DISK(14); HYP_DEF_VOGEL_DISK(15);
+    HYP_DEF_VOGEL_DISK(8);
+    HYP_DEF_VOGEL_DISK(9);
+    HYP_DEF_VOGEL_DISK(10);
+    HYP_DEF_VOGEL_DISK(11);
+    HYP_DEF_VOGEL_DISK(12);
+    HYP_DEF_VOGEL_DISK(13);
+    HYP_DEF_VOGEL_DISK(14);
+    HYP_DEF_VOGEL_DISK(15);
 #endif
 
 #undef HYP_DEF_VOGEL_DISK
@@ -187,19 +170,19 @@ float GetShadowPCF(uint index, vec3 pos, vec2 texcoord, vec2 screen_dimensions, 
     vec3 shadow_coords[HYP_SHADOW_SAMPLE_COUNT];
     vec4 shadow_samples[HYP_SHADOW_SAMPLE_COUNT];
 
-#define HYP_FETCH_SHADOW(iter_index) \
-    {                                \
-        shadow_coords[iter_index] = GetShadowCoord(iter_index, pos); \
+#define HYP_FETCH_SHADOW(iter_index)                                                                                                                                                        \
+    {                                                                                                                                                                                       \
+        shadow_coords[iter_index] = GetShadowCoord(iter_index, pos);                                                                                                                        \
         shadow_samples[iter_index] = texture(sampler2DArray(shadow_maps, HYP_SAMPLER_NEAREST), vec3((vogel_##iter_index * shadow_filter_size * uv_scale) + offset_uv, float(layer_index))); \
     }
 
-#define HYP_DO_SHADOW(iter_index) \
-    { \
-        shadowness += GetShadowStandard(index, pos, (vogel_##iter_index * shadow_filter_size), NdotL); \
+#define HYP_DO_SHADOW(iter_index)                                                                      \
+    {                                                                                                  \
+        shadowness += GetShadowStandard(light, pos, (vogel_##iter_index * shadow_filter_size), NdotL); \
     }
 
 #endif
-    
+
     float shadowness = 0.0;
 
 #ifdef HYP_SHADOW_SAMPLES_36_TAP
@@ -207,8 +190,10 @@ float GetShadowPCF(uint index, vec3 pos, vec2 texcoord, vec2 screen_dimensions, 
     const int sqrt_num_samples = 4;
     const int radius = sqrt_num_samples - 1;
 
-    for (int y = -radius; y <= radius; y++) {
-        for (int x = -radius; x <= radius; x++) {
+    for (int y = -radius; y <= radius; y++)
+    {
+        for (int x = -radius; x <= radius; x++)
+        {
             vec2 weights = vec2(1.0);
 
             bvec2 is_first = bvec2(1.0 - step(vec2(-radius + 1), vec2(x, y)));
@@ -219,14 +204,13 @@ float GetShadowPCF(uint index, vec3 pos, vec2 texcoord, vec2 screen_dimensions, 
 
             const float weight = weights.x * weights.y;
 
-            shadowness += GetShadowStandard(index, pos, (vec2(x, y) * texel_size), NdotL) * weight;
+            shadowness += GetShadowStandard(light, pos, (vec2(x, y) * texel_size), NdotL) * weight;
         }
     }
 
     shadowness /= 36.0;
 
 #else
-
 
 #if 0
 
@@ -247,20 +231,28 @@ float GetShadowPCF(uint index, vec3 pos, vec2 texcoord, vec2 screen_dimensions, 
 
 #endif
 
-    HYP_DO_SHADOW(0) HYP_DO_SHADOW(1)
-    HYP_DO_SHADOW(2) HYP_DO_SHADOW(3)
+    HYP_DO_SHADOW(0)
+    HYP_DO_SHADOW(1)
+    HYP_DO_SHADOW(2)
+    HYP_DO_SHADOW(3)
 
 #if defined(HYP_SHADOW_SAMPLES_8) || defined(HYP_SHADOW_SAMPLES_16)
-    HYP_DO_SHADOW(4) HYP_DO_SHADOW(5)
-    HYP_DO_SHADOW(6) HYP_DO_SHADOW(7)
+    HYP_DO_SHADOW(4)
+    HYP_DO_SHADOW(5)
+    HYP_DO_SHADOW(6)
+    HYP_DO_SHADOW(7)
 #endif
 
 #if defined(HYP_SHADOW_SAMPLES_16)
-    HYP_DO_SHADOW(8)  HYP_DO_SHADOW(9)
-    HYP_DO_SHADOW(10) HYP_DO_SHADOW(11)
-    HYP_DO_SHADOW(12) HYP_DO_SHADOW(13)
-    HYP_DO_SHADOW(14) HYP_DO_SHADOW(15)
-    
+    HYP_DO_SHADOW(8)
+    HYP_DO_SHADOW(9)
+    HYP_DO_SHADOW(10)
+    HYP_DO_SHADOW(11)
+    HYP_DO_SHADOW(12)
+    HYP_DO_SHADOW(13)
+    HYP_DO_SHADOW(14)
+    HYP_DO_SHADOW(15)
+
     shadowness /= 16.0;
 
 #elif defined(HYP_SHADOW_SAMPLES_8)
@@ -278,7 +270,7 @@ float GetShadowPCF(uint index, vec3 pos, vec2 texcoord, vec2 screen_dimensions, 
 #undef HYP_1_OVER_16
 }
 
-float GetShadowVariance(uint index, vec3 pos, float NdotL)
+float GetShadowVariance(in Light light, vec3 pos, float NdotL)
 {
     float bias = HYP_SHADOW_BIAS;
 
@@ -287,8 +279,8 @@ float GetShadowVariance(uint index, vec3 pos, float NdotL)
     bias = clamp(bias, 0.0, 0.01);
 #endif
 
-    const vec3 coord = GetShadowCoord(index, pos);
-    const vec4 moments = texture(sampler2DArray(shadow_maps, HYP_SAMPLER_LINEAR), vec3(coord.xy * shadow_map_data[index].dimensions_scale.zw + shadow_map_data[index].offset_uv, float(index)));
+    const vec3 coord = GetShadowCoord(light, pos);
+    const vec4 moments = texture(sampler2DArray(shadow_maps, HYP_SAMPLER_LINEAR), vec3(coord.xy * light.dimensions_scale.zw + light.offset_uv, float(light.layer_index)));
 
     float d = coord.z - moments.x;
     float p = step(coord.z, moments.x + bias);
@@ -297,14 +289,14 @@ float GetShadowVariance(uint index, vec3 pos, float NdotL)
     float p_max = variance / (variance + d * d);
 
     AABB aabb;
-    aabb.min = shadow_map_data[index].aabb_min.xyz;
-    aabb.max = shadow_map_data[index].aabb_max.xyz;
+    aabb.min = light.aabb_min.xyz;
+    aabb.max = light.aabb_max.xyz;
 
     return AABBContainsPoint(aabb, pos) ? max(p, p_max) : 1.0;
 
 #if 0
-    const vec3 coord = GetShadowCoord(index, pos);
-    const vec4 shadow_sample = texture(sampler2DArray(shadow_maps, HYP_SAMPLER_LINEAR), vec3(coord.xy * shadow_map_data[index].dimensions_scale.zw + shadow_map_data[index].offset_uv, float(index)));
+    const vec3 coord = GetShadowCoord(light, pos);
+    const vec4 shadow_sample = texture(sampler2DArray(shadow_maps, HYP_SAMPLER_LINEAR), vec3(coord.xy * light.dimensions_scale.zw + light.offset_uv, float(light.layer_index)));
     const float moment = shadow_sample.r;
 
     if (coord.z <= moment) {
@@ -333,22 +325,23 @@ float AvgBlockerDepthToPenumbra(float light_size, float avg_blocker_depth, float
     return penumbra;
 }
 
-float GetShadowContactHardened(uint index, vec3 pos, vec2 texcoord, vec2 screen_dimensions, float NdotL)
+float GetShadowContactHardened(in Light light, vec3 pos, vec2 texcoord, vec2 screen_dimensions, float NdotL)
 {
     AABB aabb;
-    aabb.min = shadow_map_data[index].aabb_min.xyz;
-    aabb.max = shadow_map_data[index].aabb_max.xyz;
+    aabb.min = light.aabb_min.xyz;
+    aabb.max = light.aabb_max.xyz;
 
-    if (!AABBContainsPoint(aabb, pos)) {
+    if (!AABBContainsPoint(aabb, pos))
+    {
         return 1.0;
     }
 
-    const vec2 uv_scale = shadow_map_data[index].dimensions_scale.zw;
+    const vec2 uv_scale = light.dimensions_scale.zw;
 
-    const vec3 coord = GetShadowCoord(index, pos);
+    const vec3 coord = GetShadowCoord(light, pos);
 
-    const uint layer_index = shadow_map_data[index].layer_index;
-    const vec2 offset_uv = shadow_map_data[index].offset_uv;
+    const uint layer_index = light.layer_index;
+    const vec2 offset_uv = light.offset_uv;
 
     const float shadow_map_depth = coord.z;
 
@@ -361,13 +354,12 @@ float GetShadowContactHardened(uint index, vec3 pos, vec2 texcoord, vec2 screen_
     float total_blocker_depth = 0.0;
     float num_blockers = 0.0;
 
-
 #if defined(HYP_SHADOW_SAMPLES_16) || defined(HYP_PENUMBRA_SAMPLES_16)
-    #define HYP_DEF_VOGEL_DISK(iter_index) \
-        vec2 vogel_##iter_index = VogelDisk(iter_index, 16, gradient_noise)
+#define HYP_DEF_VOGEL_DISK(iter_index) \
+    vec2 vogel_##iter_index = VogelDisk(iter_index, 16, gradient_noise)
 #else
-    #define HYP_DEF_VOGEL_DISK(iter_index) \
-        vec2 vogel_##iter_index = VogelDisk(iter_index, 8, gradient_noise)
+#define HYP_DEF_VOGEL_DISK(iter_index) \
+    vec2 vogel_##iter_index = VogelDisk(iter_index, 8, gradient_noise)
 #endif
 
     HYP_DEF_VOGEL_DISK(0);
@@ -395,19 +387,18 @@ float GetShadowContactHardened(uint index, vec3 pos, vec2 texcoord, vec2 screen_
 #if defined(HYP_SHADOW_PENUMBRA) && HYP_SHADOW_PENUMBRA
 
 // vectorization
-#define HYP_DO_SHADOW_PENUMBRA(iter_index0, iter_index1, iter_index2, iter_index3) \
-    { \
-        vec4 blocker_samples = vec4( \
-            texture(sampler2DArray(shadow_maps, HYP_SAMPLER_NEAREST), vec3(((coord.xy + (vogel_##iter_index0 * /*shadow_pcf_kernel[iter_index0] **/ penumbra_filter_size)) * uv_scale) + offset_uv, float(layer_index))).r, \
-            texture(sampler2DArray(shadow_maps, HYP_SAMPLER_NEAREST), vec3(((coord.xy + (vogel_##iter_index1 * /*shadow_pcf_kernel[iter_index1] **/ penumbra_filter_size)) * uv_scale) + offset_uv, float(layer_index))).r, \
-            texture(sampler2DArray(shadow_maps, HYP_SAMPLER_NEAREST), vec3(((coord.xy + (vogel_##iter_index2 * /*shadow_pcf_kernel[iter_index2] **/ penumbra_filter_size)) * uv_scale) + offset_uv, float(layer_index))).r, \
-            texture(sampler2DArray(shadow_maps, HYP_SAMPLER_NEAREST), vec3(((coord.xy + (vogel_##iter_index3 * /*shadow_pcf_kernel[iter_index3] **/ penumbra_filter_size)) * uv_scale) + offset_uv, float(layer_index))).r \
-        ); \
-        vec4 are_samples_blocking = vec4(lessThan(blocker_samples, vec4(shadow_map_depth))); \
-        total_blocker_depth += dot(blocker_samples * are_samples_blocking, vec4(1.0)); \
-        num_blockers += dot(are_samples_blocking, vec4(1.0)); \
+#define HYP_DO_SHADOW_PENUMBRA(iter_index0, iter_index1, iter_index2, iter_index3)                                                                                                                                           \
+    {                                                                                                                                                                                                                        \
+        vec4 blocker_samples = vec4(                                                                                                                                                                                         \
+            texture(sampler2DArray(shadow_maps, HYP_SAMPLER_NEAREST), vec3(((coord.xy + (vogel_##iter_index0 * /*shadow_pcf_kernel[iter_index0] **/ penumbra_filter_size)) * uv_scale) + offset_uv, float(layer_index))).r,  \
+            texture(sampler2DArray(shadow_maps, HYP_SAMPLER_NEAREST), vec3(((coord.xy + (vogel_##iter_index1 * /*shadow_pcf_kernel[iter_index1] **/ penumbra_filter_size)) * uv_scale) + offset_uv, float(layer_index))).r,  \
+            texture(sampler2DArray(shadow_maps, HYP_SAMPLER_NEAREST), vec3(((coord.xy + (vogel_##iter_index2 * /*shadow_pcf_kernel[iter_index2] **/ penumbra_filter_size)) * uv_scale) + offset_uv, float(layer_index))).r,  \
+            texture(sampler2DArray(shadow_maps, HYP_SAMPLER_NEAREST), vec3(((coord.xy + (vogel_##iter_index3 * /*shadow_pcf_kernel[iter_index3] **/ penumbra_filter_size)) * uv_scale) + offset_uv, float(layer_index))).r); \
+        vec4 are_samples_blocking = vec4(lessThan(blocker_samples, vec4(shadow_map_depth)));                                                                                                                                 \
+        total_blocker_depth += dot(blocker_samples * are_samples_blocking, vec4(1.0));                                                                                                                                       \
+        num_blockers += dot(are_samples_blocking, vec4(1.0));                                                                                                                                                                \
     }
-    
+
 #ifdef HYP_PENUMBRA_SAMPLES_8
     HYP_DO_SHADOW_PENUMBRA(0, 2, 4, 6)
     HYP_DO_SHADOW_PENUMBRA(8, 10, 12, 14)
@@ -421,12 +412,12 @@ float GetShadowContactHardened(uint index, vec3 pos, vec2 texcoord, vec2 screen_
 #else
     float penumbra_mask = 1.0;
 #endif
-    
+
     float shadowness = 0.0;
 
-#define HYP_DO_SHADOW(iter_index) \
-    { \
-        shadowness += GetShadowStandard(index, pos, (vogel_##iter_index * penumbra_mask * shadow_filter_size * uv_scale), NdotL); \
+#define HYP_DO_SHADOW(iter_index)                                                                                                 \
+    {                                                                                                                             \
+        shadowness += GetShadowStandard(light, pos, (vogel_##iter_index * penumbra_mask * shadow_filter_size * uv_scale), NdotL); \
     }
 
 #if defined(HYP_SHADOW_SAMPLES_16) || defined(HYP_SHADOW_SAMPLES_8)
@@ -495,34 +486,32 @@ float GetPointShadowStandard(uint texture_index, vec3 world_to_light, float Ndot
     return max(step(current_depth - bias, shadow_depth), 0.0);
 }
 
-float GetPointShadow(uint index, vec3 world_to_light, float NdotL)
+float GetPointShadow(in Light light, vec3 world_to_light, float NdotL)
 {
-    uint layer_index = shadow_map_data[index].layer_index;
-    uint flags = shadow_map_data[index].flags;
-    
-    switch (flags & SHADOW_FLAGS_TYPE_MASK) {
-    case SHADOW_FLAGS_VSM:
+    uint layer_index = light.layer_index;
+    uint flags = light.flags;
+
+    switch (flags & LF_SHADOW_FILTER_MASK)
+    {
+    case LF_SHADOW_VSM:
         return GetPointShadowVariance(layer_index, world_to_light, NdotL);
     default:
         return GetPointShadowStandard(layer_index, world_to_light, NdotL);
     }
 }
 
-float GetShadow(uint index, vec3 position, vec2 texcoord, vec2 screen_dimensions, float NdotL)
+float GetShadow(in Light light, vec3 position, vec2 texcoord, vec2 screen_dimensions, float NdotL)
 {
-    if (index >= HYP_MAX_SHADOW_MAPS) {
-        return 1.0;
-    }
-
-    switch (shadow_map_data[index].flags & SHADOW_FLAGS_TYPE_MASK) {
-    case SHADOW_FLAGS_VSM:
-        return GetShadowVariance(index, position, NdotL);
-    case SHADOW_FLAGS_CONTACT_HARDENED:
-        return GetShadowContactHardened(index, position, texcoord, screen_dimensions, NdotL);
-    case SHADOW_FLAGS_PCF:
-        return GetShadowPCF(index, position, texcoord, screen_dimensions, NdotL);
+    switch (light.flags & LF_SHADOW_FILTER_MASK)
+    {
+    case LF_SHADOW_VSM:
+        return GetShadowVariance(light, position, NdotL);
+    case LF_SHADOW_CONTACT_HARDENING:
+        return GetShadowContactHardened(light, position, texcoord, screen_dimensions, NdotL);
+    case LF_SHADOW_PCF:
+        return GetShadowPCF(light, position, texcoord, screen_dimensions, NdotL);
     default:
-        return GetShadowStandard(index, position, vec2(0.0), NdotL);
+        return GetShadowStandard(light, position, vec2(0.0), NdotL);
     }
 }
 

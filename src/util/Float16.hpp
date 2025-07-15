@@ -205,6 +205,11 @@ struct alignas(2) Float16
         *this -= 1.0f;
         return *this;
     }
+
+    HYP_FORCE_INLINE uint16 Raw() const
+    {
+        return value;
+    }
 };
 
 static_assert(sizeof(Float16) == 2, "float16 must be 2 bytes in size");

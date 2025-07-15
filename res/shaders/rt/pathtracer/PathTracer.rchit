@@ -35,11 +35,6 @@ HYP_DESCRIPTOR_SAMPLER(Global, SamplerLinear) uniform sampler sampler_linear;
 
 HYP_DESCRIPTOR_SRV(Global, ShadowMapsTextureArray) uniform texture2DArray shadow_maps;
 
-HYP_DESCRIPTOR_SSBO(Global, ShadowMapsBuffer) readonly buffer ShadowMapsBuffer
-{
-    ShadowMap shadow_map_data[];
-};
-
 #define HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 #include "../../include/shadows.inc"
 #undef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
@@ -112,7 +107,11 @@ float CheckLightIntersection(in Light light, in vec3 position, in vec3 R)
     vec3 light_to_position = position - light.position_intensity.xyz;
     float light_to_position_length = length(light_to_position);
 
-    if (light_to_position_length > light.radius) {
+    const vec2 radiusFalloff = unpackHalf2x16(light.radius_falloff);
+    const float radius = radiusFalloff.x;
+
+    if (light_to_position_length > radius)
+    {
         return HYP_FMATH_INFINITY;
     }
 

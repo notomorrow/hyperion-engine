@@ -127,7 +127,7 @@ void main()
     vec4 position;
     mat4 normal_matrix;
 
-#if defined(SKINNING) && defined(HYP_ATTRIBUTE_a_bone_weights) && defined(HYP_ATTRIBUTE_a_bone_indices
+#if defined(SKINNING) && defined(HYP_ATTRIBUTE_a_bone_weights) && defined(HYP_ATTRIBUTE_a_bone_indices)
     mat4 skinning_matrix = CreateSkinningMatrix(ivec4(a_bone_indices), a_bone_weights);
 
     position = object.model_matrix * skinning_matrix * vec4(a_position, 1.0);

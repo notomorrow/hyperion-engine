@@ -48,9 +48,9 @@ bool ShadowMapAtlas::AddElement(const Vec2u& elementDimensions, ShadowMapAtlasEl
 ShadowMapAllocator::ShadowMapAllocator()
     : m_atlasDimensions(2048, 2048)
 {
-    m_atlases.Reserve(maxShadowMaps);
+    m_atlases.Reserve(4);
 
-    for (SizeType i = 0; i < maxShadowMaps; i++)
+    for (SizeType i = 0; i < 4; i++)
     {
         m_atlases.PushBack(ShadowMapAtlas(uint32(i), m_atlasDimensions));
     }
@@ -221,8 +221,7 @@ RenderShadowMap::RenderShadowMap(ShadowMapType type, ShadowMapFilter filterMode,
     : m_type(type),
       m_filterMode(filterMode),
       m_atlasElement(atlasElement),
-      m_imageView(imageView),
-      m_bufferData {}
+      m_imageView(imageView)
 {
     HYP_LOG(Rendering, Debug, "Creating shadow map for atlas element, (atlas: {}, offset: {}, dimensions: {}, scale: {})",
         atlasElement.atlasIndex,
@@ -236,8 +235,7 @@ RenderShadowMap::RenderShadowMap(RenderShadowMap&& other) noexcept
       m_type(other.m_type),
       m_filterMode(other.m_filterMode),
       m_atlasElement(other.m_atlasElement),
-      m_imageView(std::move(other.m_imageView)),
-      m_bufferData(std::move(other.m_bufferData))
+      m_imageView(std::move(other.m_imageView))
 {
 }
 
@@ -265,52 +263,37 @@ void RenderShadowMap::Update_Internal()
 
 GpuBufferHolderBase* RenderShadowMap::GetGpuBufferHolder() const
 {
-    return g_renderGlobalState->gpuBuffers[GRB_SHADOW_MAPS];
-}
-
-void RenderShadowMap::SetBufferData(const ShadowMapShaderData& bufferData)
-{
-    HYP_SCOPE;
-
-    Execute([this, bufferData]()
-        {
-            m_bufferData = bufferData;
-
-            if (IsInitialized())
-            {
-                UpdateBufferData();
-            }
-        });
+    return nullptr;
 }
 
 void RenderShadowMap::UpdateBufferData()
 {
-    HYP_SCOPE;
+    // HYP_SCOPE;
 
-    Assert(m_bufferIndex != ~0u);
+    // Assert(m_bufferIndex != ~0u);
 
-    m_bufferData.dimensionsScale = Vec4f(Vec2f(m_atlasElement.dimensions), m_atlasElement.scale);
-    m_bufferData.offsetUv = m_atlasElement.offsetUv;
-    m_bufferData.layerIndex = m_type == SMT_OMNI ? m_atlasElement.pointLightIndex : m_atlasElement.atlasIndex;
-    m_bufferData.flags = uint32(SF_NONE);
+    // m_bufferData.dimensionsScale = Vec4f(Vec2f(m_atlasElement.dimensions), m_atlasElement.scale);
+    // m_bufferData.offsetUv = m_atlasElement.offsetUv;
+    // m_bufferData.layerIndex = m_type == SMT_OMNI ? m_atlasElement.pointLightIndex : m_atlasElement.atlasIndex;
+    // m_bufferData.flags = uint32(SF_NONE);
 
-    switch (m_filterMode)
-    {
-    case SMF_VSM:
-        m_bufferData.flags |= uint32(SF_VSM);
-        break;
-    case SMF_CONTACT_HARDENED:
-        m_bufferData.flags |= uint32(SF_CONTACT_HARDENED);
-        break;
-    case SMF_PCF:
-        m_bufferData.flags |= uint32(SF_PCF);
-        break;
-    default:
-        break;
-    }
+    // switch (m_filterMode)
+    // {
+    // case SMF_VSM:
+    //     m_bufferData.flags |= uint32(SF_VSM);
+    //     break;
+    // case SMF_CONTACT_HARDENED:
+    //     m_bufferData.flags |= uint32(SF_CONTACT_HARDENED);
+    //     break;
+    // case SMF_PCF:
+    //     m_bufferData.flags |= uint32(SF_PCF);
+    //     break;
+    // default:
+    //     break;
+    // }
 
-    *static_cast<ShadowMapShaderData*>(m_bufferAddress) = m_bufferData;
-    GetGpuBufferHolder()->MarkDirty(m_bufferIndex);
+    // *static_cast<ShadowMapShaderData*>(m_bufferAddress) = m_bufferData;
+    // GetGpuBufferHolder()->MarkDirty(m_bufferIndex);
 }
 
 #pragma endregion RenderShadowMap
@@ -517,10 +500,21 @@ void ShadowRendererBase::RenderFrame(FrameBase* frame, const RenderSetup& render
     else
     {
         shadowMap = cacheIt->second.shadowMap;
-        AssertDebug(shadowMap != nullptr);
     }
 
+    AssertDebug(shadowMap != nullptr);
+
     const ShadowMapAtlasElement& atlasElement = shadowMap->GetAtlasElement();
+
+    lightProxy->shadowMap = shadowMap;
+
+    lightProxy->bufferData.dimensionsScale = Vec4f(Vec2f(atlasElement.dimensions), atlasElement.scale);
+    lightProxy->bufferData.offsetUv = atlasElement.offsetUv;
+    lightProxy->bufferData.layerIndex = shadowMap->GetShadowMapType() == SMT_OMNI
+        ? atlasElement.pointLightIndex
+        : atlasElement.atlasIndex;
+
+    RenderApi_UpdateGpuData(light->Id());
 
     const ImageRef& shadowMapImage = shadowMap->GetImageView()->GetImage();
     Assert(shadowMapImage.IsValid());
@@ -705,6 +699,5 @@ RenderShadowMap* DirectionalShadowRenderer::AllocateShadowMap(Light* light)
 
 HYP_DESCRIPTOR_SRV(Global, ShadowMapsTextureArray, 1);
 HYP_DESCRIPTOR_SRV(Global, PointLightShadowMapsTextureArray, 1);
-HYP_DESCRIPTOR_SSBO(Global, ShadowMapsBuffer, 1, ~0u, false);
 
 } // namespace hyperion

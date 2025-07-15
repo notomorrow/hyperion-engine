@@ -72,11 +72,6 @@ HYP_DESCRIPTOR_CBUFF_DYNAMIC(Global, WorldsBuffer) uniform WorldsBuffer
     WorldShaderData world_shader_data;
 };
 
-HYP_DESCRIPTOR_SSBO(Global, ShadowMapsBuffer) readonly buffer ShadowMapsBuffer
-{
-    ShadowMap shadow_map_data[];
-};
-
 HYP_DESCRIPTOR_SRV(Global, ShadowMapsTextureArray) uniform texture2DArray shadow_maps;
 HYP_DESCRIPTOR_SRV(Global, PointLightShadowMapsTextureArray) uniform textureCubeArray point_shadow_maps;
 
@@ -293,9 +288,9 @@ void main()
         { // direct lighting
             float shadow = 1.0;
 
-            if (light.type == HYP_LIGHT_TYPE_DIRECTIONAL && light.shadow_map_index != ~0u)
+            if (light.type == HYP_LIGHT_TYPE_DIRECTIONAL && bool(light.flags & LF_SHADOW))
             {
-                shadow = GetShadow(light.shadow_map_index, P, texcoord, camera.dimensions.xy, NdotL);
+                shadow = GetShadow(light, P, texcoord, camera.dimensions.xy, NdotL);
             }
 
             vec3 light_color = UINT_TO_VEC4(light.color_encoded).rgb;
@@ -313,8 +308,12 @@ void main()
 
             vec3 specular = specular_lobe;
 
+            const vec2 radiusFalloff = unpackHalf2x16(light.radius_falloff);
+            const float radius = radiusFalloff.x;
+            const float falloff = radiusFalloff.y;
+
             const float attenuation = light.type == HYP_LIGHT_TYPE_POINT
-                ? GetSquareFalloffAttenuation(P, light.position_intensity.xyz, light.radius)
+                ? GetSquareFalloffAttenuation(P, light.position_intensity.xyz, radius)
                 : 1.0;
 
             vec3 diffuse_lobe = diffuse_color * (1.0 / HYP_FMATH_PI);
