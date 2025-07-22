@@ -86,7 +86,7 @@ public:
 
     struct Iterator : IteratorBase<false>
     {
-        operator ConstIterator() const
+        HYP_FORCE_INLINE operator ConstIterator() const
         {
             return { ptr, bitIndex };
         }
@@ -262,7 +262,7 @@ public:
         }
 
         // No free bit currently; return the first bit of the next block to be added
-        return numBlocks << numBitsPerBlockLog2;
+        return BitIndex(numBlocks) << numBitsPerBlockLog2;
     }
 
     inline BitIndex LastZeroBitIndex() const
@@ -287,7 +287,7 @@ public:
         }
 
         // No free bit currently; return the first bit of the next block to be added
-        return numBlocks << numBitsPerBlockLog2;
+        return BitIndex(numBlocks) << numBitsPerBlockLog2;
     }
 
     /*! \brief Get the value of the bit at the given index.

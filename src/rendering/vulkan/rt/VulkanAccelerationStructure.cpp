@@ -255,13 +255,14 @@ RendererResult VulkanAccelerationStructureBase::CreateAccelerationStructure(
         if (update)
         {
             // delete the current acceleration structure once the frame is done, rather than stalling the gpu here
-            GetRenderBackend()->GetCurrentFrame()->OnFrameEnd.Bind([oldAccelerationStructure = m_accelerationStructure](...)
-                                                                 {
-                                                                     GetRenderBackend()->GetDevice()->GetFeatures().dynFunctions.vkDestroyAccelerationStructureKHR(
-                                                                         GetRenderBackend()->GetDevice()->GetDevice(),
-                                                                         oldAccelerationStructure,
-                                                                         nullptr);
-                                                                 })
+            GetRenderBackend()->GetCurrentFrame()->OnFrameEnd
+                .Bind([oldAccelerationStructure = m_accelerationStructure](...)
+                    {
+                        GetRenderBackend()->GetDevice()->GetFeatures().dynFunctions.vkDestroyAccelerationStructureKHR(
+                            GetRenderBackend()->GetDevice()->GetDevice(),
+                            oldAccelerationStructure,
+                            nullptr);
+                    })
                 .Detach();
 
             m_accelerationStructure = VK_NULL_HANDLE;

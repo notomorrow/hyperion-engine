@@ -200,6 +200,15 @@ struct TupleElement
     using Type = typename TupleElement_SelectType_Impl<Index, 0, Types...>::Type;
 };
 
+template <SizeType Index, class... Types>
+struct TupleElement_Tuple;
+
+template <SizeType Index, class... Types>
+struct TupleElement_Tuple<Index, Tuple<Types...>>
+{
+    using Type = typename TupleElement_SelectType_Impl<Index, 0, Types...>::Type;
+};
+
 #pragma endregion TupleElement
 
 #pragma region FindTypeElementIndex
@@ -220,25 +229,15 @@ struct FindTypeElementIndex_Impl
 };
 
 template <class T, class... Types>
-struct FindTypeElementIndex
+struct FindTypeElementIndex;
+
+template <class T, class... Types>
+struct FindTypeElementIndex<T, Tuple<Types...>>
 {
     static constexpr SizeType value = FindTypeElementIndex_Impl<T, 0, Types...>::value;
 };
 
 #pragma endregion FindTypeElementIndex
-
-#pragma region FindTypeElementIndex_Tuple
-
-template <class T, class Tup>
-struct FindTypeElementIndex_Tuple;
-
-template <class T, class... Types>
-struct FindTypeElementIndex_Tuple<T, Tuple<Types...>>
-{
-    static constexpr SizeType value = FindTypeElementIndex_Impl<T, 0, Types...>::value;
-};
-
-#pragma endregion FindTypeElementIndex_Tuple
 
 #pragma region Tuple_Compare
 
@@ -569,7 +568,7 @@ public:
     template <class T>
     constexpr T& GetElement()
     {
-        constexpr SizeType index = FindTypeElementIndex<T, Types...>::value;
+        constexpr SizeType index = FindTypeElementIndex<T, Tuple<Types...>>::value;
 
         if constexpr (index == SizeType(-1))
         {
@@ -587,7 +586,7 @@ public:
     template <class T>
     constexpr const T& GetElement() const
     {
-        constexpr SizeType index = FindTypeElementIndex<T, Types...>::value;
+        constexpr SizeType index = FindTypeElementIndex<T, Tuple<Types...>>::value;
 
         if constexpr (index == SizeType(-1))
         {
@@ -612,6 +611,9 @@ public:
 
 using utilities::Tuple;
 using utilities::TupleElement;
+using utilities::TupleElement_Tuple;
+using utilities::FindTypeElementIndex;
+using utilities::TupleSize;
 using utilities::helpers::Apply;
 using utilities::helpers::ConcatTuples;
 using utilities::helpers::ForwardAsTuple;

@@ -135,12 +135,9 @@ struct RENDER_COMMAND(LightmapRender)
 
         HYP_DEFER({ if (rpl) rpl->EndRead(); });
 
-        const uint32 frameIndex = frame->GetFrameIndex();
-        const uint32 previousFrameIndex = (frameIndex + g_framesInFlight - 1) % g_framesInFlight;
-
         if (rpl)
         {
-            if (const auto& skyProbes = rpl->envProbes.GetElements<SkyProbe>(); skyProbes.Any())
+            if (const auto& skyProbes = rpl->GetEnvProbes().GetElements<SkyProbe>(); skyProbes.Any())
             {
                 renderSetup.envProbe = skyProbes.Front();
             }

@@ -298,7 +298,7 @@ void SSGI::FillUniformBufferData(RenderView* view, SSGIUniforms& outUniforms) co
 
         const uint32 maxBoundLights = ArraySize(outUniforms.lightIndices);
 
-        for (Light* light : rpl.lights)
+        for (Light* light : rpl.GetLights())
         {
             const LightType lightType = light->GetLightType();
 

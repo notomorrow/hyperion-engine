@@ -202,26 +202,40 @@ static Handle<RenderGroup> CreateRenderGroup(RenderCollector* renderCollector, D
     return rg;
 }
 
+template <class Functor, SizeType... Indices>
+static inline void ForEachResourceTrackerType_Impl(Span<ResourceTrackerBase*> resourceTrackers, const Functor& functor, std::index_sequence<Indices...>)
+{
+    (functor(TypeWrapper<typename TupleElement_Tuple<Indices, RenderProxyList::ResourceTrackerTypes>::Type>(), resourceTrackers[Indices]), ...);
+}
+
+template <class Functor>
+static inline void ForEachResourceTrackerType(Span<ResourceTrackerBase*> resourceTrackers, const Functor& functor)
+{
+    ForEachResourceTrackerType_Impl(resourceTrackers, functor, std::make_index_sequence<TupleSize<RenderProxyList::ResourceTrackerTypes>::value>());
+}
+
 RenderProxyList::RenderProxyList()
     : viewport(Viewport { Vec2u::One(), Vec2i::Zero() }),
       priority(0)
 {
+    resourceTrackers.ResizeZeroed(TupleSize<ResourceTrackerTypes>::value);
+    
+    // initialize the resource trackers
+    ForEachResourceTrackerType(resourceTrackers, []<class ResourceTrackerType>(TypeWrapper<ResourceTrackerType>, ResourceTrackerBase*& pResourceTracker)
+        {
+            AssertDebug(!pResourceTracker);
+
+            pResourceTracker = new ResourceTrackerType();
+        });
 }
 
 RenderProxyList::~RenderProxyList()
 {
-    // const auto removeRefsImpl = []<class ElementType>(ResourceTracker<ObjId<ElementType>, ElementType*>& resourceTracker)
-    // {
-    //     HYP_NOT_IMPLEMENTED();
-    // };
-
-    // removeRefsImpl(lights);
-    // removeRefsImpl(materials);
-    // removeRefsImpl(skeletons);
-    // removeRefsImpl(textures);
-    // removeRefsImpl(lightmapVolumes);
-    // removeRefsImpl(envProbes);
-    // removeRefsImpl(envGrids);
+    for (ResourceTrackerBase* resourceTracker : resourceTrackers)
+    {
+        delete resourceTracker;
+    }
+    resourceTrackers.Clear();
 }
 
 #pragma endregion RenderProxyList
@@ -616,7 +630,7 @@ uint32 RenderCollector::NumRenderGroups() const
     return count;
 }
 
-void RenderCollector::BuildRenderGroups(View* view, const RenderProxyList& renderProxyList)
+void RenderCollector::BuildRenderGroups(View* view, RenderProxyList& renderProxyList)
 {
     HYP_SCOPE;
 
@@ -625,7 +639,7 @@ void RenderCollector::BuildRenderGroups(View* view, const RenderProxyList& rende
 
     const RenderableAttributeSet* overrideAttributes = view->GetOverrideAttributes().TryGet();
 
-    auto diff = renderProxyList.meshes.GetDiff();
+    auto diff = renderProxyList.GetMeshes().GetDiff();
 
     if (!diff.NeedsUpdate())
     {
@@ -633,7 +647,7 @@ void RenderCollector::BuildRenderGroups(View* view, const RenderProxyList& rende
     }
 
     Array<ObjId<Entity>> changedIds;
-    renderProxyList.meshes.GetChanged(changedIds);
+    renderProxyList.GetMeshes().GetChanged(changedIds);
 
     if (changedIds.Any())
     {
@@ -685,16 +699,16 @@ void RenderCollector::BuildRenderGroups(View* view, const RenderProxyList& rende
     }
 
     Array<ObjId<Entity>> removed;
-    renderProxyList.meshes.GetRemoved(removed, false /* includeChanged */);
+    renderProxyList.GetMeshes().GetRemoved(removed, false /* includeChanged */);
 
     Array<ObjId<Entity>> added;
-    renderProxyList.meshes.GetAdded(added, false /* includeChanged */);
+    renderProxyList.GetMeshes().GetAdded(added, false /* includeChanged */);
 
     if (removed.Any())
     {
         for (const ObjId<Entity>& id : removed)
         {
-            const RenderProxyMesh* meshProxy = renderProxyList.meshes.GetProxy(id);
+            const RenderProxyMesh* meshProxy = renderProxyList.GetMeshes().GetProxy(id);
             AssertDebug(meshProxy != nullptr);
 
             if (!meshProxy)
@@ -727,7 +741,7 @@ void RenderCollector::BuildRenderGroups(View* view, const RenderProxyList& rende
     {
         for (const ObjId<Entity>& id : added)
         {
-            const RenderProxyMesh* meshProxy = renderProxyList.meshes.GetProxy(id);
+            const RenderProxyMesh* meshProxy = renderProxyList.GetMeshes().GetProxy(id);
             AssertDebug(meshProxy != nullptr);
 
             RenderableAttributeSet attributes = GetRenderableAttributesForProxy(*meshProxy, overrideAttributes);

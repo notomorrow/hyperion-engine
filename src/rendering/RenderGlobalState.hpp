@@ -69,10 +69,10 @@ HYP_API extern RenderProxyList& RenderApi_GetProducerProxyList(View* view);
  *  \note This is only valid to call from the render thread, or from a task that is initiated by the render thread. */
 HYP_API extern RenderProxyList& RenderApi_GetConsumerProxyList(View* view);
 
-/*! \brief Thread-safe, but only usable on game thread and render thread */
+/*! \brief Get the RenderCollector corresponding to the given View, only usable on the Render thread. */
 HYP_API extern RenderCollector& RenderApi_GetRenderCollector(View* view);
 
-// Call on render thread or render thread tasks only (consumer)
+// Call on render thread or render thread tasks only (consumer threads)
 HYP_API extern IRenderProxy* RenderApi_GetRenderProxy(ObjIdBase resourceId);
 
 /*! \brief Render thread only - update GPU data to match RenderProxy's buffer data for the resource with the given ID */

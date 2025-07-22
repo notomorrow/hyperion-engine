@@ -551,14 +551,14 @@ void EnvGrid::Update(float delta)
 
     // Make sure all our probes were collected - if this doesn't match up, down the line when we try to retrieve resource binding indices, they wouldn't be found
     RenderProxyList& rpl = RenderApi_GetProducerProxyList(m_view);
-    AssertDebug(rpl.envProbes.NumCurrent() >= m_envProbeCollection.numProbes,
+    AssertDebug(rpl.GetEnvProbes().NumCurrent() >= m_envProbeCollection.numProbes,
         "View only collected {} EnvProbes but EnvGrid {} has {} EnvProbes",
-        rpl.envProbes.NumCurrent(),
+        rpl.GetEnvProbes().NumCurrent(),
         Id(),
         m_envProbeCollection.numProbes);
 
     HYP_LOG(EnvGrid, Debug, "Updating EnvGrid {} with {} probes\t Found {} meshes", Id(), m_envProbeCollection.numProbes,
-        RenderApi_GetProducerProxyList(m_view).meshes.NumCurrent());
+        RenderApi_GetProducerProxyList(m_view).GetMeshes().NumCurrent());
 }
 
 void EnvGrid::UpdateRenderProxy(IRenderProxy* proxy)

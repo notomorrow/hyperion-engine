@@ -310,7 +310,7 @@ void View::Collect()
         | (1 << RB_TRANSLUCENT)
         | (1 << RB_DEBUG);
 
-    UpdateRefs(rpl);
+    RenderProxyList::UpdateRefs(rpl);
 
     rpl.EndWrite();
 }
@@ -384,7 +384,7 @@ ResourceTrackerDiff View::CollectMeshEntities(RenderProxyList& rpl)
     {
         HYP_LOG(Scene, Warning, "Camera is not valid for View with Id #%u, cannot collect entities!", Id().Value());
 
-        return rpl.meshes.GetDiff();
+        return rpl.GetMeshes().GetDiff();
     }
 
     const ObjId<Camera> cameraId = m_camera->Id();
@@ -437,11 +437,11 @@ ResourceTrackerDiff View::CollectMeshEntities(RenderProxyList& rpl)
 
                 ++numCollectedEntities;
 
-                rpl.meshes.Track(entity->Id(), entity, entity->GetRenderProxyVersionPtr());
+                rpl.GetMeshes().Track(entity->Id(), entity, entity->GetRenderProxyVersionPtr());
 
                 if (const Handle<Material>& material = meshComponent.material)
                 {
-                    rpl.materials.Track(material.Id(), material.Get(), material->GetRenderProxyVersionPtr());
+                    rpl.GetMaterials().Track(material.Id(), material.Get(), material->GetRenderProxyVersionPtr());
 
                     for (const auto& it : material->GetTextures())
                     {
@@ -452,13 +452,13 @@ ResourceTrackerDiff View::CollectMeshEntities(RenderProxyList& rpl)
                             continue;
                         }
 
-                        rpl.textures.Track(texture.Id(), texture.Get());
+                        rpl.GetTextures().Track(texture.Id(), texture.Get());
                     }
                 }
 
                 if (const Handle<Skeleton>& skeleton = meshComponent.skeleton)
                 {
-                    rpl.skeletons.Track(skeleton.Id(), skeleton.Get(), skeleton->GetRenderProxyVersionPtr());
+                    rpl.GetSkeletons().Track(skeleton.Id(), skeleton.Get(), skeleton->GetRenderProxyVersionPtr());
                 }
             }
 
@@ -491,11 +491,11 @@ ResourceTrackerDiff View::CollectMeshEntities(RenderProxyList& rpl)
 
                 ++numCollectedEntities;
 
-                rpl.meshes.Track(entity->Id(), entity, entity->GetRenderProxyVersionPtr());
+                rpl.GetMeshes().Track(entity->Id(), entity, entity->GetRenderProxyVersionPtr());
 
                 if (const Handle<Material>& material = meshComponent.material)
                 {
-                    rpl.materials.Track(material.Id(), material.Get(), material->GetRenderProxyVersionPtr());
+                    rpl.GetMaterials().Track(material.Id(), material.Get(), material->GetRenderProxyVersionPtr());
 
                     for (const auto& it : material->GetTextures())
                     {
@@ -506,13 +506,13 @@ ResourceTrackerDiff View::CollectMeshEntities(RenderProxyList& rpl)
                             continue;
                         }
 
-                        rpl.textures.Track(texture.Id(), texture.Get());
+                        rpl.GetTextures().Track(texture.Id(), texture.Get());
                     }
                 }
 
                 if (const Handle<Skeleton>& skeleton = meshComponent.skeleton)
                 {
-                    rpl.skeletons.Track(skeleton.Id(), skeleton.Get(), skeleton->GetRenderProxyVersionPtr());
+                    rpl.GetSkeletons().Track(skeleton.Id(), skeleton.Get(), skeleton->GetRenderProxyVersionPtr());
                 }
             }
 
@@ -545,11 +545,11 @@ ResourceTrackerDiff View::CollectMeshEntities(RenderProxyList& rpl)
 
                 ++numCollectedEntities;
 
-                rpl.meshes.Track(entity->Id(), entity, entity->GetRenderProxyVersionPtr());
+                rpl.GetMeshes().Track(entity->Id(), entity, entity->GetRenderProxyVersionPtr());
 
                 if (const Handle<Material>& material = meshComponent.material)
                 {
-                    rpl.materials.Track(material.Id(), material.Get(), material->GetRenderProxyVersionPtr());
+                    rpl.GetMaterials().Track(material.Id(), material.Get(), material->GetRenderProxyVersionPtr());
 
                     for (const auto& it : material->GetTextures())
                     {
@@ -560,13 +560,13 @@ ResourceTrackerDiff View::CollectMeshEntities(RenderProxyList& rpl)
                             continue;
                         }
 
-                        rpl.textures.Track(texture.Id(), texture.Get());
+                        rpl.GetTextures().Track(texture.Id(), texture.Get());
                     }
                 }
 
                 if (const Handle<Skeleton>& skeleton = meshComponent.skeleton)
                 {
-                    rpl.skeletons.Track(skeleton.Id(), skeleton.Get(), skeleton->GetRenderProxyVersionPtr());
+                    rpl.GetSkeletons().Track(skeleton.Id(), skeleton.Get(), skeleton->GetRenderProxyVersionPtr());
                 }
             }
 
@@ -580,19 +580,19 @@ ResourceTrackerDiff View::CollectMeshEntities(RenderProxyList& rpl)
 #endif
     }
 
-    ResourceTrackerDiff meshesDiff = rpl.meshes.GetDiff();
+    ResourceTrackerDiff meshesDiff = rpl.GetMeshes().GetDiff();
 
     if (meshesDiff.NeedsUpdate())
     {
         Array<Entity*> added;
-        rpl.meshes.GetAdded(added, /* includeChanged */ true);
+        rpl.GetMeshes().GetAdded(added, /* includeChanged */ true);
 
         for (Entity* entity : added)
         {
             auto&& [meshComponent, transformComponent, boundingBoxComponent] = entity->GetEntityManager()->TryGetComponents<MeshComponent, TransformComponent, BoundingBoxComponent>(entity);
             AssertDebug(meshComponent != nullptr);
 
-            RenderProxyMesh& meshProxy = *rpl.meshes.SetProxy(entity->Id(), RenderProxyMesh());
+            RenderProxyMesh& meshProxy = *rpl.GetMeshes().SetProxy(entity->Id(), RenderProxyMesh());
             meshProxy.entity = entity->WeakHandleFromThis();
             meshProxy.mesh = meshComponent->mesh;
             meshProxy.material = meshComponent->material;
@@ -653,11 +653,11 @@ void View::CollectLights(RenderProxyList& rpl)
             if (isLightInFrustum)
             {
                 HYP_LOG(Scene, Debug, "Collecting light {} of type {} in view {}", light->Id(), light->InstanceClass()->GetName(), Id());
-                rpl.lights.Track(light->Id(), light, light->GetRenderProxyVersionPtr());
+                rpl.GetLights().Track(light->Id(), light, light->GetRenderProxyVersionPtr());
 
                 if (light->GetMaterial().IsValid())
                 {
-                    rpl.materials.Track(light->GetMaterial()->Id(), light->GetMaterial().Get());
+                    rpl.GetMaterials().Track(light->GetMaterial()->Id(), light->GetMaterial().Get());
 
                     for (const auto& it : light->GetMaterial()->GetTextures())
                     {
@@ -668,7 +668,7 @@ void View::CollectLights(RenderProxyList& rpl)
                             continue;
                         }
 
-                        rpl.textures.Track(texture->Id(), texture.Get());
+                        rpl.GetTextures().Track(texture->Id(), texture.Get());
                     }
                 }
             }
@@ -711,8 +711,7 @@ void View::CollectLightmapVolumes(RenderProxyList& rpl)
                 continue;
             }
 
-            rpl.lightmapVolumes.Track(lightmapVolumeComponent.volume->Id(), lightmapVolumeComponent.volume,
-                lightmapVolumeComponent.volume->GetRenderProxyVersionPtr());
+            rpl.GetLightmapVolumes().Track(lightmapVolumeComponent.volume->Id(), lightmapVolumeComponent.volume, lightmapVolumeComponent.volume->GetRenderProxyVersionPtr());
         }
     }
 }
@@ -753,7 +752,7 @@ void View::CollectEnvGrids(RenderProxyList& rpl)
                 continue;
             }
 
-            rpl.envGrids.Track(envGrid->Id(), envGrid, envGrid->GetRenderProxyVersionPtr());
+            rpl.GetEnvGrids().Track(envGrid->Id(), envGrid, envGrid->GetRenderProxyVersionPtr());
         }
     }
 }
@@ -793,7 +792,7 @@ void View::CollectEnvProbes(RenderProxyList& rpl)
                 }
             }
 
-            rpl.envProbes.Track(probe->Id(), probe, probe->GetRenderProxyVersionPtr());
+            rpl.GetEnvProbes().Track(probe->Id(), probe, probe->GetRenderProxyVersionPtr());
         }
 
         // TEMP SHIT: Refactor rendering of sky probes into new SkyRenderer class, and just use the above loop to collect SkyProbe
@@ -803,7 +802,7 @@ void View::CollectEnvProbes(RenderProxyList& rpl)
             {
                 AssertDebug(skyComponent.subsystem->GetEnvProbe()->IsA<SkyProbe>());
 
-                rpl.envProbes.Track(skyComponent.subsystem->GetEnvProbe()->Id(), skyComponent.subsystem->GetEnvProbe(), skyComponent.subsystem->GetEnvProbe()->GetRenderProxyVersionPtr());
+                rpl.GetEnvProbes().Track(skyComponent.subsystem->GetEnvProbe()->Id(), skyComponent.subsystem->GetEnvProbe(), skyComponent.subsystem->GetEnvProbe()->GetRenderProxyVersionPtr());
             }
         }
     }

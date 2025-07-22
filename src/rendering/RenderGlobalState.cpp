@@ -650,7 +650,7 @@ static ViewFrameData* GetViewFrameData(View* view, uint32 slot)
 
 /// Conditionally copy RenderProxy data to global state, if proxyVersion is greater than the current held version.
 template <class ElementType, class ProxyType>
-static inline void CopyRenderProxy(ResourceSubtypeData& subtypeData, const ObjId<ElementType>& id, ProxyType* pNewProxy)
+static HYP_FORCE_INLINE void CopyRenderProxy(ResourceSubtypeData& subtypeData, const ObjId<ElementType>& id, ProxyType* pNewProxy)
 {
     AssertDebug(pNewProxy != nullptr);
 
@@ -663,7 +663,7 @@ static inline void CopyRenderProxy(ResourceSubtypeData& subtypeData, const ObjId
 
 
 template <class ElementType, class ProxyType>
-static inline void SyncResourcesImpl(ResourceTracker<ObjId<ElementType>, ElementType*, ProxyType>& resourceTracker, typename ResourceTracker<ObjId<ElementType>, ElementType*, ProxyType>::Impl& impl)
+static HYP_FORCE_INLINE void SyncResourcesImpl(ResourceTracker<ObjId<ElementType>, ElementType*, ProxyType>& resourceTracker, typename ResourceTracker<ObjId<ElementType>, ElementType*, ProxyType>::Impl& impl)
 {
     if (impl.elements.Empty())
     {
@@ -675,9 +675,7 @@ static inline void SyncResourcesImpl(ResourceTracker<ObjId<ElementType>, Element
         ElementType* elem = impl.elements.Get(i);
         const int version = impl.versions.Get(i);
         
-        const ObjId<ElementType> id = elem->Id();
-        
-        resourceTracker.Track(id, elem, &version);
+        resourceTracker.Track(elem->Id(), elem, &version);
     }
 }
 
@@ -804,16 +802,18 @@ static inline void SyncResources(ResourceTracker<ObjId<ElementType>, ElementType
      }
 }
 
-static void CopyDependencies(ViewData& vd, RenderProxyList& rpl)
+template <SizeType... Indices>
+static HYP_FORCE_INLINE void SyncResourcesT(ResourceTrackerBase** dstResourceTrackers, ResourceTrackerBase** srcResourceTrackers, std::index_sequence<Indices...>)
 {
-    SyncResources(vd.rplRender.meshes, rpl.meshes);
-    SyncResources(vd.rplRender.lights, rpl.lights);
-    SyncResources(vd.rplRender.materials, rpl.materials);
-    SyncResources(vd.rplRender.skeletons, rpl.skeletons);
-    SyncResources(vd.rplRender.textures, rpl.textures);
-    SyncResources(vd.rplRender.lightmapVolumes, rpl.lightmapVolumes);
-    SyncResources(vd.rplRender.envProbes, rpl.envProbes);
-    SyncResources(vd.rplRender.envGrids, rpl.envGrids);
+    (SyncResources(static_cast<typename TupleElement_Tuple<Indices, RenderProxyList::ResourceTrackerTypes>::Type&>(*dstResourceTrackers[Indices]), static_cast<typename TupleElement_Tuple<Indices, RenderProxyList::ResourceTrackerTypes>::Type&>(*srcResourceTrackers[Indices])), ...);
+}
+
+static inline void CopyDependencies(ViewData& vd, RenderProxyList& rpl)
+{
+    AssertDebug(vd.rplRender.resourceTrackers.Size() == TupleSize<RenderProxyList::ResourceTrackerTypes>::value);
+    AssertDebug(rpl.resourceTrackers.Size() == TupleSize<RenderProxyList::ResourceTrackerTypes>::value);
+
+    SyncResourcesT(vd.rplRender.resourceTrackers.Data(), rpl.resourceTrackers.Data(), std::make_index_sequence<TupleSize<RenderProxyList::ResourceTrackerTypes>::value>());
 
     if (rpl.useOrdering)
     {

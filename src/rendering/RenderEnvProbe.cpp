@@ -574,7 +574,7 @@ void ReflectionProbeRenderer::ComputePrefilteredEnvMap(FrameBase* frame, const R
     const uint32 maxBoundLights = ArraySize(uniforms.lightIndices);
     uint32 numBoundLights = 0;
 
-    for (Light* light : rpl.lights)
+    for (Light* light : rpl.GetLights())
     {
         const LightType lightType = light->GetLightType();
 
@@ -786,7 +786,7 @@ void ReflectionProbeRenderer::ComputeSH(FrameBase* frame, const RenderSetup& ren
     EnvProbe* skyProbe = nullptr;
     Light* directionalLight = nullptr;
 
-    for (Light* light : rpl.lights)
+    for (Light* light : rpl.GetLights())
     {
         if (light->GetLightType() == LT_DIRECTIONAL)
         {
@@ -798,7 +798,7 @@ void ReflectionProbeRenderer::ComputeSH(FrameBase* frame, const RenderSetup& ren
         }
     }
 
-    if (const auto& skyProbes = rpl.envProbes.GetElements<SkyProbe>(); skyProbes.Any())
+    if (const auto& skyProbes = rpl.GetEnvProbes().GetElements<SkyProbe>(); skyProbes.Any())
     {
         skyProbe = skyProbes.Front();
         AssertDebug(skyProbe != nullptr);

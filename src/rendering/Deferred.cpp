@@ -287,7 +287,7 @@ void DeferredPass::Render(FrameBase* frame, const RenderSetup& rs)
     HYP_DEFER({ rpl.EndRead(); });
 
     // no lights bound, do not render direct shading at all
-    if (rpl.lights.NumCurrent() == 0)
+    if (rpl.GetLights().NumCurrent() == 0)
     {
         return;
     }
@@ -301,7 +301,7 @@ void DeferredPass::Render(FrameBase* frame, const RenderSetup& rs)
 
         bool isFirstLight = true;
 
-        for (Light* light : rpl.lights)
+        for (Light* light : rpl.GetLights())
         {
             if (light->GetLightType() != lightTypeIndex)
             {
@@ -596,7 +596,7 @@ void EnvGridPass::Render(FrameBase* frame, const RenderSetup& rs)
     HYP_DEFER({ rpl.EndRead(); });
 
     // shouldn't be called if no env grids are present
-    AssertDebug(rpl.envGrids.NumCurrent() != 0);
+    AssertDebug(rpl.GetEnvGrids().NumCurrent() != 0);
 
     const uint32 frameIndex = frame->GetFrameIndex();
 
@@ -608,7 +608,7 @@ void EnvGridPass::Render(FrameBase* frame, const RenderSetup& rs)
         RenderPreviousTextureToScreen(frame, rs);
     }
 
-    for (EnvGrid* envGrid : rpl.envGrids)
+    for (EnvGrid* envGrid : rpl.GetEnvGrids())
     {
         const GraphicsPipelineRef& graphicsPipeline = m_mode == EGPM_RADIANCE
             ? m_graphicsPipeline
@@ -844,7 +844,7 @@ void ReflectionsPass::Render(FrameBase* frame, const RenderSetup& rs)
 
         const EnvProbeType envProbeType = reflectionProbeTypes[modeIndex];
 
-        for (EnvProbe* envProbe : rpl.envProbes.GetElements(g_envProbeTypeToTypeId[envProbeType]))
+        for (EnvProbe* envProbe : rpl.GetEnvProbes().GetElements(g_envProbeTypeToTypeId[envProbeType]))
         {
             passPtrs[modeIndex].second.PushBack(envProbe);
         }
@@ -1460,14 +1460,14 @@ void DeferredRenderer::RenderFrame(FrameBase* frame, const RenderSetup& rs)
         pd->priority = view->GetRenderResource().GetPriority();
 
 #if 1 // temp
-        for (Light* light : rpl.lights)
+        for (Light* light : rpl.GetLights())
         {
             AssertDebug(light != nullptr);
 
             lights[light->GetLightType()].PushBack(light);
         }
 
-        for (EnvProbe* envProbe : rpl.envProbes)
+        for (EnvProbe* envProbe : rpl.GetEnvProbes())
         {
             if (envProbe->IsControlledByEnvGrid())
             {
@@ -1482,7 +1482,7 @@ void DeferredRenderer::RenderFrame(FrameBase* frame, const RenderSetup& rs)
 
             if (!envProbeLights.Contains(envProbe))
             {
-                for (Light* light : rpl.lights)
+                for (Light* light : rpl.GetLights())
                 {
                     AssertDebug(light != nullptr);
 
@@ -1498,7 +1498,7 @@ void DeferredRenderer::RenderFrame(FrameBase* frame, const RenderSetup& rs)
             envProbes[envProbe->GetEnvProbeType()].PushBack(envProbe);
         }
 
-        for (EnvGrid* envGrid : rpl.envGrids)
+        for (EnvGrid* envGrid : rpl.GetEnvGrids())
         {
             if (envGrids.Contains(envGrid))
             {
@@ -1507,7 +1507,7 @@ void DeferredRenderer::RenderFrame(FrameBase* frame, const RenderSetup& rs)
 
             if (!envGridLights.Contains(envGrid))
             {
-                for (Light* light : rpl.lights)
+                for (Light* light : rpl.GetLights())
                 {
                     if (light->GetLightType() == LT_DIRECTIONAL)
                     {
@@ -1650,10 +1650,10 @@ void DeferredRenderer::RenderFrame(FrameBase* frame, const RenderSetup& rs)
         HYP_DEFER({ rpl.EndRead(); });
 
         counts[ERS_VIEWS]++;
-        counts[ERS_LIGHTMAP_VOLUMES] += rpl.lightmapVolumes.NumCurrent();
-        counts[ERS_LIGHTS] += rpl.lights.NumCurrent();
-        counts[ERS_ENV_GRIDS] += rpl.envGrids.NumCurrent();
-        counts[ERS_ENV_PROBES] += rpl.envProbes.NumCurrent();
+        counts[ERS_LIGHTMAP_VOLUMES] += rpl.GetLightmapVolumes().NumCurrent();
+        counts[ERS_LIGHTS] += rpl.GetLights().NumCurrent();
+        counts[ERS_ENV_GRIDS] += rpl.GetEnvGrids().NumCurrent();
+        counts[ERS_ENV_PROBES] += rpl.GetEnvProbes().NumCurrent();
 #endif
     }
 
@@ -1721,11 +1721,11 @@ void DeferredRenderer::RenderFrameForView(FrameBase* frame, const RenderSetup& r
     // HACK TEST HACK TEST HACK TEST HACK TEST
     if (TLASRef& tlas = pd->topLevelAccelerationStructures[frame->GetFrameIndex()])
     {
-        for (Entity* entity : rpl.meshes.GetElements<Entity>())
+        for (Entity* entity : rpl.GetMeshes().GetElements<Entity>())
         {
             Assert(entity);
 
-            RenderProxyMesh* meshProxy = rpl.meshes.GetProxy(entity->Id());
+            RenderProxyMesh* meshProxy = rpl.GetMeshes().GetProxy(entity->Id());
             Assert(meshProxy);
 
             BLASRef& blas = meshProxy->raytracingData.bottomLevelAccelerationStructures[frame->GetFrameIndex()];
@@ -1787,13 +1787,13 @@ void DeferredRenderer::RenderFrameForView(FrameBase* frame, const RenderSetup& r
     const bool useHbil = m_rendererConfig.hbilEnabled;
     const bool useSsgi = m_rendererConfig.ssgiEnabled;
 
-    const bool useEnvGridIrradiance = rpl.envGrids.NumCurrent() && m_rendererConfig.envGridGiEnabled;
-    const bool useEnvGridRadiance = rpl.envGrids.NumCurrent() && m_rendererConfig.envGridRadianceEnabled;
+    const bool useEnvGridIrradiance = rpl.GetEnvGrids().NumCurrent() && m_rendererConfig.envGridGiEnabled;
+    const bool useEnvGridRadiance = rpl.GetEnvGrids().NumCurrent() && m_rendererConfig.envGridRadianceEnabled;
 
     const bool useTemporalAa = pd->temporalAa != nullptr && m_rendererConfig.taaEnabled;
 
-    const bool useReflectionProbes = rpl.envProbes.GetElements<SkyProbe>().Any()
-        || rpl.envProbes.GetElements<ReflectionProbe>().Any();
+    const bool useReflectionProbes = rpl.GetEnvProbes().GetElements<SkyProbe>().Any()
+        || rpl.GetEnvProbes().GetElements<ReflectionProbe>().Any();
 
     if (useTemporalAa)
     {
@@ -1883,7 +1883,7 @@ void DeferredRenderer::RenderFrameForView(FrameBase* frame, const RenderSetup& r
         RenderSetup newRenderSetup = rs;
 
         // if (const auto& skyProbes = rpl.trackedEnvProbes.GetElements<SkyProbe>(); skyProbes.Any())
-        if (const auto& skyProbes = rpl.envProbes.GetElements<SkyProbe>(); skyProbes.Any())
+        if (const auto& skyProbes = rpl.GetEnvProbes().GetElements<SkyProbe>(); skyProbes.Any())
         {
             newRenderSetup.envProbe = skyProbes.Front();
         }
@@ -1906,7 +1906,7 @@ void DeferredRenderer::RenderFrameForView(FrameBase* frame, const RenderSetup& r
         frame->renderQueue << EndFramebuffer(deferredPassFramebuffer);
     }
 
-    if (rpl.lightmapVolumes.NumCurrent())
+    if (rpl.GetLightmapVolumes().NumCurrent())
     { // render objects to be lightmapped, separate from the opaque objects.
         // The lightmap bucket's framebuffer has a color attachment that will write into the opaque framebuffer's color attachment.
         frame->renderQueue << BeginFramebuffer(lightmapFbo);

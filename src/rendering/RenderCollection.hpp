@@ -99,11 +99,56 @@ struct DrawCallCollectionMapping
 };
 
 /*! \brief A collection of renderable objects and setup for a specific View, proxied so the render thread can work with it. */
-struct HYP_API RenderProxyList
+class HYP_API RenderProxyList
 {
     static constexpr uint64 writeFlag = 0x1;
     static constexpr uint64 readMask = uint64(-1) & ~writeFlag;
 
+public:
+    using TrackedResourceTypes = Tuple<
+        Entity,     // mesh entities
+        EnvProbe,
+        Light,
+        EnvGrid,
+        LightmapVolume,
+        Material,
+        Skeleton,
+        Texture
+    >;
+
+    using ResourceTrackerTypes = Tuple<
+        ResourceTracker<ObjId<Entity>, Entity*, RenderProxyMesh>,
+        ResourceTracker<ObjId<EnvProbe>, EnvProbe*, RenderProxyEnvProbe>,
+        ResourceTracker<ObjId<Light>, Light*, RenderProxyLight>,
+        ResourceTracker<ObjId<EnvGrid>, EnvGrid*, RenderProxyEnvGrid>,
+        ResourceTracker<ObjId<LightmapVolume>, LightmapVolume*, RenderProxyLightmapVolume>,
+        ResourceTracker<ObjId<Material>, Material*, RenderProxyMaterial>,
+        ResourceTracker<ObjId<Skeleton>, Skeleton*, RenderProxySkeleton>,
+        ResourceTracker<ObjId<Texture>, Texture*>
+    >;
+
+    static_assert(TupleSize<ResourceTrackerTypes>::value == TupleSize<TrackedResourceTypes>::value, "Tuple sizes must match");
+
+private:
+    template <class T>
+    static constexpr SizeType GetTrackedResourceTypeIndex()
+    {
+        return FindTypeElementIndex<T, TrackedResourceTypes>::value;
+    }
+
+    template <class Functor, SizeType... Indices>
+    static inline void ForEachResourceTracker_Impl(Span<ResourceTrackerBase*> resourceTrackers, const Functor& functor, std::index_sequence<Indices...>)
+    {
+        (functor(static_cast<typename TupleElement_Tuple<Indices, ResourceTrackerTypes>::Type &>(*resourceTrackers[Indices])), ...);
+    }
+
+    template <class Functor>
+    static inline void ForEachResourceTracker(Span<ResourceTrackerBase*> resourceTrackers, const Functor& functor)
+    {
+        ForEachResourceTracker_Impl(resourceTrackers, functor, std::make_index_sequence<TupleSize<ResourceTrackerTypes>::value>());
+    }
+
+public:
     RenderProxyList();
 
     RenderProxyList(const RenderProxyList& other) = delete;
@@ -131,14 +176,19 @@ struct HYP_API RenderProxyList
 
         // advance all trackers to the next state before we write into them.
         // this clears their 'next' bits and sets their 'previous' bits so we can tell what changed.
-        meshes.Advance();
+        ForEachResourceTracker(resourceTrackers.ToSpan(), [](auto&& resourceTracker)
+            {
+                resourceTracker.Advance();
+            });
+
+        /*meshes.Advance();
         envProbes.Advance();
         lights.Advance();
         envGrids.Advance();
         envProbes.Advance();
         lightmapVolumes.Advance();
         materials.Advance();
-        skeletons.Advance();
+        skeletons.Advance();*/
     }
 
     void EndWrite()
@@ -190,6 +240,92 @@ struct HYP_API RenderProxyList
         }
     }
 
+    template <SizeType Index>
+    inline auto GetResourceTracker()
+    {
+        using ResourceTrackerType = typename TupleElement_Tuple<Index, ResourceTrackerTypes>::Type;
+
+        return static_cast<ResourceTrackerType*>(resourceTrackers[Index]);
+    }
+
+    // template hackery to allow usage of undefined types
+    template <class T>
+    static inline void UpdateRefs(T& renderProxyList)
+    {
+        const auto impl = []<class ElementType, class ProxyType>(ResourceTracker<ObjId<ElementType>, ElementType*, ProxyType>& resourceTracker)
+        {
+            static const bool shouldUpdateRenderProxy = IsA<RenderProxyable, ElementType>();
+
+            auto diff = resourceTracker.GetDiff();
+            if (!diff.NeedsUpdate())
+            {
+                return;
+            }
+
+            Array<ElementType*> removed;
+            resourceTracker.GetRemoved(removed, false);
+
+            Array<ElementType*> added;
+            resourceTracker.GetAdded(added, false);
+
+            for (ElementType* resource : added)
+            {
+                resource->GetObjectHeader_Internal()->IncRefStrong();
+
+                if constexpr (!std::is_same_v<ProxyType, NullProxy>)
+                {
+                    ProxyType* pProxy = resourceTracker.GetProxy(ObjId<ElementType>(resource->Id()));
+
+                    if (!pProxy)
+                    {
+                        pProxy = resourceTracker.SetProxy(ObjId<ElementType>(resource->Id()), ProxyType());
+                    }
+
+                    AssertDebug(pProxy != nullptr);
+
+                    if (shouldUpdateRenderProxy)
+                    {
+                        static_cast<RenderProxyable*>(resource)->UpdateRenderProxy(pProxy);
+                    }
+                }
+            }
+
+            for (ElementType* resource : removed)
+            {
+                resource->GetObjectHeader_Internal()->DecRefStrong();
+
+                if constexpr (!std::is_same_v<ProxyType, NullProxy>)
+                {
+                    resourceTracker.RemoveProxy(ObjId<ElementType>(resource->Id()));
+                }
+            }
+
+            if constexpr (!std::is_same_v<ProxyType, NullProxy>)
+            {
+                if (shouldUpdateRenderProxy)
+                {
+                    Array<ObjId<ElementType>> changedIds;
+                    resourceTracker.GetChanged(changedIds);
+
+                    for (const ObjId<ElementType>& id : changedIds)
+                    {
+                        ElementType** ppResource = resourceTracker.GetElement(id);
+                        AssertDebug(ppResource && *ppResource);
+
+                        ElementType& resource = **ppResource;
+
+                        ProxyType* pProxy = resourceTracker.GetProxy(id);
+                        AssertDebug(pProxy != nullptr);
+
+                        static_cast<RenderProxyable&>(resource).UpdateRenderProxy(pProxy);
+                    }
+                }
+            }
+        };
+
+        ForEachResourceTracker(renderProxyList.resourceTrackers.ToSpan(), impl);
+    }
+
     // State for tracking transitions from writing (game thread) to reading (render thread).
     enum CollectionState : uint8
     {
@@ -208,14 +344,30 @@ struct HYP_API RenderProxyList
     Viewport viewport;
     int priority;
 
-    ResourceTracker<ObjId<Entity>, Entity*, RenderProxyMesh> meshes;
+    Array<ResourceTrackerBase*> resourceTrackers;
+
+#define DEF_RESOURCE_TRACKER_GETTER(getterName, T) \
+    HYP_FORCE_INLINE auto Get##getterName() -> typename TupleElement_Tuple<FindTypeElementIndex<class T, TrackedResourceTypes>::value, ResourceTrackerTypes>::Type& \
+        { return *GetResourceTracker<FindTypeElementIndex<class T, TrackedResourceTypes>::value>(); }
+
+    DEF_RESOURCE_TRACKER_GETTER(Meshes, Entity);
+    DEF_RESOURCE_TRACKER_GETTER(EnvProbes, EnvProbe);
+    DEF_RESOURCE_TRACKER_GETTER(Lights, Light);
+    DEF_RESOURCE_TRACKER_GETTER(EnvGrids, EnvGrid);
+    DEF_RESOURCE_TRACKER_GETTER(LightmapVolumes, LightmapVolume);
+    DEF_RESOURCE_TRACKER_GETTER(Materials, Material);
+    DEF_RESOURCE_TRACKER_GETTER(Skeletons, Skeleton);
+    DEF_RESOURCE_TRACKER_GETTER(Textures, Texture);
+
+#undef DEF_RESOURCE_TRACKER_GETTER
+    /*ResourceTracker<ObjId<Entity>, Entity*, RenderProxyMesh> meshes;
     ResourceTracker<ObjId<EnvProbe>, EnvProbe*, RenderProxyEnvProbe> envProbes;
     ResourceTracker<ObjId<Light>, Light*, RenderProxyLight> lights;
     ResourceTracker<ObjId<EnvGrid>, EnvGrid*, RenderProxyEnvGrid> envGrids;
     ResourceTracker<ObjId<LightmapVolume>, LightmapVolume*, RenderProxyLightmapVolume> lightmapVolumes;
     ResourceTracker<ObjId<Material>, Material*, RenderProxyMaterial> materials;
     ResourceTracker<ObjId<Skeleton>, Skeleton*, RenderProxySkeleton> skeletons;
-    ResourceTracker<ObjId<Texture>, Texture*> textures;
+    ResourceTracker<ObjId<Texture>, Texture*> textures;*/
 
     Array<Pair<ObjId<Entity>, int>> meshEntityOrdering;
 
@@ -288,93 +440,9 @@ public:
     uint32 NumRenderGroups() const;
 
     /*! \brief Builds RenderGroups for proxies, based on renderable attributes */
-    void BuildRenderGroups(View* view, const RenderProxyList& renderProxyList);
+    void BuildRenderGroups(View* view, RenderProxyList& renderProxyList);
 
     void BuildDrawCalls(uint32 bucketBits);
 };
-
-template <class T>
-static inline void UpdateRefs(T& renderProxyList)
-{
-    const auto impl = []<class ElementType, class ProxyType>(ResourceTracker<ObjId<ElementType>, ElementType*, ProxyType>& resourceTracker)
-    {
-        static const bool shouldUpdateRenderProxy = IsA<RenderProxyable, ElementType>();
-
-        auto diff = resourceTracker.GetDiff();
-        if (!diff.NeedsUpdate())
-        {
-            return;
-        }
-
-        Array<ElementType*> removed;
-        resourceTracker.GetRemoved(removed, false);
-
-        Array<ElementType*> added;
-        resourceTracker.GetAdded(added, false);
-
-        for (ElementType* resource : added)
-        {
-            resource->GetObjectHeader_Internal()->IncRefStrong();
-
-            if constexpr (!std::is_same_v<ProxyType, NullProxy>)
-            {
-                ProxyType* pProxy = resourceTracker.GetProxy(ObjId<ElementType>(resource->Id()));
-
-                if (!pProxy)
-                {
-                    pProxy = resourceTracker.SetProxy(ObjId<ElementType>(resource->Id()), ProxyType());
-                }
-
-                AssertDebug(pProxy != nullptr);
-
-                if (shouldUpdateRenderProxy)
-                {
-                    static_cast<RenderProxyable*>(resource)->UpdateRenderProxy(pProxy);
-                }
-            }
-        }
-
-        for (ElementType* resource : removed)
-        {
-            resource->GetObjectHeader_Internal()->DecRefStrong();
-
-            if constexpr (!std::is_same_v<ProxyType, NullProxy>)
-            {
-                resourceTracker.RemoveProxy(ObjId<ElementType>(resource->Id()));
-            }
-        }
-
-        if constexpr (!std::is_same_v<ProxyType, NullProxy>)
-        {
-            if (shouldUpdateRenderProxy)
-            {
-                Array<ObjId<ElementType>> changedIds;
-                resourceTracker.GetChanged(changedIds);
-
-                for (const ObjId<ElementType>& id : changedIds)
-                {
-                    ElementType** ppResource = resourceTracker.GetElement(id);
-                    AssertDebug(ppResource && *ppResource);
-
-                    ElementType& resource = **ppResource;
-
-                    ProxyType* pProxy = resourceTracker.GetProxy(id);
-                    AssertDebug(pProxy != nullptr);
-
-                    static_cast<RenderProxyable&>(resource).UpdateRenderProxy(pProxy);
-                }
-            }
-        }
-    };
-
-    impl(renderProxyList.meshes);
-    impl(renderProxyList.lights);
-    impl(renderProxyList.materials);
-    impl(renderProxyList.skeletons);
-    impl(renderProxyList.textures);
-    impl(renderProxyList.lightmapVolumes);
-    impl(renderProxyList.envProbes);
-    impl(renderProxyList.envGrids);
-}
 
 } // namespace hyperion

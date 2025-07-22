@@ -130,7 +130,7 @@ void RaytracingReflections::UpdateUniforms(FrameBase* frame, const RenderSetup& 
 
     const uint32 maxBoundLights = ArraySize(uniforms.lightIndices);
 
-    for (Light* light : rpl.lights)
+    for (Light* light : rpl.GetLights())
     {
         const LightType lightType = light->GetLightType();
 

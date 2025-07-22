@@ -8,6 +8,7 @@
 #include <core/Traits.hpp>
 
 #include <type_traits>
+#include <bit>
 
 // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2014/n3876.pdf
 

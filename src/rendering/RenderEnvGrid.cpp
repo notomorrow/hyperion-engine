@@ -1021,7 +1021,7 @@ void EnvGridRenderer::ComputeEnvProbeIrradiance_LightField(FrameBase* frame, con
         const uint32 maxBoundLights = ArraySize(uniforms.lightIndices);
         uint32 numBoundLights = 0;
 
-        for (Light* light : rpl.lights)
+        for (Light* light : rpl.GetLights())
         {
             const LightType lightType = light->GetLightType();
 
