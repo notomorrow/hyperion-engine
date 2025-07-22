@@ -564,10 +564,10 @@ void LightmapGPUPathTracer::Create()
     switch (m_shadingType)
     {
     case LightmapShadingType::RADIANCE:
-        shaderProperties.Set("MODE_RADIANCE");
+        shaderProperties.Set(NAME("MODE_RADIANCE"));
         break;
     case LightmapShadingType::IRRADIANCE:
-        shaderProperties.Set("MODE_IRRADIANCE");
+        shaderProperties.Set(NAME("MODE_IRRADIANCE"));
         break;
     default:
         HYP_UNREACHABLE();

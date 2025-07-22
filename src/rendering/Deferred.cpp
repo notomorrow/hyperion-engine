@@ -89,19 +89,19 @@ void GetDeferredShaderProperties(ShaderProperties& outShaderProperties)
 {
     ShaderProperties properties;
 
-    properties.Set("RT_REFLECTIONS_ENABLED", g_renderBackend->GetRenderConfig().IsRaytracingSupported() && g_engine->GetAppContext()->GetConfiguration().Get("rendering.rt.reflections.enabled").ToBool());
-    properties.Set("RT_GI_ENABLED", g_renderBackend->GetRenderConfig().IsRaytracingSupported() && g_engine->GetAppContext()->GetConfiguration().Get("rendering.rt.gi.enabled").ToBool());
-    properties.Set("ENV_GRID_ENABLED", g_engine->GetAppContext()->GetConfiguration().Get("rendering.env_grid.gi.enabled").ToBool());
-    properties.Set("HBIL_ENABLED", g_engine->GetAppContext()->GetConfiguration().Get("rendering.hbil.enabled").ToBool());
-    properties.Set("HBAO_ENABLED", g_engine->GetAppContext()->GetConfiguration().Get("rendering.hbao.enabled").ToBool());
+    properties.Set(NAME("RT_REFLECTIONS_ENABLED"), g_renderBackend->GetRenderConfig().IsRaytracingSupported() && g_engine->GetAppContext()->GetConfiguration().Get("rendering.rt.reflections.enabled").ToBool());
+    properties.Set(NAME("RT_GI_ENABLED"), g_renderBackend->GetRenderConfig().IsRaytracingSupported() && g_engine->GetAppContext()->GetConfiguration().Get("rendering.rt.gi.enabled").ToBool());
+    properties.Set(NAME("ENV_GRID_ENABLED"), g_engine->GetAppContext()->GetConfiguration().Get("rendering.env_grid.gi.enabled").ToBool());
+    properties.Set(NAME("HBIL_ENABLED"), g_engine->GetAppContext()->GetConfiguration().Get("rendering.hbil.enabled").ToBool());
+    properties.Set(NAME("HBAO_ENABLED"), g_engine->GetAppContext()->GetConfiguration().Get("rendering.hbao.enabled").ToBool());
 
     if (g_engine->GetAppContext()->GetConfiguration().Get("rendering.debug.reflections").ToBool())
     {
-        properties.Set("DEBUG_REFLECTIONS");
+        properties.Set(NAME("DEBUG_REFLECTIONS"));
     }
     else if (g_engine->GetAppContext()->GetConfiguration().Get("rendering.debug.irradiance").ToBool())
     {
-        properties.Set("DEBUG_IRRADIANCE");
+        properties.Set(NAME("DEBUG_IRRADIANCE"));
     }
 
     outShaderProperties = std::move(properties);
@@ -138,10 +138,10 @@ void DeferredPass::Create()
 void DeferredPass::CreateShader()
 {
     static const FixedArray<ShaderProperties, LT_MAX> lightTypeProperties {
-        ShaderProperties { { "LIGHT_TYPE_DIRECTIONAL" } },
-        ShaderProperties { { "LIGHT_TYPE_POINT" } },
-        ShaderProperties { { "LIGHT_TYPE_SPOT" } },
-        ShaderProperties { { "LIGHT_TYPE_AREA_RECT" } }
+        ShaderProperties { { NAME("LIGHT_TYPE_DIRECTIONAL") } },
+        ShaderProperties { { NAME("LIGHT_TYPE_POINT") } },
+        ShaderProperties { { NAME("LIGHT_TYPE_SPOT") } },
+        ShaderProperties { { NAME("LIGHT_TYPE_AREA_RECT") } }
     };
 
     switch (m_mode)
@@ -542,7 +542,7 @@ void EnvGridPass::CreatePipeline()
 
     if (m_mode == EGPM_RADIANCE)
     {
-        m_shader = g_shaderManager->GetOrCreate(NAME("ApplyEnvGrid"), ShaderProperties { { "MODE_RADIANCE" } });
+        m_shader = g_shaderManager->GetOrCreate(NAME("ApplyEnvGrid"), ShaderProperties { { NAME("MODE_RADIANCE") } });
 
         FullScreenPass::CreatePipeline(renderableAttributes);
 
@@ -550,9 +550,9 @@ void EnvGridPass::CreatePipeline()
     }
 
     static const FixedArray<Pair<EnvGridApplyMode, ShaderProperties>, EGAM_MAX> applyEnvGridPasses = {
-        Pair<EnvGridApplyMode, ShaderProperties> { EGAM_SH, ShaderProperties { { "MODE_IRRADIANCE", "IRRADIANCE_MODE_SH" } } },
-        Pair<EnvGridApplyMode, ShaderProperties> { EGAM_VOXEL, ShaderProperties { { "MODE_IRRADIANCE", "IRRADIANCE_MODE_VOXEL" } } },
-        Pair<EnvGridApplyMode, ShaderProperties> { EGAM_LIGHT_FIELD, ShaderProperties { { "MODE_IRRADIANCE", "IRRADIANCE_MODE_LIGHT_FIELD" } } }
+        Pair<EnvGridApplyMode, ShaderProperties> { EGAM_SH, ShaderProperties { { NAME("MODE_IRRADIANCE"), NAME("IRRADIANCE_MODE_SH") } } },
+        Pair<EnvGridApplyMode, ShaderProperties> { EGAM_VOXEL, ShaderProperties { { NAME("MODE_IRRADIANCE"), NAME("IRRADIANCE_MODE_VOXEL") } } },
+        Pair<EnvGridApplyMode, ShaderProperties> { EGAM_LIGHT_FIELD, ShaderProperties { { NAME("MODE_IRRADIANCE"), NAME("IRRADIANCE_MODE_LIGHT_FIELD") } } }
     };
 
     for (const auto& it : applyEnvGridPasses)
@@ -726,7 +726,7 @@ void ReflectionsPass::CreatePipeline(const RenderableAttributeSet& renderableAtt
 
     static const FixedArray<Pair<ApplyReflectionProbeMode, ShaderProperties>, ApplyReflectionProbeMode::MAX> applyReflectionProbePasses = {
         Pair<ApplyReflectionProbeMode, ShaderProperties> { ApplyReflectionProbeMode::DEFAULT, ShaderProperties {} },
-        Pair<ApplyReflectionProbeMode, ShaderProperties> { ApplyReflectionProbeMode::PARALLAX_CORRECTED, ShaderProperties { { "ENV_PROBE_PARALLAX_CORRECTED" } } }
+        Pair<ApplyReflectionProbeMode, ShaderProperties> { ApplyReflectionProbeMode::PARALLAX_CORRECTED, ShaderProperties { { NAME("ENV_PROBE_PARALLAX_CORRECTED") } } }
     };
 
     for (const auto& it : applyReflectionProbePasses)

@@ -742,7 +742,6 @@ enum StencilOp : uint8
 };
 
 HYP_STRUCT()
-
 struct StencilFunction
 {
     HYP_FIELD()

@@ -86,11 +86,11 @@ void HBAO::Create()
     HYP_SCOPE;
 
     ShaderProperties shaderProperties;
-    shaderProperties.Set("HBIL_ENABLED", g_engine->GetAppContext()->GetConfiguration().Get("rendering.hbil.enabled").ToBool());
+    shaderProperties.Set(NAME("HBIL_ENABLED"), g_engine->GetAppContext()->GetConfiguration().Get("rendering.hbil.enabled").ToBool());
 
     if (ShouldRenderHalfRes())
     {
-        shaderProperties.Set("HALFRES");
+        shaderProperties.Set(NAME("HALFRES"));
     }
 
     m_shader = g_shaderManager->GetOrCreate(NAME("HBAO"), shaderProperties);

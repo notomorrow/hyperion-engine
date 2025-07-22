@@ -9,6 +9,9 @@
 
 namespace hyperion {
 
+// false while in static initialization to disable mutex locking; set to true on engine startup
+static bool g_isNameRegistryInitialized = false;
+
 #pragma region NameRegistry
 
 class NameRegistry
@@ -43,6 +46,11 @@ Name NameRegistry::RegisterName(NameID id, const ANSIString& str, bool lock)
 {
     Name name(id);
 
+    if (!g_isNameRegistryInitialized)
+    {
+        lock = false;
+    }
+
     if (lock)
     {
         m_mutex.Lock();
@@ -74,6 +82,11 @@ Name NameRegistry::RegisterUniqueName(const ANSIString& str, bool lock)
     Name name;
     bool inserted = false;
     int suffix = 0;
+
+    if (!g_isNameRegistryInitialized)
+    {
+        lock = false;
+    }
 
     if (lock)
     {
@@ -143,6 +156,16 @@ HYP_API const ANSIString& LookupStringForName(const NameRegistry* nameRegistry, 
     return nameRegistry->LookupStringForName(name);
 }
 
+HYP_API bool ShouldLockNameRegistry()
+{
+    return g_isNameRegistryInitialized;
+}
+
+HYP_API void InitializeNameRegistry()
+{
+    g_isNameRegistryInitialized = true;
+}
+
 #pragma endregion NameRegistry
 
 #pragma region Name
@@ -194,7 +217,7 @@ NameRegistration NameRegistration::FromDynamicString(const ANSIString& str)
 {
     const NameID id = GenerateID(str);
 
-    Name::GetRegistry()->RegisterName(id, str, true);
+    Name::GetRegistry()->RegisterName(id, str, ShouldLockNameRegistry());
 
     return NameRegistration { id };
 }

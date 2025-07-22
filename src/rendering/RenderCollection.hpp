@@ -97,7 +97,8 @@ struct DrawCallCollectionMapping
     }
 };
 
-/*! \brief A collection of renderable objects and setup for a specific View, proxied so the render thread can work with it. */
+/*! \brief A collection of rendering-related objects for a View, populated via View::Collect() and usable for rendering a frame.
+  *  Keeps track of which objects are newly added, removed or changed (via render proxy version changing), allowing updates to be applied to only objects that need it. */
 class HYP_API RenderProxyList
 {
     static constexpr uint64 writeFlag = 0x1;

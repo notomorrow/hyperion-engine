@@ -254,7 +254,7 @@ void ParticleSpawner::CreateGraphicsPipeline()
 void ParticleSpawner::CreateComputePipelines()
 {
     ShaderProperties properties;
-    properties.Set("HAS_PHYSICS", m_params.hasPhysics);
+    properties.Set(NAME("HAS_PHYSICS"), m_params.hasPhysics);
 
     ShaderRef updateParticlesShader = g_shaderManager->GetOrCreate(NAME("UpdateParticles"), properties);
     Assert(updateParticlesShader.IsValid());

@@ -31,7 +31,7 @@ public:
         // Set global descriptor table version - if this hashcode changes, the shader is invalid and must be recompiled
         out.SetProperty("global_descriptor_table_version", FBOMData::FromUInt64(GetStaticDescriptorTableDeclaration().GetHashCode().Value()));
 
-        out.SetProperty("name", FBOMData::FromName(inObject.definition.name));
+        out.SetProperty("name", FBOMData::FromString(String(*inObject.definition.name)));
 
         out.SetProperty("EntryPointName", FBOMData::FromString(inObject.entryPointName));
 
@@ -57,7 +57,7 @@ public:
 
             out.SetProperty(
                 ANSIString("properties.") + ANSIString::ToString(index) + ".name",
-                FBOMData::FromString(item.name));
+                FBOMData::FromString(String(item.name.LookupString())));
 
             out.SetProperty(
                 ANSIString("properties.") + ANSIString::ToString(index) + ".is_permutation",
@@ -75,13 +75,13 @@ public:
             {
                 out.SetProperty(
                     ANSIString("properties.") + ANSIString::ToString(index) + ".num_possible_values",
-                    FBOMData::FromUInt32(uint32(item.possibleValues.Size())));
+                    FBOMData::FromUInt32(uint32(item.enumValues.Size())));
 
-                for (SizeType i = 0; i < item.possibleValues.Size(); i++)
+                for (SizeType i = 0; i < item.enumValues.Size(); i++)
                 {
                     out.SetProperty(
                         ANSIString("properties.") + ANSIString::ToString(index) + ".possible_values[" + ANSIString::ToString(i) + "]",
-                        FBOMData::FromString(item.possibleValues[i]));
+                        FBOMData::FromString(item.enumValues[i]));
                 }
             }
         }
@@ -127,10 +127,14 @@ public:
 
         CompiledShader compiledShader;
 
-        if (FBOMResult err = in.GetProperty("name").ReadName(&compiledShader.definition.name))
+        String strName;
+
+        if (FBOMResult err = in.GetProperty("name").ReadString(strName))
         {
             return err;
         }
+
+        compiledShader.definition.name = CreateNameFromDynamicString(*strName);
 
         if (in.HasProperty("EntryPointName"))
         {
@@ -175,10 +179,13 @@ public:
 
             ShaderProperty property;
 
-            if (FBOMResult err = in.GetProperty(paramString + ".name").ReadString(property.name))
+            String strName;
+            if (FBOMResult err = in.GetProperty(paramString + ".name").ReadString(strName))
             {
                 continue;
             }
+
+            property.name = CreateNameFromDynamicString(*strName);
 
             bool isValueGroup = false;
 
@@ -188,14 +195,14 @@ public:
 
             if (isValueGroup)
             {
-                uint32 numPossibleValues = 0;
+                uint32 numenumValues = 0;
 
-                if (FBOMResult err = in.GetProperty(paramString + ".num_possible_values").ReadUInt32(&numPossibleValues))
+                if (FBOMResult err = in.GetProperty(paramString + ".num_possible_values").ReadUInt32(&numenumValues))
                 {
                     continue;
                 }
 
-                for (uint32 i = 0; i < numPossibleValues; i++)
+                for (uint32 i = 0; i < numenumValues; i++)
                 {
                     String possibleValue;
 
@@ -204,7 +211,7 @@ public:
                         continue;
                     }
 
-                    property.possibleValues.PushBack(std::move(possibleValue));
+                    property.enumValues.PushBack(std::move(possibleValue));
                 }
             }
 

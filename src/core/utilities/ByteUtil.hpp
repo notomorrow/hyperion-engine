@@ -47,6 +47,16 @@ public:
         return f;
     }
 
+    static inline uint32 QuantizeFloat(float f, uint8 bits)
+    {
+        return uint32(MathUtil::Round(MathUtil::Clamp(f, 0.0f, 1.0f) * ((1u << bits) - 1)));
+    }
+
+    static inline float UnquantizeFloat(uint32 x, uint8 bits)
+    {
+        return float(x) / float((1u << bits) - 1);
+    }
+
     /*! \brief Packs a 4-component vector into a 32-bit integer.
      *  \param vec The vector to pack.
      *  \return The 32-bit integer packed from the vector. */

@@ -112,12 +112,12 @@ static String BuildPreamble(const ShaderProperties& properties)
 
     for (const ShaderProperty& property : properties.GetPropertySet())
     {
-        if (property.name.Empty())
+        if (!property.name.IsValid())
         {
             continue;
         }
 
-        preamble += "#define " + property.name + " 1\n";
+        preamble += HYP_FORMAT("#define {} 1\n", property.name);
     }
 
     return preamble;
@@ -908,27 +908,27 @@ static void ForEachPermutation(
 
     for (const ShaderProperty& valueGroup : valueGroups)
     {
-        totalCount += valueGroup.possibleValues.Size() * totalCount;
+        totalCount += valueGroup.enumValues.Size() * totalCount;
     }
 
-    Array<Array<ShaderProperty>> allCombinations;
+    Array<ShaderProperties> allCombinations;
     allCombinations.Reserve(totalCount);
 
     for (SizeType i = 0; i < numPermutations; i++)
     {
-        Array<ShaderProperty> currentProperties;
+        HashSet<ShaderProperty> currentProperties;
         currentProperties.Reserve(ByteUtil::BitCount(i) + staticProperties.Size());
-        currentProperties.Concat(staticProperties);
+        currentProperties.Merge(staticProperties);
 
         for (SizeType j = 0; j < variableProperties.Size(); j++)
         {
             if (i & (1ull << j))
             {
-                currentProperties.PushBack(variableProperties[j]);
+                currentProperties.Insert(variableProperties[j]);
             }
         }
 
-        allCombinations.PushBack(std::move(currentProperties));
+        allCombinations.EmplaceBack(std::move(currentProperties));
     }
 
     HYP_LOG(
@@ -941,18 +941,18 @@ static void ForEachPermutation(
     for (const ShaderProperty& valueGroup : valueGroups)
     {
         // each value group causes the # of combinations to grow by (num values in group) * (current number of combinations)
-        Array<Array<ShaderProperty>> currentGroupCombinations;
-        currentGroupCombinations.Resize(valueGroup.possibleValues.Size() * allCombinations.Size());
+        Array<ShaderProperties> currentGroupCombinations;
+        currentGroupCombinations.Resize(valueGroup.enumValues.Size() * allCombinations.Size());
 
         for (SizeType existingCombinationIndex = 0; existingCombinationIndex < allCombinations.Size(); existingCombinationIndex++)
         {
-            for (SizeType valueIndex = 0; valueIndex < valueGroup.possibleValues.Size(); valueIndex++)
+            for (SizeType valueIndex = 0; valueIndex < valueGroup.enumValues.Size(); valueIndex++)
             {
-                ShaderProperty newProperty(valueGroup.name + "_" + valueGroup.possibleValues[valueIndex], false);
+                ShaderProperty newProperty(NAME_FMT("{}_{}", valueGroup.name, valueGroup.enumValues[valueIndex]), false);
 
                 // copy the current version of the array
-                Array<ShaderProperty> mergedProperties(allCombinations[existingCombinationIndex]);
-                mergedProperties.PushBack(std::move(newProperty));
+                ShaderProperties mergedProperties = allCombinations[existingCombinationIndex];
+                mergedProperties.Set(newProperty);
 
                 currentGroupCombinations[existingCombinationIndex + (valueIndex * allCombinations.Size())] = std::move(mergedProperties);
             }
@@ -965,13 +965,12 @@ static void ForEachPermutation(
             valueGroup.name,
             currentGroupCombinations.Size());
 
-        for (const Array<ShaderProperty>& properties : currentGroupCombinations)
+        for (const ShaderProperties& properties : currentGroupCombinations)
         {
-            HYP_LOG(
-                ShaderCompiler,
-                Debug,
-                "\t\t{}",
-                String::Join(properties, ", ", &ShaderProperty::GetName));
+            HYP_LOG(ShaderCompiler, Debug, "\t\t{}", String::Join(properties, ", ", [](auto&& elem)
+                                                         {
+                                                             return String(*elem.GetName());
+                                                         }));
         }
 
         allCombinations.Concat(std::move(currentGroupCombinations));
@@ -989,16 +988,16 @@ static void ForEachPermutation(
     {
         TaskSystem::GetInstance().ParallelForEach(
             allCombinations,
-            [&callback](const Array<ShaderProperty>& properties, uint32, uint32)
+            [&callback](const ShaderProperties& properties, uint32, uint32)
             {
-                callback(ShaderProperties(properties));
+                callback(properties);
             });
     }
     else
     {
-        for (const Array<ShaderProperty>& properties : allCombinations)
+        for (const ShaderProperties& properties : allCombinations)
         {
-            callback(ShaderProperties(properties));
+            callback(properties);
         }
     }
 }
@@ -1053,11 +1052,7 @@ ShaderProperties& ShaderProperties::Set(const ShaderProperty& property, bool ena
 
         if (!FindVertexAttributeForDefinition(property.GetValueString(), type))
         {
-            HYP_LOG(
-                ShaderCompiler,
-                Error,
-                "Invalid vertex attribute name for shader: {}",
-                property.GetValueString());
+            HYP_LOG(ShaderCompiler, Error, "Invalid vertex attribute name for shader: {}", property.GetValueString());
 
             return *this;
         }
@@ -1073,56 +1068,94 @@ ShaderProperties& ShaderProperties::Set(const ShaderProperty& property, bool ena
             {
                 m_optionalVertexAttributes &= ~type;
             }
-        }
-        else
-        {
-            if (enabled)
-            {
-                m_requiredVertexAttributes |= type;
-                m_optionalVertexAttributes &= ~type;
-            }
-            else
-            {
-                m_requiredVertexAttributes &= ~type;
-            }
 
-            m_needsHashCodeRecalculation = true;
+            // NOTE: Optional vertex attributes should not trigger any hash code recalculation.
+
+            return *this;
         }
-    }
-    else
-    {
-        const auto it = m_props.Find(property);
 
         if (enabled)
         {
-            if (it == m_props.End())
-            {
-                m_props.Insert(property);
-
-                m_needsHashCodeRecalculation = true;
-            }
-            else
-            {
-                if (*it != property)
-                {
-                    *it = property;
-
-                    m_needsHashCodeRecalculation = true;
-                }
-            }
+            m_requiredVertexAttributes |= type;
+            m_optionalVertexAttributes &= ~type;
         }
         else
         {
-            if (it != m_props.End())
-            {
-                m_props.Erase(it);
-
-                m_needsHashCodeRecalculation = true;
-            }
+            m_requiredVertexAttributes &= ~type;
         }
+
+        m_needsHashCodeRecalculation = true;
+
+        return *this;
+    }
+
+    const auto it = m_props.Find(property);
+
+    if (enabled)
+    {
+        if (it == m_props.End())
+        {
+            m_props.Insert(property);
+
+            m_needsHashCodeRecalculation = true;
+
+            return *this;
+        }
+
+        if (*it != property)
+        {
+            *it = property;
+
+            m_needsHashCodeRecalculation = true;
+        }
+
+        return *this;
+    }
+
+    if (it != m_props.End())
+    {
+        m_props.Erase(it);
+
+        m_needsHashCodeRecalculation = true;
     }
 
     return *this;
+}
+
+String ShaderProperties::ToString() const
+{
+    Array<String> propertyNames;
+    propertyNames.Reserve(ByteUtil::BitCount(GetRequiredVertexAttributes().GetFlagMask()) + GetPropertySet().Size());
+
+    for (Bitset::BitIndex i : Bitset(GetRequiredVertexAttributes().GetFlagMask()))
+    {
+        AssertDebug(int(i) < int(VertexAttribute::mapping.Size()));
+        AssertDebug(VertexAttribute::mapping.ValueAt(i).name != nullptr, "Vertex attribute name missing at index {}, flagmask: {}", i, GetRequiredVertexAttributes().GetFlagMask());
+
+        propertyNames.PushBack(String("HYP_ATTRIBUTE_") + VertexAttribute::mapping.ValueAt(i).name);
+    }
+
+    for (const ShaderProperty& property : GetPropertySet())
+    {
+        propertyNames.PushBack(property.name.LookupString());
+    }
+
+    String propertiesString;
+    SizeType index = 0;
+
+    for (const String& name : propertyNames)
+    {
+        propertiesString += name;
+
+        if (index != propertyNames.Size() - 1)
+        {
+            propertiesString += ", ";
+        }
+
+        index++;
+    }
+
+    return propertiesString;
 }
 
 #pragma endregion ShaderProperties
@@ -1152,21 +1185,21 @@ ShaderCompiler::~ShaderCompiler()
 void ShaderCompiler::GetPlatformSpecificProperties(ShaderProperties& properties) const
 {
 #if defined(HYP_VULKAN) && HYP_VULKAN
-    properties.Set(ShaderProperty("HYP_VULKAN", false));
+    properties.Set(ShaderProperty(NAME("HYP_VULKAN"), false));
 
     constexpr uint32 vulkanVersion = HYP_VULKAN_API_VERSION;
 
     switch (vulkanVersion)
     {
     case VK_API_VERSION_1_1:
-        properties.Set(ShaderProperty("HYP_VULKAN_1_1", false));
+        properties.Set(ShaderProperty(NAME("HYP_VULKAN_1_1"), false));
         break;
     case VK_API_VERSION_1_2:
-        properties.Set(ShaderProperty("HYP_VULKAN_1_2", false));
+        properties.Set(ShaderProperty(NAME("HYP_VULKAN_1_2"), false));
         break;
 #ifdef VK_API_VERSION_1_3
     case VK_API_VERSION_1_3:
-        properties.Set(ShaderProperty("HYP_VULKAN_1_3", false));
+        properties.Set(ShaderProperty(NAME("HYP_VULKAN_1_3"), false));
         break;
 #endif
     default:
@@ -1175,28 +1208,28 @@ void ShaderCompiler::GetPlatformSpecificProperties(ShaderProperties& properties)
 #endif
 
 #if defined(HYP_WINDOWS)
-    properties.Set(ShaderProperty("HYP_WINDOWS", false));
+    properties.Set(ShaderProperty(NAME("HYP_WINDOWS"), false));
 #elif defined(HYP_LINUX)
-    properties.Set(ShaderProperty("HYP_LINUX", false));
+    properties.Set(ShaderProperty(NAME("HYP_LINUX"), false));
 #elif defined(HYP_MACOS)
-    properties.Set(ShaderProperty("HYP_MACOS", false));
+    properties.Set(ShaderProperty(NAME("HYP_MACOS"), false));
 #elif defined(HYP_IOS)
-    properties.Set(ShaderProperty("HYP_IOS", false));
+    properties.Set(ShaderProperty(NAME("HYP_IOS"), false));
 #endif
 
     if (g_renderBackend->GetRenderConfig().IsDynamicDescriptorIndexingSupported())
     {
-        properties.Set(ShaderProperty("HYP_FEATURES_DYNAMIC_DESCRIPTOR_INDEXING", false));
+        properties.Set(ShaderProperty(NAME("HYP_FEATURES_DYNAMIC_DESCRIPTOR_INDEXING"), false));
     }
 
     if (g_renderBackend->GetRenderConfig().IsBindlessSupported())
     {
-        properties.Set(ShaderProperty("HYP_FEATURES_BINDLESS_TEXTURES", false));
+        properties.Set(ShaderProperty(NAME("HYP_FEATURES_BINDLESS_TEXTURES"), false));
     }
 
     if (!g_renderBackend->GetRenderConfig().ShouldCollectUniqueDrawCallPerMaterial())
     {
-        properties.Set(ShaderProperty("HYP_USE_INDEXED_ARRAY_FOR_OBJECT_DATA", false));
+        properties.Set(ShaderProperty(NAME("HYP_USE_INDEXED_ARRAY_FOR_OBJECT_DATA"), false));
     }
 
     // props.Set(ShaderProperty("HYP_MAX_SHADOW_MAPS", false));
@@ -1214,11 +1247,11 @@ void ShaderCompiler::ParseDefinitionSection(const INIFile::Section& section, Sha
             {
                 if (element.subElements.Any())
                 {
-                    bundle.versions.AddValueGroup(element.name, element.subElements);
+                    bundle.versions.AddValueGroup(CreateNameFromDynamicString(*element.name), element.subElements);
                 }
                 else
                 {
-                    bundle.versions.AddPermutation(element.name);
+                    bundle.versions.AddPermutation(CreateNameFromDynamicString(*element.name));
                 }
             }
         }
@@ -1310,6 +1343,8 @@ bool ShaderCompiler::HandleCompiledShaderBatch(
 
         for (const CompiledShader& compiledShader : batch.compiledShaders)
         {
+            //            HYP_LOG_TEMP("compiledShader flagmask : {}", compiledShader.GetRequiredVertexAttributes().GetFlagMask());
+
             allProperties.Merge(compiledShader.GetDefinition().GetProperties());
         }
 
@@ -1556,7 +1591,7 @@ bool ShaderCompiler::LoadShaderDefinitions(bool precompileShaders)
                 bundle.versions.Merge(ShaderProperties(staticMeshVertexAttributes | skeletonVertexAttributes));
             }
 
-            ForEachPermutation(bundle.versions.ToArray(), [&](const ShaderProperties& properties)
+            ForEachPermutation(bundle.versions, [&](const ShaderProperties& properties)
                 {
                     CompiledShader compiledShader;
                     bool result = GetCompiledShader(bundle.name, properties, compiledShader);
@@ -2380,7 +2415,7 @@ bool ShaderCompiler::CompileBundle(
                                 variablePropertiesString += ", ";
                             }
 
-                            variablePropertiesString += property.name;
+                            variablePropertiesString += property.name.LookupString();
                         }
                         else
                         {
@@ -2389,7 +2424,7 @@ bool ShaderCompiler::CompileBundle(
                                 staticPropertiesString += ", ";
                             }
 
-                            staticPropertiesString += property.name;
+                            staticPropertiesString += property.name.LookupString();
                         }
                     }
 
@@ -2578,10 +2613,16 @@ bool ShaderCompiler::GetCompiledShader(
         HYP_LOG(
             ShaderCompiler,
             Error,
-            "Hash calculation for shader {} does not match {}! Invalid shader property combination.\n\tRequested instance with properties: [{}]",
+            "Hash calculation for shader {} does not match {}! Invalid shader property combination.\n\tRequested instance with properties: [{}]\n\tFound property sets: {}",
             name,
             finalPropertiesHash.Value(),
-            finalProperties.ToString());
+            finalProperties.ToString(),
+            String::Join(batch.compiledShaders, "\n\t", [](auto&& item)
+                {
+                    return HYP_FORMAT("Props: {}, Hash: {}", item.GetDefinition().GetProperties().ToString(), item.GetDefinition().GetProperties().GetHashCode().Value());
+                }));
+
+        HYP_BREAKPOINT;
 
         return false;
     }

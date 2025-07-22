@@ -173,19 +173,19 @@ const Handle<Texture>& SSRRenderer::GetFinalResultTexture() const
 ShaderProperties SSRRenderer::GetShaderProperties() const
 {
     ShaderProperties shaderProperties;
-    shaderProperties.Set("CONE_TRACING", m_config.coneTracing);
-    shaderProperties.Set("ROUGHNESS_SCATTERING", m_config.roughnessScattering);
+    shaderProperties.Set(NAME("CONE_TRACING"), m_config.coneTracing);
+    shaderProperties.Set(NAME("ROUGHNESS_SCATTERING"), m_config.roughnessScattering);
 
     switch (ssrFormat)
     {
     case TF_RGBA8:
-        shaderProperties.Set("OUTPUT_RGBA8");
+        shaderProperties.Set(NAME("OUTPUT_RGBA8"));
         break;
     case TF_RGBA16F:
-        shaderProperties.Set("OUTPUT_RGBA16F");
+        shaderProperties.Set(NAME("OUTPUT_RGBA16F"));
         break;
     case TF_RGBA32F:
-        shaderProperties.Set("OUTPUT_RGBA32F");
+        shaderProperties.Set(NAME("OUTPUT_RGBA32F"));
         break;
     }
 

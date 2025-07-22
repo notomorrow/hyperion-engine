@@ -416,8 +416,6 @@ void Mesh::SetMeshAttributes(const MeshAttributes& attributes)
     }
 }
 
-/* Copy our values into the packed vertex buffer, and increase the index for the next possible
- * mesh attribute. This macro helps keep the code cleaner and easier to maintain. */
 #define PACKED_SET_ATTR(rawValues, argSize)                                                           \
     do                                                                                                \
     {                                                                                                 \
@@ -465,7 +463,7 @@ Array<float> Mesh::BuildVertexBuffer(const VertexAttributeSet& vertexAttributes,
                 vertex.GetBoneWeight(0), vertex.GetBoneWeight(1),
                 vertex.GetBoneWeight(2), vertex.GetBoneWeight(3)
             };
-            PACKED_SET_ATTR(weights, std::size(weights));
+            PACKED_SET_ATTR(weights, HYP_ARRAY_SIZE(weights));
         }
 
         if (vertexAttributes & VertexAttribute::MESH_INPUT_ATTRIBUTE_BONE_INDICES)
@@ -474,7 +472,7 @@ Array<float> Mesh::BuildVertexBuffer(const VertexAttributeSet& vertexAttributes,
                 (float)vertex.GetBoneIndex(0), (float)vertex.GetBoneIndex(1),
                 (float)vertex.GetBoneIndex(2), (float)vertex.GetBoneIndex(3)
             };
-            PACKED_SET_ATTR(indices, std::size(indices));
+            PACKED_SET_ATTR(indices, HYP_ARRAY_SIZE(indices));
         }
     }
 

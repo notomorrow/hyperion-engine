@@ -234,9 +234,7 @@ void DebugDrawer::Initialize()
 
     m_shader = g_shaderManager->GetOrCreate(
         NAME("DebugAABB"),
-        ShaderProperties(
-            staticMeshVertexAttributes,
-            Array<String> { "IMMEDIATE_MODE" }));
+        ShaderProperties(staticMeshVertexAttributes, { { NAME("IMMEDIATE_MODE") } }));
 
     Assert(m_shader.IsValid());
 

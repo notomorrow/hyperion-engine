@@ -546,11 +546,13 @@ public:
     {
         String result;
 
-        for (auto it = container.Begin(); it != container.End(); ++it)
+        for (auto it = container.Begin(); it != container.End();)
         {
             result.Append(ToString(*it));
+            
+            ++it;
 
-            if (it != container.End() - 1)
+            if (it != container.End())
             {
                 result.Append(separator);
             }
@@ -566,11 +568,13 @@ public:
 
         String result;
 
-        for (auto it = container.Begin(); it != container.End(); ++it)
+        for (auto it = container.Begin(); it != container.End();)
         {
             result.Append(ToString(joinByFunc(*it)));
+            
+            ++it;
 
-            if (it != container.End() - 1)
+            if (it != container.End())
             {
                 result.Append(separator);
             }
@@ -584,11 +588,13 @@ public:
     {
         String result;
 
-        for (auto it = container.Begin(); it != container.End(); ++it)
+        for (auto it = container.Begin(); it != container.End();)
         {
             result.Append(ToString(*it));
+            
+            ++it;
 
-            if (it != container.End() - 1)
+            if (it != container.End())
             {
                 if constexpr (isUtf8 && std::is_same_v<utf::u32char, decltype(separator)>)
                 {
@@ -620,11 +626,13 @@ public:
 
         String result;
 
-        for (auto it = container.Begin(); it != container.End(); ++it)
+        for (auto it = container.Begin(); it != container.End();)
         {
             result.Append(ToString(joinByFunc(*it)));
+            
+            ++it;
 
-            if (it != container.End() - 1)
+            if (it != container.End())
             {
                 if constexpr (isUtf8 && std::is_same_v<utf::u32char, decltype(separator)>)
                 {

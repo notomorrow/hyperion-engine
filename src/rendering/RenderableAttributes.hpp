@@ -161,6 +161,11 @@ public:
 
     HYP_FORCE_INLINE void SetShaderDefinition(const ShaderDefinition& shaderDefinition)
     {
+        if (m_materialAttributes.shaderDefinition == shaderDefinition)
+        {
+            return;
+        }
+
         m_materialAttributes.shaderDefinition = shaderDefinition;
         m_needsHashCodeRecalculation = true;
     }
@@ -183,6 +188,11 @@ public:
 
     HYP_FORCE_INLINE void SetMaterialAttributes(const MaterialAttributes& materialAttributes)
     {
+        if (m_materialAttributes == materialAttributes)
+        {
+            return;
+        }
+
         m_materialAttributes = materialAttributes;
         m_needsHashCodeRecalculation = true;
     }
@@ -194,6 +204,11 @@ public:
 
     HYP_FORCE_INLINE void SetOverrideFlags(uint32 overrideFlags)
     {
+        if (m_overrideFlags == overrideFlags)
+        {
+            return;
+        }
+
         m_overrideFlags = overrideFlags;
         m_needsHashCodeRecalculation = true;
     }
@@ -205,6 +220,11 @@ public:
 
     HYP_FORCE_INLINE void SetDrawableLayer(uint32 drawableLayer)
     {
+        if (m_drawableLayer == drawableLayer)
+        {
+            return;
+        }
+
         m_drawableLayer = drawableLayer;
         m_needsHashCodeRecalculation = true;
     }

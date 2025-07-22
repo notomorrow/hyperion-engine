@@ -717,6 +717,9 @@ public:
         return ConstIterator(this, it);
     }
 
+    Iterator FindByHashCode(HashCode hashCode);
+    ConstIterator FindByHashCode(HashCode hashCode) const;
+
     HYP_FORCE_INLINE bool Contains(const KeyType& value) const
     {
         return Find(value) != End();
@@ -786,7 +789,7 @@ public:
         return *this;
     }
 
-    template <class OtherContainerType>
+    template <class OtherContainerType, typename = std::enable_if_t<std::is_rvalue_reference_v<OtherContainerType>>>
     HashSet& Merge(OtherContainerType&& other)
     {
         for (auto& item : other)
@@ -1111,6 +1114,36 @@ auto HashSet<Value, KeyBy, NodeAllocatorType>::Find(const KeyType& value) const 
     const Bucket* bucket = GetBucketForHash(hashCode);
 
     const typename Bucket::ConstIterator it = bucket->Find(keyByFn, value);
+
+    if (it == bucket->End())
+    {
+        return End();
+    }
+
+    return ConstIterator(this, it);
+}
+
+template <class Value, auto KeyBy, class NodeAllocatorType>
+auto HashSet<Value, KeyBy, NodeAllocatorType>::FindByHashCode(HashCode hashCode) -> Iterator
+{
+    Bucket* bucket = GetBucketForHash(hashCode.Value());
+
+    typename Bucket::Iterator it = bucket->FindByHashCode(keyByFn, hashCode.Value());
+
+    if (it == bucket->End())
+    {
+        return End();
+    }
+
+    return Iterator(this, it);
+}
+
+template <class Value, auto KeyBy, class NodeAllocatorType>
+auto HashSet<Value, KeyBy, NodeAllocatorType>::FindByHashCode(HashCode hashCode) const -> ConstIterator
+{
+    const Bucket* bucket = GetBucketForHash(hashCode.Value());
+
+    const typename Bucket::ConstIterator it = bucket->FindByHashCode(keyByFn, hashCode.Value());
 
     if (it == bucket->End())
     {

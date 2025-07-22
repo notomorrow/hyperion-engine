@@ -162,7 +162,7 @@ void RenderEnvProbe::CreateShader()
     {
         m_shader = g_shaderManager->GetOrCreate(
             NAME("RenderToCubemap"),
-            ShaderProperties(staticMeshVertexAttributes, { "ENV_PROBE", "WRITE_NORMALS", "WRITE_MOMENTS" }));
+            ShaderProperties(staticMeshVertexAttributes, { NAME("ENV_PROBE"), NAME("WRITE_NORMALS"), NAME("WRITE_MOMENTS") }));
     }
     else if (m_envProbe->IsSkyProbe())
     {
@@ -174,7 +174,7 @@ void RenderEnvProbe::CreateShader()
     {
         m_shader = g_shaderManager->GetOrCreate(
             NAME("RenderToCubemap"),
-            ShaderProperties(staticMeshVertexAttributes, { "MODE_SHADOWS" }));
+            ShaderProperties(staticMeshVertexAttributes, { NAME("MODE_SHADOWS") }));
     }
     else
     {
@@ -432,7 +432,7 @@ void ReflectionProbeRenderer::CreateShader()
 
     m_shader = g_shaderManager->GetOrCreate(
         NAME("RenderToCubemap"),
-        ShaderProperties(staticMeshVertexAttributes, { "WRITE_NORMALS", "WRITE_MOMENTS" }));
+        ShaderProperties(staticMeshVertexAttributes, { NAME("WRITE_NORMALS"), NAME("WRITE_MOMENTS") }));
 
     Assert(m_shader.IsValid());
 }
@@ -537,7 +537,7 @@ void ReflectionProbeRenderer::ComputePrefilteredEnvMap(FrameBase* frame, const R
 
     if (!envProbe->IsSkyProbe())
     {
-        shaderProperties.Set("LIGHTING");
+        shaderProperties.Set(NAME("LIGHTING"));
     }
 
     ShaderRef convolveProbeShader = g_shaderManager->GetOrCreate(NAME("ConvolveProbe"), shaderProperties);
@@ -700,14 +700,14 @@ void ReflectionProbeRenderer::ComputeSH(FrameBase* frame, const RenderSetup& ren
 
     if (!envProbe->IsSkyProbe())
     {
-        shaderProperties.Set("LIGHTING");
+        shaderProperties.Set(NAME("LIGHTING"));
     }
 
     HashMap<Name, Pair<ShaderRef, ComputePipelineRef>> pipelines = {
-        { NAME("Clear"), { g_shaderManager->GetOrCreate(NAME("ComputeSH"), ShaderProperties::Merge(shaderProperties, { { "MODE_CLEAR" } })), ComputePipelineRef() } },
-        { NAME("BuildCoeffs"), { g_shaderManager->GetOrCreate(NAME("ComputeSH"), ShaderProperties::Merge(shaderProperties, { { "MODE_BUILD_COEFFICIENTS" } })), ComputePipelineRef() } },
-        { NAME("Reduce"), { g_shaderManager->GetOrCreate(NAME("ComputeSH"), ShaderProperties::Merge(shaderProperties, { { "MODE_REDUCE" } })), ComputePipelineRef() } },
-        { NAME("Finalize"), { g_shaderManager->GetOrCreate(NAME("ComputeSH"), ShaderProperties::Merge(shaderProperties, { { "MODE_FINALIZE" } })), ComputePipelineRef() } }
+        { NAME("Clear"), { g_shaderManager->GetOrCreate(NAME("ComputeSH"), ShaderProperties::Merge(shaderProperties, { { NAME("MODE_CLEAR") } })), ComputePipelineRef() } },
+        { NAME("BuildCoeffs"), { g_shaderManager->GetOrCreate(NAME("ComputeSH"), ShaderProperties::Merge(shaderProperties, { { NAME("MODE_BUILD_COEFFICIENTS") } })), ComputePipelineRef() } },
+        { NAME("Reduce"), { g_shaderManager->GetOrCreate(NAME("ComputeSH"), ShaderProperties::Merge(shaderProperties, { { NAME("MODE_REDUCE") } })), ComputePipelineRef() } },
+        { NAME("Finalize"), { g_shaderManager->GetOrCreate(NAME("ComputeSH"), ShaderProperties::Merge(shaderProperties, { { NAME("MODE_FINALIZE") } })), ComputePipelineRef() } }
     };
 
     ShaderRef firstShader;

@@ -325,8 +325,8 @@ void EnvGridRenderer::CreateVoxelGridData(EnvGrid* envGrid, EnvGridPassData& pd)
 
     // Create shader, descriptor sets for voxelizing probes
 
-    ShaderRef voxelizeProbeShader = g_shaderManager->GetOrCreate(NAME("EnvProbe_VoxelizeProbe"), { { "MODE_VOXELIZE" } });
-    ShaderRef offsetVoxelGridShader = g_shaderManager->GetOrCreate(NAME("EnvProbe_VoxelizeProbe"), { { "MODE_OFFSET" } });
+    ShaderRef voxelizeProbeShader = g_shaderManager->GetOrCreate(NAME("EnvProbe_VoxelizeProbe"), { { NAME("MODE_VOXELIZE") } });
+    ShaderRef offsetVoxelGridShader = g_shaderManager->GetOrCreate(NAME("EnvProbe_VoxelizeProbe"), { { NAME("MODE_OFFSET") } });
     ShaderRef clearVoxelsShader = g_shaderManager->GetOrCreate(NAME("EnvProbe_ClearProbeVoxels"));
 
     AttachmentBase* colorAttachment = framebuffer->GetAttachment(0);
@@ -439,10 +439,10 @@ void EnvGridRenderer::CreateSphericalHarmonicsData(EnvGrid* envGrid, EnvGridPass
     }
 
     FixedArray<ShaderRef, 4> shaders = {
-        g_shaderManager->GetOrCreate(NAME("ComputeSH"), { { "MODE_CLEAR" } }),
-        g_shaderManager->GetOrCreate(NAME("ComputeSH"), { { "MODE_BUILD_COEFFICIENTS" } }),
-        g_shaderManager->GetOrCreate(NAME("ComputeSH"), { { "MODE_REDUCE" } }),
-        g_shaderManager->GetOrCreate(NAME("ComputeSH"), { { "MODE_FINALIZE" } })
+        g_shaderManager->GetOrCreate(NAME("ComputeSH"), { { NAME("MODE_CLEAR") } }),
+        g_shaderManager->GetOrCreate(NAME("ComputeSH"), { { NAME("MODE_BUILD_COEFFICIENTS") } }),
+        g_shaderManager->GetOrCreate(NAME("ComputeSH"), { { NAME("MODE_REDUCE") } }),
+        g_shaderManager->GetOrCreate(NAME("ComputeSH"), { { NAME("MODE_FINALIZE") } })
     };
 
     for (const ShaderRef& shader : shaders)

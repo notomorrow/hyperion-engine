@@ -24,6 +24,11 @@
 
 namespace hyperion {
 
+static const ShaderDefinition g_defaultShaderDefinition {
+    NAME("Forward"),
+    ShaderProperties(staticMeshVertexAttributes)
+};
+
 #pragma region Material
 
 const Material::ParameterTable& Material::DefaultParameters()
@@ -53,7 +58,7 @@ const Material::ParameterTable& Material::DefaultParameters()
 
 Material::Material()
     : m_renderAttributes {
-          .shaderDefinition = ShaderDefinition { NAME("Forward"), staticMeshVertexAttributes },
+          .shaderDefinition = g_defaultShaderDefinition,
           .bucket = RB_OPAQUE,
           .fillMode = FM_FILL,
           .blendFunction = BlendFunction::None(),
@@ -69,7 +74,7 @@ Material::Material()
 Material::Material(Name name, RenderBucket rb)
     : m_name(name),
       m_renderAttributes {
-          .shaderDefinition = ShaderDefinition { NAME("Forward"), staticMeshVertexAttributes },
+          .shaderDefinition = g_defaultShaderDefinition,
           .bucket = rb
       },
       m_isDynamic(false),
@@ -473,10 +478,7 @@ Handle<Material> MaterialCache::CreateMaterial(
 {
     if (!attributes.shaderDefinition)
     {
-        attributes.shaderDefinition = ShaderDefinition {
-            NAME("Forward"),
-            staticMeshVertexAttributes
-        };
+        attributes.shaderDefinition = g_defaultShaderDefinition;
     }
 
     Handle<Material> handle = CreateObject<Material>(
@@ -498,10 +500,7 @@ Handle<Material> MaterialCache::GetOrCreate(
 {
     if (!attributes.shaderDefinition)
     {
-        attributes.shaderDefinition = ShaderDefinition {
-            NAME("Forward"),
-            staticMeshVertexAttributes
-        };
+        attributes.shaderDefinition = g_defaultShaderDefinition;
     }
 
     // @TODO: For textures hashcode, asset path should be used rather than texture Id

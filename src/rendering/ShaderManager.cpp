@@ -33,7 +33,7 @@ ShaderRef ShaderManager::GetOrCreate(const ShaderDefinition& definition)
 
         for (const ShaderProperty& property : expected.GetPropertySet())
         {
-            if (!received.Has(property))
+            if (!received.GetPropertySet().Contains(property))
             {
                 return false;
             }

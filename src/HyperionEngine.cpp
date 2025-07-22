@@ -132,6 +132,8 @@ HYP_API bool InitializeEngine(int argc, char** argv)
 {
     Threads::SetCurrentThreadId(g_mainThread);
 
+    InitializeNameRegistry();
+
     HypClassRegistry::GetInstance().Initialize();
 
     if (!InitializeCommandLineArguments(argc, argv))

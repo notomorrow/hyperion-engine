@@ -26,6 +26,9 @@ extern HYP_API Name RegisterName(NameRegistry* nameRegistry, NameID id, const AN
 
 extern HYP_API const ANSIString& LookupStringForName(const NameRegistry* nameRegistry, Name name);
 
+extern HYP_API bool ShouldLockNameRegistry();
+extern HYP_API void InitializeNameRegistry();
+
 struct NameRegistration
 {
     NameID id;
@@ -68,9 +71,9 @@ struct NameRegistration
 
 /*! \brief Creates a Name from a static string. The string must be a compile-time constant. */
 template <class HashedName>
-static inline Name CreateNameFromStaticString_WithLock(HashedName&& hashedName)
+static inline Name CreateNameFromStaticString(HashedName&& hashedName)
 {
-    static const NameRegistration nameRegistration = NameRegistration::FromHashedName(std::forward<HashedName>(hashedName), true);
+    static const NameRegistration nameRegistration = NameRegistration::FromHashedName(std::forward<HashedName>(hashedName), ShouldLockNameRegistry());
 
     return Name(nameRegistration.id);
 }
@@ -112,12 +115,12 @@ constexpr WeakName operator "" _nw(const char *, SizeType);
 #define HYP_HASHED_NAME2(name) ::hyperion::HashedName<::hyperion::StaticString<sizeof(name)>(name)>()
 #define HYP_NAME_UNSAFE2(name) ::hyperion::CreateNameFromStaticString_NoLock(HYP_HASHED_NAME2(name))
 #define HYP_WEAK_NAME2(name) ::hyperion::Name(HYP_HASHED_NAME2(name).hashCode.Value())
-#define HYP_NAME2(name) ::hyperion::CreateNameFromStaticString_WithLock(HYP_HASHED_NAME2(name))
+#define HYP_NAME2(name) ::hyperion::CreateNameFromStaticString(HYP_HASHED_NAME2(name))
 
 #define HYP_HASHED_NAME(name) ::hyperion::HashedName<::hyperion::StaticString<sizeof(HYP_STR(name))>(HYP_STR(name))>()
 #define HYP_NAME_UNSAFE(name) ::hyperion::CreateNameFromStaticString_NoLock(HYP_HASHED_NAME(name))
 #define HYP_WEAK_NAME(name) ::hyperion::Name(HYP_HASHED_NAME(name).hashCode.Value())
-#define HYP_NAME(name) ::hyperion::CreateNameFromStaticString_WithLock(HYP_HASHED_NAME(name))
+#define HYP_NAME(name) ::hyperion::CreateNameFromStaticString(HYP_HASHED_NAME(name))
 
 #define NAME(str) HYP_NAME2(str)
 

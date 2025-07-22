@@ -35,7 +35,17 @@ public:
 
         const Material& inObject = in.Get<Material>();
 
-        out.SetProperty("Attributes", FBOMData::FromObject(FBOMObject().SetProperty("Bucket", uint32(inObject.GetRenderAttributes().bucket)).SetProperty("Flags", uint32(inObject.GetRenderAttributes().flags)).SetProperty("CullMode", uint32(inObject.GetRenderAttributes().cullFaces)).SetProperty("FillMode", uint32(inObject.GetRenderAttributes().fillMode))));
+        // clang-format off
+        FBOMObject attributesObject = FBOMObject()
+            .SetProperty("Bucket", uint32(inObject.GetRenderAttributes().bucket))
+            .SetProperty("Flags", uint32(inObject.GetRenderAttributes().flags))
+            .SetProperty("CullMode", uint32(inObject.GetRenderAttributes().cullFaces))
+            .SetProperty("FillMode", uint32(inObject.GetRenderAttributes().fillMode))
+            .SetProperty("BlendFunction", FBOMData::FromStruct(inObject.GetRenderAttributes().blendFunction))
+            .SetProperty("StencilFunction", FBOMData::FromStruct(inObject.GetRenderAttributes().stencilFunction));
+        // clang-format on
+
+        out.SetProperty("Attributes", FBOMData::FromObject(std::move(attributesObject)));
 
         FBOMArray paramsArray { FBOMBaseObjectType() };
 
@@ -106,6 +116,8 @@ public:
         attributesObject.GetProperty("Flags").ReadUInt32(&attributes.flags);
         attributesObject.GetProperty("CullMode").ReadUInt32(&attributes.cullFaces);
         attributesObject.GetProperty("FillMode").ReadUInt32(&attributes.fillMode);
+        attributesObject.GetProperty("BlendFunction").ReadStruct(&attributes.blendFunction);
+        attributesObject.GetProperty("StencilFunction").ReadStruct(&attributes.stencilFunction);
 
         FBOMArray paramsArray { FBOMUnset() };
 

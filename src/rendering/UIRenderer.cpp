@@ -222,7 +222,7 @@ static void BuildRenderGroups(RenderCollector& renderCollector, RenderProxyList&
         if (!rg.IsValid())
         {
             ShaderDefinition shaderDefinition = attributes.GetShaderDefinition();
-            shaderDefinition.GetProperties().Set("INSTANCING");
+            shaderDefinition.GetProperties().Set(NAME("INSTANCING"));
 
             ShaderRef shader = g_shaderManager->GetOrCreate(shaderDefinition);
             Assert(shader.IsValid());

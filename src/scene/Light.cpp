@@ -37,7 +37,12 @@ static const TextureFormat g_directionalLightShadowFormats[SMF_MAX] = {
     TF_RG32F // VSM
 };
 
-static constexpr const char* g_shadowMapFilterPropertyNames[SMF_MAX] = { "MODE_STANDARD", "MODE_PCF", "MODE_CONTACT_HARDENED", "MODE_VSM" };
+static const Name g_shadowMapFilterPropertyNames[SMF_MAX] = {
+    NAME("MODE_STANDARD"),
+    NAME("MODE_PCF"),
+    NAME("MODE_CONTACT_HARDENED"),
+    NAME("MODE_VSM")
+};
 
 static constexpr EnumFlags<ViewFlags> g_defaultShadowViewFlags = ViewFlags::NOT_MULTI_BUFFERED | ViewFlags::SKIP_LIGHTS
     | ViewFlags::SKIP_LIGHTMAP_VOLUMES | ViewFlags::SKIP_ENV_PROBES | ViewFlags::SKIP_ENV_GRIDS;
@@ -168,7 +173,7 @@ void Light::CreateShadowViews()
         depthAttachmentDesc.loadOp = LoadOperation::CLEAR;
         depthAttachmentDesc.storeOp = StoreOperation::STORE;
 
-        shaderProperties.Set("MODE_SHADOWS");
+        shaderProperties.Set(NAME("MODE_SHADOWS"));
         shaderDefinition = ShaderDefinition(NAME("RenderToCubemap"), shaderProperties);
 
         break;

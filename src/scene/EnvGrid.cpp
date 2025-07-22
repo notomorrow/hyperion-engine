@@ -158,7 +158,12 @@ void EnvGrid::Init()
     InitObject(m_camera);
     AttachChild(m_camera);
 
-    ShaderProperties shaderProperties(staticMeshVertexAttributes, { "ENV_PROBE", "WRITE_NORMALS", "WRITE_MOMENTS" });
+    ShaderProperties shaderProperties(staticMeshVertexAttributes, {
+        NAME("ENV_PROBE"),
+        NAME("WRITE_NORMALS"),
+        NAME("WRITE_MOMENTS")
+    });
+    
     ShaderDefinition shaderDefinition { NAME("RenderToCubemap"), shaderProperties };
 
     switch (GetEnvGridType())

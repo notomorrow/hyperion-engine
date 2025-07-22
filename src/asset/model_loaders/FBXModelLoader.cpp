@@ -1478,7 +1478,7 @@ AssetLoadResult FBXModelLoader::LoadAsset(LoaderState& state) const
                 auto material = g_materialSystem->GetOrCreate({
                     .shaderDefinition = ShaderDefinition {
                         NAME("Forward"),
-                        ShaderProperties(mesh->attributes, {{ "SKINNING" }})
+                        ShaderProperties(mesh->attributes, {{ NAME("SKINNING") }})
                     },
                     .bucket = RB_OPAQUE
                 });

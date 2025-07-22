@@ -98,6 +98,11 @@ static RenderableAttributeSet GetRenderableAttributesForProxy(const RenderProxyM
     return attributes;
 }
 
+static const Name g_nameInstancing = NAME("INSTANCING");
+static const Name g_nameForwardLighting = NAME("FORWARD_LIGHTING");
+static const Name g_nameAlphaDiscard = NAME("ALPHA_DISCARD");
+static const Name g_nameSkinning = NAME("SKINNING");
+
 static void UpdateRenderableAttributesDynamic(const RenderProxyMesh* proxy, RenderableAttributeSet& attributes)
 {
     HYP_SCOPE;
@@ -122,6 +127,13 @@ static void UpdateRenderableAttributesDynamic(const RenderProxyMesh* proxy, Rend
     hasAlphaDiscard = bool(attributes.GetMaterialAttributes().flags & MAF_ALPHA_DISCARD);
     hasSkinning = proxy->skeleton.IsValid() && proxy->skeleton->NumBones() > 0;
 
+//    // temp testing
+//    MaterialAttributes materialAttributes = attributes.GetMaterialAttributes();
+//    materialAttributes.stencilFunction.mask = 0xFFu;
+//    materialAttributes.stencilFunction.value = 0x1u;
+//    attributes.SetMaterialAttributes(materialAttributes);
+//    overridden = 1;
+
     if (!overridden)
     {
         return;
@@ -130,27 +142,27 @@ static void UpdateRenderableAttributesDynamic(const RenderProxyMesh* proxy, Rend
     bool shaderDefinitionChanged = false;
     ShaderDefinition shaderDefinition = attributes.GetShaderDefinition();
 
-    if (hasInstancing && !shaderDefinition.GetProperties().Has("INSTANCING"))
+    if (hasInstancing && !shaderDefinition.GetProperties().Has(g_nameInstancing))
     {
-        shaderDefinition.GetProperties().Set("INSTANCING");
+        shaderDefinition.GetProperties().Set(g_nameInstancing);
         shaderDefinitionChanged = true;
     }
 
-    if (hasForwardLighting && !shaderDefinition.GetProperties().Has("FORWARD_LIGHTING"))
+    if (hasForwardLighting && !shaderDefinition.GetProperties().Has(g_nameForwardLighting))
     {
-        shaderDefinition.GetProperties().Set("FORWARD_LIGHTING");
+        shaderDefinition.GetProperties().Set(g_nameForwardLighting);
         shaderDefinitionChanged = true;
     }
 
-    if (hasAlphaDiscard && !shaderDefinition.GetProperties().Has("ALPHA_DISCARD"))
+    if (hasAlphaDiscard && !shaderDefinition.GetProperties().Has(g_nameAlphaDiscard))
     {
-        shaderDefinition.GetProperties().Set("ALPHA_DISCARD");
+        shaderDefinition.GetProperties().Set(g_nameAlphaDiscard);
         shaderDefinitionChanged = true;
     }
 
-    if (hasSkinning && !shaderDefinition.GetProperties().Has("SKINNING"))
+    if (hasSkinning && !shaderDefinition.GetProperties().Has(g_nameSkinning))
     {
-        shaderDefinition.GetProperties().Set("SKINNING");
+        shaderDefinition.GetProperties().Set(g_nameSkinning);
         shaderDefinitionChanged = true;
     }
 
