@@ -20,7 +20,6 @@
 
 namespace hyperion {
 
-class RenderView;
 class RenderWorld;
 class RenderEnvGrid;
 class RenderLight;
@@ -76,13 +75,13 @@ struct RendererConfig : public ConfigBase<RendererConfig>
 };
 
 /*! \brief Describes the setup for rendering a frame. All RenderSetups must have a valid RenderWorld set. Passed to almost all Render() functions throughout the renderer.
- *  Most of the time you'll want a RenderSetup with a RenderView as well, but compute-only passes can use a RenderSetup without a view. Use HasView() to check if a view is set. */
+ *  Most of the time you'll want a RenderSetup with a View as well, but compute-only passes can use a RenderSetup without a view. Use HasView() to check if a view is set. */
 struct HYP_API RenderSetup
 {
     friend const RenderSetup& NullRenderSetup();
 
     RenderWorld* world;
-    RenderView* view;
+    View* view;
     EnvProbe* envProbe;
     EnvGrid* envGrid;
     Light* light;
@@ -112,7 +111,7 @@ public:
         AssertDebug(world != nullptr, "RenderSetup must have a valid RenderWorld");
     }
 
-    RenderSetup(RenderWorld* world, RenderView* view)
+    RenderSetup(RenderWorld* world, View* view)
         : world(world),
           view(view),
           envProbe(nullptr),
@@ -144,13 +143,13 @@ public:
     }
 
     /*! \brief Returns true if this RenderSetup is useable for rendering.
-     *  This means it has a valid RenderWorld set. If you need to check if a RenderView is set, use HasView() instead. */
+     *  This means it has a valid RenderWorld set. If you need to check if a View is set, use HasView() instead. */
     HYP_FORCE_INLINE bool IsValid() const
     {
         return world != nullptr;
     }
 
-    /*! \brief Returns true if this RenderSetup has a valid RenderView set. */
+    /*! \brief Returns true if this RenderSetup has a valid View set. */
     HYP_FORCE_INLINE bool HasView() const
     {
         return view != nullptr;

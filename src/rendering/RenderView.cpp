@@ -126,23 +126,6 @@ void RenderView::SetPriority(int priority)
         });
 }
 
-void RenderView::PreRender(FrameBase* frame)
-{
-    HYP_SCOPE;
-    Threads::AssertOnThread(g_renderThread);
-
-    Assert(IsInitialized());
-
-    // if (m_postProcessing)
-    // {
-    //     m_postProcessing->PerformUpdates();
-    // }
-}
-
-void RenderView::PostRender(FrameBase* frame)
-{
-}
-
 #pragma endregion RenderView
 
 } // namespace hyperion

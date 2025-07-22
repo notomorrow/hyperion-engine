@@ -5,7 +5,6 @@
 #include <rendering/RenderCamera.hpp>
 #include <rendering/RenderTexture.hpp>
 #include <rendering/RenderShadowMap.hpp>
-#include <rendering/RenderView.hpp>
 #include <rendering/Deferred.hpp>
 #include <rendering/PlaceholderData.hpp>
 #include <rendering/RenderGlobalState.hpp>
@@ -18,10 +17,10 @@
 #include <rendering/RenderImageView.hpp>
 #include <rendering/RenderGpuBuffer.hpp>
 #include <rendering/AsyncCompute.hpp>
+#include <rendering/Texture.hpp>
 
 #include <scene/EnvGrid.hpp>
 #include <scene/EnvProbe.hpp>
-#include <rendering/Texture.hpp>
 #include <scene/View.hpp>
 #include <scene/Light.hpp>
 
@@ -278,7 +277,7 @@ PassData* EnvGridRenderer::CreateViewPassData(View* view, PassDataExt& ext)
 
     EnvGridPassData* pd = new EnvGridPassData;
     pd->view = view->WeakHandleFromThis();
-    pd->viewport = view->GetRenderResource().GetViewport();
+    pd->viewport = view->GetViewport();
 
     pd->currentProbeIndex = envProbeCollection.numProbes != 0 ? 0 : ~0u;
 
@@ -580,7 +579,7 @@ void EnvGridRenderer::RenderFrame(FrameBase* frame, const RenderSetup& renderSet
     AssertDebug(pd != nullptr);
 
     RenderSetup rs = renderSetup;
-    rs.view = &envGrid->GetView()->GetRenderResource();
+    rs.view = envGrid->GetView().Get();
     rs.passData = pd;
 
     RenderProxyList& rpl = RenderApi_GetConsumerProxyList(envGrid->GetView());
@@ -767,7 +766,7 @@ void EnvGridRenderer::ComputeEnvProbeIrradiance_SphericalHarmonics(FrameBase* fr
     AssertDebug(envGrid != nullptr);
     AssertDebug(envGrid->GetEnvGridType() == ENV_GRID_TYPE_SH);
 
-    View* view = renderSetup.view->GetView();
+    View* view = renderSetup.view;
     AssertDebug(view != nullptr);
 
     EnvGridPassData* pd = static_cast<EnvGridPassData*>(FetchViewPassData(view));
@@ -969,7 +968,7 @@ void EnvGridRenderer::ComputeEnvProbeIrradiance_LightField(FrameBase* frame, con
     AssertDebug(envGrid != nullptr);
     AssertDebug(envGrid->GetEnvGridType() == ENV_GRID_TYPE_LIGHT_FIELD);
 
-    View* view = renderSetup.view->GetView();
+    View* view = renderSetup.view;
     AssertDebug(view != nullptr);
 
     EnvGridPassData* pd = static_cast<EnvGridPassData*>(FetchViewPassData(view));
@@ -1099,7 +1098,7 @@ void EnvGridRenderer::OffsetVoxelGrid(FrameBase* frame, const RenderSetup& rende
     AssertDebug(envGrid != nullptr);
     AssertDebug(envGrid->GetEnvGridType() == ENV_GRID_TYPE_LIGHT_FIELD);
 
-    View* view = renderSetup.view->GetView();
+    View* view = renderSetup.view;
     AssertDebug(view != nullptr);
 
     EnvGridPassData* pd = static_cast<EnvGridPassData*>(FetchViewPassData(view));
@@ -1146,7 +1145,7 @@ void EnvGridRenderer::VoxelizeProbe(FrameBase* frame, const RenderSetup& renderS
     AssertDebug(envGrid != nullptr);
     AssertDebug(envGrid->GetEnvGridType() == ENV_GRID_TYPE_LIGHT_FIELD);
 
-    View* view = renderSetup.view->GetView();
+    View* view = renderSetup.view;
     AssertDebug(view != nullptr);
 
     EnvGridPassData* pd = static_cast<EnvGridPassData*>(FetchViewPassData(view));

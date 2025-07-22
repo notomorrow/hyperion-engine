@@ -25,7 +25,6 @@
 
 #include <rendering/RenderEnvironment.hpp>
 #include <rendering/RenderWorld.hpp>
-#include <rendering/RenderView.hpp>
 
 #include <core/profiling/ProfileScope.hpp>
 
@@ -88,7 +87,7 @@ World::~World()
                 continue;
             }
 
-            m_renderResource->RemoveView(&view->GetRenderResource());
+            m_renderResource->RemoveView(view);
         }
 
         m_views.Clear();
@@ -132,7 +131,7 @@ void World::Init()
                         continue;
                     }
 
-                    m_renderResource->RemoveView(&view->GetRenderResource());
+                    m_renderResource->RemoveView(view);
                 }
 
                 m_views.Clear();
@@ -194,7 +193,7 @@ void World::Init()
     {
         InitObject(view);
 
-        m_renderResource->AddView(TResourceHandle<RenderView>(view->GetRenderResource()));
+        m_renderResource->AddView(view);
     }
 
     for (const Handle<Scene>& scene : m_scenes)
@@ -687,7 +686,7 @@ void World::AddView(const Handle<View>& view)
 
         InitObject(view);
 
-        m_renderResource->AddView(TResourceHandle<RenderView>(view->GetRenderResource()));
+        m_renderResource->AddView(view);
     }
 }
 
@@ -721,7 +720,7 @@ void World::RemoveView(const Handle<View>& view)
 
         if (view->IsReady())
         {
-            m_renderResource->RemoveView(&view->GetRenderResource());
+            m_renderResource->RemoveView(view);
         }
     }
 

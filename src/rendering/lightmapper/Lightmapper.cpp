@@ -9,22 +9,21 @@
 #include <rendering/RenderTexture.hpp>
 #include <rendering/RenderEnvProbe.hpp>
 #include <rendering/RenderEnvGrid.hpp>
-#include <rendering/RenderView.hpp>
 #include <rendering/RenderHelpers.hpp>
 #include <rendering/RenderCollection.hpp>
 #include <rendering/RenderBackend.hpp>
 #include <rendering/RenderObject.hpp>
 #include <rendering/RenderConfig.hpp>
 #include <rendering/RenderDevice.hpp>
+#include <rendering/Mesh.hpp>
+#include <rendering/Material.hpp>
+#include <rendering/Texture.hpp>
 #include <rendering/Renderer.hpp>
 
 #include <scene/BVH.hpp>
-#include <rendering/Mesh.hpp>
-#include <rendering/Material.hpp>
 #include <scene/World.hpp>
 #include <scene/EnvProbe.hpp>
 #include <scene/EnvGrid.hpp>
-#include <rendering/Texture.hpp>
 #include <scene/View.hpp>
 
 #include <scene/lightmapper/LightmapVolume.hpp>
@@ -87,31 +86,21 @@ struct RENDER_COMMAND(LightmapRender)
     : RenderCommand
 {
     LightmapJob* job;
-    RenderView* view;
+    View* view;
     Array<LightmapRay> rays;
     uint32 rayOffset;
 
-    RENDER_COMMAND(LightmapRender)(LightmapJob* job, RenderView* view, Array<LightmapRay>&& rays, uint32 rayOffset)
+    RENDER_COMMAND(LightmapRender)(LightmapJob* job, View* view, Array<LightmapRay>&& rays, uint32 rayOffset)
         : job(job),
           view(view),
           rays(std::move(rays)),
           rayOffset(rayOffset)
     {
-        if (view)
-        {
-            view->IncRef();
-        }
-
         job->m_numConcurrentRenderingTasks.Increment(1, MemoryOrder::RELEASE);
     }
 
     virtual ~RENDER_COMMAND(LightmapRender)() override
     {
-        if (view)
-        {
-            view->DecRef();
-        }
-
         job->m_numConcurrentRenderingTasks.Decrement(1, MemoryOrder::RELEASE);
     }
 
@@ -125,7 +114,7 @@ struct RENDER_COMMAND(LightmapRender)
 
         if (view)
         {
-            rpl = &RenderApi_GetConsumerProxyList(view->GetView());
+            rpl = &RenderApi_GetConsumerProxyList(view);
         }
 
         if (rpl)
@@ -1389,7 +1378,7 @@ void LightmapJob::Process()
         m_lastLoggedPercentage = percentage;
     }
 
-    PUSH_RENDER_COMMAND(LightmapRender, this, &m_view->GetRenderResource(), std::move(rays), rayOffset);
+    PUSH_RENDER_COMMAND(LightmapRender, this, m_view, std::move(rays), rayOffset);
 }
 
 void LightmapJob::GatherRays(uint32 maxRayHits, Array<LightmapRay>& outRays)

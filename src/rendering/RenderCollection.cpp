@@ -8,16 +8,16 @@
 #include <rendering/Deferred.hpp>
 #include <rendering/RenderCamera.hpp>
 #include <rendering/RenderMaterial.hpp>
-#include <rendering/RenderView.hpp>
 
 #include <rendering/RenderBackend.hpp>
 #include <rendering/RenderFrame.hpp>
 #include <rendering/RenderGraphicsPipeline.hpp>
 #include <rendering/RenderConfig.hpp>
 
-#include <scene/Scene.hpp>
 #include <rendering/Mesh.hpp>
 #include <rendering/Material.hpp>
+
+#include <scene/Scene.hpp>
 #include <scene/View.hpp>
 #include <scene/Light.hpp>    // For LightType
 #include <scene/EnvProbe.hpp> // For EnvProbeType
@@ -219,7 +219,7 @@ RenderProxyList::RenderProxyList()
       priority(0)
 {
     resourceTrackers.ResizeZeroed(TupleSize<ResourceTrackerTypes>::value);
-    
+
     // initialize the resource trackers
     ForEachResourceTrackerType(resourceTrackers, []<class ResourceTrackerType>(TypeWrapper<ResourceTrackerType>, ResourceTrackerBase*& pResourceTracker)
         {
@@ -442,14 +442,14 @@ void RenderCollector::ExecuteDrawCalls(FrameBase* frame, const RenderSetup& rend
     AssertDebug(renderSetup.IsValid());
     AssertDebug(renderSetup.HasView(), "RenderSetup must have a View attached");
 
-    if (renderSetup.view->GetView()->GetFlags() & ViewFlags::GBUFFER)
+    if (renderSetup.view->GetFlags() & ViewFlags::GBUFFER)
     {
         // Pass NULL framebuffer for GBuffer rendering, as it will be handled by DeferredRenderer outside of this scope.
         ExecuteDrawCalls(frame, renderSetup, FramebufferRef::Null(), bucketBits);
     }
     else
     {
-        const FramebufferRef& framebuffer = renderSetup.view->GetView()->GetOutputTarget().GetFramebuffer();
+        const FramebufferRef& framebuffer = renderSetup.view->GetOutputTarget().GetFramebuffer();
         AssertDebug(framebuffer != nullptr, "Must have a valid framebuffer for rendering");
 
         ExecuteDrawCalls(frame, renderSetup, framebuffer, bucketBits);

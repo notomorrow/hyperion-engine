@@ -24,7 +24,6 @@
 #include <scene/ecs/components/ReflectionProbeComponent.hpp>
 #include <scene/ecs/components/SkyComponent.hpp>
 
-#include <rendering/RenderView.hpp>
 #include <rendering/RenderCamera.hpp>
 #include <rendering/RenderEnvGrid.hpp>
 #include <rendering/RenderEnvProbe.hpp>
@@ -125,8 +124,7 @@ View::View()
 }
 
 View::View(const ViewDesc& viewDesc)
-    : m_renderResource(nullptr),
-      m_viewDesc(viewDesc),
+    : m_viewDesc(viewDesc),
       m_flags(viewDesc.flags),
       m_viewport(viewDesc.viewport),
       m_scenes(viewDesc.scenes),
@@ -172,32 +170,10 @@ View::~View()
 
         delete *it;
     }
-
-    if (m_renderResource)
-    {
-        // temp shit
-        m_renderResource->DecRef();
-        FreeResource(m_renderResource);
-        m_renderResource = nullptr;
-    }
 }
 
 void View::Init()
 {
-    AddDelegateHandler(g_engine->GetDelegates().OnShutdown.Bind([this]()
-        {
-            if (m_renderResource)
-            {
-                if (m_flags & ViewFlags::GBUFFER)
-                {
-                    m_renderResource->DecRef();
-                }
-
-                FreeResource(m_renderResource);
-                m_renderResource = nullptr;
-            }
-        }));
-
     Assert(m_camera.IsValid(), "Camera is not valid for View with Id #%u", Id().Value());
     InitObject(m_camera);
 
@@ -234,12 +210,6 @@ void View::Init()
     }
 
     Assert(m_outputTarget.IsValid(), "View with id #%u must have a valid output target!", Id().Value());
-
-    m_renderResource = AllocateResource<RenderView>(this);
-    m_renderResource->SetViewport(m_viewport);
-
-    // temp shit
-    m_renderResource->IncRef();
 
     AssertDebug(m_outputTarget.IsValid());
 
@@ -318,21 +288,11 @@ void View::Collect()
 void View::SetViewport(const Viewport& viewport)
 {
     m_viewport = viewport;
-
-    if (IsInitCalled())
-    {
-        m_renderResource->SetViewport(viewport);
-    }
 }
 
 void View::SetPriority(int priority)
 {
     m_priority = priority;
-
-    if (IsInitCalled())
-    {
-        m_renderResource->SetPriority(priority);
-    }
 }
 
 void View::AddScene(const Handle<Scene>& scene)

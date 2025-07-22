@@ -15,7 +15,6 @@
 namespace hyperion {
 
 class GBuffer;
-class RenderView;
 struct RenderSetup;
 
 enum class TemporalBlendTechnique

@@ -2,16 +2,14 @@
 
 #include <rendering/subsystems/ScreenCapture.hpp>
 #include <rendering/RenderTexture.hpp>
-#include <rendering/RenderView.hpp>
 #include <rendering/RenderWorld.hpp>
 #include <rendering/RenderGlobalState.hpp>
 #include <rendering/Deferred.hpp>
 #include <rendering/FinalPass.hpp>
 #include <rendering/TemporalAA.hpp>
-
 #include <rendering/RenderFrame.hpp>
-
 #include <rendering/Texture.hpp>
+
 #include <scene/World.hpp>
 #include <scene/View.hpp>
 
@@ -43,8 +41,6 @@ ScreenCaptureRenderSubsystem::~ScreenCaptureRenderSubsystem()
     HYP_SYNC_RENDER(); // wait for render commands to finish
 
     SafeRelease(std::move(m_buffer));
-
-    m_view->GetRenderResource().DecRef();
 }
 
 void ScreenCaptureRenderSubsystem::Init()
@@ -52,8 +48,6 @@ void ScreenCaptureRenderSubsystem::Init()
     Assert(m_view.IsValid());
 
     InitObject(m_view);
-    m_view->GetRenderResource().IncRef();
-
     InitObject(m_texture);
 
     SetReady(true);

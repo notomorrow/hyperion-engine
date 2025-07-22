@@ -6,14 +6,13 @@
 #include <rendering/RenderGlobalState.hpp>
 #include <rendering/PlaceholderData.hpp>
 #include <rendering/RenderBackend.hpp>
-#include <rendering/RenderView.hpp>
 #include <rendering/RenderTexture.hpp>
 #include <rendering/RenderDescriptorSet.hpp>
 #include <rendering/FullScreenPass.hpp>
+#include <rendering/Texture.hpp>
 
 #include <scene/Light.hpp>
 #include <scene/View.hpp>
-#include <rendering/Texture.hpp>
 
 #include <core/utilities/DeferredScope.hpp>
 
@@ -538,7 +537,7 @@ void ShadowRendererBase::RenderFrame(FrameBase* frame, const RenderSetup& render
         Assert(framebuffer.IsValid());
 
         RenderSetup rs = renderSetup;
-        rs.view = &shadowView->GetRenderResource(); // temp
+        rs.view = shadowView;
         rs.passData = FetchViewPassData(shadowView);
 
         ShadowPassData* pd = static_cast<ShadowPassData*>(rs.passData);
@@ -594,7 +593,7 @@ void ShadowRendererBase::RenderFrame(FrameBase* frame, const RenderSetup& render
     {
         RenderSetup rs = renderSetup;
         // FullScreenPass needs a View set
-        rs.view = &shadowViews[0]->GetRenderResource();
+        rs.view = shadowViews[0];
 
         // Combine passes into one
         combineShadowMapsPass->Render(frame, rs);
@@ -666,7 +665,7 @@ PassData* ShadowRendererBase::CreateViewPassData(View* view, PassDataExt& ext)
 {
     ShadowPassData* pd = new ShadowPassData;
     pd->view = view->WeakHandleFromThis();
-    pd->viewport = view->GetRenderResource().GetViewport();
+    pd->viewport = view->GetViewport();
 
     return pd;
 }

@@ -8,7 +8,6 @@
 #include <rendering/RenderGlobalState.hpp>
 #include <rendering/GBuffer.hpp>
 #include <rendering/Deferred.hpp>
-#include <rendering/RenderView.hpp>
 #include <rendering/FinalPass.hpp>
 #include <rendering/RenderWorld.hpp>
 #include <rendering/RenderMaterial.hpp>
@@ -429,9 +428,6 @@ void Engine::PreFrameUpdate(FrameBase* frame)
     HYP_SCOPE;
 
     Threads::AssertOnThread(g_renderThread);
-
-    if (m_world->IsReady())
-        m_world->GetRenderResource().PreRender(frame);
 
     RenderObjectDeleter::Iterate();
 

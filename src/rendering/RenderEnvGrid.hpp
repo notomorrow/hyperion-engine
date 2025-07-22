@@ -18,7 +18,6 @@
 namespace hyperion {
 
 class EnvGrid;
-class RenderView;
 
 class RenderEnvGrid final : public RenderResourceBase
 {

@@ -29,7 +29,6 @@ class Entity;
 class RenderCollector;
 class GpuBufferHolderBase;
 class IndirectRenderer;
-class RenderView;
 struct RenderSetup;
 struct PassData;
 

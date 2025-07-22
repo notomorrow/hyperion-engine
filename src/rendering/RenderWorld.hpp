@@ -35,7 +35,7 @@ class RenderCamera;
 class RenderShadowMap;
 class ShadowMapAllocator;
 class FinalPass;
-class RenderView;
+class View;
 struct ViewInfo;
 
 struct WorldShaderData
@@ -59,13 +59,13 @@ public:
         return m_world;
     }
 
-    HYP_FORCE_INLINE const Array<TResourceHandle<RenderView>>& GetViews() const
+    HYP_FORCE_INLINE const Array<Handle<View>>& GetViews() const
     {
-        return m_renderViews;
+        return m_views;
     }
 
-    void AddView(TResourceHandle<RenderView>&& renderView);
-    void RemoveView(RenderView* renderView);
+    void AddView(const Handle<View>& view);
+    void RemoveView(View* view);
 
     const RenderStats& GetRenderStats() const;
     void SetRenderStats(const RenderStats& renderStats);
@@ -83,7 +83,6 @@ public:
         return m_bufferData;
     }
 
-    void PreRender(FrameBase* frame);
     void Render(FrameBase* frame);
     void PostRender(FrameBase* frame);
 
@@ -100,7 +99,7 @@ private:
 
     World* m_world;
 
-    Array<TResourceHandle<RenderView>> m_renderViews;
+    Array<Handle<View>> m_views;
 
     UniquePtr<RenderEnvironment> m_renderEnvironment;
 

@@ -8,7 +8,6 @@
 #include <rendering/GBuffer.hpp>
 #include <rendering/RenderWorld.hpp>
 #include <rendering/RenderCamera.hpp>
-#include <rendering/RenderView.hpp>
 #include <rendering/Renderer.hpp>
 #include <rendering/GraphicsPipelineCache.hpp>
 
@@ -20,6 +19,7 @@
 
 #include <rendering/Mesh.hpp>
 
+#include <scene/View.hpp>
 #include <scene/camera/OrthoCamera.hpp>
 
 #include <core/object/HypClassUtils.hpp>
@@ -251,7 +251,7 @@ void GaussianSplattingInstance::Record(FrameBase* frame, const RenderSetup& rend
             ArrayMap<Name, ArrayMap<Name, uint32>> {
                 { NAME("Global"),
                     { { NAME("WorldsBuffer"), ShaderDataOffset<WorldShaderData>(renderSetup.world->GetBufferIndex()) },
-                        { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(renderSetup.view->GetCamera()->GetBufferIndex()) } } } },
+                        { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(renderSetup.view->GetCamera()->GetRenderResource().GetBufferIndex()) } } } },
             frame->GetFrameIndex());
 
         frame->renderQueue << DispatchCompute(
@@ -343,7 +343,7 @@ void GaussianSplattingInstance::Record(FrameBase* frame, const RenderSetup& rend
                 ArrayMap<Name, ArrayMap<Name, uint32>> {
                     { NAME("Global"),
                         { { NAME("WorldsBuffer"), ShaderDataOffset<WorldShaderData>(renderSetup.world->GetBufferIndex()) },
-                            { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(renderSetup.view->GetCamera()->GetBufferIndex()) } } } },
+                            { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(renderSetup.view->GetCamera()->GetRenderResource().GetBufferIndex()) } } } },
                 frame->GetFrameIndex());
 
             frame->renderQueue << DispatchCompute(
@@ -400,7 +400,7 @@ void GaussianSplattingInstance::Record(FrameBase* frame, const RenderSetup& rend
             ArrayMap<Name, ArrayMap<Name, uint32>> {
                 { NAME("Global"),
                     { { NAME("WorldsBuffer"), ShaderDataOffset<WorldShaderData>(renderSetup.world->GetBufferIndex()) },
-                        { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(renderSetup.view->GetCamera()->GetBufferIndex()) } } } },
+                        { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(renderSetup.view->GetCamera()->GetRenderResource().GetBufferIndex()) } } } },
             frame->GetFrameIndex());
 
         frame->renderQueue << DispatchCompute(
@@ -690,7 +690,7 @@ void GaussianSplatting::Render(FrameBase* frame, const RenderSetup& renderSetup)
         ArrayMap<Name, ArrayMap<Name, uint32>> {
             { NAME("Global"),
                 { { NAME("WorldsBuffer"), ShaderDataOffset<WorldShaderData>(renderSetup.world->GetBufferIndex()) },
-                    { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(renderSetup.view->GetCamera()->GetBufferIndex()) } } } },
+                    { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(renderSetup.view->GetCamera()->GetRenderResource().GetBufferIndex()) } } } },
         frameIndex);
 
     frame->renderQueue << BindVertexBuffer(m_quadMesh->GetVertexBuffer());

@@ -8,20 +8,18 @@
 #include <rendering/RenderMaterial.hpp>
 #include <rendering/RenderWorld.hpp>
 #include <rendering/RenderProxy.hpp>
-#include <rendering/RenderView.hpp>
 #include <rendering/RenderEnvGrid.hpp>
 #include <rendering/RenderEnvProbe.hpp>
 #include <rendering/IndirectDraw.hpp>
 #include <rendering/RenderCollection.hpp>
 #include <rendering/GraphicsPipelineCache.hpp>
-
+#include <rendering/Mesh.hpp>
+#include <rendering/Material.hpp>
 #include <rendering/RenderGraphicsPipeline.hpp>
 #include <rendering/RenderConfig.hpp>
 #include <rendering/RenderBackend.hpp>
 
 #include <scene/Entity.hpp>
-#include <rendering/Mesh.hpp>
-#include <rendering/Material.hpp>
 #include <scene/EnvProbe.hpp>
 #include <scene/EnvGrid.hpp>
 #include <scene/Light.hpp>
@@ -288,7 +286,7 @@ static void RenderAll(
             pipeline,
             ArrayMap<Name, uint32> {
                 { NAME("WorldsBuffer"), ShaderDataOffset<WorldShaderData>(renderSetup.world->GetBufferIndex()) },
-                { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(renderSetup.view->GetCamera()->GetBufferIndex()) },
+                { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(renderSetup.view->GetCamera()->GetRenderResource().GetBufferIndex()) },
                 { NAME("EnvGridsBuffer"), ShaderDataOffset<EnvGridShaderData>(renderSetup.envGrid, 0) },
                 { NAME("CurrentLight"), ShaderDataOffset<LightShaderData>(renderSetup.light, 0) },
                 { NAME("CurrentEnvProbe"), ShaderDataOffset<EnvProbeShaderData>(renderSetup.envProbe, 0) } },
@@ -484,7 +482,7 @@ static void RenderAll_Parallel(
             pipeline,
             ArrayMap<Name, uint32> {
                 { NAME("WorldsBuffer"), ShaderDataOffset<WorldShaderData>(renderSetup.world->GetBufferIndex()) },
-                { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(renderSetup.view->GetCamera()->GetBufferIndex()) },
+                { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(renderSetup.view->GetCamera()->GetRenderResource().GetBufferIndex()) },
                 { NAME("EnvGridsBuffer"), ShaderDataOffset<EnvGridShaderData>(renderSetup.envGrid, 0) },
                 { NAME("CurrentLight"), ShaderDataOffset<LightShaderData>(renderSetup.light, 0) },
                 { NAME("CurrentEnvProbe"), ShaderDataOffset<EnvProbeShaderData>(renderSetup.envProbe, 0) } },
@@ -695,7 +693,7 @@ void RenderGroup::PerformRendering(FrameBase* frame, const RenderSetup& renderSe
     AssertReady();
 
     AssertDebug(renderSetup.IsValid(), "RenderSetup must be valid for rendering");
-    AssertDebug(renderSetup.HasView(), "RenderSetup must have a valid RenderView for rendering");
+    AssertDebug(renderSetup.HasView(), "RenderSetup must have a valid View for rendering");
     AssertDebug(renderSetup.passData != nullptr, "RenderSetup must have valid PassData for rendering!");
 
     auto* cacheEntry = renderSetup.passData->renderGroupCache.TryGet(Id().ToIndex());

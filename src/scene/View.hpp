@@ -23,7 +23,6 @@
 
 namespace hyperion {
 
-class RenderView;
 class Scene;
 class Camera;
 class Light;
@@ -146,11 +145,6 @@ public:
 
     ~View();
 
-    HYP_FORCE_INLINE RenderView& GetRenderResource() const
-    {
-        return *m_renderResource;
-    }
-
     HYP_FORCE_INLINE const ViewDesc& GetViewDesc() const
     {
         return m_viewDesc;
@@ -231,8 +225,6 @@ protected:
     ResourceTrackerDiff CollectMeshEntities(RenderProxyList& rpl);
 
     ViewDesc m_viewDesc;
-
-    RenderView* m_renderResource;
 
     EnumFlags<ViewFlags> m_flags;
 

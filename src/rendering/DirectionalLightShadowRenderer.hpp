@@ -50,8 +50,6 @@ public:
         const TResourceHandle<RenderWorld>& worldResourceHandle,
         const TResourceHandle<RenderCamera>& cameraResourceHandle,
         const TResourceHandle<RenderShadowMap>& shadowMapResourceHandle,
-        const TResourceHandle<RenderView>& viewStaticsResourceHandle,
-        const TResourceHandle<RenderView>& viewDynamicsResourceHandle,
         const ShaderRef& shader,
         RerenderShadowsSemaphore* rerenderSemaphore);
     ShadowPass(const ShadowPass& other) = delete;
@@ -87,8 +85,6 @@ private:
     TResourceHandle<RenderWorld> m_worldResourceHandle;
     TResourceHandle<RenderCamera> m_cameraResourceHandle;
     TResourceHandle<RenderShadowMap> m_shadowMapResourceHandle;
-    TResourceHandle<RenderView> m_renderViewStatics;
-    TResourceHandle<RenderView> m_renderViewDynamics;
 
     Vec3f m_origin;
     RerenderShadowsSemaphore* m_rerenderSemaphore;

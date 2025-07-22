@@ -25,7 +25,6 @@ class Texture;
 class RenderGroup;
 class TemporalBlending;
 class GBuffer;
-class RenderView;
 struct RenderSetup;
 
 class HYP_API FullScreenPass

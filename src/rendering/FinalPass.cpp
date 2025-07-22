@@ -4,7 +4,6 @@
 #include <rendering/ShaderManager.hpp>
 #include <rendering/FullScreenPass.hpp>
 #include <rendering/RenderGroup.hpp>
-#include <rendering/RenderView.hpp>
 #include <rendering/RenderWorld.hpp>
 #include <rendering/PlaceholderData.hpp>
 #include <rendering/Deferred.hpp>
@@ -16,13 +15,13 @@
 #include <rendering/RenderSwapchain.hpp>
 #include <rendering/RenderGraphicsPipeline.hpp>
 
-#include <core/profiling/ProfileScope.hpp>
-
-#include <core/logging/Logger.hpp>
-
 #include <rendering/Mesh.hpp>
 #include <rendering/Texture.hpp>
 #include <rendering/RenderProxyable.hpp>
+
+#include <core/profiling/ProfileScope.hpp>
+
+#include <core/logging/Logger.hpp>
 
 #include <util/MeshBuilder.hpp>
 

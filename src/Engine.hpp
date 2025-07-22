@@ -42,7 +42,6 @@ class RenderGlobalState;
 class ScriptingService;
 class DebugDrawer;
 class DeferredRenderer;
-class RenderView;
 class FinalPass;
 class PlaceholderData;
 class RenderThread;

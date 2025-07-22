@@ -422,8 +422,6 @@ void DirectionalLightShadowRenderer::OnAddedToWorld()
         TResourceHandle<RenderWorld>(m_parentScene->GetWorld()->GetRenderResource()),
         TResourceHandle<RenderCamera>(m_camera->GetRenderResource()),
         m_shadowMapResourceHandle,
-        TResourceHandle<RenderView>(m_viewStatics->GetRenderResource()),
-        TResourceHandle<RenderView>(m_viewDynamics->GetRenderResource()),
         m_shader,
         &m_rerenderSemaphore);
 

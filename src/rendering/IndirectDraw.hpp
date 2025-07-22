@@ -19,7 +19,6 @@ class Mesh;
 class Material;
 class Engine;
 class Entity;
-class RenderView;
 struct RenderSetup;
 
 struct RenderCommand_CreateIndirectRenderer;

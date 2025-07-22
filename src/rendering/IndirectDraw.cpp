@@ -8,7 +8,6 @@
 #include <rendering/RenderEnvGrid.hpp>
 #include <rendering/RenderEnvProbe.hpp>
 #include <rendering/RenderWorld.hpp>
-#include <rendering/RenderView.hpp>
 #include <rendering/Deferred.hpp>
 #include <rendering/RenderBackend.hpp>
 
@@ -18,6 +17,8 @@
 #include <rendering/RenderHelpers.hpp>
 
 #include <rendering/Mesh.hpp>
+
+#include <scene/View.hpp>
 
 #include <core/math/MathUtil.hpp>
 
@@ -433,7 +434,7 @@ void IndirectRenderer::ExecuteCullShaderInBatches(FrameBase* frame, const Render
         ArrayMap<Name, ArrayMap<Name, uint32>> {
             { NAME("Global"),
                 { { NAME("WorldsBuffer"), ShaderDataOffset<WorldShaderData>(renderSetup.world->GetBufferIndex()) },
-                    { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(renderSetup.view->GetCamera()->GetBufferIndex()) } } } },
+                    { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(renderSetup.view->GetCamera()->GetRenderResource().GetBufferIndex()) } } } },
         frameIndex);
 
     const uint32 viewDescriptorSetIndex = m_objectVisibility->GetDescriptorTable()->GetDescriptorSetIndex(NAME("View"));

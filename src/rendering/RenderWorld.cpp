@@ -2,7 +2,6 @@
 
 #include <rendering/RenderWorld.hpp>
 #include <rendering/RenderCamera.hpp>
-#include <rendering/RenderView.hpp>
 #include <rendering/RenderEnvProbe.hpp>
 #include <rendering/RenderEnvGrid.hpp>
 #include <rendering/RenderEnvironment.hpp>
@@ -21,6 +20,7 @@
 #include <core/Handle.hpp>
 
 #include <scene/World.hpp>
+#include <scene/View.hpp>
 #include <scene/Scene.hpp>
 #include <scene/EnvProbe.hpp>
 
@@ -39,48 +39,45 @@ RenderWorld::RenderWorld(World* world)
 
 RenderWorld::~RenderWorld() = default;
 
-void RenderWorld::AddView(TResourceHandle<RenderView>&& renderView)
+void RenderWorld::AddView(const Handle<View>& view)
 {
     HYP_SCOPE;
 
-    if (!renderView)
+    if (!view.IsValid())
     {
         return;
     }
 
-    Execute([this, renderView = std::move(renderView)]()
+    Execute([this, view = view]()
         {
-            m_renderViews.PushBack(std::move(renderView));
+            m_views.PushBack(view);
 
-            std::sort(m_renderViews.Begin(), m_renderViews.End(), [](const TResourceHandle<RenderView>& a, const TResourceHandle<RenderView>& b)
+            std::sort(m_views.Begin(), m_views.End(), [](const Handle<View>& a, const Handle<View>& b)
                 {
                     return uint32(b->GetPriority()) < uint32(a->GetPriority());
                 });
         });
 }
 
-void RenderWorld::RemoveView(RenderView* renderView)
+void RenderWorld::RemoveView(View* view)
 {
     HYP_SCOPE;
 
-    if (!renderView)
+    if (!view)
     {
         return;
     }
 
-    Execute([this, renderView]()
+    Execute([this, view]()
         {
-            auto it = m_renderViews.FindIf([renderView](const TResourceHandle<RenderView>& item)
+            auto it = m_views.FindIf([view](auto&& item)
                 {
-                    return item.Get() == renderView;
+                    return item.Get() == view;
                 });
 
-            if (it != m_renderViews.End())
+            if (it != m_views.End())
             {
-                RenderView* renderView = it->Get();
-                it->Reset();
-
-                m_renderViews.Erase(it);
+                m_views.Erase(it);
             }
         });
 }
@@ -165,7 +162,7 @@ void RenderWorld::Destroy_Internal()
 {
     HYP_SCOPE;
 
-    m_renderViews.Clear();
+    m_views.Clear();
 }
 
 void RenderWorld::Update_Internal()
@@ -206,17 +203,6 @@ GpuBufferHolderBase* RenderWorld::GetGpuBufferHolder() const
     return g_renderGlobalState->gpuBuffers[GRB_WORLDS];
 }
 
-void RenderWorld::PreRender(FrameBase* frame)
-{
-    HYP_SCOPE;
-    Threads::AssertOnThread(g_renderThread);
-
-    for (const TResourceHandle<RenderView>& currentView : m_renderViews)
-    {
-        currentView->PreRender(frame);
-    }
-}
-
 void RenderWorld::Render(FrameBase* frame)
 {
     HYP_SCOPE;
@@ -230,11 +216,6 @@ void RenderWorld::PostRender(FrameBase* frame)
 {
     HYP_SCOPE;
     Threads::AssertOnThread(g_renderThread);
-
-    for (const TResourceHandle<RenderView>& currentView : m_renderViews)
-    {
-        currentView->PostRender(frame);
-    }
 
     ++m_bufferData.frameCounter;
 

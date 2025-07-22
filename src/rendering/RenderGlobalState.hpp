@@ -24,7 +24,6 @@ class ShadowMapAllocator;
 class GpuBufferHolderMap;
 class PlaceholderData;
 class RenderProxyList;
-class RenderView;
 class View;
 class DrawCallCollection;
 class RendererBase;

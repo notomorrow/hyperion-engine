@@ -5,17 +5,16 @@
 #include <scene/View.hpp>
 #include <scene/Scene.hpp>
 #include <scene/World.hpp>
-#include <rendering/Texture.hpp>
 
 #include <scene/camera/Camera.hpp>
 
 #include <scene/ecs/EntityManager.hpp>
 #include <scene/ecs/components/BoundingBoxComponent.hpp>
 
+#include <rendering/Texture.hpp>
 #include <rendering/RenderEnvGrid.hpp>
 #include <rendering/RenderEnvProbe.hpp>
 #include <rendering/RenderCamera.hpp>
-#include <rendering/RenderView.hpp>
 #include <rendering/RenderGlobalState.hpp>
 #include <rendering/RenderShadowMap.hpp>
 #include <rendering/PlaceholderData.hpp>
@@ -531,12 +530,12 @@ void EnvGrid::Update(float delta)
     {
         return;
     }
-    
+
     for (uint32 index = 0; index < m_envProbeCollection.numProbes; index++)
     {
         const Handle<EnvProbe>& probe = m_envProbeCollection.GetEnvProbeDirect(index);
         Assert(probe.IsValid());
-        
+
         // so Collect() on our view updates the EnvProbe's RenderProxy
         probe->SetNeedsRenderProxyUpdate();
         probe->SetNeedsRender(true);

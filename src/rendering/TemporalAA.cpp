@@ -6,19 +6,17 @@
 #include <rendering/Deferred.hpp>
 #include <rendering/GBuffer.hpp>
 #include <rendering/RenderCamera.hpp>
-#include <rendering/RenderView.hpp>
 #include <rendering/RenderTexture.hpp>
 #include <rendering/SafeDeleter.hpp>
 #include <rendering/RenderGlobalState.hpp>
-
 #include <rendering/RenderQueue.hpp>
-
 #include <rendering/RenderFrame.hpp>
 #include <rendering/RenderDescriptorSet.hpp>
 #include <rendering/RenderComputePipeline.hpp>
 #include <rendering/RenderFramebuffer.hpp>
-
 #include <rendering/Texture.hpp>
+
+#include <scene/View.hpp>
 
 #include <core/math/MathUtil.hpp>
 
@@ -168,7 +166,7 @@ void TemporalAA::Render(FrameBase* frame, const RenderSetup& renderSetup)
 
     pushConstants.dimensions = m_extent;
     pushConstants.depthTextureDimensions = Vec2u { depthTextureDimensions.x, depthTextureDimensions.y };
-    pushConstants.cameraNearFar = Vec2f { renderSetup.view->GetCamera()->GetBufferData().cameraNear, renderSetup.view->GetCamera()->GetBufferData().cameraFar };
+    pushConstants.cameraNearFar = Vec2f { renderSetup.view->GetCamera()->GetRenderResource().GetBufferData().cameraNear, renderSetup.view->GetCamera()->GetRenderResource().GetBufferData().cameraFar };
 
     m_computeTaa->SetPushConstants(&pushConstants, sizeof(pushConstants));
 

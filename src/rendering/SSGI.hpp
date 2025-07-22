@@ -18,7 +18,6 @@ namespace hyperion {
 class Engine;
 class GBuffer;
 struct SSGIUniforms;
-class RenderView;
 
 HYP_STRUCT(ConfigName = "app", JSONPath = "rendering.ssgi")
 struct SSGIConfig : public ConfigBase<SSGIConfig>
@@ -75,7 +74,7 @@ private:
     void CreateBlueNoiseBuffer();
     void CreateComputePipelines();
 
-    void FillUniformBufferData(RenderView* view, SSGIUniforms& outUniforms) const;
+    void FillUniformBufferData(View* view, SSGIUniforms& outUniforms) const;
 
     SSGIConfig m_config;
 

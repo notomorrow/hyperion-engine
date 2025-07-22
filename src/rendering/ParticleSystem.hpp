@@ -19,7 +19,6 @@
 namespace hyperion {
 
 class Engine;
-class RenderView;
 struct RenderSetup;
 
 struct ParticleSpawnerParams

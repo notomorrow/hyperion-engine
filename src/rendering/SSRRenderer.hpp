@@ -17,7 +17,6 @@ namespace hyperion {
 
 class Engine;
 class GBuffer;
-class RenderView;
 
 HYP_STRUCT(ConfigName = "app", JSONPath = "rendering.ssr")
 struct SSRRendererConfig : public ConfigBase<SSRRendererConfig>

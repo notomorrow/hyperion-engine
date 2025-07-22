@@ -19,7 +19,7 @@
       "screen_edge_fade": [0.960000, 0.990000],
       "quality": 2,
       "roughness_scattering": true,
-      "enabled": false,
+      "enabled": true,
       "cone_tracing": false
     },
     "taa": {

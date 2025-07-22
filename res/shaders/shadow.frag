@@ -71,15 +71,13 @@ HYP_DESCRIPTOR_SRV(Material, Textures, count = 16) uniform texture2D textures[HY
 HYP_DESCRIPTOR_SRV(Material, Textures) uniform texture2D textures[];
 #endif
 
-#define HYP_SHADOW_SAMPLE_ALBEDO 1
-
 void main()
 {
     // if (bool(GET_OBJECT_BUCKET(object) & OBJECT_MASK_SKY)) {
     //     discard;
     // }
 
-#if defined(HYP_SHADOW_SAMPLE_ALBEDO) && HYP_SHADOW_SAMPLE_ALBEDO
+#ifdef ALPHA_DISCARD
     if (HAS_TEXTURE(CURRENT_MATERIAL, MATERIAL_TEXTURE_ALBEDO_map))
     {
         vec4 albedo_texture = SAMPLE_TEXTURE(CURRENT_MATERIAL, MATERIAL_TEXTURE_ALBEDO_map, v_texcoord0);

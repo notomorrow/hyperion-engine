@@ -5,7 +5,6 @@
 #include <rendering/RenderWorld.hpp>
 #include <rendering/RenderCamera.hpp>
 #include <rendering/PlaceholderData.hpp>
-#include <rendering/RenderView.hpp>
 #include <rendering/Deferred.hpp>
 #include <rendering/GraphicsPipelineCache.hpp>
 #include <rendering/RenderGlobalState.hpp>
@@ -15,6 +14,8 @@
 #include <rendering/RenderGraphicsPipeline.hpp>
 
 #include <rendering/Mesh.hpp>
+
+#include <scene/View.hpp>
 
 #include <system/AppContext.hpp>
 
@@ -168,7 +169,7 @@ void HBAO::Render(FrameBase* frame, const RenderSetup& renderSetup)
         ArrayMap<Name, ArrayMap<Name, uint32>> {
             { NAME("Global"),
                 { { NAME("WorldsBuffer"), ShaderDataOffset<WorldShaderData>(renderSetup.world->GetBufferIndex()) },
-                    { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(renderSetup.view->GetCamera()->GetBufferIndex()) } } } },
+                    { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(renderSetup.view->GetCamera()->GetRenderResource().GetBufferIndex()) } } } },
         frameIndex);
 
     const uint32 viewDescriptorSetIndex = m_graphicsPipeline->GetDescriptorTable()->GetDescriptorSetIndex(NAME("View"));

@@ -21,7 +21,6 @@ class RenderEnvProbe;
 class Texture;
 class RenderCamera;
 class RenderShadowMap;
-class RenderView;
 
 class RenderEnvProbe final : public RenderResourceBase
 {
@@ -60,13 +59,6 @@ public:
     }
 
     void SetBufferData(const EnvProbeShaderData& bufferData);
-
-    HYP_FORCE_INLINE const TResourceHandle<RenderView>& GetViewRenderResourceHandle() const
-    {
-        return m_renderView;
-    }
-
-    void SetViewResourceHandle(TResourceHandle<RenderView>&& renderView);
 
     HYP_FORCE_INLINE const TResourceHandle<RenderShadowMap>& GetShadowMapRenderResourceHandle() const
     {
@@ -114,7 +106,6 @@ private:
     // temp
     EnvProbeSphericalHarmonics m_sphericalHarmonics;
 
-    TResourceHandle<RenderView> m_renderView;
     TResourceHandle<RenderShadowMap> m_shadowMap;
 };
 

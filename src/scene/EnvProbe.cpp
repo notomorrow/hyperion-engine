@@ -4,11 +4,10 @@
 #include <scene/View.hpp>
 #include <scene/World.hpp>
 #include <scene/Scene.hpp>
-#include <rendering/Texture.hpp>
 
+#include <rendering/Texture.hpp>
 #include <rendering/RenderEnvProbe.hpp>
 #include <rendering/RenderCamera.hpp>
-#include <rendering/RenderView.hpp>
 #include <rendering/RenderWorld.hpp>
 #include <rendering/RenderShadowMap.hpp>
 #include <rendering/RenderGlobalState.hpp>
@@ -120,15 +119,6 @@ void EnvProbe::SetIsVisible(ObjId<Camera> cameraId, bool isVisible)
 
 EnvProbe::~EnvProbe()
 {
-    // temp!
-    if (IsInitCalled())
-    {
-        if (m_view.IsValid())
-        {
-            m_view->GetRenderResource().DecRef();
-        }
-    }
-
     if (m_renderResource != nullptr)
     {
         // TEMP!
@@ -169,8 +159,6 @@ void EnvProbe::Init()
         InitObject(m_camera);
 
         CreateView();
-
-        m_renderResource->SetViewResourceHandle(TResourceHandle<RenderView>(m_view->GetRenderResource()));
     }
 
     if (ShouldComputePrefilteredEnvMap())
@@ -319,9 +307,6 @@ void EnvProbe::CreateView()
     m_view = CreateObject<View>(viewDesc);
 
     InitObject(m_view);
-
-    // temp shit
-    m_view->GetRenderResource().IncRef();
 }
 
 void EnvProbe::SetAABB(const BoundingBox& aabb)
@@ -361,7 +346,7 @@ void EnvProbe::Update(float delta)
 {
     Threads::AssertOnThread(g_gameThread | ThreadCategory::THREAD_CATEGORY_TASK);
     AssertReady();
-    
+
     if (IsControlledByEnvGrid())
     {
         return;
@@ -370,7 +355,7 @@ void EnvProbe::Update(float delta)
     Assert(GetScene() != nullptr);
 
     const Octree& octree = GetScene()->GetOctree();
-    
+
     HashCode octantHashCode = HashCode(0);
 
     if (OnlyCollectStaticEntities())

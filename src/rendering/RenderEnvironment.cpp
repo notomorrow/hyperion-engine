@@ -2,13 +2,13 @@
 
 #include <rendering/RenderEnvironment.hpp>
 #include <rendering/DirectionalLightShadowRenderer.hpp>
-#include <rendering/RenderView.hpp>
 #include <rendering/Deferred.hpp>
 #include <rendering/GBuffer.hpp>
+#include <rendering/RenderFrame.hpp>
+#include <rendering/Mesh.hpp>
+#include <rendering/Material.hpp>
 
 #include <rendering/debug/DebugDrawer.hpp>
-
-#include <rendering/RenderFrame.hpp>
 
 #include <rendering/rt/RenderAccelerationStructure.hpp>
 
@@ -19,9 +19,6 @@
 
 #include <core/logging/Logger.hpp>
 #include <core/logging/LogChannels.hpp>
-
-#include <rendering/Mesh.hpp>
-#include <rendering/Material.hpp>
 
 #include <util/MeshBuilder.hpp>
 

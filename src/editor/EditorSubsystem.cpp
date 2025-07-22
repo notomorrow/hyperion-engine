@@ -61,7 +61,6 @@
 #include <rendering/RenderEnvironment.hpp>
 #include <rendering/RenderCamera.hpp>
 #include <rendering/RenderWorld.hpp>
-#include <rendering/RenderView.hpp>
 #include <rendering/debug/DebugDrawer.hpp>
 
 #include <rendering/subsystems/ScreenCapture.hpp>

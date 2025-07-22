@@ -3,7 +3,6 @@
 #include <rendering/SSRRenderer.hpp>
 #include <rendering/RenderCamera.hpp>
 #include <rendering/RenderTexture.hpp>
-#include <rendering/RenderView.hpp>
 #include <rendering/RenderWorld.hpp>
 #include <rendering/PlaceholderData.hpp>
 #include <rendering/RenderGlobalState.hpp>
@@ -17,11 +16,13 @@
 #include <rendering/RenderDescriptorSet.hpp>
 #include <rendering/RenderComputePipeline.hpp>
 
+#include <rendering/Texture.hpp>
+
+#include <scene/View.hpp>
+
 #include <core/profiling/ProfileScope.hpp>
 
 #include <core/threading/Threads.hpp>
-
-#include <rendering/Texture.hpp>
 
 #include <EngineGlobals.hpp>
 
@@ -306,7 +307,7 @@ void SSRRenderer::Render(FrameBase* frame, const RenderSetup& renderSetup)
             ArrayMap<Name, ArrayMap<Name, uint32>> {
                 { NAME("Global"),
                     { { NAME("WorldsBuffer"), ShaderDataOffset<WorldShaderData>(renderSetup.world->GetBufferIndex()) },
-                        { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(renderSetup.view->GetCamera()->GetBufferIndex()) } } } },
+                        { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(renderSetup.view->GetCamera()->GetRenderResource().GetBufferIndex()) } } } },
             frameIndex);
 
         const uint32 viewDescriptorSetIndex = m_writeUvs->GetDescriptorTable()->GetDescriptorSetIndex(NAME("View"));
@@ -340,7 +341,7 @@ void SSRRenderer::Render(FrameBase* frame, const RenderSetup& renderSetup)
             ArrayMap<Name, ArrayMap<Name, uint32>> {
                 { NAME("Global"),
                     { { NAME("WorldsBuffer"), ShaderDataOffset<WorldShaderData>(renderSetup.world->GetBufferIndex()) },
-                        { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(renderSetup.view->GetCamera()->GetBufferIndex()) } } } },
+                        { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(renderSetup.view->GetCamera()->GetRenderResource().GetBufferIndex()) } } } },
             frameIndex);
 
         const uint32 viewDescriptorSetIndex = m_sampleGbuffer->GetDescriptorTable()->GetDescriptorSetIndex(NAME("View"));

@@ -4,7 +4,6 @@
 #include <rendering/GBuffer.hpp>
 #include <rendering/RenderCamera.hpp>
 #include <rendering/RenderTexture.hpp>
-#include <rendering/RenderView.hpp>
 #include <rendering/RenderWorld.hpp>
 #include <rendering/PlaceholderData.hpp>
 #include <rendering/Deferred.hpp>
@@ -16,6 +15,8 @@
 #include <rendering/RenderComputePipeline.hpp>
 
 #include <rendering/Texture.hpp>
+
+#include <scene/View.hpp>
 
 #include <core/threading/Threads.hpp>
 
@@ -330,7 +331,7 @@ void TemporalBlending::Render(FrameBase* frame, const RenderSetup& renderSetup)
         ArrayMap<Name, ArrayMap<Name, uint32>> {
             { NAME("Global"),
                 { { NAME("WorldsBuffer"), ShaderDataOffset<WorldShaderData>(renderSetup.world->GetBufferIndex()) },
-                    { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(renderSetup.view->GetCamera()->GetBufferIndex()) } } } },
+                    { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(renderSetup.view->GetCamera()->GetRenderResource().GetBufferIndex()) } } } },
         frame->GetFrameIndex());
 
     const uint32 viewDescriptorSetIndex = m_performBlending->GetDescriptorTable()->GetDescriptorSetIndex(NAME("View"));

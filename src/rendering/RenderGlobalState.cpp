@@ -655,12 +655,10 @@ static HYP_FORCE_INLINE void CopyRenderProxy(ResourceSubtypeData& subtypeData, c
     AssertDebug(pNewProxy != nullptr);
 
     const uint32 idx = id.ToIndex();
-    
+
     subtypeData.proxies.Set(idx, static_cast<IRenderProxy*>(pNewProxy));
     subtypeData.indicesPendingUpdate.Set(idx, true);
 }
-
-
 
 template <class ElementType, class ProxyType>
 static HYP_FORCE_INLINE void SyncResourcesImpl(ResourceTracker<ObjId<ElementType>, ElementType*, ProxyType>& resourceTracker, typename ResourceTracker<ObjId<ElementType>, ElementType*, ProxyType>::Impl& impl)
@@ -669,12 +667,12 @@ static HYP_FORCE_INLINE void SyncResourcesImpl(ResourceTracker<ObjId<ElementType
     {
         return;
     }
-    
+
     for (Bitset::BitIndex i : impl.next)
     {
         ElementType* elem = impl.elements.Get(i);
         const int version = impl.versions.Get(i);
-        
+
         resourceTracker.Track(elem->Id(), elem, &version);
     }
 }
@@ -683,21 +681,21 @@ template <class ElementType, class ProxyType>
 static inline void SyncResources(ResourceTracker<ObjId<ElementType>, ElementType*, ProxyType>& lhs, ResourceTracker<ObjId<ElementType>, ElementType*, ProxyType>& rhs)
 {
     lhs.Advance();
-    
+
     SyncResourcesImpl(lhs, rhs.GetSubclassImpl(-1));
-    
+
     for (Bitset::BitIndex subclassIndex : rhs.GetSubclassIndices())
     {
         SyncResourcesImpl(lhs, rhs.GetSubclassImpl(int(subclassIndex)));
     }
-    
+
     auto diff = lhs.GetDiff();
-    
+
     if (!diff.NeedsUpdate())
     {
         return;
     }
-    
+
     Array<ElementType*> removed;
     lhs.GetRemoved(removed, false);
 
@@ -729,12 +727,12 @@ static inline void SyncResources(ResourceTracker<ObjId<ElementType>, ElementType
         {
             ProxyType* proxy = rhs.GetProxy(resourceId);
             AssertDebug(proxy != nullptr);
-            
+
             if (!proxy)
             {
                 continue;
             }
-            
+
             lhs.SetProxy(resourceId, *proxy);
 
             CopyRenderProxy(subtypeData, resourceId, proxy);
@@ -784,7 +782,7 @@ static inline void SyncResources(ResourceTracker<ObjId<ElementType>, ElementType
                 {
                     continue;
                 }
-                
+
                 lhs.SetProxy(resourceId, *proxy);
 
                 ResourceSubtypeData& subtypeData = g_resources.GetSubtypeData(resourceId.GetTypeId());
@@ -794,12 +792,12 @@ static inline void SyncResources(ResourceTracker<ObjId<ElementType>, ElementType
         }
     }
 
-     if (added.Any() || removed.Any() || changedIds.Any())
-     {
-         HYP_LOG_TEMP("Updated resources for {}: added={}, removed={}, changed={}",
-             TypeNameWithoutNamespace<ElementType>().Data(),
-             added.Size(), removed.Size(), changedIds.Size());
-     }
+    if (added.Any() || removed.Any() || changedIds.Any())
+    {
+        HYP_LOG_TEMP("Updated resources for {}: added={}, removed={}, changed={}",
+            TypeNameWithoutNamespace<ElementType>().Data(),
+            added.Size(), removed.Size(), changedIds.Size());
+    }
 }
 
 template <SizeType... Indices>
@@ -1022,24 +1020,24 @@ HYP_API void RenderApi_BeginFrame_RenderThread()
     g_renderGlobalState->resourceBindings->textureBinder.ApplyUpdates();
     g_renderGlobalState->resourceBindings->skeletonBinder.ApplyUpdates();
 
-//    HYP_LOG(Rendering, Debug, "Mesh entities: {} bound",
-//        g_renderGlobalState->resourceBindings->meshEntityBinder.TotalBoundResources());
-//    HYP_LOG(Rendering, Debug, "Ambient probes: {} bound",
-//        g_renderGlobalState->resourceBindings->ambientProbeBinder.TotalBoundResources());
-//    HYP_LOG(Rendering, Debug, "Reflection probes: {} bound",
-//        g_renderGlobalState->resourceBindings->reflectionProbeBinder.TotalBoundResources());
-//    HYP_LOG(Rendering, Debug, "Env grids: {} bound",
-//        g_renderGlobalState->resourceBindings->envGridBinder.TotalBoundResources());
-//    HYP_LOG(
-//        Rendering, Debug, "Lights: {} bound", g_renderGlobalState->resourceBindings->lightBinder.TotalBoundResources());
-//    HYP_LOG(Rendering, Debug, "Lightmap volumes: {} bound",
-//        g_renderGlobalState->resourceBindings->lightmapVolumeBinder.TotalBoundResources());
-//    HYP_LOG(Rendering, Debug, "Materials: {} bound",
-//        g_renderGlobalState->resourceBindings->materialBinder.TotalBoundResources());
-//    HYP_LOG(Rendering, Debug, "Textures: {} bound",
-//        g_renderGlobalState->resourceBindings->textureBinder.TotalBoundResources());
-//    HYP_LOG(Rendering, Debug, "Skeletons: {} bound",
-//        g_renderGlobalState->resourceBindings->skeletonBinder.TotalBoundResources());
+    //    HYP_LOG(Rendering, Debug, "Mesh entities: {} bound",
+    //        g_renderGlobalState->resourceBindings->meshEntityBinder.TotalBoundResources());
+    //    HYP_LOG(Rendering, Debug, "Ambient probes: {} bound",
+    //        g_renderGlobalState->resourceBindings->ambientProbeBinder.TotalBoundResources());
+    //    HYP_LOG(Rendering, Debug, "Reflection probes: {} bound",
+    //        g_renderGlobalState->resourceBindings->reflectionProbeBinder.TotalBoundResources());
+    //    HYP_LOG(Rendering, Debug, "Env grids: {} bound",
+    //        g_renderGlobalState->resourceBindings->envGridBinder.TotalBoundResources());
+    //    HYP_LOG(
+    //        Rendering, Debug, "Lights: {} bound", g_renderGlobalState->resourceBindings->lightBinder.TotalBoundResources());
+    //    HYP_LOG(Rendering, Debug, "Lightmap volumes: {} bound",
+    //        g_renderGlobalState->resourceBindings->lightmapVolumeBinder.TotalBoundResources());
+    //    HYP_LOG(Rendering, Debug, "Materials: {} bound",
+    //        g_renderGlobalState->resourceBindings->materialBinder.TotalBoundResources());
+    //    HYP_LOG(Rendering, Debug, "Textures: {} bound",
+    //        g_renderGlobalState->resourceBindings->textureBinder.TotalBoundResources());
+    //    HYP_LOG(Rendering, Debug, "Skeletons: {} bound",
+    //        g_renderGlobalState->resourceBindings->skeletonBinder.TotalBoundResources());
 
     // Build draw call lists
 
@@ -1053,14 +1051,14 @@ HYP_API void RenderApi_BeginFrame_RenderThread()
 
         if (vfd.rplShared->TEMP_disableBuildRenderCollection || (vfd.view->GetFlags() & ViewFlags::NO_GFX))
         {
-//                        vd.rplRender.meshes.Advance();
-//                        vd.rplRender.textures.Advance();
-//                        vd.rplRender.materials.Advance();
-//                        vd.rplRender.envProbes.Advance();
-//                        vd.rplRender.envGrids.Advance();
-//                        vd.rplRender.lights.Advance();
-//                        vd.rplRender.lightmapVolumes.Advance();
-//                        vd.rplRender.skeletons.Advance();
+            //                        vd.rplRender.meshes.Advance();
+            //                        vd.rplRender.textures.Advance();
+            //                        vd.rplRender.materials.Advance();
+            //                        vd.rplRender.envProbes.Advance();
+            //                        vd.rplRender.envGrids.Advance();
+            //                        vd.rplRender.lights.Advance();
+            //                        vd.rplRender.lightmapVolumes.Advance();
+            //                        vd.rplRender.skeletons.Advance();
 
             continue;
         }
@@ -1074,14 +1072,14 @@ HYP_API void RenderApi_BeginFrame_RenderThread()
 
         vd.rplRender.state = RenderProxyList::CS_DONE;
 
-//                vd.rplRender.meshes.Advance();
-//                vd.rplRender.textures.Advance();
-//                vd.rplRender.materials.Advance();
-//                vd.rplRender.envProbes.Advance();
-//                vd.rplRender.envGrids.Advance();
-//                vd.rplRender.lights.Advance();
-//                vd.rplRender.lightmapVolumes.Advance();
-//                vd.rplRender.skeletons.Advance();
+        //                vd.rplRender.meshes.Advance();
+        //                vd.rplRender.textures.Advance();
+        //                vd.rplRender.materials.Advance();
+        //                vd.rplRender.envProbes.Advance();
+        //                vd.rplRender.envGrids.Advance();
+        //                vd.rplRender.lights.Advance();
+        //                vd.rplRender.lightmapVolumes.Advance();
+        //                vd.rplRender.skeletons.Advance();
     }
 
     for (ResourceSubtypeData& subtypeData : g_resources.dataByType)

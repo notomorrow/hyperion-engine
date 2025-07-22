@@ -21,7 +21,6 @@ namespace hyperion {
 
 class Engine;
 class RenderWorld;
-class RenderView;
 
 using RenderEnvironmentUpdates = uint64;
 

@@ -4,7 +4,6 @@
 #include <rendering/RenderCamera.hpp>
 #include <rendering/RenderTexture.hpp>
 #include <rendering/RenderShadowMap.hpp>
-#include <rendering/RenderView.hpp>
 #include <rendering/Deferred.hpp>
 #include <rendering/PlaceholderData.hpp>
 #include <rendering/RenderGlobalState.hpp>
@@ -70,7 +69,6 @@ RenderEnvProbe::RenderEnvProbe(EnvProbe* envProbe)
 
 RenderEnvProbe::~RenderEnvProbe()
 {
-    m_renderView.Reset();
     m_shadowMap.Reset();
 
     SafeRelease(std::move(m_shader));
@@ -123,21 +121,6 @@ void RenderEnvProbe::SetBufferData(const EnvProbeShaderData& bufferData)
             m_bufferData.positionInGrid = positionInGrid;
 
             SetNeedsUpdate();
-        });
-}
-
-void RenderEnvProbe::SetViewResourceHandle(TResourceHandle<RenderView>&& renderView)
-{
-    HYP_SCOPE;
-
-    Execute([this, renderView = std::move(renderView)]()
-        {
-            if (m_renderView == renderView)
-            {
-                return;
-            }
-
-            m_renderView = std::move(renderView);
         });
 }
 
@@ -396,8 +379,8 @@ void EnvProbeRenderer::RenderFrame(FrameBase* frame, const RenderSetup& renderSe
     AssertDebug(envProbe != nullptr);
 
     RenderSetup rs = renderSetup;
-    rs.view = envProbe->GetRenderResource().GetViewRenderResourceHandle().Get();
-    rs.passData = FetchViewPassData(rs.view->GetView());
+    rs.view = envProbe->GetView().Get();
+    rs.passData = FetchViewPassData(rs.view);
 
     RenderProbe(frame, rs, envProbe);
 }
@@ -406,7 +389,7 @@ PassData* EnvProbeRenderer::CreateViewPassData(View* view, PassDataExt&)
 {
     PassData* pd = new PassData;
     pd->view = view->WeakHandleFromThis();
-    pd->viewport = view->GetRenderResource().GetViewport();
+    pd->viewport = view->GetViewport();
 
     return pd;
 }
@@ -462,7 +445,7 @@ void ReflectionProbeRenderer::RenderProbe(FrameBase* frame, const RenderSetup& r
     AssertDebug(renderSetup.IsValid());
     AssertDebug(renderSetup.HasView());
 
-    View* view = renderSetup.view->GetView();
+    View* view = renderSetup.view;
     AssertDebug(view != nullptr);
 
     RenderProxyList& rpl = RenderApi_GetConsumerProxyList(view);
@@ -535,7 +518,7 @@ void ReflectionProbeRenderer::ComputePrefilteredEnvMap(FrameBase* frame, const R
     AssertDebug(renderSetup.IsValid());
     AssertDebug(renderSetup.HasView());
 
-    View* view = renderSetup.view->GetView();
+    View* view = renderSetup.view;
     AssertDebug(view != nullptr);
 
     RenderProxyList& rpl = RenderApi_GetConsumerProxyList(view);
@@ -681,7 +664,7 @@ void ReflectionProbeRenderer::ComputeSH(FrameBase* frame, const RenderSetup& ren
 {
     HYP_SCOPE;
 
-    View* view = renderSetup.view->GetView();
+    View* view = renderSetup.view;
     AssertDebug(view != nullptr);
 
     RenderProxyList& rpl = RenderApi_GetConsumerProxyList(view);

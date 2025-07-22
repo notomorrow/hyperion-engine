@@ -15,10 +15,12 @@
 #include <rendering/RenderTexture.hpp>
 #include <rendering/RenderGlobalState.hpp>
 #include <rendering/SafeDeleter.hpp>
-#include <rendering/RenderView.hpp>
 #include <rendering/GraphicsPipelineCache.hpp>
 #include <rendering/SSRRenderer.hpp>
 #include <rendering/SSGI.hpp>
+#include <rendering/Mesh.hpp>
+#include <rendering/Material.hpp>
+#include <rendering/Texture.hpp>
 #include <rendering/PlaceholderData.hpp>
 #include <rendering/rt/RaytracingReflections.hpp>
 #include <rendering/rt/DDGI.hpp>
@@ -32,9 +34,6 @@
 #include <rendering/RenderGraphicsPipeline.hpp>
 
 #include <scene/World.hpp>
-#include <rendering/Mesh.hpp>
-#include <rendering/Material.hpp>
-#include <rendering/Texture.hpp>
 #include <scene/View.hpp>
 #include <scene/EnvGrid.hpp>
 #include <scene/EnvProbe.hpp>
@@ -281,7 +280,7 @@ void DeferredPass::Render(FrameBase* frame, const RenderSetup& rs)
         return;
     }
 
-    RenderProxyList& rpl = RenderApi_GetConsumerProxyList(rs.view->GetView());
+    RenderProxyList& rpl = RenderApi_GetConsumerProxyList(rs.view);
     rpl.BeginRead();
 
     HYP_DEFER({ rpl.EndRead(); });
@@ -351,7 +350,7 @@ void DeferredPass::Render(FrameBase* frame, const RenderSetup& rs)
                 pipeline,
                 ArrayMap<Name, uint32> {
                     { NAME("WorldsBuffer"), ShaderDataOffset<WorldShaderData>(rs.world->GetBufferIndex()) },
-                    { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(rs.view->GetCamera()->GetBufferIndex()) },
+                    { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(rs.view->GetCamera()->GetRenderResource().GetBufferIndex()) },
                     { NAME("CurrentLight"), ShaderDataOffset<LightShaderData>(light, 0) } },
                 globalDescriptorSetIndex);
 
@@ -590,7 +589,7 @@ void EnvGridPass::Render(FrameBase* frame, const RenderSetup& rs)
     AssertDebug(rs.HasView());
     AssertDebug(rs.passData != nullptr);
 
-    RenderProxyList& rpl = RenderApi_GetConsumerProxyList(rs.view->GetView());
+    RenderProxyList& rpl = RenderApi_GetConsumerProxyList(rs.view);
     rpl.BeginRead();
 
     HYP_DEFER({ rpl.EndRead(); });
@@ -638,7 +637,7 @@ void EnvGridPass::Render(FrameBase* frame, const RenderSetup& rs)
             graphicsPipeline,
             ArrayMap<Name, uint32> {
                 { NAME("WorldsBuffer"), ShaderDataOffset<WorldShaderData>(rs.world->GetBufferIndex()) },
-                { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(rs.view->GetCamera()->GetBufferIndex()) },
+                { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(rs.view->GetCamera()->GetRenderResource().GetBufferIndex()) },
                 { NAME("EnvGridsBuffer"), ShaderDataOffset<EnvGridShaderData>(envGrid, 0) } },
             globalDescriptorSetIndex);
 
@@ -815,7 +814,7 @@ void ReflectionsPass::Render(FrameBase* frame, const RenderSetup& rs)
 
     const uint32 frameIndex = frame->GetFrameIndex();
 
-    RenderProxyList& rpl = RenderApi_GetConsumerProxyList(rs.view->GetView());
+    RenderProxyList& rpl = RenderApi_GetConsumerProxyList(rs.view);
     rpl.BeginRead();
 
     HYP_DEFER({ rpl.EndRead(); });
@@ -911,7 +910,7 @@ void ReflectionsPass::Render(FrameBase* frame, const RenderSetup& rs)
                 graphicsPipeline,
                 ArrayMap<Name, uint32> {
                     { NAME("WorldsBuffer"), ShaderDataOffset<WorldShaderData>(rs.world->GetBufferIndex()) },
-                    { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(rs.view->GetCamera()->GetBufferIndex()) },
+                    { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(rs.view->GetCamera()->GetRenderResource().GetBufferIndex()) },
                     { NAME("CurrentEnvProbe"), ShaderDataOffset<EnvProbeShaderData>(envProbe) } },
                 globalDescriptorSetIndex);
 
@@ -1026,7 +1025,7 @@ PassData* DeferredRenderer::CreateViewPassData(View* view, PassDataExt&)
     DeferredPassData* pd = new DeferredPassData;
 
     pd->view = view->WeakHandleFromThis();
-    pd->viewport = view->GetRenderResource().GetViewport();
+    pd->viewport = view->GetViewport();
 
     GBuffer* gbuffer = view->GetOutputTarget().GetGBuffer();
     AssertDebug(gbuffer != nullptr);
@@ -1433,16 +1432,9 @@ void DeferredRenderer::RenderFrame(FrameBase* frame, const RenderSetup& rs)
 
     // init view pass data and collect global rendering resources
     // (env probes, env grids)
-    for (const TResourceHandle<RenderView>& renderView : rs.world->GetViews())
+    for (const Handle<View>& view : rs.world->GetViews())
     {
-        Assert(renderView);
-
-        View* view = renderView->GetView();
-
-        if (!view)
-        {
-            continue;
-        }
+        AssertDebug(view.IsValid());
 
         RenderProxyList& rpl = RenderApi_GetConsumerProxyList(view);
         rpl.BeginRead();
@@ -1450,14 +1442,14 @@ void DeferredRenderer::RenderFrame(FrameBase* frame, const RenderSetup& rs)
         renderProxyLists.PushBack(&rpl);
 
         DeferredPassData* pd = static_cast<DeferredPassData*>(FetchViewPassData(view));
-        if (pd->viewport != view->GetRenderResource().GetViewport())
+        if (pd->viewport != view->GetViewport())
         {
-            ResizeView(view->GetRenderResource().GetViewport(), view, *pd);
+            ResizeView(view->GetViewport(), view, *pd);
         }
 
         // @TODO Call ApplyTLASUpdates on DDGI, RT reflections if need be
 
-        pd->priority = view->GetRenderResource().GetPriority();
+        pd->priority = view->GetPriority();
 
 #if 1 // temp
         for (Light* light : rpl.GetLights())
@@ -1622,21 +1614,14 @@ void DeferredRenderer::RenderFrame(FrameBase* frame, const RenderSetup& rs)
     // reset renderer state back to what it was before
     newRs = rs;
 
-    for (const TResourceHandle<RenderView>& renderView : rs.world->GetViews())
+    for (const Handle<View>& view : rs.world->GetViews())
     {
-        Assert(renderView);
-
-        View* view = renderView->GetView();
-
-        if (!view)
-        {
-            continue;
-        }
+        AssertDebug(view.IsValid());
 
         DeferredPassData* pd = static_cast<DeferredPassData*>(FetchViewPassData(view));
         AssertDebug(pd != nullptr);
 
-        newRs.view = renderView.Get();
+        newRs.view = view;
         newRs.passData = pd;
 
         RenderFrameForView(frame, newRs);
@@ -1695,7 +1680,7 @@ void DeferredRenderer::RenderFrameForView(FrameBase* frame, const RenderSetup& r
         m_lastFrameData.passData.Clear();
     }
 
-    View* view = rs.view->GetView();
+    View* view = rs.view;
 
     if (!(view->GetFlags() & ViewFlags::GBUFFER))
     {
@@ -1797,7 +1782,7 @@ void DeferredRenderer::RenderFrameForView(FrameBase* frame, const RenderSetup& r
 
     if (useTemporalAa)
     {
-        view->GetRenderResource().m_renderCamera->ApplyJitter(rs);
+        view->GetCamera()->GetRenderResource().ApplyJitter(rs);
     }
 
     struct
@@ -1814,8 +1799,8 @@ void DeferredRenderer::RenderFrameForView(FrameBase* frame, const RenderSetup& r
     deferredData.flags |= useRaytracingReflections ? DEFERRED_FLAGS_RT_RADIANCE_ENABLED : 0;
     deferredData.flags |= useRaytracingGlobalIllumination ? DEFERRED_FLAGS_DDGI_ENABLED : 0;
 
-    deferredData.screenWidth = view->GetRenderResource().GetViewport().extent.x;  // rpl.viewport.extent.x;
-    deferredData.screenHeight = view->GetRenderResource().GetViewport().extent.y; // rpl.viewport.extent.y;
+    deferredData.screenWidth = view->GetViewport().extent.x;  // rpl.viewport.extent.x;
+    deferredData.screenHeight = view->GetViewport().extent.y; // rpl.viewport.extent.y;
 
     PerformOcclusionCulling(frame, rs, renderCollector);
 

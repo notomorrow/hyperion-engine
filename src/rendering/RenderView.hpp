@@ -85,9 +85,6 @@ public:
 
     GBuffer* GetGBuffer() const;
 
-    virtual void PreRender(FrameBase* frame);
-    virtual void PostRender(FrameBase* frame);
-
 protected:
     virtual void Initialize_Internal() override;
     virtual void Destroy_Internal() override;

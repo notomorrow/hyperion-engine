@@ -37,7 +37,6 @@ class Camera;
 class Entity;
 class RenderGroup;
 class RenderCamera;
-class RenderView;
 struct RenderSetup;
 class IndirectRenderer;
 class RenderLight;
@@ -106,15 +105,14 @@ class HYP_API RenderProxyList
 
 public:
     using TrackedResourceTypes = Tuple<
-        Entity,     // mesh entities
+        Entity, // mesh entities
         EnvProbe,
         Light,
         EnvGrid,
         LightmapVolume,
         Material,
         Skeleton,
-        Texture
-    >;
+        Texture>;
 
     using ResourceTrackerTypes = Tuple<
         ResourceTracker<ObjId<Entity>, Entity*, RenderProxyMesh>,
@@ -124,8 +122,7 @@ public:
         ResourceTracker<ObjId<LightmapVolume>, LightmapVolume*, RenderProxyLightmapVolume>,
         ResourceTracker<ObjId<Material>, Material*, RenderProxyMaterial>,
         ResourceTracker<ObjId<Skeleton>, Skeleton*, RenderProxySkeleton>,
-        ResourceTracker<ObjId<Texture>, Texture*>
-    >;
+        ResourceTracker<ObjId<Texture>, Texture*>>;
 
     static_assert(TupleSize<ResourceTrackerTypes>::value == TupleSize<TrackedResourceTypes>::value, "Tuple sizes must match");
 
@@ -139,7 +136,7 @@ private:
     template <class Functor, SizeType... Indices>
     static inline void ForEachResourceTracker_Impl(Span<ResourceTrackerBase*> resourceTrackers, const Functor& functor, std::index_sequence<Indices...>)
     {
-        (functor(static_cast<typename TupleElement_Tuple<Indices, ResourceTrackerTypes>::Type &>(*resourceTrackers[Indices])), ...);
+        (functor(static_cast<typename TupleElement_Tuple<Indices, ResourceTrackerTypes>::Type&>(*resourceTrackers[Indices])), ...);
     }
 
     template <class Functor>
@@ -346,9 +343,11 @@ public:
 
     Array<ResourceTrackerBase*> resourceTrackers;
 
-#define DEF_RESOURCE_TRACKER_GETTER(getterName, T) \
-    HYP_FORCE_INLINE auto Get##getterName() -> typename TupleElement_Tuple<FindTypeElementIndex<class T, TrackedResourceTypes>::value, ResourceTrackerTypes>::Type& \
-        { return *GetResourceTracker<FindTypeElementIndex<class T, TrackedResourceTypes>::value>(); }
+#define DEF_RESOURCE_TRACKER_GETTER(getterName, T)                                                                                                                \
+    HYP_FORCE_INLINE auto Get##getterName()->typename TupleElement_Tuple<FindTypeElementIndex<class T, TrackedResourceTypes>::value, ResourceTrackerTypes>::Type& \
+    {                                                                                                                                                             \
+        return *GetResourceTracker<FindTypeElementIndex<class T, TrackedResourceTypes>::value>();                                                                 \
+    }
 
     DEF_RESOURCE_TRACKER_GETTER(Meshes, Entity);
     DEF_RESOURCE_TRACKER_GETTER(EnvProbes, EnvProbe);

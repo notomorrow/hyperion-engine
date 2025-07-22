@@ -8,7 +8,6 @@
 #include <rendering/Buffers.hpp>
 #include <rendering/FinalPass.hpp>
 #include <rendering/Deferred.hpp>
-#include <rendering/RenderView.hpp>
 #include <rendering/RenderWorld.hpp>
 #include <rendering/RenderStats.hpp>
 #include <rendering/PlaceholderData.hpp>
@@ -255,7 +254,7 @@ void UIRenderCollector::ExecuteDrawCalls(FrameBase* frame, const RenderSetup& re
     AssertDebug(renderSetup.IsValid());
     AssertDebug(renderSetup.HasView());
 
-    RenderProxyList& rpl = RenderApi_GetConsumerProxyList(renderSetup.view->GetView());
+    RenderProxyList& rpl = RenderApi_GetConsumerProxyList(renderSetup.view);
     rpl.BeginRead();
 
     HYP_DEFER({ rpl.EndRead(); });
@@ -367,7 +366,7 @@ void UIRenderer::RenderFrame(FrameBase* frame, const RenderSetup& renderSetup)
     AssertDebug(pd != nullptr);
 
     RenderSetup rs = renderSetup;
-    rs.view = &m_view->GetRenderResource();
+    rs.view = m_view.Get();
     rs.passData = pd;
 
     RenderProxyList& rpl = RenderApi_GetConsumerProxyList(m_view);
@@ -375,14 +374,12 @@ void UIRenderer::RenderFrame(FrameBase* frame, const RenderSetup& renderSetup)
 
     // RenderCollector& renderCollector = RenderApi_GetRenderCollector(m_view);
 
-    if (pd->viewport != m_view->GetRenderResource().GetViewport())
+    if (pd->viewport != m_view->GetViewport())
     {
         /// @TODO: Implement me!
 
         HYP_LOG(UI, Warning, "UIRenderer: Viewport size changed from {} to {}, resizing view pass data",
-            pd->viewport.extent, m_view->GetRenderResource().GetViewport().extent);
-
-        // ResizeView(view->GetRenderResource().GetViewport(), view, *pd);
+            pd->viewport.extent, m_view->GetViewport().extent);
     }
 
     // Don't include UI rendering in global render stats
@@ -405,7 +402,7 @@ PassData* UIRenderer::CreateViewPassData(View* view, PassDataExt&)
     UIPassData* pd = new UIPassData;
 
     pd->view = view->WeakHandleFromThis();
-    pd->viewport = view->GetRenderResource().GetViewport();
+    pd->viewport = view->GetViewport();
 
     HYP_LOG(UI, Debug, "Creating UI pass data with viewport size {}", pd->viewport.extent);
 
@@ -459,8 +456,6 @@ void UIRenderSubsystem::Init()
     Assert(m_uiStage->GetCamera().IsValid());
     Assert(m_uiStage->GetCamera()->IsReady());
 
-    m_cameraResourceHandle = TResourceHandle<RenderCamera>(m_uiStage->GetCamera()->GetRenderResource());
-
     const Vec2u surfaceSize = Vec2u(m_uiStage->GetSurfaceSize());
     HYP_LOG(UI, Debug, "UIRenderSubsystem: surface size is {}", surfaceSize);
 
@@ -481,9 +476,6 @@ void UIRenderSubsystem::Init()
     m_view = CreateObject<View>(viewDesc);
     InitObject(m_view);
 
-    // temp shit
-    m_view->GetRenderResource().IncRef();
-
     CreateFramebuffer();
 
     m_uiRenderer = new UIRenderer(m_view);
@@ -495,21 +487,10 @@ void UIRenderSubsystem::Init()
 void UIRenderSubsystem::OnAddedToWorld()
 {
     HYP_SCOPE;
-
-    if (m_view)
-    {
-        m_view->GetRenderResource().IncRef();
-    }
 }
 
 void UIRenderSubsystem::OnRemovedFromWorld()
 {
-    if (m_view)
-    {
-        m_view->GetRenderResource().DecRef();
-        m_view.Reset();
-    }
-
     PUSH_RENDER_COMMAND(SetFinalPassImageView, nullptr);
 
     m_onGbufferResolutionChangedHandle.Reset();

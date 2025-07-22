@@ -4,7 +4,6 @@
 #include <rendering/RenderCamera.hpp>
 #include <rendering/RenderTexture.hpp>
 #include <rendering/RenderEnvProbe.hpp>
-#include <rendering/RenderView.hpp>
 #include <rendering/RenderWorld.hpp>
 #include <rendering/PlaceholderData.hpp>
 #include <rendering/Deferred.hpp>
@@ -28,8 +27,10 @@
 #include <core/logging/LogChannels.hpp>
 
 #include <rendering/Texture.hpp>
+
 #include <scene/EnvProbe.hpp>
 #include <scene/Light.hpp>
+#include <scene/View.hpp>
 
 #include <EngineGlobals.hpp>
 
@@ -242,7 +243,7 @@ void SSGI::Render(FrameBase* frame, const RenderSetup& renderSetup)
         ArrayMap<Name, ArrayMap<Name, uint32>> {
             { NAME("Global"),
                 { { NAME("WorldsBuffer"), ShaderDataOffset<WorldShaderData>(renderSetup.world->GetBufferIndex()) },
-                    { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(renderSetup.view->GetCamera()->GetBufferIndex()) },
+                    { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(renderSetup.view->GetCamera()->GetRenderResource().GetBufferIndex()) },
                     { NAME("CurrentEnvProbe"), ShaderDataOffset<EnvProbeShaderData>(renderSetup.envProbe, 0) } } } },
         frameIndex);
 
@@ -272,7 +273,7 @@ void SSGI::Render(FrameBase* frame, const RenderSetup& renderSetup)
     m_isRendered = true;
 }
 
-void SSGI::FillUniformBufferData(RenderView* view, SSGIUniforms& outUniforms) const
+void SSGI::FillUniformBufferData(View* view, SSGIUniforms& outUniforms) const
 {
     outUniforms = SSGIUniforms();
     outUniforms.dimensions = Vec4u(m_config.extent, 0, 0);
@@ -291,7 +292,7 @@ void SSGI::FillUniformBufferData(RenderView* view, SSGIUniforms& outUniforms) co
     // Can only fill the lights if we have a view ready
     if (view)
     {
-        RenderProxyList& rpl = RenderApi_GetConsumerProxyList(view->GetView());
+        RenderProxyList& rpl = RenderApi_GetConsumerProxyList(view);
         rpl.BeginRead();
 
         HYP_DEFER({ rpl.EndRead(); });

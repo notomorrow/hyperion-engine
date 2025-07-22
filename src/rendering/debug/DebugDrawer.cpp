@@ -9,7 +9,6 @@
 #include <rendering/GBuffer.hpp>
 #include <rendering/Deferred.hpp>
 #include <rendering/RenderEnvironment.hpp>
-#include <rendering/RenderView.hpp>
 #include <rendering/RenderWorld.hpp>
 #include <rendering/GraphicsPipelineCache.hpp>
 
@@ -22,6 +21,8 @@
 #include <rendering/RenderGpuBuffer.hpp>
 
 #include <rendering/Mesh.hpp>
+
+#include <scene/View.hpp>
 #include <scene/Scene.hpp>
 #include <scene/EnvProbe.hpp>
 #include <scene/EnvGrid.hpp>
@@ -396,12 +397,10 @@ void DebugDrawer::Render(FrameBase* frame, const RenderSetup& renderSetup)
                         { { NAME("ImmediateDrawsBuffer"), ShaderDataOffset<ImmediateDrawShaderData>(0u) } } },
                     { NAME("Global"),
                         { { NAME("WorldsBuffer"), ShaderDataOffset<WorldShaderData>(renderSetup.world->GetBufferIndex()) },
-                            { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(renderSetup.view->GetCamera()->GetBufferIndex()) },
+                            { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(renderSetup.view->GetCamera()->GetRenderResource().GetBufferIndex()) },
                             { NAME("EnvGridsBuffer"), ShaderDataOffset<EnvGridShaderData>(renderSetup.envGrid, 0) } } },
-                    { NAME("Object"),
-                        {} },
-                    { NAME("Instancing"),
-                        { { NAME("EntityInstanceBatchesBuffer"), 0 } } } },
+                    { NAME("Object"), {} },
+                    { NAME("Instancing"), { { NAME("EntityInstanceBatchesBuffer"), 0 } } } },
                 frameIndex);
         }
 

@@ -22,9 +22,7 @@ namespace hyperion {
 
 class UIStage;
 class UIObject;
-class RenderCamera;
 class View;
-class RenderView;
 struct RenderSetup;
 struct UIPassData;
 
@@ -86,8 +84,6 @@ private:
     Handle<UIStage> m_uiStage;
 
     ShaderRef m_shader;
-
-    TResourceHandle<RenderCamera> m_cameraResourceHandle;
 
     Handle<View> m_view;
 
