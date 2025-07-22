@@ -52,6 +52,7 @@ enum class ViewFlags : uint32
     SKIP_ENV_GRIDS = 0x40,         //!< If set, the view will not collect EnvGrids.
     SKIP_LIGHTS = 0x80,            //!< If set, the view will not collect Lights.
     SKIP_LIGHTMAP_VOLUMES = 0x100, //!< If set, the view will not collect LightmapVolumes.
+    SKIP_CAMERAS = 0x200,          //!< If set, the view will not collect Cameras.
 
     NOT_MULTI_BUFFERED = 0x1000, //!< Disables double / triple buffering for the RenderProxyList this View writes to.
                                  //  --- Use ONLY for Views that are not written to every frame, and instead are written to and read once (or infrequently); e.g EnvProbes.
@@ -217,6 +218,7 @@ public:
 protected:
     void Init() override;
 
+    void CollectCameras(RenderProxyList& rpl);
     void CollectLights(RenderProxyList& rpl);
     void CollectLightmapVolumes(RenderProxyList& rpl);
     void CollectEnvGrids(RenderProxyList& rpl);

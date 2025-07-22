@@ -144,6 +144,9 @@ void TemporalAA::Render(FrameBase* frame, const RenderSetup& renderSetup)
     AssertDebug(renderSetup.IsValid());
     AssertDebug(renderSetup.HasView());
 
+    RenderProxyCamera* cameraProxy = static_cast<RenderProxyCamera*>(RenderApi_GetRenderProxy(renderSetup.view->GetCamera()));
+    Assert(cameraProxy != nullptr);
+
     const uint32 frameIndex = frame->GetFrameIndex();
 
     const ImageRef& activeImage = frame->GetFrameIndex() % 2 == 0
@@ -166,7 +169,7 @@ void TemporalAA::Render(FrameBase* frame, const RenderSetup& renderSetup)
 
     pushConstants.dimensions = m_extent;
     pushConstants.depthTextureDimensions = Vec2u { depthTextureDimensions.x, depthTextureDimensions.y };
-    pushConstants.cameraNearFar = Vec2f { renderSetup.view->GetCamera()->GetRenderResource().GetBufferData().cameraNear, renderSetup.view->GetCamera()->GetRenderResource().GetBufferData().cameraFar };
+    pushConstants.cameraNearFar = Vec2f { cameraProxy->bufferData.cameraNear, cameraProxy->bufferData.cameraFar };
 
     m_computeTaa->SetPushConstants(&pushConstants, sizeof(pushConstants));
 

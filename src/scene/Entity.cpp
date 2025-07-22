@@ -294,6 +294,8 @@ void Entity::AttachChild(const Handle<Entity>& child)
 
     Threads::AssertOnThread(entityManager->GetOwnerThreadId());
 
+    entityManager->AddExistingEntity(child);
+
     if (NodeLinkComponent* nodeLinkComponent = entityManager->TryGetComponent<NodeLinkComponent>(this))
     {
         if (Handle<Node> node = nodeLinkComponent->node.Lock())

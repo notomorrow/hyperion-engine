@@ -63,6 +63,8 @@ namespace hyperion {
 // iterations per frame for cleaning up unused resources for passes
 static constexpr int g_frameCleanupBudget = 16;
 
+static constexpr float g_cameraJitterScale = 0.25f;
+
 static constexpr TextureFormat g_envGridRadianceFormat = TF_RGBA8;
 static constexpr TextureFormat g_envGridIrradianceFormat = TF_R11G11B10F;
 
@@ -350,7 +352,7 @@ void DeferredPass::Render(FrameBase* frame, const RenderSetup& rs)
                 pipeline,
                 ArrayMap<Name, uint32> {
                     { NAME("WorldsBuffer"), ShaderDataOffset<WorldShaderData>(rs.world->GetBufferIndex()) },
-                    { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(rs.view->GetCamera()->GetRenderResource().GetBufferIndex()) },
+                    { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(rs.view->GetCamera()) },
                     { NAME("CurrentLight"), ShaderDataOffset<LightShaderData>(light, 0) } },
                 globalDescriptorSetIndex);
 
@@ -637,7 +639,7 @@ void EnvGridPass::Render(FrameBase* frame, const RenderSetup& rs)
             graphicsPipeline,
             ArrayMap<Name, uint32> {
                 { NAME("WorldsBuffer"), ShaderDataOffset<WorldShaderData>(rs.world->GetBufferIndex()) },
-                { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(rs.view->GetCamera()->GetRenderResource().GetBufferIndex()) },
+                { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(rs.view->GetCamera()) },
                 { NAME("EnvGridsBuffer"), ShaderDataOffset<EnvGridShaderData>(envGrid, 0) } },
             globalDescriptorSetIndex);
 
@@ -910,7 +912,7 @@ void ReflectionsPass::Render(FrameBase* frame, const RenderSetup& rs)
                 graphicsPipeline,
                 ArrayMap<Name, uint32> {
                     { NAME("WorldsBuffer"), ShaderDataOffset<WorldShaderData>(rs.world->GetBufferIndex()) },
-                    { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(rs.view->GetCamera()->GetRenderResource().GetBufferIndex()) },
+                    { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(rs.view->GetCamera()) },
                     { NAME("CurrentEnvProbe"), ShaderDataOffset<EnvProbeShaderData>(envProbe) } },
                 globalDescriptorSetIndex);
 
@@ -1782,7 +1784,23 @@ void DeferredRenderer::RenderFrameForView(FrameBase* frame, const RenderSetup& r
 
     if (useTemporalAa)
     {
-        view->GetCamera()->GetRenderResource().ApplyJitter(rs);
+        // apply jitter to camera for TAA
+        RenderProxyCamera* cameraProxy = static_cast<RenderProxyCamera*>(RenderApi_GetRenderProxy(view->GetCamera()->Id()));
+        Assert(cameraProxy != nullptr);
+
+        CameraShaderData& cameraBufferData = cameraProxy->bufferData;
+
+        if (cameraBufferData.projection[3][3] < MathUtil::epsilonF)
+        {
+            const uint32 frameCounter = rs.world->GetBufferData().frameCounter + 1;
+
+            Vec4f jitter = Vec4f::Zero();
+            Matrix4::Jitter(frameCounter, cameraBufferData.dimensions.x, cameraBufferData.dimensions.y, jitter);
+
+            cameraBufferData.jitter = jitter * g_cameraJitterScale;
+
+            RenderApi_UpdateGpuData(view->GetCamera()->Id());
+        }
     }
 
     struct

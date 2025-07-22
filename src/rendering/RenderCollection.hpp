@@ -106,6 +106,7 @@ class HYP_API RenderProxyList
 public:
     using TrackedResourceTypes = Tuple<
         Entity, // mesh entities
+        Camera,
         EnvProbe,
         Light,
         EnvGrid,
@@ -116,6 +117,7 @@ public:
 
     using ResourceTrackerTypes = Tuple<
         ResourceTracker<ObjId<Entity>, Entity*, RenderProxyMesh>,
+        ResourceTracker<ObjId<Camera>, Camera*, RenderProxyCamera>,
         ResourceTracker<ObjId<EnvProbe>, EnvProbe*, RenderProxyEnvProbe>,
         ResourceTracker<ObjId<Light>, Light*, RenderProxyLight>,
         ResourceTracker<ObjId<EnvGrid>, EnvGrid*, RenderProxyEnvGrid>,
@@ -177,15 +179,6 @@ public:
             {
                 resourceTracker.Advance();
             });
-
-        /*meshes.Advance();
-        envProbes.Advance();
-        lights.Advance();
-        envGrids.Advance();
-        envProbes.Advance();
-        lightmapVolumes.Advance();
-        materials.Advance();
-        skeletons.Advance();*/
     }
 
     void EndWrite()
@@ -341,7 +334,7 @@ public:
     Viewport viewport;
     int priority;
 
-    Array<ResourceTrackerBase*> resourceTrackers;
+    FixedArray<ResourceTrackerBase*, TupleSize<TrackedResourceTypes>::value> resourceTrackers;
 
 #define DEF_RESOURCE_TRACKER_GETTER(getterName, T)                                                                                                                \
     HYP_FORCE_INLINE auto Get##getterName()->typename TupleElement_Tuple<FindTypeElementIndex<class T, TrackedResourceTypes>::value, ResourceTrackerTypes>::Type& \
@@ -350,6 +343,7 @@ public:
     }
 
     DEF_RESOURCE_TRACKER_GETTER(Meshes, Entity);
+    DEF_RESOURCE_TRACKER_GETTER(Cameras, Camera);
     DEF_RESOURCE_TRACKER_GETTER(EnvProbes, EnvProbe);
     DEF_RESOURCE_TRACKER_GETTER(Lights, Light);
     DEF_RESOURCE_TRACKER_GETTER(EnvGrids, EnvGrid);

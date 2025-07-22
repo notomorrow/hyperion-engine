@@ -331,7 +331,7 @@ void TemporalBlending::Render(FrameBase* frame, const RenderSetup& renderSetup)
         ArrayMap<Name, ArrayMap<Name, uint32>> {
             { NAME("Global"),
                 { { NAME("WorldsBuffer"), ShaderDataOffset<WorldShaderData>(renderSetup.world->GetBufferIndex()) },
-                    { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(renderSetup.view->GetCamera()->GetRenderResource().GetBufferIndex()) } } } },
+                    { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(renderSetup.view->GetCamera()) } } } },
         frame->GetFrameIndex());
 
     const uint32 viewDescriptorSetIndex = m_performBlending->GetDescriptorTable()->GetDescriptorSetIndex(NAME("View"));

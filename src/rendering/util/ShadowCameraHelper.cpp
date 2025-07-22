@@ -2,6 +2,8 @@
 
 #include <scene/camera/Camera.hpp>
 
+#include <core/logging/Logger.hpp>
+
 namespace hyperion {
 
 HYP_API void ShadowCameraHelper::UpdateShadowCameraDirectional(
@@ -13,7 +15,7 @@ HYP_API void ShadowCameraHelper::UpdateShadowCameraDirectional(
 {
     AssertDebug(camera.IsValid());
 
-    camera->SetTranslation(center + dir * 1000.0f);
+    camera->SetTranslation(center + dir);
     camera->SetTarget(center);
 
     BoundingBox aabb { center - radius, center + radius };
@@ -32,6 +34,8 @@ HYP_API void ShadowCameraHelper::UpdateShadowCameraDirectional(
     aabb.min.z = -radius;
 
     camera->SetToOrthographicProjection(aabb.min.x, aabb.max.x, aabb.min.y, aabb.max.y, aabb.min.z, aabb.max.z);
+    
+    HYP_LOG_TEMP("Updated shadow camera matrix to: {}", camera->GetViewProjectionMatrix());
 
     outAabb = aabb;
 }

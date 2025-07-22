@@ -266,6 +266,7 @@ void View::Collect()
     rpl.viewport = m_viewport;
     rpl.priority = m_priority;
 
+    CollectCameras(rpl);
     CollectLights(rpl);
     CollectLightmapVolumes(rpl);
     CollectEnvGrids(rpl);
@@ -567,6 +568,31 @@ ResourceTrackerDiff View::CollectMeshEntities(RenderProxyList& rpl)
     }
 
     return meshesDiff;
+}
+
+void View::CollectCameras(RenderProxyList& rpl)
+{
+    HYP_SCOPE;
+
+    if (m_flags & ViewFlags::SKIP_CAMERAS)
+    {
+        return;
+    }
+
+    for (const Handle<Scene>& scene : m_scenes)
+    {
+        Assert(scene.IsValid());
+        Assert(scene->IsReady());
+
+        for (auto [entity, _] : scene->GetEntityManager()->GetEntitySet<EntityType<Camera>>().GetScopedView(DataAccessFlags::ACCESS_READ, HYP_FUNCTION_NAME_LIT))
+        {
+            AssertDebug(entity->IsA<Camera>());
+
+            Camera* camera = static_cast<Camera*>(entity);
+
+            rpl.GetCameras().Track(camera->Id(), camera, camera->GetRenderProxyVersionPtr());
+        }
+    }
 }
 
 void View::CollectLights(RenderProxyList& rpl)

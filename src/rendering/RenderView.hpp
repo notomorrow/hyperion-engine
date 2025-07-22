@@ -21,7 +21,6 @@ namespace hyperion {
 class View;
 class DeferredRenderer;
 class RenderWorld;
-class RenderCamera;
 class RenderLight;
 class RenderEnvGrid;
 class RenderEnvProbe;
@@ -73,16 +72,6 @@ public:
 
     void SetPriority(int priority);
 
-    HYP_FORCE_INLINE const TResourceHandle<RenderCamera>& GetCamera() const
-    {
-        return m_renderCamera;
-    }
-
-    HYP_FORCE_INLINE void SetCamera(const TResourceHandle<RenderCamera>& renderCamera)
-    {
-        m_renderCamera = renderCamera;
-    }
-
     GBuffer* GetGBuffer() const;
 
 protected:
@@ -98,8 +87,6 @@ protected:
     Viewport m_viewport;
 
     int m_priority;
-
-    TResourceHandle<RenderCamera> m_renderCamera;
 };
 
 } // namespace hyperion

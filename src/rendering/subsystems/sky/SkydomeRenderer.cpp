@@ -15,7 +15,6 @@
 #include <scene/EnvProbe.hpp>
 
 #include <scene/ecs/EntityManager.hpp>
-#include <scene/ecs/components/CameraComponent.hpp>
 
 #include <core/threading/Scheduler.hpp>
 
@@ -55,24 +54,22 @@ void SkydomeRenderer::Init()
     m_virtualScene->SetName(Name::Unique("SkydomeRendererScene"));
     InitObject(m_virtualScene);
 
-    m_camera = CreateObject<Camera>(
+    Handle<Node> cameraNode = m_virtualScene->GetRoot()->AddChild();
+
+    m_camera = m_virtualScene->GetEntityManager()->AddEntity<Camera>(
         90.0f,
         -int(m_dimensions.x), int(m_dimensions.y),
         0.1f, 10000.0f);
+
+    m_virtualScene->GetEntityManager()->AddTag<EntityTag::CAMERA_PRIMARY>(m_camera);
 
     m_camera->SetName(Name::Unique("SkydomeRendererCamera"));
     m_camera->SetViewMatrix(Matrix4::LookAt(Vec3f::UnitZ(), Vec3f::Zero(), Vec3f::UnitY()));
 
     InitObject(m_camera);
 
-    Handle<Node> cameraNode = m_virtualScene->GetRoot()->AddChild();
+    cameraNode->SetEntity(m_camera);
     cameraNode->SetName(m_camera->GetName());
-
-    Handle<Entity> cameraEntity = m_virtualScene->GetEntityManager()->AddEntity();
-    m_virtualScene->GetEntityManager()->AddTag<EntityTag::CAMERA_PRIMARY>(cameraEntity);
-    m_virtualScene->GetEntityManager()->AddComponent<CameraComponent>(cameraEntity, CameraComponent { m_camera });
-
-    cameraNode->SetEntity(cameraEntity);
 
     m_envProbe = m_virtualScene->GetEntityManager()->AddEntity<SkyProbe>(BoundingBox(Vec3f(-100.0f), Vec3f(100.0f)), m_dimensions);
     InitObject(m_envProbe);

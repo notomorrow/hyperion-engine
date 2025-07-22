@@ -6,7 +6,6 @@
 
 #include <scene/ecs/EntityManager.hpp>
 
-#include <scene/ecs/systems/CameraSystem.hpp>
 #include <scene/ecs/systems/VisibilityStateUpdaterSystem.hpp>
 #include <scene/ecs/systems/EntityRenderProxySystem_Mesh.hpp>
 #include <scene/ecs/systems/EntityMeshDirtyStateSystem.hpp>
@@ -22,7 +21,6 @@
 #include <scene/ecs/systems/BLASUpdaterSystem.hpp>
 #include <scene/ecs/systems/PhysicsSystem.hpp>
 #include <scene/ecs/systems/ScriptSystem.hpp>
-#include <scene/ecs/systems/ScenePrimaryCameraSystem.hpp>
 
 #include <rendering/RenderWorld.hpp>
 #include <rendering/RenderCamera.hpp>
@@ -198,8 +196,6 @@ void Scene::Init()
 {
     m_entityManager->SetWorld(m_world);
 
-    AddSystemIfApplicable<CameraSystem>();
-    AddSystemIfApplicable<ScenePrimaryCameraSystem>();
     AddSystemIfApplicable<WorldAABBUpdaterSystem>();
     AddSystemIfApplicable<EntityMeshDirtyStateSystem>();
     AddSystemIfApplicable<EntityRenderProxySystem_Mesh>();
@@ -233,25 +229,24 @@ void Scene::SetOwnerThreadId(ThreadId ownerThreadId)
     m_entityManager->SetOwnerThreadId(ownerThreadId);
 }
 
-const Handle<Camera>& Scene::GetPrimaryCamera() const
+Camera* Scene::GetPrimaryCamera() const
 {
     HYP_SCOPE;
     Threads::AssertOnThread(g_gameThread | ThreadCategory::THREAD_CATEGORY_TASK);
 
     if (!m_entityManager)
     {
-        return Handle<Camera>::empty;
+        return nullptr;
     }
 
-    for (auto [entity, cameraComponent, _] : m_entityManager->GetEntitySet<CameraComponent, EntityTagComponent<EntityTag::CAMERA_PRIMARY>>().GetScopedView(DataAccessFlags::ACCESS_READ, HYP_FUNCTION_NAME_LIT))
+    for (auto [entity, _0, _1] : m_entityManager->GetEntitySet<EntityType<Camera>, EntityTagComponent<EntityTag::CAMERA_PRIMARY>>().GetScopedView(DataAccessFlags::ACCESS_READ, HYP_FUNCTION_NAME_LIT))
     {
-        if (cameraComponent.camera.IsValid())
-        {
-            return cameraComponent.camera;
-        }
+        AssertDebug(entity->IsA<Camera>());
+
+        return static_cast<Camera*>(entity);
     }
 
-    return Handle<Camera>::empty;
+    return nullptr;
 }
 
 void Scene::SetWorld(World* world)

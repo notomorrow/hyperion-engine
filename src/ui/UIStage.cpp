@@ -17,7 +17,6 @@
 
 #include <scene/ecs/EntityManager.hpp>
 
-#include <scene/ecs/components/CameraComponent.hpp>
 #include <scene/ecs/components/MeshComponent.hpp>
 #include <scene/ecs/components/VisibilityStateComponent.hpp>
 #include <scene/ecs/components/TransformComponent.hpp>
@@ -158,11 +157,7 @@ void UIStage::SetScene(const Handle<Scene>& scene)
 
     Handle<Node> cameraNode = newScene->GetRoot()->AddChild();
     cameraNode->SetName(NAME_FMT("{}_Camera", GetName()));
-
-    Handle<Entity> cameraEntity = newScene->GetEntityManager()->AddEntity();
-    newScene->GetEntityManager()->AddComponent<CameraComponent>(cameraEntity, CameraComponent { m_camera });
-
-    cameraNode->SetEntity(cameraEntity);
+    cameraNode->SetEntity(m_camera);
 
     g_engine->GetWorld()->AddScene(newScene);
 

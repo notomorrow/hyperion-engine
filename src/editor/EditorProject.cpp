@@ -9,7 +9,6 @@
 #include <scene/Scene.hpp>
 
 #include <scene/ecs/EntityManager.hpp>
-#include <scene/ecs/components/CameraComponent.hpp>
 
 #include <scene/camera/Camera.hpp>
 

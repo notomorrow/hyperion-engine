@@ -23,7 +23,6 @@
 #include <scene/ecs/components/VisibilityStateComponent.hpp>
 #include <scene/ecs/components/BoundingBoxComponent.hpp>
 #include <scene/ecs/components/TransformComponent.hpp>
-#include <scene/ecs/components/CameraComponent.hpp>
 
 #include <asset/Assets.hpp>
 #include <asset/AssetRegistry.hpp>
@@ -1008,6 +1007,8 @@ void EditorSubsystem::OnAddedToWorld()
     m_editorScene->SetName(NAME("EditorScene"));
     g_engine->GetWorld()->AddScene(m_editorScene);
 
+    Handle<Node> cameraNode = m_editorScene->GetRoot()->AddChild();
+
     m_camera = CreateObject<Camera>();
     m_camera->AddCameraController(CreateObject<EditorCameraController>());
     m_camera->SetName(NAME("EditorCamera"));
@@ -1015,15 +1016,13 @@ void EditorSubsystem::OnAddedToWorld()
     m_camera->SetFOV(70.0f);
     m_camera->SetNear(0.1f);
     m_camera->SetFar(3000.0f);
+    InitObject(m_camera);
 
-    Handle<Node> cameraNode = m_editorScene->GetRoot()->AddChild();
+    m_editorScene->GetEntityManager()->AddExistingEntity(m_camera);
+    m_editorScene->GetEntityManager()->AddTag<EntityTag::CAMERA_PRIMARY>(m_camera);
+
+    cameraNode->SetEntity(m_camera);
     cameraNode->SetName(m_camera->GetName());
-
-    Handle<Entity> cameraEntity = m_editorScene->GetEntityManager()->AddEntity();
-    m_editorScene->GetEntityManager()->AddTag<EntityTag::CAMERA_PRIMARY>(cameraEntity);
-    m_editorScene->GetEntityManager()->AddComponent<CameraComponent>(cameraEntity, CameraComponent { m_camera });
-
-    cameraNode->SetEntity(cameraEntity);
 
     LoadEditorUIDefinitions();
 

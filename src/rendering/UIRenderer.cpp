@@ -517,6 +517,8 @@ void UIRenderSubsystem::Update(float delta)
 
     rpl.meshEntityOrdering.Clear();
 
+    rpl.GetCameras().Track(m_view->GetCamera()->Id(), m_view->GetCamera(), m_view->GetCamera()->GetRenderProxyVersionPtr());
+
     m_uiStage->CollectObjects([&rpl](UIObject* uiObject)
         {
             Assert(uiObject != nullptr);

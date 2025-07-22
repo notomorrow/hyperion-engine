@@ -407,7 +407,7 @@ void ParticleSystem::UpdateParticles(FrameBase* frame, const RenderSetup& render
             ArrayMap<Name, ArrayMap<Name, uint32>> {
                 { NAME("Global"),
                     { { NAME("WorldsBuffer"), ShaderDataOffset<WorldShaderData>(renderSetup.world->GetBufferIndex()) },
-                        { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(renderSetup.view->GetCamera()->GetRenderResource().GetBufferIndex()) } } } },
+                        { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(renderSetup.view->GetCamera()) } } } },
             frame->GetFrameIndex());
 
         const uint32 viewDescriptorSetIndex = spawner->GetComputePipeline()->GetDescriptorTable()->GetDescriptorSetIndex(NAME("View"));
@@ -465,7 +465,7 @@ void ParticleSystem::Render(FrameBase* frame, const RenderSetup& renderSetup)
             ArrayMap<Name, ArrayMap<Name, uint32>> {
                 { NAME("Global"),
                     { { NAME("WorldsBuffer"), ShaderDataOffset<WorldShaderData>(renderSetup.world->GetBufferIndex()) },
-                        { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(renderSetup.view->GetCamera()->GetRenderResource().GetBufferIndex()) } } } },
+                        { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(renderSetup.view->GetCamera()) } } } },
             frameIndex);
 
         const uint32 viewDescriptorSetIndex = graphicsPipeline->GetDescriptorTable()->GetDescriptorSetIndex(NAME("View"));

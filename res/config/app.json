@@ -19,7 +19,7 @@
       "screen_edge_fade": [0.960000, 0.990000],
       "quality": 2,
       "roughness_scattering": true,
-      "enabled": true,
+      "enabled": false,
       "cone_tracing": false
     },
     "taa": {
@@ -42,7 +42,7 @@
     },
     "env_grid": {
       "gi": {
-        "enabled": true
+        "enabled": false
       },
       "reflections": {
         "enabled": false

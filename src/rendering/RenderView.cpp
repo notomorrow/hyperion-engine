@@ -5,7 +5,6 @@
 #include <rendering/RenderTexture.hpp>
 #include <rendering/RenderEnvironment.hpp>
 #include <rendering/RenderEnvProbe.hpp>
-#include <rendering/RenderCamera.hpp>
 #include <rendering/RenderEnvGrid.hpp>
 #include <rendering/RenderGroup.hpp>
 #include <rendering/Deferred.hpp>
@@ -58,16 +57,12 @@ void RenderView::Initialize_Internal()
     if (m_view)
     {
         Assert(m_view->GetCamera().IsValid());
-
-        m_renderCamera = TResourceHandle<RenderCamera>(m_view->GetCamera()->GetRenderResource());
     }
 }
 
 void RenderView::Destroy_Internal()
 {
     HYP_SCOPE;
-
-    m_renderCamera.Reset();
 }
 
 GBuffer* RenderView::GetGBuffer() const

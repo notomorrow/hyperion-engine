@@ -310,8 +310,6 @@ public:
         }
     }
 
-    ~RenderProxySkeleton() override = default;
-
     WeakHandle<Skeleton> skeleton;
     SkeletonShaderData bufferData {};
 };
@@ -339,6 +337,13 @@ struct CameraShaderData
     Matrix4 _pad4;
     Matrix4 _pad5;
     Matrix4 _pad6;
+};
+
+class RenderProxyCamera : public IRenderProxy
+{
+public:
+    WeakHandle<Camera> camera;
+    CameraShaderData bufferData {};
 };
 
 } // namespace hyperion

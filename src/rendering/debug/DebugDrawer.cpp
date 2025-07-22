@@ -397,7 +397,7 @@ void DebugDrawer::Render(FrameBase* frame, const RenderSetup& renderSetup)
                         { { NAME("ImmediateDrawsBuffer"), ShaderDataOffset<ImmediateDrawShaderData>(0u) } } },
                     { NAME("Global"),
                         { { NAME("WorldsBuffer"), ShaderDataOffset<WorldShaderData>(renderSetup.world->GetBufferIndex()) },
-                            { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(renderSetup.view->GetCamera()->GetRenderResource().GetBufferIndex()) },
+                            { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(renderSetup.view->GetCamera()) },
                             { NAME("EnvGridsBuffer"), ShaderDataOffset<EnvGridShaderData>(renderSetup.envGrid, 0) } } },
                     { NAME("Object"), {} },
                     { NAME("Instancing"), { { NAME("EntityInstanceBatchesBuffer"), 0 } } } },

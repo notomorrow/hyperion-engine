@@ -78,31 +78,6 @@ void RenderCamera::SetBufferData(const CameraShaderData& bufferData)
         });
 }
 
-void RenderCamera::ApplyJitter(const RenderSetup& renderSetup)
-{
-    HYP_SCOPE;
-    Threads::AssertOnThread(g_renderThread);
-
-    static const float jitterScale = 0.25f;
-
-    Assert(m_bufferIndex != ~0u);
-
-    const uint32 frameCounter = renderSetup.world->GetBufferData().frameCounter + 1;
-
-    CameraShaderData& bufferData = *static_cast<CameraShaderData*>(m_bufferAddress);
-
-    if (bufferData.projection[3][3] < MathUtil::epsilonF)
-    {
-        Vec4f jitter = Vec4f::Zero();
-
-        Matrix4::Jitter(frameCounter, bufferData.dimensions.x, bufferData.dimensions.y, jitter);
-
-        bufferData.jitter = jitter * jitterScale;
-
-        g_renderGlobalState->gpuBuffers[GRB_CAMERAS]->MarkDirty(m_bufferIndex);
-    }
-}
-
 #pragma endregion RenderCamera
 
 } // namespace hyperion

@@ -104,6 +104,23 @@ void Light::Init()
 
 void Light::CreateShadowViews()
 {
+    for (const Handle<View>& shadowView : m_shadowViews)
+    {
+        if (!shadowView.IsValid())
+        {
+            continue;
+        }
+
+        const Handle<Camera>& shadowCamera = shadowView->GetCamera();
+
+        if (!shadowCamera.IsValid())
+        {
+            continue;
+        }
+
+        DetachChild(shadowCamera);
+    }
+
     m_shadowViews.Clear();
 
     if (!(m_flags & LF_SHADOW))
@@ -192,6 +209,8 @@ void Light::CreateShadowViews()
     shadowMapCamera->SetName(Name::Unique("ShadowMapCamera"));
     InitObject(shadowMapCamera);
 
+    AttachChild(shadowMapCamera);
+
     AssertDebug(shadowViewFlags.Size() >= 1);
     m_shadowViews.Resize(shadowViewFlags.Size());
 
@@ -272,8 +291,8 @@ void Light::Update(float delta)
             case LT_DIRECTIONAL:
                 ShadowCameraHelper::UpdateShadowCameraDirectional(
                     m_shadowViews[i]->GetCamera(),
-                    Vec3f::Zero(), /// @TODO: Clip to player
-                    GetPosition().Normalized(),
+                    GetPosition(),
+                    GetPosition().Normalized() * -1.0f,
                     40.0f, /// TODO shadow map radius
                     m_shadowAabb);
 

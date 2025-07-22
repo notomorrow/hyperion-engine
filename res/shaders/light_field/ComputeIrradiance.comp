@@ -117,7 +117,7 @@ vec4 CalculateDirectLighting(uint light_index, in vec4 albedo, in vec3 P, in vec
         shadow = GetShadowStandard(lights[light_index], P, vec2(0.0), NdotL);
     }
 
-    return vec4((light_color * NdotL * shadow * lights[light_index].position_intensity.w).rgb, 1.0);
+    return vec4((light_color * NdotL * /*shadow * */ lights[light_index].position_intensity.w).rgb, 1.0);
 }
 
 vec4 ConvoleProbe(uvec2 local_coord)

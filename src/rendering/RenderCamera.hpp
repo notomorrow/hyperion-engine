@@ -37,8 +37,6 @@ public:
         return m_bufferData;
     }
 
-    void ApplyJitter(const RenderSetup& renderSetup);
-
 protected:
     virtual void Initialize_Internal() override;
     virtual void Destroy_Internal() override;

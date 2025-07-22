@@ -138,6 +138,8 @@ void EnvGrid::Init()
             }
 
             m_view.Reset();
+
+            DetachChild(m_camera);
             m_camera.Reset();
         }));
 
@@ -154,6 +156,7 @@ void EnvGrid::Init()
     m_camera->SetName(Name::Unique("EnvGridCamera"));
     m_camera->SetTranslation(m_aabb.GetCenter());
     InitObject(m_camera);
+    AttachChild(m_camera);
 
     ShaderProperties shaderProperties(staticMeshVertexAttributes, { "ENV_PROBE", "WRITE_NORMALS", "WRITE_MOMENTS" });
     ShaderDefinition shaderDefinition { NAME("RenderToCubemap"), shaderProperties };

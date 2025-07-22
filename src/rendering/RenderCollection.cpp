@@ -218,8 +218,6 @@ RenderProxyList::RenderProxyList()
     : viewport(Viewport { Vec2u::One(), Vec2i::Zero() }),
       priority(0)
 {
-    resourceTrackers.ResizeZeroed(TupleSize<ResourceTrackerTypes>::value);
-
     // initialize the resource trackers
     ForEachResourceTrackerType(resourceTrackers, []<class ResourceTrackerType>(TypeWrapper<ResourceTrackerType>, ResourceTrackerBase*& pResourceTracker)
         {
@@ -235,7 +233,8 @@ RenderProxyList::~RenderProxyList()
     {
         delete resourceTracker;
     }
-    resourceTrackers.Clear();
+
+    resourceTrackers = {};
 }
 
 #pragma endregion RenderProxyList
@@ -802,8 +801,6 @@ void RenderCollector::BuildDrawCalls(uint32 bucketBits)
 
     if (iterators.Empty())
     {
-        HYP_LOG(Rendering, Warning, "No iterators when building draw call list");
-
         return;
     }
 

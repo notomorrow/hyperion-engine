@@ -23,6 +23,8 @@
 
 #include <rendering/RenderObject.hpp>
 
+#include <scene/Entity.hpp>
+
 #include <GameCounter.hpp>
 
 #include <atomic>
@@ -220,7 +222,7 @@ class FirstPersonCameraController;
 class FollowCameraController;
 
 HYP_CLASS()
-class HYP_API Camera final : public HypObject<Camera>
+class HYP_API Camera final : public Entity
 {
     HYP_OBJECT_BODY(Camera);
 
@@ -273,11 +275,6 @@ public:
         m_matchWindowSizeRatio = matchWindowSizeRatio;
     }
 
-    HYP_FORCE_INLINE RenderCamera& GetRenderResource() const
-    {
-        return *m_renderResource;
-    }
-
     HYP_METHOD(Property = "CameraControllers", Serialize = true)
     HYP_FORCE_INLINE const Array<Handle<CameraController>>& GetCameraControllers() const
     {
@@ -317,6 +314,8 @@ public:
             m_fov,
             m_width, m_height,
             m_near, m_far);
+
+        UpdateViewProjectionMatrix();
     }
 
     void SetToOrthographicProjection(
@@ -335,6 +334,8 @@ public:
             m_left, m_right,
             m_bottom, m_top,
             m_near, m_far);
+
+        UpdateViewProjectionMatrix();
     }
 
     HYP_METHOD(Property = "Width", Serialize = true, Editor = true)
@@ -629,10 +630,10 @@ protected:
 private:
     void UpdateMouseLocked();
 
+    virtual void UpdateRenderProxy(IRenderProxy* proxy) override;
+
     Matrix4 m_viewProjMat;
     Matrix4 m_previousViewMatrix;
-
-    RenderCamera* m_renderResource;
 
     InputMouseLockScope m_mouseLockScope;
 

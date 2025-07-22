@@ -20,7 +20,7 @@ namespace Hyperion
     }
 
     [HypClassBinding(Name="Camera")]
-    public class Camera : HypObject
+    public class Camera : Entity
     {
         public Camera()
         {

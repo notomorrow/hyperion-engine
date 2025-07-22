@@ -307,7 +307,7 @@ void SSRRenderer::Render(FrameBase* frame, const RenderSetup& renderSetup)
             ArrayMap<Name, ArrayMap<Name, uint32>> {
                 { NAME("Global"),
                     { { NAME("WorldsBuffer"), ShaderDataOffset<WorldShaderData>(renderSetup.world->GetBufferIndex()) },
-                        { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(renderSetup.view->GetCamera()->GetRenderResource().GetBufferIndex()) } } } },
+                        { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(renderSetup.view->GetCamera()) } } } },
             frameIndex);
 
         const uint32 viewDescriptorSetIndex = m_writeUvs->GetDescriptorTable()->GetDescriptorSetIndex(NAME("View"));
@@ -341,7 +341,7 @@ void SSRRenderer::Render(FrameBase* frame, const RenderSetup& renderSetup)
             ArrayMap<Name, ArrayMap<Name, uint32>> {
                 { NAME("Global"),
                     { { NAME("WorldsBuffer"), ShaderDataOffset<WorldShaderData>(renderSetup.world->GetBufferIndex()) },
-                        { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(renderSetup.view->GetCamera()->GetRenderResource().GetBufferIndex()) } } } },
+                        { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(renderSetup.view->GetCamera()) } } } },
             frameIndex);
 
         const uint32 viewDescriptorSetIndex = m_sampleGbuffer->GetDescriptorTable()->GetDescriptorSetIndex(NAME("View"));

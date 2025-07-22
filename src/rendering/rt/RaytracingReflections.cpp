@@ -169,7 +169,7 @@ void RaytracingReflections::Render(FrameBase* frame, const RenderSetup& renderSe
         ArrayMap<Name, ArrayMap<Name, uint32>> {
             { NAME("Global"),
                 { { NAME("WorldsBuffer"), ShaderDataOffset<WorldShaderData>(renderSetup.world->GetBufferIndex()) },
-                    { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(renderSetup.view->GetCamera()->GetRenderResource().GetBufferIndex()) },
+                    { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(renderSetup.view->GetCamera()) },
                     { NAME("EnvGridsBuffer"), ShaderDataOffset<EnvGridShaderData>(renderSetup.envGrid, 0) },
                     { NAME("CurrentEnvProbe"), ShaderDataOffset<EnvProbeShaderData>(renderSetup.envProbe, 0) } } } },
         frame->GetFrameIndex());
@@ -191,11 +191,17 @@ void RaytracingReflections::Render(FrameBase* frame, const RenderSetup& renderSe
     frame->renderQueue << InsertBarrier(m_texture->GetRenderResource().GetImage(), RS_SHADER_RESOURCE);
 
     // Reset progressive blending if the camera view matrix has changed (for path tracing)
-    if (IsPathTracer() && renderSetup.view->GetCamera()->GetRenderResource().GetBufferData().view != m_previousViewMatrix)
+    if (IsPathTracer())
     {
-        m_temporalBlending->ResetProgressiveBlending();
+        RenderProxyCamera* cameraProxy = static_cast<RenderProxyCamera*>(RenderApi_GetRenderProxy(renderSetup.view->GetCamera()));
+        Assert(cameraProxy != nullptr);
 
-        m_previousViewMatrix = renderSetup.view->GetCamera()->GetRenderResource().GetBufferData().view;
+        if (cameraProxy->bufferData.view != m_previousViewMatrix)
+        {
+            m_temporalBlending->ResetProgressiveBlending();
+
+            m_previousViewMatrix = cameraProxy->bufferData.view;
+        }
     }
 
     m_temporalBlending->Render(frame, renderSetup);

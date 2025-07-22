@@ -110,7 +110,7 @@ void GameThread::operator()()
 
         if (deltaTimeAccum >= 1.0f)
         {
-            HYP_LOG(GameThread, Debug, "Game thread ticks per second: {}", 1.0f / (deltaTimeAccum / float(numFrames)));
+//            HYP_LOG(GameThread, Debug, "Game thread ticks per second: {}", 1.0f / (deltaTimeAccum / float(numFrames)));
 
             deltaTimeAccum = 0.0f;
             numFrames = 0;

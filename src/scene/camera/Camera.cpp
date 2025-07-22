@@ -154,7 +154,7 @@ Camera::Camera()
 }
 
 Camera::Camera(int width, int height)
-    : HypObject(),
+    : Entity(),
       m_name(Name::Unique("Camera_")),
       m_flags(CameraFlags::NONE),
       m_matchWindowSizeRatio(1.0f),
@@ -169,15 +169,17 @@ Camera::Camera(int width, int height)
       m_top(0.0f),
       m_translation(Vec3f::Zero()),
       m_direction(Vec3f::UnitZ()),
-      m_up(Vec3f::UnitY()),
-      m_renderResource(nullptr)
+      m_up(Vec3f::UnitY())
 {
     // make sure there is always at least 1 camera controller
     m_cameraControllers.PushBack(CreateObject<NullCameraController>());
+
+    m_entityInitInfo.receivesUpdate = true;
+    m_entityInitInfo.canEverUpdate = true;
 }
 
 Camera::Camera(float fov, int width, int height, float _near, float _far)
-    : HypObject(),
+    : Entity(),
       m_name(Name::Unique("Camera_")),
       m_flags(CameraFlags::NONE),
       m_matchWindowSizeRatio(1.0f),
@@ -186,17 +188,19 @@ Camera::Camera(float fov, int width, int height, float _near, float _far)
       m_height(height),
       m_translation(Vec3f::Zero()),
       m_direction(Vec3f::UnitZ()),
-      m_up(Vec3f::UnitY()),
-      m_renderResource(nullptr)
+      m_up(Vec3f::UnitY())
 {
     // make sure there is always at least 1 camera controller
     m_cameraControllers.PushBack(CreateObject<NullCameraController>());
 
     SetToPerspectiveProjection(fov, _near, _far);
+
+    m_entityInitInfo.receivesUpdate = true;
+    m_entityInitInfo.canEverUpdate = true;
 }
 
 Camera::Camera(int width, int height, float left, float right, float bottom, float top, float _near, float _far)
-    : HypObject(),
+    : Entity(),
       m_name(Name::Unique("Camera_")),
       m_flags(CameraFlags::NONE),
       m_matchWindowSizeRatio(1.0f),
@@ -205,13 +209,15 @@ Camera::Camera(int width, int height, float left, float right, float bottom, flo
       m_height(height),
       m_translation(Vec3f::Zero()),
       m_direction(Vec3f::UnitZ()),
-      m_up(Vec3f::UnitY()),
-      m_renderResource(nullptr)
+      m_up(Vec3f::UnitY())
 {
     // make sure there is always at least 1 camera controller
     m_cameraControllers.PushBack(CreateObject<NullCameraController>());
 
     SetToOrthographicProjection(left, right, bottom, top, _near, _far);
+
+    m_entityInitInfo.receivesUpdate = true;
+    m_entityInitInfo.canEverUpdate = true;
 }
 
 Camera::~Camera()
@@ -222,12 +228,6 @@ Camera::~Camera()
 
         cameraController->OnDeactivated();
         cameraController->OnRemoved();
-    }
-
-    if (m_renderResource != nullptr)
-    {
-        m_renderResource->DecRef();
-        FreeResource(m_renderResource);
     }
 }
 
@@ -289,17 +289,6 @@ void Camera::Init()
         }
     }
 
-    AddDelegateHandler(g_engine->GetDelegates().OnShutdown.Bind([this]
-        {
-            if (m_renderResource != nullptr)
-            {
-                m_renderResource->DecRef();
-                FreeResource(m_renderResource);
-
-                m_renderResource = nullptr;
-            }
-        }));
-
     for (const Handle<CameraController>& cameraController : m_cameraControllers)
     {
         InitObject(cameraController);
@@ -316,22 +305,6 @@ void Camera::Init()
     UpdateViewMatrix();
     UpdateProjectionMatrix();
     UpdateViewProjectionMatrix();
-
-    m_renderResource = AllocateResource<RenderCamera>(this);
-
-    m_renderResource->SetBufferData(CameraShaderData {
-        .view = m_viewMat,
-        .projection = m_projMat,
-        .previousView = m_previousViewMatrix,
-        .dimensions = Vec4u { uint32(MathUtil::Abs(m_width)), uint32(MathUtil::Abs(m_height)), 0, 1 },
-        .cameraPosition = Vec4f(m_translation, 1.0f),
-        .cameraDirection = Vec4f(m_direction, 1.0f),
-        .cameraNear = m_near,
-        .cameraFar = m_far,
-        .cameraFov = m_fov,
-        .id = Id().Value() });
-
-    m_renderResource->IncRef();
 
     SetReady(true);
 }
@@ -592,6 +565,8 @@ void Camera::UpdateViewProjectionMatrix()
     m_viewProjMat = m_projMat * m_viewMat;
 
     m_frustum.SetFromViewProjectionMatrix(m_viewProjMat);
+
+    SetNeedsRenderProxyUpdate();
 }
 
 Vec3f Camera::TransformScreenToNDC(const Vec2f& screen) const
@@ -673,17 +648,7 @@ void Camera::Update(float dt)
         m_streamingVolume->SetBoundingBox(BoundingBox(m_translation - 10.0f, m_translation + 10.0f));
     }
 
-    m_renderResource->SetBufferData(CameraShaderData {
-        .view = m_viewMat,
-        .projection = m_projMat,
-        .previousView = m_previousViewMatrix,
-        .dimensions = Vec4u { uint32(MathUtil::Abs(m_width)), uint32(MathUtil::Abs(m_height)), 0, 1 },
-        .cameraPosition = Vec4f(m_translation, 1.0f),
-        .cameraDirection = Vec4f(m_translation, 1.0f),
-        .cameraNear = m_near,
-        .cameraFar = m_far,
-        .cameraFov = m_fov,
-        .id = Id().Value() });
+    SetNeedsRenderProxyUpdate();
 }
 
 void Camera::UpdateViewMatrix()
@@ -760,6 +725,24 @@ void Camera::UpdateMouseLocked()
     {
         m_mouseLockScope.Reset();
     }
+}
+
+void Camera::UpdateRenderProxy(IRenderProxy* proxy)
+{
+    RenderProxyCamera* proxyCasted = static_cast<RenderProxyCamera*>(proxy);
+    proxyCasted->camera = WeakHandleFromThis();
+
+    CameraShaderData& bufferData = proxyCasted->bufferData;
+    bufferData.id = Id().Value();
+    bufferData.view = m_viewMat;
+    bufferData.projection = m_projMat;
+    bufferData.previousView = m_previousViewMatrix;
+    bufferData.dimensions = Vec4u { uint32(MathUtil::Abs(m_width)), uint32(MathUtil::Abs(m_height)), 0, 1 };
+    bufferData.cameraPosition = Vec4f(m_translation, 1.0f);
+    bufferData.cameraDirection = Vec4f(m_direction, 1.0f);
+    bufferData.cameraNear = m_near;
+    bufferData.cameraFar = m_far;
+    bufferData.cameraFov = m_fov;
 }
 
 #pragma endregion Camera

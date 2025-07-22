@@ -106,7 +106,7 @@ public:
     void SetOwnerThreadId(ThreadId ownerThreadId);
 
     HYP_METHOD()
-    const Handle<Camera>& GetPrimaryCamera() const;
+    Camera* GetPrimaryCamera() const;
 
     HYP_METHOD()
     HYP_FORCE_INLINE EnumFlags<SceneFlags> GetFlags() const

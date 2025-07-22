@@ -152,6 +152,9 @@ struct ResourceBindings
     ResourceBindingAllocator<> meshEntityBindingsAllocator;
     ResourceBinder<Entity, &OnBindingChanged_MeshEntity> meshEntityBinder { &meshEntityBindingsAllocator };
 
+    ResourceBindingAllocator<> cameraBindingsAllocator;
+    ResourceBinder<Camera, &OnBindingChanged_Default<Camera>> cameraBinder { &cameraBindingsAllocator };
+
     // Shared index allocator for reflection probes and sky probes.
     ResourceBindingAllocator<g_maxBoundReflectionProbes> reflectionProbeBindingsAllocator;
     ResourceBinder<EnvProbe, &OnBindingChanged_ReflectionProbe> reflectionProbeBinder {
@@ -792,12 +795,12 @@ static inline void SyncResources(ResourceTracker<ObjId<ElementType>, ElementType
         }
     }
 
-    if (added.Any() || removed.Any() || changedIds.Any())
-    {
-        HYP_LOG_TEMP("Updated resources for {}: added={}, removed={}, changed={}",
-            TypeNameWithoutNamespace<ElementType>().Data(),
-            added.Size(), removed.Size(), changedIds.Size());
-    }
+//    if (added.Any() || removed.Any() || changedIds.Any())
+//    {
+//        HYP_LOG_TEMP("Updated resources for {}: added={}, removed={}, changed={}",
+//            TypeNameWithoutNamespace<ElementType>().Data(),
+//            added.Size(), removed.Size(), changedIds.Size());
+//    }
 }
 
 template <SizeType... Indices>
@@ -1011,6 +1014,7 @@ HYP_API void RenderApi_BeginFrame_RenderThread()
     // assign the actual bindings:
     /// TODO: This should be done in the ResourceBinder itself, not here.
     g_renderGlobalState->resourceBindings->meshEntityBinder.ApplyUpdates();
+    g_renderGlobalState->resourceBindings->cameraBinder.ApplyUpdates();
     g_renderGlobalState->resourceBindings->ambientProbeBinder.ApplyUpdates();
     g_renderGlobalState->resourceBindings->reflectionProbeBinder.ApplyUpdates();
     g_renderGlobalState->resourceBindings->envGridBinder.ApplyUpdates();
@@ -1051,15 +1055,6 @@ HYP_API void RenderApi_BeginFrame_RenderThread()
 
         if (vfd.rplShared->TEMP_disableBuildRenderCollection || (vfd.view->GetFlags() & ViewFlags::NO_GFX))
         {
-            //                        vd.rplRender.meshes.Advance();
-            //                        vd.rplRender.textures.Advance();
-            //                        vd.rplRender.materials.Advance();
-            //                        vd.rplRender.envProbes.Advance();
-            //                        vd.rplRender.envGrids.Advance();
-            //                        vd.rplRender.lights.Advance();
-            //                        vd.rplRender.lightmapVolumes.Advance();
-            //                        vd.rplRender.skeletons.Advance();
-
             continue;
         }
 
@@ -1071,15 +1066,6 @@ HYP_API void RenderApi_BeginFrame_RenderThread()
         vd.renderCollector.BuildDrawCalls(0);
 
         vd.rplRender.state = RenderProxyList::CS_DONE;
-
-        //                vd.rplRender.meshes.Advance();
-        //                vd.rplRender.textures.Advance();
-        //                vd.rplRender.materials.Advance();
-        //                vd.rplRender.envProbes.Advance();
-        //                vd.rplRender.envGrids.Advance();
-        //                vd.rplRender.lights.Advance();
-        //                vd.rplRender.lightmapVolumes.Advance();
-        //                vd.rplRender.skeletons.Advance();
     }
 
     for (ResourceSubtypeData& subtypeData : g_resources.dataByType)
@@ -1526,6 +1512,8 @@ void RenderGlobalState::SetDefaultDescriptorSetElements(uint32 frameIndex)
 #pragma endregion RenderGlobalState
 
 DECLARE_RENDER_DATA_CONTAINER(Entity, RenderProxyMesh, GRB_ENTITIES, &ResourceBindings::meshEntityBinder, &WriteBufferData_MeshEntity);
+
+DECLARE_RENDER_DATA_CONTAINER(Camera, RenderProxyCamera, GRB_CAMERAS, &ResourceBindings::cameraBinder);
 
 DECLARE_RENDER_DATA_CONTAINER(EnvGrid, RenderProxyEnvGrid, GRB_ENV_GRIDS, &ResourceBindings::envGridBinder, &WriteBufferData_EnvGrid);
 
