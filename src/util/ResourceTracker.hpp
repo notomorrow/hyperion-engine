@@ -351,13 +351,32 @@ public:
     const ElementArrayType& GetElements() const
     {
         static constexpr TypeId typeId = TypeId::ForType<T>();
+        static_assert(std::is_base_of_v<typename IdType::ObjectType, T>, "T must be a subclass of the ID's inner type!");
 
         return GetElements(typeId);
     }
 
-    HYP_FORCE_INLINE const Bitset& GetSubclassBits() const
+    HYP_FORCE_INLINE const Bitset& GetSubclassIndices() const
     {
         return subclassIndices;
+    }
+    
+    HYP_FORCE_INLINE Impl& GetSubclassImpl(int subclassIndex)
+    {
+        if (subclassIndex == -1)
+        {
+            return baseImpl;
+        }
+        
+        AssertDebug(subclassIndex < int(subclassImpls.Size()));
+        AssertDebug(subclassIndices.Test(subclassIndex));
+        
+        return *subclassImpls[subclassIndex];
+    }
+    
+    HYP_FORCE_INLINE const Impl& GetSubclassImpl(int subclassIndex) const
+    {
+        return const_cast<ResourceTracker*>(this)->GetSubclassImpl(subclassIndex);
     }
 
     ResourceTrackerDiff GetDiff() const
@@ -662,6 +681,32 @@ public:
     {
         return const_cast<ResourceTracker*>(this)->GetProxy(id);
     }
+    
+    ProxyType* SetProxy(IdType id, const ProxyType& proxy)
+    {
+        HYP_SCOPE;
+
+        TypeId typeId = id.GetTypeId();
+
+        if (typeId == baseImpl.typeId)
+        {
+            return baseImpl.SetProxy(id, proxy);
+        }
+
+        const int subclassIndex = GetSubclassIndex(baseImpl.typeId, typeId);
+        AssertDebug(subclassIndex >= 0, "Invalid subclass index");
+        AssertDebug(subclassIndex < subclassImpls.Size(), "Invalid subclass index");
+
+        if (!subclassIndices.Test(subclassIndex))
+        {
+            subclassImpls[subclassIndex] = MakePimpl<Impl>(typeId);
+            subclassIndices.Set(subclassIndex, true);
+        }
+
+        AssertDebug(subclassImpls[subclassIndex]->typeId == typeId,
+            "TypeId mismatch: expected {}, got {}", typeId.Value(), subclassImpls[subclassIndex]->typeId.Value());
+        return subclassImpls[subclassIndex]->SetProxy(id, proxy);
+    }
 
     ProxyType* SetProxy(IdType id, ProxyType&& proxy)
     {
@@ -713,15 +758,15 @@ public:
         subclassImpls[subclassIndex]->RemoveProxy(id);
     }
 
-    void Advance()
+    void Advance(bool clearNextState = true)
     {
         HYP_SCOPE;
 
-        baseImpl.Advance();
+        baseImpl.Advance(clearNextState);
 
         for (Bitset::BitIndex i : subclassIndices)
         {
-            subclassImpls[i]->Advance();
+            subclassImpls[i]->Advance(clearNextState);
         }
     }
 
@@ -764,6 +809,16 @@ public:
             const SizeType newNumBits = MathUtil::Max(previous.NumBits(), next.NumBits());
 
             return Bitset(previous).SetNumBits(newNumBits) & ~Bitset(next).SetNumBits(newNumBits);
+        }
+        
+        HYP_FORCE_INLINE Bitset GetElementIndices() const
+        {
+            Bitset bits = previous | next;
+            Bitset removed = GetRemoved();
+            
+            const SizeType newNumBits = MathUtil::Max(bits.NumBits(), removed.NumBits());
+
+            return bits.SetNumBits(newNumBits) & ~removed.SetNumBits(newNumBits);
         }
 
         HYP_FORCE_INLINE const Bitset& GetChanged() const
@@ -1092,34 +1147,49 @@ public:
             {
                 return nullptr;
             }
+            
+            uint32 idx = id.ToIndex();
 
-            return proxies.TryGet(id.ToIndex());
+            return proxies.TryGet(idx);
         }
 
         const ProxyType* GetProxy(IdType id) const
         {
+            return const_cast<Impl*>(this)->GetProxy(id);
+        }
+        
+        ProxyType* SetProxy(IdType id, const ProxyType& proxy)
+        {
+            HYP_SCOPE;
+            
+            const uint32 idx = id.ToIndex();
+
             AssertDebug(id.GetTypeId() == typeId);
+            AssertDebug(elements.HasIndex(idx));
 
             if (id.GetTypeId() != typeId)
             {
                 return nullptr;
             }
-
-            return proxies.TryGet(id.ToIndex());
+            
+            return &*proxies.Emplace(idx, proxy);
         }
 
         ProxyType* SetProxy(IdType id, ProxyType&& proxy)
         {
             HYP_SCOPE;
+            
+            const uint32 idx = id.ToIndex();
 
             AssertDebug(id.GetTypeId() == typeId);
+            AssertDebug(elements.HasIndex(idx));
 
             if (id.GetTypeId() != typeId)
             {
                 return nullptr;
             }
-
-            return &*proxies.Emplace(id.ToIndex(), std::move(proxy));
+            
+            return &*proxies.Emplace(idx, std::move(proxy));
         }
 
         void RemoveProxy(IdType id)
@@ -1134,23 +1204,34 @@ public:
             proxies.EraseAt(id.ToIndex());
         }
 
-        void Advance()
+        void Advance(bool clearNextState)
         {
             HYP_SCOPE;
 
-            { // Remove proxies for removed bits
-                for (Bitset::BitIndex index : GetRemoved())
-                {
-                    AssertDebug(elements.HasIndex(index));
+            // Remove element data for removed bits
+            for (Bitset::BitIndex index : GetRemoved())
+            {
+                AssertDebug(elements.HasIndex(index));
 
-                    elements.EraseAt(index);
-                    versions.EraseAt(index);
+                elements.EraseAt(index);
+                versions.EraseAt(index);
+
+                if (!clearNextState)
+                {
+                    next.Set(index, false);
                 }
             }
 
-            // Next state starts out zeroed out -- and next call to Advance will remove proxies for these objs
-            previous = std::move(next);
-            next.Clear();
+            if (clearNextState)
+            {
+                previous = std::move(next);
+                next.Clear();
+            }
+            else
+            {
+                previous = next;
+            }
+
             changed.Clear();
         }
 
@@ -1193,8 +1274,11 @@ static inline void GetAddedElements(ResourceTracker<IdType, ElementType, ProxyTy
 {
     auto impl = [&outElements](typename ResourceTracker<IdType, ElementType, ProxyType>::Impl& lhsImpl, typename ResourceTracker<IdType, ElementType, ProxyType>::Impl& rhsImpl)
     {
-        const SizeType newNumBits = MathUtil::Max(lhsImpl.next.NumBits(), rhsImpl.next.NumBits());
-        Bitset addedBits = Bitset(rhsImpl.next).SetNumBits(newNumBits) & ~Bitset(lhsImpl.next).SetNumBits(newNumBits);
+        const Bitset& lhsElements = lhsImpl.next;
+        const Bitset& rhsElements = rhsImpl.next;
+        
+        const SizeType newNumBits = MathUtil::Max(lhsElements.NumBits(), rhsElements.NumBits());
+        Bitset addedBits = Bitset(rhsElements).SetNumBits(newNumBits) & ~Bitset(lhsElements).SetNumBits(newNumBits);
 
         if (!addedBits.AnyBitsSet())
         {
@@ -1233,8 +1317,11 @@ static inline void GetRemovedElements(ResourceTracker<IdType, ElementType, Proxy
 {
     auto impl = [&outElements](typename ResourceTracker<IdType, ElementType, ProxyType>::Impl& lhsImpl, typename ResourceTracker<IdType, ElementType, ProxyType>::Impl& rhsImpl)
     {
-        const SizeType newNumBits = MathUtil::Max(lhsImpl.next.NumBits(), rhsImpl.next.NumBits());
-        Bitset removedBits = Bitset(lhsImpl.next).SetNumBits(newNumBits) & ~Bitset(rhsImpl.next).SetNumBits(newNumBits);
+        const Bitset& lhsElements = lhsImpl.next;
+        const Bitset& rhsElements = rhsImpl.next;
+        
+        const SizeType newNumBits = MathUtil::Max(lhsElements.NumBits(), rhsElements.NumBits());
+        Bitset removedBits = Bitset(lhsElements).SetNumBits(newNumBits) & ~Bitset(rhsElements).SetNumBits(newNumBits);
 
         if (!removedBits.AnyBitsSet())
         {
@@ -1245,9 +1332,9 @@ static inline void GetRemovedElements(ResourceTracker<IdType, ElementType, Proxy
 
         for (Bitset::BitIndex i : removedBits)
         {
-            const IdType id = IdType(ObjIdBase { rhsImpl.typeId, uint32(i + 1) });
+            const IdType id = IdType(ObjIdBase { lhsImpl.typeId, uint32(i + 1) });
 
-            ElementType* elem = rhsImpl.elements.TryGet(id.ToIndex());
+            ElementType* elem = lhsImpl.elements.TryGet(id.ToIndex());
             AssertDebug(elem != nullptr);
 
             outElements.PushBack(elem);

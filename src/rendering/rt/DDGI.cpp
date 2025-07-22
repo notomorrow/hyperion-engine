@@ -430,7 +430,7 @@ void DDGI::Render(FrameBase* frame, const RenderSetup& renderSetup)
 
     UpdateUniforms(frame);
 
-    frame->renderQueue.Add<InsertBarrier>(m_radianceBuffer, RS_UNORDERED_ACCESS);
+    frame->renderQueue << InsertBarrier(m_radianceBuffer, RS_UNORDERED_ACCESS);
 
     m_randomGenerator.Next();
 
@@ -445,9 +445,9 @@ void DDGI::Render(FrameBase* frame, const RenderSetup& renderSetup)
 
     m_pipeline->SetPushConstants(&pushConstants, sizeof(pushConstants));
 
-    frame->renderQueue.Add<BindRaytracingPipeline>(m_pipeline);
+    frame->renderQueue << BindRaytracingPipeline(m_pipeline);
 
-    frame->renderQueue.Add<BindDescriptorTable>(
+    frame->renderQueue << BindDescriptorTable(
         m_pipeline->GetDescriptorTable(),
         m_pipeline,
         ArrayMap<Name, ArrayMap<Name, uint32>> {
@@ -459,35 +459,35 @@ void DDGI::Render(FrameBase* frame, const RenderSetup& renderSetup)
         frame->GetFrameIndex());
 
     // bind per-view descriptor sets
-    frame->renderQueue.Add<BindDescriptorSet>(
+    frame->renderQueue << BindDescriptorSet(
         renderSetup.passData->descriptorSets[frame->GetFrameIndex()],
         m_pipeline);
 
-    frame->renderQueue.Add<TraceRays>(m_pipeline, Vec3u { m_gridInfo.NumProbes(), m_gridInfo.numRaysPerProbe, 1u });
+    frame->renderQueue << TraceRays(m_pipeline, Vec3u { m_gridInfo.NumProbes(), m_gridInfo.numRaysPerProbe, 1u });
 
-    frame->renderQueue.Add<InsertBarrier>(m_radianceBuffer, RS_UNORDERED_ACCESS);
+    frame->renderQueue << InsertBarrier(m_radianceBuffer, RS_UNORDERED_ACCESS);
 
     // Compute irradiance for ray traced probes
 
     const Vec3u probeCounts = m_gridInfo.NumProbesPerDimension();
 
-    frame->renderQueue.Add<InsertBarrier>(m_irradianceImage, RS_UNORDERED_ACCESS);
+    frame->renderQueue << InsertBarrier(m_irradianceImage, RS_UNORDERED_ACCESS);
 
-    frame->renderQueue.Add<InsertBarrier>(m_depthImage, RS_UNORDERED_ACCESS);
+    frame->renderQueue << InsertBarrier(m_depthImage, RS_UNORDERED_ACCESS);
 
-    frame->renderQueue.Add<BindComputePipeline>(m_updateIrradiance);
+    frame->renderQueue << BindComputePipeline(m_updateIrradiance);
 
-    frame->renderQueue.Add<BindDescriptorTable>(
+    frame->renderQueue << BindDescriptorTable(
         m_updateIrradiance->GetDescriptorTable(),
         m_updateIrradiance,
         ArrayMap<Name, ArrayMap<Name, uint32>> {},
         frame->GetFrameIndex());
 
-    frame->renderQueue.Add<DispatchCompute>(m_updateIrradiance, Vec3u { probeCounts.x * probeCounts.y, probeCounts.z, 1u });
+    frame->renderQueue << DispatchCompute(m_updateIrradiance, Vec3u { probeCounts.x * probeCounts.y, probeCounts.z, 1u });
 
-    frame->renderQueue.Add<BindComputePipeline>(m_updateDepth);
+    frame->renderQueue << BindComputePipeline(m_updateDepth);
 
-    frame->renderQueue.Add<BindDescriptorTable>(
+    frame->renderQueue << BindDescriptorTable(
         m_updateDepth->GetDescriptorTable(),
         m_updateDepth,
         ArrayMap<Name, ArrayMap<Name, uint32>> {
@@ -498,7 +498,7 @@ void DDGI::Render(FrameBase* frame, const RenderSetup& renderSetup)
                     { NAME("CurrentEnvProbe"), ShaderDataOffset<EnvProbeShaderData>(renderSetup.envProbe, 0) } } } },
         frame->GetFrameIndex());
 
-    frame->renderQueue.Add<DispatchCompute>(m_updateDepth, Vec3u { probeCounts.x * probeCounts.y, probeCounts.z, 1u });
+    frame->renderQueue << DispatchCompute(m_updateDepth, Vec3u { probeCounts.x * probeCounts.y, probeCounts.z, 1u });
 
 #if 0 // @FIXME: Properly implement an optimized way to copy border texels without invoking for each pixel in the images.
     m_irradianceImage->InsertBarrier(

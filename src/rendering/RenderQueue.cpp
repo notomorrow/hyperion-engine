@@ -17,18 +17,13 @@ namespace hyperion {
 #pragma region RenderQueue
 
 RenderQueue::RenderQueue()
+    : m_offset(0)
 {
 }
 
 RenderQueue::~RenderQueue()
 {
-    for (CmdHeader& cmdHeader : m_cmdHeaders)
-    {
-        CmdBase* cmdDataPtr = reinterpret_cast<CmdBase*>(m_buffer.Data() + cmdHeader.dataOffset);
-        AssertDebug(cmdHeader.dataOffset < m_buffer.Size());
-
-        cmdDataPtr->~CmdBase();
-    }
+    Assert(m_cmdHeaders.Empty(), "RenderQueue destroyed with pending commands!");
 }
 
 void RenderQueue::Prepare(FrameBase* frame)
@@ -54,8 +49,6 @@ void RenderQueue::Execute(const CommandBufferRef& cmd)
         AssertDebug(cmdHeader.dataOffset < m_buffer.Size());
 
         cmdHeader.invokeFnPtr(cmdDataPtr, cmd);
-
-        cmdDataPtr->~CmdBase();
     }
 
     m_cmdHeaders.Clear();
@@ -66,20 +59,24 @@ void RenderQueue::Execute(const CommandBufferRef& cmd)
 
 #pragma region BindDescriptorSet
 
-void BindDescriptorSet::Prepare(FrameBase* frame)
+void BindDescriptorSet::PrepareStatic(CmdBase* cmd, FrameBase* frame)
 {
-    Assert(m_descriptorSet->IsCreated());
+    BindDescriptorSet* cmdCasted = static_cast<BindDescriptorSet*>(cmd);
 
-    frame->MarkDescriptorSetUsed(m_descriptorSet);
+    Assert(cmdCasted->m_descriptorSet->IsCreated());
+
+    frame->MarkDescriptorSetUsed(cmdCasted->m_descriptorSet);
 }
 
 #pragma endregion BindDescriptorSet
 
 #pragma region BindDescriptorTable
 
-void BindDescriptorTable::Prepare(FrameBase* frame)
+void BindDescriptorTable::PrepareStatic(CmdBase* cmd, FrameBase* frame)
 {
-    for (const DescriptorSetRef& descriptorSet : m_descriptorTable->GetSets()[frame->GetFrameIndex()])
+    BindDescriptorTable* cmdCasted = static_cast<BindDescriptorTable*>(cmd);
+
+    for (const DescriptorSetRef& descriptorSet : cmdCasted->m_descriptorTable->GetSets()[frame->GetFrameIndex()])
     {
         if (descriptorSet->GetLayout().IsTemplate())
         {
@@ -106,7 +103,7 @@ BeginFramebuffer::BeginFramebuffer(const FramebufferRef& framebuffer)
     g_activeFramebuffer = framebuffer.Get();
 }
 
-void BeginFramebuffer::Prepare(FrameBase* frame)
+void BeginFramebuffer::PrepareStatic(CmdBase* cmd, FrameBase* frame)
 {
 }
 #endif
@@ -125,7 +122,7 @@ EndFramebuffer::EndFramebuffer(const FramebufferRef& framebuffer)
     g_activeFramebuffer = nullptr;
 }
 
-void EndFramebuffer::Prepare(FrameBase* frame)
+void EndFramebuffer::PrepareStatic(CmdBase* cmd, FrameBase* frame)
 {
 }
 #endif

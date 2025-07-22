@@ -153,16 +153,16 @@ struct RENDER_COMMAND(CreateTexture)
                     FrameBase* frame = g_renderBackend->GetCurrentFrame();
                     RenderQueue& renderQueue = frame->renderQueue;
 
-                    renderQueue.Add<InsertBarrier>(image, RS_COPY_DST);
+                    renderQueue << InsertBarrier(image, RS_COPY_DST);
 
-                    renderQueue.Add<CopyBufferToImage>(stagingBuffer, image);
+                    renderQueue << CopyBufferToImage(stagingBuffer, image);
 
                     if (textureData.desc.HasMipmaps())
                     {
-                        renderQueue.Add<GenerateMipmaps>(image);
+                        renderQueue << GenerateMipmaps(image);
                     }
 
-                    renderQueue.Add<InsertBarrier>(image, initialState);
+                    renderQueue << InsertBarrier(image, initialState);
                 }
                 else if (initialState != RS_UNDEFINED)
                 {
@@ -170,7 +170,7 @@ struct RENDER_COMMAND(CreateTexture)
                     RenderQueue& renderQueue = frame->renderQueue;
 
                     // Transition to initial state
-                    renderQueue.Add<InsertBarrier>(image, initialState);
+                    renderQueue << InsertBarrier(image, initialState);
                 }
             }
 
@@ -253,15 +253,15 @@ struct RENDER_COMMAND(RenderTextureMipmapLevels)
                 pass->GetGraphicsPipeline()->SetPushConstants(&pushConstants, sizeof(pushConstants));
                 pass->Begin(frame, NullRenderSetup());
 
-                renderQueue.Add<BindDescriptorTable>(
+                renderQueue << BindDescriptorTable(
                     pass->GetGraphicsPipeline()->GetDescriptorTable(),
                     pass->GetGraphicsPipeline(),
                     ArrayMap<Name, ArrayMap<Name, uint32>> {},
                     frame->GetFrameIndex());
 
-                frame->renderQueue.Add<BindVertexBuffer>(pass->GetQuadMesh()->GetVertexBuffer());
-                frame->renderQueue.Add<BindIndexBuffer>(pass->GetQuadMesh()->GetIndexBuffer());
-                frame->renderQueue.Add<DrawIndexed>(pass->GetQuadMesh()->NumIndices());
+                frame->renderQueue << BindVertexBuffer(pass->GetQuadMesh()->GetVertexBuffer());
+                frame->renderQueue << BindIndexBuffer(pass->GetQuadMesh()->GetIndexBuffer());
+                frame->renderQueue << DrawIndexed(pass->GetQuadMesh()->NumIndices());
 
                 pass->End(frame, NullRenderSetup());
             }
@@ -269,21 +269,21 @@ struct RENDER_COMMAND(RenderTextureMipmapLevels)
             const ImageRef& srcImage = pass->GetAttachment(0)->GetImage();
 
             // Blit into mip level
-            renderQueue.Add<InsertBarrier>(dstImage, RS_COPY_DST, ImageSubResource { .baseMipLevel = mipLevel });
-            renderQueue.Add<InsertBarrier>(srcImage, RS_COPY_SRC, ImageSubResource { .baseMipLevel = mipLevel });
+            renderQueue << InsertBarrier(dstImage, RS_COPY_DST, ImageSubResource { .baseMipLevel = mipLevel });
+            renderQueue << InsertBarrier(srcImage, RS_COPY_SRC, ImageSubResource { .baseMipLevel = mipLevel });
 
-            renderQueue.Add<BlitRect>(
+            renderQueue << BlitRect(
                 srcImage,
                 dstImage,
                 Rect<uint32> { 0, 0, srcImage->GetExtent().x, srcImage->GetExtent().y },
                 Rect<uint32> { 0, 0, dstImage->GetExtent().x, dstImage->GetExtent().y });
 
-            renderQueue.Add<InsertBarrier>(srcImage, RS_SHADER_RESOURCE, ImageSubResource { .baseMipLevel = mipLevel });
-            renderQueue.Add<InsertBarrier>(dstImage, RS_SHADER_RESOURCE, ImageSubResource { .baseMipLevel = mipLevel });
+            renderQueue << InsertBarrier(srcImage, RS_SHADER_RESOURCE, ImageSubResource { .baseMipLevel = mipLevel });
+            renderQueue << InsertBarrier(dstImage, RS_SHADER_RESOURCE, ImageSubResource { .baseMipLevel = mipLevel });
         }
 
         // all mip levels have been transitioned into this state
-        renderQueue.Add<InsertBarrier>(dstImage, RS_SHADER_RESOURCE);
+        renderQueue << InsertBarrier(dstImage, RS_SHADER_RESOURCE);
 
         return {};
     }
@@ -459,13 +459,13 @@ void RenderTexture::EnqueueReadback(Proc<void(TResult<ByteBuffer>&&)>&& onComple
                 {
                     const ResourceState previousResourceState = m_image->GetResourceState();
 
-                    renderQueue.Add<InsertBarrier>(m_image, RS_COPY_SRC);
-                    renderQueue.Add<InsertBarrier>(gpuBuffer, RS_COPY_DST);
+                    renderQueue << InsertBarrier(m_image, RS_COPY_SRC);
+                    renderQueue << InsertBarrier(gpuBuffer, RS_COPY_DST);
 
-                    renderQueue.Add<CopyImageToBuffer>(m_image, gpuBuffer);
+                    renderQueue << CopyImageToBuffer(m_image, gpuBuffer);
 
-                    renderQueue.Add<InsertBarrier>(gpuBuffer, RS_COPY_SRC);
-                    renderQueue.Add<InsertBarrier>(m_image, previousResourceState);
+                    renderQueue << InsertBarrier(gpuBuffer, RS_COPY_SRC);
+                    renderQueue << InsertBarrier(m_image, previousResourceState);
                 });
 
             RendererResult result = singleTimeCommands->Execute();
@@ -507,13 +507,13 @@ RendererResult RenderTexture::Readback(ByteBuffer& outByteBuffer)
         {
             const ResourceState previousResourceState = m_image->GetResourceState();
 
-            renderQueue.Add<InsertBarrier>(m_image, RS_COPY_SRC);
-            renderQueue.Add<InsertBarrier>(gpuBuffer, RS_COPY_DST);
+            renderQueue << InsertBarrier(m_image, RS_COPY_SRC);
+            renderQueue << InsertBarrier(gpuBuffer, RS_COPY_DST);
 
-            renderQueue.Add<CopyImageToBuffer>(m_image, gpuBuffer);
+            renderQueue << CopyImageToBuffer(m_image, gpuBuffer);
 
-            renderQueue.Add<InsertBarrier>(gpuBuffer, RS_COPY_SRC);
-            renderQueue.Add<InsertBarrier>(m_image, previousResourceState);
+            renderQueue << InsertBarrier(gpuBuffer, RS_COPY_SRC);
+            renderQueue << InsertBarrier(m_image, previousResourceState);
         });
 
     RendererResult result = singleTimeCommands->Execute();

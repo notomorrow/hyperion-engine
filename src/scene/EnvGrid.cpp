@@ -531,6 +531,16 @@ void EnvGrid::Update(float delta)
     {
         return;
     }
+    
+    for (uint32 index = 0; index < m_envProbeCollection.numProbes; index++)
+    {
+        const Handle<EnvProbe>& probe = m_envProbeCollection.GetEnvProbeDirect(index);
+        Assert(probe.IsValid());
+        
+        // so Collect() on our view updates the EnvProbe's RenderProxy
+        probe->SetNeedsRenderProxyUpdate();
+        probe->SetNeedsRender(true);
+    }
 
     m_camera->Update(delta);
 
@@ -539,7 +549,7 @@ void EnvGrid::Update(float delta)
 
     HYP_LOG(EnvGrid, Debug, "View::Collect() for EnvGrid {}", Id());
 
-    // Make sure all our probes were collected - if this doesn't match up, down the line when we try to receive resource binding indices they wouldn't be found
+    // Make sure all our probes were collected - if this doesn't match up, down the line when we try to retrieve resource binding indices, they wouldn't be found
     RenderProxyList& rpl = RenderApi_GetProducerProxyList(m_view);
     AssertDebug(rpl.envProbes.NumCurrent() >= m_envProbeCollection.numProbes,
         "View only collected {} EnvProbes but EnvGrid {} has {} EnvProbes",
@@ -549,15 +559,6 @@ void EnvGrid::Update(float delta)
 
     HYP_LOG(EnvGrid, Debug, "Updating EnvGrid {} with {} probes\t Found {} meshes", Id(), m_envProbeCollection.numProbes,
         RenderApi_GetProducerProxyList(m_view).meshes.NumCurrent());
-
-    for (uint32 index = 0; index < m_envProbeCollection.numProbes; index++)
-    {
-        const Handle<EnvProbe>& probe = m_envProbeCollection.GetEnvProbeDirect(index);
-        Assert(probe.IsValid());
-
-        probe->SetNeedsRender(true);
-        probe->SetReceivesUpdate(true);
-    }
 }
 
 void EnvGrid::UpdateRenderProxy(IRenderProxy* proxy)

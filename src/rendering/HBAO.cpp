@@ -162,7 +162,7 @@ void HBAO::Render(FrameBase* frame, const RenderSetup& renderSetup)
 
     Begin(frame, renderSetup);
 
-    frame->renderQueue.Add<BindDescriptorTable>(
+    frame->renderQueue << BindDescriptorTable(
         m_graphicsPipeline->GetDescriptorTable(),
         m_graphicsPipeline,
         ArrayMap<Name, ArrayMap<Name, uint32>> {
@@ -178,16 +178,16 @@ void HBAO::Render(FrameBase* frame, const RenderSetup& renderSetup)
         Assert(renderSetup.HasView());
         Assert(renderSetup.passData != nullptr);
 
-        frame->renderQueue.Add<BindDescriptorSet>(
+        frame->renderQueue << BindDescriptorSet(
             renderSetup.passData->descriptorSets[frame->GetFrameIndex()],
             m_graphicsPipeline,
             ArrayMap<Name, uint32> {},
             viewDescriptorSetIndex);
     }
 
-    frame->renderQueue.Add<BindVertexBuffer>(m_fullScreenQuad->GetVertexBuffer());
-    frame->renderQueue.Add<BindIndexBuffer>(m_fullScreenQuad->GetIndexBuffer());
-    frame->renderQueue.Add<DrawIndexed>(m_fullScreenQuad->NumIndices());
+    frame->renderQueue << BindVertexBuffer(m_fullScreenQuad->GetVertexBuffer());
+    frame->renderQueue << BindIndexBuffer(m_fullScreenQuad->GetIndexBuffer());
+    frame->renderQueue << DrawIndexed(m_fullScreenQuad->NumIndices());
 
     End(frame, renderSetup);
 }

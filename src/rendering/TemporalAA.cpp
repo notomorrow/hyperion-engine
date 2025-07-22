@@ -152,7 +152,7 @@ void TemporalAA::Render(FrameBase* frame, const RenderSetup& renderSetup)
         ? m_resultTexture->GetRenderResource().GetImage()
         : m_historyTexture->GetRenderResource().GetImage();
 
-    frame->renderQueue.Add<InsertBarrier>(activeImage, RS_UNORDERED_ACCESS);
+    frame->renderQueue << InsertBarrier(activeImage, RS_UNORDERED_ACCESS);
 
     struct
     {
@@ -172,16 +172,16 @@ void TemporalAA::Render(FrameBase* frame, const RenderSetup& renderSetup)
 
     m_computeTaa->SetPushConstants(&pushConstants, sizeof(pushConstants));
 
-    frame->renderQueue.Add<BindComputePipeline>(m_computeTaa);
+    frame->renderQueue << BindComputePipeline(m_computeTaa);
 
-    frame->renderQueue.Add<BindDescriptorTable>(
+    frame->renderQueue << BindDescriptorTable(
         m_computeTaa->GetDescriptorTable(),
         m_computeTaa,
         ArrayMap<Name, ArrayMap<Name, uint32>> {},
         frameIndex);
 
-    frame->renderQueue.Add<DispatchCompute>(m_computeTaa, Vec3u { (m_extent.x + 7) / 8, (m_extent.y + 7) / 8, 1 });
-    frame->renderQueue.Add<InsertBarrier>(activeImage, RS_SHADER_RESOURCE);
+    frame->renderQueue << DispatchCompute(m_computeTaa, Vec3u { (m_extent.x + 7) / 8, (m_extent.y + 7) / 8, 1 });
+    frame->renderQueue << InsertBarrier(activeImage, RS_SHADER_RESOURCE);
 }
 
 } // namespace hyperion

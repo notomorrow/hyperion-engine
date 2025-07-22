@@ -144,6 +144,7 @@ struct HYP_API RenderProxyList
     void EndWrite()
     {
         AssertDebug(state == CS_WRITING);
+
         state = CS_WRITTEN;
 
         rwMarker.BitAnd(~writeFlag, MemoryOrder::RELEASE);
@@ -321,15 +322,13 @@ static inline void UpdateRefs(T& renderProxyList)
 
                 if (!pProxy)
                 {
-                    ProxyType newProxy;
-                    pProxy = resourceTracker.SetProxy(ObjId<ElementType>(resource->Id()), std::move(newProxy));
+                    pProxy = resourceTracker.SetProxy(ObjId<ElementType>(resource->Id()), ProxyType());
                 }
 
                 AssertDebug(pProxy != nullptr);
 
                 if (shouldUpdateRenderProxy)
                 {
-                    HYP_LOG_TEMP("Update RenderProxy for {}", resource->Id());
                     static_cast<RenderProxyable*>(resource)->UpdateRenderProxy(pProxy);
                 }
             }
@@ -357,8 +356,6 @@ static inline void UpdateRefs(T& renderProxyList)
                     ElementType** ppResource = resourceTracker.GetElement(id);
                     AssertDebug(ppResource && *ppResource);
 
-                    HYP_LOG_TEMP("Update RenderProxy for {}", id);
-
                     ElementType& resource = **ppResource;
 
                     ProxyType* pProxy = resourceTracker.GetProxy(id);
@@ -370,7 +367,7 @@ static inline void UpdateRefs(T& renderProxyList)
         }
     };
 
-    // impl(renderProxyList.meshes);
+    impl(renderProxyList.meshes);
     impl(renderProxyList.lights);
     impl(renderProxyList.materials);
     impl(renderProxyList.skeletons);

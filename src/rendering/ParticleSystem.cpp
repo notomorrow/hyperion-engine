@@ -347,7 +347,7 @@ void ParticleSystem::UpdateParticles(FrameBase* frame, const RenderSetup& render
         return;
     }
 
-    frame->renderQueue.Add<InsertBarrier>(m_stagingBuffer, RS_COPY_SRC);
+    frame->renderQueue << InsertBarrier(m_stagingBuffer, RS_COPY_SRC);
 
     for (auto& spawner : m_particleSpawners)
     {
@@ -356,17 +356,17 @@ void ParticleSystem::UpdateParticles(FrameBase* frame, const RenderSetup& render
         Assert(spawner->GetIndirectBuffer()->Size() == sizeof(IndirectDrawCommand));
         Assert(spawner->GetParticleBuffer()->Size() >= sizeof(ParticleShaderData) * maxParticles);
 
-        frame->renderQueue.Add<InsertBarrier>(
+        frame->renderQueue << InsertBarrier(
             spawner->GetIndirectBuffer(),
             RS_COPY_DST);
 
         // copy zeros to buffer (to reset instance count)
-        frame->renderQueue.Add<CopyBuffer>(
+        frame->renderQueue << CopyBuffer(
             m_stagingBuffer,
             spawner->GetIndirectBuffer(),
             sizeof(IndirectDrawCommand));
 
-        frame->renderQueue.Add<InsertBarrier>(
+        frame->renderQueue << InsertBarrier(
             spawner->GetIndirectBuffer(),
             RS_INDIRECT_ARG);
 
@@ -398,9 +398,9 @@ void ParticleSystem::UpdateParticles(FrameBase* frame, const RenderSetup& render
 
         spawner->GetComputePipeline()->SetPushConstants(&pushConstants, sizeof(pushConstants));
 
-        frame->renderQueue.Add<BindComputePipeline>(spawner->GetComputePipeline());
+        frame->renderQueue << BindComputePipeline(spawner->GetComputePipeline());
 
-        frame->renderQueue.Add<BindDescriptorTable>(
+        frame->renderQueue << BindDescriptorTable(
             spawner->GetComputePipeline()->GetDescriptorTable(),
             spawner->GetComputePipeline(),
             ArrayMap<Name, ArrayMap<Name, uint32>> {
@@ -415,18 +415,18 @@ void ParticleSystem::UpdateParticles(FrameBase* frame, const RenderSetup& render
         {
             Assert(renderSetup.passData != nullptr);
 
-            frame->renderQueue.Add<BindDescriptorSet>(
+            frame->renderQueue << BindDescriptorSet(
                 renderSetup.passData->descriptorSets[frame->GetFrameIndex()],
                 spawner->GetComputePipeline(),
                 ArrayMap<Name, uint32> {},
                 viewDescriptorSetIndex);
         }
 
-        frame->renderQueue.Add<DispatchCompute>(
+        frame->renderQueue << DispatchCompute(
             spawner->GetComputePipeline(),
             Vec3u { uint32((maxParticles + 255) / 256), 1, 1 });
 
-        frame->renderQueue.Add<InsertBarrier>(
+        frame->renderQueue << InsertBarrier(
             spawner->GetIndirectBuffer(),
             RS_INDIRECT_ARG);
     }
@@ -456,9 +456,9 @@ void ParticleSystem::Render(FrameBase* frame, const RenderSetup& renderSetup)
     {
         const GraphicsPipelineRef& graphicsPipeline = particleSpawner->GetGraphicsPipeline();
 
-        frame->renderQueue.Add<BindGraphicsPipeline>(graphicsPipeline);
+        frame->renderQueue << BindGraphicsPipeline(graphicsPipeline);
 
-        frame->renderQueue.Add<BindDescriptorTable>(
+        frame->renderQueue << BindDescriptorTable(
             graphicsPipeline->GetDescriptorTable(),
             graphicsPipeline,
             ArrayMap<Name, ArrayMap<Name, uint32>> {
@@ -473,16 +473,16 @@ void ParticleSystem::Render(FrameBase* frame, const RenderSetup& renderSetup)
         {
             Assert(renderSetup.passData != nullptr);
 
-            frame->renderQueue.Add<BindDescriptorSet>(
+            frame->renderQueue << BindDescriptorSet(
                 renderSetup.passData->descriptorSets[frameIndex],
                 graphicsPipeline,
                 ArrayMap<Name, uint32> {},
                 viewDescriptorSetIndex);
         }
 
-        frame->renderQueue.Add<BindVertexBuffer>(m_quadMesh->GetVertexBuffer());
-        frame->renderQueue.Add<BindIndexBuffer>(m_quadMesh->GetIndexBuffer());
-        frame->renderQueue.Add<DrawIndexedIndirect>(particleSpawner->GetIndirectBuffer(), 0);
+        frame->renderQueue << BindVertexBuffer(m_quadMesh->GetVertexBuffer());
+        frame->renderQueue << BindIndexBuffer(m_quadMesh->GetIndexBuffer());
+        frame->renderQueue << DrawIndexedIndirect(particleSpawner->GetIndirectBuffer(), 0);
     }
 }
 

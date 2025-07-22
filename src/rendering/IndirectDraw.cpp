@@ -78,12 +78,12 @@ static bool ResizeIndirectDrawCommandsBuffer(
     // set all to zero
     stagingBuffer->Memset(stagingBuffer->Size(), 0);
 
-    frame->renderQueue.Add<InsertBarrier>(stagingBuffer, RS_COPY_SRC);
-    frame->renderQueue.Add<InsertBarrier>(indirectBuffer, RS_COPY_DST);
+    frame->renderQueue << InsertBarrier(stagingBuffer, RS_COPY_SRC);
+    frame->renderQueue << InsertBarrier(indirectBuffer, RS_COPY_DST);
 
-    frame->renderQueue.Add<CopyBuffer>(stagingBuffer, indirectBuffer, stagingBuffer->Size());
+    frame->renderQueue << CopyBuffer(stagingBuffer, indirectBuffer, stagingBuffer->Size());
 
-    frame->renderQueue.Add<InsertBarrier>(indirectBuffer, RS_INDIRECT_ARG);
+    frame->renderQueue << InsertBarrier(indirectBuffer, RS_INDIRECT_ARG);
 
     return true;
 }
@@ -264,12 +264,12 @@ void IndirectDrawState::UpdateBufferData(FrameBase* frame, bool* outWasResized)
 
         m_stagingBuffers[frameIndex]->Copy(m_drawCommandsBuffer.Size(), m_drawCommandsBuffer.Data());
 
-        frame->renderQueue.Add<InsertBarrier>(m_stagingBuffers[frameIndex], RS_COPY_SRC);
-        frame->renderQueue.Add<InsertBarrier>(m_indirectBuffers[frameIndex], RS_COPY_DST);
+        frame->renderQueue << InsertBarrier(m_stagingBuffers[frameIndex], RS_COPY_SRC);
+        frame->renderQueue << InsertBarrier(m_indirectBuffers[frameIndex], RS_COPY_DST);
 
-        frame->renderQueue.Add<CopyBuffer>(m_stagingBuffers[frameIndex], m_indirectBuffers[frameIndex], m_stagingBuffers[frameIndex]->Size());
+        frame->renderQueue << CopyBuffer(m_stagingBuffers[frameIndex], m_indirectBuffers[frameIndex], m_stagingBuffers[frameIndex]->Size());
 
-        frame->renderQueue.Add<InsertBarrier>(m_indirectBuffers[frameIndex], RS_INDIRECT_ARG);
+        frame->renderQueue << InsertBarrier(m_indirectBuffers[frameIndex], RS_INDIRECT_ARG);
     }
 
     Assert(m_instanceBuffers[frameIndex]->Size() >= m_objectInstances.Size() * sizeof(ObjectInstance));
@@ -427,7 +427,7 @@ void IndirectRenderer::ExecuteCullShaderInBatches(FrameBase* frame, const Render
     //     m_cachedCullDataUpdatedBits &= ~(1u << frameIndex);
     // }
 
-    frame->renderQueue.Add<BindDescriptorTable>(
+    frame->renderQueue << BindDescriptorTable(
         m_objectVisibility->GetDescriptorTable(),
         m_objectVisibility,
         ArrayMap<Name, ArrayMap<Name, uint32>> {
@@ -440,14 +440,14 @@ void IndirectRenderer::ExecuteCullShaderInBatches(FrameBase* frame, const Render
 
     if (viewDescriptorSetIndex != ~0u)
     {
-        frame->renderQueue.Add<BindDescriptorSet>(
+        frame->renderQueue << BindDescriptorSet(
             renderSetup.passData->descriptorSets[frameIndex],
             m_objectVisibility,
             ArrayMap<Name, uint32> {},
             viewDescriptorSetIndex);
     }
 
-    frame->renderQueue.Add<InsertBarrier>(m_indirectDrawState.GetIndirectBuffer(frameIndex), RS_INDIRECT_ARG);
+    frame->renderQueue << InsertBarrier(m_indirectDrawState.GetIndirectBuffer(frameIndex), RS_INDIRECT_ARG);
 
     struct
     {
@@ -466,10 +466,10 @@ void IndirectRenderer::ExecuteCullShaderInBatches(FrameBase* frame, const Render
 
     m_objectVisibility->SetPushConstants(&pushConstants, sizeof(pushConstants));
 
-    frame->renderQueue.Add<BindComputePipeline>(m_objectVisibility);
+    frame->renderQueue << BindComputePipeline(m_objectVisibility);
 
-    frame->renderQueue.Add<DispatchCompute>(m_objectVisibility, Vec3u { numBatches, 1, 1 });
-    frame->renderQueue.Add<InsertBarrier>(m_indirectDrawState.GetIndirectBuffer(frameIndex), RS_INDIRECT_ARG);
+    frame->renderQueue << DispatchCompute(m_objectVisibility, Vec3u { numBatches, 1, 1 });
+    frame->renderQueue << InsertBarrier(m_indirectDrawState.GetIndirectBuffer(frameIndex), RS_INDIRECT_ARG);
 }
 
 void IndirectRenderer::RebuildDescriptors(FrameBase* frame)

@@ -361,6 +361,7 @@ struct ResourceSubtypeData final
 
     // == optional render proxy data ==
     SparsePagedArray<IRenderProxy*, 256> proxies;
+    SparsePagedArray<int, 256> proxyVersions;
     bool hasProxyData : 1;
 
     template <class ResourceType, class ProxyType>
@@ -391,13 +392,7 @@ struct ResourceSubtypeData final
     ResourceSubtypeData(ResourceSubtypeData&& other) noexcept = default;
     ResourceSubtypeData& operator=(ResourceSubtypeData&& other) noexcept = default;
 
-    ~ResourceSubtypeData()
-    {
-        if (hasProxyData)
-        {
-            proxies.Clear();
-        }
-    }
+    ~ResourceSubtypeData() = default;
 
     HYP_FORCE_INLINE void SetGpuElem(uint32 idx, IRenderProxy* proxy)
     {
@@ -653,34 +648,69 @@ static ViewFrameData* GetViewFrameData(View* view, uint32 slot)
     return vfd;
 }
 
+/// Conditionally copy RenderProxy data to global state, if proxyVersion is greater than the current held version.
 template <class ElementType, class ProxyType>
 static inline void CopyRenderProxy(ResourceSubtypeData& subtypeData, const ObjId<ElementType>& id, ProxyType* pNewProxy)
 {
     AssertDebug(pNewProxy != nullptr);
 
     const uint32 idx = id.ToIndex();
-
+    
     subtypeData.proxies.Set(idx, static_cast<IRenderProxy*>(pNewProxy));
     subtypeData.indicesPendingUpdate.Set(idx, true);
+}
+
+
+
+template <class ElementType, class ProxyType>
+static inline void SyncResourcesImpl(ResourceTracker<ObjId<ElementType>, ElementType*, ProxyType>& resourceTracker, typename ResourceTracker<ObjId<ElementType>, ElementType*, ProxyType>::Impl& impl)
+{
+    if (impl.elements.Empty())
+    {
+        return;
+    }
+    
+    for (Bitset::BitIndex i : impl.next)
+    {
+        ElementType* elem = impl.elements.Get(i);
+        const int version = impl.versions.Get(i);
+        
+        const ObjId<ElementType> id = elem->Id();
+        
+        resourceTracker.Track(id, elem, &version);
+    }
 }
 
 template <class ElementType, class ProxyType>
 static inline void SyncResources(ResourceTracker<ObjId<ElementType>, ElementType*, ProxyType>& lhs, ResourceTracker<ObjId<ElementType>, ElementType*, ProxyType>& rhs)
 {
     lhs.Advance();
-
-    /// TODO: Preallocate these arrays
-    Array<ElementType**> removed;
-    GetRemovedElements(lhs, rhs, removed);
-
-    Array<ElementType**> added;
-    GetAddedElements(lhs, rhs, added);
-
-    for (ElementType** ppResource : added)
+    
+    SyncResourcesImpl(lhs, rhs.GetSubclassImpl(-1));
+    
+    for (Bitset::BitIndex subclassIndex : rhs.GetSubclassIndices())
     {
-        AssertDebug(*ppResource != nullptr);
+        SyncResourcesImpl(lhs, rhs.GetSubclassImpl(int(subclassIndex)));
+    }
+    
+    auto diff = lhs.GetDiff();
+    
+    if (!diff.NeedsUpdate())
+    {
+        return;
+    }
+    
+    Array<ElementType*> removed;
+    lhs.GetRemoved(removed, false);
 
-        ElementType& resource = **ppResource;
+    Array<ElementType*> added;
+    lhs.GetAdded(added, false);
+
+    for (ElementType* pResource : added)
+    {
+        AssertDebug(pResource != nullptr);
+
+        ElementType& resource = *pResource;
 
         const ObjId<ElementType> resourceId = resource.Id();
         AssertDebug(resourceId.IsValid());
@@ -697,25 +727,27 @@ static inline void SyncResources(ResourceTracker<ObjId<ElementType>, ElementType
 
         ++rd->useCount;
 
-        lhs.Track(resourceId, &resource);
-
         if constexpr (!std::is_same_v<ProxyType, NullProxy>)
         {
-            const ProxyType* pProxy = rhs.GetProxy(resourceId);
-            AssertDebug(pProxy != nullptr);
+            ProxyType* proxy = rhs.GetProxy(resourceId);
+            AssertDebug(proxy != nullptr);
+            
+            if (!proxy)
+            {
+                continue;
+            }
+            
+            lhs.SetProxy(resourceId, *proxy);
 
-            ProxyType* pNewProxy = lhs.SetProxy(resourceId, ProxyType(*pProxy));
-            AssertDebug(pNewProxy != nullptr);
-
-            CopyRenderProxy(subtypeData, resourceId, pNewProxy);
+            CopyRenderProxy(subtypeData, resourceId, proxy);
         }
     }
 
-    for (ElementType** ppResource : removed)
+    for (ElementType* pResource : removed)
     {
-        AssertDebug(*ppResource != nullptr);
+        AssertDebug(pResource != nullptr);
 
-        ElementType& resource = **ppResource;
+        ElementType& resource = *pResource;
 
         const ObjId<ElementType> resourceId = resource.Id();
         AssertDebug(resourceId.IsValid());
@@ -741,36 +773,35 @@ static inline void SyncResources(ResourceTracker<ObjId<ElementType>, ElementType
 
     if constexpr (!std::is_same_v<ProxyType, NullProxy>)
     {
-        rhs.GetChanged(changedIds);
+        lhs.GetChanged(changedIds);
 
         if (changedIds.Any())
         {
-            for (const ObjId<ElementType>& id : changedIds)
+            for (const ObjId<ElementType>& resourceId : changedIds)
             {
-                const ProxyType* pProxy = rhs.GetProxy(id);
-                AssertDebug(pProxy != nullptr);
+                ProxyType* proxy = rhs.GetProxy(resourceId);
+                AssertDebug(proxy != nullptr);
 
-                if (!pProxy)
+                if (!proxy)
                 {
                     continue;
                 }
+                
+                lhs.SetProxy(resourceId, *proxy);
 
-                ResourceSubtypeData& subtypeData = g_resources.GetSubtypeData(id.GetTypeId());
+                ResourceSubtypeData& subtypeData = g_resources.GetSubtypeData(resourceId.GetTypeId());
 
-                ProxyType* pNewProxy = lhs.SetProxy(id, ProxyType(*pProxy));
-                AssertDebug(pNewProxy != nullptr);
-
-                CopyRenderProxy(subtypeData, id, pNewProxy);
+                CopyRenderProxy(subtypeData, resourceId, proxy);
             }
         }
     }
 
-    // if (added.Any() || removed.Any() || changedIds.Any())
-    // {
-    //     HYP_LOG_TEMP("Updated resources for {}: added={}, removed={}, changed={}",
-    //         TypeNameWithoutNamespace<ElementType>().Data(),
-    //         added.Size(), removed.Size(), changedIds.Size());
-    // }
+     if (added.Any() || removed.Any() || changedIds.Any())
+     {
+         HYP_LOG_TEMP("Updated resources for {}: added={}, removed={}, changed={}",
+             TypeNameWithoutNamespace<ElementType>().Data(),
+             added.Size(), removed.Size(), changedIds.Size());
+     }
 }
 
 static void CopyDependencies(ViewData& vd, RenderProxyList& rpl)
@@ -991,24 +1022,24 @@ HYP_API void RenderApi_BeginFrame_RenderThread()
     g_renderGlobalState->resourceBindings->textureBinder.ApplyUpdates();
     g_renderGlobalState->resourceBindings->skeletonBinder.ApplyUpdates();
 
-    HYP_LOG(Rendering, Debug, "Mesh entities: {} bound",
-        g_renderGlobalState->resourceBindings->meshEntityBinder.TotalBoundResources());
-    HYP_LOG(Rendering, Debug, "Ambient probes: {} bound",
-        g_renderGlobalState->resourceBindings->ambientProbeBinder.TotalBoundResources());
-    HYP_LOG(Rendering, Debug, "Reflection probes: {} bound",
-        g_renderGlobalState->resourceBindings->reflectionProbeBinder.TotalBoundResources());
-    HYP_LOG(Rendering, Debug, "Env grids: {} bound",
-        g_renderGlobalState->resourceBindings->envGridBinder.TotalBoundResources());
-    HYP_LOG(
-        Rendering, Debug, "Lights: {} bound", g_renderGlobalState->resourceBindings->lightBinder.TotalBoundResources());
-    HYP_LOG(Rendering, Debug, "Lightmap volumes: {} bound",
-        g_renderGlobalState->resourceBindings->lightmapVolumeBinder.TotalBoundResources());
-    HYP_LOG(Rendering, Debug, "Materials: {} bound",
-        g_renderGlobalState->resourceBindings->materialBinder.TotalBoundResources());
-    HYP_LOG(Rendering, Debug, "Textures: {} bound",
-        g_renderGlobalState->resourceBindings->textureBinder.TotalBoundResources());
-    HYP_LOG(Rendering, Debug, "Skeletons: {} bound",
-        g_renderGlobalState->resourceBindings->skeletonBinder.TotalBoundResources());
+//    HYP_LOG(Rendering, Debug, "Mesh entities: {} bound",
+//        g_renderGlobalState->resourceBindings->meshEntityBinder.TotalBoundResources());
+//    HYP_LOG(Rendering, Debug, "Ambient probes: {} bound",
+//        g_renderGlobalState->resourceBindings->ambientProbeBinder.TotalBoundResources());
+//    HYP_LOG(Rendering, Debug, "Reflection probes: {} bound",
+//        g_renderGlobalState->resourceBindings->reflectionProbeBinder.TotalBoundResources());
+//    HYP_LOG(Rendering, Debug, "Env grids: {} bound",
+//        g_renderGlobalState->resourceBindings->envGridBinder.TotalBoundResources());
+//    HYP_LOG(
+//        Rendering, Debug, "Lights: {} bound", g_renderGlobalState->resourceBindings->lightBinder.TotalBoundResources());
+//    HYP_LOG(Rendering, Debug, "Lightmap volumes: {} bound",
+//        g_renderGlobalState->resourceBindings->lightmapVolumeBinder.TotalBoundResources());
+//    HYP_LOG(Rendering, Debug, "Materials: {} bound",
+//        g_renderGlobalState->resourceBindings->materialBinder.TotalBoundResources());
+//    HYP_LOG(Rendering, Debug, "Textures: {} bound",
+//        g_renderGlobalState->resourceBindings->textureBinder.TotalBoundResources());
+//    HYP_LOG(Rendering, Debug, "Skeletons: {} bound",
+//        g_renderGlobalState->resourceBindings->skeletonBinder.TotalBoundResources());
 
     // Build draw call lists
 
@@ -1022,6 +1053,15 @@ HYP_API void RenderApi_BeginFrame_RenderThread()
 
         if (vfd.rplShared->TEMP_disableBuildRenderCollection || (vfd.view->GetFlags() & ViewFlags::NO_GFX))
         {
+//                        vd.rplRender.meshes.Advance();
+//                        vd.rplRender.textures.Advance();
+//                        vd.rplRender.materials.Advance();
+//                        vd.rplRender.envProbes.Advance();
+//                        vd.rplRender.envGrids.Advance();
+//                        vd.rplRender.lights.Advance();
+//                        vd.rplRender.lightmapVolumes.Advance();
+//                        vd.rplRender.skeletons.Advance();
+
             continue;
         }
 
@@ -1033,6 +1073,15 @@ HYP_API void RenderApi_BeginFrame_RenderThread()
         vd.renderCollector.BuildDrawCalls(0);
 
         vd.rplRender.state = RenderProxyList::CS_DONE;
+
+//                vd.rplRender.meshes.Advance();
+//                vd.rplRender.textures.Advance();
+//                vd.rplRender.materials.Advance();
+//                vd.rplRender.envProbes.Advance();
+//                vd.rplRender.envGrids.Advance();
+//                vd.rplRender.lights.Advance();
+//                vd.rplRender.lightmapVolumes.Advance();
+//                vd.rplRender.skeletons.Advance();
     }
 
     for (ResourceSubtypeData& subtypeData : g_resources.dataByType)
@@ -1162,6 +1211,7 @@ HYP_API void RenderApi_EndFrame_RenderThread()
                     resource.Id(), i, slot);
 
                 subtypeData.proxies.EraseAt(i);
+                subtypeData.proxyVersions.EraseAt(i);
             }
 
             // safely release all the held resources:

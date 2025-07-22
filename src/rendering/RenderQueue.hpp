@@ -2,8 +2,6 @@
 
 #pragma once
 
-#include <core/memory/MemoryPool.hpp>
-
 #include <core/utilities/ValueStorage.hpp>
 #include <core/utilities/Variant.hpp>
 
@@ -31,100 +29,21 @@ namespace hyperion {
 
 class CmdBase;
 
-class CmdMemoryPoolBase
-{
-public:
-    virtual ~CmdMemoryPoolBase() = default;
-
-    virtual void FreeCommand(CmdBase* command) = 0;
-};
-
-struct CmdPoolHandle
-{
-    CmdMemoryPoolBase* pool;
-    uint32 index;
-};
-
 class CmdBase
 {
 public:
-    friend class RenderQueue;
-
-    template <class T>
-    friend class CmdMemoryPool;
-
     CmdBase() = default;
     CmdBase(const CmdBase& other) = delete;
     CmdBase& operator=(const CmdBase& other) = delete;
     CmdBase(CmdBase&& other) noexcept = default;
     CmdBase& operator=(CmdBase&& other) noexcept = default;
-    virtual ~CmdBase() = default;
 
-    virtual void Prepare(FrameBase* frame)
+    static inline void PrepareStatic(CmdBase* cmd, FrameBase* frame)
     {
     }
 
-    virtual void Execute(const CommandBufferRef& cmd) = 0;
-
-private:
-    CmdPoolHandle m_poolHandle;
-
-#ifdef HYP_RHI_COMMAND_STACK_TRACE
-    char* m_stackTrace = "";
-#endif
-};
-
-template <class CmdType>
-class CmdMemoryPool final : public MemoryPool<ValueStorage<CmdType>>, CmdMemoryPoolBase
-{
-public:
-    static CmdMemoryPool<CmdType>& GetInstance()
-    {
-        static CmdMemoryPool<CmdType> instance;
-
-        return instance;
-    }
-
-    virtual ~CmdMemoryPool() override = default;
-
-    template <class... Args>
-    CmdType* NewCommand(Args&&... args)
-    {
-        ValueStorage<CmdType>* commandStorage;
-
-        const uint32 index = MemoryPool<ValueStorage<CmdType>>::AcquireIndex(&commandStorage);
-
-        commandStorage->Construct(std::forward<Args>(args)...);
-        commandStorage->Get().m_poolHandle = { static_cast<CmdMemoryPoolBase*>(this), index };
-
-#ifdef HYP_RHI_COMMAND_STACK_TRACE
-        // Allocate string and copy stack trace (creating stack trace is extremely SLOW, enable for debugging only!)
-        String dump = StackDump(10, 2).ToString();
-        commandStorage->Get().m_stackTrace = (char*)std::malloc(dump.Size() + 1);
-        std::strncpy(commandStorage->Get().m_stackTrace, dump.Data(), dump.Size());
-        commandStorage->Get().m_stackTrace[dump.Size()] = '\0';
-#endif
-
-        return &commandStorage->Get();
-    }
-
-    virtual void FreeCommand(CmdBase* command) override
-    {
-        AssertDebug(command != nullptr);
-        AssertDebug(command->m_poolHandle.pool == this);
-
-#ifdef HYP_RHI_COMMAND_STACK_TRACE
-        if (command->m_stackTrace != nullptr)
-        {
-            std::free(command->m_stackTrace);
-            command->m_stackTrace = nullptr;
-        }
-#endif
-
-        command->~CmdBase();
-
-        MemoryPool<ValueStorage<CmdType>>::ReleaseIndex(command->m_poolHandle.index);
-    }
+protected:
+    ~CmdBase() = default;
 };
 
 class BindVertexBuffer final : public CmdBase
@@ -135,9 +54,13 @@ public:
     {
     }
 
-    virtual void Execute(const CommandBufferRef& cmd) override
+    static inline void InvokeStatic(CmdBase* cmd, const CommandBufferRef& commandBuffer)
     {
-        cmd->BindVertexBuffer(m_buffer);
+        BindVertexBuffer* cmdCasted = static_cast<BindVertexBuffer*>(cmd);
+
+        commandBuffer->BindVertexBuffer(cmdCasted->m_buffer);
+
+        cmdCasted->~BindVertexBuffer();
     }
 
 private:
@@ -152,9 +75,13 @@ public:
     {
     }
 
-    virtual void Execute(const CommandBufferRef& cmd) override
+    static inline void InvokeStatic(CmdBase* cmd, const CommandBufferRef& commandBuffer)
     {
-        cmd->BindIndexBuffer(m_buffer);
+        BindIndexBuffer* cmdCasted = static_cast<BindIndexBuffer*>(cmd);
+
+        commandBuffer->BindIndexBuffer(cmdCasted->m_buffer);
+
+        cmdCasted->~BindIndexBuffer();
     }
 
 private:
@@ -171,9 +98,13 @@ public:
     {
     }
 
-    virtual void Execute(const CommandBufferRef& cmd) override
+    static inline void InvokeStatic(CmdBase* cmd, const CommandBufferRef& commandBuffer)
     {
-        cmd->DrawIndexed(m_numIndices, m_numInstances, m_instanceIndex);
+        DrawIndexed* cmdCasted = static_cast<DrawIndexed*>(cmd);
+
+        commandBuffer->DrawIndexed(cmdCasted->m_numIndices, cmdCasted->m_numInstances, cmdCasted->m_instanceIndex);
+
+        cmdCasted->~DrawIndexed();
     }
 
 private:
@@ -191,9 +122,13 @@ public:
     {
     }
 
-    virtual void Execute(const CommandBufferRef& cmd) override
+    static inline void InvokeStatic(CmdBase* cmd, const CommandBufferRef& commandBuffer)
     {
-        cmd->DrawIndexedIndirect(m_buffer, m_bufferOffset);
+        DrawIndexedIndirect* cmdCasted = static_cast<DrawIndexedIndirect*>(cmd);
+
+        commandBuffer->DrawIndexedIndirect(cmdCasted->m_buffer, cmdCasted->m_bufferOffset);
+
+        cmdCasted->~DrawIndexedIndirect();
     }
 
 private:
@@ -206,7 +141,7 @@ class BeginFramebuffer final : public CmdBase
 public:
 #ifdef HYP_DEBUG_MODE
     HYP_API BeginFramebuffer(const FramebufferRef& framebuffer);
-    HYP_API virtual void Prepare(FrameBase* frame) override;
+    HYP_API static void PrepareStatic(CmdBase* cmd, FrameBase* frame);
 #else
     BeginFramebuffer(const FramebufferRef& framebuffer)
         : m_framebuffer(framebuffer)
@@ -214,9 +149,13 @@ public:
     }
 #endif
 
-    virtual void Execute(const CommandBufferRef& cmd) override
+    static inline void InvokeStatic(CmdBase* cmd, const CommandBufferRef& commandBuffer)
     {
-        m_framebuffer->BeginCapture(cmd);
+        BeginFramebuffer* cmdCasted = static_cast<BeginFramebuffer*>(cmd);
+
+        cmdCasted->m_framebuffer->BeginCapture(commandBuffer);
+
+        cmdCasted->~BeginFramebuffer();
     }
 
 private:
@@ -228,7 +167,7 @@ class EndFramebuffer final : public CmdBase
 public:
 #ifdef HYP_DEBUG_MODE
     HYP_API EndFramebuffer(const FramebufferRef& framebuffer);
-    HYP_API virtual void Prepare(FrameBase* frame) override;
+    HYP_API static void PrepareStatic(CmdBase* cmd, FrameBase* frame);
 #else
     EndFramebuffer(const FramebufferRef& framebuffer)
         : m_framebuffer(framebuffer)
@@ -236,9 +175,13 @@ public:
     }
 #endif
 
-    virtual void Execute(const CommandBufferRef& cmd) override
+    static inline void InvokeStatic(CmdBase* cmd, const CommandBufferRef& commandBuffer)
     {
-        m_framebuffer->EndCapture(cmd);
+        EndFramebuffer* cmdCasted = static_cast<EndFramebuffer*>(cmd);
+
+        cmdCasted->m_framebuffer->EndCapture(commandBuffer);
+
+        cmdCasted->~EndFramebuffer();
     }
 
 private:
@@ -253,9 +196,13 @@ public:
     {
     }
 
-    virtual void Execute(const CommandBufferRef& cmd) override
+    static inline void InvokeStatic(CmdBase* cmd, const CommandBufferRef& commandBuffer)
     {
-        m_framebuffer->Clear(cmd);
+        ClearFramebuffer* cmdCasted = static_cast<ClearFramebuffer*>(cmd);
+
+        cmdCasted->m_framebuffer->Clear(commandBuffer);
+
+        cmdCasted->~ClearFramebuffer();
     }
 
 private:
@@ -282,16 +229,20 @@ public:
     }
 #endif
 
-    virtual void Execute(const CommandBufferRef& cmd) override
+    static inline void InvokeStatic(CmdBase* cmd, const CommandBufferRef& commandBuffer)
     {
-        if (m_viewportOffset != Vec2i(0, 0) || m_viewportExtent != Vec2u(0, 0))
+        BindGraphicsPipeline* cmdCasted = static_cast<BindGraphicsPipeline*>(cmd);
+
+        if (cmdCasted->m_viewportOffset != Vec2i(0, 0) || cmdCasted->m_viewportExtent != Vec2u(0, 0))
         {
-            m_pipeline->Bind(cmd, m_viewportOffset, m_viewportExtent);
+            cmdCasted->m_pipeline->Bind(commandBuffer, cmdCasted->m_viewportOffset, cmdCasted->m_viewportExtent);
         }
         else
         {
-            m_pipeline->Bind(cmd);
+            cmdCasted->m_pipeline->Bind(commandBuffer);
         }
+
+        cmdCasted->~BindGraphicsPipeline();
     }
 
 private:
@@ -308,9 +259,13 @@ public:
     {
     }
 
-    virtual void Execute(const CommandBufferRef& cmd) override
+    static inline void InvokeStatic(CmdBase* cmd, const CommandBufferRef& commandBuffer)
     {
-        m_pipeline->Bind(cmd);
+        BindComputePipeline* cmdCasted = static_cast<BindComputePipeline*>(cmd);
+
+        cmdCasted->m_pipeline->Bind(commandBuffer);
+
+        cmdCasted->~BindComputePipeline();
     }
 
 private:
@@ -325,9 +280,13 @@ public:
     {
     }
 
-    virtual void Execute(const CommandBufferRef& cmd) override
+    static inline void InvokeStatic(CmdBase* cmd, const CommandBufferRef& commandBuffer)
     {
-        m_pipeline->Bind(cmd);
+        BindRaytracingPipeline* cmdCasted = static_cast<BindRaytracingPipeline*>(cmd);
+
+        cmdCasted->m_pipeline->Bind(commandBuffer);
+
+        cmdCasted->~BindRaytracingPipeline();
     }
 
 private:
@@ -406,14 +365,18 @@ public:
         AssertDebug(m_bindIndex != ~0u, "Invalid bind index");
     }
 
-    HYP_API virtual void Prepare(FrameBase* frame) override;
+    HYP_API static void PrepareStatic(CmdBase* cmd, FrameBase* frame);
 
-    virtual void Execute(const CommandBufferRef& cmd) override
+    static inline void InvokeStatic(CmdBase* cmd, const CommandBufferRef& commandBuffer)
     {
-        m_pipeline.Visit([this, &cmd](const auto& pipeline)
+        BindDescriptorSet* cmdCasted = static_cast<BindDescriptorSet*>(cmd);
+
+        cmdCasted->m_pipeline.Visit([cmdCasted, &commandBuffer](const auto& pipeline)
             {
-                m_descriptorSet->Bind(cmd, pipeline, m_offsets, m_bindIndex);
+                cmdCasted->m_descriptorSet->Bind(commandBuffer, pipeline, cmdCasted->m_offsets, cmdCasted->m_bindIndex);
             });
+
+        cmdCasted->~BindDescriptorSet();
     }
 
 private:
@@ -453,14 +416,18 @@ public:
         AssertDebug(descriptorTable != nullptr, "Descriptor table must not be null");
     }
 
-    HYP_API virtual void Prepare(FrameBase* frame) override;
+    HYP_API static void PrepareStatic(CmdBase* cmd, FrameBase* frame);
 
-    virtual void Execute(const CommandBufferRef& cmd) override
+    static inline void InvokeStatic(CmdBase* cmd, const CommandBufferRef& commandBuffer)
     {
-        m_pipeline.Visit([this, &cmd](const auto& pipeline)
+        BindDescriptorTable* cmdCasted = static_cast<BindDescriptorTable*>(cmd);
+
+        cmdCasted->m_pipeline.Visit([cmdCasted, &commandBuffer](const auto& pipeline)
             {
-                m_descriptorTable->Bind(cmd, m_frameIndex, pipeline, m_offsets);
+                cmdCasted->m_descriptorTable->Bind(commandBuffer, cmdCasted->m_frameIndex, pipeline, cmdCasted->m_offsets);
             });
+
+        cmdCasted->~BindDescriptorTable();
     }
 
 private:
@@ -495,23 +462,27 @@ public:
     {
     }
 
-    virtual void Execute(const CommandBufferRef& cmd) override
+    static inline void InvokeStatic(CmdBase* cmd, const CommandBufferRef& commandBuffer)
     {
-        if (m_buffer)
+        InsertBarrier* cmdCasted = static_cast<InsertBarrier*>(cmd);
+
+        if (cmdCasted->m_buffer)
         {
-            m_buffer->InsertBarrier(cmd, m_state, m_shaderModuleType);
+            cmdCasted->m_buffer->InsertBarrier(commandBuffer, cmdCasted->m_state, cmdCasted->m_shaderModuleType);
         }
-        else if (m_image)
+        else if (cmdCasted->m_image)
         {
-            if (m_subResource)
+            if (cmdCasted->m_subResource)
             {
-                m_image->InsertBarrier(cmd, *m_subResource, m_state, m_shaderModuleType);
+                cmdCasted->m_image->InsertBarrier(commandBuffer, *cmdCasted->m_subResource, cmdCasted->m_state, cmdCasted->m_shaderModuleType);
             }
             else
             {
-                m_image->InsertBarrier(cmd, m_state, m_shaderModuleType);
+                cmdCasted->m_image->InsertBarrier(commandBuffer, cmdCasted->m_state, cmdCasted->m_shaderModuleType);
             }
         }
+
+        cmdCasted->~InsertBarrier();
     }
 
 private:
@@ -548,32 +519,36 @@ public:
     {
     }
 
-    virtual void Execute(const CommandBufferRef& cmd) override
+    static inline void InvokeStatic(CmdBase* cmd, const CommandBufferRef& commandBuffer)
     {
-        if (m_mipFaceInfo)
-        {
-            MipFaceInfo info = *m_mipFaceInfo;
+        Blit* cmdCasted = static_cast<Blit*>(cmd);
 
-            if (m_srcRect && m_dstRect)
+        if (cmdCasted->m_mipFaceInfo)
+        {
+            MipFaceInfo info = *cmdCasted->m_mipFaceInfo;
+
+            if (cmdCasted->m_srcRect && cmdCasted->m_dstRect)
             {
-                m_dstImage->Blit(cmd, m_srcImage, *m_srcRect, *m_dstRect, info.srcMip, info.dstMip, info.srcFace, info.dstFace);
+                cmdCasted->m_dstImage->Blit(commandBuffer, cmdCasted->m_srcImage, *cmdCasted->m_srcRect, *cmdCasted->m_dstRect, info.srcMip, info.dstMip, info.srcFace, info.dstFace);
             }
             else
             {
-                m_dstImage->Blit(cmd, m_srcImage, info.srcMip, info.dstMip, info.srcFace, info.dstFace);
+                cmdCasted->m_dstImage->Blit(commandBuffer, cmdCasted->m_srcImage, info.srcMip, info.dstMip, info.srcFace, info.dstFace);
             }
         }
         else
         {
-            if (m_srcRect && m_dstRect)
+            if (cmdCasted->m_srcRect && cmdCasted->m_dstRect)
             {
-                m_dstImage->Blit(cmd, m_srcImage, *m_srcRect, *m_dstRect);
+                cmdCasted->m_dstImage->Blit(commandBuffer, cmdCasted->m_srcImage, *cmdCasted->m_srcRect, *cmdCasted->m_dstRect);
             }
             else
             {
-                m_dstImage->Blit(cmd, m_srcImage);
+                cmdCasted->m_dstImage->Blit(commandBuffer, cmdCasted->m_srcImage);
             }
         }
+
+        cmdCasted->~Blit();
     }
 
 private:
@@ -605,9 +580,13 @@ public:
     {
     }
 
-    virtual void Execute(const CommandBufferRef& cmd) override
+    static inline void InvokeStatic(CmdBase* cmd, const CommandBufferRef& commandBuffer)
     {
-        m_dstImage->Blit(cmd, m_srcImage, m_srcRect, m_dstRect);
+        BlitRect* cmdCasted = static_cast<BlitRect*>(cmd);
+
+        cmdCasted->m_dstImage->Blit(commandBuffer, cmdCasted->m_srcImage, cmdCasted->m_srcRect, cmdCasted->m_dstRect);
+
+        cmdCasted->~BlitRect();
     }
 
 private:
@@ -626,9 +605,13 @@ public:
     {
     }
 
-    virtual void Execute(const CommandBufferRef& cmd) override
+    static inline void InvokeStatic(CmdBase* cmd, const CommandBufferRef& commandBuffer)
     {
-        m_image->CopyToBuffer(cmd, m_buffer);
+        CopyImageToBuffer* cmdCasted = static_cast<CopyImageToBuffer*>(cmd);
+
+        cmdCasted->m_image->CopyToBuffer(commandBuffer, cmdCasted->m_buffer);
+
+        cmdCasted->~CopyImageToBuffer();
     }
 
 private:
@@ -645,9 +628,13 @@ public:
     {
     }
 
-    virtual void Execute(const CommandBufferRef& cmd) override
+    static inline void InvokeStatic(CmdBase* cmd, const CommandBufferRef& commandBuffer)
     {
-        m_image->CopyFromBuffer(cmd, m_buffer);
+        CopyBufferToImage* cmdCasted = static_cast<CopyBufferToImage*>(cmd);
+
+        cmdCasted->m_image->CopyFromBuffer(commandBuffer, cmdCasted->m_buffer);
+
+        cmdCasted->~CopyBufferToImage();
     }
 
 private:
@@ -665,9 +652,13 @@ public:
     {
     }
 
-    virtual void Execute(const CommandBufferRef& cmd) override
+    static inline void InvokeStatic(CmdBase* cmd, const CommandBufferRef& commandBuffer)
     {
-        m_dstBuffer->CopyFrom(cmd, m_srcBuffer, m_size);
+        CopyBuffer* cmdCasted = static_cast<CopyBuffer*>(cmd);
+
+        cmdCasted->m_dstBuffer->CopyFrom(commandBuffer, cmdCasted->m_srcBuffer, cmdCasted->m_size);
+
+        cmdCasted->~CopyBuffer();
     }
 
 private:
@@ -684,9 +675,13 @@ public:
     {
     }
 
-    virtual void Execute(const CommandBufferRef& cmd) override
+    static inline void InvokeStatic(CmdBase* cmd, const CommandBufferRef& commandBuffer)
     {
-        m_image->GenerateMipmaps(cmd);
+        GenerateMipmaps* cmdCasted = static_cast<GenerateMipmaps*>(cmd);
+
+        cmdCasted->m_image->GenerateMipmaps(commandBuffer);
+
+        cmdCasted->~GenerateMipmaps();
     }
 
 private:
@@ -702,9 +697,13 @@ public:
     {
     }
 
-    virtual void Execute(const CommandBufferRef& cmd) override
+    static inline void InvokeStatic(CmdBase* cmd, const CommandBufferRef& commandBuffer)
     {
-        m_pipeline->Dispatch(cmd, m_workgroupCount);
+        DispatchCompute* cmdCasted = static_cast<DispatchCompute*>(cmd);
+
+        cmdCasted->m_pipeline->Dispatch(commandBuffer, cmdCasted->m_workgroupCount);
+
+        cmdCasted->~DispatchCompute();
     }
 
 private:
@@ -721,9 +720,13 @@ public:
     {
     }
 
-    virtual void Execute(const CommandBufferRef& cmd) override
+    static inline void InvokeStatic(CmdBase* cmd, const CommandBufferRef& commandBuffer)
     {
-        m_pipeline->TraceRays(cmd, m_workgroupCount);
+        TraceRays* cmdCasted = static_cast<TraceRays*>(cmd);
+
+        cmdCasted->m_pipeline->TraceRays(commandBuffer, cmdCasted->m_workgroupCount);
+
+        cmdCasted->~TraceRays();
     }
 
 private:
@@ -746,18 +749,6 @@ class RenderQueue
     };
 
     template <class CmdType>
-    static inline void InvokeCmdStatic(CmdBase* cmd, const CommandBufferRef& commandBuffer)
-    {
-        static_cast<CmdType*>(cmd)->Execute(commandBuffer);
-    }
-
-    template <class CmdType>
-    static inline void PrepareCmdStatic(CmdBase* cmd, FrameBase* frame)
-    {
-        static_cast<CmdType*>(cmd)->Prepare(frame);
-    }
-    
-    template <class CmdType>
     static inline void MoveCmdStatic(CmdBase* cmd, void* where)
     {
         new (where) CmdType(std::move(*static_cast<CmdType*>(cmd)));
@@ -772,8 +763,8 @@ public:
     RenderQueue& operator=(RenderQueue&& other) noexcept = delete;
     ~RenderQueue();
 
-    template <class CmdType, class... Args>
-    void Add(Args&&... args)
+    template <class CmdType>
+    void Add(CmdType&& cmd)
     {
         using TCmd = NormalizedType<CmdType>;
         static_assert(alignof(TCmd) <= 16, "CmdType should have alignment <= 16!");
@@ -785,29 +776,37 @@ public:
         if (m_buffer.Size() < alignedOffset + cmdSize)
         {
             ubyte* prevPtr = m_buffer.Data();
-            
+
             ByteBuffer newBuffer;
-            newBuffer.SetSize(MathUtil::NextPowerOf2(alignedOffset + cmdSize));
-            
+            newBuffer.SetSize(2 * (alignedOffset + cmdSize));
+
             ubyte* newPtr = newBuffer.Data();
-            
+
             ReconstructCommands(m_cmdHeaders.ToSpan(), prevPtr, newPtr);
-            
+
             m_buffer = std::move(newBuffer);
-            
+
             AssertDebug(m_buffer.Data() == newPtr);
         }
 
         void* startPtr = m_buffer.Data() + alignedOffset;
-        new (startPtr) TCmd(std::forward<Args>(args)...);
+        new (startPtr) TCmd(std::forward<CmdType>(cmd));
 
         m_cmdHeaders.PushBack(CmdHeader {
             alignedOffset,
-            &InvokeCmdStatic<TCmd>,
-            &PrepareCmdStatic<TCmd>,
+            &TCmd::InvokeStatic,
+            &TCmd::PrepareStatic,
             &MoveCmdStatic<TCmd> });
 
         m_offset = alignedOffset + cmdSize;
+    }
+
+    template <class CmdType>
+    RenderQueue& operator<<(CmdType&& cmd)
+    {
+        Add(std::forward<CmdType>(cmd));
+
+        return *this;
     }
 
     void Concat(RenderQueue&& other)
@@ -816,35 +815,35 @@ public:
 
         // since we guarantee <= 16 byte alignment, we should just align our offset to 16 to make sure everything fits
         const uint32 newStartOffset = ByteUtil::AlignAs(m_offset, 16);
-        
+
         if (m_buffer.GetCapacity() < newStartOffset + other.m_offset)
         {
             ubyte* prevPtr = m_buffer.Data();
-            
+
             ByteBuffer newBuffer;
-            newBuffer.SetSize(MathUtil::NextPowerOf2(newStartOffset + other.m_offset));
-            
+            newBuffer.SetSize(2 * (newStartOffset + other.m_offset));
+
             ubyte* newPtr = newBuffer.Data();
-            
+
             ReconstructCommands(m_cmdHeaders.ToSpan(), prevPtr, newPtr);
-            
+
             m_buffer = std::move(newBuffer);
-            
+
             AssertDebug(m_buffer.Data() == newPtr);
         }
         else
         {
             ubyte* prevPtr = m_buffer.Data();
-            
+
             // No need to reconstruct commands if the allocation did not change
             m_buffer.SetSize(newStartOffset + other.m_offset);
-            
+
             // Sanity check to ensure SetSize() did not change our capacity. (it shouldn't)
             AssertDebug(m_buffer.Data() == prevPtr);
         }
-        
+
         SizeType cmdsOffset = m_cmdHeaders.Size();
-        
+
         // Reconstruct the commands into our memory
         ReconstructCommands(other.m_cmdHeaders.ToSpan(), other.m_buffer.Data(), m_buffer.Data() + newStartOffset);
 
@@ -855,9 +854,9 @@ public:
             newCmdHeader.dataOffset = newStartOffset + cmdHeader.dataOffset;
         }
 
-//        // Copy from other buffer, starting at the new offset
-//        m_buffer.Write(other.m_offset, newStartOffset, other.m_buffer.Data());
-        
+        //        // Copy from other buffer, starting at the new offset
+        //        m_buffer.Write(other.m_offset, newStartOffset, other.m_buffer.Data());
+
         m_offset = newStartOffset + other.m_offset;
 
         // clear out allocation
@@ -875,13 +874,13 @@ private:
     {
         const uintptr_t uPrevPtr = reinterpret_cast<uintptr_t>(prevPtr);
         const uintptr_t uNewPtr = reinterpret_cast<uintptr_t>(newPtr);
-        
+
         for (CmdHeader& cmdHeader : cmdHeaders)
         {
             cmdHeader.moveFnPtr(reinterpret_cast<CmdBase*>(uPrevPtr + cmdHeader.dataOffset), reinterpret_cast<void*>(uNewPtr + cmdHeader.dataOffset));
         }
     }
-    
+
     Array<CmdHeader> m_cmdHeaders;
     ByteBuffer m_buffer;
     uint32 m_offset;

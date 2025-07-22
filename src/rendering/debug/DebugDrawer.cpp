@@ -386,9 +386,9 @@ void DebugDrawer::Render(FrameBase* frame, const RenderSetup& renderSetup)
 
         if (isNewGraphicsPipeline)
         {
-            frame->renderQueue.Add<BindGraphicsPipeline>(graphicsPipeline);
+            frame->renderQueue << BindGraphicsPipeline(graphicsPipeline);
 
-            frame->renderQueue.Add<BindDescriptorTable>(
+            frame->renderQueue << BindDescriptorTable(
                 m_descriptorTable,
                 graphicsPipeline,
                 ArrayMap<Name, ArrayMap<Name, uint32>> {
@@ -405,7 +405,7 @@ void DebugDrawer::Render(FrameBase* frame, const RenderSetup& renderSetup)
                 frameIndex);
         }
 
-        frame->renderQueue.Add<BindDescriptorSet>(
+        frame->renderQueue << BindDescriptorSet(
             debugDrawerDescriptorSet,
             graphicsPipeline,
             ArrayMap<Name, uint32> {
@@ -418,9 +418,9 @@ void DebugDrawer::Render(FrameBase* frame, const RenderSetup& renderSetup)
         {
             MeshDebugDrawShapeBase* meshShape = static_cast<MeshDebugDrawShapeBase*>(drawCommand.shape);
 
-            frame->renderQueue.Add<BindVertexBuffer>(meshShape->GetMesh()->GetVertexBuffer());
-            frame->renderQueue.Add<BindIndexBuffer>(meshShape->GetMesh()->GetIndexBuffer());
-            frame->renderQueue.Add<DrawIndexed>(meshShape->GetMesh()->NumIndices());
+            frame->renderQueue << BindVertexBuffer(meshShape->GetMesh()->GetVertexBuffer());
+            frame->renderQueue << BindIndexBuffer(meshShape->GetMesh()->GetIndexBuffer());
+            frame->renderQueue << DrawIndexed(meshShape->GetMesh()->NumIndices());
 
             break;
         }

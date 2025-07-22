@@ -501,7 +501,7 @@ void RenderCollector::ExecuteDrawCalls(FrameBase* frame, const RenderSetup& rend
 
     if (framebuffer)
     {
-        frame->renderQueue.Add<BeginFramebuffer>(framebuffer);
+        frame->renderQueue << BeginFramebuffer(framebuffer);
     }
 
     for (const auto& mappings : groupsView)
@@ -562,7 +562,7 @@ void RenderCollector::ExecuteDrawCalls(FrameBase* frame, const RenderSetup& rend
 
     if (framebuffer)
     {
-        frame->renderQueue.Add<EndFramebuffer>(framebuffer);
+        frame->renderQueue << EndFramebuffer(framebuffer);
     }
 }
 
@@ -757,11 +757,6 @@ void RenderCollector::BuildDrawCalls(uint32 bucketBits)
 {
     HYP_SCOPE;
     Threads::AssertOnThread(g_renderThread);
-
-    HYP_LOG(Rendering, Debug, "Building Draw Calls for RenderCollector {}, num mappings : {}", (void*)this, Sum(mappingsByBucket, [](auto&& items)
-                                                                                                                {
-                                                                                                                    return items.Size();
-                                                                                                                }));
 
     static const bool uniquePerMaterial = g_renderBackend->GetRenderConfig().ShouldCollectUniqueDrawCallPerMaterial();
 

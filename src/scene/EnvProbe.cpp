@@ -98,7 +98,7 @@ EnvProbe::EnvProbe(EnvProbeType envProbeType, const BoundingBox& aabb, const Vec
       m_needsRenderCounter(0),
       m_renderResource(nullptr)
 {
-    m_entityInitInfo.receivesUpdate = true;
+    m_entityInitInfo.receivesUpdate = !IsControlledByEnvGrid();
 }
 
 bool EnvProbe::IsVisible(ObjId<Camera> cameraId) const
@@ -361,85 +361,64 @@ void EnvProbe::Update(float delta)
 {
     Threads::AssertOnThread(g_gameThread | ThreadCategory::THREAD_CATEGORY_TASK);
     AssertReady();
+    
+    if (IsControlledByEnvGrid())
+    {
+        return;
+    }
 
     Assert(GetScene() != nullptr);
 
     const Octree& octree = GetScene()->GetOctree();
+    
+    HashCode octantHashCode = HashCode(0);
 
-    // Ambient probes do not use their own render list,
-    // instead they are attached to a grid which shares one
-    if (!IsControlledByEnvGrid())
+    if (OnlyCollectStaticEntities())
     {
-        HashCode octantHashCode = HashCode(0);
+        Octree const* octant = &GetScene()->GetOctree();
 
-        if (OnlyCollectStaticEntities())
+        if (!IsSkyProbe())
         {
-            Octree const* octant = &GetScene()->GetOctree();
+            octree.GetFittingOctant(m_aabb, octant);
 
-            if (!IsSkyProbe())
+            if (!octant)
             {
-                octree.GetFittingOctant(m_aabb, octant);
-
-                if (!octant)
-                {
-                    HYP_LOG(EnvProbe, Warning, "No containing octant found for EnvProbe {} with AABB: {}", Id(), m_aabb);
-                }
-            }
-
-            if (octant)
-            {
-                octantHashCode = octant->GetOctantID().GetHashCode().Add(octant->GetEntryListHash<EntityTag::STATIC>()).Add(octant->GetEntryListHash<EntityTag::LIGHT>());
+                HYP_LOG(EnvProbe, Warning, "No containing octant found for EnvProbe {} with AABB: {}", Id(), m_aabb);
             }
         }
-        else
+
+        if (octant)
         {
-            octantHashCode = octree.GetOctantID().GetHashCode().Add(octree.GetEntryListHash<EntityTag::NONE>());
+            octantHashCode = octant->GetOctantID().GetHashCode().Add(octant->GetEntryListHash<EntityTag::STATIC>()).Add(octant->GetEntryListHash<EntityTag::LIGHT>());
         }
-
-        if (m_octantHashCode == octantHashCode && octantHashCode.Value() != 0)
-        {
-            return;
-        }
-
-        Assert(m_camera.IsValid());
-        m_camera->Update(delta);
-
-        m_view->UpdateVisibility();
-        m_view->Collect();
-
-        auto diff = m_view->GetLastMeshCollectionResult();
-
-        if (diff.NeedsUpdate() || m_octantHashCode != octantHashCode)
-        {
-            HYP_LOG(EnvProbe, Debug, "EnvProbe {} with AABB: {} has {} added, {} removed and {} changed entities", Id(), m_aabb,
-                diff.numAdded, diff.numRemoved, diff.numChanged);
-
-            SetNeedsRender(true);
-        }
-
-        m_octantHashCode = octantHashCode;
     }
-
-    EnvProbeShaderData bufferData {};
-    bufferData.aabbMin = Vec4f(m_aabb.min, 1.0f);
-    bufferData.aabbMax = Vec4f(m_aabb.max, 1.0f);
-    bufferData.worldPosition = Vec4f(GetOrigin(), 1.0f);
-    bufferData.cameraNear = m_cameraNear;
-    bufferData.cameraFar = m_cameraFar;
-    bufferData.dimensions = Vec2u { m_dimensions.x, m_dimensions.y };
-    bufferData.visibilityBits = m_visibilityBits.ToUInt64();
-    bufferData.flags = (IsReflectionProbe() ? EnvProbeFlags::PARALLAX_CORRECTED : EnvProbeFlags::NONE)
-        | (IsShadowProbe() ? EnvProbeFlags::SHADOW : EnvProbeFlags::NONE)
-        | EnvProbeFlags::DIRTY;
-
-    m_renderResource->SetBufferData(bufferData);
-
-    if (IsShadowProbe())
+    else
     {
-        GetWorld()->GetRenderResource().IncRef();
-        m_renderResource->IncRef();
-        PUSH_RENDER_COMMAND(RenderPointLightShadow, &GetWorld()->GetRenderResource(), m_renderResource);
+        octantHashCode = octree.GetOctantID().GetHashCode().Add(octree.GetEntryListHash<EntityTag::NONE>());
     }
+
+    if (m_octantHashCode == octantHashCode && octantHashCode.Value() != 0)
+    {
+        return;
+    }
+
+    Assert(m_camera.IsValid());
+    m_camera->Update(delta);
+
+    m_view->UpdateVisibility();
+    m_view->Collect();
+
+    auto diff = m_view->GetLastMeshCollectionResult();
+
+    if (diff.NeedsUpdate() || m_octantHashCode != octantHashCode)
+    {
+        HYP_LOG(EnvProbe, Debug, "EnvProbe {} with AABB: {} has {} added, {} removed and {} changed entities", Id(), m_aabb,
+            diff.numAdded, diff.numRemoved, diff.numChanged);
+
+        SetNeedsRender(true);
+    }
+
+    m_octantHashCode = octantHashCode;
 }
 
 void EnvProbe::UpdateRenderProxy(IRenderProxy* proxy)

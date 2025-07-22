@@ -32,11 +32,11 @@ static void TransitionFramebufferAttachments(RenderQueue& renderQueue, VulkanFra
 
         if (framebuffer->GetRenderPass()->GetStage() == RenderPassStage::PRESENT)
         {
-            renderQueue.Add<InsertBarrier>(image, RS_PRESENT);
+            renderQueue << InsertBarrier(image, RS_PRESENT);
         }
         else
         {
-            renderQueue.Add<InsertBarrier>(image, RS_SHADER_RESOURCE);
+            renderQueue << InsertBarrier(image, RS_SHADER_RESOURCE);
         }
     }
 }
@@ -265,7 +265,7 @@ RendererResult VulkanFramebuffer::Create()
     if (frame != nullptr)
     {
         RenderQueue& renderQueue = frame->renderQueue;
-        renderQueue.Add<ClearFramebuffer>(HandleFromThis());
+        renderQueue << ClearFramebuffer(HandleFromThis());
 
         return {};
     }
@@ -274,7 +274,7 @@ RendererResult VulkanFramebuffer::Create()
 
     singleTimeCommands->Push([&](RenderQueue& renderQueue) -> RendererResult
         {
-            renderQueue.Add<ClearFramebuffer>(HandleFromThis());
+            renderQueue << ClearFramebuffer(HandleFromThis());
 
             return {};
         });
@@ -353,7 +353,7 @@ RendererResult VulkanFramebuffer::Resize(Vec2u newSize)
         &m_handle));
 
     RenderQueue& renderQueue = g_renderBackend->GetCurrentFrame()->renderQueue;
-    renderQueue.Add<ClearFramebuffer>(HandleFromThis());
+    renderQueue << ClearFramebuffer(HandleFromThis());
 
     HYPERION_RETURN_OK;
 }

@@ -365,7 +365,7 @@ RendererResult VulkanSwapchain::RetrieveImageHandles()
             {
                 HYP_GFX_ASSERT(image.IsValid());
 
-                renderQueue.Add<InsertBarrier>(image, RS_PRESENT);
+                renderQueue << InsertBarrier(image, RS_PRESENT);
             }
         });
 

@@ -89,7 +89,7 @@ struct RENDER_COMMAND(BakeLightmapVolumeTexture)
 
                     const Handle<Texture>& atlasTexture = atlasTextures[textureTypeIndex];
 
-                    renderQueue.Add<InsertBarrier>(atlasTexture->GetRenderResource().GetImage(), RS_COPY_DST);
+                    renderQueue << InsertBarrier(atlasTexture->GetRenderResource().GetImage(), RS_COPY_DST);
 
                     for (const auto& elementTexturePair : elementTextures[textureTypeIndex])
                     {
@@ -109,9 +109,9 @@ struct RENDER_COMMAND(BakeLightmapVolumeTexture)
                         AssertDebug(element->offsetCoords.x + element->dimensions.x <= atlasTexture->GetExtent().x);
                         AssertDebug(element->offsetCoords.y + element->dimensions.y <= atlasTexture->GetExtent().y);
 
-                        renderQueue.Add<InsertBarrier>(elementTexture->GetRenderResource().GetImage(), RS_COPY_SRC);
+                        renderQueue << InsertBarrier(elementTexture->GetRenderResource().GetImage(), RS_COPY_SRC);
 
-                        renderQueue.Add<Blit>(
+                        renderQueue << Blit(
                             elementTexture->GetRenderResource().GetImage(),
                             atlasTexture->GetRenderResource().GetImage(),
                             Rect<uint32> { 0, 0, elementTexture->GetRenderResource().GetImage()->GetExtent().x, elementTexture->GetRenderResource().GetImage()->GetExtent().y },
@@ -122,10 +122,10 @@ struct RENDER_COMMAND(BakeLightmapVolumeTexture)
                             0  /* dstFace */
                         );
 
-                        renderQueue.Add<InsertBarrier>(elementTexture->GetRenderResource().GetImage(), RS_SHADER_RESOURCE);
+                        renderQueue << InsertBarrier(elementTexture->GetRenderResource().GetImage(), RS_SHADER_RESOURCE);
                     }
 
-                    renderQueue.Add<InsertBarrier>(atlasTexture->GetRenderResource().GetImage(), RS_SHADER_RESOURCE);
+                    renderQueue << InsertBarrier(atlasTexture->GetRenderResource().GetImage(), RS_SHADER_RESOURCE);
                 }
             });
 

@@ -232,11 +232,11 @@ void SSGI::Render(FrameBase* frame, const RenderSetup& renderSetup)
     const uint32 numDispatchCalls = (totalPixelsInImage + 255) / 256;
 
     // put sample image in writeable state
-    frame->renderQueue.Add<InsertBarrier>(m_resultTexture->GetRenderResource().GetImage(), RS_UNORDERED_ACCESS);
+    frame->renderQueue << InsertBarrier(m_resultTexture->GetRenderResource().GetImage(), RS_UNORDERED_ACCESS);
 
-    frame->renderQueue.Add<BindComputePipeline>(m_computePipeline);
+    frame->renderQueue << BindComputePipeline(m_computePipeline);
 
-    frame->renderQueue.Add<BindDescriptorTable>(
+    frame->renderQueue << BindDescriptorTable(
         m_computePipeline->GetDescriptorTable(),
         m_computePipeline,
         ArrayMap<Name, ArrayMap<Name, uint32>> {
@@ -252,17 +252,17 @@ void SSGI::Render(FrameBase* frame, const RenderSetup& renderSetup)
     {
         Assert(renderSetup.passData != nullptr);
 
-        frame->renderQueue.Add<BindDescriptorSet>(
+        frame->renderQueue << BindDescriptorSet(
             renderSetup.passData->descriptorSets[frame->GetFrameIndex()],
             m_computePipeline,
             ArrayMap<Name, uint32> {},
             viewDescriptorSetIndex);
     }
 
-    frame->renderQueue.Add<DispatchCompute>(m_computePipeline, Vec3u { numDispatchCalls, 1, 1 });
+    frame->renderQueue << DispatchCompute(m_computePipeline, Vec3u { numDispatchCalls, 1, 1 });
 
     // transition sample image back into read state
-    frame->renderQueue.Add<InsertBarrier>(m_resultTexture->GetRenderResource().GetImage(), RS_SHADER_RESOURCE);
+    frame->renderQueue << InsertBarrier(m_resultTexture->GetRenderResource().GetImage(), RS_SHADER_RESOURCE);
 
     if (useTemporalBlending && m_temporalBlending != nullptr)
     {

@@ -231,13 +231,13 @@ void ShadowPass::Render(FrameBase* frame, const RenderSetup& renderSetup)
                 ((1u << RB_OPAQUE) | (1u << RB_TRANSLUCENT)));
 
             // copy static framebuffer image
-            frame->renderQueue.Add<InsertBarrier>(framebufferImage, RS_COPY_SRC);
-            frame->renderQueue.Add<InsertBarrier>(m_shadowMapStatics->GetRenderResource().GetImage(), RS_COPY_DST);
+            frame->renderQueue << InsertBarrier(framebufferImage, RS_COPY_SRC);
+            frame->renderQueue << InsertBarrier(m_shadowMapStatics->GetRenderResource().GetImage(), RS_COPY_DST);
 
-            frame->renderQueue.Add<Blit>(framebufferImage, m_shadowMapStatics->GetRenderResource().GetImage());
+            frame->renderQueue << Blit(framebufferImage, m_shadowMapStatics->GetRenderResource().GetImage());
 
-            frame->renderQueue.Add<InsertBarrier>(framebufferImage, RS_SHADER_RESOURCE);
-            frame->renderQueue.Add<InsertBarrier>(m_shadowMapStatics->GetRenderResource().GetImage(), RS_SHADER_RESOURCE);
+            frame->renderQueue << InsertBarrier(framebufferImage, RS_SHADER_RESOURCE);
+            frame->renderQueue << InsertBarrier(m_shadowMapStatics->GetRenderResource().GetImage(), RS_SHADER_RESOURCE);
 
             m_rerenderSemaphore->Release(1);
         }
@@ -250,13 +250,13 @@ void ShadowPass::Render(FrameBase* frame, const RenderSetup& renderSetup)
                 ((1u << RB_OPAQUE) | (1u << RB_TRANSLUCENT)));
 
             // copy dynamic framebuffer image
-            frame->renderQueue.Add<InsertBarrier>(framebufferImage, RS_COPY_SRC);
-            frame->renderQueue.Add<InsertBarrier>(m_shadowMapDynamics->GetRenderResource().GetImage(), RS_COPY_DST);
+            frame->renderQueue << InsertBarrier(framebufferImage, RS_COPY_SRC);
+            frame->renderQueue << InsertBarrier(m_shadowMapDynamics->GetRenderResource().GetImage(), RS_COPY_DST);
 
-            frame->renderQueue.Add<Blit>(framebufferImage, m_shadowMapDynamics->GetRenderResource().GetImage());
+            frame->renderQueue << Blit(framebufferImage, m_shadowMapDynamics->GetRenderResource().GetImage());
 
-            frame->renderQueue.Add<InsertBarrier>(framebufferImage, RS_SHADER_RESOURCE);
-            frame->renderQueue.Add<InsertBarrier>(m_shadowMapDynamics->GetRenderResource().GetImage(), RS_SHADER_RESOURCE);
+            frame->renderQueue << InsertBarrier(framebufferImage, RS_SHADER_RESOURCE);
+            frame->renderQueue << InsertBarrier(m_shadowMapDynamics->GetRenderResource().GetImage(), RS_SHADER_RESOURCE);
         }
     }
 
@@ -275,11 +275,11 @@ void ShadowPass::Render(FrameBase* frame, const RenderSetup& renderSetup)
         m_combineShadowMapsPass->Render(frame, renderSetupStatics);
 
         // Copy combined shadow map to the final shadow map
-        frame->renderQueue.Add<InsertBarrier>(attachment->GetImage(), RS_COPY_SRC);
-        frame->renderQueue.Add<InsertBarrier>(shadowMapImage, RS_COPY_DST, ImageSubResource { .baseArrayLayer = atlasElement.atlasIndex });
+        frame->renderQueue << InsertBarrier(attachment->GetImage(), RS_COPY_SRC);
+        frame->renderQueue << InsertBarrier(shadowMapImage, RS_COPY_DST, ImageSubResource { .baseArrayLayer = atlasElement.atlasIndex });
 
         // copy the image
-        frame->renderQueue.Add<Blit>(
+        frame->renderQueue << Blit(
             attachment->GetImage(),
             shadowMapImage,
             Rect<uint32> { 0, 0, GetExtent().x, GetExtent().y },
@@ -295,8 +295,8 @@ void ShadowPass::Render(FrameBase* frame, const RenderSetup& renderSetup)
         );
 
         // put the images back into a state for reading
-        frame->renderQueue.Add<InsertBarrier>(attachment->GetImage(), RS_SHADER_RESOURCE);
-        frame->renderQueue.Add<InsertBarrier>(
+        frame->renderQueue << InsertBarrier(attachment->GetImage(), RS_SHADER_RESOURCE);
+        frame->renderQueue << InsertBarrier(
             shadowMapImage,
             RS_SHADER_RESOURCE,
             ImageSubResource { .baseArrayLayer = atlasElement.atlasIndex });
@@ -318,22 +318,22 @@ void ShadowPass::Render(FrameBase* frame, const RenderSetup& renderSetup)
         m_blurShadowMapPipeline->SetPushConstants(&pushConstants, sizeof(pushConstants));
 
         // blur the image using compute shader
-        frame->renderQueue.Add<BindComputePipeline>(m_blurShadowMapPipeline);
+        frame->renderQueue << BindComputePipeline(m_blurShadowMapPipeline);
 
         // bind descriptor set containing info needed to blur
-        frame->renderQueue.Add<BindDescriptorTable>(
+        frame->renderQueue << BindDescriptorTable(
             m_blurShadowMapPipeline->GetDescriptorTable(),
             m_blurShadowMapPipeline,
             ArrayMap<Name, ArrayMap<Name, uint32>> {},
             frame->GetFrameIndex());
 
         // put our shadow map in a state for writing
-        frame->renderQueue.Add<InsertBarrier>(
+        frame->renderQueue << InsertBarrier(
             shadowMapImage,
             RS_UNORDERED_ACCESS,
             ImageSubResource { .baseArrayLayer = atlasElement.atlasIndex });
 
-        frame->renderQueue.Add<DispatchCompute>(
+        frame->renderQueue << DispatchCompute(
             m_blurShadowMapPipeline,
             Vec3u {
                 (atlasElement.dimensions.x + 7) / 8,
@@ -341,7 +341,7 @@ void ShadowPass::Render(FrameBase* frame, const RenderSetup& renderSetup)
                 1 });
 
         // put shadow map back into readable state
-        frame->renderQueue.Add<InsertBarrier>(
+        frame->renderQueue << InsertBarrier(
             shadowMapImage,
             RS_SHADER_RESOURCE,
             ImageSubResource { .baseArrayLayer = atlasElement.atlasIndex });

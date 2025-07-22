@@ -35,7 +35,7 @@ void EntityMeshDirtyStateSystem::Process(float delta)
 {
     HashSet<WeakHandle<Entity>> updatedEntities;
 
-    for (auto [entity, meshComponent, transformComponent] : GetEntityManager().GetEntitySet<MeshComponent, TransformComponent>().GetScopedView(GetComponentInfos()))
+    /*for (auto [entity, meshComponent, transformComponent] : GetEntityManager().GetEntitySet<MeshComponent, TransformComponent>().GetScopedView(GetComponentInfos()))
     {
         // Update the material
         if (meshComponent.material.IsValid() && meshComponent.material->GetMutationState().IsDirty())
@@ -59,7 +59,7 @@ void EntityMeshDirtyStateSystem::Process(float delta)
                     GetEntityManager().AddTag<EntityTag::UPDATE_RENDER_PROXY>(entityWeak.GetUnsafe());
                 }
             });
-    }
+    }*/
 }
 
 } // namespace hyperion

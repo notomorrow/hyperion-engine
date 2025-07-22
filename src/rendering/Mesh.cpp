@@ -293,8 +293,8 @@ void Mesh::CreateGpuBuffers()
             FrameBase* frame = g_renderBackend->GetCurrentFrame();
             RenderQueue& renderQueue = frame->renderQueue;
 
-            renderQueue.Add<CopyBuffer>(stagingBufferVertices, vertexBuffer, packedBufferSize);
-            renderQueue.Add<CopyBuffer>(stagingBufferIndices, indexBuffer, packedIndicesSize);
+            renderQueue << CopyBuffer(stagingBufferVertices, vertexBuffer, packedBufferSize);
+            renderQueue << CopyBuffer(stagingBufferIndices, indexBuffer, packedIndicesSize);
 
             SafeRelease(std::move(stagingBufferVertices));
             SafeRelease(std::move(stagingBufferIndices));
@@ -614,8 +614,8 @@ BLASRef Mesh::BuildBLAS(const Handle<Material>& material) const
             FrameBase* frame = g_renderBackend->GetCurrentFrame();
             RenderQueue& renderQueue = frame->renderQueue;
 
-            renderQueue.Add<CopyBuffer>(verticesStagingBuffer, packedVerticesBuffer, packedVerticesSize);
-            renderQueue.Add<CopyBuffer>(indicesStagingBuffer, packedIndicesBuffer, packedIndicesSize);
+            renderQueue << CopyBuffer(verticesStagingBuffer, packedVerticesBuffer, packedVerticesSize);
+            renderQueue << CopyBuffer(indicesStagingBuffer, packedIndicesBuffer, packedIndicesSize);
 
             return {};
         }
