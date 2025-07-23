@@ -127,16 +127,16 @@ public:
     void Initialize();
 
 private:
-    TypeMap<HypClass*> m_registeredClasses;
+    HashMap<TypeId, HypClass*> m_registeredClasses;
 
     mutable Mutex m_dynamicClassesMutex;
-    TypeMap<HypClass*> m_dynamicClasses;
-
-    bool m_isInitialized;
+    HashMap<TypeId, HypClass*> m_dynamicClasses;
 
     HashMap<HypClass*, RC<dotnet::Class>> m_managedClasses;
     HashMap<dotnet::Class*, HypClass*> m_managedClassesReverseMapping;
     mutable Mutex m_managedClassesMutex;
+
+    bool m_isInitialized;
 };
 
 } // namespace hyperion

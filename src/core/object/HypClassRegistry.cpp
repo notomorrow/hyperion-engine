@@ -65,7 +65,7 @@ const HypClass* HypClassRegistry::GetClass(WeakName typeName) const
 {
     HYP_CORE_ASSERT(m_isInitialized, "Cannot use GetClass() - HypClassRegistry instance not yet initialized");
 
-    const auto it = m_registeredClasses.FindIf([typeName](const Pair<TypeId, HypClass*>& item)
+    const auto it = m_registeredClasses.FindIf([typeName](auto&& item)
         {
             return item.second->GetName() == typeName;
         });
@@ -74,7 +74,7 @@ const HypClass* HypClassRegistry::GetClass(WeakName typeName) const
     {
         Mutex::Guard guard(m_dynamicClassesMutex);
 
-        auto dynamicIt = m_dynamicClasses.FindIf([typeName](const Pair<TypeId, HypClass*>& item)
+        auto dynamicIt = m_dynamicClasses.FindIf([typeName](auto&& item)
             {
                 return item.second->GetName() == typeName;
             });
@@ -149,7 +149,7 @@ void HypClassRegistry::UnregisterClass(const HypClass* hypClass)
 
     Mutex::Guard guard(m_dynamicClassesMutex);
 
-    auto it = m_dynamicClasses.FindIf([hypClass](const Pair<TypeId, HypClass*>& item)
+    auto it = m_dynamicClasses.FindIf([hypClass](auto&& item)
         {
             return item.second == hypClass;
         });
@@ -168,7 +168,7 @@ void HypClassRegistry::ForEachClass(const ProcRef<IterationResult(const HypClass
 {
     HYP_CORE_ASSERT(m_isInitialized, "Cannot use ForEachClass() - HypClassRegistry instance not yet initialized");
 
-    for (const Pair<TypeId, HypClass*>& it : m_registeredClasses)
+    for (auto&& it : m_registeredClasses)
     {
         if (callback(it.second) == IterationResult::STOP)
         {
@@ -183,7 +183,7 @@ void HypClassRegistry::ForEachClass(const ProcRef<IterationResult(const HypClass
 
     Mutex::Guard guard(m_dynamicClassesMutex);
 
-    for (const Pair<TypeId, HypClass*>& it : m_dynamicClasses)
+    for (auto&& it : m_dynamicClasses)
     {
         if (callback(it.second) == IterationResult::STOP)
         {
@@ -224,7 +224,7 @@ void HypClassRegistry::Initialize()
     // Have to initialize here because HypClass::Initialize will call GetClass() for parent classes.
     m_isInitialized = true;
 
-    for (const Pair<TypeId, HypClass*>& it : m_registeredClasses)
+    for (auto&& it : m_registeredClasses)
     {
         it.second->Initialize();
     }
