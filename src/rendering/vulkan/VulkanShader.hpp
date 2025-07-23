@@ -13,21 +13,21 @@ struct VulkanShaderModule
     ShaderModuleType type;
     String entryPointName;
     ByteBuffer spirv;
-    VkShaderModule shaderModule;
+    VkShaderModule handle;
 
     VulkanShaderModule(ShaderModuleType type, String entryPointName)
         : type(type),
           entryPointName(std::move(entryPointName)),
           spirv {},
-          shaderModule {}
+          handle {}
     {
     }
 
-    VulkanShaderModule(ShaderModuleType type, String entryPointName, const ByteBuffer& spirv, VkShaderModule shaderModule = nullptr)
+    VulkanShaderModule(ShaderModuleType type, String entryPointName, const ByteBuffer& spirv, VkShaderModule handle = VK_NULL_HANDLE)
         : type(type),
           entryPointName(std::move(entryPointName)),
           spirv(spirv),
-          shaderModule(shaderModule)
+          handle(handle)
     {
     }
 
@@ -95,6 +95,10 @@ public:
 
         return hc;
     }
+
+#ifdef HYP_DEBUG_MODE
+    HYP_API virtual void SetDebugName(Name name) override;
+#endif
 
 private:
     RendererResult AttachSubShaders();

@@ -2,16 +2,18 @@
 
 #pragma once
 
+#include <core/object/HypObject.hpp>
+
+#include <core/memory/UniquePtr.hpp>
+
+#include <core/Handle.hpp>
+
 #include <rendering/RenderableAttributes.hpp>
 
 #include <rendering/RenderQueue.hpp>
 
 #include <rendering/RenderObject.hpp>
 #include <rendering/RenderStructs.hpp>
-
-#include <core/memory/UniquePtr.hpp>
-
-#include <core/Handle.hpp>
 
 #include <Constants.hpp>
 
@@ -27,8 +29,11 @@ class TemporalBlending;
 class GBuffer;
 struct RenderSetup;
 
-class HYP_API FullScreenPass
+HYP_CLASS(NoScriptBindings)
+class HYP_API FullScreenPass : public HypObject<FullScreenPass>
 {
+    HYP_OBJECT_BODY(FullScreenPass);
+
 public:
     friend struct RenderCommand_RecreateFullScreenPassFramebuffer;
 
@@ -182,7 +187,7 @@ protected:
     UniquePtr<TemporalBlending> m_temporalBlending;
     Handle<Texture> m_previousTexture;
 
-    UniquePtr<FullScreenPass> m_renderTextureToScreenPass;
+    Handle<FullScreenPass> m_renderTextureToScreenPass;
 
     bool m_isFirstFrame;
 
@@ -195,7 +200,7 @@ private:
     bool m_isInitialized;
 
     // Used for half-res rendering
-    UniquePtr<FullScreenPass> m_mergeHalfResTexturesPass;
+    Handle<FullScreenPass> m_mergeHalfResTexturesPass;
 };
 
 } // namespace hyperion

@@ -161,7 +161,7 @@ void FinalPass::Create()
 
     DeferCreate(descriptorTable);
 
-    m_renderTextureToScreenPass = MakeUnique<FullScreenPass>(
+    m_renderTextureToScreenPass = CreateObject<FullScreenPass>(
         renderTextureToScreenShader,
         std::move(descriptorTable),
         m_imageFormat,

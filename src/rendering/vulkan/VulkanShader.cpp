@@ -9,6 +9,10 @@
 
 #include <core/debug/Debug.hpp>
 
+#include <core/object/HypClassUtils.hpp>
+
+#include <core/utilities/Format.hpp>
+
 #include <Engine.hpp>
 
 #include <algorithm>
@@ -28,6 +32,10 @@ VulkanShader::VulkanShader(const RC<CompiledShader>& compiledShader)
     : ShaderBase(compiledShader),
       m_entryPointName("main")
 {
+    if (compiledShader != nullptr)
+    {
+        SetDebugName(compiledShader->GetName());
+    }
 }
 
 VulkanShader::~VulkanShader()
@@ -131,7 +139,7 @@ RendererResult VulkanShader::CreateShaderGroups()
 VkPipelineShaderStageCreateInfo VulkanShader::CreateShaderStage(const VulkanShaderModule& shaderModule)
 {
     VkPipelineShaderStageCreateInfo createInfo { VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO };
-    createInfo.module = shaderModule.shaderModule;
+    createInfo.module = shaderModule.handle;
     createInfo.pName = shaderModule.entryPointName.Data();
 
     switch (shaderModule.type)
@@ -205,6 +213,13 @@ RendererResult VulkanShader::Create()
         HYPERION_BUBBLE_ERRORS(CreateShaderGroups());
     }
 
+#ifdef HYP_DEBUG_MODE
+    if (Name debugName = GetDebugName())
+    {
+        SetDebugName(debugName);
+    }
+#endif
+
     HYPERION_RETURN_OK;
 }
 
@@ -217,13 +232,44 @@ RendererResult VulkanShader::Destroy()
 
     for (const VulkanShaderModule& shaderModule : m_shaderModules)
     {
-        vkDestroyShaderModule(GetRenderBackend()->GetDevice()->GetDevice(), shaderModule.shaderModule, nullptr);
+        vkDestroyShaderModule(GetRenderBackend()->GetDevice()->GetDevice(), shaderModule.handle, nullptr);
     }
 
     m_shaderModules.Clear();
 
     HYPERION_RETURN_OK;
 }
+
+#ifdef HYP_DEBUG_MODE
+
+HYP_API void VulkanShader::SetDebugName(Name name)
+{
+    ShaderBase::SetDebugName(name);
+
+    if (!IsCreated())
+    {
+        return;
+    }
+
+    for (VulkanShaderModule& shaderModule : m_shaderModules)
+    {
+        if (!shaderModule.handle)
+        {
+            continue;
+        }
+
+        String moduleName = HYP_FORMAT("{}_{}", name, EnumToString(shaderModule.type));
+        
+        VkDebugUtilsObjectNameInfoEXT objectNameInfo { VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT };
+        objectNameInfo.objectType = VK_OBJECT_TYPE_SHADER_MODULE;
+        objectNameInfo.objectHandle = (uint64)shaderModule.handle;
+        objectNameInfo.pObjectName = moduleName.Data();
+
+        g_vulkanDynamicFunctions->vkSetDebugUtilsObjectNameEXT(GetRenderBackend()->GetDevice()->GetDevice(), &objectNameInfo);
+    }
+}
+
+#endif
 
 #pragma endregion VulkanShader
 

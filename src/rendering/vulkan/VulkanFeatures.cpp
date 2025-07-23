@@ -8,8 +8,6 @@
 
 namespace hyperion {
 
-VulkanFeatures::DynamicFunctions VulkanFeatures::dynFunctions = {};
-
 VulkanFeatures::VulkanFeatures()
     : m_physicalDevice(nullptr),
       m_properties({}),
@@ -132,58 +130,12 @@ void VulkanFeatures::SetPhysicalDevice(VkPhysicalDevice physicalDevice)
     }
 }
 
-void VulkanFeatures::LoadDynamicFunctions(VulkanDevice* device)
-{
-#define HYP_LOAD_FN(name)                                                               \
-    do                                                                                  \
-    {                                                                                   \
-        auto procAddr = vkGetDeviceProcAddr(device->GetDevice(), #name);                \
-        if (procAddr == nullptr)                                                        \
-        {                                                                               \
-            HYP_LOG(RenderingBackend, Error, "Failed to load dynamic function " #name); \
-        }                                                                               \
-        dynFunctions.name = reinterpret_cast<PFN_##name>(procAddr);                     \
-    }                                                                                   \
-    while (0)
-
-#if defined(HYP_FEATURES_ENABLE_RAYTRACING) && defined(HYP_FEATURES_BINDLESS_TEXTURES)
-    HYP_LOAD_FN(vkGetBufferDeviceAddressKHR); // currently only used for RT
-
-    if (IsRaytracingSupported() && !IsRaytracingDisabled())
-    {
-        HYP_LOG(RenderingBackend, Info, "Raytracing supported, loading raytracing-specific dynamic functions.");
-
-        HYP_LOAD_FN(vkCmdBuildAccelerationStructuresKHR);
-        HYP_LOAD_FN(vkBuildAccelerationStructuresKHR);
-        HYP_LOAD_FN(vkCreateAccelerationStructureKHR);
-        HYP_LOAD_FN(vkDestroyAccelerationStructureKHR);
-        HYP_LOAD_FN(vkGetAccelerationStructureBuildSizesKHR);
-        HYP_LOAD_FN(vkGetAccelerationStructureDeviceAddressKHR);
-        HYP_LOAD_FN(vkCmdTraceRaysKHR);
-        HYP_LOAD_FN(vkGetRayTracingShaderGroupHandlesKHR);
-        HYP_LOAD_FN(vkCreateRayTracingPipelinesKHR);
-    }
-#endif
-
-    // HYP_LOAD_FN(vkCmdDebugMarkerBeginEXT);
-    // HYP_LOAD_FN(vkCmdDebugMarkerEndEXT);
-    // HYP_LOAD_FN(vkCmdDebugMarkerInsertEXT);
-    // HYP_LOAD_FN(vkDebugMarkerSetNameEXT);
-
-#if defined(HYP_MOLTENVK) && HYP_MOLTENVK && HYP_MOLTENVK_LINKED
-    HYP_LOAD_FN(vkGetMoltenVKConfigurationMVK);
-    HYP_LOAD_FN(vkSetMoltenVKConfigurationMVK);
-#endif
-
-#undef HYP_LOAD_FN
-}
-
 void VulkanFeatures::SetDeviceFeatures(VulkanDevice* device)
 {
 #if defined(HYP_MOLTENVK) && HYP_MOLTENVK && HYP_MOLTENVK_LINKED
     MVKConfiguration* mvkConfig = nullptr;
     size_t sz = 1;
-    dynFunctions.vkGetMoltenVKConfigurationMVK(VK_NULL_HANDLE, mvkConfig, &sz);
+    g_vulkanDynamicFunctions->vkGetMoltenVKConfigurationMVK(VK_NULL_HANDLE, mvkConfig, &sz);
 
     mvkConfig = new MVKConfiguration[sz];
 
@@ -194,7 +146,7 @@ void VulkanFeatures::SetDeviceFeatures(VulkanDevice* device)
 #endif
     }
 
-    dynFunctions.vkSetMoltenVKConfigurationMVK(VK_NULL_HANDLE, mvkConfig, &sz);
+    g_vulkanDynamicFunctions->vkSetMoltenVKConfigurationMVK(VK_NULL_HANDLE, mvkConfig, &sz);
 
     delete[] mvkConfig;
 #endif

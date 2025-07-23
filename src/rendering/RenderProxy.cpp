@@ -16,15 +16,4 @@ namespace hyperion {
 
 extern HYP_API SafeDeleter* g_safeDeleter;
 
-#pragma region RenderProxy
-
-void RenderProxyMesh::SafeRelease()
-{
-    g_safeDeleter->SafeRelease(std::move(mesh));
-    g_safeDeleter->SafeRelease(std::move(material));
-    g_safeDeleter->SafeRelease(std::move(skeleton));
-}
-
-#pragma endregion RenderProxy
-
 } // namespace hyperion

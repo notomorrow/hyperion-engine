@@ -202,7 +202,7 @@ void DeferredPass::CreatePipeline(const RenderableAttributeSet& renderableAttrib
                 TFM_LINEAR,
                 TWM_CLAMP_TO_EDGE },
             std::move(ltcMatrixData) });
-
+        m_ltcMatrixTexture->SetName(NAME("LtcMatrixLut"));
         InitObject(m_ltcMatrixTexture);
 
         m_ltcMatrixTexture->SetPersistentRenderResourceEnabled(true);
@@ -219,6 +219,7 @@ void DeferredPass::CreatePipeline(const RenderableAttributeSet& renderableAttrib
                 TWM_CLAMP_TO_EDGE },
             std::move(ltcBrdfData) });
 
+        m_ltcMatrixTexture->SetName(NAME("LtcBrdfLut"));
         InitObject(m_ltcBrdfTexture);
 
         m_ltcBrdfTexture->SetPersistentRenderResourceEnabled(true);
@@ -778,7 +779,7 @@ void ReflectionsPass::CreateSSRRenderer()
 
     DeferCreate(descriptorTable);
 
-    m_renderSsrToScreenPass = MakeUnique<FullScreenPass>(
+    m_renderSsrToScreenPass = CreateObject<FullScreenPass>(
         renderTextureToScreenShader,
         std::move(descriptorTable),
         m_imageFormat,
@@ -1040,10 +1041,10 @@ PassData* DeferredRenderer::CreateViewPassData(View* view, PassDataExt&)
     const FramebufferRef& lightmapFbo = view->GetOutputTarget().GetFramebuffer(RB_LIGHTMAP);
     const FramebufferRef& translucentFbo = view->GetOutputTarget().GetFramebuffer(RB_TRANSLUCENT);
 
-    pd->envGridRadiancePass = MakeUnique<EnvGridPass>(EGPM_RADIANCE, pd->viewport.extent, gbuffer);
+    pd->envGridRadiancePass = CreateObject<EnvGridPass>(EGPM_RADIANCE, pd->viewport.extent, gbuffer);
     pd->envGridRadiancePass->Create();
 
-    pd->envGridIrradiancePass = MakeUnique<EnvGridPass>(EGPM_IRRADIANCE, pd->viewport.extent, gbuffer);
+    pd->envGridIrradiancePass = CreateObject<EnvGridPass>(EGPM_IRRADIANCE, pd->viewport.extent, gbuffer);
     pd->envGridIrradiancePass->Create();
 
     pd->ssgi = MakeUnique<SSGI>(SSGIConfig::FromConfig(), gbuffer);
@@ -1052,10 +1053,10 @@ PassData* DeferredRenderer::CreateViewPassData(View* view, PassDataExt&)
     pd->postProcessing = MakeUnique<PostProcessing>();
     pd->postProcessing->Create();
 
-    pd->indirectPass = MakeUnique<DeferredPass>(DeferredPassMode::INDIRECT_LIGHTING, pd->viewport.extent, gbuffer);
+    pd->indirectPass = CreateObject<DeferredPass>(DeferredPassMode::INDIRECT_LIGHTING, pd->viewport.extent, gbuffer);
     pd->indirectPass->Create();
 
-    pd->directPass = MakeUnique<DeferredPass>(DeferredPassMode::DIRECT_LIGHTING, pd->viewport.extent, gbuffer);
+    pd->directPass = CreateObject<DeferredPass>(DeferredPassMode::DIRECT_LIGHTING, pd->viewport.extent, gbuffer);
     pd->directPass->Create();
 
     pd->depthPyramidRenderer = MakeUnique<DepthPyramidRenderer>(gbuffer);
@@ -1076,7 +1077,7 @@ PassData* DeferredRenderer::CreateViewPassData(View* view, PassDataExt&)
 
     pd->mipChain->SetPersistentRenderResourceEnabled(true);
 
-    pd->hbao = MakeUnique<HBAO>(HBAOConfig::FromConfig(), pd->viewport.extent, gbuffer);
+    pd->hbao = CreateObject<HBAO>(HBAOConfig::FromConfig(), pd->viewport.extent, gbuffer);
     pd->hbao->Create();
 
     // m_dofBlur = MakeUnique<DOFBlur>(gbuffer->GetResolution(), gbuffer);
@@ -1084,14 +1085,14 @@ PassData* DeferredRenderer::CreateViewPassData(View* view, PassDataExt&)
 
     CreateViewCombinePass(view, *pd);
 
-    pd->reflectionsPass = MakeUnique<ReflectionsPass>(pd->viewport.extent, gbuffer, g_renderBackend->GetTextureImageView(pd->mipChain), pd->combinePass->GetFinalImageView());
+    pd->reflectionsPass = CreateObject<ReflectionsPass>(pd->viewport.extent, gbuffer, g_renderBackend->GetTextureImageView(pd->mipChain), pd->combinePass->GetFinalImageView());
     pd->reflectionsPass->Create();
 
-    pd->tonemapPass = MakeUnique<TonemapPass>(pd->viewport.extent, gbuffer);
+    pd->tonemapPass = CreateObject<TonemapPass>(pd->viewport.extent, gbuffer);
     pd->tonemapPass->Create();
 
     // We'll render the lightmap pass into the translucent framebuffer after deferred shading has been applied to OPAQUE objects.
-    pd->lightmapPass = MakeUnique<LightmapPass>(translucentFbo, pd->viewport.extent, gbuffer);
+    pd->lightmapPass = CreateObject<LightmapPass>(translucentFbo, pd->viewport.extent, gbuffer);
     pd->lightmapPass->Create();
 
     pd->temporalAa = MakeUnique<TemporalAA>(pd->tonemapPass->GetFinalImageView(), pd->viewport.extent, gbuffer);
@@ -1270,7 +1271,7 @@ void DeferredRenderer::CreateViewCombinePass(View* view, DeferredPassData& passD
 
     DeferCreate(descriptorTable);
 
-    passData.combinePass = MakeUnique<FullScreenPass>(
+    passData.combinePass = CreateObject<FullScreenPass>(
         renderTextureToScreenShader,
         std::move(descriptorTable),
         translucentFbo,
@@ -1382,7 +1383,7 @@ void DeferredRenderer::ResizeView(Viewport viewport, View* view, DeferredPassDat
 
     passData.tonemapPass->Resize(newSize);
 
-    passData.lightmapPass = MakeUnique<LightmapPass>(translucentFbo, newSize, gbuffer);
+    passData.lightmapPass = CreateObject<LightmapPass>(translucentFbo, newSize, gbuffer);
     passData.lightmapPass->Create();
 
     passData.temporalAa = MakeUnique<TemporalAA>(passData.tonemapPass->GetFinalImageView(), newSize, gbuffer);
@@ -1708,11 +1709,11 @@ void DeferredRenderer::RenderFrameForView(FrameBase* frame, const RenderSetup& r
     // HACK TEST HACK TEST HACK TEST HACK TEST
     if (TLASRef& tlas = pd->topLevelAccelerationStructures[frame->GetFrameIndex()])
     {
-        for (Entity* entity : rpl.GetMeshes().GetElements<Entity>())
+        for (Entity* entity : rpl.GetMeshEntities().GetElements<Entity>())
         {
             Assert(entity);
 
-            RenderProxyMesh* meshProxy = rpl.GetMeshes().GetProxy(entity->Id());
+            RenderProxyMesh* meshProxy = rpl.GetMeshEntities().GetProxy(entity->Id());
             Assert(meshProxy);
 
             BLASRef& blas = meshProxy->raytracingData.bottomLevelAccelerationStructures[frame->GetFrameIndex()];

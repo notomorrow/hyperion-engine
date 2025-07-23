@@ -247,7 +247,7 @@ vec3 CalculateEnvGridIrradiance(vec3 P, vec3 N, vec3 V)
         weight *= max(0.05, dot(N, dir));
 
         vec2 uv = GetEnvProbeLightFieldUV(env_probes[neighbor_probe_index].position_in_grid.xyz, -dir);
-        vec2 depths = Texture2DLod(sampler_linear, light_field_depth_texture, uv, 0.0).rg;
+        vec2 depths = texture(sampler2D(light_field_depth_texture, sampler_linear), uv).rg;
 
         float mean = depths.x;
         float variance = abs(depths.y - HYP_FMATH_SQR(mean));

@@ -3,6 +3,12 @@
 #include <scene/camera/Camera.hpp>
 #include <scene/camera/streaming/CameraStreamingVolume.hpp>
 
+#include <scene/World.hpp>
+#include <scene/world_grid/WorldGrid.hpp>
+
+#include <streaming/StreamingManager.hpp>
+#include <streaming/StreamingVolume.hpp>
+
 #include <core/math/Halton.hpp>
 
 #include <rendering/RenderCamera.hpp>
@@ -725,6 +731,28 @@ void Camera::UpdateMouseLocked()
     {
         m_mouseLockScope.Reset();
     }
+}
+
+void Camera::OnAddedToWorld(World* world)
+{
+    if (const Handle<WorldGrid>& worldGrid = world->GetWorldGrid())
+    {
+        AssertDebug(GetStreamingVolume().IsValid());
+
+        worldGrid->GetStreamingManager()->AddStreamingVolume(GetStreamingVolume());
+    }
+
+    Entity::OnAddedToWorld(world);
+}
+
+void Camera::OnRemovedFromWorld(World* world)
+{
+    if (const Handle<WorldGrid>& worldGrid = world->GetWorldGrid())
+    {
+        worldGrid->GetStreamingManager()->RemoveStreamingVolume(GetStreamingVolume());
+    }
+
+    Entity::OnRemovedFromWorld(world);
 }
 
 void Camera::UpdateRenderProxy(IRenderProxy* proxy)

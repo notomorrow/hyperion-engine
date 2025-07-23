@@ -345,7 +345,7 @@ ResourceTrackerDiff View::CollectMeshEntities(RenderProxyList& rpl)
     {
         HYP_LOG(Scene, Warning, "Camera is not valid for View with Id #%u, cannot collect entities!", Id().Value());
 
-        return rpl.GetMeshes().GetDiff();
+        return rpl.GetMeshEntities().GetDiff();
     }
 
     const ObjId<Camera> cameraId = m_camera->Id();
@@ -398,7 +398,7 @@ ResourceTrackerDiff View::CollectMeshEntities(RenderProxyList& rpl)
 
                 ++numCollectedEntities;
 
-                rpl.GetMeshes().Track(entity->Id(), entity, entity->GetRenderProxyVersionPtr());
+                rpl.GetMeshEntities().Track(entity->Id(), entity, entity->GetRenderProxyVersionPtr());
 
                 if (const Handle<Material>& material = meshComponent.material)
                 {
@@ -452,7 +452,7 @@ ResourceTrackerDiff View::CollectMeshEntities(RenderProxyList& rpl)
 
                 ++numCollectedEntities;
 
-                rpl.GetMeshes().Track(entity->Id(), entity, entity->GetRenderProxyVersionPtr());
+                rpl.GetMeshEntities().Track(entity->Id(), entity, entity->GetRenderProxyVersionPtr());
 
                 if (const Handle<Material>& material = meshComponent.material)
                 {
@@ -506,7 +506,7 @@ ResourceTrackerDiff View::CollectMeshEntities(RenderProxyList& rpl)
 
                 ++numCollectedEntities;
 
-                rpl.GetMeshes().Track(entity->Id(), entity, entity->GetRenderProxyVersionPtr());
+                rpl.GetMeshEntities().Track(entity->Id(), entity, entity->GetRenderProxyVersionPtr());
 
                 if (const Handle<Material>& material = meshComponent.material)
                 {
@@ -541,19 +541,19 @@ ResourceTrackerDiff View::CollectMeshEntities(RenderProxyList& rpl)
 #endif
     }
 
-    ResourceTrackerDiff meshesDiff = rpl.GetMeshes().GetDiff();
+    ResourceTrackerDiff meshesDiff = rpl.GetMeshEntities().GetDiff();
 
     if (meshesDiff.NeedsUpdate())
     {
         Array<Entity*> added;
-        rpl.GetMeshes().GetAdded(added, /* includeChanged */ true);
+        rpl.GetMeshEntities().GetAdded(added, /* includeChanged */ true);
 
         for (Entity* entity : added)
         {
             auto&& [meshComponent, transformComponent, boundingBoxComponent] = entity->GetEntityManager()->TryGetComponents<MeshComponent, TransformComponent, BoundingBoxComponent>(entity);
             AssertDebug(meshComponent != nullptr);
 
-            RenderProxyMesh& meshProxy = *rpl.GetMeshes().SetProxy(entity->Id(), RenderProxyMesh());
+            RenderProxyMesh& meshProxy = *rpl.GetMeshEntities().SetProxy(entity->Id(), RenderProxyMesh());
             meshProxy.entity = entity->WeakHandleFromThis();
             meshProxy.mesh = meshComponent->mesh;
             meshProxy.material = meshComponent->material;

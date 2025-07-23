@@ -160,6 +160,13 @@ RendererResult VulkanComputePipeline::Create()
         vkCreateComputePipelines(GetRenderBackend()->GetDevice()->GetDevice(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &m_handle),
         "Failed to create compute pipeline");
 
+#ifdef HYP_DEBUG_MODE
+    if (Name debugName = GetDebugName())
+    {
+        VulkanPipelineBase::SetDebugName(debugName);
+    }
+#endif
+
     HYPERION_RETURN_OK;
 }
 
@@ -175,5 +182,21 @@ void VulkanComputePipeline::SetPushConstants(const void* data, SizeType size)
 {
     VulkanPipelineBase::SetPushConstants(data, size);
 }
+
+#ifdef HYP_DEBUG_MODE
+
+HYP_API void VulkanComputePipeline::SetDebugName(Name name)
+{
+    ComputePipelineBase::SetDebugName(name);
+
+    if (!IsCreated())
+    {
+        return;
+    }
+
+    VulkanPipelineBase::SetDebugName(name);
+}
+
+#endif
 
 } // namespace hyperion

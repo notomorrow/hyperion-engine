@@ -34,8 +34,6 @@ HYP_API void ShadowCameraHelper::UpdateShadowCameraDirectional(
     aabb.min.z = -radius;
 
     camera->SetToOrthographicProjection(aabb.min.x, aabb.max.x, aabb.min.y, aabb.max.y, aabb.min.z, aabb.max.z);
-    
-    HYP_LOG_TEMP("Updated shadow camera matrix to: {}", camera->GetViewProjectionMatrix());
 
     outAabb = aabb;
 }

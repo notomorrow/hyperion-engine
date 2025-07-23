@@ -59,6 +59,10 @@ public:
     HYP_API virtual void Map() const override;
     HYP_API virtual void Unmap() const override;
 
+#ifdef HYP_DEBUG_MODE
+    HYP_API virtual void SetDebugName(Name name) override;
+#endif
+
 private:
     RendererResult CheckCanAllocate(
         const VkBufferCreateInfo& bufferCreateInfo,

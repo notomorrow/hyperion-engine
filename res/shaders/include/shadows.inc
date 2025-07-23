@@ -280,7 +280,7 @@ float GetShadowVariance(in Light light, vec3 pos, float NdotL)
 #endif
 
     const vec3 coord = GetShadowCoord(light, pos);
-    const vec4 moments = texture(sampler2DArray(shadow_maps, HYP_SAMPLER_LINEAR), vec3(coord.xy * light.dimensions_scale.zw + light.offset_uv, float(light.layer_index)));
+    const vec2 moments = texture(sampler2DArray(shadow_maps, HYP_SAMPLER_LINEAR), vec3(coord.xy * light.dimensions_scale.zw + light.offset_uv, float(light.layer_index))).xy;
 
     float d = coord.z - moments.x;
     float p = step(coord.z, moments.x + bias);
@@ -460,7 +460,7 @@ float GetShadowContactHardened(in Light light, vec3 pos, vec2 texcoord, vec2 scr
 
 float GetPointShadowVariance(uint texture_index, vec3 world_to_light, float NdotL)
 {
-    const vec2 moments = texture(samplerCubeArray(point_shadow_maps, HYP_SAMPLER_LINEAR), vec4(world_to_light, float(texture_index))).rg;
+    const vec2 moments = unpackHalf2x16(texture(usamplerCubeArray(point_shadow_maps, HYP_SAMPLER_LINEAR), vec4(world_to_light, float(texture_index))).x);
     const float current_depth = length(world_to_light);
 
     float shadow_dist = current_depth - moments.x;
@@ -473,7 +473,7 @@ float GetPointShadowVariance(uint texture_index, vec3 world_to_light, float Ndot
 
 float GetPointShadowStandard(uint texture_index, vec3 world_to_light, float NdotL)
 {
-    const float shadow_depth = texture(samplerCubeArray(point_shadow_maps, HYP_SAMPLER_NEAREST), vec4(world_to_light, float(texture_index))).r;
+    const float shadow_depth = unpackHalf2x16(texture(usamplerCubeArray(point_shadow_maps, HYP_SAMPLER_NEAREST), vec4(world_to_light, float(texture_index))).x).x;
     const float current_depth = length(world_to_light);
 
     float bias = HYP_SHADOW_BIAS;

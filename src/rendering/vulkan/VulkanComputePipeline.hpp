@@ -9,6 +9,7 @@
 #include <vulkan/vulkan.h>
 
 namespace hyperion {
+
 class VulkanComputePipeline final : public ComputePipelineBase, public VulkanPipelineBase
 {
 public:
@@ -28,6 +29,10 @@ public:
         SizeType offset = 0) const override;
 
     HYP_API virtual void SetPushConstants(const void* data, SizeType size) override;
+
+#ifdef HYP_DEBUG_MODE
+    HYP_API virtual void SetDebugName(Name name) override;
+#endif
 };
 
 } // namespace hyperion

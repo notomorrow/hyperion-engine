@@ -32,6 +32,8 @@ const FixedArray<Pair<Vec3f, Vec3f>, 6> Texture::cubemapDirections = {
     Pair<Vec3f, Vec3f> { Vec3f { 0, 0, -1 }, Vec3f { 0, 1, 0 } }
 };
 
+static const Name g_nameTextureDefault = NAME("<unnamed texture>");
+
 #pragma region Texture
 
 Texture::Texture()
@@ -50,6 +52,7 @@ Texture::Texture(const TextureDesc& textureDesc)
       m_textureDesc(textureDesc),
       m_streamedTextureData(MakeRefCountedPtr<StreamedTextureData>(TextureData { textureDesc }, m_streamedTextureDataResourceHandle))
 {
+    SetName(g_nameTextureDefault);
 }
 
 Texture::Texture(const TextureData& textureData)
@@ -57,6 +60,7 @@ Texture::Texture(const TextureData& textureData)
       m_textureDesc(textureData.desc),
       m_streamedTextureData(MakeRefCountedPtr<StreamedTextureData>(textureData, m_streamedTextureDataResourceHandle))
 {
+    SetName(g_nameTextureDefault);
 }
 
 Texture::Texture(const RC<StreamedTextureData>& streamedTextureData)
@@ -64,6 +68,8 @@ Texture::Texture(const RC<StreamedTextureData>& streamedTextureData)
       m_textureDesc(streamedTextureData != nullptr ? streamedTextureData->GetTextureDesc() : TextureDesc {}),
       m_streamedTextureData(streamedTextureData)
 {
+    SetName(g_nameTextureDefault);
+    
     if (m_streamedTextureData)
     {
         m_streamedTextureDataResourceHandle = ResourceHandle(*m_streamedTextureData);

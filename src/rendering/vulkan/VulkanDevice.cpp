@@ -467,7 +467,6 @@ RendererResult VulkanDevice::Create(uint32 requiredQueueFamilies)
         "Could not create Device!");
 
     HYP_LOG(RenderingBackend, Debug, "Loading dynamic functions\n");
-    m_features->LoadDynamicFunctions(this);
     m_features->SetDeviceFeatures(this);
 
     DebugLog(LogType::Info, "Raytracing supported? : %d\n", m_features->IsRaytracingSupported());

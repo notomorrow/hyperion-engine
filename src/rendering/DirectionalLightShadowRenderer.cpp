@@ -157,7 +157,7 @@ void ShadowPass::CreateCombineShadowMapsPass()
 
     DeferCreate(descriptorTable);
 
-    m_combineShadowMapsPass = MakeUnique<FullScreenPass>(shader, descriptorTable, GetFormat(), GetExtent(), m_gbuffer);
+    m_combineShadowMapsPass = CreateObject<FullScreenPass>(shader, descriptorTable, GetFormat(), GetExtent(), m_gbuffer);
     m_combineShadowMapsPass->Create();
 }
 
@@ -417,7 +417,7 @@ void DirectionalLightShadowRenderer::OnAddedToWorld()
         // m_light->GetRenderResource().SetShadowMap(TResourceHandle<RenderShadowMap>(m_shadowMapResourceHandle));
     }
 
-    m_shadowPass = MakeUnique<ShadowPass>(
+    m_shadowPass = CreateObject<ShadowPass>(
         m_parentScene,
         TResourceHandle<RenderWorld>(m_parentScene->GetWorld()->GetRenderResource()),
         TResourceHandle<RenderCamera>(m_camera->GetRenderResource()),

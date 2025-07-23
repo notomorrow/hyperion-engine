@@ -2,19 +2,19 @@
 #extension GL_GOOGLE_include_directive : require
 #extension GL_EXT_scalar_block_layout : require
 
-layout(location=0) out vec3 v_position;
-layout(location=1) out vec3 v_normal;
-layout(location=2) out vec2 v_texcoord0;
-layout(location=4) out vec3 v_tangent;
-layout(location=5) out vec3 v_bitangent;
-layout(location=11) out vec4 v_position_ndc;
-layout(location=12) out vec4 v_previous_position_ndc;
-layout(location=15) out flat uint v_object_index;
+layout(location = 0) out vec3 v_position;
+layout(location = 1) out vec3 v_normal;
+layout(location = 2) out vec2 v_texcoord0;
+layout(location = 4) out vec3 v_tangent;
+layout(location = 5) out vec3 v_bitangent;
+layout(location = 11) out vec4 v_position_ndc;
+layout(location = 12) out vec4 v_previous_position_ndc;
+layout(location = 15) out flat uint v_object_index;
 
 #ifdef IMMEDIATE_MODE
-layout(location=16) out vec4 v_color;
-layout(location=17) out flat uint v_env_probe_index;
-layout(location=18) out flat uint v_env_probe_type;
+layout(location = 16) out vec4 v_color;
+layout(location = 17) out flat uint v_env_probe_index;
+layout(location = 18) out flat uint v_env_probe_type;
 #endif
 
 HYP_ATTRIBUTE(0) vec3 a_position;
@@ -32,7 +32,10 @@ HYP_ATTRIBUTE_OPTIONAL(7) vec4 a_bone_indices;
 
 #ifdef IMMEDIATE_MODE
 
-HYP_DESCRIPTOR_SSBO(Global, EnvProbesBuffer) readonly buffer EnvProbesBuffer { EnvProbe env_probes[]; };
+HYP_DESCRIPTOR_SSBO(Global, EnvProbesBuffer) readonly buffer EnvProbesBuffer
+{
+    EnvProbe env_probes[];
+};
 
 HYP_DESCRIPTOR_SRV(Global, LightFieldColorTexture) uniform texture2D light_field_color_texture;
 HYP_DESCRIPTOR_SRV(Global, LightFieldDepthTexture) uniform texture2D light_field_depth_texture;
@@ -81,7 +84,7 @@ void main()
     v_position = position.xyz;
     v_normal = (normal_matrix * vec4(a_normal, 0.0)).xyz;
     v_tangent = (normal_matrix * vec4(a_tangent, 0.0)).xyz;
-	v_bitangent = (normal_matrix * vec4(a_bitangent, 0.0)).xyz;
+    v_bitangent = (normal_matrix * vec4(a_bitangent, 0.0)).xyz;
     v_texcoord0 = a_texcoord0;
 
 #ifdef IMMEDIATE_MODE
@@ -95,7 +98,8 @@ void main()
     {
         SH9 sh9;
 
-        for (int i = 0; i < 9; i++) {
+        for (int i = 0; i < 9; i++)
+        {
             sh9.values[i] = env_probes[env_probe_index].sh[i].rgb;
         }
 
@@ -113,4 +117,4 @@ void main()
     v_previous_position_ndc = (jitter_matrix * camera.projection) * camera.previous_view * previous_position;
 
     gl_Position = camera.projection * camera.view * position;
-} 
+}

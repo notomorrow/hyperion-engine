@@ -18,11 +18,11 @@ layout(location = 0) out vec4 output_color;
 #ifdef WRITE_NORMALS
 layout(location = 1) out vec4 output_normals;
 #ifdef WRITE_MOMENTS
-layout(location = 2) out vec4 output_moments;
+layout(location = 2) out uint output_moments;
 #endif
 #else
 #ifdef WRITE_MOMENTS
-layout(location = 1) out vec4 output_moments;
+layout(location = 1) out uint output_moments;
 #endif
 #endif
 
@@ -47,7 +47,7 @@ uniform sampler sampler_nearest;
 #define HYP_CUBEMAP_AMBIENT 0.005
 
 HYP_DESCRIPTOR_SRV(Global, ShadowMapsTextureArray) uniform texture2DArray shadow_maps;
-HYP_DESCRIPTOR_SRV(Global, PointLightShadowMapsTextureArray) uniform textureCubeArray point_shadow_maps;
+HYP_DESCRIPTOR_SRV(Global, PointLightShadowMapsTextureArray) uniform utextureCubeArray point_shadow_maps;
 
 #undef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 
@@ -151,6 +151,6 @@ void main()
 #endif
 
 #ifdef WRITE_MOMENTS
-    output_moments = vec4(moments, 0.0, 1.0);
+    output_moments = packHalf2x16(moments);
 #endif
 }

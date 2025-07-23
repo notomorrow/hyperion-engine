@@ -35,13 +35,11 @@ static const Vec2u shProbeDimensions { 256, 256 };
 
 static const Vec2u lightFieldProbeDimensions { 32, 32 };
 const TextureFormat lightFieldColorFormat = TF_RGBA8;
-const TextureFormat lightFieldDepthFormat = TF_RG16F;
+const TextureFormat lightFieldDepthFormat = TF_R16F;
 static const uint32 irradianceOctahedronSize = 8;
 
 static const Vec3u voxelGridDimensions { 256, 256, 256 };
 static const TextureFormat voxelGridFormat = TF_RGBA8;
-
-static const TextureFormat ambientProbeFormat = TF_RGBA8;
 
 static const Vec2u framebufferDimensions { 256, 256 };
 
@@ -158,12 +156,8 @@ void EnvGrid::Init()
     InitObject(m_camera);
     AttachChild(m_camera);
 
-    ShaderProperties shaderProperties(staticMeshVertexAttributes, {
-        NAME("ENV_PROBE"),
-        NAME("WRITE_NORMALS"),
-        NAME("WRITE_MOMENTS")
-    });
-    
+    ShaderProperties shaderProperties(staticMeshVertexAttributes, { NAME("ENV_PROBE"), NAME("WRITE_NORMALS"), NAME("WRITE_MOMENTS") });
+
     ShaderDefinition shaderDefinition { NAME("RenderToCubemap"), shaderProperties };
 
     switch (GetEnvGridType())
@@ -190,7 +184,7 @@ void EnvGrid::Init()
                 TWM_CLAMP_TO_EDGE,
                 1,
                 IU_STORAGE | IU_SAMPLED });
-
+        m_irradianceTexture->SetName(NAME_FMT("{}_LightFieldIrradiance", Id()));
         InitObject(m_irradianceTexture);
 
         m_irradianceTexture->SetPersistentRenderResourceEnabled(true);
@@ -209,6 +203,7 @@ void EnvGrid::Init()
                 1,
                 IU_STORAGE | IU_SAMPLED });
 
+        m_depthTexture->SetName(NAME_FMT("{}_LightFieldDepth", Id()));
         InitObject(m_depthTexture);
 
         m_depthTexture->SetPersistentRenderResourceEnabled(true);
@@ -234,6 +229,7 @@ void EnvGrid::Init()
                 1,
                 IU_STORAGE | IU_SAMPLED });
 
+        m_voxelGridTexture->SetName(NAME_FMT("{}_VoxelGrid", Id()));
         InitObject(m_voxelGridTexture);
 
         m_voxelGridTexture->SetPersistentRenderResourceEnabled(true);
@@ -247,17 +243,17 @@ void EnvGrid::Init()
         .extent = Vec2u(framebufferDimensions),
         .attachments = {
             ViewOutputTargetAttachmentDesc {
-                ambientProbeFormat,
+                TF_RGBA8, // color
                 TT_CUBEMAP,
                 LoadOperation::CLEAR,
                 StoreOperation::STORE },
             ViewOutputTargetAttachmentDesc {
-                TF_RG16F,
+                TF_RG16F, // normal
                 TT_CUBEMAP,
                 LoadOperation::CLEAR,
                 StoreOperation::STORE },
             ViewOutputTargetAttachmentDesc {
-                TF_RG16F,
+                TF_R16, // distance, distance^2 (packed)
                 TT_CUBEMAP,
                 LoadOperation::CLEAR,
                 StoreOperation::STORE },
@@ -565,7 +561,7 @@ void EnvGrid::Update(float delta)
         m_envProbeCollection.numProbes);
 
     HYP_LOG(EnvGrid, Debug, "Updating EnvGrid {} with {} probes\t Found {} meshes", Id(), m_envProbeCollection.numProbes,
-        RenderApi_GetProducerProxyList(m_view).GetMeshes().NumCurrent());
+        RenderApi_GetProducerProxyList(m_view).GetMeshEntities().NumCurrent());
 }
 
 void EnvGrid::UpdateRenderProxy(IRenderProxy* proxy)

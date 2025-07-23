@@ -97,6 +97,10 @@ public:
         return m_bpp;
     }
 
+#ifdef HYP_DEBUG_MODE
+    HYP_API virtual void SetDebugName(Name name) override;
+#endif
+
 private:
     VkImage m_handle = VK_NULL_HANDLE;
     VmaAllocation m_allocation = VK_NULL_HANDLE;

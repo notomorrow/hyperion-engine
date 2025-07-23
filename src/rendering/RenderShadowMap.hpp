@@ -243,7 +243,7 @@ private:
     ShadowMapAtlasElement m_atlasElement;
     ImageViewRef m_imageView;
 
-    UniquePtr<FullScreenPass> m_combineShadowMapsPass;
+    Handle<FullScreenPass> m_combineShadowMapsPass;
 };
 
 struct HYP_API ShadowPassData : PassData
@@ -297,7 +297,7 @@ private:
     struct CachedShadowMapData
     {
         RenderShadowMap* shadowMap = nullptr;
-        UniquePtr<FullScreenPass> combineShadowMapsPass; // Pass to combine shadow maps for this light (optional)
+        Handle<FullScreenPass> combineShadowMapsPass; // Pass to combine shadow maps for this light (optional)
         ImageRef combinedShadowMapsBlurred;
         ComputePipelineRef csBlurShadowMap; // compute pipeline for blurring VSM shadow maps
     };

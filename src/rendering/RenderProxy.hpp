@@ -40,22 +40,14 @@ struct MeshRaytracingData
 
 class IRenderProxy
 {
-public:
-    virtual ~IRenderProxy() = default;
-
-    virtual void SafeRelease()
-    {
-    }
-
-#ifdef HYP_DEBUG_MODE
-    uint16 state = 0x1;
-#endif
+protected:
+    ~IRenderProxy() = default;
 };
 
-class NullProxy : public IRenderProxy
+class NullProxy final : public IRenderProxy
 {
-public:
-    char bufferData[1];
+private:
+    NullProxy() = default;
 };
 
 struct EntityShaderData
@@ -88,7 +80,7 @@ struct EntityShaderData
 static_assert(sizeof(EntityShaderData) == 256);
 
 /*! \brief Proxy for a renderable Entity with a valid Mesh and Material assigned */
-class RenderProxyMesh : public IRenderProxy
+class RenderProxyMesh final : public IRenderProxy
 {
 public:
     WeakHandle<Entity> entity;
@@ -98,10 +90,6 @@ public:
     MeshInstanceData instanceData;
     MeshRaytracingData raytracingData;
     EntityShaderData bufferData {};
-
-    ~RenderProxyMesh() override = default;
-
-    HYP_API virtual void SafeRelease() override;
 
     HYP_FORCE_INLINE bool operator==(const RenderProxyMesh& other) const
     {
@@ -149,11 +137,9 @@ struct EnvProbeShaderData
     EnvProbeSphericalHarmonics sh;
 };
 
-class RenderProxyEnvProbe : public IRenderProxy
+class RenderProxyEnvProbe final : public IRenderProxy
 {
 public:
-    ~RenderProxyEnvProbe() override = default;
-
     WeakHandle<EnvProbe> envProbe;
     EnvProbeShaderData bufferData {};
 };
@@ -176,11 +162,9 @@ struct EnvGridShaderData
     Vec2i irradianceOctahedronSize;
 };
 
-class RenderProxyEnvGrid : public IRenderProxy
+class RenderProxyEnvGrid final : public IRenderProxy
 {
 public:
-    ~RenderProxyEnvGrid() override = default;
-
     WeakHandle<EnvGrid> envGrid;
     EnvGridShaderData bufferData {};
     ObjId<EnvProbe> envProbes[g_maxBoundAmbientProbes];
@@ -217,11 +201,9 @@ struct alignas(16) LightShaderData
 
 static_assert(sizeof(LightShaderData) == 272);
 
-class RenderProxyLight : public IRenderProxy
+class RenderProxyLight final : public IRenderProxy
 {
 public:
-    ~RenderProxyLight() override = default;
-
     WeakHandle<Light> light;
     WeakHandle<Material> lightMaterial;  // for textured area lights
     Array<WeakHandle<View>> shadowViews; // optional, for lights casting shadow
@@ -240,11 +222,9 @@ struct LightmapVolumeShaderData
     uint32 _pad2;
 };
 
-class RenderProxyLightmapVolume : public IRenderProxy
+class RenderProxyLightmapVolume final : public IRenderProxy
 {
 public:
-    ~RenderProxyLightmapVolume() override = default;
-
     WeakHandle<LightmapVolume> lightmapVolume;
     LightmapVolumeShaderData bufferData {};
 };
@@ -273,7 +253,7 @@ struct MaterialShaderData
 
 static_assert(sizeof(MaterialShaderData) == 256);
 
-class RenderProxyMaterial : public IRenderProxy
+class RenderProxyMaterial final : public IRenderProxy
 {
 public:
     RenderProxyMaterial()
@@ -283,8 +263,6 @@ public:
             boundTextureIndices[i] = ~0u;
         }
     }
-
-    ~RenderProxyMaterial() override = default;
 
     WeakHandle<Material> material;
     MaterialShaderData bufferData {};
@@ -299,7 +277,7 @@ struct SkeletonShaderData
     Matrix4 bones[maxBones];
 };
 
-class RenderProxySkeleton : public IRenderProxy
+class RenderProxySkeleton final : public IRenderProxy
 {
 public:
     RenderProxySkeleton()
@@ -339,7 +317,7 @@ struct CameraShaderData
     Matrix4 _pad6;
 };
 
-class RenderProxyCamera : public IRenderProxy
+class RenderProxyCamera final : public IRenderProxy
 {
 public:
     WeakHandle<Camera> camera;

@@ -78,8 +78,11 @@ enum class DeferredPassMode
 
 void GetDeferredShaderProperties(ShaderProperties& outShaderProperties);
 
+HYP_CLASS(NoScriptBindings)
 class DeferredPass final : public FullScreenPass
 {
+    HYP_OBJECT_BODY(DeferredPass);
+    
     friend class DeferredRenderer;
 
 public:
@@ -126,8 +129,11 @@ enum EnvGridApplyMode : uint8
     EGAM_MAX
 };
 
+HYP_CLASS(NoScriptBindings)
 class TonemapPass final : public FullScreenPass
 {
+    HYP_OBJECT_BODY(TonemapPass);
+    
 public:
     TonemapPass(Vec2u extent, GBuffer* gbuffer);
     TonemapPass(const TonemapPass& other) = delete;
@@ -154,8 +160,11 @@ private:
     virtual void Resize_Internal(Vec2u newSize) override;
 };
 
+HYP_CLASS(NoScriptBindings)
 class LightmapPass final : public FullScreenPass
 {
+    HYP_OBJECT_BODY(LightmapPass);
+    
 public:
     LightmapPass(const FramebufferRef& framebuffer, Vec2u extent, GBuffer* gbuffer);
     LightmapPass(const LightmapPass& other) = delete;
@@ -182,8 +191,11 @@ private:
     virtual void Resize_Internal(Vec2u newSize) override;
 };
 
+HYP_CLASS(NoScriptBindings)
 class EnvGridPass final : public FullScreenPass
 {
+    HYP_OBJECT_BODY(EnvGridPass);
+    
 public:
     EnvGridPass(EnvGridPassMode mode, Vec2u extent, GBuffer* gbuffer);
     EnvGridPass(const EnvGridPass& other) = delete;
@@ -219,8 +231,11 @@ private:
     bool m_isFirstFrame;
 };
 
+HYP_CLASS(NoScriptBindings)
 class ReflectionsPass final : public FullScreenPass
 {
+    HYP_OBJECT_BODY(ReflectionsPass);
+    
     enum ApplyReflectionProbeMode : uint32
     {
         DEFAULT = 0,
@@ -285,7 +300,7 @@ private:
 
     UniquePtr<SSRRenderer> m_ssrRenderer;
 
-    UniquePtr<FullScreenPass> m_renderSsrToScreenPass;
+    Handle<FullScreenPass> m_renderSsrToScreenPass;
 
     bool m_isFirstFrame;
 };
@@ -299,18 +314,18 @@ struct DeferredPassData : PassData
 
     Handle<Texture> mipChain;
 
-    UniquePtr<DeferredPass> indirectPass;
-    UniquePtr<DeferredPass> directPass;
-    UniquePtr<EnvGridPass> envGridRadiancePass;
-    UniquePtr<EnvGridPass> envGridIrradiancePass;
-    UniquePtr<ReflectionsPass> reflectionsPass;
-    UniquePtr<LightmapPass> lightmapPass;
-    UniquePtr<TonemapPass> tonemapPass;
+    Handle<DeferredPass> indirectPass;
+    Handle<DeferredPass> directPass;
+    Handle<EnvGridPass> envGridRadiancePass;
+    Handle<EnvGridPass> envGridIrradiancePass;
+    Handle<ReflectionsPass> reflectionsPass;
+    Handle<LightmapPass> lightmapPass;
+    Handle<TonemapPass> tonemapPass;
+    Handle<HBAO> hbao;
+    Handle<FullScreenPass> combinePass;
     UniquePtr<PostProcessing> postProcessing;
-    UniquePtr<HBAO> hbao;
     UniquePtr<TemporalAA> temporalAa;
     UniquePtr<SSGI> ssgi;
-    UniquePtr<FullScreenPass> combinePass;
     UniquePtr<DepthPyramidRenderer> depthPyramidRenderer;
     UniquePtr<DOFBlur> dofBlur;
     UniquePtr<RaytracingReflections> raytracingReflections;

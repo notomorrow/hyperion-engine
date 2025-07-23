@@ -26,15 +26,17 @@
 
 #include <core/math/MathUtil.hpp>
 
-#include <EngineGlobals.hpp>
-#include <Types.hpp>
+#include <core/object/HypClass.hpp>
 
 #include <core/logging/Logger.hpp>
 #include <core/logging/LogChannels.hpp>
 
-#include <util/MeshBuilder.hpp>
-
 #include <core/profiling/ProfileScope.hpp>
+
+#include <EngineGlobals.hpp>
+#include <Types.hpp>
+
+#include <util/MeshBuilder.hpp>
 
 namespace hyperion {
 
@@ -340,6 +342,7 @@ void FullScreenPass::CreateFramebuffer()
     textureDesc.imageUsage = IU_ATTACHMENT | IU_SAMPLED;
 
     ImageRef attachmentImage = g_renderBackend->MakeImage(textureDesc);
+    attachmentImage->SetDebugName(NAME_FMT("{}_RenderTargetTexture", InstanceClass()->GetName()));
     DeferCreate(attachmentImage);
 
     AttachmentRef attachment = m_framebuffer->AddAttachment(
@@ -456,7 +459,7 @@ void FullScreenPass::CreateRenderTextureToScreenPass()
 
     DeferCreate(descriptorTable);
 
-    m_renderTextureToScreenPass = MakeUnique<FullScreenPass>(
+    m_renderTextureToScreenPass = CreateObject<FullScreenPass>(
         renderTextureToScreenShader,
         std::move(descriptorTable),
         m_imageFormat,
@@ -503,7 +506,7 @@ void FullScreenPass::CreateMergeHalfResTexturesPass()
 
     DeferCreate(descriptorTable);
 
-    m_mergeHalfResTexturesPass = MakeUnique<FullScreenPass>(
+    m_mergeHalfResTexturesPass = CreateObject<FullScreenPass>(
         mergeHalfResTexturesShader,
         std::move(descriptorTable),
         m_imageFormat,

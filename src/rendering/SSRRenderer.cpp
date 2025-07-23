@@ -119,6 +119,7 @@ void SSRRenderer::Create()
         1,
         IU_STORAGE | IU_SAMPLED });
 
+    m_uvsTexture->SetName(NAME("SsrUvs"));
     InitObject(m_uvsTexture);
 
     m_uvsTexture->SetPersistentRenderResourceEnabled(true);
@@ -133,6 +134,7 @@ void SSRRenderer::Create()
         1,
         IU_STORAGE | IU_SAMPLED });
 
+    m_sampledResultTexture->SetName(NAME("SsrSampledResult"));
     InitObject(m_sampledResultTexture);
 
     m_sampledResultTexture->SetPersistentRenderResourceEnabled(true);

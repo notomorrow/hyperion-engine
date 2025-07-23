@@ -87,8 +87,8 @@ void ShadowMapAllocator::Initialize()
 
     m_pointLightShadowMapImage = g_renderBackend->MakeImage(TextureDesc {
         TT_CUBEMAP_ARRAY,
-        TF_RG32F,
-        Vec3u { 512, 512, 1 },
+        TF_R16,
+        Vec3u { 256, 256, 1 },
         TFM_NEAREST,
         TFM_NEAREST,
         TWM_CLAMP_TO_EDGE,
@@ -307,7 +307,7 @@ ShadowPassData::~ShadowPassData()
 
 #pragma region ShadowRendererBase
 
-static UniquePtr<FullScreenPass> CreateCombineShadowMapsPass(TextureFormat format, Vec2u dimensions, Span<Handle<View>> views)
+static Handle<FullScreenPass> CreateCombineShadowMapsPass(TextureFormat format, Vec2u dimensions, Span<Handle<View>> views)
 {
     AssertDebug(views.Size() == 2, "Combine pass requires 2 views (one for static objects, one for dynamic objects)");
 
@@ -329,7 +329,7 @@ static UniquePtr<FullScreenPass> CreateCombineShadowMapsPass(TextureFormat forma
 
     DeferCreate(descriptorTable);
 
-    UniquePtr<FullScreenPass> combineShadowMapsPass = MakeUnique<FullScreenPass>(
+    Handle<FullScreenPass> combineShadowMapsPass = CreateObject<FullScreenPass>(
         shader,
         descriptorTable,
         format,
@@ -549,14 +549,14 @@ void ShadowRendererBase::RenderFrame(FrameBase* frame, const RenderSetup& render
         renderProxyLists.PushBack(&rpl);
 
         RenderCollector& renderCollector = RenderApi_GetRenderCollector(shadowView);
-//        HYP_LOG_TEMP("shadow render collector  {}", (void*)&renderCollector);
-//
-//        HYP_LOG_TEMP("Render Shadow map here for light {}\t into view: {} for {} entities\t\tShadow map atlas index: {} elem index: {} point idx: {}",
-//            renderSetup.light->Id(),
-//            shadowView->Id(),
-//            renderCollector.NumDrawCallsCollected(),
-//            shadowMap->GetAtlasElement().atlasIndex, shadowMap->GetAtlasElement().index,
-//            shadowMap->GetAtlasElement().pointLightIndex);
+        //        HYP_LOG_TEMP("shadow render collector  {}", (void*)&renderCollector);
+        //
+        //        HYP_LOG_TEMP("Render Shadow map here for light {}\t into view: {} for {} entities\t\tShadow map atlas index: {} elem index: {} point idx: {}",
+        //            renderSetup.light->Id(),
+        //            shadowView->Id(),
+        //            renderCollector.NumDrawCallsCollected(),
+        //            shadowMap->GetAtlasElement().atlasIndex, shadowMap->GetAtlasElement().index,
+        //            shadowMap->GetAtlasElement().pointLightIndex);
 
         renderCollector.ExecuteDrawCalls(frame, rs, ((1u << RB_OPAQUE) | (1u << RB_LIGHTMAP) | (1u << RB_TRANSLUCENT)));
 

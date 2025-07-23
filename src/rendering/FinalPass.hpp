@@ -43,7 +43,7 @@ private:
     TextureFormat m_imageFormat;
     Handle<Mesh> m_quadMesh;
     ImageViewRef m_uiLayerImageView;
-    UniquePtr<FullScreenPass> m_renderTextureToScreenPass;
+    Handle<FullScreenPass> m_renderTextureToScreenPass;
     uint8 m_dirtyFrameIndices;
 };
 } // namespace hyperion

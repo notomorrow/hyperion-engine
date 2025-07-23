@@ -57,6 +57,10 @@ public:
 
     HYP_API virtual RendererResult Destroy() override;
 
+#ifdef HYP_DEBUG_MODE
+    HYP_API virtual void SetDebugName(Name name) override;
+#endif
+
 private:
     HYP_API virtual RendererResult Rebuild() override;
 

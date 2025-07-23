@@ -28,7 +28,7 @@ HYP_DESCRIPTOR_CBUFF(Global, SphereSamplesBuffer) uniform SphereSamplesBuffer
 
 HYP_DESCRIPTOR_SRV(LightFieldProbeDescriptorSet, InColorImage) uniform textureCube color_texture;
 HYP_DESCRIPTOR_SRV(LightFieldProbeDescriptorSet, InNormalsImage) uniform textureCube normals_texture;
-HYP_DESCRIPTOR_SRV(LightFieldProbeDescriptorSet, InDepthImage) uniform textureCube depth_texture;
+HYP_DESCRIPTOR_SRV(LightFieldProbeDescriptorSet, InDepthImage) uniform utextureCube depth_texture;
 
 HYP_DESCRIPTOR_SAMPLER(LightFieldProbeDescriptorSet, SamplerLinear) uniform sampler sampler_linear;
 HYP_DESCRIPTOR_SAMPLER(LightFieldProbeDescriptorSet, SamplerNearest) uniform sampler sampler_nearest;
@@ -66,7 +66,7 @@ HYP_DESCRIPTOR_SSBO(Global, LightsBuffer) readonly buffer LightsBuffer
 };
 
 HYP_DESCRIPTOR_SRV(Global, ShadowMapsTextureArray) uniform texture2DArray shadow_maps;
-HYP_DESCRIPTOR_SRV(Global, PointLightShadowMapsTextureArray) uniform textureCubeArray point_shadow_maps;
+HYP_DESCRIPTOR_SRV(Global, PointLightShadowMapsTextureArray) uniform utextureCubeArray point_shadow_maps;
 
 #include "../include/shadows.inc"
 
@@ -90,7 +90,7 @@ vec2 ConvoleProbe(uvec2 local_coord)
         vec3 offset = sphere_samples[i % 4096].xyz;
         vec3 sample_dir = normalize(dir + vec3(lobe_size) * offset);
 
-        vec2 dist_dist2 = TextureCube(sampler_linear, depth_texture, sample_dir).rg;
+        vec2 dist_dist2 = unpackHalf2x16(texture(usamplerCube(depth_texture, sampler_linear), sample_dir).x);
         sum_distance += dist_dist2;
     }
 

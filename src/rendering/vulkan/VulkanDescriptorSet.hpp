@@ -63,6 +63,10 @@ public:
 
     HYP_API virtual DescriptorSetRef Clone() const override;
 
+#ifdef HYP_DEBUG_MODE
+    HYP_API virtual void SetDebugName(Name name) override;
+#endif
+
 protected:
     virtual void Bind(CommandBufferBase* commandBuffer, const GraphicsPipelineBase* pipeline, uint32 bindIndex) const override;
     virtual void Bind(CommandBufferBase* commandBuffer, const GraphicsPipelineBase* pipeline, const ArrayMap<Name, uint32>& offsets, uint32 bindIndex) const override;

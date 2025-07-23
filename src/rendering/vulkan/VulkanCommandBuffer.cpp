@@ -247,7 +247,8 @@ void VulkanCommandBuffer::DrawIndexedIndirect(
 
 void VulkanCommandBuffer::DebugMarkerBegin(const char* markerName) const
 {
-    if (VulkanFeatures::dynFunctions.vkCmdDebugMarkerBeginEXT)
+#ifdef HYP_DEBUG_MODE
+    if (g_vulkanDynamicFunctions->vkCmdDebugMarkerBeginEXT)
     {
         const VkDebugMarkerMarkerInfoEXT marker {
             .sType = VK_STRUCTURE_TYPE_DEBUG_MARKER_MARKER_INFO_EXT,
@@ -255,16 +256,19 @@ void VulkanCommandBuffer::DebugMarkerBegin(const char* markerName) const
             .pMarkerName = markerName
         };
 
-        VulkanFeatures::dynFunctions.vkCmdDebugMarkerBeginEXT(m_handle, &marker);
+        g_vulkanDynamicFunctions->vkCmdDebugMarkerBeginEXT(m_handle, &marker);
     }
+#endif
 }
 
 void VulkanCommandBuffer::DebugMarkerEnd() const
 {
-    if (VulkanFeatures::dynFunctions.vkCmdDebugMarkerEndEXT)
+#ifdef HYP_DEBUG_MODE
+    if (g_vulkanDynamicFunctions->vkCmdDebugMarkerEndEXT)
     {
-        VulkanFeatures::dynFunctions.vkCmdDebugMarkerEndEXT(m_handle);
+        g_vulkanDynamicFunctions->vkCmdDebugMarkerEndEXT(m_handle);
     }
+#endif
 }
 
 } // namespace hyperion

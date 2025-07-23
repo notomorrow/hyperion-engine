@@ -46,7 +46,8 @@
 #include <core/threading/Threads.hpp>
 
 #include <core/memory/MemoryPool.hpp>
-#include <core/memory/pool/MemoryPool2.hpp>
+
+#include <core/object/HypClassUtils.hpp>
 
 #include <core/logging/LogChannels.hpp>
 #include <core/logging/Logger.hpp>
@@ -795,12 +796,12 @@ static inline void SyncResources(ResourceTracker<ObjId<ElementType>, ElementType
         }
     }
 
-//    if (added.Any() || removed.Any() || changedIds.Any())
-//    {
-//        HYP_LOG_TEMP("Updated resources for {}: added={}, removed={}, changed={}",
-//            TypeNameWithoutNamespace<ElementType>().Data(),
-//            added.Size(), removed.Size(), changedIds.Size());
-//    }
+    //    if (added.Any() || removed.Any() || changedIds.Any())
+    //    {
+    //        HYP_LOG_TEMP("Updated resources for {}: added={}, removed={}, changed={}",
+    //            TypeNameWithoutNamespace<ElementType>().Data(),
+    //            added.Size(), removed.Size(), changedIds.Size());
+    //    }
 }
 
 template <SizeType... Indices>
@@ -1053,7 +1054,7 @@ HYP_API void RenderApi_BeginFrame_RenderThread()
 
         ViewData& vd = *vfd.viewData;
 
-        if (vfd.rplShared->TEMP_disableBuildRenderCollection || (vfd.view->GetFlags() & ViewFlags::NO_GFX))
+        if (vfd.rplShared->disableBuildRenderCollection || (vfd.view->GetFlags() & ViewFlags::NO_GFX))
         {
             continue;
         }
@@ -1233,6 +1234,24 @@ RenderGlobalState::RenderGlobalState()
     gpuBuffers.buffers[GRB_ENV_PROBES] = gpuBufferHolders->GetOrCreate<EnvProbeShaderData, GpuBufferType::SSBO>();
     gpuBuffers.buffers[GRB_ENV_GRIDS] = gpuBufferHolders->GetOrCreate<EnvGridShaderData, GpuBufferType::CBUFF>();
     gpuBuffers.buffers[GRB_LIGHTMAP_VOLUMES] = gpuBufferHolders->GetOrCreate<LightmapVolumeShaderData, GpuBufferType::SSBO>();
+
+#ifdef HYP_DEBUG_MODE
+    for (int i = 0; i < HYP_ARRAY_SIZE(gpuBuffers.buffers); i++)
+    {
+        if (!gpuBuffers.buffers[i])
+        {
+            continue;
+        }
+
+        for (uint32 frameIndex = 0; frameIndex < g_framesInFlight; frameIndex++)
+        {
+            const GpuBufferRef& buffer = gpuBuffers.buffers[i]->GetBuffer(frameIndex);
+            AssertDebug(buffer.IsValid());
+
+            buffer->SetDebugName(CreateNameFromDynamicString(EnumToString(GlobalRenderBuffer(i))));
+        }
+    }
+#endif
 
     globalDescriptorTable = g_renderBackend->MakeDescriptorTable(&GetStaticDescriptorTableDeclaration());
 

@@ -62,6 +62,27 @@ void VulkanPipelineBase::SetPushConstants(const void* data, SizeType size)
     m_pushConstants = PushConstantData(data, size);
 }
 
+#ifdef HYP_DEBUG_MODE
+
+HYP_API void VulkanPipelineBase::SetDebugName(Name name)
+{
+    if (!IsCreated())
+    {
+        return;
+    }
+
+    const char* strName = name.LookupString();
+
+    VkDebugUtilsObjectNameInfoEXT objectNameInfo { VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT };
+    objectNameInfo.objectType = VK_OBJECT_TYPE_PIPELINE;
+    objectNameInfo.objectHandle = (uint64)m_handle;
+    objectNameInfo.pObjectName = strName;
+
+    g_vulkanDynamicFunctions->vkSetDebugUtilsObjectNameEXT(GetRenderBackend()->GetDevice()->GetDevice(), &objectNameInfo);
+}
+
+#endif
+
 #pragma endregion VulkanPipelineBase
 
 } // namespace hyperion

@@ -26,7 +26,7 @@
 namespace hyperion {
 
 static const TextureFormat reflectionProbeFormat = TF_RGBA16F;
-static const TextureFormat shadowProbeFormat = TF_RG32F;
+static const TextureFormat shadowProbeFormat = TF_R16;
 
 static FixedArray<Matrix4, 6> CreateCubemapMatrices(const BoundingBox& aabb, const Vec3f& origin)
 {
@@ -176,6 +176,8 @@ void EnvProbe::Init()
                 TWM_CLAMP_TO_EDGE,
                 1,
                 IU_STORAGE | IU_SAMPLED });
+
+            m_prefilteredEnvMap->SetName(NAME_FMT("{}_EnvMap", Id()));
 
             Assert(InitObject(m_prefilteredEnvMap));
 
@@ -457,6 +459,8 @@ void SkyProbe::Init()
         Vec3u { m_dimensions.x, m_dimensions.y, 1 },
         TFM_LINEAR_MIPMAP,
         TFM_LINEAR });
+
+    m_prefilteredEnvMap->SetName(NAME_FMT("{}_SkyboxCubemap", Id()));
 
     InitObject(m_skyboxCubemap);
     m_skyboxCubemap->SetPersistentRenderResourceEnabled(true);

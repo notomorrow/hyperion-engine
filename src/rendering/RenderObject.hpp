@@ -798,10 +798,19 @@ public:
         return m_header->GetDebugName();
     }
 
-    HYP_FORCE_INLINE void SetDebugName(Name name)
+#ifdef HYP_DEBUG_MODE
+    virtual void SetDebugName(Name name)
     {
+        AssertDebug(m_header != nullptr);
+
         m_header->SetDebugName(name);
     }
+#else
+    void SetDebugName(Name)
+    {
+        /* no implementation */
+    }
+#endif
 
 private:
     RenderObjectHeaderBase* m_header;

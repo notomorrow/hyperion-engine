@@ -160,21 +160,15 @@ void RenderEnvProbe::CreateShader()
 
     if (m_envProbe->IsReflectionProbe())
     {
-        m_shader = g_shaderManager->GetOrCreate(
-            NAME("RenderToCubemap"),
-            ShaderProperties(staticMeshVertexAttributes, { NAME("ENV_PROBE"), NAME("WRITE_NORMALS"), NAME("WRITE_MOMENTS") }));
+        m_shader = g_shaderManager->GetOrCreate(NAME("RenderToCubemap"), ShaderProperties(staticMeshVertexAttributes, { NAME("ENV_PROBE"), NAME("WRITE_NORMALS"), NAME("WRITE_MOMENTS") }));
     }
     else if (m_envProbe->IsSkyProbe())
     {
-        m_shader = g_shaderManager->GetOrCreate(
-            NAME("RenderSky"),
-            ShaderProperties(staticMeshVertexAttributes));
+        m_shader = g_shaderManager->GetOrCreate(NAME("RenderSky"), ShaderProperties(staticMeshVertexAttributes));
     }
     else if (m_envProbe->IsShadowProbe())
     {
-        m_shader = g_shaderManager->GetOrCreate(
-            NAME("RenderToCubemap"),
-            ShaderProperties(staticMeshVertexAttributes, { NAME("MODE_SHADOWS") }));
+        m_shader = g_shaderManager->GetOrCreate(NAME("RenderToCubemap"), ShaderProperties(staticMeshVertexAttributes, { NAME("MODE_SHADOWS") }));
     }
     else
     {

@@ -9,6 +9,7 @@
 #include <rendering/vulkan/VulkanSampler.hpp>
 #include <rendering/vulkan/VulkanGraphicsPipeline.hpp>
 #include <rendering/vulkan/VulkanComputePipeline.hpp>
+#include <rendering/vulkan/VulkanFeatures.hpp>
 #include <rendering/vulkan/rt/VulkanRaytracingPipeline.hpp>
 #include <rendering/vulkan/rt/VulkanAccelerationStructure.hpp>
 
@@ -364,6 +365,13 @@ RendererResult VulkanDescriptorSet::Create()
     {
         return result;
     }
+
+#ifdef HYP_DEBUG_MODE
+    if (Name debugName = GetDebugName())
+    {
+        SetDebugName(debugName);
+    }
+#endif
 
     for (const Pair<Name, DescriptorSetElement>& it : m_elements)
     {
@@ -749,6 +757,29 @@ DescriptorSetRef VulkanDescriptorSet::Clone() const
 
     return descriptorSet;
 }
+
+#ifdef HYP_DEBUG_MODE
+
+void VulkanDescriptorSet::SetDebugName(Name name)
+{
+    DescriptorSetBase::SetDebugName(name);
+
+    if (!IsCreated())
+    {
+        return;
+    }
+
+    const char* strName = name.LookupString();
+
+    VkDebugUtilsObjectNameInfoEXT objectNameInfo { VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT };
+    objectNameInfo.objectType = VK_OBJECT_TYPE_DESCRIPTOR_SET;
+    objectNameInfo.objectHandle = (uint64)m_handle;
+    objectNameInfo.pObjectName = strName;
+
+    g_vulkanDynamicFunctions->vkSetDebugUtilsObjectNameEXT(GetRenderBackend()->GetDevice()->GetDevice(), &objectNameInfo);
+}
+
+#endif
 
 #pragma endregion VulkanDescriptorSet
 

@@ -214,6 +214,7 @@ void TemporalBlending::CreateImageOutputs()
         1,
         IU_STORAGE | IU_SAMPLED });
 
+    m_resultTexture->SetName(NAME("TemporalBlendingResult"));
     InitObject(m_resultTexture);
 
     m_resultTexture->SetPersistentRenderResourceEnabled(true);
@@ -228,6 +229,7 @@ void TemporalBlending::CreateImageOutputs()
         1,
         IU_STORAGE | IU_SAMPLED });
 
+    m_historyTexture->SetName(NAME("TemporalBlendingHistory"));
     InitObject(m_historyTexture);
 
     m_historyTexture->SetPersistentRenderResourceEnabled(true);

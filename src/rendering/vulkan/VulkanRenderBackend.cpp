@@ -199,6 +199,64 @@ public:
 
 #pragma endregion Vulkan struct wrappers
 
+#pragma region VulkanDynamicFunctions
+
+HYP_API VulkanDynamicFunctions* g_vulkanDynamicFunctions = nullptr;
+
+void VulkanDynamicFunctions::Load(VulkanDevice* device)
+{
+    static VulkanDynamicFunctions instance;
+    g_vulkanDynamicFunctions = &instance;
+
+#define HYP_LOAD_FN(function)                                                               \
+    do                                                                                      \
+    {                                                                                       \
+        auto procAddr = vkGetDeviceProcAddr(device->GetDevice(), #function);                \
+        if (procAddr == nullptr)                                                            \
+        {                                                                                   \
+            HYP_LOG(RenderingBackend, Error, "Failed to load dynamic function " #function); \
+        }                                                                                   \
+        instance.function = reinterpret_cast<PFN_##function>(procAddr);                     \
+    }                                                                                       \
+    while (0)
+
+#if defined(HYP_FEATURES_ENABLE_RAYTRACING) && defined(HYP_FEATURES_BINDLESS_TEXTURES)
+    HYP_LOAD_FN(vkGetBufferDeviceAddressKHR); // currently only used for RT
+
+    if (IsRaytracingSupported() && !IsRaytracingDisabled())
+    {
+        HYP_LOG(RenderingBackend, Info, "Raytracing supported, loading raytracing-specific dynamic functions.");
+
+        HYP_LOAD_FN(vkCmdBuildAccelerationStructuresKHR);
+        HYP_LOAD_FN(vkBuildAccelerationStructuresKHR);
+        HYP_LOAD_FN(vkCreateAccelerationStructureKHR);
+        HYP_LOAD_FN(vkDestroyAccelerationStructureKHR);
+        HYP_LOAD_FN(vkGetAccelerationStructureBuildSizesKHR);
+        HYP_LOAD_FN(vkGetAccelerationStructureDeviceAddressKHR);
+        HYP_LOAD_FN(vkCmdTraceRaysKHR);
+        HYP_LOAD_FN(vkGetRayTracingShaderGroupHandlesKHR);
+        HYP_LOAD_FN(vkCreateRayTracingPipelinesKHR);
+    }
+#endif
+
+#ifdef HYP_DEBUG_MODE
+    // HYP_LOAD_FN(vkCmdDebugMarkerBeginEXT);
+    // HYP_LOAD_FN(vkCmdDebugMarkerEndEXT);
+    // HYP_LOAD_FN(vkCmdDebugMarkerInsertEXT);
+    // HYP_LOAD_FN(vkDebugMarkerSetNameEXT);
+    HYP_LOAD_FN(vkSetDebugUtilsObjectNameEXT);
+#endif
+
+#if defined(HYP_MOLTENVK) && HYP_MOLTENVK && HYP_MOLTENVK_LINKED
+    HYP_LOAD_FN(vkGetMoltenVKConfigurationMVK);
+    HYP_LOAD_FN(vkSetMoltenVKConfigurationMVK);
+#endif
+
+#undef HYP_LOAD_FN
+}
+
+#pragma endregion VulkanDynamicFunctions
+
 #pragma region VulkanDescriptorSetManager
 
 class VulkanDescriptorSetManager final : public IDescriptorSetManager
@@ -533,6 +591,8 @@ RendererResult VulkanRenderBackend::Initialize(AppContextBase& appContext)
 {
     m_instance = new VulkanInstance();
     HYPERION_BUBBLE_ERRORS(m_instance->Initialize(appContext, g_useDebugLayers));
+
+    VulkanDynamicFunctions::Load(m_instance->GetDevice());
 
     m_crashHandler.Initialize();
 

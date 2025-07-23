@@ -25,37 +25,6 @@ namespace hyperion {
 class VulkanFeatures
 {
 public:
-    struct DynamicFunctions
-    {
-#define HYP_DECL_FN(name) PFN_##name name = nullptr
-
-        HYP_DECL_FN(vkGetBufferDeviceAddressKHR);
-        HYP_DECL_FN(vkCmdBuildAccelerationStructuresKHR);
-        HYP_DECL_FN(vkBuildAccelerationStructuresKHR);
-        HYP_DECL_FN(vkCreateAccelerationStructureKHR);
-        HYP_DECL_FN(vkDestroyAccelerationStructureKHR);
-        HYP_DECL_FN(vkGetAccelerationStructureBuildSizesKHR);
-        HYP_DECL_FN(vkGetAccelerationStructureDeviceAddressKHR);
-        HYP_DECL_FN(vkCmdTraceRaysKHR);
-        HYP_DECL_FN(vkGetRayTracingShaderGroupHandlesKHR);
-        HYP_DECL_FN(vkCreateRayTracingPipelinesKHR);
-
-        // debugging
-        HYP_DECL_FN(vkCmdDebugMarkerBeginEXT);
-        HYP_DECL_FN(vkCmdDebugMarkerEndEXT);
-        HYP_DECL_FN(vkCmdDebugMarkerInsertEXT);
-        HYP_DECL_FN(vkDebugMarkerSetObjectNameEXT);
-
-#if defined(HYP_MOLTENVK) && HYP_MOLTENVK && HYP_MOLTENVK_LINKED
-        HYP_DECL_FN(vkGetMoltenVKConfigurationMVK);
-        HYP_DECL_FN(vkSetMoltenVKConfigurationMVK);
-#endif
-
-#undef HYP_DECL_FN
-    };
-
-    static DynamicFunctions dynFunctions;
-
     VulkanFeatures();
     VulkanFeatures(VkPhysicalDevice);
 
@@ -219,7 +188,6 @@ public:
         return m_features.shaderSampledImageArrayDynamicIndexing;
     }
 
-    void LoadDynamicFunctions(VulkanDevice* device);
     void SetDeviceFeatures(VulkanDevice* device);
 
     VulkanSwapchainSupportDetails QuerySwapchainSupport(VkSurfaceKHR _surface) const

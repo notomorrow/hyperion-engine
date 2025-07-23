@@ -419,7 +419,7 @@ uint64 VulkanGpuBuffer::GetBufferDeviceAddress() const
     VkBufferDeviceAddressInfoKHR info { VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO };
     info.buffer = m_handle;
 
-    return GetRenderBackend()->GetDevice()->GetFeatures().dynFunctions.vkGetBufferDeviceAddressKHR(
+    return g_vulkanDynamicFunctions->vkGetBufferDeviceAddressKHR(
         GetRenderBackend()->GetDevice()->GetDevice(),
         &info);
 }
@@ -610,6 +610,13 @@ RendererResult VulkanGpuBuffer::Create()
         Memset(m_size, 0);
     }
 
+#ifdef HYP_DEBUG_MODE
+    if (Name debugName = GetDebugName())
+    {
+        SetDebugName(debugName);
+    }
+#endif
+
     return {};
 }
 
@@ -721,6 +728,34 @@ RendererResult VulkanGpuBuffer::CheckCanAllocate(
 
     return result;
 }
+
+#ifdef HYP_DEBUG_MODE
+
+void VulkanGpuBuffer::SetDebugName(Name name)
+{
+    GpuBufferBase::SetDebugName(name);
+
+    if (!IsCreated())
+    {
+        return;
+    }
+
+    const char* strName = name.LookupString();
+
+    if (m_vmaAllocation != VK_NULL_HANDLE)
+    {
+        vmaSetAllocationName(GetRenderBackend()->GetDevice()->GetAllocator(), m_vmaAllocation, strName);
+    }
+    
+    VkDebugUtilsObjectNameInfoEXT objectNameInfo { VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT };
+    objectNameInfo.objectType = VK_OBJECT_TYPE_BUFFER;
+    objectNameInfo.objectHandle = (uint64)m_handle;
+    objectNameInfo.pObjectName = strName;
+
+    g_vulkanDynamicFunctions->vkSetDebugUtilsObjectNameEXT(GetRenderBackend()->GetDevice()->GetDevice(), &objectNameInfo);
+}
+
+#endif
 
 #pragma endregion VulkanGpuBuffer
 

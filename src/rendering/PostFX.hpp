@@ -34,8 +34,11 @@ enum PostProcessingStage
     POST_PROCESSING_STAGE_POST_SHADING
 };
 
+HYP_CLASS(NoScriptBindings)
 class HYP_API PostFXPass final : public FullScreenPass
 {
+    HYP_OBJECT_BODY(PostFXPass);
+    
 public:
     PostFXPass(
         TextureFormat imageFormat,

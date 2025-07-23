@@ -194,7 +194,7 @@ static void BuildRenderGroups(RenderCollector& renderCollector, RenderProxyList&
 
     for (const Pair<ObjId<Entity>, int>& pair : proxyDepths)
     {
-        RenderProxyMesh* meshProxy = rpl.GetMeshes().GetProxy(pair.first);
+        RenderProxyMesh* meshProxy = rpl.GetMeshEntities().GetProxy(pair.first);
         AssertDebug(meshProxy != nullptr);
 
         if (!meshProxy)
@@ -510,7 +510,7 @@ void UIRenderSubsystem::Update(float delta)
 
     RenderProxyList& rpl = RenderApi_GetProducerProxyList(m_view);
     rpl.BeginWrite();
-    rpl.TEMP_disableBuildRenderCollection = true;
+    rpl.disableBuildRenderCollection = true;
     rpl.useOrdering = true;
     rpl.viewport = m_view->GetViewport();
     rpl.priority = m_view->GetPriority();
@@ -532,7 +532,7 @@ void UIRenderSubsystem::Update(float delta)
 
             // @TODO Include a way to determine the parent tree of the UI Object because some objects will
             // have the same depth but should be rendered in a different order.
-            rpl.GetMeshes().Track(entity.Id(), entity, entity->GetRenderProxyVersionPtr(), /* allowDuplicatesInSameFrame */ false);
+            rpl.GetMeshEntities().Track(entity.Id(), entity, entity->GetRenderProxyVersionPtr(), /* allowDuplicatesInSameFrame */ false);
 
             if (const Handle<Material>& material = meshComponent.material)
             {
@@ -555,19 +555,19 @@ void UIRenderSubsystem::Update(float delta)
         },
         /* onlyVisible */ true);
 
-    ResourceTrackerDiff meshesDiff = rpl.GetMeshes().GetDiff();
+    ResourceTrackerDiff meshesDiff = rpl.GetMeshEntities().GetDiff();
 
     if (meshesDiff.NeedsUpdate())
     {
         Array<Entity*> added;
-        rpl.GetMeshes().GetAdded(added, /* includeChanged */ true);
+        rpl.GetMeshEntities().GetAdded(added, /* includeChanged */ true);
 
         for (Entity* entity : added)
         {
             auto&& [meshComponent, transformComponent, boundingBoxComponent] = entity->GetEntityManager()->TryGetComponents<MeshComponent, TransformComponent, BoundingBoxComponent>(entity);
             AssertDebug(meshComponent != nullptr);
 
-            RenderProxyMesh& meshProxy = *rpl.GetMeshes().SetProxy(entity->Id(), RenderProxyMesh());
+            RenderProxyMesh& meshProxy = *rpl.GetMeshEntities().SetProxy(entity->Id(), RenderProxyMesh());
             meshProxy.entity = entity->WeakHandleFromThis();
             meshProxy.mesh = meshComponent->mesh;
             meshProxy.material = meshComponent->material;

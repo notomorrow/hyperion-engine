@@ -650,7 +650,7 @@ void RenderCollector::BuildRenderGroups(View* view, RenderProxyList& renderProxy
 
     const RenderableAttributeSet* overrideAttributes = view->GetOverrideAttributes().TryGet();
 
-    auto diff = renderProxyList.GetMeshes().GetDiff();
+    auto diff = renderProxyList.GetMeshEntities().GetDiff();
 
     if (!diff.NeedsUpdate())
     {
@@ -658,7 +658,7 @@ void RenderCollector::BuildRenderGroups(View* view, RenderProxyList& renderProxy
     }
 
     Array<ObjId<Entity>> changedIds;
-    renderProxyList.GetMeshes().GetChanged(changedIds);
+    renderProxyList.GetMeshEntities().GetChanged(changedIds);
 
     if (changedIds.Any())
     {
@@ -710,16 +710,16 @@ void RenderCollector::BuildRenderGroups(View* view, RenderProxyList& renderProxy
     }
 
     Array<ObjId<Entity>> removed;
-    renderProxyList.GetMeshes().GetRemoved(removed, false /* includeChanged */);
+    renderProxyList.GetMeshEntities().GetRemoved(removed, false /* includeChanged */);
 
     Array<ObjId<Entity>> added;
-    renderProxyList.GetMeshes().GetAdded(added, false /* includeChanged */);
+    renderProxyList.GetMeshEntities().GetAdded(added, false /* includeChanged */);
 
     if (removed.Any())
     {
         for (const ObjId<Entity>& id : removed)
         {
-            const RenderProxyMesh* meshProxy = renderProxyList.GetMeshes().GetProxy(id);
+            const RenderProxyMesh* meshProxy = renderProxyList.GetMeshEntities().GetProxy(id);
             AssertDebug(meshProxy != nullptr);
 
             if (!meshProxy)
@@ -752,7 +752,7 @@ void RenderCollector::BuildRenderGroups(View* view, RenderProxyList& renderProxy
     {
         for (const ObjId<Entity>& id : added)
         {
-            const RenderProxyMesh* meshProxy = renderProxyList.GetMeshes().GetProxy(id);
+            const RenderProxyMesh* meshProxy = renderProxyList.GetMeshEntities().GetProxy(id);
             AssertDebug(meshProxy != nullptr);
 
             RenderableAttributeSet attributes = GetRenderableAttributesForProxy(*meshProxy, overrideAttributes);

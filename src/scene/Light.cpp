@@ -29,7 +29,7 @@
 
 namespace hyperion {
 
-static const TextureFormat g_pointLightShadowFormat = TF_RG32F;
+static const TextureFormat g_pointLightShadowFormat = TF_RG16;
 static const TextureFormat g_directionalLightShadowFormats[SMF_MAX] = {
     TF_R32F, // STANDARD
     TF_R32F, // PCF
@@ -290,7 +290,6 @@ void Light::Update(float delta)
         /// TODO: Make update turn on/off dep. on octree changes (see EnvGrid)
         for (int i = 0; i < int(m_shadowViews.Size()); i++)
         {
-            /// Update shadow camera position
             switch (m_type)
             {
             case LT_DIRECTIONAL:
@@ -298,7 +297,7 @@ void Light::Update(float delta)
                     m_shadowViews[i]->GetCamera(),
                     GetPosition(),
                     GetPosition().Normalized() * -1.0f,
-                    40.0f, /// TODO shadow map radius
+                    25.0f, /// TODO: add proper radius
                     m_shadowAabb);
 
                 break;
@@ -309,6 +308,8 @@ void Light::Update(float delta)
             m_shadowViews[i]->UpdateVisibility();
             m_shadowViews[i]->Collect();
         }
+
+        SetNeedsRenderProxyUpdate();
     }
 }
 
@@ -321,7 +322,10 @@ void Light::SetPosition(const Vec3f& position)
 
     m_position = position;
 
-    SetNeedsRenderProxyUpdate();
+    if (IsInitCalled())
+    {
+        SetNeedsRenderProxyUpdate();
+    }
 }
 
 void Light::SetNormal(const Vec3f& normal)
@@ -333,7 +337,10 @@ void Light::SetNormal(const Vec3f& normal)
 
     m_normal = normal;
 
-    SetNeedsRenderProxyUpdate();
+    if (IsInitCalled())
+    {
+        SetNeedsRenderProxyUpdate();
+    }
 }
 
 void Light::SetAreaSize(const Vec2f& areaSize)
@@ -345,7 +352,10 @@ void Light::SetAreaSize(const Vec2f& areaSize)
 
     m_areaSize = areaSize;
 
-    SetNeedsRenderProxyUpdate();
+    if (IsInitCalled())
+    {
+        SetNeedsRenderProxyUpdate();
+    }
 }
 
 void Light::SetColor(const Color& color)
@@ -357,7 +367,10 @@ void Light::SetColor(const Color& color)
 
     m_color = color;
 
-    SetNeedsRenderProxyUpdate();
+    if (IsInitCalled())
+    {
+        SetNeedsRenderProxyUpdate();
+    }
 }
 
 void Light::SetIntensity(float intensity)
@@ -369,7 +382,10 @@ void Light::SetIntensity(float intensity)
 
     m_intensity = intensity;
 
-    SetNeedsRenderProxyUpdate();
+    if (IsInitCalled())
+    {
+        SetNeedsRenderProxyUpdate();
+    }
 }
 
 void Light::SetRadius(float radius)
@@ -381,7 +397,10 @@ void Light::SetRadius(float radius)
 
     m_radius = radius;
 
-    SetNeedsRenderProxyUpdate();
+    if (IsInitCalled())
+    {
+        SetNeedsRenderProxyUpdate();
+    }
 }
 
 void Light::SetFalloff(float falloff)
@@ -393,7 +412,10 @@ void Light::SetFalloff(float falloff)
 
     m_falloff = falloff;
 
-    SetNeedsRenderProxyUpdate();
+    if (IsInitCalled())
+    {
+        SetNeedsRenderProxyUpdate();
+    }
 }
 
 void Light::SetSpotAngles(const Vec2f& spotAngles)
@@ -405,7 +427,10 @@ void Light::SetSpotAngles(const Vec2f& spotAngles)
 
     m_spotAngles = spotAngles;
 
-    SetNeedsRenderProxyUpdate();
+    if (IsInitCalled())
+    {
+        SetNeedsRenderProxyUpdate();
+    }
 }
 
 void Light::SetMaterial(Handle<Material> material)

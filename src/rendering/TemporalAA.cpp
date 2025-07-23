@@ -75,7 +75,7 @@ void TemporalAA::CreateImages()
         TWM_CLAMP_TO_EDGE,
         1,
         IU_STORAGE | IU_SAMPLED });
-
+    m_resultTexture->SetName(NAME("TaaResult"));
     InitObject(m_resultTexture);
 
     m_resultTexture->SetPersistentRenderResourceEnabled(true);
@@ -90,6 +90,7 @@ void TemporalAA::CreateImages()
         1,
         IU_STORAGE | IU_SAMPLED });
 
+    m_historyTexture->SetName(NAME("TaaHistory"));
     InitObject(m_historyTexture);
 
     m_historyTexture->SetPersistentRenderResourceEnabled(true);

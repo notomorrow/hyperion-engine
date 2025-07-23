@@ -85,6 +85,7 @@ HYP_API extern uint32 RenderApi_RetrieveResourceBinding(ObjIdBase resourceId);
 
 struct ResourceBindings;
 
+HYP_ENUM()
 enum GlobalRenderBuffer : uint8
 {
     GRB_INVALID = uint8(-1),
@@ -102,6 +103,7 @@ enum GlobalRenderBuffer : uint8
     GRB_MAX
 };
 
+HYP_ENUM()
 enum GlobalRendererType : uint32
 {
     GRT_NONE = ~0u, //<! Not a global renderer type

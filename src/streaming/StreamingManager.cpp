@@ -419,18 +419,18 @@ void StreamingManagerThread::DoWork(StreamingManager* streamingManager)
         }
     }
 
-    // HYP_LOG(Streaming, Debug, "Processing streaming work on thread: {}, {} layers, {} volumes, {} cells",
-    //     Threads::CurrentThreadId().GetName(),
-    //     m_layers.Size(),
-    //     m_volumes.Size(),
-    //     String::Join(
-    //         Map(
-    //             m_layers,
-    //             [](const LayerData& layerData)
-    //             {
-    //                 return HYP_FORMAT("Layer: #{} : {}", layerData.layer->Id().Value(), layerData.cells.Size());
-    //             }),
-    //         ", "));
+    HYP_LOG(Streaming, Debug, "Processing streaming work on thread: {}, {} layers, {} volumes, {} cells",
+        Threads::CurrentThreadId().GetName(),
+        m_layers.Size(),
+        m_volumes.Size(),
+        String::Join(
+            Map(
+                m_layers,
+                [](const LayerData& layerData)
+                {
+                    return HYP_FORMAT("Layer: #{} : {}", layerData.layer->Id().Value(), layerData.cells.Size());
+                }),
+            ", "));
 
     for (auto it = m_layers.Begin(); it != m_layers.End();)
     {
@@ -848,6 +848,8 @@ void StreamingManager::Update(float delta)
     {
         return;
     }
+
+    HYP_LOG(Streaming, Debug, "Update StreamingManager, {} updates", updates.Size());
 
     for (Pair<Handle<StreamingCell>, StreamingCellState>& update : updates)
     {

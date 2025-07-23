@@ -384,6 +384,11 @@ RenderTexture::RenderTexture(Texture* texture)
       m_image(g_renderBackend->MakeImage(texture->GetTextureDesc())),
       m_imageView(g_renderBackend->MakeImageView(m_image))
 {
+#ifdef HYP_DEBUG_MODE
+    AssertDebug(m_image.IsValid());
+
+    m_image->SetDebugName(NAME_FMT("{} ({})", texture->Id(), texture->GetName()));
+#endif
 }
 
 RenderTexture::~RenderTexture()

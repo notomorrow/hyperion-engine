@@ -42,8 +42,11 @@ struct ShadowMapCameraData
     BoundingBox aabb;
 };
 
+HYP_CLASS(NoScriptBindings)
 class ShadowPass final : public FullScreenPass
 {
+    HYP_OBJECT_BODY(ShadowPass);
+    
 public:
     ShadowPass(
         const Handle<Scene>& parentScene,
@@ -54,7 +57,7 @@ public:
         RerenderShadowsSemaphore* rerenderSemaphore);
     ShadowPass(const ShadowPass& other) = delete;
     ShadowPass& operator=(const ShadowPass& other) = delete;
-    virtual ~ShadowPass() override;
+    virtual ~ShadowPass() override = default;
 
     HYP_FORCE_INLINE const Vec3f& GetOrigin() const
     {
@@ -92,7 +95,7 @@ private:
     Handle<Texture> m_shadowMapStatics;
     Handle<Texture> m_shadowMapDynamics;
 
-    UniquePtr<FullScreenPass> m_combineShadowMapsPass;
+    Handle<FullScreenPass> m_combineShadowMapsPass;
     ComputePipelineRef m_blurShadowMapPipeline;
 };
 

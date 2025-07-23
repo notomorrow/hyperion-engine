@@ -17,17 +17,17 @@ public:
     DOFBlur& operator=(const DOFBlur& other) = delete;
     ~DOFBlur();
 
-    const UniquePtr<FullScreenPass>& GetHorizontalBlurPass() const
+    const Handle<FullScreenPass>& GetHorizontalBlurPass() const
     {
         return m_blurHorizontalPass;
     }
 
-    const UniquePtr<FullScreenPass>& GetVerticalBlurPass() const
+    const Handle<FullScreenPass>& GetVerticalBlurPass() const
     {
         return m_blurVerticalPass;
     }
 
-    const UniquePtr<FullScreenPass>& GetCombineBlurPass() const
+    const Handle<FullScreenPass>& GetCombineBlurPass() const
     {
         return m_blurMixPass;
     }
@@ -42,9 +42,9 @@ private:
 
     Vec2u m_extent;
 
-    UniquePtr<FullScreenPass> m_blurHorizontalPass;
-    UniquePtr<FullScreenPass> m_blurVerticalPass;
-    UniquePtr<FullScreenPass> m_blurMixPass;
+    Handle<FullScreenPass> m_blurHorizontalPass;
+    Handle<FullScreenPass> m_blurVerticalPass;
+    Handle<FullScreenPass> m_blurMixPass;
 };
 
 } // namespace hyperion

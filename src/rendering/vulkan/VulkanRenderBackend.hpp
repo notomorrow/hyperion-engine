@@ -27,6 +27,43 @@ extern HYP_API VkDescriptorSetLayout GetVkDescriptorSetLayout(const VulkanDescri
 
 class VulkanTextureCache;
 
+struct VulkanDynamicFunctions
+{
+    static void Load(VulkanDevice* device);
+
+#define HYP_DECL_FN(name) PFN_##name name
+
+    // ray tracing requirements
+    HYP_DECL_FN(vkGetBufferDeviceAddressKHR);
+    HYP_DECL_FN(vkCmdBuildAccelerationStructuresKHR);
+    HYP_DECL_FN(vkBuildAccelerationStructuresKHR);
+    HYP_DECL_FN(vkCreateAccelerationStructureKHR);
+    HYP_DECL_FN(vkDestroyAccelerationStructureKHR);
+    HYP_DECL_FN(vkGetAccelerationStructureBuildSizesKHR);
+    HYP_DECL_FN(vkGetAccelerationStructureDeviceAddressKHR);
+    HYP_DECL_FN(vkCmdTraceRaysKHR);
+    HYP_DECL_FN(vkGetRayTracingShaderGroupHandlesKHR);
+    HYP_DECL_FN(vkCreateRayTracingPipelinesKHR);
+
+#ifdef HYP_DEBUG_MODE
+    // debugging
+    HYP_DECL_FN(vkCmdDebugMarkerBeginEXT);
+    HYP_DECL_FN(vkCmdDebugMarkerEndEXT);
+    HYP_DECL_FN(vkCmdDebugMarkerInsertEXT);
+    HYP_DECL_FN(vkDebugMarkerSetObjectNameEXT);
+    HYP_DECL_FN(vkSetDebugUtilsObjectNameEXT);
+#endif
+
+#if defined(HYP_MOLTENVK) && HYP_MOLTENVK && HYP_MOLTENVK_LINKED
+    HYP_DECL_FN(vkGetMoltenVKConfigurationMVK);
+    HYP_DECL_FN(vkSetMoltenVKConfigurationMVK);
+#endif
+
+#undef HYP_DECL_FN
+};
+
+HYP_API extern VulkanDynamicFunctions* g_vulkanDynamicFunctions;
+
 class VulkanRenderBackend final : public IRenderBackend
 {
 public:

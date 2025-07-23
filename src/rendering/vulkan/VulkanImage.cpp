@@ -373,6 +373,13 @@ RendererResult VulkanImage::Create(ResourceState initialState)
             nullptr),
         "Failed to create gpu image!");
 
+#ifdef HYP_DEBUG_MODE
+    if (Name debugName = GetDebugName())
+    {
+        SetDebugName(debugName);
+    }
+#endif
+
     HYPERION_RETURN_OK;
 }
 
@@ -843,6 +850,34 @@ ImageViewRef VulkanImage::MakeLayerImageView(uint32 layerIndex) const
         layerIndex,
         1);
 }
+
+#ifdef HYP_DEBUG_MODE
+
+HYP_API void VulkanImage::SetDebugName(Name name)
+{
+    ImageBase::SetDebugName(name);
+
+    if (!IsCreated())
+    {
+        return;
+    }
+
+    const char* strName = name.LookupString();
+
+    if (m_allocation != VK_NULL_HANDLE)
+    {
+        vmaSetAllocationName(GetRenderBackend()->GetDevice()->GetAllocator(), m_allocation, strName);
+    }
+    
+    VkDebugUtilsObjectNameInfoEXT objectNameInfo { VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT };
+    objectNameInfo.objectType = VK_OBJECT_TYPE_IMAGE;
+    objectNameInfo.objectHandle = (uint64)m_handle;
+    objectNameInfo.pObjectName = strName;
+
+    g_vulkanDynamicFunctions->vkSetDebugUtilsObjectNameEXT(GetRenderBackend()->GetDevice()->GetDevice(), &objectNameInfo);
+}
+
+#endif
 
 #pragma endregion VulkanImage
 

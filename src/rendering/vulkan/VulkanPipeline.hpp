@@ -54,6 +54,10 @@ public:
 
     HYP_API void SetPushConstants(const void* data, SizeType size);
 
+#ifdef HYP_DEBUG_MODE
+    HYP_API void SetDebugName(Name name);
+#endif
+
 protected:
     VkPipeline m_handle;
     VkPipelineLayout m_layout;

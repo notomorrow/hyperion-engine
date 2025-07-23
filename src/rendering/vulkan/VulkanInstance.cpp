@@ -152,17 +152,18 @@ static Array<const char*> CheckValidationLayerSupport(const Array<const char*>& 
 ExtensionMap VulkanInstance::GetExtensionMap()
 {
     return {
-#if defined(HYP_FEATURES_ENABLE_RAYTRACING) && defined(HYP_FEATURES_BINDLESS_TEXTURES)
+#ifdef HYP_DEBUG_MODE
+        { VK_EXT_DEBUG_UTILS_EXTENSION_NAME, false },
+#endif
         { VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME, false },
         { VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME, false },
         { VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME, false },
         { VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME, false },
-#endif
         { VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME, false },
         { VK_KHR_SPIRV_1_4_EXTENSION_NAME, false },
         { VK_KHR_SHADER_FLOAT_CONTROLS_EXTENSION_NAME, false },
-        { VK_KHR_SWAPCHAIN_EXTENSION_NAME, true },
-        { VK_NV_DEVICE_DIAGNOSTICS_CONFIG_EXTENSION_NAME, false }
+        { VK_NV_DEVICE_DIAGNOSTICS_CONFIG_EXTENSION_NAME, false },
+        { VK_KHR_SWAPCHAIN_EXTENSION_NAME, true }
     };
 }
 

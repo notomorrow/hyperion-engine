@@ -221,6 +221,7 @@ Result FontAtlas::RenderAtlasTextures()
         };
 
         Handle<Texture> atlasTexture = CreateObject<Texture>(std::move(atlasTextureData));
+        atlasTexture->SetName(NAME_FMT("FontAtlas_{}", scale));
         InitObject(atlasTexture);
 
         // Add initial atlas

@@ -630,6 +630,9 @@ protected:
 private:
     void UpdateMouseLocked();
 
+    virtual void OnAddedToWorld(World* world) override;
+    virtual void OnRemovedFromWorld(World* world) override;
+
     virtual void UpdateRenderProxy(IRenderProxy* proxy) override;
 
     Matrix4 m_viewProjMat;

@@ -425,6 +425,13 @@ RendererResult VulkanGraphicsPipeline::Rebuild()
         vkCreateGraphicsPipelines(GetRenderBackend()->GetDevice()->GetDevice(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &m_handle),
         "Failed to create graphics pipeline");
 
+#ifdef HYP_DEBUG_MODE
+    if (Name debugName = GetDebugName())
+    {
+        VulkanPipelineBase::SetDebugName(debugName);
+    }
+#endif
+
     HYPERION_RETURN_OK;
 }
 
@@ -515,6 +522,22 @@ void VulkanGraphicsPipeline::BuildVertexAttributes(
             .inputRate = VK_VERTEX_INPUT_RATE_VERTEX });
     }
 }
+
+#ifdef HYP_DEBUG_MODE
+
+HYP_API void VulkanGraphicsPipeline::SetDebugName(Name name)
+{
+    GraphicsPipelineBase::SetDebugName(name);
+
+    if (!IsCreated())
+    {
+        return;
+    }
+
+    VulkanPipelineBase::SetDebugName(name);
+}
+
+#endif
 
 #pragma endregion GraphicsPipeline
 

@@ -361,20 +361,20 @@ public:
     {
         return subclassIndices;
     }
-    
+
     HYP_FORCE_INLINE Impl& GetSubclassImpl(int subclassIndex)
     {
         if (subclassIndex == -1)
         {
             return baseImpl;
         }
-        
+
         AssertDebug(subclassIndex < int(subclassImpls.Size()));
         AssertDebug(subclassIndices.Test(subclassIndex));
-        
+
         return *subclassImpls[subclassIndex];
     }
-    
+
     HYP_FORCE_INLINE const Impl& GetSubclassImpl(int subclassIndex) const
     {
         return const_cast<ResourceTracker*>(this)->GetSubclassImpl(subclassIndex);
@@ -682,7 +682,7 @@ public:
     {
         return const_cast<ResourceTracker*>(this)->GetProxy(id);
     }
-    
+
     ProxyType* SetProxy(IdType id, const ProxyType& proxy)
     {
         HYP_SCOPE;
@@ -811,12 +811,12 @@ public:
 
             return Bitset(previous).SetNumBits(newNumBits) & ~Bitset(next).SetNumBits(newNumBits);
         }
-        
+
         HYP_FORCE_INLINE Bitset GetElementIndices() const
         {
             Bitset bits = previous | next;
             Bitset removed = GetRemoved();
-            
+
             const SizeType newNumBits = MathUtil::Max(bits.NumBits(), removed.NumBits());
 
             return bits.SetNumBits(newNumBits) & ~removed.SetNumBits(newNumBits);
@@ -1148,7 +1148,7 @@ public:
             {
                 return nullptr;
             }
-            
+
             uint32 idx = id.ToIndex();
 
             return proxies.TryGet(idx);
@@ -1158,11 +1158,11 @@ public:
         {
             return const_cast<Impl*>(this)->GetProxy(id);
         }
-        
+
         ProxyType* SetProxy(IdType id, const ProxyType& proxy)
         {
             HYP_SCOPE;
-            
+
             const uint32 idx = id.ToIndex();
 
             AssertDebug(id.GetTypeId() == typeId);
@@ -1172,14 +1172,14 @@ public:
             {
                 return nullptr;
             }
-            
+
             return &*proxies.Emplace(idx, proxy);
         }
 
         ProxyType* SetProxy(IdType id, ProxyType&& proxy)
         {
             HYP_SCOPE;
-            
+
             const uint32 idx = id.ToIndex();
 
             AssertDebug(id.GetTypeId() == typeId);
@@ -1189,7 +1189,7 @@ public:
             {
                 return nullptr;
             }
-            
+
             return &*proxies.Emplace(idx, std::move(proxy));
         }
 
@@ -1277,7 +1277,7 @@ static inline void GetAddedElements(ResourceTracker<IdType, ElementType, ProxyTy
     {
         const Bitset& lhsElements = lhsImpl.next;
         const Bitset& rhsElements = rhsImpl.next;
-        
+
         const SizeType newNumBits = MathUtil::Max(lhsElements.NumBits(), rhsElements.NumBits());
         Bitset addedBits = Bitset(rhsElements).SetNumBits(newNumBits) & ~Bitset(lhsElements).SetNumBits(newNumBits);
 
@@ -1320,7 +1320,7 @@ static inline void GetRemovedElements(ResourceTracker<IdType, ElementType, Proxy
     {
         const Bitset& lhsElements = lhsImpl.next;
         const Bitset& rhsElements = rhsImpl.next;
-        
+
         const SizeType newNumBits = MathUtil::Max(lhsElements.NumBits(), rhsElements.NumBits());
         Bitset removedBits = Bitset(lhsElements).SetNumBits(newNumBits) & ~Bitset(rhsElements).SetNumBits(newNumBits);
 

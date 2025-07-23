@@ -113,7 +113,7 @@ RendererResult VulkanRaytracingPipeline::Create()
     pipelineInfo.basePipelineIndex = -1;
 
     HYPERION_VK_PASS_ERRORS(
-        GetRenderBackend()->GetDevice()->GetFeatures().dynFunctions.vkCreateRayTracingPipelinesKHR(
+        g_vulkanDynamicFunctions->vkCreateRayTracingPipelinesKHR(
             GetRenderBackend()->GetDevice()->GetDevice(),
             VK_NULL_HANDLE,
             VK_NULL_HANDLE,
@@ -194,7 +194,7 @@ void VulkanRaytracingPipeline::Bind(CommandBufferBase* commandBuffer)
 
 void VulkanRaytracingPipeline::TraceRays(CommandBufferBase* commandBuffer, const Vec3u& extent) const
 {
-    GetRenderBackend()->GetDevice()->GetFeatures().dynFunctions.vkCmdTraceRaysKHR(
+    g_vulkanDynamicFunctions->vkCmdTraceRaysKHR(
         VULKAN_CAST(commandBuffer)->GetVulkanHandle(),
         &m_shaderBindingTableEntries.rayGen,
         &m_shaderBindingTableEntries.rayMiss,
@@ -207,16 +207,16 @@ RendererResult VulkanRaytracingPipeline::CreateShaderBindingTables(VulkanShader*
 {
     const Array<VulkanShaderGroup>& shaderGroups = shader->GetShaderGroups();
 
-    const auto& features = GetRenderBackend()->GetDevice()->GetFeatures();
+    const VulkanFeatures& features = GetRenderBackend()->GetDevice()->GetFeatures();
     const auto& properties = features.GetRaytracingPipelineProperties();
 
     const uint32 handleSize = properties.shaderGroupHandleSize;
-    const uint32 handleSizeAligned = GetRenderBackend()->GetDevice()->GetFeatures().PaddedSize(handleSize, properties.shaderGroupHandleAlignment);
+    const uint32 handleSizeAligned = features.PaddedSize(handleSize, properties.shaderGroupHandleAlignment);
     const uint32 tableSize = uint32(shaderGroups.Size()) * handleSizeAligned;
 
     ByteBuffer shaderHandleStorage(tableSize);
 
-    HYPERION_VK_CHECK(features.dynFunctions.vkGetRayTracingShaderGroupHandlesKHR(
+    HYPERION_VK_CHECK(g_vulkanDynamicFunctions->vkGetRayTracingShaderGroupHandlesKHR(
         GetRenderBackend()->GetDevice()->GetDevice(),
         m_handle,
         0,

@@ -98,7 +98,7 @@ struct DrawCallCollectionMapping
 };
 
 /*! \brief A collection of rendering-related objects for a View, populated via View::Collect() and usable for rendering a frame.
-  *  Keeps track of which objects are newly added, removed or changed (via render proxy version changing), allowing updates to be applied to only objects that need it. */
+ *  Keeps track of which objects are newly added, removed or changed (via render proxy version changing), allowing updates to be applied to only objects that need it. */
 class HYP_API RenderProxyList
 {
     static constexpr uint64 writeFlag = 0x1;
@@ -232,11 +232,9 @@ public:
     }
 
     template <SizeType Index>
-    inline auto GetResourceTracker()
+    HYP_FORCE_INLINE auto GetResources() -> typename TupleElement_Tuple<Index, ResourceTrackerTypes>::Type*
     {
-        using ResourceTrackerType = typename TupleElement_Tuple<Index, ResourceTrackerTypes>::Type;
-
-        return static_cast<ResourceTrackerType*>(resourceTrackers[Index]);
+        return static_cast<typename TupleElement_Tuple<Index, ResourceTrackerTypes>::Type*>(resourceTrackers[Index]);
     }
 
     // template hackery to allow usage of undefined types
@@ -328,9 +326,9 @@ public:
 
     CollectionState state : 2 = CS_DONE;
 
-    // are mesh entities sorted using an indirect array to map sort order?
-    bool useOrdering : 1 = false;
-    bool TEMP_disableBuildRenderCollection : 1 = false;
+    
+    bool useOrdering : 1 = false;                   //<! are mesh entities sorted using an indirect array to map sort order?
+    bool disableBuildRenderCollection : 1 = false;  //<! Disable building out RenderCollection. Set to true in the case of custom render collection building (See UIRenderer)
 
     Viewport viewport;
     int priority;
@@ -340,10 +338,10 @@ public:
 #define DEF_RESOURCE_TRACKER_GETTER(getterName, T)                                                                                                                \
     HYP_FORCE_INLINE auto Get##getterName()->typename TupleElement_Tuple<FindTypeElementIndex<class T, TrackedResourceTypes>::value, ResourceTrackerTypes>::Type& \
     {                                                                                                                                                             \
-        return *GetResourceTracker<FindTypeElementIndex<class T, TrackedResourceTypes>::value>();                                                                 \
+        return *GetResources<FindTypeElementIndex<class T, TrackedResourceTypes>::value>();                                                                 \
     }
 
-    DEF_RESOURCE_TRACKER_GETTER(Meshes, Entity);
+    DEF_RESOURCE_TRACKER_GETTER(MeshEntities, Entity);
     DEF_RESOURCE_TRACKER_GETTER(Cameras, Camera);
     DEF_RESOURCE_TRACKER_GETTER(EnvProbes, EnvProbe);
     DEF_RESOURCE_TRACKER_GETTER(Lights, Light);
@@ -354,16 +352,8 @@ public:
     DEF_RESOURCE_TRACKER_GETTER(Textures, Texture);
 
 #undef DEF_RESOURCE_TRACKER_GETTER
-    /*ResourceTracker<ObjId<Entity>, Entity*, RenderProxyMesh> meshes;
-    ResourceTracker<ObjId<EnvProbe>, EnvProbe*, RenderProxyEnvProbe> envProbes;
-    ResourceTracker<ObjId<Light>, Light*, RenderProxyLight> lights;
-    ResourceTracker<ObjId<EnvGrid>, EnvGrid*, RenderProxyEnvGrid> envGrids;
-    ResourceTracker<ObjId<LightmapVolume>, LightmapVolume*, RenderProxyLightmapVolume> lightmapVolumes;
-    ResourceTracker<ObjId<Material>, Material*, RenderProxyMaterial> materials;
-    ResourceTracker<ObjId<Skeleton>, Skeleton*, RenderProxySkeleton> skeletons;
-    ResourceTracker<ObjId<Texture>, Texture*> textures;*/
-
-    Array<Pair<ObjId<Entity>, int>> meshEntityOrdering;
+    
+    Array<Pair<ObjId<Entity>, int>, DynamicAllocator> meshEntityOrdering;
 
     // marker to set to locked when game thread is writing to this list.
     // this only really comes into play with non-buffered Views that do not double/triple buffer their RenderProxyLists

@@ -33,6 +33,7 @@ struct ShaderObject
     }
 };
 
+HYP_ENUM()
 enum ShaderModuleType : uint32
 {
     SMT_UNSET = 0,
