@@ -32,20 +32,25 @@ public:
 
         const AssetPackage& inObject = in.Get<AssetPackage>();
 
-        for (const Handle<AssetPackage>& package : inObject.GetSubpackages())
-        {
-            if (!package.IsValid())
-            {
-                continue;
-            }
+        FBOMResult result;
 
-            if (FBOMResult err = out.AddChild(*package))
+        inObject.ForEachSubpackage([&](const Handle<AssetPackage>& subpackage)
             {
-                return err;
-            }
-        }
+                if (!subpackage.IsValid())
+                {
+                    return IterationResult::CONTINUE;
+                }
 
-        return { FBOMResult::FBOM_OK };
+                if (FBOMResult err = out.AddChild(*subpackage))
+                {
+                    result = err;
+                    return IterationResult::STOP;
+                }
+
+                return IterationResult::CONTINUE;
+            });
+
+        return result;
     }
 
     virtual FBOMResult Deserialize(FBOMLoadContext& context, const FBOMObject& in, HypData& out) const override

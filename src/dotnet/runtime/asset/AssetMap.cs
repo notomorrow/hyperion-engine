@@ -31,11 +31,11 @@ namespace Hyperion
             }
         }
 
-        public Asset this[string key]
+        public LoadedAsset this[string key]
         {
             get
             {
-                return new Asset(AssetMap_GetAsset(ptr, key));
+                return new LoadedAsset(AssetMap_GetAsset(ptr, key));
             }
         }
 

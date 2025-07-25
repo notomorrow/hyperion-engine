@@ -596,7 +596,7 @@ public:
     HYP_METHOD()
     Vec2f GetPixelSize() const;
 
-    void Update(float dt);
+    void Update(float delta) override;
     void UpdateMatrices();
 
 protected:

@@ -437,6 +437,7 @@ private:
     void UpdateWatchedNodes();
 
     void AddPackageToContentBrowser(const Handle<AssetPackage>& package, bool nested);
+    void RemovePackageFromContentBrowser(AssetPackage* package);
     void SetSelectedPackage(const Handle<AssetPackage>& package);
 
     void SetHoveredManipulationWidget(

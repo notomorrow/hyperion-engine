@@ -46,12 +46,12 @@ HYP_API WeakName AssetObject_KeyByFunction(const Handle<AssetObject>& assetObjec
 
 #pragma region AssetResourceBase
 
-void AssetResourceBase::Initialize()
+void AssetDataResourceBase::Initialize()
 {
     Handle<AssetObject> assetObject = m_assetObject.Lock();
     Assert(assetObject.IsValid());
 
-    // @TODO Loading async w/ AssetBatch
+    // @TODO Loading async
     const FilePath assetFilePath = assetObject->GetFilePath();
     auto result = g_assetManager->Load(GetAssetTypeId(), assetFilePath);
 
@@ -61,40 +61,25 @@ void AssetResourceBase::Initialize()
         return;
     }
 
-    m_loadedAsset = std::move(result.GetValue());
+    Extract_Internal(std::move(result).GetValue());
 }
 
-void AssetResourceBase::Destroy()
+void AssetDataResourceBase::Destroy()
 {
     Handle<AssetObject> assetObject = m_assetObject.Lock();
     Assert(assetObject.IsValid());
 
-    m_loadedAsset = {};
+    Unload_Internal();
 }
 
-Result AssetResourceBase::Save()
-{
-    Result result;
-
-    Execute([this, &result]()
-        {
-            result = Save_Internal();
-        });
-
-    return result;
-}
-
-#pragma endregion AssetResourceBase
-
-#pragma region ObjectAssetResourceBase
-
-Result ObjectAssetResourceBase::Save_Internal()
+Result AssetDataResourceBase::Save()
 {
     Handle<AssetObject> assetObject = m_assetObject.Lock();
     Assert(assetObject.IsValid());
+
+    HYP_LOG(Assets, Debug, "Saving asset {} to path: {}", assetObject->GetName(), assetObject->GetFilePath());
 
     FileByteWriter byteWriter(assetObject->GetFilePath());
-
     HYP_DEFER({ byteWriter.Close(); });
 
     FBOMWriter writer { FBOMWriterConfig {} };
@@ -104,7 +89,7 @@ Result ObjectAssetResourceBase::Save_Internal()
 
     FBOMObject object;
 
-    if (FBOMResult err = marshal->Serialize(m_loadedAsset.value.ToRef(), object))
+    if (FBOMResult err = marshal->Serialize(GetAssetRef(), object))
     {
         return HYP_MAKE_ERROR(Error, "Failed to serialize asset: {}", err.message);
     }
@@ -121,39 +106,50 @@ Result ObjectAssetResourceBase::Save_Internal()
     return {};
 }
 
-#pragma endregion ObjectAssetResourceBase
+#pragma endregion AssetResourceBase
 
 #pragma region AssetObject
 
 AssetObject::AssetObject()
-    : m_resource(nullptr)
+    : m_resource(&GetNullResource())
 {
 }
 
 AssetObject::AssetObject(Name name)
     : m_name(name),
-      m_resource(nullptr)
+      m_resource(&GetNullResource())
 {
 }
 
 AssetObject::~AssetObject()
 {
-    if (m_resource != nullptr)
+    if (m_resource != nullptr && !m_resource->IsNull())
     {
         FreeResource(m_resource);
     }
 }
 
-String AssetObject::GetPath() const
+void AssetObject::SetName(Name name)
 {
-    Handle<AssetPackage> package = m_package.Lock();
-
-    if (!package.IsValid())
+    if (name == m_name)
     {
-        return *m_name;
+        return;
     }
 
-    return package->BuildAssetPath(m_name);
+    if (Handle<AssetPackage> package = GetPackage())
+    {
+        Handle<AssetObject> strongThis = HandleFromThis();
+
+        package->RemoveAssetObject(strongThis);
+
+        m_name = name;
+
+        package->AddAssetObject(strongThis);
+    }
+    else
+    {
+        m_name = name;
+    }
 }
 
 FilePath AssetObject::GetFilePath() const
@@ -172,44 +168,34 @@ FilePath AssetObject::GetFilePath() const
         return {};
     }
 
-    return registry->GetAbsolutePath() / package->BuildAssetPath(m_name);
+    return registry->GetAbsolutePath() / m_assetPath.ToString();
 }
 
 bool AssetObject::IsLoaded() const
 {
-    if (!m_resource)
+    if (!m_resource || m_resource->IsNull())
     {
         return false;
     }
 
-    bool isLoaded = false;
-
-    m_resource->Execute([resource = m_resource, &isLoaded]()
-        {
-            if (resource->m_loadedAsset.IsValid())
-            {
-                isLoaded = true;
-            }
-        });
-
-    return isLoaded;
+    return static_cast<AssetDataResourceBase*>(m_resource)->IsInitialized();
 }
 
 Result AssetObject::Save() const
 {
-    if (!m_resource || !IsLoaded())
+    if (!m_resource || m_resource->IsNull() || !IsLoaded())
     {
         return HYP_MAKE_ERROR(Error, "No resource loaded");
     }
 
-    return m_resource->Save();
+    return static_cast<AssetDataResourceBase*>(m_resource)->Save();
 }
 
 void AssetObject::Init()
 {
-    if (m_resource != nullptr)
+    if (m_resource && !m_resource->IsNull())
     {
-        m_resource->m_assetObject = WeakHandleFromThis();
+        static_cast<AssetDataResourceBase*>(m_resource)->m_assetObject = WeakHandleFromThis();
     }
 
     SetReady(true);
@@ -220,12 +206,18 @@ void AssetObject::Init()
 #pragma region AssetPackage
 
 AssetPackage::AssetPackage()
+    : AssetPackage(Name::Invalid())
 {
 }
 
-AssetPackage::AssetPackage(Name name)
-    : m_name(name)
+AssetPackage::AssetPackage(Name name, EnumFlags<AssetPackageFlags> flags)
+    : m_name(name),
+      m_flags(flags)
 {
+    if (name.IsValid() && name.LookupString()[0] == '$')
+    {
+        m_flags |= APF_TRANSIENT;
+    }
 }
 
 void AssetPackage::SetAssetObjects(const AssetObjectSet& assetObjects)
@@ -244,7 +236,15 @@ void AssetPackage::SetAssetObjects(const AssetObjectSet& assetObjects)
         {
             assetObject->m_package.Reset();
 
-            OnAssetObjectRemoved(assetObject.Get());
+            OnAssetObjectRemoved(assetObject, true);
+
+            Handle<AssetPackage> parentPackage = m_parentPackage.Lock();
+
+            while (parentPackage.IsValid())
+            {
+                parentPackage->OnAssetObjectRemoved(assetObject, false);
+                parentPackage = parentPackage->GetParentPackage().Lock();
+            }
         }
 
         previousAssetObjects.Clear();
@@ -257,53 +257,122 @@ void AssetPackage::SetAssetObjects(const AssetObjectSet& assetObjects)
 
         m_assetObjects = assetObjects;
 
-        if (IsInitCalled())
+        newAssetObjects.Reserve(m_assetObjects.Size());
+
+        for (const Handle<AssetObject>& assetObject : m_assetObjects)
         {
-            newAssetObjects.Reserve(m_assetObjects.Size());
+            assetObject->m_package = WeakHandleFromThis();
+            assetObject->m_assetPath = BuildAssetPath(assetObject->m_name);
 
-            for (const Handle<AssetObject>& assetObject : m_assetObjects)
-            {
-                assetObject->m_package = WeakHandleFromThis();
-
-                InitObject(assetObject);
-
-                newAssetObjects.PushBack(assetObject);
-            }
-        }
-    }
-
-    for (const Handle<AssetObject>& assetObject : newAssetObjects)
-    {
-        OnAssetObjectAdded(assetObject.Get());
-    }
-}
-
-Handle<AssetObject> AssetPackage::NewAssetObject(Name name, HypData&& data)
-{
-    name = GetUniqueAssetName(name);
-
-    Handle<AssetObject> assetObject;
-
-    { // so we can call OnAssetObjectAdded outside of the lock
-        Mutex::Guard guard(m_mutex);
-
-        assetObject = CreateObject<AssetObject>(name, std::move(data));
-        assetObject->m_package = WeakHandleFromThis();
-
-        m_assetObjects.Insert({ assetObject });
-
-        if (IsInitCalled())
-        {
-            InitObject(assetObject);
+            newAssetObjects.PushBack(assetObject);
         }
     }
 
     if (IsInitCalled())
     {
-        OnAssetObjectAdded(assetObject.Get());
+        for (const Handle<AssetObject>& assetObject : newAssetObjects)
+        {
+            InitObject(assetObject);
+
+            OnAssetObjectAdded(assetObject, true);
+
+            Handle<AssetPackage> parentPackage = m_parentPackage.Lock();
+
+            while (parentPackage.IsValid())
+            {
+                parentPackage->OnAssetObjectAdded(assetObject, false);
+                parentPackage = parentPackage->GetParentPackage().Lock();
+            }
+        }
+    }
+}
+
+void AssetPackage::AddAssetObject(const Handle<AssetObject>& assetObject)
+{
+    if (!assetObject.IsValid())
+    {
+        return;
     }
 
-    return assetObject;
+    // already in the package
+    if (assetObject->GetPackage() == this)
+    {
+        return;
+    }
+
+    if (assetObject->GetPackage().IsValid())
+    {
+        HYP_LOG(Assets, Warning, "AssetObject '{}' already belongs to another package!", assetObject->GetName());
+    }
+
+    {
+        Mutex::Guard guard(m_mutex);
+
+        if (m_assetObjects.Find(assetObject->GetName()) != m_assetObjects.End())
+        {
+            HYP_LOG(Assets, Warning, "AssetObject '{}' already exists in package '{}'", assetObject->GetName(), m_name);
+
+            return;
+        }
+
+        assetObject->m_package = WeakHandleFromThis();
+        assetObject->m_assetPath = BuildAssetPath(assetObject->m_name);
+
+        m_assetObjects.Insert({ assetObject });
+    }
+
+    if (IsInitCalled())
+    {
+        InitObject(assetObject);
+
+        OnAssetObjectAdded(assetObject, true);
+
+        Handle<AssetPackage> parentPackage = m_parentPackage.Lock();
+
+        while (parentPackage.IsValid())
+        {
+            parentPackage->OnAssetObjectAdded(assetObject, false);
+            parentPackage = parentPackage->GetParentPackage().Lock();
+        }
+    }
+}
+
+void AssetPackage::RemoveAssetObject(const Handle<AssetObject>& assetObject)
+{
+    if (!assetObject)
+    {
+        return;
+    }
+
+    {
+        Mutex::Guard guard(m_mutex);
+
+        auto it = m_assetObjects.Find(assetObject->GetName());
+
+        if (it == m_assetObjects.End())
+        {
+            HYP_LOG(Assets, Warning, "AssetObject '{}' not found in package '{}'", assetObject->GetName(), m_name);
+            return;
+        }
+
+        m_assetObjects.Erase(it);
+
+        assetObject->m_package.Reset();
+        assetObject->m_assetPath = {};
+    }
+
+    if (IsInitCalled())
+    {
+        OnAssetObjectRemoved(assetObject, true);
+
+        Handle<AssetPackage> parentPackage = m_parentPackage.Lock();
+
+        while (parentPackage.IsValid())
+        {
+            parentPackage->OnAssetObjectRemoved(assetObject, false);
+            parentPackage = parentPackage->GetParentPackage().Lock();
+        }
+    }
 }
 
 FilePath AssetPackage::GetAbsolutePath() const
@@ -330,9 +399,28 @@ String AssetPackage::BuildPackagePath() const
     return parentPackage->BuildPackagePath() + "/" + *m_name;
 }
 
-String AssetPackage::BuildAssetPath(Name assetName) const
+AssetPath AssetPackage::BuildAssetPath(Name assetName) const
 {
-    return BuildPackagePath() + "/" + *assetName;
+    if (!assetName.IsValid())
+    {
+        return {};
+    }
+
+    Array<Name> chain;
+
+    Handle<AssetPackage> parentPackage = m_parentPackage.Lock();
+
+    while (parentPackage.IsValid())
+    {
+        chain.PushBack(parentPackage->GetName());
+
+        parentPackage = parentPackage->GetParentPackage().Lock();
+    }
+
+    AssetPath assetPath;
+    assetPath.SetChain(chain);
+
+    return assetPath;
 }
 
 void AssetPackage::Init()
@@ -363,10 +451,89 @@ void AssetPackage::Init()
 
     for (const Handle<AssetObject>& assetObject : assetObjects)
     {
-        OnAssetObjectAdded(assetObject.Get());
+        OnAssetObjectAdded(assetObject, true);
+
+        Handle<AssetPackage> parentPackage = m_parentPackage.Lock();
+
+        while (parentPackage.IsValid())
+        {
+            parentPackage->OnAssetObjectAdded(assetObject, false);
+            parentPackage = parentPackage->GetParentPackage().Lock();
+        }
     }
 
     SetReady(true);
+}
+
+Result AssetPackage::Save()
+{
+    HYP_SCOPE;
+    AssertReady();
+
+    if (IsTransient())
+    {
+        return HYP_MAKE_ERROR(Error, "Cannot save transient AssetPackage '{}'", m_name);
+    }
+
+    Handle<AssetRegistry> registry = m_registry.Lock();
+
+    if (!registry)
+    {
+        return HYP_MAKE_ERROR(Error, "AssetPackage '{}' does not have a valid AssetRegistry", m_name);
+    }
+
+    HYP_LOG(Assets, Debug, "Saving asset package {} with {} assets (path: {})", GetName(), GetAssetObjects().Size(), GetAbsolutePath());
+
+    Mutex::Guard guard(m_mutex);
+
+    FilePath filePath = GetAbsolutePath();
+
+    if (!filePath.Exists())
+    {
+        if (!filePath.MkDir())
+        {
+            return HYP_MAKE_ERROR(Error, "Failed to create package directory '{}'", filePath);
+        }
+    }
+    else if (!filePath.IsDirectory())
+    {
+        return HYP_MAKE_ERROR(Error, "Path '{}' already exists and is not a directory", filePath);
+    }
+
+    for (const Handle<AssetPackage>& subpackage : m_subpackages)
+    {
+        if (subpackage->IsTransient())
+        {
+            continue;
+        }
+
+        Result result = subpackage->Save();
+
+        if (result.HasError())
+        {
+            return result.GetError();
+        }
+    }
+
+    for (const Handle<AssetObject>& assetObject : m_assetObjects)
+    {
+        HYP_LOG(Assets, Debug, "Saving asset object '{}' in package '{}'", assetObject->GetName(), m_name);
+
+        if (!assetObject->IsLoaded())
+        {
+            HYP_LOG(Assets, Warning, "AssetObject '{}' is not loaded, skipping save", assetObject->GetName());
+            continue;
+        }
+
+        Result result = assetObject->Save();
+
+        if (result.HasError())
+        {
+            return result.GetError();
+        }
+    }
+
+    return {};
 }
 
 #pragma endregion AssetPackage
@@ -381,37 +548,17 @@ AssetRegistry::AssetRegistry()
 AssetRegistry::AssetRegistry(const String& rootPath)
     : m_rootPath(rootPath)
 {
-    const auto addPackage = [this](Name name, WeakName parentPackageName = Name::Invalid())
-    {
-        Handle<AssetPackage> package = CreateObject<AssetPackage>(name);
-        package->m_registry = WeakHandleFromThis();
-
-        if (parentPackageName.IsValid())
-        {
-            auto parentPackageIt = m_packages.Find(parentPackageName);
-            Assert(parentPackageIt != m_packages.End(), "No package with name '%s' found", Name(parentPackageName).LookupString());
-
-            package->m_parentPackage = *parentPackageIt;
-
-            (*parentPackageIt)->m_subpackages.Insert(std::move(package));
-
-            return;
-        }
-
-        m_packages.Insert(std::move(package));
-    };
-
-    addPackage(NAME("Media"));
-    addPackage(NAME("Textures"), "Media");
-    addPackage(NAME("Models"), "Media");
-    addPackage(NAME("Materials"), "Media");
-
-    addPackage(NAME("Scripts"));
-    addPackage(NAME("Config"));
 }
 
 void AssetRegistry::Init()
 {
+    HYP_SCOPE;
+
+#ifdef HYP_EDITOR
+    // Add transient package for imported assets in editor mode
+    GetPackageFromPath("$Import", true);
+#endif
+
     Mutex::Guard guard(m_mutex);
 
     for (const Handle<AssetPackage>& package : m_packages)
@@ -422,8 +569,14 @@ void AssetRegistry::Init()
     SetReady(true);
 }
 
+AssetRegistry::~AssetRegistry()
+{
+}
+
 FilePath AssetRegistry::GetAbsolutePath() const
 {
+    HYP_SCOPE;
+
     // Allow temporary override of the root path
     AssetRegistryRootPathContext* context = GetGlobalContext<AssetRegistryRootPathContext>();
 
@@ -457,6 +610,8 @@ void AssetRegistry::SetPackages(const AssetPackageSet& packages)
     // and call OnPackageAdded for each nested package
     initializePackage = [this, &initializePackage](const Handle<AssetPackage>& parentPackage)
     {
+        Assert(parentPackage.IsValid());
+
         parentPackage->m_registry = WeakHandleFromThis();
 
         for (const Handle<AssetPackage>& package : parentPackage->m_subpackages)
@@ -471,15 +626,22 @@ void AssetRegistry::SetPackages(const AssetPackageSet& packages)
 
     for (const Handle<AssetPackage>& package : packages)
     {
+        Assert(package.IsValid());
+
         m_packages.Set(package);
 
         initializePackage(package);
     }
 }
 
-void AssetRegistry::RegisterAsset(const UTF8StringView& path, HypData&& data)
+void AssetRegistry::RegisterAsset(const UTF8StringView& path, const Handle<AssetObject>& assetObject)
 {
     HYP_SCOPE;
+
+    if (!assetObject.IsValid())
+    {
+        return;
+    }
 
     String pathString = path;
     Array<String> pathStringSplit = pathString.Split('/', '\\');
@@ -488,10 +650,24 @@ void AssetRegistry::RegisterAsset(const UTF8StringView& path, HypData&& data)
 
     pathString = String::Join(pathStringSplit, '/');
 
-    Mutex::Guard guard1(m_mutex);
-    Handle<AssetPackage> assetPackage = GetPackageFromPath_Internal(pathString, AssetRegistryPathType::PACKAGE, /* createIfNotExist */ true, assetName);
+    AssetRegistryPathType pathType = AssetRegistryPathType::ASSET;
 
-    assetPackage->NewAssetObject(CreateNameFromDynamicString(assetName), std::move(data));
+    if (assetObject->GetName().IsValid())
+    {
+        pathType = AssetRegistryPathType::PACKAGE;
+    }
+
+    Mutex::Guard guard1(m_mutex);
+    Handle<AssetPackage> assetPackage = GetPackageFromPath_Internal(pathString, pathType, /* createIfNotExist */ true, assetName);
+
+    if (pathType == AssetRegistryPathType::ASSET)
+    {
+        const Name baseName = assetName.Any() ? CreateNameFromDynamicString(assetName) : NAME("Unnamed");
+
+        assetObject->m_name = assetPackage->GetUniqueAssetName(baseName);
+    }
+
+    assetPackage->AddAssetObject(assetObject);
 }
 
 // AnyHandle AssetRegistry::GetAsset(const UTF8StringView &path)
@@ -518,6 +694,8 @@ void AssetRegistry::RegisterAsset(const UTF8StringView& path, HypData&& data)
 
 Name AssetRegistry::GetUniqueAssetName(const UTF8StringView& packagePath, Name baseName) const
 {
+    HYP_SCOPE;
+
     Handle<AssetPackage> package = const_cast<AssetRegistry*>(this)->GetPackageFromPath(packagePath, /* createIfNotExist */ false);
 
     if (!package.IsValid())
@@ -530,11 +708,103 @@ Name AssetRegistry::GetUniqueAssetName(const UTF8StringView& packagePath, Name b
 
 Handle<AssetPackage> AssetRegistry::GetPackageFromPath(const UTF8StringView& path, bool createIfNotExist)
 {
+    HYP_SCOPE;
+
     Mutex::Guard guard(m_mutex);
 
     String assetName;
 
     return GetPackageFromPath_Internal(path, AssetRegistryPathType::PACKAGE, createIfNotExist, assetName);
+}
+
+const Handle<AssetPackage>& AssetRegistry::GetSubpackage(const Handle<AssetPackage>& parentPackage, Name subpackageName, bool createIfNotExist)
+{
+    HYP_SCOPE;
+
+    AssetPackageSet* packagesSet = nullptr;
+
+    if (!parentPackage)
+    {
+        packagesSet = &m_packages;
+    }
+    else
+    {
+        packagesSet = &parentPackage->m_subpackages;
+    }
+
+    auto packageIt = packagesSet->Find(subpackageName);
+
+    if (createIfNotExist && packageIt == packagesSet->End())
+    {
+        Handle<AssetPackage> package = CreateObject<AssetPackage>(subpackageName);
+        package->m_registry = WeakHandleFromThis();
+        package->m_parentPackage = parentPackage;
+        InitObject(package);
+
+        packageIt = packagesSet->Insert(package).first;
+
+        OnPackageAdded(package);
+    }
+
+    return packageIt != packagesSet->End() ? *packageIt : Handle<AssetPackage>::empty;
+}
+
+bool AssetRegistry::RemovePackage(AssetPackage* package)
+{
+    HYP_SCOPE;
+
+    if (!package)
+    {
+        return false;
+    }
+
+    if (package->m_registry.GetUnsafe() != this)
+    {
+        return false;
+    }
+
+    package->m_registry.Reset();
+
+    Handle<AssetPackage> strongPackage = package->HandleFromThis();
+
+    bool removed = false;
+
+    {
+        Mutex::Guard guard(m_mutex);
+
+        if (package->m_parentPackage.IsValid())
+        {
+            Handle<AssetPackage> parentPackage = package->m_parentPackage.Lock();
+
+            if (parentPackage.IsValid())
+            {
+                auto it = parentPackage->m_subpackages.Find(package->GetName());
+                Assert(it != parentPackage->m_subpackages.End());
+
+                parentPackage->m_subpackages.Erase(it);
+
+                removed = true;
+            }
+        }
+        else
+        {
+            auto it = m_packages.Find(package->GetName());
+            Assert(it != m_packages.End());
+
+            m_packages.Erase(it);
+
+            removed = true;
+        }
+    }
+
+    if (removed)
+    {
+        OnPackageRemoved(strongPackage);
+
+        return true;
+    }
+
+    return false;
 }
 
 Handle<AssetPackage> AssetRegistry::GetPackageFromPath_Internal(const UTF8StringView& path, AssetRegistryPathType pathType, bool createIfNotExist, String& outAssetName)
@@ -544,41 +814,11 @@ Handle<AssetPackage> AssetRegistry::GetPackageFromPath_Internal(const UTF8String
     Handle<AssetPackage> currentPackage;
     String currentString;
 
-    const auto getSubpackage = [this, createIfNotExist](const Handle<AssetPackage>& parentPackage, UTF8StringView str) -> const Handle<AssetPackage>&
-    {
-        AssetPackageSet* packagesSet = nullptr;
-
-        if (!parentPackage)
-        {
-            packagesSet = &m_packages;
-        }
-        else
-        {
-            packagesSet = &parentPackage->m_subpackages;
-        }
-
-        auto packageIt = packagesSet->Find(str);
-
-        if (createIfNotExist && packageIt == packagesSet->End())
-        {
-            Handle<AssetPackage> package = CreateObject<AssetPackage>(CreateNameFromDynamicString(str.Data()));
-            package->m_registry = WeakHandleFromThis();
-            package->m_parentPackage = parentPackage;
-            InitObject(package);
-
-            packageIt = packagesSet->Insert(std::move(package)).first;
-
-            OnPackageAdded(package);
-        }
-
-        return packageIt != packagesSet->End() ? *packageIt : Handle<AssetPackage>::empty;
-    };
-
     for (auto it = path.Begin(); it != path.End(); ++it)
     {
         if (*it == utf::u32char('/') || *it == utf::u32char('\\'))
         {
-            currentPackage = getSubpackage(currentPackage, currentString);
+            currentPackage = GetSubpackage(currentPackage, CreateNameFromDynamicString(currentString), createIfNotExist);
 
             currentString.Clear();
 
@@ -601,7 +841,7 @@ Handle<AssetPackage> AssetRegistry::GetPackageFromPath_Internal(const UTF8String
         // If it is a PACKAGE path, if there is any remaining string, get / create the subpackage
         if (!currentPackage.IsValid() || currentString.Any())
         {
-            currentPackage = getSubpackage(currentPackage, currentString);
+            currentPackage = GetSubpackage(currentPackage, CreateNameFromDynamicString(currentString), createIfNotExist);
         }
 
         return currentPackage;

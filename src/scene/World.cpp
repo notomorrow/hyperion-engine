@@ -160,7 +160,7 @@ void World::Init()
 
     // Update RenderWorld's RenderStats - done on the game thread so both the game thread and render thread can access it.
     // It is copied, so it will be delayed by 1-2 frames for the render thread to see the updated stats.
-    AddDelegateHandler(g_engine->OnRenderStatsUpdated.Bind([thisWeak = WeakHandleFromThis()](RenderStats renderStats)
+    AddDelegateHandler(g_engine->OnRenderStatsUpdated.BindThreaded([thisWeak = WeakHandleFromThis()](RenderStats renderStats)
         {
             Threads::AssertOnThread(g_gameThread);
 
@@ -396,7 +396,7 @@ void World::Update(float delta)
     for (EntityManager* entityManager : entityManagers)
     {
         HYP_NAMED_SCOPE("Call BeginAsyncUpdate on EntityManager");
-        
+
         AssertDebug(entityManager->GetWorld() == this);
 
         entityManager->BeginAsyncUpdate(delta);

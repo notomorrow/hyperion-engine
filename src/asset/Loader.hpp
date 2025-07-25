@@ -13,6 +13,7 @@ namespace hyperion {
 
 class Engine;
 class AssetManager;
+class AssetRegistry;
 
 struct LoaderState
 {

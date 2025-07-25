@@ -25,7 +25,7 @@ namespace hyperion {
 
 class Scene;
 class AssetCollector;
-class AssetRegistry;
+class AssetPackage;
 class EditorActionStack;
 class EditorSubsystem;
 
@@ -68,10 +68,7 @@ public:
     }
 
     HYP_METHOD(Property = "Name", Serialize = true)
-    HYP_FORCE_INLINE void SetName(Name name)
-    {
-        m_name = name;
-    }
+    void SetName(Name name);
 
     HYP_METHOD(Property = "LastSavedTime", Serialize = true)
     HYP_FORCE_INLINE Time GetLastSavedTime() const
@@ -98,16 +95,16 @@ public:
         m_filepath = filepath;
     }
 
-    HYP_METHOD(Property = "AssetRegistry")
-    HYP_FORCE_INLINE const Handle<AssetRegistry>& GetAssetRegistry() const
-    {
-        return m_assetRegistry;
-    }
-
     HYP_METHOD(Property = "Scenes")
     HYP_FORCE_INLINE const Array<Handle<Scene>>& GetScenes() const
     {
         return m_scenes;
+    }
+
+    HYP_METHOD()
+    HYP_FORCE_INLINE const Handle<AssetPackage>& GetPackage() const
+    {
+        return m_package;
     }
 
     HYP_METHOD()
@@ -150,9 +147,13 @@ public:
 
     HYP_FIELD()
     ScriptableDelegate<void, const Handle<EditorProject>&> OnProjectSaved;
+    
+    Delegate<void, Handle<AssetPackage>> OnPackageCreated;
 
 private:
     void Init() override;
+
+    Result CreatePackage();
 
     HYP_FORCE_INLINE void SetEditorSubsystem(const WeakHandle<EditorSubsystem>& editorSubsystem)
     {
@@ -172,7 +173,8 @@ private:
     HYP_FIELD(Property = "Scenes", Serialize = true)
     Array<Handle<Scene>> m_scenes;
 
-    Handle<AssetRegistry> m_assetRegistry;
+    HYP_FIELD(Property = "Package", Serialize = true)
+    Handle<AssetPackage> m_package;
 
     Handle<EditorActionStack> m_actionStack;
 

@@ -16,6 +16,7 @@ class MaterialCache;
 class RenderGlobalState;
 class IRenderBackend;
 class ShaderCompiler;
+class EditorState;
 
 #ifdef HYP_BUILD_LIBRARY
 
@@ -23,6 +24,7 @@ class ShaderCompiler;
 
 extern Handle<Engine> g_engine;
 extern Handle<AssetManager> g_assetManager;
+extern Handle<EditorState> g_editorState;
 extern ShaderManager* g_shaderManager;
 extern MaterialCache* g_materialSystem;
 extern SafeDeleter* g_safeDeleter;

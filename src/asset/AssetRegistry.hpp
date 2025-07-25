@@ -45,28 +45,22 @@ HYP_API extern WeakName AssetObject_KeyByFunction(const Handle<AssetObject>& ass
 using AssetPackageSet = HashSet<Handle<AssetPackage>, &AssetPackage_KeyByFunction>;
 using AssetObjectSet = HashSet<Handle<AssetObject>, &AssetObject_KeyByFunction>;
 
-class HYP_API AssetResourceBase : public ResourceBase
+class AssetDataResourceBase : public ResourceBase
 {
 public:
     friend class AssetObject;
 
-    AssetResourceBase() = default;
+    AssetDataResourceBase(const AssetDataResourceBase&) = delete;
+    AssetDataResourceBase& operator=(const AssetDataResourceBase&) = delete;
 
-    template <class T>
-    AssetResourceBase(T&& value)
-        : m_loadedAsset(std::forward<T>(value))
-    {
-    }
+    AssetDataResourceBase(AssetDataResourceBase&&) noexcept = delete;
+    AssetDataResourceBase& operator=(AssetDataResourceBase&&) noexcept = delete;
 
-    AssetResourceBase(const AssetResourceBase&) = delete;
-    AssetResourceBase& operator=(const AssetResourceBase&) = delete;
-
-    AssetResourceBase(AssetResourceBase&&) noexcept = delete;
-    AssetResourceBase& operator=(AssetResourceBase&&) noexcept = delete;
-
-    virtual ~AssetResourceBase() override = default;
+    virtual ~AssetDataResourceBase() override = default;
 
 protected:
+    AssetDataResourceBase() = default;
+
     virtual void Initialize() override final;
     virtual void Destroy() override final;
 
@@ -76,53 +70,69 @@ protected:
 
     Result Save();
 
-    virtual Result Save_Internal() = 0;
+    virtual void Unload_Internal() = 0;
+
+    virtual void Extract_Internal(LoadedAsset&& loadedAsset) = 0;
 
     virtual TypeId GetAssetTypeId() const = 0;
+    virtual AnyRef GetAssetRef() = 0;
 
     WeakHandle<AssetObject> m_assetObject;
-    LoadedAsset m_loadedAsset;
 };
 
-class HYP_API ObjectAssetResourceBase : public AssetResourceBase
+template <class T>
+class AssetDataResource final : public AssetDataResourceBase
 {
 public:
-    ObjectAssetResourceBase() = default;
+    AssetDataResource() = default;
 
-    ObjectAssetResourceBase(HypData&& value)
-    {
-        m_assetTypeId = value.GetTypeId();
-        m_loadedAsset = std::move(value);
-    }
-
-    template <class T, typename = std::enable_if_t<!isHypData<NormalizedType<T>>>>
-    ObjectAssetResourceBase(T&& value)
-        : AssetResourceBase(std::forward<T>(value)),
-          m_assetTypeId(TypeId::ForType<T>())
+    AssetDataResource(const T& data)
+        : m_assetTypeId(TypeId::ForType<T>()),
+          m_data(data)
     {
     }
 
-    ObjectAssetResourceBase(const ObjectAssetResourceBase&) = delete;
-    ObjectAssetResourceBase& operator=(const ObjectAssetResourceBase&) = delete;
+    AssetDataResource(T&& data)
+        : m_assetTypeId(TypeId::ForType<T>()),
+          m_data(std::move(data))
+    {
+    }
 
-    ObjectAssetResourceBase(ObjectAssetResourceBase&&) noexcept = delete;
-    ObjectAssetResourceBase& operator=(ObjectAssetResourceBase&&) noexcept = delete;
+    AssetDataResource(const AssetDataResource&) = delete;
+    AssetDataResource& operator=(const AssetDataResource&) = delete;
 
-    virtual ~ObjectAssetResourceBase() override = default;
+    AssetDataResource(AssetDataResource&&) noexcept = delete;
+    AssetDataResource& operator=(AssetDataResource&&) noexcept = delete;
+
+    virtual ~AssetDataResource() override = default;
 
 protected:
-    virtual Result Save_Internal() override;
+    virtual void Unload_Internal() override
+    {
+        m_data = {};
+    }
 
-    virtual TypeId GetAssetTypeId() const override final
+    virtual void Extract_Internal(LoadedAsset&& loadedAsset) override
+    {
+        m_data = std::move(loadedAsset).ExtractAs<T>();
+    }
+
+    virtual TypeId GetAssetTypeId() const override
     {
         return m_assetTypeId;
     }
 
+    virtual AnyRef GetAssetRef() override
+    {
+        return AnyRef(&m_data);
+    }
+
     TypeId m_assetTypeId;
+    T m_data;
 };
 
-HYP_CLASS()
-class HYP_API AssetObject final : public HypObject<AssetObject>
+HYP_CLASS(Abstract)
+class HYP_API AssetObject : public HypObject<AssetObject>
 {
     HYP_OBJECT_BODY(AssetObject);
 
@@ -133,17 +143,12 @@ public:
     AssetObject();
     AssetObject(Name name);
 
-    AssetObject(Name name, HypData&& data)
+    template <class T>
+    AssetObject(Name name, T&& data)
         : AssetObject(name)
     {
-        m_resource = AllocateResource<ObjectAssetResourceBase>(std::move(data));
-    }
-
-    template <class T, typename = std::enable_if_t<!isHypData<NormalizedType<T>>>>
-    AssetObject(Name name, T&& value)
-        : AssetObject(name)
-    {
-        m_resource = AllocateResource<ObjectAssetResourceBase>(std::forward<T>(value));
+        m_resource = AllocateResource<AssetDataResource<NormalizedType<T>>>(std::forward<T>(data));
+        static_cast<AssetDataResource<NormalizedType<T>>*>(m_resource)->m_assetObject = WeakHandleFromThis();
     }
 
     AssetObject(const AssetObject& other) = delete;
@@ -165,18 +170,24 @@ public:
     }
 
     HYP_METHOD()
+    void SetName(Name name);
+
+    HYP_METHOD()
     HYP_FORCE_INLINE Handle<AssetPackage> GetPackage() const
     {
         return m_package.Lock();
     }
 
-    HYP_FORCE_INLINE AssetResourceBase* GetResource() const
+    HYP_FORCE_INLINE IResource* GetResource() const
     {
         return m_resource;
     }
 
     HYP_METHOD()
-    String GetPath() const;
+    HYP_FORCE_INLINE const AssetPath& GetPath() const
+    {
+        return m_assetPath;
+    }
 
     HYP_METHOD()
     FilePath GetFilePath() const;
@@ -187,8 +198,30 @@ public:
     HYP_METHOD()
     Result Save() const;
 
-private:
+protected:
     void Init() override;
+
+    template <class T>
+    T* GetResourceData() const
+    {
+        if (!m_resource || m_resource->IsNull())
+        {
+            return nullptr;
+        }
+
+        AssetDataResourceBase* resourceCasted = static_cast<AssetDataResourceBase*>(m_resource);
+
+        if (!resourceCasted->IsInitialized())
+        {
+            return nullptr;
+        }
+
+        AssertDebug(resourceCasted->GetAssetTypeId() == TypeId::ForType<T>(), "Type mismatch!");
+
+        ResourceHandle resourceHandle(*resourceCasted);
+
+        return resourceCasted->GetAssetRef().TryGet<T>();
+    }
 
     HYP_FIELD(Property = "UUID", Serialize = true)
     UUID m_uuid;
@@ -200,8 +233,19 @@ private:
     WeakHandle<AssetPackage> m_package;
 
     HYP_FIELD()
-    AssetResourceBase* m_resource;
+    IResource* m_resource;
+
+    AssetPath m_assetPath;
 };
+
+HYP_ENUM()
+enum AssetPackageFlags : uint32
+{
+    APF_NONE = 0x0,
+    APF_TRANSIENT = 0x1
+};
+
+HYP_MAKE_ENUM_FLAGS(AssetPackageFlags);
 
 HYP_CLASS()
 class HYP_API AssetPackage final : public HypObject<AssetPackage>
@@ -212,35 +256,47 @@ class HYP_API AssetPackage final : public HypObject<AssetPackage>
 
 public:
     AssetPackage();
-    AssetPackage(Name name);
+    AssetPackage(Name name, EnumFlags<AssetPackageFlags> flags = APF_NONE);
     AssetPackage(const AssetPackage& other) = delete;
     AssetPackage& operator=(const AssetPackage& other) = delete;
     AssetPackage(AssetPackage&& other) noexcept = delete;
     AssetPackage& operator=(AssetPackage&& other) noexcept = delete;
     ~AssetPackage() = default;
 
-    HYP_METHOD(Property = "UUID", Serialize = true)
+    HYP_METHOD()
     HYP_FORCE_INLINE const UUID& GetUUID() const
     {
         return m_uuid;
     }
 
-    HYP_METHOD(Property = "UUID", Serialize = true)
+    HYP_METHOD()
     HYP_FORCE_INLINE void SetUUID(const UUID& uuid)
     {
         m_uuid = uuid;
     }
 
-    HYP_METHOD(Property = "Name", Serialize = true)
+    HYP_METHOD()
     HYP_FORCE_INLINE Name GetName() const
     {
         return m_name;
     }
 
-    HYP_METHOD(Property = "Name", Serialize = true)
+    HYP_METHOD()
     HYP_FORCE_INLINE void SetName(Name name)
     {
         m_name = name;
+    }
+
+    HYP_METHOD()
+    HYP_FORCE_INLINE EnumFlags<AssetPackageFlags> GetFlags() const
+    {
+        return m_flags;
+    }
+
+    HYP_METHOD()
+    HYP_FORCE_INLINE bool IsTransient() const
+    {
+        return m_flags[APF_TRANSIENT];
     }
 
     HYP_FORCE_INLINE const WeakHandle<AssetRegistry>& GetRegistry() const
@@ -265,6 +321,19 @@ public:
         m_subpackages = subpackages;
     }
 
+    template <class Callback>
+    void ForEachSubpackage(Callback&& callback) const
+    {
+        AssetPackageSet set;
+
+        {
+            Mutex::Guard guard(m_mutex);
+            set = m_subpackages;
+        }
+
+        ForEach(set, std::forward<Callback>(callback));
+    }
+
     HYP_FORCE_INLINE const AssetObjectSet& GetAssetObjects() const
     {
         return m_assetObjects;
@@ -275,10 +344,24 @@ public:
     template <class Callback>
     void ForEachAssetObject(Callback&& callback) const
     {
-        ForEach(m_assetObjects, m_mutex, std::forward<Callback>(callback));
+        AssetObjectSet set;
+
+        {
+            Mutex::Guard guard(m_mutex);
+            set = m_assetObjects;
+        }
+
+        ForEach(set, std::forward<Callback>(callback));
     }
 
-    Handle<AssetObject> NewAssetObject(Name name, HypData&& data);
+    template <class T>
+    Handle<AssetObject> NewAssetObject(Name name, T&& data)
+    {
+        AddAssetObject(CreateObject<AssetObject>(name, std::forward<T>(data)));
+    }
+
+    void AddAssetObject(const Handle<AssetObject>& assetObject);
+    void RemoveAssetObject(const Handle<AssetObject>& assetObject);
 
     HYP_METHOD()
     FilePath GetAbsolutePath() const;
@@ -287,13 +370,16 @@ public:
     String BuildPackagePath() const;
 
     HYP_METHOD()
-    String BuildAssetPath(Name assetName) const;
+    AssetPath BuildAssetPath(Name assetName) const;
 
     HYP_METHOD(Scriptable)
     Name GetUniqueAssetName(Name baseName) const;
 
-    Delegate<void, AssetObject*> OnAssetObjectAdded;
-    Delegate<void, AssetObject*> OnAssetObjectRemoved;
+    HYP_METHOD()
+    Result Save();
+
+    Delegate<void, Handle<AssetObject>, bool /* isDirect */> OnAssetObjectAdded;
+    Delegate<void, Handle<AssetObject>, bool /* isDirect */> OnAssetObjectRemoved;
 
 private:
     void Init() override;
@@ -303,8 +389,15 @@ private:
         return baseName;
     }
 
+    HYP_FIELD(Property = "UUID", Serialize = true)
     UUID m_uuid;
+
+    HYP_FIELD(Property = "Name", Serialize = true)
     Name m_name;
+
+    HYP_FIELD(Property="Flags", Serialize = true)
+    EnumFlags<AssetPackageFlags> m_flags;
+
     WeakHandle<AssetRegistry> m_registry;
     WeakHandle<AssetPackage> m_parentPackage;
     AssetPackageSet m_subpackages;
@@ -330,7 +423,7 @@ public:
     AssetRegistry& operator=(const AssetRegistry& other) = delete;
     AssetRegistry(AssetRegistry&& other) noexcept = delete;
     AssetRegistry& operator=(AssetRegistry&& other) noexcept = delete;
-    ~AssetRegistry() = default;
+    ~AssetRegistry();
 
     HYP_METHOD()
     FilePath GetAbsolutePath() const;
@@ -359,7 +452,27 @@ public:
         ForEach(m_packages, m_mutex, std::forward<Callback>(callback));
     }
 
-    void RegisterAsset(const UTF8StringView& path, HypData&& data);
+    void RegisterAsset(const UTF8StringView& path, const Handle<AssetObject>& assetObject);
+    
+    template <class T>
+    Handle<AssetObject> NewAssetObject(const UTF8StringView& path, T&& data)
+    {
+        String pathString = path;
+        Array<String> pathStringSplit = pathString.Split('/', '\\');
+
+        String assetName;
+
+        pathString = String::Join(pathStringSplit, '/');
+
+        Mutex::Guard guard1(m_mutex);
+        Handle<AssetPackage> assetPackage = GetPackageFromPath_Internal(pathString, AssetRegistryPathType::PACKAGE, /* createIfNotExist */ true, assetName);
+
+        Handle<AssetObject> assetObject = CreateObject<AssetObject>(CreateNameFromDynamicString(assetName), std::forward<T>(data));
+
+        assetPackage->AddAssetObject(assetObject);
+
+        return assetObject;
+    }
 
     HYP_METHOD()
     Name GetUniqueAssetName(const UTF8StringView& packagePath, Name baseName) const;
@@ -367,7 +480,14 @@ public:
     HYP_METHOD()
     Handle<AssetPackage> GetPackageFromPath(const UTF8StringView& path, bool createIfNotExist = true);
 
-    Delegate<void, const Handle<AssetPackage>&> OnPackageAdded;
+    HYP_METHOD()
+    const Handle<AssetPackage>& GetSubpackage(const Handle<AssetPackage>& parentPackage, Name subpackageName, bool createIfNotExist = true);
+
+    HYP_METHOD()
+    bool RemovePackage(AssetPackage* package);
+
+    Delegate<void, Handle<AssetPackage>> OnPackageAdded;
+    Delegate<void, Handle<AssetPackage>> OnPackageRemoved;
 
 private:
     void Init() override;

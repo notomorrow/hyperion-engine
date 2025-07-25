@@ -257,7 +257,7 @@ void HyperionEditor::Init()
                 envGridNode->SetEntity(envGridEntity);
 #endif
 
-#if 1 // test reflection probe
+#if 0 // test reflection probe
 
                 Handle<Node> envProbeNode = scene->GetRoot()->AddChild();
                 envProbeNode->SetName(NAME("TestProbe"));

@@ -2,6 +2,7 @@
 
 #include <asset/Assets.hpp>
 #include <asset/AssetBatch.hpp>
+#include <asset/AssetRegistry.hpp>
 
 #include <asset/model_loaders/FBOMModelLoader.hpp>
 #include <asset/model_loaders/FBXModelLoader.hpp>
@@ -351,6 +352,9 @@ void AssetManager::Init()
         }));
 
     RegisterDefaultLoaders();
+
+    m_assetRegistry = CreateObject<AssetRegistry>();
+    InitObject(m_assetRegistry);
 
     m_threadPool->Start();
 

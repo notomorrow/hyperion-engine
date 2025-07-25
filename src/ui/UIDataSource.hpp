@@ -98,7 +98,7 @@ protected:
         }
         else
         {
-            return GetDerived().Create(parent, value.Get<T>());
+            return GetDerived().Create(parent, value.ToRef().Get<T>());
         }
     }
 
@@ -115,7 +115,7 @@ protected:
         }
         else
         {
-            return GetDerived().Update(uiObject, value.Get<T>());
+            return GetDerived().Update(uiObject, value.ToRef().Get<T>());
         }
     }
 
@@ -300,11 +300,11 @@ public:
           m_elementTypeId(TypeId::ForType<T>()),
           m_createUiObjectProc([func = std::forward<CreateUIObjectFunction>(createUiObject)](UIObject* parent, const HypData& value, const HypData& context) mutable
               {
-                  return func(parent, value.Get<T>(), context);
+                  return func(parent, value.ToRef().Get<T>(), context);
               }),
           m_updateUiObjectProc([func = std::forward<UpdateUIObjectFunction>(updateUiObject)](UIObject* uiObject, const HypData& value, const HypData& context) mutable
               {
-                  func(uiObject, value.Get<T>(), context);
+                  func(uiObject, value.ToRef().Get<T>(), context);
               })
     {
     }
@@ -322,7 +322,7 @@ public:
             return;
         }
 
-        if (value.GetTypeId() != m_elementTypeId)
+        if (value.GetTypeId() != m_elementTypeId && !hyperion::IsA(GetClass(m_elementTypeId), GetClass(value.GetTypeId())))
         {
             HYP_FAIL("Cannot add element with TypeId %u to UIDataSource - expected TypeId %u",
                 value.GetTypeId().Value(),
@@ -374,7 +374,7 @@ public:
 
     virtual void Set(const UUID& uuid, HypData&& value) override
     {
-        if (value.GetTypeId() != m_elementTypeId)
+        if (value.GetTypeId() != m_elementTypeId && !hyperion::IsA(GetClass(m_elementTypeId), GetClass(value.GetTypeId())))
         {
             HYP_FAIL("Cannot set element with TypeId %u in UIDataSource - expected TypeId %u",
                 value.GetTypeId().Value(),

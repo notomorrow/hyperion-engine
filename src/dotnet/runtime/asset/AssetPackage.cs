@@ -4,8 +4,16 @@ using System.Runtime.InteropServices;
 using Hyperion;
 
 namespace Hyperion
-{   
-    [HypClassBinding(Name="AssetPackage")]
+{
+    [HypClassBinding(Name = "AssetPackageFlags")]
+    [Flags]
+    public enum AssetPackageFlags : uint
+    {
+        None = 0x0,
+        Transient = 0x1
+    }
+
+    [HypClassBinding(Name = "AssetPackage")]
     public class AssetPackage : HypObject
     {
         private static LogChannel logChannel = LogChannel.ByName("Assset");

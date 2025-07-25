@@ -19,6 +19,8 @@
 #include <rendering/Texture.hpp>
 #include <rendering/Mesh.hpp>
 
+#include <asset/TextureAsset.hpp>
+
 #include <streaming/StreamedTextureData.hpp>
 
 #include <core/utilities/DeferredScope.hpp>
@@ -43,19 +45,19 @@ struct RENDER_COMMAND(CreateTexture)
     : RenderCommand
 {
     WeakHandle<Texture> textureWeak;
-    TResourceHandle<StreamedTextureData> streamedTextureDataHandle;
+    ResourceHandle resourceHandle;
     ResourceState initialState;
     ImageRef image;
     ImageViewRef imageView;
 
     RENDER_COMMAND(CreateTexture)(
         const WeakHandle<Texture>& textureWeak,
-        TResourceHandle<StreamedTextureData>&& streamedTextureDataHandle,
+        ResourceHandle&& resourceHandle,
         ResourceState initialState,
         ImageRef image,
         ImageViewRef imageView)
         : textureWeak(textureWeak),
-          streamedTextureDataHandle(std::move(streamedTextureDataHandle)),
+          resourceHandle(std::move(resourceHandle)),
           initialState(initialState),
           image(std::move(image)),
           imageView(std::move(imageView))
@@ -74,12 +76,14 @@ struct RENDER_COMMAND(CreateTexture)
             {
                 HYPERION_BUBBLE_ERRORS(image->Create());
 
-                if (streamedTextureDataHandle && streamedTextureDataHandle->GetBufferSize() != 0)
+                if (texture->GetAsset().IsValid())
                 {
-                    const TextureData& textureData = streamedTextureDataHandle->GetTextureData();
-                    const TextureDesc& textureDesc = streamedTextureDataHandle->GetTextureDesc();
+                    TextureData* textureData = texture->GetAsset()->GetTextureData();
+                    Assert(textureData != nullptr);
 
-                    ByteBuffer const* textureDataBuffer = &textureData.buffer;
+                    const TextureDesc& textureDesc = texture->GetAsset()->GetTextureDesc();
+
+                    ByteBuffer const* textureDataBuffer = &textureData->buffer;
                     LinkedList<ByteBuffer> placeholderBuffers;
 
                     if (textureDesc != image->GetTextureDesc())
@@ -157,7 +161,7 @@ struct RENDER_COMMAND(CreateTexture)
 
                     renderQueue << CopyBufferToImage(stagingBuffer, image);
 
-                    if (textureData.desc.HasMipmaps())
+                    if (textureDesc.HasMipmaps())
                     {
                         renderQueue << GenerateMipmaps(image);
                     }
@@ -404,7 +408,7 @@ void RenderTexture::Initialize_Internal()
     PUSH_RENDER_COMMAND(
         CreateTexture,
         m_texture->WeakHandleFromThis(),
-        m_texture->GetStreamedTextureData() ? TResourceHandle<StreamedTextureData>(*m_texture->GetStreamedTextureData()) : TResourceHandle<StreamedTextureData>(),
+        m_texture->GetAsset().IsValid() ? ResourceHandle(*m_texture->GetAsset()->GetResource()) : ResourceHandle(),
         RS_SHADER_RESOURCE,
         m_image,
         m_imageView);

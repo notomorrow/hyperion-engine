@@ -269,7 +269,7 @@ void Camera::Init()
 
             AddDelegateHandler(
                 NAME("HandleWindowSizeChanged"),
-                appContext->GetMainWindow()->OnWindowSizeChanged.Bind([this](Vec2i windowSize)
+                appContext->GetMainWindow()->OnWindowSizeChanged.BindThreaded([this](Vec2i windowSize)
                     {
                         HYP_NAMED_SCOPE("Update Camera size based on window size");
 
@@ -282,7 +282,7 @@ void Camera::Init()
 
                         HYP_LOG(Camera, Debug, "Camera window size (change): {}", windowSize);
                     },
-                    /* requireCurrentThread */ true));
+                    g_gameThread));
 
             HYP_LOG(Camera, Debug, "Camera window size: {}", windowSize);
 
@@ -625,12 +625,10 @@ Vec2f Camera::GetPixelSize() const
     return Vec2f::One() / Vec2f { float(GetWidth()), float(GetHeight()) };
 }
 
-void Camera::Update(float dt)
+void Camera::Update(float delta)
 {
     HYP_SCOPE;
-
     Threads::AssertOnThread(g_gameThread | ThreadCategory::THREAD_CATEGORY_TASK);
-
     AssertReady();
 
     if (HasActiveCameraController())
@@ -639,8 +637,8 @@ void Camera::Update(float dt)
         {
             UpdateMouseLocked();
 
-            cameraController->UpdateCommandQueue(dt);
-            cameraController->UpdateLogic(dt);
+            cameraController->UpdateCommandQueue(delta);
+            cameraController->UpdateLogic(delta);
         }
     }
 

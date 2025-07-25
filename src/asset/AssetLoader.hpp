@@ -13,6 +13,7 @@
 #include <core/functional/Proc.hpp>
 
 #include <core/utilities/Optional.hpp>
+#include <core/utilities/FormatFwd.hpp>
 
 #include <core/logging/LoggerFwd.hpp>
 
@@ -36,9 +37,207 @@ template <class T>
 struct AssetLoaderWrapper;
 
 template <class T>
-struct Asset;
+struct TLoadedAsset;
 
 HYP_API extern void OnPostLoad_Impl(const HypClass* hypClass, void* objectPtr);
+
+HYP_STRUCT()
+struct AssetPath
+{
+    HYP_FIELD()
+    Name* chain = nullptr;
+
+    AssetPath() = default;
+
+    AssetPath(const AssetPath& other)
+    {
+        if (other.chain)
+        {
+            uint32 count = 0;
+
+            Name* curr = other.chain;
+
+            while (curr->IsValid())
+            {
+                ++count;
+                ++curr;
+            }
+
+            chain = new Name[count + 1];
+
+            for (uint32 i = 0; i < count; i++)
+            {
+                chain[i] = other.chain[i];
+            }
+
+            chain[count] = Name::Invalid();
+        }
+    }
+
+    AssetPath& operator=(const AssetPath& other)
+    {
+        if (this == &other)
+        {
+            return *this;
+        }
+
+        if (chain)
+        {
+            delete[] chain;
+        }
+
+        if (other.chain)
+        {
+            uint32 count = 0;
+
+            Name* curr = other.chain;
+
+            while (curr->IsValid())
+            {
+                ++count;
+                ++curr;
+            }
+
+            chain = new Name[count + 1];
+
+            for (uint32 i = 0; i < count; i++)
+            {
+                chain[i] = other.chain[i];
+            }
+
+            chain[count] = Name::Invalid();
+        }
+        else
+        {
+            chain = nullptr;
+        }
+
+        return *this;
+    }
+
+    AssetPath(AssetPath&& other) noexcept
+        : chain(other.chain)
+    {
+        other.chain = nullptr;
+    }
+
+    AssetPath& operator=(AssetPath&& other) noexcept
+    {
+        if (this == &other)
+        {
+            return *this;
+        }
+
+        if (chain)
+        {
+            delete[] chain;
+        }
+
+        chain = other.chain;
+        other.chain = nullptr;
+
+        return *this;
+    }
+
+    ~AssetPath()
+    {
+        if (chain)
+        {
+            delete[] chain;
+        }
+    }
+
+    HYP_METHOD()
+    HYP_FORCE_INLINE bool IsValid() const
+    {
+        return chain && chain[0].IsValid();
+    }
+
+    HYP_FORCE_INLINE explicit operator bool() const
+    {
+        return IsValid();
+    }
+
+    HYP_FORCE_INLINE bool operator!() const
+    {
+        return !IsValid();
+    }
+
+    HYP_METHOD()
+    String ToString() const
+    {
+        if (!chain)
+        {
+            return String::empty;
+        }
+
+        String result;
+
+        Name* curr = chain;
+
+        while (curr->IsValid())
+        {
+            if (chain != curr)
+            {
+                result.Append("/");
+            }
+
+            result.Append(curr->LookupString());
+
+            ++curr;
+        }
+
+        return result;
+    }
+
+    HYP_FORCE_INLINE HashCode GetHashCode() const
+    {
+        return ToString().GetHashCode();
+    }
+
+    HYP_METHOD(Property = "Chain", Serialize = true)
+    Array<Name> GetChain() const
+    {
+        Array<Name> result;
+
+        if (chain)
+        {
+            Name* curr = chain;
+
+            while (curr->IsValid())
+            {
+                result.PushBack(*curr);
+                ++curr;
+            }
+        }
+
+        return result;
+    }
+
+    HYP_METHOD(Property = "Chain", Serialize = true)
+    void SetChain(const Array<Name>& names)
+    {
+        if (chain)
+        {
+            delete[] chain;
+            chain = nullptr;
+        }
+
+        if (names.Empty())
+        {
+            return;
+        }
+
+        chain = new Name[names.Size() + 1];
+
+        for (SizeType i = 0; i < names.Size(); i++)
+        {
+            chain[i] = names[i];
+        }
+
+        chain[names.Size()] = Name::Invalid();
+    }
+};
 
 struct LoadedAsset
 {
@@ -118,40 +317,40 @@ struct LoadedAsset
 using AssetLoadResult = TResult<LoadedAsset, AssetLoadError>;
 
 template <class T>
-struct Asset final : LoadedAsset
+struct TLoadedAsset final : LoadedAsset
 {
-    Asset()
+    TLoadedAsset()
     {
     }
 
-    Asset(const Asset& other) = delete;
-    Asset& operator=(const Asset& other) = delete;
+    TLoadedAsset(const TLoadedAsset& other) = delete;
+    TLoadedAsset& operator=(const TLoadedAsset& other) = delete;
 
-    Asset(Asset&& other) noexcept
+    TLoadedAsset(TLoadedAsset&& other) noexcept
         : LoadedAsset(static_cast<LoadedAsset&&>(other))
     {
     }
 
-    Asset& operator=(Asset&& other) noexcept
+    TLoadedAsset& operator=(TLoadedAsset&& other) noexcept
     {
         static_cast<LoadedAsset&>(*this) = static_cast<LoadedAsset&&>(other);
 
         return *this;
     }
 
-    Asset(LoadedAsset&& other) noexcept
+    TLoadedAsset(LoadedAsset&& other) noexcept
         : LoadedAsset(std::move(other))
     {
     }
 
-    Asset& operator=(LoadedAsset&& other) noexcept
+    TLoadedAsset& operator=(LoadedAsset&& other) noexcept
     {
         static_cast<LoadedAsset&>(*this) = std::move(other);
 
         return *this;
     }
 
-    virtual ~Asset() override = default;
+    virtual ~TLoadedAsset() override = default;
 
     decltype(auto) Result() const&
     {
@@ -165,9 +364,7 @@ struct Asset final : LoadedAsset
 };
 
 template <class T>
-using TAssetLoadResult = TResult<Asset<T>, AssetLoadError>;
-
-// static_assert(sizeof(Asset) == sizeof(LoadedAsset), "sizeof(Asset<T>) must match the size of its parent class, to enable type punning");
+using TAssetLoadResult = TResult<TLoadedAsset<T>, AssetLoadError>;
 
 HYP_CLASS(Abstract)
 class HYP_API AssetLoaderBase : public HypObject<AssetLoaderBase>
@@ -241,6 +438,20 @@ public:
     {
     }
 };
+
+// Formatter for AssetPath
+namespace utilities {
+
+template <class StringType>
+struct Formatter<StringType, AssetPath>
+{
+    auto operator()(const AssetPath& value) const
+    {
+        return value.ToString();
+    }
+};
+
+} // namespace utilities
 
 } // namespace hyperion
 

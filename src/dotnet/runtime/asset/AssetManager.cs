@@ -166,7 +166,7 @@ namespace Hyperion
             }
         }
 
-        public Asset<T> Load<T>(string path)
+        public LoadedAsset<T> Load<T>(string path)
         {
             HypClass? hypClass = HypClass.TryGetClass<T>();
 
@@ -178,10 +178,10 @@ namespace Hyperion
             if (loaderDefinitionPtr == IntPtr.Zero)
                 throw new Exception("Failed to get loader definition for path: " + path + ", cannot load asset!");
 
-            return new Asset<T>(AssetManager_Load(NativeAddress, loaderDefinitionPtr, path));
+            return new LoadedAsset<T>(AssetManager_Load(NativeAddress, loaderDefinitionPtr, path));
         }
 
-        public async Task<Asset<T>> LoadAsync<T>(string path)
+        public async Task<LoadedAsset<T>> LoadAsync<T>(string path)
         {
             HypClass? hypClass = HypClass.TryGetClass<T>();
 
@@ -193,7 +193,7 @@ namespace Hyperion
             if (loaderDefinitionPtr == IntPtr.Zero)
                 throw new Exception("Failed to get loader definition for path: " + path + ", cannot load asset!");
 
-            var completionSource = new TaskCompletionSource<Asset<T>>();
+            var completionSource = new TaskCompletionSource<LoadedAsset<T>>();
             
             AssetManager_LoadAsync(NativeAddress, Marshal.GetFunctionPointerForDelegate(new HandleAssetResultDelegate((assetPtr) =>
             {
@@ -204,7 +204,7 @@ namespace Hyperion
                     return;
                 }
 
-                completionSource.SetResult(new Asset<T>(assetPtr));
+                completionSource.SetResult(new LoadedAsset<T>(assetPtr));
             })));
 
             return await completionSource.Task;

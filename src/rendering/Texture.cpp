@@ -8,7 +8,7 @@
 #include <rendering/RenderImage.hpp>
 #include <rendering/RenderSampler.hpp>
 
-#include <streaming/StreamedTextureData.hpp>
+#include <asset/TextureAsset.hpp>
 
 #include <core/object/HypClassUtils.hpp>
 
@@ -50,7 +50,7 @@ Texture::Texture()
 Texture::Texture(const TextureDesc& textureDesc)
     : m_renderResource(nullptr),
       m_textureDesc(textureDesc),
-      m_streamedTextureData(MakeRefCountedPtr<StreamedTextureData>(TextureData { textureDesc }, m_streamedTextureDataResourceHandle))
+      m_asset(CreateObject<TextureAsset>(g_nameTextureDefault, TextureData { textureDesc }))
 {
     SetName(g_nameTextureDefault);
 }
@@ -58,22 +58,17 @@ Texture::Texture(const TextureDesc& textureDesc)
 Texture::Texture(const TextureData& textureData)
     : m_renderResource(nullptr),
       m_textureDesc(textureData.desc),
-      m_streamedTextureData(MakeRefCountedPtr<StreamedTextureData>(textureData, m_streamedTextureDataResourceHandle))
+      m_asset(CreateObject<TextureAsset>(g_nameTextureDefault, textureData))
 {
     SetName(g_nameTextureDefault);
 }
 
-Texture::Texture(const RC<StreamedTextureData>& streamedTextureData)
+Texture::Texture(const Handle<TextureAsset>& asset)
     : m_renderResource(nullptr),
-      m_textureDesc(streamedTextureData != nullptr ? streamedTextureData->GetTextureDesc() : TextureDesc {}),
-      m_streamedTextureData(streamedTextureData)
+      m_textureDesc(asset ? asset->GetTextureDesc() : TextureDesc {}),
+      m_asset(asset)
 {
     SetName(g_nameTextureDefault);
-    
-    if (m_streamedTextureData)
-    {
-        m_streamedTextureDataResourceHandle = ResourceHandle(*m_streamedTextureData);
-    }
 }
 
 Texture::~Texture()
@@ -86,14 +81,6 @@ Texture::~Texture()
         m_renderResource->DecRef();
         FreeResource(m_renderResource);
         m_renderResource = nullptr;
-    }
-
-    m_streamedTextureDataResourceHandle.Reset();
-
-    if (m_streamedTextureData)
-    {
-        m_streamedTextureData->WaitForFinalization();
-        m_streamedTextureData.Reset();
     }
 }
 
@@ -110,14 +97,6 @@ void Texture::Init()
                 FreeResource(m_renderResource);
                 m_renderResource = nullptr;
             }
-
-            m_streamedTextureDataResourceHandle.Reset();
-
-            if (m_streamedTextureData)
-            {
-                m_streamedTextureData->WaitForFinalization();
-                m_streamedTextureData.Reset();
-            }
         }));
 
     m_renderResource = AllocateResource<RenderTexture>(this);
@@ -125,30 +104,22 @@ void Texture::Init()
     // temp shit
     m_renderResource->IncRef();
 
-    m_streamedTextureDataResourceHandle.Reset();
-
     SetReady(true);
 }
 
-void Texture::SetStreamedTextureData(const RC<StreamedTextureData>& streamedTextureData)
+void Texture::SetName(Name name)
 {
-    Mutex::Guard guard(m_readbackMutex);
-
-    if (m_streamedTextureData == streamedTextureData)
+    if (name == m_name)
     {
         return;
     }
 
-    m_streamedTextureDataResourceHandle.Reset();
+    m_name = name;
 
-    m_streamedTextureData = streamedTextureData;
-
-    if (m_streamedTextureData && IsInitCalled())
+    if (m_asset.IsValid())
     {
-        m_streamedTextureDataResourceHandle = ResourceHandle(*m_streamedTextureData);
+        m_asset->SetName(m_name);
     }
-
-    // @TODO Reupload texture data if already initialized
 }
 
 void Texture::SetTextureDesc(const TextureDesc& textureDesc)
@@ -162,40 +133,25 @@ void Texture::SetTextureDesc(const TextureDesc& textureDesc)
 
     m_textureDesc = textureDesc;
 
-    // Update streamed data
-    if (m_streamedTextureData)
+    // create new asset
+    if (m_asset.IsValid())
     {
-        bool hasResourceHandle = bool(m_streamedTextureDataResourceHandle);
+        Handle<TextureAsset> prevAsset = m_asset;
 
-        ByteBuffer textureDataBuffer;
+        Handle<AssetPackage> package = prevAsset->GetPackage();
 
-        if (!hasResourceHandle)
+        ResourceHandle resourceHandle(*prevAsset->GetResource());
+
+        TextureData textureData = std::move(*prevAsset->GetTextureData());
+        textureData.desc = m_textureDesc;
+
+        m_asset = CreateObject<TextureAsset>(prevAsset->GetName(), textureData);
+
+        if (package.IsValid())
         {
-            m_streamedTextureDataResourceHandle = ResourceHandle(*m_streamedTextureData);
+            package->RemoveAssetObject(prevAsset);
+            package->AddAssetObject(m_asset);
         }
-
-        textureDataBuffer = m_streamedTextureData->GetTextureData().buffer;
-
-        m_streamedTextureDataResourceHandle.Reset();
-        m_streamedTextureData->WaitForFinalization();
-
-        // Create a new StreamedTextureData, with the newly set TextureDesc.
-        m_streamedTextureData = MakeRefCountedPtr<StreamedTextureData>(TextureData {
-                                                                           m_textureDesc,
-                                                                           std::move(textureDataBuffer) },
-            m_streamedTextureDataResourceHandle);
-
-        // If we didn't need it before assume we don't need it now.
-        if (!hasResourceHandle)
-        {
-            m_streamedTextureDataResourceHandle.Reset();
-        }
-    }
-
-    // @TODO Reupload texture data if already initialized
-    if (IsInitCalled())
-    {
-        // @TODO Reupload texture data
     }
 }
 
@@ -268,20 +224,26 @@ Vec4f Texture::Sample(Vec3f uvw, uint32 faceIndex)
         return Vec4f::Zero();
     }
 
-    // keep reference alive in case m_streamedTextureData changes outside of the mutex lock.
-    RC<StreamedTextureData> streamedTextureData;
-    TResourceHandle<StreamedTextureData> resourceHandle;
+    if (!m_asset.IsValid())
+    {
+        HYP_LOG(Texture, Warning, "Texture asset is not valid, cannot sample");
+
+        return Vec4f::Zero();
+    }
+
+    ResourceHandle resourceHandle;
+    TextureData* textureData = nullptr;
 
     {
         Mutex::Guard guard(m_readbackMutex);
 
-        if (!m_streamedTextureData)
+        if (!m_asset->IsLoaded())
         {
-            HYP_LOG(Texture, Warning, "Texture does not have streamed data present, attempting readback...");
+            HYP_LOG(Texture, Warning, "Texture does not have data loaded, attempting readback...");
 
             Readback_Internal();
 
-            if (!m_streamedTextureData)
+            if (!m_asset->IsLoaded())
             {
                 HYP_LOG(Texture, Warning, "Texture readback failed. Sample will return zero.");
 
@@ -289,9 +251,10 @@ Vec4f Texture::Sample(Vec3f uvw, uint32 faceIndex)
             }
         }
 
-        resourceHandle = TResourceHandle<StreamedTextureData>(*m_streamedTextureData);
+        resourceHandle = ResourceHandle(*m_asset->GetResource());
+        textureData = m_asset->GetTextureData();
 
-        if (resourceHandle->GetTextureData().buffer.Size() == 0)
+        if (!textureData || textureData->buffer.Size() == 0)
         {
             HYP_LOG(Texture, Warning, "Texture buffer is empty; forcing readback.");
 
@@ -299,27 +262,25 @@ Vec4f Texture::Sample(Vec3f uvw, uint32 faceIndex)
 
             Readback_Internal();
 
-            if (!m_streamedTextureData)
+            if (!m_asset->IsLoaded())
             {
                 HYP_LOG(Texture, Warning, "Texture readback failed. Sample will return zero.");
 
                 return Vec4f::Zero();
             }
 
-            resourceHandle = TResourceHandle<StreamedTextureData>(*m_streamedTextureData);
+            resourceHandle = ResourceHandle(*m_asset->GetResource());
 
-            if (resourceHandle->GetTextureData().buffer.Size() == 0)
+            textureData = m_asset->GetTextureData();
+
+            if (!textureData || textureData->buffer.Size() == 0)
             {
                 HYP_LOG(Texture, Warning, "Texture buffer is still empty after readback; sample will return zero.");
 
                 return Vec4f::Zero();
             }
         }
-
-        streamedTextureData = m_streamedTextureData;
     }
-
-    const TextureData* textureData = &resourceHandle->GetTextureData();
 
     const Vec3u coord = {
         uint32(uvw.x * float(textureData->desc.extent.x - 1) + 0.5f),

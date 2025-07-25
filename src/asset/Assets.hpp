@@ -33,6 +33,7 @@ HYP_DECLARE_LOG_CHANNEL(Assets);
 class AssetCache;
 class AssetBatch;
 struct AssetBatchCallbacks;
+class AssetRegistry;
 
 struct ProcessAssetFunctorBase;
 
@@ -281,6 +282,11 @@ public:
 
     HYP_API RC<AssetBatch> CreateBatch();
 
+    HYP_FORCE_INLINE const Handle<AssetRegistry>& GetAssetRegistry() const
+    {
+        return m_assetRegistry;
+    }
+
     HYP_FORCE_INLINE AssetCache* GetAssetCache() const
     {
         return m_assetCache.Get();
@@ -326,6 +332,8 @@ private:
     }
 
     void RegisterDefaultLoaders();
+
+    Handle<AssetRegistry> m_assetRegistry;
 
     UniquePtr<AssetCache> m_assetCache;
 

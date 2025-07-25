@@ -39,6 +39,11 @@ public:
         return true;
     }
 
+    HYP_FORCE_INLINE World* GetWorld() const
+    {
+        return m_world;
+    }
+
     virtual void OnAddedToWorld() = 0;
     virtual void OnRemovedFromWorld() = 0;
     virtual void PreUpdate(float delta) { }
@@ -50,11 +55,6 @@ protected:
     virtual void Init() override
     {
         SetReady(true);
-    }
-
-    HYP_FORCE_INLINE World* GetWorld() const
-    {
-        return m_world;
     }
 
 private:

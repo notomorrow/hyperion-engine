@@ -7,6 +7,7 @@
 #include <editor/EditorProject.hpp>
 #include <editor/EditorActionStack.hpp>
 #include <editor/EditorAction.hpp>
+#include <editor/EditorState.hpp>
 
 #include <editor/ui/debug/EditorDebugOverlay.hpp>
 
@@ -814,22 +815,36 @@ EditorSubsystem::EditorSubsystem(const Handle<AppContextBase>& appContext)
                         }));
 
                 m_delegateHandlers.Remove("OnPackageAdded");
+                m_delegateHandlers.Remove("OnPackageRemoved");
 
                 if (m_contentBrowserDirectoryList && m_contentBrowserDirectoryList->GetDataSource())
                 {
                     m_contentBrowserDirectoryList->GetDataSource()->Clear();
 
-                    for (const Handle<AssetPackage>& package : project->GetAssetRegistry()->GetPackages())
+                    for (const Handle<AssetPackage>& package : g_assetManager->GetAssetRegistry()->GetPackages())
                     {
+                        Assert(package.IsValid());
+
                         AddPackageToContentBrowser(package, true);
                     }
 
                     m_delegateHandlers.Add(
                         NAME("OnPackageAdded"),
-                        project->GetAssetRegistry()->OnPackageAdded.Bind([this](const Handle<AssetPackage>& package)
+                        g_assetManager->GetAssetRegistry()->OnPackageAdded.BindThreaded([this](const Handle<AssetPackage>& package)
                             {
+                                Assert(package.IsValid());
+
                                 AddPackageToContentBrowser(package, false);
-                            }));
+                            },
+                            g_gameThread));
+
+                    m_delegateHandlers.Add(
+                        NAME("OnPackageRemoved"),
+                        g_assetManager->GetAssetRegistry()->OnPackageRemoved.BindThreaded([this](AssetPackage* package)
+                            {
+                                RemovePackageFromContentBrowser(package);
+                            },
+                            g_gameThread));
                 }
 
                 m_manipulationWidgetHolder.Initialize();
@@ -937,6 +952,7 @@ EditorSubsystem::EditorSubsystem(const Handle<AppContextBase>& appContext)
 
                 m_delegateHandlers.Remove("SetBuildBVHFlag");
                 m_delegateHandlers.Remove("OnPackageAdded");
+                m_delegateHandlers.Remove("OnPackageRemoved");
                 m_delegateHandlers.Remove("OnGameStateChange");
 
                 if (m_contentBrowserDirectoryList && m_contentBrowserDirectoryList->GetDataSource())
@@ -985,7 +1001,9 @@ EditorSubsystem::~EditorSubsystem()
 {
     if (m_currentProject)
     {
-        m_currentProject->SetEditorSubsystem(WeakHandle<EditorSubsystem>::empty);
+        g_editorState->SetCurrentProject(nullptr);
+
+        m_currentProject->SetEditorSubsystem(nullptr);
         m_currentProject->Close();
 
         m_currentProject.Reset();
@@ -1080,10 +1098,11 @@ void EditorSubsystem::OnRemovedFromWorld()
 
     if (m_currentProject)
     {
+        g_editorState->SetCurrentProject(nullptr);
+
         OnProjectClosing(m_currentProject);
 
         m_currentProject->Close();
-
         m_currentProject.Reset();
     }
 }
@@ -2403,7 +2422,7 @@ void EditorSubsystem::InitContentBrowser()
                     {
                         if (const NodeTag& assetPackageTag = listViewItem->GetNodeTag("AssetPackage"); assetPackageTag.IsValid())
                         {
-                            if (Handle<AssetPackage> assetPackage = GetCurrentProject()->GetAssetRegistry()->GetPackageFromPath(assetPackageTag.ToString(), /* createIfNotExist */ false))
+                            if (Handle<AssetPackage> assetPackage = g_assetManager->GetAssetRegistry()->GetPackageFromPath(assetPackageTag.ToString(), /* createIfNotExist */ false))
                             {
                                 SetSelectedPackage(assetPackage);
 
@@ -2507,11 +2526,44 @@ void EditorSubsystem::AddPackageToContentBrowser(const Handle<AssetPackage>& pac
 
     if (nested)
     {
-        for (const Handle<AssetPackage>& subpackage : package->GetSubpackages())
+        package->ForEachSubpackage([this](const Handle<AssetPackage>& subpackage)
+            {
+                AddPackageToContentBrowser(subpackage, true);
+
+                return IterationResult::CONTINUE;
+            });
+    }
+}
+
+void EditorSubsystem::RemovePackageFromContentBrowser(AssetPackage* package)
+{
+    HYP_SCOPE;
+
+    if (!package)
+    {
+        return;
+    }
+
+    if (m_selectedPackage == package)
+    {
+        SetSelectedPackage(nullptr);
+    }
+
+    if (UIDataSourceBase* dataSource = m_contentBrowserDirectoryList->GetDataSource())
+    {
+        if (!dataSource->Remove(package->GetUUID()))
         {
-            AddPackageToContentBrowser(subpackage, true);
+            return;
         }
     }
+
+    // Remove all subpackages
+    package->ForEachSubpackage([this](const Handle<AssetPackage>& subpackage)
+        {
+            RemovePackageFromContentBrowser(subpackage.Get());
+
+            return IterationResult::CONTINUE;
+        });
 }
 
 void EditorSubsystem::SetSelectedPackage(const Handle<AssetPackage>& package)
@@ -2534,17 +2586,29 @@ void EditorSubsystem::SetSelectedPackage(const Handle<AssetPackage>& package)
     {
         m_delegateHandlers.Add(
             NAME("OnAssetObjectAdded"),
-            package->OnAssetObjectAdded.Bind([this](AssetObject* assetObject)
+            package->OnAssetObjectAdded.BindThreaded([this](Handle<AssetObject> assetObject, bool isDirect)
                 {
+                    if (!isDirect)
+                    {
+                        return;
+                    }
+
                     m_contentBrowserContents->GetDataSource()->Push(assetObject->GetUUID(), HypData(assetObject->HandleFromThis()));
-                }));
+                },
+                g_gameThread));
 
         m_delegateHandlers.Add(
             NAME("OnAssetObjectRemoved"),
-            package->OnAssetObjectRemoved.Bind([this](AssetObject* assetObject)
+            package->OnAssetObjectRemoved.BindThreaded([this](Handle<AssetObject> assetObject, bool isDirect)
                 {
+                    if (!isDirect)
+                    {
+                        return;
+                    }
+
                     m_contentBrowserContents->GetDataSource()->Remove(assetObject->GetUUID());
-                }));
+                },
+                g_gameThread));
 
         package->ForEachAssetObject([&](const Handle<AssetObject>& assetObject)
             {
@@ -2658,6 +2722,8 @@ void EditorSubsystem::OpenProject(const Handle<EditorProject>& project)
         }
 
         OnProjectOpened(m_currentProject);
+
+        g_editorState->SetCurrentProject(m_currentProject);
     }
 }
 

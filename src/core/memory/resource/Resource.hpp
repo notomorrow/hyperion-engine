@@ -209,6 +209,7 @@ protected:
     AtomicVar<int16> m_updateCounter;
 
     RefCounter m_refCounter;
+
     CompletionSemaphore m_completionSemaphore;
 
     ResourceMemoryPoolHandle m_poolHandle;

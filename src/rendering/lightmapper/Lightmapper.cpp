@@ -20,6 +20,8 @@
 #include <rendering/Texture.hpp>
 #include <rendering/Renderer.hpp>
 
+#include <asset/TextureAsset.hpp>
+
 #include <scene/BVH.hpp>
 #include <scene/World.hpp>
 #include <scene/EnvProbe.hpp>
@@ -49,8 +51,6 @@
 #include <core/utilities/DeferredScope.hpp>
 
 #include <core/math/Triangle.hpp>
-
-#include <streaming/StreamedTextureData.hpp>
 
 #include <system/AppContext.hpp>
 
@@ -1185,9 +1185,9 @@ void LightmapJob::Start()
                         {
                             for (const auto& it : subElement.material->GetTextures())
                             {
-                                if (it.second.IsValid() && it.second->GetStreamedTextureData())
+                                if (it.second.IsValid() && it.second->GetAsset())
                                 {
-                                    m_resourceCache.EmplaceBack(*it.second->GetStreamedTextureData());
+                                    m_resourceCache.EmplaceBack(*it.second->GetAsset()->GetResource());
                                 }
                             }
                         }

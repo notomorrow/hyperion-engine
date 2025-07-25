@@ -15,6 +15,8 @@
 
 #include <core/Defines.hpp>
 
+#include <core/profiling/ProfileScope.hpp>
+
 #include <Types.hpp>
 
 namespace hyperion {
@@ -51,6 +53,15 @@ struct DelegateHandlerEntryBase
     uint32 index;
     AtomicVar<uint64> mask;
     ThreadId callingThreadId;
+
+    ~DelegateHandlerEntryBase()
+    {
+        while (HYP_UNLIKELY(mask.Get(MemoryOrder::ACQUIRE) & g_readMask))
+        {
+            HYP_NAMED_SCOPE("~DelegateHandlerEntryBase() - Waiting for read scopes to finish");
+            Threads::Sleep(0);
+        }
+    }
 
     HYP_FORCE_INLINE void MarkForRemoval()
     {
@@ -374,13 +385,19 @@ public:
      *  This makes it easy to manage resource cleanup, as you can store the DelegateHandler as a class member and when the object is destroyed, the handler will be removed from the Delegate.
      *
      *  \param proc The Proc to bind.
-     *  \param requireCurrentThread Should the delegate handler function be called on the current thread?
      *  \return  A reference counted DelegateHandler object that can be used to remove the handler from the Delegate. */
-    HYP_NODISCARD DelegateHandler Bind(ProcType&& proc, bool requireCurrentThread = false)
+    HYP_NODISCARD DelegateHandler Bind(ProcType&& proc)
     {
-        HYP_CORE_ASSERT(std::is_void_v<ReturnType> || !requireCurrentThread, "Cannot use require_current_thread for non-void delegate return type");
+        Mutex::Guard guard(m_mutex);
 
-        return Bind(std::move(proc), requireCurrentThread ? ThreadId::Current() : ThreadId::Invalid());
+        DelegateHandlerEntry<ProcType>* entry = m_procs.PushBack(new DelegateHandlerEntry<ProcType>());
+        entry->index = m_idCounter++;
+        entry->callingThreadId = ThreadId::Invalid();
+        entry->proc = std::move(proc);
+
+        m_numProcs.Increment(1, MemoryOrder::RELEASE);
+
+        return CreateDelegateHandler(entry);
     }
 
     /*! \brief Bind a Proc<> to the Delegate.
@@ -390,7 +407,7 @@ public:
      *  \param proc The Proc to bind.
      *  \param callingThreadId The thread to call the bound function on.
      *  \return  A reference counted DelegateHandler object that can be used to remove the handler from the Delegate. */
-    HYP_NODISCARD DelegateHandler Bind(ProcType&& proc, const ThreadId& callingThreadId)
+    HYP_NODISCARD DelegateHandler BindThreaded(ProcType&& proc, const ThreadId& callingThreadId)
     {
         HYP_CORE_ASSERT(std::is_void_v<ReturnType> || !callingThreadId.IsValid() || callingThreadId == ThreadId::Current(), "Cannot call a handler on a different thread if the delegate returns a value");
 
@@ -571,7 +588,7 @@ public:
             {
                 if (current->callingThreadId.IsValid() && current->callingThreadId != currentThreadId)
                 {
-                    current->GetCallingThread()->GetScheduler().Enqueue([current, argsTuple = Tuple<ArgTypes...>(args...)]()
+                    current->GetCallingThread()->GetScheduler().Enqueue([current, argsTuple = Tuple<Args...>(args...)]()
                         {
                             Apply(current->proc, argsTuple);
 

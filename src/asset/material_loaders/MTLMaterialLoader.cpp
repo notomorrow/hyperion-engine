@@ -2,6 +2,8 @@
 
 #include <asset/material_loaders/MTLMaterialLoader.hpp>
 #include <asset/AssetBatch.hpp>
+#include <asset/AssetRegistry.hpp>
+#include <asset/TextureAsset.hpp>
 
 #include <rendering/Texture.hpp>
 
@@ -11,6 +13,12 @@
 
 #include <core/filesystem/FsUtil.hpp>
 
+#ifdef HYP_EDITOR
+#include <editor/EditorState.hpp>
+#include <editor/EditorProject.hpp>
+#endif
+
+#include <EngineGlobals.hpp>
 #include <Engine.hpp>
 
 namespace hyperion {
@@ -338,7 +346,11 @@ AssetLoadResult MTLMaterialLoader::LoadAsset(LoaderState& state) const
             }
 
             Handle<Texture> texture = loadedTextures[it.name].ExtractAs<Texture>();
-            texture->SetName(CreateNameFromDynamicString(it.name.Data()));
+
+            if (it.name.Any())
+            {
+                texture->SetName(CreateNameFromDynamicString(it.name.Split('/', '\\').Back()));
+            }
 
             TextureDesc textureDesc = texture->GetTextureDesc();
             textureDesc.filterModeMin = it.mapping.filterMode;
@@ -357,6 +369,8 @@ AssetLoadResult MTLMaterialLoader::LoadAsset(LoaderState& state) const
 
                 continue;
             }
+
+            state.assetManager->GetAssetRegistry()->RegisterAsset("$Import/Media/Textures", texture->GetAsset());
 
             textures.Set(it.mapping.key, std::move(texture));
         }

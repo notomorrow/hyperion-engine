@@ -32,6 +32,10 @@
 #include <rendering/vulkan/VulkanRenderBackend.hpp>
 #endif
 
+#ifdef HYP_EDITOR
+#include <editor/EditorState.hpp>
+#endif
+
 #include <audio/AudioManager.hpp>
 
 #include <core/Handle.hpp>
@@ -45,6 +49,7 @@ HYP_DECLARE_LOG_CHANNEL(Core);
 
 Handle<Engine> g_engine {};
 Handle<AssetManager> g_assetManager {};
+Handle<EditorState> g_editorState {};
 ShaderManager* g_shaderManager = nullptr;
 MaterialCache* g_materialSystem = nullptr;
 SafeDeleter* g_safeDeleter = nullptr;
@@ -158,6 +163,11 @@ HYP_API bool InitializeEngine(int argc, char** argv)
     g_assetManager = CreateObject<AssetManager>();
     InitObject(g_assetManager);
 
+#ifdef HYP_EDITOR
+    g_editorState = CreateObject<EditorState>();
+    InitObject(g_editorState);
+#endif
+
     g_shaderManager = new ShaderManager;
     g_materialSystem = new MaterialCache;
     g_safeDeleter = new SafeDeleter;
@@ -189,6 +199,7 @@ HYP_API void DestroyEngine()
     AudioManager::GetInstance().Shutdown();
 
     g_assetManager.Reset();
+    g_editorState.Reset();
 
     delete g_shaderCompiler;
     g_shaderCompiler = nullptr;

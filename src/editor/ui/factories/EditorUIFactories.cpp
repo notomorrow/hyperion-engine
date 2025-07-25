@@ -843,32 +843,18 @@ public:
                 {
                     Handle<EntityManager> entityManager = entityManagerWeak.Lock();
                     
-                    if (!entityManager) {
+                    if (!entityManager)
+                    {
                         HYP_LOG(Editor, Error, "Failed to get EntityManager");
 
                         return UIEventHandlerResult::ERR;
                     }
 
-                    EditorSubsystem *editorSubsystem = world->GetSubsystem<EditorSubsystem>();
+                    const Handle<AssetRegistry> &assetRegistry = g_assetManager->GetAssetRegistry();
 
-                    if (!editorSubsystem) {
-                        HYP_LOG(Editor, Error, "Failed to get EditorSubsystem");
-
-                        return UIEventHandlerResult::ERR;
-                    }
-
-                    const Handle<EditorProject> &editorProject = editorSubsystem->GetCurrentProject();
-
-                    if (!editorProject) {
-                        HYP_LOG(Editor, Error, "Failed to get current EditorProject");
-
-                        return UIEventHandlerResult::ERR;
-                    }
-
-                    const Handle<AssetRegistry> &assetRegistry = editorProject->GetAssetRegistry();
-
-                    if (!assetRegistry) {
-                        HYP_LOG(Editor, Error, "Failed to get AssetRegistry from EditorProject");
+                    if (!assetRegistry)
+                    {
+                        HYP_LOG(Editor, Error, "Failed to get AssetRegistry");
 
                         return UIEventHandlerResult::ERR;
                     }
@@ -879,7 +865,7 @@ public:
                     Handle<Script> script = CreateObject<Script>();
 
                     // @TODO: better name for script asset
-                    Handle<AssetObject> assetObject = scriptsPackage->NewAssetObject(Name::Unique("TestScript"), HypData(script));
+                    Handle<AssetObject> assetObject = scriptsPackage->NewAssetObject(Name::Unique("TestScript"), script);
                     
                     if (Result saveResult = assetObject->Save(); saveResult.HasError()) {
                         HYP_LOG(Editor, Error, "Failed to save script asset: {}", saveResult.GetError().GetMessage());

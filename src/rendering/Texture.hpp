@@ -31,8 +31,8 @@
 
 namespace hyperion {
 
-class StreamedTextureData;
 class RenderTexture;
+class TextureAsset;
 
 HYP_CLASS()
 class HYP_API Texture final : public HypObject<Texture>
@@ -47,7 +47,7 @@ public:
     Texture(const TextureDesc& textureDesc);
     Texture(const TextureData& textureData);
 
-    Texture(const RC<StreamedTextureData>& streamedTextureData);
+    Texture(const Handle<TextureAsset>& asset);
 
     Texture(const Texture& other) = delete;
     Texture& operator=(const Texture& other) = delete;
@@ -69,18 +69,7 @@ public:
     }
 
     HYP_METHOD(Property = "Name", Serialize = true, Editor = true)
-    HYP_FORCE_INLINE void SetName(Name name)
-    {
-        m_name = name;
-    }
-
-    HYP_FORCE_INLINE const RC<StreamedTextureData>& GetStreamedTextureData() const
-    {
-        return m_streamedTextureData;
-    }
-
-    /*! \brief Set streamed data for the image. If the image has already been created, no updates will occur. */
-    void SetStreamedTextureData(const RC<StreamedTextureData>& streamedTextureData);
+    void SetName(Name name);
 
     HYP_FORCE_INLINE const TextureDesc& GetTextureDesc() const
     {
@@ -144,13 +133,13 @@ public:
         return m_textureDesc.wrapMode;
     }
 
+    HYP_FORCE_INLINE const Handle<TextureAsset>& GetAsset() const
+    {
+        return m_asset;
+    }
+
     void GenerateMipmaps();
 
-    /*! \brief Copies the texture data to the CPU. Waits (blocking) for the render thread to execute the task.
-     *  \note While this method is usable from any thread, it is not thread-safe as it modifies the streamed texture data. of the image.
-     *  Ensure that the image is not being used in other threads before calling this method.
-     *
-     *  The texture data will be copied to the CPU and the image will have its StreamedTextureData recreated. */
     void Readback();
 
     void Resize(const Vec3u& extent);
@@ -176,9 +165,7 @@ protected:
 
     TextureDesc m_textureDesc;
 
-    // MUST BE BEFORE m_streamedTextureData, needs to get constructed first to use as out parameter to construct StreamedTextureData.
-    mutable ResourceHandle m_streamedTextureDataResourceHandle;
-    RC<StreamedTextureData> m_streamedTextureData;
+    Handle<TextureAsset> m_asset;
 
     Mutex m_readbackMutex;
 };
