@@ -10,7 +10,8 @@ namespace Hyperion
     public enum AssetPackageFlags : uint
     {
         None = 0x0,
-        Transient = 0x1
+        Transient = 0x1,
+        Hidden = 0x2
     }
 
     [HypClassBinding(Name = "AssetPackage")]

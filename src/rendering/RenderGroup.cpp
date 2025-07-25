@@ -35,6 +35,7 @@
 #include <core/logging/Logger.hpp>
 
 #include <core/profiling/ProfileScope.hpp>
+#include <core/profiling/PerformanceClock.hpp>
 
 #include <core/Defines.hpp>
 
@@ -126,7 +127,8 @@ GraphicsPipelineRef RenderGroup::CreateGraphicsPipeline(PassData* pd, IDrawCallC
     Assert(pd != nullptr);
     Assert(drawCallCollectionImpl != nullptr);
 
-    HYP_LOG(Rendering, Debug, "Creating graphics pipeline for RenderGroup with Shader: {}", m_shader->GetCompiledShader()->GetName());
+    PerformanceClock clock;
+    clock.Start();
 
     Handle<View> view = pd->view.Lock();
     Assert(view.IsValid());
@@ -165,12 +167,18 @@ GraphicsPipelineRef RenderGroup::CreateGraphicsPipeline(PassData* pd, IDrawCallC
 
     Assert(descriptorTable.IsValid());
 
-    return g_renderGlobalState->graphicsPipelineCache->GetOrCreate(
+    GraphicsPipelineRef graphicsPipeline = g_renderGlobalState->graphicsPipelineCache->GetOrCreate(
         m_shader,
         descriptorTable,
         { &view->GetOutputTarget().GetFramebuffer(m_renderableAttributes.GetMaterialAttributes().bucket), 1 },
         m_renderableAttributes);
+
+    clock.Stop();
+    HYP_LOG(Rendering, Debug, "Created graphics pipeline ({} ms)", clock.ElapsedMs());
+
+    return graphicsPipeline;
 }
+
 template <class T, class OutArray, typename = std::enable_if_t<std::is_base_of_v<DrawCallBase, T>>>
 static void DivideDrawCalls(Span<const T> drawCalls, uint32 numBatches, OutArray& outDividedDrawCalls)
 {

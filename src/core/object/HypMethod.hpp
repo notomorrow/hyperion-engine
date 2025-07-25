@@ -189,7 +189,7 @@ public:
 
         if (m_attributes["serialize"] || m_attributes["xmlattribute"])
         {
-            m_serializeProc = [memFn](Span<HypData> args) -> FBOMData
+            m_serializeProc = [memFn](Span<HypData> args, EnumFlags<FBOMDataFlags> flags) -> FBOMData
             {
                 HYP_CORE_ASSERT(args.Size() == sizeof...(ArgTypes) + 1);
 
@@ -209,7 +209,7 @@ public:
                 {
                     FBOMData out;
 
-                    if (FBOMResult err = HypDataHelper<NormalizedType<ReturnType>>::Serialize(CallHypMethod<decltype(fn), ReturnType, TargetType*, ArgTypes...>(fn, argPtrs), out))
+                    if (FBOMResult err = HypDataHelper<NormalizedType<ReturnType>>::Serialize(CallHypMethod<decltype(fn), ReturnType, TargetType*, ArgTypes...>(fn, argPtrs), out, flags))
                     {
                         HYP_FAIL("Failed to serialize data: %s", err.message.Data());
                     }
@@ -283,7 +283,7 @@ public:
 
         if (m_attributes["serialize"] || m_attributes["xmlattribute"])
         {
-            m_serializeProc = [memFn](Span<HypData> args) -> FBOMData
+            m_serializeProc = [memFn](Span<HypData> args, EnumFlags<FBOMDataFlags> flags) -> FBOMData
             {
                 HYP_CORE_ASSERT(args.Size() == sizeof...(ArgTypes) + 1);
 
@@ -303,7 +303,7 @@ public:
                 {
                     FBOMData out;
 
-                    if (FBOMResult err = HypDataHelper<NormalizedType<ReturnType>>::Serialize(CallHypMethod<decltype(fn), ReturnType, TargetType*, ArgTypes...>(fn, argPtrs), out))
+                    if (FBOMResult err = HypDataHelper<NormalizedType<ReturnType>>::Serialize(CallHypMethod<decltype(fn), ReturnType, TargetType*, ArgTypes...>(fn, argPtrs), out, flags))
                     {
                         HYP_FAIL("Failed to serialize data: %s", err.message.Data());
                     }
@@ -410,14 +410,14 @@ public:
         return m_deserializeProc.IsValid();
     }
 
-    virtual bool Serialize(Span<HypData> args, FBOMData& out) const override
+    virtual bool Serialize(Span<HypData> args, FBOMData& out, EnumFlags<FBOMDataFlags> flags = FBOMDataFlags::NONE) const override
     {
         if (!CanSerialize())
         {
             return false;
         }
 
-        out = m_serializeProc(args);
+        out = m_serializeProc(args, flags);
 
         return true;
     }
@@ -490,7 +490,7 @@ private:
 
     Proc<HypData(HypData**, SizeType)> m_proc;
 
-    Proc<FBOMData(Span<HypData>)> m_serializeProc;
+    Proc<FBOMData(Span<HypData>, EnumFlags<FBOMDataFlags> flags)> m_serializeProc;
     Proc<void(FBOMLoadContext&, Span<HypData>, const FBOMData&)> m_deserializeProc;
 };
 

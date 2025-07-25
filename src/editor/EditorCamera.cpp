@@ -75,8 +75,6 @@ bool EditorCameraInputHandler::OnMouseDrag_Impl(const MouseEvent& evt)
 {
     HYP_SCOPE;
 
-    HYP_LOG_TEMP("Mouse drag for camera input: {}", evt.position);
-
     Handle<EditorCameraController> controller = m_controller.Lock();
 
     if (!controller.IsValid())

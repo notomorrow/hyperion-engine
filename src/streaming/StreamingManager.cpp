@@ -419,27 +419,12 @@ void StreamingManagerThread::DoWork(StreamingManager* streamingManager)
         }
     }
 
-    HYP_LOG(Streaming, Debug, "Processing streaming work on thread: {}, {} layers, {} volumes, {} cells",
-        Threads::CurrentThreadId().GetName(),
-        m_layers.Size(),
-        m_volumes.Size(),
-        String::Join(
-            Map(
-                m_layers,
-                [](const LayerData& layerData)
-                {
-                    return HYP_FORMAT("Layer: #{} : {}", layerData.layer->Id().Value(), layerData.cells.Size());
-                }),
-            ", "));
-
     for (auto it = m_layers.Begin(); it != m_layers.End();)
     {
         LayerData& layerData = *it;
 
         if (layerData.IsLocked())
         {
-            HYP_LOG(Streaming, Debug, "Layer {} is locked, skipping processing", layerData.layer->GetLayerInfo().gridSize);
-
             ++it;
 
             continue;
@@ -447,8 +432,6 @@ void StreamingManagerThread::DoWork(StreamingManager* streamingManager)
 
         if (layerData.IsPendingRemoval())
         {
-            HYP_LOG(Streaming, Debug, "Layer {} is pending removal, erasing", layerData.layer->GetLayerInfo().gridSize);
-
             it = m_layers.Erase(it);
 
             continue;
@@ -459,8 +442,6 @@ void StreamingManagerThread::DoWork(StreamingManager* streamingManager)
 
         StreamingCellCollection& cells = layerData.cells;
         Queue<StreamingCellUpdate>& cellUpdateQueue = layerData.cellUpdateQueue;
-
-        HYP_LOG(Streaming, Debug, "Processing layer: {} {}", layer->GetLayerInfo().gridSize, layer->GetLayerInfo().cellSize);
 
         const WorldGridLayerInfo& layerInfo = layer->GetLayerInfo();
 
@@ -551,8 +532,6 @@ void StreamingManagerThread::ProcessCellUpdatesForLayer(LayerData& layerData)
     {
         StreamingCellUpdate update = cellUpdateQueue.Pop();
 
-        HYP_LOG(Streaming, Debug, "Processing StreamingCellUpdate for coord: {}, state: {}", update.coord, update.state);
-
         switch (update.state)
         {
         case StreamingCellState::WAITING:
@@ -575,6 +554,7 @@ void StreamingManagerThread::ProcessCellUpdatesForLayer(LayerData& layerData)
             if (!cell.IsValid())
             {
                 HYP_LOG(Streaming, Error, "Failed to create StreamingCell for coord: {}", update.coord);
+
                 continue;
             }
 
@@ -589,8 +569,8 @@ void StreamingManagerThread::ProcessCellUpdatesForLayer(LayerData& layerData)
 
             deferredUpdates.EmplaceBack([this, &layerData, cell]()
                 {
-                    HYP_LOG(Streaming, Debug, "Loading StreamingCell at coord: {} on thread: {} for layer: {}",
-                        cell->GetPatchInfo().coord, Threads::CurrentThreadId().GetName(), layerData.layer->InstanceClass()->GetName());
+                    // HYP_LOG(Streaming, Debug, "Loading StreamingCell at coord: {} on thread: {} for layer: {}",
+                    //     cell->GetPatchInfo().coord, Threads::CurrentThreadId().GetName(), layerData.layer->InstanceClass()->GetName());
 
                     bool isOk = true;
 
@@ -649,20 +629,18 @@ void StreamingManagerThread::ProcessCellUpdatesForLayer(LayerData& layerData)
                 cell->GetPatchInfo().coord,
                 layerData.layer->InstanceClass()->GetName());
 
-            HYP_LOG(Streaming, Debug, "Removed StreamingCell at coord: {} for layer: {} on thread: {}",
-                cell->GetPatchInfo().coord, layerData.layer->InstanceClass()->GetName().LookupString(),
-                Threads::CurrentThreadId().GetName());
+            // HYP_LOG(Streaming, Debug, "Removed StreamingCell at coord: {} for layer: {} on thread: {}",
+            //     cell->GetPatchInfo().coord, layerData.layer->InstanceClass()->GetName().LookupString(),
+            //     Threads::CurrentThreadId().GetName());
 
             layerData.Lock();
 
             // Call OnStreamEnd on the cell and then Unload it
             deferredUpdates.EmplaceBack([this, cell = std::move(cell), &layerData]()
                 {
-                    HYP_LOG(Streaming, Debug, "Unloading StreamingCell at coord: {} for layer: {} on thread: {}",
-                        cell->GetPatchInfo().coord, layerData.layer->InstanceClass()->GetName().LookupString(),
-                        Threads::CurrentThreadId().GetName());
-
-                    // cell->OnStreamEnd();
+                    // HYP_LOG(Streaming, Debug, "Unloading StreamingCell at coord: {} for layer: {} on thread: {}",
+                    //     cell->GetPatchInfo().coord, layerData.layer->InstanceClass()->GetName().LookupString(),
+                    //     Threads::CurrentThreadId().GetName());
 
                     PostCellUpdateToGameThread(cell, StreamingCellState::UNLOADED);
 

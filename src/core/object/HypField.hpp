@@ -120,7 +120,7 @@ public:
 
         if (m_attributes["serialize"] || m_attributes["xmlattribute"])
         {
-            m_serializeProc = [member](const HypData& targetData) -> FBOMData
+            m_serializeProc = [member](const HypData& targetData, EnumFlags<FBOMDataFlags> flags) -> FBOMData
             {
                 FBOMData out;
 
@@ -135,7 +135,7 @@ public:
                     HYP_CORE_ASSERT(targetRef.Is<ThisType>(), "Invalid target type: Expected %s (TypeId: %u), but got TypeId: %u",
                         TypeName<ThisType>().Data(), TypeId::ForType<ThisType>().Value(), targetRef.GetTypeId().Value());
 
-                    if (FBOMResult err = HypDataHelper<NormalizedType<FieldType>>::Serialize(static_cast<const ThisType*>(targetRef.GetPointer())->*member, out))
+                    if (FBOMResult err = HypDataHelper<NormalizedType<FieldType>>::Serialize(static_cast<const ThisType*>(targetRef.GetPointer())->*member, out, flags))
                     {
                         HYP_FAIL("Failed to serialize data: %s", err.message.Data());
                     }
@@ -249,12 +249,12 @@ public:
         return IsValid() && m_deserializeProc.IsValid();
     }
 
-    HYP_FORCE_INLINE bool Serialize(const HypData& target, FBOMData& out) const
+    HYP_FORCE_INLINE bool Serialize(const HypData& target, FBOMData& out, EnumFlags<FBOMDataFlags> flags = FBOMDataFlags::NONE) const
     {
-        return Serialize(Span<HypData>(&const_cast<HypData&>(target), 1), out);
+        return Serialize(Span<HypData>(&const_cast<HypData&>(target), 1), out, flags);
     }
 
-    virtual bool Serialize(Span<HypData> args, FBOMData& out) const override
+    virtual bool Serialize(Span<HypData> args, FBOMData& out, EnumFlags<FBOMDataFlags> flags = FBOMDataFlags::NONE) const override
     {
         if (!CanSerialize())
         {
@@ -266,7 +266,7 @@ public:
             return false;
         }
 
-        out = m_serializeProc(*args.Data());
+        out = m_serializeProc(*args.Data(), flags);
 
         return true;
     }
@@ -335,7 +335,7 @@ private:
     Proc<HypData(const HypData&)> m_getProc;
     Proc<void(HypData&, const HypData&)> m_setProc;
 
-    Proc<FBOMData(const HypData&)> m_serializeProc;
+    Proc<FBOMData(const HypData&, EnumFlags<FBOMDataFlags> flags)> m_serializeProc;
     Proc<Result(FBOMLoadContext&, HypData&, const FBOMData&)> m_deserializeProc;
 };
 

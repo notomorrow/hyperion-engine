@@ -825,6 +825,11 @@ EditorSubsystem::EditorSubsystem(const Handle<AppContextBase>& appContext)
                     {
                         Assert(package.IsValid());
 
+                        if (!package->IsReady())
+                        {
+                            continue;
+                        }
+
                         AddPackageToContentBrowser(package, true);
                     }
 
@@ -1441,8 +1446,6 @@ void EditorSubsystem::InitViewport()
                 }
             }
 
-            HYP_LOG_TEMP("mouse drag, {} , is hovering ? {}", event.position, IsHoveringManipulationWidget());
-
             m_camera->GetCameraController()->GetInputHandler()->OnMouseDrag(event);
 
             return UIEventHandlerResult::OK;
@@ -1451,8 +1454,6 @@ void EditorSubsystem::InitViewport()
     m_delegateHandlers.Remove(&uiImage->OnMouseMove);
     m_delegateHandlers.Add(uiImage->OnMouseMove.Bind([this, uiImage = uiImage.Get()](const MouseEvent& event)
         {
-            HYP_LOG(Editor, Debug, "Mouse moved in editor viewport: {}, {}", event.position.x, event.position.y);
-
             m_camera->GetCameraController()->GetInputHandler()->OnMouseMove(event);
 
             if (event.inputManager->IsMouseLocked())
@@ -2515,6 +2516,13 @@ void EditorSubsystem::AddPackageToContentBrowser(const Handle<AssetPackage>& pac
 {
     HYP_SCOPE;
 
+    Assert(package.IsValid());
+
+    if (package->IsHidden())
+    {
+        return;
+    }
+
     if (UIDataSourceBase* dataSource = m_contentBrowserDirectoryList->GetDataSource())
     {
         Handle<AssetPackage> parentPackage = package->GetParentPackage().Lock();
@@ -2528,6 +2536,11 @@ void EditorSubsystem::AddPackageToContentBrowser(const Handle<AssetPackage>& pac
     {
         package->ForEachSubpackage([this](const Handle<AssetPackage>& subpackage)
             {
+                if (subpackage->IsHidden())
+                {
+                    return IterationResult::CONTINUE;
+                }
+
                 AddPackageToContentBrowser(subpackage, true);
 
                 return IterationResult::CONTINUE;

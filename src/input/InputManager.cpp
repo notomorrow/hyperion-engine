@@ -122,11 +122,12 @@ void InputManager::CheckEvent(SystemEvent* event)
     switch (event->GetType())
     {
     case SystemEventType::EVENT_KEYDOWN:
-        HYP_LOG(Input, Debug, "Key down: {}", uint32(event->GetKeyCode()));
         KeyDown(event->GetNormalizedKeyCode());
+
         break;
     case SystemEventType::EVENT_KEYUP:
         KeyUp(event->GetNormalizedKeyCode());
+
         break;
     case SystemEventType::EVENT_MOUSEBUTTON_DOWN:
         for (Bitset::BitIndex index : Bitset(event->GetMouseButtons()))
@@ -144,6 +145,7 @@ void InputManager::CheckEvent(SystemEvent* event)
         break;
     case SystemEventType::EVENT_MOUSEMOTION:
         UpdateMousePosition();
+
         break;
     case SystemEventType::EVENT_WINDOW_EVENT:
     {

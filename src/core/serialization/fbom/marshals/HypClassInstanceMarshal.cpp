@@ -16,10 +16,6 @@
 
 #include <core/profiling/ProfileScope.hpp>
 
-#include <scene/Node.hpp>                         // temp
-#include <scene/Entity.hpp>                       // temp
-#include <scene/ecs/components/MeshComponent.hpp> // temp
-
 namespace hyperion::serialization {
 
 FBOMResult HypClassInstanceMarshal::Serialize(ConstAnyRef in, FBOMObject& out) const
@@ -88,9 +84,16 @@ FBOMResult HypClassInstanceMarshal::Serialize(ConstAnyRef in, FBOMObject& out) c
 
             HYP_NAMED_SCOPE_FMT("Serializing member '{}' for HypClass '{}'", member.GetName(), hypClass->GetName());
 
+            EnumFlags<FBOMDataFlags> flags = FBOMDataFlags::NONE;
+
+            if (member.GetAttribute("compressed").GetBool())
+            {
+                flags |= FBOMDataFlags::COMPRESSED;
+            }
+
             FBOMData data;
 
-            if (!member.Serialize(Span<HypData>(&targetData, 1), data))
+            if (!member.Serialize(Span<HypData>(&targetData, 1), data, flags))
             {
                 return { FBOMResult::FBOM_ERR, HYP_FORMAT("Failed to serialize member '{}' of HypClass '{}'", member.GetName(), hypClass->GetName()) };
             }
@@ -171,31 +174,12 @@ FBOMResult HypClassInstanceMarshal::Deserialize_Internal(FBOMLoadContext& contex
                     continue;
                 }
 
-                // temp
-                if (property->GetName() == NAME("Entity") && hypClass == Node::Class())
-                {
-                    HYP_LOG(Serialization, Debug, "Setting entity for Node with Id : {}, and name: {}", ref.Get<Node>().Id(), ref.Get<Node>().GetName());
-                }
-
-                if (hypClass->GetName() == NAME("MeshComponent"))
-                {
-                    HYP_LOG(Serialization, Debug, "Deserializing property '{}' for HypClass '{}'",
-                        property->GetName(), hypClass->GetName());
-                }
-
                 if (!property->Deserialize(context, targetData, it.second))
                 {
                     return { FBOMResult::FBOM_ERR, HYP_FORMAT("Failed to deserialize member '{}' of HypClass '{}'", property->GetName(), hypClass->GetName()) };
                 }
             }
         }
-    }
-
-    // temp
-    if (hypClass->GetName() == NAME("MeshComponent"))
-    {
-        HYP_CORE_ASSERT(ref.Get<MeshComponent>().mesh != nullptr,
-            "MeshComponent deserialized with null mesh, this is likely due to a missing 'mesh' property in the FBOM data");
     }
 
     hypClass->PostLoad(ref.GetPointer());

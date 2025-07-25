@@ -248,41 +248,6 @@ Result EditorProject::SaveAs(FilePath filepath)
         return HYP_MAKE_ERROR(Error, "Failed to write project to disk");
     }
 
-    Proc<Result(const FilePath&, const Handle<AssetPackage>&)> createAssetPackageDirectory;
-
-    createAssetPackageDirectory = [&createAssetPackageDirectory](const FilePath& parentDirectory, const Handle<AssetPackage>& package) -> Result
-    {
-        const FilePath directory = parentDirectory / package->GetName().LookupString();
-
-        if (!directory.Exists())
-        {
-            if (!directory.MkDir())
-            {
-                return HYP_MAKE_ERROR(Error, "Failed to create directory");
-            }
-        }
-        else if (!directory.IsDirectory())
-        {
-            return HYP_MAKE_ERROR(Error, "Path is not a directory");
-        }
-
-        Result result;
-
-        package->ForEachSubpackage([&](const Handle<AssetPackage>& subpackage)
-            {
-                result = createAssetPackageDirectory(directory, subpackage);
-
-                if (result.HasError())
-                {
-                    return IterationResult::STOP;
-                }
-
-                return IterationResult::CONTINUE;
-            });
-
-        return result;
-    };
-
     Result result;
 
     {
@@ -299,8 +264,6 @@ Result EditorProject::SaveAs(FilePath filepath)
     {
         // Update m_filepath when save was successful.
         m_filepath = filepath;
-
-        // m_assetRegistry->SetRootPath(FilePath::Relative(filepath, FilePath::Current()));
 
         OnProjectSaved(HandleFromThis());
     }

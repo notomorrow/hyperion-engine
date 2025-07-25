@@ -58,6 +58,15 @@ public:
 
     virtual ~AssetDataResourceBase() override = default;
 
+    ThreadId GetWritingThread() const
+    {
+        Mutex::Guard guard(m_mutex);
+        return m_writingThread;
+    }
+
+    Result Save();
+    Result SaveTo(const FilePath& path);
+
 protected:
     AssetDataResourceBase() = default;
 
@@ -68,16 +77,16 @@ protected:
     {
     }
 
-    Result Save();
-
     virtual void Unload_Internal() = 0;
 
-    virtual void Extract_Internal(LoadedAsset&& loadedAsset) = 0;
+    virtual void Extract_Internal(HypData&& data) = 0;
 
     virtual TypeId GetAssetTypeId() const = 0;
     virtual AnyRef GetAssetRef() = 0;
 
     WeakHandle<AssetObject> m_assetObject;
+    ThreadId m_writingThread;
+    mutable Mutex m_mutex;
 };
 
 template <class T>
@@ -87,14 +96,12 @@ public:
     AssetDataResource() = default;
 
     AssetDataResource(const T& data)
-        : m_assetTypeId(TypeId::ForType<T>()),
-          m_data(data)
+        : m_data(data)
     {
     }
 
     AssetDataResource(T&& data)
-        : m_assetTypeId(TypeId::ForType<T>()),
-          m_data(std::move(data))
+        : m_data(std::move(data))
     {
     }
 
@@ -112,14 +119,14 @@ protected:
         m_data = {};
     }
 
-    virtual void Extract_Internal(LoadedAsset&& loadedAsset) override
+    virtual void Extract_Internal(HypData&& data) override
     {
-        m_data = std::move(loadedAsset).ExtractAs<T>();
+        m_data = std::move(data.Get<T>());
     }
 
     virtual TypeId GetAssetTypeId() const override
     {
-        return m_assetTypeId;
+        return const_cast<AssetDataResource*>(this)->GetAssetRef().GetTypeId();
     }
 
     virtual AnyRef GetAssetRef() override
@@ -127,7 +134,6 @@ protected:
         return AnyRef(&m_data);
     }
 
-    TypeId m_assetTypeId;
     T m_data;
 };
 
@@ -242,7 +248,8 @@ HYP_ENUM()
 enum AssetPackageFlags : uint32
 {
     APF_NONE = 0x0,
-    APF_TRANSIENT = 0x1
+    APF_TRANSIENT = 0x1,
+    APF_HIDDEN = 0x2
 };
 
 HYP_MAKE_ENUM_FLAGS(AssetPackageFlags);
@@ -288,6 +295,18 @@ public:
     }
 
     HYP_METHOD()
+    HYP_FORCE_INLINE Name GetFriendlyName() const
+    {
+        return m_friendlyName.IsValid() ? m_friendlyName : m_name;
+    }
+
+    HYP_METHOD()
+    HYP_FORCE_INLINE void SetFriendlyName(Name friendlyName)
+    {
+        m_friendlyName = friendlyName;
+    }
+
+    HYP_METHOD()
     HYP_FORCE_INLINE EnumFlags<AssetPackageFlags> GetFlags() const
     {
         return m_flags;
@@ -297,6 +316,12 @@ public:
     HYP_FORCE_INLINE bool IsTransient() const
     {
         return m_flags[APF_TRANSIENT];
+    }
+
+    HYP_METHOD()
+    HYP_FORCE_INLINE bool IsHidden() const
+    {
+        return m_flags[APF_HIDDEN];
     }
 
     HYP_FORCE_INLINE const WeakHandle<AssetRegistry>& GetRegistry() const
@@ -395,6 +420,9 @@ private:
     HYP_FIELD(Property = "Name", Serialize = true)
     Name m_name;
 
+    HYP_FIELD(Property = "FriendlyName", Serialize = true)
+    Name m_friendlyName;
+
     HYP_FIELD(Property="Flags", Serialize = true)
     EnumFlags<AssetPackageFlags> m_flags;
 
@@ -481,7 +509,7 @@ public:
     Handle<AssetPackage> GetPackageFromPath(const UTF8StringView& path, bool createIfNotExist = true);
 
     HYP_METHOD()
-    const Handle<AssetPackage>& GetSubpackage(const Handle<AssetPackage>& parentPackage, Name subpackageName, bool createIfNotExist = true);
+    Handle<AssetPackage> GetSubpackage(const Handle<AssetPackage>& parentPackage, Name subpackageName, bool createIfNotExist = true);
 
     HYP_METHOD()
     bool RemovePackage(AssetPackage* package);

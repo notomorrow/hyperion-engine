@@ -102,7 +102,7 @@ RendererResult VulkanComputePipeline::Create()
     const Array<VkDescriptorSetLayout> usedLayouts = GetPipelineVulkanDescriptorSetLayouts(*this);
     const uint32 maxSetLayouts = GetRenderBackend()->GetDevice()->GetFeatures().GetPhysicalDeviceProperties().limits.maxBoundDescriptorSets;
 
-#if 1
+#if 0
     HYP_LOG(RenderingBackend, Debug, "Using {} descriptor set layouts in pipeline", usedLayouts.Size());
 
     for (const DescriptorSetRef& descriptorSet : m_descriptorTable->GetSets()[0])

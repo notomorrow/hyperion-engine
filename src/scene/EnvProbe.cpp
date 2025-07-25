@@ -41,41 +41,6 @@ static FixedArray<Matrix4, 6> CreateCubemapMatrices(const BoundingBox& aabb, con
     return viewMatrices;
 }
 
-#pragma region Render commands
-
-struct RENDER_COMMAND(RenderPointLightShadow)
-    : RenderCommand
-{
-    RenderWorld* world;
-    RenderEnvProbe* envProbe;
-
-    RENDER_COMMAND(RenderPointLightShadow)(RenderWorld* world, RenderEnvProbe* envProbe)
-        : world(world),
-          envProbe(envProbe)
-    {
-        // world->IncRef();
-        // envProbe->IncRef();
-    }
-
-    virtual ~RENDER_COMMAND(RenderPointLightShadow)() override
-    {
-        world->DecRef();
-        envProbe->DecRef();
-    }
-
-    virtual RendererResult operator()() override
-    {
-        FrameBase* frame = g_renderBackend->GetCurrentFrame();
-        RenderSetup renderSetup { world, nullptr };
-
-        envProbe->Render(frame, renderSetup);
-
-        HYPERION_RETURN_OK;
-    }
-};
-
-#pragma endregion Render commands
-
 EnvProbe::EnvProbe()
     : EnvProbe(EPT_INVALID)
 {

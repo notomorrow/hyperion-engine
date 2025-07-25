@@ -23,7 +23,7 @@ HYP_DECLARE_LOG_CHANNEL(Streaming);
 StreamedTextureData::StreamedTextureData(StreamedDataState initialState, TextureData textureData, ResourceHandle& outResourceHandle)
     : StreamedDataBase(initialState, outResourceHandle),
       m_textureDesc(textureData.desc),
-      m_bufferSize(textureData.buffer.Size())
+      m_bufferSize(textureData.imageData.Size())
 {
     switch (initialState)
     {
@@ -80,12 +80,12 @@ StreamedTextureData::StreamedTextureData()
 }
 
 StreamedTextureData::StreamedTextureData(const TextureData& textureData, ResourceHandle& outResourceHandle)
-    : StreamedTextureData(textureData.buffer.Any() ? StreamedDataState::LOADED : StreamedDataState::NONE, textureData, outResourceHandle)
+    : StreamedTextureData(textureData.imageData.Any() ? StreamedDataState::LOADED : StreamedDataState::NONE, textureData, outResourceHandle)
 {
 }
 
 StreamedTextureData::StreamedTextureData(TextureData&& textureData, ResourceHandle& outResourceHandle)
-    : StreamedTextureData(textureData.buffer.Any() ? StreamedDataState::LOADED : StreamedDataState::NONE, std::move(textureData), outResourceHandle)
+    : StreamedTextureData(textureData.imageData.Any() ? StreamedDataState::LOADED : StreamedDataState::NONE, std::move(textureData), outResourceHandle)
 {
 }
 
@@ -140,7 +140,7 @@ void StreamedTextureData::LoadTextureData(const ByteBuffer& byteBuffer) const
 
     TextureData& textureData = value.Get<TextureData>();
 
-    if (textureData.buffer.Empty())
+    if (textureData.imageData.Empty())
     {
         HYP_LOG(Streaming, Warning, "StreamedTextureData: Texture data buffer is empty for StreamedTextureData with hash: {}", GetDataHashCode().Value());
 
@@ -150,7 +150,7 @@ void StreamedTextureData::LoadTextureData(const ByteBuffer& byteBuffer) const
     m_textureData = textureData;
     Assert(m_textureDesc == m_textureData->desc);
 
-    m_bufferSize = m_textureData->buffer.Size();
+    m_bufferSize = m_textureData->imageData.Size();
 
     Assert(m_bufferSize == m_textureDesc.GetByteSize(),
         "Buffer size mismatch for StreamedTextureData with hash: %llu. Expected: %u, Actual: %u",
@@ -176,7 +176,7 @@ void StreamedTextureData::SetTextureData(TextureData&& textureData)
     Execute([this, textureData = std::move(textureData)]()
         {
             m_textureDesc = textureData.desc;
-            m_bufferSize = textureData.buffer.Size();
+            m_bufferSize = textureData.imageData.Size();
 
             m_textureData.Set(std::move(textureData));
         });

@@ -15,6 +15,8 @@
 #include <core/logging/Logger.hpp>
 #include <core/logging/LogChannels.hpp>
 
+#include <core/profiling/PerformanceClock.hpp>
+
 #include <EngineGlobals.hpp>
 
 namespace hyperion {
@@ -100,7 +102,8 @@ GraphicsPipelineRef PassData::CreateGraphicsPipeline(
 
     Assert(pd != nullptr);
 
-    HYP_LOG(Rendering, Debug, "Creating graphics pipeline for View: {}, RenderableAttributeSet hash: {}", pd->view.Id(), renderableAttributes.GetHashCode().Value());
+    PerformanceClock clock;
+    clock.Start();
 
     Handle<View> view = pd->view.Lock();
     Assert(view.IsValid());
@@ -150,11 +153,17 @@ GraphicsPipelineRef PassData::CreateGraphicsPipeline(
 
     Assert(table.IsValid());
 
-    return g_renderGlobalState->graphicsPipelineCache->GetOrCreate(
+    GraphicsPipelineRef graphicsPipeline = g_renderGlobalState->graphicsPipelineCache->GetOrCreate(
         shader,
         table,
         view->GetOutputTarget().GetFramebuffers(),
         renderableAttributes);
+
+    clock.Stop();
+
+    HYP_LOG(Rendering, Debug, "Created graphics pipeline ({} ms)", clock.ElapsedMs());
+
+    return graphicsPipeline;
 }
 
 #pragma endregion PassData
@@ -191,7 +200,7 @@ int RendererBase::RunCleanupCycle(int maxIter)
         &m_viewPassData,
         m_viewPassDataCleanupIterator.page,
         m_viewPassDataCleanupIterator.elem);
-    
+
     const typename SparsePagedArray<PassData*, 16>::Iterator startIterator = m_viewPassDataCleanupIterator; // the iterator we started at - use it to check that we don't do duplicate checks
 
     int numCycles = 0;
@@ -202,13 +211,13 @@ int RendererBase::RunCleanupCycle(int maxIter)
         if (m_viewPassDataCleanupIterator == m_viewPassData.End())
         {
             m_viewPassDataCleanupIterator = m_viewPassData.Begin();
-            
+
             if (m_viewPassDataCleanupIterator == m_viewPassData.End())
             {
                 break;
             }
         }
-        
+
         PassData* pd = *m_viewPassDataCleanupIterator;
 
         int numLocalCycles = 1;
@@ -229,7 +238,7 @@ int RendererBase::RunCleanupCycle(int maxIter)
         }
 
         numCycles += numLocalCycles;
-        
+
         if (m_viewPassDataCleanupIterator == startIterator)
         {
             // we checked everything

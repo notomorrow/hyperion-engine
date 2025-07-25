@@ -254,7 +254,7 @@ Vec4f Texture::Sample(Vec3f uvw, uint32 faceIndex)
         resourceHandle = ResourceHandle(*m_asset->GetResource());
         textureData = m_asset->GetTextureData();
 
-        if (!textureData || textureData->buffer.Size() == 0)
+        if (!textureData || textureData->imageData.Size() == 0)
         {
             HYP_LOG(Texture, Warning, "Texture buffer is empty; forcing readback.");
 
@@ -273,7 +273,7 @@ Vec4f Texture::Sample(Vec3f uvw, uint32 faceIndex)
 
             textureData = m_asset->GetTextureData();
 
-            if (!textureData || textureData->buffer.Size() == 0)
+            if (!textureData || textureData->imageData.Size() == 0)
             {
                 HYP_LOG(Texture, Warning, "Texture buffer is still empty after readback; sample will return zero.");
 
@@ -306,15 +306,15 @@ Vec4f Texture::Sample(Vec3f uvw, uint32 faceIndex)
         + coord.y * (textureData->desc.extent.x * bytesPerComponent * numComponents)
         + coord.x * bytesPerComponent * numComponents;
 
-    if (index >= textureData->buffer.Size())
+    if (index >= textureData->imageData.Size())
     {
-        HYP_LOG(Texture, Warning, "Index out of bounds, index: {}, buffer size: {}, coord: {}, dimensions: {}, num faces: {}", index, textureData->buffer.Size(),
+        HYP_LOG(Texture, Warning, "Index out of bounds, index: {}, buffer size: {}, coord: {}, dimensions: {}, num faces: {}", index, textureData->imageData.Size(),
             coord, textureData->desc.extent, NumFaces());
 
         return Vec4f::Zero();
     }
 
-    const ubyte* data = textureData->buffer.Data() + index;
+    const ubyte* data = textureData->imageData.Data() + index;
 
     switch (numComponents)
     {

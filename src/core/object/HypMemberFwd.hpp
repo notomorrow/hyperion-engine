@@ -17,6 +17,8 @@ class HypClassAttributeSet;
 class HypClassAttributeValue;
 struct HypData;
 
+enum class FBOMDataFlags : uint32;
+
 namespace serialization {
 
 class FBOMData;
@@ -54,7 +56,7 @@ public:
     virtual bool CanSerialize() const = 0;
     virtual bool CanDeserialize() const = 0;
 
-    virtual bool Serialize(Span<HypData> args, FBOMData& out) const = 0;
+    virtual bool Serialize(Span<HypData> args, FBOMData& out, EnumFlags<FBOMDataFlags> flags = FBOMDataFlags::NONE) const = 0;
     virtual bool Deserialize(FBOMLoadContext& context, HypData& target, const FBOMData& value) const = 0;
 
     virtual const HypClassAttributeSet& GetAttributes() const = 0;

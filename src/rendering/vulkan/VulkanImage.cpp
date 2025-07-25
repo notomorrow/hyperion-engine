@@ -68,7 +68,7 @@ RendererResult ImagePlatformImpl<Platform::vulkan>::ConvertTo32BPP(
     const TextureFormat newFormat = FormatChangeNumComponents(currentDesc.format, newBpp);
 
     if (inTextureData != nullptr) {
-        HYP_GFX_ASSERT(inTextureData->buffer.Size() == size);
+        HYP_GFX_ASSERT(inTextureData->imageData.Size() == size);
 
         ByteBuffer newByteBuffer(newSize);
 
@@ -76,7 +76,7 @@ RendererResult ImagePlatformImpl<Platform::vulkan>::ConvertTo32BPP(
             ImageUtil::ConvertBPP(
                 currentDesc.extent.x, currentDesc.extent.y, currentDesc.extent.z,
                 bpp, newBpp,
-                &inTextureData->buffer.Data()[i * faceOffsetStep],
+                &inTextureData->imageData.Data()[i * faceOffsetStep],
                 &newByteBuffer.Data()[i * newFaceOffsetStep]
             );
         }
@@ -868,7 +868,7 @@ HYP_API void VulkanImage::SetDebugName(Name name)
     {
         vmaSetAllocationName(GetRenderBackend()->GetDevice()->GetAllocator(), m_allocation, strName);
     }
-    
+
     VkDebugUtilsObjectNameInfoEXT objectNameInfo { VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT };
     objectNameInfo.objectType = VK_OBJECT_TYPE_IMAGE;
     objectNameInfo.objectHandle = (uint64)m_handle;

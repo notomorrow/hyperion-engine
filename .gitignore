@@ -292,6 +292,8 @@ res/data/**/tmp/**/*
 res/data/dump/**/*
 res/data/streaming/**/*
 res/data/fonts/**/*
+res/data/imported/**/*
+res/import/**/*
 
 project/**/*
 xcode_project/**/*

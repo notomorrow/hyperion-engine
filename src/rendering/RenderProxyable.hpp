@@ -21,7 +21,10 @@ public:
 
     virtual void UpdateRenderProxy(IRenderProxy* proxy);
 
-    const int* GetRenderProxyVersionPtr() const { return &m_renderProxyVersion; }
+    const int* GetRenderProxyVersionPtr() const
+    {
+        return &m_renderProxyVersion;
+    }
 
 protected:
     RenderProxyable();

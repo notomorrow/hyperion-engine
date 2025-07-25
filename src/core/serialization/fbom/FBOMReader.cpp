@@ -335,8 +335,15 @@ FBOMResult FBOMReader::LoadFromFile(FBOMLoadContext& context, const String& path
         return { FBOMResult::FBOM_ERR, HYP_FORMAT("File does not exist: {}", readPath) };
     }
 
+    if (readPath.FileSize() == 0)
+    {
+        return { FBOMResult::FBOM_ERR, HYP_FORMAT("File is empty: {}", readPath) };
+    }
+
     FileBufferedReaderSource source { readPath };
     BufferedReader reader { &source };
+
+    HYP_CORE_ASSERT(!reader.Eof());
 
     return Deserialize(context, reader, out);
 }
@@ -363,6 +370,8 @@ FBOMResult FBOMReader::LoadFromFile(const String& path, FBOMObject& out)
 
     FileBufferedReaderSource source { readPath };
     BufferedReader reader { &source };
+
+    HYP_CORE_ASSERT(!reader.Eof());
 
     FBOMLoadContext context;
 
@@ -628,6 +637,8 @@ FBOMResult FBOMReader::ReadObjectLibrary(FBOMLoadContext& context, BufferedReade
         MemoryBufferedReaderSource source { buffer.ToByteView() };
         BufferedReader byteReader { &source };
 
+        HYP_CORE_ASSERT(!byteReader.Eof());
+
         FBOMReader deserializer(m_config);
 
         if (FBOMResult err = deserializer.Deserialize(context, byteReader, outLibrary, /* readHeader */ false))
@@ -687,8 +698,6 @@ FBOMResult FBOMReader::ReadData(FBOMLoadContext& context, BufferedReader* reader
         {
             return err;
         }
-
-        BufferedReader compressedDataReader;
 
         ByteBuffer byteBuffer;
 

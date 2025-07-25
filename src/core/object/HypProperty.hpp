@@ -50,7 +50,7 @@ constexpr TypeId GetUnwrappedSerializationTypeId()
 struct HypPropertyGetter
 {
     Proc<HypData(const HypData&)> getProc;
-    Proc<FBOMData(const HypData&)> serializeProc;
+    Proc<FBOMData(const HypData&, EnumFlags<FBOMDataFlags> flags)> serializeProc;
     HypPropertyTypeInfo typeInfo;
 
     HypPropertyGetter() = default;
@@ -61,11 +61,11 @@ struct HypPropertyGetter
               {
                   return HypData((static_cast<const TargetType*>(target.ToRef().GetPointer())->*memFn)());
               }),
-          serializeProc([memFn](const HypData& target) -> FBOMData
+          serializeProc([memFn](const HypData& target, EnumFlags<FBOMDataFlags> flags) -> FBOMData
               {
                   FBOMData out;
 
-                  if (FBOMResult err = HypDataHelper<NormalizedType<ReturnType>>::Serialize((static_cast<const TargetType*>(target.ToRef().GetPointer())->*memFn)(), out))
+                  if (FBOMResult err = HypDataHelper<NormalizedType<ReturnType>>::Serialize((static_cast<const TargetType*>(target.ToRef().GetPointer())->*memFn)(), out, flags))
                   {
                       HYP_FAIL("Failed to serialize data: %s", err.message.Data());
                   }
@@ -83,11 +83,11 @@ struct HypPropertyGetter
               {
                   return HypData((static_cast<const TargetType*>(target.ToRef().GetPointer())->*memFn)());
               }),
-          serializeProc([memFn](const HypData& target) -> FBOMData
+          serializeProc([memFn](const HypData& target, EnumFlags<FBOMDataFlags> flags) -> FBOMData
               {
                   FBOMData out;
 
-                  if (FBOMResult err = HypDataHelper<NormalizedType<ReturnType>>::Serialize((static_cast<const TargetType*>(target.ToRef().GetPointer())->*memFn)(), out))
+                  if (FBOMResult err = HypDataHelper<NormalizedType<ReturnType>>::Serialize((static_cast<const TargetType*>(target.ToRef().GetPointer())->*memFn)(), out, flags))
                   {
                       HYP_FAIL("Failed to serialize data: %s", err.message.Data());
                   }
@@ -104,11 +104,11 @@ struct HypPropertyGetter
               {
                   return HypData(fnptr(static_cast<const TargetType*>(target.ToRef().GetPointer())));
               }),
-          serializeProc([fnptr](const HypData& target) -> FBOMData
+          serializeProc([fnptr](const HypData& target, EnumFlags<FBOMDataFlags> flags) -> FBOMData
               {
                   FBOMData out;
 
-                  if (FBOMResult err = HypDataHelper<NormalizedType<ReturnType>>::Serialize(fnptr(static_cast<const TargetType*>(target.ToRef().GetPointer())), out))
+                  if (FBOMResult err = HypDataHelper<NormalizedType<ReturnType>>::Serialize(fnptr(static_cast<const TargetType*>(target.ToRef().GetPointer())), out, flags))
                   {
                       HYP_FAIL("Failed to serialize data: %s", err.message.Data());
                   }
@@ -126,11 +126,11 @@ struct HypPropertyGetter
               {
                   return HypData(fnptr());
               }),
-          serializeProc([fnptr](const HypData& target) -> FBOMData
+          serializeProc([fnptr](const HypData& target, EnumFlags<FBOMDataFlags> flags) -> FBOMData
               {
                   FBOMData out;
 
-                  if (FBOMResult err = HypDataHelper<NormalizedType<ReturnType>>::Serialize(fnptr(), out))
+                  if (FBOMResult err = HypDataHelper<NormalizedType<ReturnType>>::Serialize(fnptr(), out, flags))
                   {
                       HYP_FAIL("Failed to serialize data: %s", err.message.Data());
                   }
@@ -147,11 +147,11 @@ struct HypPropertyGetter
               {
                   return HypData(static_cast<const TargetType*>(target.ToRef().GetPointer())->*member);
               }),
-          serializeProc([member](const HypData& target) -> FBOMData
+          serializeProc([member](const HypData& target, EnumFlags<FBOMDataFlags> flags) -> FBOMData
               {
                   FBOMData out;
 
-                  if (FBOMResult err = HypDataHelper<NormalizedType<ValueType>>::Serialize(static_cast<const TargetType*>(target.ToRef().GetPointer())->*member, out))
+                  if (FBOMResult err = HypDataHelper<NormalizedType<ValueType>>::Serialize(static_cast<const TargetType*>(target.ToRef().GetPointer())->*member, out, flags))
                   {
                       HYP_FAIL("Failed to serialize data: %s", err.message.Data());
                   }
@@ -186,7 +186,7 @@ struct HypPropertyGetter
         return getProc(target);
     }
 
-    FBOMData Serialize(const HypData& target) const
+    FBOMData Serialize(const HypData& target, EnumFlags<FBOMDataFlags> flags) const
     {
         HYP_CORE_ASSERT(IsValid());
         HYP_CORE_ASSERT(!target.IsNull());
@@ -197,7 +197,7 @@ struct HypPropertyGetter
             typeInfo.targetTypeId.Value(),
             target.GetTypeId().Value());
 
-        return serializeProc(target);
+        return serializeProc(target, flags);
     }
 };
 
@@ -445,7 +445,7 @@ public:
         return Serialize(Span<HypData>(&const_cast<HypData&>(target), 1), out);
     }
 
-    virtual bool Serialize(Span<HypData> args, FBOMData& out) const override
+    virtual bool Serialize(Span<HypData> args, FBOMData& out, EnumFlags<FBOMDataFlags> flags = FBOMDataFlags::NONE) const override
     {
         if (!CanSerialize())
         {
@@ -457,7 +457,7 @@ public:
             return false;
         }
 
-        out = m_getter.Serialize(*args.Data());
+        out = m_getter.Serialize(*args.Data(), flags);
 
         return true;
     }

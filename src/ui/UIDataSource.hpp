@@ -98,7 +98,7 @@ protected:
         }
         else
         {
-            return GetDerived().Create(parent, value.ToRef().Get<T>());
+            return GetDerived().Create(parent, value.Get<T>());
         }
     }
 
@@ -115,7 +115,7 @@ protected:
         }
         else
         {
-            return GetDerived().Update(uiObject, value.ToRef().Get<T>());
+            return GetDerived().Update(uiObject, value.Get<T>());
         }
     }
 
@@ -300,11 +300,11 @@ public:
           m_elementTypeId(TypeId::ForType<T>()),
           m_createUiObjectProc([func = std::forward<CreateUIObjectFunction>(createUiObject)](UIObject* parent, const HypData& value, const HypData& context) mutable
               {
-                  return func(parent, value.ToRef().Get<T>(), context);
+                  return func(parent, value.Get<T>(), context);
               }),
           m_updateUiObjectProc([func = std::forward<UpdateUIObjectFunction>(updateUiObject)](UIObject* uiObject, const HypData& value, const HypData& context) mutable
               {
-                  func(uiObject, value.ToRef().Get<T>(), context);
+                  func(uiObject, value.Get<T>(), context);
               })
     {
     }

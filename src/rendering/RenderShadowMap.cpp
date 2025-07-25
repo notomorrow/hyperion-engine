@@ -555,16 +555,12 @@ void ShadowRendererBase::RenderFrame(FrameBase* frame, const RenderSetup& render
 
         renderProxyLists.PushBack(&rpl);
 
-        RenderCollector& renderCollector = RenderApi_GetRenderCollector(shadowView);
-        //        HYP_LOG_TEMP("shadow render collector  {}", (void*)&renderCollector);
-        //
-        //        HYP_LOG_TEMP("Render Shadow map here for light {}\t into view: {} for {} entities\t\tShadow map atlas index: {} elem index: {} point idx: {}",
-        //            renderSetup.light->Id(),
-        //            shadowView->Id(),
-        //            renderCollector.NumDrawCallsCollected(),
-        //            shadowMap->GetAtlasElement().atlasIndex, shadowMap->GetAtlasElement().index,
-        //            shadowMap->GetAtlasElement().pointLightIndex);
+        if (!rpl.GetMeshEntities().GetDiff().NeedsUpdate() && !rpl.GetSkeletons().GetDiff().NeedsUpdate())
+        {
+            continue;
+        }
 
+        RenderCollector& renderCollector = RenderApi_GetRenderCollector(shadowView);
         renderCollector.ExecuteDrawCalls(frame, rs, ((1u << RB_OPAQUE) | (1u << RB_LIGHTMAP) | (1u << RB_TRANSLUCENT)));
 
         if (!combineShadowMapsPass)

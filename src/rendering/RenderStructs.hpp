@@ -406,28 +406,28 @@ static inline constexpr bool FormatSupportsBlending(TextureFormat fmt)
 HYP_STRUCT()
 struct TextureDesc
 {
-    HYP_FIELD(Serialize, Property = "Type")
+    HYP_FIELD(Property = "Type", Serialize)
     TextureType type = TT_TEX2D;
 
-    HYP_FIELD(Serialize, Property = "Format")
+    HYP_FIELD(Property = "Format", Serialize)
     TextureFormat format = TF_RGBA8;
 
-    HYP_FIELD(Serialize, Property = "Extent")
+    HYP_FIELD(Property = "Extent", Serialize)
     Vec3u extent = Vec3u::One();
 
-    HYP_FIELD(Serialize, Property = "MinFilterMode")
+    HYP_FIELD(Property = "MinFilterMode", Serialize)
     TextureFilterMode filterModeMin = TFM_NEAREST;
 
-    HYP_FIELD(Serialize, Property = "MagFilterMode")
+    HYP_FIELD(Property = "MagFilterMode", Serialize)
     TextureFilterMode filterModeMag = TFM_NEAREST;
 
-    HYP_FIELD(Serialize, Property = "TextureWrapMode")
+    HYP_FIELD(Property = "TextureWrapMode", Serialize)
     TextureWrapMode wrapMode = TWM_CLAMP_TO_EDGE;
 
-    HYP_FIELD(Serialize, Property = "NumLayers")
+    HYP_FIELD(Property = "NumLayers", Serialize)
     uint32 numLayers = 1;
 
-    HYP_FIELD(Serialize, Property = "ImageUsage")
+    HYP_FIELD(Property = "ImageUsage", Serialize)
     EnumFlags<ImageUsage> imageUsage = IU_SAMPLED;
 
     HYP_FORCE_INLINE bool operator==(const TextureDesc& other) const = default;
@@ -529,21 +529,25 @@ struct TextureDesc
     }
 };
 
+HYP_STRUCT()
 struct TextureData
 {
+    HYP_FIELD(Property = "TextureDesc", Serialize)
     TextureDesc desc;
-    ByteBuffer buffer;
+
+    HYP_FIELD(Property = "ImageData", Serialize, Compressed)
+    ByteBuffer imageData;
 
     HYP_FORCE_INLINE bool IsValid() const
     {
-        return buffer.Any();
+        return imageData.Any();
     }
 
     HYP_FORCE_INLINE HashCode GetHashCode() const
     {
         HashCode hc;
         hc.Add(desc.GetHashCode());
-        hc.Add(buffer.GetHashCode());
+        hc.Add(imageData.GetHashCode());
 
         return hc;
     }

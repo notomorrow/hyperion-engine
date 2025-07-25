@@ -45,11 +45,11 @@ public:
 
         if (m_attributes["serialize"] || m_attributes["xmlattribute"])
         {
-            m_serializeProc = [value]() -> FBOMData
+            m_serializeProc = [value](EnumFlags<FBOMDataFlags> flags) -> FBOMData
             {
                 FBOMData out;
 
-                if (FBOMResult err = HypDataHelper<NormalizedType<ConstantType>>::Serialize(value, out))
+                if (FBOMResult err = HypDataHelper<NormalizedType<ConstantType>>::Serialize(value, out, flags))
                 {
                     HYP_FAIL("Failed to serialize data: %s", err.message.Data());
                 }
@@ -73,13 +73,13 @@ public:
 
         if (m_attributes["serialize"] || m_attributes["xmlattribute"])
         {
-            m_serializeProc = [valuePtr]() -> FBOMData
+            m_serializeProc = [valuePtr](EnumFlags<FBOMDataFlags> flags) -> FBOMData
             {
                 HYP_CORE_ASSERT(valuePtr != nullptr);
 
                 FBOMData out;
 
-                if (FBOMResult err = HypDataHelper<NormalizedType<ConstantType>>::Serialize(*valuePtr, out))
+                if (FBOMResult err = HypDataHelper<NormalizedType<ConstantType>>::Serialize(*valuePtr, out, flags))
                 {
                     HYP_FAIL("Failed to serialize data: %s", err.message.Data());
                 }
@@ -130,7 +130,7 @@ public:
         return Serialize({}, out);
     }
 
-    virtual bool Serialize(Span<HypData> args, FBOMData& out) const override
+    virtual bool Serialize(Span<HypData> args, FBOMData& out, EnumFlags<FBOMDataFlags> flags = FBOMDataFlags::NONE) const override
     {
         if (!CanSerialize())
         {
@@ -142,7 +142,7 @@ public:
             return false;
         }
 
-        out = m_serializeProc();
+        out = m_serializeProc(flags);
 
         return true;
     }
@@ -191,7 +191,7 @@ private:
     HypClassAttributeSet m_attributes;
 
     Proc<HypData()> m_getProc;
-    Proc<FBOMData()> m_serializeProc;
+    Proc<FBOMData(EnumFlags<FBOMDataFlags> flags)> m_serializeProc;
 };
 
 } // namespace hyperion

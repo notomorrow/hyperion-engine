@@ -115,7 +115,6 @@ public:
 };
 
 HYP_STRUCT()
-
 class HYP_API CommandLineArguments
 {
     String m_command;

@@ -320,6 +320,9 @@ AssetLoadResult OgreXMLModelLoader::LoadAsset(LoaderState& state) const
             };
 
             scene->GetEntityManager()->AddComponent<AnimationComponent>(entity, animationComponent);
+
+            scene->GetEntityManager()->RemoveTag<EntityTag::STATIC>(entity);
+            scene->GetEntityManager()->AddTag<EntityTag::DYNAMIC>(entity);
         }
 
         Handle<Node> node = CreateObject<Node>();

@@ -19,7 +19,7 @@ HYP_DECLARE_LOG_CHANNEL(Editor);
 
 static Handle<AssetPackage> GetImportsPackage()
 {
-    return AssetManager::GetInstance()->GetAssetRegistry()->GetPackageFromPath("$Import", false);
+    return AssetManager::GetInstance()->GetAssetRegistry()->GetPackageFromPath("$Import", true);
 }
 
 static void RegisterImportedAsset(const Handle<EditorProject>& project, const Handle<AssetObject>& assetObject)

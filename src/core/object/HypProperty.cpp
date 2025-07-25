@@ -39,11 +39,11 @@ HypProperty HypProperty::MakeHypProperty(const HypField* field)
     {
         return field->Get(target);
     };
-    result.m_getter.serializeProc = [field](const HypData& target) -> FBOMData
+    result.m_getter.serializeProc = [field](const HypData& target, EnumFlags<FBOMDataFlags> flags) -> FBOMData
     {
         FBOMData data;
 
-        if (!field->Serialize(target, data))
+        if (!field->Serialize(target, data, flags))
         {
             return FBOMData();
         }
@@ -146,10 +146,10 @@ HypProperty HypProperty::MakeHypProperty(const HypMethod* getter, const HypMetho
         {
             return getter->Invoke(Span<HypData> { const_cast<HypData*>(&target), 1 });
         };
-        result.m_getter.serializeProc = [getter](const HypData& target) -> FBOMData
+        result.m_getter.serializeProc = [getter](const HypData& target, EnumFlags<FBOMDataFlags> flags) -> FBOMData
         {
             FBOMData data;
-            HYP_CORE_ASSERT(getter->Serialize(Span<HypData> { const_cast<HypData*>(&target), 1 }, data));
+            HYP_CORE_ASSERT(getter->Serialize(Span<HypData> { const_cast<HypData*>(&target), 1 }, data, flags));
 
             return data;
         };

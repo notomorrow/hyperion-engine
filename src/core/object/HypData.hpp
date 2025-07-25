@@ -66,7 +66,7 @@ struct HypDataGetReturnTypeHelper
     using Type = decltype(std::declval<HypDataHelper<T>>().Get(*std::declval<std::add_pointer_t<std::conditional_t<IsConst, std::add_const_t<T>, T>>>()));
 };
 
-using HypDataSerializeFunction = FBOMResult (*)(const HypData& data, FBOMData& out);
+using HypDataSerializeFunction = FBOMResult (*)(const HypData& data, FBOMData& out, EnumFlags<FBOMDataFlags> flags);
 
 template <class T>
 struct DefaultHypDataSerializeFunction;
@@ -74,7 +74,7 @@ struct DefaultHypDataSerializeFunction;
 template <>
 struct DefaultHypDataSerializeFunction<void>
 {
-    static inline FBOMResult Serialize(const HypData& data, FBOMData& out)
+    static inline FBOMResult Serialize(const HypData& data, FBOMData& out, EnumFlags<FBOMDataFlags> flags = FBOMDataFlags::NONE)
     {
         out = FBOMData();
 
@@ -357,20 +357,20 @@ struct HypData
      *  \param out The FBOMData object to serialize to.
      *  \return The result of the serialization operation.
      */
-    FBOMResult Serialize(FBOMData& out) const
+    FBOMResult Serialize(FBOMData& out, EnumFlags<FBOMDataFlags> flags = FBOMDataFlags::NONE) const
     {
         if (serializeFunction == nullptr)
         {
             return { FBOMResult::FBOM_ERR, "No serialization function provided" };
         }
 
-        return serializeFunction(*this, out);
+        return serializeFunction(*this, out, flags);
     }
 
     template <class T>
-    static FBOMResult Serialize(T&& value, FBOMData& out)
+    static FBOMResult Serialize(T&& value, FBOMData& out, EnumFlags<FBOMDataFlags> flags = FBOMDataFlags::NONE)
     {
-        return HypDataHelper<NormalizedType<T>>::Serialize(value, out);
+        return HypDataHelper<NormalizedType<T>>::Serialize(value, out, flags);
     }
 
     template <class T>
@@ -402,9 +402,9 @@ constexpr bool isHypData = std::is_same_v<NormalizedType<T>, HypData>;
 template <class T>
 struct DefaultHypDataSerializeFunction
 {
-    static inline FBOMResult Serialize(const HypData& data, FBOMData& out)
+    static inline FBOMResult Serialize(const HypData& data, FBOMData& out, EnumFlags<FBOMDataFlags> flags = FBOMDataFlags::NONE)
     {
-        if (FBOMResult err = HypDataHelper<NormalizedType<T>>::Serialize(data.Get<NormalizedType<T>>(), out))
+        if (FBOMResult err = HypDataHelper<NormalizedType<T>>::Serialize(data.Get<NormalizedType<T>>(), out, flags))
         {
             return err;
         }
@@ -420,7 +420,7 @@ struct HypDataMarshalHelper
     static HYP_API FBOMResult NoMarshalRegistered(ANSIStringView typeName);
 
     template <class T>
-    static inline FBOMResult Serialize(const T& value, FBOMData& outData)
+    static inline FBOMResult Serialize(const T& value, FBOMData& outData, EnumFlags<FBOMDataFlags> flags = FBOMDataFlags::NONE)
     {
         using Normalized = NormalizedType<T>;
 
@@ -532,9 +532,9 @@ struct HypDataHelper<T, std::enable_if_t<std::is_fundamental_v<T>>>
         hypData.Set_Internal(value);
     }
 
-    HYP_FORCE_INLINE static FBOMResult Serialize(T value, FBOMData& out)
+    HYP_FORCE_INLINE static FBOMResult Serialize(T value, FBOMData& out, EnumFlags<FBOMDataFlags> flags = FBOMDataFlags::NONE)
     {
-        out = FBOMData(value);
+        out = FBOMData(value, flags);
 
         return FBOMResult::FBOM_OK;
     }
@@ -600,9 +600,9 @@ struct HypDataHelper<T, std::enable_if_t<std::is_enum_v<T>>> : HypDataHelper<std
         HypDataHelper<std::underlying_type_t<T>>::Set(hypData, static_cast<std::underlying_type_t<T>>(value));
     }
 
-    HYP_FORCE_INLINE static FBOMResult Serialize(T value, FBOMData& out)
+    HYP_FORCE_INLINE static FBOMResult Serialize(T value, FBOMData& out, EnumFlags<FBOMDataFlags> flags = FBOMDataFlags::NONE)
     {
-        out = FBOMData(static_cast<std::underlying_type_t<T>>(value));
+        out = FBOMData(static_cast<std::underlying_type_t<T>>(value), flags);
 
         return FBOMResult::FBOM_OK;
     }
@@ -680,7 +680,7 @@ struct HypDataHelper<void*>
         hypData.Set_Internal(value);
     }
 
-    HYP_FORCE_INLINE static FBOMResult Serialize(void* value, FBOMData& out)
+    HYP_FORCE_INLINE static FBOMResult Serialize(void* value, FBOMData& out, EnumFlags<FBOMDataFlags> flags = FBOMDataFlags::NONE)
     {
         return { FBOMResult::FBOM_ERR, "Cannot serialize a user pointer!" };
     }
@@ -754,9 +754,9 @@ struct HypDataHelper<ObjIdBase>
         hypData.Set_Internal(value);
     }
 
-    HYP_FORCE_INLINE static FBOMResult Serialize(ObjIdBase value, FBOMData& outData)
+    HYP_FORCE_INLINE static FBOMResult Serialize(ObjIdBase value, FBOMData& outData, EnumFlags<FBOMDataFlags> flags = FBOMDataFlags::NONE)
     {
-        outData = FBOMData::FromStruct<ObjIdBase>(value);
+        outData = FBOMData::FromStruct<ObjIdBase>(value, flags);
 
         return FBOMResult::FBOM_OK;
     }
@@ -849,7 +849,7 @@ struct HypDataHelper<AnyHandle>
         hypData.Set_Internal(std::move(value));
     }
 
-    static FBOMResult Serialize(const AnyHandle& value, FBOMData& outData)
+    static FBOMResult Serialize(const AnyHandle& value, FBOMData& outData, EnumFlags<FBOMDataFlags> flags = FBOMDataFlags::NONE)
     {
         HYP_SCOPE;
 
@@ -1020,7 +1020,7 @@ struct HypDataHelper<RC<void>>
         hypData.Set_Internal(std::move(value));
     }
 
-    static FBOMResult Serialize(const RC<void>& value, FBOMData& outData)
+    static FBOMResult Serialize(const RC<void>& value, FBOMData& outData, EnumFlags<FBOMDataFlags> flags = FBOMDataFlags::NONE)
     {
         HYP_SCOPE;
 
@@ -1156,7 +1156,7 @@ struct HypDataHelper<AnyRef>
         hypData.Set_Internal(std::move(value));
     }
 
-    static FBOMResult Serialize(const AnyRef& value, FBOMData& outData)
+    static FBOMResult Serialize(const AnyRef& value, FBOMData& outData, EnumFlags<FBOMDataFlags> flags = FBOMDataFlags::NONE)
     {
         HYP_SCOPE;
 
@@ -1344,7 +1344,7 @@ struct HypDataHelper<Any>
         hypData.Set_Internal(std::move(value));
     }
 
-    static FBOMResult Serialize(const Any& value, FBOMData& outData)
+    static FBOMResult Serialize(const Any& value, FBOMData& outData, EnumFlags<FBOMDataFlags> flags = FBOMDataFlags::NONE)
     {
         HYP_SCOPE;
 
@@ -1411,7 +1411,7 @@ struct HypDataHelper<containers::String<StringType>> : HypDataHelper<Any>
         HypDataHelper<Any>::Set(hypData, Any::Construct<containers::String<StringType>>(std::move(value)));
     }
 
-    HYP_FORCE_INLINE static FBOMResult Serialize(const containers::String<StringType>& value, FBOMData& outData)
+    HYP_FORCE_INLINE static FBOMResult Serialize(const containers::String<StringType>& value, FBOMData& outData, EnumFlags<FBOMDataFlags> flags = FBOMDataFlags::NONE)
     {
         HYP_SCOPE;
 
@@ -1510,7 +1510,7 @@ struct HypDataHelper<Name> : HypDataHelper<Any>
         HypDataHelper<Any>::Set(hypData, Any::Construct<ANSIString>(value.LookupString()));
     }
 
-    HYP_FORCE_INLINE static FBOMResult Serialize(const Name& value, FBOMData& outData)
+    HYP_FORCE_INLINE static FBOMResult Serialize(const Name& value, FBOMData& outData, EnumFlags<FBOMDataFlags> flags = FBOMDataFlags::NONE)
     {
         HYP_SCOPE;
 
@@ -1574,7 +1574,7 @@ struct HypDataHelper<Array<T, AllocatorType>, std::enable_if_t<!std::is_const_v<
         HypDataHelper<Any>::Set(hypData, Any::Construct<Array<T, AllocatorType>>(std::move(value)));
     }
 
-    static FBOMResult Serialize(const Array<T, AllocatorType>& value, FBOMData& outData)
+    static FBOMResult Serialize(const Array<T, AllocatorType>& value, FBOMData& outData, EnumFlags<FBOMDataFlags> flags = FBOMDataFlags::NONE)
     {
         HYP_SCOPE;
 
@@ -1668,7 +1668,7 @@ struct HypDataHelper<FixedArray<T, Size>, std::enable_if_t<!std::is_const_v<T>>>
         HypDataHelper<Any>::Set(hypData, Any::Construct<FixedArray<T, Size>>(std::move(value)));
     }
 
-    static FBOMResult Serialize(const FixedArray<T, Size>& value, FBOMData& outData)
+    static FBOMResult Serialize(const FixedArray<T, Size>& value, FBOMData& outData, EnumFlags<FBOMDataFlags> flags = FBOMDataFlags::NONE)
     {
         HYP_SCOPE;
 
@@ -1757,7 +1757,7 @@ struct HypDataHelper<T[Size], std::enable_if_t<!std::is_const_v<T>>> : HypDataHe
         HypDataHelper<FixedArray<T, Size>>::Set(hypData, MakeFixedArray(value));
     }
 
-    static FBOMResult Serialize(const T (&value)[Size], FBOMData& outData)
+    static FBOMResult Serialize(const T (&value)[Size], FBOMData& outData, EnumFlags<FBOMDataFlags> flags = FBOMDataFlags::NONE)
     {
         HYP_SCOPE;
 
@@ -1851,7 +1851,7 @@ struct HypDataHelper<Pair<K, V>> : HypDataHelper<Any>
         HypDataHelper<Any>::Set(hypData, Any::Construct<Pair<K, V>>(std::move(value)));
     }
 
-    static FBOMResult Serialize(const Pair<K, V>& value, FBOMData& outData)
+    static FBOMResult Serialize(const Pair<K, V>& value, FBOMData& outData, EnumFlags<FBOMDataFlags> flags = FBOMDataFlags::NONE)
     {
         HYP_SCOPE;
 
@@ -1937,7 +1937,7 @@ struct HypDataHelper<HashMap<K, V>> : HypDataHelper<Any>
         HypDataHelper<Any>::Set(hypData, Any::Construct<HashMap<K, V>>(std::move(value)));
     }
 
-    static FBOMResult Serialize(const HashMap<K, V>& value, FBOMData& outData)
+    static FBOMResult Serialize(const HashMap<K, V>& value, FBOMData& outData, EnumFlags<FBOMDataFlags> flags = FBOMDataFlags::NONE)
     {
         HYP_SCOPE;
 
@@ -2034,7 +2034,7 @@ struct HypDataHelper<HashSet<ValueType, KeyByFunction>> : HypDataHelper<Any>
         HypDataHelper<Any>::Set(hypData, Any::Construct<HashSet<ValueType, KeyByFunction>>(std::move(value)));
     }
 
-    static FBOMResult Serialize(const HashSet<ValueType, KeyByFunction>& value, FBOMData& outData)
+    static FBOMResult Serialize(const HashSet<ValueType, KeyByFunction>& value, FBOMData& outData, EnumFlags<FBOMDataFlags> flags = FBOMDataFlags::NONE)
     {
         HYP_SCOPE;
 
@@ -2131,7 +2131,7 @@ struct HypDataHelper<LinkedList<T>> : HypDataHelper<Any>
         HypDataHelper<Any>::Set(hypData, Any::Construct<LinkedList<T>>(std::move(value)));
     }
 
-    static FBOMResult Serialize(const LinkedList<T>& value, FBOMData& outData)
+    static FBOMResult Serialize(const LinkedList<T>& value, FBOMData& outData, EnumFlags<FBOMDataFlags> flags = FBOMDataFlags::NONE)
     {
         HYP_SCOPE;
 
@@ -2241,7 +2241,7 @@ struct HypDataHelper<math::Vec2<T>> : HypDataHelper<Any>
         HypDataHelper<Any>::Set(hypData, Any::Construct<math::Vec2<T>>(value));
     }
 
-    HYP_FORCE_INLINE static FBOMResult Serialize(const math::Vec2<T>& value, FBOMData& outData)
+    HYP_FORCE_INLINE static FBOMResult Serialize(const math::Vec2<T>& value, FBOMData& outData, EnumFlags<FBOMDataFlags> flags = FBOMDataFlags::NONE)
     {
         HYP_SCOPE;
 
@@ -2295,7 +2295,7 @@ struct HypDataHelper<math::Vec3<T>> : HypDataHelper<Any>
         HypDataHelper<Any>::Set(hypData, Any::Construct<math::Vec3<T>>(value));
     }
 
-    HYP_FORCE_INLINE static FBOMResult Serialize(const math::Vec3<T>& value, FBOMData& outData)
+    HYP_FORCE_INLINE static FBOMResult Serialize(const math::Vec3<T>& value, FBOMData& outData, EnumFlags<FBOMDataFlags> flags = FBOMDataFlags::NONE)
     {
         HYP_SCOPE;
 
@@ -2351,7 +2351,7 @@ struct HypDataHelper<math::Vec4<T>> : HypDataHelper<Any>
         HypDataHelper<Any>::Set(hypData, Any::Construct<math::Vec4<T>>(value));
     }
 
-    HYP_FORCE_INLINE static FBOMResult Serialize(const math::Vec4<T>& value, FBOMData& outData)
+    HYP_FORCE_INLINE static FBOMResult Serialize(const math::Vec4<T>& value, FBOMData& outData, EnumFlags<FBOMDataFlags> flags = FBOMDataFlags::NONE)
     {
         HYP_SCOPE;
 
@@ -2407,7 +2407,7 @@ struct HypDataHelper<Matrix3> : HypDataHelper<Any>
         HypDataHelper<Any>::Set(hypData, Any::Construct<Matrix3>(value));
     }
 
-    HYP_FORCE_INLINE static FBOMResult Serialize(const Matrix3& value, FBOMData& outData)
+    HYP_FORCE_INLINE static FBOMResult Serialize(const Matrix3& value, FBOMData& outData, EnumFlags<FBOMDataFlags> flags = FBOMDataFlags::NONE)
     {
         HYP_SCOPE;
 
@@ -2463,7 +2463,7 @@ struct HypDataHelper<Matrix4> : HypDataHelper<Any>
         HypDataHelper<Any>::Set(hypData, Any::Construct<Matrix4>(value));
     }
 
-    HYP_FORCE_INLINE static FBOMResult Serialize(const Matrix4& value, FBOMData& outData)
+    HYP_FORCE_INLINE static FBOMResult Serialize(const Matrix4& value, FBOMData& outData, EnumFlags<FBOMDataFlags> flags = FBOMDataFlags::NONE)
     {
         HYP_SCOPE;
 
@@ -2519,7 +2519,7 @@ struct HypDataHelper<Quaternion> : HypDataHelper<Any>
         HypDataHelper<Any>::Set(hypData, Any::Construct<Quaternion>(value));
     }
 
-    HYP_FORCE_INLINE static FBOMResult Serialize(const Quaternion& value, FBOMData& outData)
+    HYP_FORCE_INLINE static FBOMResult Serialize(const Quaternion& value, FBOMData& outData, EnumFlags<FBOMDataFlags> flags = FBOMDataFlags::NONE)
     {
         HYP_SCOPE;
 
@@ -2575,11 +2575,11 @@ struct HypDataHelper<ByteBuffer> : HypDataHelper<Any>
         HypDataHelper<Any>::Set(hypData, Any::Construct<ByteBuffer>(std::move(value)));
     }
 
-    HYP_FORCE_INLINE static FBOMResult Serialize(const ByteBuffer& value, FBOMData& outData)
+    HYP_FORCE_INLINE static FBOMResult Serialize(const ByteBuffer& value, FBOMData& outData, EnumFlags<FBOMDataFlags> flags = FBOMDataFlags::NONE)
     {
         HYP_SCOPE;
 
-        outData = FBOMData::FromByteBuffer(value);
+        outData = FBOMData::FromByteBuffer(value, flags);
 
         return FBOMResult::FBOM_OK;
     }
@@ -2677,7 +2677,7 @@ struct HypDataHelper<Variant<Types...>> : HypDataHelper<Any>
         HypDataHelper<Any>::Set(hypData, Any::Construct<Variant<Types...>>(std::move(value)));
     }
 
-    HYP_FORCE_INLINE static FBOMResult Serialize(const Variant<Types...>& value, FBOMData& outData)
+    HYP_FORCE_INLINE static FBOMResult Serialize(const Variant<Types...>& value, FBOMData& outData, EnumFlags<FBOMDataFlags> flags = FBOMDataFlags::NONE)
     {
         HYP_SCOPE;
 
@@ -2808,7 +2808,7 @@ struct HypDataHelper<T, std::enable_if_t<!HypData::canStoreDirectly<T> && !imple
         HypDataHelper<Any>::Set(hypData, Any::Construct<T>(std::move(value)));
     }
 
-    static FBOMResult Serialize(const T& value, FBOMData& outData)
+    static FBOMResult Serialize(const T& value, FBOMData& outData, EnumFlags<FBOMDataFlags> flags = FBOMDataFlags::NONE)
     {
         HYP_SCOPE;
 

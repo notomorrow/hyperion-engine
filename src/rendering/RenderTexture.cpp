@@ -83,7 +83,7 @@ struct RENDER_COMMAND(CreateTexture)
 
                     const TextureDesc& textureDesc = texture->GetAsset()->GetTextureDesc();
 
-                    ByteBuffer const* textureDataBuffer = &textureData->buffer;
+                    ByteBuffer const* imageData = &textureData->imageData;
                     LinkedList<ByteBuffer> placeholderBuffers;
 
                     if (textureDesc != image->GetTextureDesc())
@@ -91,7 +91,7 @@ struct RENDER_COMMAND(CreateTexture)
                         HYP_LOG(Streaming, Warning, "Streamed texture data TextureDesc not equal to Image's TextureDesc!");
                     }
 
-                    if (textureDataBuffer->Size() != image->GetByteSize())
+                    if (imageData->Size() != image->GetByteSize())
                     {
                         HYP_LOG(Streaming, Warning, "Streamed texture data buffer size mismatch! Expected: {}, Got: {}",
                             image->GetByteSize(), textureDesc.GetByteSize());
@@ -143,12 +143,12 @@ struct RENDER_COMMAND(CreateTexture)
                             break;
                         }
 
-                        textureDataBuffer = placeholderBuffer;
+                        imageData = placeholderBuffer;
                     }
 
-                    GpuBufferRef stagingBuffer = g_renderBackend->MakeGpuBuffer(GpuBufferType::STAGING_BUFFER, textureDataBuffer->Size());
+                    GpuBufferRef stagingBuffer = g_renderBackend->MakeGpuBuffer(GpuBufferType::STAGING_BUFFER, imageData->Size());
                     HYPERION_BUBBLE_ERRORS(stagingBuffer->Create());
-                    stagingBuffer->Copy(textureDataBuffer->Size(), textureDataBuffer->Data());
+                    stagingBuffer->Copy(imageData->Size(), imageData->Data());
 
                     HYP_DEFER({ SafeRelease(std::move(stagingBuffer)); });
 

@@ -58,7 +58,7 @@ struct HypData;
 template <class T, class T2>
 struct HypDataHelper;
 
-enum class FBOMDataFlags
+enum class FBOMDataFlags : uint32
 {
     NONE = 0x0,
     COMPRESSED = 0x1,
@@ -218,6 +218,11 @@ public:
     HYP_FORCE_INLINE EnumFlags<FBOMDataFlags> GetFlags() const
     {
         return m_flags;
+    }
+
+    HYP_FORCE_INLINE void SetFlags(EnumFlags<FBOMDataFlags> flags)
+    {
+        m_flags = flags;
     }
 
     HYP_FORCE_INLINE bool IsCompressed() const

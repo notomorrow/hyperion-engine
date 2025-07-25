@@ -675,7 +675,6 @@ void View::CollectLights(RenderProxyList& rpl)
 
             if (isLightInFrustum)
             {
-                HYP_LOG(Scene, Debug, "Collecting light {} of type {} in view {}", light->Id(), light->InstanceClass()->GetName(), Id());
                 rpl.GetLights().Track(light->Id(), light, light->GetRenderProxyVersionPtr());
 
                 if (light->GetMaterial().IsValid())
