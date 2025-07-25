@@ -109,6 +109,32 @@ private:
     TResourceHandle<RenderShadowMap> m_shadowMap;
 };
 
+struct EnvProbePassData : PassData
+{
+    // for sky
+    Vec4f cachedLightDirIntensity;
+};
+
+struct EnvProbePassDataExt : PassDataExt
+{
+    EnvProbe* envProbe = nullptr;
+
+    EnvProbePassDataExt()
+        : PassDataExt(TypeId::ForType<EnvProbePassDataExt>())
+    {
+    }
+
+    virtual ~EnvProbePassDataExt() override = default;
+
+    virtual PassDataExt* Clone() override
+    {
+        EnvProbePassDataExt* clone = new EnvProbePassDataExt;
+        clone->envProbe = envProbe;
+
+        return clone;
+    }
+};
+
 class EnvProbeRenderer : public RendererBase
 {
 public:
@@ -124,7 +150,7 @@ protected:
 
     virtual void RenderProbe(FrameBase* frame, const RenderSetup& renderSetup, EnvProbe* envProbe) = 0;
 
-    PassData* CreateViewPassData(View* view, PassDataExt&) override;
+    PassData* CreateViewPassData(View* view, PassDataExt& ext) override;
 };
 
 class ReflectionProbeRenderer : public EnvProbeRenderer

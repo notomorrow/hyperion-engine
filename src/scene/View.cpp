@@ -144,7 +144,7 @@ View::View(const ViewDesc& viewDesc)
             continue;
         }
 
-        *it = new RenderProxyList;
+        *it = new RenderProxyList(/* isShared */ true);
     }
 }
 

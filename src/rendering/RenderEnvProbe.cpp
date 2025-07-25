@@ -379,9 +379,9 @@ void EnvProbeRenderer::RenderFrame(FrameBase* frame, const RenderSetup& renderSe
     RenderProbe(frame, rs, envProbe);
 }
 
-PassData* EnvProbeRenderer::CreateViewPassData(View* view, PassDataExt&)
+PassData* EnvProbeRenderer::CreateViewPassData(View* view, PassDataExt& ext)
 {
-    PassData* pd = new PassData;
+    EnvProbePassData* pd = new EnvProbePassData;
     pd->view = view->WeakHandleFromThis();
     pd->viewport = view->GetViewport();
 
@@ -442,25 +442,49 @@ void ReflectionProbeRenderer::RenderProbe(FrameBase* frame, const RenderSetup& r
     View* view = renderSetup.view;
     AssertDebug(view != nullptr);
 
+    EnvProbePassData* pd = static_cast<EnvProbePassData*>(renderSetup.passData);
+    AssertDebug(pd != nullptr);
+
     RenderProxyList& rpl = RenderApi_GetConsumerProxyList(view);
     rpl.BeginRead();
     HYP_DEFER({ rpl.EndRead(); });
 
-    RenderCollector& renderCollector = RenderApi_GetRenderCollector(view);
-
-#ifdef HYP_DEBUG_MODE
+    // special checks for Sky + caching result based on light position + intensity
     if (envProbe->IsA<SkyProbe>())
     {
         if (!renderSetup.light)
         {
             HYP_LOG(Rendering, Warning, "No directional light bound while rendering SkyProbe {} in view {}", envProbe->Id(), view->Id());
+
+            pd->cachedLightDirIntensity = MathUtil::NaN<Vec4f>();
+
+            return;
         }
-        else if (renderSetup.light->GetLightType() != LT_DIRECTIONAL)
+
+        if (renderSetup.light->GetLightType() != LT_DIRECTIONAL)
         {
             HYP_LOG(Rendering, Warning, "Light bound to SkyProbe pass is not a directional light: {} in view {}", renderSetup.light->Id(), view->Id());
+
+            pd->cachedLightDirIntensity = MathUtil::NaN<Vec4f>();
+
+            return;
         }
+
+        RenderProxyLight* lightProxy = static_cast<RenderProxyLight*>(RenderApi_GetRenderProxy(renderSetup.light->Id()));
+        AssertDebug(lightProxy != nullptr);
+        AssertDebug(RenderApi_RetrieveResourceBinding(renderSetup.light) != ~0u);
+
+        if (lightProxy->bufferData.positionIntensity == pd->cachedLightDirIntensity && !rpl.GetMeshEntities().GetDiff().NeedsUpdate())
+        {
+            // no need to render it just yet if values have not changed -- return early
+            return;
+        }
+
+        // cache it to save on rendering later
+        pd->cachedLightDirIntensity = lightProxy->bufferData.positionIntensity;
     }
-#endif
+
+    RenderCollector& renderCollector = RenderApi_GetRenderCollector(view);
 
     renderCollector.ExecuteDrawCalls(frame, renderSetup, ((1u << RB_OPAQUE) | (1u << RB_TRANSLUCENT)));
 
@@ -484,6 +508,8 @@ void ReflectionProbeRenderer::RenderProbe(FrameBase* frame, const RenderSetup& r
 
     if (SkyProbe* skyProbe = ObjCast<SkyProbe>(envProbe))
     {
+        HYP_LOG_TEMP("Render SkyProbe {} with {} mesh entities", envProbe->Id(), renderCollector.NumDrawCallsCollected());
+
         Assert(skyProbe->GetSkyboxCubemap().IsValid());
 
         const ImageRef& dstImage = skyProbe->GetSkyboxCubemap()->GetRenderResource().GetImage();

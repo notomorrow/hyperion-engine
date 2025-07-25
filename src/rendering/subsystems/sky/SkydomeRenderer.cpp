@@ -72,6 +72,9 @@ void SkydomeRenderer::Init()
     cameraNode->SetName(m_camera->GetName());
 
     m_envProbe = m_virtualScene->GetEntityManager()->AddEntity<SkyProbe>(BoundingBox(Vec3f(-100.0f), Vec3f(100.0f)), m_dimensions);
+
+    Handle<Node> envProbeNode = m_virtualScene->GetRoot()->AddChild();
+    envProbeNode->SetEntity(m_envProbe);
     InitObject(m_envProbe);
 
     auto domeNodeAsset = g_assetManager->Load<Node>("models/inv_sphere.obj");
@@ -96,6 +99,8 @@ void SkydomeRenderer::OnAddedToWorld()
     AssertDebug(m_cubemap.IsValid());
 
     GetWorld()->AddScene(m_virtualScene);
+
+    m_envProbe->SetNeedsRender(true);
 }
 
 void SkydomeRenderer::OnRemovedFromWorld()
@@ -118,10 +123,10 @@ void SkydomeRenderer::Update(float delta)
         return;
     }
 
-//    m_envProbe->Update(delta);
-//    m_envProbe->SetNeedsRender(true);
-//
-//    m_envProbe->SetReceivesUpdate(false);
+    //    m_envProbe->Update(delta);
+    m_envProbe->SetNeedsRender(true);
+
+    // m_envProbe->SetReceivesUpdate(false);
 }
 
 } // namespace hyperion

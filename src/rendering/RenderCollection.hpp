@@ -149,7 +149,8 @@ private:
     }
 
 public:
-    RenderProxyList();
+    /*! \param isShared if true, uses a spinlock to protect against mutual access of the data */
+    RenderProxyList(bool isShared);
 
     RenderProxyList(const RenderProxyList& other) = delete;
     RenderProxyList& operator=(const RenderProxyList& other) = delete;
@@ -161,17 +162,21 @@ public:
 
     void BeginWrite()
     {
-        uint64 rwMarkerState = rwMarker.BitOr(writeFlag, MemoryOrder::ACQUIRE);
-        while (HYP_UNLIKELY(rwMarkerState & readMask))
+        if (isShared)
         {
-            HYP_LOG_TEMP("Busy waiting for read marker to be released! "
-                         "If this is occuring frequently, the View that owns this RenderProxyList should have double / triple buffering enabled");
-
-            rwMarkerState = rwMarker.Get(MemoryOrder::ACQUIRE);
-            HYP_WAIT_IDLE();
+            uint64 rwMarkerState = rwMarker.BitOr(writeFlag, MemoryOrder::ACQUIRE);
+            while (HYP_UNLIKELY(rwMarkerState & readMask))
+            {
+                HYP_LOG_TEMP("Busy waiting for read marker to be released! "
+                             "If this is occuring frequently, the View that owns this RenderProxyList should have double / triple buffering enabled");
+                
+                rwMarkerState = rwMarker.Get(MemoryOrder::ACQUIRE);
+                HYP_WAIT_IDLE();
+            }
+            
         }
-
-        AssertDebug(state != CS_READING, "Got state == CS_READING, race condition! (rwMarkerState = {})", rwMarkerState);
+        
+        AssertDebug(state != CS_READING);
         state = CS_WRITING;
 
         // advance all trackers to the next state before we write into them.
@@ -187,30 +192,40 @@ public:
         AssertDebug(state == CS_WRITING);
 
         state = CS_WRITTEN;
-
-        rwMarker.BitAnd(~writeFlag, MemoryOrder::RELEASE);
+        
+        if (isShared)
+        {
+            rwMarker.BitAnd(~writeFlag, MemoryOrder::RELEASE);
+        }
     }
 
     void BeginRead()
     {
-        uint64 rwMarkerState;
-
-        do
+        if (isShared)
         {
-            rwMarkerState = rwMarker.Increment(2, MemoryOrder::ACQUIRE);
-
-            if (HYP_UNLIKELY(rwMarkerState & writeFlag))
+            uint64 rwMarkerState;
+            
+            do
             {
-                HYP_LOG_TEMP("Waiting for write marker to be released."
-                             "If this is occurring frequently, the View that owns this RenderProxyList should have double / triple buffering enabled");
-
-                rwMarker.Decrement(2, MemoryOrder::RELAXED);
-
-                // spin to wait for write flag to be released
-                HYP_WAIT_IDLE();
+                rwMarkerState = rwMarker.Increment(2, MemoryOrder::ACQUIRE);
+                
+                if (HYP_UNLIKELY(rwMarkerState & writeFlag))
+                {
+                    HYP_LOG_TEMP("Waiting for write marker to be released."
+                                 "If this is occurring frequently, the View that owns this RenderProxyList should have double / triple buffering enabled");
+                    
+                    rwMarker.Decrement(2, MemoryOrder::RELAXED);
+                    
+                    // spin to wait for write flag to be released
+                    HYP_WAIT_IDLE();
+                }
             }
+            while (HYP_UNLIKELY(rwMarkerState & writeFlag));
         }
-        while (HYP_UNLIKELY(rwMarkerState & writeFlag));
+        else
+        {
+            ++readDepth;
+        }
 
         AssertDebug(state != CS_WRITING);
         state = CS_READING;
@@ -219,15 +234,25 @@ public:
     void EndRead()
     {
         AssertDebug(state == CS_READING);
-
-        uint64 rwMarkerState = rwMarker.Decrement(2, MemoryOrder::ACQUIRE_RELEASE);
-        AssertDebug(rwMarkerState & readMask, "Invalid state, expected read mask to be set when calling EndRead()");
-
-        /// FIXME: If BeginRead() is called on other thread between the check and setting state to CS_DONE,
-        /// we could set state to done when it isn't actually.
-        if (((rwMarkerState - 2) & readMask) == 0)
+        
+        if (isShared)
         {
-            state = CS_DONE;
+            uint64 rwMarkerState = rwMarker.Decrement(2, MemoryOrder::ACQUIRE_RELEASE);
+            AssertDebug(rwMarkerState & readMask, "Invalid state, expected read mask to be set when calling EndRead()");
+            
+            /// FIXME: If BeginRead() is called on other thread between the check and setting state to CS_DONE,
+            /// we could set state to done when it isn't actually.
+            if (((rwMarkerState - 2) & readMask) == 0)
+            {
+                state = CS_DONE;
+            }
+        }
+        else
+        {
+            if (!--readDepth)
+            {
+                state = CS_DONE;
+            }
         }
     }
 
@@ -326,7 +351,7 @@ public:
 
     CollectionState state : 2 = CS_DONE;
 
-    
+    const bool isShared : 1 = false;                //<! should we use a spinlock to ensure multiple threads aren't accessing this list at the same time?
     bool useOrdering : 1 = false;                   //<! are mesh entities sorted using an indirect array to map sort order?
     bool disableBuildRenderCollection : 1 = false;  //<! Disable building out RenderCollection. Set to true in the case of custom render collection building (See UIRenderer)
 
@@ -358,10 +383,7 @@ public:
     // marker to set to locked when game thread is writing to this list.
     // this only really comes into play with non-buffered Views that do not double/triple buffer their RenderProxyLists
     AtomicVar<uint64> rwMarker { 0 };
-
-#ifdef HYP_ENABLE_MT_CHECK
-    HYP_DECLARE_MT_CHECK(dataRaceDetector);
-#endif
+    uint32 readDepth = 0;
 };
 
 class HYP_API RenderCollector

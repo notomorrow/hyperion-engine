@@ -249,35 +249,22 @@ void Octree::RebuildEntriesHash(uint32 level)
         const HashCode entryHashCode = entry.GetHashCode();
         m_entryHashes[0].Add(entryHashCode);
 
-        Array<EntityTag> tags;
+        uint32 tagsMask = 0;
 
         if (m_entityManager)
         {
-            tags = m_entityManager->GetSavableTags(entry.value);
+            tagsMask = m_entityManager->GetSavableTagsMask(entry.value);
         }
 
-        for (uint32 i = 0; i < uint32(tags.Size()); i++)
+        FOR_EACH_BIT(tagsMask, i)
         {
-            const uint32 numCombinations = (1u << i);
+            EntityTag tag = EntityTag(i + 1);
+            AssertDebug(uint32(tag) < m_entryHashes.Size());
 
-            for (uint32 k = 0; k < numCombinations; k++)
-            {
-                uint32 mask = (1u << (uint32(tags[i]) - 1));
+            // sanity check, temp.
+            AssertDebug(m_entityManager->HasTag(entry.value, tag));
 
-                for (uint32 j = 0; j < i; j++)
-                {
-                    if ((k & (1u << j)) != (1u << j))
-                    {
-                        continue;
-                    }
-
-                    mask |= (1u << (uint32(tags[j]) - 1));
-                }
-
-                Assert(m_entryHashes.Size() > mask);
-
-                m_entryHashes[mask].Add(entryHashCode);
-            }
+            m_entryHashes[uint32(tag)].Add(entryHashCode);
         }
     }
 

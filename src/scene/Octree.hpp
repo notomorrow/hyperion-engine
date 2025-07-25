@@ -66,24 +66,22 @@ public:
 
     /*! \brief Get a hashcode of all entities currently in this Octant that have the given tags (child octants affect this too)
      */
-    template <EntityTag... Tags>
+    template <EntityTag Tag>
     HYP_FORCE_INLINE HashCode GetEntryListHash() const
     {
-        static_assert(((uint32(Tags) < uint32(EntityTag::DESCRIPTOR_MAX)) && ...), "All tags must have a value < EntityTag::DESCRIPTOR_MAX");
+        static_assert((uint32(Tag) < uint32(EntityTag::SAVABLE_MAX)), "All tags must have a value < EntityTag::SAVABLE_MAX");
 
-        const uint32 mask = ((Tags == EntityTag::NONE ? 0 : (1u << (uint32(Tags) - 1))) | ...);
-
-        return HashCode(m_entryHashes[mask])
+        return HashCode(m_entryHashes[uint32(Tag)])
             .Add(m_invalidationMarker);
     }
 
     /*! \brief Get a hashcode of all entities currently in this Octant that match the mask tag (child octants affect this too)
      */
-    HYP_FORCE_INLINE HashCode GetEntryListHash(uint32 entityTagMask) const
+    HYP_FORCE_INLINE HashCode GetEntryListHash(EntityTag entityTag) const
     {
-        Assert(entityTagMask < m_entryHashes.Size());
+        Assert(uint32(entityTag) < m_entryHashes.Size());
 
-        return HashCode(m_entryHashes[entityTagMask])
+        return HashCode(m_entryHashes[uint32(entityTag)])
             .Add(m_invalidationMarker);
     }
 
@@ -102,7 +100,7 @@ public:
     virtual void PerformUpdates() override;
 
 private:
-    static constexpr uint32 numEntryHashes = 1u << uint32(EntityTag::DESCRIPTOR_MAX);
+    static constexpr uint32 numEntryHashes = uint32(EntityTag::SAVABLE_MAX);
 
     virtual UniquePtr<Octree> CreateChildOctant(const BoundingBox& aabb, Octree* parent, uint8 index) override
     {

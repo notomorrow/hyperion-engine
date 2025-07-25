@@ -277,7 +277,8 @@ public:
     static_assert(std::is_base_of_v<ObjIdBase, IdType>, "IdType must be derived from ObjIdBase (must use numeric id)");
 
     ResourceTracker()
-        : baseImpl(IdType::typeIdStatic) // default impl for base class
+        : baseImpl(IdType::typeIdStatic), // default impl for base class
+          cachedDiffNeedsUpdate(false)
     {
         // Setup the subclass implementations array, we initialize them as they get used
         const SizeType numDescendants = GetNumDescendants(IdType::typeIdStatic);
@@ -362,7 +363,7 @@ public:
         return subclassIndices;
     }
 
-    HYP_FORCE_INLINE Impl& GetSubclassImpl(int subclassIndex)
+    HYP_FORCE_INLINE const Impl& GetSubclassImpl(int subclassIndex) const
     {
         if (subclassIndex == -1)
         {
@@ -375,32 +376,32 @@ public:
         return *subclassImpls[subclassIndex];
     }
 
-    HYP_FORCE_INLINE const Impl& GetSubclassImpl(int subclassIndex) const
-    {
-        return const_cast<ResourceTracker*>(this)->GetSubclassImpl(subclassIndex);
-    }
-
-    ResourceTrackerDiff GetDiff() const
+    const ResourceTrackerDiff& GetDiff() const
     {
         HYP_SCOPE;
 
-        ResourceTrackerDiff diff {};
-        diff.numAdded = baseImpl.GetAdded().Count();
-        diff.numRemoved = baseImpl.GetRemoved().Count();
-        diff.numChanged = baseImpl.GetChanged().Count();
-
-        for (Bitset::BitIndex i : subclassIndices)
+        if (cachedDiffNeedsUpdate)
         {
-            AssertDebug(i < subclassImpls.Size());
+            cachedDiff = {};
+            cachedDiff.numAdded = baseImpl.GetAdded().Count();
+            cachedDiff.numRemoved = baseImpl.GetRemoved().Count();
+            cachedDiff.numChanged = baseImpl.GetChanged().Count();
 
-            auto& impl = *subclassImpls[i];
+            for (Bitset::BitIndex i : subclassIndices)
+            {
+                AssertDebug(i < subclassImpls.Size());
 
-            diff.numAdded += impl.GetAdded().Count();
-            diff.numRemoved += impl.GetRemoved().Count();
-            diff.numChanged += impl.GetChanged().Count();
+                auto& impl = *subclassImpls[i];
+
+                cachedDiff.numAdded += impl.GetAdded().Count();
+                cachedDiff.numRemoved += impl.GetRemoved().Count();
+                cachedDiff.numChanged += impl.GetChanged().Count();
+            }
+
+            cachedDiffNeedsUpdate = false;
         }
 
-        return diff;
+        return cachedDiff;
     }
 
     /*! \brief Marks an element to be considered valid for this frame
@@ -416,6 +417,8 @@ public:
 
         TypeId typeId = id.GetTypeId();
         AssertDebug(typeId != TypeId::Void());
+
+        cachedDiffNeedsUpdate = true;
 
         if (typeId == baseImpl.typeId)
         {
@@ -443,6 +446,8 @@ public:
         TypeId typeId = id.GetTypeId();
         AssertDebug(typeId != TypeId::Void());
 
+        cachedDiffNeedsUpdate = true;
+
         if (typeId == baseImpl.typeId)
         {
             return baseImpl.MarkToKeep(id);
@@ -464,6 +469,8 @@ public:
     {
         TypeId typeId = id.GetTypeId();
         AssertDebug(typeId != TypeId::Void());
+
+        cachedDiffNeedsUpdate = true;
 
         if (typeId == baseImpl.typeId)
         {
@@ -763,6 +770,8 @@ public:
     {
         HYP_SCOPE;
 
+        cachedDiffNeedsUpdate = true;
+
         baseImpl.Advance(clearNextState);
 
         for (Bitset::BitIndex i : subclassIndices)
@@ -773,6 +782,8 @@ public:
 
     void Reset()
     {
+        cachedDiffNeedsUpdate = true;
+
         baseImpl.Reset();
 
         for (Bitset::BitIndex i : subclassIndices)
@@ -1268,6 +1279,9 @@ public:
     // per-subtype implementations (only constructed and setup on first Bind() call with that type)
     Array<Pimpl<Impl>> subclassImpls;
     Bitset subclassIndices;
+
+    mutable ResourceTrackerDiff cachedDiff;
+    mutable bool cachedDiffNeedsUpdate : 1 = true;
 };
 
 template <class IdType, class ElementType, class ProxyType>

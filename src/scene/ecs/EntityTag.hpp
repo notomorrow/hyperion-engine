@@ -20,19 +20,17 @@ enum class EntityTag : uint64
     STATIC,
     DYNAMIC,
 
-    LIGHT, /* associated with a LightComponent */
-
-    UI, /* associated with a UIObject */
+    LIGHT,
 
     CAMERA_PRIMARY,
 
-    LIGHTMAP_ELEMENT, /* Has an entry in a LightmapVolume - See MeshComponent lightmap_* fields */
+    LIGHTMAP_ELEMENT,
 
     RECEIVES_UPDATE,
 
-    DESCRIPTOR_MAX, // Maximum value used for things like Octree entry hashes.
+    SAVABLE_MAX, // savable entity tags end here.
 
-    UI_OBJECT_VISIBLE = DESCRIPTOR_MAX,
+    UI_OBJECT_VISIBLE = SAVABLE_MAX,
 
     EDITOR_FOCUSED,
 

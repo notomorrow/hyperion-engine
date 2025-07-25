@@ -523,11 +523,10 @@ struct ResourceContainerFactory
 struct ViewData
 {
     View* view = nullptr;
-    RenderProxyList rplRender;
+    RenderProxyList rplRender { /* isShared */ false };
     RenderCollector renderCollector;
-    uint32 framesSinceUsed : 4 = 0;
-    uint32 numRefs : 4 = 0; // number of ViewFrameData holding refs to this
-    // view is still alive if not reset to zero.
+    uint32 framesSinceUsed = 0;
+    uint32 numRefs = 0; // number of ViewFrameData holding refs to this
 };
 
 // Data for views that is buffered over multiple frames
@@ -647,6 +646,7 @@ static ViewFrameData* GetViewFrameData(View* view, uint32 slot)
 
         vfd->rplShared = view->GetRenderProxyList(slot);
         AssertDebug(vfd->rplShared != nullptr);
+        AssertDebug(vfd->rplShared->isShared, "Expected isShared to be true to ensure multiple threads don't access the list concurrently");
     }
 
     return vfd;
@@ -665,7 +665,7 @@ static HYP_FORCE_INLINE void CopyRenderProxy(ResourceSubtypeData& subtypeData, c
 }
 
 template <class ElementType, class ProxyType>
-static HYP_FORCE_INLINE void SyncResourcesImpl(ResourceTracker<ObjId<ElementType>, ElementType*, ProxyType>& resourceTracker, typename ResourceTracker<ObjId<ElementType>, ElementType*, ProxyType>::Impl& impl)
+static HYP_FORCE_INLINE void SyncResourcesImpl(ResourceTracker<ObjId<ElementType>, ElementType*, ProxyType>& resourceTracker, const typename ResourceTracker<ObjId<ElementType>, ElementType*, ProxyType>::Impl& impl)
 {
     if (impl.elements.Empty())
     {
@@ -1059,14 +1059,14 @@ HYP_API void RenderApi_BeginFrame_RenderThread()
             continue;
         }
 
-        vd.rplRender.state = RenderProxyList::CS_READING;
+        vd.rplRender.BeginRead();
 
         vd.renderCollector.BuildRenderGroups(vd.view, vd.rplRender);
 
         /// TODO: Use View's bucket mask property to pass to BuildDrawCalls().
         vd.renderCollector.BuildDrawCalls(0);
 
-        vd.rplRender.state = RenderProxyList::CS_DONE;
+        vd.rplRender.EndRead();
     }
 
     for (ResourceSubtypeData& subtypeData : g_resources.dataByType)
@@ -1138,7 +1138,7 @@ HYP_API void RenderApi_EndFrame_RenderThread()
         vd.renderCollector.RemoveEmptyRenderGroups();
 
         // Clear out data for views that haven't been written to for a while
-        if (vd.framesSinceUsed == g_maxFramesBeforeDiscard)
+        if (++vd.framesSinceUsed == g_maxFramesBeforeDiscard)
         {
             HYP_LOG(Rendering, Debug, "Discarding ViewData for view {} after {} frames",
                 view->Id(), g_maxFramesBeforeDiscard);

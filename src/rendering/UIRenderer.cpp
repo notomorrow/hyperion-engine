@@ -212,11 +212,14 @@ static void BuildRenderGroups(RenderCollector& renderCollector, RenderProxyList&
 
         RenderableAttributeSet attributes = GetMergedRenderableAttributes(RenderableAttributeSet { mesh->GetMeshAttributes(), material->GetRenderAttributes() }, overrideAttributes);
 
-        if (material->GetTexture(MaterialTextureKey::ALBEDO_MAP).IsValid())
+        if (const Handle<Texture>& albedoTexture = material->GetTexture(MaterialTextureKey::ALBEDO_MAP))
         {
-            ShaderDefinition shaderDefinition = attributes.GetShaderDefinition();
-            shaderDefinition.GetProperties().Set(NAME("TEXTURED"));
-            attributes.SetShaderDefinition(shaderDefinition);
+            if (albedoTexture != g_renderGlobalState->placeholderData->DefaultTexture2D)
+            {
+                ShaderDefinition shaderDefinition = attributes.GetShaderDefinition();
+                shaderDefinition.GetProperties().Set(NAME("TEXTURED"));
+                attributes.SetShaderDefinition(shaderDefinition);
+            }
         }
 
         const RenderBucket rb = attributes.GetMaterialAttributes().bucket;

@@ -25,6 +25,7 @@ namespace hyperion {
 
 class Texture;
 class View;
+class Light;
 
 enum class EnvProbeFlags : uint32
 {
@@ -312,6 +313,7 @@ public:
     SkyProbe& operator=(const SkyProbe& other) = delete;
     ~SkyProbe() override = default;
 
+    HYP_METHOD()
     const Handle<Texture>& GetSkyboxCubemap() const
     {
         return m_skyboxCubemap;

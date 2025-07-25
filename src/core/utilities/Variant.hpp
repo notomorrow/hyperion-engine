@@ -33,18 +33,6 @@ struct VariantHelper<T, Ts...>
     template <class SrcType>
     static constexpr bool holdsType = std::is_same_v<T, NormalizedType<SrcType>> || (std::is_same_v<Ts, NormalizedType<SrcType>> || ...);
 
-    template <class SrcType>
-    static constexpr bool copyAssignableTo = (std::is_assignable_v<T, const NormalizedType<SrcType>&> || (std::is_assignable_v<Ts, const NormalizedType<SrcType>&> || ...));
-
-    template <class SrcType>
-    static constexpr bool moveAssignableTo = (std::is_assignable_v<T, NormalizedType<SrcType>&&> || (std::is_assignable_v<Ts, NormalizedType<SrcType>&&> || ...));
-
-    template <class SrcType>
-    static constexpr bool copyConstructibleTo = (std::is_constructible_v<T, const NormalizedType<SrcType>&> || (std::is_constructible_v<Ts, const NormalizedType<SrcType>&> || ...));
-
-    template <class SrcType>
-    static constexpr bool moveConstructibleTo = (std::is_constructible_v<T, NormalizedType<SrcType>&&> || (std::is_constructible_v<Ts, NormalizedType<SrcType>&&> || ...));
-
     static constexpr bool copyConstructible = (std::is_copy_constructible_v<T> && (std::is_copy_constructible_v<Ts> && ...));
     static constexpr bool copyAssignable = (std::is_copy_assignable_v<T> && (std::is_copy_assignable_v<Ts> && ...));
     static constexpr bool moveConstructible = (std::is_move_constructible_v<T> && (std::is_move_constructible_v<Ts> && ...));
@@ -54,94 +42,69 @@ struct VariantHelper<T, Ts...>
 
     static inline bool CopyAssign(TypeId typeId, void* dst, const void* src)
     {
+        HYP_CORE_ASSERT(typeId == thisTypeId);
+
         if constexpr (std::is_copy_assignable_v<T>)
         {
-            if (typeId == thisTypeId)
-            {
-                *static_cast<NormalizedType<T>*>(dst) = *static_cast<const NormalizedType<T>*>(src);
+            *static_cast<NormalizedType<T>*>(dst) = *static_cast<const NormalizedType<T>*>(src);
 
-                return true;
-            }
+            return true;
         }
 
-        return VariantHelper<Ts...>::CopyAssign(typeId, dst, src);
+        return false;
     }
 
     static inline bool CopyConstruct(TypeId typeId, void* dst, const void* src)
     {
+        HYP_CORE_ASSERT(typeId == thisTypeId);
+
         if constexpr (std::is_copy_constructible_v<T>)
         {
-            if (typeId == thisTypeId)
-            {
-                Memory::Construct<NormalizedType<T>>(dst, *static_cast<const NormalizedType<T>*>(src));
+            Memory::Construct<NormalizedType<T>>(dst, *static_cast<const NormalizedType<T>*>(src));
 
-                return true;
-            }
+            return true;
         }
 
-        return VariantHelper<Ts...>::CopyConstruct(typeId, dst, src);
+        return false;
     }
 
-    static inline void MoveAssign(TypeId typeId, void* dst, void* src)
+    static inline bool MoveAssign(TypeId typeId, void* dst, void* src)
     {
-        if (typeId == thisTypeId)
-        {
-            *static_cast<NormalizedType<T>*>(dst) = std::move(*static_cast<NormalizedType<T>*>(src));
-        }
-        else
-        {
-            VariantHelper<Ts...>::MoveAssign(typeId, dst, src);
-        }
+        HYP_CORE_ASSERT(typeId == thisTypeId);
+
+        *static_cast<NormalizedType<T>*>(dst) = std::move(*static_cast<NormalizedType<T>*>(src));
+        
+        return true;
     }
 
     static inline bool MoveConstruct(TypeId typeId, void* dst, void* src)
     {
-        if (typeId == thisTypeId)
-        {
-            Memory::Construct<NormalizedType<T>>(dst, std::move(*static_cast<NormalizedType<T>*>(src)));
+        HYP_CORE_ASSERT(typeId == thisTypeId);
 
-            return true;
-        }
-        else
-        {
-            return VariantHelper<Ts...>::MoveConstruct(typeId, dst, src);
-        }
+        Memory::Construct<NormalizedType<T>>(dst, std::move(*static_cast<NormalizedType<T>*>(src)));
+
+        return true;
     }
 
     static inline void Destruct(TypeId typeId, void* data)
     {
-        if (typeId == thisTypeId)
-        {
-            Memory::Destruct<NormalizedType<T>>(data);
-        }
-        else
-        {
-            VariantHelper<Ts...>::Destruct(typeId, data);
-        }
+        HYP_CORE_ASSERT(typeId == thisTypeId);
+
+        Memory::Destruct<NormalizedType<T>>(data);
     }
 
     static inline bool Compare(TypeId typeId, const void* data, const void* otherData)
     {
-        if (typeId == thisTypeId)
-        {
-            return *static_cast<const NormalizedType<T>*>(data) == *static_cast<const NormalizedType<T>*>(otherData);
-        }
-        else
-        {
-            return VariantHelper<Ts...>::Compare(typeId, data, otherData);
-        }
+        HYP_CORE_ASSERT(typeId == thisTypeId);
+
+        return *static_cast<const NormalizedType<T>*>(data) == *static_cast<const NormalizedType<T>*>(otherData);
     }
 
     static inline HashCode GetHashCode(TypeId typeId, const void* data)
     {
-        if (typeId == thisTypeId)
-        {
-            return HashCode::GetHashCode(*static_cast<const NormalizedType<T>*>(data));
-        }
-        else
-        {
-            return VariantHelper<Ts...>::GetHashCode(typeId, data);
-        }
+        HYP_CORE_ASSERT(typeId == thisTypeId);
+
+        return HashCode::GetHashCode(*static_cast<const NormalizedType<T>*>(data));
     }
 };
 
@@ -150,18 +113,6 @@ struct VariantHelper<>
 {
     template <class SrcType>
     static constexpr bool holdsType = false;
-
-    template <class SrcType>
-    static constexpr bool copyAssignableTo = false;
-
-    template <class SrcType>
-    static constexpr bool moveAssignableTo = false;
-
-    template <class SrcType>
-    static constexpr bool copyConstructibleTo = false;
-
-    template <class SrcType>
-    static constexpr bool moveConstructibleTo = false;
 
     static inline bool CopyAssign(TypeId typeId, void* dst, const void* src)
     {
@@ -173,8 +124,9 @@ struct VariantHelper<>
         return false;
     }
 
-    static inline void MoveAssign(TypeId typeId, void* dst, void* src)
+    static inline bool MoveAssign(TypeId typeId, void* dst, void* src)
     {
+        return false;
     }
 
     static inline bool MoveConstruct(TypeId typeId, void* dst, void* src)
@@ -184,11 +136,6 @@ struct VariantHelper<>
 
     static inline void Destruct(TypeId typeId, void* data)
     {
-    }
-
-    static inline bool Destruct(TypeId typeId, void* data, const void* otherData)
-    {
-        return false;
     }
 
     static inline bool Compare(TypeId typeId, const void* data, const void* otherData)
@@ -210,6 +157,22 @@ protected:
 
     friend struct TypeIndexHelper<VariantBase<Types...>>;
 
+    using CopyAssignFunction = bool (*)(TypeId typeId, void* dst, const void* src);
+    using CopyConstructFunction = bool (*)(TypeId typeId, void* dst, const void* src);
+    using MoveAssignFunction = bool (*)(TypeId typeId, void* dst, void* src);
+    using MoveConstructFunction = bool (*)(TypeId typeId, void* dst, void* src);
+    using DestructFunction = void (*)(TypeId typeId, void* data);
+    using CompareFunction = bool (*)(TypeId typeId, const void* data, const void* otherData);
+    using GetHashCodeFunction = HashCode (*)(TypeId typeId, const void* data);
+
+    static const inline CopyAssignFunction copyAssignFunctions[] = { &VariantHelper<Types>::CopyAssign... };
+    static const inline CopyConstructFunction copyConstructFunctions[] = { &VariantHelper<Types>::CopyConstruct... };
+    static const inline MoveAssignFunction moveAssignFunctions[] = { &VariantHelper<Types>::MoveAssign... };
+    static const inline MoveConstructFunction moveConstructFunctions[] = { &VariantHelper<Types>::MoveConstruct... };
+    static const inline DestructFunction destructFunctions[] = { &VariantHelper<Types>::Destruct... };
+    static const inline CompareFunction compareFunctions[] = { &VariantHelper<Types>::Compare... };
+    static const inline GetHashCodeFunction getHashCodeFunctions[] = { &VariantHelper<Types>::GetHashCode... };
+
 public:
     static constexpr int invalidTypeIndex = -1;
     static constexpr TypeId typeIds[sizeof...(Types)] { TypeId::ForType<Types>()... };
@@ -230,7 +193,7 @@ public:
     {
         if (other.IsValid())
         {
-            if (Helper::MoveConstruct(other.CurrentTypeId(), m_storage.GetPointer(), other.m_storage.GetPointer()))
+            if (moveConstructFunctions[other.m_currentIndex](other.CurrentTypeId(), m_storage.GetPointer(), other.m_storage.GetPointer()))
             {
                 m_currentIndex = other.m_currentIndex;
             }
@@ -248,17 +211,17 @@ public:
         {
             if (other.m_currentIndex == m_currentIndex)
             {
-                Helper::MoveAssign(CurrentTypeId(), m_storage.GetPointer(), other.m_storage.GetPointer());
+                moveAssignFunctions[m_currentIndex](CurrentTypeId(), m_storage.GetPointer(), other.m_storage.GetPointer());
             }
             else
             {
-                Helper::Destruct(CurrentTypeId(), m_storage.GetPointer());
+                destructFunctions[m_currentIndex](CurrentTypeId(), m_storage.GetPointer());
 
                 m_currentIndex = invalidTypeIndex;
 
                 if (other.IsValid())
                 {
-                    if (Helper::MoveConstruct(other.CurrentTypeId(), m_storage.GetPointer(), other.m_storage.GetPointer()))
+                    if (moveConstructFunctions[other.m_currentIndex](other.CurrentTypeId(), m_storage.GetPointer(), other.m_storage.GetPointer()))
                     {
                         m_currentIndex = other.m_currentIndex;
                     }
@@ -267,7 +230,7 @@ public:
         }
         else if (other.IsValid())
         {
-            if (Helper::MoveConstruct(other.CurrentTypeId(), m_storage.GetPointer(), other.m_storage.GetPointer()))
+            if (moveConstructFunctions[other.m_currentIndex](other.CurrentTypeId(), m_storage.GetPointer(), other.m_storage.GetPointer()))
             {
                 m_currentIndex = other.m_currentIndex;
             }
@@ -292,9 +255,10 @@ public:
 
         constexpr TypeId typeId = TypeId::ForType<NormalizedType<T>>();
 
-        HYP_CORE_ASSERT(Helper::CopyConstruct(typeId, m_storage.GetPointer(), std::addressof(value)));
-
         m_currentIndex = TypeIndexHelper<VariantBase<Types...>> {}(typeId);
+        const bool constructResult = copyConstructFunctions[m_currentIndex](typeId, m_storage.GetPointer(), std::addressof(value));
+
+        HYP_CORE_ASSERT(constructResult);
     }
 
     template <class T, typename = typename std::enable_if_t<!std::is_base_of_v<VariantBase, T>>>
@@ -305,16 +269,17 @@ public:
 
         constexpr TypeId typeId = TypeId::ForType<NormalizedType<T>>();
 
-        HYP_CORE_ASSERT(Helper::MoveConstruct(typeId, m_storage.GetPointer(), std::addressof(value)));
-
         m_currentIndex = TypeIndexHelper<VariantBase<Types...>> {}(typeId);
+        const bool constructResult = moveConstructFunctions[m_currentIndex](typeId, m_storage.GetPointer(), std::addressof(value));
+
+        HYP_CORE_ASSERT(constructResult);
     }
 
     ~VariantBase()
     {
         if (IsValid())
         {
-            Helper::Destruct(CurrentTypeId(), m_storage.GetPointer());
+            destructFunctions[m_currentIndex](CurrentTypeId(), m_storage.GetPointer());
         }
     }
 
@@ -344,13 +309,13 @@ public:
         {
             return false;
         }
-
-        if (!IsValid() && !other.IsValid())
+        
+        if (!IsValid())
         {
-            return true;
+            return false;
         }
 
-        return Helper::Compare(CurrentTypeId(), m_storage.GetPointer(), other.m_storage.GetPointer());
+        return compareFunctions[m_currentIndex](CurrentTypeId(), m_storage.GetPointer(), other.m_storage.GetPointer());
     }
 
     template <class T>
@@ -452,16 +417,15 @@ public:
 
         if (IsValid())
         {
-            Helper::Destruct(CurrentTypeId(), m_storage.GetPointer());
+            destructFunctions[m_currentIndex](CurrentTypeId(), m_storage.GetPointer());
         }
-
-        m_currentIndex = invalidTypeIndex;
 
         constexpr TypeId typeId = TypeId::ForType<NormalizedType<T>>();
 
-        HYP_CORE_ASSERT(Helper::CopyConstruct(typeId, m_storage.GetPointer(), &value));
-
         m_currentIndex = TypeIndexHelper<VariantBase<Types...>> {}(typeId);
+        const bool constructResult = copyConstructFunctions[m_currentIndex](typeId, m_storage.GetPointer(), &value);
+
+        HYP_CORE_ASSERT(constructResult);
     }
 
     template <class T>
@@ -471,17 +435,16 @@ public:
 
         if (IsValid())
         {
-            Helper::Destruct(CurrentTypeId(), m_storage.GetPointer());
+            destructFunctions[m_currentIndex](CurrentTypeId(), m_storage.GetPointer());
         }
 
-        m_currentIndex = invalidTypeIndex;
-
         constexpr TypeId typeId = TypeId::ForType<NormalizedType<T>>();
+        m_currentIndex = TypeIndexHelper<VariantBase<Types...>> {}(typeId);
+
+        const bool constructResult = moveConstructFunctions[m_currentIndex](typeId, m_storage.GetPointer(), &value);
 
         // Not a valid type for the variant
-        HYP_CORE_ASSERT(Helper::MoveConstruct(typeId, m_storage.GetPointer(), &value));
-
-        m_currentIndex = TypeIndexHelper<VariantBase<Types...>> {}(typeId);
+        HYP_CORE_ASSERT(constructResult);
     }
 
     template <class T, class... Args>
@@ -491,7 +454,7 @@ public:
 
         if (IsValid())
         {
-            Helper::Destruct(CurrentTypeId(), m_storage.GetPointer());
+            destructFunctions[m_currentIndex](CurrentTypeId(), m_storage.GetPointer());
         }
 
         m_currentIndex = invalidTypeIndex;
@@ -510,15 +473,20 @@ public:
     {
         if (IsValid())
         {
-            Helper::Destruct(CurrentTypeId(), m_storage.GetPointer());
+            destructFunctions[m_currentIndex](CurrentTypeId(), m_storage.GetPointer());
         }
 
         m_currentIndex = invalidTypeIndex;
     }
 
-    HashCode GetHashCode() const
+    HYP_FORCE_INLINE HashCode GetHashCode() const
     {
-        return Helper::GetHashCode(CurrentTypeId(), m_storage.GetPointer());
+        if (!IsValid())
+        {
+            return HashCode();
+        }
+
+        return getHashCodeFunctions[m_currentIndex](CurrentTypeId(), m_storage.GetPointer());
     }
 
 protected:
@@ -579,8 +547,10 @@ public:
     {
         if (other.IsValid())
         {
+            const bool constructResult = Base::copyConstructFunctions[other.m_currentIndex](other.CurrentTypeId(), Base::m_storage.GetPointer(), other.m_storage.GetPointer());
+
             // Not compatible
-            HYP_CORE_ASSERT(Base::Helper::CopyConstruct(other.CurrentTypeId(), Base::m_storage.GetPointer(), other.m_storage.GetPointer()));
+            HYP_CORE_ASSERT(constructResult);
 
             Base::m_currentIndex = other.m_currentIndex;
         }
@@ -597,17 +567,21 @@ public:
         {
             if (other.m_currentIndex == Base::m_currentIndex)
             {
-                HYP_CORE_ASSERT(Base::Helper::CopyAssign(Base::CurrentTypeId(), Base::m_storage.GetPointer(), other.m_storage.GetPointer()));
+                const bool assignResult = Base::copyAssignFunctions[Base::m_currentIndex](Base::CurrentTypeId(), Base::m_storage.GetPointer(), other.m_storage.GetPointer());
+
+                HYP_CORE_ASSERT(assignResult);
             }
             else
             {
-                Base::Helper::Destruct(Base::CurrentTypeId(), Base::m_storage.GetPointer());
+                Base::destructFunctions[Base::m_currentIndex](Base::CurrentTypeId(), Base::m_storage.GetPointer());
 
                 Base::m_currentIndex = Base::invalidTypeIndex;
 
                 if (other.IsValid())
                 {
-                    HYP_CORE_ASSERT(Base::Helper::CopyConstruct(other.CurrentTypeId(), Base::m_storage.GetPointer(), other.m_storage.GetPointer()));
+                    const bool constructResult = Base::copyConstructFunctions[other.m_currentIndex](other.CurrentTypeId(), Base::m_storage.GetPointer(), other.m_storage.GetPointer());
+
+                    HYP_CORE_ASSERT(constructResult);
 
                     Base::m_currentIndex = other.m_currentIndex;
                 }
@@ -615,7 +589,9 @@ public:
         }
         else if (other.IsValid())
         {
-            HYP_CORE_ASSERT(Base::Helper::CopyConstruct(other.CurrentTypeId(), Base::m_storage.GetPointer(), other.m_storage.GetPointer()));
+            const bool constructResult = Base::copyConstructFunctions[other.m_currentIndex](other.CurrentTypeId(), Base::m_storage.GetPointer(), other.m_storage.GetPointer());
+
+            HYP_CORE_ASSERT(constructResult);
 
             Base::m_currentIndex = other.m_currentIndex;
         }

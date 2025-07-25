@@ -4,6 +4,7 @@
 #include <scene/View.hpp>
 #include <scene/World.hpp>
 #include <scene/Scene.hpp>
+#include <scene/Light.hpp>
 
 #include <rendering/Texture.hpp>
 #include <rendering/RenderEnvProbe.hpp>
@@ -24,9 +25,6 @@
 #include <Engine.hpp>
 
 namespace hyperion {
-
-static const TextureFormat reflectionProbeFormat = TF_R10G10B10A2;
-static const TextureFormat shadowProbeFormat = TF_R16;
 
 static FixedArray<Matrix4, 6> CreateCubemapMatrices(const BoundingBox& aabb, const Vec3f& origin)
 {
@@ -97,6 +95,7 @@ EnvProbe::EnvProbe(EnvProbeType envProbeType, const BoundingBox& aabb, const Vec
       m_needsRenderCounter(0),
       m_renderResource(nullptr)
 {
+    m_entityInitInfo.canEverUpdate = true;
     m_entityInitInfo.receivesUpdate = !IsControlledByEnvGrid();
 }
 
@@ -169,15 +168,15 @@ void EnvProbe::Init()
         {
             m_prefilteredEnvMap = CreateObject<Texture>(TextureDesc {
                 TT_TEX2D,
-                TF_RGBA16F,
-                Vec3u { 1024, 1024, 1 },
+                TF_RGBA8,
+                Vec3u { 512, 512, 1 },
                 TFM_LINEAR_MIPMAP,
                 TFM_LINEAR,
                 TWM_CLAMP_TO_EDGE,
                 1,
                 IU_STORAGE | IU_SAMPLED });
 
-            m_prefilteredEnvMap->SetName(NAME_FMT("{}_EnvMap", Id()));
+            m_prefilteredEnvMap->SetName(NAME_FMT("{}_PrefilteredEnvMap", Id()));
 
             Assert(InitObject(m_prefilteredEnvMap));
 
@@ -208,6 +207,8 @@ void EnvProbe::Init()
 void EnvProbe::OnAddedToWorld(World* world)
 {
     Entity::OnAddedToWorld(world);
+
+    SetNeedsRender(true);
 }
 
 void EnvProbe::OnRemovedFromWorld(World* world)
@@ -255,7 +256,7 @@ void EnvProbe::CreateView()
     if (IsReflectionProbe() || IsSkyProbe())
     {
         outputTargetDesc.attachments.PushBack(ViewOutputTargetAttachmentDesc {
-            .format = reflectionProbeFormat,
+            .format = TF_R10G10B10A2,
             .imageType = TT_CUBEMAP,
             .loadOp = LoadOperation::CLEAR,
             .storeOp = StoreOperation::STORE });
@@ -267,7 +268,7 @@ void EnvProbe::CreateView()
             .storeOp = StoreOperation::STORE });
 
         outputTargetDesc.attachments.PushBack(ViewOutputTargetAttachmentDesc {
-            .format = TF_RGBA16F,
+            .format = TF_R16,
             .imageType = TT_CUBEMAP,
             .loadOp = LoadOperation::CLEAR,
             .storeOp = StoreOperation::STORE,
@@ -276,7 +277,7 @@ void EnvProbe::CreateView()
     else if (IsShadowProbe())
     {
         outputTargetDesc.attachments.PushBack(ViewOutputTargetAttachmentDesc {
-            .format = shadowProbeFormat,
+            .format = TF_R16,
             .imageType = TT_CUBEMAP,
             .loadOp = LoadOperation::CLEAR,
             .storeOp = StoreOperation::STORE });
@@ -355,81 +356,50 @@ void EnvProbe::Update(float delta)
         return;
     }
 
-    Assert(GetScene() != nullptr);
-
-    const Octree& octree = GetScene()->GetOctree();
-    
-    if (IsSkyProbe())
-    {
-        HYP_LOG_TEMP("Update SkyProbe {} - octant hash code = {}", Id(), m_octantHashCode.Value());
-    }
-
     HashCode octantHashCode = HashCode(0);
 
-    if (OnlyCollectStaticEntities())
+    for (const Handle<Scene>& scene : m_view->GetScenes())
     {
-        Octree const* octant = &GetScene()->GetOctree();
+        AssertDebug(scene.IsValid());
 
-        if (!IsSkyProbe())
+        const Octree& octree = scene->GetOctree();
+
+        Octree const* octant = &octree;
+
+        if (!octant)
         {
-            octree.GetFittingOctant(m_aabb, octant);
-
-            if (!octant)
-            {
-                HYP_LOG(EnvProbe, Warning, "No containing octant found for EnvProbe {} with AABB: {}", Id(), m_aabb);
-            }
+            continue;
         }
 
-        if (octant)
+        if (OnlyCollectStaticEntities())
         {
-            octantHashCode = octant->GetOctantID().GetHashCode().Add(octant->GetEntryListHash<EntityTag::STATIC>()).Add(octant->GetEntryListHash<EntityTag::LIGHT>());
+            // clang-format off
+            octantHashCode.Add(octant->GetOctantID().GetHashCode()
+                .Add(octant->GetEntryListHash<EntityTag::STATIC>())
+                .Add(octant->GetEntryListHash<EntityTag::LIGHT>()));
+            // clang-format on
+        }
+        else
+        {
+            // clang-format off
+            octantHashCode.Add(octree.GetOctantID().GetHashCode()
+                .Add(octree.GetEntryListHash<EntityTag::NONE>()));
+            // clang-format on
         }
     }
-    else
-    {
-        octantHashCode = octree.GetOctantID().GetHashCode().Add(octree.GetEntryListHash<EntityTag::NONE>());
-    }
 
-    if (m_octantHashCode == octantHashCode && octantHashCode.Value() != 0)
+    if (m_octantHashCode == octantHashCode)
     {
         // return early so we don't need to set up async View collection
         return;
     }
 
-    if (m_octantHashCode != octantHashCode)
-    {
-        SetNeedsRender(true);
-    }
-
     Assert(m_camera.IsValid());
     m_camera->Update(delta);
 
-    DelegateHandler* delegateHandle = new DelegateHandler();
+    GetWorld()->ProcessViewAsync(m_view);
 
-    *delegateHandle = GetWorld()->ProcessViewAsync(m_view, [weakThis = WeakHandleFromThis(), delegateHandle]()
-        {
-            Handle<EnvProbe> envProbe = weakThis.Lock();
-
-            if (HYP_LIKELY(envProbe.IsValid()))
-            {
-                HYP_LOG(EnvProbe, Debug, "Process EnvProbe {} view on thread {}", envProbe->Id(), Threads::CurrentThreadId().GetName());
-                
-                auto diff = envProbe->m_view->GetLastMeshCollectionResult();
-
-                if (diff.NeedsUpdate())
-                {
-                    HYP_LOG(EnvProbe, Debug, "EnvProbe {} with AABB: {} has {} added, {} removed and {} changed entities", envProbe->Id(), envProbe->m_aabb,
-                        diff.numAdded, diff.numRemoved, diff.numChanged);
-
-                    envProbe->SetNeedsRender(true);
-                }
-            }
-
-            delete delegateHandle;
-        });
-
-    // m_view->UpdateVisibility();
-    // m_view->CollectSync();
+    SetNeedsRender(true);
 
     m_octantHashCode = octantHashCode;
 }
@@ -481,7 +451,7 @@ void SkyProbe::Init()
         TT_CUBEMAP,
         TF_R11G11B10F,
         Vec3u { m_dimensions.x, m_dimensions.y, 1 },
-        TFM_LINEAR_MIPMAP,
+        TFM_LINEAR,
         TFM_LINEAR });
 
     m_prefilteredEnvMap->SetName(NAME_FMT("{}_SkyboxCubemap", Id()));

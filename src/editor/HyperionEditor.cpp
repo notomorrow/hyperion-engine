@@ -14,8 +14,9 @@
 
 #include <scene/World.hpp>
 #include <scene/Light.hpp>
-#include <rendering/Texture.hpp>
 #include <scene/EnvGrid.hpp>
+#include <scene/EnvProbe.hpp>
+#include <rendering/Texture.hpp>
 
 #include <scene/ecs/EntityManager.hpp>
 #include <scene/ecs/components/MeshComponent.hpp>
@@ -254,6 +255,19 @@ void HyperionEditor::Init()
                 scene->GetEntityManager()->AddComponent<BoundingBoxComponent>(envGridEntity, BoundingBoxComponent { node->GetWorldAABB() * 1.01f, node->GetWorldAABB() * 1.01f });
 
                 envGridNode->SetEntity(envGridEntity);
+#endif
+
+#if 1 // test reflection probe
+
+                Handle<Node> envProbeNode = scene->GetRoot()->AddChild();
+                envProbeNode->SetName(NAME("TestProbe"));
+
+                Handle<Entity> envProbeEntity = scene->GetEntityManager()->AddEntity<ReflectionProbe>(node->GetWorldAABB() * 1.01f, Vec2u(256, 256));
+
+                scene->GetEntityManager()->AddComponent<TransformComponent>(envProbeEntity, TransformComponent {});
+                scene->GetEntityManager()->AddComponent<BoundingBoxComponent>(envProbeEntity, BoundingBoxComponent { node->GetWorldAABB() * 1.01f, node->GetWorldAABB() * 1.01f });
+
+                envProbeNode->SetEntity(envProbeEntity);
 #endif
 
                 if (auto& zombieAsset = results["zombie"]; zombieAsset.IsValid())

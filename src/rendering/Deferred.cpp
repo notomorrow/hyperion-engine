@@ -1565,26 +1565,22 @@ void DeferredRenderer::RenderFrame(FrameBase* frame, const RenderSetup& rs)
         {
             for (uint32 envProbeType = 0; envProbeType <= EPT_REFLECTION; envProbeType++)
             {
-                for (EnvProbe* envProbe : envProbes[envProbeType])
+                if (RendererBase* renderer = g_renderGlobalState->globalRenderers[GRT_ENV_PROBE][envProbeType])
                 {
-                    if (envProbe->NeedsRender())
+                    for (EnvProbe* envProbe : envProbes[envProbeType])
                     {
-                        if (RendererBase* renderer = g_renderGlobalState->globalRenderers[GRT_ENV_PROBE][envProbeType])
-                        {
-                            newRs.envProbe = envProbe;
-                            renderer->RenderFrame(frame, newRs);
-                            newRs.envProbe = nullptr; // reset for next probe
+                        newRs.envProbe = envProbe;
 
-                            counts[ERS_ENV_PROBES]++;
-                        }
-                        else
-                        {
+                        renderer->RenderFrame(frame, newRs);
 
-                            HYP_LOG(Rendering, Warning, "No EnvProbeRenderer found for EnvProbeType {}! Skipping rendering of env probes of this type.", EPT_REFLECTION);
-                        }
+                        newRs.envProbe = nullptr;
 
-                        envProbe->SetNeedsRender(false);
+                        counts[ERS_ENV_PROBES]++;
                     }
+                }
+                else
+                {
+                    HYP_LOG(Rendering, Warning, "No EnvProbeRenderer found for EnvProbeType {}! Skipping rendering of env probes of this type.", EPT_REFLECTION);
                 }
             }
         }

@@ -467,7 +467,7 @@ public:
     HYP_FORCE_INLINE Array<EntityTag> GetSavableTags(const Entity* entity) const
     {
         Array<EntityTag> tags;
-        GetTagsHelper(entity, std::make_integer_sequence<uint32, uint32(EntityTag::DESCRIPTOR_MAX) - 2>(), tags);
+        GetTagsHelper(entity, std::make_integer_sequence<uint32, uint32(EntityTag::SAVABLE_MAX) - 2>(), tags);
 
         return tags;
     }
@@ -475,7 +475,7 @@ public:
     HYP_FORCE_INLINE uint32 GetSavableTagsMask(const Entity* entity) const
     {
         uint32 mask = 0;
-        GetTagsHelper(entity, std::make_integer_sequence<uint32, uint32(EntityTag::DESCRIPTOR_MAX) - 2>(), mask);
+        GetTagsHelper(entity, std::make_integer_sequence<uint32, uint32(EntityTag::SAVABLE_MAX) - 2>(), mask);
 
         return mask;
     }

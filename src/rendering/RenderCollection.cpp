@@ -226,8 +226,9 @@ static inline void ForEachResourceTrackerType(Span<ResourceTrackerBase*> resourc
     ForEachResourceTrackerType_Impl(resourceTrackers, functor, std::make_index_sequence<TupleSize<RenderProxyList::ResourceTrackerTypes>::value>());
 }
 
-RenderProxyList::RenderProxyList()
-    : viewport(Viewport { Vec2u::One(), Vec2i::Zero() }),
+RenderProxyList::RenderProxyList(bool isShared)
+    : isShared(isShared),
+      viewport(Viewport { Vec2u::One(), Vec2i::Zero() }),
       priority(0)
 {
     // initialize the resource trackers
@@ -403,8 +404,6 @@ void RenderCollector::PerformOcclusionCulling(FrameBase* frame, const RenderSetu
     AssertDebug(renderSetup.IsValid());
     AssertDebug(renderSetup.HasView(), "RenderSetup must have a View attached");
     AssertDebug(renderSetup.passData != nullptr, "RenderSetup must have valid PassData to perform occlusion culling");
-
-    HYP_MT_CHECK_RW(renderProxyList.dataRaceDetector);
 
     static const bool isIndirectRenderingEnabled = g_renderBackend->GetRenderConfig().IsIndirectRenderingEnabled();
     const bool performOcclusionCulling = isIndirectRenderingEnabled && renderSetup.passData->cullData.depthPyramidImageView != nullptr;
