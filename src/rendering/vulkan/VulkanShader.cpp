@@ -59,7 +59,7 @@ RendererResult VulkanShader::AttachSubShader(ShaderModuleType type, const Shader
 
     HYPERION_VK_CHECK(vkCreateShaderModule(GetRenderBackend()->GetDevice()->GetDevice(), &createInfo, nullptr, &shaderModule));
 
-    m_shaderModules.PushBack(VulkanShaderModule(type, m_entryPointName, spirv, shaderModule));
+    m_shaderModules.EmplaceBack(type, shaderObject.srcName, m_entryPointName, spirv, shaderModule);
 
     std::sort(m_shaderModules.Begin(), m_shaderModules.End());
 
@@ -80,16 +80,18 @@ RendererResult VulkanShader::AttachSubShaders()
 
     for (SizeType index = 0; index < m_compiledShader->modules.Size(); index++)
     {
-        const ByteBuffer& byteBuffer = m_compiledShader->modules[index];
+        const Name srcName = m_compiledShader->GetName();
+        ByteBuffer byteBuffer = m_compiledShader->modules[index];
 
         if (byteBuffer.Empty())
         {
             continue;
         }
 
-        HYPERION_BUBBLE_ERRORS(AttachSubShader(
-            ShaderModuleType(index),
-            { byteBuffer }));
+        // since we reinterpret it as uint32 ptr we need to make sure it is aligned as uint32
+        byteBuffer.SetSize(ByteUtil::AlignAs(byteBuffer.Size(), alignof(uint32)));
+
+        HYPERION_BUBBLE_ERRORS(AttachSubShader(ShaderModuleType(index), ShaderObject { srcName, std::move(byteBuffer) }));
     }
 
     HYPERION_RETURN_OK;
@@ -258,8 +260,8 @@ HYP_API void VulkanShader::SetDebugName(Name name)
             continue;
         }
 
-        String moduleName = HYP_FORMAT("{}_{}", name, EnumToString(shaderModule.type));
-        
+        String moduleName = shaderModule.srcName.IsValid() ? shaderModule.srcName.LookupString() : name.LookupString();
+
         VkDebugUtilsObjectNameInfoEXT objectNameInfo { VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT };
         objectNameInfo.objectType = VK_OBJECT_TYPE_SHADER_MODULE;
         objectNameInfo.objectHandle = (uint64)shaderModule.handle;

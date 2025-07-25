@@ -25,6 +25,7 @@ uniform sampler sampler_nearest;
 #include "include/object.inc"
 #include "include/material.inc"
 #include "include/shared.inc"
+#include "include/packing.inc"
 
 #undef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 
@@ -32,7 +33,7 @@ uniform sampler sampler_nearest;
 
 HYP_DESCRIPTOR_SSBO(Global, ObjectsBuffer) readonly buffer ObjectsBuffer
 {
-    Object objects[HYP_MAX_ENTITIES];
+    Object objects[];
 };
 
 #else
@@ -101,6 +102,6 @@ void main()
 
     output_shadow = vec4(moments, 0.0, 0.0);
 #else
-    output_shadow = vec4(depth, 0.0, 0.0, 0.0);
+    output_shadow = PackDepth(depth);
 #endif
 }

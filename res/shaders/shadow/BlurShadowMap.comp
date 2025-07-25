@@ -12,13 +12,13 @@ layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 HYP_DESCRIPTOR_SAMPLER(Global, SamplerLinear) uniform sampler src_sampler;
 
 HYP_DESCRIPTOR_SRV(BlurShadowMapDescriptorSet, InputTexture) uniform texture2D src;
-HYP_DESCRIPTOR_UAV(BlurShadowMapDescriptorSet, OutputTexture, format = rg32f) uniform writeonly image2D dst;
+HYP_DESCRIPTOR_UAV(BlurShadowMapDescriptorSet, OutputTexture, format = rg16f) uniform writeonly image2D dst;
 
 layout(push_constant) uniform BlurShadowMapData
 {
-    uvec2   image_dimensions;
-    uvec2   dimensions;
-    uvec2   offset;
+    uvec2 image_dimensions;
+    uvec2 dimensions;
+    uvec2 offset;
 };
 
 void main(void)
@@ -34,8 +34,10 @@ void main(void)
     const vec2 slice_min = vec2(offset);
     const vec2 slice_max = vec2(offset + dimensions) - vec2(1.0);
 
-    for (int x = -1; x <= 1; ++x) {
-        for (int y = -1; y <= 1; ++y) {
+    for (int x = -1; x <= 1; ++x)
+    {
+        for (int y = -1; y <= 1; ++y)
+        {
             vec2 offset_coord = vec2(x, y) * radius;
 
             vec2 sample_abs = vec2(absolute_coord) + offset_coord;

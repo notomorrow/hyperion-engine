@@ -1,12 +1,15 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
 #include <scene/Light.hpp>
-#include <rendering/Material.hpp>
 #include <scene/View.hpp>
 #include <scene/Scene.hpp>
+
 #include <scene/camera/Camera.hpp>
+#include <scene/camera/OrthoCamera.hpp>
+
 #include <scene/ecs/EntityTag.hpp>
 
+#include <rendering/Material.hpp>
 #include <rendering/RenderShadowMap.hpp>
 #include <rendering/RenderProxy.hpp>
 #include <rendering/RenderBackend.hpp>
@@ -31,10 +34,10 @@ namespace hyperion {
 
 static const TextureFormat g_pointLightShadowFormat = TF_RG16;
 static const TextureFormat g_directionalLightShadowFormats[SMF_MAX] = {
-    TF_R32F, // STANDARD
-    TF_R32F, // PCF
-    TF_R32F, // CONTACT_HARDENING
-    TF_RG32F // VSM
+    TF_RGBA8, // STANDARD
+    TF_RGBA8, // PCF
+    TF_RGBA8, // CONTACT_HARDENING
+    TF_RG16F  // VSM
 };
 
 static const Name g_shadowMapFilterPropertyNames[SMF_MAX] = {
@@ -46,6 +49,13 @@ static const Name g_shadowMapFilterPropertyNames[SMF_MAX] = {
 
 static constexpr EnumFlags<ViewFlags> g_defaultShadowViewFlags = ViewFlags::NOT_MULTI_BUFFERED | ViewFlags::SKIP_LIGHTS
     | ViewFlags::SKIP_LIGHTMAP_VOLUMES | ViewFlags::SKIP_ENV_PROBES | ViewFlags::SKIP_ENV_GRIDS;
+
+static constexpr Vec2u g_defaultShadowMapDimensions[LT_MAX] = {
+    Vec2u(1024, 1024), // LT_DIRECTIONAL
+    Vec2u(256, 256),   // LT_POINT
+    Vec2u(256, 256),   // LT_SPOT
+    Vec2u(256, 256)    // LT_AREA_RECT
+};
 
 #pragma region Light
 
@@ -62,7 +72,8 @@ Light::Light(LightType type, const Vec3f& position, const Color& color, float in
       m_intensity(intensity),
       m_radius(radius),
       m_falloff(1.0f),
-      m_spotAngles(Vec2f::Zero())
+      m_spotAngles(Vec2f::Zero()),
+      m_shadowMapDimensions(g_defaultShadowMapDimensions[type])
 {
     m_entityInitInfo.canEverUpdate = true;
     m_entityInitInfo.receivesUpdate = true;
@@ -80,7 +91,8 @@ Light::Light(LightType type, const Vec3f& position, const Vec3f& normal, const V
       m_intensity(intensity),
       m_radius(radius),
       m_falloff(1.0f),
-      m_spotAngles(Vec2f::Zero())
+      m_spotAngles(Vec2f::Zero()),
+      m_shadowMapDimensions(g_defaultShadowMapDimensions[type])
 {
     m_entityInitInfo.canEverUpdate = true;
     m_entityInitInfo.receivesUpdate = true;
@@ -136,8 +148,6 @@ void Light::CreateShadowViews()
     const ShadowMapFilter shadowMapFilter = GetShadowMapFilter();
     AssertDebug(shadowMapFilter < std::size(g_shadowMapFilterPropertyNames));
 
-    const Vec2u shadowMapDimensions = Vec2u { 256, 256 };
-
     // Per shadow view flags
     Array<EnumFlags<ViewFlags>> shadowViewFlags = { { ViewFlags::COLLECT_ALL_ENTITIES } };
 
@@ -148,7 +158,7 @@ void Light::CreateShadowViews()
     shaderProperties.Set(g_shadowMapFilterPropertyNames[shadowMapFilter]);
 
     ViewOutputTargetDesc outputTargetDesc {};
-    outputTargetDesc.extent = shadowMapDimensions;
+    outputTargetDesc.extent = m_shadowMapDimensions;
 
     switch (m_type)
     {
@@ -210,8 +220,9 @@ void Light::CreateShadowViews()
 
     AssertDebug(shaderDefinition.IsValid(), "Shader definition is not valid for light type {}", EnumToString(m_type));
 
-    Handle<Camera> shadowMapCamera = CreateObject<Camera>(90.0f, -int(shadowMapDimensions.x), int(shadowMapDimensions.y), 0.001f, 250.0f);
+    Handle<Camera> shadowMapCamera = CreateObject<Camera>(90.0f, -int(m_shadowMapDimensions.x), int(m_shadowMapDimensions.y), 0.001f, 250.0f);
     shadowMapCamera->SetName(Name::Unique("ShadowMapCamera"));
+    shadowMapCamera->AddCameraController(CreateObject<OrthoCameraController>());
     InitObject(shadowMapCamera);
 
     AttachChild(shadowMapCamera);
@@ -229,7 +240,7 @@ void Light::CreateShadowViews()
     {
         ViewDesc viewDesc {
             .flags = shadowViewFlags[i] | g_defaultShadowViewFlags,
-            .viewport = Viewport { .extent = shadowMapDimensions, .position = Vec2i::Zero() },
+            .viewport = Viewport { .extent = m_shadowMapDimensions, .position = Vec2i::Zero() },
             .outputTargetDesc = outputTargetDesc,
             .scenes = {},
             .camera = shadowMapCamera,
@@ -295,9 +306,9 @@ void Light::Update(float delta)
             case LT_DIRECTIONAL:
                 ShadowCameraHelper::UpdateShadowCameraDirectional(
                     m_shadowViews[i]->GetCamera(),
+                    Vec3f::Zero(), // TODO: Center around camera
                     GetPosition(),
-                    GetPosition().Normalized() * -1.0f,
-                    25.0f, /// TODO: add proper radius
+                    50.0f, /// TODO: add proper radius
                     m_shadowAabb);
 
                 break;
@@ -469,6 +480,23 @@ Pair<Vec3f, Vec3f> Light::CalculateAreaLightRect() const
     return { p0, p2 };
 }
 
+void Light::SetShadowMapDimensions(Vec2u shadowMapDimensions)
+{
+    shadowMapDimensions = MathUtil::Max(shadowMapDimensions, Vec2u::One());
+
+    if (shadowMapDimensions == m_shadowMapDimensions)
+    {
+        return;
+    }
+
+    m_shadowMapDimensions = shadowMapDimensions;
+
+    if (IsInitCalled())
+    {
+        SetNeedsRenderProxyUpdate();
+    }
+}
+
 BoundingBox Light::GetAABB() const
 {
     if (m_type == LT_DIRECTIONAL)
@@ -514,28 +542,35 @@ void Light::UpdateRenderProxy(IRenderProxy* proxy)
     const BoundingBox aabb = GetAABB();
 
     LightShaderData& bufferData = proxyCasted->bufferData;
-    bufferData.lightId = Id().Value();
     bufferData.lightType = uint32(m_type);
     bufferData.colorPacked = uint32(m_color);
     bufferData.radiusFalloffPacked = (uint32(Float16(m_radius).Raw()) << 16) | Float16(m_falloff).Raw();
-    bufferData.areaSize = m_areaSize;
     bufferData.positionIntensity = Vec4f(m_position, m_intensity);
     bufferData.normal = Vec4f(m_normal, 0.0f);
-    bufferData.spotAngles = m_spotAngles;
     bufferData.materialIndex = ~0u; // materialIndex gets set in WriteBufferData_Light()
     bufferData.flags = m_flags;
 
+    switch (GetLightType())
+    {
+    case LT_AREA_RECT:
+        bufferData.areaSize = m_areaSize;
+        break;
+    case LT_SPOT:
+        bufferData.areaSize = m_spotAngles;
+        break;
+    default:
+        break;
+    }
+
     if (m_shadowViews.Any())
     {
-        bufferData.projection = m_shadowViews[0]->GetCamera()->GetProjectionMatrix();
-        bufferData.view = m_shadowViews[0]->GetCamera()->GetViewMatrix();
+        bufferData.shadowMatrix = m_shadowViews[0]->GetCamera()->GetViewProjectionMatrix();
         bufferData.aabbMin = Vec4f(m_shadowAabb.min, 1.0f);
         bufferData.aabbMax = Vec4f(m_shadowAabb.max, 1.0f);
     }
     else
     {
-        bufferData.projection = Matrix4::Identity();
-        bufferData.view = Matrix4::Identity();
+        bufferData.shadowMatrix = Matrix4::Identity();
         bufferData.aabbMin = MathUtil::MaxSafeValue<Vec4f>();
         bufferData.aabbMax = MathUtil::MinSafeValue<Vec4f>();
     }

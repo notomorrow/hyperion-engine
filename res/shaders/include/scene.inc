@@ -40,27 +40,25 @@ struct Camera
 
 struct Light
 {
-    uint id;
     uint type;
     uint color_encoded;
     uint radius_falloff; // packed as half
-
-    vec2 area_size; // for area lights
-
-    vec4 position_intensity; // position or direction
-    vec4 normal;             // for area lights
-
-    vec2 spot_angles;    // for spot lights (x = outer, y = inner)
-    uint material_index; // for area lights - ~0u == no material
     uint flags;
 
-    mat4 projection;
-    mat4 view;
+    vec2 area_size; // for area lights = area size, for spot lights = spot angles
+
+    vec4 position_intensity; // position or direction
+    vec4 normal;             // for area lights - x,y,z = normal
+
+    /// shadow map data
+    mat4 shadow_matrix;
     vec4 aabb_min;
     vec4 aabb_max;
     vec4 dimensions_scale; // xy = slice dimensions in pixels, zw = slice dimensions relative to the atlas dimensions
     vec2 offset_uv;
     uint layer_index; // atlas index, also used for point light shadow map index
+
+    uint material_index; // for area lights - ~0u == no material
 };
 
 // Maps to LightFlags

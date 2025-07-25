@@ -28,7 +28,7 @@ EditorActionStack::EditorActionStack(const WeakHandle<EditorProject>& editorProj
 
 EditorActionStack::EditorActionStack(EditorActionStack&& other) noexcept
     : m_editorProject(std::move(other.m_editorProject)),
-      m_actions(Move(other.m_actions)),
+      m_actions(std::move(other.m_actions)),
       m_currentActionIndex(other.m_currentActionIndex),
       m_currentState(other.m_currentState)
 {
@@ -45,7 +45,7 @@ EditorActionStack& EditorActionStack::operator=(EditorActionStack&& other) noexc
 
     m_editorProject = std::move(other.m_editorProject);
 
-    m_actions = Move(other.m_actions);
+    m_actions = std::move(other.m_actions);
     m_currentActionIndex = other.m_currentActionIndex;
     m_currentState = other.m_currentState;
 

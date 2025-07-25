@@ -71,6 +71,22 @@ vec3 DecodeNormal(vec4 enc)
 #endif
 }
 
+const vec4 depthBitShift = vec4(256.0 * 256.0 * 256.0, 256.0 * 256.0, 256.0, 1.0);
+const vec4 depthBitShiftInv = vec4(1.0) / depthBitShift;
+const vec4 depthBitMask = vec4(0.0, 1.0 / 256.0, 1.0 / 256.0, 1.0 / 256.0);
+
+vec4 PackDepth(in float depth)
+{
+    vec4 res = fract(vec4(depth) * depthBitShift);
+    res -= res.xxyz * depthBitMask;
+    return res;
+}
+
+float UnpackDepth(in vec4 packedDepth)
+{
+    return dot(packedDepth, depthBitShiftInv);
+}
+
 #define HYP_QUANTIZE(v, bits) uint(round(clamp((v), 0.0, 1.0) * ((1 << (bits)) - 1)))
 #define HYP_UNQUANTIZE(x, bits) float(x) / float((1 << (bits)) - 1)
 

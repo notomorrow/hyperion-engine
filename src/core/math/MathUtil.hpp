@@ -684,15 +684,12 @@ public:
 
     static inline constexpr uint64 PreviousPowerOf2(uint64 value)
     {
-        // dumb implementation
-        uint64 result = 1;
-
-        while (result * 2 < value)
+        if (value <= 1)
         {
-            result *= 2;
+            return 0;
         }
 
-        return result;
+        return NextPowerOf2(value) >> 1;
     }
 
     template <class T, class U>

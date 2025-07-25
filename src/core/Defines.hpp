@@ -302,8 +302,8 @@
     prefix
 #endif
 
-#define HYP_PAD_STRUCT_HERE(type, count) \
-    type HYP_UNIQUE_NAME(_padding)[count]
+#define HYP_PAD_STRUCT_HERE(count) \
+    uint8 HYP_UNIQUE_NAME(_padding)[count]
 
 #pragma endregion Utility Macros
 

@@ -611,7 +611,7 @@ RendererResult VulkanRenderBackend::Initialize(AppContextBase& appContext)
     m_defaultFormats.Set(
         DIF_DEPTH,
         m_instance->GetDevice()->GetFeatures().FindSupportedFormat(
-            { { TF_DEPTH_24, TF_DEPTH_32F, TF_DEPTH_16 } },
+            { { TF_DEPTH_24, TF_DEPTH_16, TF_DEPTH_32F } },
             IS_DEPTH));
 
     m_defaultFormats.Set(

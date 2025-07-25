@@ -72,7 +72,7 @@ void ShadowMapAllocator::Initialize()
 
     m_atlasImage = g_renderBackend->MakeImage(TextureDesc {
         TT_TEX2D_ARRAY,
-        TF_RG32F,
+        TF_RG16F,
         Vec3u { m_atlasDimensions, 1 },
         TFM_NEAREST,
         TFM_NEAREST,
@@ -307,11 +307,18 @@ ShadowPassData::~ShadowPassData()
 
 #pragma region ShadowRendererBase
 
-static Handle<FullScreenPass> CreateCombineShadowMapsPass(TextureFormat format, Vec2u dimensions, Span<Handle<View>> views)
+static Handle<FullScreenPass> CreateCombineShadowMapsPass(ShadowMapFilter filterMode, TextureFormat format, Vec2u dimensions, Span<Handle<View>> views)
 {
     AssertDebug(views.Size() == 2, "Combine pass requires 2 views (one for static objects, one for dynamic objects)");
 
-    ShaderRef shader = g_shaderManager->GetOrCreate(NAME("CombineShadowMaps"));
+    ShaderProperties properties;
+
+    if (filterMode == SMF_VSM)
+    {
+        properties.Set(NAME("VSM"));
+    }
+
+    ShaderRef shader = g_shaderManager->GetOrCreate(NAME("CombineShadowMaps"), properties);
     Assert(shader.IsValid());
 
     const DescriptorTableDeclaration& descriptorTableDecl = shader->GetCompiledShader()->GetDescriptorTableDeclaration();
@@ -366,10 +373,7 @@ static ComputePipelineRef CreateBlurShadowMapPipeline(const ImageViewRef& input,
 
     DeferCreate(descriptorTable);
 
-    ComputePipelineRef blurShadowMapPipeline = g_renderBackend->MakeComputePipeline(
-        blurShadowMapShader,
-        descriptorTable);
-
+    ComputePipelineRef blurShadowMapPipeline = g_renderBackend->MakeComputePipeline(blurShadowMapShader, descriptorTable);
     DeferCreate(blurShadowMapPipeline);
 
     return blurShadowMapPipeline;
@@ -476,6 +480,7 @@ void ShadowRendererBase::RenderFrame(FrameBase* frame, const RenderSetup& render
         if (lightProxy->shadowViews.Size() == 2)
         {
             cacheIt->second.combineShadowMapsPass = CreateCombineShadowMapsPass(
+                shadowMap->GetFilterMode(),
                 shadowMap->GetImageView()->GetImage()->GetTextureFormat(), // @TODO get format from Light's settings
                 shadowMap->GetExtent(),
                 shadowViews);
@@ -679,7 +684,7 @@ RenderShadowMap* PointShadowRenderer::AllocateShadowMap(Light* light)
     return g_renderGlobalState->shadowMapAllocator->AllocateShadowMap(
         ShadowMapType::SMT_OMNI,
         light->GetShadowMapFilter(),
-        Vec2u(256, 256)); /// TEMP! fixme
+        light->GetShadowMapDimensions());
 }
 
 #pragma endregion PointShadowRenderer
@@ -691,7 +696,7 @@ RenderShadowMap* DirectionalShadowRenderer::AllocateShadowMap(Light* light)
     return g_renderGlobalState->shadowMapAllocator->AllocateShadowMap(
         ShadowMapType::SMT_DIRECTIONAL,
         light->GetShadowMapFilter(),
-        Vec2u(256, 256)); /// TEMP! fixme
+        light->GetShadowMapDimensions());
 }
 
 #pragma endregion DirectionalShadowRenderer

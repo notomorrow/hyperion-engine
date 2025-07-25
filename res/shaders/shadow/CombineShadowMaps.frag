@@ -13,6 +13,7 @@ layout(location = 0) out vec4 color_output;
 
 #define HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 #include "../include/shared.inc"
+#include "../include/packing.inc"
 
 #include "../include/scene.inc"
 
@@ -27,5 +28,14 @@ void main()
     vec4 color0 = Texture2D(sampler_nearest, src0, v_texcoord);
     vec4 color1 = Texture2D(sampler_nearest, src1, v_texcoord);
 
+#ifdef VSM
     color_output = color0.r < color1.r ? color0 : color1;
+#else
+    float unpackedDepth0 = UnpackDepth(color0);
+    float unpackedDepth1 = UnpackDepth(color1);
+
+    float depth = min(unpackedDepth0, unpackedDepth1);
+
+    color_output = vec4(depth);
+#endif
 }

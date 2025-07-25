@@ -272,8 +272,9 @@ void main()
 
 #ifdef LIGHT_TYPE_SPOT
         float theta = max(dot(-L, normalize(light.normal.xyz)), 0.0);
+        vec2 spot_angles = light.area_size.xy;
 
-        attenuation *= saturate((theta - light.spot_angles[0]) / (light.spot_angles[1] - light.spot_angles[0])) * step(light.spot_angles.x, theta);
+        attenuation *= saturate((theta - spot_angles[0]) / (spot_angles[1] - spot_angles[0])) * step(spot_angles[0], theta);
 #endif
 
 #else
@@ -304,4 +305,7 @@ void main()
 #else
     output_color = vec4(result);
 #endif
+
+    // output_color = texture(sampler2DArray(shadow_maps, HYP_SAMPLER_NEAREST), vec3(GetShadowCoord(light.shadow_matrix, position.xyz).xy * vec2(0.125), float(light.layer_index)));
+    // output_color.a = 1.0;
 }

@@ -72,7 +72,7 @@ HYP_DESCRIPTOR_SRV(Global, LightFieldDepthTexture) uniform texture2D light_field
 
 HYP_DESCRIPTOR_SSBO(Global, ObjectsBuffer) readonly buffer ObjectsBuffer
 {
-    Object objects[HYP_MAX_ENTITIES];
+    Object objects[];
 };
 
 #endif

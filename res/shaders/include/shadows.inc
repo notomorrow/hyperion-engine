@@ -48,9 +48,9 @@ const mat4 shadow_bias_matrix = mat4(
     0.0, 0.0, 1.0, 0.0,
     0.5, 0.5, 0.0, 1.0);
 
-vec3 GetShadowCoord(in Light light, vec3 pos)
+vec3 GetShadowCoord(in mat4 shadowMatrix, vec3 pos)
 {
-    mat4 shadow_matrix = shadow_bias_matrix * light.projection * light.view;
+    mat4 shadow_matrix = shadow_bias_matrix * shadowMatrix;
     vec4 shadow_position = shadow_matrix * vec4(pos, 1.0);
     shadow_position.xyz /= shadow_position.w;
 
@@ -59,8 +59,8 @@ vec3 GetShadowCoord(in Light light, vec3 pos)
 
 float GetShadowStandard(in Light light, vec3 pos, vec2 offset, float NdotL)
 {
-    const vec3 coord = GetShadowCoord(light, pos);
-    const vec4 shadow_sample = texture(sampler2DArray(shadow_maps, HYP_SAMPLER_NEAREST), vec3(((coord.xy + offset) * light.dimensions_scale.zw) + light.offset_uv, float(light.layer_index)));
+    const vec3 coord = GetShadowCoord(light.shadow_matrix, pos);
+    const vec4 shadow_sample = texture(sampler2DArray(shadow_maps, HYP_SAMPLER_NEAREST), vec3((saturate(coord.xy + offset) * light.dimensions_scale.zw) + light.offset_uv, float(light.layer_index)));
     const float shadow_depth = shadow_sample.r;
 
     float bias = HYP_SHADOW_BIAS;
@@ -75,7 +75,7 @@ float GetShadowStandard(in Light light, vec3 pos, vec2 offset, float NdotL)
 
 float GetShadowStandard(in Light light, vec3 pos)
 {
-    const vec3 coord = GetShadowCoord(light, pos);
+    const vec3 coord = saturate(GetShadowCoord(light.shadow_matrix, pos));
     const vec4 shadow_sample = texture(sampler2DArray(shadow_maps, HYP_SAMPLER_NEAREST), vec3(coord.xy * light.dimensions_scale.zw, float(light.layer_index)));
     const float shadow_depth = shadow_sample.r;
 
@@ -107,6 +107,7 @@ float GetShadowPCF(in Light light, vec3 pos, vec2 texcoord, vec2 screen_dimensio
     aabb.max = light.aabb_max.xyz;
 
     const uint layer_index = light.layer_index;
+    const mat4 shadowMatrix = light.shadow_matrix;
 
     const vec2 offset_uv = light.offset_uv;
     const vec2 dimensions = light.dimensions_scale.xy;
@@ -117,7 +118,7 @@ float GetShadowPCF(in Light light, vec3 pos, vec2 texcoord, vec2 screen_dimensio
         return 1.0;
     }
 
-    const vec3 coord = GetShadowCoord(light, pos);
+    const vec3 coord = GetShadowCoord(shadowMatrix, pos);
 
     const vec2 texel_size = vec2(1.0) / dimensions;
 
@@ -172,7 +173,7 @@ float GetShadowPCF(in Light light, vec3 pos, vec2 texcoord, vec2 screen_dimensio
 
 #define HYP_FETCH_SHADOW(iter_index)                                                                                                                                                        \
     {                                                                                                                                                                                       \
-        shadow_coords[iter_index] = GetShadowCoord(iter_index, pos);                                                                                                                        \
+        shadow_coords[iter_index] = GetShadowCoord(shadowMatrix, pos);                                                                                                                      \
         shadow_samples[iter_index] = texture(sampler2DArray(shadow_maps, HYP_SAMPLER_NEAREST), vec3((vogel_##iter_index * shadow_filter_size * uv_scale) + offset_uv, float(layer_index))); \
     }
 
@@ -279,7 +280,7 @@ float GetShadowVariance(in Light light, vec3 pos, float NdotL)
     bias = clamp(bias, 0.0, 0.01);
 #endif
 
-    const vec3 coord = GetShadowCoord(light, pos);
+    const vec3 coord = GetShadowCoord(light.shadow_matrix, pos);
     const vec2 moments = texture(sampler2DArray(shadow_maps, HYP_SAMPLER_LINEAR), vec3(coord.xy * light.dimensions_scale.zw + light.offset_uv, float(light.layer_index))).xy;
 
     float d = coord.z - moments.x;
@@ -295,7 +296,7 @@ float GetShadowVariance(in Light light, vec3 pos, float NdotL)
     return AABBContainsPoint(aabb, pos) ? max(p, p_max) : 1.0;
 
 #if 0
-    const vec3 coord = GetShadowCoord(light, pos);
+    const vec3 coord = GetShadowCoord(light.shadow_matrix, pos);
     const vec4 shadow_sample = texture(sampler2DArray(shadow_maps, HYP_SAMPLER_LINEAR), vec3(coord.xy * light.dimensions_scale.zw + light.offset_uv, float(light.layer_index)));
     const float moment = shadow_sample.r;
 
@@ -338,7 +339,7 @@ float GetShadowContactHardened(in Light light, vec3 pos, vec2 texcoord, vec2 scr
 
     const vec2 uv_scale = light.dimensions_scale.zw;
 
-    const vec3 coord = GetShadowCoord(light, pos);
+    const vec3 coord = GetShadowCoord(light.shadow_matrix, pos);
 
     const uint layer_index = light.layer_index;
     const vec2 offset_uv = light.offset_uv;

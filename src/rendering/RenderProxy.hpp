@@ -172,34 +172,26 @@ public:
 
 struct alignas(16) LightShaderData
 {
-    uint32 lightId;
     uint32 lightType;
     uint32 colorPacked;
     uint32 radiusFalloffPacked;
-    // 16
+    uint32 flags;
 
-    Vec2f areaSize;
-    // 32
+    Vec2f areaSize; // also angles for spot lights
 
     Vec4f positionIntensity;
     Vec4f normal;
-    // 64
-
-    Vec2f spotAngles;
-    uint32 materialIndex;
-    uint32 flags;
 
     // Shadow map data
-    Matrix4 projection;
-    Matrix4 view;
+    Matrix4 shadowMatrix;
     Vec4f aabbMin;
     Vec4f aabbMax;
     Vec4f dimensionsScale; // xy = shadow map dimensions in pixels, zw = shadow map dimensions relative to the atlas dimensions
     Vec2f offsetUv;        // offset in the atlas texture array
     uint32 layerIndex;     // index of the atlas in the shadow map texture array, or cubemap index for point lights
-};
 
-static_assert(sizeof(LightShaderData) == 272);
+    uint32 materialIndex;
+};
 
 class RenderProxyLight final : public IRenderProxy
 {

@@ -85,8 +85,8 @@ void DepthPyramidRenderer::Create()
             TT_TEX2D,
             TF_R32F,
             Vec3u {
-                depthImage->GetExtent().x > 1 ? uint32(MathUtil::NextPowerOf2(depthImage->GetExtent().x)) : 1,
-                depthImage->GetExtent().y > 1 ? uint32(MathUtil::NextPowerOf2(depthImage->GetExtent().y)) : 1,
+                MathUtil::Max(uint32(MathUtil::PreviousPowerOf2(depthImage->GetExtent().x + 1)), 1),
+                MathUtil::Max(uint32(MathUtil::PreviousPowerOf2(depthImage->GetExtent().y + 1)), 1),
                 1 },
             TFM_NEAREST_MIPMAP,
             TFM_NEAREST,

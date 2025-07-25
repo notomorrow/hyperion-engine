@@ -106,17 +106,17 @@ void HyperionEditor::Init()
 
     g_engine->GetWorld()->AddSubsystem(m_editorSubsystem);
 
-    if (const Handle<WorldGrid>& worldGrid = g_engine->GetWorld()->GetWorldGrid())
-    {
-        // // Initialize the world grid subsystem
-        // worldGrid->AddPlugin(0, MakeRefCountedPtr<TerrainWorldGridPlugin>());
+    // if (const Handle<WorldGrid>& worldGrid = g_engine->GetWorld()->GetWorldGrid())
+    // {
+    //     // // Initialize the world grid subsystem
+    //     // worldGrid->AddPlugin(0, MakeRefCountedPtr<TerrainWorldGridPlugin>());
 
-        worldGrid->AddLayer(CreateObject<TerrainWorldGridLayer>());
-    }
-    else
-    {
-        HYP_FAIL("World grid is not initialized in the editor!");
-    }
+    //     worldGrid->AddLayer(CreateObject<TerrainWorldGridLayer>());
+    // }
+    // else
+    // {
+    //     HYP_FAIL("World grid is not initialized in the editor!");
+    // }
 
     Handle<Scene> scene = CreateObject<Scene>(SceneFlags::FOREGROUND);
     m_editorSubsystem->GetCurrentProject()->AddScene(scene);
@@ -197,7 +197,6 @@ void HyperionEditor::Init()
         Vec3f(-0.4f, 0.8f, 0.0f).Normalize(),
         Color(Vec4f(1.0f, 0.9f, 0.8f, 1.0f)),
         5.0f);
-    sunNode->SetWorldTranslation(Vec3f { -0.4f, 0.8f, 0.0f }.Normalize());
 
     sunEntity->Attach(sunNode);
 

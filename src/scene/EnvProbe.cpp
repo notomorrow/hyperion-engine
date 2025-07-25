@@ -25,7 +25,7 @@
 
 namespace hyperion {
 
-static const TextureFormat reflectionProbeFormat = TF_RGBA16F;
+static const TextureFormat reflectionProbeFormat = TF_R10G10B10A2;
 static const TextureFormat shadowProbeFormat = TF_R16;
 
 static FixedArray<Matrix4, 6> CreateCubemapMatrices(const BoundingBox& aabb, const Vec3f& origin)

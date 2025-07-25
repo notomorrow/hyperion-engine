@@ -259,6 +259,15 @@ public:
     HYP_METHOD(Property = "Material", Serialize = true, Editor = true)
     void SetMaterial(Handle<Material> material);
 
+    HYP_METHOD(Property="ShadowMapDimensions", Serialize=true, Editor=true)
+    HYP_FORCE_INLINE const Vec2u& GetShadowMapDimensions() const
+    {
+        return m_shadowMapDimensions;
+    }
+
+    HYP_METHOD(Property="ShadowMapDimensions", Serialize=true, Editor=true)
+    void SetShadowMapDimensions(Vec2u shadowMapDimensions);
+
     HYP_METHOD()
     BoundingBox GetAABB() const;
 
@@ -298,6 +307,7 @@ protected:
     Vec2f m_spotAngles;
     Handle<Material> m_material;
     
+    Vec2u m_shadowMapDimensions;
     Array<Handle<View>> m_shadowViews;
     BoundingBox m_shadowAabb;
 
@@ -312,12 +322,12 @@ class HYP_API DirectionalLight : public Light
 
 public:
     DirectionalLight()
-        : Light(LT_DIRECTIONAL, Vec3f(0.0f, 1.0f, 0.0f), Color::White(), 1.0f, 0.0f)
+        : Light(LT_DIRECTIONAL, Vec3f(0.0f, 1.0f, 0.0f).Normalized(), Color::White(), 1.0f, 0.0f)
     {
     }
 
     DirectionalLight(const Vec3f& direction, const Color& color, float intensity)
-        : Light(LT_DIRECTIONAL, direction, color, intensity, 0.0f)
+        : Light(LT_DIRECTIONAL, direction.Normalized(), color, intensity, 0.0f)
     {
     }
 

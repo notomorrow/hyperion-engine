@@ -11,20 +11,23 @@ namespace hyperion {
 struct VulkanShaderModule
 {
     ShaderModuleType type;
+    Name srcName;
     String entryPointName;
     ByteBuffer spirv;
     VkShaderModule handle;
 
-    VulkanShaderModule(ShaderModuleType type, String entryPointName)
+    VulkanShaderModule(ShaderModuleType type, Name srcName, String entryPointName)
         : type(type),
+          srcName(srcName),
           entryPointName(std::move(entryPointName)),
           spirv {},
           handle {}
     {
     }
 
-    VulkanShaderModule(ShaderModuleType type, String entryPointName, const ByteBuffer& spirv, VkShaderModule handle = VK_NULL_HANDLE)
+    VulkanShaderModule(ShaderModuleType type, Name srcName, String entryPointName, const ByteBuffer& spirv, VkShaderModule handle = VK_NULL_HANDLE)
         : type(type),
+          srcName(srcName),
           entryPointName(std::move(entryPointName)),
           spirv(spirv),
           handle(handle)

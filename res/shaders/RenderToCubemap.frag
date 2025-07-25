@@ -55,7 +55,7 @@ HYP_DESCRIPTOR_SRV(Global, PointLightShadowMapsTextureArray) uniform utextureCub
 
 HYP_DESCRIPTOR_SSBO(Global, ObjectsBuffer) readonly buffer ObjectsBuffer
 {
-    Object objects[HYP_MAX_ENTITIES];
+    Object objects[];
 };
 
 #else
