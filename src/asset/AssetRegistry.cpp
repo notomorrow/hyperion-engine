@@ -181,31 +181,46 @@ AssetObject::~AssetObject()
     }
 }
 
-void AssetObject::SetName(Name name)
+Result AssetObject::Rename(Name name)
 {
     if (name == m_name)
     {
-        return;
+        // same name, do nothing
+        return {};
     }
 
     if (Handle<AssetPackage> package = GetPackage())
     {
         Handle<AssetObject> strongThis = HandleFromThis();
 
-        package->RemoveAssetObject(strongThis);
+        if (Result result = package->RemoveAssetObject(strongThis); result.HasError())
+        {
+            HYP_LOG(Assets, Error, "Failed to remove asset object '{}' from package '{}': {}", m_name, package->GetName(), result.GetError().GetMessage());
+
+            return result;
+        }
 
         m_name = name;
 
-        package->AddAssetObject(strongThis);
+        if (Result result = package->AddAssetObject(strongThis); result.HasError())
+        {
+            HYP_LOG(Assets, Error, "Failed to rename asset object '{}' to '{}': {}", m_name, name, result.GetError().GetMessage());
+
+            return result;
+        }
     }
     else
     {
         m_name = name;
     }
+
+    return {};
 }
 
 FilePath AssetObject::GetFilePath() const
 {
+    AssertDebug(IsRegistered(), "Calling GetPath() on an unregistered asset object");
+
     if (!m_assetPath.IsValid())
     {
         return {};
@@ -226,9 +241,9 @@ bool AssetObject::IsLoaded() const
 
 Result AssetObject::Save() const
 {
-    if (!m_resource || m_resource->IsNull() || !IsLoaded())
+    if (!m_resource || m_resource->IsNull())
     {
-        return HYP_MAKE_ERROR(Error, "No resource loaded");
+        return HYP_MAKE_ERROR(Error, "No resource set, cannot save");
     }
 
     return static_cast<AssetDataResourceBase*>(m_resource)->Save();
@@ -357,17 +372,17 @@ void AssetPackage::SetAssetObjects(const AssetObjectSet& assetObjects)
     }
 }
 
-void AssetPackage::AddAssetObject(const Handle<AssetObject>& assetObject)
+Result AssetPackage::AddAssetObject(const Handle<AssetObject>& assetObject)
 {
     if (!assetObject.IsValid())
     {
-        return;
+        return HYP_MAKE_ERROR(Error, "AssetObject is invalid");
     }
 
-    // already in the package
     if (assetObject->GetPackage() == this)
     {
-        return;
+        // already added, fine
+        return {};
     }
 
     if (assetObject->GetPackage().IsValid())
@@ -375,18 +390,24 @@ void AssetPackage::AddAssetObject(const Handle<AssetObject>& assetObject)
         HYP_LOG(Assets, Warning, "AssetObject '{}' already belongs to another package!", assetObject->GetName());
     }
 
+    assetObject->m_package = WeakHandleFromThis();
+    assetObject->m_assetPath = BuildAssetPath(assetObject->m_name);
+
     {
         Mutex::Guard guard(m_mutex);
 
-        if (m_assetObjects.Find(assetObject->GetName()) != m_assetObjects.End())
+        auto assetObjectsIt = m_assetObjects.Find(assetObject->GetName());
+
+        if (assetObjectsIt != m_assetObjects.End())
         {
-            HYP_LOG(Assets, Warning, "AssetObject '{}' already exists in package '{}'", assetObject->GetName(), m_name);
+            if (*assetObjectsIt != assetObject)
+            {
+                return HYP_MAKE_ERROR(Error, "AssetObject with name '{}' already exists in package '{}'", assetObject->GetName(), m_name);
+            }
 
-            return;
+            // already exists, fine
+            return {};
         }
-
-        assetObject->m_package = WeakHandleFromThis();
-        assetObject->m_assetPath = BuildAssetPath(assetObject->m_name);
 
         m_assetObjects.Insert({ assetObject });
     }
@@ -403,6 +424,8 @@ void AssetPackage::AddAssetObject(const Handle<AssetObject>& assetObject)
             if (saveAssetResult.HasError())
             {
                 HYP_LOG(Assets, Error, "Failed to save asset object '{}' in package '{}': {}", assetObject->GetName(), m_name, saveAssetResult.GetError().GetMessage());
+
+                return HYP_MAKE_ERROR(Error, "Failed to save asset object '{}': {}", assetObject->GetName(), saveAssetResult.GetError().GetMessage());
             }
         }
 
@@ -416,13 +439,15 @@ void AssetPackage::AddAssetObject(const Handle<AssetObject>& assetObject)
             parentPackage = parentPackage->GetParentPackage().Lock();
         }
     }
+
+    return {};
 }
 
-void AssetPackage::RemoveAssetObject(const Handle<AssetObject>& assetObject)
+Result AssetPackage::RemoveAssetObject(const Handle<AssetObject>& assetObject)
 {
     if (!assetObject)
     {
-        return;
+        return HYP_MAKE_ERROR(Error, "AssetObject is invalid");
     }
 
     {
@@ -432,8 +457,7 @@ void AssetPackage::RemoveAssetObject(const Handle<AssetObject>& assetObject)
 
         if (it == m_assetObjects.End())
         {
-            HYP_LOG(Assets, Warning, "AssetObject '{}' not found in package '{}'", assetObject->GetName(), m_name);
-            return;
+            return HYP_MAKE_ERROR(Error, "AssetObject '{}' not found in package '{}'", assetObject->GetName(), m_name);
         }
 
         m_assetObjects.Erase(it);
@@ -456,6 +480,8 @@ void AssetPackage::RemoveAssetObject(const Handle<AssetObject>& assetObject)
 
         /// TODO: remove the file
     }
+
+    return {};
 }
 
 FilePath AssetPackage::GetAbsolutePath() const
@@ -816,13 +842,13 @@ void AssetRegistry::SetPackages(const AssetPackageSet& packages)
     }
 }
 
-void AssetRegistry::RegisterAsset(const UTF8StringView& path, const Handle<AssetObject>& assetObject)
+Result AssetRegistry::RegisterAsset(const UTF8StringView& path, const Handle<AssetObject>& assetObject)
 {
     HYP_SCOPE;
 
     if (!assetObject.IsValid())
     {
-        return;
+        return HYP_MAKE_ERROR(Error, "AssetObject is invalid");
     }
 
     String pathString = path;
@@ -852,7 +878,7 @@ void AssetRegistry::RegisterAsset(const UTF8StringView& path, const Handle<Asset
         }
     }
 
-    assetPackage->AddAssetObject(assetObject);
+    return assetPackage->AddAssetObject(assetObject);
 }
 
 Name AssetRegistry::GetUniqueAssetName(const UTF8StringView& packagePath, Name baseName) const

@@ -39,11 +39,11 @@ public:
     PlaceholderData& operator=(PlaceholderData&& other) = delete;
     ~PlaceholderData();
 
-    Handle<Texture> DefaultTexture2D;
-    Handle<Texture> DefaultTexture3D;
-    Handle<Texture> DefaultCubemap;
-    Handle<Texture> DefaultTexture2DArray;
-    Handle<Texture> DefaultCubemapArray;
+    Handle<Texture> defaultTexture2d;
+    Handle<Texture> defaultTexture3d;
+    Handle<Texture> defaultCubemap;
+    Handle<Texture> defaultTexture2dArray;
+    Handle<Texture> defaultCubemapArray;
 
 #define HYP_DEF_DUMMY_DATA(type, getter, member) \
 public:                                          \

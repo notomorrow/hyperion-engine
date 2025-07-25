@@ -463,9 +463,9 @@ void EnvGridRenderer::CreateSphericalHarmonicsData(EnvGrid* envGrid, EnvGridPass
             const DescriptorSetRef& computeShDescriptorSet = pd.computeShDescriptorTables[i]->GetDescriptorSet(NAME("ComputeSHDescriptorSet"), frameIndex);
             Assert(computeShDescriptorSet != nullptr);
 
-            computeShDescriptorSet->SetElement(NAME("InColorCubemap"), g_renderGlobalState->placeholderData->DefaultCubemap->GetRenderResource().GetImageView());
-            computeShDescriptorSet->SetElement(NAME("InNormalsCubemap"), g_renderGlobalState->placeholderData->DefaultCubemap->GetRenderResource().GetImageView());
-            computeShDescriptorSet->SetElement(NAME("InDepthCubemap"), g_renderGlobalState->placeholderData->DefaultCubemap->GetRenderResource().GetImageView());
+            computeShDescriptorSet->SetElement(NAME("InColorCubemap"), g_renderGlobalState->placeholderData->defaultCubemap->GetRenderResource().GetImageView());
+            computeShDescriptorSet->SetElement(NAME("InNormalsCubemap"), g_renderGlobalState->placeholderData->defaultCubemap->GetRenderResource().GetImageView());
+            computeShDescriptorSet->SetElement(NAME("InDepthCubemap"), g_renderGlobalState->placeholderData->defaultCubemap->GetRenderResource().GetImageView());
             computeShDescriptorSet->SetElement(NAME("InputSHTilesBuffer"), pd.shTilesBuffers[i]);
 
             if (i != shNumLevels - 1)

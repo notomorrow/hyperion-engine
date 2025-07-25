@@ -363,15 +363,6 @@ AssetLoadResult MTLMaterialLoader::LoadAsset(LoaderState& state) const
 
             texture->SetTextureDesc(textureDesc);
 
-            state.assetManager->GetAssetRegistry()->RegisterAsset("$Import/Media/Textures", texture->GetAsset());
-
-            if (!InitObject(texture))
-            {
-                HYP_LOG(Assets, Warning, "OBJ material loader: Texture {} could not be used because it could not be initialized!", it.name);
-
-                continue;
-            }
-
             textures.Set(it.mapping.key, std::move(texture));
         }
 

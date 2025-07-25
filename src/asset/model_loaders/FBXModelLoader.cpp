@@ -176,7 +176,7 @@ struct FBXMesh
     FBXObjectID skinId = 0;
 
     Array<Vertex> vertices;
-    Array<Mesh::Index> indices;
+    Array<uint32> indices;
     VertexAttributeSet attributes;
 
     Optional<Handle<Mesh>> result;
@@ -187,13 +187,18 @@ struct FBXMesh
         {
             auto verticesAndIndices = Mesh::CalculateIndices(vertices);
 
-            auto handle = CreateObject<Mesh>(
-                verticesAndIndices.first,
-                verticesAndIndices.second,
-                TOP_TRIANGLES,
-                attributes);
+            MeshData meshData;
+            meshData.desc.meshAttributes.vertexAttributes = attributes;
+            meshData.desc.numIndices = uint32(vertices.Size());
+            meshData.desc.numIndices = uint32(indices.Size());
+            meshData.vertexData = vertices;
+            meshData.indexData.SetSize(indices.Size() * sizeof(uint32));
+            meshData.indexData.Write(indices.Size() * sizeof(uint32), 0, indices.Data());
 
-            result.Set(std::move(handle));
+            Handle<Mesh> mesh = CreateObject<Mesh>();
+            mesh->SetMeshData(meshData);
+
+            result.Set(std::move(mesh));
         }
 
         return result.Get();
@@ -1035,8 +1040,8 @@ AssetLoadResult FBXModelLoader::LoadAsset(LoaderState& state) const
             }
             else if (child->name == "Geometry")
             {
-                Array<Vector3> modelVertices;
-                Array<Mesh::Index> modelIndices;
+                Array<Vec3f> modelVertices;
+                Array<uint32> modelIndices;
                 VertexAttributeSet attributes;
 
                 Array<String> layerNodeNames;
@@ -1137,7 +1142,7 @@ AssetLoadResult FBXModelLoader::LoadAsset(LoaderState& state) const
                             return HYP_MAKE_ERROR(AssetLoadError, "Index out of range");
                         }
 
-                        modelIndices[index] = Mesh::Index(i);
+                        modelIndices[index] = uint32(i);
                     }
                 }
 

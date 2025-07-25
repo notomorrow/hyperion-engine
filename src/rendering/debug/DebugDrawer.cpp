@@ -71,10 +71,7 @@ MeshDebugDrawShapeBase::MeshDebugDrawShapeBase(IDebugDrawCommandList& renderQueu
     : renderQueue(renderQueue),
       m_mesh(mesh)
 {
-    if (InitObject(mesh))
-    {
-        mesh->SetPersistentRenderResourceEnabled(true);
-    }
+    InitObject(m_mesh);
 }
 
 #pragma endregion MeshDebugDrawShapeBase

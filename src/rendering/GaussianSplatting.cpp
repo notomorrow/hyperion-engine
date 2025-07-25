@@ -594,16 +594,20 @@ void GaussianSplatting::Init()
         Vertex { { -1.0f, 1.0f, 0.0f }, { 0.0f, 1.0f }, { 0.0f, 0.0f, -1.0f } }
     };
 
-    static const Array<Mesh::Index> indices = {
+    static const Array<uint32> indices = {
         0, 3, 1,
         2, 3, 1
     };
 
-    m_quadMesh = CreateObject<Mesh>(
-        vertices,
-        indices,
-        TOP_TRIANGLES,
-        staticMeshVertexAttributes);
+    MeshData meshData;
+    meshData.desc.numIndices = uint32(indices.Size());
+    meshData.desc.numVertices = uint32(vertices.Size());
+    meshData.vertexData = vertices;
+    meshData.indexData.SetSize(indices.Size() * sizeof(uint32));
+    meshData.indexData.Write(indices.Size() * sizeof(uint32), 0, indices.Data());
+
+    m_quadMesh = CreateObject<Mesh>();
+    m_quadMesh->SetMeshData(meshData);
 
     InitObject(m_quadMesh);
 

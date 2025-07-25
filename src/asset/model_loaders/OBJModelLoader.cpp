@@ -338,10 +338,10 @@ LoadedAsset OBJModelLoader::BuildModel(LoaderState& state, OBJModel& model)
         Array<Vertex> vertices;
         vertices.Reserve(model.positions.Size());
 
-        Array<Mesh::Index> indices;
+        Array<uint32> indices;
         indices.Reserve(objMesh.indices.Size());
 
-        HashMap<OBJIndex, Mesh::Index> indexMap;
+        HashMap<OBJIndex, uint32> indexMap;
 
         const bool hasIndices = !objMesh.indices.Empty();
 
@@ -406,19 +406,25 @@ LoadedAsset OBJModelLoader::BuildModel(LoaderState& state, OBJModel& model)
             vertex.SetPosition(vertex.GetPosition() - meshAabbCenter);
         }
 
-        Handle<Mesh> mesh = CreateObject<Mesh>(
-            vertices,
-            indices,
-            TOP_TRIANGLES);
+        Name assetName = CreateNameFromDynamicString(objMesh.name.Split('/', '\\').Back());
 
-        mesh->SetName(CreateNameFromDynamicString(objMesh.name));
+        MeshData meshData;
+        meshData.desc.numIndices = uint32(indices.Size());
+        meshData.desc.numVertices = uint32(vertices.Size());
+        meshData.vertexData = vertices;
+        meshData.indexData.SetSize(indices.Size() * sizeof(uint32));
+        meshData.indexData.Write(indices.Size() * sizeof(uint32), 0, indices.Data());
 
-        if (!hasNormals)
-        {
-            mesh->CalculateNormals();
-        }
+        meshData.CalculateNormals();
+        meshData.CalculateTangents();
 
-        mesh->CalculateTangents();
+        Handle<Mesh> mesh = CreateObject<Mesh>();
+        mesh->SetName(assetName);
+        mesh->SetMeshData(meshData);
+
+        mesh->GetAsset()->Rename(assetName);
+
+        state.assetManager->GetAssetRegistry()->RegisterAsset("$Import/Media/Meshes", mesh->GetAsset());
 
         InitObject(mesh);
 

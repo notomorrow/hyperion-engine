@@ -293,8 +293,27 @@ AssetLoadResult OgreXMLModelLoader::LoadAsset(LoaderState& state) const
         scene->GetEntityManager()->AddComponent<TransformComponent>(entity, TransformComponent {});
         scene->GetEntityManager()->AddComponent<VisibilityStateComponent>(entity, VisibilityStateComponent {});
 
-        Handle<Mesh> mesh = CreateObject<Mesh>(model.vertices, subMesh.indices, TOP_TRIANGLES);
-        mesh->CalculateNormals();
+        MeshData meshData;
+        meshData.desc.numVertices = uint32(model.vertices.Size());
+        meshData.desc.numIndices = uint32(subMesh.indices.Size());
+        meshData.desc.meshAttributes.vertexAttributes = staticMeshVertexAttributes;
+
+        if (skeleton.IsValid())
+        {
+            meshData.desc.meshAttributes.vertexAttributes |= skeletonVertexAttributes;
+        }
+
+        meshData.vertexData = model.vertices;
+        meshData.indexData.SetSize(subMesh.indices.Size() * sizeof(uint32));
+        meshData.indexData.Write(subMesh.indices.Size() * sizeof(uint32), 0, subMesh.indices.Data());
+
+        meshData.CalculateNormals();
+
+        Handle<Mesh> mesh = CreateObject<Mesh>();
+        mesh->SetName(CreateNameFromDynamicString(subMesh.name));
+        mesh->SetMeshData(meshData);
+
+        state.assetManager->GetAssetRegistry()->RegisterAsset("$Import/Media/Meshes", mesh->GetAsset());
 
         MaterialAttributes materialAttributes {};
         materialAttributes.shaderDefinition = ShaderDefinition {

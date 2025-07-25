@@ -865,7 +865,16 @@ public:
                     Handle<Script> script = CreateObject<Script>();
 
                     // @TODO: better name for script asset
-                    Handle<AssetObject> assetObject = scriptsPackage->NewAssetObject(Name::Unique("TestScript"), script);
+                    TResult<Handle<AssetObject>> assetObjectResult = scriptsPackage->NewAssetObject(Name::Unique("TestScript"), script);
+
+                    if (assetObjectResult.HasError())
+                    {
+                        HYP_LOG(Editor, Error, "Failed to create new script asset: {}", assetObjectResult.GetError().GetMessage());
+
+                        return UIEventHandlerResult::ERR;
+                    }
+
+                    Handle<AssetObject> assetObject = assetObjectResult.GetValue();
                     
                     if (Result saveResult = assetObject->Save(); saveResult.HasError()) {
                         HYP_LOG(Editor, Error, "Failed to save script asset: {}", saveResult.GetError().GetMessage());

@@ -170,7 +170,7 @@ public:
 
 private:
     Array<Vertex> BuildVertices() const;
-    Array<Mesh::Index> BuildIndices() const;
+    Array<uint32> BuildIndices() const;
 
     TerrainHeightData m_heightData;
 };
@@ -212,16 +212,20 @@ Handle<Mesh> TerrainMeshBuilder::BuildMesh() const
     HYP_SCOPE;
 
     Array<Vertex> vertices = BuildVertices();
-    Array<Mesh::Index> indices = BuildIndices();
+    Array<uint32> indices = BuildIndices();
 
-    Handle<Mesh> mesh = CreateObject<Mesh>(
-        vertices,
-        indices,
-        TOP_TRIANGLES,
-        staticMeshVertexAttributes);
+    MeshData meshData;
+    meshData.desc.numIndices = uint32(indices.Size());
+    meshData.desc.numVertices = uint32(vertices.Size());
+    meshData.vertexData = vertices;
+    meshData.indexData.SetSize(indices.Size() * sizeof(uint32));
+    meshData.indexData.Write(indices.Size() * sizeof(uint32), 0, indices.Data());
 
-    mesh->CalculateNormals();
-    mesh->CalculateTangents();
+    meshData.CalculateNormals();
+    meshData.CalculateTangents();
+
+    Handle<Mesh> mesh = CreateObject<Mesh>();
+    mesh->SetMeshData(meshData);
 
     return mesh;
 }

@@ -308,9 +308,6 @@ void ParticleSystem::Init()
     m_quadMesh = MeshBuilder::Quad();
     InitObject(m_quadMesh);
 
-    // Allow Render() to be called directly without a RenderGroup
-    m_quadMesh->SetPersistentRenderResourceEnabled(true);
-
     CreateBuffers();
 
     SetReady(true);

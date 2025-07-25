@@ -21,7 +21,7 @@
 #include <rendering/RenderStructs.hpp>
 #include <rendering/RenderObject.hpp>
 
-#include <streaming/StreamedMeshData.hpp>
+#include <asset/MeshAsset.hpp>
 
 #include <cstdint>
 
@@ -31,8 +31,7 @@ class BVHNode;
 class RenderMesh;
 class Material;
 
-/*! \brief Represents a 3D mesh in the engine from the Game thread, containing vertex data, indices, and rendering attributes.
- *  \details This class is used to manage mesh data, including streamed meshes, and provides methods for manipulating mesh data at runtime. */
+/*! \brief Represents a 3D mesh in the engine, containing vertex data, indices, and rendering attributes. */
 HYP_CLASS()
 class HYP_API Mesh final : public HypObject<Mesh>
 {
@@ -44,10 +43,10 @@ public:
     static Pair<Array<Vertex>, Array<uint32>> CalculateIndices(const Array<Vertex>& vertices);
 
     Mesh();
-    Mesh(RC<StreamedMeshData> streamedMeshData, Topology topology, const VertexAttributeSet& vertexAttributes);
-    Mesh(RC<StreamedMeshData> streamedMeshData, Topology topology = TOP_TRIANGLES);
-    Mesh(Array<Vertex> vertices, Array<uint32> indices, Topology topology, const VertexAttributeSet& vertexAttributes);
-    Mesh(Array<Vertex> vertices, Array<uint32> indices, Topology topology = TOP_TRIANGLES);
+    Mesh(const Handle<MeshAsset>& asset, Topology topology, const VertexAttributeSet& vertexAttributes);
+    Mesh(const Handle<MeshAsset>& asset, Topology topology = TOP_TRIANGLES);
+    Mesh(const Array<Vertex>& vertexData, const ByteBuffer& indexData, Topology topology, const VertexAttributeSet& vertexAttributes);
+    Mesh(const Array<Vertex>& vertexData, const ByteBuffer& indexData, Topology topology = TOP_TRIANGLES);
 
     Mesh(const Mesh& other) = delete;
     Mesh& operator=(const Mesh& other) = delete;
@@ -64,17 +63,12 @@ public:
     }
 
     HYP_METHOD()
-    HYP_FORCE_INLINE void SetName(Name name)
-    {
-        m_name = name;
-    }
+    void SetName(Name name);
 
     void SetVertices(Span<const Vertex> vertices);
     void SetVertices(Span<const Vertex> vertices, Span<const uint32> indices);
 
-    const RC<StreamedMeshData>& GetStreamedMeshData() const;
-
-    void SetStreamedMeshData(RC<StreamedMeshData> streamedMeshData);
+    void SetMeshData(const MeshData& meshData);
 
     HYP_METHOD()
     uint32 NumIndices() const;
@@ -92,17 +86,17 @@ public:
     }
 
     HYP_METHOD(Property = "VertexAttributes")
-    HYP_FORCE_INLINE const VertexAttributeSet& GetVertexAttributes() const
+    HYP_FORCE_INLINE VertexAttributeSet GetVertexAttributes() const
     {
-        return m_meshAttributes.vertexAttributes;
+        return m_asset.IsValid() ? m_asset->GetMeshDesc().meshAttributes.vertexAttributes : VertexAttributeSet();
     }
 
     HYP_METHOD(Property = "VertexAttributes")
     void SetVertexAttributes(const VertexAttributeSet& vertexAttributes);
 
-    HYP_FORCE_INLINE const MeshAttributes& GetMeshAttributes() const
+    HYP_FORCE_INLINE MeshAttributes GetMeshAttributes() const
     {
-        return m_meshAttributes;
+        return m_asset.IsValid() ? m_asset->GetMeshDesc().meshAttributes : MeshAttributes();
     }
 
     void SetMeshAttributes(const MeshAttributes& attributes);
@@ -110,65 +104,43 @@ public:
     HYP_METHOD(Property = "Topology")
     HYP_FORCE_INLINE Topology GetTopology() const
     {
-        return m_meshAttributes.topology;
+        return GetMeshAttributes().topology;
     }
 
-    void CalculateNormals(bool weighted = false);
-    void CalculateTangents();
+    HYP_FORCE_INLINE const Handle<MeshAsset>& GetAsset() const
+    {
+        return m_asset;
+    }
 
-    HYP_METHOD()
-    void InvertNormals();
-
-    /*! \brief Get the axis-aligned bounding box for the mesh.
-        If the mesh has not been initialized, the AABB will be invalid, unless SetAABB() has been called.
-        Otherwise, the AABB will be calculated from the mesh vertices. */
+    /*! \brief Get the axis-aligned bounding box for the mesh. */
     HYP_METHOD(Property = "AABB", Serialize = true, Editor = true)
     HYP_FORCE_INLINE const BoundingBox& GetAABB() const
     {
         return m_aabb;
     }
 
-    /*! \brief Manually set the AABB for the mesh. If CalculateAABB is called after this, or the mesh data is changed, the
-        manually set AABB will be overwritten. */
+    /*! \brief Manually set the AABB for the mesh */
     HYP_METHOD(Property = "AABB", Serialize = true, Editor = true)
     HYP_FORCE_INLINE void SetAABB(const BoundingBox& aabb)
     {
         m_aabb = aabb;
     }
 
-    /*! \brief Set the mesh to be able to have Render* methods called without needing to have its resources claimed.
-     *  \note Init() must be called before this method. */
-    HYP_DEPRECATED void SetPersistentRenderResourceEnabled(bool enabled);
-
     HYP_FORCE_INLINE const BVHNode& GetBVH() const
     {
         return m_bvh;
     }
 
-    HYP_METHOD()
     bool BuildBVH(int maxDepth = 3);
 
     BLASRef BuildBLAS(const Handle<Material>& material) const;
 
 private:
-    static Array<float> BuildVertexBuffer(const VertexAttributeSet& vertexAttributes, const MeshData& meshData);
-
     void Init() override;
-    void CalculateAABB();
-
     void CreateGpuBuffers();
-
-    Array<PackedVertex> BuildPackedVertices() const;
-    Array<uint32> BuildPackedIndices() const;
 
     HYP_FIELD(Serialize, Editor)
     Name m_name;
-
-    MeshAttributes m_meshAttributes;
-
-    // Must be before m_streamedMeshData, needs to get constructed first to use as out parameter to construct StreamedMeshData.
-    mutable ResourceHandle m_streamedMeshDataResourceHandle;
-    RC<StreamedMeshData> m_streamedMeshData;
 
     mutable BoundingBox m_aabb;
 
@@ -177,6 +149,8 @@ private:
 
     GpuBufferRef m_vertexBuffer;
     GpuBufferRef m_indexBuffer;
+
+    Handle<MeshAsset> m_asset;
 
     HYP_DECLARE_MT_CHECK(m_dataRaceDetector);
 };

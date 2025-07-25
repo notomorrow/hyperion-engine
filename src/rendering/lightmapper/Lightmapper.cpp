@@ -1176,9 +1176,9 @@ void LightmapJob::Start()
 
                     for (const LightmapSubElement& subElement : m_params.subElementsView)
                     {
-                        if (subElement.mesh.IsValid() && subElement.mesh->GetStreamedMeshData())
+                        if (subElement.mesh.IsValid() && subElement.mesh->GetAsset().IsValid())
                         {
-                            m_resourceCache.EmplaceBack(*subElement.mesh->GetStreamedMeshData());
+                            m_resourceCache.EmplaceBack(*subElement.mesh->GetAsset()->GetResource());
                         }
 
                         if (subElement.material.IsValid())
@@ -1709,19 +1709,19 @@ void Lightmapper::HandleCompletedJob(LightmapJob* job)
             Assert(lightmapMeshData.mesh == mesh);
 
             MeshData newMeshData;
-            newMeshData.vertices = lightmapMeshData.vertices;
-            newMeshData.indices = lightmapMeshData.indices;
+            newMeshData.vertexData = lightmapMeshData.vertices;
+            newMeshData.indexData = ByteBuffer(lightmapMeshData.indices.ToByteView());
 
-            for (uint32 i = 0; i < newMeshData.vertices.Size(); i++)
+            for (SizeType i = 0; i < newMeshData.vertexData.Size(); i++)
             {
-                Vec2f& lightmapUv = newMeshData.vertices[i].texcoord1;
+                Vec2f& lightmapUv = newMeshData.vertexData[i].texcoord1;
                 lightmapUv.y = 1.0f - lightmapUv.y; // Invert Y coordinate for lightmaps
                 lightmapUv *= element->scale;
                 lightmapUv += Vec2f(element->offsetUv.x, element->offsetUv.y);
             }
 
             ResourceHandle resourceHandle;
-            mesh->SetStreamedMeshData(MakeRefCountedPtr<StreamedMeshData>(std::move(newMeshData), resourceHandle));
+            mesh->SetMeshData(newMeshData);
         };
 
         updateMeshData();

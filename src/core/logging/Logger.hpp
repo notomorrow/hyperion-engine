@@ -16,6 +16,8 @@
 #include <core/containers/String.hpp>
 #include <core/containers/Bitset.hpp>
 
+#include <core/threading/AtomicVar.hpp>
+
 namespace hyperion {
 
 enum class LogChannelFlags : uint32
@@ -213,13 +215,18 @@ struct LogOnceHelper
     template <auto LogOnceFileName, int32 LogOnceLineNumber, auto LogOnceFunctionName, LogCategory Category, auto ChannelArg, auto LogOnceFormatString, class... LogOnceArgTypes>
     static void ExecuteLogOnce(Logger& logger, LogOnceArgTypes&&... args)
     {
-        static struct LogOnceHelper_Impl
+        static volatile int64 timesExecutedCounter = 0;
+
+        int64 count = AtomicIncrement(&timesExecutedCounter);
+
+        if (count == 0)
         {
-            LogOnceHelper_Impl(Logger& logger, LogOnceArgTypes&&... args)
-            {
-                LogStatic<Category, ChannelArg, LogOnceFormatString>(logger, std::forward<LogOnceArgTypes>(args)...);
-            }
-        } impl { logger, std::forward<LogOnceArgTypes>(args)... };
+            LogStatic<Category, ChannelArg, LogOnceFormatString>(logger, std::forward<LogOnceArgTypes>(args)...);
+        }
+        else if ((uint32(count) & (uint32(count) - 1)) == 0)
+        {
+            LogStatic<Category, ChannelArg, LogOnceFormatString.template Concat<HYP_STATIC_STRING(" (and {} more like this)")>()>(logger, std::forward<LogOnceArgTypes>(args)..., uint32(count));
+        }
     }
 };
 

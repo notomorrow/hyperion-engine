@@ -8,6 +8,8 @@
 #include <rendering/RenderImage.hpp>
 #include <rendering/RenderSampler.hpp>
 
+#include <asset/Assets.hpp>
+#include <asset/AssetRegistry.hpp>
 #include <asset/TextureAsset.hpp>
 
 #include <core/object/HypClassUtils.hpp>
@@ -49,7 +51,6 @@ Texture::Texture()
 
 Texture::Texture(const TextureDesc& textureDesc)
     : m_renderResource(nullptr),
-      m_textureDesc(textureDesc),
       m_asset(CreateObject<TextureAsset>(g_nameTextureDefault, TextureData { textureDesc }))
 {
     SetName(g_nameTextureDefault);
@@ -57,7 +58,6 @@ Texture::Texture(const TextureDesc& textureDesc)
 
 Texture::Texture(const TextureData& textureData)
     : m_renderResource(nullptr),
-      m_textureDesc(textureData.desc),
       m_asset(CreateObject<TextureAsset>(g_nameTextureDefault, textureData))
 {
     SetName(g_nameTextureDefault);
@@ -65,7 +65,6 @@ Texture::Texture(const TextureData& textureData)
 
 Texture::Texture(const Handle<TextureAsset>& asset)
     : m_renderResource(nullptr),
-      m_textureDesc(asset ? asset->GetTextureDesc() : TextureDesc {}),
       m_asset(asset)
 {
     SetName(g_nameTextureDefault);
@@ -99,6 +98,16 @@ void Texture::Init()
             }
         }));
 
+    if (m_asset.IsValid() && !m_asset->IsRegistered())
+    {
+        if (!m_asset->GetName().IsValid())
+        {
+            m_asset->Rename(m_name);
+        }
+
+        g_assetManager->GetAssetRegistry()->RegisterAsset("$Memory/Media/Textures", m_asset);
+    }
+
     m_renderResource = AllocateResource<RenderTexture>(this);
 
     // temp shit
@@ -116,22 +125,33 @@ void Texture::SetName(Name name)
 
     m_name = name;
 
-    if (m_asset.IsValid())
+    if (m_asset.IsValid() && !m_asset->IsRegistered() && IsInitCalled())
     {
-        m_asset->SetName(m_name);
+        if (!m_asset->GetName().IsValid())
+        {
+            m_asset->Rename(m_name);
+        }
+
+        g_assetManager->GetAssetRegistry()->RegisterAsset("$Memory/Media/Textures", m_asset);
     }
+}
+
+const TextureDesc& Texture::GetTextureDesc() const
+{
+    static const TextureDesc defaultTextureDesc {};
+    return m_asset.IsValid() ? m_asset->GetTextureDesc() : defaultTextureDesc;
 }
 
 void Texture::SetTextureDesc(const TextureDesc& textureDesc)
 {
     Mutex::Guard guard(m_readbackMutex);
 
-    if (m_textureDesc == textureDesc)
+    TextureDesc currentTextureDesc = GetTextureDesc();
+
+    if (currentTextureDesc == textureDesc)
     {
         return;
     }
-
-    m_textureDesc = textureDesc;
 
     // create new asset
     if (m_asset.IsValid())
@@ -143,7 +163,7 @@ void Texture::SetTextureDesc(const TextureDesc& textureDesc)
         ResourceHandle resourceHandle(*prevAsset->GetResource());
 
         TextureData textureData = std::move(*prevAsset->GetTextureData());
-        textureData.desc = m_textureDesc;
+        textureData.desc = textureDesc;
 
         m_asset = CreateObject<TextureAsset>(prevAsset->GetName(), textureData);
 
@@ -152,6 +172,15 @@ void Texture::SetTextureDesc(const TextureDesc& textureDesc)
             package->RemoveAssetObject(prevAsset);
             package->AddAssetObject(m_asset);
         }
+    }
+    else
+    {
+        m_asset = CreateObject<TextureAsset>(GetName(), TextureData { textureDesc });
+    }
+
+    if (IsInitCalled() && !m_asset->IsRegistered())
+    {
+        g_assetManager->GetAssetRegistry()->RegisterAsset("$Memory/Media/Textures", m_asset);
     }
 }
 
@@ -195,12 +224,16 @@ void Texture::Readback_Internal()
 
 void Texture::Resize(const Vec3u& extent)
 {
-    if (m_textureDesc.extent == extent)
+    TextureDesc textureDesc = GetTextureDesc();
+
+    if (textureDesc.extent == extent)
     {
         return;
     }
 
-    m_textureDesc.extent = extent;
+    textureDesc.extent = extent;
+
+    SetTextureDesc(textureDesc);
 
     if (m_renderResource)
     {

@@ -125,7 +125,7 @@ AssetLoadResult AssetLoaderBase::Load(AssetManager& assetManager, const String& 
 
         LoaderState state {
             &assetManager,
-            path.Data(),
+            path,
             std::move(reader)
         };
 

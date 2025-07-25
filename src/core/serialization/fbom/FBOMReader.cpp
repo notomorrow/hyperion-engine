@@ -368,6 +368,11 @@ FBOMResult FBOMReader::LoadFromFile(const String& path, FBOMObject& out)
         return { FBOMResult::FBOM_ERR, HYP_FORMAT("File does not exist: {}", readPath) };
     }
 
+    if (readPath.FileSize() == 0)
+    {
+        return { FBOMResult::FBOM_ERR, HYP_FORMAT("File is empty: {}", readPath) };
+    }
+
     FileBufferedReaderSource source { readPath };
     BufferedReader reader { &source };
 

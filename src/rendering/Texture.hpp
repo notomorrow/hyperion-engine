@@ -71,66 +71,62 @@ public:
     HYP_METHOD(Property = "Name", Serialize = true, Editor = true)
     void SetName(Name name);
 
-    HYP_FORCE_INLINE const TextureDesc& GetTextureDesc() const
-    {
-        return m_textureDesc;
-    }
-
+    const TextureDesc& GetTextureDesc() const;
     void SetTextureDesc(const TextureDesc& textureDesc);
 
     HYP_FORCE_INLINE TextureType GetType() const
     {
-        return m_textureDesc.type;
+        return GetTextureDesc().type;
     }
 
     HYP_FORCE_INLINE uint32 NumFaces() const
     {
-        return m_textureDesc.NumFaces();
+        return GetTextureDesc().NumFaces();
     }
 
     HYP_FORCE_INLINE bool IsTextureCube() const
     {
-        return m_textureDesc.IsTextureCube();
+        return GetTextureDesc().IsTextureCube();
     }
 
     HYP_FORCE_INLINE bool IsPanorama() const
     {
-        return m_textureDesc.IsPanorama();
+        return GetTextureDesc().IsPanorama();
     }
 
     HYP_FORCE_INLINE const Vec3u& GetExtent() const
     {
-        return m_textureDesc.extent;
+        return GetTextureDesc().extent;
     }
 
     HYP_FORCE_INLINE TextureFormat GetFormat() const
     {
-        return m_textureDesc.format;
+        return GetTextureDesc().format;
     }
 
     HYP_FORCE_INLINE HYP_DEPRECATED TextureFilterMode GetFilterMode() const
     {
-        return m_textureDesc.filterModeMin;
+        return GetTextureDesc().filterModeMin;
     }
 
     HYP_FORCE_INLINE TextureFilterMode GetMinFilterMode() const
     {
-        return m_textureDesc.filterModeMin;
+        return GetTextureDesc().filterModeMin;
     }
 
     HYP_FORCE_INLINE TextureFilterMode GetMagFilterMode() const
     {
-        return m_textureDesc.filterModeMag;
+        return GetTextureDesc().filterModeMag;
     }
 
     HYP_FORCE_INLINE bool HasMipmaps() const
     {
-        return m_textureDesc.HasMipmaps();
+        return GetTextureDesc().HasMipmaps();
     }
 
     HYP_FORCE_INLINE TextureWrapMode GetWrapMode() const
     {
-        return m_textureDesc.wrapMode;
+        return GetTextureDesc().wrapMode;
     }
 
     HYP_FORCE_INLINE const Handle<TextureAsset>& GetAsset() const
@@ -162,8 +158,6 @@ protected:
 
     RenderTexture* m_renderResource;
     ResourceHandle m_renderPersistent;
-
-    TextureDesc m_textureDesc;
 
     Handle<TextureAsset> m_asset;
 

@@ -4,8 +4,6 @@
 
 #include <rendering/Mesh.hpp>
 
-#include <streaming/StreamedMeshData.hpp>
-
 #include <core/logging/Logger.hpp>
 #include <core/logging/LogChannels.hpp>
 
@@ -102,46 +100,39 @@ LightmapUVBuilder::LightmapUVBuilder(const LightmapUVBuilderParams& params)
 
         const Handle<Mesh>& mesh = subElement.mesh;
 
-        StreamedMeshData* streamedMeshData = mesh->GetStreamedMeshData();
-
-        if (!streamedMeshData)
+        if (!mesh->GetAsset())
         {
             HYP_LOG(Lightmap, Error, "Sub-element {} has no streamed mesh data, skipping", i);
 
             continue;
         }
 
-        TResourceHandle<StreamedMeshData> resourceHandle(*streamedMeshData);
+        ResourceHandle resourceHandle(*mesh->GetAsset()->GetResource());
 
         if (!resourceHandle)
         {
             return;
         }
 
-        MeshData meshData = resourceHandle->GetMeshData();
-
-        HYP_LOG(Lightmap, Debug, "Resource handle has {} vertices and {} indices",
-            meshData.vertices.Size(),
-            meshData.indices.Size());
+        MeshData meshData = *mesh->GetAsset()->GetMeshData();
 
         lightmapMeshData.mesh = subElement.mesh;
         lightmapMeshData.material = subElement.material;
         lightmapMeshData.transform = subElement.transform.GetMatrix();
 
-        m_meshVertexPositions[i].Resize(meshData.vertices.Size() * 3);
-        m_meshVertexNormals[i].Resize(meshData.vertices.Size() * 3);
-        m_meshVertexUvs[i].Resize(meshData.vertices.Size() * 2);
-        m_meshIndices[i] = meshData.indices;
+        m_meshVertexPositions[i].Resize(meshData.vertexData.Size() * 3);
+        m_meshVertexNormals[i].Resize(meshData.vertexData.Size() * 3);
+        m_meshVertexUvs[i].Resize(meshData.vertexData.Size() * 2);
 
-        Assert(m_meshIndices[i].Size() % 3 == 0);
+        m_meshIndices[i] = meshData.indexData;
 
         const Matrix4 normalMatrix = subElement.transform.GetMatrix().Inverted().Transpose();
 
-        for (SizeType vertexIndex = 0; vertexIndex < meshData.vertices.Size(); vertexIndex++)
+        for (SizeType vertexIndex = 0; vertexIndex < meshData.vertexData.Size(); vertexIndex++)
         {
-            const Vec3f position = subElement.transform.GetMatrix() * meshData.vertices[vertexIndex].GetPosition();
-            const Vec3f normal = (normalMatrix * Vec4f(meshData.vertices[vertexIndex].GetNormal(), 0.0f)).GetXYZ().Normalize();
-            const Vec2f uv = meshData.vertices[vertexIndex].GetTexCoord0();
+            const Vec3f position = subElement.transform.GetMatrix() * meshData.vertexData[vertexIndex].GetPosition();
+            const Vec3f normal = (normalMatrix * Vec4f(meshData.vertexData[vertexIndex].GetNormal(), 0.0f)).GetXYZ().Normalize();
+            const Vec2f uv = meshData.vertexData[vertexIndex].GetTexCoord0();
 
             m_meshVertexPositions[i][vertexIndex * 3] = position.x;
             m_meshVertexPositions[i][vertexIndex * 3 + 1] = position.y;
@@ -382,8 +373,7 @@ TResult<LightmapUVMap> LightmapUVBuilder::Build()
         m_meshVertexUvs[meshIndex].Clear();
         m_meshVertexUvs[meshIndex].Refit();
 
-        m_meshIndices[meshIndex].Clear();
-        m_meshIndices[meshIndex].Refit();
+        m_meshIndices[meshIndex] = {};
     }
 
     xatlas::Destroy(atlas);

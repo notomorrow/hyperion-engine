@@ -78,6 +78,8 @@ struct RENDER_COMMAND(CreateTexture)
 
                 if (texture->GetAsset().IsValid())
                 {
+                    Assert(resourceHandle);
+
                     TextureData* textureData = texture->GetAsset()->GetTextureData();
                     Assert(textureData != nullptr);
 

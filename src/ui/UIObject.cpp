@@ -74,32 +74,32 @@ const Handle<Mesh>& UIObjectQuadMeshHelper::GetQuadMesh()
 {
     static struct QuadMeshInitializer
     {
+        Handle<Mesh> quad;
+
         QuadMeshInitializer()
         {
-            Handle<Mesh> quad = MeshBuilder::Quad();
-
+            quad = MeshBuilder::Quad();
             // Hack to make vertices be from 0..1 rather than -1..1
 
-            TResourceHandle<StreamedMeshData> resourceHandle(*quad->GetStreamedMeshData());
+            Assert(quad->GetAsset().IsValid());
+            Assert(quad->GetAsset()->GetMeshData() != nullptr);
 
-            Array<Vertex> vertices = resourceHandle->GetMeshData().vertices;
-            const Array<uint32>& indices = resourceHandle->GetMeshData().indices;
+            MeshData newMeshData = *quad->GetAsset()->GetMeshData();
 
-            for (Vertex& vert : vertices)
+            for (Vertex& vert : newMeshData.vertexData)
             {
                 vert.position.x = (vert.position.x + 1.0f) * 0.5f;
                 vert.position.y = (vert.position.y + 1.0f) * 0.5f;
             }
 
-            mesh = CreateObject<Mesh>(std::move(vertices), indices);
-            mesh->SetName(NAME("UIObject_QuadMesh"));
-            InitObject(mesh);
-        }
+            quad->SetMeshData(newMeshData);
+            quad->SetName(NAME("UIObject_QuadMesh"));
 
-        Handle<Mesh> mesh;
+            InitObject(quad);
+        }
     } quadMeshInitializer;
 
-    return quadMeshInitializer.mesh;
+    return quadMeshInitializer.quad;
 }
 
 #pragma endregion UIObjectQuadMeshHelper

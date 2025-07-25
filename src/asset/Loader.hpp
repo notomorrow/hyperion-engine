@@ -20,7 +20,7 @@ struct LoaderState
     using Stream = BufferedReader;
 
     AssetManager* assetManager;
-    String filepath;
+    FilePath filepath;
     Stream stream;
 };
 

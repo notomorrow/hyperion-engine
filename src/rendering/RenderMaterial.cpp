@@ -65,7 +65,7 @@ void MaterialDescriptorSetManager::CreateFallbackMaterialDescriptorSet()
 
         for (uint32 textureIndex = 0; textureIndex < g_maxBoundTextures; textureIndex++)
         {
-            m_fallbackMaterialDescriptorSets[frameIndex]->SetElement(NAME("Textures"), textureIndex, g_renderGlobalState->placeholderData->DefaultTexture2D->GetRenderResource().GetImageView());
+            m_fallbackMaterialDescriptorSets[frameIndex]->SetElement(NAME("Textures"), textureIndex, g_renderGlobalState->placeholderData->defaultTexture2d->GetRenderResource().GetImageView());
         }
 
         DeferCreate(m_fallbackMaterialDescriptorSets[frameIndex]);
@@ -131,7 +131,7 @@ FixedArray<DescriptorSetRef, g_framesInFlight> MaterialDescriptorSetManager::All
 
         for (uint32 textureIndex = 0; textureIndex < g_maxBoundTextures; textureIndex++)
         {
-            descriptorSet->SetElement(NAME("Textures"), textureIndex, g_renderGlobalState->placeholderData->DefaultTexture2D->GetRenderResource().GetImageView());
+            descriptorSet->SetElement(NAME("Textures"), textureIndex, g_renderGlobalState->placeholderData->defaultTexture2d->GetRenderResource().GetImageView());
         }
 
         descriptorSets[frameIndex] = std::move(descriptorSet);
@@ -183,7 +183,7 @@ FixedArray<DescriptorSetRef, g_framesInFlight> MaterialDescriptorSetManager::All
         // set initial placeholder elements that will get overridden
         for (uint32 i = 0; i < g_maxBoundTextures; i++)
         {
-            descriptorSet->SetElement(NAME("Textures"), i, g_renderGlobalState->placeholderData->DefaultTexture2D->GetRenderResource().GetImageView());
+            descriptorSet->SetElement(NAME("Textures"), i, g_renderGlobalState->placeholderData->defaultTexture2d->GetRenderResource().GetImageView());
         }
 
         for (uint32 slot = 0; slot < uint32(textureIndirectIndices.Size()); slot++)

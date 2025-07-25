@@ -133,7 +133,7 @@ struct RENDER_COMMAND(SetFinalPassImageView)
     {
         if (!imageView)
         {
-            imageView = g_renderGlobalState->placeholderData->DefaultTexture2D->GetRenderResource().GetImageView();
+            imageView = g_renderGlobalState->placeholderData->defaultTexture2d->GetRenderResource().GetImageView();
         }
 
         g_engine->GetFinalPass()->SetUILayerImageView(imageView);
@@ -214,7 +214,7 @@ static void BuildRenderGroups(RenderCollector& renderCollector, RenderProxyList&
 
         if (const Handle<Texture>& albedoTexture = material->GetTexture(MaterialTextureKey::ALBEDO_MAP))
         {
-            if (albedoTexture != g_renderGlobalState->placeholderData->DefaultTexture2D)
+            if (albedoTexture != g_renderGlobalState->placeholderData->defaultTexture2d)
             {
                 ShaderDefinition shaderDefinition = attributes.GetShaderDefinition();
                 shaderDefinition.GetProperties().Set(NAME("TEXTURED"));

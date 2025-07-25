@@ -56,7 +56,6 @@ struct EnvProbeCollection
     uint32 numProbes = 0;
     FixedArray<uint32, g_maxBoundAmbientProbes * 2> indirectIndices = { 0 };
     FixedArray<Handle<EnvProbe>, g_maxBoundAmbientProbes> envProbes = {};
-    FixedArray<TResourceHandle<RenderEnvProbe>, g_maxBoundAmbientProbes> envRenderProbes = {};
 
     // Must be called in EnvGrid::Init(), before probes are used from the render thread.
     // returns the index

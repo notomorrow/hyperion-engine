@@ -567,6 +567,7 @@ struct alignas(16) PackedVertex
 
 static_assert(sizeof(PackedVertex) == sizeof(float32) * 8);
 
+HYP_ENUM()
 enum GpuElemType : uint32
 {
     GET_UNSIGNED_BYTE,
@@ -575,9 +576,24 @@ enum GpuElemType : uint32
     GET_SIGNED_SHORT,
     GET_UNSIGNED_INT,
     GET_SIGNED_INT,
-    GET_FLOAT
+    GET_FLOAT,
+
+    GET_MAX
 };
 
+static inline constexpr uint32 GpuElemTypeSize(GpuElemType type)
+{
+    constexpr uint32 sizes[GET_MAX] = {
+        1, 1,
+        2, 2,
+        4, 4,
+        4
+    };
+
+    return sizes[uint32(type)];
+}
+
+HYP_ENUM()
 enum FaceCullMode : uint32
 {
     FCM_NONE,
@@ -585,12 +601,14 @@ enum FaceCullMode : uint32
     FCM_FRONT
 };
 
+HYP_ENUM()
 enum FillMode : uint32
 {
     FM_FILL,
     FM_LINE
 };
 
+HYP_ENUM()
 enum Topology : uint32
 {
     TOP_TRIANGLES,
@@ -602,6 +620,7 @@ enum Topology : uint32
     TOP_POINTS
 };
 
+HYP_ENUM()
 enum BlendModeFactor : uint32
 {
     BMF_NONE,

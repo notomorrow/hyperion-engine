@@ -1,6 +1,9 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
 #include <asset/texture_loaders/TextureLoader.hpp>
+#include <asset/Assets.hpp>
+#include <asset/AssetRegistry.hpp>
+#include <asset/TextureAsset.hpp>
 
 #include <streaming/StreamedTextureData.hpp>
 
@@ -84,6 +87,8 @@ AssetLoadResult TextureLoader::LoadAsset(LoaderState& state) const
     // data.width = 1;
     // data.height = 1;
 
+    Name assetName = CreateNameFromDynamicString(state.filepath.Basename());
+
     const SizeType imageBytesCount = SizeType(data.width)
         * SizeType(data.height)
         * SizeType(data.numComponents);
@@ -100,10 +105,14 @@ AssetLoadResult TextureLoader::LoadAsset(LoaderState& state) const
 
     stbi_image_free(imageBytes);
 
-    texture->SetName(CreateNameFromDynamicString(StringUtil::Basename(state.filepath.Data()).c_str()));
+    texture->SetName(assetName);
+    texture->GetAsset()->Rename(assetName);
+
+    state.assetManager->GetAssetRegistry()->RegisterAsset("$Import/Media/Textures", texture->GetAsset());
+
+    InitObject(texture);
 
     AssetLoadResult result = LoadedAsset { std::move(texture) };
-    Assert(result.GetValue().value.Is<Handle<Texture>>());
 
     return result;
 }

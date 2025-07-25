@@ -39,15 +39,7 @@ void EntityRenderProxySystem_Mesh::OnEntityAdded(Entity* entity)
 
     if (!meshComponent.mesh.IsValid() || !meshComponent.material.IsValid())
     {
-        if (!meshComponent.mesh.IsValid())
-        {
-            HYP_LOG(ECS, Warning, "Mesh not valid for entity #{}!", entity->Id());
-        }
-
-        if (!meshComponent.material.IsValid())
-        {
-            HYP_LOG(ECS, Warning, "Material not valid for entity #{}!", entity->Id());
-        }
+        HYP_LOG_ONCE(ECS, Warning, "Mesh or material not valid for entity #{}!", entity->Id());
 
         return;
     }
@@ -81,7 +73,7 @@ void EntityRenderProxySystem_Mesh::Process(float delta)
 
         if (!meshComponent.mesh.IsValid() || !meshComponent.material.IsValid())
         {
-            HYP_LOG(ECS, Warning, "Mesh or material not valid for entity #{}!", entity->Id());
+            HYP_LOG_ONCE(ECS, Warning, "Mesh or material not valid for entity #{}!", entity->Id());
 
             updatedEntities.Insert(entity->WeakHandleFromThis());
 

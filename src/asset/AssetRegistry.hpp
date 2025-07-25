@@ -176,7 +176,7 @@ public:
     }
 
     HYP_METHOD()
-    void SetName(Name name);
+    Result Rename(Name name);
 
     HYP_METHOD()
     HYP_FORCE_INLINE Handle<AssetPackage> GetPackage() const
@@ -192,7 +192,15 @@ public:
     HYP_METHOD()
     HYP_FORCE_INLINE const AssetPath& GetPath() const
     {
+        AssertDebug(IsRegistered(), "Calling GetPath() on an unregistered asset object");
+        
         return m_assetPath;
+    }
+
+    HYP_METHOD()
+    HYP_FORCE_INLINE bool IsRegistered() const
+    {
+        return m_package.IsValid();
     }
 
     HYP_METHOD()
@@ -216,15 +224,7 @@ protected:
         }
 
         AssetDataResourceBase* resourceCasted = static_cast<AssetDataResourceBase*>(m_resource);
-
-        if (!resourceCasted->IsInitialized())
-        {
-            return nullptr;
-        }
-
         AssertDebug(resourceCasted->GetAssetTypeId() == TypeId::ForType<T>(), "Type mismatch!");
-
-        ResourceHandle resourceHandle(*resourceCasted);
 
         return resourceCasted->GetAssetRef().TryGet<T>();
     }
@@ -380,13 +380,21 @@ public:
     }
 
     template <class T>
-    Handle<AssetObject> NewAssetObject(Name name, T&& data)
+    TResult<Handle<AssetObject>> NewAssetObject(Name name, T&& data)
     {
-        AddAssetObject(CreateObject<AssetObject>(name, std::forward<T>(data)));
+        Handle<AssetObject> assetObject = CreateObject<AssetObject>(name, std::forward<T>(data));
+        Result result = AddAssetObject(assetObject);
+
+        if (result.HasError())
+        {
+            return result.GetError();
+        }
+
+        return assetObject;
     }
 
-    void AddAssetObject(const Handle<AssetObject>& assetObject);
-    void RemoveAssetObject(const Handle<AssetObject>& assetObject);
+    Result AddAssetObject(const Handle<AssetObject>& assetObject);
+    Result RemoveAssetObject(const Handle<AssetObject>& assetObject);
 
     HYP_METHOD()
     FilePath GetAbsolutePath() const;
@@ -480,7 +488,7 @@ public:
         ForEach(m_packages, m_mutex, std::forward<Callback>(callback));
     }
 
-    void RegisterAsset(const UTF8StringView& path, const Handle<AssetObject>& assetObject);
+    Result RegisterAsset(const UTF8StringView& path, const Handle<AssetObject>& assetObject);
     
     template <class T>
     Handle<AssetObject> NewAssetObject(const UTF8StringView& path, T&& data)

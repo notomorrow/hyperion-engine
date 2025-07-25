@@ -1465,7 +1465,7 @@ void RenderGlobalState::SetDefaultDescriptorSetElements(uint32 frameIndex)
     {
         globalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)
             ->SetElement(
-                NAME("EnvProbeTextures"), i, placeholderData->DefaultTexture2D->GetRenderResource().GetImageView());
+                NAME("EnvProbeTextures"), i, placeholderData->defaultTexture2d->GetRenderResource().GetImageView());
     }
 
     globalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)
@@ -1514,7 +1514,7 @@ void RenderGlobalState::SetDefaultDescriptorSetElements(uint32 frameIndex)
         {
             globalDescriptorTable->GetDescriptorSet(NAME("Material"), frameIndex)
                 ->SetElement(NAME("Textures"), textureIndex,
-                    placeholderData->DefaultTexture2D->GetRenderResource().GetImageView());
+                    placeholderData->defaultTexture2d->GetRenderResource().GetImageView());
         }
     }
     else
@@ -1523,7 +1523,7 @@ void RenderGlobalState::SetDefaultDescriptorSetElements(uint32 frameIndex)
         {
             globalDescriptorTable->GetDescriptorSet(NAME("Material"), frameIndex)
                 ->SetElement(NAME("Textures"), textureIndex,
-                    placeholderData->DefaultTexture2D->GetRenderResource().GetImageView());
+                    placeholderData->defaultTexture2d->GetRenderResource().GetImageView());
         }
     }
 }

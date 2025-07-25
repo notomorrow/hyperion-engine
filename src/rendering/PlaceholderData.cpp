@@ -2,10 +2,13 @@
 
 #include <rendering/PlaceholderData.hpp>
 #include <rendering/RenderBackend.hpp>
+#include <rendering/Texture.hpp>
+
+#include <asset/Assets.hpp>
+#include <asset/AssetRegistry.hpp>
+#include <asset/TextureAsset.hpp>
 
 #include <core/math/Vector2.hpp>
-
-#include <rendering/Texture.hpp>
 
 #include <util/img/Bitmap.hpp>
 
@@ -231,7 +234,7 @@ void PlaceholderData::Create()
     ByteBuffer placeholderBufferCubemapRgba8;
     FillPlaceholderBuffer_Cubemap<TF_RGBA8>(Vec2u::One(), placeholderBufferCubemapRgba8);
 
-    DefaultTexture2D = CreateObject<Texture>(TextureData {
+    defaultTexture2d = CreateObject<Texture>(TextureData {
         TextureDesc {
             TT_TEX2D,
             TF_RGBA8,
@@ -243,11 +246,14 @@ void PlaceholderData::Create()
             IU_SAMPLED | IU_STORAGE },
         placeholderBufferTex2dRgba8 });
 
-    DefaultTexture2D->SetName(NAME("Placeholder_Texture_2D_1x1_R8"));
-    InitObject(DefaultTexture2D);
-    DefaultTexture2D->SetPersistentRenderResourceEnabled(true);
+    defaultTexture2d->SetName(NAME("Placeholder_Texture_2D_1x1_R8"));
 
-    DefaultTexture3D = CreateObject<Texture>(TextureData {
+    g_assetManager->GetAssetRegistry()->RegisterAsset("$Engine/Media/Textures", defaultTexture2d->GetAsset());
+
+    InitObject(defaultTexture2d);
+    defaultTexture2d->SetPersistentRenderResourceEnabled(true);
+
+    defaultTexture3d = CreateObject<Texture>(TextureData {
         TextureDesc {
             TT_TEX3D,
             TF_R8,
@@ -258,11 +264,14 @@ void PlaceholderData::Create()
             1,
             IU_SAMPLED | IU_STORAGE } });
 
-    DefaultTexture3D->SetName(NAME("Placeholder_Texture_3D_1x1x1_R8"));
-    InitObject(DefaultTexture3D);
-    DefaultTexture3D->SetPersistentRenderResourceEnabled(true);
+    defaultTexture3d->SetName(NAME("Placeholder_Texture_3D_1x1x1_R8"));
 
-    DefaultCubemap = CreateObject<Texture>(TextureData {
+    g_assetManager->GetAssetRegistry()->RegisterAsset("$Engine/Media/Textures", defaultTexture3d->GetAsset());
+
+    InitObject(defaultTexture3d);
+    defaultTexture3d->SetPersistentRenderResourceEnabled(true);
+
+    defaultCubemap = CreateObject<Texture>(TextureData {
         TextureDesc {
             TT_CUBEMAP,
             TF_RGBA8,
@@ -274,11 +283,13 @@ void PlaceholderData::Create()
             IU_SAMPLED | IU_STORAGE },
         placeholderBufferCubemapRgba8 });
 
-    DefaultCubemap->SetName(NAME("Placeholder_Texture_Cube_1x1_R8"));
-    InitObject(DefaultCubemap);
-    DefaultCubemap->SetPersistentRenderResourceEnabled(true);
+    defaultCubemap->SetName(NAME("Placeholder_Texture_Cube_1x1_R8"));
 
-    DefaultTexture2DArray = CreateObject<Texture>(TextureData {
+    g_assetManager->GetAssetRegistry()->RegisterAsset("$Engine/Media/Textures", defaultCubemap->GetAsset());
+    InitObject(defaultCubemap);
+    defaultCubemap->SetPersistentRenderResourceEnabled(true);
+
+    defaultTexture2dArray = CreateObject<Texture>(TextureData {
         TextureDesc {
             TT_TEX2D_ARRAY,
             TF_RGBA8,
@@ -290,11 +301,13 @@ void PlaceholderData::Create()
             IU_SAMPLED | IU_STORAGE },
         placeholderBufferTex2dRgba8 });
 
-    DefaultTexture2DArray->SetName(NAME("Placeholder_Texture_2D_1x1_R8_Array"));
-    InitObject(DefaultTexture2DArray);
-    DefaultTexture2DArray->SetPersistentRenderResourceEnabled(true);
+    defaultTexture2dArray->SetName(NAME("Placeholder_Texture_2D_1x1_R8_Array"));
 
-    DefaultCubemapArray = CreateObject<Texture>(TextureData {
+    g_assetManager->GetAssetRegistry()->RegisterAsset("$Engine/Media/Textures", defaultTexture2dArray->GetAsset());
+    InitObject(defaultTexture2dArray);
+    defaultTexture2dArray->SetPersistentRenderResourceEnabled(true);
+
+    defaultCubemapArray = CreateObject<Texture>(TextureData {
         TextureDesc {
             TT_CUBEMAP_ARRAY,
             TF_RGBA8,
@@ -306,9 +319,11 @@ void PlaceholderData::Create()
             IU_SAMPLED | IU_STORAGE },
         placeholderBufferCubemapRgba8 });
 
-    DefaultCubemapArray->SetName(NAME("Placeholder_Texture_Cube_1x1_R8_Array"));
-    InitObject(DefaultCubemapArray);
-    DefaultCubemapArray->SetPersistentRenderResourceEnabled(true);
+    defaultCubemapArray->SetName(NAME("Placeholder_Texture_Cube_1x1_R8_Array"));
+
+    g_assetManager->GetAssetRegistry()->RegisterAsset("$Engine/Media/Textures", defaultCubemapArray->GetAsset());
+    InitObject(defaultCubemapArray);
+    defaultCubemapArray->SetPersistentRenderResourceEnabled(true);
 
 #pragma endregion Textures
 

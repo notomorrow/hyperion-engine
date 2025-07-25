@@ -81,7 +81,7 @@ struct RENDER_COMMAND(SetUILayerImageView)
                 }
                 else
                 {
-                    descriptorSet->SetElement(NAME("InTexture"), g_renderGlobalState->placeholderData->DefaultTexture2D->GetRenderResource().GetImageView());
+                    descriptorSet->SetElement(NAME("InTexture"), g_renderGlobalState->placeholderData->defaultTexture2d->GetRenderResource().GetImageView());
                 }
             }
         }
@@ -136,7 +136,6 @@ void FinalPass::Create()
 
     m_quadMesh = MeshBuilder::Quad();
     InitObject(m_quadMesh);
-    m_quadMesh->SetPersistentRenderResourceEnabled(true);
 
     ShaderRef renderTextureToScreenShader = g_shaderManager->GetOrCreate(NAME("RenderTextureToScreen_UI"));
     Assert(renderTextureToScreenShader.IsValid());

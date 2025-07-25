@@ -139,7 +139,7 @@ private:
     Array<MeshFloatDataArray, DynamicAllocator> m_meshVertexPositions;
     Array<MeshFloatDataArray, DynamicAllocator> m_meshVertexNormals;
     Array<MeshFloatDataArray, DynamicAllocator> m_meshVertexUvs;
-    Array<MeshIndexArray, DynamicAllocator> m_meshIndices;
+    Array<ByteBuffer, DynamicAllocator> m_meshIndices;
 };
 
 } // namespace hyperion

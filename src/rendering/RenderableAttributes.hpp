@@ -6,6 +6,7 @@
 #include <rendering/RenderFramebuffer.hpp>
 #include <rendering/RenderBucket.hpp>
 #include <rendering/ShaderManager.hpp>
+#include <rendering/RenderStructs.hpp>
 
 #include <core/Defines.hpp>
 #include <core/utilities/EnumFlags.hpp>
@@ -97,10 +98,14 @@ struct MeshAttributes
     HYP_FIELD(Property = "Topology", Serialize = true)
     Topology topology = TOP_TRIANGLES;
 
+    HYP_FIELD(Property = "IndexBufferElemType", Serialize)
+    GpuElemType indexBufferElemType = GET_UNSIGNED_INT;
+
     HYP_FORCE_INLINE bool operator==(const MeshAttributes& other) const
     {
         return vertexAttributes == other.vertexAttributes
-            && topology == other.topology;
+            && topology == other.topology
+            && indexBufferElemType == other.indexBufferElemType;
     }
 
     HYP_FORCE_INLINE HashCode GetHashCode() const
@@ -108,6 +113,7 @@ struct MeshAttributes
         HashCode hc;
         hc.Add(vertexAttributes);
         hc.Add(topology);
+        hc.Add(indexBufferElemType);
 
         return hc;
     }

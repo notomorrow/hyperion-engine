@@ -4,6 +4,12 @@
 
 #include <core/Defines.hpp>
 
+#ifdef HYP_WINDOWS
+#include <Windows.h>
+#endif
+
+#include <Types.hpp>
+
 #include <atomic>
 #include <algorithm>
 #include <utility>
@@ -165,8 +171,180 @@ public:
     }
 };
 
+#ifdef HYP_WINDOWS
+static inline int32 AtomicAdd(volatile int32* value, int32 amount)
+{
+    return _InterlockedExchangeAdd(reinterpret_cast<long volatile*>(value), amount);
+}
+
+static inline int64 AtomicAdd(volatile int64* value, int64 amount)
+{
+    return _InterlockedExchangeAdd64(reinterpret_cast<long long volatile*>(value), amount);
+}
+
+static inline int32 AtomicIncrement(volatile int32* value)
+{
+    return _InterlockedIncrement(reinterpret_cast<long volatile*>(value));
+}
+
+static inline int64 AtomicIncrement(volatile int64* value)
+{
+    return _InterlockedIncrement64(reinterpret_cast<long long volatile*>(value));
+}
+
+static inline int32 AtomicDecrement(volatile int32* value)
+{
+    return _InterlockedDecrement(reinterpret_cast<long volatile*>(value));
+}
+
+static inline int64 AtomicDecrement(volatile int64* value)
+{
+    return _InterlockedDecrement64(reinterpret_cast<long long volatile*>(value));
+}
+
+static inline int32 AtomicExchange(volatile int32* value, int32 newValue)
+{
+    return _InterlockedExchange(reinterpret_cast<long volatile*>(value), newValue);
+}
+
+static inline int64 AtomicExchange(volatile int64* value, int64 newValue)
+{
+    return _InterlockedExchange64(reinterpret_cast<long long volatile*>(value), newValue);
+}
+
+static inline bool AtomicCompareExchange(volatile int32* value, int32& expected, int32 desired)
+{
+    return _InterlockedCompareExchange(reinterpret_cast<long volatile*>(value), desired, expected) == expected;
+}
+
+static inline bool AtomicCompareExchange(volatile int64* value, int64& expected, int64 desired)
+{
+    return _InterlockedCompareExchange64(reinterpret_cast<long long volatile*>(value), desired, expected) == expected;
+}
+
+static inline int32 AtomicBitOr(volatile int32* value, int32 bitMask)
+{
+    return _InterlockedOr(reinterpret_cast<long volatile*>(value), bitMask);
+}
+
+static inline int64 AtomicBitOr(volatile int64* value, int64 bitMask)
+{
+    return _InterlockedOr64(reinterpret_cast<long long volatile*>(value), bitMask);
+}
+
+static inline int32 AtomicBitAnd(volatile int32* value, int32 bitMask)
+{
+    return _InterlockedAnd(reinterpret_cast<long volatile*>(value), bitMask);
+}
+
+static inline int64 AtomicBitAnd(volatile int64* value, int64 bitMask)
+{
+    return _InterlockedAnd64(reinterpret_cast<long long volatile*>(value), bitMask);
+}
+
+static inline int32 AtomicBitXor(volatile int32* value, int32 bitMask)
+{
+    return _InterlockedXor(reinterpret_cast<long volatile*>(value), bitMask);
+}
+
+static inline int64 AtomicBitXor(volatile int64* value, int64 bitMask)
+{
+    return _InterlockedXor64(reinterpret_cast<long long volatile*>(value), bitMask);
+}
+
+#else
+static inline int32 AtomicAdd(volatile int32* value, int32 amount)
+{
+    return __atomic_fetch_add(value, amount, __ATOMIC_SEQ_CST);
+}
+
+static inline int64 AtomicAdd(volatile int64* value, int64 amount)
+{
+    return __atomic_fetch_add(value, amount, __ATOMIC_SEQ_CST);
+}
+
+static inline int32 AtomicIncrement(volatile int32* value)
+{
+    return __atomic_fetch_add(value, 1, __ATOMIC_SEQ_CST);
+}
+
+static inline int64 AtomicIncrement(volatile int64* value)
+{
+    return __atomic_fetch_add(value, 1, __ATOMIC_SEQ_CST);
+}
+
+static inline int32 AtomicDecrement(volatile int32* value)
+{
+    return __atomic_fetch_sub(value, 1, __ATOMIC_SEQ_CST);
+}
+
+static inline int64 AtomicDecrement(volatile int64* value)
+{
+    return __atomic_fetch_sub(value, 1, __ATOMIC_SEQ_CST);
+}
+
+static inline int32 AtomicExchange(volatile int32* value, int32 newValue)
+{
+    return __atomic_exchange_n(value, newValue, __ATOMIC_SEQ_CST);
+}
+
+static inline int64 AtomicExchange(volatile int64* value, int64 newValue)
+{
+    return __atomic_exchange_n(value, newValue, __ATOMIC_SEQ_CST);
+}
+
+static inline bool AtomicCompareExchange(volatile int32* value, int32& expected, int32 desired)
+{
+    return __atomic_compare_exchange_n(value, &expected, desired, false, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
+}
+
+static inline bool AtomicCompareExchange(volatile int64* value, int64& expected, int64 desired)
+{
+    return __atomic_compare_exchange_n(value, &expected, desired, false, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
+}
+
+static inline int32 AtomicBitOr(volatile int32* value, int32 bitMask)
+{
+    return __atomic_fetch_or(value, bitMask, __ATOMIC_SEQ_CST);
+}
+
+static inline int64 AtomicBitOr(volatile int64* value, int64 bitMask)
+{
+    return __atomic_fetch_or(value, bitMask, __ATOMIC_SEQ_CST);
+}
+
+static inline int32 AtomicBitAnd(volatile int32* value, int32 bitMask)
+{
+    return __atomic_fetch_and(value, bitMask, __ATOMIC_SEQ_CST);
+}
+
+static inline int64 AtomicBitAnd(volatile int64* value, int64 bitMask)
+{
+    return __atomic_fetch_and(value, bitMask, __ATOMIC_SEQ_CST);
+}
+
+static inline int32 AtomicBitXor(volatile int32* value, int32 bitMask)
+{
+    return __atomic_fetch_xor(value, bitMask, __ATOMIC_SEQ_CST);
+}
+
+static inline int64 AtomicBitXor(volatile int64* value, int64 bitMask)
+{
+    return __atomic_fetch_xor(value, bitMask, __ATOMIC_SEQ_CST);
+}
+
+#endif
+
 } // namespace threading
 
+using threading::AtomicAdd;
+using threading::AtomicBitAnd;
+using threading::AtomicBitOr;
+using threading::AtomicBitXor;
+using threading::AtomicCompareExchange;
+using threading::AtomicDecrement;
+using threading::AtomicExchange;
+using threading::AtomicIncrement;
 using threading::AtomicVar;
 
 } // namespace hyperion

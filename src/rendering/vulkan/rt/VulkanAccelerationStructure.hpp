@@ -15,8 +15,6 @@
 #include <rendering/RenderGpuBuffer.hpp>
 #include <rendering/RenderStructs.hpp>
 
-#include <streaming/StreamedMeshData.hpp>
-
 #include <Types.hpp>
 
 namespace hyperion {

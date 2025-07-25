@@ -68,7 +68,6 @@ uint32 EnvProbeCollection::AddProbe(const Handle<EnvProbe>& envProbe)
     const uint32 index = numProbes++;
 
     envProbes[index] = envProbe;
-    envRenderProbes[index] = TResourceHandle<RenderEnvProbe>(envProbe->GetRenderResource());
     indirectIndices[index] = index;
     indirectIndices[g_maxBoundAmbientProbes + index] = index;
 
@@ -86,7 +85,6 @@ void EnvProbeCollection::AddProbe(uint32 index, const Handle<EnvProbe>& envProbe
     numProbes = MathUtil::Max(numProbes, index + 1);
 
     envProbes[index] = envProbe;
-    envRenderProbes[index] = TResourceHandle<RenderEnvProbe>(envProbe->GetRenderResource());
     indirectIndices[index] = index;
     indirectIndices[g_maxBoundAmbientProbes + index] = index;
 }

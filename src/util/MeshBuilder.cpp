@@ -74,35 +74,38 @@ Handle<Mesh> MeshBuilder::Quad()
 {
     const VertexAttributeSet vertexAttributes = staticMeshVertexAttributes;
 
-    Handle<Mesh> mesh = CreateObject<Mesh>(
-        quadVertices,
-        quadIndices,
-        TOP_TRIANGLES,
-        vertexAttributes);
+    MeshData meshData;
+    meshData.desc.numIndices = uint32(quadIndices.Size());
+    meshData.desc.numVertices = uint32(quadVertices.Size());
+    meshData.vertexData = quadVertices;
+    meshData.indexData.SetSize(quadIndices.Size() * sizeof(uint32));
+    meshData.indexData.Write(quadIndices.Size() * sizeof(uint32), 0, quadIndices.Data());
 
+    meshData.CalculateTangents();
+
+    Handle<Mesh> mesh = CreateObject<Mesh>();
+    mesh->SetMeshData(meshData);
     mesh->SetName(NAME("MeshBuilder_Quad"));
-
-    mesh->CalculateTangents();
 
     return mesh;
 }
 
 Handle<Mesh> MeshBuilder::Cube()
 {
-    Handle<Mesh> mesh;
+    static const auto cubeVerticesAndIndices = Mesh::CalculateIndices(cubeVertices);
 
-    const VertexAttributeSet vertexAttributes = staticMeshVertexAttributes;
+    MeshData meshData;
+    meshData.desc.numIndices = uint32(cubeVerticesAndIndices.second.Size());
+    meshData.desc.numVertices = uint32(cubeVerticesAndIndices.first.Size());
+    meshData.vertexData = cubeVerticesAndIndices.first;
+    meshData.indexData.SetSize(cubeVerticesAndIndices.second.Size() * sizeof(uint32));
+    meshData.indexData.Write(cubeVerticesAndIndices.second.Size() * sizeof(uint32), 0, cubeVerticesAndIndices.second.Data());
 
-    auto meshData = Mesh::CalculateIndices(cubeVertices);
+    meshData.CalculateTangents();
 
-    mesh = CreateObject<Mesh>(
-        meshData.first,
-        meshData.second,
-        TOP_TRIANGLES,
-        vertexAttributes);
+    Handle<Mesh> mesh = CreateObject<Mesh>();
     mesh->SetName(NAME("MeshBuilder_Cube"));
-
-    mesh->CalculateTangents();
+    mesh->SetMeshData(meshData);
 
     return mesh;
 }
@@ -139,7 +142,7 @@ Handle<Mesh> MeshBuilder::NormalizedCubeSphere(uint32 numDivisions)
     };
 
     Array<Vertex> vertices;
-    Array<Mesh::Index> indices;
+    Array<uint32> indices;
 
     for (uint32 face = 0; face < 6; face++)
     {
@@ -203,16 +206,19 @@ Handle<Mesh> MeshBuilder::NormalizedCubeSphere(uint32 numDivisions)
         }
     }
 
-    Handle<Mesh> mesh = CreateObject<Mesh>(
-        vertices,
-        indices,
-        TOP_TRIANGLES,
-        staticMeshVertexAttributes);
+    MeshData meshData;
+    meshData.desc.numIndices = uint32(indices.Size());
+    meshData.desc.numVertices = uint32(vertices.Size());
+    meshData.vertexData = std::move(vertices);
+    meshData.indexData.SetSize(indices.Size() * sizeof(uint32));
+    meshData.indexData.Write(indices.Size() * sizeof(uint32), 0, indices.Data());
 
+    meshData.CalculateNormals(true);
+    meshData.CalculateTangents();
+
+    Handle<Mesh> mesh = CreateObject<Mesh>();
+    mesh->SetMeshData(meshData);
     mesh->SetName(NAME("MeshBuilder_NormalizedCubeSphere"));
-
-    mesh->CalculateNormals(true);
-    mesh->CalculateTangents();
 
     return mesh;
 }
@@ -221,20 +227,18 @@ Handle<Mesh> MeshBuilder::ApplyTransform(const Mesh* mesh, const Transform& tran
 {
     Assert(mesh != nullptr);
 
-    StreamedMeshData* streamedMeshData = mesh->GetStreamedMeshData();
-
-    if (!streamedMeshData)
+    if (!mesh->GetAsset())
     {
         return Handle<Mesh> {};
     }
 
-    ResourceHandle resourceHandle(*streamedMeshData);
+    ResourceHandle resourceHandle(*mesh->GetAsset()->GetResource());
 
     const Matrix4 normalMatrix = transform.GetMatrix().Inverted().Transposed();
 
-    Array<Vertex> newVertices = streamedMeshData->GetMeshData().vertices;
+    MeshData meshData = *mesh->GetAsset()->GetMeshData();
 
-    for (Vertex& vertex : newVertices)
+    for (Vertex& vertex : meshData.vertexData)
     {
         vertex.SetPosition(transform.GetMatrix() * vertex.GetPosition());
         vertex.SetNormal(normalMatrix * vertex.GetNormal());
@@ -242,11 +246,8 @@ Handle<Mesh> MeshBuilder::ApplyTransform(const Mesh* mesh, const Transform& tran
         vertex.SetBitangent(normalMatrix * vertex.GetBitangent());
     }
 
-    Handle<Mesh> newMesh = CreateObject<Mesh>(
-        std::move(newVertices),
-        streamedMeshData->GetMeshData().indices,
-        mesh->GetTopology(),
-        mesh->GetVertexAttributes());
+    Handle<Mesh> newMesh = CreateObject<Mesh>();
+    newMesh->SetMeshData(meshData);
     newMesh->SetName(mesh->GetName());
 
     return newMesh;
@@ -254,59 +255,68 @@ Handle<Mesh> MeshBuilder::ApplyTransform(const Mesh* mesh, const Transform& tran
 
 Handle<Mesh> MeshBuilder::Merge(const Mesh* a, const Mesh* b, const Transform& aTransform, const Transform& bTransform)
 {
-    Assert(a != nullptr);
-    Assert(b != nullptr);
+    Assert(a != nullptr && a->GetAsset().IsValid());
+    Assert(b != nullptr && b->GetAsset().IsValid());
 
     Handle<Mesh> transformedMeshes[] = {
         ApplyTransform(a, aTransform),
         ApplyTransform(b, bTransform)
     };
 
-    StreamedMeshData* streamedMeshDatas[] = {
-        transformedMeshes[0]->GetStreamedMeshData(),
-        transformedMeshes[1]->GetStreamedMeshData()
+    ResourceHandle resourceHandles[] = {
+        ResourceHandle(*transformedMeshes[0]->GetAsset()->GetResource()),
+        ResourceHandle(*transformedMeshes[1]->GetAsset()->GetResource())
     };
 
-    Assert(streamedMeshDatas[0] != nullptr);
-    Assert(streamedMeshDatas[1] != nullptr);
-
-    TResourceHandle<StreamedMeshData> streamedMeshDataRefs[] = {
-        *streamedMeshDatas[0],
-        *streamedMeshDatas[1]
+    MeshData* meshDatas[] = {
+        transformedMeshes[0]->GetAsset()->GetMeshData(),
+        transformedMeshes[1]->GetAsset()->GetMeshData()
     };
+
+    Assert(meshDatas[0] != nullptr);
+    Assert(meshDatas[1] != nullptr);
 
     const VertexAttributeSet mergedVertexAttributes = a->GetVertexAttributes() | b->GetVertexAttributes();
 
     Array<Vertex> allVertices;
-    allVertices.Resize(streamedMeshDataRefs[0]->GetMeshData().vertices.Size() + streamedMeshDataRefs[1]->GetMeshData().vertices.Size());
+    allVertices.Resize(meshDatas[0]->vertexData.Size() + meshDatas[1]->vertexData.Size());
 
-    Array<Mesh::Index> allIndices;
-    allIndices.Resize(streamedMeshDataRefs[0]->GetMeshData().indices.Size() + streamedMeshDataRefs[1]->GetMeshData().indices.Size());
+    Array<uint32> allIndices;
+    allIndices.Resize(
+        (meshDatas[0]->indexData.Size() / GpuElemTypeSize(meshDatas[0]->desc.meshAttributes.indexBufferElemType))
+        + (meshDatas[1]->indexData.Size() / GpuElemTypeSize(meshDatas[1]->desc.meshAttributes.indexBufferElemType)));
 
-    SizeType vertexOffset = 0,
-             indexOffset = 0;
+    SizeType vertexOffset = 0;
+    SizeType indexOffset = 0;
 
     for (SizeType meshIndex = 0; meshIndex < 2; meshIndex++)
     {
         const SizeType vertexOffsetBefore = vertexOffset;
 
-        for (SizeType i = 0; i < streamedMeshDataRefs[meshIndex]->GetMeshData().vertices.Size(); i++)
+        for (SizeType i = 0; i < meshDatas[meshIndex]->vertexData.Size(); i++)
         {
-            allVertices[vertexOffset++] = streamedMeshDataRefs[meshIndex]->GetMeshData().vertices[i];
+            allVertices[vertexOffset++] = meshDatas[meshIndex]->vertexData[i];
         }
 
-        for (SizeType i = 0; i < streamedMeshDataRefs[meshIndex]->GetMeshData().indices.Size(); i++)
+        const uint32 stride = GpuElemTypeSize(meshDatas[meshIndex]->desc.meshAttributes.indexBufferElemType);
+
+        for (SizeType i = 0; i < meshDatas[meshIndex]->indexData.Size() / stride; i++)
         {
-            allIndices[indexOffset++] = streamedMeshDataRefs[meshIndex]->GetMeshData().indices[i] + vertexOffsetBefore;
+            allIndices[indexOffset++] = meshDatas[meshIndex]->indexData[i * stride] + vertexOffsetBefore;
         }
     }
 
-    Handle<Mesh> newMesh = CreateObject<Mesh>(
-        std::move(allVertices),
-        std::move(allIndices),
-        a->GetTopology(),
-        mergedVertexAttributes);
+    MeshData mergedMeshData;
+    mergedMeshData.desc.meshAttributes.indexBufferElemType = GET_UNSIGNED_INT;
+    mergedMeshData.desc.meshAttributes.vertexAttributes = mergedVertexAttributes;
+    mergedMeshData.desc.numIndices = uint32(allIndices.Size());
+    mergedMeshData.desc.numVertices = uint32(allVertices.Size());
+    mergedMeshData.vertexData = std::move(allVertices);
+    mergedMeshData.indexData.SetSize(allIndices.Size() * sizeof(uint32));
+    mergedMeshData.indexData.Write(allIndices.Size() * sizeof(uint32), 0, allIndices.Data());
 
+    Handle<Mesh> newMesh = CreateObject<Mesh>();
+    newMesh->SetMeshData(mergedMeshData);
     newMesh->SetName(NAME("MeshBuilder_MergedMesh"));
 
     return newMesh;

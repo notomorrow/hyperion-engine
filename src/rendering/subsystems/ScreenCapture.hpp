@@ -6,8 +6,6 @@
 #include <scene/Scene.hpp>
 #include <scene/camera/Camera.hpp>
 
-#include <rendering/RenderResource.hpp>
-
 #include <rendering/RenderObject.hpp>
 
 #include <core/Handle.hpp>

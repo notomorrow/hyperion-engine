@@ -290,9 +290,6 @@ void FullScreenPass::CreateQuad()
 
     m_fullScreenQuad = MeshBuilder::Quad();
     InitObject(m_fullScreenQuad);
-
-    // Allow Render() to be called directly without a RenderGroup
-    m_fullScreenQuad->SetPersistentRenderResourceEnabled(true);
 }
 
 void FullScreenPass::CreateFramebuffer()
@@ -417,8 +414,6 @@ void FullScreenPass::CreatePreviousTexture()
         TWM_CLAMP_TO_EDGE });
 
     InitObject(m_previousTexture);
-
-    m_previousTexture->SetPersistentRenderResourceEnabled(true);
 }
 
 void FullScreenPass::CreateRenderTextureToScreenPass()

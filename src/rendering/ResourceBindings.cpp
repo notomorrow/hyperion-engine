@@ -80,7 +80,7 @@ void OnBindingChanged_ReflectionProbe(EnvProbe* envProbe, uint32 prev, uint32 ne
         for (uint32 frameIndex = 0; frameIndex < g_framesInFlight; frameIndex++)
         {
             g_renderGlobalState->globalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)
-                ->SetElement(NAME("EnvProbeTextures"), prev, g_renderGlobalState->placeholderData->DefaultTexture2D->GetRenderResource().GetImageView());
+                ->SetElement(NAME("EnvProbeTextures"), prev, g_renderGlobalState->placeholderData->defaultTexture2d->GetRenderResource().GetImageView());
         }
     }
     else
