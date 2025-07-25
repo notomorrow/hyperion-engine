@@ -1122,17 +1122,20 @@ ShaderProperties& ShaderProperties::Set(const ShaderProperty& property, bool ena
     return *this;
 }
 
-String ShaderProperties::ToString() const
+String ShaderProperties::ToString(bool includeVertexAttributes) const
 {
     Array<String> propertyNames;
-    propertyNames.Reserve(ByteUtil::BitCount(GetRequiredVertexAttributes().GetFlagMask()) + GetPropertySet().Size());
+    propertyNames.Reserve((includeVertexAttributes ? ByteUtil::BitCount(GetRequiredVertexAttributes().GetFlagMask()) : 0) + GetPropertySet().Size());
 
-    for (Bitset::BitIndex i : Bitset(GetRequiredVertexAttributes().GetFlagMask()))
+    if (includeVertexAttributes)
     {
-        AssertDebug(int(i) < int(VertexAttribute::mapping.Size()));
-        AssertDebug(VertexAttribute::mapping.ValueAt(i).name != nullptr, "Vertex attribute name missing at index {}, flagmask: {}", i, GetRequiredVertexAttributes().GetFlagMask());
+        for (Bitset::BitIndex i : Bitset(GetRequiredVertexAttributes().GetFlagMask()))
+        {
+            AssertDebug(int(i) < int(VertexAttribute::mapping.Size()));
+            AssertDebug(VertexAttribute::mapping.ValueAt(i).name != nullptr, "Vertex attribute name missing at index {}, flagmask: {}", i, GetRequiredVertexAttributes().GetFlagMask());
 
-        propertyNames.PushBack(String("HYP_ATTRIBUTE_") + VertexAttribute::mapping.ValueAt(i).name);
+            propertyNames.PushBack(String("HYP_ATTRIBUTE_") + VertexAttribute::mapping.ValueAt(i).name);
+        }
     }
 
     for (const ShaderProperty& property : GetPropertySet())

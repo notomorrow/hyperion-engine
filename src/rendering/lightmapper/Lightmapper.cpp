@@ -1141,7 +1141,7 @@ LightmapJob::LightmapJob(LightmapJobParams&& params)
     InitObject(m_view);
 
     m_view->UpdateVisibility();
-    m_view->Collect();
+    m_view->CollectSync();
 }
 
 LightmapJob::~LightmapJob()

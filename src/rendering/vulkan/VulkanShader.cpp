@@ -80,7 +80,12 @@ RendererResult VulkanShader::AttachSubShaders()
 
     for (SizeType index = 0; index < m_compiledShader->modules.Size(); index++)
     {
-        const Name srcName = m_compiledShader->GetName();
+#ifdef HYP_DEBUG_MODE
+        const Name srcName = NAME_FMT("{} ({})", m_compiledShader->GetName(), m_compiledShader->GetDefinition().GetProperties().ToString(/* includeVertexAttributes */ false));
+#else
+        const Name srcName = NAME("<unnamed shader>");
+#endif
+
         ByteBuffer byteBuffer = m_compiledShader->modules[index];
 
         if (byteBuffer.Empty())

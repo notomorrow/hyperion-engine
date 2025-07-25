@@ -51,8 +51,9 @@ class TaskSystem;
 
 using OnTaskBatchCompletedCallback = Proc<void()>;
 
-struct TaskBatch
+class TaskBatch
 {
+public:
     TaskCompleteNotifier notifier;
     uint32 numEnqueued = 0;
 

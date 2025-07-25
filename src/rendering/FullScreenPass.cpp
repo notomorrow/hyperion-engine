@@ -307,13 +307,16 @@ void FullScreenPass::CreateFramebuffer()
         return;
     }
 
-    if (m_extent.x * m_extent.y == 0)
-    {
-        // Assert(m_gbuffer != nullptr);
-        // m_extent = m_gbuffer->GetExtent();
-        // TEMP HACK
-        m_extent = g_renderBackend->GetSwapchain()->GetExtent();
-    }
+    Assert(m_extent.Volume() != 0);
+
+    // if (m_extent.x * m_extent.y == 0)
+    // {
+
+    //     Assert(m_gbuffer != nullptr);
+    //     m_extent = m_gbuffer->GetExtent();
+    //     // // TEMP HACK
+    //     // m_extent = g_renderBackend->GetSwapchain()->GetExtent();
+    // }
 
     Vec2u framebufferExtent = m_extent;
 

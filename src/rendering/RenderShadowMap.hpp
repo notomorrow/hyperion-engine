@@ -22,9 +22,10 @@ class FullScreenPass;
 class RenderWorld;
 class RenderShadowMap;
 
+HYP_ENUM()
 enum ShadowMapFilter : uint32
 {
-    SMF_STANDARD,
+    SMF_STANDARD = 0,
     SMF_PCF,
     SMF_CONTACT_HARDENED,
     SMF_VSM,
@@ -32,6 +33,7 @@ enum ShadowMapFilter : uint32
     SMF_MAX
 };
 
+HYP_ENUM()
 enum ShadowMapType : uint32
 {
     SMT_DIRECTIONAL,
@@ -39,6 +41,7 @@ enum ShadowMapType : uint32
     SMT_OMNI
 };
 
+HYP_STRUCT()
 struct ShadowMapAtlasElement
 {
     // Directional and spot lights only: index of the atlas in the shadow map texture array

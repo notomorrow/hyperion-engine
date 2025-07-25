@@ -118,10 +118,10 @@ void SkydomeRenderer::Update(float delta)
         return;
     }
 
-    m_envProbe->Update(delta);
-    m_envProbe->SetNeedsRender(true);
-
-    m_envProbe->SetReceivesUpdate(false);
+//    m_envProbe->Update(delta);
+//    m_envProbe->SetNeedsRender(true);
+//
+//    m_envProbe->SetReceivesUpdate(false);
 }
 
 } // namespace hyperion

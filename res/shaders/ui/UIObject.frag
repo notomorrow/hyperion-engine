@@ -74,10 +74,12 @@ HYP_DESCRIPTOR_SSBO_DYNAMIC(Object, MaterialsBuffer) readonly buffer MaterialsBu
 #endif
 #endif
 
+#ifdef TEXTURED
 #ifndef HYP_FEATURES_BINDLESS_TEXTURES
 HYP_DESCRIPTOR_SRV(Material, Textures, count = 16) uniform texture2D textures[HYP_MAX_BOUND_TEXTURES];
 #else
 HYP_DESCRIPTOR_SRV(Material, Textures) uniform texture2D textures[];
+#endif
 #endif
 
 float RoundedRectangle(vec2 pos, vec2 size, float radius)
@@ -87,35 +89,39 @@ float RoundedRectangle(vec2 pos, vec2 size, float radius)
 
 void main()
 {
-    UIObjectProperties properties;
-    GetUIObjectProperties(object, properties);
+    const UIObjectProperties properties = GetUIObjectProperties(object);
 
     vec4 ui_color = CURRENT_MATERIAL.albedo;
 
+#ifdef TEXTURED
     if (HAS_TEXTURE(CURRENT_MATERIAL, MATERIAL_TEXTURE_ALBEDO_map))
     {
         vec4 albedo_texture = SAMPLE_TEXTURE(CURRENT_MATERIAL, MATERIAL_TEXTURE_ALBEDO_map, v_texcoord0);
 
         ui_color *= albedo_texture;
     }
+#endif
 
     // rounded corners
     vec2 size = vec2(properties.size);
     vec2 position = v_texcoord0 * size;
 
-    float roundedness = RoundedRectangle((size * 0.5) - position, size * 0.5, properties.border_radius);
+    if (!bool(HYP_FAST_LESS(properties.border_flags, 1)) && !bool(HYP_FAST_LESS(properties.border_radius, HYP_FMATH_EPSILON)))
+    {
+        float roundedness = RoundedRectangle((size * 0.5) - position, size * 0.5, properties.border_radius);
 
-    float top = float((properties.border_flags & UOB_TOP) != 0u);
-    float left = float((properties.border_flags & UOB_LEFT) != 0u);
-    float bottom = float((properties.border_flags & UOB_BOTTOM) != 0u);
-    float right = float((properties.border_flags & UOB_RIGHT) != 0u);
+        float top = float((properties.border_flags & UOB_TOP) != 0u);
+        float left = float((properties.border_flags & UOB_LEFT) != 0u);
+        float bottom = float((properties.border_flags & UOB_BOTTOM) != 0u);
+        float right = float((properties.border_flags & UOB_RIGHT) != 0u);
 
-    roundedness = mix(mix(roundedness, 1.0, step(0.5, 1.0 - v_texcoord0.y)), roundedness, top);
-    roundedness = mix(mix(roundedness, 1.0, step(0.5, 1.0 - v_texcoord0.x)), roundedness, left);
-    roundedness = mix(mix(roundedness, 1.0, step(0.5, v_texcoord0.y)), roundedness, bottom);
-    roundedness = mix(mix(roundedness, 1.0, step(0.5, v_texcoord0.x)), roundedness, right);
+        roundedness = mix(mix(roundedness, 1.0, step(0.5, 1.0 - v_texcoord0.y)), roundedness, top);
+        roundedness = mix(mix(roundedness, 1.0, step(0.5, 1.0 - v_texcoord0.x)), roundedness, left);
+        roundedness = mix(mix(roundedness, 1.0, step(0.5, v_texcoord0.y)), roundedness, bottom);
+        roundedness = mix(mix(roundedness, 1.0, step(0.5, v_texcoord0.x)), roundedness, right);
 
-    ui_color.a *= mix(1.0, roundedness, 1.0 - step(properties.border_radius, 0.0));
+        ui_color.a *= mix(1.0, roundedness, 1.0 - step(properties.border_radius, 0.0));
+    }
 
     gbuffer_albedo = ui_color * v_color;
     gbuffer_mask = GET_OBJECT_BUCKET(object) | OBJECT_MASK_UI;

@@ -35,6 +35,14 @@ class RenderEnvProbe;
 class GBuffer;
 class IDrawCallCollectionImpl;
 
+namespace threading {
+
+class TaskBatch;
+
+} // namespace threading
+
+using threading::TaskBatch;
+
 enum class ViewFlags : uint32
 {
     NONE = 0x0,
@@ -213,7 +221,11 @@ public:
     bool TestRay(const Ray& ray, RayTestResults& outResults, bool useBvh = true) const;
 
     void UpdateVisibility();
-    void Collect();
+
+    void BeginAsyncCollection(TaskBatch& batch);
+    void EndAsyncCollection();
+
+    void CollectSync();
 
 protected:
     void Init() override;
@@ -245,6 +257,8 @@ protected:
     Optional<RenderableAttributeSet> m_overrideAttributes;
 
     ResourceTrackerDiff m_lastMeshCollectionResult;
+
+    TaskBatch* m_collectionTaskBatch;
 };
 
 } // namespace hyperion

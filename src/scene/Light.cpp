@@ -3,6 +3,7 @@
 #include <scene/Light.hpp>
 #include <scene/View.hpp>
 #include <scene/Scene.hpp>
+#include <scene/World.hpp>
 
 #include <scene/camera/Camera.hpp>
 #include <scene/camera/OrthoCamera.hpp>
@@ -316,8 +317,7 @@ void Light::Update(float delta)
                 break;
             }
 
-            m_shadowViews[i]->UpdateVisibility();
-            m_shadowViews[i]->Collect();
+            GetWorld()->ProcessViewAsync(m_shadowViews[i]);
         }
 
         SetNeedsRenderProxyUpdate();
@@ -490,6 +490,24 @@ void Light::SetShadowMapDimensions(Vec2u shadowMapDimensions)
     }
 
     m_shadowMapDimensions = shadowMapDimensions;
+
+    if (IsInitCalled())
+    {
+        SetNeedsRenderProxyUpdate();
+    }
+}
+
+void Light::SetShadowMapFilter(ShadowMapFilter shadowMapFilter)
+{
+    if (shadowMapFilter == GetShadowMapFilter())
+    {
+        return;
+    }
+
+    m_flags &= ~LF_SHADOW_FILTER_MASK;
+
+    // ShadowMapFilter enum members are sequentially ordered so turn it into a flag
+    m_flags |= EnumFlags<LightFlags>(1u << shadowMapFilter);
 
     if (IsInitCalled())
     {

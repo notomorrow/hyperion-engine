@@ -198,6 +198,8 @@ void HyperionEditor::Init()
         Color(Vec4f(1.0f, 0.9f, 0.8f, 1.0f)),
         5.0f);
 
+    // sunEntity->SetShadowMapFilter(SMF_VSM);
+
     sunEntity->Attach(sunNode);
 
     scene->GetEntityManager()->AddComponent<ShadowMapComponent>(sunEntity, ShadowMapComponent { .mode = SMF_PCF, .radius = 80.0f, .resolution = { 1024, 1024 } });

@@ -281,7 +281,7 @@ float GetShadowVariance(in Light light, vec3 pos, float NdotL)
 #endif
 
     const vec3 coord = GetShadowCoord(light.shadow_matrix, pos);
-    const vec2 moments = texture(sampler2DArray(shadow_maps, HYP_SAMPLER_LINEAR), vec3(coord.xy * light.dimensions_scale.zw + light.offset_uv, float(light.layer_index))).xy;
+    vec2 moments = texture(sampler2DArray(shadow_maps, HYP_SAMPLER_LINEAR), vec3(coord.xy * light.dimensions_scale.zw + light.offset_uv, float(light.layer_index))).xy;
 
     float d = coord.z - moments.x;
     float p = step(coord.z, moments.x + bias);

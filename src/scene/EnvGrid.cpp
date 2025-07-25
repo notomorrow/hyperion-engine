@@ -313,19 +313,25 @@ void EnvGrid::OnDetachedFromNode(Node* node)
 
 void EnvGrid::OnAddedToWorld(World* world)
 {
+    Entity::OnAddedToWorld(world);
 }
 
 void EnvGrid::OnRemovedFromWorld(World* world)
 {
+    Entity::OnRemovedFromWorld(world);
 }
 
 void EnvGrid::OnAddedToScene(Scene* scene)
 {
+    Entity::OnAddedToScene(scene);
+
     m_view->AddScene(scene->HandleFromThis());
 }
 
 void EnvGrid::OnRemovedFromScene(Scene* scene)
 {
+    Entity::OnRemovedFromScene(scene);
+
     m_view->RemoveScene(scene->HandleFromThis());
 }
 
@@ -548,7 +554,7 @@ void EnvGrid::Update(float delta)
     m_camera->Update(delta);
 
     m_view->UpdateVisibility();
-    m_view->Collect();
+    m_view->CollectSync();
 
     HYP_LOG(EnvGrid, Debug, "View::Collect() for EnvGrid {}", Id());
 

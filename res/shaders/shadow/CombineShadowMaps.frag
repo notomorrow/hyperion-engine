@@ -9,7 +9,7 @@ layout(location = 0) in vec3 v_position;
 layout(location = 1) in vec3 v_normal;
 layout(location = 2) in vec2 v_texcoord;
 
-layout(location = 0) out vec4 color_output;
+layout(location = 0) out vec4 combinedDepths;
 
 #define HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 #include "../include/shared.inc"
@@ -29,13 +29,16 @@ void main()
     vec4 color1 = Texture2D(sampler_nearest, src1, v_texcoord);
 
 #ifdef VSM
-    color_output = color0.r < color1.r ? color0 : color1;
+    // VSM stores as 16 bit float in each texture
+    vec2 moments = mix(color0.xy, color1.xy, bvec2(color0.r < color1.r));
+
+    combinedDepths = vec4(moments, 0.0, 0.0);
 #else
     float unpackedDepth0 = UnpackDepth(color0);
     float unpackedDepth1 = UnpackDepth(color1);
 
     float depth = min(unpackedDepth0, unpackedDepth1);
 
-    color_output = vec4(depth);
+    combinedDepths = vec4(depth);
 #endif
 }

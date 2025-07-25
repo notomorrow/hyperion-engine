@@ -201,7 +201,7 @@ void EntityManager::Init()
 
         entity->OnAddedToScene(m_scene);
 
-        if (m_world && m_scene->IsForegroundScene())
+        if (m_world)
         {
             entity->OnAddedToWorld(m_world);
         }
@@ -293,7 +293,7 @@ void EntityManager::Shutdown()
                 componentInfoPairIt = entityData.components.Erase(componentInfoPairIt);
             }
 
-            if (m_world && m_scene->IsForegroundScene())
+            if (m_world)
             {
                 entity->OnRemovedFromWorld(m_world);
             }
@@ -355,7 +355,7 @@ void EntityManager::SetWorld(World* world)
         }
 
         // Call OnRemovedFromWorld() now for all entities in the EntityManager if previous world is not null
-        if (m_world && m_scene->IsForegroundScene())
+        if (m_world)
         {
             for (auto& entitiesIt : m_entities)
             {
@@ -383,15 +383,12 @@ void EntityManager::SetWorld(World* world)
                 InitializeSystem(system);
             }
 
-            if (m_scene->IsForegroundScene())
+            for (auto& entitiesIt : m_entities)
             {
-                for (auto& entitiesIt : m_entities)
-                {
-                    Entity* entity = entitiesIt.first;
-                    Assert(entity);
+                Entity* entity = entitiesIt.first;
+                Assert(entity);
 
-                    entity->OnAddedToWorld(m_world);
-                }
+                entity->OnAddedToWorld(m_world);
             }
         }
 
@@ -432,7 +429,7 @@ Handle<Entity> EntityManager::AddBasicEntity()
     {
         entity->OnAddedToScene(m_scene);
 
-        if (m_world && m_scene->IsForegroundScene())
+        if (m_world)
         {
             entity->OnAddedToWorld(m_world);
         }
@@ -504,7 +501,7 @@ Handle<Entity> EntityManager::AddTypedEntity(const HypClass* hypClass)
     {
         entity->OnAddedToScene(m_scene);
 
-        if (m_world && m_scene->IsForegroundScene())
+        if (m_world)
         {
             entity->OnAddedToWorld(m_world);
         }
@@ -579,7 +576,7 @@ void EntityManager::AddExistingEntity_Internal(const Handle<Entity>& entity)
     {
         entity->OnAddedToScene(m_scene);
 
-        if (m_world && m_scene->IsForegroundScene())
+        if (m_world)
         {
             entity->OnAddedToWorld(m_world);
         }
@@ -742,7 +739,7 @@ void EntityManager::MoveEntity(const Handle<Entity>& entity, const Handle<Entity
 
         if (IsInitCalled())
         {
-            if (m_world && m_scene->IsForegroundScene())
+            if (m_world)
             {
                 entity->OnRemovedFromWorld(m_world);
             }
@@ -868,7 +865,7 @@ void EntityManager::MoveEntity(const Handle<Entity>& entity, const Handle<Entity
         {
             entity->OnAddedToScene(other->m_scene);
 
-            if (other->m_world && other->m_scene->IsForegroundScene())
+            if (other->m_world)
             {
                 entity->OnAddedToWorld(other->m_world);
             }
@@ -1332,9 +1329,14 @@ void EntityManager::BeginAsyncUpdate(float delta)
 {
     HYP_SCOPE;
     Threads::AssertOnThread(m_ownerThreadId);
+    
+    AssertDebug(GetWorld() != nullptr);
 
     for (auto [entity, _] : GetEntitySet<EntityTagComponent<EntityTag::RECEIVES_UPDATE>>().GetScopedView(DataAccessFlags::ACCESS_RW))
     {
+        AssertDebug(entity->GetEntityManager() == this);
+        AssertDebug(entity->GetWorld() == GetWorld());
+        
         entity->Update(delta);
     }
 

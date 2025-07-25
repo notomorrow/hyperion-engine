@@ -484,6 +484,8 @@ void ShadowRendererBase::RenderFrame(FrameBase* frame, const RenderSetup& render
                 shadowMap->GetImageView()->GetImage()->GetTextureFormat(), // @TODO get format from Light's settings
                 shadowMap->GetExtent(),
                 shadowViews);
+
+            AssertDebug(cacheIt->second.combineShadowMapsPass->GetExtent() == light->GetShadowMapDimensions());
         }
 
         if (shadowMap->GetFilterMode() == SMF_VSM)

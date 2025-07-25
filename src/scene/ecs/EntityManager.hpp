@@ -43,7 +43,7 @@
 namespace hyperion {
 
 namespace threading {
-struct TaskBatch;
+class TaskBatch;
 } // namespace threading
 
 using threading::TaskBatch;

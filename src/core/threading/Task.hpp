@@ -36,7 +36,7 @@ HYP_MAKE_ENUM_FLAGS(TaskEnqueueFlags)
 namespace threading {
 
 class TaskThread;
-struct TaskBatch;
+class TaskBatch;
 class SchedulerBase;
 class TaskBase;
 

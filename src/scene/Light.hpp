@@ -271,12 +271,16 @@ public:
     HYP_METHOD()
     BoundingBox GetAABB() const;
 
-    HYP_FORCE_INLINE ShadowMapFilter GetShadowMapFilter() const
+    HYP_METHOD(Property="ShadowMapFilter", Serialize=false, Editor=true)
+    ShadowMapFilter GetShadowMapFilter() const
     {
         return (ShadowMapFilter)((uint32(m_flags) & LF_SHADOW_FILTER_MASK)
             ? MathUtil::FastLog2(uint32(m_flags) & LF_SHADOW_FILTER_MASK)
             : 0);
     }
+
+    HYP_METHOD(Property="ShadowMapFilter", Serialize=false, Editor=true)
+    void SetShadowMapFilter(ShadowMapFilter shadowMapFilter);
 
     BoundingSphere GetBoundingSphere() const;
 

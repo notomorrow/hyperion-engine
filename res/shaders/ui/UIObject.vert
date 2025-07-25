@@ -58,8 +58,7 @@ HYP_DESCRIPTOR_SSBO_DYNAMIC(Global, ObjectsBuffer) readonly buffer ObjectsBuffer
 
 void main()
 {
-    UIObjectProperties properties;
-    GetUIObjectProperties(object, properties);
+    const UIObjectProperties properties = GetUIObjectProperties(object);
 
     mat4 model_matrix = object.model_matrix;
     model_matrix[0][0] = 1.0;

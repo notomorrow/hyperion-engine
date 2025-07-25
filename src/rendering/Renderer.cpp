@@ -191,17 +191,24 @@ int RendererBase::RunCleanupCycle(int maxIter)
         &m_viewPassData,
         m_viewPassDataCleanupIterator.page,
         m_viewPassDataCleanupIterator.elem);
-
-    // Loop around to the beginning of the container when the end is reached.
-    if (m_viewPassDataCleanupIterator == m_viewPassData.End())
-    {
-        m_viewPassDataCleanupIterator = m_viewPassData.Begin();
-    }
+    
+    const typename SparsePagedArray<PassData*, 16>::Iterator startIterator = m_viewPassDataCleanupIterator; // the iterator we started at - use it to check that we don't do duplicate checks
 
     int numCycles = 0;
 
-    while (m_viewPassDataCleanupIterator != m_viewPassData.End() && numCycles < maxIter)
+    while (numCycles < maxIter)
     {
+        // Loop around to the beginning of the container when the end is reached.
+        if (m_viewPassDataCleanupIterator == m_viewPassData.End())
+        {
+            m_viewPassDataCleanupIterator = m_viewPassData.Begin();
+            
+            if (m_viewPassDataCleanupIterator == m_viewPassData.End())
+            {
+                break;
+            }
+        }
+        
         PassData* pd = *m_viewPassDataCleanupIterator;
 
         int numLocalCycles = 1;
@@ -222,6 +229,12 @@ int RendererBase::RunCleanupCycle(int maxIter)
         }
 
         numCycles += numLocalCycles;
+        
+        if (m_viewPassDataCleanupIterator == startIterator)
+        {
+            // we checked everything
+            break;
+        }
     }
 
     return numCycles;

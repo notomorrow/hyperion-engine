@@ -36,6 +36,8 @@
 
 #include <core/profiling/ProfileScope.hpp>
 
+#include <core/threading/Task.hpp>
+
 #include <core/logging/LogChannels.hpp>
 #include <core/logging/Logger.hpp>
 
@@ -130,7 +132,8 @@ View::View(const ViewDesc& viewDesc)
       m_scenes(viewDesc.scenes),
       m_camera(viewDesc.camera),
       m_priority(viewDesc.priority),
-      m_overrideAttributes(viewDesc.overrideAttributes)
+      m_overrideAttributes(viewDesc.overrideAttributes),
+      m_collectionTaskBatch(nullptr)
 {
     for (auto it = std::begin(m_renderProxyLists); it != std::end(m_renderProxyLists); ++it)
     {
@@ -147,6 +150,8 @@ View::View(const ViewDesc& viewDesc)
 
 View::~View()
 {
+    Assert(m_collectionTaskBatch == nullptr, "Collection tasks pending on View destruction!");
+
     if (GBuffer* gbuffer = m_outputTarget.GetGBuffer())
     {
         delete gbuffer;
@@ -254,11 +259,14 @@ void View::UpdateVisibility()
     }
 }
 
-void View::Collect()
+void View::BeginAsyncCollection(TaskBatch& batch)
 {
     HYP_SCOPE;
-    Threads::AssertOnThread(g_gameThread | ThreadCategory::THREAD_CATEGORY_TASK);
+    Threads::AssertOnThread(g_gameThread);
     AssertReady();
+
+    Assert(m_collectionTaskBatch == nullptr, "m_collectionTaskBatch is not nullptr, already collecting?");
+    m_collectionTaskBatch = &batch;
 
     RenderProxyList& rpl = RenderApi_GetProducerProxyList(this);
     rpl.BeginWrite();
@@ -266,24 +274,53 @@ void View::Collect()
     rpl.viewport = m_viewport;
     rpl.priority = m_priority;
 
-    CollectCameras(rpl);
-    CollectLights(rpl);
-    CollectLightmapVolumes(rpl);
-    CollectEnvGrids(rpl);
-    CollectEnvProbes(rpl);
+    batch.AddTask([this, &rpl]()
+        {
+            CollectCameras(rpl);
+            CollectLights(rpl);
+            CollectLightmapVolumes(rpl);
+            CollectEnvGrids(rpl);
+            CollectEnvProbes(rpl);
 
-    m_lastMeshCollectionResult = CollectMeshEntities(rpl);
+            m_lastMeshCollectionResult = CollectMeshEntities(rpl);
 
-    /// temp
-    constexpr uint32 bucketMask = (1 << RB_OPAQUE)
-        | (1 << RB_LIGHTMAP)
-        | (1 << RB_SKYBOX)
-        | (1 << RB_TRANSLUCENT)
-        | (1 << RB_DEBUG);
+            /// temp
+            constexpr uint32 bucketMask = (1 << RB_OPAQUE)
+                | (1 << RB_LIGHTMAP)
+                | (1 << RB_SKYBOX)
+                | (1 << RB_TRANSLUCENT)
+                | (1 << RB_DEBUG);
 
-    RenderProxyList::UpdateRefs(rpl);
+            RenderProxyList::UpdateRefs(rpl);
 
-    rpl.EndWrite();
+            rpl.EndWrite();
+        });
+}
+
+void View::EndAsyncCollection()
+{
+    HYP_SCOPE;
+    Threads::AssertOnThread(g_gameThread);
+    AssertReady();
+
+    Assert(m_collectionTaskBatch != nullptr);
+    Assert(m_collectionTaskBatch->IsCompleted());
+
+    m_collectionTaskBatch = nullptr;
+}
+
+void View::CollectSync()
+{
+    HYP_SCOPE;
+    Threads::AssertOnThread(g_gameThread);
+    AssertReady();
+
+    TaskBatch taskBatch;
+    BeginAsyncCollection(taskBatch);
+
+    taskBatch.ExecuteBlocking();
+
+    EndAsyncCollection();
 }
 
 void View::SetViewport(const Viewport& viewport)

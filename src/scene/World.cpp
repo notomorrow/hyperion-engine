@@ -23,10 +23,10 @@
 #include <core/logging/Logger.hpp>
 #include <core/logging/LogChannels.hpp>
 
+#include <core/profiling/ProfileScope.hpp>
+
 #include <rendering/RenderEnvironment.hpp>
 #include <rendering/RenderWorld.hpp>
-
-#include <core/profiling/ProfileScope.hpp>
 
 #include <EngineGlobals.hpp>
 #include <Engine.hpp>
@@ -34,13 +34,14 @@
 namespace hyperion {
 
 #define HYP_WORLD_ASYNC_SUBSYSTEM_UPDATES
-// #define HYP_WORLD_ASYNC_VIEW_UPDATES
+#define HYP_WORLD_ASYNC_VIEW_COLLECTION
 
 World::World()
     : HypObject(),
       m_worldGrid(CreateObject<WorldGrid>(this)),
       m_detachedScenes(this),
-      m_renderResource(nullptr)
+      m_renderResource(nullptr),
+      m_viewCollectionBatch(nullptr)
 {
 }
 
@@ -98,6 +99,14 @@ World::~World()
             Assert(subsystem.IsValid());
 
             it.second->OnRemovedFromWorld();
+        }
+
+        if (m_viewCollectionBatch)
+        {
+            AssertDebug(m_viewCollectionBatch->IsCompleted());
+
+            delete m_viewCollectionBatch;
+            m_viewCollectionBatch = nullptr;
         }
     }
 
@@ -171,6 +180,9 @@ void World::Init()
         },
         g_gameThread));
 
+    m_viewCollectionBatch = new TaskBatch();
+    m_viewCollectionBatch->pool = &TaskSystem::GetInstance().GetPool(TaskThreadPoolName::THREAD_POOL_GENERIC);
+
     m_renderResource = AllocateResource<RenderWorld>(this);
 
     WorldShaderData shaderData {};
@@ -230,12 +242,66 @@ void World::Init()
     SetReady(true);
 }
 
+void World::ProcessViewAsync(const Handle<View>& view)
+{
+    HYP_SCOPE;
+    Threads::AssertOnThread(g_gameThread);
+    AssertReady();
+
+    if (!view)
+    {
+        return;
+    }
+
+    if (m_processViews.Contains(view))
+    {
+        return;
+    }
+
+    m_processViews.PushBack(view);
+}
+
+DelegateHandler World::ProcessViewAsync(const Handle<View>& view, Proc<void()>&& onComplete)
+{
+    if (!onComplete.IsValid())
+    {
+        ProcessViewAsync(view);
+
+        return {};
+    }
+
+    ProcessViewAsync(view);
+
+    return m_viewCollectionBatch->OnComplete.Bind(std::move(onComplete));
+}
+
 void World::Update(float delta)
 {
     HYP_SCOPE;
     Threads::AssertOnThread(g_gameThread);
 
     AssertReady();
+
+    Array<View*> processViews;
+    processViews.Resize(m_processViews.Size() + m_views.Size());
+
+    m_processViews.Reserve(m_processViews.Size() + m_views.Size());
+
+    for (SizeType i = 0; i < m_views.Size(); i++)
+    {
+        AssertDebug(m_views[i].IsValid());
+        AssertDebug(!m_processViews.Contains(m_views[i]));
+
+        processViews[i] = m_views[i].Get();
+    }
+
+    for (SizeType i = m_views.Size(); i < processViews.Size(); i++)
+    {
+        processViews[i] = m_processViews[i - m_views.Size()];
+    }
+
+    // Clear additional Views to process for next frame
+    m_processViews.Clear();
 
     m_gameState.deltaTime = delta;
 
@@ -320,14 +386,18 @@ void World::Update(float delta)
         entityManagers.PushBack(scene->GetEntityManager().Get());
     }
 
-#ifdef HYP_WORLD_ASYNC_VIEW_UPDATES
-    Array<Task<void>> updateViewsTasks;
-    updateViewsTasks.Reserve(m_views.Size());
+#ifdef HYP_WORLD_ASYNC_VIEW_COLLECTION
+    AssertDebug(m_viewCollectionBatch != nullptr);
+    AssertDebug(m_viewCollectionBatch->IsCompleted());
+
+    m_viewCollectionBatch->ResetState();
 #endif
 
     for (EntityManager* entityManager : entityManagers)
     {
         HYP_NAMED_SCOPE("Call BeginAsyncUpdate on EntityManager");
+        
+        AssertDebug(entityManager->GetWorld() == this);
 
         entityManager->BeginAsyncUpdate(delta);
     }
@@ -339,30 +409,30 @@ void World::Update(float delta)
         entityManager->EndAsyncUpdate();
     }
 
-    for (uint32 index = 0; index < m_views.Size(); index++)
+    for (uint32 index = 0; index < processViews.Size(); index++)
     {
         HYP_NAMED_SCOPE("Per-view entity collection");
 
-        const Handle<View>& view = m_views[index];
-        Assert(view.IsValid());
+        View* view = processViews[index];
+        Assert(view != nullptr);
 
         // View must be updated on the game thread as it mutates the scene's octree state
         view->UpdateVisibility();
 
-#ifdef HYP_WORLD_ASYNC_VIEW_UPDATES
-        updateViewsTasks.PushBack(TaskSystem::GetInstance().Enqueue([view = m_views[index].Get(), delta]
-            {
-                view->Collect();
-            }));
+#ifdef HYP_WORLD_ASYNC_VIEW_COLLECTION
+        view->BeginAsyncCollection(*m_viewCollectionBatch);
 #else
-        view->Collect();
+        view->CollectSync();
 #endif
     }
 
-#ifdef HYP_WORLD_ASYNC_VIEW_UPDATES
-    for (Task<void>& task : updateViewsTasks)
+#ifdef HYP_WORLD_ASYNC_VIEW_COLLECTION
+    TaskSystem::GetInstance().EnqueueBatch(m_viewCollectionBatch);
+    m_viewCollectionBatch->AwaitCompletion();
+
+    for (uint32 index = 0; index < processViews.Size(); index++)
     {
-        task.Await();
+        processViews[index]->EndAsyncCollection();
     }
 #endif
 

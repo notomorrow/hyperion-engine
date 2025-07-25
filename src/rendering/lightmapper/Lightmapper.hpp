@@ -24,7 +24,7 @@ namespace hyperion {
 static constexpr int maxBouncesCpu = 2;
 
 namespace threading {
-struct TaskBatch;
+class TaskBatch;
 } // namespace threading
 
 using threading::TaskBatch;

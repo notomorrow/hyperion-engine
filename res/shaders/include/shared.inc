@@ -12,6 +12,8 @@
 #define float3x3 mat3
 #define float4x4 mat4
 
+#define HYP_FAST_LESS(x, y) (1 - step((y), (x)))
+
 struct Ray
 {
     vec3 origin;
@@ -42,7 +44,7 @@ ivec4 imod(ivec4 a, ivec4 b)
 
 #define round(x) floor((x) + 0.5)
 
-//#define rcp(x) (1.0 / (x))
+// #define rcp(x) (1.0 / (x))
 
 float Luminance(vec3 color)
 {
@@ -51,21 +53,23 @@ float Luminance(vec3 color)
 
 #define AngleBetweenVectors(a, b) (acos(dot((a), (b))))
 
-mat4 CreateRotationMatrix(vec3 axis, float angle) {
+mat4 CreateRotationMatrix(vec3 axis, float angle)
+{
     axis = normalize(axis);
     float s = sin(angle);
     float c = cos(angle);
     float oc = 1.0 - c;
-    
-    return mat4(oc * axis.x * axis.x + c,           oc * axis.x * axis.y - axis.z * s,  oc * axis.z * axis.x + axis.y * s,  0.0,
-                oc * axis.x * axis.y + axis.z * s,  oc * axis.y * axis.y + c,           oc * axis.y * axis.z - axis.x * s,  0.0,
-                oc * axis.z * axis.x - axis.y * s,  oc * axis.y * axis.z + axis.x * s,  oc * axis.z * axis.z + c,           0.0,
-                0.0,                                0.0,                                0.0,                                1.0);
+
+    return mat4(oc * axis.x * axis.x + c, oc * axis.x * axis.y - axis.z * s, oc * axis.z * axis.x + axis.y * s, 0.0,
+        oc * axis.x * axis.y + axis.z * s, oc * axis.y * axis.y + c, oc * axis.y * axis.z - axis.x * s, 0.0,
+        oc * axis.z * axis.x - axis.y * s, oc * axis.y * axis.z + axis.x * s, oc * axis.z * axis.z + c, 0.0,
+        0.0, 0.0, 0.0, 1.0);
 }
 
-vec3 RotateVector(vec3 v, vec3 axis, float angle) {
-	mat4 m = CreateRotationMatrix(axis, angle);
-	return (m * vec4(v, 1.0)).xyz;
+vec3 RotateVector(vec3 v, vec3 axis, float angle)
+{
+    mat4 m = CreateRotationMatrix(axis, angle);
+    return (m * vec4(v, 1.0)).xyz;
 }
 
 void ComputeOrthonormalBasis(in vec3 normal, out vec3 tangent, out vec3 bitangent)
@@ -207,7 +211,7 @@ vec4 Texture2DTriplanar(sampler samp, texture2D tex, vec3 position, vec3 normal)
     vec4 sample_x = Texture2D(samp, tex, position.zy * 0.01);
     vec4 sample_y = Texture2D(samp, tex, position.xz * 0.01);
     vec4 sample_z = Texture2D(samp, tex, position.xy * 0.01);
-    
+
     return sample_x * blending.x + sample_y * blending.y + sample_z * blending.z;
 }
 
@@ -237,7 +241,6 @@ int GetNumLevels(sampler samp, textureCube tex)
     return textureQueryLevels(samplerCube(tex, samp));
 }
 
-
 #define GAUSS_TABLE_SIZE 15
 
 const float gauss_table[GAUSS_TABLE_SIZE + 1] = float[](
@@ -256,15 +259,15 @@ const float gauss_table[GAUSS_TABLE_SIZE + 1] = float[](
     3.602517634249573e-8,
     2.4592560765896795e-9,
     1.3534945386863618e-10,
-    0.0
-);
+    0.0);
 
 float GaussianWeight(float value)
 {
     float idxf;
     float c = modf(max(0.0, value * float(GAUSS_TABLE_SIZE)), idxf);
     int idx = int(idxf);
-    if (idx >= GAUSS_TABLE_SIZE + 1) {
+    if (idx >= GAUSS_TABLE_SIZE + 1)
+    {
         return 0.0;
     }
 
@@ -275,8 +278,8 @@ vec4 GaussianBlur9(
     texture2D tex, sampler samp,
     vec2 uv,
     vec2 direction,
-    float radius
-) {
+    float radius)
+{
     vec4 color = vec4(0.0);
     vec2 offset1 = vec2(1.3846153846) * direction;
     vec2 offset2 = vec2(3.2307692308) * direction;
@@ -285,25 +288,24 @@ vec4 GaussianBlur9(
     color += Texture2D(samp, tex, uv - (offset1 * radius)) * 0.3162162162;
     color += Texture2D(samp, tex, uv + (offset2 * radius)) * 0.0702702703;
     color += Texture2D(samp, tex, uv - (offset2 * radius)) * 0.0702702703;
-    return color; 
+    return color;
 }
 
 vec4 GaussianBlur5(
     texture2D tex, sampler samp,
     vec2 uv,
     vec2 direction,
-    float radius
-) {
+    float radius)
+{
     vec4 color = vec4(0.0);
     vec2 offset = vec2(1.3333333333333333) * direction;
     color += Texture2D(samp, tex, uv) * 0.29411764705882354;
     color += Texture2D(samp, tex, uv + (offset * radius)) * 0.35294117647058826;
     color += Texture2D(samp, tex, uv - (offset * radius)) * 0.35294117647058826;
-    return color; 
+    return color;
 }
 
 #endif
-
 
 float LinearDepth(mat4 projection, float depth)
 {
@@ -333,10 +335,9 @@ float ProjectedDepth(mat4 projection, float depth)
     result *= projection[3][2];
     result += projection[2][2];
     result /= projection[2][3];
-    
+
     return result;*/
 }
-
 
 float ViewDepth(float depth, float near, float far)
 {
@@ -346,8 +347,8 @@ float ViewDepth(float depth, float near, float far)
     float w = y / far;
 
     return 1.0 / (z * depth + w);
-    
-    //return (far * near) / (far - depth * (far - near));
+
+    // return (far * near) / (far - depth * (far - near));
 }
 
 vec4 ReconstructWorldSpacePositionFromDepth(mat4 inverse_projection, mat4 inverse_view, vec2 coord, float depth)
@@ -373,20 +374,20 @@ vec4 ReconstructViewSpacePositionFromDepth(mat4 inverse_projection, vec2 coord, 
 
 vec2 GetProjectedPositionFromWorld(in mat4 projection, in mat4 view, in vec3 world_space_position)
 {
-	vec4 sample_position = projection * view * vec4(world_space_position, 1.0);
-	return (sample_position.xy / sample_position.w) * 0.5 + 0.5;
+    vec4 sample_position = projection * view * vec4(world_space_position, 1.0);
+    return (sample_position.xy / sample_position.w) * 0.5 + 0.5;
 }
 
 vec2 GetProjectedPositionFromWorld(in mat4 view_projection, in vec3 world_space_position)
 {
-	vec4 sample_position = view_projection * vec4(world_space_position, 1.0);
-	return (sample_position.xy / sample_position.w) * 0.5 + 0.5;
+    vec4 sample_position = view_projection * vec4(world_space_position, 1.0);
+    return (sample_position.xy / sample_position.w) * 0.5 + 0.5;
 }
 
 vec2 GetProjectedPositionFromView(in mat4 projection, in vec3 view_space_position)
 {
-	vec4 sample_position = projection * vec4(view_space_position, 1.0);
-	return (sample_position.xy / sample_position.w) * 0.5 + 0.5;
+    vec4 sample_position = projection * vec4(view_space_position, 1.0);
+    return (sample_position.xy / sample_position.w) * 0.5 + 0.5;
 }
 
 float Saturate(float val)
@@ -430,7 +431,7 @@ vec4 CalculateFogLinear(in vec4 start_color, in vec4 end_color, vec3 world_posit
 
 float RoughnessToConeAngle(float roughness)
 {
-	float specular_power = 2.0 / pow(roughness, 4.0) - 2.0;
+    float specular_power = 2.0 / pow(roughness, 4.0) - 2.0;
 
     const float xi = 0.244;
     float exponent = 1.0 / (specular_power + 1.0);
@@ -482,25 +483,26 @@ vec3 GetCubemapCoord(uint face, vec2 uv)
 {
     vec3 dir = vec3(0.0);
 
-    switch (face) {
+    switch (face)
+    {
     case 0:
         dir = vec3(1.0, -uv.y, -uv.x);
-        break;  // POSITIVE X
+        break; // POSITIVE X
     case 1:
-        dir = vec3(-1.0, -uv.y,  uv.x);
-        break;  // NEGATIVE X
+        dir = vec3(-1.0, -uv.y, uv.x);
+        break; // NEGATIVE X
     case 2:
         dir = vec3(uv.x, 1.0, uv.y);
-        break;  // POSITIVE Y
+        break; // POSITIVE Y
     case 3:
         dir = vec3(uv.x, -1.0, -uv.y);
-        break;  // NEGATIVE Y
+        break; // NEGATIVE Y
     case 4:
         dir = vec3(uv.x, -uv.y, 1.0);
-        break;  // POSITIVE Z
+        break; // POSITIVE Z
     case 5:
         dir = vec3(uv.x, -uv.y, -1.0);
-        break;  // NEGATIVE Z
+        break; // NEGATIVE Z
     }
 
     return dir;
@@ -513,11 +515,16 @@ uint GetCubemapFaceIndex(vec3 dir)
     float ay = abs(dir.y);
     float az = abs(dir.z);
 
-    if (ay > ax && ay > az) {
+    if (ay > ax && ay > az)
+    {
         face = (dir.y < 0.0) ? 3u : 2u;
-    } else if (az > ax && az > ay) {
+    }
+    else if (az > ax && az > ay)
+    {
         face = (dir.z < 0.0) ? 5u : 4u;
-    } else {
+    }
+    else
+    {
         face = (dir.x < 0.0) ? 1u : 0u;
     }
 

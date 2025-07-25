@@ -7,11 +7,10 @@
 // #define HYP_DEPTH_PYRAMID_SAMPLE_MIN
 
 #ifdef HYP_DEPTH_PYRAMID_SAMPLE_MAX
-    #define HYP_DEPTH_CMP max    
+#define HYP_DEPTH_CMP max
 #else
-    #define HYP_DEPTH_CMP min
+#define HYP_DEPTH_CMP min
 #endif
-
 
 const ivec2 depth_pyramid_offsets[HYP_NUM_DEPTH_PYRAMID_OFFSETS] = {
     ivec2(0, 0),
@@ -22,13 +21,13 @@ const ivec2 depth_pyramid_offsets[HYP_NUM_DEPTH_PYRAMID_OFFSETS] = {
 
 uint GetCullBits(vec4 pos)
 {
-    return uint(pos.x < -pos.w  * 0x01)
-        | (uint(pos.x > pos.w)  * 0x02)
+    return uint(pos.x < -pos.w * 0x01)
+        | (uint(pos.x > pos.w) * 0x02)
         | (uint(pos.y < -pos.w) * 0x04)
-        | (uint(pos.y > pos.w)  * 0x08)
+        | (uint(pos.y > pos.w) * 0x08)
         | (uint(pos.z < -pos.w) * 0x10)
-        | (uint(pos.z > pos.w)  * 0x20)
-        | (uint(pos.w <= 0)     * 0x40);
+        | (uint(pos.z > pos.w) * 0x20)
+        | (uint(pos.w <= 0) * 0x40);
 }
 
 #endif

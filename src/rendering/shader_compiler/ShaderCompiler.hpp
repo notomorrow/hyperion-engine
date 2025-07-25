@@ -426,7 +426,7 @@ public:
         return m_props.ToArray();
     }
 
-    HYP_API String ToString() const;
+    HYP_API String ToString(bool includeVertexAttributes = true) const;
 
     HYP_FORCE_INLINE HashCode GetHashCode() const
     {

@@ -207,22 +207,18 @@ void EnvProbe::Init()
 
 void EnvProbe::OnAddedToWorld(World* world)
 {
-    // if (m_view.IsValid())
-    // {
-    //     world->AddView(m_view);
-    // }
+    Entity::OnAddedToWorld(world);
 }
 
 void EnvProbe::OnRemovedFromWorld(World* world)
 {
-    // if (m_view.IsValid())
-    // {
-    //     world->RemoveView(m_view);
-    // }
+    Entity::OnRemovedFromWorld(world);
 }
 
 void EnvProbe::OnAddedToScene(Scene* scene)
 {
+    Entity::OnAddedToScene(scene);
+
     if (m_view.IsValid())
     {
         m_view->AddScene(scene->HandleFromThis());
@@ -233,6 +229,8 @@ void EnvProbe::OnAddedToScene(Scene* scene)
 
 void EnvProbe::OnRemovedFromScene(Scene* scene)
 {
+    Entity::OnRemovedFromScene(scene);
+
     if (m_view.IsValid())
     {
         m_view->RemoveScene(scene->HandleFromThis());
@@ -348,7 +346,8 @@ void EnvProbe::SetOrigin(const Vec3f& origin)
 
 void EnvProbe::Update(float delta)
 {
-    Threads::AssertOnThread(g_gameThread | ThreadCategory::THREAD_CATEGORY_TASK);
+    HYP_SCOPE;
+    Threads::AssertOnThread(g_gameThread);
     AssertReady();
 
     if (IsControlledByEnvGrid())
@@ -359,6 +358,11 @@ void EnvProbe::Update(float delta)
     Assert(GetScene() != nullptr);
 
     const Octree& octree = GetScene()->GetOctree();
+    
+    if (IsSkyProbe())
+    {
+        HYP_LOG_TEMP("Update SkyProbe {} - octant hash code = {}", Id(), m_octantHashCode.Value());
+    }
 
     HashCode octantHashCode = HashCode(0);
 
@@ -388,24 +392,44 @@ void EnvProbe::Update(float delta)
 
     if (m_octantHashCode == octantHashCode && octantHashCode.Value() != 0)
     {
+        // return early so we don't need to set up async View collection
         return;
+    }
+
+    if (m_octantHashCode != octantHashCode)
+    {
+        SetNeedsRender(true);
     }
 
     Assert(m_camera.IsValid());
     m_camera->Update(delta);
 
-    m_view->UpdateVisibility();
-    m_view->Collect();
+    DelegateHandler* delegateHandle = new DelegateHandler();
 
-    auto diff = m_view->GetLastMeshCollectionResult();
+    *delegateHandle = GetWorld()->ProcessViewAsync(m_view, [weakThis = WeakHandleFromThis(), delegateHandle]()
+        {
+            Handle<EnvProbe> envProbe = weakThis.Lock();
 
-    if (diff.NeedsUpdate() || m_octantHashCode != octantHashCode)
-    {
-        HYP_LOG(EnvProbe, Debug, "EnvProbe {} with AABB: {} has {} added, {} removed and {} changed entities", Id(), m_aabb,
-            diff.numAdded, diff.numRemoved, diff.numChanged);
+            if (HYP_LIKELY(envProbe.IsValid()))
+            {
+                HYP_LOG(EnvProbe, Debug, "Process EnvProbe {} view on thread {}", envProbe->Id(), Threads::CurrentThreadId().GetName());
+                
+                auto diff = envProbe->m_view->GetLastMeshCollectionResult();
 
-        SetNeedsRender(true);
-    }
+                if (diff.NeedsUpdate())
+                {
+                    HYP_LOG(EnvProbe, Debug, "EnvProbe {} with AABB: {} has {} added, {} removed and {} changed entities", envProbe->Id(), envProbe->m_aabb,
+                        diff.numAdded, diff.numRemoved, diff.numChanged);
+
+                    envProbe->SetNeedsRender(true);
+                }
+            }
+
+            delete delegateHandle;
+        });
+
+    // m_view->UpdateVisibility();
+    // m_view->CollectSync();
 
     m_octantHashCode = octantHashCode;
 }

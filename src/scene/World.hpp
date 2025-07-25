@@ -1,12 +1,15 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
 #pragma once
+
 #include <scene/Scene.hpp>
 #include <scene/Subsystem.hpp>
 #include <scene/GameState.hpp>
 
 #include <core/object/HypObject.hpp>
+
 #include <core/functional/Delegate.hpp>
+#include <core/functional/Proc.hpp>
 
 #include <physics/PhysicsWorld.hpp>
 
@@ -17,6 +20,12 @@ class EditorDelegates;
 struct RenderStats;
 class View;
 class WorldGrid;
+
+namespace threading {
+class TaskBatch;
+} // namespace threading
+
+using threading::TaskBatch;
 
 struct DetachedScenesContainer
 {
@@ -180,6 +189,10 @@ public:
         return m_views;
     }
 
+    /*! \brief Adds a View for processing asynchronously for this frame. */
+    void ProcessViewAsync(const Handle<View>& view);
+    DelegateHandler ProcessViewAsync(const Handle<View>& view, Proc<void()>&& onComplete);
+
     /*! \brief Perform any necessary game thread specific updates to the World.
      * The main logic loop of the engine happens here. Each Scene in the World is updated,
      * and within each Scene, each Entity, etc. */
@@ -207,6 +220,11 @@ private:
     GameState m_gameState;
 
     RenderWorld* m_renderResource;
+
+    TaskBatch* m_viewCollectionBatch;
+
+    // additional views to process for the current frame
+    Array<Handle<View>> m_processViews;
 };
 
 } // namespace hyperion
