@@ -251,10 +251,7 @@ Result EditorProject::SaveAs(FilePath filepath)
     Result result;
 
     {
-        // temporary scope to set the root path for the asset registry
-        GlobalContextScope scope { AssetRegistryRootPathContext { filepath } };
-
-        if (Result packageSaveResult = m_package->Save(); packageSaveResult.HasError())
+        if (Result packageSaveResult = m_package->Save(filepath); packageSaveResult.HasError())
         {
             result = packageSaveResult;
         }

@@ -45,7 +45,7 @@ static void RegisterImportedAsset(const Handle<EditorProject>& project, const Ha
 
     Handle<AssetPackage> currentPackage = previousPackage;
 
-    while (currentPackage.IsValid() && !currentPackage->IsTransient())
+    while (currentPackage.IsValid() && currentPackage->GetName() != "$Import")
     {
         subpackageNames.PushBack(currentPackage->GetName());
         currentPackage = currentPackage->GetParentPackage().Lock();

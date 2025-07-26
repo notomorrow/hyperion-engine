@@ -45,6 +45,28 @@ UUID::UUID(UUIDVersion version)
     }
 }
 
+UUID::UUID(const ANSIStringView& str)
+{
+    HYP_CORE_ASSERT(str.Size() == 36, "UUID string must be 36 characters long!");
+
+    union
+    {
+        uint64 data[2];
+        uint8 bytes[16];
+    } u;
+
+    char buffer[37];
+    Memory::MemCpy(buffer, str.Data(), 36);
+    buffer[36] = '\0';
+
+    std::sscanf(buffer, "%02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x",
+        &u.bytes[7], &u.bytes[6], &u.bytes[5], &u.bytes[4], &u.bytes[3], &u.bytes[2], &u.bytes[1], &u.bytes[0],
+        &u.bytes[15], &u.bytes[14], &u.bytes[13], &u.bytes[12], &u.bytes[11], &u.bytes[10], &u.bytes[9], &u.bytes[8]);
+
+    data0 = u.data[0];
+    data1 = u.data[1];
+}
+
 ANSIString UUID::ToString() const
 {
     union

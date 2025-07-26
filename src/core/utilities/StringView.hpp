@@ -281,18 +281,27 @@ public:
     /*! \brief Get a char from the String at the given index.
      *  For UTF-8 strings, the character is encoded as a 32-bit value.
      *
-     *  \ref{index} must be less than \ref{Length()}. */
+     *  \ref{index} must be less than \ref{Length()}.
+     *
+     *  \returns The character at the given index. If the index is out of bounds, it returns a null character. */
     WidestCharType GetChar(SizeType index) const
     {
         const SizeType size = Size();
 
         if constexpr (isUtf8)
         {
-            return utf::utf8Charat(reinterpret_cast<const utf::u8char*>(Data()), size, index);
+            WidestCharType ch = utf::utf8Charat(reinterpret_cast<const utf::u8char*>(Data()), size, index);
+            if (ch == WidestCharType(-1))
+            {
+                // invalid utf8
+                return 0;
+            }
+
+            return ch;
         }
         else
         {
-            return *(Data() + index);
+            return index >= size ? *(Data() + index) : 0;
         }
     }
 

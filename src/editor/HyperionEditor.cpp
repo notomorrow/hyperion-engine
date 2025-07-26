@@ -3,6 +3,7 @@
 #include <editor/EditorDelegates.hpp>
 #include <editor/EditorSubsystem.hpp>
 #include <editor/EditorProject.hpp>
+#include <editor/EditorState.hpp>
 
 #include <rendering/RenderEnvironment.hpp>
 #include <rendering/RenderWorld.hpp>
@@ -222,6 +223,7 @@ void HyperionEditor::Init()
         skydomeNode->SetName(NAME("Sky"));
     }
 
+#if 0
     // temp
     RC<AssetBatch> batch = AssetManager::GetInstance()->CreateBatch();
     batch->Add("test_model", "models/sponza/sponza.obj");
@@ -300,6 +302,7 @@ void HyperionEditor::Init()
         .Detach();
 
     batch->LoadAsync();
+#endif
 }
 
 void HyperionEditor::Logic(float delta)

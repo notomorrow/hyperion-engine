@@ -24,7 +24,7 @@ VkImageType ToVkImageType(TextureType);
 VkImageViewType ToVkImageViewType(TextureType type);
 VkDescriptorType ToVkDescriptorType(DescriptorSetElementType type);
 
-class VulkanSingleTimeCommands : public SingleTimeCommands
+class VulkanSingleTimeCommands final : public SingleTimeCommands
 {
 public:
     VulkanSingleTimeCommands() = default;

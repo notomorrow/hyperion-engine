@@ -209,7 +209,7 @@ private:
     Handle<Material> m_material;
 };
 
-class VulkanTLAS : public TLASBase, public VulkanAccelerationStructureBase
+class VulkanTLAS final : public TLASBase, public VulkanAccelerationStructureBase
 {
 public:
     HYP_API VulkanTLAS();

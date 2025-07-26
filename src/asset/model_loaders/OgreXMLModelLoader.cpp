@@ -293,6 +293,8 @@ AssetLoadResult OgreXMLModelLoader::LoadAsset(LoaderState& state) const
         scene->GetEntityManager()->AddComponent<TransformComponent>(entity, TransformComponent {});
         scene->GetEntityManager()->AddComponent<VisibilityStateComponent>(entity, VisibilityStateComponent {});
 
+        Name assetName = CreateNameFromDynamicString(subMesh.name);
+
         MeshData meshData;
         meshData.desc.numVertices = uint32(model.vertices.Size());
         meshData.desc.numIndices = uint32(subMesh.indices.Size());
@@ -310,8 +312,11 @@ AssetLoadResult OgreXMLModelLoader::LoadAsset(LoaderState& state) const
         meshData.CalculateNormals();
 
         Handle<Mesh> mesh = CreateObject<Mesh>();
-        mesh->SetName(CreateNameFromDynamicString(subMesh.name));
+        mesh->SetName(assetName);
         mesh->SetMeshData(meshData);
+
+        mesh->GetAsset()->Rename(assetName);
+        mesh->GetAsset()->SetOriginalFilepath(FilePath::Relative(state.filepath, state.assetManager->GetBasePath()));
 
         state.assetManager->GetAssetRegistry()->RegisterAsset("$Import/Media/Meshes", mesh->GetAsset());
 

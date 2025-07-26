@@ -406,7 +406,7 @@ LoadedAsset OBJModelLoader::BuildModel(LoaderState& state, OBJModel& model)
             vertex.SetPosition(vertex.GetPosition() - meshAabbCenter);
         }
 
-        Name assetName = CreateNameFromDynamicString(objMesh.name.Split('/', '\\').Back());
+        Name assetName = CreateNameFromDynamicString(StringUtil::StripExtension(objMesh.name.Split('/', '\\').Back()));
 
         MeshData meshData;
         meshData.desc.numIndices = uint32(indices.Size());
@@ -423,6 +423,7 @@ LoadedAsset OBJModelLoader::BuildModel(LoaderState& state, OBJModel& model)
         mesh->SetMeshData(meshData);
 
         mesh->GetAsset()->Rename(assetName);
+        mesh->GetAsset()->SetOriginalFilepath(FilePath::Relative(state.filepath, state.assetManager->GetBasePath()));
 
         state.assetManager->GetAssetRegistry()->RegisterAsset("$Import/Media/Meshes", mesh->GetAsset());
 

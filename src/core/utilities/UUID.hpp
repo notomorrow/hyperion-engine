@@ -34,6 +34,8 @@ struct UUID
     {
     }
 
+    HYP_API explicit UUID(const ANSIStringView& str);
+
     UUID(UUIDVersion version = UUIDVersion::UUIDv4);
 
     HYP_FORCE_INLINE constexpr bool operator==(const UUID& other) const
@@ -66,7 +68,7 @@ struct UUID
         return data0 > other.data0 || (data0 == other.data0 && data1 >= other.data1);
     }
 
-    ANSIString ToString() const;
+    HYP_API ANSIString ToString() const;
 
     HYP_FORCE_INLINE constexpr HashCode GetHashCode() const
     {

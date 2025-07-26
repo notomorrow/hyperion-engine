@@ -238,39 +238,49 @@ public:
         Close();
     }
 
+    HYP_FORCE_INLINE BufferedReaderSource* GetSource() const
+    {
+        return m_source;
+    }
+
     /*! \brief Returns a boolean indicating whether or not the file could be opened without issue */
-    explicit operator bool() const
+    HYP_FORCE_INLINE explicit operator bool() const
     {
         return IsOpen();
     }
 
-    const FilePath& GetFilepath() const
+    HYP_FORCE_INLINE bool operator!() const
+    {
+        return !IsOpen();
+    }
+
+    HYP_FORCE_INLINE const FilePath& GetFilepath() const
     {
         return m_filepath;
     }
 
     /*! \brief Returns a boolean indicating whether or not the file could be opened without issue */
-    bool IsOpen() const
+    HYP_FORCE_INLINE bool IsOpen() const
     {
         return m_source != nullptr && m_source->IsOK();
     }
 
-    SizeType Position() const
+    HYP_FORCE_INLINE SizeType Position() const
     {
         return m_pos;
     }
 
-    SizeType Max() const
+    HYP_FORCE_INLINE SizeType Max() const
     {
         return m_source != nullptr ? m_source->Size() : 0;
     }
 
-    bool Eof() const
+    HYP_FORCE_INLINE bool Eof() const
     {
         return m_source == nullptr || m_pos >= m_source->Size();
     }
 
-    void Rewind(unsigned long amount)
+    HYP_FORCE_INLINE void Rewind(unsigned long amount)
     {
         if (amount > m_pos)
         {
@@ -282,7 +292,7 @@ public:
         }
     }
 
-    void Skip(unsigned long amount)
+    HYP_FORCE_INLINE void Skip(unsigned long amount)
     {
         if (Eof())
         {
@@ -292,12 +302,12 @@ public:
         m_pos += amount;
     }
 
-    void Seek(unsigned long whereTo)
+    HYP_FORCE_INLINE void Seek(unsigned long whereTo)
     {
         m_pos = whereTo;
     }
 
-    void Close()
+    HYP_FORCE_INLINE void Close()
     {
         m_pos = eofPos;
         m_source = nullptr;

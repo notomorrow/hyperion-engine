@@ -40,7 +40,6 @@
 #include <system/SystemEvent.hpp>
 
 #include <core/threading/Threads.hpp>
-#include <core/threading/TaskSystem.hpp>
 
 #include <core/utilities/DeferredScope.hpp>
 
@@ -223,8 +222,6 @@ HYP_API void Engine::Init()
     //                                                        })
     //     .Detach();
 
-    TaskSystem::GetInstance().Start();
-
     Assert(g_renderBackend != nullptr);
 
     g_renderBackend->GetOnSwapchainRecreatedDelegate()
@@ -373,15 +370,6 @@ void Engine::FinalizeStop()
     }
 
     m_world.Reset();
-
-    if (TaskSystem::GetInstance().IsRunning())
-    { // Stop task system
-        HYP_LOG(Tasks, Info, "Stopping task system");
-
-        TaskSystem::GetInstance().Stop();
-
-        HYP_LOG(Tasks, Info, "Task system stopped");
-    }
 
     m_debugDrawer.Reset();
 

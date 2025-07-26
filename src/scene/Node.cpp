@@ -215,8 +215,6 @@ Node& Node::operator=(Node&& other) noexcept
 
 Node::~Node()
 {
-    HYP_LOG(Node, Debug, "Destroying Node {}", m_name);
-
     for (const Handle<Node>& child : m_childNodes)
     {
         if (!child.IsValid())
@@ -774,8 +772,6 @@ void Node::LockTransform()
         {
             entityManager->AddTag<EntityTag::STATIC>(m_entity);
             entityManager->RemoveTag<EntityTag::DYNAMIC>(m_entity);
-
-            HYP_LOG(Node, Debug, "Node: {} Make Entity #{} static", m_name, m_entity.Id().Value());
         }
 
         m_transformChanged = false;
@@ -942,8 +938,6 @@ void Node::SetEntity(const Handle<Entity>& entity)
 
         UpdateWorldTransform();
     }
-
-    HYP_LOG(Node, Debug, "Node: {} Set Entity #{}\tScene: {}", m_name, m_entity.IsValid() ? m_entity.Id().Value() : 0, m_scene ? m_scene->GetName() : Name::Invalid());
 }
 
 void Node::SetEntityAABB(const BoundingBox& aabb)

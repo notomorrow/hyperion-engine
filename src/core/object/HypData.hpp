@@ -1493,21 +1493,36 @@ struct HypDataHelperDecl<Name>
 template <>
 struct HypDataHelper<Name> : HypDataHelper<Any>
 {
-    using ConvertibleFrom = Tuple<>;
+    using ConvertibleFrom = Tuple<ANSIString>;
 
     HYP_FORCE_INLINE bool Is(const Any& value) const
     {
-        return value.Is<ANSIString>();
+        return value.Is<Name>();
     }
 
     HYP_FORCE_INLINE Name Get(const Any& value) const
     {
-        return CreateNameFromDynamicString(value.Get<ANSIString>());
+        return value.Get<Name>();
     }
 
     HYP_FORCE_INLINE void Set(HypData& hypData, Name value) const
     {
-        HypDataHelper<Any>::Set(hypData, Any::Construct<ANSIString>(value.LookupString()));
+        HypDataHelper<Any>::Set(hypData, Any::Construct<Name>(value));
+    }
+
+    HYP_FORCE_INLINE bool Is(const ANSIString& value) const
+    {
+        return true; // can convert from ANSIString to Name
+    }
+
+    HYP_FORCE_INLINE Name Get(const ANSIString& value) const
+    {
+        return CreateNameFromDynamicString(value);
+    }
+
+    HYP_FORCE_INLINE void Set(HypData& hypData, const ANSIString& value) const
+    {
+        HypDataHelper<Any>::Set(hypData, Any::Construct<Name>(CreateNameFromDynamicString(value)));
     }
 
     HYP_FORCE_INLINE static FBOMResult Serialize(const Name& value, FBOMData& outData, EnumFlags<FBOMDataFlags> flags = FBOMDataFlags::NONE)
@@ -1521,14 +1536,14 @@ struct HypDataHelper<Name> : HypDataHelper<Any>
 
     HYP_FORCE_INLINE static FBOMResult Deserialize(FBOMLoadContext& context, const FBOMData& data, HypData& out)
     {
-        ANSIString result;
+        ANSIString str;
 
-        if (FBOMResult err = data.ReadString(result))
+        if (FBOMResult err = data.ReadString(str))
         {
             return err;
         }
 
-        out = HypData(std::move(result));
+        out = HypData(CreateNameFromDynamicString(str));
 
         return { FBOMResult::FBOM_OK };
     }

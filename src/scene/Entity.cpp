@@ -207,7 +207,6 @@ void Entity::OnDetachedFromNode(Node* node)
 
 void Entity::OnAddedToWorld(World* world)
 {
-    HYP_LOG(ECS, Debug, "Entity {} added to world {}", Id(), world->Id());
     AssertDebug(world != nullptr);
 
     m_world = world;
@@ -215,8 +214,6 @@ void Entity::OnAddedToWorld(World* world)
 
 void Entity::OnRemovedFromWorld(World* world)
 {
-    HYP_LOG(ECS, Debug, "Entity {} removed from world {}", Id(), world->Id());
-
     AssertDebug(world != nullptr);
     AssertDebug(m_world == world);
 

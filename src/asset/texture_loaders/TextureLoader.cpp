@@ -87,7 +87,7 @@ AssetLoadResult TextureLoader::LoadAsset(LoaderState& state) const
     // data.width = 1;
     // data.height = 1;
 
-    Name assetName = CreateNameFromDynamicString(state.filepath.Basename());
+    Name assetName = CreateNameFromDynamicString(StringUtil::StripExtension(state.filepath.Basename()));
 
     const SizeType imageBytesCount = SizeType(data.width)
         * SizeType(data.height)
@@ -106,7 +106,9 @@ AssetLoadResult TextureLoader::LoadAsset(LoaderState& state) const
     stbi_image_free(imageBytes);
 
     texture->SetName(assetName);
+
     texture->GetAsset()->Rename(assetName);
+    texture->GetAsset()->SetOriginalFilepath(FilePath::Relative(state.filepath, state.assetManager->GetBasePath()));
 
     state.assetManager->GetAssetRegistry()->RegisterAsset("$Import/Media/Textures", texture->GetAsset());
 

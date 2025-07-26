@@ -12,6 +12,7 @@
 #include <core/utilities/GlobalContext.hpp>
 
 #include <core/object/HypClassUtils.hpp>
+#include <core/object/HypDataJSONHelpers.hpp>
 
 #include <core/profiling/ProfileScope.hpp>
 
@@ -19,6 +20,9 @@
 #include <core/serialization/fbom/FBOMMarshaler.hpp>
 #include <core/serialization/fbom/FBOMWriter.hpp>
 #include <core/serialization/fbom/FBOMReader.hpp>
+#include <core/serialization/fbom/FBOMLoadContext.hpp>
+
+#include <core/json/JSON.hpp>
 
 #include <system/MessageBox.hpp>
 
@@ -52,35 +56,37 @@ HYP_API WeakName AssetObject_KeyByFunction(const Handle<AssetObject>& assetObjec
 void AssetDataResourceBase::Initialize()
 {
     Mutex::Guard guard(m_mutex);
-    if (m_writingThread != ThreadId::Invalid())
-    {
-        HYP_LOG(Assets, Error, "Asset is being written to by thread {}, cannot read", m_writingThread.GetName());
-
-        return;
-    }
 
     Handle<AssetObject> assetObject = m_assetObject.Lock();
     Assert(assetObject.IsValid());
 
-    // @TODO Loading async
-    // @TODO: non-filepath loading (load from packfile)
-    const FilePath assetFilePath = assetObject->GetFilePath();
+    BufferedReader stream;
 
-    if (assetFilePath.Empty() || !assetFilePath.Exists())
+    HYP_DEFER({
+        stream.Close();
+
+        if (stream.GetSource() != nullptr)
+        {
+            delete stream.GetSource();
+        }
+    });
+
+    if (Result openStreamResult = assetObject->OpenReadStream(stream); openStreamResult.HasError())
     {
-        HYP_LOG(Assets, Error, "Asset file path is invalid or does not exist: {}", assetFilePath);
+        HYP_LOG(Assets, Error, "Failed to open stream for asset '{}': {}", assetObject->GetPath().ToString(), openStreamResult.GetError().GetMessage());
 
         return;
     }
 
     HypData value;
 
+    FBOMLoadContext context;
     FBOMReader reader { FBOMReaderConfig {} };
     FBOMResult err;
 
-    if ((err = reader.LoadFromFile(assetFilePath, value)))
+    if ((err = reader.Deserialize(context, stream, value)))
     {
-        HYP_LOG(Assets, Error, "Failed to load asset at path: {}\n\tMessage: {}", assetFilePath, err.message);
+        HYP_LOG(Assets, Error, "Failed to load asset {}\n\tMessage: {}", assetObject->GetPath().ToString(), err.message);
 
         return;
     }
@@ -90,34 +96,15 @@ void AssetDataResourceBase::Initialize()
 
 void AssetDataResourceBase::Destroy()
 {
-    Handle<AssetObject> assetObject = m_assetObject.Lock();
-    Assert(assetObject.IsValid());
-
     Unload_Internal();
 }
 
-Result AssetDataResourceBase::Save()
+Result AssetDataResourceBase::Save_Internal(const FilePath& path)
 {
-    Handle<AssetObject> assetObject = m_assetObject.Lock();
-    Assert(assetObject.IsValid());
+    // mutex will already be locked by the asset object that owns this resource
 
-    return SaveTo(assetObject->GetFilePath());
-}
-
-Result AssetDataResourceBase::SaveTo(const FilePath& path)
-{
-    Mutex::Guard guard(m_mutex);
-
-    if (m_writingThread != ThreadId::Invalid())
-    {
-        return HYP_MAKE_ERROR(Error, "Asset is already being written to by thread {}", m_writingThread.GetName());
-    }
-
-    m_writingThread = ThreadId::Current();
-    HYP_DEFER({ m_writingThread = ThreadId::Invalid(); });
-
-    Handle<AssetObject> assetObject = m_assetObject.Lock();
-    Assert(assetObject.IsValid());
+    AssetObject* assetObject = m_assetObject.GetUnsafe();
+    Assert(assetObject != nullptr);
 
     FileByteWriter byteWriter { path };
     HYP_DEFER({ byteWriter.Close(); });
@@ -163,22 +150,63 @@ Result AssetDataResourceBase::SaveTo(const FilePath& path)
 #pragma region AssetObject
 
 AssetObject::AssetObject()
-    : m_resource(&GetNullResource())
+    : m_resource(&GetNullResource()),
+      m_flags(AOF_NONE)
 {
 }
 
 AssetObject::AssetObject(Name name)
     : m_name(name),
-      m_resource(&GetNullResource())
+      m_resource(&GetNullResource()),
+      m_flags(AOF_NONE)
 {
 }
 
 AssetObject::~AssetObject()
 {
+    // need to release before freeing resource or we'll deadlock
+    m_persistentResource.Reset();
+
     if (m_resource != nullptr && !m_resource->IsNull())
     {
         FreeResource(m_resource);
     }
+}
+
+void AssetObject::Init()
+{
+    if (m_resource && !m_resource->IsNull())
+    {
+        AssetDataResourceBase* resourceCasted = static_cast<AssetDataResourceBase*>(m_resource);
+        resourceCasted->m_assetObject = WeakHandleFromThis();
+
+        if (m_flags[AOF_PERSISTENT] && !m_persistentResource)
+        {
+            m_persistentResource = ResourceHandle(*m_resource);
+        }
+    }
+
+    SetReady(true);
+}
+
+void AssetObject::SetIsPersistentlyLoaded(bool persistentlyLoaded)
+{
+    m_flags[AOF_PERSISTENT] = persistentlyLoaded;
+
+    if (persistentlyLoaded)
+    {
+        if (!m_persistentResource && m_resource && !m_resource->IsNull())
+        {
+            // shouldInitialize is false since it should already be in memory and we use this for transient assets,
+            // meaning we can't load the data from disk
+            m_persistentResource = ResourceHandle(*m_resource, /* shouldInitialize */ false);
+            Assert(m_persistentResource);
+        }
+
+        return;
+    }
+
+    m_persistentResource.Reset();
 }
 
 Result AssetObject::Rename(Name name)
@@ -217,18 +245,6 @@ Result AssetObject::Rename(Name name)
     return {};
 }
 
-FilePath AssetObject::GetFilePath() const
-{
-    AssertDebug(IsRegistered(), "Calling GetPath() on an unregistered asset object");
-
-    if (!m_assetPath.IsValid())
-    {
-        return {};
-    }
-
-    return g_assetManager->GetBasePath() / m_assetPath.ToString();
-}
-
 bool AssetObject::IsLoaded() const
 {
     if (!m_resource || m_resource->IsNull())
@@ -246,17 +262,126 @@ Result AssetObject::Save() const
         return HYP_MAKE_ERROR(Error, "No resource set, cannot save");
     }
 
-    return static_cast<AssetDataResourceBase*>(m_resource)->Save();
-}
+    AssetDataResourceBase* resourceCasted = static_cast<AssetDataResourceBase*>(m_resource);
 
-void AssetObject::Init()
-{
-    if (m_resource && !m_resource->IsNull())
+    Mutex::Guard guard(resourceCasted->m_mutex);
+
+    const FilePath path = m_filepath;
+
+    if (path.Empty())
     {
-        static_cast<AssetDataResourceBase*>(m_resource)->m_assetObject = WeakHandleFromThis();
+        return HYP_MAKE_ERROR(Error, "Asset path is empty, cannot save");
     }
 
-    SetReady(true);
+    const FilePath dir = path.BasePath();
+
+    if (!dir.Exists() || !dir.IsDirectory())
+    {
+        HYP_BREAKPOINT_DEBUG_MODE;
+
+        return HYP_MAKE_ERROR(Error, "Path '{}' is not a valid directory, cannot save asset", dir);
+    }
+
+    FileByteWriter manifestWriter { path.StripExtension() + ".json" };
+
+    if (!manifestWriter.IsOpen())
+    {
+        return HYP_MAKE_ERROR(Error, "Failed to open manifest file for asset '{}'", m_name);
+    }
+
+    if (Result saveManifestResult = SaveManifest(manifestWriter); saveManifestResult.HasError())
+    {
+        return HYP_MAKE_ERROR(Error, "Failed to save manifest for asset '{}': {}", m_name, saveManifestResult.GetError().GetMessage());
+    }
+
+    manifestWriter.Close();
+
+    return resourceCasted->Save_Internal(path);
+}
+
+Result AssetObject::SaveManifest(ByteWriter& stream) const
+{
+    json::JSONObject manifestJson;
+    ObjectToJSON(InstanceClass(), HypData(AnyRef(const_cast<AssetObject*>(this))), manifestJson);
+
+    manifestJson["$Class"] = *InstanceClass()->GetName();
+
+    stream.WriteString(json::JSONValue(std::move(manifestJson)).ToString(true));
+
+    return {};
+}
+
+Result AssetObject::LoadAssetFromManifest(BufferedReader& stream, Handle<AssetObject>& outAssetObject)
+{
+    HYP_LOG(Assets, Debug, "Loading asset from manifest stream");
+
+    if (!stream.IsOpen())
+    {
+        return HYP_MAKE_ERROR(Error, "Stream is not open");
+    }
+
+    json::ParseResult parseResult = json::JSON::Parse(stream);
+
+    if (!parseResult.ok)
+    {
+        return HYP_MAKE_ERROR(Error, "Failed to parse manifest JSON: {}", parseResult.message);
+    }
+
+    if (!parseResult.value.IsObject())
+    {
+        return HYP_MAKE_ERROR(Error, "Manifest JSON must be an object");
+    }
+
+    json::JSONObject jsonObject = std::move(parseResult.value.AsObject());
+    json::JSONValue classNameValue = jsonObject["$Class"];
+
+    if (!classNameValue.IsString())
+    {
+        return HYP_MAKE_ERROR(Error, "Manifest JSON must contain a 'class' string");
+    }
+
+    const HypClass* hypClass = GetClass(classNameValue.AsString());
+
+    if (!hypClass)
+    {
+        return HYP_MAKE_ERROR(Error, "Class '{}' not found!", classNameValue.AsString());
+    }
+
+    if (!hypClass->IsDerivedFrom(AssetObject::Class()))
+    {
+        return HYP_MAKE_ERROR(Error, "Class '{}' is not derived from AssetObject!", classNameValue.AsString());
+    }
+
+    HypData hypData;
+    if (!hypClass->CreateInstance(hypData))
+    {
+        return HYP_MAKE_ERROR(Error, "Failed to create instance of class '{}'", classNameValue.AsString());
+    }
+
+    AssertDebug(hypData.Is<Handle<AssetObject>>());
+
+    // remove class property
+    jsonObject.Erase("$Class");
+
+    if (!JSONToObject(jsonObject, hypClass, hypData))
+    {
+        return HYP_MAKE_ERROR(Error, "Failed to deserialize asset object from manifest JSON");
+    }
+
+    outAssetObject = hypData.Get<Handle<AssetObject>>();
+
+    return {};
+}
+
+Result AssetObject::OpenReadStream(BufferedReader& stream) const
+{
+    Handle<AssetPackage> package = GetPackage();
+    if (!package.IsValid())
+    {
+        return HYP_MAKE_ERROR(Error, "Package is invalid");
+    }
+
+    return package->OpenAssetReadStream(m_name, stream);
 }
 
 #pragma endregion AssetObject
@@ -292,6 +417,72 @@ AssetPackage::AssetPackage(Name name, EnumFlags<AssetPackageFlags> flags)
 
         m_friendlyName = CreateNameFromDynamicString(StringUtil::ToPascalCase(friendlyNameStr, true));
     }
+}
+
+void AssetPackage::Init()
+{
+    Handle<AssetRegistry> registry = m_registry.Lock();
+    Assert(registry.IsValid());
+
+    Array<Handle<AssetObject>> assetObjects;
+    Array<Handle<AssetPackage>> subpackages;
+
+    {
+        Mutex::Guard guard(m_mutex);
+
+        assetObjects.Reserve(m_assetObjects.Size());
+        subpackages.Reserve(m_subpackages.Size());
+
+        for (const Handle<AssetObject>& assetObject : m_assetObjects)
+        {
+            if (IsTransient())
+            {
+                // transient data isn't saved to disk so we have to keep it in memory
+                assetObject->SetIsPersistentlyLoaded(true);
+            }
+            else
+            {
+                assetObject->m_filepath = m_packageDir / *assetObject->GetName();
+            }
+
+            InitObject(assetObject);
+
+            assetObjects.PushBack(assetObject);
+        }
+
+        for (const Handle<AssetPackage>& subpackage : m_subpackages)
+        {
+            InitObject(subpackage);
+
+            subpackages.PushBack(subpackage);
+        }
+    }
+
+    for (const Handle<AssetObject>& assetObject : assetObjects)
+    {
+        if (!IsTransient())
+        {
+            // save the file in our package
+            Result saveAssetResult = assetObject->Save();
+
+            if (saveAssetResult.HasError())
+            {
+                HYP_LOG(Assets, Error, "Failed to save asset object '{}' in package '{}': {}", assetObject->GetName(), m_name, saveAssetResult.GetError().GetMessage());
+            }
+        }
+
+        OnAssetObjectAdded(assetObject, true);
+
+        Handle<AssetPackage> parentPackage = m_parentPackage.Lock();
+
+        while (parentPackage.IsValid())
+        {
+            parentPackage->OnAssetObjectAdded(assetObject, false);
+            parentPackage = parentPackage->GetParentPackage().Lock();
+        }
+    }
+
+    SetReady(true);
 }
 
 void AssetPackage::SetAssetObjects(const AssetObjectSet& assetObjects)
@@ -338,6 +529,18 @@ void AssetPackage::SetAssetObjects(const AssetObjectSet& assetObjects)
             assetObject->m_package = WeakHandleFromThis();
             assetObject->m_assetPath = BuildAssetPath(assetObject->m_name);
 
+            if (IsTransient())
+            {
+                // transient data isn't saved to disk so we have to keep it in memory
+                assetObject->SetIsPersistentlyLoaded(true);
+            }
+            else
+            {
+                assetObject->m_filepath = m_packageDir / *assetObject->GetName();
+            }
+
+            InitObject(assetObject);
+
             newAssetObjects.PushBack(assetObject);
         }
     }
@@ -346,8 +549,6 @@ void AssetPackage::SetAssetObjects(const AssetObjectSet& assetObjects)
     {
         for (const Handle<AssetObject>& assetObject : newAssetObjects)
         {
-            InitObject(assetObject);
-
             if (!IsTransient())
             {
                 // save the file in our package
@@ -395,6 +596,16 @@ Result AssetPackage::AddAssetObject(const Handle<AssetObject>& assetObject)
 
     {
         Mutex::Guard guard(m_mutex);
+
+        if (IsTransient())
+        {
+            // transient data isn't saved to disk so we have to keep it in memory
+            assetObject->SetIsPersistentlyLoaded(true);
+        }
+        else
+        {
+            assetObject->m_filepath = m_packageDir / *assetObject->GetName();
+        }
 
         auto assetObjectsIt = m_assetObjects.Find(assetObject->GetName());
 
@@ -484,11 +695,6 @@ Result AssetPackage::RemoveAssetObject(const Handle<AssetObject>& assetObject)
     return {};
 }
 
-FilePath AssetPackage::GetAbsolutePath() const
-{
-    return g_assetManager->GetBasePath() / BuildPackagePath();
-}
-
 String AssetPackage::BuildPackagePath() const
 {
     Handle<AssetPackage> parentPackage = m_parentPackage.Lock();
@@ -529,60 +735,34 @@ AssetPath AssetPackage::BuildAssetPath(Name assetName) const
     return assetPath;
 }
 
-void AssetPackage::Init()
+Name AssetPackage::GetUniqueAssetName(Name baseName) const
 {
-    Array<Handle<AssetObject>> assetObjects;
-    Array<Handle<AssetPackage>> subpackages;
-
+    if (!baseName.IsValid())
     {
-        Mutex::Guard guard(m_mutex);
-
-        assetObjects.Reserve(m_assetObjects.Size());
-        subpackages.Reserve(m_subpackages.Size());
-
-        for (const Handle<AssetObject>& assetObject : m_assetObjects)
-        {
-            InitObject(assetObject);
-
-            assetObjects.PushBack(assetObject);
-        }
-
-        for (const Handle<AssetPackage>& subpackage : m_subpackages)
-        {
-            InitObject(subpackage);
-
-            subpackages.PushBack(subpackage);
-        }
+        return Name::Invalid();
     }
 
-    for (const Handle<AssetObject>& assetObject : assetObjects)
+    int counter = 0;
+    String str = *baseName;
+
+    Mutex::Guard guard(m_mutex);
+
+    while (m_assetObjects.Contains(str))
     {
-        if (!IsTransient())
-        {
-            // save the file in our package
-            Result saveAssetResult = assetObject->Save();
+        counter++;
 
-            if (saveAssetResult.HasError())
-            {
-                HYP_LOG(Assets, Error, "Failed to save asset object '{}' in package '{}': {}", assetObject->GetName(), m_name, saveAssetResult.GetError().GetMessage());
-            }
-        }
-
-        OnAssetObjectAdded(assetObject, true);
-
-        Handle<AssetPackage> parentPackage = m_parentPackage.Lock();
-
-        while (parentPackage.IsValid())
-        {
-            parentPackage->OnAssetObjectAdded(assetObject, false);
-            parentPackage = parentPackage->GetParentPackage().Lock();
-        }
+        str = HYP_FORMAT("{}{}", *baseName, counter);
     }
 
-    SetReady(true);
+    if (counter > 0)
+    {
+        return CreateNameFromDynamicString(str);
+    }
+
+    return baseName;
 }
 
-Result AssetPackage::Save()
+Result AssetPackage::Save(const FilePath& outputDirectory)
 {
     HYP_SCOPE;
     AssertReady();
@@ -599,23 +779,37 @@ Result AssetPackage::Save()
         return HYP_MAKE_ERROR(Error, "AssetPackage '{}' does not have a valid AssetRegistry", m_name);
     }
 
-    HYP_LOG(Assets, Debug, "Saving asset package {} with {} assets (path: {})", GetName(), GetAssetObjects().Size(), GetAbsolutePath());
-
     Mutex::Guard guard(m_mutex);
 
-    FilePath filePath = GetAbsolutePath();
+    FilePath packageDirectory = outputDirectory / BuildPackagePath();
 
-    if (!filePath.Exists())
+    if (!packageDirectory.Exists())
     {
-        if (!filePath.MkDir())
+        if (!packageDirectory.MkDir())
         {
-            return HYP_MAKE_ERROR(Error, "Failed to create package directory '{}'", filePath);
+            return HYP_MAKE_ERROR(Error, "Failed to create package directory '{}'", packageDirectory);
         }
     }
-    else if (!filePath.IsDirectory())
+    else if (!packageDirectory.IsDirectory())
     {
-        return HYP_MAKE_ERROR(Error, "Path '{}' already exists and is not a directory", filePath);
+        return HYP_MAKE_ERROR(Error, "Path '{}' already exists and is not a directory", packageDirectory);
     }
+
+    const FilePath manifestPath = packageDirectory / "PackageManifest.json";
+
+    FileByteWriter manifestWriter { manifestPath };
+
+    if (!manifestWriter.IsOpen())
+    {
+        return HYP_MAKE_ERROR(Error, "Failed to open manifest file for package '{}'", m_name);
+    }
+
+    if (Result saveManifestResult = SaveManifest(manifestWriter); saveManifestResult.HasError())
+    {
+        return HYP_MAKE_ERROR(Error, "Failed to save manifest for package '{}': {}", m_name, saveManifestResult.GetError().GetMessage());
+    }
+
+    manifestWriter.Close();
 
     for (const Handle<AssetPackage>& subpackage : m_subpackages)
     {
@@ -624,7 +818,7 @@ Result AssetPackage::Save()
             continue;
         }
 
-        Result result = subpackage->Save();
+        Result result = subpackage->Save(outputDirectory);
 
         if (result.HasError())
         {
@@ -632,21 +826,66 @@ Result AssetPackage::Save()
         }
     }
 
+    m_packageDir = packageDirectory;
+
     for (const Handle<AssetObject>& assetObject : m_assetObjects)
     {
-        HYP_LOG(Assets, Debug, "Saving asset object '{}' in package '{}'", assetObject->GetName(), m_name);
-
-        if (!assetObject->IsLoaded())
-        {
-            HYP_LOG(Assets, Warning, "AssetObject '{}' is not loaded, skipping save", assetObject->GetName());
-            continue;
-        }
+        assetObject->m_filepath = m_packageDir / *assetObject->GetName();
 
         Result result = assetObject->Save();
 
         if (result.HasError())
         {
             return result.GetError();
+        }
+    }
+
+    return {};
+}
+
+Result AssetPackage::SaveManifest(ByteWriter& stream) const
+{
+    HYP_SCOPE;
+
+    json::JSONObject manifestJson;
+    ObjectToJSON(InstanceClass(), HypData(AnyRef(const_cast<AssetPackage*>(this))), manifestJson);
+
+    stream.WriteString(json::JSONValue(std::move(manifestJson)).ToString(true));
+
+    return {};
+}
+
+Result AssetPackage::OpenAssetReadStream(Name assetName, BufferedReader& stream) const
+{
+    HYP_SCOPE;
+    AssertReady();
+
+    if (!assetName.IsValid())
+    {
+        return HYP_MAKE_ERROR(Error, "Asset name is invalid");
+    }
+
+    Mutex::Guard guard(m_mutex);
+    auto it = m_assetObjects.Find(assetName);
+
+    if (it == m_assetObjects.End())
+    {
+        return HYP_MAKE_ERROR(Error, "AssetObject '{}' not found in package '{}'", assetName, m_name);
+    }
+
+    Handle<AssetObject> assetObject = *it;
+
+    if (m_packageDir.IsDirectory())
+    {
+        FileBufferedReaderSource* source = new FileBufferedReaderSource(m_packageDir / *assetObject->GetName());
+
+        stream = BufferedReader { source };
+
+        if (!stream.IsOpen())
+        {
+            delete source;
+
+            return HYP_MAKE_ERROR(Error, "Failed to open stream for asset '{}'", assetName);
         }
     }
 
@@ -667,125 +906,123 @@ AssetRegistry::AssetRegistry(const String& rootPath)
 {
 }
 
-void AssetRegistry::Init()
-{
-    HYP_SCOPE;
-
-#ifdef HYP_EDITOR
-    // Add transient package for imported assets in editor mode
-    Handle<AssetPackage> importsPackage = GetPackageFromPath("$Import", true);
-
-    const FilePath importedPath = importsPackage->GetAbsolutePath();
-
-    if (!importedPath.Exists())
-    {
-        if (importedPath.MkDir())
-        {
-            HYP_LOG(Assets, Debug, "Created directory for imported assets: {}", importedPath);
-        }
-        else
-        {
-            HYP_LOG(Assets, Error, "Failed to create directory for imported assets: {}", importedPath);
-        }
-    }
-    else if (!importedPath.IsDirectory())
-    {
-        HYP_LOG(Assets, Error, "Path '{}' already exists and is not a directory", importedPath);
-    }
-
-    importsPackage->OnAssetObjectAdded
-        .Bind([this, importedPath](const Handle<AssetObject>& assetObject, bool isDirect)
-            {
-                if (!assetObject->GetResource() || assetObject->GetResource()->IsNull())
-                {
-                    HYP_LOG(Assets, Error, "AssetObject '{}' has no resource, skipping import", assetObject->GetName());
-
-                    return;
-                }
-
-                // build relative dir
-                Array<Name> parts;
-
-                Handle<AssetPackage> currentPackage = assetObject->GetPackage();
-                while (currentPackage.IsValid() && !currentPackage->IsTransient())
-                {
-                    parts.PushBack(currentPackage->GetFriendlyName());
-
-                    currentPackage = currentPackage->GetParentPackage().Lock();
-                }
-
-                parts.Reverse();
-
-                FilePath dir = importedPath / String::Join(parts, '/', &Name::LookupString);
-
-                if (!dir.Exists())
-                {
-                    if (!dir.MkDir())
-                    {
-                        HYP_LOG(Assets, Error, "Failed to create directory for imported assets: {}", dir);
-
-                        return;
-                    }
-                }
-                else if (!dir.IsDirectory())
-                {
-                    HYP_LOG(Assets, Error, "Path '{}' already exists and is not a directory", dir);
-
-                    return;
-                }
-
-                FilePath path = dir / *assetObject->GetName();
-
-                AssetDataResourceBase* resourceCasted = static_cast<AssetDataResourceBase*>(assetObject->GetResource());
-                ResourceHandle resourceHandle(*resourceCasted, false);
-
-                Result saveResult = resourceCasted->Save();
-
-                if (saveResult.HasError())
-                {
-                    HYP_LOG(Assets, Error, "Failed to save imported asset '{}': {}", assetObject->GetName(), saveResult.GetError().GetMessage());
-                }
-                else
-                {
-                    HYP_LOG(Assets, Debug, "Saved imported asset '{}' to '{}'", assetObject->GetName(), path);
-                }
-            })
-        .Detach();
-#endif
-
-    AssetPackageSet packages;
-
-    {
-        Mutex::Guard guard(m_mutex);
-        packages = m_packages;
-    }
-
-    for (const Handle<AssetPackage>& package : packages)
-    {
-        InitObject(package);
-    }
-
-    SetReady(true);
-}
-
 AssetRegistry::~AssetRegistry()
 {
 }
 
-FilePath AssetRegistry::GetAbsolutePath() const
+void AssetRegistry::Init()
 {
     HYP_SCOPE;
 
-    // Allow temporary override of the root path
-    AssetRegistryRootPathContext* context = GetGlobalContext<AssetRegistryRootPathContext>();
+    SetReady(true);
 
-    if (context)
+    Handle<AssetPackage> memoryPackage = GetPackageFromPath("$Memory", true);
+    Handle<AssetPackage> enginePackage = GetPackageFromPath("$Engine", true);
+
+    LoadPackagesAsync();
+
+#ifdef HYP_EDITOR
+    // Add transient package for imported assets in editor mode
+    Handle<AssetPackage> importsPackage = GetPackageFromPath("$Import", true);
+#endif
+}
+
+void AssetRegistry::LoadPackagesAsync()
+{
+    HYP_SCOPE;
+
+    FilePath rootPath = g_assetManager->GetBasePath();
+
+    if (!rootPath.Exists() || !rootPath.IsDirectory())
     {
-        return context->value;
+        // nothing to load if it doesnt exist
+        return;
     }
 
-    Mutex::Guard guard(m_mutex);
-    return FilePath::Current() / m_rootPath;
+    TaskSystem::GetInstance().Enqueue([this, weakThis = WeakHandleFromThis(), rootPath]()
+        {
+            HYP_NAMED_SCOPE("AssetRegistry::LoadPackagesAsync");
+
+            HYP_LOG(Assets, Debug, "Loading packages from root path: {}", rootPath);
+
+            Handle<AssetRegistry> registry = weakThis.Lock();
+            if (!registry)
+            {
+                HYP_LOG(Assets, Error, "AssetRegistry is no longer valid, cannot load packages");
+                return;
+            }
+
+            AssetPackageSet rootPackages;
+
+            Proc<void(const FilePath& dir)> iterateDirectory;
+
+            iterateDirectory = [&](const FilePath& dir)
+            {
+                HYP_LOG(Assets, Debug, "Searching for package manifest in directory: {}", dir);
+
+                bool packageFound = false;
+
+                for (const FilePath& entry : dir.GetAllFilesInDirectory())
+                {
+                    if (entry.Basename() != "PackageManifest.json")
+                    {
+                        continue;
+                    }
+
+                    FileBufferedReaderSource source { entry };
+                    BufferedReader manifestStream { &source };
+
+                    if (!manifestStream.IsOpen())
+                    {
+                        HYP_LOG(Assets, Error, "Failed to open manifest file '{}'", entry);
+
+                        continue;
+                    }
+
+                    Handle<AssetPackage> package;
+
+                    const String packagePath = FilePath::Relative(dir, g_assetManager->GetBasePath());
+
+                    // build virtual package path from filesystem path
+                    if (Result result = LoadPackageFromManifest(dir, packagePath, manifestStream, package, /* loadSubpackages */ true); result.HasError())
+                    {
+                        HYP_LOG(Assets, Error, "Failed to load package from manifest '{}': {}", packagePath, result.GetError().GetMessage());
+
+                        continue;
+                    }
+
+                    if (!package.IsValid())
+                    {
+                        HYP_LOG(Assets, Error, "Package at path '{}' is invalid!", entry);
+
+                        continue;
+                    }
+
+                    if (!package->GetName().IsValid())
+                    {
+                        HYP_LOG(Assets, Error, "Package at path '{}' has an invalid name!", entry);
+
+                        continue;
+                    }
+
+                    rootPackages.Insert(package);
+
+                    // if package manifest found, stop searching in directory and don't look deeper (LoadPackageFromManifest already handles subdirs)
+                    return;
+                }
+
+                for (const FilePath& subdirectory : dir.GetSubdirectories())
+                {
+                    // recursively iterate subdirectories
+                    iterateDirectory(subdirectory);
+                }
+            };
+
+            iterateDirectory(rootPath);
+
+            HYP_LOG(Assets, Debug, "Loaded {} packages from root path '{}'", rootPackages.Size(), rootPath);
+        },
+        TaskThreadPoolName::THREAD_POOL_BACKGROUND, TaskEnqueueFlags::FIRE_AND_FORGET);
 }
 
 void AssetRegistry::SetRootPath(const String& rootPath)
@@ -814,12 +1051,14 @@ void AssetRegistry::SetPackages(const AssetPackageSet& packages)
         if (IsInitCalled())
         {
             InitObject(package);
+
             OnPackageAdded(package);
         }
 
         for (const Handle<AssetPackage>& subpackage : package->m_subpackages)
         {
             subpackage->m_parentPackage = package;
+            subpackage->m_flags |= package->m_flags;
 
             initializePackage(subpackage);
         }
@@ -892,8 +1131,6 @@ Name AssetRegistry::GetUniqueAssetName(const UTF8StringView& packagePath, Name b
         return baseName;
     }
 
-    /// FIXME: Don't consider filesyetem stuff, just check AssetObjects
-
     return package->GetUniqueAssetName(baseName);
 }
 
@@ -909,6 +1146,7 @@ Handle<AssetPackage> AssetRegistry::GetPackageFromPath(const UTF8StringView& pat
 Handle<AssetPackage> AssetRegistry::GetSubpackage(const Handle<AssetPackage>& parentPackage, Name subpackageName, bool createIfNotExist)
 {
     HYP_SCOPE;
+    AssertReady();
 
     Handle<AssetPackage> subpackage;
     bool isNew = false;
@@ -924,7 +1162,6 @@ Handle<AssetPackage> AssetRegistry::GetSubpackage(const Handle<AssetPackage>& pa
             {
                 subpackage = CreateObject<AssetPackage>(subpackageName);
                 subpackage->m_registry = WeakHandleFromThis();
-                subpackage->m_parentPackage = parentPackage;
 
                 m_packages.Insert(subpackage);
 
@@ -956,6 +1193,7 @@ Handle<AssetPackage> AssetRegistry::GetSubpackage(const Handle<AssetPackage>& pa
             subpackage = CreateObject<AssetPackage>(subpackageName);
             subpackage->m_registry = WeakHandleFromThis();
             subpackage->m_parentPackage = parentPackage;
+            subpackage->m_flags |= parentPackage->m_flags;
 
             parentPackage->m_subpackages.Insert(subpackage);
             isNew = true;
@@ -1032,6 +1270,120 @@ bool AssetRegistry::RemovePackage(AssetPackage* package)
     }
 
     return false;
+}
+
+Result AssetRegistry::LoadPackageFromManifest(const FilePath& dir, UTF8StringView packagePath, BufferedReader& manifestStream, Handle<AssetPackage>& outPackage, bool loadSubpackages)
+{
+    HYP_SCOPE;
+
+    HYP_LOG(Assets, Debug, "Loading package from manifest: {}", packagePath);
+
+    json::ParseResult parseResult = json::JSON::Parse(manifestStream);
+
+    if (!parseResult.ok)
+    {
+        return HYP_MAKE_ERROR(Error, "Failed to parse manifest JSON: {}", parseResult.message);
+    }
+
+    if (!parseResult.value.IsObject())
+    {
+        return HYP_MAKE_ERROR(Error, "Manifest JSON must be an object");
+    }
+
+    outPackage = GetPackageFromPath(packagePath, true);
+
+    HypData targetHypData = HypData(outPackage.ToRef());
+
+    if (!JSONToObject(parseResult.value.AsObject(), outPackage->InstanceClass(), targetHypData))
+    {
+        return HYP_MAKE_ERROR(Error, "Failed to load package data from manifest");
+    }
+
+    const FilePath packageDir = dir / outPackage->BuildPackagePath();
+
+    if (!packageDir.Exists() || !packageDir.IsDirectory())
+    {
+        HYP_LOG(Assets, Warning, "Package directory '{}' does not exist or is not a directory", packageDir);
+
+        return {};
+    }
+
+    outPackage->m_packageDir = packageDir;
+
+    // Load AssetObjects from manifest files
+    for (const FilePath& entry : packageDir.GetAllFilesInDirectory())
+    {
+        if (entry.GetExtension() != "json")
+        {
+            continue;
+        }
+
+        if (entry.Basename() == "PackageManifest.json")
+        {
+            // Skip the package manifest itself
+            continue;
+        }
+
+        FileBufferedReaderSource source { entry };
+        BufferedReader assetManifestStream { &source };
+
+        Handle<AssetObject> assetObject;
+
+        if (Result loadAssetResult = AssetObject::LoadAssetFromManifest(assetManifestStream, assetObject); loadAssetResult.HasError())
+        {
+            HYP_LOG(Assets, Error, "Failed to load asset from manifest '{}': {}", entry, loadAssetResult.GetError().GetMessage());
+
+            continue;
+        }
+
+        if (Result addAssetResult = outPackage->AddAssetObject(assetObject); addAssetResult.HasError())
+        {
+            HYP_LOG(Assets, Error, "Failed to add asset object '{}' to package '{}': {}", assetObject->GetName(), outPackage->GetName(), addAssetResult.GetError().GetMessage());
+
+            continue;
+        }
+    }
+
+    if (loadSubpackages)
+    {
+        // Load subpackages
+
+        for (const FilePath& subdirectory : packageDir.GetSubdirectories())
+        {
+            for (const FilePath& entry : subdirectory.GetAllFilesInDirectory())
+            {
+                if (entry.Basename() == "PackageManifest.json")
+                {
+                    FileBufferedReaderSource source { entry };
+                    BufferedReader subpackageManifestStream { &source };
+
+                    Handle<AssetPackage> subpackage;
+
+                    // build virtual package path from filesystem path
+                    const String packagePath = FilePath::Relative(subdirectory, g_assetManager->GetBasePath());
+
+                    if (Result result = LoadPackageFromManifest(subdirectory, packagePath, subpackageManifestStream, subpackage, /* loadSubpackages */ true); result.HasError())
+                    {
+                        HYP_LOG(Assets, Error, "Failed to load subpackage from manifest '{}': {}", packagePath, result.GetError().GetMessage());
+
+                        continue;
+                    }
+
+                    if (subpackage.IsValid())
+                    {
+                        subpackage->m_parentPackage = outPackage;
+                        subpackage->m_flags |= outPackage->m_flags;
+
+                        outPackage->m_subpackages.Insert(subpackage);
+                    }
+
+                    break;
+                }
+            }
+        }
+    }
+
+    return {};
 }
 
 Handle<AssetPackage> AssetRegistry::GetPackageFromPath_Internal(const UTF8StringView& path, AssetRegistryPathType pathType, bool createIfNotExist, String& outAssetName)

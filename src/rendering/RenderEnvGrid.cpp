@@ -717,12 +717,6 @@ void EnvGridRenderer::RenderProbe(FrameBase* frame, const RenderSetup& renderSet
     const uint32 probeBoundIndex = RenderApi_RetrieveResourceBinding(probe.Id());
     AssertDebug(probeBoundIndex != ~0u, "EnvProbe {} is not bound when rendering EnvGrid!", probe.Id());
 
-    // RenderProxyEnvProbe* probeProxy = static_cast<RenderProxyEnvProbe*>(RenderApi_GetRenderProxy(probe.Id()));
-    // AssertDebug(probeProxy != nullptr, "No render proxy for EnvProbe {} when rendering EnvGrid!", probe.Id());
-
-    HYP_LOG(EnvGrid, Debug, "Rendering EnvProbe {} with {} draw calls collected, render collector = {}, rpl = {}",
-        probe->Id(), renderCollector.NumDrawCallsCollected(), (void*)&renderCollector, (void*)&rpl);
-
     {
         RenderSetup rs = renderSetup;
         rs.envProbe = probe;

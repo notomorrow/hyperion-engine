@@ -18,7 +18,7 @@ enum class VulkanSemaphoreType
     SIGNAL
 };
 
-class VulkanSemaphore
+class VulkanSemaphore final
 {
     friend class VulkanSemaphoreChain;
 

@@ -21,13 +21,13 @@ class GBuffer;
 struct RenderCommand_DestroyRaytracingReflections;
 struct RenderCommand_CreateRTRadianceImageOutputs;
 
-HYP_STRUCT(ConfigName = "app", JSONPath = "rendering.rt.reflections")
+HYP_STRUCT(ConfigName = "app", JsonPath = "rendering.rt.reflections")
 struct RaytracingReflectionsConfig : public ConfigBase<RaytracingReflectionsConfig>
 {
-    HYP_FIELD(JSONIgnore)
+    HYP_FIELD(JsonIgnore)
     Vec2u extent = { 1024, 1024 };
 
-    HYP_FIELD(JSONIgnore)
+    HYP_FIELD(JsonIgnore)
     bool pathTracing = false;
 
     virtual ~RaytracingReflectionsConfig() override = default;

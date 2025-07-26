@@ -19,13 +19,13 @@ class Engine;
 class GBuffer;
 struct SSGIUniforms;
 
-HYP_STRUCT(ConfigName = "app", JSONPath = "rendering.ssgi")
+HYP_STRUCT(ConfigName = "app", JsonPath = "rendering.ssgi")
 struct SSGIConfig : public ConfigBase<SSGIConfig>
 {
     HYP_FIELD(Description = "The quality level of the SSGI effect. (0 = quarter res, 1 = half res)")
     int quality = 0;
 
-    HYP_FIELD(JSONIgnore)
+    HYP_FIELD(JsonIgnore)
     Vec2u extent;
 
     virtual ~SSGIConfig() override = default;

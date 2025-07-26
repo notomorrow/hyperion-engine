@@ -78,7 +78,7 @@ VulkanDescriptorSet::VulkanDescriptorSet(const DescriptorSetLayout& layout)
 
 VulkanDescriptorSet::~VulkanDescriptorSet()
 {
-    HYP_LOG(RenderingBackend, Debug, "Destroying descriptor set {}", GetDebugName());
+    HYP_GFX_ASSERT(!IsCreated());
 }
 
 void VulkanDescriptorSet::UpdateDirtyState(bool* outIsDirty)

@@ -151,6 +151,7 @@ HYP_API bool InitializeEngine(int argc, char** argv)
     dotnet::DotNetSystem::GetInstance().Initialize(basePath);
     ConsoleCommandManager::GetInstance().Initialize();
     AudioManager::GetInstance().Initialize();
+    TaskSystem::GetInstance().Start();
 
 #ifdef HYP_VULKAN
     g_renderBackend = new VulkanRenderBackend();
@@ -197,6 +198,11 @@ HYP_API void DestroyEngine()
     ComponentInterfaceRegistry::GetInstance().Shutdown();
     ConsoleCommandManager::GetInstance().Shutdown();
     AudioManager::GetInstance().Shutdown();
+
+    if (TaskSystem::GetInstance().IsRunning())
+    {
+        TaskSystem::GetInstance().Stop();
+    }
 
     g_assetManager.Reset();
     g_editorState.Reset();

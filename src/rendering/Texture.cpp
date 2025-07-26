@@ -100,7 +100,7 @@ void Texture::Init()
 
     if (m_asset.IsValid() && !m_asset->IsRegistered())
     {
-        if (!m_asset->GetName().IsValid())
+        if (!m_asset->GetName().IsValid() && m_name.IsValid() && m_name != g_nameTextureDefault)
         {
             m_asset->Rename(m_name);
         }
@@ -127,7 +127,7 @@ void Texture::SetName(Name name)
 
     if (m_asset.IsValid() && !m_asset->IsRegistered() && IsInitCalled())
     {
-        if (!m_asset->GetName().IsValid())
+        if (!m_asset->GetName().IsValid() && m_name.IsValid() && m_name != g_nameTextureDefault)
         {
             m_asset->Rename(m_name);
         }

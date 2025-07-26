@@ -86,7 +86,7 @@ private:
 
 #pragma region Vulkan struct wrappers
 
-class VulkanDescriptorSetLayoutWrapper : public RenderObject<VulkanDescriptorSetLayoutWrapper>
+class VulkanDescriptorSetLayoutWrapper final : public RenderObject<VulkanDescriptorSetLayoutWrapper>
 {
     VkDescriptorSetLayout m_handle;
     VulkanDevice* m_device;

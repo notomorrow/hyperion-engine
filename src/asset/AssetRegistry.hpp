@@ -20,6 +20,8 @@
 
 #include <core/memory/resource/Resource.hpp>
 
+#include <core/io/BufferedByteReader.hpp>
+
 #include <core/Defines.hpp>
 
 #include <core/logging/LoggerFwd.hpp>
@@ -58,17 +60,10 @@ public:
 
     virtual ~AssetDataResourceBase() override = default;
 
-    ThreadId GetWritingThread() const
-    {
-        Mutex::Guard guard(m_mutex);
-        return m_writingThread;
-    }
-
-    Result Save();
-    Result SaveTo(const FilePath& path);
-
 protected:
-    AssetDataResourceBase() = default;
+    AssetDataResourceBase()
+    {
+    }
 
     virtual void Initialize() override final;
     virtual void Destroy() override final;
@@ -76,6 +71,8 @@ protected:
     virtual void Update() override
     {
     }
+
+    Result Save_Internal(const FilePath& path);
 
     virtual void Unload_Internal() = 0;
 
@@ -85,7 +82,6 @@ protected:
     virtual AnyRef GetAssetRef() = 0;
 
     WeakHandle<AssetObject> m_assetObject;
-    ThreadId m_writingThread;
     mutable Mutex m_mutex;
 };
 
@@ -137,6 +133,15 @@ protected:
     T m_data;
 };
 
+HYP_ENUM()
+enum AssetObjectFlags : uint32
+{
+    AOF_NONE = 0x0,
+    AOF_PERSISTENT = 0x1 //<! Asset is persistently loaded in memory
+};
+
+HYP_MAKE_ENUM_FLAGS(AssetObjectFlags);
+
 HYP_CLASS(Abstract)
 class HYP_API AssetObject : public HypObject<AssetObject>
 {
@@ -179,6 +184,18 @@ public:
     Result Rename(Name name);
 
     HYP_METHOD()
+    HYP_FORCE_INLINE const FilePath& GetOriginalFilepath() const
+    {
+        return m_originalFilepath;
+    }
+
+    HYP_METHOD()
+    HYP_FORCE_INLINE void SetOriginalFilepath(const FilePath& originalFilepath)
+    {
+        m_originalFilepath = originalFilepath;
+    }
+
+    HYP_METHOD()
     HYP_FORCE_INLINE Handle<AssetPackage> GetPackage() const
     {
         return m_package.Lock();
@@ -204,7 +221,19 @@ public:
     }
 
     HYP_METHOD()
-    FilePath GetFilePath() const;
+    HYP_FORCE_INLINE EnumFlags<AssetObjectFlags> GetFlags() const
+    {
+        return m_flags;
+    }
+
+    HYP_METHOD()
+    HYP_FORCE_INLINE bool IsPersistentlyLoaded() const
+    {
+        return bool(m_persistentResource);
+    }
+
+    HYP_METHOD()
+    void SetIsPersistentlyLoaded(bool persistentlyLoaded);
 
     HYP_METHOD()
     bool IsLoaded() const;
@@ -212,8 +241,14 @@ public:
     HYP_METHOD()
     Result Save() const;
 
+    Result OpenReadStream(BufferedReader& stream) const;
+
+    static Result LoadAssetFromManifest(BufferedReader& stream, Handle<AssetObject>& outAssetObject);
+
 protected:
     void Init() override;
+
+    Result SaveManifest(ByteWriter& stream) const;
 
     template <class T>
     T* GetResourceData() const
@@ -229,19 +264,29 @@ protected:
         return resourceCasted->GetAssetRef().TryGet<T>();
     }
 
-    HYP_FIELD(Property = "UUID", Serialize = true)
+    HYP_FIELD(Serialize = true)
     UUID m_uuid;
 
-    HYP_FIELD(Property = "Name", Serialize = true)
+    HYP_FIELD(Serialize = true)
     Name m_name;
 
-    HYP_FIELD()
+    HYP_FIELD(Serialize = true)
+    EnumFlags<AssetObjectFlags> m_flags;
+
+    HYP_FIELD(Serialize = true)
+    FilePath m_originalFilepath; // used to determine if we should skip importing an asset
+
+    HYP_FIELD(JsonIgnore)
     WeakHandle<AssetPackage> m_package;
 
-    HYP_FIELD()
+    HYP_FIELD(JsonIgnore)
     IResource* m_resource;
 
+    HYP_FIELD(JsonIgnore)
     AssetPath m_assetPath;
+
+    FilePath m_filepath;
+    ResourceHandle m_persistentResource;
 };
 
 HYP_ENUM()
@@ -397,19 +442,18 @@ public:
     Result RemoveAssetObject(const Handle<AssetObject>& assetObject);
 
     HYP_METHOD()
-    FilePath GetAbsolutePath() const;
-
-    HYP_METHOD()
     String BuildPackagePath() const;
 
     HYP_METHOD()
     AssetPath BuildAssetPath(Name assetName) const;
 
-    HYP_METHOD(Scriptable)
+    HYP_METHOD()
     Name GetUniqueAssetName(Name baseName) const;
 
     HYP_METHOD()
-    Result Save();
+    Result Save(const FilePath& outputDirectory);
+
+    Result OpenAssetReadStream(Name assetName, BufferedReader& stream) const;
 
     Delegate<void, Handle<AssetObject>, bool /* isDirect */> OnAssetObjectAdded;
     Delegate<void, Handle<AssetObject>, bool /* isDirect */> OnAssetObjectRemoved;
@@ -417,27 +461,25 @@ public:
 private:
     void Init() override;
 
-    Name GetUniqueAssetName_Impl(Name baseName) const
-    {
-        return baseName;
-    }
+    Result SaveManifest(ByteWriter& stream) const;
 
-    HYP_FIELD(Property = "UUID", Serialize = true)
+    HYP_FIELD(Serialize = true)
     UUID m_uuid;
 
-    HYP_FIELD(Property = "Name", Serialize = true)
+    HYP_FIELD(Serialize = true)
     Name m_name;
 
-    HYP_FIELD(Property = "FriendlyName", Serialize = true)
+    HYP_FIELD(Serialize = true)
     Name m_friendlyName;
 
-    HYP_FIELD(Property="Flags", Serialize = true)
+    HYP_FIELD(Serialize = true)
     EnumFlags<AssetPackageFlags> m_flags;
 
     WeakHandle<AssetRegistry> m_registry;
     WeakHandle<AssetPackage> m_parentPackage;
     AssetPackageSet m_subpackages;
     AssetObjectSet m_assetObjects;
+    FilePath m_packageDir;
     mutable Mutex m_mutex;
 };
 
@@ -460,9 +502,6 @@ public:
     AssetRegistry(AssetRegistry&& other) noexcept = delete;
     AssetRegistry& operator=(AssetRegistry&& other) noexcept = delete;
     ~AssetRegistry();
-
-    HYP_METHOD()
-    FilePath GetAbsolutePath() const;
 
     HYP_METHOD()
     HYP_FORCE_INLINE String GetRootPath() const
@@ -522,24 +561,23 @@ public:
     HYP_METHOD()
     bool RemovePackage(AssetPackage* package);
 
+    Result LoadPackageFromManifest(const FilePath& dir, UTF8StringView packagePath, BufferedReader& manifestStream, Handle<AssetPackage>& outPackage, bool loadSubpackages);
+
     Delegate<void, Handle<AssetPackage>> OnPackageAdded;
     Delegate<void, Handle<AssetPackage>> OnPackageRemoved;
 
 private:
     void Init() override;
 
+    void LoadPackagesAsync();
+
     Handle<AssetPackage> GetPackageFromPath_Internal(const UTF8StringView& path, AssetRegistryPathType pathType, bool createIfNotExist, String& outAssetName);
 
-    HYP_FIELD(Property = "RootPath", Serialize = true)
+    HYP_FIELD(Serialize = true)
     String m_rootPath;
 
     AssetPackageSet m_packages;
     mutable Mutex m_mutex;
-};
-
-struct AssetRegistryRootPathContext
-{
-    FilePath value;
 };
 
 } // namespace hyperion

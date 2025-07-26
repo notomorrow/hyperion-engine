@@ -155,7 +155,7 @@ void Mesh::Init()
 {
     if (m_asset.IsValid() && !m_asset->IsRegistered())
     {
-        if (!m_asset->GetName().IsValid())
+        if (!m_asset->GetName().IsValid() && m_name.IsValid() && m_name != g_nameMeshDefault)
         {
             m_asset->Rename(m_name);
         }
@@ -180,14 +180,17 @@ void Mesh::CreateGpuBuffers()
     }
 
     ResourceHandle resourceHandle(*m_asset->GetResource());
-
-    AssertDebug(m_asset->GetMeshData()->desc.meshAttributes.vertexAttributes != 0, "No vertex attributes set on mesh");
+    Assert(m_asset->IsLoaded());
 
     Array<float> vertices = m_asset->GetMeshData()->BuildVertexBuffer();
 
     Array<uint32> indices;
     indices.Resize(m_asset->GetMeshData()->indexData.Size() / sizeof(uint32));
     Memory::MemCpy(indices.Data(), m_asset->GetMeshData()->indexData.Data(), m_asset->GetMeshData()->indexData.Size());
+
+    AssertDebug(m_asset->GetMeshData()->desc.meshAttributes.vertexAttributes != 0, "No vertex attributes set on mesh");
+    Assert(vertices.Size() == m_asset->GetMeshDesc().numVertices * m_asset->GetMeshDesc().meshAttributes.vertexAttributes.CalculateVertexSize());
+    Assert(indices.Size() == m_asset->GetMeshDesc().numIndices);
 
     // Ensure vertex buffer is not empty
     if (vertices.Empty())
@@ -215,7 +218,7 @@ void Mesh::CreateGpuBuffers()
         m_vertexBuffer = g_renderBackend->MakeGpuBuffer(GpuBufferType::MESH_VERTEX_BUFFER, packedBufferSize);
 
 #ifdef HYP_DEBUG_MODE
-        m_vertexBuffer->SetDebugName(NAME_FMT("Mesh_VertexBuffer_{}", Id().Value()));
+        m_vertexBuffer->SetDebugName(NAME_FMT("{}_VBO", GetName()));
 #endif
     }
 
@@ -228,7 +231,9 @@ void Mesh::CreateGpuBuffers()
         m_indexBuffer = g_renderBackend->MakeGpuBuffer(GpuBufferType::MESH_INDEX_BUFFER, packedIndicesSize);
 
 #ifdef HYP_DEBUG_MODE
-        m_indexBuffer->SetDebugName(NAME_FMT("Mesh_IndexBuffer_{}", Id().Value()));
+        m_indexBuffer->SetDebugName(NAME_FMT("{}_IBO", GetName()));
+
+        HYP_LOG_TEMP("Creating index buffer for mesh '{}' with size {}, idx count {}", GetName(), m_indexBuffer->Size(), m_asset->GetMeshDesc().numIndices);
 #endif
     }
 
@@ -297,7 +302,7 @@ void Mesh::SetName(Name name)
 
     if (m_asset.IsValid() && !m_asset->IsRegistered() && IsInitCalled())
     {
-        if (!m_asset->GetName().IsValid())
+        if (!m_asset->GetName().IsValid() && m_name.IsValid() && m_name != g_nameMeshDefault)
         {
             m_asset->Rename(m_name);
         }

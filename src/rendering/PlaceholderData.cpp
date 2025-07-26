@@ -249,6 +249,7 @@ void PlaceholderData::Create()
     defaultTexture2d->SetName(NAME("Placeholder_Texture_2D_1x1_R8"));
 
     g_assetManager->GetAssetRegistry()->RegisterAsset("$Engine/Media/Textures", defaultTexture2d->GetAsset());
+    Assert(defaultTexture2d->GetAsset()->IsPersistentlyLoaded());
 
     InitObject(defaultTexture2d);
     defaultTexture2d->SetPersistentRenderResourceEnabled(true);

@@ -10,6 +10,7 @@
 #include <core/object/HypConstant.hpp>
 
 #include <core/utilities/Format.hpp>
+#include <core/utilities/UUID.hpp>
 
 #include <core/logging/LogChannels.hpp>
 #include <core/logging/Logger.hpp>
@@ -18,7 +19,7 @@ namespace hyperion {
 
 bool ObjectToJSON(const HypClass* hypClass, const HypData& target, json::JSONObject& outJson)
 {
-    for (const IHypMember& member : hypClass->GetMembers())
+    for (const IHypMember& member : hypClass->GetMembers(HypMemberType::TYPE_FIELD | HypMemberType::TYPE_PROPERTY))
     {
         if (const HypClassAttributeValue& attribute = member.GetAttribute("jsonignore"); attribute.IsValid() && attribute.GetBool())
         {
@@ -60,6 +61,12 @@ bool ObjectToJSON(const HypClass* hypClass, const HypData& target, json::JSONObj
         {
             const HypField* field = static_cast<const HypField*>(&member);
 
+            // skip fields that act as synthetic properties - they will be included twice otherwise
+            if (field->GetAttribute("property").IsValid())
+            {
+                continue;
+            }
+
             json::JSONValue jsonValue;
 
             if (!HypDataToJSON(field->Get(target), jsonValue))
@@ -87,6 +94,12 @@ bool ObjectToJSON(const HypClass* hypClass, const HypData& target, json::JSONObj
         case HypMemberType::TYPE_CONSTANT:
         {
             const HypConstant* constant = static_cast<const HypConstant*>(&member);
+
+            // skip fields that act as synthetic properties - they will be included twice otherwise
+            if (constant->GetAttribute("property").IsValid())
+            {
+                continue;
+            }
 
             json::JSONValue jsonValue;
 
@@ -153,14 +166,20 @@ bool JSONToObject(const json::JSONObject& jsonObject, const HypClass* hypClass, 
         {
             const HypField& field = static_cast<const HypField&>(member);
 
+            // skip fields that act as synthetic properties - they will be included twice otherwise
+            if (field.GetAttribute("property").IsValid())
+            {
+                break;
+            }
+
             const TypeId typeId = field.Get(target).ToRef().GetTypeId();
 
             HypData hypData;
 
             if (!JSONToHypData(value, typeId, hypData))
             {
-                HYP_LOG(Config, Warning, "Failed to deserialize field \"{}\" of HypClass \"{}\" from json",
-                    member.GetName(), hypClass->GetName());
+                HYP_LOG(Config, Warning, "Failed to deserialize field \"{}\" of HypClass \"{}\" from json (TypeId: {})",
+                    member.GetName(), hypClass->GetName(), typeId.Value());
 
                 return false;
             }
@@ -178,7 +197,7 @@ bool JSONToObject(const json::JSONObject& jsonObject, const HypClass* hypClass, 
 
     json::JSONValue jsonObjectValue(jsonObject);
 
-    for (const IHypMember& member : hypClass->GetMembers())
+    for (const IHypMember& member : hypClass->GetMembers(HypMemberType::TYPE_FIELD | HypMemberType::TYPE_PROPERTY))
     {
         if (const HypClassAttributeValue& attribute = member.GetAttribute("jsonignore"); attribute.IsValid() && attribute.GetBool())
         {
@@ -202,9 +221,6 @@ bool JSONToObject(const json::JSONObject& jsonObject, const HypClass* hypClass, 
 
             if (!resolveMember(member, value.Get()))
             {
-                HYP_LOG(Config, Warning, "Failed to deserialize property \"{}\" of HypClass \"{}\" from json",
-                    path, hypClass->GetName());
-
                 return false;
             }
 
@@ -223,9 +239,6 @@ bool JSONToObject(const json::JSONObject& jsonObject, const HypClass* hypClass, 
 
         if (!resolveMember(member, value.Get()))
         {
-            HYP_LOG(Config, Warning, "Failed to deserialize property \"{}\" of HypClass \"{}\" from json",
-                member.GetName(), hypClass->GetName());
-
             return false;
         }
     }
@@ -469,6 +482,30 @@ bool JSONToHypData(const json::JSONValue& jsonValue, TypeId typeId, HypData& out
 
         return true;
     }
+    else if (typeId == TypeId::ForType<UUID>())
+    {
+        if (!jsonValue.IsString())
+        {
+            return false;
+        }
+
+        const json::JSONString& jsonString = jsonValue.AsString();
+
+        if (jsonString.Size() != 36)
+        {
+            return false;
+        }
+
+        outHypData = HypData(UUID(ANSIStringView(*jsonString)));
+
+        return true;
+    }
+    else if (typeId == TypeId::ForType<Name>())
+    {
+        outHypData = HypData(Name(CreateNameFromDynamicString(*jsonValue.ToString())));
+
+        return true;
+    }
     else
     {
         if (!jsonValue.IsObject())
@@ -652,6 +689,24 @@ bool HypDataToJSON(const HypData& value, json::JSONValue& outJson)
         jsonArray.PushBack(json::JSONNumber(vec.w));
 
         outJson = std::move(jsonArray);
+
+        return true;
+    }
+
+    if (value.Is<UUID>())
+    {
+        const UUID& uuid = value.Get<UUID>();
+
+        outJson = json::JSONString(uuid.ToString());
+
+        return true;
+    }
+
+    if (value.Is<Name>())
+    {
+        const Name name = value.Get<Name>();
+
+        outJson = json::JSONString(name.LookupString());
 
         return true;
     }

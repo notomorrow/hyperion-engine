@@ -241,15 +241,6 @@ class ResourceBinder : public ResourceBinderBase
                 }
             }
 
-            if (newlyAdded.Count() != 0 || removed.Count() != 0)
-            {
-                DebugLog(LogType::Debug, "ResourceBinder<%s>: %u objects added, %u objects removed, %u total bindings\n",
-                    TypeNameWithoutNamespace<T>().Data(),
-                    newlyAdded.Count(),
-                    removed.Count(),
-                    after.Count());
-            }
-
             lastFrameIds = currentFrameIds;
         }
 

@@ -76,6 +76,11 @@ bool FilePath::Remove() const
 
 bool FilePath::Exists() const
 {
+    if (Empty())
+    {
+        return false;
+    }
+
     struct stat st;
 
     return stat(Data(), &st) == 0;
@@ -83,6 +88,11 @@ bool FilePath::Exists() const
 
 bool FilePath::IsDirectory() const
 {
+    if (Empty())
+    {
+        return false;
+    }
+
     struct stat st;
 
     if (stat(Data(), &st) == 0)
