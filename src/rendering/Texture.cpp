@@ -2,15 +2,20 @@
 
 #include <rendering/Texture.hpp>
 
-#include <rendering/RenderTexture.hpp>
-
 #include <rendering/RenderObject.hpp>
 #include <rendering/RenderImage.hpp>
 #include <rendering/RenderSampler.hpp>
+#include <rendering/RenderQueue.hpp>
+#include <rendering/RenderFrame.hpp>
+#include <rendering/PlaceholderData.hpp>
+#include <rendering/RenderTextureMipmap.hpp>
+#include <rendering/RenderHelpers.hpp>
 
 #include <asset/Assets.hpp>
 #include <asset/AssetRegistry.hpp>
 #include <asset/TextureAsset.hpp>
+
+#include <core/utilities/DeferredScope.hpp>
 
 #include <core/object/HypClassUtils.hpp>
 
@@ -36,6 +41,150 @@ const FixedArray<Pair<Vec3f, Vec3f>, 6> Texture::cubemapDirections = {
 
 static const Name g_nameTextureDefault = NAME("<unnamed texture>");
 
+#pragma region Render commands
+
+struct RENDER_COMMAND(CreateTextureGpuImage)
+    : RenderCommand
+{
+    WeakHandle<Texture> textureWeak;
+    ResourceHandle resourceHandle;
+    ResourceState initialState;
+    ImageRef image;
+
+    RENDER_COMMAND(CreateTextureGpuImage)(
+        const WeakHandle<Texture>& textureWeak,
+        ResourceHandle&& resourceHandle,
+        ResourceState initialState,
+        ImageRef image)
+        : textureWeak(textureWeak),
+          resourceHandle(std::move(resourceHandle)),
+          initialState(initialState),
+          image(std::move(image))
+    {
+        Assert(this->image.IsValid());
+    }
+
+    virtual ~RENDER_COMMAND(CreateTextureGpuImage)() override = default;
+
+    virtual RendererResult operator()() override
+    {
+        if (Handle<Texture> texture = textureWeak.Lock())
+        {
+            if (!image->IsCreated())
+            {
+                HYPERION_BUBBLE_ERRORS(image->Create());
+
+                if (texture->GetAsset().IsValid())
+                {
+                    Assert(resourceHandle);
+
+                    TextureData* textureData = texture->GetAsset()->GetTextureData();
+                    Assert(textureData != nullptr);
+
+                    const TextureDesc& textureDesc = texture->GetAsset()->GetTextureDesc();
+
+                    ByteBuffer const* imageData = &textureData->imageData;
+                    LinkedList<ByteBuffer> placeholderBuffers;
+
+                    if (textureDesc != image->GetTextureDesc())
+                    {
+                        HYP_LOG(Streaming, Warning, "Streamed texture data TextureDesc not equal to Image's TextureDesc!");
+                    }
+
+                    if (imageData->Size() != image->GetByteSize())
+                    {
+                        HYP_LOG(Streaming, Warning, "Streamed texture data buffer size mismatch! Expected: {}, Got: {}",
+                            image->GetByteSize(), textureDesc.GetByteSize());
+
+                        // fill some placeholder data with zeros so we don't crash
+                        ByteBuffer* placeholderBuffer = &placeholderBuffers.EmplaceBack();
+                        placeholderBuffer->SetSize(image->GetByteSize());
+
+                        const TextureFormat nonSrgbFormat = ChangeFormatSrgb(image->GetTextureFormat(), false);
+
+                        switch (texture->GetType())
+                        {
+                        case TT_TEX2D:
+                            switch (nonSrgbFormat)
+                            {
+                            case TF_R8:
+                                FillPlaceholderBuffer_Tex2D<TF_R8>(image->GetExtent().GetXY(), *placeholderBuffer);
+                                break;
+                            case TF_RGBA8:
+                                FillPlaceholderBuffer_Tex2D<TF_RGBA8>(image->GetExtent().GetXY(), *placeholderBuffer);
+                                break;
+                            case TF_RGBA16F:
+                                FillPlaceholderBuffer_Tex2D<TF_RGBA16F>(image->GetExtent().GetXY(), *placeholderBuffer);
+                                break;
+                            case TF_RGBA32F:
+                                FillPlaceholderBuffer_Tex2D<TF_RGBA32F>(image->GetExtent().GetXY(), *placeholderBuffer);
+                                break;
+                            default:
+                                // no FillPlaceholderBuffer method defined
+                                break;
+                            }
+                            break;
+                        case TT_CUBEMAP:
+                            switch (nonSrgbFormat)
+                            {
+                            case TF_R8:
+                                FillPlaceholderBuffer_Cubemap<TF_R8>(image->GetExtent().GetXY(), *placeholderBuffer);
+                                break;
+                            case TF_RGBA8:
+                                FillPlaceholderBuffer_Cubemap<TF_RGBA8>(image->GetExtent().GetXY(), *placeholderBuffer);
+                                break;
+                            default:
+                                // no FillPlaceholderBuffer method defined
+                                break;
+                            }
+                            break;
+                        default:
+                            // no FillPlaceholderBuffer method defined
+                            break;
+                        }
+
+                        imageData = placeholderBuffer;
+                    }
+
+                    GpuBufferRef stagingBuffer = g_renderBackend->MakeGpuBuffer(GpuBufferType::STAGING_BUFFER, imageData->Size());
+                    HYPERION_BUBBLE_ERRORS(stagingBuffer->Create());
+                    stagingBuffer->Copy(imageData->Size(), imageData->Data());
+
+                    HYP_DEFER({ SafeRelease(std::move(stagingBuffer)); });
+
+                    // @FIXME add back ConvertTo32BPP
+
+                    FrameBase* frame = g_renderBackend->GetCurrentFrame();
+                    RenderQueue& renderQueue = frame->renderQueue;
+
+                    renderQueue << InsertBarrier(image, RS_COPY_DST);
+
+                    renderQueue << CopyBufferToImage(stagingBuffer, image);
+
+                    if (textureDesc.HasMipmaps())
+                    {
+                        renderQueue << GenerateMipmaps(image);
+                    }
+
+                    renderQueue << InsertBarrier(image, initialState);
+                }
+                else if (initialState != RS_UNDEFINED)
+                {
+                    FrameBase* frame = g_renderBackend->GetCurrentFrame();
+                    RenderQueue& renderQueue = frame->renderQueue;
+
+                    // Transition to initial state
+                    renderQueue << InsertBarrier(image, initialState);
+                }
+            }
+        }
+
+        return {};
+    }
+};
+
+#pragma endregion Render commands
+
 #pragma region Texture
 
 Texture::Texture()
@@ -50,52 +199,33 @@ Texture::Texture()
 }
 
 Texture::Texture(const TextureDesc& textureDesc)
-    : m_renderResource(nullptr),
-      m_asset(CreateObject<TextureAsset>(g_nameTextureDefault, TextureData { textureDesc }))
+    : m_asset(CreateObject<TextureAsset>(g_nameTextureDefault, TextureData { textureDesc }))
 {
     SetName(g_nameTextureDefault);
 }
 
 Texture::Texture(const TextureData& textureData)
-    : m_renderResource(nullptr),
-      m_asset(CreateObject<TextureAsset>(g_nameTextureDefault, textureData))
+    : m_asset(CreateObject<TextureAsset>(g_nameTextureDefault, textureData))
 {
     SetName(g_nameTextureDefault);
 }
 
 Texture::Texture(const Handle<TextureAsset>& asset)
-    : m_renderResource(nullptr),
-      m_asset(asset)
+    : m_asset(asset)
 {
     SetName(g_nameTextureDefault);
 }
 
 Texture::~Texture()
 {
-    m_renderPersistent.Reset();
-
-    // temp shit
-    if (m_renderResource)
-    {
-        m_renderResource->DecRef();
-        FreeResource(m_renderResource);
-        m_renderResource = nullptr;
-    }
+    SafeRelease(std::move(m_gpuImage));
 }
 
 void Texture::Init()
 {
     AddDelegateHandler(g_engine->GetDelegates().OnShutdown.Bind([this]()
         {
-            m_renderPersistent.Reset();
-
-            if (m_renderResource)
-            {
-                // temp shit
-                m_renderResource->DecRef();
-                FreeResource(m_renderResource);
-                m_renderResource = nullptr;
-            }
+            SafeRelease(std::move(m_gpuImage));
         }));
 
     if (m_asset.IsValid() && !m_asset->IsRegistered())
@@ -108,10 +238,14 @@ void Texture::Init()
         g_assetManager->GetAssetRegistry()->RegisterAsset("$Memory/Media/Textures", m_asset);
     }
 
-    m_renderResource = AllocateResource<RenderTexture>(this);
+    m_gpuImage = g_renderBackend->MakeImage(GetTextureDesc());
 
-    // temp shit
-    m_renderResource->IncRef();
+    PUSH_RENDER_COMMAND(
+        CreateTextureGpuImage,
+        WeakHandleFromThis(),
+        m_asset.IsValid() ? ResourceHandle(*m_asset->GetResource()) : ResourceHandle(),
+        RS_SHADER_RESOURCE,
+        m_gpuImage);
 
     SetReady(true);
 }
@@ -144,8 +278,6 @@ const TextureDesc& Texture::GetTextureDesc() const
 
 void Texture::SetTextureDesc(const TextureDesc& textureDesc)
 {
-    Mutex::Guard guard(m_readbackMutex);
-
     TextureDesc currentTextureDesc = GetTextureDesc();
 
     if (currentTextureDesc == textureDesc)
@@ -186,59 +318,49 @@ void Texture::SetTextureDesc(const TextureDesc& textureDesc)
 
 void Texture::GenerateMipmaps()
 {
+    HYP_SCOPE;
     AssertReady();
 
-    m_renderResource->IncRef();
-    m_renderResource->RenderMipmaps();
-    m_renderResource->DecRef();
+    TextureMipmapRenderer::RenderMipmaps(HandleFromThis());
 }
 
-void Texture::Readback()
+void Texture::Readback(ByteBuffer& outByteBuffer)
 {
-    Mutex::Guard guard(m_readbackMutex);
+    HYP_SCOPE;
+    Threads::AssertOnThread(g_renderThread);
 
-    Readback_Internal();
-}
+    GpuBufferRef gpuBuffer = g_renderBackend->MakeGpuBuffer(GpuBufferType::STAGING_BUFFER, m_gpuImage->GetByteSize());
+    HYPERION_ASSERT_RESULT(gpuBuffer->Create());
+    gpuBuffer->Map();
 
-void Texture::Readback_Internal()
-{
-    AssertReady();
+    UniquePtr<SingleTimeCommands> singleTimeCommands = g_renderBackend->GetSingleTimeCommands();
 
-    // ByteBuffer resultByteBuffer;
-    // m_renderResource->Readback(resultByteBuffer);
+    singleTimeCommands->Push([this, &gpuBuffer](RenderQueue& renderQueue)
+        {
+            const ResourceState previousResourceState = m_gpuImage->GetResourceState();
 
-    // const SizeType expected = m_textureDesc.GetByteSize();
-    // const SizeType real = resultByteBuffer.Size();
+            renderQueue << InsertBarrier(m_gpuImage, RS_COPY_SRC);
+            renderQueue << InsertBarrier(gpuBuffer, RS_COPY_DST);
 
-    // Assert(expected == real, "Failed to readback texture: expected size: %llu, got %llu", expected, real);
+            renderQueue << CopyImageToBuffer(m_gpuImage, gpuBuffer);
 
-    // m_streamedTextureDataResourceHandle.Reset();
+            renderQueue << InsertBarrier(gpuBuffer, RS_COPY_SRC);
+            renderQueue << InsertBarrier(m_gpuImage, previousResourceState);
+        });
 
-    // m_streamedTextureData = MakeRefCountedPtr<StreamedTextureData>(TextureData {
-    //                                                                    m_textureDesc,
-    //                                                                    std::move(resultByteBuffer) },
-    //     m_streamedTextureDataResourceHandle);
+    RendererResult result = singleTimeCommands->Execute();
 
-    HYP_NOT_IMPLEMENTED();
-}
-
-void Texture::Resize(const Vec3u& extent)
-{
-    TextureDesc textureDesc = GetTextureDesc();
-
-    if (textureDesc.extent == extent)
+    if (result.HasError())
     {
+        HYP_LOG(Rendering, Error, "Failed to readback texture data! {}", result.GetError().GetMessage());
+
         return;
     }
 
-    textureDesc.extent = extent;
+    outByteBuffer.SetSize(gpuBuffer->Size());
+    gpuBuffer->Read(outByteBuffer.Size(), outByteBuffer.Data());
 
-    SetTextureDesc(textureDesc);
-
-    if (m_renderResource)
-    {
-        m_renderResource->Resize(extent);
-    }
+    gpuBuffer->Destroy();
 }
 
 Vec4f Texture::Sample(Vec3f uvw, uint32 faceIndex)
@@ -268,52 +390,24 @@ Vec4f Texture::Sample(Vec3f uvw, uint32 faceIndex)
     TextureData* textureData = nullptr;
 
     {
-        Mutex::Guard guard(m_readbackMutex);
-
         if (!m_asset->IsLoaded())
         {
-            HYP_LOG(Texture, Warning, "Texture does not have data loaded, attempting readback...");
-
-            Readback_Internal();
-
-            if (!m_asset->IsLoaded())
-            {
-                HYP_LOG(Texture, Warning, "Texture readback failed. Sample will return zero.");
-
-                return Vec4f::Zero();
-            }
-        }
-
-        resourceHandle = ResourceHandle(*m_asset->GetResource());
-        textureData = m_asset->GetTextureData();
-
-        if (!textureData || textureData->imageData.Size() == 0)
-        {
-            HYP_LOG(Texture, Warning, "Texture buffer is empty; forcing readback.");
-
-            resourceHandle.Reset();
-
-            Readback_Internal();
-
-            if (!m_asset->IsLoaded())
-            {
-                HYP_LOG(Texture, Warning, "Texture readback failed. Sample will return zero.");
-
-                return Vec4f::Zero();
-            }
+            HYP_LOG(Texture, Info, "Texture does not have data loaded, loading from disk...");
 
             resourceHandle = ResourceHandle(*m_asset->GetResource());
-
-            textureData = m_asset->GetTextureData();
-
-            if (!textureData || textureData->imageData.Size() == 0)
-            {
-                HYP_LOG(Texture, Warning, "Texture buffer is still empty after readback; sample will return zero.");
-
-                return Vec4f::Zero();
-            }
         }
+
+        if (!resourceHandle)
+        {
+            HYP_LOG(Texture, Warning, "Texture resource handle is not valid, cannot sample");
+
+            return Vec4f::Zero();
+        }
+
+        textureData = m_asset->GetTextureData();
     }
+
+    Assert(textureData != nullptr);
 
     const Vec3u coord = {
         uint32(uvw.x * float(textureData->desc.extent.x - 1) + 0.5f),
@@ -441,23 +535,6 @@ Vec4f Texture::SampleCube(Vec3f direction)
     }
 
     return Sample(Vec3f { uv / mag * 0.5f + 0.5f, 0.0f }, faceIndex);
-}
-
-void Texture::SetPersistentRenderResourceEnabled(bool enabled)
-{
-    AssertReady();
-
-    if (enabled)
-    {
-        if (!m_renderPersistent)
-        {
-            m_renderPersistent = ResourceHandle(*m_renderResource);
-        }
-    }
-    else
-    {
-        m_renderPersistent.Reset();
-    }
 }
 
 #pragma endregion Texture

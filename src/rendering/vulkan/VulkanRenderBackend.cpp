@@ -464,7 +464,7 @@ public:
         {
 
             VulkanImageViewRef imageView = MakeRenderObject<VulkanImageView>(
-                VulkanImageRef(texture->GetRenderResource().GetImage()),
+                VulkanImageRef(texture->GetGpuImage()),
                 subResource.baseMipLevel,
                 subResource.numLevels,
                 subResource.baseArrayLayer,

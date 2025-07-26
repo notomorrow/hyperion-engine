@@ -132,8 +132,6 @@ void ShadowPass::CreateShadowMap()
             IU_STORAGE | IU_SAMPLED });
 
         InitObject(texture);
-
-        texture->SetPersistentRenderResourceEnabled(true);
     }
 }
 
@@ -232,12 +230,12 @@ void ShadowPass::Render(FrameBase* frame, const RenderSetup& renderSetup)
 
             // copy static framebuffer image
             frame->renderQueue << InsertBarrier(framebufferImage, RS_COPY_SRC);
-            frame->renderQueue << InsertBarrier(m_shadowMapStatics->GetRenderResource().GetImage(), RS_COPY_DST);
+            frame->renderQueue << InsertBarrier(m_shadowMapStatics->GetGpuImage(), RS_COPY_DST);
 
-            frame->renderQueue << Blit(framebufferImage, m_shadowMapStatics->GetRenderResource().GetImage());
+            frame->renderQueue << Blit(framebufferImage, m_shadowMapStatics->GetGpuImage());
 
             frame->renderQueue << InsertBarrier(framebufferImage, RS_SHADER_RESOURCE);
-            frame->renderQueue << InsertBarrier(m_shadowMapStatics->GetRenderResource().GetImage(), RS_SHADER_RESOURCE);
+            frame->renderQueue << InsertBarrier(m_shadowMapStatics->GetGpuImage(), RS_SHADER_RESOURCE);
 
             m_rerenderSemaphore->Release(1);
         }
@@ -251,12 +249,12 @@ void ShadowPass::Render(FrameBase* frame, const RenderSetup& renderSetup)
 
             // copy dynamic framebuffer image
             frame->renderQueue << InsertBarrier(framebufferImage, RS_COPY_SRC);
-            frame->renderQueue << InsertBarrier(m_shadowMapDynamics->GetRenderResource().GetImage(), RS_COPY_DST);
+            frame->renderQueue << InsertBarrier(m_shadowMapDynamics->GetGpuImage(), RS_COPY_DST);
 
-            frame->renderQueue << Blit(framebufferImage, m_shadowMapDynamics->GetRenderResource().GetImage());
+            frame->renderQueue << Blit(framebufferImage, m_shadowMapDynamics->GetGpuImage());
 
             frame->renderQueue << InsertBarrier(framebufferImage, RS_SHADER_RESOURCE);
-            frame->renderQueue << InsertBarrier(m_shadowMapDynamics->GetRenderResource().GetImage(), RS_SHADER_RESOURCE);
+            frame->renderQueue << InsertBarrier(m_shadowMapDynamics->GetGpuImage(), RS_SHADER_RESOURCE);
         }
     }
 

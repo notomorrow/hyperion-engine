@@ -129,8 +129,8 @@ public:
         return m_descriptorTable;
     }
 
-    virtual const ImageViewRef& GetFinalImageView() const;
-    virtual const ImageViewRef& GetPreviousFrameColorImageView() const;
+    virtual ImageViewRef GetFinalImageView() const;
+    virtual ImageViewRef GetPreviousFrameColorImageView() const;
 
     /*! \brief Resizes the full screen pass to the new size.
      *  Callable on any thread, as it enqueues a render command. */

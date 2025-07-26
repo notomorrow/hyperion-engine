@@ -59,17 +59,13 @@ void ScreenCaptureRenderSubsystem::OnAddedToWorld()
 
     Assert(m_view);
 
-    m_texture->SetPersistentRenderResourceEnabled(true);
-
-    m_buffer = g_renderBackend->MakeGpuBuffer(GpuBufferType::STAGING_BUFFER, m_texture->GetRenderResource().GetImage()->GetByteSize());
+    m_buffer = g_renderBackend->MakeGpuBuffer(GpuBufferType::STAGING_BUFFER, m_texture->GetGpuImage()->GetByteSize());
     DeferCreate(m_buffer);
 }
 
 void ScreenCaptureRenderSubsystem::OnRemovedFromWorld()
 {
     SafeRelease(std::move(m_buffer));
-
-    m_texture->SetPersistentRenderResourceEnabled(false);
 }
 
 void ScreenCaptureRenderSubsystem::Update(float delta)
@@ -127,7 +123,7 @@ void ScreenCaptureRenderSubsystem::CaptureFrame(FrameBase* frame)
     }
 
     const ImageRef& imageRef = deferredRenderer->GetRendererConfig().taaEnabled
-        ? pd->temporalAa->GetResultTexture()->GetRenderResource().GetImage()
+        ? pd->temporalAa->GetResultTexture()->GetGpuImage()
         : pd->tonemapPass->GetFinalImageView()->GetImage();
 
     Assert(imageRef.IsValid());
@@ -166,11 +162,11 @@ void ScreenCaptureRenderSubsystem::CaptureFrame(FrameBase* frame)
     switch (m_screenCaptureMode)
     {
     case ScreenCaptureMode::TO_TEXTURE:
-        Assert(m_texture->GetRenderResource().GetImage()->IsCreated());
+        Assert(m_texture->GetGpuImage()->IsCreated());
 
-        frame->renderQueue << InsertBarrier(m_texture->GetRenderResource().GetImage(), RS_COPY_DST);
-        frame->renderQueue << Blit(imageRef, m_texture->GetRenderResource().GetImage());
-        frame->renderQueue << InsertBarrier(m_texture->GetRenderResource().GetImage(), RS_SHADER_RESOURCE);
+        frame->renderQueue << InsertBarrier(m_texture->GetGpuImage(), RS_COPY_DST);
+        frame->renderQueue << Blit(imageRef, m_texture->GetGpuImage());
+        frame->renderQueue << InsertBarrier(m_texture->GetGpuImage(), RS_SHADER_RESOURCE);
 
         break;
     case ScreenCaptureMode::TO_BUFFER:

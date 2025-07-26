@@ -512,7 +512,7 @@ void ReflectionProbeRenderer::RenderProbe(FrameBase* frame, const RenderSetup& r
 
         Assert(skyProbe->GetSkyboxCubemap().IsValid());
 
-        const ImageRef& dstImage = skyProbe->GetSkyboxCubemap()->GetRenderResource().GetImage();
+        const ImageRef& dstImage = skyProbe->GetSkyboxCubemap()->GetGpuImage();
         Assert(dstImage.IsValid());
         Assert(dstImage->IsCreated());
 
@@ -631,7 +631,7 @@ void ReflectionProbeRenderer::ComputePrefilteredEnvMap(FrameBase* frame, const R
         descriptorSet->SetElement(NAME("MomentsTexture"), momentsAttachment ? momentsAttachment->GetImageView() : g_renderGlobalState->placeholderData->GetImageViewCube1x1R8());
         descriptorSet->SetElement(NAME("SamplerLinear"), g_renderGlobalState->placeholderData->GetSamplerLinear());
         descriptorSet->SetElement(NAME("SamplerNearest"), g_renderGlobalState->placeholderData->GetSamplerNearest());
-        descriptorSet->SetElement(NAME("OutImage"), prefilteredEnvMap->GetRenderResource().GetImageView());
+        descriptorSet->SetElement(NAME("OutImage"), g_renderBackend->GetTextureImageView(prefilteredEnvMap));
     }
 
     HYPERION_ASSERT_RESULT(descriptorTable->Create());
@@ -639,7 +639,7 @@ void ReflectionProbeRenderer::ComputePrefilteredEnvMap(FrameBase* frame, const R
     ComputePipelineRef convolveProbeComputePipeline = g_renderBackend->MakeComputePipeline(convolveProbeShader, descriptorTable);
     HYPERION_ASSERT_RESULT(convolveProbeComputePipeline->Create());
 
-    frame->renderQueue << InsertBarrier(prefilteredEnvMap->GetRenderResource().GetImage(), RS_UNORDERED_ACCESS);
+    frame->renderQueue << InsertBarrier(prefilteredEnvMap->GetGpuImage(), RS_UNORDERED_ACCESS);
 
     frame->renderQueue << BindComputePipeline(convolveProbeComputePipeline);
 
@@ -656,11 +656,11 @@ void ReflectionProbeRenderer::ComputePrefilteredEnvMap(FrameBase* frame, const R
 
     if (prefilteredEnvMap->GetTextureDesc().HasMipmaps())
     {
-        frame->renderQueue << InsertBarrier(prefilteredEnvMap->GetRenderResource().GetImage(), RS_COPY_DST);
-        frame->renderQueue << GenerateMipmaps(prefilteredEnvMap->GetRenderResource().GetImage());
+        frame->renderQueue << InsertBarrier(prefilteredEnvMap->GetGpuImage(), RS_COPY_DST);
+        frame->renderQueue << GenerateMipmaps(prefilteredEnvMap->GetGpuImage());
     }
 
-    frame->renderQueue << InsertBarrier(prefilteredEnvMap->GetRenderResource().GetImage(), RS_SHADER_RESOURCE);
+    frame->renderQueue << InsertBarrier(prefilteredEnvMap->GetGpuImage(), RS_SHADER_RESOURCE);
 
     // for (uint32 frameIndex = 0; frameIndex < g_framesInFlight; frameIndex++)
     // {

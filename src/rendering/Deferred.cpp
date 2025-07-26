@@ -205,8 +205,6 @@ void DeferredPass::CreatePipeline(const RenderableAttributeSet& renderableAttrib
         m_ltcMatrixTexture->SetName(NAME("LtcMatrixLut"));
         InitObject(m_ltcMatrixTexture);
 
-        m_ltcMatrixTexture->SetPersistentRenderResourceEnabled(true);
-
         ByteBuffer ltcBrdfData(sizeof(g_ltcBrdf), g_ltcBrdf);
 
         m_ltcBrdfTexture = CreateObject<Texture>(TextureData {
@@ -221,8 +219,6 @@ void DeferredPass::CreatePipeline(const RenderableAttributeSet& renderableAttrib
 
         m_ltcMatrixTexture->SetName(NAME("LtcBrdfLut"));
         InitObject(m_ltcBrdfTexture);
-
-        m_ltcBrdfTexture->SetPersistentRenderResourceEnabled(true);
     }
 
     for (uint32 i = 0; i < LT_MAX; i++)
@@ -1072,8 +1068,6 @@ PassData* DeferredRenderer::CreateViewPassData(View* view, PassDataExt&)
 
     InitObject(pd->mipChain);
 
-    pd->mipChain->SetPersistentRenderResourceEnabled(true);
-
     pd->hbao = CreateObject<HBAO>(HBAOConfig::FromConfig(), pd->viewport.extent, gbuffer);
     pd->hbao->Create();
 
@@ -1210,7 +1204,7 @@ void DeferredRenderer::CreateViewDescriptorSets(View* view, DeferredPassData& pa
 
         if (passData.ssgi)
         {
-            descriptorSet->SetElement(NAME("SSGIResultTexture"), passData.ssgi->GetFinalResultTexture()->GetRenderResource().GetImageView());
+            descriptorSet->SetElement(NAME("SSGIResultTexture"), g_renderBackend->GetTextureImageView(passData.ssgi->GetFinalResultTexture()));
         }
         else
         {
@@ -2023,7 +2017,7 @@ void DeferredRenderer::GenerateMipChain(FrameBase* frame, const RenderSetup& rs,
 
     DeferredPassData* pd = static_cast<DeferredPassData*>(rs.passData);
 
-    const ImageRef& mipmappedResult = pd->mipChain->GetRenderResource().GetImage();
+    const ImageRef& mipmappedResult = pd->mipChain->GetGpuImage();
     Assert(mipmappedResult.IsValid());
 
     frame->renderQueue << InsertBarrier(srcImage, RS_COPY_SRC);

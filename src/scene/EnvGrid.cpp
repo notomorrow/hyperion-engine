@@ -185,8 +185,6 @@ void EnvGrid::Init()
         m_irradianceTexture->SetName(NAME_FMT("{}_LightFieldIrradiance", Id()));
         InitObject(m_irradianceTexture);
 
-        m_irradianceTexture->SetPersistentRenderResourceEnabled(true);
-
         m_depthTexture = CreateObject<Texture>(
             TextureDesc {
                 TT_TEX2D,
@@ -203,8 +201,6 @@ void EnvGrid::Init()
 
         m_depthTexture->SetName(NAME_FMT("{}_LightFieldDepth", Id()));
         InitObject(m_depthTexture);
-
-        m_depthTexture->SetPersistentRenderResourceEnabled(true);
 
         break;
     }
@@ -229,8 +225,6 @@ void EnvGrid::Init()
 
         m_voxelGridTexture->SetName(NAME_FMT("{}_VoxelGrid", Id()));
         InitObject(m_voxelGridTexture);
-
-        m_voxelGridTexture->SetPersistentRenderResourceEnabled(true);
     }
 
     m_renderResource = AllocateResource<RenderEnvGrid>(this);

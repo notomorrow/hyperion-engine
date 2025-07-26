@@ -30,7 +30,7 @@ void BindlessStorage::UnsetAllResources()
         // Unset all active textures
         for (const auto& it : m_resources)
         {
-            descriptorSet->SetElement(NAME("Textures"), it.first.ToIndex(), g_renderGlobalState->placeholderData->defaultTexture2d->GetRenderResource().GetImageView());
+            descriptorSet->SetElement(NAME("Textures"), it.first.ToIndex(), g_renderBackend->GetTextureImageView(g_renderGlobalState->placeholderData->defaultTexture2d));
         }
     }
 
@@ -87,7 +87,7 @@ void BindlessStorage::RemoveResource(ObjId<Texture> id)
         const DescriptorSetRef& descriptorSet = g_renderGlobalState->globalDescriptorTable->GetDescriptorSet(NAME("Material"), frameIndex);
         AssertDebug(descriptorSet.IsValid());
 
-        descriptorSet->SetElement(NAME("Textures"), id.ToIndex(), g_renderGlobalState->placeholderData->defaultTexture2d->GetRenderResource().GetImageView());
+        descriptorSet->SetElement(NAME("Textures"), id.ToIndex(), g_renderBackend->GetTextureImageView(g_renderGlobalState->placeholderData->defaultTexture2d));
     }
 }
 

@@ -155,13 +155,13 @@ FullScreenPass::~FullScreenPass()
     }
 }
 
-const ImageViewRef& FullScreenPass::GetFinalImageView() const
+ImageViewRef FullScreenPass::GetFinalImageView() const
 {
     if (UsesTemporalBlending())
     {
         Assert(m_temporalBlending != nullptr);
 
-        return m_temporalBlending->GetResultTexture()->GetRenderResource().GetImageView();
+        return g_renderBackend->GetTextureImageView(m_temporalBlending->GetResultTexture());
     }
 
     if (ShouldRenderHalfRes())
@@ -179,7 +179,7 @@ const ImageViewRef& FullScreenPass::GetFinalImageView() const
     return colorAttachment->GetImageView();
 }
 
-const ImageViewRef& FullScreenPass::GetPreviousFrameColorImageView() const
+ImageViewRef FullScreenPass::GetPreviousFrameColorImageView() const
 {
     // If we're rendering at half res, we use the same image we render to but at an offset.
     if (ShouldRenderHalfRes())
@@ -196,7 +196,7 @@ const ImageViewRef& FullScreenPass::GetPreviousFrameColorImageView() const
 
     if (m_previousTexture.IsValid())
     {
-        return m_previousTexture->GetRenderResource().GetImageView();
+        return g_renderBackend->GetTextureImageView(m_previousTexture);
     }
 
     return ImageViewRef::Null();
@@ -583,7 +583,7 @@ void FullScreenPass::CopyResultToPreviousTexture(FrameBase* frame, const RenderS
     Assert(m_previousTexture.IsValid());
 
     const ImageRef& srcImage = m_framebuffer->GetAttachment(0)->GetImage();
-    const ImageRef& dstImage = m_previousTexture->GetRenderResource().GetImage();
+    const ImageRef& dstImage = m_previousTexture->GetGpuImage();
 
     frame->renderQueue << InsertBarrier(srcImage, RS_COPY_SRC);
     frame->renderQueue << InsertBarrier(dstImage, RS_COPY_DST);

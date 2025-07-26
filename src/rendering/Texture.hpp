@@ -57,11 +57,6 @@ public:
 
     ~Texture();
 
-    HYP_FORCE_INLINE RenderTexture& GetRenderResource() const
-    {
-        return *m_renderResource;
-    }
-
     HYP_METHOD(Property = "Name", Serialize = true, Editor = true)
     HYP_FORCE_INLINE Name GetName() const
     {
@@ -134,34 +129,32 @@ public:
         return m_asset;
     }
 
+    HYP_FORCE_INLINE const ImageRef& GetGpuImage() const
+    {
+        return m_gpuImage;
+    }
+
     void GenerateMipmaps();
 
-    void Readback();
-
-    void Resize(const Vec3u& extent);
+    void Readback(ByteBuffer& outByteBuffer);
 
     Vec4f Sample(Vec3f uvw, uint32 faceIndex);
     Vec4f Sample2D(Vec2f uv);
     Vec4f SampleCube(Vec3f direction);
 
-    /*! \brief Set the Texture to have its render resource always enabled.
-     *  \note Init() must be called before this method. */
-    void SetPersistentRenderResourceEnabled(bool enabled);
-
 protected:
     void Init() override;
+
+    void UploadGpuData();
 
     /*! \brief Readback() implementation, without locking mutex. */
     void Readback_Internal();
 
     Name m_name;
 
-    RenderTexture* m_renderResource;
-    ResourceHandle m_renderPersistent;
-
     Handle<TextureAsset> m_asset;
 
-    Mutex m_readbackMutex;
+    ImageRef m_gpuImage;
 };
 
 } // namespace hyperion

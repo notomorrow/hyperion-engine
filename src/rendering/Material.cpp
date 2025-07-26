@@ -120,9 +120,6 @@ void Material::Init()
         {
             InitObject(texture);
 
-            // temp shit
-            m_textures.ValueAt(i)->GetRenderResource().IncRef();
-
             textures.Set(key, texture);
         }
     }
@@ -236,9 +233,6 @@ void Material::SetTexture(MaterialTextureKey key, const Handle<Texture>& texture
     {
         InitObject(texture);
 
-        // temp shit
-        texture->GetRenderResource().IncRef();
-
         SetNeedsRenderProxyUpdate();
 
         m_mutationState |= DataMutationState::DIRTY;
@@ -277,9 +271,6 @@ void Material::SetTextures(const TextureSet& textures)
             }
 
             InitObject(m_textures.ValueAt(i));
-
-            // temp shit
-            m_textures.ValueAt(i)->GetRenderResource().IncRef();
         }
 
         SetNeedsRenderProxyUpdate();

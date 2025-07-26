@@ -71,14 +71,8 @@ void OnBindingChanged_ReflectionProbe(EnvProbe* envProbe, uint32 prev, uint32 ne
         for (uint32 frameIndex = 0; frameIndex < g_framesInFlight; frameIndex++)
         {
             g_renderGlobalState->globalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)
-                ->SetElement(NAME("EnvProbeTextures"), prev, g_renderGlobalState->placeholderData->defaultTexture2d->GetRenderResource().GetImageView());
+                ->SetElement(NAME("EnvProbeTextures"), prev, g_renderBackend->GetTextureImageView(g_renderGlobalState->placeholderData->defaultTexture2d));
         }
-    }
-    else
-    {
-        // Temp shit
-        envProbe->GetRenderResource().IncRef();
-        envProbe->GetPrefilteredEnvMap()->GetRenderResource().IncRef();
     }
 
     RenderApi_AssignResourceBinding(envProbe, next);
@@ -91,13 +85,8 @@ void OnBindingChanged_ReflectionProbe(EnvProbe* envProbe, uint32 prev, uint32 ne
         for (uint32 frameIndex = 0; frameIndex < g_framesInFlight; frameIndex++)
         {
             g_renderGlobalState->globalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)
-                ->SetElement(NAME("EnvProbeTextures"), next, envProbe->GetPrefilteredEnvMap()->GetRenderResource().GetImageView());
+                ->SetElement(NAME("EnvProbeTextures"), next, g_renderBackend->GetTextureImageView(envProbe->GetPrefilteredEnvMap()));
         }
-    }
-    else
-    {
-        envProbe->GetRenderResource().DecRef();
-        envProbe->GetPrefilteredEnvMap()->GetRenderResource().DecRef();
     }
 }
 
@@ -150,10 +139,10 @@ void OnBindingChanged_EnvGrid(EnvGrid* envGrid, uint32 prev, uint32 next)
         for (uint32 frameIndex = 0; frameIndex < g_framesInFlight; frameIndex++)
         {
             g_renderGlobalState->globalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)
-                ->SetElement(NAME("LightFieldColorTexture"), envGrid->GetLightFieldIrradianceTexture()->GetRenderResource().GetImageView());
+                ->SetElement(NAME("LightFieldColorTexture"), g_renderBackend->GetTextureImageView(envGrid->GetLightFieldIrradianceTexture()));
 
             g_renderGlobalState->globalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)
-                ->SetElement(NAME("LightFieldDepthTexture"), envGrid->GetLightFieldDepthTexture()->GetRenderResource().GetImageView());
+                ->SetElement(NAME("LightFieldDepthTexture"), g_renderBackend->GetTextureImageView(envGrid->GetLightFieldDepthTexture()));
         }
 
         return;
@@ -170,7 +159,7 @@ void OnBindingChanged_EnvGrid(EnvGrid* envGrid, uint32 prev, uint32 next)
         for (uint32 frameIndex = 0; frameIndex < g_framesInFlight; frameIndex++)
         {
             g_renderGlobalState->globalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)
-                ->SetElement(NAME("VoxelGridTexture"), envGrid->GetVoxelGridTexture()->GetRenderResource().GetImageView());
+                ->SetElement(NAME("VoxelGridTexture"), g_renderBackend->GetTextureImageView(envGrid->GetVoxelGridTexture()));
         }
     }
     // }
@@ -290,17 +279,11 @@ void OnBindingChanged_Texture(Texture* texture, uint32 prev, uint32 next)
     {
         if (next != ~0u)
         {
-            // temp shit
-            texture->GetRenderResource().IncRef();
-
-            g_renderGlobalState->bindlessStorage->AddResource(texture->Id(), texture->GetRenderResource().GetImageView());
+            g_renderGlobalState->bindlessStorage->AddResource(texture->Id(), g_renderBackend->GetTextureImageView(texture->HandleFromThis()));
         }
         else
         {
             g_renderGlobalState->bindlessStorage->RemoveResource(texture->Id());
-
-            // temp shit
-            texture->GetRenderResource().DecRef();
         }
     }
 

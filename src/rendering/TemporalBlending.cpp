@@ -217,8 +217,6 @@ void TemporalBlending::CreateImageOutputs()
     m_resultTexture->SetName(NAME("TemporalBlendingResult"));
     InitObject(m_resultTexture);
 
-    m_resultTexture->SetPersistentRenderResourceEnabled(true);
-
     m_historyTexture = CreateObject<Texture>(TextureDesc {
         TT_TEX2D,
         m_imageFormat,
@@ -231,8 +229,6 @@ void TemporalBlending::CreateImageOutputs()
 
     m_historyTexture->SetName(NAME("TemporalBlendingHistory"));
     InitObject(m_historyTexture);
-
-    m_historyTexture->SetPersistentRenderResourceEnabled(true);
 }
 
 void TemporalBlending::CreateDescriptorSets()
@@ -262,7 +258,7 @@ void TemporalBlending::CreateDescriptorSets()
             ->SetElement(NAME("InImage"), inputImageView);
 
         m_descriptorTable->GetDescriptorSet(NAME("TemporalBlendingDescriptorSet"), frameIndex)
-            ->SetElement(NAME("PrevImage"), (*textures[(frameIndex + 1) % 2])->GetRenderResource().GetImageView());
+            ->SetElement(NAME("PrevImage"), g_renderBackend->GetTextureImageView((*textures[(frameIndex + 1) % 2])));
 
         m_descriptorTable->GetDescriptorSet(NAME("TemporalBlendingDescriptorSet"), frameIndex)
             ->SetElement(NAME("VelocityImage"), m_gbuffer->GetBucket(RB_OPAQUE).GetGBufferAttachment(GTN_VELOCITY)->GetImageView());
@@ -274,7 +270,7 @@ void TemporalBlending::CreateDescriptorSets()
             ->SetElement(NAME("SamplerNearest"), g_renderGlobalState->placeholderData->GetSamplerNearest());
 
         m_descriptorTable->GetDescriptorSet(NAME("TemporalBlendingDescriptorSet"), frameIndex)
-            ->SetElement(NAME("OutImage"), (*textures[frameIndex % 2])->GetRenderResource().GetImageView());
+            ->SetElement(NAME("OutImage"), g_renderBackend->GetTextureImageView((*textures[frameIndex % 2])));
     }
 
     DeferCreate(m_descriptorTable);
@@ -300,8 +296,8 @@ void TemporalBlending::Render(FrameBase* frame, const RenderSetup& renderSetup)
     AssertDebug(renderSetup.HasView());
 
     const ImageRef& activeImage = frame->GetFrameIndex() % 2 == 0
-        ? m_resultTexture->GetRenderResource().GetImage()
-        : m_historyTexture->GetRenderResource().GetImage();
+        ? m_resultTexture->GetGpuImage()
+        : m_historyTexture->GetGpuImage();
 
     frame->renderQueue << InsertBarrier(activeImage, RS_UNORDERED_ACCESS);
 

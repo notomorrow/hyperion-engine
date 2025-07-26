@@ -502,48 +502,6 @@ void RenderTexture::EnqueueReadback(Proc<void(TResult<ByteBuffer>&&)>&& onComple
         /* forceOwnerThread */ true);
 }
 
-RendererResult RenderTexture::Readback(ByteBuffer& outByteBuffer)
-{
-    HYP_SCOPE;
-
-    Threads::AssertOnThread(g_renderThread);
-
-    GpuBufferRef gpuBuffer = g_renderBackend->MakeGpuBuffer(GpuBufferType::STAGING_BUFFER, m_image->GetByteSize());
-    HYPERION_ASSERT_RESULT(gpuBuffer->Create());
-    gpuBuffer->Map();
-
-    UniquePtr<SingleTimeCommands> singleTimeCommands = g_renderBackend->GetSingleTimeCommands();
-
-    singleTimeCommands->Push([this, &gpuBuffer](RenderQueue& renderQueue)
-        {
-            const ResourceState previousResourceState = m_image->GetResourceState();
-
-            renderQueue << InsertBarrier(m_image, RS_COPY_SRC);
-            renderQueue << InsertBarrier(gpuBuffer, RS_COPY_DST);
-
-            renderQueue << CopyImageToBuffer(m_image, gpuBuffer);
-
-            renderQueue << InsertBarrier(gpuBuffer, RS_COPY_SRC);
-            renderQueue << InsertBarrier(m_image, previousResourceState);
-        });
-
-    RendererResult result = singleTimeCommands->Execute();
-
-    if (result.HasError())
-    {
-        HYP_LOG(Rendering, Error, "Failed to readback texture data! {}", result.GetError().GetMessage());
-
-        return result;
-    }
-
-    outByteBuffer.SetSize(gpuBuffer->Size());
-    gpuBuffer->Read(outByteBuffer.Size(), outByteBuffer.Data());
-
-    gpuBuffer->Destroy();
-
-    return {};
-}
-
 void RenderTexture::Resize(const Vec3u& extent)
 {
     HYP_SCOPE;

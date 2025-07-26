@@ -127,8 +127,6 @@ void SSGI::Create()
 
     InitObject(m_resultTexture);
 
-    m_resultTexture->SetPersistentRenderResourceEnabled(true);
-
     CreateUniformBuffers();
 
     if (useTemporalBlending)
@@ -138,7 +136,7 @@ void SSGI::Create()
             ssgiFormat,
             TemporalBlendTechnique::TECHNIQUE_1,
             TemporalBlendFeedback::HIGH,
-            m_resultTexture->GetRenderResource().GetImageView(),
+            g_renderBackend->GetTextureImageView(m_resultTexture),
             m_gbuffer);
 
         m_temporalBlending->Create();
@@ -202,7 +200,7 @@ void SSGI::CreateComputePipelines()
         const DescriptorSetRef& descriptorSet = descriptorTable->GetDescriptorSet(NAME("SSGIDescriptorSet"), frameIndex);
         Assert(descriptorSet != nullptr);
 
-        descriptorSet->SetElement(NAME("OutImage"), m_resultTexture->GetRenderResource().GetImageView());
+        descriptorSet->SetElement(NAME("OutImage"), g_renderBackend->GetTextureImageView(m_resultTexture));
         descriptorSet->SetElement(NAME("UniformBuffer"), m_uniformBuffers[frameIndex]);
     }
 
@@ -233,7 +231,7 @@ void SSGI::Render(FrameBase* frame, const RenderSetup& renderSetup)
     const uint32 numDispatchCalls = (totalPixelsInImage + 255) / 256;
 
     // put sample image in writeable state
-    frame->renderQueue << InsertBarrier(m_resultTexture->GetRenderResource().GetImage(), RS_UNORDERED_ACCESS);
+    frame->renderQueue << InsertBarrier(m_resultTexture->GetGpuImage(), RS_UNORDERED_ACCESS);
 
     frame->renderQueue << BindComputePipeline(m_computePipeline);
 
@@ -262,7 +260,7 @@ void SSGI::Render(FrameBase* frame, const RenderSetup& renderSetup)
     frame->renderQueue << DispatchCompute(m_computePipeline, Vec3u { numDispatchCalls, 1, 1 });
 
     // transition sample image back into read state
-    frame->renderQueue << InsertBarrier(m_resultTexture->GetRenderResource().GetImage(), RS_SHADER_RESOURCE);
+    frame->renderQueue << InsertBarrier(m_resultTexture->GetGpuImage(), RS_SHADER_RESOURCE);
 
     if (useTemporalBlending && m_temporalBlending != nullptr)
     {

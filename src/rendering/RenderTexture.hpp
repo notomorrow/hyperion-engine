@@ -47,7 +47,6 @@ public:
     void RenderMipmaps();
 
     void EnqueueReadback(Proc<void(TResult<ByteBuffer>&&)>&& onComplete);
-    RendererResult Readback(ByteBuffer& outByteBuffer);
 
     void Resize(const Vec3u& extent);
 

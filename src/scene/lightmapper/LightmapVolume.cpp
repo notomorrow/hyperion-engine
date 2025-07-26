@@ -89,7 +89,7 @@ struct RENDER_COMMAND(BakeLightmapVolumeTexture)
 
                     const Handle<Texture>& atlasTexture = atlasTextures[textureTypeIndex];
 
-                    renderQueue << InsertBarrier(atlasTexture->GetRenderResource().GetImage(), RS_COPY_DST);
+                    renderQueue << InsertBarrier(atlasTexture->GetGpuImage(), RS_COPY_DST);
 
                     for (const auto& elementTexturePair : elementTextures[textureTypeIndex])
                     {
@@ -100,7 +100,7 @@ struct RENDER_COMMAND(BakeLightmapVolumeTexture)
                             element->index,
                             elementTexture->GetName(),
                             atlasTexture->GetName(),
-                            elementTexture->GetRenderResource().GetImage()->GetExtent(),
+                            elementTexture->GetGpuImage()->GetExtent(),
                             element->offsetCoords,
                             element->dimensions);
 
@@ -109,12 +109,12 @@ struct RENDER_COMMAND(BakeLightmapVolumeTexture)
                         AssertDebug(element->offsetCoords.x + element->dimensions.x <= atlasTexture->GetExtent().x);
                         AssertDebug(element->offsetCoords.y + element->dimensions.y <= atlasTexture->GetExtent().y);
 
-                        renderQueue << InsertBarrier(elementTexture->GetRenderResource().GetImage(), RS_COPY_SRC);
+                        renderQueue << InsertBarrier(elementTexture->GetGpuImage(), RS_COPY_SRC);
 
                         renderQueue << Blit(
-                            elementTexture->GetRenderResource().GetImage(),
-                            atlasTexture->GetRenderResource().GetImage(),
-                            Rect<uint32> { 0, 0, elementTexture->GetRenderResource().GetImage()->GetExtent().x, elementTexture->GetRenderResource().GetImage()->GetExtent().y },
+                            elementTexture->GetGpuImage(),
+                            atlasTexture->GetGpuImage(),
+                            Rect<uint32> { 0, 0, elementTexture->GetGpuImage()->GetExtent().x, elementTexture->GetGpuImage()->GetExtent().y },
                             Rect<uint32> { element->offsetCoords.x, element->offsetCoords.y, element->offsetCoords.x + element->dimensions.x, element->offsetCoords.y + element->dimensions.y },
                             0, /* srcMip */
                             0, /* dstMip */
@@ -122,10 +122,10 @@ struct RENDER_COMMAND(BakeLightmapVolumeTexture)
                             0  /* dstFace */
                         );
 
-                        renderQueue << InsertBarrier(elementTexture->GetRenderResource().GetImage(), RS_SHADER_RESOURCE);
+                        renderQueue << InsertBarrier(elementTexture->GetGpuImage(), RS_SHADER_RESOURCE);
                     }
 
-                    renderQueue << InsertBarrier(atlasTexture->GetRenderResource().GetImage(), RS_SHADER_RESOURCE);
+                    renderQueue << InsertBarrier(atlasTexture->GetGpuImage(), RS_SHADER_RESOURCE);
                 }
             });
 
@@ -144,11 +144,7 @@ struct RENDER_COMMAND(BakeLightmapVolumeTexture)
             Assert(atlasTexture.IsValid() && atlasTexture->IsReady());
 
             ByteBuffer data;
-
-            if (RendererResult readbackResult = atlasTexture->GetRenderResource().Readback(data); readbackResult.HasError())
-            {
-                return readbackResult;
-            }
+            atlasTexture->Readback(data);
 
             if (data.Empty())
             {

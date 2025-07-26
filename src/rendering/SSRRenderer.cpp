@@ -122,8 +122,6 @@ void SSRRenderer::Create()
     m_uvsTexture->SetName(NAME("SsrUvs"));
     InitObject(m_uvsTexture);
 
-    m_uvsTexture->SetPersistentRenderResourceEnabled(true);
-
     m_sampledResultTexture = CreateObject<Texture>(TextureDesc {
         TT_TEX2D,
         ssrFormat,
@@ -136,8 +134,6 @@ void SSRRenderer::Create()
 
     m_sampledResultTexture->SetName(NAME("SsrSampledResult"));
     InitObject(m_sampledResultTexture);
-
-    m_sampledResultTexture->SetPersistentRenderResourceEnabled(true);
 
     CreateUniformBuffers();
 
@@ -230,7 +226,7 @@ void SSRRenderer::CreateComputePipelines()
         const DescriptorSetRef& descriptorSet = writeUvsShaderDescriptorTable->GetDescriptorSet(NAME("SSRDescriptorSet"), frameIndex);
         Assert(descriptorSet != nullptr);
 
-        descriptorSet->SetElement(NAME("UVImage"), m_uvsTexture->GetRenderResource().GetImageView());
+        descriptorSet->SetElement(NAME("UVImage"), g_renderBackend->GetTextureImageView(m_uvsTexture));
         descriptorSet->SetElement(NAME("UniformBuffer"), m_uniformBuffer);
 
         descriptorSet->SetElement(NAME("GBufferNormalsTexture"), m_gbuffer->GetBucket(RB_OPAQUE).GetGBufferAttachment(GTN_NORMALS)->GetImageView());
@@ -262,8 +258,8 @@ void SSRRenderer::CreateComputePipelines()
         const DescriptorSetRef& descriptorSet = sampleGbufferShaderDescriptorTable->GetDescriptorSet(NAME("SSRDescriptorSet"), frameIndex);
         Assert(descriptorSet != nullptr);
 
-        descriptorSet->SetElement(NAME("UVImage"), m_uvsTexture->GetRenderResource().GetImageView());
-        descriptorSet->SetElement(NAME("SampleImage"), m_sampledResultTexture->GetRenderResource().GetImageView());
+        descriptorSet->SetElement(NAME("UVImage"), g_renderBackend->GetTextureImageView(m_uvsTexture));
+        descriptorSet->SetElement(NAME("SampleImage"), g_renderBackend->GetTextureImageView(m_sampledResultTexture));
         descriptorSet->SetElement(NAME("UniformBuffer"), m_uniformBuffer);
 
         descriptorSet->SetElement(NAME("GBufferNormalsTexture"), m_gbuffer->GetBucket(RB_OPAQUE).GetGBufferAttachment(GTN_NORMALS)->GetImageView());
@@ -299,7 +295,7 @@ void SSRRenderer::Render(FrameBase* frame, const RenderSetup& renderSetup)
 
     { // PASS 1 -- write UVs
 
-        frame->renderQueue << InsertBarrier(m_uvsTexture->GetRenderResource().GetImage(), RS_UNORDERED_ACCESS);
+        frame->renderQueue << InsertBarrier(m_uvsTexture->GetGpuImage(), RS_UNORDERED_ACCESS);
 
         frame->renderQueue << BindComputePipeline(m_writeUvs);
 
@@ -327,12 +323,12 @@ void SSRRenderer::Render(FrameBase* frame, const RenderSetup& renderSetup)
         frame->renderQueue << DispatchCompute(m_writeUvs, Vec3u { numDispatchCalls, 1, 1 });
 
         // transition the UV image back into read state
-        frame->renderQueue << InsertBarrier(m_uvsTexture->GetRenderResource().GetImage(), RS_SHADER_RESOURCE);
+        frame->renderQueue << InsertBarrier(m_uvsTexture->GetGpuImage(), RS_SHADER_RESOURCE);
     }
 
     { // PASS 2 - sample textures
         // put sample image in writeable state
-        frame->renderQueue << InsertBarrier(m_sampledResultTexture->GetRenderResource().GetImage(), RS_UNORDERED_ACCESS);
+        frame->renderQueue << InsertBarrier(m_sampledResultTexture->GetGpuImage(), RS_UNORDERED_ACCESS);
 
         frame->renderQueue << BindComputePipeline(m_sampleGbuffer);
 
@@ -360,7 +356,7 @@ void SSRRenderer::Render(FrameBase* frame, const RenderSetup& renderSetup)
         frame->renderQueue << DispatchCompute(m_sampleGbuffer, Vec3u { numDispatchCalls, 1, 1 });
 
         // transition sample image back into read state
-        frame->renderQueue << InsertBarrier(m_sampledResultTexture->GetRenderResource().GetImage(), RS_SHADER_RESOURCE);
+        frame->renderQueue << InsertBarrier(m_sampledResultTexture->GetGpuImage(), RS_SHADER_RESOURCE);
     }
 
     if (useTemporalBlending && m_temporalBlending != nullptr)

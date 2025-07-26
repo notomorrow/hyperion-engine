@@ -185,11 +185,7 @@ ParticleSpawner::~ParticleSpawner()
 
 void ParticleSpawner::Init()
 {
-    if (m_params.texture)
-    {
-        InitObject(m_params.texture);
-        m_params.texture->SetPersistentRenderResourceEnabled(true);
-    }
+    InitObject(m_params.texture);
 
     CreateBuffers();
     CreateComputePipelines();
@@ -227,7 +223,7 @@ void ParticleSpawner::CreateGraphicsPipeline()
         Assert(descriptorSet != nullptr);
 
         descriptorSet->SetElement(NAME("ParticlesBuffer"), m_particleBuffer);
-        descriptorSet->SetElement(NAME("ParticleTexture"), m_params.texture ? m_params.texture->GetRenderResource().GetImageView() : g_renderGlobalState->placeholderData->GetImageView2D1x1R8());
+        descriptorSet->SetElement(NAME("ParticleTexture"), m_params.texture ? g_renderBackend->GetTextureImageView(m_params.texture) : g_renderGlobalState->placeholderData->GetImageView2D1x1R8());
     }
 
     DeferCreate(descriptorTable);

@@ -60,7 +60,7 @@ static RenderableAttributeSet GetRenderableAttributes()
 
 struct DebugDrawCommand_Probe : DebugDrawCommand
 {
-    TResourceHandle<RenderEnvProbe> envProbeResourceHandle;
+    const EnvProbe* envProbe = nullptr;
 };
 
 #pragma endregion DebugDrawCommand_Probe
@@ -109,7 +109,7 @@ void AmbientProbeDebugDrawShape::operator()(const Vec3f& position, float radius,
     command->shape = this;
     command->transformMatrix = Transform(position, radius, Quaternion::Identity()).GetMatrix();
     command->color = Color::White();
-    command->envProbeResourceHandle = TResourceHandle<RenderEnvProbe>(envProbe.GetRenderResource());
+    command->envProbe = &envProbe;
 
     renderQueue.Push(std::move(command));
 }
@@ -126,7 +126,7 @@ void ReflectionProbeDebugDrawShape::operator()(const Vec3f& position, float radi
     command->shape = this;
     command->transformMatrix = Transform(position, radius, Quaternion::Identity()).GetMatrix();
     command->color = Color::White();
-    command->envProbeResourceHandle = TResourceHandle<RenderEnvProbe>(envProbe.GetRenderResource());
+    command->envProbe = &envProbe;
 
     renderQueue.Push(std::move(command));
 }
@@ -338,14 +338,16 @@ void DebugDrawer::Render(FrameBase* frame, const RenderSetup& renderSetup)
         {
             const DebugDrawCommand_Probe& probeCommand = static_cast<const DebugDrawCommand_Probe&>(drawCommand);
             envProbeType = uint32(EPT_AMBIENT);
-            envProbeIndex = RenderApi_RetrieveResourceBinding(probeCommand.envProbeResourceHandle->GetEnvProbe());
+            envProbeIndex = RenderApi_RetrieveResourceBinding(probeCommand.envProbe);
         }
         else if (drawCommand.shape == &ReflectionProbe)
         {
             const DebugDrawCommand_Probe& probeCommand = static_cast<const DebugDrawCommand_Probe&>(drawCommand);
             envProbeType = uint32(EPT_REFLECTION);
-            envProbeIndex = RenderApi_RetrieveResourceBinding(probeCommand.envProbeResourceHandle->GetEnvProbe());
+            envProbeIndex = RenderApi_RetrieveResourceBinding(probeCommand.envProbe);
         }
+
+        Assert(envProbeIndex != ~0u);
 
         shaderData[index] = ImmediateDrawShaderData {
             drawCommand.transformMatrix,

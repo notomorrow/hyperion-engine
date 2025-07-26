@@ -47,7 +47,6 @@ void SkydomeRenderer::Init()
         TFM_LINEAR });
 
     InitObject(m_cubemap);
-    m_cubemap->SetPersistentRenderResourceEnabled(true);
 
     m_virtualScene = CreateObject<Scene>(SceneFlags::NONE);
     m_virtualScene->SetOwnerThreadId(g_gameThread);

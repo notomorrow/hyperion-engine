@@ -78,8 +78,6 @@ void TemporalAA::CreateImages()
     m_resultTexture->SetName(NAME("TaaResult"));
     InitObject(m_resultTexture);
 
-    m_resultTexture->SetPersistentRenderResourceEnabled(true);
-
     m_historyTexture = CreateObject<Texture>(TextureDesc {
         TT_TEX2D,
         TF_RGBA16F,
@@ -92,8 +90,6 @@ void TemporalAA::CreateImages()
 
     m_historyTexture->SetName(NAME("TaaHistory"));
     InitObject(m_historyTexture);
-
-    m_historyTexture->SetPersistentRenderResourceEnabled(true);
 }
 
 void TemporalAA::CreateComputePipelines()
@@ -117,7 +113,7 @@ void TemporalAA::CreateComputePipelines()
         Assert(descriptorSet != nullptr);
 
         descriptorSet->SetElement(NAME("InColorTexture"), m_inputImageView);
-        descriptorSet->SetElement(NAME("InPrevColorTexture"), (*textures[(frameIndex + 1) % 2])->GetRenderResource().GetImageView());
+        descriptorSet->SetElement(NAME("InPrevColorTexture"), g_renderBackend->GetTextureImageView((*textures[(frameIndex + 1) % 2])));
 
         descriptorSet->SetElement(NAME("InVelocityTexture"), m_gbuffer->GetBucket(RB_OPAQUE).GetGBufferAttachment(GTN_VELOCITY)->GetImageView());
 
@@ -126,7 +122,7 @@ void TemporalAA::CreateComputePipelines()
         descriptorSet->SetElement(NAME("SamplerLinear"), g_renderGlobalState->placeholderData->GetSamplerLinear());
         descriptorSet->SetElement(NAME("SamplerNearest"), g_renderGlobalState->placeholderData->GetSamplerNearest());
 
-        descriptorSet->SetElement(NAME("OutColorImage"), (*textures[frameIndex % 2])->GetRenderResource().GetImageView());
+        descriptorSet->SetElement(NAME("OutColorImage"), g_renderBackend->GetTextureImageView((*textures[frameIndex % 2])));
     }
 
     DeferCreate(descriptorTable);
@@ -151,8 +147,8 @@ void TemporalAA::Render(FrameBase* frame, const RenderSetup& renderSetup)
     const uint32 frameIndex = frame->GetFrameIndex();
 
     const ImageRef& activeImage = frame->GetFrameIndex() % 2 == 0
-        ? m_resultTexture->GetRenderResource().GetImage()
-        : m_historyTexture->GetRenderResource().GetImage();
+        ? m_resultTexture->GetGpuImage()
+        : m_historyTexture->GetGpuImage();
 
     frame->renderQueue << InsertBarrier(activeImage, RS_UNORDERED_ACCESS);
 

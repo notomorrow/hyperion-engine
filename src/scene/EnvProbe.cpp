@@ -144,8 +144,6 @@ void EnvProbe::Init()
             m_prefilteredEnvMap->SetName(NAME_FMT("{}_PrefilteredEnvMap", Id()));
 
             Assert(InitObject(m_prefilteredEnvMap));
-
-            m_prefilteredEnvMap->SetPersistentRenderResourceEnabled(true);
         }
     }
 
@@ -422,7 +420,6 @@ void SkyProbe::Init()
     m_prefilteredEnvMap->SetName(NAME_FMT("{}_SkyboxCubemap", Id()));
 
     InitObject(m_skyboxCubemap);
-    m_skyboxCubemap->SetPersistentRenderResourceEnabled(true);
 }
 
 #pragma endregion SkyProbe

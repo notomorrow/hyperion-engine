@@ -80,7 +80,7 @@ struct RENDER_COMMAND(SetUILayerImageView)
                 }
                 else
                 {
-                    descriptorSet->SetElement(NAME("InTexture"), g_renderGlobalState->placeholderData->defaultTexture2d->GetRenderResource().GetImageView());
+                    descriptorSet->SetElement(NAME("InTexture"), g_renderBackend->GetTextureImageView(g_renderGlobalState->placeholderData->defaultTexture2d));
                 }
             }
         }

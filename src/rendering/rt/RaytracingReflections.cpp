@@ -40,21 +40,25 @@ enum RTRadianceUpdates : uint32
 struct RENDER_COMMAND(SetRTRadianceImageInGlobalDescriptorSet)
     : RenderCommand
 {
-    FixedArray<ImageViewRef, g_framesInFlight> imageViews;
+    ImageViewRef imageView;
 
     RENDER_COMMAND(SetRTRadianceImageInGlobalDescriptorSet)(
-        const FixedArray<ImageViewRef, g_framesInFlight>& imageViews)
-        : imageViews(imageViews)
+        const ImageViewRef& imageView)
+        : imageView(imageView)
     {
     }
 
-    virtual ~RENDER_COMMAND(SetRTRadianceImageInGlobalDescriptorSet)() override = default;
+    virtual ~RENDER_COMMAND(SetRTRadianceImageInGlobalDescriptorSet)() override
+    {
+        SafeRelease(std::move(imageView));
+    }
 
     virtual RendererResult operator()() override
     {
         for (uint32 frameIndex = 0; frameIndex < g_framesInFlight; frameIndex++)
         {
-            g_renderGlobalState->globalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)->SetElement(NAME("RTRadianceResultTexture"), imageViews[frameIndex]);
+            g_renderGlobalState->globalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)
+                ->SetElement(NAME("RTRadianceResultTexture"), imageView);
         }
 
         HYPERION_RETURN_OK;
@@ -179,15 +183,15 @@ void RaytracingReflections::Render(FrameBase* frame, const RenderSetup& renderSe
         ArrayMap<Name, uint32> {},
         viewDescriptorSetIndex);
 
-    frame->renderQueue << InsertBarrier(m_texture->GetRenderResource().GetImage(), RS_UNORDERED_ACCESS);
+    frame->renderQueue << InsertBarrier(m_texture->GetGpuImage(), RS_UNORDERED_ACCESS);
 
-    const Vec3u imageExtent = m_texture->GetRenderResource().GetImage()->GetExtent();
+    const Vec3u imageExtent = m_texture->GetGpuImage()->GetExtent();
 
     const SizeType numPixels = imageExtent.Volume();
     // const SizeType halfNumPixels = numPixels / 2;
 
     frame->renderQueue << TraceRays(m_raytracingPipeline, Vec3u { uint32(numPixels), 1, 1 });
-    frame->renderQueue << InsertBarrier(m_texture->GetRenderResource().GetImage(), RS_SHADER_RESOURCE);
+    frame->renderQueue << InsertBarrier(m_texture->GetGpuImage(), RS_SHADER_RESOURCE);
 
     // Reset progressive blending if the camera view matrix has changed (for path tracing)
     if (IsPathTracer())
@@ -219,8 +223,6 @@ void RaytracingReflections::CreateImages()
         IU_SAMPLED | IU_STORAGE });
 
     InitObject(m_texture);
-
-    m_texture->SetPersistentRenderResourceEnabled(true);
 }
 
 void RaytracingReflections::CreateUniformBuffer()
@@ -297,7 +299,7 @@ void RaytracingReflections::CreateRaytracingPipeline()
         descriptorSet->SetElement(NAME("TLAS"), m_topLevelAccelerationStructures[frameIndex]);
         descriptorSet->SetElement(NAME("MeshDescriptionsBuffer"), m_topLevelAccelerationStructures[frameIndex]->GetMeshDescriptionsBuffer());
 
-        descriptorSet->SetElement(NAME("OutputImage"), m_texture->GetRenderResource().GetImageView());
+        descriptorSet->SetElement(NAME("OutputImage"), g_renderBackend->GetTextureImageView(m_texture));
 
         descriptorSet->SetElement(NAME("LightsBuffer"), g_renderGlobalState->gpuBuffers[GRB_LIGHTS]->GetBuffer(frameIndex));
         descriptorSet->SetElement(NAME("MaterialsBuffer"), g_renderGlobalState->gpuBuffers[GRB_MATERIALS]->GetBuffer(frameIndex));
@@ -314,9 +316,7 @@ void RaytracingReflections::CreateRaytracingPipeline()
 
     PUSH_RENDER_COMMAND(
         SetRTRadianceImageInGlobalDescriptorSet,
-        FixedArray<ImageViewRef, g_framesInFlight> {
-            m_temporalBlending->GetResultTexture()->GetRenderResource().GetImageView(),
-            m_temporalBlending->GetResultTexture()->GetRenderResource().GetImageView() });
+        g_renderBackend->GetTextureImageView(m_temporalBlending->GetResultTexture()));
 }
 
 void RaytracingReflections::CreateTemporalBlending()
@@ -330,7 +330,7 @@ void RaytracingReflections::CreateTemporalBlending()
         IsPathTracer()
             ? TemporalBlendFeedback::HIGH
             : TemporalBlendFeedback::HIGH,
-        m_texture->GetRenderResource().GetImageView(),
+        g_renderBackend->GetTextureImageView(m_texture),
         m_gbuffer);
 
     m_temporalBlending->Create();

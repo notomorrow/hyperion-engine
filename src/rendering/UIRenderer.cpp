@@ -133,7 +133,7 @@ struct RENDER_COMMAND(SetFinalPassImageView)
     {
         if (!imageView)
         {
-            imageView = g_renderGlobalState->placeholderData->defaultTexture2d->GetRenderResource().GetImageView();
+            imageView = g_renderBackend->GetTextureImageView(g_renderGlobalState->placeholderData->defaultTexture2d);
         }
 
         g_engine->GetFinalPass()->SetUILayerImageView(imageView);
