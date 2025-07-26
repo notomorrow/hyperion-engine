@@ -352,7 +352,6 @@ void DeferredPass::Render(FrameBase* frame, const RenderSetup& rs)
                 pipeline->GetDescriptorTable()->GetDescriptorSet(NAME("Global"), frame->GetFrameIndex()),
                 pipeline,
                 ArrayMap<Name, uint32> {
-                    { NAME("WorldsBuffer"), ShaderDataOffset<WorldShaderData>(rs.world->GetBufferIndex()) },
                     { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(rs.view->GetCamera()) },
                     { NAME("CurrentLight"), ShaderDataOffset<LightShaderData>(light, 0) } },
                 globalDescriptorSetIndex);
@@ -625,7 +624,7 @@ void EnvGridPass::Render(FrameBase* frame, const RenderSetup& rs)
 
         if (ShouldRenderHalfRes())
         {
-            const Vec2i viewportOffset = (Vec2i(m_framebuffer->GetExtent().x, 0) / 2) * (rs.world->GetBufferData().frameCounter & 1);
+            const Vec2i viewportOffset = (Vec2i(m_framebuffer->GetExtent().x, 0) / 2) * (RenderApi_GetWorldBufferData()->frameCounter & 1);
             const Vec2u viewportExtent = Vec2u(m_framebuffer->GetExtent().x / 2, m_framebuffer->GetExtent().y);
 
             frame->renderQueue << BindGraphicsPipeline(graphicsPipeline, viewportOffset, viewportExtent);
@@ -639,7 +638,6 @@ void EnvGridPass::Render(FrameBase* frame, const RenderSetup& rs)
             graphicsPipeline->GetDescriptorTable()->GetDescriptorSet(NAME("Global"), frameIndex),
             graphicsPipeline,
             ArrayMap<Name, uint32> {
-                { NAME("WorldsBuffer"), ShaderDataOffset<WorldShaderData>(rs.world->GetBufferIndex()) },
                 { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(rs.view->GetCamera()) },
                 { NAME("EnvGridsBuffer"), ShaderDataOffset<EnvGridShaderData>(envGrid, 0) } },
             globalDescriptorSetIndex);
@@ -881,7 +879,7 @@ void ReflectionsPass::Render(FrameBase* frame, const RenderSetup& rs)
 
         if (ShouldRenderHalfRes())
         {
-            const Vec2i viewportOffset = (Vec2i(m_framebuffer->GetExtent().x, 0) / 2) * (rs.world->GetBufferData().frameCounter & 1);
+            const Vec2i viewportOffset = (Vec2i(m_framebuffer->GetExtent().x, 0) / 2) * (RenderApi_GetWorldBufferData()->frameCounter & 1);
             const Vec2u viewportExtent = Vec2u(m_framebuffer->GetExtent().x / 2, m_framebuffer->GetExtent().y);
 
             frame->renderQueue << BindGraphicsPipeline(graphicsPipeline, viewportOffset, viewportExtent);
@@ -912,7 +910,6 @@ void ReflectionsPass::Render(FrameBase* frame, const RenderSetup& rs)
                 graphicsPipeline->GetDescriptorTable()->GetDescriptorSet(NAME("Global"), frameIndex),
                 graphicsPipeline,
                 ArrayMap<Name, uint32> {
-                    { NAME("WorldsBuffer"), ShaderDataOffset<WorldShaderData>(rs.world->GetBufferIndex()) },
                     { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(rs.view->GetCamera()) },
                     { NAME("CurrentEnvProbe"), ShaderDataOffset<EnvProbeShaderData>(envProbe) } },
                 globalDescriptorSetIndex);
@@ -1641,7 +1638,7 @@ void DeferredRenderer::RenderFrame(FrameBase* frame, const RenderSetup& rs)
 #endif
     }
 
-    g_engine->GetRenderStatsCalculator().AddCounts(counts);
+    RenderApi_AddRenderStats(counts);
 
     /// TODO: Have an iterator stored so we can maintain state for the next frame and don't start over from the first index.
     int numCleanupCycles = g_frameCleanupBudget;
@@ -1746,8 +1743,8 @@ void DeferredRenderer::RenderFrameForView(FrameBase* frame, const RenderSetup& r
 
     const uint32 frameIndex = frame->GetFrameIndex();
 
-    // @TODO: Refactor to put this in the RenderWorld
-    RenderEnvironment* environment = rs.world->GetEnvironment();
+    /// FIXME:
+    // RenderEnvironment* environment = rs.world->GetEnvironment();
 
     const FramebufferRef& opaqueFbo = view->GetOutputTarget().GetFramebuffer(RB_OPAQUE);
     const FramebufferRef& lightmapFbo = view->GetOutputTarget().GetFramebuffer(RB_LIGHTMAP);
@@ -1789,7 +1786,7 @@ void DeferredRenderer::RenderFrameForView(FrameBase* frame, const RenderSetup& r
 
         if (cameraBufferData.projection[3][3] < MathUtil::epsilonF)
         {
-            const uint32 frameCounter = rs.world->GetBufferData().frameCounter + 1;
+            const uint32 frameCounter = RenderApi_GetWorldBufferData()->frameCounter + 1;
 
             Vec4f jitter = Vec4f::Zero();
             Matrix4::Jitter(frameCounter, cameraBufferData.dimensions.x, cameraBufferData.dimensions.y, jitter);
@@ -1819,15 +1816,15 @@ void DeferredRenderer::RenderFrameForView(FrameBase* frame, const RenderSetup& r
 
     PerformOcclusionCulling(frame, rs, renderCollector);
 
-    if (doParticles)
-    {
-        environment->GetParticleSystem()->UpdateParticles(frame, rs);
-    }
+    // if (doParticles)
+    // {
+    //     environment->GetParticleSystem()->UpdateParticles(frame, rs);
+    // }
 
-    if (doGaussianSplatting)
-    {
-        environment->GetGaussianSplatting()->UpdateSplats(frame, rs);
-    }
+    // if (doGaussianSplatting)
+    // {
+    //     environment->GetGaussianSplatting()->UpdateSplats(frame, rs);
+    // }
 
     pd->indirectPass->SetPushConstants(&deferredData, sizeof(deferredData));
     pd->directPass->SetPushConstants(&deferredData, sizeof(deferredData));

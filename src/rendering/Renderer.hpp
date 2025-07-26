@@ -74,13 +74,13 @@ struct RendererConfig : public ConfigBase<RendererConfig>
     virtual ~RendererConfig() override = default;
 };
 
-/*! \brief Describes the setup for rendering a frame. All RenderSetups must have a valid RenderWorld set. Passed to almost all Render() functions throughout the renderer.
+/*! \brief Describes the setup for rendering a frame. All RenderSetups must have a valid World set. Passed to almost all Render() functions throughout the renderer.
  *  Most of the time you'll want a RenderSetup with a View as well, but compute-only passes can use a RenderSetup without a view. Use HasView() to check if a view is set. */
 struct HYP_API RenderSetup
 {
     friend const RenderSetup& NullRenderSetup();
 
-    RenderWorld* world;
+    World* world;
     View* view;
     EnvProbe* envProbe;
     EnvGrid* envGrid;
@@ -100,7 +100,7 @@ private:
     }
 
 public:
-    RenderSetup(RenderWorld* world)
+    RenderSetup(World* world)
         : world(world),
           view(nullptr),
           envProbe(nullptr),
@@ -108,10 +108,10 @@ public:
           light(nullptr),
           passData(nullptr)
     {
-        AssertDebug(world != nullptr, "RenderSetup must have a valid RenderWorld");
+        AssertDebug(world != nullptr, "RenderSetup must have a valid World");
     }
 
-    RenderSetup(RenderWorld* world, View* view)
+    RenderSetup(World* world, View* view)
         : world(world),
           view(view),
           envProbe(nullptr),
@@ -119,7 +119,7 @@ public:
           light(nullptr),
           passData(nullptr)
     {
-        AssertDebug(world != nullptr, "RenderSetup must have a valid RenderWorld");
+        AssertDebug(world != nullptr, "RenderSetup must have a valid World");
     }
 
     RenderSetup(const RenderSetup& other) = default;
@@ -143,7 +143,7 @@ public:
     }
 
     /*! \brief Returns true if this RenderSetup is useable for rendering.
-     *  This means it has a valid RenderWorld set. If you need to check if a View is set, use HasView() instead. */
+     *  This means it has a valid World set. If you need to check if a View is set, use HasView() instead. */
     HYP_FORCE_INLINE bool IsValid() const
     {
         return world != nullptr;
@@ -157,7 +157,7 @@ public:
 };
 
 /*! \brief Special null RenderSetup that can be used for simple rendering tasks that don't make sense to use a RenderWorld, such as rendering texture mipmaps.
- *  \internal Use sparingly as most rendering tasks should have a valid RenderWorld and using this will cause the IsValid() check to return false */
+ *  \internal Use sparingly as most rendering tasks should have a valid World and using this will cause the IsValid() check to return false */
 extern const RenderSetup& NullRenderSetup();
 
 struct PassDataExt

@@ -27,6 +27,7 @@
 
 #include <rendering/RenderEnvironment.hpp>
 #include <rendering/RenderWorld.hpp>
+#include <rendering/RenderGlobalState.hpp>
 
 #include <EngineGlobals.hpp>
 #include <Engine.hpp>
@@ -40,7 +41,6 @@ World::World()
     : HypObject(),
       m_worldGrid(CreateObject<WorldGrid>(this)),
       m_detachedScenes(this),
-      m_renderResource(nullptr),
       m_viewCollectionBatch(nullptr)
 {
 }
@@ -80,17 +80,6 @@ World::~World()
         }
 
         m_scenes.Clear();
-
-        for (const Handle<View>& view : m_views)
-        {
-            if (!view.IsValid())
-            {
-                continue;
-            }
-
-            m_renderResource->RemoveView(view);
-        }
-
         m_views.Clear();
 
         for (auto& it : m_subsystems)
@@ -112,15 +101,6 @@ World::~World()
 
     m_physicsWorld.Teardown();
 
-    if (m_renderResource != nullptr)
-    {
-        m_renderResource->DecRef();
-
-        FreeResource(m_renderResource);
-
-        m_renderResource = nullptr;
-    }
-
     if (m_worldGrid.IsValid())
     {
         m_worldGrid->Shutdown();
@@ -131,63 +111,14 @@ void World::Init()
 {
     AddDelegateHandler(g_engine->GetDelegates().OnShutdown.Bind([this]
         {
-            if (m_renderResource != nullptr)
-            {
-                for (const Handle<View>& view : m_views)
-                {
-                    if (!view.IsValid())
-                    {
-                        continue;
-                    }
-
-                    m_renderResource->RemoveView(view);
-                }
-
-                m_views.Clear();
-
-                m_renderResource->DecRef();
-
-                FreeResource(m_renderResource);
-
-                m_renderResource = nullptr;
-            }
-
             if (m_worldGrid.IsValid())
             {
                 m_worldGrid->Shutdown();
             }
         }));
 
-    // Update RenderWorld's RenderStats - done on the game thread so both the game thread and render thread can access it.
-    // It is copied, so it will be delayed by 1-2 frames for the render thread to see the updated stats.
-    AddDelegateHandler(g_engine->OnRenderStatsUpdated.BindThreaded([thisWeak = WeakHandleFromThis()](RenderStats renderStats)
-        {
-            Threads::AssertOnThread(g_gameThread);
-
-            Handle<World> world = thisWeak.Lock();
-
-            if (!world.IsValid())
-            {
-                return;
-            }
-
-            if (!world->IsReady())
-            {
-                return;
-            }
-
-            world->GetRenderResource().SetRenderStats(renderStats);
-        },
-        g_gameThread));
-
     m_viewCollectionBatch = new TaskBatch();
     m_viewCollectionBatch->pool = &TaskSystem::GetInstance().GetPool(TaskThreadPoolName::THREAD_POOL_GENERIC);
-
-    m_renderResource = AllocateResource<RenderWorld>(this);
-
-    WorldShaderData shaderData {};
-    shaderData.gameTime = m_gameState.gameTime;
-    m_renderResource->SetBufferData(shaderData);
 
     for (auto& it : m_subsystems)
     {
@@ -200,13 +131,6 @@ void World::Init()
     }
 
     InitObject(m_worldGrid);
-
-    for (const Handle<View>& view : m_views)
-    {
-        InitObject(view);
-
-        m_renderResource->AddView(view);
-    }
 
     for (const Handle<Scene>& scene : m_scenes)
     {
@@ -234,8 +158,6 @@ void World::Init()
             }
         }
     }
-
-    m_renderResource->IncRef();
 
     m_physicsWorld.Init();
 
@@ -304,10 +226,6 @@ void World::Update(float delta)
     m_processViews.Clear();
 
     m_gameState.deltaTime = delta;
-
-    WorldShaderData shaderData {};
-    shaderData.gameTime = m_gameState.gameTime;
-    m_renderResource->SetBufferData(shaderData);
 
     m_worldGrid->Update(delta);
 
@@ -437,6 +355,10 @@ void World::Update(float delta)
 #endif
 
     m_gameState.gameTime += delta;
+
+    WorldShaderData* bufferData = RenderApi_GetWorldBufferData();
+    bufferData->gameTime = m_gameState.gameTime;
+    bufferData->frameCounter = RenderApi_GetFrameCounter();
 }
 
 Handle<Subsystem> World::AddSubsystem(TypeId typeId, const Handle<Subsystem>& subsystem)
@@ -755,8 +677,6 @@ void World::AddView(const Handle<View>& view)
         }
 
         InitObject(view);
-
-        m_renderResource->AddView(view);
     }
 }
 
@@ -787,11 +707,6 @@ void World::RemoveView(const Handle<View>& view)
                 view->RemoveScene(scene);
             }
         }
-
-        if (view->IsReady())
-        {
-            m_renderResource->RemoveView(view);
-        }
     }
 
     if (it != m_views.End())
@@ -802,12 +717,7 @@ void World::RemoveView(const Handle<View>& view)
 
 RenderStats* World::GetRenderStats() const
 {
-    if (!IsReady())
-    {
-        return nullptr;
-    }
-
-    return &const_cast<RenderStats&>(m_renderResource->GetRenderStats());
+    return RenderApi_GetRenderStats();
 }
 
 } // namespace hyperion

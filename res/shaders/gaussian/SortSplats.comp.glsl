@@ -36,7 +36,7 @@ HYP_DESCRIPTOR_SSBO(SortSplatsDescriptorSet, SplatInstancesBuffer, standard = st
     GaussianSplatShaderData instances[];
 };
 
-HYP_DESCRIPTOR_CBUFF_DYNAMIC(Global, WorldsBuffer) uniform WorldsBuffer
+HYP_DESCRIPTOR_CBUFF(Global, WorldsBuffer) uniform WorldsBuffer
 {
     WorldShaderData world_shader_data;
 };

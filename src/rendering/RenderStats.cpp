@@ -1,6 +1,7 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
 #include <rendering/RenderStats.hpp>
+#include <rendering/RenderGlobalState.hpp>
 
 #include <core/math/MathUtil.hpp>
 
@@ -20,18 +21,12 @@ namespace hyperion {
 
 SuppressRenderStatsScope::SuppressRenderStatsScope()
 {
-    HYP_SCOPE;
-    Threads::AssertOnThread(g_renderThread);
-
-    g_engine->GetRenderStatsCalculator().Suppress();
+    RenderApi_SuppressRenderStats();
 }
 
 SuppressRenderStatsScope::~SuppressRenderStatsScope()
 {
-    HYP_SCOPE;
-    Threads::AssertOnThread(g_renderThread);
-
-    g_engine->GetRenderStatsCalculator().Unsuppress();
+    RenderApi_UnsuppressRenderStats();
 }
 
 #pragma endregion SuppressRenderStatsScope

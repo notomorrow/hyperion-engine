@@ -31,10 +31,6 @@ void OnBindingChanged_MeshEntity(Entity* entity, uint32 prev, uint32 next)
 {
     // For now, use Entity ID as index.
     RenderApi_AssignResourceBinding(entity, entity->Id().ToIndex());
-
-    // HYP_LOG(Rendering, Debug,
-    //     "MeshEntity {} binding changed from {} to {}",
-    //     entity->Id(), prev, next);
 }
 
 void WriteBufferData_MeshEntity(GpuBufferHolderBase* gpuBufferHolder, uint32 idx, IRenderProxy* proxy)
@@ -70,13 +66,8 @@ void OnBindingChanged_ReflectionProbe(EnvProbe* envProbe, uint32 prev, uint32 ne
         return;
     }
 
-    DebugLog(LogType::Debug, "EnvProbe %u (class: %s) binding changed from %u to %u\n", envProbe->Id().Value(),
-        *envProbe->InstanceClass()->GetName(),
-        prev, next);
-
     if (prev != ~0u)
     {
-        HYP_LOG(Rendering, Debug, "UN setting env probe texture at index: {}", prev);
         for (uint32 frameIndex = 0; frameIndex < g_framesInFlight; frameIndex++)
         {
             g_renderGlobalState->globalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)
@@ -265,14 +256,6 @@ void OnBindingChanged_Material(Material* material, uint32 prev, uint32 next)
     static const bool isBindlessSupported = renderConfig.IsBindlessSupported();
 
     AssertDebug(material != nullptr);
-
-    // // debugging :
-    // if (next == ~0u && material->Id().Value() == 8)
-    // {
-    //     HYP_BREAKPOINT;
-    // }
-
-    HYP_LOG(Rendering, Debug, "Material {} binding changed from {} to {}", material->Id(), prev, next);
 
     RenderApi_AssignResourceBinding(material, next);
 

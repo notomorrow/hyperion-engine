@@ -127,12 +127,12 @@ static void UpdateRenderableAttributesDynamic(const RenderProxyMesh* proxy, Rend
     hasAlphaDiscard = bool(attributes.GetMaterialAttributes().flags & MAF_ALPHA_DISCARD);
     hasSkinning = proxy->skeleton.IsValid() && proxy->skeleton->NumBones() > 0;
 
-//    // temp testing
-//    MaterialAttributes materialAttributes = attributes.GetMaterialAttributes();
-//    materialAttributes.stencilFunction.mask = 0xFFu;
-//    materialAttributes.stencilFunction.value = 0x1u;
-//    attributes.SetMaterialAttributes(materialAttributes);
-//    overridden = 1;
+    //    // temp testing
+    //    MaterialAttributes materialAttributes = attributes.GetMaterialAttributes();
+    //    materialAttributes.stencilFunction.mask = 0xFFu;
+    //    materialAttributes.stencilFunction.value = 0x1u;
+    //    attributes.SetMaterialAttributes(materialAttributes);
+    //    overridden = 1;
 
     if (!overridden)
     {
@@ -378,7 +378,7 @@ void RenderCollector::CommitParallelRenderingState(RenderQueue& renderQueue)
         // Add render stats counts to the engine's render stats
         for (RenderStatsCounts& counts : state->renderStatsCounts)
         {
-            g_engine->GetRenderStatsCalculator().AddCounts(counts);
+            RenderApi_AddRenderStats(counts);
 
             counts = RenderStatsCounts(); // Reset counts after adding for next use
         }

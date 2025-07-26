@@ -148,7 +148,7 @@ void SSRRenderer::Create()
             TF_RGBA16F,
             TemporalBlendTechnique::TECHNIQUE_1,
             TemporalBlendFeedback::HIGH,
-            m_sampledResultTexture->GetRenderResource().GetImageView(),
+            g_renderBackend->GetTextureImageView(m_sampledResultTexture),
             m_gbuffer);
 
         m_temporalBlending->Create();
@@ -308,8 +308,7 @@ void SSRRenderer::Render(FrameBase* frame, const RenderSetup& renderSetup)
             m_writeUvs,
             ArrayMap<Name, ArrayMap<Name, uint32>> {
                 { NAME("Global"),
-                    { { NAME("WorldsBuffer"), ShaderDataOffset<WorldShaderData>(renderSetup.world->GetBufferIndex()) },
-                        { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(renderSetup.view->GetCamera()) } } } },
+                    { { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(renderSetup.view->GetCamera()) } } } },
             frameIndex);
 
         const uint32 viewDescriptorSetIndex = m_writeUvs->GetDescriptorTable()->GetDescriptorSetIndex(NAME("View"));
@@ -342,8 +341,7 @@ void SSRRenderer::Render(FrameBase* frame, const RenderSetup& renderSetup)
             m_sampleGbuffer,
             ArrayMap<Name, ArrayMap<Name, uint32>> {
                 { NAME("Global"),
-                    { { NAME("WorldsBuffer"), ShaderDataOffset<WorldShaderData>(renderSetup.world->GetBufferIndex()) },
-                        { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(renderSetup.view->GetCamera()) } } } },
+                    { { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(renderSetup.view->GetCamera()) } } } },
             frameIndex);
 
         const uint32 viewDescriptorSetIndex = m_sampleGbuffer->GetDescriptorTable()->GetDescriptorSetIndex(NAME("View"));

@@ -2,9 +2,12 @@
 
 #include <asset/model_loaders/FBXModelLoader.hpp>
 
-#include <scene/Entity.hpp>
 #include <rendering/Mesh.hpp>
 #include <rendering/Material.hpp>
+
+#include <scene/Entity.hpp>
+#include <scene/World.hpp>
+#include <scene/Scene.hpp>
 
 #include <scene/animation/Bone.hpp>
 #include <scene/animation/Skeleton.hpp>
@@ -18,12 +21,15 @@
 
 #include <core/functional/Proc.hpp>
 
+#include <core/compression/Archive.hpp>
+
 #include <core/filesystem/FsUtil.hpp>
 
 #include <core/memory/Memory.hpp>
 
 #include <core/logging/Logger.hpp>
 
+#include <EngineGlobals.hpp>
 #include <Engine.hpp>
 
 #include <algorithm>
@@ -189,7 +195,7 @@ struct FBXMesh
 
             MeshData meshData;
             meshData.desc.meshAttributes.vertexAttributes = attributes;
-            meshData.desc.numIndices = uint32(vertices.Size());
+            meshData.desc.numVertices = uint32(vertices.Size());
             meshData.desc.numIndices = uint32(indices.Size());
             meshData.vertexData = vertices;
             meshData.indexData.SetSize(indices.Size() * sizeof(uint32));
@@ -424,26 +430,23 @@ static Result ReadFBXProperty(ByteReader& reader, FBXProperty& outProperty)
 
         if (encoding != 0)
         {
+            if (!Archive::IsEnabled())
+            {
+                return HYP_MAKE_ERROR(Error, "FBX array property compression requested, but Archive is not enabled");
+            }
+
             ByteBuffer compressedBuffer;
             reader.Read(length, compressedBuffer);
 
-#ifdef HYP_ZLIB
             unsigned long compressedSize(length);
             unsigned long decompressedSize(PrimitiveSize(arrayHeldType) * numElements);
 
-            ByteBuffer decompressedBuffer(decompressedSize);
+            Archive archive(std::move(compressedBuffer), decompressedSize);
 
-            const unsigned long compressedSizeBefore = compressedSize;
-            const unsigned long decompressedSizeBefore = decompressedSize;
-
-            if (uncompress2(decompressedBuffer.Data(), &decompressedSize, compressedBuffer.Data(), &compressedSize) != Z_OK)
+            ByteBuffer decompressedBuffer;
+            if (Result decompressResult = archive.Decompress(decompressedBuffer); decompressResult.HasError())
             {
-                return { LoaderResult::Status::ERR, "Failed to decompress data" };
-            }
-
-            if (compressedSize != compressedSizeBefore || decompressedSize != decompressedSizeBefore)
-            {
-                return { LoaderResult::Status::ERR, "Decompressed data was incorrect" };
+                return HYP_MAKE_ERROR(Error, "Failed to decompress FBX array property: {}", decompressResult.GetError().GetMessage());
             }
 
             MemoryByteReader memoryReader(&decompressedBuffer);
@@ -461,7 +464,6 @@ static Result ReadFBXProperty(ByteReader& reader, FBXProperty& outProperty)
 
                 outProperty.arrayElements.PushBack(std::move(value));
             }
-#endif
         }
         else
         {
@@ -692,7 +694,7 @@ AssetLoadResult FBXModelLoader::LoadAsset(LoaderState& state) const
 
         if (!result)
         {
-            return { result };
+            return HYP_MAKE_ERROR(AssetLoadError, "Failed to read FBX node: {}", 0, result.GetError().GetMessage());
         }
 
         if (object == nullptr || object->Empty())
@@ -703,8 +705,6 @@ AssetLoadResult FBXModelLoader::LoadAsset(LoaderState& state) const
         root.children.PushBack(std::move(object));
     }
     while (true);
-
-    FlatMap<String, FBXDefinitionProperty> definitions;
 
     if (const auto& definitionsNode = root["Definitions"])
     {
@@ -1218,12 +1218,12 @@ AssetLoadResult FBXModelLoader::LoadAsset(LoaderState& state) const
                     }
                 }
 
-                FBXMesh mesh;
-                mesh.vertices = vertices;
-                mesh.indices = modelIndices;
-                mesh.attributes = staticMeshVertexAttributes | skeletonVertexAttributes;
+                FBXMesh fbxMesh;
+                fbxMesh.vertices = vertices;
+                fbxMesh.indices = modelIndices;
+                fbxMesh.attributes = staticMeshVertexAttributes | skeletonVertexAttributes;
 
-                mapping.data.Set(mesh);
+                mapping.data.Set(std::move(fbxMesh));
             }
             else if (child->name == "Model")
             {
@@ -1449,18 +1449,22 @@ AssetLoadResult FBXModelLoader::LoadAsset(LoaderState& state) const
 
     buildNodes = [&](FBXNode::Type type, FBXNode& fbxNode, Node* parentNode)
     {
-#if 0 // temporarily disabled due to 'Internal Server Error' on MSW
+#if 1 // temporarily disabled due to 'Internal Server Error' on MSW
         Assert(parentNode != nullptr);
 
-        if (fbxNode.type != type) {
+        if (fbxNode.type != type)
+        {
             return;
         }
 
         Handle<Node> node;
 
-        if (fbxNode.type == FBXNode::Type::NODE) {
+        if (fbxNode.type == FBXNode::Type::NODE)
+        {
             node = CreateObject<Node>();
-        } else if (fbxNode.type == FBXNode::Type::LIMB_NODE) {
+        }
+        else if (fbxNode.type == FBXNode::Type::LIMB_NODE)
+        {
             Transform bindingTransform;
             bindingTransform.SetTranslation(fbxNode.localBindMatrix.ExtractTranslation());
             bindingTransform.SetRotation(fbxNode.localBindMatrix.ExtractRotation());
@@ -1469,64 +1473,63 @@ AssetLoadResult FBXModelLoader::LoadAsset(LoaderState& state) const
             Handle<Bone> bone = CreateObject<Bone>();
             bone->SetBindingTransform(bindingTransform);
 
-            node = Handle<Node>(bone);
+            node = bone;
         }
 
-        node->SetName(fbxNode.name);
+        node->SetName(CreateNameFromDynamicString(fbxNode.name));
 
-        if (fbxNode.meshId) {
-            FBXMesh *mesh;
+        if (fbxNode.meshId)
+        {
+            FBXMesh* fbxMesh;
 
-            if (GetFBXObject(fbxNode.meshId, mesh)) {
-                ApplyClustersToMesh(*mesh);
+            if (getFbxObject(fbxNode.meshId, fbxMesh))
+            {
+                applyClustersToMesh(*fbxMesh);
 
-                auto material = g_materialSystem->GetOrCreate({
-                    .shaderDefinition = ShaderDefinition {
-                        NAME("Forward"),
-                        ShaderProperties(mesh->attributes, {{ NAME("SKINNING") }})
-                    },
-                    .bucket = RB_OPAQUE
-                });
+                Handle<Mesh> mesh = fbxMesh->GetResultObject();
 
-                Handle<Scene> detachedScene = g_engine->GetDefaultWorld()->GetDetachedScene(Threads::CurrentThreadId());
+                state.assetManager->GetAssetRegistry()->RegisterAsset("$Import/Media/Meshes", mesh->GetAsset());
 
-                const Handle<Entity> entity = detachedScene->GetEntityManager()->AddEntity();
+                MaterialAttributes materialAttributes {};
+                materialAttributes.shaderDefinition = ShaderDefinition {
+                    NAME("Forward"),
+                    ShaderProperties(mesh->GetVertexAttributes())
+                };
 
-                detachedScene->GetEntityManager()->AddComponent<TransformComponent>(
-                    entity,
-                    TransformComponent { }
-                );
+                Handle<Material> material = MaterialCache::GetInstance()->GetOrCreate(
+                    CreateNameFromDynamicString(fbxNode.name),
+                    { .shaderDefinition = ShaderDefinition {
+                          NAME("Forward"),
+                          ShaderProperties(mesh->GetVertexAttributes()) },
+                        .bucket = RB_OPAQUE },
+                    { { Material::MATERIAL_KEY_ALBEDO, Vec4f(1.0f) }, { Material::MATERIAL_KEY_ROUGHNESS, 0.65f }, { Material::MATERIAL_KEY_METALNESS, 0.0f } });
 
-                detachedScene->GetEntityManager()->AddComponent<MeshComponent>(
-                    entity,
-                    MeshComponent {
-                        mesh->GetResultObject(),
-                        material
-                    }
-                );
+                Handle<Scene> scene = g_engine->GetDefaultWorld()->GetDetachedScene(Threads::CurrentThreadId());
 
-                detachedScene->GetEntityManager()->AddComponent<BoundingBoxComponent>(
-                    entity,
-                    BoundingBoxComponent {
-                        mesh->GetResultObject()->GetAABB()
-                    }
-                );
+                const Handle<Entity> entity = scene->GetEntityManager()->AddEntity();
 
-                detachedScene->GetEntityManager()->AddComponent<VisibilityStateComponent>(
-                    entity,
-                    VisibilityStateComponent { }
-                );
+                scene->GetEntityManager()->AddComponent<TransformComponent>(entity, TransformComponent {});
+                scene->GetEntityManager()->AddComponent<MeshComponent>(entity, MeshComponent { mesh, material });
+                scene->GetEntityManager()->AddComponent<BoundingBoxComponent>(entity, BoundingBoxComponent { mesh->GetAABB() });
+                scene->GetEntityManager()->AddComponent<VisibilityStateComponent>(entity, VisibilityStateComponent {});
 
-                node.SetEntity(entity);
+                node->SetEntity(entity);
+            }
+            else
+            {
+                HYP_LOG(Assets, Warning, "FBX Mesh with id {} not found in mapping", fbxNode.meshId);
             }
         }
 
-        for (const FBXObjectID id : fbxNode.childIds) {
-            if (id) {
-                FBXNode *childNode;
+        for (const FBXObjectID id : fbxNode.childIds)
+        {
+            if (id)
+            {
+                FBXNode* childNode;
 
-                if (GetFBXObject(id, childNode)) {
-                    BuildNodes(type, *childNode, node.Get());
+                if (getFbxObject(id, childNode))
+                {
+                    buildNodes(type, *childNode, node.Get());
 
                     continue;
                 }
@@ -1657,22 +1660,27 @@ AssetLoadResult FBXModelLoader::LoadAsset(LoaderState& state) const
         }
     };
 
-#if 0
+#if 1
 
-    Proc<FBXNode *(FBXNode &)> findFirstLimbNode;
+    Proc<FBXNode*(FBXNode&)> findFirstLimbNode;
 
-    findFirstLimbNode = [&](FBXNode &fbxNode) -> FBXNode *
+    findFirstLimbNode = [&](FBXNode& fbxNode) -> FBXNode*
     {
-        if (fbxNode.type == FBXNode::Type::LIMB_NODE) {
+        if (fbxNode.type == FBXNode::Type::LIMB_NODE)
+        {
             return &fbxNode;
         }
 
-        for (const FBXObjectID id : fbxNode.childIds) {
-            if (id) {
-                FBXNode *childNode;
+        for (const FBXObjectID id : fbxNode.childIds)
+        {
+            if (id)
+            {
+                FBXNode* childNode;
 
-                if (getFbxObject(id, childNode)) {
-                    if (FBXNode *limbNode = findFirstLimbNode(*childNode)) {
+                if (getFbxObject(id, childNode))
+                {
+                    if (FBXNode* limbNode = findFirstLimbNode(*childNode))
+                    {
                         return limbNode;
                     }
                 }

@@ -70,10 +70,6 @@ class RenderStatsCalculator
 public:
     friend struct SuppressRenderStatsScope;
 
-    void AddCounts(const RenderStatsCounts& counts);
-    void Advance(RenderStats& renderStats);
-
-private:
     HYP_FORCE_INLINE void Suppress()
     {
         m_suppressCount++;
@@ -87,6 +83,10 @@ private:
         }
     }
 
+    void AddCounts(const RenderStatsCounts& counts);
+    void Advance(RenderStats& renderStats);
+
+private:
     double CalculateFramesPerSecond() const;
     double CalculateMillisecondsPerFrame() const;
 

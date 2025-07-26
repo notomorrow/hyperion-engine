@@ -109,18 +109,8 @@ Result EditorProject::CreatePackage()
 
     Handle<AssetRegistry> assetRegistry = g_assetManager->GetAssetRegistry();
 
-    Handle<AssetPackage> rootPackage = assetRegistry->GetPackageFromPath(*packageName);
+    Handle<AssetPackage> rootPackage = assetRegistry->GetPackageFromPath(*packageName, true);
     Assert(rootPackage.IsValid());
-
-    const auto addPackage = [assetRegistry, rootPackage](UTF8StringView path)
-    {
-        assetRegistry->GetPackageFromPath(HYP_FORMAT("{}/{}", rootPackage->BuildPackagePath(), path), /* createIfNotExist */ true);
-    };
-
-    addPackage("Media/Textures");
-    addPackage("Media/Meshes");
-
-    addPackage("Scripts");
 
     m_package = rootPackage;
 

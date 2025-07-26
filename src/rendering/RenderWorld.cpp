@@ -207,27 +207,14 @@ void RenderWorld::Render(FrameBase* frame)
 {
     HYP_SCOPE;
     Threads::AssertOnThread(g_renderThread);
-
-    RenderSetup rs { this, nullptr };
-    g_renderGlobalState->mainRenderer->RenderFrame(frame, rs);
 }
 
 void RenderWorld::PostRender(FrameBase* frame)
 {
     HYP_SCOPE;
     Threads::AssertOnThread(g_renderThread);
-
-    ++m_bufferData.frameCounter;
-
-    if (m_bufferIndex != ~0u)
-    {
-        static_cast<WorldShaderData*>(m_bufferAddress)->frameCounter = m_bufferData.frameCounter;
-        GetGpuBufferHolder()->MarkDirty(m_bufferIndex);
-    }
 }
 
 #pragma endregion RenderWorld
-
-HYP_DESCRIPTOR_CBUFF(Global, WorldsBuffer, 1, sizeof(WorldShaderData), true);
 
 } // namespace hyperion

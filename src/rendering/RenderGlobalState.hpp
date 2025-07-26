@@ -40,6 +40,9 @@ class GraphicsPipelineCache;
 class BindlessStorage;
 class RenderProxyable;
 class RenderCollector;
+struct WorldShaderData;
+struct RenderStats;
+struct RenderStatsCounts;
 
 HYP_API extern SizeType GetNumDescendants(TypeId typeId);
 HYP_API extern int GetSubclassIndex(TypeId baseTypeId, TypeId subclassTypeId);
@@ -82,6 +85,12 @@ HYP_API extern void RenderApi_AssignResourceBinding(HypObjectBase* resource, uin
 // used on render thread only - retrieves the binding set for the given resource (~0u if unset)
 HYP_API extern uint32 RenderApi_RetrieveResourceBinding(const HypObjectBase* resource);
 HYP_API extern uint32 RenderApi_RetrieveResourceBinding(ObjIdBase resourceId);
+
+HYP_API extern WorldShaderData* RenderApi_GetWorldBufferData();
+HYP_API extern RenderStats* RenderApi_GetRenderStats();
+HYP_API extern void RenderApi_AddRenderStats(const RenderStatsCounts& counts);
+HYP_API extern void RenderApi_SuppressRenderStats();
+HYP_API extern void RenderApi_UnsuppressRenderStats();
 
 struct ResourceBindings;
 

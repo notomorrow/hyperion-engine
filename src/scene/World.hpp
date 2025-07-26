@@ -77,11 +77,6 @@ public:
     World& operator=(World&& other) noexcept = delete;
     ~World() override;
 
-    HYP_FORCE_INLINE RenderWorld& GetRenderResource() const
-    {
-        return *m_renderResource;
-    }
-
     HYP_METHOD()
     RenderStats* GetRenderStats() const;
 
@@ -218,8 +213,6 @@ private:
     Handle<WorldGrid> m_worldGrid;
 
     GameState m_gameState;
-
-    RenderWorld* m_renderResource;
 
     TaskBatch* m_viewCollectionBatch;
 

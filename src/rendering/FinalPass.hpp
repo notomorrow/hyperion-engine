@@ -17,8 +17,8 @@ namespace hyperion {
 
 class ShaderManager;
 class FullScreenPass;
-class RenderWorld;
 class Mesh;
+struct RenderSetup;
 
 struct RENDER_COMMAND(SetUILayerImageView);
 
@@ -35,7 +35,7 @@ public:
     void SetUILayerImageView(const ImageViewRef& imageView);
 
     void Create();
-    void Render(FrameBase* frame, RenderWorld* renderWorld);
+    void Render(FrameBase* frame, const RenderSetup& rs);
 
 private:
     SwapchainRef m_swapchain;

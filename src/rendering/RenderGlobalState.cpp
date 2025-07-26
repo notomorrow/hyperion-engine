@@ -16,6 +16,7 @@
 #include <rendering/PlaceholderData.hpp>
 #include <rendering/GraphicsPipelineCache.hpp>
 #include <rendering/Bindless.hpp>
+#include <rendering/RenderStats.hpp>
 
 #include <rendering/rt/DDGI.hpp>
 
@@ -73,6 +74,10 @@ thread_local uint32* g_threadFrameIndex;
 thread_local uint32* g_threadFrameCounter;
 static uint32 g_frameCounter[2] = { 0 };
 static uint32 g_frameIndex[2] = { 0 };
+
+// Render thread only
+static RenderStats g_renderStats {};
+static RenderStatsCalculator g_renderStatsCalculator {};
 
 static std::counting_semaphore<g_numFrames> g_fullSemaphore { 0 };
 static std::counting_semaphore<g_numFrames> g_freeSemaphore { g_numFrames };
@@ -210,7 +215,6 @@ struct ResourceBindings
 
         if (bindings.gpuBufferHolder != nullptr)
         {
-            /// TODO: Move this to somewhere else (like when the binding gets created?)
             bindings.gpuBufferHolder->EnsureCapacity(binding);
 
             cpuMapping = bindings.gpuBufferHolder->GetCpuMapping(binding);
@@ -542,6 +546,9 @@ struct ViewFrameData
 struct FrameData
 {
     HashMap<View*, ViewFrameData*> viewFrameData;
+
+    WorldShaderData worldBufferData {};
+    RenderStats renderStats {}; // for game thread to write to and render thread to read from
 };
 
 static FrameData g_frameData[g_numFrames];
@@ -939,6 +946,52 @@ HYP_API uint32 RenderApi_RetrieveResourceBinding(ObjIdBase resourceId)
     return g_renderGlobalState->resourceBindings->Retrieve(resourceId).first;
 }
 
+HYP_API WorldShaderData* RenderApi_GetWorldBufferData()
+{
+    return &g_frameData[*g_threadFrameIndex].worldBufferData;
+}
+
+HYP_API RenderStats* RenderApi_GetRenderStats()
+{
+    if (Threads::IsOnThread(g_renderThread))
+    {
+        return &g_renderStats;
+    }
+
+#ifdef HYP_DEBUG_MODE
+    Threads::AssertOnThread(g_gameThread);
+#endif
+
+    return &g_frameData[*g_threadFrameIndex].renderStats;
+}
+
+HYP_API void RenderApi_AddRenderStats(const RenderStatsCounts& counts)
+{
+#ifdef HYP_DEBUG_MODE
+    Threads::AssertOnThread(g_renderThread);
+#endif
+
+    g_renderStatsCalculator.AddCounts(counts);
+}
+
+HYP_API void RenderApi_SuppressRenderStats()
+{
+#ifdef HYP_DEBUG_MODE
+    Threads::AssertOnThread(g_renderThread);
+#endif
+
+    g_renderStatsCalculator.Suppress();
+}
+
+HYP_API void RenderApi_UnsuppressRenderStats()
+{
+#ifdef HYP_DEBUG_MODE
+    Threads::AssertOnThread(g_renderThread);
+#endif
+
+    g_renderStatsCalculator.Unsuppress();
+}
+
 HYP_API void RenderApi_BeginFrame_GameThread()
 {
     HYP_SCOPE;
@@ -1124,6 +1177,10 @@ HYP_API void RenderApi_EndFrame_RenderThread()
 
     FrameData& frameData = g_frameData[slot];
 
+    // update render stats and copy to frame data so the game thread can read it
+    g_renderStatsCalculator.Advance(g_renderStats);
+    frameData.renderStats = g_renderStats;
+
     // cull ViewData that hasn't been written to for a while
     for (auto it = frameData.viewFrameData.Begin(); it != frameData.viewFrameData.End();)
     {
@@ -1225,7 +1282,7 @@ RenderGlobalState::RenderGlobalState()
       graphicsPipelineCache(new GraphicsPipelineCache()),
       bindlessStorage(new BindlessStorage())
 {
-    gpuBuffers.buffers[GRB_WORLDS] = gpuBufferHolders->GetOrCreate<WorldShaderData, GpuBufferType::CBUFF>();
+    gpuBuffers.buffers[GRB_WORLDS] = gpuBufferHolders->GetOrCreate<WorldShaderData, GpuBufferType::CBUFF>(1);
     gpuBuffers.buffers[GRB_CAMERAS] = gpuBufferHolders->GetOrCreate<CameraShaderData, GpuBufferType::CBUFF>();
     gpuBuffers.buffers[GRB_LIGHTS] = gpuBufferHolders->GetOrCreate<LightShaderData, GpuBufferType::SSBO>();
     gpuBuffers.buffers[GRB_ENTITIES] = gpuBufferHolders->GetOrCreate<EntityShaderData, GpuBufferType::SSBO>();

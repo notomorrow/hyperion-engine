@@ -293,7 +293,6 @@ static void RenderAll(
             globalDescriptorSet,
             pipeline,
             ArrayMap<Name, uint32> {
-                { NAME("WorldsBuffer"), ShaderDataOffset<WorldShaderData>(renderSetup.world->GetBufferIndex()) },
                 { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(renderSetup.view->GetCamera()) },
                 { NAME("EnvGridsBuffer"), ShaderDataOffset<EnvGridShaderData>(renderSetup.envGrid, 0) },
                 { NAME("CurrentLight"), ShaderDataOffset<LightShaderData>(renderSetup.light, 0) },
@@ -440,7 +439,7 @@ static void RenderAll(
         counts[ERS_TRIANGLES] += drawCall.mesh->NumIndices() / 3;
     }
 
-    g_engine->GetRenderStatsCalculator().AddCounts(counts);
+    RenderApi_AddRenderStats(counts);
 }
 
 template <bool UseIndirectRendering>
@@ -489,7 +488,6 @@ static void RenderAll_Parallel(
             globalDescriptorSet,
             pipeline,
             ArrayMap<Name, uint32> {
-                { NAME("WorldsBuffer"), ShaderDataOffset<WorldShaderData>(renderSetup.world->GetBufferIndex()) },
                 { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(renderSetup.view->GetCamera()) },
                 { NAME("EnvGridsBuffer"), ShaderDataOffset<EnvGridShaderData>(renderSetup.envGrid, 0) },
                 { NAME("CurrentLight"), ShaderDataOffset<LightShaderData>(renderSetup.light, 0) },
@@ -777,7 +775,7 @@ void RenderGroup::PerformRendering(FrameBase* frame, const RenderSetup& renderSe
     RenderStatsCounts counts;
     counts[ERS_RENDER_GROUPS] = 1;
 
-    g_engine->GetRenderStatsCalculator().AddCounts(counts);
+    RenderApi_AddRenderStats(counts);
 #endif
 }
 

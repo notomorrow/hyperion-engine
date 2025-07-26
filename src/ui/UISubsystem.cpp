@@ -13,7 +13,6 @@
 
 #include <rendering/UIRenderer.hpp>
 #include <rendering/RenderCamera.hpp>
-#include <rendering/RenderWorld.hpp>
 #include <rendering/RenderEnvironment.hpp>
 
 namespace hyperion {

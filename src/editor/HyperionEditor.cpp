@@ -6,7 +6,6 @@
 #include <editor/EditorState.hpp>
 
 #include <rendering/RenderEnvironment.hpp>
-#include <rendering/RenderWorld.hpp>
 
 // temp
 #include <rendering/ParticleSystem.hpp>
@@ -223,14 +222,14 @@ void HyperionEditor::Init()
         skydomeNode->SetName(NAME("Sky"));
     }
 
-#if 0
+#if 1
     // temp
     RC<AssetBatch> batch = AssetManager::GetInstance()->CreateBatch();
     batch->Add("test_model", "models/sponza/sponza.obj");
     // batch->Add("test_model", "models/pica_pica/pica_pica.obj");
     // batch->Add("test_model", "models/testbed/testbed.obj");
     batch->Add("zombie", "models/ogrexml/dragger_Body.mesh.xml");
-    // batch->Add("house", "models/house.obj");
+    batch->Add("z2", "models/monkey.fbx");
 
     Handle<Entity> rootEntity = scene->GetEntityManager()->AddEntity();
     scene->GetRoot()->SetEntity(rootEntity);
@@ -271,6 +270,15 @@ void HyperionEditor::Init()
 
                 envProbeNode->SetEntity(envProbeEntity);
 #endif
+
+                if (auto& z2 = results["z2"]; z2.IsValid())
+                {
+                    Handle<Node> node = z2.ExtractAs<Node>();
+                    node->Scale(0.25f);
+                    node->Translate(Vec3f(0.0f, 2.0f, 5.2f));
+
+                    scene->GetRoot()->AddChild(node);
+                }
 
                 if (auto& zombieAsset = results["zombie"]; zombieAsset.IsValid())
                 {

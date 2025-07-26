@@ -10,7 +10,6 @@
 
 #include <rendering/RenderEnvironment.hpp>
 #include <rendering/ShaderManager.hpp>
-#include <rendering/RenderWorld.hpp>
 #include <rendering/RenderGlobalState.hpp>
 #include <rendering/PlaceholderData.hpp>
 #include <rendering/RenderTexture.hpp>

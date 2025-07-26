@@ -385,25 +385,18 @@ HYP_API void Engine::RenderNextFrame()
 {
     HYP_PROFILE_BEGIN;
 
-#ifdef HYP_ENABLE_RENDER_STATS
-    // @TODO Move to RenderGlobalState and don't use a delegate,
-    // simply write into the buffer and read from double/triple buffered data
-    m_renderStatsCalculator.Advance(m_renderStats);
-    OnRenderStatsUpdated(m_renderStats);
-#endif
-
     FrameBase* frame = g_renderBackend->PrepareNextFrame();
 
     PreFrameUpdate(frame);
 
-    // temp
     if (m_world->IsReady())
     {
-        m_world->GetRenderResource().Render(frame);
+        g_renderGlobalState->gpuBuffers[GRB_WORLDS]->WriteBufferData(0, RenderApi_GetWorldBufferData(), sizeof(WorldShaderData));
 
-        m_finalPass->Render(frame, &m_world->GetRenderResource());
+        RenderSetup rs { m_world, nullptr };
+        g_renderGlobalState->mainRenderer->RenderFrame(frame, rs);
 
-        m_world->GetRenderResource().PostRender(frame);
+        m_finalPass->Render(frame, rs);
     }
 
     g_renderGlobalState->UpdateBuffers(frame);

@@ -48,7 +48,7 @@ HYP_DESCRIPTOR_SSBO(DDGIDescriptorSet, LightsBuffer) readonly buffer LightsBuffe
 
 #include "../../include/rt/probe/shared.inc"
 
-HYP_DESCRIPTOR_CBUFF_DYNAMIC(Global, WorldsBuffer) uniform WorldsBuffer
+HYP_DESCRIPTOR_CBUFF(Global, WorldsBuffer) uniform WorldsBuffer
 {
     WorldShaderData world_shader_data;
 };

@@ -3,7 +3,6 @@
 #include <rendering/FullScreenPass.hpp>
 #include <rendering/RenderGroup.hpp>
 #include <rendering/RenderCamera.hpp>
-#include <rendering/RenderWorld.hpp>
 #include <rendering/RenderTexture.hpp>
 #include <rendering/RenderEnvProbe.hpp>
 #include <rendering/RenderEnvGrid.hpp>
@@ -12,6 +11,7 @@
 #include <rendering/TemporalBlending.hpp>
 #include <rendering/GraphicsPipelineCache.hpp>
 #include <rendering/RenderGlobalState.hpp>
+#include <rendering/RenderWorld.hpp>
 
 #include <rendering/RenderBackend.hpp>
 #include <rendering/RenderSwapchain.hpp> // temp
@@ -532,7 +532,7 @@ void FullScreenPass::RenderPreviousTextureToScreen(FrameBase* frame, const Rende
 
     if (ShouldRenderHalfRes())
     {
-        const Vec2i viewportOffset = (Vec2i(m_framebuffer->GetExtent().x, 0) / 2) * (renderSetup.world->GetBufferData().frameCounter & 1);
+        const Vec2i viewportOffset = (Vec2i(m_framebuffer->GetExtent().x, 0) / 2) * (RenderApi_GetWorldBufferData()->frameCounter & 1);
         const Vec2u viewportExtent = Vec2u(m_framebuffer->GetExtent().x / 2, m_framebuffer->GetExtent().y);
 
         // render previous frame's result to screen
@@ -552,8 +552,7 @@ void FullScreenPass::RenderPreviousTextureToScreen(FrameBase* frame, const Rende
         m_renderTextureToScreenPass->GetGraphicsPipeline(),
         ArrayMap<Name, ArrayMap<Name, uint32>> {
             { NAME("Global"),
-                { { NAME("WorldsBuffer"), ShaderDataOffset<WorldShaderData>(renderSetup.world->GetBufferIndex()) },
-                    { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(renderSetup.view->GetCamera()) } } } },
+                { { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(renderSetup.view->GetCamera()) } } } },
         frameIndex);
 
     const uint32 viewDescriptorSetIndex = m_renderTextureToScreenPass->GetGraphicsPipeline()->GetDescriptorTable()->GetDescriptorSetIndex(NAME("View"));
@@ -659,7 +658,7 @@ void FullScreenPass::RenderToFramebuffer(FrameBase* frame, const RenderSetup& re
     {
         Assert(framebuffer != nullptr, "Framebuffer must be set before rendering to it, if rendering at half res");
 
-        const Vec2i viewportOffset = (Vec2i(framebuffer->GetExtent().x, 0) / 2) * (renderSetup.world->GetBufferData().frameCounter & 1);
+        const Vec2i viewportOffset = (Vec2i(framebuffer->GetExtent().x, 0) / 2) * (RenderApi_GetWorldBufferData()->frameCounter & 1);
         const Vec2u viewportExtent = Vec2u(framebuffer->GetExtent().x / 2, framebuffer->GetExtent().y);
 
         frame->renderQueue << BindGraphicsPipeline(
@@ -677,8 +676,7 @@ void FullScreenPass::RenderToFramebuffer(FrameBase* frame, const RenderSetup& re
         m_graphicsPipeline,
         ArrayMap<Name, ArrayMap<Name, uint32>> {
             { NAME("Global"),
-                { { NAME("WorldsBuffer"), ShaderDataOffset<WorldShaderData>(renderSetup.world->GetBufferIndex()) },
-                    { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(renderSetup.view->GetCamera()) } } } },
+                { { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(renderSetup.view->GetCamera()) } } } },
         frame->GetFrameIndex());
 
     const uint32 viewDescriptorSetIndex = m_graphicsPipeline->GetDescriptorTable()->GetDescriptorSetIndex(NAME("View"));
@@ -715,7 +713,7 @@ void FullScreenPass::Begin(FrameBase* frame, const RenderSetup& renderSetup)
 
     if (ShouldRenderHalfRes())
     {
-        const Vec2i viewportOffset = (Vec2i(m_framebuffer->GetExtent().x, 0) / 2) * (renderSetup.world->GetBufferData().frameCounter & 1);
+        const Vec2i viewportOffset = (Vec2i(m_framebuffer->GetExtent().x, 0) / 2) * (RenderApi_GetWorldBufferData()->frameCounter & 1);
         const Vec2u viewportExtent = Vec2u(m_framebuffer->GetExtent().x / 2, m_framebuffer->GetExtent().y);
 
         frame->renderQueue << BindGraphicsPipeline(

@@ -169,13 +169,12 @@ public:
             {
                 HYP_LOG_TEMP("Busy waiting for read marker to be released! "
                              "If this is occuring frequently, the View that owns this RenderProxyList should have double / triple buffering enabled");
-                
+
                 rwMarkerState = rwMarker.Get(MemoryOrder::ACQUIRE);
                 HYP_WAIT_IDLE();
             }
-            
         }
-        
+
         AssertDebug(state != CS_READING);
         state = CS_WRITING;
 
@@ -192,7 +191,7 @@ public:
         AssertDebug(state == CS_WRITING);
 
         state = CS_WRITTEN;
-        
+
         if (isShared)
         {
             rwMarker.BitAnd(~writeFlag, MemoryOrder::RELEASE);
@@ -204,18 +203,18 @@ public:
         if (isShared)
         {
             uint64 rwMarkerState;
-            
+
             do
             {
                 rwMarkerState = rwMarker.Increment(2, MemoryOrder::ACQUIRE);
-                
+
                 if (HYP_UNLIKELY(rwMarkerState & writeFlag))
                 {
                     HYP_LOG_TEMP("Waiting for write marker to be released."
                                  "If this is occurring frequently, the View that owns this RenderProxyList should have double / triple buffering enabled");
-                    
+
                     rwMarker.Decrement(2, MemoryOrder::RELAXED);
-                    
+
                     // spin to wait for write flag to be released
                     HYP_WAIT_IDLE();
                 }
@@ -234,12 +233,12 @@ public:
     void EndRead()
     {
         AssertDebug(state == CS_READING);
-        
+
         if (isShared)
         {
             uint64 rwMarkerState = rwMarker.Decrement(2, MemoryOrder::ACQUIRE_RELEASE);
             AssertDebug(rwMarkerState & readMask, "Invalid state, expected read mask to be set when calling EndRead()");
-            
+
             /// FIXME: If BeginRead() is called on other thread between the check and setting state to CS_DONE,
             /// we could set state to done when it isn't actually.
             if (((rwMarkerState - 2) & readMask) == 0)
@@ -351,9 +350,9 @@ public:
 
     CollectionState state : 2 = CS_DONE;
 
-    const bool isShared : 1 = false;                //<! should we use a spinlock to ensure multiple threads aren't accessing this list at the same time?
-    bool useOrdering : 1 = false;                   //<! are mesh entities sorted using an indirect array to map sort order?
-    bool disableBuildRenderCollection : 1 = false;  //<! Disable building out RenderCollection. Set to true in the case of custom render collection building (See UIRenderer)
+    const bool isShared : 1 = false;               //<! should we use a spinlock to ensure multiple threads aren't accessing this list at the same time?
+    bool useOrdering : 1 = false;                  //<! are mesh entities sorted using an indirect array to map sort order?
+    bool disableBuildRenderCollection : 1 = false; //<! Disable building out RenderCollection. Set to true in the case of custom render collection building (See UIRenderer)
 
     Viewport viewport;
     int priority;
@@ -363,7 +362,7 @@ public:
 #define DEF_RESOURCE_TRACKER_GETTER(getterName, T)                                                                                                                \
     HYP_FORCE_INLINE auto Get##getterName()->typename TupleElement_Tuple<FindTypeElementIndex<class T, TrackedResourceTypes>::value, ResourceTrackerTypes>::Type& \
     {                                                                                                                                                             \
-        return *GetResources<FindTypeElementIndex<class T, TrackedResourceTypes>::value>();                                                                 \
+        return *GetResources<FindTypeElementIndex<class T, TrackedResourceTypes>::value>();                                                                       \
     }
 
     DEF_RESOURCE_TRACKER_GETTER(MeshEntities, Entity);
@@ -377,7 +376,7 @@ public:
     DEF_RESOURCE_TRACKER_GETTER(Textures, Texture);
 
 #undef DEF_RESOURCE_TRACKER_GETTER
-    
+
     Array<Pair<ObjId<Entity>, int>, DynamicAllocator> meshEntityOrdering;
 
     // marker to set to locked when game thread is writing to this list.

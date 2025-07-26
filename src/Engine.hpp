@@ -126,11 +126,6 @@ public:
         return m_delegates;
     }
 
-    HYP_FORCE_INLINE RenderStatsCalculator& GetRenderStatsCalculator()
-    {
-        return m_renderStatsCalculator;
-    }
-
     HYP_FORCE_INLINE bool IsShuttingDown() const
     {
         return m_isShuttingDown.Get(MemoryOrder::SEQUENTIAL);
@@ -143,8 +138,6 @@ public:
     HYP_API void RequestStop();
 
     void FinalizeStop();
-
-    Delegate<void, RenderStats> OnRenderStatsUpdated;
 
 private:
     HYP_API void Init() override;
@@ -168,9 +161,6 @@ private:
     UniquePtr<ScriptingService> m_scriptingService;
 
     EngineDelegates m_delegates;
-
-    RenderStatsCalculator m_renderStatsCalculator;
-    RenderStats m_renderStats;
 
     AtomicVar<bool> m_isShuttingDown;
     bool m_shouldRecreateSwapchain;

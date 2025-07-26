@@ -7,7 +7,6 @@
 #include <rendering/RenderCamera.hpp>
 #include <rendering/RenderEnvGrid.hpp>
 #include <rendering/RenderEnvProbe.hpp>
-#include <rendering/RenderWorld.hpp>
 #include <rendering/Deferred.hpp>
 #include <rendering/RenderBackend.hpp>
 
@@ -433,8 +432,7 @@ void IndirectRenderer::ExecuteCullShaderInBatches(FrameBase* frame, const Render
         m_objectVisibility,
         ArrayMap<Name, ArrayMap<Name, uint32>> {
             { NAME("Global"),
-                { { NAME("WorldsBuffer"), ShaderDataOffset<WorldShaderData>(renderSetup.world->GetBufferIndex()) },
-                    { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(renderSetup.view->GetCamera()) } } } },
+                { { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(renderSetup.view->GetCamera()) } } } },
         frameIndex);
 
     const uint32 viewDescriptorSetIndex = m_objectVisibility->GetDescriptorTable()->GetDescriptorSetIndex(NAME("View"));

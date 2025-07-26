@@ -4,7 +4,6 @@
 #include <rendering/ShaderManager.hpp>
 #include <rendering/FullScreenPass.hpp>
 #include <rendering/RenderGroup.hpp>
-#include <rendering/RenderWorld.hpp>
 #include <rendering/PlaceholderData.hpp>
 #include <rendering/Deferred.hpp>
 #include <rendering/GBuffer.hpp>
@@ -174,7 +173,7 @@ void FinalPass::Create()
     m_renderTextureToScreenPass->Create();
 }
 
-void FinalPass::Render(FrameBase* frame, RenderWorld* renderWorld)
+void FinalPass::Render(FrameBase* frame, const RenderSetup& rs)
 {
     HYP_SCOPE;
     Threads::AssertOnThread(g_renderThread);

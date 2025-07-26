@@ -108,7 +108,7 @@ struct RENDER_COMMAND(LightmapRender)
     {
         FrameBase* frame = g_renderBackend->GetCurrentFrame();
 
-        RenderSetup renderSetup { &g_engine->GetWorld()->GetRenderResource(), view };
+        RenderSetup renderSetup { g_engine->GetWorld(), view };
 
         RenderProxyList* rpl = nullptr;
 
@@ -745,8 +745,7 @@ void LightmapGPUPathTracer::Render(FrameBase* frame, const RenderSetup& renderSe
         m_raytracingPipeline,
         ArrayMap<Name, ArrayMap<Name, uint32>> {
             { NAME("Global"),
-                { { NAME("WorldsBuffer"), ShaderDataOffset<WorldShaderData>(renderSetup.world->GetBufferIndex()) },
-                    { NAME("EnvGridsBuffer"), ShaderDataOffset<EnvGridShaderData>(renderSetup.envGrid, 0) },
+                { { NAME("EnvGridsBuffer"), ShaderDataOffset<EnvGridShaderData>(renderSetup.envGrid, 0) },
                     { NAME("CurrentEnvProbe"), ShaderDataOffset<EnvProbeShaderData>(renderSetup.envProbe, 0) } } } },
         frame->GetFrameIndex());
 
