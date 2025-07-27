@@ -40,16 +40,9 @@ HYP_API IResourceMemoryPool* GetOrCreateResourceMemoryPool(TypeId typeId, Unique
 #pragma region ResourceBase
 
 ResourceBase::ResourceBase()
-    : m_isInitialized(0),
+    : m_initState(0),
       m_initializationThreadId(ThreadId::Invalid())
 {
-}
-
-ResourceBase::ResourceBase(ResourceBase&& other) noexcept
-    : m_isInitialized(other.m_isInitialized.Exchange(0, MemoryOrder::ACQUIRE_RELEASE)),
-      m_initializationThreadId(other.m_initializationThreadId)
-{
-    other.m_initializationThreadId = ThreadId::Invalid();
 }
 
 ResourceBase::~ResourceBase()
@@ -60,18 +53,18 @@ ResourceBase::~ResourceBase()
 
 bool ResourceBase::IsInitialized() const
 {
-    return m_isInitialized.Get(MemoryOrder::ACQUIRE);
+    return m_initState.GetValue();
 }
 
 int ResourceBase::IncRefNoInitialize()
 {
-    Mutex::Guard guard(m_refMutex);
-    
     int count = m_refCounter.Produce(1);
 
     if (count == 1)
     {
-        m_isInitialized.Set(1, MemoryOrder::RELEASE);
+        Mutex::Guard guard(m_mutex);
+
+        m_initState.Produce();
         m_initializationThreadId = Threads::CurrentThreadId();
     }
 
@@ -82,30 +75,21 @@ int ResourceBase::IncRef()
 {
     HYP_SCOPE;
 
-    m_completionSemaphore.Produce(1);
-    
-    m_refMutex.Lock();
-
     int result = m_refCounter.Produce(1);
 
     if (result == 1)
     {
-        HYP_NAMED_SCOPE("Initializing Resource - Initialization");
+        Mutex::Guard guard(m_mutex);
+        m_initState.Produce(1, [&](bool)
+            {
+                HYP_NAMED_SCOPE("Initializing Resource - Initialization");
+                HYP_MT_CHECK_RW(m_dataRaceDetector);
 
-        Assert(!m_isInitialized.Get(MemoryOrder::ACQUIRE));
-        
-        HYP_MT_CHECK_RW(m_dataRaceDetector);
+                m_initializationThreadId = Threads::CurrentThreadId();
 
-        m_initializationThreadId = Threads::CurrentThreadId();
-
-        Initialize();
-        
-        m_isInitialized.Set(1, MemoryOrder::RELEASE);
+                Initialize();
+            });
     }
-    
-    m_refMutex.Unlock();
-
-    m_completionSemaphore.Release(1);
 
     return result;
 }
@@ -114,31 +98,24 @@ int ResourceBase::DecRef()
 {
     HYP_SCOPE;
 
-    m_completionSemaphore.Produce(1);
-    
-    m_refMutex.Lock();
-
     int result = m_refCounter.Release(1);
 
     if (result == 0)
     {
-        HYP_NAMED_SCOPE("Destroying Resource");
-
-        Assert(m_isInitialized.Get(MemoryOrder::ACQUIRE));
-        
+        Mutex::Guard guard(m_mutex);
+        if (!m_initState.GetValue())
         {
-            HYP_MT_CHECK_RW(m_dataRaceDetector);
-
-            Destroy();
-
-            m_initializationThreadId = ThreadId::Invalid();
-            m_isInitialized.Set(0, MemoryOrder::RELEASE);
+            return result;
         }
-    }
 
-    m_refMutex.Unlock();
-    
-    m_completionSemaphore.Release(1);
+        HYP_NAMED_SCOPE("Destroying Resource");
+        HYP_MT_CHECK_RW(m_dataRaceDetector);
+
+        Destroy();
+
+        m_initializationThreadId = ThreadId::Invalid();
+        m_initState.Release();
+    }
 
     return result;
 }
@@ -147,7 +124,11 @@ void ResourceBase::WaitForFinalization() const
 {
     HYP_SCOPE;
 
+    // wait for it to be zero
     m_refCounter.Acquire();
+
+    Mutex::Guard guard(m_mutex);
+    m_initState.Acquire();
 }
 
 #pragma endregion ResourceBase

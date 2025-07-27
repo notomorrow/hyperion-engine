@@ -16,9 +16,7 @@
 
 #include <scene/Entity.hpp>
 
-#include <rendering/RenderResource.hpp>
 #include <rendering/RenderCollection.hpp>
-
 #include <rendering/RenderCommand.hpp>
 
 #include <GameCounter.hpp>

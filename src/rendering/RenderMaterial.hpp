@@ -4,7 +4,6 @@
 
 #include <rendering/ShaderManager.hpp>
 #include <rendering/RenderableAttributes.hpp>
-#include <rendering/RenderResource.hpp>
 #include <rendering/RenderProxy.hpp>
 
 #include <rendering/RenderFrame.hpp>

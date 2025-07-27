@@ -118,7 +118,7 @@ void ShadowMapAllocator::Destroy()
     SafeRelease(std::move(m_pointLightShadowMapImageView));
 }
 
-RenderShadowMap* ShadowMapAllocator::AllocateShadowMap(ShadowMapType shadowMapType, ShadowMapFilter filterMode, const Vec2u& dimensions)
+ShadowMap* ShadowMapAllocator::AllocateShadowMap(ShadowMapType shadowMapType, ShadowMapFilter filterMode, const Vec2u& dimensions)
 {
     if (shadowMapType == SMT_OMNI)
     {
@@ -141,7 +141,7 @@ RenderShadowMap* ShadowMapAllocator::AllocateShadowMap(ShadowMapType shadowMapTy
             .scale = Vec2f::One()
         };
 
-        RenderShadowMap* shadowMap = AllocateResource<RenderShadowMap>(
+        ShadowMap* shadowMap = new ShadowMap(
             shadowMapType,
             filterMode,
             atlasElement,
@@ -159,7 +159,7 @@ RenderShadowMap* ShadowMapAllocator::AllocateShadowMap(ShadowMapType shadowMapTy
             ImageViewRef atlasImageView = m_atlasImage->MakeLayerImageView(atlasElement.atlasIndex);
             DeferCreate(atlasImageView);
 
-            RenderShadowMap* shadowMap = AllocateResource<RenderShadowMap>(
+            ShadowMap* shadowMap = new ShadowMap(
                 shadowMapType,
                 filterMode,
                 atlasElement,
@@ -172,7 +172,7 @@ RenderShadowMap* ShadowMapAllocator::AllocateShadowMap(ShadowMapType shadowMapTy
     return nullptr;
 }
 
-bool ShadowMapAllocator::FreeShadowMap(RenderShadowMap* shadowMap)
+bool ShadowMapAllocator::FreeShadowMap(ShadowMap* shadowMap)
 {
     if (!shadowMap)
     {
@@ -206,16 +206,16 @@ bool ShadowMapAllocator::FreeShadowMap(RenderShadowMap* shadowMap)
         HYP_LOG(Rendering, Error, "Failed to free shadow map: invalid atlas index and point light index");
     }
 
-    FreeResource(shadowMap);
+    delete shadowMap;
 
     return result;
 }
 
 #pragma endregion ShadowMapAllocator
 
-#pragma region RenderShadowMap
+#pragma region ShadowMap
 
-RenderShadowMap::RenderShadowMap(ShadowMapType type, ShadowMapFilter filterMode, const ShadowMapAtlasElement& atlasElement, const ImageViewRef& imageView)
+ShadowMap::ShadowMap(ShadowMapType type, ShadowMapFilter filterMode, const ShadowMapAtlasElement& atlasElement, const ImageViewRef& imageView)
     : m_type(type),
       m_filterMode(filterMode),
       m_atlasElement(atlasElement),
@@ -228,73 +228,12 @@ RenderShadowMap::RenderShadowMap(ShadowMapType type, ShadowMapFilter filterMode,
         atlasElement.scale);
 }
 
-RenderShadowMap::RenderShadowMap(RenderShadowMap&& other) noexcept
-    : RenderResourceBase(static_cast<RenderResourceBase&&>(other)),
-      m_type(other.m_type),
-      m_filterMode(other.m_filterMode),
-      m_atlasElement(other.m_atlasElement),
-      m_imageView(std::move(other.m_imageView))
-{
-}
-
-RenderShadowMap::~RenderShadowMap()
+ShadowMap::~ShadowMap()
 {
     SafeRelease(std::move(m_imageView));
 }
 
-void RenderShadowMap::Initialize_Internal()
-{
-    HYP_SCOPE;
-
-    UpdateBufferData();
-}
-
-void RenderShadowMap::Destroy_Internal()
-{
-    HYP_SCOPE;
-}
-
-void RenderShadowMap::Update_Internal()
-{
-    HYP_SCOPE;
-}
-
-GpuBufferHolderBase* RenderShadowMap::GetGpuBufferHolder() const
-{
-    return nullptr;
-}
-
-void RenderShadowMap::UpdateBufferData()
-{
-    // HYP_SCOPE;
-
-    // Assert(m_bufferIndex != ~0u);
-
-    // m_bufferData.dimensionsScale = Vec4f(Vec2f(m_atlasElement.dimensions), m_atlasElement.scale);
-    // m_bufferData.offsetUv = m_atlasElement.offsetUv;
-    // m_bufferData.layerIndex = m_type == SMT_OMNI ? m_atlasElement.pointLightIndex : m_atlasElement.atlasIndex;
-    // m_bufferData.flags = uint32(SF_NONE);
-
-    // switch (m_filterMode)
-    // {
-    // case SMF_VSM:
-    //     m_bufferData.flags |= uint32(SF_VSM);
-    //     break;
-    // case SMF_CONTACT_HARDENED:
-    //     m_bufferData.flags |= uint32(SF_CONTACT_HARDENED);
-    //     break;
-    // case SMF_PCF:
-    //     m_bufferData.flags |= uint32(SF_PCF);
-    //     break;
-    // default:
-    //     break;
-    // }
-
-    // *static_cast<ShadowMapShaderData*>(m_bufferAddress) = m_bufferData;
-    // GetGpuBufferHolder()->MarkDirty(m_bufferIndex);
-}
-
-#pragma endregion RenderShadowMap
+#pragma endregion ShadowMap
 
 #pragma region ShadowPassData
 
@@ -386,7 +325,7 @@ void ShadowRendererBase::Initialize()
 
 void ShadowRendererBase::Shutdown()
 {
-    HashSet<RenderShadowMap*> shadowMaps;
+    HashSet<ShadowMap*> shadowMaps;
 
     for (const KeyValuePair<WeakHandle<Light>, CachedShadowMapData>& it : m_cachedShadowMapData)
     {
@@ -402,7 +341,7 @@ void ShadowRendererBase::Shutdown()
 
     if (shadowMaps.Any())
     {
-        for (RenderShadowMap* shadowMap : shadowMaps)
+        for (ShadowMap* shadowMap : shadowMaps)
         {
             bool shadowMapFreed = g_renderGlobalState->shadowMapAllocator->FreeShadowMap(shadowMap);
             AssertDebug(shadowMapFreed, "Failed to free shadow map");
@@ -416,7 +355,8 @@ int ShadowRendererBase::RunCleanupCycle(int maxIter)
 
     for (auto it = m_cachedShadowMapData.Begin(); it != m_cachedShadowMapData.End() && numCycles < maxIter; numCycles++)
     {
-        if (!(it->first.Lock()))
+        // check if weak object is no longer alive
+        if (!it->first || it->first.GetUnsafe()->GetObjectHeader_Internal()->GetRefCountStrong() == 0)
         {
             HYP_LOG(Rendering, Debug, "Removing cached shadow map for Light {} as it is no longer valid.", it->first.Id());
 
@@ -446,7 +386,7 @@ void ShadowRendererBase::RenderFrame(FrameBase* frame, const RenderSetup& render
     AssertDebug(renderSetup.light != nullptr);
 
     Light* light = renderSetup.light;
-    RenderShadowMap* shadowMap = nullptr;
+    ShadowMap* shadowMap = nullptr;
 
     RenderProxyLight* lightProxy = static_cast<RenderProxyLight*>(RenderApi_GetRenderProxy(light->Id()));
     Assert(lightProxy != nullptr, "Proxy for Light {} not found when rendering shadows!", light->Id());
@@ -553,10 +493,6 @@ void ShadowRendererBase::RenderFrame(FrameBase* frame, const RenderSetup& render
         rpl.BeginRead();
 
         renderProxyLists.PushBack(&rpl);
-
-        HYP_LOG_TEMP("ShadowView: {} : Num entities : {}",
-            shadowView->Id(),
-            rpl.GetMeshEntities().NumCurrent());
 
         if (!rpl.GetMeshEntities().GetDiff().NeedsUpdate() && !rpl.GetSkeletons().GetDiff().NeedsUpdate())
         {
@@ -680,7 +616,7 @@ PassData* ShadowRendererBase::CreateViewPassData(View* view, PassDataExt& ext)
 
 #pragma region PointShadowRenderer
 
-RenderShadowMap* PointShadowRenderer::AllocateShadowMap(Light* light)
+ShadowMap* PointShadowRenderer::AllocateShadowMap(Light* light)
 {
     return g_renderGlobalState->shadowMapAllocator->AllocateShadowMap(
         ShadowMapType::SMT_OMNI,
@@ -692,7 +628,7 @@ RenderShadowMap* PointShadowRenderer::AllocateShadowMap(Light* light)
 
 #pragma region DirectionalShadowRenderer
 
-RenderShadowMap* DirectionalShadowRenderer::AllocateShadowMap(Light* light)
+ShadowMap* DirectionalShadowRenderer::AllocateShadowMap(Light* light)
 {
     return g_renderGlobalState->shadowMapAllocator->AllocateShadowMap(
         ShadowMapType::SMT_DIRECTIONAL,

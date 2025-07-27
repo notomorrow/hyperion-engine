@@ -2,7 +2,6 @@
 
 #pragma once
 
-#include <rendering/RenderResource.hpp>
 #include <rendering/RenderObject.hpp>
 #include <rendering/Renderer.hpp>
 
@@ -19,7 +18,7 @@
 namespace hyperion {
 
 class FullScreenPass;
-class RenderShadowMap;
+class ShadowMap;
 
 HYP_ENUM()
 enum ShadowMapFilter : uint32
@@ -182,8 +181,8 @@ public:
     void Initialize();
     void Destroy();
 
-    RenderShadowMap* AllocateShadowMap(ShadowMapType shadowMapType, ShadowMapFilter filterMode, const Vec2u& dimensions);
-    bool FreeShadowMap(RenderShadowMap* shadowMap);
+    ShadowMap* AllocateShadowMap(ShadowMapType shadowMapType, ShadowMapFilter filterMode, const Vec2u& dimensions);
+    bool FreeShadowMap(ShadowMap* shadowMap);
 
 private:
     Vec2u m_atlasDimensions;
@@ -198,12 +197,11 @@ private:
     IdGenerator m_pointLightShadowMapIdGenerator;
 };
 
-class RenderShadowMap final : public RenderResourceBase
+class ShadowMap
 {
 public:
-    RenderShadowMap(ShadowMapType type, ShadowMapFilter filterMode, const ShadowMapAtlasElement& atlasElement, const ImageViewRef& imageView);
-    RenderShadowMap(RenderShadowMap&& other) noexcept;
-    virtual ~RenderShadowMap() override;
+    ShadowMap(ShadowMapType type, ShadowMapFilter filterMode, const ShadowMapAtlasElement& atlasElement, const ImageViewRef& imageView);
+    ~ShadowMap();
 
     HYP_FORCE_INLINE ShadowMapType GetShadowMapType() const
     {
@@ -230,16 +228,7 @@ public:
         return m_imageView;
     }
 
-protected:
-    virtual void Initialize_Internal() override;
-    virtual void Destroy_Internal() override;
-    virtual void Update_Internal() override;
-
-    virtual GpuBufferHolderBase* GetGpuBufferHolder() const override;
-
 private:
-    void UpdateBufferData();
-
     ShadowMapType m_type;
     ShadowMapFilter m_filterMode;
     ShadowMapAtlasElement m_atlasElement;
@@ -290,7 +279,7 @@ protected:
 
     virtual PassData* CreateViewPassData(View* view, PassDataExt&) override;
 
-    virtual RenderShadowMap* AllocateShadowMap(Light* light) = 0;
+    virtual ShadowMap* AllocateShadowMap(Light* light) = 0;
 
 private:
     // Shadow maps cached per-light.
@@ -298,7 +287,7 @@ private:
     // we store the shadow maps here rather than on the per-view PassData
     struct CachedShadowMapData
     {
-        RenderShadowMap* shadowMap = nullptr;
+        ShadowMap* shadowMap = nullptr;
         Handle<FullScreenPass> combineShadowMapsPass; // Pass to combine shadow maps for this light (optional)
         ImageRef combinedShadowMapsBlurred;
         ComputePipelineRef csBlurShadowMap; // compute pipeline for blurring VSM shadow maps
@@ -315,7 +304,7 @@ public:
     virtual ~PointShadowRenderer() override = default;
 
 protected:
-    virtual RenderShadowMap* AllocateShadowMap(Light* light) override;
+    virtual ShadowMap* AllocateShadowMap(Light* light) override;
 };
 
 class DirectionalShadowRenderer : public ShadowRendererBase
@@ -325,7 +314,7 @@ public:
     virtual ~DirectionalShadowRenderer() override = default;
 
 protected:
-    virtual RenderShadowMap* AllocateShadowMap(Light* light) override;
+    virtual ShadowMap* AllocateShadowMap(Light* light) override;
 };
 
 } // namespace hyperion

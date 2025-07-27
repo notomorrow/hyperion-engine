@@ -72,15 +72,14 @@ class HYP_API ResourceBase : public IResource
 {
 protected:
     using RefCounter = Semaphore<int32, SemaphoreDirection::WAIT_FOR_ZERO_OR_NEGATIVE, threading::AtomicSemaphoreImpl<int32, SemaphoreDirection::WAIT_FOR_ZERO_OR_NEGATIVE>>;
-    using CompletionSemaphore = Semaphore<int32, SemaphoreDirection::WAIT_FOR_ZERO_OR_NEGATIVE, threading::ConditionVarSemaphoreImpl<int32, SemaphoreDirection::WAIT_FOR_ZERO_OR_NEGATIVE>>;
+    using InitState = Semaphore<int32, SemaphoreDirection::WAIT_FOR_ZERO_OR_NEGATIVE, threading::ConditionVarSemaphoreImpl<int32, SemaphoreDirection::WAIT_FOR_ZERO_OR_NEGATIVE>>;
 
 public:
     ResourceBase();
 
     ResourceBase(const ResourceBase& other) = delete;
     ResourceBase& operator=(const ResourceBase& other) = delete;
-
-    ResourceBase(ResourceBase&& other) noexcept;
+    ResourceBase(ResourceBase&& other) noexcept = delete;
     ResourceBase& operator=(ResourceBase&& other) noexcept = delete;
 
     virtual ~ResourceBase() override;
@@ -125,16 +124,14 @@ protected:
 
 protected:
     RefCounter m_refCounter;
-    mutable Mutex m_refMutex;
-
-    CompletionSemaphore m_completionSemaphore;
+    mutable Mutex m_mutex;
 
     ResourceMemoryPoolHandle m_poolHandle;
 
     HYP_DECLARE_MT_CHECK(m_dataRaceDetector);
 
 private:
-    AtomicVar<bool> m_isInitialized;
+    InitState m_initState;
     ThreadId m_initializationThreadId; // thread that initialized this resource
 };
 
@@ -284,7 +281,7 @@ public:
 
     ResourceHandle& operator=(ResourceHandle&& other) noexcept
     {
-        if (this == &other)
+        if (this == &other || m_resource == other.m_resource)
         {
             return *this;
         }

@@ -7,7 +7,6 @@
 #include <core/math/Matrix4.hpp>
 
 #include <rendering/Renderer.hpp>
-#include <rendering/RenderResource.hpp>
 #include <rendering/RenderCollection.hpp>
 
 #include <rendering/RenderObject.hpp>
@@ -18,7 +17,6 @@ namespace hyperion {
 
 class EnvProbe;
 class Texture;
-class RenderShadowMap;
 
 struct EnvProbePassData : PassData
 {

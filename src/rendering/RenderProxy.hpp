@@ -30,6 +30,7 @@ class Material;
 class Skeleton;
 class EnvProbe;
 class EnvGrid;
+class ShadowMap;
 
 HYP_STRUCT()
 struct MeshRaytracingData
@@ -210,7 +211,7 @@ public:
     WeakHandle<Material> lightMaterial;  // for textured area lights
     Array<WeakHandle<View>> shadowViews; // optional, for lights casting shadow
     LightShaderData bufferData {};
-    class RenderShadowMap* shadowMap = nullptr;
+    ShadowMap* shadowMap = nullptr;
 };
 
 struct LightmapVolumeShaderData

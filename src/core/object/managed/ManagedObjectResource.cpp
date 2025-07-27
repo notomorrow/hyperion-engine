@@ -59,16 +59,6 @@ ManagedObjectResource::ManagedObjectResource(HypObjectPtr ptr, const RC<dotnet::
     }
 }
 
-ManagedObjectResource::ManagedObjectResource(ManagedObjectResource&& other) noexcept
-    : ResourceBase(static_cast<ResourceBase&&>(other)),
-      m_ptr(other.m_ptr),
-      m_objectPtr(other.m_objectPtr),
-      m_managedClass(std::move(other.m_managedClass))
-{
-    other.m_ptr = nullptr;
-    other.m_objectPtr = nullptr;
-}
-
 ManagedObjectResource::~ManagedObjectResource()
 {
     if (m_objectPtr)
@@ -137,7 +127,7 @@ void ManagedObjectResource::Destroy()
     if (m_objectPtr)
     {
         const bool result = m_objectPtr->SetKeepAlive(false);
-        
+
         HYP_CORE_ASSERT(result);
     }
 }

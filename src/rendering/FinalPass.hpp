@@ -7,8 +7,6 @@
 #include <core/Handle.hpp>
 
 #include <rendering/SafeDeleter.hpp>
-
-#include <rendering/RenderResource.hpp>
 #include <rendering/RenderObject.hpp>
 
 #include <Types.hpp>
