@@ -29,7 +29,6 @@
 
 namespace hyperion {
 
-class RenderTexture;
 class TextureAsset;
 
 HYP_CLASS()

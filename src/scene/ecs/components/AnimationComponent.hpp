@@ -6,6 +6,7 @@
 
 namespace hyperion {
 
+HYP_ENUM()
 enum class AnimationPlaybackStatus : uint32
 {
     STOPPED = 0,
@@ -13,6 +14,7 @@ enum class AnimationPlaybackStatus : uint32
     PLAYING
 };
 
+HYP_ENUM()
 enum class AnimationLoopMode : uint32
 {
     ONCE = 0,
@@ -20,7 +22,6 @@ enum class AnimationLoopMode : uint32
 };
 
 HYP_STRUCT()
-
 struct AnimationPlaybackState
 {
     HYP_FIELD(Property = "AnimationIndex", Serialize = true, Editor = true)
@@ -53,7 +54,6 @@ struct AnimationPlaybackState
 };
 
 HYP_STRUCT(Component)
-
 struct AnimationComponent
 {
     HYP_FIELD(Property = "PlaybackState", Serialize = true, Editor = true)

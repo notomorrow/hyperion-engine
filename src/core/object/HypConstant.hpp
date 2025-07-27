@@ -130,7 +130,7 @@ public:
         return Serialize({}, out);
     }
 
-    virtual bool Serialize(Span<HypData> args, FBOMData& out, EnumFlags<FBOMDataFlags> flags = FBOMDataFlags::NONE) const override
+    virtual bool Serialize(Span<HypData> args, FBOMData& out, EnumFlags<FBOMDataFlags> flags = FBOMDataFlags(0)) const override
     {
         if (!CanSerialize())
         {

@@ -20,7 +20,6 @@
 #include <scene/ecs/components/BoundingBoxComponent.hpp>
 #include <scene/ecs/components/VisibilityStateComponent.hpp>
 #include <scene/ecs/components/LightmapVolumeComponent.hpp>
-#include <scene/ecs/components/ShadowMapComponent.hpp>
 #include <scene/ecs/components/SkyComponent.hpp>
 
 #include <rendering/RenderGlobalState.hpp>

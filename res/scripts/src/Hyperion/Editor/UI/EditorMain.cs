@@ -629,10 +629,6 @@ namespace Hyperion
                 light.SetRadius(30.0f);
                 light.SetIntensity(20.0f);
 
-                activeScene.GetEntityManager().AddComponent<ShadowMapComponent>(light, new ShadowMapComponent
-                {
-                });
-
                 var lightNode = new Node();
                 lightNode.SetName(activeScene.GetUniqueNodeName("PointLight"));
                 lightNode.SetEntity(light);
@@ -687,9 +683,6 @@ namespace Hyperion
 
                 // currentProject.GetScene().GetEntityManager().AddComponent<LightComponent>(lightEntity, new LightComponent {
                 //     Light = light
-                // });
-
-                // currentProject.GetScene().GetEntityManager().AddComponent<ShadowMapComponent>(lightEntity, new ShadowMapComponent {
                 // });
 
                 // var lightNode = new Node();
@@ -812,10 +805,6 @@ namespace Hyperion
                 light.SetRadius(30.0f);
                 light.SetIntensity(5.0f);
                 light.SetAreaSize(new Vec2f(2.0f, 2.0f));
-
-                activeScene.GetEntityManager().AddComponent<ShadowMapComponent>(light, new ShadowMapComponent
-                {
-                });
 
                 var lightNode = new Node();
                 lightNode.SetName(activeScene.GetUniqueNodeName("AreaRectLight"));

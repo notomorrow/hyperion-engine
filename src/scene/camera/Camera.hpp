@@ -33,7 +33,6 @@
 namespace hyperion {
 
 class Engine;
-class RenderCamera;
 class CameraStreamingVolume;
 
 HYP_ENUM()

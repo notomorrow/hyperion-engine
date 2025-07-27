@@ -18,13 +18,6 @@ class BVHNode;
 class RenderProxyMesh;
 struct MeshRaytracingData;
 
-using MeshComponentFlags = uint32;
-
-enum MeshComponentFlagBits : MeshComponentFlags
-{
-    MESH_COMPONENT_FLAG_NONE = 0x0
-};
-
 using MeshComponentUserData = UserData<32, 16>;
 
 HYP_STRUCT(Component, Size = 288, Label = "Mesh Component", Description = "Controls the rendering of an entity, including the mesh, material, and skeleton.", Editor = true)
@@ -56,7 +49,7 @@ struct MeshComponent
     // 136
 
     HYP_FIELD()
-    MeshComponentFlags flags = MESH_COMPONENT_FLAG_NONE;
+    uint32 UNUSED_flags = 0;
 
     // 140 + 4 padding
 

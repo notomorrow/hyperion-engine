@@ -54,9 +54,6 @@ enum EnvProbeType : uint32
     EPT_MAX
 };
 
-class EnvProbe;
-class RenderEnvProbe;
-
 /*! \brief An EnvProbe handles rendering of reflection probes, sky probes, shadow probes, and ambient probes.
  *  \details It is used to capture the environment around a point in space and store it in a cubemap texture.
  *  It can also be used to capture shadows from a light source.

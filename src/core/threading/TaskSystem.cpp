@@ -124,10 +124,19 @@ void TaskThreadPool::Start()
 
 void TaskThreadPool::Stop()
 {
+    if (!IsRunning())
+    {
+        return;
+    }
+
     for (auto& it : m_threads)
     {
-        HYP_CORE_ASSERT(it != nullptr);
         it->Stop();
+    }
+
+    for (auto& it : m_threads)
+    {
+        it->Join();
     }
 }
 

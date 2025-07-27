@@ -26,12 +26,9 @@ namespace hyperion {
 class Scene;
 class Camera;
 class Light;
-class RenderLight;
 class LightmapVolume;
 class EnvGrid;
-class RenderEnvGrid;
 class EnvProbe;
-class RenderEnvProbe;
 class GBuffer;
 class IDrawCallCollectionImpl;
 
@@ -56,7 +53,7 @@ enum class ViewFlags : uint32
 
     NO_FRUSTUM_CULLING = 0x10, //!< If set, the view will not perform frustum culling. This is useful for debugging or when you want to render everything regardless of visibility.
 
-    SKIP_ENV_PROBES = 0x20,        //!< If set, the view will not collect EnvProbes. Use for RenderEnvProbe, so that it does not collect itself!
+    SKIP_ENV_PROBES = 0x20,        //!< If set, the view will not collect EnvProbes
     SKIP_ENV_GRIDS = 0x40,         //!< If set, the view will not collect EnvGrids.
     SKIP_LIGHTS = 0x80,            //!< If set, the view will not collect Lights.
     SKIP_LIGHTMAP_VOLUMES = 0x100, //!< If set, the view will not collect LightmapVolumes.

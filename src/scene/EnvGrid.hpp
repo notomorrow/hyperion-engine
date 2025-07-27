@@ -28,8 +28,6 @@ namespace hyperion {
 
 class View;
 class Scene;
-class RenderEnvGrid;
-class RenderEnvProbe;
 class EnvProbe;
 class Texture;
 

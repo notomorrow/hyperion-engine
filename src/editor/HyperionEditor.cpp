@@ -23,7 +23,6 @@
 #include <scene/ecs/components/SkyComponent.hpp>
 #include <scene/ecs/components/TransformComponent.hpp>
 #include <scene/ecs/components/AudioComponent.hpp>
-#include <scene/ecs/components/ShadowMapComponent.hpp>
 #include <scene/ecs/components/BoundingBoxComponent.hpp>
 #include <scene/ecs/components/VisibilityStateComponent.hpp>
 #include <scene/ecs/components/ReflectionProbeComponent.hpp>
@@ -202,8 +201,6 @@ void HyperionEditor::Init()
     // sunEntity->SetShadowMapFilter(SMF_VSM);
 
     sunEntity->Attach(sunNode);
-
-    scene->GetEntityManager()->AddComponent<ShadowMapComponent>(sunEntity, ShadowMapComponent { .mode = SMF_PCF, .radius = 80.0f, .resolution = { 1024, 1024 } });
 #endif
 
     // Add Skybox

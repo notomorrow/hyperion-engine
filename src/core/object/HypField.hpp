@@ -249,12 +249,12 @@ public:
         return IsValid() && m_deserializeProc.IsValid();
     }
 
-    HYP_FORCE_INLINE bool Serialize(const HypData& target, FBOMData& out, EnumFlags<FBOMDataFlags> flags = FBOMDataFlags::NONE) const
+    HYP_FORCE_INLINE bool Serialize(const HypData& target, FBOMData& out, EnumFlags<FBOMDataFlags> flags = FBOMDataFlags(0)) const
     {
         return Serialize(Span<HypData>(&const_cast<HypData&>(target), 1), out, flags);
     }
 
-    virtual bool Serialize(Span<HypData> args, FBOMData& out, EnumFlags<FBOMDataFlags> flags = FBOMDataFlags::NONE) const override
+    virtual bool Serialize(Span<HypData> args, FBOMData& out, EnumFlags<FBOMDataFlags> flags = FBOMDataFlags(0)) const override
     {
         if (!CanSerialize())
         {

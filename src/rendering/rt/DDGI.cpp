@@ -540,7 +540,7 @@ void DDGI::Render(FrameBase* frame, const RenderSetup& renderSetup)
             {
                 NAME("Global"),
                 {
-                    { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(*renderCamera) },
+                    { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(*renderSetup.camera) },
                     { NAME("EnvGridsBuffer"), ShaderDataOffset<EnvGridShaderData>(envGrid.Get(), 0) },
                     { NAME("CurrentEnvProbe"), ShaderDataOffset<EnvProbeShaderData>(envProbe.Get(), 0) }
                 }

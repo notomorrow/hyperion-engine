@@ -18,7 +18,6 @@ namespace hyperion {
 
 class EnvProbe;
 class Texture;
-class RenderCamera;
 class RenderShadowMap;
 
 struct EnvProbePassData : PassData

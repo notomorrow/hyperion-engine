@@ -16,7 +16,7 @@ if(MSVC)
 else()
     # set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -O3")
     # for debugging
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -O0 -fpermissive -fsanitize=address,undefined -fno-omit-frame-pointer -fno-optimize-sibling-calls -fno-inline -fno-inline-small-functions -fno-inline-functions-called-once -fno-builtin")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -O0 -fpermissive -fsanitize=address,undefined -fno-omit-frame-pointer")
 endif()
 
 set(OpenGL_GL_PREFERENCE GLVND)

@@ -3,12 +3,6 @@ using System.Runtime.InteropServices;
 
 namespace Hyperion
 {
-    public enum MeshComponentFlags : uint
-    {
-        None = 0x0,
-        Dirty = 0x1
-    }
-
     [HypClassBinding(Name="MeshComponent")]
     [StructLayout(LayoutKind.Explicit, Size = 288)]
     public unsafe struct MeshComponent : IComponent
@@ -29,13 +23,13 @@ namespace Hyperion
         private IntPtr proxyPtr;
 
         [FieldOffset(136)]
-        private uint meshComponentFlags;
+        private uint UNUSED_flags;
 
         [FieldOffset(144)]
         private Matrix4 previousModelMatrix;
 
         [FieldOffset(208)]
-        private IntPtr raytracingDataPtr;
+        private IntPtr UNUSED_rayTracingDataPtr;
 
         [FieldOffset(224)]
         private fixed byte userData[32];
@@ -146,18 +140,6 @@ namespace Hyperion
             get
             {
                 return ref instanceData;
-            }
-        }
-
-        public uint Flags
-        {
-            get
-            {
-                return meshComponentFlags;
-            }
-            set
-            {
-                meshComponentFlags = value;
             }
         }
     }

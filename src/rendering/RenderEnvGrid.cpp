@@ -885,7 +885,7 @@ void EnvGridRenderer::ComputeEnvProbeIrradiance_SphericalHarmonics(FrameBase* fr
     *delegateHandle = frame->OnFrameEnd.Bind(
         [probe = Handle<EnvProbe>(probe), delegateHandle](FrameBase* frame)
         {
-            HYP_NAMED_SCOPE("RenderEnvGrid::ComputeEnvProbeIrradiance_SphericalHarmonics - Buffer readback");
+            HYP_NAMED_SCOPE("EnvGridRenderer::ComputeEnvProbeIrradiance_SphericalHarmonics - Buffer readback");
 
             EnvProbeShaderData readbackBuffer;
 
