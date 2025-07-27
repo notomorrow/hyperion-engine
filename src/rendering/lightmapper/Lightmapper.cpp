@@ -264,17 +264,7 @@ struct LightmapRayHit : RayHit
 
 using LightmapRayTestResults = FlatSet<LightmapRayHit>;
 
-class ILightmapAccelerationStructure
-{
-public:
-    virtual ~ILightmapAccelerationStructure() = default;
-
-    virtual const Transform& GetTransform() const = 0;
-
-    virtual LightmapRayTestResults TestRay(const Ray& ray) const = 0;
-};
-
-class LightmapBottomLevelAccelerationStructure final : public ILightmapAccelerationStructure
+class LightmapBottomLevelAccelerationStructure
 {
 public:
     LightmapBottomLevelAccelerationStructure(const LightmapSubElement* subElement, const BVHNode* bvh)
@@ -312,19 +302,19 @@ public:
         return *this;
     }
 
-    virtual ~LightmapBottomLevelAccelerationStructure() override = default;
+    ~LightmapBottomLevelAccelerationStructure() = default;
 
     HYP_FORCE_INLINE const Handle<Entity>& GetEntity() const
     {
         return m_subElement->entity;
     }
 
-    virtual const Transform& GetTransform() const override
+    HYP_FORCE_INLINE const Transform& GetTransform() const
     {
         return m_subElement->transform;
     }
 
-    virtual LightmapRayTestResults TestRay(const Ray& ray) const override
+    LightmapRayTestResults TestRay(const Ray& ray) const
     {
         Assert(m_root != nullptr);
 
@@ -382,17 +372,17 @@ private:
     const BVHNode* m_root;
 };
 
-class LightmapTopLevelAccelerationStructure final : public ILightmapAccelerationStructure
+class LightmapTopLevelAccelerationStructure
 {
 public:
-    virtual ~LightmapTopLevelAccelerationStructure() override = default;
+    ~LightmapTopLevelAccelerationStructure() = default;
 
-    virtual const Transform& GetTransform() const override
+    HYP_FORCE_INLINE const Transform& GetTransform() const
     {
         return Transform::identity;
     }
 
-    virtual LightmapRayTestResults TestRay(const Ray& ray) const override
+    LightmapRayTestResults TestRay(const Ray& ray) const
     {
         LightmapRayTestResults results;
 
@@ -851,7 +841,7 @@ void LightmapCPUPathTracer::Render(FrameBase* frame, const RenderSetup& renderSe
         envProbeTexture = renderSetup.envProbe->GetPrefilteredEnvMap();
         // envProbeTexture->Readback();
 
-        HYP_NOT_IMPLEMENTED();
+        // HYP_NOT_IMPLEMENTED();
     }
 
     m_hitsBuffer.Resize(rays.Size());
@@ -1029,7 +1019,7 @@ void LightmapCPUPathTracer::TraceSingleRayOnCPU(LightmapJob* job, const Lightmap
     outPayload.meshId = ObjId<Mesh>::invalid;
     outPayload.triangleIndex = ~0u;
 
-    ILightmapAccelerationStructure* accelerationStructure = job->GetParams().accelerationStructure;
+    LightmapTopLevelAccelerationStructure* accelerationStructure = job->GetParams().accelerationStructure;
 
     if (!accelerationStructure)
     {
@@ -1171,18 +1161,22 @@ void LightmapJob::Start()
 
                     for (const LightmapSubElement& subElement : m_params.subElementsView)
                     {
-                        if (subElement.mesh.IsValid() && subElement.mesh->GetAsset().IsValid())
+                        if (subElement.mesh.IsValid())
                         {
-                            m_resourceCache.EmplaceBack(*subElement.mesh->GetAsset()->GetResource());
+                            Assert(subElement.mesh->GetAsset().IsValid());
+
+                            m_resourceCache.Emplace(subElement.mesh->GetAsset(), *subElement.mesh->GetAsset()->GetResource());
                         }
 
                         if (subElement.material.IsValid())
                         {
                             for (const auto& it : subElement.material->GetTextures())
                             {
-                                if (it.second.IsValid() && it.second->GetAsset())
+                                if (it.second.IsValid())
                                 {
-                                    m_resourceCache.EmplaceBack(*it.second->GetAsset()->GetResource());
+                                    Assert(it.second->GetAsset().IsValid());
+
+                                    m_resourceCache.Emplace(it.second->GetAsset(), *it.second->GetAsset()->GetResource());
                                 }
                             }
                         }
@@ -1704,6 +1698,9 @@ void Lightmapper::HandleCompletedJob(LightmapJob* job)
             Assert(lightmapMeshData.mesh == mesh);
 
             MeshData newMeshData;
+            newMeshData.desc.meshAttributes = mesh->GetMeshAttributes();
+            newMeshData.desc.numVertices = uint32(lightmapMeshData.vertices.Size());
+            newMeshData.desc.numIndices = uint32(lightmapMeshData.indices.Size());
             newMeshData.vertexData = lightmapMeshData.vertices;
             newMeshData.indexData = ByteBuffer(lightmapMeshData.indices.ToByteView());
 
@@ -1715,7 +1712,6 @@ void Lightmapper::HandleCompletedJob(LightmapJob* job)
                 lightmapUv += Vec2f(element->offsetUv.x, element->offsetUv.y);
             }
 
-            ResourceHandle resourceHandle;
             mesh->SetMeshData(newMeshData);
         };
 

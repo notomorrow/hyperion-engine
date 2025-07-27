@@ -459,7 +459,7 @@ private:
     Handle<EditorProject> m_currentProject;
     WeakHandle<Scene> m_activeScene;
 
-    FixedArray<Array<RunningEditorTask>, ThreadType::THREAD_TYPE_MAX> m_tasksByThreadType;
+    Array<RunningEditorTask> m_tasks;
 
     EditorManipulationWidgetHolder m_manipulationWidgetHolder;
 

@@ -21,7 +21,7 @@
 
 namespace hyperion {
 
-static constexpr int maxBouncesCpu = 2;
+static constexpr int maxBouncesCpu = 4;
 
 namespace threading {
 class TaskBatch;
@@ -284,6 +284,54 @@ public:
     }
 
 private:
+    struct CachedResource
+    {
+        Handle<AssetObject> assetObject;
+        ResourceHandle resourceHandle;
+
+        CachedResource() = default;
+
+        CachedResource(const Handle<AssetObject>& assetObject, const ResourceHandle& resourceHandle)
+            : assetObject(assetObject),
+              resourceHandle(resourceHandle)
+        {
+        }
+
+        CachedResource(const CachedResource& other) = delete;
+        CachedResource& operator=(const CachedResource& other) = delete;
+
+        CachedResource(CachedResource&& other) noexcept
+            : assetObject(std::move(other.assetObject)),
+              resourceHandle(std::move(other.resourceHandle))
+        {
+            other.resourceHandle.Reset();
+        }
+
+        CachedResource& operator=(CachedResource&& other) noexcept
+        {
+            if (this == &other)
+            {
+                return *this;
+            }
+
+            resourceHandle.Reset();
+
+            assetObject = std::move(other.assetObject);
+            resourceHandle = std::move(other.resourceHandle);
+
+            return *this;
+        }
+
+        ~CachedResource()
+        {
+            // destruct the ResourceHandle before assetobject is destructed,
+            // so it destructing the AssetObject doesn't try to wait for the resource's ref count to reach zero
+            resourceHandle.Reset();
+        }
+    };
+
+    using ResourceCache = HashSet<CachedResource, &CachedResource::assetObject, HashTable_DynamicNodeAllocator<CachedResource>>;
+
     HYP_FORCE_INLINE bool HasRemainingTexels() const
     {
         return m_texelIndex < m_texelIndices.Size() * m_params.config->numSamples;
@@ -330,7 +378,8 @@ private:
 
     AtomicVar<uint32> m_numConcurrentRenderingTasks;
 
-    Array<ResourceHandle> m_resourceCache;
+    // cache to keep asset data in memory while we're using it
+    ResourceCache m_resourceCache;
 
     Result m_result;
 };

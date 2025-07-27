@@ -13,6 +13,10 @@
 
 #include <rendering/lightmapper/LightmapUVBuilder.hpp>
 
+#include <asset/AssetRegistry.hpp>
+#include <asset/Assets.hpp>
+#include <asset/TextureAsset.hpp>
+
 #include <core/io/ByteWriter.hpp>
 
 #include <core/logging/Logger.hpp>
@@ -334,6 +338,11 @@ void LightmapVolume::UpdateAtlasTextures()
                 TWM_CLAMP_TO_EDGE });
 
             texture->SetName(NAME_FMT("LightmapVolumeAtlasTexture_{}_{}_{}", m_uuid, uint32(textureType), textureTypeNames[i]));
+
+            if (Result result = g_assetManager->GetAssetRegistry()->RegisterAsset("$Import/Media/Lightmaps", texture->GetAsset()); result.HasError())
+            {
+                HYP_LOG(Lightmap, Error, "Failed to register atlas texture '{}' with asset registry: {}", texture->GetName(), result.GetError().GetMessage());
+            }
         }
 
         InitObject(texture);

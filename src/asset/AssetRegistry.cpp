@@ -151,14 +151,16 @@ Result AssetDataResourceBase::Save_Internal(const FilePath& path)
 
 AssetObject::AssetObject()
     : m_resource(&GetNullResource()),
-      m_flags(AOF_NONE)
+      m_flags(AOF_NONE),
+      m_pool(nullptr)
 {
 }
 
 AssetObject::AssetObject(Name name)
     : m_name(name),
       m_resource(&GetNullResource()),
-      m_flags(AOF_NONE)
+      m_flags(AOF_NONE),
+      m_pool(nullptr)
 {
 }
 
@@ -169,7 +171,9 @@ AssetObject::~AssetObject()
 
     if (m_resource != nullptr && !m_resource->IsNull())
     {
-        FreeResource(m_resource);
+        Assert(m_pool != nullptr);
+
+        m_pool->Free(m_resource);
     }
 }
 

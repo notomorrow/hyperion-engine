@@ -52,6 +52,7 @@ public:
     BindVertexBuffer(const GpuBufferRef& buffer)
         : m_buffer(buffer)
     {
+        Assert(buffer && buffer->IsCreated());
     }
 
     static inline void InvokeStatic(CmdBase* cmd, const CommandBufferRef& commandBuffer)
@@ -73,6 +74,7 @@ public:
     BindIndexBuffer(const GpuBufferRef& buffer)
         : m_buffer(buffer)
     {
+        Assert(buffer && buffer->IsCreated());
     }
 
     static inline void InvokeStatic(CmdBase* cmd, const CommandBufferRef& commandBuffer)

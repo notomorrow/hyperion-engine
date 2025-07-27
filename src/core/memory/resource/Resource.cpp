@@ -62,8 +62,6 @@ int ResourceBase::IncRefNoInitialize()
 
     if (count == 1)
     {
-        Mutex::Guard guard(m_mutex);
-
         m_initState.Produce();
         m_initializationThreadId = Threads::CurrentThreadId();
     }
@@ -80,6 +78,7 @@ int ResourceBase::IncRef()
     if (result == 1)
     {
         Mutex::Guard guard(m_mutex);
+
         m_initState.Produce(1, [&](bool)
             {
                 HYP_NAMED_SCOPE("Initializing Resource - Initialization");
@@ -103,6 +102,7 @@ int ResourceBase::DecRef()
     if (result == 0)
     {
         Mutex::Guard guard(m_mutex);
+
         if (!m_initState.GetValue())
         {
             return result;
@@ -126,8 +126,6 @@ void ResourceBase::WaitForFinalization() const
 
     // wait for it to be zero
     m_refCounter.Acquire();
-
-    Mutex::Guard guard(m_mutex);
     m_initState.Acquire();
 }
 

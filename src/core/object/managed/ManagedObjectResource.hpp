@@ -34,7 +34,8 @@ public:
 
     ManagedObjectResource(const ManagedObjectResource& other) = delete;
     ManagedObjectResource& operator=(const ManagedObjectResource& other) = delete;
-    ManagedObjectResource(ManagedObjectResource&& other) noexcept = delete;
+
+    ManagedObjectResource(ManagedObjectResource&& other) noexcept;
     ManagedObjectResource& operator=(ManagedObjectResource&& other) noexcept = delete;
 
     virtual ~ManagedObjectResource() override;

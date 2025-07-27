@@ -64,7 +64,7 @@ int DataStoreBase::IncRef()
             if (m_options.flags & DSF_WRITE)
             {
                 const bool result = MakeDirectory();
-                
+
                 HYP_CORE_ASSERT(result, "Failed to create directory for data store at path %s", GetDirectory().Data());
             }
         });

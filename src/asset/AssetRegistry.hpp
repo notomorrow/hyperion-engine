@@ -154,7 +154,10 @@ public:
     AssetObject(Name name, T&& data)
         : AssetObject(name)
     {
-        m_resource = AllocateResource<AssetDataResource<NormalizedType<T>>>(std::forward<T>(data));
+        ResourceMemoryPool<AssetDataResource<NormalizedType<T>>>* pool = ResourceMemoryPool<AssetDataResource<NormalizedType<T>>>::GetInstance();
+        m_pool = pool;
+
+        m_resource = pool->Allocate(std::forward<T>(data));
         static_cast<AssetDataResource<NormalizedType<T>>*>(m_resource)->m_assetObject = WeakHandleFromThis();
     }
 
@@ -282,6 +285,7 @@ protected:
     AssetPath m_assetPath;
 
     FilePath m_filepath;
+    IResourceMemoryPool* m_pool;
     ResourceHandle m_persistentResource;
 };
 

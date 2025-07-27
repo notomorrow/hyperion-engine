@@ -67,12 +67,12 @@
     "name": "HyperionEditor"
   },
   "lightmapper": {
-    "num_threads_per_job": 4,
-    "num_samples": 8,
+    "num_threads_per_job": 8,
+    "num_samples": 4,
     "ideal_triangles_per_job": 5000,
     "trace_mode": 0,
     "radiance": false,
-    "max_rays_per_frame": 100,
+    "max_rays_per_frame": 100000,
     "irradiance": true
   }
 }

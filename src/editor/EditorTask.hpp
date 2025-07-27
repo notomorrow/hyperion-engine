@@ -1,4 +1,4 @@
-/* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
+/* Copyright (c) 2025 No Tomorrow Games. All rights reserved. */
 
 #pragma once
 
@@ -12,13 +12,17 @@
 
 #include <core/functional/ScriptableDelegate.hpp>
 
+#include <core/memory/Pimpl.hpp>
+
 #include <core/object/HypObject.hpp>
 
+#include <GameCounter.hpp>
 #include <Types.hpp>
 
 namespace hyperion {
 
 class UIObject;
+class EditorTaskThread;
 
 HYP_CLASS(Abstract)
 class EditorTaskBase : public HypObject<EditorTaskBase>
@@ -27,8 +31,6 @@ class EditorTaskBase : public HypObject<EditorTaskBase>
 
 public:
     virtual ~EditorTaskBase() = default;
-
-    virtual ThreadType GetRunnableThreadType() const = 0;
 
     HYP_METHOD()
     virtual bool IsCommitted() const = 0;
@@ -43,10 +45,7 @@ public:
     virtual void Process() = 0;
 
     HYP_METHOD()
-    virtual void Commit() = 0;
-
-    HYP_METHOD()
-    virtual void Tick(float delta) = 0;
+    virtual bool Commit() = 0;
 
     HYP_FIELD()
     ScriptableDelegate<void> OnComplete;
@@ -64,9 +63,14 @@ public:
     TickableEditorTask();
     virtual ~TickableEditorTask() override = default;
 
-    virtual ThreadType GetRunnableThreadType() const override final
+    HYP_FORCE_INLINE LockstepGameCounter& GetTimer()
     {
-        return ThreadType::THREAD_TYPE_GAME;
+        return m_timer;
+    }
+
+    HYP_FORCE_INLINE const LockstepGameCounter& GetTimer() const
+    {
+        return m_timer;
     }
 
     HYP_METHOD()
@@ -85,10 +89,10 @@ public:
     virtual void Process() override;
 
     HYP_METHOD()
-    virtual void Commit() override final;
+    virtual bool Commit() override final;
 
     HYP_METHOD(Scriptable)
-    virtual void Tick(float delta) override;
+    virtual void Tick(float delta);
 
 protected:
     virtual void Cancel_Impl();
@@ -104,6 +108,8 @@ protected:
         HYP_PURE_VIRTUAL();
     }
 
+    LockstepGameCounter m_timer;
+
 private:
     AtomicVar<bool> m_isCommitted;
     Task<void> m_task;
@@ -116,12 +122,7 @@ class HYP_API LongRunningEditorTask : public EditorTaskBase
 
 public:
     LongRunningEditorTask();
-    virtual ~LongRunningEditorTask() override = default;
-
-    virtual ThreadType GetRunnableThreadType() const override final
-    {
-        return ThreadType::THREAD_TYPE_TASK;
-    }
+    virtual ~LongRunningEditorTask() override;
 
     HYP_METHOD()
     virtual bool IsCommitted() const override final
@@ -139,13 +140,7 @@ public:
     virtual void Process() override;
 
     HYP_METHOD()
-    virtual void Commit() override final;
-
-    HYP_METHOD()
-    virtual void Tick(float delta) override final
-    {
-        // Do nothing
-    }
+    virtual bool Commit() override final;
 
 protected:
     virtual void Cancel_Impl();
@@ -158,6 +153,7 @@ protected:
 
     AtomicVar<bool> m_isCommitted;
     Task<void> m_task;
+    Pimpl<EditorTaskThread> m_thread;
 };
 
 } // namespace hyperion

@@ -2752,11 +2752,9 @@ void EditorSubsystem::AddTask(const Handle<EditorTaskBase>& task)
     UISubsystem* uiSubsystem = GetWorld()->GetSubsystem<UISubsystem>();
     Assert(uiSubsystem != nullptr);
 
-    const ThreadType threadType = task->GetRunnableThreadType();
-
     // @TODO Auto remove tasks that aren't on the game thread when they have completed
 
-    RunningEditorTask& runningTask = m_tasksByThreadType[threadType].EmplaceBack(task);
+    RunningEditorTask& runningTask = m_tasks.EmplaceBack(task);
 
     Handle<UIMenuItem> tasksMenuItem = ObjCast<UIMenuItem>(uiSubsystem->GetUIStage()->FindChildUIObject(NAME("Tasks_MenuItem")));
 
@@ -2982,40 +2980,42 @@ void EditorSubsystem::UpdateTasks(float delta)
 {
     HYP_SCOPE;
 
-    for (uint32 threadTypeIndex = 0; threadTypeIndex < m_tasksByThreadType.Size(); threadTypeIndex++)
+    for (auto it = m_tasks.Begin(); it != m_tasks.End();)
     {
-        auto& tasks = m_tasksByThreadType[threadTypeIndex];
+        auto& task = it->GetTask();
 
-        for (auto it = tasks.Begin(); it != tasks.End();)
+        if (task->IsCommitted())
         {
-            auto& task = it->GetTask();
-
-            if (task->IsCommitted())
+            if (TickableEditorTask* tickableTask = ObjCast<TickableEditorTask>(task.Get()))
             {
-                // Can only tick tasks that run on the game thread
-                if (task->GetRunnableThreadType() == ThreadType::THREAD_TYPE_GAME)
+                if (tickableTask->GetTimer().Waiting())
                 {
-                    task->Tick(delta);
-                }
-
-                if (task->IsCompleted())
-                {
-                    task->OnComplete();
-
-                    // Remove the UIObject for the task from this stage
-                    if (const Handle<UIObject>& taskUiObject = it->GetUIObject())
-                    {
-                        taskUiObject->RemoveFromParent();
-                    }
-
-                    it = tasks.Erase(it);
+                    ++it;
 
                     continue;
                 }
+
+                tickableTask->GetTimer().NextTick();
+                tickableTask->Tick(tickableTask->GetTimer().delta);
             }
 
-            ++it;
+            if (task->IsCompleted())
+            {
+                task->OnComplete();
+
+                // Remove the UIObject for the task from this stage
+                if (const Handle<UIObject>& taskUiObject = it->GetUIObject())
+                {
+                    taskUiObject->RemoveFromParent();
+                }
+
+                it = m_tasks.Erase(it);
+
+                continue;
+            }
         }
+
+        ++it;
     }
 }
 

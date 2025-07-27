@@ -124,7 +124,21 @@ LightmapUVBuilder::LightmapUVBuilder(const LightmapUVBuilderParams& params)
         m_meshVertexNormals[i].Resize(meshData.vertexData.Size() * 3);
         m_meshVertexUvs[i].Resize(meshData.vertexData.Size() * 2);
 
-        m_meshIndices[i] = meshData.indexData;
+        const SizeType indexSize = GpuElemTypeSize(meshData.desc.meshAttributes.indexBufferElemType);
+
+        m_meshIndices[i].Resize(meshData.indexData.Size() / indexSize);
+
+        if (indexSize == sizeof(uint32))
+        {
+            Memory::MemCpy(m_meshIndices[i].Data(), meshData.indexData.Data(), meshData.indexData.Size());
+        }
+        else
+        {
+            for (SizeType j = 0; j < meshData.indexData.Size(); j += indexSize)
+            {
+                Memory::MemCpy(&m_meshIndices[i][j / indexSize], meshData.indexData.Data() + j, MathUtil::Min(indexSize, sizeof(uint32)));
+            }
+        }
 
         const Matrix4 normalMatrix = subElement.transform.GetMatrix().Inverted().Transpose();
 
@@ -189,7 +203,7 @@ TResult<LightmapUVMap> LightmapUVBuilder::Build()
     }
 
     xatlas::PackOptions packOptions {};
-    // packOptions.maxChartSize = 256;//2048;
+    packOptions.maxChartSize = 256; // 2048;
     // packOptions.resolution = 1024; // testing
     // packOptions.padding = 8;
     // packOptions.texelsPerUnit = 128.0f;
@@ -373,7 +387,8 @@ TResult<LightmapUVMap> LightmapUVBuilder::Build()
         m_meshVertexUvs[meshIndex].Clear();
         m_meshVertexUvs[meshIndex].Refit();
 
-        m_meshIndices[meshIndex] = {};
+        m_meshIndices[meshIndex].Clear();
+        m_meshIndices[meshIndex].Refit();
     }
 
     xatlas::Destroy(atlas);

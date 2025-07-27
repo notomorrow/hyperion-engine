@@ -252,8 +252,7 @@ void Entity::OnComponentAdded(AnyRef component)
         {
             if (meshComponent->mesh->GetBVH().IsValid())
             {
-                HYP_LOG(ECS, Debug, "Entity {} has a MeshComponent with a BVH, skipping BVH build", Id());
-
+                // already has a BVH, skip
                 return;
             }
 

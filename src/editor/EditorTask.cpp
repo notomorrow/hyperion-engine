@@ -12,31 +12,49 @@ namespace hyperion {
 
 HYP_DECLARE_LOG_CHANNEL(Editor);
 
+#pragma region EditorTaskThread
+
+class HYP_API EditorTaskThread final : public TaskThread
+{
+public:
+    EditorTaskThread()
+        : TaskThread(Name::Unique("EditorTaskThread"))
+    {
+    }
+
+    virtual ~EditorTaskThread() override = default;
+};
+
+#pragma endregion EditorTaskThread
+
 #pragma region TickableEditorTask
 
 TickableEditorTask::TickableEditorTask()
-    : m_isCommitted(false)
+    : m_isCommitted(false),
+      m_timer(1.0f)
 {
 }
 
-void TickableEditorTask::Commit()
+bool TickableEditorTask::Commit()
 {
     ThreadBase* gameThread = Threads::GetThread(g_gameThread);
     Assert(gameThread != nullptr);
 
-    m_task = gameThread->GetScheduler().Enqueue([weakThis = WeakHandleFromThis()]()
+    m_task = gameThread->GetScheduler().Enqueue([this, weakThis = WeakHandleFromThis()]()
         {
-            if (Handle<TickableEditorTask> task = weakThis.Lock())
-            {
-                task->m_isCommitted.Set(true, MemoryOrder::RELEASE);
+            Handle<TickableEditorTask> task = weakThis.Lock();
 
-                task->Process();
-            }
-            else
+            if (!task)
             {
                 HYP_LOG(Editor, Warning, "EditorTask was destroyed before it could be processed");
             }
+
+            m_isCommitted.Set(true, MemoryOrder::RELEASE);
+
+            Process();
         });
+
+    return true;
 }
 
 void TickableEditorTask::Cancel_Impl()
@@ -80,15 +98,37 @@ LongRunningEditorTask::LongRunningEditorTask()
 {
 }
 
-void LongRunningEditorTask::Commit()
+LongRunningEditorTask::~LongRunningEditorTask()
 {
-    m_task = TaskSystem::GetInstance().Enqueue([this]()
+    if (m_thread && m_thread->IsRunning())
+    {
+        m_thread->Stop();
+        m_thread->Join();
+
+        m_thread.Reset();
+    }
+}
+
+bool LongRunningEditorTask::Commit()
+{
+    m_thread = MakePimpl<EditorTaskThread>();
+
+    if (!m_thread->Start())
+    {
+        HYP_LOG(Editor, Error, "Failed to start EditorTaskThread");
+
+        return false;
+    }
+
+    m_task = m_thread->GetScheduler().Enqueue([this]()
         {
             m_isCommitted.Set(true, MemoryOrder::RELEASE);
 
             Process();
         },
         TaskThreadPoolName::THREAD_POOL_BACKGROUND);
+
+    return true;
 }
 
 void LongRunningEditorTask::Cancel_Impl()
@@ -103,6 +143,14 @@ void LongRunningEditorTask::Cancel_Impl()
         }
 
         OnCancel();
+    }
+
+    if (m_thread && m_thread->IsRunning())
+    {
+        m_thread->Stop();
+        m_thread->Join();
+
+        m_thread.Reset();
     }
 
     m_isCommitted.Set(false, MemoryOrder::RELEASE);

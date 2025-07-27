@@ -6,6 +6,7 @@
 #include <core/threading/AtomicVar.hpp>
 #include <core/threading/Semaphore.hpp>
 #include <core/threading/DataRaceDetector.hpp>
+#include <core/threading/Spinlock.hpp>
 
 #include <core/functional/Proc.hpp>
 
@@ -139,6 +140,8 @@ class IResourceMemoryPool
 {
 public:
     virtual ~IResourceMemoryPool() = default;
+
+    virtual void Free(void* ptr) = 0;
 };
 
 extern HYP_API IResourceMemoryPool* GetOrCreateResourceMemoryPool(TypeId typeId, UniquePtr<IResourceMemoryPool> (*createFn)(void));
@@ -180,7 +183,13 @@ public:
         return ptr;
     }
 
-    void Free(T* ptr)
+    virtual void Free(void* ptr) override
+    {
+        Free_Internal(reinterpret_cast<T*>(ptr));
+    }
+
+private:
+    void Free_Internal(T* ptr)
     {
         HYP_CORE_ASSERT(ptr != nullptr);
 

@@ -211,59 +211,88 @@ void Mesh::CreateGpuBuffers()
     const SizeType packedBufferSize = vertices.ByteSize();
     const SizeType packedIndicesSize = indices.ByteSize();
 
-    if (!m_vertexBuffer.IsValid() || m_vertexBuffer->Size() != packedBufferSize)
-    {
-        SafeRelease(std::move(m_vertexBuffer));
+    GpuBufferRef vertexBuffer;
+    GpuBufferRef indexBuffer;
 
-        m_vertexBuffer = g_renderBackend->MakeGpuBuffer(GpuBufferType::MESH_VERTEX_BUFFER, packedBufferSize);
+    if (IsInitCalled() && !Threads::IsOnThread(g_renderThread))
+    {
+        vertexBuffer = g_renderBackend->MakeGpuBuffer(GpuBufferType::MESH_VERTEX_BUFFER, packedBufferSize);
+        indexBuffer = g_renderBackend->MakeGpuBuffer(GpuBufferType::MESH_INDEX_BUFFER, packedIndicesSize);
 
 #ifdef HYP_DEBUG_MODE
-        m_vertexBuffer->SetDebugName(NAME_FMT("{}_VBO", GetName()));
+        vertexBuffer->SetDebugName(NAME_FMT("{}_VBO", GetName()));
+        indexBuffer->SetDebugName(NAME_FMT("{}_IBO", GetName()));
 #endif
+
+        DeferCreate(vertexBuffer);
+        DeferCreate(indexBuffer);
     }
-
-    DeferCreate(m_vertexBuffer);
-
-    if (!m_indexBuffer.IsValid() || m_indexBuffer->Size() != packedIndicesSize)
+    else
     {
-        SafeRelease(std::move(m_indexBuffer));
+        if (!m_vertexBuffer.IsValid() || m_vertexBuffer->Size() != packedBufferSize)
+        {
+            SafeRelease(std::move(m_vertexBuffer));
 
-        m_indexBuffer = g_renderBackend->MakeGpuBuffer(GpuBufferType::MESH_INDEX_BUFFER, packedIndicesSize);
+            m_vertexBuffer = g_renderBackend->MakeGpuBuffer(GpuBufferType::MESH_VERTEX_BUFFER, packedBufferSize);
 
 #ifdef HYP_DEBUG_MODE
-        m_indexBuffer->SetDebugName(NAME_FMT("{}_IBO", GetName()));
-
-        HYP_LOG_TEMP("Creating index buffer for mesh '{}' with size {}, idx count {}", GetName(), m_indexBuffer->Size(), m_asset->GetMeshDesc().numIndices);
+            m_vertexBuffer->SetDebugName(NAME_FMT("{}_VBO", GetName()));
 #endif
-    }
+        }
 
-    DeferCreate(m_indexBuffer);
+        DeferCreate(m_vertexBuffer);
+
+        if (!m_indexBuffer.IsValid() || m_indexBuffer->Size() != packedIndicesSize)
+        {
+            SafeRelease(std::move(m_indexBuffer));
+
+            m_indexBuffer = g_renderBackend->MakeGpuBuffer(GpuBufferType::MESH_INDEX_BUFFER, packedIndicesSize);
+
+#ifdef HYP_DEBUG_MODE
+            m_indexBuffer->SetDebugName(NAME_FMT("{}_IBO", GetName()));
+#endif
+        }
+
+        DeferCreate(m_indexBuffer);
+
+        vertexBuffer = m_vertexBuffer;
+        indexBuffer = m_indexBuffer;
+    }
 
     struct RENDER_COMMAND(CopyMeshGpuData)
         : public RenderCommand
     {
+        WeakHandle<Mesh> weakMesh;
+
         Array<float> vertices;
         Array<uint32> indices;
 
         GpuBufferRef vertexBuffer;
         GpuBufferRef indexBuffer;
 
-        RENDER_COMMAND(CopyMeshGpuData)(Array<float>&& vertices, Array<uint32>&& indices, const GpuBufferRef& vertexBuffer, const GpuBufferRef& indexBuffer)
-            : vertices(std::move(vertices)),
+        RENDER_COMMAND(CopyMeshGpuData)(const WeakHandle<Mesh>& weakMesh, Array<float>&& vertices, Array<uint32>&& indices, GpuBufferRef&& vertexBuffer, GpuBufferRef&& indexBuffer)
+            : weakMesh(weakMesh),
+              vertices(std::move(vertices)),
               indices(std::move(indices)),
-              vertexBuffer(vertexBuffer),
-              indexBuffer(indexBuffer)
+              vertexBuffer(std::move(vertexBuffer)),
+              indexBuffer(std::move(indexBuffer))
         {
         }
 
-        virtual ~RENDER_COMMAND(CopyMeshGpuData)() override
-        {
-            SafeRelease(std::move(vertexBuffer));
-            SafeRelease(std::move(indexBuffer));
-        }
+        virtual ~RENDER_COMMAND(CopyMeshGpuData)() override = default;
 
         virtual RendererResult operator()() override
         {
+            Handle<Mesh> mesh = weakMesh.Lock();
+
+            if (!mesh.IsValid())
+            {
+                SafeRelease(std::move(vertexBuffer));
+                SafeRelease(std::move(indexBuffer));
+
+                return {};
+            }
+
             const SizeType packedBufferSize = vertices.ByteSize();
             const SizeType packedIndicesSize = indices.ByteSize();
 
@@ -284,11 +313,17 @@ void Mesh::CreateGpuBuffers()
             SafeRelease(std::move(stagingBufferVertices));
             SafeRelease(std::move(stagingBufferIndices));
 
+            SafeRelease(std::move(mesh->m_vertexBuffer));
+            SafeRelease(std::move(mesh->m_indexBuffer));
+
+            mesh->m_vertexBuffer = std::move(vertexBuffer);
+            mesh->m_indexBuffer = std::move(indexBuffer);
+
             return {};
         }
     };
 
-    PUSH_RENDER_COMMAND(CopyMeshGpuData, std::move(vertices), std::move(indices), m_vertexBuffer, m_indexBuffer);
+    PUSH_RENDER_COMMAND(CopyMeshGpuData, WeakHandleFromThis(), std::move(vertices), std::move(indices), std::move(vertexBuffer), std::move(indexBuffer));
 }
 
 void Mesh::SetName(Name name)
