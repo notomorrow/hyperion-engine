@@ -136,12 +136,10 @@ void ManagedObjectResource::Destroy()
 {
     if (m_objectPtr)
     {
-        HYP_CORE_ASSERT(m_objectPtr->SetKeepAlive(false));
+        const bool result = m_objectPtr->SetKeepAlive(false);
+        
+        HYP_CORE_ASSERT(result);
     }
-}
-
-void ManagedObjectResource::Update()
-{
 }
 
 } // namespace hyperion

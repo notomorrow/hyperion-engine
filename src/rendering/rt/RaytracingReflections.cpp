@@ -3,11 +3,6 @@
 #include <rendering/rt/RaytracingReflections.hpp>
 #include <rendering/rt/DDGI.hpp>
 #include <rendering/RenderGlobalState.hpp>
-#include <rendering/RenderCamera.hpp>
-#include <rendering/RenderEnvProbe.hpp>
-#include <rendering/RenderTexture.hpp>
-#include <rendering/RenderEnvGrid.hpp>
-#include <rendering/RenderWorld.hpp>
 #include <rendering/Deferred.hpp>
 #include <rendering/PlaceholderData.hpp>
 #include <rendering/SafeDeleter.hpp>

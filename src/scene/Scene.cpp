@@ -11,21 +11,15 @@
 #include <scene/ecs/systems/EntityMeshDirtyStateSystem.hpp>
 #include <scene/ecs/systems/WorldAABBUpdaterSystem.hpp>
 #include <scene/ecs/systems/LightVisibilityUpdaterSystem.hpp>
-#include <scene/ecs/systems/ShadowMapUpdaterSystem.hpp>
 #include <scene/ecs/systems/EnvGridUpdaterSystem.hpp>
-#include <scene/ecs/systems/ReflectionProbeUpdaterSystem.hpp>
 #include <scene/ecs/systems/AnimationSystem.hpp>
 #include <scene/ecs/systems/LightmapSystem.hpp>
 #include <scene/ecs/systems/SkySystem.hpp>
 #include <scene/ecs/systems/AudioSystem.hpp>
-#include <scene/ecs/systems/BLASUpdaterSystem.hpp>
 #include <scene/ecs/systems/PhysicsSystem.hpp>
 #include <scene/ecs/systems/ScriptSystem.hpp>
 
-#include <rendering/RenderWorld.hpp>
-#include <rendering/RenderCamera.hpp>
 #include <rendering/RenderEnvironment.hpp>
-#include <rendering/ReflectionProbeRenderer.hpp>
 #include <rendering/RenderGlobalState.hpp>
 
 #include <rendering/rt/RenderAccelerationStructure.hpp>
@@ -200,8 +194,6 @@ void Scene::Init()
     AddSystemIfApplicable<EntityMeshDirtyStateSystem>();
     AddSystemIfApplicable<EntityRenderProxySystem_Mesh>();
     AddSystemIfApplicable<VisibilityStateUpdaterSystem>();
-    AddSystemIfApplicable<ReflectionProbeUpdaterSystem>();
-    AddSystemIfApplicable<ShadowMapUpdaterSystem>();
     AddSystemIfApplicable<EnvGridUpdaterSystem>();
     AddSystemIfApplicable<LightmapSystem>();
     AddSystemIfApplicable<AnimationSystem>();

@@ -5,8 +5,6 @@
 #include <rendering/PlaceholderData.hpp>
 #include <rendering/Deferred.hpp>
 #include <rendering/GBuffer.hpp>
-#include <rendering/RenderCamera.hpp>
-#include <rendering/RenderTexture.hpp>
 #include <rendering/SafeDeleter.hpp>
 #include <rendering/RenderGlobalState.hpp>
 #include <rendering/RenderQueue.hpp>

@@ -7,9 +7,6 @@
 #include <scene/Light.hpp>
 
 #include <rendering/Texture.hpp>
-#include <rendering/RenderEnvProbe.hpp>
-#include <rendering/RenderCamera.hpp>
-#include <rendering/RenderWorld.hpp>
 #include <rendering/RenderShadowMap.hpp>
 #include <rendering/RenderGlobalState.hpp>
 
@@ -57,8 +54,7 @@ EnvProbe::EnvProbe(EnvProbeType envProbeType, const BoundingBox& aabb, const Vec
       m_envProbeType(envProbeType),
       m_cameraNear(0.05f),
       m_cameraFar(aabb.GetRadius()),
-      m_needsRenderCounter(0),
-      m_renderResource(nullptr)
+      m_needsRenderCounter(0)
 {
     m_entityInitInfo.canEverUpdate = true;
     m_entityInitInfo.receivesUpdate = !IsControlledByEnvGrid();
@@ -83,15 +79,6 @@ void EnvProbe::SetIsVisible(ObjId<Camera> cameraId, bool isVisible)
 
 EnvProbe::~EnvProbe()
 {
-    if (m_renderResource != nullptr)
-    {
-        // TEMP!
-        m_renderResource->DecRef();
-
-        FreeResource(m_renderResource);
-
-        m_renderResource = nullptr;
-    }
 }
 
 void EnvProbe::Init()
@@ -100,16 +87,7 @@ void EnvProbe::Init()
         {
             DetachChild(m_camera);
             m_camera.Reset();
-
-            if (m_renderResource != nullptr)
-            {
-                FreeResource(m_renderResource);
-
-                m_renderResource = nullptr;
-            }
         }));
-
-    m_renderResource = AllocateResource<RenderEnvProbe>(this);
 
     if (!IsControlledByEnvGrid())
     {
@@ -146,23 +124,6 @@ void EnvProbe::Init()
             Assert(InitObject(m_prefilteredEnvMap));
         }
     }
-
-    EnvProbeShaderData bufferData {};
-    bufferData.aabbMin = Vec4f(m_aabb.min, 1.0f);
-    bufferData.aabbMax = Vec4f(m_aabb.max, 1.0f);
-    bufferData.worldPosition = Vec4f(GetOrigin(), 1.0f);
-    bufferData.cameraNear = m_cameraNear;
-    bufferData.cameraFar = m_cameraFar;
-    bufferData.dimensions = Vec2u { m_dimensions.x, m_dimensions.y };
-    bufferData.visibilityBits = m_visibilityBits.ToUInt64();
-    bufferData.flags = (IsReflectionProbe() ? EnvProbeFlags::PARALLAX_CORRECTED : EnvProbeFlags::NONE)
-        | (IsShadowProbe() ? EnvProbeFlags::SHADOW : EnvProbeFlags::NONE)
-        | EnvProbeFlags::DIRTY;
-
-    m_renderResource->SetBufferData(bufferData);
-
-    // TEMP! Need to keep it alive since for right now we are reading renderresource's BufferData - will change w/ new proxy binding system!
-    m_renderResource->IncRef();
 
     SetReady(true);
 }
@@ -252,6 +213,18 @@ void EnvProbe::CreateView()
         .loadOp = LoadOperation::CLEAR,
         .storeOp = StoreOperation::STORE });
 
+    ShaderDefinition shaderDefinition;
+
+    if (IsReflectionProbe())
+    {
+        shaderDefinition = ShaderDefinition(NAME("RenderToCubemap"),
+            ShaderProperties(staticMeshVertexAttributes, { NAME("ENV_PROBE"), NAME("WRITE_NORMALS"), NAME("WRITE_MOMENTS") }));
+    }
+    else if (IsSkyProbe())
+    {
+        shaderDefinition = ShaderDefinition(NAME("RenderSky"), ShaderProperties(staticMeshVertexAttributes));
+    }
+
     ViewDesc viewDesc {
         .flags = (OnlyCollectStaticEntities() ? ViewFlags::COLLECT_STATIC_ENTITIES : ViewFlags::COLLECT_ALL_ENTITIES)
             | ViewFlags::NO_FRUSTUM_CULLING
@@ -265,7 +238,7 @@ void EnvProbe::CreateView()
         .overrideAttributes = RenderableAttributeSet(
             MeshAttributes {},
             MaterialAttributes {
-                .shaderDefinition = m_renderResource->GetShader()->GetCompiledShader()->GetDefinition(),
+                .shaderDefinition = shaderDefinition,
                 .blendFunction = BlendFunction::AlphaBlending(),
                 .cullFaces = FCM_NONE })
     };
@@ -388,18 +361,6 @@ void EnvProbe::UpdateRenderProxy(IRenderProxy* proxy)
 
     Memory::MemCpy(bufferData.faceViewMatrices, viewMatrices.Data(), sizeof(EnvProbeShaderData::faceViewMatrices));
     // Memory::MemCpy(bufferData.sh.values, m_sphericalHarmonics.values, sizeof(EnvProbeSphericalHarmonics::values));
-
-    // /// temp shit
-    // if (IsShadowProbe())
-    // {
-    //     // Assert(m_shadowMap);
-
-    //     // bufferData->textureIndex = m_shadowMap->GetAtlasElement().pointLightIndex;
-    // }
-    // else
-    // {
-    //     bufferData.textureIndex = m_renderResource->GetTextureSlot();
-    // }
 
     bufferData.positionInGrid = m_positionInGrid;
 }

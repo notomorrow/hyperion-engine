@@ -15,7 +15,6 @@
 #include <rendering/vulkan/rt/VulkanRaytracingPipeline.hpp>
 #include <rendering/vulkan/rt/VulkanAccelerationStructure.hpp>
 
-#include <rendering/RenderTexture.hpp>
 #include <rendering/RenderableAttributes.hpp>
 
 #include <core/containers/SparsePagedArray.hpp>

@@ -1026,14 +1026,18 @@ UniqueID FBOMWriter::AddStaticData(FBOMLoadContext& context, const FBOMData& dat
     if (data.IsObject())
     {
         FBOMObject object;
-        HYP_CORE_ASSERT(data.ReadObject(context, object).value == FBOMResult::FBOM_OK, "Invalid object, cannot write to stream");
+        
+        const bool result = data.ReadObject(context, object).value;
+        HYP_CORE_ASSERT(result == FBOMResult::FBOM_OK, "Invalid object, cannot write to stream");
 
         AddStaticData(context, object);
     }
     else if (data.IsArray())
     {
         FBOMArray array { FBOMUnset() };
-        HYP_CORE_ASSERT(data.ReadArray(context, array).value == FBOMResult::FBOM_OK, "Invalid array, cannot write to stream");
+        
+        const FBOMResult result = data.ReadArray(context, array).value;
+        HYP_CORE_ASSERT(result == FBOMResult::FBOM_OK, "Invalid array, cannot write to stream");
 
         AddStaticData(context, array);
     }

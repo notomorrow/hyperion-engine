@@ -2,9 +2,6 @@
 
 #include <rendering/subsystems/sky/SkydomeRenderer.hpp>
 #include <rendering/RenderEnvironment.hpp>
-#include <rendering/RenderEnvProbe.hpp>
-#include <rendering/RenderTexture.hpp>
-#include <rendering/RenderWorld.hpp>
 #include <rendering/Renderer.hpp>
 
 #include <rendering/RenderFrame.hpp>

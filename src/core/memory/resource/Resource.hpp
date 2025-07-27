@@ -58,9 +58,6 @@ public:
     virtual int IncRefNoInitialize() = 0;
     virtual int DecRef() = 0;
 
-    /*! \brief Waits for all tasks to be completed. */
-    virtual void WaitForTaskCompletion() const = 0;
-
     /*! \brief Waits for ref count to be 0 and all tasks to be completed.
      *  If any ResourceHandle objects are still alive, this will block until they are destroyed.
      *  \note Ensure the current thread does not hold any ResourceHandle objects when calling this function, or it will deadlock. */
@@ -101,9 +98,6 @@ public:
     virtual int IncRef() override final;
     virtual int DecRef() override final;
 
-    /*! \brief Wait for all tasks to be completed. */
-    virtual void WaitForTaskCompletion() const override final;
-
     /*! \brief Wait for ref count to be 0 and all tasks to be completed. Will also wait for any tasks that are currently executing to complete.
      *  If any ResourceHandle objects are still alive, this will block until they are destroyed.
      *  \note Ensure the current thread does not hold any ResourceHandle objects when calling this function, or it will deadlock. */
@@ -121,94 +115,17 @@ public:
 
     bool IsInitialized() const;
 
-    /*! \brief Performs an transactional operation on this Resource. Executes on the owner thread if the resources are initialized,
-     *  otherwise executes it inline on the calling thread. Initialization on the owner thread will not begin until at least the end of the given proc,
-     *  so it is safe to use this method on any thread.
-     *  \param proc The operation to perform.
-     *  \param forceOwnerThread If true, the operation will be performed on the owner thread regardless of initialization state. */
-    template <class Function>
-    void Execute(Function&& function, bool forceOwnerThread = false)
-    {
-        m_completionSemaphore.Produce(1);
-
-        if (!forceOwnerThread)
-        {
-            if (m_refCounter.IsInSignalState())
-            {
-                // Try to add read access - if it can't be acquired, we are in the process of initializing
-                // and thus we will remove our read access and enqueue the operation
-                if (!(m_initializationMask.Increment(2, MemoryOrder::ACQUIRE) & g_initializationMaskInitializedBit))
-                {
-                    {
-                        // Check again, as it might have been initialized in between the initial check and the increment
-                        HYP_MT_CHECK_RW(m_dataRaceDetector);
-
-                        // Execute inline if not initialized yet instead of pushing to owner thread
-                        function();
-                    }
-
-                    // Remove our read access
-                    m_initializationMask.Decrement(2, MemoryOrder::RELAXED);
-
-                    m_completionSemaphore.Release(1);
-
-                    return;
-                }
-
-                // Remove our read access
-                m_initializationMask.Decrement(2, MemoryOrder::RELAXED);
-            }
-        }
-
-        if (!CanExecuteInline())
-        {
-            EnqueueOp([this, f = std::forward<Function>(function)]() mutable
-                {
-                    {
-                        HYP_MT_CHECK_RW(m_dataRaceDetector);
-
-                        f();
-                    }
-
-                    m_completionSemaphore.Release(1);
-                });
-
-            return;
-        }
-
-        {
-            HYP_MT_CHECK_RW(m_dataRaceDetector);
-
-            function();
-        }
-
-        m_completionSemaphore.Release(1);
-    }
-
 protected:
     // Needed to increment ref count for resources that are initialized in LOADED state.
     // We can't call Initialize() because it is a virtual function and the object might not be fully constructed yet.
     virtual int IncRefNoInitialize() override final;
 
-    virtual ThreadBase* GetOwnerThread() const
-    {
-        return nullptr;
-    }
-
-    virtual bool CanExecuteInline() const;
-    virtual void FlushScheduledTasks() const;
-    virtual void EnqueueOp(Proc<void()>&& proc);
-
     virtual void Initialize() = 0;
     virtual void Destroy() = 0;
-    virtual void Update() = 0;
-
-    void SetNeedsUpdate();
 
 protected:
-    AtomicVar<int16> m_updateCounter;
-
     RefCounter m_refCounter;
+    mutable Mutex m_refMutex;
 
     CompletionSemaphore m_completionSemaphore;
 
@@ -217,7 +134,7 @@ protected:
     HYP_DECLARE_MT_CHECK(m_dataRaceDetector);
 
 private:
-    AtomicVar<uint64> m_initializationMask;
+    AtomicVar<bool> m_isInitialized;
     ThreadId m_initializationThreadId; // thread that initialized this resource
 };
 

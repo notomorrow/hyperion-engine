@@ -6,8 +6,6 @@
 #include <rendering/RenderEnvironment.hpp>
 #include <rendering/RenderableAttributes.hpp>
 #include <rendering/GBuffer.hpp>
-#include <rendering/RenderWorld.hpp>
-#include <rendering/RenderCamera.hpp>
 #include <rendering/Renderer.hpp>
 #include <rendering/GraphicsPipelineCache.hpp>
 

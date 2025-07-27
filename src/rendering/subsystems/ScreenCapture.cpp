@@ -1,8 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
 #include <rendering/subsystems/ScreenCapture.hpp>
-#include <rendering/RenderTexture.hpp>
-#include <rendering/RenderWorld.hpp>
 #include <rendering/RenderGlobalState.hpp>
 #include <rendering/Deferred.hpp>
 #include <rendering/FinalPass.hpp>

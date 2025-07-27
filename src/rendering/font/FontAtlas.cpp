@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
 #include <rendering/font/FontAtlas.hpp>
-#include <rendering/RenderTexture.hpp>
 #include <rendering/RenderGlobalState.hpp>
 #include <rendering/PlaceholderData.hpp>
 #include <rendering/SafeDeleter.hpp>
@@ -11,8 +10,6 @@
 #include <rendering/RenderBackend.hpp>
 #include <rendering/RenderCommand.hpp>
 #include <rendering/RenderHelpers.hpp>
-
-#include <streaming/StreamedTextureData.hpp>
 
 #include <rendering/Texture.hpp>
 

@@ -15,8 +15,6 @@
 
 #include <core/object/HypObject.hpp>
 
-#include <streaming/StreamedData.hpp>
-
 #include <rendering/RenderObject.hpp>
 #include <rendering/RenderImage.hpp>
 #include <rendering/RenderImageView.hpp>

@@ -114,7 +114,6 @@ protected:
     virtual int IncRefNoInitialize() override;
     virtual int DecRef() override;
 
-    virtual void WaitForTaskCompletion() const override final;
     virtual void WaitForFinalization() const override final;
 
 private:

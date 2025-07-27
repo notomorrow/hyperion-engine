@@ -1,13 +1,8 @@
 /* Copyright (c) 2024-2025 No Tomorrow Games. All rights reserved. */
 
 #include <rendering/RenderGlobalState.hpp>
-#include <rendering/RenderWorld.hpp>
-#include <rendering/RenderCamera.hpp>
 #include <rendering/RenderMaterial.hpp>
-#include <rendering/RenderEnvProbe.hpp>
 #include <rendering/RenderShadowMap.hpp>
-#include <rendering/RenderEnvGrid.hpp>
-#include <rendering/RenderTexture.hpp>
 #include <rendering/Renderer.hpp>
 #include <rendering/SafeDeleter.hpp>
 #include <rendering/Deferred.hpp>
@@ -16,17 +11,18 @@
 #include <rendering/PlaceholderData.hpp>
 #include <rendering/GraphicsPipelineCache.hpp>
 #include <rendering/Bindless.hpp>
+#include <rendering/Texture.hpp>
 #include <rendering/RenderStats.hpp>
-
-#include <rendering/rt/DDGI.hpp>
-
 #include <rendering/RenderObject.hpp>
 #include <rendering/RenderComputePipeline.hpp>
 #include <rendering/RenderShader.hpp>
 #include <rendering/RenderImage.hpp>
 #include <rendering/RenderBackend.hpp>
+#include <rendering/RenderEnvProbe.hpp>
+#include <rendering/RenderEnvGrid.hpp>
 
-#include <rendering/Texture.hpp>
+#include <rendering/rt/DDGI.hpp>
+
 #include <scene/View.hpp>
 #include <scene/EnvProbe.hpp>
 #include <scene/EnvGrid.hpp>

@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
 #include <rendering/RenderEnvironment.hpp>
-#include <rendering/DirectionalLightShadowRenderer.hpp>
 #include <rendering/Deferred.hpp>
 #include <rendering/GBuffer.hpp>
 #include <rendering/RenderFrame.hpp>

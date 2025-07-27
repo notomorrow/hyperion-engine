@@ -18,8 +18,6 @@
 #include <ui/UISubsystem.hpp>
 #include <ui/UIStage.hpp>
 
-#include <rendering/RenderCamera.hpp>
-
 #include <rendering/debug/DebugDrawer.hpp>
 
 #include <dotnet/DotNetSystem.hpp>

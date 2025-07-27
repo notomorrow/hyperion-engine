@@ -160,11 +160,6 @@ public:
         return m_depthTexture;
     }
 
-    HYP_FORCE_INLINE RenderEnvGrid& GetRenderResource() const
-    {
-        return *m_renderResource;
-    }
-
     HYP_METHOD()
     const BoundingBox& GetAABB() const
     {
@@ -231,8 +226,6 @@ private:
     Handle<Texture> m_depthTexture;
 
     HashCode m_cachedOctantHashCode;
-
-    RenderEnvGrid* m_renderResource;
 };
 
 } // namespace hyperion

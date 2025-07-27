@@ -48,7 +48,7 @@ static const Name g_shadowMapFilterPropertyNames[SMF_MAX] = {
     NAME("MODE_VSM")
 };
 
-static constexpr EnumFlags<ViewFlags> g_defaultShadowViewFlags = ViewFlags::NOT_MULTI_BUFFERED | ViewFlags::SKIP_LIGHTS
+static constexpr EnumFlags<ViewFlags> g_defaultShadowViewFlags = ViewFlags::SKIP_LIGHTS
     | ViewFlags::SKIP_LIGHTMAP_VOLUMES | ViewFlags::SKIP_ENV_PROBES | ViewFlags::SKIP_ENV_GRIDS;
 
 static constexpr Vec2u g_defaultShadowMapDimensions[LT_MAX] = {
@@ -150,7 +150,7 @@ void Light::CreateShadowViews()
     AssertDebug(shadowMapFilter < std::size(g_shadowMapFilterPropertyNames));
 
     // Per shadow view flags
-    Array<EnumFlags<ViewFlags>> shadowViewFlags = { { ViewFlags::COLLECT_ALL_ENTITIES } };
+    Array<EnumFlags<ViewFlags>> shadowViewFlags = { ViewFlags::COLLECT_ALL_ENTITIES };
 
     ShaderDefinition shaderDefinition;
 
@@ -192,7 +192,7 @@ void Light::CreateShadowViews()
     case LT_DIRECTIONAL:
     {
         // For directional lights, we have one for static objects and one for dynamic objects
-        shadowViewFlags = { { ViewFlags::COLLECT_STATIC_ENTITIES, ViewFlags::COLLECT_DYNAMIC_ENTITIES } };
+        shadowViewFlags = { ViewFlags::COLLECT_STATIC_ENTITIES, ViewFlags::COLLECT_DYNAMIC_ENTITIES };
 
         // depth, depth^2 texture (for variance shadow map)
         ViewOutputTargetAttachmentDesc& attachmentDesc = outputTargetDesc.attachments.EmplaceBack();

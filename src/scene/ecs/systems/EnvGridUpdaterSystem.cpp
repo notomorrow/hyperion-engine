@@ -14,8 +14,6 @@
 #include <rendering/RenderEnvironment.hpp>
 #include <rendering/RenderCollection.hpp>
 #include <rendering/RenderSubsystem.hpp>
-#include <rendering/RenderWorld.hpp>
-#include <rendering/RenderEnvGrid.hpp>
 
 #include <rendering/RenderShader.hpp>
 

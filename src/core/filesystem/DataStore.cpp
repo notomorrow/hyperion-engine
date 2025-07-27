@@ -63,7 +63,9 @@ int DataStoreBase::IncRef()
         {
             if (m_options.flags & DSF_WRITE)
             {
-                HYP_CORE_ASSERT(MakeDirectory(), "Failed to create directory for data store at path %s", GetDirectory().Data());
+                const bool result = MakeDirectory();
+                
+                HYP_CORE_ASSERT(result, "Failed to create directory for data store at path %s", GetDirectory().Data());
             }
         });
 }
@@ -101,14 +103,9 @@ int DataStoreBase::DecRef()
     return result;
 }
 
-void DataStoreBase::WaitForTaskCompletion() const
-{
-    m_shutdownSemaphore.Acquire();
-}
-
 void DataStoreBase::WaitForFinalization() const
 {
-    WaitForTaskCompletion();
+    m_shutdownSemaphore.Acquire();
     m_refCounter.Acquire();
 }
 

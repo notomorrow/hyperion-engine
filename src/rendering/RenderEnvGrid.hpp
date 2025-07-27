@@ -19,32 +19,6 @@ namespace hyperion {
 
 class EnvGrid;
 
-class RenderEnvGrid final : public RenderResourceBase
-{
-public:
-    RenderEnvGrid(EnvGrid* envGrid);
-    virtual ~RenderEnvGrid() override;
-
-    HYP_FORCE_INLINE EnvGrid* GetEnvGrid() const
-    {
-        return m_envGrid;
-    }
-
-    void SetProbeIndices(Array<uint32>&& indices);
-
-    void Render(FrameBase* frame, const RenderSetup& renderSetup);
-
-protected:
-    virtual void Initialize_Internal() override;
-    virtual void Destroy_Internal() override;
-    virtual void Update_Internal() override;
-
-    virtual GpuBufferHolderBase* GetGpuBufferHolder() const override;
-
-private:
-    EnvGrid* m_envGrid;
-};
-
 struct HYP_API EnvGridPassData : PassData
 {
     virtual ~EnvGridPassData() override;

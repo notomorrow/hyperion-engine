@@ -21,12 +21,8 @@
 #include <scene/ecs/components/VisibilityStateComponent.hpp>
 #include <scene/ecs/components/LightmapVolumeComponent.hpp>
 #include <scene/ecs/components/ShadowMapComponent.hpp>
-#include <scene/ecs/components/ReflectionProbeComponent.hpp>
 #include <scene/ecs/components/SkyComponent.hpp>
 
-#include <rendering/RenderCamera.hpp>
-#include <rendering/RenderEnvGrid.hpp>
-#include <rendering/RenderEnvProbe.hpp>
 #include <rendering/RenderGlobalState.hpp>
 #include <rendering/GBuffer.hpp>
 #include <rendering/subsystems/sky/SkydomeRenderer.hpp>
@@ -265,17 +261,18 @@ void View::BeginAsyncCollection(TaskBatch& batch)
     Threads::AssertOnThread(g_gameThread);
     AssertReady();
 
-    Assert(m_collectionTaskBatch == nullptr, "m_collectionTaskBatch is not nullptr, already collecting?");
+    AssertDebug(m_collectionTaskBatch == nullptr, "m_collectionTaskBatch is not nullptr, already collecting?");
     m_collectionTaskBatch = &batch;
 
     RenderProxyList& rpl = RenderApi_GetProducerProxyList(this);
-    rpl.BeginWrite();
-
-    rpl.viewport = m_viewport;
-    rpl.priority = m_priority;
 
     batch.AddTask([this, &rpl]()
         {
+            rpl.BeginWrite();
+
+            rpl.viewport = m_viewport;
+            rpl.priority = m_priority;
+
             CollectCameras(rpl);
             CollectLights(rpl);
             CollectLightmapVolumes(rpl);

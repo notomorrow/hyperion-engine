@@ -3,7 +3,6 @@
 #include <rendering/RenderEnvGrid.hpp>
 #include <rendering/RenderEnvProbe.hpp>
 #include <rendering/RenderMaterial.hpp>
-#include <rendering/RenderTexture.hpp>
 #include <rendering/RenderShadowMap.hpp>
 #include <rendering/PlaceholderData.hpp>
 #include <rendering/Bindless.hpp>

@@ -68,10 +68,6 @@ protected:
     virtual void Initialize() override final;
     virtual void Destroy() override final;
 
-    virtual void Update() override
-    {
-    }
-
     Result Save_Internal(const FilePath& path);
 
     virtual void Unload_Internal() = 0;

@@ -12,7 +12,6 @@
 #include <scene/ecs/components/MeshComponent.hpp>
 
 #include <rendering/UIRenderer.hpp>
-#include <rendering/RenderCamera.hpp>
 #include <rendering/RenderEnvironment.hpp>
 
 namespace hyperion {

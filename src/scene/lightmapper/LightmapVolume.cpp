@@ -3,7 +3,6 @@
 #include <scene/lightmapper/LightmapVolume.hpp>
 #include <rendering/Texture.hpp>
 
-#include <rendering/RenderTexture.hpp>
 #include <rendering/RenderProxy.hpp>
 
 #include <rendering/RenderQueue.hpp>

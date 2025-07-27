@@ -5,7 +5,6 @@
 
 #include <rendering/RenderMaterial.hpp>
 #include <rendering/RenderProxy.hpp>
-#include <rendering/RenderTexture.hpp>
 
 #include <rendering/RenderBackend.hpp>
 #include <rendering/RenderConfig.hpp>

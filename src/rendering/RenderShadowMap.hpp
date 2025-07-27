@@ -19,7 +19,6 @@
 namespace hyperion {
 
 class FullScreenPass;
-class RenderWorld;
 class RenderShadowMap;
 
 HYP_ENUM()

@@ -1,8 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
 #include <rendering/RenderEnvProbe.hpp>
-#include <rendering/RenderCamera.hpp>
-#include <rendering/RenderTexture.hpp>
 #include <rendering/RenderShadowMap.hpp>
 #include <rendering/Deferred.hpp>
 #include <rendering/PlaceholderData.hpp>
@@ -53,295 +51,6 @@ static FixedArray<Matrix4, 6> CreateCubemapMatrices(const BoundingBox& aabb, con
 
     return viewMatrices;
 }
-
-#pragma region RenderEnvProbe
-
-RenderEnvProbe::RenderEnvProbe(EnvProbe* envProbe)
-    : m_envProbe(envProbe),
-      m_bufferData {},
-      m_textureSlot(~0u)
-{
-    if (!m_envProbe->IsControlledByEnvGrid())
-    {
-        CreateShader();
-    }
-}
-
-RenderEnvProbe::~RenderEnvProbe()
-{
-    m_shadowMap.Reset();
-
-    SafeRelease(std::move(m_shader));
-}
-
-void RenderEnvProbe::SetPositionInGrid(const Vec4i& positionInGrid)
-{
-    HYP_SCOPE;
-
-    Execute([this, positionInGrid]()
-        {
-            m_positionInGrid = positionInGrid;
-
-            SetNeedsUpdate();
-        });
-}
-
-void RenderEnvProbe::SetTextureSlot(uint32 textureSlot)
-{
-    HYP_SCOPE;
-
-    Execute([this, textureSlot]()
-        {
-            HYP_LOG(Rendering, Debug, "Setting texture slot for EnvProbe {} (type: {}) to {}", m_envProbe->Id(), m_envProbe->GetEnvProbeType(), textureSlot);
-
-            if (m_textureSlot == textureSlot)
-            {
-                return;
-            }
-
-            m_textureSlot = textureSlot;
-
-            SetNeedsUpdate();
-        });
-}
-
-void RenderEnvProbe::SetBufferData(const EnvProbeShaderData& bufferData)
-{
-    HYP_SCOPE;
-
-    Execute([this, bufferData]()
-        {
-            // TEMP hack: save previous textureIndex and positionInGrid
-            const Vec4i positionInGrid = m_bufferData.positionInGrid;
-
-            m_bufferData = bufferData;
-
-            // restore previous textureIndex and positionInGrid
-            m_bufferData.textureIndex = m_textureSlot;
-            m_bufferData.positionInGrid = positionInGrid;
-
-            SetNeedsUpdate();
-        });
-}
-
-void RenderEnvProbe::SetShadowMap(TResourceHandle<RenderShadowMap>&& shadowMap)
-{
-    HYP_SCOPE;
-
-    Execute([this, shadowMap = std::move(shadowMap)]()
-        {
-            if (m_shadowMap == shadowMap)
-            {
-                return;
-            }
-
-            m_shadowMap = std::move(shadowMap);
-        });
-}
-
-void RenderEnvProbe::SetSphericalHarmonics(const EnvProbeSphericalHarmonics& sphericalHarmonics)
-{
-    HYP_SCOPE;
-
-    Execute([this, sphericalHarmonics]()
-        {
-            m_sphericalHarmonics = sphericalHarmonics;
-
-            SetNeedsUpdate();
-        });
-}
-
-void RenderEnvProbe::CreateShader()
-{
-    if (m_envProbe->IsControlledByEnvGrid())
-    {
-        return;
-    }
-
-    if (m_envProbe->IsReflectionProbe())
-    {
-        m_shader = g_shaderManager->GetOrCreate(NAME("RenderToCubemap"), ShaderProperties(staticMeshVertexAttributes, { NAME("ENV_PROBE"), NAME("WRITE_NORMALS"), NAME("WRITE_MOMENTS") }));
-    }
-    else if (m_envProbe->IsSkyProbe())
-    {
-        m_shader = g_shaderManager->GetOrCreate(NAME("RenderSky"), ShaderProperties(staticMeshVertexAttributes));
-    }
-    else if (m_envProbe->IsShadowProbe())
-    {
-        m_shader = g_shaderManager->GetOrCreate(NAME("RenderToCubemap"), ShaderProperties(staticMeshVertexAttributes, { NAME("MODE_SHADOWS") }));
-    }
-    else
-    {
-        HYP_UNREACHABLE();
-    }
-
-    Assert(m_shader.IsValid());
-}
-
-void RenderEnvProbe::Initialize_Internal()
-{
-    HYP_SCOPE;
-
-    UpdateBufferData();
-}
-
-void RenderEnvProbe::Destroy_Internal()
-{
-    HYP_SCOPE;
-}
-
-void RenderEnvProbe::Update_Internal()
-{
-    HYP_SCOPE;
-
-    UpdateBufferData();
-}
-
-GpuBufferHolderBase* RenderEnvProbe::GetGpuBufferHolder() const
-{
-    return g_renderGlobalState->gpuBuffers[GRB_ENV_PROBES];
-}
-
-void RenderEnvProbe::UpdateBufferData()
-{
-    HYP_SCOPE;
-
-    /*const BoundingBox aabb = BoundingBox(m_bufferData.aabbMin.GetXYZ(), m_bufferData.aabbMax.GetXYZ());
-    const Vec3f worldPosition = m_bufferData.worldPosition.GetXYZ();
-
-    const FixedArray<Matrix4, 6> viewMatrices = CreateCubemapMatrices(aabb, worldPosition);
-
-    EnvProbeShaderData* bufferData = static_cast<EnvProbeShaderData*>(m_bufferAddress);
-
-    Memory::MemCpy(bufferData, &m_bufferData, sizeof(EnvProbeShaderData));
-    Memory::MemCpy(bufferData->faceViewMatrices, viewMatrices.Data(), sizeof(EnvProbeShaderData::faceViewMatrices));
-    Memory::MemCpy(bufferData->sh.values, m_sphericalHarmonics.values, sizeof(EnvProbeSphericalHarmonics::values));
-
-    if (m_envProbe->IsShadowProbe())
-    {
-        Assert(m_shadowMap);
-
-        bufferData->textureIndex = m_shadowMap->GetAtlasElement().pointLightIndex;
-    }
-    else
-    {
-        bufferData->textureIndex = m_textureSlot;
-    }
-
-    bufferData->positionInGrid = m_positionInGrid;
-
-    GetGpuBufferHolder()->MarkDirty(m_bufferIndex);*/
-}
-
-/// TEMPORARY: will be replaced by EnvProbeRenderer classes.
-void RenderEnvProbe::Render(FrameBase* frame, const RenderSetup& renderSetup)
-{
-#if 0
-    HYP_SCOPE;
-    Threads::AssertOnThread(g_renderThread);
-
-    if (m_envProbe->IsControlledByEnvGrid())
-    {
-        HYP_LOG(EnvProbe, Warning, "EnvProbe {} is controlled by an EnvGrid, but Render() is being called!", m_envProbe->Id());
-
-        return;
-    }
-
-    AssertDebug(m_bufferIndex != ~0u);
-
-    RenderProxyList& rpl = RenderApi_GetConsumerProxyList(m_renderView->GetView());
-
-    if (!m_envProbe->NeedsRender())
-    {
-        return;
-    }
-
-    HYP_LOG(EnvProbe, Debug, "Rendering EnvProbe {} (type: {})",
-        m_envProbe->Id(), m_envProbe->GetEnvProbeType());
-
-    const uint32 frameIndex = frame->GetFrameIndex();
-
-    RenderSetup newRenderSetup = renderSetup;
-    newRenderSetup.view = m_renderView.Get();
-
-    {
-        newRenderSetup.envProbe = m_envProbe;
-
-        renderCollector.ExecuteDrawCalls(frame, newRenderSetup, ((1u << RB_OPAQUE) | (1u << RB_TRANSLUCENT)));
-
-        newRenderSetup.envProbe = nullptr;
-    }
-
-    const ViewOutputTarget& outputTarget = m_envProbe->GetView()->GetOutputTarget();
-
-    const FramebufferRef& framebuffer = outputTarget.GetFramebuffer();
-    AssertDebug(framebuffer.IsValid());
-
-    const ImageRef& framebufferImage = framebuffer->GetAttachment(0)->GetImage();
-
-    if (m_envProbe->IsSkyProbe() || m_envProbe->IsReflectionProbe())
-    {
-        // HYP_LOG(EnvProbe, Debug, "Render sky/reflection probe {} (type: {})",
-        //     m_envProbe->Id(), m_envProbe->GetEnvProbeType());
-
-        return; // now handled by ReflectionProbeRenderer
-    }
-    else if (m_envProbe->IsShadowProbe())
-    {
-        Assert(m_shadowMap);
-        Assert(m_shadowMap->GetAtlasElement().pointLightIndex != ~0u);
-
-        HYP_LOG(EnvProbe, Debug, "Render shadow probe {} (pointlight index: {})",
-            m_envProbe->Id(), m_shadowMap->GetAtlasElement().pointLightIndex);
-
-        const ImageViewRef& shadowMapImageView = m_shadowMap->GetImageView();
-        Assert(shadowMapImageView.IsValid());
-
-        const ImageRef& shadowMapImage = shadowMapImageView->GetImage();
-        Assert(shadowMapImage.IsValid());
-
-        const ShadowMapAtlasElement& atlasElement = m_shadowMap->GetAtlasElement();
-
-        // Copy combined shadow map to the final shadow map
-        frame->renderQueue << InsertBarrier(framebufferImage, RS_COPY_SRC);
-        frame->renderQueue << InsertBarrier(
-            shadowMapImage,
-            RS_COPY_DST,
-            ImageSubResource { .baseArrayLayer = atlasElement.pointLightIndex * 6, .numLayers = 6 });
-
-        // copy the image
-        for (uint32 i = 0; i < 6; i++)
-        {
-            frame->renderQueue << Blit(
-                framebufferImage,
-                shadowMapImage,
-                Rect<uint32> { 0, 0, framebufferImage->GetExtent().x, framebufferImage->GetExtent().y },
-                Rect<uint32> {
-                    atlasElement.offsetCoords.x,
-                    atlasElement.offsetCoords.y,
-                    atlasElement.offsetCoords.x + atlasElement.dimensions.x,
-                    atlasElement.offsetCoords.y + atlasElement.dimensions.y },
-                0,                                      /* srcMip */
-                0,                                      /* dstMip */
-                i,                                      /* srcFace */
-                atlasElement.pointLightIndex * 6 + i /* dstFace */
-            );
-        }
-
-        // put the images back into a state for reading
-        frame->renderQueue << InsertBarrier(framebufferImage, RS_SHADER_RESOURCE);
-        frame->renderQueue << InsertBarrier(
-            shadowMapImage,
-            RS_SHADER_RESOURCE,
-            ImageSubResource { .baseArrayLayer = atlasElement.pointLightIndex * 6, .numLayers = 6 });
-    }
-
-    // Temp; refactor
-    m_envProbe->SetNeedsRender(false);
-#endif
-}
-
-#pragma endregion RenderEnvProbe
 
 #pragma region EnvProbeRenderer
 
@@ -541,6 +250,9 @@ void ReflectionProbeRenderer::ComputePrefilteredEnvMap(FrameBase* frame, const R
     View* view = renderSetup.view;
     AssertDebug(view != nullptr);
 
+    RenderProxyEnvProbe* envProbeProxy = static_cast<RenderProxyEnvProbe*>(RenderApi_GetRenderProxy(envProbe->Id()));
+    AssertDebug(envProbeProxy != nullptr);
+
     RenderProxyList& rpl = RenderApi_GetConsumerProxyList(view);
     rpl.BeginRead();
     HYP_DEFER({ rpl.EndRead(); });
@@ -572,7 +284,7 @@ void ReflectionProbeRenderer::ComputePrefilteredEnvMap(FrameBase* frame, const R
 
     ConvolveProbeUniforms uniforms;
     uniforms.outImageDimensions = prefilteredEnvMap->GetExtent().GetXY();
-    uniforms.worldPosition = envProbe->GetRenderResource().GetBufferData().worldPosition;
+    uniforms.worldPosition = envProbeProxy->bufferData.worldPosition;
 
     const uint32 maxBoundLights = ArraySize(uniforms.lightIndices);
     uint32 numBoundLights = 0;
@@ -686,6 +398,9 @@ void ReflectionProbeRenderer::ComputeSH(FrameBase* frame, const RenderSetup& ren
 
     View* view = renderSetup.view;
     AssertDebug(view != nullptr);
+
+    RenderProxyEnvProbe* envProbeProxy = static_cast<RenderProxyEnvProbe*>(RenderApi_GetRenderProxy(envProbe->Id()));
+    Assert(envProbeProxy != nullptr);
 
     RenderProxyList& rpl = RenderApi_GetConsumerProxyList(view);
     rpl.BeginRead();
@@ -822,7 +537,7 @@ void ReflectionProbeRenderer::ComputeSH(FrameBase* frame, const RenderSetup& ren
     pushConstants.envProbeIndex = RenderApi_RetrieveResourceBinding(envProbe);
     pushConstants.probeGridPosition = { 0, 0, 0, 0 };
     pushConstants.cubemapDimensions = Vec4u { cubemapDimensions, 0, 0 };
-    pushConstants.worldPosition = envProbe->GetRenderResource().GetBufferData().worldPosition;
+    pushConstants.worldPosition = envProbeProxy->bufferData.worldPosition;
 
     AssertDebug(pushConstants.envProbeIndex != ~0u);
 
@@ -930,26 +645,24 @@ void ReflectionProbeRenderer::ComputeSH(FrameBase* frame, const RenderSetup& ren
     asyncComputeCommandList << InsertBarrier(g_renderGlobalState->gpuBuffers[GRB_ENV_PROBES]->GetBuffer(frame->GetFrameIndex()), RS_UNORDERED_ACCESS, SMT_COMPUTE);
 
     DelegateHandler* delegateHandle = new DelegateHandler();
-    *delegateHandle = frame->OnFrameEnd.Bind([renderEnvProbe = TResourceHandle<RenderEnvProbe>(envProbe->GetRenderResource()), pipelines = std::move(pipelines), descriptorTables = std::move(computeShDescriptorTables), delegateHandle](FrameBase* frame) mutable
+    *delegateHandle = frame->OnFrameEnd.Bind([envProbe = envProbe->HandleFromThis(), pipelines = std::move(pipelines), descriptorTables = std::move(computeShDescriptorTables), delegateHandle](FrameBase* frame) mutable
         {
             HYP_NAMED_SCOPE("EnvProbe::ComputeSH - Buffer readback");
 
-            const uint32 boundIndex = RenderApi_RetrieveResourceBinding(renderEnvProbe->GetEnvProbe());
+            const uint32 boundIndex = RenderApi_RetrieveResourceBinding(envProbe->Id());
             Assert(boundIndex != ~0u);
 
             EnvProbeShaderData readbackBuffer;
 
             g_renderGlobalState->gpuBuffers[GRB_ENV_PROBES]->ReadbackElement(frame->GetFrameIndex(), boundIndex, &readbackBuffer);
 
-            Memory::MemCpy(renderEnvProbe->m_sphericalHarmonics.values, readbackBuffer.sh.values, sizeof(EnvProbeSphericalHarmonics::values));
+            // Memory::MemCpy(renderEnvProbe->m_sphericalHarmonics.values, readbackBuffer.sh.values, sizeof(EnvProbeSphericalHarmonics::values));
 
-            HYP_LOG(EnvProbe, Debug, "EnvProbe {} (type: {}) SH computed", renderEnvProbe->GetEnvProbe()->Id(), renderEnvProbe->GetEnvProbe()->GetEnvProbeType());
-            for (uint32 i = 0; i < 9; i++)
-            {
-                HYP_LOG(EnvProbe, Debug, "SH[{}]: {}", i, renderEnvProbe->m_sphericalHarmonics.values[i]);
-            }
-
-            renderEnvProbe->SetNeedsUpdate();
+            // HYP_LOG(EnvProbe, Debug, "EnvProbe {} (type: {}) SH computed", renderEnvProbe->GetEnvProbe()->Id(), renderEnvProbe->GetEnvProbe()->GetEnvProbeType());
+            // for (uint32 i = 0; i < 9; i++)
+            // {
+            //     HYP_LOG(EnvProbe, Debug, "SH[{}]: {}", i, renderEnvProbe->m_sphericalHarmonics.values[i]);
+            // }
 
             for (auto& it : pipelines)
             {

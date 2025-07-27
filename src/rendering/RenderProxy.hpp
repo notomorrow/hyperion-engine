@@ -50,6 +50,16 @@ private:
     NullProxy() = default;
 };
 
+struct WorldShaderData
+{
+    Vec4f fogParams;
+
+    float gameTime;
+    uint32 frameCounter;
+    uint32 _pad0;
+    uint32 _pad1;
+};
+
 struct EntityShaderData
 {
     Matrix4 modelMatrix;

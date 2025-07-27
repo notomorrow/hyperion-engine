@@ -2,11 +2,7 @@
 
 #include <rendering/rt/DDGI.hpp>
 #include <rendering/RenderGlobalState.hpp>
-#include <rendering/RenderCamera.hpp>
-#include <rendering/RenderEnvProbe.hpp>
-#include <rendering/RenderEnvGrid.hpp>
 #include <rendering/PlaceholderData.hpp>
-#include <rendering/RenderWorld.hpp>
 #include <rendering/Deferred.hpp>
 #include <rendering/RenderFrame.hpp>
 #include <rendering/RenderGpuBuffer.hpp>
@@ -404,7 +400,7 @@ void DDGI::ApplyTLASUpdates(RTUpdateStateFlags flags)
 void DDGI::UpdateUniforms(FrameBase* frame)
 {
     // FIXME: Lights are now stored per-view.
-    // We don't have a View for DDGI since it is for the entire RenderWorld it is indirectly attached to.
+    // We don't have a View for DDGI since it is for the entire World it is indirectly attached to.
     // We'll need to find a way to get the lights for the current view.
     // Ideas:
     // a) create a View for the DDGI and use that to get the lights. It will need to collect the lights on the Game thread so we'll need to add some kind of System to do that.

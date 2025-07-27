@@ -75,11 +75,6 @@ public:
     EnvProbe& operator=(const EnvProbe& other) = delete;
     ~EnvProbe();
 
-    HYP_FORCE_INLINE RenderEnvProbe& GetRenderResource() const
-    {
-        return *m_renderResource;
-    }
-
     HYP_FORCE_INLINE const Handle<View>& GetView() const
     {
         return m_view;
@@ -266,8 +261,6 @@ protected:
     HashCode m_octantHashCode;
 
     Handle<Texture> m_prefilteredEnvMap;
-
-    RenderEnvProbe* m_renderResource;
 };
 
 HYP_CLASS()

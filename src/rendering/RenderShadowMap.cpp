@@ -1,14 +1,13 @@
 /* Copyright (c) 2024-2025 No Tomorrow Games. All rights reserved. */
 
 #include <rendering/RenderShadowMap.hpp>
-#include <rendering/RenderWorld.hpp>
 #include <rendering/Buffers.hpp>
 #include <rendering/RenderGlobalState.hpp>
 #include <rendering/PlaceholderData.hpp>
 #include <rendering/RenderBackend.hpp>
-#include <rendering/RenderTexture.hpp>
 #include <rendering/RenderDescriptorSet.hpp>
 #include <rendering/FullScreenPass.hpp>
+#include <rendering/RenderFrame.hpp>
 #include <rendering/Texture.hpp>
 
 #include <scene/Light.hpp>
@@ -554,6 +553,10 @@ void ShadowRendererBase::RenderFrame(FrameBase* frame, const RenderSetup& render
         rpl.BeginRead();
 
         renderProxyLists.PushBack(&rpl);
+
+        HYP_LOG_TEMP("ShadowView: {} : Num entities : {}",
+            shadowView->Id(),
+            rpl.GetMeshEntities().NumCurrent());
 
         if (!rpl.GetMeshEntities().GetDiff().NeedsUpdate() && !rpl.GetSkeletons().GetDiff().NeedsUpdate())
         {

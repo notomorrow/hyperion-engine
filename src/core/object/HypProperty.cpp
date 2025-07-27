@@ -149,7 +149,10 @@ HypProperty HypProperty::MakeHypProperty(const HypMethod* getter, const HypMetho
         result.m_getter.serializeProc = [getter](const HypData& target, EnumFlags<FBOMDataFlags> flags) -> FBOMData
         {
             FBOMData data;
-            HYP_CORE_ASSERT(getter->Serialize(Span<HypData> { const_cast<HypData*>(&target), 1 }, data, flags));
+            
+            const bool result = getter->Serialize(Span<HypData> { const_cast<HypData*>(&target), 1 }, data, flags);
+            
+            HYP_CORE_ASSERT(result);
 
             return data;
         };
@@ -167,7 +170,9 @@ HypProperty HypProperty::MakeHypProperty(const HypMethod* getter, const HypMetho
         };
         result.m_setter.deserializeProc = [setter](FBOMLoadContext& context, HypData& target, const FBOMData& value) -> void
         {
-            HYP_CORE_ASSERT(setter->Deserialize(context, target, value));
+            const bool result = setter->Deserialize(context, target, value);
+            
+            HYP_CORE_ASSERT(result);
         };
         result.m_originalMember = setter;
     }

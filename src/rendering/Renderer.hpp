@@ -20,9 +20,6 @@
 
 namespace hyperion {
 
-class RenderWorld;
-class RenderEnvGrid;
-class RenderLight;
 class Light;
 class EnvProbe;
 class EnvGrid;
@@ -156,7 +153,7 @@ public:
     }
 };
 
-/*! \brief Special null RenderSetup that can be used for simple rendering tasks that don't make sense to use a RenderWorld, such as rendering texture mipmaps.
+/*! \brief Special null RenderSetup that can be used for simple rendering tasks that don't make sense to use a World, such as rendering texture mipmaps.
  *  \internal Use sparingly as most rendering tasks should have a valid World and using this will cause the IsValid() check to return false */
 extern const RenderSetup& NullRenderSetup();
 

@@ -9,9 +9,7 @@
 #include <rendering/GBuffer.hpp>
 #include <rendering/Deferred.hpp>
 #include <rendering/FinalPass.hpp>
-#include <rendering/RenderWorld.hpp>
 #include <rendering/RenderMaterial.hpp>
-#include <rendering/RenderTexture.hpp>
 #include <rendering/SafeDeleter.hpp>
 #include <rendering/ShaderManager.hpp>
 #include <rendering/GraphicsPipelineCache.hpp>

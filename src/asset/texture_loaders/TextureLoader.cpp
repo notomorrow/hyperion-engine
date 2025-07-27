@@ -5,8 +5,6 @@
 #include <asset/AssetRegistry.hpp>
 #include <asset/TextureAsset.hpp>
 
-#include <streaming/StreamedTextureData.hpp>
-
 #include <core/utilities/StringUtil.hpp>
 
 #include <rendering/Texture.hpp>

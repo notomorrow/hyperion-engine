@@ -53,7 +53,6 @@ public:
 protected:
     virtual void Initialize() override final;
     virtual void Destroy() override final;
-    virtual void Update() override final;
 
     HypObjectPtr m_ptr;
     dotnet::Object* m_objectPtr;

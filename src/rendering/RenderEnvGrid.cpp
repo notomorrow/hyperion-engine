@@ -1,9 +1,6 @@
 /* Copyright (c) 2024-2025 No Tomorrow Games. All rights reserved. */
 
 #include <rendering/RenderEnvGrid.hpp>
-#include <rendering/RenderEnvProbe.hpp>
-#include <rendering/RenderCamera.hpp>
-#include <rendering/RenderTexture.hpp>
 #include <rendering/RenderShadowMap.hpp>
 #include <rendering/Deferred.hpp>
 #include <rendering/PlaceholderData.hpp>
@@ -170,54 +167,6 @@ struct LightFieldUniforms
 };
 
 #pragma endregion Uniform buffer structs
-
-#pragma region RenderEnvGrid
-
-RenderEnvGrid::RenderEnvGrid(EnvGrid* envGrid)
-    : m_envGrid(envGrid)
-{
-}
-
-RenderEnvGrid::~RenderEnvGrid()
-{
-}
-
-void RenderEnvGrid::SetProbeIndices(Array<uint32>&& indices)
-{
-    HYP_SCOPE;
-
-    Execute([this, indices = std::move(indices)]()
-        {
-            for (uint32 i = 0; i < uint32(indices.Size()); i++)
-            {
-                m_envGrid->GetEnvProbeCollection().SetIndexOnRenderThread(i, indices[i]);
-            }
-
-            SetNeedsUpdate();
-        });
-}
-
-void RenderEnvGrid::Initialize_Internal()
-{
-    HYP_SCOPE;
-}
-
-void RenderEnvGrid::Destroy_Internal()
-{
-    HYP_SCOPE;
-}
-
-void RenderEnvGrid::Update_Internal()
-{
-    HYP_SCOPE;
-}
-
-GpuBufferHolderBase* RenderEnvGrid::GetGpuBufferHolder() const
-{
-    return g_renderGlobalState->gpuBuffers[GRB_ENV_GRIDS];
-}
-
-#pragma endregion RenderEnvGrid
 
 #pragma region EnvGridPassData
 
@@ -611,8 +560,11 @@ void EnvGridRenderer::RenderFrame(FrameBase* frame, const RenderSetup& renderSet
                 continue;
             }
 
+            RenderProxyEnvProbe* envProbeProxy = static_cast<RenderProxyEnvProbe*>(RenderApi_GetRenderProxy(probe->Id()));
+            Assert(envProbeProxy != nullptr);
+
             g_engine->GetDebugDrawer()->AmbientProbe(
-                probe->GetRenderResource().GetBufferData().worldPosition.GetXYZ(),
+                envProbeProxy->bufferData.worldPosition.GetXYZ(),
                 0.25f,
                 *probe);
         }
@@ -662,7 +614,10 @@ void EnvGridRenderer::RenderFrame(FrameBase* frame, const RenderSetup& renderSet
                 const Handle<EnvProbe>& probe = envProbeCollection.GetEnvProbeDirect(indirectIndex);
                 Assert(probe.IsValid());
 
-                const Vec3f worldPosition = probe->GetRenderResource().GetBufferData().worldPosition.GetXYZ();
+                RenderProxyEnvProbe* envProbeProxy = static_cast<RenderProxyEnvProbe*>(RenderApi_GetRenderProxy(probe->Id()));
+                Assert(envProbeProxy != nullptr);
+
+                const Vec3f worldPosition = envProbeProxy->bufferData.worldPosition.GetXYZ();
 
                 const EnvProbeGridIndex bindingIndex = GetProbeBindingIndex(worldPosition, gridAabb, options.density);
 
@@ -760,6 +715,9 @@ void EnvGridRenderer::ComputeEnvProbeIrradiance_SphericalHarmonics(FrameBase* fr
     AssertDebug(envGrid != nullptr);
     AssertDebug(envGrid->GetEnvGridType() == ENV_GRID_TYPE_SH);
 
+    RenderProxyEnvProbe* envProbeProxy = static_cast<RenderProxyEnvProbe*>(RenderApi_GetRenderProxy(probe.Id()));
+    AssertDebug(envProbeProxy != nullptr);
+
     View* view = renderSetup.view;
     AssertDebug(view != nullptr);
 
@@ -803,8 +761,7 @@ void EnvGridRenderer::ComputeEnvProbeIrradiance_SphericalHarmonics(FrameBase* fr
     };
 
     pushConstants.cubemapDimensions = Vec4u { cubemapDimensions, 0, 0 };
-
-    pushConstants.worldPosition = probe->GetRenderResource().GetBufferData().worldPosition;
+    pushConstants.worldPosition = envProbeProxy->bufferData.worldPosition;
 
     for (const DescriptorTableRef& descriptorSetRef : pd->computeShDescriptorTables)
     {
@@ -926,26 +883,26 @@ void EnvGridRenderer::ComputeEnvProbeIrradiance_SphericalHarmonics(FrameBase* fr
 
     DelegateHandler* delegateHandle = new DelegateHandler();
     *delegateHandle = frame->OnFrameEnd.Bind(
-        [resourceHandle = TResourceHandle<RenderEnvProbe>(probe->GetRenderResource()), delegateHandle](FrameBase* frame)
+        [probe = Handle<EnvProbe>(probe), delegateHandle](FrameBase* frame)
         {
             HYP_NAMED_SCOPE("RenderEnvGrid::ComputeEnvProbeIrradiance_SphericalHarmonics - Buffer readback");
 
             EnvProbeShaderData readbackBuffer;
 
-            const uint32 boundIndex = RenderApi_RetrieveResourceBinding(resourceHandle->GetEnvProbe());
+            const uint32 boundIndex = RenderApi_RetrieveResourceBinding(probe.Id());
             Assert(boundIndex != ~0u);
 
             g_renderGlobalState->gpuBuffers[GRB_ENV_PROBES]->ReadbackElement(frame->GetFrameIndex(), boundIndex, &readbackBuffer);
 
             // Log out SH data
             HYP_LOG(EnvGrid, Info, "EnvProbe {} SH data:\n\t{}\n\t{}\n\t{}\n\t{}\n",
-                resourceHandle->GetEnvProbe()->Id(),
+                probe->Id(),
                 readbackBuffer.sh.values[0],
                 readbackBuffer.sh.values[1],
                 readbackBuffer.sh.values[2],
                 readbackBuffer.sh.values[3]);
 
-            resourceHandle->SetSphericalHarmonics(readbackBuffer.sh);
+            // resourceHandle->SetSphericalHarmonics(readbackBuffer.sh);
 
             delete delegateHandle;
         });
@@ -1151,6 +1108,9 @@ void EnvGridRenderer::VoxelizeProbe(FrameBase* frame, const RenderSetup& renderS
     const FramebufferRef& framebuffer = outputTarget.GetFramebuffer();
     Assert(framebuffer.IsValid());
 
+    RenderProxyEnvProbe* envProbeProxy = static_cast<RenderProxyEnvProbe*>(RenderApi_GetRenderProxy(renderSetup.envProbe->Id()));
+    Assert(envProbeProxy != nullptr);
+
     const EnvGridOptions& options = envGrid->GetOptions();
     const EnvProbeCollection& envProbeCollection = envGrid->GetEnvProbeCollection();
 
@@ -1185,7 +1145,7 @@ void EnvGridRenderer::VoxelizeProbe(FrameBase* frame, const RenderSetup& renderS
 
     pushConstants.voxelTextureDimensions = Vec4u(voxelGridTextureExtent, 0);
     pushConstants.cubemapDimensions = Vec4u(cubemapDimensions, 0);
-    pushConstants.worldPosition = probe->GetRenderResource().GetBufferData().worldPosition;
+    pushConstants.worldPosition = envProbeProxy->bufferData.worldPosition;
 
     frame->renderQueue << InsertBarrier(colorImage, RS_SHADER_RESOURCE);
 

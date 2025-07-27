@@ -56,54 +56,6 @@ void RenderResourceBase::Destroy()
     Destroy_Internal();
 }
 
-void RenderResourceBase::Update()
-{
-    Update_Internal();
-}
-
-ThreadBase* RenderResourceBase::GetOwnerThread() const
-{
-    static ThreadBase* const renderThread = Threads::GetThread(g_renderThread);
-
-    return renderThread;
-}
-
-bool RenderResourceBase::CanExecuteInline() const
-{
-    return Threads::IsOnThread(g_renderThread);
-}
-
-void RenderResourceBase::FlushScheduledTasks() const
-{
-    HYP_FAIL("Cannot flush scheduled tasks in RenderResourceBase!");
-    // HYPERION_ASSERT_RESULT(RenderCommands::Flush());
-}
-
-void RenderResourceBase::EnqueueOp(Proc<void()>&& proc)
-{
-    struct RENDER_COMMAND(RenderResourceOperation)
-        : RenderCommand
-    {
-        Proc<void()> proc;
-
-        RENDER_COMMAND(RenderResourceOperation)(Proc<void()>&& proc)
-            : proc(std::move(proc))
-        {
-        }
-
-        virtual ~RENDER_COMMAND(RenderResourceOperation)() override = default;
-
-        virtual RendererResult operator()() override
-        {
-            proc();
-
-            return {};
-        }
-    };
-
-    PUSH_RENDER_COMMAND(RenderResourceOperation, std::move(proc));
-}
-
 void RenderResourceBase::AcquireBufferIndex()
 {
     HYP_SCOPE;

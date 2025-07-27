@@ -1,10 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
 #include <rendering/SSGI.hpp>
-#include <rendering/RenderCamera.hpp>
-#include <rendering/RenderTexture.hpp>
-#include <rendering/RenderEnvProbe.hpp>
-#include <rendering/RenderWorld.hpp>
 #include <rendering/PlaceholderData.hpp>
 #include <rendering/Deferred.hpp>
 #include <rendering/RenderGlobalState.hpp>

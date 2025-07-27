@@ -12,7 +12,6 @@
 #include <rendering/ShaderManager.hpp>
 #include <rendering/RenderGlobalState.hpp>
 #include <rendering/PlaceholderData.hpp>
-#include <rendering/RenderTexture.hpp>
 
 #include <rendering/subsystems/sky/SkydomeRenderer.hpp>
 

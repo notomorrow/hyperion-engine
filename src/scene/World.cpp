@@ -26,8 +26,8 @@
 #include <core/profiling/ProfileScope.hpp>
 
 #include <rendering/RenderEnvironment.hpp>
-#include <rendering/RenderWorld.hpp>
 #include <rendering/RenderGlobalState.hpp>
+#include <rendering/RenderProxy.hpp>
 
 #include <EngineGlobals.hpp>
 #include <Engine.hpp>

@@ -14,7 +14,6 @@
 #include <rendering/Texture.hpp>
 #include <rendering/RenderEnvGrid.hpp>
 #include <rendering/RenderEnvProbe.hpp>
-#include <rendering/RenderCamera.hpp>
 #include <rendering/RenderGlobalState.hpp>
 #include <rendering/RenderShadowMap.hpp>
 #include <rendering/PlaceholderData.hpp>
@@ -102,8 +101,7 @@ EnvGrid::EnvGrid(const BoundingBox& aabb, const EnvGridOptions& options)
     : m_aabb(aabb),
       m_offset(aabb.GetCenter()),
       m_voxelGridAabb(aabb),
-      m_options(options),
-      m_renderResource(nullptr)
+      m_options(options)
 {
     m_entityInitInfo.receivesUpdate = true;
     m_entityInitInfo.canEverUpdate = true;
@@ -111,28 +109,12 @@ EnvGrid::EnvGrid(const BoundingBox& aabb, const EnvGridOptions& options)
 
 EnvGrid::~EnvGrid()
 {
-    if (m_renderResource != nullptr)
-    {
-        // temp shit
-        m_renderResource->DecRef();
-
-        FreeResource(m_renderResource);
-
-        m_renderResource = nullptr;
-    }
 }
 
 void EnvGrid::Init()
 {
     AddDelegateHandler(g_engine->GetDelegates().OnShutdown.Bind([this]
         {
-            if (m_renderResource != nullptr)
-            {
-                FreeResource(m_renderResource);
-
-                m_renderResource = nullptr;
-            }
-
             m_view.Reset();
 
             DetachChild(m_camera);
@@ -226,10 +208,6 @@ void EnvGrid::Init()
         m_voxelGridTexture->SetName(NAME_FMT("{}_VoxelGrid", Id()));
         InitObject(m_voxelGridTexture);
     }
-
-    m_renderResource = AllocateResource<RenderEnvGrid>(this);
-    // temp shit
-    m_renderResource->IncRef();
 
     ViewOutputTargetDesc outputTargetDesc {
         .extent = Vec2u(framebufferDimensions),
@@ -485,8 +463,6 @@ void EnvGrid::Translate(const BoundingBox& aabb, const Vec3f& translation)
     }
 
     SetNeedsRenderProxyUpdate();
-
-    m_renderResource->SetProbeIndices(std::move(updates));
 }
 
 void EnvGrid::Update(float delta)

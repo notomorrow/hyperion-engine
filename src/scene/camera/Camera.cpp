@@ -11,8 +11,8 @@
 
 #include <core/math/Halton.hpp>
 
-#include <rendering/RenderCamera.hpp>
 #include <rendering/RenderFramebuffer.hpp>
+#include <rendering/RenderProxy.hpp>
 
 #include <core/object/HypClassUtils.hpp>
 

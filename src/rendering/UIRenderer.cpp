@@ -3,17 +3,14 @@
 #include <rendering/UIRenderer.hpp>
 #include <rendering/RenderEnvironment.hpp>
 #include <rendering/RenderGroup.hpp>
-#include <rendering/RenderCamera.hpp>
 #include <rendering/GBuffer.hpp>
 #include <rendering/Buffers.hpp>
 #include <rendering/FinalPass.hpp>
 #include <rendering/Deferred.hpp>
-#include <rendering/RenderWorld.hpp>
 #include <rendering/RenderStats.hpp>
 #include <rendering/PlaceholderData.hpp>
 #include <rendering/RenderGlobalState.hpp>
 #include <rendering/Renderer.hpp>
-#include <rendering/RenderTexture.hpp>
 
 #include <rendering/font/FontAtlas.hpp>
 
@@ -266,10 +263,7 @@ void UIRenderCollector::ExecuteDrawCalls(FrameBase* frame, const RenderSetup& re
 
     RenderProxyList& rpl = RenderApi_GetConsumerProxyList(renderSetup.view);
     rpl.BeginRead();
-
     HYP_DEFER({ rpl.EndRead(); });
-
-    // RenderCollector& renderCollector = RenderApi_GetRenderCollector(renderSetup.view->GetView());
 
     const uint32 frameIndex = frame->GetFrameIndex();
 

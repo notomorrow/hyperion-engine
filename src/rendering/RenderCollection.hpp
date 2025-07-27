@@ -210,7 +210,7 @@ public:
 
                 if (HYP_UNLIKELY(rwMarkerState & writeFlag))
                 {
-                    HYP_LOG_TEMP("Waiting for write marker to be released."
+                    HYP_LOG_TEMP("Waiting for write marker to be released. "
                                  "If this is occurring frequently, the View that owns this RenderProxyList should have double / triple buffering enabled");
 
                     rwMarker.Decrement(2, MemoryOrder::RELAXED);

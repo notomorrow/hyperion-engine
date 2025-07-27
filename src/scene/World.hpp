@@ -15,7 +15,6 @@
 
 namespace hyperion {
 
-class RenderWorld;
 class EditorDelegates;
 struct RenderStats;
 class View;

@@ -9,10 +9,7 @@
 #include <rendering/DepthPyramidRenderer.hpp>
 #include <rendering/RenderEnvGrid.hpp>
 #include <rendering/RenderEnvProbe.hpp>
-#include <rendering/RenderCamera.hpp>
-#include <rendering/RenderWorld.hpp>
 #include <rendering/RenderMaterial.hpp>
-#include <rendering/RenderTexture.hpp>
 #include <rendering/RenderGlobalState.hpp>
 #include <rendering/SafeDeleter.hpp>
 #include <rendering/GraphicsPipelineCache.hpp>
@@ -46,8 +43,6 @@
 
 #include <core/logging/LogChannels.hpp>
 #include <core/logging/Logger.hpp>
-
-#include <streaming/StreamedTextureData.hpp>
 
 #include <system/AppContext.hpp>
 

@@ -7,11 +7,6 @@
 #include <rendering/RenderEnvironment.hpp>
 #include <rendering/RenderableAttributes.hpp>
 #include <rendering/GBuffer.hpp>
-#include <rendering/RenderWorld.hpp>
-#include <rendering/RenderCamera.hpp>
-#include <rendering/RenderEnvProbe.hpp>
-#include <rendering/RenderTexture.hpp>
-#include <rendering/RenderEnvGrid.hpp>
 #include <rendering/Deferred.hpp>
 #include <rendering/PlaceholderData.hpp>
 #include <rendering/RenderGlobalState.hpp>

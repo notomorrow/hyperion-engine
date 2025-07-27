@@ -3,7 +3,6 @@
 #include <rendering/Bindless.hpp>
 #include <rendering/PlaceholderData.hpp>
 #include <rendering/RenderGlobalState.hpp>
-#include <rendering/RenderTexture.hpp>
 
 #include <rendering/RenderDescriptorSet.hpp>
 
