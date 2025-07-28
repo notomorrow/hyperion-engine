@@ -14,6 +14,7 @@ namespace hyperion {
 
 class Engine;
 class GBuffer;
+class Texture;
 struct RenderSetup;
 
 struct RenderCommand_CreateTemporalAADescriptors;

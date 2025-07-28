@@ -26,6 +26,11 @@ namespace hyperion {
 
 class Entity;
 class Mesh;
+class Light;
+class Camera;
+class View;
+class Texture;
+class LightmapVolume;
 class Material;
 class Skeleton;
 class EnvProbe;

@@ -47,6 +47,7 @@ class PlaceholderData;
 class RenderThread;
 class SafeDeleter;
 class RenderState;
+class World;
 
 struct EngineDelegates
 {

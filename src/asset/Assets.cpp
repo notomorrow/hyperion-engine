@@ -45,6 +45,9 @@
 
 namespace hyperion {
 
+class Skeleton;
+class AudioSource;
+
 #pragma region AssetCollector
 
 AssetCollector::~AssetCollector()

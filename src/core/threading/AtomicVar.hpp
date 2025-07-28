@@ -172,6 +172,17 @@ public:
 };
 
 #ifdef HYP_WINDOWS
+
+static inline int32 AtomicFetch(volatile int32* value)
+{
+    return _InterlockedOr(reinterpret_cast<long volatile*>(value), 0);
+}
+
+static inline int64 AtomicFetch(volatile int64* value)
+{
+    return _InterlockedOr64(reinterpret_cast<long long volatile*>(value), 0);
+}
+
 static inline int32 AtomicAdd(volatile int32* value, int32 amount)
 {
     return _InterlockedExchangeAdd(reinterpret_cast<long volatile*>(value), amount);
@@ -180,6 +191,16 @@ static inline int32 AtomicAdd(volatile int32* value, int32 amount)
 static inline int64 AtomicAdd(volatile int64* value, int64 amount)
 {
     return _InterlockedExchangeAdd64(reinterpret_cast<long long volatile*>(value), amount);
+}
+
+static inline int32 AtomicSub(volatile int32* value, int32 amount)
+{
+    return _InterlockedExchangeAdd(reinterpret_cast<long volatile*>(value), -amount);
+}
+
+static inline int64 AtomicSub(volatile int64* value, int64 amount)
+{
+    return _InterlockedExchangeAdd64(reinterpret_cast<long long volatile*>(value), -amount);
 }
 
 static inline int32 AtomicIncrement(volatile int32* value)
@@ -253,6 +274,16 @@ static inline int64 AtomicBitXor(volatile int64* value, int64 bitMask)
 }
 
 #else
+static inline int32 AtomicFetch(volatile int32* value)
+{
+    return __atomic_load_n(value, __ATOMIC_SEQ_CST);
+}
+
+static inline int64 AtomicFetch(volatile int64* value)
+{
+    return __atomic_load_n(value, __ATOMIC_SEQ_CST);
+}
+
 static inline int32 AtomicAdd(volatile int32* value, int32 amount)
 {
     return __atomic_fetch_add(value, amount, __ATOMIC_SEQ_CST);
@@ -261,6 +292,16 @@ static inline int32 AtomicAdd(volatile int32* value, int32 amount)
 static inline int64 AtomicAdd(volatile int64* value, int64 amount)
 {
     return __atomic_fetch_add(value, amount, __ATOMIC_SEQ_CST);
+}
+
+static inline int32 AtomicSub(volatile int32* value, int32 amount)
+{
+    return __atomic_fetch_sub(value, amount, __ATOMIC_SEQ_CST);
+}
+
+static inline int64 AtomicSub(volatile int64* value, int64 amount)
+{
+    return __atomic_fetch_sub(value, amount, __ATOMIC_SEQ_CST);
 }
 
 static inline int32 AtomicIncrement(volatile int32* value)
@@ -344,7 +385,9 @@ using threading::AtomicBitXor;
 using threading::AtomicCompareExchange;
 using threading::AtomicDecrement;
 using threading::AtomicExchange;
+using threading::AtomicFetch;
 using threading::AtomicIncrement;
+using threading::AtomicSub;
 using threading::AtomicVar;
 
 } // namespace hyperion

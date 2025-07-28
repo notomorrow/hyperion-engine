@@ -21,6 +21,7 @@ namespace hyperion {
 
 class Engine;
 class Texture;
+class Mesh;
 struct RenderSetup;
 
 struct alignas(16) GaussianSplattingPoint

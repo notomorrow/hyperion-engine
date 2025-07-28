@@ -19,6 +19,8 @@
 namespace hyperion {
 
 class Engine;
+class Mesh;
+class Texture;
 struct RenderSetup;
 
 struct ParticleSpawnerParams

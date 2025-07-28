@@ -8,8 +8,6 @@
 #include <rendering/ParticleSystem.hpp>
 #include <rendering/IndirectDraw.hpp>
 #include <rendering/rt/RaytracingReflections.hpp>
-#include <rendering/DOFBlur.hpp>
-#include <rendering/HBAO.hpp>
 #include <rendering/TemporalAA.hpp>
 
 #include <rendering/RenderObject.hpp>

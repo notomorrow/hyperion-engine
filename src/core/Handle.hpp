@@ -963,25 +963,4 @@ inline bool InitObject(const Handle<T>& handle)
     return true;
 }
 
-#define DEF_HANDLE(T)          \
-    class T;                   \
-    template <>                \
-    struct HandleDefinition<T> \
-    {                          \
-    };
-
-#define DEF_HANDLE_NS(ns, T)       \
-    namespace ns {                 \
-    class T;                       \
-    }                              \
-    template <>                    \
-    struct HandleDefinition<ns::T> \
-    {                              \
-    };
-
-#include <core/inl/HandleDefinitions.inl>
-
-#undef DEF_HANDLE
-#undef DEF_HANDLE_NS
-
 } // namespace hyperion

@@ -20,6 +20,7 @@
 
 namespace hyperion {
 
+class World;
 class Light;
 class EnvProbe;
 class EnvGrid;

@@ -15,6 +15,8 @@
 #include <rendering/GraphicsPipelineCache.hpp>
 #include <rendering/SSRRenderer.hpp>
 #include <rendering/SSGI.hpp>
+#include <rendering/HbaoPass.hpp>
+#include <rendering/DepthOfField.hpp>
 #include <rendering/Mesh.hpp>
 #include <rendering/Material.hpp>
 #include <rendering/Texture.hpp>

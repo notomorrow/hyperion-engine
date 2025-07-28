@@ -1,6 +1,8 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
 #include <asset/audio_loaders/WAVAudioLoader.hpp>
+#include <audio/AudioSource.hpp>
+
 #include <Engine.hpp>
 
 namespace hyperion {
@@ -72,11 +74,9 @@ AssetLoadResult WAVAudioLoader::LoadAsset(LoaderState& state) const
         }
     }
 
-    ByteBuffer byteBuffer(object.waveBytes.Size(), &object.waveBytes[0]);
-
     Handle<AudioSource> audioSource = CreateObject<AudioSource>(
         object.format,
-        byteBuffer,
+        object.waveBytes,
         object.frequency);
 
     return LoadedAsset { audioSource };

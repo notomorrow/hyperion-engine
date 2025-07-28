@@ -17,6 +17,7 @@ namespace hyperion {
 
 class Engine;
 class GBuffer;
+class View;
 struct SSGIUniforms;
 
 HYP_STRUCT(ConfigName = "app", JsonPath = "rendering.ssgi")

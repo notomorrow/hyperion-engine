@@ -28,9 +28,6 @@ namespace hyperion {
 class Engine;
 
 template <class T>
-struct HandleDefinition;
-
-template <class T>
 class ObjectContainer;
 
 class ObjectContainerBase;

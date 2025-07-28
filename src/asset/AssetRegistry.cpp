@@ -281,8 +281,6 @@ Result AssetObject::Save() const
 
     if (!dir.Exists() || !dir.IsDirectory())
     {
-        HYP_BREAKPOINT_DEBUG_MODE;
-
         return HYP_MAKE_ERROR(Error, "Path '{}' is not a valid directory, cannot save asset", dir);
     }
 
@@ -601,6 +599,12 @@ Result AssetPackage::AddAssetObject(const Handle<AssetObject>& assetObject)
     {
         Mutex::Guard guard(m_mutex);
 
+        // if no name is provided for the asset, generate one
+        if (!assetObject->GetName().IsValid())
+        {
+            assetObject->m_name = GetUniqueAssetName_Internal(assetObject->InstanceClass()->GetName());
+        }
+
         if (IsTransient())
         {
             // transient data isn't saved to disk so we have to keep it in memory
@@ -746,10 +750,15 @@ Name AssetPackage::GetUniqueAssetName(Name baseName) const
         return Name::Invalid();
     }
 
+    Mutex::Guard guard(m_mutex);
+
+    return GetUniqueAssetName_Internal(baseName);
+}
+
+Name AssetPackage::GetUniqueAssetName_Internal(Name baseName) const
+{
     int counter = 0;
     String str = *baseName;
-
-    Mutex::Guard guard(m_mutex);
 
     while (m_assetObjects.Contains(str))
     {
@@ -1101,12 +1110,7 @@ Result AssetRegistry::RegisterAsset(const UTF8StringView& path, const Handle<Ass
 
     pathString = String::Join(pathStringSplit, '/');
 
-    AssetRegistryPathType pathType = AssetRegistryPathType::ASSET;
-
-    if (assetObject->GetName().IsValid())
-    {
-        pathType = AssetRegistryPathType::PACKAGE;
-    }
+    AssetRegistryPathType pathType = AssetRegistryPathType::PACKAGE;
 
     Handle<AssetPackage> assetPackage;
 

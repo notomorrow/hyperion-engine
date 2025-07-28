@@ -24,6 +24,7 @@ namespace hyperion {
 
 class EntityManager;
 class Scene;
+class World;
 
 enum class SceneFlags : uint32;
 

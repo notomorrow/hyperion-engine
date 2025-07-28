@@ -69,12 +69,12 @@ struct RENDER_COMMAND(CreateTextureGpuImage)
     virtual RendererResult operator()() override
     {
         Handle<Texture> texture = textureWeak.Lock();
-        
+
         if (!texture.IsValid())
         {
             return {};
         }
-        
+
         if (!image->IsCreated())
         {
             HYPERION_BUBBLE_ERRORS(image->Create());
@@ -182,7 +182,7 @@ struct RENDER_COMMAND(CreateTextureGpuImage)
                 renderQueue << InsertBarrier(image, initialState);
             }
         }
-        
+
         resourceHandle.Reset();
 
         return {};
@@ -373,21 +373,21 @@ Vec4f Texture::Sample(Vec3f uvw, uint32 faceIndex)
 {
     if (!IsReady())
     {
-        HYP_LOG(Texture, Warning, "Texture is not ready, cannot sample");
+        HYP_LOG_ONCE(Texture, Warning, "Texture is not ready, cannot sample");
 
         return Vec4f::Zero();
     }
 
     if (faceIndex >= NumFaces())
     {
-        HYP_LOG(Texture, Warning, "Face index out of bounds: {} >= {}", faceIndex, NumFaces());
+        HYP_LOG_ONCE(Texture, Error, "Face index out of bounds: {} >= {}", faceIndex, NumFaces());
 
         return Vec4f::Zero();
     }
 
     if (!m_asset.IsValid())
     {
-        HYP_LOG(Texture, Warning, "Texture asset is not valid, cannot sample");
+        HYP_LOG_ONCE(Texture, Warning, "Texture asset is not valid, cannot sample");
 
         return Vec4f::Zero();
     }
@@ -398,14 +398,14 @@ Vec4f Texture::Sample(Vec3f uvw, uint32 faceIndex)
     {
         if (!m_asset->IsLoaded())
         {
-            HYP_LOG(Texture, Info, "Texture does not have data loaded, loading from disk...");
+            HYP_LOG_ONCE(Texture, Info, "Texture does not have data loaded, loading from disk...");
 
             resourceHandle = ResourceHandle(*m_asset->GetResource());
         }
 
         if (!resourceHandle)
         {
-            HYP_LOG(Texture, Warning, "Texture resource handle is not valid, cannot sample");
+            HYP_LOG_ONCE(Texture, Warning, "Texture resource handle is not valid, cannot sample");
 
             return Vec4f::Zero();
         }
@@ -425,7 +425,7 @@ Vec4f Texture::Sample(Vec3f uvw, uint32 faceIndex)
 
     if (bytesPerComponent != 1)
     {
-        HYP_LOG(Texture, Warning, "Unsupported bytes per component to use with Sample(): {}", bytesPerComponent);
+        HYP_LOG_ONCE(Texture, Warning, "Unsupported bytes per component to use with Sample(): {}", bytesPerComponent);
 
         HYP_BREAKPOINT;
 
@@ -441,7 +441,7 @@ Vec4f Texture::Sample(Vec3f uvw, uint32 faceIndex)
 
     if (index >= textureData->imageData.Size())
     {
-        HYP_LOG(Texture, Warning, "Index out of bounds, index: {}, buffer size: {}, coord: {}, dimensions: {}, num faces: {}", index, textureData->imageData.Size(),
+        HYP_LOG_ONCE(Texture, Warning, "Index out of bounds, index: {}, buffer size: {}, coord: {}, dimensions: {}, num faces: {}", index, textureData->imageData.Size(),
             coord, textureData->desc.extent, NumFaces());
 
         return Vec4f::Zero();
@@ -460,7 +460,7 @@ Vec4f Texture::Sample(Vec3f uvw, uint32 faceIndex)
     case 4:
         return Vec4f(float(data[0]) / 255.0f, float(data[1]) / 255.0f, float(data[2]) / 255.0f, float(data[3]) / 255.0f);
     default: // should never happen
-        HYP_LOG(Texture, Error, "Unsupported number of components: {}", numComponents);
+        HYP_LOG_ONCE(Texture, Error, "Unsupported number of components: {}", numComponents);
 
         return Vec4f::Zero();
     }
@@ -470,7 +470,7 @@ Vec4f Texture::Sample2D(Vec2f uv)
 {
     if (GetType() != TT_TEX2D)
     {
-        HYP_LOG(Texture, Warning, "Unsupported texture type to use with Sample2D(): {}", GetType());
+        HYP_LOG_ONCE(Texture, Warning, "Unsupported texture type to use with Sample2D(): {}", GetType());
 
         return Vec4f::Zero();
     }
@@ -483,7 +483,7 @@ Vec4f Texture::SampleCube(Vec3f direction)
 {
     if (GetType() != TT_CUBEMAP)
     {
-        HYP_LOG(Texture, Warning, "Unsupported texture type to use with SampleCube(): {}", GetType());
+        HYP_LOG_ONCE(Texture, Warning, "Unsupported texture type to use with SampleCube(): {}", GetType());
 
         return Vec4f::Zero();
     }

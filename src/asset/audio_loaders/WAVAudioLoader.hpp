@@ -3,11 +3,12 @@
 #pragma once
 
 #include <asset/Assets.hpp>
-#include <audio/AudioSource.hpp>
 
 #include <core/memory/ByteBuffer.hpp>
 
 namespace hyperion {
+
+enum class AudioSourceFormat : uint32;
 
 HYP_CLASS(NoScriptBindings)
 class WAVAudioLoader : public AssetLoaderBase

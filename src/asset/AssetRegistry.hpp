@@ -463,6 +463,8 @@ private:
 
     Result SaveManifest(ByteWriter& stream) const;
 
+    Name GetUniqueAssetName_Internal(Name baseName) const;
+
     HYP_FIELD(Serialize = true)
     UUID m_uuid;
 

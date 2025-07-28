@@ -66,9 +66,6 @@ template <class T>
 constexpr bool implementationExists = decltype(implementationExistsImpl(std::declval<T*>()))::value;
 
 template <class T>
-struct HandleDefinition;
-
-template <class T>
 constexpr bool isConstPointer = std::is_pointer_v<T> && std::is_const_v<std::remove_pointer_t<T>>;
 template <class T>
 using RemoveConstPointer = std::add_pointer_t<std::remove_const_t<std::remove_pointer_t<T>>>;

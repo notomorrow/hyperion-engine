@@ -33,6 +33,14 @@ struct BVHNode
     HYP_FIELD(Serialize)
     bool isLeafNode = false;
 
+    BVHNode() = default;
+
+    BVHNode(const BoundingBox& aabb)
+        : aabb(aabb),
+          isLeafNode(true)
+    {
+    }
+
     HYP_FORCE_INLINE bool IsValid() const
     {
         return aabb.IsValid() && aabb.IsFinite();

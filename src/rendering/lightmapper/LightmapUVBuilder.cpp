@@ -29,7 +29,7 @@ Bitmap<4, float> LightmapUVMap::ToBitmapRadiance() const
 
             Vec4f color = uvs[index].radiance;
 
-            if (color.w < 1.0f)
+            if (color.w <= 0.0f)
             {
                 continue;
             }
@@ -57,7 +57,7 @@ Bitmap<4, float> LightmapUVMap::ToBitmapIrradiance() const
 
             Vec4f color = uvs[index].irradiance;
 
-            if (color.w < 1.0f)
+            if (color.w <= 0.0f)
             {
                 continue;
             }

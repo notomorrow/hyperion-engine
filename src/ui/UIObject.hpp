@@ -34,6 +34,7 @@ class UIStage;
 class UIRenderSubsystem;
 class UIDataSourceBase;
 class UIDataSource;
+class Mesh;
 
 // Helper function to get the scene from a UIStage
 template <class UIStageType>

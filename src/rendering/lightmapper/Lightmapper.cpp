@@ -95,12 +95,12 @@ struct RENDER_COMMAND(LightmapRender)
           rays(std::move(rays)),
           rayOffset(rayOffset)
     {
-        job->m_numConcurrentRenderingTasks.Increment(1, MemoryOrder::RELEASE);
+        job->numConcurrentRenderingTasks.Increment(1, MemoryOrder::RELEASE);
     }
 
     virtual ~RENDER_COMMAND(LightmapRender)() override
     {
-        job->m_numConcurrentRenderingTasks.Decrement(1, MemoryOrder::RELEASE);
+        job->numConcurrentRenderingTasks.Decrement(1, MemoryOrder::RELEASE);
     }
 
     virtual RendererResult operator()() override
@@ -785,7 +785,7 @@ private:
 
     void TraceSingleRayOnCPU(LightmapJob* job, const LightmapRay& ray, LightmapRayHitPayload& outPayload);
 
-    static Vec4f EvaluateDiffuseLighting(Light* light, const LightShaderData& bufferData, const Vec3f& position, const Vec3f& normal);
+    static Vec3f EvaluateDiffuseLighting(Light* light, const LightShaderData& bufferData, const Vec3f& position, const Vec3f& normal);
 
     static SharedCpuData* CreateSharedCpuData(RenderProxyList& rpl);
 
@@ -837,14 +837,14 @@ void LightmapCPUPathTracer::ReadHitsBuffer(FrameBase* frame, Span<LightmapHit> o
     Memory::MemCpy(outHits.Data(), m_hitsBuffer.Data(), m_hitsBuffer.ByteSize());
 }
 
-Vec4f LightmapCPUPathTracer::EvaluateDiffuseLighting(Light* light, const LightShaderData& bufferData, const Vec3f& position, const Vec3f& normal)
+Vec3f LightmapCPUPathTracer::EvaluateDiffuseLighting(Light* light, const LightShaderData& bufferData, const Vec3f& position, const Vec3f& normal)
 {
     Assert(light != nullptr);
 
     switch (light->GetLightType())
     {
     case LT_DIRECTIONAL:
-        return ByteUtil::UnpackVec4f(bufferData.colorPacked) * MathUtil::Max(0.0f, normal.Dot(bufferData.positionIntensity.GetXYZ().Normalized())) * bufferData.positionIntensity.w;
+        return (ByteUtil::UnpackVec4f(SwapEndian(bufferData.colorPacked)) * MathUtil::Max(0.0f, normal.Dot(bufferData.positionIntensity.GetXYZ().Normalized())) * bufferData.positionIntensity.w).GetXYZ();
     case LT_POINT:
     {
         const float radius = Float16::FromRaw(bufferData.radiusFalloffPacked >> 16);
@@ -857,11 +857,11 @@ Vec4f LightmapCPUPathTracer::EvaluateDiffuseLighting(Light* light, const LightSh
         float factor = distSqr * (invRadius * invRadius);
         float smoothFactor = MathUtil::Max(1.0f - (factor * factor), 0.0f);
 
-        return ByteUtil::UnpackVec4f(bufferData.colorPacked) * ((smoothFactor * smoothFactor) / MathUtil::Max(distSqr, 1e4f)) * bufferData.positionIntensity.w;
+        return (ByteUtil::UnpackVec4f(SwapEndian(bufferData.colorPacked)) * ((smoothFactor * smoothFactor) / MathUtil::Max(distSqr, 1e4f)) * bufferData.positionIntensity.w).GetXYZ();
     }
     default:
         // Not implemented
-        return Vec4f::Zero();
+        return Vec3f::Zero();
     }
 }
 
@@ -994,9 +994,9 @@ void LightmapCPUPathTracer::Render(FrameBase* frame, const RenderSetup& renderSe
 
                         TraceSingleRayOnCPU(job, bounceRay, payload);
 
-                        if (payload.distance - MathUtil::epsilonF < 0.0f)
+                        if (payload.distance <= -1.0f)
                         {
-                            payload.throughput = Vec4f(0.0f);
+                            payload.throughput = Vec3f(0.0f);
 
                             Assert(bounceIndex < bounces.Size());
 
@@ -1040,14 +1040,14 @@ void LightmapCPUPathTracer::Render(FrameBase* frame, const RenderSetup& renderSe
 
                     for (int bounceIndex = int(numBounces - 1); bounceIndex >= 0; bounceIndex--)
                     {
-                        Vec4f radiance = bounces[bounceIndex].emissive;
+                        Vec3f radiance = bounces[bounceIndex].emissive;
 
                         if (bounceIndex != numBounces - 1)
                         {
                             radiance += bounces[bounceIndex + 1].radiance * bounces[bounceIndex].throughput;
                         }
 
-                        float p = MathUtil::Max(radiance.x, MathUtil::Max(radiance.y, MathUtil::Max(radiance.z, radiance.w)));
+                        float p = MathUtil::Max(radiance.x, MathUtil::Max(radiance.y, radiance.z));
 
                         if (MathUtil::RandomFloat(seed) > p)
                         {
@@ -1069,17 +1069,15 @@ void LightmapCPUPathTracer::Render(FrameBase* frame, const RenderSetup& renderSe
                         {
                             HYP_LOG_ONCE(Lightmap, Warning, "NaN or infinite color detected while tracing rays");
 
-                            hit.color = Vec4f(0.0f);
+                            hit.color = Vec3f(0.0f);
                         }
-
-                        hit.color.w = 1.0f;
                     }
                 }
             });
     }
 
     taskBatch->OnComplete
-        .Bind([sharedCpuData]()
+        .Bind([sharedCpuData, numBatches, job]()
             {
                 delete sharedCpuData;
             })
@@ -1092,9 +1090,9 @@ void LightmapCPUPathTracer::Render(FrameBase* frame, const RenderSetup& renderSe
 
 void LightmapCPUPathTracer::TraceSingleRayOnCPU(LightmapJob* job, const LightmapRay& ray, LightmapRayHitPayload& outPayload)
 {
-    outPayload.throughput = Vec4f(0.0f);
-    outPayload.emissive = Vec4f(0.0f);
-    outPayload.radiance = Vec4f(0.0f);
+    outPayload.throughput = Vec3f(0.0f);
+    outPayload.emissive = Vec3f(0.0f);
+    outPayload.radiance = Vec3f(0.0f);
     outPayload.normal = Vec3f(0.0f);
     outPayload.distance = -1.0f;
     outPayload.barycentricCoords = Vec3f(0.0f);
@@ -1153,8 +1151,8 @@ void LightmapCPUPathTracer::TraceSingleRayOnCPU(LightmapJob* job, const Lightmap
             albedo *= albedoTextureColor;
         }
 
-        outPayload.emissive = Vec4f(0.0f);
-        outPayload.throughput = albedo;
+        outPayload.emissive = Vec3f(0.0f);
+        outPayload.throughput = albedo.GetXYZ() * albedo.GetW();
         outPayload.barycentricCoords = barycentricCoords;
         outPayload.meshId = meshId;
         outPayload.triangleIndex = hit.id;
@@ -1176,7 +1174,7 @@ LightmapJob::LightmapJob(LightmapJobParams&& params)
       m_elementIndex(~0u),
       m_texelIndex(0),
       m_lastLoggedPercentage(0),
-      m_numConcurrentRenderingTasks(0)
+      numConcurrentRenderingTasks(0)
 {
 
     Handle<Camera> camera = CreateObject<Camera>();
@@ -1219,8 +1217,6 @@ LightmapJob::~LightmapJob()
 
         delete taskBatch;
     }
-
-    m_resourceCache.Clear();
 }
 
 void LightmapJob::Start()
@@ -1235,34 +1231,6 @@ void LightmapJob::Start()
                     m_uvMap = LightmapUVMap {};
 
                     return;
-                }
-
-                if (m_params.config->traceMode == LightmapTraceMode::CPU_PATH_TRACING)
-                {
-                    HYP_LOG(Lightmap, Info, "Lightmap job {}: Preloading sub-element cached resources", m_uuid);
-
-                    for (const LightmapSubElement& subElement : m_params.subElementsView)
-                    {
-                        if (subElement.mesh.IsValid())
-                        {
-                            Assert(subElement.mesh->GetAsset().IsValid());
-
-                            m_resourceCache.Emplace(subElement.mesh->GetAsset(), *subElement.mesh->GetAsset()->GetResource());
-                        }
-
-                        if (subElement.material.IsValid())
-                        {
-                            for (const auto& it : subElement.material->GetTextures())
-                            {
-                                if (it.second.IsValid())
-                                {
-                                    Assert(it.second->GetAsset().IsValid());
-
-                                    m_resourceCache.Emplace(it.second->GetAsset(), *it.second->GetAsset()->GetResource());
-                                }
-                            }
-                        }
-                    }
                 }
 
                 HYP_LOG(Lightmap, Info, "Lightmap job {}: Enqueue task to build UV map", m_uuid);
@@ -1312,7 +1280,7 @@ void LightmapJob::Process()
     m_view->UpdateVisibility();
     m_view->CollectSync();
 
-    if (m_numConcurrentRenderingTasks.Get(MemoryOrder::ACQUIRE) >= g_maxConcurrentRenderingTasksPerJob)
+    if (numConcurrentRenderingTasks.Get(MemoryOrder::ACQUIRE) >= g_maxConcurrentRenderingTasksPerJob)
     {
         // Wait for current rendering tasks to complete before enqueueing new ones.
 
@@ -1383,8 +1351,10 @@ void LightmapJob::Process()
 
         if (m_currentTasks.Any())
         {
-            for (TaskBatch* taskBatch : m_currentTasks)
+            for (SizeType taskIndex = 0; taskIndex < m_currentTasks.Size(); taskIndex++)
             {
+                TaskBatch* taskBatch = m_currentTasks[taskIndex];
+
                 if (!taskBatch->IsCompleted())
                 {
                     // Skip this call
@@ -1393,8 +1363,10 @@ void LightmapJob::Process()
                 }
             }
 
-            for (TaskBatch* taskBatch : m_currentTasks)
+            for (SizeType taskIndex = 0; taskIndex < m_currentTasks.Size(); taskIndex++)
             {
+                TaskBatch* taskBatch = m_currentTasks[taskIndex];
+
                 taskBatch->AwaitCompletion();
 
                 delete taskBatch;
@@ -1417,7 +1389,7 @@ void LightmapJob::Process()
 
     if (!hasRemainingRays
         && m_texelIndex >= m_texelIndices.Size() * m_params.config->numSamples
-        && m_numConcurrentRenderingTasks.Get(MemoryOrder::ACQUIRE) == 0)
+        && numConcurrentRenderingTasks.Get(MemoryOrder::ACQUIRE) == 0)
     {
         HYP_LOG(Lightmap, Debug, "Lightmap job {}: All texels processed ({} / {}), stopping", m_uuid, m_texelIndex, m_texelIndices.Size() * m_params.config->numSamples);
 
@@ -1484,10 +1456,10 @@ void LightmapJob::IntegrateRayHits(Span<const LightmapRay> rays, Span<const Ligh
         switch (shadingType)
         {
         case LightmapShadingType::RADIANCE:
-            uv.radiance += Vec4f(hit.color.GetXYZ(), 1.0f); //= Vec4f(MathUtil::Lerp(uv.radiance.GetXYZ() * uv.radiance.w, hit.color.GetXYZ(), hit.color.w), 1.0f);
+            uv.radiance += Vec4f(hit.color, 1.0f); //= Vec4f(MathUtil::Lerp(uv.radiance.GetXYZ() * uv.radiance.w, hit.color.GetXYZ(), hit.color.w), 1.0f);
             break;
         case LightmapShadingType::IRRADIANCE:
-            uv.irradiance += Vec4f(hit.color.GetXYZ(), 1.0f); //= Vec4f(MathUtil::Lerp(uv.irradiance.GetXYZ() * uv.irradiance.w, hit.color.GetXYZ(), hit.color.w), 1.0f);
+            uv.irradiance += Vec4f(hit.color, 1.0f); //= Vec4f(MathUtil::Lerp(uv.irradiance.GetXYZ() * uv.irradiance.w, hit.color.GetXYZ(), hit.color.w), 1.0f);
             break;
         default:
             HYP_UNREACHABLE();
@@ -1558,6 +1530,8 @@ Lightmapper::Lightmapper(LightmapperConfig&& config, const Handle<Scene>& scene,
     Handle<Node> lightmapVolumeNode = m_scene->GetRoot()->AddChild();
     lightmapVolumeNode->SetName(Name::Unique("LightmapVolume"));
     lightmapVolumeNode->SetEntity(lightmapVolumeEntity);
+
+    BuildResourceCache();
 }
 
 Lightmapper::~Lightmapper()
@@ -1572,6 +1546,42 @@ Lightmapper::~Lightmapper()
 bool Lightmapper::IsComplete() const
 {
     return m_numJobs.Get(MemoryOrder::ACQUIRE) == 0;
+}
+
+/// Build cache to keep scene meshes, textures etc. in memory while we perform CPU path tracing
+void Lightmapper::BuildResourceCache()
+{
+    if (m_config.traceMode != LightmapTraceMode::CPU_PATH_TRACING)
+    {
+        return;
+    }
+
+    HYP_NAMED_SCOPE("Building lightmapper resource cache");
+
+    HYP_LOG(Lightmap, Info, "Building resource cache");
+
+    for (LightmapSubElement& subElement : m_subElements)
+    {
+        if (subElement.mesh.IsValid())
+        {
+            Assert(subElement.mesh->GetAsset().IsValid());
+
+            m_resourceCache.Emplace(subElement.mesh->GetAsset(), *subElement.mesh->GetAsset()->GetResource());
+        }
+
+        if (subElement.material.IsValid())
+        {
+            for (const auto& it : subElement.material->GetTextures())
+            {
+                if (it.second.IsValid())
+                {
+                    Assert(it.second->GetAsset().IsValid());
+
+                    m_resourceCache.Emplace(it.second->GetAsset(), *it.second->GetAsset()->GetResource());
+                }
+            }
+        }
+    }
 }
 
 LightmapJobParams Lightmapper::CreateLightmapJobParams(

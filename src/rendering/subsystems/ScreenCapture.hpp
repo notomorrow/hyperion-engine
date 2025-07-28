@@ -23,6 +23,7 @@
 namespace hyperion {
 
 class View;
+class Texture;
 
 enum class ScreenCaptureMode
 {

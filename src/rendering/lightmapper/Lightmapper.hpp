@@ -13,6 +13,8 @@
 #include <core/utilities/Uuid.hpp>
 #include <core/utilities/Result.hpp>
 
+#include <core/profiling/PerformanceClock.hpp>
+
 #include <core/config/Config.hpp>
 
 #include <scene/Scene.hpp>
@@ -34,6 +36,7 @@ class LightmapThreadPool;
 class ILightmapAccelerationStructure;
 class LightmapJob;
 class LightmapVolume;
+class AssetObject;
 
 class View;
 struct RenderSetup;
@@ -123,7 +126,7 @@ struct LightmapperConfig : public ConfigBase<LightmapperConfig>
 
 struct LightmapHit
 {
-    Vec4f color;
+    Vec3f color;
 };
 
 static_assert(sizeof(LightmapHit) == 16);
@@ -132,9 +135,9 @@ class LightmapTopLevelAccelerationStructure;
 
 struct LightmapRayHitPayload
 {
-    Vec4f throughput;
-    Vec4f emissive;
-    Vec4f radiance;
+    Vec3f throughput;
+    Vec3f emissive;
+    Vec3f radiance;
     Vec3f normal;
     float distance = -1.0f;
     Vec3f barycentricCoords;
@@ -175,8 +178,6 @@ struct LightmapJobParams
 class HYP_API LightmapJob
 {
 public:
-    friend struct RenderCommand_LightmapRender;
-
     LightmapJob(LightmapJobParams&& params);
     LightmapJob(const LightmapJob& other) = delete;
     LightmapJob& operator=(const LightmapJob& other) = delete;
@@ -283,7 +284,59 @@ public:
         return m_runningSemaphore.IsInSignalState();
     }
 
+    // Number of GPU path tracing tasks running, used to not overwhelm the gpu while rendering the frame
+    AtomicVar<uint32> numConcurrentRenderingTasks;
+
 private:
+    HYP_FORCE_INLINE bool HasRemainingTexels() const
+    {
+        return m_texelIndex < m_texelIndices.Size() * m_params.config->numSamples;
+    }
+
+    /*! \brief Get the next texel index to process, advancing the teexl counter
+     *  \return The texel index
+     */
+    HYP_FORCE_INLINE uint32 NextTexel()
+    {
+        const uint32 currentTexelIndex = m_texelIndices[m_texelIndex % m_texelIndices.Size()];
+        m_texelIndex++;
+
+        return currentTexelIndex;
+    }
+
+    void Stop();
+    void Stop(const Error& error);
+
+    LightmapJobParams m_params;
+
+    UUID m_uuid;
+
+    Handle<View> m_view;
+
+    Array<uint32> m_texelIndices; // flattened texel indices, flattened so that meshes are grouped together
+
+    Array<LightmapRay> m_previousFrameRays;
+    mutable Mutex m_previousFrameRaysMutex;
+
+    LightmapUVBuilder m_uvBuilder;
+    Optional<LightmapUVMap> m_uvMap;
+    Task<TResult<LightmapUVMap>> m_buildUvMapTask;
+
+    uint32 m_elementIndex;
+
+    Array<TaskBatch*> m_currentTasks;
+    mutable Mutex m_currentTasksMutex;
+
+    Semaphore<int32> m_runningSemaphore;
+    uint32 m_texelIndex;
+
+    double m_lastLoggedPercentage;
+
+    Result m_result;
+};
+
+class HYP_API Lightmapper
+{
     struct CachedResource
     {
         Handle<AssetObject> assetObject;
@@ -332,60 +385,6 @@ private:
 
     using ResourceCache = HashSet<CachedResource, &CachedResource::assetObject, HashTable_DynamicNodeAllocator<CachedResource>>;
 
-    HYP_FORCE_INLINE bool HasRemainingTexels() const
-    {
-        return m_texelIndex < m_texelIndices.Size() * m_params.config->numSamples;
-    }
-
-    /*! \brief Get the next texel index to process, advancing the teexl counter
-     *  \return The texel index
-     */
-    HYP_FORCE_INLINE uint32 NextTexel()
-    {
-        const uint32 currentTexelIndex = m_texelIndices[m_texelIndex % m_texelIndices.Size()];
-        m_texelIndex++;
-
-        return currentTexelIndex;
-    }
-
-    void Stop();
-    void Stop(const Error& error);
-
-    LightmapJobParams m_params;
-
-    UUID m_uuid;
-
-    Handle<View> m_view;
-
-    Array<uint32> m_texelIndices; // flattened texel indices, flattened so that meshes are grouped together
-
-    Array<LightmapRay> m_previousFrameRays;
-    mutable Mutex m_previousFrameRaysMutex;
-
-    LightmapUVBuilder m_uvBuilder;
-    Optional<LightmapUVMap> m_uvMap;
-    Task<TResult<LightmapUVMap>> m_buildUvMapTask;
-
-    uint32 m_elementIndex;
-
-    Array<TaskBatch*> m_currentTasks;
-    mutable Mutex m_currentTasksMutex;
-
-    Semaphore<int32> m_runningSemaphore;
-    uint32 m_texelIndex;
-
-    double m_lastLoggedPercentage;
-
-    AtomicVar<uint32> m_numConcurrentRenderingTasks;
-
-    // cache to keep asset data in memory while we're using it
-    ResourceCache m_resourceCache;
-
-    Result m_result;
-};
-
-class HYP_API Lightmapper
-{
 public:
     Lightmapper(LightmapperConfig&& config, const Handle<Scene>& scene, const BoundingBox& aabb);
     Lightmapper(const Lightmapper& other) = delete;
@@ -402,6 +401,8 @@ public:
     Delegate<void> OnComplete;
 
 private:
+    void BuildResourceCache();
+
     LightmapJobParams CreateLightmapJobParams(
         SizeType startIndex,
         SizeType endIndex,
@@ -435,6 +436,8 @@ private:
 
     Array<LightmapSubElement> m_subElements;
     HashMap<Handle<Entity>, LightmapSubElement*> m_subElementsByEntity;
+
+    ResourceCache m_resourceCache;
 };
 
 } // namespace hyperion

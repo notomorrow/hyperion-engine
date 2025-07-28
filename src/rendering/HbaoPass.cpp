@@ -1,6 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#include <rendering/HBAO.hpp>
+#include <rendering/HbaoPass.hpp>
 #include <rendering/RenderGroup.hpp>
 #include <rendering/PlaceholderData.hpp>
 #include <rendering/Deferred.hpp>

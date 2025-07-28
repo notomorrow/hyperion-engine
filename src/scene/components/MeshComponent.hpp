@@ -17,6 +17,7 @@ class Skeleton;
 class BVHNode;
 class RenderProxyMesh;
 struct MeshRaytracingData;
+class LightmapVolume;
 
 using MeshComponentUserData = UserData<32, 16>;
 

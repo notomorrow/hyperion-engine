@@ -12,6 +12,7 @@ namespace hyperion {
 
 class Engine;
 
+HYP_ENUM()
 enum class AudioSourceFormat : uint32
 {
     MONO8,
@@ -20,6 +21,7 @@ enum class AudioSourceFormat : uint32
     STEREO16
 };
 
+HYP_ENUM()
 enum class AudioSourceState : uint32
 {
     UNDEFINED,

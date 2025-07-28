@@ -29,6 +29,7 @@ namespace hyperion {
 class Scene;
 class EntityManager;
 class WorldGridLayer;
+class StreamingManager;
 
 HYP_CLASS()
 class HYP_API WorldGrid final : public HypObject<WorldGrid>
