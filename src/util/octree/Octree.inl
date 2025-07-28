@@ -28,9 +28,10 @@ void OctreeState<Derived, TEntry>::MarkOctantDirty(OctantId octantId)
 }
 
 template <class Derived, class TEntry>
-OctreeBase<Derived, TEntry>::OctreeBase()
+OctreeBase<Derived, TEntry>::OctreeBase(EnumFlags<OctreeFlags> flags)
     : OctreeBase(defaultBounds)
 {
+    m_flags = flags;
 }
 
 template <class Derived, class TEntry>
@@ -47,7 +48,8 @@ OctreeBase<Derived, TEntry>::OctreeBase(const BoundingBox& aabb, OctreeBase* par
       m_isDivided(false),
       m_state(nullptr),
       m_octantId(index, OctantId::Invalid()),
-      m_invalidationMarker(0)
+      m_invalidationMarker(0),
+      m_flags(OctreeFlags::OF_NONE)
 {
     if (parent != nullptr)
     {
@@ -77,6 +79,7 @@ void OctreeBase<Derived, TEntry>::SetParent(OctreeBase* parent)
 
     if (m_parent != nullptr)
     {
+        m_flags = parent->m_flags;
         m_state = m_parent->m_state;
     }
     else
@@ -198,12 +201,30 @@ void OctreeBase<Derived, TEntry>::Divide()
 {
     Assert(!IsDivided());
 
+    Array<Entry> entries;
+    if (m_flags & OctreeFlags::OF_ONLY_INSERT_INTO_LEAF_NODES)
+    {
+        Clear(entries, false);
+    }
+
     for (int i = 0; i < 8; i++)
     {
         Octant& octant = m_octants[i];
         Assert(octant.octree == nullptr);
 
         octant.octree = CreateChildOctant(octant.aabb, static_cast<Derived*>(this), uint8(i));
+    }
+
+    // will only have elements if OF_ONLY_INSERT_INTO_LEAF_NODES is set
+    // we do this to re-insert the elements into newly created child octants since we can't host them in our octant anymore
+    if (entries.Any())
+    {
+        for (const Entry& entry : entries)
+        {
+            const BoundingBox& aabb = entry.aabb;
+
+            auto insertResult = Insert(entry.value, aabb, /* allowRebuild */ true);
+        }
     }
 
     m_isDivided = true;
@@ -390,16 +411,13 @@ OctreeBase<Derived, TEntry>::InsertResult OctreeBase<Derived, TEntry>::Insert(co
 {
     if (aabb.IsValid() && aabb.IsFinite())
     {
-        if (allowRebuild)
+        if (!m_aabb.Contains(aabb) && IsRoot() && allowRebuild)
         {
-            if (!m_aabb.Contains(aabb))
-            {
-                auto rebuildResult = RebuildExtend_Internal(aabb);
+            auto rebuildResult = RebuildExtend_Internal(aabb);
 
-                if (!rebuildResult.first)
-                {
-                    return rebuildResult;
-                }
+            if (!rebuildResult.first)
+            {
+                return rebuildResult;
             }
         }
 
@@ -408,32 +426,58 @@ OctreeBase<Derived, TEntry>::InsertResult OctreeBase<Derived, TEntry>::Insert(co
         {
             for (Octant& octant : m_octants)
             {
-                if (octant.aabb.Contains(aabb))
+                if (!octant.aabb.Contains(aabb))
                 {
-                    if (!IsDivided())
+                    continue;
+                }
+
+                if (!IsDivided())
+                {
+                    if (!allowRebuild)
                     {
-                        if (allowRebuild)
-                        {
-                            Divide();
-                        }
-                        else
-                        {
-                            // do not use this octant if it has not been divided yet.
-                            // instead, we'll insert into the current octant and mark it dirty
-                            // so it will get added after the fact.
-                            continue;
-                        }
+                        // do not use this octant if it has not been divided yet.
+                        // instead, we'll insert into the THIS octant, marking it as dirty,
+                        // so it will get added to the correct octant on Rebuild().
+                        break;
                     }
 
-                    Assert(octant.octree != nullptr);
-
-                    return octant.octree->Insert(value, aabb, allowRebuild);
+                    Divide();
                 }
+
+                Assert(octant.octree != nullptr);
+
+                return octant.octree->Insert(value, aabb, allowRebuild);
             }
         }
     }
 
     m_state->MarkOctantDirty(m_octantId);
+
+    if ((m_flags & OctreeFlags::OF_ONLY_INSERT_INTO_LEAF_NODES) && IsDivided())
+    {
+        // we'll allow inserting infinite AABBs into the root node, but only if OF_ONLY_INSERT_INTO_LEAF_NODES is /not/ set.
+        // otherwise it'll return an error.
+        if (!aabb.IsValid() || !aabb.IsFinite())
+        {
+            return { { Result::OCTREE_ERR, "Invalid AABB for insertion" }, m_octantId };
+        }
+
+        // we can't insert into a divided octree if we only want to insert into leaf nodes
+        // we need to find the best fit leaf node instead
+        OctreeBase* bestFit = nullptr;
+
+        for (Octant& octant : m_octants)
+        {
+            if (!bestFit || (octant.aabb.GetCenter() - aabb.GetCenter()).LengthSquared() < (bestFit->GetAABB().GetCenter() - aabb.GetCenter()).LengthSquared())
+            {
+                bestFit = octant.octree.Get();
+            }
+        }
+
+        Assert(bestFit != nullptr);
+
+        return bestFit->Insert(value, aabb, allowRebuild);
+    }
 
     return Insert_Internal(value, aabb);
 }
@@ -441,14 +485,17 @@ OctreeBase<Derived, TEntry>::InsertResult OctreeBase<Derived, TEntry>::Insert(co
 template <class Derived, class TEntry>
 OctreeBase<Derived, TEntry>::InsertResult OctreeBase<Derived, TEntry>::Insert_Internal(const TEntry& value, const BoundingBox& aabb)
 {
-    m_entries.Set(Entry { value, aabb });
-
     if (m_state != nullptr)
     {
-        Assert(m_state->entryToOctree.Find(value) == m_state->entryToOctree.End(), "Entry must not already be in octree hierarchy.");
+        if (m_state->entryToOctree.Find(value) != m_state->entryToOctree.End())
+        {
+            return { { Result::OCTREE_ERR, "Entry already exists in entry map" }, m_octantId };
+        }
 
         m_state->entryToOctree.Insert(value, this);
     }
+
+    m_entries.Set(Entry { value, aabb });
 
     return {
         { OctreeBase<Derived, TEntry>::Result::OCTREE_OK },
@@ -465,7 +512,6 @@ OctreeBase<Derived, TEntry>::Result OctreeBase<Derived, TEntry>::Remove(const TE
 
         if (it == m_state->entryToOctree.End())
         {
-            HYP_BREAKPOINT;
             return { Result::OCTREE_ERR, "Not found in entry map" };
         }
 

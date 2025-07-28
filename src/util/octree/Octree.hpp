@@ -164,6 +164,14 @@ struct OctreeState
     void MarkOctantDirty(OctantId octantId);
 };
 
+enum class OctreeFlags : uint32
+{
+    OF_NONE = 0x0,
+    OF_ONLY_INSERT_INTO_LEAF_NODES = 0x1 //<! Entries can only be inserted into undivided leaf nodes.
+};
+
+HYP_MAKE_ENUM_FLAGS(OctreeFlags);
+
 template <class Derived, class TEntry>
 class OctreeBase
 {
@@ -306,7 +314,7 @@ public:
 
     using EntrySet = HashSet<Entry, &Entry::value>;
 
-    OctreeBase();
+    OctreeBase(EnumFlags<OctreeFlags> flags = OctreeFlags::OF_NONE);
     OctreeBase(const BoundingBox& aabb);
     OctreeBase(const BoundingBox& aabb, OctreeBase* parent, uint8 index);
 
@@ -419,6 +427,7 @@ protected:
     EntrySet m_entries;
     OctreeBase* m_parent;
     BoundingBox m_aabb;
+    EnumFlags<OctreeFlags> m_flags;
     FixedArray<Octant, 8> m_octants;
     bool m_isDivided;
     OctreeState<Derived, TEntry>* m_state;

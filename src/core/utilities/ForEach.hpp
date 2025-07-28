@@ -3,8 +3,12 @@
 #pragma once
 
 #include <core/math/MathUtil.hpp>
-#include <Types.hpp>
+
+#include <core/utilities/Span.hpp>
+
 #include <core/threading/TaskSystem.hpp>
+
+#include <Types.hpp>
 
 #include <algorithm>
 #include <utility>
@@ -63,11 +67,11 @@ static inline void ForEach(Container&& container, Mutex& mutex, Callback&& callb
 
 /*! \brief Execute a lambda for each item in the container, in \ref{numBatches} batches.
  *  Container must be a contiguous container.
- *  Callback is called with the item, the index of the item, and the batch index and should return a IterationResult.
+ *  Callback is called with a Span of items for each batch, and should return a IterationResult.
  *
  *  \param container The container to iterate over.
  *  \param numBatches The number of batches to split the container into.
- *  \param callback The function to call for each item.
+ *  \param callback The function to call with a Span of items for the batch
  */
 template <class Container, class Callback>
 static inline void ForEachInBatches(Container&& container, uint32 numBatches, Callback&& callback)
@@ -84,14 +88,13 @@ static inline void ForEachInBatches(Container&& container, uint32 numBatches, Ca
         const uint32 offsetIndex = batchIndex * itemsPerBatch;
         const uint32 maxIndex = MathUtil::Min(offsetIndex + itemsPerBatch, numItems);
 
-        for (uint32 i = offsetIndex; i < maxIndex; ++i)
-        {
-            IterationResult result = callback(*(dataPtr + i), i, batchIndex);
+        auto elementsSpan = container.ToSpan() + offsetIndex;
 
-            if (result == IterationResult::STOP)
-            {
-                break;
-            }
+        IterationResult result = callback(elementsSpan);
+
+        if (result == IterationResult::STOP)
+        {
+            break;
         }
     }
 }

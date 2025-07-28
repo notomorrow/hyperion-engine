@@ -490,7 +490,7 @@ struct alignas(16) Vertex
         }
     }
 
-    HYP_FORCE_INLINE HashCode GetHashCode() const
+    HYP_FORCE_INLINE constexpr HashCode GetHashCode() const
     {
         HashCode hc;
         hc.Add(position.GetHashCode());

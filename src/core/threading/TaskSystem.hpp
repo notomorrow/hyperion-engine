@@ -154,7 +154,7 @@ public:
 
 class HYP_API TaskThreadPool
 {
-protected:
+public:
     TaskThreadPool();
     TaskThreadPool(Array<UniquePtr<TaskThread>>&& threads);
 
@@ -180,7 +180,6 @@ protected:
         }
     }
 
-public:
     TaskThreadPool(const TaskThreadPool&) = delete;
     TaskThreadPool& operator=(const TaskThreadPool&) = delete;
     TaskThreadPool(TaskThreadPool&&) noexcept = delete;

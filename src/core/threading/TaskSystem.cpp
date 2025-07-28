@@ -119,6 +119,11 @@ void TaskThreadPool::Start()
     {
         HYP_CORE_ASSERT(it != nullptr);
         HYP_CORE_ASSERT(it->Start());
+
+        while (!it->IsRunning())
+        {
+            HYP_WAIT_IDLE();
+        }
     }
 }
 

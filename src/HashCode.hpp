@@ -160,7 +160,7 @@ struct HashCode
 
     template <class T, class DecayedType = std::decay_t<T>>
     static constexpr inline typename std::enable_if_t<!(std::is_same_v<T, HashCode> || std::is_base_of_v<HashCode, T>) && !HYP_HAS_METHOD(DecayedType, GetHashCode)
-            && !std::is_pointer_v<DecayedType> && std::is_integral_v<DecayedType>,
+            && !std::is_pointer_v<DecayedType> && std::is_arithmetic_v<DecayedType>,
         HashCode>
     GetHashCode(T&& value)
     {
@@ -183,7 +183,7 @@ struct HashCode
         else
         {
             static_assert(resolutionFailure<T>,
-                "HashCode::GetHashCode: Unsupported type size for integral type. Supported sizes are 8, 16, 32, and 64 bits.");
+                "HashCode::GetHashCode: Unsupported type size for arthmetic type. Supported sizes are 8, 16, 32, and 64 bits.");
         }
     }
 

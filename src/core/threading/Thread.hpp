@@ -126,6 +126,7 @@ Thread<Scheduler, Args...>::Thread(const ThreadId& id, ThreadPriorityValue prior
       m_stopRequested(false),
       m_thread(nullptr)
 {
+    m_scheduler.SetOwnerThread(id);
 }
 
 template <class Scheduler, class... Args>
@@ -158,8 +159,6 @@ bool Thread<Scheduler, Args...>::Start(Args... args)
     m_thread = new std::thread([this, tupleArgs = MakeTuple(args...)](...) -> void
         {
             SetCurrentThreadObject(this);
-
-            m_scheduler.SetOwnerThread(Id());
 
             (*this)((tupleArgs.template GetElement<Args>())...);
 

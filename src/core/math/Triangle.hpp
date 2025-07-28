@@ -76,5 +76,15 @@ struct HYP_API Triangle
     BoundingBox GetBoundingBox() const;
 
     bool ContainsPoint(const Vec3f& pt) const;
+
+    HYP_FORCE_INLINE constexpr HashCode GetHashCode() const
+    {
+        // clang-format off
+        return HashCode()
+            .Combine(points[0].GetHashCode())
+            .Combine(points[1].GetHashCode())
+            .Combine(points[2].GetHashCode());
+        // clang-format on
+    }
 };
 } // namespace hyperion
