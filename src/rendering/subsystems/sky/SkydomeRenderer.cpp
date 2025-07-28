@@ -11,7 +11,7 @@
 #include <scene/View.hpp>
 #include <scene/EnvProbe.hpp>
 
-#include <scene/ecs/EntityManager.hpp>
+#include <scene/EntityManager.hpp>
 
 #include <core/threading/Scheduler.hpp>
 

@@ -6,11 +6,11 @@
 #include <scene/Node.hpp>
 #include <rendering/Mesh.hpp>
 
-#include <scene/ecs/EntityManager.hpp>
-#include <scene/ecs/ComponentInterface.hpp>
-#include <scene/ecs/components/NodeLinkComponent.hpp>
-#include <scene/ecs/components/MeshComponent.hpp>
-#include <scene/ecs/EntityTag.hpp>
+#include <scene/EntityManager.hpp>
+#include <scene/ComponentInterface.hpp>
+#include <scene/components/NodeLinkComponent.hpp>
+#include <scene/components/MeshComponent.hpp>
+#include <scene/EntityTag.hpp>
 
 #include <rendering/RenderProxy.hpp>
 
@@ -47,13 +47,13 @@ Entity::~Entity()
     {
         HYP_NAMED_SCOPE("Remove Entity from EntityManager (sync)");
 
-        HYP_LOG(ECS, Debug, "Removing Entity {} from entity manager", Id());
+        HYP_LOG(Entity, Debug, "Removing Entity {} from entity manager", Id());
 
         AssertDebug(entityManager->HasEntity(this));
 
         if (!entityManager->RemoveEntity(this))
         {
-            HYP_LOG(ECS, Error, "Failed to remove Entity {} from EntityManager", Id());
+            HYP_LOG(Entity, Error, "Failed to remove Entity {} from EntityManager", Id());
         }
     }
     else
@@ -64,19 +64,19 @@ Entity::~Entity()
                 Handle<EntityManager> entityManager = entityManagerWeak.Lock();
                 if (!entityManager)
                 {
-                    HYP_LOG(ECS, Error, "EntityManager is no longer valid while removing Entity {}", weakThis.Id());
+                    HYP_LOG(Entity, Error, "EntityManager is no longer valid while removing Entity {}", weakThis.Id());
                     return;
                 }
 
                 HYP_NAMED_SCOPE("Remove Entity from EntityManager (async)");
 
-                HYP_LOG(ECS, Debug, "Removing Entity {} from entity manager", weakThis.Id());
+                HYP_LOG(Entity, Debug, "Removing Entity {} from entity manager", weakThis.Id());
 
                 AssertDebug(entityManager->HasEntity(weakThis.GetUnsafe()));
 
                 if (!entityManager->RemoveEntity(weakThis.GetUnsafe()))
                 {
-                    HYP_LOG(ECS, Error, "Failed to remove Entity {} from EntityManager", weakThis.Id());
+                    HYP_LOG(Entity, Error, "Failed to remove Entity {} from EntityManager", weakThis.Id());
                 }
             },
             TaskEnqueueFlags::FIRE_AND_FORGET);
@@ -243,7 +243,7 @@ void Entity::OnComponentAdded(AnyRef component)
     {
         if (!meshComponent->mesh.IsValid())
         {
-            HYP_LOG(ECS, Warning, "Entity {} has a MeshComponent with an invalid mesh", Id());
+            HYP_LOG(Entity, Warning, "Entity {} has a MeshComponent with an invalid mesh", Id());
 
             return;
         }
@@ -258,7 +258,7 @@ void Entity::OnComponentAdded(AnyRef component)
 
             if (!meshComponent->mesh->BuildBVH(m_entityInitInfo.bvhDepth))
             {
-                HYP_LOG(ECS, Error, "Failed to build BVH for MeshComponent on Entity {}!", Id());
+                HYP_LOG(Entity, Error, "Failed to build BVH for MeshComponent on Entity {}!", Id());
 
                 return;
             }
@@ -330,10 +330,10 @@ void Entity::AttachChild(const Handle<Entity>& child)
             return;
         }
 
-        HYP_LOG(ECS, Warning, "Entity {} has a NodeLinkComponent but the node is not valid, cannot attach child {}", Id(), child.Id());
+        HYP_LOG(Entity, Warning, "Entity {} has a NodeLinkComponent but the node is not valid, cannot attach child {}", Id(), child.Id());
     }
 
-    HYP_LOG(ECS, Warning, "Entity {} does not have a NodeLinkComponent, cannot attach child {}", Id(), child.Id());
+    HYP_LOG(Entity, Warning, "Entity {} does not have a NodeLinkComponent, cannot attach child {}", Id(), child.Id());
 }
 
 void Entity::DetachChild(const Handle<Entity>& child)
@@ -361,15 +361,15 @@ void Entity::DetachChild(const Handle<Entity>& child)
                         return;
                     }
 
-                    HYP_LOG(ECS, Warning, "Failed to detach child {} node ({}) from parent's node ({})", child.Id(), childNode->GetName(), node->GetName());
+                    HYP_LOG(Entity, Warning, "Failed to detach child {} node ({}) from parent's node ({})", child.Id(), childNode->GetName(), node->GetName());
                 }
             }
 
-            HYP_LOG(ECS, Warning, "Entity {} does not have a NodeLinkComponent for child {}", Id(), child.Id());
+            HYP_LOG(Entity, Warning, "Entity {} does not have a NodeLinkComponent for child {}", Id(), child.Id());
         }
         else
         {
-            HYP_LOG(ECS, Warning, "Entity {} has a NodeLinkComponent but the node is not valid, cannot detach child {}", Id(), child.Id());
+            HYP_LOG(Entity, Warning, "Entity {} has a NodeLinkComponent but the node is not valid, cannot detach child {}", Id(), child.Id());
         }
     }
 }

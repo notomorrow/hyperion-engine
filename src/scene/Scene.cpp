@@ -4,20 +4,18 @@
 #include <scene/World.hpp>
 #include <scene/Light.hpp>
 
-#include <scene/ecs/EntityManager.hpp>
+#include <scene/EntityManager.hpp>
 
-#include <scene/ecs/systems/VisibilityStateUpdaterSystem.hpp>
-#include <scene/ecs/systems/EntityRenderProxySystem_Mesh.hpp>
-#include <scene/ecs/systems/EntityMeshDirtyStateSystem.hpp>
-#include <scene/ecs/systems/WorldAABBUpdaterSystem.hpp>
-#include <scene/ecs/systems/LightVisibilityUpdaterSystem.hpp>
-#include <scene/ecs/systems/EnvGridUpdaterSystem.hpp>
-#include <scene/ecs/systems/AnimationSystem.hpp>
-#include <scene/ecs/systems/LightmapSystem.hpp>
-#include <scene/ecs/systems/SkySystem.hpp>
-#include <scene/ecs/systems/AudioSystem.hpp>
-#include <scene/ecs/systems/PhysicsSystem.hpp>
-#include <scene/ecs/systems/ScriptSystem.hpp>
+#include <scene/systems/VisibilityStateUpdaterSystem.hpp>
+#include <scene/systems/EntityRenderProxySystem_Mesh.hpp>
+#include <scene/systems/EntityMeshDirtyStateSystem.hpp>
+#include <scene/systems/WorldAABBUpdaterSystem.hpp>
+#include <scene/systems/AnimationSystem.hpp>
+#include <scene/systems/LightmapSystem.hpp>
+#include <scene/systems/SkySystem.hpp>
+#include <scene/systems/AudioSystem.hpp>
+#include <scene/systems/PhysicsSystem.hpp>
+#include <scene/systems/ScriptSystem.hpp>
 
 #include <rendering/RenderEnvironment.hpp>
 #include <rendering/RenderGlobalState.hpp>
@@ -194,7 +192,6 @@ void Scene::Init()
     AddSystemIfApplicable<EntityMeshDirtyStateSystem>();
     AddSystemIfApplicable<EntityRenderProxySystem_Mesh>();
     AddSystemIfApplicable<VisibilityStateUpdaterSystem>();
-    AddSystemIfApplicable<EnvGridUpdaterSystem>();
     AddSystemIfApplicable<LightmapSystem>();
     AddSystemIfApplicable<AnimationSystem>();
     AddSystemIfApplicable<SkySystem>();

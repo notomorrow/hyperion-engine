@@ -6,10 +6,6 @@
 
 #include <dotnet/DotNetSystem.hpp>
 
-#include <rendering/Material.hpp>
-
-#include <scene/ecs/ComponentInterface.hpp>
-
 #include <core/object/HypClassRegistry.hpp>
 
 #include <core/threading/Threads.hpp>
@@ -24,6 +20,7 @@
 
 #include <streaming/StreamingManager.hpp>
 
+#include <rendering/Material.hpp>
 #include <rendering/SafeDeleter.hpp>
 #include <rendering/RenderGlobalState.hpp>
 #include <rendering/shader_compiler/ShaderCompiler.hpp>
@@ -35,6 +32,8 @@
 #ifdef HYP_EDITOR
 #include <editor/EditorState.hpp>
 #endif
+
+#include <scene/ComponentInterface.hpp>
 
 #include <audio/AudioManager.hpp>
 

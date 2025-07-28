@@ -22,11 +22,11 @@
 #include <scene/Entity.hpp>
 #include <scene/World.hpp>
 
-#include <scene/ecs/EntityManager.hpp>
-#include <scene/ecs/ComponentInterface.hpp>
+#include <scene/EntityManager.hpp>
+#include <scene/ComponentInterface.hpp>
 
 // temp
-#include <scene/ecs/components/MeshComponent.hpp>
+#include <scene/components/MeshComponent.hpp>
 
 #include <EngineGlobals.hpp>
 #include <Engine.hpp>

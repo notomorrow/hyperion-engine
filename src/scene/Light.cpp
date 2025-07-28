@@ -8,7 +8,7 @@
 #include <scene/camera/Camera.hpp>
 #include <scene/camera/OrthoCamera.hpp>
 
-#include <scene/ecs/EntityTag.hpp>
+#include <scene/EntityTag.hpp>
 
 #include <rendering/Material.hpp>
 #include <rendering/RenderShadowMap.hpp>

@@ -8,12 +8,12 @@
 
 #include <scene/animation/Skeleton.hpp>
 
-#include <scene/ecs/EntityManager.hpp>
-#include <scene/ecs/components/MeshComponent.hpp>
-#include <scene/ecs/components/AnimationComponent.hpp>
-#include <scene/ecs/components/TransformComponent.hpp>
-#include <scene/ecs/components/BoundingBoxComponent.hpp>
-#include <scene/ecs/components/VisibilityStateComponent.hpp>
+#include <scene/EntityManager.hpp>
+#include <scene/components/MeshComponent.hpp>
+#include <scene/components/AnimationComponent.hpp>
+#include <scene/components/TransformComponent.hpp>
+#include <scene/components/BoundingBoxComponent.hpp>
+#include <scene/components/VisibilityStateComponent.hpp>
 
 #include <core/logging/Logger.hpp>
 

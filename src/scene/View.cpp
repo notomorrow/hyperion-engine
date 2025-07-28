@@ -12,15 +12,15 @@
 #include <scene/camera/Camera.hpp>
 #include <scene/animation/Skeleton.hpp>
 
-#include <scene/ecs/EntityManager.hpp>
-#include <scene/ecs/EntityTag.hpp>
+#include <scene/EntityManager.hpp>
+#include <scene/EntityTag.hpp>
 
-#include <scene/ecs/components/MeshComponent.hpp>
-#include <scene/ecs/components/TransformComponent.hpp>
-#include <scene/ecs/components/BoundingBoxComponent.hpp>
-#include <scene/ecs/components/VisibilityStateComponent.hpp>
-#include <scene/ecs/components/LightmapVolumeComponent.hpp>
-#include <scene/ecs/components/SkyComponent.hpp>
+#include <scene/components/MeshComponent.hpp>
+#include <scene/components/TransformComponent.hpp>
+#include <scene/components/BoundingBoxComponent.hpp>
+#include <scene/components/VisibilityStateComponent.hpp>
+#include <scene/components/LightmapVolumeComponent.hpp>
+#include <scene/components/SkyComponent.hpp>
 
 #include <rendering/RenderGlobalState.hpp>
 #include <rendering/GBuffer.hpp>

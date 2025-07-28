@@ -18,12 +18,12 @@
 #include <scene/Light.hpp>
 #include <rendering/Texture.hpp>
 
-#include <scene/ecs/EntityManager.hpp>
-#include <scene/ecs/components/NodeLinkComponent.hpp>
-#include <scene/ecs/components/MeshComponent.hpp>
-#include <scene/ecs/components/VisibilityStateComponent.hpp>
-#include <scene/ecs/components/BoundingBoxComponent.hpp>
-#include <scene/ecs/components/TransformComponent.hpp>
+#include <scene/EntityManager.hpp>
+#include <scene/components/NodeLinkComponent.hpp>
+#include <scene/components/MeshComponent.hpp>
+#include <scene/components/VisibilityStateComponent.hpp>
+#include <scene/components/BoundingBoxComponent.hpp>
+#include <scene/components/TransformComponent.hpp>
 
 #include <asset/Assets.hpp>
 #include <asset/AssetRegistry.hpp>

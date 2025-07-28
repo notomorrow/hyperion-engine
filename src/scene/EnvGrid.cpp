@@ -8,8 +8,8 @@
 
 #include <scene/camera/Camera.hpp>
 
-#include <scene/ecs/EntityManager.hpp>
-#include <scene/ecs/components/BoundingBoxComponent.hpp>
+#include <scene/EntityManager.hpp>
+#include <scene/components/BoundingBoxComponent.hpp>
 
 #include <rendering/Texture.hpp>
 #include <rendering/RenderEnvGrid.hpp>

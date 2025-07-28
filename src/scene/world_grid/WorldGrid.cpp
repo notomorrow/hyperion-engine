@@ -5,11 +5,11 @@
 
 #include <scene/Scene.hpp>
 
-#include <scene/ecs/EntityManager.hpp>
-#include <scene/ecs/components/BoundingBoxComponent.hpp>
-#include <scene/ecs/components/TransformComponent.hpp>
-#include <scene/ecs/components/VisibilityStateComponent.hpp>
-#include <scene/ecs/components/NodeLinkComponent.hpp>
+#include <scene/EntityManager.hpp>
+#include <scene/components/BoundingBoxComponent.hpp>
+#include <scene/components/TransformComponent.hpp>
+#include <scene/components/VisibilityStateComponent.hpp>
+#include <scene/components/NodeLinkComponent.hpp>
 
 #include <streaming/StreamingManager.hpp>
 

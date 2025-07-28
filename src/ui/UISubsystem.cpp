@@ -7,9 +7,9 @@
 #include <scene/Node.hpp>
 #include <scene/Scene.hpp>
 
-#include <scene/ecs/EntityManager.hpp>
+#include <scene/EntityManager.hpp>
 
-#include <scene/ecs/components/MeshComponent.hpp>
+#include <scene/components/MeshComponent.hpp>
 
 #include <rendering/UIRenderer.hpp>
 #include <rendering/RenderEnvironment.hpp>

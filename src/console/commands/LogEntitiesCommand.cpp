@@ -15,10 +15,10 @@
 #include <scene/Scene.hpp>
 #include <scene/Node.hpp>
 
-#include <scene/ecs/EntityManager.hpp>
-#include <scene/ecs/ComponentInterface.hpp>
-#include <scene/ecs/components/NodeLinkComponent.hpp>
-#include <scene/ecs/components/UIComponent.hpp>
+#include <scene/EntityManager.hpp>
+#include <scene/ComponentInterface.hpp>
+#include <scene/components/NodeLinkComponent.hpp>
+#include <scene/components/UIComponent.hpp>
 
 #include <ui/UIObject.hpp>
 

@@ -12,7 +12,7 @@
 #include <core/logging/Logger.hpp>
 
 #include <scene/Scene.hpp>
-#include <scene/ecs/components/ScriptComponent.hpp>
+#include <scene/components/ScriptComponent.hpp>
 
 #include <Types.hpp>
 

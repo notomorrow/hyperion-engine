@@ -16,7 +16,7 @@
 #include <scene/Entity.hpp>
 #include <scene/VisibilityState.hpp>
 
-#include <scene/ecs/EntityTag.hpp>
+#include <scene/EntityTag.hpp>
 
 #include <core/math/Vector3.hpp>
 #include <core/math/BoundingBox.hpp>

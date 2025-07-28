@@ -17,14 +17,14 @@
 #include <scene/camera/OrthoCamera.hpp>
 #include <scene/camera/PerspectiveCamera.hpp>
 
-#include <scene/ecs/EntityManager.hpp>
-#include <scene/ecs/components/MeshComponent.hpp>
-#include <scene/ecs/components/VisibilityStateComponent.hpp>
-#include <scene/ecs/components/TransformComponent.hpp>
-#include <scene/ecs/components/BoundingBoxComponent.hpp>
-#include <scene/ecs/components/ScriptComponent.hpp>
-#include <scene/ecs/components/NodeLinkComponent.hpp>
-#include <scene/ecs/components/UIComponent.hpp>
+#include <scene/EntityManager.hpp>
+#include <scene/components/MeshComponent.hpp>
+#include <scene/components/VisibilityStateComponent.hpp>
+#include <scene/components/TransformComponent.hpp>
+#include <scene/components/BoundingBoxComponent.hpp>
+#include <scene/components/ScriptComponent.hpp>
+#include <scene/components/NodeLinkComponent.hpp>
+#include <scene/components/UIComponent.hpp>
 
 #include <rendering/Mesh.hpp>
 

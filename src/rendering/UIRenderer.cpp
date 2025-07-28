@@ -31,11 +31,11 @@
 #include <scene/lightmapper/LightmapVolume.hpp>
 #include <scene/animation/Skeleton.hpp>
 
-#include <scene/ecs/EntityManager.hpp>
-#include <scene/ecs/components/UIComponent.hpp>
-#include <scene/ecs/components/BoundingBoxComponent.hpp>
-#include <scene/ecs/components/TransformComponent.hpp>
-#include <scene/ecs/components/MeshComponent.hpp>
+#include <scene/EntityManager.hpp>
+#include <scene/components/UIComponent.hpp>
+#include <scene/components/BoundingBoxComponent.hpp>
+#include <scene/components/TransformComponent.hpp>
+#include <scene/components/MeshComponent.hpp>
 
 #include <core/utilities/DeferredScope.hpp>
 

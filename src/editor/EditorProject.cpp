@@ -8,7 +8,7 @@
 
 #include <scene/Scene.hpp>
 
-#include <scene/ecs/EntityManager.hpp>
+#include <scene/EntityManager.hpp>
 
 #include <scene/camera/Camera.hpp>
 

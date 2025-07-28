@@ -9,9 +9,9 @@
 
 #include <scene/Node.hpp>
 #include <scene/World.hpp>
-#include <scene/ecs/EntityManager.hpp>
-#include <scene/ecs/ComponentInterface.hpp>
-#include <scene/ecs/components/ScriptComponent.hpp>
+#include <scene/EntityManager.hpp>
+#include <scene/ComponentInterface.hpp>
+#include <scene/components/ScriptComponent.hpp>
 
 #include <ui/UIText.hpp>
 #include <ui/UITextbox.hpp>

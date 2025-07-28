@@ -63,12 +63,12 @@ Result CXXModuleGenerator::Generate_Internal(const Analyzer& analyzer, const Mod
 
         if (isComponent || isEntity)
         {
-            writer.WriteString("#include <scene/ecs/ComponentInterface.hpp>\n");
+            writer.WriteString("#include <scene/ComponentInterface.hpp>\n");
         }
 
         if (isEntity)
         {
-            writer.WriteString("#include <scene/ecs/EntityTag.hpp>\n");
+            writer.WriteString("#include <scene/EntityTag.hpp>\n");
         }
 
         if (hasScriptableMethods)

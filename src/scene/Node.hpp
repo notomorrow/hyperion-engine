@@ -21,7 +21,7 @@
 #include <core/Handle.hpp>
 
 #include <scene/Entity.hpp>
-#include <scene/ecs/EntityTag.hpp>
+#include <scene/EntityTag.hpp>
 
 #include <core/math/Transform.hpp>
 #include <core/math/Ray.hpp>

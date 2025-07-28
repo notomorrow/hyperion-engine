@@ -11,7 +11,7 @@
 #include <scene/Node.hpp>
 #include <scene/Scene.hpp>
 
-#include <scene/ecs/components/UIComponent.hpp>
+#include <scene/components/UIComponent.hpp>
 
 #include <rendering/RenderStructs.hpp>
 

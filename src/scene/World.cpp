@@ -7,7 +7,7 @@
 #include <editor/EditorSubsystem.hpp>
 #endif
 
-#include <scene/ecs/EntityManager.hpp>
+#include <scene/EntityManager.hpp>
 
 #include <scene/world_grid/WorldGrid.hpp>
 

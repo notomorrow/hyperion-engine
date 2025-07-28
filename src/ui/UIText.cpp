@@ -14,9 +14,9 @@
 
 #include <scene/camera/OrthoCamera.hpp>
 
-#include <scene/ecs/EntityManager.hpp>
-#include <scene/ecs/components/MeshComponent.hpp>
-#include <scene/ecs/components/BoundingBoxComponent.hpp>
+#include <scene/EntityManager.hpp>
+#include <scene/components/MeshComponent.hpp>
+#include <scene/components/BoundingBoxComponent.hpp>
 
 #include <core/math/Vector3.hpp>
 #include <core/math/Quaternion.hpp>

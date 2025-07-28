@@ -18,17 +18,17 @@
 #include <scene/EnvProbe.hpp>
 #include <rendering/Texture.hpp>
 
-#include <scene/ecs/EntityManager.hpp>
-#include <scene/ecs/components/MeshComponent.hpp>
-#include <scene/ecs/components/SkyComponent.hpp>
-#include <scene/ecs/components/TransformComponent.hpp>
-#include <scene/ecs/components/AudioComponent.hpp>
-#include <scene/ecs/components/BoundingBoxComponent.hpp>
-#include <scene/ecs/components/VisibilityStateComponent.hpp>
-#include <scene/ecs/components/ReflectionProbeComponent.hpp>
-#include <scene/ecs/components/RigidBodyComponent.hpp>
-#include <scene/ecs/components/ScriptComponent.hpp>
-#include <scene/ecs/ComponentInterface.hpp>
+#include <scene/EntityManager.hpp>
+#include <scene/components/MeshComponent.hpp>
+#include <scene/components/SkyComponent.hpp>
+#include <scene/components/TransformComponent.hpp>
+#include <scene/components/AudioComponent.hpp>
+#include <scene/components/BoundingBoxComponent.hpp>
+#include <scene/components/VisibilityStateComponent.hpp>
+#include <scene/components/ReflectionProbeComponent.hpp>
+#include <scene/components/RigidBodyComponent.hpp>
+#include <scene/components/ScriptComponent.hpp>
+#include <scene/ComponentInterface.hpp>
 
 #include <scene/world_grid/terrain/TerrainWorldGridPlugin.hpp>
 #include <scene/world_grid/WorldGrid.hpp>

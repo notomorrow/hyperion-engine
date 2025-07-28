@@ -6,11 +6,11 @@
 #include <rendering/Mesh.hpp>
 #include <scene/BVH.hpp>
 
-#include <scene/ecs/EntityManager.hpp>
-#include <scene/ecs/components/VisibilityStateComponent.hpp>
-#include <scene/ecs/components/TransformComponent.hpp>
-#include <scene/ecs/components/NodeLinkComponent.hpp>
-#include <scene/ecs/components/MeshComponent.hpp>
+#include <scene/EntityManager.hpp>
+#include <scene/components/VisibilityStateComponent.hpp>
+#include <scene/components/TransformComponent.hpp>
+#include <scene/components/NodeLinkComponent.hpp>
+#include <scene/components/MeshComponent.hpp>
 
 #include <scene/camera/Camera.hpp>
 

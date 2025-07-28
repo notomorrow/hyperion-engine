@@ -1,0 +1,41 @@
+/* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
+
+#pragma once
+
+#include <core/memory/RefCountedPtr.hpp>
+
+#include <scene/VisibilityState.hpp>
+#include <scene/Octree.hpp>
+
+#include <HashCode.hpp>
+
+namespace hyperion {
+
+using VisibilityStateFlags = uint32;
+
+enum VisibilityStateFlagBits : VisibilityStateFlags
+{
+    VISIBILITY_STATE_FLAG_NONE = 0x0,
+    VISIBILITY_STATE_FLAG_ALWAYS_VISIBLE = 0x1,
+    VISIBILITY_STATE_FLAG_INVALIDATED = 0x2
+};
+
+HYP_STRUCT(Component, Size = 32, Serialize = false, Editor = false)
+struct VisibilityStateComponent
+{
+    HYP_FIELD()
+    VisibilityStateFlags flags = VISIBILITY_STATE_FLAG_NONE;
+
+    HYP_FIELD()
+    OctantId octantId = OctantId::Invalid();
+
+    HYP_FIELD()
+    VisibilityState* visibilityState = nullptr;
+
+    HYP_FORCE_INLINE HashCode GetHashCode() const
+    {
+        return HashCode();
+    }
+};
+
+} // namespace hyperion
