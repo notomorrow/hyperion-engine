@@ -203,14 +203,8 @@ TResult<LightmapUVMap> LightmapUVBuilder::Build()
     }
 
     xatlas::PackOptions packOptions {};
-    packOptions.maxChartSize = 256; // 2048;
-    // packOptions.resolution = 1024; // testing
-    // packOptions.padding = 8;
-    // packOptions.texelsPerUnit = 128.0f;
+    packOptions.resolution = 256;
     packOptions.bilinear = true;
-    // packOptions.blockAlign = true;
-    packOptions.bruteForce = true;
-    packOptions.rotateCharts = true;
 
     xatlas::ComputeCharts(atlas);
     xatlas::PackCharts(atlas, packOptions);

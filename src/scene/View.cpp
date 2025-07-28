@@ -650,23 +650,30 @@ void View::CollectLights(RenderProxyList& rpl)
 
             bool isLightInFrustum = false;
 
-            switch (light->GetLightType())
+            if (m_flags & ViewFlags::NO_FRUSTUM_CULLING)
             {
-            case LT_DIRECTIONAL:
                 isLightInFrustum = true;
-                break;
-            case LT_POINT:
-                isLightInFrustum = m_camera->GetFrustum().ContainsBoundingSphere(light->GetBoundingSphere());
-                break;
-            case LT_SPOT:
-                // @TODO Implement frustum culling for spot lights
-                isLightInFrustum = true;
-                break;
-            case LT_AREA_RECT:
-                isLightInFrustum = m_camera->GetFrustum().ContainsAABB(light->GetAABB());
-                break;
-            default:
-                break;
+            }
+            else
+            {
+                switch (light->GetLightType())
+                {
+                case LT_DIRECTIONAL:
+                    isLightInFrustum = true;
+                    break;
+                case LT_POINT:
+                    isLightInFrustum = m_camera->GetFrustum().ContainsBoundingSphere(light->GetBoundingSphere());
+                    break;
+                case LT_SPOT:
+                    // @TODO Implement frustum culling for spot lights
+                    isLightInFrustum = true;
+                    break;
+                case LT_AREA_RECT:
+                    isLightInFrustum = m_camera->GetFrustum().ContainsAABB(light->GetAABB());
+                    break;
+                default:
+                    break;
+                }
             }
 
             if (isLightInFrustum)

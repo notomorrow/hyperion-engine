@@ -59,7 +59,7 @@ struct alignas(2) Float16
         this->value = (sign | (exponent << 10) | fraction);
     }
 
-    explicit operator float() const
+    operator float() const
     {
         static constexpr uint16 signMask = 0x8000;
         static constexpr uint16 expMask = 0x7C00;
@@ -209,6 +209,13 @@ struct alignas(2) Float16
     HYP_FORCE_INLINE uint16 Raw() const
     {
         return value;
+    }
+
+    HYP_FORCE_INLINE static Float16 FromRaw(uint16 v)
+    {
+        Float16 result;
+        result.value = v;
+        return result;
     }
 };
 

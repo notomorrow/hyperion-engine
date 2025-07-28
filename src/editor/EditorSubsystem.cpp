@@ -174,8 +174,6 @@ void GenerateLightmapsEditorTask::Tick(float delta)
             m_task = nullptr;
         }
     }
-
-    HYP_LOG(Editor, Info, "GenerateLightmapsEditorTask ticked");
 }
 
 #pragma endregion GenerateLightmapsEditorTask

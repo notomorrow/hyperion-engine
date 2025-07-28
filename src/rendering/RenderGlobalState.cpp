@@ -62,7 +62,7 @@ namespace hyperion {
 static constexpr uint32 g_numFrames = g_tripleBuffer ? 3 : 2;
 
 static constexpr uint32 g_maxViewsPerFrame = 16;
-static constexpr uint32 g_maxFramesBeforeDiscard = 4; // number of frames before ViewData is discarded if not written to
+static constexpr uint32 g_maxFramesBeforeDiscard = 10; // number of frames before ViewData is discarded if not written to
 
 // thread-local frame index for the game and render threads
 // @NOTE: thread local so initialized to 0 on each thread by default
@@ -566,7 +566,6 @@ static ViewData* GetViewData(View* view)
 
         ViewData* vd = new ViewData();
         vd->view = view;
-        vd->framesSinceUsed = 0;
 
         if (view->GetViewDesc().drawCallCollectionImpl != nullptr)
         {
@@ -583,6 +582,8 @@ static ViewData* GetViewData(View* view)
     }
 
     AssertDebug(viewDataIt->second != nullptr);
+
+    viewDataIt->second->framesSinceUsed = 0;
 
     return viewDataIt->second;
 }

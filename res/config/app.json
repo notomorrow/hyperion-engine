@@ -71,7 +71,7 @@
     "num_samples": 4,
     "ideal_triangles_per_job": 5000,
     "trace_mode": 0,
-    "radiance": false,
+    "radiance": true,
     "max_rays_per_frame": 100000,
     "irradiance": true
   }
