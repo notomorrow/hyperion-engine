@@ -5,7 +5,7 @@
 #include <core/serialization/fbom/FBOMResult.hpp>
 #include <core/serialization/fbom/FBOMEnums.hpp>
 
-#include <core/utilities/UniqueID.hpp>
+#include <core/utilities/UniqueId.hpp>
 #include <core/utilities/EnumFlags.hpp>
 
 #include <core/memory/RefCountedPtr.hpp>
@@ -38,9 +38,9 @@ public:
     FBOMSerializableBase& operator=(FBOMSerializableBase&&) noexcept = default;
     virtual ~FBOMSerializableBase() = default;
 
-    virtual FBOMResult Visit(UniqueID id, FBOMWriter* writer, ByteWriter* out, EnumFlags<FBOMDataAttributes> attributes = FBOMDataAttributes::NONE) const = 0;
+    virtual FBOMResult Visit(UniqueId id, FBOMWriter* writer, ByteWriter* out, EnumFlags<FBOMDataAttributes> attributes = FBOMDataAttributes::NONE) const = 0;
 
-    virtual UniqueID GetUniqueID() const = 0;
+    virtual UniqueId GetUniqueID() const = 0;
     virtual HashCode GetHashCode() const = 0;
     virtual String ToString(bool deep = true) const = 0;
 };

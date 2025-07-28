@@ -10,7 +10,7 @@
 #include <core/functional/Proc.hpp>
 
 #include <core/utilities/Pair.hpp>
-#include <core/utilities/UUID.hpp>
+#include <core/utilities/Uuid.hpp>
 #include <core/utilities/DeferredScope.hpp>
 
 #include <core/memory/RefCountedPtr.hpp>

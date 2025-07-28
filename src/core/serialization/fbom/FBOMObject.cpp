@@ -153,7 +153,7 @@ void FBOMObject::AddChild(FBOMObject&& object)
     m_children.PushBack(std::move(object));
 }
 
-FBOMResult FBOMObject::Visit(UniqueID id, FBOMWriter* writer, ByteWriter* out, EnumFlags<FBOMDataAttributes> attributes) const
+FBOMResult FBOMObject::Visit(UniqueId id, FBOMWriter* writer, ByteWriter* out, EnumFlags<FBOMDataAttributes> attributes) const
 {
     if (IsExternal())
     {

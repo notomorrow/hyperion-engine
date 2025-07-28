@@ -194,7 +194,18 @@ public:
     TaskExecutorBase(const TaskExecutorBase& other) = delete;
     TaskExecutorBase& operator=(const TaskExecutorBase& other) = delete;
 
-    TaskExecutorBase(TaskExecutorBase&& other) noexcept = delete;
+    TaskExecutorBase(TaskExecutorBase&& other) noexcept
+        : m_id(other.m_id),
+          m_initiatorThreadId(other.m_initiatorThreadId),
+          m_assignedScheduler(other.m_assignedScheduler)
+    {
+        m_callbackChain = std::move(other.m_callbackChain);
+
+        other.m_id = TaskID::Invalid();
+        other.m_initiatorThreadId = ThreadId::Invalid();
+        other.m_assignedScheduler = nullptr;
+    }
+
     TaskExecutorBase& operator=(TaskExecutorBase&& other) noexcept = delete;
 
     virtual ~TaskExecutorBase() override = default;
@@ -279,7 +290,13 @@ public:
     TaskExecutorInstance(const TaskExecutorInstance& other) = delete;
     TaskExecutorInstance& operator=(const TaskExecutorInstance& other) = delete;
 
-    TaskExecutorInstance(TaskExecutorInstance&& other) noexcept = delete;
+    TaskExecutorInstance(TaskExecutorInstance&& other) noexcept
+        : Base(static_cast<Base&&>(other)),
+          m_fn(std::move(other.m_fn)),
+          m_resultValue(std::move(other.m_resultValue))
+    {
+    }
+
     TaskExecutorInstance& operator=(TaskExecutorInstance&& other) noexcept = delete;
 
     virtual ~TaskExecutorInstance() override = default;
@@ -334,17 +351,13 @@ public:
     TaskExecutorInstance(const TaskExecutorInstance& other) = delete;
     TaskExecutorInstance& operator=(const TaskExecutorInstance& other) = delete;
 
-    TaskExecutorInstance(TaskExecutorInstance&& other) noexcept = delete;
+    TaskExecutorInstance(TaskExecutorInstance&& other) noexcept
+        : Base(static_cast<Base&&>(other)),
+          m_fn(std::move(other.m_fn))
+    {
+    }
+
     TaskExecutorInstance& operator=(TaskExecutorInstance&& other) noexcept = delete;
-
-    // TaskExecutorInstance &operator=(TaskExecutorInstance &&other) noexcept
-    // {
-    //     Base::operator=(static_cast<Base &&>(other));
-
-    //     m_fn = std::move(other.m_fn);
-
-    //     return *this;
-    // }
 
     virtual ~TaskExecutorInstance() override = default;
 
@@ -377,7 +390,13 @@ public:
     TaskPromise(const TaskPromise& other) = delete;
     TaskPromise& operator=(const TaskPromise& other) = delete;
 
-    TaskPromise(TaskPromise&& other) noexcept = delete;
+    TaskPromise(TaskPromise&& other) noexcept
+        : Base(static_cast<Base&&>(other)),
+          m_task(other.m_task)
+    {
+        other.m_task = nullptr;
+    }
+
     TaskPromise& operator=(TaskPromise&& other) noexcept = delete;
 
     virtual ~TaskPromise() override = default;
@@ -442,7 +461,13 @@ public:
     TaskPromise(const TaskPromise& other) = delete;
     TaskPromise& operator=(const TaskPromise& other) = delete;
 
-    TaskPromise(TaskPromise&& other) noexcept = delete;
+    TaskPromise(TaskPromise&& other) noexcept
+        : Base(static_cast<Base&&>(other)),
+          m_task(other.m_task)
+    {
+        other.m_task = nullptr;
+    }
+
     TaskPromise& operator=(TaskPromise&& other) noexcept = delete;
 
     virtual ~TaskPromise() override = default;

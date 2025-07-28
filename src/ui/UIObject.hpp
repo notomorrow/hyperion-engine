@@ -10,9 +10,9 @@
 
 #include <core/functional/ScriptableDelegate.hpp>
 
-#include <core/utilities/UniqueID.hpp>
+#include <core/utilities/UniqueId.hpp>
 #include <core/utilities/EnumFlags.hpp>
-#include <core/utilities/UUID.hpp>
+#include <core/utilities/Uuid.hpp>
 #include <core/utilities/Pair.hpp>
 #include <core/utilities/ForEach.hpp>
 

@@ -63,7 +63,7 @@ public:
     TaskThreadPool* pool = nullptr;
 
     /* Tasks must remain constant from creation of the TaskBatch to completion. */
-    LinkedList<TaskExecutorInstance<void>> executors;
+    Array<TaskExecutorInstance<void>> executors;
 
     /* TaskRefs to be set by the TaskSystem, holding task ids and pointers to the threads
      * each task has been scheduled to. */

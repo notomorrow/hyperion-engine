@@ -2,7 +2,7 @@
 #include <core/containers/String.hpp>
 
 #include <core/utilities/EnumFlags.hpp>
-#include <core/utilities/UUID.hpp>
+#include <core/utilities/Uuid.hpp>
 
 #include <core/memory/RefCountedPtr.hpp>
 #include <core/memory/UniquePtr.hpp>

@@ -2,7 +2,7 @@
 
 #include <core/Name.hpp>
 
-#include <core/utilities/UUID.hpp>
+#include <core/utilities/Uuid.hpp>
 #include <core/utilities/Format.hpp>
 
 #include <core/math/MathUtil.hpp>

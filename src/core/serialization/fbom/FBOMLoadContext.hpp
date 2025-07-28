@@ -4,7 +4,7 @@
 
 #include <core/containers/HashMap.hpp>
 
-#include <core/utilities/UUID.hpp>
+#include <core/utilities/Uuid.hpp>
 
 #include <core/serialization/fbom/FBOMObjectLibrary.hpp>
 

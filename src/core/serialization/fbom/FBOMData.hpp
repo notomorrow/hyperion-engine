@@ -578,10 +578,10 @@ public:
         return Visit(GetUniqueID(), writer, out, attributes);
     }
 
-    virtual FBOMResult Visit(UniqueID id, FBOMWriter* writer, ByteWriter* out, EnumFlags<FBOMDataAttributes> attributes = FBOMDataAttributes::NONE) const override;
+    virtual FBOMResult Visit(UniqueId id, FBOMWriter* writer, ByteWriter* out, EnumFlags<FBOMDataAttributes> attributes = FBOMDataAttributes::NONE) const override;
 
     virtual String ToString(bool deep = true) const override;
-    virtual UniqueID GetUniqueID() const override;
+    virtual UniqueId GetUniqueID() const override;
     virtual HashCode GetHashCode() const override;
 
     HYP_FORCE_INLINE const RC<HypData>& GetDeserializedObject() const

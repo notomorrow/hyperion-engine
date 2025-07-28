@@ -10,7 +10,7 @@
 #include <core/utilities/StringView.hpp>
 #include <core/utilities/Optional.hpp>
 #include <core/utilities/Variant.hpp>
-#include <core/utilities/UniqueID.hpp>
+#include <core/utilities/UniqueId.hpp>
 #include <core/utilities/EnumFlags.hpp>
 #include <core/utilities/TypeAttributes.hpp>
 
@@ -62,8 +62,8 @@ struct FBOMWriteStream
 {
     Array<FBOMObject> m_objectData;
     Array<FBOMObjectLibrary> m_objectLibraries;
-    HashMap<UniqueID, FBOMStaticData> m_staticData; // map hashcodes to static data to be stored.
-    HashMap<UniqueID, int> m_hashUseCountMap;
+    HashMap<UniqueId, FBOMStaticData> m_staticData; // map hashcodes to static data to be stored.
+    HashMap<UniqueId, int> m_hashUseCountMap;
     uint32 m_staticDataOffset = 0;
     bool m_isWritingStaticData : 1 = false;   // is writing to static data locked? (prevents iterator invalidation)
     bool m_objectDataWriteLocked : 1 = false; // is writing to object data locked? (prevents iterator invalidation)
@@ -76,7 +76,7 @@ struct FBOMWriteStream
     FBOMWriteStream& operator=(FBOMWriteStream&& other) noexcept = default;
     ~FBOMWriteStream() = default;
 
-    FBOMDataLocation GetDataLocation(const UniqueID& uniqueId, const FBOMStaticData** outStaticData, const FBOMExternalObjectInfo** outExternalObjectInfo) const;
+    FBOMDataLocation GetDataLocation(const UniqueId& uniqueId, const FBOMStaticData** outStaticData, const FBOMExternalObjectInfo** outExternalObjectInfo) const;
 
     HYP_FORCE_INLINE void BeginStaticDataWriting()
     {
@@ -156,10 +156,10 @@ public:
 
     FBOMResult Emit(ByteWriter* out, bool writeHeader = true);
 
-    FBOMResult Write(ByteWriter* out, const FBOMObject& object, UniqueID id, EnumFlags<FBOMDataAttributes> attributes = FBOMDataAttributes::NONE);
-    FBOMResult Write(ByteWriter* out, const FBOMType& type, UniqueID id, EnumFlags<FBOMDataAttributes> attributes = FBOMDataAttributes::NONE);
-    FBOMResult Write(ByteWriter* out, const FBOMData& data, UniqueID id, EnumFlags<FBOMDataAttributes> attributes = FBOMDataAttributes::NONE);
-    FBOMResult Write(ByteWriter* out, const FBOMArray& array, UniqueID id, EnumFlags<FBOMDataAttributes> attributes = FBOMDataAttributes::NONE);
+    FBOMResult Write(ByteWriter* out, const FBOMObject& object, UniqueId id, EnumFlags<FBOMDataAttributes> attributes = FBOMDataAttributes::NONE);
+    FBOMResult Write(ByteWriter* out, const FBOMType& type, UniqueId id, EnumFlags<FBOMDataAttributes> attributes = FBOMDataAttributes::NONE);
+    FBOMResult Write(ByteWriter* out, const FBOMData& data, UniqueId id, EnumFlags<FBOMDataAttributes> attributes = FBOMDataAttributes::NONE);
+    FBOMResult Write(ByteWriter* out, const FBOMArray& array, UniqueId id, EnumFlags<FBOMDataAttributes> attributes = FBOMDataAttributes::NONE);
 
 private:
     FBOMResult WriteArchive(ByteWriter* out, const Archive& archive) const;
@@ -177,20 +177,20 @@ private:
 
     FBOMResult WriteStaticDataUsage(ByteWriter* out, const FBOMStaticData&) const;
 
-    void AddObjectData(const FBOMObject&, UniqueID id);
-    void AddObjectData(FBOMObject&&, UniqueID id);
+    void AddObjectData(const FBOMObject&, UniqueId id);
+    void AddObjectData(FBOMObject&&, UniqueId id);
 
-    UniqueID AddStaticData(FBOMLoadContext& context, const FBOMType&);
-    UniqueID AddStaticData(FBOMLoadContext& context, const FBOMObject&);
-    UniqueID AddStaticData(FBOMLoadContext& context, const FBOMData&);
-    UniqueID AddStaticData(FBOMLoadContext& context, const FBOMArray&);
+    UniqueId AddStaticData(FBOMLoadContext& context, const FBOMType&);
+    UniqueId AddStaticData(FBOMLoadContext& context, const FBOMObject&);
+    UniqueId AddStaticData(FBOMLoadContext& context, const FBOMData&);
+    UniqueId AddStaticData(FBOMLoadContext& context, const FBOMArray&);
 
-    UniqueID AddStaticData(UniqueID id, FBOMStaticData&& staticData);
+    UniqueId AddStaticData(UniqueId id, FBOMStaticData&& staticData);
 
-    HYP_FORCE_INLINE UniqueID AddStaticData(FBOMStaticData&& staticData)
+    HYP_FORCE_INLINE UniqueId AddStaticData(FBOMStaticData&& staticData)
     {
-        const UniqueID id = staticData.GetUniqueID();
-        HYP_CORE_ASSERT(id != UniqueID::Invalid());
+        const UniqueId id = staticData.GetUniqueID();
+        HYP_CORE_ASSERT(id != UniqueId::Invalid());
 
         return AddStaticData(id, std::move(staticData));
     }

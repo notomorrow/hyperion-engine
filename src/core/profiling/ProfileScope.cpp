@@ -13,7 +13,7 @@
 #include <core/threading/TaskThread.hpp>
 #include <core/threading/DataRaceDetector.hpp>
 
-#include <core/utilities/UUID.hpp>
+#include <core/utilities/Uuid.hpp>
 
 #include <core/net/HTTPRequest.hpp>
 

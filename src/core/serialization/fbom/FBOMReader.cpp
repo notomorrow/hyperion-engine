@@ -965,7 +965,7 @@ FBOMResult FBOMReader::ReadObject(FBOMLoadContext& context, BufferedReader* read
         }
 
         outObject = FBOMObject(objectType);
-        outObject.m_uniqueId = UniqueID { id };
+        outObject.m_uniqueId = UniqueId { id };
 
         do
         {

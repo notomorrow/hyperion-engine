@@ -9,7 +9,7 @@
 #include <core/containers/HashMap.hpp>
 #include <core/containers/HashSet.hpp>
 
-#include <core/utilities/UUID.hpp>
+#include <core/utilities/Uuid.hpp>
 #include <core/utilities/StringView.hpp>
 
 #include <core/object/HypObject.hpp>

@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include <core/utilities/UUID.hpp>
+#include <core/utilities/Uuid.hpp>
 #include <core/utilities/EnumFlags.hpp>
 
 #include <core/serialization/fbom/FBOMObject.hpp>

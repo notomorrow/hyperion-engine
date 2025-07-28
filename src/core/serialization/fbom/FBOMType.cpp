@@ -239,7 +239,7 @@ bool FBOMType::Extends(const FBOMType& other, bool allowUnbounded, bool allowVoi
     return extends->Extends(other, allowUnbounded, allowVoidTypeId);
 }
 
-FBOMResult FBOMType::Visit(UniqueID id, FBOMWriter* writer, ByteWriter* out, EnumFlags<FBOMDataAttributes> attributes) const
+FBOMResult FBOMType::Visit(UniqueId id, FBOMWriter* writer, ByteWriter* out, EnumFlags<FBOMDataAttributes> attributes) const
 {
     return writer->Write(out, *this, id, attributes);
 }

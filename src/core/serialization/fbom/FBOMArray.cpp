@@ -162,7 +162,7 @@ const FBOMData* FBOMArray::TryGetElement(SizeType index) const
     return &m_values[index];
 }
 
-FBOMResult FBOMArray::Visit(UniqueID id, FBOMWriter* writer, ByteWriter* out, EnumFlags<FBOMDataAttributes> attributes) const
+FBOMResult FBOMArray::Visit(UniqueId id, FBOMWriter* writer, ByteWriter* out, EnumFlags<FBOMDataAttributes> attributes) const
 {
     return writer->Write(out, *this, id, attributes);
 }
@@ -190,9 +190,9 @@ String FBOMArray::ToString(bool deep) const
     return String(ss.str().data());
 }
 
-UniqueID FBOMArray::GetUniqueID() const
+UniqueId FBOMArray::GetUniqueID() const
 {
-    return UniqueID(GetHashCode());
+    return UniqueId(GetHashCode());
 }
 
 HashCode FBOMArray::GetHashCode() const

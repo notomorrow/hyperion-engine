@@ -10,7 +10,7 @@
 #include <core/object/HypConstant.hpp>
 
 #include <core/utilities/Format.hpp>
-#include <core/utilities/UUID.hpp>
+#include <core/utilities/Uuid.hpp>
 
 #include <core/logging/LogChannels.hpp>
 #include <core/logging/Logger.hpp>

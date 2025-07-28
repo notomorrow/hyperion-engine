@@ -27,7 +27,7 @@ namespace hyperion::serialization {
 
 FBOMWriteStream::FBOMWriteStream() = default;
 
-FBOMDataLocation FBOMWriteStream::GetDataLocation(const UniqueID& uniqueId, const FBOMStaticData** outStaticData, const FBOMExternalObjectInfo** outExternalObjectInfo) const
+FBOMDataLocation FBOMWriteStream::GetDataLocation(const UniqueId& uniqueId, const FBOMStaticData** outStaticData, const FBOMExternalObjectInfo** outExternalObjectInfo) const
 {
     *outStaticData = nullptr;
     *outExternalObjectInfo = nullptr;
@@ -159,7 +159,7 @@ FBOMResult FBOMWriter::Append(const FBOMObject& object)
 
 FBOMResult FBOMWriter::Append(FBOMObject&& object)
 {
-    const UniqueID id = object.GetUniqueID();
+    const UniqueId id = object.GetUniqueID();
 
     AddObjectData(std::move(object), id);
 
@@ -534,7 +534,7 @@ FBOMResult FBOMWriter::WriteHeader(ByteWriter* out)
     return FBOMResult::FBOM_OK;
 }
 
-FBOMResult FBOMWriter::Write(ByteWriter* out, const FBOMObject& object, UniqueID id, EnumFlags<FBOMDataAttributes> attributes)
+FBOMResult FBOMWriter::Write(ByteWriter* out, const FBOMObject& object, UniqueId id, EnumFlags<FBOMDataAttributes> attributes)
 {
     HYP_CORE_ASSERT(uint64(id) != 0);
 
@@ -634,7 +634,7 @@ FBOMResult FBOMWriter::Write(ByteWriter* out, const FBOMObject& object, UniqueID
     return FBOMResult::FBOM_OK;
 }
 
-FBOMResult FBOMWriter::Write(ByteWriter* out, const FBOMType& type, UniqueID id, EnumFlags<FBOMDataAttributes> attributes)
+FBOMResult FBOMWriter::Write(ByteWriter* out, const FBOMType& type, UniqueId id, EnumFlags<FBOMDataAttributes> attributes)
 {
     const FBOMStaticData* staticDataPtr;
     const FBOMExternalObjectInfo* externalObjectInfoPtr;
@@ -690,7 +690,7 @@ FBOMResult FBOMWriter::Write(ByteWriter* out, const FBOMType& type, UniqueID id,
     return FBOMResult::FBOM_OK;
 }
 
-FBOMResult FBOMWriter::Write(ByteWriter* out, const FBOMData& data, UniqueID id, EnumFlags<FBOMDataAttributes> attributes)
+FBOMResult FBOMWriter::Write(ByteWriter* out, const FBOMData& data, UniqueId id, EnumFlags<FBOMDataAttributes> attributes)
 {
     ByteWriter* writerPtr = out;
 
@@ -759,7 +759,7 @@ FBOMResult FBOMWriter::Write(ByteWriter* out, const FBOMData& data, UniqueID id,
     return FBOMResult::FBOM_OK;
 }
 
-FBOMResult FBOMWriter::Write(ByteWriter* out, const FBOMArray& array, UniqueID id, EnumFlags<FBOMDataAttributes> attributes)
+FBOMResult FBOMWriter::Write(ByteWriter* out, const FBOMArray& array, UniqueId id, EnumFlags<FBOMDataAttributes> attributes)
 {
     const FBOMStaticData* staticDataPtr;
     const FBOMExternalObjectInfo* externalObjectInfoPtr;
@@ -928,7 +928,7 @@ FBOMResult FBOMWriter::WriteStaticDataUsage(ByteWriter* out, const FBOMStaticDat
     return FBOMResult::FBOM_OK;
 }
 
-void FBOMWriter::AddObjectData(const FBOMObject& object, UniqueID id)
+void FBOMWriter::AddObjectData(const FBOMObject& object, UniqueId id)
 {
     HYP_CORE_ASSERT(uint64(id) != 0);
 
@@ -946,7 +946,7 @@ void FBOMWriter::AddObjectData(const FBOMObject& object, UniqueID id)
     it->second++;
 }
 
-void FBOMWriter::AddObjectData(FBOMObject&& object, UniqueID id)
+void FBOMWriter::AddObjectData(FBOMObject&& object, UniqueId id)
 {
     HYP_CORE_ASSERT(uint64(id) != 0);
 
@@ -964,7 +964,7 @@ void FBOMWriter::AddObjectData(FBOMObject&& object, UniqueID id)
     it->second++;
 }
 
-UniqueID FBOMWriter::AddStaticData(UniqueID id, FBOMStaticData&& staticData)
+UniqueId FBOMWriter::AddStaticData(UniqueId id, FBOMStaticData&& staticData)
 {
     HYP_CORE_ASSERT(!m_writeStream->IsWritingStaticData());
 
@@ -995,7 +995,7 @@ UniqueID FBOMWriter::AddStaticData(UniqueID id, FBOMStaticData&& staticData)
     return id;
 }
 
-UniqueID FBOMWriter::AddStaticData(FBOMLoadContext& context, const FBOMType& type)
+UniqueId FBOMWriter::AddStaticData(FBOMLoadContext& context, const FBOMType& type)
 {
     if (type.extends != nullptr)
     {
@@ -1005,28 +1005,28 @@ UniqueID FBOMWriter::AddStaticData(FBOMLoadContext& context, const FBOMType& typ
     return AddStaticData(FBOMStaticData(type));
 }
 
-UniqueID FBOMWriter::AddStaticData(FBOMLoadContext& context, const FBOMObject& object)
+UniqueId FBOMWriter::AddStaticData(FBOMLoadContext& context, const FBOMObject& object)
 {
     AddStaticData(context, object.GetType());
 
     return AddStaticData(FBOMStaticData(object));
 }
 
-UniqueID FBOMWriter::AddStaticData(FBOMLoadContext& context, const FBOMArray& array)
+UniqueId FBOMWriter::AddStaticData(FBOMLoadContext& context, const FBOMArray& array)
 {
     return AddStaticData(FBOMStaticData(array));
 }
 
-UniqueID FBOMWriter::AddStaticData(FBOMLoadContext& context, const FBOMData& data)
+UniqueId FBOMWriter::AddStaticData(FBOMLoadContext& context, const FBOMData& data)
 {
-    UniqueID id = UniqueID::Invalid();
+    UniqueId id = UniqueId::Invalid();
 
     AddStaticData(context, data.GetType());
 
     if (data.IsObject())
     {
         FBOMObject object;
-        
+
         const bool result = data.ReadObject(context, object).value;
         HYP_CORE_ASSERT(result == FBOMResult::FBOM_OK, "Invalid object, cannot write to stream");
 
@@ -1035,7 +1035,7 @@ UniqueID FBOMWriter::AddStaticData(FBOMLoadContext& context, const FBOMData& dat
     else if (data.IsArray())
     {
         FBOMArray array { FBOMUnset() };
-        
+
         const FBOMResult result = data.ReadArray(context, array).value;
         HYP_CORE_ASSERT(result == FBOMResult::FBOM_OK, "Invalid array, cannot write to stream");
 

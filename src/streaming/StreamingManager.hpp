@@ -17,7 +17,7 @@
 
 #include <core/threading/Semaphore.hpp>
 
-#include <core/utilities/UUID.hpp>
+#include <core/utilities/Uuid.hpp>
 
 #include <core/logging/LoggerFwd.hpp>
 

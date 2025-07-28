@@ -10,7 +10,7 @@
 #include <core/threading/Semaphore.hpp>
 
 #include <core/utilities/Span.hpp>
-#include <core/utilities/UUID.hpp>
+#include <core/utilities/Uuid.hpp>
 #include <core/utilities/Result.hpp>
 
 #include <core/config/Config.hpp>

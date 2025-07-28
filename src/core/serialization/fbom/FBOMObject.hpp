@@ -9,10 +9,10 @@
 #include <core/containers/FlatMap.hpp>
 
 #include <core/utilities/Optional.hpp>
-#include <core/utilities/UniqueID.hpp>
+#include <core/utilities/UniqueId.hpp>
 #include <core/utilities/StringView.hpp>
 #include <core/utilities/EnumFlags.hpp>
-#include <core/utilities/UUID.hpp>
+#include <core/utilities/Uuid.hpp>
 
 #include <core/memory/ByteBuffer.hpp>
 
@@ -55,9 +55,9 @@ struct FBOMExternalObjectInfo
     UUID libraryId = UUID::Invalid();
     uint32 index = ~0u;
 
-    HYP_FORCE_INLINE UniqueID GetUniqueID() const
+    HYP_FORCE_INLINE UniqueId GetUniqueID() const
     {
-        return UniqueID(GetHashCode());
+        return UniqueId(GetHashCode());
     }
 
     HYP_FORCE_INLINE bool IsLinked() const
@@ -86,7 +86,7 @@ public:
     FlatMap<ANSIString, FBOMData> properties;
     RC<HypData> m_deserializedObject;
     Optional<FBOMExternalObjectInfo> m_externalInfo;
-    UniqueID m_uniqueId;
+    UniqueId m_uniqueId;
 
     FBOMObject();
     FBOMObject(const FBOMType& loaderType);
@@ -249,11 +249,11 @@ public:
         return Visit(GetUniqueID(), writer, out, attributes);
     }
 
-    virtual FBOMResult Visit(UniqueID id, FBOMWriter* writer, ByteWriter* out, EnumFlags<FBOMDataAttributes> attributes = FBOMDataAttributes::NONE) const override;
+    virtual FBOMResult Visit(UniqueId id, FBOMWriter* writer, ByteWriter* out, EnumFlags<FBOMDataAttributes> attributes = FBOMDataAttributes::NONE) const override;
 
     virtual String ToString(bool deep = true) const override;
 
-    virtual UniqueID GetUniqueID() const override
+    virtual UniqueId GetUniqueID() const override
     {
         return m_uniqueId;
     }
@@ -375,18 +375,18 @@ struct FBOMObjectSerialize_Impl<T, std::enable_if_t<!std::is_same_v<FBOMObject, 
         {
             if (flags & FBOMObjectSerializeFlags::KEEP_UNIQUE)
             {
-                outObject.m_uniqueId = UniqueID::Generate();
+                outObject.m_uniqueId = UniqueId::Generate();
             }
             else
             {
                 const HashCode hashCode = HashCode::GetHashCode(TypeId::ForType<T>()).Add(HashCode::GetHashCode(in));
 
-                outObject.m_uniqueId = UniqueID(hashCode);
+                outObject.m_uniqueId = UniqueId(hashCode);
             }
         }
         else
         {
-            outObject.m_uniqueId = UniqueID::Generate();
+            outObject.m_uniqueId = UniqueId::Generate();
         }
 
         if (flags & FBOMObjectSerializeFlags::EXTERNAL)

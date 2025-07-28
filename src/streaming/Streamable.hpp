@@ -8,7 +8,7 @@
 
 #include <core/math/BoundingBox.hpp>
 
-#include <core/utilities/UUID.hpp>
+#include <core/utilities/Uuid.hpp>
 
 #include <core/object/HypObject.hpp>
 

@@ -4,7 +4,7 @@
 
 #include <core/containers/String.hpp>
 #include <core/utilities/Optional.hpp>
-#include <core/utilities/UniqueID.hpp>
+#include <core/utilities/UniqueId.hpp>
 #include <core/utilities/EnumFlags.hpp>
 
 #include <core/serialization/fbom/FBOMObject.hpp>
@@ -180,12 +180,12 @@ struct FBOMStaticData
     }
 
     /*! \brief Set a custom identifier for this object (overrides the underlying data's unique identifier) */
-    HYP_FORCE_INLINE void SetUniqueID(UniqueID id)
+    HYP_FORCE_INLINE void SetUniqueID(UniqueId id)
     {
         m_id.Set(id);
     }
 
-    HYP_FORCE_INLINE UniqueID GetUniqueID() const
+    HYP_FORCE_INLINE UniqueId GetUniqueID() const
     {
         if (m_id.HasValue())
         {
@@ -197,7 +197,7 @@ struct FBOMStaticData
             return data->GetUniqueID();
         }
 
-        return UniqueID::Invalid();
+        return UniqueId::Invalid();
     }
 
     HYP_FORCE_INLINE HashCode GetHashCode() const
@@ -222,7 +222,7 @@ struct FBOMStaticData
 
 private:
     // Optional custom set Id
-    Optional<UniqueID> m_id;
+    Optional<UniqueId> m_id;
 };
 
 } // namespace serialization

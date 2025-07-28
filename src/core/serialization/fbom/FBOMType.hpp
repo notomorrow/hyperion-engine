@@ -7,7 +7,7 @@
 #include <core/containers/String.hpp>
 
 #include <core/utilities/StringView.hpp>
-#include <core/utilities/UniqueID.hpp>
+#include <core/utilities/UniqueId.hpp>
 #include <core/utilities/EnumFlags.hpp>
 #include <core/utilities/TypeId.hpp>
 
@@ -139,13 +139,13 @@ public:
         return Visit(GetUniqueID(), writer, out, attributes);
     }
 
-    virtual FBOMResult Visit(UniqueID id, FBOMWriter* writer, ByteWriter* out, EnumFlags<FBOMDataAttributes> attributes = FBOMDataAttributes::NONE) const override;
+    virtual FBOMResult Visit(UniqueId id, FBOMWriter* writer, ByteWriter* out, EnumFlags<FBOMDataAttributes> attributes = FBOMDataAttributes::NONE) const override;
 
     virtual String ToString(bool deep = true) const override;
 
-    virtual UniqueID GetUniqueID() const override
+    virtual UniqueId GetUniqueID() const override
     {
-        return UniqueID(GetHashCode());
+        return UniqueId(GetHashCode());
     }
 
     virtual HashCode GetHashCode() const override

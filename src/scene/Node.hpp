@@ -10,7 +10,7 @@
 
 #include <core/functional/Delegate.hpp>
 
-#include <core/utilities/UUID.hpp>
+#include <core/utilities/Uuid.hpp>
 #include <core/utilities/EnumFlags.hpp>
 #include <core/utilities/StringView.hpp>
 #include <core/utilities/Variant.hpp>

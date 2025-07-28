@@ -561,7 +561,7 @@ FBOMData::FBOMData(const json::JSONValue& jsonValue)
 {
 }
 
-FBOMResult FBOMData::Visit(UniqueID id, FBOMWriter* writer, ByteWriter* out, EnumFlags<FBOMDataAttributes> attributes) const
+FBOMResult FBOMData::Visit(UniqueId id, FBOMWriter* writer, ByteWriter* out, EnumFlags<FBOMDataAttributes> attributes) const
 {
     return writer->Write(out, *this, id, attributes);
 }
@@ -597,9 +597,9 @@ String FBOMData::ToString(bool deep) const
     return String(stream.str().c_str());
 }
 
-UniqueID FBOMData::GetUniqueID() const
+UniqueId FBOMData::GetUniqueID() const
 {
-    return UniqueID(GetHashCode());
+    return UniqueId(GetHashCode());
 }
 
 HashCode FBOMData::GetHashCode() const

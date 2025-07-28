@@ -3,7 +3,7 @@
 #pragma once
 
 #include <core/utilities/TypeId.hpp>
-#include <core/utilities/UniqueID.hpp>
+#include <core/utilities/UniqueId.hpp>
 
 #include <core/utilities/FormatFwd.hpp>
 
@@ -89,9 +89,9 @@ struct ObjIdBase
         return value ? value - 1 : invalidValue;
     }
 
-    HYP_FORCE_INLINE operator UniqueID() const
+    HYP_FORCE_INLINE operator UniqueId() const
     {
-        return UniqueID { GetHashCode() };
+        return UniqueId { GetHashCode() };
     }
 
     HYP_FORCE_INLINE constexpr HashCode GetHashCode() const

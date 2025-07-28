@@ -14,7 +14,7 @@
 #include <core/functional/Delegate.hpp>
 #include <core/functional/ScriptableDelegate.hpp>
 
-#include <core/utilities/UUID.hpp>
+#include <core/utilities/Uuid.hpp>
 #include <core/utilities/Result.hpp>
 
 #include <core/utilities/Time.hpp>
