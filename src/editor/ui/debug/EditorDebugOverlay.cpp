@@ -9,6 +9,7 @@
 #include <rendering/Texture.hpp>
 
 #include <ui/UIImage.hpp>
+#include <ui/UIText.hpp>
 
 namespace hyperion {
 
@@ -61,5 +62,31 @@ Handle<UIObject> TextureEditorDebugOverlay::CreateUIObject_Impl(UIObject* spawnP
 }
 
 #pragma endregion TextureEditorDebugOverlay
+
+#pragma region TextEditorDebugOverlay
+
+TextEditorDebugOverlay::TextEditorDebugOverlay(const String& text, Color textColor, float textSize)
+    : m_text(text),
+      m_textColor(textColor),
+      m_textSize(textSize)
+{
+}
+
+TextEditorDebugOverlay::~TextEditorDebugOverlay()
+{
+}
+
+Handle<UIObject> TextEditorDebugOverlay::CreateUIObject_Impl(UIObject* spawnParent)
+{
+    Handle<UIText> uiText = spawnParent->CreateUIObject<UIText>(GetName(), Vec2i::Zero(), UIObjectSize({ 0, UIObjectSize::AUTO }, { 0, UIObjectSize::AUTO }));
+    uiText->SetText(m_text);
+    uiText->SetTextColor(m_textColor);
+    uiText->SetTextSize(m_textSize);
+    uiText->SetPadding(Vec2i { 2, 2 });
+
+    return uiText;
+}
+
+#pragma endregion TextEditorDebugOverlay
 
 } // namespace hyperion

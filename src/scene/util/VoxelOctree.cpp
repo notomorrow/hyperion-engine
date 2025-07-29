@@ -216,7 +216,7 @@ VoxelOctreeBuildResult VoxelOctree::Build(const VoxelOctreeParams& params, Entit
                     {
                         OctreeBase::Insert(
                             VoxelOctreeNode { element.entity.Id(), triangles[triangleIndex] },
-                            triangleAabbs[triangleIndex], false);
+                            triangleAabbs[triangleIndex], true);
                     }
 
                     return IterationResult::CONTINUE;
@@ -249,11 +249,6 @@ VoxelOctreeBuildResult VoxelOctree::Build(const VoxelOctreeParams& params, Entit
     taskBatch.AwaitCompletion();
 
     pool.Stop();
-
-    if (!OctreeBase::Rebuild().first)
-    {
-        return HYP_MAKE_ERROR(Error, "Failed to rebuild voxel octree after inserting BVHs");
-    }
 
     return {};
 }

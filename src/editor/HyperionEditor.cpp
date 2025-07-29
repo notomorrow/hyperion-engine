@@ -226,7 +226,7 @@ void HyperionEditor::Init()
     // batch->Add("test_model", "models/pica_pica/pica_pica.obj");
     // batch->Add("test_model", "models/testbed/testbed.obj");
     batch->Add("zombie", "models/ogrexml/dragger_Body.mesh.xml");
-    batch->Add("z2", "models/monkey.fbx");
+//    batch->Add("z2", "models/monkey.fbx");
 
     Handle<Entity> rootEntity = scene->GetEntityManager()->AddEntity();
     scene->GetRoot()->SetEntity(rootEntity);

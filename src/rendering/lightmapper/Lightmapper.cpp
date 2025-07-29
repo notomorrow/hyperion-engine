@@ -1499,15 +1499,16 @@ Lightmapper::Lightmapper(LightmapperConfig&& config, const Handle<Scene>& scene,
         NAME("Forward"),
         ShaderProperties(voxelMesh->GetVertexAttributes())
     };
+    materialAttributes.cullFaces = FaceCullMode::FCM_NONE;
     Handle<Material> material = CreateObject<Material>(Name::Invalid(), materialAttributes);
-
-    scene->GetEntityManager()->AddComponent<MeshComponent>(entity, MeshComponent { voxelMesh, material });
-    scene->GetEntityManager()->AddComponent<BoundingBoxComponent>(entity, BoundingBoxComponent { voxelMesh->GetAABB() });
 
     Handle<Node> node = CreateObject<Node>();
     node->SetEntity(entity);
 
     scene->GetRoot()->AddChild(std::move(node));
+
+    scene->GetEntityManager()->AddComponent<MeshComponent>(entity, MeshComponent { voxelMesh, material });
+    scene->GetEntityManager()->AddComponent<BoundingBoxComponent>(entity, BoundingBoxComponent { voxelMesh->GetAABB() });
 
     /// testing
 
@@ -1590,15 +1591,21 @@ void Lightmapper::BuildResourceCache()
 
     HYP_NAMED_SCOPE("Building lightmapper resource cache");
 
-    HYP_LOG(Lightmap, Info, "Building resource cache");
+    HYP_LOG(Lightmap, Info, "Building lightmapper resource cache");
 
-    for (LightmapSubElement& subElement : m_subElements)
+    Mutex mtx;
+
+    TaskBatch taskBatch;
+
+    auto callback = [&](LightmapSubElement& subElement, uint32, uint32) -> void
     {
+        Array<CachedResource> localResources;
+
         if (subElement.mesh.IsValid())
         {
             Assert(subElement.mesh->GetAsset().IsValid());
 
-            m_resourceCache.Emplace(subElement.mesh->GetAsset(), *subElement.mesh->GetAsset()->GetResource());
+            localResources.EmplaceBack(subElement.mesh->GetAsset(), *subElement.mesh->GetAsset()->GetResource());
         }
 
         if (subElement.material.IsValid())
@@ -1609,10 +1616,36 @@ void Lightmapper::BuildResourceCache()
                 {
                     Assert(it.second->GetAsset().IsValid());
 
-                    m_resourceCache.Emplace(it.second->GetAsset(), *it.second->GetAsset()->GetResource());
+                    localResources.EmplaceBack(it.second->GetAsset(), *it.second->GetAsset()->GetResource());
                 }
             }
         }
+
+        if (localResources.Any())
+        {
+            Mutex::Guard guard(mtx);
+
+            for (CachedResource& cachedResource : localResources)
+            {
+                m_resourceCache.Set(std::move(cachedResource));
+            }
+        }
+    };
+
+    TaskSystem::GetInstance().ParallelForEach_Batch(
+        taskBatch,
+        (m_subElements.Size() + 255) / 256,
+        m_subElements, callback);
+
+    TaskSystem::GetInstance().EnqueueBatch(&taskBatch);
+
+    while (!taskBatch.IsCompleted())
+    {
+        Threads::Sleep(1000);
+
+        Mutex::Guard guard(mtx);
+
+        HYP_LOG(Lightmap, Debug, "Waiting for lightmapper resource cache to finish building... ({} resources discovered)", m_resourceCache.Size());
     }
 }
 

@@ -248,6 +248,8 @@ void Entity::OnComponentAdded(AnyRef component)
             return;
         }
 
+        InitObject(meshComponent->mesh);
+
         if (m_entityInitInfo.bvhDepth > 0)
         {
             if (meshComponent->mesh->GetBVH().IsValid())

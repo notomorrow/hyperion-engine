@@ -11,6 +11,8 @@
 
 #include <editor/ui/debug/EditorDebugOverlay.hpp>
 
+#include <dotnet/DotNetSystem.hpp>
+
 #include <scene/Scene.hpp>
 #include <scene/World.hpp>
 #include <rendering/Mesh.hpp>
@@ -1089,6 +1091,11 @@ void EditorSubsystem::OnAddedToWorld()
     // }
 
     // OpenProject(*result);
+
+    if (!dotnet::DotNetSystem::GetInstance().IsEnabled())
+    {
+        AddDebugOverlay(CreateObject<TextEditorDebugOverlay>(".NET runtime is not enabled - editor features may be missing or non-functional", Color::Red()));
+    }
 }
 
 void EditorSubsystem::OnRemovedFromWorld()
@@ -2728,6 +2735,12 @@ void EditorSubsystem::OpenProject(const Handle<EditorProject>& project)
         if (project.IsValid())
         {
             project->SetEditorSubsystem(WeakHandleFromThis());
+        }
+
+        if (Result saveResult = project->Save(); saveResult.HasError())
+        {
+            HYP_BREAKPOINT_DEBUG_MODE;
+            HYP_LOG(Editor, Error, "Failed to save newly created project: {}", saveResult.GetError().GetMessage());
         }
 
         OnProjectOpened(m_currentProject);

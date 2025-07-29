@@ -96,6 +96,8 @@ void AssetDataResourceBase::Initialize()
 
 void AssetDataResourceBase::Destroy()
 {
+    HYP_LOG(Assets, Debug, "Unloading asset '{}'", m_assetObject.GetUnsafe()->IsRegistered() ? *m_assetObject.GetUnsafe()->GetPath().ToString() : *m_assetObject.GetUnsafe()->GetName());
+
     Unload_Internal();
 }
 
@@ -281,6 +283,7 @@ Result AssetObject::Save() const
 
     if (!dir.Exists() || !dir.IsDirectory())
     {
+        HYP_BREAKPOINT;
         return HYP_MAKE_ERROR(Error, "Path '{}' is not a valid directory, cannot save asset", dir);
     }
 
@@ -429,8 +432,12 @@ void AssetPackage::Init()
     Array<Handle<AssetObject>> assetObjects;
     Array<Handle<AssetPackage>> subpackages;
 
+    bool isSaved = false;
+
     {
         Mutex::Guard guard(m_mutex);
+
+        isSaved = !IsTransient() && m_packageDir.Length() != 0;
 
         assetObjects.Reserve(m_assetObjects.Size());
         subpackages.Reserve(m_subpackages.Size());
@@ -442,7 +449,7 @@ void AssetPackage::Init()
                 // transient data isn't saved to disk so we have to keep it in memory
                 assetObject->SetIsPersistentlyLoaded(true);
             }
-            else
+            else if (isSaved)
             {
                 assetObject->m_filepath = m_packageDir / *assetObject->GetName();
             }
@@ -462,7 +469,7 @@ void AssetPackage::Init()
 
     for (const Handle<AssetObject>& assetObject : assetObjects)
     {
-        if (!IsTransient())
+        if (isSaved)
         {
             // save the file in our package
             Result saveAssetResult = assetObject->Save();
@@ -471,6 +478,8 @@ void AssetPackage::Init()
             {
                 HYP_LOG(Assets, Error, "Failed to save asset object '{}' in package '{}': {}", assetObject->GetName(), m_name, saveAssetResult.GetError().GetMessage());
             }
+
+            assetObject->SetIsPersistentlyLoaded(false);
         }
 
         OnAssetObjectAdded(assetObject, true);
@@ -519,8 +528,12 @@ void AssetPackage::SetAssetObjects(const AssetObjectSet& assetObjects)
 
     Array<Handle<AssetObject>> newAssetObjects;
 
+    bool isSaved = false;
+
     {
         Mutex::Guard guard(m_mutex);
+
+        isSaved = !IsTransient() && m_packageDir.Length() != 0;
 
         m_assetObjects = assetObjects;
 
@@ -536,7 +549,7 @@ void AssetPackage::SetAssetObjects(const AssetObjectSet& assetObjects)
                 // transient data isn't saved to disk so we have to keep it in memory
                 assetObject->SetIsPersistentlyLoaded(true);
             }
-            else
+            else if (isSaved)
             {
                 assetObject->m_filepath = m_packageDir / *assetObject->GetName();
             }
@@ -551,7 +564,7 @@ void AssetPackage::SetAssetObjects(const AssetObjectSet& assetObjects)
     {
         for (const Handle<AssetObject>& assetObject : newAssetObjects)
         {
-            if (!IsTransient())
+            if (isSaved)
             {
                 // save the file in our package
                 Result saveAssetResult = assetObject->Save();
@@ -560,6 +573,8 @@ void AssetPackage::SetAssetObjects(const AssetObjectSet& assetObjects)
                 {
                     HYP_LOG(Assets, Error, "Failed to save asset object '{}' in package '{}': {}", assetObject->GetName(), m_name, saveAssetResult.GetError().GetMessage());
                 }
+
+                assetObject->SetIsPersistentlyLoaded(false);
             }
 
             OnAssetObjectAdded(assetObject, true);
@@ -596,8 +611,12 @@ Result AssetPackage::AddAssetObject(const Handle<AssetObject>& assetObject)
     assetObject->m_package = WeakHandleFromThis();
     assetObject->m_assetPath = BuildAssetPath(assetObject->m_name);
 
+    bool isSaved = false;
+
     {
         Mutex::Guard guard(m_mutex);
+
+        isSaved = !IsTransient() && m_packageDir.Length() != 0;
 
         // if no name is provided for the asset, generate one
         if (!assetObject->GetName().IsValid())
@@ -610,7 +629,7 @@ Result AssetPackage::AddAssetObject(const Handle<AssetObject>& assetObject)
             // transient data isn't saved to disk so we have to keep it in memory
             assetObject->SetIsPersistentlyLoaded(true);
         }
-        else
+        else if (isSaved)
         {
             assetObject->m_filepath = m_packageDir / *assetObject->GetName();
         }
@@ -635,7 +654,7 @@ Result AssetPackage::AddAssetObject(const Handle<AssetObject>& assetObject)
     {
         InitObject(assetObject);
 
-        if (!IsTransient())
+        if (isSaved)
         {
             // save the file in our package
             Result saveAssetResult = assetObject->Save();
@@ -646,6 +665,8 @@ Result AssetPackage::AddAssetObject(const Handle<AssetObject>& assetObject)
 
                 return HYP_MAKE_ERROR(Error, "Failed to save asset object '{}': {}", assetObject->GetName(), saveAssetResult.GetError().GetMessage());
             }
+
+            assetObject->SetIsPersistentlyLoaded(false);
         }
 
         OnAssetObjectAdded(assetObject, true);
@@ -824,6 +845,8 @@ Result AssetPackage::Save(const FilePath& outputDirectory)
 
     manifestWriter.Close();
 
+    m_packageDir = packageDirectory;
+
     for (const Handle<AssetPackage>& subpackage : m_subpackages)
     {
         if (subpackage->IsTransient())
@@ -839,17 +862,20 @@ Result AssetPackage::Save(const FilePath& outputDirectory)
         }
     }
 
-    m_packageDir = packageDirectory;
-
-    for (const Handle<AssetObject>& assetObject : m_assetObjects)
+    if (!IsTransient() && m_packageDir.Length() != 0)
     {
-        assetObject->m_filepath = m_packageDir / *assetObject->GetName();
-
-        Result result = assetObject->Save();
-
-        if (result.HasError())
+        for (const Handle<AssetObject>& assetObject : m_assetObjects)
         {
-            return result.GetError();
+            assetObject->m_filepath = m_packageDir / *assetObject->GetName();
+
+            Result result = assetObject->Save();
+
+            if (result.HasError())
+            {
+                return result.GetError();
+            }
+
+            assetObject->SetIsPersistentlyLoaded(false);
         }
     }
 

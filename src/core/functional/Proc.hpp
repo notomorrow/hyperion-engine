@@ -391,6 +391,23 @@ public:
         }
     }
 
+    ProcRef(Proc<ReturnType(Args...)>&& proc)
+        : ProcRef(nullptr)
+    {
+        if (proc.IsValid())
+        {
+            m_ptr = static_cast<void*>(&proc);
+
+            m_invokeFn = [](void* ptr, Args&... args) -> ReturnType
+            {
+                Proc<ReturnType(Args...)>& proc = *static_cast<Proc<ReturnType(Args...)>*>(ptr);
+                HYP_CORE_ASSERT(proc.IsValid(), "Cannot invoke ProcRef referencing invalid Proc");
+
+                return proc(args...);
+            };
+        }
+    }
+
     template <class Callable, typename = std::enable_if_t<!std::is_pointer_v<NormalizedType<Callable>> && std::is_invocable_v<NormalizedType<Callable>, Args...> && !std::is_base_of_v<ProcRefBase, NormalizedType<Callable>> && !std::is_base_of_v<ProcBase, NormalizedType<Callable>>>>
     ProcRef(Callable&& callable)
         : m_ptr(const_cast<void*>(static_cast<const void*>(&callable)))
@@ -461,11 +478,9 @@ public:
     {
     }
 
-    template <class Callable>
-    ProcRef(Callable& callable)
+    ProcRef(T& callable)
         : m_ptr(&callable)
     {
-        static_assert(!std::is_rvalue_reference_v<Callable>, "ProcRef cannot be constructed from an rvalue reference. The callable must outlive the ProcRef.");
     }
 
     ProcRef(const ProcRef& other) = default;

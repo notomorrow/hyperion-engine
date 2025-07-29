@@ -6,8 +6,9 @@
 
 #include <core/memory/RefCountedPtr.hpp>
 
-#include <core/Handle.hpp>
+#include <core/math/Color.hpp>
 
+#include <core/Handle.hpp>
 #include <core/Defines.hpp>
 
 #include <ui/UIObject.hpp>
@@ -84,6 +85,28 @@ protected:
     }
 
     Handle<Texture> m_texture;
+};
+
+HYP_CLASS()
+class HYP_API TextEditorDebugOverlay : public EditorDebugOverlayBase
+{
+    HYP_OBJECT_BODY(TextEditorDebugOverlay);
+
+public:
+    TextEditorDebugOverlay(const String& text, Color textColor = Color::White(), float textSize = 10.0f);
+    virtual ~TextEditorDebugOverlay() override;
+
+protected:
+    virtual Handle<UIObject> CreateUIObject_Impl(UIObject* spawnParent) override;
+
+    virtual Name GetName_Impl() const override
+    {
+        return NAME("TextEditorDebugOverlay");
+    }
+
+    String m_text;
+    Color m_textColor;
+    float m_textSize;
 };
 
 } // namespace hyperion

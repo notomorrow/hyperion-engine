@@ -351,17 +351,20 @@ Handle<Mesh> MeshBuilder::BuildVoxelMesh(const VoxelOctree& voxelOctree)
         }
         else if (octant.GetEntries().Any()) // filled voxel node
         {
-            Vec3f center = octant.GetAABB().GetCenter();
-            voxelPositions.PushBack(Vec3i((int)center.x, (int)center.y, (int)center.z));
-
-            if (!minVoxelAabb.IsValid())
+            if (octant.GetAABB().IsFinite() && !octant.GetAABB().IsZero() && octant.GetAABB().IsValid())
             {
-                minVoxelAabb = octant.GetAABB();
+                Vec3f center = octant.GetAABB().GetCenter();
+                voxelPositions.PushBack(Vec3i((int)center.x, (int)center.y, (int)center.z));
 
-                return;
+                if (!minVoxelAabb.IsValid())
+                {
+                    minVoxelAabb = octant.GetAABB();
+
+                    return;
+                }
+
+                minVoxelAabb.SetExtent(MathUtil::Min(minVoxelAabb.GetExtent(), octant.GetAABB().GetExtent()));
             }
-
-            minVoxelAabb.SetExtent(MathUtil::Min(minVoxelAabb.GetExtent(), octant.GetAABB().GetExtent()));
         }
     };
 
@@ -379,174 +382,60 @@ Handle<Mesh> MeshBuilder::BuildVoxelMesh(const VoxelOctree& voxelOctree)
     Array<uint32> indices;
     uint32 vertexOffset = 0;
 
-    struct Face
-    {
-        Vec3f normal; // Face normal direction
-        Vec3f uDir;   // First tangent direction
-        Vec3f vDir;   // Second tangent direction
+    // Per-axis half-extents of the smallest voxel cell
+    Vec3f halfExtents = minVoxelAabb.GetExtent();
+
+    // Six face directions
+    static const Vec3i dirs[6] = {
+        { 1, 0, 0 }, { -1, 0, 0 },
+        { 0, 1, 0 }, { 0, -1, 0 },
+        { 0, 0, 1 }, { 0, 0, -1 }
     };
 
-    static const Face faces[6] = {
-        { Vec3f(1, 0, 0), Vec3f(0, 1, 0), Vec3f(0, 0, 1) },  // +X
-        { Vec3f(-1, 0, 0), Vec3f(0, 1, 0), Vec3f(0, 0, 1) }, // -X
-        { Vec3f(0, 1, 0), Vec3f(1, 0, 0), Vec3f(0, 0, 1) },  // +Y
-        { Vec3f(0, -1, 0), Vec3f(1, 0, 0), Vec3f(0, 0, 1) }, // -Y
-        { Vec3f(0, 0, 1), Vec3f(1, 0, 0), Vec3f(0, 1, 0) },  // +Z
-        { Vec3f(0, 0, -1), Vec3f(1, 0, 0), Vec3f(0, 1, 0) }  // -Z
+    // Unit-cube corner offsets for each face
+    static const Vec3i faceCorners[6][4] = {
+        { { 1, 1, 1 }, { 1, 1, -1 }, { 1, -1, 1 }, { 1, -1, -1 } },
+        { { -1, 1, -1 }, { -1, 1, 1 }, { -1, -1, -1 }, { -1, -1, 1 } },
+        { { -1, 1, 1 }, { 1, 1, 1 }, { -1, 1, -1 }, { 1, 1, -1 } },
+        { { -1, -1, -1 }, { 1, -1, -1 }, { -1, -1, 1 }, { 1, -1, 1 } },
+        { { -1, 1, 1 }, { 1, 1, 1 }, { -1, -1, 1 }, { 1, -1, 1 } },
+        { { 1, 1, -1 }, { -1, 1, -1 }, { 1, -1, -1 }, { -1, -1, -1 } }
     };
 
-    // Step 3: Process each face direction using greedy meshing
-    const float voxelSize = 1.0f;
-    const float halfVoxel = voxelSize * 0.5f;
+    static const Vec2f uvs[4] = { { 0, 0 }, { 1, 0 }, { 0, 1 }, { 1, 1 } };
+    static const uint32 idxPattern[6] = { 0, 1, 2, 2, 1, 3 };
 
-    for (int faceIndex = 0; faceIndex < 6; faceIndex++)
+    // Generate only outer faces
+    for (auto& vp : voxelSet)
     {
-        Face face = faces[faceIndex];
-
-        // Find bounds in face-local coordinates
-        int minU = INT_MAX, minV = INT_MAX;
-        int maxU = INT_MIN, maxV = INT_MIN;
-        int minD = INT_MAX, maxD = INT_MIN;
-
-        for (uint32 i = 0; i < voxelPositions.Size(); i++)
+        Vec3f center((float)vp.x, (float)vp.y, (float)vp.z);
+        for (int f = 0; f < 6; ++f)
         {
-            Vec3i pos = voxelPositions[i];
+            Vec3i neighbor = vp + dirs[f];
+            if (voxelSet.Contains(neighbor))
+                continue;
 
-            // Project voxel position into face-local coordinates
-            int u = (int)(pos.x * face.uDir.x + pos.y * face.uDir.y + pos.z * face.uDir.z);
-            int v = (int)(pos.x * face.vDir.x + pos.y * face.vDir.y + pos.z * face.vDir.z);
-            int d = (int)(pos.x * face.normal.x + pos.y * face.normal.y + pos.z * face.normal.z);
-
-            // Track bounds
-            minU = MathUtil::Min(minU, u);
-            maxU = MathUtil::Max(maxU, u);
-            minV = MathUtil::Min(minV, v);
-            maxV = MathUtil::Max(maxV, v);
-            minD = MathUtil::Min(minD, d);
-            maxD = MathUtil::Max(maxD, d);
-        }
-
-        // Process each layer of voxels perpendicular to the face direction
-        for (int d = minD; d <= maxD + 1; d++)
-        {
-            int width = maxU - minU + 1;
-            int height = maxV - minV + 1;
-
-            // Create a mask of visible faces for this layer
-            Bitset visibleFaces;
-
-            // Determine which faces are visible
-            for (int v = 0; v < height; v++)
+            // build one quad face
+            for (int i = 0; i < 4; ++i)
             {
-                for (int u = 0; u < width; u++)
-                {
-                    // Convert back to world coordinates
-                    Vec3i voxelPos;
-                    voxelPos.x = (minU + u) * (int)face.uDir.x + (minV + v) * (int)face.vDir.x + d * (int)face.normal.x;
-                    voxelPos.y = (minU + u) * (int)face.uDir.y + (minV + v) * (int)face.vDir.y + d * (int)face.normal.y;
-                    voxelPos.z = (minU + u) * (int)face.uDir.z + (minV + v) * (int)face.vDir.z + d * (int)face.normal.z;
-
-                    bool voxelExists = voxelSet.Contains(voxelPos);
-
-                    Vec3i neighborPos = voxelPos;
-
-                    if (face.normal.x + face.normal.y + face.normal.z > 0)
-                    {
-                        neighborPos.x -= (int)face.normal.x;
-                        neighborPos.y -= (int)face.normal.y;
-                        neighborPos.z -= (int)face.normal.z;
-                    }
-                    else
-                    {
-                        neighborPos.x += (int)face.normal.x;
-                        neighborPos.y += (int)face.normal.y;
-                        neighborPos.z += (int)face.normal.z;
-                    }
-
-                    bool neighborExists = voxelSet.Contains(neighborPos);
-
-                    visibleFaces.Set(u + v * width, voxelExists && !neighborExists);
-                }
+                Vec3i corner = faceCorners[f][i];
+                // scale unit corner by half-extents per axis
+                Vec3f offset(
+                    corner.x * halfExtents.x,
+                    corner.y * halfExtents.y,
+                    corner.z * halfExtents.z);
+                Vertex vert;
+                vert.position = center + offset;
+                vert.normal = Vec3f((float)dirs[f].x,
+                    (float)dirs[f].y,
+                    (float)dirs[f].z);
+                vert.texcoord0 = uvs[i];
+                vertices.PushBack(vert);
             }
+            for (int k = 0; k < 6; ++k)
+                indices.PushBack(vertexOffset + idxPattern[k]);
 
-            // greedy meshing
-            for (int v = 0; v < height; v++)
-            {
-                for (int u = 0; u < width;)
-                {
-                    if (!visibleFaces.Test(u + v * width))
-                    {
-                        u++;
-                        continue;
-                    }
-
-                    // Find width of rectangle (how far we can go in u direction)
-                    int rectWidth;
-                    for (rectWidth = 1; (u + rectWidth) < width && visibleFaces.Test(u + rectWidth + v * width); rectWidth++)
-                        ;
-
-                    // Find height of rectangle (how far we can go in v direction)
-                    int rectHeight;
-                    for (rectHeight = 1; (v + rectHeight) < height; rectHeight++)
-                    {
-                        // Check if entire row is visible
-                        bool rowIsVisible = true;
-                        for (int du = 0; du < rectWidth; du++)
-                        {
-                            if (!visibleFaces.Test(u + du + (v + rectHeight) * width))
-                            {
-                                rowIsVisible = false;
-                                break;
-                            }
-                        }
-                        if (!rowIsVisible)
-                            break;
-                    }
-
-                    // Mark all faces in this rectangle as processed
-                    for (int dv = 0; dv < rectHeight; dv++)
-                    {
-                        for (int du = 0; du < rectWidth; du++)
-                        {
-                            visibleFaces.Set((u + du) + (v + dv) * width, false);
-                        }
-                    }
-
-                    // Generate quad for this rectangle
-                    Vec3f origin = face.uDir * (float)(minU + u) + face.vDir * (float)(minV + v) + face.normal * (float)d;
-                    Vec3f uExtent = face.uDir * (float)rectWidth;
-                    Vec3f vExtent = face.vDir * (float)rectHeight;
-                    Vec3f offset = face.normal * halfVoxel;
-
-                    // Calculate the four corners of the quad
-                    Vec3f v0 = origin + offset;
-                    Vec3f v1 = origin + uExtent + offset;
-                    Vec3f v2 = origin + uExtent + vExtent + offset;
-                    Vec3f v3 = origin + vExtent + offset;
-
-                    Vec2f uv0(0, 0), uv1(1, 0), uv2(1, 1), uv3(0, 1);
-
-                    // Add the quad to the mesh
-                    vertices.PushBack(Vertex(v0, uv0, face.normal));
-                    vertices.PushBack(Vertex(v1, uv1, face.normal));
-                    vertices.PushBack(Vertex(v2, uv2, face.normal));
-                    vertices.PushBack(Vertex(v3, uv3, face.normal));
-
-                    // Add indices for the quad (two triangles)
-                    indices.PushBack(vertexOffset + 0);
-                    indices.PushBack(vertexOffset + 1);
-                    indices.PushBack(vertexOffset + 2);
-
-                    indices.PushBack(vertexOffset + 0);
-                    indices.PushBack(vertexOffset + 2);
-                    indices.PushBack(vertexOffset + 3);
-
-                    vertexOffset += 4;
-
-                    // Move to the next position in the row
-                    u += rectWidth;
-                }
-            }
+            vertexOffset += 4;
         }
     }
 
@@ -556,9 +445,6 @@ Handle<Mesh> MeshBuilder::BuildVoxelMesh(const VoxelOctree& voxelOctree)
     meshData.vertexData = std::move(vertices);
     meshData.indexData.SetSize(indices.Size() * sizeof(uint32));
     meshData.indexData.Write(indices.Size() * sizeof(uint32), 0, indices.Data());
-
-    meshData.CalculateNormals(true);
-    meshData.CalculateTangents();
 
     Handle<Mesh> mesh = CreateObject<Mesh>();
     mesh->SetMeshData(meshData);

@@ -39,7 +39,11 @@ Octree::Octree(const Handle<EntityManager>& entityManager, const BoundingBox& aa
 {
 }
 
-Octree::~Octree() = default;
+Octree::~Octree()
+{
+    // to ensure VisibilityStateComponents are updated
+    Clear();
+}
 
 void Octree::SetEntityManager(const Handle<EntityManager>& entityManager)
 {
@@ -145,7 +149,7 @@ void Octree::PerformUpdates()
 
     Assert(m_state != nullptr);
 
-    if (!m_state->NeedsRebuild())
+    if (!m_state->IsDirty())
     {
         // No octant to rebuild, skipping
         return;

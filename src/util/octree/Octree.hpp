@@ -150,18 +150,28 @@ class OctreeBase;
 template <class Derived, class TEntry>
 struct OctreeState
 {
+    struct DirtyState
+    {
+        OctantId octantId = OctantId::Invalid();
+        bool needsRebuild = false;
+    };
+
     HashMap<TEntry, OctreeBase<Derived, TEntry>*> entryToOctree;
 
     // If any octants need to be rebuilt, their topmost parent that needs to be rebuilt will be stored here
-    OctantId rebuildState = OctantId::Invalid();
+    DirtyState dirtyState;
 
     HYP_FORCE_INLINE bool NeedsRebuild() const
     {
-        return rebuildState != OctantId::Invalid();
+        return dirtyState.needsRebuild && dirtyState.octantId != OctantId::Invalid();
     }
 
-    /*! \brief Mark the octant as dirty, meaning it needs to be rebuilt */
-    void MarkOctantDirty(OctantId octantId);
+    HYP_FORCE_INLINE bool IsDirty() const
+    {
+        return dirtyState.octantId != OctantId::Invalid();
+    }
+
+    void MarkOctantDirty(OctantId octantId, bool needsRebuild = false);
 };
 
 enum class OctreeFlags : uint32
