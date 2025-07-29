@@ -314,16 +314,13 @@ struct alignas(alignof(T) * 4) HYP_API Vec3
             static_cast<Ty>(z)
         };
     }
-
-    HYP_FORCE_INLINE HashCode GetHashCode() const
+    
+    HYP_FORCE_INLINE constexpr HashCode GetHashCode() const
     {
-        HashCode hc;
-
-        hc.Add(x);
-        hc.Add(y);
-        hc.Add(z);
-
-        return hc;
+        return HashCode()
+            .Combine(x)
+            .Combine(y)
+            .Combine(z);
     }
 
     HYP_FORCE_INLINE static Vec3 Zero()
@@ -627,15 +624,12 @@ struct alignas(alignof(float) * 4) HYP_API Vec3<float>
         };
     }
 
-    HashCode GetHashCode() const
+    HYP_FORCE_INLINE constexpr HashCode GetHashCode() const
     {
-        HashCode hc;
-
-        hc.Add(x);
-        hc.Add(y);
-        hc.Add(z);
-
-        return hc;
+        return HashCode()
+            .Combine(x)
+            .Combine(y)
+            .Combine(z);
     }
 
     static Vec3<float> Abs(const Vec3<float>&);

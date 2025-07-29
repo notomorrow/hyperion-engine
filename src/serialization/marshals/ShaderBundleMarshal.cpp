@@ -120,9 +120,7 @@ public:
 
         if (globalDescriptorTableVersion != GetStaticDescriptorTableDeclaration().GetHashCode().Value())
         {
-            HYP_LOG(ShaderCompiler, Info, "The global descriptor table version does not match. This shader will need to be recompiled.");
-
-            return { FBOMResult::FBOM_ERR, "Global descriptor table version mismatch" };
+            return { FBOMResult::FBOM_ERR, "Shader out of date" };
         }
 
         CompiledShader compiledShader;

@@ -150,7 +150,7 @@ GraphicsPipelineRef RenderGroup::CreateGraphicsPipeline(PassData* pd, IDrawCallC
         {
             for (uint32 frameIndex = 0; frameIndex < g_framesInFlight; frameIndex++)
             {
-                const GpuBufferRef& gpuBuffer = drawCallCollectionImpl->GetEntityInstanceBatchHolder()->GetBuffer(frameIndex);
+                const GpuBufferRef& gpuBuffer = drawCallCollectionImpl->GetGpuBufferHolder()->GetBuffer(frameIndex);
                 Assert(gpuBuffer.IsValid());
 
                 const DescriptorSetRef& instancingDescriptorSet = descriptorTable->GetDescriptorSet(NAME("Instancing"), frameIndex);

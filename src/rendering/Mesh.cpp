@@ -148,6 +148,9 @@ Mesh::~Mesh()
     if (IsInitCalled())
     {
         SetReady(false);
+        
+        SafeRelease(std::move(m_vertexBuffer));
+        SafeRelease(std::move(m_indexBuffer));
     }
 }
 

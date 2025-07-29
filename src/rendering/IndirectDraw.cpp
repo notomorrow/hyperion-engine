@@ -310,7 +310,7 @@ void IndirectRenderer::Create(IDrawCallCollectionImpl* impl)
 
     Assert(impl != nullptr);
 
-    GpuBufferHolderBase* entityInstanceBatches = impl->GetEntityInstanceBatchHolder();
+    GpuBufferHolderBase* entityInstanceBatches = impl->GetGpuBufferHolder();
     const SizeType batchSizeof = impl->GetStructSize();
 
     for (uint32 frameIndex = 0; frameIndex < g_framesInFlight; frameIndex++)
@@ -337,8 +337,8 @@ void IndirectRenderer::Create(IDrawCallCollectionImpl* impl)
             else
             {
                 // case 2: packing the EntityInstanceBatch buffer data into scalar data
-                Assert(shaderBufferSize == 16, "Expected EntityInstanceBatchesBuffer descriptor to have size 16 (uvec4), but got {}", shaderBufferSize);
-                Assert(batchSizeof % 16 == 0, "Expected batch struct size to be divisible by 16!");
+                AssertDebug(shaderBufferSize == 16, "Expected EntityInstanceBatchesBuffer descriptor to have size 16 (uvec4), but got {}", shaderBufferSize);
+                AssertDebug(batchSizeof % 16 == 0, "Expected batch struct size to be divisible by 16!");
             }
         }
 

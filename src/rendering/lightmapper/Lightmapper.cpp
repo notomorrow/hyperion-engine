@@ -1482,6 +1482,35 @@ Lightmapper::Lightmapper(LightmapperConfig&& config, const Handle<Scene>& scene,
 {
     HYP_LOG(Lightmap, Info, "Initializing lightmapper: {}", m_config.ToString());
 
+    /// testing
+
+    VoxelOctree voxelOctree;
+    if (auto res = voxelOctree.Build(VoxelOctreeParams {}, m_scene->GetEntityManager()); res.HasError())
+    {
+        HYP_LOG(Lightmap, Error, "Failed to build voxel octree for lightmapper: {}", res.GetError().GetMessage());
+    }
+
+    Handle<Mesh> voxelMesh = MeshBuilder::BuildVoxelMesh(voxelOctree);
+
+    Handle<Entity> entity = m_scene->GetEntityManager()->AddEntity();
+
+    MaterialAttributes materialAttributes {};
+    materialAttributes.shaderDefinition = ShaderDefinition {
+        NAME("Forward"),
+        ShaderProperties(voxelMesh->GetVertexAttributes())
+    };
+    Handle<Material> material = CreateObject<Material>(Name::Invalid(), materialAttributes);
+
+    scene->GetEntityManager()->AddComponent<MeshComponent>(entity, MeshComponent { voxelMesh, material });
+    scene->GetEntityManager()->AddComponent<BoundingBoxComponent>(entity, BoundingBoxComponent { voxelMesh->GetAABB() });
+
+    Handle<Node> node = CreateObject<Node>();
+    node->SetEntity(entity);
+
+    scene->GetRoot()->AddChild(std::move(node));
+
+    /// testing
+
     for (uint32 i = 0; i < uint32(LightmapShadingType::MAX); i++)
     {
         switch (LightmapShadingType(i))
@@ -1535,34 +1564,6 @@ Lightmapper::Lightmapper(LightmapperConfig&& config, const Handle<Scene>& scene,
     lightmapVolumeNode->SetEntity(lightmapVolumeEntity);
 
     BuildResourceCache();
-
-    // Testing
-    VoxelOctree voxelOctree;
-    if (auto res = voxelOctree.Build(VoxelOctreeParams {}, m_scene->GetEntityManager()); res.HasError())
-    {
-        HYP_LOG(Lightmap, Error, "Failed to build voxel octree for lightmapper: {}", res.GetError().GetMessage());
-    }
-
-    Handle<Mesh> voxelMesh = MeshBuilder::BuildVoxelMesh(voxelOctree);
-
-    Handle<Entity> entity = m_scene->GetEntityManager()->AddEntity();
-
-    MaterialAttributes materialAttributes {};
-    materialAttributes.shaderDefinition = ShaderDefinition {
-        NAME("Forward"),
-        ShaderProperties(voxelMesh->GetVertexAttributes())
-    };
-    Handle<Material> material = CreateObject<Material>(Name::Invalid(), materialAttributes);
-
-    scene->GetEntityManager()->AddComponent<MeshComponent>(entity, MeshComponent { voxelMesh, material });
-    scene->GetEntityManager()->AddComponent<BoundingBoxComponent>(entity, BoundingBoxComponent { voxelMesh->GetAABB() });
-
-    Handle<Node> node = CreateObject<Node>();
-    node->SetEntity(entity);
-
-    scene->GetRoot()->AddChild(std::move(node));
-
-    HYP_BREAKPOINT;
 }
 
 Lightmapper::~Lightmapper()

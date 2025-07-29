@@ -492,27 +492,17 @@ struct alignas(16) Vertex
 
     HYP_FORCE_INLINE constexpr HashCode GetHashCode() const
     {
-        HashCode hc;
-        hc.Add(position.GetHashCode());
-        hc.Add(normal.GetHashCode());
-        hc.Add(texcoord0.GetHashCode());
-        hc.Add(texcoord1.GetHashCode());
-        hc.Add(tangent.GetHashCode());
-        hc.Add(bitangent.GetHashCode());
-        hc.Add(numIndices);
-        hc.Add(numWeights);
-
-        for (int i = 0; i < MAX_BONE_INDICES; i++)
-        {
-            hc.Add(boneIndices[i]);
-        }
-
-        for (int i = 0; i < MAX_BONE_WEIGHTS; i++)
-        {
-            hc.Add(boneWeights[i]);
-        }
-
-        return hc;
+        return HashCode()
+            .Combine(position)
+            .Combine(normal)
+            .Combine(texcoord0)
+            .Combine(texcoord1)
+            .Combine(tangent)
+            .Combine(bitangent)
+            .Combine(numIndices)
+            .Combine(numWeights)
+            .Combine(boneIndices)
+            .Combine(boneWeights);
     }
 
     HYP_FIELD(Property = "Position", Serialize = true)

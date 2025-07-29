@@ -346,17 +346,14 @@ struct alignas(alignof(T) * 4) HYP_API Vec4
     {
         return Vec4(0, 0, 0, 1);
     }
-
-    HashCode GetHashCode() const
+    
+    HYP_FORCE_INLINE constexpr HashCode GetHashCode() const
     {
-        HashCode hc;
-
-        hc.Add(x);
-        hc.Add(y);
-        hc.Add(z);
-        hc.Add(w);
-
-        return hc;
+        return HashCode()
+            .Combine(x)
+            .Combine(y)
+            .Combine(z)
+            .Combine(w);
     }
 };
 
@@ -701,17 +698,14 @@ struct alignas(alignof(float) * 4) HYP_API Vec4<float>
     {
         return Vec4(0, 0, 0, 1);
     }
-
-    HashCode GetHashCode() const
+    
+    HYP_FORCE_INLINE constexpr HashCode GetHashCode() const
     {
-        HashCode hc;
-
-        hc.Add(x);
-        hc.Add(y);
-        hc.Add(z);
-        hc.Add(w);
-
-        return hc;
+        return HashCode()
+            .Combine(x)
+            .Combine(y)
+            .Combine(z)
+            .Combine(w);
     }
 };
 

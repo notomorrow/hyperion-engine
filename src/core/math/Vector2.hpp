@@ -346,14 +346,11 @@ struct alignas(alignof(T) * 2) HYP_API Vec2
         };
     }
 
-    HashCode GetHashCode() const
+    HYP_FORCE_INLINE constexpr HashCode GetHashCode() const
     {
-        HashCode hc;
-
-        hc.Add(x);
-        hc.Add(y);
-
-        return hc;
+        return HashCode()
+            .Combine(x)
+            .Combine(y);
     }
 };
 
@@ -662,14 +659,11 @@ public:
         return Vec2(0.0f, 1.0f);
     }
 
-    HashCode GetHashCode() const
+    HYP_FORCE_INLINE constexpr HashCode GetHashCode() const
     {
-        HashCode hc;
-
-        hc.Add(x);
-        hc.Add(y);
-
-        return hc;
+        return HashCode()
+            .Combine(x)
+            .Combine(y);
     }
 };
 

@@ -228,7 +228,8 @@ static inline void ForEachResourceTrackerType(Span<ResourceTrackerBase*> resourc
 RenderProxyList::RenderProxyList(bool isShared)
     : isShared(isShared),
       viewport(Viewport { Vec2u::One(), Vec2i::Zero() }),
-      priority(0)
+      priority(0),
+      resourceTrackers {}
 {
     // initialize the resource trackers
     ForEachResourceTrackerType(resourceTrackers, []<class ResourceTrackerType>(TypeWrapper<ResourceTrackerType>, ResourceTrackerBase*& pResourceTracker)
@@ -873,7 +874,7 @@ void RenderCollector::BuildDrawCalls(uint32 bucketBits)
                     // Reset it
                     *batch = EntityInstanceBatch { batchIndex };
 
-                    drawCallCollection.impl->GetEntityInstanceBatchHolder()->MarkDirty(batch->batchIndex);
+                    drawCallCollection.impl->GetGpuBufferHolder()->MarkDirty(batch->batchIndex);
                 }
             }
 

@@ -9,6 +9,7 @@
 #include <core/memory/UniquePtr.hpp>
 
 #include <rendering/GpuBufferHolderMap.hpp>
+#include <rendering/Buffers.hpp>
 
 #include <rendering/RenderObject.hpp>
 
@@ -135,13 +136,37 @@ struct InstancedDrawCall : DrawCallBase
 class IDrawCallCollectionImpl
 {
 public:
-    virtual ~IDrawCallCollectionImpl() = default;
+    ~IDrawCallCollectionImpl() = default;
+    
+    HYP_FORCE_INLINE SizeType GetStructSize() const
+    {
+        return m_bufferHolder->GetStructSize();
+    }
 
-    virtual SizeType GetStructSize() const = 0;
-    virtual SizeType GetStructAlignment() const = 0;
+    HYP_FORCE_INLINE SizeType GetStructAlignment() const
+    {
+        return m_bufferHolder->GetStructSize();
+    }
+
+    HYP_FORCE_INLINE void ReleaseBatch(EntityInstanceBatch* batch) const
+    {
+        m_bufferHolder->ReleaseIndex(batch->batchIndex);
+    }
+
+    HYP_FORCE_INLINE GpuBufferHolderBase* GetGpuBufferHolder() const
+    {
+        return m_bufferHolder;
+    }
+
     virtual EntityInstanceBatch* AcquireBatch() const = 0;
-    virtual void ReleaseBatch(EntityInstanceBatch* batch) const = 0;
-    virtual GpuBufferHolderBase* GetEntityInstanceBatchHolder() const = 0;
+
+protected:
+    IDrawCallCollectionImpl(GpuBufferHolderBase* bufferHolder)
+        : m_bufferHolder(bufferHolder)
+    {
+    }
+
+    GpuBufferHolderBase* m_bufferHolder;
 };
 
 struct DrawCallCollection
@@ -202,45 +227,21 @@ public:
     static_assert(offsetof(EntityInstanceBatchType, indices) == 16, "offsetof for member `indices` of the derived EntityInstanceBatch type must be 16 or shader calculations will be incorrect!");
 
     DrawCallCollectionImpl()
-        : m_entityInstanceBatches(GetGpuBufferHolderMap()->GetOrCreate<EntityInstanceBatchType>())
+        : IDrawCallCollectionImpl(GetGpuBufferHolderMap()->GetOrCreate<EntityInstanceBatchType>())
     {
     }
 
-    virtual ~DrawCallCollectionImpl() override = default;
-
-    virtual SizeType GetStructSize() const override
-    {
-        return sizeof(EntityInstanceBatchType);
-    }
-
-    virtual SizeType GetStructAlignment() const override
-    {
-        return alignof(EntityInstanceBatchType);
-    }
+    ~DrawCallCollectionImpl() = default;
 
     virtual EntityInstanceBatch* AcquireBatch() const override
     {
         EntityInstanceBatchType* batch;
-        const uint32 batchIndex = m_entityInstanceBatches->AcquireIndex(&batch);
+        const uint32 batchIndex = reinterpret_cast<GpuBufferHolder<EntityInstanceBatchType, GpuBufferType::SSBO>*>(m_bufferHolder)->AcquireIndex(&batch);
 
         batch->batchIndex = batchIndex;
 
         return batch;
     }
-
-    virtual void ReleaseBatch(EntityInstanceBatch* batch) const override
-    {
-        m_entityInstanceBatches->ReleaseIndex(batch->batchIndex);
-    }
-
-    virtual GpuBufferHolderBase* GetEntityInstanceBatchHolder() const override
-    {
-        // Need to use reinterpret_cast because GpuBufferHolder is forward declared here
-        return reinterpret_cast<GpuBufferHolderBase*>(m_entityInstanceBatches);
-    }
-
-private:
-    GpuBufferHolder<EntityInstanceBatchType, GpuBufferType::SSBO>* m_entityInstanceBatches;
 };
 
 extern HYP_API IDrawCallCollectionImpl* GetDrawCallCollectionImpl(TypeId typeId);

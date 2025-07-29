@@ -92,7 +92,7 @@ void DrawCallCollection::PushRenderProxyInstanced(EntityInstanceBatch* batch, Dr
 
     AssertDebug(initialNumInstances > 0);
 
-    GpuBufferHolderBase* entityInstanceBatches = impl->GetEntityInstanceBatchHolder();
+    GpuBufferHolderBase* entityInstanceBatches = impl->GetGpuBufferHolder();
     Assert(entityInstanceBatches != nullptr);
 
     while (numInstances != 0)
@@ -177,7 +177,7 @@ void DrawCallCollection::ResetDrawCalls()
 {
     AssertDebug(impl != nullptr);
 
-    GpuBufferHolderBase* entityInstanceBatches = impl->GetEntityInstanceBatchHolder();
+    GpuBufferHolderBase* entityInstanceBatches = impl->GetGpuBufferHolder();
     AssertDebug(entityInstanceBatches != nullptr);
 
     for (InstancedDrawCall& drawCall : instancedDrawCalls)
@@ -282,7 +282,7 @@ uint32 DrawCallCollection::PushEntityToBatch(InstancedDrawCall& drawCall, ObjId<
 
     if (dirty)
     {
-        impl->GetEntityInstanceBatchHolder()->MarkDirty(drawCall.batch->batchIndex);
+        impl->GetGpuBufferHolder()->MarkDirty(drawCall.batch->batchIndex);
     }
 
     return numInstances;

@@ -18,7 +18,6 @@
 namespace hyperion {
 
 HYP_STRUCT()
-
 class alignas(uint32) HYP_API Color
 {
 public:
