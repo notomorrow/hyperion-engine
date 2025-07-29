@@ -26,6 +26,21 @@
 
 namespace hyperion {
 
+static BoundingBox SnapAabbToVoxel(const BoundingBox& aabb, float voxelSize)
+{
+    
+    Vec3f extent = aabb.GetExtent();
+    Vec3f newExtent = Vec3f(
+        MathUtil::Ceil(extent.x / voxelSize) * voxelSize,
+        MathUtil::Ceil(extent.y / voxelSize) * voxelSize,
+        MathUtil::Ceil(extent.z / voxelSize) * voxelSize);
+
+    BoundingBox newAabb = aabb;
+    newAabb.SetExtent(newExtent);
+    
+    return newAabb;
+}
+
 class VoxelOctreeBlas
 {
 public:
@@ -152,6 +167,7 @@ VoxelOctreeBuildResult VoxelOctree::Build(const VoxelOctreeParams& params, Entit
         element.mesh = meshComponent.mesh;
         element.material = meshComponent.material;
         element.transform = transformComponent.transform;
+        element.aabb = boundingBoxComponent.worldAabb;
 
         tlas.Add(element, &meshComponent.mesh->GetBVH());
     }
@@ -160,15 +176,6 @@ VoxelOctreeBuildResult VoxelOctree::Build(const VoxelOctreeParams& params, Entit
     {
         return HYP_MAKE_ERROR(Error, "Invalid AABB, cannot build voxel octree");
     }
-
-    // expand AABB to fit voxel size
-    Vec3f extent = newAabb.GetExtent();
-    Vec3f newExtent = Vec3f(
-        MathUtil::Ceil(extent.x / params.voxelSize) * params.voxelSize,
-        MathUtil::Ceil(extent.y / params.voxelSize) * params.voxelSize,
-        MathUtil::Ceil(extent.z / params.voxelSize) * params.voxelSize);
-
-    newAabb.SetExtent(newExtent);
 
     if (!OctreeBase::Rebuild(newAabb, true).first)
     {
@@ -194,11 +201,6 @@ VoxelOctreeBuildResult VoxelOctree::Build(const VoxelOctreeParams& params, Entit
 
         if (bvh.triangles.Any())
         {
-            BoundingBox bvhAabb = bvh.aabb;
-            // transform bvh aabb into world space
-            bvhAabb = element.transform * bvhAabb;
-            // root of Octree is zero so we don't need to transform it relatively
-
             // iterate triangles in batches so we don't hold exclusive access for too long
             ForEachInBatches(bvh.triangles, (bvh.triangles.Size() + 255) / 256, [&](Span<const Triangle> triangles)
                 {
@@ -207,7 +209,7 @@ VoxelOctreeBuildResult VoxelOctree::Build(const VoxelOctreeParams& params, Entit
 
                     for (SizeType i = 0; i < triangles.Size(); i++)
                     {
-                        triangleAabbs[i] = element.transform * triangles[i].GetBoundingBox();
+                        triangleAabbs[i] = (element.transform.GetMatrix() * triangles[i]).GetBoundingBox();
                     }
 
                     Mutex::Guard guard(mtx);
@@ -215,7 +217,7 @@ VoxelOctreeBuildResult VoxelOctree::Build(const VoxelOctreeParams& params, Entit
                     for (SizeType triangleIndex = 0; triangleIndex < triangles.Size(); triangleIndex++)
                     {
                         OctreeBase::Insert(
-                            VoxelOctreeNode { element.entity.Id(), triangles[triangleIndex] },
+                            VoxelOctreeNode { element.entity.Id(), element.mesh.Id(), triangles[triangleIndex] },
                             triangleAabbs[triangleIndex], true);
                     }
 

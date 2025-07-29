@@ -416,48 +416,48 @@ OctreeBase<Derived, TEntry>::InsertResult OctreeBase<Derived, TEntry>::Insert(co
 {
     if (aabb.IsValid() && aabb.IsFinite())
     {
-        if (!m_aabb.Contains(aabb))
+        if (m_aabb.Contains(aabb))
         {
-            if (IsRoot() && allowRebuild)
+            
+            // stop recursing if we are at max depth
+            if (m_octantId.GetDepth() < OctantId::maxDepth - 1)
             {
-                auto rebuildResult = RebuildExtend_Internal(aabb);
-
-                if (!rebuildResult.first)
+                for (Octant& octant : m_octants)
                 {
-                    return rebuildResult;
+                    if (!octant.aabb.Contains(aabb))
+                    {
+                        continue;
+                    }
+                    
+                    if (!IsDivided())
+                    {
+                        if (!allowRebuild)
+                        {
+                            // do not use this octant if it has not been divided yet.
+                            // instead, we'll insert into the THIS octant, marking it as dirty,
+                            // so it will get added to the correct octant on Rebuild().
+                            
+                            m_state->MarkOctantDirty(m_octantId, true);
+                            
+                            break;
+                        }
+                        
+                        Divide();
+                    }
+                    
+                    Assert(octant.octree != nullptr);
+                    
+                    return octant.octree->Insert(value, aabb, allowRebuild);
                 }
             }
         }
-
-        // stop recursing if we are at max depth
-        if (m_octantId.GetDepth() < OctantId::maxDepth - 1)
+        else if (IsRoot() && allowRebuild)
         {
-            for (Octant& octant : m_octants)
+            auto rebuildResult = RebuildExtend_Internal(aabb);
+
+            if (!rebuildResult.first)
             {
-                if (!octant.aabb.Contains(aabb))
-                {
-                    continue;
-                }
-
-                if (!IsDivided())
-                {
-                    if (!allowRebuild)
-                    {
-                        // do not use this octant if it has not been divided yet.
-                        // instead, we'll insert into the THIS octant, marking it as dirty,
-                        // so it will get added to the correct octant on Rebuild().
-
-                        m_state->MarkOctantDirty(m_octantId, true);
-
-                        break;
-                    }
-
-                    Divide();
-                }
-
-                Assert(octant.octree != nullptr);
-
-                return octant.octree->Insert(value, aabb, allowRebuild);
+                return rebuildResult;
             }
         }
     }

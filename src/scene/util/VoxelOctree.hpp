@@ -30,13 +30,15 @@ struct VoxelOctreeElement
     Handle<Mesh> mesh;
     Handle<Material> material;
     Transform transform;
+    BoundingBox aabb;
 
     HYP_FORCE_INLINE bool operator==(const VoxelOctreeElement& other) const
     {
         return entity == other.entity
             && mesh == other.mesh
             && material == other.material
-            && transform == other.transform;
+            && transform == other.transform
+            && aabb == other.aabb;
     }
 
     HashCode GetHashCode() const
@@ -46,6 +48,7 @@ struct VoxelOctreeElement
         hc.Add(mesh.GetHashCode());
         hc.Add(material.GetHashCode());
         hc.Add(transform.GetHashCode());
+        hc.Add(aabb);
 
         return hc;
     }
@@ -54,11 +57,13 @@ struct VoxelOctreeElement
 struct VoxelOctreeNode
 {
     ObjId<Entity> entityId;
+    ObjId<Mesh> meshId;
     Triangle triangle;
 
     HYP_FORCE_INLINE bool operator==(const VoxelOctreeNode& other) const
     {
         return entityId == other.entityId
+            && meshId == other.meshId
             && triangle == other.triangle;
     }
 
@@ -66,6 +71,7 @@ struct VoxelOctreeNode
     {
         HashCode hc;
         hc.Add(entityId);
+        hc.Add(meshId);
         hc.Add(triangle);
 
         return hc;

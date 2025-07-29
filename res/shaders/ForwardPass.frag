@@ -210,7 +210,7 @@ void main()
         // N = ((normalize(v_tangent) * normals_texture.x) + (normalize(v_bitangent) * normals_texture.y) + (N * normals_texture.z));
     }
 
-#ifdef FORWARD_LIGHTING
+#if defined(FORWARD_LIGHTING) && !defined(UNLIT)
     {
         const float NdotV = max(HYP_FMATH_EPSILON, dot(N, V));
         const vec3 F0 = CalculateF0(gbuffer_albedo.rgb, metalness);

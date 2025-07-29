@@ -2739,7 +2739,6 @@ void EditorSubsystem::OpenProject(const Handle<EditorProject>& project)
 
         if (Result saveResult = project->Save(); saveResult.HasError())
         {
-            HYP_BREAKPOINT_DEBUG_MODE;
             HYP_LOG(Editor, Error, "Failed to save newly created project: {}", saveResult.GetError().GetMessage());
         }
 

@@ -88,9 +88,7 @@ static inline void ForEachInBatches(Container&& container, uint32 numBatches, Ca
         const uint32 offsetIndex = batchIndex * itemsPerBatch;
         const uint32 maxIndex = MathUtil::Min(offsetIndex + itemsPerBatch, numItems);
 
-        auto elementsSpan = container.ToSpan() + offsetIndex;
-
-        IterationResult result = callback(elementsSpan);
+        IterationResult result = callback(container.ToSpan().Slice(offsetIndex, maxIndex - offsetIndex));
 
         if (result == IterationResult::STOP)
         {

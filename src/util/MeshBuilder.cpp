@@ -331,13 +331,25 @@ Handle<Mesh> MeshBuilder::Merge(const Mesh* a, const Mesh* b)
 
 Handle<Mesh> MeshBuilder::BuildVoxelMesh(const VoxelOctree& voxelOctree)
 {
-    BoundingBox minVoxelAabb;
+    HashSet<BoundingBox> voxelAabbs;
 
     Array<Vec3i> voxelPositions;
 
     Proc<void(const VoxelOctree&)> traverse;
     traverse = [&](const VoxelOctree& octant)
     {
+        if (octant.GetEntries().Any()) // filled voxel node
+        {
+            AssertDebug(!octant.IsDivided());
+            
+            if (octant.GetAABB().IsFinite() && !octant.GetAABB().IsZero() && octant.GetAABB().IsValid())
+            {
+                voxelAabbs.Insert(octant.GetAABB());
+            }
+            
+            return;
+        }
+        
         if (octant.IsDivided())
         {
             AssertDebug(octant.GetEntries().Empty());
@@ -349,92 +361,53 @@ Handle<Mesh> MeshBuilder::BuildVoxelMesh(const VoxelOctree& voxelOctree)
                 traverse(static_cast<const VoxelOctree&>(*childOctant.octree));
             }
         }
-        else if (octant.GetEntries().Any()) // filled voxel node
-        {
-            if (octant.GetAABB().IsFinite() && !octant.GetAABB().IsZero() && octant.GetAABB().IsValid())
-            {
-                Vec3f center = octant.GetAABB().GetCenter();
-                voxelPositions.PushBack(Vec3i((int)center.x, (int)center.y, (int)center.z));
-
-                if (!minVoxelAabb.IsValid())
-                {
-                    minVoxelAabb = octant.GetAABB();
-
-                    return;
-                }
-
-                minVoxelAabb.SetExtent(MathUtil::Min(minVoxelAabb.GetExtent(), octant.GetAABB().GetExtent()));
-            }
-        }
     };
 
     traverse(voxelOctree);
-
-    HashSet<Vec3i> voxelSet;
-    voxelSet.Reserve(voxelPositions.Size());
-
-    for (uint32 i = 0; i < voxelPositions.Size(); i++)
-    {
-        voxelSet.Insert(voxelPositions[i]);
-    }
 
     Array<Vertex> vertices;
     Array<uint32> indices;
     uint32 vertexOffset = 0;
 
-    // Per-axis half-extents of the smallest voxel cell
-    Vec3f halfExtents = minVoxelAabb.GetExtent();
-
-    // Six face directions
-    static const Vec3i dirs[6] = {
+    // Mapping from a bounding-box corner index to its coordinate
+    // corners: 0=(min,min,min), 1=(max,min,min), 2=(min,max,min), 3=(max,max,min),
+    //          4=(min,min,max), 5=(max,min,max), 6=(min,max,max), 7=(max,max,max)
+    static const int faceCornerIdx[6][4] = {
+        { 1, 5, 6, 2 }, // +X
+        { 4, 0, 3, 7 }, // -X
+        { 3, 2, 6, 7 }, // +Y
+        { 0, 1, 5, 4 }, // -Y
+        { 4, 5, 6, 7 }, // +Z (corrected)
+        { 0, 1, 2, 3 }  // -Z (corrected)
+    };
+    static const Vec3i faceNormals[6] = {
         { 1, 0, 0 }, { -1, 0, 0 },
         { 0, 1, 0 }, { 0, -1, 0 },
         { 0, 0, 1 }, { 0, 0, -1 }
     };
-
-    // Unit-cube corner offsets for each face
-    static const Vec3i faceCorners[6][4] = {
-        { { 1, 1, 1 }, { 1, 1, -1 }, { 1, -1, 1 }, { 1, -1, -1 } },
-        { { -1, 1, -1 }, { -1, 1, 1 }, { -1, -1, -1 }, { -1, -1, 1 } },
-        { { -1, 1, 1 }, { 1, 1, 1 }, { -1, 1, -1 }, { 1, 1, -1 } },
-        { { -1, -1, -1 }, { 1, -1, -1 }, { -1, -1, 1 }, { 1, -1, 1 } },
-        { { -1, 1, 1 }, { 1, 1, 1 }, { -1, -1, 1 }, { 1, -1, 1 } },
-        { { 1, 1, -1 }, { -1, 1, -1 }, { 1, -1, -1 }, { -1, -1, -1 } }
-    };
-
     static const Vec2f uvs[4] = { { 0, 0 }, { 1, 0 }, { 0, 1 }, { 1, 1 } };
-    static const uint32 idxPattern[6] = { 0, 1, 2, 2, 1, 3 };
+    static const uint32 idxPattern[6] = { 0, 1, 2, 0, 2, 3 };
 
-    // Generate only outer faces
-    for (auto& vp : voxelSet)
+    // Build full box for each voxel AABB
+    for (const auto& aabb : voxelAabbs)
     {
-        Vec3f center((float)vp.x, (float)vp.y, (float)vp.z);
+        HYP_LOG_TEMP("Voxel aabb : {}", aabb);
+        Vec3f mn = aabb.GetMin();
+        Vec3f mx = aabb.GetMax();
+        Vec3f corners[8] = {
+            { mn.x, mn.y, mn.z }, { mx.x, mn.y, mn.z }, { mx.x, mx.y, mn.z }, { mn.x, mx.y, mn.z },
+            { mn.x, mn.y, mx.z }, { mx.x, mn.y, mx.z }, { mx.x, mx.y, mx.z }, { mn.x, mx.y, mx.z }
+        };
         for (int f = 0; f < 6; ++f)
         {
-            Vec3i neighbor = vp + dirs[f];
-            if (voxelSet.Contains(neighbor))
-                continue;
-
-            // build one quad face
             for (int i = 0; i < 4; ++i)
             {
-                Vec3i corner = faceCorners[f][i];
-                // scale unit corner by half-extents per axis
-                Vec3f offset(
-                    corner.x * halfExtents.x,
-                    corner.y * halfExtents.y,
-                    corner.z * halfExtents.z);
                 Vertex vert;
-                vert.position = center + offset;
-                vert.normal = Vec3f((float)dirs[f].x,
-                    (float)dirs[f].y,
-                    (float)dirs[f].z);
-                vert.texcoord0 = uvs[i];
+                vert.position = corners[faceCornerIdx[f][i]];
                 vertices.PushBack(vert);
             }
             for (int k = 0; k < 6; ++k)
                 indices.PushBack(vertexOffset + idxPattern[k]);
-
             vertexOffset += 4;
         }
     }

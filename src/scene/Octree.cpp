@@ -95,24 +95,29 @@ Octree::InsertResult Octree::Rebuild(const BoundingBox& newAabb, bool allowGrow)
 
     m_aabb = newAabb;
 
+    if (allowGrow)
+    {
+        Assert(IsRoot());
+
+        for (auto& it : newEntries)
+        {
+            if (it.aabb.IsValid() && it.aabb.IsFinite())
+            {
+                m_aabb = m_aabb.Union(it.aabb);
+            }
+        }
+    }
+
+    InitOctants();
+
     for (auto& it : newEntries)
     {
         Entity* entity = it.value;
         Assert(entity != nullptr);
-
+        
         if (it.aabb.IsValid() && it.aabb.IsFinite())
         {
-            if (IsRoot())
-            {
-                AssertDebug(allowGrow);
-
-                m_aabb = m_aabb.Union(it.aabb);
-            }
-            else
-            {
-                // should already be contained in the aabb of non-root octants
-                AssertDebug(m_aabb.Contains(it.aabb));
-            }
+            AssertDebug(m_aabb.Contains(it.aabb));
         }
 
         auto insertResult = Insert(entity, it.aabb, true /* allow rebuild */);

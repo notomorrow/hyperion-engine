@@ -87,4 +87,7 @@ struct HYP_API Triangle
         // clang-format on
     }
 };
+
+Triangle operator*(const Matrix4& transform, const Triangle& triangle);
+
 } // namespace hyperion

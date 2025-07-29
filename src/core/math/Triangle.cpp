@@ -4,6 +4,7 @@
 #include <core/math/MathUtil.hpp>
 
 namespace hyperion {
+
 Triangle::Triangle()
     : points {}
 {
@@ -47,15 +48,10 @@ const Vertex& Triangle::Closest(const Vec3f& vec) const
 
 BoundingBox Triangle::GetBoundingBox() const
 {
-    const Vec3f min = Vec3f::Min(
-        Vec3f::Min(points[0].GetPosition(), points[1].GetPosition()),
-        points[2].GetPosition());
-
-    const Vec3f max = Vec3f::Max(
-        Vec3f::Max(points[0].GetPosition(), points[1].GetPosition()),
-        points[2].GetPosition());
-
-    return BoundingBox(min, max);
+    return BoundingBox()
+        .Union(points[0].GetPosition())
+        .Union(points[1].GetPosition())
+        .Union(points[2].GetPosition());
 }
 
 bool Triangle::ContainsPoint(const Vec3f& pt) const
@@ -75,6 +71,24 @@ bool Triangle::ContainsPoint(const Vec3f& pt) const
     const float v = (dot00 * dot12 - dot01 * dot02) * invDenom;
 
     return (u >= 0.0f) && (v >= 0.0f) && (u + v < 1.0f);
+}
+
+Triangle operator*(const Matrix4& transform, const Triangle& triangle)
+{
+    const Matrix4 normalMatrix = transform.Inverted().Transposed();
+
+    Triangle result;
+
+    for (SizeType i = 0; i < 3; i++)
+    {
+        result.points[i] = triangle.points[i];
+        result.points[i].SetPosition(transform * triangle.points[i].GetPosition());
+        result.points[i].SetNormal((normalMatrix * Vec4f(triangle.points[i].GetNormal(), 0.0f)).GetXYZ());
+        result.points[i].SetTangent((normalMatrix * Vec4f(triangle.points[i].GetTangent(), 0.0f)).GetXYZ());
+        result.points[i].SetBitangent((normalMatrix * Vec4f(triangle.points[i].GetBitangent(), 0.0f)).GetXYZ());
+    }
+
+    return result;
 }
 
 } // namespace hyperion

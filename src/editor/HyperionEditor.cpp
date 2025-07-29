@@ -16,6 +16,7 @@
 #include <scene/Light.hpp>
 #include <scene/EnvGrid.hpp>
 #include <scene/EnvProbe.hpp>
+#include <scene/util/VoxelOctree.hpp> // temp
 #include <rendering/Texture.hpp>
 
 #include <scene/EntityManager.hpp>
@@ -226,7 +227,7 @@ void HyperionEditor::Init()
     // batch->Add("test_model", "models/pica_pica/pica_pica.obj");
     // batch->Add("test_model", "models/testbed/testbed.obj");
     batch->Add("zombie", "models/ogrexml/dragger_Body.mesh.xml");
-//    batch->Add("z2", "models/monkey.fbx");
+    //    batch->Add("z2", "models/monkey.fbx");
 
     Handle<Entity> rootEntity = scene->GetEntityManager()->AddEntity();
     scene->GetRoot()->SetEntity(rootEntity);
@@ -303,6 +304,37 @@ void HyperionEditor::Init()
 
                     zombie->SetName(NAME("zombie"));
                 }
+
+                /// testing
+
+                VoxelOctree voxelOctree;
+                if (auto res = voxelOctree.Build(VoxelOctreeParams {}, scene->GetEntityManager()); res.HasError())
+                {
+                    HYP_LOG(Editor, Error, "Failed to build voxel octree for lightmapper: {}", res.GetError().GetMessage());
+                }
+
+                Handle<Mesh> voxelMesh = MeshBuilder::BuildVoxelMesh(voxelOctree);
+
+                Handle<Entity> entity = scene->GetEntityManager()->AddEntity();
+
+                MaterialAttributes materialAttributes {};
+                materialAttributes.shaderDefinition = ShaderDefinition {
+                    NAME("Forward"),
+                    ShaderProperties(voxelMesh->GetVertexAttributes(), { { NAME("UNLIT") } })
+                };
+                materialAttributes.bucket = RB_TRANSLUCENT;
+                materialAttributes.cullFaces = FaceCullMode::FCM_NONE;
+                Handle<Material> material = CreateObject<Material>(Name::Invalid(), materialAttributes);
+
+                Handle<Node> voxelNode = CreateObject<Node>();
+                voxelNode->SetEntity(entity);
+
+                scene->GetRoot()->AddChild(std::move(voxelNode));
+
+                scene->GetEntityManager()->AddComponent<MeshComponent>(entity, MeshComponent { voxelMesh, material });
+                scene->GetEntityManager()->AddComponent<BoundingBoxComponent>(entity, BoundingBoxComponent { voxelMesh->GetAABB() });
+
+                /// testing
             })
         .Detach();
 
