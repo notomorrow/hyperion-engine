@@ -26,6 +26,7 @@ find_package(Threads REQUIRED)
 
 if(MSVC)
     set(CMAKE_CXX_FLAGS "/Zc:preprocessor /MD /O2 /Zi")
+    add_definitions("/DNOMINMAX")
 else()
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -O3 -fpermissive")
 endif()

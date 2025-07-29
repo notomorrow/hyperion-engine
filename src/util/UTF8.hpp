@@ -3,13 +3,13 @@
 #pragma once
 
 #include <core/Defines.hpp>
+#include <core/containers/Array.hpp>
+
 #include <Types.hpp>
 
 #include <iostream>
 #include <algorithm>
 #include <fstream>
-#include <vector>
-#include <string>
 #include <cstdint>
 #include <cstring>
 
@@ -31,25 +31,30 @@ namespace utf {
 
 #ifdef _WIN32
 
-inline std::vector<wchar_t> ToWide(const char* str)
+inline Array<wchar_t> ToWide(const char* str)
 {
-    std::vector<wchar_t> buffer;
-    buffer.resize(MultiByteToWideChar(CP_UTF8, 0, str, -1, 0, 0));
-    MultiByteToWideChar(CP_UTF8, 0, str, -1, &buffer[0], static_cast<int>(buffer.size()));
+    Array<wchar_t> buffer;
+    buffer.Resize(MultiByteToWideChar(CP_UTF8, 0, str, -1, 0, 0));
+    MultiByteToWideChar(CP_UTF8, 0, str, -1, &buffer[0], int(buffer.Size()));
+
     return buffer;
 }
 
-inline std::vector<char> ToMultiByte(const wchar_t* wstr)
+inline Array<char> ToMultiByte(const wchar_t* wstr)
 {
     int sizeNeeded = WideCharToMultiByte(CP_UTF8, 0, wstr, -1, NULL, 0, NULL, NULL);
-    std::vector<char> buffer(sizeNeeded, 0);
+
+    Array<char> buffer;
+    buffer.Resize(sizeNeeded);
+
     WideCharToMultiByte(CP_UTF8, 0, wstr, -1, &buffer[0], sizeNeeded, NULL, NULL);
+
     return buffer;
 }
 
 #define HYP_UTF8_WIDE
-#define HYP_UTF8_TOWIDE(str) utf::ToWide(str).data()
-#define HYP_UTF8_TOMULTIBYTE(str) utf::ToMultiByte(str).data()
+#define HYP_UTF8_TOWIDE(str) utf::ToWide(str).Data()
+#define HYP_UTF8_TOMULTIBYTE(str) utf::ToMultiByte(str).Data()
 
 #else
 #define HYP_UTF8_TOWIDE(str) (str)

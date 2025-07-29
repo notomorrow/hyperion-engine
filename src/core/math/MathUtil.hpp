@@ -17,10 +17,6 @@
 #include <limits>
 #include <type_traits>
 
-#if HYP_WINDOWS
-#include <intrin.h>
-#endif
-
 namespace hyperion {
 
 template <class T>

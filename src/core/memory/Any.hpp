@@ -160,6 +160,11 @@ public:
         }
     }
 
+    HYP_FORCE_INLINE bool operator==(const CopyableAny& other) const = delete;
+    HYP_FORCE_INLINE bool operator!=(const CopyableAny& other) const = delete;
+    HYP_FORCE_INLINE bool operator==(const Any& other) const = delete;
+    HYP_FORCE_INLINE bool operator!=(const Any& other) const = delete;
+
     /*! \brief Get a raw pointer to the held object. */
     HYP_FORCE_INLINE void* GetPointer()
     {
@@ -549,6 +554,11 @@ public:
             m_dtor(m_ptr);
         }
     }
+
+    HYP_FORCE_INLINE bool operator==(const CopyableAny& other) const = delete;
+    HYP_FORCE_INLINE bool operator!=(const CopyableAny& other) const = delete;
+    HYP_FORCE_INLINE bool operator==(const Any& other) const = delete;
+    HYP_FORCE_INLINE bool operator!=(const Any& other) const = delete;
 
     /*! \brief Get a raw pointer to the held object. */
     HYP_FORCE_INLINE void* GetPointer()

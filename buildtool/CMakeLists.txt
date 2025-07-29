@@ -19,6 +19,11 @@ else()
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -O0 -fpermissive -fsanitize=address,undefined -fno-omit-frame-pointer")
 endif()
 
+# if Win32, link with DbgHelp
+if(WIN32)
+    set(COMMON_LIBRARIES ${COMMON_LIBRARIES} DbgHelp)
+endif()
+
 set(OpenGL_GL_PREFERENCE GLVND)
 
 link_directories(${CMAKE_SOURCE_DIR}/../lib /usr/local/lib)

@@ -207,35 +207,20 @@ void VulkanDynamicFunctions::Load(VulkanDevice* device)
     static VulkanDynamicFunctions instance;
     g_vulkanDynamicFunctions = &instance;
 
-#define HYP_LOAD_FN(function)                                                               \
-    do                                                                                      \
-    {                                                                                       \
-        auto procAddr = vkGetDeviceProcAddr(device->GetDevice(), #function);                \
-        if (procAddr == nullptr)                                                            \
-        {                                                                                   \
-            HYP_LOG(RenderingBackend, Error, "Failed to load dynamic function " #function); \
-        }                                                                                   \
-        instance.function = reinterpret_cast<PFN_##function>(procAddr);                     \
-    }                                                                                       \
-    while (0)
+#define HYP_LOAD_FN(function) instance.function = reinterpret_cast<PFN_##function>(vkGetDeviceProcAddr(device->GetDevice(), #function))
 
 #if defined(HYP_FEATURES_ENABLE_RAYTRACING) && defined(HYP_FEATURES_BINDLESS_TEXTURES)
     HYP_LOAD_FN(vkGetBufferDeviceAddressKHR); // currently only used for RT
 
-    if (IsRaytracingSupported() && !IsRaytracingDisabled())
-    {
-        HYP_LOG(RenderingBackend, Info, "Raytracing supported, loading raytracing-specific dynamic functions.");
-
-        HYP_LOAD_FN(vkCmdBuildAccelerationStructuresKHR);
-        HYP_LOAD_FN(vkBuildAccelerationStructuresKHR);
-        HYP_LOAD_FN(vkCreateAccelerationStructureKHR);
-        HYP_LOAD_FN(vkDestroyAccelerationStructureKHR);
-        HYP_LOAD_FN(vkGetAccelerationStructureBuildSizesKHR);
-        HYP_LOAD_FN(vkGetAccelerationStructureDeviceAddressKHR);
-        HYP_LOAD_FN(vkCmdTraceRaysKHR);
-        HYP_LOAD_FN(vkGetRayTracingShaderGroupHandlesKHR);
-        HYP_LOAD_FN(vkCreateRayTracingPipelinesKHR);
-    }
+    HYP_LOAD_FN(vkCmdBuildAccelerationStructuresKHR);
+    HYP_LOAD_FN(vkBuildAccelerationStructuresKHR);
+    HYP_LOAD_FN(vkCreateAccelerationStructureKHR);
+    HYP_LOAD_FN(vkDestroyAccelerationStructureKHR);
+    HYP_LOAD_FN(vkGetAccelerationStructureBuildSizesKHR);
+    HYP_LOAD_FN(vkGetAccelerationStructureDeviceAddressKHR);
+    HYP_LOAD_FN(vkCmdTraceRaysKHR);
+    HYP_LOAD_FN(vkGetRayTracingShaderGroupHandlesKHR);
+    HYP_LOAD_FN(vkCreateRayTracingPipelinesKHR);
 #endif
 
 #ifdef HYP_DEBUG_MODE

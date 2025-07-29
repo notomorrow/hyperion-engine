@@ -104,6 +104,7 @@ if(MSVC)
 
     # no exceptions
     add_definitions("/D_HAS_EXCEPTIONS=0")
+    add_definitions("/DNOMINMAX")
 
     # add_definitions("/constexpr:depth1024")
 

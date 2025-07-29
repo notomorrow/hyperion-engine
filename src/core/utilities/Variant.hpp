@@ -95,16 +95,22 @@ struct VariantHelper<T, Ts...>
 
     static inline bool Compare(TypeId typeId, const void* data, const void* otherData)
     {
-        HYP_CORE_ASSERT(typeId == thisTypeId);
+        if (typeId == thisTypeId)
+        {
+            return *static_cast<const NormalizedType<T>*>(data) == *static_cast<const NormalizedType<T>*>(otherData);
+        }
 
-        return *static_cast<const NormalizedType<T>*>(data) == *static_cast<const NormalizedType<T>*>(otherData);
+        return VariantHelper<Ts...>::Compare(typeId, data, otherData);
     }
 
     static inline HashCode GetHashCode(TypeId typeId, const void* data)
     {
-        HYP_CORE_ASSERT(typeId == thisTypeId);
+        if (typeId == thisTypeId)
+        {
+            return HashCode::GetHashCode(*static_cast<const NormalizedType<T>*>(data));
+        }
 
-        return HashCode::GetHashCode(*static_cast<const NormalizedType<T>*>(data));
+        return VariantHelper<Ts...>::GetHashCode(typeId, data);
     }
 };
 
@@ -162,16 +168,12 @@ protected:
     using MoveAssignFunction = bool (*)(TypeId typeId, void* dst, void* src);
     using MoveConstructFunction = bool (*)(TypeId typeId, void* dst, void* src);
     using DestructFunction = void (*)(TypeId typeId, void* data);
-    using CompareFunction = bool (*)(TypeId typeId, const void* data, const void* otherData);
-    using GetHashCodeFunction = HashCode (*)(TypeId typeId, const void* data);
 
     static const inline CopyAssignFunction copyAssignFunctions[] = { &VariantHelper<Types>::CopyAssign... };
     static const inline CopyConstructFunction copyConstructFunctions[] = { &VariantHelper<Types>::CopyConstruct... };
     static const inline MoveAssignFunction moveAssignFunctions[] = { &VariantHelper<Types>::MoveAssign... };
     static const inline MoveConstructFunction moveConstructFunctions[] = { &VariantHelper<Types>::MoveConstruct... };
     static const inline DestructFunction destructFunctions[] = { &VariantHelper<Types>::Destruct... };
-    static const inline CompareFunction compareFunctions[] = { &VariantHelper<Types>::Compare... };
-    static const inline GetHashCodeFunction getHashCodeFunctions[] = { &VariantHelper<Types>::GetHashCode... };
 
 public:
     static constexpr int invalidTypeIndex = -1;
@@ -315,7 +317,7 @@ public:
             return false;
         }
 
-        return compareFunctions[m_currentIndex](CurrentTypeId(), m_storage.GetPointer(), other.m_storage.GetPointer());
+        return VariantHelper<Types...>::Compare(CurrentTypeId(), m_storage.GetPointer(), other.m_storage.GetPointer());
     }
 
     template <class T>
@@ -486,7 +488,7 @@ public:
             return HashCode();
         }
 
-        return getHashCodeFunctions[m_currentIndex](CurrentTypeId(), m_storage.GetPointer());
+        return VariantHelper<Types...>::GetHashCode(CurrentTypeId(), m_storage.GetPointer());
     }
 
 protected:
