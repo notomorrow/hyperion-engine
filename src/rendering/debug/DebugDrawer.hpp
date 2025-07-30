@@ -42,6 +42,7 @@ class DebugDrawCommandList;
 class IDebugDrawShape;
 class UIObject;
 class UIStage;
+class PassData;
 struct RenderSetup;
 
 HYP_STRUCT(ConfigName = "app", JsonPath = "rendering.debug.debug_drawer")
@@ -170,11 +171,11 @@ public:
     friend class DebugDrawer;
 
     DebugDrawCommandList(DebugDrawer& debugDrawer)
-        : Sphere(*this),
-          AmbientProbe(*this),
-          ReflectionProbe(*this),
-          Box(*this),
-          Plane(*this),
+        : sphere(*this),
+          ambientProbe(*this),
+          reflectionProbe(*this),
+          box(*this),
+          plane(*this),
           m_debugDrawer(debugDrawer)
     {
     }
@@ -192,11 +193,11 @@ public:
     virtual void Push(UniquePtr<DebugDrawCommand>&& command) override;
     virtual void Commit() override;
 
-    SphereDebugDrawShape Sphere;
-    AmbientProbeDebugDrawShape AmbientProbe;
-    ReflectionProbeDebugDrawShape ReflectionProbe;
-    BoxDebugDrawShape Box;
-    PlaneDebugDrawShape Plane;
+    SphereDebugDrawShape sphere;
+    AmbientProbeDebugDrawShape ambientProbe;
+    ReflectionProbeDebugDrawShape reflectionProbe;
+    BoxDebugDrawShape box;
+    PlaneDebugDrawShape plane;
 
 private:
     DebugDrawer& m_debugDrawer;
@@ -244,14 +245,14 @@ private:
     AtomicVar<bool> m_isInitialized;
 
 public: // Shapes
-    SphereDebugDrawShape& Sphere;
-    AmbientProbeDebugDrawShape& AmbientProbe;
-    ReflectionProbeDebugDrawShape& ReflectionProbe;
-    BoxDebugDrawShape& Box;
-    PlaneDebugDrawShape& Plane;
+    SphereDebugDrawShape& sphere;
+    AmbientProbeDebugDrawShape& ambientProbe;
+    ReflectionProbeDebugDrawShape& reflectionProbe;
+    BoxDebugDrawShape& box;
+    PlaneDebugDrawShape& plane;
 
 private:
-    GraphicsPipelineRef FetchGraphicsPipeline(RenderableAttributeSet attributes, uint32 drawableLayer);
+    GraphicsPipelineRef FetchGraphicsPipeline(RenderableAttributeSet attributes, uint32 drawableLayer, PassData* passData);
 
     ShaderRef m_shader;
     DescriptorTableRef m_descriptorTable;

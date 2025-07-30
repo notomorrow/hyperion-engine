@@ -1129,8 +1129,8 @@ void EditorSubsystem::Update(float delta)
 
 #if 0
     if (m_focusedNode.IsValid()) {
-        g_engine->GetDebugDrawer()->Box(m_focusedNode->GetWorldTranslation(), m_focusedNode->GetWorldAABB().GetExtent() + Vec3f(1.0001f), Color(0.0f, 0.0f, 1.0f, 1.0f));
-        g_engine->GetDebugDrawer()->Box(m_focusedNode->GetWorldTranslation(), m_focusedNode->GetWorldAABB().GetExtent(), Color(1.0f), RenderableAttributeSet(
+        g_engine->GetDebugDrawer()->box(m_focusedNode->GetWorldTranslation(), m_focusedNode->GetWorldAABB().GetExtent() + Vec3f(1.0001f), Color(0.0f, 0.0f, 1.0f, 1.0f));
+        g_engine->GetDebugDrawer()->box(m_focusedNode->GetWorldTranslation(), m_focusedNode->GetWorldAABB().GetExtent(), Color(1.0f), RenderableAttributeSet(
             MeshAttributes {
                 .vertexAttributes = staticMeshVertexAttributes
             },

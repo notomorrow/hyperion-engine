@@ -186,7 +186,7 @@
   </Type>
   
   
-  <Type Name="hyperion::containers::HashSet&lt;*,*&gt;">
+  <Type Name="hyperion::containers::HashSet&lt;*,*,*&gt;">
     <DisplayString>{{ Size={m_size} }}</DisplayString>
 
     <Expand>

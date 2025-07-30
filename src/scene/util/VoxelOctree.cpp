@@ -209,7 +209,12 @@ VoxelOctreeBuildResult VoxelOctree::Build(const VoxelOctreeParams& params, Entit
 
                     for (SizeType i = 0; i < triangles.Size(); i++)
                     {
-                        triangleAabbs[i] = (element.transform.GetMatrix() * triangles[i]).GetBoundingBox();
+                        //triangleAabbs[i] = (element.transform.GetMatrix() * triangles[i]).GetBoundingBox();
+
+                        triangleAabbs[i] = BoundingBox()
+                            .Union(element.transform.GetMatrix() * triangles[i].GetPoint(0).position)
+                            .Union(element.transform.GetMatrix() * triangles[i].GetPoint(1).position)
+                            .Union(element.transform.GetMatrix() * triangles[i].GetPoint(2).position);
                     }
 
                     Mutex::Guard guard(mtx);

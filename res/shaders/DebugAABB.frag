@@ -35,6 +35,7 @@ HYP_DESCRIPTOR_SAMPLER(Global, SamplerNearest) uniform sampler sampler_nearest;
 #include "include/packing.inc"
 #include "include/env_probe.inc"
 #include "include/scene.inc"
+#include "include/gbuffer.inc"
 
 HYP_DESCRIPTOR_SRV(View, GBufferMipChain) uniform texture2D gbuffer_mip_chain;
 

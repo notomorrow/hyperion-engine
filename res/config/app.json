@@ -27,7 +27,7 @@
     },
     "debug": {
       "debug_drawer": {
-        "enabled": false
+        "enabled": true
       },
       "env_grid_probes": false,
       "reflection_probes": false,

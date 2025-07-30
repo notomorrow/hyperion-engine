@@ -1948,8 +1948,8 @@ void DeferredRenderer::RenderFrameForView(FrameBase* frame, const RenderSetup& r
 
         ExecuteDrawCalls(frame, rs, renderCollector, (1u << RB_SKYBOX));
 
-        // // render debug draw
-        // g_engine->GetDebugDrawer()->Render(frame, rs);
+        // render debug draw
+        g_engine->GetDebugDrawer()->Render(frame, rs);
 
         frame->renderQueue << EndFramebuffer(translucentFbo);
     }

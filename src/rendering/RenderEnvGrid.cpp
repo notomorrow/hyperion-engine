@@ -563,7 +563,7 @@ void EnvGridRenderer::RenderFrame(FrameBase* frame, const RenderSetup& renderSet
             RenderProxyEnvProbe* envProbeProxy = static_cast<RenderProxyEnvProbe*>(RenderApi_GetRenderProxy(probe->Id()));
             Assert(envProbeProxy != nullptr);
 
-            g_engine->GetDebugDrawer()->AmbientProbe(
+            g_engine->GetDebugDrawer()->ambientProbe(
                 envProbeProxy->bufferData.worldPosition.GetXYZ(),
                 0.25f,
                 *probe);

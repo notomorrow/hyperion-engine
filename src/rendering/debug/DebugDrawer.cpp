@@ -193,11 +193,11 @@ DebugDrawer::DebugDrawer()
     : m_config(DebugDrawerConfig::FromConfig()),
       m_defaultCommandList(*this),
       m_isInitialized(false),
-      Sphere(m_defaultCommandList.Sphere),
-      AmbientProbe(m_defaultCommandList.AmbientProbe),
-      ReflectionProbe(m_defaultCommandList.ReflectionProbe),
-      Box(m_defaultCommandList.Box),
-      Plane(m_defaultCommandList.Plane),
+      sphere(m_defaultCommandList.sphere),
+      ambientProbe(m_defaultCommandList.ambientProbe),
+      reflectionProbe(m_defaultCommandList.reflectionProbe),
+      box(m_defaultCommandList.box),
+      plane(m_defaultCommandList.plane),
       m_numDrawCommandsPendingAddition(0)
 {
     m_drawCommands.Reserve(256);
@@ -330,20 +330,18 @@ void DebugDrawer::Render(FrameBase* frame, const RenderSetup& renderSetup)
         uint32 envProbeType = uint32(EPT_INVALID);
         uint32 envProbeIndex = ~0u;
 
-        if (drawCommand.shape == &AmbientProbe)
+        if (drawCommand.shape == &ambientProbe)
         {
             const DebugDrawCommand_Probe& probeCommand = static_cast<const DebugDrawCommand_Probe&>(drawCommand);
             envProbeType = uint32(EPT_AMBIENT);
             envProbeIndex = RenderApi_RetrieveResourceBinding(probeCommand.envProbe);
         }
-        else if (drawCommand.shape == &ReflectionProbe)
+        else if (drawCommand.shape == &reflectionProbe)
         {
             const DebugDrawCommand_Probe& probeCommand = static_cast<const DebugDrawCommand_Probe&>(drawCommand);
             envProbeType = uint32(EPT_REFLECTION);
             envProbeIndex = RenderApi_RetrieveResourceBinding(probeCommand.envProbe);
         }
-
-        Assert(envProbeIndex != ~0u);
 
         shaderData[index] = ImmediateDrawShaderData {
             drawCommand.transformMatrix,
@@ -372,7 +370,7 @@ void DebugDrawer::Render(FrameBase* frame, const RenderSetup& renderSetup)
 
         if (!graphicsPipeline.IsValid() || previousState.attributesHashCode != drawCommand.attributes.GetHashCode())
         {
-            graphicsPipeline = FetchGraphicsPipeline(drawCommand.attributes, ++previousState.drawableLayer);
+            graphicsPipeline = FetchGraphicsPipeline(drawCommand.attributes, ++previousState.drawableLayer, renderSetup.passData);
             previousState.attributesHashCode = drawCommand.attributes.GetHashCode();
 
             isNewGraphicsPipeline = true;
@@ -456,9 +454,12 @@ void DebugDrawer::CommitCommands(DebugDrawCommandList& renderQueue)
     m_drawCommandsPendingAddition.Concat(std::move(renderQueue.m_drawCommands));
 }
 
-GraphicsPipelineRef DebugDrawer::FetchGraphicsPipeline(RenderableAttributeSet attributes, uint32 drawableLayer)
+GraphicsPipelineRef DebugDrawer::FetchGraphicsPipeline(RenderableAttributeSet attributes, uint32 drawableLayer, PassData* passData)
 {
     HYP_SCOPE;
+    Threads::AssertOnThread(g_renderThread);
+
+    AssertDebug(passData != nullptr);
 
     attributes.SetDrawableLayer(drawableLayer);
 

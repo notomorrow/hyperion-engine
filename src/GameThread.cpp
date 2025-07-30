@@ -79,8 +79,7 @@ void GameThread::operator()()
     GameCounter counter;
 #endif
 
-    // temp. commented out
-    // g_engine->GetDebugDrawer()->Initialize();
+    g_engine->GetDebugDrawer()->Initialize();
 
     if (m_game.IsValid())
     {

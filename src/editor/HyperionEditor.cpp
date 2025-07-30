@@ -85,6 +85,8 @@ namespace hyperion {
 
 HYP_DECLARE_LOG_CHANNEL(Editor);
 
+static VoxelOctree* g_voxelOctree = nullptr;
+
 namespace editor {
 
 #pragma region HyperionEditor
@@ -307,13 +309,13 @@ void HyperionEditor::Init()
 
                 /// testing
 
-                VoxelOctree voxelOctree;
-                if (auto res = voxelOctree.Build(VoxelOctreeParams {}, scene->GetEntityManager()); res.HasError())
+                g_voxelOctree = new VoxelOctree();
+                if (auto res = g_voxelOctree->Build(VoxelOctreeParams {}, scene->GetEntityManager()); res.HasError())
                 {
                     HYP_LOG(Editor, Error, "Failed to build voxel octree for lightmapper: {}", res.GetError().GetMessage());
                 }
 
-                Handle<Mesh> voxelMesh = MeshBuilder::BuildVoxelMesh(voxelOctree);
+                Handle<Mesh> voxelMesh = MeshBuilder::BuildVoxelMesh(*g_voxelOctree);
 
                 Handle<Entity> entity = scene->GetEntityManager()->AddEntity();
 
@@ -344,6 +346,25 @@ void HyperionEditor::Init()
 
 void HyperionEditor::Logic(float delta)
 {
+    if (g_voxelOctree != nullptr)
+    {
+        Proc<void(const VoxelOctree&)> drawOctant;
+        
+        drawOctant = [&](const VoxelOctree& octree)
+        {
+            g_engine->GetDebugDrawer()->box(octree.GetAABB().GetCenter(), octree.GetAABB().GetExtent() * 0.5f, Color::Green());
+
+            if (octree.IsDivided())
+            {
+                for (const auto& it : octree.GetOctants())
+                {
+                    drawOctant(static_cast<const VoxelOctree&>(*it.octree));
+                }
+            }
+        };
+
+        drawOctant(*g_voxelOctree);
+    }
 }
 
 void HyperionEditor::OnInputEvent(const SystemEvent& event)
