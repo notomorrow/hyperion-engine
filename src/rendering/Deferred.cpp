@@ -1690,6 +1690,7 @@ void DeferredRenderer::RenderFrameForView(FrameBase* frame, const RenderSetup& r
         pd->raytracingReflections->ApplyTLASUpdates(updateStateFlags);
     }*/
 
+#if 0
     // HACK TEST HACK TEST HACK TEST HACK TEST
     if (TLASRef& tlas = pd->topLevelAccelerationStructures[frame->GetFrameIndex()])
     {
@@ -1731,6 +1732,7 @@ void DeferredRenderer::RenderFrameForView(FrameBase* frame, const RenderSetup& r
             pd->raytracingReflections->ApplyTLASUpdates(updateStateFlags);
         }
     }
+#endif
 
     const uint32 frameIndex = frame->GetFrameIndex();
 

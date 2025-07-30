@@ -234,13 +234,23 @@ Handle<Mesh> MeshBuilder::ApplyTransform(const Mesh* mesh, const Transform& tran
         return Handle<Mesh> {};
     }
 
-    ResourceHandle resourceHandle(*mesh->GetAsset()->GetResource());
+    ResourceHandle resourceHandle;
+    
+    if (mesh->GetAsset()->IsRegistered())
+    {
+        resourceHandle = ResourceHandle(*mesh->GetAsset()->GetResource());
+    }
 
     const Matrix4 normalMatrix = transform.GetMatrix().Inverted().Transposed();
 
-    MeshData meshData = *mesh->GetAsset()->GetMeshData();
+    MeshData* meshData = mesh->GetAsset()->GetMeshData();
+    Assert(meshData != nullptr);
 
-    for (Vertex& vertex : meshData.vertexData)
+    MeshData newMeshData = *meshData;
+
+    resourceHandle.Reset();
+
+    for (Vertex& vertex : newMeshData.vertexData)
     {
         vertex.SetPosition(transform.GetMatrix() * vertex.GetPosition());
         vertex.SetNormal(normalMatrix * vertex.GetNormal());
@@ -249,7 +259,7 @@ Handle<Mesh> MeshBuilder::ApplyTransform(const Mesh* mesh, const Transform& tran
     }
 
     Handle<Mesh> newMesh = CreateObject<Mesh>();
-    newMesh->SetMeshData(meshData);
+    newMesh->SetMeshData(newMeshData);
     newMesh->SetName(mesh->GetName());
 
     return newMesh;
@@ -266,8 +276,8 @@ Handle<Mesh> MeshBuilder::Merge(const Mesh* a, const Mesh* b, const Transform& a
     };
 
     ResourceHandle resourceHandles[] = {
-        ResourceHandle(*transformedMeshes[0]->GetAsset()->GetResource()),
-        ResourceHandle(*transformedMeshes[1]->GetAsset()->GetResource())
+        transformedMeshes[0]->GetAsset()->IsRegistered() ? ResourceHandle(*transformedMeshes[0]->GetAsset()->GetResource()) : ResourceHandle(),
+        transformedMeshes[1]->GetAsset()->IsRegistered() ? ResourceHandle(*transformedMeshes[1]->GetAsset()->GetResource()) : ResourceHandle()
     };
 
     MeshData* meshDatas[] = {
@@ -308,6 +318,11 @@ Handle<Mesh> MeshBuilder::Merge(const Mesh* a, const Mesh* b, const Transform& a
         }
     }
 
+    for (ResourceHandle& resourceHandle : resourceHandles)
+    {
+        resourceHandle.Reset();    
+    }
+
     MeshData mergedMeshData;
     mergedMeshData.desc.meshAttributes.indexBufferElemType = GET_UNSIGNED_INT;
     mergedMeshData.desc.meshAttributes.vertexAttributes = mergedVertexAttributes;
@@ -331,28 +346,23 @@ Handle<Mesh> MeshBuilder::Merge(const Mesh* a, const Mesh* b)
 
 Handle<Mesh> MeshBuilder::BuildVoxelMesh(const VoxelOctree& voxelOctree)
 {
-    HashSet<BoundingBox> voxelAabbs;
+    static const auto cubeVerticesAndIndices = Mesh::CalculateIndices(cubeVertices);
 
-    Array<Vec3i> voxelPositions;
+    Array<BoundingBox> voxelAabbs;
 
     Proc<void(const VoxelOctree&)> traverse;
     traverse = [&](const VoxelOctree& octant)
     {
         if (octant.GetEntries().Any()) // filled voxel node
         {
-            AssertDebug(!octant.IsDivided());
+            //AssertDebug(!octant.IsDivided());
             
-            if (octant.GetAABB().IsFinite() && !octant.GetAABB().IsZero() && octant.GetAABB().IsValid())
-            {
-                voxelAabbs.Insert(octant.GetAABB());
-            }
-            
-            return;
+            voxelAabbs.PushBack(octant.GetAABB());
         }
         
         if (octant.IsDivided())
         {
-            AssertDebug(octant.GetEntries().Empty());
+            //AssertDebug(octant.GetEntries().Empty());
 
             for (auto& childOctant : octant.GetOctants())
             {
@@ -368,6 +378,34 @@ Handle<Mesh> MeshBuilder::BuildVoxelMesh(const VoxelOctree& voxelOctree)
     Array<Vertex> vertices;
     Array<uint32> indices;
     uint32 vertexOffset = 0;
+
+    /*const Array<Vertex>& cubeVertices = cubeVerticesAndIndices.first;
+    const Array<uint32>& cubeIndices = cubeVerticesAndIndices.second;
+
+    // Build full box for each voxel AABB
+    for (const auto& aabb : voxelAabbs)
+    {
+        Vec3f mn = aabb.GetMin();
+        Vec3f mx = aabb.GetMax();
+        
+        Vec3f size = mx - mn;
+
+        // Create vertices for the cube
+        for (Vertex vertex : cubeVertices)
+        {
+            vertex.position = vertex.GetPosition() * size + mn;
+        
+            vertices.PushBack(vertex);
+        }
+
+        // Create indices for the cube
+        for (const uint32 index : cubeIndices)
+        {
+            indices.PushBack(index + vertexOffset);
+        }
+
+        vertexOffset += (uint32)cubeVertices.Size();
+    }*/
 
     // Mapping from a bounding-box corner index to its coordinate
     // corners: 0=(min,min,min), 1=(max,min,min), 2=(min,max,min), 3=(max,max,min),
@@ -391,7 +429,6 @@ Handle<Mesh> MeshBuilder::BuildVoxelMesh(const VoxelOctree& voxelOctree)
     // Build full box for each voxel AABB
     for (const auto& aabb : voxelAabbs)
     {
-        HYP_LOG_TEMP("Voxel aabb : {}", aabb);
         Vec3f mn = aabb.GetMin();
         Vec3f mx = aabb.GetMax();
         Vec3f corners[8] = {

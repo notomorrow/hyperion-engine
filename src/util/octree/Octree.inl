@@ -11,7 +11,7 @@ void OctreeState<Derived, TEntry>::MarkOctantDirty(OctantId octantId, bool needs
         return;
     }
 
-    if (dirtyState.octantId == OctantId::Invalid())
+    if (dirtyState.octantId.IsInvalid())
     {
         dirtyState = { octantId, needsRebuild };
 
@@ -20,19 +20,25 @@ void OctreeState<Derived, TEntry>::MarkOctantDirty(OctantId octantId, bool needs
 
     while (octantId != dirtyState.octantId && !octantId.IsChildOf(dirtyState.octantId) && !dirtyState.octantId.IsInvalid())
     {
-        octantId = dirtyState.octantId.GetParent();
+        dirtyState.octantId = dirtyState.octantId.GetParent();
     }
 
     // should always end up at root if it doesnt match any
-    Assert(dirtyState.octantId != OctantId::Invalid());
+    AssertDebug(dirtyState.octantId != OctantId::Invalid());
     dirtyState.needsRebuild |= needsRebuild;
 }
 
 template <class Derived, class TEntry>
-OctreeBase<Derived, TEntry>::OctreeBase(EnumFlags<OctreeFlags> flags)
+OctreeBase<Derived, TEntry>::OctreeBase(EnumFlags<OctreeFlags> flags, uint8 maxDepth)
     : OctreeBase(defaultBounds)
 {
     m_flags = flags;
+    m_maxDepth = maxDepth;
+
+    if (m_maxDepth > uint8(OctantId::maxDepth))
+    {
+        m_maxDepth = uint8(OctantId::maxDepth);
+    }
 }
 
 template <class Derived, class TEntry>
@@ -50,7 +56,8 @@ OctreeBase<Derived, TEntry>::OctreeBase(const BoundingBox& aabb, OctreeBase* par
       m_state(nullptr),
       m_octantId(index, OctantId::Invalid()),
       m_invalidationMarker(0),
-      m_flags(OctreeFlags::OF_NONE)
+      m_flags(OctreeFlags::OF_NONE),
+      m_maxDepth(uint8(OctantId::maxDepth))
 {
     if (parent != nullptr)
     {
@@ -79,6 +86,7 @@ void OctreeBase<Derived, TEntry>::SetParent(OctreeBase* parent)
     if (m_parent != nullptr)
     {
         m_flags = parent->m_flags;
+        m_maxDepth = parent->m_maxDepth;
         m_state = m_parent->m_state;
     }
     else
@@ -420,7 +428,7 @@ OctreeBase<Derived, TEntry>::InsertResult OctreeBase<Derived, TEntry>::Insert(co
         {
             
             // stop recursing if we are at max depth
-            if (m_octantId.GetDepth() < OctantId::maxDepth - 1)
+            if (m_octantId.GetDepth() < m_maxDepth - 1)
             {
                 for (Octant& octant : m_octants)
                 {
@@ -737,7 +745,7 @@ OctreeBase<Derived, TEntry>::InsertResult OctreeBase<Derived, TEntry>::Move(cons
 
                 if (!IsDivided())
                 {
-                    if (allowRebuild && m_octantId.GetDepth() < OctantId::maxDepth - 1)
+                    if (allowRebuild && m_octantId.GetDepth() < m_maxDepth - 1)
                     {
                         Divide();
                     }

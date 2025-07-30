@@ -10,6 +10,8 @@
 
 #include <core/io/ByteWriter.hpp>
 
+#include <system/MessageBox.hpp>
+
 #if defined(HYP_AFTERMATH) && HYP_AFTERMATH
 #include <Aftermath/GFSDK_Aftermath.h>
 #include <Aftermath/GFSDK_Aftermath_GpuCrashDump.h>
@@ -156,6 +158,11 @@ void CrashHandler::Initialize()
             FileByteWriter writer("./dump.nv-gpudmp");
             writer.Write(bytes.data(), bytes.size());
             writer.Close();
+
+            SystemMessageBox(MessageBoxType::CRITICAL)
+                .Title("GPU Crash Detected!")
+                .Text(HYP_FORMAT("A GPU crash has been detected. A crash dump has been saved to:\n\n{}", FilePath::Current() / "dump.nv-gpudmp"))
+                .Show();
         },
         [](const void* info, const uint32 size, void*)
         {

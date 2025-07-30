@@ -56,6 +56,11 @@ struct BVHNode
         Split_Internal(0, maxDepth);
     }
 
+    void Shake()
+    {
+        Shake_Internal();
+    }
+
     HYP_NODISCARD RayTestResults TestRay(const Ray& ray) const
     {
         RayTestResults results;
@@ -86,6 +91,8 @@ struct BVHNode
 private:
     void Split_Internal(int depth, int maxDepth)
     {
+        children.Clear();
+
         if (isLeafNode)
         {
             if (triangles.Any())
@@ -131,6 +138,7 @@ private:
                     }
 
                     triangles.Clear();
+                    triangles.Refit();
 
                     isLeafNode = false;
                 }
@@ -140,6 +148,35 @@ private:
         for (BVHNode& node : children)
         {
             node.Split_Internal(depth + 1, maxDepth);
+        }
+    }
+
+    void Shake_Internal()
+    {
+        if (isLeafNode)
+        {
+            return;
+        }
+
+        for (auto it = children.Begin(); it != children.End();)
+        {
+            BVHNode& node = *it;
+        
+            if (node.isLeafNode)
+            {
+                if (node.triangles.Empty())
+                {
+                    it = children.Erase(it);
+
+                    continue;
+                }
+            }
+            else
+            {
+                node.Shake_Internal();
+            }
+            
+            ++it;
         }
     }
 };

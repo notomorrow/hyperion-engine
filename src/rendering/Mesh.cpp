@@ -349,126 +349,14 @@ void Mesh::SetName(Name name)
     }
 }
 
-void Mesh::SetVertices(Span<const Vertex> vertices)
-{
-    Array<uint32> indices;
-    indices.Resize(vertices.Size());
-
-    for (SizeType index = 0; index < vertices.Size(); index++)
-    {
-        indices[index] = uint32(index);
-    }
-
-    const MeshDesc meshDesc {
-        .meshAttributes = GetMeshAttributes(),
-        .numVertices = uint32(vertices.Size()),
-        .numIndices = uint32(indices.Size())
-    };
-
-    Handle<AssetPackage> package;
-    MeshData meshData;
-
-    if (m_asset.IsValid())
-    {
-        Handle<MeshAsset> prevAsset = m_asset;
-
-        package = prevAsset->GetPackage();
-
-        ResourceHandle resourceHandle(*prevAsset->GetResource());
-
-        meshData = std::move(*prevAsset->GetMeshData());
-    }
-
-    meshData.desc = meshDesc;
-
-    m_aabb = meshData.CalculateAABB();
-
-    Handle<MeshAsset> newAsset = CreateObject<MeshAsset>(GetName(), meshData);
-
-    if (package.IsValid())
-    {
-        package->RemoveAssetObject(m_asset);
-        package->AddAssetObject(newAsset);
-    }
-
-    m_asset = std::move(newAsset);
-
-    if (IsInitCalled())
-    {
-        CreateGpuBuffers();
-    }
-}
-
-void Mesh::SetVertices(Span<const Vertex> vertices, Span<const uint32> indices)
-{
-    HYP_CORE_ASSERT(indices.Size() % 3 == 0, "Indices must be a multiple of 3");
-
-    const MeshDesc meshDesc {
-        .meshAttributes = GetMeshAttributes(),
-        .numVertices = uint32(vertices.Size()),
-        .numIndices = uint32(indices.Size())
-    };
-
-    Handle<AssetPackage> package;
-    MeshData meshData;
-
-    if (m_asset.IsValid())
-    {
-        Handle<MeshAsset> prevAsset = m_asset;
-
-        package = prevAsset->GetPackage();
-
-        ResourceHandle resourceHandle(*prevAsset->GetResource());
-
-        meshData = std::move(*prevAsset->GetMeshData());
-    }
-
-    meshData.desc = meshDesc;
-    meshData.vertexData = Array<Vertex>(vertices);
-    meshData.indexData = ByteBuffer(ConstByteView(reinterpret_cast<const ubyte*>(indices.Data()), reinterpret_cast<const ubyte*>(indices.Data() + indices.Size())));
-
-    m_aabb = meshData.CalculateAABB();
-
-    Handle<MeshAsset> newAsset = CreateObject<MeshAsset>(GetName(), meshData);
-
-    if (package.IsValid())
-    {
-        package->RemoveAssetObject(m_asset);
-        package->AddAssetObject(newAsset);
-    }
-
-    m_asset = std::move(newAsset);
-
-    if (IsInitCalled())
-    {
-        CreateGpuBuffers();
-    }
-}
-
 void Mesh::SetMeshData(const MeshData& meshData)
 {
     HYP_SCOPE;
     HYP_MT_CHECK_RW(m_dataRaceDetector);
 
-    Handle<AssetPackage> package;
-
-    if (m_asset.IsValid())
-    {
-        Handle<MeshAsset> prevAsset = m_asset;
-
-        package = prevAsset->GetPackage();
-    }
-
     m_aabb = meshData.CalculateAABB();
 
     Handle<MeshAsset> newAsset = CreateObject<MeshAsset>(GetName(), meshData);
-
-    if (package.IsValid())
-    {
-        package->RemoveAssetObject(m_asset);
-        package->AddAssetObject(newAsset);
-    }
-
     m_asset = std::move(newAsset);
 
     if (IsInitCalled())
@@ -490,61 +378,7 @@ uint32 Mesh::NumIndices() const
     return m_asset ? m_asset->GetMeshDesc().numIndices : 0;
 }
 
-void Mesh::SetVertexAttributes(const VertexAttributeSet& vertexAttributes)
-{
-    HYP_SCOPE;
-    HYP_MT_CHECK_RW(m_dataRaceDetector, "Attributes");
-
-    MeshDesc meshDesc = m_asset.IsValid() ? m_asset->GetMeshDesc() : MeshDesc();
-
-    MeshAttributes meshAttributes = meshDesc.meshAttributes;
-    meshAttributes.vertexAttributes = vertexAttributes;
-
-    SetMeshAttributes(meshAttributes);
-}
-
-void Mesh::SetMeshAttributes(const MeshAttributes& attributes)
-{
-    HYP_SCOPE;
-    HYP_MT_CHECK_RW(m_dataRaceDetector, "Attributes");
-
-    MeshDesc meshDesc = m_asset.IsValid() ? m_asset->GetMeshDesc() : MeshDesc();
-    meshDesc.meshAttributes = attributes;
-
-    Handle<AssetPackage> package;
-    MeshData meshData;
-
-    if (m_asset.IsValid())
-    {
-        Handle<MeshAsset> prevAsset = m_asset;
-
-        package = prevAsset->GetPackage();
-
-        ResourceHandle resourceHandle(*prevAsset->GetResource());
-
-        meshData = std::move(*prevAsset->GetMeshData());
-    }
-
-    meshData.desc = meshDesc;
-
-    m_aabb = meshData.CalculateAABB();
-
-    Handle<MeshAsset> newAsset = CreateObject<MeshAsset>(GetName(), meshData);
-
-    if (package.IsValid())
-    {
-        package->RemoveAssetObject(m_asset);
-        package->AddAssetObject(newAsset);
-    }
-
-    m_asset = std::move(newAsset);
-
-    if (IsInitCalled())
-    {
-        CreateGpuBuffers();
-    }
-}
-
+/// TODO: Move to BlasBuilder class which will take in MeshData, to keep this thread safe to call on the Render thread (unloading mesh asset may cause issues if trying to build on render thread now)
 BLASRef Mesh::BuildBLAS(const Handle<Material>& material) const
 {
     if (!m_asset)

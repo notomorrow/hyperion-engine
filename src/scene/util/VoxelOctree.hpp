@@ -21,7 +21,7 @@ class EntityManager;
 
 struct VoxelOctreeParams
 {
-    float voxelSize = 0.25f;
+    float voxelSize = 0.025f;
 };
 
 struct VoxelOctreeElement
@@ -82,16 +82,20 @@ using VoxelOctreeBuildResult = Result;
 
 class HYP_API VoxelOctree : public OctreeBase<VoxelOctree, VoxelOctreeNode>
 {
+    static constexpr uint8 g_voxelOctreeMaxDepth = 8;
+
 public:
     VoxelOctree()
     {
         m_flags = OctreeFlags::OF_ONLY_INSERT_INTO_LEAF_NODES;
+        m_maxDepth = g_voxelOctreeMaxDepth;
     }
 
     VoxelOctree(const BoundingBox& aabb, VoxelOctree* parent = nullptr, uint8 index = 0)
         : OctreeBase(aabb, parent, index)
     {
         m_flags = OctreeFlags::OF_ONLY_INSERT_INTO_LEAF_NODES;
+        m_maxDepth = g_voxelOctreeMaxDepth;
     }
 
     virtual ~VoxelOctree() override = default;

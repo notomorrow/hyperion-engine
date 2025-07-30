@@ -65,9 +65,6 @@ public:
     HYP_METHOD()
     void SetName(Name name);
 
-    void SetVertices(Span<const Vertex> vertices);
-    void SetVertices(Span<const Vertex> vertices, Span<const uint32> indices);
-
     void SetMeshData(const MeshData& meshData);
 
     HYP_METHOD()
@@ -91,15 +88,10 @@ public:
         return m_asset.IsValid() ? m_asset->GetMeshDesc().meshAttributes.vertexAttributes : VertexAttributeSet();
     }
 
-    HYP_METHOD(Property = "VertexAttributes")
-    void SetVertexAttributes(const VertexAttributeSet& vertexAttributes);
-
     HYP_FORCE_INLINE MeshAttributes GetMeshAttributes() const
     {
         return m_asset.IsValid() ? m_asset->GetMeshDesc().meshAttributes : MeshAttributes();
     }
-
-    void SetMeshAttributes(const MeshAttributes& attributes);
 
     HYP_METHOD(Property = "Topology")
     HYP_FORCE_INLINE Topology GetTopology() const

@@ -182,7 +182,7 @@ VoxelOctreeBuildResult VoxelOctree::Build(const VoxelOctreeParams& params, Entit
         return HYP_MAKE_ERROR(Error, "Failed to rebuild voxel octree");
     }
 
-    TaskThreadPool pool("BuildVoxelOctreeTP", MathUtil::Min(tlas.GetAccelerationStructures().Size(), 10));
+    TaskThreadPool pool("BuildVoxelOctreeTP", MathUtil::Min(tlas.GetAccelerationStructures().Size(), 4));
     pool.Start();
 
     TaskBatch taskBatch;

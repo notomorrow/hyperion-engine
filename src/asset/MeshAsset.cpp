@@ -440,35 +440,19 @@ bool MeshData::BuildBVH(BVHNode& bvhNode, int maxDepth) const
     const uint32* uIndexData = reinterpret_cast<const uint32*>(indexData.Data());
 
     bvhNode = BVHNode(aabb);
+    bvhNode.triangles.Reserve(numIndices / 3);
 
     for (uint32 i = 0; i < numIndices; i += 3)
     {
-        Triangle triangle {
+        bvhNode.triangles.PushBack(Triangle {
             vertexData[uIndexData[i + 0]],
             vertexData[uIndexData[i + 1]],
             vertexData[uIndexData[i + 2]]
-        };
-
-        triangle[0].position = triangle[0].position;
-        triangle[1].position = triangle[1].position;
-        triangle[2].position = triangle[2].position;
-
-        triangle[0].normal = (Vec4f(triangle[0].normal.Normalized(), 0.0f)).GetXYZ().Normalize();
-        triangle[1].normal = (Vec4f(triangle[1].normal.Normalized(), 0.0f)).GetXYZ().Normalize();
-        triangle[2].normal = (Vec4f(triangle[2].normal.Normalized(), 0.0f)).GetXYZ().Normalize();
-
-        triangle[0].tangent = (Vec4f(triangle[0].tangent.Normalized(), 0.0f)).GetXYZ().Normalize();
-        triangle[1].tangent = (Vec4f(triangle[1].tangent.Normalized(), 0.0f)).GetXYZ().Normalize();
-        triangle[2].tangent = (Vec4f(triangle[2].tangent.Normalized(), 0.0f)).GetXYZ().Normalize();
-
-        triangle[0].bitangent = (Vec4f(triangle[0].bitangent.Normalized(), 0.0f)).GetXYZ().Normalize();
-        triangle[1].bitangent = (Vec4f(triangle[1].bitangent.Normalized(), 0.0f)).GetXYZ().Normalize();
-        triangle[2].bitangent = (Vec4f(triangle[2].bitangent.Normalized(), 0.0f)).GetXYZ().Normalize();
-
-        bvhNode.AddTriangle(triangle);
+        });
     }
 
     bvhNode.Split(maxDepth);
+    bvhNode.Shake();
 
     return true;
 }

@@ -586,16 +586,6 @@ FBOMResult FBOMReader::ReadObjectType(FBOMLoadContext& context, BufferedReader* 
             return { FBOMResult::FBOM_ERR, "Invalid type in static data pool" };
         }
 
-        // HYP_CORE_ASSERT(offset < m_staticDataPool.Size(),
-        //     "Offset out of bounds of static data pool: %u >= %u",
-        //     offset,
-        //     m_staticDataPool.Size());
-
-        // // grab from static data pool
-        // FBOMType *asType = m_staticDataPool[offset].data.TryGetAsDynamic<FBOMType>();
-        // HYP_CORE_ASSERT(asType != nullptr, "Invalid value in static data pool at offset %u. Type: %u", offset, m_staticDataPool[offset].data.GetTypeId().Value());
-        // outType = *asType;
-
         break;
     }
     default:

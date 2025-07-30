@@ -16,6 +16,17 @@
     </Expand>
   </Type>
 
+  <Type Name="hyperion::containers::FixedArray&lt;*,*&gt;">
+    <DisplayString>{($T1 *)m_values}</DisplayString>
+    <Expand>
+      <Item Name="[Count]">($T2)</Item>
+
+      <ArrayItems>
+        <Size>($T2)</Size>
+        <ValuePointer>(($T1 *)m_values)</ValuePointer>
+      </ArrayItems>
+    </Expand>
+  </Type>
 
   <Type Name="hyperion::containers::Array&lt;*,*&gt;">
     <DisplayString>{{ Size={m_size - m_startOffset} Dynamic={m_allocation.isDynamic} }}</DisplayString>
@@ -52,7 +63,19 @@
       </CustomListItems>
     </Expand>
   </Type>
-
+  
+  <Type Name="hyperion::containers::LinkedList&lt;*&gt;">
+    <DisplayString>{{ Count={m_size} }}</DisplayString>
+    <Expand>
+      <Item Name="[Count]">m_size</Item>
+      <LinkedListItems>
+        <Size>m_size</Size>
+        <HeadPointer>m_head</HeadPointer>
+        <NextPointer>next</NextPointer>
+        <ValueNode>value</ValueNode>
+      </LinkedListItems>
+    </Expand>
+  </Type>
 
   <Type Name="hyperion::containers::SparsePagedArray&lt;*,*&gt;">
     <Expand>
@@ -152,6 +175,44 @@
             <Loop>
               <Break Condition="currentHead == nullptr" />
               <Item Name="{ currentHead-&gt;value.first }">currentHead-&gt;value.second</Item>
+              <Exec>currentHead = currentHead-&gt;next</Exec>
+            </Loop>
+          </If>
+          <Exec>bucketPtr++</Exec>
+          <Exec>bucketIndex++</Exec>
+        </Loop>
+      </CustomListItems>
+    </Expand>
+  </Type>
+  
+  
+  <Type Name="hyperion::containers::HashSet&lt;*,*&gt;">
+    <DisplayString>{{ Size={m_size} }}</DisplayString>
+
+    <Expand>
+      <CustomListItems>
+        <Variable Name="bucketPtr" InitialValue="((Bucket *)nullptr)" />
+        <Variable Name="bucketIndex" InitialValue="0" />
+
+        <Variable Name="currentHead" InitialValue="((Node *)nullptr)" />
+
+        <Exec Condition="m_buckets.m_allocation.allocationType == 1">bucketPtr = ((Bucket *) m_buckets.m_allocation.buffer)</Exec>
+        <Exec Condition="m_buckets.m_allocation.allocationType == 2 &amp;&amp; m_buckets.m_allocation.isDynamic == false">bucketPtr = ((Bucket *) &amp;(m_buckets.m_allocation.storage.dataBuffer[0]))</Exec>
+        <Exec Condition="m_buckets.m_allocation.allocationType == 2 &amp;&amp; m_buckets.m_allocation.isDynamic == true">bucketPtr = ((Bucket *) m_buckets.m_allocation.dynamicAllocation.buffer)</Exec>
+
+        <Exec Condition="m_buckets.m_allocation.allocationType == 1">bucketPtr = ((Bucket *)m_buckets.m_allocation.buffer + m_buckets.m_startOffset)</Exec>
+        <Exec Condition="m_buckets.m_allocation.allocationType == 2 &amp;&amp; m_buckets.m_allocation.isDynamic == false">bucketPtr = ((Bucket *)&amp;m_buckets.m_allocation.storage.dataBuffer[0] + m_buckets.m_startOffset)</Exec>
+        <Exec Condition="m_buckets.m_allocation.allocationType == 2 &amp;&amp; m_buckets.m_allocation.isDynamic == true">bucketPtr = ((Bucket *)m_buckets.m_allocation.dynamicAllocation.buffer + m_buckets.m_startOffset)</Exec>
+
+        <Loop>
+          <Break Condition="bucketIndex == (m_buckets.m_size - m_buckets.m_startOffset)" />
+
+          <Exec>currentHead = bucketPtr-&gt;head</Exec>
+
+          <If Condition="currentHead != nullptr">
+            <Loop>
+              <Break Condition="currentHead == nullptr" />
+              <Item>currentHead-&gt;value</Item>
               <Exec>currentHead = currentHead-&gt;next</Exec>
             </Loop>
           </If>

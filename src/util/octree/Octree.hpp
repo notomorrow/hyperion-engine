@@ -324,7 +324,7 @@ public:
 
     using EntrySet = HashSet<Entry, &Entry::value>;
 
-    OctreeBase(EnumFlags<OctreeFlags> flags = OctreeFlags::OF_NONE);
+    OctreeBase(EnumFlags<OctreeFlags> flags = OctreeFlags::OF_NONE, uint8 maxDepth = uint8(OctantId::maxDepth));
     OctreeBase(const BoundingBox& aabb);
     OctreeBase(const BoundingBox& aabb, OctreeBase* parent, uint8 index);
 
@@ -438,6 +438,7 @@ protected:
     OctreeBase* m_parent;
     BoundingBox m_aabb;
     EnumFlags<OctreeFlags> m_flags;
+    uint8 m_maxDepth;
     FixedArray<Octant, 8> m_octants;
     bool m_isDivided;
     OctreeState<Derived, TEntry>* m_state;

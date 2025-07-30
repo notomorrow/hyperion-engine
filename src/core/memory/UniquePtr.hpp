@@ -32,13 +32,11 @@ struct UniquePtrHolder
 {
     void* value;
     TypeId typeId;
-    TypeId baseTypeId;
     void (*dtor)(void*);
 
     UniquePtrHolder()
         : value(nullptr),
           typeId(TypeId::ForType<void>()),
-          baseTypeId(TypeId::ForType<void>()),
           dtor(nullptr)
     {
     }
@@ -46,7 +44,6 @@ struct UniquePtrHolder
     UniquePtrHolder(const UniquePtrHolder& other)
         : value(other.value),
           typeId(other.typeId),
-          baseTypeId(other.baseTypeId),
           dtor(other.dtor)
     {
     }
@@ -60,7 +57,6 @@ struct UniquePtrHolder
 
         value = other.value;
         typeId = other.typeId;
-        baseTypeId = other.baseTypeId;
         dtor = other.dtor;
 
         return *this;
@@ -69,12 +65,10 @@ struct UniquePtrHolder
     UniquePtrHolder(UniquePtrHolder&& other) noexcept
         : value(other.value),
           typeId(other.typeId),
-          baseTypeId(other.baseTypeId),
           dtor(other.dtor)
     {
         other.value = nullptr;
         other.typeId = TypeId::ForType<void>();
-        other.baseTypeId = TypeId::ForType<void>();
         other.dtor = nullptr;
     }
 
@@ -87,12 +81,10 @@ struct UniquePtrHolder
 
         value = other.value;
         typeId = other.typeId;
-        baseTypeId = other.baseTypeId;
         dtor = other.dtor;
 
         other.value = nullptr;
         other.typeId = TypeId::ForType<void>();
-        other.baseTypeId = TypeId::ForType<void>();
         other.dtor = nullptr;
 
         return *this;
@@ -104,7 +96,6 @@ struct UniquePtrHolder
         value = Memory::AllocateAndConstruct<Derived>(std::forward<Args>(args)...);
         dtor = &Memory::DestructAndFree<Derived>;
         typeId = TypeId::ForType<Derived>();
-        baseTypeId = TypeId::ForType<Base>();
     }
 
     template <class Base, class Derived>
@@ -113,7 +104,6 @@ struct UniquePtrHolder
         value = ptr;
         dtor = &Memory::DestructAndFree<Derived>;
         typeId = TypeId::ForType<Derived>();
-        baseTypeId = TypeId::ForType<Base>();
     }
 
     void Destruct()
@@ -221,29 +211,17 @@ public:
         return nullptr;
     }
 
-    template <class T>
-    HYP_FORCE_INLINE UniquePtr<T> CastUnsafe()
-    {
-        return UniquePtr<T>(static_cast<T*>(Release()));
-    }
-
 protected:
     explicit UniquePtrBase(UniquePtrHolder&& holder)
         : m_holder(std::move(holder))
     {
     }
 
-    HYP_FORCE_INLINE TypeId GetBaseTypeId() const
-    {
-        return m_holder.baseTypeId;
-    }
-
     UniquePtrHolder m_holder;
 };
 
-/*! \brief A unique pointer with type erasure built in, so anything could be stored as UniquePtr<void>.
-    You can also store a derived pointer in a UniquePtr<Base>, and it will be convertible back to UniquePtr<Derived>, as
-    well as having the destructor called correctly without needing it to be virtual.
+/*! \brief A unique pointer with type erasure built in, so anything could be stored as UniquePtr<void> as
+    well as having the correct destructor called without needing it to be virtual.
 */
 template <class T>
 class UniquePtr : public UniquePtrBase
@@ -263,9 +241,6 @@ public:
     }
 
     /*! \brief Takes ownership of ptr.
-
-        Ty may be a derived class of T, and the type Id of Ty will be stored, allowing
-        for conversion back to UniquePtr<Ty> using Cast<Ty>().
 
         Do not delete the pointer passed to this,
         as it will be automatically deleted when this object or any object that takes ownership
@@ -318,28 +293,6 @@ public:
     HYP_FORCE_INLINE T* Get() const
     {
         return static_cast<T*>(Base::m_holder.value);
-    }
-
-    template <class OtherType>
-    HYP_FORCE_INLINE OtherType* TryGetAs() const
-    {
-        if (!Is<OtherType>())
-        {
-            return nullptr;
-        }
-
-        return static_cast<OtherType*>(Base::m_holder.value);
-    }
-
-    template <class OtherType>
-    HYP_FORCE_INLINE OtherType* TryGetAsDynamic() const
-    {
-        if (OtherType* ptr = dynamic_cast<OtherType*>(Get()))
-        {
-            return ptr;
-        }
-
-        return nullptr;
     }
 
     HYP_FORCE_INLINE T* operator->() const
@@ -459,10 +412,7 @@ public:
     }
 
     /*! \brief Returns a boolean indicating whether the type of this UniquePtr is the same as the given type, or if the given type is a base class of the type of this UniquePtr.
-     *  If T has a HypClass registered, this function will also return true if the held object is a subclass of T
-     *
-     *  \note This function will not check if the pointer can be casted to the given type using dynamically, so if you have a base class pointer and want to check if it can be casted to a derived class, use IsDynamic().
-     *  However, there is still limited functionality for checking if a base class pointer can be casted to a derived class pointer, as long as the UniquePtr was constructed or Reset() with a derived class pointer. */
+     *  If T has a HypClass registered, this function will also return true if the held object is a subclass of T or if IsA() would return true. */
     template <class Ty>
     HYP_FORCE_INLINE bool Is() const
     {
@@ -471,56 +421,8 @@ public:
         return std::is_convertible_v<std::add_pointer_t<T>, std::add_pointer_t<Ty>>
             || std::is_same_v<Ty, void>
             || GetTypeId() == typeId
-            || GetBaseTypeId() == typeId
             || IsA(GetClass(typeId), m_holder.value, GetTypeId());
     }
-
-    /*! \brief Returns a boolean indicating whether the type of this UniquePtr is the same as the given type, or if the given type is a base class of the type of this UniquePtr.
-     *  If T has a HypClass registered, this function will also return true if the held object is a subclass of T
-     *  This function will also check if the pointer can be casted to the given type using dynamic_cast. */
-    template <class Ty>
-    HYP_FORCE_INLINE bool IsDynamic() const
-    {
-        return Is<Ty>() || dynamic_cast<Ty*>(Get()) != nullptr;
-    }
-
-    /*! \brief Attempts to cast the pointer directly to the given type.
-        If the types are not compatible (Derived -> Base) or equal (or T is not void, in the case of a void pointer),
-        no cast is performed and a null UniquePtr is returned. Otherwise, the
-        value currently held in the UniquePtr being casted is std::move'd to the returned value. */
-    template <class Ty>
-    HYP_NODISCARD HYP_FORCE_INLINE UniquePtr<Ty> Cast()
-    {
-        if (Is<Ty>())
-        {
-            return Base::CastUnsafe<Ty>();
-        }
-
-        return UniquePtr<Ty>();
-    }
-
-    /*! \brief Attempts to cast the pointer to the given type using dynamic_cast.
-        If the types are not compatible (Derived -> Base) or equal (or T is not void, in the case of a void pointer),
-        no cast is performed and a null UniquePtr is returned. Otherwise, the
-        value currently held in the UniquePtr being casted is std::move'd to the returned value. */
-    template <class Ty>
-    HYP_NODISCARD HYP_FORCE_INLINE UniquePtr<Ty> CastDynamic()
-    {
-        Ty* result = nullptr;
-        if (Is<Ty>() || (result = dynamic_cast<Ty*>(Get())))
-        {
-            return result;
-        }
-
-        return UniquePtr<Ty>();
-    }
-
-    /*! \brief Conversion to base class UniquePtr. Performs a Cast(). */
-    // template <class Ty, typename = typename std::enable_if_t<std::is_convertible_v<std::add_pointer_t<T>, std::add_pointer_t<Ty>>>>
-    // operator UniquePtr<Ty>()
-    //{
-    //     return CastUnsafe<Ty>();
-    // }
 };
 
 /*! \brief A UniquePtr<void> cannot be constructed except for being moved from an existing
@@ -544,7 +446,6 @@ public:
         : Base()
     {
         Base::m_holder.typeId = value.m_typeId;
-        Base::m_holder.baseTypeId = value.m_typeId;
         Base::m_holder.value = value.m_ptr;
         Base::m_holder.dtor = value.m_dtor;
 
@@ -605,30 +506,7 @@ public:
 
         return std::is_same_v<Ty, void>
             || GetTypeId() == typeId
-            || GetBaseTypeId() == typeId
             || IsA(GetClass(typeId), m_holder.value, GetTypeId());
-    }
-
-    /*! \brief Attempts to cast the pointer directly to the given type.
-        If the types are not EXACT (or T is not void, in the case of a void pointer),
-        no cast is performed and a null UniquePtr is returned. Otherwise, the
-        value currently held in the UniquePtr being casted is moved to the returned value.
-
-        \note Casting from UniquePtr<void> -> UniquePtr<T> will not be able to do any base class checking
-        so you can only go from UniquePtr<void> to the exact specified type!
-
-        \tparam Ty The type to cast to.
-        \returns A UniquePtr<Ty> if the cast is successful, otherwise a null UniquePtr.
-    */
-    template <class Ty>
-    HYP_NODISCARD HYP_FORCE_INLINE UniquePtr<Ty> Cast()
-    {
-        if (Is<Ty>())
-        {
-            return Base::CastUnsafe<Ty>();
-        }
-
-        return UniquePtr<Ty>();
     }
 };
 
