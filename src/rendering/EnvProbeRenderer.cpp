@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#include <rendering/RenderEnvProbe.hpp>
-#include <rendering/RenderShadowMap.hpp>
+#include <rendering/EnvProbeRenderer.hpp>
 #include <rendering/Deferred.hpp>
 #include <rendering/PlaceholderData.hpp>
 #include <rendering/RenderGlobalState.hpp>

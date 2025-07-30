@@ -752,6 +752,10 @@ GraphicsPipelineRef VulkanRenderBackend::MakeGraphicsPipeline(
     if (shader.IsValid())
     {
         graphicsPipeline->SetShader(shader);
+        
+#ifdef HYP_DEBUG_MODE
+        graphicsPipeline->SetDebugName(NAME_FMT("GraphicsPipeline_{}", shader->GetDebugName().IsValid() ? *shader->GetDebugName() : "<unnamed shader>"));
+#endif
     }
 
     HYP_GFX_ASSERT(graphicsPipeline->GetDescriptorTable().IsValid());

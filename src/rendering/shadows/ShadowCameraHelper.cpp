@@ -1,4 +1,4 @@
-#include <rendering/util/ShadowCameraHelper.hpp>
+#include <rendering/shadows/ShadowCameraHelper.hpp>
 
 #include <scene/camera/Camera.hpp>
 

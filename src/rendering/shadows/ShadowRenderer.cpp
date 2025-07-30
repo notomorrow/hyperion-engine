@@ -1,6 +1,9 @@
-/* Copyright (c) 2024-2025 No Tomorrow Games. All rights reserved. */
+/* Copyright (c) 2025 No Tomorrow Games. All rights reserved. */
 
-#include <rendering/RenderShadowMap.hpp>
+#include <rendering/shadows/ShadowRenderer.hpp>
+#include <rendering/shadows/ShadowMapAllocator.hpp>
+#include <rendering/shadows/ShadowMap.hpp>
+
 #include <rendering/Buffers.hpp>
 #include <rendering/RenderGlobalState.hpp>
 #include <rendering/PlaceholderData.hpp>
@@ -24,216 +27,6 @@
 namespace hyperion {
 
 HYP_DECLARE_LOG_CHANNEL(Rendering);
-
-#pragma region ShadowMapAtlas
-
-bool ShadowMapAtlas::AddElement(const Vec2u& elementDimensions, ShadowMapAtlasElement& outElement)
-{
-    if (!AtlasPacker<ShadowMapAtlasElement>::AddElement(elementDimensions, outElement))
-    {
-        return false;
-    }
-
-    outElement.atlasIndex = atlasIndex;
-
-    return true;
-}
-
-#pragma endregion ShadowMapAtlas
-
-#pragma region ShadowMapAllocator
-
-ShadowMapAllocator::ShadowMapAllocator()
-    : m_atlasDimensions(2048, 2048)
-{
-    m_atlases.Reserve(4);
-
-    for (SizeType i = 0; i < 4; i++)
-    {
-        m_atlases.PushBack(ShadowMapAtlas(uint32(i), m_atlasDimensions));
-    }
-}
-
-ShadowMapAllocator::~ShadowMapAllocator()
-{
-    SafeRelease(std::move(m_atlasImage));
-    SafeRelease(std::move(m_atlasImageView));
-
-    SafeRelease(std::move(m_pointLightShadowMapImage));
-    SafeRelease(std::move(m_pointLightShadowMapImageView));
-}
-
-void ShadowMapAllocator::Initialize()
-{
-    HYP_SCOPE;
-
-    Threads::AssertOnThread(g_renderThread);
-
-    m_atlasImage = g_renderBackend->MakeImage(TextureDesc {
-        TT_TEX2D_ARRAY,
-        TF_RG16F,
-        Vec3u { m_atlasDimensions, 1 },
-        TFM_NEAREST,
-        TFM_NEAREST,
-        TWM_CLAMP_TO_EDGE,
-        uint32(m_atlases.Size()),
-        IU_SAMPLED | IU_STORAGE });
-
-    HYPERION_ASSERT_RESULT(m_atlasImage->Create());
-
-    m_atlasImageView = g_renderBackend->MakeImageView(m_atlasImage);
-    HYPERION_ASSERT_RESULT(m_atlasImageView->Create());
-
-    m_pointLightShadowMapImage = g_renderBackend->MakeImage(TextureDesc {
-        TT_CUBEMAP_ARRAY,
-        TF_R16,
-        Vec3u { 256, 256, 1 },
-        TFM_NEAREST,
-        TFM_NEAREST,
-        TWM_CLAMP_TO_EDGE,
-        g_maxBoundPointShadowMaps * 6,
-        IU_SAMPLED | IU_STORAGE });
-
-    HYPERION_ASSERT_RESULT(m_pointLightShadowMapImage->Create());
-
-    m_pointLightShadowMapImageView = g_renderBackend->MakeImageView(m_pointLightShadowMapImage);
-    HYPERION_ASSERT_RESULT(m_pointLightShadowMapImageView->Create());
-}
-
-void ShadowMapAllocator::Destroy()
-{
-    HYP_SCOPE;
-
-    Threads::AssertOnThread(g_renderThread);
-
-    for (ShadowMapAtlas& atlas : m_atlases)
-    {
-        atlas.Clear();
-    }
-
-    SafeRelease(std::move(m_atlasImage));
-    SafeRelease(std::move(m_atlasImageView));
-
-    SafeRelease(std::move(m_pointLightShadowMapImage));
-    SafeRelease(std::move(m_pointLightShadowMapImageView));
-}
-
-ShadowMap* ShadowMapAllocator::AllocateShadowMap(ShadowMapType shadowMapType, ShadowMapFilter filterMode, const Vec2u& dimensions)
-{
-    if (shadowMapType == SMT_OMNI)
-    {
-        const uint32 pointLightIndex = m_pointLightShadowMapIdGenerator.Next() - 1;
-
-        // Cannot allocate if we ran out of IDs
-        if (pointLightIndex >= g_maxBoundPointShadowMaps)
-        {
-            m_pointLightShadowMapIdGenerator.ReleaseId(pointLightIndex + 1);
-
-            return nullptr;
-        }
-
-        const ShadowMapAtlasElement atlasElement {
-            .atlasIndex = ~0u,
-            .pointLightIndex = pointLightIndex,
-            .offsetUv = Vec2f::Zero(),
-            .offsetCoords = Vec2u::Zero(),
-            .dimensions = dimensions,
-            .scale = Vec2f::One()
-        };
-
-        ShadowMap* shadowMap = new ShadowMap(
-            shadowMapType,
-            filterMode,
-            atlasElement,
-            m_pointLightShadowMapImageView);
-
-        return shadowMap;
-    }
-
-    for (ShadowMapAtlas& atlas : m_atlases)
-    {
-        ShadowMapAtlasElement atlasElement;
-
-        if (atlas.AddElement(dimensions, atlasElement))
-        {
-            ImageViewRef atlasImageView = m_atlasImage->MakeLayerImageView(atlasElement.atlasIndex);
-            DeferCreate(atlasImageView);
-
-            ShadowMap* shadowMap = new ShadowMap(
-                shadowMapType,
-                filterMode,
-                atlasElement,
-                atlasImageView);
-
-            return shadowMap;
-        }
-    }
-
-    return nullptr;
-}
-
-bool ShadowMapAllocator::FreeShadowMap(ShadowMap* shadowMap)
-{
-    if (!shadowMap)
-    {
-        return false;
-    }
-
-    const ShadowMapAtlasElement& atlasElement = shadowMap->GetAtlasElement();
-
-    bool result = false;
-
-    if (atlasElement.atlasIndex != ~0u)
-    {
-        Assert(atlasElement.atlasIndex < m_atlases.Size());
-
-        ShadowMapAtlas& atlas = m_atlases[atlasElement.atlasIndex];
-        result = atlas.RemoveElement(atlasElement);
-
-        if (!result)
-        {
-            HYP_LOG(Rendering, Error, "Failed to free shadow map from atlas (atlas index: {})", atlasElement.atlasIndex);
-        }
-    }
-    else if (atlasElement.pointLightIndex != ~0u)
-    {
-        m_pointLightShadowMapIdGenerator.ReleaseId(atlasElement.pointLightIndex + 1);
-
-        result = true;
-    }
-    else
-    {
-        HYP_LOG(Rendering, Error, "Failed to free shadow map: invalid atlas index and point light index");
-    }
-
-    delete shadowMap;
-
-    return result;
-}
-
-#pragma endregion ShadowMapAllocator
-
-#pragma region ShadowMap
-
-ShadowMap::ShadowMap(ShadowMapType type, ShadowMapFilter filterMode, const ShadowMapAtlasElement& atlasElement, const ImageViewRef& imageView)
-    : m_type(type),
-      m_filterMode(filterMode),
-      m_atlasElement(atlasElement),
-      m_imageView(imageView)
-{
-    HYP_LOG(Rendering, Debug, "Creating shadow map for atlas element, (atlas: {}, offset: {}, dimensions: {}, scale: {})",
-        atlasElement.atlasIndex,
-        atlasElement.offsetCoords,
-        atlasElement.dimensions,
-        atlasElement.scale);
-}
-
-ShadowMap::~ShadowMap()
-{
-    SafeRelease(std::move(m_imageView));
-}
-
-#pragma endregion ShadowMap
 
 #pragma region ShadowPassData
 
@@ -411,6 +204,7 @@ void ShadowRendererBase::RenderFrame(FrameBase* frame, const RenderSetup& render
 
         shadowMap = AllocateShadowMap(light);
         Assert(shadowMap != nullptr, "Failed to allocate shadow map for Light {}!", light->Id());
+        Assert(shadowMap->GetAtlasElement() != nullptr);
 
         cacheIt = m_cachedShadowMapData.Emplace(lightWeak).first;
         cacheIt->second.shadowMap = shadowMap;
@@ -421,7 +215,7 @@ void ShadowRendererBase::RenderFrame(FrameBase* frame, const RenderSetup& render
             cacheIt->second.combineShadowMapsPass = CreateCombineShadowMapsPass(
                 shadowMap->GetFilterMode(),
                 shadowMap->GetImageView()->GetImage()->GetTextureFormat(), // @TODO get format from Light's settings
-                shadowMap->GetExtent(),
+                shadowMap->GetAtlasElement()->dimensions,
                 shadowViews);
 
             AssertDebug(cacheIt->second.combineShadowMapsPass->GetExtent() == light->GetShadowMapDimensions());
@@ -447,9 +241,10 @@ void ShadowRendererBase::RenderFrame(FrameBase* frame, const RenderSetup& render
         shadowMap = cacheIt->second.shadowMap;
     }
 
-    AssertDebug(shadowMap != nullptr);
+    Assert(shadowMap != nullptr);
+    Assert(shadowMap->GetAtlasElement() != nullptr);
 
-    const ShadowMapAtlasElement& atlasElement = shadowMap->GetAtlasElement();
+    const ShadowMapAtlasElement& atlasElement = *shadowMap->GetAtlasElement();
 
     lightProxy->shadowMap = shadowMap;
 
@@ -514,7 +309,7 @@ void ShadowRendererBase::RenderFrame(FrameBase* frame, const RenderSetup& render
             frame->renderQueue << Blit(
                 framebufferImage,
                 shadowMapImage,
-                Rect<uint32> { 0, 0, shadowMap->GetExtent().x, shadowMap->GetExtent().y },
+                Rect<uint32> { 0, 0, atlasElement.dimensions.x, atlasElement.dimensions.y },
                 Rect<uint32> {
                     atlasElement.offsetCoords.x,
                     atlasElement.offsetCoords.y,

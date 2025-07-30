@@ -231,6 +231,8 @@ public:
     }
 #endif
 
+    HYP_API static void PrepareStatic(CmdBase* cmd, FrameBase*);
+
     static inline void InvokeStatic(CmdBase* cmd, const CommandBufferRef& commandBuffer)
     {
         BindGraphicsPipeline* cmdCasted = static_cast<BindGraphicsPipeline*>(cmd);

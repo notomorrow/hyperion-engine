@@ -7,7 +7,6 @@
 #include <scene/Light.hpp>
 
 #include <rendering/Texture.hpp>
-#include <rendering/RenderShadowMap.hpp>
 #include <rendering/RenderGlobalState.hpp>
 
 #include <rendering/RenderBackend.hpp>

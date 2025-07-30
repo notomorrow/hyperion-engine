@@ -4,8 +4,8 @@
 #include <rendering/DrawCall.hpp>
 #include <rendering/RenderGlobalState.hpp>
 #include <rendering/DepthPyramidRenderer.hpp>
-#include <rendering/RenderEnvGrid.hpp>
-#include <rendering/RenderEnvProbe.hpp>
+#include <rendering/EnvGridRenderer.hpp>
+#include <rendering/EnvProbeRenderer.hpp>
 #include <rendering/Deferred.hpp>
 #include <rendering/RenderBackend.hpp>
 

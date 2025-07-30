@@ -2,7 +2,6 @@
 
 #include <rendering/RenderGlobalState.hpp>
 #include <rendering/RenderMaterial.hpp>
-#include <rendering/RenderShadowMap.hpp>
 #include <rendering/Renderer.hpp>
 #include <rendering/SafeDeleter.hpp>
 #include <rendering/Deferred.hpp>
@@ -18,8 +17,11 @@
 #include <rendering/RenderShader.hpp>
 #include <rendering/RenderImage.hpp>
 #include <rendering/RenderBackend.hpp>
-#include <rendering/RenderEnvProbe.hpp>
-#include <rendering/RenderEnvGrid.hpp>
+#include <rendering/EnvProbeRenderer.hpp>
+#include <rendering/EnvGridRenderer.hpp>
+
+#include <rendering/shadows/ShadowMapAllocator.hpp>
+#include <rendering/shadows/ShadowRenderer.hpp>
 
 #include <rendering/rt/DDGI.hpp>
 
@@ -63,6 +65,9 @@ static constexpr uint32 g_numFrames = g_tripleBuffer ? 3 : 2;
 
 static constexpr uint32 g_maxViewsPerFrame = 16;
 static constexpr uint32 g_maxFramesBeforeDiscard = 10; // number of frames before ViewData is discarded if not written to
+
+// iterations per frame for cleaning up unused resources for passes
+static constexpr int g_frameCleanupBudget = 16;
 
 // thread-local frame index for the game and render threads
 // @NOTE: thread local so initialized to 0 on each thread by default
@@ -591,6 +596,9 @@ static ViewData* GetViewData(View* view)
 HYP_API void RenderApi_Init()
 {
     Threads::AssertOnThread(g_mainThread);
+    
+    g_threadFrameIndex = &g_frameIndex[CONSUMER];
+    g_threadFrameCounter = &g_frameCounter[CONSUMER];
 
     ResourceContainerFactoryRegistry& registry = ResourceContainerFactoryRegistry::GetInstance();
     registry.InvokeAll(*g_renderGlobalState->resourceBindings, g_resources);
@@ -1009,6 +1017,7 @@ HYP_API void RenderApi_EndFrame_GameThread()
     FrameData& frameData = g_frameData[g_frameIndex[PRODUCER]];
 
     g_frameIndex[PRODUCER] = (g_frameIndex[PRODUCER] + 1) % g_numFrames;
+    ++g_frameCounter[PRODUCER];
 
     g_fullSemaphore.release();
 }
@@ -1019,9 +1028,6 @@ HYP_API void RenderApi_BeginFrame_RenderThread()
 #ifdef HYP_DEBUG_MODE
     Threads::AssertOnThread(g_renderThread);
 #endif
-
-    g_threadFrameIndex = &g_frameIndex[CONSUMER];
-    g_threadFrameCounter = &g_frameCounter[CONSUMER];
 
     g_fullSemaphore.acquire();
 
@@ -1221,6 +1227,22 @@ HYP_API void RenderApi_EndFrame_RenderThread()
         ++it;
     }
 
+    int numCleanupCycles = g_frameCleanupBudget;
+    numCleanupCycles -= g_renderGlobalState->mainRenderer->RunCleanupCycle(numCleanupCycles);
+
+    for (uint32 i = 0; i < GRT_MAX && numCleanupCycles > 0; i++)
+    {
+        for (uint32 j = 0; j < g_renderGlobalState->globalRenderers[i].Size() && numCleanupCycles > 0; j++)
+        {
+            if (RendererBase* renderer = g_renderGlobalState->globalRenderers[i][j])
+            {
+                numCleanupCycles -= renderer->RunCleanupCycle(numCleanupCycles);
+            }
+        }
+    }
+
+    g_renderGlobalState->graphicsPipelineCache->RunCleanupCycle(64);
+
     for (ResourceSubtypeData& subtypeData : g_resources.dataByType)
     {
         for (Bitset::BitIndex i : subtypeData.indicesPendingDelete)
@@ -1264,6 +1286,7 @@ HYP_API void RenderApi_EndFrame_RenderThread()
     }
 
     g_frameIndex[CONSUMER] = (g_frameIndex[CONSUMER] + 1) % g_numFrames;
+    ++g_frameCounter[CONSUMER];
 
     g_freeSemaphore.release();
 }

@@ -11,11 +11,14 @@
 #include <scene/EntityTag.hpp>
 
 #include <rendering/Material.hpp>
-#include <rendering/RenderShadowMap.hpp>
 #include <rendering/RenderProxy.hpp>
 #include <rendering/RenderBackend.hpp>
 #include <rendering/RenderGlobalState.hpp>
-#include <rendering/util/ShadowCameraHelper.hpp>
+
+#include <rendering/shadows/ShadowMap.hpp>
+#include <rendering/shadows/ShadowMapAllocator.hpp>
+#include <rendering/shadows/ShadowRenderer.hpp>
+#include <rendering/shadows/ShadowCameraHelper.hpp>
 
 #include <core/object/HypClassUtils.hpp>
 

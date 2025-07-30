@@ -1,9 +1,8 @@
 #include <rendering/RenderProxy.hpp>
 #include <rendering/RenderGlobalState.hpp>
-#include <rendering/RenderEnvGrid.hpp>
-#include <rendering/RenderEnvProbe.hpp>
+#include <rendering/EnvGridRenderer.hpp>
+#include <rendering/EnvProbeRenderer.hpp>
 #include <rendering/RenderMaterial.hpp>
-#include <rendering/RenderShadowMap.hpp>
 #include <rendering/PlaceholderData.hpp>
 #include <rendering/Bindless.hpp>
 

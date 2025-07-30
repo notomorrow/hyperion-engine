@@ -54,43 +54,4 @@ protected:
     Handle<View> m_view;
 };
 
-HYP_CLASS(NoScriptBindings)
-class HYP_API UIRenderSubsystem : public Subsystem
-{
-    HYP_OBJECT_BODY(UIRenderSubsystem);
-
-public:
-    UIRenderSubsystem(const Handle<UIStage>& uiStage);
-    UIRenderSubsystem(const UIRenderSubsystem& other) = delete;
-    UIRenderSubsystem& operator=(const UIRenderSubsystem& other) = delete;
-    virtual ~UIRenderSubsystem();
-
-    HYP_FORCE_INLINE const Handle<UIStage>& GetUIStage() const
-    {
-        return m_uiStage;
-    }
-
-    virtual void PreUpdate(float delta) override;
-    virtual void Update(float delta) override;
-
-private:
-    virtual void Init() override;
-
-    virtual void OnAddedToWorld() override;
-    virtual void OnRemovedFromWorld() override;
-
-    void CreateFramebuffer();
-
-    Handle<UIStage> m_uiStage;
-
-    ShaderRef m_shader;
-
-    Handle<View> m_view;
-
-    UIRenderer* m_uiRenderer;
-
-    DelegateHandler m_onGbufferResolutionChangedHandle;
-};
-
 } // namespace hyperion
-

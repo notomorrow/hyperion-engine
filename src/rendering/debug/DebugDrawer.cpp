@@ -8,8 +8,6 @@
 #include <rendering/RenderEnvironment.hpp>
 #include <rendering/GraphicsPipelineCache.hpp>
 
-#include <rendering/UIRenderer.hpp>
-
 #include <rendering/RenderBackend.hpp>
 #include <rendering/RenderConfig.hpp>
 #include <rendering/RenderGraphicsPipeline.hpp>
@@ -286,6 +284,9 @@ void DebugDrawer::Render(FrameBase* frame, const RenderSetup& renderSetup)
 
     if (!IsEnabled())
     {
+        // clear, otherwise we'll start to leak a huge amount of memory
+        m_drawCommands.Clear();
+
         return;
     }
 
@@ -474,15 +475,14 @@ GraphicsPipelineRef DebugDrawer::FetchGraphicsPipeline(RenderableAttributeSet at
 
     if (!graphicsPipeline)
     {
+        Handle<View> view = passData->view.Lock();
+        Assert(view.IsValid());
+
         graphicsPipeline = g_renderGlobalState->graphicsPipelineCache->GetOrCreate(
             m_shader,
             m_descriptorTable,
-            {},
+            view->GetOutputTarget().GetFramebuffers(),
             attributes);
-
-        /// FIXME: GetCurrentView() should not be used here
-        // const FramebufferRef& framebuffer = g_engine->GetCurrentView()->GetGBuffer()->GetBucket(attributes.GetMaterialAttributes().bucket).GetFramebuffer();
-        // renderGroup->AddFramebuffer(framebuffer);
 
         if (it != m_graphicsPipelines.End())
         {

@@ -12,10 +12,9 @@
 #include <scene/components/BoundingBoxComponent.hpp>
 
 #include <rendering/Texture.hpp>
-#include <rendering/RenderEnvGrid.hpp>
-#include <rendering/RenderEnvProbe.hpp>
+#include <rendering/EnvGridRenderer.hpp>
+#include <rendering/EnvProbeRenderer.hpp>
 #include <rendering/RenderGlobalState.hpp>
-#include <rendering/RenderShadowMap.hpp>
 #include <rendering/PlaceholderData.hpp>
 
 #include <rendering/RenderDescriptorSet.hpp>

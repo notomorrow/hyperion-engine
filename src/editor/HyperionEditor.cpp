@@ -309,7 +309,7 @@ void HyperionEditor::Init()
 
                 /// testing
 
-                g_voxelOctree = new VoxelOctree();
+                /*g_voxelOctree = new VoxelOctree();
                 if (auto res = g_voxelOctree->Build(VoxelOctreeParams {}, scene->GetEntityManager()); res.HasError())
                 {
                     HYP_LOG(Editor, Error, "Failed to build voxel octree for lightmapper: {}", res.GetError().GetMessage());
@@ -334,7 +334,7 @@ void HyperionEditor::Init()
                 scene->GetRoot()->AddChild(std::move(voxelNode));
 
                 scene->GetEntityManager()->AddComponent<MeshComponent>(entity, MeshComponent { voxelMesh, material });
-                scene->GetEntityManager()->AddComponent<BoundingBoxComponent>(entity, BoundingBoxComponent { voxelMesh->GetAABB() });
+                scene->GetEntityManager()->AddComponent<BoundingBoxComponent>(entity, BoundingBoxComponent { voxelMesh->GetAABB() });*/
 
                 /// testing
             })

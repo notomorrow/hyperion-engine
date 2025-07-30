@@ -31,7 +31,7 @@ struct ScriptComponent;
 
 class UIObject;
 class UIStage;
-class UIRenderSubsystem;
+class UISubsystem;
 class UIDataSourceBase;
 class UIDataSource;
 class Mesh;
@@ -509,7 +509,7 @@ protected:
     UIObject(const ThreadId& ownerThreadId);
 
 public:
-    friend class UIRenderSubsystem;
+    friend class UISubsystem;
     friend class UIStage;
     friend struct UILockedUpdatesScope;
 

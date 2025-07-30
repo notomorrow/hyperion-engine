@@ -1,12 +1,10 @@
-/* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
+/* Copyright (c) 2025 No Tomorrow Games. All rights reserved. */
 
 #pragma once
 
 #include <rendering/RenderObject.hpp>
-#include <rendering/Renderer.hpp>
 
 #include <core/math/Matrix4.hpp>
-#include <core/math/Vector2.hpp>
 
 #include <core/utilities/EnumFlags.hpp>
 #include <core/utilities/IdGenerator.hpp>
@@ -19,25 +17,8 @@ namespace hyperion {
 
 class FullScreenPass;
 class ShadowMap;
-
-HYP_ENUM()
-enum ShadowMapFilter : uint32
-{
-    SMF_STANDARD = 0,
-    SMF_PCF,
-    SMF_CONTACT_HARDENED,
-    SMF_VSM,
-
-    SMF_MAX
-};
-
-HYP_ENUM()
-enum ShadowMapType : uint32
-{
-    SMT_DIRECTIONAL,
-    SMT_SPOT,
-    SMT_OMNI
-};
+enum ShadowMapFilter : uint32;
+enum ShadowMapType : uint32;
 
 HYP_STRUCT()
 struct ShadowMapAtlasElement
@@ -195,126 +176,6 @@ private:
     ImageViewRef m_pointLightShadowMapImageView;
 
     IdGenerator m_pointLightShadowMapIdGenerator;
-};
-
-class ShadowMap
-{
-public:
-    ShadowMap(ShadowMapType type, ShadowMapFilter filterMode, const ShadowMapAtlasElement& atlasElement, const ImageViewRef& imageView);
-    ~ShadowMap();
-
-    HYP_FORCE_INLINE ShadowMapType GetShadowMapType() const
-    {
-        return m_type;
-    }
-
-    HYP_FORCE_INLINE ShadowMapFilter GetFilterMode() const
-    {
-        return m_filterMode;
-    }
-
-    HYP_FORCE_INLINE const Vec2u& GetExtent() const
-    {
-        return m_atlasElement.dimensions;
-    }
-
-    HYP_FORCE_INLINE const ShadowMapAtlasElement& GetAtlasElement() const
-    {
-        return m_atlasElement;
-    }
-
-    HYP_FORCE_INLINE const ImageViewRef& GetImageView() const
-    {
-        return m_imageView;
-    }
-
-private:
-    ShadowMapType m_type;
-    ShadowMapFilter m_filterMode;
-    ShadowMapAtlasElement m_atlasElement;
-    ImageViewRef m_imageView;
-
-    Handle<FullScreenPass> m_combineShadowMapsPass;
-};
-
-struct HYP_API ShadowPassData : PassData
-{
-    virtual ~ShadowPassData() override;
-};
-
-struct ShadowPassDataExt : PassDataExt
-{
-    Light* light = nullptr;
-
-    ShadowPassDataExt()
-        : PassDataExt(TypeId::ForType<ShadowPassDataExt>())
-    {
-    }
-
-    virtual ~ShadowPassDataExt() override = default;
-
-    virtual PassDataExt* Clone() override
-    {
-        ShadowPassDataExt* clone = new ShadowPassDataExt;
-        clone->light = light;
-
-        return clone;
-    }
-};
-
-class ShadowRendererBase : public RendererBase
-{
-public:
-    virtual ~ShadowRendererBase() override = default;
-
-    virtual void Initialize() override;
-    virtual void Shutdown() override;
-
-    virtual void RenderFrame(FrameBase* frame, const RenderSetup& renderSetup) override final;
-
-protected:
-    ShadowRendererBase();
-
-    virtual int RunCleanupCycle(int maxIter) override;
-
-    virtual PassData* CreateViewPassData(View* view, PassDataExt&) override;
-
-    virtual ShadowMap* AllocateShadowMap(Light* light) = 0;
-
-private:
-    // Shadow maps cached per-light.
-    // Since Lights can have multiple shadow views that blit into one final shadow map
-    // we store the shadow maps here rather than on the per-view PassData
-    struct CachedShadowMapData
-    {
-        ShadowMap* shadowMap = nullptr;
-        Handle<FullScreenPass> combineShadowMapsPass; // Pass to combine shadow maps for this light (optional)
-        ImageRef combinedShadowMapsBlurred;
-        ComputePipelineRef csBlurShadowMap; // compute pipeline for blurring VSM shadow maps
-    };
-
-    /// Cached per-light shadow map rendering data that is cleaned up when no longer used
-    HashMap<WeakHandle<Light>, CachedShadowMapData> m_cachedShadowMapData;
-};
-
-class PointShadowRenderer : public ShadowRendererBase
-{
-public:
-    PointShadowRenderer() = default;
-    virtual ~PointShadowRenderer() override = default;
-
-protected:
-    virtual ShadowMap* AllocateShadowMap(Light* light) override;
-};
-
-class DirectionalShadowRenderer : public ShadowRendererBase
-{
-public:
-    DirectionalShadowRenderer() = default;
-    virtual ~DirectionalShadowRenderer() override = default;
-
-protected:
-    virtual ShadowMap* AllocateShadowMap(Light* light) override;
 };
 
 } // namespace hyperion

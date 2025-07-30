@@ -1,7 +1,6 @@
 /* Copyright (c) 2024-2025 No Tomorrow Games. All rights reserved. */
 
-#include <rendering/RenderEnvGrid.hpp>
-#include <rendering/RenderShadowMap.hpp>
+#include <rendering/EnvGridRenderer.hpp>
 #include <rendering/Deferred.hpp>
 #include <rendering/PlaceholderData.hpp>
 #include <rendering/RenderGlobalState.hpp>

@@ -37,6 +37,8 @@ public:
         Span<const FramebufferRef> framebuffers,
         const RenderableAttributeSet& attributes);
 
+    int RunCleanupCycle(int maxIter = 10);
+
 private:
     GraphicsPipelineRef FindGraphicsPipeline(
         const ShaderRef& shader,

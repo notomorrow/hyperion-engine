@@ -2,6 +2,7 @@
 
 #include <rendering/RenderQueue.hpp>
 #include <rendering/RenderFrame.hpp>
+#include <rendering/RenderGlobalState.hpp>
 
 #if defined(HYP_DEBUG_MODE) && defined(HYP_VULKAN)
 // for debugging
@@ -148,6 +149,16 @@ BindGraphicsPipeline::BindGraphicsPipeline(const GraphicsPipelineRef& pipeline)
 }
 
 #endif
+
+void BindGraphicsPipeline::PrepareStatic(CmdBase* cmd, FrameBase*)
+{
+    BindGraphicsPipeline* cmdCasted = static_cast<BindGraphicsPipeline*>(cmd);
+
+    if (cmdCasted->m_pipeline)
+    {
+        cmdCasted->m_pipeline->lastFrame = RenderApi_GetFrameCounter();
+    }
+}
 
 #pragma endregion BindGraphicsPipeline
 

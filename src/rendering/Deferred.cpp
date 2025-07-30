@@ -7,8 +7,8 @@
 #include <rendering/RenderGroup.hpp>
 #include <rendering/GBuffer.hpp>
 #include <rendering/DepthPyramidRenderer.hpp>
-#include <rendering/RenderEnvGrid.hpp>
-#include <rendering/RenderEnvProbe.hpp>
+#include <rendering/EnvGridRenderer.hpp>
+#include <rendering/EnvProbeRenderer.hpp>
 #include <rendering/RenderMaterial.hpp>
 #include <rendering/RenderGlobalState.hpp>
 #include <rendering/SafeDeleter.hpp>
@@ -56,9 +56,6 @@
 #include <Engine.hpp>
 
 namespace hyperion {
-
-// iterations per frame for cleaning up unused resources for passes
-static constexpr int g_frameCleanupBudget = 16;
 
 static constexpr float g_cameraJitterScale = 0.25f;
 
@@ -1630,21 +1627,6 @@ void DeferredRenderer::RenderFrame(FrameBase* frame, const RenderSetup& rs)
     }
 
     RenderApi_AddRenderStats(counts);
-
-    /// TODO: Have an iterator stored so we can maintain state for the next frame and don't start over from the first index.
-    int numCleanupCycles = g_frameCleanupBudget;
-    numCleanupCycles -= g_renderGlobalState->mainRenderer->RunCleanupCycle(numCleanupCycles);
-
-    for (uint32 i = 0; i < GRT_MAX && numCleanupCycles > 0; i++)
-    {
-        for (uint32 j = 0; j < g_renderGlobalState->globalRenderers[i].Size() && numCleanupCycles > 0; j++)
-        {
-            if (RendererBase* renderer = g_renderGlobalState->globalRenderers[i][j])
-            {
-                numCleanupCycles -= renderer->RunCleanupCycle(numCleanupCycles);
-            }
-        }
-    }
 }
 
 #define CHECK_FRAMEBUFFER_SIZE(fb)                                                                    \

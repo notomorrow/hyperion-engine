@@ -59,8 +59,6 @@
 #include <core/logging/Logger.hpp>
 #include <core/logging/LogChannels.hpp>
 
-#include <rendering/UIRenderer.hpp>
-#include <rendering/RenderEnvironment.hpp>
 #include <rendering/debug/DebugDrawer.hpp>
 
 #include <rendering/subsystems/ScreenCapture.hpp>
