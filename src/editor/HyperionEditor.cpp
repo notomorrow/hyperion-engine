@@ -348,11 +348,13 @@ void HyperionEditor::Logic(float delta)
 {
     if (g_voxelOctree != nullptr)
     {
+        DebugDrawCommandList& debugDrawCommands = g_engine->GetDebugDrawer()->CreateCommandList();
+
         Proc<void(const VoxelOctree&)> drawOctant;
-        
+
         drawOctant = [&](const VoxelOctree& octree)
         {
-            g_engine->GetDebugDrawer()->box(octree.GetAABB().GetCenter(), octree.GetAABB().GetExtent() * 0.5f, Color::Green());
+            debugDrawCommands.box(octree.GetAABB().GetCenter(), octree.GetAABB().GetExtent() * 0.5f, Color::Green());
 
             if (octree.IsDivided())
             {

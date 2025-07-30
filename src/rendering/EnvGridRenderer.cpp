@@ -550,6 +550,8 @@ void EnvGridRenderer::RenderFrame(FrameBase* frame, const RenderSetup& renderSet
     // Debug draw
     if (options.flags & EnvGridFlags::DEBUG_DISPLAY_PROBES)
     {
+        DebugDrawCommandList& debugDrawer = g_engine->GetDebugDrawer()->CreateCommandList();
+
         for (uint32 index = 0; index < envProbeCollection.numProbes; index++)
         {
             const Handle<EnvProbe>& probe = envProbeCollection.GetEnvProbeDirect(index);
@@ -562,7 +564,7 @@ void EnvGridRenderer::RenderFrame(FrameBase* frame, const RenderSetup& renderSet
             RenderProxyEnvProbe* envProbeProxy = static_cast<RenderProxyEnvProbe*>(RenderApi_GetRenderProxy(probe->Id()));
             Assert(envProbeProxy != nullptr);
 
-            g_engine->GetDebugDrawer()->ambientProbe(
+            debugDrawer.ambientProbe(
                 envProbeProxy->bufferData.worldPosition.GetXYZ(),
                 0.25f,
                 *probe);

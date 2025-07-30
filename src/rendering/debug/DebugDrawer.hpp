@@ -44,6 +44,7 @@ class UIObject;
 class UIStage;
 class PassData;
 struct RenderSetup;
+struct ImmediateDrawShaderData;
 
 HYP_STRUCT(ConfigName = "app", JsonPath = "rendering.debug.debug_drawer")
 struct DebugDrawerConfig : public ConfigBase<DebugDrawerConfig>
@@ -73,7 +74,6 @@ public:
     virtual ~IDebugDrawCommandList() = default;
 
     virtual void Push(UniquePtr<DebugDrawCommand>&& command) = 0;
-    virtual void Commit() = 0;
 };
 
 class IDebugDrawShape
@@ -82,12 +82,13 @@ public:
     virtual ~IDebugDrawShape() = default;
 
     virtual DebugDrawType GetDebugDrawType() const = 0;
+    virtual void UpdateBufferData(const DebugDrawCommand& cmd, ImmediateDrawShaderData* bufferData) const;
 };
 
 class HYP_API MeshDebugDrawShapeBase : public IDebugDrawShape
 {
 public:
-    MeshDebugDrawShapeBase(IDebugDrawCommandList& renderQueue, const Handle<Mesh>& mesh);
+    MeshDebugDrawShapeBase(IDebugDrawCommandList& list, const Handle<Mesh>& mesh);
 
     virtual ~MeshDebugDrawShapeBase() override = default;
 
@@ -102,14 +103,14 @@ public:
     }
 
 protected:
-    IDebugDrawCommandList& renderQueue;
+    IDebugDrawCommandList& list;
     Handle<Mesh> m_mesh;
 };
 
 class HYP_API SphereDebugDrawShape : public MeshDebugDrawShapeBase
 {
 public:
-    SphereDebugDrawShape(IDebugDrawCommandList& renderQueue);
+    SphereDebugDrawShape(IDebugDrawCommandList& list);
 
     virtual ~SphereDebugDrawShape() override = default;
 
@@ -120,12 +121,14 @@ public:
 class HYP_API AmbientProbeDebugDrawShape : public SphereDebugDrawShape
 {
 public:
-    AmbientProbeDebugDrawShape(IDebugDrawCommandList& renderQueue)
-        : SphereDebugDrawShape(renderQueue)
+    AmbientProbeDebugDrawShape(IDebugDrawCommandList& list)
+        : SphereDebugDrawShape(list)
     {
     }
 
     virtual ~AmbientProbeDebugDrawShape() override = default;
+
+    virtual void UpdateBufferData(const DebugDrawCommand& cmd, ImmediateDrawShaderData* bufferData) const override;
 
     void operator()(const Vec3f& position, float radius, const EnvProbe& envProbe);
 };
@@ -133,12 +136,14 @@ public:
 class HYP_API ReflectionProbeDebugDrawShape : public SphereDebugDrawShape
 {
 public:
-    ReflectionProbeDebugDrawShape(IDebugDrawCommandList& renderQueue)
-        : SphereDebugDrawShape(renderQueue)
+    ReflectionProbeDebugDrawShape(IDebugDrawCommandList& list)
+        : SphereDebugDrawShape(list)
     {
     }
 
     virtual ~ReflectionProbeDebugDrawShape() override = default;
+
+    virtual void UpdateBufferData(const DebugDrawCommand& cmd, ImmediateDrawShaderData* bufferData) const override;
 
     void operator()(const Vec3f& position, float radius, const EnvProbe& envProbe);
 };
@@ -146,7 +151,7 @@ public:
 class HYP_API BoxDebugDrawShape : public MeshDebugDrawShapeBase
 {
 public:
-    BoxDebugDrawShape(IDebugDrawCommandList& renderQueue);
+    BoxDebugDrawShape(IDebugDrawCommandList& list);
 
     virtual ~BoxDebugDrawShape() override = default;
 
@@ -157,7 +162,7 @@ public:
 class HYP_API PlaneDebugDrawShape : public MeshDebugDrawShapeBase
 {
 public:
-    PlaneDebugDrawShape(IDebugDrawCommandList& renderQueue);
+    PlaneDebugDrawShape(IDebugDrawCommandList& list);
 
     virtual ~PlaneDebugDrawShape() override = default;
 
@@ -170,28 +175,24 @@ class DebugDrawCommandList final : public IDebugDrawCommandList
 public:
     friend class DebugDrawer;
 
-    DebugDrawCommandList(DebugDrawer& debugDrawer)
+    DebugDrawCommandList()
         : sphere(*this),
           ambientProbe(*this),
           reflectionProbe(*this),
           box(*this),
-          plane(*this),
-          m_debugDrawer(debugDrawer)
+          plane(*this)
     {
     }
 
     DebugDrawCommandList(const DebugDrawCommandList& other) = delete;
     DebugDrawCommandList& operator=(const DebugDrawCommandList& other) = delete;
 
+    DebugDrawCommandList(DebugDrawCommandList&& other) noexcept = delete;
+    DebugDrawCommandList& operator=(DebugDrawCommandList&& other) noexcept = delete;
+
     virtual ~DebugDrawCommandList() override = default;
 
-    HYP_FORCE_INLINE bool IsEmpty() const
-    {
-        return m_numDrawCommands.Get(MemoryOrder::ACQUIRE) == 0;
-    }
-
     virtual void Push(UniquePtr<DebugDrawCommand>&& command) override;
-    virtual void Commit() override;
 
     SphereDebugDrawShape sphere;
     AmbientProbeDebugDrawShape ambientProbe;
@@ -200,10 +201,7 @@ public:
     PlaneDebugDrawShape plane;
 
 private:
-    DebugDrawer& m_debugDrawer;
     Array<UniquePtr<DebugDrawCommand>> m_drawCommands;
-    Mutex m_drawCommandsMutex;
-    AtomicVar<uint32> m_numDrawCommands { 0 };
 };
 
 class IDebugDrawer
@@ -233,23 +231,12 @@ public:
     virtual void Update(float delta) override;
     virtual void Render(FrameBase* frame, const RenderSetup& renderSetup) override;
 
-    UniquePtr<DebugDrawCommandList> CreateCommandList();
-    void CommitCommands(DebugDrawCommandList& renderQueue);
+    DebugDrawCommandList& CreateCommandList();
 
 private:
-    void UpdateDrawCommands();
-
     DebugDrawerConfig m_config;
 
-    DebugDrawCommandList m_defaultCommandList;
     AtomicVar<bool> m_isInitialized;
-
-public: // Shapes
-    SphereDebugDrawShape& sphere;
-    AmbientProbeDebugDrawShape& ambientProbe;
-    ReflectionProbeDebugDrawShape& reflectionProbe;
-    BoxDebugDrawShape& box;
-    PlaneDebugDrawShape& plane;
 
 private:
     GraphicsPipelineRef FetchGraphicsPipeline(RenderableAttributeSet attributes, uint32 drawableLayer, PassData* passData);
@@ -258,10 +245,8 @@ private:
     DescriptorTableRef m_descriptorTable;
     HashMap<RenderableAttributeSet, GraphicsPipelineWeakRef> m_graphicsPipelines;
 
-    Array<UniquePtr<DebugDrawCommand>> m_drawCommands;
-    Array<UniquePtr<DebugDrawCommand>> m_drawCommandsPendingAddition;
-    AtomicVar<uint32> m_numDrawCommandsPendingAddition;
-    Mutex m_drawCommandsMutex;
+    FixedArray<Array<UniquePtr<DebugDrawCommand>>, g_tripleBuffer ? 3 : 2> m_drawCommands;
+    FixedArray<LinkedList<DebugDrawCommandList>, g_tripleBuffer ? 3 : 2> m_commandLists;
 
     FixedArray<GpuBufferRef, g_framesInFlight> m_instanceBuffers;
 };

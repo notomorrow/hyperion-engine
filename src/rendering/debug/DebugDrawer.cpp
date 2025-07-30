@@ -59,10 +59,22 @@ struct DebugDrawCommand_Probe : DebugDrawCommand
 
 #pragma endregion DebugDrawCommand_Probe
 
+#pragma region IDebugDrawShape
+
+void IDebugDrawShape::UpdateBufferData(const DebugDrawCommand& cmd, ImmediateDrawShaderData* bufferData) const
+{
+    *bufferData = ImmediateDrawShaderData {
+        cmd.transformMatrix,
+        cmd.color.Packed()
+    };
+}
+
+#pragma endregion IDebugDrawShape
+
 #pragma region MeshDebugDrawShapeBase
 
-MeshDebugDrawShapeBase::MeshDebugDrawShapeBase(IDebugDrawCommandList& renderQueue, const Handle<Mesh>& mesh)
-    : renderQueue(renderQueue),
+MeshDebugDrawShapeBase::MeshDebugDrawShapeBase(IDebugDrawCommandList& list, const Handle<Mesh>& mesh)
+    : list(list),
       m_mesh(mesh)
 {
     InitObject(m_mesh);
@@ -72,8 +84,8 @@ MeshDebugDrawShapeBase::MeshDebugDrawShapeBase(IDebugDrawCommandList& renderQueu
 
 #pragma region SphereDebugDrawShape
 
-SphereDebugDrawShape::SphereDebugDrawShape(IDebugDrawCommandList& renderQueue)
-    : MeshDebugDrawShapeBase(renderQueue, MeshBuilder::NormalizedCubeSphere(4))
+SphereDebugDrawShape::SphereDebugDrawShape(IDebugDrawCommandList& list)
+    : MeshDebugDrawShapeBase(list, MeshBuilder::NormalizedCubeSphere(4))
 {
 }
 
@@ -84,7 +96,7 @@ void SphereDebugDrawShape::operator()(const Vec3f& position, float radius, const
 
 void SphereDebugDrawShape::operator()(const Vec3f& position, float radius, const Color& color, const RenderableAttributeSet& attributes)
 {
-    renderQueue.Push(MakeUnique<DebugDrawCommand>(DebugDrawCommand {
+    list.Push(MakeUnique<DebugDrawCommand>(DebugDrawCommand {
         this,
         Transform(position, radius, Quaternion::Identity()).GetMatrix(),
         color,
@@ -94,6 +106,16 @@ void SphereDebugDrawShape::operator()(const Vec3f& position, float radius, const
 #pragma endregion SphereDebugDrawShape
 
 #pragma region AmbientProbeDebugDrawShape
+
+void AmbientProbeDebugDrawShape::UpdateBufferData(const DebugDrawCommand& cmd, ImmediateDrawShaderData* bufferData) const
+{
+    IDebugDrawShape::UpdateBufferData(cmd, bufferData);
+
+    const uint32 envProbeIndex = RenderApi_RetrieveResourceBinding(static_cast<const DebugDrawCommand_Probe&>(cmd).envProbe);
+
+    bufferData->envProbeType = EPT_AMBIENT;
+    bufferData->envProbeIndex = envProbeIndex;
+}
 
 void AmbientProbeDebugDrawShape::operator()(const Vec3f& position, float radius, const EnvProbe& envProbe)
 {
@@ -105,12 +127,22 @@ void AmbientProbeDebugDrawShape::operator()(const Vec3f& position, float radius,
     command->color = Color::White();
     command->envProbe = &envProbe;
 
-    renderQueue.Push(std::move(command));
+    list.Push(std::move(command));
 }
 
 #pragma endregion AmbientProbeDebugDrawShape
 
 #pragma region ReflectionProbeDebugDrawShape
+
+void ReflectionProbeDebugDrawShape::UpdateBufferData(const DebugDrawCommand& cmd, ImmediateDrawShaderData* bufferData) const
+{
+    IDebugDrawShape::UpdateBufferData(cmd, bufferData);
+
+    const uint32 envProbeIndex = RenderApi_RetrieveResourceBinding(static_cast<const DebugDrawCommand_Probe&>(cmd).envProbe);
+
+    bufferData->envProbeType = EPT_REFLECTION;
+    bufferData->envProbeIndex = envProbeIndex;
+}
 
 void ReflectionProbeDebugDrawShape::operator()(const Vec3f& position, float radius, const EnvProbe& envProbe)
 {
@@ -122,15 +154,15 @@ void ReflectionProbeDebugDrawShape::operator()(const Vec3f& position, float radi
     command->color = Color::White();
     command->envProbe = &envProbe;
 
-    renderQueue.Push(std::move(command));
+    list.Push(std::move(command));
 }
 
 #pragma endregion ReflectionProbeDebugDrawShape
 
 #pragma region BoxDebugDrawShape
 
-BoxDebugDrawShape::BoxDebugDrawShape(IDebugDrawCommandList& renderQueue)
-    : MeshDebugDrawShapeBase(renderQueue, MeshBuilder::Cube())
+BoxDebugDrawShape::BoxDebugDrawShape(IDebugDrawCommandList& list)
+    : MeshDebugDrawShapeBase(list, MeshBuilder::Cube())
 {
 }
 
@@ -141,7 +173,7 @@ void BoxDebugDrawShape::operator()(const Vec3f& position, const Vec3f& size, con
 
 void BoxDebugDrawShape::operator()(const Vec3f& position, const Vec3f& size, const Color& color, const RenderableAttributeSet& attributes)
 {
-    renderQueue.Push(MakeUnique<DebugDrawCommand>(DebugDrawCommand {
+    list.Push(MakeUnique<DebugDrawCommand>(DebugDrawCommand {
         this,
         Transform(position, size, Quaternion::Identity()).GetMatrix(),
         color,
@@ -152,8 +184,8 @@ void BoxDebugDrawShape::operator()(const Vec3f& position, const Vec3f& size, con
 
 #pragma region PlaneDebugDrawShape
 
-PlaneDebugDrawShape::PlaneDebugDrawShape(IDebugDrawCommandList& renderQueue)
-    : MeshDebugDrawShapeBase(renderQueue, MeshBuilder::Quad())
+PlaneDebugDrawShape::PlaneDebugDrawShape(IDebugDrawCommandList& list)
+    : MeshDebugDrawShapeBase(list, MeshBuilder::Quad())
 {
 }
 
@@ -176,7 +208,7 @@ void PlaneDebugDrawShape::operator()(const FixedArray<Vec3f, 4>& points, const C
     transformMatrix.rows[2] = Vec4f(z, 0.0f);
     transformMatrix.rows[3] = Vec4f(center, 1.0f);
 
-    renderQueue.Push(MakeUnique<DebugDrawCommand>(DebugDrawCommand {
+    list.Push(MakeUnique<DebugDrawCommand>(DebugDrawCommand {
         this,
         transformMatrix,
         color,
@@ -189,16 +221,8 @@ void PlaneDebugDrawShape::operator()(const FixedArray<Vec3f, 4>& points, const C
 
 DebugDrawer::DebugDrawer()
     : m_config(DebugDrawerConfig::FromConfig()),
-      m_defaultCommandList(*this),
-      m_isInitialized(false),
-      sphere(m_defaultCommandList.sphere),
-      ambientProbe(m_defaultCommandList.ambientProbe),
-      reflectionProbe(m_defaultCommandList.reflectionProbe),
-      box(m_defaultCommandList.box),
-      plane(m_defaultCommandList.plane),
-      m_numDrawCommandsPendingAddition(0)
+      m_isInitialized(false)
 {
-    m_drawCommands.Reserve(256);
 }
 
 DebugDrawer::~DebugDrawer()
@@ -219,7 +243,7 @@ void DebugDrawer::Initialize()
 
     for (uint32 frameIndex = 0; frameIndex < g_framesInFlight; frameIndex++)
     {
-        m_instanceBuffers[frameIndex] = g_renderBackend->MakeGpuBuffer(GpuBufferType::SSBO, m_drawCommands.Capacity() * sizeof(ImmediateDrawShaderData));
+        m_instanceBuffers[frameIndex] = g_renderBackend->MakeGpuBuffer(GpuBufferType::SSBO, sizeof(ImmediateDrawShaderData));
         DeferCreate(m_instanceBuffers[frameIndex]);
     }
 
@@ -255,10 +279,19 @@ void DebugDrawer::Update(float delta)
     HYP_SCOPE;
     Threads::AssertOnThread(g_gameThread);
 
-    if (!IsEnabled())
+    const uint32 idx = RenderApi_GetFrameIndex();
+
+    if (m_commandLists[idx].Empty())
     {
         return;
     }
+
+    for (DebugDrawCommandList& it : m_commandLists[idx])
+    {
+        m_drawCommands[idx].Concat(std::move(it.m_drawCommands));
+    }
+
+    m_commandLists[idx].Clear();
 }
 
 void DebugDrawer::Render(FrameBase* frame, const RenderSetup& renderSetup)
@@ -272,25 +305,17 @@ void DebugDrawer::Render(FrameBase* frame, const RenderSetup& renderSetup)
         return;
     }
 
-    if (!m_defaultCommandList.IsEmpty())
-    {
-        m_defaultCommandList.Commit();
-    }
-
-    if (m_numDrawCommandsPendingAddition.Get(MemoryOrder::ACQUIRE) != 0)
-    {
-        UpdateDrawCommands();
-    }
+    const uint32 idx = RenderApi_GetFrameIndex();
 
     if (!IsEnabled())
     {
         // clear, otherwise we'll start to leak a huge amount of memory
-        m_drawCommands.Clear();
+        m_drawCommands[idx].Clear();
 
         return;
     }
 
-    if (m_drawCommands.Empty())
+    if (m_drawCommands[idx].Empty())
     {
         return;
     }
@@ -300,10 +325,10 @@ void DebugDrawer::Render(FrameBase* frame, const RenderSetup& renderSetup)
     GpuBufferRef& instanceBuffer = m_instanceBuffers[frameIndex];
     bool wasInstanceBufferRebuilt = false;
 
-    if (m_drawCommands.Size() * sizeof(ImmediateDrawShaderData) > instanceBuffer->Size())
+    if (m_drawCommands[idx].Size() * sizeof(ImmediateDrawShaderData) > instanceBuffer->Size())
     {
         HYPERION_ASSERT_RESULT(instanceBuffer->EnsureCapacity(
-            m_drawCommands.Size() * sizeof(ImmediateDrawShaderData),
+            m_drawCommands[idx].Size() * sizeof(ImmediateDrawShaderData),
             &wasInstanceBufferRebuilt));
     }
 
@@ -322,34 +347,16 @@ void DebugDrawer::Render(FrameBase* frame, const RenderSetup& renderSetup)
     }
 
     Array<ImmediateDrawShaderData> shaderData;
-    shaderData.Resize(m_drawCommands.Size());
+    shaderData.Resize(m_drawCommands[idx].Size());
 
-    for (SizeType index = 0; index < m_drawCommands.Size(); index++)
+    for (SizeType drawCommandIdx = 0; drawCommandIdx < m_drawCommands[idx].Size(); drawCommandIdx++)
     {
-        const DebugDrawCommand& drawCommand = *m_drawCommands[index];
+        const DebugDrawCommand& drawCommand = *m_drawCommands[idx][drawCommandIdx];
 
         uint32 envProbeType = uint32(EPT_INVALID);
         uint32 envProbeIndex = ~0u;
 
-        if (drawCommand.shape == &ambientProbe)
-        {
-            const DebugDrawCommand_Probe& probeCommand = static_cast<const DebugDrawCommand_Probe&>(drawCommand);
-            envProbeType = uint32(EPT_AMBIENT);
-            envProbeIndex = RenderApi_RetrieveResourceBinding(probeCommand.envProbe);
-        }
-        else if (drawCommand.shape == &reflectionProbe)
-        {
-            const DebugDrawCommand_Probe& probeCommand = static_cast<const DebugDrawCommand_Probe&>(drawCommand);
-            envProbeType = uint32(EPT_REFLECTION);
-            envProbeIndex = RenderApi_RetrieveResourceBinding(probeCommand.envProbe);
-        }
-
-        shaderData[index] = ImmediateDrawShaderData {
-            drawCommand.transformMatrix,
-            drawCommand.color.Packed(),
-            envProbeType,
-            envProbeIndex
-        };
+        drawCommand.shape->UpdateBufferData(drawCommand, &shaderData[drawCommandIdx]);
     }
 
     instanceBuffer->Copy(shaderData.ByteSize(), shaderData.Data());
@@ -361,9 +368,9 @@ void DebugDrawer::Render(FrameBase* frame, const RenderSetup& renderSetup)
         uint32 drawableLayer = ~0u;
     } previousState;
 
-    for (SizeType index = 0; index < m_drawCommands.Size(); index++)
+    for (SizeType drawCommandIdx = 0; drawCommandIdx < m_drawCommands[idx].Size(); drawCommandIdx++)
     {
-        const DebugDrawCommand& drawCommand = *m_drawCommands[index];
+        const DebugDrawCommand& drawCommand = *m_drawCommands[idx][drawCommandIdx];
 
         bool isNewGraphicsPipeline = false;
 
@@ -399,7 +406,7 @@ void DebugDrawer::Render(FrameBase* frame, const RenderSetup& renderSetup)
             debugDrawerDescriptorSet,
             graphicsPipeline,
             ArrayMap<Name, uint32> {
-                { NAME("ImmediateDrawsBuffer"), ShaderDataOffset<ImmediateDrawShaderData>(index) } },
+                { NAME("ImmediateDrawsBuffer"), ShaderDataOffset<ImmediateDrawShaderData>(uint32(drawCommandIdx)) } },
             debugDrawerDescriptorSetIndex);
 
         switch (drawCommand.shape->GetDebugDrawType())
@@ -419,40 +426,17 @@ void DebugDrawer::Render(FrameBase* frame, const RenderSetup& renderSetup)
         }
     }
 
-    m_drawCommands.Clear();
+    m_drawCommands[idx].Clear();
 }
 
-void DebugDrawer::UpdateDrawCommands()
+DebugDrawCommandList& DebugDrawer::CreateCommandList()
 {
     HYP_SCOPE;
+    Threads::AssertOnThread(g_gameThread | g_renderThread);
 
-    Mutex::Guard guard(m_drawCommandsMutex);
+    const uint32 idx = RenderApi_GetFrameIndex();
 
-    SizeType size = m_drawCommandsPendingAddition.Size();
-    int64 previousValue = int64(m_numDrawCommandsPendingAddition.Decrement(uint32(size), MemoryOrder::ACQUIRE_RELEASE));
-    Assert(previousValue - int64(size) >= 0);
-
-    m_drawCommands.Concat(std::move(m_drawCommandsPendingAddition));
-
-    Assert(m_drawCommandsPendingAddition.Empty());
-}
-
-UniquePtr<DebugDrawCommandList> DebugDrawer::CreateCommandList()
-{
-    HYP_SCOPE;
-
-    return MakeUnique<DebugDrawCommandList>(*this);
-}
-
-void DebugDrawer::CommitCommands(DebugDrawCommandList& renderQueue)
-{
-    HYP_SCOPE;
-
-    Mutex::Guard guard(m_drawCommandsMutex);
-
-    const SizeType numAddedItems = renderQueue.m_drawCommands.Size();
-    m_numDrawCommandsPendingAddition.Increment(uint32(numAddedItems), MemoryOrder::RELEASE);
-    m_drawCommandsPendingAddition.Concat(std::move(renderQueue.m_drawCommands));
+    return m_commandLists[idx].EmplaceBack();
 }
 
 GraphicsPipelineRef DebugDrawer::FetchGraphicsPipeline(RenderableAttributeSet attributes, uint32 drawableLayer, PassData* passData)
@@ -505,24 +489,7 @@ void DebugDrawCommandList::Push(UniquePtr<DebugDrawCommand>&& command)
 {
     HYP_SCOPE;
 
-    Mutex::Guard guard(m_drawCommandsMutex);
-
     m_drawCommands.PushBack(std::move(command));
-
-    m_numDrawCommands.Increment(1, MemoryOrder::RELEASE);
-}
-
-void DebugDrawCommandList::Commit()
-{
-    HYP_SCOPE;
-
-    Mutex::Guard guard(m_drawCommandsMutex);
-
-    const SizeType numAddedItems = m_drawCommands.Size();
-
-    m_debugDrawer.CommitCommands(*this);
-
-    m_numDrawCommands.Decrement(uint32(numAddedItems), MemoryOrder::RELEASE);
 }
 
 #pragma endregion DebugDrawCommandList
