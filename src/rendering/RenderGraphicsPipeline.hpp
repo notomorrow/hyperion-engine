@@ -17,7 +17,7 @@ struct DescriptorTableDeclaration;
 class GraphicsPipelineBase : public RenderObject<GraphicsPipelineBase>
 {
 public:
-    HYP_API ~GraphicsPipelineBase() override = default;
+    virtual HYP_API ~GraphicsPipelineBase() override;
 
     HYP_FORCE_INLINE const VertexAttributeSet& GetVertexAttributes() const
     {

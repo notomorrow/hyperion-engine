@@ -27,12 +27,6 @@ VulkanPipelineBase::VulkanPipelineBase()
 {
 }
 
-VulkanPipelineBase::~VulkanPipelineBase()
-{
-    HYP_GFX_ASSERT(m_handle == VK_NULL_HANDLE, "Expected pipeline to have been destroyed");
-    HYP_GFX_ASSERT(m_layout == VK_NULL_HANDLE, "Expected layout to have been destroyed");
-}
-
 RendererResult VulkanPipelineBase::Destroy()
 {
     if (m_handle != VK_NULL_HANDLE)

@@ -63,7 +63,8 @@ void FrameBase::UpdateUsedDescriptorSets()
         }
 #endif
 
-        HYP_LOG(Rendering, Debug, "Updating descriptor set '{}' for frame '{}' (index: {})",
+        HYP_LOG(Rendering, Debug, "Updating descriptor set {} ({}) for frame '{}' (index: {})",
+            (void*)descriptorSet,
             descriptorSet->GetLayout().GetName().LookupString(),
             GetDebugName().LookupString(),
             m_frameIndex);

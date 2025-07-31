@@ -9,6 +9,13 @@
 
 namespace hyperion {
 
+GraphicsPipelineBase::~GraphicsPipelineBase()
+{
+    SafeRelease(std::move(m_descriptorTable));
+    SafeRelease(std::move(m_shader));
+    SafeRelease(std::move(m_framebuffers));
+}
+
 RendererResult GraphicsPipelineBase::Create()
 {
     if (!m_shader.IsValid())

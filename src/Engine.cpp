@@ -268,6 +268,7 @@ HYP_API void Engine::Init()
     m_finalPass->Create();
 
     m_debugDrawer = MakeUnique<DebugDrawer>();
+    m_debugDrawer->Initialize();
 
     m_world = CreateObject<World>();
 

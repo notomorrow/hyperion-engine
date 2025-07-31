@@ -64,7 +64,7 @@ struct ImmediateDrawShaderData
     uint32 colorPacked;
     uint32 envProbeType;
     uint32 envProbeIndex;
-    uint32 _pad0;
+    uint32 isCulled : 1;
 };
 
 static_assert(sizeof(ImmediateDrawShaderData) == 80);

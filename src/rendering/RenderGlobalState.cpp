@@ -1368,8 +1368,9 @@ RenderGlobalState::~RenderGlobalState()
     bindlessStorage = nullptr;
 
     shadowMapAllocator->Destroy();
-    globalDescriptorTable->Destroy();
     placeholderData->Destroy();
+    
+    globalDescriptorTable.Reset();
 
     for (uint32 i = 0; i < GRT_MAX; i++)
     {

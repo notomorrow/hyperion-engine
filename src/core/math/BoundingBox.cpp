@@ -181,6 +181,14 @@ BoundingBox& BoundingBox::Clear()
     return *this;
 }
 
+BoundingBox BoundingBox::Expand(const Vec3f& delta) const
+{
+    return BoundingBox {
+        min - delta,
+        max + delta
+    };
+}
+
 BoundingBox BoundingBox::Union(const Vec3f& vec) const
 {
     return BoundingBox {
@@ -212,12 +220,9 @@ BoundingBox BoundingBox::Intersection(const BoundingBox& other) const
 
 bool BoundingBox::Overlaps(const BoundingBox& other) const
 {
-    if (max.x < other.min.x || min.x > other.max.x)
-        return false;
-    if (max.y < other.min.y || min.y > other.max.y)
-        return false;
-    if (max.z < other.min.z || min.z > other.max.z)
-        return false;
+    if (max.x < other.min.x || other.max.x < min.x) return false;
+    if (max.y < other.min.y || other.max.y < min.y) return false;
+    if (max.z < other.min.z || other.max.z < min.z) return false;
 
     return true;
 }
@@ -248,51 +253,94 @@ bool BoundingBox::Contains(const BoundingBox& other) const
 
 bool BoundingBox::ContainsTriangle(const Triangle& triangle) const
 {
-    // Get the axes to test for separation
-    static const FixedArray<Vec3f, 3> axes = {
-        Vec3f(1.0f, 0.0f, 0.0f),
-        Vec3f(0.0f, 1.0f, 0.0f),
-        Vec3f(0.0f, 0.0f, 1.0f)
-    };
-
-    // Get the corners of the bounding box
-    const FixedArray<Vec3f, 8> aabbCorners = GetCorners();
-
-    // Get the corners of the triangle
-    const FixedArray<Vec3f, 3> triangleCorners = {
-        triangle.GetPoint(0).GetPosition(),
-        triangle.GetPoint(1).GetPosition(),
-        triangle.GetPoint(2).GetPosition()
-    };
-
-    for (const Vec3f& axis : axes)
+    for (int i = 0; i < 3; ++i)
     {
-        float aabbMin = MathUtil::MaxSafeValue<float>();
-        float aabbMax = MathUtil::MinSafeValue<float>();
+        Vec3f p = triangle[i].GetPosition();
 
-        for (const Vec3f& corner : aabbCorners)
-        {
-            const float projection = corner.Dot(axis);
-
-            aabbMin = MathUtil::Min(aabbMin, projection);
-            aabbMax = MathUtil::Max(aabbMax, projection);
-        }
-
-        float triangleMin = MathUtil::MaxSafeValue<float>();
-        float triangleMax = MathUtil::MinSafeValue<float>();
-
-        for (const Vec3f& corner : triangleCorners)
-        {
-            const float projection = corner.Dot(axis);
-
-            triangleMin = MathUtil::Min(triangleMin, projection);
-            triangleMax = MathUtil::Max(triangleMax, projection);
-        }
-
-        if (aabbMax < triangleMin || aabbMin > triangleMax)
+        if (p.x < min.x || p.x > max.x || p.y < min.y || p.y > max.y || p.z < min.z || p.z > max.z)
         {
             return false;
         }
+    }
+
+    return true;
+}
+
+bool BoundingBox::OverlapsTriangle(const Triangle& triangle) const
+{
+    // bring triangle into box‐centered coordinates
+    Vec3f center = GetCenter();
+    Vec3f half = GetExtent() * 0.5f;
+
+    Vec3f v0 = triangle[0].position - center;
+    Vec3f v1 = triangle[1].position - center;
+    Vec3f v2 = triangle[2].position - center;
+
+    // triangle edges
+    Vec3f e0 = v1 - v0;
+    Vec3f e1 = v2 - v1;
+    Vec3f e2 = v0 - v2;
+
+    static const Vec3f axes[3] = { Vec3f { 1, 0, 0 }, Vec3f { 0, 1, 0 }, Vec3f { 0, 0, 1 } };
+
+    for (const Vec3f& e : { e0, e1, e2 })
+    {
+        for (const Vec3f& a : axes)
+        {
+            Vec3f axis = e.Cross(a);
+
+            float r = half.x * fabs(axis.x)
+                + half.y * fabs(axis.y)
+                + half.z * fabs(axis.z);
+
+            float p0 = axis.Dot(v0);
+            float p1 = axis.Dot(v1);
+            float p2 = axis.Dot(v2);
+
+            float mn = MathUtil::Min(MathUtil::Min(p0, p1), p2);
+            float mx = MathUtil::Max(MathUtil::Max(p0, p1), p2);
+
+            if (mn > r || mx < -r)
+            {
+                return false;
+            }
+        }
+    }
+
+    for (int i = 0; i < 3; i++)
+    {
+        float mn = MathUtil::Min(MathUtil::Min(v0[i], v1[i]), v2[i]);
+        float mx = MathUtil::Max(MathUtil::Max(v0[i], v1[i]), v2[i]);
+
+        if (mn > half[i] || mx < -half[i])
+        {
+            return false;
+        }
+    }
+
+    Vec3f normal = e0.Cross(e1);
+    float d = -normal.Dot(v0);
+
+    Vec3f vmin;
+    Vec3f vmax;
+
+    for (int i = 0; i < 3; ++i)
+    {
+        if (normal[i] > 0.0f)
+        {
+            vmin[i] = -half[i];
+            vmax[i] = half[i];
+        }
+        else
+        {
+            vmin[i] = half[i];
+            vmax[i] = -half[i];
+        }
+    }
+
+    if (normal.Dot(vmin) + d > 0.0f || normal.Dot(vmax) + d < 0.0f)
+    {
+        return false;
     }
 
     return true;

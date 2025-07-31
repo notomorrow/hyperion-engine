@@ -34,7 +34,6 @@ class VulkanPipelineBase
 {
 public:
     HYP_API VulkanPipelineBase();
-    HYP_API virtual ~VulkanPipelineBase();
 
     HYP_FORCE_INLINE VkPipeline GetVulkanHandle() const
     {

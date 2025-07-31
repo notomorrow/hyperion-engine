@@ -155,8 +155,21 @@ struct OctreeState
         OctantId octantId = OctantId::Invalid();
         bool needsRebuild = false;
     };
+    
+    OctreeState() = default;
+    OctreeState(const OctreeState& other) = delete;
+    OctreeState& operator=(const OctreeState& other) = delete;
+    
+    ~OctreeState()
+    {
+        if (entryToOctant != nullptr)
+        {
+            delete entryToOctant;
+            entryToOctant = nullptr;
+        }
+    }
 
-    HashMap<TEntry, OctreeBase<Derived, TEntry>*> entryToOctree;
+    HashMap<TEntry, OctreeBase<Derived, TEntry>*>* entryToOctant = nullptr;
 
     // If any octants need to be rebuilt, their topmost parent that needs to be rebuilt will be stored here
     DirtyState dirtyState;
@@ -177,7 +190,9 @@ struct OctreeState
 enum class OctreeFlags : uint32
 {
     OF_NONE = 0x0,
-    OF_ONLY_INSERT_INTO_LEAF_NODES = 0x1 //<! Entries can only be inserted into undivided leaf nodes.
+    OF_INSERT_ON_OVERLAP = 0x2,  //!< Insert into child octant on overlap rather than contains check of the Entry's AABB. Will cause entries to be contained in multiple octants rather than one.
+    OF_ALLOW_GROW_ROOT = 0x4,
+    OF_DEFAULT = OF_ALLOW_GROW_ROOT
 };
 
 HYP_MAKE_ENUM_FLAGS(OctreeFlags);
@@ -324,7 +339,7 @@ public:
 
     using EntrySet = HashSet<Entry, &Entry::value>;
 
-    OctreeBase(EnumFlags<OctreeFlags> flags = OctreeFlags::OF_NONE, uint8 maxDepth = uint8(OctantId::maxDepth));
+    OctreeBase(EnumFlags<OctreeFlags> flags = OctreeFlags::OF_DEFAULT, uint8 maxDepth = uint8(OctantId::maxDepth));
     OctreeBase(const BoundingBox& aabb);
     OctreeBase(const BoundingBox& aabb, OctreeBase* parent, uint8 index);
 
@@ -409,6 +424,16 @@ protected:
         and subdivided octants will be collapsed if they are empty + new octants will be created if they are needed.
      */
     InsertResult Move(const TEntry& value, const BoundingBox& aabb, bool allowRebuild, EntrySet::Iterator it);
+    
+    HYP_FORCE_INLINE bool UseEntryToOctantMap() const
+    {
+        return m_state != nullptr && !m_flags[OctreeFlags::OF_INSERT_ON_OVERLAP];
+    }
+    
+    HYP_FORCE_INLINE bool ContainsAabb(const BoundingBox& aabb) const
+    {
+        return m_flags[OctreeFlags::OF_INSERT_ON_OVERLAP] ? m_aabb.Overlaps(aabb) : m_aabb.Contains(aabb);
+    }
 
     HYP_FORCE_INLINE bool IsRoot() const
     {

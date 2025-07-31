@@ -452,6 +452,7 @@ Handle<Mesh> MeshBuilder::BuildVoxelMesh(const VoxelOctree& voxelOctree)
     MeshData meshData;
     meshData.desc.numVertices = (uint32)vertices.Size();
     meshData.desc.numIndices = (uint32)indices.Size();
+    meshData.desc.meshAttributes.topology = TOP_LINES;
     meshData.vertexData = std::move(vertices);
     meshData.indexData.SetSize(indices.Size() * sizeof(uint32));
     meshData.indexData.Write(indices.Size() * sizeof(uint32), 0, indices.Data());

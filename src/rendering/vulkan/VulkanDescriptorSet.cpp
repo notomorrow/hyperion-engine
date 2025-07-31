@@ -78,7 +78,10 @@ VulkanDescriptorSet::VulkanDescriptorSet(const DescriptorSetLayout& layout)
 
 VulkanDescriptorSet::~VulkanDescriptorSet()
 {
-    HYP_GFX_ASSERT(!IsCreated());
+    HYP_GFX_ASSERT(
+       !IsCreated(),
+       "Descriptor set %p (%s) was not properly disposed before the destructor was hit. SafeRelease() call is probably missing somewhere.",
+       this, *GetDebugName());
 }
 
 void VulkanDescriptorSet::UpdateDirtyState(bool* outIsDirty)

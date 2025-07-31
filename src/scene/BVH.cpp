@@ -4,4 +4,14 @@
 
 namespace hyperion {
 
+
+void BVHNode::QuantizeTriangleData(
+     Span<const Vertex> vertexData,
+     Span<const uint32> indexData,
+     ByteBuffer& outQuantizedVertexData,
+     ByteBuffer& outQuantizedIndexData)
+{
+    HYP_NOT_IMPLEMENTED();
+}
+
 } // namespace hyperion

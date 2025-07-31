@@ -240,7 +240,7 @@ void HyperionEditor::Init()
                 Handle<Node> node = results["test_model"].ExtractAs<Node>();
 
                 // node->Scale(3.0f);
-                node->Scale(0.03f);
+                node->Scale(0.05f);
                 node->SetName(NAME("test_model"));
                 node->LockTransform();
 
@@ -309,32 +309,32 @@ void HyperionEditor::Init()
 
                 /// testing
 
-                /*g_voxelOctree = new VoxelOctree();
+                g_voxelOctree = new VoxelOctree();
                 if (auto res = g_voxelOctree->Build(VoxelOctreeParams {}, scene->GetEntityManager()); res.HasError())
                 {
                     HYP_LOG(Editor, Error, "Failed to build voxel octree for lightmapper: {}", res.GetError().GetMessage());
                 }
 
-                Handle<Mesh> voxelMesh = MeshBuilder::BuildVoxelMesh(*g_voxelOctree);
-
-                Handle<Entity> entity = scene->GetEntityManager()->AddEntity();
-
-                MaterialAttributes materialAttributes {};
-                materialAttributes.shaderDefinition = ShaderDefinition {
-                    NAME("Forward"),
-                    ShaderProperties(voxelMesh->GetVertexAttributes(), { { NAME("UNLIT") } })
-                };
-                materialAttributes.bucket = RB_TRANSLUCENT;
-                materialAttributes.cullFaces = FaceCullMode::FCM_NONE;
-                Handle<Material> material = CreateObject<Material>(Name::Invalid(), materialAttributes);
-
-                Handle<Node> voxelNode = CreateObject<Node>();
-                voxelNode->SetEntity(entity);
-
-                scene->GetRoot()->AddChild(std::move(voxelNode));
-
-                scene->GetEntityManager()->AddComponent<MeshComponent>(entity, MeshComponent { voxelMesh, material });
-                scene->GetEntityManager()->AddComponent<BoundingBoxComponent>(entity, BoundingBoxComponent { voxelMesh->GetAABB() });*/
+                //                Handle<Mesh> voxelMesh = MeshBuilder::BuildVoxelMesh(*g_voxelOctree);
+                //
+                //                Handle<Entity> entity = scene->GetEntityManager()->AddEntity();
+                //
+                //                MaterialAttributes materialAttributes {};
+                //                materialAttributes.shaderDefinition = ShaderDefinition {
+                //                    NAME("Forward"),
+                //                    ShaderProperties(voxelMesh->GetVertexAttributes(), { { NAME("UNLIT") } })
+                //                };
+                //                materialAttributes.bucket = RB_TRANSLUCENT;
+                //                materialAttributes.cullFaces = FaceCullMode::FCM_NONE;
+                //                Handle<Material> material = CreateObject<Material>(Name::Invalid(), materialAttributes);
+                //
+                //                Handle<Node> voxelNode = CreateObject<Node>();
+                //                voxelNode->SetEntity(entity);
+                //
+                //                scene->GetRoot()->AddChild(std::move(voxelNode));
+                //
+                //                scene->GetEntityManager()->AddComponent<MeshComponent>(entity, MeshComponent { voxelMesh, material });
+                //                scene->GetEntityManager()->AddComponent<BoundingBoxComponent>(entity, BoundingBoxComponent { voxelMesh->GetAABB() });
 
                 /// testing
             })
@@ -354,14 +354,16 @@ void HyperionEditor::Logic(float delta)
 
         drawOctant = [&](const VoxelOctree& octree)
         {
-            debugDrawCommands.box(octree.GetAABB().GetCenter(), octree.GetAABB().GetExtent() * 0.5f, Color::Green());
-
             if (octree.IsDivided())
             {
                 for (const auto& it : octree.GetOctants())
                 {
                     drawOctant(static_cast<const VoxelOctree&>(*it.octree));
                 }
+            }
+            else if (octree.GetEntries().Any()) // filled node
+            {
+                debugDrawCommands.box(octree.GetAABB().GetCenter(), octree.GetAABB().GetExtent(), Color::Green());
             }
         };
 

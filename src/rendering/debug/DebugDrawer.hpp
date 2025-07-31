@@ -17,6 +17,7 @@
 #include <core/config/Config.hpp>
 
 #include <core/math/Transform.hpp>
+#include <core/math/Frustum.hpp>
 #include <core/math/Color.hpp>
 #include <core/math/Vector2.hpp>
 #include <core/math/Vector3.hpp>
@@ -68,12 +69,13 @@ struct DebugDrawCommand
     RenderableAttributeSet attributes;
 };
 
-class IDebugDrawCommandList
+struct DebugDrawCommandHeader
 {
-public:
-    virtual ~IDebugDrawCommandList() = default;
+    uint32 offset;
+    uint32 size;
 
-    virtual void Push(UniquePtr<DebugDrawCommand>&& command) = 0;
+    void (*moveFn)(void* dst, void* src);
+    void (*destructFn)(void*);
 };
 
 class IDebugDrawShape
@@ -82,13 +84,19 @@ public:
     virtual ~IDebugDrawShape() = default;
 
     virtual DebugDrawType GetDebugDrawType() const = 0;
-    virtual void UpdateBufferData(const DebugDrawCommand& cmd, ImmediateDrawShaderData* bufferData) const;
+    
+    virtual bool CheckShouldCull(DebugDrawCommand* cmd, const Frustum& frustum) const
+    {
+        return false;
+    }
+    
+    virtual void UpdateBufferData(DebugDrawCommand* cmd, ImmediateDrawShaderData* bufferData) const;
 };
 
 class HYP_API MeshDebugDrawShapeBase : public IDebugDrawShape
 {
 public:
-    MeshDebugDrawShapeBase(IDebugDrawCommandList& list, const Handle<Mesh>& mesh);
+    MeshDebugDrawShapeBase(DebugDrawCommandList& list);
 
     virtual ~MeshDebugDrawShapeBase() override = default;
 
@@ -97,38 +105,50 @@ public:
         return DebugDrawType::MESH;
     }
 
-    HYP_FORCE_INLINE const Handle<Mesh>& GetMesh() const
+    HYP_FORCE_INLINE Mesh* GetMesh() const
     {
+        if (!m_mesh)
+        {
+            m_mesh = GetMesh_Internal();
+        }
+        
         return m_mesh;
     }
 
 protected:
-    IDebugDrawCommandList& list;
-    Handle<Mesh> m_mesh;
+    virtual Mesh* GetMesh_Internal() const = 0;
+    
+    DebugDrawCommandList& list;
+    
+private:
+    mutable Mesh* m_mesh;
 };
 
 class HYP_API SphereDebugDrawShape : public MeshDebugDrawShapeBase
 {
 public:
-    SphereDebugDrawShape(IDebugDrawCommandList& list);
+    SphereDebugDrawShape(DebugDrawCommandList& list);
 
     virtual ~SphereDebugDrawShape() override = default;
 
     void operator()(const Vec3f& position, float radius, const Color& color);
     void operator()(const Vec3f& position, float radius, const Color& color, const RenderableAttributeSet& attributes);
+    
+private:
+    virtual Mesh* GetMesh_Internal() const override;
 };
 
 class HYP_API AmbientProbeDebugDrawShape : public SphereDebugDrawShape
 {
 public:
-    AmbientProbeDebugDrawShape(IDebugDrawCommandList& list)
+    AmbientProbeDebugDrawShape(DebugDrawCommandList& list)
         : SphereDebugDrawShape(list)
     {
     }
 
     virtual ~AmbientProbeDebugDrawShape() override = default;
 
-    virtual void UpdateBufferData(const DebugDrawCommand& cmd, ImmediateDrawShaderData* bufferData) const override;
+    virtual void UpdateBufferData(DebugDrawCommand* cmd, ImmediateDrawShaderData* bufferData) const override;
 
     void operator()(const Vec3f& position, float radius, const EnvProbe& envProbe);
 };
@@ -136,14 +156,14 @@ public:
 class HYP_API ReflectionProbeDebugDrawShape : public SphereDebugDrawShape
 {
 public:
-    ReflectionProbeDebugDrawShape(IDebugDrawCommandList& list)
+    ReflectionProbeDebugDrawShape(DebugDrawCommandList& list)
         : SphereDebugDrawShape(list)
     {
     }
 
     virtual ~ReflectionProbeDebugDrawShape() override = default;
 
-    virtual void UpdateBufferData(const DebugDrawCommand& cmd, ImmediateDrawShaderData* bufferData) const override;
+    virtual void UpdateBufferData(DebugDrawCommand* cmd, ImmediateDrawShaderData* bufferData) const override;
 
     void operator()(const Vec3f& position, float radius, const EnvProbe& envProbe);
 };
@@ -151,36 +171,46 @@ public:
 class HYP_API BoxDebugDrawShape : public MeshDebugDrawShapeBase
 {
 public:
-    BoxDebugDrawShape(IDebugDrawCommandList& list);
+    BoxDebugDrawShape(DebugDrawCommandList& list);
 
     virtual ~BoxDebugDrawShape() override = default;
+    
+    virtual bool CheckShouldCull(DebugDrawCommand* cmd, const Frustum& frustum) const override;
 
     void operator()(const Vec3f& position, const Vec3f& size, const Color& color);
     void operator()(const Vec3f& position, const Vec3f& size, const Color& color, const RenderableAttributeSet& attributes);
+    
+private:
+    virtual Mesh* GetMesh_Internal() const override;
 };
 
 class HYP_API PlaneDebugDrawShape : public MeshDebugDrawShapeBase
 {
 public:
-    PlaneDebugDrawShape(IDebugDrawCommandList& list);
+    PlaneDebugDrawShape(DebugDrawCommandList& list);
 
     virtual ~PlaneDebugDrawShape() override = default;
 
     void operator()(const FixedArray<Vec3f, 4>& points, const Color& color);
     void operator()(const FixedArray<Vec3f, 4>& points, const Color& color, const RenderableAttributeSet& attributes);
+    
+private:
+    virtual Mesh* GetMesh_Internal() const override;
 };
 
-class DebugDrawCommandList final : public IDebugDrawCommandList
+class DebugDrawCommandList final
 {
 public:
     friend class DebugDrawer;
 
-    DebugDrawCommandList()
-        : sphere(*this),
+    DebugDrawCommandList(DebugDrawer* debugDrawer)
+        : m_debugDrawer(debugDrawer),
+          sphere(*this),
           ambientProbe(*this),
           reflectionProbe(*this),
           box(*this),
-          plane(*this)
+          plane(*this),
+          m_bufferOffset(0)
     {
     }
 
@@ -190,9 +220,15 @@ public:
     DebugDrawCommandList(DebugDrawCommandList&& other) noexcept = delete;
     DebugDrawCommandList& operator=(DebugDrawCommandList&& other) noexcept = delete;
 
-    virtual ~DebugDrawCommandList() override = default;
+    ~DebugDrawCommandList();
+    
+    HYP_FORCE_INLINE DebugDrawer* GetDebugDrawer() const
+    {
+        return m_debugDrawer;
+    }
 
-    virtual void Push(UniquePtr<DebugDrawCommand>&& command) override;
+    void* Alloc(uint32 size, uint32 alignment, DebugDrawCommandHeader& outHeader);
+    void Push(const DebugDrawCommandHeader& header);
 
     SphereDebugDrawShape sphere;
     AmbientProbeDebugDrawShape ambientProbe;
@@ -201,35 +237,26 @@ public:
     PlaneDebugDrawShape plane;
 
 private:
-    Array<UniquePtr<DebugDrawCommand>> m_drawCommands;
+    DebugDrawer* m_debugDrawer;
+    Array<DebugDrawCommandHeader> m_headers;
+    ByteBuffer m_buffer;
+    uint32 m_bufferOffset;
 };
 
-class IDebugDrawer
-{
-public:
-    virtual ~IDebugDrawer() = default;
-
-    virtual bool IsEnabled() const = 0;
-
-    virtual void Initialize() = 0;
-    virtual void Update(float delta) = 0;
-    virtual void Render(FrameBase* frame, const RenderSetup& renderSetup) = 0;
-};
-
-class HYP_API DebugDrawer final : public IDebugDrawer
+class HYP_API DebugDrawer
 {
 public:
     DebugDrawer();
-    virtual ~DebugDrawer() override;
+    ~DebugDrawer();
 
-    virtual bool IsEnabled() const override
+    HYP_FORCE_INLINE bool IsEnabled() const
     {
         return m_config.enabled;
     }
 
-    virtual void Initialize() override;
-    virtual void Update(float delta) override;
-    virtual void Render(FrameBase* frame, const RenderSetup& renderSetup) override;
+    void Initialize();
+    void Update(float delta);
+    void Render(FrameBase* frame, const RenderSetup& renderSetup);
 
     DebugDrawCommandList& CreateCommandList();
 
@@ -241,14 +268,24 @@ private:
 private:
     GraphicsPipelineRef FetchGraphicsPipeline(RenderableAttributeSet attributes, uint32 drawableLayer, PassData* passData);
 
+    void ClearCommands(uint32 idx);
+
     ShaderRef m_shader;
     DescriptorTableRef m_descriptorTable;
     HashMap<RenderableAttributeSet, GraphicsPipelineWeakRef> m_graphicsPipelines;
 
-    FixedArray<Array<UniquePtr<DebugDrawCommand>>, g_tripleBuffer ? 3 : 2> m_drawCommands;
+    FixedArray<Array<DebugDrawCommandHeader>, g_tripleBuffer ? 3 : 2> m_headers;
+    FixedArray<ByteBuffer, g_tripleBuffer ? 3 : 2> m_buffers;
+    FixedArray<uint32, g_tripleBuffer ? 3 : 2> m_bufferOffsets;
+    
+    // buffer sizes over the last X frames. we max() this to determine if we should compact the buffer
+    FixedArray<SizeType, 10> m_bufferSizeHistory;
+
     FixedArray<LinkedList<DebugDrawCommandList>, g_tripleBuffer ? 3 : 2> m_commandLists;
 
     FixedArray<GpuBufferRef, g_framesInFlight> m_instanceBuffers;
+    
+    Array<ImmediateDrawShaderData> m_cachedShaderData;
 };
 
 } // namespace hyperion

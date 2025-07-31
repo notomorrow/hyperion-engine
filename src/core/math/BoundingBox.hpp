@@ -95,9 +95,16 @@ public:
 
     BoundingBox& Clear();
 
+    /*! \brief Grow the bounding box by the given delta in each direction. Returns a new BoundingBox and does not modify this. */
+    BoundingBox Expand(const Vec3f& delta) const;
+
+    /*! \brief Creates a new BoundingBox that is the union of this and the given point. */
     BoundingBox Union(const Vec3f& vec) const;
 
+    /*! \brief Creates a new BoundingBox that is the union of this and the given BoundingBox. */
     BoundingBox Union(const BoundingBox& other) const;
+
+    /*! \brief Creates a new BoundingBox that is the intersection of this and the given BoundingBox. */
     BoundingBox Intersection(const BoundingBox& other) const;
 
     // do the AABB's overlap at all?
@@ -107,6 +114,7 @@ public:
     bool Contains(const BoundingBox& other) const;
 
     bool ContainsTriangle(const Triangle& triangle) const;
+    bool OverlapsTriangle(const Triangle& triangle) const;
 
     bool ContainsPoint(const Vec3f& vec) const;
 

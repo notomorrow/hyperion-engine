@@ -28,7 +28,7 @@ namespace hyperion {
 
 static BoundingBox SnapAabbToVoxel(const BoundingBox& aabb, float voxelSize)
 {
-    
+
     Vec3f extent = aabb.GetExtent();
     Vec3f newExtent = Vec3f(
         MathUtil::Ceil(extent.x / voxelSize) * voxelSize,
@@ -37,7 +37,7 @@ static BoundingBox SnapAabbToVoxel(const BoundingBox& aabb, float voxelSize)
 
     BoundingBox newAabb = aabb;
     newAabb.SetExtent(newExtent);
-    
+
     return newAabb;
 }
 
@@ -176,7 +176,9 @@ VoxelOctreeBuildResult VoxelOctree::Build(const VoxelOctreeParams& params, Entit
     {
         return HYP_MAKE_ERROR(Error, "Invalid AABB, cannot build voxel octree");
     }
-
+    
+    newAabb = BoundingBox(Vec3f(-45.0f), Vec3f(45.0f));
+    
     if (!OctreeBase::Rebuild(newAabb, true).first)
     {
         return HYP_MAKE_ERROR(Error, "Failed to rebuild voxel octree");
@@ -202,27 +204,23 @@ VoxelOctreeBuildResult VoxelOctree::Build(const VoxelOctreeParams& params, Entit
         if (bvh.triangles.Any())
         {
             // iterate triangles in batches so we don't hold exclusive access for too long
-            ForEachInBatches(bvh.triangles, (bvh.triangles.Size() + 255) / 256, [&](Span<const Triangle> triangles)
+            static constexpr uint32 batchSize = 64;
+            ForEachInBatches(bvh.triangles, (bvh.triangles.Size() + batchSize - 1) / batchSize, [&](Span<const Triangle> triangles)
                 {
-                    Array<BoundingBox> triangleAabbs;
+                    Array<BoundingBox, FixedAllocator<batchSize>> triangleAabbs;
                     triangleAabbs.Resize(triangles.Size());
 
                     for (SizeType i = 0; i < triangles.Size(); i++)
                     {
-                        //triangleAabbs[i] = (element.transform.GetMatrix() * triangles[i]).GetBoundingBox();
-
-                        triangleAabbs[i] = BoundingBox()
-                            .Union(element.transform.GetMatrix() * triangles[i].GetPoint(0).position)
-                            .Union(element.transform.GetMatrix() * triangles[i].GetPoint(1).position)
-                            .Union(element.transform.GetMatrix() * triangles[i].GetPoint(2).position);
+                        triangleAabbs[i] = (element.transform.GetMatrix() * triangles[i]).GetBoundingBox();
                     }
 
                     Mutex::Guard guard(mtx);
 
                     for (SizeType triangleIndex = 0; triangleIndex < triangles.Size(); triangleIndex++)
                     {
-                        OctreeBase::Insert(
-                            VoxelOctreeNode { element.entity.Id(), element.mesh.Id(), triangles[triangleIndex] },
+                        InsertResult insertResult = OctreeBase::Insert(
+                            VoxelOctreeNode { element.entity.Id(), element.mesh.Id(), &triangles[triangleIndex] },
                             triangleAabbs[triangleIndex], true);
                     }
 

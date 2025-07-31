@@ -758,6 +758,8 @@ void Camera::UpdateRenderProxy(IRenderProxy* proxy)
     RenderProxyCamera* proxyCasted = static_cast<RenderProxyCamera*>(proxy);
     proxyCasted->camera = WeakHandleFromThis();
 
+    proxyCasted->viewFrustum = m_frustum;
+
     CameraShaderData& bufferData = proxyCasted->bufferData;
     bufferData.id = Id().Value();
     bufferData.view = m_viewMat;

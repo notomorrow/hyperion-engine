@@ -1116,6 +1116,8 @@ void DeferredRenderer::CreateViewFinalPassDescriptorSet(View* view, DeferredPass
 
     DeferCreate(descriptorSet);
 
+    SafeRelease(std::move(passData.finalPassDescriptorSet));
+    
     passData.finalPassDescriptorSet = std::move(descriptorSet);
 }
 

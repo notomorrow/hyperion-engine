@@ -433,11 +433,14 @@ bool MeshData::BuildBVH(BVHNode& bvhNode, int maxDepth) const
     const BoundingBox aabb = CalculateAABB();
 
     Assert(indexData.Size() % sizeof(uint32) == 0);
+    Assert((indexData.Size() / sizeof(uint32)) % 3 == 0);
 
     const SizeType numIndices = desc.numIndices;
     const SizeType numVertices = desc.numVertices;
+    
+    Assert(numIndices == indexData.Size() / sizeof(uint32));
 
-    const uint32* uIndexData = reinterpret_cast<const uint32*>(indexData.Data());
+    const uint32* indexDataU32 = reinterpret_cast<const uint32*>(indexData.Data());
 
     bvhNode = BVHNode(aabb);
     bvhNode.triangles.Reserve(numIndices / 3);
@@ -445,9 +448,9 @@ bool MeshData::BuildBVH(BVHNode& bvhNode, int maxDepth) const
     for (uint32 i = 0; i < numIndices; i += 3)
     {
         bvhNode.triangles.PushBack(Triangle {
-            vertexData[uIndexData[i + 0]],
-            vertexData[uIndexData[i + 1]],
-            vertexData[uIndexData[i + 2]]
+            vertexData[indexDataU32[i + 0]],
+            vertexData[indexDataU32[i + 1]],
+            vertexData[indexDataU32[i + 2]]
         });
     }
 

@@ -10,6 +10,8 @@
 
 #include <core/utilities/Result.hpp>
 
+//#include <core/logging/LoggerFwd.hpp>
+
 #include <util/octree/Octree.hpp>
 
 namespace hyperion {
@@ -58,7 +60,7 @@ struct VoxelOctreeNode
 {
     ObjId<Entity> entityId;
     ObjId<Mesh> meshId;
-    Triangle triangle;
+    const Triangle* triangle;
 
     HYP_FORCE_INLINE bool operator==(const VoxelOctreeNode& other) const
     {
@@ -82,19 +84,20 @@ using VoxelOctreeBuildResult = Result;
 
 class HYP_API VoxelOctree : public OctreeBase<VoxelOctree, VoxelOctreeNode>
 {
-    static constexpr uint8 g_voxelOctreeMaxDepth = 8;
+    static constexpr uint8 g_voxelOctreeMaxDepth = 7;
+    static constexpr EnumFlags<OctreeFlags> g_voxelOctreeFlags = OctreeFlags::OF_INSERT_ON_OVERLAP;
 
 public:
     VoxelOctree()
     {
-        m_flags = OctreeFlags::OF_ONLY_INSERT_INTO_LEAF_NODES;
+        m_flags = g_voxelOctreeFlags;
         m_maxDepth = g_voxelOctreeMaxDepth;
     }
 
     VoxelOctree(const BoundingBox& aabb, VoxelOctree* parent = nullptr, uint8 index = 0)
         : OctreeBase(aabb, parent, index)
     {
-        m_flags = OctreeFlags::OF_ONLY_INSERT_INTO_LEAF_NODES;
+        m_flags = g_voxelOctreeFlags;
         m_maxDepth = g_voxelOctreeMaxDepth;
     }
 

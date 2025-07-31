@@ -15,6 +15,7 @@
 #include <core/math/Transform.hpp>
 #include <core/math/BoundingBox.hpp>
 #include <core/math/Matrix4.hpp>
+#include <core/math/Frustum.hpp>
 
 #include <rendering/RenderableAttributes.hpp>
 #include <rendering/MeshInstanceData.hpp>
@@ -330,6 +331,7 @@ class RenderProxyCamera final : public IRenderProxy
 public:
     WeakHandle<Camera> camera;
     CameraShaderData bufferData {};
+    Frustum viewFrustum;
 };
 
 } // namespace hyperion

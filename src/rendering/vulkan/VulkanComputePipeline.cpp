@@ -40,6 +40,10 @@ VulkanComputePipeline::VulkanComputePipeline(const VulkanShaderRef& shader, cons
 
 VulkanComputePipeline::~VulkanComputePipeline()
 {
+    HYP_GFX_ASSERT(!IsCreated());
+    
+    HYP_GFX_ASSERT(m_handle == VK_NULL_HANDLE, "Expected pipeline to have been destroyed");
+    HYP_GFX_ASSERT(m_layout == VK_NULL_HANDLE, "Expected layout to have been destroyed");
 }
 
 void VulkanComputePipeline::Bind(CommandBufferBase* commandBuffer)

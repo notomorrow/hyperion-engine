@@ -79,8 +79,6 @@ void GameThread::operator()()
     GameCounter counter;
 #endif
 
-    g_engine->GetDebugDrawer()->Initialize();
-
     if (m_game.IsValid())
     {
         m_game->SetAppContext(m_appContext);

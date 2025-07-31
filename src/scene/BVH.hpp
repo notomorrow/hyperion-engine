@@ -6,6 +6,7 @@
 #include <core/containers/LinkedList.hpp>
 
 #include <core/memory/UniquePtr.hpp>
+#include <core/memory/ByteBuffer.hpp>
 
 #include <core/math/BoundingBox.hpp>
 #include <core/math/Triangle.hpp>
@@ -19,16 +20,22 @@ namespace hyperion {
 /// reference: https://gdbooks.gitbooks.io/3dcollisions/content/Chapter4/bvh.html
 
 HYP_STRUCT()
-struct BVHNode
+struct HYP_API BVHNode
 {
     HYP_FIELD(Serialize)
     BoundingBox aabb;
 
     HYP_FIELD(Serialize)
     LinkedList<BVHNode> children;
-
+    
     HYP_FIELD(Serialize)
-    Array<Triangle, DynamicAllocator> triangles;
+    Array<Triangle, DynamicAllocator> triangles; // temp; replace with quantized data
+
+    HYP_FIELD(Serialize, Compressed)
+    ByteBuffer vertexData;
+    
+    HYP_FIELD(Serialize, Compressed)
+    ByteBuffer indexData;
 
     HYP_FIELD(Serialize)
     bool isLeafNode = false;
@@ -89,10 +96,14 @@ struct BVHNode
     }
 
 private:
+    static void QuantizeTriangleData(
+         Span<const Vertex> vertexData,
+         Span<const uint32> indexData,
+         ByteBuffer& outQuantizedVertexData,
+         ByteBuffer& outQuantizedIndexData);
+    
     void Split_Internal(int depth, int maxDepth)
     {
-        children.Clear();
-
         if (isLeafNode)
         {
             if (triangles.Any())
@@ -130,7 +141,7 @@ private:
                     {
                         for (BVHNode& node : children)
                         {
-                            if (node.aabb.ContainsTriangle(triangle))
+                            if (node.aabb.OverlapsTriangle(triangle))
                             {
                                 node.triangles.PushBack(triangle);
                             }

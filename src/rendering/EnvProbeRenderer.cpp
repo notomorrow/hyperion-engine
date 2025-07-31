@@ -10,6 +10,8 @@
 #include <rendering/RenderImage.hpp>
 #include <rendering/RenderImageView.hpp>
 #include <rendering/RenderGpuBuffer.hpp>
+#include <rendering/RenderDescriptorSet.hpp>
+#include <rendering/RenderObject.hpp>
 #include <rendering/AsyncCompute.hpp>
 
 #include <rendering/Texture.hpp>
@@ -381,11 +383,11 @@ void ReflectionProbeRenderer::ComputePrefilteredEnvMap(FrameBase* frame, const R
     // }
 
     DelegateHandler* delegateHandle = new DelegateHandler();
-    *delegateHandle = frame->OnFrameEnd.Bind([delegateHandle, uniformBuffer = std::move(uniformBuffer), convolveProbeComputePipeline = std::move(convolveProbeComputePipeline), descriptorTable = std::move(descriptorTable)](...)
+    *delegateHandle = frame->OnFrameEnd.Bind([delegateHandle, uniformBuffer = std::move(uniformBuffer), convolveProbeComputePipeline = std::move(convolveProbeComputePipeline), descriptorTable = std::move(descriptorTable)](...) mutable
         {
-            HYPERION_ASSERT_RESULT(uniformBuffer->Destroy());
-            HYPERION_ASSERT_RESULT(convolveProbeComputePipeline->Destroy());
-            HYPERION_ASSERT_RESULT(descriptorTable->Destroy());
+            SafeRelease(std::move(uniformBuffer));
+            SafeRelease(std::move(convolveProbeComputePipeline));
+            SafeRelease(std::move(descriptorTable));
 
             delete delegateHandle;
         });
