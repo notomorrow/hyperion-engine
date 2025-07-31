@@ -200,6 +200,12 @@ struct Span<T, std::enable_if_t<!std::is_const_v<T>>>
 
         return Span(first + offset, first + offset + count);
     }
+    
+    // To make generic programming easier
+    HYP_FORCE_INLINE constexpr Span<T> ToSpan() const
+    {
+        return *this;
+    }
 
     HYP_FORCE_INLINE constexpr HashCode GetHashCode() const
     {
@@ -375,6 +381,12 @@ struct Span<T, std::enable_if_t<std::is_const_v<T>>>
         }
 
         return Span(first + offset, first + offset + count);
+    }
+    
+    // To make generic programming easier
+    HYP_FORCE_INLINE constexpr Span<const T> ToSpan() const
+    {
+        return *this;
     }
 
     HYP_FORCE_INLINE constexpr HashCode GetHashCode() const

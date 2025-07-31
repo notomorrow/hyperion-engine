@@ -60,7 +60,7 @@ struct VoxelOctreeNode
 {
     ObjId<Entity> entityId;
     ObjId<Mesh> meshId;
-    const Triangle* triangle;
+    Triangle triangle;
 
     HYP_FORCE_INLINE bool operator==(const VoxelOctreeNode& other) const
     {

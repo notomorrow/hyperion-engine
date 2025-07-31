@@ -76,8 +76,6 @@ static inline void ForEach(Container&& container, Mutex& mutex, Callback&& callb
 template <class Container, class Callback>
 static inline void ForEachInBatches(Container&& container, uint32 numBatches, Callback&& callback)
 {
-    static_assert(NormalizedType<Container>::isContiguous, "Container must be contiguous to use ForEachInBatches");
-
     const uint32 numItems = container.Size();
     const uint32 itemsPerBatch = (numItems + numBatches - 1) / numBatches;
 
