@@ -12,6 +12,7 @@ class HYP_API CrashHandler
 {
 public:
     CrashHandler();
+    ~CrashHandler();
 
     void Initialize();
     void HandleGPUCrash(RendererResult result);

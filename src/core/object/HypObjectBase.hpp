@@ -136,6 +136,11 @@ public:
     {
         HYP_CORE_ASSERT(m_managedObjectResource == nullptr);
         m_managedObjectResource = managedObjectResource;
+
+        if (managedObjectResource)
+        {
+            managedObjectResource->IncRef();
+        }
     }
 
     virtual ManagedObjectResource* GetManagedObjectResource() const override

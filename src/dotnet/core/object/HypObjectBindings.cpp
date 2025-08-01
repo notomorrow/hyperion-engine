@@ -44,7 +44,7 @@ extern "C"
 
             HypData value;
 
-            // Set allowAbstract to true so we can use classes marked as "Abstract"
+            // Set allowAbstract to true so we can use classes marked as `Abstract=true`.
             // allowing the managed class to override methods of an abstract class
             bool success = hypClass->CreateInstance(value, /* allowAbstract */ true);
             Assert(success, "Failed to create instance of HypClass '%s'", hypClass->GetName().LookupString());

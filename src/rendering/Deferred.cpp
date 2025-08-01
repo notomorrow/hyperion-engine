@@ -21,6 +21,7 @@
 #include <rendering/Material.hpp>
 #include <rendering/Texture.hpp>
 #include <rendering/PlaceholderData.hpp>
+#include <rendering/rt/MeshBlasBuilder.hpp>
 #include <rendering/rt/RaytracingReflections.hpp>
 #include <rendering/rt/DDGI.hpp>
 
@@ -1321,7 +1322,7 @@ void DeferredRenderer::CreateViewTopLevelAccelerationStructures(View* view, Defe
     Handle<Material> defaultMaterial = CreateObject<Material>();
     InitObject(defaultMaterial);
 
-    BLASRef blas = defaultMesh->BuildBLAS(defaultMaterial);
+    BLASRef blas = MeshBlasBuilder::Build(defaultMesh, defaultMaterial);
     DeferCreate(blas);
 
     for (uint32 frameIndex = 0; frameIndex < g_framesInFlight; frameIndex++)
@@ -1674,11 +1675,11 @@ void DeferredRenderer::RenderFrameForView(FrameBase* frame, const RenderSetup& r
         pd->raytracingReflections->ApplyTLASUpdates(updateStateFlags);
     }*/
 
-#if 0
+#if 1
     // HACK TEST HACK TEST HACK TEST HACK TEST
     if (TLASRef& tlas = pd->topLevelAccelerationStructures[frame->GetFrameIndex()])
     {
-        for (Entity* entity : rpl.GetMeshEntities().GetElements<Entity>())
+        for (Entity* entity : rpl.GetMeshEntities())
         {
             Assert(entity);
 
@@ -1689,7 +1690,9 @@ void DeferredRenderer::RenderFrameForView(FrameBase* frame, const RenderSetup& r
 
             if (!blas)
             {
-                blas = meshProxy->mesh->BuildBLAS(meshProxy->material);
+                blas = MeshBlasBuilder::Build(meshProxy->mesh, meshProxy->material);
+                Assert(blas != nullptr);
+
                 blas->SetTransform(meshProxy->bufferData.modelMatrix);
 
                 if (!blas->IsCreated())
@@ -1702,19 +1705,19 @@ void DeferredRenderer::RenderFrameForView(FrameBase* frame, const RenderSetup& r
                 blas->SetTransform(meshProxy->bufferData.modelMatrix);
             }
 
-            if (!tlas->HasBLAS(blas))
-            {
-                tlas->AddBLAS(blas);
-            }
+            //if (!tlas->HasBLAS(blas))
+            //{
+            //    tlas->AddBLAS(blas);
+            //}
         }
 
-        RTUpdateStateFlags updateStateFlags = RTUpdateStateFlagBits::RT_UPDATE_STATE_FLAGS_NONE;
-        tlas->UpdateStructure(updateStateFlags);
+        //RTUpdateStateFlags updateStateFlags = RTUpdateStateFlagBits::RT_UPDATE_STATE_FLAGS_NONE;
+        //tlas->UpdateStructure(updateStateFlags);
 
-        if (pd->raytracingReflections)
-        {
-            pd->raytracingReflections->ApplyTLASUpdates(updateStateFlags);
-        }
+        //if (pd->raytracingReflections)
+        //{
+       //     pd->raytracingReflections->ApplyTLASUpdates(updateStateFlags);
+        //}
     }
 #endif
 

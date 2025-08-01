@@ -87,7 +87,7 @@ public:
 
     HYP_FORCE_INLINE int32 NumRefs() const
     {
-        return m_refCounter.GetValue();
+        return m_refCount;
     }
 
     virtual bool IsNull() const override final
@@ -98,9 +98,7 @@ public:
     virtual int IncRef() override final;
     virtual int DecRef() override final;
 
-    /*! \brief Wait for ref count to be 0 and all tasks to be completed. Will also wait for any tasks that are currently executing to complete.
-     *  If any ResourceHandle objects are still alive, this will block until they are destroyed.
-     *  \note Ensure the current thread does not hold any ResourceHandle objects when calling this function, or it will deadlock. */
+    /*! \brief Wait for the resource to no longer be in loaded state */
     virtual void WaitForFinalization() const override final;
 
     virtual ResourceMemoryPoolHandle GetPoolHandle() const override final
@@ -124,7 +122,7 @@ protected:
     virtual void Destroy() = 0;
 
 protected:
-    RefCounter m_refCounter;
+    volatile int32 m_refCount;
     mutable Mutex m_mutex;
 
     ResourceMemoryPoolHandle m_poolHandle;

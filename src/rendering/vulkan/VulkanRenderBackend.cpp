@@ -638,6 +638,13 @@ FrameBase* VulkanRenderBackend::PrepareNextFrame()
 {
     RendererResult frameResult = m_instance->GetSwapchain()->PrepareFrame(m_shouldRecreateSwapchain);
 
+    if (!frameResult)
+    {
+        m_crashHandler.HandleGPUCrash(frameResult);
+
+        HYP_FAIL("Failed to retrieve frame");
+    }
+
     VulkanFrame* frame = m_instance->GetSwapchain()->GetCurrentFrame();
 
     if (m_shouldRecreateSwapchain)
@@ -660,12 +667,7 @@ FrameBase* VulkanRenderBackend::PrepareNextFrame()
         OnSwapchainRecreated(m_instance->GetSwapchain());
     }
 
-    if (!frameResult)
-    {
-        m_crashHandler.HandleGPUCrash(frameResult);
-
-        return nullptr;
-    }
+    AssertDebug(frame != nullptr);
 
     VulkanAsyncCompute* asyncCompute = static_cast<VulkanAsyncCompute*>(m_asyncCompute);
 

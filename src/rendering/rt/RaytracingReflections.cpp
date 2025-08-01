@@ -232,6 +232,8 @@ void RaytracingReflections::CreateUniformBuffer()
 
     for (uint32 frameIndex = 0; frameIndex < g_framesInFlight; frameIndex++)
     {
+        m_uniformBuffers[frameIndex]->SetDebugName(NAME_FMT("RaytracingReflectionsUniformBuffer_{}", frameIndex));
+
         HYPERION_ASSERT_RESULT(m_uniformBuffers[frameIndex]->Create());
         m_uniformBuffers[frameIndex]->Copy(sizeof(uniforms), &uniforms);
     }

@@ -121,7 +121,7 @@ void main()
     const float depth = Texture2DLod(sampler_nearest, gbuffer_depth_texture, uv, 0.0).r;
     const vec3 position = ReconstructWorldSpacePositionFromDepth(projection_inverse, view_inverse, uv, depth).xyz;
 
-    uvec2 materialData = texture(usampler2D(gbuffer_material_texture, HYP_SAMPLER_NEAREST), texcoord).rg;
+    uvec2 materialData = texture(usampler2D(gbuffer_material_texture, HYP_SAMPLER_NEAREST), uv).rg;
 
     GBufferMaterialParams materialParams;
     GBufferUnpackMaterialParams(materialData, materialParams);

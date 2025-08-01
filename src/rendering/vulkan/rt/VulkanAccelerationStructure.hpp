@@ -22,25 +22,25 @@ namespace hyperion {
 class Entity;
 class Material;
 
-class VulkanAccelerationGeometry final : public RenderObject<VulkanAccelerationGeometry>
+class HYP_API VulkanAccelerationGeometry final : public RenderObject<VulkanAccelerationGeometry>
 {
 public:
     friend class VulkanTLAS;
     friend class VulkanBLAS;
 
-    HYP_API VulkanAccelerationGeometry(
-        const VulkanGpuBufferRef& packedVerticesBuffer,
-        const VulkanGpuBufferRef& packedIndicesBuffer,
+    VulkanAccelerationGeometry(
+        const GpuBufferRef& packedVerticesBuffer,
+        const GpuBufferRef& packedIndicesBuffer,
         const Handle<Material>& material);
 
-    HYP_API virtual ~VulkanAccelerationGeometry() override;
+    virtual ~VulkanAccelerationGeometry() override;
 
-    HYP_FORCE_INLINE const VulkanGpuBufferRef& GetPackedVerticesBuffer() const
+    HYP_FORCE_INLINE const GpuBufferRef& GetPackedVerticesBuffer() const
     {
         return m_packedVerticesBuffer;
     }
 
-    HYP_FORCE_INLINE const VulkanGpuBufferRef& GetPackedIndicesBuffer() const
+    HYP_FORCE_INLINE const GpuBufferRef& GetPackedIndicesBuffer() const
     {
         return m_packedIndicesBuffer;
     }
@@ -50,17 +50,17 @@ public:
         return m_material;
     }
 
-    HYP_API bool IsCreated() const;
+    bool IsCreated() const;
 
-    HYP_API RendererResult Create();
+    RendererResult Create();
     /* Remove from the parent acceleration structure */
-    HYP_API RendererResult Destroy();
+    RendererResult Destroy();
 
 private:
     bool m_isCreated;
 
-    VulkanGpuBufferRef m_packedVerticesBuffer;
-    VulkanGpuBufferRef m_packedIndicesBuffer;
+    GpuBufferRef m_packedVerticesBuffer;
+    GpuBufferRef m_packedIndicesBuffer;
 
     Handle<Material> m_material;
 
@@ -70,13 +70,14 @@ private:
 using VulkanAccelerationGeometryRef = RenderObjectHandle_Strong<VulkanAccelerationGeometry>;
 using VulkanAccelerationGeometryWeakRef = RenderObjectHandle_Weak<VulkanAccelerationGeometry>;
 
-class VulkanAccelerationStructureBase
+class HYP_API VulkanAccelerationStructureBase
 {
-public:
-    HYP_API VulkanAccelerationStructureBase(const Matrix4& transform = Matrix4::Identity());
-    HYP_API virtual ~VulkanAccelerationStructureBase();
+protected:
+    VulkanAccelerationStructureBase(const Matrix4& transform = Matrix4::Identity());
+     ~VulkanAccelerationStructureBase();
 
-    HYP_FORCE_INLINE const VulkanGpuBufferRef& GetBuffer() const
+public:
+    HYP_FORCE_INLINE const GpuBufferRef& GetBuffer() const
     {
         return m_buffer;
     }
@@ -122,12 +123,12 @@ public:
         SetNeedsRebuildFlag();
     }
 
-    HYP_API void RemoveGeometry(uint32 index);
+    void RemoveGeometry(uint32 index);
 
     /*! \brief Remove the geometry from the internal list of Nodes and set a flag that the
      * structure needs to be rebuilt. Will not automatically rebuild.
      */
-    HYP_API void RemoveGeometry(const VulkanAccelerationGeometryRef& geometry);
+    void RemoveGeometry(const VulkanAccelerationGeometryRef& geometry);
 
     HYP_FORCE_INLINE const Matrix4& GetTransform() const
     {
@@ -146,7 +147,7 @@ public:
         SetTransformUpdateFlag();
     }
 
-    HYP_API RendererResult Destroy();
+    RendererResult Destroy();
 
 protected:
     HYP_FORCE_INLINE void SetTransformUpdateFlag()
@@ -166,8 +167,8 @@ protected:
         bool update,
         RTUpdateStateFlags& outUpdateStateFlags);
 
-    VulkanGpuBufferRef m_buffer;
-    VulkanGpuBufferRef m_scratchBuffer;
+    GpuBufferRef m_buffer;
+    GpuBufferRef m_scratchBuffer;
     Array<VulkanAccelerationGeometryRef> m_geometries;
     Matrix4 m_transform;
     VkAccelerationStructureKHR m_accelerationStructure;
@@ -178,54 +179,54 @@ protected:
 using VulkanAccelerationStructureRef = RenderObjectHandle_Strong<VulkanAccelerationStructureBase>;
 using VulkanAccelerationStructureWeakRef = RenderObjectHandle_Weak<VulkanAccelerationStructureBase>;
 
-class VulkanBLAS final : public BLASBase, public VulkanAccelerationStructureBase
+class HYP_API VulkanBLAS final : public BLASBase, public VulkanAccelerationStructureBase
 {
 public:
-    HYP_API VulkanBLAS(
-        const VulkanGpuBufferRef& packedVerticesBuffer,
-        const VulkanGpuBufferRef& packedIndicesBuffer,
+    VulkanBLAS(
+        const GpuBufferRef& packedVerticesBuffer,
+        const GpuBufferRef& packedIndicesBuffer,
         const Handle<Material>& material,
         const Matrix4& transform);
-    HYP_API virtual ~VulkanBLAS() override;
+    virtual ~VulkanBLAS() override;
 
-    HYP_API virtual bool IsCreated() const override;
+    virtual bool IsCreated() const override;
 
-    HYP_API virtual RendererResult Create() override;
-    HYP_API virtual RendererResult Destroy() override;
+    virtual RendererResult Create() override;
+    virtual RendererResult Destroy() override;
 
-    HYP_API virtual void SetTransform(const Matrix4& transform) override
+    virtual void SetTransform(const Matrix4& transform) override
     {
         VulkanAccelerationStructureBase::SetTransform(transform);
     }
 
     /*! \brief Rebuild IF the rebuild flag has been set. Otherwise this is a no-op. */
-    HYP_API RendererResult UpdateStructure(RTUpdateStateFlags& outUpdateStateFlags);
+    RendererResult UpdateStructure(RTUpdateStateFlags& outUpdateStateFlags);
 
 private:
     RendererResult Rebuild(RTUpdateStateFlags& outUpdateStateFlags);
 
-    VulkanGpuBufferRef m_packedVerticesBuffer;
-    VulkanGpuBufferRef m_packedIndicesBuffer;
+    GpuBufferRef m_packedVerticesBuffer;
+    GpuBufferRef m_packedIndicesBuffer;
     Handle<Material> m_material;
 };
 
-class VulkanTLAS final : public TLASBase, public VulkanAccelerationStructureBase
+class HYP_API VulkanTLAS final : public TLASBase, public VulkanAccelerationStructureBase
 {
 public:
-    HYP_API VulkanTLAS();
-    HYP_API virtual ~VulkanTLAS() override;
+    VulkanTLAS();
+    virtual ~VulkanTLAS() override;
 
-    HYP_API virtual bool IsCreated() const override;
+    virtual bool IsCreated() const override;
 
-    HYP_API virtual void AddBLAS(const BLASRef& blas) override;
-    HYP_API virtual void RemoveBLAS(const BLASRef& blas) override;
-    HYP_API virtual bool HasBLAS(const BLASRef& blas) override;
+    virtual void AddBLAS(const BLASRef& blas) override;
+    virtual void RemoveBLAS(const BLASRef& blas) override;
+    virtual bool HasBLAS(const BLASRef& blas) override;
 
-    HYP_API virtual RendererResult Create() override;
-    HYP_API virtual RendererResult Destroy() override;
+    virtual RendererResult Create() override;
+    virtual RendererResult Destroy() override;
 
     /*! \brief Rebuild IF the rebuild flag has been set. Otherwise this is a no-op. */
-    HYP_API virtual RendererResult UpdateStructure(RTUpdateStateFlags& outUpdateStateFlags) override;
+    virtual RendererResult UpdateStructure(RTUpdateStateFlags& outUpdateStateFlags) override;
 
 private:
     RendererResult Rebuild(RTUpdateStateFlags& outUpdateStateFlags);
@@ -240,7 +241,7 @@ private:
     RendererResult BuildMeshDescriptionsBuffer(uint32 first, uint32 last);
 
     Array<VulkanBLASRef> m_blas;
-    VulkanGpuBufferRef m_instancesBuffer;
+    GpuBufferRef m_instancesBuffer;
 };
 
 } // namespace hyperion

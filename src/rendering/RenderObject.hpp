@@ -790,11 +790,6 @@ protected:
         : m_header(PopGlobalContext<ConstructRenderObjectContext>().header)
     {
     }
-
-#ifdef HYP_DEBUG_MODE
-public:
-#endif
-
     virtual ~RenderObjectBase()
     {
         auto* _header = m_header;
@@ -802,6 +797,11 @@ public:
 
         _header->DecRefWeak();
     }
+
+
+#ifdef HYP_DEBUG_MODE
+public:
+#endif
 
     HYP_FORCE_INLINE RenderObjectHeaderBase* GetHeader_Internal() const
     {
@@ -1011,7 +1011,7 @@ struct DeletionQueueBase
 
 struct RenderObjectDeleter
 {
-    static constexpr uint32 initialCyclesRemaining = g_framesInFlight + 1;
+    static constexpr uint32 initialCyclesRemaining = 4;
     static constexpr SizeType maxQueues = 63;
 
     static FixedArray<DeletionQueueBase*, maxQueues + 1> s_queues;
@@ -1021,8 +1021,6 @@ struct RenderObjectDeleter
     struct DeletionQueue : DeletionQueueBase
     {
         using Base = DeletionQueueBase;
-
-        static constexpr uint32 initialCyclesRemaining = g_framesInFlight + 1;
 
         Array<Pair<RenderObjectHandle_Strong<T>, uint8>> items;
         Queue<RenderObjectHandle_Strong<T>> toDelete;
@@ -1124,6 +1122,7 @@ struct RenderObjectDeleter
             std::lock_guard guard(Base::mtx);
 
             items.PushBack({ std::move(handle), initialCyclesRemaining });
+            handle = {};
 
             Base::numItems.Increment(1, MemoryOrder::RELEASE);
         }

@@ -8,6 +8,8 @@
 
 #include <core/logging/Logger.hpp>
 
+#include <core/threading/Threads.hpp>
+
 #include <core/io/ByteWriter.hpp>
 
 #include <system/MessageBox.hpp>
@@ -27,12 +29,26 @@ namespace hyperion {
 
 HYP_DECLARE_LOG_CHANNEL(Rendering);
 
+thread_local Array<FilePath>* g_savedDumpFiles = nullptr;
+static Mutex g_savedDumpFilesPerThreadMutex;
+static Array<Array<FilePath>*> g_savedDumpFilesPerThread {};
+
 CrashHandler::CrashHandler()
     : m_isInitialized(false)
 {
 }
 
-HYP_DISABLE_OPTIMIZATION;
+CrashHandler::~CrashHandler()
+{
+    Mutex::Guard guard(g_savedDumpFilesPerThreadMutex);
+
+    for (Array<FilePath>* savedDumpFiles : g_savedDumpFilesPerThread)
+    {
+        delete savedDumpFiles;
+    }
+
+    g_savedDumpFilesPerThread.Clear();
+}
 
 void CrashHandler::Initialize()
 {
@@ -158,11 +174,16 @@ void CrashHandler::Initialize()
             FileByteWriter writer("./dump.nv-gpudmp");
             writer.Write(bytes.data(), bytes.size());
             writer.Close();
+            
+            if (!g_savedDumpFiles)
+            {
+                g_savedDumpFiles = new Array<FilePath>();
 
-            SystemMessageBox(MessageBoxType::CRITICAL)
-                .Title("GPU Crash Detected!")
-                .Text(HYP_FORMAT("A GPU crash has been detected. A crash dump has been saved to:\n\n{}", FilePath::Current() / "dump.nv-gpudmp"))
-                .Show();
+                Mutex::Guard guard(g_savedDumpFilesPerThreadMutex);
+                g_savedDumpFilesPerThread.PushBack(g_savedDumpFiles);
+            }
+
+            g_savedDumpFiles->PushBack(writer.GetFilePath());
         },
         [](const void* info, const uint32 size, void*)
         {
@@ -188,6 +209,16 @@ void CrashHandler::Initialize()
             FileByteWriter writer(FilePath::Current() / HYP_FORMAT("shader-{}.nvdbg", str.c_str()));
             writer.Write(bytes.data(), bytes.size());
             writer.Close();
+            
+            if (!g_savedDumpFiles)
+            {
+                g_savedDumpFiles = new Array<FilePath>();
+
+                Mutex::Guard guard(g_savedDumpFilesPerThreadMutex);
+                g_savedDumpFilesPerThread.PushBack(g_savedDumpFiles);
+            }
+
+            g_savedDumpFiles->PushBack(writer.GetFilePath());
         },
         [](PFN_GFSDK_Aftermath_AddGpuCrashDumpDescription, void*)
         {
@@ -201,8 +232,6 @@ void CrashHandler::Initialize()
 #endif
 }
 
-HYP_ENABLE_OPTIMIZATION;
-
 void CrashHandler::HandleGPUCrash(RendererResult result)
 {
     if (result)
@@ -211,25 +240,37 @@ void CrashHandler::HandleGPUCrash(RendererResult result)
     }
 
 #if defined(HYP_AFTERMATH) && HYP_AFTERMATH
+
     GFSDK_Aftermath_CrashDump_Status status = GFSDK_Aftermath_CrashDump_Status_Unknown;
     Assert(GFSDK_Aftermath_GetCrashDumpStatus(&status) == GFSDK_Aftermath_Result_Success);
 
     const auto start = std::chrono::steady_clock::now();
     auto elapsed = std::chrono::milliseconds::zero();
 
-    // Loop while Aftermath crash dump data collection has not finished or
-    // the application is still processing the crash dump data.
-    while (status != GFSDK_Aftermath_CrashDump_Status_CollectingDataFailed && status != GFSDK_Aftermath_CrashDump_Status_Finished && elapsed.count() < 1000000)
+    while (status != GFSDK_Aftermath_CrashDump_Status_CollectingDataFailed && status != GFSDK_Aftermath_CrashDump_Status_Finished && elapsed.count() < 10000)
     {
-        // Sleep a couple of milliseconds and poll the status again.
-        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+        Threads::Sleep(30);
+
         Assert(GFSDK_Aftermath_GetCrashDumpStatus(&status) == GFSDK_Aftermath_Result_Success);
 
         elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start);
     }
 #endif
 
-    HYP_LOG(Rendering, Fatal, "GPU Crash Detected!");
+    Mutex::Guard guard(g_savedDumpFilesPerThreadMutex);
+
+    const String message = String("A GPU crash has been detected. The application will now exit.")
+        + (g_savedDumpFilesPerThread.Any()
+            ? HYP_FORMAT("\nCrash dump(s) has been saved to: {}\n\nPlease attach these when submitting a bug report.",
+                  String::Join(g_savedDumpFilesPerThread, '\n', [](const Array<FilePath>* item) { return item ? String::Join(*item, '\n') : String(); }))
+            : "\nCrash dump state is unknown.");
+
+    SystemMessageBox(MessageBoxType::CRITICAL)
+        .Title("GPU Crash Detected!")
+        .Text(message)
+        .Show();
+
+    HYP_LOG(Rendering, Fatal, "GPU Crash Detected!\n{}", message);
 }
 
 } // namespace hyperion

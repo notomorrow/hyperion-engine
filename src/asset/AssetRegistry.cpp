@@ -31,6 +31,9 @@
 
 namespace hyperion {
 
+//! for debugging
+static constexpr bool g_disableAssetUnload = true;
+
 HYP_API WeakName AssetPackage_KeyByFunction(const Handle<AssetPackage>& assetPackage)
 {
     if (!assetPackage.IsValid())
@@ -186,7 +189,7 @@ void AssetObject::Init()
         AssetDataResourceBase* resourceCasted = static_cast<AssetDataResourceBase*>(m_resource);
         resourceCasted->m_assetObject = WeakHandleFromThis();
 
-        if (m_flags[AOF_PERSISTENT] && !m_persistentResource)
+        if ((m_flags[AOF_PERSISTENT] || g_disableAssetUnload) && !m_persistentResource)
         {
             m_persistentResource = ResourceHandle(*m_resource);
         }
@@ -209,6 +212,11 @@ void AssetObject::SetIsPersistentlyLoaded(bool persistentlyLoaded)
             Assert(m_persistentResource);
         }
 
+        return;
+    }
+
+    if (g_disableAssetUnload)
+    {
         return;
     }
 

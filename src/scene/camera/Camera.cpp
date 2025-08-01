@@ -32,10 +32,22 @@ namespace hyperion {
 
 class Camera;
 
+static const Handle<NullInputHandler>& GetNullInputHandler()
+{
+    static const Handle<NullInputHandler> nullInputHandler = CreateObject<NullInputHandler>();
+    return nullInputHandler;
+}
+
+static const Handle<NullCameraController>& GetNullCameraController()
+{
+    static const Handle<NullCameraController> nullCameraController = CreateObject<NullCameraController>();
+    return nullCameraController;
+}
+
 #pragma region CameraController
 
 CameraController::CameraController(CameraProjectionMode projectionMode)
-    : m_inputHandler(ObjCast<InputHandlerBase>(CreateObject<NullInputHandler>())),
+    : m_inputHandler(GetNullInputHandler()),
       m_camera(nullptr),
       m_projectionMode(projectionMode),
       m_commandQueueCount { 0 },
@@ -178,7 +190,7 @@ Camera::Camera(int width, int height)
       m_up(Vec3f::UnitY())
 {
     // make sure there is always at least 1 camera controller
-    m_cameraControllers.PushBack(CreateObject<NullCameraController>());
+    m_cameraControllers.PushBack(GetNullCameraController());
 
     m_entityInitInfo.receivesUpdate = true;
     m_entityInitInfo.canEverUpdate = true;
@@ -197,7 +209,7 @@ Camera::Camera(float fov, int width, int height, float _near, float _far)
       m_up(Vec3f::UnitY())
 {
     // make sure there is always at least 1 camera controller
-    m_cameraControllers.PushBack(CreateObject<NullCameraController>());
+    m_cameraControllers.PushBack(GetNullCameraController());
 
     SetToPerspectiveProjection(fov, _near, _far);
 
@@ -218,7 +230,7 @@ Camera::Camera(int width, int height, float left, float right, float bottom, flo
       m_up(Vec3f::UnitY())
 {
     // make sure there is always at least 1 camera controller
-    m_cameraControllers.PushBack(CreateObject<NullCameraController>());
+    m_cameraControllers.PushBack(GetNullCameraController());
 
     SetToOrthographicProjection(left, right, bottom, top, _near, _far);
 

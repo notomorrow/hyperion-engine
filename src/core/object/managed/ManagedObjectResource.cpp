@@ -93,16 +93,16 @@ void ManagedObjectResource::Initialize()
     // In this case, the ref count will be decremented once the queued object is finalized
     const HypClass* hypClass = m_ptr.GetClass();
 
-    // HYP_LOG(Object, Info, "Thread: {}\tManaged object for object with HypClass {} at address {} could not be kept alive, it may have been garbage collected. The managed object will be recreated.\n\tObject address: {}",
-    //     Threads::CurrentThreadId().GetName(),
-    //     hypClass->GetName(), m_ptr.GetPointer(),
-    //     (void*)m_objectPtr);
+    HYP_LOG(Object, Info, "Thread: {}\tManaged object for object with HypClass {} at address {} could not be kept alive, it may have been garbage collected. The managed object will be recreated.\n\tObject address: {}",
+        Threads::CurrentThreadId().GetName(),
+        hypClass->GetName(), m_ptr.GetPointer(),
+        (void*)m_objectPtr);
 
     if (m_managedClass)
     {
         if (hypClass->IsReferenceCounted())
         {
-            m_ptr.IncRef(false);
+            m_ptr.IncRef();
         }
 
         dotnet::Object* newManagedObject = m_managedClass->NewObject(hypClass, m_ptr.GetPointer());

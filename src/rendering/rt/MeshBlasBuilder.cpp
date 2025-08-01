@@ -69,11 +69,13 @@ struct RENDER_COMMAND(BuildMeshBlas) : public RenderCommand
         HYPERION_BUBBLE_ERRORS(packedIndicesBuffer->Create());
 
         verticesStagingBuffer = g_renderBackend->MakeGpuBuffer(GpuBufferType::STAGING_BUFFER, packedVerticesSize);
+        verticesStagingBuffer->SetDebugName(NAME_FMT("StagingBuffer_V_BLAS_{}", blas->GetDebugName()));
         HYPERION_BUBBLE_ERRORS(verticesStagingBuffer->Create());
         verticesStagingBuffer->Memset(packedVerticesSize, 0); // zero out
         verticesStagingBuffer->Copy(packedVertices.Size() * sizeof(PackedVertex), packedVertices.Data());
 
         indicesStagingBuffer = g_renderBackend->MakeGpuBuffer(GpuBufferType::STAGING_BUFFER, packedIndicesSize);
+        verticesStagingBuffer->SetDebugName(NAME_FMT("StagingBuffer_I_BLAS_{}", blas->GetDebugName()));
         HYPERION_BUBBLE_ERRORS(indicesStagingBuffer->Create());
         indicesStagingBuffer->Memset(packedIndicesSize, 0); // zero out
         indicesStagingBuffer->Copy(packedIndices.Size() * sizeof(uint32), packedIndices.Data());
@@ -120,6 +122,7 @@ BLASRef MeshBlasBuilder::Build(Mesh* mesh, Material* material)
 
     BLASRef blas;
     PUSH_RENDER_COMMAND(BuildMeshBlas, blas, std::move(packedVertices), std::move(packedIndices), material ? material->HandleFromThis() : nullptr);
+    blas->SetDebugName(NAME_FMT("MeshBlas_{}", mesh->GetName()));
 
     return blas;
 }

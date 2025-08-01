@@ -37,11 +37,12 @@ enum AccelerationStructureFlagBits : AccelerationStructureFlags
     ACCELERATION_STRUCTURE_FLAGS_MATERIAL_UPDATE = 0x4
 };
 
-class TLASBase : public RenderObject<TLASBase>
+class HYP_API TLASBase : public RenderObject<TLASBase>
 {
-public:
+protected:
     virtual ~TLASBase() override = default;
 
+public:
     HYP_FORCE_INLINE AccelerationStructureType GetType() const
     {
         return AccelerationStructureType::TOP_LEVEL;
@@ -52,37 +53,38 @@ public:
         return m_meshDescriptionsBuffer;
     }
 
-    HYP_API virtual bool IsCreated() const = 0;
+    virtual bool IsCreated() const = 0;
 
-    HYP_API virtual void AddBLAS(const BLASRef& blas) = 0;
-    HYP_API virtual void RemoveBLAS(const BLASRef& blas) = 0;
-    HYP_API virtual bool HasBLAS(const BLASRef& blas) = 0;
+    virtual void AddBLAS(const BLASRef& blas) = 0;
+    virtual void RemoveBLAS(const BLASRef& blas) = 0;
+    virtual bool HasBLAS(const BLASRef& blas) = 0;
 
-    HYP_API virtual RendererResult Create() = 0;
-    HYP_API virtual RendererResult Destroy() = 0;
+    virtual RendererResult Create() = 0;
+    virtual RendererResult Destroy() = 0;
 
-    HYP_API virtual RendererResult UpdateStructure(RTUpdateStateFlags& outUpdateStateFlags) = 0;
+    virtual RendererResult UpdateStructure(RTUpdateStateFlags& outUpdateStateFlags) = 0;
 
 protected:
     GpuBufferRef m_meshDescriptionsBuffer;
 };
 
-class BLASBase : public RenderObject<BLASBase>
+class HYP_API BLASBase : public RenderObject<BLASBase>
 {
-public:
+protected:
     virtual ~BLASBase() override = default;
 
+public:
     HYP_FORCE_INLINE AccelerationStructureType GetType() const
     {
         return AccelerationStructureType::BOTTOM_LEVEL;
     }
 
-    HYP_API virtual bool IsCreated() const = 0;
+    virtual bool IsCreated() const = 0;
 
-    HYP_API virtual RendererResult Create() = 0;
-    HYP_API virtual RendererResult Destroy() = 0;
+    virtual RendererResult Create() = 0;
+    virtual RendererResult Destroy() = 0;
 
-    HYP_API virtual void SetTransform(const Matrix4& transform) = 0;
+    virtual void SetTransform(const Matrix4& transform) = 0;
 };
 
 } // namespace hyperion

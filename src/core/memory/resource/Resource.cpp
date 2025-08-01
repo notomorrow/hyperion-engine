@@ -40,7 +40,8 @@ HYP_API IResourceMemoryPool* GetOrCreateResourceMemoryPool(TypeId typeId, Unique
 #pragma region ResourceBase
 
 ResourceBase::ResourceBase()
-    : m_initState(0),
+    : m_refCount(0),
+      m_initState(0),
       m_initializationThreadId(ThreadId::Invalid())
 {
 }
@@ -48,7 +49,7 @@ ResourceBase::ResourceBase()
 ResourceBase::~ResourceBase()
 {
     // Ensure that the resources are no longer being used
-    HYP_CORE_ASSERT(m_refCounter.IsInSignalState(), "Resource destroyed while still in use, was WaitForFinalization() called?");
+    HYP_CORE_ASSERT(m_refCount == 0, "Resource destroyed while still in use, was WaitForFinalization() called?");
 }
 
 bool ResourceBase::IsInitialized() const
@@ -58,7 +59,7 @@ bool ResourceBase::IsInitialized() const
 
 int ResourceBase::IncRefNoInitialize()
 {
-    int count = m_refCounter.Produce(1);
+    int count = AtomicIncrement(&m_refCount);
 
     if (count == 1)
     {
@@ -73,7 +74,7 @@ int ResourceBase::IncRef()
 {
     HYP_SCOPE;
 
-    int result = m_refCounter.Produce(1);
+    int result = AtomicIncrement(&m_refCount);
 
     if (result == 1)
     {
@@ -97,7 +98,7 @@ int ResourceBase::DecRef()
 {
     HYP_SCOPE;
 
-    int result = m_refCounter.Release(1);
+    int result = AtomicDecrement(&m_refCount);
 
     if (result == 0)
     {
@@ -117,6 +118,8 @@ int ResourceBase::DecRef()
         m_initState.Release();
     }
 
+    AssertDebug(result >= 0);
+
     return result;
 }
 
@@ -124,9 +127,12 @@ void ResourceBase::WaitForFinalization() const
 {
     HYP_SCOPE;
 
-    // wait for it to be zero
-    m_refCounter.Acquire();
     m_initState.Acquire();
+
+    while (HYP_UNLIKELY(m_refCount != 0))
+    {
+        Threads::Sleep(0);
+    }
 }
 
 #pragma endregion ResourceBase
