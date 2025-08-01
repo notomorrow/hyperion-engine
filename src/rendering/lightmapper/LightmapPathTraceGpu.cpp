@@ -145,7 +145,7 @@ void LightmapRenderer_GpuPathTracing::Create()
         HYP_UNREACHABLE();
     }
 
-    ShaderRef shader = g_shaderManager->GetOrCreate(NAME("LightmapRenderer_GpuPathTracing"), shaderProperties);
+    ShaderRef shader = g_shaderManager->GetOrCreate(NAME("LightmapPathTracer"), shaderProperties);
     Assert(shader.IsValid());
 
     const DescriptorTableDeclaration& descriptorTableDecl = shader->GetCompiledShader()->GetDescriptorTableDeclaration();

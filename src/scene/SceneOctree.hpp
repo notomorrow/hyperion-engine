@@ -199,6 +199,11 @@ public:
     void Collect(Array<Entity*>& outEntities) const;
     void Collect(const BoundingSphere& bounds, Array<Entity*>& outEntities) const;
     void Collect(const BoundingBox& bounds, Array<Entity*>& outEntities) const;
+    
+    HYP_FORCE_INLINE OctreeBase::Result Insert(const SceneOctreePayload& payload, const BoundingBox& aabb)
+    {
+        return OctreeBase::Insert(payload, aabb);
+    }
 
     Result Insert(Entity* entity, const BoundingBox& aabb, bool allowRebuild = false);
     Result Remove(Entity* entity, bool allowRebuild = false);

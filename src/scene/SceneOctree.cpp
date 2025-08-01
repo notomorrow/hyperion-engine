@@ -970,9 +970,11 @@ bool SceneOctree::TestRay(const Ray& ray, RayTestResults& outResults, bool useBv
                         if (TransformComponent* transformComponent = m_entityManager->TryGetComponent<TransformComponent>(entry.value))
                         {
                             modelMatrix = transformComponent->transform.GetMatrix();
-                            normalMatrix = modelMatrix.Transposed().Inverted();
 
-                            localSpaceRay = modelMatrix.Inverted() * ray;
+                            Matrix4 invModelMatrix = modelMatrix.Inverted();
+                            normalMatrix = invModelMatrix.Transposed();
+
+                            localSpaceRay = invModelMatrix * ray;
                         }
 
                         RayTestResults localBvhResults = meshComponent->mesh->GetBVH().TestRay(localSpaceRay);

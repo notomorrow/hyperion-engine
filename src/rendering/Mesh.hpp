@@ -125,8 +125,6 @@ public:
 
     bool BuildBVH(int maxDepth = 3);
 
-    BLASRef BuildBLAS(const Handle<Material>& material) const;
-
 private:
     void Init() override;
     void CreateGpuBuffers();

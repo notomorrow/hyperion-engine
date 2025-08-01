@@ -99,7 +99,7 @@ struct RENDER_COMMAND(CreateTextureGpuImage)
                 if (imageData->Size() != image->GetByteSize())
                 {
                     HYP_LOG(Streaming, Warning, "Streamed texture data buffer size mismatch! Expected: {}, Got: {}",
-                        image->GetByteSize(), textureDesc.GetByteSize());
+                        image->GetByteSize(), imageData->Size());
 
                     // fill some placeholder data with zeros so we don't crash
                     ByteBuffer* placeholderBuffer = &placeholderBuffers.EmplaceBack();
