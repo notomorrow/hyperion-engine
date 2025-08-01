@@ -4,7 +4,7 @@
 
 #include <scene/Node.hpp>
 #include <scene/Entity.hpp>
-#include <scene/Octree.hpp>
+#include <scene/SceneOctree.hpp>
 #include <scene/camera/Camera.hpp>
 
 #include <core/Name.hpp>
@@ -159,12 +159,12 @@ public:
         return m_entityManager;
     }
 
-    HYP_FORCE_INLINE Octree& GetOctree()
+    HYP_FORCE_INLINE SceneOctree& GetOctree()
     {
         return m_octree;
     }
 
-    HYP_FORCE_INLINE const Octree& GetOctree() const
+    HYP_FORCE_INLINE const SceneOctree& GetOctree() const
     {
         return m_octree;
     }
@@ -248,7 +248,7 @@ private:
 
     Handle<EntityManager> m_entityManager;
 
-    Octree m_octree;
+    SceneOctree m_octree;
 
     bool m_isAudioListener;
 

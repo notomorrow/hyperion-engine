@@ -5,7 +5,7 @@
 #include <core/memory/RefCountedPtr.hpp>
 
 #include <scene/VisibilityState.hpp>
-#include <scene/Octree.hpp>
+#include <scene/SceneOctree.hpp>
 
 #include <HashCode.hpp>
 

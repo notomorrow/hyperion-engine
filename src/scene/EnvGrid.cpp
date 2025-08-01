@@ -485,7 +485,7 @@ void EnvGrid::Update(float delta)
         return;
     }
 
-    Octree const* octree = &GetScene()->GetOctree();
+    SceneOctree const* octree = &GetScene()->GetOctree();
     octree->GetFittingOctant(boundingBoxComponent->worldAabb, octree);
 
     // clang-format off

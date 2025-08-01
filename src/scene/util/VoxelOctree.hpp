@@ -94,34 +94,29 @@ struct VoxelOctreePayload
 
 class HYP_API VoxelOctree : public OctreeBase<VoxelOctree, VoxelOctreePayload>
 {
-    static constexpr uint8 g_voxelOctreeMaxDepth = 8;
-    static constexpr EnumFlags<OctreeFlags> g_voxelOctreeFlags = OctreeFlags::OF_INSERT_ON_OVERLAP;
+    friend class OctreeBase<VoxelOctree, VoxelOctreePayload>;
+
+    VoxelOctree(VoxelOctree* parent, const BoundingBox& aabb, uint8 index = 0)
+        : OctreeBase(parent, aabb, index)
+    {
+    }
 
 public:
+    static constexpr uint8 g_maxDepth = 8;
+    static constexpr EnumFlags<OctreeFlags> g_flags = OctreeFlags::OF_INSERT_ON_OVERLAP;
+
     VoxelOctree()
     {
-        m_flags = g_voxelOctreeFlags;
-        m_maxDepth = g_voxelOctreeMaxDepth;
     }
 
-    VoxelOctree(const BoundingBox& aabb, VoxelOctree* parent = nullptr, uint8 index = 0)
-        : OctreeBase(aabb, parent, index)
-    {
-        m_flags = g_voxelOctreeFlags;
-        m_maxDepth = g_voxelOctreeMaxDepth;
-    }
-
-    virtual ~VoxelOctree() override = default;
+    ~VoxelOctree() = default;
 
     VoxelOctreeBuildResult Build(const VoxelOctreeParams& params, EntityManager* entityManager);
 
-private:
-    virtual UniquePtr<VoxelOctree> CreateChildOctant(
-        const BoundingBox& aabb,
-        VoxelOctree* parent,
-        uint8 index) override
+protected:
+    static UniquePtr<VoxelOctree> CreateChildOctant(VoxelOctree* parent, const BoundingBox& aabb, uint8 index)
     {
-        return MakeUnique<VoxelOctree>(aabb, parent, index);
+        return UniquePtr<VoxelOctree>(new VoxelOctree(parent, aabb, index));
     }
 };
 

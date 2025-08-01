@@ -154,7 +154,7 @@ VoxelOctreeBuildResult VoxelOctree::Build(const VoxelOctreeParams& params, Entit
 
         if (!meshComponent.mesh->GetBVH().IsValid())
         {
-            HYP_LOG_ONCE(Octree, Warning, "No valid BVH for mesh {} (ID: {}) on entity {}, skipping.", meshComponent.mesh->GetName(), meshComponent.mesh->Id(), entity->Id());
+            HYP_LOG_ONCE(Misc, Warning, "No valid BVH for mesh {} (ID: {}) on entity {}, skipping.", meshComponent.mesh->GetName(), meshComponent.mesh->Id(), entity->Id());
 
             continue;
         }

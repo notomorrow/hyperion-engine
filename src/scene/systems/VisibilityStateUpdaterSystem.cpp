@@ -4,7 +4,7 @@
 #include <scene/EntityManager.hpp>
 
 #include <scene/Scene.hpp>
-#include <scene/Octree.hpp>
+#include <scene/SceneOctree.hpp>
 
 #include <core/containers/HashSet.hpp>
 
@@ -32,9 +32,9 @@ void VisibilityStateUpdaterSystem::OnEntityAdded(Entity* entity)
 
     BoundingBoxComponent& boundingBoxComponent = GetEntityManager().GetComponent<BoundingBoxComponent>(entity);
 
-    Octree& octree = GetEntityManager().GetScene()->GetOctree();
+    SceneOctree& octree = GetEntityManager().GetScene()->GetOctree();
 
-    const Octree::Result insertResult = octree.Insert(entity, boundingBoxComponent.worldAabb);
+    const SceneOctree::Result insertResult = octree.Insert(entity, boundingBoxComponent.worldAabb);
 
     if (insertResult.HasValue())
     {
@@ -44,7 +44,7 @@ void VisibilityStateUpdaterSystem::OnEntityAdded(Entity* entity)
         visibilityStateComponent.octantId = octantId;
         visibilityStateComponent.visibilityState = nullptr;
 
-        if (Octree* octant = octree.GetChildOctant(visibilityStateComponent.octantId))
+        if (SceneOctree* octant = octree.GetChildOctant(visibilityStateComponent.octantId))
         {
             visibilityStateComponent.visibilityState = &octant->GetVisibilityState();
         }
@@ -55,7 +55,7 @@ void VisibilityStateUpdaterSystem::OnEntityAdded(Entity* entity)
     }
     else
     {
-        HYP_LOG(Octree, Warning, "Failed to insert entity #{} into octree: {}", entity->Id(), insertResult.GetError().GetMessage());
+        HYP_LOG(Scene, Warning, "Failed to insert entity #{} into octree: {}", entity->Id(), insertResult.GetError().GetMessage());
     }
 }
 
@@ -65,13 +65,13 @@ void VisibilityStateUpdaterSystem::OnEntityRemoved(Entity* entity)
 
     VisibilityStateComponent& visibilityStateComponent = GetEntityManager().GetComponent<VisibilityStateComponent>(entity);
 
-    Octree& octree = GetEntityManager().GetScene()->GetOctree();
+    SceneOctree& octree = GetEntityManager().GetScene()->GetOctree();
 
-    const Octree::Result removeResult = octree.Remove(entity);
+    const SceneOctree::Result removeResult = octree.Remove(entity);
 
     if (removeResult.HasError())
     {
-        HYP_LOG(Octree, Warning, "Failed to remove Entity #{} from octree: {}", entity->Id(), removeResult.GetError().GetMessage());
+        HYP_LOG(Scene, Warning, "Failed to remove Entity #{} from octree: {}", entity->Id(), removeResult.GetError().GetMessage());
     }
 
     visibilityStateComponent.octantId = OctantId::Invalid();
@@ -80,7 +80,7 @@ void VisibilityStateUpdaterSystem::OnEntityRemoved(Entity* entity)
 
 void VisibilityStateUpdaterSystem::Process(float delta)
 {
-    Octree& octree = GetEntityManager().GetScene()->GetOctree();
+    SceneOctree& octree = GetEntityManager().GetScene()->GetOctree();
 
     HashSet<WeakHandle<Entity>> updatedEntities;
 
@@ -104,7 +104,7 @@ void VisibilityStateUpdaterSystem::Process(float delta)
                 return;
             }
 
-            const Octree::Result insertResult = octree.Insert(entity, boundingBoxComponent.worldAabb);
+            const SceneOctree::Result insertResult = octree.Insert(entity, boundingBoxComponent.worldAabb);
 
             if (insertResult.HasValue())
             {
@@ -112,7 +112,7 @@ void VisibilityStateUpdaterSystem::Process(float delta)
 
                 visibilityStateComponent.octantId = insertResult.GetValue();
 
-                if (Octree* octant = octree.GetChildOctant(visibilityStateComponent.octantId))
+                if (SceneOctree* octant = octree.GetChildOctant(visibilityStateComponent.octantId))
                 {
                     visibilityStateComponent.visibilityState = &octant->GetVisibilityState();
                 }
@@ -129,19 +129,19 @@ void VisibilityStateUpdaterSystem::Process(float delta)
             // so directional lights changing cause the entire octree to be updated.
             const bool forceEntryInvalidation = visibilityStateInvalidated;
 
-            const Octree::Result updateResult = octree.Update(entity, boundingBoxComponent.worldAabb, forceEntryInvalidation);
+            const SceneOctree::Result updateResult = octree.Update(entity, boundingBoxComponent.worldAabb, forceEntryInvalidation);
 
             if (updateResult.HasError())
             {
                 visibilityStateComponent.octantId = OctantId::Invalid();
-                
-                HYP_LOG(Octree, Warning, "Failed to update entity {} in octree: {}", entity->Id(), updateResult.GetError().GetMessage());
+
+                HYP_LOG(Scene, Warning, "Failed to update entity {} in octree: {}", entity->Id(), updateResult.GetError().GetMessage());
 
                 return;
             }
 
             AssertDebug(updateResult.GetValue() != OctantId::Invalid(), "Invalid octant Id returned from Update()");
-            
+
             visibilityStateComponent.octantId = updateResult.GetValue();
         }
 
@@ -149,7 +149,7 @@ void VisibilityStateUpdaterSystem::Process(float delta)
         {
             visibilityStateComponent.visibilityState = nullptr;
 
-            if (Octree* octant = octree.GetChildOctant(visibilityStateComponent.octantId))
+            if (SceneOctree* octant = octree.GetChildOctant(visibilityStateComponent.octantId))
             {
                 visibilityStateComponent.visibilityState = &octant->GetVisibilityState();
             }

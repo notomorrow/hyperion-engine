@@ -32,7 +32,7 @@ class Entity;
 class EntityManager;
 class Camera;
 
-class Octree;
+class SceneOctree;
 
 struct SceneOctreePayload
 {
@@ -120,26 +120,29 @@ struct SceneOctreePayload
     }
 };
 
-struct SceneOctreeState : public OctreeState<Octree, SceneOctreePayload>
+struct SceneOctreeState : public OctreeState<SceneOctree, SceneOctreePayload>
 {
-    HashMap<Entity*, Octree*> entityToOctant;
+    HashMap<Entity*, SceneOctree*> entityToOctant;
 
     virtual ~SceneOctreeState() override = default;
 };
 
-class HYP_API Octree final : public OctreeBase<Octree, SceneOctreePayload>
+class HYP_API SceneOctree final : public OctreeBase<SceneOctree, SceneOctreePayload>
 {
+    friend class OctreeBase<SceneOctree, SceneOctreePayload>;
+
+    SceneOctree(const Handle<EntityManager>& entityManager, SceneOctree* parent, const BoundingBox& aabb, uint8 index);
+
 public:
-    static OctreeState<Octree, SceneOctreePayload>* CreateOctreeState()
+    static OctreeState<SceneOctree, SceneOctreePayload>* CreateOctreeState()
     {
         return new SceneOctreeState();
     }
-    
-    Octree(const Handle<EntityManager>& entityManager);
-    Octree(const Handle<EntityManager>& entityManager, const BoundingBox& aabb);
-    Octree(const Handle<EntityManager>& entityManager, const BoundingBox& aabb, Octree* parent, uint8 index);
 
-    virtual ~Octree() override;
+    SceneOctree(const Handle<EntityManager>& entityManager);
+    SceneOctree(const Handle<EntityManager>& entityManager, const BoundingBox& aabb);
+
+    ~SceneOctree();
 
     HYP_FORCE_INLINE const SceneOctreePayload::EntrySet& GetEntries() const
     {
@@ -188,11 +191,6 @@ public:
             .Add(m_invalidationMarker);
     }
 
-    HYP_FORCE_INLINE Octree* GetChildOctant(OctantId octantId)
-    {
-        return static_cast<Octree*>(OctreeBase::GetChildOctant(octantId));
-    }
-
     void NextVisibilityState();
     void CalculateVisibility(const Handle<Camera>& camera);
 
@@ -205,7 +203,12 @@ public:
     Result Insert(Entity* entity, const BoundingBox& aabb, bool allowRebuild = false);
     Result Remove(Entity* entity, bool allowRebuild = false);
 
-    virtual void Clear() override;
+    void Clear();
+
+    HYP_FORCE_INLINE void Clear(Array<SceneOctreePayload>& outPayloads, bool undivide)
+    {
+        OctreeBase::Clear(outPayloads, undivide);
+    }
 
     Result Rebuild();
     Result Rebuild(const BoundingBox& newAabb, bool allowGrow);
@@ -225,12 +228,12 @@ private:
 
     HYP_FORCE_INLINE bool UseEntityMap() const
     {
-        return m_state != nullptr && !(m_flags & OctreeFlags::OF_INSERT_ON_OVERLAP);
+        return m_state != nullptr && !(g_flags & OF_INSERT_ON_OVERLAP);
     }
 
-    virtual UniquePtr<Octree> CreateChildOctant(const BoundingBox& aabb, Octree* parent, uint8 index) override
+    static UniquePtr<SceneOctree> CreateChildOctant(SceneOctree* parent, const BoundingBox& aabb, uint8 index)
     {
-        return MakeUnique<Octree>(m_entityManager, aabb, this, index);
+        return UniquePtr<SceneOctree>(new SceneOctree(parent->m_entityManager, parent, aabb, index));
     }
 
     void ResetEntriesHash();

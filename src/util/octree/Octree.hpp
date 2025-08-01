@@ -34,7 +34,7 @@ namespace hyperion {
  */
 struct OctantId
 {
-    // This bit is reserved for invalid octants -- We use 3 bits for each index, leaving 1 bit left on a 64-bit integer
+    //! This bit is reserved for invalid octants -- We use 3 bits for each index, leaving 1 bit left on a 64-bit integer
     static constexpr uint64 invalidBits = 1ull << 63;
     static constexpr SizeType maxDepth = 64 / 3;
 
@@ -179,7 +179,7 @@ struct OctreeState
     void MarkOctantDirty(OctantId octantId, bool needsRebuild = false);
 };
 
-enum class OctreeFlags : uint32
+enum OctreeFlags : uint8
 {
     OF_NONE = 0x0,
     OF_INSERT_ON_OVERLAP = 0x2, //!< Insert into child octant on overlap rather than contains check of the Entry's AABB. Will cause entries to be contained in multiple octants rather than one.
@@ -199,30 +199,30 @@ protected:
         DEPTH_SEARCH_ONLY_THIS = 0
     };
 
-    static constexpr float growthFactor = 1.5f;
-    // the length value at which to stop recusively dividing
-    // for a small enough object
-    static constexpr float minAabbSize = 1.0f;
-    static const BoundingBox defaultBounds;
+    static constexpr float g_growthFactor = 1.5f;
+    static const BoundingBox g_defaultBounds;
+
+    static constexpr uint8 g_maxDepth = OctantId::maxDepth;
+    static constexpr EnumFlags<OctreeFlags> g_flags = OctreeFlags::OF_DEFAULT;
+
+    OctreeBase();
+    OctreeBase(const BoundingBox& aabb);
+    OctreeBase(Derived* parent, const BoundingBox& aabb, uint8 index);
+    ~OctreeBase();
 
 public:
     using Result = utilities::TResult<OctantId>;
 
     struct Octant
     {
-        UniquePtr<OctreeBase> octree;
+        UniquePtr<Derived> octree;
         BoundingBox aabb;
     };
-
-    OctreeBase(EnumFlags<OctreeFlags> flags = OctreeFlags::OF_DEFAULT, uint8 maxDepth = uint8(OctantId::maxDepth));
-    OctreeBase(const BoundingBox& aabb);
-    OctreeBase(const BoundingBox& aabb, OctreeBase* parent, uint8 index);
 
     OctreeBase(const OctreeBase& other) = delete;
     OctreeBase& operator=(const OctreeBase& other) = delete;
     OctreeBase(OctreeBase&& other) noexcept = delete;
     OctreeBase& operator=(OctreeBase&& other) noexcept = delete;
-    virtual ~OctreeBase();
 
     HYP_FORCE_INLINE const Payload& GetPayload() const
     {
@@ -248,15 +248,15 @@ public:
      *  \param octantId The OctantId to use to find the octant (see OctantId struct)
      *  \return The octant with the specified index, or nullptr if it doesn't exist
      */
-    OctreeBase* GetChildOctant(OctantId octantId);
+    Derived* GetChildOctant(OctantId octantId);
 
     HYP_FORCE_INLINE bool IsDivided() const
     {
         return m_isDivided;
     }
 
-    virtual void Clear();
-    void Clear(Array<Payload>& out, bool undivide);
+    void Clear();
+    void Clear(Array<Payload>& outPayloads, bool undivide);
 
     Result Insert(const Payload& payload, const BoundingBox& aabb);
 
@@ -275,11 +275,12 @@ protected:
         return new OctreeState<Derived, Payload>();
     }
 
-    virtual UniquePtr<Derived> CreateChildOctant(const BoundingBox& aabb, Derived* parent, uint8 index) = 0;
+    //! derived classes must implement this
+    // static UniquePtr<Derived> CreateChildOctant(Derived* parent, const BoundingBox& aabb, uint8 index);
 
     HYP_FORCE_INLINE bool ContainsAabb(const BoundingBox& aabb) const
     {
-        return m_flags[OctreeFlags::OF_INSERT_ON_OVERLAP] ? m_aabb.Overlaps(aabb) : m_aabb.Contains(aabb);
+        return (Derived::g_flags & OF_INSERT_ON_OVERLAP) ? m_aabb.Overlaps(aabb) : m_aabb.Contains(aabb);
     }
 
     HYP_FORCE_INLINE bool IsRoot() const
@@ -292,7 +293,7 @@ protected:
         return m_payload.Empty();
     }
 
-    void SetParent(OctreeBase* parent);
+    void SetParent(Derived* parent);
     bool EmptyDeep(int depth = DEPTH_SEARCH_INF, uint8 octantMask = 0xff) const;
 
     void InitOctants();
@@ -308,16 +309,13 @@ protected:
 
     Payload m_payload;
 
-    OctreeBase* m_parent;
+    Derived* m_parent;
     BoundingBox m_aabb;
     FixedArray<Octant, 8> m_octants;
     OctreeState<Derived, Payload>* m_state;
     OctantId m_octantId;
 
-    EnumFlags<OctreeFlags> m_flags;
-
     uint32 m_invalidationMarker : 16;
-    uint8 m_maxDepth : 5;
     bool m_isDivided : 1;
 };
 

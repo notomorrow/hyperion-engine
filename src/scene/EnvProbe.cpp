@@ -297,9 +297,9 @@ void EnvProbe::Update(float delta)
     {
         AssertDebug(scene.IsValid());
 
-        const Octree& octree = scene->GetOctree();
+        const SceneOctree& octree = scene->GetOctree();
 
-        Octree const* octant = &octree;
+        SceneOctree const* octant = &octree;
 
         if (!octant)
         {

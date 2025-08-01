@@ -1,5 +1,5 @@
 template <class Derived, class Payload>
-const BoundingBox OctreeBase<Derived, Payload>::defaultBounds = BoundingBox({ -250.0f }, { 250.0f });
+const BoundingBox OctreeBase<Derived, Payload>::g_defaultBounds = BoundingBox({ -250.0f }, { 250.0f });
 
 template <class Derived, class Payload>
 void OctreeState<Derived, Payload>::MarkOctantDirty(OctantId octantId, bool needsRebuild)
@@ -29,35 +29,27 @@ void OctreeState<Derived, Payload>::MarkOctantDirty(OctantId octantId, bool need
 }
 
 template <class Derived, class Payload>
-OctreeBase<Derived, Payload>::OctreeBase(EnumFlags<OctreeFlags> flags, uint8 maxDepth)
-    : OctreeBase(defaultBounds)
+OctreeBase<Derived, Payload>::OctreeBase()
+    : OctreeBase(Derived::g_defaultBounds)
 {
-    m_flags = flags;
-    m_maxDepth = maxDepth;
-
-    if (m_maxDepth > uint8(OctantId::maxDepth))
-    {
-        m_maxDepth = uint8(OctantId::maxDepth);
-    }
+    static_assert(Derived::g_maxDepth <= OctantId::maxDepth);
 }
 
 template <class Derived, class Payload>
 OctreeBase<Derived, Payload>::OctreeBase(const BoundingBox& aabb)
-    : OctreeBase(aabb, nullptr, 0)
+    : OctreeBase(nullptr, aabb, 0)
 {
     m_state = Derived::CreateOctreeState();
 }
 
 template <class Derived, class Payload>
-OctreeBase<Derived, Payload>::OctreeBase(const BoundingBox& aabb, OctreeBase* parent, uint8 index)
-    : m_aabb(aabb),
-      m_parent(nullptr),
+OctreeBase<Derived, Payload>::OctreeBase(Derived* parent, const BoundingBox& aabb, uint8 index)
+    : m_parent(nullptr),
+      m_aabb(aabb),
       m_isDivided(false),
       m_state(nullptr),
       m_octantId(index, OctantId::Invalid()),
       m_invalidationMarker(0),
-      m_flags(OctreeFlags::OF_DEFAULT),
-      m_maxDepth(uint8(OctantId::maxDepth)),
       m_payload {}
 {
     if (parent != nullptr)
@@ -80,14 +72,12 @@ OctreeBase<Derived, Payload>::~OctreeBase()
 }
 
 template <class Derived, class Payload>
-void OctreeBase<Derived, Payload>::SetParent(OctreeBase* parent)
+void OctreeBase<Derived, Payload>::SetParent(Derived* parent)
 {
     m_parent = parent;
 
     if (m_parent != nullptr)
     {
-        m_flags = parent->m_flags;
-        m_maxDepth = parent->m_maxDepth;
         m_state = m_parent->m_state;
     }
     else
@@ -103,7 +93,7 @@ void OctreeBase<Derived, Payload>::SetParent(OctreeBase* parent)
         {
             Assert(octant.octree != nullptr);
 
-            octant.octree->SetParent(this);
+            octant.octree->SetParent(static_cast<Derived*>(this));
         }
     }
 }
@@ -161,7 +151,7 @@ void OctreeBase<Derived, Payload>::InitOctants()
 }
 
 template <class Derived, class Payload>
-OctreeBase<Derived, Payload>* OctreeBase<Derived, Payload>::GetChildOctant(OctantId octantId)
+Derived* OctreeBase<Derived, Payload>::GetChildOctant(OctantId octantId)
 {
     if (octantId == OctantId::Invalid())
     {
@@ -170,7 +160,7 @@ OctreeBase<Derived, Payload>* OctreeBase<Derived, Payload>::GetChildOctant(Octan
 
     if (octantId == m_octantId)
     {
-        return this;
+        return static_cast<Derived*>(this);
     }
 
     if (octantId.depth <= m_octantId.depth)
@@ -178,7 +168,7 @@ OctreeBase<Derived, Payload>* OctreeBase<Derived, Payload>::GetChildOctant(Octan
         return nullptr;
     }
 
-    OctreeBase* current = this;
+    Derived* current = static_cast<Derived*>(this);
 
     for (uint32 depth = m_octantId.depth + 1; depth <= octantId.depth; depth++)
     {
@@ -186,15 +176,6 @@ OctreeBase<Derived, Payload>* OctreeBase<Derived, Payload>::GetChildOctant(Octan
 
         if (!current || !current->IsDivided())
         {
-#ifdef HYP_OCTREE_DEBUG
-            HYP_DEBUG(OctreeBase, Warning,
-                "Octant id {}:{} is not a child of {}:{}: Octant {}:{} is not divided",
-                octantId.GetDepth(), octantId.GetIndex(),
-                m_octantId.GetDepth(), m_octantId.GetIndex(),
-                current ? current->m_octantId.GetDepth() : ~0u,
-                current ? current->m_octantId.GetIndex() : ~0u);
-#endif
-
             return nullptr;
         }
 
@@ -214,7 +195,7 @@ void OctreeBase<Derived, Payload>::Divide()
         Octant& octant = m_octants[i];
         Assert(octant.octree == nullptr);
 
-        octant.octree = CreateChildOctant(octant.aabb, static_cast<Derived*>(this), uint8(i));
+        octant.octree = Derived::CreateChildOctant(static_cast<Derived*>(this), octant.aabb, uint8(i));
     }
 
     m_isDivided = true;
@@ -265,8 +246,8 @@ void OctreeBase<Derived, Payload>::CollapseParents(bool allowRebuild)
         return;
     }
 
-    OctreeBase *iteration = m_parent,
-               *highestEmpty = nullptr;
+    Derived* iteration = m_parent;
+    Derived* highestEmpty = nullptr;
 
     while (iteration != nullptr && iteration->Empty())
     {
@@ -318,7 +299,7 @@ template <class Derived, class Payload>
 void OctreeBase<Derived, Payload>::Clear(Array<Payload>& outPayloads, bool undivide)
 {
     outPayloads.Reserve(outPayloads.Size() + 1);
-    
+
     if (!m_payload.Empty())
     {
         outPayloads.PushBack(std::move(m_payload));
@@ -346,9 +327,9 @@ void OctreeBase<Derived, Payload>::Clear(Array<Payload>& outPayloads, bool undiv
 template <class Derived, class Payload>
 OctreeBase<Derived, Payload>::Result OctreeBase<Derived, Payload>::Insert(const Payload& payload, const BoundingBox& aabb)
 {
-    if (m_flags[OctreeFlags::OF_INSERT_ON_OVERLAP])
+    if (Derived::g_flags & OF_INSERT_ON_OVERLAP)
     {
-        AssertDebug(aabb.IsValid() && aabb.IsFinite() && !aabb.IsZero(), "Attempting to insert invalid AABB into Octree: {}", aabb);
+        AssertDebug(aabb.IsValid() && aabb.IsFinite() && !aabb.IsZero(), "Attempting to insert invalid AABB into octree: {}", aabb);
     }
 
     if (aabb.IsValid() && aabb.IsFinite())
@@ -359,13 +340,13 @@ OctreeBase<Derived, Payload>::Result OctreeBase<Derived, Payload>::Insert(const 
         }
 
         // stop recursing if we are at max depth
-        if (m_octantId.GetDepth() < m_maxDepth - 1)
+        if (m_octantId.GetDepth() < int(Derived::g_maxDepth) - 1)
         {
             bool wasInserted = false;
 
             for (Octant& octant : m_octants)
             {
-                if (!(m_flags[OctreeFlags::OF_INSERT_ON_OVERLAP] ? octant.aabb.Overlaps(aabb) : octant.aabb.Contains(aabb)))
+                if (!((Derived::g_flags & OF_INSERT_ON_OVERLAP) ? octant.aabb.Overlaps(aabb) : octant.aabb.Contains(aabb)))
                 {
                     continue;
                 }
@@ -380,7 +361,7 @@ OctreeBase<Derived, Payload>::Result OctreeBase<Derived, Payload>::Insert(const 
                 Result insertResult = octant.octree->Insert(payload, aabb);
                 wasInserted |= bool(insertResult.HasValue());
 
-                if (m_flags[OctreeFlags::OF_INSERT_ON_OVERLAP])
+                if (Derived::g_flags & OF_INSERT_ON_OVERLAP)
                 {
                     AssertDebug(insertResult.HasValue(), "Failed to insert into overlapping octant! Message: {}", insertResult.GetError().GetMessage());
                 }
@@ -430,7 +411,7 @@ bool OctreeBase<Derived, Payload>::GetNearestOctants(const Vec3f& position, Fixe
 
     for (SizeType i = 0; i < m_octants.Size(); i++)
     {
-        out[i] = static_cast<Derived*>(m_octants[i].octree.Get());
+        out[i] = m_octants[i].octree.Get();
     }
 
     return true;

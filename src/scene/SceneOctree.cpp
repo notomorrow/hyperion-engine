@@ -1,6 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#include <scene/Octree.hpp>
+#include <scene/SceneOctree.hpp>
 #include <scene/Entity.hpp>
 #include <scene/Node.hpp>
 #include <rendering/Mesh.hpp>
@@ -21,31 +21,31 @@
 
 namespace hyperion {
 
-Octree::Octree(const Handle<EntityManager>& entityManager)
+SceneOctree::SceneOctree(const Handle<EntityManager>& entityManager)
     : OctreeBase(),
       m_entityManager(entityManager)
 {
 }
 
-Octree::Octree(const Handle<EntityManager>& entityManager, const BoundingBox& aabb)
+SceneOctree::SceneOctree(const Handle<EntityManager>& entityManager, const BoundingBox& aabb)
     : OctreeBase(aabb),
       m_entityManager(entityManager)
 {
 }
 
-Octree::Octree(const Handle<EntityManager>& entityManager, const BoundingBox& aabb, Octree* parent, uint8 index)
-    : OctreeBase(aabb, parent, index),
+SceneOctree::SceneOctree(const Handle<EntityManager>& entityManager, SceneOctree* parent, const BoundingBox& aabb, uint8 index)
+    : OctreeBase(parent, aabb, index),
       m_entityManager(entityManager)
 {
 }
 
-Octree::~Octree()
+SceneOctree::~SceneOctree()
 {
     // to ensure VisibilityStateComponents are updated
     Clear();
 }
 
-void Octree::SetEntityManager(const Handle<EntityManager>& entityManager)
+void SceneOctree::SetEntityManager(const Handle<EntityManager>& entityManager)
 {
     HYP_SCOPE;
 
@@ -57,12 +57,12 @@ void Octree::SetEntityManager(const Handle<EntityManager>& entityManager)
         {
             Assert(octant.octree != nullptr);
 
-            static_cast<Octree*>(octant.octree.Get())->SetEntityManager(m_entityManager);
+            octant.octree->SetEntityManager(m_entityManager);
         }
     }
 }
 
-void Octree::Collect(Array<Entity*>& outEntities) const
+void SceneOctree::Collect(Array<Entity*>& outEntities) const
 {
     outEntities.Reserve(outEntities.Size() + m_payload.entries.Size());
 
@@ -77,12 +77,12 @@ void Octree::Collect(Array<Entity*>& outEntities) const
         {
             Assert(octant.octree != nullptr);
 
-            static_cast<Octree*>(octant.octree.Get())->Collect(outEntities);
+            octant.octree->Collect(outEntities);
         }
     }
 }
 
-void Octree::Collect(const BoundingSphere& bounds, Array<Entity*>& outEntities) const
+void SceneOctree::Collect(const BoundingSphere& bounds, Array<Entity*>& outEntities) const
 {
     if (!bounds.Overlaps(m_aabb))
     {
@@ -105,12 +105,12 @@ void Octree::Collect(const BoundingSphere& bounds, Array<Entity*>& outEntities) 
         {
             Assert(octant.octree != nullptr);
 
-            static_cast<Octree*>(octant.octree.Get())->Collect(bounds, outEntities);
+            octant.octree->Collect(bounds, outEntities);
         }
     }
 }
 
-void Octree::Collect(const BoundingBox& bounds, Array<Entity*>& outEntities) const
+void SceneOctree::Collect(const BoundingBox& bounds, Array<Entity*>& outEntities) const
 {
     if (!m_aabb.Overlaps(bounds))
     {
@@ -133,12 +133,12 @@ void Octree::Collect(const BoundingBox& bounds, Array<Entity*>& outEntities) con
         {
             Assert(octant.octree != nullptr);
 
-            static_cast<Octree*>(octant.octree.Get())->Collect(bounds, outEntities);
+            octant.octree->Collect(bounds, outEntities);
         }
     }
 }
 
-void Octree::Clear()
+void SceneOctree::Clear()
 {
     HYP_SCOPE;
 
@@ -167,11 +167,11 @@ void Octree::Clear()
                 }
 
                 m_entityManager->AddTag<EntityTag::UPDATE_VISIBILITY_STATE>(entity);
-                
+
                 if (UseEntityMap())
                 {
                     SceneOctreeState* stateCasted = static_cast<SceneOctreeState*>(m_state);
-                    
+
                     stateCasted->entityToOctant.Erase(entity);
                 }
             }
@@ -181,11 +181,11 @@ void Octree::Clear()
     RebuildEntriesHash();
 }
 
-Octree::Result Octree::Rebuild()
+SceneOctree::Result SceneOctree::Rebuild()
 {
     if (IsRoot())
     {
-        return Rebuild(BoundingBox::Empty(), /* allowGrow */ m_flags[OctreeFlags::OF_ALLOW_GROW_ROOT]);
+        return Rebuild(BoundingBox::Empty(), /* allowGrow */ g_flags[OF_ALLOW_GROW_ROOT]);
     }
     else
     {
@@ -194,7 +194,7 @@ Octree::Result Octree::Rebuild()
     }
 }
 
-Octree::Result Octree::RebuildExtend_Internal(const BoundingBox& extendIncludeAabb)
+SceneOctree::Result SceneOctree::RebuildExtend_Internal(const BoundingBox& extendIncludeAabb)
 {
     if (!extendIncludeAabb.IsValid())
     {
@@ -210,13 +210,12 @@ Octree::Result Octree::RebuildExtend_Internal(const BoundingBox& extendIncludeAa
     BoundingBox newAabb(m_aabb.Union(extendIncludeAabb));
     // grow our new aabb by a predetermined growth factor,
     // to keep it from constantly resizing
-    newAabb *= growthFactor;
+    newAabb *= g_growthFactor;
 
     return Rebuild(newAabb, /* allowGrow */ false);
 }
 
-HYP_DISABLE_OPTIMIZATION;
-Octree::Result Octree::Rebuild(const BoundingBox& newAabb, bool allowGrow)
+SceneOctree::Result SceneOctree::Rebuild(const BoundingBox& newAabb, bool allowGrow)
 {
     Array<SceneOctreePayload> payloads;
     OctreeBase::Clear(payloads, /* undivide */ true);
@@ -235,11 +234,11 @@ Octree::Result Octree::Rebuild(const BoundingBox& newAabb, bool allowGrow)
                 {
                     m_aabb = m_aabb.Union(entry.aabb);
                 }
-                
+
                 if (UseEntityMap() && entry.value != nullptr)
                 {
                     SceneOctreeState* stateCasted = static_cast<SceneOctreeState*>(m_state);
-                    
+
                     stateCasted->entityToOctant.Erase(entry.value);
                 }
             }
@@ -285,9 +284,8 @@ Octree::Result Octree::Rebuild(const BoundingBox& newAabb, bool allowGrow)
 
     return m_octantId;
 }
-HYP_ENABLE_OPTIMIZATION;
 
-void Octree::PerformUpdates()
+void SceneOctree::PerformUpdates()
 {
     HYP_SCOPE;
 
@@ -303,7 +301,7 @@ void Octree::PerformUpdates()
 
     if (m_state->NeedsRebuild())
     {
-        Octree* octant = static_cast<Octree*>(GetChildOctant(m_state->dirtyState.octantId));
+        SceneOctree* octant = GetChildOctant(m_state->dirtyState.octantId);
         Assert(octant != nullptr);
 
         const Result rebuildResult = octant->Rebuild();
@@ -319,9 +317,9 @@ void Octree::PerformUpdates()
     RebuildEntriesHash();
 }
 
-Octree::Result Octree::Insert(Entity* entity, const BoundingBox& aabb, bool allowRebuild)
+SceneOctree::Result SceneOctree::Insert(Entity* entity, const BoundingBox& aabb, bool allowRebuild)
 {
-    if (m_flags[OctreeFlags::OF_INSERT_ON_OVERLAP])
+    if (g_flags & OF_INSERT_ON_OVERLAP)
     {
         AssertDebug(aabb.IsValid() && aabb.IsFinite() && !aabb.IsZero(), "Attempting to insert invalid AABB into Octree: {}", aabb);
     }
@@ -330,7 +328,7 @@ Octree::Result Octree::Insert(Entity* entity, const BoundingBox& aabb, bool allo
     {
         if (IsRoot())
         {
-            if (!m_aabb.Contains(aabb) && (m_flags[OctreeFlags::OF_ALLOW_GROW_ROOT]))
+            if (!m_aabb.Contains(aabb) && (g_flags & OF_ALLOW_GROW_ROOT))
             {
                 if (allowRebuild)
                 {
@@ -357,13 +355,13 @@ Octree::Result Octree::Insert(Entity* entity, const BoundingBox& aabb, bool allo
         }
 
         // stop recursing if we are at max depth
-        if (m_octantId.GetDepth() < m_maxDepth - 1)
+        if (m_octantId.GetDepth() < g_maxDepth - 1)
         {
             bool wasInserted = false;
 
             for (Octant& octant : m_octants)
             {
-                if (!(m_flags[OctreeFlags::OF_INSERT_ON_OVERLAP] ? octant.aabb.Overlaps(aabb) : octant.aabb.Contains(aabb)))
+                if (!((g_flags & OF_INSERT_ON_OVERLAP) ? octant.aabb.Overlaps(aabb) : octant.aabb.Contains(aabb)))
                 {
                     continue;
                 }
@@ -387,10 +385,10 @@ Octree::Result Octree::Insert(Entity* entity, const BoundingBox& aabb, bool allo
 
                 Assert(octant.octree != nullptr);
 
-                Result insertResult = static_cast<Octree*>(octant.octree.Get())->Insert(entity, aabb, allowRebuild);
+                Result insertResult = octant.octree->Insert(entity, aabb, allowRebuild);
                 wasInserted |= bool(insertResult.HasValue());
 
-                if (m_flags[OctreeFlags::OF_INSERT_ON_OVERLAP])
+                if (g_flags & OF_INSERT_ON_OVERLAP)
                 {
                     AssertDebug(insertResult.HasValue(), "Failed to insert into overlapping octant! Message: {}", insertResult.GetError().GetMessage());
                 }
@@ -411,7 +409,7 @@ Octree::Result Octree::Insert(Entity* entity, const BoundingBox& aabb, bool allo
     return Insert_Internal(entity, aabb);
 }
 
-Octree::Result Octree::Insert_Internal(Entity* entity, const BoundingBox& aabb)
+SceneOctree::Result SceneOctree::Insert_Internal(Entity* entity, const BoundingBox& aabb)
 {
     if (UseEntityMap())
     {
@@ -433,7 +431,7 @@ Octree::Result Octree::Insert_Internal(Entity* entity, const BoundingBox& aabb)
     return m_octantId;
 }
 
-Octree::Result Octree::Remove(Entity* entity, bool allowRebuild)
+SceneOctree::Result SceneOctree::Remove(Entity* entity, bool allowRebuild)
 {
     if (UseEntityMap())
     {
@@ -443,7 +441,7 @@ Octree::Result Octree::Remove(Entity* entity, bool allowRebuild)
 
         if (it != stateCasted->entityToOctant.End())
         {
-            if (Octree* octant = static_cast<Octree*>(it->second))
+            if (SceneOctree* octant = it->second)
             {
                 return octant->Remove_Internal(entity, allowRebuild);
             }
@@ -453,7 +451,7 @@ Octree::Result Octree::Remove(Entity* entity, bool allowRebuild)
     return Remove_Internal(entity, allowRebuild);
 }
 
-Octree::Result Octree::Remove_Internal(Entity* entity, bool allowRebuild)
+SceneOctree::Result SceneOctree::Remove_Internal(Entity* entity, bool allowRebuild)
 {
     const auto it = m_payload.entries.Find(entity);
 
@@ -467,13 +465,13 @@ Octree::Result Octree::Remove_Internal(Entity* entity, bool allowRebuild)
             {
                 Assert(octant.octree != nullptr);
 
-                if (m_flags & OctreeFlags::OF_INSERT_ON_OVERLAP)
+                if (g_flags & OF_INSERT_ON_OVERLAP)
                 {
-                    wasRemoved |= bool(static_cast<Octree*>(octant.octree.Get())->Remove_Internal(entity, allowRebuild));
+                    wasRemoved |= bool(octant.octree->Remove_Internal(entity, allowRebuild));
                 }
                 else
                 {
-                    if (Result octantResult = static_cast<Octree*>(octant.octree.Get())->Remove_Internal(entity, allowRebuild))
+                    if (Result octantResult = octant.octree->Remove_Internal(entity, allowRebuild))
                     {
                         return octantResult;
                     }
@@ -507,11 +505,11 @@ Octree::Result Octree::Remove_Internal(Entity* entity, bool allowRebuild)
 
     if (!m_isDivided && m_payload.entries.Empty())
     {
-        Octree* lastEmptyParent = nullptr;
+        SceneOctree* lastEmptyParent = nullptr;
 
-        if (Octree* parent = static_cast<Octree*>(m_parent))
+        if (SceneOctree* parent = m_parent)
         {
-            const Octree* child = this;
+            const SceneOctree* child = this;
 
             while (parent->EmptyDeep(DEPTH_SEARCH_INF, 0xff & ~(1 << child->m_octantId.GetIndex())))
             { // do not search this branch of the tree again
@@ -523,7 +521,7 @@ Octree::Result Octree::Remove_Internal(Entity* entity, bool allowRebuild)
                 }
 
                 child = parent;
-                parent = static_cast<Octree*>(child->m_parent);
+                parent = child->m_parent;
             }
         }
 
@@ -546,7 +544,7 @@ Octree::Result Octree::Remove_Internal(Entity* entity, bool allowRebuild)
     return m_octantId;
 }
 
-Octree::Result Octree::Move(Entity* entity, const BoundingBox& aabb, bool allowRebuild, typename SceneOctreePayload::EntrySet::Iterator it)
+SceneOctree::Result SceneOctree::Move(Entity* entity, const BoundingBox& aabb, bool allowRebuild, typename SceneOctreePayload::EntrySet::Iterator it)
 {
     const BoundingBox& newAabb = aabb;
 
@@ -581,8 +579,8 @@ Octree::Result Octree::Move(Entity* entity, const BoundingBox& aabb, bool allowR
         Optional<Result> parentInsertResult;
 
         /* Contains is false at this point */
-        Octree* parent = static_cast<Octree*>(m_parent);
-        Octree* lastParent = parent;
+        SceneOctree* parent = m_parent;
+        SceneOctree* lastParent = parent;
 
         while (parent != nullptr)
         {
@@ -612,7 +610,7 @@ Octree::Result Octree::Move(Entity* entity, const BoundingBox& aabb, bool allowR
                 break;
             }
 
-            parent = static_cast<Octree*>(parent->m_parent);
+            parent = parent->m_parent;
         }
 
         if (parentInsertResult.HasValue())
@@ -642,7 +640,7 @@ Octree::Result Octree::Move(Entity* entity, const BoundingBox& aabb, bool allowR
         // Check if we can go deeper.
         for (Octant& octant : m_octants)
         {
-            if (m_flags[OctreeFlags::OF_INSERT_ON_OVERLAP] ? octant.aabb.Overlaps(newAabb) : octant.aabb.Contains(newAabb))
+            if ((g_flags & OF_INSERT_ON_OVERLAP) ? octant.aabb.Overlaps(newAabb) : octant.aabb.Contains(newAabb))
             {
                 if (it != m_payload.entries.End())
                 {
@@ -663,7 +661,7 @@ Octree::Result Octree::Move(Entity* entity, const BoundingBox& aabb, bool allowR
 
                 if (!IsDivided())
                 {
-                    if (allowRebuild && m_octantId.GetDepth() < m_maxDepth - 1)
+                    if (allowRebuild && m_octantId.GetDepth() < int(g_maxDepth) - 1)
                     {
                         Divide();
                     }
@@ -675,15 +673,14 @@ Octree::Result Octree::Move(Entity* entity, const BoundingBox& aabb, bool allowR
                 }
 
                 AssertDebug(octant.octree != nullptr);
-                Octree* octantCasted = static_cast<Octree*>(octant.octree.Get());
 
-                if (m_flags & OctreeFlags::OF_INSERT_ON_OVERLAP)
+                if (g_flags & OF_INSERT_ON_OVERLAP)
                 {
-                    wasMoved |= bool(octantCasted->Move(entity, aabb, allowRebuild, octantCasted->m_payload.entries.End()));
+                    wasMoved |= bool(octant.octree->Move(entity, aabb, allowRebuild, octant.octree->m_payload.entries.End()));
                 }
                 else
                 {
-                    return octantCasted->Move(entity, aabb, allowRebuild, octantCasted->m_payload.entries.End());
+                    return octant.octree->Move(entity, aabb, allowRebuild, octant.octree->m_payload.entries.End());
                 }
             }
         }
@@ -717,7 +714,7 @@ Octree::Result Octree::Move(Entity* entity, const BoundingBox& aabb, bool allowR
     return m_octantId;
 }
 
-Octree::Result Octree::Update(Entity* entity, const BoundingBox& aabb, bool forceInvalidation, bool allowRebuild)
+SceneOctree::Result SceneOctree::Update(Entity* entity, const BoundingBox& aabb, bool forceInvalidation, bool allowRebuild)
 {
     if (UseEntityMap())
     {
@@ -730,9 +727,9 @@ Octree::Result Octree::Update(Entity* entity, const BoundingBox& aabb, bool forc
             return HYP_MAKE_ERROR(Error, "Object not found in entry map!");
         }
 
-        if (OctreeBase* octree = it->second)
+        if (it->second)
         {
-            return static_cast<Octree*>(octree)->Update_Internal(entity, aabb, forceInvalidation, allowRebuild);
+            return it->second->Update_Internal(entity, aabb, forceInvalidation, allowRebuild);
         }
 
         return HYP_MAKE_ERROR(Error, "Object has no octree in entry map!");
@@ -741,7 +738,7 @@ Octree::Result Octree::Update(Entity* entity, const BoundingBox& aabb, bool forc
     return Update_Internal(entity, aabb, forceInvalidation, allowRebuild);
 }
 
-Octree::Result Octree::Update_Internal(Entity* entity, const BoundingBox& aabb, bool forceInvalidation, bool allowRebuild)
+SceneOctree::Result SceneOctree::Update_Internal(Entity* entity, const BoundingBox& aabb, bool forceInvalidation, bool allowRebuild)
 {
     const auto it = m_payload.entries.Find(entity);
 
@@ -755,13 +752,13 @@ Octree::Result Octree::Update_Internal(Entity* entity, const BoundingBox& aabb, 
             {
                 Assert(octant.octree != nullptr);
 
-                if (m_flags & OctreeFlags::OF_INSERT_ON_OVERLAP)
+                if (g_flags & OF_INSERT_ON_OVERLAP)
                 {
-                    wasUpdated |= bool(static_cast<Octree*>(octant.octree.Get())->Update_Internal(entity, aabb, forceInvalidation, allowRebuild));
+                    wasUpdated |= bool(octant.octree->Update_Internal(entity, aabb, forceInvalidation, allowRebuild));
                 }
                 else
                 {
-                    Result updateInternalResult = static_cast<Octree*>(octant.octree.Get())->Update_Internal(entity, aabb, forceInvalidation, allowRebuild);
+                    Result updateInternalResult = octant.octree->Update_Internal(entity, aabb, forceInvalidation, allowRebuild);
 
                     if (updateInternalResult.HasValue())
                     {
@@ -808,7 +805,7 @@ Octree::Result Octree::Update_Internal(Entity* entity, const BoundingBox& aabb, 
     return Move(entity, newAabb, allowRebuild, it);
 }
 
-void Octree::NextVisibilityState()
+void SceneOctree::NextVisibilityState()
 {
     HYP_SCOPE;
 
@@ -817,7 +814,7 @@ void Octree::NextVisibilityState()
     m_visibilityState.Next();
 }
 
-void Octree::CalculateVisibility(const Handle<Camera>& camera)
+void SceneOctree::CalculateVisibility(const Handle<Camera>& camera)
 {
     HYP_SCOPE;
 
@@ -826,7 +823,7 @@ void Octree::CalculateVisibility(const Handle<Camera>& camera)
     UpdateVisibilityState(camera, m_visibilityState.validityMarker);
 }
 
-void Octree::UpdateVisibilityState(const Handle<Camera>& camera, uint16 validityMarker)
+void SceneOctree::UpdateVisibilityState(const Handle<Camera>& camera, uint16 validityMarker)
 {
     if (!camera.IsValid())
     {
@@ -840,7 +837,7 @@ void Octree::UpdateVisibilityState(const Handle<Camera>& camera, uint16 validity
         return;
     }
 
-    Octree* current = this;
+    SceneOctree* current = this;
     uint8 childIndex = uint8(-1);
 
     while (true)
@@ -860,7 +857,7 @@ void Octree::UpdateVisibilityState(const Handle<Camera>& camera, uint16 validity
                     continue;
                 }
 
-                current = static_cast<Octree*>(current->m_octants[i].octree.Get());
+                current = current->m_octants[i].octree.Get();
                 childIndex = uint8(-1);
 
                 descended = true;
@@ -879,18 +876,18 @@ void Octree::UpdateVisibilityState(const Handle<Camera>& camera, uint16 validity
         }
 
         childIndex = current->m_octantId.GetIndex();
-        current = static_cast<Octree*>(current->m_parent);
+        current = current->m_parent;
     }
 }
 
-void Octree::ResetEntriesHash()
+void SceneOctree::ResetEntriesHash()
 {
     HYP_SCOPE;
 
     m_entryHashes = {};
 }
 
-void Octree::RebuildEntriesHash(uint32 level)
+void SceneOctree::RebuildEntriesHash(uint32 level)
 {
     HYP_SCOPE;
 
@@ -926,7 +923,7 @@ void Octree::RebuildEntriesHash(uint32 level)
         {
             Assert(octant.octree != nullptr);
 
-            static_cast<Octree*>(octant.octree.Get())->RebuildEntriesHash(level + 1);
+            octant.octree->RebuildEntriesHash(level + 1);
         }
     }
 
@@ -935,12 +932,12 @@ void Octree::RebuildEntriesHash(uint32 level)
     {
         for (uint32 i = 0; i < uint32(m_entryHashes.Size()); i++)
         {
-            static_cast<Octree*>(m_parent)->m_entryHashes[i].Add(m_entryHashes[i]);
+            m_parent->m_entryHashes[i].Add(m_entryHashes[i]);
         }
     }
 }
 
-bool Octree::TestRay(const Ray& ray, RayTestResults& outResults, bool useBvh) const
+bool SceneOctree::TestRay(const Ray& ray, RayTestResults& outResults, bool useBvh) const
 {
     HYP_SCOPE;
 
@@ -1014,7 +1011,7 @@ bool Octree::TestRay(const Ray& ray, RayTestResults& outResults, bool useBvh) co
                         NodeLinkComponent* nodeLinkComponent = m_entityManager->TryGetComponent<NodeLinkComponent>(entry.value);
                         Handle<Node> node = nodeLinkComponent ? nodeLinkComponent->node.Lock() : nullptr;
 
-                        HYP_LOG(Octree, Warning, "Entity #{} (node: {}) does not have a BVH component, using AABB instead", entry.value->Id(), node ? node->GetName() : NAME("<null>"));
+                        HYP_LOG(Scene, Warning, "Entity #{} (node: {}) does not have a BVH component, using AABB instead", entry.value->Id(), node ? node->GetName() : NAME("<null>"));
                     }
                 }
             }
@@ -1033,7 +1030,7 @@ bool Octree::TestRay(const Ray& ray, RayTestResults& outResults, bool useBvh) co
             {
                 Assert(octant.octree != nullptr);
 
-                if (static_cast<Octree*>(octant.octree.Get())->TestRay(ray, outResults))
+                if (octant.octree->TestRay(ray, outResults))
                 {
                     hasHit = true;
                 }
