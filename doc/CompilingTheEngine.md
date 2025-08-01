@@ -12,13 +12,18 @@ Hyperion has a few required dependencies to compile. In addition, there are seve
 ## Optional* dependencies
 
 The following dependencies are optional for compiling the engine, but without them, engine and editor functionality may be limited and/or missing features.
-Some of the dependencies listed below are included as a Git submodule, meaning they will already be located under the submodules subdirectory if you cloned the repository including submodules. 
+Some of the dependencies listed below are included as Git submodules. If you cloned the repository with the `--recursive` flag, these submodules should already be pulled. If you didn't, you can still pull them after cloning.
+If you cloned the repository without the `--recursive` flag, you can run the following command to pull the submodules:
+```bash
+git submodule update --init --recursive
+```
+### Optional dependencies that are included as Git submodules
+* [.NET Core](https://github.com/dotnet/runtime) - The .NET Core is used enable C# scripting for gameplay and editor functionality.
+* [zlib](https://github.com/madler/zlib) - Hyperion uses zlib to compress and decompress serialized data.
+* [glslang](https://github.com/KhronosGroup/glslang) - Used to compile GLSL shaders to SPIR-V and perform shader reflection. We use a version with [some minor modifications](https://github.com/notomorrow/glslang)
+* [xatlas](https://github.com/jpcy/xatlas) - Used to generate lightmap UVs, can be skipped or disabled if you don't need this.
 
-To pull these submodules, run this command in your terminal: `git submodule update --init --recursive`
-* [.NET Core](https://github.com/dotnet/runtime) (included as a Git submodule) - The .NET Core is used to provide a scripting runtime for gameplay and editor functionality.
-* [zlib](https://github.com/madler/zlib) (included as a Git submodule) - Hyperion uses zlib to compress and decompress serialized data.
-* [glslang](https://github.com/KhronosGroup/glslang) (included as a Git submodule) - Used to compile GLSL shaders to SPIR-V and perform shader reflection. We use a version with [some minor modifications](https://github.com/notomorrow/glslang)
-* [xatlas](https://github.com/jpcy/xatlas) (included as a Git submodule) - Used to generate lightmap UVs, can be skipped or disabled if you don't need this.
+### Optional dependencies you can install manually
 * [Bullet Physics](https://github.com/bulletphysics/bullet3) - Hyperion uses Bullet Physics for physics simulation. This is an optional dependency, but if you want to use physics in your game, you'll need to have it installed for CMake to find it. (Note, implementation is bare bones at the moment)
 * [FreeType](https://freetype.org/) - Used for rendering text in the editor and engine.
 * [OpenAL Soft](openal-soft.org) - Used for audio playback.
@@ -31,7 +36,7 @@ lib` exists in the `lib/Win32/{Debug|Release}` directory, Hyperion will link to 
 
 ## Build Tool
 
-In the project's base directory, you'll find a folder named buildtool containing source code and CMake files separated from the rest of the engine. This application reads through the engine's header files, parsing them to generate C++ code that enhances Hyperion's reflection, serialization, and scripting systems.
+In the project's base directory, you'll find a folder named `buildtool` containing source code and CMake files separated from the rest of the engine. This application reads through the engine's header files and parses them to generate code that is used by Hyperion's reflection, serialization, and scripting systems.
 
 buildtool is set up to run whenever you reconfigure the engine's CMake files. To invoke it manually, there are two scripts located under tools/scripts:
 

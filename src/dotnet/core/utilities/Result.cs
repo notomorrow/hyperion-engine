@@ -10,5 +10,13 @@ namespace Hyperion
     {
         [FieldOffset(0)]
         private PimplPtr errorPtr;
+
+        public bool IsValid
+        {
+            get
+            {
+                return errorPtr.ptr == IntPtr.Zero;
+            }
+        }
     }
 }

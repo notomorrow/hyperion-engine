@@ -1,5 +1,7 @@
 using System;
 using System.IO;
+using System.Linq;
+using System.Collections.Generic;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.MSBuild;
@@ -244,6 +246,13 @@ namespace Hyperion
             );
         }
 
+        private static string EscapePath(string path)
+        {
+            // prevent escape codes from being interpreted by the XML parser
+            // (e.g \x64 is interpreted as a unicode character)
+            return path.Replace("\\x", "\\\\x");
+        }
+
         private bool GenerateCSharpProjectFile(string projectFilePath, string scriptDirectory, string moduleName)
         {
             string? dependenciesDirectory = System.IO.Path.GetDirectoryName(System.Environment.ProcessPath);
@@ -270,8 +279,13 @@ namespace Hyperion
                     //    + "<ReferenceOutputAssembly>true</ReferenceOutputAssembly>\n"
                     //    + "<Private>true</Private>\n"
                     //+ "</ProjectReference>\n"
-                    + $"<Reference Name=\"HyperionRuntime\" HintPath=\"{System.IO.Path.Combine(dependenciesDirectory, "HyperionRuntime.dll")}\" />\n"
-                    + string.Join("", System.IO.Directory.GetFiles(scriptDirectory, "*.cs").Select(script => $"<Compile Include=\"{script}\" />\n"))
+                    + $"<Reference Include=\"HyperionCore\">\n"
+                        + $"<HintPath>{EscapePath(System.IO.Path.Combine(dependenciesDirectory, "HyperionCore.dll"))}</HintPath>\n"
+                    + "</Reference>\n"
+                    + $"<Reference Include=\"HyperionRuntime\">\n"
+                        + $"<HintPath>{EscapePath(System.IO.Path.Combine(dependenciesDirectory, "HyperionRuntime.dll"))}</HintPath>\n"
+                    + "</Reference>\n"
+                    + string.Join("", System.IO.Directory.GetFiles(scriptDirectory, "*.cs").Select(script => $"<Compile Include=\"{EscapePath(script)}\" />\n"))
                     + "</ItemGroup>\n"
                 + "</Project>\n";
 

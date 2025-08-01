@@ -207,10 +207,14 @@ namespace Hyperion
                 throw new Exception("HypClass pointer is null");
             }
 
+            Logger.Log(LogType.Debug, $"Invoking native method {name} on {this}");
+
             HypMethod method = GetMethod(name);
 
-            HypDataBuffer resultData = method.InvokeNativeWithThis(this, args);
-            resultData.Dispose();
+            using (HypDataBuffer resultData = method.InvokeNativeWithThis(this, args))
+            {
+                // do nothing with the result
+            }
         }
 
         public uint RefCount

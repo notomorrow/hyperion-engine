@@ -52,10 +52,10 @@ HypObjectInitializerGuardBase::~HypObjectInitializerGuardBase()
     {
         if (RC<dotnet::Class> managedClass = ptr.GetClass()->GetManagedClass())
         {
-            AssertDebug(ptr.GetClass()->GetAllocationMethod() == HypClassAllocationMethod::HANDLE);
+            Assert(ptr.GetClass()->GetAllocationMethod() == HypClassAllocationMethod::HANDLE);
 
             HypObjectBase* target = reinterpret_cast<HypObjectBase*>(ptr.GetPointer());
-            AssertDebug(target->GetObjectHeader_Internal()->GetRefCountStrong() == 1);
+            Assert(target->GetObjectHeader_Internal()->GetRefCountStrong() == 1);
 
             target->SetManagedObjectResource(AllocateResource<ManagedObjectResource>(ptr, managedClass));
         }

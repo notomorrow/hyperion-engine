@@ -8,6 +8,6 @@ namespace Hyperion
     public struct PimplPtr
     {
         [FieldOffset(0)]
-        private IntPtr ptr;
+        internal IntPtr ptr;
     }
 }
