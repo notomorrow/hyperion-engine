@@ -353,7 +353,7 @@ Handle<Mesh> MeshBuilder::BuildVoxelMesh(const VoxelOctree& voxelOctree)
     Proc<void(const VoxelOctree&)> traverse;
     traverse = [&](const VoxelOctree& octant)
     {
-        if (octant.GetEntries().Any()) // filled voxel node
+        if (octant.GetPayload().occupiedBit) // filled voxel node
         {
             //AssertDebug(!octant.IsDivided());
             

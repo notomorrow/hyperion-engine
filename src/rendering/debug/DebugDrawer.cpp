@@ -124,7 +124,7 @@ void SphereDebugDrawShape::operator()(const Vec3f& position, float radius, const
     {
         return;
     }
-    
+
     DebugDrawCommandHeader header;
 
     DebugDrawCommand* ptr = reinterpret_cast<DebugDrawCommand*>(list.Alloc(sizeof(DebugDrawCommand), alignof(DebugDrawCommand), header));
@@ -164,7 +164,7 @@ void AmbientProbeDebugDrawShape::operator()(const Vec3f& position, float radius,
     {
         return;
     }
-    
+
     Assert(envProbe.IsReady());
 
     DebugDrawCommandHeader header;
@@ -206,7 +206,7 @@ void ReflectionProbeDebugDrawShape::operator()(const Vec3f& position, float radi
     {
         return;
     }
-    
+
     Assert(envProbe.IsReady());
 
     DebugDrawCommandHeader header;
@@ -241,7 +241,7 @@ BoxDebugDrawShape::BoxDebugDrawShape(DebugDrawCommandList& list)
 bool BoxDebugDrawShape::CheckShouldCull(DebugDrawCommand* cmd, const Frustum& frustum) const
 {
     const BoundingBox aabb = cmd->transformMatrix * BoundingBox(Vec3f(-1.0f), Vec3f(1.0f));
-    
+
     return !frustum.ContainsAABB(aabb);
 }
 
@@ -276,7 +276,7 @@ void BoxDebugDrawShape::operator()(const Vec3f& position, const Vec3f& size, con
     {
         return;
     }
-    
+
     DebugDrawCommandHeader header;
 
     DebugDrawCommand* ptr = reinterpret_cast<DebugDrawCommand*>(list.Alloc(sizeof(DebugDrawCommand), alignof(DebugDrawCommand), header));
@@ -337,7 +337,7 @@ void PlaneDebugDrawShape::operator()(const FixedArray<Vec3f, 4>& points, const C
     {
         return;
     }
-    
+
     Vec3f x = (points[1] - points[0]).Normalize();
     Vec3f y = (points[2] - points[0]).Normalize();
     Vec3f z = x.Cross(y).Normalize();
@@ -387,7 +387,7 @@ DebugDrawer::~DebugDrawer()
     {
         m_commandLists[i].Clear();
     }
-    
+
     for (uint32 i = 0; i < uint32(m_buffers.Size()); i++)
     {
         ClearCommands(i);
@@ -543,9 +543,9 @@ void DebugDrawer::Render(FrameBase* frame, const RenderSetup& renderSetup)
 
         return;
     }
-    
+
     Assert(renderSetup.HasView());
-    
+
     RenderProxyCamera* cameraProxy = static_cast<RenderProxyCamera*>(RenderApi_GetRenderProxy(renderSetup.view->GetCamera().Id()));
     Assert(cameraProxy != nullptr);
 
@@ -572,11 +572,16 @@ void DebugDrawer::Render(FrameBase* frame, const RenderSetup& renderSetup)
     {
         debugDrawerDescriptorSet->SetElement(NAME("ImmediateDrawsBuffer"), instanceBuffer);
     }
+    
+    auto& partitionedShaderData = m_cachedPartitionedShaderData;
+    
+    for (auto& it : partitionedShaderData)
+    {
+        // don't want to keep filling up buffers
+        it.second.Clear();
+    }
 
-    Array<ImmediateDrawShaderData>& shaderData = m_cachedShaderData;
-    shaderData.ResizeUninitialized(m_headers[idx].Size());
-    Memory::MemSet(shaderData.Data(), 0, shaderData.ByteSize());
-
+    /// @TODO: Sort debug draws by attributes so the same ones are grouped together
     for (SizeType drawCommandIdx = 0; drawCommandIdx < m_headers[idx].Size(); drawCommandIdx++)
     {
         uint32 offset = m_headers[idx][drawCommandIdx].offset;
@@ -590,16 +595,17 @@ void DebugDrawer::Render(FrameBase* frame, const RenderSetup& renderSetup)
 
         if (drawCommand->shape->CheckShouldCull(drawCommand, cameraProxy->viewFrustum))
         {
-            shaderData[drawCommandIdx].isCulled = 1;
-            
             continue;
         }
         
-        drawCommand->shape->UpdateBufferData(drawCommand, &shaderData[drawCommandIdx]);
+        auto& shaderData = partitionedShaderData[drawCommand->shape];
+        ImmediateDrawShaderData& shaderDataElement = shaderData.EmplaceBack();
+
+        drawCommand->shape->UpdateBufferData(drawCommand, &shaderDataElement);
+        
+        shaderDataElement.idx = (uint32)drawCommandIdx;
     }
-
-    instanceBuffer->Copy(shaderData.ByteSize(), shaderData.Data());
-
+    
     struct
     {
         HashCode attributesHashCode;
@@ -607,77 +613,109 @@ void DebugDrawer::Render(FrameBase* frame, const RenderSetup& renderSetup)
         uint32 drawableLayer = ~0u;
     } previousState;
 
-    for (SizeType drawCommandIdx = 0; drawCommandIdx < m_headers[idx].Size(); drawCommandIdx++)
+    SizeType shaderDataOffset = 0;
+    SizeType totalDrawCalls = 0;
+    SizeType totalInstancedDraws = 0;
+    
+    for (auto& it : partitionedShaderData)
     {
-        if (shaderData[drawCommandIdx].isCulled)
+        IDebugDrawShape* shape = it.first;
+        auto& shaderData = it.second;
+        
+        if (shaderData.Empty())
         {
             continue;
         }
         
-        uint32 offset = m_headers[idx][drawCommandIdx].offset;
-        uint32 size = m_headers[idx][drawCommandIdx].size;
-        AssertDebug(offset + size <= m_buffers[idx].Size());
-
-        DebugDrawCommand* drawCommand = reinterpret_cast<DebugDrawCommand*>(m_buffers[idx].Data() + offset);
-
-        bool isNewGraphicsPipeline = false;
-
-        GraphicsPipelineRef& graphicsPipeline = previousState.graphicsPipeline;
-
-        if (!graphicsPipeline.IsValid() || previousState.attributesHashCode != drawCommand->attributes.GetHashCode())
+        Assert(instanceBuffer->Size() >= (shaderData.Size() + shaderDataOffset) * sizeof(ImmediateDrawShaderData));
+        instanceBuffer->Copy(shaderDataOffset * sizeof(ImmediateDrawShaderData), shaderData.Size() * sizeof(ImmediateDrawShaderData), shaderData.Data());
+        
+        SizeType numToDraw = 0;
+        
+        auto commitCurrentDraws = [&]()
         {
-            graphicsPipeline = FetchGraphicsPipeline(drawCommand->attributes, ++previousState.drawableLayer, renderSetup.passData);
-            previousState.attributesHashCode = drawCommand->attributes.GetHashCode();
-
-            isNewGraphicsPipeline = true;
-        }
-
-        if (isNewGraphicsPipeline)
+            if (numToDraw != 0)
+            {
+                switch (shape->GetDebugDrawType())
+                {
+                    case DebugDrawType::MESH:
+                    {
+                        MeshDebugDrawShapeBase* meshShape = static_cast<MeshDebugDrawShapeBase*>(shape);
+                        
+                        Mesh* mesh = meshShape->GetMesh();
+                        AssertDebug(mesh && mesh->IsReady());
+                        
+                        frame->renderQueue << BindVertexBuffer(mesh->GetVertexBuffer());
+                        frame->renderQueue << BindIndexBuffer(mesh->GetIndexBuffer());
+                        frame->renderQueue << DrawIndexed(mesh->NumIndices(), uint32(numToDraw));
+                        
+                        ++totalDrawCalls;
+                        totalInstancedDraws += numToDraw;
+                        
+                        break;
+                    }
+                    default:
+                        HYP_UNREACHABLE();
+                }
+                
+                numToDraw = 0;
+            }
+        };
+        
+        for (SizeType i = 0; i < shaderData.Size(); i++)
         {
-            frame->renderQueue << BindGraphicsPipeline(graphicsPipeline);
-
-            frame->renderQueue << BindDescriptorTable(
-                m_descriptorTable,
-                graphicsPipeline,
-                ArrayMap<Name, ArrayMap<Name, uint32>> {
-                    { NAME("DebugDrawerDescriptorSet"),
-                        { { NAME("ImmediateDrawsBuffer"), ShaderDataOffset<ImmediateDrawShaderData>(0u) } } },
-                    { NAME("Global"),
-                        { { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(renderSetup.view->GetCamera()) },
-                            { NAME("EnvGridsBuffer"), ShaderDataOffset<EnvGridShaderData>(renderSetup.envGrid, 0) } } },
-                    { NAME("Object"), {} },
-                    { NAME("Instancing"), { { NAME("EntityInstanceBatchesBuffer"), 0 } } } },
-                frameIndex);
+            AssertDebug(shaderData[i].idx != ~0u, "culled element should not be in array");
+            
+            const uint32 drawCommandIdx = shaderData[i].idx;
+            
+            uint32 offset = m_headers[idx][drawCommandIdx].offset;
+            uint32 size = m_headers[idx][drawCommandIdx].size;
+            AssertDebug(offset + size <= m_buffers[idx].Size());
+            
+            DebugDrawCommand* drawCommand = reinterpret_cast<DebugDrawCommand*>(m_buffers[idx].Data() + offset);
+            
+            bool isNewGraphicsPipeline = false;
+            
+            GraphicsPipelineRef& graphicsPipeline = previousState.graphicsPipeline;
+            
+            if (!graphicsPipeline.IsValid() || previousState.attributesHashCode != drawCommand->attributes.GetHashCode())
+            {
+                graphicsPipeline = FetchGraphicsPipeline(drawCommand->attributes, ++previousState.drawableLayer, renderSetup.passData);
+                previousState.attributesHashCode = drawCommand->attributes.GetHashCode();
+                
+                isNewGraphicsPipeline = true;
+            }
+            
+            if (isNewGraphicsPipeline)
+            {
+                // new graphics pipeline, commit current draws then bind new pipeline to keep adding draws
+                commitCurrentDraws();
+                
+                frame->renderQueue << BindGraphicsPipeline(graphicsPipeline);
+                
+                frame->renderQueue << BindDescriptorTable(
+                      m_descriptorTable,
+                      graphicsPipeline,
+                      ArrayMap<Name, ArrayMap<Name, uint32>> {
+                          { NAME("DebugDrawerDescriptorSet"),
+                              { { NAME("ImmediateDrawsBuffer"), ShaderDataOffset<ImmediateDrawShaderData>(uint32(shaderDataOffset)) } } },
+                          { NAME("Global"),
+                              { { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(renderSetup.view->GetCamera()) },
+                                  { NAME("EnvGridsBuffer"), ShaderDataOffset<EnvGridShaderData>(renderSetup.envGrid, 0) } } },
+                          { NAME("Object"), {} } },
+                      frameIndex);
+            }
+            
+            shaderDataOffset++;
+            numToDraw++;
         }
-
-        frame->renderQueue << BindDescriptorSet(
-            debugDrawerDescriptorSet,
-            graphicsPipeline,
-            ArrayMap<Name, uint32> {
-                { NAME("ImmediateDrawsBuffer"), ShaderDataOffset<ImmediateDrawShaderData>(uint32(drawCommandIdx)) } },
-            debugDrawerDescriptorSetIndex);
-
-        switch (drawCommand->shape->GetDebugDrawType())
-        {
-        case DebugDrawType::MESH:
-        {
-            MeshDebugDrawShapeBase* meshShape = static_cast<MeshDebugDrawShapeBase*>(drawCommand->shape);
-
-            Mesh* mesh = meshShape->GetMesh();
-            AssertDebug(mesh && mesh->IsReady());
-
-            frame->renderQueue << BindVertexBuffer(mesh->GetVertexBuffer());
-            frame->renderQueue << BindIndexBuffer(mesh->GetIndexBuffer());
-            frame->renderQueue << DrawIndexed(mesh->NumIndices());
-
-            break;
-        }
-        default:
-            HYP_UNREACHABLE();
-        }
+        
+        commitCurrentDraws();
     }
 
     ClearCommands(idx);
+    
+    HYP_LOG_TEMP("Debug drawer total draw calls: {}\tNum instanced draws: {}", totalDrawCalls, totalInstancedDraws);
 }
 
 void DebugDrawer::ClearCommands(uint32 idx)
@@ -793,7 +831,7 @@ DebugDrawCommandList::~DebugDrawCommandList()
 void* DebugDrawCommandList::Alloc(uint32 size, uint32 alignment, DebugDrawCommandHeader& outHeader)
 {
     HYP_SCOPE;
-    
+
     AssertDebug(m_debugDrawer && m_debugDrawer->IsEnabled());
     AssertDebug(alignment <= 16);
 

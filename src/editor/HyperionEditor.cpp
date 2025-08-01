@@ -225,8 +225,8 @@ void HyperionEditor::Init()
 #if 1
     // temp
     RC<AssetBatch> batch = AssetManager::GetInstance()->CreateBatch();
-//    batch->Add("test_model", "models/sponza/sponza.obj");
-     batch->Add("test_model", "models/pica_pica/pica_pica.obj");
+    batch->Add("test_model", "models/sponza/sponza.obj");
+//     batch->Add("test_model", "models/pica_pica/pica_pica.obj");
     // batch->Add("test_model", "models/testbed/testbed.obj");
     batch->Add("zombie", "models/ogrexml/dragger_Body.mesh.xml");
     //    batch->Add("z2", "models/monkey.fbx");
@@ -239,8 +239,8 @@ void HyperionEditor::Init()
             {
                 Handle<Node> node = results["test_model"].ExtractAs<Node>();
 
-                 node->Scale(3.0f);
-//                node->Scale(0.05f);
+//                 node->Scale(3.0f);
+                node->Scale(0.05f);
                 node->SetName(NAME("test_model"));
                 node->LockTransform();
 
@@ -349,25 +349,34 @@ void HyperionEditor::Logic(float delta)
     if (g_voxelOctree != nullptr)
     {
         DebugDrawCommandList& debugDrawCommands = g_engine->GetDebugDrawer()->CreateCommandList();
+        
+//        PerformanceClock clock;
+//        clock.Start();
 
-        Proc<void(const VoxelOctree&)> drawOctant;
+        Proc<void(const VoxelOctree&, int)> drawOctant;
 
-        drawOctant = [&](const VoxelOctree& octree)
+        drawOctant = [&](const VoxelOctree& octree, int depth)
         {
+            if (octree.GetPayload().occupiedBit)
+            {
+                AssertDebug(!octree.IsDivided());
+                debugDrawCommands.box(octree.GetAABB().GetCenter(), octree.GetAABB().GetExtent(), Color::Cyan());
+            }
+            
             if (octree.IsDivided())
             {
                 for (const auto& it : octree.GetOctants())
                 {
-                    drawOctant(static_cast<const VoxelOctree&>(*it.octree));
+                    drawOctant(static_cast<const VoxelOctree&>(*it.octree), depth + 1);
                 }
-            }
-            else if (octree.GetEntries().Any()) // filled node
-            {
-                debugDrawCommands.box(octree.GetAABB().GetCenter(), octree.GetAABB().GetExtent(), Color::Green());
             }
         };
 
-        drawOctant(*g_voxelOctree);
+        drawOctant(*g_voxelOctree, 0);
+//        
+//        clock.Stop();
+//        
+//        HYP_LOG_TEMP("Time to draw boxes: {}", clock.ElapsedMs());
     }
 }
 

@@ -2,6 +2,8 @@
 
 #include <rendering/lightmapper/LightmapperSubsystem.hpp>
 #include <rendering/lightmapper/Lightmapper.hpp>
+#include <rendering/lightmapper/LightmapPathTraceCpu.hpp>
+#include <rendering/lightmapper/LightmapPathTraceGpu.hpp>
 
 #include <rendering/RenderConfig.hpp>
 
@@ -19,6 +21,21 @@
 #include <Engine.hpp>
 
 namespace hyperion {
+
+template <class... Args>
+static UniquePtr<Lightmapper> CreateLightmapper(LightmapperConfig&& config, Args&&... args)
+{
+    switch (config.traceMode)
+    {
+    case LightmapTraceMode::GPU_PATH_TRACING:
+        return MakeUnique<Lightmapper_GpuPathTracing>(std::move(config), std::forward<Args>(args)...);
+    case LightmapTraceMode::CPU_PATH_TRACING:
+        return MakeUnique<Lightmapper_CpuPathTracing>(std::move(config), std::forward<Args>(args)...);
+    case LightmapTraceMode::ENV_GRID: // fallthrough
+    default:
+        HYP_NOT_IMPLEMENTED();
+    }
+}
 
 #pragma region LightmapperSubsystem
 
@@ -102,7 +119,7 @@ Task<void>* LightmapperSubsystem::GenerateLightmaps(const Handle<Scene>& scene, 
         return nullptr;
     }
 
-    UniquePtr<Lightmapper> lightmapper = MakeUnique<Lightmapper>(LightmapperConfig::FromConfig(), scene, aabb);
+    UniquePtr<Lightmapper> lightmapper = CreateLightmapper(LightmapperConfig::FromConfig(), scene, aabb);
 
     Task<void>& task = m_tasks.EmplaceBack();
 
@@ -113,7 +130,8 @@ Task<void>* LightmapperSubsystem::GenerateLightmaps(const Handle<Scene>& scene, 
             })
         .Detach();
 
-    lightmapper->PerformLightmapping();
+    lightmapper->Initialize();
+    lightmapper->Build();
 
     m_lightmappers.Insert(scene.Id(), std::move(lightmapper));
 

@@ -6,8 +6,8 @@
 #include <rendering/Deferred.hpp>
 #include <rendering/RenderMaterial.hpp>
 #include <rendering/RenderProxy.hpp>
-#include <rendering/EnvGridRenderer.hpp>
-#include <rendering/EnvProbeRenderer.hpp>
+#include <rendering/env_grid/EnvGridRenderer.hpp>
+#include <rendering/env_probe/EnvProbeRenderer.hpp>
 #include <rendering/IndirectDraw.hpp>
 #include <rendering/RenderCollection.hpp>
 #include <rendering/GraphicsPipelineCache.hpp>

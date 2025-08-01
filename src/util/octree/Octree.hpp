@@ -138,17 +138,17 @@ struct OctantId
 
 /*! \brief Base class for an octree
  *  \tparam Derived The derived class type (used for CRTP)
- *  \tparam TEntry The type of entry stored in the octree
+ *  \tparam Payload The payload to be stored in each octant node. Must have an Empty() method, used to determine Octant occupancy
  *  This class provides the basic functionality for an octree, including insertion, removal, and querying of entries.
  */
-template <class Derived, class TEntry>
+template <class Derived, class Payload>
 class OctreeBase;
 
 /*! \brief State of the octree, used to track which octants need to be rebuilt and maps entries to their respective octants.
  *  \tparam Derived The derived class type (used for CRTP)
- *  \tparam TEntry The type of entry stored in the octree
+ *  \tparam Payload The payload to be stored in each octant node. Must have an Empty() method, used to determine Octant occupancy
  *  \internal Used by OctreeBase to manage the state of the octree. */
-template <class Derived, class TEntry>
+template <class Derived, class Payload>
 struct OctreeState
 {
     struct DirtyState
@@ -161,16 +161,7 @@ struct OctreeState
     OctreeState(const OctreeState& other) = delete;
     OctreeState& operator=(const OctreeState& other) = delete;
 
-    ~OctreeState()
-    {
-        if (entryToOctant != nullptr)
-        {
-            delete entryToOctant;
-            entryToOctant = nullptr;
-        }
-    }
-
-    HashMap<TEntry, OctreeBase<Derived, TEntry>*>* entryToOctant = nullptr;
+    virtual ~OctreeState() = default;
 
     // If any octants need to be rebuilt, their topmost parent that needs to be rebuilt will be stored here
     DirtyState dirtyState;
@@ -233,9 +224,9 @@ public:
     OctreeBase& operator=(OctreeBase&& other) noexcept = delete;
     virtual ~OctreeBase();
 
-    HYP_FORCE_INLINE BoundingBox& GetAABB()
+    HYP_FORCE_INLINE const Payload& GetPayload() const
     {
-        return m_aabb;
+        return m_payload;
     }
 
     HYP_FORCE_INLINE const BoundingBox& GetAABB() const
@@ -267,42 +258,24 @@ public:
     virtual void Clear();
     void Clear(Array<Payload>& out, bool undivide);
 
-    Result Insert(const TEntry& value, const BoundingBox& aabb, bool allowRebuild = false);
-    Result Remove(const TEntry& value, bool allowRebuild = false);
-
-    /*! \brief Update the entry in the octree.
-     * \param id value The id of the entry to update
-     * \param aabb The new AABB of the entry
-     * \param allowRebuild If true, the octree will be rebuilt if the entry doesn't fit in the new octant. Otherwise, the octree will be marked as dirty and rebuilt on the next call to PerformUpdates()
-     * \param forceInvalidation If true, the entry will have its invalidation marker incremented, causing the octant's hash to be updated
-     */
-    Result Update(const TEntry& value, const BoundingBox& aabb, bool forceInvalidation = false, bool allowRebuild = false);
-    Result Rebuild();
-    virtual Result Rebuild(const BoundingBox& newAabb, bool allowGrow);
+    Result Insert(const Payload& payload, const BoundingBox& aabb);
 
     bool GetNearestOctants(const Vec3f& position, FixedArray<Derived*, 8>& out) const;
     bool GetNearestOctant(const Vec3f& position, Derived const*& out) const;
     bool GetFittingOctant(const BoundingBox& aabb, Derived const*& out) const;
 
-    virtual void PerformUpdates();
-
-    HYP_FORCE_INLINE OctreeState<Derived, TEntry>* GetState() const
+    HYP_FORCE_INLINE OctreeState<Derived, Payload>* GetState() const
     {
         return m_state;
     }
 
 protected:
-    virtual UniquePtr<Derived> CreateChildOctant(const BoundingBox& aabb, Derived* parent, uint8 index) = 0;
-
-    /*! \brief Move the entry to a new octant. If allowRebuild is true, the octree will be rebuilt if the entry doesn't fit in the new octant,
-        and subdivided octants will be collapsed if they are empty + new octants will be created if they are needed.
-     */
-    Result Move(const TEntry& value, const BoundingBox& aabb, bool allowRebuild, EntrySet::Iterator it);
-
-    HYP_FORCE_INLINE bool UseEntryToOctantMap() const
+    static OctreeState<Derived, Payload>* CreateOctreeState()
     {
-        return m_state != nullptr && !m_flags[OctreeFlags::OF_INSERT_ON_OVERLAP];
+        return new OctreeState<Derived, Payload>();
     }
+
+    virtual UniquePtr<Derived> CreateChildOctant(const BoundingBox& aabb, Derived* parent, uint8 index) = 0;
 
     HYP_FORCE_INLINE bool ContainsAabb(const BoundingBox& aabb) const
     {
@@ -334,21 +307,18 @@ protected:
     void CollapseParents(bool allowRebuild);
 
     Payload m_payload;
+
     OctreeBase* m_parent;
     BoundingBox m_aabb;
-    EnumFlags<OctreeFlags> m_flags;
-    uint8 m_maxDepth;
     FixedArray<Octant, 8> m_octants;
-    bool m_isDivided;
-    OctreeState<Derived, TEntry>* m_state;
+    OctreeState<Derived, Payload>* m_state;
     OctantId m_octantId;
-    uint32 m_invalidationMarker;
 
-private:
-    Result Insert_Internal(const TEntry& value, const BoundingBox& aabb);
-    Result Update_Internal(const TEntry& value, const BoundingBox& aabb, bool forceInvalidation, bool allowRebuild);
-    Result Remove_Internal(const TEntry& value, bool allowRebuild);
-    Result RebuildExtend_Internal(const BoundingBox& extendIncludeAabb);
+    EnumFlags<OctreeFlags> m_flags;
+
+    uint32 m_invalidationMarker : 16;
+    uint8 m_maxDepth : 5;
+    bool m_isDivided : 1;
 };
 
 #include <util/octree/Octree.inl>

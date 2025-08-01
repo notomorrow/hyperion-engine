@@ -105,7 +105,7 @@ void Octree::Collect(const BoundingSphere& bounds, Array<Entity*>& outEntities) 
         {
             Assert(octant.octree != nullptr);
 
-            octant.octree->Collect(bounds, outEntities);
+            static_cast<Octree*>(octant.octree.Get())->Collect(bounds, outEntities);
         }
     }
 }
@@ -117,7 +117,7 @@ void Octree::Collect(const BoundingBox& bounds, Array<Entity*>& outEntities) con
         return;
     }
 
-    outEntities.Reserve(outEntries.Size() + m_payload.entries.Size());
+    outEntities.Reserve(outEntities.Size() + m_payload.entries.Size());
 
     for (const auto& entry : m_payload.entries)
     {
@@ -133,7 +133,7 @@ void Octree::Collect(const BoundingBox& bounds, Array<Entity*>& outEntities) con
         {
             Assert(octant.octree != nullptr);
 
-            octant.octree->Collect(bounds, outEntities);
+            static_cast<Octree*>(octant.octree.Get())->Collect(bounds, outEntities);
         }
     }
 }
@@ -151,7 +151,7 @@ void Octree::Clear()
 
         for (SceneOctreePayload& payload : payloads)
         {
-            for (auto& entry : payload.entries)
+            for (SceneOctreePayload::Entry& entry : payload.entries)
             {
                 Entity* entity = entry.value;
 
@@ -167,6 +167,13 @@ void Octree::Clear()
                 }
 
                 m_entityManager->AddTag<EntityTag::UPDATE_VISIBILITY_STATE>(entity);
+                
+                if (UseEntityMap())
+                {
+                    SceneOctreeState* stateCasted = static_cast<SceneOctreeState*>(m_state);
+                    
+                    stateCasted->entityToOctant.Erase(entity);
+                }
             }
         }
     }
@@ -174,6 +181,41 @@ void Octree::Clear()
     RebuildEntriesHash();
 }
 
+Octree::Result Octree::Rebuild()
+{
+    if (IsRoot())
+    {
+        return Rebuild(BoundingBox::Empty(), /* allowGrow */ m_flags[OctreeFlags::OF_ALLOW_GROW_ROOT]);
+    }
+    else
+    {
+        // if we are not root, we can't grow this octant as it would invalidate the rules of an octree!
+        return Rebuild(m_aabb, /* allowGrow */ false);
+    }
+}
+
+Octree::Result Octree::RebuildExtend_Internal(const BoundingBox& extendIncludeAabb)
+{
+    if (!extendIncludeAabb.IsValid())
+    {
+        return HYP_MAKE_ERROR(Error, "AABB is in invalid state");
+    }
+
+    if (!extendIncludeAabb.IsFinite())
+    {
+        return HYP_MAKE_ERROR(Error, "AABB is not finite");
+    }
+
+    // have to grow the aabb by rebuilding the octree
+    BoundingBox newAabb(m_aabb.Union(extendIncludeAabb));
+    // grow our new aabb by a predetermined growth factor,
+    // to keep it from constantly resizing
+    newAabb *= growthFactor;
+
+    return Rebuild(newAabb, /* allowGrow */ false);
+}
+
+HYP_DISABLE_OPTIMIZATION;
 Octree::Result Octree::Rebuild(const BoundingBox& newAabb, bool allowGrow)
 {
     Array<SceneOctreePayload> payloads;
@@ -185,13 +227,20 @@ Octree::Result Octree::Rebuild(const BoundingBox& newAabb, bool allowGrow)
     {
         Assert(IsRoot());
 
-        for (auto& payload : payloads)
+        for (SceneOctreePayload& payload : payloads)
         {
-            for (auto& entry : payload.entries)
+            for (SceneOctreePayload::Entry& entry : payload.entries)
             {
                 if (entry.aabb.IsValid() && entry.aabb.IsFinite())
                 {
                     m_aabb = m_aabb.Union(entry.aabb);
+                }
+                
+                if (UseEntityMap() && entry.value != nullptr)
+                {
+                    SceneOctreeState* stateCasted = static_cast<SceneOctreeState*>(m_state);
+                    
+                    stateCasted->entityToOctant.Erase(entry.value);
                 }
             }
         }
@@ -199,9 +248,9 @@ Octree::Result Octree::Rebuild(const BoundingBox& newAabb, bool allowGrow)
 
     InitOctants();
 
-    for (auto& payload : payloads)
+    for (SceneOctreePayload& payload : payloads)
     {
-        for (auto& entry : payload.entries)
+        for (SceneOctreePayload::Entry& entry : payload.entries)
         {
             Entity* entity = entry.value;
             Assert(entity != nullptr);
@@ -236,6 +285,7 @@ Octree::Result Octree::Rebuild(const BoundingBox& newAabb, bool allowGrow)
 
     return m_octantId;
 }
+HYP_ENABLE_OPTIMIZATION;
 
 void Octree::PerformUpdates()
 {
@@ -249,9 +299,513 @@ void Octree::PerformUpdates()
         return;
     }
 
-    OctreeBase::PerformUpdates();
+    Assert(m_state != nullptr);
+
+    if (m_state->NeedsRebuild())
+    {
+        Octree* octant = static_cast<Octree*>(GetChildOctant(m_state->dirtyState.octantId));
+        Assert(octant != nullptr);
+
+        const Result rebuildResult = octant->Rebuild();
+        AssertDebug(!rebuildResult.HasError(), "Failed to rebuild Octree: {}", rebuildResult.GetError().GetMessage());
+
+        if (!rebuildResult.HasError())
+        {
+            // set rebuild state back to invalid if rebuild was successful
+            m_state->dirtyState = {};
+        }
+    }
 
     RebuildEntriesHash();
+}
+
+Octree::Result Octree::Insert(Entity* entity, const BoundingBox& aabb, bool allowRebuild)
+{
+    if (m_flags[OctreeFlags::OF_INSERT_ON_OVERLAP])
+    {
+        AssertDebug(aabb.IsValid() && aabb.IsFinite() && !aabb.IsZero(), "Attempting to insert invalid AABB into Octree: {}", aabb);
+    }
+
+    if (aabb.IsValid() && aabb.IsFinite())
+    {
+        if (IsRoot())
+        {
+            if (!m_aabb.Contains(aabb) && (m_flags[OctreeFlags::OF_ALLOW_GROW_ROOT]))
+            {
+                if (allowRebuild)
+                {
+                    Result rebuildResult = RebuildExtend_Internal(aabb);
+
+                    if (rebuildResult.HasError())
+                    {
+                        return rebuildResult;
+                    }
+                }
+                else
+                {
+                    // mark octree to be rebuilt
+                    m_state->MarkOctantDirty(m_octantId, true);
+                }
+            }
+        }
+        else
+        {
+            if (!m_aabb.Overlaps(aabb))
+            {
+                return HYP_MAKE_ERROR(Error, "Entry AABB outside of octant AABB");
+            }
+        }
+
+        // stop recursing if we are at max depth
+        if (m_octantId.GetDepth() < m_maxDepth - 1)
+        {
+            bool wasInserted = false;
+
+            for (Octant& octant : m_octants)
+            {
+                if (!(m_flags[OctreeFlags::OF_INSERT_ON_OVERLAP] ? octant.aabb.Overlaps(aabb) : octant.aabb.Contains(aabb)))
+                {
+                    continue;
+                }
+
+                if (!IsDivided())
+                {
+                    if (!allowRebuild)
+                    {
+                        // do not use this octant if it has not been divided yet.
+                        // instead, we'll insert into the THIS octant, marking it as dirty,
+                        // so it will get added to the correct octant on Rebuild().
+
+                        m_state->MarkOctantDirty(m_octantId, true);
+
+                        // insert into parent for now (will be rebuilt)
+                        return Insert_Internal(entity, aabb);
+                    }
+
+                    Divide();
+                }
+
+                Assert(octant.octree != nullptr);
+
+                Result insertResult = static_cast<Octree*>(octant.octree.Get())->Insert(entity, aabb, allowRebuild);
+                wasInserted |= bool(insertResult.HasValue());
+
+                if (m_flags[OctreeFlags::OF_INSERT_ON_OVERLAP])
+                {
+                    AssertDebug(insertResult.HasValue(), "Failed to insert into overlapping octant! Message: {}", insertResult.GetError().GetMessage());
+                }
+                else
+                {
+                    // return on first call to Insert() on child octant - child fully contains the aabb
+                    return insertResult;
+                }
+            }
+
+            if (wasInserted)
+            {
+                return m_octantId;
+            }
+        }
+    }
+
+    return Insert_Internal(entity, aabb);
+}
+
+Octree::Result Octree::Insert_Internal(Entity* entity, const BoundingBox& aabb)
+{
+    if (UseEntityMap())
+    {
+        SceneOctreeState* stateCasted = static_cast<SceneOctreeState*>(m_state);
+
+        if (stateCasted->entityToOctant.Find(entity) != stateCasted->entityToOctant.End())
+        {
+            return HYP_MAKE_ERROR(Error, "Entry already exists in entry map");
+        }
+
+        stateCasted->entityToOctant[entity] = this;
+    }
+
+    m_payload.entries.Set(SceneOctreePayload::Entry { entity, aabb });
+
+    // mark dirty (not for rebuild)
+    m_state->MarkOctantDirty(m_octantId);
+
+    return m_octantId;
+}
+
+Octree::Result Octree::Remove(Entity* entity, bool allowRebuild)
+{
+    if (UseEntityMap())
+    {
+        SceneOctreeState* stateCasted = static_cast<SceneOctreeState*>(m_state);
+
+        const auto it = stateCasted->entityToOctant.Find(entity);
+
+        if (it != stateCasted->entityToOctant.End())
+        {
+            if (Octree* octant = static_cast<Octree*>(it->second))
+            {
+                return octant->Remove_Internal(entity, allowRebuild);
+            }
+        }
+    }
+
+    return Remove_Internal(entity, allowRebuild);
+}
+
+Octree::Result Octree::Remove_Internal(Entity* entity, bool allowRebuild)
+{
+    const auto it = m_payload.entries.Find(entity);
+
+    if (it == m_payload.entries.End())
+    {
+        if (m_isDivided)
+        {
+            bool wasRemoved = false;
+
+            for (Octant& octant : m_octants)
+            {
+                Assert(octant.octree != nullptr);
+
+                if (m_flags & OctreeFlags::OF_INSERT_ON_OVERLAP)
+                {
+                    wasRemoved |= bool(static_cast<Octree*>(octant.octree.Get())->Remove_Internal(entity, allowRebuild));
+                }
+                else
+                {
+                    if (Result octantResult = static_cast<Octree*>(octant.octree.Get())->Remove_Internal(entity, allowRebuild))
+                    {
+                        return octantResult;
+                    }
+                }
+            }
+
+            if (wasRemoved)
+            {
+                return m_octantId;
+            }
+        }
+
+        return HYP_MAKE_ERROR(Error, "Could not be removed from any sub octants and not found in this octant");
+    }
+
+    if (UseEntityMap())
+    {
+        SceneOctreeState* stateCasted = static_cast<SceneOctreeState*>(m_state);
+
+        auto entryToOctantIt = stateCasted->entityToOctant.Find(entity);
+
+        if (entryToOctantIt != stateCasted->entityToOctant.End())
+        {
+            stateCasted->entityToOctant.Erase(entryToOctantIt);
+        }
+    }
+
+    m_payload.entries.Erase(it);
+
+    m_state->MarkOctantDirty(m_octantId);
+
+    if (!m_isDivided && m_payload.entries.Empty())
+    {
+        Octree* lastEmptyParent = nullptr;
+
+        if (Octree* parent = static_cast<Octree*>(m_parent))
+        {
+            const Octree* child = this;
+
+            while (parent->EmptyDeep(DEPTH_SEARCH_INF, 0xff & ~(1 << child->m_octantId.GetIndex())))
+            { // do not search this branch of the tree again
+                lastEmptyParent = parent;
+
+                if (parent->m_parent == nullptr)
+                {
+                    break;
+                }
+
+                child = parent;
+                parent = static_cast<Octree*>(child->m_parent);
+            }
+        }
+
+        if (lastEmptyParent != nullptr)
+        {
+            Assert(lastEmptyParent->EmptyDeep(DEPTH_SEARCH_INF));
+
+            /* At highest empty parent octant, call Undivide() to collapse entries */
+            if (allowRebuild)
+            {
+                lastEmptyParent->Undivide();
+            }
+            else
+            {
+                m_state->MarkOctantDirty(lastEmptyParent->GetOctantID(), true);
+            }
+        }
+    }
+
+    return m_octantId;
+}
+
+Octree::Result Octree::Move(Entity* entity, const BoundingBox& aabb, bool allowRebuild, typename SceneOctreePayload::EntrySet::Iterator it)
+{
+    const BoundingBox& newAabb = aabb;
+
+    const bool isRoot = IsRoot();
+    const bool contains = ContainsAabb(aabb);
+
+    if (!contains)
+    {
+        // NO LONGER CONTAINS AABB
+
+        if (isRoot)
+        {
+            // have to rebuild, invalidating child octants.
+            // which we have a ContainsAabb() check for child entries walking upwards
+
+            if (allowRebuild)
+            {
+                return RebuildExtend_Internal(newAabb);
+            }
+            else
+            {
+                m_state->MarkOctantDirty(m_octantId, true);
+
+                // Moved outside of the root octree, but we keep it here for now.
+                // Next call of PerformUpdates(), we will extend the octree.
+                return m_octantId;
+            }
+        }
+
+        // not root
+
+        Optional<Result> parentInsertResult;
+
+        /* Contains is false at this point */
+        Octree* parent = static_cast<Octree*>(m_parent);
+        Octree* lastParent = parent;
+
+        while (parent != nullptr)
+        {
+            lastParent = parent;
+
+            if (parent->ContainsAabb(newAabb))
+            {
+                if (it != m_payload.entries.End())
+                {
+                    if (UseEntityMap())
+                    {
+                        SceneOctreeState* stateCasted = static_cast<SceneOctreeState*>(m_state);
+
+                        auto jt = stateCasted->entityToOctant.Find(entity);
+
+                        if (jt != stateCasted->entityToOctant.End())
+                        {
+                            stateCasted->entityToOctant.Erase(jt);
+                        }
+                    }
+
+                    m_payload.entries.Erase(it);
+                }
+
+                parentInsertResult = parent->Move(entity, aabb, allowRebuild, parent->m_payload.entries.End());
+
+                break;
+            }
+
+            parent = static_cast<Octree*>(parent->m_parent);
+        }
+
+        if (parentInsertResult.HasValue())
+        { // succesfully inserted, safe to call CollapseParents()
+            // Entry has now been added to it's appropriate octant which is a parent of this -
+            // collapse this up to the top
+            CollapseParents(allowRebuild);
+
+            return parentInsertResult.Get();
+        }
+
+        // not inserted because no Move() was called on parents (because they don't contain AABB),
+        // have to _manually_ call Move() which will go to the above branch for the parent octant,
+        // this invalidating `this`
+
+        Assert(lastParent != nullptr);
+
+        return lastParent->Move(entity, aabb, allowRebuild, lastParent->m_payload.entries.End());
+    }
+
+    // CONTAINS AABB HERE
+
+    if (allowRebuild)
+    {
+        bool wasMoved = false;
+
+        // Check if we can go deeper.
+        for (Octant& octant : m_octants)
+        {
+            if (m_flags[OctreeFlags::OF_INSERT_ON_OVERLAP] ? octant.aabb.Overlaps(newAabb) : octant.aabb.Contains(newAabb))
+            {
+                if (it != m_payload.entries.End())
+                {
+                    if (UseEntityMap())
+                    {
+                        SceneOctreeState* stateCasted = static_cast<SceneOctreeState*>(m_state);
+
+                        auto jt = stateCasted->entityToOctant.Find(entity);
+
+                        if (jt != stateCasted->entityToOctant.End())
+                        {
+                            stateCasted->entityToOctant.Erase(jt);
+                        }
+                    }
+
+                    m_payload.entries.Erase(it);
+                }
+
+                if (!IsDivided())
+                {
+                    if (allowRebuild && m_octantId.GetDepth() < m_maxDepth - 1)
+                    {
+                        Divide();
+                    }
+                    else
+                    {
+                        // no point checking other octants
+                        break;
+                    }
+                }
+
+                AssertDebug(octant.octree != nullptr);
+                Octree* octantCasted = static_cast<Octree*>(octant.octree.Get());
+
+                if (m_flags & OctreeFlags::OF_INSERT_ON_OVERLAP)
+                {
+                    wasMoved |= bool(octantCasted->Move(entity, aabb, allowRebuild, octantCasted->m_payload.entries.End()));
+                }
+                else
+                {
+                    return octantCasted->Move(entity, aabb, allowRebuild, octantCasted->m_payload.entries.End());
+                }
+            }
+        }
+
+        if (wasMoved)
+        {
+            return m_octantId;
+        }
+    }
+    else
+    {
+        m_state->MarkOctantDirty(m_octantId, true);
+    }
+
+    if (it != m_payload.entries.End())
+    {
+        /* Not moved out of this octant (for now) */
+        it->aabb = newAabb;
+    }
+    else
+    {
+        /* Moved into this octant */
+        m_payload.entries.Insert(SceneOctreePayload::Entry { entity, newAabb });
+
+        if (UseEntityMap())
+        {
+            static_cast<SceneOctreeState*>(m_state)->entityToOctant[entity] = this;
+        }
+    }
+
+    return m_octantId;
+}
+
+Octree::Result Octree::Update(Entity* entity, const BoundingBox& aabb, bool forceInvalidation, bool allowRebuild)
+{
+    if (UseEntityMap())
+    {
+        SceneOctreeState* stateCasted = static_cast<SceneOctreeState*>(m_state);
+
+        const auto it = stateCasted->entityToOctant.Find(entity);
+
+        if (it == stateCasted->entityToOctant.End())
+        {
+            return HYP_MAKE_ERROR(Error, "Object not found in entry map!");
+        }
+
+        if (OctreeBase* octree = it->second)
+        {
+            return static_cast<Octree*>(octree)->Update_Internal(entity, aabb, forceInvalidation, allowRebuild);
+        }
+
+        return HYP_MAKE_ERROR(Error, "Object has no octree in entry map!");
+    }
+
+    return Update_Internal(entity, aabb, forceInvalidation, allowRebuild);
+}
+
+Octree::Result Octree::Update_Internal(Entity* entity, const BoundingBox& aabb, bool forceInvalidation, bool allowRebuild)
+{
+    const auto it = m_payload.entries.Find(entity);
+
+    if (it == m_payload.entries.End())
+    {
+        if (m_isDivided)
+        {
+            bool wasUpdated = false;
+
+            for (Octant& octant : m_octants)
+            {
+                Assert(octant.octree != nullptr);
+
+                if (m_flags & OctreeFlags::OF_INSERT_ON_OVERLAP)
+                {
+                    wasUpdated |= bool(static_cast<Octree*>(octant.octree.Get())->Update_Internal(entity, aabb, forceInvalidation, allowRebuild));
+                }
+                else
+                {
+                    Result updateInternalResult = static_cast<Octree*>(octant.octree.Get())->Update_Internal(entity, aabb, forceInvalidation, allowRebuild);
+
+                    if (updateInternalResult.HasValue())
+                    {
+                        return updateInternalResult;
+                    }
+                }
+            }
+
+            if (wasUpdated)
+            {
+                return m_octantId;
+            }
+        }
+
+        return HYP_MAKE_ERROR(Error, "Could not update in any sub octants");
+    }
+
+    if (forceInvalidation)
+    {
+        // force invalidation of this entry so the octant's hash will be updated
+        Invalidate();
+    }
+
+    const BoundingBox& newAabb = aabb;
+    const BoundingBox& oldAabb = it->aabb;
+
+    if (newAabb == oldAabb)
+    {
+        if (forceInvalidation)
+        {
+            // force invalidation of this entry so the octant's hash will be updated
+            m_state->MarkOctantDirty(m_octantId);
+        }
+
+        /* AABB has not changed - no need to update */
+        return m_octantId;
+    }
+
+    /* AABB has changed to we remove it from this octree and either:
+     * If we don't contain it anymore - insert it from the highest level octree that still contains the aabb and then walking down from there
+     * If we do still contain it - we will remove it from this octree and re-insert it to find the deepest child octant
+     */
+
+    return Move(entity, newAabb, allowRebuild, it);
 }
 
 void Octree::NextVisibilityState()

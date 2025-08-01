@@ -142,15 +142,15 @@ GraphicsPipelineRef GraphicsPipelineCache::GetOrCreate(
         DeferCreate(table);
     }
 
-    Proc<void(const GraphicsPipelineRef&)> newCallback = [this, attributes](const GraphicsPipelineRef& graphicsPipeline)
+    Proc<void(GraphicsPipelineRef graphicsPipeline)> newCallback([this, attributes](GraphicsPipelineRef graphicsPipeline)
     {
         Mutex::Guard guard(m_mutex);
 
-        HYP_LOG(Rendering, Debug, "Adding graphics pipeline to cache with hash: {} (debug name: {})", attributes.GetHashCode().Value(), graphicsPipeline->GetDebugName());
+        HYP_LOG(Rendering, Debug, "Adding graphics pipeline {} (debug name: {}) to cache with hash: {}", (void*)graphicsPipeline.Get(), graphicsPipeline->GetDebugName(), attributes.GetHashCode().Value());
 
         (*m_cachedPipelines)[attributes].PushBack(graphicsPipeline);
         m_cachedPipelines->reverseMap.Set(graphicsPipeline.header->index, attributes);
-    };
+    });
 
     graphicsPipeline = g_renderBackend->MakeGraphicsPipeline(
         shader,
@@ -162,11 +162,11 @@ GraphicsPipelineRef GraphicsPipelineCache::GetOrCreate(
         : RenderCommand
     {
         GraphicsPipelineRef graphicsPipeline;
-        Proc<void(const GraphicsPipelineRef&)> callback;
+        Proc<void(GraphicsPipelineRef)> callback;
 
         RENDER_COMMAND(CreateGraphicsPipelineAndAddToCache)(
             const GraphicsPipelineRef& graphicsPipeline,
-            Proc<void(const GraphicsPipelineRef&)>&& callback)
+            Proc<void(GraphicsPipelineRef)>&& callback)
             : graphicsPipeline(graphicsPipeline),
               callback(std::move(callback))
         {

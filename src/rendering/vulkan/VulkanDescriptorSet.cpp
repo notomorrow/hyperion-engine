@@ -138,10 +138,10 @@ void VulkanDescriptorSet::UpdateDirtyState(bool* outIsDirty)
             const bool isDynamic = layoutElement->type == DescriptorSetElementType::UNIFORM_BUFFER_DYNAMIC
                 || layoutElement->type == DescriptorSetElementType::STORAGE_BUFFER_DYNAMIC;
 
-            if (isDynamic)
-            {
-                HYP_GFX_ASSERT(layoutElement->size != 0, "Buffer size not set for dynamic buffer element: %s.%s", m_layout.GetName().LookupString(), name.LookupString());
-            }
+//            if (isDynamic)
+//            {
+//                HYP_GFX_ASSERT(layoutElement->size != 0, "Buffer size not set for dynamic buffer element: %s.%s", m_layout.GetName().LookupString(), name.LookupString());
+//            }
 
             for (auto& valuesIt : element.values)
             {

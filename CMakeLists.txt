@@ -615,7 +615,7 @@ if(HYP_BUILD_CSHARP_LIBRARIES)
     message(STATUS "Building C# libraries")
 
     file(GLOB_RECURSE CSHARP_CORE_SOURCES "src/dotnet/core/**.cs")
-    file(GLOB_RECURSE CSHARP_RUNTIME_SOURCES "src/dotnet/runtime/**.cs")
+    file(GLOB_RECURSE CSHARP_RUNTIME_SOURCES "src/dotnet/runtime/**.cs" "${HYP_GENERATED_DIR}/csharp/**.cs")
     file(GLOB_RECURSE CSHARP_INTEROP_SOURCES "src/dotnet/interop/**.cs")
     file(GLOB_RECURSE CSHARP_SCRIPTING_SOURCES "src/dotnet/scripting/**.cs")
 

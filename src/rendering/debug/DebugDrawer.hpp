@@ -285,7 +285,8 @@ private:
 
     FixedArray<GpuBufferRef, g_framesInFlight> m_instanceBuffers;
     
-    Array<ImmediateDrawShaderData> m_cachedShaderData;
+    using CachedPartitionedShaderData = HashMap<IDebugDrawShape*, Array<ImmediateDrawShaderData, DynamicAllocator>, HashTable_DynamicNodeAllocator<KeyValuePair<IDebugDrawShape*, Array<ImmediateDrawShaderData, DynamicAllocator>>>>;
+    CachedPartitionedShaderData m_cachedPartitionedShaderData;
 };
 
 } // namespace hyperion

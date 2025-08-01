@@ -23,8 +23,6 @@
 
 namespace hyperion {
 
-static constexpr int maxBouncesCpu = 4;
-
 namespace threading {
 class TaskBatch;
 } // namespace threading
@@ -45,6 +43,7 @@ enum class LightmapTraceMode : int
 {
     GPU_PATH_TRACING = 0,
     CPU_PATH_TRACING,
+    ENV_GRID,
 
     MAX
 };
@@ -155,6 +154,7 @@ public:
     virtual LightmapShadingType GetShadingType() const = 0;
 
     virtual void Create() = 0;
+    virtual void PrepareJob(LightmapJob* job) { };
     virtual void UpdateRays(Span<const LightmapRay> rays) = 0;
     virtual void ReadHitsBuffer(FrameBase* frame, Span<LightmapHit> outHits) = 0;
     virtual void Render(FrameBase* frame, const RenderSetup& renderSetup, LightmapJob* job, Span<const LightmapRay> rays, uint32 rayOffset) = 0;
@@ -170,8 +170,6 @@ struct LightmapJobParams
     Span<LightmapSubElement> subElementsView;
     HashMap<Handle<Entity>, LightmapSubElement*>* subElementsByEntity;
 
-    LightmapTopLevelAccelerationStructure* accelerationStructure;
-
     Array<ILightmapRenderer*> renderers;
 };
 
@@ -183,7 +181,7 @@ public:
     LightmapJob& operator=(const LightmapJob& other) = delete;
     LightmapJob(LightmapJob&& other) noexcept = delete;
     LightmapJob& operator=(LightmapJob&& other) noexcept = delete;
-    ~LightmapJob();
+    virtual ~LightmapJob();
 
     HYP_FORCE_INLINE const LightmapJobParams& GetParams() const
     {
@@ -212,11 +210,13 @@ public:
 
     HYP_FORCE_INLINE LightmapUVMap& GetUVMap()
     {
+        Assert(m_uvMap.HasValue());
         return *m_uvMap;
     }
 
     HYP_FORCE_INLINE const LightmapUVMap& GetUVMap() const
     {
+        Assert(m_uvMap.HasValue());
         return *m_uvMap;
     }
 
@@ -287,7 +287,7 @@ public:
     // Number of GPU path tracing tasks running, used to not overwhelm the gpu while rendering the frame
     AtomicVar<uint32> numConcurrentRenderingTasks;
 
-private:
+protected:
     HYP_FORCE_INLINE bool HasRemainingTexels() const
     {
         return m_texelIndex < m_texelIndices.Size() * m_params.config->numSamples;
@@ -337,76 +337,30 @@ private:
 
 class HYP_API Lightmapper
 {
-    struct CachedResource
-    {
-        Handle<AssetObject> assetObject;
-        ResourceHandle resourceHandle;
-
-        CachedResource() = default;
-
-        CachedResource(const Handle<AssetObject>& assetObject, const ResourceHandle& resourceHandle)
-            : assetObject(assetObject),
-              resourceHandle(resourceHandle)
-        {
-        }
-
-        CachedResource(const CachedResource& other) = delete;
-        CachedResource& operator=(const CachedResource& other) = delete;
-
-        CachedResource(CachedResource&& other) noexcept
-            : assetObject(std::move(other.assetObject)),
-              resourceHandle(std::move(other.resourceHandle))
-        {
-            other.resourceHandle.Reset();
-        }
-
-        CachedResource& operator=(CachedResource&& other) noexcept
-        {
-            if (this == &other)
-            {
-                return *this;
-            }
-
-            resourceHandle.Reset();
-
-            assetObject = std::move(other.assetObject);
-            resourceHandle = std::move(other.resourceHandle);
-
-            return *this;
-        }
-
-        ~CachedResource()
-        {
-            // destruct the ResourceHandle before assetobject is destructed,
-            // so it destructing the AssetObject doesn't try to wait for the resource's ref count to reach zero
-            resourceHandle.Reset();
-        }
-    };
-
-    using ResourceCache = HashSet<CachedResource, &CachedResource::assetObject, HashTable_DynamicNodeAllocator<CachedResource>>;
-
 public:
     Lightmapper(LightmapperConfig&& config, const Handle<Scene>& scene, const BoundingBox& aabb);
     Lightmapper(const Lightmapper& other) = delete;
     Lightmapper& operator=(const Lightmapper& other) = delete;
     Lightmapper(Lightmapper&& other) noexcept = delete;
     Lightmapper& operator=(Lightmapper&& other) noexcept = delete;
-    ~Lightmapper();
+    virtual ~Lightmapper();
 
     bool IsComplete() const;
 
-    void PerformLightmapping();
+    void Initialize();
+    void Build();
     void Update(float delta);
 
     Delegate<void> OnComplete;
 
-private:
-    void BuildResourceCache();
-
-    LightmapJobParams CreateLightmapJobParams(
-        SizeType startIndex,
-        SizeType endIndex,
-        LightmapTopLevelAccelerationStructure* accelerationStructure);
+protected:
+    virtual void Initialize_Internal() { }
+    virtual void Build_Internal() { }
+    
+    virtual UniquePtr<LightmapJob> CreateJob(LightmapJobParams&& params) = 0;
+    virtual UniquePtr<ILightmapRenderer> CreateRenderer(LightmapShadingType shadingType) = 0;
+    
+    LightmapJobParams CreateLightmapJobParams(SizeType startIndex, SizeType endIndex);
 
     void AddJob(UniquePtr<LightmapJob>&& job)
     {
@@ -428,16 +382,12 @@ private:
 
     Array<UniquePtr<ILightmapRenderer>> m_lightmapRenderers;
 
-    UniquePtr<LightmapTopLevelAccelerationStructure> m_accelerationStructure;
-
     Queue<UniquePtr<LightmapJob>> m_queue;
     Mutex m_queueMutex;
     AtomicVar<uint32> m_numJobs;
 
     Array<LightmapSubElement> m_subElements;
     HashMap<Handle<Entity>, LightmapSubElement*> m_subElementsByEntity;
-
-    ResourceCache m_resourceCache;
 };
 
 } // namespace hyperion

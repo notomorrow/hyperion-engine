@@ -40,16 +40,16 @@ void RenderQueue::Prepare(FrameBase* frame)
     }
 }
 
-void RenderQueue::Execute(const CommandBufferRef& cmd)
+void RenderQueue::Execute(CommandBufferBase* commandBuffer)
 {
-    Assert(cmd != nullptr);
+    AssertDebug(commandBuffer != nullptr);
 
     for (CmdHeader& cmdHeader : m_cmdHeaders)
     {
-        CmdBase* cmdDataPtr = reinterpret_cast<CmdBase*>(m_buffer.Data() + cmdHeader.dataOffset);
         AssertDebug(cmdHeader.dataOffset < m_buffer.Size());
+        CmdBase* cmdDataPtr = reinterpret_cast<CmdBase*>(m_buffer.Data() + cmdHeader.dataOffset);
 
-        cmdHeader.invokeFnPtr(cmdDataPtr, cmd);
+        cmdHeader.invokeFnPtr(cmdDataPtr, commandBuffer);
     }
 
     m_cmdHeaders.Clear();
@@ -97,11 +97,11 @@ void BindDescriptorTable::PrepareStatic(CmdBase* cmd, FrameBase* frame)
 #ifdef HYP_DEBUG_MODE
 static FramebufferBase* g_activeFramebuffer = nullptr;
 
-BeginFramebuffer::BeginFramebuffer(const FramebufferRef& framebuffer)
+BeginFramebuffer::BeginFramebuffer(FramebufferBase* framebuffer)
     : m_framebuffer(framebuffer)
 {
     Assert(!g_activeFramebuffer, "Cannot begin framebuffer: already in a framebuffer");
-    g_activeFramebuffer = framebuffer.Get();
+    g_activeFramebuffer = framebuffer;
 }
 
 void BeginFramebuffer::PrepareStatic(CmdBase* cmd, FrameBase* frame)
@@ -115,11 +115,11 @@ void BeginFramebuffer::PrepareStatic(CmdBase* cmd, FrameBase* frame)
 
 #ifdef HYP_DEBUG_MODE
 
-EndFramebuffer::EndFramebuffer(const FramebufferRef& framebuffer)
+EndFramebuffer::EndFramebuffer(FramebufferBase* framebuffer)
     : m_framebuffer(framebuffer)
 {
     Assert(g_activeFramebuffer, "Cannot end framebuffer: not in a framebuffer");
-    Assert(g_activeFramebuffer == framebuffer.Get(), "Cannot end framebuffer: mismatched framebuffer");
+    Assert(g_activeFramebuffer == framebuffer, "Cannot end framebuffer: mismatched framebuffer");
     g_activeFramebuffer = nullptr;
 }
 
@@ -134,7 +134,7 @@ void EndFramebuffer::PrepareStatic(CmdBase* cmd, FrameBase* frame)
 
 #ifdef HYP_DEBUG_MODE
 
-BindGraphicsPipeline::BindGraphicsPipeline(const GraphicsPipelineRef& pipeline, Vec2i viewportOffset, Vec2u viewportExtent)
+BindGraphicsPipeline::BindGraphicsPipeline(GraphicsPipelineBase* pipeline, Vec2i viewportOffset, Vec2u viewportExtent)
     : m_pipeline(pipeline),
       m_viewportOffset(viewportOffset),
       m_viewportExtent(viewportExtent)
@@ -142,7 +142,7 @@ BindGraphicsPipeline::BindGraphicsPipeline(const GraphicsPipelineRef& pipeline, 
     Assert(g_activeFramebuffer != nullptr, "Cannot bind graphics pipeline: not in a framebuffer");
 }
 
-BindGraphicsPipeline::BindGraphicsPipeline(const GraphicsPipelineRef& pipeline)
+BindGraphicsPipeline::BindGraphicsPipeline(GraphicsPipelineBase* pipeline)
     : m_pipeline(pipeline)
 {
     Assert(g_activeFramebuffer != nullptr, "Cannot bind graphics pipeline: not in a framebuffer");

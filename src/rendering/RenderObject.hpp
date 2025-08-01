@@ -68,8 +68,8 @@ struct RenderObjectHeaderBase
 {
     RenderObjectContainerBase* container;
     uint32 index;
-    AtomicVar<uint16> refCountStrong;
-    AtomicVar<uint16> refCountWeak;
+    AtomicVar<uint32> refCountStrong;
+    AtomicVar<uint32> refCountWeak;
     void (*deleter)(RenderObjectHeaderBase*);
 
 #ifdef HYP_DEBUG_MODE
@@ -97,19 +97,27 @@ struct RenderObjectHeaderBase
         return index != ~0u;
     }
 
-    HYP_FORCE_INLINE uint16 GetRefCountStrong() const
+    HYP_FORCE_INLINE uint32 GetRefCountStrong() const
     {
         return refCountStrong.Get(MemoryOrder::ACQUIRE);
     }
 
-    HYP_FORCE_INLINE uint16 GetRefCountWeak() const
+    HYP_FORCE_INLINE uint32 GetRefCountWeak() const
     {
         return refCountWeak.Get(MemoryOrder::ACQUIRE);
     }
 
     HYP_FORCE_INLINE void IncRefStrong()
     {
+#ifdef HYP_DEBUG_MODE
+        uint32 count = refCountStrong.Increment(1, MemoryOrder::ACQUIRE_RELEASE);
+        if (count == UINT32_MAX)
+        {
+            HYP_FAIL("Ref count overflow!");
+        }
+#else
         refCountStrong.Increment(1, MemoryOrder::RELEASE);
+#endif
     }
 
     uint32 DecRefStrong()
@@ -139,7 +147,15 @@ struct RenderObjectHeaderBase
 
     HYP_FORCE_INLINE void IncRefWeak()
     {
+#ifdef HYP_DEBUG_MODE
+        uint32 count = refCountWeak.Increment(1, MemoryOrder::ACQUIRE_RELEASE);
+        if (count == UINT32_MAX)
+        {
+            HYP_FAIL("Ref count overflow!");
+        }
+#else
         refCountWeak.Increment(1, MemoryOrder::RELEASE);
+#endif
     }
 
     uint32 DecRefWeak()
@@ -439,7 +455,7 @@ public:
         return header != nullptr && ptr != nullptr;
     }
 
-    HYP_FORCE_INLINE uint16 GetRefCount() const
+    HYP_FORCE_INLINE uint32 GetRefCount() const
     {
         return header ? header->GetRefCountStrong() : 0;
     }

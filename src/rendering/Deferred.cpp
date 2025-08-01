@@ -7,8 +7,8 @@
 #include <rendering/RenderGroup.hpp>
 #include <rendering/GBuffer.hpp>
 #include <rendering/DepthPyramidRenderer.hpp>
-#include <rendering/EnvGridRenderer.hpp>
-#include <rendering/EnvProbeRenderer.hpp>
+#include <rendering/env_grid/EnvGridRenderer.hpp>
+#include <rendering/env_probe/EnvProbeRenderer.hpp>
 #include <rendering/RenderMaterial.hpp>
 #include <rendering/RenderGlobalState.hpp>
 #include <rendering/SafeDeleter.hpp>
@@ -1117,7 +1117,7 @@ void DeferredRenderer::CreateViewFinalPassDescriptorSet(View* view, DeferredPass
     DeferCreate(descriptorSet);
 
     SafeRelease(std::move(passData.finalPassDescriptorSet));
-    
+
     passData.finalPassDescriptorSet = std::move(descriptorSet);
 }
 

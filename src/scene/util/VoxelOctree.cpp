@@ -167,12 +167,12 @@ VoxelOctreeBuildResult VoxelOctree::Build(const VoxelOctreeParams& params, Entit
         element.material = meshComponent.material;
         element.transform = transformComponent.transform;
         element.aabb = boundingBoxComponent.worldAabb;
-        
+
         if (!meshComponent.mesh->GetAsset())
         {
             continue;
         }
-        
+
         ResourceHandle resourceHandle(*meshComponent.mesh->GetAsset()->GetResource());
         meshDatas.EmplaceBack(element, meshComponent.mesh->GetAsset()->GetMeshData(), resourceHandle);
     }
@@ -181,19 +181,17 @@ VoxelOctreeBuildResult VoxelOctree::Build(const VoxelOctreeParams& params, Entit
     {
         return HYP_MAKE_ERROR(Error, "Invalid AABB, cannot build voxel octree");
     }
-    
+
     Vec3f extent = newAabb.GetExtent();
-    
+
     const Vec3f center = newAabb.GetCenter();
     float maxExtent = extent.Max();
-    
+
     newAabb.SetExtent(Vec3f(maxExtent));
     newAabb.SetCenter(center);
-    
-    if (OctreeBase::Result rebuildResult = OctreeBase::Rebuild(newAabb, true); rebuildResult.HasError())
-    {
-        return VoxelOctreeBuildResult(rebuildResult.GetError());
-    }
+
+    m_aabb = newAabb;
+    InitOctants();
 
     Proc<bool(const VoxelOctreeElement&, const MeshData&)> insertIntoOctree;
 
@@ -204,23 +202,23 @@ VoxelOctreeBuildResult VoxelOctree::Build(const VoxelOctreeParams& params, Entit
             Span<const uint32> meshIndices = Span<const uint32>(
                 reinterpret_cast<const uint32*>(meshData.indexData.Data()),
                 reinterpret_cast<const uint32*>(meshData.indexData.Data()) + (meshData.indexData.Size() / sizeof(uint32)));
-            
+
             Assert(meshIndices.Size() % 3 == 0);
-            
+
             for (SizeType i = 0; i < meshIndices.Size(); i += 3)
             {
                 Triangle triangle {
-                    Vertex(element.transform.GetMatrix() * meshData.vertexData[meshIndices[i]].position),
+                    Vertex(element.transform.GetMatrix() * meshData.vertexData[meshIndices[i + 0]].position),
                     Vertex(element.transform.GetMatrix() * meshData.vertexData[meshIndices[i + 1]].position),
                     Vertex(element.transform.GetMatrix() * meshData.vertexData[meshIndices[i + 2]].position)
                 };
-                
+
                 BoundingBox triangleAabb = triangle.GetBoundingBox().Expand(0.002f);
-                
-                (void)OctreeBase::Insert(VoxelOctreeNode { element.entity.Id(), element.mesh.Id(), triangle }, triangleAabb, true);
+
+                (void)OctreeBase::Insert(VoxelOctreePayload { .occupiedBit = 1 }, triangleAabb);
             }
         }
-        
+
         return true;
     };
 
@@ -228,7 +226,7 @@ VoxelOctreeBuildResult VoxelOctree::Build(const VoxelOctreeParams& params, Entit
     {
         const VoxelOctreeElement& element = tup.GetElement<0>();
         const MeshData* meshData = tup.GetElement<1>();
-        
+
         Assert(meshData != nullptr);
 
         insertIntoOctree(element, *meshData);

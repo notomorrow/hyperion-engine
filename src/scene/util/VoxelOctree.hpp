@@ -10,7 +10,7 @@
 
 #include <core/utilities/Result.hpp>
 
-//#include <core/logging/LoggerFwd.hpp>
+// #include <core/logging/LoggerFwd.hpp>
 
 #include <util/octree/Octree.hpp>
 
@@ -82,7 +82,17 @@ struct VoxelOctreeNode
 
 using VoxelOctreeBuildResult = Result;
 
-class HYP_API VoxelOctree : public OctreeBase<VoxelOctree, VoxelOctreeNode>
+struct VoxelOctreePayload
+{
+    uint8 occupiedBit : 1 = 0;
+
+    HYP_FORCE_INLINE bool Empty() const
+    {
+        return occupiedBit == 0;
+    }
+};
+
+class HYP_API VoxelOctree : public OctreeBase<VoxelOctree, VoxelOctreePayload>
 {
     static constexpr uint8 g_voxelOctreeMaxDepth = 8;
     static constexpr EnumFlags<OctreeFlags> g_voxelOctreeFlags = OctreeFlags::OF_INSERT_ON_OVERLAP;

@@ -120,9 +120,21 @@ struct SceneOctreePayload
     }
 };
 
+struct SceneOctreeState : public OctreeState<Octree, SceneOctreePayload>
+{
+    HashMap<Entity*, Octree*> entityToOctant;
+
+    virtual ~SceneOctreeState() override = default;
+};
+
 class HYP_API Octree final : public OctreeBase<Octree, SceneOctreePayload>
 {
 public:
+    static OctreeState<Octree, SceneOctreePayload>* CreateOctreeState()
+    {
+        return new SceneOctreeState();
+    }
+    
     Octree(const Handle<EntityManager>& entityManager);
     Octree(const Handle<EntityManager>& entityManager, const BoundingBox& aabb);
     Octree(const Handle<EntityManager>& entityManager, const BoundingBox& aabb, Octree* parent, uint8 index);
@@ -190,12 +202,31 @@ public:
     void Collect(const BoundingSphere& bounds, Array<Entity*>& outEntities) const;
     void Collect(const BoundingBox& bounds, Array<Entity*>& outEntities) const;
 
+    Result Insert(Entity* entity, const BoundingBox& aabb, bool allowRebuild = false);
+    Result Remove(Entity* entity, bool allowRebuild = false);
+
     virtual void Clear() override;
-    virtual Result Rebuild(const BoundingBox& newAabb, bool allowGrow) override;
-    virtual void PerformUpdates() override;
+
+    Result Rebuild();
+    Result Rebuild(const BoundingBox& newAabb, bool allowGrow);
+
+    void PerformUpdates();
+
+    /*! \brief Update a given entity's bounds and assigned octant in the octree.
+     * \param entity The Entity to update in the octree
+     * \param aabb The new AABB of the entry
+     * \param allowRebuild If true, the octree will be rebuilt if the entry doesn't fit in the new octant. Otherwise, the octree will be marked as dirty and rebuilt on the next call to PerformUpdates()
+     * \param forceInvalidation If true, the entry will have its invalidation marker incremented, causing the octant's hash to be updated
+     */
+    Result Update(Entity* entity, const BoundingBox& aabb, bool forceInvalidation = false, bool allowRebuild = false);
 
 private:
     static constexpr uint32 numEntryHashes = uint32(EntityTag::SAVABLE_MAX);
+
+    HYP_FORCE_INLINE bool UseEntityMap() const
+    {
+        return m_state != nullptr && !(m_flags & OctreeFlags::OF_INSERT_ON_OVERLAP);
+    }
 
     virtual UniquePtr<Octree> CreateChildOctant(const BoundingBox& aabb, Octree* parent, uint8 index) override
     {
@@ -206,6 +237,19 @@ private:
     void RebuildEntriesHash(uint32 level = 0);
 
     void UpdateVisibilityState(const Handle<Camera>& camera, uint16 validityMarker);
+
+    /*! \brief Move the entity to a new octant. If allowRebuild is true, the octree will be rebuilt if the entry doesn't fit in the new octant,
+        and subdivided octants will be collapsed if they are empty + new octants will be created if they are needed.
+     */
+    Result Move(Entity* entity, const BoundingBox& aabb, bool allowRebuild, typename SceneOctreePayload::EntrySet::Iterator it);
+
+    Result Insert_Internal(Entity* entity, const BoundingBox& aabb);
+
+    Result Remove_Internal(Entity* entity, bool allowRebuild);
+
+    Result Update_Internal(Entity* entity, const BoundingBox& aabb, bool forceInvalidation, bool allowRebuild);
+
+    Result RebuildExtend_Internal(const BoundingBox& extendIncludeAabb);
 
     Handle<EntityManager> m_entityManager;
 

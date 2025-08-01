@@ -17,8 +17,8 @@
 #include <rendering/RenderShader.hpp>
 #include <rendering/RenderImage.hpp>
 #include <rendering/RenderBackend.hpp>
-#include <rendering/EnvProbeRenderer.hpp>
-#include <rendering/EnvGridRenderer.hpp>
+#include <rendering/env_probe/EnvProbeRenderer.hpp>
+#include <rendering/env_grid/EnvGridRenderer.hpp>
 
 #include <rendering/shadows/ShadowMapAllocator.hpp>
 #include <rendering/shadows/ShadowRenderer.hpp>
@@ -596,7 +596,7 @@ static ViewData* GetViewData(View* view)
 HYP_API void RenderApi_Init()
 {
     Threads::AssertOnThread(g_mainThread);
-    
+
     g_threadFrameIndex = &g_frameIndex[CONSUMER];
     g_threadFrameCounter = &g_frameCounter[CONSUMER];
 
@@ -1369,7 +1369,7 @@ RenderGlobalState::~RenderGlobalState()
 
     shadowMapAllocator->Destroy();
     placeholderData->Destroy();
-    
+
     globalDescriptorTable.Reset();
 
     for (uint32 i = 0; i < GRT_MAX; i++)
