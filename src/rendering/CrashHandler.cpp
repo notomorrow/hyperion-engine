@@ -265,11 +265,6 @@ void CrashHandler::HandleGPUCrash(RendererResult result)
                   String::Join(g_savedDumpFilesPerThread, '\n', [](const Array<FilePath>* item) { return item ? String::Join(*item, '\n') : String(); }))
             : "\nCrash dump state is unknown.");
 
-    SystemMessageBox(MessageBoxType::CRITICAL)
-        .Title("GPU Crash Detected!")
-        .Text(message)
-        .Show();
-
     HYP_LOG(Rendering, Fatal, "GPU Crash Detected!\n{}", message);
 }
 

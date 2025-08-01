@@ -53,8 +53,6 @@
 #include <system/AppContext.hpp>
 #include <system/App.hpp>
 
-#include <streaming/StreamingThread.hpp>
-
 #include <scripting/ScriptingService.hpp>
 
 #include <EngineGlobals.hpp>
@@ -250,10 +248,6 @@ HYP_API void Engine::Init()
     SetGlobalNetRequestThread(netRequestThread);
     netRequestThread->Start();
 
-    RC<StreamingThread> streamingThread = MakeRefCountedPtr<StreamingThread>();
-    SetGlobalStreamingThread(streamingThread);
-    streamingThread->Start();
-
     // g_streamingManager->Start();
 
     // must start after net request thread
@@ -335,23 +329,6 @@ void Engine::FinalizeStop()
 
     // must stop before net request thread
     StopProfilerConnectionThread();
-
-    // g_streamingManager->Stop();
-
-    if (RC<StreamingThread> streamingThread = GetGlobalStreamingThread())
-    {
-        if (streamingThread->IsRunning())
-        {
-            streamingThread->Stop();
-        }
-
-        if (streamingThread->CanJoin())
-        {
-            streamingThread->Join();
-        }
-
-        SetGlobalStreamingThread(nullptr);
-    }
 
     if (RC<NetRequestThread> netRequestThread = GetGlobalNetRequestThread())
     {

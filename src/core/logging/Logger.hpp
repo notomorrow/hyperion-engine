@@ -168,6 +168,8 @@ public:
 
     virtual void Write(const LogChannel& channel, const LogMessage& message) = 0;
     virtual void WriteError(const LogChannel& channel, const LogMessage& message) = 0;
+
+    virtual void Flush() = 0;
 };
 
 class LoggerImpl;
@@ -205,6 +207,9 @@ public:
     void SetChannelEnabled(const LogChannel& channel, bool enabled);
 
     void Log(const LogChannel& channel, const LogMessage& message);
+    void LogFatal(const LogChannel& channel, const LogMessage& message);
+
+    void (*fatalErrorHook)(const char*);
 
 private:
     Pimpl<LoggerImpl> m_pImpl;
@@ -217,7 +222,7 @@ struct LogOnceHelper
     {
         static volatile int64 timesExecutedCounter = 0;
 
-        int64 count = AtomicIncrement(&timesExecutedCounter);
+        int64 count = AtomicIncrement(&timesExecutedCounter) - 1;
 
         if (count == 0)
         {
@@ -247,17 +252,30 @@ inline void LogStatic(Logger& logger, Args&&... args)
     {
         if constexpr (Memory::AreStaticStringsEqual(colorCode, ""))
         {
-            logger.Log(channel, LogMessage { Category.GetLevel(), Time::Now().ToMilliseconds(), Span<StringView<StringType::UTF8>> { { prefix, utilities::Format<FormatString>(std::forward<Args>(args)...) } } });
+            if constexpr (Category.GetFlags() & LogCategory::LCF_FATAL)
+            {
+                logger.LogFatal(channel, LogMessage { Category.GetLevel(), Time::Now().ToMilliseconds(), Span<StringView<StringType::UTF8>> { { prefix, utilities::Format<FormatString>(std::forward<Args>(args)...) } } });
+
+                HYP_UNREACHABLE();
+            }
+            else
+            {
+                logger.Log(channel, LogMessage { Category.GetLevel(), Time::Now().ToMilliseconds(), Span<StringView<StringType::UTF8>> { { prefix, utilities::Format<FormatString>(std::forward<Args>(args)...) } } });
+            }
         }
         else
         {
-            logger.Log(channel, LogMessage { Category.GetLevel(), Time::Now().ToMilliseconds(), Span<StringView<StringType::UTF8>> { { prefix, utilities::Format<FormatString>(std::forward<Args>(args)...), "\33[0m" } } });
-        }
-    }
+            if constexpr (Category.GetFlags() & LogCategory::LCF_FATAL)
+            {
+                logger.LogFatal(channel, LogMessage { Category.GetLevel(), Time::Now().ToMilliseconds(), Span<StringView<StringType::UTF8>> { { prefix, utilities::Format<FormatString>(std::forward<Args>(args)...), "\33[0m" } } });
 
-    if constexpr (Category.GetFlags() & LogCategory::LCF_FATAL)
-    {
-        HYP_FAIL("Fatal error logged! Crashing the engine...");
+                HYP_UNREACHABLE();
+            }
+            else
+            {
+                logger.Log(channel, LogMessage { Category.GetLevel(), Time::Now().ToMilliseconds(), Span<StringView<StringType::UTF8>> { { prefix, utilities::Format<FormatString>(std::forward<Args>(args)...), "\33[0m" } } });
+            }
+        }
     }
 }
 
@@ -275,12 +293,16 @@ inline void LogStatic_Channel(Logger& logger, const LogChannel& channel, Args&&.
 
     if (logger.IsChannelEnabled(channel))
     {
-        logger.Log(channel, LogMessage { Category.GetLevel(), Time::Now().ToMilliseconds(), Span<StringView<StringType::UTF8>> { { prefix, utilities::Format<FormatString>(std::forward<Args>(args)...), "\33[0m" } } });
-    }
+        if constexpr (Category.GetFlags() & LogCategory::LCF_FATAL)
+        {
+            logger.LogFatal(channel, LogMessage { Category.GetLevel(), Time::Now().ToMilliseconds(), Span<StringView<StringType::UTF8>> { { prefix, utilities::Format<FormatString>(std::forward<Args>(args)...), "\33[0m" } } });
 
-    if constexpr (Category.GetFlags() & LogCategory::LCF_FATAL)
-    {
-        HYP_THROW("Fatal error logged! Crashing the engine...");
+            HYP_UNREACHABLE();
+        }
+        else
+        {
+            logger.Log(channel, LogMessage { Category.GetLevel(), Time::Now().ToMilliseconds(), Span<StringView<StringType::UTF8>> { { prefix, utilities::Format<FormatString>(std::forward<Args>(args)...), "\33[0m" } } });
+        }
     }
 }
 
@@ -301,17 +323,30 @@ inline void LogDynamic(Logger& logger, const char* str)
     {
         if constexpr (Memory::AreStaticStringsEqual(colorCode, ""))
         {
-            logger.Log(channel, LogMessage { Category.GetLevel(), Time::Now().ToMilliseconds(), Span<StringView<StringType::UTF8>> { { prefix, str } } });
+            if constexpr (Category.GetFlags() & LogCategory::LCF_FATAL)
+            {
+                logger.LogFatal(channel, LogMessage { Category.GetLevel(), Time::Now().ToMilliseconds(), Span<StringView<StringType::UTF8>> { { prefix, str } } });
+
+                HYP_UNREACHABLE();
+            }
+            else
+            {
+                logger.Log(channel, LogMessage { Category.GetLevel(), Time::Now().ToMilliseconds(), Span<StringView<StringType::UTF8>> { { prefix, str } } });
+            }
         }
         else
         {
-            logger.Log(channel, LogMessage { Category.GetLevel(), Time::Now().ToMilliseconds(), Span<StringView<StringType::UTF8>> { { prefix, str, "\33[0m" } } });
-        }
-    }
+            if constexpr (Category.GetFlags() & LogCategory::LCF_FATAL)
+            {
+                logger.LogFatal(channel, LogMessage { Category.GetLevel(), Time::Now().ToMilliseconds(), Span<StringView<StringType::UTF8>> { { prefix, str, "\33[0m" } } });
 
-    if constexpr (Category.GetFlags() & LogCategory::LCF_FATAL)
-    {
-        HYP_FAIL("Fatal error logged! Crashing the engine...");
+                HYP_UNREACHABLE();
+            }
+            else
+            {
+                logger.Log(channel, LogMessage { Category.GetLevel(), Time::Now().ToMilliseconds(), Span<StringView<StringType::UTF8>> { { prefix, str, "\33[0m" } } });
+            }
+        }
     }
 }
 

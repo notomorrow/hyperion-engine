@@ -58,6 +58,16 @@ ShaderCompiler* g_shaderCompiler = nullptr;
 
 static CommandLineArguments g_commandLineArguments;
 
+static void HandleFatalError(const char* message)
+{
+    SystemMessageBox(MessageBoxType::CRITICAL)
+        .Title("Fatal error logged!")
+        .Text(message)
+        .Show();
+
+    std::terminate();
+}
+
 static bool InitializeCommandLineArguments(int argc, char** argv)
 {
     CommandLineParser argParse { &DefaultCommandLineArgumentDefinitions() };
@@ -134,6 +144,8 @@ HYP_API const FilePath& GetResourceDirectory()
 
 HYP_API bool InitializeEngine(int argc, char** argv)
 {
+    Logger::GetInstance().fatalErrorHook = &HandleFatalError;
+
     Threads::SetCurrentThreadId(g_mainThread);
 
     InitializeNameRegistry();

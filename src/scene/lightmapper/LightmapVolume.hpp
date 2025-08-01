@@ -120,9 +120,17 @@ public:
         return m_aabb;
     }
 
-    HYP_FORCE_INLINE const HashMap<LightmapTextureType, Handle<Texture>>& GetAtlasTextures() const
+    HYP_FORCE_INLINE const FixedArray<Handle<Texture>, LTT_MAX>& GetAtlasTextures() const
     {
         return m_atlasTextures;
+    }
+
+    HYP_METHOD()
+    HYP_FORCE_INLINE const Handle<Texture>& GetAtlasTexture(LightmapTextureType type) const
+    {
+        AssertDebug(type < LTT_MAX, "Invalid LightmapTextureType!");
+
+        return m_atlasTextures[type];
     }
 
     HYP_FORCE_INLINE const LightmapVolumeAtlas& GetAtlas() const
@@ -150,7 +158,7 @@ private:
     BoundingBox m_aabb;
 
     HYP_FIELD(Serialize = true)
-    HashMap<LightmapTextureType, Handle<Texture>> m_atlasTextures;
+    FixedArray<Handle<Texture>, LTT_MAX> m_atlasTextures;
 
     HYP_FIELD(Serialize = true)
     LightmapVolumeAtlas m_atlas;

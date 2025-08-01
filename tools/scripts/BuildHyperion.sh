@@ -13,7 +13,7 @@ for arg in "$@"; do
     elif [[ "$arg" == "--ios-simulator" ]]; then
         IOS=1
         IOS_SIMULATOR=1
-    elif [[ "$arg" == "--darwin" ]]; then
+    elif [[ "$arg" == "--xcode" ]]; then
         DARWIN=1
     fi
 done

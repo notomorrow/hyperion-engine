@@ -719,6 +719,32 @@ bool HypClass::IsDerivedFrom(const HypClass* other) const
     return false;
 }
 
+bool HypClass::GetManagedObject(const void* objectPtr, dotnet::ObjectReference& outObjectReference) const
+{
+    if (!UseHandles())
+    {
+        return false;
+    }
+
+    const HypObjectBase* target = reinterpret_cast<const HypObjectBase*>(objectPtr);
+
+    if (!target)
+    {
+        return false;
+    }
+
+    if (!target->GetManagedObjectResource())
+    {
+        return false;
+    }
+
+    TResourceHandle<ManagedObjectResource> resourceHandle(*target->GetManagedObjectResource());
+
+    outObjectReference = resourceHandle->GetManagedObject()->GetObjectReference();
+    
+    return true;
+}
+
 #pragma endregion HypClass
 
 } // namespace hyperion

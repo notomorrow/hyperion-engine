@@ -74,21 +74,15 @@ class HYP_API ResourceBase : public IResource
 protected:
     using RefCounter = Semaphore<int32, SemaphoreDirection::WAIT_FOR_ZERO_OR_NEGATIVE, threading::AtomicSemaphoreImpl<int32, SemaphoreDirection::WAIT_FOR_ZERO_OR_NEGATIVE>>;
     using InitState = Semaphore<int32, SemaphoreDirection::WAIT_FOR_ZERO_OR_NEGATIVE, threading::ConditionVarSemaphoreImpl<int32, SemaphoreDirection::WAIT_FOR_ZERO_OR_NEGATIVE>>;
+    
+    ResourceBase();
+    ~ResourceBase();
 
 public:
-    ResourceBase();
-
     ResourceBase(const ResourceBase& other) = delete;
     ResourceBase& operator=(const ResourceBase& other) = delete;
     ResourceBase(ResourceBase&& other) noexcept = delete;
     ResourceBase& operator=(ResourceBase&& other) noexcept = delete;
-
-    virtual ~ResourceBase() override;
-
-    HYP_FORCE_INLINE int32 NumRefs() const
-    {
-        return m_refCount;
-    }
 
     virtual bool IsNull() const override final
     {

@@ -246,6 +246,14 @@ namespace Hyperion
 
         private bool GenerateCSharpProjectFile(string projectFilePath, string scriptDirectory, string moduleName)
         {
+            string? dependenciesDirectory = System.IO.Path.GetDirectoryName(System.Environment.ProcessPath);
+            if (dependenciesDirectory == null)
+            {
+                Logger.Log(logChannel, LogType.Error, "Failed to get dependencies directory!");
+
+                return false;
+            }
+
             string projectContent =
                 "<Project Sdk=\"Microsoft.NET.Sdk\">\n"
                     + "<PropertyGroup>\n"
@@ -258,10 +266,11 @@ namespace Hyperion
                         + $"<AssemblyName>{moduleName}</AssemblyName>\n"
                     + "</PropertyGroup>\n"
                     + "<ItemGroup>\n"
-                    + $"<ProjectReference Include=\"{System.IO.Path.Combine(intermediateDirectory, "HyperionRuntime", "HyperionRuntime.csproj")}\">\n"
-                        + "<ReferenceOutputAssembly>true</ReferenceOutputAssembly>\n"
-                        + "<Private>true</Private>\n"
-                    + "</ProjectReference>\n"
+                    //+ $"<ProjectReference Include=\"{System.IO.Path.Combine(intermediateDirectory, "HyperionRuntime", "HyperionRuntime.csproj")}\">\n"
+                    //    + "<ReferenceOutputAssembly>true</ReferenceOutputAssembly>\n"
+                    //    + "<Private>true</Private>\n"
+                    //+ "</ProjectReference>\n"
+                    + $"<Reference Name=\"HyperionRuntime\" HintPath=\"{System.IO.Path.Combine(dependenciesDirectory, "HyperionRuntime.dll")}\" />\n"
                     + string.Join("", System.IO.Directory.GetFiles(scriptDirectory, "*.cs").Select(script => $"<Compile Include=\"{script}\" />\n"))
                     + "</ItemGroup>\n"
                 + "</Project>\n";

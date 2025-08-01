@@ -1,4 +1,5 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
+
 #include <core/logging/Logger.hpp>
 
 #include <core/threading/Thread.hpp>
@@ -13,6 +14,8 @@
 
 #include <core/memory/ByteBuffer.hpp>
 #include <core/memory/NotNullPtr.hpp>
+
+#include <core/io/ByteWriter.hpp>
 
 #include <core/utilities/ByteUtil.hpp>
 
@@ -264,6 +267,19 @@ public:
         m_rwMarker.Decrement(2, MemoryOrder::RELEASE);
     }
 
+    virtual void Flush() override
+    {
+        if (m_output)
+        {
+            std::fflush(m_output);
+        }
+
+        if (m_outputError)
+        {
+            std::fflush(m_outputError);
+        }
+    }
+
 private:
     static void Write_Static(void* context, const LogChannel& channel, const LogMessage& message)
     {
@@ -366,7 +382,8 @@ Logger::Logger()
 }
 
 Logger::Logger(ILoggerOutputStream& outputStream)
-    : m_pImpl(MakePimpl<LoggerImpl>(outputStream))
+    : m_pImpl(MakePimpl<LoggerImpl>(outputStream)),
+      fatalErrorHook(nullptr)
 {
 }
 
@@ -479,6 +496,30 @@ void Logger::Log(const LogChannel& channel, const LogMessage& message)
     else
     {
         m_pImpl->m_outputStream->Write(channel, message);
+    }
+}
+
+void Logger::LogFatal(const LogChannel& channel, const LogMessage& message)
+{
+    Log(channel, message);
+
+    // flush the output stream to ensure that the message is written before we call the fatal error hook
+    m_pImpl->m_outputStream->Flush();
+
+    MemoryByteWriter writer;
+
+    for (const auto& chunk : message.chunks)
+    {
+        writer.Write(chunk.Data(), chunk.Size());
+    }
+
+    writer.Write(uint8(0)); // Null-terminate the message
+
+    const String messageStr { writer.GetBuffer().ToByteView() };
+
+    if (fatalErrorHook)
+    {
+        fatalErrorHook(messageStr.Data());
     }
 }
 

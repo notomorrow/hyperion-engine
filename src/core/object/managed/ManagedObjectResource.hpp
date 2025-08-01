@@ -38,7 +38,7 @@ public:
     ManagedObjectResource(ManagedObjectResource&& other) noexcept;
     ManagedObjectResource& operator=(ManagedObjectResource&& other) noexcept = delete;
 
-    virtual ~ManagedObjectResource() override;
+    ~ManagedObjectResource();
 
     HYP_FORCE_INLINE dotnet::Object* GetManagedObject() const
     {

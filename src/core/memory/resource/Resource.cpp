@@ -6,6 +6,7 @@
 #include <core/threading/Scheduler.hpp>
 
 #include <core/profiling/ProfileScope.hpp>
+#include <core/profiling/PerformanceClock.hpp>
 
 #include <core/utilities/DeferredScope.hpp>
 
@@ -118,7 +119,12 @@ int ResourceBase::DecRef()
         m_initState.Release();
     }
 
-    AssertDebug(result >= 0);
+    if (HYP_UNLIKELY(result < 0))
+    {
+        HYP_LOG(Resource, Fatal, "Resource ref count is negative! This is a bug in the code that uses this resource, please report it.\n\t"
+            "Resource ref count: {}, address: {}",
+            result, (void *)this);
+    }
 
     return result;
 }
@@ -129,9 +135,23 @@ void ResourceBase::WaitForFinalization() const
 
     m_initState.Acquire();
 
-    while (HYP_UNLIKELY(m_refCount != 0))
+    if (HYP_UNLIKELY(m_refCount != 0))
     {
-        Threads::Sleep(0);
+        PerformanceClock timer;
+        timer.Start();
+
+        do
+        {
+            Threads::Sleep(0);
+        } while (m_refCount != 0 && timer.ElapsedMs() < 30.0);
+
+        if (m_refCount != 0)
+        {
+            HYP_LOG(Resource, Fatal, "Resource could not be finalized; must be locked elsewhere! "
+                "This is a bug in the code that uses this resource, please report it.\n\t"
+                "Resource ref count: {}, address: {}",
+                m_refCount, (void*)this);
+        }
     }
 }
 

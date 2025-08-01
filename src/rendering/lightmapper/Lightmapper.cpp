@@ -797,8 +797,8 @@ void Lightmapper::HandleCompletedJob(LightmapJob* job)
         subElement.material->SetTexture(MaterialTextureKey::RADIANCE_MAP, radianceTexture);
 #else
         // @TEMP
-        subElement.material->SetTexture(MaterialTextureKey::IRRADIANCE_MAP, m_volume->GetAtlasTextures().At(LTT_IRRADIANCE));
-        subElement.material->SetTexture(MaterialTextureKey::RADIANCE_MAP, m_volume->GetAtlasTextures().At(LTT_RADIANCE));
+        subElement.material->SetTexture(MaterialTextureKey::IRRADIANCE_MAP, m_volume->GetAtlasTexture(LTT_IRRADIANCE));
+        subElement.material->SetTexture(MaterialTextureKey::RADIANCE_MAP, m_volume->GetAtlasTexture(LTT_RADIANCE));
 #endif
 
         auto updateMeshComponent = [entityManagerWeak = m_scene->GetEntityManager()->WeakHandleFromThis(), elementIndex = job->GetElementIndex(), volume = m_volume, subElement = subElement, newMaterial = (isNewMaterial ? subElement.material : Handle<Material>::empty)]()

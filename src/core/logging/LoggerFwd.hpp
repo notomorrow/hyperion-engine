@@ -123,7 +123,7 @@ constexpr LogCategory Error()
 
 constexpr LogCategory Fatal()
 {
-    return LogCategory(LogLevel::FATAL, 1, LogCategory::LCF_FATAL);
+    return LogCategory(LogLevel::FATAL, 1, LogCategory::LCF_ENABLED | LogCategory::LCF_FATAL);
 }
 
 template <LogCategory Category, auto ChannelArg, auto FormatString, class... Args>

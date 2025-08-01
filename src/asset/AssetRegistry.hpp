@@ -58,7 +58,7 @@ public:
     AssetDataResourceBase(AssetDataResourceBase&&) noexcept = delete;
     AssetDataResourceBase& operator=(AssetDataResourceBase&&) noexcept = delete;
 
-    virtual ~AssetDataResourceBase() override = default;
+    ~AssetDataResourceBase() = default;
 
 protected:
     AssetDataResourceBase()

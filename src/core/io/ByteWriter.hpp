@@ -107,7 +107,7 @@ protected:
     virtual void WriteBytes(const char* ptr, SizeType size) = 0;
 };
 
-class MemoryByteWriter : public ByteWriter
+class MemoryByteWriter final : public ByteWriter
 {
 public:
     MemoryByteWriter()
@@ -124,6 +124,9 @@ public:
 
     virtual void Close() override
     {
+        m_pos = 0;
+        // fit buffer to size
+        m_buffer.SetCapacity(m_buffer.Size());
     }
 
     HYP_FORCE_INLINE ByteBuffer& GetBuffer()
@@ -156,7 +159,7 @@ private:
     }
 };
 
-class FileByteWriter : public ByteWriter
+class FileByteWriter final : public ByteWriter
 {
 public:
     FileByteWriter(const FilePath& filepath)

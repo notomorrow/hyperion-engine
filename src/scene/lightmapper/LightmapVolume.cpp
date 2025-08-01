@@ -186,12 +186,9 @@ LightmapVolume::LightmapVolume()
 
 LightmapVolume::LightmapVolume(const BoundingBox& aabb)
     : m_aabb(aabb),
+      m_atlasTextures {},
       m_atlas(Vec2u(4096, 4096))
 {
-    m_atlasTextures = {
-        { LTT_RADIANCE, Handle<Texture>::empty },
-        { LTT_IRRADIANCE, Handle<Texture>::empty }
-    };
 }
 
 LightmapVolume::~LightmapVolume()

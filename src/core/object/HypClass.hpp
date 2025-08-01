@@ -580,7 +580,7 @@ public:
         m_managedClass = managedClass;
     }
 
-    virtual bool GetManagedObject(const void* objectPtr, dotnet::ObjectReference& outObjectReference) const = 0;
+    virtual bool GetManagedObject(const void* objectPtr, dotnet::ObjectReference& outObjectReference) const;
 
     virtual bool CanCreateInstance() const = 0;
 
@@ -739,25 +739,6 @@ public:
         {
             return HypClassAllocationMethod::NONE;
         }
-    }
-
-    virtual bool GetManagedObject(const void* objectPtr, dotnet::ObjectReference& outObjectReference) const override
-    {
-        const HypObjectBase* target = reinterpret_cast<HypObjectBase*>(objectPtr);
-
-        if (!target)
-        {
-            return false;
-        }
-
-        if (!target->GetManagedObjectResource())
-        {
-            return false;
-        }
-
-        TResourceHandle<ManagedObjectResource> resourceHandle(*target->GetManagedObjectResource());
-
-        outObjectReference = resourceHandle->GetManagedObject()->GetObjectReference();
     }
 
     virtual bool CanCreateInstance() const override
