@@ -64,21 +64,6 @@ public:
         return m_hypClass;
     }
 
-    virtual void SetManagedObjectResource(ManagedObjectResource* managedObjectResource) override
-    {
-        m_parentInitializer->SetManagedObjectResource(managedObjectResource);
-    }
-
-    virtual ManagedObjectResource* GetManagedObjectResource() const override
-    {
-        return m_parentInitializer->GetManagedObjectResource();
-    }
-
-    virtual dotnet::Object* GetManagedObject() const override
-    {
-        return m_parentInitializer->GetManagedObject();
-    }
-
     virtual void IncRef(void* _this, bool weak) const override
     {
         m_parentInitializer->IncRef(_this, weak);
@@ -109,18 +94,10 @@ class HypObjectInitializer final : public IHypObjectInitializer
 {
 public:
     HypObjectInitializer(T* _this)
-        : m_managedObjectResource(nullptr)
     {
     }
 
-    virtual ~HypObjectInitializer() override
-    {
-        if (m_managedObjectResource)
-        {
-            FreeResource(m_managedObjectResource);
-            m_managedObjectResource = nullptr;
-        }
-    }
+    virtual ~HypObjectInitializer() override = default;
 
     virtual TypeId GetTypeId() const override
     {
@@ -130,27 +107,6 @@ public:
     virtual const HypClass* GetClass() const override
     {
         return GetClass_Static();
-    }
-
-    virtual void SetManagedObjectResource(ManagedObjectResource* managedObjectResource) override
-    {
-        HYP_CORE_ASSERT(m_managedObjectResource == nullptr);
-        m_managedObjectResource = managedObjectResource;
-
-        if (managedObjectResource)
-        {
-            managedObjectResource->IncRef();
-        }
-    }
-
-    virtual ManagedObjectResource* GetManagedObjectResource() const override
-    {
-        return m_managedObjectResource;
-    }
-
-    virtual dotnet::Object* GetManagedObject() const override
-    {
-        return m_managedObjectResource ? m_managedObjectResource->GetManagedObject() : nullptr;
     }
 
     virtual void IncRef(void* _this, bool weak) const override
@@ -271,7 +227,6 @@ public:
     }
 
 private:
-    ManagedObjectResource* m_managedObjectResource;
 };
 
 class HYP_API HypObjectBase
@@ -318,6 +273,22 @@ public:
     HYP_FORCE_INLINE HypObjectHeader* GetObjectHeader_Internal() const
     {
         return m_header;
+    }
+
+    void SetManagedObjectResource(ManagedObjectResource* managedObjectResource)
+    {
+        HYP_CORE_ASSERT(m_managedObjectResource == nullptr);
+        m_managedObjectResource = managedObjectResource;
+    }
+
+    ManagedObjectResource* GetManagedObjectResource() const
+    {
+        return m_managedObjectResource;
+    }
+
+    dotnet::Object* GetManagedObject() const
+    {
+        return m_managedObjectResource ? m_managedObjectResource->GetManagedObject() : nullptr;
     }
 
     HYP_FORCE_INLINE bool IsInitCalled() const
@@ -408,6 +379,7 @@ protected:
     // Pointer to the header of the object, holding container, index and ref counts. Must be the first member.
     HypObjectHeader* m_header;
     DelegateHandlerSet m_delegateHandlers;
+    ManagedObjectResource* m_managedObjectResource;
 
 private:
     // Used internally by InitObject() to call derived Init() methods.

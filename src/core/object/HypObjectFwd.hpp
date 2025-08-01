@@ -63,11 +63,6 @@ public:
 
     virtual const HypClass* GetClass() const = 0;
 
-    virtual void SetManagedObjectResource(ManagedObjectResource* managedObjectResource) = 0;
-    virtual ManagedObjectResource* GetManagedObjectResource() const = 0;
-
-    virtual dotnet::Object* GetManagedObject() const = 0;
-
     virtual void IncRef(void* _this, bool weak) const = 0;
     virtual void DecRef(void* _this, bool weak) const = 0;
 

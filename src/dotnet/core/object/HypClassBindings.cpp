@@ -4,6 +4,7 @@
 #include <core/object/HypClassRegistry.hpp>
 #include <core/object/HypObject.hpp>
 #include <core/object/HypData.hpp>
+#include <core/object/HypObject.hpp>
 
 #include <core/logging/Logger.hpp>
 #include <core/logging/LogChannels.hpp>
@@ -68,16 +69,17 @@ HypClassAllocationMethod DynamicHypClassInstance::GetAllocationMethod() const
 bool DynamicHypClassInstance::GetManagedObject(const void* objectPtr, dotnet::ObjectReference& outObjectReference) const
 {
     Assert(m_parent != nullptr);
+    Assert(m_parent->GetAllocationMethod() == HypClassAllocationMethod::HANDLE);
 
-    const IHypObjectInitializer* initializer = m_parent->GetObjectInitializer(objectPtr);
-    Assert(initializer != nullptr);
+    HypObjectBase* target = reinterpret_cast<HypObjectBase*>(const_cast<void*>(objectPtr));
+    Assert(target != nullptr);
 
-    if (initializer->GetManagedObjectResource() == nullptr)
+    if (target->GetManagedObjectResource() == nullptr)
     {
         return false;
     }
 
-    TResourceHandle<ManagedObjectResource> resourceHandle(*initializer->GetManagedObjectResource());
+    TResourceHandle<ManagedObjectResource> resourceHandle(*target->GetManagedObjectResource());
 
     if (!resourceHandle->GetManagedObject()->IsValid())
     {
@@ -155,17 +157,20 @@ bool DynamicHypClassInstance::CreateInstance_Internal(HypData& out) const
         }
     }
 
-    void* targetAddress = out.ToRef().GetPointer();
-    Assert(targetAddress != nullptr);
+    AssertDebug(m_parent->GetAllocationMethod() == HypClassAllocationMethod::HANDLE);
 
-    IHypObjectInitializer* parentInitializer = m_parent->GetObjectInitializer(targetAddress);
+    HypObjectBase* target = reinterpret_cast<HypObjectBase*>(out.ToRef().GetPointer());
+    Assert(target != nullptr);
+    AssertDebug(target->GetObjectHeader_Internal()->GetRefCountStrong() > 1);
+
+    IHypObjectInitializer* parentInitializer = m_parent->GetObjectInitializer(target);
     Assert(parentInitializer != nullptr);
 
     DynamicHypObjectInitializer* newInitializer = new DynamicHypObjectInitializer(this, parentInitializer);
-    FixupObjectInitializerPointer(targetAddress, newInitializer);
+    FixupObjectInitializerPointer(target, newInitializer);
 
-    ManagedObjectResource* managedObjectResource = AllocateResource<ManagedObjectResource>(HypObjectPtr(this, targetAddress), managedClass);
-    newInitializer->SetManagedObjectResource(managedObjectResource);
+    ManagedObjectResource* managedObjectResource = AllocateResource<ManagedObjectResource>(HypObjectPtr(this, target), managedClass);
+    target->SetManagedObjectResource(managedObjectResource);
 
     // Create the managed object
     managedObjectResource->IncRef();
@@ -175,13 +180,7 @@ bool DynamicHypClassInstance::CreateInstance_Internal(HypData& out) const
 
 bool DynamicHypClassInstance::CreateInstanceArray_Internal(Span<HypData> elements, HypData& out) const
 {
-    Assert(m_parent != nullptr);
-
-    /// \todo: Find some way to support this.
-
     HYP_NOT_IMPLEMENTED();
-
-    return false;
 }
 
 HashCode DynamicHypClassInstance::GetInstanceHashCode_Internal(ConstAnyRef ref) const

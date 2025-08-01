@@ -685,29 +685,6 @@ Array<HypConstant*> HypClass::GetConstantsInherited() const
     return m_constants;
 }
 
-bool HypClass::GetManagedObjectFromObjectInitializer(const IHypObjectInitializer* objectInitializer, dotnet::ObjectReference& outObjectReference)
-{
-    if (!objectInitializer)
-    {
-        HYP_LOG(Object, Error, "Cannot get managed object from null object initializer");
-
-        return false;
-    }
-
-    if (!objectInitializer->GetManagedObjectResource())
-    {
-        HYP_LOG(Object, Error, "Cannot get managed object from object initializer without a managed object resource");
-
-        return false;
-    }
-
-    TResourceHandle<ManagedObjectResource> resourceHandle(*objectInitializer->GetManagedObjectResource());
-
-    outObjectReference = resourceHandle->GetManagedObject()->GetObjectReference();
-
-    return true;
-}
-
 bool HypClass::IsDerivedFrom(const HypClass* other) const
 {
     if (other == nullptr)

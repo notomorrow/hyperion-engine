@@ -39,8 +39,6 @@ public:
         return HypClassAllocationMethod::NONE;
     }
 
-    virtual bool GetManagedObject(const void* objectPtr, dotnet::ObjectReference& outObjectReference) const override = 0;
-
     virtual bool CanCreateInstance() const override = 0;
 
     virtual bool ToHypData(ByteView memory, HypData& outHypData) const override = 0;

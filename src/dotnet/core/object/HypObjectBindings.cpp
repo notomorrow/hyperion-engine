@@ -34,6 +34,8 @@ extern "C"
         Assert(objectReference != nullptr);
         Assert(outInstancePtr != nullptr);
 
+        Assert(hypClass->GetAllocationMethod() == HypClassAllocationMethod::HANDLE);
+
         HypObjectPtr ptr;
 
         *outInstancePtr = nullptr;
@@ -67,8 +69,11 @@ extern "C"
             classObjectPtr->RefCountedPtrFromThis(),
             *objectReference,
             ObjectFlags::CREATED_FROM_MANAGED);
+        
+        HypObjectBase* target = reinterpret_cast<HypObjectBase*>(ptr.GetPointer());
+        AssertDebug(target->GetObjectHeader_Internal()->GetRefCountStrong() == 1);
 
-        initializer->SetManagedObjectResource(managedObjectResource);
+        target->SetManagedObjectResource(managedObjectResource);
     }
 
     HYP_EXPORT uint32 HypObject_GetRefCount_Strong(const HypClass* hypClass, void* nativeAddress)

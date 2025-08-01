@@ -52,7 +52,12 @@ HypObjectInitializerGuardBase::~HypObjectInitializerGuardBase()
     {
         if (RC<dotnet::Class> managedClass = ptr.GetClass()->GetManagedClass())
         {
-            ptr.GetObjectInitializer()->SetManagedObjectResource(AllocateResource<ManagedObjectResource>(ptr, managedClass));
+            AssertDebug(ptr.GetClass()->GetAllocationMethod() == HypClassAllocationMethod::HANDLE);
+
+            HypObjectBase* target = reinterpret_cast<HypObjectBase*>(ptr.GetPointer());
+            AssertDebug(target->GetObjectHeader_Internal()->GetRefCountStrong() == 1);
+
+            target->SetManagedObjectResource(AllocateResource<ManagedObjectResource>(ptr, managedClass));
         }
         else
         {
@@ -89,6 +94,12 @@ HypObjectBase::HypObjectBase()
 
 HypObjectBase::~HypObjectBase()
 {
+    if (m_managedObjectResource)
+    {
+        FreeResource(m_managedObjectResource);
+        m_managedObjectResource = nullptr;
+    }
+
     HYP_CORE_ASSERT(m_header != nullptr);
     m_header->DecRefWeak();
 }
@@ -234,36 +245,34 @@ HYP_API void FixupObjectInitializerPointer(void* target, IHypObjectInitializer* 
 
 HYP_API void HypObject_OnIncRefCount_Strong(HypObjectPtr ptr, uint32 count)
 {
-    if (IHypObjectInitializer* initializer = ptr.GetObjectInitializer())
+    HypObjectBase *hypObject = reinterpret_cast<HypObjectBase *>(ptr.GetPointer());
+
+    if (count > 1)
     {
-        if (count > 1)
+        if (ManagedObjectResource* managedObjectResource = hypObject->GetManagedObjectResource())
         {
-            if (ManagedObjectResource* managedObjectResource = initializer->GetManagedObjectResource())
-            {
-                managedObjectResource->IncRef();
-            }
+            managedObjectResource->IncRef();
         }
     }
 }
 
 HYP_API void HypObject_OnDecRefCount_Strong(HypObjectPtr ptr, uint32 count)
 {
-    if (IHypObjectInitializer* initializer = ptr.GetObjectInitializer())
+    HypObjectBase *hypObject = reinterpret_cast<HypObjectBase *>(ptr.GetPointer());
+
+    if (count >= 1)
     {
-        if (count >= 1)
+        if (ManagedObjectResource* managedObjectResource = hypObject->GetManagedObjectResource())
         {
-            if (ManagedObjectResource* managedObjectResource = initializer->GetManagedObjectResource())
-            {
-                managedObjectResource->DecRef();
-            }
+            managedObjectResource->DecRef();
         }
-        else if (initializer->GetClass()->IsDynamic())
-        {
-            // Dynamic HypClass initializers need to be deleted manually, as they are not stored inline on the class and are heap allocated.
-            // They will delete up the chain if the parent is also dynamic.
-            // We don't allow any non-dynamic initializers in the chain after a dynamic one is added.
-            delete initializer;
-        }
+    }
+    else if (ptr.GetClass()->IsDynamic())
+    {
+        // Dynamic HypClass initializers need to be deleted manually, as they are not stored inline on the class and are heap allocated.
+        // They will delete up the chain if the parent is also dynamic.
+        // We don't allow any non-dynamic initializers in the chain after a dynamic one is added.
+        delete ptr.GetObjectInitializer();
     }
 }
 

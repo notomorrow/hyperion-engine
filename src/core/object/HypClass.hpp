@@ -653,8 +653,6 @@ protected:
 
     virtual HashCode GetInstanceHashCode_Internal(ConstAnyRef ref) const = 0;
 
-    static bool GetManagedObjectFromObjectInitializer(const IHypObjectInitializer* objectInitializer, dotnet::ObjectReference& outObjectReference);
-
     TypeId m_typeId;
     Name m_name;
     int m_staticIndex;
@@ -745,7 +743,21 @@ public:
 
     virtual bool GetManagedObject(const void* objectPtr, dotnet::ObjectReference& outObjectReference) const override
     {
-        return GetManagedObjectFromObjectInitializer(HypClass::GetObjectInitializer(objectPtr), outObjectReference);
+        const HypObjectBase* target = reinterpret_cast<HypObjectBase*>(objectPtr);
+
+        if (!target)
+        {
+            return false;
+        }
+
+        if (!target->GetManagedObjectResource())
+        {
+            return false;
+        }
+
+        TResourceHandle<ManagedObjectResource> resourceHandle(*target->GetManagedObjectResource());
+
+        outObjectReference = resourceHandle->GetManagedObject()->GetObjectReference();
     }
 
     virtual bool CanCreateInstance() const override

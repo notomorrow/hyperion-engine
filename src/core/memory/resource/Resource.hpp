@@ -96,6 +96,11 @@ public:
     }
 
     virtual int IncRef() override final;
+
+    // Needed to increment ref count for resources that are initialized in LOADED state.
+    // We can't call Initialize() because it is a virtual function and the object might not be fully constructed yet.
+    virtual int IncRefNoInitialize() override final;
+
     virtual int DecRef() override final;
 
     /*! \brief Wait for the resource to no longer be in loaded state */
@@ -114,10 +119,6 @@ public:
     bool IsInitialized() const;
 
 protected:
-    // Needed to increment ref count for resources that are initialized in LOADED state.
-    // We can't call Initialize() because it is a virtual function and the object might not be fully constructed yet.
-    virtual int IncRefNoInitialize() override final;
-
     virtual void Initialize() = 0;
     virtual void Destroy() = 0;
 

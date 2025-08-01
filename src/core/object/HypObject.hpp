@@ -36,11 +36,6 @@ public:                                                                         
         return m_hypObjectInitializerPtr;                                        \
     }                                                                            \
                                                                                  \
-    HYP_FORCE_INLINE ManagedObjectResource* GetManagedObjectResource() const     \
-    {                                                                            \
-        return m_hypObjectInitializerPtr->GetManagedObjectResource();            \
-    }                                                                            \
-                                                                                 \
     HYP_FORCE_INLINE static const HypClass* Class()                              \
     {                                                                            \
         return HypObjectInitializer<T>::GetClass_Static();                       \
