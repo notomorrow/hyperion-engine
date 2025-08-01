@@ -11,6 +11,7 @@
 
 #include <core/utilities/Pair.hpp>
 #include <core/utilities/Optional.hpp>
+#include <core/utilities/Result.hpp>
 
 #include <core/math/Vector3.hpp>
 #include <core/math/BoundingBox.hpp>
@@ -155,11 +156,11 @@ struct OctreeState
         OctantId octantId = OctantId::Invalid();
         bool needsRebuild = false;
     };
-    
+
     OctreeState() = default;
     OctreeState(const OctreeState& other) = delete;
     OctreeState& operator=(const OctreeState& other) = delete;
-    
+
     ~OctreeState()
     {
         if (entryToOctant != nullptr)
@@ -190,14 +191,14 @@ struct OctreeState
 enum class OctreeFlags : uint32
 {
     OF_NONE = 0x0,
-    OF_INSERT_ON_OVERLAP = 0x2,  //!< Insert into child octant on overlap rather than contains check of the Entry's AABB. Will cause entries to be contained in multiple octants rather than one.
+    OF_INSERT_ON_OVERLAP = 0x2, //!< Insert into child octant on overlap rather than contains check of the Entry's AABB. Will cause entries to be contained in multiple octants rather than one.
     OF_ALLOW_GROW_ROOT = 0x4,
     OF_DEFAULT = OF_ALLOW_GROW_ROOT
 };
 
 HYP_MAKE_ENUM_FLAGS(OctreeFlags);
 
-template <class Derived, class TEntry>
+template <class Derived, class Payload>
 class OctreeBase
 {
 protected:
@@ -214,130 +215,13 @@ protected:
     static const BoundingBox defaultBounds;
 
 public:
-    struct Result
-    {
-        enum
-        {
-            OCTREE_OK = 0,
-            OCTREE_ERR = 1
-        } result;
-
-        const char* message;
-        int errorCode = 0;
-
-        Result()
-            : Result(OCTREE_OK)
-        {
-        }
-
-        Result(decltype(result) result, const char* message = "", int errorCode = 0)
-            : result(result),
-              message(message),
-              errorCode(errorCode)
-        {
-        }
-
-        Result(const Result& other)
-            : result(other.result),
-              message(other.message),
-              errorCode(other.errorCode)
-        {
-        }
-
-        HYP_FORCE_INLINE bool operator!() const
-        {
-            return result != OCTREE_OK;
-        }
-
-        HYP_FORCE_INLINE operator bool() const
-        {
-            return result == OCTREE_OK;
-        }
-    };
-
-    using InsertResult = Pair<Result, OctantId>;
+    using Result = utilities::TResult<OctantId>;
 
     struct Octant
     {
         UniquePtr<OctreeBase> octree;
         BoundingBox aabb;
     };
-
-    struct Entry
-    {
-        TEntry value;
-        BoundingBox aabb;
-
-        Entry() = default;
-
-        Entry(const TEntry& value, const BoundingBox& aabb)
-            : value(value),
-              aabb(aabb)
-        {
-        }
-
-        Entry(const Entry& other)
-            : value(other.value),
-              aabb(other.aabb)
-        {
-        }
-
-        Entry& operator=(const Entry& other)
-        {
-            value = other.value;
-            aabb = other.aabb;
-
-            return *this;
-        }
-
-        Entry(Entry&& other) noexcept
-            : value(std::move(other.value)),
-              aabb(other.aabb)
-        {
-            other.aabb = BoundingBox::Empty();
-        }
-
-        Entry& operator=(Entry&& other) noexcept
-        {
-            if (this == &other)
-            {
-                return *this;
-            }
-
-            value = std::move(other.value);
-            aabb = other.aabb;
-
-            other.aabb = BoundingBox::Empty();
-
-            return *this;
-        }
-
-        ~Entry() = default;
-
-        HYP_FORCE_INLINE bool operator==(const Entry& other) const
-        {
-            return value == other.value
-                && aabb == other.aabb;
-        }
-
-        HYP_FORCE_INLINE bool operator!=(const Entry& other) const
-        {
-            return value != other.value
-                || aabb != other.aabb;
-        }
-
-        HashCode GetHashCode() const
-        {
-            HashCode hc;
-
-            hc.Add(HashCode::GetHashCode(value));
-            hc.Add(aabb.GetHashCode());
-
-            return hc;
-        }
-    };
-
-    using EntrySet = HashSet<Entry, &Entry::value>;
 
     OctreeBase(EnumFlags<OctreeFlags> flags = OctreeFlags::OF_DEFAULT, uint8 maxDepth = uint8(OctantId::maxDepth));
     OctreeBase(const BoundingBox& aabb);
@@ -357,11 +241,6 @@ public:
     HYP_FORCE_INLINE const BoundingBox& GetAABB() const
     {
         return m_aabb;
-    }
-
-    HYP_FORCE_INLINE const EntrySet& GetEntries() const
-    {
-        return m_entries;
     }
 
     HYP_FORCE_INLINE OctantId GetOctantID() const
@@ -386,10 +265,9 @@ public:
     }
 
     virtual void Clear();
-    void Clear(Array<Entry>& outEntries, bool undivide);
-    void Clear(Array<TEntry>& outEntries, bool undivide);
+    void Clear(Array<Payload>& out, bool undivide);
 
-    InsertResult Insert(const TEntry& value, const BoundingBox& aabb, bool allowRebuild = false);
+    Result Insert(const TEntry& value, const BoundingBox& aabb, bool allowRebuild = false);
     Result Remove(const TEntry& value, bool allowRebuild = false);
 
     /*! \brief Update the entry in the octree.
@@ -398,13 +276,9 @@ public:
      * \param allowRebuild If true, the octree will be rebuilt if the entry doesn't fit in the new octant. Otherwise, the octree will be marked as dirty and rebuilt on the next call to PerformUpdates()
      * \param forceInvalidation If true, the entry will have its invalidation marker incremented, causing the octant's hash to be updated
      */
-    InsertResult Update(const TEntry& value, const BoundingBox& aabb, bool forceInvalidation = false, bool allowRebuild = false);
-    InsertResult Rebuild();
-    virtual InsertResult Rebuild(const BoundingBox& newAabb, bool allowGrow);
-
-    void CollectEntries(Array<const TEntry*>& outEntries) const;
-    void CollectEntries(const BoundingSphere& bounds, Array<const TEntry*>& outEntries) const;
-    void CollectEntries(const BoundingBox& bounds, Array<const TEntry*>& outEntries) const;
+    Result Update(const TEntry& value, const BoundingBox& aabb, bool forceInvalidation = false, bool allowRebuild = false);
+    Result Rebuild();
+    virtual Result Rebuild(const BoundingBox& newAabb, bool allowGrow);
 
     bool GetNearestOctants(const Vec3f& position, FixedArray<Derived*, 8>& out) const;
     bool GetNearestOctant(const Vec3f& position, Derived const*& out) const;
@@ -423,13 +297,13 @@ protected:
     /*! \brief Move the entry to a new octant. If allowRebuild is true, the octree will be rebuilt if the entry doesn't fit in the new octant,
         and subdivided octants will be collapsed if they are empty + new octants will be created if they are needed.
      */
-    InsertResult Move(const TEntry& value, const BoundingBox& aabb, bool allowRebuild, EntrySet::Iterator it);
-    
+    Result Move(const TEntry& value, const BoundingBox& aabb, bool allowRebuild, EntrySet::Iterator it);
+
     HYP_FORCE_INLINE bool UseEntryToOctantMap() const
     {
         return m_state != nullptr && !m_flags[OctreeFlags::OF_INSERT_ON_OVERLAP];
     }
-    
+
     HYP_FORCE_INLINE bool ContainsAabb(const BoundingBox& aabb) const
     {
         return m_flags[OctreeFlags::OF_INSERT_ON_OVERLAP] ? m_aabb.Overlaps(aabb) : m_aabb.Contains(aabb);
@@ -442,7 +316,7 @@ protected:
 
     HYP_FORCE_INLINE bool Empty() const
     {
-        return m_entries.Empty();
+        return m_payload.Empty();
     }
 
     void SetParent(OctreeBase* parent);
@@ -459,7 +333,7 @@ protected:
     */
     void CollapseParents(bool allowRebuild);
 
-    EntrySet m_entries;
+    Payload m_payload;
     OctreeBase* m_parent;
     BoundingBox m_aabb;
     EnumFlags<OctreeFlags> m_flags;
@@ -471,10 +345,10 @@ protected:
     uint32 m_invalidationMarker;
 
 private:
-    InsertResult Insert_Internal(const TEntry& value, const BoundingBox& aabb);
-    InsertResult Update_Internal(const TEntry& value, const BoundingBox& aabb, bool forceInvalidation, bool allowRebuild);
+    Result Insert_Internal(const TEntry& value, const BoundingBox& aabb);
+    Result Update_Internal(const TEntry& value, const BoundingBox& aabb, bool forceInvalidation, bool allowRebuild);
     Result Remove_Internal(const TEntry& value, bool allowRebuild);
-    InsertResult RebuildExtend_Internal(const BoundingBox& extendIncludeAabb);
+    Result RebuildExtend_Internal(const BoundingBox& extendIncludeAabb);
 };
 
 #include <util/octree/Octree.inl>

@@ -336,7 +336,6 @@ RendererResult VulkanImage::Create(ResourceState initialState)
 
     if (!formatSupportResult)
     {
-        HYP_BREAKPOINT;
         HYPERION_BUBBLE_ERRORS(formatSupportResult);
     }
 

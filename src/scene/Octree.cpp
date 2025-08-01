@@ -62,36 +62,122 @@ void Octree::SetEntityManager(const Handle<EntityManager>& entityManager)
     }
 }
 
+void Octree::Collect(Array<Entity*>& outEntities) const
+{
+    outEntities.Reserve(outEntities.Size() + m_payload.entries.Size());
+
+    for (const auto& entry : m_payload.entries)
+    {
+        outEntities.PushBack(entry.value);
+    }
+
+    if (m_isDivided)
+    {
+        for (const Octant& octant : m_octants)
+        {
+            Assert(octant.octree != nullptr);
+
+            static_cast<Octree*>(octant.octree.Get())->Collect(outEntities);
+        }
+    }
+}
+
+void Octree::Collect(const BoundingSphere& bounds, Array<Entity*>& outEntities) const
+{
+    if (!bounds.Overlaps(m_aabb))
+    {
+        return;
+    }
+
+    outEntities.Reserve(outEntities.Size() + m_payload.entries.Size());
+
+    for (const auto& entry : m_payload.entries)
+    {
+        if (bounds.Overlaps(entry.aabb))
+        {
+            outEntities.PushBack(entry.value);
+        }
+    }
+
+    if (m_isDivided)
+    {
+        for (const Octant& octant : m_octants)
+        {
+            Assert(octant.octree != nullptr);
+
+            octant.octree->Collect(bounds, outEntities);
+        }
+    }
+}
+
+void Octree::Collect(const BoundingBox& bounds, Array<Entity*>& outEntities) const
+{
+    if (!m_aabb.Overlaps(bounds))
+    {
+        return;
+    }
+
+    outEntities.Reserve(outEntries.Size() + m_payload.entries.Size());
+
+    for (const auto& entry : m_payload.entries)
+    {
+        if (bounds.Overlaps(entry.aabb))
+        {
+            outEntities.PushBack(entry.value);
+        }
+    }
+
+    if (m_isDivided)
+    {
+        for (const Octant& octant : m_octants)
+        {
+            Assert(octant.octree != nullptr);
+
+            octant.octree->Collect(bounds, outEntities);
+        }
+    }
+}
+
 void Octree::Clear()
 {
     HYP_SCOPE;
 
-    Array<Entry> entries;
-    OctreeBase::Clear(entries, /* undivide */ true);
+    Array<SceneOctreePayload> payloads;
+    OctreeBase::Clear(payloads, /* undivide */ true);
 
     if (m_entityManager)
     {
         Assert(Threads::IsOnThread(m_entityManager->GetOwnerThreadId()));
 
-        for (Entry& entry : entries)
+        for (SceneOctreePayload& payload : payloads)
         {
-            if (VisibilityStateComponent* visibilityStateComponent = m_entityManager->TryGetComponent<VisibilityStateComponent>(entry.value))
+            for (auto& entry : payload.entries)
             {
-                visibilityStateComponent->octantId = OctantId::Invalid();
-                visibilityStateComponent->visibilityState = nullptr;
-            }
+                Entity* entity = entry.value;
 
-            m_entityManager->AddTag<EntityTag::UPDATE_VISIBILITY_STATE>(entry.value);
+                if (!entity)
+                {
+                    continue;
+                }
+
+                if (VisibilityStateComponent* visibilityStateComponent = m_entityManager->TryGetComponent<VisibilityStateComponent>(entity))
+                {
+                    visibilityStateComponent->octantId = OctantId::Invalid();
+                    visibilityStateComponent->visibilityState = nullptr;
+                }
+
+                m_entityManager->AddTag<EntityTag::UPDATE_VISIBILITY_STATE>(entity);
+            }
         }
     }
 
     RebuildEntriesHash();
 }
 
-Octree::InsertResult Octree::Rebuild(const BoundingBox& newAabb, bool allowGrow)
+Octree::Result Octree::Rebuild(const BoundingBox& newAabb, bool allowGrow)
 {
-    Array<Entry> newEntries;
-    OctreeBase::Clear(newEntries, /* undivide */ true);
+    Array<SceneOctreePayload> payloads;
+    OctreeBase::Clear(payloads, /* undivide */ true);
 
     m_aabb = newAabb;
 
@@ -99,53 +185,56 @@ Octree::InsertResult Octree::Rebuild(const BoundingBox& newAabb, bool allowGrow)
     {
         Assert(IsRoot());
 
-        for (auto& it : newEntries)
+        for (auto& payload : payloads)
         {
-            if (it.aabb.IsValid() && it.aabb.IsFinite())
+            for (auto& entry : payload.entries)
             {
-                m_aabb = m_aabb.Union(it.aabb);
+                if (entry.aabb.IsValid() && entry.aabb.IsFinite())
+                {
+                    m_aabb = m_aabb.Union(entry.aabb);
+                }
             }
         }
     }
 
     InitOctants();
 
-    for (auto& it : newEntries)
+    for (auto& payload : payloads)
     {
-        Entity* entity = it.value;
-        Assert(entity != nullptr);
-        
-        if (it.aabb.IsValid() && it.aabb.IsFinite())
+        for (auto& entry : payload.entries)
         {
-            AssertDebug(m_aabb.Contains(it.aabb));
+            Entity* entity = entry.value;
+            Assert(entity != nullptr);
+
+            if (entry.aabb.IsValid() && entry.aabb.IsFinite())
+            {
+                AssertDebug(m_aabb.Contains(entry.aabb));
+            }
+
+            OctreeBase::Result insertResult = Insert(entity, entry.aabb, true /* allow rebuild */);
+
+            if (insertResult.HasError())
+            {
+                return insertResult;
+            }
+
+            VisibilityStateComponent* visibilityStateComponent = m_entityManager->TryGetComponent<VisibilityStateComponent>(entity);
+
+            if (visibilityStateComponent)
+            {
+                visibilityStateComponent->octantId = insertResult.GetValue();
+                visibilityStateComponent->visibilityState = nullptr;
+            }
+            else
+            {
+                m_entityManager->AddComponent<VisibilityStateComponent>(entity, VisibilityStateComponent { .octantId = insertResult.GetValue(), .visibilityState = nullptr });
+            }
+
+            m_entityManager->AddTag<EntityTag::UPDATE_VISIBILITY_STATE>(entity);
         }
-
-        auto insertResult = Insert(entity, it.aabb, true /* allow rebuild */);
-
-        if (!insertResult.first)
-        {
-            return insertResult;
-        }
-
-        VisibilityStateComponent* visibilityStateComponent = m_entityManager->TryGetComponent<VisibilityStateComponent>(entity);
-
-        if (visibilityStateComponent)
-        {
-            visibilityStateComponent->octantId = insertResult.second;
-            visibilityStateComponent->visibilityState = nullptr;
-        }
-        else
-        {
-            m_entityManager->AddComponent<VisibilityStateComponent>(entity, VisibilityStateComponent { .octantId = insertResult.second, .visibilityState = nullptr });
-        }
-
-        m_entityManager->AddTag<EntityTag::UPDATE_VISIBILITY_STATE>(entity);
     }
 
-    return {
-        { OctreeBase::Result::OCTREE_OK },
-        m_octantId
-    };
+    return m_octantId;
 }
 
 void Octree::PerformUpdates()
@@ -253,7 +342,7 @@ void Octree::RebuildEntriesHash(uint32 level)
 
     ResetEntriesHash();
 
-    for (const Entry& entry : m_entries)
+    for (const auto& entry : m_payload.entries)
     {
         const HashCode entryHashCode = entry.GetHashCode();
         m_entryHashes[0].Add(entryHashCode);
@@ -305,7 +394,7 @@ bool Octree::TestRay(const Ray& ray, RayTestResults& outResults, bool useBvh) co
 
     if (ray.TestAABB(m_aabb))
     {
-        for (const Octree::Entry& entry : m_entries)
+        for (const auto& entry : m_payload.entries)
         {
             RayTestResults aabbResult;
 

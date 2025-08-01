@@ -8,6 +8,8 @@
 #include <core/utilities/StaticMessage.hpp>
 #include <core/utilities/Format.hpp>
 
+#include <core/memory/Pimpl.hpp>
+
 #include <core/debug/Debug.hpp>
 
 #include <Types.hpp>
@@ -97,17 +99,38 @@ public:
     }
 
     TResult(const ErrorType& error)
-        : m_value(error)
+        : m_value(MakePimpl<ErrorType>(error))
     {
     }
 
     TResult(ErrorType&& error)
-        : m_value(std::move(error))
+        : m_value(MakePimpl<ErrorType>(std::move(error)))
     {
     }
 
-    TResult(const TResult& other) = default;
-    TResult& operator=(const TResult& other) = default;
+    TResult(const TResult& other)
+        : m_value(other.HasError() ? Variant<T, Pimpl<ErrorType>>(MakePimpl<ErrorType>(other.GetError())) : Variant<T, Pimpl<ErrorType>>(T(other.GetValue())))
+    {
+    }
+
+    TResult& operator=(const TResult& other)
+    {
+        if (this == &other)
+        {
+            return *this;
+        }
+
+        if (other.HasError())
+        {
+            m_value = MakePimpl<ErrorType>(other.GetError());
+        }
+        else
+        {
+            m_value = T(other.GetValue());
+        }
+
+        return *this;
+    }
 
     template <class OtherT, typename = std::enable_if_t<!std::is_same_v<T, OtherT> && std::is_constructible_v<T, const OtherT&>>>
     TResult(const TResult<OtherT, ErrorType>& other)
@@ -118,7 +141,7 @@ public:
         }
         else
         {
-            m_value = other.GetError();
+            m_value = MakePimpl<ErrorType>(other.GetError());
         }
     }
 
@@ -136,7 +159,7 @@ public:
         }
         else if (other.HasError())
         {
-            m_value = other.GetError();
+            m_value = MakePimpl<ErrorType>(other.GetError());
         }
         else
         {
@@ -158,7 +181,7 @@ public:
         }
         else if (other.HasError())
         {
-            m_value = std::move(other.GetError_NonConst());
+            m_value = MakePimpl<ErrorType>(std::move(other.GetError_NonConst()));
         }
     }
 
@@ -176,7 +199,7 @@ public:
         }
         else if (other.HasError())
         {
-            m_value = std::move(other.GetError_NonConst());
+            m_value = MakePimpl<ErrorType>(std::move(other.GetError_NonConst()));
         }
         else
         {
@@ -205,7 +228,7 @@ public:
 
     HYP_FORCE_INLINE bool HasError() const
     {
-        return m_value.template Is<ErrorType>();
+        return m_value.template Is<Pimpl<ErrorType>>();
     }
 
     HYP_FORCE_INLINE T& GetValue() &
@@ -328,7 +351,7 @@ private:
 
         if (HasError())
         {
-            return m_value.template GetUnchecked<ErrorType>();
+            return *m_value.template GetUnchecked<Pimpl<ErrorType>>();
         }
         else
         {
@@ -336,7 +359,7 @@ private:
         }
     }
 
-    Variant<T, ErrorType> m_value;
+    Variant<T, Pimpl<ErrorType>> m_value;
 };
 
 template <class ErrorType>
@@ -348,39 +371,76 @@ public:
     TResult() = default;
 
     TResult(const ErrorType& error)
-        : m_error(error)
+        : m_error(MakePimpl<ErrorType>(error))
     {
     }
 
     TResult(ErrorType&& error)
-        : m_error(std::move(error))
+        : m_error(MakePimpl<ErrorType>(std::move(error)))
     {
     }
 
-    TResult(const TResult& other) = default;
-    TResult& operator=(const TResult& other) = default;
-    TResult(TResult&& other) noexcept = default;
-    TResult& operator=(TResult&& other) noexcept = default;
+    TResult(const TResult& other)
+        : m_error(other.HasError() ? MakePimpl<ErrorType>(other.GetError()) : Pimpl<ErrorType>())
+    {
+    }
+
+    TResult& operator=(const TResult& other)
+    {
+        if (this == &other)
+        {
+            return *this;
+        }
+
+        if (other.HasError())
+        {
+            m_error = MakePimpl<ErrorType>(other.GetError());
+        }
+        else
+        {
+            m_error.Reset();
+        }
+
+        return *this;
+    }
+
+    TResult(TResult&& other) noexcept
+        : m_error(std::move(other.m_error))
+    {
+    }
+
+    TResult& operator=(TResult&& other) noexcept
+    {
+        if (this == &other)
+        {
+            return *this;
+        }
+
+        m_error = std::move(other.m_error);
+
+        return *this;
+    }
+
     ~TResult() = default;
 
     HYP_FORCE_INLINE explicit operator bool() const
     {
-        return !m_error.HasValue();
+        return m_error == nullptr;
     }
 
     HYP_FORCE_INLINE bool operator!() const
     {
-        return m_error.HasValue();
+        return m_error != nullptr;
     }
 
     HYP_FORCE_INLINE bool HasValue() const
     {
-        return !m_error.HasValue();
+        return m_error == nullptr;
     }
 
     HYP_FORCE_INLINE bool HasError() const
     {
-        return m_error.HasValue();
+        return m_error != nullptr;
     }
 
     HYP_FORCE_INLINE const ErrorType& GetError() const
@@ -389,7 +449,7 @@ public:
 
         if (HasError())
         {
-            return m_error.Get();
+            return *m_error;
         }
         else
         {
@@ -400,25 +460,24 @@ public:
     template <class OtherErrorType>
     HYP_FORCE_INLINE bool operator==(const TResult<void, OtherErrorType>& other) const
     {
-        return m_error.HasValue() == other.m_error.HasValue();
+        return bool(m_error) == bool(other.m_error);
     }
 
     template <class OtherErrorType>
     HYP_FORCE_INLINE bool operator!=(const TResult<void, OtherErrorType>& other) const
     {
-        return m_error.HasValue() != other.m_error.HasValue();
+        return bool(m_error) != bool(other.m_error);
     }
 
     HYP_FORCE_INLINE bool operator==(const ErrorType& error) const = delete;
     HYP_FORCE_INLINE bool operator!=(const ErrorType& error) const = delete;
 
 private:
-    Optional<ErrorType> m_error;
+    Pimpl<ErrorType> m_error;
 };
 
 /*! \brief Default Result class - see TResult<T, ErrorType> for custom T or Error type. */
-HYP_STRUCT(Size = 136)
-
+HYP_STRUCT(Size = 8)
 class Result : public TResult<void, Error>
 {
 public:

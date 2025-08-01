@@ -34,13 +34,14 @@ void VisibilityStateUpdaterSystem::OnEntityAdded(Entity* entity)
 
     Octree& octree = GetEntityManager().GetScene()->GetOctree();
 
-    const Octree::InsertResult insertResult = octree.Insert(entity, boundingBoxComponent.worldAabb);
+    const Octree::Result insertResult = octree.Insert(entity, boundingBoxComponent.worldAabb);
 
-    if (insertResult.first)
+    if (insertResult.HasValue())
     {
-        Assert(insertResult.second != OctantId::Invalid(), "Invalid octant Id returned from Insert()");
+        OctantId octantId = insertResult.GetValue();
+        Assert(octantId != OctantId::Invalid(), "Invalid octant Id returned from Insert()");
 
-        visibilityStateComponent.octantId = insertResult.second;
+        visibilityStateComponent.octantId = octantId;
         visibilityStateComponent.visibilityState = nullptr;
 
         if (Octree* octant = octree.GetChildOctant(visibilityStateComponent.octantId))
@@ -54,7 +55,7 @@ void VisibilityStateUpdaterSystem::OnEntityAdded(Entity* entity)
     }
     else
     {
-        HYP_LOG(Octree, Warning, "Failed to insert entity #{} into octree: {}", entity->Id(), insertResult.first.message);
+        HYP_LOG(Octree, Warning, "Failed to insert entity #{} into octree: {}", entity->Id(), insertResult.GetError().GetMessage());
     }
 }
 
@@ -68,9 +69,9 @@ void VisibilityStateUpdaterSystem::OnEntityRemoved(Entity* entity)
 
     const Octree::Result removeResult = octree.Remove(entity);
 
-    if (!removeResult)
+    if (removeResult.HasError())
     {
-        HYP_LOG(Octree, Warning, "Failed to remove Entity #{} from octree: {}", entity->Id(), removeResult.message);
+        HYP_LOG(Octree, Warning, "Failed to remove Entity #{} from octree: {}", entity->Id(), removeResult.GetError().GetMessage());
     }
 
     visibilityStateComponent.octantId = OctantId::Invalid();
@@ -103,13 +104,13 @@ void VisibilityStateUpdaterSystem::Process(float delta)
                 return;
             }
 
-            const Octree::InsertResult insertResult = octree.Insert(entity, boundingBoxComponent.worldAabb);
+            const Octree::Result insertResult = octree.Insert(entity, boundingBoxComponent.worldAabb);
 
-            if (insertResult.first)
+            if (insertResult.HasValue())
             {
-                Assert(insertResult.second != OctantId::Invalid(), "Invalid octant Id returned from Insert()");
+                Assert(insertResult.GetValue() != OctantId::Invalid(), "Invalid octant Id returned from Insert()");
 
-                visibilityStateComponent.octantId = insertResult.second;
+                visibilityStateComponent.octantId = insertResult.GetValue();
 
                 if (Octree* octant = octree.GetChildOctant(visibilityStateComponent.octantId))
                 {
@@ -128,18 +129,20 @@ void VisibilityStateUpdaterSystem::Process(float delta)
             // so directional lights changing cause the entire octree to be updated.
             const bool forceEntryInvalidation = visibilityStateInvalidated;
 
-            const Octree::InsertResult updateResult = octree.Update(entity, boundingBoxComponent.worldAabb, forceEntryInvalidation);
+            const Octree::Result updateResult = octree.Update(entity, boundingBoxComponent.worldAabb, forceEntryInvalidation);
 
-            visibilityStateComponent.octantId = updateResult.second;
-
-            if (!updateResult.first)
+            if (updateResult.HasError())
             {
-                HYP_LOG(Octree, Warning, "Failed to update entity {} in octree: {}", entity->Id(), updateResult.first.message);
+                visibilityStateComponent.octantId = OctantId::Invalid();
+                
+                HYP_LOG(Octree, Warning, "Failed to update entity {} in octree: {}", entity->Id(), updateResult.GetError().GetMessage());
 
                 return;
             }
 
-            Assert(updateResult.second != OctantId::Invalid(), "Invalid octant Id returned from Update()");
+            AssertDebug(updateResult.GetValue() != OctantId::Invalid(), "Invalid octant Id returned from Update()");
+            
+            visibilityStateComponent.octantId = updateResult.GetValue();
         }
 
         if (visibilityStateComponent.octantId != OctantId::Invalid())

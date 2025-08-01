@@ -225,8 +225,8 @@ void HyperionEditor::Init()
 #if 1
     // temp
     RC<AssetBatch> batch = AssetManager::GetInstance()->CreateBatch();
-    batch->Add("test_model", "models/sponza/sponza.obj");
-    // batch->Add("test_model", "models/pica_pica/pica_pica.obj");
+//    batch->Add("test_model", "models/sponza/sponza.obj");
+     batch->Add("test_model", "models/pica_pica/pica_pica.obj");
     // batch->Add("test_model", "models/testbed/testbed.obj");
     batch->Add("zombie", "models/ogrexml/dragger_Body.mesh.xml");
     //    batch->Add("z2", "models/monkey.fbx");
@@ -239,8 +239,8 @@ void HyperionEditor::Init()
             {
                 Handle<Node> node = results["test_model"].ExtractAs<Node>();
 
-                // node->Scale(3.0f);
-                node->Scale(0.05f);
+                 node->Scale(3.0f);
+//                node->Scale(0.05f);
                 node->SetName(NAME("test_model"));
                 node->LockTransform();
 

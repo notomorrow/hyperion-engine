@@ -34,7 +34,93 @@ class Camera;
 
 class Octree;
 
-class HYP_API Octree final : public OctreeBase<Octree, Entity*>
+struct SceneOctreePayload
+{
+    struct Entry
+    {
+        Entity* value;
+        BoundingBox aabb;
+
+        Entry() = default;
+
+        Entry(Entity* value, const BoundingBox& aabb)
+            : value(value),
+              aabb(aabb)
+        {
+        }
+
+        Entry(const Entry& other)
+            : value(other.value),
+              aabb(other.aabb)
+        {
+        }
+
+        Entry& operator=(const Entry& other)
+        {
+            value = other.value;
+            aabb = other.aabb;
+
+            return *this;
+        }
+
+        Entry(Entry&& other) noexcept
+            : value(std::move(other.value)),
+              aabb(other.aabb)
+        {
+            other.aabb = BoundingBox::Empty();
+        }
+
+        Entry& operator=(Entry&& other) noexcept
+        {
+            if (this == &other)
+            {
+                return *this;
+            }
+
+            value = std::move(other.value);
+            aabb = other.aabb;
+
+            other.aabb = BoundingBox::Empty();
+
+            return *this;
+        }
+
+        ~Entry() = default;
+
+        HYP_FORCE_INLINE bool operator==(const Entry& other) const
+        {
+            return value == other.value
+                && aabb == other.aabb;
+        }
+
+        HYP_FORCE_INLINE bool operator!=(const Entry& other) const
+        {
+            return value != other.value
+                || aabb != other.aabb;
+        }
+
+        HashCode GetHashCode() const
+        {
+            HashCode hc;
+
+            hc.Add(HashCode::GetHashCode(value));
+            hc.Add(aabb.GetHashCode());
+
+            return hc;
+        }
+    };
+
+    using EntrySet = HashSet<Entry, &Entry::value>;
+
+    EntrySet entries;
+
+    HYP_FORCE_INLINE bool Empty() const
+    {
+        return entries.Empty();
+    }
+};
+
+class HYP_API Octree final : public OctreeBase<Octree, SceneOctreePayload>
 {
 public:
     Octree(const Handle<EntityManager>& entityManager);
@@ -42,6 +128,11 @@ public:
     Octree(const Handle<EntityManager>& entityManager, const BoundingBox& aabb, Octree* parent, uint8 index);
 
     virtual ~Octree() override;
+
+    HYP_FORCE_INLINE const SceneOctreePayload::EntrySet& GetEntries() const
+    {
+        return m_payload.entries;
+    }
 
     VisibilityState& GetVisibilityState()
     {
@@ -95,8 +186,12 @@ public:
 
     bool TestRay(const Ray& ray, RayTestResults& outResults, bool useBvh = true) const;
 
+    void Collect(Array<Entity*>& outEntities) const;
+    void Collect(const BoundingSphere& bounds, Array<Entity*>& outEntities) const;
+    void Collect(const BoundingBox& bounds, Array<Entity*>& outEntities) const;
+
     virtual void Clear() override;
-    virtual InsertResult Rebuild(const BoundingBox& newAabb, bool allowGrow) override;
+    virtual Result Rebuild(const BoundingBox& newAabb, bool allowGrow) override;
     virtual void PerformUpdates() override;
 
 private:

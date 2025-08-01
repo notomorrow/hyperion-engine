@@ -27,13 +27,13 @@ struct HYP_API BVHNode
 
     HYP_FIELD(Serialize)
     LinkedList<BVHNode> children;
-    
+
     HYP_FIELD(Serialize)
     Array<Triangle, DynamicAllocator> triangles; // temp; replace with quantized data
 
     HYP_FIELD(Serialize, Compressed)
     ByteBuffer vertexData;
-    
+
     HYP_FIELD(Serialize, Compressed)
     ByteBuffer indexData;
 
@@ -97,11 +97,11 @@ struct HYP_API BVHNode
 
 private:
     static void QuantizeTriangleData(
-         Span<const Vertex> vertexData,
-         Span<const uint32> indexData,
-         ByteBuffer& outQuantizedVertexData,
-         ByteBuffer& outQuantizedIndexData);
-    
+        Span<const Vertex> vertexData,
+        Span<const uint32> indexData,
+        ByteBuffer& outQuantizedVertexData,
+        ByteBuffer& outQuantizedIndexData);
+
     void Split_Internal(int depth, int maxDepth)
     {
         if (isLeafNode)
@@ -172,7 +172,7 @@ private:
         for (auto it = children.Begin(); it != children.End();)
         {
             BVHNode& node = *it;
-        
+
             if (node.isLeafNode)
             {
                 if (node.triangles.Empty())
@@ -186,8 +186,13 @@ private:
             {
                 node.Shake_Internal();
             }
-            
+
             ++it;
+        }
+
+        if (children.Empty())
+        {
+            isLeafNode = true;
         }
     }
 };

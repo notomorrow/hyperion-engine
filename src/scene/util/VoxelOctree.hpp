@@ -84,7 +84,7 @@ using VoxelOctreeBuildResult = Result;
 
 class HYP_API VoxelOctree : public OctreeBase<VoxelOctree, VoxelOctreeNode>
 {
-    static constexpr uint8 g_voxelOctreeMaxDepth = 7;
+    static constexpr uint8 g_voxelOctreeMaxDepth = 8;
     static constexpr EnumFlags<OctreeFlags> g_voxelOctreeFlags = OctreeFlags::OF_INSERT_ON_OVERLAP;
 
 public:

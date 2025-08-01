@@ -9,6 +9,8 @@
 
 #include <rendering/Texture.hpp>
 
+#include <util/img/ImageUtil.hpp>
+
 #include <thirdparty/stb_image.h>
 
 namespace hyperion {
@@ -91,7 +93,7 @@ AssetLoadResult TextureLoader::LoadAsset(LoaderState& state) const
         * SizeType(data.height)
         * SizeType(data.numComponents);
 
-    Handle<Texture> texture = CreateObject<Texture>(TextureData {
+    TextureData textureData {
         TextureDesc {
             TT_TEX2D,
             data.format,
@@ -99,7 +101,39 @@ AssetLoadResult TextureLoader::LoadAsset(LoaderState& state) const
             TFM_LINEAR_MIPMAP,
             TFM_LINEAR,
             TWM_REPEAT },
-        ByteBuffer(imageBytesCount, imageBytes) });
+        ByteBuffer(imageBytesCount, imageBytes)
+    };
+
+    uint32 bpp = NumComponents(data.format);
+
+    if (bpp == 3)
+    {
+        // convert to bytes per pixel = 4
+        TextureDesc& textureDesc = textureData.desc;
+
+        const uint32 size = textureDesc.GetByteSize();
+        const uint32 faceOffsetStep = size / textureDesc.NumFaces();
+
+        textureDesc.format = FormatChangeNumComponents(data.format, 4);
+
+        const uint32 newSize = textureDesc.GetByteSize();
+        const uint32 newFaceOffsetStep = newSize / textureDesc.NumFaces();
+
+        ByteBuffer newByteBuffer(textureDesc.GetByteSize());
+
+        for (uint32 i = 0; i < textureDesc.NumFaces(); i++)
+        {
+            ImageUtil::ConvertBPP(
+                textureDesc.extent.x, textureDesc.extent.y, textureDesc.extent.z,
+                bpp, 4,
+                &textureData.imageData.Data()[i * faceOffsetStep],
+                &newByteBuffer.Data()[i * newFaceOffsetStep]);
+        }
+
+        textureData.imageData = std::move(newByteBuffer);
+    }
+
+    Handle<Texture> texture = CreateObject<Texture>(textureData);
 
     stbi_image_free(imageBytes);
 
