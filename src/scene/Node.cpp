@@ -1026,7 +1026,7 @@ void Node::UpdateWorldTransform(bool updateChildTransforms)
         return;
     }
 
-    if (m_type == Type::BONE)
+    if (IsA<Bone>())
     {
         static_cast<Bone*>(this)->UpdateBoneTransform(); // NOLINT(cppcoreguidelines-pro-type-static-cast-downcast)
     }

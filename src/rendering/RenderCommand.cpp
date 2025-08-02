@@ -138,10 +138,8 @@ void RenderCommands::Wait()
     const uint32 currentValue = s_semaphore.GetValue();
 
 #ifdef HYP_RENDER_COMMANDS_DOUBLE_BUFFERED
-    // wait for the counter to increment by 2
     s_semaphore.WaitForValue(currentValue + 2);
 #else
-    // wait for the counter to increment by 1
     s_semaphore.WaitForValue(currentValue + 1);
 #endif
 }

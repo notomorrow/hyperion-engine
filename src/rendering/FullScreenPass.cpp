@@ -42,14 +42,13 @@ struct MergeHalfResTexturesUniforms
 
 #pragma region Render commands
 
-struct RENDER_COMMAND(RecreateFullScreenPassFramebuffer)
-    : RenderCommand
+struct RENDER_COMMAND(RecreateFullScreenPassFramebuffer) : RenderCommand
 {
-    FullScreenPass& fullScreenPass;
+    WeakHandle<FullScreenPass> fullScreenPassWeak;
     Vec2u newSize;
 
-    RENDER_COMMAND(RecreateFullScreenPassFramebuffer)(FullScreenPass& fullScreenPass, Vec2u newSize)
-        : fullScreenPass(fullScreenPass),
+    RENDER_COMMAND(RecreateFullScreenPassFramebuffer)(const WeakHandle<FullScreenPass>& fullScreenPassWeak, Vec2u newSize)
+        : fullScreenPassWeak(fullScreenPassWeak),
           newSize(newSize)
     {
     }
@@ -58,16 +57,24 @@ struct RENDER_COMMAND(RecreateFullScreenPassFramebuffer)
 
     virtual RendererResult operator()() override
     {
-        if (fullScreenPass.m_isInitialized)
+        Handle<FullScreenPass> fullScreenPass = fullScreenPassWeak.Lock();
+        if (!fullScreenPass)
         {
-            fullScreenPass.Resize_Internal(newSize);
+            HYP_LOG(Rendering, Debug, "FullScreenPass {} is no longer alive, skipping recreate.", fullScreenPassWeak.Id());
+
+            return {};
+        }
+
+        if (fullScreenPass->m_isInitialized)
+        {
+            fullScreenPass->Resize_Internal(newSize);
         }
         else
         {
-            fullScreenPass.m_extent = newSize;
+            fullScreenPass->m_extent = newSize;
         }
 
-        HYPERION_RETURN_OK;
+        return {};
     }
 };
 
@@ -142,12 +149,6 @@ FullScreenPass::~FullScreenPass()
 
     SafeRelease(std::move(m_framebuffer));
     SafeRelease(std::move(m_graphicsPipeline));
-
-    if (m_isInitialized)
-    {
-        // Prevent dangling reference from render commands
-        HYP_SYNC_RENDER();
-    }
 }
 
 ImageViewRef FullScreenPass::GetFinalImageView() const
@@ -242,7 +243,7 @@ void FullScreenPass::SetBlendFunction(const BlendFunction& blendFunction)
 
 void FullScreenPass::Resize(Vec2u newSize)
 {
-    PUSH_RENDER_COMMAND(RecreateFullScreenPassFramebuffer, *this, newSize);
+    PUSH_RENDER_COMMAND(RecreateFullScreenPassFramebuffer, WeakHandleFromThis(), newSize);
 }
 
 void FullScreenPass::Resize_Internal(Vec2u newSize)

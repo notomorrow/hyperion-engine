@@ -3,9 +3,6 @@ cmake_policy(SET CMP0091 NEW)
 
 set(BUILD_NAME hyperion-sample)
 
-set (CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
-set (CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
-
 project(${BUILD_NAME} CXX C)
 
 if(MSVC)

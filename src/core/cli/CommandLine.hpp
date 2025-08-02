@@ -126,6 +126,20 @@ public:
     using Iterator = Array<Pair<String, CommandLineArgumentValue>>::Iterator;
     using ConstIterator = Array<Pair<String, CommandLineArgumentValue>>::ConstIterator;
 
+    CommandLineArguments() = default;
+
+    CommandLineArguments(const String& command)
+        : m_command(command)
+    {
+    }
+
+    CommandLineArguments(const CommandLineArguments& other) = default;
+    CommandLineArguments& operator=(const CommandLineArguments& other) = default;
+    CommandLineArguments(CommandLineArguments&& other) noexcept = default;
+    CommandLineArguments& operator=(CommandLineArguments&& other) noexcept = default;
+
+    ~CommandLineArguments() = default;
+
     const CommandLineArgumentValue& operator[](UTF8StringView key) const;
 
     HYP_FORCE_INLINE const String& GetCommand() const

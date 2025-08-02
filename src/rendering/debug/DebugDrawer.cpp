@@ -714,8 +714,6 @@ void DebugDrawer::Render(FrameBase* frame, const RenderSetup& renderSetup)
     }
 
     ClearCommands(idx);
-    
-    HYP_LOG_TEMP("Debug drawer total draw calls: {}\tNum instanced draws: {}", totalDrawCalls, totalInstancedDraws);
 }
 
 void DebugDrawer::ClearCommands(uint32 idx)

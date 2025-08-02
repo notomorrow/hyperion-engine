@@ -2,12 +2,18 @@ cmake_minimum_required(VERSION 3.5)
 
 set(BUILD_NAME hyperion)
 
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin) 
-
 if(NOT DEFINED CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Build type to use" FORCE)
 endif()
+
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin/)
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_RELEASE ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_DEBUG ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
+
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin/)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
+
 set(CMAKE_CONFIGURATION_TYPES "Release;RelWithDebugInfo" CACHE STRING "Configurations to build" FORCE)
 set(CMAKE_TRY_COMPILE_CONFIGURATION "Release" CACHE STRING "Configuration to use for try_compile" FORCE)
 
@@ -103,13 +109,9 @@ if(MSVC)
     add_definitions("/D_HAS_EXCEPTIONS=0")
     add_definitions("/DNOMINMAX")
 
-    # add_definitions("/constexpr:depth1024")
-
     if(HYP_DEBUG_MODE)
-        message(STATUS "Generating PDB for Hyperion library")
-
         set(CMAKE_CXX_FLAGS "/Zc:preprocessor /O2 /Oy /MD /Zi /constexpr:depth1024 /bigobj /MP")
-        set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS_RELEASE} /DEBUG")
+        set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS_RELEASE} /DEBUG /NATVIS:${CMAKE_SOURCE_DIR}/src/Hyperion.natvis")
         set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS_RELEASE} /DEBUG")
     else()
         set(CMAKE_CXX_FLAGS "/Zc:preprocessor /O2 /Oy /MD /constexpr:depth1024 /bigobj /MP")
@@ -389,10 +391,10 @@ if (${NATIVE} AND NOT ${HYP_PLATFORM_NAME} STREQUAL "iOS")
 
         set(GLSLANG_ENABLE_INSTALL OFF)
         set(GLSLANG_ENABLE_INSTALL_DEFAULT OFF)
-        set(ENABLE_GLSLANG_BINARIES OFF)
         set(GLSLANG_TESTS OFF)
+        set(ENABLE_GLSLANG_BINARIES OFF)
         set(ENABLE_SPVREMAPPER OFF)
-        set(ENABLE_SPIRV OFF)
+        set(ENABLE_SPIRV ON)
 
         include_directories(BEFORE submodules/glslang)
         add_subdirectory(submodules/glslang)
@@ -400,7 +402,6 @@ if (${NATIVE} AND NOT ${HYP_PLATFORM_NAME} STREQUAL "iOS")
         set(COMMON_LIBRARIES
             ${COMMON_LIBRARIES}
             glslang
-            SPIRV
         )
     endif()
 

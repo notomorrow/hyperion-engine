@@ -4,7 +4,6 @@
 
 #include <core/io/ByteWriter.hpp>
 
-#include <system/AppContext.hpp>
 #include <core/cli/CommandLine.hpp>
 
 #include <core/dll/DynamicLibrary.hpp>
@@ -16,6 +15,9 @@
 #include <core/json/JSON.hpp>
 
 #include <core/profiling/ProfileScope.hpp>
+
+#include <system/AppContext.hpp>
+#include <system/App.hpp>
 
 #include <dotnet/Class.hpp>
 
@@ -141,19 +143,19 @@ public:
         // Load the .NET Core runtime
         if (!LoadHostFxr())
         {
-            HYP_THROW("Could not initialize .NET runtime: Failed to load hostfxr");
+            HYP_LOG(DotNET, Fatal, "Could not initialize .NET runtime: Failed to load hostfxr");
         }
 
         if (!InitDotNetRuntime())
         {
-            HYP_THROW("Could not initialize .NET runtime: Failed to initialize runtime");
+            HYP_LOG(DotNET, Fatal, "Could not initialize .NET runtime: Failed to initialize runtime");
         }
 
         const Optional<FilePath> interopAssemblyPath = FindAssemblyFilePath(m_basePath, "HyperionInterop.dll");
 
         if (!interopAssemblyPath.HasValue())
         {
-            HYP_THROW("Could not initialize .NET runtime: Could not locate HyperionInterop.dll!");
+            HYP_LOG(DotNET, Fatal, "Could not initialize .NET runtime: Could not locate HyperionInterop.dll!");
         }
 
         PlatformString interopAssemblyPathPlatform;
@@ -310,7 +312,7 @@ public:
     {
         if (!m_cxt)
         {
-            HYP_THROW("Failed to get delegate: .NET runtime not initialized");
+            HYP_LOG(DotNET, Fatal, "Failed to get delegate: .NET runtime not initialized");
         }
 
         // Get the delegate for the managed function

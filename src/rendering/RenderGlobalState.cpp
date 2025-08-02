@@ -299,7 +299,6 @@ struct ResourceBindings
 
             if (SubtypeResourceBindings* bindings = subtypeBindings.TryGet(staticIndex))
             {
-                HYP_LOG_TEMP("Subtype bindings for {} = {}", originalClass->GetName(), bindings->resourceClass->GetName());
                 cache[typeId] = bindings;
 
                 return *bindings;
