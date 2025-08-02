@@ -61,3 +61,5 @@ After CMake has been configured and the build tool has been run, you should be a
 
 * Visual Studio Solution files (.sln) (Windows only) - Visual Studio now supports CMake projects directly, so you're able to just open the root directory of the cloned repository. You can also use these generated solution files.
 * Makefiles (Linux/macOS, etc.) - To make compiling easier, we've also added a `build.sh` shell script in the root directory of the project which compiles the code for you optionally allows you to reconfigure CMake. To generate XCode projects for macOS, you can run this script with `--xcode` passed in as a command line argument.
+
+> Note: If you're planning on using Visual Studio, be sure to compile the engine with the configuration set to either `Release` or `RelWithDebugInfo`. MSVC's `Debug` configuration adds too much overhead for the engine to run smoothly.

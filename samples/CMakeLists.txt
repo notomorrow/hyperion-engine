@@ -43,6 +43,7 @@ include_directories(
 add_executable(${BUILD_NAME} ${SOURCES} ${HEADERS})
 
 if(MSVC)
+    set (CMAKE_CONFIGURATION_TYPES "Release;RelWithDebugInfo" CACHE STRING "Configurations" FORCE)
     set_property(TARGET ${BUILD_NAME} APPEND PROPERTY LINK_FLAGS /DEBUG)
 endif()
 
