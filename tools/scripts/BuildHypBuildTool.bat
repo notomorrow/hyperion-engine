@@ -15,18 +15,18 @@ if errorlevel 1 (
     exit /b 1
 )
 
-if exist hyperion-buildtool (
-    echo Found hyperion-buildtool in current directory
+if exist hyperion-buildtool.exe (
+    echo Found hyperion-buildtool.exe in current directory
 ) else (
-    if exist Debug\hyperion-buildtool (
-        echo Found hyperion-buildtool in Debug directory
-        move Debug\hyperion-buildtool ..
+    if exist Debug\hyperion-buildtool.exe (
+        echo Found hyperion-buildtool.exe in Debug directory
+        move Debug\hyperion-buildtool.exe ..
     ) else (
-        if exist Release\hyperion-buildtool (
-            echo Found hyperion-buildtool in Release directory
-            move Release\hyperion-buildtool ..
+        if exist Release\hyperion-buildtool.exe (
+            echo Found hyperion-buildtool.exe in Release directory
+            move Release\hyperion-buildtool.exe ..
         ) else (
-            echo Could not find hyperion-buildtool executable
+            echo Could not find hyperion-buildtool.exe executable!
             exit /b 1
         )
     )
