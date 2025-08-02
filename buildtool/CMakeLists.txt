@@ -12,7 +12,7 @@ if(MSVC)
     set(CMAKE_CXX_FLAGS "/Zc:preprocessor /MD /O2 /Zi")
 
     # set to path of vcpkg
-    set(CMAKE_TOOLCHAIN_FILE, "${VCPKG_INSTALLED_DIR}/../scripts/buildsystems/vcpkg.cmake")
+    set(CMAKE_TOOLCHAIN_FILE, "$ENV{VCPKG_ROOT}/../scripts/buildsystems/vcpkg.cmake")
 else()
     # set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -O3")
     # for debugging

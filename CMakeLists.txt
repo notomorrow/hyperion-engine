@@ -2,10 +2,8 @@ cmake_minimum_required(VERSION 3.5)
 
 set(BUILD_NAME hyperion)
 
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}) 
-
-set(vcpkg_path "$ENV{VCPKG_INSTALLED_DIR}/../scripts/buildsystems/vcpkg.cmake")
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin) 
 
 if(NOT DEFINED CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Build type to use" FORCE)
@@ -110,11 +108,11 @@ if(MSVC)
     if(HYP_DEBUG_MODE)
         message(STATUS "Generating PDB for Hyperion library")
 
-        set(CMAKE_CXX_FLAGS "/Zc:preprocessor /O2 /Oy /MD /Zi /constexpr:depth1024 /bigobj")
+        set(CMAKE_CXX_FLAGS "/Zc:preprocessor /O2 /Oy /MD /Zi /constexpr:depth1024 /bigobj /MP")
         set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS_RELEASE} /DEBUG")
         set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS_RELEASE} /DEBUG")
     else()
-        set(CMAKE_CXX_FLAGS "/Zc:preprocessor /O2 /Oy /MD /constexpr:depth1024 /bigobj")
+        set(CMAKE_CXX_FLAGS "/Zc:preprocessor /O2 /Oy /MD /constexpr:depth1024 /bigobj /MP")
     endif()
 else()
     if(HYP_DEBUG_MODE)
@@ -389,6 +387,13 @@ if (${NATIVE} AND NOT ${HYP_PLATFORM_NAME} STREQUAL "iOS")
         add_definitions(-DHYP_GLSLANG=1)
         add_definitions(-DHYP_GLSLANG_MODIFICATIONS=1)
 
+        set(GLSLANG_ENABLE_INSTALL OFF)
+        set(GLSLANG_ENABLE_INSTALL_DEFAULT OFF)
+        set(ENABLE_GLSLANG_BINARIES OFF)
+        set(GLSLANG_TESTS OFF)
+        set(ENABLE_SPVREMAPPER OFF)
+        set(ENABLE_SPIRV OFF)
+
         include_directories(BEFORE submodules/glslang)
         add_subdirectory(submodules/glslang)
 
@@ -454,7 +459,7 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/include/dotnetcore/hostfxr.h")
         set(COMMON_LIBRARIES ${COMMON_LIBRARIES} "${CMAKE_SOURCE_DIR}/lib/${HYP_PLATFORM_NAME}/${HYP_BUILD_TYPE}/nethost.lib")
 
         # copy the dll to the build directory
-        file(COPY "${CMAKE_SOURCE_DIR}/lib/${HYP_PLATFORM_NAME}/${HYP_BUILD_TYPE}/nethost.dll" DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+        file(COPY "${CMAKE_SOURCE_DIR}/lib/${HYP_PLATFORM_NAME}/${HYP_BUILD_TYPE}/nethost.dll" DESTINATION ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
 
         set(HYP_DOTNET 1)
     else()
@@ -487,7 +492,7 @@ if(WIN32)
         add_definitions(-DHYP_AFTERMATH=1)
 
         # copy the dll to the build directory
-        file(COPY "${CMAKE_SOURCE_DIR}/lib/${HYP_PLATFORM_NAME}/${HYP_BUILD_TYPE}/GFSDK_Aftermath_Lib.x64.dll" DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+        file(COPY "${CMAKE_SOURCE_DIR}/lib/${HYP_PLATFORM_NAME}/${HYP_BUILD_TYPE}/GFSDK_Aftermath_Lib.x64.dll" DESTINATION ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
 
         message(STATUS "Aftermath found, linking to it")
     else()
@@ -575,18 +580,7 @@ foreach(GENERATED_SOURCE ${REFLECTION_GENERATED_SOURCES})
     set(SOURCES ${SOURCES} ${GENERATED_SOURCE})
 endforeach()
 
-# if(WIN32)
-#     # DLL is currently not working on Win32 as it is not exporting the symbols.
-#     # When this is fixed, make it also shared.
-#     add_library(${BUILD_NAME} ${SOURCES} ${HEADERS})
-# else()
-    add_library(${BUILD_NAME} SHARED ${SOURCES} ${HEADERS})
-# endif()
-
-if(MSVC)
-    # Allow multiprocess building with MSVC
-    target_compile_options(${BUILD_NAME} PRIVATE "/MP")
-endif()
+add_library(${BUILD_NAME} SHARED ${SOURCES} ${HEADERS})
 
 set(COMMON_LIBRARIES
     ${COMMON_LIBRARIES}
@@ -665,8 +659,8 @@ if(HYP_BUILD_CSHARP_LIBRARIES)
 
         add_custom_target(HyperionCore ALL
             COMMAND dotnet build --disable-build-servers --no-restore --configuration ${HYP_BUILD_TYPE}
-            COMMAND ${CMAKE_COMMAND} -E copy ${CSHARP_PROJECTS_DIR}/HyperionCore/bin/${HYP_BUILD_TYPE}/net8.0/HyperionCore.dll ${CMAKE_CURRENT_BINARY_DIR}/HyperionCore.dll
-            COMMAND ${CMAKE_COMMAND} -E copy ${CSHARP_PROJECTS_DIR}/HyperionCore/bin/${HYP_BUILD_TYPE}/net8.0/HyperionCore.xml ${CMAKE_CURRENT_BINARY_DIR}/HyperionCore.xml
+            COMMAND ${CMAKE_COMMAND} -E copy ${CSHARP_PROJECTS_DIR}/HyperionCore/bin/${HYP_BUILD_TYPE}/net8.0/HyperionCore.dll ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/HyperionCore.dll
+            COMMAND ${CMAKE_COMMAND} -E copy ${CSHARP_PROJECTS_DIR}/HyperionCore/bin/${HYP_BUILD_TYPE}/net8.0/HyperionCore.xml ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/HyperionCore.xml
             WORKING_DIRECTORY ${CSHARP_PROJECTS_DIR}/HyperionCore
         )
     endif()
@@ -729,8 +723,8 @@ if(HYP_BUILD_CSHARP_LIBRARIES)
         add_custom_target(HyperionRuntime ALL
             COMMAND dotnet build --disable-build-servers --no-restore --configuration ${HYP_BUILD_TYPE}
             DEPENDS HyperionCore
-            COMMAND ${CMAKE_COMMAND} -E copy ${CSHARP_PROJECTS_DIR}/HyperionRuntime/bin/${HYP_BUILD_TYPE}/net8.0/HyperionRuntime.dll ${CMAKE_CURRENT_BINARY_DIR}/HyperionRuntime.dll
-            COMMAND ${CMAKE_COMMAND} -E copy ${CSHARP_PROJECTS_DIR}/HyperionRuntime/bin/${HYP_BUILD_TYPE}/net8.0/HyperionRuntime.xml ${CMAKE_CURRENT_BINARY_DIR}/HyperionRuntime.xml
+            COMMAND ${CMAKE_COMMAND} -E copy ${CSHARP_PROJECTS_DIR}/HyperionRuntime/bin/${HYP_BUILD_TYPE}/net8.0/HyperionRuntime.dll ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/HyperionRuntime.dll
+            COMMAND ${CMAKE_COMMAND} -E copy ${CSHARP_PROJECTS_DIR}/HyperionRuntime/bin/${HYP_BUILD_TYPE}/net8.0/HyperionRuntime.xml ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/HyperionRuntime.xml
             WORKING_DIRECTORY ${CSHARP_PROJECTS_DIR}/HyperionRuntime
         )
     endif()
@@ -794,8 +788,8 @@ if(HYP_BUILD_CSHARP_LIBRARIES)
         add_custom_target(HyperionInterop ALL
             COMMAND dotnet build --disable-build-servers --no-restore --configuration ${HYP_BUILD_TYPE}
             DEPENDS HyperionCore
-            COMMAND ${CMAKE_COMMAND} -E copy ${CSHARP_PROJECTS_DIR}/HyperionInterop/bin/${HYP_BUILD_TYPE}/net8.0/HyperionInterop.dll ${CMAKE_CURRENT_BINARY_DIR}/HyperionInterop.dll
-            COMMAND ${CMAKE_COMMAND} -E copy ${CSHARP_PROJECTS_DIR}/HyperionInterop/bin/${HYP_BUILD_TYPE}/net8.0/HyperionInterop.xml ${CMAKE_CURRENT_BINARY_DIR}/HyperionInterop.xml
+            COMMAND ${CMAKE_COMMAND} -E copy ${CSHARP_PROJECTS_DIR}/HyperionInterop/bin/${HYP_BUILD_TYPE}/net8.0/HyperionInterop.dll ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/HyperionInterop.dll
+            COMMAND ${CMAKE_COMMAND} -E copy ${CSHARP_PROJECTS_DIR}/HyperionInterop/bin/${HYP_BUILD_TYPE}/net8.0/HyperionInterop.xml ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/HyperionInterop.xml
             WORKING_DIRECTORY ${CSHARP_PROJECTS_DIR}/HyperionInterop
         )
     endif()
@@ -865,8 +859,8 @@ if(HYP_BUILD_CSHARP_LIBRARIES)
         add_custom_target(HyperionScripting ALL
             COMMAND dotnet build --disable-build-servers --no-restore --configuration ${HYP_BUILD_TYPE}
             DEPENDS HyperionCore
-            COMMAND ${CMAKE_COMMAND} -E copy ${CSHARP_PROJECTS_DIR}/HyperionScripting/bin/${HYP_BUILD_TYPE}/net8.0/HyperionScripting.dll ${CMAKE_CURRENT_BINARY_DIR}/HyperionScripting.dll
-            COMMAND ${CMAKE_COMMAND} -E copy ${CSHARP_PROJECTS_DIR}/HyperionScripting/bin/${HYP_BUILD_TYPE}/net8.0/HyperionScripting.xml ${CMAKE_CURRENT_BINARY_DIR}/HyperionScripting.xml
+            COMMAND ${CMAKE_COMMAND} -E copy ${CSHARP_PROJECTS_DIR}/HyperionScripting/bin/${HYP_BUILD_TYPE}/net8.0/HyperionScripting.dll ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/HyperionScripting.dll
+            COMMAND ${CMAKE_COMMAND} -E copy ${CSHARP_PROJECTS_DIR}/HyperionScripting/bin/${HYP_BUILD_TYPE}/net8.0/HyperionScripting.xml ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/HyperionScripting.xml
             WORKING_DIRECTORY ${CSHARP_PROJECTS_DIR}/HyperionScripting
         )
     endif()

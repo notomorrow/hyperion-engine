@@ -2,22 +2,10 @@
 
 #include <system/App.hpp>
 
-#include <core/debug/StackDump.hpp>
-
-#include <core/containers/Bitset.hpp>
-
 #include <core/logging/Logger.hpp>
-#include <core/utilities/Optional.hpp>
-#include <core/utilities/uuid.hpp>
-
-#include <core/utilities/Tuple.hpp>
-#include <core/utilities/Format.hpp>
 
 #include <HyperionEngine.hpp>
 #include <Engine.hpp>
-
-// temp
-#include <SDL2/SDL.h>
 
 using namespace hyperion;
 
@@ -32,8 +20,6 @@ void HandleSignal(int signum)
         LogType::Warn,
         "Received signal %d\n",
         signum);
-
-    DebugLog(LogType::Debug, "%s\n", StackDump().ToString().Data());
 
     Engine::GetInstance()->RequestStop();
 
@@ -56,9 +42,9 @@ int main(int argc, char** argv)
         return 1;
     }
 
-    Handle<Game> game = CreateObject<HyperionEditor>();
+    Handle<HyperionEditor> editorInstance = CreateObject<HyperionEditor>();
 
-    App::GetInstance().LaunchGame(game);
+    App::GetInstance().LaunchGame(editorInstance);
 
     return 0;
 }

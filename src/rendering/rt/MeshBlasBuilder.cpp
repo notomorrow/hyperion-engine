@@ -6,6 +6,7 @@
 #include <rendering/Mesh.hpp>
 #include <rendering/Material.hpp>
 #include <rendering/RenderBackend.hpp>
+#include <rendering/RenderHelpers.hpp>
 
 #include <asset/MeshAsset.hpp>
 #include <asset/AssetRegistry.hpp>
@@ -80,11 +81,21 @@ struct RENDER_COMMAND(BuildMeshBlas) : public RenderCommand
         indicesStagingBuffer->Memset(packedIndicesSize, 0); // zero out
         indicesStagingBuffer->Copy(packedIndices.Size() * sizeof(uint32), packedIndices.Data());
 
-        FrameBase* frame = g_renderBackend->GetCurrentFrame();
+        UniquePtr<SingleTimeCommands> singleTimeCommands = g_renderBackend->GetSingleTimeCommands();
+
+        singleTimeCommands->Push([&](RenderQueue& renderQueue)
+            {
+                renderQueue << CopyBuffer(verticesStagingBuffer, packedVerticesBuffer, packedVerticesSize);
+                renderQueue << CopyBuffer(indicesStagingBuffer, packedIndicesBuffer, packedIndicesSize);
+            });
+
+        return singleTimeCommands->Execute();
+
+        /*FrameBase* frame = g_renderBackend->GetCurrentFrame();
         RenderQueue& renderQueue = frame->renderQueue;
 
         renderQueue << CopyBuffer(verticesStagingBuffer, packedVerticesBuffer, packedVerticesSize);
-        renderQueue << CopyBuffer(indicesStagingBuffer, packedIndicesBuffer, packedIndicesSize);
+        renderQueue << CopyBuffer(indicesStagingBuffer, packedIndicesBuffer, packedIndicesSize);*/
 
         return {};
     }
