@@ -39,7 +39,7 @@ Result GeneratorBase::Generate(const Analyzer& analyzer, const Module& mod) cons
 
     MemoryByteWriter memoryWriter;
 
-    Result res = Generate_Internal(analyzer, mod, memoryWriter);
+    Result res = Generate(analyzer, mod, memoryWriter);
 
     if (!res.HasError())
     {

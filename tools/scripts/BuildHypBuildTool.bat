@@ -10,7 +10,7 @@ if %errorlevel%==1 (
     cmake ..\..\buildtool
 )
 
-cmake --build . --target hyperion-buildtool
+cmake --build . --target hyperion-buildtool --parallel 4
 if errorlevel 1 (
     exit /b 1
 )

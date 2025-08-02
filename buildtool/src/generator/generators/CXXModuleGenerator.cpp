@@ -41,13 +41,12 @@ FilePath CXXModuleGenerator::GetOutputFilePath(const Analyzer& analyzer, const M
     return analyzer.GetCXXOutputDirectory() / relativePath.BasePath() / StringUtil::StripExtension(relativePath.Basename()) + ".generated.cpp";
 }
 
-Result CXXModuleGenerator::Generate_Internal(const Analyzer& analyzer, const Module& mod, ByteWriter& writer) const
+Result CXXModuleGenerator::Generate(const Analyzer& analyzer, const Module& mod, ByteWriter& writer) const
 {
     FilePath relativePath = FilePath(FileSystem::RelativePath(mod.GetPath().Data(), analyzer.GetSourceDirectory().Data()).c_str());
 
     writer.WriteString(HYP_FORMAT("/* Generated from: {} */\n\n", relativePath));
 
-    writer.WriteString("#include <core/object/HypClassUtils.hpp>\n");
     writer.WriteString(HYP_FORMAT("#include <{}>\n\n", relativePath));
 
     for (const Pair<String, HypClassDefinition>& pair : mod.GetHypClasses())
