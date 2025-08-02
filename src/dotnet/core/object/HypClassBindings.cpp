@@ -161,7 +161,6 @@ bool DynamicHypClassInstance::CreateInstance_Internal(HypData& out) const
 
     HypObjectBase* target = reinterpret_cast<HypObjectBase*>(out.ToRef().GetPointer());
     Assert(target != nullptr);
-    AssertDebug(target->GetObjectHeader_Internal()->GetRefCountStrong() > 1);
 
     IHypObjectInitializer* parentInitializer = m_parent->GetObjectInitializer(target);
     Assert(parentInitializer != nullptr);
@@ -170,10 +169,12 @@ bool DynamicHypClassInstance::CreateInstance_Internal(HypData& out) const
     FixupObjectInitializerPointer(target, newInitializer);
 
     ManagedObjectResource* managedObjectResource = AllocateResource<ManagedObjectResource>(HypObjectPtr(this, target), managedClass);
-    target->SetManagedObjectResource(managedObjectResource);
+    AssertDebug(managedObjectResource != nullptr);
 
-    // Create the managed object
+    // keep it alive
     managedObjectResource->IncRef();
+    
+    target->SetManagedObjectResource(managedObjectResource);
 
     return true;
 }

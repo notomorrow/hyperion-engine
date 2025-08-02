@@ -31,6 +31,11 @@ HypObjectInitializerGuardBase::HypObjectInitializerGuardBase(HypObjectPtr ptr)
     count = 0;
 #endif
 
+    HYP_CORE_ASSERT(ptr.GetClass()->UseHandles());
+
+    HypObjectBase* target = reinterpret_cast<HypObjectBase*>(ptr.GetPointer());
+    HYP_CORE_ASSERT(target != nullptr, "HypObjectInitializerGuardBase: HypObjectPtr is not valid!");
+
     // Push NONE to prevent our current flags from polluting allocations that happen in the constructor
     PushGlobalContext(HypObjectInitializerContext {
         .hypClass = ptr.GetClass(),
@@ -46,18 +51,23 @@ HypObjectInitializerGuardBase::~HypObjectInitializerGuardBase()
         return;
     }
 
+    HYP_CORE_ASSERT(ptr.GetClass()->UseHandles());
+
+    HypObjectBase* target = reinterpret_cast<HypObjectBase*>(ptr.GetPointer());
+    AssertDebug(target->GetObjectHeader_Internal()->GetRefCountStrong() == 1);
+
     HypObjectInitializerContext* context = GetGlobalContext<HypObjectInitializerContext>();
 
     if ((!context || !(context->flags & HypObjectInitializerFlags::SUPPRESS_MANAGED_OBJECT_CREATION)) && !ptr.GetClass()->IsAbstract())
     {
         if (RC<dotnet::Class> managedClass = ptr.GetClass()->GetManagedClass())
         {
-            Assert(ptr.GetClass()->GetAllocationMethod() == HypClassAllocationMethod::HANDLE);
+            ManagedObjectResource* managedObjectResource = AllocateResource<ManagedObjectResource>(ptr, managedClass);
 
-            HypObjectBase* target = reinterpret_cast<HypObjectBase*>(ptr.GetPointer());
-            Assert(target->GetObjectHeader_Internal()->GetRefCountStrong() == 1);
+            Assert(managedObjectResource != nullptr);
+            managedObjectResource->IncRef();
 
-            target->SetManagedObjectResource(AllocateResource<ManagedObjectResource>(ptr, managedClass));
+            target->SetManagedObjectResource(managedObjectResource);
         }
         else
         {
@@ -90,6 +100,9 @@ HypObjectBase::HypObjectBase()
 
     m_header = reinterpret_cast<HypObjectHeader*>(uintptr_t(this) - headerOffset);
     m_header->IncRefWeak();
+    
+    // increment the strong reference count for the Handle<T> that will be returned from CreateObject<T>().
+    m_header->refCountStrong.Increment(1, MemoryOrder::RELEASE);
 }
 
 HypObjectBase::~HypObjectBase()

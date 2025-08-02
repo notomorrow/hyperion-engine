@@ -74,6 +74,8 @@ namespace Hyperion
 
                 if (_nativeAddress == IntPtr.Zero)
                     throw new Exception("Native address is null - object is not correctly initialized");
+
+                HypObject_IncRef(_hypClassPtr, _nativeAddress, false);
             }
             
             // Logger.Log(LogType.Debug, "Created HypObject of type " + GetType().Name + ", _hypClassPtr: " + _hypClassPtr + ", _nativeAddress: " + _nativeAddress);

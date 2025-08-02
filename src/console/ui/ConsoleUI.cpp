@@ -38,7 +38,8 @@ class ConsoleHistory
 public:
     ConsoleHistory(const Handle<UIDataSource>& dataSource, int maxHistorySize = 100)
         : m_dataSource(dataSource),
-          m_maxHistorySize(maxHistorySize)
+          m_maxHistorySize(maxHistorySize),
+          m_numQueuedEntries(0)
     {
         m_entries.Reserve(m_maxHistorySize);
     }
@@ -47,14 +48,39 @@ public:
     {
     }
 
+    HYP_FORCE_INLINE bool HasUpdates() const
+    {
+        return m_numQueuedEntries.Get(MemoryOrder::RELAXED) != 0;
+    }
+
     HYP_FORCE_INLINE const Handle<UIDataSource>& GetDataSource() const
     {
         return m_dataSource;
     }
 
-    void AddEntry(const String& text, ConsoleHistoryEntryType entryType)
+    // Must be called on parent UIObject's owner thread
+    void SyncUpdates()
     {
-        if (m_entries.Any() && int(m_entries.Size() + 1) > m_maxHistorySize)
+        Array<ConsoleHistoryEntry> localQueuedEntries;
+
+        {
+            Mutex::Guard guard(m_queuedEntriesMutex);
+
+            const uint32 numQueuedEntries = uint32(m_queuedEntries.Size());
+        
+            localQueuedEntries = std::move(m_queuedEntries);
+            m_numQueuedEntries.Decrement(numQueuedEntries, MemoryOrder::RELEASE);
+        }
+        
+        /// FIXME: This could be more efficient, if the entry list is too large we shouldn't push stuff just to remove it
+        for (ConsoleHistoryEntry& entry : localQueuedEntries)
+        {
+            m_dataSource->Push(entry.uuid, HypData(entry), UUID::Invalid());
+        }
+
+        m_entries.Concat(std::move(localQueuedEntries));
+
+        while (m_entries.Any() && int(m_entries.Size()) > m_maxHistorySize)
         {
             ConsoleHistoryEntry* entry = &m_entries.Front();
 
@@ -66,18 +92,21 @@ public:
             m_entries.PopFront();
         }
 
-        ConsoleHistoryEntry entry;
+    }
+
+    void AddEntry(const String& text, ConsoleHistoryEntryType entryType)
+    {
+        Mutex::Guard guard(m_queuedEntriesMutex);
+
+        ConsoleHistoryEntry entry {};
         entry.type = entryType;
         entry.text = text;
 
-        if (m_dataSource)
-        {
-            m_dataSource->Push(entry.uuid, HypData(entry), UUID::Invalid());
-        }
-
-        m_entries.PushBack(std::move(entry));
+        m_queuedEntries.PushBack(std::move(entry));
+        m_numQueuedEntries.Increment(1, MemoryOrder::RELEASE);
     }
 
+    // Must be called from owner thread of the UI Object
     void ClearHistory()
     {
         m_entries.Clear();
@@ -92,6 +121,10 @@ private:
     Handle<UIDataSource> m_dataSource;
     int m_maxHistorySize;
     Array<ConsoleHistoryEntry> m_entries;
+
+    Array<ConsoleHistoryEntry> m_queuedEntries;
+    Mutex m_queuedEntriesMutex;
+    AtomicVar<uint32> m_numQueuedEntries;
 };
 
 #pragma endregion ConsoleHistory
@@ -357,6 +390,28 @@ void ConsoleUI::UpdateSize_Internal(bool updateChildren)
         m_textbox->SetSize(UIObjectSize({ 100, UIObjectSize::PERCENT }, { 25, UIObjectSize::PIXEL }));
     }
 }
+
+void ConsoleUI::Update_Internal(float delta)
+{
+    UIObject::Update_Internal(delta);
+
+    m_history->SyncUpdates();
+}
+
+bool ConsoleUI::NeedsUpdate() const
+{
+    if (UIObject::NeedsUpdate())
+    {
+        return true;
+    }
+
+    if (m_history != nullptr)
+    {
+        return m_history->HasUpdates();
+    }
+
+    return false;
+ }
 
 Material::ParameterTable ConsoleUI::GetMaterialParameters() const
 {

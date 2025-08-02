@@ -45,12 +45,13 @@ ManagedObjectResource::ManagedObjectResource(HypObjectPtr ptr, const RC<dotnet::
         }
         else
         {
-            if (m_ptr.GetClass()->IsReferenceCounted())
-            {
-                // Increment reference count for the managed object (creating from managed does this already via HypObject_Initialize())
-                // The managed object is responsible for decrementing the ref count using HypObject_DecRef() in finalizer and Dispose().
-                m_ptr.IncRef();
-            }
+            /// VVVV NOTE: moved HypObject_IncRef into C# constructor instead
+            //if (m_ptr.GetClass()->IsReferenceCounted())
+            //{
+            //    // Increment reference count for the managed object (creating from managed does this already via HypObject_Initialize())
+            //    // The managed object is responsible for decrementing the ref count using HypObject_DecRef() in finalizer and Dispose().
+            //    m_ptr.IncRef();
+            //}
 
             m_objectPtr = m_managedClass->NewObject(m_ptr.GetClass(), address);
         }
@@ -100,10 +101,11 @@ void ManagedObjectResource::Initialize()
 
     if (m_managedClass)
     {
-        if (hypClass->IsReferenceCounted())
+        //// VVVV NOTE: moved HypObject_IncRef into C# constructor instead
+        /*if (hypClass->IsReferenceCounted())
         {
             m_ptr.IncRef();
-        }
+        }*/
 
         dotnet::Object* newManagedObject = m_managedClass->NewObject(hypClass, m_ptr.GetPointer());
 

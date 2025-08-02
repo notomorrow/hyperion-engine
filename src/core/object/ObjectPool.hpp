@@ -285,6 +285,8 @@ public:
     {
         HypObjectMemory* element;
         m_pool.AcquireIndex(&element);
+        AssertDebug(element->GetRefCountStrong() == 0 && element->GetRefCountWeak() == 0,
+            "HypObjectMemory should not have any references when allocated from the pool!!");
 
         return element;
     }

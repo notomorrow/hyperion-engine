@@ -38,6 +38,12 @@ A `Node` is a basic building block of the scene graph. It represents a position 
 ### Entity
 An `Entity` is a fundamental object in the engine. It can have various components attached to it, and can be subclassed to provide additional functionality. Entities are used to represent objects in the game world which may or may not be visible. They can be anything from a 3D model, a light source, a camera, etc. Entities can be added to a `Scene` by attaching them to a node in the scene's hierarchy. Each `Entity` can have multiple components, which define its behavior and properties.
 
+### Component
+A `Component` is a modular piece of functionality that can be attached to an `Entity`. Components can be used to define the behavior and properties of an entity. For example, a `TransformComponent` can be used to define the position, rotation, and scale of an entity, while a `MeshComponent` can be used to define the mesh, material and skeletal data that will be associated with a given `Entity`.
+
+### System
+A `System` is a class that provides functionality to the engine and can be added to a `Scene`. Systems can process entities in a scene in parallel from each other as long as the components they operate on would not conflict with each other allowing for efficient processing of entities.
+
 ### View
 A `View` can be thought of a slice of a `Scene` that is rendered from a specific camera's perspective. A `View` is used to collect entities and other objects that are visible from the camera's point of view. It contains the camera, the scene(s) to render, and any additional settings for rendering. Views are the bridge between the scene and the rendering system, allowing for multiple cameras to render different parts of the scene simultaneously. For example, you can have a main `View` for the game's main camera and a separate `View` for shadows.
 
@@ -46,6 +52,9 @@ A `Camera` is a subclass of `Entity` that provides a viewpoint for rendering the
 
 ### Light
 A `Light` is a subclass of `Entity` that defines a light source in the scene. Just like other types of entities, a `Light` can also be attached to a `Node` in the scene hierarchy, allowing it to inherit transformations from its parent node. Lights can have different types (e.g., directional, point, spot) and properties (e.g., color, intensity) that affect how they illuminate the scene.
+
+### Subsystem
+A world-level system that can be added to a `World` to provide additional functionality. Subsystems are not localized to any `Scene` or `View` on the world. Subsystems have an `Update(delta)` method that is called every frame on the game thread allowing them to perform necessary updates.
 
 ### SceneOctree
 A `SceneOctree` is a spatial partitioning structure used to efficiently manage and query the entities in a scene. It divides the 3D space into smaller regions (octants) to optimize collection and collision detection.

@@ -71,9 +71,10 @@ extern "C"
             ObjectFlags::CREATED_FROM_MANAGED);
         
         HypObjectBase* target = reinterpret_cast<HypObjectBase*>(ptr.GetPointer());
-        AssertDebug(target->GetObjectHeader_Internal()->GetRefCountStrong() == 1);
 
         target->SetManagedObjectResource(managedObjectResource);
+
+        /// NOTE: CREATED_FROM_MANAGED is set to true here, so we don't set keep alive to true
     }
 
     HYP_EXPORT uint32 HypObject_GetRefCount_Strong(const HypClass* hypClass, void* nativeAddress)

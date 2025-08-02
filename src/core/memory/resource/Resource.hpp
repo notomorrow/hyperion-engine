@@ -84,6 +84,11 @@ public:
     ResourceBase(ResourceBase&& other) noexcept = delete;
     ResourceBase& operator=(ResourceBase&& other) noexcept = delete;
 
+    HYP_FORCE_INLINE int NumRefs() const
+    {
+        return m_refCount;
+    }
+
     virtual bool IsNull() const override final
     {
         return false;
@@ -117,7 +122,7 @@ protected:
     virtual void Destroy() = 0;
 
 protected:
-    volatile int32 m_refCount;
+    int32 m_refCount;
     mutable Mutex m_mutex;
 
     ResourceMemoryPoolHandle m_poolHandle;

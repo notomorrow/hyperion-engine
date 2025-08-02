@@ -917,9 +917,6 @@ inline Handle<T> CreateObject(Args&&... args)
 
     HypObjectMemory<T>* header = container.Allocate();
 
-    // Add initial strong reference for the Handle<T> - if the object is alive, it will have at least 1 strong ref.
-    header->refCountStrong.Increment(1, MemoryOrder::RELEASE);
-
     T* ptr = header->storage.GetPointer();
 
     Memory::ConstructWithContext<T, HypObjectInitializerGuard<T>>(ptr, std::forward<Args>(args)...);

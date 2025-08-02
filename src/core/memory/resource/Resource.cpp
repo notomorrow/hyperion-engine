@@ -60,21 +60,21 @@ bool ResourceBase::IsInitialized() const
 
 int ResourceBase::IncRefNoInitialize()
 {
-    int count = AtomicIncrement(&m_refCount);
+    int result = AtomicIncrement(&m_refCount);
 
-    if (count == 1)
+    if (result == 1)
     {
         m_initState.Produce();
         m_initializationThreadId = Threads::CurrentThreadId();
     }
 
-    return count;
+    return result;
 }
 
 int ResourceBase::IncRef()
 {
     HYP_SCOPE;
-
+    
     int result = AtomicIncrement(&m_refCount);
 
     if (result == 1)
@@ -98,7 +98,7 @@ int ResourceBase::IncRef()
 int ResourceBase::DecRef()
 {
     HYP_SCOPE;
-
+    
     int result = AtomicDecrement(&m_refCount);
 
     if (result == 0)

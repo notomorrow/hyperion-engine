@@ -6,6 +6,8 @@
 
 #include <core/memory/Pimpl.hpp>
 
+#include <core/threading/Mutex.hpp>
+
 namespace hyperion {
 
 class UITextbox;
@@ -29,6 +31,10 @@ public:
 protected:
     virtual void Init() override;
     virtual void UpdateSize_Internal(bool updateChildren) override;
+    
+    virtual void Update_Internal(float delta) override;
+
+    virtual bool NeedsUpdate() const override;
 
     virtual Material::ParameterTable GetMaterialParameters() const override;
 

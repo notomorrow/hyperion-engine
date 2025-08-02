@@ -278,8 +278,8 @@ public:
     void SetManagedObjectResource(ManagedObjectResource* managedObjectResource)
     {
         HYP_CORE_ASSERT(m_managedObjectResource == nullptr);
+
         m_managedObjectResource = managedObjectResource;
-        HYP_CORE_ASSERT(m_header != nullptr && m_header->GetRefCountStrong() <= 1);
     }
 
     ManagedObjectResource* GetManagedObjectResource() const
