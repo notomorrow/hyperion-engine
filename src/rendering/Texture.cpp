@@ -77,7 +77,7 @@ struct RENDER_COMMAND(CreateTextureGpuImage)
 
         if (!image->IsCreated())
         {
-            HYPERION_BUBBLE_ERRORS(image->Create());
+            HYP_GFX_CHECK(image->Create());
 
             if (texture->GetAsset().IsValid())
             {
@@ -152,7 +152,7 @@ struct RENDER_COMMAND(CreateTextureGpuImage)
                 }
 
                 GpuBufferRef stagingBuffer = g_renderBackend->MakeGpuBuffer(GpuBufferType::STAGING_BUFFER, imageData->Size());
-                HYPERION_BUBBLE_ERRORS(stagingBuffer->Create());
+                HYP_GFX_CHECK(stagingBuffer->Create());
                 stagingBuffer->Copy(imageData->Size(), imageData->Data());
 
                 HYP_DEFER({ SafeRelease(std::move(stagingBuffer)); });
@@ -336,7 +336,7 @@ void Texture::Readback(ByteBuffer& outByteBuffer)
     Threads::AssertOnThread(g_renderThread);
 
     GpuBufferRef gpuBuffer = g_renderBackend->MakeGpuBuffer(GpuBufferType::STAGING_BUFFER, m_gpuImage->GetByteSize());
-    HYPERION_ASSERT_RESULT(gpuBuffer->Create());
+    HYP_GFX_ASSERT(gpuBuffer->Create());
     gpuBuffer->Map();
 
     UniquePtr<SingleTimeCommands> singleTimeCommands = g_renderBackend->GetSingleTimeCommands();

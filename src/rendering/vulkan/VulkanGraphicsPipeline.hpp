@@ -14,7 +14,7 @@
 #include <rendering/RenderPipeline.hpp>
 #include <rendering/RenderDevice.hpp>
 #include <rendering/RenderShader.hpp>
-#include <rendering/RenderStructs.hpp>
+#include <rendering/Shared.hpp>
 #include <rendering/RenderHelpers.hpp>
 
 #include <core/containers/Array.hpp>

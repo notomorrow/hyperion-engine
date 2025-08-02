@@ -65,18 +65,18 @@ struct RENDER_COMMAND(BuildMeshBlas) : public RenderCommand
         const SizeType packedVerticesSize = packedVertices.Size() * sizeof(PackedVertex);
         const SizeType packedIndicesSize = packedIndices.Size() * sizeof(uint32);
 
-        HYPERION_BUBBLE_ERRORS(packedVerticesBuffer->Create());
-        HYPERION_BUBBLE_ERRORS(packedIndicesBuffer->Create());
+        HYP_GFX_CHECK(packedVerticesBuffer->Create());
+        HYP_GFX_CHECK(packedIndicesBuffer->Create());
 
         verticesStagingBuffer = g_renderBackend->MakeGpuBuffer(GpuBufferType::STAGING_BUFFER, packedVerticesSize);
         verticesStagingBuffer->SetDebugName(NAME_FMT("StagingBuffer_V_BLAS_{}", blas->GetDebugName()));
-        HYPERION_BUBBLE_ERRORS(verticesStagingBuffer->Create());
+        HYP_GFX_CHECK(verticesStagingBuffer->Create());
         verticesStagingBuffer->Memset(packedVerticesSize, 0); // zero out
         verticesStagingBuffer->Copy(packedVertices.Size() * sizeof(PackedVertex), packedVertices.Data());
 
         indicesStagingBuffer = g_renderBackend->MakeGpuBuffer(GpuBufferType::STAGING_BUFFER, packedIndicesSize);
         verticesStagingBuffer->SetDebugName(NAME_FMT("StagingBuffer_I_BLAS_{}", blas->GetDebugName()));
-        HYPERION_BUBBLE_ERRORS(indicesStagingBuffer->Create());
+        HYP_GFX_CHECK(indicesStagingBuffer->Create());
         indicesStagingBuffer->Memset(packedIndicesSize, 0); // zero out
         indicesStagingBuffer->Copy(packedIndices.Size() * sizeof(uint32), packedIndices.Data());
 

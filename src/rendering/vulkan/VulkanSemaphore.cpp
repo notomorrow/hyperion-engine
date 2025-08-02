@@ -30,7 +30,7 @@ RendererResult VulkanSemaphore::Create()
 {
     VkSemaphoreCreateInfo semaphoreInfo { VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
 
-    HYPERION_VK_CHECK_MSG(
+    VULKAN_CHECK_MSG(
         vkCreateSemaphore(GetRenderBackend()->GetDevice()->GetDevice(), &semaphoreInfo, nullptr, &m_semaphore),
         "Failed to create semaphore");
 
@@ -98,7 +98,7 @@ RendererResult VulkanSemaphoreChain::Create()
     {
         auto& ref = m_signalSemaphores[i];
 
-        HYPERION_BUBBLE_ERRORS(ref.Get().Create());
+        HYP_GFX_CHECK(ref.Get().Create());
 
         m_signalSemaphoresView[i] = ref.Get().GetVulkanHandle();
     }
@@ -107,7 +107,7 @@ RendererResult VulkanSemaphoreChain::Create()
     {
         auto& ref = m_waitSemaphores[i];
 
-        HYPERION_BUBBLE_ERRORS(ref.Get().Create());
+        HYP_GFX_CHECK(ref.Get().Create());
 
         m_waitSemaphoresView[i] = ref.Get().GetVulkanHandle();
     }

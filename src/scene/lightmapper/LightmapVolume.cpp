@@ -132,7 +132,7 @@ struct RENDER_COMMAND(BakeLightmapVolumeTexture)
                 }
             });
 
-        HYPERION_ASSERT_RESULT(singleTimeCommands->Execute());
+        Assert(singleTimeCommands->Execute());
 
         // DEBUGGING: Save each atlas texture to a file for debugging purposes
         HYP_LOG(Lightmap, Info, "Saving atlas textures to disk for debugging");

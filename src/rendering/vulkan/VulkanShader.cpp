@@ -57,7 +57,7 @@ RendererResult VulkanShader::AttachSubShader(ShaderModuleType type, const Shader
 
     VkShaderModule shaderModule;
 
-    HYPERION_VK_CHECK(vkCreateShaderModule(GetRenderBackend()->GetDevice()->GetDevice(), &createInfo, nullptr, &shaderModule));
+    VULKAN_CHECK(vkCreateShaderModule(GetRenderBackend()->GetDevice()->GetDevice(), &createInfo, nullptr, &shaderModule));
 
     m_shaderModules.EmplaceBack(type, shaderObject.srcName, m_entryPointName, spirv, shaderModule);
 
@@ -96,7 +96,7 @@ RendererResult VulkanShader::AttachSubShaders()
         // since we reinterpret it as uint32 ptr we need to make sure it is aligned as uint32
         byteBuffer.SetSize(ByteUtil::AlignAs(byteBuffer.Size(), alignof(uint32)));
 
-        HYPERION_BUBBLE_ERRORS(AttachSubShader(ShaderModuleType(index), ShaderObject { srcName, std::move(byteBuffer) }));
+        HYP_GFX_CHECK(AttachSubShader(ShaderModuleType(index), ShaderObject { srcName, std::move(byteBuffer) }));
     }
 
     HYPERION_RETURN_OK;
@@ -204,7 +204,7 @@ RendererResult VulkanShader::Create()
         HYPERION_RETURN_OK;
     }
 
-    HYPERION_BUBBLE_ERRORS(AttachSubShaders());
+    HYP_GFX_CHECK(AttachSubShaders());
 
     bool isRaytracing = false;
 
@@ -217,7 +217,7 @@ RendererResult VulkanShader::Create()
 
     if (isRaytracing)
     {
-        HYPERION_BUBBLE_ERRORS(CreateShaderGroups());
+        HYP_GFX_CHECK(CreateShaderGroups());
     }
 
 #ifdef HYP_DEBUG_MODE

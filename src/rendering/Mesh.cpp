@@ -300,11 +300,11 @@ void Mesh::CreateGpuBuffers()
             const SizeType packedIndicesSize = indices.ByteSize();
 
             GpuBufferRef stagingBufferVertices = g_renderBackend->MakeGpuBuffer(GpuBufferType::STAGING_BUFFER, packedBufferSize);
-            HYPERION_ASSERT_RESULT(stagingBufferVertices->Create());
+            HYP_GFX_ASSERT(stagingBufferVertices->Create());
             stagingBufferVertices->Copy(packedBufferSize, vertices.Data());
 
             GpuBufferRef stagingBufferIndices = g_renderBackend->MakeGpuBuffer(GpuBufferType::STAGING_BUFFER, packedIndicesSize);
-            HYPERION_ASSERT_RESULT(stagingBufferIndices->Create());
+            HYP_GFX_ASSERT(stagingBufferIndices->Create());
             stagingBufferIndices->Copy(packedIndicesSize, indices.Data());
 
             FrameBase* frame = g_renderBackend->GetCurrentFrame();

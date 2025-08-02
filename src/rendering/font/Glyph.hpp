@@ -13,7 +13,7 @@
 #include <rendering/font/FontEngine.hpp>
 #include <rendering/font/FontFace.hpp>
 
-#include <rendering/RenderStructs.hpp>
+#include <rendering/Shared.hpp>
 
 namespace hyperion {
 

@@ -109,7 +109,7 @@ struct RENDER_COMMAND(CreateDDGIUniformBuffer)
 
     virtual RendererResult operator()() override
     {
-        HYPERION_BUBBLE_ERRORS(uniformBuffer->Create());
+        HYP_GFX_CHECK(uniformBuffer->Create());
         uniformBuffer->Copy(sizeof(DDGIUniforms), &uniforms);
 
         HYPERION_RETURN_OK;
@@ -132,7 +132,7 @@ struct RENDER_COMMAND(CreateDDGIRadianceBuffer)
 
     virtual RendererResult operator()() override
     {
-        HYPERION_BUBBLE_ERRORS(radianceBuffer->Create());
+        HYP_GFX_CHECK(radianceBuffer->Create());
         radianceBuffer->Memset(radianceBuffer->Size(), 0);
 
         HYPERION_RETURN_OK;

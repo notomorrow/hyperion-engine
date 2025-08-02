@@ -18,6 +18,19 @@
 
 namespace hyperion {
 
+#define HYP_GFX_ASSERT(cond, ...)                                                                          \
+    do                                                                                                     \
+    {                                                                                                      \
+        if (HYP_UNLIKELY(!(cond)))                                                                         \
+        {                                                                                                  \
+            std::printf(                                                                                   \
+                "Assertion failed in renderer!\n\tCondition: " #cond "\n\tMessage: " __VA_ARGS__); \
+            HYP_PRINT_STACK_TRACE();                                                                       \
+            std::terminate();                                                                              \
+        }                                                                                                  \
+    }                                                                                                      \
+    while (0)
+
 enum ImageUsage : uint32
 {
     IU_NONE = 0x0,
@@ -857,12 +870,6 @@ struct PushConstantData
 };
 
 } // namespace hyperion
-
-#if HYP_VULKAN
-#include <rendering/vulkan/VulkanStructs.hpp>
-#else
-#error Unsupported rendering backend
-#endif
 
 #include <core/math/Vector3.hpp>
 #include <core/math/Vector4.hpp>

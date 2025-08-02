@@ -1226,7 +1226,7 @@ void DeferredRenderer::CreateViewDescriptorSets(View* view, DeferredPassData& pa
         descriptorSet->SetElement(NAME("EnvGridRadianceResultTexture"), passData.envGridRadiancePass->GetFinalImageView());
         descriptorSet->SetElement(NAME("EnvGridIrradianceResultTexture"), passData.envGridIrradiancePass->GetFinalImageView());
 
-        HYPERION_ASSERT_RESULT(descriptorSet->Create());
+        HYP_GFX_ASSERT(descriptorSet->Create());
 
         descriptorSets[frameIndex] = std::move(descriptorSet);
     }
@@ -1681,7 +1681,7 @@ void DeferredRenderer::RenderFrameForView(FrameBase* frame, const RenderSetup& r
     {
         for (Entity* entity : rpl.GetMeshEntities())
         {
-            /*Assert(entity);
+            Assert(entity);
 
             RenderProxyMesh* meshProxy = rpl.GetMeshEntities().GetProxy(entity->Id());
             Assert(meshProxy);
@@ -1697,13 +1697,13 @@ void DeferredRenderer::RenderFrameForView(FrameBase* frame, const RenderSetup& r
 
                 if (!blas->IsCreated())
                 {
-                    HYPERION_ASSERT_RESULT(blas->Create());
+                    HYP_GFX_ASSERT(blas->Create());
                 }
             }
             else
             {
-                blas->SetTransform(meshProxy->bufferData.modelMatrix);
-            }*/
+                //blas->SetTransform(meshProxy->bufferData.modelMatrix);
+            }
 
             //if (!tlas->HasBLAS(blas))
             //{

@@ -61,7 +61,8 @@ using RendererResult = TResult<void, RendererError>;
     }                                                  \
     while (0)
 
-#define HYPERION_BUBBLE_ERRORS(result)                 \
+/// On error, exits the current functon returning the result
+#define HYP_GFX_CHECK(result)                 \
     do                                                 \
     {                                                  \
         ::hyperion::RendererResult _result = (result); \
@@ -76,14 +77,6 @@ using RendererResult = TResult<void, RendererError>;
         ::hyperion::RendererResult _result = (result); \
         (void)_result;                                 \
     }                                                  \
-    while (0)
-
-#define HYPERION_ASSERT_RESULT(result)                                                                                      \
-    do                                                                                                                      \
-    {                                                                                                                       \
-        auto _result = (result);                                                                                            \
-        Assert(_result, "[Error Code: {}]  {}", _result.GetError().GetErrorCode(), _result.GetError().GetMessage().Data()); \
-    }                                                                                                                       \
     while (0)
 
 } // namespace hyperion

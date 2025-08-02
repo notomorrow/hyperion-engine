@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include <rendering/RenderStructs.hpp>
+#include <rendering/Shared.hpp>
 #include <rendering/RenderResult.hpp>
 #include <rendering/RenderObject.hpp>
 #include <rendering/RenderConfig.hpp>
@@ -17,19 +17,6 @@
 #include <core/Handle.hpp>
 
 #include <core/Defines.hpp>
-
-#define HYP_GFX_ASSERT(cond, ...)                                                                          \
-    do                                                                                                     \
-    {                                                                                                      \
-        if (HYP_UNLIKELY(!(cond)))                                                                         \
-        {                                                                                                  \
-            std::printf(                                                                                   \
-                "Assertion failed in graphics library!\n\tCondition: " #cond "\n\tMessage: " __VA_ARGS__); \
-            HYP_PRINT_STACK_TRACE();                                                                       \
-            std::terminate();                                                                              \
-        }                                                                                                  \
-    }                                                                                                      \
-    while (0)
 
 namespace hyperion {
 

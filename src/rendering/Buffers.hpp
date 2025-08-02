@@ -10,7 +10,7 @@
 
 #include <core/Defines.hpp>
 
-#include <rendering/RenderStructs.hpp>
+#include <rendering/Shared.hpp>
 #include <rendering/RenderObject.hpp>
 #include <rendering/RenderGpuBuffer.hpp>
 
@@ -225,7 +225,7 @@ public:
     void EnsureGpuBufferCapacity(const GpuBufferRef& buffer, uint32 frameIndex)
     {
         bool wasResized = false;
-        HYPERION_ASSERT_RESULT(buffer->EnsureCapacity(Base::NumAllocatedElements() * sizeof(StructType), &wasResized));
+        HYP_GFX_ASSERT(buffer->EnsureCapacity(Base::NumAllocatedElements() * sizeof(StructType), &wasResized));
 
         if (wasResized)
         {

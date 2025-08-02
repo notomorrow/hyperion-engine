@@ -24,6 +24,7 @@
 
 #include <rendering/RenderCommand.hpp>
 #include <rendering/RenderResult.hpp>
+#include <rendering/Shared.hpp>
 
 #include <mutex>
 
@@ -1072,7 +1073,7 @@ struct RenderObjectDeleter
                     continue;
                 }
 
-                HYPERION_ASSERT_RESULT(object->Destroy());
+                HYP_GFX_ASSERT(object->Destroy());
             }
         }
 
@@ -1111,7 +1112,7 @@ struct RenderObjectDeleter
                     continue;
                 }
 
-                HYPERION_ASSERT_RESULT(object->Destroy());
+                HYP_GFX_ASSERT(object->Destroy());
             }
 
             return numDeletedObjects;

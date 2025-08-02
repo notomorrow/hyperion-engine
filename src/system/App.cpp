@@ -84,7 +84,7 @@ void App::LaunchGame(const Handle<Game>& game)
     }
 
     Assert(g_renderBackend != nullptr);
-    HYPERION_ASSERT_RESULT(g_renderBackend->Initialize(*appContext));
+    Assert(g_renderBackend->Initialize(*appContext));
 
     RenderObjectDeleter::Initialize();
 
@@ -105,7 +105,7 @@ void App::LaunchGame(const Handle<Game>& game)
 
     RenderObjectDeleter::RemoveAllNow(/* force */ true);
 
-    HYPERION_ASSERT_RESULT(g_renderBackend->Destroy());
+    Assert(g_renderBackend->Destroy());
 }
 
 } // namespace sys

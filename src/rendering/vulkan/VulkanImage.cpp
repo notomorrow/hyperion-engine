@@ -336,7 +336,7 @@ RendererResult VulkanImage::Create(ResourceState initialState)
 
     if (!formatSupportResult)
     {
-        HYPERION_BUBBLE_ERRORS(formatSupportResult);
+        HYP_GFX_CHECK(formatSupportResult);
     }
 
     const QueueFamilyIndices& qfIndices = GetRenderBackend()->GetDevice()->GetQueueFamilyIndices();
@@ -362,7 +362,7 @@ RendererResult VulkanImage::Create(ResourceState initialState)
     VmaAllocationCreateInfo allocInfo {};
     allocInfo.usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE;
 
-    HYPERION_VK_CHECK_MSG(
+    VULKAN_CHECK_MSG(
         vmaCreateImage(
             GetRenderBackend()->GetDevice()->GetAllocator(),
             &imageInfo,
@@ -440,8 +440,8 @@ RendererResult VulkanImage::Resize(const Vec3u& extent)
             return HYP_MAKE_ERROR(RendererError, "Cannot resize non-owned image");
         }
 
-        HYPERION_BUBBLE_ERRORS(Destroy());
-        HYPERION_BUBBLE_ERRORS(Create());
+        HYP_GFX_CHECK(Destroy());
+        HYP_GFX_CHECK(Create());
 
         if (previousResourceState != RS_UNDEFINED)
         {

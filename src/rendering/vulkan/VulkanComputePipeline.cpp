@@ -132,7 +132,7 @@ RendererResult VulkanComputePipeline::Create()
     layoutInfo.pushConstantRangeCount = uint32(std::size(pushConstantRanges));
     layoutInfo.pPushConstantRanges = pushConstantRanges;
 
-    HYPERION_VK_CHECK_MSG(
+    VULKAN_CHECK_MSG(
         vkCreatePipelineLayout(GetRenderBackend()->GetDevice()->GetDevice(), &layoutInfo, nullptr, &m_layout),
         "Failed to create compute pipeline layout");
 
@@ -160,7 +160,7 @@ RendererResult VulkanComputePipeline::Create()
     pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
     pipelineInfo.basePipelineIndex = -1;
 
-    HYPERION_VK_CHECK_MSG(
+    VULKAN_CHECK_MSG(
         vkCreateComputePipelines(GetRenderBackend()->GetDevice()->GetDevice(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &m_handle),
         "Failed to create compute pipeline");
 

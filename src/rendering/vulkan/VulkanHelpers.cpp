@@ -232,16 +232,16 @@ RendererResult VulkanSingleTimeCommands::Execute()
     RendererResult result;
 
     VulkanFrameRef tempFrame = VulkanFrameRef(GetRenderBackend()->MakeFrame(0));
-    HYPERION_BUBBLE_ERRORS(tempFrame->Create());
+    HYP_GFX_CHECK(tempFrame->Create());
 
     renderQueue.Prepare(tempFrame);
 
     tempFrame->UpdateUsedDescriptorSets();
 
     VulkanCommandBufferRef commandBuffer = MakeRenderObject<VulkanCommandBuffer>(VK_COMMAND_BUFFER_LEVEL_PRIMARY);
-    HYPERION_BUBBLE_ERRORS(commandBuffer->Create(GetRenderBackend()->GetDevice()->GetGraphicsQueue().commandPools[0]));
+    HYP_GFX_CHECK(commandBuffer->Create(GetRenderBackend()->GetDevice()->GetGraphicsQueue().commandPools[0]));
 
-    HYPERION_BUBBLE_ERRORS(commandBuffer->Begin());
+    HYP_GFX_CHECK(commandBuffer->Begin());
 
     // Execute the command list
     renderQueue.Execute(commandBuffer);

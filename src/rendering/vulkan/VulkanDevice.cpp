@@ -349,25 +349,25 @@ RendererResult VulkanDevice::Wait() const
 
     if (m_queueGraphics.queue != VK_NULL_HANDLE)
     {
-        HYPERION_VK_PASS_ERRORS(vkQueueWaitIdle(m_queueGraphics.queue), result);
+        VULKAN_PASS_ERRORS(vkQueueWaitIdle(m_queueGraphics.queue), result);
     }
 
     if (m_queueTransfer.queue != VK_NULL_HANDLE)
     {
-        HYPERION_VK_PASS_ERRORS(vkQueueWaitIdle(m_queueTransfer.queue), result);
+        VULKAN_PASS_ERRORS(vkQueueWaitIdle(m_queueTransfer.queue), result);
     }
 
     if (m_queueCompute.queue != VK_NULL_HANDLE)
     {
-        HYPERION_VK_PASS_ERRORS(vkQueueWaitIdle(m_queueCompute.queue), result);
+        VULKAN_PASS_ERRORS(vkQueueWaitIdle(m_queueCompute.queue), result);
     }
 
     if (m_queuePresent.queue != VK_NULL_HANDLE)
     {
-        HYPERION_VK_PASS_ERRORS(vkQueueWaitIdle(m_queuePresent.queue), result);
+        VULKAN_PASS_ERRORS(vkQueueWaitIdle(m_queuePresent.queue), result);
     }
 
-    HYPERION_VK_PASS_ERRORS(vkDeviceWaitIdle(m_device), result);
+    VULKAN_PASS_ERRORS(vkDeviceWaitIdle(m_device), result);
 
     return result;
 }
@@ -407,7 +407,7 @@ RendererResult VulkanDevice::Create(uint32 requiredQueueFamilies)
     const ExtensionMap unsupportedExtensions = GetUnsupportedExtensions();
     const auto supportedExtensions = GetSupportedExtensions();
 
-    HYPERION_BUBBLE_ERRORS(CheckDeviceSuitable(unsupportedExtensions));
+    HYP_GFX_CHECK(CheckDeviceSuitable(unsupportedExtensions));
 
     // no _required_ extensions were missing (otherwise would have caused an error)
     // so for each unsupported extension, remove it from out list of extensions
@@ -462,7 +462,7 @@ RendererResult VulkanDevice::Create(uint32 requiredQueueFamilies)
     // createInfo.pEnabledFeatures        = &features->GetPhysicalDeviceFeatures();
     createInfo.pNext = &m_features->GetPhysicalDeviceFeatures2();
 
-    HYPERION_VK_CHECK_MSG(
+    VULKAN_CHECK_MSG(
         vkCreateDevice(m_physical, &createInfo, nullptr, &m_device),
         "Could not create Device!");
 
@@ -522,7 +522,7 @@ RendererResult VulkanDevice::Create(uint32 requiredQueueFamilies)
                 poolInfo.queueFamilyIndex = familyIndex;
                 poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
 
-                HYPERION_VK_CHECK_MSG(
+                VULKAN_CHECK_MSG(
                     vkCreateCommandPool(GetDevice(), &poolInfo, nullptr, &it->commandPools[commandBufferIndex]),
                     "Could not create Vulkan command pool");
             }

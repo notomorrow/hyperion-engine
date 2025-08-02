@@ -180,7 +180,7 @@ GraphicsPipelineRef GraphicsPipelineCache::GetOrCreate(
 
         virtual RendererResult operator()() override
         {
-            HYPERION_BUBBLE_ERRORS(graphicsPipeline->Create());
+            HYP_GFX_CHECK(graphicsPipeline->Create());
 
             if (callback.IsValid())
             {

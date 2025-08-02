@@ -371,7 +371,7 @@ void PlaceholderData::Destroy()
 GpuBufferRef PlaceholderData::CreateGpuBuffer(GpuBufferType bufferType, SizeType size)
 {
     GpuBufferRef gpuBuffer = g_renderBackend->MakeGpuBuffer(bufferType, size);
-    HYPERION_ASSERT_RESULT(gpuBuffer->Create());
+    HYP_GFX_ASSERT(gpuBuffer->Create());
 
     return gpuBuffer;
 }

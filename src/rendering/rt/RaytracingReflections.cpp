@@ -234,7 +234,7 @@ void RaytracingReflections::CreateUniformBuffer()
     {
         m_uniformBuffers[frameIndex]->SetDebugName(NAME_FMT("RaytracingReflectionsUniformBuffer_{}", frameIndex));
 
-        HYPERION_ASSERT_RESULT(m_uniformBuffers[frameIndex]->Create());
+        HYP_GFX_ASSERT(m_uniformBuffers[frameIndex]->Create());
         m_uniformBuffers[frameIndex]->Copy(sizeof(uniforms), &uniforms);
     }
 }

@@ -13,7 +13,7 @@
 #include <rendering/RenderBucket.hpp>
 
 #include <rendering/RenderImage.hpp>
-#include <rendering/RenderStructs.hpp>
+#include <rendering/Shared.hpp>
 
 #include <Types.hpp>
 

@@ -5,7 +5,7 @@
 #include <core/debug/Debug.hpp>
 
 namespace hyperion {
-#define HYPERION_VK_CHECK(vkResult)                                                          \
+#define VULKAN_CHECK(vkResult)                                                          \
     do                                                                                       \
     {                                                                                        \
         if ((vkResult) != VK_SUCCESS)                                                        \
@@ -13,7 +13,7 @@ namespace hyperion {
     }                                                                                        \
     while (0)
 
-#define HYPERION_VK_CHECK_MSG(vkResult, msg)                          \
+#define VULKAN_CHECK_MSG(vkResult, msg)                          \
     do                                                                \
     {                                                                 \
         if ((vkResult) != VK_SUCCESS)                                 \
@@ -21,7 +21,7 @@ namespace hyperion {
     }                                                                 \
     while (0)
 
-#define HYPERION_VK_PASS_ERRORS(vkResult, outResult)                                                \
+#define VULKAN_PASS_ERRORS(vkResult, outResult)                                                \
     do                                                                                              \
     {                                                                                               \
         if ((vkResult) != VK_SUCCESS)                                                               \
@@ -29,7 +29,7 @@ namespace hyperion {
     }                                                                                               \
     while (0)
 
-#define HYPERION_VK_PASS_ERRORS_MSG(vkResult, msg, outResult)                \
+#define VULKAN_PASS_ERRORS_MSG(vkResult, msg, outResult)                \
     do                                                                       \
     {                                                                        \
         if ((vkResult) != VK_SUCCESS)                                        \

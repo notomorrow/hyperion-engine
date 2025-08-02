@@ -19,7 +19,6 @@
 
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
-#define NOMINMAX // do not allow windows.h to define 'max' and 'min'
 #include <windows.h>
 #include <fcntl.h>
 #include <io.h>
@@ -1045,5 +1044,3 @@ inline char* asUtf8Char(u32char& ch)
 
 } // namespace utf
 } // namespace hyperion
-
-#undef NOMINMAX

@@ -8,7 +8,7 @@
 #include <rendering/FullScreenPass.hpp>
 
 #include <rendering/RenderObject.hpp>
-#include <rendering/RenderStructs.hpp>
+#include <rendering/Shared.hpp>
 
 #include <Types.hpp>
 

@@ -109,7 +109,7 @@ public:
     template <class LambdaFunction>
     RendererResult Record(const VulkanRenderPass* renderPass, LambdaFunction&& fn)
     {
-        HYPERION_BUBBLE_ERRORS(Begin(renderPass));
+        HYP_GFX_CHECK(Begin(renderPass));
 
         RendererResult result = fn(this);
 

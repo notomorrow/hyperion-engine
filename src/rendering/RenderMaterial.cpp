@@ -138,7 +138,7 @@ FixedArray<DescriptorSetRef, g_framesInFlight> MaterialDescriptorSetManager::All
 
     for (uint32 frameIndex = 0; frameIndex < g_framesInFlight; frameIndex++)
     {
-        HYPERION_ASSERT_RESULT(descriptorSets[frameIndex]->Create());
+        HYP_GFX_ASSERT(descriptorSets[frameIndex]->Create());
     }
 
     auto it = m_materialDescriptorSets.Find(boundIndex);
@@ -211,7 +211,7 @@ FixedArray<DescriptorSetRef, g_framesInFlight> MaterialDescriptorSetManager::All
 
     for (uint32 frameIndex = 0; frameIndex < g_framesInFlight; frameIndex++)
     {
-        HYPERION_ASSERT_RESULT(descriptorSets[frameIndex]->Create());
+        HYP_GFX_ASSERT(descriptorSets[frameIndex]->Create());
     }
 
     auto it = m_materialDescriptorSets.Find(boundIndex);

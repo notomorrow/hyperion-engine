@@ -10,7 +10,7 @@
 #include <core/containers/Array.hpp>
 
 #include <rendering/RenderableAttributes.hpp>
-#include <rendering/RenderStructs.hpp>
+#include <rendering/Shared.hpp>
 
 #include <HashCode.hpp>
 #include <Types.hpp>

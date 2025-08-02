@@ -3,8 +3,12 @@
 #include <rendering/vulkan/VulkanFence.hpp>
 #include <rendering/vulkan/VulkanRenderBackend.hpp>
 #include <rendering/vulkan/VulkanDevice.hpp>
+#include <rendering/vulkan/VulkanFrame.hpp>
 
 #include <rendering/RenderDevice.hpp>
+
+#include <core/logging/Logger.hpp>
+#include <core/logging/LogChannels.hpp>
 
 #define DEFAULT_FENCE_TIMEOUT 100000000000
 
@@ -36,7 +40,7 @@ RendererResult VulkanFence::Create()
     VkFenceCreateInfo fenceCreateInfo { VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
     fenceCreateInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
-    HYPERION_VK_CHECK(vkCreateFence(GetRenderBackend()->GetDevice()->GetDevice(), &fenceCreateInfo, nullptr, &m_handle));
+    VULKAN_CHECK(vkCreateFence(GetRenderBackend()->GetDevice()->GetDevice(), &fenceCreateInfo, nullptr, &m_handle));
 
     HYPERION_RETURN_OK;
 }
@@ -60,11 +64,13 @@ RendererResult VulkanFence::WaitForGPU(bool timeoutLoop)
 
     do
     {
+        HYP_LOG(RenderingBackend, Debug, "Waiting for fence on frame index {}",
+            GetRenderBackend()->GetCurrentFrame() ? GetRenderBackend()->GetCurrentFrame()->GetFrameIndex() : ~0u);
         vkResult = vkWaitForFences(GetRenderBackend()->GetDevice()->GetDevice(), 1, &m_handle, VK_TRUE, DEFAULT_FENCE_TIMEOUT);
     }
     while (vkResult == VK_TIMEOUT && timeoutLoop);
 
-    HYPERION_VK_CHECK(vkResult);
+    VULKAN_CHECK(vkResult);
 
     m_lastFrameResult = vkResult;
 
@@ -73,7 +79,7 @@ RendererResult VulkanFence::WaitForGPU(bool timeoutLoop)
 
 RendererResult VulkanFence::Reset()
 {
-    HYPERION_VK_CHECK(vkResetFences(GetRenderBackend()->GetDevice()->GetDevice(), 1, &m_handle));
+    VULKAN_CHECK(vkResetFences(GetRenderBackend()->GetDevice()->GetDevice(), 1, &m_handle));
 
     HYPERION_RETURN_OK;
 }

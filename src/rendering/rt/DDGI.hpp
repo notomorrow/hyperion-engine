@@ -4,7 +4,7 @@
 
 #include <rendering/ShaderManager.hpp>
 
-#include <rendering/RenderStructs.hpp>
+#include <rendering/Shared.hpp>
 #include <rendering/RenderObject.hpp>
 #include <rendering/rt/RenderRaytracingPipeline.hpp>
 

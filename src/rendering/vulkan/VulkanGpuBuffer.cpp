@@ -576,11 +576,11 @@ RendererResult VulkanGpuBuffer::Create()
     const auto createInfo = GetBufferCreateInfo();
     const auto allocInfo = GetAllocationCreateInfo();
 
-    HYPERION_BUBBLE_ERRORS(CheckCanAllocate(createInfo, allocInfo, m_size));
+    HYP_GFX_CHECK(CheckCanAllocate(createInfo, allocInfo, m_size));
 
     if (m_alignment != 0)
     {
-        HYPERION_VK_CHECK_MSG(
+        VULKAN_CHECK_MSG(
             vmaCreateBufferWithAlignment(
                 GetRenderBackend()->GetDevice()->GetAllocator(),
                 &createInfo,
@@ -593,7 +593,7 @@ RendererResult VulkanGpuBuffer::Create()
     }
     else
     {
-        HYPERION_VK_CHECK_MSG(
+        VULKAN_CHECK_MSG(
             vmaCreateBuffer(
                 GetRenderBackend()->GetDevice()->GetAllocator(),
                 &createInfo,
@@ -644,7 +644,7 @@ RendererResult VulkanGpuBuffer::EnsureCapacity(
 
     if (shouldCreate)
     {
-        HYPERION_BUBBLE_ERRORS(Destroy());
+        HYP_GFX_CHECK(Destroy());
     }
 
     m_size = minimumSize;
@@ -657,7 +657,7 @@ RendererResult VulkanGpuBuffer::EnsureCapacity(
 
     if (shouldCreate)
     {
-        HYPERION_BUBBLE_ERRORS(Create());
+        HYP_GFX_CHECK(Create());
     }
 
     return {};
@@ -704,7 +704,7 @@ RendererResult VulkanGpuBuffer::CheckCanAllocate(
 
     uint32 memoryTypeIndex = UINT32_MAX;
 
-    HYPERION_VK_PASS_ERRORS(
+    VULKAN_PASS_ERRORS(
         vmaFindMemoryTypeIndexForBufferInfo(
             GetRenderBackend()->GetDevice()->GetAllocator(),
             &bufferCreateInfo,

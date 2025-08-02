@@ -61,7 +61,7 @@ RendererResult VulkanAttachmentMap::Create()
 
         if (!def.image->IsCreated())
         {
-            HYPERION_BUBBLE_ERRORS(def.image->Create());
+            HYP_GFX_CHECK(def.image->Create());
         }
 
         attachmentDefs.PushBack(&def);
@@ -70,7 +70,7 @@ RendererResult VulkanAttachmentMap::Create()
 
         if (!def.attachment->IsCreated())
         {
-            HYPERION_BUBBLE_ERRORS(def.attachment->Create());
+            HYP_GFX_CHECK(def.attachment->Create());
         }
     }
 
@@ -122,7 +122,7 @@ RendererResult VulkanAttachmentMap::Resize(Vec2u newSize)
             textureDesc.extent = Vec3u { newSize.x, newSize.y, 1 };
 
             newImage = MakeRenderObject<VulkanImage>(textureDesc);
-            HYPERION_ASSERT_RESULT(newImage->Create());
+            HYP_GFX_ASSERT(newImage->Create());
 
             if (def.image.IsValid())
             {
@@ -147,7 +147,7 @@ RendererResult VulkanAttachmentMap::Resize(Vec2u newSize)
 
         newAttachment->SetBinding(def.attachment->GetBinding());
 
-        HYPERION_ASSERT_RESULT(newAttachment->Create());
+        HYP_GFX_ASSERT(newAttachment->Create());
 
         if (def.attachment.IsValid())
         {
@@ -215,7 +215,7 @@ RendererResult VulkanFramebuffer::Create()
         HYPERION_RETURN_OK;
     }
 
-    HYPERION_BUBBLE_ERRORS(m_attachmentMap.Create());
+    HYP_GFX_CHECK(m_attachmentMap.Create());
 
     for (const auto& it : m_attachmentMap.attachments)
     {
@@ -225,7 +225,7 @@ RendererResult VulkanFramebuffer::Create()
         m_renderPass->AddAttachment(def.attachment);
     }
 
-    HYPERION_BUBBLE_ERRORS(m_renderPass->Create());
+    HYP_GFX_CHECK(m_renderPass->Create());
 
     Array<VkImageView> attachmentImageViews;
     attachmentImageViews.Reserve(m_attachmentMap.attachments.Size());
@@ -253,7 +253,7 @@ RendererResult VulkanFramebuffer::Create()
 
     for (uint32 frameIndex = 0; frameIndex < g_framesInFlight; frameIndex++)
     {
-        HYPERION_VK_CHECK(vkCreateFramebuffer(
+        VULKAN_CHECK(vkCreateFramebuffer(
             GetRenderBackend()->GetDevice()->GetDevice(),
             &framebufferCreateInfo,
             nullptr,
@@ -316,7 +316,7 @@ RendererResult VulkanFramebuffer::Resize(Vec2u newSize)
         HYPERION_RETURN_OK;
     }
 
-    HYPERION_BUBBLE_ERRORS(m_attachmentMap.Resize(newSize));
+    HYP_GFX_CHECK(m_attachmentMap.Resize(newSize));
 
     if (m_handle != VK_NULL_HANDLE)
     {
@@ -346,7 +346,7 @@ RendererResult VulkanFramebuffer::Resize(Vec2u newSize)
     framebufferCreateInfo.height = newSize.y;
     framebufferCreateInfo.layers = numLayers;
 
-    HYPERION_VK_CHECK(vkCreateFramebuffer(
+    VULKAN_CHECK(vkCreateFramebuffer(
         GetRenderBackend()->GetDevice()->GetDevice(),
         &framebufferCreateInfo,
         nullptr,

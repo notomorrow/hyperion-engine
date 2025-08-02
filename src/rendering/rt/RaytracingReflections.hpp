@@ -8,7 +8,7 @@
 #include <rendering/TemporalBlending.hpp>
 
 #include <rendering/RenderObject.hpp>
-#include <rendering/RenderStructs.hpp>
+#include <rendering/Shared.hpp>
 #include <rendering/rt/RenderRaytracingPipeline.hpp>
 
 #include <core/config/Config.hpp>

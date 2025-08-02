@@ -80,10 +80,10 @@ void ShadowMapAllocator::Initialize()
         uint32(m_atlases.Size()),
         IU_SAMPLED | IU_STORAGE });
 
-    HYPERION_ASSERT_RESULT(m_atlasImage->Create());
+    HYP_GFX_ASSERT(m_atlasImage->Create());
 
     m_atlasImageView = g_renderBackend->MakeImageView(m_atlasImage);
-    HYPERION_ASSERT_RESULT(m_atlasImageView->Create());
+    HYP_GFX_ASSERT(m_atlasImageView->Create());
 
     m_pointLightShadowMapImage = g_renderBackend->MakeImage(TextureDesc {
         TT_CUBEMAP_ARRAY,
@@ -95,10 +95,10 @@ void ShadowMapAllocator::Initialize()
         g_maxBoundPointShadowMaps * 6,
         IU_SAMPLED | IU_STORAGE });
 
-    HYPERION_ASSERT_RESULT(m_pointLightShadowMapImage->Create());
+    HYP_GFX_ASSERT(m_pointLightShadowMapImage->Create());
 
     m_pointLightShadowMapImageView = g_renderBackend->MakeImageView(m_pointLightShadowMapImage);
-    HYPERION_ASSERT_RESULT(m_pointLightShadowMapImageView->Create());
+    HYP_GFX_ASSERT(m_pointLightShadowMapImageView->Create());
 }
 
 void ShadowMapAllocator::Destroy()
