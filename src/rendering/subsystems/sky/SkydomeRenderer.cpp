@@ -31,7 +31,6 @@ SkydomeRenderer::SkydomeRenderer(Vec2u dimensions)
 
 SkydomeRenderer::~SkydomeRenderer()
 {
-    HYP_SYNC_RENDER(); // wait for render commands to finish
 }
 
 void SkydomeRenderer::Init()

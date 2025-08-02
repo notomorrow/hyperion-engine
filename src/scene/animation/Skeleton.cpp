@@ -64,12 +64,12 @@ Bone* Skeleton::FindBone(WeakName name) const
             continue;
         }
 
-        if (node->GetType() != Node::Type::BONE)
+        Bone* bone = ObjCast<Bone>(node);
+
+        if (!bone)
         {
             continue;
         }
-
-        Bone* bone = static_cast<Bone*>(node); // NOLINT(cppcoreguidelines-pro-type-static-cast-downcast)
 
         if (bone->GetName() == name)
         {
@@ -103,12 +103,12 @@ uint32 Skeleton::FindBoneIndex(WeakName name) const
             continue;
         }
 
-        if (node->GetType() != Node::Type::BONE)
+        Bone* bone = ObjCast<Bone>(node);
+
+        if (!bone)
         {
             continue;
         }
-
-        const Bone* bone = static_cast<const Bone*>(node); // NOLINT(cppcoreguidelines-pro-type-static-cast-downcast)
 
         if (bone->GetName() == name)
         {
@@ -220,12 +220,14 @@ void Skeleton::UpdateRenderProxy(IRenderProxy* proxy)
                     continue;
                 }
 
-                if (descendent->GetType() != Node::Type::BONE)
+                Bone* bone = ObjCast<Bone>(descendent);
+
+                if (!bone)
                 {
                     continue;
                 }
 
-                bufferData.bones[i] = static_cast<const Bone*>(descendent)->GetBoneMatrix();
+                bufferData.bones[i] = bone->GetBoneMatrix();
             }
         }
     }

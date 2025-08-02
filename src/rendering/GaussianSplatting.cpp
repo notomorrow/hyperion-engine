@@ -213,8 +213,6 @@ void GaussianSplattingInstance::Init()
     }
 #endif
 
-    HYP_SYNC_RENDER();
-
     SetReady(true);
 }
 

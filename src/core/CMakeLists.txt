@@ -3,9 +3,6 @@ cmake_policy(SET CMP0091 NEW)
 
 set(BUILD_NAME hyperion-core)
 
-set (CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
-set (CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
-
 project(${BUILD_NAME} CXX C)
 
 set(OpenGL_GL_PREFERENCE GLVND)
@@ -25,7 +22,7 @@ set(COMMON_LIBRARIES
 find_package(Threads REQUIRED)
 
 if(MSVC)
-    set(CMAKE_CXX_FLAGS "/Zc:preprocessor /MD /O2 /Zi")
+    set(CMAKE_CXX_FLAGS "/Zc:preprocessor /MD /O2 /Zi /MP")
     add_definitions("/DNOMINMAX")
 else()
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -O3 -fpermissive")

@@ -441,7 +441,7 @@ TResult<CommandLineArguments> CommandLineParser::Parse(const String& command, co
         return HYP_MAKE_ERROR(Error, "No command line argument definitions");
     }
 
-    CommandLineArguments result;
+    CommandLineArguments result { command };
 
     HashSet<String> usedArguments;
 

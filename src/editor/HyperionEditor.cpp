@@ -353,7 +353,7 @@ void HyperionEditor::Logic(float delta)
 //        PerformanceClock clock;
 //        clock.Start();
 
-        /*Proc<void(const VoxelOctree&, int)> drawOctant;
+        Proc<void(const VoxelOctree&, int)> drawOctant;
 
         drawOctant = [&](const VoxelOctree& octree, int depth)
         {
@@ -372,7 +372,7 @@ void HyperionEditor::Logic(float delta)
             }
         };
 
-        drawOctant(*g_voxelOctree, 0);*/
+        drawOctant(*g_voxelOctree, 0);
 //        
 //        clock.Stop();
 //        

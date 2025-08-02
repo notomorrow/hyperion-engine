@@ -70,6 +70,8 @@ static void HandleFatalError(const char* message)
 
 static bool InitializeCommandLineArguments(int argc, char** argv)
 {
+    g_commandLineArguments = CommandLineArguments(argv[0]);
+
     CommandLineParser argParse { &DefaultCommandLineArgumentDefinitions() };
 
     TResult<CommandLineArguments> parseResult = argParse.Parse(argc, argv);
@@ -79,8 +81,6 @@ static bool InitializeCommandLineArguments(int argc, char** argv)
         const Error& error = parseResult.GetError();
 
         HYP_LOG(Core, Error, "Failed to parse command line arguments!\n\t{}", error.GetMessage().Any() ? error.GetMessage() : "<no message>");
-
-        g_commandLineArguments = CommandLineArguments();
 
         return false;
     }
