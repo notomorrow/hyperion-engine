@@ -20,7 +20,7 @@ git submodule update --init --recursive
 ### Optional dependencies that are included as Git submodules
 * [.NET Core](https://github.com/dotnet/runtime) - The .NET Core is used enable C# scripting for gameplay and editor functionality.
 * [zlib](https://github.com/madler/zlib) - Hyperion uses zlib to compress and decompress serialized data.
-* [glslang](https://github.com/KhronosGroup/glslang) - Used to compile GLSL shaders to SPIR-V and perform shader reflection. We use a version with [some minor modifications](https://github.com/notomorrow/glslang)
+* [glslang](https://github.com/KhronosGroup/glslang) - Used to compile GLSL shaders to SPIR-V and perform shader reflection. We use a version with [some minor modifications](https://github.com/notomorrow/glslang/tree/hyp-modifications)
 * [xatlas](https://github.com/jpcy/xatlas) - Used to generate lightmap UVs, can be skipped or disabled if you don't need this.
 
 ### Optional dependencies you can install manually
