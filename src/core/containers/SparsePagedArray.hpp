@@ -258,8 +258,55 @@ public:
         }
     }
 
-    SparsePagedArray(const SparsePagedArray& other) = delete;
-    SparsePagedArray& operator=(const SparsePagedArray& other) = delete;
+    SparsePagedArray(const SparsePagedArray& other)
+        : m_validPages(other.m_validPages)
+    {
+        m_pages.ResizeZeroed(other.m_pages.Size());
+        
+        for (Bitset::BitIndex bit : other.m_validPages)
+        {
+            HYP_CORE_ASSERT(bit < other.m_pages.Size());
+
+            m_pages[bit] = new Page;
+
+            for (Bitset::BitIndex elem : other.m_pages[bit]->initializedBits)
+            {
+                new (m_pages[bit]->storage.GetPointer() + elem) T(other.m_pages[bit]->storage.GetPointer()[elem]);
+            }
+        }
+    }
+
+    SparsePagedArray& operator=(const SparsePagedArray& other)
+    {
+        if (this == &other)
+        {
+            return *this;
+        }
+
+        for (Bitset::BitIndex bit : m_validPages)
+        {
+            HYP_CORE_ASSERT(bit < m_pages.Size());
+            delete m_pages[bit];
+            m_pages[bit] = nullptr;
+        }
+
+        m_validPages = other.m_validPages;
+        m_pages.ResizeZeroed(other.m_pages.Size());
+
+        for (Bitset::BitIndex bit : other.m_validPages)
+        {
+            HYP_CORE_ASSERT(bit < other.m_pages.Size());
+
+            m_pages[bit] = new Page;
+
+            for (Bitset::BitIndex elem : other.m_pages[bit]->initializedBits)
+            {
+                new (m_pages[bit]->storage.GetPointer() + elem) T(other.m_pages[bit]->storage.GetPointer()[elem]);
+            }
+        }
+
+        return *this;
+    }
 
     SparsePagedArray(SparsePagedArray&& other) noexcept
         : m_pages(std::move(other.m_pages)),

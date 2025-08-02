@@ -64,9 +64,9 @@ void SceneOctree::SetEntityManager(const Handle<EntityManager>& entityManager)
 
 void SceneOctree::Collect(Array<Entity*>& outEntities) const
 {
-    outEntities.Reserve(outEntities.Size() + m_payload.entries.Size());
+    outEntities.Reserve(outEntities.Size() + m_payload.entries.Count());
 
-    for (const auto& entry : m_payload.entries)
+    for (const SceneOctreePayload::Entry& entry : m_payload.entries)
     {
         outEntities.PushBack(entry.value);
     }
@@ -89,9 +89,9 @@ void SceneOctree::Collect(const BoundingSphere& bounds, Array<Entity*>& outEntit
         return;
     }
 
-    outEntities.Reserve(outEntities.Size() + m_payload.entries.Size());
+    outEntities.Reserve(outEntities.Size() + m_payload.entries.Count());
 
-    for (const auto& entry : m_payload.entries)
+    for (const SceneOctreePayload::Entry& entry : m_payload.entries)
     {
         if (bounds.Overlaps(entry.aabb))
         {
@@ -117,9 +117,9 @@ void SceneOctree::Collect(const BoundingBox& bounds, Array<Entity*>& outEntities
         return;
     }
 
-    outEntities.Reserve(outEntities.Size() + m_payload.entries.Size());
+    outEntities.Reserve(outEntities.Size() + m_payload.entries.Count());
 
-    for (const auto& entry : m_payload.entries)
+    for (const SceneOctreePayload::Entry& entry : m_payload.entries)
     {
         if (bounds.Overlaps(entry.aabb))
         {
@@ -319,6 +319,15 @@ void SceneOctree::PerformUpdates()
 
 SceneOctree::Result SceneOctree::Insert(Entity* entity, const BoundingBox& aabb, bool allowRebuild)
 {
+    HYP_SCOPE;
+
+    AssertDebug(entity != nullptr);
+
+    if (!entity)
+    {
+        return HYP_MAKE_ERROR(Error, "Cannot insert null entity into octree");
+    }
+
     if (g_flags & OF_INSERT_ON_OVERLAP)
     {
         AssertDebug(aabb.IsValid() && aabb.IsFinite() && !aabb.IsZero(), "Attempting to insert invalid AABB into Octree: {}", aabb);
@@ -423,7 +432,7 @@ SceneOctree::Result SceneOctree::Insert_Internal(Entity* entity, const BoundingB
         stateCasted->entityToOctant[entity] = this;
     }
 
-    m_payload.entries.Set(SceneOctreePayload::Entry { entity, aabb });
+    m_payload.entries.Set(entity->Id().ToIndex(), SceneOctreePayload::Entry { entity, aabb });
 
     // mark dirty (not for rebuild)
     m_state->MarkOctantDirty(m_octantId);
@@ -433,6 +442,13 @@ SceneOctree::Result SceneOctree::Insert_Internal(Entity* entity, const BoundingB
 
 SceneOctree::Result SceneOctree::Remove(Entity* entity, bool allowRebuild)
 {
+    HYP_SCOPE;
+
+    if (!entity)
+    {
+        return m_octantId;
+    }
+
     if (UseEntityMap())
     {
         SceneOctreeState* stateCasted = static_cast<SceneOctreeState*>(m_state);
@@ -453,9 +469,10 @@ SceneOctree::Result SceneOctree::Remove(Entity* entity, bool allowRebuild)
 
 SceneOctree::Result SceneOctree::Remove_Internal(Entity* entity, bool allowRebuild)
 {
-    const auto it = m_payload.entries.Find(entity);
+    const SizeType entryIndex = entity->Id().ToIndex();
+    SceneOctreePayload::Entry* entry = m_payload.entries.TryGet(entryIndex);
 
-    if (it == m_payload.entries.End())
+    if (!entry)
     {
         if (m_isDivided)
         {
@@ -499,7 +516,7 @@ SceneOctree::Result SceneOctree::Remove_Internal(Entity* entity, bool allowRebui
         }
     }
 
-    m_payload.entries.Erase(it);
+    m_payload.entries.EraseAt(entryIndex);
 
     m_state->MarkOctantDirty(m_octantId);
 
@@ -544,8 +561,12 @@ SceneOctree::Result SceneOctree::Remove_Internal(Entity* entity, bool allowRebui
     return m_octantId;
 }
 
-SceneOctree::Result SceneOctree::Move(Entity* entity, const BoundingBox& aabb, bool allowRebuild, typename SceneOctreePayload::EntrySet::Iterator it)
+SceneOctree::Result SceneOctree::Move(Entity* entity, const BoundingBox& aabb, bool allowRebuild, SceneOctreePayload::Entry* entry)
 {
+    HYP_SCOPE;
+
+    AssertDebug(entity != nullptr);
+
     const BoundingBox& newAabb = aabb;
 
     const bool isRoot = IsRoot();
@@ -588,7 +609,7 @@ SceneOctree::Result SceneOctree::Move(Entity* entity, const BoundingBox& aabb, b
 
             if (parent->ContainsAabb(newAabb))
             {
-                if (it != m_payload.entries.End())
+                if (entry)
                 {
                     if (UseEntityMap())
                     {
@@ -602,10 +623,10 @@ SceneOctree::Result SceneOctree::Move(Entity* entity, const BoundingBox& aabb, b
                         }
                     }
 
-                    m_payload.entries.Erase(it);
+                    m_payload.entries.EraseAt(entry->value->Id().ToIndex());
                 }
 
-                parentInsertResult = parent->Move(entity, aabb, allowRebuild, parent->m_payload.entries.End());
+                parentInsertResult = parent->Move(entity, aabb, allowRebuild, nullptr);
 
                 break;
             }
@@ -628,7 +649,7 @@ SceneOctree::Result SceneOctree::Move(Entity* entity, const BoundingBox& aabb, b
 
         Assert(lastParent != nullptr);
 
-        return lastParent->Move(entity, aabb, allowRebuild, lastParent->m_payload.entries.End());
+        return lastParent->Move(entity, aabb, allowRebuild, nullptr);
     }
 
     // CONTAINS AABB HERE
@@ -642,7 +663,7 @@ SceneOctree::Result SceneOctree::Move(Entity* entity, const BoundingBox& aabb, b
         {
             if ((g_flags & OF_INSERT_ON_OVERLAP) ? octant.aabb.Overlaps(newAabb) : octant.aabb.Contains(newAabb))
             {
-                if (it != m_payload.entries.End())
+                if (entry)
                 {
                     if (UseEntityMap())
                     {
@@ -656,7 +677,7 @@ SceneOctree::Result SceneOctree::Move(Entity* entity, const BoundingBox& aabb, b
                         }
                     }
 
-                    m_payload.entries.Erase(it);
+                    m_payload.entries.EraseAt(entry->value->Id().ToIndex());
                 }
 
                 if (!IsDivided())
@@ -676,11 +697,11 @@ SceneOctree::Result SceneOctree::Move(Entity* entity, const BoundingBox& aabb, b
 
                 if (g_flags & OF_INSERT_ON_OVERLAP)
                 {
-                    wasMoved |= bool(octant.octree->Move(entity, aabb, allowRebuild, octant.octree->m_payload.entries.End()));
+                    wasMoved |= bool(octant.octree->Move(entity, aabb, allowRebuild, nullptr));
                 }
                 else
                 {
-                    return octant.octree->Move(entity, aabb, allowRebuild, octant.octree->m_payload.entries.End());
+                    return octant.octree->Move(entity, aabb, allowRebuild, nullptr);
                 }
             }
         }
@@ -695,15 +716,15 @@ SceneOctree::Result SceneOctree::Move(Entity* entity, const BoundingBox& aabb, b
         m_state->MarkOctantDirty(m_octantId, true);
     }
 
-    if (it != m_payload.entries.End())
+    if (entry)
     {
         /* Not moved out of this octant (for now) */
-        it->aabb = newAabb;
+        entry->aabb = newAabb;
     }
     else
     {
         /* Moved into this octant */
-        m_payload.entries.Insert(SceneOctreePayload::Entry { entity, newAabb });
+        m_payload.entries.Set(entry->value->Id().ToIndex(), SceneOctreePayload::Entry { entity, newAabb });
 
         if (UseEntityMap())
         {
@@ -716,6 +737,15 @@ SceneOctree::Result SceneOctree::Move(Entity* entity, const BoundingBox& aabb, b
 
 SceneOctree::Result SceneOctree::Update(Entity* entity, const BoundingBox& aabb, bool forceInvalidation, bool allowRebuild)
 {
+    HYP_SCOPE;
+
+    AssertDebug(entity != nullptr);
+
+    if (!entity)
+    {
+        return HYP_MAKE_ERROR(Error, "Cannot update null entity in octree");
+    }
+
     if (UseEntityMap())
     {
         SceneOctreeState* stateCasted = static_cast<SceneOctreeState*>(m_state);
@@ -740,9 +770,10 @@ SceneOctree::Result SceneOctree::Update(Entity* entity, const BoundingBox& aabb,
 
 SceneOctree::Result SceneOctree::Update_Internal(Entity* entity, const BoundingBox& aabb, bool forceInvalidation, bool allowRebuild)
 {
-    const auto it = m_payload.entries.Find(entity);
+    const SizeType entryIndex = entity->Id().ToIndex();
+    SceneOctreePayload::Entry* entry = m_payload.entries.TryGet(entryIndex);
 
-    if (it == m_payload.entries.End())
+    if (!entry)
     {
         if (m_isDivided)
         {
@@ -783,7 +814,7 @@ SceneOctree::Result SceneOctree::Update_Internal(Entity* entity, const BoundingB
     }
 
     const BoundingBox& newAabb = aabb;
-    const BoundingBox& oldAabb = it->aabb;
+    const BoundingBox& oldAabb = entry->aabb;
 
     if (newAabb == oldAabb)
     {
@@ -802,7 +833,7 @@ SceneOctree::Result SceneOctree::Update_Internal(Entity* entity, const BoundingB
      * If we do still contain it - we will remove it from this octree and re-insert it to find the deepest child octant
      */
 
-    return Move(entity, newAabb, allowRebuild, it);
+    return Move(entity, newAabb, allowRebuild, entry);
 }
 
 void SceneOctree::NextVisibilityState()
@@ -893,7 +924,7 @@ void SceneOctree::RebuildEntriesHash(uint32 level)
 
     ResetEntriesHash();
 
-    for (const auto& entry : m_payload.entries)
+    for (SceneOctreePayload::Entry& entry : m_payload.entries)
     {
         const HashCode entryHashCode = entry.GetHashCode();
         m_entryHashes[0].Add(entryHashCode);
@@ -945,7 +976,7 @@ bool SceneOctree::TestRay(const Ray& ray, RayTestResults& outResults, bool useBv
 
     if (ray.TestAABB(m_aabb))
     {
-        for (const auto& entry : m_payload.entries)
+        for (const SceneOctreePayload::Entry& entry : m_payload.entries)
         {
             RayTestResults aabbResult;
 

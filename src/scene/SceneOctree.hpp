@@ -8,6 +8,7 @@
 #include <core/containers/FixedArray.hpp>
 #include <core/containers/HashMap.hpp>
 #include <core/containers/HashSet.hpp>
+#include <core/containers/SparsePagedArray.hpp>
 
 #include <core/utilities/Pair.hpp>
 
@@ -110,7 +111,7 @@ struct SceneOctreePayload
         }
     };
 
-    using EntrySet = HashSet<Entry, &Entry::value>;
+    using EntrySet = SparsePagedArray<Entry, 1024>;
 
     EntrySet entries;
 
@@ -249,7 +250,7 @@ private:
     /*! \brief Move the entity to a new octant. If allowRebuild is true, the octree will be rebuilt if the entry doesn't fit in the new octant,
         and subdivided octants will be collapsed if they are empty + new octants will be created if they are needed.
      */
-    Result Move(Entity* entity, const BoundingBox& aabb, bool allowRebuild, typename SceneOctreePayload::EntrySet::Iterator it);
+    Result Move(Entity* entity, const BoundingBox& aabb, bool allowRebuild, SceneOctreePayload::Entry* entry);
 
     Result Insert_Internal(Entity* entity, const BoundingBox& aabb);
 
