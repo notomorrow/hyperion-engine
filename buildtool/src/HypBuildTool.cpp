@@ -11,6 +11,8 @@
 #include <core/threading/TaskThread.hpp>
 #include <core/threading/Mutex.hpp>
 
+#include <core/io/ByteWriter.hpp>
+
 #include <core/functional/Proc.hpp>
 
 #include <core/memory/UniquePtr.hpp>
@@ -26,6 +28,9 @@ namespace hyperion {
 namespace buildtool {
 
 HYP_DEFINE_LOG_CHANNEL(BuildTool);
+
+static constexpr bool g_cxxUnityBuildEnabled = true;
+static constexpr uint32 g_cxxUnityBuildIdealFileSize = 64 * 1024;
 
 class WorkerThread : public TaskThread
 {
@@ -345,6 +350,9 @@ private:
 
     Task<void> GenerateOutputFiles()
     {
+        Assert(m_analyzer.GetCXXOutputDirectory().MkDir(), "Failed to create C++ output directory: {}", m_analyzer.GetCXXOutputDirectory());
+        Assert(m_analyzer.GetCSharpOutputDirectory().MkDir(), "Failed to create C# output directory: {}", m_analyzer.GetCSharpOutputDirectory());
+
         Task<void> task;
 
         TaskBatch* batch = new TaskBatch();
@@ -358,7 +366,6 @@ private:
                 })
             .Detach();
 
-        RC<CXXModuleGenerator> cxxModuleGenerator = MakeRefCountedPtr<CXXModuleGenerator>();
         RC<CSharpModuleGenerator> csharpModuleGenerator = MakeRefCountedPtr<CSharpModuleGenerator>();
 
         for (const UniquePtr<Module>& mod : m_analyzer.GetModules())
@@ -368,18 +375,95 @@ private:
                 continue;
             }
 
-            batch->AddTask([this, cxxModuleGenerator, csharpModuleGenerator, mod = mod.Get()]()
+            // csharp modules can be processed async from C++ modules
+            batch->AddTask([this, csharpModuleGenerator, &mod = *mod]()
                 {
-                    if (Result res = cxxModuleGenerator->Generate(m_analyzer, *mod); res.HasError())
+                    if (Result res = csharpModuleGenerator->Generate(m_analyzer, mod); res.HasError())
                     {
-                        m_analyzer.AddError(AnalyzerError(res.GetError(), mod->GetPath()));
-                    }
-
-                    if (Result res = csharpModuleGenerator->Generate(m_analyzer, *mod); res.HasError())
-                    {
-                        m_analyzer.AddError(AnalyzerError(res.GetError(), mod->GetPath()));
+                        m_analyzer.AddError(AnalyzerError(res.GetError(), mod.GetPath()));
                     }
                 });
+        }
+
+        RC<CXXModuleGenerator> cxxModuleGenerator = MakeRefCountedPtr<CXXModuleGenerator>();
+
+        static constexpr uint32 idealCxxModuleFileSize = g_cxxUnityBuildEnabled ? g_cxxUnityBuildIdealFileSize : 1;
+
+        uint32 fileIndex = 0;
+        char filenameBuffer[256] = {};
+
+        FileByteWriter* cxxModuleWriter = nullptr;
+
+        auto toLetters = [](uint32 idx, char* dst, SizeType cap)
+        {
+            char buf[32];
+            SizeType n = 0;
+
+            ++idx;
+            while (idx)
+            {
+                uint32 r = (idx - 1) % 26;
+                buf[n++] = char('A' + r);
+                idx = (idx - 1) / 26;
+            }
+
+            if (n + 4 >= cap)
+            {
+                return false;
+            }
+
+            for (SizeType i = 0; i < n; ++i)
+            {
+                dst[i] = buf[n - 1 - i];
+            }
+
+            dst[n] = '\0';
+
+            return true;
+        };
+
+        auto updateFilenameBuffer = [&]()
+        {
+            Assert(toLetters(fileIndex, filenameBuffer, sizeof(filenameBuffer)));
+
+            std::strcat(filenameBuffer, ".cpp");
+
+            ++fileIndex;
+        };
+
+        for (const UniquePtr<Module>& mod : m_analyzer.GetModules())
+        {
+            if (mod->GetHypClasses().Empty())
+            {
+                continue;
+            }
+
+            if (!cxxModuleWriter || cxxModuleWriter->Position() >= idealCxxModuleFileSize)
+            {
+                if (cxxModuleWriter)
+                {
+                    cxxModuleWriter->Close();
+                    delete cxxModuleWriter;
+                }
+
+                updateFilenameBuffer();
+
+                cxxModuleWriter = new FileByteWriter(m_analyzer.GetCXXOutputDirectory() / filenameBuffer);
+
+                // add main required header that is shared across all generated modules.
+                cxxModuleWriter->WriteString("#include <core/object/HypClassUtils.hpp>\n");
+            }
+
+            if (Result res = cxxModuleGenerator->Generate(m_analyzer, *mod, *cxxModuleWriter); res.HasError())
+            {
+                m_analyzer.AddError(AnalyzerError(res.GetError(), mod->GetPath()));
+            }
+        }
+
+        if (cxxModuleWriter != nullptr)
+        {
+            cxxModuleWriter->Close();
+            delete cxxModuleWriter;
         }
 
         TaskSystem::GetInstance().EnqueueBatch(batch);

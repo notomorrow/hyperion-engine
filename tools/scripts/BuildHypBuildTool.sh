@@ -11,7 +11,7 @@ if [[ $RESP =~ ^[Yy] ]]; then
 fi
 
 # Build the buildtool and move it to the build directory
-cmake --build . --target hyperion-buildtool || exit 1
+cmake --build . --target hyperion-buildtool --parallel 4 || exit 1
 
 # find the hyperion-buildtool executable: will be in the folder on mac/linux, on windows will be under debug/release folder
 if [ -f ./hyperion-buildtool ]; then

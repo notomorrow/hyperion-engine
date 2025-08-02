@@ -820,7 +820,6 @@ void View::CollectEnvProbes(RenderProxyList& rpl)
             rpl.GetEnvProbes().Track(probe->Id(), probe, probe->GetRenderProxyVersionPtr());
         }
 
-        // TEMP SHIT: Refactor rendering of sky probes into new SkyRenderer class, and just use the above loop to collect SkyProbe
         for (auto [entity, skyComponent] : scene->GetEntityManager()->GetEntitySet<SkyComponent>().GetScopedView(DataAccessFlags::ACCESS_READ, HYP_FUNCTION_NAME_LIT))
         {
             if (skyComponent.subsystem)
@@ -831,8 +830,6 @@ void View::CollectEnvProbes(RenderProxyList& rpl)
             }
         }
     }
-
-    /// TODO: point light Shadow maps
 }
 
 #pragma endregion View

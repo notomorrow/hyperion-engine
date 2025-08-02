@@ -39,7 +39,7 @@ FilePath CSharpModuleGenerator::GetOutputFilePath(const Analyzer& analyzer, cons
     return analyzer.GetCSharpOutputDirectory() / relativePath.BasePath() / StringUtil::StripExtension(relativePath.Basename()) + ".cs";
 }
 
-Result CSharpModuleGenerator::Generate_Internal(const Analyzer& analyzer, const Module& mod, ByteWriter& writer) const
+Result CSharpModuleGenerator::Generate(const Analyzer& analyzer, const Module& mod, ByteWriter& writer) const
 {
     writer.WriteString("using System;\n");
     writer.WriteString("using System.Runtime.InteropServices;\n");
