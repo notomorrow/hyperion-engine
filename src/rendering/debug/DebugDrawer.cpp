@@ -556,7 +556,7 @@ void DebugDrawer::Render(FrameBase* frame, const RenderSetup& renderSetup)
 
     if (m_headers[idx].Size() * sizeof(ImmediateDrawShaderData) > instanceBuffer->Size())
     {
-        HYPERION_ASSERT_RESULT(instanceBuffer->EnsureCapacity(
+        HYP_GFX_ASSERT(instanceBuffer->EnsureCapacity(
             m_headers[idx].Size() * sizeof(ImmediateDrawShaderData),
             &wasInstanceBufferRebuilt));
     }

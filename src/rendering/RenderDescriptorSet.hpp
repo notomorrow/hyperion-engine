@@ -44,7 +44,7 @@ HYP_MAKE_ENUM_FLAGS(DescriptorSetDeclarationFlags)
 class IRenderProxy;
 class HypObjectBase;
 
-HYP_API extern uint32 RenderApi_RetrieveResourceBinding(const HypObjectBase* resource);
+uint32 RenderApi_RetrieveResourceBinding(const HypObjectBase* resource);
 
 template <class T>
 struct ShaderDataOffset
@@ -601,13 +601,13 @@ public:
     }
 #endif
 
-    HYP_API virtual bool IsCreated() const = 0;
+    virtual bool IsCreated() const = 0;
 
-    HYP_API virtual RendererResult Create() = 0;
-    HYP_API virtual RendererResult Destroy() = 0;
-    HYP_API virtual void UpdateDirtyState(bool* outIsDirty = nullptr) = 0;
-    HYP_API virtual void Update(bool force = false) = 0;
-    HYP_API virtual DescriptorSetRef Clone() const = 0;
+    virtual RendererResult Create() = 0;
+    virtual RendererResult Destroy() = 0;
+    virtual void UpdateDirtyState(bool* outIsDirty = nullptr) = 0;
+    virtual void Update(bool force = false) = 0;
+    virtual DescriptorSetRef Clone() const = 0;
 
     bool HasElement(Name name) const;
 

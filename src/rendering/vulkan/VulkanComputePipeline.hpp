@@ -17,21 +17,21 @@ public:
     VulkanComputePipeline(const VulkanShaderRef& shader, const VulkanDescriptorTableRef& descriptorTable);
     virtual ~VulkanComputePipeline() override;
 
-    HYP_API virtual RendererResult Create() override;
-    HYP_API virtual RendererResult Destroy() override;
+    virtual RendererResult Create() override;
+    virtual RendererResult Destroy() override;
 
-    HYP_API virtual void Bind(CommandBufferBase* commandBuffer) override;
+    virtual void Bind(CommandBufferBase* commandBuffer) override;
 
-    HYP_API virtual void Dispatch(CommandBufferBase* commandBuffer, const Vec3u& groupSize) const override;
-    HYP_API virtual void DispatchIndirect(
+    virtual void Dispatch(CommandBufferBase* commandBuffer, const Vec3u& groupSize) const override;
+    virtual void DispatchIndirect(
         CommandBufferBase* commandBuffer,
         const GpuBufferRef& indirectBuffer,
         SizeType offset = 0) const override;
 
-    HYP_API virtual void SetPushConstants(const void* data, SizeType size) override;
+    virtual void SetPushConstants(const void* data, SizeType size) override;
 
 #ifdef HYP_DEBUG_MODE
-    HYP_API virtual void SetDebugName(Name name) override;
+    virtual void SetDebugName(Name name) override;
 #endif
 };
 

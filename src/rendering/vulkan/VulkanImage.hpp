@@ -17,44 +17,44 @@ class VulkanImage final : public ImageBase
 public:
     friend class VulkanSwapchain;
 
-    HYP_API VulkanImage(const TextureDesc& textureDesc);
-    HYP_API virtual ~VulkanImage() override;
+    VulkanImage(const TextureDesc& textureDesc);
+    virtual ~VulkanImage() override;
 
     HYP_FORCE_INLINE VkImage GetVulkanHandle() const
     {
         return m_handle;
     }
 
-    HYP_API virtual bool IsCreated() const override;
-    HYP_API virtual bool IsOwned() const override;
+    virtual bool IsCreated() const override;
+    virtual bool IsOwned() const override;
 
-    HYP_API virtual RendererResult Create() override;
-    HYP_API virtual RendererResult Create(ResourceState initialState) override;
-    HYP_API virtual RendererResult Destroy() override;
+    virtual RendererResult Create() override;
+    virtual RendererResult Create(ResourceState initialState) override;
+    virtual RendererResult Destroy() override;
 
-    HYP_API virtual RendererResult Resize(const Vec3u& extent) override;
+    virtual RendererResult Resize(const Vec3u& extent) override;
 
-    HYP_API void SetResourceState(ResourceState newState);
+    void SetResourceState(ResourceState newState);
 
-    HYP_API ResourceState GetSubResourceState(const ImageSubResource& subResource) const;
-    HYP_API void SetSubResourceState(const ImageSubResource& subResource, ResourceState newState);
+    ResourceState GetSubResourceState(const ImageSubResource& subResource) const;
+    void SetSubResourceState(const ImageSubResource& subResource, ResourceState newState);
 
-    HYP_API virtual void InsertBarrier(
+    virtual void InsertBarrier(
         CommandBufferBase* commandBuffer,
         ResourceState newState,
         ShaderModuleType shaderModuleType) override;
 
-    HYP_API virtual void InsertBarrier(
+    virtual void InsertBarrier(
         CommandBufferBase* commandBuffer,
         const ImageSubResource& subResource,
         ResourceState newState,
         ShaderModuleType shaderModuleType) override;
 
-    HYP_API virtual RendererResult Blit(
+    virtual RendererResult Blit(
         CommandBufferBase* commandBuffer,
         const ImageBase* src) override;
 
-    HYP_API virtual RendererResult Blit(
+    virtual RendererResult Blit(
         CommandBufferBase* commandBuffer,
         const ImageBase* src,
         uint32 srcMip,
@@ -62,13 +62,13 @@ public:
         uint32 srcFace,
         uint32 dstFace) override;
 
-    HYP_API virtual RendererResult Blit(
+    virtual RendererResult Blit(
         CommandBufferBase* commandBuffer,
         const ImageBase* src,
         Rect<uint32> srcRect,
         Rect<uint32> dstRect) override;
 
-    HYP_API virtual RendererResult Blit(
+    virtual RendererResult Blit(
         CommandBufferBase* commandBuffer,
         const ImageBase* src,
         Rect<uint32> srcRect,
@@ -78,19 +78,19 @@ public:
         uint32 srcFace,
         uint32 dstFace) override;
 
-    HYP_API virtual RendererResult GenerateMipmaps(CommandBufferBase* commandBuffer) override;
+    virtual RendererResult GenerateMipmaps(CommandBufferBase* commandBuffer) override;
 
-    HYP_API virtual void CopyFromBuffer(
+    virtual void CopyFromBuffer(
         CommandBufferBase* commandBuffer,
         const GpuBufferBase* srcBuffer) const override;
 
-    HYP_API virtual void CopyToBuffer(
+    virtual void CopyToBuffer(
         CommandBufferBase* commandBuffer,
         GpuBufferBase* dstBuffer) const override;
 
     /*! \brief Creates a view of the image for the specified array layer
      */
-    HYP_API virtual ImageViewRef MakeLayerImageView(uint32 layerIndex) const override;
+    virtual ImageViewRef MakeLayerImageView(uint32 layerIndex) const override;
 
     HYP_FORCE_INLINE uint8 GetBPP() const
     {
@@ -98,7 +98,7 @@ public:
     }
 
 #ifdef HYP_DEBUG_MODE
-    HYP_API virtual void SetDebugName(Name name) override;
+    virtual void SetDebugName(Name name) override;
 #endif
 
 private:

@@ -10,12 +10,13 @@
 #include <rendering/vulkan/VulkanGpuBuffer.hpp>
 #include <rendering/vulkan/VulkanDescriptorSet.hpp>
 #include <rendering/vulkan/VulkanCommandBuffer.hpp>
+#include <rendering/vulkan/VulkanStructs.hpp>
 
 #include <rendering/RenderPipeline.hpp>
 #include <rendering/RenderDevice.hpp>
 #include <rendering/RenderShader.hpp>
-#include <rendering/Shared.hpp>
 #include <rendering/RenderHelpers.hpp>
+#include <rendering/Shared.hpp>
 
 #include <core/containers/Array.hpp>
 
@@ -39,30 +40,30 @@ using VulkanRenderPassWeakRef = RenderObjectHandle_Weak<VulkanRenderPass>;
 class VulkanGraphicsPipeline final : public GraphicsPipelineBase, public VulkanPipelineBase
 {
 public:
-    HYP_API VulkanGraphicsPipeline();
-    HYP_API VulkanGraphicsPipeline(const VulkanShaderRef& shader, const VulkanDescriptorTableRef& descriptorTable);
-    HYP_API ~VulkanGraphicsPipeline();
+    VulkanGraphicsPipeline();
+    VulkanGraphicsPipeline(const VulkanShaderRef& shader, const VulkanDescriptorTableRef& descriptorTable);
+    ~VulkanGraphicsPipeline();
 
     HYP_FORCE_INLINE const VulkanRenderPassRef& GetRenderPass() const
     {
         return m_renderPass;
     }
 
-    HYP_API void SetRenderPass(const VulkanRenderPassRef& renderPass);
+    void SetRenderPass(const VulkanRenderPassRef& renderPass);
 
-    HYP_API virtual void Bind(CommandBufferBase* cmd) override;
-    HYP_API virtual void Bind(CommandBufferBase* cmd, Vec2i viewportOffset, Vec2u viewportExtent) override;
+    virtual void Bind(CommandBufferBase* cmd) override;
+    virtual void Bind(CommandBufferBase* cmd, Vec2i viewportOffset, Vec2u viewportExtent) override;
 
-    HYP_API virtual void SetPushConstants(const void* data, SizeType size) override;
+    virtual void SetPushConstants(const void* data, SizeType size) override;
 
-    HYP_API virtual RendererResult Destroy() override;
+    virtual RendererResult Destroy() override;
 
 #ifdef HYP_DEBUG_MODE
-    HYP_API virtual void SetDebugName(Name name) override;
+    virtual void SetDebugName(Name name) override;
 #endif
 
 private:
-    HYP_API virtual RendererResult Rebuild() override;
+    virtual RendererResult Rebuild() override;
 
     void BuildVertexAttributes(
         const VertexAttributeSet& attributeSet,

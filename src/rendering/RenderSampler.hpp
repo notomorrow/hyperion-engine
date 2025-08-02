@@ -28,10 +28,10 @@ public:
         return m_wrapMode;
     }
 
-    HYP_API virtual bool IsCreated() const = 0;
+    virtual bool IsCreated() const = 0;
 
-    HYP_API virtual RendererResult Create() = 0;
-    HYP_API virtual RendererResult Destroy() = 0;
+    virtual RendererResult Create() = 0;
+    virtual RendererResult Destroy() = 0;
 
 protected:
     TextureFilterMode m_minFilterMode = TFM_NEAREST;

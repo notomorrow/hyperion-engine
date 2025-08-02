@@ -24,10 +24,10 @@ class FrameBase : public RenderObject<FrameBase>
 public:
     virtual ~FrameBase() override = default;
 
-    HYP_API virtual RendererResult Create() = 0;
-    HYP_API virtual RendererResult Destroy() = 0;
+    virtual RendererResult Create() = 0;
+    virtual RendererResult Destroy() = 0;
 
-    HYP_API virtual RendererResult ResetFrameState() = 0;
+    virtual RendererResult ResetFrameState() = 0;
 
     void UpdateUsedDescriptorSets();
 

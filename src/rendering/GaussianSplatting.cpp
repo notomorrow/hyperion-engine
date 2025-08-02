@@ -38,6 +38,10 @@
 #include <EngineGlobals.hpp>
 #include <Engine.hpp>
 
+#ifdef HYP_VULKAN
+#include <rendering/vulkan/VulkanStructs.hpp>
+#endif
+
 // #define HYP_GAUSSIAN_SPLATTING_CPU_SORT
 
 namespace hyperion {
@@ -642,8 +646,6 @@ void GaussianSplatting::UpdateSplats(FrameBase* frame, const RenderSetup& render
         return;
     }
 
-    Assert(m_gaussianSplattingInstance->GetIndirectBuffer()->Size() == sizeof(IndirectDrawCommand));
-
     frame->renderQueue << InsertBarrier(
         m_stagingBuffer,
         RS_COPY_SRC);
@@ -655,7 +657,7 @@ void GaussianSplatting::UpdateSplats(FrameBase* frame, const RenderSetup& render
     frame->renderQueue << CopyBuffer(
         m_stagingBuffer,
         m_gaussianSplattingInstance->GetIndirectBuffer(),
-        sizeof(IndirectDrawCommand));
+        m_gaussianSplattingInstance->GetIndirectBuffer()->Size());
 
     frame->renderQueue << InsertBarrier(
         m_gaussianSplattingInstance->GetIndirectBuffer(),

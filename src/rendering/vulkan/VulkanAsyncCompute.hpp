@@ -12,19 +12,19 @@ namespace hyperion {
 class VulkanAsyncCompute final : public AsyncComputeBase
 {
 public:
-    HYP_API VulkanAsyncCompute();
-    HYP_API virtual ~VulkanAsyncCompute() override;
+    VulkanAsyncCompute();
+    virtual ~VulkanAsyncCompute() override;
 
     virtual bool IsSupported() const override
     {
         return m_isSupported;
     }
 
-    HYP_API RendererResult Create();
-    HYP_API RendererResult Submit(VulkanFrame* frame);
+    RendererResult Create();
+    RendererResult Submit(VulkanFrame* frame);
 
-    HYP_API RendererResult PrepareForFrame(VulkanFrame* frame);
-    HYP_API RendererResult WaitForFence(VulkanFrame* frame);
+    RendererResult PrepareForFrame(VulkanFrame* frame);
+    RendererResult WaitForFence(VulkanFrame* frame);
 
 private:
     FixedArray<VulkanCommandBufferRef, g_framesInFlight> m_commandBuffers;

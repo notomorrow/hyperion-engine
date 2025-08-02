@@ -62,39 +62,39 @@ public:
         return m_resourceState;
     }
 
-    HYP_API virtual RendererResult Create() = 0;
-    HYP_API virtual RendererResult Destroy() = 0;
+    virtual RendererResult Create() = 0;
+    virtual RendererResult Destroy() = 0;
 
-    HYP_API virtual bool IsCreated() const = 0;
-    HYP_API virtual bool IsCpuAccessible() const = 0;
+    virtual bool IsCreated() const = 0;
+    virtual bool IsCpuAccessible() const = 0;
 
-    HYP_API virtual void InsertBarrier(CommandBufferBase* commandBuffer, ResourceState newState) const = 0;
-    HYP_API virtual void InsertBarrier(CommandBufferBase* commandBuffer, ResourceState newState, ShaderModuleType shaderType) const = 0;
+    virtual void InsertBarrier(CommandBufferBase* commandBuffer, ResourceState newState) const = 0;
+    virtual void InsertBarrier(CommandBufferBase* commandBuffer, ResourceState newState, ShaderModuleType shaderType) const = 0;
 
-    HYP_API virtual void CopyFrom(
+    virtual void CopyFrom(
         CommandBufferBase* commandBuffer,
         const GpuBufferBase* srcBuffer,
         SizeType count) = 0;
 
-    HYP_API virtual RendererResult EnsureCapacity(
+    virtual RendererResult EnsureCapacity(
         SizeType minimumSize,
         bool* outSizeChanged = nullptr) = 0;
 
-    HYP_API virtual RendererResult EnsureCapacity(
+    virtual RendererResult EnsureCapacity(
         SizeType minimumSize,
         SizeType alignment,
         bool* outSizeChanged = nullptr) = 0;
 
-    HYP_API virtual void Memset(SizeType count, ubyte value) = 0;
+    virtual void Memset(SizeType count, ubyte value) = 0;
 
-    HYP_API virtual void Copy(SizeType count, const void* ptr) = 0;
-    HYP_API virtual void Copy(SizeType offset, SizeType count, const void* ptr) = 0;
+    virtual void Copy(SizeType count, const void* ptr) = 0;
+    virtual void Copy(SizeType offset, SizeType count, const void* ptr) = 0;
 
-    HYP_API virtual void Read(SizeType count, void* outPtr) const = 0;
-    HYP_API virtual void Read(SizeType offset, SizeType count, void* outPtr) const = 0;
+    virtual void Read(SizeType count, void* outPtr) const = 0;
+    virtual void Read(SizeType offset, SizeType count, void* outPtr) const = 0;
 
-    HYP_API virtual void Map() const = 0;
-    HYP_API virtual void Unmap() const = 0;
+    virtual void Map() const = 0;
+    virtual void Unmap() const = 0;
 
 protected:
     GpuBufferBase(GpuBufferType type, SizeType size, SizeType alignment = 0)

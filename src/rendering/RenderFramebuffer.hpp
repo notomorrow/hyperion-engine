@@ -30,29 +30,29 @@ public:
         return m_extent;
     }
 
-    HYP_API virtual bool IsCreated() const = 0;
+    virtual bool IsCreated() const = 0;
 
-    HYP_API virtual RendererResult Create() = 0;
-    HYP_API virtual RendererResult Destroy() = 0;
+    virtual RendererResult Create() = 0;
+    virtual RendererResult Destroy() = 0;
 
-    HYP_API virtual RendererResult Resize(Vec2u newSize) = 0;
+    virtual RendererResult Resize(Vec2u newSize) = 0;
 
-    HYP_API virtual AttachmentRef AddAttachment(const AttachmentRef& attachment) = 0;
-    HYP_API virtual AttachmentRef AddAttachment(uint32 binding, const ImageRef& image, LoadOperation loadOp, StoreOperation storeOp) = 0;
-    HYP_API virtual AttachmentRef AddAttachment(
+    virtual AttachmentRef AddAttachment(const AttachmentRef& attachment) = 0;
+    virtual AttachmentRef AddAttachment(uint32 binding, const ImageRef& image, LoadOperation loadOp, StoreOperation storeOp) = 0;
+    virtual AttachmentRef AddAttachment(
         uint32 binding,
         TextureFormat format,
         TextureType type,
         LoadOperation loadOp,
         StoreOperation storeOp) = 0;
 
-    HYP_API virtual bool RemoveAttachment(uint32 binding) = 0;
-    HYP_API virtual AttachmentBase* GetAttachment(uint32 binding) const = 0;
+    virtual bool RemoveAttachment(uint32 binding) = 0;
+    virtual AttachmentBase* GetAttachment(uint32 binding) const = 0;
 
-    HYP_API virtual void BeginCapture(CommandBufferBase* commandBuffer) = 0;
-    HYP_API virtual void EndCapture(CommandBufferBase* commandBuffer) = 0;
+    virtual void BeginCapture(CommandBufferBase* commandBuffer) = 0;
+    virtual void EndCapture(CommandBufferBase* commandBuffer) = 0;
 
-    HYP_API virtual void Clear(CommandBufferBase* commandBuffer) = 0;
+    virtual void Clear(CommandBufferBase* commandBuffer) = 0;
 
 protected:
     FramebufferBase(Vec2u extent)

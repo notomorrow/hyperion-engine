@@ -119,12 +119,12 @@ struct VulkanAttachmentMap
 class VulkanFramebuffer final : public FramebufferBase
 {
 public:
-    HYP_API VulkanFramebuffer(
+    VulkanFramebuffer(
         Vec2u extent,
         RenderPassStage stage = RenderPassStage::SHADER,
         uint32 numMultiviewLayers = 0);
 
-    HYP_API virtual ~VulkanFramebuffer() override;
+    virtual ~VulkanFramebuffer() override;
 
     HYP_FORCE_INLINE const VkFramebuffer& GetVulkanHandle() const
     {
@@ -136,36 +136,36 @@ public:
         return m_renderPass;
     }
 
-    HYP_API virtual AttachmentRef AddAttachment(const AttachmentRef& attachment) override;
-    HYP_API virtual AttachmentRef AddAttachment(uint32 binding, const ImageRef& image, LoadOperation loadOp, StoreOperation storeOp) override;
+    virtual AttachmentRef AddAttachment(const AttachmentRef& attachment) override;
+    virtual AttachmentRef AddAttachment(uint32 binding, const ImageRef& image, LoadOperation loadOp, StoreOperation storeOp) override;
 
-    HYP_API virtual AttachmentRef AddAttachment(
+    virtual AttachmentRef AddAttachment(
         uint32 binding,
         TextureFormat format,
         TextureType type,
         LoadOperation loadOp,
         StoreOperation storeOp) override;
 
-    HYP_API virtual bool RemoveAttachment(uint32 binding) override;
+    virtual bool RemoveAttachment(uint32 binding) override;
 
-    HYP_API virtual AttachmentBase* GetAttachment(uint32 binding) const override;
+    virtual AttachmentBase* GetAttachment(uint32 binding) const override;
 
     HYP_FORCE_INLINE const VulkanAttachmentMap& GetAttachmentMap() const
     {
         return m_attachmentMap;
     }
 
-    HYP_API virtual bool IsCreated() const override;
+    virtual bool IsCreated() const override;
 
-    HYP_API virtual RendererResult Create() override;
-    HYP_API virtual RendererResult Destroy() override;
+    virtual RendererResult Create() override;
+    virtual RendererResult Destroy() override;
 
-    HYP_API virtual RendererResult Resize(Vec2u newSize) override;
+    virtual RendererResult Resize(Vec2u newSize) override;
 
-    HYP_API virtual void BeginCapture(CommandBufferBase* commandBuffer) override;
-    HYP_API virtual void EndCapture(CommandBufferBase* commandBuffer) override;
+    virtual void BeginCapture(CommandBufferBase* commandBuffer) override;
+    virtual void EndCapture(CommandBufferBase* commandBuffer) override;
 
-    HYP_API virtual void Clear(CommandBufferBase* commandBuffer) override;
+    virtual void Clear(CommandBufferBase* commandBuffer) override;
 
 private:
     VkFramebuffer m_handle;

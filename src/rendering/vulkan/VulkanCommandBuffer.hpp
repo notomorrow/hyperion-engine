@@ -52,8 +52,8 @@ public:
     friend class VulkanFramebuffer;
     friend class VulkanDescriptorSet;
 
-    HYP_API explicit VulkanCommandBuffer(VkCommandBufferLevel type);
-    HYP_API virtual ~VulkanCommandBuffer() override;
+    explicit VulkanCommandBuffer(VkCommandBufferLevel type);
+    virtual ~VulkanCommandBuffer() override;
 
     HYP_FORCE_INLINE VkCommandBuffer GetVulkanHandle() const
     {
@@ -75,36 +75,36 @@ public:
         return m_isInRenderPass;
     }
 
-    HYP_API virtual bool IsCreated() const override;
+    virtual bool IsCreated() const override;
 
-    HYP_API virtual RendererResult Create() override;
-    HYP_API RendererResult Create(VkCommandPool commandPool);
-    HYP_API virtual RendererResult Destroy() override;
+    virtual RendererResult Create() override;
+    RendererResult Create(VkCommandPool commandPool);
+    virtual RendererResult Destroy() override;
 
-    HYP_API RendererResult Begin(const VulkanRenderPass* renderPass = nullptr);
-    HYP_API RendererResult End();
-    HYP_API RendererResult Reset();
-    HYP_API RendererResult SubmitPrimary(
+    RendererResult Begin(const VulkanRenderPass* renderPass = nullptr);
+    RendererResult End();
+    RendererResult Reset();
+    RendererResult SubmitPrimary(
         VulkanDeviceQueue* queue,
         VulkanFence* fence,
         VulkanSemaphoreChain* semaphoreChain);
 
-    HYP_API RendererResult SubmitSecondary(VulkanCommandBuffer* primary);
+    RendererResult SubmitSecondary(VulkanCommandBuffer* primary);
 
-    HYP_API virtual void BindVertexBuffer(const GpuBufferBase* buffer) override;
-    HYP_API virtual void BindIndexBuffer(const GpuBufferBase* buffer, GpuElemType elemType = GET_UNSIGNED_INT) override;
+    virtual void BindVertexBuffer(const GpuBufferBase* buffer) override;
+    virtual void BindIndexBuffer(const GpuBufferBase* buffer, GpuElemType elemType = GET_UNSIGNED_INT) override;
 
-    HYP_API virtual void DrawIndexed(
+    virtual void DrawIndexed(
         uint32 numIndices,
         uint32 numInstances = 1,
         uint32 instanceIndex = 0) const override;
 
-    HYP_API virtual void DrawIndexedIndirect(
+    virtual void DrawIndexedIndirect(
         const GpuBufferBase* buffer,
         uint32 bufferOffset) const override;
 
-    HYP_API void DebugMarkerBegin(const char* markerName) const;
-    HYP_API void DebugMarkerEnd() const;
+    void DebugMarkerBegin(const char* markerName) const;
+    void DebugMarkerEnd() const;
 
     template <class LambdaFunction>
     RendererResult Record(const VulkanRenderPass* renderPass, LambdaFunction&& fn)

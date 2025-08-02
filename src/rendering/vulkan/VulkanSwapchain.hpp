@@ -8,6 +8,7 @@
 #include <rendering/RenderObject.hpp>
 #include <rendering/vulkan/VulkanSemaphore.hpp>
 #include <rendering/vulkan/VulkanFramebuffer.hpp>
+#include <rendering/vulkan/VulkanStructs.hpp>
 
 #include <rendering/Shared.hpp>
 
@@ -25,8 +26,8 @@ class VulkanSwapchain final : public SwapchainBase
 public:
     friend class VulkanInstance;
 
-    HYP_API VulkanSwapchain();
-    HYP_API virtual ~VulkanSwapchain() override;
+    VulkanSwapchain();
+    virtual ~VulkanSwapchain() override;
 
     HYP_FORCE_INLINE VkSwapchainKHR GetVulkanHandle() const
     {
@@ -48,15 +49,15 @@ public:
         return uint32(m_images.Size());
     }
 
-    HYP_API virtual bool IsCreated() const override;
+    virtual bool IsCreated() const override;
 
-    HYP_API void NextFrame();
+    void NextFrame();
 
-    HYP_API RendererResult PrepareFrame(bool& outNeedsRecreate);
-    HYP_API RendererResult PresentFrame(VulkanDeviceQueue* queue) const;
+    RendererResult PrepareFrame(bool& outNeedsRecreate);
+    RendererResult PresentFrame(VulkanDeviceQueue* queue) const;
 
-    HYP_API virtual RendererResult Create() override;
-    HYP_API virtual RendererResult Destroy() override;
+    virtual RendererResult Create() override;
+    virtual RendererResult Destroy() override;
 
 private:
     RendererResult ChooseSurfaceFormat();

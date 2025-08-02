@@ -32,19 +32,19 @@ public:
         m_shader = shader;
     }
 
-    HYP_API virtual RendererResult Create() = 0;
-    HYP_API virtual RendererResult Destroy() = 0;
+    virtual RendererResult Create() = 0;
+    virtual RendererResult Destroy() = 0;
 
-    HYP_API virtual void Bind(CommandBufferBase* commandBuffer) = 0;
+    virtual void Bind(CommandBufferBase* commandBuffer) = 0;
 
-    HYP_API virtual void Dispatch(CommandBufferBase* commandBuffer, const Vec3u& groupSize) const = 0;
-    HYP_API virtual void DispatchIndirect(
+    virtual void Dispatch(CommandBufferBase* commandBuffer, const Vec3u& groupSize) const = 0;
+    virtual void DispatchIndirect(
         CommandBufferBase* commandBuffer,
         const GpuBufferRef& indirectBuffer,
         SizeType offset = 0) const = 0;
 
     // Deprecated - will be removed to decouple from vulkan
-    HYP_DEPRECATED HYP_API virtual void SetPushConstants(const void* data, SizeType size) = 0;
+    HYP_DEPRECATED virtual void SetPushConstants(const void* data, SizeType size) = 0;
 
 protected:
     ComputePipelineBase() = default;

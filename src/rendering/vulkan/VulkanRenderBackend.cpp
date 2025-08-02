@@ -28,6 +28,20 @@
 
 #include <vulkan/vulkan.h>
 
+#define CHECK_FRAME_RESULT(result)                  \
+    do                                              \
+    {                                               \
+        auto _result = (result);                    \
+                                                    \
+        if (!(_result))                             \
+        {                                           \
+            m_crashHandler.HandleGPUCrash(_result); \
+                                                    \
+            HYP_UNREACHABLE();                      \
+        }                                           \
+    }                                               \
+    while (0)
+
 namespace hyperion {
 #ifdef HYP_DEBUG_MODE
 static constexpr bool g_useDebugLayers = true;
@@ -636,7 +650,7 @@ FrameBase* VulkanRenderBackend::GetCurrentFrame() const
 
 FrameBase* VulkanRenderBackend::PrepareNextFrame()
 {
-    RendererResult frameResult = m_instance->GetSwapchain()->PrepareFrame(m_shouldRecreateSwapchain);
+    CHECK_FRAME_RESULT(m_instance->GetSwapchain()->PrepareFrame(m_shouldRecreateSwapchain));
 
     VulkanFrame* frame = m_instance->GetSwapchain()->GetCurrentFrame();
 
@@ -644,15 +658,13 @@ FrameBase* VulkanRenderBackend::PrepareNextFrame()
     {
         m_shouldRecreateSwapchain = false;
 
-        HYP_GFX_ASSERT(m_instance->GetDevice()->Wait());
-        HYP_GFX_ASSERT(m_instance->RecreateSwapchain());
+        CHECK_FRAME_RESULT(m_instance->GetDevice()->Wait());
+        CHECK_FRAME_RESULT(m_instance->RecreateSwapchain());
 
-        HYP_GFX_ASSERT(m_instance->GetSwapchain()->GetCurrentFrame()->RecreateFence());
+        CHECK_FRAME_RESULT(m_instance->GetSwapchain()->GetCurrentFrame()->RecreateFence());
 
         // Need to prepare frame again now that swapchain has been recreated.
-        HYP_GFX_ASSERT(m_instance->GetSwapchain()->PrepareFrame(m_shouldRecreateSwapchain));
-
-        HYP_GFX_ASSERT(!m_shouldRecreateSwapchain);
+        CHECK_FRAME_RESULT(m_instance->GetSwapchain()->PrepareFrame(m_shouldRecreateSwapchain));
 
         frame = m_instance->GetSwapchain()->GetCurrentFrame();
 
@@ -661,7 +673,7 @@ FrameBase* VulkanRenderBackend::PrepareNextFrame()
 
     AssertDebug(frame != nullptr);
 
-    static_cast<VulkanAsyncCompute*>(m_asyncCompute)->PrepareForFrame(frame);
+    CHECK_FRAME_RESULT(static_cast<VulkanAsyncCompute*>(m_asyncCompute)->PrepareForFrame(frame));
 
     return frame;
 }
@@ -674,34 +686,12 @@ void VulkanRenderBackend::PresentFrame(FrameBase* frame)
     VulkanCommandBufferRef vulkanCommandBuffer = VULKAN_CAST(commandBuffer);
     VulkanAsyncCompute* vulkanAsyncCompute = static_cast<VulkanAsyncCompute*>(m_asyncCompute);
 
-    RendererResult submitResult = vulkanFrame->Submit(&m_instance->GetDevice()->GetGraphicsQueue(), vulkanCommandBuffer);
-
-    if (!submitResult)
-    {
-        m_crashHandler.HandleGPUCrash(submitResult);
-
-        HYP_UNREACHABLE();
-    }
-
-    submitResult = vulkanAsyncCompute->Submit(vulkanFrame);
-
-    if (!submitResult)
-    {
-        m_crashHandler.HandleGPUCrash(submitResult);
-
-        HYP_UNREACHABLE();
-    }
+    CHECK_FRAME_RESULT(vulkanFrame->Submit(&m_instance->GetDevice()->GetGraphicsQueue(), vulkanCommandBuffer));
+    CHECK_FRAME_RESULT(vulkanAsyncCompute->Submit(vulkanFrame));
 
     m_textureCache->CleanupUnusedTextures();
 
-    submitResult = m_instance->GetSwapchain()->PresentFrame(&m_instance->GetDevice()->GetGraphicsQueue());
-
-    if (!submitResult)
-    {
-        m_crashHandler.HandleGPUCrash(submitResult);
-
-        HYP_UNREACHABLE();
-    }
+    CHECK_FRAME_RESULT(m_instance->GetSwapchain()->PresentFrame(&m_instance->GetDevice()->GetGraphicsQueue()));
 
     m_instance->GetSwapchain()->NextFrame();
 }
@@ -1034,9 +1024,11 @@ UniquePtr<SingleTimeCommands> VulkanRenderBackend::GetSingleTimeCommands()
 
 #pragma endregion VulkanRenderBackend
 
-HYP_API VkDescriptorSetLayout GetVkDescriptorSetLayout(const VulkanDescriptorSetLayoutWrapper& layout)
+VkDescriptorSetLayout GetVkDescriptorSetLayout(const VulkanDescriptorSetLayoutWrapper& layout)
 {
     return layout.GetVulkanHandle();
 }
 
 } // namespace hyperion
+
+#undef CHECK_FRAME_RESULT

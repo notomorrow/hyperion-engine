@@ -8,7 +8,8 @@
 #include <vulkan/vulkan.h>
 
 namespace hyperion {
-extern HYP_API VkDescriptorSetLayout GetVkDescriptorSetLayout(const VulkanDescriptorSetLayoutWrapper& layout);
+
+VkDescriptorSetLayout GetVkDescriptorSetLayout(const VulkanDescriptorSetLayoutWrapper& layout);
 
 template <class PipelineType>
 static inline Array<VkDescriptorSetLayout> GetPipelineVulkanDescriptorSetLayouts(const PipelineType& pipeline)
@@ -33,7 +34,7 @@ static inline Array<VkDescriptorSetLayout> GetPipelineVulkanDescriptorSetLayouts
 class VulkanPipelineBase
 {
 public:
-    HYP_API VulkanPipelineBase();
+    VulkanPipelineBase();
 
     HYP_FORCE_INLINE VkPipeline GetVulkanHandle() const
     {
@@ -45,16 +46,16 @@ public:
         return m_layout;
     }
 
-    HYP_API Array<VkDescriptorSetLayout> GetDescriptorSetLayouts() const;
+    Array<VkDescriptorSetLayout> GetDescriptorSetLayouts() const;
 
-    HYP_API RendererResult Destroy();
+    RendererResult Destroy();
 
-    HYP_API bool IsCreated() const;
+    bool IsCreated() const;
 
-    HYP_API void SetPushConstants(const void* data, SizeType size);
+    void SetPushConstants(const void* data, SizeType size);
 
 #ifdef HYP_DEBUG_MODE
-    HYP_API void SetDebugName(Name name);
+    void SetDebugName(Name name);
 #endif
 
 protected:

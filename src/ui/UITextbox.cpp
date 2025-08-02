@@ -95,10 +95,6 @@ UITextbox::UITextbox()
                          {
                              // @TODO
                          }
-                         else if (keyChar == '\e')
-                         {
-                             // @TODO
-                         }
                          else if (keyChar == '\x1b')
                          {
                              // @TODO
