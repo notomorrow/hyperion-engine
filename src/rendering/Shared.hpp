@@ -2,6 +2,8 @@
 
 #pragma once
 
+#include <rendering/RenderResult.hpp>
+
 #include <core/containers/String.hpp>
 
 #include <core/utilities/EnumFlags.hpp>
@@ -17,19 +19,6 @@
 #include <HashCode.hpp>
 
 namespace hyperion {
-
-#define HYP_GFX_ASSERT(cond, ...)                                                                          \
-    do                                                                                                     \
-    {                                                                                                      \
-        if (HYP_UNLIKELY(!(cond)))                                                                         \
-        {                                                                                                  \
-            std::printf(                                                                                   \
-                "Assertion failed in renderer!\n\tCondition: " #cond "\n\tMessage: " __VA_ARGS__); \
-            HYP_PRINT_STACK_TRACE();                                                                       \
-            std::terminate();                                                                              \
-        }                                                                                                  \
-    }                                                                                                      \
-    while (0)
 
 enum ImageUsage : uint32
 {

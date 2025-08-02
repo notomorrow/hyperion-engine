@@ -49,48 +49,48 @@ HYP_API extern int GetSubclassIndex(TypeId baseTypeId, TypeId subclassTypeId);
 
 // Call at start of engine before render / game thread start ticking.
 // Allocates containers declared in RenderGlobalState.cpp via DECLARE_RENDER_DATA_CONTAINER
-HYP_API extern void RenderApi_Init();
-HYP_API extern void RenderApi_Shutdown();
+void RenderApi_Init();
+void RenderApi_Shutdown();
 
-HYP_API extern uint32 RenderApi_GetFrameIndex();
-HYP_API extern uint32 RenderApi_GetFrameCounter();
+uint32 RenderApi_GetFrameIndex();
+uint32 RenderApi_GetFrameCounter();
 
-HYP_API extern void RenderApi_BeginFrame_GameThread();
-HYP_API extern void RenderApi_EndFrame_GameThread();
+void RenderApi_BeginFrame_GameThread();
+void RenderApi_EndFrame_GameThread();
 
-HYP_API extern void RenderApi_BeginFrame_RenderThread();
-HYP_API extern void RenderApi_EndFrame_RenderThread();
+void RenderApi_BeginFrame_RenderThread();
+void RenderApi_EndFrame_RenderThread();
 
 /*! \brief Get the RenderProxyList for the Game thread to write to for the current frame, for the given view.
  *  The game thread adds proxies of entities, lights, envprobes, etc. to this list, which the render thread will
  *  use when rendering the frame.
  *  \note This is only valid to call from the game thread, or from a task that is initiated by the game thread. */
-HYP_API extern RenderProxyList& RenderApi_GetProducerProxyList(View* view);
+RenderProxyList& RenderApi_GetProducerProxyList(View* view);
 
 /*! \brief Get the RenderProxyList for the Render thread to read from for the current frame, for the given view.
  *  \note This is only valid to call from the render thread, or from a task that is initiated by the render thread. */
-HYP_API extern RenderProxyList& RenderApi_GetConsumerProxyList(View* view);
+RenderProxyList& RenderApi_GetConsumerProxyList(View* view);
 
 /*! \brief Get the RenderCollector corresponding to the given View, only usable on the Render thread. */
-HYP_API extern RenderCollector& RenderApi_GetRenderCollector(View* view);
+RenderCollector& RenderApi_GetRenderCollector(View* view);
 
 // Call on render thread or render thread tasks only (consumer threads)
-HYP_API extern IRenderProxy* RenderApi_GetRenderProxy(ObjIdBase resourceId);
+IRenderProxy* RenderApi_GetRenderProxy(ObjIdBase resourceId);
 
 /*! \brief Render thread only - update GPU data to match RenderProxy's buffer data for the resource with the given ID */
-HYP_API extern void RenderApi_UpdateGpuData(ObjIdBase resourceId);
+void RenderApi_UpdateGpuData(ObjIdBase resourceId);
 
 // used on render thread only - assigns all render proxy for the given object to the given binding
-HYP_API extern void RenderApi_AssignResourceBinding(HypObjectBase* resource, uint32 binding);
+void RenderApi_AssignResourceBinding(HypObjectBase* resource, uint32 binding);
 // used on render thread only - retrieves the binding set for the given resource (~0u if unset)
-HYP_API extern uint32 RenderApi_RetrieveResourceBinding(const HypObjectBase* resource);
-HYP_API extern uint32 RenderApi_RetrieveResourceBinding(ObjIdBase resourceId);
+uint32 RenderApi_RetrieveResourceBinding(const HypObjectBase* resource);
+uint32 RenderApi_RetrieveResourceBinding(ObjIdBase resourceId);
 
-HYP_API extern WorldShaderData* RenderApi_GetWorldBufferData();
-HYP_API extern RenderStats* RenderApi_GetRenderStats();
-HYP_API extern void RenderApi_AddRenderStats(const RenderStatsCounts& counts);
-HYP_API extern void RenderApi_SuppressRenderStats();
-HYP_API extern void RenderApi_UnsuppressRenderStats();
+WorldShaderData* RenderApi_GetWorldBufferData();
+RenderStats* RenderApi_GetRenderStats();
+void RenderApi_AddRenderStats(const RenderStatsCounts& counts);
+void RenderApi_SuppressRenderStats();
+void RenderApi_UnsuppressRenderStats();
 
 struct ResourceBindings;
 

@@ -99,33 +99,33 @@ public:
         return m_textureDesc.GetByteSize();
     }
 
-    HYP_API virtual bool IsCreated() const = 0;
+    virtual bool IsCreated() const = 0;
 
     /*! \brief Returns true if the underlying GPU image is owned by this object. */
-    HYP_API virtual bool IsOwned() const = 0;
+    virtual bool IsOwned() const = 0;
 
-    HYP_API virtual RendererResult Create() = 0;
-    HYP_API virtual RendererResult Create(ResourceState initialState) = 0;
-    HYP_API virtual RendererResult Destroy() = 0;
+    virtual RendererResult Create() = 0;
+    virtual RendererResult Create(ResourceState initialState) = 0;
+    virtual RendererResult Destroy() = 0;
 
-    HYP_API virtual RendererResult Resize(const Vec3u& extent) = 0;
+    virtual RendererResult Resize(const Vec3u& extent) = 0;
 
-    HYP_API virtual void InsertBarrier(
+    virtual void InsertBarrier(
         CommandBufferBase* commandBuffer,
         ResourceState newState,
         ShaderModuleType shaderModuleType) = 0;
 
-    HYP_API virtual void InsertBarrier(
+    virtual void InsertBarrier(
         CommandBufferBase* commandBuffer,
         const ImageSubResource& subResource,
         ResourceState newState,
         ShaderModuleType shaderModuleType) = 0;
 
-    HYP_API virtual RendererResult Blit(
+    virtual RendererResult Blit(
         CommandBufferBase* commandBuffer,
         const ImageBase* src) = 0;
 
-    HYP_API virtual RendererResult Blit(
+    virtual RendererResult Blit(
         CommandBufferBase* commandBuffer,
         const ImageBase* src,
         uint32 srcMip,
@@ -133,13 +133,13 @@ public:
         uint32 srcFace,
         uint32 dstFace) = 0;
 
-    HYP_API virtual RendererResult Blit(
+    virtual RendererResult Blit(
         CommandBufferBase* commandBuffer,
         const ImageBase* src,
         Rect<uint32> srcRect,
         Rect<uint32> dstRect) = 0;
 
-    HYP_API virtual RendererResult Blit(
+    virtual RendererResult Blit(
         CommandBufferBase* commandBuffer,
         const ImageBase* src,
         Rect<uint32> srcRect,
@@ -149,17 +149,17 @@ public:
         uint32 srcFace,
         uint32 dstFace) = 0;
 
-    HYP_API virtual RendererResult GenerateMipmaps(CommandBufferBase* commandBuffer) = 0;
+    virtual RendererResult GenerateMipmaps(CommandBufferBase* commandBuffer) = 0;
 
-    HYP_API virtual void CopyFromBuffer(
+    virtual void CopyFromBuffer(
         CommandBufferBase* commandBuffer,
         const GpuBufferBase* srcBuffer) const = 0;
 
-    HYP_API virtual void CopyToBuffer(
+    virtual void CopyToBuffer(
         CommandBufferBase* commandBuffer,
         GpuBufferBase* dstBuffer) const = 0;
 
-    HYP_API virtual ImageViewRef MakeLayerImageView(uint32 layerIndex) const = 0;
+    virtual ImageViewRef MakeLayerImageView(uint32 layerIndex) const = 0;
 
 protected:
     ImageBase()

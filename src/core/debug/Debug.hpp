@@ -133,7 +133,7 @@ using debug::LogType;
 #ifdef HYP_DEBUG_MODE
 #define AssertDebug(...) Assert(__VA_ARGS__)
 #else
-#define AssertDebug(...)
+#define AssertDebug(...) (void)(__VA_ARGS__)
 #endif
 
 #ifdef HYP_DEBUG_MODE
@@ -153,7 +153,7 @@ using debug::LogType;
     }                                                                                                                                                          \
     while (0)
 #else
-#define HYP_CORE_ASSERT(...)
+#define HYP_CORE_ASSERT(...) (void)(cond)
 #endif
 
 #ifdef HYP_DEBUG_MODE

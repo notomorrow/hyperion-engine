@@ -16,27 +16,27 @@ namespace hyperion {
 class VulkanAttachment final : public AttachmentBase
 {
 public:
-    HYP_API VulkanAttachment(
+    VulkanAttachment(
         const VulkanImageRef& image,
         const VulkanFramebufferWeakRef& framebuffer,
         RenderPassStage stage,
         LoadOperation loadOperation = LoadOperation::CLEAR,
         StoreOperation storeOperation = StoreOperation::STORE,
         BlendFunction blendFunction = BlendFunction::None());
-    HYP_API virtual ~VulkanAttachment() override;
+    virtual ~VulkanAttachment() override;
 
-    HYP_API VkAttachmentReference GetVulkanHandle() const;
-    HYP_API VkAttachmentDescription GetVulkanAttachmentDescription() const;
+    VkAttachmentReference GetVulkanHandle() const;
+    VkAttachmentDescription GetVulkanAttachmentDescription() const;
 
     HYP_FORCE_INLINE RenderPassStage GetRenderPassStage() const
     {
         return m_stage;
     }
 
-    HYP_API virtual bool IsCreated() const override;
+    virtual bool IsCreated() const override;
 
-    HYP_API virtual RendererResult Create() override;
-    HYP_API virtual RendererResult Destroy() override;
+    virtual RendererResult Create() override;
+    virtual RendererResult Destroy() override;
 
 private:
     RenderPassStage m_stage;

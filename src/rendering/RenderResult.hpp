@@ -71,6 +71,19 @@ using RendererResult = TResult<void, RendererError>;
     }                                                  \
     while (0)
 
+#define HYP_GFX_ASSERT(cond, ...)                                                                          \
+    do                                                                                                     \
+    {                                                                                                      \
+        if (HYP_UNLIKELY(!(cond)))                                                                         \
+        {                                                                                                  \
+            std::printf(                                                                                   \
+                "Assertion failed in renderer!\n\tCondition: " #cond "\n\tMessage: " __VA_ARGS__); \
+            HYP_PRINT_STACK_TRACE();                                                                       \
+            std::terminate();                                                                              \
+        }                                                                                                  \
+    }                                                                                                      \
+    while (0)
+
 #define HYPERION_IGNORE_ERRORS(result)                 \
     do                                                 \
     {                                                  \

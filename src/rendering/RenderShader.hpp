@@ -75,17 +75,17 @@ static inline bool IsRaytracingShaderModule(ShaderModuleType type)
 class ShaderBase : public RenderObject<ShaderBase>
 {
 public:
-    HYP_API virtual ~ShaderBase() override = default;
+    virtual ~ShaderBase() override = default;
 
     HYP_FORCE_INLINE const RC<CompiledShader>& GetCompiledShader() const
     {
         return m_compiledShader;
     }
 
-    HYP_API virtual bool IsCreated() const = 0;
+    virtual bool IsCreated() const = 0;
 
-    HYP_API virtual RendererResult Create() = 0;
-    HYP_API virtual RendererResult Destroy() = 0;
+    virtual RendererResult Create() = 0;
+    virtual RendererResult Destroy() = 0;
 
 protected:
     ShaderBase(const RC<CompiledShader>& compiledShader)

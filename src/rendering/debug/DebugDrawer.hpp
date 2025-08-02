@@ -27,7 +27,7 @@
 #include <rendering/RenderCollection.hpp>
 
 #include <rendering/RenderObject.hpp>
-#include <rendering/RenderStructs.hpp>
+#include <rendering/Shared.hpp>
 
 #include <GameCounter.hpp>
 

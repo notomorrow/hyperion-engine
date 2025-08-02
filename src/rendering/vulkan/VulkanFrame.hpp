@@ -20,12 +20,12 @@ public:
     explicit VulkanFrame(uint32 frameIndex);
     virtual ~VulkanFrame() override;
 
-    HYP_API virtual RendererResult Create() override;
-    HYP_API virtual RendererResult Destroy() override;
+    virtual RendererResult Create() override;
+    virtual RendererResult Destroy() override;
 
-    HYP_API virtual RendererResult ResetFrameState() override;
+    virtual RendererResult ResetFrameState() override;
 
-    HYP_API RendererResult Submit(VulkanDeviceQueue* deviceQueue, const VulkanCommandBufferRef& commandBuffer);
+    RendererResult Submit(VulkanDeviceQueue* deviceQueue, const VulkanCommandBufferRef& commandBuffer);
 
     HYP_FORCE_INLINE const VulkanFenceRef& GetFence() const
     {

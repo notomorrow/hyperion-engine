@@ -2,16 +2,15 @@
 
 #include <rendering/vulkan/rt/VulkanAccelerationStructure.hpp>
 #include <rendering/vulkan/VulkanFence.hpp>
+#include <rendering/vulkan/VulkanFrame.hpp>
 #include <rendering/vulkan/VulkanCommandBuffer.hpp>
 #include <rendering/vulkan/VulkanInstance.hpp>
 #include <rendering/vulkan/VulkanDevice.hpp>
 #include <rendering/vulkan/VulkanFeatures.hpp>
 #include <rendering/vulkan/VulkanRenderBackend.hpp>
 
-#include <rendering/RenderMaterial.hpp>
-
-// @TODO: Refactor to not need this include
 #include <rendering/Material.hpp>
+#include <rendering/Shared.hpp>
 
 #include <core/utilities/Range.hpp>
 #include <core/math/MathUtil.hpp>
@@ -76,12 +75,6 @@ RendererResult VulkanAccelerationGeometry::Create()
         return {};
     }
 
-    /// FIXME!!!
-    // if (m_material.IsValid())
-    // {
-    //     m_material->GetRenderResource().IncRef();
-    // }
-
     if (!GetRenderBackend()->GetDevice()->GetFeatures().IsRaytracingSupported())
     {
         return HYP_MAKE_ERROR(RendererError, "Device does not support raytracing");
@@ -131,18 +124,12 @@ RendererResult VulkanAccelerationGeometry::Create()
     };
 
     m_isCreated = true;
-
-    return {};
+    
+    return RendererResult();
 }
 
 RendererResult VulkanAccelerationGeometry::Destroy()
 {
-    if (m_material.IsValid())
-    {
-        /// FIXME!!!
-        // m_material->GetRenderResource().DecRef();
-    }
-
     RendererResult result;
 
     SafeRelease(std::move(m_packedVerticesBuffer));
@@ -190,9 +177,6 @@ RendererResult VulkanAccelerationStructureBase::CreateAccelerationStructure(
     if (update)
     {
         HYP_GFX_ASSERT(m_accelerationStructure != VK_NULL_HANDLE);
-
-        // TEMP: we should have two TLASes and two RT descriptor sets I suppose...
-        // HYP_GFX_CHECK(instance->GetDevice()->Wait());
     }
     else
     {
@@ -313,11 +297,11 @@ RendererResult VulkanAccelerationStructureBase::CreateAccelerationStructure(
         m_scratchBuffer = GetRenderBackend()->MakeGpuBuffer(GpuBufferType::SCRATCH_BUFFER, scratchSize, scratchBufferAlignment);
         m_scratchBuffer->SetDebugName(NAME("ASScratchBuffer"));
 
-        VULKAN_CHECK(m_scratchBuffer->Create());
+        HYP_GFX_CHECK(m_scratchBuffer->Create());
     }
     else
     {
-        VULKAN_CHECK(m_scratchBuffer->EnsureCapacity(scratchSize, scratchBufferAlignment));
+        HYP_GFX_CHECK(m_scratchBuffer->EnsureCapacity(scratchSize, scratchBufferAlignment));
     }
 
     // zero out scratch buffer
@@ -368,8 +352,8 @@ RendererResult VulkanAccelerationStructureBase::CreateAccelerationStructure(
     SafeRelease(std::move(fence));
 
     ClearFlag(ACCELERATION_STRUCTURE_FLAGS_NEEDS_REBUILDING);
-
-    return {};
+    
+    return RendererResult();
 }
 
 RendererResult VulkanAccelerationStructureBase::Destroy()
@@ -506,8 +490,8 @@ RendererResult VulkanTLAS::Create()
 
     HYP_GFX_CHECK(BuildMeshDescriptionsBuffer());
     updateStateFlags |= RT_UPDATE_STATE_FLAGS_UPDATE_MESH_DESCRIPTIONS;
-
-    return {};
+    
+    return RendererResult();
 }
 
 RendererResult VulkanTLAS::Destroy()
@@ -590,7 +574,7 @@ RendererResult VulkanTLAS::BuildInstancesBuffer(uint32 first, uint32 last)
     if (last <= first)
     {
         // nothing to update
-        return {};
+        return RendererResult();
     }
 
     last = MathUtil::Min(m_blas.Size(), last);
@@ -626,7 +610,7 @@ RendererResult VulkanTLAS::BuildInstancesBuffer(uint32 first, uint32 last)
     if (m_blas.Empty() || last <= first)
     {
         // no need to update the data inside
-        return {};
+        return RendererResult();
     }
 
     Array<VkAccelerationStructureInstanceKHR> instances;
@@ -656,8 +640,8 @@ RendererResult VulkanTLAS::BuildInstancesBuffer(uint32 first, uint32 last)
         first * sizeof(VkAccelerationStructureInstanceKHR),
         instances.Size() * sizeof(VkAccelerationStructureInstanceKHR),
         instances.Data());
-
-    return {};
+    
+    return RendererResult();
 }
 
 RendererResult VulkanTLAS::BuildMeshDescriptionsBuffer()
@@ -670,7 +654,7 @@ RendererResult VulkanTLAS::BuildMeshDescriptionsBuffer(uint32 first, uint32 last
     if (last <= first)
     {
         // nothing to update
-        return {};
+        return RendererResult();
     }
 
     last = MathUtil::Min(m_blas.Size(), last);
@@ -706,7 +690,7 @@ RendererResult VulkanTLAS::BuildMeshDescriptionsBuffer(uint32 first, uint32 last
     if (m_blas.Empty() || last <= first)
     {
         // no need to update the data inside
-        return {};
+        return RendererResult();
     }
 
     Array<MeshDescription> meshDescriptions;
@@ -746,8 +730,8 @@ RendererResult VulkanTLAS::BuildMeshDescriptionsBuffer(uint32 first, uint32 last
         first * sizeof(MeshDescription),
         meshDescriptions.Size() * sizeof(MeshDescription),
         meshDescriptions.Data());
-
-    return {};
+    
+    return RendererResult();
 }
 
 RendererResult VulkanTLAS::UpdateStructure(RTUpdateStateFlags& outUpdateStateFlags)
@@ -784,8 +768,8 @@ RendererResult VulkanTLAS::UpdateStructure(RTUpdateStateFlags& outUpdateStateFla
 
         outUpdateStateFlags |= RT_UPDATE_STATE_FLAGS_UPDATE_MESH_DESCRIPTIONS | RT_UPDATE_STATE_FLAGS_UPDATE_INSTANCES;
     }
-
-    HYPERION_RETURN_OK;
+    
+    return RendererResult();
 }
 
 RendererResult VulkanTLAS::Rebuild(RTUpdateStateFlags& outUpdateStateFlags)
@@ -819,8 +803,8 @@ RendererResult VulkanTLAS::Rebuild(RTUpdateStateFlags& outUpdateStateFlags)
 
     HYP_GFX_CHECK(BuildMeshDescriptionsBuffer());
     outUpdateStateFlags |= RT_UPDATE_STATE_FLAGS_UPDATE_MESH_DESCRIPTIONS;
-
-    return {};
+    
+    return RendererResult();
 }
 
 #pragma endregion TLAS
@@ -884,20 +868,13 @@ RendererResult VulkanBLAS::Create()
             return HYP_MAKE_ERROR(RendererError, "Cannot create BLAS -- geometry has zero indices");
         }
     }
-    }
 
     RTUpdateStateFlags updateStateFlags = RT_UPDATE_STATE_FLAGS_NONE;
 
-    HYP_GFX_CHECK(CreateAccelerationStructure(
-        GetType(),
-        geometries,
-        primitiveCounts,
-        false,
-        updateStateFlags));
-
+    HYP_GFX_CHECK(CreateAccelerationStructure(GetType(), geometries, primitiveCounts, false, updateStateFlags));
     HYP_GFX_ASSERT(updateStateFlags & RT_UPDATE_STATE_FLAGS_UPDATE_ACCELERATION_STRUCTURE);
 
-    return {};
+    return RendererResult();
 }
 
 RendererResult VulkanBLAS::Destroy()
@@ -930,8 +907,8 @@ RendererResult VulkanBLAS::UpdateStructure(RTUpdateStateFlags& outUpdateStateFla
     {
         return Rebuild(outUpdateStateFlags);
     }
-
-    HYPERION_RETURN_OK;
+    
+    return RendererResult();
 }
 
 RendererResult VulkanBLAS::Rebuild(RTUpdateStateFlags& outUpdateStateFlags)
@@ -952,7 +929,7 @@ RendererResult VulkanBLAS::Rebuild(RTUpdateStateFlags& outUpdateStateFlags)
 
     m_flags &= ~(ACCELERATION_STRUCTURE_FLAGS_NEEDS_REBUILDING | ACCELERATION_STRUCTURE_FLAGS_TRANSFORM_UPDATE);
 
-    return {};
+    return RendererResult();
 }
 
 #pragma endregion BLAS

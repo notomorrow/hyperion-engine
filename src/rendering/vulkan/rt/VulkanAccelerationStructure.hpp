@@ -1,6 +1,13 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
 #pragma once
+
+#include <rendering/rt/RenderAccelerationStructure.hpp>
+
+
+#include <rendering/RenderGpuBuffer.hpp>
+#include <rendering/Shared.hpp>
+
 #include <core/math/Matrix4.hpp>
 
 #include <core/containers/Array.hpp>
@@ -9,13 +16,9 @@
 
 #include <core/Handle.hpp>
 
-#include <rendering/rt/RenderAccelerationStructure.hpp>
-
-#include <rendering/RenderResult.hpp>
-#include <rendering/RenderGpuBuffer.hpp>
-#include <rendering/Shared.hpp>
-
 #include <Types.hpp>
+
+#include <vulkan/vulkan.h>
 
 namespace hyperion {
 

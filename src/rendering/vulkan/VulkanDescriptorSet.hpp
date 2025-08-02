@@ -40,8 +40,8 @@ class VulkanDescriptorSet final : public DescriptorSetBase
     using ElementCache = HashMap<Name, Array<VulkanDescriptorElementInfo>>;
 
 public:
-    HYP_API VulkanDescriptorSet(const DescriptorSetLayout& layout);
-    HYP_API ~VulkanDescriptorSet();
+    VulkanDescriptorSet(const DescriptorSetLayout& layout);
+    ~VulkanDescriptorSet();
 
     HYP_FORCE_INLINE VkDescriptorSet GetVulkanHandle() const
     {
@@ -53,18 +53,18 @@ public:
         return m_vkLayoutWrapper.Get();
     }
 
-    HYP_API virtual bool IsCreated() const override;
+    virtual bool IsCreated() const override;
 
-    HYP_API virtual RendererResult Create() override;
-    HYP_API virtual RendererResult Destroy() override;
+    virtual RendererResult Create() override;
+    virtual RendererResult Destroy() override;
 
-    HYP_API virtual void UpdateDirtyState(bool* outIsDirty = nullptr) override;
-    HYP_API virtual void Update(bool force = false) override;
+    virtual void UpdateDirtyState(bool* outIsDirty = nullptr) override;
+    virtual void Update(bool force = false) override;
 
-    HYP_API virtual DescriptorSetRef Clone() const override;
+    virtual DescriptorSetRef Clone() const override;
 
 #ifdef HYP_DEBUG_MODE
-    HYP_API virtual void SetDebugName(Name name) override;
+    virtual void SetDebugName(Name name) override;
 #endif
 
 protected:
@@ -84,8 +84,8 @@ protected:
 class VulkanDescriptorTable final : public DescriptorTableBase
 {
 public:
-    HYP_API VulkanDescriptorTable(const DescriptorTableDeclaration* decl);
-    HYP_API virtual ~VulkanDescriptorTable() override = default;
+    VulkanDescriptorTable(const DescriptorTableDeclaration* decl);
+    virtual ~VulkanDescriptorTable() override = default;
 };
 
 } // namespace hyperion

@@ -532,7 +532,7 @@ void VulkanGraphicsPipeline::BuildVertexAttributes(
 
 #ifdef HYP_DEBUG_MODE
 
-HYP_API void VulkanGraphicsPipeline::SetDebugName(Name name)
+void VulkanGraphicsPipeline::SetDebugName(Name name)
 {
     GraphicsPipelineBase::SetDebugName(name);
 

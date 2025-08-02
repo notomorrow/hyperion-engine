@@ -852,7 +852,7 @@ ImageViewRef VulkanImage::MakeLayerImageView(uint32 layerIndex) const
 
 #ifdef HYP_DEBUG_MODE
 
-HYP_API void VulkanImage::SetDebugName(Name name)
+void VulkanImage::SetDebugName(Name name)
 {
     ImageBase::SetDebugName(name);
 

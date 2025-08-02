@@ -111,8 +111,8 @@ public:
 
     virtual bool IsCreated() const = 0;
 
-    HYP_API virtual RendererResult Create() = 0;
-    HYP_API virtual RendererResult Destroy() = 0;
+    virtual RendererResult Create() = 0;
+    virtual RendererResult Destroy() = 0;
 
 protected:
     AttachmentBase(

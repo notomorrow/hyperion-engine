@@ -2,6 +2,9 @@
 
 #pragma once
 
+#include <rendering/vulkan/VulkanDeviceQueue.hpp>
+#include <rendering/vulkan/VulkanStructs.hpp>
+
 #include <core/memory/UniquePtr.hpp>
 
 #include <core/containers/Array.hpp>
@@ -10,8 +13,6 @@
 
 #include <core/utilities/Span.hpp>
 #include <core/utilities/Optional.hpp>
-
-#include <rendering/vulkan/VulkanDeviceQueue.hpp>
 
 #include <rendering/RenderObject.hpp>
 #include <rendering/RenderDevice.hpp>
@@ -44,7 +45,7 @@ struct QueueFamilyIndices
     }
 };
 
-class VulkanDevice : public DeviceBase
+class VulkanDevice final : public DeviceBase
 {
     static QueueFamilyIndices FindQueueFamilies(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface);
 

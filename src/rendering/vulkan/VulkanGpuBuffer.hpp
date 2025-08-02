@@ -10,57 +10,57 @@ namespace hyperion {
 class VulkanGpuBuffer final : public GpuBufferBase
 {
 public:
-    HYP_API VulkanGpuBuffer(GpuBufferType type, SizeType size, SizeType alignment = 0);
-    HYP_API virtual ~VulkanGpuBuffer() override;
+    VulkanGpuBuffer(GpuBufferType type, SizeType size, SizeType alignment = 0);
+    virtual ~VulkanGpuBuffer() override;
 
     HYP_FORCE_INLINE VkBuffer GetVulkanHandle() const
     {
         return m_handle;
     }
 
-    HYP_API virtual bool IsCreated() const override;
-    HYP_API virtual bool IsCpuAccessible() const override;
+    virtual bool IsCreated() const override;
+    virtual bool IsCpuAccessible() const override;
 
-    HYP_API virtual void InsertBarrier(CommandBufferBase* commandBuffer, ResourceState newState) const override;
-    HYP_API virtual void InsertBarrier(CommandBufferBase* commandBuffer, ResourceState newState, ShaderModuleType shaderType) const override;
+    virtual void InsertBarrier(CommandBufferBase* commandBuffer, ResourceState newState) const override;
+    virtual void InsertBarrier(CommandBufferBase* commandBuffer, ResourceState newState, ShaderModuleType shaderType) const override;
 
-    HYP_API void InsertBarrier(VulkanCommandBuffer* commandBuffer, ResourceState newState) const;
-    HYP_API void InsertBarrier(VulkanCommandBuffer* commandBuffer, ResourceState newState, ShaderModuleType shaderType) const;
+    void InsertBarrier(VulkanCommandBuffer* commandBuffer, ResourceState newState) const;
+    void InsertBarrier(VulkanCommandBuffer* commandBuffer, ResourceState newState, ShaderModuleType shaderType) const;
 
-    HYP_API virtual void CopyFrom(
+    virtual void CopyFrom(
         CommandBufferBase* commandBuffer,
         const GpuBufferBase* srcBuffer,
         SizeType count) override;
 
-    HYP_API RendererResult CheckCanAllocate(SizeType size) const;
+    RendererResult CheckCanAllocate(SizeType size) const;
 
-    HYP_API uint64 GetBufferDeviceAddress() const;
+    uint64 GetBufferDeviceAddress() const;
 
-    HYP_API virtual RendererResult Create() override;
-    HYP_API virtual RendererResult Destroy() override;
+    virtual RendererResult Create() override;
+    virtual RendererResult Destroy() override;
 
-    HYP_API virtual RendererResult EnsureCapacity(
+    virtual RendererResult EnsureCapacity(
         SizeType minimumSize,
         bool* outSizeChanged = nullptr) override;
 
-    HYP_API virtual RendererResult EnsureCapacity(
+    virtual RendererResult EnsureCapacity(
         SizeType minimumSize,
         SizeType alignment,
         bool* outSizeChanged = nullptr) override;
 
-    HYP_API virtual void Memset(SizeType count, ubyte value) override;
+    virtual void Memset(SizeType count, ubyte value) override;
 
-    HYP_API virtual void Copy(SizeType count, const void* ptr) override;
-    HYP_API virtual void Copy(SizeType offset, SizeType count, const void* ptr) override;
+    virtual void Copy(SizeType count, const void* ptr) override;
+    virtual void Copy(SizeType offset, SizeType count, const void* ptr) override;
 
-    HYP_API virtual void Read(SizeType count, void* outPtr) const override;
-    HYP_API virtual void Read(SizeType offset, SizeType count, void* outPtr) const override;
+    virtual void Read(SizeType count, void* outPtr) const override;
+    virtual void Read(SizeType offset, SizeType count, void* outPtr) const override;
 
-    HYP_API virtual void Map() const override;
-    HYP_API virtual void Unmap() const override;
+    virtual void Map() const override;
+    virtual void Unmap() const override;
 
 #ifdef HYP_DEBUG_MODE
-    HYP_API virtual void SetDebugName(Name name) override;
+    virtual void SetDebugName(Name name) override;
 #endif
 
 private:

@@ -14,20 +14,20 @@ class CommandBufferBase : public RenderObject<CommandBufferBase>
 public:
     virtual ~CommandBufferBase() override = default;
 
-    HYP_API virtual bool IsCreated() const = 0;
+    virtual bool IsCreated() const = 0;
 
-    HYP_API virtual RendererResult Create() = 0;
-    HYP_API virtual RendererResult Destroy() = 0;
+    virtual RendererResult Create() = 0;
+    virtual RendererResult Destroy() = 0;
 
-    HYP_API virtual void BindVertexBuffer(const GpuBufferBase* buffer) = 0;
-    HYP_API virtual void BindIndexBuffer(const GpuBufferBase* buffer, GpuElemType elemType = GET_UNSIGNED_INT) = 0;
+    virtual void BindVertexBuffer(const GpuBufferBase* buffer) = 0;
+    virtual void BindIndexBuffer(const GpuBufferBase* buffer, GpuElemType elemType = GET_UNSIGNED_INT) = 0;
 
-    HYP_API virtual void DrawIndexed(
+    virtual void DrawIndexed(
         uint32 numIndices,
         uint32 numInstances = 1,
         uint32 instanceIndex = 0) const = 0;
 
-    HYP_API virtual void DrawIndexedIndirect(
+    virtual void DrawIndexedIndirect(
         const GpuBufferBase* buffer,
         uint32 bufferOffset) const = 0;
 };

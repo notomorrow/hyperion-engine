@@ -189,7 +189,7 @@ void VulkanComputePipeline::SetPushConstants(const void* data, SizeType size)
 
 #ifdef HYP_DEBUG_MODE
 
-HYP_API void VulkanComputePipeline::SetDebugName(Name name)
+void VulkanComputePipeline::SetDebugName(Name name)
 {
     ComputePipelineBase::SetDebugName(name);
 

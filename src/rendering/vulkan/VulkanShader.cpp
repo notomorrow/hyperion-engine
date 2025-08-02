@@ -249,7 +249,7 @@ RendererResult VulkanShader::Destroy()
 
 #ifdef HYP_DEBUG_MODE
 
-HYP_API void VulkanShader::SetDebugName(Name name)
+void VulkanShader::SetDebugName(Name name)
 {
     ShaderBase::SetDebugName(name);
 

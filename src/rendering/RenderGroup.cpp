@@ -41,6 +41,10 @@
 #include <Engine.hpp>
 #include <Constants.hpp>
 
+#ifdef HYP_VULKAN
+#include <rendering/vulkan/VulkanStructs.hpp>
+#endif
+
 namespace hyperion {
 
 #pragma region RenderGroup

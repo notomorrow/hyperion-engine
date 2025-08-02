@@ -10,8 +10,8 @@ namespace hyperion {
 class VulkanFence final : public RenderObject<VulkanFence>
 {
 public:
-    HYP_API VulkanFence();
-    HYP_API virtual ~VulkanFence() override;
+    VulkanFence();
+    virtual ~VulkanFence() override;
 
     HYP_FORCE_INLINE VkFence GetVulkanHandle() const
     {
@@ -23,10 +23,10 @@ public:
         return m_lastFrameResult;
     }
 
-    HYP_API RendererResult Create();
-    HYP_API RendererResult Destroy();
-    HYP_API RendererResult WaitForGPU(bool timeoutLoop = false);
-    HYP_API RendererResult Reset();
+    RendererResult Create();
+    RendererResult Destroy();
+    RendererResult WaitForGPU(bool timeoutLoop = false);
+    RendererResult Reset();
 
 private:
     VkFence m_handle = VK_NULL_HANDLE;

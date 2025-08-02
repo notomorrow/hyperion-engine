@@ -593,7 +593,7 @@ static ViewData* GetViewData(View* view)
     return viewDataIt->second;
 }
 
-HYP_API void RenderApi_Init()
+void RenderApi_Init()
 {
     Threads::AssertOnThread(g_mainThread);
 
@@ -608,7 +608,7 @@ HYP_API void RenderApi_Init()
     g_renderGlobalState->materialDescriptorSetManager->CreateFallbackMaterialDescriptorSet();
 }
 
-HYP_API void RenderApi_Shutdown()
+void RenderApi_Shutdown()
 {
     Threads::AssertOnThread(g_mainThread);
 
@@ -630,13 +630,13 @@ HYP_API void RenderApi_Shutdown()
     g_viewData.Clear();
 }
 
-HYP_API uint32 RenderApi_GetFrameIndex()
+uint32 RenderApi_GetFrameIndex()
 {
     AssertDebug(g_threadFrameIndex != nullptr, "Called from invalid thread or before frame began!");
     return *g_threadFrameIndex;
 }
 
-HYP_API uint32 RenderApi_GetFrameCounter()
+uint32 RenderApi_GetFrameCounter()
 {
     AssertDebug(g_threadFrameCounter != nullptr, "Called from invalid thread or before frame began!");
     return *g_threadFrameCounter;
@@ -835,7 +835,7 @@ static inline void CopyDependencies(ViewData& vd, RenderProxyList& rpl)
     }
 }
 
-HYP_API RenderProxyList& RenderApi_GetProducerProxyList(View* view)
+RenderProxyList& RenderApi_GetProducerProxyList(View* view)
 {
 #ifdef HYP_DEBUG_MODE
     Threads::AssertOnThread(g_gameThread);
@@ -846,7 +846,7 @@ HYP_API RenderProxyList& RenderApi_GetProducerProxyList(View* view)
     return *vd->rplShared;
 }
 
-HYP_API RenderProxyList& RenderApi_GetConsumerProxyList(View* view)
+RenderProxyList& RenderApi_GetConsumerProxyList(View* view)
 {
     AssertDebug(view != nullptr);
 
@@ -857,7 +857,7 @@ HYP_API RenderProxyList& RenderApi_GetConsumerProxyList(View* view)
     return GetViewData(view)->rplRender;
 }
 
-HYP_API RenderCollector& RenderApi_GetRenderCollector(View* view)
+RenderCollector& RenderApi_GetRenderCollector(View* view)
 {
 #ifdef HYP_DEBUG_MODE
     Threads::AssertOnThread(g_renderThread);
@@ -866,7 +866,7 @@ HYP_API RenderCollector& RenderApi_GetRenderCollector(View* view)
     return GetViewData(view)->renderCollector;
 }
 
-HYP_API IRenderProxy* RenderApi_GetRenderProxy(ObjIdBase resourceId)
+IRenderProxy* RenderApi_GetRenderProxy(ObjIdBase resourceId)
 {
     AssertDebug(resourceId.IsValid());
     AssertDebug(resourceId.GetTypeId() != TypeId::Void());
@@ -891,7 +891,7 @@ HYP_API IRenderProxy* RenderApi_GetRenderProxy(ObjIdBase resourceId)
     return pProxy;
 }
 
-HYP_API void RenderApi_UpdateGpuData(ObjIdBase resourceId)
+void RenderApi_UpdateGpuData(ObjIdBase resourceId)
 {
     AssertDebug(resourceId.IsValid());
     AssertDebug(resourceId.GetTypeId() != TypeId::Void());
@@ -922,7 +922,7 @@ HYP_API void RenderApi_UpdateGpuData(ObjIdBase resourceId)
     subtypeData.indicesPendingUpdate.Set(idx, false);
 }
 
-HYP_API void RenderApi_AssignResourceBinding(HypObjectBase* resource, uint32 binding)
+void RenderApi_AssignResourceBinding(HypObjectBase* resource, uint32 binding)
 {
 #ifdef HYP_DEBUG_MODE
     Threads::AssertOnThread(g_renderThread);
@@ -931,7 +931,7 @@ HYP_API void RenderApi_AssignResourceBinding(HypObjectBase* resource, uint32 bin
     g_renderGlobalState->resourceBindings->Assign(resource, binding);
 }
 
-HYP_API uint32 RenderApi_RetrieveResourceBinding(const HypObjectBase* resource)
+uint32 RenderApi_RetrieveResourceBinding(const HypObjectBase* resource)
 {
 #ifdef HYP_DEBUG_MODE
     // FIXME: Add better check to ensure it is from a render task thread.
@@ -941,7 +941,7 @@ HYP_API uint32 RenderApi_RetrieveResourceBinding(const HypObjectBase* resource)
     return g_renderGlobalState->resourceBindings->Retrieve(resource).first;
 }
 
-HYP_API uint32 RenderApi_RetrieveResourceBinding(ObjIdBase resourceId)
+uint32 RenderApi_RetrieveResourceBinding(ObjIdBase resourceId)
 {
 #ifdef HYP_DEBUG_MODE
     // FIXME: Add better check to ensure it is from a render task thread.
@@ -951,12 +951,12 @@ HYP_API uint32 RenderApi_RetrieveResourceBinding(ObjIdBase resourceId)
     return g_renderGlobalState->resourceBindings->Retrieve(resourceId).first;
 }
 
-HYP_API WorldShaderData* RenderApi_GetWorldBufferData()
+WorldShaderData* RenderApi_GetWorldBufferData()
 {
     return &g_frameData[*g_threadFrameIndex].worldBufferData;
 }
 
-HYP_API RenderStats* RenderApi_GetRenderStats()
+RenderStats* RenderApi_GetRenderStats()
 {
     if (Threads::IsOnThread(g_renderThread))
     {
@@ -970,7 +970,7 @@ HYP_API RenderStats* RenderApi_GetRenderStats()
     return &g_frameData[*g_threadFrameIndex].renderStats;
 }
 
-HYP_API void RenderApi_AddRenderStats(const RenderStatsCounts& counts)
+void RenderApi_AddRenderStats(const RenderStatsCounts& counts)
 {
 #ifdef HYP_DEBUG_MODE
     Threads::AssertOnThread(g_renderThread);
@@ -979,7 +979,7 @@ HYP_API void RenderApi_AddRenderStats(const RenderStatsCounts& counts)
     g_renderStatsCalculator.AddCounts(counts);
 }
 
-HYP_API void RenderApi_SuppressRenderStats()
+void RenderApi_SuppressRenderStats()
 {
 #ifdef HYP_DEBUG_MODE
     Threads::AssertOnThread(g_renderThread);
@@ -988,7 +988,7 @@ HYP_API void RenderApi_SuppressRenderStats()
     g_renderStatsCalculator.Suppress();
 }
 
-HYP_API void RenderApi_UnsuppressRenderStats()
+void RenderApi_UnsuppressRenderStats()
 {
 #ifdef HYP_DEBUG_MODE
     Threads::AssertOnThread(g_renderThread);
@@ -997,7 +997,7 @@ HYP_API void RenderApi_UnsuppressRenderStats()
     g_renderStatsCalculator.Unsuppress();
 }
 
-HYP_API void RenderApi_BeginFrame_GameThread()
+void RenderApi_BeginFrame_GameThread()
 {
     HYP_SCOPE;
 
@@ -1007,7 +1007,7 @@ HYP_API void RenderApi_BeginFrame_GameThread()
     g_freeSemaphore.acquire();
 }
 
-HYP_API void RenderApi_EndFrame_GameThread()
+void RenderApi_EndFrame_GameThread()
 {
     HYP_SCOPE;
 #ifdef HYP_DEBUG_MODE
@@ -1022,7 +1022,7 @@ HYP_API void RenderApi_EndFrame_GameThread()
     g_fullSemaphore.release();
 }
 
-HYP_API void RenderApi_BeginFrame_RenderThread()
+void RenderApi_BeginFrame_RenderThread()
 {
     HYP_SCOPE;
 #ifdef HYP_DEBUG_MODE
@@ -1169,7 +1169,7 @@ HYP_API void RenderApi_BeginFrame_RenderThread()
     }
 }
 
-HYP_API void RenderApi_EndFrame_RenderThread()
+void RenderApi_EndFrame_RenderThread()
 {
     HYP_SCOPE;
 #ifdef HYP_DEBUG_MODE

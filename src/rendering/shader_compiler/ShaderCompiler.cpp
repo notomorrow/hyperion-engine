@@ -51,6 +51,10 @@
 
 #endif
 
+#ifdef HYP_VULKAN
+#include <vulkan/vulkan.h>
+#endif
+
 namespace hyperion {
 
 HYP_DEFINE_LOG_SUBCHANNEL(ShaderCompiler, Core);

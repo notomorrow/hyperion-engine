@@ -17,7 +17,7 @@ struct DescriptorTableDeclaration;
 class GraphicsPipelineBase : public RenderObject<GraphicsPipelineBase>
 {
 public:
-    virtual HYP_API ~GraphicsPipelineBase() override;
+    virtual ~GraphicsPipelineBase() override;
 
     HYP_FORCE_INLINE const VertexAttributeSet& GetVertexAttributes() const
     {
@@ -104,36 +104,36 @@ public:
         return m_descriptorTable;
     }
 
-    HYP_API void SetDescriptorTable(const DescriptorTableRef& descriptorTable);
+    void SetDescriptorTable(const DescriptorTableRef& descriptorTable);
 
     HYP_FORCE_INLINE const ShaderRef& GetShader() const
     {
         return m_shader;
     }
 
-    HYP_API void SetShader(const ShaderRef& shader);
+    void SetShader(const ShaderRef& shader);
 
     HYP_FORCE_INLINE const Array<FramebufferRef>& GetFramebuffers() const
     {
         return m_framebuffers;
     }
 
-    HYP_API void SetFramebuffers(const Array<FramebufferRef>& framebuffers);
+    void SetFramebuffers(const Array<FramebufferRef>& framebuffers);
 
-    HYP_API virtual RendererResult Create();
-    HYP_API virtual RendererResult Destroy();
+    virtual RendererResult Create();
+    virtual RendererResult Destroy();
 
-    HYP_API virtual void Bind(CommandBufferBase* commandBuffer) = 0;
-    HYP_API virtual void Bind(CommandBufferBase* commandBuffer, Vec2i viewportOffset, Vec2u viewportExtent) = 0;
+    virtual void Bind(CommandBufferBase* commandBuffer) = 0;
+    virtual void Bind(CommandBufferBase* commandBuffer, Vec2i viewportOffset, Vec2u viewportExtent) = 0;
 
-    HYP_API virtual bool MatchesSignature(
+    virtual bool MatchesSignature(
         const ShaderBase* shader,
         const DescriptorTableDeclaration& descriptorTableDecl,
         const Array<const FramebufferBase*>& framebuffers,
         const RenderableAttributeSet& attributes) const;
 
     // Deprecated - will be removed to decouple from vulkan
-    HYP_DEPRECATED HYP_API virtual void SetPushConstants(const void* data, SizeType size) = 0;
+    HYP_DEPRECATED virtual void SetPushConstants(const void* data, SizeType size) = 0;
 
     uint32 lastFrame = uint32(-1);
 
