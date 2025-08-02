@@ -3,8 +3,8 @@ cmake_policy(SET CMP0091 NEW)
 
 set(BUILD_NAME hyperion-core)
 
-set (CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
-set (CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
+set (CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+set (CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
 project(${BUILD_NAME} CXX C)
 
@@ -53,6 +53,10 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/submodules/zlib/CMakeLists.txt")
     message(STATUS "Zlib submodule found")
 
     add_definitions(-DHYP_ZLIB=1)
+
+    set(ZLIB_BUILD_TESTING OFF CACHE BOOL "" FORCE)
+    set(ZLIB_BUILD_MINIZIP OFF CACHE BOOL "" FORCE)
+    set(ZLIB_INSTALL OFF CACHE BOOL "" FORCE)
 
     include_directories(${CMAKE_SOURCE_DIR}/submodules/zlib PUBLIC "${CMAKE_CURRENT_BINARY_DIR}/zlib")
     add_subdirectory(${CMAKE_SOURCE_DIR}/submodules/zlib ${CMAKE_CURRENT_BINARY_DIR}/zlib)
