@@ -13,7 +13,7 @@
 
 #include <rendering/RenderResult.hpp>
 #include <rendering/RenderGpuBuffer.hpp>
-#include <rendering/RenderStructs.hpp>
+#include <rendering/Shared.hpp>
 
 #include <Types.hpp>
 

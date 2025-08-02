@@ -261,7 +261,7 @@ RendererResult VulkanInstance::SetupDebugMessenger()
     messengerInfo.pfnUserCallback = &DebugCallback;
     messengerInfo.pUserData = nullptr;
 
-    HYPERION_VK_CHECK(CreateDebugUtilsMessengerEXT(m_instance, &messengerInfo, nullptr, &this->debugMessenger));
+    VULKAN_CHECK(CreateDebugUtilsMessengerEXT(m_instance, &messengerInfo, nullptr, &this->debugMessenger));
 
     DebugLog(LogType::Info, "Using Vulkan Debug Messenger\n");
 #endif
@@ -273,7 +273,7 @@ RendererResult VulkanInstance::Initialize(const AppContextBase& appContext, bool
     /* Set up our debug and validation layers */
     if (loadDebugLayers)
     {
-        HYPERION_BUBBLE_ERRORS(SetupDebug());
+        HYP_GFX_CHECK(SetupDebug());
     }
 
     VkApplicationInfo appInfo { VK_STRUCTURE_TYPE_APPLICATION_INFO };
@@ -330,15 +330,15 @@ RendererResult VulkanInstance::Initialize(const AppContextBase& appContext, bool
     VkResult instanceResult = vkCreateInstance(&createInfo, nullptr, &m_instance);
 
     DebugLog(LogType::Info, "Instance result: %d\n", instanceResult);
-    HYPERION_VK_CHECK_MSG(instanceResult, "Failed to create Vulkan Instance!");
+    VULKAN_CHECK_MSG(instanceResult, "Failed to create Vulkan Instance!");
 
     /* Create our renderable surface from SDL */
     HYP_GFX_ASSERT(appContext.GetMainWindow() != nullptr);
     m_surface = appContext.GetMainWindow()->CreateVkSurface(this);
 
     /* Find and set up an adequate GPU for rendering and presentation */
-    HYPERION_BUBBLE_ERRORS(CreateDevice());
-    HYPERION_BUBBLE_ERRORS(CreateSwapchain());
+    HYP_GFX_CHECK(CreateDevice());
+    HYP_GFX_CHECK(CreateSwapchain());
 
     SetupDebugMessenger();
     m_device->SetupAllocator(this);
@@ -407,7 +407,7 @@ RendererResult VulkanInstance::CreateDevice(VkPhysicalDevice physicalDevice)
     queueFamilyIndices.Set(familyIndices.computeFamily.Get(), true);
 
     /* Create a logical device to operate on */
-    HYPERION_BUBBLE_ERRORS(m_device->Create(queueFamilyIndices.ToUInt64()));
+    HYP_GFX_CHECK(m_device->Create(queueFamilyIndices.ToUInt64()));
 
     /* Get the internal queues from our device */
 
@@ -422,7 +422,7 @@ RendererResult VulkanInstance::CreateSwapchain()
     }
 
     m_swapchain->m_surface = m_surface;
-    HYPERION_BUBBLE_ERRORS(m_swapchain->Create());
+    HYP_GFX_CHECK(m_swapchain->Create());
 
     HYPERION_RETURN_OK;
 }
@@ -434,7 +434,7 @@ RendererResult VulkanInstance::RecreateSwapchain()
         // Cannot use SafeRelease here; will get NATIVE_WINDOW_IN_USE_KHR error
         if (m_swapchain->IsCreated())
         {
-            HYPERION_BUBBLE_ERRORS(m_swapchain->Destroy());
+            HYP_GFX_CHECK(m_swapchain->Destroy());
         }
 
         m_swapchain.Reset();
@@ -449,7 +449,7 @@ RendererResult VulkanInstance::RecreateSwapchain()
 
     m_swapchain = MakeRenderObject<VulkanSwapchain>();
     m_swapchain->m_surface = m_surface;
-    HYPERION_BUBBLE_ERRORS(m_swapchain->Create());
+    HYP_GFX_CHECK(m_swapchain->Create());
 
     HYPERION_RETURN_OK;
 }

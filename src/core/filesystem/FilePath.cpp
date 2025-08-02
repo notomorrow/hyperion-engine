@@ -13,11 +13,9 @@
 #include <direct.h>
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
-#define NOMINMAX
 #endif
 #include <windows.h>
 #undef WIN32_LEAN_AND_MEAN
-#undef NOMINMAX
 #elif defined(HYP_UNIX)
 #include <unistd.h>
 #endif

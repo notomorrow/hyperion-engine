@@ -2,11 +2,11 @@
 
 #pragma once
 
-#include <rendering/RenderStructs.hpp>
+#include <rendering/Shared.hpp>
 #include <rendering/RenderFramebuffer.hpp>
 #include <rendering/RenderBucket.hpp>
 #include <rendering/ShaderManager.hpp>
-#include <rendering/RenderStructs.hpp>
+#include <rendering/Shared.hpp>
 
 #include <core/Defines.hpp>
 #include <core/utilities/EnumFlags.hpp>

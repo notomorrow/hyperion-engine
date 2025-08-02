@@ -32,7 +32,7 @@
 namespace hyperion {
 
 //! for debugging
-static constexpr bool g_disableAssetUnload = true;
+static constexpr bool g_disableAssetUnload = false;
 
 HYP_API WeakName AssetPackage_KeyByFunction(const Handle<AssetPackage>& assetPackage)
 {

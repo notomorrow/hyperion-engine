@@ -13,7 +13,7 @@
 #include <rendering/RenderQueue.hpp>
 
 #include <rendering/RenderObject.hpp>
-#include <rendering/RenderStructs.hpp>
+#include <rendering/Shared.hpp>
 
 #include <Constants.hpp>
 

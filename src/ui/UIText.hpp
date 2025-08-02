@@ -12,7 +12,7 @@
 #include <core/math/Transform.hpp>
 #include <core/math/Vector2.hpp>
 
-#include <rendering/RenderStructs.hpp>
+#include <rendering/Shared.hpp>
 
 #include <rendering/font/FontAtlas.hpp>
 

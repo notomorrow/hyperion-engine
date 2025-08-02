@@ -9,7 +9,7 @@
 #include <core/utilities/EnumFlags.hpp>
 
 #include <rendering/RenderResult.hpp>
-#include <rendering/RenderStructs.hpp>
+#include <rendering/Shared.hpp>
 #include <rendering/RenderObject.hpp>
 
 #include <Types.hpp>

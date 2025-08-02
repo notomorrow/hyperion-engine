@@ -16,7 +16,7 @@
 #include <rendering/RenderObject.hpp>
 #include <rendering/RenderDevice.hpp>
 #include <rendering/RenderResult.hpp>
-#include <rendering/RenderStructs.hpp>
+#include <rendering/Shared.hpp>
 
 #include <system/vma/VmaUsage.hpp>
 

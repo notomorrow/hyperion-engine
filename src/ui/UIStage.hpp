@@ -13,7 +13,7 @@
 
 #include <scene/components/UIComponent.hpp>
 
-#include <rendering/RenderStructs.hpp>
+#include <rendering/Shared.hpp>
 
 #include <input/Mouse.hpp>
 #include <input/Keyboard.hpp>

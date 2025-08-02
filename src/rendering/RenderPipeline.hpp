@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include <rendering/RenderStructs.hpp>
+#include <rendering/Shared.hpp>
 #include <rendering/RenderDescriptorSet.hpp>
 
 #include <core/containers/Array.hpp>

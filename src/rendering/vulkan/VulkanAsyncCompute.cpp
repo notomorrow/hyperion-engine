@@ -59,12 +59,12 @@ RendererResult VulkanAsyncCompute::Create()
     {
         HYP_GFX_ASSERT(commandBuffer.IsValid());
 
-        HYPERION_BUBBLE_ERRORS(commandBuffer->Create(queue->commandPools[0]));
+        HYP_GFX_CHECK(commandBuffer->Create(queue->commandPools[0]));
     }
 
     for (const VulkanFenceRef& fence : m_fences)
     {
-        HYPERION_BUBBLE_ERRORS(fence->Create());
+        HYP_GFX_CHECK(fence->Create());
     }
 
     HYPERION_RETURN_OK;
@@ -78,9 +78,9 @@ RendererResult VulkanAsyncCompute::Submit(VulkanFrame* frame)
 
     // @TODO: Call RenderQueue::Prepare to set descriptor sets to be used for the frame.
 
-    HYPERION_BUBBLE_ERRORS(m_commandBuffers[frameIndex]->Begin());
+    HYP_GFX_CHECK(m_commandBuffers[frameIndex]->Begin());
     renderQueue.Execute(m_commandBuffers[frameIndex]);
-    HYPERION_BUBBLE_ERRORS(m_commandBuffers[frameIndex]->End());
+    HYP_GFX_CHECK(m_commandBuffers[frameIndex]->End());
 
     VulkanDeviceQueue& computeQueue = GetRenderBackend()->GetDevice()->GetComputeQueue();
 
@@ -93,7 +93,7 @@ RendererResult VulkanAsyncCompute::PrepareForFrame(VulkanFrame* frame)
 
     const uint32 frameIndex = frame->GetFrameIndex();
 
-    HYPERION_BUBBLE_ERRORS(WaitForFence(frame));
+    HYP_GFX_CHECK(WaitForFence(frame));
 
     HYPERION_RETURN_OK;
 }

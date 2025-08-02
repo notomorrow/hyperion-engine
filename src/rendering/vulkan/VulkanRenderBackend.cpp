@@ -106,7 +106,7 @@ public:
         if (m_handle != VK_NULL_HANDLE)
         {
             HYP_GFX_ASSERT(m_deleteFn != nullptr);
-            HYPERION_ASSERT_RESULT(m_deleteFn(m_device, this));
+            HYP_GFX_ASSERT(m_deleteFn(m_device, this));
         }
     }
 
@@ -172,7 +172,7 @@ public:
         layoutInfo.flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT;
         layoutInfo.pNext = &extendedInfo;
 
-        HYPERION_VK_CHECK(vkCreateDescriptorSetLayout(
+        VULKAN_CHECK(vkCreateDescriptorSetLayout(
             device->GetDevice(),
             &layoutInfo,
             nullptr,
@@ -295,7 +295,7 @@ RendererResult VulkanDescriptorSetManager::Create(VulkanDevice* device)
     poolInfo.poolSizeCount = uint32(poolSizes.Size());
     poolInfo.pPoolSizes = poolSizes.Data();
 
-    HYPERION_VK_CHECK(vkCreateDescriptorPool(
+    VULKAN_CHECK(vkCreateDescriptorPool(
         device->GetDevice(),
         &poolInfo,
         nullptr,
@@ -400,7 +400,7 @@ VulkanDescriptorSetLayoutWrapperRef VulkanDescriptorSetManager::GetOrCreateVkDes
             return wrapper->Destroy(device);
         });
 
-    HYPERION_ASSERT_RESULT(vkDescriptorSetLayout->Create(device, layout));
+    HYP_GFX_ASSERT(vkDescriptorSetLayout->Create(device, layout));
 
     m_vkDescriptorSetLayouts.Set(hashCode, vkDescriptorSetLayout);
 
@@ -574,16 +574,16 @@ SwapchainBase* VulkanRenderBackend::GetSwapchain() const
 RendererResult VulkanRenderBackend::Initialize(AppContextBase& appContext)
 {
     m_instance = new VulkanInstance();
-    HYPERION_BUBBLE_ERRORS(m_instance->Initialize(appContext, g_useDebugLayers));
+    HYP_GFX_CHECK(m_instance->Initialize(appContext, g_useDebugLayers));
 
     VulkanDynamicFunctions::Load(m_instance->GetDevice());
 
     m_crashHandler.Initialize();
 
-    HYPERION_BUBBLE_ERRORS(m_descriptorSetManager->Create(m_instance->GetDevice()));
+    HYP_GFX_CHECK(m_descriptorSetManager->Create(m_instance->GetDevice()));
 
     VulkanAsyncCompute* asyncCompute = new VulkanAsyncCompute();
-    HYPERION_BUBBLE_ERRORS(asyncCompute->Create());
+    HYP_GFX_CHECK(asyncCompute->Create());
     m_asyncCompute = asyncCompute;
 
     m_defaultFormats.Set(
@@ -620,8 +620,8 @@ RendererResult VulkanRenderBackend::Destroy()
     delete m_asyncCompute;
     m_asyncCompute = nullptr;
 
-    HYPERION_BUBBLE_ERRORS(m_instance->GetDevice()->Wait());
-    HYPERION_BUBBLE_ERRORS(m_instance->Destroy());
+    HYP_GFX_CHECK(m_instance->GetDevice()->Wait());
+    HYP_GFX_CHECK(m_instance->Destroy());
 
     delete m_instance;
     m_instance = nullptr;
@@ -638,27 +638,19 @@ FrameBase* VulkanRenderBackend::PrepareNextFrame()
 {
     RendererResult frameResult = m_instance->GetSwapchain()->PrepareFrame(m_shouldRecreateSwapchain);
 
-    if (!frameResult)
-    {
-        m_crashHandler.HandleGPUCrash(frameResult);
-
-        HYP_FAIL("Failed to retrieve frame");
-    }
-
     VulkanFrame* frame = m_instance->GetSwapchain()->GetCurrentFrame();
 
     if (m_shouldRecreateSwapchain)
     {
         m_shouldRecreateSwapchain = false;
 
-        HYPERION_ASSERT_RESULT(m_instance->GetDevice()->Wait());
-        HYPERION_ASSERT_RESULT(m_instance->RecreateSwapchain());
-        HYPERION_ASSERT_RESULT(m_instance->GetDevice()->Wait());
+        HYP_GFX_ASSERT(m_instance->GetDevice()->Wait());
+        HYP_GFX_ASSERT(m_instance->RecreateSwapchain());
 
-        HYPERION_ASSERT_RESULT(m_instance->GetSwapchain()->GetCurrentFrame()->RecreateFence());
+        HYP_GFX_ASSERT(m_instance->GetSwapchain()->GetCurrentFrame()->RecreateFence());
 
         // Need to prepare frame again now that swapchain has been recreated.
-        HYPERION_ASSERT_RESULT(m_instance->GetSwapchain()->PrepareFrame(m_shouldRecreateSwapchain));
+        HYP_GFX_ASSERT(m_instance->GetSwapchain()->PrepareFrame(m_shouldRecreateSwapchain));
 
         HYP_GFX_ASSERT(!m_shouldRecreateSwapchain);
 
@@ -669,9 +661,7 @@ FrameBase* VulkanRenderBackend::PrepareNextFrame()
 
     AssertDebug(frame != nullptr);
 
-    VulkanAsyncCompute* asyncCompute = static_cast<VulkanAsyncCompute*>(m_asyncCompute);
-
-    HYPERION_ASSERT_RESULT(asyncCompute->PrepareForFrame(frame));
+    static_cast<VulkanAsyncCompute*>(m_asyncCompute)->PrepareForFrame(frame);
 
     return frame;
 }
@@ -690,14 +680,29 @@ void VulkanRenderBackend::PresentFrame(FrameBase* frame)
     {
         m_crashHandler.HandleGPUCrash(submitResult);
 
-        return;
+        HYP_UNREACHABLE();
     }
 
-    HYPERION_ASSERT_RESULT(vulkanAsyncCompute->Submit(vulkanFrame));
+    submitResult = vulkanAsyncCompute->Submit(vulkanFrame);
+
+    if (!submitResult)
+    {
+        m_crashHandler.HandleGPUCrash(submitResult);
+
+        HYP_UNREACHABLE();
+    }
 
     m_textureCache->CleanupUnusedTextures();
 
-    m_instance->GetSwapchain()->PresentFrame(&m_instance->GetDevice()->GetGraphicsQueue());
+    submitResult = m_instance->GetSwapchain()->PresentFrame(&m_instance->GetDevice()->GetGraphicsQueue());
+
+    if (!submitResult)
+    {
+        m_crashHandler.HandleGPUCrash(submitResult);
+
+        HYP_UNREACHABLE();
+    }
+
     m_instance->GetSwapchain()->NextFrame();
 }
 

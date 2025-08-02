@@ -86,7 +86,7 @@ RendererResult VulkanRaytracingPipeline::Create()
     layoutInfo.pushConstantRangeCount = ArraySize(pushConstantRanges);
     layoutInfo.pPushConstantRanges = pushConstantRanges;
 
-    HYPERION_VK_PASS_ERRORS(
+    VULKAN_PASS_ERRORS(
         vkCreatePipelineLayout(GetRenderBackend()->GetDevice()->GetDevice(), &layoutInfo, VK_NULL_HANDLE, &m_layout),
         result);
 
@@ -118,7 +118,7 @@ RendererResult VulkanRaytracingPipeline::Create()
     pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
     pipelineInfo.basePipelineIndex = -1;
 
-    HYPERION_VK_PASS_ERRORS(
+    VULKAN_PASS_ERRORS(
         g_vulkanDynamicFunctions->vkCreateRayTracingPipelinesKHR(
             GetRenderBackend()->GetDevice()->GetDevice(),
             VK_NULL_HANDLE,
@@ -222,7 +222,7 @@ RendererResult VulkanRaytracingPipeline::CreateShaderBindingTables(VulkanShader*
 
     ByteBuffer shaderHandleStorage(tableSize);
 
-    HYPERION_VK_CHECK(g_vulkanDynamicFunctions->vkGetRayTracingShaderGroupHandlesKHR(
+    VULKAN_CHECK(g_vulkanDynamicFunctions->vkGetRayTracingShaderGroupHandlesKHR(
         GetRenderBackend()->GetDevice()->GetDevice(),
         m_handle,
         0,

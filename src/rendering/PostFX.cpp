@@ -239,7 +239,7 @@ void PostProcessing::CreateUniformBuffer()
     const PostProcessingUniforms postProcessingUniforms = GetUniforms();
 
     m_uniformBuffer = g_renderBackend->MakeGpuBuffer(GpuBufferType::CBUFF, sizeof(postProcessingUniforms));
-    HYPERION_ASSERT_RESULT(m_uniformBuffer->Create());
+    HYP_GFX_ASSERT(m_uniformBuffer->Create());
     m_uniformBuffer->Copy(sizeof(PostProcessingUniforms), &postProcessingUniforms);
 }
 

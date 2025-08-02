@@ -3,7 +3,7 @@
 #pragma once
 #include <rendering/RenderObject.hpp>
 #include <rendering/RenderResult.hpp>
-#include <rendering/RenderStructs.hpp>
+#include <rendering/Shared.hpp>
 
 #include <core/Defines.hpp>
 

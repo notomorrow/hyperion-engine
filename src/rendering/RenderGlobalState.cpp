@@ -1035,7 +1035,7 @@ HYP_API void RenderApi_BeginFrame_RenderThread()
 
     FrameData& fd = g_frameData[slot];
 
-    HYPERION_ASSERT_RESULT(RenderCommands::Flush());
+    HYP_GFX_ASSERT(RenderCommands::Flush());
 
     for (auto it = fd.viewFrameData.Begin(); it != fd.viewFrameData.End(); ++it)
     {
@@ -1458,7 +1458,7 @@ void RenderGlobalState::CreateBlueNoiseBuffer()
             + ((rankingTileOffset - (scramblingTileOffset + scramblingTileSize)) + rankingTileSize));
 
     GpuBufferRef blueNoiseBuffer = g_renderBackend->MakeGpuBuffer(GpuBufferType::SSBO, sizeof(BlueNoiseBuffer));
-    HYPERION_ASSERT_RESULT(blueNoiseBuffer->Create());
+    HYP_GFX_ASSERT(blueNoiseBuffer->Create());
     blueNoiseBuffer->Copy(sobol256spp256dOffset, sobol256spp256dSize, &BlueNoise::sobol256spp256d[0]);
     blueNoiseBuffer->Copy(scramblingTileOffset, scramblingTileSize, &BlueNoise::scramblingTile[0]);
     blueNoiseBuffer->Copy(rankingTileOffset, rankingTileSize, &BlueNoise::rankingTile[0]);
@@ -1475,7 +1475,7 @@ void RenderGlobalState::CreateSphereSamplesBuffer()
     HYP_SCOPE;
 
     GpuBufferRef sphereSamplesBuffer = g_renderBackend->MakeGpuBuffer(GpuBufferType::CBUFF, sizeof(Vec4f) * 4096);
-    HYPERION_ASSERT_RESULT(sphereSamplesBuffer->Create());
+    HYP_GFX_ASSERT(sphereSamplesBuffer->Create());
 
     Vec4f* sphereSamples = new Vec4f[4096];
 

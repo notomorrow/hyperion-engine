@@ -363,7 +363,7 @@ RendererResult VulkanGraphicsPipeline::Rebuild()
     layoutInfo.pushConstantRangeCount = uint32(std::size(pushConstantRanges));
     layoutInfo.pPushConstantRanges = pushConstantRanges;
 
-    HYPERION_VK_CHECK_MSG(
+    VULKAN_CHECK_MSG(
         vkCreatePipelineLayout(GetRenderBackend()->GetDevice()->GetDevice(), &layoutInfo, nullptr, &m_layout),
         "Failed to create graphics pipeline layout");
 
@@ -428,7 +428,7 @@ RendererResult VulkanGraphicsPipeline::Rebuild()
         .pData = &specializationInfoData
     };
 
-    HYPERION_VK_CHECK_MSG(
+    VULKAN_CHECK_MSG(
         vkCreateGraphicsPipelines(GetRenderBackend()->GetDevice()->GetDevice(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &m_handle),
         "Failed to create graphics pipeline");
 

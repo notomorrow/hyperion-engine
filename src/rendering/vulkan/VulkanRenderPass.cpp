@@ -188,7 +188,7 @@ RendererResult VulkanRenderPass::Create()
         renderPassInfo.pNext = &multiviewInfo;
     }
 
-    HYPERION_VK_CHECK(vkCreateRenderPass(GetRenderBackend()->GetDevice()->GetDevice(), &renderPassInfo, nullptr, &m_handle));
+    VULKAN_CHECK(vkCreateRenderPass(GetRenderBackend()->GetDevice()->GetDevice(), &renderPassInfo, nullptr, &m_handle));
 
     HYPERION_RETURN_OK;
 }

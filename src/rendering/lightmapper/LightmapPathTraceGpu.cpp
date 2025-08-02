@@ -75,7 +75,7 @@ struct RENDER_COMMAND(CreateLightmapGPUPathTracerUniformBuffer)
 
     virtual RendererResult operator()() override
     {
-        HYPERION_BUBBLE_ERRORS(uniformBuffer->Create());
+        HYP_GFX_CHECK(uniformBuffer->Create());
         uniformBuffer->Memset(sizeof(RTRadianceUniforms), 0x0);
 
         HYPERION_RETURN_OK;
@@ -233,7 +233,7 @@ void LightmapRenderer_GpuPathTracing::ReadHitsBuffer(FrameBase* frame, Span<Ligh
     const GpuBufferRef& hitsBuffer = m_hitsBufferGpu;
 
     GpuBufferRef stagingBuffer = g_renderBackend->MakeGpuBuffer(GpuBufferType::STAGING_BUFFER, outHits.Size() * sizeof(LightmapHit));
-    HYPERION_ASSERT_RESULT(stagingBuffer->Create());
+    HYP_GFX_ASSERT(stagingBuffer->Create());
     stagingBuffer->Memset(outHits.Size() * sizeof(LightmapHit), 0);
 
     UniquePtr<SingleTimeCommands> singleTimeCommands = g_renderBackend->GetSingleTimeCommands();
@@ -255,11 +255,11 @@ void LightmapRenderer_GpuPathTracing::ReadHitsBuffer(FrameBase* frame, Span<Ligh
             renderQueue << InsertBarrier(hitsBuffer, previousResourceState);
         });
 
-    HYPERION_ASSERT_RESULT(singleTimeCommands->Execute());
+    HYP_GFX_ASSERT(singleTimeCommands->Execute());
 
     stagingBuffer->Read(sizeof(LightmapHit) * outHits.Size(), outHits.Data());
 
-    HYPERION_ASSERT_RESULT(stagingBuffer->Destroy());
+    HYP_GFX_ASSERT(stagingBuffer->Destroy());
 }
 
 void LightmapRenderer_GpuPathTracing::Render(FrameBase* frame, const RenderSetup& renderSetup, LightmapJob* job, Span<const LightmapRay> rays, uint32 rayOffset)
@@ -286,7 +286,7 @@ void LightmapRenderer_GpuPathTracing::Render(FrameBase* frame, const RenderSetup
 
         bool raysBufferResized = false;
 
-        HYPERION_ASSERT_RESULT(m_raysBuffers[frame->GetFrameIndex()]->EnsureCapacity(rayData.ByteSize(), &raysBufferResized));
+        HYP_GFX_ASSERT(m_raysBuffers[frame->GetFrameIndex()]->EnsureCapacity(rayData.ByteSize(), &raysBufferResized));
         m_raysBuffers[frame->GetFrameIndex()]->Copy(rayData.ByteSize(), rayData.Data());
 
         if (raysBufferResized)
@@ -296,7 +296,7 @@ void LightmapRenderer_GpuPathTracing::Render(FrameBase* frame, const RenderSetup
 
         bool hitsBufferResized = false;
 
-        /*HYPERION_ASSERT_RESULT(m_hitsBuffers[frame->GetFrameIndex()]->EnsureCapacity(rays.Size() * sizeof(LightmapHit), &hitsBufferResized));
+        /*HYP_GFX_ASSERT(m_hitsBuffers[frame->GetFrameIndex()]->EnsureCapacity(rays.Size() * sizeof(LightmapHit), &hitsBufferResized));
         m_hitsBuffers[frame->GetFrameIndex()]->Memset(rays.Size() * sizeof(LightmapHit), 0);
 
         if (hitsBufferResized) {

@@ -1019,7 +1019,7 @@ template <class... Types>
 struct VisitHelper<utilities::Variant<Types...>>
 {
     template <class FunctionType>
-    HYP_FORCE_INLINE static inline void Invoke(utilities::Variant<Types...>& variant, FunctionType&& fn)
+    static inline void Invoke(utilities::Variant<Types...>& variant, FunctionType&& fn)
     {
         using InvokeFunctionWrapper = std::add_pointer_t<void(utilities::Variant<Types...>&, FunctionType&)>;
 
@@ -1041,7 +1041,7 @@ struct VisitHelper<utilities::Variant<Types...>>
     }
 
     template <class FunctionType>
-    HYP_FORCE_INLINE static inline void Invoke(const utilities::Variant<Types...>& variant, FunctionType&& fn)
+    static inline void Invoke(const utilities::Variant<Types...>& variant, FunctionType&& fn)
     {
         using InvokeFunctionWrapper = std::add_pointer_t<void(const utilities::Variant<Types...>&, FunctionType&)>;
 
@@ -1063,7 +1063,7 @@ struct VisitHelper<utilities::Variant<Types...>>
     }
 
     template <class FunctionType>
-    HYP_FORCE_INLINE static inline void Invoke(utilities::Variant<Types...>&& variant, FunctionType&& fn)
+    static inline void Invoke(utilities::Variant<Types...>&& variant, FunctionType&& fn)
     {
         using InvokeFunctionWrapper = std::add_pointer_t<void(utilities::Variant<Types...>&&, FunctionType&)>;
 
@@ -1088,7 +1088,7 @@ struct VisitHelper<utilities::Variant<Types...>>
 #pragma endregion VisitHelper
 
 template <class VariantType, class FunctionType>
-HYP_FORCE_INLINE static inline void Visit(VariantType&& variant, FunctionType&& fn)
+static inline void Visit(VariantType&& variant, FunctionType&& fn)
 {
     VisitHelper<NormalizedType<VariantType>>::Invoke(std::forward<VariantType>(variant), std::forward<FunctionType>(fn));
 }

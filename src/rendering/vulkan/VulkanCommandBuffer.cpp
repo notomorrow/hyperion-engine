@@ -66,7 +66,7 @@ RendererResult VulkanCommandBuffer::Create()
     allocInfo.commandPool = m_commandPool;
     allocInfo.commandBufferCount = 1;
 
-    HYPERION_VK_CHECK_MSG(
+    VULKAN_CHECK_MSG(
         vkAllocateCommandBuffers(GetRenderBackend()->GetDevice()->GetDevice(), &allocInfo, &m_handle),
         "Failed to allocate command buffer");
 
@@ -116,7 +116,7 @@ RendererResult VulkanCommandBuffer::Begin(const VulkanRenderPass* renderPass)
         return HYP_MAKE_ERROR(RendererError, "Command buffer not created!");
     }
 
-    HYPERION_VK_CHECK_MSG(
+    VULKAN_CHECK_MSG(
         vkBeginCommandBuffer(m_handle, &beginInfo),
         "Failed to begin command buffer");
 
@@ -127,7 +127,7 @@ RendererResult VulkanCommandBuffer::End()
 {
     m_boundDescriptorSets.Clear();
 
-    HYPERION_VK_CHECK_MSG(
+    VULKAN_CHECK_MSG(
         vkEndCommandBuffer(m_handle),
         "Failed to end command buffer");
 
@@ -138,7 +138,7 @@ RendererResult VulkanCommandBuffer::Reset()
 {
     m_boundDescriptorSets.Clear();
 
-    HYPERION_VK_CHECK_MSG(
+    VULKAN_CHECK_MSG(
         vkResetCommandBuffer(m_handle, 0),
         "Failed to reset command buffer");
 
@@ -177,9 +177,9 @@ RendererResult VulkanCommandBuffer::SubmitPrimary(
     HYP_GFX_ASSERT(fence != nullptr);
     HYP_GFX_ASSERT(fence->GetVulkanHandle() != VK_NULL_HANDLE);
 
-    HYPERION_VK_CHECK_MSG(
+    VULKAN_CHECK_MSG(
         vkQueueSubmit(queue->queue, 1, &submitInfo, fence->GetVulkanHandle()),
-        "Failed to submit command");
+        "Failed to submit command buffer");
 
     HYPERION_RETURN_OK;
 }

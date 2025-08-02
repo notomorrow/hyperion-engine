@@ -75,7 +75,7 @@ void DepthPyramidRenderer::Create()
         Threads::AssertOnThread(g_renderThread);
 
         m_depthPyramidSampler = g_renderBackend->MakeSampler(TFM_NEAREST_MIPMAP, TFM_NEAREST, TWM_CLAMP_TO_EDGE);
-        HYPERION_ASSERT_RESULT(m_depthPyramidSampler->Create());
+        HYP_GFX_ASSERT(m_depthPyramidSampler->Create());
 
         const ImageRef& depthImage = m_depthImageView->GetImage();
         Assert(depthImage.IsValid());
@@ -127,11 +127,11 @@ void DepthPyramidRenderer::Create()
             uniforms.mipLevel = mipLevel;
 
             GpuBufferRef& mipUniformBuffer = m_mipUniformBuffers.PushBack(g_renderBackend->MakeGpuBuffer(GpuBufferType::CBUFF, sizeof(DepthPyramidUniforms)));
-            HYPERION_ASSERT_RESULT(mipUniformBuffer->Create());
+            HYP_GFX_ASSERT(mipUniformBuffer->Create());
             mipUniformBuffer->Copy(sizeof(DepthPyramidUniforms), &uniforms);
 
             ImageViewRef& mipImageView = m_mipImageViews.PushBack(g_renderBackend->MakeImageView(m_depthPyramid, mipLevel, 1, 0, m_depthPyramid->NumFaces()));
-            HYPERION_ASSERT_RESULT(mipImageView->Create());
+            HYP_GFX_ASSERT(mipImageView->Create());
         }
 
         ShaderRef shader = g_shaderManager->GetOrCreate(NAME("GenerateDepthPyramid"), {});
@@ -187,7 +187,7 @@ void DepthPyramidRenderer::Create()
 
                 setDescriptorSetElements();
 
-                HYPERION_ASSERT_RESULT(descriptorTable->Create());
+                HYP_GFX_ASSERT(descriptorTable->Create());
             }
             else
             {

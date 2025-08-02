@@ -78,7 +78,7 @@ struct RENDER_COMMAND(CreateSSGIUniformBuffers)
         {
             Assert(uniformBuffers[frameIndex] != nullptr);
 
-            HYPERION_BUBBLE_ERRORS(uniformBuffers[frameIndex]->Create());
+            HYP_GFX_CHECK(uniformBuffers[frameIndex]->Create());
 
             uniformBuffers[frameIndex]->Copy(sizeof(uniforms), &uniforms);
         }

@@ -42,10 +42,10 @@ VulkanFrame::~VulkanFrame()
 
 RendererResult VulkanFrame::Create()
 {
-    HYPERION_BUBBLE_ERRORS(m_presentSemaphores.Create());
+    HYP_GFX_CHECK(m_presentSemaphores.Create());
 
     m_queueSubmitFence = MakeRenderObject<VulkanFence>();
-    HYPERION_BUBBLE_ERRORS(m_queueSubmitFence->Create());
+    HYP_GFX_CHECK(m_queueSubmitFence->Create());
 
     HYPERION_RETURN_OK;
 }
@@ -106,6 +106,8 @@ RendererResult VulkanFrame::Submit(VulkanDeviceQueue* deviceQueue, const VulkanC
     commandBuffer->Begin();
     renderQueue.Execute(commandBuffer);
     commandBuffer->End();
+
+    HYP_LOG(RenderingBackend, Debug, "Submitting command buffer for frame {}", m_frameIndex);
 
     return commandBuffer->SubmitPrimary(deviceQueue, m_queueSubmitFence, &m_presentSemaphores);
 }

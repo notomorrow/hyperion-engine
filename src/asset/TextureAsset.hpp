@@ -4,7 +4,7 @@
 
 #include <asset/AssetRegistry.hpp>
 
-#include <rendering/RenderStructs.hpp>
+#include <rendering/Shared.hpp>
 
 namespace hyperion {
 

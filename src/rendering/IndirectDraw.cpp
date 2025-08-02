@@ -41,11 +41,11 @@ static bool ResizeBuffer(
 
     bool sizeChanged = false;
 
-    HYPERION_ASSERT_RESULT(buffer->EnsureCapacity(newBufferSize, &sizeChanged));
+    HYP_GFX_ASSERT(buffer->EnsureCapacity(newBufferSize, &sizeChanged));
 
     if (!buffer->IsCreated())
     {
-        HYPERION_ASSERT_RESULT(buffer->Create());
+        HYP_GFX_ASSERT(buffer->Create());
 
         sizeChanged = true;
     }
@@ -66,12 +66,12 @@ static bool ResizeIndirectDrawCommandsBuffer(
         return false;
     }
 
-    HYPERION_ASSERT_RESULT(stagingBuffer->EnsureCapacity(indirectBuffer->Size()));
+    HYP_GFX_ASSERT(stagingBuffer->EnsureCapacity(indirectBuffer->Size()));
 
     // upload zeros to the buffer using a staging buffer.
     if (!stagingBuffer->IsCreated())
     {
-        HYPERION_ASSERT_RESULT(stagingBuffer->Create());
+        HYP_GFX_ASSERT(stagingBuffer->Create());
     }
 
     // set all to zero

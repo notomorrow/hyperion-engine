@@ -9,7 +9,7 @@
 #include <rendering/vulkan/VulkanSemaphore.hpp>
 #include <rendering/vulkan/VulkanFramebuffer.hpp>
 
-#include <rendering/RenderStructs.hpp>
+#include <rendering/Shared.hpp>
 
 #include <Types.hpp>
 #include <Constants.hpp>

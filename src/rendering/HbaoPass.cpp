@@ -60,7 +60,7 @@ struct RENDER_COMMAND(CreateHBAOUniformBuffer)
 
     virtual RendererResult operator()() override
     {
-        HYPERION_BUBBLE_ERRORS(uniformBuffer->Create());
+        HYP_GFX_CHECK(uniformBuffer->Create());
         uniformBuffer->Copy(sizeof(uniforms), &uniforms);
 
         HYPERION_RETURN_OK;

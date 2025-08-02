@@ -78,9 +78,9 @@ struct RENDER_COMMAND(CreateParticleSpawnerBuffers)
 
         Bitmap<1> noiseMap = SimplexNoiseGenerator(seed).CreateBitmap(128, 128, 1024.0f);
 
-        HYPERION_BUBBLE_ERRORS(particleBuffer->Create());
-        HYPERION_BUBBLE_ERRORS(indirectBuffer->Create());
-        HYPERION_BUBBLE_ERRORS(noiseBuffer->Create());
+        HYP_GFX_CHECK(particleBuffer->Create());
+        HYP_GFX_CHECK(indirectBuffer->Create());
+        HYP_GFX_CHECK(noiseBuffer->Create());
 
         // copy zeroes into particle buffer
         // if we don't do this, garbage values could be in the particle buffer,
@@ -144,7 +144,7 @@ struct RENDER_COMMAND(CreateParticleSystemBuffers)
 
     virtual RendererResult operator()() override
     {
-        HYPERION_BUBBLE_ERRORS(stagingBuffer->Create());
+        HYP_GFX_CHECK(stagingBuffer->Create());
 
         // copy zeros to buffer
         stagingBuffer->Copy(indirectDrawCommandsBuffer.Size(), indirectDrawCommandsBuffer.Data());

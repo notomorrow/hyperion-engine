@@ -85,20 +85,20 @@ RendererResult VulkanSwapchain::PrepareFrame(bool& outNeedsRecreate)
             HYPERION_RETURN_OK;
         }
 
-        HYPERION_VK_CHECK(result);
+        VULKAN_CHECK(result);
 
         HYPERION_RETURN_OK;
     };
 
     const VulkanFrameRef& frame = GetCurrentFrame();
 
-    HYPERION_BUBBLE_ERRORS(frame->GetFence()->WaitForGPU(true));
+    HYP_GFX_CHECK(frame->GetFence()->WaitForGPU(true));
 
-    HYPERION_BUBBLE_ERRORS(handleFrameResult(frame->GetFence()->GetLastFrameResult(), outNeedsRecreate));
+    HYP_GFX_CHECK(handleFrameResult(frame->GetFence()->GetLastFrameResult(), outNeedsRecreate));
 
-    HYPERION_BUBBLE_ERRORS(frame->ResetFrameState());
+    HYP_GFX_CHECK(frame->ResetFrameState());
 
-    HYPERION_BUBBLE_ERRORS(HandleNextFrame(this, frame, &m_acquiredImageIndex, outNeedsRecreate));
+    HYP_GFX_CHECK(HandleNextFrame(this, frame, &m_acquiredImageIndex, outNeedsRecreate));
 
     HYPERION_RETURN_OK;
 }
@@ -126,7 +126,7 @@ RendererResult VulkanSwapchain::PresentFrame(VulkanDeviceQueue* queue) const
     presentInfo.pImageIndices = &m_acquiredImageIndex;
     presentInfo.pResults = nullptr;
 
-    HYPERION_VK_CHECK(vkQueuePresentKHR(queue->queue, &presentInfo));
+    VULKAN_CHECK(vkQueuePresentKHR(queue->queue, &presentInfo));
 
     HYPERION_RETURN_OK;
 }
@@ -138,9 +138,9 @@ RendererResult VulkanSwapchain::Create()
         return HYP_MAKE_ERROR(RendererError, "Cannot initialize swapchain without a surface");
     }
 
-    HYPERION_BUBBLE_ERRORS(RetrieveSupportDetails());
-    HYPERION_BUBBLE_ERRORS(ChooseSurfaceFormat());
-    HYPERION_BUBBLE_ERRORS(ChoosePresentMode());
+    HYP_GFX_CHECK(RetrieveSupportDetails());
+    HYP_GFX_CHECK(ChooseSurfaceFormat());
+    HYP_GFX_CHECK(ChoosePresentMode());
 
     m_extent = {
         m_supportDetails.capabilities.currentExtent.width,
@@ -199,11 +199,11 @@ RendererResult VulkanSwapchain::Create()
     createInfo.clipped = VK_TRUE;
     createInfo.oldSwapchain = VK_NULL_HANDLE;
 
-    HYPERION_VK_CHECK_MSG(
+    VULKAN_CHECK_MSG(
         vkCreateSwapchainKHR(GetRenderBackend()->GetDevice()->GetDevice(), &createInfo, nullptr, &m_handle),
         "Failed to create Vulkan swapchain!");
 
-    HYPERION_BUBBLE_ERRORS(RetrieveImageHandles());
+    HYP_GFX_CHECK(RetrieveImageHandles());
 
     for (const ImageRef& image : m_images)
     {
@@ -211,17 +211,17 @@ RendererResult VulkanSwapchain::Create()
 
         if (!image->IsCreated())
         {
-            HYPERION_BUBBLE_ERRORS(HYP_MAKE_ERROR(RendererError, "Image is not created!"));
+            HYP_GFX_CHECK(HYP_MAKE_ERROR(RendererError, "Image is not created!"));
         }
 
         if (image->GetResourceState() != RS_PRESENT)
         {
-            HYPERION_BUBBLE_ERRORS(HYP_MAKE_ERROR(RendererError, "Image resource state is not PRESENT!"));
+            HYP_GFX_CHECK(HYP_MAKE_ERROR(RendererError, "Image resource state is not PRESENT!"));
         }
 
         VulkanFramebufferRef framebuffer = MakeRenderObject<VulkanFramebuffer>(m_extent, RenderPassStage::PRESENT);
         framebuffer->AddAttachment(0, VulkanImageRef(image), LoadOperation::CLEAR, StoreOperation::STORE);
-        HYPERION_BUBBLE_ERRORS(framebuffer->Create());
+        HYP_GFX_CHECK(framebuffer->Create());
 
         m_framebuffers.PushBack(std::move(framebuffer));
     }
@@ -234,11 +234,11 @@ RendererResult VulkanSwapchain::Create()
         HYP_GFX_ASSERT(pool != VK_NULL_HANDLE);
 
         VulkanCommandBufferRef commandBuffer = MakeRenderObject<VulkanCommandBuffer>(VK_COMMAND_BUFFER_LEVEL_PRIMARY);
-        HYPERION_BUBBLE_ERRORS(commandBuffer->Create(pool));
+        HYP_GFX_CHECK(commandBuffer->Create(pool));
         m_commandBuffers[i] = std::move(commandBuffer);
 
         VulkanFrameRef frame = MakeRenderObject<VulkanFrame>(i);
-        HYPERION_BUBBLE_ERRORS(frame->Create());
+        HYP_GFX_CHECK(frame->Create());
         m_frames[i] = std::move(frame);
     }
 
@@ -351,7 +351,7 @@ RendererResult VulkanSwapchain::RetrieveImageHandles()
         image->m_handle = vkImages[i];
         image->m_isHandleOwned = false;
 
-        HYPERION_BUBBLE_ERRORS(image->Create());
+        HYP_GFX_CHECK(image->Create());
 
         m_images[i] = std::move(image);
     }
@@ -369,7 +369,7 @@ RendererResult VulkanSwapchain::RetrieveImageHandles()
             }
         });
 
-    HYPERION_BUBBLE_ERRORS(singleTimeCommands->Execute());
+    HYP_GFX_CHECK(singleTimeCommands->Execute());
 
     // Ensure all images are in the PRESENT state
     for (const ImageRef& image : m_images)

@@ -310,7 +310,7 @@ void ReflectionProbeRenderer::ComputePrefilteredEnvMap(FrameBase* frame, const R
     uniforms.numBoundLights = numBoundLights;
 
     GpuBufferRef uniformBuffer = g_renderBackend->MakeGpuBuffer(GpuBufferType::CBUFF, sizeof(uniforms));
-    HYPERION_ASSERT_RESULT(uniformBuffer->Create());
+    HYP_GFX_ASSERT(uniformBuffer->Create());
     uniformBuffer->Copy(sizeof(uniforms), &uniforms);
 
     const ViewOutputTarget& outputTarget = view->GetOutputTarget();
@@ -347,10 +347,10 @@ void ReflectionProbeRenderer::ComputePrefilteredEnvMap(FrameBase* frame, const R
         descriptorSet->SetElement(NAME("OutImage"), g_renderBackend->GetTextureImageView(prefilteredEnvMap));
     }
 
-    HYPERION_ASSERT_RESULT(descriptorTable->Create());
+    HYP_GFX_ASSERT(descriptorTable->Create());
 
     ComputePipelineRef convolveProbeComputePipeline = g_renderBackend->MakeComputePipeline(convolveProbeShader, descriptorTable);
-    HYPERION_ASSERT_RESULT(convolveProbeComputePipeline->Create());
+    HYP_GFX_ASSERT(convolveProbeComputePipeline->Create());
 
     frame->renderQueue << InsertBarrier(prefilteredEnvMap->GetGpuImage(), RS_UNORDERED_ACCESS);
 
@@ -429,7 +429,7 @@ void ReflectionProbeRenderer::ComputeSH(FrameBase* frame, const RenderSetup& ren
         const SizeType size = sizeof(SHTile) * (shNumTiles.x >> i) * (shNumTiles.y >> i);
 
         shTilesBuffers[i] = g_renderBackend->MakeGpuBuffer(GpuBufferType::SSBO, size);
-        HYPERION_ASSERT_RESULT(shTilesBuffers[i]->Create());
+        HYP_GFX_ASSERT(shTilesBuffers[i]->Create());
     }
 
     ShaderProperties shaderProperties;
@@ -498,7 +498,7 @@ void ReflectionProbeRenderer::ComputeSH(FrameBase* frame, const RenderSetup& ren
             it.second.first,
             computeShDescriptorTables[0]);
 
-        HYPERION_ASSERT_RESULT(pipeline->Create());
+        HYP_GFX_ASSERT(pipeline->Create());
     }
 
     // Bind a directional light and sky envprobe if available

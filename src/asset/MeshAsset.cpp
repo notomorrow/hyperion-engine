@@ -141,6 +141,14 @@ Array<uint32> MeshData::BuildPackedIndices() const
         packedIndices[2] = 2;
     }
 
+#ifdef HYP_DEBUG_MODE
+    for (SizeType i = 0; i < packedIndices.Size(); i++)
+    {
+        uint32 idx = packedIndices[i];
+        AssertDebug(idx < vertexData.Size());
+    }
+#endif
+
     return packedIndices;
 }
 

@@ -14,7 +14,7 @@
 #include <core/memory/resource/Resource.hpp>
 
 #include <rendering/RenderCollection.hpp>
-#include <rendering/RenderStructs.hpp>
+#include <rendering/Shared.hpp>
 #include <rendering/RenderObject.hpp>
 
 #include <GameCounter.hpp>

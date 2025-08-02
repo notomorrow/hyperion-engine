@@ -86,7 +86,7 @@ RendererResult VulkanImageView::Create()
     // HYP_GFX_ASSERT(mipmapLayer < numMipmaps, "mipmap layer out of bounds");
     // HYP_GFX_ASSERT(faceLayer < m_numFaces, "face layer out of bounds");
 
-    HYPERION_VK_CHECK_MSG(
+    VULKAN_CHECK_MSG(
         vkCreateImageView(GetRenderBackend()->GetDevice()->GetDevice(), &viewInfo, nullptr, &m_handle),
         "Failed to create image view");
 
