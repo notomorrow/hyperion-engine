@@ -1,38 +1,47 @@
 {
   "rendering": {
-    "rt": {
+    "ssr": {
+      "coneTracing": false,
+      "numIterations": 64,
+      "quality": 2,
+      "eyeFade": [0.980000, 0.990000],
+      "rayStep": 3.200000,
+      "screenEdgeFade": [0.960000, 0.990000],
+      "enabled": false,
+      "roughnessScattering": true,
+      "eyeEade": [0.980000, 0.990000]
+    },
+    "envGrid": {
       "reflections": {
         "enabled": false
       },
-      "path_tracing": {
+      "globalIllumination": {
         "enabled": false
-      },
-      "gi": {
-        "enabled": false
-      },
-      "enabled": false
-    },
-    "ssr": {
-      "num_iterations": 64,
-      "eye_fade": [0.980000, 0.990000],
-      "ray_step": 3.200000,
-      "screen_edge_fade": [0.960000, 0.990000],
-      "quality": 2,
-      "roughness_scattering": true,
-      "enabled": false,
-      "cone_tracing": false
+      }
     },
     "taa": {
       "enabled": false
     },
-    "debug": {
-      "debug_drawer": {
-        "enabled": true
+    "raytacing": {
+      "reflections": {
+        "enabled": false
       },
-      "env_grid_probes": false,
-      "reflection_probes": false,
+      "globalIllumination": {
+        "enabled": false
+      },
+      "pathTracing": {
+        "enabled": false
+      },
+      "enabled": false
+    },
+    "debug": {
       "reflections": false,
       "hbil": false,
+      "debugDrawer": {
+        "enabled": true
+      },
+      "envGridProbes": false,
+      "reflectionProbes": false,
       "ssgi": false,
       "hbao": false,
       "irradiance": false
@@ -40,24 +49,26 @@
     "hbil": {
       "enabled": false
     },
-    "env_grid": {
+    "raytracing": {
       "reflections": {
         "enabled": false
       },
-      "gi": {
+      "globalIllumination": {
         "enabled": false
-      }
+      },
+      "pathTracing": {
+        "enabled": false
+      },
+      "enabled": false
     },
     "hbao": {
-      "temporal_blending": false,
       "radius": 2.500000,
-      "Radius": 2.500000,
       "power": 0.800000,
-      "Power": 0.800000,
-      "UseTemporalBlending": false,
+      "temporalBlending": false,
       "enabled": false
     },
     "ssgi": {
+      "quality": 0,
       "Quality": 0,
       "enabled": false
     }
@@ -67,12 +78,12 @@
     "args": "-ResX=1920 -ResY=1080 -Profile=false -TraceURL=http://localhost:8000/trace"
   },
   "lightmapper": {
-    "num_threads_per_job": 8,
-    "num_samples": 8,
-    "ideal_triangles_per_job": 64000,
+    "maxRaysPerFrame": 1000,
+    "numThreadsPerJob": 8,
     "trace_mode": 0,
     "radiance": true,
-    "max_rays_per_frame": 1000,
+    "idealTrianglesPerJob": 64000,
+    "numSamples": 8,
     "irradiance": true
   }
 }

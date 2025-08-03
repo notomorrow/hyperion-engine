@@ -288,6 +288,29 @@ public:
         return String::Join(parts, "");
     }
 
+    static inline String ToCamelCase(const String& str, bool preserveCase = false)
+    {
+        String pascalCase = ToPascalCase(str, preserveCase);
+        if (pascalCase.Empty())
+        {
+            return pascalCase;
+        }
+
+        utf::u32char firstChar = pascalCase.GetChar(0);
+        if (firstChar > UINT8_MAX)
+        {
+            // If the first character is not a ascii we just return the string as is - we only convert
+            // the first character to lower case if it is an ascii character.
+            return pascalCase;
+        }
+
+        String camelCase;
+        camelCase.Append(std::tolower(int(firstChar)));
+        camelCase.Append(pascalCase.Substr(1));
+
+        return camelCase;
+    }
+
     static inline bool Parse(const String& str, int* outValue)
     {
         *outValue = std::strtol(str.Data(), nullptr, 0);

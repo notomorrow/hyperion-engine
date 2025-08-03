@@ -85,13 +85,13 @@ void GetDeferredShaderProperties(ShaderProperties& outShaderProperties)
     const GlobalConfig& appConfig = g_engine->GetAppContext()->GetConfiguration();
     const IRenderConfig& renderConfig = g_renderBackend->GetRenderConfig();
 
-    outShaderProperties.Set(NAME("RT_REFLECTIONS_ENABLED"), renderConfig.IsRaytracingSupported() && appConfig.Get("rendering.rt.reflections.enabled").ToBool());
-    outShaderProperties.Set(NAME("RT_GI_ENABLED"), renderConfig.IsRaytracingSupported() && appConfig.Get("rendering.rt.gi.enabled").ToBool());
-    outShaderProperties.Set(NAME("ENV_GRID_ENABLED"), appConfig.Get("rendering.env_grid.gi.enabled").ToBool());
+    outShaderProperties.Set(NAME("RT_REFLECTIONS_ENABLED"), renderConfig.IsRaytracingSupported() && appConfig.Get("rendering.raytracing.reflections.enabled").ToBool());
+    outShaderProperties.Set(NAME("RT_GI_ENABLED"), renderConfig.IsRaytracingSupported() && appConfig.Get("rendering.raytracing.globalIllumination.enabled").ToBool());
+    outShaderProperties.Set(NAME("ENV_GRID_ENABLED"), appConfig.Get("rendering.envGrid.globalIllumination.enabled").ToBool());
     outShaderProperties.Set(NAME("HBIL_ENABLED"), appConfig.Get("rendering.hbil.enabled").ToBool());
     outShaderProperties.Set(NAME("HBAO_ENABLED"), appConfig.Get("rendering.hbao.enabled").ToBool());
 
-    if (appConfig.Get("rendering.rt.path_tracing").ToBool())
+    if (appConfig.Get("rendering.raytracing.pathTracing.enabled").ToBool())
     {
         outShaderProperties.Set(NAME("PATHTRACER"));
     }

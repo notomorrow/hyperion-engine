@@ -107,8 +107,6 @@ RendererResult VulkanFrame::Submit(VulkanDeviceQueue* deviceQueue, VulkanCommand
     renderQueue.Execute(commandBuffer);
     commandBuffer->End();
 
-    HYP_LOG(RenderingBackend, Debug, "Submitting command buffer for frame {}", m_frameIndex);
-
     return commandBuffer->SubmitPrimary(deviceQueue, m_queueSubmitFence, &m_presentSemaphores);
 }
 

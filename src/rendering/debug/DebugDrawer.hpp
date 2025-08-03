@@ -47,7 +47,7 @@ class PassData;
 struct RenderSetup;
 struct ImmediateDrawShaderData;
 
-HYP_STRUCT(ConfigName = "app", JsonPath = "rendering.debug.debug_drawer")
+HYP_STRUCT(ConfigName = "app", JsonPath = "rendering.debug.debugDrawer")
 struct DebugDrawerConfig : public ConfigBase<DebugDrawerConfig>
 {
     HYP_FIELD(Description = "Enable or disable the debug drawer.", JsonPath = "enabled")
@@ -84,12 +84,12 @@ public:
     virtual ~IDebugDrawShape() = default;
 
     virtual DebugDrawType GetDebugDrawType() const = 0;
-    
+
     virtual bool CheckShouldCull(DebugDrawCommand* cmd, const Frustum& frustum) const
     {
         return false;
     }
-    
+
     virtual void UpdateBufferData(DebugDrawCommand* cmd, ImmediateDrawShaderData* bufferData) const;
 };
 
@@ -111,15 +111,15 @@ public:
         {
             m_mesh = GetMesh_Internal();
         }
-        
+
         return m_mesh;
     }
 
 protected:
     virtual Mesh* GetMesh_Internal() const = 0;
-    
+
     DebugDrawCommandList& list;
-    
+
 private:
     mutable Mesh* m_mesh;
 };
@@ -133,7 +133,7 @@ public:
 
     void operator()(const Vec3f& position, float radius, const Color& color);
     void operator()(const Vec3f& position, float radius, const Color& color, const RenderableAttributeSet& attributes);
-    
+
 private:
     virtual Mesh* GetMesh_Internal() const override;
 };
@@ -174,12 +174,12 @@ public:
     BoxDebugDrawShape(DebugDrawCommandList& list);
 
     virtual ~BoxDebugDrawShape() override = default;
-    
+
     virtual bool CheckShouldCull(DebugDrawCommand* cmd, const Frustum& frustum) const override;
 
     void operator()(const Vec3f& position, const Vec3f& size, const Color& color);
     void operator()(const Vec3f& position, const Vec3f& size, const Color& color, const RenderableAttributeSet& attributes);
-    
+
 private:
     virtual Mesh* GetMesh_Internal() const override;
 };
@@ -193,7 +193,7 @@ public:
 
     void operator()(const FixedArray<Vec3f, 4>& points, const Color& color);
     void operator()(const FixedArray<Vec3f, 4>& points, const Color& color, const RenderableAttributeSet& attributes);
-    
+
 private:
     virtual Mesh* GetMesh_Internal() const override;
 };
@@ -221,7 +221,7 @@ public:
     DebugDrawCommandList& operator=(DebugDrawCommandList&& other) noexcept = delete;
 
     ~DebugDrawCommandList();
-    
+
     HYP_FORCE_INLINE DebugDrawer* GetDebugDrawer() const
     {
         return m_debugDrawer;
@@ -277,14 +277,14 @@ private:
     FixedArray<Array<DebugDrawCommandHeader>, g_tripleBuffer ? 3 : 2> m_headers;
     FixedArray<ByteBuffer, g_tripleBuffer ? 3 : 2> m_buffers;
     FixedArray<uint32, g_tripleBuffer ? 3 : 2> m_bufferOffsets;
-    
+
     // buffer sizes over the last X frames. we max() this to determine if we should compact the buffer
     FixedArray<SizeType, 10> m_bufferSizeHistory;
 
     FixedArray<LinkedList<DebugDrawCommandList>, g_tripleBuffer ? 3 : 2> m_commandLists;
 
     FixedArray<GpuBufferRef, g_framesInFlight> m_instanceBuffers;
-    
+
     using CachedPartitionedShaderData = HashMap<IDebugDrawShape*, Array<ImmediateDrawShaderData, DynamicAllocator>, HashTable_DynamicNodeAllocator<KeyValuePair<IDebugDrawShape*, Array<ImmediateDrawShaderData, DynamicAllocator>>>>;
     CachedPartitionedShaderData m_cachedPartitionedShaderData;
 };
