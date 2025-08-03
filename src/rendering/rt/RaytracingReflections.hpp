@@ -22,13 +22,13 @@ struct PassData;
 struct RenderCommand_DestroyRaytracingReflections;
 struct RenderCommand_CreateRTRadianceImageOutputs;
 
-HYP_STRUCT(ConfigName = "app", JsonPath = "rendering.rt")
+HYP_STRUCT(ConfigName = "app", JsonPath = "rendering.raytracing")
 struct RaytracingReflectionsConfig : public ConfigBase<RaytracingReflectionsConfig>
 {
     HYP_FIELD(JsonIgnore)
     Vec2u extent = { 1024, 1024 };
 
-    HYP_FIELD(JsonPath="path_tracing")
+    HYP_FIELD(JsonPath = "pathTracing.enabled")
     bool pathTracing = false;
 
     virtual ~RaytracingReflectionsConfig() override = default;

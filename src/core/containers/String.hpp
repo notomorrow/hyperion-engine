@@ -542,6 +542,21 @@ public:
     }
 
     template <class Container>
+    static String Join(const Container& container)
+    {
+        String result;
+
+        for (auto it = container.Begin(); it != container.End();)
+        {
+            result.Append(ToString(*it));
+
+            ++it;
+        }
+
+        return result;
+    }
+
+    template <class Container>
     static String Join(const Container& container, const String& separator)
     {
         String result;
@@ -549,7 +564,7 @@ public:
         for (auto it = container.Begin(); it != container.End();)
         {
             result.Append(ToString(*it));
-            
+
             ++it;
 
             if (it != container.End())
@@ -571,7 +586,7 @@ public:
         for (auto it = container.Begin(); it != container.End();)
         {
             result.Append(ToString(joinByFunc(*it)));
-            
+
             ++it;
 
             if (it != container.End())
@@ -591,7 +606,7 @@ public:
         for (auto it = container.Begin(); it != container.End();)
         {
             result.Append(ToString(*it));
-            
+
             ++it;
 
             if (it != container.End())
@@ -629,7 +644,7 @@ public:
         for (auto it = container.Begin(); it != container.End();)
         {
             result.Append(ToString(joinByFunc(*it)));
-            
+
             ++it;
 
             if (it != container.End())

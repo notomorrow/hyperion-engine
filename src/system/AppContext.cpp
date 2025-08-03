@@ -315,10 +315,10 @@ void AppContextBase::UpdateConfigurationOverrides()
     // if ray tracing is not supported, we need to update the configuration
     if (!g_renderBackend->GetRenderConfig().IsRaytracingSupported())
     {
-        m_configuration.Set("rendering.rt.enabled", false);
-        m_configuration.Set("rendering.rt.reflections.enabled", false);
-        m_configuration.Set("rendering.rt.gi.enabled", false);
-        m_configuration.Set("rendering.rt.path_tracing.enabled", false);
+        m_configuration.Set("rendering.raytracing.enabled", false);
+        m_configuration.Set("rendering.raytracing.reflections.enabled", false);
+        m_configuration.Set("rendering.raytracing.globalIllumination.enabled", false);
+        m_configuration.Set("rendering.raytracing.pathTracing.enabled", false);
 
         // Save new configuration to disk
         if (m_configuration.IsChanged())

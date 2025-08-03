@@ -24,7 +24,7 @@ struct HBAOConfig : public ConfigBase<HBAOConfig>
     HYP_FIELD(JsonPath = "power")
     float power = 0.8f;
 
-    HYP_FIELD(JsonPath = "temporal_blending")
+    HYP_FIELD(JsonPath = "temporalBlending")
     bool useTemporalBlending = false;
 
     virtual ~HBAOConfig() override = default;

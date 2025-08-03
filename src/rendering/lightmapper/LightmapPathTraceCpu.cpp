@@ -292,7 +292,7 @@ private:
 
 uint32 LightmapThreadPool::NumThreadsToCreate()
 {
-    uint32 numThreads = g_engine->GetAppContext()->GetConfiguration().Get("lightmapper.num_threads_per_job").ToUInt32(4);
+    uint32 numThreads = g_engine->GetAppContext()->GetConfiguration().Get("lightmapper.numThreadsPerJob").ToUInt32(4);
     return MathUtil::Clamp(numThreads, 1u, 128u);
 }
 

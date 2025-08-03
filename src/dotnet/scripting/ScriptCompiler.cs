@@ -307,6 +307,21 @@ namespace Hyperion
         {
             hotReloadVersion = -1;
 
+            // ensure the working dir exists
+            if (!System.IO.Directory.Exists(projectOutputDirectory))
+            {
+                // make the directory (recursive)
+                try
+                {
+                    System.IO.Directory.CreateDirectory(projectOutputDirectory);
+                }
+                catch (Exception e)
+                {
+                    Logger.Log(logChannel, LogType.Error, "Failed to create project output directory {0}: {1}", projectOutputDirectory, e.Message);
+                    return false;
+                }
+            }
+
             System.Diagnostics.Process process = new System.Diagnostics.Process();
             process.StartInfo.FileName = "dotnet";
             process.StartInfo.Arguments = $"build";
@@ -323,7 +338,17 @@ namespace Hyperion
             {
                 Logger.Log(logChannel, LogType.Error, "{0}", eventArgs.Data);
             };
-            process.Start();
+
+            try
+            {
+                process.Start();
+            }
+            catch (Exception e)
+            {
+                Logger.Log(logChannel, LogType.Error, "Failed to start dotnet process: {0}", e.Message);
+
+                return false;
+            }
 
             process.BeginOutputReadLine();
             process.BeginErrorReadLine();

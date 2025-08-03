@@ -157,8 +157,6 @@ struct RENDER_COMMAND(CreateTextureGpuImage)
 
                 HYP_DEFER({ SafeRelease(std::move(stagingBuffer)); });
 
-                // @FIXME add back ConvertTo32BPP
-
                 FrameBase* frame = g_renderBackend->GetCurrentFrame();
                 RenderQueue& renderQueue = frame->renderQueue;
 

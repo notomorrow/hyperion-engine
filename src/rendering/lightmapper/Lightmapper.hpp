@@ -58,22 +58,22 @@ enum class LightmapShadingType
 HYP_STRUCT(ConfigName = "app", JsonPath = "lightmapper")
 struct LightmapperConfig : public ConfigBase<LightmapperConfig>
 {
-    HYP_FIELD(JsonPath = "trace_mode")
+    HYP_FIELD()
     LightmapTraceMode traceMode = LightmapTraceMode::GPU_PATH_TRACING;
 
-    HYP_FIELD(JsonPath = "radiance")
+    HYP_FIELD()
     bool radiance = true;
 
-    HYP_FIELD(JsonPath = "irradiance")
+    HYP_FIELD()
     bool irradiance = true;
 
-    HYP_FIELD(JsonPath = "num_samples")
+    HYP_FIELD()
     uint32 numSamples = 16;
 
-    HYP_FIELD(JsonPath = "max_rays_per_frame")
+    HYP_FIELD()
     uint32 maxRaysPerFrame = 512 * 512;
 
-    HYP_FIELD(JsonPath = "ideal_triangles_per_job")
+    HYP_FIELD()
     uint32 idealTrianglesPerJob = 8192;
 
     virtual ~LightmapperConfig() override = default;
@@ -354,12 +354,16 @@ public:
     Delegate<void> OnComplete;
 
 protected:
-    virtual void Initialize_Internal() { }
-    virtual void Build_Internal() { }
-    
+    virtual void Initialize_Internal()
+    {
+    }
+    virtual void Build_Internal()
+    {
+    }
+
     virtual UniquePtr<LightmapJob> CreateJob(LightmapJobParams&& params) = 0;
     virtual UniquePtr<ILightmapRenderer> CreateRenderer(LightmapShadingType shadingType) = 0;
-    
+
     LightmapJobParams CreateLightmapJobParams(SizeType startIndex, SizeType endIndex);
 
     void AddJob(UniquePtr<LightmapJob>&& job)

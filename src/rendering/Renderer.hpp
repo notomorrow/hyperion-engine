@@ -42,13 +42,13 @@ using threading::TaskBatch;
 HYP_STRUCT(ConfigName = "app", JsonPath = "rendering")
 struct RendererConfig : public ConfigBase<RendererConfig>
 {
-    HYP_FIELD(JsonPath = "rt.path_tracing.enabled")
+    HYP_FIELD(JsonPath = "raytracing.pathTracing.Enabled")
     bool pathTracer = false;
 
-    HYP_FIELD(JsonPath = "rt.reflections.enabled")
+    HYP_FIELD(JsonPath = "raytracing.reflections.enabled")
     bool raytracingReflections = false;
 
-    HYP_FIELD(JsonPath = "rt.gi.enabled")
+    HYP_FIELD(JsonPath = "raytracing.globalIllumination.enabled")
     bool raytracingGlobalIllumination = false;
 
     HYP_FIELD(JsonPath = "hbao.enabled")
@@ -60,10 +60,10 @@ struct RendererConfig : public ConfigBase<RendererConfig>
     HYP_FIELD(JsonPath = "ssgi.enabled")
     bool ssgiEnabled = false;
 
-    HYP_FIELD(JsonPath = "env_grid.gi.enabled")
+    HYP_FIELD(JsonPath = "envGrid.globalIllumination.enabled")
     bool envGridGiEnabled = false;
 
-    HYP_FIELD(JsonPath = "env_grid.reflections.enabled")
+    HYP_FIELD(JsonPath = "envGrid.reflections.enabled")
     bool envGridRadianceEnabled = false;
 
     HYP_FIELD(JsonPath = "taa.enabled")

@@ -64,8 +64,6 @@ RendererResult VulkanFence::WaitForGPU(bool timeoutLoop)
 
     do
     {
-        HYP_LOG(RenderingBackend, Debug, "Waiting for fence on frame index {}",
-            GetRenderBackend()->GetCurrentFrame() ? GetRenderBackend()->GetCurrentFrame()->GetFrameIndex() : ~0u);
         vkResult = vkWaitForFences(GetRenderBackend()->GetDevice()->GetDevice(), 1, &m_handle, VK_TRUE, DEFAULT_FENCE_TIMEOUT);
     }
     while (vkResult == VK_TIMEOUT && timeoutLoop);
