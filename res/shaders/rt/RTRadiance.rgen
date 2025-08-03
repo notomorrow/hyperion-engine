@@ -32,7 +32,7 @@ HYP_DESCRIPTOR_SAMPLER(Global, SamplerLinear) uniform sampler sampler_linear;
 #define HYP_SAMPLER_LINEAR sampler_linear
 
 HYP_DESCRIPTOR_ACCELERATION_STRUCTURE(RTRadianceDescriptorSet, TLAS) uniform accelerationStructureEXT tlas;
-HYP_DESCRIPTOR_UAV(RTRadianceDescriptorSet, OutputImage, format = rgba8) uniform image2D image;
+HYP_DESCRIPTOR_UAV(RTRadianceDescriptorSet, OutputImage, format = rgba16f) uniform image2D image;
 
 #define HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 
@@ -84,6 +84,8 @@ layout(location = 0) rayPayloadEXT RayPayload payload;
 #define RAY_OFFSET 0.25
 #define NUM_SAMPLES 4
 
+// #define USE_MIN_ROUGHNESS
+
 void main() 
 {
     const ivec2 resolution = rt_radiance_uniforms.output_image_resolution;
@@ -115,12 +117,12 @@ void main()
     // imageStore(image, storage_coord, vec4(1.0, 0.0, 0.0, 1.0));
     // return;
 
+#if USE_MIN_ROUGHNESS
     if (roughness > rt_radiance_uniforms.min_roughness) {
         imageStore(image, storage_coord, vec4(0.0));
         return;
     }
-
-    const float perceptual_roughness = sqrt(roughness);
+#endif
 
     const vec3 V = normalize(camera.position.xyz - position);
     const vec3 R = normalize(reflect(-V, normal));
@@ -148,7 +150,7 @@ void main()
     vec2 blue_noise_scaled = blue_noise_sample + float(world_shader_data.frame_counter % 256) * 1.618;
     const vec2 rnd = fmod(blue_noise_scaled, vec2(1.0));
     
-    vec3 H = ImportanceSampleGGX(rnd, normal, perceptual_roughness);
+    vec3 H = ImportanceSampleGGX(rnd, normal, roughness);
     H = normalize(tangent * H.x + bitangent * H.y + normal * H.z);
 
     direction = H;
@@ -189,8 +191,10 @@ void main()
 
     color = clamp(color, vec4(0.0), vec4(1.0));
 
+#ifdef USE_MIN_ROUGHNESS
     // interpolate alpha based on roughness compared to minimum roughness needed for reflection
     color.a = 1.0 - (roughness / rt_radiance_uniforms.min_roughness);
+#endif
 
     imageStore(image, storage_coord, color);
 }
