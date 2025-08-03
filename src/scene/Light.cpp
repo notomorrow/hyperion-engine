@@ -312,7 +312,7 @@ void Light::Update(float delta)
                     m_shadowViews[i]->GetCamera(),
                     Vec3f::Zero(), // TODO: Center around camera
                     GetPosition(),
-                    50.0f, /// TODO: add proper radius
+                    85.0f, /// TODO: add proper radius
                     m_shadowAabb);
 
                 break;

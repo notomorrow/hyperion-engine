@@ -234,7 +234,6 @@ void WriteBufferData_Light(GpuBufferHolderBase* gpuBufferHolder, uint32 idx, IRe
     gpuBufferHolder->WriteBufferData(idx, &bufferData, sizeof(bufferData));
 }
 
-// @TODO: Handle update if a texture is changed
 void OnBindingChanged_Material(Material* material, uint32 prev, uint32 next)
 {
     Threads::AssertOnThread(g_renderThread);
@@ -245,6 +244,8 @@ void OnBindingChanged_Material(Material* material, uint32 prev, uint32 next)
     AssertDebug(material != nullptr);
 
     RenderApi_AssignResourceBinding(material, next);
+
+    /// @TODO: Needs to notify that mesh descriptions buffer needs to be updated for ray tracing.
 
     if (!isBindlessSupported)
     {

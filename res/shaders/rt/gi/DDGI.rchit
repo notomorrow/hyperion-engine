@@ -188,12 +188,12 @@ void main()
         material = materials[material_index];
     }
     
-    material_color = material.albedo;
+    material_color = vec4(material.albedo.rgb, 1.0);
 
     if (HAS_TEXTURE(material, MATERIAL_TEXTURE_ALBEDO_map)) {
         vec4 albedo_texture = SAMPLE_TEXTURE(material, MATERIAL_TEXTURE_ALBEDO_map, texcoord * material.uv_scale * vec2(1.0, -1.0));
         
-        material_color *= albedo_texture;
+        material_color.rgb *= albedo_texture.rgb;
     }
 
     payload.throughput = material_color;

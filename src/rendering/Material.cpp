@@ -325,7 +325,9 @@ void Material::UpdateRenderProxy(IRenderProxy* proxy)
     bufferData.parallaxHeight = GetParameter<float>(MATERIAL_KEY_PARALLAX_HEIGHT);
 
     bufferData.textureUsage = 0;
-    Memory::MemSet(bufferData.textureIndex, 0, sizeof(bufferData.textureIndex));
+    
+    uint32* textureIndicesU32 = reinterpret_cast<uint32*>(&bufferData.textureIndices);
+    Memory::MemSet(textureIndicesU32, 0, sizeof(bufferData.textureIndices));
 
     const uint32 numTextureSlots = MathUtil::Min(maxTextures, useBindlessTextures ? g_maxBindlessResources : g_maxBoundTextures);
     uint32 remainingTextureSlots = numTextureSlots;
@@ -357,11 +359,11 @@ void Material::UpdateRenderProxy(IRenderProxy* proxy)
 
             if (useBindlessTextures)
             {
-                bufferData.textureIndex[slot] = texture.Id().ToIndex();
+                textureIndicesU32[slot] = texture.Id().ToIndex();
             }
             else
             {
-                bufferData.textureIndex[slot] = idx;
+                textureIndicesU32[slot] = idx;
             }
 
             // enable this slot for the texture

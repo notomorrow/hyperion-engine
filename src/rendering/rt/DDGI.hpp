@@ -45,15 +45,12 @@ struct DDGIUniforms
     Vec4u gridDimensions;
     Vec4u imageDimensions;
 
-    struct alignas(16)
-    {
-        float probeDistance;
-        uint32 numRaysPerProbe;
-        uint32 numBoundLights;
-        uint32 flags;
-    };
+    float probeDistance;
+    uint32 numRaysPerProbe;
+    uint32 numBoundLights;
+    uint32 flags;
     
-    alignas(Vec4u) uint32 lightIndices[16];
+    Vec4u lightIndices[4];
 };
 
 struct DDGIInfo
@@ -162,7 +159,7 @@ private:
 
     RaytracingPipelineRef m_pipeline;
 
-    GpuBufferRef m_uniformBuffer;
+    FixedArray<GpuBufferRef, g_framesInFlight> m_uniformBuffers;
     GpuBufferRef m_radianceBuffer;
 
     ImageRef m_irradianceImage;
