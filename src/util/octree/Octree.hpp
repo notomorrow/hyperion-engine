@@ -215,7 +215,7 @@ public:
 
     struct Octant
     {
-        UniquePtr<Derived> octree;
+        Derived* octree = nullptr;
         BoundingBox aabb;
     };
 

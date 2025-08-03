@@ -114,9 +114,9 @@ public:
     VoxelOctreeBuildResult Build(const VoxelOctreeParams& params, EntityManager* entityManager);
 
 protected:
-    static UniquePtr<VoxelOctree> CreateChildOctant(VoxelOctree* parent, const BoundingBox& aabb, uint8 index)
+    static VoxelOctree* CreateChildOctant(VoxelOctree* parent, const BoundingBox& aabb, uint8 index)
     {
-        return UniquePtr<VoxelOctree>(new VoxelOctree(parent, aabb, index));
+        return new VoxelOctree(parent, aabb, index);
     }
 };
 

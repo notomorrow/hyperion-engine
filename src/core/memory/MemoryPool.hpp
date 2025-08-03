@@ -33,11 +33,11 @@ struct MemoryPoolInitInfo
 };
 
 template <class ElementType, class TInitInfo, void (*OnBlockAllocated)(void* ctx, ElementType* elements, uint32 startIndex, uint32 count) = nullptr>
-struct MemoryPoolBlock
+struct MemoryPoolBlock final
 {
     static constexpr uint32 numElementsPerBlock = TInitInfo::numElementsPerBlock;
 
-    ValueStorage<ubyte, numElementsPerBlock * sizeof(ElementType), alignof(ElementType)> buffer;
+    ValueStorage<ubyte, numElementsPerBlock * sizeof(ElementType)> buffer;
     AtomicVar<uint32> numElements { 0 };
 
 #ifdef HYP_ENABLE_MT_CHECK
@@ -46,12 +46,12 @@ struct MemoryPoolBlock
 
     MemoryPoolBlock(void* ctx, uint32 blockIndex)
     {
-        Memory::MemSet(buffer.GetPointer(), 0, numElementsPerBlock * sizeof(ElementType));
+        Memory::MemSet(&buffer, 0, sizeof(buffer));
 
         // Allow overloading assignment of elements
         if (OnBlockAllocated != nullptr)
         {
-            OnBlockAllocated(ctx, reinterpret_cast<ElementType*>(buffer.GetPointer()), blockIndex * numElementsPerBlock, numElementsPerBlock);
+            OnBlockAllocated(ctx, HYP_ALIGN_PTR_AS(buffer.GetPointer(), ElementType), blockIndex * numElementsPerBlock, numElementsPerBlock);
         }
         else
         {
@@ -60,7 +60,7 @@ struct MemoryPoolBlock
                 // For non-POD types, default assign each element
                 for (uint32 i = 0; i < numElementsPerBlock; i++)
                 {
-                    new (reinterpret_cast<ElementType*>(buffer.GetPointer()) + i) ElementType();
+                    new (HYP_ALIGN_PTR_AS(buffer.GetPointer(), ElementType) + i) ElementType();
 
                     // if constexpr (std::is_copy_assignable_v<ElementType> || std::is_move_assignable_v<ElementType>)
                     // {
@@ -84,7 +84,7 @@ struct MemoryPoolBlock
         {
             for (uint32 i = 0; i < numElementsPerBlock; i++)
             {
-                reinterpret_cast<ElementType*>(buffer.GetPointer())[i].~ElementType();
+                HYP_ALIGN_PTR_AS(buffer.GetPointer(), ElementType)[i].~ElementType();
             }
         }
     }
@@ -107,10 +107,10 @@ public:
     MemoryPoolBase& operator=(const MemoryPoolBase& other) = delete;
     MemoryPoolBase(MemoryPoolBase&& other) noexcept = delete;
     MemoryPoolBase& operator=(MemoryPoolBase&& other) noexcept = delete;
-    ~MemoryPoolBase(); // non-virtual intentionally
 
 protected:
     MemoryPoolBase(ThreadId ownerThreadId, SizeType (*getNumAllocatedBytes)(MemoryPoolBase*));
+    ~MemoryPoolBase();
 
     ThreadId m_ownerThreadId;
     IdGenerator m_idGenerator;
@@ -188,7 +188,7 @@ public:
 
             if (outElementPtr != nullptr)
             {
-                *outElementPtr = &reinterpret_cast<ElementType*>(block.buffer.GetPointer())[index % numElementsPerBlock];
+                *outElementPtr = HYP_ALIGN_PTR_AS(block.buffer.GetPointer(), ElementType) + (index % numElementsPerBlock);
             }
         }
         else
@@ -202,7 +202,7 @@ public:
 
                 if (outElementPtr != nullptr)
                 {
-                    *outElementPtr = &reinterpret_cast<ElementType*>(block.buffer.GetPointer())[index % numElementsPerBlock];
+                    *outElementPtr = HYP_ALIGN_PTR_AS(block.buffer.GetPointer(), ElementType) + (index % numElementsPerBlock);
                 }
             }
             else
@@ -224,7 +224,7 @@ public:
 
                 if (outElementPtr != nullptr)
                 {
-                    *outElementPtr = &reinterpret_cast<ElementType*>(block.buffer.GetPointer())[index % numElementsPerBlock];
+                    *outElementPtr = HYP_ALIGN_PTR_AS(block.buffer.GetPointer(), ElementType) + (index % numElementsPerBlock);
                 }
             }
         }
@@ -300,7 +300,7 @@ public:
             Block& block = m_blocks[blockIndex];
             HYP_MT_CHECK_READ(block.dataRaceDetectors[elementIndex]);
 
-            return reinterpret_cast<ElementType*>(block.buffer.GetPointer())[elementIndex];
+            return HYP_ALIGN_PTR_AS(block.buffer.GetPointer(), ElementType)[elementIndex];
         }
         else
         {
@@ -309,7 +309,7 @@ public:
             Block& block = m_blocks[blockIndex];
             HYP_MT_CHECK_READ(block.dataRaceDetectors[elementIndex]);
 
-            return reinterpret_cast<ElementType*>(block.buffer.GetPointer())[elementIndex];
+            return HYP_ALIGN_PTR_AS(block.buffer.GetPointer(), ElementType)[elementIndex];
         }
     }
 
@@ -327,7 +327,7 @@ public:
             Block& block = m_blocks[blockIndex];
             HYP_MT_CHECK_RW(block.dataRaceDetectors[elementIndex]);
 
-            reinterpret_cast<ElementType*>(block.buffer.GetPointer())[elementIndex] = value;
+            HYP_ALIGN_PTR_AS(block.buffer.GetPointer(), ElementType)[elementIndex] = value;
         }
         else
         {
@@ -338,7 +338,7 @@ public:
             Block& block = m_blocks[blockIndex];
             HYP_MT_CHECK_RW(block.dataRaceDetectors[elementIndex]);
 
-            reinterpret_cast<ElementType*>(block.buffer.GetPointer())[elementIndex] = value;
+            HYP_ALIGN_PTR_AS(block.buffer.GetPointer(), ElementType)[elementIndex] = value;
         }
     }
 

@@ -888,7 +888,7 @@ void SceneOctree::UpdateVisibilityState(const Handle<Camera>& camera, uint16 val
                     continue;
                 }
 
-                current = current->m_octants[i].octree.Get();
+                current = current->m_octants[i].octree;
                 childIndex = uint8(-1);
 
                 descended = true;

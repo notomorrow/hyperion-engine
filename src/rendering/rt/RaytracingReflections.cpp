@@ -244,7 +244,7 @@ void RaytracingReflections::CreateImages()
 
     m_texture = CreateObject<Texture>(TextureDesc {
         TT_TEX2D,
-        TF_RGBA16F,
+        TF_RGBA8,
         Vec3u { m_config.extent, 1 },
         TFM_NEAREST,
         TFM_NEAREST,
@@ -278,7 +278,7 @@ void RaytracingReflections::CreateTemporalBlending()
 {
     m_temporalBlending = MakeUnique<TemporalBlending>(
         m_config.extent,
-        TF_RGBA16F,
+        TF_RGBA8,
         IsPathTracer()
             ? TemporalBlendTechnique::TECHNIQUE_4 // progressive blending
             : TemporalBlendTechnique::TECHNIQUE_1,

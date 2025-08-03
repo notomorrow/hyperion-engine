@@ -56,7 +56,7 @@ struct Handle final : HandleBase
     {
         if (id.IsValid())
         {
-            ObjectContainerBase* container = ObjectPool::GetObjectContainerHolder().TryGet(id.GetTypeId());
+            ObjectContainerBase* container = ObjectPool::GetObjectContainerMap().TryGet(id.GetTypeId());
 
             // This really shouldn't happen unless we're doing something wrong.
             // We shouldn't have an Id for a type that doesn't have a container.
@@ -390,7 +390,7 @@ struct WeakHandle final
     {
         if (id.IsValid())
         {
-            ObjectContainerBase* container = ObjectPool::GetObjectContainerHolder().TryGet(id.GetTypeId());
+            ObjectContainerBase* container = ObjectPool::GetObjectContainerMap().TryGet(id.GetTypeId());
 
             // This really shouldn't happen unless we're doing something wrong.
             // We shouldn't have an Id for a type that doesn't have a container.
@@ -913,7 +913,7 @@ const WeakHandle<T> WeakHandle<T>::empty = {};
 template <class T, class... Args>
 inline Handle<T> CreateObject(Args&&... args)
 {
-    ObjectContainer<T>& container = ObjectPool::GetObjectContainerHolder().GetOrCreate<T>();
+    ObjectContainer<T>& container = ObjectPool::GetObjectContainerMap().GetOrCreate<T>();
 
     HypObjectMemory<T>* header = container.Allocate();
 
