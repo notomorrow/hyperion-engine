@@ -133,7 +133,7 @@ HYP_ENUM()
 enum AssetObjectFlags : uint32
 {
     AOF_NONE = 0x0,
-    AOF_PERSISTENT = 0x1 //<! Asset is persistently loaded in memory
+    AOF_PERSISTENT = 0x1 //!< Asset is persistently loaded in memory
 };
 
 HYP_MAKE_ENUM_FLAGS(AssetObjectFlags);

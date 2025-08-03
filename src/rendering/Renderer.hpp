@@ -4,6 +4,8 @@
 
 #include <core/Handle.hpp>
 
+#include <core/object/HypObject.hpp>
+
 #include <core/config/Config.hpp>
 
 #include <core/debug/Debug.hpp>
@@ -27,7 +29,7 @@ class EnvGrid;
 struct CullData;
 struct DrawCall;
 struct InstancedDrawCall;
-struct PassData;
+class PassData;
 class RendererBase;
 class RenderGroup;
 class View;
@@ -217,8 +219,16 @@ protected:
 };
 
 /*! \brief Data and passes used for rendering a View in the Deferred Renderer. */
-struct PassData
+
+HYP_CLASS(NoScriptBindings)
+class HYP_API PassData : public HypObject<PassData>
 {
+    HYP_OBJECT_BODY(PassData);
+
+public:
+    PassData() = default;
+    virtual ~PassData();
+
     struct RenderGroupCacheEntry
     {
         WeakHandle<RenderGroup> renderGroup;
@@ -239,8 +249,6 @@ struct PassData
     typename SparsePagedArray<RenderGroupCacheEntry, 32>::Iterator renderGroupCacheIterator;
 
     PassDataExt* next = nullptr;
-
-    virtual ~PassData();
 
     /*! \brief Safely remove unused graphics pipelines that are no longer used from the cache.
      *  A graphics pipeline is considered unused if the RenderGroup it is associated with has no more references remaining
@@ -273,14 +281,14 @@ public:
 protected:
     RendererBase();
 
-    virtual PassData* CreateViewPassData(View* view, PassDataExt& ext) = 0;
+    virtual Handle<PassData> CreateViewPassData(View* view, PassDataExt& ext) = 0;
 
-    PassData* TryGetViewPassData(View* view);
-    PassData* FetchViewPassData(View* view, PassDataExt* ext = nullptr);
+    const Handle<PassData>& TryGetViewPassData(View* view);
+    const Handle<PassData>& FetchViewPassData(View* view, PassDataExt* ext = nullptr);
 
 private:
-    SparsePagedArray<PassData*, 16> m_viewPassData;
-    typename SparsePagedArray<PassData*, 16>::Iterator m_viewPassDataCleanupIterator;
+    SparsePagedArray<Handle<PassData>, 16> m_viewPassData;
+    typename SparsePagedArray<Handle<PassData>, 16>::Iterator m_viewPassDataCleanupIterator;
 };
 
 } // namespace hyperion

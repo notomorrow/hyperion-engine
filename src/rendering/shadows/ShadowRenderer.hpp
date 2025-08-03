@@ -14,8 +14,12 @@ namespace hyperion {
 class FullScreenPass;
 class ShadowMap;
 
-struct ShadowPassData : PassData
+HYP_CLASS(NoScriptBindings)
+class HYP_API ShadowPassData : public PassData
 {
+    HYP_OBJECT_BODY(ShadowPassData);
+
+public:
     virtual ~ShadowPassData() override;
 };
 
@@ -54,7 +58,7 @@ protected:
 
     virtual int RunCleanupCycle(int maxIter) override;
 
-    virtual PassData* CreateViewPassData(View* view, PassDataExt&) override;
+    virtual Handle<PassData> CreateViewPassData(View* view, PassDataExt&) override;
 
     virtual ShadowMap* AllocateShadowMap(Light* light) = 0;
 

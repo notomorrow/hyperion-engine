@@ -457,7 +457,10 @@ void IndirectRenderer::ExecuteCullShaderInBatches(FrameBase* frame, const Render
 
     AssertDebug(m_drawCallCollectionImpl->GetStructSize() % 4 == 0);
 
-    pushConstants.depthPyramidDimensions = static_cast<DeferredPassData*>(renderSetup.passData)->depthPyramidRenderer->GetExtent();
+    DeferredPassData* pd = ObjCast<DeferredPassData>(renderSetup.passData);
+    Assert(pd != nullptr);
+
+    pushConstants.depthPyramidDimensions = pd->depthPyramidRenderer->GetExtent();
     pushConstants.batchOffset = 0;
     pushConstants.numInstances = numInstances;
     pushConstants.entityInstanceBatchStride = ByteUtil::AlignAs(m_drawCallCollectionImpl->GetStructSize(), m_drawCallCollectionImpl->GetStructAlignment());

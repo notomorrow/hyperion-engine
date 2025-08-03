@@ -192,16 +192,15 @@ LightmapJob::LightmapJob(LightmapJobParams&& params)
     // dummy output target
     ViewOutputTargetDesc outputTargetDesc {
         .extent = Vec2u::One(),
-        .attachments = { { TF_RGBA8 } }
+        .attachments = { { TF_R8 } }
     };
 
     ViewDesc viewDesc {
         .flags = ViewFlags::COLLECT_STATIC_ENTITIES
             | ViewFlags::NO_FRUSTUM_CULLING
-            | ViewFlags::SKIP_ENV_GRIDS
-            | ViewFlags::SKIP_LIGHTMAP_VOLUMES
-            | ViewFlags::ENABLE_RAYTRACING
-            | ViewFlags::NO_GFX,
+            | ViewFlags::SKIP_ENV_GRIDS | ViewFlags::SKIP_LIGHTMAP_VOLUMES
+            | ViewFlags::RAYTRACING
+            | ViewFlags::NO_DRAW_CALLS,
         .viewport = Viewport { .extent = Vec2u::One(), .position = Vec2i::Zero() },
         .outputTargetDesc = outputTargetDesc,
         .scenes = { m_params.scene },

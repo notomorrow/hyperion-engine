@@ -62,10 +62,10 @@ enum class ViewFlags : uint32
     NOT_MULTI_BUFFERED = 0x1000, //!< Disables double / triple buffering for the RenderProxyList this View writes to.
                                  //  --- Use ONLY for Views that are not written to every frame, and instead are written to and read once (or infrequently); e.g EnvProbes.
                                  //  --- Use of these is still threadsafe, however it uses a spinlock instead of multiple buffering so contentions will eat up cpu cycles.
-    NO_GFX = 0x2000,             //!< If set, the view will not perform any graphics rendering
+    NO_DRAW_CALLS = 0x2000,      //!< If set, no draw calls will be built for any mesh entities that this View collects.
 
     // enable flags
-    ENABLE_RAYTRACING = 0x100000, //!< Should raytracing features be enabled for rendering this View? (Only for Views with GBUFFER enabled). Raytracing must be enabled in the global renderer config
+    RAYTRACING = 0x100000, //!< Does this View contain raytracing data (acceleration structures)? (Raytracing must be enabled in the global config and must have RT hardware support)
 
     DEFAULT = ALL_WORLD_SCENES | COLLECT_ALL_ENTITIES
 };
@@ -137,6 +137,8 @@ HYP_CLASS()
 class HYP_API View final : public HypObject<View>
 {
     HYP_OBJECT_BODY(View);
+
+    friend class World;
 
 public:
     View();
@@ -215,6 +217,11 @@ public:
         return m_renderProxyLists[index];
     }
 
+    HYP_FORCE_INLINE const WeakHandle<View>& GetRaytracingView() const
+    {
+        return m_raytracingView;
+    }
+
     bool TestRay(const Ray& ray, RayTestResults& outResults, bool useBvh = true) const;
 
     void UpdateVisibility();
@@ -244,6 +251,9 @@ protected:
     Array<Handle<Scene>> m_scenes;
     Handle<Camera> m_camera;
     ViewOutputTarget m_outputTarget;
+
+    // optional raytracing View set by the world
+    WeakHandle<View> m_raytracingView;
 
     RenderProxyList* m_renderProxyLists[g_tripleBuffer ? 3 : 2];
 

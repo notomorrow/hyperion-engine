@@ -17,7 +17,7 @@ namespace hyperion {
 
 class Engine;
 class GBuffer;
-struct PassData;
+class PassData;
 
 struct RenderCommand_DestroyRaytracingReflections;
 struct RenderCommand_CreateRTRadianceImageOutputs;

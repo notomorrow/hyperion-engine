@@ -12,6 +12,8 @@
 
 #include <rendering/RenderObject.hpp>
 
+#include <core/object/HypObject.hpp>
+
 #include <scene/Light.hpp> // For LightType
 
 namespace hyperion {
@@ -298,8 +300,14 @@ private:
     bool m_isFirstFrame;
 };
 
-struct DeferredPassData : PassData
+HYP_CLASS(NoScriptBindings)
+class HYP_API DeferredPassData : public PassData
 {
+    HYP_OBJECT_BODY(DeferredPassData);
+
+public:
+    virtual ~DeferredPassData() override;
+
     int priority = 0;
 
     // Descriptor set used when rendering the View in FinalPass.
@@ -321,12 +329,20 @@ struct DeferredPassData : PassData
     UniquePtr<SSGI> ssgi;
     UniquePtr<DepthPyramidRenderer> depthPyramidRenderer;
     UniquePtr<DOFBlur> dofBlur;
+
     UniquePtr<RaytracingReflections> raytracingReflections;
     UniquePtr<DDGI> ddgi;
+};
 
-    FixedArray<TLASRef, g_framesInFlight> topLevelAccelerationStructures;
+HYP_CLASS(NoScriptBindings)
+class HYP_API RaytracingPassData : public PassData
+{
+    HYP_OBJECT_BODY(RaytracingPassData);
 
-    virtual ~DeferredPassData() override;
+public:
+    FixedArray<TLASRef, g_framesInFlight> raytracingTlases;
+
+    virtual ~RaytracingPassData() override;
 };
 
 class DeferredRenderer final : public RendererBase
@@ -376,14 +392,16 @@ public:
 
 private:
     void RenderFrameForView(FrameBase* frame, const RenderSetup& rs);
+    void UpdateRaytracingView(FrameBase* frame, const RenderSetup& rs);
 
     // Called on initialization or when the view changes
-    virtual PassData* CreateViewPassData(View* view, PassDataExt&) override;
+    virtual Handle<PassData> CreateViewPassData(View* view, PassDataExt&) override;
     void CreateViewFinalPassDescriptorSet(View* view, DeferredPassData& passData);
     void CreateViewDescriptorSets(View* view, DeferredPassData& passData);
     void CreateViewCombinePass(View* view, DeferredPassData& passData);
-    void CreateViewRaytracingData(View* view, DeferredPassData& passData);
-    void CreateViewTopLevelAccelerationStructures(View* view, DeferredPassData& passData);
+    void CreateViewRaytracingPasses(View* view, DeferredPassData& passData);
+
+    void CreateViewTopLevelAccelerationStructures(View* view, RaytracingPassData& passData);
 
     void ResizeView(Viewport viewport, View* view, DeferredPassData& passData);
 

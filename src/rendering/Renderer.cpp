@@ -185,10 +185,6 @@ RendererBase::RendererBase()
 
 RendererBase::~RendererBase()
 {
-    for (PassData* pd : m_viewPassData)
-    {
-        delete pd;
-    }
 }
 
 int RendererBase::RunCleanupCycle(int maxIter)
@@ -196,12 +192,12 @@ int RendererBase::RunCleanupCycle(int maxIter)
     // Ensures the iterator is valid: the Iterator type for SparsePagedArray will find the next available slot in the constructor
     // elements may have been added in the middle or removed in the meantime.
     // elements that were added will be handled after the next time this loops around; elements that were removed will be skipped over to find the next valid entry.
-    m_viewPassDataCleanupIterator = typename SparsePagedArray<PassData*, 16>::Iterator(
+    m_viewPassDataCleanupIterator = typename SparsePagedArray<Handle<PassData>, 16>::Iterator(
         &m_viewPassData,
         m_viewPassDataCleanupIterator.page,
         m_viewPassDataCleanupIterator.elem);
 
-    const typename SparsePagedArray<PassData*, 16>::Iterator startIterator = m_viewPassDataCleanupIterator; // the iterator we started at - use it to check that we don't do duplicate checks
+    const typename SparsePagedArray<Handle<PassData>, 16>::Iterator startIterator = m_viewPassDataCleanupIterator; // the iterator we started at - use it to check that we don't do duplicate checks
 
     int numCycles = 0;
 
@@ -218,7 +214,7 @@ int RendererBase::RunCleanupCycle(int maxIter)
             }
         }
 
-        PassData* pd = *m_viewPassDataCleanupIterator;
+        Handle<PassData>& pd = *m_viewPassDataCleanupIterator;
 
         int numLocalCycles = 1;
 
@@ -226,7 +222,7 @@ int RendererBase::RunCleanupCycle(int maxIter)
         {
             HYP_LOG(Rendering, Debug, "Removing PassData for View {} as it is no longer valid.", pd->view.Id());
 
-            delete pd;
+            pd.Reset();
 
             m_viewPassDataCleanupIterator = m_viewPassData.Erase(m_viewPassDataCleanupIterator);
         }
@@ -249,51 +245,49 @@ int RendererBase::RunCleanupCycle(int maxIter)
     return numCycles;
 }
 
-PassData* RendererBase::TryGetViewPassData(View* view)
+const Handle<PassData>& RendererBase::TryGetViewPassData(View* view)
 {
     if (!view)
     {
-        return nullptr;
+        return Handle<PassData>::empty;
     }
 
-    if (PassData** pdPtr = m_viewPassData.TryGet(view->Id().ToIndex()))
+    if (Handle<PassData>* pPassData = m_viewPassData.TryGet(view->Id().ToIndex()))
     {
-        return *pdPtr;
+        return *pPassData;
     }
 
-    return nullptr;
+    return Handle<PassData>::empty;
 }
 
-PassData* RendererBase::FetchViewPassData(View* view, PassDataExt* ext)
+const Handle<PassData>& RendererBase::FetchViewPassData(View* view, PassDataExt* ext)
 {
     if (!view)
     {
-        return nullptr;
+        return Handle<PassData>::empty;
     }
 
-    PassData* pd = nullptr;
+    Handle<PassData>* pPassData = m_viewPassData.TryGet(view->Id().ToIndex());
 
-    if (PassData** pdPtr = m_viewPassData.TryGet(view->Id().ToIndex()))
-    {
-        pd = *pdPtr;
-    }
-
-    if (!pd)
+    if (!pPassData)
     {
         NullPassDataExt nullPassDataExt {};
 
         // call virtual function to alloc / create
 
-        pd = CreateViewPassData(view, ext ? *ext : nullPassDataExt);
+        Handle<PassData> pd = CreateViewPassData(view, ext ? *ext : nullPassDataExt);
         AssertDebug(pd != nullptr);
 
         pd->next = ext ? ext->Clone() : nullptr;
 
-        m_viewPassData.Set(view->Id().ToIndex(), pd);
+        InitObject(pd);
+
+        pPassData = &*m_viewPassData.Set(view->Id().ToIndex(), pd);
     }
-    else if (pd->view.GetUnsafe() != view)
+    else if ((*pPassData)->view.GetUnsafe() != view)
     {
-        delete pd;
+        Handle<PassData>& pd = *pPassData;
+        pd.Reset();
 
         NullPassDataExt nullPassDataExt {};
 
@@ -301,13 +295,16 @@ PassData* RendererBase::FetchViewPassData(View* view, PassDataExt* ext)
         AssertDebug(pd != nullptr);
 
         pd->next = ext ? ext->Clone() : nullptr;
+        
+        InitObject(pd);
 
         m_viewPassData.Set(view->Id().ToIndex(), pd);
     }
 
-    AssertDebug(pd->view.GetUnsafe() == view);
+    AssertDebug(pPassData != nullptr && *pPassData != nullptr);
+    AssertDebug((*pPassData)->view.GetUnsafe() == view);
 
-    return pd;
+    return *pPassData;
 }
 
 #pragma region RendererBase

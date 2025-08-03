@@ -24,7 +24,15 @@ class UIStage;
 class UIObject;
 class View;
 struct RenderSetup;
-struct UIPassData;
+
+HYP_CLASS(NoScriptBindings)
+class HYP_API UIPassData : public PassData
+{
+    HYP_OBJECT_BODY(UIPassData);
+
+public:
+    virtual ~UIPassData() override = default;
+};
 
 class UIRenderCollector : public RenderCollector
 {
@@ -49,7 +57,7 @@ public:
     UIRenderCollector renderCollector;
 
 protected:
-    PassData* CreateViewPassData(View* view, PassDataExt&) override;
+    Handle<PassData> CreateViewPassData(View* view, PassDataExt&) override;
 
     Handle<View> m_view;
 };
