@@ -184,13 +184,13 @@ void main()
 
     result = Fd + Fr;
 
-    // #ifdef PATHTRACER
-    //     result = CalculatePathTracing(deferred_params, texcoord).rgb;
-    // #elif defined(DEBUG_REFLECTIONS)
-    //     result = E * reflections.rgb;
-    // #elif defined(DEBUG_IRRADIANCE)
-    //     result = irradiance.rgb;
-    // #endif
+    #ifdef PATHTRACER
+        result = CalculatePathTracing(deferred_params, texcoord).rgb;
+    #elif defined(DEBUG_REFLECTIONS)
+        result = E * reflections.rgb;
+    #elif defined(DEBUG_IRRADIANCE)
+        result = irradiance.rgb;
+    #endif
 
     output_color = vec4(result, 1.0);
 }
