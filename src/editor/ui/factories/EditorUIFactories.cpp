@@ -599,6 +599,11 @@ public:
                     continue;
                 }
 
+                if (componentInterface->IsEntityTag())
+                {
+                    continue;
+                }
+
                 ComponentContainerBase* componentContainer = entityManager->TryGetContainer(componentTypeId);
                 Assert(componentContainer != nullptr);
 

@@ -4,11 +4,50 @@
 
 namespace hyperion {
 
-ObjectPool::ObjectContainerMap& ObjectPool::GetObjectContainerHolder()
-{
-    static ObjectPool::ObjectContainerMap holder {};
+static ObjectPool::ObjectContainerMap g_objectContainerMap {};
 
-    return holder;
+ObjectPool::ObjectContainerMap::~ObjectContainerMap()
+{
+    for (auto& it : m_map)
+    {
+        if (it.second != nullptr)
+        {
+            delete it.second;
+            it.second = nullptr;
+        }
+    }
+}
+
+ObjectPool::ObjectContainerMap& ObjectPool::GetObjectContainerMap()
+{
+    return g_objectContainerMap;
+}
+
+ObjectContainerBase& ObjectPool::ObjectContainerMap::GetOrCreate(TypeId typeId, ObjectContainerBase* (*createFn)(void))
+{
+    Mutex::Guard guard(m_mutex);
+
+    auto it = m_map.FindIf([typeId](const auto& element)
+        {
+            return element.first == typeId;
+        });
+
+    if (it != m_map.End())
+    {
+        if (it->second == nullptr)
+        {
+            it->second = createFn();
+
+            HYP_CORE_ASSERT(it->second != nullptr);
+        }
+
+        return *it->second;
+    }
+
+    ObjectContainerBase* container = createFn();
+    HYP_CORE_ASSERT(container != nullptr);
+
+    return *m_map.EmplaceBack(typeId, container).second;
 }
 
 ObjectContainerBase& ObjectPool::ObjectContainerMap::Get(TypeId typeId)
@@ -44,7 +83,7 @@ ObjectContainerBase* ObjectPool::ObjectContainerMap::TryGet(TypeId typeId)
         return nullptr;
     }
 
-    return it->second.Get();
+    return it->second;
 }
 
 } // namespace hyperion

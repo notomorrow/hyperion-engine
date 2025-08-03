@@ -349,7 +349,7 @@ public:
     {
         // Maps type Id to object container
         // Use a linked list so that references are never invalidated.
-        LinkedList<Pair<TypeId, UniquePtr<ObjectContainerBase>>> m_map;
+        LinkedList<Pair<TypeId, ObjectContainerBase*>> m_map;
         Mutex m_mutex;
 
     public:
@@ -358,15 +358,15 @@ public:
         ObjectContainerMap& operator=(const ObjectContainerMap&) = delete;
         ObjectContainerMap(ObjectContainerMap&&) noexcept = delete;
         ObjectContainerMap& operator=(ObjectContainerMap&&) noexcept = delete;
-        ~ObjectContainerMap() = default;
+        HYP_API ~ObjectContainerMap();
 
         template <class T>
         ObjectContainer<T>& GetOrCreate()
         {
             // static variable to ensure that the object container is only created once and we don't have to lock everytime this is called
-            static ObjectContainer<T>& container = static_cast<ObjectContainer<T>&>(GetOrCreate(TypeId::ForType<T>(), []() -> UniquePtr<ObjectContainerBase>
+            static ObjectContainer<T>& container = static_cast<ObjectContainer<T>&>(GetOrCreate(TypeId::ForType<T>(), []() -> ObjectContainerBase*
                 {
-                    return MakeUnique<ObjectContainer<T>>();
+                    return new ObjectContainer<T>();
                 }));
 
             return container;
@@ -376,33 +376,10 @@ public:
         HYP_API ObjectContainerBase* TryGet(TypeId typeId);
 
     private:
-        ObjectContainerBase& GetOrCreate(TypeId typeId, UniquePtr<ObjectContainerBase> (*createFn)(void))
-        {
-            Mutex::Guard guard(m_mutex);
-
-            auto it = m_map.FindIf([typeId](const auto& element)
-                {
-                    return element.first == typeId;
-                });
-
-            if (it != m_map.End())
-            {
-                if (it->second == nullptr)
-                {
-                    it->second = createFn();
-                }
-
-                return *it->second;
-            }
-
-            UniquePtr<ObjectContainerBase> container = createFn();
-            HYP_CORE_ASSERT(container != nullptr);
-
-            return *m_map.EmplaceBack(typeId, std::move(container)).second;
-        }
+        HYP_API ObjectContainerBase& GetOrCreate(TypeId typeId, ObjectContainerBase* (*createFn)(void));
     };
 
-    HYP_API static ObjectContainerMap& GetObjectContainerHolder();
+    HYP_API static ObjectContainerMap& GetObjectContainerMap();
 };
 
 } // namespace hyperion

@@ -69,6 +69,15 @@ OctreeBase<Derived, Payload>::~OctreeBase()
     {
         delete m_state;
     }
+
+    for (Octant& octant : m_octants)
+    {
+        if (octant.octree != nullptr)
+        {
+            delete octant.octree;
+            octant.octree = nullptr;
+        }
+    }
 }
 
 template <class Derived, class Payload>
@@ -179,7 +188,7 @@ Derived* OctreeBase<Derived, Payload>::GetChildOctant(OctantId octantId)
             return nullptr;
         }
 
-        current = current->m_octants[index].octree.Get();
+        current = current->m_octants[index].octree;
     }
 
     return current;
@@ -216,7 +225,8 @@ void OctreeBase<Derived, Payload>::Undivide()
             octant.octree->Undivide();
         }
 
-        octant.octree.Reset();
+        delete octant.octree;
+        octant.octree = nullptr;
     }
 
     m_isDivided = false;
@@ -255,7 +265,7 @@ void OctreeBase<Derived, Payload>::CollapseParents(bool allowRebuild)
         {
             Assert(octant.octree != nullptr);
 
-            if (octant.octree.Get() == highestEmpty)
+            if (octant.octree == highestEmpty)
             {
                 /* Do not perform a check on our entry, as we've already
                  * checked it by going up the chain.
@@ -411,7 +421,7 @@ bool OctreeBase<Derived, Payload>::GetNearestOctants(const Vec3f& position, Fixe
 
     for (SizeType i = 0; i < m_octants.Size(); i++)
     {
-        out[i] = m_octants[i].octree.Get();
+        out[i] = m_octants[i].octree;
     }
 
     return true;

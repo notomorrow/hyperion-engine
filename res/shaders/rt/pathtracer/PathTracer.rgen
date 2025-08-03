@@ -253,10 +253,20 @@ void main()
             
                 vec3 hit_position = origin + direction * payload.distance;
 
-                direction = normalize(RandomInHemisphere(
-                    vec3(RandomFloat(ray_seed), RandomFloat(ray_seed), RandomFloat(ray_seed)),
-                    payload.normal
-                ));
+                ComputeOrthonormalBasis(payload.normal, tangent, bitangent);
+
+                rnd = vec2(RandomFloat(ray_seed), RandomFloat(ray_seed));
+
+                H = ImportanceSampleGGX(rnd, payload.normal, payload.roughness);
+                H = tangent * H.x + bitangent * H.y + normal * H.z;
+                H = normalize(H);
+
+                direction = reflect(direction, H);
+
+                // direction = normalize(RandomInHemisphere(
+                //     vec3(RandomFloat(ray_seed), RandomFloat(ray_seed), RandomFloat(ray_seed)),
+                //     payload.normal
+                // ));
 
                 origin = hit_position + direction * RAY_OFFSET;
 
