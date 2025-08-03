@@ -214,6 +214,11 @@ endif()
 if(CMAKE_GENERATOR STREQUAL "Xcode")
     set(CMAKE_XCODE_SCHEME_ENABLE_GPU_API_VALIDATION FALSE)
     set(CMAKE_XCODE_SCHEME_ENABLE_GPU_FRAME_CAPTURE_MODE DISABLED)
+
+# for VS solutions, we want to add the .natvis file as a custom solution item
+elseif(MSVC)
+    set(SOLUTION_FILES "${CMAKE_SOURCE_DIR}/src/Hyperion.natvis")
+    add_custom_target(VisualStudioSolutionFiles SOURCES ${SOLUTION_FILES})
 endif()
 
 if(NOT IOS)

@@ -715,13 +715,16 @@ RendererResult VulkanTLAS::BuildMeshDescriptionsBuffer(uint32 first, uint32 last
 
         HYP_GFX_ASSERT(blas->GetGeometries().Any(), "No geometries added to BLAS node %u!", i);
 
+        uint32 materialBoundIndex = ~0u;
+
         const Handle<Material>& material = blas->GetGeometries()[0]->GetMaterial();
 
         if (material.IsValid())
         {
-            // /// FIXME: This needs to use new resource binding system
-            // // Must be initialized (AccelerationGeometry calls IncRef() and DecRef())
-            // HYP_GFX_ASSERT(material->GetRenderResource().GetBufferIndex() != ~0u);
+            materialBoundIndex = RenderApi_RetrieveResourceBinding(material);
+
+            HYP_GFX_ASSERT(materialBoundIndex != ~0u, "Material %s (ID: #%u) was not bound at time of building mesh descriptions buffer",
+                *material->GetName(), material->Id().Value());
         }
 
         HYP_GFX_ASSERT(blas->GetGeometries()[0]->GetPackedVerticesBuffer() && blas->GetGeometries()[0]->GetPackedVerticesBuffer()->IsCreated());
@@ -729,9 +732,7 @@ RendererResult VulkanTLAS::BuildMeshDescriptionsBuffer(uint32 first, uint32 last
 
         meshDescription.vertexBufferAddress = VULKAN_CAST(blas->GetGeometries()[0]->GetPackedVerticesBuffer())->GetBufferDeviceAddress();
         meshDescription.indexBufferAddress = VULKAN_CAST(blas->GetGeometries()[0]->GetPackedIndicesBuffer())->GetBufferDeviceAddress();
-        /// FIXME: This needs to use new resource binding system
-        meshDescription.materialIndex = 0;//~0u;
-        // meshDescription.materialIndex = material.IsValid() ? material->GetRenderResource().GetBufferIndex() : ~0u;
+        meshDescription.materialIndex = materialBoundIndex;
         meshDescription.numIndices = blas->GetGeometries()[0]->NumIndices();
         meshDescription.numVertices = blas->GetGeometries()[0]->NumVertices();
     }

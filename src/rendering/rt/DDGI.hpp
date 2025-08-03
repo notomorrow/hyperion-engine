@@ -44,10 +44,16 @@ struct DDGIUniforms
     Vec4u probeCounts;
     Vec4u gridDimensions;
     Vec4u imageDimensions;
-    Vec4u params; // x = probe distance, y = num rays per probe, z = flags, w = num bound lights
-    uint32 shadowMapIndex;
-    uint32 _pad0, _pad1, _pad2;
-    uint32 lightIndices[16];
+
+    struct alignas(16)
+    {
+        float probeDistance;
+        uint32 numRaysPerProbe;
+        uint32 numBoundLights;
+        uint32 flags;
+    };
+    
+    alignas(Vec4u) uint32 lightIndices[16];
 };
 
 struct DDGIInfo
@@ -105,25 +111,18 @@ struct Probe
     Vec3f position;
 };
 
-class DDGI
+class HYP_API DDGI
 {
 public:
-    HYP_API DDGI(DDGIInfo&& gridInfo);
+    DDGI(DDGIInfo&& gridInfo);
     DDGI(const DDGI& other) = delete;
     DDGI& operator=(const DDGI& other) = delete;
-    HYP_API ~DDGI();
+    ~DDGI();
 
     const Array<Probe>& GetProbes() const
     {
         return m_probes;
     }
-
-    HYP_FORCE_INLINE void SetTopLevelAccelerationStructures(const FixedArray<TLASRef, g_framesInFlight>& topLevelAccelerationStructures)
-    {
-        m_topLevelAccelerationStructures = topLevelAccelerationStructures;
-    }
-
-    HYP_API void ApplyTLASUpdates(RTUpdateStateFlags flags);
 
     const GpuBufferRef& GetRadianceBuffer() const
     {
@@ -140,15 +139,16 @@ public:
         return m_irradianceImageView;
     }
 
-    HYP_API void Create();
+    void Create();
 
-    HYP_API void Render(FrameBase* frame, const RenderSetup& renderSetup);
+    void Render(FrameBase* frame, const RenderSetup& renderSetup);
 
 private:
-    void CreatePipelines();
     void CreateUniformBuffer();
     void CreateStorageBuffers();
-    void UpdateUniforms(FrameBase* frame);
+
+    void UpdatePipelineState(FrameBase* frame, const RenderSetup& renderSetup);
+    void UpdateUniforms(FrameBase* frame, const RenderSetup& renderSetup);
 
     DDGIInfo m_gridInfo;
     Array<Probe> m_probes;
@@ -160,8 +160,6 @@ private:
     ComputePipelineRef m_copyBorderTexelsIrradiance;
     ComputePipelineRef m_copyBorderTexelsDepth;
 
-    ShaderRef m_shader;
-
     RaytracingPipelineRef m_pipeline;
 
     GpuBufferRef m_uniformBuffer;
@@ -171,8 +169,6 @@ private:
     ImageViewRef m_irradianceImageView;
     ImageRef m_depthImage;
     ImageViewRef m_depthImageView;
-
-    FixedArray<TLASRef, g_framesInFlight> m_topLevelAccelerationStructures;
 
     DDGIUniforms m_uniforms;
 

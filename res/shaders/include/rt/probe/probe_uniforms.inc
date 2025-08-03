@@ -10,17 +10,16 @@ struct DDGIUniforms
 {
     vec4 aabb_max;
     vec4 aabb_min;
+    
     uvec4 probe_border;
     uvec4 probe_counts;
     uvec4 grid_dimensions;
     uvec4 image_dimensions;
+
     float probe_distance;
     uint num_rays_per_probe;
-    uint flags;
     uint num_bound_lights;
-
-    uint shadow_map_index;
-    uint _pad0, _pad1, _pad2;
+    uint flags;
 
     uvec4 light_indices[4];
 };

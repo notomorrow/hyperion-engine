@@ -44,10 +44,7 @@ extern "C"
 
     HYP_EXPORT void TaskBatch_AddTask(TaskBatch* taskBatch, TaskDelegate delegate)
     {
-        taskBatch->AddTask([delegate](...)
-            {
-                delegate();
-            });
+        taskBatch->AddTask(delegate);
     }
 
     HYP_EXPORT void TaskBatch_Launch(TaskBatch* taskBatch, void (*callback)(void))

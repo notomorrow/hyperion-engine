@@ -37,13 +37,13 @@ class Assembly;
 class Method;
 class Property;
 
-/*! \brief A move-only object that represents a managed object in the .NET runtime.
+/*! \brief References a managed object in the .NET runtime.
  *  By default, the managed object this Object is associated with will be allowed to be released by the .NET runtime upon this object's destruction.
  *  To allow the managed object to live beyond the lifetime of this object, use the ObjectFlags::CREATED_FROM_MANAGED flag.
  *
  *  \details To create a new Object, use the Class::NewObject method.
  * */
-class HYP_API Object
+class HYP_API Object final
 {
 public:
     Object();
