@@ -50,10 +50,12 @@ static VkAccelerationStructureTypeKHR ToVkAccelerationStructureType(Acceleration
 
 #pragma region VulkanAccelerationGeometry
 
-VulkanAccelerationGeometry::VulkanAccelerationGeometry(const GpuBufferRef& packedVerticesBuffer, const GpuBufferRef& packedIndicesBuffer, const Handle<Material>& material)
+VulkanAccelerationGeometry::VulkanAccelerationGeometry(const GpuBufferRef& packedVerticesBuffer, const GpuBufferRef& packedIndicesBuffer, uint32 numVertices, uint32 numIndices, const Handle<Material>& material)
     : m_isCreated(false),
       m_packedVerticesBuffer(packedVerticesBuffer),
       m_packedIndicesBuffer(packedIndicesBuffer),
+      m_numVertices(numVertices),
+      m_numIndices(numIndices),
       m_material(material),
       m_geometry {}
 {
@@ -235,16 +237,25 @@ RendererResult VulkanAccelerationStructureBase::CreateAccelerationStructure(
 
         if (update)
         {
-            // delete the current acceleration structure once the frame is done, rather than stalling the gpu here
-            GetRenderBackend()->GetCurrentFrame()->OnFrameEnd
-                .Bind([oldAccelerationStructure = m_accelerationStructure](...)
-                {
-                    g_vulkanDynamicFunctions->vkDestroyAccelerationStructureKHR(
-                        GetRenderBackend()->GetDevice()->GetDevice(),
-                        oldAccelerationStructure,
-                        nullptr);
-                })
-                .Detach();
+            //// delete the current acceleration structure once the frame is done, rather than stalling the gpu here
+            //GetRenderBackend()->GetCurrentFrame()->OnFrameEnd
+            //    .Bind([oldAccelerationStructure = m_accelerationStructure](...)
+            //    {
+            //        g_vulkanDynamicFunctions->vkDestroyAccelerationStructureKHR(
+            //            GetRenderBackend()->GetDevice()->GetDevice(),
+            //            oldAccelerationStructure,
+            //            nullptr);
+            //    })
+            //    .Detach();
+
+            HYP_GFX_ASSERT(GetRenderBackend()->GetDevice()->Wait()); // To prevent deletion while in use 
+
+            // delete the current acceleration structure
+            g_vulkanDynamicFunctions->vkDestroyAccelerationStructureKHR(
+                GetRenderBackend()->GetDevice()->GetDevice(),
+                m_accelerationStructure,
+                nullptr
+            );
 
             m_accelerationStructure = VK_NULL_HANDLE;
 
@@ -442,6 +453,8 @@ HYP_API bool VulkanTLAS::IsCreated() const
 
 Array<VkAccelerationStructureGeometryKHR> VulkanTLAS::GetGeometries() const
 {
+    HYP_GFX_ASSERT(m_instancesBuffer != nullptr && m_instancesBuffer->IsCreated());
+
     return {
         { .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR,
             .geometryType = VK_GEOMETRY_TYPE_INSTANCES_KHR,
@@ -579,22 +592,27 @@ RendererResult VulkanTLAS::BuildInstancesBuffer(uint32 first, uint32 last)
 
     last = MathUtil::Min(m_blas.Size(), last);
 
+    /// Temporarily commented out
+    //if (m_blas.Empty() || last <= first)
+    //{
+    //    // no need to update the data inside
+    //    return RendererResult();
+    //}
+
     constexpr SizeType minInstancesBufferSize = sizeof(VkAccelerationStructureInstanceKHR);
     const SizeType instancesBufferSize = MathUtil::Max(minInstancesBufferSize, m_blas.Size() * sizeof(VkAccelerationStructureInstanceKHR));
 
     bool instancesBufferRecreated = false;
 
-    if (!m_instancesBuffer)
+    if (!m_instancesBuffer || m_instancesBuffer->Size() < instancesBufferSize)
     {
+        SafeRelease(std::move(m_instancesBuffer));
+
         m_instancesBuffer = GetRenderBackend()->MakeGpuBuffer(GpuBufferType::ACCELERATION_STRUCTURE_INSTANCE_BUFFER, instancesBufferSize);
         m_instancesBuffer->SetDebugName(NAME("ASInstancesBuffer"));
         HYP_GFX_CHECK(m_instancesBuffer->Create());
 
         instancesBufferRecreated = true;
-    }
-    else
-    {
-        m_instancesBuffer->EnsureCapacity(instancesBufferSize, &instancesBufferRecreated);
     }
 
     if (instancesBufferRecreated)
@@ -605,12 +623,6 @@ RendererResult VulkanTLAS::BuildInstancesBuffer(uint32 first, uint32 last)
         // set dirty range to all elements if resized or newly created
         first = 0;
         last = uint32(m_blas.Size());
-    }
-
-    if (m_blas.Empty() || last <= first)
-    {
-        // no need to update the data inside
-        return RendererResult();
     }
 
     Array<VkAccelerationStructureInstanceKHR> instances;
@@ -664,17 +676,15 @@ RendererResult VulkanTLAS::BuildMeshDescriptionsBuffer(uint32 first, uint32 last
 
     bool meshDescriptionsBufferRecreated = false;
 
-    if (!m_meshDescriptionsBuffer)
+    if (!m_meshDescriptionsBuffer || m_meshDescriptionsBuffer->Size() < meshDescriptionsBufferSize)
     {
+        SafeRelease(std::move(m_meshDescriptionsBuffer));
+
         m_meshDescriptionsBuffer = GetRenderBackend()->MakeGpuBuffer(GpuBufferType::SSBO, meshDescriptionsBufferSize);
         m_meshDescriptionsBuffer->SetDebugName(NAME("ASMeshDescriptionsBuffer"));
         HYP_GFX_CHECK(m_meshDescriptionsBuffer->Create());
 
         meshDescriptionsBufferRecreated = true;
-    }
-    else
-    {
-        m_meshDescriptionsBuffer->EnsureCapacity(meshDescriptionsBufferSize, &meshDescriptionsBufferRecreated);
     }
 
     if (meshDescriptionsBufferRecreated)
@@ -714,13 +724,16 @@ RendererResult VulkanTLAS::BuildMeshDescriptionsBuffer(uint32 first, uint32 last
             // HYP_GFX_ASSERT(material->GetRenderResource().GetBufferIndex() != ~0u);
         }
 
+        HYP_GFX_ASSERT(blas->GetGeometries()[0]->GetPackedVerticesBuffer() && blas->GetGeometries()[0]->GetPackedVerticesBuffer()->IsCreated());
+        HYP_GFX_ASSERT(blas->GetGeometries()[0]->GetPackedIndicesBuffer() && blas->GetGeometries()[0]->GetPackedIndicesBuffer()->IsCreated());
+
         meshDescription.vertexBufferAddress = VULKAN_CAST(blas->GetGeometries()[0]->GetPackedVerticesBuffer())->GetBufferDeviceAddress();
         meshDescription.indexBufferAddress = VULKAN_CAST(blas->GetGeometries()[0]->GetPackedIndicesBuffer())->GetBufferDeviceAddress();
         /// FIXME: This needs to use new resource binding system
-        meshDescription.materialIndex = ~0u;
+        meshDescription.materialIndex = 0;//~0u;
         // meshDescription.materialIndex = material.IsValid() ? material->GetRenderResource().GetBufferIndex() : ~0u;
-        meshDescription.numIndices = uint32(blas->GetGeometries()[0]->GetPackedIndicesBuffer()->Size() / sizeof(uint32));
-        meshDescription.numVertices = uint32(blas->GetGeometries()[0]->GetPackedVerticesBuffer()->Size() / sizeof(PackedVertex));
+        meshDescription.numIndices = blas->GetGeometries()[0]->NumIndices();
+        meshDescription.numVertices = blas->GetGeometries()[0]->NumVertices();
     }
 
     HYP_GFX_ASSERT(m_meshDescriptionsBuffer != nullptr);
@@ -814,6 +827,8 @@ RendererResult VulkanTLAS::Rebuild(RTUpdateStateFlags& outUpdateStateFlags)
 VulkanBLAS::VulkanBLAS(
     const GpuBufferRef& packedVerticesBuffer,
     const GpuBufferRef& packedIndicesBuffer,
+    uint32 numVertices,
+    uint32 numIndices,
     const Handle<Material>& material,
     const Matrix4& transform)
     : VulkanAccelerationStructureBase(transform),
@@ -824,6 +839,8 @@ VulkanBLAS::VulkanBLAS(
     m_geometries.PushBack(MakeRenderObject<VulkanAccelerationGeometry>(
         m_packedVerticesBuffer,
         m_packedIndicesBuffer,
+        numVertices,
+        numIndices,
         m_material));
 }
 

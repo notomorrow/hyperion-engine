@@ -121,6 +121,15 @@ static String BuildPreamble(const ShaderProperties& properties)
             continue;
         }
 
+        // property has a value -- use #define <name> <value>
+        if (property.HasValue())
+        {
+            preamble += HYP_FORMAT("#define {} {}\n", property.name, property.GetValueString());
+
+            continue;
+        }
+
+        // no value set, treat it as boolean true (1)
         preamble += HYP_FORMAT("#define {} 1\n", property.name);
     }
 
@@ -143,7 +152,7 @@ DescriptorTableDeclaration DescriptorUsageSet::BuildDescriptorTableDeclaration()
     for (const DescriptorUsage& descriptorUsage : elements)
     {
         Assert(descriptorUsage.slot != DescriptorSlot::DESCRIPTOR_SLOT_NONE && descriptorUsage.slot < DescriptorSlot::DESCRIPTOR_SLOT_MAX,
-            "Descriptor usage %s has invalid slot %d", descriptorUsage.descriptorName.LookupString(), descriptorUsage.slot);
+            "Descriptor usage {} has invalid slot {}", descriptorUsage.descriptorName.LookupString(), descriptorUsage.slot);
 
         DescriptorSetDeclaration* descriptorSetDeclaration = table.FindDescriptorSetDeclaration(descriptorUsage.setName);
 
@@ -156,9 +165,8 @@ DescriptorTableDeclaration DescriptorUsageSet::BuildDescriptorTableDeclaration()
         {
             Assert(
                 staticDescriptorSetDeclaration->FindDescriptorDeclaration(descriptorUsage.descriptorName) != nullptr,
-                "Descriptor set %s is defined in the static descriptor table, but the descriptor %s is not",
-                descriptorUsage.setName.LookupString(),
-                descriptorUsage.descriptorName.LookupString());
+                "Descriptor set {} is defined in the static descriptor table, but the descriptor {} is not",
+                descriptorUsage.setName, descriptorUsage.descriptorName);
 
             if (!descriptorSetDeclaration)
             {
@@ -1046,6 +1054,28 @@ static bool LoadBatchFromFile(const FilePath& filepath, CompiledShaderBatch& out
     return true;
 }
 
+#pragma region ShaderProperty
+
+String ShaderProperty::GetValueString() const
+{
+    if (HasValue())
+    {
+        String str;
+
+        Visit(currentValue, [&str](auto&& value)
+            {
+                str = HYP_FORMAT("{}", value);
+            });
+
+        return str;
+    }
+
+    return String::empty;
+}
+
+
+#pragma endregion ShaderProperty
+
 #pragma region ShaderProperties
 
 ShaderProperties& ShaderProperties::Set(const ShaderProperty& property, bool enabled)
@@ -1223,6 +1253,8 @@ void ShaderCompiler::GetPlatformSpecificProperties(ShaderProperties& properties)
 #elif defined(HYP_IOS)
     properties.Set(ShaderProperty(NAME("HYP_IOS"), false));
 #endif
+
+    properties.Set(ShaderProperty(NAME("NUM_GBUFFER_TEXTURES"), false, ShaderProperty::Value(int(g_numGbufferTargets))));
 
     if (g_renderBackend->GetRenderConfig().IsDynamicDescriptorIndexingSupported())
     {

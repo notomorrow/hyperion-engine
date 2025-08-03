@@ -217,7 +217,7 @@ protected:
 };
 
 /*! \brief Data and passes used for rendering a View in the Deferred Renderer. */
-struct HYP_API PassData
+struct PassData
 {
     struct RenderGroupCacheEntry
     {

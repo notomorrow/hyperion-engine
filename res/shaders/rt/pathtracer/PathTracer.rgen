@@ -22,6 +22,8 @@ HYP_DESCRIPTOR_SRV(View, GBufferTranslucentTexture) uniform texture2D gbuffer_al
 HYP_DESCRIPTOR_SRV(View, GBufferMipChain) uniform texture2D gbuffer_mip_chain;
 HYP_DESCRIPTOR_SRV(View, GBufferDepthTexture) uniform texture2D gbuffer_depth_texture;
 
+HYP_DESCRIPTOR_SRV(Global, PointLightShadowMapsTextureArray) uniform utextureCubeArray point_shadow_maps;
+
 HYP_DESCRIPTOR_SAMPLER(Global, SamplerNearest) uniform sampler sampler_nearest;
 HYP_DESCRIPTOR_SAMPLER(Global, SamplerLinear) uniform sampler sampler_linear;
 
@@ -54,7 +56,7 @@ HYP_DESCRIPTOR_SSBO(Global, BlueNoiseBuffer) readonly buffer BlueNoiseBuffer
 
 #undef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 
-HYP_DESCRIPTOR_SSBO(RTRadianceDescriptorSet, LightsBuffer) readonly buffer LightsBuffer
+HYP_DESCRIPTOR_SSBO(Global, LightsBuffer) readonly buffer LightsBuffer
 {
     Light lights[];
 };
@@ -87,8 +89,8 @@ HYP_DESCRIPTOR_CBUFF(RTRadianceDescriptorSet, RTRadianceUniforms) uniform RTRadi
 
 layout(location = 0) rayPayloadEXT RayPayload payload;
 
-#define RAY_OFFSET 0.25
-#define NUM_SAMPLES 4
+#define RAY_OFFSET 0.05
+#define NUM_SAMPLES 2
 #define NUM_BOUNCES 4
 
 struct RayBounceInfo
@@ -102,11 +104,17 @@ void main()
 {
     const ivec2 resolution = rt_radiance_uniforms.output_image_resolution;
     
-    const int pixel_index = int(gl_LaunchIDEXT.x * 2) + int(world_shader_data.frame_counter & 1);
+    const int pixel_index = int(gl_LaunchIDEXT.x);//int(gl_LaunchIDEXT.x * 2) + int(world_shader_data.frame_counter & 1);
     const ivec2 storage_coord = ivec2(
         pixel_index % resolution.x,
         pixel_index / resolution.x
     );
+
+    if (pixel_index >= resolution.x * resolution.y)
+    {
+        // Out of bounds; return
+        return;
+    }
 
     //if (pixel_index % 2 == 0) {
     //    return;
@@ -136,10 +144,8 @@ void main()
 
     const uint flags = gl_RayFlagsOpaqueEXT;
     const uint mask = 0xff;
-    const float tmin = 0.1;
+    const float tmin = 0.001;
     const float tmax = 1000.0;
-
-    uint ray_seed = InitRandomSeed(InitRandomSeed(gl_LaunchIDEXT.x * 2, gl_LaunchIDEXT.x * 2 + 1), world_shader_data.frame_counter % 256);
 
     vec4 color = vec4(0.0);
 
@@ -150,6 +156,11 @@ void main()
     vec4 radiance = vec4(0.0, 0.0, 0.0, 0.0);
 
     for (uint sample_index = 0; sample_index < NUM_SAMPLES; sample_index++) {
+        uint ray_seed = InitRandomSeed(InitRandomSeed(
+            (gl_LaunchIDEXT.x * 2 * NUM_SAMPLES) + sample_index * 2,
+            (gl_LaunchIDEXT.x * 2 * NUM_SAMPLES) + (sample_index * 2) + 1),
+            world_shader_data.frame_counter % 256);
+
         vec2 rnd = vec2(RandomFloat(ray_seed), RandomFloat(ray_seed));
 
         vec3 tangent;
@@ -208,6 +219,7 @@ void main()
 
                 vec4 throughput = payload.throughput;
                 vec3 normal = payload.normal;
+
                 traceRayEXT(tlas, flags, mask, 0, 0, 0, origin, tmin, direction, tmax, 0);
 
                 bounces[bounce_index].throughput = payload.throughput;

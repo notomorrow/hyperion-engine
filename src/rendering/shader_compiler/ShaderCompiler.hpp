@@ -213,23 +213,7 @@ struct ShaderProperty
         return IsVertexAttribute() && IsPermutable();
     }
 
-    HYP_FORCE_INLINE String GetValueString() const
-    {
-        if (HasValue())
-        {
-            if (const String* str = currentValue.TryGet<String>())
-            {
-                return *str;
-            }
-
-            if (const int* i = currentValue.TryGet<int>())
-            {
-                return String::ToString(*i);
-            }
-        }
-
-        return String::empty;
-    }
+    String GetValueString() const;
 
     HYP_FORCE_INLINE constexpr HashCode GetHashCode() const
     {

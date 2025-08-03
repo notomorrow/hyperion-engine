@@ -88,7 +88,7 @@ public:
 
     virtual bool IsDynamicDescriptorIndexingSupported() const override
     {
-        return false; // m_renderBackend->GetDevice()->GetFeatures().SupportsDynamicDescriptorIndexing();
+        return false;//m_renderBackend->GetDevice()->GetFeatures().SupportsDynamicDescriptorIndexing();
     }
 
 private:
@@ -561,18 +561,16 @@ public:
 
 VulkanRenderBackend::VulkanRenderBackend()
     : m_instance(nullptr),
-      m_renderConfig(new VulkanRenderConfig(this)),
-      m_descriptorSetManager(new VulkanDescriptorSetManager()),
+      m_renderConfig(MakePimpl<VulkanRenderConfig>(this)),
+      m_descriptorSetManager(MakePimpl<VulkanDescriptorSetManager>()),
       m_textureCache(MakePimpl<VulkanTextureCache>()),
-      m_asyncCompute(nullptr),
+      m_asyncCompute(MakePimpl<VulkanAsyncCompute>()),
       m_shouldRecreateSwapchain(false)
 {
 }
 
 VulkanRenderBackend::~VulkanRenderBackend()
 {
-    delete m_renderConfig;
-    delete m_descriptorSetManager;
 }
 
 const VulkanDeviceRef& VulkanRenderBackend::GetDevice() const
@@ -580,9 +578,19 @@ const VulkanDeviceRef& VulkanRenderBackend::GetDevice() const
     return m_instance->GetDevice();
 }
 
+const IRenderConfig& VulkanRenderBackend::GetRenderConfig() const
+{
+    return *m_renderConfig;
+}
+
 SwapchainBase* VulkanRenderBackend::GetSwapchain() const
 {
     return m_instance->GetSwapchain();
+}
+
+AsyncComputeBase* VulkanRenderBackend::GetAsyncCompute() const
+{
+    return m_asyncCompute.Get();
 }
 
 RendererResult VulkanRenderBackend::Initialize(AppContextBase& appContext)
@@ -595,10 +603,7 @@ RendererResult VulkanRenderBackend::Initialize(AppContextBase& appContext)
     m_crashHandler.Initialize();
 
     HYP_GFX_CHECK(m_descriptorSetManager->Create(m_instance->GetDevice()));
-
-    VulkanAsyncCompute* asyncCompute = new VulkanAsyncCompute();
-    HYP_GFX_CHECK(asyncCompute->Create());
-    m_asyncCompute = asyncCompute;
+    HYP_GFX_CHECK(m_asyncCompute->Create());
 
     m_defaultFormats.Set(
         DIF_COLOR,
@@ -631,8 +636,7 @@ RendererResult VulkanRenderBackend::Destroy()
 {
     m_descriptorSetManager->Destroy(m_instance->GetDevice());
 
-    delete m_asyncCompute;
-    m_asyncCompute = nullptr;
+    m_asyncCompute.Reset();
 
     HYP_GFX_CHECK(m_instance->GetDevice()->Wait());
     HYP_GFX_CHECK(m_instance->Destroy());
@@ -673,7 +677,7 @@ FrameBase* VulkanRenderBackend::PrepareNextFrame()
 
     AssertDebug(frame != nullptr);
 
-    CHECK_FRAME_RESULT(static_cast<VulkanAsyncCompute*>(m_asyncCompute)->PrepareForFrame(frame));
+    CHECK_FRAME_RESULT(static_cast<VulkanAsyncCompute&>(*m_asyncCompute).PrepareForFrame(frame));
 
     return frame;
 }
@@ -683,8 +687,8 @@ void VulkanRenderBackend::PresentFrame(FrameBase* frame)
     const CommandBufferRef& commandBuffer = m_instance->GetSwapchain()->GetCurrentCommandBuffer();
 
     VulkanFrame* vulkanFrame = VULKAN_CAST(frame);
-    VulkanCommandBufferRef vulkanCommandBuffer = VULKAN_CAST(commandBuffer);
-    VulkanAsyncCompute* vulkanAsyncCompute = static_cast<VulkanAsyncCompute*>(m_asyncCompute);
+    VulkanCommandBuffer* vulkanCommandBuffer = VULKAN_CAST(commandBuffer.Get());
+    VulkanAsyncCompute* vulkanAsyncCompute = static_cast<VulkanAsyncCompute*>(m_asyncCompute.Get());
 
     CHECK_FRAME_RESULT(vulkanFrame->Submit(&m_instance->GetDevice()->GetGraphicsQueue(), vulkanCommandBuffer));
     CHECK_FRAME_RESULT(vulkanAsyncCompute->Submit(vulkanFrame));
@@ -839,12 +843,16 @@ ShaderRef VulkanRenderBackend::MakeShader(const RC<CompiledShader>& compiledShad
 BLASRef VulkanRenderBackend::MakeBLAS(
     const GpuBufferRef& packedVerticesBuffer,
     const GpuBufferRef& packedIndicesBuffer,
+    uint32 numVertices,
+    uint32 numIndices,
     const Handle<Material>& material,
     const Matrix4& transform)
 {
     return MakeRenderObject<VulkanBLAS>(
         VulkanGpuBufferRef(packedVerticesBuffer),
         VulkanGpuBufferRef(packedIndicesBuffer),
+        numVertices,
+        numIndices,
         material,
         transform);
 }

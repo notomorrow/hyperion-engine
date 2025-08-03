@@ -17,17 +17,18 @@ namespace hyperion {
 
 class Engine;
 class GBuffer;
+struct PassData;
 
 struct RenderCommand_DestroyRaytracingReflections;
 struct RenderCommand_CreateRTRadianceImageOutputs;
 
-HYP_STRUCT(ConfigName = "app", JsonPath = "rendering.rt.reflections")
+HYP_STRUCT(ConfigName = "app", JsonPath = "rendering.rt")
 struct RaytracingReflectionsConfig : public ConfigBase<RaytracingReflectionsConfig>
 {
     HYP_FIELD(JsonIgnore)
     Vec2u extent = { 1024, 1024 };
 
-    HYP_FIELD(JsonIgnore)
+    HYP_FIELD(JsonPath="path_tracing")
     bool pathTracing = false;
 
     virtual ~RaytracingReflectionsConfig() override = default;
@@ -55,13 +56,6 @@ public:
         return m_config.pathTracing;
     }
 
-    HYP_FORCE_INLINE void SetTopLevelAccelerationStructures(const FixedArray<TLASRef, g_framesInFlight>& tlas)
-    {
-        m_topLevelAccelerationStructures = tlas;
-    }
-
-    HYP_API void ApplyTLASUpdates(RTUpdateStateFlags flags);
-
     HYP_API void Create();
 
     HYP_API void Render(FrameBase* frame, const RenderSetup& renderSetup);
@@ -71,17 +65,13 @@ private:
     void CreateUniformBuffer();
     void CreateRaytracingPipeline();
     void CreateTemporalBlending();
+
+    void UpdatePipelineState(FrameBase* frame, const RenderSetup& renderSetup);
     void UpdateUniforms(FrameBase* frame, const RenderSetup& renderSetup);
 
     RaytracingReflectionsConfig m_config;
 
     GBuffer* m_gbuffer;
-
-    FixedArray<TLASRef, g_framesInFlight> m_topLevelAccelerationStructures;
-
-    FixedArray<uint32, g_framesInFlight> m_updates;
-
-    ShaderRef m_shader;
 
     Handle<Texture> m_texture;
     UniquePtr<TemporalBlending> m_temporalBlending;

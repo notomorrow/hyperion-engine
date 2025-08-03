@@ -71,12 +71,12 @@ HYP_DESCRIPTOR_SSBO(RTRadianceDescriptorSet, MeshDescriptionsBuffer) buffer Mesh
     MeshDescription mesh_descriptions[];
 };
 
-HYP_DESCRIPTOR_SSBO(RTRadianceDescriptorSet, MaterialsBuffer) readonly buffer MaterialBuffer
+HYP_DESCRIPTOR_SSBO(Object, MaterialsBuffer) readonly buffer MaterialBuffer
 {
     Material materials[];
 };
 
-HYP_DESCRIPTOR_SSBO(RTRadianceDescriptorSet, LightsBuffer) readonly buffer LightsBuffer
+HYP_DESCRIPTOR_SSBO(Global, LightsBuffer) readonly buffer LightsBuffer
 {
     Light lights[];
 };

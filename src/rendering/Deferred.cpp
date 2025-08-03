@@ -82,24 +82,27 @@ static_assert(sizeof(g_ltcBrdf) == 64 * 64 * 4 * 2, "Invalid LTC BRDF size");
 
 void GetDeferredShaderProperties(ShaderProperties& outShaderProperties)
 {
-    ShaderProperties properties;
+    const GlobalConfig& appConfig = g_engine->GetAppContext()->GetConfiguration();
+    const IRenderConfig& renderConfig = g_renderBackend->GetRenderConfig();
 
-    properties.Set(NAME("RT_REFLECTIONS_ENABLED"), g_renderBackend->GetRenderConfig().IsRaytracingSupported() && g_engine->GetAppContext()->GetConfiguration().Get("rendering.rt.reflections.enabled").ToBool());
-    properties.Set(NAME("RT_GI_ENABLED"), g_renderBackend->GetRenderConfig().IsRaytracingSupported() && g_engine->GetAppContext()->GetConfiguration().Get("rendering.rt.gi.enabled").ToBool());
-    properties.Set(NAME("ENV_GRID_ENABLED"), g_engine->GetAppContext()->GetConfiguration().Get("rendering.env_grid.gi.enabled").ToBool());
-    properties.Set(NAME("HBIL_ENABLED"), g_engine->GetAppContext()->GetConfiguration().Get("rendering.hbil.enabled").ToBool());
-    properties.Set(NAME("HBAO_ENABLED"), g_engine->GetAppContext()->GetConfiguration().Get("rendering.hbao.enabled").ToBool());
+    outShaderProperties.Set(NAME("RT_REFLECTIONS_ENABLED"), renderConfig.IsRaytracingSupported() && appConfig.Get("rendering.rt.reflections.enabled").ToBool());
+    outShaderProperties.Set(NAME("RT_GI_ENABLED"), renderConfig.IsRaytracingSupported() && appConfig.Get("rendering.rt.gi.enabled").ToBool());
+    outShaderProperties.Set(NAME("ENV_GRID_ENABLED"), appConfig.Get("rendering.env_grid.gi.enabled").ToBool());
+    outShaderProperties.Set(NAME("HBIL_ENABLED"), appConfig.Get("rendering.hbil.enabled").ToBool());
+    outShaderProperties.Set(NAME("HBAO_ENABLED"), appConfig.Get("rendering.hbao.enabled").ToBool());
 
-    if (g_engine->GetAppContext()->GetConfiguration().Get("rendering.debug.reflections").ToBool())
+    if (appConfig.Get("rendering.rt.path_tracing").ToBool())
     {
-        properties.Set(NAME("DEBUG_REFLECTIONS"));
+        outShaderProperties.Set(NAME("PATHTRACER"));
     }
-    else if (g_engine->GetAppContext()->GetConfiguration().Get("rendering.debug.irradiance").ToBool())
+    else if (appConfig.Get("rendering.debug.reflections").ToBool())
     {
-        properties.Set(NAME("DEBUG_IRRADIANCE"));
+        outShaderProperties.Set(NAME("DEBUG_REFLECTIONS"));
     }
-
-    outShaderProperties = std::move(properties);
+    else if (appConfig.Get("rendering.debug.irradiance").ToBool())
+    {
+        outShaderProperties.Set(NAME("DEBUG_IRRADIANCE"));
+    }
 }
 
 static constexpr TypeId g_envProbeTypeToTypeId[EPT_MAX] = {
@@ -1301,7 +1304,6 @@ void DeferredRenderer::CreateViewRaytracingData(View* view, DeferredPassData& pa
     AssertDebug(gbuffer != nullptr);
 
     passData.raytracingReflections = MakeUnique<RaytracingReflections>(RaytracingReflectionsConfig::FromConfig(), gbuffer);
-    passData.raytracingReflections->SetTopLevelAccelerationStructures(passData.topLevelAccelerationStructures);
     passData.raytracingReflections->Create();
 
     /// FIXME: Proper AABB for DDGI
@@ -1668,13 +1670,6 @@ void DeferredRenderer::RenderFrameForView(FrameBase* frame, const RenderSetup& r
     DeferredPassData* pd = static_cast<DeferredPassData*>(rs.passData);
     AssertDebug(pd != nullptr);
 
-    /*if (TLASRef& tlas = pd->topLevelAccelerationStructures[frame->GetFrameIndex()])
-    {
-        RTUpdateStateFlags updateStateFlags = RTUpdateStateFlagBits::RT_UPDATE_STATE_FLAGS_NONE;
-        tlas->UpdateStructure(updateStateFlags);
-        pd->raytracingReflections->ApplyTLASUpdates(updateStateFlags);
-    }*/
-
 #if 1
     if (view->GetFlags() & ViewFlags::ENABLE_RAYTRACING)
     {
@@ -1715,11 +1710,6 @@ void DeferredRenderer::RenderFrameForView(FrameBase* frame, const RenderSetup& r
 
             RTUpdateStateFlags updateStateFlags = RTUpdateStateFlagBits::RT_UPDATE_STATE_FLAGS_NONE;
             tlas->UpdateStructure(updateStateFlags);
-
-            if (pd->raytracingReflections)
-            {
-                pd->raytracingReflections->ApplyTLASUpdates(updateStateFlags);
-            }
         }
     }
 #endif

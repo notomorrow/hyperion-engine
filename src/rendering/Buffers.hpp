@@ -100,13 +100,13 @@ struct BlueNoiseBuffer
     Vec4i rankingTile[128 * 128 * 8 / 4];
 };
 
-struct alignas(16) RTRadianceUniforms
+struct RTRadianceUniforms
 {
     uint32 numBoundLights;
     uint32 rayOffset; // for lightmapper
     float minRoughness;
     Vec2i outputImageResolution;
-    uint32 lightIndices[16];
+    alignas(Vec4f) uint32 lightIndices[16];
 };
 
 class GpuBufferHolderBase

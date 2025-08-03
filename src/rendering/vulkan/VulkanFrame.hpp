@@ -25,7 +25,7 @@ public:
 
     virtual RendererResult ResetFrameState() override;
 
-    RendererResult Submit(VulkanDeviceQueue* deviceQueue, const VulkanCommandBufferRef& commandBuffer);
+    RendererResult Submit(VulkanDeviceQueue* deviceQueue, VulkanCommandBuffer* commandBuffer);
 
     HYP_FORCE_INLINE const VulkanFenceRef& GetFence() const
     {
