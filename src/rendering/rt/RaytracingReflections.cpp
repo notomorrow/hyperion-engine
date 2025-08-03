@@ -140,7 +140,6 @@ void RaytracingReflections::UpdatePipelineState(FrameBase* frame, const RenderSe
     }
 }
 
-HYP_DISABLE_OPTIMIZATION;
 void RaytracingReflections::UpdateUniforms(FrameBase* frame, const RenderSetup& renderSetup)
 {
     RenderProxyList& rpl = RenderApi_GetConsumerProxyList(renderSetup.view);
@@ -180,7 +179,6 @@ void RaytracingReflections::UpdateUniforms(FrameBase* frame, const RenderSetup& 
 
     m_uniformBuffers[frame->GetFrameIndex()]->Copy(sizeof(uniforms), &uniforms);
 }
-HYP_ENABLE_OPTIMIZATION;
 
 void RaytracingReflections::Render(FrameBase* frame, const RenderSetup& renderSetup)
 {

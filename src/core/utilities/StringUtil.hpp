@@ -297,7 +297,7 @@ public:
         }
 
         utf::u32char firstChar = pascalCase.GetChar(0);
-        if (firstChar > UINT8_MAX)
+        if (firstChar >= 128)
         {
             // If the first character is not a ascii we just return the string as is - we only convert
             // the first character to lower case if it is an ascii character.

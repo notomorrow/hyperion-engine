@@ -14,14 +14,15 @@
 #include <scene/EnvProbe.hpp>
 #include <scene/EnvGrid.hpp>
 
-#include <EngineGlobals.hpp>
-#include <Engine.hpp>
-#include <Types.hpp>
-
 #include <core/logging/Logger.hpp>
 #include <core/logging/LogChannels.hpp>
 
 #include <core/utilities/ByteUtil.hpp>
+#include <core/utilities/DeferredScope.hpp>
+
+#include <EngineGlobals.hpp>
+#include <Engine.hpp>
+#include <Types.hpp>
 
 namespace hyperion {
 
@@ -150,8 +151,6 @@ DDGI::DDGI(DDGIInfo&& gridInfo)
 
 DDGI::~DDGI()
 {
-    m_shader.Reset();
-
     SafeRelease(std::move(m_uniformBuffer));
     SafeRelease(std::move(m_radianceBuffer));
     SafeRelease(std::move(m_irradianceImage));
@@ -189,91 +188,12 @@ void DDGI::Create()
 
     CreateStorageBuffers();
     CreateUniformBuffer();
-    CreatePipelines();
 
     PUSH_RENDER_COMMAND(
         SetDDGIDescriptors,
         m_uniformBuffer,
         m_irradianceImageView,
         m_depthImageView);
-}
-
-void DDGI::CreatePipelines()
-{
-    m_shader = g_shaderManager->GetOrCreate(NAME("DDGI"));
-    Assert(m_shader.IsValid());
-
-    const DescriptorTableDeclaration& raytracingPipelineDescriptorTableDecl = m_shader->GetCompiledShader()->GetDescriptorTableDeclaration();
-
-    DescriptorTableRef raytracingPipelineDescriptorTable = g_renderBackend->MakeDescriptorTable(&raytracingPipelineDescriptorTableDecl);
-
-    for (uint32 frameIndex = 0; frameIndex < g_framesInFlight; frameIndex++)
-    {
-        Assert(m_topLevelAccelerationStructures[frameIndex] != nullptr);
-
-        const DescriptorSetRef& descriptorSet = raytracingPipelineDescriptorTable->GetDescriptorSet(NAME("DDGIDescriptorSet"), frameIndex);
-        Assert(descriptorSet != nullptr);
-
-        descriptorSet->SetElement(NAME("TLAS"), m_topLevelAccelerationStructures[frameIndex]);
-
-        descriptorSet->SetElement(NAME("LightsBuffer"), g_renderGlobalState->gpuBuffers[GRB_LIGHTS]->GetBuffer(frameIndex));
-        descriptorSet->SetElement(NAME("MaterialsBuffer"), g_renderGlobalState->gpuBuffers[GRB_MATERIALS]->GetBuffer(frameIndex));
-        descriptorSet->SetElement(NAME("MeshDescriptionsBuffer"), m_topLevelAccelerationStructures[frameIndex]->GetMeshDescriptionsBuffer());
-
-        descriptorSet->SetElement(NAME("DDGIUniforms"), m_uniformBuffer);
-        descriptorSet->SetElement(NAME("ProbeRayData"), m_radianceBuffer);
-    }
-
-    DeferCreate(raytracingPipelineDescriptorTable);
-
-    // Create raytracing pipeline
-
-    m_pipeline = g_renderBackend->MakeRaytracingPipeline(
-        m_shader,
-        raytracingPipelineDescriptorTable);
-
-    DeferCreate(m_pipeline);
-
-    ShaderRef updateIrradianceShader = g_shaderManager->GetOrCreate(NAME("RTProbeUpdateIrradiance"));
-    ShaderRef updateDepthShader = g_shaderManager->GetOrCreate(NAME("RTProbeUpdateDepth"));
-    ShaderRef copyBorderTexelsIrradianceShader = g_shaderManager->GetOrCreate(NAME("RTCopyBorderTexelsIrradiance"));
-    ShaderRef copyBorderTexelsDepthShader = g_shaderManager->GetOrCreate(NAME("RTCopyBorderTexelsDepth"));
-
-    Pair<ShaderRef, ComputePipelineRef&> shaders[] = {
-        { updateIrradianceShader, m_updateIrradiance },
-        { updateDepthShader, m_updateDepth },
-        { copyBorderTexelsIrradianceShader, m_copyBorderTexelsIrradiance },
-        { copyBorderTexelsDepthShader, m_copyBorderTexelsDepth }
-    };
-
-    for (const Pair<ShaderRef, ComputePipelineRef&>& it : shaders)
-    {
-        Assert(it.first.IsValid());
-
-        const DescriptorTableDeclaration& descriptorTableDecl = it.first->GetCompiledShader()->GetDescriptorTableDeclaration();
-
-        DescriptorTableRef descriptorTable = g_renderBackend->MakeDescriptorTable(&descriptorTableDecl);
-
-        for (uint32 frameIndex = 0; frameIndex < g_framesInFlight; frameIndex++)
-        {
-            const DescriptorSetRef& descriptorSet = descriptorTable->GetDescriptorSet(NAME("DDGIDescriptorSet"), frameIndex);
-            Assert(descriptorSet != nullptr);
-
-            descriptorSet->SetElement(NAME("DDGIUniforms"), m_uniformBuffer);
-            descriptorSet->SetElement(NAME("ProbeRayData"), m_radianceBuffer);
-
-            descriptorSet->SetElement(NAME("OutputIrradianceImage"), m_irradianceImageView);
-            descriptorSet->SetElement(NAME("OutputDepthImage"), m_depthImageView);
-        }
-
-        DeferCreate(descriptorTable);
-
-        it.second = g_renderBackend->MakeComputePipeline(
-            it.first,
-            descriptorTable);
-
-        DeferCreate(it.second);
-    }
 }
 
 void DDGI::CreateUniformBuffer()
@@ -286,21 +206,17 @@ void DDGI::CreateUniformBuffer()
     m_uniforms = DDGIUniforms {
         .aabbMax = Vec4f(m_gridInfo.aabb.max, 1.0f),
         .aabbMin = Vec4f(m_gridInfo.aabb.min, 1.0f),
-        .probeBorder = {
-            m_gridInfo.probeBorder.x,
-            m_gridInfo.probeBorder.y,
-            m_gridInfo.probeBorder.z,
-            0 },
+        .probeBorder = Vec4u(m_gridInfo.probeBorder, 0),
         .probeCounts = { numProbesPerDimension.x, numProbesPerDimension.y, numProbesPerDimension.z, 0 },
         .gridDimensions = { gridImageDimensions.x, gridImageDimensions.y, 0, 0 },
         .imageDimensions = { m_irradianceImage->GetExtent().x, m_irradianceImage->GetExtent().y, m_depthImage->GetExtent().x, m_depthImage->GetExtent().y },
-        .params = { ByteUtil::PackFloat(m_gridInfo.probeDistance), m_gridInfo.numRaysPerProbe, PROBE_SYSTEM_FLAGS_FIRST_RUN, 0 }
+        .probeDistance = m_gridInfo.probeDistance,
+        .numRaysPerProbe = m_gridInfo.numRaysPerProbe,
+        .numBoundLights = 0,
+        .flags = PROBE_SYSTEM_FLAGS_FIRST_RUN
     };
 
-    PUSH_RENDER_COMMAND(
-        CreateDDGIUniformBuffer,
-        m_uniformBuffer,
-        m_uniforms);
+    PUSH_RENDER_COMMAND(CreateDDGIUniformBuffer, m_uniformBuffer, m_uniforms);
 }
 
 void DDGI::CreateStorageBuffers()
@@ -309,10 +225,7 @@ void DDGI::CreateStorageBuffers()
 
     m_radianceBuffer = g_renderBackend->MakeGpuBuffer(GpuBufferType::SSBO, m_gridInfo.GetImageDimensions().x * m_gridInfo.GetImageDimensions().y * sizeof(ProbeRayData));
 
-    PUSH_RENDER_COMMAND(
-        CreateDDGIRadianceBuffer,
-        m_radianceBuffer,
-        m_gridInfo);
+    PUSH_RENDER_COMMAND(CreateDDGIRadianceBuffer, m_radianceBuffer, m_gridInfo);
 
     { // irradiance image
         const Vec3u extent {
@@ -367,52 +280,134 @@ void DDGI::CreateStorageBuffers()
     }
 }
 
-void DDGI::ApplyTLASUpdates(RTUpdateStateFlags flags)
+void DDGI::UpdatePipelineState(FrameBase* frame, const RenderSetup& renderSetup)
 {
-    if (!flags)
+    HYP_SCOPE;
+
+    DeferredPassData* pd = static_cast<DeferredPassData*>(renderSetup.passData);
+    Assert(pd != nullptr);
+
+    const auto setDescriptorElements = [this, pd](DescriptorSetBase* descriptorSet, const TLASRef& tlas)
+        {
+            Assert(tlas != nullptr);
+
+            descriptorSet->SetElement(NAME("TLAS"), tlas);
+            descriptorSet->SetElement(NAME("MeshDescriptionsBuffer"), tlas->GetMeshDescriptionsBuffer());
+            descriptorSet->SetElement(NAME("DDGIUniforms"), m_uniformBuffer);
+            descriptorSet->SetElement(NAME("ProbeRayData"), m_radianceBuffer);
+        };
+
+    if (m_pipeline != nullptr)
     {
+        DescriptorSetBase* descriptorSet = m_pipeline->GetDescriptorTable()->GetDescriptorSet(NAME("DDGIDescriptorSet"), frame->GetFrameIndex());
+        Assert(descriptorSet != nullptr);
+
+        setDescriptorElements(descriptorSet, pd->topLevelAccelerationStructures[frame->GetFrameIndex()]);
+
+        descriptorSet->UpdateDirtyState();
+        descriptorSet->Update(true); //! temp
+
         return;
     }
 
+    // Create raytracing pipeline
+    ShaderRef raytracingShader = g_shaderManager->GetOrCreate(NAME("DDGI"));
+    Assert(raytracingShader != nullptr);
+
+    const DescriptorTableDeclaration& descriptorTableDecl = raytracingShader->GetCompiledShader()->GetDescriptorTableDeclaration();
+
+    DescriptorTableRef descriptorTable = g_renderBackend->MakeDescriptorTable(&descriptorTableDecl);
+
     for (uint32 frameIndex = 0; frameIndex < g_framesInFlight; frameIndex++)
     {
-        const DescriptorSetRef& descriptorSet = m_pipeline->GetDescriptorTable()->GetDescriptorSet(NAME("DDGIDescriptorSet"), frameIndex);
+        DescriptorSetBase* descriptorSet = descriptorTable->GetDescriptorSet(NAME("DDGIDescriptorSet"), frameIndex);
         Assert(descriptorSet != nullptr);
 
-        if (flags & RT_UPDATE_STATE_FLAGS_UPDATE_ACCELERATION_STRUCTURE)
+        setDescriptorElements(descriptorSet, pd->topLevelAccelerationStructures[frameIndex]);
+    }
+
+    HYP_GFX_ASSERT(descriptorTable->Create());
+
+    m_pipeline = g_renderBackend->MakeRaytracingPipeline(raytracingShader, descriptorTable);
+    HYP_GFX_ASSERT(m_pipeline->Create());
+    
+    for (uint32 frameIndex = 0; frameIndex < g_framesInFlight; frameIndex++)
+    {
+        descriptorTable->Update(frameIndex, /* force */ true);
+    }
+
+    // Create compute pipelines
+    ShaderRef updateIrradianceShader = g_shaderManager->GetOrCreate(NAME("RTProbeUpdateIrradiance"));
+    ShaderRef updateDepthShader = g_shaderManager->GetOrCreate(NAME("RTProbeUpdateDepth"));
+    ShaderRef copyBorderTexelsIrradianceShader = g_shaderManager->GetOrCreate(NAME("RTCopyBorderTexelsIrradiance"));
+    ShaderRef copyBorderTexelsDepthShader = g_shaderManager->GetOrCreate(NAME("RTCopyBorderTexelsDepth"));
+
+    Pair<ShaderRef, ComputePipelineRef&> computePipelines[] = {
+        { updateIrradianceShader, m_updateIrradiance },
+        { updateDepthShader, m_updateDepth },
+        { copyBorderTexelsIrradianceShader, m_copyBorderTexelsIrradiance },
+        { copyBorderTexelsDepthShader, m_copyBorderTexelsDepth }
+    };
+
+    for (auto& [shader, computePipeline] : computePipelines)
+    {
+        const DescriptorTableDeclaration& descriptorTableDecl = shader->GetCompiledShader()->GetDescriptorTableDeclaration();
+
+        DescriptorTableRef descriptorTable = g_renderBackend->MakeDescriptorTable(&descriptorTableDecl);
+
+        for (uint32 frameIndex = 0; frameIndex < g_framesInFlight; frameIndex++)
         {
-            // update acceleration structure in descriptor set
-            descriptorSet->SetElement(NAME("TLAS"), m_topLevelAccelerationStructures[frameIndex]);
+            const DescriptorSetRef& descriptorSet = descriptorTable->GetDescriptorSet(NAME("DDGIDescriptorSet"), frameIndex);
+            Assert(descriptorSet != nullptr);
+
+            descriptorSet->SetElement(NAME("DDGIUniforms"), m_uniformBuffer);
+            descriptorSet->SetElement(NAME("ProbeRayData"), m_radianceBuffer);
+
+            descriptorSet->SetElement(NAME("OutputIrradianceImage"), m_irradianceImageView);
+            descriptorSet->SetElement(NAME("OutputDepthImage"), m_depthImageView);
         }
 
-        if (flags & RT_UPDATE_STATE_FLAGS_UPDATE_MESH_DESCRIPTIONS)
-        {
-            // update mesh descriptions buffer in descriptor set
-            descriptorSet->SetElement(NAME("MeshDescriptionsBuffer"), m_topLevelAccelerationStructures[frameIndex]->GetMeshDescriptionsBuffer());
-        }
+        DeferCreate(descriptorTable);
 
-        descriptorSet->Update();
-
-        m_updates[frameIndex] &= ~PROBE_SYSTEM_UPDATES_TLAS;
+        computePipeline = g_renderBackend->MakeComputePipeline(shader, descriptorTable);
+        DeferCreate(computePipeline);
     }
 }
 
-void DDGI::UpdateUniforms(FrameBase* frame)
+void DDGI::UpdateUniforms(FrameBase* frame, const RenderSetup& renderSetup)
 {
-    // FIXME: Lights are now stored per-view.
-    // We don't have a View for DDGI since it is for the entire World it is indirectly attached to.
-    // We'll need to find a way to get the lights for the current view.
-    // Ideas:
-    // a) create a View for the DDGI and use that to get the lights. It will need to collect the lights on the Game thread so we'll need to add some kind of System to do that.
-    // b) add a function to the RenderScene to get all the lights in the scene and use that to get the lights for the current view. This has a drawback that we will always have some RenderLight active when it could be inactive if it is not in any view.
-    // OR: We can just use the lights in the current view and ignore the rest. This is a bit of a hack but it will work for now.
-    HYP_NOT_IMPLEMENTED();
+    RenderProxyList& rpl = RenderApi_GetConsumerProxyList(renderSetup.view);
+    rpl.BeginRead();
+    HYP_DEFER({ rpl.EndRead(); });
 
-    m_uniforms.params[3] = 0;
+    DDGIUniforms& uniforms = m_uniforms;
+
+    uint32 numBoundLights = 0;
+
+    const uint32 maxBoundLights = ArraySize(uniforms.lightIndices);
+
+    for (Light* light : rpl.GetLights())
+    {
+        const LightType lightType = light->GetLightType();
+
+        if (lightType != LT_DIRECTIONAL && lightType != LT_POINT)
+        {
+            continue;
+        }
+
+        if (numBoundLights >= maxBoundLights)
+        {
+            break;
+        }
+
+        uniforms.lightIndices[numBoundLights++] = RenderApi_RetrieveResourceBinding(light);
+    }
+
+    uniforms.numBoundLights = numBoundLights;
 
     m_uniformBuffer->Copy(sizeof(DDGIUniforms), &m_uniforms);
 
-    m_uniforms.params[2] &= ~PROBE_SYSTEM_FLAGS_FIRST_RUN;
+    uniforms.flags &= ~PROBE_SYSTEM_FLAGS_FIRST_RUN;
 }
 
 void DDGI::Render(FrameBase* frame, const RenderSetup& renderSetup)
@@ -423,9 +418,8 @@ void DDGI::Render(FrameBase* frame, const RenderSetup& renderSetup)
     Assert(renderSetup.HasView());
     Assert(renderSetup.passData != nullptr);
 
-    UpdateUniforms(frame);
-
-    frame->renderQueue << InsertBarrier(m_radianceBuffer, RS_UNORDERED_ACCESS);
+    UpdatePipelineState(frame, renderSetup);
+    UpdateUniforms(frame, renderSetup);
 
     m_randomGenerator.Next();
 
@@ -440,6 +434,8 @@ void DDGI::Render(FrameBase* frame, const RenderSetup& renderSetup)
 
     m_pipeline->SetPushConstants(&pushConstants, sizeof(pushConstants));
 
+    frame->renderQueue << InsertBarrier(m_radianceBuffer, RS_UNORDERED_ACCESS);
+
     frame->renderQueue << BindRaytracingPipeline(m_pipeline);
 
     frame->renderQueue << BindDescriptorTable(
@@ -452,11 +448,6 @@ void DDGI::Render(FrameBase* frame, const RenderSetup& renderSetup)
                     { NAME("CurrentEnvProbe"), ShaderDataOffset<EnvProbeShaderData>(renderSetup.envProbe, 0) } } } },
         frame->GetFrameIndex());
 
-    // bind per-view descriptor sets
-    frame->renderQueue << BindDescriptorSet(
-        renderSetup.passData->descriptorSets[frame->GetFrameIndex()],
-        m_pipeline);
-
     frame->renderQueue << TraceRays(m_pipeline, Vec3u { m_gridInfo.NumProbes(), m_gridInfo.numRaysPerProbe, 1u });
 
     frame->renderQueue << InsertBarrier(m_radianceBuffer, RS_UNORDERED_ACCESS);
@@ -466,7 +457,6 @@ void DDGI::Render(FrameBase* frame, const RenderSetup& renderSetup)
     const Vec3u probeCounts = m_gridInfo.NumProbesPerDimension();
 
     frame->renderQueue << InsertBarrier(m_irradianceImage, RS_UNORDERED_ACCESS);
-
     frame->renderQueue << InsertBarrier(m_depthImage, RS_UNORDERED_ACCESS);
 
     frame->renderQueue << BindComputePipeline(m_updateIrradiance);

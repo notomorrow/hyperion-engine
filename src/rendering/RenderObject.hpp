@@ -938,21 +938,20 @@ public:
 template <class RefType, class... Args>
 static inline void DeferCreate(RefType ref, Args&&... args)
 {
-    struct RENDER_COMMAND(CreateRenderObject)
-        : RenderCommand
+    struct RENDER_COMMAND(CallCreateOnRenderThread) final : RenderCommand
     {
         using ArgsTuple = Tuple<std::decay_t<Args>...>;
 
         RefType ref;
         ArgsTuple args;
 
-        RENDER_COMMAND(CreateRenderObject)(RefType&& ref, Args&&... args)
+        RENDER_COMMAND(CallCreateOnRenderThread)(RefType&& ref, Args&&... args)
             : ref(std::move(ref)),
               args(std::forward<Args>(args)...)
         {
         }
 
-        virtual ~RENDER_COMMAND(CreateRenderObject)() override = default;
+        virtual ~RENDER_COMMAND(CallCreateOnRenderThread)() override = default;
 
         virtual RendererResult operator()() override
         {
@@ -969,7 +968,7 @@ static inline void DeferCreate(RefType ref, Args&&... args)
         return;
     }
 
-    PUSH_RENDER_COMMAND(CreateRenderObject, std::move(ref), std::forward<Args>(args)...);
+    PUSH_RENDER_COMMAND(CallCreateOnRenderThread, std::move(ref), std::forward<Args>(args)...);
 }
 
 #if HYP_VULKAN

@@ -133,7 +133,7 @@ FBOMSerializableBase* FBOMReader::FBOMStaticDataIndexMap::GetOrInitializeElement
     {
         if (FBOMResult err = element.Initialize(context, reader))
         {
-            HYP_LOG(Serialization, Error, "Error initializing static data element at index {}: {}", index, err.message);
+            HYP_LOG(Serialization, Error, "Deserialization error: {}", err.message);
 
             return nullptr;
         }

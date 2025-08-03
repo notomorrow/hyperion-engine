@@ -747,7 +747,7 @@ void ReflectionsPass::CreatePipeline(const RenderableAttributeSet& renderableAtt
 bool ReflectionsPass::ShouldRenderSSR() const
 {
     return g_engine->GetAppContext()->GetConfiguration().Get("rendering.ssr.enabled").ToBool(true)
-        && !g_engine->GetAppContext()->GetConfiguration().Get("rendering.rt.reflections.enabled").ToBool(false);
+        && !g_engine->GetAppContext()->GetConfiguration().Get("rendering.raytracing.reflections.enabled").ToBool(false);
 }
 
 void ReflectionsPass::CreateSSRRenderer()
@@ -1287,8 +1287,8 @@ void DeferredRenderer::CreateViewRaytracingData(View* view, DeferredPassData& pa
         return;
     }
 
-    const bool shouldEnableRaytracingForView = g_engine->GetAppContext()->GetConfiguration().Get("rendering.rt.enabled").ToBool()
-        && (view->GetFlags() & ViewFlags::ENABLE_RAYTRACING);
+    const bool shouldEnableRaytracingForView = bool(view->GetFlags() & ViewFlags::ENABLE_RAYTRACING)
+        && g_engine->GetAppContext()->GetConfiguration().Get("rendering.raytracing.enabled").ToBool();
 
     CreateViewTopLevelAccelerationStructures(view, passData);
 
@@ -1308,7 +1308,6 @@ void DeferredRenderer::CreateViewRaytracingData(View* view, DeferredPassData& pa
 
     /// FIXME: Proper AABB for DDGI
     passData.ddgi = MakeUnique<DDGI>(DDGIInfo { .aabb = { { -45.0f, -5.0f, -45.0f }, { 45.0f, 60.0f, 45.0f } } });
-    passData.ddgi->SetTopLevelAccelerationStructures(passData.topLevelAccelerationStructures);
     passData.ddgi->Create();
 }
 
