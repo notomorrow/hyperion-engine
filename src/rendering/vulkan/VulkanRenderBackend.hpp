@@ -16,6 +16,8 @@
 namespace hyperion {
 
 class VulkanInstance;
+class VulkanAsyncCompute;
+class VulkanRenderConfig;
 
 class VulkanDescriptorSetLayoutWrapper;
 using VulkanDescriptorSetLayoutWrapperRef = RenderObjectHandle_Strong<VulkanDescriptorSetLayoutWrapper>;
@@ -80,17 +82,10 @@ public:
     virtual RendererResult Initialize(AppContextBase& appContext) override;
     virtual RendererResult Destroy() override;
 
-    virtual const IRenderConfig& GetRenderConfig() const override
-    {
-        return *m_renderConfig;
-    }
+    virtual const IRenderConfig& GetRenderConfig() const override;
 
     virtual SwapchainBase* GetSwapchain() const override;
-
-    virtual AsyncComputeBase* GetAsyncCompute() const override
-    {
-        return m_asyncCompute;
-    }
+    virtual AsyncComputeBase* GetAsyncCompute() const override;
 
     virtual FrameBase* GetCurrentFrame() const override;
     virtual FrameBase* PrepareNextFrame() override;
@@ -133,6 +128,8 @@ public:
     virtual BLASRef MakeBLAS(
         const GpuBufferRef& packedVerticesBuffer,
         const GpuBufferRef& packedIndicesBuffer,
+        uint32 numVertices,
+        uint32 numIndices,
         const Handle<Material>& material,
         const Matrix4& transform) override;
     virtual TLASRef MakeTLAS() override;
@@ -164,13 +161,13 @@ private:
 
     VulkanInstance* m_instance;
 
-    IRenderConfig* m_renderConfig;
+    Pimpl<VulkanRenderConfig> m_renderConfig;
 
     CrashHandler m_crashHandler;
 
-    VulkanDescriptorSetManager* m_descriptorSetManager;
+    Pimpl<VulkanDescriptorSetManager> m_descriptorSetManager;
 
-    AsyncComputeBase* m_asyncCompute;
+    Pimpl<VulkanAsyncCompute> m_asyncCompute;
 
     HashMap<DefaultImageFormat, TextureFormat> m_defaultFormats;
 

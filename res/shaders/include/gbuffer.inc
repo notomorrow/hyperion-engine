@@ -3,7 +3,6 @@
 
 #include "defines.inc"
 
-#define NUM_GBUFFER_TEXTURES 7
 #define HYP_GBUFFER_FLIP_Y 0
 
 #include "shared.inc"

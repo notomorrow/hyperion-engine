@@ -91,7 +91,7 @@ RendererResult VulkanFrame::ResetFrameState()
     return result;
 }
 
-RendererResult VulkanFrame::Submit(VulkanDeviceQueue* deviceQueue, const VulkanCommandBufferRef& commandBuffer)
+RendererResult VulkanFrame::Submit(VulkanDeviceQueue* deviceQueue, VulkanCommandBuffer* commandBuffer)
 {
     renderQueue.Prepare(this);
 

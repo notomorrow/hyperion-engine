@@ -14,7 +14,7 @@ namespace hyperion {
 class FullScreenPass;
 class ShadowMap;
 
-struct HYP_API ShadowPassData : PassData
+struct ShadowPassData : PassData
 {
     virtual ~ShadowPassData() override;
 };

@@ -17,7 +17,7 @@ namespace hyperion {
 
 class EnvGrid;
 
-struct HYP_API EnvGridPassData : PassData
+struct EnvGridPassData : PassData
 {
     virtual ~EnvGridPassData() override;
 

@@ -38,8 +38,8 @@ struct RENDER_COMMAND(BuildMeshBlas) : public RenderCommand
           packedIndices(std::move(packedIndices)),
           material(material)
     {
-        const SizeType packedVerticesSize = this->packedVertices.Size() * sizeof(PackedVertex);
-        const SizeType packedIndicesSize = this->packedIndices.Size() * sizeof(uint32);
+        const SizeType packedVerticesSize = ByteUtil::AlignAs(this->packedVertices.Size() * sizeof(PackedVertex), 16);
+        const SizeType packedIndicesSize = ByteUtil::AlignAs(this->packedIndices.Size() * sizeof(uint32), 16);
 
         packedVerticesBuffer = g_renderBackend->MakeGpuBuffer(GpuBufferType::RT_MESH_VERTEX_BUFFER, packedVerticesSize);
         packedIndicesBuffer = g_renderBackend->MakeGpuBuffer(GpuBufferType::RT_MESH_INDEX_BUFFER, packedIndicesSize);
@@ -47,6 +47,8 @@ struct RENDER_COMMAND(BuildMeshBlas) : public RenderCommand
         blas = g_renderBackend->MakeBLAS(
             packedVerticesBuffer,
             packedIndicesBuffer,
+            uint32(this->packedVertices.Size()),
+            uint32(this->packedIndices.Size()),
             material,
             Matrix4::identity);
 
@@ -63,8 +65,8 @@ struct RENDER_COMMAND(BuildMeshBlas) : public RenderCommand
 
     virtual RendererResult operator()() override
     {
-        const SizeType packedVerticesSize = packedVertices.Size() * sizeof(PackedVertex);
-        const SizeType packedIndicesSize = packedIndices.Size() * sizeof(uint32);
+        const SizeType packedVerticesSize = ByteUtil::AlignAs(packedVertices.Size() * sizeof(PackedVertex), 16);
+        const SizeType packedIndicesSize = ByteUtil::AlignAs(packedIndices.Size() * sizeof(uint32), 16);
 
         HYP_GFX_CHECK(packedVerticesBuffer->Create());
         HYP_GFX_CHECK(packedIndicesBuffer->Create());
@@ -83,13 +85,13 @@ struct RENDER_COMMAND(BuildMeshBlas) : public RenderCommand
 
         UniquePtr<SingleTimeCommands> singleTimeCommands = g_renderBackend->GetSingleTimeCommands();
 
-        singleTimeCommands->Push([&](RenderQueue& renderQueue)
+        singleTimeCommands->Push([this, packedVerticesSize, packedIndicesSize](RenderQueue& renderQueue)
             {
                 renderQueue << CopyBuffer(verticesStagingBuffer, packedVerticesBuffer, packedVerticesSize);
                 renderQueue << CopyBuffer(indicesStagingBuffer, packedIndicesBuffer, packedIndicesSize);
             });
 
-        return singleTimeCommands->Execute();
+        HYP_GFX_CHECK(singleTimeCommands->Execute());
 
         /*FrameBase* frame = g_renderBackend->GetCurrentFrame();
         RenderQueue& renderQueue = frame->renderQueue;

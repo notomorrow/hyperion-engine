@@ -9,6 +9,8 @@
 
 #include <rendering/RenderQueue.hpp>
 
+#include <core/utilities/DeferredScope.hpp>
+
 #include <core/math/MathUtil.hpp>
 
 namespace hyperion {
@@ -220,6 +222,16 @@ VkDescriptorType ToVkDescriptorType(DescriptorSetElementType type)
 
 RendererResult VulkanSingleTimeCommands::Execute()
 {
+    VulkanFrameRef tempFrame;
+    VulkanCommandBufferRef commandBuffer;
+    VulkanFenceRef fence;
+
+    HYP_DEFER({
+        SafeRelease(std::move(fence));
+        SafeRelease(std::move(commandBuffer));
+        SafeRelease(std::move(tempFrame));
+    });
+
     RenderQueue renderQueue;
 
     for (auto& fn : m_functions)
@@ -229,16 +241,14 @@ RendererResult VulkanSingleTimeCommands::Execute()
 
     m_functions.Clear();
 
-    RendererResult result;
-
-    VulkanFrameRef tempFrame = VulkanFrameRef(GetRenderBackend()->MakeFrame(0));
+    tempFrame = VulkanFrameRef(GetRenderBackend()->MakeFrame(0));
     HYP_GFX_CHECK(tempFrame->Create());
 
     renderQueue.Prepare(tempFrame);
 
     tempFrame->UpdateUsedDescriptorSets();
 
-    VulkanCommandBufferRef commandBuffer = MakeRenderObject<VulkanCommandBuffer>(VK_COMMAND_BUFFER_LEVEL_PRIMARY);
+    commandBuffer = MakeRenderObject<VulkanCommandBuffer>(VK_COMMAND_BUFFER_LEVEL_PRIMARY);
     HYP_GFX_CHECK(commandBuffer->Create(GetRenderBackend()->GetDevice()->GetGraphicsQueue().commandPools[0]));
 
     HYP_GFX_CHECK(commandBuffer->Begin());
@@ -246,26 +256,21 @@ RendererResult VulkanSingleTimeCommands::Execute()
     // Execute the command list
     renderQueue.Execute(commandBuffer);
 
-    HYPERION_PASS_ERRORS(commandBuffer->End(), result);
+    HYP_GFX_CHECK(commandBuffer->End());
 
     // @TODO Refactor to use frame's fence instead, just need to make Frame able to not be presentable
-    VulkanFenceRef fence = MakeRenderObject<VulkanFence>();
-    HYPERION_PASS_ERRORS(fence->Create(), result);
-    HYPERION_PASS_ERRORS(fence->Reset(), result);
+    fence = MakeRenderObject<VulkanFence>();
+    HYP_GFX_CHECK(fence->Create());
+    HYP_GFX_CHECK(fence->Reset());
 
     // Submit to the queue
     VulkanDeviceQueue& queueGraphics = GetRenderBackend()->GetDevice()->GetGraphicsQueue();
 
-    HYPERION_PASS_ERRORS(commandBuffer->SubmitPrimary(&queueGraphics, fence, nullptr), result);
+    HYP_GFX_CHECK(commandBuffer->SubmitPrimary(&queueGraphics, fence, nullptr));
 
-    HYPERION_PASS_ERRORS(fence->WaitForGPU(), result);
-    HYPERION_PASS_ERRORS(fence->Destroy(), result);
+    HYP_GFX_CHECK(fence->WaitForGPU());
 
-    HYPERION_PASS_ERRORS(commandBuffer->Destroy(), result);
-
-    HYPERION_PASS_ERRORS(tempFrame->Destroy(), result);
-
-    return result;
+    return {};
 }
 
 #pragma endregion VulkanSingleTimeCommands

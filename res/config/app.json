@@ -2,7 +2,7 @@
   "rendering": {
     "rt": {
       "path_tracing": {
-        "enabled": false
+        "enabled": true
       },
       "reflections": {
         "enabled": false

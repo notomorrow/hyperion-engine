@@ -34,6 +34,8 @@ public:
     VulkanAccelerationGeometry(
         const GpuBufferRef& packedVerticesBuffer,
         const GpuBufferRef& packedIndicesBuffer,
+        uint32 numVertices,
+        uint32 numIndices,
         const Handle<Material>& material);
 
     virtual ~VulkanAccelerationGeometry() override;
@@ -46,6 +48,16 @@ public:
     HYP_FORCE_INLINE const GpuBufferRef& GetPackedIndicesBuffer() const
     {
         return m_packedIndicesBuffer;
+    }
+
+    HYP_FORCE_INLINE uint32 NumVertices() const
+    {
+        return m_numVertices;
+    }
+
+    HYP_FORCE_INLINE uint32 NumIndices() const
+    {
+        return m_numIndices;
     }
 
     HYP_FORCE_INLINE const Handle<Material>& GetMaterial() const
@@ -64,6 +76,9 @@ private:
 
     GpuBufferRef m_packedVerticesBuffer;
     GpuBufferRef m_packedIndicesBuffer;
+
+    uint32 m_numVertices;
+    uint32 m_numIndices;
 
     Handle<Material> m_material;
 
@@ -188,6 +203,8 @@ public:
     VulkanBLAS(
         const GpuBufferRef& packedVerticesBuffer,
         const GpuBufferRef& packedIndicesBuffer,
+        uint32 numVertices,
+        uint32 numIndices,
         const Handle<Material>& material,
         const Matrix4& transform);
     virtual ~VulkanBLAS() override;

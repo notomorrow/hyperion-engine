@@ -909,7 +909,7 @@ public:
             bool isDirty = false;
             set->UpdateDirtyState(&isDirty);
 
-            if (!isDirty & !force)
+            if (!isDirty && !force)
             {
                 continue;
             }

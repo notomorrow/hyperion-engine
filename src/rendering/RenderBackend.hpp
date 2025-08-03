@@ -116,6 +116,8 @@ public:
     virtual BLASRef MakeBLAS(
         const GpuBufferRef& packedVerticesBuffer,
         const GpuBufferRef& packedIndicesBuffer,
+        uint32 numVertices,
+        uint32 numIndices,
         const Handle<Material>& material,
         const Matrix4& transform) = 0;
     virtual TLASRef MakeTLAS() = 0;
