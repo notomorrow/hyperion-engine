@@ -89,9 +89,9 @@ void EnvProbeRenderer::RenderFrame(FrameBase* frame, const RenderSetup& renderSe
     RenderProbe(frame, rs, envProbe);
 }
 
-PassData* EnvProbeRenderer::CreateViewPassData(View* view, PassDataExt& ext)
+Handle<PassData> EnvProbeRenderer::CreateViewPassData(View* view, PassDataExt& ext)
 {
-    EnvProbePassData* pd = new EnvProbePassData;
+    Handle<EnvProbePassData> pd = CreateObject<EnvProbePassData>();
     pd->view = view->WeakHandleFromThis();
     pd->viewport = view->GetViewport();
 
@@ -152,7 +152,7 @@ void ReflectionProbeRenderer::RenderProbe(FrameBase* frame, const RenderSetup& r
     View* view = renderSetup.view;
     AssertDebug(view != nullptr);
 
-    EnvProbePassData* pd = static_cast<EnvProbePassData*>(renderSetup.passData);
+    EnvProbePassData* pd = ObjCast<EnvProbePassData>(renderSetup.passData);
     AssertDebug(pd != nullptr);
 
     RenderProxyList& rpl = RenderApi_GetConsumerProxyList(view);

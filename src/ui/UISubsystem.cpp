@@ -170,7 +170,7 @@ void UISubsystem::Init()
     };
 
     ViewDesc viewDesc {
-        .flags = ViewFlags::DEFAULT & ~(ViewFlags::ALL_WORLD_SCENES | ViewFlags::ENABLE_RAYTRACING),
+        .flags = ViewFlags::DEFAULT & ~ViewFlags::ALL_WORLD_SCENES,
         .viewport = Viewport { .extent = surfaceSize, .position = Vec2i::Zero() },
         .outputTargetDesc = outputTargetDesc,
         .scenes = { m_uiStage->GetScene()->HandleFromThis() },

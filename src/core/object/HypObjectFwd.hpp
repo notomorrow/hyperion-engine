@@ -243,12 +243,12 @@ static inline Other* ObjCast(T* objectPtr)
 {
     static_assert(std::is_class_v<Other>, "Other must be a class type to use with ObjCast");
 
-    if (!objectPtr)
+    if constexpr (std::is_same_v<T, Other> || std::is_base_of_v<Other, T>)
     {
-        return nullptr;
+        return static_cast<Other*>(objectPtr);
     }
 
-    if (objectPtr->IsA(Other::Class()))
+    if (objectPtr && objectPtr->IsA(Other::Class()))
     {
         return static_cast<Other*>(objectPtr);
     }
@@ -261,12 +261,12 @@ static inline const Other* ObjCast(const T* objectPtr)
 {
     static_assert(std::is_class_v<Other>, "Other must be a class type to use with ObjCast");
 
-    if (!objectPtr)
+    if constexpr (std::is_same_v<T, Other> || std::is_base_of_v<Other, T>)
     {
-        return nullptr;
+        return static_cast<const Other*>(objectPtr);
     }
 
-    if (objectPtr->IsA(Other::Class()))
+    if (objectPtr && objectPtr->IsA(Other::Class()))
     {
         return static_cast<const Other*>(const_cast<T*>(objectPtr));
     }

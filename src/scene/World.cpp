@@ -25,6 +25,8 @@
 
 #include <core/profiling/ProfileScope.hpp>
 
+#include <system/AppContext.hpp>
+
 #include <rendering/RenderEnvironment.hpp>
 #include <rendering/RenderGlobalState.hpp>
 #include <rendering/RenderProxy.hpp>
@@ -41,8 +43,12 @@ World::World()
     : HypObject(),
       m_worldGrid(CreateObject<WorldGrid>(this)),
       m_detachedScenes(this),
+      m_raytracingView(nullptr),
       m_viewCollectionBatch(nullptr)
 {
+    // set m_viewsPerFrame to initial size. It uses fixed allocator so it won't dynamically allocate any memory anyway
+    m_viewsPerFrame.Resize(m_viewsPerFrame.Capacity());
+    AssertDebug(m_viewsPerFrame.Size() == (g_tripleBuffer ? 3 : 2));
 }
 
 World::~World()
@@ -78,6 +84,8 @@ World::~World()
 
             scene->SetWorld(nullptr);
         }
+
+        m_raytracingView = nullptr;
 
         m_scenes.Clear();
         m_views.Clear();
@@ -132,6 +140,34 @@ void World::Init()
 
     InitObject(m_worldGrid);
 
+    // Create a View that is intended to collect objects used by RT gi/reflections
+    // since we'll need to have resources bound even if they aren't directly in any camera's view frustum.
+    // (for example there could be some stuff behind the player we want to see reflections of)
+    if (g_engine->GetAppContext()->GetConfiguration().Get("rendering.raytracing.enabled").ToBool(false))
+    {
+        // dummy output target
+        ViewOutputTargetDesc outputTargetDesc {
+            .extent = Vec2u::One(),
+            .attachments = { { TF_R8 } }
+        };
+
+        const ViewDesc raytracingViewDesc {
+                .flags = ViewFlags::RAYTRACING | ViewFlags::NO_DRAW_CALLS
+                | ViewFlags::ALL_WORLD_SCENES | ViewFlags::COLLECT_ALL_ENTITIES
+                | ViewFlags::NO_FRUSTUM_CULLING,
+            .viewport = Viewport { .extent = Vec2u::One(), .position = Vec2i::Zero() },
+            .outputTargetDesc = outputTargetDesc,
+            .camera = CreateObject<Camera>()
+        };
+
+        Handle<View> raytracingView = CreateObject<View>(raytracingViewDesc);
+        InitObject(raytracingView);
+
+        m_raytracingView = raytracingView;
+
+        m_views.PushBack(std::move(raytracingView));
+    }
+
     for (const Handle<Scene>& scene : m_scenes)
     {
         scene->SetWorld(this);
@@ -157,6 +193,28 @@ void World::Init()
                 view->AddScene(scene);
             }
         }
+    }
+
+    for (const Handle<View>& view : m_views)
+    {
+        if (view->m_raytracingView.GetUnsafe() != m_raytracingView)
+        {
+            if (view->m_raytracingView.IsValid())
+            {
+                HYP_LOG(Scene, Warning,
+                    "View {} already has a raytracing View set! Was it added to multiple Worlds with raytracing enabled?",
+                    view->Id());
+
+                view->m_raytracingView.Reset();
+            }
+
+            if (m_raytracingView != nullptr)
+            {
+                view->m_raytracingView = m_raytracingView->WeakHandleFromThis();
+            }
+        }
+
+        InitObject(view);
     }
 
     m_physicsWorld.Init();
@@ -204,10 +262,13 @@ void World::Update(float delta)
 
     AssertReady();
 
+    const uint32 currentFrameIndex = RenderApi_GetFrameIndex();
+
+    // set buffered Views for current frame index
+    m_viewsPerFrame[currentFrameIndex] = m_views;
+
     Array<View*> processViews;
     processViews.Resize(m_processViews.Size() + m_views.Size());
-
-    m_processViews.Reserve(m_processViews.Size() + m_views.Size());
 
     for (SizeType i = 0; i < m_views.Size(); i++)
     {
@@ -659,6 +720,23 @@ void World::AddView(const Handle<View>& view)
 
     if (IsReady())
     {
+        if (view->m_raytracingView.GetUnsafe() != m_raytracingView)
+        {
+            if (view->m_raytracingView.IsValid())
+            {
+                HYP_LOG(Scene, Warning,
+                    "View {} already has a raytracing View set! Was it added to multiple Worlds with raytracing enabled?",
+                    view->Id());
+
+                view->m_raytracingView.Reset();
+            }
+
+            if (m_raytracingView != nullptr)
+            {
+                view->m_raytracingView = m_raytracingView->WeakHandleFromThis();
+            }
+        }
+
         // Add all scenes to the view, if the view should collect all world scenes
         if (view->GetFlags() & ViewFlags::ALL_WORLD_SCENES)
         {
@@ -694,6 +772,8 @@ void World::RemoveView(const Handle<View>& view)
 
     if (IsReady())
     {
+        view->m_raytracingView.Reset();
+
         // Remove all scenes from the view, if the view should collect all world scenes
         if (view->GetFlags() & ViewFlags::ALL_WORLD_SCENES)
         {
@@ -713,6 +793,14 @@ void World::RemoveView(const Handle<View>& view)
     {
         m_views.Erase(it);
     }
+}
+
+Span<const Handle<View>> World::GetViews() const
+{
+    HYP_SCOPE;
+    Threads::AssertOnThread(g_renderThread | g_gameThread);
+
+    return m_viewsPerFrame[RenderApi_GetFrameIndex()].ToSpan();
 }
 
 RenderStats* World::GetRenderStats() const

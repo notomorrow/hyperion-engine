@@ -284,7 +284,7 @@ void DDGI::UpdatePipelineState(FrameBase* frame, const RenderSetup& renderSetup)
 {
     HYP_SCOPE;
 
-    DeferredPassData* pd = static_cast<DeferredPassData*>(renderSetup.passData);
+    RaytracingPassData* pd = ObjCast<RaytracingPassData>(renderSetup.passData);
     Assert(pd != nullptr);
 
     const auto setDescriptorElements = [this, pd](DescriptorSetBase* descriptorSet, const TLASRef& tlas)
@@ -302,7 +302,7 @@ void DDGI::UpdatePipelineState(FrameBase* frame, const RenderSetup& renderSetup)
         DescriptorSetBase* descriptorSet = m_pipeline->GetDescriptorTable()->GetDescriptorSet(NAME("DDGIDescriptorSet"), frame->GetFrameIndex());
         Assert(descriptorSet != nullptr);
 
-        setDescriptorElements(descriptorSet, pd->topLevelAccelerationStructures[frame->GetFrameIndex()]);
+        setDescriptorElements(descriptorSet, pd->raytracingTlases[frame->GetFrameIndex()]);
 
         descriptorSet->UpdateDirtyState();
         descriptorSet->Update(true); //! temp
@@ -323,7 +323,7 @@ void DDGI::UpdatePipelineState(FrameBase* frame, const RenderSetup& renderSetup)
         DescriptorSetBase* descriptorSet = descriptorTable->GetDescriptorSet(NAME("DDGIDescriptorSet"), frameIndex);
         Assert(descriptorSet != nullptr);
 
-        setDescriptorElements(descriptorSet, pd->topLevelAccelerationStructures[frameIndex]);
+        setDescriptorElements(descriptorSet, pd->raytracingTlases[frameIndex]);
     }
 
     HYP_GFX_ASSERT(descriptorTable->Create());

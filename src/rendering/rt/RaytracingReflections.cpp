@@ -82,7 +82,7 @@ void RaytracingReflections::UpdatePipelineState(FrameBase* frame, const RenderSe
 {
     HYP_SCOPE;
 
-    DeferredPassData* pd = static_cast<DeferredPassData*>(renderSetup.passData);
+    RaytracingPassData* pd = ObjCast<RaytracingPassData>(renderSetup.passData);
     Assert(pd != nullptr);
 
     const auto setDescriptorElements = [this, pd](DescriptorSetBase* descriptorSet, const TLASRef& tlas, uint32 frameIndex)
@@ -101,7 +101,7 @@ void RaytracingReflections::UpdatePipelineState(FrameBase* frame, const RenderSe
         DescriptorSetBase* descriptorSet = m_raytracingPipeline->GetDescriptorTable()->GetDescriptorSet(NAME("RTRadianceDescriptorSet"), frame->GetFrameIndex());
         Assert(descriptorSet != nullptr);
 
-        setDescriptorElements(descriptorSet, pd->topLevelAccelerationStructures[frame->GetFrameIndex()], frame->GetFrameIndex());
+        setDescriptorElements(descriptorSet, pd->raytracingTlases[frame->GetFrameIndex()], frame->GetFrameIndex());
 
         descriptorSet->UpdateDirtyState();
         descriptorSet->Update(true); //! temp
@@ -123,7 +123,7 @@ void RaytracingReflections::UpdatePipelineState(FrameBase* frame, const RenderSe
         DescriptorSetBase* descriptorSet = descriptorTable->GetDescriptorSet(NAME("RTRadianceDescriptorSet"), frameIndex);
         Assert(descriptorSet != nullptr);
 
-        setDescriptorElements(descriptorSet, pd->topLevelAccelerationStructures[frameIndex], frameIndex);
+        setDescriptorElements(descriptorSet, pd->raytracingTlases[frameIndex], frameIndex);
     }
 
     HYP_GFX_ASSERT(descriptorTable->Create());

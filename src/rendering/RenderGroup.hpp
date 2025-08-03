@@ -30,7 +30,7 @@ class RenderCollector;
 class GpuBufferHolderBase;
 class IndirectRenderer;
 struct RenderSetup;
-struct PassData;
+class PassData;
 
 enum class RenderGroupFlags : uint32
 {

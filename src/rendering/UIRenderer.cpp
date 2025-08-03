@@ -11,7 +11,6 @@
 #include <rendering/PlaceholderData.hpp>
 #include <rendering/RenderGlobalState.hpp>
 #include <rendering/Mesh.hpp>
-#include <rendering/Renderer.hpp>
 
 #include <rendering/font/FontAtlas.hpp>
 
@@ -39,14 +38,6 @@
 namespace hyperion {
 
 HYP_DECLARE_LOG_CHANNEL(UI);
-
-#pragma region UIPassData
-
-struct UIPassData : PassData
-{
-};
-
-#pragma endregion UIPassData
 
 #pragma region UIRenderCollector
 
@@ -273,7 +264,7 @@ void UIRenderer::Shutdown()
 
 void UIRenderer::RenderFrame(FrameBase* frame, const RenderSetup& renderSetup)
 {
-    UIPassData* pd = static_cast<UIPassData*>(FetchViewPassData(m_view));
+    const Handle<UIPassData>& pd = ObjCast<UIPassData>(FetchViewPassData(m_view));
     AssertDebug(pd != nullptr);
 
     RenderSetup rs = renderSetup;
@@ -308,9 +299,9 @@ void UIRenderer::RenderFrame(FrameBase* frame, const RenderSetup& renderSetup)
     renderCollector.ExecuteDrawCalls(frame, rs, outputTarget.GetFramebuffer(), 0);
 }
 
-PassData* UIRenderer::CreateViewPassData(View* view, PassDataExt&)
+Handle<PassData> UIRenderer::CreateViewPassData(View* view, PassDataExt&)
 {
-    UIPassData* pd = new UIPassData;
+    Handle<UIPassData> pd = CreateObject<UIPassData>();
 
     pd->view = view->WeakHandleFromThis();
     pd->viewport = view->GetViewport();

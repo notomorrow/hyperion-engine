@@ -98,9 +98,7 @@ struct DrawCallID
     }
 };
 
-/*! \brief Base struct for all draw calls.
- *  \details This struct contains the common data for all draw calls, such as the Id, render mesh, material, and skeleton.
- *  It is used as a base class for both `DrawCall` and `InstancedDrawCall`. */
+/*! \brief Base struct for all draw calls */
 struct DrawCallBase
 {
     DrawCallID id;
@@ -112,17 +110,13 @@ struct DrawCallBase
     uint32 drawCommandIndex = 0;
 };
 
-/*! \brief Represents a draw call for a single entity.
- *  \details This is used for non-instanced draw calls, where each entity has its own draw call.
- *  The `entityId` is the Id of the entity that this draw call represents. */
+/*! \brief Non-instanced draw call for a single entity  */
 struct DrawCall : DrawCallBase
 {
     ObjId<Entity> entityId;
 };
 
-/*! \brief Represents a draw call for multiple entities sharing the same mesh and material.
- *  \details This is used for instanced draw calls, where multiple entities share the same mesh and material.
- *  The `batch` is the entity instance batch that contains the instances of the entities. */
+/*! \brief A draw call for multiple entities sharing the same mesh and material */
 struct InstancedDrawCall : DrawCallBase
 {
     EntityInstanceBatch* batch = nullptr;

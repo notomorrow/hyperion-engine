@@ -179,6 +179,5 @@ void main()
         ray_data[bounce_index].color = radiance;
     }
 
-    ray_data[0].color = vec4(1.0, 0.0, 0.0, 1.0);
     SetProbeRayData(coord, ray_data[0]);
 }

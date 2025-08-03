@@ -17,8 +17,12 @@ namespace hyperion {
 
 class EnvGrid;
 
-struct EnvGridPassData : PassData
+HYP_CLASS(NosScriptBindings)
+class HYP_API EnvGridPassData : public PassData
 {
+    HYP_OBJECT_BODY(EnvGridPassData);
+
+public:
     virtual ~EnvGridPassData() override;
 
     ShaderRef shader;
@@ -89,7 +93,7 @@ protected:
     void OffsetVoxelGrid(FrameBase* frame, const RenderSetup& renderSetup, Vec3i offset);
     void VoxelizeProbe(FrameBase* frame, const RenderSetup& renderSetup, uint32 probeIndex);
 
-    PassData* CreateViewPassData(View* view, PassDataExt& ext) override;
+    Handle<PassData> CreateViewPassData(View* view, PassDataExt& ext) override;
     void CreateVoxelGridData(EnvGrid* envGrid, EnvGridPassData& pd);
     void CreateSphericalHarmonicsData(EnvGrid* envGrid, EnvGridPassData& pd);
     void CreateLightFieldData(EnvGrid* envGrid, EnvGridPassData& pd);

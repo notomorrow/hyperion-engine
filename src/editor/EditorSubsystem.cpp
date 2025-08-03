@@ -1277,13 +1277,14 @@ void EditorSubsystem::InitViewport()
     HYP_LOG(Editor, Debug, "scene image object size : {}", sceneImageObject->GetActualSize());
 
     Vec2u viewportSize = MathUtil::Max(Vec2u(sceneImageObject->GetActualSize()), Vec2u::One());
-
-    Handle<View> view = CreateObject<View>(ViewDesc {
-        .flags = ViewFlags::DEFAULT | ViewFlags::GBUFFER | ViewFlags::ENABLE_RAYTRACING,
+    ViewDesc viewDesc {
+        .flags = ViewFlags::DEFAULT | ViewFlags::GBUFFER,
         .viewport = Viewport { .extent = viewportSize, .position = Vec2i::Zero() },
         .outputTargetDesc = { .extent = viewportSize },
-        .camera = m_camera });
+        .camera = m_camera
+    };
 
+    Handle<View> view = CreateObject<View>(viewDesc);
     InitObject(view);
 
     HYP_LOG(Editor, Info, "Creating editor viewport with size: {}", viewportSize);

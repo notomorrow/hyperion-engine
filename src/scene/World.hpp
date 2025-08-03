@@ -178,9 +178,13 @@ public:
     HYP_METHOD()
     void RemoveView(const Handle<View>& view);
 
-    HYP_FORCE_INLINE const Array<Handle<View>>& GetViews() const
+    /*! \brief Get Views attached to this World. Buffered so it is safe to access from either the render thread or game thread. */
+    Span<const Handle<View>> GetViews() const;
+
+    //! May be null if raytracing is not enabled
+    HYP_FORCE_INLINE View* GetRaytracingView() const
     {
-        return m_views;
+        return m_raytracingView;
     }
 
     /*! \brief Adds a View for processing asynchronously for this frame. */
@@ -206,6 +210,11 @@ private:
 
     Array<Handle<Scene>> m_scenes;
     Array<Handle<View>> m_views;
+
+    // Views, buffered so the render thread can safely read from it
+    Array<Array<Handle<View>>, FixedAllocator<g_tripleBuffer ? 3 : 2>> m_viewsPerFrame;
+
+    View* m_raytracingView;
 
     TypeMap<Handle<Subsystem>> m_subsystems;
 

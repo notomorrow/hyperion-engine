@@ -18,8 +18,14 @@ namespace hyperion {
 class EnvProbe;
 class Texture;
 
-struct EnvProbePassData : PassData
+HYP_CLASS(NoScriptBindings)
+class HYP_API EnvProbePassData : public PassData
 {
+    HYP_OBJECT_BODY(EnvProbePassData);
+
+public:
+    virtual ~EnvProbePassData() override = default;
+
     // for sky
     Vec4f cachedLightDirIntensity;
 };
@@ -59,7 +65,7 @@ protected:
 
     virtual void RenderProbe(FrameBase* frame, const RenderSetup& renderSetup, EnvProbe* envProbe) = 0;
 
-    PassData* CreateViewPassData(View* view, PassDataExt& ext) override;
+    Handle<PassData> CreateViewPassData(View* view, PassDataExt& ext) override;
 };
 
 class ReflectionProbeRenderer : public EnvProbeRenderer

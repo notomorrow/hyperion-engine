@@ -1109,7 +1109,7 @@ void RenderApi_BeginFrame_RenderThread()
 
         ViewData& vd = *vfd.viewData;
 
-        if (vfd.rplShared->disableBuildRenderCollection || (vfd.view->GetFlags() & ViewFlags::NO_GFX))
+        if (vfd.rplShared->disableBuildRenderCollection || (vfd.view->GetFlags() & ViewFlags::NO_DRAW_CALLS))
         {
             continue;
         }
