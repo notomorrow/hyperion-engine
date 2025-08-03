@@ -252,20 +252,13 @@ struct MaterialShaderData
 
     Vec2f uvScale;
     float parallaxHeight;
-    float _pad0;
-
-    uint32 textureIndex[16];
 
     uint32 textureUsage;
-    uint32 _pad1;
-    uint32 _pad2;
-    uint32 _pad3;
 
-    Vec4f _pad4[4];
-    Vec4f _pad5[4];
+    Vec4u textureIndices[4];
 };
 
-static_assert(sizeof(MaterialShaderData) == 256);
+static_assert(sizeof(MaterialShaderData) == 112);
 
 class RenderProxyMaterial final : public IRenderProxy
 {

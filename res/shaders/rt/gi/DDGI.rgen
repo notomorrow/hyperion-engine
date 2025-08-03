@@ -63,8 +63,8 @@ layout(location = 0) rayPayloadEXT RayPayload payload;
 #define HYP_GET_LIGHT(index) \
     lights[probe_system.light_indices[(index / 4)][index % 4]]
 
-#define RAY_OFFSET 0.1
-#define NUM_BOUNCES 3
+#define RAY_OFFSET 0.0025
+#define NUM_BOUNCES 4
 
 layout(push_constant) uniform constants
 {
@@ -95,9 +95,10 @@ void main()
     
     uint flags = gl_RayFlagsOpaqueEXT;
     uint mask = 0xff;
-    float tmin = 0.2;
-    float tmax = 10000.0;
+    float tmin = RAY_OFFSET;
+    float tmax = 1000.0;
     
+    payload.throughput = vec4(1.0);
     payload.color = vec4(0.0);
     payload.distance = -1.0;
     
@@ -116,7 +117,7 @@ void main()
         vec3 normal = payload.normal;
         traceRayEXT(tlas, flags, mask, 0, 0, 0, origin, tmin, direction, tmax, 0);
 
-        bounces[bounce_index].throughput = payload.throughput;
+        bounces[bounce_index].throughput = vec4(payload.throughput.rgb * payload.throughput.a, 1.0);
         bounces[bounce_index].emissive = payload.emissive;
 
         ray_data[bounce_index].color = vec4(0.0);
@@ -168,7 +169,7 @@ void main()
         }
 
         // As the throughput is multiplied by the albedo, the probability of the ray getting discarded is higher
-        float p = max(radiance.r, max(radiance.g, max(radiance.b, radiance.a)));
+        float p = max(radiance.r, max(radiance.g, radiance.b));
 
         if (RandomFloat(ray_seed) > p) {
             break;

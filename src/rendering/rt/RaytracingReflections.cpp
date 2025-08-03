@@ -203,6 +203,8 @@ void RaytracingReflections::Render(FrameBase* frame, const RenderSetup& renderSe
                     { NAME("CurrentEnvProbe"), ShaderDataOffset<EnvProbeShaderData>(renderSetup.envProbe, 0) } } } },
         frame->GetFrameIndex());
 
+    /// FIXME: passData is a RaytracingPassData which will not have descriptor sets per-view,
+    /// so this will trigger an assertion failure!
     frame->renderQueue << BindDescriptorSet(
         renderSetup.passData->descriptorSets[frame->GetFrameIndex()],
         m_raytracingPipeline,

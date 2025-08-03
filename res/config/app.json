@@ -42,7 +42,7 @@
         "enabled": false
       },
       "globalIllumination": {
-        "enabled": true
+        "enabled": false
       },
       "pathTracing": {
         "enabled": false

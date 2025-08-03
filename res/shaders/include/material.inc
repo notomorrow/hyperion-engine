@@ -12,17 +12,9 @@ struct Material
 
     vec2 uv_scale;
     float parallax_height;
-    float _pad0;
+    uint textureUsage;
 
     uvec4 texture_indices[4]; // moltenvk is compiling uint32_t texture_index[16] -> uint4 texture_index[16]
-
-    uint texture_usage;
-    uint _pad1;
-    uint _pad2;
-    uint _pad3;
-
-    mat4 _pad4;
-    mat4 _pad5;
 };
 
 // enum for packed params
@@ -49,7 +41,7 @@ struct Material
 #define MATERIAL_ALPHA_DISCARD 0.25
 
 #define HAS_TEXTURE(mat, index) \
-    bool(((mat).texture_usage & (1 << index)))
+    bool(((mat).textureUsage & (1 << index)))
 
 #define GET_TEXTURE(mat, index) \
     textures[(mat).texture_indices[(index) / 4][(index) % 4]]
