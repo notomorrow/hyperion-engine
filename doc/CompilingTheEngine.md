@@ -34,7 +34,7 @@ lib` exists in the `lib/Win32/{Debug|Release}` directory, Hyperion will link to 
 * [libdatachannel](https://libdatachannel.org/) (included as a Git submodule) - For WebRTC support (only needed if you want to use experimental WebRTC streaming).
 * [GStreamer](https://gstreamer.freedesktop.org/) - For cloud streaming (only needed if you want to use experimental WebRTC streaming).
 
-## Build Tool
+## Run the Build Tool
 
 In the project's base directory, you'll find a folder named `buildtool` containing source code and CMake files separated from the rest of the engine. This application reads through the engine's header files and parses them to generate code that is used by Hyperion's reflection, serialization, and scripting systems.
 
@@ -60,6 +60,23 @@ While the engine itself compiles as a dynamic library, the main driver for the e
 After CMake has been configured and the build tool has been run, you should be able to build the engine itself. Depending on your current platform, CMake will have generated into the build folder:
 
 * Visual Studio Solution files (.sln) (Windows only) - Visual Studio now supports CMake projects directly, so you're able to just open the root directory of the cloned repository. You can also use these generated solution files.
-* Makefiles (Linux/macOS, etc.) - To make compiling easier, we've also added a `build` script in the root directory of the project that compiles the code for you, and optionally allows you to reconfigure CMake. To generate XCode projects for macOS, you can run this script with `--xcode` passed in as a command line argument.
+* Makefiles (Linux/macOS, etc.)
 
-> Note: If you're planning on using Visual Studio, be sure to compile the engine with the configuration set to either `Release` or `RelWithDebugInfo`. MSVC's `Debug` configuration adds too much overhead for the engine to run smoothly.
+## Build Scripts
+
+To make compiling easier, we've also added a `build` script in the root directory of the project that compiles the code for you as well as runs the build tool. There are also more useful build scripts in the `tools/scripts` directory for more fine-grained control over the build process.
+
+## Visual Studio specifics
+
+Note: If you're planning on using Visual Studio, be sure to compile the engine with the configuration set to either `Release` or `RelWithDebInfo`. MSVC's `Debug` configuration adds too much overhead for the engine to run smoothly.
+
+## macOS specifics
+
+On macOS, you will need to install the following dependencies via Homebrew using the `InstallDependenciesMac.sh` script located in the `tools/scripts` directory:
+```bash
+./tools/scripts/InstallDependenciesMac.sh
+```
+To generate XCode projects for macOS, you can run the `build.sh` script in the root directory with `--xcode` passed in as a command line argument.
+
+### Important note about Metal API validation
+**If you debug with XCode you will need to disable Metal API validation in the scheme settings.** This is because Hyperion uses Vulkan, which is translated to Metal on macOS, and Metal API validation can cause issues with Vulkan calls. To do this, open the scheme settings in XCode, go to the "Options" tab, and uncheck "Enable Metal API Validation".

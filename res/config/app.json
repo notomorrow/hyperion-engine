@@ -1,16 +1,16 @@
 {
   "rendering": {
     "rt": {
-      "path_tracing": {
-        "enabled": true
-      },
       "reflections": {
+        "enabled": false
+      },
+      "path_tracing": {
         "enabled": false
       },
       "gi": {
         "enabled": false
       },
-      "enabled": true
+      "enabled": false
     },
     "ssr": {
       "num_iterations": 64,
@@ -41,10 +41,10 @@
       "enabled": false
     },
     "env_grid": {
-      "gi": {
+      "reflections": {
         "enabled": false
       },
-      "reflections": {
+      "gi": {
         "enabled": false
       }
     },
@@ -63,8 +63,8 @@
     }
   },
   "app": {
-    "args": "-ResX=1920 -ResY=1080 -Profile=false -TraceURL=http://localhost:8000/trace",
-    "name": "HyperionEditor"
+    "name": "HyperionEditor",
+    "args": "-ResX=1920 -ResY=1080 -Profile=false -TraceURL=http://localhost:8000/trace"
   },
   "lightmapper": {
     "num_threads_per_job": 8,
