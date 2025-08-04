@@ -86,7 +86,7 @@ vec2 texcoord = v_texcoord0;
 
 HYP_DESCRIPTOR_CBUFF(Global, DDGIUniforms, size = 256) uniform DDGIUniformBuffer
 {
-    DDGIUniforms probe_system;
+    DDGIUniforms ddgiUniforms;
 };
 
 HYP_DESCRIPTOR_SRV(Global, DDGIIrradianceTexture) uniform texture2D probe_irradiance;
@@ -100,7 +100,7 @@ layout(push_constant) uniform PushConstant
     DeferredParams deferred_params;
 };
 
-#define DDGI_MULTIPLIER 1.5
+#define DDGI_MULTIPLIER 1.0
 
 void main()
 {

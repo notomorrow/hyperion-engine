@@ -283,7 +283,7 @@ void main()
                 }
 
                 // As the throughput is multiplied by the albedo, the probability of the ray getting discarded is higher
-                float p = max(r.r, max(r.g, max(r.b, r.a)));
+                float p = max(r.r, max(r.g, r.b));
 
                 if (RandomFloat(ray_seed) > p) {
                     break;

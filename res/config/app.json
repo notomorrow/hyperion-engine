@@ -23,7 +23,7 @@
       "enabled": false
     },
     "debug": {
-      "reflections": false,
+      "reflections": true,
       "hbil": false,
       "debugDrawer": {
         "enabled": true
@@ -39,7 +39,7 @@
     },
     "raytracing": {
       "reflections": {
-        "enabled": false
+        "enabled": true
       },
       "globalIllumination": {
         "enabled": true
