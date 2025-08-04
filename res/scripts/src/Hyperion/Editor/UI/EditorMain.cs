@@ -173,7 +173,8 @@ namespace Hyperion
                     sb.AppendFormat(", Tris: {0}", renderStats.counts[RenderStatsCountType.Triangles]);
                     sb.AppendFormat(", RenderGroups: {0}", renderStats.counts[RenderStatsCountType.RenderGroups]);
                     sb.AppendFormat(", Views: {0}", renderStats.counts[RenderStatsCountType.Views]);
-                    sb.AppendFormat(", Scenes: {0}", renderStats.counts[RenderStatsCountType.Scenes]);
+                    sb.AppendFormat(", Textures: {0}", renderStats.counts[RenderStatsCountType.Textures]);
+                    sb.AppendFormat(", Materials: {0}", renderStats.counts[RenderStatsCountType.Materials]);
 
                     if (renderStats.counts[RenderStatsCountType.Lights] > 0)
                         sb.AppendFormat(", Lights: {0}", renderStats.counts[RenderStatsCountType.Lights]);
@@ -869,7 +870,7 @@ namespace Hyperion
                 envProbeNode.SetName(activeScene.GetUniqueNodeName("ReflectionProbe"));
                 envProbeNode.SetWorldTranslation(new Vec3f(0.0f, 5.0f, 0.0f));
 
-                envProbeEntity.Attach(envProbeNode);
+                envProbeEntity.AttachTo(envProbeNode);
 
                 currentProject.GetActionStack().Push(new EditorAction(
                     new Name("AddReflectionProbe"),
