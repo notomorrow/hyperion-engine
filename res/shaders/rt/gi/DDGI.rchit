@@ -76,7 +76,7 @@ HYP_DESCRIPTOR_SSBO(DDGIDescriptorSet, MeshDescriptionsBuffer) buffer MeshDescri
     MeshDescription mesh_descriptions[];
 };
 
-HYP_DESCRIPTOR_SSBO(Object, MaterialsBuffer) readonly buffer MaterialBuffer
+HYP_DESCRIPTOR_SSBO(DDGIDescriptorSet, MaterialsBuffer) readonly buffer MaterialBuffer
 {
     Material materials[];
 };

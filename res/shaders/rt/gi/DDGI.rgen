@@ -58,6 +58,11 @@ HYP_DESCRIPTOR_SSBO(Global, EnvProbesBuffer) readonly buffer EnvProbesBuffer { E
 HYP_DESCRIPTOR_CBUFF_DYNAMIC(Global, EnvGridsBuffer) uniform EnvGridsBuffer { EnvGrid env_grid; };
 HYP_DESCRIPTOR_SSBO_DYNAMIC(Global, CurrentEnvProbe) readonly buffer CurrentEnvProbe { EnvProbe current_env_probe; };
 
+HYP_DESCRIPTOR_SRV(Global, ShadowMapsTextureArray) uniform texture2DArray shadow_maps;
+HYP_DESCRIPTOR_SRV(Global, PointLightShadowMapsTextureArray) uniform utextureCubeArray point_shadow_maps;
+
+#include "../../include/shadows.inc"
+
 layout(location = 0) rayPayloadEXT RayPayload payload;
 
 #define HYP_GET_LIGHT(index) \
@@ -140,8 +145,15 @@ void main()
                     continue;
                 }
 
+                float shadow = 1.0;
+
+                if (light.type == HYP_LIGHT_TYPE_DIRECTIONAL && bool(light.flags & LF_SHADOW))
+                {
+                    shadow = GetShadowStandard(light, origin);
+                }
+
                 const float cos_theta = max(dot(direction, normalize(light.position_intensity.xyz)), 0.0);
-                bounces[bounce_index].emissive += UINT_TO_VEC4(light.color_encoded) * light.position_intensity.w * cos_theta;
+                bounces[bounce_index].emissive += UINT_TO_VEC4(light.color_encoded) * light.position_intensity.w * shadow * cos_theta;
             }
 
             ++num_bounces;

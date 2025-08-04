@@ -74,7 +74,7 @@ HYP_DESCRIPTOR_SSBO(RTRadianceDescriptorSet, MeshDescriptionsBuffer) buffer Mesh
     MeshDescription mesh_descriptions[];
 };
 
-HYP_DESCRIPTOR_SSBO(Object, MaterialsBuffer) readonly buffer MaterialBuffer
+HYP_DESCRIPTOR_SSBO(RTRadianceDescriptorSet, MaterialsBuffer) readonly buffer MaterialBuffer
 {
     Material materials[];
 };
@@ -251,43 +251,43 @@ void main()
     vec4 F0 = vec4(material_color.rgb * metalness + (reflectance * (1.0 - metalness)), 1.0);
     vec4 F90 = vec4(clamp(dot(F0, vec4(50.0 * 0.33)), 0.0, 1.0));
 
-    float closest_light_dist = HYP_FMATH_INFINITY;
-    uint closest_light_index = ~0u;
+    // float closest_light_dist = HYP_FMATH_INFINITY;
+    // uint closest_light_index = ~0u;
 
-    for (uint light_index = 0; light_index < rt_radiance_uniforms.num_bound_lights; light_index++) {
-        const Light light = HYP_GET_LIGHT(light_index);
+    // for (uint light_index = 0; light_index < rt_radiance_uniforms.num_bound_lights; light_index++) {
+    //     const Light light = HYP_GET_LIGHT(light_index);
 
-        // skip directional lights
-        // @TODO: Implement more light types besides point lights
-        if (light.type != HYP_LIGHT_TYPE_POINT) {
-            continue;
-        }
+    //     // skip directional lights
+    //     // @TODO: Implement more light types besides point lights
+    //     if (light.type != HYP_LIGHT_TYPE_POINT) {
+    //         continue;
+    //     }
 
-        float light_dist = CheckLightIntersection(light, hit_position, gl_WorldRayDirectionEXT);
+    //     float light_dist = CheckLightIntersection(light, hit_position, gl_WorldRayDirectionEXT);
 
-        if (light_dist < closest_light_dist) {
-            closest_light_dist = light_dist;
-            closest_light_index = light_index;
-        }
-    }
+    //     if (light_dist < closest_light_dist) {
+    //         closest_light_dist = light_dist;
+    //         closest_light_index = light_index;
+    //     }
+    // }
 
     uint ray_seed = InitRandomSeed(InitRandomSeed(gl_LaunchIDEXT.x * 2, gl_LaunchIDEXT.x * 2 + 1), gl_PrimitiveID);
 
-    // russian roulette to select a light
-    if (closest_light_index != ~0u && RandomFloat(ray_seed) < 0.5) {
-        const Light light = HYP_GET_LIGHT(closest_light_index);
+    // // russian roulette to select a light
+    // if (closest_light_index != ~0u && RandomFloat(ray_seed) < 0.5) {
+    //     const Light light = HYP_GET_LIGHT(closest_light_index);
 
-        payload.distance = closest_light_dist;
-        payload.emissive = vec4(UINT_TO_VEC4(light.color_encoded) * light.position_intensity.w);
-        payload.throughput = vec4(0.0);
-        payload.normal = normal;
-        payload.roughness = 0.0;
+    //     payload.distance = closest_light_dist;
+    //     payload.emissive = vec4(UINT_TO_VEC4(light.color_encoded) * light.position_intensity.w);
+    //     payload.throughput = vec4(0.0);
+    //     payload.normal = normal;
+    //     payload.roughness = 0.0;
 
-        return;
-    }
+    //     return;
+    // }
 
     payload.emissive = vec4(0.0);
-    payload.throughput *= material_color;
+    payload.throughput = material_color;
     payload.distance = gl_HitTEXT;
     payload.normal = normal;
     payload.roughness = roughness;
