@@ -145,9 +145,9 @@ void main()
 
     vec3 colors[2] = vec3[](imageLoad(OUTPUT_IMAGE, coord).rgb, result);
 
-    float hysteresis = 0.99;
+    float hysteresis = 0.97;
 
-    float alpha = 1.0 - hysteresis;
+    float alpha = clamp(1.0 - hysteresis, 0.0, 1.0);
 
     imageStore(
         OUTPUT_IMAGE,

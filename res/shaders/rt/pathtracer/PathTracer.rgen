@@ -32,7 +32,7 @@ HYP_DESCRIPTOR_SAMPLER(Global, SamplerLinear) uniform sampler sampler_linear;
 #define HYP_SAMPLER_LINEAR sampler_linear
 
 HYP_DESCRIPTOR_ACCELERATION_STRUCTURE(RTRadianceDescriptorSet, TLAS) uniform accelerationStructureEXT tlas;
-HYP_DESCRIPTOR_UAV(RTRadianceDescriptorSet, OutputImage, format = rgba16f) uniform image2D image;
+HYP_DESCRIPTOR_UAV(RTRadianceDescriptorSet, OutputImage, format = rgba8) uniform image2D image;
 
 #define HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 
@@ -104,7 +104,7 @@ void main()
 {
     const ivec2 resolution = rt_radiance_uniforms.output_image_resolution;
     
-    const int pixel_index = int(gl_LaunchIDEXT.x);//int(gl_LaunchIDEXT.x * 2) + int(world_shader_data.frame_counter & 1);
+    const int pixel_index = int(gl_LaunchIDEXT.x * 2) + int(world_shader_data.frame_counter & 1);
     const ivec2 storage_coord = ivec2(
         pixel_index % resolution.x,
         pixel_index / resolution.x
@@ -116,10 +116,6 @@ void main()
         return;
     }
 
-    //if (pixel_index % 2 == 0) {
-    //    return;
-    //}
-
     const vec2 uv = (vec2(storage_coord) + 0.5) / vec2(resolution);
 
     const mat4 view_inverse = inverse(camera.view);
@@ -127,7 +123,10 @@ void main()
 
     const vec3 normal = normalize(DecodeNormal(Texture2DLod(sampler_nearest, gbuffer_normals_texture, uv, 0.0)));
     const float depth = Texture2DLod(sampler_nearest, gbuffer_depth_texture, uv, 0.0).r;
-    const vec3 position = ReconstructWorldSpacePositionFromDepth(projection_inverse, view_inverse, uv, depth).xyz;
+    const vec3 viewPosition = ReconstructViewSpacePositionFromDepth(projection_inverse, uv, depth).xyz;
+    
+    vec4 worldPosition = view_inverse * vec4(viewPosition, 1.0);
+    worldPosition /= worldPosition.w;
 
     uvec2 materialData = texture(usampler2D(gbuffer_material_texture, HYP_SAMPLER_NEAREST), uv).rg;
 
@@ -137,10 +136,8 @@ void main()
     const float roughness = materialParams.roughness;
     const float metalness = materialParams.metalness;
 
-    const float perceptual_roughness = sqrt(roughness);
-
-    const vec3 V = normalize(camera.position.xyz - position);
-    const vec3 R = normalize(reflect(-V, normal));
+    const vec3 V = normalize(-viewPosition);
+    const vec3 R = reflect(-V, normal);
 
     const uint flags = gl_RayFlagsOpaqueEXT;
     const uint mask = 0xff;
@@ -149,7 +146,6 @@ void main()
 
     vec4 color = vec4(0.0);
 
-    const vec4 target = projection_inverse * vec4(uv * 2.0 - 1.0, 1.0, 1.0);
     const vec4 albedo = Texture2DLod(sampler_nearest, gbuffer_albedo_texture, uv, 0.0);
 
     vec4 irradiance = vec4(0.0, 0.0, 0.0, 0.0);
@@ -169,9 +165,8 @@ void main()
 
         vec3 H = ImportanceSampleGGX(rnd, normal, roughness);
         H = tangent * H.x + bitangent * H.y + normal * H.z;
-        H = normalize(H);
 
-        vec3 origin = position + normal * RAY_OFFSET;
+        vec3 origin = worldPosition.xyz + normal * RAY_OFFSET;
 
 #if 0
         { // radiance
@@ -190,35 +185,31 @@ void main()
 
                 if (payload.distance < 0.0) {
                     const float cos_theta = max(dot(normal, normalize(light.position_intensity.xyz)), 0.0);
-                    emissive += UINT_TO_VEC4(light.color_encoded) * light.position_intensity.w * cos_theta;
+                    emissive += UINT_TO_VEC4(light.color_encoded) * light.position_intensity.w;
                 }
             }
 
             // @TODO: Proper BRDF
-            radiance += emissive * (albedo * (1.0 - metalness));
+            radiance += emissive * (1.0 - metalness) * albedo;
         }
 #endif
 
         { // irradiance
             RayBounceInfo bounces[NUM_BOUNCES];
 
-            bounces[0].throughput = (albedo * (1.0 - metalness));
+            bounces[0].throughput = albedo;
             bounces[0].emissive = vec4(0.0);
             bounces[0].radiance = vec4(0.0);
 
             uint num_bounces = 1;
             
-            vec3 direction = reflect(-V, H);
-
-            payload.throughput = vec4(1.0);
-            payload.emissive = vec4(0.0);
-            payload.normal = normal;
+            vec3 direction = H;
 
             for (int bounce_index = 1; bounce_index < NUM_BOUNCES; bounce_index++) {
+                payload.throughput = vec4(1.0);
+                payload.emissive = vec4(0.0);
+                payload.normal = vec3(0.0);
                 payload.distance = -1.0;
-
-                vec4 throughput = payload.throughput;
-                vec3 normal = payload.normal;
 
                 traceRayEXT(tlas, flags, mask, 0, 0, 0, origin, tmin, direction, tmax, 0);
 
@@ -241,9 +232,7 @@ void main()
                             continue;
                         }
 
-                        const float cos_theta = max(dot(direction, normalize(light.position_intensity.xyz)), 0.0);
-
-                        bounces[bounce_index].emissive += UINT_TO_VEC4(light.color_encoded) * light.position_intensity.w * cos_theta;
+                        bounces[bounce_index].emissive += UINT_TO_VEC4(light.color_encoded) * light.position_intensity.w;
                     }
 
                     ++num_bounces;
@@ -258,17 +247,11 @@ void main()
                 rnd = vec2(RandomFloat(ray_seed), RandomFloat(ray_seed));
 
                 H = ImportanceSampleGGX(rnd, payload.normal, payload.roughness);
-                H = tangent * H.x + bitangent * H.y + normal * H.z;
-                H = normalize(H);
+                H = tangent * H.x + bitangent * H.y + payload.normal * H.z;
 
-                direction = reflect(direction, H);
+                direction = normalize(reflect(direction, H));
 
-                // direction = normalize(RandomInHemisphere(
-                //     vec3(RandomFloat(ray_seed), RandomFloat(ray_seed), RandomFloat(ray_seed)),
-                //     payload.normal
-                // ));
-
-                origin = hit_position + direction * RAY_OFFSET;
+                origin = hit_position + payload.normal * RAY_OFFSET;
 
                 ++num_bounces;
             }
@@ -277,8 +260,9 @@ void main()
 
             for (; bounce_index >= 0; bounce_index--) {
                 vec4 r = bounces[bounce_index].emissive;
-
+                
                 if (bounce_index != num_bounces - 1) {
+
                     r += bounces[bounce_index + 1].radiance * bounces[bounce_index].throughput;
                 }
 
@@ -301,7 +285,7 @@ void main()
     }
 
     color = irradiance / float(NUM_SAMPLES);
-    //color += radiance / float(NUM_SAMPLES);
+    // color += radiance / float(NUM_SAMPLES);
 
     // color.rgb = pow(color.rgb, vec3(1.0 / 2.2));
     

@@ -51,23 +51,20 @@ ivec3 BaseGridCoord(vec3 P)
         : clamp(ivec3(max(vec3(0.0), P - PROBE_GRID_ORIGIN) / PROBE_GRID_STEP), ivec3(0), ivec3(ddgiUniforms.probe_counts.xyz) - ivec3(1));
 }
 
-uvec2 DDGIGetProbeTexelCoords(uint probeIndex)
+vec2 TextureCoordFromDirection(vec3 dir, int probe_index, uvec3 probe_counts, uvec2 image_dimensions, uint probe_side_length)
 {
-    // Find the probe's plane index
-    uint probesPerPlane = (ddgiUniforms.probe_counts.x * ddgiUniforms.probe_counts.z);
-    uint planeIndex = probeIndex / probesPerPlane;
 
-    uint gridSpaceX = (probeIndex % ddgiUniforms.probe_counts.x);
-    uint gridSpaceY = (probeIndex / ddgiUniforms.probe_counts.x);
 
-    uint x = gridSpaceX + (planeIndex * ddgiUniforms.probe_counts.x);
-    uint y = gridSpaceY % ddgiUniforms.probe_counts.z;
+    // vec2 oct_coord = EncodeOctahedralCoord(normalize(dir)) * 0.5 + 0.5;
+    // oct_coord *= vec2(float(probe_side_length), float(probe_side_length)) / vec2(image_dimensions);
 
-    return uvec2(x, y);
-}
+    // ivec2 offset_coord = ivec2(
+    //     float(probe_side_length + 2) * (float(probe_grid_position.x) * float(probe_counts.y) + float(probe_grid_position.y)) + 1,
+    //     float(probe_side_length + 2) * float(probe_grid_position.z) + 1);
+    // vec2 offset_uv = vec2(offset_coord) / vec2(image_dimensions);
 
-vec2 TextureCoordFromDirection(vec3 dir, uint probe_index, uvec2 image_dimensions, uint probe_side_length)
-{
+    // return offset_uv + oct_coord;
+
     vec2 normalizedOctCoord = EncodeOctahedralCoord(normalize(dir));
     vec2 normalizedOctCoordZeroOne = (normalizedOctCoord + vec2(1.0f)) * 0.5f;
 

@@ -71,7 +71,7 @@ HYP_DESCRIPTOR_SSBO(RTRadianceDescriptorSet, MeshDescriptionsBuffer) buffer Mesh
     MeshDescription mesh_descriptions[];
 };
 
-HYP_DESCRIPTOR_SSBO(Object, MaterialsBuffer) readonly buffer MaterialBuffer
+HYP_DESCRIPTOR_SSBO(RTRadianceDescriptorSet, MaterialsBuffer) readonly buffer MaterialBuffer
 {
     Material materials[];
 };
@@ -241,7 +241,7 @@ void main()
         direct_lighting += material_color * local_light;
     }
     
-    payload.color = material_color;//indirect_lighting + direct_lighting;
+    payload.color = indirect_lighting + direct_lighting;
     payload.distance = gl_HitTEXT;
     payload.normal = normal;
     payload.roughness = roughness;
