@@ -12,7 +12,7 @@
 #define DEFERRED_FLAGS_RT_RADIANCE_ENABLED 0x20
 
 #define HYP_HBIL_MULTIPLIER 1.0
-#define ENV_GRID_MULTIPLIER 5.0
+#define ENV_GRID_MULTIPLIER 1.0
 
 struct DeferredParams
 {
