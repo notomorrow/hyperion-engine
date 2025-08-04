@@ -36,10 +36,10 @@
         "enabled": false
       },
       "globalIllumination": {
-        "enabled": false
+        "enabled": true
       },
       "pathTracing": {
-        "enabled": true
+        "enabled": false
       },
       "enabled": true
     },
@@ -60,10 +60,9 @@
   },
   "lightmapper": {
     "maxRaysPerFrame": 1000,
-    "traceMode": 0,
+    "traceMode": 1,
     "numThreadsPerJob": 8,
     "radiance": true,
-    "trace_mode": 0,
     "idealTrianglesPerJob": 64000,
     "numSamples": 8,
     "irradiance": true
