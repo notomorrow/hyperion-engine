@@ -39,15 +39,15 @@
     },
     "raytracing": {
       "reflections": {
-        "enabled": true
+        "enabled": false
       },
       "globalIllumination": {
-        "enabled": true
+        "enabled": false
       },
       "pathTracing": {
         "enabled": false
       },
-      "enabled": true
+      "enabled": false
     },
     "hbao": {
       "radius": 2.500000,
