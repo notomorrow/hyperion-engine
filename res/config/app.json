@@ -7,7 +7,7 @@
       "eyeFade": [0.980000, 0.990000],
       "rayStep": 3.200000,
       "screenEdgeFade": [0.960000, 0.990000],
-      "enabled": false,
+      "enabled": true,
       "roughnessScattering": true,
       "eyeEade": [0.980000, 0.990000]
     },
@@ -20,10 +20,10 @@
       }
     },
     "taa": {
-      "enabled": false
+      "enabled": true
     },
     "debug": {
-      "reflections": true,
+      "reflections": false,
       "hbil": false,
       "debugDrawer": {
         "enabled": true

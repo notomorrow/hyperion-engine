@@ -99,7 +99,7 @@ namespace Hyperion
                 renderListView.SetTextSize(8);
 
                 UIText fpsTextElement = renderListView.Spawn<UIText>(new Name("FPSCounterDebugOverlay_FPS"), new Vec2i(0, 0), new UIObjectSize(UIObjectSize.Auto));
-                fpsTextElement.SetText("Render:");
+                fpsTextElement.SetText("0 fps, 0.00 ms/frame (avg: 0.00, min: 0.00, max: 0.00)");
                 fpsTextElement.SetTextColor(new Color(1.0f, 1.0f, 1.0f, 1.0f));
                 fpsTextElement.SetPadding(new Vec2i(5, 5));
                 renderListView.AddChildUIObject(fpsTextElement);
