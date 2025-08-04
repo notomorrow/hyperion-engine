@@ -33,7 +33,7 @@ HYP_DESCRIPTOR_ACCELERATION_STRUCTURE(DDGIDescriptorSet, TLAS) uniform accelerat
 
 HYP_DESCRIPTOR_CBUFF(DDGIDescriptorSet, DDGIUniforms) uniform DDGIUniformBuffer
 {
-    DDGIUniforms probe_system;
+    DDGIUniforms ddgiUniforms;
 };
 
 HYP_DESCRIPTOR_SSBO(DDGIDescriptorSet, ProbeRayData) buffer ProbeRayDataBuffer
@@ -61,10 +61,10 @@ HYP_DESCRIPTOR_SSBO_DYNAMIC(Global, CurrentEnvProbe) readonly buffer CurrentEnvP
 layout(location = 0) rayPayloadEXT RayPayload payload;
 
 #define HYP_GET_LIGHT(index) \
-    lights[probe_system.light_indices[(index / 4)][index % 4]]
+    lights[ddgiUniforms.light_indices[(index / 4)][index % 4]]
 
-#define RAY_OFFSET 0.0025
-#define NUM_BOUNCES 4
+#define RAY_OFFSET 0.025
+#define NUM_BOUNCES 3
 
 layout(push_constant) uniform constants
 {
@@ -90,13 +90,13 @@ void main()
     const uint probe_index = coord.x;
     const uint ray_index = coord.y;
     
-    vec3 origin = ProbeIndexToWorldPosition(probe_index);
-    vec3 direction = normalize(mat3(push_constants.rotation) * SphericalFibonacci(ray_index, probe_system.num_rays_per_probe));
+    vec3 direction = normalize(mat3(push_constants.rotation) * SphericalFibonacci(ray_index, ddgiUniforms.num_rays_per_probe));
+    vec3 origin = ProbeIndexToWorldPosition(probe_index) + direction * RAY_OFFSET;
     
     uint flags = gl_RayFlagsOpaqueEXT;
     uint mask = 0xff;
     float tmin = RAY_OFFSET;
-    float tmax = 1000.0;
+    float tmax = ddgiUniforms.probe_distance;
     
     payload.throughput = vec4(1.0);
     payload.color = vec4(0.0);
@@ -113,11 +113,10 @@ void main()
     for (int bounce_index = 0; bounce_index < NUM_BOUNCES; bounce_index++) {
         payload.distance = -1.0;
 
-        vec4 throughput = payload.throughput;
         vec3 normal = payload.normal;
         traceRayEXT(tlas, flags, mask, 0, 0, 0, origin, tmin, direction, tmax, 0);
 
-        bounces[bounce_index].throughput = vec4(payload.throughput.rgb * payload.throughput.a, 1.0);
+        bounces[bounce_index].throughput = payload.throughput;
         bounces[bounce_index].emissive = payload.emissive;
 
         ray_data[bounce_index].color = vec4(0.0);
@@ -133,7 +132,7 @@ void main()
                 bounces[bounce_index].emissive += Texture2D(sampler_linear, env_probe_textures[probe_texture_index], EncodeOctahedralCoord(direction) * 0.5 + 0.5);
             }
             
-            for (uint light_index = 0; light_index < probe_system.num_bound_lights; light_index++) {
+            for (uint light_index = 0; light_index < ddgiUniforms.num_bound_lights; light_index++) {
                 const Light light = HYP_GET_LIGHT(light_index);
 
                 // Only handle directional lights here
@@ -142,7 +141,7 @@ void main()
                 }
 
                 const float cos_theta = max(dot(direction, normalize(light.position_intensity.xyz)), 0.0);
-                bounces[bounce_index].emissive += UINT_TO_VEC4(light.color_encoded) * vec4(1.0) * light.position_intensity.w * cos_theta;
+                bounces[bounce_index].emissive += UINT_TO_VEC4(light.color_encoded) * light.position_intensity.w * cos_theta;
             }
 
             ++num_bounces;

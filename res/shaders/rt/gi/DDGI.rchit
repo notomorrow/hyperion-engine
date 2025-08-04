@@ -34,7 +34,7 @@ HYP_DESCRIPTOR_SAMPLER(Global, SamplerLinear) uniform sampler sampler_linear;
 
 HYP_DESCRIPTOR_CBUFF(DDGIDescriptorSet, DDGIUniforms) uniform DDGIUniformBuffer
 {
-    DDGIUniforms probe_system;
+    DDGIUniforms ddgiUniforms;
 };
 
 /* Shadows */
@@ -87,7 +87,7 @@ HYP_DESCRIPTOR_SSBO(Global, LightsBuffer) readonly buffer LightsBuffer
 };
 
 #define HYP_GET_LIGHT(index) \
-    lights[probe_system.light_indices[(index / 4)][index % 4]]
+    lights[ddgiUniforms.light_indices[(index / 4)][index % 4]]
 
 HYP_DESCRIPTOR_SRV(Material, Textures) uniform texture2D textures[];
 
@@ -182,23 +182,40 @@ void main()
 
     const uint32_t material_index = mesh_description.material_index;
 
+    
     Material material;
 
     if (material_index != ~0u) {
         material = materials[material_index];
     }
     
-    material_color = vec4(material.albedo.rgb, 1.0);
+    material_color = material.albedo;
 
     if (HAS_TEXTURE(material, MATERIAL_TEXTURE_ALBEDO_map)) {
-        vec4 albedo_texture = SAMPLE_TEXTURE(material, MATERIAL_TEXTURE_ALBEDO_map, texcoord * material.uv_scale * vec2(1.0, -1.0));
+        vec4 albedo_texture = SAMPLE_TEXTURE(material, MATERIAL_TEXTURE_ALBEDO_map, vec2(texcoord.x, 1.0 - texcoord.y));
         
-        material_color.rgb *= albedo_texture.rgb;
+        material_color *= albedo_texture;
     }
 
-    payload.throughput = material_color;
+    float metalness = GET_MATERIAL_PARAM(material, MATERIAL_PARAM_METALNESS);
+
+    if (HAS_TEXTURE(material, MATERIAL_TEXTURE_METALNESS_MAP)) {
+        float metalness_sample = SAMPLE_TEXTURE(material, MATERIAL_TEXTURE_METALNESS_MAP, vec2(texcoord.x, 1.0 - texcoord.y)).r;
+        
+        metalness = metalness_sample;
+    }
+
+    float roughness = GET_MATERIAL_PARAM(material, MATERIAL_PARAM_ROUGHNESS);
+
+    if (HAS_TEXTURE(material, MATERIAL_TEXTURE_ROUGHNESS_MAP)) {
+        float roughness_sample = SAMPLE_TEXTURE(material, MATERIAL_TEXTURE_ROUGHNESS_MAP, vec2(texcoord.x, 1.0 - texcoord.y)).r;
+        
+        roughness = roughness_sample;
+    }
+
+    payload.throughput = vec4(material_color.rgb * (1.0 - metalness), 1.0);
     payload.emissive = vec4(0.0);
-    payload.distance = gl_RayTminEXT + gl_HitTEXT;
+    payload.distance = gl_HitTEXT;
     payload.normal = normal;
-    payload.roughness = GET_MATERIAL_PARAM(material, MATERIAL_PARAM_ROUGHNESS);
+    payload.roughness = roughness;
 }
