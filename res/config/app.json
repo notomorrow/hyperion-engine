@@ -6,10 +6,9 @@
       "quality": 2,
       "eyeFade": [0.980000, 0.990000],
       "rayStep": 3.200000,
+      "enabled": false,
       "screenEdgeFade": [0.960000, 0.990000],
-      "enabled": true,
-      "roughnessScattering": true,
-      "eyeEade": [0.980000, 0.990000]
+      "roughnessScattering": true
     },
     "envGrid": {
       "reflections": {
@@ -20,19 +19,12 @@
       }
     },
     "taa": {
-      "enabled": true
+      "enabled": false
     },
     "debug": {
-      "reflections": false,
-      "hbil": false,
       "debugDrawer": {
-        "enabled": true
-      },
-      "envGridProbes": false,
-      "reflectionProbes": false,
-      "ssgi": false,
-      "hbao": false,
-      "irradiance": false
+        "enabled": false
+      }
     },
     "hbil": {
       "enabled": false
