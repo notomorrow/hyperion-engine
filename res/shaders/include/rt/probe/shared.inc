@@ -5,9 +5,9 @@
 
 #define M_PI 3.14159265359
 
-#define PROBE_GRID_ORIGIN (probe_system.aabb_min.xyz)
-#define PROBE_GRID_STEP   (vec3(probe_system.probe_distance))
-#define PROBE_TOTAL_COUNT (probe_system.probe_counts.x * probe_system.probe_counts.y * probe_system.probe_counts.z)
+#define PROBE_GRID_ORIGIN (ddgiUniforms.aabb_min.xyz)
+#define PROBE_GRID_STEP   (vec3(ddgiUniforms.probe_distance))
+#define PROBE_TOTAL_COUNT (ddgiUniforms.probe_counts.x * ddgiUniforms.probe_counts.y * ddgiUniforms.probe_counts.z)
 #define PROBE_NORMAL_BIAS (0.01)
 
 #define PROBE_SIDE_LENGTH_DEPTH 16
@@ -16,26 +16,26 @@
 
 ivec3 ProbeIndexToGridPosition(uint index)
 {
-    const int probe_count_xy = int(probe_system.probe_counts.x) * int(probe_system.probe_counts.y);
+    const int probe_count_xy = int(ddgiUniforms.probe_counts.x) * int(ddgiUniforms.probe_counts.y);
     
     return ivec3(
-        index % int(probe_system.probe_counts.x),
-        (index % probe_count_xy) / int(probe_system.probe_counts.x),
+        index % int(ddgiUniforms.probe_counts.x),
+        (index % probe_count_xy) / int(ddgiUniforms.probe_counts.x),
         index / probe_count_xy
     );
 }
 
 vec3 GridPositionToWorldPosition(ivec3 pos)
 {
-    //vec3 half_border = vec3(probe_system.probe_border) * 0.5;
-    return PROBE_GRID_STEP * vec3(pos) + probe_system.aabb_min.xyz;
+    //vec3 half_border = vec3(ddgiUniforms.probe_border) * 0.5;
+    return PROBE_GRID_STEP * vec3(pos) + ddgiUniforms.aabb_min.xyz;
 }
 
 int GridPositionToProbeIndex(ivec3 pos)
 {
     return pos.x
-        + int(probe_system.probe_counts.x) * pos.y
-        + int(probe_system.probe_counts.x) * int(probe_system.probe_counts.y) * pos.z;
+        + int(ddgiUniforms.probe_counts.x) * pos.y
+        + int(ddgiUniforms.probe_counts.x) * int(ddgiUniforms.probe_counts.y) * pos.z;
 }
 
 
@@ -48,20 +48,20 @@ ivec3 BaseGridCoord(vec3 P)
 {   
     return PROBE_TOTAL_COUNT == 0
         ? ivec3(0)
-        : clamp(ivec3(max(vec3(0.0), P - PROBE_GRID_ORIGIN) / PROBE_GRID_STEP), ivec3(0), ivec3(probe_system.probe_counts.xyz) - ivec3(1));
+        : clamp(ivec3(max(vec3(0.0), P - PROBE_GRID_ORIGIN) / PROBE_GRID_STEP), ivec3(0), ivec3(ddgiUniforms.probe_counts.xyz) - ivec3(1));
 }
 
 uvec2 DDGIGetProbeTexelCoords(uint probeIndex)
 {
     // Find the probe's plane index
-    uint probesPerPlane = (probe_system.probe_counts.x * probe_system.probe_counts.z);
+    uint probesPerPlane = (ddgiUniforms.probe_counts.x * ddgiUniforms.probe_counts.z);
     uint planeIndex = probeIndex / probesPerPlane;
 
-    uint gridSpaceX = (probeIndex % probe_system.probe_counts.x);
-    uint gridSpaceY = (probeIndex / probe_system.probe_counts.x);
+    uint gridSpaceX = (probeIndex % ddgiUniforms.probe_counts.x);
+    uint gridSpaceY = (probeIndex / ddgiUniforms.probe_counts.x);
 
-    uint x = gridSpaceX + (planeIndex * probe_system.probe_counts.x);
-    uint y = gridSpaceY % probe_system.probe_counts.z;
+    uint x = gridSpaceX + (planeIndex * ddgiUniforms.probe_counts.x);
+    uint y = gridSpaceY % ddgiUniforms.probe_counts.z;
 
     return uvec2(x, y);
 }

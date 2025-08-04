@@ -32,6 +32,6 @@ struct ProbeRayData
     vec4 color;
 };
 
-#define PROBE_RAY_DATA_INDEX(coord) (coord.x + probe_system.grid_dimensions.x * coord.y)
+#define PROBE_RAY_DATA_INDEX(coord) (coord.x + ddgiUniforms.grid_dimensions.x * coord.y)
 
 #endif

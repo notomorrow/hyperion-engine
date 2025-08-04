@@ -241,7 +241,7 @@ void main()
         direct_lighting += material_color * local_light;
     }
     
-    payload.color = indirect_lighting + direct_lighting;
+    payload.color = material_color;//indirect_lighting + direct_lighting;
     payload.distance = gl_HitTEXT;
     payload.normal = normal;
     payload.roughness = roughness;
