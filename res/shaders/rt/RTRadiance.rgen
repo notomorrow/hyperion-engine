@@ -130,7 +130,7 @@ void main()
     const uint flags = gl_RayFlagsOpaqueEXT;
     const uint mask = 0xff;
     const float tmin = 0.01;
-    const float tmax = 10000.0;
+    const float tmax = 1000.0;
 
     uint ray_seed = InitRandomSeed(InitRandomSeed(gl_LaunchIDEXT.x * 2, gl_LaunchIDEXT.x * 2 + 1), world_shader_data.frame_counter % 256);
 

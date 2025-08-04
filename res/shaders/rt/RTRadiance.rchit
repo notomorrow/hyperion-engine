@@ -183,7 +183,7 @@ void main()
         material = materials[material_index];
     }
     
-    // material_color = material.albedo;
+    material_color = material.albedo;
 
     if (HAS_TEXTURE(material, MATERIAL_TEXTURE_ALBEDO_map)) {
         vec4 albedo_texture = SAMPLE_TEXTURE(material, MATERIAL_TEXTURE_ALBEDO_map, vec2(texcoord.x, 1.0 - texcoord.y));
@@ -241,7 +241,7 @@ void main()
         direct_lighting += material_color * local_light;
     }
     
-    payload.color = material_color;//indirect_lighting + direct_lighting;
+    payload.color = indirect_lighting + direct_lighting;
     payload.distance = gl_HitTEXT;
     payload.normal = normal;
     payload.roughness = roughness;
