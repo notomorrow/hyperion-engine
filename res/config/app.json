@@ -2,11 +2,11 @@
   "rendering": {
     "ssr": {
       "coneTracing": false,
-      "numIterations": 64,
+      "numIterations": 32,
       "quality": 2,
       "eyeFade": [0.980000, 0.990000],
-      "rayStep": 3.200000,
-      "enabled": false,
+      "rayStep": 1.500000,
+      "enabled": true,
       "screenEdgeFade": [0.960000, 0.990000],
       "roughnessScattering": true
     },
@@ -15,7 +15,7 @@
         "enabled": false
       },
       "globalIllumination": {
-        "enabled": false
+        "enabled": true
       }
     },
     "taa": {
@@ -36,12 +36,12 @@
         "enabled": false
       },
       "globalIllumination": {
-        "enabled": true
+        "enabled": false
       },
       "pathTracing": {
         "enabled": false
       },
-      "enabled": true
+      "enabled": false
     },
     "hbao": {
       "radius": 2.500000,

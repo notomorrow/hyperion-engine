@@ -149,18 +149,17 @@ vec4 ConvoleProbe(uvec2 local_coord)
 
 #ifdef LIGHTING
         // Sample the sky in the direction of the normal to get a rough approximation of indirect lighting.
-        vec4 irradiance = SampleSky(normal) * albedo * 0.08;
-
-        vec4 radiance = vec4(0.0);
+        vec3 irradiance = SampleSky(normal).rgb * albedo.rgb * 0.2;
+        vec3 radiance = vec3(0.0);
 
         for (uint j = 0; j < num_bound_lights; j++)
         {
             uint light_index = light_indices[j / 4][j % 4];
 
-            radiance += CalculateDirectLighting(light_index, albedo, position.xyz, normal, -sample_dir);
+            radiance += CalculateDirectLighting(light_index, albedo, position.xyz, normal, -sample_dir).rgb;
         }
 
-        vec4 color = irradiance + radiance * albedo; // mix(irradiance + radiance * albedo, SampleSky(sample_dir), step(HYP_FLOAT_MAX, dist_dist2.r));
+        vec4 color = vec4(clamp(mix(irradiance + radiance * albedo.rgb, SampleSky(sample_dir).rgb, step(HYP_FLOAT_MAX, dist_dist2.r)), vec3(0.0), vec3(1.0)), 1.0);
 #else
         vec4 color = albedo;
 #endif
@@ -184,5 +183,5 @@ void main(void)
 
     const uvec2 coord = probe_offset_coord.xy + local_coord;
 
-    imageStore(out_color_image, ivec2(coord), color);
+    imageStore(out_color_image, ivec2(coord), clamp(color, vec4(0.0), vec4(1.0)));
 }

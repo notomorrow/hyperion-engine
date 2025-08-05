@@ -55,6 +55,7 @@ HYP_DESCRIPTOR_CBUFF_DYNAMIC(Global, CamerasBuffer) uniform CameraShaderData
 #define HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 #include "../include/gbuffer.inc"
 #include "../include/BlueNoise.glsl"
+#include "../include/Temporal.glsl"
 #undef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 
 mat4 view = camera.view;
@@ -168,10 +169,9 @@ void main(void)
 
     const float roughness = materialParams.roughness;
 
-    const float perceptual_roughness = sqrt(roughness);
     const float depth = Texture2D(sampler_nearest, gbuffer_depth_texture, texcoord).r;
 
-    if (depth > 0.99999)
+    if (depth > 0.99999 || roughness > 0.4)
     {
         imageStore(ssr_uvs, ivec2(coord), vec4(0.0));
         return;
@@ -193,22 +193,21 @@ void main(void)
     vec3 ray_origin;
 
 #ifdef ROUGHNESS_SCATTERING
-    vec2 blue_noise_sample = vec2(
-        SampleBlueNoise(int(coord.x), int(coord.y), 0, 0),
-        SampleBlueNoise(int(coord.x), int(coord.y), 0, 1));
-
-    vec2 blue_noise_scaled = blue_noise_sample + float(world_shader_data.frame_counter % 256) * 1.618;
-    const vec2 rnd = fmod(blue_noise_scaled, vec2(1.0));
+#define NUM_SAMPLES 2
+    vec2 rnd = vec2(
+        SampleBlueNoise(int(coord.x), int(coord.y), int(world_shader_data.frame_counter % NUM_SAMPLES) * 2, NUM_SAMPLES * 2),
+        SampleBlueNoise(int(coord.x), int(coord.y), int(world_shader_data.frame_counter % NUM_SAMPLES) * 2 + 1, NUM_SAMPLES * 2));
 
     vec3 H = ImportanceSampleGGX(rnd, view_space_normal, roughness);
     H = tangent * H.x + bitangent * H.y + view_space_normal * H.z;
+    H = normalize(H);
 
     vec3 ray_direction = reflect(-V, H);
 #else
     vec3 ray_direction = view_space_normal;
 #endif
 
-    ray_origin = P + ray_direction * 0.25;
+    ray_origin = P + ray_direction * 0.001;
 
     // discard if the ray is pointing directly towards the camera
     if (dot(ray_direction, -V) < 0.0)
@@ -229,6 +228,8 @@ void main(void)
     float alpha = CalculateAlpha(num_iterations, hit_pixel, hit_point, dist, ray_direction) * float(intersect);
 
     alpha *= float(hit_pixel == saturate(hit_pixel));
+    alpha *= 1.0 - (roughness / 0.4);
+
     hit_pixel = saturate(hit_pixel);
     hit_pixel *= float(alpha > HYP_FMATH_EPSILON);
 
