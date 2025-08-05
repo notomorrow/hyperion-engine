@@ -60,7 +60,7 @@
   },
   "lightmapper": {
     "maxRaysPerFrame": 1000,
-    "traceMode": 1,
+    "traceMode": 0,
     "numThreadsPerJob": 8,
     "radiance": true,
     "idealTrianglesPerJob": 64000,
