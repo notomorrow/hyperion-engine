@@ -103,9 +103,7 @@ void main()
 
     float roughness = materialParams.roughness;
 
-    const float perceptual_roughness = sqrt(roughness);
-
-    const float lod = HYP_FMATH_SQR(perceptual_roughness) * 12.0;
+    const float lod = HYP_FMATH_SQR(sqrt(roughness)) * 12.0;
 
     vec4 ibl = vec4(0.0);
 

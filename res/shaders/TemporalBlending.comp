@@ -76,11 +76,12 @@ HYP_DESCRIPTOR_CBUFF_DYNAMIC(Global, CamerasBuffer) uniform CameraShaderData
 
 HYP_DESCRIPTOR_SRV(View, GBufferDepthTexture) uniform texture2D depth_texture;
 
-layout(push_constant) uniform PushConstant
+HYP_DESCRIPTOR_CBUFF(TemporalBlendingDescriptorSet, TemporalBlendingUniforms) uniform TemporalBlendingUniforms
 {
     uvec2 output_dimensions;
     uvec2 depth_texture_dimensions;
     uint blending_frame_counter;
+    uint _pad0;
 };
 
 void main(void)
