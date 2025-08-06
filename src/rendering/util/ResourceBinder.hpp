@@ -4,12 +4,16 @@
 
 #include <core/object/Handle.hpp>
 
+#include <core/logging/LoggerFwd.hpp>
+
 namespace hyperion {
 
 HYP_API extern SizeType GetNumDescendants(TypeId typeId);
 HYP_API extern int GetSubclassIndex(TypeId baseTypeId, TypeId subclassTypeId);
 
 class RenderGlobalState;
+
+HYP_DECLARE_LOG_CHANNEL(Rendering);
 
 struct ResourceBindingAllocatorBase
 {
@@ -225,7 +229,7 @@ class ResourceBinder : public ResourceBinderBase
                 const uint32 index = allocator->AllocateIndex();
                 if (index == ResourceBindingAllocatorBase::invalidBinding)
                 {
-                    HYP_LOG(Core, Warning, "ResourceBinder<{}>: Maximum size of {} reached, cannot bind more objects!",
+                    HYP_LOG(Rendering, Warning, "ResourceBinder<{}>: Maximum size of {} reached, cannot bind more objects!",
                         TypeNameWithoutNamespace<T>().Data(),
                         allocator->maxSize);
 

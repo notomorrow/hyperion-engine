@@ -42,8 +42,7 @@ HYP_API IResourceMemoryPool* GetOrCreateResourceMemoryPool(TypeId typeId, Unique
 
 ResourceBase::ResourceBase()
     : m_refCount(0),
-      m_initState(0),
-      m_initializationThreadId(ThreadId::Invalid())
+      m_initState(0)
 {
 }
 
@@ -65,7 +64,6 @@ int ResourceBase::IncRefNoInitialize()
     if (result == 1)
     {
         m_initState.Produce();
-        m_initializationThreadId = Threads::CurrentThreadId();
     }
 
     return result;
@@ -85,8 +83,6 @@ int ResourceBase::IncRef()
             {
                 HYP_NAMED_SCOPE("Initializing Resource - Initialization");
                 HYP_MT_CHECK_RW(m_dataRaceDetector);
-
-                m_initializationThreadId = Threads::CurrentThreadId();
 
                 Initialize();
             });
@@ -115,7 +111,6 @@ int ResourceBase::DecRef()
 
         Destroy();
 
-        m_initializationThreadId = ThreadId::Invalid();
         m_initState.Release();
     }
 

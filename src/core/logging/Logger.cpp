@@ -12,12 +12,16 @@
 #include <core/containers/Bitset.hpp>
 #include <core/containers/LinkedList.hpp>
 
+#include <core/functional/Proc.hpp>
+
 #include <core/memory/ByteBuffer.hpp>
 #include <core/memory/NotNullPtr.hpp>
 
 #include <core/io/ByteWriter.hpp>
 
 #include <core/utilities/ByteUtil.hpp>
+
+#include <numeric>
 
 namespace hyperion {
 
@@ -26,6 +30,9 @@ HYP_DECLARE_LOG_CHANNEL(Misc);
 HYP_DECLARE_LOG_CHANNEL(Temp);
 
 namespace logging {
+
+static volatile int32 g_maxLogChannelId = -1;
+static bool g_registerChannelsCalled = false;
 
 HYP_API Logger& GetLogger()
 {
@@ -172,7 +179,8 @@ public:
         if (channel.Id() >= Logger::maxChannels)
         {
             // log channel overflow! revert to Log_Misc
-            channelPtr = &Log_Misc;
+            /// @TODO: Dynamic channels with ID >= maxChannels should be checked using a dynamic bitset w/ mutex
+            channelPtr = &g_logChannel_Misc;
             return;
         }
 
@@ -223,7 +231,7 @@ public:
         if (channel.Id() >= Logger::maxChannels)
         {
             // log channel overflow! revert to Log_Misc
-            channelPtr = &Log_Misc;
+            channelPtr = &g_logChannel_Misc;
             return;
         }
 
@@ -315,33 +323,203 @@ private:
 
 #pragma endregion LoggerOutputStream
 
-#pragma region LogChannel
+#pragma region DynamicLogChannelHandle
 
-LogChannel::LogChannel(Name name)
-    : m_id(g_logChannelIdGenerator.Next()),
-      m_name(name),
-      m_flags(LogChannelFlags::NONE),
-      m_parentChannel(nullptr),
-      m_maskBitset(1ull << m_id)
+DynamicLogChannelHandle::~DynamicLogChannelHandle()
 {
-}
-
-LogChannel::LogChannel(Name name, LogChannel* parentChannel)
-    : LogChannel(name)
-{
-    m_parentChannel = parentChannel;
-
-    if (m_parentChannel != nullptr)
+    if (m_logger != nullptr)
     {
-        m_maskBitset |= m_parentChannel->m_maskBitset;
+        m_logger->DestroyDynamicLogChannel(*this);
     }
 }
 
-LogChannel::~LogChannel()
+DynamicLogChannelHandle& DynamicLogChannelHandle::operator=(DynamicLogChannelHandle&& other) noexcept
+{
+    if (this == &other || m_channel == other.m_channel)
+    {
+        return *this;
+    }
+
+    if (m_logger != nullptr)
+    {
+        m_logger->DestroyDynamicLogChannel(*this);
+    }
+
+    m_logger = other.m_logger;
+    m_channel = other.m_channel;
+
+    other.m_logger = nullptr;
+    other.m_channel = nullptr;
+
+    return *this;
+}
+
+#pragma endregion DynamicLogChannelHandle
+
+#pragma region LogChannel
+
+LogChannel::LogChannel(Name name)
+    : m_id(~0u),
+      m_name(name),
+      m_flags(LogChannelFlags::NONE),
+      m_parentChannel(nullptr),
+      m_maskBitset(0)
 {
 }
 
 #pragma endregion LogChannel
+
+#pragma region LogChannelRegistrar
+
+void LogChannelRegistrar::RegisterAll()
+{
+    HashMap<LogChannel*, uint32> channelIds;
+
+    for (SizeType i = 0; i < m_channels.Size(); i++)
+    {
+        channelIds[m_channels[i]] = i;
+    }
+
+    Array<Array<uint32>, DynamicAllocator> derived;
+    derived.Resize(m_channels.Size());
+
+    for (LogChannel* channel : m_channels)
+    {
+        const uint32 child = channelIds.At(channel);
+
+        LogChannel* parent = channel->m_parentChannel;
+
+        while (parent != nullptr)
+        {
+            const auto parentIt = channelIds.Find(parent);
+
+            if (parentIt == channelIds.End())
+            {
+                continue;
+            }
+
+            const uint32 parentId = parentIt->second;
+            Assert(parentId < channelIds.Size());
+
+            derived[parentId].PushBack(child);
+
+            parent = parent->m_parentChannel;
+        }
+    }
+
+    Array<uint32> indeg;
+    indeg.Resize(m_channels.Size());
+
+    for (const Array<uint32>& children : derived)
+    {
+        for (uint32 child : children)
+        {
+            indeg[child]++;
+        }
+    }
+
+    Array<uint32> roots;
+
+    for (SizeType i = 0; i < indeg.Size(); i++)
+    {
+        if (indeg[i] == 0)
+        {
+            roots.PushBack(i);
+        }
+    }
+
+    Array<uint32> stack;
+    stack.Reserve(m_channels.Size());
+
+    uint32 nextOut = 0;
+
+    Proc<void(uint32)> assignIds;
+    assignIds = [&](uint32 id)
+    {
+        Assert(id < m_channels.Size());
+
+        LogChannel* channel = m_channels[id];
+
+        uint32 start = nextOut;
+
+        channel->m_id = int(nextOut++);
+
+        stack.PushBack(id);
+
+        for (uint32 child : derived[id])
+        {
+            if (m_channels[child]->m_id == -1)
+            {
+                assignIds(child);
+            }
+        }
+
+        stack.PopBack();
+
+        channel->m_id = int(start + 1);
+    };
+
+    for (uint32 root : roots)
+    {
+        assignIds(root);
+    }
+    
+    AtomicExchange(&g_maxLogChannelId, int32(nextOut));
+
+    Array<SizeType> idx(m_channels.Size());
+    std::iota(idx.begin(), idx.end(), 0);
+
+    std::sort(
+        idx.begin(),
+        idx.end(),
+        [&](SizeType i, SizeType j)
+        {
+            return m_channels[i]->m_id < m_channels[j]->m_id;
+        });
+
+    Array<LogChannel*> channelsSorted(m_channels.Size());
+    Array<void (*)(void)> callbacksSorted(m_callbacks.Size());
+
+    for (SizeType i = 0; i < idx.Size(); i++)
+    {
+        channelsSorted[i] = m_channels[idx[i]];
+        callbacksSorted[i] = m_callbacks[idx[i]];
+    }
+
+    m_channels = std::move(channelsSorted);
+    m_callbacks = std::move(callbacksSorted);
+
+    for (SizeType i = 0; i < m_channels.Size(); i++)
+    {
+        LogChannel* channel = m_channels[i];
+
+        channel->m_maskBitset = Bitset();
+
+        if (channel->m_id < Logger::maxChannels)
+        {
+            channel->m_maskBitset |= Bitset(1ull << channel->m_id);
+        }
+
+        LogChannel* parentChannel = channel->m_parentChannel;
+
+        while (parentChannel)
+        {
+            AssertDebug(parentChannel->m_id != ~0u);
+            AssertDebug(parentChannel->m_maskBitset.Count() != 0);
+
+            channel->m_maskBitset |= parentChannel->m_maskBitset;
+
+            parentChannel = parentChannel->m_parentChannel;
+        }
+
+        m_callbacks[i]();
+    }
+    
+    m_channels.Clear();
+    m_callbacks.Clear();
+}
+
+#pragma endregion LogChannelRegistrar
 
 #pragma region LoggerImpl
 
@@ -356,11 +534,19 @@ public:
     {
         Fill(m_logChannels.Begin(), m_logChannels.End(), nullptr);
     }
+    
+    ~LoggerImpl()
+    {
+        for (LogChannel* channel : m_dynamicLogChannels)
+        {
+            delete channel;
+        }
+    }
 
 private:
     AtomicVar<Logger::ChannelMask> m_logMask;
     FixedArray<LogChannel*, Logger::maxChannels> m_logChannels;
-    LinkedList<LogChannel> m_dynamicLogChannels;
+    Array<LogChannel*> m_dynamicLogChannels;
     mutable Mutex m_dynamicLogChannelsMutex;
     NotNullPtr<ILoggerOutputStream> m_outputStream;
 };
@@ -385,6 +571,12 @@ Logger::Logger(ILoggerOutputStream& outputStream)
     : m_pImpl(MakePimpl<LoggerImpl>(outputStream)),
       fatalErrorHook(nullptr)
 {
+    if (!g_registerChannelsCalled)
+    {
+        g_registerChannelsCalled = true;
+        
+        LogChannelRegistrar::GetInstance().RegisterAll();
+    }
 }
 
 Logger::~Logger() = default;
@@ -411,9 +603,16 @@ const LogChannel* Logger::FindLogChannel(WeakName name) const
 
     Mutex::Guard guard(m_pImpl->m_dynamicLogChannelsMutex);
 
-    for (const LogChannel& channel : m_pImpl->m_dynamicLogChannels)
+    for (LogChannel* channel : m_pImpl->m_dynamicLogChannels)
     {
-        return &channel;
+        AssertDebug(channel != nullptr);
+        
+        if (channel->GetName() == name)
+        {
+            return channel;
+        }
+        
+        return channel;
     }
 
     return nullptr;
@@ -427,20 +626,53 @@ void Logger::RegisterChannel(LogChannel* channel)
     m_pImpl->m_logChannels[channel->Id()] = channel;
 }
 
-LogChannel* Logger::CreateDynamicLogChannel(Name name, LogChannel* parentChannel)
+DynamicLogChannelHandle Logger::CreateDynamicLogChannel(Name name, LogChannel* parentChannel)
+{
+    AssertDebug(g_registerChannelsCalled);
+    
+    Mutex::Guard guard(m_pImpl->m_dynamicLogChannelsMutex);
+
+    LogChannel* channel = m_pImpl->m_dynamicLogChannels.PushBack(new LogChannel(name));
+    
+    channel->m_id = AtomicIncrement(&g_maxLogChannelId);
+    channel->m_maskBitset = Bitset(1ull << channel->m_id);
+    
+    if (parentChannel)
+    {
+        AssertDebug(parentChannel->m_id != ~0u, "Parent channel must be registered if it exists!");
+        
+        channel->m_parentChannel = parentChannel;
+        channel->m_maskBitset |= parentChannel->m_maskBitset;
+    }
+    
+    return DynamicLogChannelHandle(this, channel);
+}
+
+DynamicLogChannelHandle Logger::CreateDynamicLogChannel(LogChannel& channel)
 {
     Mutex::Guard guard(m_pImpl->m_dynamicLogChannelsMutex);
 
-    return &m_pImpl->m_dynamicLogChannels.EmplaceBack(name, parentChannel);
+    m_pImpl->m_dynamicLogChannels.PushBack(&channel);
+    
+    if (channel.m_id == ~0u)
+    {
+        AssertDebug(g_registerChannelsCalled);
+        
+        channel.m_id = AtomicIncrement(&g_maxLogChannelId);
+    }
+    
+    channel.m_maskBitset = Bitset(1ull << channel.m_id);
+
+    return DynamicLogChannelHandle(this, &channel);
 }
 
 void Logger::DestroyDynamicLogChannel(Name name)
 {
     Mutex::Guard guard(m_pImpl->m_dynamicLogChannelsMutex);
 
-    auto it = m_pImpl->m_dynamicLogChannels.FindIf([name](const auto& item)
+    auto it = m_pImpl->m_dynamicLogChannels.FindIf([name](LogChannel* channel)
         {
-            return item.GetName() == name;
+            return channel->GetName() == name;
         });
 
     if (it == m_pImpl->m_dynamicLogChannels.End())
@@ -448,6 +680,8 @@ void Logger::DestroyDynamicLogChannel(Name name)
         return;
     }
 
+    delete *it;
+    
     m_pImpl->m_dynamicLogChannels.Erase(it);
 }
 
@@ -455,17 +689,29 @@ void Logger::DestroyDynamicLogChannel(LogChannel* channel)
 {
     Mutex::Guard guard(m_pImpl->m_dynamicLogChannelsMutex);
 
-    auto it = m_pImpl->m_dynamicLogChannels.FindIf([channel](const auto& item)
-        {
-            return &item == channel;
-        });
+    auto it = m_pImpl->m_dynamicLogChannels.Find(channel);
 
     if (it == m_pImpl->m_dynamicLogChannels.End())
     {
         return;
     }
+    
+    delete *it;
 
     m_pImpl->m_dynamicLogChannels.Erase(it);
+}
+
+void Logger::DestroyDynamicLogChannel(DynamicLogChannelHandle& channelHandle)
+{
+    if (!channelHandle.m_channel)
+    {
+        return;
+    }
+
+    DestroyDynamicLogChannel(channelHandle.m_channel);
+
+    channelHandle.m_logger = nullptr;
+    channelHandle.m_channel = nullptr;
 }
 
 bool Logger::IsChannelEnabled(const LogChannel& channel) const
@@ -528,12 +774,10 @@ void Logger::LogFatal(const LogChannel& channel, const LogMessage& message)
 } // namespace logging
 
 namespace logging {
-// // For Assert() to work with logging
-// template HYP_API void LogDynamic<Debug(), HYP_MAKE_CONST_ARG(&Log_Core)>(Logger&, const char*);
 
 HYP_API void LogTemp(Logger& logger, const char* str)
 {
-    LogDynamic<Debug(), HYP_MAKE_CONST_ARG(&Log_Misc)>(logger, str);
+    LogDynamic<Debug(), HYP_MAKE_CONST_ARG(&g_logChannel_Temp)>(logger, str);
 }
 
 } // namespace logging

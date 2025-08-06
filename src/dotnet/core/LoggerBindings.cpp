@@ -14,7 +14,7 @@ extern "C"
     {
         if (!channel)
         {
-            channel = &Log_Script;
+            channel = &g_logChannel_Script;
         }
 
         if (logLevel > uint32(LogLevel::FATAL))
@@ -61,7 +61,7 @@ extern "C"
     {
         const Name channelName = CreateNameFromDynamicString(name);
 
-        return Logger::GetInstance().CreateDynamicLogChannel(channelName, &Log_Script);
+        return Logger::GetInstance().CreateDynamicLogChannel(channelName, &g_logChannel_Script).Release();
     }
 
     HYP_EXPORT void Logger_DestroyLogChannel(LogChannel* logChannel)

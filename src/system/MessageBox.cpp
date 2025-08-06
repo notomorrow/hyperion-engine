@@ -30,8 +30,6 @@ SystemMessageBox::SystemMessageBox(
 {
     if (m_buttons.Size() > 3)
     {
-        HYP_LOG(Core, Warning, "MessageBox does not support > 3 buttons");
-
         m_buttons.Resize(3);
     }
 }
@@ -79,8 +77,6 @@ SystemMessageBox& SystemMessageBox::Button(const String& text, Proc<void()>&& on
 {
     if (m_buttons.Size() >= 3)
     {
-        HYP_LOG(Core, Warning, "MessageBox does not support > 3 buttons");
-
         return *this;
     }
 
