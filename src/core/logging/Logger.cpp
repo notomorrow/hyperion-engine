@@ -32,7 +32,7 @@ HYP_DECLARE_LOG_CHANNEL(Temp);
 namespace logging {
 
 static volatile int32 g_maxLogChannelId = -1;
-static bool g_registerChannelsCalled = false;
+static bool g_registerAllCalled = false;
 
 HYP_API Logger& GetLogger()
 {
@@ -373,150 +373,101 @@ LogChannel::LogChannel(Name name)
 
 void LogChannelRegistrar::RegisterAll()
 {
-    HashMap<LogChannel*, uint32> channelIds;
-
-    for (SizeType i = 0; i < m_channels.Size(); i++)
+    if (g_registerAllCalled)
     {
-        channelIds[m_channels[i]] = i;
-    }
-
-    Array<Array<uint32>, DynamicAllocator> derived;
-    derived.Resize(m_channels.Size());
-
-    for (LogChannel* channel : m_channels)
-    {
-        const uint32 child = channelIds.At(channel);
-
-        LogChannel* parent = channel->m_parentChannel;
-
-        while (parent != nullptr)
-        {
-            const auto parentIt = channelIds.Find(parent);
-
-            if (parentIt == channelIds.End())
-            {
-                continue;
-            }
-
-            const uint32 parentId = parentIt->second;
-            Assert(parentId < channelIds.Size());
-
-            derived[parentId].PushBack(child);
-
-            parent = parent->m_parentChannel;
-        }
-    }
-
-    Array<uint32> indeg;
-    indeg.Resize(m_channels.Size());
-
-    for (const Array<uint32>& children : derived)
-    {
-        for (uint32 child : children)
-        {
-            indeg[child]++;
-        }
-    }
-
-    Array<uint32> roots;
-
-    for (SizeType i = 0; i < indeg.Size(); i++)
-    {
-        if (indeg[i] == 0)
-        {
-            roots.PushBack(i);
-        }
-    }
-
-    Array<uint32> stack;
-    stack.Reserve(m_channels.Size());
-
-    uint32 nextOut = 0;
-
-    Proc<void(uint32)> assignIds;
-    assignIds = [&](uint32 id)
-    {
-        Assert(id < m_channels.Size());
-
-        LogChannel* channel = m_channels[id];
-
-        uint32 start = nextOut;
-
-        channel->m_id = int(nextOut++);
-
-        stack.PushBack(id);
-
-        for (uint32 child : derived[id])
-        {
-            if (m_channels[child]->m_id == -1)
-            {
-                assignIds(child);
-            }
-        }
-
-        stack.PopBack();
-
-        channel->m_id = int(start + 1);
-    };
-
-    for (uint32 root : roots)
-    {
-        assignIds(root);
+        return;
     }
     
-    AtomicExchange(&g_maxLogChannelId, int32(nextOut));
+    g_registerAllCalled = true;
+    
+    const Array<LogChannel*>& channels = m_channels;
+    const uint32 n = uint32(channels.Size());
 
-    Array<SizeType> idx(m_channels.Size());
-    std::iota(idx.begin(), idx.end(), 0);
+    HashMap<LogChannel*, uint32> indeg;
+    HashMap<LogChannel*, Array<LogChannel*>> children;
+    indeg.Reserve(n);
+    children.Reserve(n);
 
-    std::sort(
-        idx.begin(),
-        idx.end(),
-        [&](SizeType i, SizeType j)
-        {
-            return m_channels[i]->m_id < m_channels[j]->m_id;
-        });
-
-    Array<LogChannel*> channelsSorted(m_channels.Size());
-    Array<void (*)(void)> callbacksSorted(m_callbacks.Size());
-
-    for (SizeType i = 0; i < idx.Size(); i++)
+    for (LogChannel* channel : channels)
     {
-        channelsSorted[i] = m_channels[idx[i]];
-        callbacksSorted[i] = m_callbacks[idx[i]];
+        indeg[channel] = 0;
     }
 
-    m_channels = std::move(channelsSorted);
-    m_callbacks = std::move(callbacksSorted);
-
-    for (SizeType i = 0; i < m_channels.Size(); i++)
+    for (LogChannel* channel : channels)
     {
-        LogChannel* channel = m_channels[i];
+        if (channel->m_parentChannel)
+        {
+            children[channel->m_parentChannel].PushBack(channel);
+            ++indeg[channel];
+        }
+    }
 
+    Array<LogChannel*> queue;
+    queue.Reserve(n);
+
+    for (LogChannel* channel : channels)
+    {
+        if (indeg[channel] == 0)
+        {
+            queue.PushBack(channel);
+        }
+    }
+
+    Array<LogChannel*> order;
+    order.Reserve(n);
+
+    SizeType head = 0;
+    
+    while (head < queue.Size())
+    {
+        LogChannel* u = queue[head++];
+        order.PushBack(u);
+
+        Array<LogChannel*>& subchannels = children[u];
+        
+        for (LogChannel* subchannel : subchannels)
+        {
+            if (--indeg[subchannel] == 0)
+            {
+                queue.PushBack(subchannel);
+            }
+        }
+    }
+
+    Assert(order.Size() == n);
+    
+    for (uint32 i = 0; i < n; i++)
+    {
+        order[i]->m_id = i;
+    }
+    
+    // kept alive until program exit
+    static Array<DynamicLogChannelHandle> dynamicLogChannelHandles;
+    
+    for (LogChannel* channel : m_channels)
+    {
+        Assert(channel->m_id != ~0u);
+        
         channel->m_maskBitset = Bitset();
+        channel->m_maskBitset.Set(channel->m_id, true);
 
-        if (channel->m_id < Logger::maxChannels)
+        if (channel->m_parentChannel != nullptr)
         {
-            channel->m_maskBitset |= Bitset(1ull << channel->m_id);
+            Assert(channel->m_parentChannel->m_id != ~0u);
+            
+            channel->m_maskBitset |= channel->m_parentChannel->m_maskBitset;
         }
-
-        LogChannel* parentChannel = channel->m_parentChannel;
-
-        while (parentChannel)
+        
+        if (channel->m_id < hyperion::logging::Logger::maxChannels)
         {
-            AssertDebug(parentChannel->m_id != ~0u);
-            AssertDebug(parentChannel->m_maskBitset.Count() != 0);
-
-            channel->m_maskBitset |= parentChannel->m_maskBitset;
-
-            parentChannel = parentChannel->m_parentChannel;
+            continue;
         }
-
-        m_callbacks[i]();
+        
+        // out of slots, need to store dynamic
+        dynamicLogChannelHandles.PushBack(Logger::GetInstance().CreateDynamicLogChannel(*channel));
     }
     
     m_channels.Clear();
-    m_callbacks.Clear();
 }
 
 #pragma endregion LogChannelRegistrar
@@ -571,12 +522,6 @@ Logger::Logger(ILoggerOutputStream& outputStream)
     : m_pImpl(MakePimpl<LoggerImpl>(outputStream)),
       fatalErrorHook(nullptr)
 {
-    if (!g_registerChannelsCalled)
-    {
-        g_registerChannelsCalled = true;
-        
-        LogChannelRegistrar::GetInstance().RegisterAll();
-    }
 }
 
 Logger::~Logger() = default;
@@ -628,7 +573,7 @@ void Logger::RegisterChannel(LogChannel* channel)
 
 DynamicLogChannelHandle Logger::CreateDynamicLogChannel(Name name, LogChannel* parentChannel)
 {
-    AssertDebug(g_registerChannelsCalled);
+    AssertDebug(g_registerAllCalled);
     
     Mutex::Guard guard(m_pImpl->m_dynamicLogChannelsMutex);
 
@@ -656,7 +601,7 @@ DynamicLogChannelHandle Logger::CreateDynamicLogChannel(LogChannel& channel)
     
     if (channel.m_id == ~0u)
     {
-        AssertDebug(g_registerChannelsCalled);
+        AssertDebug(g_registerAllCalled);
         
         channel.m_id = AtomicIncrement(&g_maxLogChannelId);
     }

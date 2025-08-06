@@ -964,12 +964,7 @@ static void ForEachPermutation(
             }
         }
 
-        HYP_LOG(
-            ShaderCompiler,
-            Debug,
-            "\tShader value group {} has {} combinations:",
-            valueGroup.name,
-            currentGroupCombinations.Size());
+        HYP_LOG(ShaderCompiler, Info, "\tShader value group {} has {} permutations:", valueGroup.name, currentGroupCombinations.Size());
 
         for (const ShaderProperties& properties : currentGroupCombinations)
         {
@@ -983,11 +978,7 @@ static void ForEachPermutation(
     }
 
     // #ifdef HYP_SHADER_COMPILER_LOGGING
-    HYP_LOG(
-        ShaderCompiler,
-        Debug,
-        "Processing {} shader combinations:",
-        allCombinations.Size());
+    HYP_LOG(ShaderCompiler, Info, "Processing {} shader permutations:", allCombinations.Size());
     // #endif
 
     if (parallel)

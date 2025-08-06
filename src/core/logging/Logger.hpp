@@ -400,41 +400,38 @@ public:
         return instance;
     }
 
-    void Register(LogChannel* channel, void (*callback)(void))
+    void Register(LogChannel* channel)
     {
-        AssertDebug(channel && callback);
+        AssertDebug(channel);
 
-        m_callbacks.PushBack(callback);
         m_channels.PushBack(channel);
     }
 
-    void Register(LogChannel* channel, LogChannel* parentChannel, void (*callback)(void))
+    void Register(LogChannel* channel, LogChannel* parentChannel)
     {
-        AssertDebug(channel && callback);
+        AssertDebug(channel);
 
         channel->m_parentChannel = parentChannel;
 
-        m_callbacks.PushBack(callback);
         m_channels.PushBack(channel);
     }
 
     void RegisterAll();
 
 private:
-    Array<void (*)(void)> m_callbacks;
     Array<LogChannel*> m_channels;
 };
 
 struct LogChannelRegistration
 {
-    LogChannelRegistration(LogChannel* channel, void (*callback)())
+    LogChannelRegistration(LogChannel* channel)
     {
-        LogChannelRegistrar::GetInstance().Register(channel, callback);
+        LogChannelRegistrar::GetInstance().Register(channel);
     }
 
-    LogChannelRegistration(LogChannel* channel, LogChannel* parentChannel, void (*callback)())
+    LogChannelRegistration(LogChannel* channel, LogChannel* parentChannel)
     {
-        LogChannelRegistrar::GetInstance().Register(channel, parentChannel, callback);
+        LogChannelRegistrar::GetInstance().Register(channel, parentChannel);
     }
 };
 
@@ -457,27 +454,11 @@ using logging::DynamicLogChannelHandle;
 // Must be used outside of function (in global scope)
 #define HYP_DEFINE_LOG_CHANNEL(name)                                                                                                                            \
     hyperion::logging::LogChannel g_logChannel_##name(HYP_NAME(HYP_STR(name)));                                                                                 \
-    static hyperion::logging::LogChannelRegistration g_logChannelRegistration_##name(&g_logChannel_##name, []()                                                 \
-        {                                                                                                                                                       \
-            if (g_logChannel_##name.Id() < hyperion::logging::Logger::maxChannels)                                                                              \
-            {                                                                                                                                                   \
-                return;                                                                                                                                         \
-            }                                                                                                                                                   \
-                                                                                                                                                                \
-            static hyperion::logging::DynamicLogChannelHandle handle = hyperion::logging::Logger::GetInstance().CreateDynamicLogChannel(g_logChannel_##name);   \
-        })
+    static hyperion::logging::LogChannelRegistration g_logChannelRegistration_##name(&g_logChannel_##name)
 
 #define HYP_DEFINE_LOG_SUBCHANNEL(name, parentName)                                                                                                             \
     hyperion::logging::LogChannel g_logChannel_##name(HYP_NAME(HYP_STR(name)));                                                                                 \
-    static hyperion::logging::LogChannelRegistration g_logChannelRegistration_##name(&g_logChannel_##name, &g_logChannel_##parentName, []()                     \
-        {                                                                                                                                                       \
-            if (g_logChannel_##name.Id() < hyperion::logging::Logger::maxChannels)                                                                              \
-            {                                                                                                                                                   \
-                return;                                                                                                                                         \
-            }                                                                                                                                                   \
-                                                                                                                                                                \
-            static hyperion::logging::DynamicLogChannelHandle handle = hyperion::logging::Logger::GetInstance().CreateDynamicLogChannel(g_logChannel_##name);   \
-        })
+    static hyperion::logging::LogChannelRegistration g_logChannelRegistration_##name(&g_logChannel_##name, &g_logChannel_##parentName)
 
 // Undefine HYP_LOG if already defined (LoggerFwd could have defined it as an empty macro)
 #ifdef HYP_LOG_ONCE

@@ -159,7 +159,7 @@ public:
 
         const BlockType* blocksIter = blocksBegin;
 
-        while (blocksIter != blocksEnd)
+        while (blocksIter < blocksEnd)
         {
             if (*blocksIter != 0)
             {
@@ -218,7 +218,7 @@ public:
 
         uint32 mask = ~(GetBitMask(offset) - 1);
 
-        while (blocksIter != blocksEnd)
+        while (blocksIter < blocksEnd)
         {
             if ((*blocksIter & mask))
             {

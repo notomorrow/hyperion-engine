@@ -182,6 +182,7 @@ HYP_API const GlobalConfig& GetGlobalConfig()
 HYP_API bool InitializeEngine(int argc, char** argv)
 {
     Logger::GetInstance().fatalErrorHook = &HandleFatalError;
+    LogChannelRegistrar::GetInstance().RegisterAll();
 
     Threads::SetCurrentThreadId(g_mainThread);
 
