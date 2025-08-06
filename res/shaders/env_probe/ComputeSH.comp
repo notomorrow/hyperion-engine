@@ -185,7 +185,7 @@ vec4 SampleSky(vec3 dir)
     return vec4(0.0);
 }
 
-vec4 CalculateDirectLighting(in vec3 P, in vec3 N, in vec3 V)
+vec4 CalculateDirectLighting(in vec3 P, in vec3 N)
 {
     if (light.type != HYP_LIGHT_TYPE_DIRECTIONAL)
     {
@@ -200,12 +200,12 @@ vec4 CalculateDirectLighting(in vec3 P, in vec3 N, in vec3 V)
 
     float shadow = 1.0;
 
-    if (bool(light.flags & LF_SHADOW))
-    {
-        shadow = GetShadowStandard(light, P, vec2(0.0), NdotL);
-    }
+    // if (bool(light.flags & LF_SHADOW))
+    // {
+    //     shadow = GetShadowStandard(light, P, vec2(0.0), NdotL);
+    // }
 
-    return light_color * NdotL * shadow * light.position_intensity.w;
+    return vec4(light_color.rgb * NdotL * shadow * light.position_intensity.w, 1.0);
 }
 #endif
 
@@ -247,14 +247,11 @@ void main(void)
 
     vec4 position = vec4(world_position.xyz + dir * dist_dist2.r, 1.0);
 
+    // @TODO: Sample existing envgrid probes in the world for multi bounce lighting
+
     vec4 indirect = SampleSky(normal);
-    vec4 irradiance = indirect * albedo * 0.25;
-
-    vec4 radiance = CalculateDirectLighting(position.xyz, normal, -dir) * albedo;
-    vec4 sky = SampleSky(dir);
-    // radiance = mix(radiance, sky, step(HYP_FLOAT_MAX, dist_dist2.r));
-
-    vec4 color = irradiance + radiance;
+    vec4 color = (indirect + CalculateDirectLighting(position.xyz, normal)) * (albedo * (1.0 / HYP_FMATH_PI));
+    color.a = 1.0;
 #else
     vec4 color = albedo;
 #endif

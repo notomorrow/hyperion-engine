@@ -123,8 +123,10 @@ void main()
 
         v_color = vec4(SphericalHarmonicsSample(sh9, a_normal), 1.0);
     }
-#else
+#elif defined(INSTANCING)
     v_object_index = OBJECT_INDEX;
+#else
+    v_object_index = 0;
 #endif
 
     mat4 jitter_matrix = mat4(1.0);

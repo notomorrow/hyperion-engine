@@ -69,11 +69,18 @@ HYP_DESCRIPTOR_SRV(Global, LightFieldDepthTexture) uniform texture2D light_field
 #include "include/brdf.inc"
 #include "deferred/DeferredLighting.glsl"
 
-#else
+#elif defined(INSTANCING)
 
 HYP_DESCRIPTOR_SSBO(Global, ObjectsBuffer) readonly buffer ObjectsBuffer
 {
     Object objects[];
+};
+
+#else
+
+HYP_DESCRIPTOR_SSBO_DYNAMIC(Object, CurrentObject) readonly buffer ObjectsBuffer
+{
+    Object object;
 };
 
 #endif
