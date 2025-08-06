@@ -112,23 +112,6 @@ vec3 CalculateRefraction(
 
 #ifndef HYP_DEFERRED_NO_ENV_GRID
 
-float[9] ProjectSHBands(vec3 N)
-{
-    float bands[9];
-
-    bands[0] = 0.282095;
-    bands[1] = -0.488603 * N.y;
-    bands[2] = 0.488603 * N.z;
-    bands[3] = -0.488603 * N.x;
-    bands[4] = 1.092548 * N.x * N.y;
-    bands[5] = -1.092548 * N.y * N.z;
-    bands[6] = 0.315392 * (3.0 * N.z * N.z - 1.0);
-    bands[7] = -1.092548 * N.x * N.z;
-    bands[8] = 0.546274 * (N.x * N.x - N.y * N.y);
-
-    return bands;
-}
-
 ivec2 GetEnvProbeLightFieldOffset(ivec3 probe_grid_position)
 {
     return ivec2(

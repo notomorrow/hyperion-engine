@@ -144,18 +144,47 @@ vec4 EnvProbeSampleParallaxCorrected(
     return textureLod(tex, coord, lod);
 }
 
+float[9] ProjectSHBands(vec3 N)
+{
+    float bands[9];
+
+    bands[0] = 0.282095;
+    bands[1] = -0.488603 * N.y;
+    bands[2] = 0.488603 * N.z;
+    bands[3] = -0.488603 * N.x;
+    bands[4] = 1.092548 * N.x * N.y;
+    bands[5] = -1.092548 * N.y * N.z;
+    bands[6] = 0.315392 * (3.0 * N.z * N.z - 1.0);
+    bands[7] = -1.092548 * N.x * N.z;
+    bands[8] = 0.546274 * (N.x * N.x - N.y * N.y);
+
+    return bands;
+}
+
 vec3 SphericalHarmonicsSample(const in SH9 sh, vec3 normal)
 {
-    const float x = normal.x;
-    const float y = normal.y;
-    const float z = normal.z;
+    // const float x = normal.x;
+    // const float y = normal.y;
+    // const float z = normal.z;
 
-    vec3 result = vec3(
-        sh.values[0] +
+    // vec3 result = vec3(
+    //     sh.values[0] +
 
-        sh.values[1] * x + sh.values[2] * y + sh.values[3] * z +
+    //     sh.values[1] * x + sh.values[2] * y + sh.values[3] * z +
 
-        sh.values[4] * z * x + sh.values[5] * y * z + sh.values[6] * y * x + sh.values[7] * (3.0 * z * z - 1.0) + sh.values[8] * (x * x - y * y));
+    //     sh.values[4] * z * x + sh.values[5] * y * z + sh.values[6] * y * x + sh.values[7] * (3.0 * z * z - 1.0) + sh.values[8] * (x * x - y * y));
+
+    float bands[9] = ProjectSHBands(normal);
+
+    vec3 result = sh.values[0] * bands[0]
+        + sh.values[1] * bands[1]
+        + sh.values[2] * bands[2]
+        + sh.values[3] * bands[3]
+        + sh.values[4] * bands[4]
+        + sh.values[5] * bands[5]
+        + sh.values[6] * bands[6]
+        + sh.values[7] * bands[7]
+        + sh.values[8] * bands[8];
 
     result = max(result, vec3(0.0));
 

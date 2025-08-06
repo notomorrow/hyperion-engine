@@ -24,7 +24,8 @@
     "debug": {
       "reflections": false,
       "debugDrawer": {
-        "enabled": false
+        "enabled": true,
+        "envGridProbes": true
       },
       "irradiance": false
     },
