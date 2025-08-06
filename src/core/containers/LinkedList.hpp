@@ -8,8 +8,8 @@
 #include <core/memory/Memory.hpp>
 #include <core/debug/Debug.hpp>
 
-#include <HashCode.hpp>
-#include <Types.hpp>
+#include <core/HashCode.hpp>
+#include <core/Types.hpp>
 
 namespace hyperion {
 

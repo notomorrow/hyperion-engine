@@ -24,8 +24,8 @@
 
 #include <core/threading/Threads.hpp>
 
-#include <EngineGlobals.hpp>
-#include <Engine.hpp>
+#include <engine/EngineGlobals.hpp>
+#include <engine/EngineDriver.hpp>
 
 namespace hyperion {
 
@@ -147,39 +147,39 @@ struct RENDER_COMMAND(BakeLightmapVolumeTexture)
             Assert(atlasTexture.IsValid() && atlasTexture->IsReady());
 
             atlasTexture->EnqueueReadback([atlasTextureWeak = atlasTexture.ToWeak(), textureTypeIndex](ByteBuffer&& byteBuffer) mutable
-            {
-                Handle<Texture> atlasTexture = atlasTextureWeak.Lock();
-                if (!atlasTexture)
                 {
-                    HYP_LOG(Lightmap, Error, "Atlas texture {} was not alive after GPU image readback!", atlasTextureWeak.Id());
-                    
-                    return;
-                }
-                
-                if (byteBuffer.Empty())
-                {
-                    HYP_LOG(Lightmap, Warning, "Atlas texture {} is empty, skipping save", atlasTexture->GetName());
-                    
-                    return;
-                }
+                    Handle<Texture> atlasTexture = atlasTextureWeak.Lock();
+                    if (!atlasTexture)
+                    {
+                        HYP_LOG(Lightmap, Error, "Atlas texture {} was not alive after GPU image readback!", atlasTextureWeak.Id());
 
-                Bitmap<4> bitmap(atlasTexture->GetExtent().x, atlasTexture->GetExtent().y);
-                bitmap.SetPixels(std::move(byteBuffer));
+                        return;
+                    }
 
-                const String filename = HYP_FORMAT("lightmap_atlas_texture_{}_{}.bmp",
-                    atlasTexture->GetName(),
-                    uint32(LightmapTextureType(textureTypeIndex)));
+                    if (byteBuffer.Empty())
+                    {
+                        HYP_LOG(Lightmap, Warning, "Atlas texture {} is empty, skipping save", atlasTexture->GetName());
 
-                HYP_LOG(Lightmap, Info, "Writing atlas texture {} to file {}", atlasTexture->GetName(), filename);
+                        return;
+                    }
 
-                FileByteWriter fileByteWriter { filename };
-                bool res = bitmap.Write(&fileByteWriter);
+                    Bitmap<4> bitmap(atlasTexture->GetExtent().x, atlasTexture->GetExtent().y);
+                    bitmap.SetPixels(std::move(byteBuffer));
 
-                if (!res)
-                {
-                    HYP_LOG(Lightmap, Error, "Failed to write atlas texture {} to file", atlasTexture->GetName());
-                }
-            });
+                    const String filename = HYP_FORMAT("lightmap_atlas_texture_{}_{}.bmp",
+                        atlasTexture->GetName(),
+                        uint32(LightmapTextureType(textureTypeIndex)));
+
+                    HYP_LOG(Lightmap, Info, "Writing atlas texture {} to file {}", atlasTexture->GetName(), filename);
+
+                    FileByteWriter fileByteWriter { filename };
+                    bool res = bitmap.Write(&fileByteWriter);
+
+                    if (!res)
+                    {
+                        HYP_LOG(Lightmap, Error, "Failed to write atlas texture {} to file", atlasTexture->GetName());
+                    }
+                });
         }
 
         HYPERION_RETURN_OK;

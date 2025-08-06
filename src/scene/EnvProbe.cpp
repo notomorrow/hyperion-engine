@@ -17,8 +17,8 @@
 
 #include <core/object/HypClassUtils.hpp>
 
-#include <EngineGlobals.hpp>
-#include <Engine.hpp>
+#include <engine/EngineGlobals.hpp>
+#include <engine/EngineDriver.hpp>
 
 namespace hyperion {
 
@@ -82,7 +82,7 @@ EnvProbe::~EnvProbe()
 
 void EnvProbe::Init()
 {
-    AddDelegateHandler(g_engine->GetDelegates().OnShutdown.Bind([this]
+    AddDelegateHandler(g_engineDriver->GetDelegates().OnShutdown.Bind([this]
         {
             DetachChild(m_camera);
             m_camera.Reset();

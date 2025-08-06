@@ -14,7 +14,7 @@
 #include <rendering/RenderGraphicsPipeline.hpp>
 #include <rendering/rt/RenderRaytracingPipeline.hpp>
 
-#include <Types.hpp>
+#include <core/Types.hpp>
 
 namespace hyperion {
 

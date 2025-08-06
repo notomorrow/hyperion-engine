@@ -8,7 +8,7 @@
 
 #include <rendering/Texture.hpp>
 
-#include <EngineGlobals.hpp>
+#include <engine/EngineGlobals.hpp>
 
 namespace hyperion {
 

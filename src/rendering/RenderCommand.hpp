@@ -14,19 +14,13 @@
 #include <core/utilities/StringView.hpp>
 #include <core/Util.hpp>
 
-#include <Types.hpp>
+#include <core/Types.hpp>
 
 #include <type_traits>
 #include <mutex>
 #include <condition_variable>
 
 namespace hyperion {
-enum RenderCommandExecuteStage : uint32
-{
-    EXECUTE_STAGE_BEFORE_BUFFERS,
-    EXECUTE_STAGE_AFTER_BUFFERS,
-    EXECUTE_STAGE_MAX
-};
 
 #define RENDER_COMMAND(name) RenderCommand_##name
 

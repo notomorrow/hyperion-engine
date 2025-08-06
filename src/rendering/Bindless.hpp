@@ -10,7 +10,6 @@
 
 namespace hyperion {
 
-class Engine;
 class Texture;
 
 class BindlessStorage

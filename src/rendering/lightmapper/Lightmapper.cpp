@@ -60,8 +60,8 @@
 
 #include <system/AppContext.hpp>
 
-#include <EngineGlobals.hpp>
-#include <Engine.hpp>
+#include <engine/EngineGlobals.hpp>
+#include <engine/EngineDriver.hpp>
 
 namespace hyperion {
 
@@ -100,7 +100,7 @@ struct RENDER_COMMAND(LightmapRender)
 
         FrameBase* frame = g_renderBackend->GetCurrentFrame();
 
-        RenderSetup renderSetup { g_engine->GetWorld(), view };
+        RenderSetup renderSetup { g_engineDriver->GetWorld(), view };
 
         RenderProxyList* rpl = nullptr;
 
@@ -134,7 +134,7 @@ struct RENDER_COMMAND(LightmapRender)
             {
                 Array<LightmapHit> hitsBuffer;
                 hitsBuffer.Resize(previousRays.Size());
-                
+
                 AssertDebug(job->GetParams().renderers != nullptr);
 
                 for (UniquePtr<ILightmapRenderer>& lightmapRenderer : *job->GetParams().renderers)
@@ -475,7 +475,7 @@ Lightmapper::~Lightmapper()
     m_lightmapRenderers = {};
 
     m_queue.Clear();
-    
+
     if (m_view != nullptr)
     {
         m_scene->GetWorld()->RemoveView(m_view);
@@ -491,7 +491,7 @@ bool Lightmapper::IsComplete() const
 void Lightmapper::Initialize()
 {
     HYP_LOG(Lightmap, Info, "Initializing lightmapper: {}", m_config.ToString());
-  
+
     Handle<Camera> camera = CreateObject<Camera>();
     camera->SetName(NAME_FMT("{}_Camera", InstanceClass()->GetName()));
     camera->AddCameraController(CreateObject<OrthoCameraController>());
@@ -532,7 +532,7 @@ void Lightmapper::Initialize()
     Handle<Node> lightmapVolumeNode = m_scene->GetRoot()->AddChild();
     lightmapVolumeNode->SetName(Name::Unique("LightmapVolume"));
     lightmapVolumeNode->SetEntity(lightmapVolumeEntity);
-    
+
     Initialize_Internal();
 
     Build();
@@ -561,7 +561,7 @@ void Lightmapper::Initialize()
 
         UniquePtr<ILightmapRenderer>& lightmapRenderer = m_lightmapRenderers.EmplaceBack();
         lightmapRenderer = CreateRenderer(LightmapShadingType(i));
-        
+
         if (!lightmapRenderer)
         {
             continue;
@@ -636,7 +636,7 @@ void Lightmapper::Build()
             transformComponent.transform,
             boundingBoxComponent.worldAabb });
     }
-    
+
     Build_Internal();
 
     uint32 numTriangles = 0;
@@ -673,7 +673,7 @@ void Lightmapper::Build()
 void Lightmapper::Update(float delta)
 {
     HYP_SCOPE;
-    
+
     m_view->UpdateVisibility();
     m_view->CollectSync();
 

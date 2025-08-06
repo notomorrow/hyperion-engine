@@ -17,7 +17,7 @@
 
 #include <core/profiling/PerformanceClock.hpp>
 
-#include <EngineGlobals.hpp>
+#include <engine/EngineGlobals.hpp>
 
 namespace hyperion {
 
@@ -295,7 +295,7 @@ const Handle<PassData>& RendererBase::FetchViewPassData(View* view, PassDataExt*
         AssertDebug(pd != nullptr);
 
         pd->next = ext ? ext->Clone() : nullptr;
-        
+
         InitObject(pd);
 
         m_viewPassData.Set(view->Id().ToIndex(), pd);

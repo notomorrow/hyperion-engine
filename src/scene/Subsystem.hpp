@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include <core/Handle.hpp>
+#include <core/object/Handle.hpp>
 #include <core/Defines.hpp>
 
 #include <core/object/HypObject.hpp>
@@ -11,8 +11,8 @@
 
 #include <core/utilities/StringView.hpp>
 
-#include <HashCode.hpp>
-#include <GameCounter.hpp>
+#include <core/HashCode.hpp>
+#include <util/GameCounter.hpp>
 
 namespace hyperion {
 

@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include <core/Handle.hpp>
+#include <core/object/Handle.hpp>
 #include <core/Defines.hpp>
 #include <core/config/Config.hpp>
 

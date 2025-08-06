@@ -1,6 +1,6 @@
 #pragma once
-#include <Constants.hpp>
-#include <Types.hpp>
+#include <core/Constants.hpp>
+#include <core/Types.hpp>
 
 namespace hyperion {
 namespace utilities {
@@ -609,10 +609,10 @@ public:
 
 } // namespace utilities
 
+using utilities::FindTypeElementIndex;
 using utilities::Tuple;
 using utilities::TupleElement;
 using utilities::TupleElement_Tuple;
-using utilities::FindTypeElementIndex;
 using utilities::TupleSize;
 using utilities::helpers::Apply;
 using utilities::helpers::ConcatTuples;

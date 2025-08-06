@@ -7,7 +7,7 @@
 #include <core/json/parser/CompilerError.hpp>
 #include <util/UTF8.hpp>
 
-#include <Types.hpp>
+#include <core/Types.hpp>
 
 namespace hyperion::json {
 

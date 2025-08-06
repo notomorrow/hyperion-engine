@@ -2,13 +2,13 @@
 
 #pragma once
 
-#include <core/Handle.hpp>
+#include <core/object/Handle.hpp>
 
-#include <Types.hpp>
+#include <core/Types.hpp>
 
 namespace hyperion {
 
-class Engine;
+class EngineDriver;
 class AssetManager;
 class SafeDeleter;
 class ShaderManager;
@@ -22,7 +22,7 @@ class EditorState;
 
 // Globals for internal usage within the Hyperion library
 
-extern Handle<Engine> g_engine;
+extern Handle<EngineDriver> g_engineDriver;
 extern Handle<AssetManager> g_assetManager;
 extern Handle<EditorState> g_editorState;
 extern ShaderManager* g_shaderManager;

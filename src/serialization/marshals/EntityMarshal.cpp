@@ -28,8 +28,8 @@
 // temp
 #include <scene/components/MeshComponent.hpp>
 
-#include <EngineGlobals.hpp>
-#include <Engine.hpp>
+#include <engine/EngineGlobals.hpp>
+#include <engine/EngineDriver.hpp>
 
 namespace hyperion::serialization {
 
@@ -184,7 +184,7 @@ public:
 
         // Read components
 
-        const Handle<Scene>& detachedScene = g_engine->GetDefaultWorld()->GetDetachedScene(ThreadId::Current());
+        const Handle<Scene>& detachedScene = g_engineDriver->GetDefaultWorld()->GetDetachedScene(ThreadId::Current());
         const Handle<EntityManager>& entityManager = detachedScene->GetEntityManager();
         entityManager->AddExistingEntity(entity);
 

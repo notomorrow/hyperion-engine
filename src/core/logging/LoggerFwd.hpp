@@ -6,7 +6,7 @@
 
 #include <core/containers/StaticString.hpp>
 
-#include <Types.hpp>
+#include <core/Types.hpp>
 
 #define HYP_DECLARE_LOG_CHANNEL(name) \
     extern hyperion::logging::LogChannel Log_##name

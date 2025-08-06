@@ -18,7 +18,7 @@
 
 #include <core/object/HypClassUtils.hpp>
 
-#include <Engine.hpp>
+#include <engine/EngineDriver.hpp>
 
 namespace hyperion {
 

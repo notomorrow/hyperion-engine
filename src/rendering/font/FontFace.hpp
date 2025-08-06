@@ -7,12 +7,10 @@
 #include <core/Defines.hpp>
 #include <core/filesystem/FsUtil.hpp>
 
-#include <Constants.hpp>
-#include <Types.hpp>
+#include <core/Constants.hpp>
+#include <core/Types.hpp>
 
 namespace hyperion {
-
-class Engine;
 
 class FontFace
 {

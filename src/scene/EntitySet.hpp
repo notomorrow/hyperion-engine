@@ -17,7 +17,7 @@
 #include <scene/EntityContainer.hpp>
 #include <scene/ComponentContainer.hpp>
 
-#include <Types.hpp>
+#include <core/Types.hpp>
 
 namespace hyperion {
 

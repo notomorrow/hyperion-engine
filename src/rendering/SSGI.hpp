@@ -15,7 +15,6 @@
 
 namespace hyperion {
 
-class Engine;
 class GBuffer;
 class View;
 struct SSGIUniforms;

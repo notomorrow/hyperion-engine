@@ -6,7 +6,7 @@
 
 #include <core/memory/UniquePtr.hpp>
 
-#include <core/Handle.hpp>
+#include <core/object/Handle.hpp>
 
 #include <rendering/RenderableAttributes.hpp>
 
@@ -15,13 +15,12 @@
 #include <rendering/RenderObject.hpp>
 #include <rendering/Shared.hpp>
 
-#include <Constants.hpp>
+#include <core/Constants.hpp>
 
-#include <Types.hpp>
+#include <core/Types.hpp>
 
 namespace hyperion {
 
-class Engine;
 class Mesh;
 class Texture;
 class RenderGroup;

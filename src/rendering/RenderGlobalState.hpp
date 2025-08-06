@@ -4,7 +4,7 @@
 
 #include <core/memory/UniquePtr.hpp>
 
-#include <core/Handle.hpp>
+#include <core/object/Handle.hpp>
 
 #include <rendering/Buffers.hpp>
 
@@ -18,7 +18,6 @@
 
 namespace hyperion {
 
-class Engine;
 class Entity;
 class ShadowMapAllocator;
 class GpuBufferHolderMap;

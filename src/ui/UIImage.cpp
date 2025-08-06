@@ -6,7 +6,7 @@
 
 #include <rendering/Texture.hpp>
 
-#include <Engine.hpp>
+#include <engine/EngineDriver.hpp>
 
 namespace hyperion {
 

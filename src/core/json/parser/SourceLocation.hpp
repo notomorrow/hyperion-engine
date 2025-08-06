@@ -3,7 +3,7 @@
 #pragma once
 
 #include <core/containers/String.hpp>
-#include <HashCode.hpp>
+#include <core/HashCode.hpp>
 
 namespace hyperion::json {
 

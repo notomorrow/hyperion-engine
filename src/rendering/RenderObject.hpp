@@ -18,9 +18,9 @@
 
 #include <core/Name.hpp>
 
-#include <HashCode.hpp>
-#include <Constants.hpp>
-#include <Types.hpp>
+#include <core/HashCode.hpp>
+#include <core/Constants.hpp>
+#include <core/Types.hpp>
 
 #include <rendering/RenderCommand.hpp>
 #include <rendering/RenderResult.hpp>
@@ -29,8 +29,6 @@
 #include <mutex>
 
 namespace hyperion {
-
-class Engine;
 
 template <class T>
 struct RenderObjectHeader;
@@ -798,7 +796,6 @@ protected:
 
         _header->DecRefWeak();
     }
-
 
 #ifdef HYP_DEBUG_MODE
 public:

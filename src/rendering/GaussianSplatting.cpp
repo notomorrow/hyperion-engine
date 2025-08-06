@@ -35,8 +35,8 @@
 #include <util/NoiseFactory.hpp>
 #include <util/MeshBuilder.hpp>
 
-#include <EngineGlobals.hpp>
-#include <Engine.hpp>
+#include <engine/EngineGlobals.hpp>
+#include <engine/EngineDriver.hpp>
 
 #ifdef HYP_VULKAN
 #include <rendering/vulkan/VulkanStructs.hpp>
@@ -576,7 +576,7 @@ GaussianSplatting::~GaussianSplatting()
 
 void GaussianSplatting::Init()
 {
-    AddDelegateHandler(g_engine->GetDelegates().OnShutdown.Bind([this]()
+    AddDelegateHandler(g_engineDriver->GetDelegates().OnShutdown.Bind([this]()
         {
             m_quadMesh.Reset();
             m_gaussianSplattingInstance.Reset();

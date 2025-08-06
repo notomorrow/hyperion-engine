@@ -8,14 +8,14 @@
 
 #include <core/utilities/Uuid.hpp>
 
-#include <core/Handle.hpp>
+#include <core/object/Handle.hpp>
 
 #include <scene/Entity.hpp>
 
 #include <util/AtlasPacker.hpp>
 
-#include <GameCounter.hpp>
-#include <Types.hpp>
+#include <util/GameCounter.hpp>
+#include <core/Types.hpp>
 
 namespace hyperion {
 

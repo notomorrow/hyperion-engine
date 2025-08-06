@@ -4,7 +4,7 @@
 
 #include <core/containers/Array.hpp>
 
-#include <core/Handle.hpp>
+#include <core/object/Handle.hpp>
 #include <core/Defines.hpp>
 
 #include <core/math/BoundingBox.hpp>
@@ -12,7 +12,7 @@
 #include <core/math/Vector4.hpp>
 #include <core/math/Vertex.hpp>
 
-#include <Types.hpp>
+#include <core/Types.hpp>
 
 namespace hyperion {
 

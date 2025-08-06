@@ -12,7 +12,7 @@
 #include <core/serialization/fbom/FBOMResult.hpp>
 #include <core/serialization/fbom/FBOMBaseTypes.hpp>
 
-#include <Constants.hpp>
+#include <core/Constants.hpp>
 
 namespace hyperion {
 struct HypData;

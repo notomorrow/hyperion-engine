@@ -3,8 +3,8 @@
 #pragma once
 
 #include <core/Defines.hpp>
-#include <HashCode.hpp>
-#include <Types.hpp>
+#include <core/HashCode.hpp>
+#include <core/Types.hpp>
 
 namespace hyperion {
 namespace utilities {
@@ -200,7 +200,7 @@ struct Span<T, std::enable_if_t<!std::is_const_v<T>>>
 
         return Span(first + offset, first + offset + count);
     }
-    
+
     // To make generic programming easier
     HYP_FORCE_INLINE constexpr Span<T> ToSpan() const
     {
@@ -382,7 +382,7 @@ struct Span<T, std::enable_if_t<std::is_const_v<T>>>
 
         return Span(first + offset, first + offset + count);
     }
-    
+
     // To make generic programming easier
     HYP_FORCE_INLINE constexpr Span<const T> ToSpan() const
     {

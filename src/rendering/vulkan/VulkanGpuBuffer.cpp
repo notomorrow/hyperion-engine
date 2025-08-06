@@ -13,7 +13,7 @@
 
 #include <core/math/MathUtil.hpp>
 
-#include <Engine.hpp>
+#include <engine/EngineDriver.hpp>
 
 #include <cstring>
 
@@ -746,7 +746,7 @@ void VulkanGpuBuffer::SetDebugName(Name name)
     {
         vmaSetAllocationName(GetRenderBackend()->GetDevice()->GetAllocator(), m_vmaAllocation, strName);
     }
-    
+
     VkDebugUtilsObjectNameInfoEXT objectNameInfo { VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT };
     objectNameInfo.objectType = VK_OBJECT_TYPE_BUFFER;
     objectNameInfo.objectHandle = (uint64)m_handle;

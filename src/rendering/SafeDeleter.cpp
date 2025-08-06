@@ -7,7 +7,7 @@
 #include <rendering/RenderBackend.hpp>
 #include <rendering/RenderCommand.hpp>
 
-#include <EngineGlobals.hpp>
+#include <engine/EngineGlobals.hpp>
 
 namespace hyperion {
 

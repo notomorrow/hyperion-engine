@@ -55,7 +55,7 @@
 
 #include <util/BlueNoise.hpp>
 
-#include <EngineGlobals.hpp>
+#include <engine/EngineGlobals.hpp>
 
 #include <semaphore>
 
@@ -826,8 +826,9 @@ template <SizeType... Indices>
 static HYP_FORCE_INLINE void SyncResourcesT(ResourceTrackerBase** dstResourceTrackers, ResourceTrackerBase** srcResourceTrackers, std::index_sequence<Indices...>)
 {
     (SyncResources(
-        static_cast<typename TupleElement_Tuple<Indices, RenderProxyList::ResourceTrackerTypes>::Type*>(dstResourceTrackers[Indices]),
-        static_cast<typename TupleElement_Tuple<Indices, RenderProxyList::ResourceTrackerTypes>::Type*>(srcResourceTrackers[Indices])), ...);
+         static_cast<typename TupleElement_Tuple<Indices, RenderProxyList::ResourceTrackerTypes>::Type*>(dstResourceTrackers[Indices]),
+         static_cast<typename TupleElement_Tuple<Indices, RenderProxyList::ResourceTrackerTypes>::Type*>(srcResourceTrackers[Indices])),
+        ...);
 }
 
 static HYP_FORCE_INLINE void CopyDependencies(ViewData& vd, RenderProxyList& rpl)

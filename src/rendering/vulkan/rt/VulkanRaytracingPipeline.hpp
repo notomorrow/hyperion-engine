@@ -8,7 +8,7 @@
 #include <core/containers/Array.hpp>
 #include <core/containers/HashMap.hpp>
 
-#include <Types.hpp>
+#include <core/Types.hpp>
 
 namespace hyperion {
 class VulkanShader;
@@ -19,7 +19,7 @@ public:
     HYP_API VulkanRaytracingPipeline();
     HYP_API VulkanRaytracingPipeline(const VulkanShaderRef& shader, const VulkanDescriptorTableRef& descriptorTable);
     HYP_API virtual ~VulkanRaytracingPipeline() override;
-    
+
     virtual bool IsCreated() const override
     {
         return VulkanPipelineBase::IsCreated();

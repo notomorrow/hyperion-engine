@@ -2,11 +2,11 @@
 
 #pragma once
 
-#include <core/Handle.hpp>
+#include <core/object/Handle.hpp>
 #include <physics/RigidBody.hpp>
 #include <physics/PhysicsMaterial.hpp>
 
-#include <HashCode.hpp>
+#include <core/HashCode.hpp>
 
 namespace hyperion {
 

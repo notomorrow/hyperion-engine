@@ -7,7 +7,7 @@
 #include <core/utilities/TypeId.hpp>
 #include <core/utilities/ByteUtil.hpp>
 
-#include <Types.hpp>
+#include <core/Types.hpp>
 
 namespace hyperion {
 

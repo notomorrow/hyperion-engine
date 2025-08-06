@@ -19,7 +19,7 @@
 
 #include <core/json/JSON.hpp>
 
-#include <Types.hpp>
+#include <core/Types.hpp>
 
 namespace hyperion {
 namespace net {

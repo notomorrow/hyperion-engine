@@ -18,7 +18,7 @@
 #include <core/object/HypObject.hpp>
 
 #include <core/Name.hpp>
-#include <core/Handle.hpp>
+#include <core/object/Handle.hpp>
 
 #include <scene/Entity.hpp>
 #include <scene/EntityTag.hpp>
@@ -27,12 +27,11 @@
 #include <core/math/Ray.hpp>
 #include <core/math/BoundingBox.hpp>
 
-#include <HashCode.hpp>
-#include <Types.hpp>
+#include <core/HashCode.hpp>
+#include <core/Types.hpp>
 
 namespace hyperion {
 
-class Engine;
 class Scene;
 class EditorDelegates;
 

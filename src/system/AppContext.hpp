@@ -22,12 +22,12 @@
 #include <core/object/HypObject.hpp>
 
 #include <core/Defines.hpp>
-#include <core/Handle.hpp>
+#include <core/object/Handle.hpp>
 
 #include <input/Mouse.hpp>
 #include <input/InputManager.hpp>
 
-#include <Types.hpp>
+#include <core/Types.hpp>
 
 namespace hyperion {
 

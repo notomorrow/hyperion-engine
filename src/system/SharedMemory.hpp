@@ -5,7 +5,7 @@
 #include <core/containers/String.hpp>
 #include <core/Defines.hpp>
 
-#include <Types.hpp>
+#include <core/Types.hpp>
 
 namespace hyperion {
 namespace sys {

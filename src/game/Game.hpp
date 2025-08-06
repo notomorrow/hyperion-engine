@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include <GameCounter.hpp>
+#include <util/GameCounter.hpp>
 
 #include <core/memory/UniquePtr.hpp>
 #include <core/memory/resource/Resource.hpp>
@@ -28,8 +28,6 @@ class Assembly;
 class Object;
 } // namespace dotnet
 
-class Engine;
-class GameThread;
 class UISubsystem;
 
 struct ManagedGameInfo
@@ -42,7 +40,7 @@ HYP_CLASS(Abstract)
 class HYP_API Game : public HypObjectBase
 {
     friend class GameThread;
-    friend class Engine;
+    friend class EngineDriver;
 
     HYP_OBJECT_BODY(Game);
 

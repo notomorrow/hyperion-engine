@@ -15,7 +15,7 @@
 #include <core/memory/MemoryPool.hpp>
 #include <core/Name.hpp>
 
-#include <Types.hpp>
+#include <core/Types.hpp>
 
 namespace hyperion {
 
@@ -74,7 +74,7 @@ class HYP_API ResourceBase : public IResource
 protected:
     using RefCounter = Semaphore<int32, SemaphoreDirection::WAIT_FOR_ZERO_OR_NEGATIVE, threading::AtomicSemaphoreImpl<int32, SemaphoreDirection::WAIT_FOR_ZERO_OR_NEGATIVE>>;
     using InitState = Semaphore<int32, SemaphoreDirection::WAIT_FOR_ZERO_OR_NEGATIVE, threading::ConditionVarSemaphoreImpl<int32, SemaphoreDirection::WAIT_FOR_ZERO_OR_NEGATIVE>>;
-    
+
     ResourceBase();
     ~ResourceBase();
 

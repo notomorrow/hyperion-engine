@@ -17,8 +17,8 @@
 
 #include <core/logging/Logger.hpp>
 
-#include <EngineGlobals.hpp>
-#include <Engine.hpp>
+#include <engine/EngineGlobals.hpp>
+#include <engine/EngineDriver.hpp>
 
 #include <util/xml/SAXParser.hpp>
 
@@ -286,7 +286,7 @@ AssetLoadResult OgreXMLModelLoader::LoadAsset(LoaderState& state) const
             continue;
         }
 
-        Handle<Scene> scene = g_engine->GetDefaultWorld()->GetDetachedScene(Threads::CurrentThreadId());
+        Handle<Scene> scene = g_engineDriver->GetDefaultWorld()->GetDetachedScene(Threads::CurrentThreadId());
 
         const Handle<Entity> entity = scene->GetEntityManager()->AddEntity();
 

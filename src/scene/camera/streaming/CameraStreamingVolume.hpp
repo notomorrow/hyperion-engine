@@ -4,7 +4,7 @@
 
 #include <streaming/StreamingVolume.hpp>
 
-#include <core/Handle.hpp>
+#include <core/object/Handle.hpp>
 #include <core/Defines.hpp>
 
 #include <core/object/HypObject.hpp>

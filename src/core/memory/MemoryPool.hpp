@@ -18,7 +18,7 @@
 
 #include <core/utilities/IdGenerator.hpp>
 
-#include <Types.hpp>
+#include <core/Types.hpp>
 
 namespace hyperion {
 namespace memory {
@@ -84,7 +84,8 @@ struct MemoryPoolBlock final
         {
             for (uint32 i = 0; i < numElementsPerBlock; i++)
             {
-                HYP_ALIGN_PTR_AS(buffer.GetPointer(), ElementType)[i].~ElementType();
+                HYP_ALIGN_PTR_AS(buffer.GetPointer(), ElementType)
+                [i].~ElementType();
             }
         }
     }
@@ -327,7 +328,8 @@ public:
             Block& block = m_blocks[blockIndex];
             HYP_MT_CHECK_RW(block.dataRaceDetectors[elementIndex]);
 
-            HYP_ALIGN_PTR_AS(block.buffer.GetPointer(), ElementType)[elementIndex] = value;
+            HYP_ALIGN_PTR_AS(block.buffer.GetPointer(), ElementType)
+            [elementIndex] = value;
         }
         else
         {
@@ -338,7 +340,8 @@ public:
             Block& block = m_blocks[blockIndex];
             HYP_MT_CHECK_RW(block.dataRaceDetectors[elementIndex]);
 
-            HYP_ALIGN_PTR_AS(block.buffer.GetPointer(), ElementType)[elementIndex] = value;
+            HYP_ALIGN_PTR_AS(block.buffer.GetPointer(), ElementType)
+            [elementIndex] = value;
         }
     }
 

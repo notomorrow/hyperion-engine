@@ -14,7 +14,7 @@
 
 #include <core/utilities/Span.hpp>
 
-#include <core/Handle.hpp>
+#include <core/object/Handle.hpp>
 
 #include <core/Defines.hpp>
 

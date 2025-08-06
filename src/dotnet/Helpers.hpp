@@ -8,7 +8,7 @@
 
 #include <core/memory/RefCountedPtr.hpp>
 
-#include <core/Handle.hpp>
+#include <core/object/Handle.hpp>
 #include <core/object/ObjId.hpp>
 
 #include <type_traits>

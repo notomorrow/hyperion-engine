@@ -1,6 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#include <Types.hpp>
+#include <core/Types.hpp>
 
 #include <core/threading/Mutex.hpp>
 

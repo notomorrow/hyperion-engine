@@ -29,8 +29,8 @@
 
 #include <core/logging/Logger.hpp>
 
-#include <EngineGlobals.hpp>
-#include <Engine.hpp>
+#include <engine/EngineGlobals.hpp>
+#include <engine/EngineDriver.hpp>
 
 #include <algorithm>
 #include <string>
@@ -647,7 +647,7 @@ static bool GetFBXObjectInMapping(FlatMap<FBXObjectID, FBXNodeMapping>& mapping,
 //     if (Handle<Entity> &entity = fbxNode->GetEntity()) {
 //         entity->SetSkeleton(skeleton);
 
-//         g_engine->GetComponents() << AnimationController>(entity, MakeUnique<AnimationController());
+//         g_engineDriver->GetComponents() << AnimationController>(entity, MakeUnique<AnimationController());
 //     }
 
 //     for (auto &child : fbxNode->GetChildren()) {
@@ -1504,7 +1504,7 @@ AssetLoadResult FBXModelLoader::LoadAsset(LoaderState& state) const
                         .bucket = RB_OPAQUE },
                     { { Material::MATERIAL_KEY_ALBEDO, Vec4f(1.0f) }, { Material::MATERIAL_KEY_ROUGHNESS, 0.65f }, { Material::MATERIAL_KEY_METALNESS, 0.0f } });
 
-                Handle<Scene> scene = g_engine->GetDefaultWorld()->GetDetachedScene(Threads::CurrentThreadId());
+                Handle<Scene> scene = g_engineDriver->GetDefaultWorld()->GetDetachedScene(Threads::CurrentThreadId());
 
                 const Handle<Entity> entity = scene->GetEntityManager()->AddEntity();
 

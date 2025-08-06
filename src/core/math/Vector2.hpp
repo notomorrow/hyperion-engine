@@ -2,13 +2,13 @@
 
 #pragma once
 
-#include <HashCode.hpp>
+#include <core/HashCode.hpp>
 
 #include <core/utilities/FormatFwd.hpp>
 
 #include <core/Defines.hpp>
 
-#include <Types.hpp>
+#include <core/Types.hpp>
 
 #include <ostream>
 #include <cmath>

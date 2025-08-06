@@ -11,7 +11,7 @@
 #include <core/math/MathUtil.hpp>
 #include <core/math/Transform.hpp>
 
-#include <Engine.hpp>
+#include <engine/EngineDriver.hpp>
 
 #include <cstring>
 
@@ -45,7 +45,7 @@ VulkanRaytracingPipeline::VulkanRaytracingPipeline(const VulkanShaderRef& shader
 VulkanRaytracingPipeline::~VulkanRaytracingPipeline()
 {
     HYP_GFX_ASSERT(!IsCreated());
-    
+
     HYP_GFX_ASSERT(m_handle == VK_NULL_HANDLE, "Expected pipeline to have been destroyed");
     HYP_GFX_ASSERT(m_layout == VK_NULL_HANDLE, "Expected layout to have been destroyed");
 }

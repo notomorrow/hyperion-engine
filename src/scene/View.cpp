@@ -36,8 +36,8 @@
 #include <core/logging/LogChannels.hpp>
 #include <core/logging/Logger.hpp>
 
-#include <EngineGlobals.hpp>
-#include <Engine.hpp>
+#include <engine/EngineGlobals.hpp>
+#include <engine/EngineDriver.hpp>
 
 // #define HYP_DISABLE_VISIBILITY_CHECK
 // #define HYP_VISIBILITY_CHECK_DEBUG

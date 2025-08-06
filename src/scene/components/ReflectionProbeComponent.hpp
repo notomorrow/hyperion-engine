@@ -3,7 +3,7 @@
 #pragma once
 
 #include <core/Name.hpp>
-#include <core/Handle.hpp>
+#include <core/object/Handle.hpp>
 
 #include <core/memory/RefCountedPtr.hpp>
 
@@ -13,7 +13,7 @@
 #include <core/math/Extent.hpp>
 #include <core/math/Vector3.hpp>
 
-#include <HashCode.hpp>
+#include <core/HashCode.hpp>
 
 namespace hyperion {
 

@@ -9,7 +9,7 @@
 
 #include <core/debug/Debug.hpp>
 
-#include <Types.hpp>
+#include <core/Types.hpp>
 
 namespace hyperion {
 namespace threading {

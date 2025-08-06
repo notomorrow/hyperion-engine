@@ -13,7 +13,7 @@
 #include <core/Defines.hpp>
 #include <core/Util.hpp> // For HYP_PRETTY_FUNCTION_NAME
 
-#include <Types.hpp>
+#include <core/Types.hpp>
 
 namespace hyperion {
 namespace profiling {

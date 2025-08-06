@@ -16,7 +16,7 @@
 
 #include <core/object/HypObject.hpp>
 
-#include <Types.hpp>
+#include <core/Types.hpp>
 
 namespace hyperion {
 

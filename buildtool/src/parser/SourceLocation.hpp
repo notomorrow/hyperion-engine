@@ -4,7 +4,7 @@
 #define HYPERION_BUILDTOOL_SOURCE_LOCATION_HPP
 
 #include <core/containers/String.hpp>
-#include <HashCode.hpp>
+#include <core/HashCode.hpp>
 
 namespace hyperion::buildtool {
 

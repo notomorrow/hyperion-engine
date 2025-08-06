@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include <core/Handle.hpp>
+#include <core/object/Handle.hpp>
 
 #include <core/object/HypObject.hpp>
 
@@ -10,7 +10,7 @@
 
 #include <core/functional/ScriptableDelegate.hpp>
 
-#include <Types.hpp>
+#include <core/Types.hpp>
 
 namespace hyperion {
 

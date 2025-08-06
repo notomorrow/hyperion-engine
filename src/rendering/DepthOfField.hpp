@@ -6,7 +6,6 @@
 
 namespace hyperion {
 
-class Engine;
 class GBuffer;
 
 class DOFBlur

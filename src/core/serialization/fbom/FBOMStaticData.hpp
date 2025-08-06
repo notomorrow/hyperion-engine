@@ -15,9 +15,9 @@
 #include <core/serialization/fbom/FBOMArray.hpp>
 #include <core/serialization/fbom/FBOMInterfaces.hpp>
 
-#include <Constants.hpp>
-#include <Types.hpp>
-#include <HashCode.hpp>
+#include <core/Constants.hpp>
+#include <core/Types.hpp>
+#include <core/HashCode.hpp>
 
 #include <type_traits>
 

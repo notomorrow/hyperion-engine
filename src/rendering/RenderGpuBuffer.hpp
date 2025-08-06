@@ -14,7 +14,7 @@
 #include <rendering/RenderShader.hpp>
 #include <rendering/RenderObject.hpp>
 
-#include <Types.hpp>
+#include <core/Types.hpp>
 
 namespace hyperion {
 enum class GpuBufferType : uint8

@@ -28,8 +28,8 @@
 
 #include <core/profiling/ProfileScope.hpp>
 
-#include <EngineGlobals.hpp>
-#include <Types.hpp>
+#include <engine/EngineGlobals.hpp>
+#include <core/Types.hpp>
 
 #include <util/MeshBuilder.hpp>
 
@@ -42,7 +42,8 @@ struct MergeHalfResTexturesUniforms
 
 #pragma region Render commands
 
-struct RENDER_COMMAND(RecreateFullScreenPassFramebuffer) : RenderCommand
+struct RENDER_COMMAND(RecreateFullScreenPassFramebuffer)
+    : RenderCommand
 {
     WeakHandle<FullScreenPass> fullScreenPassWeak;
     Vec2u newSize;

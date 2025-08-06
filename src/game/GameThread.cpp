@@ -1,8 +1,8 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#include <GameThread.hpp>
-#include <Game.hpp>
-#include <GameCounter.hpp>
+#include <game/GameThread.hpp>
+#include <game/Game.hpp>
+#include <util/GameCounter.hpp>
 
 #include <core/logging/Logger.hpp>
 
@@ -22,8 +22,8 @@
 #include <rendering/debug/DebugDrawer.hpp>
 #include <rendering/RenderGlobalState.hpp>
 
-#include <EngineGlobals.hpp>
-#include <Engine.hpp>
+#include <engine/EngineGlobals.hpp>
+#include <engine/EngineDriver.hpp>
 
 // #define HYP_GAME_THREAD_LOCKED 1
 
@@ -147,7 +147,7 @@ void GameThread::operator()()
             m_game->Update(counter.delta);
         }
 
-        g_engine->GetDebugDrawer()->Update(counter.delta);
+        g_engineDriver->GetDebugDrawer()->Update(counter.delta);
 
         RenderApi_EndFrame_GameThread();
     }

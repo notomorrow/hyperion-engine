@@ -14,7 +14,7 @@
 #include <scene/Scene.hpp>
 #include <scene/components/ScriptComponent.hpp>
 
-#include <Types.hpp>
+#include <core/Types.hpp>
 
 namespace hyperion {
 

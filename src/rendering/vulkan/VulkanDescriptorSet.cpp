@@ -22,8 +22,8 @@
 #include <core/logging/Logger.hpp>
 #include <core/logging/LogChannels.hpp>
 
-#include <EngineGlobals.hpp>
-#include <Engine.hpp>
+#include <engine/EngineGlobals.hpp>
+#include <engine/EngineDriver.hpp>
 
 #include <vulkan/vulkan.h>
 
@@ -79,9 +79,9 @@ VulkanDescriptorSet::VulkanDescriptorSet(const DescriptorSetLayout& layout)
 VulkanDescriptorSet::~VulkanDescriptorSet()
 {
     HYP_GFX_ASSERT(
-       !IsCreated(),
-       "Descriptor set %p (%s) was not properly disposed before the destructor was hit. SafeRelease() call is probably missing somewhere.",
-       this, *GetDebugName());
+        !IsCreated(),
+        "Descriptor set %p (%s) was not properly disposed before the destructor was hit. SafeRelease() call is probably missing somewhere.",
+        this, *GetDebugName());
 }
 
 void VulkanDescriptorSet::UpdateDirtyState(bool* outIsDirty)
@@ -138,10 +138,10 @@ void VulkanDescriptorSet::UpdateDirtyState(bool* outIsDirty)
             const bool isDynamic = layoutElement->type == DescriptorSetElementType::UNIFORM_BUFFER_DYNAMIC
                 || layoutElement->type == DescriptorSetElementType::STORAGE_BUFFER_DYNAMIC;
 
-//            if (isDynamic)
-//            {
-//                HYP_GFX_ASSERT(layoutElement->size != 0, "Buffer size not set for dynamic buffer element: %s.%s", m_layout.GetName().LookupString(), name.LookupString());
-//            }
+            //            if (isDynamic)
+            //            {
+            //                HYP_GFX_ASSERT(layoutElement->size != 0, "Buffer size not set for dynamic buffer element: %s.%s", m_layout.GetName().LookupString(), name.LookupString());
+            //            }
 
             for (auto& valuesIt : element.values)
             {

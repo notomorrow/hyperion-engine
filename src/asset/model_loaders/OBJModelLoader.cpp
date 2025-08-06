@@ -19,8 +19,8 @@
 
 #include <core/filesystem/FsUtil.hpp>
 
-#include <EngineGlobals.hpp>
-#include <Engine.hpp>
+#include <engine/EngineGlobals.hpp>
+#include <engine/EngineDriver.hpp>
 
 namespace hyperion {
 
@@ -456,7 +456,7 @@ LoadedAsset OBJModelLoader::BuildModel(LoaderState& state, OBJModel& model)
 
         InitObject(material);
 
-        Handle<Scene> scene = g_engine->GetDefaultWorld()->GetDetachedScene(Threads::CurrentThreadId());
+        Handle<Scene> scene = g_engineDriver->GetDefaultWorld()->GetDetachedScene(Threads::CurrentThreadId());
 
         const Handle<Entity> entity = scene->GetEntityManager()->AddEntity();
 

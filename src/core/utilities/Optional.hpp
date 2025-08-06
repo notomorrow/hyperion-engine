@@ -5,8 +5,8 @@
 #include <core/utilities/ValueStorage.hpp>
 #include <core/debug/Debug.hpp>
 
-#include <Types.hpp>
-#include <HashCode.hpp>
+#include <core/Types.hpp>
+#include <core/HashCode.hpp>
 
 namespace hyperion {
 namespace utilities {

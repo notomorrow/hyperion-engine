@@ -9,7 +9,7 @@
 
 #include <util/UTF8.hpp>
 
-#include <Types.hpp>
+#include <core/Types.hpp>
 
 namespace hyperion::buildtool {
 

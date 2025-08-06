@@ -25,7 +25,7 @@
 #include <core/math/Vector3.hpp>
 #include <core/math/Vector4.hpp>
 
-#include <Types.hpp>
+#include <core/Types.hpp>
 
 namespace hyperion {
 

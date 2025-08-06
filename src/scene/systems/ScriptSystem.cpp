@@ -18,8 +18,8 @@
 
 #include <core/profiling/ProfileScope.hpp>
 
-#include <EngineGlobals.hpp>
-#include <Engine.hpp>
+#include <engine/EngineGlobals.hpp>
+#include <engine/EngineDriver.hpp>
 
 namespace hyperion {
 
@@ -34,7 +34,7 @@ ScriptSystem::ScriptSystem(EntityManager& entityManager)
     {
         m_delegateHandlers.Add(
             NAME("OnScriptStateChanged"),
-            g_engine->GetScriptingService()->OnScriptStateChanged.Bind([this](const ManagedScript& script)
+            g_engineDriver->GetScriptingService()->OnScriptStateChanged.Bind([this](const ManagedScript& script)
                 {
                     Threads::AssertOnThread(g_gameThread);
 

@@ -6,7 +6,7 @@
 #include <scene/animation/Animation.hpp>
 #include <scene/animation/Skeleton.hpp>
 
-#include <core/Handle.hpp>
+#include <core/object/Handle.hpp>
 
 namespace hyperion {
 

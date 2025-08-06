@@ -22,7 +22,7 @@
 
 #include <core/serialization/fbom/FBOMData.hpp>
 
-#include <Types.hpp>
+#include <core/Types.hpp>
 
 namespace hyperion {
 

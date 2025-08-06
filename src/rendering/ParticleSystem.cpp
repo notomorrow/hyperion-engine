@@ -39,7 +39,7 @@
 #include <core/logging/LogChannels.hpp>
 #include <core/logging/Logger.hpp>
 
-#include <EngineGlobals.hpp>
+#include <engine/EngineGlobals.hpp>
 
 #ifdef HYP_VULKAN
 #include <rendering/vulkan/VulkanStructs.hpp>
@@ -243,7 +243,7 @@ void ParticleSpawner::CreateGraphicsPipeline()
 #endif
 
     // // @FIXME: needs to be per view!
-    // m_renderGroup->AddFramebuffer(g_engine->GetCurrentView()->GetGBuffer()->GetBucket(RB_TRANSLUCENT).GetFramebuffer());
+    // m_renderGroup->AddFramebuffer(g_engineDriver->GetCurrentView()->GetGBuffer()->GetBucket(RB_TRANSLUCENT).GetFramebuffer());
 }
 
 void ParticleSpawner::CreateComputePipelines()

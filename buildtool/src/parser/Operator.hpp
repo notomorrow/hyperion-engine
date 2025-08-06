@@ -1,12 +1,12 @@
 #ifndef HYPERION_BUILDTOOL_OPERATOR_HPP
 #define HYPERION_BUILDTOOL_OPERATOR_HPP
 
-#include <Types.hpp>
+#include <core/Types.hpp>
 
 #include <core/containers/String.hpp>
 #include <core/containers/HashMap.hpp>
 
-#include <HashCode.hpp>
+#include <core/HashCode.hpp>
 
 namespace hyperion::buildtool {
 

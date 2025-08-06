@@ -8,7 +8,7 @@
 
 #include <core/utilities/Result.hpp>
 
-#include <core/Handle.hpp>
+#include <core/object/Handle.hpp>
 
 namespace hyperion {
 

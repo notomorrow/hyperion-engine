@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include <HashCode.hpp>
+#include <core/HashCode.hpp>
 
 namespace hyperion {
 

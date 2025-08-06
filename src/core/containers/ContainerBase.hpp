@@ -10,9 +10,9 @@
 
 #include <core/Defines.hpp>
 
-#include <Constants.hpp>
-#include <HashCode.hpp>
-#include <Types.hpp>
+#include <core/Constants.hpp>
+#include <core/HashCode.hpp>
+#include <core/Types.hpp>
 
 #include <algorithm> // for std::lower_bound, std::upper_bound
 

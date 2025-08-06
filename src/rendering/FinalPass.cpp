@@ -25,8 +25,8 @@
 
 #include <system/AppContext.hpp>
 
-#include <EngineGlobals.hpp>
-#include <Engine.hpp>
+#include <engine/EngineGlobals.hpp>
+#include <engine/EngineDriver.hpp>
 
 #define HYP_RENDER_UI_IN_FINAL_PASS
 
@@ -56,7 +56,7 @@ struct RENDER_COMMAND(SetUILayerImageView)
     {
         SafeRelease(std::move(finalPass.m_uiLayerImageView));
 
-        if (g_engine->IsShuttingDown())
+        if (g_engineDriver->IsShuttingDown())
         {
             // Don't set if the engine is in a shutdown state,
             // pipeline may already have been deleted.

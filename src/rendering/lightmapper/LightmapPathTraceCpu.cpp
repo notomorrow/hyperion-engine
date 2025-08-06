@@ -57,8 +57,8 @@
 
 #include <system/AppContext.hpp>
 
-#include <EngineGlobals.hpp>
-#include <Engine.hpp>
+#include <engine/EngineGlobals.hpp>
+#include <engine/EngineDriver.hpp>
 
 namespace hyperion {
 
@@ -446,7 +446,7 @@ void LightmapRenderer_CpuPathTracing::Render(FrameBase* frame, const RenderSetup
             {
                 // Keep the ViewData alive to prevent needing to recreate it a bunch
                 RenderApi_GetConsumerProxyList(view);
-            
+
                 uint32 seed = std::rand();
 
                 const uint32 offsetIndex = batchIndex * itemsPerBatch;

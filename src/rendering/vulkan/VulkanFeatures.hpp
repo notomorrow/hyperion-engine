@@ -10,7 +10,7 @@
 #include <core/containers/Array.hpp>
 
 #include <core/Defines.hpp>
-#include <Types.hpp>
+#include <core/Types.hpp>
 
 #include <vulkan/vulkan.h>
 
@@ -193,7 +193,7 @@ public:
     VulkanSwapchainSupportDetails QuerySwapchainSupport(VkSurfaceKHR _surface) const
     {
         HYP_GFX_ASSERT(m_physicalDevice != VK_NULL_HANDLE, "No physical device set!");
-        
+
         VulkanSwapchainSupportDetails details {};
         vkGetPhysicalDeviceSurfaceCapabilitiesKHR(m_physicalDevice, _surface, &details.capabilities);
 

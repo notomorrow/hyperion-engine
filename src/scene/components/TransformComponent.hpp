@@ -4,7 +4,7 @@
 
 #include <core/math/Transform.hpp>
 
-#include <HashCode.hpp>
+#include <core/HashCode.hpp>
 
 namespace hyperion {
 

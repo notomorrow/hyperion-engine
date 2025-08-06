@@ -6,8 +6,8 @@
 
 #include <scene/World.hpp>
 
-#include <EngineGlobals.hpp>
-#include <Engine.hpp>
+#include <engine/EngineGlobals.hpp>
+#include <engine/EngineDriver.hpp>
 
 namespace hyperion::physics {
 
@@ -44,7 +44,7 @@ void RigidBody::SetShape(const Handle<PhysicsShape>& shape)
 
     if (IsInitCalled())
     {
-        g_engine->GetWorld()->GetPhysicsWorld().GetAdapter().OnChangePhysicsShape(this);
+        g_engineDriver->GetWorld()->GetPhysicsWorld().GetAdapter().OnChangePhysicsShape(this);
     }
 }
 
@@ -54,13 +54,13 @@ void RigidBody::SetPhysicsMaterial(const PhysicsMaterial& physicsMaterial)
 
     if (IsInitCalled())
     {
-        g_engine->GetWorld()->GetPhysicsWorld().GetAdapter().OnChangePhysicsMaterial(this);
+        g_engineDriver->GetWorld()->GetPhysicsWorld().GetAdapter().OnChangePhysicsMaterial(this);
     }
 }
 
 void RigidBody::ApplyForce(const Vector3& force)
 {
-    g_engine->GetWorld()->GetPhysicsWorld().GetAdapter().ApplyForceToBody(this, force);
+    g_engineDriver->GetWorld()->GetPhysicsWorld().GetAdapter().ApplyForceToBody(this, force);
 }
 
 } // namespace hyperion::physics

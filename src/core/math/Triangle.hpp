@@ -7,7 +7,7 @@
 
 #include <core/containers/FixedArray.hpp>
 
-#include <Types.hpp>
+#include <core/Types.hpp>
 
 namespace hyperion {
 

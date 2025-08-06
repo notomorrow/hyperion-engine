@@ -5,10 +5,10 @@
 #include <core/containers/FixedArray.hpp>
 #include <core/containers/Array.hpp>
 #include <core/utilities/Pair.hpp>
-#include <HashCode.hpp>
+#include <core/HashCode.hpp>
 #include <core/math/MathUtil.hpp>
 
-#include <Types.hpp>
+#include <core/Types.hpp>
 
 #include <initializer_list>
 #include <limits>

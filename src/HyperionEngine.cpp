@@ -37,16 +37,16 @@
 
 #include <audio/AudioManager.hpp>
 
-#include <core/Handle.hpp>
+#include <core/object/Handle.hpp>
 
-#include <Engine.hpp>
-#include <Game.hpp>
+#include <engine/EngineDriver.hpp>
+#include <game/Game.hpp>
 
 namespace hyperion {
 
 HYP_DECLARE_LOG_CHANNEL(Core);
 
-Handle<Engine> g_engine {};
+Handle<EngineDriver> g_engineDriver {};
 Handle<AssetManager> g_assetManager {};
 Handle<EditorState> g_editorState {};
 ShaderManager* g_shaderManager = nullptr;
@@ -148,21 +148,21 @@ HYP_API const FilePath& GetResourceDirectory()
 static void UpdateGlobalConfig(const ConfigurationTable& mergeValues)
 {
     Mutex::Guard guard(g_globalConfigMutex);
-    
+
     GlobalConfig* prevGlobalConfig = nullptr;
-    
+
     if (g_globalConfigChain.Any())
     {
         prevGlobalConfig = &g_globalConfigChain.Back();
     }
-    
+
     GlobalConfig& newGlobalConfig = g_globalConfigChain.EmplaceBack("app");
-    
+
     if (prevGlobalConfig != nullptr)
     {
         newGlobalConfig.Merge(*prevGlobalConfig);
     }
-    
+
     newGlobalConfig.Merge(mergeValues);
     newGlobalConfig.Save();
 }
@@ -170,12 +170,12 @@ static void UpdateGlobalConfig(const ConfigurationTable& mergeValues)
 HYP_API const GlobalConfig& GetGlobalConfig()
 {
     Mutex::Guard guard(g_globalConfigMutex);
-    
+
     if (g_globalConfigChain.Empty())
     {
         g_globalConfigChain.EmplaceBack("app");
     }
-    
+
     return g_globalConfigChain.Back();
 }
 
@@ -188,7 +188,7 @@ HYP_API bool InitializeEngine(int argc, char** argv)
     InitializeNameRegistry();
 
     HypClassRegistry::GetInstance().Initialize();
-    
+
     {
         Mutex::Guard guard(g_globalConfigMutex);
         g_globalConfigChain.EmplaceBack("app");
@@ -211,10 +211,10 @@ HYP_API bool InitializeEngine(int argc, char** argv)
 #else
 #error Unsupported rendering backend
 #endif
-    
+
     ConfigurationTable renderGlobalConfigOverrides;
 
-    g_engine = CreateObject<Engine>();
+    g_engineDriver = CreateObject<EngineDriver>();
 
     g_assetManager = CreateObject<AssetManager>();
     InitObject(g_assetManager);
@@ -287,15 +287,15 @@ HYP_API bool InitializeEngine(int argc, char** argv)
             renderGlobalConfigOverrides.Set("rendering.raytracing.reflections.enabled", false);
             renderGlobalConfigOverrides.Set("rendering.raytracing.globalIllumination.enabled", false);
             renderGlobalConfigOverrides.Set("rendering.raytracing.pathTracing.enabled", false);
-        
+
             UpdateGlobalConfig(renderGlobalConfigOverrides);
         }
     }
 
     RenderApi_Init();
 
-    g_engine->SetAppContext(appContext);
-    InitObject(g_engine);
+    g_engineDriver->SetAppContext(appContext);
+    InitObject(g_engineDriver);
 
     return true;
 }
@@ -305,10 +305,10 @@ HYP_API void DestroyEngine()
     Threads::AssertOnThread(g_mainThread);
 
     Assert(
-        g_engine != nullptr,
+        g_engineDriver != nullptr,
         "Hyperion not initialized!");
 
-    g_engine->FinalizeStop();
+    g_engineDriver->FinalizeStop();
 
     dotnet::DotNetSystem::GetInstance().Shutdown();
     ComponentInterfaceRegistry::GetInstance().Shutdown();
@@ -332,11 +332,11 @@ HYP_API void DestroyEngine()
     delete g_materialSystem;
     g_materialSystem = nullptr;
 
-    g_engine.Reset();
+    g_engineDriver.Reset();
 
     delete g_renderBackend;
     g_renderBackend = nullptr;
-    
+
     g_globalConfigChain.Clear();
 }
 

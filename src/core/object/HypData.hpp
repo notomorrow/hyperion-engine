@@ -5,7 +5,7 @@
 #include <core/Defines.hpp>
 
 #include <core/object/ObjId.hpp>
-#include <core/Handle.hpp>
+#include <core/object/Handle.hpp>
 
 #include <core/containers/String.hpp>
 #include <core/containers/HashMap.hpp>
@@ -31,7 +31,7 @@
 
 #include <core/profiling/ProfileScope.hpp>
 
-#include <Types.hpp>
+#include <core/Types.hpp>
 
 #include <type_traits>
 

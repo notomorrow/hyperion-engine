@@ -5,7 +5,7 @@
 #include <core/math/Vector2.hpp>
 
 #include <core/debug/Debug.hpp>
-#include <Types.hpp>
+#include <core/Types.hpp>
 
 namespace hyperion {
 

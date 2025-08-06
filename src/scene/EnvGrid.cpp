@@ -25,8 +25,8 @@
 
 #include <core/object/HypClassUtils.hpp>
 
-#include <EngineGlobals.hpp>
-#include <Engine.hpp>
+#include <engine/EngineGlobals.hpp>
+#include <engine/EngineDriver.hpp>
 
 namespace hyperion {
 
@@ -115,7 +115,7 @@ EnvGrid::~EnvGrid()
 
 void EnvGrid::Init()
 {
-    AddDelegateHandler(g_engine->GetDelegates().OnShutdown.Bind([this]
+    AddDelegateHandler(g_engineDriver->GetDelegates().OnShutdown.Bind([this]
         {
             m_view.Reset();
 
@@ -479,7 +479,7 @@ void EnvGrid::Update(float delta)
     // Debug draw
     if (configDebugDrawProbes.ToBool(false))
     {
-        DebugDrawCommandList& debugDrawer = g_engine->GetDebugDrawer()->CreateCommandList();
+        DebugDrawCommandList& debugDrawer = g_engineDriver->GetDebugDrawer()->CreateCommandList();
 
         for (uint32 index = 0; index < m_envProbeCollection.numProbes; index++)
         {

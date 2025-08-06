@@ -12,7 +12,7 @@
 #include <core/Name.hpp>
 #include <core/Defines.hpp>
 
-#include <Types.hpp>
+#include <core/Types.hpp>
 
 #include <thread>
 #include <type_traits>

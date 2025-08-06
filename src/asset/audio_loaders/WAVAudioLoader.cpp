@@ -3,7 +3,7 @@
 #include <asset/audio_loaders/WAVAudioLoader.hpp>
 #include <audio/AudioSource.hpp>
 
-#include <Engine.hpp>
+#include <engine/EngineDriver.hpp>
 
 namespace hyperion {
 

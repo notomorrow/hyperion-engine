@@ -23,8 +23,8 @@
 #include <rendering/RenderSampler.hpp>
 #include <rendering/rt/RenderAccelerationStructure.hpp>
 
-#include <Types.hpp>
-#include <HashCode.hpp>
+#include <core/Types.hpp>
+#include <core/HashCode.hpp>
 
 namespace hyperion {
 
@@ -945,11 +945,11 @@ public:
             if (set->GetLayout().GetDynamicElements().Any() && offsets.Any())
             {
                 const auto offsetsIt = offsets.Find(descriptorSetName);
-                
+
                 if (offsetsIt != offsets.End())
                 {
                     set->Bind(commandBuffer, pipeline, offsetsIt->second, setIndex);
-                    
+
                     continue;
                 }
             }

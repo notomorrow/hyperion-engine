@@ -7,7 +7,7 @@
 
 #include <core/utilities/FormatFwd.hpp>
 
-#include <HashCode.hpp>
+#include <core/HashCode.hpp>
 
 namespace hyperion {
 

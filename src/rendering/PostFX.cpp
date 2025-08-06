@@ -11,7 +11,7 @@
 
 #include <util/MeshBuilder.hpp>
 
-#include <EngineGlobals.hpp>
+#include <engine/EngineGlobals.hpp>
 
 namespace hyperion {
 

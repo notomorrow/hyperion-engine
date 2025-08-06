@@ -13,7 +13,7 @@
 #include <core/threading/Thread.hpp>
 #include <core/threading/Scheduler.hpp>
 
-#include <Types.hpp>
+#include <core/Types.hpp>
 
 namespace hyperion {
 namespace net {

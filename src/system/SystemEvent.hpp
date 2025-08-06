@@ -9,7 +9,7 @@
 
 #include <SDL2/SDL.h>
 
-#include <Types.hpp>
+#include <core/Types.hpp>
 
 namespace hyperion {
 namespace sys {

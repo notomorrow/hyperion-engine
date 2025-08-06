@@ -34,8 +34,8 @@
 
 #include <system/AppContext.hpp>
 
-#include <Engine.hpp>
-#include <EngineGlobals.hpp>
+#include <engine/EngineDriver.hpp>
+#include <engine/EngineGlobals.hpp>
 
 namespace hyperion {
 
@@ -108,7 +108,7 @@ struct RENDER_COMMAND(SetFinalPassImageView)
             imageView = g_renderBackend->GetTextureImageView(g_renderGlobalState->placeholderData->defaultTexture2d);
         }
 
-        g_engine->GetFinalPass()->SetUILayerImageView(imageView);
+        g_engineDriver->GetFinalPass()->SetUILayerImageView(imageView);
 
         HYPERION_RETURN_OK;
     }
@@ -135,11 +135,11 @@ void UISubsystem::Init()
 {
     HYP_SCOPE;
 
-    m_onGbufferResolutionChangedHandle = g_engine->GetDelegates().OnAfterSwapchainRecreated.Bind([weakThis = WeakHandleFromThis()]()
+    m_onGbufferResolutionChangedHandle = g_engineDriver->GetDelegates().OnAfterSwapchainRecreated.Bind([weakThis = WeakHandleFromThis()]()
         {
             Threads::AssertOnThread(g_renderThread);
 
-            HYP_LOG(UI, Debug, "UISubsystem: resizing to {}", g_engine->GetAppContext()->GetMainWindow()->GetDimensions());
+            HYP_LOG(UI, Debug, "UISubsystem: resizing to {}", g_engineDriver->GetAppContext()->GetMainWindow()->GetDimensions());
 
             Handle<UISubsystem> subsystem = weakThis.Lock();
 

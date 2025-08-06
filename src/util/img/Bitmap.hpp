@@ -18,7 +18,7 @@
 
 #include <util/img/WriteBitmap.hpp>
 
-#include <Types.hpp>
+#include <core/Types.hpp>
 
 namespace hyperion {
 

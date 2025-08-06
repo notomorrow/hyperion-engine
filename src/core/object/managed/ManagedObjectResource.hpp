@@ -11,7 +11,7 @@
 
 #include <core/utilities/EnumFlags.hpp>
 
-#include <Types.hpp>
+#include <core/Types.hpp>
 
 namespace hyperion {
 

@@ -3,10 +3,10 @@
 #pragma once
 
 #include <audio/AudioSource.hpp>
-#include <core/Handle.hpp>
+#include <core/object/Handle.hpp>
 
-#include <HashCode.hpp>
-#include <GameCounter.hpp>
+#include <core/HashCode.hpp>
+#include <util/GameCounter.hpp>
 
 namespace hyperion {
 

@@ -8,7 +8,7 @@
 
 #include <core/math/Color.hpp>
 
-#include <core/Handle.hpp>
+#include <core/object/Handle.hpp>
 #include <core/Defines.hpp>
 
 #include <ui/UIObject.hpp>

@@ -19,7 +19,7 @@
 
 #include <core/profiling/ProfileScope.hpp>
 
-#include <EngineGlobals.hpp>
+#include <engine/EngineGlobals.hpp>
 
 namespace hyperion {
 
@@ -163,7 +163,7 @@ void TemporalBlending::Resize_Internal(Vec2u newSize)
     }
 
     CreateImages();
-    
+
     SafeRelease(std::move(m_csPerformBlending));
 }
 
@@ -226,10 +226,10 @@ void TemporalBlending::CreateImages()
 void TemporalBlending::CreatePipeline()
 {
     SafeRelease(std::move(m_csPerformBlending));
-    
+
     ShaderRef shader = g_shaderManager->GetOrCreate(NAME("TemporalBlending"), GetShaderProperties());
     Assert(shader.IsValid());
-    
+
     const DescriptorTableDeclaration& descriptorTableDecl = shader->GetCompiledShader()->GetDescriptorTableDeclaration();
 
     DescriptorTableRef descriptorTable = g_renderBackend->MakeDescriptorTable(&descriptorTableDecl);
@@ -246,7 +246,7 @@ void TemporalBlending::CreatePipeline()
             m_uniformBuffers[frameIndex] = g_renderBackend->MakeGpuBuffer(GpuBufferType::CBUFF, sizeof(TemporalBlendingUniforms));
             HYP_GFX_ASSERT(m_uniformBuffers[frameIndex]->Create());
         }
-        
+
         const ImageViewRef& inputImageView = m_inputFramebuffer.IsValid()
             ? m_inputFramebuffer->GetAttachment(0)->GetImageView()
             : m_inputImageView;
@@ -271,7 +271,7 @@ void TemporalBlending::CreatePipeline()
 
         descriptorTable->GetDescriptorSet(NAME("TemporalBlendingDescriptorSet"), frameIndex)
             ->SetElement(NAME("OutImage"), g_renderBackend->GetTextureImageView((*textures[frameIndex % 2])));
-        
+
         descriptorTable->GetDescriptorSet(NAME("TemporalBlendingDescriptorSet"), frameIndex)
             ->SetElement(NAME("TemporalBlendingUniforms"), m_uniformBuffers[frameIndex]);
     }
@@ -289,11 +289,11 @@ void TemporalBlending::Render(FrameBase* frame, const RenderSetup& renderSetup)
 
     AssertDebug(renderSetup.IsValid());
     AssertDebug(renderSetup.HasView());
-    
+
     if (!m_csPerformBlending)
     {
         CreatePipeline();
-        
+
         Assert(m_csPerformBlending != nullptr && m_csPerformBlending->IsCreated());
     }
 
@@ -304,9 +304,11 @@ void TemporalBlending::Render(FrameBase* frame, const RenderSetup& renderSetup)
     frame->renderQueue << InsertBarrier(activeImage, RS_UNORDERED_ACCESS);
 
     const Vec3u& extent = activeImage->GetExtent();
-    
+
     const Vec3u depthTextureDimensions = m_gbuffer->GetBucket(RB_OPAQUE)
-        .GetGBufferAttachment(GTN_DEPTH)->GetImage()->GetExtent();
+                                             .GetGBufferAttachment(GTN_DEPTH)
+                                             ->GetImage()
+                                             ->GetExtent();
 
     // Copy uniform data to gpu buffer
     TemporalBlendingUniforms uniforms {};

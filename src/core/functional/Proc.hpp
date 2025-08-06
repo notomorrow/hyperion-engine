@@ -10,8 +10,8 @@
 #include <core/memory/Memory.hpp>
 #include <core/utilities/ValueStorage.hpp>
 
-#include <Types.hpp>
-#include <Constants.hpp>
+#include <core/Types.hpp>
+#include <core/Constants.hpp>
 
 #include <type_traits>
 #include <cstddef>

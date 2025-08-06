@@ -28,7 +28,7 @@
 #include <scene/Light.hpp>
 #include <scene/View.hpp>
 
-#include <EngineGlobals.hpp>
+#include <engine/EngineGlobals.hpp>
 
 namespace hyperion {
 

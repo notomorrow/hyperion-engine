@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include <core/Handle.hpp>
+#include <core/object/Handle.hpp>
 
 #include <core/math/Matrix4.hpp>
 
@@ -11,7 +11,7 @@
 
 #include <rendering/RenderObject.hpp>
 
-#include <Types.hpp>
+#include <core/Types.hpp>
 
 namespace hyperion {
 

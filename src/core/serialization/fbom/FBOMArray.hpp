@@ -11,8 +11,8 @@
 #include <core/serialization/fbom/FBOMData.hpp>
 #include <core/serialization/fbom/FBOMInterfaces.hpp>
 
-#include <Types.hpp>
-#include <Constants.hpp>
+#include <core/Types.hpp>
+#include <core/Constants.hpp>
 
 #include <type_traits>
 

@@ -10,7 +10,7 @@
 
 #include <system/vma/VmaUsage.hpp>
 
-#include <Types.hpp>
+#include <core/Types.hpp>
 
 #include <vulkan/vulkan.h>
 

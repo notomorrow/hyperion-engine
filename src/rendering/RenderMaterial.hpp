@@ -16,7 +16,7 @@
 #include <core/threading/Mutex.hpp>
 #include <core/threading/AtomicVar.hpp>
 
-#include <Types.hpp>
+#include <core/Types.hpp>
 
 namespace hyperion {
 

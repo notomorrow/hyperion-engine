@@ -11,10 +11,10 @@
 
 #include <core/object/HypObject.hpp>
 
-#include <core/Handle.hpp>
+#include <core/object/Handle.hpp>
 #include <core/Name.hpp>
 
-#include <Types.hpp>
+#include <core/Types.hpp>
 
 namespace hyperion {
 

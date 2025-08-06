@@ -4,7 +4,7 @@
 
 #include <rendering/RenderProxyable.hpp>
 
-#include <core/Handle.hpp>
+#include <core/object/Handle.hpp>
 
 #include <core/utilities/DataMutationState.hpp>
 
@@ -18,12 +18,11 @@
 
 #include <core/math/Matrix4.hpp>
 
-#include <GameCounter.hpp>
-#include <Types.hpp>
+#include <util/GameCounter.hpp>
+#include <core/Types.hpp>
 
 namespace hyperion {
 
-class Engine;
 class Bone;
 class Animation;
 

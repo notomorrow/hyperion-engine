@@ -10,7 +10,7 @@
 
 #include <core/containers/Stack.hpp>
 
-#include <Types.hpp>
+#include <core/Types.hpp>
 
 #include <util/xml/SAXParser.hpp>
 

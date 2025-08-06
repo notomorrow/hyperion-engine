@@ -6,10 +6,10 @@
 #include <core/threading/Scheduler.hpp>
 #include <core/containers/Queue.hpp>
 #include <core/math/MathUtil.hpp>
-#include <GameCounter.hpp>
+#include <util/GameCounter.hpp>
 #include <core/Defines.hpp>
 
-#include <Types.hpp>
+#include <core/Types.hpp>
 
 namespace hyperion {
 namespace threading {

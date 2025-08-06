@@ -7,7 +7,7 @@
 #include <core/utilities/Pair.hpp>
 #include <core/containers/ContainerBase.hpp>
 
-#include <HashCode.hpp>
+#include <core/HashCode.hpp>
 
 namespace hyperion {
 namespace containers {

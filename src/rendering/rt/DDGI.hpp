@@ -10,15 +10,13 @@
 
 #include <core/math/BoundingBox.hpp>
 
-#include <Types.hpp>
+#include <core/Types.hpp>
 
 #include <random>
 
 namespace hyperion {
 
 struct RenderSetup;
-
-class Engine;
 
 enum ProbeSystemFlags : uint32
 {
@@ -49,7 +47,7 @@ struct DDGIUniforms
     uint32 numRaysPerProbe;
     uint32 numBoundLights;
     uint32 flags;
-    
+
     Vec4u lightIndices[4];
 };
 

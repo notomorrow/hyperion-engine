@@ -3,7 +3,7 @@
 #include <core/object/HypClass.hpp>
 #include <core/object/HypData.hpp>
 
-#include <Types.hpp>
+#include <core/Types.hpp>
 
 using namespace hyperion;
 

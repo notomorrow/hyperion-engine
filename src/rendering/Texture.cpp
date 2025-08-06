@@ -24,8 +24,8 @@
 
 #include <util/img/Bitmap.hpp>
 
-#include <EngineGlobals.hpp>
-#include <Engine.hpp>
+#include <engine/EngineGlobals.hpp>
+#include <engine/EngineDriver.hpp>
 
 namespace hyperion {
 
@@ -229,7 +229,7 @@ Texture::~Texture()
 
 void Texture::Init()
 {
-    AddDelegateHandler(g_engine->GetDelegates().OnShutdown.Bind([this]()
+    AddDelegateHandler(g_engineDriver->GetDelegates().OnShutdown.Bind([this]()
         {
             SafeRelease(std::move(m_gpuImage));
         }));
@@ -334,7 +334,7 @@ void Texture::Readback(ByteBuffer& outByteBuffer)
 {
     HYP_SCOPE;
     Threads::AssertOnThread(g_renderThread);
-    
+
     AssertReady();
 
     GpuBufferRef gpuBuffer = g_renderBackend->MakeGpuBuffer(GpuBufferType::STAGING_BUFFER, m_gpuImage->GetByteSize());
@@ -374,26 +374,26 @@ void Texture::EnqueueReadback(Proc<void(ByteBuffer&& byteBuffer)>&& callback)
 {
     HYP_SCOPE;
     Threads::AssertOnThread(g_renderThread);
-    
+
     AssertReady();
 
     FrameBase* currentFrame = g_renderBackend->GetCurrentFrame();
-    
+
     // No current frame, fallback to blocking Readback() call.
     if (!currentFrame)
     {
         ByteBuffer byteBuffer;
         Readback(byteBuffer);
-        
+
         callback(std::move(byteBuffer));
-        
+
         return;
     }
-    
+
     RenderQueue& renderQueue = currentFrame->renderQueue;
-    
+
     const ResourceState previousResourceState = m_gpuImage->GetResourceState();
-    
+
     GpuBufferRef stagingBuffer = g_renderBackend->MakeGpuBuffer(GpuBufferType::STAGING_BUFFER, m_gpuImage->GetByteSize());
     HYP_GFX_ASSERT(stagingBuffer->Create());
     stagingBuffer->Map();
@@ -404,23 +404,22 @@ void Texture::EnqueueReadback(Proc<void(ByteBuffer&& byteBuffer)>&& callback)
     renderQueue << CopyImageToBuffer(m_gpuImage, stagingBuffer);
 
     renderQueue << InsertBarrier(m_gpuImage, previousResourceState);
-    
+
     currentFrame->OnFrameEnd
-        .Bind([
-            gpuImageRef = m_gpuImage /* hold a strong reference to our buffer to ensure it is kept alive */,
-            stagingBuffer = std::move(stagingBuffer),
-            callback = std::move(callback)](...) mutable
-        {
-            ByteBuffer byteBuffer;
-            byteBuffer.SetSize(stagingBuffer->Size());
-            
-            stagingBuffer->Read(byteBuffer.Size(), byteBuffer.Data());
-            
-            SafeRelease(std::move(stagingBuffer));
-            SafeRelease(std::move(gpuImageRef));
-            
-            callback(std::move(byteBuffer));
-        })
+        .Bind([gpuImageRef = m_gpuImage /* hold a strong reference to our buffer to ensure it is kept alive */,
+                  stagingBuffer = std::move(stagingBuffer),
+                  callback = std::move(callback)](...) mutable
+            {
+                ByteBuffer byteBuffer;
+                byteBuffer.SetSize(stagingBuffer->Size());
+
+                stagingBuffer->Read(byteBuffer.Size(), byteBuffer.Data());
+
+                SafeRelease(std::move(stagingBuffer));
+                SafeRelease(std::move(gpuImageRef));
+
+                callback(std::move(byteBuffer));
+            })
         .Detach();
 }
 
@@ -451,7 +450,7 @@ Vec4f Texture::Sample(Vec3f uvw, uint32 faceIndex)
     {
         HYP_LOG_ONCE(Texture, Debug, "Texture does not have data loaded, will be streamed in");
     }
-    
+
     ResourceHandle resourceHandle = ResourceHandle(*m_asset->GetResource());
 
     if (!resourceHandle)
@@ -497,17 +496,22 @@ Vec4f Texture::Sample(Vec3f uvw, uint32 faceIndex)
 
         return Vec4f::Zero();
     }
-    
+
     if ((textureData->desc.format >= TF_R16F && textureData->desc.format <= TF_RGBA32F) || textureData->desc.format == TF_R11G11B10F)
     {
         // FP format
         switch (numComponents)
         {
-        case 1: return PixelReference<float, 1>(textureData->imageData.Data() + index).GetRGBA();
-        case 2: return PixelReference<float, 2>(textureData->imageData.Data() + index).GetRGBA();
-        case 3: return PixelReference<float, 3>(textureData->imageData.Data() + index).GetRGBA();
-        case 4: return PixelReference<float, 4>(textureData->imageData.Data() + index).GetRGBA();
-        default: break;
+        case 1:
+            return PixelReference<float, 1>(textureData->imageData.Data() + index).GetRGBA();
+        case 2:
+            return PixelReference<float, 2>(textureData->imageData.Data() + index).GetRGBA();
+        case 3:
+            return PixelReference<float, 3>(textureData->imageData.Data() + index).GetRGBA();
+        case 4:
+            return PixelReference<float, 4>(textureData->imageData.Data() + index).GetRGBA();
+        default:
+            break;
         }
     }
     else if (textureData->desc.format >= TF_R16 && textureData->desc.format <= TF_RGBA16)
@@ -515,11 +519,16 @@ Vec4f Texture::Sample(Vec3f uvw, uint32 faceIndex)
         // 16 bit integer format
         switch (numComponents)
         {
-        case 1: return PixelReference<uint16, 1>(textureData->imageData.Data() + index).GetRGBA();
-        case 2: return PixelReference<uint16, 2>(textureData->imageData.Data() + index).GetRGBA();
-        case 3: return PixelReference<uint16, 3>(textureData->imageData.Data() + index).GetRGBA();
-        case 4: return PixelReference<uint16, 4>(textureData->imageData.Data() + index).GetRGBA();
-        default: break;
+        case 1:
+            return PixelReference<uint16, 1>(textureData->imageData.Data() + index).GetRGBA();
+        case 2:
+            return PixelReference<uint16, 2>(textureData->imageData.Data() + index).GetRGBA();
+        case 3:
+            return PixelReference<uint16, 3>(textureData->imageData.Data() + index).GetRGBA();
+        case 4:
+            return PixelReference<uint16, 4>(textureData->imageData.Data() + index).GetRGBA();
+        default:
+            break;
         }
     }
     else if (textureData->desc.format >= TF_R32 && textureData->desc.format <= TF_RGBA32)
@@ -527,11 +536,16 @@ Vec4f Texture::Sample(Vec3f uvw, uint32 faceIndex)
         // 32 bit integer format
         switch (numComponents)
         {
-        case 1: return PixelReference<uint32, 1>(textureData->imageData.Data() + index).GetRGBA();
-        case 2: return PixelReference<uint32, 2>(textureData->imageData.Data() + index).GetRGBA();
-        case 3: return PixelReference<uint32, 3>(textureData->imageData.Data() + index).GetRGBA();
-        case 4: return PixelReference<uint32, 4>(textureData->imageData.Data() + index).GetRGBA();
-        default: break;
+        case 1:
+            return PixelReference<uint32, 1>(textureData->imageData.Data() + index).GetRGBA();
+        case 2:
+            return PixelReference<uint32, 2>(textureData->imageData.Data() + index).GetRGBA();
+        case 3:
+            return PixelReference<uint32, 3>(textureData->imageData.Data() + index).GetRGBA();
+        case 4:
+            return PixelReference<uint32, 4>(textureData->imageData.Data() + index).GetRGBA();
+        default:
+            break;
         }
     }
     else
@@ -539,11 +553,16 @@ Vec4f Texture::Sample(Vec3f uvw, uint32 faceIndex)
         // ubyte format
         switch (numComponents)
         {
-        case 1: return PixelReference<ubyte, 1>(textureData->imageData.Data() + index).GetRGBA();
-        case 2: return PixelReference<ubyte, 2>(textureData->imageData.Data() + index).GetRGBA();
-        case 3: return PixelReference<ubyte, 3>(textureData->imageData.Data() + index).GetRGBA();
-        case 4: return PixelReference<ubyte, 4>(textureData->imageData.Data() + index).GetRGBA();
-        default: break;
+        case 1:
+            return PixelReference<ubyte, 1>(textureData->imageData.Data() + index).GetRGBA();
+        case 2:
+            return PixelReference<ubyte, 2>(textureData->imageData.Data() + index).GetRGBA();
+        case 3:
+            return PixelReference<ubyte, 3>(textureData->imageData.Data() + index).GetRGBA();
+        case 4:
+            return PixelReference<ubyte, 4>(textureData->imageData.Data() + index).GetRGBA();
+        default:
+            break;
         }
     }
 

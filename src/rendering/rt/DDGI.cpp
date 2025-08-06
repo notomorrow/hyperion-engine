@@ -20,9 +20,9 @@
 #include <core/utilities/ByteUtil.hpp>
 #include <core/utilities/DeferredScope.hpp>
 
-#include <EngineGlobals.hpp>
-#include <Engine.hpp>
-#include <Types.hpp>
+#include <engine/EngineGlobals.hpp>
+#include <engine/EngineDriver.hpp>
+#include <core/Types.hpp>
 
 namespace hyperion {
 
@@ -261,15 +261,15 @@ void DDGI::UpdatePipelineState(FrameBase* frame, const RenderSetup& renderSetup)
     Assert(pd != nullptr);
 
     const auto setDescriptorElements = [this, pd](DescriptorSetBase* descriptorSet, const TLASRef& tlas, uint32 frameIndex)
-        {
-            Assert(tlas != nullptr);
+    {
+        Assert(tlas != nullptr);
 
-            descriptorSet->SetElement(NAME("TLAS"), tlas);
-            descriptorSet->SetElement(NAME("MeshDescriptionsBuffer"), tlas->GetMeshDescriptionsBuffer());
-            descriptorSet->SetElement(NAME("DDGIUniforms"), m_uniformBuffers[frameIndex]);
-            descriptorSet->SetElement(NAME("ProbeRayData"), m_radianceBuffer);
-            descriptorSet->SetElement(NAME("MaterialsBuffer"), g_renderGlobalState->gpuBuffers[GRB_MATERIALS]->GetBuffer(frameIndex));
-        };
+        descriptorSet->SetElement(NAME("TLAS"), tlas);
+        descriptorSet->SetElement(NAME("MeshDescriptionsBuffer"), tlas->GetMeshDescriptionsBuffer());
+        descriptorSet->SetElement(NAME("DDGIUniforms"), m_uniformBuffers[frameIndex]);
+        descriptorSet->SetElement(NAME("ProbeRayData"), m_radianceBuffer);
+        descriptorSet->SetElement(NAME("MaterialsBuffer"), g_renderGlobalState->gpuBuffers[GRB_MATERIALS]->GetBuffer(frameIndex));
+    };
 
     if (m_pipeline != nullptr)
     {
@@ -304,7 +304,7 @@ void DDGI::UpdatePipelineState(FrameBase* frame, const RenderSetup& renderSetup)
 
     m_pipeline = g_renderBackend->MakeRaytracingPipeline(raytracingShader, descriptorTable);
     HYP_GFX_ASSERT(m_pipeline->Create());
-    
+
     for (uint32 frameIndex = 0; frameIndex < g_framesInFlight; frameIndex++)
     {
         descriptorTable->Update(frameIndex, /* force */ true);

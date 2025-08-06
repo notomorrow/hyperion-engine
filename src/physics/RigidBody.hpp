@@ -3,7 +3,7 @@
 #pragma once
 
 #include <core/Defines.hpp>
-#include <core/Handle.hpp>
+#include <core/object/Handle.hpp>
 
 #include <core/object/HypObject.hpp>
 
@@ -17,14 +17,11 @@
 
 #include <physics/PhysicsMaterial.hpp>
 
-#include <Types.hpp>
+#include <core/Types.hpp>
 
 #include <type_traits>
 
 namespace hyperion {
-
-class Engine;
-
 namespace physics {
 
 enum class PhysicsShapeType : uint32

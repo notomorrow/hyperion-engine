@@ -3,7 +3,7 @@
 #pragma once
 
 #include <core/Name.hpp>
-#include <core/Handle.hpp>
+#include <core/object/Handle.hpp>
 
 #include <core/threading/Mutex.hpp>
 
@@ -11,7 +11,7 @@
 
 #include <rendering/shader_compiler/ShaderCompiler.hpp>
 
-#include <HashCode.hpp>
+#include <core/HashCode.hpp>
 
 namespace hyperion {
 

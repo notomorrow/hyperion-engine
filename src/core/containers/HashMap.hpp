@@ -7,7 +7,7 @@
 #include <core/utilities/Pair.hpp>
 #include <core/functional/FunctionWrapper.hpp>
 
-#include <HashCode.hpp>
+#include <core/HashCode.hpp>
 
 namespace hyperion {
 
