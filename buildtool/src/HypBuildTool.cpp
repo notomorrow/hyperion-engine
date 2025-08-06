@@ -538,6 +538,8 @@ int main(int argc, char** argv)
 {
     Threads::SetCurrentThreadId(g_mainThread);
 
+    LogChannelRegistrar::GetInstance().RegisterAll();
+
     static const CommandLineArgumentDefinitions definitions = []()
     {
         CommandLineArgumentDefinitions result;
