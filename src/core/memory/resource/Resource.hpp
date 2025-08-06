@@ -131,7 +131,6 @@ protected:
 
 private:
     InitState m_initState;
-    ThreadId m_initializationThreadId; // thread that initialized this resource
 };
 
 class IResourceMemoryPool

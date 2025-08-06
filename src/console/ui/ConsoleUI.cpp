@@ -67,11 +67,11 @@ public:
             Mutex::Guard guard(m_queuedEntriesMutex);
 
             const uint32 numQueuedEntries = uint32(m_queuedEntries.Size());
-        
+
             localQueuedEntries = std::move(m_queuedEntries);
             m_numQueuedEntries.Decrement(numQueuedEntries, MemoryOrder::RELEASE);
         }
-        
+
         /// FIXME: This could be more efficient, if the entry list is too large we shouldn't push stuff just to remove it
         for (ConsoleHistoryEntry& entry : localQueuedEntries)
         {
@@ -91,7 +91,6 @@ public:
 
             m_entries.PopFront();
         }
-
     }
 
     void AddEntry(const String& text, ConsoleHistoryEntryType entryType)
@@ -144,7 +143,7 @@ ConsoleUI::ConsoleUI()
     SetParentAlignment(UIObjectAlignment::BOTTOM_LEFT);
 
     m_loggerRedirectId = Logger::GetInstance().GetOutputStream()->AddRedirect(
-        Log_Console.GetMaskBitset(),
+        g_logChannel_Console.GetMaskBitset(),
         (void*)this,
         [](void* context, const LogChannel& channel, const LogMessage& message)
         {
@@ -251,14 +250,14 @@ void ConsoleUI::Init()
 
     historyListView->OnChildAttached
         .Bind([this](UIObject* child) -> UIEventHandlerResult
-        {
-            // m_historyListView->SetScrollOffset(Vec2i {
-            //     m_historyListView->GetScrollOffset().x,
-            //     m_historyListView->GetActualInnerSize().y - m_historyListView->GetActualSize().y
-            // }, /* smooth */ false);
+            {
+                // m_historyListView->SetScrollOffset(Vec2i {
+                //     m_historyListView->GetScrollOffset().x,
+                //     m_historyListView->GetActualInnerSize().y - m_historyListView->GetActualSize().y
+                // }, /* smooth */ false);
 
-            return UIEventHandlerResult::STOP_BUBBLING;
-        })
+                return UIEventHandlerResult::STOP_BUBBLING;
+            })
         .Detach();
 
     AddChildUIObject(historyListView);
@@ -411,7 +410,7 @@ bool ConsoleUI::NeedsUpdate() const
     }
 
     return false;
- }
+}
 
 Material::ParameterTable ConsoleUI::GetMaterialParameters() const
 {

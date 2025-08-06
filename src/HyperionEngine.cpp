@@ -44,7 +44,7 @@
 
 namespace hyperion {
 
-HYP_DECLARE_LOG_CHANNEL(Core);
+HYP_DECLARE_LOG_CHANNEL(Engine);
 
 Handle<EngineDriver> g_engineDriver {};
 Handle<AssetManager> g_assetManager {};
@@ -83,7 +83,7 @@ static bool InitializeCommandLineArguments(int argc, char** argv)
     {
         const Error& error = parseResult.GetError();
 
-        HYP_LOG(Core, Error, "Failed to parse command line arguments!\n\t{}", error.GetMessage().Any() ? error.GetMessage() : "<no message>");
+        HYP_LOG(Engine, Error, "Failed to parse command line arguments!\n\t{}", error.GetMessage().Any() ? error.GetMessage() : "<no message>");
 
         return false;
     }
@@ -99,7 +99,7 @@ static bool InitializeCommandLineArguments(int argc, char** argv)
 
         if (parseResult.HasError())
         {
-            HYP_LOG(Core, Error, "Failed to parse config command line value \"{}\":\n\t{}", configArgsString, parseResult.GetError().GetMessage());
+            HYP_LOG(Engine, Error, "Failed to parse config command line value \"{}\":\n\t{}", configArgsString, parseResult.GetError().GetMessage());
 
             return false;
         }
@@ -231,7 +231,7 @@ HYP_API bool InitializeEngine(int argc, char** argv)
     g_shaderCompiler = new ShaderCompiler;
     if (!g_shaderCompiler->LoadShaderDefinitions())
     {
-        HYP_LOG(Core, Error, "Failed to load shader definitions!");
+        HYP_LOG(Engine, Error, "Failed to load shader definitions!");
     }
 
     ComponentInterfaceRegistry::GetInstance().Initialize();
@@ -265,13 +265,13 @@ HYP_API bool InitializeEngine(int argc, char** argv)
 
     if (!(windowFlags & WindowFlags::HEADLESS))
     {
-        HYP_LOG(Core, Info, "Running in windowed mode: {}x{}", resolution.x, resolution.y);
+        HYP_LOG(Engine, Info, "Running in windowed mode: {}x{}", resolution.x, resolution.y);
 
         appContext->SetMainWindow(appContext->CreateSystemWindow({ "Hyperion Engine", resolution, windowFlags }));
     }
     else
     {
-        HYP_LOG(Core, Info, "Running in headless mode");
+        HYP_LOG(Engine, Info, "Running in headless mode");
     }
 
     Assert(g_renderBackend != nullptr);

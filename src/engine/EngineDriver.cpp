@@ -205,6 +205,11 @@ struct RENDER_COMMAND(RecreateSwapchain)
 
 #pragma region EngineDriver
 
+const Handle<EngineDriver>& EngineDriver::GetInstance()
+{
+    return g_engineDriver;
+}
+
 EngineDriver::EngineDriver()
     : m_isShuttingDown(false),
       m_shouldRecreateSwapchain(false)
@@ -232,7 +237,7 @@ HYP_API void EngineDriver::Init()
     // m_appContext->GetMainWindow()->OnWindowSizeChanged.Bind(
     //                                                        [this](Vec2i newWindowSize)
     //                                                        {
-    //                                                            HYP_LOG(EngineDriver, Info, "Resize window to {}", newWindowSize);
+    //                                                            HYP_LOG(Engine, Info, "Resize window to {}", newWindowSize);
 
     //                                                            // m_finalPass->Resize(Vec2u(newWindowSize));
     //                                                        })
@@ -299,13 +304,13 @@ bool EngineDriver::StartRenderLoop()
 
     if (m_renderThread == nullptr)
     {
-        HYP_LOG(EngineDriver, Error, "Render thread is not initialized!");
+        HYP_LOG(Engine, Error, "Render thread is not initialized!");
         return false;
     }
 
     if (m_renderThread->IsRunning())
     {
-        HYP_LOG(EngineDriver, Warning, "Render thread is already running!");
+        HYP_LOG(Engine, Warning, "Render thread is already running!");
         return true;
     }
 
@@ -334,7 +339,7 @@ void EngineDriver::FinalizeStop()
 
     m_isShuttingDown.Set(true, MemoryOrder::SEQUENTIAL);
 
-    HYP_LOG(EngineDriver, Info, "Stopping all engine processes");
+    HYP_LOG(Engine, Info, "Stopping all engine processes");
 
     m_delegates.OnShutdown();
 
