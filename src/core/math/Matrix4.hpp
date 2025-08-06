@@ -10,8 +10,8 @@
 
 #include <core/utilities/FormatFwd.hpp>
 
-#include <HashCode.hpp>
-#include <Types.hpp>
+#include <core/HashCode.hpp>
+#include <core/Types.hpp>
 
 #include <cstring>
 

@@ -3,7 +3,7 @@
 #include <core/math/Color.hpp>
 #include <core/math/MathUtil.hpp>
 
-#include <Constants.hpp>
+#include <core/Constants.hpp>
 
 namespace hyperion {
 

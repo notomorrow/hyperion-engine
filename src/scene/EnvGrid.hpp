@@ -19,8 +19,8 @@
 #include <rendering/RenderCollection.hpp>
 #include <rendering/RenderCommand.hpp>
 
-#include <GameCounter.hpp>
-#include <HashCode.hpp>
+#include <util/GameCounter.hpp>
+#include <core/HashCode.hpp>
 
 namespace hyperion {
 

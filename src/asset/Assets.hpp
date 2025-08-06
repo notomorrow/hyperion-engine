@@ -7,7 +7,7 @@
 
 #include <core/filesystem/FsUtil.hpp>
 
-#include <core/Handle.hpp>
+#include <core/object/Handle.hpp>
 
 #include <core/object/HypObject.hpp>
 
@@ -17,11 +17,11 @@
 
 #include <core/logging/LoggerFwd.hpp>
 
-#include <GameCounter.hpp>
+#include <util/GameCounter.hpp>
 
 #include <scene/Node.hpp>
 
-#include <Constants.hpp>
+#include <core/Constants.hpp>
 
 #include <algorithm>
 #include <type_traits>

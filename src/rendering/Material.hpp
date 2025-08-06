@@ -19,10 +19,10 @@
 
 #include <core/math/Color.hpp>
 
-#include <Types.hpp>
+#include <core/Types.hpp>
 
 #include <util/EnumOptions.hpp>
-#include <HashCode.hpp>
+#include <core/HashCode.hpp>
 
 namespace hyperion {
 

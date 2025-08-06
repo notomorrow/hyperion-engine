@@ -8,7 +8,7 @@
 
 #include <rendering/RenderObject.hpp>
 
-#include <core/Handle.hpp>
+#include <core/object/Handle.hpp>
 
 #include <core/math/BoundingBox.hpp>
 
@@ -18,7 +18,7 @@
 
 #include <core/object/HypObject.hpp>
 
-#include <Types.hpp>
+#include <core/Types.hpp>
 
 namespace hyperion {
 

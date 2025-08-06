@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include <core/Handle.hpp>
+#include <core/object/Handle.hpp>
 
 #include <core/containers/Bitset.hpp>
 
@@ -18,11 +18,10 @@
 
 #include <scene/Entity.hpp>
 
-#include <Types.hpp>
+#include <core/Types.hpp>
 
 namespace hyperion {
 
-class Engine;
 class Camera;
 class Material;
 class View;

@@ -1,9 +1,8 @@
-/* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
+/* Copyright (c) 2025 No Tomorrow Games. All rights reserved. */
 
 #pragma once
 
-#include <Config.hpp>
-#include <Types.hpp>
+#include <core/Types.hpp>
 
 #include <rendering/RenderStats.hpp>
 
@@ -12,7 +11,7 @@
 #include <rendering/RenderObject.hpp>
 #include <rendering/RenderCommand.hpp>
 
-#include <core/Handle.hpp>
+#include <core/object/Handle.hpp>
 
 #include <core/object/HypObject.hpp>
 
@@ -57,18 +56,18 @@ struct EngineDelegates
 };
 
 HYP_CLASS()
-class Engine final : public HypObjectBase
+class EngineDriver final : public HypObjectBase
 {
-    HYP_OBJECT_BODY(Engine);
+    HYP_OBJECT_BODY(EngineDriver);
 
     friend struct RENDER_COMMAND(RecreateSwapchain);
 
 public:
     HYP_METHOD()
-    HYP_API static const Handle<Engine>& GetInstance();
+    HYP_API static const Handle<EngineDriver>& GetInstance();
 
-    HYP_API Engine();
-    HYP_API ~Engine() override;
+    HYP_API EngineDriver();
+    HYP_API ~EngineDriver() override;
 
     HYP_FORCE_INLINE const Handle<AppContextBase>& GetAppContext() const
     {
@@ -90,16 +89,6 @@ public:
     HYP_FORCE_INLINE const Handle<World>& GetDefaultWorld() const
     {
         return m_world;
-    }
-
-    HYP_FORCE_INLINE HYP_DEPRECATED Configuration& GetConfig()
-    {
-        return m_configuration;
-    }
-
-    HYP_FORCE_INLINE HYP_DEPRECATED const Configuration& GetConfig() const
-    {
-        return m_configuration;
     }
 
     HYP_FORCE_INLINE DebugDrawer* GetDebugDrawer() const
@@ -152,8 +141,6 @@ private:
     UniquePtr<RenderThread> m_renderThread;
 
     Handle<World> m_world;
-
-    Configuration m_configuration;
 
     UniquePtr<DebugDrawer> m_debugDrawer;
 

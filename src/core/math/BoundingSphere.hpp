@@ -6,7 +6,7 @@
 #include <core/math/BoundingBox.hpp>
 #include <core/math/Ray.hpp>
 
-#include <HashCode.hpp>
+#include <core/HashCode.hpp>
 
 namespace hyperion {
 

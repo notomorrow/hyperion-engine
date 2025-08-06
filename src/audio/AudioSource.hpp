@@ -6,11 +6,9 @@
 
 #include <core/math/Vector3.hpp>
 
-#include <Types.hpp>
+#include <core/Types.hpp>
 
 namespace hyperion {
-
-class Engine;
 
 HYP_ENUM()
 enum class AudioSourceFormat : uint32

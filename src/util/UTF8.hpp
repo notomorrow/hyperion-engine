@@ -5,7 +5,7 @@
 #include <core/Defines.hpp>
 #include <core/containers/Array.hpp>
 
-#include <Types.hpp>
+#include <core/Types.hpp>
 
 #include <iostream>
 #include <algorithm>
@@ -572,16 +572,20 @@ static inline HYP_FORCE_INLINE void Char32to8(u32char src, u8char* dst, SizeType
     *reinterpret_cast<u32char*>(dst) = 0;
 
     outCodepoints = 0;
-    
+
     const char* srcBytes = reinterpret_cast<char*>(&src);
-    
-    if (HYP_UNLIKELY(!*srcBytes)) return;
+
+    if (HYP_UNLIKELY(!*srcBytes))
+        return;
     dst[outCodepoints++] = *(srcBytes++);
-    if (!*srcBytes) return;
+    if (!*srcBytes)
+        return;
     dst[outCodepoints++] = *(srcBytes++);
-    if (!*srcBytes) return;
+    if (!*srcBytes)
+        return;
     dst[outCodepoints++] = *(srcBytes++);
-    if (!*srcBytes) return;
+    if (!*srcBytes)
+        return;
     dst[outCodepoints++] = *(srcBytes++);
 }
 

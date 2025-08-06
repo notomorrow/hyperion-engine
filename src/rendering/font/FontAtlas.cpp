@@ -18,7 +18,7 @@
 
 #include <core/io/ByteWriter.hpp>
 
-#include <EngineGlobals.hpp>
+#include <engine/EngineGlobals.hpp>
 
 namespace hyperion {
 

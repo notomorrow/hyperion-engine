@@ -9,7 +9,7 @@
 
 #include <core/Defines.hpp>
 
-#include <Types.hpp>
+#include <core/Types.hpp>
 
 namespace hyperion {
 namespace containers {
@@ -262,7 +262,7 @@ public:
         : m_validPages(other.m_validPages)
     {
         m_pages.ResizeZeroed(other.m_pages.Size());
-        
+
         for (Bitset::BitIndex bit : other.m_validPages)
         {
             HYP_CORE_ASSERT(bit < other.m_pages.Size());

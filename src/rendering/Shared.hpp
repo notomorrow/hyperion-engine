@@ -15,8 +15,8 @@
 
 #include <core/Defines.hpp>
 
-#include <Types.hpp>
-#include <HashCode.hpp>
+#include <core/Types.hpp>
+#include <core/HashCode.hpp>
 
 namespace hyperion {
 

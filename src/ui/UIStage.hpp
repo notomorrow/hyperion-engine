@@ -18,9 +18,9 @@
 #include <input/Mouse.hpp>
 #include <input/Keyboard.hpp>
 
-#include <GameCounter.hpp>
-#include <HashCode.hpp>
-#include <Types.hpp>
+#include <util/GameCounter.hpp>
+#include <core/HashCode.hpp>
+#include <core/Types.hpp>
 
 namespace hyperion {
 namespace sys {

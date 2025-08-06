@@ -9,12 +9,12 @@
 #include <rendering/RenderGlobalState.hpp>
 #include <rendering/RenderBackend.hpp>
 
-#include <Game.hpp>
-#include <GameThread.hpp>
+#include <game/Game.hpp>
+#include <game/GameThread.hpp>
 
-#include <Engine.hpp>
+#include <engine/EngineDriver.hpp>
 
-#include <EngineGlobals.hpp>
+#include <engine/EngineGlobals.hpp>
 #include <HyperionEngine.hpp>
 
 namespace hyperion {
@@ -43,12 +43,12 @@ void App::LaunchGame(const Handle<Game>& game)
 
     Assert(game.IsValid());
 
-    m_gameThread = MakeUnique<GameThread>(g_engine->GetAppContext());
+    m_gameThread = MakeUnique<GameThread>(g_engineDriver->GetAppContext());
     m_gameThread->SetGame(game);
     m_gameThread->Start();
 
     // Loop blocks the main thread until the game is done.
-    Assert(g_engine->StartRenderLoop());
+    Assert(g_engineDriver->StartRenderLoop());
 
     delete g_renderGlobalState;
     g_renderGlobalState = nullptr;

@@ -17,8 +17,8 @@
 #include <rendering/vulkan/VulkanInstance.hpp>
 #endif
 
-#include <EngineGlobals.hpp>
-#include <Engine.hpp>
+#include <engine/EngineGlobals.hpp>
+#include <engine/EngineDriver.hpp>
 
 #ifdef HYP_SDL
 #include <SDL2/SDL.h>
@@ -288,7 +288,7 @@ AppContextBase::AppContextBase(ANSIString name, const CommandLineArguments& argu
     {
         if (json::JSONValue configAppName = GetGlobalConfig().Get("app.name"))
         {
-            m_name =  GetGlobalConfig().Get("app.name").ToString();
+            m_name = GetGlobalConfig().Get("app.name").ToString();
         }
     }
 }

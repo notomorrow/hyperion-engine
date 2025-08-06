@@ -7,8 +7,8 @@
 #include <core/utilities/Tuple.hpp>
 #include <core/utilities/StringView.hpp>
 
-#include <Types.hpp>
-#include <HashCode.hpp>
+#include <core/Types.hpp>
+#include <core/HashCode.hpp>
 
 #include <string_view>
 #include <array>

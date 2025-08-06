@@ -13,8 +13,8 @@
 
 #include <core/Traits.hpp>
 
-#include <Types.hpp>
-#include <Constants.hpp>
+#include <core/Types.hpp>
+#include <core/Constants.hpp>
 
 #include <type_traits>
 
@@ -37,7 +37,7 @@ struct VariantHelper<T, Ts...>
     static constexpr bool copyAssignable = (std::is_copy_assignable_v<T> && (std::is_copy_assignable_v<Ts> && ...));
     static constexpr bool moveConstructible = (std::is_move_constructible_v<T> && (std::is_move_constructible_v<Ts> && ...));
     static constexpr bool moveAssignable = (std::is_move_assignable_v<T> && (std::is_move_assignable_v<Ts> && ...));
-    
+
     static constexpr bool triviallyDestructible = (std::is_trivially_destructible_v<T> && (std::is_trivially_destructible_v<Ts> && ...));
 
     static constexpr TypeId thisTypeId = TypeId::ForType<NormalizedType<T>>();
@@ -75,7 +75,7 @@ struct VariantHelper<T, Ts...>
         HYP_CORE_ASSERT(typeId == thisTypeId);
 
         *static_cast<NormalizedType<T>*>(dst) = std::move(*static_cast<NormalizedType<T>*>(src));
-        
+
         return true;
     }
 
@@ -319,7 +319,7 @@ public:
         {
             return false;
         }
-        
+
         if (!IsValid())
         {
             return false;
@@ -690,7 +690,7 @@ template <class... Types>
 struct Variant : private ConstructAssignmentTraits<true, utilities::VariantHelper<Types...>::copyConstructible, utilities::VariantHelper<Types...>::moveConstructible, Variant<Types...>>
 {
     static constexpr int invalidTypeIndex = utilities::VariantBase<Types...>::invalidTypeIndex;
-    
+
     // we do sizeof...(Types) + 1 so getting type id from index is just accessing the element at type index + 1.
     static constexpr TypeId typeIds[sizeof...(Types) + 1] { TypeId::Void(), TypeId::ForType<Types>()... };
 

@@ -12,8 +12,8 @@
 #include <rendering/RenderObject.hpp>
 #include <rendering/RenderDevice.hpp>
 
-#include <HashCode.hpp>
-#include <Types.hpp>
+#include <core/HashCode.hpp>
+#include <core/Types.hpp>
 
 namespace hyperion {
 

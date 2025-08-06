@@ -6,8 +6,8 @@
 
 #include <core/utilities/FormatFwd.hpp>
 
-#include <Types.hpp>
-#include <HashCode.hpp>
+#include <core/Types.hpp>
+#include <core/HashCode.hpp>
 
 #include <type_traits>
 

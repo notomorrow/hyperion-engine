@@ -4,8 +4,8 @@
 
 #include <core/memory/Memory.hpp>
 
-#include <Constants.hpp>
-#include <Types.hpp>
+#include <core/Constants.hpp>
+#include <core/Types.hpp>
 
 #include <type_traits>
 

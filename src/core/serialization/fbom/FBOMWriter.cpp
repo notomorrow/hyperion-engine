@@ -17,7 +17,7 @@
 #include <core/logging/LogChannels.hpp>
 #include <core/logging/Logger.hpp>
 
-#include <Constants.hpp>
+#include <core/Constants.hpp>
 
 #include <algorithm>
 

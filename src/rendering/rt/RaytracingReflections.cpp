@@ -19,7 +19,7 @@
 
 #include <core/utilities/DeferredScope.hpp>
 
-#include <EngineGlobals.hpp>
+#include <engine/EngineGlobals.hpp>
 
 namespace hyperion {
 
@@ -86,15 +86,15 @@ void RaytracingReflections::UpdatePipelineState(FrameBase* frame, const RenderSe
     Assert(pd != nullptr);
 
     const auto setDescriptorElements = [this, pd](DescriptorSetBase* descriptorSet, const TLASRef& tlas, uint32 frameIndex)
-        {
-            Assert(tlas != nullptr);
+    {
+        Assert(tlas != nullptr);
 
-            descriptorSet->SetElement(NAME("TLAS"), tlas);
-            descriptorSet->SetElement(NAME("MeshDescriptionsBuffer"), tlas->GetMeshDescriptionsBuffer());
-            descriptorSet->SetElement(NAME("OutputImage"), g_renderBackend->GetTextureImageView(m_texture));
-            descriptorSet->SetElement(NAME("RTRadianceUniforms"), m_uniformBuffers[frameIndex]);
-            descriptorSet->SetElement(NAME("MaterialsBuffer"), g_renderGlobalState->gpuBuffers[GRB_MATERIALS]->GetBuffer(frameIndex));
-        };
+        descriptorSet->SetElement(NAME("TLAS"), tlas);
+        descriptorSet->SetElement(NAME("MeshDescriptionsBuffer"), tlas->GetMeshDescriptionsBuffer());
+        descriptorSet->SetElement(NAME("OutputImage"), g_renderBackend->GetTextureImageView(m_texture));
+        descriptorSet->SetElement(NAME("RTRadianceUniforms"), m_uniformBuffers[frameIndex]);
+        descriptorSet->SetElement(NAME("MaterialsBuffer"), g_renderGlobalState->gpuBuffers[GRB_MATERIALS]->GetBuffer(frameIndex));
+    };
 
     if (m_raytracingPipeline != nullptr)
     {
@@ -130,7 +130,7 @@ void RaytracingReflections::UpdatePipelineState(FrameBase* frame, const RenderSe
 
     m_raytracingPipeline = g_renderBackend->MakeRaytracingPipeline(shader, descriptorTable);
     HYP_GFX_ASSERT(m_raytracingPipeline->Create());
-    
+
     for (uint32 frameIndex = 0; frameIndex < g_framesInFlight; frameIndex++)
     {
         descriptorTable->Update(frameIndex, /* force */ true);
@@ -204,7 +204,7 @@ void RaytracingReflections::Render(FrameBase* frame, const RenderSetup& renderSe
         {
             RenderSetup newRenderSetup = renderSetup;
             newRenderSetup.passData = parentPass;
-            
+
             m_temporalBlending->ResetProgressiveBlending();
             m_temporalBlending->Render(frame, newRenderSetup);
 

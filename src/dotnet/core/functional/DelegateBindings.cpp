@@ -6,7 +6,7 @@
 
 #include <core/functional/ScriptableDelegate.hpp>
 
-#include <Types.hpp>
+#include <core/Types.hpp>
 
 namespace hyperion::dotnet {
 

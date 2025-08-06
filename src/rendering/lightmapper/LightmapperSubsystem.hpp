@@ -13,10 +13,10 @@
 
 #include <core/math/BoundingBox.hpp>
 
-#include <core/Handle.hpp>
+#include <core/object/Handle.hpp>
 #include <core/Defines.hpp>
 
-#include <GameCounter.hpp>
+#include <util/GameCounter.hpp>
 
 namespace hyperion {
 

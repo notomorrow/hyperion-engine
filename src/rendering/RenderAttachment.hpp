@@ -9,7 +9,7 @@
 #include <rendering/RenderObject.hpp>
 #include <rendering/RenderImage.hpp>
 
-#include <Types.hpp>
+#include <core/Types.hpp>
 
 namespace hyperion {
 enum class RenderPassStage : uint8

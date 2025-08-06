@@ -7,7 +7,7 @@
 
 #include <core/containers/String.hpp>
 
-#include <core/Handle.hpp>
+#include <core/object/Handle.hpp>
 
 #include <core/math/Transform.hpp>
 #include <core/math/Vector2.hpp>
@@ -18,9 +18,9 @@
 
 #include <scene/Scene.hpp>
 
-#include <GameCounter.hpp>
+#include <util/GameCounter.hpp>
 
-#include <Types.hpp>
+#include <core/Types.hpp>
 
 namespace hyperion {
 namespace sys {

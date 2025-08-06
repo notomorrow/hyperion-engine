@@ -16,8 +16,8 @@
 
 #include <core/math/Matrix4.hpp>
 
-#include <Constants.hpp>
-#include <Types.hpp>
+#include <core/Constants.hpp>
+#include <core/Types.hpp>
 
 namespace hyperion {
 

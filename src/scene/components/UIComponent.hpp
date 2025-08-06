@@ -12,7 +12,7 @@
 
 #include <core/math/Vector2.hpp>
 
-#include <HashCode.hpp>
+#include <core/HashCode.hpp>
 
 namespace hyperion {
 

@@ -23,7 +23,7 @@
 
 #include <core/profiling/ProfileScope.hpp>
 
-#include <EngineGlobals.hpp>
+#include <engine/EngineGlobals.hpp>
 #include <HyperionEngine.hpp>
 
 namespace hyperion {

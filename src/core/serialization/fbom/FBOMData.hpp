@@ -27,7 +27,7 @@
 #include <core/math/Matrix4.hpp>
 #include <core/math/Quaternion.hpp>
 
-#include <Types.hpp>
+#include <core/Types.hpp>
 
 #define FBOM_ASSERT(cond, message)                                \
     do                                                            \

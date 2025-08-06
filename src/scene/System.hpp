@@ -18,7 +18,7 @@
 
 #include <scene/ComponentContainer.hpp>
 
-#include <GameCounter.hpp>
+#include <util/GameCounter.hpp>
 
 namespace hyperion {
 

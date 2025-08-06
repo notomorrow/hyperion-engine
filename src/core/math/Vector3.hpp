@@ -8,8 +8,8 @@
 
 #include <core/math/Vector2.hpp>
 
-#include <HashCode.hpp>
-#include <Types.hpp>
+#include <core/HashCode.hpp>
+#include <core/Types.hpp>
 
 #include <cmath>
 #include <iostream>
@@ -314,7 +314,7 @@ struct alignas(alignof(T) * 4) HYP_API Vec3
             static_cast<Ty>(z)
         };
     }
-    
+
     HYP_FORCE_INLINE constexpr HashCode GetHashCode() const
     {
         return HashCode()

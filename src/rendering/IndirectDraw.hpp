@@ -10,14 +10,13 @@
 #include <rendering/Shared.hpp>
 #include <rendering/RenderObject.hpp>
 
-#include <Constants.hpp>
-#include <Types.hpp>
+#include <core/Constants.hpp>
+#include <core/Types.hpp>
 
 namespace hyperion {
 
 class Mesh;
 class Material;
-class Engine;
 class Entity;
 struct RenderSetup;
 

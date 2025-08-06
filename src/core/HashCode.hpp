@@ -2,8 +2,8 @@
 
 #pragma once
 
-#include <Types.hpp>
-#include <Constants.hpp>
+#include <core/Types.hpp>
+#include <core/Constants.hpp>
 
 #include <core/Traits.hpp>
 

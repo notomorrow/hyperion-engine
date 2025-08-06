@@ -25,9 +25,9 @@
 
 #include <core/json/JSON.hpp>
 
-#include <Types.hpp>
+#include <core/Types.hpp>
 
-#include <HashCode.hpp>
+#include <core/HashCode.hpp>
 
 namespace hyperion {
 

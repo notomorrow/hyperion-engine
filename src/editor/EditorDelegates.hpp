@@ -25,7 +25,7 @@
 
 #include <core/math/Transform.hpp>
 
-#include <Types.hpp>
+#include <core/Types.hpp>
 
 namespace hyperion {
 

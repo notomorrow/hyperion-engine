@@ -15,7 +15,6 @@
 
 namespace hyperion {
 
-class Engine;
 class GBuffer;
 
 HYP_STRUCT(ConfigName = "app", JsonPath = "rendering.ssr")

@@ -23,8 +23,8 @@
 
 #include <core/profiling/ProfileScope.hpp>
 
-#include <Types.hpp>
-#include <Constants.hpp>
+#include <core/Types.hpp>
+#include <core/Constants.hpp>
 
 #include <type_traits>
 

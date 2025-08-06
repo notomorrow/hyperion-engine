@@ -33,8 +33,8 @@
 #include <rendering/RenderGlobalState.hpp>
 #include <rendering/RenderProxy.hpp>
 
-#include <EngineGlobals.hpp>
-#include <Engine.hpp>
+#include <engine/EngineGlobals.hpp>
+#include <engine/EngineDriver.hpp>
 
 namespace hyperion {
 
@@ -121,7 +121,7 @@ World::~World()
 
 void World::Init()
 {
-    AddDelegateHandler(g_engine->GetDelegates().OnShutdown.Bind([this]
+    AddDelegateHandler(g_engineDriver->GetDelegates().OnShutdown.Bind([this]
         {
             if (m_worldGrid.IsValid())
             {
@@ -156,7 +156,7 @@ void World::Init()
         };
 
         const ViewDesc raytracingViewDesc {
-                .flags = ViewFlags::RAYTRACING | ViewFlags::NO_DRAW_CALLS
+            .flags = ViewFlags::RAYTRACING | ViewFlags::NO_DRAW_CALLS
                 | ViewFlags::ALL_WORLD_SCENES | ViewFlags::COLLECT_ALL_ENTITIES
                 | ViewFlags::NO_FRUSTUM_CULLING,
             .viewport = Viewport { .extent = Vec2u::One(), .position = Vec2i::Zero() },

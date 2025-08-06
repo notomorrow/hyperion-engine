@@ -4,7 +4,7 @@
 
 #include <core/math/MathUtil.hpp>
 #include <core/memory/ByteBuffer.hpp>
-#include <Types.hpp>
+#include <core/Types.hpp>
 
 namespace hyperion {
 class ByteReader

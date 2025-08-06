@@ -14,9 +14,9 @@
 
 #include <rendering/RenderObject.hpp>
 
-#include <GameCounter.hpp>
-#include <Constants.hpp>
-#include <Types.hpp>
+#include <util/GameCounter.hpp>
+#include <core/Constants.hpp>
+#include <core/Types.hpp>
 
 #include <type_traits>
 

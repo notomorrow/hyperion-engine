@@ -11,17 +11,18 @@
 #include <asset/MeshAsset.hpp>
 #include <asset/AssetRegistry.hpp>
 
-#include <core/Handle.hpp>
+#include <core/object/Handle.hpp>
 
 #include <core/containers/Array.hpp>
 
 #include <core/memory/resource/Resource.hpp>
 
-#include <EngineGlobals.hpp>
+#include <engine/EngineGlobals.hpp>
 
 namespace hyperion {
 
-struct RENDER_COMMAND(BuildMeshBlas) : public RenderCommand
+struct RENDER_COMMAND(BuildMeshBlas)
+    : public RenderCommand
 {
     BLASRef blas;
     Array<PackedVertex> packedVertices;

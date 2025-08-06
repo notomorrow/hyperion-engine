@@ -11,8 +11,8 @@
 #include <core/containers/TypeMap.hpp>
 #include <core/containers/Bitset.hpp>
 
-#include <Constants.hpp>
-#include <Types.hpp>
+#include <core/Constants.hpp>
+#include <core/Types.hpp>
 
 #include <mutex>
 #include <atomic>

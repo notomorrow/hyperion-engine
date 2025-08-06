@@ -10,7 +10,7 @@
 #include <core/utilities/EnumFlags.hpp>
 #include <core/utilities/FormatFwd.hpp>
 
-#include <Constants.hpp>
+#include <core/Constants.hpp>
 
 #include <type_traits>
 

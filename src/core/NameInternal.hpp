@@ -5,7 +5,7 @@
 #include <core/containers/StaticString.hpp>
 #include <core/Defines.hpp>
 
-#include <HashCode.hpp>
+#include <core/HashCode.hpp>
 
 namespace hyperion {
 

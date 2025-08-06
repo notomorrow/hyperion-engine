@@ -12,7 +12,7 @@
 
 #include <core/utilities/Pair.hpp>
 
-#include <core/Handle.hpp>
+#include <core/object/Handle.hpp>
 
 #include <scene/Entity.hpp>
 #include <scene/VisibilityState.hpp>
@@ -22,7 +22,7 @@
 #include <core/math/BoundingBox.hpp>
 #include <core/math/Ray.hpp>
 
-#include <Types.hpp>
+#include <core/Types.hpp>
 
 // #define HYP_OCTREE_DEBUG
 

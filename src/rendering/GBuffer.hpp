@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include <Constants.hpp>
+#include <core/Constants.hpp>
 
 #include <core/containers/FixedArray.hpp>
 
@@ -15,11 +15,9 @@
 #include <rendering/RenderImage.hpp>
 #include <rendering/Shared.hpp>
 
-#include <Types.hpp>
+#include <core/Types.hpp>
 
 namespace hyperion {
-
-class Engine;
 
 using GBufferFormat = Variant<DefaultImageFormat, TextureFormat, Array<TextureFormat>>;
 

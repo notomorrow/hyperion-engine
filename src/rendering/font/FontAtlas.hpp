@@ -3,7 +3,7 @@
 #pragma once
 
 #include <core/Defines.hpp>
-#include <core/Handle.hpp>
+#include <core/object/Handle.hpp>
 
 #include <core/memory/ByteBuffer.hpp>
 #include <core/containers/Array.hpp>

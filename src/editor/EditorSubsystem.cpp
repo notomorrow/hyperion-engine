@@ -80,9 +80,9 @@
 #include <core/profiling/ProfileScope.hpp>
 #include <util/MeshBuilder.hpp>
 
-#include <EngineGlobals.hpp>
+#include <engine/EngineGlobals.hpp>
 #include <HyperionEngine.hpp>
-#include <Engine.hpp>
+#include <engine/EngineDriver.hpp>
 
 namespace hyperion {
 
@@ -1024,7 +1024,7 @@ void EditorSubsystem::OnAddedToWorld()
 
     m_editorScene = CreateObject<Scene>(nullptr, SceneFlags::FOREGROUND | SceneFlags::EDITOR);
     m_editorScene->SetName(NAME("EditorScene"));
-    g_engine->GetWorld()->AddScene(m_editorScene);
+    g_engineDriver->GetWorld()->AddScene(m_editorScene);
 
     Handle<Node> cameraNode = m_editorScene->GetRoot()->AddChild();
 
@@ -1054,10 +1054,10 @@ void EditorSubsystem::OnAddedToWorld()
 
     CreateHighlightNode();
 
-    g_engine->GetScriptingService()->OnScriptStateChanged.Bind([](const ManagedScript& script)
-                                                             {
-                                                                 DebugLog(LogType::Debug, "Script state changed: now is %u", script.state);
-                                                             })
+    g_engineDriver->GetScriptingService()->OnScriptStateChanged.Bind([](const ManagedScript& script)
+                                                                   {
+                                                                       DebugLog(LogType::Debug, "Script state changed: now is %u", script.state);
+                                                                   })
         .Detach();
 
     if (Handle<AssetCollector> baseAssetCollector = g_assetManager->GetBaseAssetCollector())
@@ -1100,7 +1100,7 @@ void EditorSubsystem::OnRemovedFromWorld()
 {
     HYP_SCOPE;
 
-    g_engine->GetWorld()->RemoveScene(m_editorScene);
+    g_engineDriver->GetWorld()->RemoveScene(m_editorScene);
 
     if (m_currentProject)
     {
@@ -1127,8 +1127,8 @@ void EditorSubsystem::Update(float delta)
 
 #if 0
     if (m_focusedNode.IsValid()) {
-        g_engine->GetDebugDrawer()->box(m_focusedNode->GetWorldTranslation(), m_focusedNode->GetWorldAABB().GetExtent() + Vec3f(1.0001f), Color(0.0f, 0.0f, 1.0f, 1.0f));
-        g_engine->GetDebugDrawer()->box(m_focusedNode->GetWorldTranslation(), m_focusedNode->GetWorldAABB().GetExtent(), Color(1.0f), RenderableAttributeSet(
+        g_engineDriver->GetDebugDrawer()->box(m_focusedNode->GetWorldTranslation(), m_focusedNode->GetWorldAABB().GetExtent() + Vec3f(1.0001f), Color(0.0f, 0.0f, 1.0f, 1.0f));
+        g_engineDriver->GetDebugDrawer()->box(m_focusedNode->GetWorldTranslation(), m_focusedNode->GetWorldAABB().GetExtent(), Color(1.0f), RenderableAttributeSet(
             MeshAttributes {
                 .vertexAttributes = staticMeshVertexAttributes
             },

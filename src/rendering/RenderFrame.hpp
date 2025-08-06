@@ -13,7 +13,7 @@
 
 #include <core/functional/Delegate.hpp>
 
-#include <Types.hpp>
+#include <core/Types.hpp>
 
 // #define HYP_DEBUG_USED_DESCRIPTOR_SETS
 

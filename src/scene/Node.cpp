@@ -31,8 +31,8 @@
 #include <editor/EditorSubsystem.hpp>
 #endif
 
-#include <EngineGlobals.hpp>
-#include <Engine.hpp>
+#include <engine/EngineGlobals.hpp>
+#include <engine/EngineDriver.hpp>
 
 #include <cstring>
 
@@ -40,7 +40,7 @@ namespace hyperion {
 
 HYP_API void Node_OnPostLoad(Node& node)
 {
-    node.SetScene(g_engine->GetDefaultWorld()->GetDetachedScene(g_gameThread));
+    node.SetScene(g_engineDriver->GetDefaultWorld()->GetDetachedScene(g_gameThread));
 }
 
 #pragma region NodeTag
@@ -326,7 +326,7 @@ void Node::SetScene(Scene* scene)
 {
     if (!scene)
     {
-        scene = g_engine->GetDefaultWorld()->GetDetachedScene(Threads::CurrentThreadId()).Get();
+        scene = g_engineDriver->GetDefaultWorld()->GetDetachedScene(Threads::CurrentThreadId()).Get();
     }
 
     Assert(scene != nullptr);
@@ -395,7 +395,7 @@ World* Node::GetWorld() const
 {
     return m_scene != nullptr
         ? m_scene->GetWorld()
-        : g_engine->GetDefaultWorld().Get();
+        : g_engineDriver->GetDefaultWorld().Get();
 }
 
 void Node::OnNestedNodeAdded(Node* node, bool direct)
@@ -1410,7 +1410,7 @@ bool Node::HasTag(WeakName key) const
 
 Scene* Node::GetDefaultScene()
 {
-    return g_engine->GetDefaultWorld()->GetDetachedScene(Threads::CurrentThreadId()).Get();
+    return g_engineDriver->GetDefaultWorld()->GetDetachedScene(Threads::CurrentThreadId()).Get();
 }
 
 #ifdef HYP_EDITOR
@@ -1421,7 +1421,7 @@ EditorDelegates* Node::GetEditorDelegates()
 
     Threads::AssertOnThread(g_gameThread);
 
-    if (EditorSubsystem* editorSubsystem = g_engine->GetDefaultWorld()->GetSubsystem<EditorSubsystem>())
+    if (EditorSubsystem* editorSubsystem = g_engineDriver->GetDefaultWorld()->GetSubsystem<EditorSubsystem>())
     {
         return editorSubsystem->GetEditorDelegates();
     }
@@ -1434,7 +1434,7 @@ void Node::GetEditorDelegates(Function&& func)
 {
     if (Threads::IsOnThread(g_gameThread))
     {
-        if (EditorSubsystem* editorSubsystem = g_engine->GetDefaultWorld()->GetSubsystem<EditorSubsystem>())
+        if (EditorSubsystem* editorSubsystem = g_engineDriver->GetDefaultWorld()->GetSubsystem<EditorSubsystem>())
         {
             func(editorSubsystem->GetEditorDelegates());
         }
@@ -1445,7 +1445,7 @@ void Node::GetEditorDelegates(Function&& func)
             {
                 if (Handle<Node> strongThis = weakThis.Lock())
                 {
-                    if (EditorSubsystem* editorSubsystem = g_engine->GetDefaultWorld()->GetSubsystem<EditorSubsystem>())
+                    if (EditorSubsystem* editorSubsystem = g_engineDriver->GetDefaultWorld()->GetSubsystem<EditorSubsystem>())
                     {
                         func(editorSubsystem->GetEditorDelegates());
                     }

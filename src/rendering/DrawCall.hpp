@@ -4,7 +4,7 @@
 
 #include <core/Defines.hpp>
 #include <core/object/ObjId.hpp>
-#include <core/Handle.hpp>
+#include <core/object/Handle.hpp>
 
 #include <core/memory/UniquePtr.hpp>
 
@@ -13,11 +13,10 @@
 
 #include <rendering/RenderObject.hpp>
 
-#include <Types.hpp>
+#include <core/Types.hpp>
 
 namespace hyperion {
 
-class Engine;
 class Mesh;
 class Material;
 class Skeleton;
@@ -131,7 +130,7 @@ class IDrawCallCollectionImpl
 {
 public:
     ~IDrawCallCollectionImpl() = default;
-    
+
     HYP_FORCE_INLINE SizeType GetStructSize() const
     {
         return m_bufferHolder->GetStructSize();

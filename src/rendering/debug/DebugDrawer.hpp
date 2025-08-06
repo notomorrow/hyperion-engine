@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include <Constants.hpp>
+#include <core/Constants.hpp>
 
 #include <core/containers/Array.hpp>
 #include <core/containers/FixedArray.hpp>
@@ -10,7 +10,7 @@
 #include <core/threading/AtomicVar.hpp>
 #include <core/threading/Mutex.hpp>
 
-#include <core/Handle.hpp>
+#include <core/object/Handle.hpp>
 
 #include <core/memory/RefCountedPtr.hpp>
 
@@ -29,13 +29,12 @@
 #include <rendering/RenderObject.hpp>
 #include <rendering/Shared.hpp>
 
-#include <GameCounter.hpp>
+#include <util/GameCounter.hpp>
 
-#include <Types.hpp>
+#include <core/Types.hpp>
 
 namespace hyperion {
 
-class Engine;
 class RenderGroup;
 class Mesh;
 class DebugDrawer;

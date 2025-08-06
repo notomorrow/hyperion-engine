@@ -3,8 +3,8 @@
 #pragma once
 #include <core/containers/FixedArray.hpp>
 
-#include <GameCounter.hpp>
-#include <Types.hpp>
+#include <util/GameCounter.hpp>
+#include <core/Types.hpp>
 
 #include <cfloat>
 

@@ -25,8 +25,8 @@
 
 #include <core/profiling/ProfileScope.hpp>
 
-#include <EngineGlobals.hpp>
-#include <Engine.hpp>
+#include <engine/EngineGlobals.hpp>
+#include <engine/EngineDriver.hpp>
 
 namespace hyperion {
 
@@ -260,7 +260,7 @@ void Camera::Init()
     {
         auto initMatchWindowSize = [this]() -> TResult<>
         {
-            const Handle<AppContextBase>& appContext = g_engine->GetAppContext();
+            const Handle<AppContextBase>& appContext = g_engineDriver->GetAppContext();
 
             if (!appContext)
             {
@@ -731,7 +731,7 @@ void Camera::UpdateMouseLocked()
     {
         if (!m_mouseLockScope)
         {
-            if (const Handle<AppContextBase>& appContext = g_engine->GetAppContext())
+            if (const Handle<AppContextBase>& appContext = g_engineDriver->GetAppContext())
             {
                 m_mouseLockScope = appContext->GetInputManager()->AcquireMouseLock();
             }

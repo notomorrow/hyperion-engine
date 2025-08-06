@@ -25,7 +25,7 @@
 // For CompiledShader
 #include <rendering/shader_compiler/ShaderCompiler.hpp>
 
-#include <EngineGlobals.hpp>
+#include <engine/EngineGlobals.hpp>
 
 namespace hyperion {
 
@@ -143,14 +143,14 @@ GraphicsPipelineRef GraphicsPipelineCache::GetOrCreate(
     }
 
     Proc<void(GraphicsPipelineRef graphicsPipeline)> newCallback([this, attributes](GraphicsPipelineRef graphicsPipeline)
-    {
-        Mutex::Guard guard(m_mutex);
+        {
+            Mutex::Guard guard(m_mutex);
 
-        HYP_LOG(Rendering, Debug, "Adding graphics pipeline {} (debug name: {}) to cache with hash: {}", (void*)graphicsPipeline.Get(), graphicsPipeline->GetDebugName(), attributes.GetHashCode().Value());
+            HYP_LOG(Rendering, Debug, "Adding graphics pipeline {} (debug name: {}) to cache with hash: {}", (void*)graphicsPipeline.Get(), graphicsPipeline->GetDebugName(), attributes.GetHashCode().Value());
 
-        (*m_cachedPipelines)[attributes].PushBack(graphicsPipeline);
-        m_cachedPipelines->reverseMap.Set(graphicsPipeline.header->index, attributes);
-    });
+            (*m_cachedPipelines)[attributes].PushBack(graphicsPipeline);
+            m_cachedPipelines->reverseMap.Set(graphicsPipeline.header->index, attributes);
+        });
 
     graphicsPipeline = g_renderBackend->MakeGraphicsPipeline(
         shader,
@@ -186,7 +186,7 @@ GraphicsPipelineRef GraphicsPipelineCache::GetOrCreate(
             {
                 // set initial lastFrame index so we don't delete it right away when cleaning up after the frame.
                 graphicsPipeline->lastFrame = RenderApi_GetFrameCounter();
-                
+
                 callback(graphicsPipeline);
             }
 
@@ -298,7 +298,7 @@ int GraphicsPipelineCache::RunCleanupCycle(int maxIter)
             for (auto graphicsPipelineIt = it->second.Begin(); graphicsPipelineIt != it->second.End() && numCycles < maxIter; ++numCycles)
             {
                 AssertDebug(graphicsPipelineIt->header != nullptr);
-                
+
                 GraphicsPipelineRef& graphicsPipeline = (*graphicsPipelineIt);
 
                 if (graphicsPipeline->GetHeader_Internal()->index == uint32(graphicsPipelineIdx))
@@ -314,7 +314,7 @@ int GraphicsPipelineCache::RunCleanupCycle(int maxIter)
                             frameDiff);
 
                         SafeRelease(std::move(graphicsPipeline));
-                        
+
                         graphicsPipelineIt = it->second.Erase(graphicsPipelineIt);
 
                         m_cachedPipelines->cleanupIterator = m_cachedPipelines->reverseMap.Erase(m_cachedPipelines->cleanupIterator);

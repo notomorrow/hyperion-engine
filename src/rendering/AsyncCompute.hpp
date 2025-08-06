@@ -16,7 +16,7 @@
 #include <core/math/MathUtil.hpp>
 #include <core/math/Extent.hpp>
 
-#include <Types.hpp>
+#include <core/Types.hpp>
 
 namespace hyperion {
 

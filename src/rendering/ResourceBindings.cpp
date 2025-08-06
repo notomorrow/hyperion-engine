@@ -21,7 +21,7 @@
 
 #include <core/Defines.hpp>
 
-#include <EngineGlobals.hpp>
+#include <engine/EngineGlobals.hpp>
 
 namespace hyperion {
 

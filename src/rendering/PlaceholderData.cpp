@@ -12,8 +12,8 @@
 
 #include <util/img/Bitmap.hpp>
 
-#include <EngineGlobals.hpp>
-#include <Types.hpp>
+#include <engine/EngineGlobals.hpp>
+#include <core/Types.hpp>
 
 namespace hyperion {
 

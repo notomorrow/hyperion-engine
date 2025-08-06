@@ -4,7 +4,7 @@
 
 #include <streaming/Streamable.hpp>
 
-#include <core/Handle.hpp>
+#include <core/object/Handle.hpp>
 #include <core/Defines.hpp>
 
 #include <core/memory/UniquePtr.hpp>
@@ -21,7 +21,7 @@
 
 #include <core/logging/LoggerFwd.hpp>
 
-#include <GameCounter.hpp>
+#include <util/GameCounter.hpp>
 
 namespace hyperion {
 

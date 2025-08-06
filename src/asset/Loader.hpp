@@ -11,7 +11,6 @@
 
 namespace hyperion {
 
-class Engine;
 class AssetManager;
 class AssetRegistry;
 

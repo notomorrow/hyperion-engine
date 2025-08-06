@@ -29,8 +29,8 @@
 
 #include <util/octree/Octree.hpp>
 
-#include <EngineGlobals.hpp>
-#include <Engine.hpp>
+#include <engine/EngineGlobals.hpp>
+#include <engine/EngineDriver.hpp>
 
 namespace hyperion {
 
@@ -806,7 +806,7 @@ void StreamingManager::Stop()
 
 void StreamingManager::Init()
 {
-    AddDelegateHandler(g_engine->GetDelegates().OnShutdown.Bind([this]()
+    AddDelegateHandler(g_engineDriver->GetDelegates().OnShutdown.Bind([this]()
         {
             Stop();
         }));

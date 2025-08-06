@@ -1,7 +1,7 @@
 #pragma once
 #include <core/math/Vector3.hpp>
 
-#include <Types.hpp>
+#include <core/Types.hpp>
 
 #include <vector>
 

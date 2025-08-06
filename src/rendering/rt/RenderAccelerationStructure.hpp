@@ -3,11 +3,11 @@
 #pragma once
 
 #include <core/Defines.hpp>
-#include <core/Handle.hpp>
+#include <core/object/Handle.hpp>
 
 #include <rendering/RenderObject.hpp>
 
-#include <Types.hpp>
+#include <core/Types.hpp>
 
 namespace hyperion {
 
@@ -92,7 +92,7 @@ public:
 
     virtual RendererResult Create() = 0;
     virtual RendererResult Destroy() = 0;
-    
+
     HYP_FORCE_INLINE const Handle<Material>& GetMaterial() const
     {
         return m_material;
@@ -108,12 +108,11 @@ public:
         m_materialBinding = materialBinding;
     }
 
-     virtual void SetTransform(const Matrix4& transform) = 0;
+    virtual void SetTransform(const Matrix4& transform) = 0;
 
 protected:
     Handle<Material> m_material;
     uint32 m_materialBinding;
-
 };
 
 } // namespace hyperion

@@ -4,7 +4,7 @@
 
 #include <core/Defines.hpp>
 
-#include <core/Handle.hpp>
+#include <core/object/Handle.hpp>
 #include <core/memory/RefCountedPtr.hpp>
 
 namespace hyperion {

@@ -17,11 +17,10 @@
 
 #include <rendering/RenderObject.hpp>
 
-#include <Constants.hpp>
+#include <core/Constants.hpp>
 
 namespace hyperion {
 
-class Engine;
 class Mesh;
 class Material;
 class Skeleton;

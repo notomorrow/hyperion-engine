@@ -20,7 +20,7 @@
 
 #include <asset/Assets.hpp>
 
-#include <EngineGlobals.hpp>
+#include <engine/EngineGlobals.hpp>
 
 namespace hyperion {
 

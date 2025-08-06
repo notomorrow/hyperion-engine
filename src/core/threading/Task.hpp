@@ -19,7 +19,7 @@
 #include <core/memory/UniquePtr.hpp>
 #include <core/Util.hpp>
 
-#include <Types.hpp>
+#include <core/Types.hpp>
 
 namespace hyperion {
 

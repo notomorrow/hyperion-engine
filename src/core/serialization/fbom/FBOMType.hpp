@@ -11,8 +11,8 @@
 #include <core/utilities/EnumFlags.hpp>
 #include <core/utilities/TypeId.hpp>
 
-#include <HashCode.hpp>
-#include <Types.hpp>
+#include <core/HashCode.hpp>
+#include <core/Types.hpp>
 
 #include <cstddef>
 

@@ -2,8 +2,8 @@
 
 #pragma once
 
-#include <Constants.hpp>
-#include <Types.hpp>
+#include <core/Constants.hpp>
+#include <core/Types.hpp>
 
 namespace hyperion {
 namespace utilities {

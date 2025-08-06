@@ -17,7 +17,7 @@
 
 #include <core/serialization/Serialization.hpp>
 
-#include <Types.hpp>
+#include <core/Types.hpp>
 
 namespace hyperion {
 

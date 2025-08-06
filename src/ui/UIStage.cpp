@@ -37,8 +37,8 @@
 
 #include <core/profiling/ProfileScope.hpp>
 
-#include <EngineGlobals.hpp>
-#include <Engine.hpp>
+#include <engine/EngineGlobals.hpp>
+#include <engine/EngineDriver.hpp>
 
 namespace hyperion {
 
@@ -161,7 +161,7 @@ void UIStage::SetScene(const Handle<Scene>& scene)
     cameraNode->SetName(NAME_FMT("{}_Camera", GetName()));
     cameraNode->SetEntity(m_camera);
 
-    g_engine->GetWorld()->AddScene(newScene);
+    g_engineDriver->GetWorld()->AddScene(newScene);
 
     InitObject(newScene);
 
@@ -207,7 +207,7 @@ void UIStage::Init()
     HYP_SCOPE;
     AssertOnOwnerThread();
 
-    if (const Handle<AppContextBase>& appContext = g_engine->GetAppContext())
+    if (const Handle<AppContextBase>& appContext = g_engineDriver->GetAppContext())
     {
         const auto updateSurfaceSize = [this](ApplicationWindow* window)
         {
@@ -737,7 +737,7 @@ UIEventHandlerResult UIStage::OnInputEvent(
 
         const EnumFlags<MouseButtonState> buttons = event.GetMouseButtons();
         HashMap<WeakHandle<UIObject>, UIObjectPressedState> modifiedStates;
-        
+
         if (buttons & MouseButtonState::LEFT)
         {
             for (auto it = rayTestResults.Begin(); it != rayTestResults.End(); ++it)

@@ -11,8 +11,8 @@
 #include <rendering/RenderDescriptorSet.hpp>
 #include <rendering/RenderObject.hpp>
 
-#include <Types.hpp>
-#include <Constants.hpp>
+#include <core/Types.hpp>
+#include <core/Constants.hpp>
 
 #include <vulkan/vulkan.h>
 

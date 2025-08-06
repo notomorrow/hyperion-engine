@@ -7,7 +7,7 @@
 #include <core/math/Matrix4.hpp>
 #include <core/math/Vector2.hpp>
 
-#include <Types.hpp>
+#include <core/Types.hpp>
 
 namespace hyperion {
 

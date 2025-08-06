@@ -4,7 +4,7 @@
 
 #include <core/object/HypObject.hpp>
 
-#include <core/Handle.hpp>
+#include <core/object/Handle.hpp>
 
 #include <core/math/Ray.hpp>
 
@@ -17,9 +17,9 @@
 #include <rendering/Shared.hpp>
 #include <rendering/RenderObject.hpp>
 
-#include <GameCounter.hpp>
-#include <Constants.hpp>
-#include <Types.hpp>
+#include <util/GameCounter.hpp>
+#include <core/Constants.hpp>
+#include <core/Types.hpp>
 
 namespace hyperion {
 

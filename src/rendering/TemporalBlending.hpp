@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include <Constants.hpp>
+#include <core/Constants.hpp>
 
 #include <core/containers/FixedArray.hpp>
 
@@ -111,7 +111,7 @@ private:
     uint16 m_blendingFrameCounter;
 
     ComputePipelineRef m_csPerformBlending;
-    
+
     FixedArray<GpuBufferRef, g_framesInFlight> m_uniformBuffers;
 
     ImageViewRef m_inputImageView;

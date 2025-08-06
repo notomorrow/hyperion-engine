@@ -37,9 +37,9 @@
 
 #include <core/Defines.hpp>
 
-#include <EngineGlobals.hpp>
-#include <Engine.hpp>
-#include <Constants.hpp>
+#include <engine/EngineGlobals.hpp>
+#include <engine/EngineDriver.hpp>
+#include <core/Constants.hpp>
 
 #ifdef HYP_VULKAN
 #include <rendering/vulkan/VulkanStructs.hpp>
@@ -100,7 +100,7 @@ void RenderGroup::Init()
 {
     HYP_SCOPE;
 
-    AddDelegateHandler(g_engine->GetDelegates().OnShutdown.Bind([this]()
+    AddDelegateHandler(g_engineDriver->GetDelegates().OnShutdown.Bind([this]()
         {
             HYP_SCOPE;
 

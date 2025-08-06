@@ -3,7 +3,7 @@
 #pragma once
 
 #include <core/math/BoundingBox.hpp>
-#include <HashCode.hpp>
+#include <core/HashCode.hpp>
 
 namespace hyperion {
 

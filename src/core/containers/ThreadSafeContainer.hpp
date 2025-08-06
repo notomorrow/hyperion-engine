@@ -2,14 +2,14 @@
 
 #pragma once
 
-#include <core/Handle.hpp>
+#include <core/object/Handle.hpp>
 #include <core/threading/Thread.hpp>
 #include <core/containers/Array.hpp>
 #include <core/containers/TypeMap.hpp>
 
 #include <core/threading/Threads.hpp>
 
-#include <Types.hpp>
+#include <core/Types.hpp>
 
 #include <mutex>
 #include <atomic>

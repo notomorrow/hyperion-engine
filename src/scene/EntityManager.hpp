@@ -28,7 +28,7 @@
 
 #include <core/profiling/PerformanceClock.hpp>
 
-#include <core/Handle.hpp>
+#include <core/object/Handle.hpp>
 #include <core/object/ObjId.hpp>
 
 #include <scene/Entity.hpp>
@@ -38,7 +38,7 @@
 #include <scene/System.hpp>
 #include <scene/EntityTag.hpp>
 
-#include <GameCounter.hpp>
+#include <util/GameCounter.hpp>
 
 namespace hyperion {
 

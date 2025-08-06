@@ -34,9 +34,9 @@
 
 #include <core/utilities/ByteUtil.hpp>
 
-#include <Constants.hpp>
-#include <Types.hpp>
-#include <HashCode.hpp>
+#include <core/Constants.hpp>
+#include <core/Types.hpp>
+#include <core/HashCode.hpp>
 
 namespace hyperion {
 

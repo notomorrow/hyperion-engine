@@ -10,9 +10,9 @@
 
 #include <core/math/MathUtil.hpp>
 
-#include <HashCode.hpp>
+#include <core/HashCode.hpp>
 
-#include <Types.hpp>
+#include <core/Types.hpp>
 
 #include <type_traits>
 

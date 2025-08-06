@@ -4,9 +4,9 @@
 
 #include <core/Traits.hpp>
 
-#include <Types.hpp>
-#include <Constants.hpp>
-#include <HashCode.hpp>
+#include <core/Types.hpp>
+#include <core/Constants.hpp>
+#include <core/HashCode.hpp>
 
 #include <type_traits>
 

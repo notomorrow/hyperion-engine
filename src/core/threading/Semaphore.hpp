@@ -8,7 +8,7 @@
 
 #include <core/functional/Proc.hpp>
 
-#include <Types.hpp>
+#include <core/Types.hpp>
 
 #include <mutex>
 #include <condition_variable>

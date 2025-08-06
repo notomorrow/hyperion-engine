@@ -78,8 +78,8 @@
 #include <core/logging/Logger.hpp>
 
 #include <HyperionEngine.hpp>
-#include <EngineGlobals.hpp>
-#include <Engine.hpp>
+#include <engine/EngineGlobals.hpp>
+#include <engine/EngineDriver.hpp>
 
 namespace hyperion {
 
@@ -107,9 +107,9 @@ void HyperionEditor::Init()
 
     m_editorSubsystem = CreateObject<EditorSubsystem>(GetAppContext());
 
-    g_engine->GetWorld()->AddSubsystem(m_editorSubsystem);
+    g_engineDriver->GetWorld()->AddSubsystem(m_editorSubsystem);
 
-    // if (const Handle<WorldGrid>& worldGrid = g_engine->GetWorld()->GetWorldGrid())
+    // if (const Handle<WorldGrid>& worldGrid = g_engineDriver->GetWorld()->GetWorldGrid())
     // {
     //     // // Initialize the world grid subsystem
     //     // worldGrid->AddPlugin(0, MakeRefCountedPtr<TerrainWorldGridPlugin>());
@@ -296,7 +296,7 @@ void HyperionEditor::Logic(float delta)
 {
     if (g_voxelOctree != nullptr)
     {
-        DebugDrawCommandList& debugDrawCommands = g_engine->GetDebugDrawer()->CreateCommandList();
+        DebugDrawCommandList& debugDrawCommands = g_engineDriver->GetDebugDrawer()->CreateCommandList();
 
         //        PerformanceClock clock;
         //        clock.Start();

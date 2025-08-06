@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include <core/Handle.hpp>
+#include <core/object/Handle.hpp>
 
 #include <core/math/Vector3.hpp>
 #include <core/math/BoundingBox.hpp>

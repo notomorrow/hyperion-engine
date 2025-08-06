@@ -9,8 +9,8 @@
 
 #include <core/Defines.hpp>
 
-#include <HashCode.hpp>
-#include <Types.hpp>
+#include <core/HashCode.hpp>
+#include <core/Types.hpp>
 
 #include <cmath>
 
@@ -346,7 +346,7 @@ struct alignas(alignof(T) * 4) HYP_API Vec4
     {
         return Vec4(0, 0, 0, 1);
     }
-    
+
     HYP_FORCE_INLINE constexpr HashCode GetHashCode() const
     {
         return HashCode()
@@ -698,7 +698,7 @@ struct alignas(alignof(float) * 4) HYP_API Vec4<float>
     {
         return Vec4(0, 0, 0, 1);
     }
-    
+
     HYP_FORCE_INLINE constexpr HashCode GetHashCode() const
     {
         return HashCode()

@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include <Constants.hpp>
+#include <core/Constants.hpp>
 
 #include <core/containers/ThreadSafeContainer.hpp>
 
@@ -18,7 +18,6 @@
 
 namespace hyperion {
 
-class Engine;
 class Mesh;
 class Texture;
 struct RenderSetup;

@@ -10,7 +10,7 @@
 #include <core/threading/Spinlock.hpp>
 
 #include <core/object/ObjId.hpp>
-#include <core/Handle.hpp>
+#include <core/object/Handle.hpp>
 
 #include <scene/ComponentContainer.hpp>
 

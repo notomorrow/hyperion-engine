@@ -2,14 +2,14 @@
 
 #pragma once
 
-#include <core/Handle.hpp>
+#include <core/object/Handle.hpp>
 
 #include <core/threading/Thread.hpp>
 #include <core/threading/Scheduler.hpp>
 
 #include <core/logging/LoggerFwd.hpp>
 
-#include <GameCounter.hpp>
+#include <util/GameCounter.hpp>
 
 namespace hyperion {
 
@@ -21,7 +21,6 @@ class AppContextBase;
 
 using sys::AppContextBase;
 
-class Engine;
 class Game;
 
 class GameThread final : public Thread<Scheduler>

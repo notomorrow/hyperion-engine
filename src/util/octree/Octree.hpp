@@ -17,7 +17,7 @@
 #include <core/math/BoundingBox.hpp>
 #include <core/math/BoundingSphere.hpp>
 
-#include <Types.hpp>
+#include <core/Types.hpp>
 
 // #define HYP_OCTREE_DEBUG
 

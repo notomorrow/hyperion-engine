@@ -3,7 +3,7 @@
 #pragma once
 
 #include <core/object/ObjId.hpp>
-#include <core/Handle.hpp>
+#include <core/object/Handle.hpp>
 
 #include <core/memory/Any.hpp>
 
@@ -21,7 +21,7 @@
 
 #include <core/debug/Debug.hpp>
 
-#include <Constants.hpp>
+#include <core/Constants.hpp>
 
 #include <asset/Loader.hpp>
 

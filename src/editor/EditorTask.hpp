@@ -16,8 +16,8 @@
 
 #include <core/object/HypObject.hpp>
 
-#include <GameCounter.hpp>
-#include <Types.hpp>
+#include <util/GameCounter.hpp>
+#include <core/Types.hpp>
 
 namespace hyperion {
 

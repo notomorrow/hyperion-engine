@@ -10,7 +10,7 @@
 
 #include <core/filesystem/FsUtil.hpp>
 
-#include <HashCode.hpp>
+#include <core/HashCode.hpp>
 
 namespace hyperion {
 

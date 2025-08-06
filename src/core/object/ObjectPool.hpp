@@ -17,15 +17,13 @@
 #include <core/memory/Memory.hpp>
 #include <core/memory/MemoryPool.hpp>
 
-#include <Constants.hpp>
-#include <Types.hpp>
+#include <core/Constants.hpp>
+#include <core/Types.hpp>
 
 #include <type_traits>
 
 // #define HYP_OBJECT_POOL_DEBUG
 namespace hyperion {
-
-class Engine;
 
 template <class T>
 class ObjectContainer;

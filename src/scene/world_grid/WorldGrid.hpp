@@ -7,7 +7,7 @@
 #include <scene/Entity.hpp>
 #include <scene/Node.hpp>
 
-#include <core/Handle.hpp>
+#include <core/object/Handle.hpp>
 
 #include <core/containers/FlatMap.hpp>
 #include <core/containers/FlatSet.hpp>
@@ -21,8 +21,8 @@
 
 #include <core/math/Vector2.hpp>
 
-#include <GameCounter.hpp>
-#include <HashCode.hpp>
+#include <util/GameCounter.hpp>
+#include <core/HashCode.hpp>
 
 namespace hyperion {
 

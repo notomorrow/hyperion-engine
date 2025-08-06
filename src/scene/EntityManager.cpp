@@ -7,7 +7,7 @@
 #include <scene/Scene.hpp>
 #include <scene/World.hpp>
 
-#include <core/Handle.hpp>
+#include <core/object/Handle.hpp>
 
 #include <core/threading/TaskSystem.hpp>
 

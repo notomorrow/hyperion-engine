@@ -4,7 +4,6 @@
 
 #include <rendering/rt/RenderAccelerationStructure.hpp>
 
-
 #include <rendering/RenderGpuBuffer.hpp>
 #include <rendering/Shared.hpp>
 
@@ -14,9 +13,9 @@
 
 #include <core/utilities/Span.hpp>
 
-#include <core/Handle.hpp>
+#include <core/object/Handle.hpp>
 
-#include <Types.hpp>
+#include <core/Types.hpp>
 
 #include <vulkan/vulkan.h>
 
@@ -92,7 +91,7 @@ class HYP_API VulkanAccelerationStructureBase
 {
 protected:
     VulkanAccelerationStructureBase(const Matrix4& transform = Matrix4::Identity());
-     ~VulkanAccelerationStructureBase();
+    ~VulkanAccelerationStructureBase();
 
 public:
     HYP_FORCE_INLINE const GpuBufferRef& GetBuffer() const
@@ -227,17 +226,16 @@ public:
         {
             return;
         }
-    
+
         m_materialBinding = materialBinding;
-    
+
         if (!IsCreated())
         {
             return;
         }
-    
+
         m_flags |= ACCELERATION_STRUCTURE_FLAGS_MATERIAL_UPDATE;
     }
-
 
     /*! \brief Rebuild IF the rebuild flag has been set. Otherwise this is a no-op. */
     RendererResult UpdateStructure(RTUpdateStateFlags& outUpdateStateFlags);

@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include <core/Handle.hpp>
+#include <core/object/Handle.hpp>
 
 #include <core/containers/Queue.hpp>
 
@@ -25,14 +25,13 @@
 
 #include <scene/Entity.hpp>
 
-#include <GameCounter.hpp>
+#include <util/GameCounter.hpp>
 
 #include <atomic>
 #include <mutex>
 
 namespace hyperion {
 
-class Engine;
 class CameraStreamingVolume;
 
 HYP_ENUM()

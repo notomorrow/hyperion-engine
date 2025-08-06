@@ -5,17 +5,16 @@
 #include <rendering/RenderObject.hpp>
 
 #include <core/Name.hpp>
-#include <core/Handle.hpp>
+#include <core/object/Handle.hpp>
 
 #include <core/utilities/Pair.hpp>
 
 #include <core/math/MathUtil.hpp>
-#include <Constants.hpp>
-#include <Types.hpp>
+#include <core/Constants.hpp>
+#include <core/Types.hpp>
 
 namespace hyperion {
 
-class Engine;
 class ParticleSystem;
 class GaussianSplatting;
 

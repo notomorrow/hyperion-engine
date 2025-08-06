@@ -18,8 +18,8 @@
 #include <core/math/Vector3.hpp>
 #include <core/math/Transform.hpp>
 
-#include <HashCode.hpp>
-#include <Types.hpp>
+#include <core/HashCode.hpp>
+#include <core/Types.hpp>
 
 #include <type_traits>
 

@@ -29,9 +29,9 @@
 
 #include <core/math/MathUtil.hpp>
 
-#include <EngineGlobals.hpp>
+#include <engine/EngineGlobals.hpp>
 #include <HyperionEngine.hpp>
-#include <Engine.hpp>
+#include <engine/EngineDriver.hpp>
 
 #include <rendering/RenderConfig.hpp>
 #include <rendering/RenderBackend.hpp>
@@ -741,10 +741,11 @@ static ByteBuffer CompileToSPIRV(
                         {
                             fieldTypeName = it->type->getCompleteString(true, false, false, true).data();
                         }
-                        
+
                         auto& field = outDescriptorUsageType.AddField(
-                            CreateNameFromDynamicString(it->type->getFieldName().data()),
-                            DescriptorUsageType(CreateNameFromDynamicString(fieldTypeName))).second;
+                                                                CreateNameFromDynamicString(it->type->getFieldName().data()),
+                                                                DescriptorUsageType(CreateNameFromDynamicString(fieldTypeName)))
+                                          .second;
 
                         HandleType(it->type, field);
                     }
@@ -1065,7 +1066,6 @@ String ShaderProperty::GetValueString() const
 
     return String::empty;
 }
-
 
 #pragma endregion ShaderProperty
 
@@ -1658,11 +1658,6 @@ bool ShaderCompiler::LoadShaderDefinitions(bool precompileShaders)
 
 bool ShaderCompiler::CanCompileShaders() const
 {
-    if (!g_engine->GetConfig().Get(CONFIG_SHADER_COMPILATION).GetBool())
-    {
-        return false;
-    }
-
 #ifdef HYP_GLSLANG
     return true;
 #else

@@ -4,7 +4,7 @@
 
 #include <core/utilities/TypeId.hpp>
 
-#include <Types.hpp>
+#include <core/Types.hpp>
 
 using namespace hyperion;
 

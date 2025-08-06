@@ -16,12 +16,10 @@
 
 #include <util/ini/INIFile.hpp>
 
-#include <HashCode.hpp>
-#include <Types.hpp>
+#include <core/HashCode.hpp>
+#include <core/Types.hpp>
 
 namespace hyperion {
-
-class Engine;
 
 using ShaderPropertyFlags = uint32;
 

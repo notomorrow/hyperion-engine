@@ -4,9 +4,9 @@
 
 #include <core/math/Vector3.hpp>
 
-#include <Types.hpp>
+#include <core/Types.hpp>
 
-#include <HashCode.hpp>
+#include <core/HashCode.hpp>
 
 #include <string.h>
 

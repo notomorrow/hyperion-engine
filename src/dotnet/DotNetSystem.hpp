@@ -6,7 +6,7 @@
 
 #include <core/filesystem/FilePath.hpp>
 
-#include <Types.hpp>
+#include <core/Types.hpp>
 
 #include <dotnet/Assembly.hpp>
 

@@ -8,7 +8,7 @@
 #include <Windows.h>
 #endif
 
-#include <Types.hpp>
+#include <core/Types.hpp>
 
 #include <atomic>
 #include <algorithm>

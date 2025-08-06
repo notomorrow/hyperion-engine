@@ -14,7 +14,7 @@
 
 #include <core/Defines.hpp>
 
-#include <HashCode.hpp>
+#include <core/HashCode.hpp>
 
 namespace hyperion {
 class ByteWriter;

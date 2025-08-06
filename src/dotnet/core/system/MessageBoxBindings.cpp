@@ -2,7 +2,7 @@
 
 #include <system/MessageBox.hpp>
 
-#include <Types.hpp>
+#include <core/Types.hpp>
 
 using namespace hyperion;
 

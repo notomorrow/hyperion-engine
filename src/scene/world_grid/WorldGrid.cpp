@@ -24,8 +24,8 @@
 
 #include <core/profiling/ProfileScope.hpp>
 
-#include <EngineGlobals.hpp>
-#include <Engine.hpp>
+#include <engine/EngineGlobals.hpp>
+#include <engine/EngineDriver.hpp>
 
 namespace hyperion {
 
@@ -67,7 +67,7 @@ WorldGrid::~WorldGrid()
 
 void WorldGrid::Init()
 {
-    AddDelegateHandler(g_engine->GetDelegates().OnShutdown.Bind([this]
+    AddDelegateHandler(g_engineDriver->GetDelegates().OnShutdown.Bind([this]
         {
             if (IsReady())
             {

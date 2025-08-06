@@ -26,8 +26,8 @@
 
 #include <system/MessageBox.hpp>
 
-#include <EngineGlobals.hpp>
-#include <Engine.hpp>
+#include <engine/EngineGlobals.hpp>
+#include <engine/EngineDriver.hpp>
 
 namespace hyperion {
 
@@ -927,7 +927,7 @@ Result AssetPackage::OpenAssetReadStream(Name assetName, BufferedReader& stream)
     if (!m_packageDir.IsDirectory())
     {
         // package not saved
-        
+
         return HYP_MAKE_ERROR(Error, "Package not saved; cannot load asset");
     }
 

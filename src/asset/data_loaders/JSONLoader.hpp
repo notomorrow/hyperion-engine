@@ -5,7 +5,7 @@
 #include <asset/Assets.hpp>
 #include <core/json/JSON.hpp>
 
-#include <Types.hpp>
+#include <core/Types.hpp>
 
 namespace hyperion {
 

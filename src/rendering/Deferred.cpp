@@ -55,8 +55,8 @@
 
 #include <util/MeshBuilder.hpp>
 
-#include <EngineGlobals.hpp>
-#include <Engine.hpp>
+#include <engine/EngineGlobals.hpp>
+#include <engine/EngineDriver.hpp>
 
 namespace hyperion {
 
@@ -1937,7 +1937,7 @@ void DeferredRenderer::RenderFrameForView(FrameBase* frame, const RenderSetup& r
         ExecuteDrawCalls(frame, rs, renderCollector, (1u << RB_SKYBOX));
 
         // render debug draw
-        g_engine->GetDebugDrawer()->Render(frame, rs);
+        g_engineDriver->GetDebugDrawer()->Render(frame, rs);
 
         frame->renderQueue << EndFramebuffer(translucentFbo);
     }

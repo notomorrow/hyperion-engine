@@ -25,7 +25,7 @@
 
 #include <system/vma/VmaUsage.hpp>
 
-#include <Types.hpp>
+#include <core/Types.hpp>
 
 #include <cstring>
 
@@ -262,7 +262,7 @@ RendererResult VulkanInstance::SetupDebugMessenger()
     messengerInfo.pUserData = nullptr;
 
     VULKAN_CHECK(CreateDebugUtilsMessengerEXT(m_instance, &messengerInfo, nullptr, &this->debugMessenger));
-    
+
     HYP_LOG(RenderingBackend, Info, "Enabling Vulkan debug messenger");
 #endif
     HYPERION_RETURN_OK;

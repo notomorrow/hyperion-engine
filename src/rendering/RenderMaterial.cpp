@@ -21,9 +21,9 @@
 #include <core/utilities/ByteUtil.hpp>
 #include <core/profiling/ProfileScope.hpp>
 
-#include <EngineGlobals.hpp>
-#include <Engine.hpp>
-#include <Types.hpp>
+#include <engine/EngineGlobals.hpp>
+#include <engine/EngineDriver.hpp>
+#include <core/Types.hpp>
 
 namespace hyperion {
 

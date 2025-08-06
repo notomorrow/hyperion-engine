@@ -10,13 +10,12 @@
 #include <rendering/RenderObject.hpp>
 #include <rendering/Shared.hpp>
 
-#include <Types.hpp>
+#include <core/Types.hpp>
 
 #include <utility>
 
 namespace hyperion {
 
-class Engine;
 class GBuffer;
 
 struct alignas(16) PostProcessingUniforms

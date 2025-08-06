@@ -10,7 +10,7 @@
 
 #include <core/utilities/ValueStorage.hpp>
 
-#include <Types.hpp>
+#include <core/Types.hpp>
 
 namespace hyperion {
 namespace memory {

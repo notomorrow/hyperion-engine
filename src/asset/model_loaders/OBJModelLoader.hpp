@@ -10,7 +10,7 @@
 #include <core/containers/String.hpp>
 #include <core/utilities/Tuple.hpp>
 
-#include <Types.hpp>
+#include <core/Types.hpp>
 
 namespace hyperion {
 

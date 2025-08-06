@@ -4,7 +4,7 @@
 
 #include <ui/UIPanel.hpp>
 
-#include <core/Handle.hpp>
+#include <core/object/Handle.hpp>
 
 #include <core/containers/Array.hpp>
 

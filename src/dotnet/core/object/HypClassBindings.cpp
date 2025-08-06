@@ -18,7 +18,7 @@
 #include <dotnet/Object.hpp>
 #include <dotnet/Class.hpp>
 
-#include <Types.hpp>
+#include <core/Types.hpp>
 
 using namespace hyperion;
 
@@ -173,7 +173,7 @@ bool DynamicHypClassInstance::CreateInstance_Internal(HypData& out) const
 
     // keep it alive
     managedObjectResource->IncRef();
-    
+
     target->SetManagedObjectResource(managedObjectResource);
 
     return true;

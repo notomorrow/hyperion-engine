@@ -17,7 +17,7 @@
 
 #include <core/profiling/ProfileScope.hpp>
 
-#include <Types.hpp>
+#include <core/Types.hpp>
 
 namespace hyperion {
 

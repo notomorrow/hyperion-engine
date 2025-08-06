@@ -39,8 +39,8 @@
 #include <core/filesystem/FsUtil.hpp>
 #include <core/profiling/ProfileScope.hpp>
 
-#include <EngineGlobals.hpp>
-#include <Engine.hpp>
+#include <engine/EngineGlobals.hpp>
+#include <engine/EngineDriver.hpp>
 #include <HyperionEngine.hpp>
 
 namespace hyperion {
@@ -345,7 +345,7 @@ const AssetLoaderDefinition* AssetManager::GetLoaderDefinition(const FilePath& p
 
 void AssetManager::Init()
 {
-    AddDelegateHandler(g_engine->GetDelegates().OnShutdown.Bind([this]()
+    AddDelegateHandler(g_engineDriver->GetDelegates().OnShutdown.Bind([this]()
         {
             if (m_threadPool)
             {

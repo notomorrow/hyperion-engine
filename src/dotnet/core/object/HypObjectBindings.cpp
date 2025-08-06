@@ -12,7 +12,7 @@
 #include <dotnet/Class.hpp>
 #include <dotnet/interop/ManagedObject.hpp>
 
-#include <Types.hpp>
+#include <core/Types.hpp>
 
 using namespace hyperion;
 
@@ -69,7 +69,7 @@ extern "C"
             classObjectPtr->RefCountedPtrFromThis(),
             *objectReference,
             ObjectFlags::CREATED_FROM_MANAGED);
-        
+
         HypObjectBase* target = reinterpret_cast<HypObjectBase*>(ptr.GetPointer());
 
         target->SetManagedObjectResource(managedObjectResource);

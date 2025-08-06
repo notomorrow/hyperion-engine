@@ -4,7 +4,7 @@
 
 #include <core/Defines.hpp>
 
-#include <Types.hpp>
+#include <core/Types.hpp>
 
 #include <bit>
 
@@ -216,7 +216,7 @@ struct alignas(2) Float16
 
     HYP_FORCE_INLINE static constexpr Float16 FromRaw(uint16 v)
     {
-        Float16 result{};
+        Float16 result {};
         result.value = v;
         return result;
     }

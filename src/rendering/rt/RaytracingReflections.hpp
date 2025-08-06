@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include <Constants.hpp>
+#include <core/Constants.hpp>
 
 #include <rendering/ShaderManager.hpp>
 #include <rendering/TemporalBlending.hpp>
@@ -15,7 +15,6 @@
 
 namespace hyperion {
 
-class Engine;
 class GBuffer;
 class PassData;
 

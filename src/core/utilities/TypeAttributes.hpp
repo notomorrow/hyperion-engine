@@ -7,8 +7,8 @@
 #include <core/Name.hpp>
 #include <core/Util.hpp>
 
-#include <Types.hpp>
-#include <HashCode.hpp>
+#include <core/Types.hpp>
+#include <core/HashCode.hpp>
 
 #include <type_traits>
 

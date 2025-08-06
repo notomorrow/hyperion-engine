@@ -23,7 +23,7 @@
 #include <core/serialization/Serialization.hpp>
 #include <core/serialization/SerializationWrapper.hpp>
 
-#include <Types.hpp>
+#include <core/Types.hpp>
 
 namespace hyperion {
 

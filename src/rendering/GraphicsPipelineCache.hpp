@@ -13,7 +13,7 @@
 
 #include <rendering/RenderObject.hpp>
 
-#include <Constants.hpp>
+#include <core/Constants.hpp>
 
 namespace hyperion {
 

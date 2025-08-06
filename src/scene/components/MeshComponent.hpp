@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include <core/Handle.hpp>
+#include <core/object/Handle.hpp>
 #include <core/utilities/UserData.hpp>
 
 #include <core/math/Matrix4.hpp>

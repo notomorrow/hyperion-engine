@@ -7,7 +7,7 @@
 #include <core/serialization/fbom/FBOM.hpp>
 #include <core/serialization/fbom/FBOMMarshaler.hpp>
 
-#include <Constants.hpp>
+#include <core/Constants.hpp>
 
 namespace hyperion {
 

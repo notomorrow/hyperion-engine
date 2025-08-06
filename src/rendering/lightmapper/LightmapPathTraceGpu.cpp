@@ -58,8 +58,8 @@
 
 #include <system/AppContext.hpp>
 
-#include <EngineGlobals.hpp>
-#include <Engine.hpp>
+#include <engine/EngineGlobals.hpp>
+#include <engine/EngineDriver.hpp>
 
 namespace hyperion {
 
@@ -218,7 +218,7 @@ void LightmapRenderer_GpuPathTracing::UpdatePipelineState(FrameBase* frame)
     {
         DeferCreate(m_raysBuffers[frameIndex]);
     }
-    
+
     /// Shader
 
     ShaderProperties shaderProperties;
@@ -267,7 +267,7 @@ void LightmapRenderer_GpuPathTracing::UpdatePipelineState(FrameBase* frame)
 
     m_raytracingPipeline = g_renderBackend->MakeRaytracingPipeline(shader, descriptorTable);
     DeferCreate(m_raytracingPipeline);
-        
+
     RTUpdateStateFlags updateStateFlags = RTUpdateStateFlagBits::RT_UPDATE_STATE_FLAGS_NONE;
     m_accelerationStructures[frame->GetFrameIndex()]->UpdateStructure(updateStateFlags);
 }
@@ -279,7 +279,7 @@ void LightmapRenderer_GpuPathTracing::UpdateUniforms(FrameBase* frame, uint32 ra
 
     uniforms.rayOffset = rayOffset;
 
-    // const uint32 maxBoundLights = MathUtil::Min(g_engine->GetRenderState()->NumBoundLights(), ArraySize(uniforms.lightIndices));
+    // const uint32 maxBoundLights = MathUtil::Min(g_engineDriver->GetRenderState()->NumBoundLights(), ArraySize(uniforms.lightIndices));
     // uint32 numBoundLights = 0;
 
     // for (uint32 lightType = 0; lightType < uint32(LT_MAX); lightType++) {
@@ -287,7 +287,7 @@ void LightmapRenderer_GpuPathTracing::UpdateUniforms(FrameBase* frame, uint32 ra
     //         break;
     //     }
 
-    //     for (const auto &it : g_engine->GetRenderState()->boundLights[lightType]) {
+    //     for (const auto &it : g_engineDriver->GetRenderState()->boundLights[lightType]) {
     //         if (numBoundLights >= maxBoundLights) {
     //             break;
     //         }
@@ -305,7 +305,7 @@ void LightmapRenderer_GpuPathTracing::UpdateUniforms(FrameBase* frame, uint32 ra
     // a) create a View for the Lightmapper and use that to get the lights. It will need to collect the lights on the Game thread so we'll need to add some kind of System to do that.
     // b) add a function to the RenderScene to get all the lights in the scene and use that to get the lights for the current view. This has a drawback that we will always have some RenderLight active when it could be inactive if it is not in any view.
     // OR: We can just use the lights in the current view and ignore the rest. This is a bit of a hack but it will work for now.
-    //HYP_NOT_IMPLEMENTED();
+    // HYP_NOT_IMPLEMENTED();
 
     uniforms.numBoundLights = 0;
 

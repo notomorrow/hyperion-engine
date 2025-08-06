@@ -7,7 +7,7 @@
 #include <dotnet/interop/ManagedGuid.hpp>
 #include <dotnet/interop/ManagedObject.hpp>
 
-#include <Types.hpp>
+#include <core/Types.hpp>
 
 namespace hyperion::dotnet {
 

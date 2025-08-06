@@ -20,8 +20,8 @@
 
 #include <scene/BVH.hpp>
 
-#include <EngineGlobals.hpp>
-#include <Engine.hpp>
+#include <engine/EngineGlobals.hpp>
+#include <engine/EngineDriver.hpp>
 
 #include <cstring>
 

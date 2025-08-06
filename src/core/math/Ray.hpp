@@ -11,8 +11,8 @@
 #include <core/utilities/Optional.hpp>
 #include <core/utilities/Tuple.hpp>
 
-#include <HashCode.hpp>
-#include <Types.hpp>
+#include <core/HashCode.hpp>
+#include <core/Types.hpp>
 
 namespace hyperion {
 

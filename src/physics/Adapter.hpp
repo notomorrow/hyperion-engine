@@ -2,8 +2,8 @@
 
 #pragma once
 
-#include <core/Handle.hpp>
-#include <GameCounter.hpp>
+#include <core/object/Handle.hpp>
+#include <util/GameCounter.hpp>
 
 namespace hyperion::physics {
 

@@ -1,7 +1,7 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#include <Game.hpp>
-#include <GameThread.hpp>
+#include <game/Game.hpp>
+#include <game/GameThread.hpp>
 
 #include <asset/Assets.hpp>
 
@@ -31,8 +31,8 @@
 
 #include <system/SystemEvent.hpp>
 
-#include <EngineGlobals.hpp>
-#include <Engine.hpp>
+#include <engine/EngineGlobals.hpp>
+#include <engine/EngineDriver.hpp>
 
 namespace hyperion {
 
@@ -58,7 +58,7 @@ void Game::Update(float delta)
 {
     HYP_SCOPE;
 
-    g_engine->GetScriptingService()->Update();
+    g_engineDriver->GetScriptingService()->Update();
 
     Logic(delta);
 
@@ -67,7 +67,7 @@ void Game::Update(float delta)
         m_managedGameObject->InvokeMethodByName<void, float>("Update", float(delta));
     }
 
-    g_engine->GetWorld()->Update(delta);
+    g_engineDriver->GetWorld()->Update(delta);
 }
 
 void Game::Init()
@@ -88,7 +88,7 @@ void Game::Init()
         }
     }
 
-    const Handle<World>& world = g_engine->GetWorld();
+    const Handle<World>& world = g_engineDriver->GetWorld();
     Assert(world.IsValid());
     InitObject(world);
 
