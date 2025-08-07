@@ -769,6 +769,11 @@ public:
     RenderQueue(RenderQueue&& other) noexcept = delete;
     RenderQueue& operator=(RenderQueue&& other) noexcept = delete;
     ~RenderQueue();
+    
+    HYP_FORCE_INLINE bool IsEmpty() const
+    {
+        return m_offset == 0;
+    }
 
     template <class CmdType>
     void Add(CmdType&& cmd)

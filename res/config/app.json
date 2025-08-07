@@ -12,10 +12,10 @@
     },
     "envGrid": {
       "reflections": {
-        "enabled": false
+        "enabled": true
       },
       "globalIllumination": {
-        "enabled": true
+        "enabled": false
       }
     },
     "taa": {
@@ -24,8 +24,8 @@
     "debug": {
       "reflections": false,
       "debugDrawer": {
-        "enabled": true,
-        "envGridProbes": true
+        "enabled": false,
+        "envGridProbes": false
       },
       "irradiance": false
     },
@@ -34,15 +34,15 @@
     },
     "raytracing": {
       "reflections": {
-        "enabled": false
+        "enabled": true
       },
       "globalIllumination": {
-        "enabled": false
+        "enabled": true
       },
       "pathTracing": {
         "enabled": false
       },
-      "enabled": false
+      "enabled": true
     },
     "hbao": {
       "radius": 2.500000,

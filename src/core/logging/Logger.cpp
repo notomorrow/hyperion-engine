@@ -329,7 +329,12 @@ DynamicLogChannelHandle::~DynamicLogChannelHandle()
 {
     if (m_logger != nullptr)
     {
-        m_logger->DestroyDynamicLogChannel(*this);
+        m_logger->RemoveDynamicLogChannel(*this);
+    }
+
+    if (m_ownsAllocation)
+    {
+        delete m_channel;
     }
 }
 
@@ -342,14 +347,21 @@ DynamicLogChannelHandle& DynamicLogChannelHandle::operator=(DynamicLogChannelHan
 
     if (m_logger != nullptr)
     {
-        m_logger->DestroyDynamicLogChannel(*this);
+        m_logger->RemoveDynamicLogChannel(*this);
+    }
+
+    if (m_ownsAllocation)
+    {
+        delete m_channel;
     }
 
     m_logger = other.m_logger;
     m_channel = other.m_channel;
+    m_ownsAllocation = other.m_ownsAllocation;
 
     other.m_logger = nullptr;
     other.m_channel = nullptr;
+    other.m_ownsAllocation = false;
 
     return *this;
 }
@@ -377,9 +389,9 @@ void LogChannelRegistrar::RegisterAll()
     {
         return;
     }
-    
+
     g_registerAllCalled = true;
-    
+
     const Array<LogChannel*>& channels = m_channels;
     const uint32 n = uint32(channels.Size());
 
@@ -417,14 +429,14 @@ void LogChannelRegistrar::RegisterAll()
     order.Reserve(n);
 
     SizeType head = 0;
-    
+
     while (head < queue.Size())
     {
         LogChannel* u = queue[head++];
         order.PushBack(u);
 
         Array<LogChannel*>& subchannels = children[u];
-        
+
         for (LogChannel* subchannel : subchannels)
         {
             if (--indeg[subchannel] == 0)
@@ -435,38 +447,38 @@ void LogChannelRegistrar::RegisterAll()
     }
 
     Assert(order.Size() == n);
-    
+
     for (uint32 i = 0; i < n; i++)
     {
         order[i]->m_id = i;
     }
-    
+
     // kept alive until program exit
     static Array<DynamicLogChannelHandle> dynamicLogChannelHandles;
-    
+
     for (LogChannel* channel : m_channels)
     {
         Assert(channel->m_id != ~0u);
-        
+
         channel->m_maskBitset = Bitset();
         channel->m_maskBitset.Set(channel->m_id, true);
 
         if (channel->m_parentChannel != nullptr)
         {
             Assert(channel->m_parentChannel->m_id != ~0u);
-            
+
             channel->m_maskBitset |= channel->m_parentChannel->m_maskBitset;
         }
-        
+
         if (channel->m_id < hyperion::logging::Logger::maxChannels)
         {
             continue;
         }
-        
+
         // out of slots, need to store dynamic
         dynamicLogChannelHandles.PushBack(Logger::GetInstance().CreateDynamicLogChannel(*channel));
     }
-    
+
     m_channels.Clear();
 }
 
@@ -485,13 +497,9 @@ public:
     {
         Fill(m_logChannels.Begin(), m_logChannels.End(), nullptr);
     }
-    
+
     ~LoggerImpl()
     {
-        for (LogChannel* channel : m_dynamicLogChannels)
-        {
-            delete channel;
-        }
     }
 
 private:
@@ -551,12 +559,12 @@ const LogChannel* Logger::FindLogChannel(WeakName name) const
     for (LogChannel* channel : m_pImpl->m_dynamicLogChannels)
     {
         AssertDebug(channel != nullptr);
-        
+
         if (channel->GetName() == name)
         {
             return channel;
         }
-        
+
         return channel;
     }
 
@@ -574,23 +582,23 @@ void Logger::RegisterChannel(LogChannel* channel)
 DynamicLogChannelHandle Logger::CreateDynamicLogChannel(Name name, LogChannel* parentChannel)
 {
     AssertDebug(g_registerAllCalled);
-    
+
     Mutex::Guard guard(m_pImpl->m_dynamicLogChannelsMutex);
 
     LogChannel* channel = m_pImpl->m_dynamicLogChannels.PushBack(new LogChannel(name));
-    
+
     channel->m_id = AtomicIncrement(&g_maxLogChannelId);
     channel->m_maskBitset = Bitset(1ull << channel->m_id);
-    
+
     if (parentChannel)
     {
         AssertDebug(parentChannel->m_id != ~0u, "Parent channel must be registered if it exists!");
-        
+
         channel->m_parentChannel = parentChannel;
         channel->m_maskBitset |= parentChannel->m_maskBitset;
     }
-    
-    return DynamicLogChannelHandle(this, channel);
+
+    return DynamicLogChannelHandle(this, channel, /* ownsAllocation */ true);
 }
 
 DynamicLogChannelHandle Logger::CreateDynamicLogChannel(LogChannel& channel)
@@ -598,20 +606,20 @@ DynamicLogChannelHandle Logger::CreateDynamicLogChannel(LogChannel& channel)
     Mutex::Guard guard(m_pImpl->m_dynamicLogChannelsMutex);
 
     m_pImpl->m_dynamicLogChannels.PushBack(&channel);
-    
+
     if (channel.m_id == ~0u)
     {
         AssertDebug(g_registerAllCalled);
-        
+
         channel.m_id = AtomicIncrement(&g_maxLogChannelId);
     }
-    
+
     channel.m_maskBitset = Bitset(1ull << channel.m_id);
 
-    return DynamicLogChannelHandle(this, &channel);
+    return DynamicLogChannelHandle(this, &channel, /* ownsAllocation */ false);
 }
 
-void Logger::DestroyDynamicLogChannel(Name name)
+void Logger::RemoveDynamicLogChannel(Name name)
 {
     Mutex::Guard guard(m_pImpl->m_dynamicLogChannelsMutex);
 
@@ -625,12 +633,10 @@ void Logger::DestroyDynamicLogChannel(Name name)
         return;
     }
 
-    delete *it;
-    
     m_pImpl->m_dynamicLogChannels.Erase(it);
 }
 
-void Logger::DestroyDynamicLogChannel(LogChannel* channel)
+void Logger::RemoveDynamicLogChannel(LogChannel* channel)
 {
     Mutex::Guard guard(m_pImpl->m_dynamicLogChannelsMutex);
 
@@ -640,20 +646,18 @@ void Logger::DestroyDynamicLogChannel(LogChannel* channel)
     {
         return;
     }
-    
-    delete *it;
 
     m_pImpl->m_dynamicLogChannels.Erase(it);
 }
 
-void Logger::DestroyDynamicLogChannel(DynamicLogChannelHandle& channelHandle)
+void Logger::RemoveDynamicLogChannel(DynamicLogChannelHandle& channelHandle)
 {
     if (!channelHandle.m_channel)
     {
         return;
     }
 
-    DestroyDynamicLogChannel(channelHandle.m_channel);
+    RemoveDynamicLogChannel(channelHandle.m_channel);
 
     channelHandle.m_logger = nullptr;
     channelHandle.m_channel = nullptr;

@@ -764,12 +764,16 @@ void EnvGridRenderer::ComputeEnvProbeIrradiance_SphericalHarmonics(FrameBase* fr
     pd->clearSh->SetPushConstants(&pushConstants, sizeof(pushConstants));
     pd->computeSh->SetPushConstants(&pushConstants, sizeof(pushConstants));
 
-    RenderQueue& asyncComputeCommandList = g_renderBackend->GetAsyncCompute()->renderQueue;
+    RenderQueue* asyncRenderQueuePtr = g_renderBackend->GetAsyncCompute()->IsSupported()
+        ? &g_renderBackend->GetAsyncCompute()->renderQueue
+        : &frame->renderQueue;
+    
+    RenderQueue& asyncRenderQueue = *asyncRenderQueuePtr;
 
-    asyncComputeCommandList << InsertBarrier(pd->shTilesBuffers[0], RS_UNORDERED_ACCESS, SMT_COMPUTE);
-    asyncComputeCommandList << InsertBarrier(g_renderGlobalState->gpuBuffers[GRB_ENV_PROBES]->GetBuffer(frame->GetFrameIndex()), RS_UNORDERED_ACCESS, SMT_COMPUTE);
+    asyncRenderQueue << InsertBarrier(pd->shTilesBuffers[0], RS_UNORDERED_ACCESS, SMT_COMPUTE);
+    asyncRenderQueue << InsertBarrier(g_renderGlobalState->gpuBuffers[GRB_ENV_PROBES]->GetBuffer(frame->GetFrameIndex()), RS_UNORDERED_ACCESS, SMT_COMPUTE);
 
-    asyncComputeCommandList << BindDescriptorTable(
+    asyncRenderQueue << BindDescriptorTable(
         pd->computeShDescriptorTables[0],
         pd->clearSh,
         ArrayMap<Name, ArrayMap<Name, uint32>> {
@@ -779,12 +783,12 @@ void EnvGridRenderer::ComputeEnvProbeIrradiance_SphericalHarmonics(FrameBase* fr
                     { NAME("CurrentEnvProbe"), ShaderDataOffset<EnvProbeShaderData>(renderSetup.envProbe, 0) } } } },
         frame->GetFrameIndex());
 
-    asyncComputeCommandList << BindComputePipeline(pd->clearSh);
-    asyncComputeCommandList << DispatchCompute(pd->clearSh, Vec3u { 1, 1, 1 });
+    asyncRenderQueue << BindComputePipeline(pd->clearSh);
+    asyncRenderQueue << DispatchCompute(pd->clearSh, Vec3u { 1, 1, 1 });
 
-    asyncComputeCommandList << InsertBarrier(pd->shTilesBuffers[0], RS_UNORDERED_ACCESS, SMT_COMPUTE);
+    asyncRenderQueue << InsertBarrier(pd->shTilesBuffers[0], RS_UNORDERED_ACCESS, SMT_COMPUTE);
 
-    asyncComputeCommandList << BindDescriptorTable(
+    asyncRenderQueue << BindDescriptorTable(
         pd->computeShDescriptorTables[0],
         pd->computeSh,
         ArrayMap<Name, ArrayMap<Name, uint32>> {
@@ -794,15 +798,15 @@ void EnvGridRenderer::ComputeEnvProbeIrradiance_SphericalHarmonics(FrameBase* fr
                     { NAME("CurrentEnvProbe"), ShaderDataOffset<EnvProbeShaderData>(renderSetup.envProbe, 0) } } } },
         frame->GetFrameIndex());
 
-    asyncComputeCommandList << BindComputePipeline(pd->computeSh);
-    asyncComputeCommandList << DispatchCompute(pd->computeSh, Vec3u { 1, 1, 1 });
+    asyncRenderQueue << BindComputePipeline(pd->computeSh);
+    asyncRenderQueue << DispatchCompute(pd->computeSh, Vec3u { 1, 1, 1 });
 
     // Parallel reduce
     if (shParallelReduce)
     {
         for (uint32 i = 1; i < shNumLevels; i++)
         {
-            asyncComputeCommandList << InsertBarrier(pd->shTilesBuffers[i - 1], RS_UNORDERED_ACCESS, SMT_COMPUTE);
+            asyncRenderQueue << InsertBarrier(pd->shTilesBuffers[i - 1], RS_UNORDERED_ACCESS, SMT_COMPUTE);
 
             const Vec2u prevDimensions {
                 MathUtil::Max(1u, shNumSamples.x >> (i - 1)),
@@ -827,7 +831,7 @@ void EnvGridRenderer::ComputeEnvProbeIrradiance_SphericalHarmonics(FrameBase* fr
 
             pd->reduceSh->SetPushConstants(&pushConstants, sizeof(pushConstants));
 
-            asyncComputeCommandList << BindDescriptorTable(
+            asyncRenderQueue << BindDescriptorTable(
                 pd->computeShDescriptorTables[i - 1],
                 pd->reduceSh,
                 ArrayMap<Name, ArrayMap<Name, uint32>> {
@@ -837,20 +841,20 @@ void EnvGridRenderer::ComputeEnvProbeIrradiance_SphericalHarmonics(FrameBase* fr
                             { NAME("CurrentEnvProbe"), ShaderDataOffset<EnvProbeShaderData>(renderSetup.envProbe, 0) } } } },
                 frame->GetFrameIndex());
 
-            asyncComputeCommandList << BindComputePipeline(pd->reduceSh);
-            asyncComputeCommandList << DispatchCompute(pd->reduceSh, Vec3u { 1, (nextDimensions.x + 3) / 4, (nextDimensions.y + 3) / 4 });
+            asyncRenderQueue << BindComputePipeline(pd->reduceSh);
+            asyncRenderQueue << DispatchCompute(pd->reduceSh, Vec3u { 1, (nextDimensions.x + 3) / 4, (nextDimensions.y + 3) / 4 });
         }
     }
 
     const uint32 finalizeShBufferIndex = shParallelReduce ? shNumLevels - 1 : 0;
 
     // Finalize - build into final buffer
-    asyncComputeCommandList << InsertBarrier(pd->shTilesBuffers[finalizeShBufferIndex], RS_UNORDERED_ACCESS, SMT_COMPUTE);
-    asyncComputeCommandList << InsertBarrier(g_renderGlobalState->gpuBuffers[GRB_ENV_PROBES]->GetBuffer(frame->GetFrameIndex()), RS_UNORDERED_ACCESS, SMT_COMPUTE);
+    asyncRenderQueue << InsertBarrier(pd->shTilesBuffers[finalizeShBufferIndex], RS_UNORDERED_ACCESS, SMT_COMPUTE);
+    asyncRenderQueue << InsertBarrier(g_renderGlobalState->gpuBuffers[GRB_ENV_PROBES]->GetBuffer(frame->GetFrameIndex()), RS_UNORDERED_ACCESS, SMT_COMPUTE);
 
     pd->finalizeSh->SetPushConstants(&pushConstants, sizeof(pushConstants));
 
-    asyncComputeCommandList << BindDescriptorTable(
+    asyncRenderQueue << BindDescriptorTable(
         pd->computeShDescriptorTables[finalizeShBufferIndex],
         pd->finalizeSh,
         ArrayMap<Name, ArrayMap<Name, uint32>> {
@@ -860,10 +864,10 @@ void EnvGridRenderer::ComputeEnvProbeIrradiance_SphericalHarmonics(FrameBase* fr
                     { NAME("CurrentEnvProbe"), ShaderDataOffset<EnvProbeShaderData>(renderSetup.envProbe, 0) } } } },
         frame->GetFrameIndex());
 
-    asyncComputeCommandList << BindComputePipeline(pd->finalizeSh);
-    asyncComputeCommandList << DispatchCompute(pd->finalizeSh, Vec3u { 1, 1, 1 });
+    asyncRenderQueue << BindComputePipeline(pd->finalizeSh);
+    asyncRenderQueue << DispatchCompute(pd->finalizeSh, Vec3u { 1, 1, 1 });
 
-    asyncComputeCommandList << InsertBarrier(g_renderGlobalState->gpuBuffers[GRB_ENV_PROBES]->GetBuffer(frame->GetFrameIndex()), RS_UNORDERED_ACCESS, SMT_COMPUTE);
+    asyncRenderQueue << InsertBarrier(g_renderGlobalState->gpuBuffers[GRB_ENV_PROBES]->GetBuffer(frame->GetFrameIndex()), RS_UNORDERED_ACCESS, SMT_COMPUTE);
 
     DelegateHandler* delegateHandle = new DelegateHandler();
     *delegateHandle = frame->OnFrameEnd.Bind(

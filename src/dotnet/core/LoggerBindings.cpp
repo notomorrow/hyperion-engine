@@ -71,7 +71,10 @@ extern "C"
             return;
         }
 
-        Logger::GetInstance().DestroyDynamicLogChannel(logChannel);
+        Logger::GetInstance().RemoveDynamicLogChannel(logChannel);
+
+        // owns allocation
+        delete logChannel;
     }
 
 } // extern "C"

@@ -178,9 +178,10 @@ class HYP_API DynamicLogChannelHandle
 {
     friend class Logger;
 
-    DynamicLogChannelHandle(Logger* logger, LogChannel* channel)
+    DynamicLogChannelHandle(Logger* logger, LogChannel* channel, bool ownsAllocation)
         : m_logger(logger),
-          m_channel(channel)
+          m_channel(channel),
+          m_ownsAllocation(ownsAllocation)
     {
     }
 
@@ -189,9 +190,13 @@ class HYP_API DynamicLogChannelHandle
 
 public:
     DynamicLogChannelHandle(DynamicLogChannelHandle&& other) noexcept
-        : m_channel(other.m_channel)
+        : m_logger(other.m_logger),
+          m_channel(other.m_channel),
+          m_ownsAllocation(other.m_ownsAllocation)
     {
+        other.m_logger = nullptr;
         other.m_channel = nullptr;
+        other.m_ownsAllocation = false;
     }
 
     DynamicLogChannelHandle& operator=(DynamicLogChannelHandle&& other) noexcept;
@@ -204,6 +209,7 @@ public:
 
         m_logger = nullptr;
         m_channel = nullptr;
+        m_ownsAllocation = false;
 
         return channel;
     }
@@ -211,6 +217,7 @@ public:
 private:
     Logger* m_logger;
     LogChannel* m_channel;
+    bool m_ownsAllocation : 1;
 };
 
 class HYP_API Logger
@@ -239,9 +246,9 @@ public:
 
     DynamicLogChannelHandle CreateDynamicLogChannel(Name name, LogChannel* parentChannel = nullptr);
     DynamicLogChannelHandle CreateDynamicLogChannel(LogChannel& channel);
-    void DestroyDynamicLogChannel(Name name);
-    void DestroyDynamicLogChannel(LogChannel* channel);
-    void DestroyDynamicLogChannel(DynamicLogChannelHandle& channelHandle);
+    void RemoveDynamicLogChannel(Name name);
+    void RemoveDynamicLogChannel(LogChannel* channel);
+    void RemoveDynamicLogChannel(DynamicLogChannelHandle& channelHandle);
 
     bool IsChannelEnabled(const LogChannel& channel) const;
 
@@ -437,6 +444,7 @@ struct LogChannelRegistration
 
 } // namespace logging
 
+using logging::DynamicLogChannelHandle;
 using logging::ILoggerOutputStream;
 using logging::LogCategory;
 using logging::LogChannel;
@@ -445,19 +453,18 @@ using logging::LogChannelRegistration;
 using logging::Logger;
 using logging::LogLevel;
 using logging::LogMessage;
-using logging::DynamicLogChannelHandle;
 
 } // namespace hyperion
 
 // Helper macros
 
 // Must be used outside of function (in global scope)
-#define HYP_DEFINE_LOG_CHANNEL(name)                                                                                                                            \
-    hyperion::logging::LogChannel g_logChannel_##name(HYP_NAME(HYP_STR(name)));                                                                                 \
+#define HYP_DEFINE_LOG_CHANNEL(name)                                            \
+    hyperion::logging::LogChannel g_logChannel_##name(HYP_NAME(HYP_STR(name))); \
     static hyperion::logging::LogChannelRegistration g_logChannelRegistration_##name(&g_logChannel_##name)
 
-#define HYP_DEFINE_LOG_SUBCHANNEL(name, parentName)                                                                                                             \
-    hyperion::logging::LogChannel g_logChannel_##name(HYP_NAME(HYP_STR(name)));                                                                                 \
+#define HYP_DEFINE_LOG_SUBCHANNEL(name, parentName)                             \
+    hyperion::logging::LogChannel g_logChannel_##name(HYP_NAME(HYP_STR(name))); \
     static hyperion::logging::LogChannelRegistration g_logChannelRegistration_##name(&g_logChannel_##name, &g_logChannel_##parentName)
 
 // Undefine HYP_LOG if already defined (LoggerFwd could have defined it as an empty macro)
@@ -465,9 +472,9 @@ using logging::DynamicLogChannelHandle;
 #undef HYP_LOG_ONCE
 #endif
 
-#define HYP_LOG_ONCE(channel, category, fmt, ...)                                                                                                                                                                                                                                                   \
-    do                                                                                                                                                                                                                                                                                              \
-    {                                                                                                                                                                                                                                                                                               \
+#define HYP_LOG_ONCE(channel, category, fmt, ...)                                                                                                                                                                                                                                                    \
+    do                                                                                                                                                                                                                                                                                               \
+    {                                                                                                                                                                                                                                                                                                \
         ::hyperion::logging::LogOnceHelper::ExecuteLogOnce<HYP_STATIC_STRING(__FILE__), __LINE__, HYP_STATIC_STRING(HYP_FUNCTION_NAME_LIT), hyperion::logging::category(), HYP_MAKE_CONST_ARG(&g_logChannel_##channel), HYP_STATIC_STRING(fmt "\n")>(hyperion::logging::GetLogger(), ##__VA_ARGS__); \
-    }                                                                                                                                                                                                                                                                                               \
+    }                                                                                                                                                                                                                                                                                                \
     while (0)

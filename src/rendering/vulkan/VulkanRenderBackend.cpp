@@ -677,7 +677,10 @@ FrameBase* VulkanRenderBackend::PrepareNextFrame()
 
     AssertDebug(frame != nullptr);
 
-    CHECK_FRAME_RESULT(static_cast<VulkanAsyncCompute&>(*m_asyncCompute).PrepareForFrame(frame));
+    if (m_asyncCompute->IsSupported())
+    {
+        CHECK_FRAME_RESULT(m_asyncCompute->PrepareForFrame(frame));
+    }
 
     return frame;
 }
@@ -688,10 +691,20 @@ void VulkanRenderBackend::PresentFrame(FrameBase* frame)
 
     VulkanFrame* vulkanFrame = VULKAN_CAST(frame);
     VulkanCommandBuffer* vulkanCommandBuffer = VULKAN_CAST(commandBuffer.Get());
-    VulkanAsyncCompute* vulkanAsyncCompute = static_cast<VulkanAsyncCompute*>(m_asyncCompute.Get());
+    VulkanAsyncCompute* vulkanAsyncCompute = m_asyncCompute.Get();
 
     CHECK_FRAME_RESULT(vulkanFrame->Submit(&m_instance->GetDevice()->GetGraphicsQueue(), vulkanCommandBuffer));
-    CHECK_FRAME_RESULT(vulkanAsyncCompute->Submit(vulkanFrame));
+    
+    if (vulkanAsyncCompute->IsSupported())
+    {
+        CHECK_FRAME_RESULT(vulkanAsyncCompute->Submit(vulkanFrame));
+    }
+#ifdef HYP_DEBUG_MODE
+    else if (!vulkanAsyncCompute->renderQueue.IsEmpty())
+    {
+        HYP_LOG(RenderingBackend, Fatal, "Cannot write to async compute render queue, this device does not support async compute!");
+    }
+#endif
 
     m_textureCache->CleanupUnusedTextures();
 
