@@ -6,13 +6,13 @@
       "quality": 2,
       "eyeFade": [0.980000, 0.990000],
       "rayStep": 1.500000,
-      "enabled": true,
+      "enabled": false,
       "screenEdgeFade": [0.960000, 0.990000],
       "roughnessScattering": true
     },
     "envGrid": {
       "reflections": {
-        "enabled": true
+        "enabled": false
       },
       "globalIllumination": {
         "enabled": false
@@ -34,15 +34,15 @@
     },
     "raytracing": {
       "reflections": {
-        "enabled": true
+        "enabled": false
       },
       "globalIllumination": {
-        "enabled": true
+        "enabled": false
       },
       "pathTracing": {
         "enabled": false
       },
-      "enabled": true
+      "enabled": false
     },
     "hbao": {
       "radius": 2.500000,
@@ -53,6 +53,12 @@
     "ssgi": {
       "quality": 0,
       "enabled": false
+    }
+  },
+  "editor": {
+    "camera": {
+      "moveSensitivity": 1,
+      "lookSensitivity": 1
     }
   },
   "app": {

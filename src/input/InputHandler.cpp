@@ -10,7 +10,8 @@ namespace hyperion {
 #pragma region InputHandlerBase
 
 InputHandlerBase::InputHandlerBase()
-    : m_inputState(MakePimpl<InputState>())
+    : m_inputState(MakePimpl<InputState>()),
+      m_deltaTime(0.016667f)
 {
 }
 
@@ -18,11 +19,36 @@ InputHandlerBase::~InputHandlerBase()
 {
 }
 
+const Bitset& InputHandlerBase::GetKeyStates() const
+{
+    return m_inputState->keyStates;
+}
+
+bool InputHandlerBase::IsKeyDown(KeyCode key) const
+{
+    return m_inputState->keyStates.Test(uint32(key));
+}
+
+bool InputHandlerBase::IsKeyUp(KeyCode key) const
+{
+    return !m_inputState->keyStates.Test(uint32(key));
+}
+
+bool InputHandlerBase::IsMouseButtonDown(MouseButton btn) const
+{
+    return m_inputState->mouseButtonStates & MouseButtonState(1u << uint32(btn));
+}
+
+bool InputHandlerBase::IsMouseButtonUp(MouseButton btn) const
+{
+    return !(m_inputState->mouseButtonStates & MouseButtonState(1u << uint32(btn)));
+}
+
 bool InputHandlerBase::OnKeyDown_Impl(const KeyboardEvent& evt)
 {
     if (uint32(evt.keyCode) < NUM_KEYBOARD_KEYS)
     {
-        m_inputState->keyStates[uint32(evt.keyCode)] = true;
+        m_inputState->keyStates.Set(uint32(evt.keyCode), true);
     }
 
     return true;
@@ -32,7 +58,7 @@ bool InputHandlerBase::OnKeyUp_Impl(const KeyboardEvent& evt)
 {
     if (uint32(evt.keyCode) < NUM_KEYBOARD_KEYS)
     {
-        m_inputState->keyStates[uint32(evt.keyCode)] = false;
+        m_inputState->keyStates.Set(uint32(evt.keyCode), false);
     }
 
     return true;
@@ -44,7 +70,7 @@ bool InputHandlerBase::OnMouseDown_Impl(const MouseEvent& evt)
     {
         if (i < NUM_MOUSE_BUTTONS)
         {
-            m_inputState->mouseButtonStates[i] = true;
+            m_inputState->mouseButtonStates |= (1u << i);
         }
     }
 
@@ -57,51 +83,11 @@ bool InputHandlerBase::OnMouseUp_Impl(const MouseEvent& evt)
     {
         if (i < NUM_MOUSE_BUTTONS)
         {
-            m_inputState->mouseButtonStates[i] = false;
+            m_inputState->mouseButtonStates &= (1u << i);
         }
     }
 
     return true;
-}
-
-bool InputHandlerBase::IsKeyDown(KeyCode key) const
-{
-    if (uint32(key) < NUM_KEYBOARD_KEYS)
-    {
-        return m_inputState->keyStates[uint32(key)];
-    }
-
-    return false;
-}
-
-bool InputHandlerBase::IsKeyUp(KeyCode key) const
-{
-    if (uint32(key) < NUM_KEYBOARD_KEYS)
-    {
-        return !m_inputState->keyStates[uint32(key)];
-    }
-
-    return false;
-}
-
-bool InputHandlerBase::IsMouseButtonDown(MouseButton btn) const
-{
-    if (uint32(btn) < NUM_MOUSE_BUTTONS)
-    {
-        return m_inputState->mouseButtonStates[uint32(btn)];
-    }
-
-    return false;
-}
-
-bool InputHandlerBase::IsMouseButtonUp(MouseButton btn) const
-{
-    if (uint32(btn) < NUM_MOUSE_BUTTONS)
-    {
-        return !m_inputState->mouseButtonStates[uint32(btn)];
-    }
-
-    return false;
 }
 
 #pragma endregion InputHandlerBase

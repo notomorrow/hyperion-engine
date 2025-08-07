@@ -705,7 +705,10 @@ UIEventHandlerResult UIStage::OnInputEvent(
                     mouseButtonPressedStatesIt = m_mouseButtonPressedStates.Set(uiObject, { event.GetMouseButtons(), 0.0f }).first;
                 }
 
-                uiObject->SetFocusState(uiObject->GetFocusState() | UIObjectFocusState::PRESSED);
+                if (event.GetMouseButtons() & MouseButtonState::LEFT)
+                {
+                    uiObject->SetFocusState(uiObject->GetFocusState() | UIObjectFocusState::PRESSED);
+                }
 
                 const UIEventHandlerResult onMouseDownResult = uiObject->OnMouseDown(MouseEvent {
                     .inputManager = inputManager,
@@ -736,41 +739,30 @@ UIEventHandlerResult UIStage::OnInputEvent(
         TestRay(mouseScreen, rayTestResults);
 
         const EnumFlags<MouseButtonState> buttons = event.GetMouseButtons();
-        HashMap<WeakHandle<UIObject>, UIObjectPressedState> modifiedStates;
 
-        if (buttons & MouseButtonState::LEFT)
+        for (auto it = rayTestResults.Begin(); it != rayTestResults.End(); ++it)
         {
-            for (auto it = rayTestResults.Begin(); it != rayTestResults.End(); ++it)
+            const Handle<UIObject>& uiObject = *it;
+
+            auto stateIt = m_mouseButtonPressedStates.Find(uiObject);
+
+            if (stateIt == m_mouseButtonPressedStates.End() || !(stateIt->second.mouseButtons & buttons))
             {
-                const Handle<UIObject>& uiObject = *it;
+                continue;
+            }
 
-                auto stateIt = m_mouseButtonPressedStates.Find(uiObject);
+            const EnumFlags<MouseButtonState> currentState = stateIt->second.mouseButtons;
 
-                if (stateIt == m_mouseButtonPressedStates.End() || !(stateIt->second.mouseButtons & buttons))
-                {
-                    continue;
-                }
-
-                const EnumFlags<MouseButtonState> currentState = stateIt->second.mouseButtons;
-                modifiedStates.Insert(*stateIt);
-                stateIt->second.mouseButtons &= ~buttons;
-
-                if (!(currentState & MouseButtonState::LEFT))
-                {
-                    continue;
-                }
-
-                if (!uiObject->IsEnabled())
-                {
-                    continue;
-                }
-
+            // check if we should trigger a click event
+            if (((currentState & buttons) & MouseButtonState::LEFT) && uiObject->IsEnabled())
+            {
                 const UIEventHandlerResult result = uiObject->OnClick(MouseEvent {
                     .inputManager = inputManager,
                     .position = uiObject->TransformScreenCoordsToRelative(mousePosition),
                     .previousPosition = uiObject->TransformScreenCoordsToRelative(previousMousePosition),
                     .absolutePosition = mousePosition,
-                    .mouseButtons = event.GetMouseButtons() });
+                    .mouseButtons = event.GetMouseButtons()
+                });
 
                 eventHandlerResult |= result;
 
@@ -787,23 +779,48 @@ UIEventHandlerResult UIStage::OnInputEvent(
                 }
             }
         }
-
-        for (auto& it : modifiedStates)
+        
+        for (auto it = m_mouseButtonPressedStates.Begin(); it != m_mouseButtonPressedStates.End();)
         {
-            // trigger mouse up
-            if (Handle<UIObject> uiObject = it.first.Lock())
+            EnumFlags<MouseButtonState>& stateMouseButtons = it->second.mouseButtons;
+            
+            if (!(stateMouseButtons & buttons))
             {
-                uiObject->SetFocusState(uiObject->GetFocusState() & ~UIObjectFocusState::PRESSED);
+                ++it;
+                
+                continue;
+            }
+            
+            stateMouseButtons &= ~buttons;
+            
+            // trigger mouse up
+            if (Handle<UIObject> uiObject = it->first.Lock())
+            {
+                // No longer pressed if left mouse btn was released
+                if ((buttons & MouseButtonState::LEFT) && (stateMouseButtons & MouseButtonState::LEFT))
+                {
+                    uiObject->SetFocusState(uiObject->GetFocusState() & ~UIObjectFocusState::PRESSED);
+                }
 
                 UIEventHandlerResult currentResult = uiObject->OnMouseUp(MouseEvent {
                     .inputManager = inputManager,
                     .position = uiObject->TransformScreenCoordsToRelative(mousePosition),
                     .previousPosition = uiObject->TransformScreenCoordsToRelative(previousMousePosition),
                     .absolutePosition = mousePosition,
-                    .mouseButtons = it.second.mouseButtons });
+                    .mouseButtons = stateMouseButtons
+                });
 
                 eventHandlerResult |= currentResult;
             }
+            
+            if (!stateMouseButtons) // now empty after update; remove from the map
+            {
+                it = m_mouseButtonPressedStates.Erase(it);
+                
+                continue;
+            }
+            
+            ++it;
         }
 
         break;
