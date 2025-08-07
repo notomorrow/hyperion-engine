@@ -23,8 +23,8 @@ Color::Color(float r, float g, float b, float a)
 }
 
 Color::Color(const Color& other)
+    : color32(other.color32)
 {
-    Memory::MemCpy(bytes, other.bytes, size);
 }
 
 Color::Color(const Vec4f& vec)
@@ -37,7 +37,7 @@ Color::Color(const Vec4f& vec)
 
 Color& Color::operator=(const Color& other)
 {
-    Memory::MemCpy(bytes, other.bytes, size);
+    color32 = other.color32;
 
     return *this;
 }
@@ -120,12 +120,12 @@ Color& Color::operator/=(const Color& other)
 
 bool Color::operator==(const Color& other) const
 {
-    return Memory::MemCmp(bytes, other.bytes, size) == 0;
+    return color32 == other.color32;
 }
 
 bool Color::operator!=(const Color& other) const
 {
-    return Memory::MemCmp(bytes, other.bytes, size) != 0;
+    return color32 != other.color32;
 }
 
 Color& Color::Lerp(const Color& to, float amt)

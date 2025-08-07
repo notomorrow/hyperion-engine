@@ -86,15 +86,12 @@ public:
     {
     }
 
-    // Overrides Start() to not create a thread object. Runs the render loop on the main thread.
     bool Start()
     {
         Assert(m_isRunning.Exchange(true, MemoryOrder::ACQUIRE_RELEASE) == false);
 
         // Must be current thread
         Threads::AssertOnThread(g_renderThread);
-
-        g_renderThreadInstance = this;
 
         SetCurrentThreadObject(this);
         m_scheduler.SetOwnerThread(Id());
@@ -107,10 +104,8 @@ public:
         return true;
     }
 
-    void Stop()
+    void Stop() override
     {
-        g_renderThreadInstance = nullptr;
-
         m_isRunning.Set(false, MemoryOrder::RELEASE);
     }
 
@@ -127,6 +122,8 @@ private:
         SystemEvent event;
 
         Queue<Scheduler::ScheduledTask> tasks;
+        
+        g_renderThreadInstance = this;
 
         while (m_isRunning.Get(MemoryOrder::RELAXED))
         {
@@ -152,6 +149,8 @@ private:
 
             RenderApi_EndFrame_RenderThread();
         }
+        
+        g_renderThreadInstance = nullptr;
     }
 
     Handle<AppContextBase> m_appContext;
@@ -164,9 +163,17 @@ void HandleSignal(int signum)
     {
         return;
     }
+    
+//    Time startTime = Time::Now();
 
     g_renderThreadInstance->Stop();
-    g_renderThreadInstance->Join();
+//    
+//    while (g_renderThreadInstance->IsRunning())
+//    {
+//        Threads::Sleep(10);
+//    }
+//    
+//    g_renderThreadInstance->Join();
 
     exit(signum);
 }

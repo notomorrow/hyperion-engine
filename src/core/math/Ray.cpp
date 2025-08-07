@@ -153,7 +153,8 @@ bool Ray::TestPlane(const Vec3f& position, const Vec3f& normal, RayHitID hitId, 
         .normal = normal,
         .distance = t,
         .id = hitId,
-        .userData = userData });
+        .userData = userData
+    });
 
     return true;
 }

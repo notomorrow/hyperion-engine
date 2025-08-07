@@ -92,11 +92,6 @@ public:
      */
     virtual ImageViewRef MakeLayerImageView(uint32 layerIndex) const override;
 
-    HYP_FORCE_INLINE uint8 GetBPP() const
-    {
-        return m_bpp;
-    }
-
 #ifdef HYP_DEBUG_MODE
     virtual void SetDebugName(Name name) override;
 #endif
@@ -114,7 +109,6 @@ private:
     bool m_isHandleOwned = true;
 
     SizeType m_size;
-    SizeType m_bpp; // bytes per pixel
 };
 
 } // namespace hyperion

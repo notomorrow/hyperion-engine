@@ -48,6 +48,9 @@ class FilePath;
 
 using filesystem::FilePath;
 
+extern HYP_API const HypClass* GetClass(TypeId typeId);
+extern HYP_API bool IsA(const HypClass* hypClass, const HypClass* instanceHypClass);
+
 template <class T, class T2 = void>
 struct HypDataHelper;
 
@@ -2724,7 +2727,8 @@ struct HypDataHelper<Variant<Types...>> : HypDataHelper<Any>
 
         for (TypeId typeId : Variant<Types...>::typeIds)
         {
-            if (data.GetType().GetNativeTypeId() == typeId)
+            if (data.GetType().GetNativeTypeId() == typeId
+                || IsA(GetClass(data.GetType().GetNativeTypeId()), GetClass(typeId)))
             {
                 foundTypeIndex = currentTypeIndex;
 

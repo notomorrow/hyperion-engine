@@ -202,9 +202,8 @@ static BoundingBox CalculateTextAABB(const FontAtlas& fontAtlas, const String& t
 #pragma region UIText
 
 UIText::UIText()
+    : UIObject()
 {
-    m_textColor = Color(Vec4f::One());
-
     OnComputedVisibilityChange
         .Bind([this]()
             {

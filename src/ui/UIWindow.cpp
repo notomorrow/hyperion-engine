@@ -50,30 +50,32 @@ void UIWindow::Init()
         titleBarText->SetText(GetText());
         m_titleBar->AddChildUIObject(titleBarText);
 
-        m_titleBar->OnMouseDown.Bind([this](const MouseEvent& event)
-                                    {
-                                        if (m_windowFlags & UIWindowFlags::ALLOW_DRAG)
-                                        {
-                                            m_mouseDragStart = event.absolutePosition;
+        m_titleBar->OnMouseDown
+            .Bind([this](const MouseEvent& event)
+            {
+                if (m_windowFlags & UIWindowFlags::ALLOW_DRAG)
+                {
+                    m_mouseDragStart = event.absolutePosition;
 
-                                            return UIEventHandlerResult::STOP_BUBBLING;
-                                        }
+                    return UIEventHandlerResult::STOP_BUBBLING;
+                }
 
-                                        return UIEventHandlerResult::OK;
-                                    })
+                return UIEventHandlerResult::OK;
+            })
             .Detach();
 
-        m_titleBar->OnMouseUp.Bind([this](const MouseEvent& event)
-                                  {
-                                      if (m_windowFlags & UIWindowFlags::ALLOW_DRAG)
-                                      {
-                                          m_mouseDragStart.Unset();
+        m_titleBar->OnMouseUp
+            .Bind([this](const MouseEvent& event)
+            {
+                if (m_windowFlags & UIWindowFlags::ALLOW_DRAG)
+                {
+                    m_mouseDragStart.Unset();
 
-                                          return UIEventHandlerResult::STOP_BUBBLING;
-                                      }
+                    return UIEventHandlerResult::STOP_BUBBLING;
+                }
 
-                                      return UIEventHandlerResult::OK;
-                                  })
+                return UIEventHandlerResult::OK;
+            })
             .Detach();
 
         m_titleBar->OnMouseDrag.Bind([this](const MouseEvent& event)

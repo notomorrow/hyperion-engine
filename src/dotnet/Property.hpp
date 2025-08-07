@@ -61,10 +61,10 @@ public:
         return std::move(returnHypData.Get<ReturnType>());
     }
 
-    template <class PropertyType>
-    void InvokeSetter(const Object* objectPtr, PropertyType&& value)
+    template <class T>
+    void InvokeSetter(const Object* objectPtr, T&& value)
     {
-        HypData valueHypData(TransformArgument<PropertyType> {}(std::forward<PropertyType>(value)));
+        HypData valueHypData(std::forward<T>(value));
         const HypData* valueHypDataPtr = &valueHypData;
 
         return InvokeSetter_Internal(objectPtr, &valueHypDataPtr);

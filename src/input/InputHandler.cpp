@@ -90,6 +90,11 @@ bool InputHandlerBase::OnMouseUp_Impl(const MouseEvent& evt)
     return true;
 }
 
+bool InputHandlerBase::OnMouseLeave_Impl(const MouseEvent& evt)
+{
+    return false;
+}
+
 #pragma endregion InputHandlerBase
 
 } // namespace hyperion

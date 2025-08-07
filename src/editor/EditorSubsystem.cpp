@@ -313,9 +313,11 @@ void TranslateEditorManipulationWidget::OnDragStart(const Handle<Camera>& camera
 
     dragData.axisDirection[axis] = 1.0f;
 
-    dragData.planeNormal = dragData.axisDirection.Cross(camera->GetDirection()).Normalize();
-
-    if (dragData.planeNormal.LengthSquared() < 1e6f)
+    if (axis == 1) // +Y, -Y
+    {
+        dragData.planeNormal = dragData.axisDirection.Cross(camera->GetSideVector()).Normalize();
+    }
+    else
     {
         dragData.planeNormal = dragData.axisDirection.Cross(camera->GetUpVector()).Normalize();
     }
@@ -333,6 +335,7 @@ void TranslateEditorManipulationWidget::OnDragStart(const Handle<Camera>& camera
     }
     else
     {
+        HYP_LOG_TEMP("Ray plane test returned no hit. plane point : {}, plane normal {}", dragData.planePoint, dragData.planeNormal);
         return;
     }
 
@@ -510,6 +513,111 @@ bool TranslateEditorManipulationWidget::OnMouseMove(const Handle<Camera>& camera
     }
 
     return true;
+}
+
+bool TranslateEditorManipulationWidget::OnKeyPress(const Handle<Camera>& camera, const KeyboardEvent& keyboardEvent, const Handle<Node>& node)
+{
+    if (!node)
+    {
+        return false;
+    }
+
+    switch (keyboardEvent.keyCode)
+    {
+    case KeyCode::ARROW_LEFT:
+    case KeyCode::ARROW_RIGHT:
+    case KeyCode::ARROW_UP:
+    case KeyCode::ARROW_DOWN: // fallthrough
+    {
+        const Bitset& keyStates = camera->GetCameraController()->GetInputHandler()->GetKeyStates();
+
+        const bool snapMovement = keyStates.Test(uint32(KeyCode::LEFT_ALT)) | keyStates.Test(uint32(KeyCode::RIGHT_ALT));
+
+        float step = 1.0f;
+
+        if (keyStates.Test(uint32(KeyCode::LEFT_SHIFT)) | keyStates.Test(uint32(KeyCode::RIGHT_SHIFT)))
+        {
+            // use larger step with shift held down
+            step *= 10.0f;
+        }
+
+        const Vec3f cameraForwardVector = camera->GetDirection();
+        const Vec3f cameraSideVector = camera->GetSideVector();
+
+        const Quaternion invNodeRotation = node->GetWorldRotation().Inverse();
+
+        const Vec3f nodeForwardVector = (invNodeRotation * cameraForwardVector);
+        const Vec3f nodeSideVector = (invNodeRotation * cameraSideVector);
+
+        NodeUnlockTransformScope scope(*node);
+
+        Vec3f moveVec;
+
+        switch (keyboardEvent.keyCode)
+        {
+        case KeyCode::ARROW_LEFT:
+            moveVec = nodeSideVector;
+
+            break;
+        case KeyCode::ARROW_RIGHT:
+            moveVec = -nodeSideVector;
+
+            break;
+        case KeyCode::ARROW_UP:
+            moveVec = nodeForwardVector;
+
+            break;
+        case KeyCode::ARROW_DOWN:
+            moveVec = -nodeForwardVector;
+
+            break;
+        default:
+            return false;
+        }
+
+        int dominantAxis;
+
+        if (std::fabsf(moveVec.x) >= std::fabsf(moveVec.y) && std::fabsf(moveVec.x) >= std::fabsf(moveVec.z))
+        {
+            dominantAxis = 0;
+        }
+        else if (std::fabsf(moveVec.y) >= std::fabsf(moveVec.z) && std::fabsf(moveVec.y) >= std::fabsf(moveVec.x))
+        {
+            dominantAxis = 1;
+        }
+        else
+        {
+            dominantAxis = 2;
+        }
+
+        for (int i = 0; i < 3; i++)
+        {
+            if (i != dominantAxis)
+            {
+                moveVec[i] = 0.0f;
+            }
+        }
+
+        moveVec = node->GetWorldRotation() * moveVec;
+        moveVec.Normalize();
+        moveVec *= step;
+
+        Vec3f worldTranslation = node->GetWorldTranslation() + moveVec;
+        if (snapMovement)
+        {
+            // @TODO: Configurable snap value
+            worldTranslation[dominantAxis] = std::fmodf(worldTranslation[dominantAxis], 1.0f);
+        }
+
+        node->SetWorldTranslation(worldTranslation);
+    }
+
+    break;
+    default:
+        break;
+    }
+
+    return false;
 }
 
 Handle<Node> TranslateEditorManipulationWidget::Load_Internal() const
@@ -1419,6 +1527,8 @@ void EditorSubsystem::InitViewport()
             {
                 SetHoveredManipulationWidget(event, nullptr, Handle<Node>::empty);
             }
+        
+            m_camera->GetCameraController()->GetInputHandler()->OnMouseLeave(event);
 
             return UIEventHandlerResult::OK;
         }));
@@ -1551,30 +1661,23 @@ void EditorSubsystem::InitViewport()
 
                 if (!manipulationWidget->IsDragging())
                 {
-
                     const Vec4f mouseWorld = m_camera->TransformScreenToWorld(event.position);
                     const Vec4f rayDirection = mouseWorld.Normalized();
 
                     const Ray ray { m_camera->GetTranslation(), rayDirection.GetXYZ() };
 
-                    Vec3f hitpoint;
-
                     RayTestResults results;
 
-                    if (manipulationWidget->GetNode()->TestRay(ray, results, /* useBvh */ true))
+                    if (node->TestRay(ray, results, /* useBvh */ true))
                     {
                         for (const RayHit& rayHit : results)
                         {
-                            hitpoint = rayHit.hitpoint;
+                            manipulationWidget->OnDragStart(m_camera, event, node, rayHit.hitpoint);
 
-                            break;
+                            return UIEventHandlerResult::STOP_BUBBLING;
                         }
                     }
-
-                    manipulationWidget->OnDragStart(m_camera, event, node, hitpoint);
                 }
-
-                return UIEventHandlerResult::STOP_BUBBLING;
             }
 
             m_camera->GetCameraController()->GetInputHandler()->OnMouseDown(event);
@@ -1649,6 +1752,14 @@ void EditorSubsystem::InitViewport()
                 }
 
                 return UIEventHandlerResult::STOP_BUBBLING;
+            }
+
+            if (m_focusedNode.IsValid())
+            {
+                if (m_manipulationWidgetHolder.GetManipulationWidget(EditorManipulationMode::TRANSLATE).OnKeyPress(m_camera, event, m_focusedNode.Lock()))
+                {
+                    return UIEventHandlerResult::STOP_BUBBLING;
+                }
             }
 
             if (m_camera->GetCameraController()->GetInputHandler()->OnKeyDown(event))
@@ -2459,58 +2570,26 @@ void EditorSubsystem::InitContentBrowser()
         importButton->OnClick
             .Bind([this, stageWeak = uiSubsystem->GetUIStage().ToWeak()](...)
                 {
-                    // temp deebugging:
-
-                    // remove a light!
-                    Light* lightEntity = nullptr;
-                    for (auto [entity, _] : m_activeScene.GetUnsafe()->GetEntityManager()->GetEntitySet<EntityType<Light>>())
+                    if (Handle<UIStage> stage = stageWeak.Lock())
                     {
-                        Light* l = static_cast<Light*>(entity);
+                        auto loadedUiAsset = AssetManager::GetInstance()->Load<UIObject>("ui/dialog/FileBrowserDialog.ui.xml");
 
-                        if (l->GetLightType() == LT_POINT)
+                        if (loadedUiAsset.HasValue())
                         {
-                            lightEntity = l;
-                            break;
-                        }
-                    }
+                            Handle<UIObject> loadedUi = loadedUiAsset->Result();
 
-                    if (lightEntity != nullptr)
-                    {
-                        NodeLinkComponent* nlc = lightEntity->GetEntityManager()->TryGetComponent<NodeLinkComponent>(lightEntity);
-
-                        if (nlc)
-                        {
-                            if (Handle<Node> node = nlc->node.Lock())
+                            if (Handle<UIObject> fileBrowserDialog = loadedUi->FindChildUIObject("File_Browser_Dialog"))
                             {
-                                node->Remove();
+                                stage->AddChildUIObject(fileBrowserDialog);
 
-                                HYP_LOG(Editor, Debug, "Removed light node: {}", *node->GetName());
+                                return UIEventHandlerResult::STOP_BUBBLING;
                             }
                         }
+
+                        HYP_LOG(Editor, Error, "Failed to load file browser dialog! Error: {}", loadedUiAsset.GetError().GetMessage());
                     }
 
-                    return UIEventHandlerResult::STOP_BUBBLING;
-
-                    // if (Handle<UIStage> stage = stageWeak.Lock())
-                    // {
-                    //     auto loadedUiAsset = AssetManager::GetInstance()->Load<UIObject>("ui/dialog/FileBrowserDialog.ui.xml");
-
-                    //     if (loadedUiAsset.HasValue())
-                    //     {
-                    //         Handle<UIObject> loadedUi = loadedUiAsset->Result();
-
-                    //         if (Handle<UIObject> fileBrowserDialog = loadedUi->FindChildUIObject("File_Browser_Dialog"))
-                    //         {
-                    //             stage->AddChildUIObject(fileBrowserDialog);
-
-                    //             return UIEventHandlerResult::STOP_BUBBLING;
-                    //         }
-                    //     }
-
-                    //     HYP_LOG(Editor, Error, "Failed to load file browser dialog! Error: {}", loadedUiAsset.GetError().GetMessage());
-                    // }
-
-                    // return UIEventHandlerResult::ERR;
+                    return UIEventHandlerResult::ERR;
                 }));
 }
 

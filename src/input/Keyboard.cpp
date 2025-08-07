@@ -8,8 +8,6 @@ namespace hyperion {
 
 HYP_API bool KeyCodeToChar(KeyCode keyCode, bool shift, bool alt, bool ctrl, char& outChar)
 {
-    DebugLog(LogType::Debug, "KeyCodeToChar: key_code = %u\n", uint32(keyCode));
-
     if (uint32(keyCode) >= uint32(KeyCode::KEY_A) && uint32(keyCode) <= uint32(KeyCode::KEY_Z))
     {
         outChar = char(uint32(keyCode) - uint32(KeyCode::KEY_A)) + (shift ? 'A' : 'a');

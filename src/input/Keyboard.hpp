@@ -7,6 +7,7 @@ namespace hyperion {
 
 class InputManager;
 
+HYP_ENUM()
 enum class KeyCode : uint16
 {
     UNKNOWN = uint16(-1),
@@ -49,7 +50,7 @@ enum class KeyCode : uint16
     KEY_8,
     KEY_9,
 
-    KEY_F1 = 58, // SDL_SCANCODE_F1,
+    KEY_F1 = 58,
     KEY_F2,
     KEY_F3,
     KEY_F4,
@@ -62,14 +63,14 @@ enum class KeyCode : uint16
     KEY_F11,
     KEY_F12,
 
-    LEFT_CTRL = 224,   // SDL_SCANCODE_LCTRL,
-    LEFT_SHIFT = 225,  // SDL_SCANCODE_LSHIFT,
-    LEFT_ALT = 226,    // SDL_SCANCODE_LALT
-    RIGHT_CTRL = 228,  // SDL_SCANCODE_RCTRL,
-    RIGHT_SHIFT = 229, // SDL_SCANCODE_RSHIFT,
-    RIGHT_ALT = 230,   // SDL_SCANCODE_RALT
+    LEFT_CTRL = 224,
+    LEFT_SHIFT = 225,
+    LEFT_ALT = 226,
+    RIGHT_CTRL = 228,
+    RIGHT_SHIFT = 229,
+    RIGHT_ALT = 230,
 
-    SPACE = 32, // SDL_SCANCODE_SPACE,
+    SPACE = 32,
     COMMA = 44,
     DASH = 45,
     PERIOD = 46,

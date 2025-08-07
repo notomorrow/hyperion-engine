@@ -431,7 +431,7 @@ public:
         return m_pages[pageIndex]->initializedBits.Test(elementIndex);
     }
 
-    /*T& operator[](SizeType index)
+    T& operator[](SizeType index)
     {
         const SizeType pageIndex = PageIndex(index);
         const SizeType elementIndex = ElementIndex(index);
@@ -445,7 +445,7 @@ public:
         }
 
         return page->storage.GetPointer()[elementIndex];
-    }*/
+    }
 
     T& Get(SizeType index)
     {

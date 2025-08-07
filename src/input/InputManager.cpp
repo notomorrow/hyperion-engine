@@ -7,6 +7,8 @@
 #include <system/AppContext.hpp>
 #include <system/SystemEvent.hpp>
 
+#include <core/utilities/DeferredScope.hpp>
+
 #include <core/threading/Threads.hpp>
 #include <core/threading/Spinlock.hpp>
 
@@ -28,12 +30,11 @@ void InputEventSink::Push(SystemEvent&& evt)
 {
     Spinlock spinlock(m_lockState);
     spinlock.LockWriter();
+    HYP_DEFER({ spinlock.UnlockWriter(); });
 
     m_events.PushBack(std::move(evt));
 
     m_notifier.Produce(1);
-
-    spinlock.UnlockWriter();
 }
 
 bool InputEventSink::Poll(Array<SystemEvent>& outEvents)
@@ -45,18 +46,16 @@ bool InputEventSink::Poll(Array<SystemEvent>& outEvents)
 
     Spinlock spinlock(m_lockState);
     spinlock.LockReader();
+    HYP_DEFER({ spinlock.UnlockReader(); });
 
     if (m_events.Empty())
     {
-        spinlock.UnlockReader();
         return false;
     }
 
     outEvents = std::move(m_events);
 
     m_notifier.Release(outEvents.Size());
-
-    spinlock.UnlockReader();
 
     return true;
 }

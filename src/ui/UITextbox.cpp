@@ -259,19 +259,7 @@ void UITextbox::UpdateCursor()
 
 Color UITextbox::GetPlaceholderTextColor() const
 {
-    // Vec4f backgroundColorRgba = Vec4f(ComputeBlendedBackgroundColor());
-    // backgroundColorRgba *= backgroundColorRgba.w;
-    // backgroundColorRgba.w = 1.0f;
-
-    // const float brightness = (0.299f * backgroundColorRgba.x) + (0.587f * backgroundColorRgba.y) + (0.114f * backgroundColorRgba.z);
-
-    // if (brightness < 0.35f) {
-    //     return Color(Vec4f { 1.0f, 1.0f, 1.0f, 0.8f });
-    // } else {
-    //     return Color(Vec4f { 0.0f, 0.0f, 0.0f, 0.8f });
-    // }
-
-    return Color(Vec4f(Vec4f(GetTextColor()).GetXYZ(), 0.5f));
+    return Color(Vec4f(Vec4f(m_textColor).GetXYZ(), 0.5f));
 }
 
 void UITextbox::UpdateTextColor()
@@ -289,7 +277,7 @@ void UITextbox::UpdateTextColor()
     else
     {
         m_textElement->SetText(m_text);
-        m_textElement->SetTextColor(GetTextColor());
+        m_textElement->SetTextColor(m_textColor);
     }
 }
 
