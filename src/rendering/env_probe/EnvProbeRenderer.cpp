@@ -546,12 +546,16 @@ void ReflectionProbeRenderer::ComputeSH(FrameBase* frame, const RenderSetup& ren
     pipelines[NAME("Clear")].second->SetPushConstants(&pushConstants, sizeof(pushConstants));
     pipelines[NAME("BuildCoeffs")].second->SetPushConstants(&pushConstants, sizeof(pushConstants));
 
-    RenderQueue& asyncComputeCommandList = g_renderBackend->GetAsyncCompute()->renderQueue;
+    RenderQueue* asyncRenderQueuePtr = g_renderBackend->GetAsyncCompute()->IsSupported()
+        ? &g_renderBackend->GetAsyncCompute()->renderQueue
+        : &frame->renderQueue;
+    
+    RenderQueue& asyncRenderQueue = *asyncRenderQueuePtr;
 
-    asyncComputeCommandList << InsertBarrier(shTilesBuffers[0], RS_UNORDERED_ACCESS, SMT_COMPUTE);
-    asyncComputeCommandList << InsertBarrier(g_renderGlobalState->gpuBuffers[GRB_ENV_PROBES]->GetBuffer(frame->GetFrameIndex()), RS_UNORDERED_ACCESS, SMT_COMPUTE);
+    asyncRenderQueue << InsertBarrier(shTilesBuffers[0], RS_UNORDERED_ACCESS, SMT_COMPUTE);
+    asyncRenderQueue << InsertBarrier(g_renderGlobalState->gpuBuffers[GRB_ENV_PROBES]->GetBuffer(frame->GetFrameIndex()), RS_UNORDERED_ACCESS, SMT_COMPUTE);
 
-    asyncComputeCommandList << BindDescriptorTable(
+    asyncRenderQueue << BindDescriptorTable(
         computeShDescriptorTables[0],
         pipelines[NAME("Clear")].second,
         ArrayMap<Name, ArrayMap<Name, uint32>> {
@@ -560,12 +564,12 @@ void ReflectionProbeRenderer::ComputeSH(FrameBase* frame, const RenderSetup& ren
                     { NAME("CurrentEnvProbe"), ShaderDataOffset<EnvProbeShaderData>(skyProbe, 0) } } } },
         frame->GetFrameIndex());
 
-    asyncComputeCommandList << BindComputePipeline(pipelines[NAME("Clear")].second);
-    asyncComputeCommandList << DispatchCompute(pipelines[NAME("Clear")].second, Vec3u { 1, 1, 1 });
+    asyncRenderQueue << BindComputePipeline(pipelines[NAME("Clear")].second);
+    asyncRenderQueue << DispatchCompute(pipelines[NAME("Clear")].second, Vec3u { 1, 1, 1 });
 
-    asyncComputeCommandList << InsertBarrier(shTilesBuffers[0], RS_UNORDERED_ACCESS, SMT_COMPUTE);
+    asyncRenderQueue << InsertBarrier(shTilesBuffers[0], RS_UNORDERED_ACCESS, SMT_COMPUTE);
 
-    asyncComputeCommandList << BindDescriptorTable(
+    asyncRenderQueue << BindDescriptorTable(
         computeShDescriptorTables[0],
         pipelines[NAME("BuildCoeffs")].second,
         ArrayMap<Name, ArrayMap<Name, uint32>> {
@@ -574,15 +578,15 @@ void ReflectionProbeRenderer::ComputeSH(FrameBase* frame, const RenderSetup& ren
                     { NAME("CurrentEnvProbe"), ShaderDataOffset<EnvProbeShaderData>(skyProbe, 0) } } } },
         frame->GetFrameIndex());
 
-    asyncComputeCommandList << BindComputePipeline(pipelines[NAME("BuildCoeffs")].second);
-    asyncComputeCommandList << DispatchCompute(pipelines[NAME("BuildCoeffs")].second, Vec3u { 1, 1, 1 });
+    asyncRenderQueue << BindComputePipeline(pipelines[NAME("BuildCoeffs")].second);
+    asyncRenderQueue << DispatchCompute(pipelines[NAME("BuildCoeffs")].second, Vec3u { 1, 1, 1 });
 
     // Parallel reduce
     if (shParallelReduce)
     {
         for (uint32 i = 1; i < shNumLevels; i++)
         {
-            asyncComputeCommandList << InsertBarrier(
+            asyncRenderQueue << InsertBarrier(
                 shTilesBuffers[i - 1],
                 RS_UNORDERED_ACCESS,
                 SMT_COMPUTE);
@@ -610,7 +614,7 @@ void ReflectionProbeRenderer::ComputeSH(FrameBase* frame, const RenderSetup& ren
 
             pipelines[NAME("Reduce")].second->SetPushConstants(&pushConstants, sizeof(pushConstants));
 
-            asyncComputeCommandList << BindDescriptorTable(
+            asyncRenderQueue << BindDescriptorTable(
                 computeShDescriptorTables[i - 1],
                 pipelines[NAME("Reduce")].second,
                 ArrayMap<Name, ArrayMap<Name, uint32>> {
@@ -619,20 +623,20 @@ void ReflectionProbeRenderer::ComputeSH(FrameBase* frame, const RenderSetup& ren
                             { NAME("CurrentEnvProbe"), ShaderDataOffset<EnvProbeShaderData>(skyProbe, 0) } } } },
                 frame->GetFrameIndex());
 
-            asyncComputeCommandList << BindComputePipeline(pipelines[NAME("Reduce")].second);
-            asyncComputeCommandList << DispatchCompute(pipelines[NAME("Reduce")].second, Vec3u { 1, (nextDimensions.x + 3) / 4, (nextDimensions.y + 3) / 4 });
+            asyncRenderQueue << BindComputePipeline(pipelines[NAME("Reduce")].second);
+            asyncRenderQueue << DispatchCompute(pipelines[NAME("Reduce")].second, Vec3u { 1, (nextDimensions.x + 3) / 4, (nextDimensions.y + 3) / 4 });
         }
     }
 
     const uint32 finalizeShBufferIndex = shParallelReduce ? shNumLevels - 1 : 0;
 
     // Finalize - build into final buffer
-    asyncComputeCommandList << InsertBarrier(shTilesBuffers[finalizeShBufferIndex], RS_UNORDERED_ACCESS, SMT_COMPUTE);
-    asyncComputeCommandList << InsertBarrier(g_renderGlobalState->gpuBuffers[GRB_ENV_PROBES]->GetBuffer(frame->GetFrameIndex()), RS_UNORDERED_ACCESS, SMT_COMPUTE);
+    asyncRenderQueue << InsertBarrier(shTilesBuffers[finalizeShBufferIndex], RS_UNORDERED_ACCESS, SMT_COMPUTE);
+    asyncRenderQueue << InsertBarrier(g_renderGlobalState->gpuBuffers[GRB_ENV_PROBES]->GetBuffer(frame->GetFrameIndex()), RS_UNORDERED_ACCESS, SMT_COMPUTE);
 
     pipelines[NAME("Finalize")].second->SetPushConstants(&pushConstants, sizeof(pushConstants));
 
-    asyncComputeCommandList << BindDescriptorTable(
+    asyncRenderQueue << BindDescriptorTable(
         computeShDescriptorTables[finalizeShBufferIndex],
         pipelines[NAME("Finalize")].second,
         ArrayMap<Name, ArrayMap<Name, uint32>> {
@@ -641,10 +645,10 @@ void ReflectionProbeRenderer::ComputeSH(FrameBase* frame, const RenderSetup& ren
                     { NAME("CurrentEnvProbe"), ShaderDataOffset<EnvProbeShaderData>(skyProbe, 0) } } } },
         frame->GetFrameIndex());
 
-    asyncComputeCommandList << BindComputePipeline(pipelines[NAME("Finalize")].second);
-    asyncComputeCommandList << DispatchCompute(pipelines[NAME("Finalize")].second, Vec3u { 1, 1, 1 });
+    asyncRenderQueue << BindComputePipeline(pipelines[NAME("Finalize")].second);
+    asyncRenderQueue << DispatchCompute(pipelines[NAME("Finalize")].second, Vec3u { 1, 1, 1 });
 
-    asyncComputeCommandList << InsertBarrier(g_renderGlobalState->gpuBuffers[GRB_ENV_PROBES]->GetBuffer(frame->GetFrameIndex()), RS_UNORDERED_ACCESS, SMT_COMPUTE);
+    asyncRenderQueue << InsertBarrier(g_renderGlobalState->gpuBuffers[GRB_ENV_PROBES]->GetBuffer(frame->GetFrameIndex()), RS_UNORDERED_ACCESS, SMT_COMPUTE);
 
     DelegateHandler* delegateHandle = new DelegateHandler();
     *delegateHandle = frame->OnFrameEnd.Bind([envProbe = envProbe->HandleFromThis(), pipelines = std::move(pipelines), descriptorTables = std::move(computeShDescriptorTables), delegateHandle](FrameBase* frame) mutable

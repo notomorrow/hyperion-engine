@@ -383,8 +383,6 @@ ResourceTrackerDiff View::CollectMeshEntities(RenderProxyList& rpl)
 
     const ObjId<Camera> cameraId = m_camera->Id();
 
-    const bool skipFrustumCulling = (m_flags & ViewFlags::NO_FRUSTUM_CULLING);
-
     for (const Handle<Scene>& scene : m_scenes)
     {
         Assert(scene.IsValid());
@@ -405,162 +403,264 @@ ResourceTrackerDiff View::CollectMeshEntities(RenderProxyList& rpl)
         switch (uint32(m_flags) & uint32(ViewFlags::COLLECT_ALL_ENTITIES))
         {
         case uint32(ViewFlags::COLLECT_ALL_ENTITIES):
-            for (auto [entity, meshComponent, visibilityStateComponent] : scene->GetEntityManager()->GetEntitySet<MeshComponent, VisibilityStateComponent>().GetScopedView(DataAccessFlags::ACCESS_READ, HYP_FUNCTION_NAME_LIT))
+            if (m_flags & ViewFlags::NO_FRUSTUM_CULLING)
             {
-                if (!skipFrustumCulling && !(visibilityStateComponent.flags & VISIBILITY_STATE_FLAG_ALWAYS_VISIBLE))
+                for (auto [entity, meshComponent] : scene->GetEntityManager()->GetEntitySet<MeshComponent>().GetScopedView(DataAccessFlags::ACCESS_READ, HYP_FUNCTION_NAME_LIT))
                 {
-#ifndef HYP_DISABLE_VISIBILITY_CHECK
-                    if (!visibilityStateComponent.visibilityState)
+                    ++numCollectedEntities;
+                    
+                    rpl.GetMeshEntities().Track(entity->Id(), entity, entity->GetRenderProxyVersionPtr());
+                    
+                    if (const Handle<Material>& material = meshComponent.material)
                     {
-#ifdef HYP_VISIBILITY_CHECK_DEBUG
-                        ++numSkippedEntities;
-#endif
-                        continue;
-                    }
-
-                    if (!visibilityStateComponent.visibilityState->GetSnapshot(cameraId).ValidToParent(visibilityStateSnapshot))
-                    {
-#ifdef HYP_VISIBILITY_CHECK_DEBUG
-                        ++numSkippedEntities;
-#endif
-
-                        continue;
-                    }
-#endif
-                }
-
-                ++numCollectedEntities;
-
-                rpl.GetMeshEntities().Track(entity->Id(), entity, entity->GetRenderProxyVersionPtr());
-
-                if (const Handle<Material>& material = meshComponent.material)
-                {
-                    rpl.GetMaterials().Track(material.Id(), material.Get(), material->GetRenderProxyVersionPtr());
-
-                    for (const auto& it : material->GetTextures())
-                    {
-                        const Handle<Texture>& texture = it.second;
-
-                        if (!texture.IsValid())
+                        rpl.GetMaterials().Track(material.Id(), material.Get(), material->GetRenderProxyVersionPtr());
+                        
+                        for (const auto& it : material->GetTextures())
                         {
+                            const Handle<Texture>& texture = it.second;
+                            
+                            if (!texture.IsValid())
+                            {
+                                continue;
+                            }
+                            
+                            rpl.GetTextures().Track(texture.Id(), texture.Get());
+                        }
+                    }
+                    
+                    if (const Handle<Skeleton>& skeleton = meshComponent.skeleton)
+                    {
+                        rpl.GetSkeletons().Track(skeleton.Id(), skeleton.Get(), skeleton->GetRenderProxyVersionPtr());
+                    }
+                }
+            }
+            else
+            {
+                for (auto [entity, meshComponent, visibilityStateComponent] : scene->GetEntityManager()->GetEntitySet<MeshComponent, VisibilityStateComponent>().GetScopedView(DataAccessFlags::ACCESS_READ, HYP_FUNCTION_NAME_LIT))
+                {
+                    if (!(visibilityStateComponent.flags & VISIBILITY_STATE_FLAG_ALWAYS_VISIBLE))
+                    {
+#ifndef HYP_DISABLE_VISIBILITY_CHECK
+                        if (!visibilityStateComponent.visibilityState)
+                        {
+#ifdef HYP_VISIBILITY_CHECK_DEBUG
+                            ++numSkippedEntities;
+#endif
                             continue;
                         }
-
-                        rpl.GetTextures().Track(texture.Id(), texture.Get());
+                        
+                        if (!visibilityStateComponent.visibilityState->GetSnapshot(cameraId).ValidToParent(visibilityStateSnapshot))
+                        {
+#ifdef HYP_VISIBILITY_CHECK_DEBUG
+                            ++numSkippedEntities;
+#endif
+                            
+                            continue;
+                        }
+#endif
                     }
-                }
-
-                if (const Handle<Skeleton>& skeleton = meshComponent.skeleton)
-                {
-                    rpl.GetSkeletons().Track(skeleton.Id(), skeleton.Get(), skeleton->GetRenderProxyVersionPtr());
+                    
+                    ++numCollectedEntities;
+                    
+                    rpl.GetMeshEntities().Track(entity->Id(), entity, entity->GetRenderProxyVersionPtr());
+                    
+                    if (const Handle<Material>& material = meshComponent.material)
+                    {
+                        rpl.GetMaterials().Track(material.Id(), material.Get(), material->GetRenderProxyVersionPtr());
+                        
+                        for (const auto& it : material->GetTextures())
+                        {
+                            const Handle<Texture>& texture = it.second;
+                            
+                            if (!texture.IsValid())
+                            {
+                                continue;
+                            }
+                            
+                            rpl.GetTextures().Track(texture.Id(), texture.Get());
+                        }
+                    }
+                    
+                    if (const Handle<Skeleton>& skeleton = meshComponent.skeleton)
+                    {
+                        rpl.GetSkeletons().Track(skeleton.Id(), skeleton.Get(), skeleton->GetRenderProxyVersionPtr());
+                    }
                 }
             }
 
             break;
 
         case uint32(ViewFlags::COLLECT_STATIC_ENTITIES):
-            for (auto [entity, meshComponent, visibilityStateComponent, _] : scene->GetEntityManager()->GetEntitySet<MeshComponent, VisibilityStateComponent, EntityTagComponent<EntityTag::STATIC>>().GetScopedView(DataAccessFlags::ACCESS_READ, HYP_FUNCTION_NAME_LIT))
+            if (m_flags & ViewFlags::NO_FRUSTUM_CULLING)
             {
-                if (!skipFrustumCulling && !(visibilityStateComponent.flags & VISIBILITY_STATE_FLAG_ALWAYS_VISIBLE))
+                for (auto [entity, meshComponent, _] : scene->GetEntityManager()->GetEntitySet<MeshComponent, EntityTagComponent<EntityTag::STATIC>>().GetScopedView(DataAccessFlags::ACCESS_READ, HYP_FUNCTION_NAME_LIT))
                 {
-#ifndef HYP_DISABLE_VISIBILITY_CHECK
-                    if (!visibilityStateComponent.visibilityState)
+                    ++numCollectedEntities;
+
+                    rpl.GetMeshEntities().Track(entity->Id(), entity, entity->GetRenderProxyVersionPtr());
+
+                    if (const Handle<Material>& material = meshComponent.material)
                     {
-#ifdef HYP_VISIBILITY_CHECK_DEBUG
-                        ++numSkippedEntities;
-#endif
-                        continue;
-                    }
+                        rpl.GetMaterials().Track(material.Id(), material.Get(), material->GetRenderProxyVersionPtr());
 
-                    if (!visibilityStateComponent.visibilityState->GetSnapshot(cameraId).ValidToParent(visibilityStateSnapshot))
-                    {
-#ifdef HYP_VISIBILITY_CHECK_DEBUG
-                        ++numSkippedEntities;
-#endif
-
-                        continue;
-                    }
-#endif
-                }
-
-                ++numCollectedEntities;
-
-                rpl.GetMeshEntities().Track(entity->Id(), entity, entity->GetRenderProxyVersionPtr());
-
-                if (const Handle<Material>& material = meshComponent.material)
-                {
-                    rpl.GetMaterials().Track(material.Id(), material.Get(), material->GetRenderProxyVersionPtr());
-
-                    for (const auto& it : material->GetTextures())
-                    {
-                        const Handle<Texture>& texture = it.second;
-
-                        if (!texture.IsValid())
+                        for (const auto& it : material->GetTextures())
                         {
+                            const Handle<Texture>& texture = it.second;
+
+                            if (!texture.IsValid())
+                            {
+                                continue;
+                            }
+
+                            rpl.GetTextures().Track(texture.Id(), texture.Get());
+                        }
+                    }
+
+                    if (const Handle<Skeleton>& skeleton = meshComponent.skeleton)
+                    {
+                        rpl.GetSkeletons().Track(skeleton.Id(), skeleton.Get(), skeleton->GetRenderProxyVersionPtr());
+                    }
+                }
+            }
+            else
+            {
+                for (auto [entity, meshComponent, visibilityStateComponent, _] : scene->GetEntityManager()->GetEntitySet<MeshComponent, VisibilityStateComponent, EntityTagComponent<EntityTag::STATIC>>().GetScopedView(DataAccessFlags::ACCESS_READ, HYP_FUNCTION_NAME_LIT))
+                {
+                    if (!(visibilityStateComponent.flags & VISIBILITY_STATE_FLAG_ALWAYS_VISIBLE))
+                    {
+#ifndef HYP_DISABLE_VISIBILITY_CHECK
+                        if (!visibilityStateComponent.visibilityState)
+                        {
+#ifdef HYP_VISIBILITY_CHECK_DEBUG
+                            ++numSkippedEntities;
+#endif
                             continue;
                         }
-
-                        rpl.GetTextures().Track(texture.Id(), texture.Get());
+                        
+                        if (!visibilityStateComponent.visibilityState->GetSnapshot(cameraId).ValidToParent(visibilityStateSnapshot))
+                        {
+#ifdef HYP_VISIBILITY_CHECK_DEBUG
+                            ++numSkippedEntities;
+#endif
+                            
+                            continue;
+                        }
+#endif
                     }
-                }
-
-                if (const Handle<Skeleton>& skeleton = meshComponent.skeleton)
-                {
-                    rpl.GetSkeletons().Track(skeleton.Id(), skeleton.Get(), skeleton->GetRenderProxyVersionPtr());
+                    
+                    ++numCollectedEntities;
+                    
+                    rpl.GetMeshEntities().Track(entity->Id(), entity, entity->GetRenderProxyVersionPtr());
+                    
+                    if (const Handle<Material>& material = meshComponent.material)
+                    {
+                        rpl.GetMaterials().Track(material.Id(), material.Get(), material->GetRenderProxyVersionPtr());
+                        
+                        for (const auto& it : material->GetTextures())
+                        {
+                            const Handle<Texture>& texture = it.second;
+                            
+                            if (!texture.IsValid())
+                            {
+                                continue;
+                            }
+                            
+                            rpl.GetTextures().Track(texture.Id(), texture.Get());
+                        }
+                    }
+                    
+                    if (const Handle<Skeleton>& skeleton = meshComponent.skeleton)
+                    {
+                        rpl.GetSkeletons().Track(skeleton.Id(), skeleton.Get(), skeleton->GetRenderProxyVersionPtr());
+                    }
                 }
             }
 
             break;
 
         case uint32(ViewFlags::COLLECT_DYNAMIC_ENTITIES):
-            for (auto [entity, meshComponent, visibilityStateComponent, _] : scene->GetEntityManager()->GetEntitySet<MeshComponent, VisibilityStateComponent, EntityTagComponent<EntityTag::DYNAMIC>>().GetScopedView(DataAccessFlags::ACCESS_READ, HYP_FUNCTION_NAME_LIT))
+            if (m_flags & ViewFlags::NO_FRUSTUM_CULLING)
             {
-                if (!skipFrustumCulling && !(visibilityStateComponent.flags & VISIBILITY_STATE_FLAG_ALWAYS_VISIBLE))
+                for (auto [entity, meshComponent, _] : scene->GetEntityManager()->GetEntitySet<MeshComponent, EntityTagComponent<EntityTag::DYNAMIC>>().GetScopedView(DataAccessFlags::ACCESS_READ, HYP_FUNCTION_NAME_LIT))
                 {
-#ifndef HYP_DISABLE_VISIBILITY_CHECK
-                    if (!visibilityStateComponent.visibilityState)
+                    ++numCollectedEntities;
+                    
+                    rpl.GetMeshEntities().Track(entity->Id(), entity, entity->GetRenderProxyVersionPtr());
+                    
+                    if (const Handle<Material>& material = meshComponent.material)
                     {
-#ifdef HYP_VISIBILITY_CHECK_DEBUG
-                        ++numSkippedEntities;
-#endif
-                        continue;
-                    }
-
-                    if (!visibilityStateComponent.visibilityState->GetSnapshot(cameraId).ValidToParent(visibilityStateSnapshot))
-                    {
-#ifdef HYP_VISIBILITY_CHECK_DEBUG
-                        ++numSkippedEntities;
-#endif
-
-                        continue;
-                    }
-#endif
-                }
-
-                ++numCollectedEntities;
-
-                rpl.GetMeshEntities().Track(entity->Id(), entity, entity->GetRenderProxyVersionPtr());
-
-                if (const Handle<Material>& material = meshComponent.material)
-                {
-                    rpl.GetMaterials().Track(material.Id(), material.Get(), material->GetRenderProxyVersionPtr());
-
-                    for (const auto& it : material->GetTextures())
-                    {
-                        const Handle<Texture>& texture = it.second;
-
-                        if (!texture.IsValid())
+                        rpl.GetMaterials().Track(material.Id(), material.Get(), material->GetRenderProxyVersionPtr());
+                        
+                        for (const auto& it : material->GetTextures())
                         {
+                            const Handle<Texture>& texture = it.second;
+                            
+                            if (!texture.IsValid())
+                            {
+                                continue;
+                            }
+                            
+                            rpl.GetTextures().Track(texture.Id(), texture.Get());
+                        }
+                    }
+                    
+                    if (const Handle<Skeleton>& skeleton = meshComponent.skeleton)
+                    {
+                        rpl.GetSkeletons().Track(skeleton.Id(), skeleton.Get(), skeleton->GetRenderProxyVersionPtr());
+                    }
+                }
+            }
+            else
+            {
+                for (auto [entity, meshComponent, visibilityStateComponent, _] : scene->GetEntityManager()->GetEntitySet<MeshComponent, VisibilityStateComponent, EntityTagComponent<EntityTag::DYNAMIC>>().GetScopedView(DataAccessFlags::ACCESS_READ, HYP_FUNCTION_NAME_LIT))
+                {
+                    if (!(visibilityStateComponent.flags & VISIBILITY_STATE_FLAG_ALWAYS_VISIBLE))
+                    {
+#ifndef HYP_DISABLE_VISIBILITY_CHECK
+                        if (!visibilityStateComponent.visibilityState)
+                        {
+#ifdef HYP_VISIBILITY_CHECK_DEBUG
+                            ++numSkippedEntities;
+#endif
                             continue;
                         }
-
-                        rpl.GetTextures().Track(texture.Id(), texture.Get());
+                        
+                        if (!visibilityStateComponent.visibilityState->GetSnapshot(cameraId).ValidToParent(visibilityStateSnapshot))
+                        {
+#ifdef HYP_VISIBILITY_CHECK_DEBUG
+                            ++numSkippedEntities;
+#endif
+                            
+                            continue;
+                        }
+#endif
                     }
-                }
-
-                if (const Handle<Skeleton>& skeleton = meshComponent.skeleton)
-                {
-                    rpl.GetSkeletons().Track(skeleton.Id(), skeleton.Get(), skeleton->GetRenderProxyVersionPtr());
+                    
+                    ++numCollectedEntities;
+                    
+                    rpl.GetMeshEntities().Track(entity->Id(), entity, entity->GetRenderProxyVersionPtr());
+                    
+                    if (const Handle<Material>& material = meshComponent.material)
+                    {
+                        rpl.GetMaterials().Track(material.Id(), material.Get(), material->GetRenderProxyVersionPtr());
+                        
+                        for (const auto& it : material->GetTextures())
+                        {
+                            const Handle<Texture>& texture = it.second;
+                            
+                            if (!texture.IsValid())
+                            {
+                                continue;
+                            }
+                            
+                            rpl.GetTextures().Track(texture.Id(), texture.Get());
+                        }
+                    }
+                    
+                    if (const Handle<Skeleton>& skeleton = meshComponent.skeleton)
+                    {
+                        rpl.GetSkeletons().Track(skeleton.Id(), skeleton.Get(), skeleton->GetRenderProxyVersionPtr());
+                    }
                 }
             }
 

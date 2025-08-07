@@ -13,6 +13,11 @@
 
 namespace hyperion {
 
+bool VisibilityStateUpdaterSystem::ShouldCreateForScene(Scene* scene) const
+{
+    return !(scene->GetFlags() & (SceneFlags::UI | SceneFlags::DETACHED));
+}
+
 void VisibilityStateUpdaterSystem::OnEntityAdded(Entity* entity)
 {
     SystemBase::OnEntityAdded(entity);
@@ -51,7 +56,7 @@ void VisibilityStateUpdaterSystem::OnEntityAdded(Entity* entity)
 
         // HYP_LOG(Octree, Debug, "Inserted entity #{} into octree, inserted at {}, {}", entity.Id().Value(), visibilityStateComponent.octantId.GetIndex(), visibilityStateComponent.octantId.GetDepth());
 
-        // GetEntityManager().RemoveTag<EntityTag::UPDATE_VISIBILITY_STATE>(entity);
+         GetEntityManager().RemoveTag<EntityTag::UPDATE_VISIBILITY_STATE>(entity);
     }
     else
     {
@@ -83,6 +88,7 @@ void VisibilityStateUpdaterSystem::Process(float delta)
     SceneOctree& octree = GetEntityManager().GetScene()->GetOctree();
 
     HashSet<WeakHandle<Entity>> updatedEntities;
+    
 
     const auto updateVisbilityState = [&octree, &updatedEntities](Entity* entity, VisibilityStateComponent& visibilityStateComponent, BoundingBoxComponent& boundingBoxComponent)
     {

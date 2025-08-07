@@ -7,7 +7,6 @@
 #include <core/functional/Proc.hpp>
 
 #include <rendering/RenderObject.hpp>
-#include <rendering/Platform.hpp>
 
 #include <core/Types.hpp>
 
