@@ -40,7 +40,6 @@ static constexpr SizeType scriptMaxPathLength = 1024;
 static constexpr SizeType scriptMaxClassNameLength = 1024;
 
 HYP_STRUCT()
-
 struct ManagedScript
 {
     HYP_FIELD(Serialize, Property = "UUID")

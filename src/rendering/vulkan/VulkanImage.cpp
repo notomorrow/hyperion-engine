@@ -46,8 +46,7 @@ extern VkPipelineStageFlags GetVkShaderStageMask(ResourceState, bool, ShaderModu
 #pragma region VulkanImage
 
 VulkanImage::VulkanImage(const TextureDesc& textureDesc)
-    : ImageBase(textureDesc),
-      m_bpp(NumComponents(GetBaseFormat(textureDesc.format)))
+    : ImageBase(textureDesc)
 {
     m_size = textureDesc.GetByteSize();
 }

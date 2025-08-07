@@ -6,6 +6,7 @@ namespace hyperion {
 
 class InputManager;
 
+HYP_ENUM()
 enum class MouseButton : uint32
 {
     INVALID = ~0u,
@@ -16,6 +17,7 @@ enum class MouseButton : uint32
     MAX
 };
 
+HYP_ENUM()
 enum class MouseButtonState : uint32
 {
     NONE = 0x0,
@@ -27,7 +29,6 @@ enum class MouseButtonState : uint32
 HYP_MAKE_ENUM_FLAGS(MouseButtonState)
 
 HYP_STRUCT(Size = 56)
-
 struct MouseEvent
 {
     HYP_FIELD()

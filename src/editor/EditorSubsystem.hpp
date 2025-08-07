@@ -40,6 +40,7 @@ class EditorProject;
 class EditorDebugOverlayBase;
 class AssetPackage;
 struct MouseEvent;
+struct KeyboardEvent;
 class View;
 class ScreenCaptureRenderSubsystem;
 class ConsoleUI;
@@ -213,6 +214,11 @@ public:
     {
         return false;
     }
+    
+    virtual bool OnKeyPress(const Handle<Camera>& camera, const KeyboardEvent& keyboardEvent, const Handle<Node>& node)
+    {
+        return false;
+    }
 
 protected:
     virtual void Init() override;
@@ -280,6 +286,8 @@ public:
     virtual bool OnMouseHover(const Handle<Camera>& camera, const MouseEvent& mouseEvent, const Handle<Node>& node) override;
     virtual bool OnMouseLeave(const Handle<Camera>& camera, const MouseEvent& mouseEvent, const Handle<Node>& node) override;
     virtual bool OnMouseMove(const Handle<Camera>& camera, const MouseEvent& mouseEvent, const Handle<Node>& node) override;
+    
+    virtual bool OnKeyPress(const Handle<Camera>& camera, const KeyboardEvent& keyboardEvent, const Handle<Node>& node) override;
 
 protected:
     struct DragData
@@ -308,6 +316,13 @@ public:
     HYP_FORCE_INLINE const EditorManipulationWidgetSet& GetManipulationWidgets() const
     {
         return m_manipulationWidgets;
+    }
+    
+    HYP_FORCE_INLINE EditorManipulationWidgetBase& GetManipulationWidget(EditorManipulationMode mode) const
+    {
+        Assert(mode != EditorManipulationMode::NONE);
+        
+        return *m_manipulationWidgets.At(mode);
     }
 
     EditorManipulationMode GetSelectedManipulationMode() const;

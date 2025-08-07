@@ -42,6 +42,8 @@ public:
             ubyte z;
             ubyte w;
         };
+
+        uint32 color32;
     };
 
     Color();

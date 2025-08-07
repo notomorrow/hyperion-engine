@@ -8,6 +8,10 @@
 
 #include <core/functional/Delegate.hpp>
 
+#include <core/utilities/Time.hpp>
+
+#include <core/containers/SparsePagedArray.hpp>
+
 #include <scene/Node.hpp>
 #include <scene/Scene.hpp>
 
@@ -38,9 +42,15 @@ namespace hyperion {
 class UIButton;
 class FontAtlas;
 
-struct UIObjectPressedState
+struct UIObjectMouseState
 {
     EnumFlags<MouseButtonState> mouseButtons = MouseButtonState::NONE;
+    float heldTime = 0.0f;
+};
+
+struct UIObjectKeyState
+{
+    uint32 count = 0;
     float heldTime = 0.0f;
 };
 
@@ -148,6 +158,7 @@ protected:
     virtual bool NeedsUpdate() const override
     {
         return m_mouseButtonPressedStates.Any() // to update mouse down timers
+            || m_keyedDownObjects.Any()
             || UIObject::NeedsUpdate();
     }
 
@@ -168,9 +179,9 @@ private:
 
     RC<FontAtlas> m_defaultFontAtlas;
 
-    HashMap<WeakHandle<UIObject>, UIObjectPressedState> m_mouseButtonPressedStates;
-    FlatSet<WeakHandle<UIObject>> m_hoveredUiObjects;
-    HashMap<KeyCode, Array<WeakHandle<UIObject>>> m_keyedDownObjects;
+    HashMap<WeakHandle<UIObject>, UIObjectMouseState> m_mouseButtonPressedStates;
+    HashSet<WeakHandle<UIObject>> m_hoveredUiObjects;
+    SparsePagedArray<HashMap<WeakHandle<UIObject>, UIObjectKeyState>, 16> m_keyedDownObjects;
 
     WeakHandle<UIObject> m_focusedObject;
 

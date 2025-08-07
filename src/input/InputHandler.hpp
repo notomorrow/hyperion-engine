@@ -51,6 +51,9 @@ public:
 
     HYP_METHOD(Scriptable)
     bool OnMouseDrag(const MouseEvent& evt);
+    
+    HYP_METHOD(Scriptable)
+    bool OnMouseLeave(const MouseEvent& evt);
 
     HYP_METHOD(Scriptable)
     bool OnClick(const MouseEvent& evt);
@@ -81,6 +84,9 @@ protected:
 
     HYP_METHOD()
     virtual bool OnMouseDrag_Impl(const MouseEvent& evt) = 0;
+    
+    HYP_METHOD()
+    virtual bool OnMouseLeave_Impl(const MouseEvent& evt) = 0;
 
     HYP_METHOD()
     virtual bool OnClick_Impl(const MouseEvent& evt) = 0;
@@ -133,6 +139,11 @@ private:
     }
 
     virtual bool OnMouseDrag_Impl(const MouseEvent& evt) override
+    {
+        return false;
+    }
+    
+    virtual bool OnMouseLeave_Impl(const MouseEvent& evt) override
     {
         return false;
     }

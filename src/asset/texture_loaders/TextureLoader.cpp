@@ -104,9 +104,9 @@ AssetLoadResult TextureLoader::LoadAsset(LoaderState& state) const
         ByteBuffer(imageBytesCount, imageBytes)
     };
 
-    uint32 bpp = NumComponents(data.format);
+    const uint32 numComponents = NumComponents(data.format);
 
-    if (bpp == 3)
+    if (numComponents == 3)
     {
         // convert to bytes per pixel = 4
         TextureDesc& textureDesc = textureData.desc;
@@ -125,7 +125,7 @@ AssetLoadResult TextureLoader::LoadAsset(LoaderState& state) const
         {
             ImageUtil::ConvertBPP(
                 textureDesc.extent.x, textureDesc.extent.y, textureDesc.extent.z,
-                bpp, 4,
+                numComponents, 4,
                 &textureData.imageData.Data()[i * faceOffsetStep],
                 &newByteBuffer.Data()[i * newFaceOffsetStep]);
         }

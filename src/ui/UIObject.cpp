@@ -1145,15 +1145,14 @@ void UIObject::SetTextColor(const Color& textColor)
 {
     HYP_SCOPE;
 
-    if (textColor == GetTextColor())
+    if (textColor == m_textColor)
     {
         return;
     }
 
     m_textColor = textColor;
 
-    // UpdateMaterial(true);
-    SetDeferredUpdate(UIObjectUpdateType::UPDATE_MATERIAL, false);
+    SetDeferredUpdate(UIObjectUpdateType::UPDATE_MATERIAL, true);
 }
 
 void UIObject::SetText(const String& text)
@@ -2406,7 +2405,10 @@ void UIObject::UpdateMaterial(bool updateChildren)
     Material::ParameterTable materialParameters = GetMaterialParameters();
     Material::TextureSet materialTextures = GetMaterialTextures();
 
-    if (!currentMaterial.IsValid() || currentMaterial->GetRenderAttributes() != materialAttributes || currentMaterial->GetTextures() != materialTextures || currentMaterial->GetParameters() != materialParameters)
+    if (!currentMaterial.IsValid()
+        || currentMaterial->GetRenderAttributes() != materialAttributes
+        || currentMaterial->GetTextures() != materialTextures
+        || currentMaterial->GetParameters() != materialParameters)
     {
         // need to get a new Material if attributes have changed
         Handle<Material> newMaterial = CreateMaterial();

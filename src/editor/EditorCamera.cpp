@@ -174,6 +174,18 @@ bool EditorCameraInputHandler::OnMouseDrag_Impl(const MouseEvent& evt)
     return true;
 }
 
+bool EditorCameraInputHandler::OnMouseLeave_Impl(const MouseEvent& evt)
+{
+    if (Handle<EditorCameraController> controller = m_controller.Lock())
+    {
+        controller->SetMode(EditorCameraControllerMode::INACTIVE);
+
+        return true;
+    }
+    
+    return false;
+}
+
 bool EditorCameraInputHandler::OnClick_Impl(const MouseEvent& evt)
 {
     return false;

@@ -33,6 +33,7 @@ protected:
     virtual bool OnMouseUp_Impl(const MouseEvent& evt) override;
     virtual bool OnMouseMove_Impl(const MouseEvent& evt) override;
     virtual bool OnMouseDrag_Impl(const MouseEvent& evt) override;
+    virtual bool OnMouseLeave_Impl(const MouseEvent& evt) override;
     virtual bool OnClick_Impl(const MouseEvent& evt) override;
 
 private:

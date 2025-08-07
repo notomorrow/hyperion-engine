@@ -83,6 +83,11 @@ bool FirstPersonCameraInputHandler::OnMouseDrag_Impl(const MouseEvent& evt)
     return false;
 }
 
+bool FirstPersonCameraInputHandler::OnMouseLeave_Impl(const MouseEvent& evt)
+{
+    return false;
+}
+
 bool FirstPersonCameraInputHandler::OnClick_Impl(const MouseEvent& evt)
 {
     return false;
