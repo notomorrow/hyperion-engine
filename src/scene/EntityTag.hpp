@@ -35,14 +35,8 @@ enum class EntityTag : uint64
     EDITOR_FOCUSED,
 
     UPDATE_AABB,
-    UPDATE_BVH,
-    UPDATE_BLAS,
-    UPDATE_LIGHT_TRANSFORM,
     UPDATE_RENDER_PROXY,
     UPDATE_VISIBILITY_STATE,
-    UPDATE_CAMERA_TRANSFORM,
-    UPDATE_ENV_GRID_TRANSFORM,
-    UPDATE_ENV_PROBE_TRANSFORM,
 
     TYPE_ID = (uint64(1) << 31),            // Flag to indicate that this EntityTag is an EntityType tag
     TYPE_ID_MASK = uint64(0xFFFFFFFF) << 32 // Mask to get TypeId from the vaue

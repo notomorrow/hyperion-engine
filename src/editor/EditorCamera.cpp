@@ -5,6 +5,8 @@
 #include <input/InputManager.hpp>
 #include <input/InputHandler.hpp>
 
+#include <core/config/Config.hpp>
+
 #include <core/logging/Logger.hpp>
 #include <core/logging/LogChannels.hpp>
 
@@ -16,7 +18,30 @@
 
 namespace hyperion {
 
+HYP_API extern const GlobalConfig& GetGlobalConfig();
+
 HYP_DECLARE_LOG_CHANNEL(Camera);
+
+static Bitset CreateWasdBitset(bool includeArrowKeys = true)
+{
+    Bitset bits;
+    bits.Set(uint32(KeyCode::KEY_W), true);
+    bits.Set(uint32(KeyCode::KEY_A), true);
+    bits.Set(uint32(KeyCode::KEY_S), true);
+    bits.Set(uint32(KeyCode::KEY_D), true);
+
+    if (includeArrowKeys)
+    {
+        bits.Set(uint32(KeyCode::ARROW_LEFT), true);
+        bits.Set(uint32(KeyCode::ARROW_RIGHT), true);
+        bits.Set(uint32(KeyCode::ARROW_UP), true);
+        bits.Set(uint32(KeyCode::ARROW_DOWN), true);
+    }
+
+    return bits;
+}
+
+static const Bitset g_wasdBits = CreateWasdBitset(true);
 
 #pragma region EditorCameraInputHandler
 
@@ -56,7 +81,10 @@ bool EditorCameraInputHandler::OnMouseUp_Impl(const MouseEvent& evt)
 
     if (Handle<EditorCameraController> controller = m_controller.Lock())
     {
-        controller->SetMode(EditorCameraControllerMode::INACTIVE);
+        if (!(evt.mouseButtons & (MouseButtonState::LEFT | MouseButtonState::RIGHT)))
+        {
+            controller->SetMode(EditorCameraControllerMode::INACTIVE);
+        }
 
         return true;
     }
@@ -74,6 +102,9 @@ bool EditorCameraInputHandler::OnMouseMove_Impl(const MouseEvent& evt)
 bool EditorCameraInputHandler::OnMouseDrag_Impl(const MouseEvent& evt)
 {
     HYP_SCOPE;
+    
+    static const ConfigurationValue& editorLookSensitivity = GetGlobalConfig().Get("editor.camera.lookSensitivity");
+    static const ConfigurationValue& editorMoveSensitivity = GetGlobalConfig().Get("editor.camera.lookSensitivity");
 
     Handle<EditorCameraController> controller = m_controller.Lock();
 
@@ -88,49 +119,55 @@ bool EditorCameraInputHandler::OnMouseDrag_Impl(const MouseEvent& evt)
     {
         return false;
     }
+    
+    // magic numbers for fun
+    const float lookMultiplier = 5000.0f * editorLookSensitivity.ToFloat(1.0f);
+    const float moveMultiplier = 20.0f * editorMoveSensitivity.ToFloat(1.0f);
 
-    constexpr float lookMultiplier = 30.0f;
-    constexpr float moveMultiplier = 0.16f;
-
-    const Vec2f delta = (evt.position - evt.previousPosition);
+    const Vec2f mouseDelta = (evt.position - evt.previousPosition) * m_deltaTime;
+    const Vec2f deltaSign = Vec2f(MathUtil::Sign(evt.position - evt.previousPosition)) * m_deltaTime;
 
     const Vec3f dirCrossY = camera->GetDirection().Cross(camera->GetUpVector());
 
-    if (evt.mouseButtons & MouseButtonState::RIGHT)
-    {
-        const Vec2i deltaSign = Vec2i(MathUtil::Sign(delta));
+    const bool isAltPressed = IsKeyDown(KeyCode::LEFT_ALT) || IsKeyDown(KeyCode::RIGHT_ALT);
+    const bool isMoveKeyPressed = (GetKeyStates() & g_wasdBits).Count() != 0;
 
-        if (evt.mouseButtons & MouseButtonState::LEFT)
+    if (isAltPressed || (evt.mouseButtons & (MouseButtonState::LEFT & MouseButtonState::RIGHT)))
+    {
+        // Get the forward vector on the horizontal plane
+        Vec3f forward = camera->GetDirection();
+        forward.y = 0.0f; // Ignore vertical component
+        forward.Normalize();
+
+        camera->Rotate(camera->GetUpVector(), MathUtil::DegToRad(mouseDelta.x) * lookMultiplier);
+
+        if (!isMoveKeyPressed)
         {
-            if (MathUtil::Abs(delta.y) > MathUtil::Abs(delta.x))
+            camera->SetTranslation(camera->GetTranslation() + forward * -deltaSign.y * moveMultiplier);
+        }
+    }
+    else if ((evt.mouseButtons & MouseButtonState::RIGHT))
+    {
+        if (!isMoveKeyPressed) // so we don't try to move using cam when any movement keys are pressed. would be annoying.
+        {
+            if (MathUtil::Abs(mouseDelta.y) > MathUtil::Abs(mouseDelta.x))
             {
-                camera->SetTranslation(camera->GetTranslation() + camera->GetUpVector() * float(-deltaSign.y) * moveMultiplier);
+                camera->SetTranslation(camera->GetTranslation() + camera->GetUpVector() * -deltaSign.y * moveMultiplier);
             }
             else
             {
-                camera->SetTranslation(camera->GetTranslation() + dirCrossY * float(deltaSign.x) * moveMultiplier);
+                camera->SetTranslation(camera->GetTranslation() + dirCrossY * deltaSign.x * moveMultiplier);
             }
-        }
-        else
-        {
-            // Get the forward vector on the horizontal plane
-            Vec3f forward = camera->GetDirection();
-            forward.y = 0.0f; // Ignore vertical component
-            forward.Normalize();
-
-            camera->Rotate(camera->GetUpVector(), MathUtil::DegToRad(delta.x * lookMultiplier));
-
-            camera->SetTranslation(camera->GetTranslation() + forward * float(-deltaSign.y) * moveMultiplier);
         }
     }
     else if (evt.mouseButtons & MouseButtonState::LEFT)
     {
-        camera->Rotate(camera->GetUpVector(), MathUtil::DegToRad(delta.x * lookMultiplier));
-        camera->Rotate(dirCrossY, MathUtil::DegToRad(delta.y * lookMultiplier));
+        camera->Rotate(camera->GetUpVector(), MathUtil::DegToRad(mouseDelta.x) * lookMultiplier);
+        camera->Rotate(dirCrossY, MathUtil::DegToRad(mouseDelta.y) * lookMultiplier);
 
         if (camera->GetDirection().y > 0.98f || camera->GetDirection().y < -0.98f)
         {
-            camera->Rotate(dirCrossY, MathUtil::DegToRad(-delta.y * lookMultiplier));
+            camera->Rotate(dirCrossY, MathUtil::DegToRad(-mouseDelta.y) * lookMultiplier);
         }
     }
 
@@ -193,6 +230,8 @@ void EditorCameraController::UpdateLogic(double delta)
 
     const Vec3f direction = m_camera->GetDirection();
     const Vec3f dirCrossY = direction.Cross(m_camera->GetUpVector());
+    
+    m_inputHandler->SetDeltaTime(delta);
 
     if (m_inputHandler->IsKeyDown(KeyCode::KEY_W))
     {

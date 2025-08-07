@@ -13,6 +13,8 @@
 #include <core/containers/Bitset.hpp>
 #include <core/containers/LinkedList.hpp>
 
+#include <core/containers/Bitset.hpp>
+
 #include <core/math/Vector2.hpp>
 
 #include <core/threading/Semaphore.hpp>
@@ -32,12 +34,12 @@ using sys::SystemEvent;
 
 struct InputState
 {
-    bool keyStates[NUM_KEYBOARD_KEYS];
-    bool mouseButtonStates[int(MouseButton::MAX)];
+    Bitset keyStates;
+    EnumFlags<MouseButtonState> mouseButtonStates;
 
     InputState()
-        : keyStates { false },
-          mouseButtonStates { false }
+        : keyStates { },
+          mouseButtonStates { }
     {
     }
 };

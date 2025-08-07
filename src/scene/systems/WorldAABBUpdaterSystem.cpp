@@ -19,10 +19,10 @@ void WorldAABBUpdaterSystem::OnEntityAdded(Entity* entity)
 
     if (ProcessEntity(entity, GetEntityManager().GetComponent<BoundingBoxComponent>(entity), GetEntityManager().GetComponent<TransformComponent>(entity)))
     {
-        GetEntityManager().AddTags<EntityTag::UPDATE_RENDER_PROXY, EntityTag::UPDATE_VISIBILITY_STATE, EntityTag::UPDATE_ENV_PROBE_TRANSFORM>(entity);
-
-        GetEntityManager().RemoveTag<EntityTag::UPDATE_AABB>(entity);
+        GetEntityManager().AddTags<EntityTag::UPDATE_RENDER_PROXY, EntityTag::UPDATE_VISIBILITY_STATE>(entity);
     }
+    
+    GetEntityManager().RemoveTag<EntityTag::UPDATE_AABB>(entity);
 }
 
 void WorldAABBUpdaterSystem::OnEntityRemoved(Entity* entity)
@@ -32,34 +32,40 @@ void WorldAABBUpdaterSystem::OnEntityRemoved(Entity* entity)
 
 void WorldAABBUpdaterSystem::Process(float delta)
 {
-    HashSet<WeakHandle<Entity>> updatedEntities;
+    HashMap<WeakHandle<Entity>, bool> updatedEntities;
 
     for (auto [entity, boundingBoxComponent, transformComponent, _] : GetEntityManager().GetEntitySet<BoundingBoxComponent, TransformComponent, EntityTagComponent<EntityTag::UPDATE_AABB>>().GetScopedView(GetComponentInfos()))
     {
-        if (ProcessEntity(entity, boundingBoxComponent, transformComponent))
-        {
-            updatedEntities.Insert(entity->WeakHandleFromThis());
-        }
+        const bool wasWorldAabbChanged = ProcessEntity(entity, boundingBoxComponent, transformComponent);
+        
+        updatedEntities[entity->WeakHandleFromThis()] = wasWorldAabbChanged;
     }
 
     if (updatedEntities.Any())
     {
         AfterProcess([this, updatedEntities = std::move(updatedEntities)]()
             {
-                for (const WeakHandle<Entity>& entityWeak : updatedEntities)
+                for (const auto& [entityWeak, wasWorldAabbChanged] : updatedEntities)
                 {
-                    GetEntityManager().AddTags<EntityTag::UPDATE_RENDER_PROXY, EntityTag::UPDATE_VISIBILITY_STATE, EntityTag::UPDATE_ENV_PROBE_TRANSFORM>(entityWeak.GetUnsafe());
+                    Entity* entity = entityWeak.GetUnsafe(); // don't use ptr so it's fine to use GetUnsafe()
+                    
+                    if (wasWorldAabbChanged)
+                    {
+                        GetEntityManager().AddTags<EntityTag::UPDATE_RENDER_PROXY, EntityTag::UPDATE_VISIBILITY_STATE>(entity);
+                    }
 
-                    GetEntityManager().RemoveTag<EntityTag::UPDATE_AABB>(entityWeak.GetUnsafe());
+                    GetEntityManager().RemoveTag<EntityTag::UPDATE_AABB>(entity);
                 }
             });
     }
 }
 
+//! Return true on change
 bool WorldAABBUpdaterSystem::ProcessEntity(Entity* entity, BoundingBoxComponent& boundingBoxComponent, TransformComponent& transformComponent)
 {
-    const BoundingBox localAabb = boundingBoxComponent.localAabb;
-    BoundingBox worldAabb = boundingBoxComponent.worldAabb;
+    const BoundingBox prevWorldAabb = boundingBoxComponent.worldAabb;
+    const BoundingBox& localAabb = boundingBoxComponent.localAabb;
+    BoundingBox& worldAabb = boundingBoxComponent.worldAabb;
 
     worldAabb = BoundingBox::Empty();
 
@@ -70,8 +76,13 @@ bool WorldAABBUpdaterSystem::ProcessEntity(Entity* entity, BoundingBoxComponent&
             worldAabb = worldAabb.Union(transformComponent.transform.GetMatrix() * corner);
         }
     }
+    
+    if (prevWorldAabb == worldAabb)
+    {
+        // no change
+        return false;
+    }
 
-    boundingBoxComponent.localAabb = localAabb;
     boundingBoxComponent.worldAabb = worldAabb;
 
     return true;

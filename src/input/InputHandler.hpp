@@ -28,6 +28,11 @@ public:
     InputHandlerBase(InputHandlerBase&& other) noexcept = delete;
     InputHandlerBase& operator=(InputHandlerBase&& other) noexcept = delete;
     virtual ~InputHandlerBase();
+    
+    HYP_FORCE_INLINE void SetDeltaTime(float deltaTime)
+    {
+        m_deltaTime = deltaTime;
+    }
 
     HYP_METHOD(Scriptable)
     bool OnKeyDown(const KeyboardEvent& evt);
@@ -49,9 +54,12 @@ public:
 
     HYP_METHOD(Scriptable)
     bool OnClick(const MouseEvent& evt);
+    
+    const Bitset& GetKeyStates() const;
 
     bool IsKeyDown(KeyCode key) const;
     bool IsKeyUp(KeyCode key) const;
+    
     bool IsMouseButtonDown(MouseButton btn) const;
     bool IsMouseButtonUp(MouseButton btn) const;
 
@@ -79,6 +87,9 @@ protected:
 
 private:
     Pimpl<InputState> m_inputState;
+    
+protected:
+    float m_deltaTime;
 };
 
 HYP_CLASS()

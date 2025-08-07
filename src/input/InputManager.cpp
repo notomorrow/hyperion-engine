@@ -278,7 +278,7 @@ void InputManager::SetKey(KeyCode key, bool pressed)
 {
     if (uint32(key) < NUM_KEYBOARD_KEYS)
     {
-        m_inputState.keyStates[uint32(key)] = pressed;
+        m_inputState.keyStates.Set(uint32(key), pressed);
     }
 }
 
@@ -286,7 +286,14 @@ void InputManager::SetMouseButton(MouseButton btn, bool pressed)
 {
     if (uint32(btn) < NUM_MOUSE_BUTTONS)
     {
-        m_inputState.mouseButtonStates[uint32(btn)] = pressed;
+        if (pressed)
+        {
+            m_inputState.mouseButtonStates |= MouseButtonState(1u << uint32(btn));
+        }
+        else
+        {
+            m_inputState.mouseButtonStates &= MouseButtonState(~(1u << uint32(btn)));
+        }
     }
 }
 
@@ -294,7 +301,7 @@ bool InputManager::IsKeyDown(KeyCode key) const
 {
     if (uint32(key) < NUM_KEYBOARD_KEYS)
     {
-        return m_inputState.keyStates[uint32(key)];
+        return m_inputState.keyStates.Test(uint32(key));
     }
 
     return false;
@@ -304,7 +311,7 @@ bool InputManager::IsButtonDown(MouseButton btn) const
 {
     if (uint32(btn) < NUM_MOUSE_BUTTONS)
     {
-        return m_inputState.mouseButtonStates[uint32(btn)];
+        return m_inputState.mouseButtonStates & MouseButtonState(1u << uint32(btn));
     }
 
     return false;
@@ -316,7 +323,7 @@ EnumFlags<MouseButtonState> InputManager::GetButtonStates() const
 
     for (uint32 i = 0; i < NUM_MOUSE_BUTTONS; i++)
     {
-        if (m_inputState.mouseButtonStates[i])
+        if (m_inputState.mouseButtonStates & MouseButtonState(1u << i))
         {
             state |= MouseButtonState(1u << i);
         }

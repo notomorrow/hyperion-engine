@@ -244,7 +244,7 @@ void HyperionEditor::Init()
                 Handle<Node> envGridNode = scene->GetRoot()->AddChild();
                 envGridNode->SetName(NAME("EnvGrid2"));
 
-                Handle<Entity> envGridEntity = scene->GetEntityManager()->AddEntity<EnvGrid>(node->GetWorldAABB() * 1.01f, EnvGridOptions { .type = EnvGridType::ENV_GRID_TYPE_SH, .density = Vec3u { 10, 3, 10 } });
+                Handle<Entity> envGridEntity = scene->GetEntityManager()->AddEntity<EnvGrid>(node->GetWorldAABB() * 1.01f, EnvGridOptions { .type = EnvGridType::ENV_GRID_TYPE_LIGHT_FIELD, .density = Vec3u { 10, 3, 10 } });
 
                 scene->GetEntityManager()->AddComponent<TransformComponent>(envGridEntity, TransformComponent {});
                 scene->GetEntityManager()->AddComponent<BoundingBoxComponent>(envGridEntity, BoundingBoxComponent { node->GetWorldAABB() * 1.01f, node->GetWorldAABB() * 1.01f });
