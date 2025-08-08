@@ -490,7 +490,25 @@ namespace Hyperion
                 // Logger.Log(LogType.Info, "Camera controller removed");
             }
 
-            public UIEventHandlerResult SaveClicked()
+            public UIEventHandlerResult OpenProjectClicked()
+            {
+                Logger.Log(LogType.Info, "Open Project clicked");
+
+                var editorSubsystem = World.GetSubsystem<EditorSubsystem>();
+
+                if (editorSubsystem == null)
+                {
+                    Logger.Log(LogType.Error, "EditorSubsystem not found");
+
+                    return UIEventHandlerResult.Error;
+                }
+
+                editorSubsystem.ShowOpenProjectDialog();
+
+                return UIEventHandlerResult.Ok;
+            }
+
+            public UIEventHandlerResult SaveProjectClicked()
             {
                 Logger.Log(LogType.Info, "Save clicked");
 
