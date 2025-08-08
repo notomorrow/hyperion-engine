@@ -4,8 +4,8 @@
     <MenuBar name="Main_MenuBar" position="0 0" size="100% 25" originAlignment="topleft" parentAlignment="topleft" padding="5 2" depth="1">
         <MenuItem name="File_MenuItem" text="File" size="auto 100%">
             <MenuItem name="New_MenuItem" text="New Project..."></MenuItem>
-            <MenuItem name="Open_MenuItem" text="Open Project..."></MenuItem>
-            <MenuItem name="Save_MenuItem" text="Save Project" OnClick="SaveClicked"></MenuItem>
+            <MenuItem name="Open_MenuItem" text="Open Project..." OnClick="OpenProjectClicked"></MenuItem>
+            <MenuItem name="Save_MenuItem" text="Save Project" OnClick="SaveProjectClicked"></MenuItem>
             <MenuItem name="Exit_MenuItem" text="Exit"></MenuItem>
         </MenuItem>
         <MenuItem name="Edit_MenuItem" text="Edit" size="auto 100%">
@@ -84,12 +84,12 @@
                         <GridRow size="100%">
                             <GridColumn size="100%" colsize="2" padding="1">
                                 <Grid size="100%" backgroundColor="#101012">
-                                    <GridRow name="Browse_Heading" size="100% 35" backgroundColor="#000000">
+                                    <GridRow name="Browse_Heading" size="100%" backgroundColor="#000000">
                                         <Text originAlignment="center" parentAlignment="center">Library</Text>
                                     </GridRow>
                                     <GridRow size="100% fill">
                                         <GridColumn size="auto 100%">
-                                            <ListView name="ContentBrowser_Directory_List" size="100%">
+                                            <ListView name="ContentBrowser_Directory_List" size="100%" innersize="100% auto">
                                             </ListView>
                                         </GridColumn>
                                     </GridRow>
