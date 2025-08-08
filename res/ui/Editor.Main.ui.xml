@@ -74,26 +74,25 @@
             <TabView name="Bottom_Panel_TabView" size="100%">
                 <Tab name="Assets_Tab" text="Assets">
                     <Script assembly="Hyperion.Editor.UI.dll" class="ContentBrowser" />
-                    <Panel size="100% 35" padding="0 2">
-                        <Button name="ContentBrowser_Import_Button" size="50 fill">
-                            Import
-                        </Button>
-                    </Panel>
                     
-                    <Grid size="100% fill" position="0 35" padding="0 2" cols="12" backgroundColor="#000000">
+                    <Grid size="100% fill" position="0 35" padding="0 2" cols="12">
                         <GridRow size="100%">
                             <GridColumn size="100%" colsize="2" padding="1">
-                                <Grid size="100%" backgroundColor="#101012">
-                                    <GridRow name="Browse_Heading" size="100%" backgroundColor="#000000">
-                                        <Text originAlignment="center" parentAlignment="center">Library</Text>
-                                    </GridRow>
-                                    <GridRow size="100% fill">
-                                        <GridColumn size="auto 100%">
-                                            <ListView name="ContentBrowser_Directory_List" size="100%" innersize="100% auto">
-                                            </ListView>
-                                        </GridColumn>
-                                    </GridRow>
-                                </Grid>
+                                <Panel size="100% 35" backgroundColor="#101012">
+                                    <!-- <Text backgroundColor="#000000">Assets</Text>
+                                    <Button name="ContentBrowser_Import_Button" parentAlignment="topright" size="50 fill">
+                                        Import
+                                    </Button> -->
+
+                                    <MenuBar name="Assets_MenuBar" position="0 0" size="100% 25" originAlignment="topleft" parentAlignment="topleft" padding="5 2" depth="1">
+                                        <MenuItem name="Assets_MenuItem" text="Assets" size="auto 100%" />
+                                        <MenuItem name="Import_MenuItem" text="Import" size="auto 100%" OnClick="ImportContentClicked" />
+                                    </MenuBar>
+                                </Panel>
+
+                                <ListView name="ContentBrowser_Directory_List" size="100% fill" position="0 35" innersize="100% auto" backgroundColor="#101012" padding="5">
+                                    
+                                </ListView>
                             </GridColumn>
                             <GridColumn size="auto 100%" colsize="10" padding="1">
                                 <Panel name="ContentBrowser_Contents_Empty" size="100%" backgroundColor="#101012" visible="false">
