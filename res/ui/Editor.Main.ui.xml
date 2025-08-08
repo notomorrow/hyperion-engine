@@ -75,18 +75,13 @@
                 <Tab name="Assets_Tab" text="Assets">
                     <Script assembly="Hyperion.Editor.UI.dll" class="ContentBrowser" />
                     
-                    <Grid size="100% fill" position="0 35" padding="0 2" cols="12">
+                    <Grid size="100% fill" padding="0 2" cols="12">
                         <GridRow size="100%">
                             <GridColumn size="100%" colsize="2" padding="1">
                                 <Panel size="100% 35" backgroundColor="#101012">
-                                    <!-- <Text backgroundColor="#000000">Assets</Text>
-                                    <Button name="ContentBrowser_Import_Button" parentAlignment="topright" size="50 fill">
-                                        Import
-                                    </Button> -->
-
                                     <MenuBar name="Assets_MenuBar" position="0 0" size="100% 25" originAlignment="topleft" parentAlignment="topleft" padding="5 2" depth="1">
-                                        <MenuItem name="Assets_MenuItem" text="Assets" size="auto 100%" />
-                                        <MenuItem name="Import_MenuItem" text="Import" size="auto 100%" OnClick="ImportContentClicked" />
+                                        <Spacer />
+                                        <MenuItem name="ContentBrowser_Import_Button" text="Import..." size="auto 100%" />
                                     </MenuBar>
                                 </Panel>
 
