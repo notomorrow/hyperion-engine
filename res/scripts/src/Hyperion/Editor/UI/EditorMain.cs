@@ -217,8 +217,13 @@ namespace Hyperion
             {
                 base.Init(entity);
 
-                var editorSubsystem = World.GetSubsystem<EditorSubsystem>();
-                Assert.Throw(editorSubsystem != null, "EditorSubsystem not found");
+                Logger.Log(LogType.Info, "EditorMain Init()");
+
+                EditorSubsystem? editorSubsystem = World.GetSubsystem<EditorSubsystem>();
+                if (editorSubsystem == null)
+                {
+                    return;
+                }
 
                 onProjectOpenedDelegate = editorSubsystem.GetOnProjectOpenedDelegate().Bind((EditorProject proj) =>
                 {
@@ -236,28 +241,6 @@ namespace Hyperion
                 }
 
                 editorSubsystem.AddDebugOverlay(new FPSCounterDebugOverlay(World));
-
-                // Testing stuff
-
-                // testScene = new Scene();
-                // testScene.SetName(new Name("TestScene"));
-                // testScene.SetFlags(SceneFlags.Foreground);
-
-                // Camera camera = new Camera();
-                // camera.SetName(new Name("TestCamera"));
-
-                // firstPersonCameraController = new FirstPersonCameraController();
-                // // firstPersonCameraController.SetMode(FirstPersonCameraControllerMode.MouseLocked);
-                // camera.AddCameraController(firstPersonCameraController);
-
-                // var cameraNode = new Node();
-                // cameraNode.SetName("TestCameraNode");
-
-                // var cameraEntity = testScene.GetEntityManager().AddEntity();
-                // testScene.GetEntityManager().AddComponent<CameraComponent>(cameraEntity, new CameraComponent { Camera = camera });
-                // cameraNode.SetEntity(cameraEntity);
-
-                // testScene.GetRoot().AddChild(cameraNode);
             }
 
             ~EditorMain()
@@ -447,9 +430,12 @@ namespace Hyperion
                 onActionStackStateChangeDelegate?.Remove();
                 onActionStackStateChangeDelegate = null;
 
-                var editorSubsystem = World.GetSubsystem<EditorSubsystem>();
+                if (World != null)
+                {
 
-                editorSubsystem.RemoveDebugOverlay(new Name("TestEditorDebugOverlay", weak: true));
+                    EditorSubsystem? editorSubsystem = World.GetSubsystem<EditorSubsystem>();
+                    editorSubsystem?.RemoveDebugOverlay(new Name("TestEditorDebugOverlay", weak: true));
+                }
             }
 
             public override void OnPlayStart()
@@ -490,6 +476,7 @@ namespace Hyperion
                 // Logger.Log(LogType.Info, "Camera controller removed");
             }
 
+
             public UIEventHandlerResult OpenProjectClicked()
             {
                 Logger.Log(LogType.Info, "Open Project clicked");
@@ -508,7 +495,7 @@ namespace Hyperion
                 return UIEventHandlerResult.Ok;
             }
 
-            public UIEventHandlerResult SaveProjectClicked()
+            public UIEventHandlerResult SaveClicked()
             {
                 Logger.Log(LogType.Info, "Save clicked");
 

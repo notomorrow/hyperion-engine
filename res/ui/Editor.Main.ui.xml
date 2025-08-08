@@ -5,7 +5,7 @@
         <MenuItem name="File_MenuItem" text="File" size="auto 100%">
             <MenuItem name="New_MenuItem" text="New Project..."></MenuItem>
             <MenuItem name="Open_MenuItem" text="Open Project..." OnClick="OpenProjectClicked"></MenuItem>
-            <MenuItem name="Save_MenuItem" text="Save Project" OnClick="SaveProjectClicked"></MenuItem>
+            <MenuItem name="Save_MenuItem" text="Save Project" OnClick="SaveClicked"></MenuItem>
             <MenuItem name="Exit_MenuItem" text="Exit"></MenuItem>
         </MenuItem>
         <MenuItem name="Edit_MenuItem" text="Edit" size="auto 100%">
