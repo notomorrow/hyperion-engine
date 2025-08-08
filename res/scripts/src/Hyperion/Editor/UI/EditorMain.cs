@@ -632,8 +632,9 @@ namespace Hyperion
                 PointLight light = activeScene.GetEntityManager().AddEntity<PointLight>();
                 light.SetPosition(new Vec3f(0.0f, 5.0f, 0.0f));
                 light.SetColor(new Color(1.0f, 1.0f, 1.0f, 1.0f));
-                light.SetRadius(30.0f);
-                light.SetIntensity(20.0f);
+                light.SetRadius(10.0f);
+                light.SetIntensity(3.0f);
+                // light.SetLightFlags(light.GetLightFlags() & ~LightFlags.Shadow);
 
                 var lightNode = new Node();
                 lightNode.SetName(activeScene.GetUniqueNodeName("PointLight"));
