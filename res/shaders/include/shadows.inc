@@ -492,13 +492,13 @@ float GetPointShadow(in Light light, vec3 world_to_light, float NdotL)
     uint layer_index = light.layer_index;
     uint flags = light.flags;
 
-    // switch (flags & LF_SHADOW_FILTER_MASK)
-    // {
-    // case LF_SHADOW_VSM:
-    //     return GetPointShadowVariance(layer_index, world_to_light, NdotL);
-    // default:
-    return GetPointShadowStandard(layer_index, world_to_light, NdotL);
-    // }
+    switch (flags & LF_SHADOW_FILTER_MASK)
+    {
+    case LF_SHADOW_VSM:
+        return GetPointShadowVariance(layer_index, world_to_light, NdotL);
+    default:
+        return GetPointShadowStandard(layer_index, world_to_light, NdotL);
+    }
 }
 
 float GetShadow(in Light light, vec3 position, vec2 texcoord, vec2 screen_dimensions, float NdotL)
