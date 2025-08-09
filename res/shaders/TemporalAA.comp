@@ -23,11 +23,12 @@ HYP_DESCRIPTOR_SAMPLER(TemporalAADescriptorSet, SamplerNearest) uniform sampler 
 
 HYP_DESCRIPTOR_UAV(TemporalAADescriptorSet, OutColorImage, format = rgba8) uniform writeonly image2D output_image;
 
-layout(push_constant) uniform PushConstants
+HYP_DESCRIPTOR_CBUFF(TemporalAADescriptorSet, UniformBuffer) uniform UniformBuffer
 {
     uvec2 dimensions;
     uvec2 depth_texture_dimensions;
     vec2 camera_near_far;
+    vec2 _pad0;
 };
 
 // #define ADJUST_COLOR_HDR
