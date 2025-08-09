@@ -6,7 +6,7 @@
       "quality": 2,
       "eyeFade": [0.980000, 0.990000],
       "rayStep": 1.500000,
-      "enabled": false,
+      "enabled": true,
       "screenEdgeFade": [0.960000, 0.990000],
       "roughnessScattering": true
     },
@@ -37,12 +37,12 @@
         "enabled": false
       },
       "globalIllumination": {
-        "enabled": false
+        "enabled": true
       },
       "pathTracing": {
         "enabled": false
       },
-      "enabled": false
+      "enabled": true
     },
     "hbao": {
       "radius": 2.500000,
