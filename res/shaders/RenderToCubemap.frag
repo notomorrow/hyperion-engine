@@ -14,9 +14,8 @@ layout(location = 11) in flat uint v_object_index;
 layout(location = 13) in flat uint v_cube_face_index;
 
 #ifdef MODE_SHADOWS
-// For shadow rendering (omnidirectional shadow maps), we output distance moments,
-// packed into a u32 instead of color.
-layout(location = 0) out uint output_color;
+// For shadow rendering (omnidirectional shadow maps), we output distance moments
+layout(location = 0) out vec2 output_color;
 #else
 layout(location = 0) out vec4 output_color;
 #endif
@@ -53,7 +52,7 @@ uniform sampler sampler_nearest;
 #define HYP_CUBEMAP_AMBIENT 0.005
 
 HYP_DESCRIPTOR_SRV(Global, ShadowMapsTextureArray) uniform texture2DArray shadow_maps;
-HYP_DESCRIPTOR_SRV(Global, PointLightShadowMapsTextureArray) uniform utextureCubeArray point_shadow_maps;
+HYP_DESCRIPTOR_SRV(Global, PointLightShadowMapsTextureArray) uniform textureCubeArray point_shadow_maps;
 
 #undef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 
@@ -140,7 +139,7 @@ void main()
 
     moments.y += 0.25 * (HYP_FMATH_SQR(dx) + HYP_FMATH_SQR(dy));
 
-    output_color = packHalf2x16(moments);
+    output_color = moments;
 #else
 
     const float metalness = GET_MATERIAL_PARAM(CURRENT_MATERIAL, MATERIAL_PARAM_METALNESS);
