@@ -28,6 +28,10 @@
 
 #include <vulkan/vulkan.h>
 
+#ifdef HYP_WINDOWS
+#include <vulkan/vulkan_win32.h>
+#endif
+
 #define CHECK_FRAME_RESULT(result)                  \
     do                                              \
     {                                               \
@@ -88,7 +92,7 @@ public:
 
     virtual bool IsDynamicDescriptorIndexingSupported() const override
     {
-        return false;//m_renderBackend->GetDevice()->GetFeatures().SupportsDynamicDescriptorIndexing();
+        return false; // m_renderBackend->GetDevice()->GetFeatures().SupportsDynamicDescriptorIndexing();
     }
 
 private:
@@ -429,7 +433,7 @@ class VulkanTextureCache
 {
 public:
     // map texture ID -> image views
-    SparsePagedArray<HashMap<ImageSubResource, ImageViewRef>, 1024> imageViews;
+    SparsePagedArray<HashMap<ImageSubResource, GpuImageViewRef>, 1024> imageViews;
     // to keep texture IDs as valid
     SparsePagedArray<WeakHandle<Texture>, 1024> weakTextureHandles;
 
@@ -440,7 +444,7 @@ public:
         cleanupIterator = weakTextureHandles.End();
     }
 
-    const ImageViewRef& GetOrCreate(const Handle<Texture>& texture, const ImageSubResource& subResource)
+    const GpuImageViewRef& GetOrCreate(const Handle<Texture>& texture, const ImageSubResource& subResource)
     {
         Threads::AssertOnThread(g_renderThread);
 
@@ -461,8 +465,8 @@ public:
         if (it == textureImageViews.End())
         {
 
-            VulkanImageViewRef imageView = MakeRenderObject<VulkanImageView>(
-                VulkanImageRef(texture->GetGpuImage()),
+            VulkanGpuImageViewRef imageView = MakeRenderObject<VulkanGpuImageView>(
+                VulkanGpuImageRef(texture->GetGpuImage()),
                 subResource.baseMipLevel,
                 subResource.numLevels,
                 subResource.baseArrayLayer,
@@ -694,7 +698,7 @@ void VulkanRenderBackend::PresentFrame(FrameBase* frame)
     VulkanAsyncCompute* vulkanAsyncCompute = m_asyncCompute.Get();
 
     CHECK_FRAME_RESULT(vulkanFrame->Submit(&m_instance->GetDevice()->GetGraphicsQueue(), vulkanCommandBuffer));
-    
+
     if (vulkanAsyncCompute->IsSupported())
     {
         CHECK_FRAME_RESULT(vulkanAsyncCompute->Submit(vulkanFrame));
@@ -766,7 +770,7 @@ GraphicsPipelineRef VulkanRenderBackend::MakeGraphicsPipeline(
     if (shader.IsValid())
     {
         graphicsPipeline->SetShader(shader);
-        
+
 #ifdef HYP_DEBUG_MODE
         graphicsPipeline->SetDebugName(NAME_FMT("GraphicsPipeline_{}", shader->GetDebugName().IsValid() ? *shader->GetDebugName() : "<unnamed shader>"));
 #endif
@@ -807,19 +811,19 @@ GpuBufferRef VulkanRenderBackend::MakeGpuBuffer(GpuBufferType bufferType, SizeTy
     return MakeRenderObject<VulkanGpuBuffer>(bufferType, size, alignment);
 }
 
-ImageRef VulkanRenderBackend::MakeImage(const TextureDesc& textureDesc)
+GpuImageRef VulkanRenderBackend::MakeImage(const TextureDesc& textureDesc)
 {
-    return MakeRenderObject<VulkanImage>(textureDesc);
+    return MakeRenderObject<VulkanGpuImage>(textureDesc);
 }
 
-ImageViewRef VulkanRenderBackend::MakeImageView(const ImageRef& image)
+GpuImageViewRef VulkanRenderBackend::MakeImageView(const GpuImageRef& image)
 {
-    return MakeRenderObject<VulkanImageView>(VulkanImageRef(image));
+    return MakeRenderObject<VulkanGpuImageView>(VulkanGpuImageRef(image));
 }
 
-ImageViewRef VulkanRenderBackend::MakeImageView(const ImageRef& image, uint32 mipIndex, uint32 numMips, uint32 faceIndex, uint32 numFaces)
+GpuImageViewRef VulkanRenderBackend::MakeImageView(const GpuImageRef& image, uint32 mipIndex, uint32 numMips, uint32 faceIndex, uint32 numFaces)
 {
-    return MakeRenderObject<VulkanImageView>(VulkanImageRef(image), mipIndex, numMips, faceIndex, numFaces);
+    return MakeRenderObject<VulkanGpuImageView>(VulkanGpuImageRef(image), mipIndex, numMips, faceIndex, numFaces);
 }
 
 SamplerRef VulkanRenderBackend::MakeSampler(TextureFilterMode filterModeMin, TextureFilterMode filterModeMag, TextureWrapMode wrapMode)
@@ -875,11 +879,11 @@ TLASRef VulkanRenderBackend::MakeTLAS()
     return MakeRenderObject<VulkanTLAS>();
 }
 
-const ImageViewRef& VulkanRenderBackend::GetTextureImageView(const Handle<Texture>& texture, uint32 mipIndex, uint32 numMips, uint32 faceIndex, uint32 numFaces)
+const GpuImageViewRef& VulkanRenderBackend::GetTextureImageView(const Handle<Texture>& texture, uint32 mipIndex, uint32 numMips, uint32 faceIndex, uint32 numFaces)
 {
     if (!texture.IsValid())
     {
-        return ImageViewRef::Null();
+        return GpuImageViewRef::Null();
     }
 
     ImageSubResource subResource {};
@@ -888,7 +892,7 @@ const ImageViewRef& VulkanRenderBackend::GetTextureImageView(const Handle<Textur
     subResource.numLayers = MathUtil::Min(numFaces, texture->GetTextureDesc().NumFaces());
     subResource.baseArrayLayer = MathUtil::Min(faceIndex, numFaces - 1);
 
-    const ImageViewRef& imageView = m_textureCache->GetOrCreate(texture, subResource);
+    const GpuImageViewRef& imageView = m_textureCache->GetOrCreate(texture, subResource);
     HYP_GFX_ASSERT(imageView.IsValid());
 
     return imageView;
@@ -1041,6 +1045,115 @@ RendererResult VulkanRenderBackend::GetOrCreateVkDescriptorSetLayout(const Descr
 UniquePtr<SingleTimeCommands> VulkanRenderBackend::GetSingleTimeCommands()
 {
     return MakeUnique<VulkanSingleTimeCommands>();
+}
+
+VkSurfaceKHR VulkanRenderBackend::CreateVkSurface(ApplicationWindow* window, VulkanInstance* instance)
+{
+    HYP_GFX_ASSERT(window && instance);
+
+#ifdef HYP_SDL
+    if (SDLApplicationWindow* sdlWindow = ObjCast<SDLApplicationWindow>(window))
+    {
+        VkSurfaceKHR surface = VK_NULL_HANDLE;
+        SDL_bool result = SDL_Vulkan_CreateSurface(static_cast<SDL_Window*>(sdlWindow->GetInternalWindowHandle()), instance->GetInstance(), &surface);
+
+        HYP_GFX_ASSERT(result == SDL_TRUE, "Failed to create Vulkan surface: %s", SDL_GetError());
+
+        return surface;
+    }
+#endif
+
+#ifdef HYP_WINDOWS
+    if (Win32ApplicationWindow* win32Window = ObjCast<Win32ApplicationWindow>(window))
+    {
+        VkSurfaceKHR surface = VK_NULL_HANDLE;
+
+        VkWin32SurfaceCreateInfoKHR createInfo { VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR };
+        createInfo.hinstance = win32Window->GetHINSTANCE();
+        createInfo.hwnd = win32Window->GetHWND();
+
+        VkResult vkResult = vkCreateWin32SurfaceKHR(
+            instance->GetInstance(),
+            &createInfo,
+            nullptr,
+            &surface);
+
+        HYP_GFX_ASSERT(vkResult == VK_SUCCESS, "Failed to create Win32 Vulkan surface: %d", int(vkResult));
+
+        return surface;
+    }
+#endif
+
+    HYP_NOT_IMPLEMENTED();
+}
+
+
+bool VulkanRenderBackend::GetVkExtensions(const AppContextBase* appContext, Array<const char*> &outExtensions)
+{
+#ifdef HYP_SDL
+    if (const SDLAppContext* sdlAppContext = ObjCast<SDLAppContext>(appContext))
+    {
+        uint32 numExtensions = 0;
+        SDL_Window* sdlWindow = static_cast<SDL_Window*>(static_cast<SDLApplicationWindow*>(sdlAppContext->GetMainWindow())->GetInternalWindowHandle());
+
+        if (!SDL_Vulkan_GetInstanceExtensions(sdlWindow, &numExtensions, nullptr))
+        {
+            return false;
+        }
+
+        outExtensions.Resize(numExtensions);
+
+        if (!SDL_Vulkan_GetInstanceExtensions(sdlWindow, &numExtensions, outExtensions.Data()))
+        {
+            return false;
+        }
+
+        return true;
+    }
+#endif
+
+#ifdef HYP_WINDOWS
+    if (const Win32AppContext* win32AppContext = ObjCast<Win32AppContext>(appContext))
+    {
+        // extensions required for Win32 surface support
+        static const char* requiredExtensions[] = {
+            "VK_KHR_surface",
+            "VK_KHR_win32_surface"
+        };
+
+        uint32_t count = 0;
+        vkEnumerateInstanceExtensionProperties(nullptr, &count, nullptr);
+
+        Array<VkExtensionProperties> vkProperties(count);
+        vkEnumerateInstanceExtensionProperties(nullptr, &count, vkProperties.Data());
+
+        for (const char* requiredExtension : requiredExtensions)
+        {
+            bool found = false;
+
+            for (VkExtensionProperties& it : vkProperties)
+            {
+                if (!std::strcmp(it.extensionName, requiredExtension))
+                {
+                    found = true;
+
+                    break;
+                }
+            }
+
+            if (!found)
+            {
+                // required extension missing.
+                return false;
+            }
+
+            outExtensions.PushBack(requiredExtension);
+        }
+        return true;
+    }
+#endif
+
+    return false;
 }
 
 #pragma endregion VulkanRenderBackend

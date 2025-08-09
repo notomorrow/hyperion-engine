@@ -66,7 +66,7 @@ HYP_DESCRIPTOR_SSBO_DYNAMIC(Global, CurrentLight) readonly buffer CurrentLight
 };
 
 HYP_DESCRIPTOR_SRV(Global, ShadowMapsTextureArray) uniform texture2DArray shadow_maps;
-HYP_DESCRIPTOR_SRV(Global, PointLightShadowMapsTextureArray) uniform utextureCubeArray point_shadow_maps;
+HYP_DESCRIPTOR_SRV(Global, PointLightShadowMapsTextureArray) uniform textureCubeArray point_shadow_maps;
 
 #define HYP_DEFERRED_NO_REFRACTION
 #include "./deferred/DeferredLighting.glsl"
@@ -306,6 +306,9 @@ void main()
     output_color = vec4(result);
 #endif
 
-    // output_color = texture(sampler2DArray(shadow_maps, HYP_SAMPLER_NEAREST), vec3(GetShadowCoord(light.shadow_matrix, position.xyz).xy * vec2(0.125), float(light.layer_index)));
-    // output_color.a = 1.0;
+    // #if defined(LIGHT_TYPE_POINT)
+    //     // debug
+    //     output_color = texture(sampler2DArray(shadow_maps, HYP_SAMPLER_NEAREST), vec3(GetShadowCoord(light.shadow_matrix, position.xyz).xy * vec2(0.125), float(light.layer_index)));
+    //     output_color.a = 1.0;
+    // #endif
 }

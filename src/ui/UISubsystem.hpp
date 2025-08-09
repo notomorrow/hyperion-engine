@@ -14,6 +14,7 @@ namespace hyperion {
 
 class Scene;
 class View;
+class World;
 
 class UIStage;
 class UIRenderer;
@@ -53,7 +54,7 @@ private:
 
     UIRenderer* m_uiRenderer;
 
-    DelegateHandler m_onGbufferResolutionChangedHandle;
+    DelegateHandler m_onResizeHandle;
 };
 
 } // namespace hyperion

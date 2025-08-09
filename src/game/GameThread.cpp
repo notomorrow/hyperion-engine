@@ -49,13 +49,11 @@ void GameThread::SetGame(const Handle<Game>& game)
         GetScheduler().Enqueue([this, game = game, promise = future.Promise()]()
             {
                 m_game = game;
+                
+                Assert(m_game != nullptr);
+                m_game->SetAppContext(m_appContext);
 
-                if (m_game.IsValid())
-                {
-                    m_game->SetAppContext(m_appContext);
-
-                    InitObject(m_game);
-                }
+                InitObject(m_game);
 
                 promise->Fulfill();
             });
@@ -70,21 +68,12 @@ void GameThread::SetGame(const Handle<Game>& game)
 
 void GameThread::operator()()
 {
-    uint32 numFrames = 0;
-    float deltaTimeAccum = 0.0f;
-
-#if HYP_GAME_THREAD_LOCKED
-    LockstepGameCounter counter(1.0f / gameThreadTargetTicksPerSecond);
-#else
     GameCounter counter;
-#endif
 
-    if (m_game.IsValid())
-    {
-        m_game->SetAppContext(m_appContext);
+    Assert(m_game != nullptr);
+    m_game->SetAppContext(m_appContext);
 
-        InitObject(m_game);
-    }
+    InitObject(m_game);
 
     Queue<Scheduler::ScheduledTask> tasks;
     Array<SystemEvent> events;
@@ -99,19 +88,10 @@ void GameThread::operator()()
 #endif
 
         HYP_PROFILE_BEGIN;
+        
+        RenderApi_BeginFrame_GameThread();
 
         counter.NextTick();
-
-        deltaTimeAccum += counter.delta;
-        numFrames++;
-
-        if (deltaTimeAccum >= 1.0f)
-        {
-            //            HYP_LOG(GameThread, Debug, "Game thread ticks per second: {}", 1.0f / (deltaTimeAccum / float(numFrames)));
-
-            deltaTimeAccum = 0.0f;
-            numFrames = 0;
-        }
 
         AssetManager::GetInstance()->Update(counter.delta);
 
@@ -120,11 +100,8 @@ void GameThread::operator()()
             for (SystemEvent& event : events)
             {
                 m_appContext->GetInputManager()->CheckEvent(&event);
-
-                if (m_game.IsValid())
-                {
-                    m_game->HandleEvent(std::move(event));
-                }
+                
+                m_game->HandleEvent(std::move(event));
             }
 
             events.Clear();
@@ -139,8 +116,6 @@ void GameThread::operator()()
                 tasks.Pop().Execute();
             }
         }
-
-        RenderApi_BeginFrame_GameThread();
 
         if (m_game.IsValid())
         {

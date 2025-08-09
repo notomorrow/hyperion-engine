@@ -9,8 +9,8 @@
 #include <rendering/RenderComputePipeline.hpp>
 #include <rendering/RenderDescriptorSet.hpp>
 #include <rendering/RenderFrame.hpp>
-#include <rendering/RenderImage.hpp>
-#include <rendering/RenderImageView.hpp>
+#include <rendering/RenderGpuImage.hpp>
+#include <rendering/RenderGpuImageView.hpp>
 #include <rendering/RenderSampler.hpp>
 
 #include <core/profiling/ProfileScope.hpp>
@@ -77,7 +77,7 @@ void DepthPyramidRenderer::Create()
         m_depthPyramidSampler = g_renderBackend->MakeSampler(TFM_NEAREST_MIPMAP, TFM_NEAREST, TWM_CLAMP_TO_EDGE);
         HYP_GFX_ASSERT(m_depthPyramidSampler->Create());
 
-        const ImageRef& depthImage = m_depthImageView->GetImage();
+        const GpuImageRef& depthImage = m_depthImageView->GetImage();
         Assert(depthImage.IsValid());
 
         // create depth pyramid image
@@ -130,7 +130,7 @@ void DepthPyramidRenderer::Create()
             HYP_GFX_ASSERT(mipUniformBuffer->Create());
             mipUniformBuffer->Copy(sizeof(DepthPyramidUniforms), &uniforms);
 
-            ImageViewRef& mipImageView = m_mipImageViews.PushBack(g_renderBackend->MakeImageView(m_depthPyramid, mipLevel, 1, 0, m_depthPyramid->NumFaces()));
+            GpuImageViewRef& mipImageView = m_mipImageViews.PushBack(g_renderBackend->MakeImageView(m_depthPyramid, mipLevel, 1, 0, m_depthPyramid->NumFaces()));
             HYP_GFX_ASSERT(mipImageView->Create());
         }
 
@@ -139,7 +139,7 @@ void DepthPyramidRenderer::Create()
 
         const DescriptorTableDeclaration& descriptorTableDecl = shader->GetCompiledShader()->GetDescriptorTableDeclaration();
 
-        const DescriptorSetDeclaration* depthPyramidDescriptorSetDecl = descriptorTableDecl.FindDescriptorSetDeclaration(NAME("DepthPyramidDescriptorSet"));
+        const DescriptorSetDeclaration* depthPyramidDescriptorSetDecl = descriptorTableDecl.FindDescriptorSetDeclaration("DepthPyramidDescriptorSet");
         Assert(depthPyramidDescriptorSetDecl != nullptr);
 
         while (m_mipDescriptorTables.Size() > numMipLevels)
@@ -160,24 +160,24 @@ void DepthPyramidRenderer::Create()
             {
                 for (uint32 frameIndex = 0; frameIndex < g_framesInFlight; frameIndex++)
                 {
-                    const DescriptorSetRef& depthPyramidDescriptorSet = descriptorTable->GetDescriptorSet(NAME("DepthPyramidDescriptorSet"), frameIndex);
+                    const DescriptorSetRef& depthPyramidDescriptorSet = descriptorTable->GetDescriptorSet("DepthPyramidDescriptorSet", frameIndex);
                     Assert(depthPyramidDescriptorSet != nullptr);
 
                     if (mipLevel == 0)
                     {
                         // first mip level -- input is the actual depth image
-                        depthPyramidDescriptorSet->SetElement(NAME("InImage"), m_depthImageView);
+                        depthPyramidDescriptorSet->SetElement("InImage", m_depthImageView);
                     }
                     else
                     {
                         Assert(m_mipImageViews[mipLevel - 1] != nullptr);
 
-                        depthPyramidDescriptorSet->SetElement(NAME("InImage"), m_mipImageViews[mipLevel - 1]);
+                        depthPyramidDescriptorSet->SetElement("InImage", m_mipImageViews[mipLevel - 1]);
                     }
 
-                    depthPyramidDescriptorSet->SetElement(NAME("OutImage"), m_mipImageViews[mipLevel]);
-                    depthPyramidDescriptorSet->SetElement(NAME("UniformBuffer"), m_mipUniformBuffers[mipLevel]);
-                    depthPyramidDescriptorSet->SetElement(NAME("DepthPyramidSampler"), m_depthPyramidSampler);
+                    depthPyramidDescriptorSet->SetElement("OutImage", m_mipImageViews[mipLevel]);
+                    depthPyramidDescriptorSet->SetElement("UniformBuffer", m_mipUniformBuffers[mipLevel]);
+                    depthPyramidDescriptorSet->SetElement("DepthPyramidSampler", m_depthPyramidSampler);
                 }
             };
 
@@ -254,7 +254,7 @@ void DepthPyramidRenderer::Render(FrameBase* frame)
         frame->renderQueue << BindDescriptorTable(
             m_mipDescriptorTables[mipLevel],
             m_generateDepthPyramid,
-            ArrayMap<Name, ArrayMap<Name, uint32>> {},
+            {},
             frameIndex);
 
         // set push constant data for the current mip level

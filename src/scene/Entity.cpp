@@ -4,14 +4,15 @@
 #include <scene/Scene.hpp>
 #include <scene/World.hpp>
 #include <scene/Node.hpp>
-#include <rendering/Mesh.hpp>
-
+#include <scene/util/EntityScripting.hpp>
 #include <scene/EntityManager.hpp>
+#include <scene/EntityTag.hpp>
 #include <scene/ComponentInterface.hpp>
 #include <scene/components/NodeLinkComponent.hpp>
 #include <scene/components/MeshComponent.hpp>
-#include <scene/EntityTag.hpp>
+#include <scene/components/ScriptComponent.hpp>
 
+#include <rendering/Mesh.hpp>
 #include <rendering/RenderProxy.hpp>
 
 #include <core/logging/Logger.hpp>
@@ -27,7 +28,8 @@ namespace hyperion {
 
 Entity::Entity()
     : m_world(nullptr),
-      m_scene(nullptr)
+      m_scene(nullptr),
+      m_renderProxyVersion(0)
 {
 }
 
@@ -265,11 +267,26 @@ void Entity::OnComponentAdded(AnyRef component)
                 return;
             }
         }
+
+        return;
     }
+
+    // if (ScriptComponent* scriptComponent = component.TryGet<ScriptComponent>())
+    // {
+    //     EntityScripting::InitEntityScriptComponent(this, *scriptComponent);
+
+    //     return;
+    // }
 }
 
 void Entity::OnComponentRemoved(AnyRef component)
 {
+    // if (ScriptComponent* scriptComponent = component.TryGet<ScriptComponent>())
+    // {
+    //     EntityScripting::DeinitEntityScriptComponent(this, *scriptComponent);
+
+    //     return;
+    // }
 }
 
 void Entity::OnTagAdded(EntityTag tag)
@@ -278,6 +295,11 @@ void Entity::OnTagAdded(EntityTag tag)
 
 void Entity::OnTagRemoved(EntityTag tag)
 {
+}
+
+void Entity::OnTransformUpdated(const Transform& transform)
+{
+    // Do nothing
 }
 
 void Entity::AttachChild(const Handle<Entity>& child)
@@ -294,48 +316,56 @@ void Entity::AttachChild(const Handle<Entity>& child)
 
     entityManager->AddExistingEntity(child);
 
-    if (NodeLinkComponent* nodeLinkComponent = entityManager->TryGetComponent<NodeLinkComponent>(this))
+    NodeLinkComponent* nodeLinkComponent = entityManager->TryGetComponent<NodeLinkComponent>(this);
+
+    if (!nodeLinkComponent)
     {
-        if (Handle<Node> node = nodeLinkComponent->node.Lock())
+        HYP_LOG(Entity, Warning, "Entity {} does not have a NodeLinkComponent, cannot attach child {}", Id(), child.Id());
+//        HYP_BREAKPOINT_DEBUG_MODE;
+        
+        return;
+    }
+
+    Handle<Node> node = nodeLinkComponent->node.Lock();
+
+    if (!node)
+    {
+        HYP_LOG(Entity, Warning, "Entity {} has a NodeLinkComponent but the node is not valid, cannot attach child {}", Id(), child.Id());
+//        HYP_BREAKPOINT_DEBUG_MODE;
+
+        return;
+    }
+
+    if (NodeLinkComponent* childNodeLinkComponent = entityManager->TryGetComponent<NodeLinkComponent>(child))
+    {
+        if (Handle<Node> childNode = childNodeLinkComponent->node.Lock())
         {
-            if (NodeLinkComponent* childNodeLinkComponent = entityManager->TryGetComponent<NodeLinkComponent>(child))
-            {
-                if (Handle<Node> childNode = childNodeLinkComponent->node.Lock())
-                {
-                    node->AddChild(childNode);
-
-                    return;
-                }
-                else
-                {
-                    childNode = node->AddChild();
-                    childNode->SetEntity(child);
-
-                    childNodeLinkComponent->node = childNode;
-
-                    return;
-                }
-            }
-
-            Handle<Node> childNode = node->AddChild();
-            childNode->SetEntity(child);
-
-            if (NodeLinkComponent* childNodeLinkComponent = entityManager->TryGetComponent<NodeLinkComponent>(child))
-            {
-                childNodeLinkComponent->node = childNode;
-            }
-            else
-            {
-                entityManager->AddComponent<NodeLinkComponent>(child, NodeLinkComponent { childNode });
-            }
+            node->AddChild(childNode);
 
             return;
         }
+        else
+        {
+            childNode = node->AddChild();
+            childNode->SetEntity(child);
 
-        HYP_LOG(Entity, Warning, "Entity {} has a NodeLinkComponent but the node is not valid, cannot attach child {}", Id(), child.Id());
+            childNodeLinkComponent->node = childNode;
+
+            return;
+        }
     }
 
-    HYP_LOG(Entity, Warning, "Entity {} does not have a NodeLinkComponent, cannot attach child {}", Id(), child.Id());
+    Handle<Node> childNode = node->AddChild();
+    childNode->SetEntity(child);
+
+    if (NodeLinkComponent* childNodeLinkComponent = entityManager->TryGetComponent<NodeLinkComponent>(child))
+    {
+        childNodeLinkComponent->node = childNode;
+    }
+    else
+    {
+        entityManager->AddComponent<NodeLinkComponent>(child, NodeLinkComponent { childNode });
+    }
 }
 
 void Entity::DetachChild(const Handle<Entity>& child)

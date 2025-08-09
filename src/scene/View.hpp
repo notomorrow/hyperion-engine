@@ -11,6 +11,8 @@
 #include <core/utilities/EnumFlags.hpp>
 #include <core/utilities/Variant.hpp>
 
+#include <core/functional/Delegate.hpp>
+
 #include <core/memory/resource/Resource.hpp>
 
 #include <rendering/RenderCollection.hpp>
@@ -64,6 +66,8 @@ enum class ViewFlags : uint32
                                  //  --- Use of these is still threadsafe, however it uses a spinlock instead of multiple buffering so contentions will eat up cpu cycles.
     NO_DRAW_CALLS = 0x2000,      //!< If set, no draw calls will be built for any mesh entities that this View collects.
 
+    ENABLE_READBACK = 0x4000,    //!< Enable render target texture readback (final texture)
+    
     // enable flags
     RAYTRACING = 0x100000, //!< Does this View contain raytracing data (acceleration structures)? (Raytracing must be enabled in the global config and must have RT hardware support)
 
@@ -98,6 +102,7 @@ struct ViewDesc
     int priority = 0;
     Optional<RenderableAttributeSet> overrideAttributes;
     IDrawCallCollectionImpl* drawCallCollectionImpl = nullptr;
+    TextureFormat readbackTextureFormat = TF_RGBA8;             //!< If ENABLE_READBACK is set, the format of the texture we copy the output to.
 };
 
 class HYP_API ViewOutputTarget
@@ -186,12 +191,22 @@ public:
         return m_outputTarget;
     }
 
-    HYP_FORCE_INLINE const Viewport& GetViewport() const
-    {
-        return m_viewport;
-    }
-
+    /*! \brief Get the Viewport of this View.
+     *  Thread-safe but only callable from the Game thread or Render thread as it is buffered over multiple frames. */
+    const Viewport& GetViewport() const;
+    
+    /*! \brief Set the Viewport of this View.
+     *  Only callable on the Game thread. */
     void SetViewport(const Viewport& viewport);
+    
+    HYP_FORCE_INLINE const Handle<Texture>& GetReadbackTexture() const
+    {
+        Threads::AssertOnThread(g_gameThread);
+        
+        return m_readbackTexture;
+    }
+    
+    GpuImageBase* GetReadbackTextureGpuImage() const;
 
     HYP_METHOD()
     HYP_FORCE_INLINE int GetPriority() const
@@ -224,15 +239,26 @@ public:
 
     bool TestRay(const Ray& ray, RayTestResults& outResults, bool useBvh = true) const;
 
+    /*! \brief Sync changes to the Viewport so the render thread can see updates to it for the next frame */
+    void UpdateViewport();
+    
+    /*! \brief Computes visibility states for all Scenes this View has using the Camera */
     void UpdateVisibility();
 
+    /*! \brief Enqueue tasks to `batch` to asynchronously collect entities and other scene resources for the current View. */
     void BeginAsyncCollection(TaskBatch& batch);
+    /*! \brief End asynchronous scene collection tasks */
     void EndAsyncCollection();
 
+    /*! \brief Synchronously collect scene resources for the View, blocks the current thread until complete. */
     void CollectSync();
+    
+    Delegate<void, const Handle<Texture>&> OnReadbackTextureChanged;
 
 protected:
     void Init() override;
+    
+    void CreateReadbackTexture();
 
     void CollectCameras(RenderProxyList& rpl);
     void CollectLights(RenderProxyList& rpl);
@@ -246,8 +272,6 @@ protected:
 
     EnumFlags<ViewFlags> m_flags;
 
-    Viewport m_viewport;
-
     Array<Handle<Scene>> m_scenes;
     Handle<Camera> m_camera;
     ViewOutputTarget m_outputTarget;
@@ -256,10 +280,16 @@ protected:
     WeakHandle<View> m_raytracingView;
 
     RenderProxyList* m_renderProxyLists[g_tripleBuffer ? 3 : 2];
+    
+    Viewport m_viewport;
+    Viewport m_viewportBuffered[g_tripleBuffer ? 3 : 2];
 
     // ViewID m_viewId; // unique Id for this view in the current frame
 
     int m_priority;
+    
+    Handle<Texture> m_readbackTexture;
+    GpuImageBase* m_readbackTextureGpuImages[g_tripleBuffer ? 3 : 2];
 
     Optional<RenderableAttributeSet> m_overrideAttributes;
 

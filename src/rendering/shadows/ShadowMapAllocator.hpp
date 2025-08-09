@@ -24,10 +24,8 @@ HYP_STRUCT()
 struct ShadowMapAtlasElement
 {
     // Directional and spot lights only: index of the atlas in the shadow map texture array
-    uint32 atlasIndex = ~0u;
-
-    // Point light shadow maps only: index of the cubemap in the texture array
-    uint32 pointLightIndex = ~0u;
+    // Point lights: index in the cubemap texture array
+    uint32 layerIndex = ~0u;
 
     // Index of the element in the atlas
     uint32 index = ~0u;
@@ -46,8 +44,7 @@ struct ShadowMapAtlasElement
 
     HYP_FORCE_INLINE bool operator==(const ShadowMapAtlasElement& other) const
     {
-        return atlasIndex == other.atlasIndex
-            && pointLightIndex == other.pointLightIndex
+        return layerIndex == other.layerIndex
             && index == other.index
             && offsetUv == other.offsetUv
             && offsetCoords == other.offsetCoords
@@ -57,8 +54,7 @@ struct ShadowMapAtlasElement
 
     HYP_FORCE_INLINE bool operator!=(const ShadowMapAtlasElement& other) const
     {
-        return atlasIndex != other.atlasIndex
-            || pointLightIndex != other.pointLightIndex
+        return layerIndex != other.layerIndex
             || index != other.index
             || offsetUv != other.offsetUv
             || offsetCoords != other.offsetCoords
@@ -139,22 +135,22 @@ public:
     ShadowMapAllocator();
     ~ShadowMapAllocator();
 
-    HYP_FORCE_INLINE const ImageRef& GetAtlasImage() const
+    HYP_FORCE_INLINE const GpuImageRef& GetAtlasImage() const
     {
         return m_atlasImage;
     }
 
-    HYP_FORCE_INLINE const ImageViewRef& GetAtlasImageView() const
+    HYP_FORCE_INLINE const GpuImageViewRef& GetAtlasImageView() const
     {
         return m_atlasImageView;
     }
 
-    HYP_FORCE_INLINE const ImageRef& GetPointLightShadowMapImage() const
+    HYP_FORCE_INLINE const GpuImageRef& GetPointLightShadowMapImage() const
     {
         return m_pointLightShadowMapImage;
     }
 
-    HYP_FORCE_INLINE const ImageViewRef& GetPointLightShadowMapImageView() const
+    HYP_FORCE_INLINE const GpuImageViewRef& GetPointLightShadowMapImageView() const
     {
         return m_pointLightShadowMapImageView;
     }
@@ -169,11 +165,11 @@ private:
     Vec2u m_atlasDimensions;
     Array<ShadowMapAtlas> m_atlases;
 
-    ImageRef m_atlasImage;
-    ImageViewRef m_atlasImageView;
+    GpuImageRef m_atlasImage;
+    GpuImageViewRef m_atlasImageView;
 
-    ImageRef m_pointLightShadowMapImage;
-    ImageViewRef m_pointLightShadowMapImageView;
+    GpuImageRef m_pointLightShadowMapImage;
+    GpuImageViewRef m_pointLightShadowMapImageView;
 
     IdGenerator m_pointLightShadowMapIdGenerator;
 };

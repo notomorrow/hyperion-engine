@@ -45,6 +45,7 @@ HYP_API extern const GlobalConfig& GetGlobalConfig();
 
 World::World()
     : HypObjectBase(),
+      m_name(Name::Unique("World")),
       m_worldGrid(CreateObject<WorldGrid>(this)),
       m_detachedScenes(this),
       m_raytracingView(nullptr),
@@ -350,7 +351,6 @@ void World::Update(float delta)
     Array<EntityManager*> entityManagers;
     entityManagers.Reserve(m_scenes.Size());
 
-    // @TODO Collect all scenes, envgrids, envprobes for Views into a single list to call Update() on them all.
     for (uint32 index = 0; index < m_scenes.Size(); index++)
     {
         const Handle<Scene>& scene = m_scenes[index];
@@ -399,6 +399,7 @@ void World::Update(float delta)
         View* view = processViews[index];
         Assert(view != nullptr);
 
+        view->UpdateViewport();
         // View must be updated on the game thread as it mutates the scene's octree state
         view->UpdateVisibility();
 

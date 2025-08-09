@@ -18,6 +18,16 @@
 #include <type_traits>
 
 namespace hyperion {
+
+namespace functional {
+
+template <class FunctionSignature>
+class Proc;
+
+} // namespace functional
+
+using functional::Proc;
+
 namespace threading {
 
 class SchedulerBase;
@@ -44,11 +54,9 @@ public:
         return m_id;
     }
 
-    /*! \brief Get the thread-local storage for this thread. This is used to store thread-local data that is unique to this thread. */
-    HYP_FORCE_INLINE ThreadLocalStorage* GetTLS() const
-    {
-        return m_tls;
-    }
+    /*! \brief Get the thread-local storage for this thread. This is used to store thread-local data that is unique to this thread.
+      *  Must only be called from THIS thread */
+    ThreadLocalStorage& GetTLS() const;
 
     /*! \brief Get the priority of this thread. */
     HYP_FORCE_INLINE ThreadPriorityValue GetPriority() const
@@ -58,17 +66,20 @@ public:
 
     /*! \brief Get the scheduler that this thread is associated with. */
     virtual Scheduler& GetScheduler() = 0;
+    
+    void AtExit(Proc<void()>&& proc);
 
 protected:
     ThreadBase(const ThreadId& id, ThreadPriorityValue priority = ThreadPriorityValue::NORMAL);
 
     const ThreadId m_id;
     ThreadPriorityValue m_priority;
-    ThreadLocalStorage* m_tls;
+    mutable ThreadLocalStorage* m_tls;
 };
 
 extern HYP_API void SetCurrentThreadObject(ThreadBase*);
 extern HYP_API void SetCurrentThreadPriority(ThreadPriorityValue priority);
+extern HYP_API void OnCurrentThreadExit();
 
 template <class Scheduler, class... Args>
 class Thread : public ThreadBase
@@ -163,6 +174,8 @@ bool Thread<Scheduler, Args...>::Start(Args... args)
             (*this)((tupleArgs.template GetElement<Args>())...);
 
             m_isRunning.Set(false, MemoryOrder::RELAXED);
+        
+            OnCurrentThreadExit();
         });
 
     return true;

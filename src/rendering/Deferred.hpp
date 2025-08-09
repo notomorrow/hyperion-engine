@@ -90,8 +90,6 @@ public:
     virtual void Render(FrameBase* frame, const RenderSetup& rs) override;
 
 protected:
-    void CreateShader();
-
     virtual void CreatePipeline(const RenderableAttributeSet& renderableAttributes) override;
 
     virtual void Resize_Internal(Vec2u newSize) override;
@@ -99,7 +97,6 @@ protected:
 private:
     const DeferredPassMode m_mode;
 
-    FixedArray<ShaderRef, LT_MAX> m_directLightShaders;
     FixedArray<GraphicsPipelineRef, LT_MAX> m_directLightGraphicsPipelines;
 
     Handle<Texture> m_ltcMatrixTexture;
@@ -231,26 +228,26 @@ class ReflectionsPass final : public FullScreenPass
 {
     HYP_OBJECT_BODY(ReflectionsPass);
     
-    enum ApplyReflectionProbeMode : uint32
+    enum CubemapType : uint32
     {
-        DEFAULT = 0,
-        PARALLAX_CORRECTED,
+        CMT_DEFAULT = 0,
+        CMT_PARALLAX_CORRECTED,
 
-        MAX
+        CMT_MAX
     };
 
 public:
-    ReflectionsPass(Vec2u extent, GBuffer* gbuffer, const ImageViewRef& mipChainImageView, const ImageViewRef& deferredResultImageView);
+    ReflectionsPass(Vec2u extent, GBuffer* gbuffer, const GpuImageViewRef& mipChainImageView, const GpuImageViewRef& deferredResultImageView);
     ReflectionsPass(const ReflectionsPass& other) = delete;
     ReflectionsPass& operator=(const ReflectionsPass& other) = delete;
     virtual ~ReflectionsPass() override;
 
-    HYP_FORCE_INLINE const ImageViewRef& GetMipChainImageView() const
+    HYP_FORCE_INLINE const GpuImageViewRef& GetMipChainImageView() const
     {
         return m_mipChainImageView;
     }
 
-    HYP_FORCE_INLINE const ImageViewRef& GetDeferredResultImageView() const
+    HYP_FORCE_INLINE const GpuImageViewRef& GetDeferredResultImageView() const
     {
         return m_deferredResultImageView;
     }
@@ -288,10 +285,10 @@ private:
 
     virtual void Resize_Internal(Vec2u newSize) override;
 
-    ImageViewRef m_mipChainImageView;
-    ImageViewRef m_deferredResultImageView;
+    GpuImageViewRef m_mipChainImageView;
+    GpuImageViewRef m_deferredResultImageView;
 
-    FixedArray<GraphicsPipelineRef, ApplyReflectionProbeMode::MAX> m_graphicsPipelines;
+    FixedArray<GraphicsPipelineRef, CMT_MAX> m_cubemapGraphicsPipelines;
 
     UniquePtr<SSRRenderer> m_ssrRenderer;
 
@@ -410,7 +407,7 @@ private:
 
     void PerformOcclusionCulling(FrameBase* frame, const RenderSetup& rs, RenderCollector& renderCollector);
     void ExecuteDrawCalls(FrameBase* frame, const RenderSetup& rs, RenderCollector& renderCollector, uint32 bucketMask);
-    void GenerateMipChain(FrameBase* frame, const RenderSetup& rs, RenderCollector& renderCollector, const ImageRef& srcImage);
+    void GenerateMipChain(FrameBase* frame, const RenderSetup& rs, RenderCollector& renderCollector, const GpuImageRef& srcImage);
 
     LastFrameData m_lastFrameData;
 

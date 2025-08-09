@@ -92,9 +92,9 @@ struct RENDER_COMMAND(RemoveUIRenderer)
 struct RENDER_COMMAND(SetFinalPassImageView)
     : RenderCommand
 {
-    ImageViewRef imageView;
+    GpuImageViewRef imageView;
 
-    RENDER_COMMAND(SetFinalPassImageView)(const ImageViewRef& imageView)
+    RENDER_COMMAND(SetFinalPassImageView)(const GpuImageViewRef& imageView)
         : imageView(imageView)
     {
     }
@@ -135,11 +135,12 @@ void UISubsystem::Init()
 {
     HYP_SCOPE;
 
-    m_onGbufferResolutionChangedHandle = g_engineDriver->GetDelegates().OnAfterSwapchainRecreated.Bind([weakThis = WeakHandleFromThis()]()
-        {
-            Threads::AssertOnThread(g_renderThread);
+    Assert(m_uiStage != nullptr);
+    InitObject(m_uiStage);
 
-            HYP_LOG(UI, Debug, "UISubsystem: resizing to {}", g_engineDriver->GetAppContext()->GetMainWindow()->GetDimensions());
+    m_onResizeHandle = g_engineDriver->GetAppContext()->GetMainWindow()->OnWindowSizeChanged.BindThreaded([weakThis = WeakHandleFromThis()](Vec2i windowSize)
+        {
+            PUSH_RENDER_COMMAND(SetFinalPassImageView, nullptr);
 
             Handle<UISubsystem> subsystem = weakThis.Lock();
 
@@ -150,16 +151,14 @@ void UISubsystem::Init()
                 return;
             }
 
-            PUSH_RENDER_COMMAND(SetFinalPassImageView, nullptr);
+            Handle<UIStage> uiStage = subsystem->GetUIStage();
+            AssertDebug(uiStage != nullptr);
+
+            uiStage->SetSurfaceSize(windowSize);
 
             subsystem->CreateFramebuffer();
-        });
-
-    Assert(m_uiStage != nullptr);
-    InitObject(m_uiStage);
-
-    Assert(m_uiStage->GetCamera().IsValid());
-    Assert(m_uiStage->GetCamera()->IsReady());
+        },
+        g_gameThread);
 
     const Vec2u surfaceSize = Vec2u(m_uiStage->GetSurfaceSize());
     HYP_LOG(UI, Debug, "UISubsystem: surface size is {}", surfaceSize);
@@ -192,13 +191,23 @@ void UISubsystem::Init()
 void UISubsystem::OnAddedToWorld()
 {
     HYP_SCOPE;
+
+    if (m_uiStage && m_uiStage->GetScene())
+    {
+        GetWorld()->AddScene(m_uiStage->GetScene()->HandleFromThis());
+    }
 }
 
 void UISubsystem::OnRemovedFromWorld()
 {
+    if (m_uiStage && m_uiStage->GetScene())
+    {
+        GetWorld()->RemoveScene(m_uiStage->GetScene()->HandleFromThis());
+    }
+
     PUSH_RENDER_COMMAND(SetFinalPassImageView, nullptr);
 
-    m_onGbufferResolutionChangedHandle.Reset();
+    m_onResizeHandle.Reset();
 }
 
 void UISubsystem::PreUpdate(float delta)
@@ -211,6 +220,7 @@ void UISubsystem::Update(float delta)
 {
     m_uiStage->Update(delta);
 
+    m_view->UpdateViewport();
     m_view->UpdateVisibility();
 
     RenderProxyList& rpl = RenderApi_GetProducerProxyList(m_view);

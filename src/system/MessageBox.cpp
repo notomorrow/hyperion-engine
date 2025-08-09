@@ -93,6 +93,8 @@ void SystemMessageBox::Show() const
     {
         buttonTexts[i] = m_buttons[i].text.Data();
     }
+    
+    AssertDebug(m_title.Data() != nullptr && m_message.Data() != nullptr);
 
     int buttonIndex = ShowMessageBox(int(m_type), m_title.Data(), m_message.Data(), int(m_buttons.Size()), buttonTexts);
 
@@ -100,7 +102,7 @@ void SystemMessageBox::Show() const
     {
         if (buttonIndex < 0 || buttonIndex >= m_buttons.Size())
         {
-            HYP_LOG(Core, Warning, "MessageBox Show() returned invalid index: {}, {} buttons", buttonIndex, m_buttons.Size());
+            HYP_LOG(Core, Warning, "ShowMessageBox() returned invalid index: {}, {} buttons", buttonIndex, m_buttons.Size());
 
             return;
         }

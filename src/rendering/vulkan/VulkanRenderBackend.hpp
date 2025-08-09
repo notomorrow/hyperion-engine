@@ -15,6 +15,14 @@
 
 namespace hyperion {
 
+namespace sys {
+class ApplicationWindow;
+class AppContextBase;
+} // namespace sys
+
+using sys::ApplicationWindow;
+using sys::AppContextBase;
+
 class VulkanInstance;
 class VulkanAsyncCompute;
 class VulkanRenderConfig;
@@ -111,10 +119,10 @@ public:
 
     virtual GpuBufferRef MakeGpuBuffer(GpuBufferType bufferType, SizeType size, SizeType alignment = 0) override;
 
-    virtual ImageRef MakeImage(const TextureDesc& textureDesc) override;
+    virtual GpuImageRef MakeImage(const TextureDesc& textureDesc) override;
 
-    virtual ImageViewRef MakeImageView(const ImageRef& image) override;
-    virtual ImageViewRef MakeImageView(const ImageRef& image, uint32 mipIndex, uint32 numMips, uint32 faceIndex, uint32 numFaces) override;
+    virtual GpuImageViewRef MakeImageView(const GpuImageRef& image) override;
+    virtual GpuImageViewRef MakeImageView(const GpuImageRef& image, uint32 mipIndex, uint32 numMips, uint32 faceIndex, uint32 numFaces) override;
 
     virtual SamplerRef MakeSampler(TextureFilterMode filterModeMin, TextureFilterMode filterModeMag, TextureWrapMode wrapMode) override;
 
@@ -134,7 +142,7 @@ public:
         const Matrix4& transform) override;
     virtual TLASRef MakeTLAS() override;
 
-    virtual const ImageViewRef& GetTextureImageView(const Handle<Texture>& texture, uint32 mipIndex = 0, uint32 numMips = ~0u, uint32 faceIndex = 0, uint32 numFaces = ~0u) override;
+    virtual const GpuImageViewRef& GetTextureImageView(const Handle<Texture>& texture, uint32 mipIndex = 0, uint32 numMips = ~0u, uint32 faceIndex = 0, uint32 numFaces = ~0u) override;
 
     virtual void PopulateIndirectDrawCommandsBuffer(const GpuBufferRef& vertexBuffer, const GpuBufferRef& indexBuffer, uint32 instanceOffset, ByteBuffer& outByteBuffer) override;
 
@@ -155,6 +163,9 @@ public:
     HYP_API RendererResult CreateDescriptorSet(const VulkanDescriptorSetLayoutWrapperRef& layout, VkDescriptorSet& outVkDescriptorSet);
     HYP_API RendererResult DestroyDescriptorSet(VkDescriptorSet vkDescriptorSet);
     HYP_API RendererResult GetOrCreateVkDescriptorSetLayout(const DescriptorSetLayout& layout, VulkanDescriptorSetLayoutWrapperRef& outRef);
+
+    VkSurfaceKHR CreateVkSurface(ApplicationWindow* window, VulkanInstance* instance);
+    bool GetVkExtensions(const AppContextBase* appContext, Array<const char*>& outExtensions);
 
 private:
     Delegate<void, SwapchainBase*> OnSwapchainRecreated;

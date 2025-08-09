@@ -2,8 +2,6 @@
 
 #pragma once
 
-#include <rendering/RenderProxyable.hpp>
-
 #include <core/object/Handle.hpp>
 
 #include <core/utilities/DataMutationState.hpp>
@@ -25,6 +23,7 @@ namespace hyperion {
 
 class Bone;
 class Animation;
+class RenderProxySkeleton;
 
 struct SkeletonBoneData
 {
@@ -59,7 +58,7 @@ struct SkeletonBoneData
 };
 
 HYP_CLASS()
-class HYP_API Skeleton final : public RenderProxyable
+class HYP_API Skeleton final : public HypObjectBase
 {
     HYP_OBJECT_BODY(Skeleton);
 
@@ -150,13 +149,25 @@ public:
      */
     const Animation* FindAnimation(UTF8StringView name, uint32* outIndex) const;
     
-    void UpdateRenderProxy(IRenderProxy* proxy) override final;
+    void UpdateRenderProxy(RenderProxySkeleton* proxy);
+
+    const int* GetRenderProxyVersionPtr() const
+    {
+        return &m_renderProxyVersion;
+    }
+
+    void SetNeedsRenderProxyUpdate()
+    {
+        ++m_renderProxyVersion;
+    }
 
 private:
     void Init() override;
 
     Handle<Bone> m_rootBone;
     Array<Handle<Animation>> m_animations;
+
+    int m_renderProxyVersion;
 };
 
 } // namespace hyperion

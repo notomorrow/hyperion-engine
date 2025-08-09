@@ -13,14 +13,13 @@
 
 #include <core/math/Matrix4.hpp>
 
-#include <rendering/RenderProxyable.hpp>
-
 namespace hyperion {
 
 class World;
 class Scene;
 class Node;
 class EntityManager;
+struct Transform;
 enum class EntityTag : uint64;
 
 struct EntityInitInfo
@@ -34,7 +33,7 @@ struct EntityInitInfo
 };
 
 HYP_CLASS()
-class HYP_API Entity : public RenderProxyable
+class HYP_API Entity : public HypObjectBase
 {
     HYP_OBJECT_BODY(Entity);
 
@@ -81,6 +80,16 @@ public:
     HYP_METHOD()
     virtual void Detach();
 
+    const int* GetRenderProxyVersionPtr() const
+    {
+        return &m_renderProxyVersion;
+    }
+
+    void SetNeedsRenderProxyUpdate()
+    {
+        ++m_renderProxyVersion;
+    }
+
 protected:
     virtual void Init() override;
 
@@ -103,6 +112,8 @@ protected:
     virtual void OnTagAdded(EntityTag tag);
     virtual void OnTagRemoved(EntityTag tag);
 
+    virtual void OnTransformUpdated(const Transform& transform);
+
     void AttachChild(const Handle<Entity>& child);
     void DetachChild(const Handle<Entity>& child);
 
@@ -113,6 +124,8 @@ private:
     Scene* m_scene;
 
     Matrix4 m_prevModelMatrix;
+
+    int m_renderProxyVersion;
 };
 
 } // namespace hyperion

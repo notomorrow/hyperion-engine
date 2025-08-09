@@ -83,18 +83,19 @@ mat4 LookAt(vec3 pos, vec3 target, vec3 up)
 {
     mat4 lookat;
 
-    vec3 zaxis = normalize(target - pos);     // Forward
-    vec3 xaxis = normalize(cross(up, zaxis)); // Right
-    vec3 yaxis = cross(zaxis, xaxis);         // Up
+    vec3 dir = normalize(target - pos);
 
-    vec3 t = -vec3(dot(xaxis, pos), // translation
-        dot(yaxis, pos),
-        dot(zaxis, pos));
+    vec3 zaxis = dir;
+    vec3 xaxis = normalize(cross(dir, up));
+    vec3 yaxis = cross(xaxis, zaxis);
 
-    return mat4(vec4(xaxis, 0.0),
-        vec4(yaxis, 0.0),
-        vec4(zaxis, 0.0),
-        vec4(t, 1.0));
+    lookat[0] = vec4(xaxis, pos.x);
+    lookat[1] = vec4(yaxis, pos.y);
+    lookat[2] = vec4(zaxis, pos.z);
+    lookat[3] = vec4(0.0, 0.0, 0.0, 1.0);
+    lookat = transpose(lookat);
+
+    return lookat;
 }
 
 #ifdef SKINNING
@@ -141,16 +142,17 @@ void main()
     v_normal = (normal_matrix * vec4(a_normal, 0.0)).xyz;
     v_texcoord0 = vec2(a_texcoord0.x, 1.0 - a_texcoord0.y);
 
+    const vec3 forward_direction = cubemap_directions[gl_ViewIndex * 2];
+    const vec3 up_direction = cubemap_directions[gl_ViewIndex * 2 + 1];
+
+    mat4 projection_matrix = camera.projection;
+
 #ifdef ENV_PROBE
     v_camera_position = current_env_probe.world_position.xyz;
 #else
     v_camera_position = camera.position.xyz;
 #endif
 
-    const vec3 forward_direction = cubemap_directions[gl_ViewIndex * 2];
-    const vec3 up_direction = cubemap_directions[gl_ViewIndex * 2 + 1];
-
-    mat4 projection_matrix = camera.projection;
     mat4 view_matrix = LookAt(v_camera_position, v_camera_position + forward_direction, up_direction);
 
 #ifdef INSTANCING

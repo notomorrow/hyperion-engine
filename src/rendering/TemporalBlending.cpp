@@ -60,7 +60,7 @@ TemporalBlending::TemporalBlending(
     const Vec2u& extent,
     TemporalBlendTechnique technique,
     TemporalBlendFeedback feedback,
-    const ImageViewRef& inputImageView,
+    const GpuImageViewRef& inputImageView,
     GBuffer* gbuffer)
     : TemporalBlending(
           extent,
@@ -95,7 +95,7 @@ TemporalBlending::TemporalBlending(
     TextureFormat imageFormat,
     TemporalBlendTechnique technique,
     TemporalBlendFeedback feedback,
-    const ImageViewRef& inputImageView,
+    const GpuImageViewRef& inputImageView,
     GBuffer* gbuffer)
     : m_extent(extent),
       m_imageFormat(imageFormat),
@@ -247,33 +247,33 @@ void TemporalBlending::CreatePipeline()
             HYP_GFX_ASSERT(m_uniformBuffers[frameIndex]->Create());
         }
 
-        const ImageViewRef& inputImageView = m_inputFramebuffer.IsValid()
+        const GpuImageViewRef& inputImageView = m_inputFramebuffer.IsValid()
             ? m_inputFramebuffer->GetAttachment(0)->GetImageView()
             : m_inputImageView;
 
         Assert(inputImageView != nullptr);
 
         // input image
-        descriptorTable->GetDescriptorSet(NAME("TemporalBlendingDescriptorSet"), frameIndex)
-            ->SetElement(NAME("InImage"), inputImageView);
+        descriptorTable->GetDescriptorSet("TemporalBlendingDescriptorSet", frameIndex)
+            ->SetElement("InImage", inputImageView);
 
-        descriptorTable->GetDescriptorSet(NAME("TemporalBlendingDescriptorSet"), frameIndex)
-            ->SetElement(NAME("PrevImage"), g_renderBackend->GetTextureImageView((*textures[(frameIndex + 1) % 2])));
+        descriptorTable->GetDescriptorSet("TemporalBlendingDescriptorSet", frameIndex)
+            ->SetElement("PrevImage", g_renderBackend->GetTextureImageView((*textures[(frameIndex + 1) % 2])));
 
-        descriptorTable->GetDescriptorSet(NAME("TemporalBlendingDescriptorSet"), frameIndex)
-            ->SetElement(NAME("VelocityImage"), m_gbuffer->GetBucket(RB_OPAQUE).GetGBufferAttachment(GTN_VELOCITY)->GetImageView());
+        descriptorTable->GetDescriptorSet("TemporalBlendingDescriptorSet", frameIndex)
+            ->SetElement("VelocityImage", m_gbuffer->GetBucket(RB_OPAQUE).GetGBufferAttachment(GTN_VELOCITY)->GetImageView());
 
-        descriptorTable->GetDescriptorSet(NAME("TemporalBlendingDescriptorSet"), frameIndex)
-            ->SetElement(NAME("SamplerLinear"), g_renderGlobalState->placeholderData->GetSamplerLinear());
+        descriptorTable->GetDescriptorSet("TemporalBlendingDescriptorSet", frameIndex)
+            ->SetElement("SamplerLinear", g_renderGlobalState->placeholderData->GetSamplerLinear());
 
-        descriptorTable->GetDescriptorSet(NAME("TemporalBlendingDescriptorSet"), frameIndex)
-            ->SetElement(NAME("SamplerNearest"), g_renderGlobalState->placeholderData->GetSamplerNearest());
+        descriptorTable->GetDescriptorSet("TemporalBlendingDescriptorSet", frameIndex)
+            ->SetElement("SamplerNearest", g_renderGlobalState->placeholderData->GetSamplerNearest());
 
-        descriptorTable->GetDescriptorSet(NAME("TemporalBlendingDescriptorSet"), frameIndex)
-            ->SetElement(NAME("OutImage"), g_renderBackend->GetTextureImageView((*textures[frameIndex % 2])));
+        descriptorTable->GetDescriptorSet("TemporalBlendingDescriptorSet", frameIndex)
+            ->SetElement("OutImage", g_renderBackend->GetTextureImageView((*textures[frameIndex % 2])));
 
-        descriptorTable->GetDescriptorSet(NAME("TemporalBlendingDescriptorSet"), frameIndex)
-            ->SetElement(NAME("TemporalBlendingUniforms"), m_uniformBuffers[frameIndex]);
+        descriptorTable->GetDescriptorSet("TemporalBlendingDescriptorSet", frameIndex)
+            ->SetElement("TemporalBlendingUniforms", m_uniformBuffers[frameIndex]);
     }
 
     HYP_GFX_ASSERT(descriptorTable->Create());
@@ -297,7 +297,7 @@ void TemporalBlending::Render(FrameBase* frame, const RenderSetup& renderSetup)
         Assert(m_csPerformBlending != nullptr && m_csPerformBlending->IsCreated());
     }
 
-    const ImageRef& activeImage = frame->GetFrameIndex() % 2 == 0
+    const GpuImageRef& activeImage = frame->GetFrameIndex() % 2 == 0
         ? m_resultTexture->GetGpuImage()
         : m_historyTexture->GetGpuImage();
 
@@ -322,12 +322,10 @@ void TemporalBlending::Render(FrameBase* frame, const RenderSetup& renderSetup)
     frame->renderQueue << BindDescriptorTable(
         m_csPerformBlending->GetDescriptorTable(),
         m_csPerformBlending,
-        ArrayMap<Name, ArrayMap<Name, uint32>> {
-            { NAME("Global"),
-                { { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(renderSetup.view->GetCamera()) } } } },
+        { { "Global", { { "CamerasBuffer", ShaderDataOffset<CameraShaderData>(renderSetup.view->GetCamera()) } } } },
         frame->GetFrameIndex());
 
-    const uint32 viewDescriptorSetIndex = m_csPerformBlending->GetDescriptorTable()->GetDescriptorSetIndex(NAME("View"));
+    const uint32 viewDescriptorSetIndex = m_csPerformBlending->GetDescriptorTable()->GetDescriptorSetIndex("View");
 
     if (viewDescriptorSetIndex != ~0u)
     {
@@ -336,7 +334,7 @@ void TemporalBlending::Render(FrameBase* frame, const RenderSetup& renderSetup)
         frame->renderQueue << BindDescriptorSet(
             renderSetup.passData->descriptorSets[frame->GetFrameIndex()],
             m_csPerformBlending,
-            ArrayMap<Name, uint32> {},
+            {},
             viewDescriptorSetIndex);
     }
 

@@ -218,11 +218,11 @@ void ParticleSpawner::CreateGraphicsPipeline()
 
     for (uint32 frameIndex = 0; frameIndex < g_framesInFlight; frameIndex++)
     {
-        const DescriptorSetRef& descriptorSet = descriptorTable->GetDescriptorSet(NAME("ParticleDescriptorSet"), frameIndex);
+        const DescriptorSetRef& descriptorSet = descriptorTable->GetDescriptorSet("ParticleDescriptorSet", frameIndex);
         Assert(descriptorSet != nullptr);
 
-        descriptorSet->SetElement(NAME("ParticlesBuffer"), m_particleBuffer);
-        descriptorSet->SetElement(NAME("ParticleTexture"), m_params.texture ? g_renderBackend->GetTextureImageView(m_params.texture) : g_renderGlobalState->placeholderData->GetImageView2D1x1R8());
+        descriptorSet->SetElement("ParticlesBuffer", m_particleBuffer);
+        descriptorSet->SetElement("ParticleTexture", m_params.texture ? g_renderBackend->GetTextureImageView(m_params.texture) : g_renderGlobalState->placeholderData->GetImageView2D1x1R8());
     }
 
     DeferCreate(descriptorTable);
@@ -260,12 +260,12 @@ void ParticleSpawner::CreateComputePipelines()
 
     for (uint32 frameIndex = 0; frameIndex < g_framesInFlight; frameIndex++)
     {
-        const DescriptorSetRef& descriptorSet = descriptorTable->GetDescriptorSet(NAME("UpdateParticlesDescriptorSet"), frameIndex);
+        const DescriptorSetRef& descriptorSet = descriptorTable->GetDescriptorSet("UpdateParticlesDescriptorSet", frameIndex);
         Assert(descriptorSet != nullptr);
 
-        descriptorSet->SetElement(NAME("ParticlesBuffer"), m_particleBuffer);
-        descriptorSet->SetElement(NAME("IndirectDrawCommandsBuffer"), m_indirectBuffer);
-        descriptorSet->SetElement(NAME("NoiseBuffer"), m_noiseBuffer);
+        descriptorSet->SetElement("ParticlesBuffer", m_particleBuffer);
+        descriptorSet->SetElement("IndirectDrawCommandsBuffer", m_indirectBuffer);
+        descriptorSet->SetElement("NoiseBuffer", m_noiseBuffer);
     }
 
     DeferCreate(descriptorTable);
@@ -396,12 +396,10 @@ void ParticleSystem::UpdateParticles(FrameBase* frame, const RenderSetup& render
         frame->renderQueue << BindDescriptorTable(
             spawner->GetComputePipeline()->GetDescriptorTable(),
             spawner->GetComputePipeline(),
-            ArrayMap<Name, ArrayMap<Name, uint32>> {
-                { NAME("Global"),
-                    { { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(renderSetup.view->GetCamera()) } } } },
+            { { "Global", { { "CamerasBuffer", ShaderDataOffset<CameraShaderData>(renderSetup.view->GetCamera()) } } } },
             frame->GetFrameIndex());
 
-        const uint32 viewDescriptorSetIndex = spawner->GetComputePipeline()->GetDescriptorTable()->GetDescriptorSetIndex(NAME("View"));
+        const uint32 viewDescriptorSetIndex = spawner->GetComputePipeline()->GetDescriptorTable()->GetDescriptorSetIndex("View");
 
         if (viewDescriptorSetIndex != ~0u)
         {
@@ -410,7 +408,7 @@ void ParticleSystem::UpdateParticles(FrameBase* frame, const RenderSetup& render
             frame->renderQueue << BindDescriptorSet(
                 renderSetup.passData->descriptorSets[frame->GetFrameIndex()],
                 spawner->GetComputePipeline(),
-                ArrayMap<Name, uint32> {},
+                {},
                 viewDescriptorSetIndex);
         }
 
@@ -453,12 +451,10 @@ void ParticleSystem::Render(FrameBase* frame, const RenderSetup& renderSetup)
         frame->renderQueue << BindDescriptorTable(
             graphicsPipeline->GetDescriptorTable(),
             graphicsPipeline,
-            ArrayMap<Name, ArrayMap<Name, uint32>> {
-                { NAME("Global"),
-                    { { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(renderSetup.view->GetCamera()) } } } },
+            { { "Global", { { "CamerasBuffer", ShaderDataOffset<CameraShaderData>(renderSetup.view->GetCamera()) } } } },
             frameIndex);
 
-        const uint32 viewDescriptorSetIndex = graphicsPipeline->GetDescriptorTable()->GetDescriptorSetIndex(NAME("View"));
+        const uint32 viewDescriptorSetIndex = graphicsPipeline->GetDescriptorTable()->GetDescriptorSetIndex("View");
 
         if (viewDescriptorSetIndex != ~0u)
         {
@@ -467,7 +463,7 @@ void ParticleSystem::Render(FrameBase* frame, const RenderSetup& renderSetup)
             frame->renderQueue << BindDescriptorSet(
                 renderSetup.passData->descriptorSets[frameIndex],
                 graphicsPipeline,
-                ArrayMap<Name, uint32> {},
+                {},
                 viewDescriptorSetIndex);
         }
 

@@ -193,11 +193,11 @@ void SSGI::CreateComputePipelines()
 
     for (uint32 frameIndex = 0; frameIndex < g_framesInFlight; frameIndex++)
     {
-        const DescriptorSetRef& descriptorSet = descriptorTable->GetDescriptorSet(NAME("SSGIDescriptorSet"), frameIndex);
+        const DescriptorSetRef& descriptorSet = descriptorTable->GetDescriptorSet("SSGIDescriptorSet", frameIndex);
         Assert(descriptorSet != nullptr);
 
-        descriptorSet->SetElement(NAME("OutImage"), g_renderBackend->GetTextureImageView(m_resultTexture));
-        descriptorSet->SetElement(NAME("UniformBuffer"), m_uniformBuffers[frameIndex]);
+        descriptorSet->SetElement("OutImage", g_renderBackend->GetTextureImageView(m_resultTexture));
+        descriptorSet->SetElement("UniformBuffer", m_uniformBuffers[frameIndex]);
     }
 
     DeferCreate(descriptorTable);
@@ -234,13 +234,12 @@ void SSGI::Render(FrameBase* frame, const RenderSetup& renderSetup)
     frame->renderQueue << BindDescriptorTable(
         m_computePipeline->GetDescriptorTable(),
         m_computePipeline,
-        ArrayMap<Name, ArrayMap<Name, uint32>> {
-            { NAME("Global"),
-                { { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(renderSetup.view->GetCamera()) },
-                    { NAME("CurrentEnvProbe"), ShaderDataOffset<EnvProbeShaderData>(renderSetup.envProbe, 0) } } } },
+        { { "Global",
+            { { "CamerasBuffer", ShaderDataOffset<CameraShaderData>(renderSetup.view->GetCamera()) },
+                { "CurrentEnvProbe", ShaderDataOffset<EnvProbeShaderData>(renderSetup.envProbe, 0) } } } },
         frameIndex);
 
-    const uint32 viewDescriptorSetIndex = m_computePipeline->GetDescriptorTable()->GetDescriptorSetIndex(NAME("View"));
+    const uint32 viewDescriptorSetIndex = m_computePipeline->GetDescriptorTable()->GetDescriptorSetIndex("View");
 
     if (viewDescriptorSetIndex != ~0u)
     {
@@ -249,7 +248,7 @@ void SSGI::Render(FrameBase* frame, const RenderSetup& renderSetup)
         frame->renderQueue << BindDescriptorSet(
             renderSetup.passData->descriptorSets[frame->GetFrameIndex()],
             m_computePipeline,
-            ArrayMap<Name, uint32> {},
+            {},
             viewDescriptorSetIndex);
     }
 

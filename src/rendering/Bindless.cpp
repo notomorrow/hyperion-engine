@@ -23,20 +23,20 @@ void BindlessStorage::UnsetAllResources()
 
     for (uint32 frameIndex = 0; frameIndex < g_framesInFlight; frameIndex++)
     {
-        const DescriptorSetRef& descriptorSet = g_renderGlobalState->globalDescriptorTable->GetDescriptorSet(NAME("Material"), frameIndex);
+        const DescriptorSetRef& descriptorSet = g_renderGlobalState->globalDescriptorTable->GetDescriptorSet("Material", frameIndex);
         AssertDebug(descriptorSet.IsValid());
 
         // Unset all active textures
         for (const auto& it : m_resources)
         {
-            descriptorSet->SetElement(NAME("Textures"), it.first.ToIndex(), g_renderBackend->GetTextureImageView(g_renderGlobalState->placeholderData->defaultTexture2d));
+            descriptorSet->SetElement("Textures", it.first.ToIndex(), g_renderBackend->GetTextureImageView(g_renderGlobalState->placeholderData->defaultTexture2d));
         }
     }
 
     m_resources.Clear();
 }
 
-void BindlessStorage::AddResource(ObjId<Texture> id, const ImageViewRef& imageView)
+void BindlessStorage::AddResource(ObjId<Texture> id, const GpuImageViewRef& imageView)
 {
     Threads::AssertOnThread(g_renderThread);
 
@@ -56,10 +56,10 @@ void BindlessStorage::AddResource(ObjId<Texture> id, const ImageViewRef& imageVi
 
     for (uint32 frameIndex = 0; frameIndex < g_framesInFlight; frameIndex++)
     {
-        const DescriptorSetRef& descriptorSet = g_renderGlobalState->globalDescriptorTable->GetDescriptorSet(NAME("Material"), frameIndex);
+        const DescriptorSetRef& descriptorSet = g_renderGlobalState->globalDescriptorTable->GetDescriptorSet("Material", frameIndex);
         AssertDebug(descriptorSet.IsValid());
 
-        descriptorSet->SetElement(NAME("Textures"), id.ToIndex(), imageView);
+        descriptorSet->SetElement("Textures", id.ToIndex(), imageView);
     }
 }
 
@@ -83,10 +83,10 @@ void BindlessStorage::RemoveResource(ObjId<Texture> id)
 
     for (uint32 frameIndex = 0; frameIndex < g_framesInFlight; frameIndex++)
     {
-        const DescriptorSetRef& descriptorSet = g_renderGlobalState->globalDescriptorTable->GetDescriptorSet(NAME("Material"), frameIndex);
+        const DescriptorSetRef& descriptorSet = g_renderGlobalState->globalDescriptorTable->GetDescriptorSet("Material", frameIndex);
         AssertDebug(descriptorSet.IsValid());
 
-        descriptorSet->SetElement(NAME("Textures"), id.ToIndex(), g_renderBackend->GetTextureImageView(g_renderGlobalState->placeholderData->defaultTexture2d));
+        descriptorSet->SetElement("Textures", id.ToIndex(), g_renderBackend->GetTextureImageView(g_renderGlobalState->placeholderData->defaultTexture2d));
     }
 }
 

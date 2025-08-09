@@ -47,7 +47,7 @@ uniform sampler sampler_nearest;
 #define HYP_CUBEMAP_AMBIENT 0.005
 
 HYP_DESCRIPTOR_SRV(Global, ShadowMapsTextureArray) uniform texture2DArray shadow_maps;
-HYP_DESCRIPTOR_SRV(Global, PointLightShadowMapsTextureArray) uniform utextureCubeArray point_shadow_maps;
+HYP_DESCRIPTOR_SRV(Global, PointLightShadowMapsTextureArray) uniform textureCubeArray point_shadow_maps;
 
 #undef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 

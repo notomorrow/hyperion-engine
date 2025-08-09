@@ -19,7 +19,7 @@
 #include <rendering/RenderResult.hpp>
 #include <rendering/RenderObject.hpp>
 #include <rendering/RenderGpuBuffer.hpp>
-#include <rendering/RenderImageView.hpp>
+#include <rendering/RenderGpuImageView.hpp>
 #include <rendering/RenderSampler.hpp>
 #include <rendering/rt/RenderAccelerationStructure.hpp>
 
@@ -126,7 +126,7 @@ struct DescriptorSetElementTypeInfo<GpuBufferBase>
 };
 
 template <>
-struct DescriptorSetElementTypeInfo<ImageViewBase>
+struct DescriptorSetElementTypeInfo<GpuImageViewBase>
 {
     static constexpr uint32 mask = (1u << uint32(DescriptorSetElementType::IMAGE))
         | (1u << uint32(DescriptorSetElementType::IMAGE_STORAGE));
@@ -495,9 +495,9 @@ public:
         m_elements.Insert(name, DescriptorSetLayoutElement { type, binding, count, size });
     }
 
-    HYP_FORCE_INLINE const DescriptorSetLayoutElement* GetElement(Name name) const
+    HYP_FORCE_INLINE const DescriptorSetLayoutElement* GetElement(WeakName name) const
     {
-        const auto it = m_elements.Find(name);
+        const auto it = m_elements.FindAs(name);
 
         if (it == m_elements.End())
         {
@@ -542,7 +542,7 @@ private:
 
 struct DescriptorSetElement
 {
-    using ValueType = Variant<GpuBufferRef, ImageViewRef, SamplerRef, TLASRef>;
+    using ValueType = Variant<GpuBufferRef, GpuImageViewRef, SamplerRef, TLASRef>;
 
     FlatMap<uint32, ValueType> values;
     Range<uint32> dirtyRange {};
@@ -609,27 +609,27 @@ public:
     virtual void Update(bool force = false) = 0;
     virtual DescriptorSetRef Clone() const = 0;
 
-    bool HasElement(Name name) const;
+    bool HasElement(WeakName name) const;
 
-    void SetElement(Name name, uint32 index, uint32 bufferSize, const GpuBufferRef& ref);
-    void SetElement(Name name, uint32 index, const GpuBufferRef& ref);
-    void SetElement(Name name, const GpuBufferRef& ref);
+    void SetElement(WeakName name, uint32 index, uint32 bufferSize, const GpuBufferRef& ref);
+    void SetElement(WeakName name, uint32 index, const GpuBufferRef& ref);
+    void SetElement(WeakName name, const GpuBufferRef& ref);
 
-    void SetElement(Name name, uint32 index, const ImageViewRef& ref);
-    void SetElement(Name name, const ImageViewRef& ref);
+    void SetElement(WeakName name, uint32 index, const GpuImageViewRef& ref);
+    void SetElement(WeakName name, const GpuImageViewRef& ref);
 
-    void SetElement(Name name, uint32 index, const SamplerRef& ref);
-    void SetElement(Name name, const SamplerRef& ref);
+    void SetElement(WeakName name, uint32 index, const SamplerRef& ref);
+    void SetElement(WeakName name, const SamplerRef& ref);
 
-    void SetElement(Name name, uint32 index, const TLASRef& ref);
-    void SetElement(Name name, const TLASRef& ref);
+    void SetElement(WeakName name, uint32 index, const TLASRef& ref);
+    void SetElement(WeakName name, const TLASRef& ref);
 
     virtual void Bind(CommandBufferBase* commandBuffer, const GraphicsPipelineBase* pipeline, uint32 bindIndex) const = 0;
-    virtual void Bind(CommandBufferBase* commandBuffer, const GraphicsPipelineBase* pipeline, const ArrayMap<Name, uint32>& offsets, uint32 bindIndex) const = 0;
+    virtual void Bind(CommandBufferBase* commandBuffer, const GraphicsPipelineBase* pipeline, const ArrayMap<WeakName, uint32>& offsets, uint32 bindIndex) const = 0;
     virtual void Bind(CommandBufferBase* commandBuffer, const ComputePipelineBase* pipeline, uint32 bindIndex) const = 0;
-    virtual void Bind(CommandBufferBase* commandBuffer, const ComputePipelineBase* pipeline, const ArrayMap<Name, uint32>& offsets, uint32 bindIndex) const = 0;
+    virtual void Bind(CommandBufferBase* commandBuffer, const ComputePipelineBase* pipeline, const ArrayMap<WeakName, uint32>& offsets, uint32 bindIndex) const = 0;
     virtual void Bind(CommandBufferBase* commandBuffer, const RaytracingPipelineBase* pipeline, uint32 bindIndex) const = 0;
-    virtual void Bind(CommandBufferBase* commandBuffer, const RaytracingPipelineBase* pipeline, const ArrayMap<Name, uint32>& offsets, uint32 bindIndex) const = 0;
+    virtual void Bind(CommandBufferBase* commandBuffer, const RaytracingPipelineBase* pipeline, const ArrayMap<WeakName, uint32>& offsets, uint32 bindIndex) const = 0;
 
 protected:
     DescriptorSetBase(const DescriptorSetLayout& layout)
@@ -638,18 +638,18 @@ protected:
     }
 
     template <class T>
-    DescriptorSetElement& SetElement(Name name, uint32 index, const T& ref)
+    DescriptorSetElement& SetElement(WeakName name, uint32 index, const T& ref)
     {
         const DescriptorSetLayoutElement* layoutElement = m_layout.GetElement(name);
-        AssertDebug(layoutElement != nullptr, "Invalid element: No item with name {} found", name);
+        AssertDebug(layoutElement != nullptr, "Invalid element: No item with name {} found", Name(name));
 
         // Type check
         static const uint32 mask = DescriptorSetElementTypeInfo<typename T::Type>::mask;
-        AssertDebug(mask & (1u << uint32(layoutElement->type)), "Layout type for {} does not match given type", name);
+        AssertDebug(mask & (1u << uint32(layoutElement->type)), "Layout type for {} does not match given type", Name(name));
 
         // Range check
         AssertDebug(index < layoutElement->count, "Index {} out of range for element {} with count {}",
-            index, name, layoutElement->count);
+            index, Name(name), layoutElement->count);
 
         // Buffer type check, to make sure the buffer type is allowed for the given element
         if constexpr (std::is_same_v<typename T::Type, GpuBufferBase>)
@@ -661,7 +661,7 @@ protected:
                 AssertDebug(
                     (descriptorSetElementTypeToBufferType[uint32(layoutElement->type)] & (1u << uint32(bufferType))),
                     "Buffer type {} is not in the allowed types for element {}",
-                    uint32(bufferType), name);
+                    uint32(bufferType), Name(name));
 
                 if (layoutElement->size != 0 && layoutElement->size != ~0u)
                 {
@@ -670,16 +670,17 @@ protected:
                     AssertDebug(
                         remainder == 0,
                         "Buffer size ({}) is not a multiplier of layout size ({}) for element {}",
-                        ref->Size(), layoutElement->size, name);
+                        ref->Size(), layoutElement->size, Name(name));
                 }
             }
         }
 
-        auto it = m_elements.Find(name);
+        auto it = m_elements.FindAs(name);
+        AssertDebug(it != m_elements.End());
 
         if (it == m_elements.End())
         {
-            it = m_elements.Emplace(name).first;
+            it = m_elements.Emplace(Name(name)).first;
         }
 
         DescriptorSetElement& element = it->second;
@@ -727,7 +728,7 @@ protected:
             AssertDebug(layoutElement->IsBindless(), "-1 given as count to prefill elements, yet {} is not specified as bindless in layout", name);
         }
 
-        auto it = m_elements.Find(name);
+        auto it = m_elements.FindAs(name);
 
         if (it == m_elements.End())
         {
@@ -789,7 +790,7 @@ public:
         \param name The name of the descriptor set
         \param frameIndex The index of the frame for the descriptor set
         \return The descriptor set, or an unset reference if not found */
-    HYP_FORCE_INLINE const DescriptorSetRef& GetDescriptorSet(Name name, uint32 frameIndex) const
+    HYP_FORCE_INLINE const DescriptorSetRef& GetDescriptorSet(WeakName name, uint32 frameIndex) const
     {
         for (const DescriptorSetRef& set : m_sets[frameIndex])
         {
@@ -823,7 +824,7 @@ public:
     /*! \brief Get the index of a descriptor set in the table
         \param name The name of the descriptor set
         \return The index of the descriptor set in the table, or -1 if not found */
-    HYP_FORCE_INLINE uint32 GetDescriptorSetIndex(Name name) const
+    HYP_FORCE_INLINE uint32 GetDescriptorSetIndex(WeakName name) const
     {
         return m_decl ? m_decl->GetDescriptorSetIndex(name) : ~0u;
     }
@@ -924,7 +925,7 @@ public:
         \param pipeline The pipeline to bind the descriptor sets to
         \param offsets The offsets to bind dynamic descriptor sets with */
     template <class PipelineRef>
-    void Bind(CommandBufferBase* commandBuffer, uint32 frameIndex, const PipelineRef& pipeline, const ArrayMap<Name, ArrayMap<Name, uint32>>& offsets) const
+    void Bind(CommandBufferBase* commandBuffer, uint32 frameIndex, const PipelineRef& pipeline, const ArrayMap<WeakName, ArrayMap<WeakName, uint32>>& offsets) const
     {
         for (const DescriptorSetRef& set : m_sets[frameIndex])
         {

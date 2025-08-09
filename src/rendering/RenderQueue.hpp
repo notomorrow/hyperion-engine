@@ -14,12 +14,12 @@
 #include <rendering/rt/RenderRaytracingPipeline.hpp>
 #include <rendering/RenderDescriptorSet.hpp>
 #include <rendering/RenderFramebuffer.hpp>
-#include <rendering/RenderImage.hpp>
+#include <rendering/RenderGpuImage.hpp>
 #include <rendering/RenderGpuBuffer.hpp>
 #include <rendering/RenderCommandBuffer.hpp>
 #include <rendering/RenderObject.hpp>
 
-//#define HYP_RHI_COMMAND_STACK_TRACE
+// #define HYP_RHI_COMMAND_STACK_TRACE
 
 #ifdef HYP_RHI_COMMAND_STACK_TRACE
 #include <core/debug/StackDump.hpp>
@@ -61,7 +61,8 @@ public:
 
         commandBuffer->BindVertexBuffer(cmdCasted->m_buffer);
 
-        cmdCasted->~BindVertexBuffer();
+        static_assert(std::is_trivially_destructible_v<BindVertexBuffer>);
+        // cmdCasted->~BindVertexBuffer();
     }
 
 private:
@@ -83,7 +84,8 @@ public:
 
         commandBuffer->BindIndexBuffer(cmdCasted->m_buffer);
 
-        cmdCasted->~BindIndexBuffer();
+        static_assert(std::is_trivially_destructible_v<BindIndexBuffer>);
+        // cmdCasted->~BindIndexBuffer();
     }
 
 private:
@@ -106,7 +108,8 @@ public:
 
         commandBuffer->DrawIndexed(cmdCasted->m_numIndices, cmdCasted->m_numInstances, cmdCasted->m_instanceIndex);
 
-        cmdCasted->~DrawIndexed();
+        static_assert(std::is_trivially_destructible_v<DrawIndexed>);
+        // cmdCasted->~DrawIndexed();
     }
 
 private:
@@ -130,12 +133,19 @@ public:
 
         commandBuffer->DrawIndexedIndirect(cmdCasted->m_buffer, cmdCasted->m_bufferOffset);
 
-        cmdCasted->~DrawIndexedIndirect();
+        static_assert(std::is_trivially_destructible_v<DrawIndexedIndirect>);
+        // cmdCasted->~DrawIndexedIndirect();
     }
 
 private:
     GpuBufferBase* m_buffer;
     uint32 m_bufferOffset;
+};
+
+class DrawQuad final : public CmdBase
+{
+public:
+    static void InvokeStatic(CmdBase* cmd, CommandBufferBase* commandBuffer);
 };
 
 class BeginFramebuffer final : public CmdBase
@@ -157,7 +167,8 @@ public:
 
         cmdCasted->m_framebuffer->BeginCapture(commandBuffer);
 
-        cmdCasted->~BeginFramebuffer();
+        static_assert(std::is_trivially_destructible_v<BeginFramebuffer>);
+        // cmdCasted->~BeginFramebuffer();
     }
 
 private:
@@ -183,7 +194,8 @@ public:
 
         cmdCasted->m_framebuffer->EndCapture(commandBuffer);
 
-        cmdCasted->~EndFramebuffer();
+        static_assert(std::is_trivially_destructible_v<EndFramebuffer>);
+        // cmdCasted->~EndFramebuffer();
     }
 
 private:
@@ -204,7 +216,8 @@ public:
 
         cmdCasted->m_framebuffer->Clear(commandBuffer);
 
-        cmdCasted->~ClearFramebuffer();
+        static_assert(std::is_trivially_destructible_v<ClearFramebuffer>);
+        // cmdCasted->~ClearFramebuffer();
     }
 
 private:
@@ -246,7 +259,8 @@ public:
             cmdCasted->m_pipeline->Bind(commandBuffer);
         }
 
-        cmdCasted->~BindGraphicsPipeline();
+        static_assert(std::is_trivially_destructible_v<BindGraphicsPipeline>);
+        // cmdCasted->~BindGraphicsPipeline();
     }
 
 private:
@@ -269,7 +283,8 @@ public:
 
         cmdCasted->m_pipeline->Bind(commandBuffer);
 
-        cmdCasted->~BindComputePipeline();
+        static_assert(std::is_trivially_destructible_v<BindComputePipeline>);
+        // cmdCasted->~BindComputePipeline();
     }
 
 private:
@@ -290,7 +305,8 @@ public:
 
         cmdCasted->m_pipeline->Bind(commandBuffer);
 
-        cmdCasted->~BindRaytracingPipeline();
+        static_assert(std::is_trivially_destructible_v<BindRaytracingPipeline>);
+        // cmdCasted->~BindRaytracingPipeline();
     }
 
 private:
@@ -300,7 +316,7 @@ private:
 class BindDescriptorSet final : public CmdBase
 {
 public:
-    BindDescriptorSet(DescriptorSetBase* descriptorSet, GraphicsPipelineBase* pipeline, const ArrayMap<Name, uint32>& offsets = {})
+    BindDescriptorSet(DescriptorSetBase* descriptorSet, GraphicsPipelineBase* pipeline, const ArrayMap<WeakName, uint32>& offsets = {})
         : m_descriptorSet(descriptorSet),
           m_pipeline(pipeline),
           m_offsets(offsets)
@@ -312,7 +328,7 @@ public:
         AssertDebug(m_bindIndex != ~0u, "Invalid bind index for descriptor set {}", descriptorSet->GetLayout().GetName());
     }
 
-    BindDescriptorSet(DescriptorSetBase* descriptorSet, GraphicsPipelineBase* pipeline, const ArrayMap<Name, uint32>& offsets, uint32 bindIndex)
+    BindDescriptorSet(DescriptorSetBase* descriptorSet, GraphicsPipelineBase* pipeline, const ArrayMap<WeakName, uint32>& offsets, uint32 bindIndex)
         : m_descriptorSet(descriptorSet),
           m_pipeline(pipeline),
           m_offsets(offsets),
@@ -323,7 +339,7 @@ public:
         AssertDebug(m_bindIndex != ~0u, "Invalid bind index");
     }
 
-    BindDescriptorSet(DescriptorSetBase* descriptorSet, ComputePipelineBase* pipeline, const ArrayMap<Name, uint32>& offsets = {})
+    BindDescriptorSet(DescriptorSetBase* descriptorSet, ComputePipelineBase* pipeline, const ArrayMap<WeakName, uint32>& offsets = {})
         : m_descriptorSet(descriptorSet),
           m_pipeline(pipeline),
           m_offsets(offsets)
@@ -335,7 +351,7 @@ public:
         AssertDebug(m_bindIndex != ~0u, "Invalid bind index for descriptor set {}", descriptorSet->GetLayout().GetName());
     }
 
-    BindDescriptorSet(DescriptorSetBase* descriptorSet, ComputePipelineBase* pipeline, const ArrayMap<Name, uint32>& offsets, uint32 bindIndex)
+    BindDescriptorSet(DescriptorSetBase* descriptorSet, ComputePipelineBase* pipeline, const ArrayMap<WeakName, uint32>& offsets, uint32 bindIndex)
         : m_descriptorSet(descriptorSet),
           m_pipeline(pipeline),
           m_offsets(offsets),
@@ -346,7 +362,7 @@ public:
         AssertDebug(m_bindIndex != ~0u, "Invalid bind index");
     }
 
-    BindDescriptorSet(DescriptorSetBase* descriptorSet, RaytracingPipelineBase* pipeline, const ArrayMap<Name, uint32>& offsets = {})
+    BindDescriptorSet(DescriptorSetBase* descriptorSet, RaytracingPipelineBase* pipeline, const ArrayMap<WeakName, uint32>& offsets = {})
         : m_descriptorSet(descriptorSet),
           m_pipeline(pipeline),
           m_offsets(offsets)
@@ -358,7 +374,7 @@ public:
         AssertDebug(m_bindIndex != ~0u, "Invalid bind index for descriptor set {}", descriptorSet->GetLayout().GetName());
     }
 
-    BindDescriptorSet(DescriptorSetBase* descriptorSet, RaytracingPipelineBase* pipeline, const ArrayMap<Name, uint32>& offsets, uint32 bindIndex)
+    BindDescriptorSet(DescriptorSetBase* descriptorSet, RaytracingPipelineBase* pipeline, const ArrayMap<WeakName, uint32>& offsets, uint32 bindIndex)
         : m_descriptorSet(descriptorSet),
           m_pipeline(pipeline),
           m_offsets(offsets),
@@ -386,14 +402,14 @@ public:
 private:
     DescriptorSetBase* m_descriptorSet;
     Variant<GraphicsPipelineBase*, ComputePipelineBase*, RaytracingPipelineBase*> m_pipeline;
-    ArrayMap<Name, uint32> m_offsets;
+    ArrayMap<WeakName, uint32> m_offsets;
     uint32 m_bindIndex;
 };
 
 class BindDescriptorTable final : public CmdBase
 {
 public:
-    BindDescriptorTable(DescriptorTableBase* descriptorTable, GraphicsPipelineBase* graphicsPipeline, const ArrayMap<Name, ArrayMap<Name, uint32>>& offsets, uint32 frameIndex)
+    BindDescriptorTable(DescriptorTableBase* descriptorTable, GraphicsPipelineBase* graphicsPipeline, const ArrayMap<WeakName, ArrayMap<WeakName, uint32>>& offsets, uint32 frameIndex)
         : m_descriptorTable(descriptorTable),
           m_pipeline(graphicsPipeline),
           m_offsets(offsets),
@@ -402,7 +418,7 @@ public:
         AssertDebug(descriptorTable != nullptr, "Descriptor table must not be null");
     }
 
-    BindDescriptorTable(DescriptorTableBase* descriptorTable, ComputePipelineBase* computePipeline, const ArrayMap<Name, ArrayMap<Name, uint32>>& offsets, uint32 frameIndex)
+    BindDescriptorTable(DescriptorTableBase* descriptorTable, ComputePipelineBase* computePipeline, const ArrayMap<WeakName, ArrayMap<WeakName, uint32>>& offsets, uint32 frameIndex)
         : m_descriptorTable(descriptorTable),
           m_pipeline(computePipeline),
           m_offsets(offsets),
@@ -411,7 +427,7 @@ public:
         AssertDebug(descriptorTable != nullptr, "Descriptor table must not be null");
     }
 
-    BindDescriptorTable(DescriptorTableBase* descriptorTable, RaytracingPipelineBase* raytracingPipeline, const ArrayMap<Name, ArrayMap<Name, uint32>>& offsets, uint32 frameIndex)
+    BindDescriptorTable(DescriptorTableBase* descriptorTable, RaytracingPipelineBase* raytracingPipeline, const ArrayMap<WeakName, ArrayMap<WeakName, uint32>>& offsets, uint32 frameIndex)
         : m_descriptorTable(descriptorTable),
           m_pipeline(raytracingPipeline),
           m_offsets(offsets),
@@ -437,7 +453,7 @@ public:
 private:
     DescriptorTableBase* m_descriptorTable;
     Variant<GraphicsPipelineBase*, ComputePipelineBase*, RaytracingPipelineBase*> m_pipeline;
-    ArrayMap<Name, ArrayMap<Name, uint32>> m_offsets;
+    ArrayMap<WeakName, ArrayMap<WeakName, uint32>> m_offsets;
     uint32 m_frameIndex;
 };
 
@@ -452,7 +468,7 @@ public:
     {
     }
 
-    InsertBarrier(ImageBase* image, const ResourceState& state, ShaderModuleType shaderModuleType = SMT_UNSET)
+    InsertBarrier(GpuImageBase* image, const ResourceState& state, ShaderModuleType shaderModuleType = SMT_UNSET)
         : m_buffer(nullptr),
           m_image(image),
           m_state(state),
@@ -460,7 +476,7 @@ public:
     {
     }
 
-    InsertBarrier(ImageBase* image, const ResourceState& state, const ImageSubResource& subResource, ShaderModuleType shaderModuleType = SMT_UNSET)
+    InsertBarrier(GpuImageBase* image, const ResourceState& state, const ImageSubResource& subResource, ShaderModuleType shaderModuleType = SMT_UNSET)
         : m_buffer(nullptr),
           m_image(image),
           m_state(state),
@@ -489,12 +505,13 @@ public:
             }
         }
 
-        cmdCasted->~InsertBarrier();
+        static_assert(std::is_trivially_destructible_v<InsertBarrier>);
+        // cmdCasted->~InsertBarrier();
     }
 
 private:
     GpuBufferBase* m_buffer;
-    ImageBase* m_image;
+    GpuImageBase* m_image;
     ResourceState m_state;
     Optional<ImageSubResource> m_subResource;
     ShaderModuleType m_shaderModuleType;
@@ -503,13 +520,13 @@ private:
 class Blit final : public CmdBase
 {
 public:
-    Blit(ImageBase* srcImage, ImageBase* dstImage)
+    Blit(GpuImageBase* srcImage, GpuImageBase* dstImage)
         : m_srcImage(srcImage),
           m_dstImage(dstImage)
     {
     }
 
-    Blit(ImageBase* srcImage, ImageBase* dstImage, const Rect<uint32>& srcRect, const Rect<uint32>& dstRect)
+    Blit(GpuImageBase* srcImage, GpuImageBase* dstImage, const Rect<uint32>& srcRect, const Rect<uint32>& dstRect)
         : m_srcImage(srcImage),
           m_dstImage(dstImage),
           m_srcRect(srcRect),
@@ -517,7 +534,7 @@ public:
     {
     }
 
-    Blit(ImageBase* srcImage, ImageBase* dstImage, const Rect<uint32>& srcRect, const Rect<uint32>& dstRect, uint32 srcMip, uint32 dstMip, uint32 srcFace, uint32 dstFace)
+    Blit(GpuImageBase* srcImage, GpuImageBase* dstImage, const Rect<uint32>& srcRect, const Rect<uint32>& dstRect, uint32 srcMip, uint32 dstMip, uint32 srcFace, uint32 dstFace)
         : m_srcImage(srcImage),
           m_dstImage(dstImage),
           m_srcRect(srcRect),
@@ -555,7 +572,8 @@ public:
             }
         }
 
-        cmdCasted->~Blit();
+        static_assert(std::is_trivially_destructible_v<Blit>);
+        // cmdCasted->~Blit();
     }
 
 private:
@@ -567,8 +585,8 @@ private:
         uint32 dstFace;
     };
 
-    ImageBase* m_srcImage;
-    ImageBase* m_dstImage;
+    GpuImageBase* m_srcImage;
+    GpuImageBase* m_dstImage;
 
     Optional<Rect<uint32>> m_srcRect;
     Optional<Rect<uint32>> m_dstRect;
@@ -579,7 +597,7 @@ private:
 class BlitRect final : public CmdBase
 {
 public:
-    BlitRect(ImageBase* srcImage, ImageBase* dstImage, const Rect<uint32>& srcRect, const Rect<uint32>& dstRect)
+    BlitRect(GpuImageBase* srcImage, GpuImageBase* dstImage, const Rect<uint32>& srcRect, const Rect<uint32>& dstRect)
         : m_srcImage(srcImage),
           m_dstImage(dstImage),
           m_srcRect(srcRect),
@@ -593,12 +611,13 @@ public:
 
         cmdCasted->m_dstImage->Blit(commandBuffer, cmdCasted->m_srcImage, cmdCasted->m_srcRect, cmdCasted->m_dstRect);
 
-        cmdCasted->~BlitRect();
+        static_assert(std::is_trivially_destructible_v<BlitRect>);
+        // cmdCasted->~BlitRect();
     }
 
 private:
-    ImageBase* m_srcImage;
-    ImageBase* m_dstImage;
+    GpuImageBase* m_srcImage;
+    GpuImageBase* m_dstImage;
     Rect<uint32> m_srcRect;
     Rect<uint32> m_dstRect;
 };
@@ -606,7 +625,7 @@ private:
 class CopyImageToBuffer final : public CmdBase
 {
 public:
-    CopyImageToBuffer(ImageBase* image, GpuBufferBase* buffer)
+    CopyImageToBuffer(GpuImageBase* image, GpuBufferBase* buffer)
         : m_image(image),
           m_buffer(buffer)
     {
@@ -618,18 +637,19 @@ public:
 
         cmdCasted->m_image->CopyToBuffer(commandBuffer, cmdCasted->m_buffer);
 
-        cmdCasted->~CopyImageToBuffer();
+        static_assert(std::is_trivially_destructible_v<CopyImageToBuffer>);
+        // cmdCasted->~CopyImageToBuffer();
     }
 
 private:
-    ImageBase* m_image;
+    GpuImageBase* m_image;
     GpuBufferBase* m_buffer;
 };
 
 class CopyBufferToImage final : public CmdBase
 {
 public:
-    CopyBufferToImage(GpuBufferBase* buffer, ImageBase* image)
+    CopyBufferToImage(GpuBufferBase* buffer, GpuImageBase* image)
         : m_buffer(buffer),
           m_image(image)
     {
@@ -641,12 +661,13 @@ public:
 
         cmdCasted->m_image->CopyFromBuffer(commandBuffer, cmdCasted->m_buffer);
 
-        cmdCasted->~CopyBufferToImage();
+        static_assert(std::is_trivially_destructible_v<CopyBufferToImage>);
+        // cmdCasted->~CopyBufferToImage();
     }
 
 private:
     GpuBufferBase* m_buffer;
-    ImageBase* m_image;
+    GpuImageBase* m_image;
 };
 
 class CopyBuffer final : public CmdBase
@@ -665,7 +686,8 @@ public:
 
         cmdCasted->m_dstBuffer->CopyFrom(commandBuffer, cmdCasted->m_srcBuffer, cmdCasted->m_size);
 
-        cmdCasted->~CopyBuffer();
+        static_assert(std::is_trivially_destructible_v<CopyBuffer>);
+        // cmdCasted->~CopyBuffer();
     }
 
 private:
@@ -677,7 +699,7 @@ private:
 class GenerateMipmaps final : public CmdBase
 {
 public:
-    GenerateMipmaps(ImageBase* image)
+    GenerateMipmaps(GpuImageBase* image)
         : m_image(image)
     {
     }
@@ -688,11 +710,12 @@ public:
 
         cmdCasted->m_image->GenerateMipmaps(commandBuffer);
 
-        cmdCasted->~GenerateMipmaps();
+        static_assert(std::is_trivially_destructible_v<GenerateMipmaps>);
+        // cmdCasted->~GenerateMipmaps();
     }
 
 private:
-    ImageBase* m_image;
+    GpuImageBase* m_image;
 };
 
 class DispatchCompute final : public CmdBase
@@ -710,7 +733,8 @@ public:
 
         cmdCasted->m_pipeline->Dispatch(commandBuffer, cmdCasted->m_workgroupCount);
 
-        cmdCasted->~DispatchCompute();
+        static_assert(std::is_trivially_destructible_v<DispatchCompute>);
+        // cmdCasted->~DispatchCompute();
     }
 
 private:
@@ -733,7 +757,8 @@ public:
 
         cmdCasted->m_pipeline->TraceRays(commandBuffer, cmdCasted->m_workgroupCount);
 
-        cmdCasted->~TraceRays();
+        static_assert(std::is_trivially_destructible_v<TraceRays>);
+        // cmdCasted->~TraceRays();
     }
 
 private:
@@ -759,7 +784,11 @@ class RenderQueue
     static inline void MoveCmdStatic(CmdBase* cmd, void* where)
     {
         new (where) CmdType(std::move(*static_cast<CmdType*>(cmd)));
-        static_cast<CmdType*>(cmd)->~CmdType();
+
+        if constexpr (!std::is_trivially_destructible_v<CmdType>)
+        {
+            static_cast<CmdType*>(cmd)->~CmdType();
+        }
     }
 
 public:
@@ -769,7 +798,7 @@ public:
     RenderQueue(RenderQueue&& other) noexcept = delete;
     RenderQueue& operator=(RenderQueue&& other) noexcept = delete;
     ~RenderQueue();
-    
+
     HYP_FORCE_INLINE bool IsEmpty() const
     {
         return m_offset == 0;

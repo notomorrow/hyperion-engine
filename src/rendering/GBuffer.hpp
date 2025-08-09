@@ -12,7 +12,7 @@
 
 #include <rendering/RenderBucket.hpp>
 
-#include <rendering/RenderImage.hpp>
+#include <rendering/RenderGpuImage.hpp>
 #include <rendering/Shared.hpp>
 
 #include <core/Types.hpp>
@@ -95,6 +95,11 @@ public:
     GBuffer& operator=(GBuffer&& other) noexcept = delete;
     ~GBuffer();
 
+    HYP_FORCE_INLINE bool IsCreated() const
+    {
+        return m_isCreated;
+    }
+
     HYP_FORCE_INLINE GBufferTarget& GetBucket(RenderBucket rb)
     {
         AssertDebug(rb > RenderBucket::RB_NONE && rb < RenderBucket::RB_MAX);
@@ -133,6 +138,8 @@ private:
     Array<FramebufferRef> m_framebuffers;
 
     Vec2u m_extent;
+
+    bool m_isCreated;
 };
 
 } // namespace hyperion

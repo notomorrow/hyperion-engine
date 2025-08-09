@@ -26,8 +26,6 @@
 #include <rendering/Shared.hpp>
 #include <rendering/RenderObject.hpp>
 
-#include <rendering/RenderProxyable.hpp>
-
 #include <core/Types.hpp>
 
 namespace hyperion {
@@ -47,6 +45,8 @@ struct ResourceContainer;
 enum class RenderGroupFlags : uint32;
 enum LightType : uint32;
 enum EnvProbeType : uint32;
+
+HYP_MAKE_HAS_METHOD(UpdateRenderProxy);
 
 struct ParallelRenderingState
 {
@@ -263,8 +263,6 @@ public:
     {
         const auto impl = []<class ElementType, class ProxyType>(ResourceTracker<ObjId<ElementType>, ElementType*, ProxyType>& resourceTracker)
         {
-            static const bool shouldUpdateRenderProxy = IsA<RenderProxyable, ElementType>();
-
             auto diff = resourceTracker.GetDiff();
             if (!diff.NeedsUpdate())
             {
@@ -292,7 +290,7 @@ public:
 
                     AssertDebug(pProxy != nullptr);
 
-                    if (shouldUpdateRenderProxy)
+                    if constexpr (HYP_HAS_METHOD(ElementType, UpdateRenderProxy))
                     {
                         resource->UpdateRenderProxy(pProxy);
                     }
@@ -309,25 +307,22 @@ public:
                 }
             }
 
-            if constexpr (!std::is_same_v<ProxyType, NullProxy>)
+            if constexpr (!std::is_same_v<ProxyType, NullProxy> && HYP_HAS_METHOD(ElementType, UpdateRenderProxy))
             {
-                if (shouldUpdateRenderProxy)
+                Array<ObjId<ElementType>> changedIds;
+                resourceTracker.GetChanged(changedIds);
+
+                for (const ObjId<ElementType>& id : changedIds)
                 {
-                    Array<ObjId<ElementType>> changedIds;
-                    resourceTracker.GetChanged(changedIds);
+                    ElementType** ppResource = resourceTracker.GetElement(id);
+                    AssertDebug(ppResource && *ppResource);
 
-                    for (const ObjId<ElementType>& id : changedIds)
-                    {
-                        ElementType** ppResource = resourceTracker.GetElement(id);
-                        AssertDebug(ppResource && *ppResource);
+                    ElementType& resource = **ppResource;
 
-                        ElementType& resource = **ppResource;
+                    ProxyType* pProxy = resourceTracker.GetProxy(id);
+                    AssertDebug(pProxy != nullptr);
 
-                        ProxyType* pProxy = resourceTracker.GetProxy(id);
-                        AssertDebug(pProxy != nullptr);
-
-                        static_cast<RenderProxyable&>(resource).UpdateRenderProxy(pProxy);
-                    }
+                    resource.UpdateRenderProxy(pProxy);
                 }
             }
         };

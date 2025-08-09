@@ -37,11 +37,11 @@ class UIRenderer;
 class MaterialDescriptorSetManager;
 class GraphicsPipelineCache;
 class BindlessStorage;
-class RenderProxyable;
 class RenderCollector;
 struct WorldShaderData;
 struct RenderStats;
 struct RenderStatsCounts;
+struct Viewport;
 
 HYP_API extern SizeType GetNumDescendants(TypeId typeId);
 HYP_API extern int GetSubclassIndex(TypeId baseTypeId, TypeId subclassTypeId);
@@ -86,6 +86,9 @@ uint32 RenderApi_RetrieveResourceBinding(const HypObjectBase* resource);
 uint32 RenderApi_RetrieveResourceBinding(ObjIdBase resourceId);
 
 WorldShaderData* RenderApi_GetWorldBufferData();
+
+Viewport& RenderApi_GetViewport(View* view);
+
 RenderStats* RenderApi_GetRenderStats();
 void RenderApi_AddRenderStats(const RenderStatsCounts& counts);
 void RenderApi_SuppressRenderStats();
@@ -159,7 +162,7 @@ public:
     DescriptorTableRef globalDescriptorTable;
 
     RendererBase* mainRenderer;
-    FixedArray<Array<RendererBase*>, GRT_MAX> globalRenderers;
+    Array<RendererBase*> globalRenderers[GRT_MAX];
 
     GlobalGpuBuffers gpuBuffers;
     ResourceBindings* resourceBindings;
