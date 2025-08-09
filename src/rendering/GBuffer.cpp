@@ -71,7 +71,8 @@ static TextureFormat GetImageFormat(GBufferTargetName targetName)
 }
 
 GBuffer::GBuffer(Vec2u extent)
-    : m_extent(extent)
+    : m_extent(extent),
+      m_isCreated(false)
 {
     for (uint32 bucketIndex = 0; bucketIndex < RB_MAX - 1; bucketIndex++)
     {
@@ -97,18 +98,27 @@ GBuffer::~GBuffer()
 void GBuffer::Create()
 {
     HYP_SCOPE;
+    Threads::AssertOnThread(g_renderThread);
+
+    if (m_isCreated)
+    {
+        return;
+    }
 
     HYP_LOG(Rendering, Debug, "Creating GBuffer with resolution {}", m_extent);
 
     for (auto& framebuffer : m_framebuffers)
     {
-        DeferCreate(framebuffer);
+        HYP_GFX_ASSERT(framebuffer->Create());
     }
+
+    m_isCreated = true;
 }
 
 void GBuffer::Resize(Vec2u extent)
 {
     HYP_SCOPE;
+    Threads::AssertOnThread(g_renderThread);
 
     if (m_extent == extent)
     {
@@ -126,19 +136,22 @@ void GBuffer::Resize(Vec2u extent)
 
     CreateBucketFramebuffers();
 
-    for (auto& framebuffer : m_framebuffers)
+    if (m_isCreated)
     {
-        DeferCreate(framebuffer);
-    }
+        for (auto& framebuffer : m_framebuffers)
+        {
+            HYP_GFX_ASSERT(framebuffer->Create());
+        }
 
-    OnGBufferResolutionChanged(m_extent);
+        OnGBufferResolutionChanged(m_extent);
+    }
 }
 
 void GBuffer::CreateBucketFramebuffers()
 {
     HYP_SCOPE;
-
-    Assert(m_framebuffers.Empty());
+    
+    m_framebuffers.Clear();
 
     for (GBufferTarget& it : m_buckets)
     {

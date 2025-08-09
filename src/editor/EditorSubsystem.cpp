@@ -15,7 +15,6 @@
 
 #include <scene/Scene.hpp>
 #include <scene/World.hpp>
-#include <rendering/Mesh.hpp>
 #include <scene/View.hpp>
 #include <scene/Light.hpp>
 #include <rendering/Texture.hpp>
@@ -29,6 +28,7 @@
 
 #include <asset/Assets.hpp>
 #include <asset/AssetRegistry.hpp>
+#include <asset/AssetBatch.hpp>
 
 #include <core/serialization/fbom/FBOMReader.hpp>
 #include <core/serialization/fbom/FBOMWriter.hpp>
@@ -49,6 +49,7 @@
 #include <input/InputManager.hpp>
 
 #include <system/AppContext.hpp>
+#include <system/OpenFileDialog.hpp>
 
 #include <core/object/HypClassUtils.hpp>
 
@@ -59,9 +60,8 @@
 #include <core/logging/Logger.hpp>
 #include <core/logging/LogChannels.hpp>
 
+#include <rendering/Mesh.hpp>
 #include <rendering/debug/DebugDrawer.hpp>
-
-#include <rendering/subsystems/ScreenCapture.hpp>
 
 #include <rendering/font/FontAtlas.hpp>
 
@@ -78,11 +78,12 @@
 #include <scripting/ScriptingService.hpp>
 
 #include <core/profiling/ProfileScope.hpp>
+
 #include <util/MeshBuilder.hpp>
 
 #include <engine/EngineGlobals.hpp>
-#include <HyperionEngine.hpp>
 #include <engine/EngineDriver.hpp>
+#include <HyperionEngine.hpp>
 
 namespace hyperion {
 
@@ -1049,16 +1050,6 @@ EditorSubsystem::EditorSubsystem(const Handle<AppContextBase>& appContext)
                 m_delegateHandlers.Remove(&project->OnSceneAdded);
                 m_delegateHandlers.Remove(&project->OnSceneRemoved);
 
-                ScreenCaptureRenderSubsystem* subsystem = GetWorld()->GetSubsystem<ScreenCaptureRenderSubsystem>();
-
-                if (subsystem)
-                {
-                    m_delegateHandlers.Remove(&subsystem->OnTextureResize);
-
-                    bool removed = GetWorld()->RemoveSubsystem(subsystem);
-                    Assert(removed);
-                }
-
                 m_delegateHandlers.Remove("SetBuildBVHFlag");
                 m_delegateHandlers.Remove("OnPackageAdded");
                 m_delegateHandlers.Remove("OnPackageRemoved");
@@ -1132,7 +1123,7 @@ void EditorSubsystem::OnAddedToWorld()
 
     m_editorScene = CreateObject<Scene>(nullptr, SceneFlags::FOREGROUND | SceneFlags::EDITOR);
     m_editorScene->SetName(NAME("EditorScene"));
-    g_engineDriver->GetWorld()->AddScene(m_editorScene);
+    GetWorld()->AddScene(m_editorScene);
 
     Handle<Node> cameraNode = m_editorScene->GetRoot()->AddChild();
 
@@ -1164,7 +1155,7 @@ void EditorSubsystem::OnAddedToWorld()
 
     g_engineDriver->GetScriptingService()->OnScriptStateChanged.Bind([](const ManagedScript& script)
                                                                    {
-                                                                       DebugLog(LogType::Debug, "Script state changed: now is %u", script.state);
+                                                                       HYP_LOG(Script, Debug, "Script state changed: now is {}", EnumToString(ScriptCompileStatus(script.compileStatus)));
                                                                    })
         .Detach();
 
@@ -1208,7 +1199,7 @@ void EditorSubsystem::OnRemovedFromWorld()
 {
     HYP_SCOPE;
 
-    g_engineDriver->GetWorld()->RemoveScene(m_editorScene);
+    GetWorld()->RemoveScene(m_editorScene);
 
     if (m_currentProject)
     {
@@ -1386,31 +1377,17 @@ void EditorSubsystem::InitViewport()
 
     Vec2u viewportSize = MathUtil::Max(Vec2u(sceneImageObject->GetActualSize()), Vec2u::One());
     ViewDesc viewDesc {
-        .flags = ViewFlags::DEFAULT | ViewFlags::GBUFFER,
+        .flags = ViewFlags::DEFAULT | ViewFlags::GBUFFER | ViewFlags::ENABLE_READBACK,
         .viewport = Viewport { .extent = viewportSize, .position = Vec2i::Zero() },
         .outputTargetDesc = { .extent = viewportSize },
-        .camera = m_camera
+        .camera = m_camera,
+        .readbackTextureFormat = TF_R11G11B10F
     };
 
     Handle<View> view = CreateObject<View>(viewDesc);
     InitObject(view);
 
     HYP_LOG(Editor, Info, "Creating editor viewport with size: {}", viewportSize);
-
-    Handle<ScreenCaptureRenderSubsystem> screenCaptureRenderSubsystem = GetWorld()->AddSubsystem(CreateObject<ScreenCaptureRenderSubsystem>(view));
-    // m_delegateHandlers.Add(
-    //     screenCaptureRenderSubsystem->OnTextureResize.Bind([this, sceneImageObjectWeak = sceneImageObject.ToWeak()](const Handle<Texture>& texture)
-    //         {
-    //             if (Handle<UIObject> sceneImageObject = sceneImageObjectWeak.Lock())
-    //             {
-    //                 if (Handle<UIImage> uiImage = sceneImageObject.Cast<UIImage>())
-    //                 {
-    //                     uiImage->SetTexture(Handle<Texture>::empty);
-    //                     uiImage->SetTexture(texture);
-    //                 }
-    //             }
-    //         },
-    //         g_gameThread));
 
     GetWorld()->AddView(view);
 
@@ -1445,10 +1422,21 @@ void EditorSubsystem::InitViewport()
     Handle<UIImage> uiImage = ObjCast<UIImage>(sceneImageObject);
     Assert(uiImage.IsValid());
 
-    m_sceneTexture.Reset();
+    Handle<Texture> readbackTexture = view->GetReadbackTexture();
+    Assert(readbackTexture != nullptr);
 
-    m_sceneTexture = screenCaptureRenderSubsystem->GetTexture();
-    Assert(m_sceneTexture.IsValid());
+    m_delegateHandlers.Remove("OnReadbackTextureChanged");
+    m_delegateHandlers.Add(NAME("OnReadbackTextureChanged"), view->OnReadbackTextureChanged.Bind([uiImageWeak = uiImage.ToWeak()](const Handle<Texture>& readbackTexture)
+                                                                 {
+                                                                     Handle<UIImage> uiImage = uiImageWeak.Lock();
+
+                                                                     if (!uiImage)
+                                                                     {
+                                                                         return;
+                                                                     }
+
+                                                                     uiImage->SetTexture(readbackTexture);
+                                                                 }));
 
     m_delegateHandlers.Remove(&uiImage->OnClick);
     m_delegateHandlers.Add(uiImage->OnClick.Bind([this](const MouseEvent& event)
@@ -1527,7 +1515,7 @@ void EditorSubsystem::InitViewport()
             {
                 SetHoveredManipulationWidget(event, nullptr, Handle<Node>::empty);
             }
-        
+
             m_camera->GetCameraController()->GetInputHandler()->OnMouseLeave(event);
 
             return UIEventHandlerResult::OK;
@@ -1539,9 +1527,9 @@ void EditorSubsystem::InitViewport()
             // prevent click being triggered on release once mouse has been dragged
             m_shouldCancelNextClick = true;
 
-            // If the mouse is currently over a manipulation widget, don't allow camera to handle the event
-            if (IsHoveringManipulationWidget())
+            if (!event.inputManager->IsMouseLocked() && IsHoveringManipulationWidget())
             {
+                // If the mouse is currently over a manipulation widget, don't allow camera to handle the event
                 Handle<EditorManipulationWidgetBase> manipulationWidget = m_hoveredManipulationWidget.Lock();
                 Handle<Node> node = m_hoveredManipulationWidgetNode.Lock();
 
@@ -1559,25 +1547,25 @@ void EditorSubsystem::InitViewport()
             }
 
             m_camera->GetCameraController()->GetInputHandler()->OnMouseDrag(event);
+            
+            // handle move before we reset mouse pos
+            if (event.inputManager->IsMouseLocked())
+            {
+                const Vec2f position = uiImage->GetAbsolutePosition();
+                const Vec2i size = uiImage->GetActualSize();
 
-            return UIEventHandlerResult::OK;
+                event.inputManager->SetMousePosition(Vec2i(position + Vec2f(size) * 0.5f));
+
+                return UIEventHandlerResult::OK;
+            }
+            
+            return UIEventHandlerResult::STOP_BUBBLING;
         }));
 
     m_delegateHandlers.Remove(&uiImage->OnMouseMove);
     m_delegateHandlers.Add(uiImage->OnMouseMove.Bind([this, uiImage = uiImage.Get()](const MouseEvent& event)
         {
             m_camera->GetCameraController()->GetInputHandler()->OnMouseMove(event);
-
-            if (event.inputManager->IsMouseLocked())
-            {
-                const Vec2f position = uiImage->GetAbsolutePosition();
-                const Vec2i size = uiImage->GetActualSize();
-
-                // Set mouse position to previous position to keep it stationary while rotating
-                event.inputManager->SetMousePosition(Vec2i(position + event.previousPosition * Vec2f(size)));
-
-                return UIEventHandlerResult::OK;
-            }
 
             // Hover over a manipulation widget when mouse is not down
             if (!event.mouseButtons[MouseButtonState::LEFT]
@@ -1626,6 +1614,7 @@ void EditorSubsystem::InitViewport()
 
                         if (node == m_hoveredManipulationWidgetNode)
                         {
+
                             return UIEventHandlerResult::STOP_BUBBLING;
                         }
 
@@ -1647,6 +1636,8 @@ void EditorSubsystem::InitViewport()
     m_delegateHandlers.Remove(&uiImage->OnMouseDown);
     m_delegateHandlers.Add(uiImage->OnMouseDown.Bind([this, uiImageWeak = uiImage.ToWeak()](const MouseEvent& event)
         {
+            m_shouldCancelNextClick = false;
+
             if (IsHoveringManipulationWidget())
             {
                 Handle<EditorManipulationWidgetBase> manipulationWidget = m_hoveredManipulationWidget.Lock();
@@ -1673,23 +1664,23 @@ void EditorSubsystem::InitViewport()
                         for (const RayHit& rayHit : results)
                         {
                             manipulationWidget->OnDragStart(m_camera, event, node, rayHit.hitpoint);
-
-                            return UIEventHandlerResult::STOP_BUBBLING;
                         }
                     }
                 }
+
+                return UIEventHandlerResult::STOP_BUBBLING;
             }
 
             m_camera->GetCameraController()->GetInputHandler()->OnMouseDown(event);
 
-            m_shouldCancelNextClick = false;
-
-            return UIEventHandlerResult::OK;
+            return UIEventHandlerResult::STOP_BUBBLING;
         }));
 
     m_delegateHandlers.Remove(&uiImage->OnMouseUp);
     m_delegateHandlers.Add(uiImage->OnMouseUp.Bind([this](const MouseEvent& event)
         {
+            m_shouldCancelNextClick = false;
+
             if (IsHoveringManipulationWidget())
             {
                 Handle<EditorManipulationWidgetBase> manipulationWidget = m_hoveredManipulationWidget.Lock();
@@ -1712,9 +1703,7 @@ void EditorSubsystem::InitViewport()
 
             m_camera->GetCameraController()->GetInputHandler()->OnMouseUp(event);
 
-            m_shouldCancelNextClick = false;
-
-            return UIEventHandlerResult::OK;
+            return UIEventHandlerResult::STOP_BUBBLING;
         }));
 
     m_delegateHandlers.Remove(&uiImage->OnKeyDown);
@@ -1797,7 +1786,7 @@ void EditorSubsystem::InitViewport()
             return UIEventHandlerResult::OK;
         }));
 
-    uiImage->SetTexture(m_sceneTexture);
+    uiImage->SetTexture(readbackTexture);
 
     InitConsoleUI();
     InitDebugOverlays();
@@ -2554,43 +2543,28 @@ void EditorSubsystem::InitContentBrowser()
 
     m_contentBrowserContents = ObjCast<UIGrid>(uiSubsystem->GetUIStage()->FindChildUIObject("ContentBrowser_Contents"));
     Assert(m_contentBrowserContents != nullptr);
-    m_contentBrowserContents->SetDataSource(CreateObject<UIDataSource>(TypeWrapper<AssetObject> {}));
+
+    // create data source that handles AssetObject and AssetPackage (so we display as subfolders)
+    m_contentBrowserContents->SetDataSource(CreateObject<UIDataSource>(TypeWrapper<AssetObject> {}, TypeWrapper<AssetPackage> {}));
     m_contentBrowserContents->SetIsVisible(false);
 
     m_contentBrowserContentsEmpty = uiSubsystem->GetUIStage()->FindChildUIObject("ContentBrowser_Contents_Empty");
     Assert(m_contentBrowserContentsEmpty != nullptr);
     m_contentBrowserContentsEmpty->SetIsVisible(true);
 
-    Handle<UIObject> importButton = uiSubsystem->GetUIStage()->FindChildUIObject("ContentBrowser_Import_Button");
-    Assert(importButton != nullptr);
-
-    m_delegateHandlers.Remove(NAME("ImportClicked"));
-    m_delegateHandlers.Add(
-        NAME("ImportClicked"),
-        importButton->OnClick
-            .Bind([this, stageWeak = uiSubsystem->GetUIStage().ToWeak()](...)
-                {
-                    if (Handle<UIStage> stage = stageWeak.Lock())
+    if (Handle<UIObject> importButton = uiSubsystem->GetUIStage()->FindChildUIObject("ContentBrowser_Import_Button"))
+    {
+        m_delegateHandlers.Remove(NAME("ImportClicked"));
+        m_delegateHandlers.Add(
+            NAME("ImportClicked"),
+            importButton->OnClick
+                .Bind([this](...)
                     {
-                        auto loadedUiAsset = AssetManager::GetInstance()->Load<UIObject>("ui/dialog/FileBrowserDialog.ui.xml");
+                        ShowImportContentDialog();
 
-                        if (loadedUiAsset.HasValue())
-                        {
-                            Handle<UIObject> loadedUi = loadedUiAsset->Result();
-
-                            if (Handle<UIObject> fileBrowserDialog = loadedUi->FindChildUIObject("File_Browser_Dialog"))
-                            {
-                                stage->AddChildUIObject(fileBrowserDialog);
-
-                                return UIEventHandlerResult::STOP_BUBBLING;
-                            }
-                        }
-
-                        HYP_LOG(Editor, Error, "Failed to load file browser dialog! Error: {}", loadedUiAsset.GetError().GetMessage());
-                    }
-
-                    return UIEventHandlerResult::ERR;
-                }));
+                        return UIEventHandlerResult::STOP_BUBBLING;
+                    }));
+    }
 }
 
 void EditorSubsystem::AddPackageToContentBrowser(const Handle<AssetPackage>& package, bool nested)
@@ -2710,6 +2684,34 @@ void EditorSubsystem::SetSelectedPackage(const Handle<AssetPackage>& package)
 
                 return IterationResult::CONTINUE;
             });
+
+        m_delegateHandlers.Add(
+            NAME("OnSubpackageAdded"),
+            package->OnSubpackageAdded.BindThreaded([this](const Handle<AssetPackage>& subpackage)
+                {
+                    m_contentBrowserContents->GetDataSource()->Push(subpackage->GetUUID(), HypData(subpackage));
+                },
+                g_gameThread));
+
+        m_delegateHandlers.Add(
+            NAME("OnSubpackageRemoved"),
+            package->OnSubpackageRemoved.BindThreaded([this](const Handle<AssetPackage>& subpackage)
+                {
+                    m_contentBrowserContents->GetDataSource()->Remove(subpackage->GetUUID());
+                },
+                g_gameThread));
+
+        package->ForEachSubpackage([this](const Handle<AssetPackage>& subpackage)
+            {
+                if (subpackage->IsHidden())
+                {
+                    return IterationResult::CONTINUE;
+                }
+
+                m_contentBrowserContents->GetDataSource()->Push(subpackage->GetUUID(), HypData(subpackage));
+
+                return IterationResult::CONTINUE;
+            });
     }
 
     HYP_LOG(Editor, Debug, "Num assets in package: {}", m_contentBrowserContents->GetDataSource()->Size());
@@ -2824,6 +2826,107 @@ void EditorSubsystem::OpenProject(const Handle<EditorProject>& project)
 
         g_editorState->SetCurrentProject(m_currentProject);
     }
+}
+
+void EditorSubsystem::ShowOpenProjectDialog()
+{
+    HYP_SCOPE;
+
+    ShowOpenFileDialog(
+        "Select the project file to open",
+        GetResourceDirectory(),
+        { "hyp" },
+        /* allowMultiple */ false, /* allowDirectories */ true,
+        [](TResult<Array<FilePath>>&& result)
+        {
+            if (result.HasError())
+            {
+                HYP_LOG(Editor, Error, "Failed to select project file: {}", result.GetError().GetMessage());
+                return;
+            }
+
+            if (result.GetValue().Empty())
+            {
+                HYP_LOG(Editor, Warning, "No project file selected.");
+                return;
+            }
+
+            Threads::GetThread(g_gameThread)->GetScheduler().Enqueue([projectFilepath = std::move(result.GetValue()[0])]()
+                {
+                    TResult<Handle<EditorProject>> loadProjectResult = EditorProject::Load(projectFilepath);
+
+                    if (loadProjectResult.HasError())
+                    {
+                        HYP_LOG(Editor, Error, "Failed to load project: {}", loadProjectResult.GetError().GetMessage());
+                        return;
+                    }
+
+                    Handle<EditorProject> project = loadProjectResult.GetValue();
+
+                    if (!project.IsValid())
+                    {
+                        HYP_LOG(Editor, Error, "Loaded project is invalid.");
+                        return;
+                    }
+
+                    if (EditorSubsystem* editorSubsystem = g_engineDriver->GetCurrentWorld()->GetSubsystem<EditorSubsystem>())
+                    {
+                        editorSubsystem->OpenProject(project);
+
+                        return;
+                    }
+
+                    HYP_LOG(Editor, Fatal, "EditorSubsystem does not exist!");
+                },
+                TaskEnqueueFlags::FIRE_AND_FORGET);
+        });
+}
+
+void EditorSubsystem::ShowImportContentDialog()
+{
+    HYP_SCOPE;
+
+    ShowOpenFileDialog(
+        "Select the file(s) to import into the project",
+        GetResourceDirectory(),
+        { "obj", "jpg", "jpeg", "png", "tga", "bmp", "ogre.xml" },
+        /* allowMultiple */ true, /* allowDirectories */ false,
+        [](TResult<Array<FilePath>>&& result)
+        {
+            if (result.HasError())
+            {
+                HYP_LOG(Editor, Error, "Failed to select files to import: {}", result.GetError().GetMessage());
+
+                return;
+            }
+
+            // Create identifier based on the common folder of the assets
+            String identifier = "Unknown";
+
+            if (result.GetValue().Any())
+            {
+                identifier = result.GetValue()[0].BasePath().Basename();
+            }
+
+            // Queue up an asset batch
+            RC<AssetBatch> batch = AssetManager::GetInstance()->CreateBatch(identifier);
+
+            for (const FilePath& file : result.GetValue())
+            {
+                batch->Add(file.Basename(), FilePath::Relative(file, GetExecutablePath()));
+            }
+
+            batch->OnComplete
+                .Bind([](AssetMap& results)
+                    {
+                        HYP_LOG(Editor, Info, "{} assets loaded.", results.Size());
+
+                        // @TODO Open folder the assets ended up in
+                    })
+                .Detach();
+
+            batch->LoadAsync();
+        });
 }
 
 void EditorSubsystem::AddTask(const Handle<EditorTaskBase>& task)

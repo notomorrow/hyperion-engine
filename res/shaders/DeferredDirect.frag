@@ -306,6 +306,9 @@ void main()
     output_color = vec4(result);
 #endif
 
-    // output_color = texture(sampler2DArray(shadow_maps, HYP_SAMPLER_NEAREST), vec3(GetShadowCoord(light.shadow_matrix, position.xyz).xy * vec2(0.125), float(light.layer_index)));
-    // output_color.a = 1.0;
+    // #if defined(LIGHT_TYPE_POINT)
+    //     // debug
+    //     output_color = texture(sampler2DArray(shadow_maps, HYP_SAMPLER_NEAREST), vec3(GetShadowCoord(light.shadow_matrix, position.xyz).xy * vec2(0.125), float(light.layer_index)));
+    //     output_color.a = 1.0;
+    // #endif
 }

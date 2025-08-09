@@ -79,7 +79,7 @@ static Handle<FullScreenPass> CreateCombineShadowMapsPass(ShadowMapFilter filter
     return combineShadowMapsPass;
 }
 
-static ComputePipelineRef CreateBlurShadowMapPipeline(const ImageViewRef& input, const ImageViewRef& output)
+static ComputePipelineRef CreateBlurShadowMapPipeline(const GpuImageViewRef& input, const GpuImageViewRef& output)
 {
     Assert(input.IsValid());
     Assert(output.IsValid());
@@ -223,7 +223,7 @@ void ShadowRendererBase::RenderFrame(FrameBase* frame, const RenderSetup& render
 
         if (shadowMap->GetFilterMode() == SMF_VSM)
         {
-            const ImageViewRef& inputImageView = cacheIt->second.combineShadowMapsPass != nullptr
+            const GpuImageViewRef& inputImageView = cacheIt->second.combineShadowMapsPass != nullptr
                 ? cacheIt->second.combineShadowMapsPass->GetFinalImageView()
                 : shadowViews[0]->GetOutputTarget().GetFramebuffer()->GetAttachment(0)->GetImageView();
 
@@ -250,14 +250,13 @@ void ShadowRendererBase::RenderFrame(FrameBase* frame, const RenderSetup& render
 
     lightProxy->bufferData.dimensionsScale = Vec4f(Vec2f(atlasElement.dimensions), atlasElement.scale);
     lightProxy->bufferData.offsetUv = atlasElement.offsetUv;
-    lightProxy->bufferData.layerIndex = shadowMap->GetShadowMapType() == SMT_OMNI
-        ? atlasElement.pointLightIndex
-        : atlasElement.atlasIndex;
+    lightProxy->bufferData.layerIndex = atlasElement.layerIndex;
 
     RenderApi_UpdateGpuData(light->Id());
 
-    const ImageRef& shadowMapImage = shadowMap->GetImageView()->GetImage();
+    const GpuImageRef& shadowMapImage = shadowMap->GetImageView()->GetImage();
     Assert(shadowMapImage.IsValid());
+    Assert(atlasElement.layerIndex < shadowMapImage->NumLayers());
 
     FullScreenPass* combineShadowMapsPass = cacheIt->second.combineShadowMapsPass.Get();
     const ComputePipelineRef& csBlurShadowMap = cacheIt->second.csBlurShadowMap;
@@ -300,7 +299,7 @@ void ShadowRendererBase::RenderFrame(FrameBase* frame, const RenderSetup& render
         if (!combineShadowMapsPass)
         {
             // blit image into final result
-            const ImageRef& framebufferImage = framebuffer->GetAttachment(0)->GetImage();
+            const GpuImageRef& framebufferImage = framebuffer->GetAttachment(0)->GetImage();
             Assert(framebufferImage.IsValid());
 
             frame->renderQueue << InsertBarrier(framebufferImage, RS_COPY_SRC);
@@ -318,7 +317,7 @@ void ShadowRendererBase::RenderFrame(FrameBase* frame, const RenderSetup& render
                 0,                      /* srcMip */
                 0,                      /* dstMip */
                 0,                      /* srcFace */
-                atlasElement.atlasIndex /* dstFace */
+                atlasElement.layerIndex /* dstFace */
             );
 
             frame->renderQueue << InsertBarrier(framebufferImage, RS_SHADER_RESOURCE);
@@ -338,12 +337,12 @@ void ShadowRendererBase::RenderFrame(FrameBase* frame, const RenderSetup& render
         AttachmentBase* attachment = combineShadowMapsPass->GetFramebuffer()->GetAttachment(0);
         Assert(attachment != nullptr);
 
-        const ImageRef& srcImage = attachment->GetImage();
+        const GpuImageRef& srcImage = attachment->GetImage();
         Assert(srcImage.IsValid());
 
         // Copy combined shadow map to the final shadow map
         frame->renderQueue << InsertBarrier(srcImage, RS_COPY_SRC);
-        frame->renderQueue << InsertBarrier(shadowMapImage, RS_COPY_DST, ImageSubResource { .baseArrayLayer = atlasElement.atlasIndex });
+        frame->renderQueue << InsertBarrier(shadowMapImage, RS_COPY_DST, ImageSubResource { .baseArrayLayer = atlasElement.layerIndex });
 
         // copy the image
         frame->renderQueue << Blit(
@@ -358,12 +357,12 @@ void ShadowRendererBase::RenderFrame(FrameBase* frame, const RenderSetup& render
             0,                      /* srcMip */
             0,                      /* dstMip */
             0,                      /* srcFace */
-            atlasElement.atlasIndex /* dstFace */
+            atlasElement.layerIndex /* dstFace */
         );
 
         // put the images back into a state for reading
         frame->renderQueue << InsertBarrier(srcImage, RS_SHADER_RESOURCE);
-        frame->renderQueue << InsertBarrier(shadowMapImage, RS_SHADER_RESOURCE, ImageSubResource { .baseArrayLayer = atlasElement.atlasIndex });
+        frame->renderQueue << InsertBarrier(shadowMapImage, RS_SHADER_RESOURCE, ImageSubResource { .baseArrayLayer = atlasElement.layerIndex });
     }
 
     if (useVsm)
@@ -390,11 +389,11 @@ void ShadowRendererBase::RenderFrame(FrameBase* frame, const RenderSetup& render
         frame->renderQueue << BindDescriptorTable(csBlurShadowMap->GetDescriptorTable(), csBlurShadowMap, ArrayMap<Name, ArrayMap<Name, uint32>> {}, frame->GetFrameIndex());
 
         // put our shadow map in a state for writing
-        frame->renderQueue << InsertBarrier(shadowMapImage, RS_UNORDERED_ACCESS, ImageSubResource { .baseArrayLayer = atlasElement.atlasIndex });
+        frame->renderQueue << InsertBarrier(shadowMapImage, RS_UNORDERED_ACCESS, ImageSubResource { .baseArrayLayer = atlasElement.layerIndex });
         frame->renderQueue << DispatchCompute(csBlurShadowMap, Vec3u { (atlasElement.dimensions.x + 7) / 8, (atlasElement.dimensions.y + 7) / 8, 1 });
 
         // put shadow map back into readable state
-        frame->renderQueue << InsertBarrier(shadowMapImage, RS_SHADER_RESOURCE, ImageSubResource { .baseArrayLayer = atlasElement.atlasIndex });
+        frame->renderQueue << InsertBarrier(shadowMapImage, RS_SHADER_RESOURCE, ImageSubResource { .baseArrayLayer = atlasElement.layerIndex });
     }
 }
 

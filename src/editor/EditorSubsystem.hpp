@@ -42,7 +42,6 @@ class AssetPackage;
 struct MouseEvent;
 struct KeyboardEvent;
 class View;
-class ScreenCaptureRenderSubsystem;
 class ConsoleUI;
 
 namespace sys {
@@ -395,6 +394,12 @@ public:
     void OpenProject(const Handle<EditorProject>& project);
 
     HYP_METHOD()
+    void ShowOpenProjectDialog();
+
+    HYP_METHOD()
+    void ShowImportContentDialog();
+
+    HYP_METHOD()
     void AddTask(const Handle<EditorTaskBase>& task);
 
     HYP_METHOD()
@@ -481,7 +486,6 @@ private:
     WeakHandle<EditorManipulationWidgetBase> m_hoveredManipulationWidget;
     WeakHandle<Node> m_hoveredManipulationWidgetNode;
 
-    Handle<Texture> m_sceneTexture;
     Handle<UIObject> m_mainPanel;
 
     WeakHandle<Node> m_focusedNode;
