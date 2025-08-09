@@ -461,7 +461,7 @@ float GetShadowContactHardened(in Light light, vec3 pos, vec2 texcoord, vec2 scr
 
 float GetPointShadowVariance(uint texture_index, vec3 world_to_light, float NdotL)
 {
-    const vec2 moments = unpackHalf2x16(texture(usamplerCubeArray(point_shadow_maps, HYP_SAMPLER_LINEAR), vec4(world_to_light, float(texture_index))).x);
+    const vec2 moments = texture(samplerCubeArray(point_shadow_maps, HYP_SAMPLER_LINEAR), vec4(world_to_light, float(texture_index))).rg;
     const float current_depth = length(world_to_light);
 
     float shadow_dist = current_depth - moments.x;
@@ -474,7 +474,7 @@ float GetPointShadowVariance(uint texture_index, vec3 world_to_light, float Ndot
 
 float GetPointShadowStandard(uint texture_index, vec3 world_to_light, float NdotL)
 {
-    const float shadow_depth = unpackHalf2x16(texture(usamplerCubeArray(point_shadow_maps, HYP_SAMPLER_NEAREST), vec4(world_to_light, float(texture_index))).x).x;
+    const float shadow_depth = texture(samplerCubeArray(point_shadow_maps, HYP_SAMPLER_NEAREST), vec4(world_to_light, float(texture_index))).r;
     const float current_depth = length(world_to_light);
 
     float bias = HYP_SHADOW_BIAS;
@@ -492,13 +492,13 @@ float GetPointShadow(in Light light, vec3 world_to_light, float NdotL)
     uint layer_index = light.layer_index;
     uint flags = light.flags;
 
-    switch (flags & LF_SHADOW_FILTER_MASK)
-    {
-    case LF_SHADOW_VSM:
-        return GetPointShadowVariance(layer_index, world_to_light, NdotL);
-    default:
-        return GetPointShadowStandard(layer_index, world_to_light, NdotL);
-    }
+    // switch (flags & LF_SHADOW_FILTER_MASK)
+    // {
+    // case LF_SHADOW_VSM:
+    //     return GetPointShadowVariance(layer_index, world_to_light, NdotL);
+    // default:
+    return GetPointShadowStandard(layer_index, world_to_light, NdotL);
+    // }
 }
 
 float GetShadow(in Light light, vec3 position, vec2 texcoord, vec2 screen_dimensions, float NdotL)
