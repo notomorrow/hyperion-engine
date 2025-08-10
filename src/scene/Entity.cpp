@@ -11,6 +11,9 @@
 #include <scene/components/NodeLinkComponent.hpp>
 #include <scene/components/MeshComponent.hpp>
 #include <scene/components/ScriptComponent.hpp>
+#include <scene/components/TransformComponent.hpp>
+#include <scene/components/VisibilityStateComponent.hpp>
+#include <scene/components/BoundingBoxComponent.hpp>
 
 #include <rendering/Mesh.hpp>
 #include <rendering/RenderProxy.hpp>
@@ -28,14 +31,13 @@ namespace hyperion {
 
 Entity::Entity()
     : m_world(nullptr),
-      m_scene(nullptr),
+      m_entityManager(nullptr),
       m_renderProxyVersion(0)
 {
 }
 
 Entity::~Entity()
 {
-    m_scene = nullptr;
     m_world = nullptr;
 
     // Keep a WeakHandle of Entity so the Id doesn't get reused while we're using it
@@ -87,17 +89,57 @@ Entity::~Entity()
 
 void Entity::Init()
 {
-    SetReady(true);
-}
+    AssertDebug(m_scene != nullptr);
+    SetEntityManager(m_scene->GetEntityManager());
 
-EntityManager* Entity::GetEntityManager() const
-{
-    if (!m_scene)
+    Node::Init();
+
+    // If a TransformComponent already exists on the Entity, allow it to keep its current transform by moving the Node
+    // to match it, as long as we're not locked
+    // If transform is locked, the Entity's TransformComponent will be synced with the Node's current transform
+    if (TransformComponent* transformComponent = m_entityManager->TryGetComponent<TransformComponent>(this))
     {
-        return nullptr;
+        if (!IsTransformLocked())
+        {
+            SetWorldTransform(transformComponent->transform);
+        }
+    }
+    else
+    {
+        m_entityManager->AddComponent<TransformComponent>(this, TransformComponent { m_worldTransform });
     }
 
-    return m_scene->GetEntityManager();
+    if (BoundingBoxComponent* boundingBoxComponent = m_entityManager->TryGetComponent<BoundingBoxComponent>(this))
+    {
+        SetEntityAABB(boundingBoxComponent->localAabb);
+    }
+    else
+    {
+        SetEntityAABB(BoundingBox::Empty());
+    }
+
+    if (!m_entityManager->HasComponent<VisibilityStateComponent>(this))
+    {
+        m_entityManager->AddComponent<VisibilityStateComponent>(this, {});
+    }
+
+    m_entityManager->AddTags<EntityTag::UPDATE_AABB>(this);
+
+    // set entity to static by default
+    if (m_entityManager->HasTag<EntityTag::DYNAMIC>(this))
+    {
+        m_entityManager->RemoveTag<EntityTag::STATIC>(this);
+    }
+    else
+    {
+        m_entityManager->AddTag<EntityTag::STATIC>(this);
+        m_entityManager->RemoveTag<EntityTag::DYNAMIC>(this);
+    }
+
+    // set transformChanged to false until entity is set to DYNAMIC
+    m_transformChanged = false;
+
+    SetReady(true);
 }
 
 bool Entity::ReceivesUpdate() const
@@ -195,16 +237,16 @@ void Entity::Detach()
 
 void Entity::OnAttachedToNode(Node* node)
 {
-    Assert(node != nullptr);
+    Node::OnAttachedToNode(node);
 
-    // Do nothing in default implementation.
+    // SetScene() should've been called before this,
+    // so EntityManager should be updated
+    AssertDebug(GetEntityManager() == node->GetScene()->GetEntityManager());
 }
 
 void Entity::OnDetachedFromNode(Node* node)
 {
-    Assert(node != nullptr);
-
-    // Do nothing in default implementation.
+    Node::OnDetachedFromNode(node);
 }
 
 void Entity::OnAddedToWorld(World* world)
@@ -227,16 +269,11 @@ void Entity::OnAddedToScene(Scene* scene)
     AssertDebug(scene != nullptr);
 
     EntityManager* entityManager = nullptr;
-
-    m_scene = scene;
 }
 
 void Entity::OnRemovedFromScene(Scene* scene)
 {
     AssertDebug(scene != nullptr);
-    AssertDebug(m_scene == scene);
-
-    m_scene = nullptr;
 }
 
 void Entity::OnComponentAdded(AnyRef component)
@@ -270,23 +307,10 @@ void Entity::OnComponentAdded(AnyRef component)
 
         return;
     }
-
-    // if (ScriptComponent* scriptComponent = component.TryGet<ScriptComponent>())
-    // {
-    //     EntityScripting::InitEntityScriptComponent(this, *scriptComponent);
-
-    //     return;
-    // }
 }
 
 void Entity::OnComponentRemoved(AnyRef component)
 {
-    // if (ScriptComponent* scriptComponent = component.TryGet<ScriptComponent>())
-    // {
-    //     EntityScripting::DeinitEntityScriptComponent(this, *scriptComponent);
-
-    //     return;
-    // }
 }
 
 void Entity::OnTagAdded(EntityTag tag)
@@ -295,11 +319,6 @@ void Entity::OnTagAdded(EntityTag tag)
 
 void Entity::OnTagRemoved(EntityTag tag)
 {
-}
-
-void Entity::OnTransformUpdated(const Transform& transform)
-{
-    // Do nothing
 }
 
 void Entity::AttachChild(const Handle<Entity>& child)
@@ -313,6 +332,9 @@ void Entity::AttachChild(const Handle<Entity>& child)
     AssertDebug(entityManager != nullptr, "EntityManager is null for Entity {} while attaching child {}", Id(), child.Id());
 
     Threads::AssertOnThread(entityManager->GetOwnerThreadId());
+
+    // wont work as we currently need a SetEntity() call.
+    // Node::AddChild(child);
 
     entityManager->AddExistingEntity(child);
 
@@ -378,6 +400,8 @@ void Entity::DetachChild(const Handle<Entity>& child)
 
     Threads::AssertOnThread(entityManager->GetOwnerThreadId());
 
+    // Node::RemoveChild(child);
+
     if (NodeLinkComponent* nodeLinkComponent = entityManager->TryGetComponent<NodeLinkComponent>(this))
     {
         if (Handle<Node> node = nodeLinkComponent->node.Lock())
@@ -402,6 +426,84 @@ void Entity::DetachChild(const Handle<Entity>& child)
             HYP_LOG(Entity, Warning, "Entity {} has a NodeLinkComponent but the node is not valid, cannot detach child {}", Id(), child.Id());
         }
     }
+}
+
+void Entity::SetScene(Scene* scene)
+{
+    if (scene == m_scene)
+    {
+        return;
+    }
+
+    Node::SetScene(scene);
+
+    // Move entity from previous scene to new scene's EntityManager
+    SetEntityManager(m_scene->GetEntityManager());
+}
+
+void Entity::LockTransform()
+{
+    Node::LockTransform();
+
+    EntityManager* entityManager = GetEntityManager();
+    AssertDebug(entityManager != nullptr);
+
+    // set entity to static
+    entityManager->AddTag<EntityTag::STATIC>(this);
+    entityManager->RemoveTag<EntityTag::DYNAMIC>(this);
+
+    m_transformChanged = false;
+}
+
+void Entity::UnlockTransform()
+{
+    Node::UnlockTransform();
+}
+
+void Entity::OnTransformUpdated(const Transform& transform)
+{
+    Node::OnTransformUpdated(transform);
+
+    EntityManager* entityManager = GetEntityManager();
+    AssertDebug(entityManager != nullptr);
+    AssertDebug(entityManager == m_scene->GetEntityManager());
+
+    if (!m_transformChanged)
+    {
+        // Set to dynamic
+        entityManager->AddTag<EntityTag::DYNAMIC>(this);
+        entityManager->RemoveTag<EntityTag::STATIC>(this);
+
+        m_transformChanged = true;
+    }
+
+    TransformComponent& transformComponent = entityManager->GetComponent<TransformComponent>(this);
+    transformComponent.transform = m_worldTransform;
+
+    entityManager->AddTags<EntityTag::UPDATE_AABB>(this);
+}
+
+void Entity::SetEntityManager(const Handle<EntityManager>& entityManager)
+{
+    AssertDebug(entityManager != nullptr);
+
+    EntityManager* previousEntityManager = GetEntityManager();
+
+    if (previousEntityManager)
+    {
+        if (previousEntityManager != entityManager)
+        {
+            Handle<Entity> thisHandle = HandleFromThis();
+            previousEntityManager->MoveEntity(thisHandle, entityManager);
+        }
+    }
+    else
+    {
+        Handle<Entity> thisHandle = HandleFromThis();
+        entityManager->AddExistingEntity(thisHandle);
+    }
+
+    AssertDebug(m_entityManager == entityManager);
 }
 
 } // namespace hyperion

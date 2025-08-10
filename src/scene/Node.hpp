@@ -20,7 +20,6 @@
 #include <core/Name.hpp>
 #include <core/object/Handle.hpp>
 
-#include <scene/Entity.hpp>
 #include <scene/EntityTag.hpp>
 
 #include <core/math/Transform.hpp>
@@ -33,6 +32,9 @@
 namespace hyperion {
 
 class Scene;
+class Node;
+class World;
+class Entity;
 class EditorDelegates;
 
 HYP_ENUM(Flags)
@@ -277,7 +279,7 @@ public:
     /*! \brief Set the Scene this Node and its children are attached to.
      *  \internal Not intended to be used in user code. Use Remove() instead. */
     HYP_METHOD(Property = "Scene")
-    void SetScene(Scene* scene);
+    virtual void SetScene(Scene* scene);
 
     /*! \returns A pointer to the World this Node and its children are attached to. May be null. */
     HYP_METHOD(Property = "World")
@@ -572,10 +574,10 @@ public:
     }
 
     /*! \brief Lock the Node from being transformed. */
-    void LockTransform();
+    virtual void LockTransform();
 
     /*! \brief Unlock the Node from being transformed. */
-    void UnlockTransform();
+    virtual void UnlockTransform();
 
     /*! \brief Get the local-space (model) aabb of the node, excluding the entity's aabb.
      *  \returns The local-space (model) of the node's aabb, excluding the entity's aabb. */
@@ -608,10 +610,6 @@ public:
     uint32 FindSelfIndex() const;
 
     bool TestRay(const Ray& ray, RayTestResults& outResults, bool useBvh = true) const;
-
-    /*! \brief Search child nodes (breadth-first) until a node with an Entity with the given Id is found. */
-    HYP_METHOD()
-    Handle<Node> FindChildWithEntity(const Entity* entity) const;
 
     /*! \brief Search child nodes (breadth-first) until a node with the given name is found. */
     HYP_METHOD()
@@ -680,9 +678,13 @@ protected:
 
     virtual void Init() override;
 
+    virtual void OnAttachedToNode(Node* node);
+    virtual void OnDetachedFromNode(Node* node);
+
     /*! \brief Refresh the transform of the entity attached to this Node. This will update the entity AABB to match,
      *  and will update the TransformComponent of the entity if it exists. */
     void RefreshEntityTransform();
+    virtual void OnTransformUpdated(const Transform& transform);
 
     void OnNestedNodeAdded(Node* node, bool direct);
     void OnNestedNodeRemoved(Node* node, bool direct);
