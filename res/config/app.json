@@ -6,7 +6,7 @@
       "quality": 2,
       "eyeFade": [0.980000, 0.990000],
       "rayStep": 1.500000,
-      "enabled": true,
+      "enabled": false,
       "screenEdgeFade": [0.960000, 0.990000],
       "roughnessScattering": true
     },
@@ -15,11 +15,11 @@
         "enabled": false
       },
       "globalIllumination": {
-        "enabled": true
+        "enabled": false
       }
     },
     "taa": {
-      "enabled": true
+      "enabled": false
     },
     "debug": {
       "reflections": false,
