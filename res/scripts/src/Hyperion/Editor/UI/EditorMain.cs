@@ -876,7 +876,7 @@ namespace Hyperion
                 envProbeNode.SetName(activeScene.GetUniqueNodeName("ReflectionProbe"));
                 envProbeNode.SetWorldTranslation(new Vec3f(0.0f, 5.0f, 0.0f));
 
-                envProbeEntity.AttachTo(envProbeNode);
+                envProbeNode.AddChild(envProbeEntity);
 
                 currentProject.GetActionStack().Push(new EditorAction(
                     new Name("AddReflectionProbe"),
