@@ -1266,7 +1266,12 @@ AssetLoadResult FBXModelLoader::LoadAsset(LoaderState& state) const
                             }
                             else if (propertiesChildName == "Lcl Rotation")
                             {
-                                transform.SetRotation(Quaternion(ReadVec3f(*propertiesChild)));
+                                Vec3f degrees = ReadVec3f(*propertiesChild);
+                                Vec3f radians;
+                                radians.x = MathUtil::DegToRad(degrees.x);
+                                radians.y = MathUtil::DegToRad(degrees.y);
+                                radians.z = MathUtil::DegToRad(degrees.z);
+                                transform.SetRotation(Quaternion(radians));
                             }
                         }
                     }

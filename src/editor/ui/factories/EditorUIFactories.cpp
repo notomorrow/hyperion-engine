@@ -444,7 +444,7 @@ public:
             panel->SetPadding({ 1, 1 });
 
             Handle<UITextbox> textbox = parent->CreateUIObject<UITextbox>(NAME("QuaternionPanel_Roll_Value"), Vec2i { 0, 0 }, UIObjectSize({ 100, UIObjectSize::PERCENT }, { 20, UIObjectSize::PIXEL }));
-            textbox->SetText(HYP_FORMAT("{}", value.Roll()));
+            textbox->SetText(HYP_FORMAT("{}", MathUtil::RadToDeg(value.Roll())));
             textbox->OnTextChange
                 .Bind([gridWeak = grid.ToWeak()](const String& str) -> UIEventHandlerResult
                     {
@@ -463,7 +463,7 @@ public:
 
                         Quaternion quat = grid->GetCurrentValue().Get<Quaternion>();
 
-                        Vec3f euler(MathUtil::DegToRad(roll), MathUtil::DegToRad(quat.Pitch()), MathUtil::DegToRad(quat.Yaw()));
+                        Vec3f euler(MathUtil::DegToRad(roll), quat.Pitch(), quat.Yaw());
 
                         quat = Quaternion(euler);
                         grid->SetCurrentValue(HypData(quat));
@@ -484,7 +484,7 @@ public:
             panel->SetPadding({ 1, 1 });
 
             Handle<UITextbox> textbox = parent->CreateUIObject<UITextbox>(NAME("QuaternionPanel_Pitch_Value"), Vec2i { 0, 0 }, UIObjectSize({ 100, UIObjectSize::PERCENT }, { 20, UIObjectSize::PIXEL }));
-            textbox->SetText(HYP_FORMAT("{}", value.Pitch()));
+            textbox->SetText(HYP_FORMAT("{}", MathUtil::RadToDeg(value.Pitch())));
             textbox->OnTextChange
                 .Bind([gridWeak = grid.ToWeak()](const String& str) -> UIEventHandlerResult
                     {
@@ -503,7 +503,7 @@ public:
 
                         Quaternion quat = grid->GetCurrentValue().Get<Quaternion>();
 
-                        Vec3f euler(MathUtil::DegToRad(quat.Roll()), MathUtil::DegToRad(pitch), MathUtil::DegToRad(quat.Yaw()));
+                        Vec3f euler(quat.Roll(), MathUtil::DegToRad(pitch), quat.Yaw());
 
                         quat = Quaternion(euler);
                         grid->SetCurrentValue(HypData(quat));
@@ -524,7 +524,7 @@ public:
             panel->SetPadding({ 1, 1 });
 
             Handle<UITextbox> textbox = parent->CreateUIObject<UITextbox>(NAME("QuaternionPanel_Yaw_Value"), Vec2i { 0, 0 }, UIObjectSize({ 100, UIObjectSize::PERCENT }, { 20, UIObjectSize::PIXEL }));
-            textbox->SetText(HYP_FORMAT("{}", value.Yaw()));
+            textbox->SetText(HYP_FORMAT("{}", MathUtil::RadToDeg(value.Yaw())));
             textbox->OnTextChange
                 .Bind([gridWeak = grid.ToWeak()](const String& str) -> UIEventHandlerResult
                     {
@@ -543,7 +543,7 @@ public:
 
                         Quaternion quat = grid->GetCurrentValue().Get<Quaternion>();
 
-                        Vec3f euler(MathUtil::DegToRad(quat.Roll()), MathUtil::DegToRad(quat.Pitch()), MathUtil::DegToRad(yaw));
+                        Vec3f euler(quat.Roll(), quat.Pitch(), MathUtil::DegToRad(yaw));
 
                         quat = Quaternion(euler);
                         grid->SetCurrentValue(HypData(quat));

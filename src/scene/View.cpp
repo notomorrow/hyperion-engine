@@ -140,7 +140,7 @@ View::View(const ViewDesc& viewDesc)
             continue;
         }
 
-        *it = new RenderProxyList(/* isShared */ true);
+        *it = new RenderProxyList(/* isShared */ true, /* useRefCounting */ true);
     }
 }
 
@@ -311,8 +311,6 @@ void View::BeginAsyncCollection(TaskBatch& batch)
                 | (1 << RB_SKYBOX)
                 | (1 << RB_TRANSLUCENT)
                 | (1 << RB_DEBUG);
-
-            RenderProxyList::UpdateRefs(rpl);
 
             rpl.EndWrite();
         });

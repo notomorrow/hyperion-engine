@@ -38,9 +38,6 @@ Entity::Entity()
 
 Entity::~Entity()
 {
-    // TEMP:
-    Assert(HandleFromThis() == nullptr);
-
     m_scene = nullptr;
     m_world = nullptr;
 

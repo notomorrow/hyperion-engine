@@ -525,7 +525,7 @@ struct ResourceContainerFactory
 struct ViewData
 {
     View* view = nullptr;
-    RenderProxyList rplRender { /* isShared */ false };
+    RenderProxyList rplRender { /* isShared */ false, /* refCounting */ false };
     RenderCollector renderCollector;
     uint32 framesSinceUsed = 0;
     uint32 numRefs = 0; // number of ViewFrameData holding refs to this

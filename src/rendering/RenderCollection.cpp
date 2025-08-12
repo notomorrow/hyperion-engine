@@ -15,11 +15,14 @@
 
 #include <rendering/Mesh.hpp>
 #include <rendering/Material.hpp>
+#include <rendering/Texture.hpp>
 
 #include <scene/Scene.hpp>
 #include <scene/View.hpp>
-#include <scene/Light.hpp>    // For LightType
-#include <scene/EnvProbe.hpp> // For EnvProbeType
+#include <scene/Light.hpp>
+#include <scene/EnvProbe.hpp>
+#include <scene/EnvGrid.hpp>
+#include <scene/lightmapper/LightmapVolume.hpp>
 
 #include <scene/camera/Camera.hpp>
 
@@ -225,8 +228,106 @@ static inline void ForEachResourceTrackerType(Span<ResourceTrackerBase*> resourc
     ForEachResourceTrackerType_Impl(resourceTrackers, functor, std::make_index_sequence<TupleSize<RenderProxyList::ResourceTrackerTypes>::value>());
 }
 
-RenderProxyList::RenderProxyList(bool isShared)
+template <class T>
+static constexpr SizeType GetTrackedResourceTypeIndex()
+{
+    return FindTypeElementIndex<T, RenderProxyList::TrackedResourceTypes>::value;
+}
+
+template <class Functor, SizeType... Indices>
+static inline void ForEachResourceTracker_Impl(Span<ResourceTrackerBase*> resourceTrackers, const Functor& functor, std::index_sequence<Indices...>)
+{
+    (functor(static_cast<typename TupleElement_Tuple<Indices, RenderProxyList::ResourceTrackerTypes>::Type&>(*resourceTrackers[Indices])), ...);
+}
+
+template <class Functor>
+static inline void ForEachResourceTracker(Span<ResourceTrackerBase*> resourceTrackers, const Functor& functor)
+{
+    ForEachResourceTracker_Impl(resourceTrackers, functor, std::make_index_sequence<TupleSize<RenderProxyList::ResourceTrackerTypes>::value>());
+}
+
+template <class ElementType, class ProxyType>
+static inline void UpdateRefs_Impl(ResourceTracker<ObjId<ElementType>, ElementType*, ProxyType>& resourceTracker)
+{
+    auto diff = resourceTracker.GetDiff();
+    if (!diff.NeedsUpdate())
+    {
+        return;
+    }
+
+    Array<ElementType*> removed;
+    resourceTracker.GetRemoved(removed, false);
+
+    Array<ElementType*> added;
+    resourceTracker.GetAdded(added, false);
+
+    for (ElementType* resource : added)
+    {
+        resource->GetObjectHeader_Internal()->IncRefStrong();
+
+        if constexpr (!std::is_same_v<ProxyType, NullProxy>)
+        {
+            ProxyType* pProxy = resourceTracker.GetProxy(ObjId<ElementType>(resource->Id()));
+
+            if (!pProxy)
+            {
+                pProxy = resourceTracker.SetProxy(ObjId<ElementType>(resource->Id()), ProxyType());
+            }
+
+            AssertDebug(pProxy != nullptr);
+
+            if constexpr (HYP_HAS_METHOD(ElementType, UpdateRenderProxy))
+            {
+                resource->UpdateRenderProxy(pProxy);
+            }
+        }
+    }
+
+    for (ElementType* resource : removed)
+    {
+        resource->GetObjectHeader_Internal()->DecRefStrong();
+
+        if constexpr (!std::is_same_v<ProxyType, NullProxy>)
+        {
+            resourceTracker.RemoveProxy(ObjId<ElementType>(resource->Id()));
+        }
+    }
+
+    if constexpr (!std::is_same_v<ProxyType, NullProxy> && HYP_HAS_METHOD(ElementType, UpdateRenderProxy))
+    {
+        Array<ObjId<ElementType>> changedIds;
+        resourceTracker.GetChanged(changedIds);
+
+        for (const ObjId<ElementType>& id : changedIds)
+        {
+            ElementType** ppResource = resourceTracker.GetElement(id);
+            AssertDebug(ppResource && *ppResource);
+
+            ElementType& resource = **ppResource;
+
+            ProxyType* pProxy = resourceTracker.GetProxy(id);
+            AssertDebug(pProxy != nullptr);
+
+            resource.UpdateRenderProxy(pProxy);
+        }
+    }
+}
+
+// template hackery to allow usage of undefined types
+template <class T>
+static inline void UpdateRefs(T& renderProxyList)
+{
+    AssertDebug(renderProxyList.useRefCounting);
+    
+    ForEachResourceTracker(renderProxyList.resourceTrackers.ToSpan(), []<class... Args>(Args&&... args) {
+        UpdateRefs_Impl(std::forward<Args>(args)...);
+    });
+}
+
+
+RenderProxyList::RenderProxyList(bool isShared, bool useRefCounting)
     : isShared(isShared),
+      useRefCounting(useRefCounting),
       viewport(Viewport { Vec2u::One(), Vec2i::Zero() }),
       priority(0),
       resourceTrackers {},
@@ -239,46 +340,57 @@ RenderProxyList::RenderProxyList(bool isShared)
 
             pResourceTracker = new ResourceTrackerType();
 
-            releaseRefsFunctions[idx] = [](ResourceTrackerBase* resourceTracker) -> void
+            if (this->useRefCounting)
             {
-                ResourceTrackerType* resourceTrackerCasted = static_cast<ResourceTrackerType*>(resourceTracker);
-                resourceTrackerCasted->Advance(/* clearNextState */ true);
-
-                const auto releaseRefs = [](auto& elements)
+                releaseRefsFunctions[idx] = [](ResourceTrackerBase* resourceTracker) -> void
                 {
-                    // Release weak references to all tracked elements
-                    for (auto* elem : elements)
+                    ResourceTrackerType* resourceTrackerCasted = static_cast<ResourceTrackerType*>(resourceTracker);
+                    resourceTrackerCasted->Advance(/* clearNextState */ true);
+                    
+                    HashSet<HypObjectBase*> releasedObjects;
+                    
+                    const auto releaseRefs = [&](auto& elements)
                     {
-                        AssertDebug(elem != nullptr);
-                        
-                        HypObjectBase* elemCasted = reinterpret_cast<HypObjectBase*>(elem);
-                        AssertDebug(elemCasted->GetObjectHeader_Internal()->GetRefCountStrong() > 0);
-
-                        elemCasted->GetObjectHeader_Internal()->DecRefStrong();
-                    }
+                        // Release weak references to all tracked elements
+                        for (auto* elem : elements)
+                        {
+                            AssertDebug(elem != nullptr);
+                            
+                            HypObjectBase* elemCasted = reinterpret_cast<HypObjectBase*>(elem);
+                            AssertDebug(elemCasted->GetObjectHeader_Internal()->GetRefCountStrong() > 0);
+                            
+                            AssertDebug(!releasedObjects.Contains(elemCasted));
+                            
+                            elemCasted->GetObjectHeader_Internal()->DecRefStrong();
+                            
+                            releasedObjects.Insert(elemCasted);
+                        }
+                    };
+                    
+                    Assert(!resourceTrackerCasted->GetDiff().NeedsUpdate(),
+                           "Update needed when resources are being released! This will lead to improper ref counts!");
+                    
+                    Array<typename ResourceTrackerType::TElementType> elements;
+                    // get current REMOVED elements
+                    resourceTrackerCasted->GetRemoved(elements, false);
+                    releaseRefs(elements);
+                    elements.Clear();
+                    
+                    // get current ADDED elements
+                    resourceTrackerCasted->GetAdded(elements, false);
+                    releaseRefs(elements);
+                    elements.Clear();
+                    
+                    // advance, moving the current elements over to the REMOVED bin.
+                    resourceTrackerCasted->Advance(/* clearNextState */ true);
+                    
+                    // release refs on elements that were moved over
+                    resourceTrackerCasted->GetRemoved(elements, false);
+                    releaseRefs(elements);
+                    
+                    AssertDebug(resourceTrackerCasted->NumCurrent() == 0);
                 };
-
-                Array<typename ResourceTrackerType::TElementType> elements;
-                // get current "removed" elements
-                resourceTrackerCasted->GetRemoved(elements, false);
-                releaseRefs(elements);
-                elements.Clear();
-                
-                // get "new" elements
-                resourceTrackerCasted->GetAdded(elements, false);
-                releaseRefs(elements);
-                elements.Clear();
-
-                // advance, moving all remaining elements to "removed"
-                // ("removed" before this get discarded, and "new" get moved to "current")
-                resourceTrackerCasted->Advance(/* clearNextState */ true);
-
-                // release refs on removed elements
-                resourceTrackerCasted->GetRemoved(elements, false);
-                releaseRefs(elements);
-
-                AssertDebug(resourceTrackerCasted->NumCurrent() == 0);
-            };
+            }
         });
 }
 
@@ -295,14 +407,117 @@ RenderProxyList::~RenderProxyList()
         ResourceTrackerBase* resourceTracker = resourceTrackers[i];
         AssertDebug(resourceTracker != nullptr);
 
-        // Release all strong references to tracked elements
-        AssertDebug(releaseRefsFunctions[i] != nullptr);
-        releaseRefsFunctions[i](resourceTracker);
+        if (useRefCounting)
+        {
+            // Release all strong references to tracked elements
+            AssertDebug(releaseRefsFunctions[i] != nullptr);
+            releaseRefsFunctions[i](resourceTracker);
+        }
 
         delete resourceTracker;
     }
 
     resourceTrackers = {};
+}
+
+void RenderProxyList::BeginWrite()
+{
+    if (isShared)
+    {
+        uint64 rwMarkerState = rwMarker.BitOr(writeFlag, MemoryOrder::ACQUIRE);
+        while (HYP_UNLIKELY(rwMarkerState & readMask))
+        {
+            HYP_LOG_TEMP("Busy waiting for read marker to be released! "
+                         "If this is occuring frequently, the View that owns this RenderProxyList should have double / triple buffering enabled");
+
+            rwMarkerState = rwMarker.Get(MemoryOrder::ACQUIRE);
+            HYP_WAIT_IDLE();
+        }
+    }
+
+    AssertDebug(state != CS_READING);
+    state = CS_WRITING;
+
+    // advance all trackers to the next state before we write into them.
+    // this clears their 'next' bits and sets their 'previous' bits so we can tell what changed.
+    ForEachResourceTracker(resourceTrackers.ToSpan(), [](auto&& resourceTracker)
+        {
+            resourceTracker.Advance();
+        });
+}
+
+void RenderProxyList::EndWrite()
+{
+    AssertDebug(state == CS_WRITING);
+    
+    if (useRefCounting)
+    {
+        UpdateRefs(*this);
+    }
+
+    state = CS_WRITTEN;
+
+    if (isShared)
+    {
+        rwMarker.BitAnd(~writeFlag, MemoryOrder::RELEASE);
+    }
+}
+
+void RenderProxyList::BeginRead()
+{
+    if (isShared)
+    {
+        uint64 rwMarkerState;
+
+        do
+        {
+            rwMarkerState = rwMarker.Increment(2, MemoryOrder::ACQUIRE);
+
+            if (HYP_UNLIKELY(rwMarkerState & writeFlag))
+            {
+                HYP_LOG_TEMP("Waiting for write marker to be released. "
+                             "If this is occurring frequently, the View that owns this RenderProxyList should have double / triple buffering enabled");
+
+                rwMarker.Decrement(2, MemoryOrder::RELAXED);
+
+                // spin to wait for write flag to be released
+                HYP_WAIT_IDLE();
+            }
+        }
+        while (HYP_UNLIKELY(rwMarkerState & writeFlag));
+    }
+    else
+    {
+        ++readDepth;
+    }
+
+    AssertDebug(state != CS_WRITING);
+    state = CS_READING;
+}
+
+void RenderProxyList::EndRead()
+{
+    AssertDebug(state == CS_READING);
+
+    if (isShared)
+    {
+        uint64 rwMarkerState = rwMarker.Decrement(2, MemoryOrder::ACQUIRE_RELEASE);
+        AssertDebug(rwMarkerState & readMask, "Invalid state, expected read mask to be set when calling EndRead()");
+
+        /// FIXME: If BeginRead() is called on other thread between the check and setting state to CS_DONE,
+        /// we could set state to done when it isn't actually.
+        if (((rwMarkerState - 2) & readMask) == 0)
+        {
+            state = CS_DONE;
+        }
+    }
+    else
+    {
+        if (!--readDepth)
+        {
+            state = CS_DONE;
+        }
+    }
 }
 
 #pragma endregion RenderProxyList

@@ -136,10 +136,11 @@ static void ForEachCharacter(const FontAtlas& fontAtlas, const String& text, con
         }
 
         Optional<const Glyph::Metrics&> glyphMetrics = fontAtlas.GetGlyphMetrics(ch);
-        AssertDebug(glyphMetrics.HasValue() && (glyphMetrics->width != 0 && glyphMetrics->height != 0));
 
         if (!glyphMetrics.HasValue() || (glyphMetrics->width == 0 || glyphMetrics->height == 0))
         {
+            HYP_LOG(UI, Warning, "Ensure how to render char: {}", (int)ch);
+            
             if (outCharacterPlacements)
             {
                 outCharacterPlacements->PushBack(placement);
