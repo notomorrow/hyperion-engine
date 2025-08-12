@@ -35,7 +35,10 @@ public:
 protected:
     virtual Result Execute_Impl(const CommandLineArguments& args) = 0;
 
-    virtual CommandLineArgumentDefinitions GetDefinitions_Internal() const = 0;
+    virtual CommandLineArgumentDefinitions GetDefinitions_Internal() const
+    {
+        return CommandLineArgumentDefinitions();
+    }
 
 private:
     CommandLineArgumentDefinitions m_definitions;

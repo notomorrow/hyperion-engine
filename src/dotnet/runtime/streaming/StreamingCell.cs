@@ -59,6 +59,7 @@ namespace Hyperion
 
         public override void OnStreamStart()
         {
+            Console.WriteLine("StreamingCell.OnStreamStart() called");
             InvokeNativeMethod(new Name("OnStreamStart_Impl", weak: true));
         }
 

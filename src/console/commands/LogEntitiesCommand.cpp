@@ -14,6 +14,7 @@
 
 #include <scene/Scene.hpp>
 #include <scene/Node.hpp>
+#include <scene/World.hpp>
 
 #include <scene/EntityManager.hpp>
 #include <scene/ComponentInterface.hpp>
@@ -25,6 +26,9 @@
 #include <dotnet/DotNetSystem.hpp>
 #include <dotnet/Object.hpp>
 #include <dotnet/Class.hpp>
+
+#include <engine/EngineGlobals.hpp>
+#include <engine/EngineDriver.hpp>
 
 namespace hyperion {
 
@@ -52,141 +56,121 @@ Result LogEntitiesCommand::Execute_Impl(const CommandLineArguments& args)
 
     json::JSONArray entityManagersJson;
 
-#if 0 // fixme: No more entity to entitymanager map
-    EntityManager::GetEntityToEntityManagerMap().ForEachEntityManager([&](EntityManager* entityManager)
+    Handle<World> currentWorld = g_engineDriver->GetCurrentWorld();
+    if (!currentWorld)
+    {
+        return HYP_MAKE_ERROR(Error, "No current world; cannot run command");
+    }
+
+    for (const Handle<Scene>& scene : currentWorld->GetScenes())
+    {
+        AssertDebug(scene != nullptr);
+
+        const Handle<EntityManager>& entityManager = scene->GetEntityManager();
+
+        json::JSONObject entityManagerJson;
+
+        if (!entityManager->GetScene())
         {
-            json::JSONObject entityManagerJson;
+            return;
+        }
 
-            if (!entityManager->GetScene())
-            {
-                return;
-            }
+        entityManagerJson["scene"] = entityManager->GetScene()->GetName().LookupString();
+        entityManagerJson["ownerThreadId"] = entityManager->GetOwnerThreadId().GetName().LookupString();
 
-            entityManagerJson["scene"] = entityManager->GetScene()->GetName().LookupString();
-            entityManagerJson["owner_thread_id"] = entityManager->GetOwnerThreadId().GetName().LookupString();
+        json::JSONArray entityManagerEntitiesJson;
 
-            json::JSONArray entityManagerEntitiesJson;
+        // HYP_LOG(LogEntities, Info, "Logging entities for scene {}", entityManager->GetScene()->GetName());
 
-            // HYP_LOG(LogEntities, Info, "Logging entities for scene {}", entityManager->GetScene()->GetName());
+        auto impl = [&]()
+        {
+            entityManager->ForEachEntity([&](Entity* entity)
+                {
+                    Assert(entity != nullptr);
 
-            auto impl = [&]()
-            {
-                entityManager->ForEachEntity([&](const Handle<Entity>& entity, const EntityData& entityData)
+                    if (onlyOrphanNodes)
                     {
-                        if (onlyOrphanNodes)
+                        if (entity->GetParent() != nullptr)
                         {
-                            NodeLinkComponent* nodeLinkComponent = entityManager->TryGetComponent<NodeLinkComponent>(entity);
+                            // skip
+                            return IterationResult::CONTINUE;
+                        }
+                    }
 
-                            if (!nodeLinkComponent)
+                    json::JSONObject entityJson;
+                    entityJson["id"] = json::JSONString(HYP_FORMAT("{}", entity->Id()));
+                    entityJson["refCountStrong"] = entity->GetObjectHeader_Internal()->GetRefCountStrong();
+                    entityJson["refCountWeak"] = entity->GetObjectHeader_Internal()->GetRefCountWeak();
+                    entityJson["uuid"] = json::JSONString(entity->GetUUID().ToString());
+                    entityJson["name"] = json::JSONString(*entity->GetName());
+                    entityJson["type"] = json::JSONString(*entity->InstanceClass()->GetName());
+                    entityJson["parentName"] = entity->GetParent() ? json::JSONValue(json::JSONString(*entity->GetParent()->GetName())) : json::JSONValue(json::JSONNull());
+                    entityJson["parentId"] = entity->GetParent() ? json::JSONValue(json::JSONString(HYP_FORMAT("{}", entity->GetScene()->Id()))) : json::JSONValue(json::JSONNull());
+                    entityJson["sceneId"] = entity->GetScene() ? json::JSONValue(json::JSONString(HYP_FORMAT("{}", entity->GetScene()->Id()))) : json::JSONValue(json::JSONNull());
+                    entityJson["sceneName"] = entity->GetScene() ? json::JSONValue(json::JSONString(*entity->GetScene()->GetName())) : json::JSONValue(json::JSONNull());
+
+                    json::JSONArray componentsJson;
+
+                    for (const auto& it : *entityManager->GetAllComponents(entity))
+                    {
+                        const TypeId componentTypeId = it.first;
+                        const ComponentId componentId = it.second;
+
+                        const IComponentInterface* componentInterface = ComponentInterfaceRegistry::GetInstance().GetComponentInterface(componentTypeId);
+
+                        if (!componentInterface)
+                        {
+                            continue;
+                        }
+
+                        json::JSONObject componentJson;
+                        componentJson["type"] = componentInterface->GetTypeName();
+                        componentJson["id"] = componentId;
+
+                        if (componentTypeId == TypeId::ForType<UIComponent>())
+                        {
+                            const UIComponent* uiComponent = entityManager->TryGetComponent<UIComponent>(entity);
+                            if (uiComponent)
                             {
-                                return IterationResult::CONTINUE;
-                            }
+                                if (UIObject* uiObject = uiComponent->uiObject)
+                                {
+                                    Handle<UIObject> uiObjectRef = uiObject->HandleFromThis();
+                                    Assert(uiObjectRef.IsValid());
 
-                            Handle<Node> node = nodeLinkComponent->node.Lock();
-
-                            if (node == nullptr || node->GetParent() != nullptr)
-                            {
-                                return IterationResult::CONTINUE;
-                            }
-
-                            if (entityManager->GetScene()->GetRoot().Get() == node.Get())
-                            {
-                                return IterationResult::CONTINUE; // skip root node
+                                    componentJson["ui_object"] = json::JSONObject({ { "name", json::JSONString(*uiObject->GetName()) },
+                                        { "type", json::JSONString(*uiObject->InstanceClass()->GetName()) },
+                                        { "refCountStrong", uiObjectRef->GetObjectHeader_Internal()->GetRefCountStrong() - 1 },
+                                        { "refCountWeak", uiObjectRef->GetObjectHeader_Internal()->GetRefCountWeak() } });
+                                }
                             }
                         }
 
-                        json::JSONObject entityJson;
-                        entityJson["id"] = entity->Id().Value();
+                        componentsJson.PushBack(std::move(componentJson));
+                    }
 
-                        entityJson["num_strong_refs"] = entity.ptr->GetObjectHeader_Internal()->GetRefCountStrong() - 1;
-                        entityJson["num_weak_refs"] = entity.ptr->GetObjectHeader_Internal()->GetRefCountWeak();
+                    entityJson["components"] = std::move(componentsJson);
+                    entityManagerEntitiesJson.PushBack(std::move(entityJson));
 
-                        json::JSONArray componentsJson;
+                    return IterationResult::CONTINUE;
+                });
+        };
 
-                        for (const auto& it : *entityManager->GetAllComponents(entity))
-                        {
-                            const TypeId componentTypeId = it.first;
-                            const ComponentId componentId = it.second;
+        if (Threads::CurrentThreadId() == entityManager->GetOwnerThreadId())
+        {
+            impl();
+        }
+        else
+        {
+            Task task = Threads::GetThread(entityManager->GetOwnerThreadId())->GetScheduler().Enqueue(std::move(impl));
+            task.Await();
+        }
 
-                            const IComponentInterface* componentInterface = ComponentInterfaceRegistry::GetInstance().GetComponentInterface(componentTypeId);
+        entityManagerJson["entities"] = std::move(entityManagerEntitiesJson);
 
-                            if (!componentInterface)
-                            {
-                                continue;
-                            }
+        entityManagersJson.PushBack(std::move(entityManagerJson));
+    }
 
-                            json::JSONObject componentJson;
-                            componentJson["type"] = componentInterface->GetTypeName();
-                            componentJson["id"] = componentId;
-
-                            if (componentTypeId == TypeId::ForType<NodeLinkComponent>())
-                            {
-                                const NodeLinkComponent* nodeLinkComponent = entityManager->TryGetComponent<NodeLinkComponent>(entity);
-                                if (nodeLinkComponent)
-                                {
-                                    if (Handle<Node> node = nodeLinkComponent->node.Lock())
-                                    {
-                                        componentJson["node"] = json::JSONObject({ { "uuid", json::JSONString(node->GetUUID().ToString()) },
-                                            { "name", json::JSONString(*node->GetName()) },
-                                            { "type", json::JSONString(*node->InstanceClass()->GetName()) },
-                                            { "num_strong_refs", node->GetObjectHeader_Internal()->GetRefCountStrong() - 1 },
-                                            { "num_weak_refs", node->GetObjectHeader_Internal()->GetRefCountWeak() },
-                                            { "parent_name", node->GetParent() ? json::JSONValue(json::JSONString(*node->GetParent()->GetName())) : json::JSONValue(json::JSONNull()) },
-                                            { "parent_uuid", node->GetParent() ? json::JSONValue(json::JSONString(node->GetParent()->GetUUID().ToString())) : json::JSONValue(json::JSONNull()) },
-                                            { "scene_id", node->GetScene() ? json::JSONValue(node->GetScene()->Id().Value()) : json::JSONValue(uint32(0)) },
-                                            { "scene_name", node->GetScene() ? json::JSONValue(json::JSONString(*node->GetScene()->GetName())) : json::JSONValue(json::JSONNull()) } });
-                                    }
-                                    else
-                                    {
-                                        componentJson["node"] = "<expired>";
-                                    }
-                                }
-                            }
-                            else if (componentTypeId == TypeId::ForType<UIComponent>())
-                            {
-                                const UIComponent* uiComponent = entityManager->TryGetComponent<UIComponent>(entity);
-                                if (uiComponent)
-                                {
-                                    if (UIObject* uiObject = uiComponent->uiObject)
-                                    {
-                                        Handle<UIObject> uiObjectRef = uiObject->HandleFromThis();
-                                        Assert(uiObjectRef.IsValid());
-
-                                        componentJson["ui_object"] = json::JSONObject({ { "name", json::JSONString(*uiObject->GetName()) },
-                                            { "type", json::JSONString(*uiObject->InstanceClass()->GetName()) },
-                                            { "num_strong_refs", uiObjectRef->GetObjectHeader_Internal()->GetRefCountStrong() - 1 },
-                                            { "num_weak_refs", uiObjectRef->GetObjectHeader_Internal()->GetRefCountWeak() } });
-                                    }
-                                }
-                            }
-
-                            componentsJson.PushBack(std::move(componentJson));
-                        }
-
-                        entityJson["components"] = std::move(componentsJson);
-                        entityManagerEntitiesJson.PushBack(std::move(entityJson));
-
-                        return IterationResult::CONTINUE;
-                    });
-            };
-
-            if (Threads::CurrentThreadId() == entityManager->GetOwnerThreadId())
-            {
-                impl();
-            }
-            else
-            {
-                Task task = Threads::GetThread(entityManager->GetOwnerThreadId())->GetScheduler().Enqueue(std::move(impl));
-                task.Await();
-            }
-
-            entityManagerJson["entities"] = std::move(entityManagerEntitiesJson);
-
-            entityManagersJson.PushBack(std::move(entityManagerJson));
-        });
-#endif
-
-    json["entity_managers"] = std::move(entityManagersJson);
+    json["entityManagers"] = std::move(entityManagersJson);
 
     FilePath filepath = FilePath::Current() / fileArg;
     if (!filepath.BasePath().MkDir())

@@ -92,13 +92,15 @@ int ConsoleCommandManager::FindAndRegisterCommands()
 
     HypClassRegistry::GetInstance().ForEachClass([this, parentHypClass, &commands](const HypClass* hypClass)
         {
-            if (hypClass->IsAbstract())
-            {
-                return IterationResult::CONTINUE;
-            }
-
             if (hypClass->IsDerivedFrom(parentHypClass))
             {
+                if (hypClass->IsAbstract())
+                {
+                    HYP_LOG(Console, Error, "Class '{}' is abstract, cannot register console command", hypClass->GetName());
+
+                    return IterationResult::CONTINUE;
+                }
+
                 HypData hypData;
                 if (!hypClass->CreateInstance(hypData))
                 {

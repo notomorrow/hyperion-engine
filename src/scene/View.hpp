@@ -66,8 +66,8 @@ enum class ViewFlags : uint32
                                  //  --- Use of these is still threadsafe, however it uses a spinlock instead of multiple buffering so contentions will eat up cpu cycles.
     NO_DRAW_CALLS = 0x2000,      //!< If set, no draw calls will be built for any mesh entities that this View collects.
 
-    ENABLE_READBACK = 0x4000,    //!< Enable render target texture readback (final texture)
-    
+    ENABLE_READBACK = 0x4000, //!< Enable render target texture readback (final texture)
+
     // enable flags
     RAYTRACING = 0x100000, //!< Does this View contain raytracing data (acceleration structures)? (Raytracing must be enabled in the global config and must have RT hardware support)
 
@@ -102,7 +102,7 @@ struct ViewDesc
     int priority = 0;
     Optional<RenderableAttributeSet> overrideAttributes;
     IDrawCallCollectionImpl* drawCallCollectionImpl = nullptr;
-    TextureFormat readbackTextureFormat = TF_RGBA8;             //!< If ENABLE_READBACK is set, the format of the texture we copy the output to.
+    TextureFormat readbackTextureFormat = TF_RGBA8; //!< If ENABLE_READBACK is set, the format of the texture we copy the output to.
 };
 
 class HYP_API ViewOutputTarget
@@ -222,11 +222,6 @@ public:
         return m_overrideAttributes;
     }
 
-    HYP_FORCE_INLINE const ResourceTrackerDiff& GetLastMeshCollectionResult() const
-    {
-        return m_lastMeshCollectionResult;
-    }
-
     HYP_FORCE_INLINE RenderProxyList* GetRenderProxyList(uint32 index) const
     {
         return m_renderProxyLists[index];
@@ -292,8 +287,6 @@ protected:
     GpuImageBase* m_readbackTextureGpuImages[g_tripleBuffer ? 3 : 2];
 
     Optional<RenderableAttributeSet> m_overrideAttributes;
-
-    ResourceTrackerDiff m_lastMeshCollectionResult;
 
     TaskBatch* m_collectionTaskBatch;
 };

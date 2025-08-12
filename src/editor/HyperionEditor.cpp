@@ -119,6 +119,7 @@ void HyperionEditor::Init()
     // }
 
     Handle<Scene> scene = CreateObject<Scene>(SceneFlags::FOREGROUND);
+    scene->SetName(NAME("myScene"));
     m_editorSubsystem->GetCurrentProject()->AddScene(scene);
 
     // Calculate memory pool usage
@@ -311,6 +312,14 @@ void HyperionEditor::Logic(float delta)
         //        clock.Stop();
         //
         //        HYP_LOG_TEMP("Time to draw boxes: {}", clock.ElapsedMs());
+        auto scene = GetWorld()->GetSceneByName(NAME("myScene"));
+        if (scene)
+        {
+            auto envGrid = scene->GetRoot()->FindChildByName("EnvGrid2");
+            if (envGrid)
+                envGrid->Remove();
+        }
+        
     }
 }
 
