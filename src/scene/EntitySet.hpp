@@ -115,17 +115,17 @@ public:
 
     /*! \brief Checks if an Entity's components are valid for this EntitySet.
      *
-     *  \param entity The ID of the Entity to check.
+     *  \param entityId The ID of the Entity to check.
      *
      *  \return True if the Entity's components are valid for this EntitySet, false otherwise.
      */
-    virtual bool ValidForEntity(ObjId<Entity> entity) const = 0;
+    virtual bool ValidForEntity(ObjId<Entity> entityId) const = 0;
 
     /*! \brief Removes the given Entity from this EntitySet.
      *
-     *  \param entity The Entity to remove.
+     *  \param entityId The ID of the Entity to remove.
      */
-    virtual void RemoveEntity(Entity* entity) = 0;
+    virtual void RemoveEntity(ObjId<Entity> entityId) = 0;
 
     /*! \brief To be used by the EntityManager
         \note Do not call this function directly. */
@@ -198,15 +198,30 @@ public:
 
     /*! \brief Remove an Entity from this EntitySet
      *
-     *  \param entity The Entity to remove.
+     *  \param entityId The ID of the Entity to remove.
      */
-    virtual void RemoveEntity(Entity* entity) override
+    virtual void RemoveEntity(ObjId<Entity> entityId) override
     {
         HYP_MT_CHECK_RW(m_dataRaceDetector);
+        
+        Assert(entityId.IsValid());
+        
+        // Get pointer from ID
+        ObjectContainerBase* container = ObjectPool::GetObjectContainerMap().TryGet(entityId.GetTypeId());
 
-        const auto entityElementIt = m_elements.FindIf([entity](const Element& element)
+        HYP_CORE_ASSERT(container != nullptr,
+            "Container is not initialized for type! Possibly using an Id created without pointing to a valid object with TypeId %u?",
+            entityId.GetTypeId().Value());
+
+        HypObjectHeader* header = container->GetObjectHeader(entityId.ToIndex());
+        HYP_CORE_ASSERT(header != nullptr);
+
+        HypObjectBase* entityPtr = container->GetObjectPointer(header);
+        HYP_CORE_ASSERT(entityPtr != nullptr);
+
+        const auto entityElementIt = m_elements.FindIf([entityPtr](const Element& element)
             {
-                return element.template GetElement<0>() == entity;
+                return static_cast<HypObjectBase*>(element.template GetElement<0>()) == entityPtr;
             });
 
         if (entityElementIt != m_elements.End())
@@ -220,9 +235,9 @@ public:
     virtual void OnEntityUpdated(Entity* entity) override
     {
         HYP_MT_CHECK_RW(m_dataRaceDetector);
-        
+
         AssertDebug(entity != nullptr);
-        
+
         const ObjId<Entity> id = entity->Id();
 
         const auto entityElementIt = m_elements.FindIf([entity](const Element& element)
@@ -260,11 +275,11 @@ public:
      *
      *  \return True if the Entity's components are valid for this EntitySet, false otherwise.
      */
-    virtual bool ValidForEntity(ObjId<Entity> id) const override
+    virtual bool ValidForEntity(ObjId<Entity> entityId) const override
     {
         HYP_MT_CHECK_READ(m_dataRaceDetector);
 
-        return m_entities.GetEntityData(id).template HasComponents<Components...>();
+        return m_entities.GetEntityData(entityId).template HasComponents<Components...>();
     }
 
 #ifdef HYP_ENABLE_MT_CHECK

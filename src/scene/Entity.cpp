@@ -38,6 +38,10 @@ Entity::Entity()
 
 Entity::~Entity()
 {
+    // TEMP:
+    Assert(HandleFromThis() == nullptr);
+
+    m_scene = nullptr;
     m_world = nullptr;
 
     // Keep a WeakHandle of Entity so the Id doesn't get reused while we're using it
@@ -47,16 +51,39 @@ Entity::~Entity()
         return;
     }
 
-    Threads::AssertOnThread(entityManager->GetOwnerThreadId(),
-        "Entity destructor must be called on the EntityManager's owner thread!");
-
-    WeakHandle<Entity> weakThis = WeakHandleFromThis();
-
-    if (!entityManager->RemoveEntity(weakThis))
+    if (Threads::IsOnThread(entityManager->GetOwnerThreadId()))
     {
-        HYP_LOG(Entity, Error, "Failed to remove Entity {} from EntityManager", Id());
+        HYP_NAMED_SCOPE("Remove Entity from EntityManager (sync)");
 
-        HYP_BREAKPOINT_DEBUG_MODE;
+        HYP_LOG(Entity, Debug, "Removing Entity {} from entity manager", Id());
+
+        if (!entityManager->RemoveEntity(Id()))
+        {
+            HYP_LOG(Entity, Error, "Failed to remove Entity {} from EntityManager", Id());
+        }
+    }
+    else
+    {
+        // If not on the correct thread, perform the removal asynchronously
+        Threads::GetThread(entityManager->GetOwnerThreadId())->GetScheduler().Enqueue([weakThis = WeakHandleFromThis(), entityManagerWeak = entityManager->WeakHandleFromThis()]()
+            {
+                Handle<EntityManager> entityManager = entityManagerWeak.Lock();
+                if (!entityManager)
+                {
+                    HYP_LOG(Entity, Error, "EntityManager is no longer valid while removing Entity {}", weakThis.Id());
+                    return;
+                }
+
+                HYP_NAMED_SCOPE("Remove Entity from EntityManager (async)");
+
+                HYP_LOG(Entity, Debug, "Removing Entity {} from entity manager", weakThis.Id());
+
+                if (!entityManager->RemoveEntity(weakThis.Id()))
+                {
+                    HYP_LOG(Entity, Error, "Failed to remove Entity {} from EntityManager", weakThis.Id());
+                }
+            },
+            TaskEnqueueFlags::FIRE_AND_FORGET);
     }
 }
 
