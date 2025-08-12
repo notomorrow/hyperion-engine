@@ -466,7 +466,7 @@ bool TranslateEditorManipulationWidget::OnMouseMove(const Handle<Camera>& camera
     {
         return false;
     }
-    
+
     Entity* entity = static_cast<Entity*>(node.Get());
 
     MeshComponent* meshComponent = entity->TryGetComponent<MeshComponent>();
@@ -1139,7 +1139,7 @@ void EditorSubsystem::OnAddedToWorld()
     m_editorScene->GetEntityManager()->AddExistingEntity(m_camera);
     m_editorScene->GetEntityManager()->AddTag<EntityTag::CAMERA_PRIMARY>(m_camera);
 
-    cameraNode->SetEntity(m_camera);
+    cameraNode->AddChild(m_camera);
     cameraNode->SetName(m_camera->GetName());
 
     LoadEditorUIDefinitions();

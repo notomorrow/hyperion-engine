@@ -1511,7 +1511,7 @@ AssetLoadResult FBXModelLoader::LoadAsset(LoaderState& state) const
                 scene->GetEntityManager()->AddComponent<MeshComponent>(entity, MeshComponent { mesh, material });
                 scene->GetEntityManager()->AddComponent<BoundingBoxComponent>(entity, BoundingBoxComponent { mesh->GetAABB() });
 
-                node->SetEntity(entity);
+                node->AddChild(entity);
             }
             else
             {

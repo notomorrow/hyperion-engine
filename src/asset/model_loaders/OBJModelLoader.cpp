@@ -466,7 +466,7 @@ LoadedAsset OBJModelLoader::BuildModel(LoaderState& state, OBJModel& model)
         scene->GetEntityManager()->AddComponent<BoundingBoxComponent>(entity, BoundingBoxComponent { mesh->GetAABB() });
 
         Handle<Node> node = top->AddChild(CreateObject<Node>(CreateNameFromDynamicString(objMesh.name)));
-        node->SetEntity(entity);
+        node->AddChild(entity);
         node->SetLocalTranslation(meshAabbCenter);
     }
 

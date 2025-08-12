@@ -371,7 +371,7 @@ void TerrainStreamingCell::OnLoaded_Impl()
     Handle<Entity> entity = entityManager->AddEntity();
     entityManager->GetComponent<TransformComponent>(entity) = TransformComponent { transform };
     entityManager->GetComponent<VisibilityStateComponent>(entity) = VisibilityStateComponent { VISIBILITY_STATE_FLAG_ALWAYS_VISIBLE };
-    
+
     entityManager->AddComponent<BoundingBoxComponent>(entity, BoundingBoxComponent { m_mesh->GetAABB() });
 
     MeshComponent* meshComponent = entityManager->TryGetComponent<MeshComponent>(entity);
@@ -391,7 +391,7 @@ void TerrainStreamingCell::OnLoaded_Impl()
 
     m_node = m_scene->GetRoot()->AddChild();
     m_node->SetName(NAME_FMT("TerrainPatch_{}", m_cellInfo.coord));
-    m_node->SetEntity(entity);
+    m_node->AddChild(entity);
     m_node->SetWorldTransform(transform);
     HYP_LOG(WorldGrid, Debug, "Created terrain patch node: {}, aabb: {} world pos: {}", m_node->GetName(), m_node->GetEntityAABB(), m_node->GetWorldTranslation());
 
