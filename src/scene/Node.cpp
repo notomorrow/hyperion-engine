@@ -519,10 +519,9 @@ Handle<Node> Node::Select(ANSIStringView selector) const
 
     const char* str = strBegin;
 
-    for ((ch = *str) != '\0'; str != strEnd;)
+    for (; str != strEnd && (ch = *str) != '\0'; ++str)
     {
         const char prevSelectorChar = str == strBegin ? '\0' : *(str - 1);
-        ++str;
 
         if (ch == '/' && prevSelectorChar != '\\')
         {

@@ -1322,10 +1322,12 @@ protected:
 
     /*! \brief Does this object allow the material to be updated?
      *  If true, a dynamic material will be created for this object. */
-    virtual bool AllowMaterialUpdate() const
+    bool AllowMaterialUpdate() const
     {
-        return false;
+        return m_allowMaterialUpdate;
     }
+    
+    void SetAllowMaterialUpdate(bool allowMaterialUpdate);
 
     virtual MaterialAttributes GetMaterialAttributes() const;
     virtual Material::ParameterTable GetMaterialParameters() const;
@@ -1488,6 +1490,7 @@ private:
     bool m_acceptsFocus : 1;
     bool m_affectsParentSize : 1;
     bool m_isPositionAbsolute : 1;
+    bool m_allowMaterialUpdate : 1;
 
     int m_computedDepth;
 
