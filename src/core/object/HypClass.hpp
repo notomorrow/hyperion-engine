@@ -496,12 +496,12 @@ public:
         return m_attributes;
     }
 
-    HYP_FORCE_INLINE const HypClassAttributeValue& GetAttribute(ANSIStringView key) const
+    HYP_FORCE_INLINE const HypClassAttributeValue& GetAttribute(WeakName key) const
     {
         return m_attributes[key];
     }
 
-    HYP_FORCE_INLINE const HypClassAttributeValue& GetAttribute(ANSIStringView key, const HypClassAttributeValue& defaultValue) const
+    HYP_FORCE_INLINE const HypClassAttributeValue& GetAttribute(WeakName key, const HypClassAttributeValue& defaultValue) const
     {
         return m_attributes.Get(key, defaultValue);
     }

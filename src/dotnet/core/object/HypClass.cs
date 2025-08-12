@@ -167,21 +167,6 @@ namespace Hyperion
             }
         }
 
-        public IEnumerable<HypClassAttribute> Attributes
-        {
-            get
-            {
-                IntPtr attributesPtr;
-                uint count = HypClass_GetAttributes(ptr, out attributesPtr);
-
-                for (int i = 0; i < count; i++)
-                {
-                    IntPtr attributePtr = Marshal.ReadIntPtr(attributesPtr, i * IntPtr.Size);
-                    yield return new HypClassAttribute(attributePtr);
-                }
-            }
-        }
-
         public HypClassAttribute? GetAttribute(string name)
         {
             IntPtr attributePtr = HypClass_GetAttribute(ptr, name);
@@ -494,9 +479,6 @@ namespace Hyperion
 
         [DllImport("hyperion", EntryPoint = "HypClass_GetAllocationMethod")]
         private static extern byte HypClass_GetAllocationMethod([In] IntPtr hypClassPtr);
-
-        [DllImport("hyperion", EntryPoint = "HypClass_GetAttributes")]
-        private static extern uint HypClass_GetAttributes([In] IntPtr hypClassPtr, [Out] out IntPtr outAttributesPtr);
 
         [DllImport("hyperion", EntryPoint = "HypClass_GetAttribute")]
         private static extern IntPtr HypClass_GetAttribute([In] IntPtr hypClassPtr, [MarshalAs(UnmanagedType.LPStr)] string name);

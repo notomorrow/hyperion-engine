@@ -35,9 +35,14 @@ struct Formatter<StringType, char>
 template <class StringType>
 struct Formatter<StringType, bool>
 {
-    auto operator()(bool value) const
+    static const inline StringType trueString = "true";
+    static const inline StringType falseString = "false";
+    
+    static const inline StringType* const boolStrings[2] = { &falseString, &trueString };
+    
+    const auto& operator()(bool value) const
     {
-        return StringType(value ? "true" : "false");
+        return *boolStrings[value];
     }
 };
 
@@ -46,16 +51,16 @@ struct Formatter<StringType, float>
 {
     auto operator()(float value) const
     {
-        Array<ubyte, InlineAllocator<1024>> buf;
-        buf.Resize(1024);
+        Array<ubyte, InlineAllocator<16>> buf;
+        buf.Resize(16);
 
-        int resultSize = std::snprintf(reinterpret_cast<char*>(buf.Data()), buf.Size(), "%f", value) + 1;
+        int resultSize = std::snprintf(reinterpret_cast<char*>(buf.Data()), buf.Size(), "%g", value) + 1;
 
         if (resultSize > buf.Size())
         {
             buf.Resize(resultSize);
 
-            resultSize = std::snprintf(reinterpret_cast<char*>(buf.Data()), buf.Size(), "%f", value) + 1;
+            resultSize = std::snprintf(reinterpret_cast<char*>(buf.Data()), buf.Size(), "%g", value) + 1;
         }
 
         return StringType(buf.ToByteView());
@@ -67,16 +72,16 @@ struct Formatter<StringType, double>
 {
     auto operator()(double value) const
     {
-        Array<ubyte, InlineAllocator<1024>> buf;
-        buf.Resize(1024);
+        Array<ubyte, InlineAllocator<16>> buf;
+        buf.Resize(16);
 
-        int resultSize = std::snprintf(reinterpret_cast<char*>(buf.Data()), buf.Size(), "%f", value) + 1;
+        int resultSize = std::snprintf(reinterpret_cast<char*>(buf.Data()), buf.Size(), "%g", value) + 1;
 
         if (resultSize > buf.Size())
         {
             buf.Resize(resultSize);
 
-            resultSize = std::snprintf(reinterpret_cast<char*>(buf.Data()), buf.Size(), "%f", value) + 1;
+            resultSize = std::snprintf(reinterpret_cast<char*>(buf.Data()), buf.Size(), "%g", value) + 1;
         }
 
         return StringType(buf.ToByteView());
@@ -126,8 +131,8 @@ struct PrintfFormatter
 {
     auto operator()(T value) const
     {
-        Array<ubyte, InlineAllocator<1024>> buf;
-        buf.Resize(1024);
+        Array<ubyte, InlineAllocator<64>> buf;
+        buf.Resize(64);
 
         int resultSize = std::snprintf(reinterpret_cast<char*>(buf.Data()), buf.Size(), FormatString.data, value) + 1;
 

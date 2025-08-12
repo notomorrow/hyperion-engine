@@ -276,23 +276,6 @@ extern "C"
         return uint8(hypClass->GetAllocationMethod());
     }
 
-    HYP_EXPORT uint32 HypClass_GetAttributes(const HypClass* hypClass, const void** outAttributes)
-    {
-        if (!hypClass || !outAttributes)
-        {
-            return 0;
-        }
-
-        if (hypClass->GetAttributes().Empty())
-        {
-            return 0;
-        }
-
-        *outAttributes = hypClass->GetAttributes().Begin();
-
-        return (uint32)hypClass->GetAttributes().Size();
-    }
-
     HYP_EXPORT const HypClassAttribute* HypClass_GetAttribute(const HypClass* hypClass, const char* name)
     {
         if (!hypClass || !name)
@@ -307,7 +290,7 @@ extern "C"
             return nullptr;
         }
 
-        return it;
+        return &*it;
     }
 
     HYP_EXPORT uint32 HypClass_GetProperties(const HypClass* hypClass, const void** outProperties)

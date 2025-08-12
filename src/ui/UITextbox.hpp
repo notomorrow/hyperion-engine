@@ -68,6 +68,10 @@ protected:
     {
         return GetText().Length() == 0 && m_placeholder.Length() != 0;
     }
+    
+    // Set text without broadcasting update
+    void SetText_Internal(const String& text);
+    void SubmitTextChange();
 
     UIText* m_textElement;
     Handle<UIObject> m_cursorElement;
@@ -76,6 +80,7 @@ protected:
 
     BlendVar<float> m_cursorBlinkBlendVar;
 
+    String m_prevText;
     String m_placeholder;
 };
 
