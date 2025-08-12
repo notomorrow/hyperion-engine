@@ -69,7 +69,7 @@ HypClassAllocationMethod DynamicHypClassInstance::GetAllocationMethod() const
 bool DynamicHypClassInstance::GetManagedObject(const void* objectPtr, dotnet::ObjectReference& outObjectReference) const
 {
     Assert(m_parent != nullptr);
-    Assert(m_parent->GetAllocationMethod() == HypClassAllocationMethod::HANDLE);
+    Assert(m_parent->UseHandles(), "Must be HypObjectBase type to call GetManagedObject");
 
     HypObjectBase* target = reinterpret_cast<HypObjectBase*>(const_cast<void*>(objectPtr));
     Assert(target != nullptr);
@@ -107,20 +107,8 @@ bool DynamicHypClassInstance::ToHypData(ByteView memory, HypData& outHypData) co
     return m_parent->ToHypData(memory, outHypData);
 }
 
-void DynamicHypClassInstance::FixupPointer(void* target, IHypObjectInitializer* newInitializer) const
-{
-    // Do nothing - FixupObjectInitializerPointer() will just keep iterating up the chain
-}
-
 void DynamicHypClassInstance::PostLoad_Internal(void* objectPtr) const
 {
-}
-
-IHypObjectInitializer* DynamicHypClassInstance::GetObjectInitializer_Internal(void* objectPtr) const
-{
-    Assert(m_parent != nullptr);
-
-    return m_parent->GetObjectInitializer(objectPtr);
 }
 
 bool DynamicHypClassInstance::CreateInstance_Internal(HypData& out) const
@@ -157,16 +145,10 @@ bool DynamicHypClassInstance::CreateInstance_Internal(HypData& out) const
         }
     }
 
-    AssertDebug(m_parent->GetAllocationMethod() == HypClassAllocationMethod::HANDLE);
+    AssertDebug(m_parent->UseHandles());
 
     HypObjectBase* target = reinterpret_cast<HypObjectBase*>(out.ToRef().GetPointer());
     Assert(target != nullptr);
-
-    IHypObjectInitializer* parentInitializer = m_parent->GetObjectInitializer(target);
-    Assert(parentInitializer != nullptr);
-
-    DynamicHypObjectInitializer* newInitializer = new DynamicHypObjectInitializer(this, parentInitializer);
-    FixupObjectInitializerPointer(target, newInitializer);
 
     ManagedObjectResource* managedObjectResource = AllocateResource<ManagedObjectResource>(HypObjectPtr(this, target), managedClass);
     AssertDebug(managedObjectResource != nullptr);

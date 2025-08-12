@@ -39,8 +39,6 @@ struct Handle;
 template <class T>
 struct WeakHandle;
 
-class IHypObjectInitializer;
-
 struct HypObjectHeader;
 
 template <class T>
@@ -52,24 +50,6 @@ enum class HypClassFlags : uint32;
 
 extern HYP_API const HypClass* GetClass(TypeId typeId);
 
-HYP_API extern void FixupObjectInitializerPointer(void* target, IHypObjectInitializer* initializer);
-
-class IHypObjectInitializer
-{
-public:
-    virtual ~IHypObjectInitializer() = default;
-
-    virtual TypeId GetTypeId() const = 0;
-
-    virtual const HypClass* GetClass() const = 0;
-
-    virtual void IncRef(void* _this, bool weak) const = 0;
-    virtual void DecRef(void* _this, bool weak) const = 0;
-
-    virtual uint32 GetRefCount_Strong(void* _this) const = 0;
-    virtual uint32 GetRefCount_Weak(void* _this) const = 0;
-};
-
 template <class T, class T2 = void>
 struct IsHypObject
 {
@@ -80,7 +60,7 @@ struct IsHypObject
  *  \note A type is considered a HypObject if it is derived from HypObjectBase or if it has HYP_OBJECT_BODY(...) in the class body.
  *  \tparam T The type to check. */
 template <class T>
-struct IsHypObject<T, std::enable_if_t<std::is_base_of_v<HypObjectBase, T> || (T::HypObjectData::isHypObject)>>
+struct IsHypObject<T, std::enable_if_t<std::is_base_of_v<HypObjectBase, T>>>
 {
     static constexpr bool value = true;
 
@@ -125,7 +105,7 @@ public:
     template <class T, typename = std::enable_if_t<IsHypObject<T>::value>>
     HypObjectPtr(T* ptr)
         : m_ptr(ptr),
-          m_hypClass(GetHypClass(TypeId::ForType<typename IsHypObject<T>::Type>()))
+          m_hypClass(T::Class())
     {
     }
 
@@ -180,25 +160,19 @@ public:
         return m_ptr;
     }
 
-    HYP_API IHypObjectInitializer* GetObjectInitializer() const;
-
-    HYP_API uint32 GetRefCount_Strong() const;
-    HYP_API uint32 GetRefCount_Weak() const;
+    HYP_API uint32 GetRefCountStrong() const;
+    HYP_API uint32 GetRefCountWeak() const;
 
     HYP_API void IncRef(bool weak = false);
     HYP_API void DecRef(bool weak = false);
 
 private:
-    HYP_API const HypClass* GetHypClass(TypeId typeId) const;
-
     void* m_ptr;
     const HypClass* m_hypClass;
 };
 
-HYP_API void HypObject_OnIncRefCount_Strong(HypObjectPtr ptr, uint32 count);
-HYP_API void HypObject_OnDecRefCount_Strong(HypObjectPtr ptr, uint32 count);
-HYP_API void HypObject_OnIncRefCount_Weak(HypObjectPtr ptr, uint32 count);
-HYP_API void HypObject_OnDecRefCount_Weak(HypObjectPtr ptr, uint32 count);
+HYP_API void HypObject_AcquireManagedObjectLock(HypObjectPtr ptr);
+HYP_API void HypObject_ReleaseManagedObjectLock(HypObjectPtr ptr);
 
 struct HypObjectInitializerGuardBase
 {
@@ -225,7 +199,7 @@ struct HypObjectInitializerGuard : HypObjectInitializerGuardBase
     static const HypClass* GetClassAndEnsureValid()
     {
         using HypObjectType = typename IsHypObject<T>::Type;
-        static const HypClass* hypClass = GetClass(TypeId::ForType<HypObjectType>());
+        static const HypClass* hypClass = HypObjectType::Class();
 
         HYP_CORE_ASSERT(hypClass != nullptr, "HypClass not registered for type %s", TypeNameWithoutNamespace<T>().Data());
 

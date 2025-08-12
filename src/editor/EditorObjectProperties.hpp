@@ -2,6 +2,8 @@
 
 #pragma once
 
+#include <core/object/Handle.hpp>
+
 #include <core/math/Vector2.hpp>
 #include <core/math/Vector3.hpp>
 #include <core/math/Vector4.hpp>

@@ -45,8 +45,6 @@ class HypStructInstance;
 template <class T>
 class HypEnumInstance;
 
-class IHypObjectInitializer;
-
 enum class HypClassFlags : uint32
 {
     NONE = 0x0,
@@ -446,18 +444,6 @@ public:
         return m_alignment;
     }
 
-    HYP_FORCE_INLINE IHypObjectInitializer* GetObjectInitializer(void* objectPtr) const
-    {
-        return GetObjectInitializer_Internal(objectPtr);
-    }
-
-    HYP_FORCE_INLINE const IHypObjectInitializer* GetObjectInitializer(const void* objectPtr) const
-    {
-        return GetObjectInitializer_Internal(const_cast<void*>(objectPtr));
-    }
-
-    virtual void FixupPointer(void* target, IHypObjectInitializer* newInitializer) const = 0;
-
     HYP_FORCE_INLINE TypeId GetTypeId() const
     {
         return m_typeId;
@@ -641,8 +627,6 @@ protected:
     {
     }
 
-    virtual IHypObjectInitializer* GetObjectInitializer_Internal(void* objectPtr) const = 0;
-
     virtual bool CreateInstance_Internal(HypData& out) const
     {
         return false;
@@ -809,19 +793,6 @@ public:
     }
 
 protected:
-    virtual void FixupPointer(void* target, IHypObjectInitializer* newInitializer) const override
-    {
-        HYP_CORE_ASSERT(target != nullptr);
-
-        if constexpr (std::is_base_of_v<EnableRefCountedPtrFromThisBase<>, T>)
-        {
-            // hack to update the TypeId of the weakThis pointer to be the same as the new initializer
-            static_cast<EnableRefCountedPtrFromThisBase<>*>(static_cast<T*>(target))->weakThis.GetRefCountData_Internal()->typeId = newInitializer->GetTypeId();
-        }
-
-        static_cast<T*>(target)->m_hypObjectInitializerPtr = newInitializer;
-    }
-
     virtual void PostLoad_Internal(void* objectPtr) const override
     {
         if (!objectPtr)
@@ -840,16 +811,6 @@ protected:
         HYP_CORE_ASSERT(callbackWrapperCasted != nullptr);
 
         callbackWrapperCasted->GetCallback()(*static_cast<T*>(objectPtr));
-    }
-
-    virtual IHypObjectInitializer* GetObjectInitializer_Internal(void* objectPtr) const override
-    {
-        if (!objectPtr)
-        {
-            return nullptr;
-        }
-
-        return static_cast<T*>(objectPtr)->GetObjectInitializer();
     }
 
     virtual bool CreateInstance_Internal(HypData& out) const override
@@ -970,9 +931,7 @@ public:
     virtual bool ToHypData(ByteView memory, HypData& outHypData) const override;
 
 protected:
-    virtual void FixupPointer(void* target, IHypObjectInitializer* newInitializer) const override;
     virtual void PostLoad_Internal(void* objectPtr) const override;
-    virtual IHypObjectInitializer* GetObjectInitializer_Internal(void* objectPtr) const override;
     virtual bool CreateInstance_Internal(HypData& out) const override;
     virtual bool CreateInstanceArray_Internal(Span<HypData> elements, HypData& out) const override;
     virtual HashCode GetInstanceHashCode_Internal(ConstAnyRef ref) const override;

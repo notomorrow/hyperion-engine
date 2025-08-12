@@ -158,7 +158,10 @@ struct HypObjectMemory final : HypObjectHeader
     {
         const uint32 count = refCountStrong.Increment(1, MemoryOrder::ACQUIRE_RELEASE) + 1;
 
-        HypObject_OnIncRefCount_Strong(HypObjectPtr(GetPointer()), count);
+        if (count > 1)
+        {
+            HypObject_AcquireManagedObjectLock(HypObjectPtr(GetPointer()));
+        }
 
         return count;
     }
@@ -177,8 +180,6 @@ struct HypObjectMemory final : HypObjectHeader
             // Increment weak reference count by 1 so any WeakHandleFromThis() calls in the destructor do not immediately cause the item to be removed from the pool
             refCountWeak.Increment(1, MemoryOrder::RELEASE);
 
-            HypObject_OnDecRefCount_Strong(HypObjectPtr(GetPointer()), count - 1);
-
             GetPointer()->~T();
 
             if (refCountWeak.Decrement(1, MemoryOrder::ACQUIRE_RELEASE) == 1)
@@ -189,7 +190,7 @@ struct HypObjectMemory final : HypObjectHeader
         }
         else
         {
-            HypObject_OnDecRefCount_Strong(HypObjectPtr(GetPointer()), count - 1);
+            HypObject_ReleaseManagedObjectLock(HypObjectPtr(GetPointer()));
         }
 
         return count - 1;
@@ -258,7 +259,7 @@ class ObjectContainer final : public ObjectContainerBase
 
 public:
     ObjectContainer()
-        : ObjectContainerBase(TypeId::ForType<T>(), GetClass(TypeId::ForType<T>())),
+        : ObjectContainerBase(TypeId::ForType<T>(), T::Class()),
           m_pool(2048, /* createInitialBlocks */ true, /* blockInitCtx */ this)
     {
     }

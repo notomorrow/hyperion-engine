@@ -109,11 +109,8 @@ void HyperionEditor::Init()
 
     GetWorld()->AddSubsystem(m_editorSubsystem);
 
-    // if (const Handle<WorldGrid>& worldGrid = g_engineDriver->GetWorld()->GetWorldGrid())
+    // if (const Handle<WorldGrid>& worldGrid = GetWorld()->GetWorldGrid())
     // {
-    //     // // Initialize the world grid subsystem
-    //     // worldGrid->AddPlugin(0, MakeRefCountedPtr<TerrainWorldGridPlugin>());
-
     //     worldGrid->AddLayer(CreateObject<TerrainWorldGridLayer>());
     // }
     // else
@@ -224,7 +221,8 @@ void HyperionEditor::Init()
     // Test assets, nevermind this
     RC<AssetBatch> batch = AssetManager::GetInstance()->CreateBatch();
     batch->Add("test_model", "models/sponza/sponza.obj");
-    batch->Add("test_model", "models/testbed/testbed.obj");
+    batch->Add("zombie", "models/ogrexml/dragger_Body.mesh.xml");
+    // batch->Add("test_model", "models/testbed/testbed.obj");
 
     batch->OnComplete
         .Bind([this, scene](AssetMap& results)
@@ -238,13 +236,11 @@ void HyperionEditor::Init()
                 scene->GetRoot()->AddChild(node);
 
 #if 1
-                Handle<Node> envGridNode = scene->GetRoot()->AddChild();
-                envGridNode->SetName(NAME("EnvGrid2"));
-
                 Handle<Entity> envGridEntity = scene->GetEntityManager()->AddEntity<EnvGrid>(node->GetWorldAABB() * 1.2f, EnvGridOptions { .type = EnvGridType::ENV_GRID_TYPE_LIGHT_FIELD, .density = Vec3u { 10, 3, 10 } });
+                envGridEntity->SetName(NAME("EnvGrid2"));
                 scene->GetEntityManager()->AddComponent<BoundingBoxComponent>(envGridEntity, BoundingBoxComponent { node->GetWorldAABB() * 1.2f, node->GetWorldAABB() * 1.2f });
 
-                envGridNode->AddChild(envGridEntity);
+                scene->GetRoot()->AddChild(envGridEntity);
 #endif
 
                 if (auto& zombieAsset = results["zombie"]; zombieAsset.IsValid())
@@ -253,23 +249,18 @@ void HyperionEditor::Init()
                     zombie->Scale(0.25f);
                     zombie->Translate(Vec3f(0, 2.0f, -1.0f));
 
-                    Handle<Entity> zombieEntity = zombie->GetChild(0)->GetEntity();
-
                     scene->GetRoot()->AddChild(zombie);
 
-                    if (zombieEntity.IsValid())
-                    {
-                        if (auto* meshComponent = scene->GetEntityManager()->TryGetComponent<MeshComponent>(zombieEntity))
-                        {
-                            meshComponent->material = meshComponent->material->Clone();
-                            meshComponent->material->SetParameter(Material::MaterialKey::MATERIAL_KEY_ALBEDO, Vec4f(1.0f));
-                            meshComponent->material->SetParameter(Material::MaterialKey::MATERIAL_KEY_ROUGHNESS, 0.1f);
-                            meshComponent->material->SetParameter(Material::MaterialKey::MATERIAL_KEY_METALNESS, 0.0f);
-                            InitObject(meshComponent->material);
-                        }
+                    // if (auto* meshComponent = zombie->TryGetComponent<MeshComponent>())
+                    // {
+                    //     meshComponent->material = meshComponent->material->Clone();
+                    //     meshComponent->material->SetParameter(Material::MaterialKey::MATERIAL_KEY_ALBEDO, Vec4f(1.0f));
+                    //     meshComponent->material->SetParameter(Material::MaterialKey::MATERIAL_KEY_ROUGHNESS, 0.1f);
+                    //     meshComponent->material->SetParameter(Material::MaterialKey::MATERIAL_KEY_METALNESS, 0.0f);
+                    //     InitObject(meshComponent->material);
+                    // }
 
-                        scene->GetEntityManager()->AddComponent<AudioComponent>(zombieEntity, AudioComponent { .audioSource = AssetManager::GetInstance()->Load<AudioSource>("sounds/taunt.wav")->Result(), .playbackState = { .loopMode = AudioLoopMode::AUDIO_LOOP_MODE_ONCE, .speed = 2.0f } });
-                    }
+                    // zombie->AddComponent<AudioComponent>(AudioComponent { .audioSource = AssetManager::GetInstance()->Load<AudioSource>("sounds/taunt.wav")->Result(), .playbackState = { .loopMode = AudioLoopMode::AUDIO_LOOP_MODE_ONCE, .speed = 2.0f } });
 
                     zombie->SetName(NAME("zombie"));
                 }

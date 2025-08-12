@@ -48,45 +48,15 @@ Entity::~Entity()
         return;
     }
 
-    if (Threads::IsOnThread(entityManager->GetOwnerThreadId()))
+    Threads::AssertOnThread(entityManager->GetOwnerThreadId(), "Entity destructor must be called on the EntityManager's owner thread");
+
+    WeakHandle<Entity> weakThis = WeakHandleFromThis();
+
+    if (!entityManager->RemoveEntity(weakThis))
     {
-        HYP_NAMED_SCOPE("Remove Entity from EntityManager (sync)");
+        HYP_LOG(Entity, Error, "Failed to remove Entity {} from EntityManager", Id());
 
-        HYP_LOG(Entity, Debug, "Removing Entity {} from entity manager", Id());
-        
-        WeakHandle<Entity> weakThis = WeakHandleFromThis();
-
-        if (!entityManager->RemoveEntity(weakThis))
-        {
-            HYP_LOG(Entity, Error, "Failed to remove Entity {} from EntityManager", Id());
-
-            HYP_BREAKPOINT_DEBUG_MODE;
-        }
-    }
-    else
-    {
-        /// @TODO: Require destruct on game thread?
-        Task<void> removeEntityTask = Threads::GetThread(entityManager->GetOwnerThreadId())->GetScheduler().Enqueue([weakThis = WeakHandleFromThis(), entityManagerWeak = entityManager->WeakHandleFromThis()]()
-            {
-                Handle<EntityManager> entityManager = entityManagerWeak.Lock();
-                if (!entityManager)
-                {
-                    HYP_LOG(Entity, Error, "EntityManager is no longer valid while removing Entity {}", weakThis.Id());
-                    return;
-                }
-
-                HYP_NAMED_SCOPE("Remove Entity from EntityManager (async)");
-
-                HYP_LOG(Entity, Debug, "Removing Entity {} from entity manager (async)", weakThis.Id());
-
-                if (!entityManager->RemoveEntity(weakThis))
-                {
-                    HYP_LOG(Entity, Error, "Failed to remove Entity {} from EntityManager", weakThis.Id());
-                    HYP_BREAKPOINT_DEBUG_MODE;
-                }
-            });
-        
-        removeEntityTask.Await();
+        HYP_BREAKPOINT_DEBUG_MODE;
     }
 }
 

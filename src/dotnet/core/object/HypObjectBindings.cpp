@@ -34,7 +34,7 @@ extern "C"
         Assert(objectReference != nullptr);
         Assert(outInstancePtr != nullptr);
 
-        Assert(hypClass->GetAllocationMethod() == HypClassAllocationMethod::HANDLE);
+        Assert(hypClass->UseHandles());
 
         HypObjectPtr ptr;
 
@@ -61,9 +61,6 @@ extern "C"
 
         *outInstancePtr = ptr.GetPointer();
 
-        IHypObjectInitializer* initializer = ptr.GetObjectInitializer();
-        Assert(initializer != nullptr);
-
         ManagedObjectResource* managedObjectResource = AllocateResource<ManagedObjectResource>(
             ptr,
             classObjectPtr->RefCountedPtrFromThis(),
@@ -77,14 +74,14 @@ extern "C"
         /// NOTE: CREATED_FROM_MANAGED is set to true here, so we don't set keep alive to true
     }
 
-    HYP_EXPORT uint32 HypObject_GetRefCount_Strong(const HypClass* hypClass, void* nativeAddress)
+    HYP_EXPORT uint32 HypObject_GetRefCountStrong(const HypClass* hypClass, void* nativeAddress)
     {
         Assert(hypClass != nullptr);
         Assert(nativeAddress != nullptr);
 
         HypObjectPtr hypObjectPtr = HypObjectPtr(hypClass, nativeAddress);
 
-        return hypObjectPtr.GetRefCount_Strong();
+        return hypObjectPtr.GetRefCountStrong();
     }
 
     HYP_EXPORT void HypObject_IncRef(const HypClass* hypClass, void* nativeAddress, int8 isWeak)

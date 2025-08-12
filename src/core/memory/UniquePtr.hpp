@@ -398,15 +398,7 @@ public:
         static_assert(std::is_constructible_v<T, Args...>, "T must be constructible using the given args");
 
         UniquePtr ptr;
-
-        if constexpr (IsHypObject<T>::value)
-        {
-            ptr.Reset(Memory::AllocateAndConstructWithContext<T, HypObjectInitializerGuard<T>>(std::forward<Args>(args)...));
-        }
-        else
-        {
-            ptr.Reset(Memory::AllocateAndConstruct<T>(std::forward<Args>(args)...));
-        }
+        ptr.Reset(Memory::AllocateAndConstruct<T>(std::forward<Args>(args)...));
 
         return ptr;
     }

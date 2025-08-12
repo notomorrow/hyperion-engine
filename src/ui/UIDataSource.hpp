@@ -107,7 +107,7 @@ protected:
 };
 
 template <class T>
-class HYP_API UIElementFactory : public UIElementFactoryBase
+class UIElementFactory : public UIElementFactoryBase
 {
 public:
     virtual ~UIElementFactory() = default;

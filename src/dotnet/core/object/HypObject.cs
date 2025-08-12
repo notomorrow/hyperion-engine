@@ -96,7 +96,7 @@ namespace Hyperion
                 if (HypClass.IsReferenceCounted)
                 {
 #if DEBUG
-                    Assert.Throw(HypObject_GetRefCount_Strong(_hypClassPtr, _nativeAddress) == 1, "Strong reference must be 1 before destruction");
+                    Assert.Throw(HypObject_GetRefCountStrong(_hypClassPtr, _nativeAddress) == 1, "Strong reference must be 1 before destruction");
 #endif
 
                     HypObject_DecRef(_hypClassPtr, _nativeAddress, false);
@@ -233,7 +233,7 @@ namespace Hyperion
                     throw new Exception("Native address is null");
                 }
 
-                return HypObject_GetRefCount_Strong(_hypClassPtr, _nativeAddress);
+                return HypObject_GetRefCountStrong(_hypClassPtr, _nativeAddress);
             }
         }
 
@@ -245,8 +245,8 @@ namespace Hyperion
         [DllImport("hyperion", EntryPoint = "HypObject_Initialize")]
         private static extern void HypObject_Initialize([In] IntPtr hypClassPtr, [In] IntPtr classObjectPtr, [In] ref ObjectReference objectReference, [Out] out IntPtr outInstancePtr);
 
-        [DllImport("hyperion", EntryPoint = "HypObject_GetRefCount_Strong")]
-        private static extern uint HypObject_GetRefCount_Strong([In] IntPtr hypClassPtr, [In] IntPtr nativeAddress);
+        [DllImport("hyperion", EntryPoint = "HypObject_GetRefCountStrong")]
+        private static extern uint HypObject_GetRefCountStrong([In] IntPtr hypClassPtr, [In] IntPtr nativeAddress);
 
         [DllImport("hyperion", EntryPoint = "HypObject_IncRef")]
         private static extern void HypObject_IncRef([In] IntPtr hypClassPtr, [In] IntPtr nativeAddress, [MarshalAs(UnmanagedType.I1)] bool isWeak);
