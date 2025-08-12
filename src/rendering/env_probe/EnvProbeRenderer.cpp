@@ -185,7 +185,8 @@ void ReflectionProbeRenderer::RenderProbe(FrameBase* frame, const RenderSetup& r
         AssertDebug(lightProxy != nullptr);
         AssertDebug(RenderApi_RetrieveResourceBinding(renderSetup.light) != ~0u);
 
-        if (lightProxy->bufferData.positionIntensity == pd->cachedLightDirIntensity && !rpl.GetMeshEntities().GetDiff().NeedsUpdate())
+        if (lightProxy->bufferData.positionIntensity == pd->cachedLightDirIntensity
+            && !rpl.GetMeshEntities().GetDiff().NeedsUpdate())
         {
             // no need to render it just yet if values have not changed -- return early
             return;
@@ -193,6 +194,13 @@ void ReflectionProbeRenderer::RenderProbe(FrameBase* frame, const RenderSetup& r
 
         // cache it to save on rendering later
         pd->cachedLightDirIntensity = lightProxy->bufferData.positionIntensity;
+    }
+
+    if (!rpl.GetMeshEntities().GetDiff().NeedsUpdate()
+        && !rpl.GetLights().GetDiff().NeedsUpdate())
+    {
+        // no need to render it just yet if there are no mesh entities
+        return;
     }
 
     RenderCollector& renderCollector = RenderApi_GetRenderCollector(view);

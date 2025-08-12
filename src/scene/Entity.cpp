@@ -53,18 +53,20 @@ Entity::~Entity()
         HYP_NAMED_SCOPE("Remove Entity from EntityManager (sync)");
 
         HYP_LOG(Entity, Debug, "Removing Entity {} from entity manager", Id());
+        
+        WeakHandle<Entity> weakThis = WeakHandleFromThis();
 
-        AssertDebug(entityManager->HasEntity(this));
-
-        if (!entityManager->RemoveEntity(this))
+        if (!entityManager->RemoveEntity(weakThis))
         {
             HYP_LOG(Entity, Error, "Failed to remove Entity {} from EntityManager", Id());
+
+            HYP_BREAKPOINT_DEBUG_MODE;
         }
     }
     else
     {
-        // If not on the correct thread, perform the removal asynchronously
-        Threads::GetThread(entityManager->GetOwnerThreadId())->GetScheduler().Enqueue([weakThis = WeakHandleFromThis(), entityManagerWeak = entityManager->WeakHandleFromThis()]()
+        /// @TODO: Require destruct on game thread?
+        Task<void> removeEntityTask = Threads::GetThread(entityManager->GetOwnerThreadId())->GetScheduler().Enqueue([weakThis = WeakHandleFromThis(), entityManagerWeak = entityManager->WeakHandleFromThis()]()
             {
                 Handle<EntityManager> entityManager = entityManagerWeak.Lock();
                 if (!entityManager)
@@ -75,16 +77,16 @@ Entity::~Entity()
 
                 HYP_NAMED_SCOPE("Remove Entity from EntityManager (async)");
 
-                HYP_LOG(Entity, Debug, "Removing Entity {} from entity manager", weakThis.Id());
+                HYP_LOG(Entity, Debug, "Removing Entity {} from entity manager (async)", weakThis.Id());
 
-                AssertDebug(entityManager->HasEntity(weakThis.GetUnsafe()));
-
-                if (!entityManager->RemoveEntity(weakThis.GetUnsafe()))
+                if (!entityManager->RemoveEntity(weakThis))
                 {
                     HYP_LOG(Entity, Error, "Failed to remove Entity {} from EntityManager", weakThis.Id());
+                    HYP_BREAKPOINT_DEBUG_MODE;
                 }
-            },
-            TaskEnqueueFlags::FIRE_AND_FORGET);
+            });
+        
+        removeEntityTask.Await();
     }
 }
 

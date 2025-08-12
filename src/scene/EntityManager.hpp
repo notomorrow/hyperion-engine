@@ -401,16 +401,12 @@ public:
      */
     void MoveEntity(const Handle<Entity>& entity, const Handle<EntityManager>& other);
 
-    HYP_FORCE_INLINE bool HasEntity(const Entity* entity) const
+    HYP_FORCE_INLINE bool HasEntity(ObjId<Entity> id) const
     {
         Threads::AssertOnThread(m_ownerThreadId);
 
-        if (!entity)
-        {
-            return false;
-        }
 
-        return m_entities.HasEntity(entity);
+        return id.IsValid() && m_entities.HasEntity(id);
     }
 
     void AddTag(Entity* entity, EntityTag tag);
@@ -485,32 +481,22 @@ public:
     {
         EnsureValidComponentType<Component>();
 
-        if (!entity)
-        {
-            return false;
-        }
-
         // Threads::AssertOnThread(m_ownerThreadId);
 
         HYP_MT_CHECK_READ(m_entitiesDataRaceDetector);
 
-        return m_entities.GetEntityData(entity).HasComponent<Component>();
+        return entity && m_entities.GetEntityData(entity->Id()).HasComponent<Component>();
     }
 
     bool HasComponent(TypeId componentTypeId, const Entity* entity) const
     {
         EnsureValidComponentType(componentTypeId);
 
-        if (!entity)
-        {
-            return false;
-        }
-
         // Threads::AssertOnThread(m_ownerThreadId);
 
         HYP_MT_CHECK_READ(m_entitiesDataRaceDetector);
 
-        return m_entities.GetEntityData(entity).HasComponent(componentTypeId);
+        return entity && m_entities.GetEntityData(entity->Id()).HasComponent(componentTypeId);
     }
 
     template <class Component>
@@ -525,7 +511,7 @@ public:
         HYP_MT_CHECK_READ(m_entitiesDataRaceDetector);
         HYP_MT_CHECK_READ(m_containersDataRaceDetector);
 
-        EntityData* entityData = m_entities.TryGetEntityData(entity);
+        EntityData* entityData = m_entities.TryGetEntityData(entity->Id());
         Assert(entityData != nullptr, "Entity does not exist");
 
         const Optional<ComponentId> componentIdOpt = entityData->TryGetComponentId<Component>();
@@ -562,7 +548,7 @@ public:
         HYP_MT_CHECK_READ(m_entitiesDataRaceDetector);
         HYP_MT_CHECK_READ(m_containersDataRaceDetector);
 
-        EntityData* entityData = m_entities.TryGetEntityData(entity);
+        EntityData* entityData = m_entities.TryGetEntityData(entity->Id());
 
         if (!entityData)
         {
@@ -621,7 +607,7 @@ public:
         HYP_MT_CHECK_READ(m_entitiesDataRaceDetector);
         HYP_MT_CHECK_READ(m_containersDataRaceDetector);
 
-        EntityData* entityData = m_entities.TryGetEntityData(entity);
+        EntityData* entityData = m_entities.TryGetEntityData(entity->Id());
 
         if (!entityData)
         {
@@ -689,7 +675,7 @@ public:
 
         Threads::AssertOnThread(m_ownerThreadId);
 
-        const EntityData* entityData = m_entities.TryGetEntityData(entity);
+        const EntityData* entityData = m_entities.TryGetEntityData(entity->Id());
         
         if (!entityData)
         {
@@ -716,7 +702,7 @@ public:
         Handle<Entity> entityHandle = entity->HandleFromThis();
         Assert(entityHandle.IsValid());
 
-        EntityData* entityData = m_entities.TryGetEntityData(entity);
+        EntityData* entityData = m_entities.TryGetEntityData(entity->Id());
         Assert(entityData != nullptr);
 
         Component* componentPtr = nullptr;
@@ -787,7 +773,7 @@ public:
 
         TypeMap<ComponentId> removedComponentIds;
 
-        EntityData* entityData = m_entities.TryGetEntityData(entity);
+        EntityData* entityData = m_entities.TryGetEntityData(entity->Id());
 
         if (!entityData)
         {
@@ -1091,11 +1077,11 @@ private:
 
     /*! \brief Removes an entity from the EntityManager.
      *
-     *  \param[in] entity The Entity to remove.
+     *  \param[in] entityWeak WeakHandle to the Entity to remove.
      *
      *  \return True if the entity was removed, false otherwise.
      */
-    bool RemoveEntity(Entity* entity);
+    bool RemoveEntity(const WeakHandle<Entity>& entityWeak);
 
     bool IsEntityInitializedForSystem(SystemBase* system, const Entity* entity) const;
 

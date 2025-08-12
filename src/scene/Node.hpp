@@ -230,13 +230,6 @@ public:
     HYP_METHOD()
     bool HasName() const;
 
-    /*! \returns The type of the node. By default, it will just be NODE. */
-    HYP_METHOD(Property = "Type")
-    HYP_FORCE_INLINE Type GetType() const
-    {
-        return m_type;
-    }
-
     /*! \brief Get the flags of the Node.
      *  \see NodeFlagBits
      *  \returns The flags of the Node. */
@@ -653,11 +646,9 @@ public:
     {
         HashCode hc;
 
-        hc.Add(m_type);
         hc.Add(m_name);
         hc.Add(m_localTransform);
         hc.Add(m_worldTransform);
-        hc.Add(m_entity);
 
         for (const Handle<Node>& child : m_childNodes)
         {
@@ -674,8 +665,6 @@ public:
 
 protected:
     static Scene* GetDefaultScene();
-
-    Node(Type type, Name name, const Handle<Entity>& entity, const Transform& localTransform = Transform(), Scene* scene = nullptr);
 
     virtual void Init() override;
 
@@ -697,8 +686,6 @@ protected:
     template <class Function>
     void GetEditorDelegates(Function&& func);
 #endif
-
-    Type m_type = Type::NODE;
 
     EnumFlags<NodeFlags> m_flags = NodeFlags::NONE;
 

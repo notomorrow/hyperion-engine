@@ -156,83 +156,85 @@ public:
         subtypeData.data.Emplace(id.ToIndex(), EntityData { entity.ToWeak() });
     }
 
-    HYP_FORCE_INLINE bool Remove(const Entity* entity)
+    HYP_FORCE_INLINE bool Remove(ObjId<Entity> id)
     {
-        if (!entity)
+        HYP_MT_CHECK_READ(m_dataRaceDetector);
+
+        if (!id.IsValid())
         {
             return false;
         }
 
-        const TypeId typeId = entity->Id().GetTypeId();
+        const TypeId typeId = id.GetTypeId();
         SubtypeData& subtypeData = GetSubtypeData(typeId);
 
-        if (!subtypeData.data.HasIndex(entity->Id().ToIndex()))
+        if (!subtypeData.data.HasIndex(id.ToIndex()))
         {
             return false;
         }
 
-        subtypeData.data.EraseAt(entity->Id().ToIndex());
+        subtypeData.data.EraseAt(id.ToIndex());
 
         return true;
     }
 
-    HYP_FORCE_INLINE bool HasEntity(const Entity* entity) const
+    HYP_FORCE_INLINE bool HasEntity(ObjId<Entity> id) const
     {
         HYP_MT_CHECK_READ(m_dataRaceDetector);
 
-        if (!entity)
+        if (!id.IsValid())
         {
             return false;
         }
 
-        const TypeId typeId = entity->Id().GetTypeId();
+        const TypeId typeId = id.GetTypeId();
         const SubtypeData& subtypeData = GetSubtypeData(typeId);
 
-        return subtypeData.data.HasIndex(entity->Id().ToIndex());
+        return subtypeData.data.HasIndex(id.ToIndex());
     }
 
-    HYP_FORCE_INLINE EntityData* TryGetEntityData(const Entity* entity)
+    HYP_FORCE_INLINE EntityData* TryGetEntityData(ObjId<Entity> id)
     {
         HYP_MT_CHECK_READ(m_dataRaceDetector);
 
-        if (!entity)
+        if (!id.IsValid())
         {
             return nullptr;
         }
 
-        const TypeId typeId = entity->Id().GetTypeId();
+        const TypeId typeId = id.GetTypeId();
         SubtypeData& subtypeData = GetSubtypeData(typeId);
 
-        return subtypeData.data.TryGet(entity->Id().ToIndex());
+        return subtypeData.data.TryGet(id.ToIndex());
     }
 
-    HYP_FORCE_INLINE const EntityData* TryGetEntityData(const Entity* entity) const
+    HYP_FORCE_INLINE const EntityData* TryGetEntityData(ObjId<Entity> id) const
     {
         HYP_MT_CHECK_READ(m_dataRaceDetector);
 
-        if (!entity)
+        if (!id.IsValid())
         {
             return nullptr;
         }
 
-        const TypeId typeId = entity->Id().GetTypeId();
+        const TypeId typeId = id.GetTypeId();
         const SubtypeData& subtypeData = GetSubtypeData(typeId);
 
-        return subtypeData.data.TryGet(entity->Id().ToIndex());
+        return subtypeData.data.TryGet(id.ToIndex());
     }
 
-    HYP_FORCE_INLINE EntityData& GetEntityData(const Entity* entity)
+    HYP_FORCE_INLINE EntityData& GetEntityData(ObjId<Entity> id)
     {
-        EntityData* data = TryGetEntityData(entity);
-        Assert(data != nullptr);
+        EntityData* data = TryGetEntityData(id);
+        AssertDebug(data != nullptr);
 
         return *data;
     }
 
-    HYP_FORCE_INLINE const EntityData& GetEntityData(const Entity* entity) const
+    HYP_FORCE_INLINE const EntityData& GetEntityData(ObjId<Entity> id) const
     {
-        const EntityData* data = TryGetEntityData(entity);
-        Assert(data != nullptr);
+        const EntityData* data = TryGetEntityData(id);
+        AssertDebug(data != nullptr);
 
         return *data;
     }

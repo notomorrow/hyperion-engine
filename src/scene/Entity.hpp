@@ -63,6 +63,30 @@ public:
         return m_entityManager;
     }
 
+    template <class Component, class EntityManagerPtr = EntityManager*>
+    Component& GetComponent() const;
+
+    template <class Component, class EntityManagerPtr = EntityManager*>
+    Component* TryGetComponent() const;
+
+    template <class Component, class EntityManagerPtr = EntityManager*>
+    bool HasComponent() const;
+
+    template <class Component, class T = Component, class EntityManagerPtr = EntityManager*>
+    Component& AddComponent(T&& component);
+
+    template <class Component, class EntityManagerPtr = EntityManager*>
+    bool RemoveComponent();
+
+    template <EntityTag Tag, class EntityManagerPtr = EntityManager*>
+    void AddTag();
+
+    template <EntityTag Tag, class EntityManagerPtr = EntityManager*>
+    bool RemoveTag();
+
+    template <EntityTag Tag, class EntityManagerPtr = EntityManager*>
+    bool HasTag() const;
+
     bool ReceivesUpdate() const;
     void SetReceivesUpdate(bool receivesUpdate);
 
@@ -120,6 +144,8 @@ private:
     // has the transform been updated since the Node's transform has been unlocked?
     bool m_transformChanged : 1;
 };
+
+#include <scene/Entity.inl>
 
 } // namespace hyperion
 
