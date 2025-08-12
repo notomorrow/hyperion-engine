@@ -135,7 +135,7 @@ Scene::Scene(World* world, ThreadId ownerThreadId, EnumFlags<SceneFlags> flags)
       m_octree(m_entityManager, BoundingBox(Vec3f(-250.0f), Vec3f(250.0f))),
       m_previousDelta(0.01667f)
 {
-    m_root = CreateObject<Node>(NAME("<ROOT>"), Handle<Entity>::empty, Transform::identity, this);
+    m_root = CreateObject<Node>(NAME("<ROOT>"), Transform::identity, this);
 }
 
 Scene::~Scene()

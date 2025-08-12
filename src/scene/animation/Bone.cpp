@@ -11,7 +11,7 @@ Bone::Bone()
 }
 
 Bone::Bone(Name name)
-    : Node(name, Handle<Entity>::empty, Transform()),
+    : Node(name, Transform()),
       m_skeleton(nullptr)
 {
 }

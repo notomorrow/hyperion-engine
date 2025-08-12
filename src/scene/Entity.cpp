@@ -8,7 +8,6 @@
 #include <scene/EntityManager.hpp>
 #include <scene/EntityTag.hpp>
 #include <scene/ComponentInterface.hpp>
-#include <scene/components/NodeLinkComponent.hpp>
 #include <scene/components/MeshComponent.hpp>
 #include <scene/components/ScriptComponent.hpp>
 #include <scene/components/TransformComponent.hpp>
@@ -226,10 +225,23 @@ void Entity::OnComponentAdded(AnyRef component)
 
         return;
     }
+
+    if (BoundingBoxComponent* boundingBoxComponent = component.TryGet<BoundingBoxComponent>())
+    {
+        SetEntityAABB(boundingBoxComponent->localAabb);
+
+        return;
+    }
 }
 
 void Entity::OnComponentRemoved(AnyRef component)
 {
+    if (BoundingBoxComponent* boundingBoxComponent = component.TryGet<BoundingBoxComponent>())
+    {
+        SetEntityAABB(BoundingBox::Empty());
+
+        return;
+    }
 }
 
 void Entity::OnTagAdded(EntityTag tag)

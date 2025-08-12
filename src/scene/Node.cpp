@@ -13,7 +13,6 @@
 #include <scene/components/BoundingBoxComponent.hpp>
 #include <scene/components/MeshComponent.hpp>
 #include <scene/components/TransformComponent.hpp>
-#include <scene/components/NodeLinkComponent.hpp>
 #include <scene/components/VisibilityStateComponent.hpp>
 
 #include <core/debug/Debug.hpp>
@@ -73,17 +72,7 @@ String NodeTag::ToString() const
 // this Node is held on a component that the EntityManager has.
 // In practice it only really shows up on UI objects where UIObject holds a reference to a Node.
 
-Node::Node(Name name, const Transform& localTransform)
-    : Node(name, Handle<Entity>::empty, localTransform)
-{
-}
-
-Node::Node(Name name, const Handle<Entity>& entity, const Transform& localTransform)
-    : Node(name, entity, localTransform, GetDefaultScene())
-{
-}
-
-Node::Node(Name name, const Handle<Entity>& entity, const Transform& localTransform, Scene* scene)
+Node::Node(Name name, const Transform& localTransform, Scene* scene)
     : m_name(name.IsValid() ? name : NAME("<unnamed>")),
       m_parentNode(nullptr),
       m_localTransform(localTransform),
@@ -91,8 +80,6 @@ Node::Node(Name name, const Handle<Entity>& entity, const Transform& localTransf
       m_transformLocked(false),
       m_delegates(MakeUnique<Delegates>())
 {
-    SetEntity(entity);
-
     if (scene != nullptr)
     {
         for (const Handle<Node>& child : m_childNodes)
@@ -122,11 +109,6 @@ Node::~Node()
 
 void Node::Init()
 {
-    if (m_entity.IsValid())
-    {
-        InitObject(m_entity);
-    }
-
     for (const Handle<Node>& child : m_childNodes)
     {
         InitObject(child);
@@ -382,13 +364,6 @@ bool Node::RemoveChild(const Node* node)
         return false;
     }
 
-    // TEMP
-    if (node == m_entity.Get())
-    {
-        SetEntity(nullptr);
-        return true;
-    }
-
     auto it = m_childNodes.FindIf([node](const Handle<Node>& it)
         {
             return it.Get() == node;
@@ -481,13 +456,6 @@ void Node::RemoveAllChildren()
         {
             Assert(node.IsValid());
             Assert(node->GetParent() == this);
-
-            // TEMP
-            if (node.Get() == m_entity.Get())
-            {
-                ++it;
-                continue;
-            }
 
             node->OnDetachedFromNode(this);
             node->SetScene(nullptr);
@@ -707,91 +675,6 @@ void Node::SetLocalTransform(const Transform& transform)
 Transform Node::GetRelativeTransform(const Transform& parentTransform) const
 {
     return parentTransform.GetInverse() * m_worldTransform;
-}
-
-void Node::SetEntity(const Handle<Entity>& entity)
-{
-    if (m_entity == entity)
-    {
-        return;
-    }
-
-    // Remove the NodeLinkComponent from the old entity
-    if (m_entity.IsValid())
-    {
-        RemoveChild(m_entity);
-
-        if (m_scene != nullptr && m_scene->GetEntityManager() != nullptr)
-        {
-            m_scene->GetEntityManager()->RemoveComponent<NodeLinkComponent>(m_entity);
-        }
-    }
-
-    if (entity.IsValid())
-    {
-        AssertDebug(m_scene && m_scene->GetEntityManager());
-
-        EntityManager* previousEntityManager = entity->GetEntityManager();
-
-        // TEMP
-        if (previousEntityManager)
-        {
-            // Update / add a NodeLinkComponent to the new entity
-            if (NodeLinkComponent* nodeLinkComponent = previousEntityManager->TryGetComponent<NodeLinkComponent>(entity))
-            {
-                nodeLinkComponent->node = WeakHandleFromThis();
-            }
-            else
-            {
-                previousEntityManager->AddComponent<NodeLinkComponent>(entity, { WeakHandleFromThis() });
-            }
-        }
-
-        AddChild(entity);
-
-        // sanity check
-        AssertDebug(entity->GetScene() == m_scene);
-
-        m_entity = entity;
-
-        // TEMP
-        {
-
-            // Update / add a NodeLinkComponent to the new entity
-            if (NodeLinkComponent* nodeLinkComponent = m_scene->GetEntityManager()->TryGetComponent<NodeLinkComponent>(m_entity))
-            {
-                nodeLinkComponent->node = WeakHandleFromThis();
-            }
-            else
-            {
-                m_scene->GetEntityManager()->AddComponent<NodeLinkComponent>(m_entity, { WeakHandleFromThis() });
-            }
-        }
-
-#ifdef HYP_EDITOR
-        GetEditorDelegates([this](EditorDelegates* editorDelegates)
-            {
-                editorDelegates->OnNodeUpdate(this, Class()->GetProperty(NAME("Entity")));
-            });
-#endif
-
-        InitObject(m_entity);
-    }
-    else
-    {
-        m_entity = Handle<Entity>::empty;
-
-#ifdef HYP_EDITOR
-        GetEditorDelegates([this](EditorDelegates* editorDelegates)
-            {
-                editorDelegates->OnNodeUpdate(this, Class()->GetProperty(NAME("Entity")));
-            });
-#endif
-
-        SetEntityAABB(BoundingBox::Empty());
-
-        UpdateWorldTransform();
-    }
 }
 
 void Node::SetEntityAABB(const BoundingBox& aabb)
@@ -1021,7 +904,7 @@ bool Node::TestRay(const Ray& ray, RayTestResults& outResults, bool useBvh) cons
 
                     for (RayHit hit : localBvhResults)
                     {
-                        hit.id = m_entity.Id().Value();
+                        hit.id = Id().Value();
                         hit.userData = nullptr;
 
                         Vec4f transformedNormal = normalMatrix * Vec4f(hit.normal, 0.0f);

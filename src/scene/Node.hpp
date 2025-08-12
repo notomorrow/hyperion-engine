@@ -199,9 +199,7 @@ public:
      * \param name The name of the Node.
      * \param localTransform An optional parameter representing the local-space transform of this Node.
      */
-    Node(Name name = Name::Invalid(), const Transform& localTransform = Transform());
-    Node(Name name, const Handle<Entity>& entity, const Transform& localTransform = Transform());
-    Node(Name name, const Handle<Entity>& entity, const Transform& localTransform, Scene* scene);
+    Node(Name name = Name::Invalid(), const Transform& localTransform = Transform::identity, Scene* scene = nullptr);
 
     Node(const Node& other) = delete;
     Node& operator=(const Node& other) = delete;
@@ -291,15 +289,6 @@ public:
      *   \note Calls to RefreshEntityTransform() will override this value. */
     HYP_METHOD(Property = "EntityAABB", Serialize = true, Editor = true)
     void SetEntityAABB(const BoundingBox& aabb);
-
-    HYP_METHOD(Property = "Entity", Serialize = true, Editor = true, Label = "Entity", Description = "The entity that this node is linked with.")
-    HYP_FORCE_INLINE const Handle<Entity>& GetEntity() const
-    {
-        return m_entity;
-    }
-
-    HYP_METHOD(Property = "Entity", Serialize = true, Editor = true)
-    void SetEntity(const Handle<Entity>& entity);
 
     /*! \brief Add the Node as a child of this object, taking ownership over the given Node.
      *  \param node The Node to be added as achild of this Node
@@ -697,8 +686,6 @@ protected:
     Transform m_localTransform;
     Transform m_worldTransform;
     BoundingBox m_entityAabb;
-
-    Handle<Entity> m_entity;
 
     Array<Node*> m_descendants;
 
