@@ -8,7 +8,6 @@
 #include <scene/components/BoundingBoxComponent.hpp>
 #include <scene/components/VisibilityStateComponent.hpp>
 #include <scene/components/UIComponent.hpp>
-#include <scene/components/NodeLinkComponent.hpp>
 
 #include <scene/animation/Skeleton.hpp>
 

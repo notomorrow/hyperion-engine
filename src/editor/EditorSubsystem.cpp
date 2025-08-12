@@ -20,7 +20,6 @@
 #include <rendering/Texture.hpp>
 
 #include <scene/EntityManager.hpp>
-#include <scene/components/NodeLinkComponent.hpp>
 #include <scene/components/MeshComponent.hpp>
 #include <scene/components/VisibilityStateComponent.hpp>
 #include <scene/components/BoundingBoxComponent.hpp>
@@ -1489,15 +1488,9 @@ void EditorSubsystem::InitViewport()
                                 continue;
                             }
 
-                            if (NodeLinkComponent* nodeLinkComponent = entityManager->TryGetComponent<NodeLinkComponent>(entity))
-                            {
-                                if (Handle<Node> node = nodeLinkComponent->node.Lock())
-                                {
-                                    SetFocusedNode(Handle<Node>(node), true);
+                            SetFocusedNode(entity, true);
 
-                                    break;
-                                }
-                            }
+                            break;
                         }
                     }
 
@@ -1598,29 +1591,14 @@ void EditorSubsystem::InitViewport()
                         Handle<Entity> entity { entityId };
                         Assert(entity.IsValid());
 
-                        NodeLinkComponent* nodeLinkComponent = m_editorScene->GetEntityManager()->TryGetComponent<NodeLinkComponent>(entity);
-
-                        if (!nodeLinkComponent)
+                        if (entity.Get() == m_hoveredManipulationWidgetNode.GetUnsafe())
                         {
-                            continue;
-                        }
-
-                        Handle<Node> node = nodeLinkComponent->node.Lock();
-
-                        if (!node)
-                        {
-                            continue;
-                        }
-
-                        if (node == m_hoveredManipulationWidgetNode)
-                        {
-
                             return UIEventHandlerResult::STOP_BUBBLING;
                         }
 
-                        if (manipulationWidget.OnMouseHover(m_camera, event, Handle<Node>(node)))
+                        if (manipulationWidget.OnMouseHover(m_camera, event, Handle<Node>(entity)))
                         {
-                            SetHoveredManipulationWidget(event, &manipulationWidget, Handle<Node>(node));
+                            SetHoveredManipulationWidget(event, &manipulationWidget, Handle<Node>(entity));
 
                             return UIEventHandlerResult::STOP_BUBBLING;
                         }
@@ -1865,10 +1843,10 @@ static void AddNodeToSceneOutline(const Handle<UIListView>& listView, Node* node
 {
     Assert(node != nullptr);
 
-    // if (node->GetFlags() & NodeFlags::HIDE_IN_SCENE_OUTLINE)
-    // {
-    //     return;
-    // }
+    if (node->GetFlags() & NodeFlags::HIDE_IN_SCENE_OUTLINE)
+    {
+        return;
+    }
 
     if (!listView)
     {
@@ -1893,10 +1871,10 @@ static void AddNodeToSceneOutline(const Handle<UIListView>& listView, Node* node
 
     for (Node* child : node->GetChildren())
     {
-        // if (child->GetFlags() & NodeFlags::HIDE_IN_SCENE_OUTLINE)
-        // {
-        //     continue;
-        // }
+         if (child->GetFlags() & NodeFlags::HIDE_IN_SCENE_OUTLINE)
+         {
+             continue;
+         }
 
         AddNodeToSceneOutline(listView, child);
     }
@@ -1934,12 +1912,10 @@ void EditorSubsystem::StartWatchingNode(const Handle<Node>& node)
         [this, listViewWeak = listView.ToWeak()](Node* node, const HypProperty* property)
         {
             // Update name in list view
-            // @TODO: Ensure game thread
-
-            // if (node->GetFlags() & NodeFlags::HIDE_IN_SCENE_OUTLINE)
-            // {
-            //     return;
-            // }
+             if (node->GetFlags() & NodeFlags::HIDE_IN_SCENE_OUTLINE)
+             {
+                 return;
+             }
 
             HYP_LOG(Editor, Debug, "Node {} property changed : {}", *node->GetName(), *property->GetName());
 
@@ -1972,10 +1948,10 @@ void EditorSubsystem::StartWatchingNode(const Handle<Node>& node)
 
             Assert(node != nullptr);
 
-            // if (node->GetFlags() & NodeFlags::HIDE_IN_SCENE_OUTLINE)
-            // {
-            //     return;
-            // }
+            if (node->GetFlags() & NodeFlags::HIDE_IN_SCENE_OUTLINE)
+            {
+                return;
+            }
 
             Handle<UIListView> listView = listViewWeak.Lock();
 
