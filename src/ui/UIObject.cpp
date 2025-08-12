@@ -130,6 +130,7 @@ UIObject::UIObject(const ThreadId& ownerThreadId)
       m_affectsParentSize(true),
       m_needsRepaint(true),
       m_isPositionAbsolute(false),
+      m_allowMaterialUpdate(false),
       m_computedDepth(0),
       m_dataSourceElementUuid(UUID::Invalid()),
       m_deferredUpdates(UIObjectUpdateType::NONE),
@@ -1368,9 +1369,9 @@ void UIObject::SetIsEnabled(bool isEnabled)
 void UIObject::SetCurrentValue(HypData&& value, bool triggerEvent)
 {
     HYP_SCOPE;
-    
+
     m_currentValue = std::move(value);
-    
+
     if (triggerEvent)
     {
         OnValueChange(m_currentValue);
@@ -1837,6 +1838,20 @@ void UIObject::SetAffectsParentSize(bool affectsParentSize)
     }
 }
 
+void UIObject::SetAllowMaterialUpdate(bool allowMaterialUpdate)
+{
+    HYP_SCOPE;
+
+    if (allowMaterialUpdate == m_allowMaterialUpdate)
+    {
+        return;
+    }
+
+    m_allowMaterialUpdate = allowMaterialUpdate;
+
+    UpdateMaterial(false);
+}
+
 MaterialAttributes UIObject::GetMaterialAttributes() const
 {
     HYP_SCOPE;
@@ -1875,7 +1890,7 @@ Handle<Material> UIObject::CreateMaterial() const
     if (AllowMaterialUpdate())
     {
         Handle<Material> material = CreateObject<Material>(
-            Name::Unique("UIObjectMaterial_Dynamic"),
+            m_name,
             GetMaterialAttributes(),
             GetMaterialParameters(),
             materialTextures);
@@ -1889,7 +1904,6 @@ Handle<Material> UIObject::CreateMaterial() const
     else
     {
         return MaterialCache::GetInstance()->GetOrCreate(
-            Name::Unique("UIObjectMaterial_Static"),
             GetMaterialAttributes(),
             GetMaterialParameters(),
             materialTextures);
@@ -2418,6 +2432,7 @@ void UIObject::UpdateMaterial(bool updateChildren)
     Material::TextureSet materialTextures = GetMaterialTextures();
 
     if (!currentMaterial.IsValid()
+        || (!currentMaterial->IsDynamic() && AllowMaterialUpdate()) // set to dynamic if we allow material updates
         || currentMaterial->GetRenderAttributes() != materialAttributes
         || currentMaterial->GetTextures() != materialTextures
         || currentMaterial->GetParameters() != materialParameters)
@@ -2608,7 +2623,7 @@ void UIObject::SetNodeProxy(Handle<Node> node)
     if (m_node.IsValid())
     {
         Assert(m_node->IsA<Entity>());
-        
+
         Entity* entity = ObjCast<Entity>(m_node.Get());
         entity->AddComponent<UIComponent>(UIComponent { this });
 
