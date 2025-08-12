@@ -16,8 +16,9 @@ namespace threading {
 
 class Spinlock
 {
+    static constexpr uint32 g_maxSpins = 1024; // before we yield
 public:
-    Spinlock(AtomicVar<uint64>& value)
+    Spinlock(volatile int64* value)
         : m_value(value)
     {
     }
@@ -32,36 +33,77 @@ public:
 
     void LockWriter()
     {
-        uint64 state = m_value.BitOr(0x1, MemoryOrder::ACQUIRE_RELEASE);
-        while (state & (~0u << 1))
+        uint32 numSpins = 0;
+
+        union
         {
-            state = m_value.Get(MemoryOrder::ACQUIRE);
-            HYP_WAIT_IDLE();
+            int64 state;
+            uint64 ustate;
+        };
+
+        state = AtomicBitOr(m_value, 0x1);
+
+        while (ustate & (~0u << 1))
+        {
+            for (int i = 0; i < 32; i++)
+            {
+                HYP_WAIT_IDLE();
+            }
+
+            if (numSpins++ >= g_maxSpins)
+            {
+                // yield to other threads
+                Threads::Sleep(0);
+                numSpins = 0;
+            }
+
+            // read and try again
+            state = AtomicBitOr(m_value, 0);
         }
     }
 
     void UnlockWriter()
     {
-        m_value.BitAnd(~uint64(0x1), MemoryOrder::RELEASE);
+        AtomicBitAnd(m_value, ~0x1);
     }
 
     void LockReader()
     {
-        uint64 state = m_value.Increment(0x2, MemoryOrder::ACQUIRE_RELEASE);
-        while (state & 0x1)
+        uint32 numSpins = 0;
+
+        union
         {
-            state = m_value.Get(MemoryOrder::ACQUIRE);
-            HYP_WAIT_IDLE();
+            int64 state;
+            uint64 ustate;
+        };
+
+        state = AtomicAdd(m_value, 2);
+
+        while (ustate & 0x1)
+        {
+            for (int i = 0; i < 32; i++)
+            {
+                HYP_WAIT_IDLE();
+            }
+
+            if (numSpins++ >= g_maxSpins)
+            {
+                Threads::Sleep(0);
+                numSpins = 0;
+            }
+
+            // read and try again
+            state = AtomicAdd(m_value, 0);
         }
     }
 
     void UnlockReader()
     {
-        m_value.Decrement(0x2, MemoryOrder::RELEASE);
+        AtomicSub(m_value, 2);
     }
 
 private:
-    AtomicVar<uint64>& m_value;
+    volatile int64* m_value;
 };
 
 } // namespace threading

@@ -10,6 +10,9 @@
 #include <core/threading/Threads.hpp>
 #include <core/threading/Task.hpp>
 #include <core/threading/Scheduler.hpp>
+#include <core/threading/Spinlock.hpp>
+
+#include <core/utilities/DeferredScope.hpp>
 
 #include <core/Name.hpp>
 
@@ -96,21 +99,21 @@ struct DelegateHandlerEntry : DelegateHandlerEntryBase
 struct DelegateHandler
 {
     DelegateHandlerEntryBase* entry;
-    void* delegate;
+    void* delegateImpl;
     void (*removeFn)(void*, DelegateHandlerEntryBase*);
     void (*detachFn)(void*, DelegateHandler&& delegateHandler);
 
     DelegateHandler()
         : entry(nullptr),
-          delegate(nullptr),
+          delegateImpl(nullptr),
           removeFn(nullptr),
           detachFn(nullptr)
     {
     }
 
-    DelegateHandler(DelegateHandlerEntryBase* entry, void* delegate, void (*removeFn)(void*, DelegateHandlerEntryBase*), void (*detachFn)(void*, DelegateHandler&& delegateHandler))
+    DelegateHandler(DelegateHandlerEntryBase* entry, void* delegateImpl, void (*removeFn)(void*, DelegateHandlerEntryBase*), void (*detachFn)(void*, DelegateHandler&& delegateHandler))
         : entry(entry),
-          delegate(delegate),
+          delegateImpl(delegateImpl),
           removeFn(removeFn),
           detachFn(detachFn)
     {
@@ -121,12 +124,12 @@ struct DelegateHandler
 
     DelegateHandler(DelegateHandler&& other) noexcept
         : entry(other.entry),
-          delegate(other.delegate),
+          delegateImpl(other.delegateImpl),
           removeFn(other.removeFn),
           detachFn(other.detachFn)
     {
         other.entry = nullptr;
-        other.delegate = nullptr;
+        other.delegateImpl = nullptr;
         other.removeFn = nullptr;
         other.detachFn = nullptr;
     }
@@ -141,12 +144,12 @@ struct DelegateHandler
         Reset();
 
         entry = other.entry;
-        delegate = other.delegate;
+        delegateImpl = other.delegateImpl;
         removeFn = other.removeFn;
         detachFn = other.detachFn;
 
         other.entry = nullptr;
-        other.delegate = nullptr;
+        other.delegateImpl = nullptr;
         other.removeFn = nullptr;
         other.detachFn = nullptr;
 
@@ -160,7 +163,7 @@ struct DelegateHandler
 
     HYP_FORCE_INLINE void* GetDelegate() const
     {
-        return delegate;
+        return delegateImpl;
     }
 
     void Reset()
@@ -169,11 +172,11 @@ struct DelegateHandler
         {
             HYP_CORE_ASSERT(removeFn != nullptr);
 
-            removeFn(delegate, entry);
+            removeFn(delegateImpl, entry);
         }
 
         entry = nullptr;
-        delegate = nullptr;
+        delegateImpl = nullptr;
         removeFn = nullptr;
         detachFn = nullptr;
     }
@@ -184,23 +187,23 @@ struct DelegateHandler
         {
             HYP_CORE_ASSERT(detachFn != nullptr);
 
-            detachFn(delegate, std::move(*this));
+            detachFn(delegateImpl, std::move(*this));
         }
     }
 
     HYP_FORCE_INLINE bool IsValid() const
     {
-        return entry != nullptr && delegate != nullptr;
+        return entry != nullptr && delegateImpl != nullptr;
     }
 
     HYP_FORCE_INLINE bool operator==(const DelegateHandler& other) const
     {
-        return entry == other.entry && delegate == other.delegate;
+        return entry == other.entry && delegateImpl == other.delegateImpl;
     }
 
     HYP_FORCE_INLINE bool operator!=(const DelegateHandler& other) const
     {
-        return entry != other.entry || delegate != other.delegate;
+        return entry != other.entry || delegateImpl != other.delegateImpl;
     }
 
     HYP_FORCE_INLINE bool operator<(const DelegateHandler& other) const
@@ -219,93 +222,6 @@ struct DelegateHandler
     }
 };
 
-/*! \brief Stores a set of DelegateHandlers, intended to hold references to delegates and remove them upon destruction of the owner object. */
-class DelegateHandlerSet : HashMap<Name, DelegateHandler>
-{
-public:
-    using HashMap::ConstIterator;
-    using HashMap::Iterator;
-
-    HYP_FORCE_INLINE DelegateHandlerSet& Add(DelegateHandler&& delegateHandler)
-    {
-        HashMap::Insert({ Name::Unique("DelegateHandler_"), std::move(delegateHandler) });
-        return *this;
-    }
-
-    HYP_FORCE_INLINE DelegateHandlerSet& Add(Name name, DelegateHandler&& delegateHandler)
-    {
-        HashMap::Insert({ name, std::move(delegateHandler) });
-        return *this;
-    }
-
-    HYP_FORCE_INLINE bool Remove(WeakName name)
-    {
-        auto it = HashMap::FindAs(name);
-
-        if (it == HashMap::End())
-        {
-            return false;
-        }
-
-        HashMap::Erase(it);
-
-        return true;
-    }
-
-    HYP_FORCE_INLINE bool Remove(ConstIterator it)
-    {
-        if (it == HashMap::End())
-        {
-            return false;
-        }
-
-        HashMap::Erase(it);
-
-        return true;
-    }
-
-    /*! \brief Remove all delegate handlers that are bound to the given \ref{delegate}
-     *  \returns The number of delegate handlers that were removed. */
-    template <class ReturnType, class... Args>
-    HYP_FORCE_INLINE int Remove(Delegate<ReturnType, Args...>* delegate)
-    {
-        Array<DelegateHandler> delegateHandlers;
-
-        for (auto it = HashMap::Begin(); it != HashMap::End();)
-        {
-            if (it->second.delegate == delegate)
-            {
-                delegateHandlers.PushBack(std::move(it->second));
-
-                it = HashMap::Erase(it);
-
-                continue;
-            }
-
-            ++it;
-        }
-
-        return int(delegateHandlers.Size());
-    }
-
-    HYP_FORCE_INLINE Iterator Find(WeakName name)
-    {
-        return HashMap::FindAs(name);
-    }
-
-    HYP_FORCE_INLINE ConstIterator Find(WeakName name) const
-    {
-        return HashMap::FindAs(name);
-    }
-
-    HYP_FORCE_INLINE bool Contains(WeakName name) const
-    {
-        return HashMap::FindAs(name) != HashMap::End();
-    }
-
-    HYP_DEF_STL_BEGIN_END(HashMap::Begin(), HashMap::End())
-};
-
 class IDelegate
 {
 public:
@@ -315,9 +231,6 @@ public:
 
     virtual bool Remove(DelegateHandler&& handler) = 0;
     virtual int RemoveAllDetached() = 0;
-
-protected:
-    virtual bool Remove(DelegateHandlerEntryBase* entry) = 0;
 };
 
 /*! \brief A Delegate object that can be used to bind handler functions to be called when a broadcast is sent.
@@ -325,37 +238,24 @@ protected:
  *  \tparam ReturnType The return type of the handler functions.
  *  \tparam Args The argument types of the handler functions. */
 template <class ReturnType, class... Args>
-class Delegate : public virtual IDelegate
+class DelegateImpl final
 {
 public:
     using ProcType = Proc<ReturnType(Args...)>;
 
-    Delegate()
+    DelegateImpl()
         : m_numProcs(0),
           m_idCounter(0)
     {
     }
 
-    Delegate(const Delegate& other) = delete;
-    Delegate& operator=(const Delegate& other) = delete;
+    DelegateImpl(const DelegateImpl& other) = delete;
+    DelegateImpl& operator=(const DelegateImpl& other) = delete;
 
-    Delegate(Delegate&& other) noexcept
-        : m_procs(std::move(other.m_procs)),
-          m_numProcs(other.m_numProcs.Exchange(0, MemoryOrder::ACQUIRE_RELEASE)),
-          m_detachedHandlers(std::move(other.m_detachedHandlers)),
-          m_idCounter(other.m_idCounter)
-    {
-        other.m_idCounter = 0;
+    DelegateImpl(DelegateImpl&& other) noexcept = delete;
+    DelegateImpl& operator=(DelegateImpl&& other) noexcept = delete;
 
-        for (auto it = m_detachedHandlers.Begin(); it != m_detachedHandlers.End(); ++it)
-        {
-            it->delegate = this; // Reassign the delegate pointer to the new instance
-        }
-    }
-
-    Delegate& operator=(Delegate&& other) noexcept = delete;
-
-    virtual ~Delegate() override
+    ~DelegateImpl()
     {
         m_detachedHandlers.Clear();
 
@@ -365,17 +265,7 @@ public:
         }
     }
 
-    HYP_FORCE_INLINE bool operator!() const
-    {
-        return !Delegate::AnyBound();
-    }
-
-    HYP_FORCE_INLINE explicit operator bool() const
-    {
-        return Delegate::AnyBound();
-    }
-
-    virtual bool AnyBound() const override final
+    bool AnyBound() const
     {
         return m_numProcs.Get(MemoryOrder::ACQUIRE) != 0;
     }
@@ -433,7 +323,7 @@ public:
     /*! \brief Remove all detached handlers from the Delegate.
      *  \note Only detached handlers are removed, as removing bound handlers would cause them to hold dangling pointers.
      *  \return The number of handlers removed. */
-    virtual int RemoveAllDetached() override
+    int RemoveAllDetached()
     {
         if (!AnyBound())
         {
@@ -442,7 +332,6 @@ public:
 
         Mutex::Guard guard(m_mutex);
 
-        Mutex::Guard guard2(m_detachedHandlersMutex);
         m_detachedHandlers.Clear();
 
         int numRemoved = 0;
@@ -478,20 +367,20 @@ public:
         return numRemoved;
     }
 
-    virtual bool Remove(DelegateHandler&& handle) override
+    bool Remove(DelegateHandler&& handle)
     {
         if (!handle.IsValid())
         {
             return false;
         }
 
-        HYP_CORE_ASSERT(handle.delegate == this);
+        HYP_CORE_ASSERT(handle.delegateImpl == this);
 
         const bool removeResult = Remove(handle.entry);
 
         if (removeResult)
         {
-            handle.delegate = nullptr;
+            handle.delegateImpl = nullptr;
             handle.entry = nullptr;
             handle.removeFn = nullptr;
             handle.detachFn = nullptr;
@@ -634,18 +523,8 @@ public:
         }
     }
 
-    /*! \brief Call operator overload - alias method for Broadcast().
-     *  \tparam ArgTypes The argument types to pass to the handlers.
-     *  \param args The arguments to pass to the handlers.
-     *  \return The result returned from the final handler that was called, or a default constructed \ref{ReturnType} if no handlers were bound. */
-    template <class... ArgTypes>
-    HYP_FORCE_INLINE ReturnType operator()(ArgTypes&&... args) const
-    {
-        return const_cast<Delegate*>(this)->Broadcast(std::forward<ArgTypes>(args)...);
-    }
-
 protected:
-    virtual bool Remove(DelegateHandlerEntryBase* entry) override
+    bool Remove(DelegateHandlerEntryBase* entry)
     {
         if (!entry)
         {
@@ -669,14 +548,14 @@ protected:
 
     static void RemoveDelegateHandlerCallback(void* delegate, DelegateHandlerEntryBase* entry)
     {
-        Delegate* delegateCasted = static_cast<Delegate*>(delegate);
+        DelegateImpl* delegateCasted = static_cast<DelegateImpl*>(delegate);
 
         delegateCasted->Remove(entry);
     }
 
     static void DetachDelegateHandlerCallback(void* delegate, DelegateHandler&& handler)
     {
-        Delegate* delegateCasted = static_cast<Delegate*>(delegate);
+        DelegateImpl* delegateCasted = static_cast<DelegateImpl*>(delegate);
 
         delegateCasted->DetachDelegateHandler(std::move(handler));
     }
@@ -684,7 +563,7 @@ protected:
     /*! \brief Add a delegate handler to hang around after its DelegateHandler is destructed */
     void DetachDelegateHandler(DelegateHandler&& handler)
     {
-        Mutex::Guard guard(m_detachedHandlersMutex);
+        Mutex::Guard guard(m_mutex);
 
         m_detachedHandlers.PushBack(std::move(handler));
     }
@@ -699,12 +578,300 @@ protected:
         };
     }
 
-    Array<DelegateHandlerEntry<ProcType>*, DynamicAllocator> m_procs;
-    Array<DelegateHandler, DynamicAllocator> m_detachedHandlers;
-    Mutex m_detachedHandlersMutex;
+    Array<DelegateHandlerEntry<ProcType>*> m_procs;
+    Array<DelegateHandler> m_detachedHandlers;
     Mutex m_mutex;
     AtomicVar<uint32> m_numProcs;
     uint32 m_idCounter;
+};
+
+template <class ReturnType, class... Args>
+class Delegate : public virtual IDelegate
+{
+public:
+    friend class DelegateHandlerSet;
+
+    Delegate()
+        : m_spinlock(0),
+          m_impl(nullptr)
+    {
+    }
+
+    Delegate(const Delegate& other) = delete;
+    Delegate& operator=(const Delegate& other) = delete;
+
+    Delegate(Delegate&& other) noexcept
+        : m_spinlock(AtomicExchange(&other.m_spinlock, 0)),
+          m_impl(other.m_impl)
+    {
+        other.m_impl = nullptr;
+    }
+
+    Delegate& operator=(Delegate&& other) noexcept = delete;
+
+    virtual ~Delegate() override
+    {
+        // Ensure that the delegate is not being used by any threads before deleting it
+        Spinlock spinlock(&m_spinlock);
+        spinlock.LockWriter();
+
+        if (m_impl != nullptr)
+        {
+            delete m_impl;
+            m_impl = nullptr;
+        }
+        // no need to unlock, as the spinlock is being destroyed
+    }
+
+    HYP_FORCE_INLINE bool operator!() const
+    {
+        return !Delegate::AnyBound();
+    }
+
+    HYP_FORCE_INLINE explicit operator bool() const
+    {
+        return Delegate::AnyBound();
+    }
+
+    virtual bool AnyBound() const override final
+    {
+        Spinlock spinlock(&m_spinlock);
+        spinlock.LockReader();
+        HYP_DEFER({ spinlock.UnlockReader(); });
+
+        if (m_impl == nullptr)
+        {
+            return false;
+        }
+
+        return m_impl->AnyBound();
+    }
+
+    /*! \brief Bind a Proc<> to the Delegate. The bound function will always be called on the thread that Bind() is called from if \ref{requireCurrentThread} is set to true.
+     *  \note The handler will be removed when the last reference to the returned DelegateHandler is removed.
+     *  This makes it easy to manage resource cleanup, as you can store the DelegateHandler as a class member and when the object is destroyed, the handler will be removed from the Delegate.
+     *
+     *  \param proc The Proc to bind.
+     *  \return  A reference counted DelegateHandler object that can be used to remove the handler from the Delegate. */
+    HYP_NODISCARD DelegateHandler Bind(Proc<ReturnType(Args...)>&& proc)
+    {
+        Spinlock spinlock(&m_spinlock);
+        spinlock.LockReader();
+        HYP_DEFER({ spinlock.UnlockReader(); });
+
+        if (m_impl == nullptr)
+        {
+            spinlock.UnlockReader();
+            spinlock.LockWriter();
+
+            m_impl = new DelegateImpl<ReturnType, Args...>();
+
+            spinlock.UnlockWriter();
+            spinlock.LockReader();
+        }
+
+        return m_impl->Bind(std::move(proc));
+    }
+
+    /*! \brief Bind a Proc<> to the Delegate.
+     *  \note The handler will be removed when the last reference to the returned DelegateHandler is removed.
+     *  This makes it easy to manage resource cleanup, as you can store the DelegateHandler as a class member and when the object is destroyed, the handler will be removed from the Delegate.
+     *
+     *  \param proc The Proc to bind.
+     *  \param callingThreadId The thread to call the bound function on.
+     *  \return  A reference counted DelegateHandler object that can be used to remove the handler from the Delegate. */
+    HYP_NODISCARD DelegateHandler BindThreaded(Proc<ReturnType(Args...)>&& proc, const ThreadId& callingThreadId)
+    {
+        Spinlock spinlock(&m_spinlock);
+        spinlock.LockReader();
+        HYP_DEFER({ spinlock.UnlockReader(); });
+
+        if (m_impl == nullptr)
+        {
+            spinlock.UnlockReader();
+            spinlock.LockWriter();
+
+            m_impl = new DelegateImpl<ReturnType, Args...>();
+
+            spinlock.UnlockWriter();
+            spinlock.LockReader();
+        }
+
+        return m_impl->BindThreaded(std::move(proc), callingThreadId);
+    }
+
+    /*! \brief Remove all detached handlers from the Delegate.
+     *  \note Only detached handlers are removed, as removing bound handlers would cause them to hold dangling pointers.
+     *  \return The number of handlers removed. */
+    int RemoveAllDetached() override
+    {
+        Spinlock spinlock(&m_spinlock);
+        spinlock.LockReader();
+        HYP_DEFER({ spinlock.UnlockReader(); });
+
+        if (m_impl == nullptr)
+        {
+            return 0;
+        }
+
+        return m_impl->RemoveAllDetached();
+    }
+
+    bool Remove(DelegateHandler&& handle) override
+    {
+        Spinlock spinlock(&m_spinlock);
+        spinlock.LockReader();
+        HYP_DEFER({ spinlock.UnlockReader(); });
+
+        if (m_impl == nullptr)
+        {
+            return false;
+        }
+
+        return m_impl->Remove(std::move(handle));
+    }
+
+    /*! \brief Broadcast a message to all bound handlers.
+     *  \tparam ArgTypes The argument types to pass to the handlers.
+     *  \param args The arguments to pass to the handlers.
+     *  \return The result returned from the final handler that was called, or a default constructed \ref{ReturnType} if no handlers were bound. */
+    template <class... ArgTypes>
+    ReturnType Broadcast(ArgTypes&&... args)
+    {
+        Spinlock spinlock(&m_spinlock);
+        spinlock.LockReader();
+        HYP_DEFER({ spinlock.UnlockReader(); });
+
+        if (m_impl == nullptr)
+        {
+            if constexpr (!std::is_void_v<ReturnType>)
+            {
+                return ReturnType();
+            }
+            else
+            {
+                return;
+            }
+        }
+
+        return m_impl->Broadcast(std::forward<ArgTypes>(args)...);
+    }
+
+    /*! \brief Call operator overload - alias method for Broadcast().
+     *  \tparam ArgTypes The argument types to pass to the handlers.
+     *  \param args The arguments to pass to the handlers.
+     *  \return The result returned from the final handler that was called, or a default constructed \ref{ReturnType} if no handlers were bound. */
+    template <class... ArgTypes>
+    HYP_FORCE_INLINE ReturnType operator()(ArgTypes&&... args) const
+    {
+        return const_cast<Delegate*>(this)->Broadcast(std::forward<ArgTypes>(args)...);
+    }
+
+private:
+    using DelegateImplType = DelegateImpl<ReturnType, Args...>;
+
+    // keep implementation pointer to reduce static memory footprint as many delegates will not have any handlers bound
+    DelegateImplType* m_impl;
+    // spinlock to protect against multiple threads creating / reading from m_impl pointer
+    mutable volatile int64 m_spinlock;
+};
+
+/*! \brief Stores a set of DelegateHandlers, intended to hold references to delegates and remove them upon destruction of the owner object. */
+class DelegateHandlerSet : HashMap<Name, DelegateHandler>
+{
+public:
+    using HashMap::ConstIterator;
+    using HashMap::Iterator;
+
+    HYP_FORCE_INLINE DelegateHandlerSet& Add(DelegateHandler&& delegateHandler)
+    {
+        HashMap::Insert({ Name::Unique("DelegateHandler_"), std::move(delegateHandler) });
+        return *this;
+    }
+
+    HYP_FORCE_INLINE DelegateHandlerSet& Add(Name name, DelegateHandler&& delegateHandler)
+    {
+        HashMap::Insert({ name, std::move(delegateHandler) });
+        return *this;
+    }
+
+    HYP_FORCE_INLINE bool Remove(WeakName name)
+    {
+        auto it = HashMap::FindAs(name);
+
+        if (it == HashMap::End())
+        {
+            return false;
+        }
+
+        HashMap::Erase(it);
+
+        return true;
+    }
+
+    HYP_FORCE_INLINE bool Remove(ConstIterator it)
+    {
+        if (it == HashMap::End())
+        {
+            return false;
+        }
+
+        HashMap::Erase(it);
+
+        return true;
+    }
+
+    /*! \brief Remove all delegate handlers that are bound to the given \ref{delegate}
+     *  \returns The number of delegate handlers that were removed. */
+    template <class ReturnType, class... Args>
+    HYP_FORCE_INLINE int Remove(Delegate<ReturnType, Args...>* delegate)
+    {
+        if (!delegate)
+        {
+            HYP_CORE_ASSERT(false, "Cannot remove delegate handlers from a null delegate");
+            return 0;
+        }
+
+        // lock the delegate object for reading
+        Spinlock spinlock(&delegate->m_spinlock);
+        spinlock.LockReader();
+        HYP_DEFER({ spinlock.UnlockReader(); });
+
+        Array<DelegateHandler> delegateHandlers;
+
+        for (auto it = HashMap::Begin(); it != HashMap::End();)
+        {
+            if (it->second.delegateImpl == delegate->m_impl)
+            {
+                delegateHandlers.PushBack(std::move(it->second));
+
+                it = HashMap::Erase(it);
+
+                continue;
+            }
+
+            ++it;
+        }
+
+        return int(delegateHandlers.Size());
+    }
+
+    HYP_FORCE_INLINE Iterator Find(WeakName name)
+    {
+        return HashMap::FindAs(name);
+    }
+
+    HYP_FORCE_INLINE ConstIterator Find(WeakName name) const
+    {
+        return HashMap::FindAs(name);
+    }
+
+    HYP_FORCE_INLINE bool Contains(WeakName name) const
+    {
+        return HashMap::FindAs(name) != HashMap::End();
+    }
+
+    HYP_DEF_STL_BEGIN_END(HashMap::Begin(), HashMap::End())
 };
 
 } // namespace functional

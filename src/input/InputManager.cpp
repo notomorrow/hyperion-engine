@@ -28,7 +28,7 @@ InputEventSink::~InputEventSink() = default;
 
 void InputEventSink::Push(SystemEvent&& evt)
 {
-    Spinlock spinlock(m_lockState);
+    Spinlock spinlock(&m_lockState);
     spinlock.LockWriter();
     HYP_DEFER({ spinlock.UnlockWriter(); });
 
@@ -44,7 +44,7 @@ bool InputEventSink::Poll(Array<SystemEvent>& outEvents)
         return false;
     }
 
-    Spinlock spinlock(m_lockState);
+    Spinlock spinlock(&m_lockState);
     spinlock.LockReader();
     HYP_DEFER({ spinlock.UnlockReader(); });
 
