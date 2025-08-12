@@ -860,13 +860,11 @@ public:
     HYP_METHOD(Property = "IsEnabled")
     void SetIsEnabled(bool isEnabled);
     
-    HYP_METHOD()
     HYP_FORCE_INLINE const HypData& GetCurrentValue() const
     {
         return m_currentValue;
     }
     
-    HYP_METHOD()
     void SetCurrentValue(HypData&& value, bool triggerEvent = true);
 
     /*! \brief Check if the UI object has focus. If \ref{includeChildren} is true, also return true if any child objects have focus.
