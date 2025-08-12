@@ -456,13 +456,6 @@ bool OctreeBase<Derived, Payload>::GetNearestOctant(const Vec3f& position, Deriv
 template <class Derived, class Payload>
 bool OctreeBase<Derived, Payload>::GetFittingOctant(const BoundingBox& aabb, Derived const*& out) const
 {
-    if (!ContainsAabb(aabb))
-    {
-        out = nullptr;
-
-        return false;
-    }
-
     if (m_isDivided)
     {
         for (const Octant& octant : m_octants)
@@ -476,7 +469,8 @@ bool OctreeBase<Derived, Payload>::GetFittingOctant(const BoundingBox& aabb, Der
         }
     }
 
+    // out should always be set to something, boolean indicates whether or not it was actually contained
     out = static_cast<const Derived*>(this);
 
-    return true;
+    return ContainsAabb(aabb);
 }

@@ -2433,9 +2433,7 @@ void UIObject::UpdateMaterial(bool updateChildren)
 
     if (!currentMaterial.IsValid()
         || (!currentMaterial->IsDynamic() && AllowMaterialUpdate()) // set to dynamic if we allow material updates
-        || currentMaterial->GetRenderAttributes() != materialAttributes
-        || currentMaterial->GetTextures() != materialTextures
-        || currentMaterial->GetParameters() != materialParameters)
+        || currentMaterial->GetRenderAttributes() != materialAttributes)
     {
         // need to get a new Material if attributes have changed
         Handle<Material> newMaterial = CreateMaterial();
@@ -2461,6 +2459,7 @@ void UIObject::UpdateMaterial(bool updateChildren)
         else
         {
             newMaterial = currentMaterial->Clone();
+            InitObject(newMaterial);
 
             meshComponent->material = newMaterial;
 
@@ -2478,8 +2477,6 @@ void UIObject::UpdateMaterial(bool updateChildren)
         {
             newMaterial->SetTextures(materialTextures);
         }
-
-        InitObject(newMaterial);
     }
 
     SetNeedsRepaintFlag();
