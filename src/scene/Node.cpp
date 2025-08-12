@@ -320,7 +320,7 @@ Handle<Node> Node::AddChild(const Handle<Node>& node)
 
     bool wasTransformLocked = false;
 
-    if (node->m_transformLocked)
+    if (node->IsTransformLocked())
     {
         wasTransformLocked = true;
 
@@ -382,7 +382,7 @@ bool Node::RemoveChild(const Node* node)
 
     bool wasTransformLocked = false;
 
-    if (node->m_transformLocked)
+    if (node->IsTransformLocked())
     {
         wasTransformLocked = true;
 
@@ -498,7 +498,7 @@ Handle<Node> Node::GetChild(int index) const
     return m_childNodes[index];
 }
 
-Handle<Node> Node::Select(UTF8StringView selector) const
+Handle<Node> Node::Select(ANSIStringView selector) const
 {
     Handle<Node> result;
 
@@ -511,19 +511,18 @@ Handle<Node> Node::Select(UTF8StringView selector) const
 
     char buffer[256];
     uint32 bufferIndex = 0;
-    uint32 selectorIndex = 0;
 
     const Node* searchNode = this;
 
-    const char* str = selector.Data();
+    const char* strBegin = selector.Data();
+    const char* strEnd = strBegin + selector.Size();
 
-    while ((ch = str[selectorIndex]) != '\0')
+    const char* str = strBegin;
+
+    for ((ch = *str) != '\0'; str != strEnd;)
     {
-        const char prevSelectorChar = selectorIndex == 0
-            ? '\0'
-            : str[selectorIndex - 1];
-
-        ++selectorIndex;
+        const char prevSelectorChar = str == strBegin ? '\0' : *(str - 1);
+        ++str;
 
         if (ch == '/' && prevSelectorChar != '\\')
         {
@@ -657,7 +656,7 @@ void Node::UnlockTransform()
 
 void Node::SetLocalTransform(const Transform& transform)
 {
-    if (m_transformLocked)
+    if (IsTransformLocked())
     {
         return;
     }
@@ -758,7 +757,7 @@ BoundingBox Node::GetWorldAABB() const
 
 void Node::UpdateWorldTransform(bool updateChildTransforms)
 {
-    if (m_transformLocked)
+    if (IsTransformLocked())
     {
         return;
     }

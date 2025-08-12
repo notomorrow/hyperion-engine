@@ -428,6 +428,11 @@ void UIStage::SetFocusedObject(const Handle<UIObject>& uiObject)
     {
         return;
     }
+    
+    if (Handle<UIStage> parentStage = GetClosestParentUIObject<UIStage>())
+    {
+        parentStage->SetFocusedObject(uiObject);
+    }
 
     Handle<UIObject> currentFocusedUiObject = m_focusedObject.Lock();
 
@@ -444,11 +449,6 @@ void UIStage::SetFocusedObject(const Handle<UIObject>& uiObject)
     }
 
     m_focusedObject = uiObject;
-
-    if (Handle<UIStage> parentStage = GetClosestParentUIObject<UIStage>())
-    {
-        parentStage->SetFocusedObject(uiObject);
-    }
 }
 
 void UIStage::ComputeActualSize(const UIObjectSize& inSize, Vec2i& outActualSize, UpdateSizePhase phase, bool isInner)
@@ -757,7 +757,7 @@ UIEventHandlerResult UIStage::OnInputEvent(
                 }
             }
 
-            if (firstHit != nullptr && firstHit->AcceptsFocus())
+            if (firstHit != nullptr && firstHit->AcceptsFocus() && firstHit->IsEnabled())
             {
                 firstHit->Focus();
             }

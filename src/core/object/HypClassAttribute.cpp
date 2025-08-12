@@ -14,7 +14,7 @@ const HypClassAttributeValue HypClassAttributeValue::empty = HypClassAttributeVa
 
 bool HypClassAttributeValue::IsString() const
 {
-    return m_value.Is<String>();
+    return value.Is<String>();
 }
 
 const String& HypClassAttributeValue::GetString() const
@@ -24,32 +24,32 @@ const String& HypClassAttributeValue::GetString() const
         return String::empty;
     }
 
-    return m_value.Get<String>();
+    return value.Get<String>();
 }
 
 bool HypClassAttributeValue::IsBool() const
 {
-    return m_value.Is<bool>();
+    return value.Is<bool>();
 }
 
 bool HypClassAttributeValue::GetBool() const
 {
-    if (!m_value.HasValue())
+    if (!value.HasValue())
     {
         return false;
     }
 
-    if (const bool* boolPtr = m_value.TryGet<bool>())
+    if (const bool* boolPtr = value.TryGet<bool>())
     {
         return *boolPtr;
     }
 
-    if (const String* stringPtr = m_value.TryGet<String>())
+    if (const String* stringPtr = value.TryGet<String>())
     {
         return !stringPtr->Empty();
     }
 
-    if (const int* intPtr = m_value.TryGet<int>())
+    if (const int* intPtr = value.TryGet<int>())
     {
         return *intPtr != 0;
     }
@@ -59,22 +59,22 @@ bool HypClassAttributeValue::GetBool() const
 
 bool HypClassAttributeValue::IsInt() const
 {
-    return m_value.Is<int>();
+    return value.Is<int>();
 }
 
 int HypClassAttributeValue::GetInt() const
 {
-    if (!m_value.HasValue())
+    if (!value.HasValue())
     {
         return 0;
     }
 
-    if (const int* intPtr = m_value.TryGet<int>())
+    if (const int* intPtr = value.TryGet<int>())
     {
         return *intPtr;
     }
 
-    if (const String* stringPtr = m_value.TryGet<String>())
+    if (const String* stringPtr = value.TryGet<String>())
     {
         int intValue;
 
@@ -86,7 +86,7 @@ int HypClassAttributeValue::GetInt() const
         return 0;
     }
 
-    if (const bool* boolPtr = m_value.TryGet<bool>())
+    if (const bool* boolPtr = value.TryGet<bool>())
     {
         return *boolPtr != false;
     }
@@ -98,11 +98,11 @@ String HypClassAttributeValue::ToString() const
 {
     json::JSONValue jsonValue;
 
-    if (m_value.HasValue())
+    if (value.HasValue())
     {
-        Visit(m_value, [&jsonValue](auto&& value)
+        Visit(value, [&jsonValue](auto&& v)
             {
-                jsonValue = json::JSONValue(value);
+                jsonValue = json::JSONValue(v);
             });
     }
 

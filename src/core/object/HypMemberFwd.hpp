@@ -14,7 +14,7 @@
 namespace hyperion {
 
 class HypClassAttributeSet;
-class HypClassAttributeValue;
+struct HypClassAttributeValue;
 struct HypData;
 
 enum class FBOMDataFlags : uint32;
@@ -60,8 +60,8 @@ public:
     virtual bool Deserialize(FBOMLoadContext& context, HypData& target, const FBOMData& value) const = 0;
 
     virtual const HypClassAttributeSet& GetAttributes() const = 0;
-    virtual const HypClassAttributeValue& GetAttribute(ANSIStringView key) const = 0;
-    virtual const HypClassAttributeValue& GetAttribute(ANSIStringView key, const HypClassAttributeValue& defaultValue) const = 0;
+    virtual const HypClassAttributeValue& GetAttribute(WeakName key) const = 0;
+    virtual const HypClassAttributeValue& GetAttribute(WeakName key, const HypClassAttributeValue& defaultValue) const = 0;
 };
 
 } // namespace hyperion

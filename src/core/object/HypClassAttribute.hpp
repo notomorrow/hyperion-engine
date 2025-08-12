@@ -3,8 +3,7 @@
 #pragma once
 
 #include <core/containers/String.hpp>
-#include <core/containers/HashMap.hpp>
-#include <core/containers/FlatSet.hpp>
+#include <core/containers/HashSet.hpp>
 
 #include <core/utilities/StringView.hpp>
 #include <core/utilities/Span.hpp>
@@ -24,43 +23,42 @@ enum class HypClassAttributeType : uint32
     BOOLEAN
 };
 
-class HypClassAttributeValue
+struct HypClassAttributeValue
 {
-public:
     static const HypClassAttributeValue empty;
 
     HypClassAttributeValue()
-        : m_type(HypClassAttributeType::NONE)
+        : type(HypClassAttributeType::NONE)
     {
     }
 
     HypClassAttributeValue(const String& value)
-        : m_type(HypClassAttributeType::STRING),
-          m_value(value)
+        : type(HypClassAttributeType::STRING),
+          value(value)
     {
     }
 
     HypClassAttributeValue(const char* str)
-        : m_type(HypClassAttributeType::STRING),
-          m_value(String(str))
+        : type(HypClassAttributeType::STRING),
+          value(String(str))
     {
     }
 
     HypClassAttributeValue(int value)
-        : m_type(HypClassAttributeType::INT),
-          m_value(value)
+        : type(HypClassAttributeType::INT),
+          value(value)
     {
     }
 
     HypClassAttributeValue(double value)
-        : m_type(HypClassAttributeType::FLOAT),
-          m_value(value)
+        : type(HypClassAttributeType::FLOAT),
+          value(value)
     {
     }
 
     HypClassAttributeValue(bool value)
-        : m_type(HypClassAttributeType::BOOLEAN),
-          m_value(value)
+        : type(HypClassAttributeType::BOOLEAN),
+          value(value)
     {
     }
 
@@ -73,12 +71,12 @@ public:
 
     HYP_FORCE_INLINE HypClassAttributeType GetType() const
     {
-        return m_type;
+        return type;
     }
 
     HYP_FORCE_INLINE bool IsValid() const
     {
-        return m_value.HasValue();
+        return value.HasValue();
     }
 
     HYP_FORCE_INLINE explicit operator bool() const
@@ -93,12 +91,12 @@ public:
 
     HYP_FORCE_INLINE bool operator==(const HypClassAttributeValue& other) const
     {
-        return m_value == other.m_value;
+        return value == other.value;
     }
 
     HYP_FORCE_INLINE bool operator!=(const HypClassAttributeValue& other) const
     {
-        return m_value != other.m_value;
+        return value != other.value;
     }
 
     HYP_API bool IsString() const;
@@ -110,75 +108,53 @@ public:
 
     HYP_API String ToString() const;
 
-    // HYP_FORCE_INLINE bool operator==(UTF8StringView other) const
-    // {
-    //     if (const String *stringPtr = m_value.TryGet<String>()) {
-    //         return *stringPtr == other;
-    //     }
-
-    //     return false;
-    // }
-
-    // HYP_FORCE_INLINE bool operator!=(UTF8StringView other) const
-    // {
-    //     if (const String *stringPtr = m_value.TryGet<String>()) {
-    //         return *stringPtr != other;
-    //     }
-
-    //     return true;
-    // }
-
-    // HYP_FORCE_INLINE bool operator==(int value) const
-    //     { return Compare<int>(value); }
-
-    // HYP_FORCE_INLINE bool operator!=(int value) const
-    //     { return !Compare<int>(value); }
-
-    // HYP_FORCE_INLINE bool operator==(double value) const
-    //     { return Compare<double>(value); }
-
-    // HYP_FORCE_INLINE bool operator!=(double value) const
-    //     { return !Compare<double>(value); }
-
-    // HYP_FORCE_INLINE bool operator==(bool value) const
-    //     { return Compare<bool>(value); }
-
-    // HYP_FORCE_INLINE bool operator!=(bool value) const
-    //     { return !Compare<bool>(value); }
-
     // private:
     template <class T>
     HYP_FORCE_INLINE bool Compare(const T& other) const
     {
         bool result = false;
 
-        Visit(m_value, [other, &result](auto&& value)
+        Visit(value, [&other, &result](auto&& v)
             {
-                if constexpr (std::is_same_v<NormalizedType<decltype(value)>, String>)
+                if constexpr (std::is_same_v<NormalizedType<decltype(v)>, String>)
                 {
                     result = false;
                 }
                 else
                 {
-                    result = value == other;
+                    result = (v == other);
                 }
             });
 
         return result;
     }
+    
+    HYP_FORCE_INLINE HashCode GetHashCode() const
+    {
+        HashCode hc;
+        hc.Add(type);
+        hc.Add(value);
+        
+        return hc;
+    }
 
-    HypClassAttributeType m_type;
-    Variant<String, int, double, bool> m_value;
+    HypClassAttributeType type;
+    Variant<String, int, double, bool> value;
 };
 
-class HypClassAttribute
+struct HypClassAttribute
 {
-public:
     HypClassAttribute() = default;
 
-    HypClassAttribute(const ANSIStringView& name, const HypClassAttributeValue& value)
-        : m_name(name),
-          m_value(value)
+    HypClassAttribute(Name name, const HypClassAttributeValue& value)
+        : name(name),
+          value(value)
+    {
+    }
+    
+    HypClassAttribute(ANSIStringView name, const HypClassAttributeValue& value)
+        : name(CreateNameFromDynamicString(name)),
+          value(value)
     {
     }
 
@@ -190,56 +166,44 @@ public:
 
     ~HypClassAttribute() = default;
 
-    HYP_FORCE_INLINE ANSIStringView GetName() const
+    HYP_FORCE_INLINE Name GetName() const
     {
-        return m_name;
+        return name;
     }
 
     HYP_FORCE_INLINE const HypClassAttributeValue& GetValue() const
     {
-        return m_value;
+        return value;
     }
 
     HYP_FORCE_INLINE bool operator==(const HypClassAttribute& other) const
     {
-        return m_name == other.m_name && m_value == other.m_value;
-    }
-
-    HYP_FORCE_INLINE bool operator==(ANSIStringView other) const
-    {
-        return m_name == other;
+        return name == other.name && value == other.value;
     }
 
     HYP_FORCE_INLINE bool operator!=(const HypClassAttribute& other) const
     {
-        return m_name != other.m_name || m_value != other.m_value;
+        return name != other.name || value != other.value;
     }
-
-    HYP_FORCE_INLINE bool operator!=(ANSIStringView other) const
+    
+    HYP_FORCE_INLINE HashCode GetHashCode() const
     {
-        return m_name != other;
+        HashCode hc;
+        hc.Add(name);
+        hc.Add(value);
+        
+        return hc;
     }
 
-    HYP_FORCE_INLINE bool operator<(const HypClassAttribute& other) const
-    {
-        return m_name < other.m_name;
-    }
-
-    HYP_FORCE_INLINE bool operator<(ANSIStringView other) const
-    {
-        return m_name < other;
-    }
-
-private:
-    ANSIStringView m_name;
-    HypClassAttributeValue m_value;
+    Name name;
+    HypClassAttributeValue value;
 };
 
 class HypClassAttributeSet
 {
 public:
-    using Iterator = typename FlatSet<HypClassAttribute>::Iterator;
-    using ConstIterator = typename FlatSet<HypClassAttribute>::ConstIterator;
+    using Iterator = typename HashSet<HypClassAttribute, &HypClassAttribute::name>::Iterator;
+    using ConstIterator = typename HashSet<HypClassAttribute, &HypClassAttribute::name>::ConstIterator;
 
     HypClassAttributeSet() = default;
 
@@ -256,12 +220,12 @@ public:
         }
     }
 
-    HypClassAttributeSet(const FlatSet<HypClassAttribute>& attributes)
+    HypClassAttributeSet(const HashSet<HypClassAttribute, &HypClassAttribute::name>& attributes)
         : m_attributes(attributes)
     {
     }
 
-    HypClassAttributeSet(FlatSet<HypClassAttribute>&& attributes)
+    HypClassAttributeSet(HashSet<HypClassAttribute, &HypClassAttribute::name>&& attributes)
         : m_attributes(std::move(attributes))
     {
     }
@@ -287,19 +251,19 @@ public:
         return m_attributes.Size();
     }
 
-    HYP_FORCE_INLINE const HypClassAttributeValue& operator[](ANSIStringView name) const
+    HYP_FORCE_INLINE const HypClassAttributeValue& operator[](WeakName name) const
     {
         return Get(name);
     }
 
-    const HypClassAttributeValue& Get(ANSIStringView name) const
+    const HypClassAttributeValue& Get(WeakName name) const
     {
         static const HypClassAttributeValue invalidValue {};
 
         return Get(name, invalidValue);
     }
 
-    const HypClassAttributeValue& Get(ANSIStringView name, const HypClassAttributeValue& defaultValue) const
+    const HypClassAttributeValue& Get(WeakName name, const HypClassAttributeValue& defaultValue) const
     {
         const auto it = m_attributes.FindAs(name);
 
@@ -321,12 +285,12 @@ public:
         m_attributes.Merge(std::move(other.m_attributes));
     }
 
-    HYP_FORCE_INLINE Iterator Find(ANSIStringView name)
+    HYP_FORCE_INLINE Iterator Find(WeakName name)
     {
         return m_attributes.FindAs(name);
     }
 
-    HYP_FORCE_INLINE ConstIterator Find(ANSIStringView name) const
+    HYP_FORCE_INLINE ConstIterator Find(WeakName name) const
     {
         return m_attributes.FindAs(name);
     }
@@ -334,7 +298,7 @@ public:
     HYP_DEF_STL_BEGIN_END(m_attributes.Begin(), m_attributes.End())
 
 private:
-    FlatSet<HypClassAttribute> m_attributes;
+    HashSet<HypClassAttribute, &HypClassAttribute::name> m_attributes;
 };
 
 } // namespace hyperion

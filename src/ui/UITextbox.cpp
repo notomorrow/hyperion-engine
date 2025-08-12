@@ -18,7 +18,8 @@ UITextbox::UITextbox()
     : m_textElement(nullptr),
       m_characterIndex(0)
 {
-    SetBorderRadius(2);
+    SetBorderRadius(4);
+    SetBorderFlags(UIObjectBorderFlags::ALL);
     SetPadding({ 5, 2 });
     SetTextColor(Color::Black());
     SetBackgroundColor(Vec4f::One());
@@ -26,96 +27,107 @@ UITextbox::UITextbox()
     // For now
     SetIsScrollEnabled(SA_ALL, false);
 
-    OnKeyDown.Bind([this](const KeyboardEvent& eventData) -> UIEventHandlerResult
+    OnKeyDown
+        .Bind([this](const KeyboardEvent& eventData) -> UIEventHandlerResult
+         {
+             // disable cursor blinking when typing
+             m_cursorBlinkBlendVar.SetValue(1.0f);
+             m_cursorBlinkBlendVar.SetTarget(1.0f);
+
+             switch (eventData.keyCode)
+             {
+             case KeyCode::ARROW_LEFT:
+                 if (m_characterIndex > 0)
                  {
-                     // disable cursor blinking when typing
-                     m_cursorBlinkBlendVar.SetValue(1.0f);
-                     m_cursorBlinkBlendVar.SetTarget(1.0f);
+                     --m_characterIndex;
+                 }
 
-                     switch (eventData.keyCode)
+                 return UIEventHandlerResult::STOP_BUBBLING;
+             case KeyCode::ARROW_RIGHT:
+                 if (m_characterIndex < uint32(GetText().Length()))
+                 {
+                     ++m_characterIndex;
+                 }
+
+                 return UIEventHandlerResult::STOP_BUBBLING;
+             case KeyCode::RETURN:
+                 SubmitTextChange();
+                 Blur();
+                 
+                 return UIEventHandlerResult::STOP_BUBBLING;
+             case KeyCode::ESC:
+                 SetText_Internal(m_prevText);
+                 Blur();
+                 
+                 return UIEventHandlerResult::STOP_BUBBLING;
+             default:
+                 break;
+             }
+
+             char keyChar;
+
+             const bool shift = eventData.inputManager->IsShiftDown();
+             const bool alt = eventData.inputManager->IsAltDown();
+             const bool ctrl = eventData.inputManager->IsCtrlDown();
+
+             if (KeyCodeToChar(eventData.keyCode, shift, alt, ctrl, keyChar))
+             {
+                 const String& text = GetText();
+
+                 if (keyChar == '\b')
+                 {
+                     if (m_characterIndex > 0)
                      {
-                     case KeyCode::ARROW_LEFT:
-                         if (m_characterIndex > 0)
-                         {
-                             --m_characterIndex;
-                         }
+                         --m_characterIndex;
 
-                         return UIEventHandlerResult::STOP_BUBBLING;
-                     case KeyCode::ARROW_RIGHT:
-                         if (m_characterIndex < uint32(GetText().Length()))
-                         {
-                             ++m_characterIndex;
-                         }
-
-                         return UIEventHandlerResult::STOP_BUBBLING;
-                     default:
-                         break;
+                         SetText_Internal(String(text.Substr(0, m_characterIndex)) + text.Substr(m_characterIndex + 1));
+                     }
+                 }
+                 else if (keyChar == '\t')
+                 {
+                     // @TODO
+                 }
+                 else if (keyChar == '\n')
+                 {
+                     // @TODO
+                 }
+                 else if (keyChar == '\r')
+                 {
+                     // @TODO
+                 }
+                 else if (keyChar == '\f')
+                 {
+                     // @TODO
+                 }
+                 else if (keyChar == '\v')
+                 {
+                     // @TODO
+                 }
+                 else if (keyChar == '\a')
+                 {
+                     // @TODO
+                 }
+                 else if (keyChar == '\x1b')
+                 {
+                     // @TODO
+                 }
+                 else if (keyChar != '\0')
+                 {
+                     if (m_characterIndex > 0)
+                     {
+                         SetText_Internal(String(text.Substr(0, m_characterIndex)) + keyChar + text.Substr(m_characterIndex));
+                     }
+                     else
+                     {
+                         SetText_Internal(String::empty + keyChar + text);
                      }
 
-                     char keyChar;
+                     ++m_characterIndex;
+                 }
+             }
 
-                     const bool shift = eventData.inputManager->IsShiftDown();
-                     const bool alt = eventData.inputManager->IsAltDown();
-                     const bool ctrl = eventData.inputManager->IsCtrlDown();
-
-                     if (KeyCodeToChar(eventData.keyCode, shift, alt, ctrl, keyChar))
-                     {
-                         const String& text = GetText();
-
-                         if (keyChar == '\b')
-                         {
-                             if (m_characterIndex > 0)
-                             {
-                                 --m_characterIndex;
-
-                                 SetText(String(text.Substr(0, m_characterIndex)) + text.Substr(m_characterIndex + 1));
-                             }
-                         }
-                         else if (keyChar == '\t')
-                         {
-                             // @TODO
-                         }
-                         else if (keyChar == '\n')
-                         {
-                             // @TODO
-                         }
-                         else if (keyChar == '\r')
-                         {
-                             // @TODO
-                         }
-                         else if (keyChar == '\f')
-                         {
-                             // @TODO
-                         }
-                         else if (keyChar == '\v')
-                         {
-                             // @TODO
-                         }
-                         else if (keyChar == '\a')
-                         {
-                             // @TODO
-                         }
-                         else if (keyChar == '\x1b')
-                         {
-                             // @TODO
-                         }
-                         else if (keyChar != '\0')
-                         {
-                             if (m_characterIndex > 0)
-                             {
-                                 SetText(String(text.Substr(0, m_characterIndex)) + keyChar + text.Substr(m_characterIndex));
-                             }
-                             else
-                             {
-                                 SetText(String::empty + keyChar + text);
-                             }
-
-                             ++m_characterIndex;
-                         }
-                     }
-
-                     return UIEventHandlerResult::STOP_BUBBLING;
-                 })
+             return UIEventHandlerResult::STOP_BUBBLING;
+         })
         .Detach();
 
     OnKeyUp.Bind([this](const KeyboardEvent& eventData) -> UIEventHandlerResult
@@ -134,8 +146,9 @@ void UITextbox::Init()
     SetInnerSize(UIObjectSize({ 0, UIObjectSize::AUTO }, { 100, UIObjectSize::PERCENT }));
     // SetInnerSize(UIObjectSize({ 100, UIObjectSize::PERCENT }, { 100, UIObjectSize::PERCENT }));
 
-    Handle<UIText> textElement = CreateUIObject<UIText>(NAME("TextboxText"), Vec2i { 0, 0 }, UIObjectSize(UIObjectSize::AUTO));
+    Handle<UIText> textElement = CreateUIObject<UIText>(Vec2i { 0, 0 }, UIObjectSize(UIObjectSize::AUTO));
     textElement->SetTextSize(12.0f);
+    textElement->SetAcceptsFocus(false);
 
     UpdateTextColor();
 
@@ -154,6 +167,17 @@ void UITextbox::SetTextColor(const Color& textColor)
 }
 
 void UITextbox::SetText(const String& text)
+{
+    HYP_SCOPE;
+    
+    m_prevText = GetText();
+    
+    SetText_Internal(text);
+    
+    SubmitTextChange();
+}
+
+void UITextbox::SetText_Internal(const String& text)
 {
     const bool wasDisplayingPlaceholder = ShouldDisplayPlaceholder();
 
@@ -187,9 +211,9 @@ void UITextbox::Update_Internal(float delta)
 
     if (m_cursorElement != nullptr)
     {
-        constexpr double cursorBlinkSpeed = 2.5;
+        constexpr double cursorBlinkSpeed = 0.25;
 
-        if (delta <= 0.167)
+        if (delta <= 0.0167)
         {
             if (!m_cursorBlinkBlendVar.Advance(delta * cursorBlinkSpeed))
             {
@@ -219,11 +243,16 @@ void UITextbox::SetFocusState_Internal(EnumFlags<UIObjectFocusState> focusState)
 
     if ((previousFocusState & UIObjectFocusState::FOCUSED) != (focusState & UIObjectFocusState::FOCUSED))
     {
+        const String& text = GetText();
+        
         if (focusState & UIObjectFocusState::FOCUSED)
         {
-            const String& text = GetText();
-
             m_characterIndex = uint32(text.Length());
+            
+        }
+        else
+        {
+            SubmitTextChange();
         }
 
         UpdateCursor();
@@ -278,6 +307,20 @@ void UITextbox::UpdateTextColor()
     {
         m_textElement->SetText(m_text);
         m_textElement->SetTextColor(m_textColor);
+    }
+}
+
+void UITextbox::SubmitTextChange()
+{
+    HYP_SCOPE;
+    
+    const String& text = GetText();
+    
+    if (m_prevText != text)
+    {
+        OnTextChange(text);
+        
+        m_prevText = text;
     }
 }
 

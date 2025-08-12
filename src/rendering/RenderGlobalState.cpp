@@ -1318,10 +1318,11 @@ void RenderApi_EndFrame_RenderThread()
             }
 
             // safely release all the held resources:
-            if (resource.IsValid())
-            {
-                g_safeDeleter->SafeRelease(std::move(resource));
-            }
+//            if (resource.IsValid())
+//            {
+//                g_safeDeleter->SafeRelease(std::move(resource));
+//            }
+            resource.Reset();
         }
 
         subtypeData.indicesPendingDelete.Clear();

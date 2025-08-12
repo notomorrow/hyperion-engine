@@ -152,9 +152,12 @@ UIObject::UIObject(const ThreadId& ownerThreadId)
     OnClick.BindManaged("OnClick", GetManagedObjectResource(), UIEventHandlerResult::OK).Detach();
     OnKeyDown.BindManaged("OnKeyDown", GetManagedObjectResource(), UIEventHandlerResult::OK).Detach();
     OnKeyUp.BindManaged("OnKeyUp", GetManagedObjectResource(), UIEventHandlerResult::OK).Detach();
+    OnTextChange.BindManaged("OnTextChange", GetManagedObjectResource(), UIEventHandlerResult::OK).Detach();
+    OnSizeChange.BindManaged("OnSizeChange", GetManagedObjectResource(), UIEventHandlerResult::OK).Detach();
     OnComputedVisibilityChange.BindManaged("OnComputedVisibilityChange", GetManagedObjectResource(), UIEventHandlerResult::OK).Detach();
     OnEnabled.BindManaged("OnEnabled", GetManagedObjectResource(), UIEventHandlerResult::OK).Detach();
     OnDisabled.BindManaged("OnDisabled", GetManagedObjectResource(), UIEventHandlerResult::OK).Detach();
+    OnValueChange.BindManaged("OnValueChange", GetManagedObjectResource(), UIEventHandlerResult::OK).Detach();
 }
 
 UIObject::UIObject()
@@ -1164,8 +1167,6 @@ void UIObject::SetText(const String& text)
     }
 
     m_text = text;
-
-    OnTextChange();
 }
 
 float UIObject::GetTextSize() const
@@ -1362,6 +1363,18 @@ void UIObject::SetIsEnabled(bool isEnabled)
             return IterationResult::CONTINUE;
         },
         /* deep */ true);
+}
+
+void UIObject::SetCurrentValue(HypData&& value, bool triggerEvent)
+{
+    HYP_SCOPE;
+    
+    m_currentValue = std::move(value);
+    
+    if (triggerEvent)
+    {
+        OnValueChange(m_currentValue);
+    }
 }
 
 void UIObject::UpdateComputedTextSize()

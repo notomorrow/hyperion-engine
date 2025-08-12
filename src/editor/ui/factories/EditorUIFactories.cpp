@@ -19,6 +19,7 @@
 #include <ui/UIGrid.hpp>
 #include <ui/UIButton.hpp>
 #include <ui/UIDataSource.hpp>
+#include <ui/UIListView.hpp>
 
 #include <core/memory/RefCountedPtr.hpp>
 
@@ -107,6 +108,13 @@ static Handle<UIObject> CreatePropertyPanel(UIObject* spawnParent, const HypData
         }
     }
 
+    if (!propertyPanelClass)
+    {
+        HYP_LOG(Editor, Error, "No property panel class to use for property \"{}\"", property->GetName());
+
+        return nullptr;
+    }
+
     Handle<UIObject> element;
 
     Assert(propertyPanelClass != nullptr, "No property panel class found for property {}", property->GetName());
@@ -130,7 +138,7 @@ static Handle<UIObject> CreatePropertyPanel(UIObject* spawnParent, const HypData
         return nullptr;
     }
 
-    propertyPanelCasted->Build(targetData);
+    propertyPanelCasted->Build(targetData, property);
 
     return propertyPanelCasted;
 }
@@ -140,6 +148,8 @@ class HypDataUIElementFactory : public UIElementFactory<HypData>
 public:
     Handle<UIObject> Create(UIObject* parent, const HypData& value) const
     {
+        const HypData& target = value;
+
         const HypClass* hypClass = GetClass(value.GetTypeId());
         Assert(hypClass != nullptr, "No HypClass registered for TypeId %u", value.GetTypeId().Value());
 
@@ -240,6 +250,7 @@ public:
     Handle<UIObject> Create(UIObject* parent, const Vec3f& value) const
     {
         Handle<UIGrid> grid = parent->CreateUIObject<UIGrid>(Vec2i { 0, 0 }, UIObjectSize({ 100, UIObjectSize::PERCENT }, { 0, UIObjectSize::AUTO }));
+        grid->SetCurrentValue(HypData(value), false);
 
         Handle<UIGridRow> row = grid->AddRow();
 
@@ -251,6 +262,30 @@ public:
 
             Handle<UITextbox> textbox = parent->CreateUIObject<UITextbox>(NAME("Vec3fPanel_X_Value"), Vec2i { 0, 0 }, UIObjectSize({ 100, UIObjectSize::PERCENT }, { 20, UIObjectSize::PIXEL }));
             textbox->SetText(HYP_FORMAT("{}", value.x));
+            textbox->OnTextChange
+                .Bind([gridWeak = grid.ToWeak()](const String& str) -> UIEventHandlerResult
+                    {
+                        Handle<UIGrid> grid = gridWeak.Lock();
+                        if (!grid)
+                        {
+                            return UIEventHandlerResult::OK;
+                        }
+
+                        float x;
+                        if (!StringUtil::Parse(str, &x))
+                        {
+                            // cannot parse float
+                            return UIEventHandlerResult::ERR;
+                        }
+
+                        Vec3f vec = grid->GetCurrentValue().Get<Vec3f>();
+                        vec.x = x;
+                        grid->SetCurrentValue(HypData(vec));
+
+                        return UIEventHandlerResult::OK;
+                    })
+                .Detach();
+
             panel->AddChildUIObject(textbox);
 
             col->AddChildUIObject(panel);
@@ -264,6 +299,29 @@ public:
 
             Handle<UITextbox> textbox = parent->CreateUIObject<UITextbox>(NAME("Vec3fPanel_Y_Value"), Vec2i { 0, 0 }, UIObjectSize({ 100, UIObjectSize::PERCENT }, { 20, UIObjectSize::PIXEL }));
             textbox->SetText(HYP_FORMAT("{}", value.y));
+            textbox->OnTextChange
+                .Bind([gridWeak = grid.ToWeak()](const String& str) -> UIEventHandlerResult
+                    {
+                        Handle<UIGrid> grid = gridWeak.Lock();
+                        if (!grid)
+                        {
+                            return UIEventHandlerResult::OK;
+                        }
+
+                        float y;
+                        if (!StringUtil::Parse(str, &y))
+                        {
+                            // cannot parse float
+                            return UIEventHandlerResult::ERR;
+                        }
+
+                        Vec3f vec = grid->GetCurrentValue().Get<Vec3f>();
+                        vec.y = y;
+                        grid->SetCurrentValue(HypData(vec));
+
+                        return UIEventHandlerResult::OK;
+                    })
+                .Detach();
             panel->AddChildUIObject(textbox);
 
             col->AddChildUIObject(panel);
@@ -277,6 +335,29 @@ public:
 
             Handle<UITextbox> textbox = parent->CreateUIObject<UITextbox>(NAME("Vec3fPanel_Z_Value"), Vec2i { 0, 0 }, UIObjectSize({ 100, UIObjectSize::PERCENT }, { 20, UIObjectSize::PIXEL }));
             textbox->SetText(HYP_FORMAT("{}", value.z));
+            textbox->OnTextChange
+                .Bind([gridWeak = grid.ToWeak()](const String& str) -> UIEventHandlerResult
+                    {
+                        Handle<UIGrid> grid = gridWeak.Lock();
+                        if (!grid)
+                        {
+                            return UIEventHandlerResult::OK;
+                        }
+
+                        float z;
+                        if (!StringUtil::Parse(str, &z))
+                        {
+                            // cannot parse float
+                            return UIEventHandlerResult::ERR;
+                        }
+
+                        Vec3f vec = grid->GetCurrentValue().Get<Vec3f>();
+                        vec.z = z;
+                        grid->SetCurrentValue(HypData(vec));
+
+                        return UIEventHandlerResult::OK;
+                    })
+                .Detach();
             panel->AddChildUIObject(textbox);
 
             col->AddChildUIObject(panel);
@@ -317,6 +398,27 @@ public:
 
             Handle<UITextbox> textbox = parent->CreateUIObject<UITextbox>(NAME("Value"), Vec2i { 0, 0 }, UIObjectSize({ 100, UIObjectSize::PERCENT }, { 20, UIObjectSize::PIXEL }));
             textbox->SetText(HYP_FORMAT("{}", value));
+            textbox->OnTextChange
+                .Bind([gridWeak = grid.ToWeak()](const String& str) -> UIEventHandlerResult
+                    {
+                        Handle<UIGrid> grid = gridWeak.Lock();
+                        if (!grid)
+                        {
+                            return UIEventHandlerResult::OK;
+                        }
+
+                        uint32 intValue;
+                        if (!StringUtil::Parse(str, &intValue))
+                        {
+                            // cannot parse uint32
+                            return UIEventHandlerResult::ERR;
+                        }
+
+                        grid->SetCurrentValue(HypData(intValue));
+
+                        return UIEventHandlerResult::OK;
+                    })
+                .Detach();
 
             col->AddChildUIObject(textbox);
         }
@@ -340,6 +442,7 @@ public:
     Handle<UIObject> Create(UIObject* parent, const Quaternion& value) const
     {
         Handle<UIGrid> grid = parent->CreateUIObject<UIGrid>(Vec2i { 0, 0 }, UIObjectSize({ 100, UIObjectSize::PERCENT }, { 0, UIObjectSize::AUTO }));
+        grid->SetCurrentValue(HypData(value), /* triggerEvent */ false);
 
         Handle<UIGridRow> row = grid->AddRow();
 
@@ -351,6 +454,33 @@ public:
 
             Handle<UITextbox> textbox = parent->CreateUIObject<UITextbox>(NAME("QuaternionPanel_Roll_Value"), Vec2i { 0, 0 }, UIObjectSize({ 100, UIObjectSize::PERCENT }, { 20, UIObjectSize::PIXEL }));
             textbox->SetText(HYP_FORMAT("{}", value.Roll()));
+            textbox->OnTextChange
+                .Bind([gridWeak = grid.ToWeak()](const String& str) -> UIEventHandlerResult
+                    {
+                        Handle<UIGrid> grid = gridWeak.Lock();
+                        if (!grid)
+                        {
+                            return UIEventHandlerResult::OK;
+                        }
+
+                        float roll;
+                        if (!StringUtil::Parse(str, &roll))
+                        {
+                            // cannot parse float
+                            return UIEventHandlerResult::ERR;
+                        }
+
+                        Quaternion quat = grid->GetCurrentValue().Get<Quaternion>();
+
+                        Vec3f euler(MathUtil::DegToRad(roll), MathUtil::DegToRad(quat.Pitch()), MathUtil::DegToRad(quat.Yaw()));
+
+                        quat = Quaternion(euler);
+                        grid->SetCurrentValue(HypData(quat));
+
+                        return UIEventHandlerResult::OK;
+                    })
+                .Detach();
+
             panel->AddChildUIObject(textbox);
 
             col->AddChildUIObject(panel);
@@ -364,6 +494,33 @@ public:
 
             Handle<UITextbox> textbox = parent->CreateUIObject<UITextbox>(NAME("QuaternionPanel_Pitch_Value"), Vec2i { 0, 0 }, UIObjectSize({ 100, UIObjectSize::PERCENT }, { 20, UIObjectSize::PIXEL }));
             textbox->SetText(HYP_FORMAT("{}", value.Pitch()));
+            textbox->OnTextChange
+                .Bind([gridWeak = grid.ToWeak()](const String& str) -> UIEventHandlerResult
+                    {
+                        Handle<UIGrid> grid = gridWeak.Lock();
+                        if (!grid)
+                        {
+                            return UIEventHandlerResult::OK;
+                        }
+
+                        float pitch;
+                        if (!StringUtil::Parse(str, &pitch))
+                        {
+                            // cannot parse float
+                            return UIEventHandlerResult::ERR;
+                        }
+
+                        Quaternion quat = grid->GetCurrentValue().Get<Quaternion>();
+
+                        Vec3f euler(MathUtil::DegToRad(quat.Roll()), MathUtil::DegToRad(pitch), MathUtil::DegToRad(quat.Yaw()));
+
+                        quat = Quaternion(euler);
+                        grid->SetCurrentValue(HypData(quat));
+
+                        return UIEventHandlerResult::OK;
+                    })
+                .Detach();
+
             panel->AddChildUIObject(textbox);
 
             col->AddChildUIObject(panel);
@@ -377,6 +534,33 @@ public:
 
             Handle<UITextbox> textbox = parent->CreateUIObject<UITextbox>(NAME("QuaternionPanel_Yaw_Value"), Vec2i { 0, 0 }, UIObjectSize({ 100, UIObjectSize::PERCENT }, { 20, UIObjectSize::PIXEL }));
             textbox->SetText(HYP_FORMAT("{}", value.Yaw()));
+            textbox->OnTextChange
+                .Bind([gridWeak = grid.ToWeak()](const String& str) -> UIEventHandlerResult
+                    {
+                        Handle<UIGrid> grid = gridWeak.Lock();
+                        if (!grid)
+                        {
+                            return UIEventHandlerResult::OK;
+                        }
+
+                        float yaw;
+                        if (!StringUtil::Parse(str, &yaw))
+                        {
+                            // cannot parse float
+                            return UIEventHandlerResult::ERR;
+                        }
+
+                        Quaternion quat = grid->GetCurrentValue().Get<Quaternion>();
+
+                        Vec3f euler(MathUtil::DegToRad(quat.Roll()), MathUtil::DegToRad(quat.Pitch()), MathUtil::DegToRad(yaw));
+
+                        quat = Quaternion(euler);
+                        grid->SetCurrentValue(HypData(quat));
+
+                        return UIEventHandlerResult::OK;
+                    })
+                .Detach();
+
             panel->AddChildUIObject(textbox);
 
             col->AddChildUIObject(panel);
@@ -399,92 +583,6 @@ public:
 };
 
 HYP_DEFINE_UI_ELEMENT_FACTORY(Quaternion, QuaternionUIElementFactory);
-
-class TransformUIElementFactory : public UIElementFactory<Transform>
-{
-public:
-    Handle<UIObject> Create(UIObject* parent, const Transform& value) const
-    {
-        const HypClass* hypClass = GetClass<Transform>();
-
-        Handle<UIGrid> grid = parent->CreateUIObject<UIGrid>(Vec2i { 0, 0 }, UIObjectSize({ 100, UIObjectSize::PERCENT }, { 0, UIObjectSize::AUTO }));
-
-        {
-            Handle<UIGridRow> translationHeaderRow = grid->AddRow();
-            Handle<UIGridColumn> translationHeaderColumn = translationHeaderRow->AddColumn();
-
-            Handle<UIText> translationHeader = parent->CreateUIObject<UIText>(Vec2i { 0, 0 }, UIObjectSize(UIObjectSize::AUTO));
-            translationHeader->SetText("Translation");
-            translationHeaderColumn->AddChildUIObject(translationHeader);
-
-            Handle<UIGridRow> translationValueRow = grid->AddRow();
-            Handle<UIGridColumn> translationValueColumn = translationValueRow->AddColumn();
-
-            if (Handle<UIElementFactoryBase> factory = GetEditorUIElementFactory<Vec3f>())
-            {
-                Handle<UIObject> translationElement = factory->CreateUIObject(parent, HypData(value.GetTranslation()), {});
-                translationValueColumn->AddChildUIObject(translationElement);
-            }
-        }
-
-        {
-            Handle<UIGridRow> rotationHeaderRow = grid->AddRow();
-            Handle<UIGridColumn> rotationHeaderColumn = rotationHeaderRow->AddColumn();
-
-            Handle<UIText> rotationHeader = parent->CreateUIObject<UIText>(Vec2i { 0, 0 }, UIObjectSize(UIObjectSize::AUTO));
-            rotationHeader->SetText("Rotation");
-            rotationHeaderColumn->AddChildUIObject(rotationHeader);
-
-            Handle<UIGridRow> rotationValueRow = grid->AddRow();
-            Handle<UIGridColumn> rotationValueColumn = rotationValueRow->AddColumn();
-
-            if (Handle<UIElementFactoryBase> factory = GetEditorUIElementFactory<Quaternion>())
-            {
-                Handle<UIObject> rotationElement = factory->CreateUIObject(parent, HypData(value.GetRotation()), {});
-                rotationValueColumn->AddChildUIObject(rotationElement);
-            }
-        }
-
-        {
-            Handle<UIGridRow> scaleHeaderRow = grid->AddRow();
-            Handle<UIGridColumn> scaleHeaderColumn = scaleHeaderRow->AddColumn();
-
-            Handle<UIText> scaleHeader = parent->CreateUIObject<UIText>(Vec2i { 0, 0 }, UIObjectSize(UIObjectSize::AUTO));
-            scaleHeader->SetText("Scale");
-            scaleHeaderColumn->AddChildUIObject(scaleHeader);
-
-            Handle<UIGridRow> scaleValueRow = grid->AddRow();
-            Handle<UIGridColumn> scaleValueColumn = scaleValueRow->AddColumn();
-
-            if (Handle<UIElementFactoryBase> factory = GetEditorUIElementFactory<Vec3f>())
-            {
-                Handle<UIObject> scaleElement = factory->CreateUIObject(parent, HypData(value.GetScale()), {});
-                scaleValueColumn->AddChildUIObject(scaleElement);
-            }
-        }
-
-        return grid;
-    }
-
-    void Update(UIObject* uiObject, const Transform& value) const
-    {
-        HYP_NOT_IMPLEMENTED_VOID();
-
-        // uiObject->FindChildUIObject(NAME("TranslationValue"))
-        //     .Cast<UITextbox>()
-        //     ->SetText(HYP_FORMAT("{}", value.GetTranslation()));
-
-        // uiObject->FindChildUIObject(NAME("RotationValue"))
-        //     .Cast<UITextbox>()
-        //     ->SetText(HYP_FORMAT("{}", value.GetRotation()));
-
-        // uiObject->FindChildUIObject(NAME("ScaleValue"))
-        //     .Cast<UITextbox>()
-        //     ->SetText(HYP_FORMAT("{}", value.GetScale()));
-    }
-};
-
-HYP_DEFINE_UI_ELEMENT_FACTORY(Transform, TransformUIElementFactory);
 
 class EditorWeakNodeFactory : public UIElementFactory<WeakHandle<Node>>
 {
@@ -598,67 +696,6 @@ public:
         const EditorNodePropertyRef* context = GetContext<EditorNodePropertyRef>();
         Assert(context != nullptr);
 
-        if (!entity.IsValid())
-        {
-            Handle<UIGrid> grid = parent->CreateUIObject<UIGrid>(Vec2i { 0, 0 }, UIObjectSize({ 100, UIObjectSize::PERCENT }, { 0, UIObjectSize::AUTO }));
-
-            Handle<UIGridRow> row = grid->AddRow();
-            Handle<UIGridColumn> column = row->AddColumn();
-
-            Handle<UIButton> addEntityButton = parent->CreateUIObject<UIButton>(NAME("Add_Entity_Button"), Vec2i { 0, 0 }, UIObjectSize({ 100, UIObjectSize::PERCENT }, { 0, UIObjectSize::AUTO }));
-            addEntityButton->SetText("Add Entity");
-
-            addEntityButton->OnClick
-                .Bind([world = parent->GetWorld()->HandleFromThis(), nodeWeak = context->node](...) -> UIEventHandlerResult
-                    {
-                        HYP_LOG(Editor, Debug, "Add Entity clicked");
-
-                        if (Handle<Node> node = nodeWeak.Lock())
-                        {
-                            world->GetSubsystem<EditorSubsystem>()->GetCurrentProject()->GetActionStack()->Push(CreateObject<FunctionalEditorAction>(
-                                NAME("AddEntity"),
-                                [node, entity = Handle<Entity>::empty]() mutable -> EditorActionFunctions
-                                {
-                                    return {
-                                        [&](EditorSubsystem* editorSubsystem, EditorProject* editorProject)
-                                        {
-                                            Scene* scene = node->GetScene();
-
-                                            if (!scene)
-                                            {
-                                                HYP_LOG(Editor, Error, "GetScene() returned null for Node with name \"{}\", cannot add Entity", node->GetName());
-
-                                                return;
-                                            }
-
-                                            if (!entity.IsValid())
-                                            {
-                                                entity = scene->GetEntityManager()->AddEntity();
-                                            }
-
-                                            node->AddChild(entity);
-                                        },
-                                        [&](EditorSubsystem* editorSubsystem, EditorProject* editorProject)
-                                        {
-                                            node->RemoveChild(entity);
-                                        }
-                                    };
-                                }));
-
-                            return UIEventHandlerResult::STOP_BUBBLING;
-                        }
-
-                        HYP_LOG(Editor, Error, "Cannot add Entity to Node, Node reference could not be obtained");
-
-                        return UIEventHandlerResult::ERR;
-                    })
-                .Detach();
-
-            column->AddChildUIObject(addEntityButton);
-
-            return grid;
-        }
-
         EntityManager* entityManager = entity->GetEntityManager();
 
         if (!entityManager)
@@ -668,6 +705,7 @@ public:
             return nullptr;
         }
 
+#if 0
         auto createComponentsGrid = [&]() -> Handle<UIObject>
         {
             Optional<const TypeMap<ComponentId>&> allComponents = entityManager->GetAllComponents(entity);
@@ -1010,6 +1048,24 @@ public:
         }
 
         return componentsGridContainer;
+#endif
+
+        Handle<UIListView> listView = parent->CreateUIObject<UIListView>(Vec2i { 0, 0 }, UIObjectSize({ 100, UIObjectSize::PERCENT }, { 0, UIObjectSize::AUTO }));
+        // add the generic properties (HypData) of the entity
+        // get the factory for the HypData type
+        Handle<UIElementFactoryBase> factory = GetEditorUIElementFactory<HypData>();
+        Assert(factory != nullptr);
+
+        // create a UIObject for the HypData
+        Handle<UIObject> hypDataElement = factory->CreateUIObject(parent, HypData(entity), {});
+        Assert(hypDataElement != nullptr);
+
+        // add the HypData UIObject to the list view
+        listView->AddChildUIObject(hypDataElement);
+
+        // @TODO: Add components to the list view
+
+        return listView;
     }
 
     void Update(UIObject* uiObject, const Handle<Entity>& entity) const
@@ -1036,60 +1092,47 @@ public:
             return nullptr;
         }
 
-        Handle<UIElementFactoryBase> factory = GetEditorUIElementFactory(value.property->GetTypeId());
+        Handle<UIObject> propertyPanel = CreatePropertyPanel(parent, HypData(node), value.property);
 
-        if (!factory)
+        if (!propertyPanel)
         {
-            HYP_LOG(Editor, Error, "No factory registered for TypeId {} when creating UI element for property \"{}\"", value.property->GetTypeId().Value(), value.title);
+            HYP_LOG(Editor, Error, "Failed to create property panel for property \"{}\" on node \"{}\"", value.title, node->GetName().LookupString());
 
             return nullptr;
         }
 
-        // Create panel
-        Handle<UIPanel> panel = parent->CreateUIObject<UIPanel>(Vec2i { 0, 0 }, UIObjectSize({ 100, UIObjectSize::PERCENT }, { 0, UIObjectSize::AUTO }));
+        Handle<UIGrid> grid = parent->CreateUIObject<UIGrid>(Vec2i { 0, 0 }, UIObjectSize({ 100, UIObjectSize::PERCENT }, { 0, UIObjectSize::AUTO }));
+        grid->SetPadding({ 5, 5 });
 
+        Handle<UIGridRow> headerRow = grid->AddRow();
+        Handle<UIGridColumn> headerColumn = headerRow->AddColumn();
+        headerColumn->SetPadding({ 0, 5 });
+
+        Handle<UIText> headerText = parent->CreateUIObject<UIText>(Vec2i { 0, 0 }, UIObjectSize(UIObjectSize::AUTO));
+
+        headerText->SetText(value.title);
+        headerText->SetTextSize(14);
+        headerColumn->AddChildUIObject(headerText);
+
+        if (value.description.HasValue())
         {
-            Handle<UIGrid> grid = parent->CreateUIObject<UIGrid>(Vec2i { 0, 0 }, UIObjectSize({ 100, UIObjectSize::PERCENT }, { 0, UIObjectSize::AUTO }));
+            Handle<UIGridRow> descriptionRow = grid->AddRow();
+            Handle<UIGridColumn> descriptionColumn = descriptionRow->AddColumn();
+            descriptionColumn->SetPadding({ 0, 5 });
 
-            Handle<UIGridRow> headerRow = grid->AddRow();
-            Handle<UIGridColumn> headerColumn = headerRow->AddColumn();
-
-            Handle<UIText> componentHeader = parent->CreateUIObject<UIText>(Vec2i { 0, 0 }, UIObjectSize(UIObjectSize::AUTO));
-
-            componentHeader->SetText(value.title);
-            componentHeader->SetTextSize(12);
-            headerColumn->AddChildUIObject(componentHeader);
-
-            if (value.description.HasValue())
-            {
-                Handle<UIGridRow> descriptionRow = grid->AddRow();
-                Handle<UIGridColumn> descriptionColumn = descriptionRow->AddColumn();
-
-                Handle<UIText> componentDescription = parent->CreateUIObject<UIText>(Vec2i { 0, 0 }, UIObjectSize(UIObjectSize::AUTO));
-                componentDescription->SetTextSize(10);
-                componentDescription->SetText(*value.description);
-
-                descriptionColumn->AddChildUIObject(componentDescription);
-            }
-
-            Handle<UIGridRow> contentRow = grid->AddRow();
-            Handle<UIGridColumn> contentColumn = contentRow->AddColumn();
-
-            panel->AddChildUIObject(grid);
+            Handle<UIText> descriptionText = parent->CreateUIObject<UIText>(Vec2i { 0, 0 }, UIObjectSize(UIObjectSize::AUTO));
+            descriptionText->SetTextSize(11);
+            descriptionText->SetText(*value.description);
+            descriptionColumn->AddChildUIObject(descriptionText);
         }
 
-        {
-            Handle<UIPanel> content = parent->CreateUIObject<UIPanel>(NAME("PropertyPanel_Content"), Vec2i { 0, 25 }, UIObjectSize({ 100, UIObjectSize::PERCENT }, { 0, UIObjectSize::AUTO }));
+        Handle<UIGridRow> contentRow = grid->AddRow();
+        Handle<UIGridColumn> contentColumn = contentRow->AddColumn();
+        contentColumn->SetPadding({ 0, 5 });
 
-            if (Handle<UIObject> element = factory->CreateUIObject(parent, value.property->Get(HypData(node)), HypData(AnyRef(const_cast<EditorNodePropertyRef&>(value)))))
-            {
-                content->AddChildUIObject(element);
-            }
+        contentColumn->AddChildUIObject(propertyPanel);
 
-            panel->AddChildUIObject(content);
-        }
-
-        return panel;
+        return grid;
     }
 
     void Update(UIObject* uiObject, const EditorNodePropertyRef& value) const

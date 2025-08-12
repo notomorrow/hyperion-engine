@@ -157,12 +157,12 @@ public:
         return m_attributes;
     }
 
-    virtual const HypClassAttributeValue& GetAttribute(ANSIStringView key) const override
+    virtual const HypClassAttributeValue& GetAttribute(WeakName key) const override
     {
         return m_attributes.Get(key);
     }
 
-    virtual const HypClassAttributeValue& GetAttribute(ANSIStringView key, const HypClassAttributeValue& defaultValue) const override
+    virtual const HypClassAttributeValue& GetAttribute(WeakName key, const HypClassAttributeValue& defaultValue) const override
     {
         return m_attributes.Get(key, defaultValue);
     }

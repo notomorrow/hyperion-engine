@@ -331,7 +331,7 @@ public:
      *  The string is case-sensitive.
      *  The '/' can be escaped by using a '\' char. */
     HYP_METHOD()
-    Handle<Node> Select(UTF8StringView selector) const;
+    Handle<Node> Select(ANSIStringView selector) const;
 
     /*! \brief Get an iterator for the given child Node from this Node's child list
      * \param node The node to find in this Node's child list
@@ -447,7 +447,7 @@ public:
     }
 
     /*! \brief \returns The world-space translation, scale, rotation of this Node. Influenced by accumulative transformation of all ancestor Nodes. */
-    HYP_METHOD(Property = "WorldTransform", Editor = true, Label = "World-space Transform")
+    HYP_METHOD(Property = "WorldTransform", Editor = true, Label = "World-space Transform", EditorPropertyPanelClass = "TransformEditorPropertyPanel")
     const Transform& GetWorldTransform() const
     {
         return m_worldTransform;
@@ -464,18 +464,7 @@ public:
             return;
         }
 
-        Transform offsetTransform;
-        offsetTransform.GetTranslation() = (m_flags & NodeFlags::IGNORE_PARENT_TRANSLATION)
-            ? transform.GetTranslation()
-            : transform.GetTranslation() - m_parentNode->GetWorldTranslation();
-        offsetTransform.GetScale() = (m_flags & NodeFlags::IGNORE_PARENT_SCALE)
-            ? transform.GetScale()
-            : transform.GetScale() / m_parentNode->GetWorldScale();
-        offsetTransform.GetRotation() = (m_flags & NodeFlags::IGNORE_PARENT_ROTATION)
-            ? transform.GetRotation()
-            : Quaternion(m_parentNode->GetWorldRotation()).Invert() * transform.GetRotation();
-
-        offsetTransform.UpdateMatrix();
+        Transform offsetTransform = m_parentNode->GetWorldTransform().GetInverse() * transform;
 
         SetLocalTransform(offsetTransform);
     }

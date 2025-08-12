@@ -17,7 +17,7 @@ extern "C"
     {
         Assert(attribute != nullptr);
 
-        return attribute->GetName().Data();
+        return *attribute->GetName();
     }
 
     HYP_EXPORT const char* HypClassAttribute_GetString(HypClassAttribute* attribute)
