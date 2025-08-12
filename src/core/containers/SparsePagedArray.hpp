@@ -39,9 +39,12 @@ class SparsePagedArray : public ContainerBase<SparsePagedArray<T, PageSize>, Siz
 
         ~Page()
         {
-            for (Bitset::BitIndex bit : initializedBits)
+            if constexpr (!std::is_trivially_destructible_v<T>)
             {
-                storage.GetPointer()[bit].~T();
+                for (Bitset::BitIndex bit : initializedBits)
+                {
+                    storage.GetPointer()[bit].~T();
+                }
             }
         }
     };
@@ -112,7 +115,7 @@ public:
             }
         }
 
-        T& operator*() const
+        HYP_FORCE_INLINE T& operator*() const
         {
 #ifdef HYP_DEBUG_MODE
             HYP_CORE_ASSERT(array->m_validPages.Test(page));
@@ -127,7 +130,7 @@ public:
 #endif
         }
 
-        T* operator->() const
+        HYP_FORCE_INLINE T* operator->() const
         {
 #ifdef HYP_DEBUG_MODE
             HYP_CORE_ASSERT(array->m_validPages.Test(page));
@@ -246,7 +249,7 @@ public:
         }
     };
 
-    SparsePagedArray()
+    HYP_FORCE_INLINE SparsePagedArray()
     {
     }
 
@@ -419,24 +422,22 @@ public:
     HYP_FORCE_INLINE bool HasIndex(SizeType index) const
     {
         const SizeType pageIndex = PageIndex(index);
-        const SizeType elementIndex = ElementIndex(index);
 
         if (!m_validPages.Test(pageIndex))
         {
             return false;
         }
 
-        HYP_CORE_ASSERT(m_pages[pageIndex] != nullptr);
-
-        return m_pages[pageIndex]->initializedBits.Test(elementIndex);
+        return m_pages[pageIndex]->initializedBits.Test(ElementIndex(index));
     }
 
     T& operator[](SizeType index)
     {
         const SizeType pageIndex = PageIndex(index);
-        const SizeType elementIndex = ElementIndex(index);
 
         Page* page = GetOrAllocatePage(pageIndex);
+
+        const SizeType elementIndex = ElementIndex(index);
 
         if (!page->initializedBits.Test(elementIndex))
         {
@@ -447,49 +448,50 @@ public:
         return page->storage.GetPointer()[elementIndex];
     }
 
-    T& Get(SizeType index)
+    HYP_FORCE_INLINE T& Get(SizeType index)
     {
         HYP_CORE_ASSERT(HasIndex(index), "Index %zu is not initialized in SparsePagedArray!", index);
 
         const SizeType pageIndex = PageIndex(index);
-        const SizeType elementIndex = ElementIndex(index);
-
-        HYP_CORE_ASSERT(m_validPages.Test(pageIndex));
 
         Page* page = m_pages[pageIndex];
-        HYP_CORE_ASSERT(page != nullptr);
 
-        HYP_CORE_ASSERT(page->initializedBits.Test(elementIndex));
-
-        return page->storage.GetPointer()[elementIndex];
+        return *(page->storage.GetPointer() + ElementIndex(index));
     }
 
-    const T& Get(SizeType index) const
+    HYP_FORCE_INLINE const T& Get(SizeType index) const
     {
-        return const_cast<SparsePagedArray&>(*this).Get(index);
+        HYP_CORE_ASSERT(HasIndex(index), "Index %zu is not initialized in SparsePagedArray!", index);
+
+        const SizeType pageIndex = PageIndex(index);
+
+        Page* page = m_pages[pageIndex];
+
+        return *(page->storage.GetPointer() + ElementIndex(index));
     }
 
-    T* TryGet(SizeType index)
+    HYP_FORCE_INLINE T* TryGet(SizeType index)
     {
         const SizeType pageIndex = PageIndex(index);
-        const SizeType elementIndex = ElementIndex(index);
 
         if (!m_validPages.Test(pageIndex))
         {
             return nullptr;
         }
 
-        HYP_CORE_ASSERT(m_pages[pageIndex] != nullptr);
+        Page* page = m_pages[pageIndex];
 
-        if (!m_pages[pageIndex]->initializedBits.Test(elementIndex))
+        const SizeType elementIndex = ElementIndex(index);
+
+        if (!page->initializedBits.Test(elementIndex))
         {
             return nullptr;
         }
 
-        return &m_pages[pageIndex]->storage.GetPointer()[elementIndex];
+        return page->storage.GetPointer() + elementIndex;
     }
 
-    const T* TryGet(SizeType index) const
+    HYP_FORCE_INLINE const T* TryGet(SizeType index) const
     {
         return const_cast<SparsePagedArray&>(*this).TryGet(index);
     }

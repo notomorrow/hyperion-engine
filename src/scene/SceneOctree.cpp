@@ -991,7 +991,7 @@ bool SceneOctree::TestRay(const Ray& ray, RayTestResults& outResults, bool useBv
             {
                 if (m_entityManager && entry.value != nullptr)
                 {
-                    if (!m_entityManager->HasEntity(entry.value))
+                    if (!m_entityManager->HasEntity(entry.value->Id()))
                     {
                         continue;
                     }

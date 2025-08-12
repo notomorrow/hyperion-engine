@@ -115,11 +115,11 @@ public:
 
     /*! \brief Checks if an Entity's components are valid for this EntitySet.
      *
-     *  \param entity The Entity to check.
+     *  \param entity The ID of the Entity to check.
      *
      *  \return True if the Entity's components are valid for this EntitySet, false otherwise.
      */
-    virtual bool ValidForEntity(Entity* entity) const = 0;
+    virtual bool ValidForEntity(ObjId<Entity> entity) const = 0;
 
     /*! \brief Removes the given Entity from this EntitySet.
      *
@@ -220,22 +220,28 @@ public:
     virtual void OnEntityUpdated(Entity* entity) override
     {
         HYP_MT_CHECK_RW(m_dataRaceDetector);
+        
+        AssertDebug(entity != nullptr);
+        
+        const ObjId<Entity> id = entity->Id();
 
         const auto entityElementIt = m_elements.FindIf([entity](const Element& element)
             {
                 return element.template GetElement<0>() == entity;
             });
 
-        if (ValidForEntity(entity))
+        if (ValidForEntity(id))
         {
             if (entityElementIt != m_elements.End())
             {
                 return;
             }
 
-            EntityData& entityData = m_entities.GetEntityData(entity);
+            EntityData& entityData = m_entities.GetEntityData(id);
 
-            m_elements.EmplaceBack(entity, entityData.entityWeak.GetTypeId(), FixedArray<ComponentId, sizeof...(Components)> { entityData.template GetComponentId<Components>()... });
+            m_elements.EmplaceBack(entity,
+                entityData.entityWeak.GetTypeId(),
+                FixedArray<ComponentId, sizeof...(Components)> { entityData.template GetComponentId<Components>()... });
         }
         else
         {
@@ -250,15 +256,15 @@ public:
 
     /*! \brief Checks if an Entity's components are valid for this EntitySet.
      *
-     *  \param entity The Entity to check.
+     *  \param id The ID of the Entity to check.
      *
      *  \return True if the Entity's components are valid for this EntitySet, false otherwise.
      */
-    virtual bool ValidForEntity(Entity* entity) const override
+    virtual bool ValidForEntity(ObjId<Entity> id) const override
     {
         HYP_MT_CHECK_READ(m_dataRaceDetector);
 
-        return m_entities.GetEntityData(entity).template HasComponents<Components...>();
+        return m_entities.GetEntityData(id).template HasComponents<Components...>();
     }
 
 #ifdef HYP_ENABLE_MT_CHECK

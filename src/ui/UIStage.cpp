@@ -149,6 +149,7 @@ void UIStage::SetScene(const Handle<Scene>& scene)
 
         newScene = CreateObject<Scene>(nullptr, ownerThreadId, SceneFlags::FOREGROUND | SceneFlags::UI);
         newScene->SetName(Name::Unique(HYP_FORMAT("UIStage_{}_Scene", GetName()).Data()));
+        newScene->SetRoot(CreateObject<Entity>());
     }
 
     if (newScene == m_scene)

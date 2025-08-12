@@ -271,12 +271,14 @@ void TranslateEditorManipulationWidget::OnDragStart(const Handle<Camera>& camera
 
     m_dragData.Unset();
 
-    if (!node->GetEntity() || !node->GetScene() || !node->GetScene()->GetEntityManager())
+    if (!node->IsA<Entity>())
     {
         return;
     }
 
-    MeshComponent* meshComponent = node->GetScene()->GetEntityManager()->TryGetComponent<MeshComponent>(node->GetEntity());
+    Entity* entity = static_cast<Entity*>(node.Get());
+
+    MeshComponent* meshComponent = entity->TryGetComponent<MeshComponent>();
 
     if (!meshComponent || !meshComponent->material)
     {
@@ -401,12 +403,14 @@ void TranslateEditorManipulationWidget::OnDragEnd(const Handle<Camera>& camera, 
 
 bool TranslateEditorManipulationWidget::OnMouseHover(const Handle<Camera>& camera, const MouseEvent& mouseEvent, const Handle<Node>& node)
 {
-    if (!node->GetEntity() || !node->GetScene() || !node->GetScene()->GetEntityManager())
+    if (!node->IsA<Entity>())
     {
         return false;
     }
 
-    MeshComponent* meshComponent = node->GetScene()->GetEntityManager()->TryGetComponent<MeshComponent>(node->GetEntity());
+    Entity* entity = static_cast<Entity*>(node.Get());
+
+    MeshComponent* meshComponent = entity->TryGetComponent<MeshComponent>();
 
     if (!meshComponent || !meshComponent->material)
     {
@@ -422,12 +426,14 @@ bool TranslateEditorManipulationWidget::OnMouseHover(const Handle<Camera>& camer
 
 bool TranslateEditorManipulationWidget::OnMouseLeave(const Handle<Camera>& camera, const MouseEvent& mouseEvent, const Handle<Node>& node)
 {
-    if (!node->GetEntity() || !node->GetScene() || !node->GetScene()->GetEntityManager())
+    if (!node->IsA<Entity>())
     {
         return false;
     }
 
-    MeshComponent* meshComponent = node->GetScene()->GetEntityManager()->TryGetComponent<MeshComponent>(node->GetEntity());
+    Entity* entity = static_cast<Entity*>(node.Get());
+
+    MeshComponent* meshComponent = entity->TryGetComponent<MeshComponent>();
 
     if (!meshComponent || !meshComponent->material)
     {
@@ -451,7 +457,7 @@ bool TranslateEditorManipulationWidget::OnMouseMove(const Handle<Camera>& camera
         return false;
     }
 
-    if (!node->GetEntity() || !node->GetScene() || !node->GetScene()->GetEntityManager())
+    if (!node->IsA<Entity>())
     {
         return false;
     }
@@ -460,8 +466,10 @@ bool TranslateEditorManipulationWidget::OnMouseMove(const Handle<Camera>& camera
     {
         return false;
     }
+    
+    Entity* entity = static_cast<Entity*>(node.Get());
 
-    MeshComponent* meshComponent = node->GetScene()->GetEntityManager()->TryGetComponent<MeshComponent>(node->GetEntity());
+    MeshComponent* meshComponent = entity->TryGetComponent<MeshComponent>();
 
     if (!meshComponent || !meshComponent->material)
     {
@@ -644,24 +652,17 @@ Handle<Node> TranslateEditorManipulationWidget::Load_Internal() const
 
             for (Node* child : node->GetDescendants())
             {
-                if (!child->GetEntity().IsValid())
+                if (!child->IsA<Entity>())
                 {
                     continue;
                 }
 
-                if (!child->GetScene())
-                {
-                    HYP_LOG(Editor, Warning, "Manipulation widget child \"{}\" has no scene set", child->GetName());
+                Entity* childEntity = static_cast<Entity*>(child);
 
-                    continue;
-                }
+                childEntity->RemoveTag<EntityTag::STATIC>();
+                childEntity->AddTag<EntityTag::DYNAMIC>();
 
-                EntityManager& entityManager = *child->GetScene()->GetEntityManager();
-
-                entityManager.RemoveTag<EntityTag::STATIC>(child->GetEntity());
-                entityManager.AddTag<EntityTag::DYNAMIC>(child->GetEntity());
-
-                VisibilityStateComponent* visibilityState = entityManager.TryGetComponent<VisibilityStateComponent>(child->GetEntity());
+                VisibilityStateComponent* visibilityState = childEntity->TryGetComponent<VisibilityStateComponent>();
 
                 if (visibilityState)
                 {
@@ -669,10 +670,10 @@ Handle<Node> TranslateEditorManipulationWidget::Load_Internal() const
                 }
                 else
                 {
-                    entityManager.AddComponent<VisibilityStateComponent>(child->GetEntity(), VisibilityStateComponent { VISIBILITY_STATE_FLAG_ALWAYS_VISIBLE });
+                    childEntity->AddComponent<VisibilityStateComponent>(VisibilityStateComponent { VISIBILITY_STATE_FLAG_ALWAYS_VISIBLE });
                 }
 
-                MeshComponent* meshComponent = entityManager.TryGetComponent<MeshComponent>(child->GetEntity());
+                MeshComponent* meshComponent = childEntity->TryGetComponent<MeshComponent>();
 
                 if (!meshComponent)
                 {
@@ -709,9 +710,8 @@ Handle<Node> TranslateEditorManipulationWidget::Load_Internal() const
                 meshComponent->material = MaterialCache::GetInstance()->CreateMaterial(materialAttributes, materialParameters);
                 meshComponent->material->SetIsDynamic(true);
 
-                entityManager.AddTag<EntityTag::UPDATE_RENDER_PROXY>(child->GetEntity());
-
-                child->AddTag(NodeTag(NAME("TransformWidgetElementColor"), Vec4f(meshComponent->material->GetParameter(Material::MATERIAL_KEY_ALBEDO))));
+                childEntity->AddTag<EntityTag::UPDATE_RENDER_PROXY>();
+                childEntity->Node::AddTag(NodeTag(NAME("TransformWidgetElementColor"), Vec4f(meshComponent->material->GetParameter(Material::MATERIAL_KEY_ALBEDO))));
             }
 
             // FileByteWriter byteWriter(GetResourceDirectory() / "models/editor/axis_arrows.hypmodel");
@@ -721,11 +721,11 @@ Handle<Node> TranslateEditorManipulationWidget::Load_Internal() const
             // FBOMResult writeErr = writer.Emit(&byteWriter);
 
             // byteWriter.Close();
-//
-//            if (writeErr)
-//            {
-//                HYP_LOG(Editor, Error, "Failed to write axis arrows to disk: {}", writeErr.message);
-//            }
+            //
+            //            if (writeErr)
+            //            {
+            //                HYP_LOG(Editor, Error, "Failed to write axis arrows to disk: {}", writeErr.message);
+            //            }
 
             return node;
         }
@@ -3043,9 +3043,9 @@ void EditorSubsystem::SetFocusedNode(const Handle<Node>& focusedNode, bool shoul
     {
         if (focusedNode->GetScene() != nullptr)
         {
-            if (const Handle<Entity>& entity = focusedNode->GetEntity())
+            if (const Handle<Entity>& entity = ObjCast<Entity>(focusedNode))
             {
-                focusedNode->GetScene()->GetEntityManager()->AddTag<EntityTag::EDITOR_FOCUSED>(entity);
+                entity->AddTag<EntityTag::EDITOR_FOCUSED>();
             }
         }
 
@@ -3067,11 +3067,11 @@ void EditorSubsystem::SetFocusedNode(const Handle<Node>& focusedNode, bool shoul
         manipulationWidget.UpdateWidget(focusedNode);
     }
 
-    if (previousFocusedNode.IsValid() && previousFocusedNode->GetScene() != nullptr)
+    if (previousFocusedNode != nullptr)
     {
-        if (const Handle<Entity>& entity = previousFocusedNode->GetEntity())
+        if (const Handle<Entity>& entity = ObjCast<Entity>(previousFocusedNode))
         {
-            previousFocusedNode->GetScene()->GetEntityManager()->RemoveTag<EntityTag::EDITOR_FOCUSED>(entity);
+            entity->RemoveTag<EntityTag::EDITOR_FOCUSED>();
         }
     }
 

@@ -79,18 +79,12 @@ Node::Node(Name name, const Transform& localTransform)
 }
 
 Node::Node(Name name, const Handle<Entity>& entity, const Transform& localTransform)
-    : Node(Type::NODE, name, entity, localTransform, GetDefaultScene())
+    : Node(name, entity, localTransform, GetDefaultScene())
 {
 }
 
 Node::Node(Name name, const Handle<Entity>& entity, const Transform& localTransform, Scene* scene)
-    : Node(Type::NODE, name, entity, localTransform, scene)
-{
-}
-
-Node::Node(Type type, Name name, const Handle<Entity>& entity, const Transform& localTransform, Scene* scene)
-    : m_type(type),
-      m_name(name.IsValid() ? name : NAME("<unnamed>")),
+    : m_name(name.IsValid() ? name : NAME("<unnamed>")),
       m_parentNode(nullptr),
       m_localTransform(localTransform),
       m_scene(scene != nullptr ? scene : GetDefaultScene()),
@@ -990,14 +984,16 @@ bool Node::TestRay(const Ray& ray, RayTestResults& outResults, bool useBvh) cons
 
     if (ray.TestAABB(worldAabb))
     {
-        if (m_entity.IsValid())
+        if (IsA<Entity>())
         {
+            const Entity* entity = static_cast<const Entity*>(this);
+
             const BVHNode* bvh = nullptr;
             Matrix4 modelMatrix = Matrix4::Identity();
 
-            if (useBvh && m_scene && m_scene->GetEntityManager())
+            if (useBvh)
             {
-                if (MeshComponent* meshComponent = m_scene->GetEntityManager()->TryGetComponent<MeshComponent>(m_entity); meshComponent && meshComponent->mesh.IsValid())
+                if (MeshComponent* meshComponent = entity->TryGetComponent<MeshComponent>(); meshComponent && meshComponent->mesh.IsValid())
                 {
                     if (meshComponent->mesh->GetBVH().IsValid())
                     {
@@ -1005,7 +1001,7 @@ bool Node::TestRay(const Ray& ray, RayTestResults& outResults, bool useBvh) cons
                     }
                 }
 
-                if (TransformComponent* transformComponent = m_scene->GetEntityManager()->TryGetComponent<TransformComponent>(m_entity))
+                if (TransformComponent* transformComponent = entity->TryGetComponent<TransformComponent>())
                 {
                     modelMatrix = transformComponent->transform.GetMatrix();
                 }
@@ -1048,7 +1044,7 @@ bool Node::TestRay(const Ray& ray, RayTestResults& outResults, bool useBvh) cons
             }
             else
             {
-                hasEntityHit = ray.TestAABB(worldAabb, m_entity.Id().Value(), nullptr, outResults);
+                hasEntityHit = ray.TestAABB(worldAabb, entity->Id().Value(), nullptr, outResults);
             }
         }
 
