@@ -45,6 +45,13 @@ const HypEnum* GetEnum(WeakName typeName)
 
 bool IsA(const HypClass* hypClass, const void* ptr, TypeId typeId)
 {
+    if (!ptr)
+    {
+        return false;
+    }
+
+    // we assume ptr is of the type TypeId, this is on the caller to ensure it's correct
+
     if (!hypClass)
     {
         return false;
@@ -65,10 +72,12 @@ bool IsA(const HypClass* hypClass, const void* ptr, TypeId typeId)
             return uint32(otherHypClass->GetStaticIndex() - hypClass->GetStaticIndex()) <= hypClass->GetNumDescendants();
         }
 
-        // Try to get the initializer. If we can get it, use the instance class rather than just the class for the type Id.
-        if (const IHypObjectInitializer* initializer = otherHypClass->GetObjectInitializer(ptr))
+        if (otherHypClass->UseHandles()) // check is HypObjectBase
         {
-            otherHypClass = initializer->GetClass();
+            // since we got the HypClass we can assume ptr is a HypObjectBase or derived type.
+            // this could get iffy with multiple inheritance so it's best we disallow MI for HypObjects.
+            const HypObjectBase* hypObjectBase = reinterpret_cast<const HypObjectBase*>(ptr);
+            otherHypClass = hypObjectBase->InstanceClass();
         }
     }
 
@@ -168,33 +177,32 @@ thread_local FormattedStringMap* g_formattedStringMap;
 const char* LookupTypeName(TypeId typeId)
 {
     const HypClass* hypClass = GetClass(typeId);
-    
+
     if (hypClass)
     {
         return *hypClass->GetName();
     }
-    
+
     if (!g_formattedStringMap)
     {
         g_formattedStringMap = Threads::CurrentThreadObject()->GetTLS().Alloc<FormattedStringMap>();
         new (g_formattedStringMap) FormattedStringMap();
-        
+
         Threads::CurrentThreadObject()->AtExit([]()
-        {
-            g_formattedStringMap->~FormattedStringMap();
-        });
+            {
+                g_formattedStringMap->~FormattedStringMap();
+            });
     }
-    
+
     auto it = g_formattedStringMap->Find(typeId);
-    
+
     if (it == g_formattedStringMap->End())
     {
         it = g_formattedStringMap->Insert(typeId, HYP_FORMAT("TypeId({})", typeId.Value())).first;
     }
-    
+
     return *it->second;
 }
-
 
 #pragma endregion Helpers
 
@@ -757,7 +765,7 @@ bool HypClass::IsDerivedFrom(const HypClass* other) const
 
 bool HypClass::GetManagedObject(const void* objectPtr, dotnet::ObjectReference& outObjectReference) const
 {
-    if (!UseHandles())
+    if (!UseHandles()) // check is HypObjectBase
     {
         return false;
     }
@@ -777,7 +785,7 @@ bool HypClass::GetManagedObject(const void* objectPtr, dotnet::ObjectReference& 
     TResourceHandle<ManagedObjectResource> resourceHandle(*target->GetManagedObjectResource());
 
     outObjectReference = resourceHandle->GetManagedObject()->GetObjectReference();
-    
+
     return true;
 }
 

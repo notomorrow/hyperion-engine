@@ -47,18 +47,8 @@ public:
     virtual FBOMResult DeserializeStruct(FBOMLoadContext& context, const FBOMObject& in, HypData& out) const = 0;
 
 protected:
-    virtual void FixupPointer(void* target, IHypObjectInitializer* newInitializer) const override
-    {
-        HYP_NOT_IMPLEMENTED();
-    }
-
     virtual void PostLoad_Internal(void* objectPtr) const override
     {
-    }
-
-    virtual IHypObjectInitializer* GetObjectInitializer_Internal(void* objectPtr) const override
-    {
-        return nullptr;
     }
 
     virtual bool CreateInstance_Internal(HypData& out) const override = 0;

@@ -330,7 +330,7 @@ AssetLoadResult OgreXMLModelLoader::LoadAsset(LoaderState& state) const
 
         Handle<Node> node = CreateObject<Node>();
         node->SetName(CreateNameFromDynamicString(subMesh.name));
-        node->AddChild(entity);
+        node->SetEntity(entity);
 
         if (skeleton.IsValid())
         {

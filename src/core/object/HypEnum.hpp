@@ -36,16 +36,6 @@ public:
     virtual TypeId GetUnderlyingTypeId() const = 0;
 
 protected:
-    virtual void FixupPointer(void* target, IHypObjectInitializer* newInitializer) const override
-    {
-        HYP_NOT_IMPLEMENTED();
-    }
-
-    virtual IHypObjectInitializer* GetObjectInitializer_Internal(void* objectPtr) const override
-    {
-        return nullptr;
-    }
-
     virtual bool CreateInstance_Internal(HypData& out) const override = 0;
     virtual bool CreateInstanceArray_Internal(Span<HypData> elements, HypData& out) const override = 0;
 

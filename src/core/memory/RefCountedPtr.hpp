@@ -12,8 +12,6 @@
 
 #include <core/threading/AtomicVar.hpp>
 
-#include <core/object/HypObjectFwd.hpp>
-
 #include <core/debug/Debug.hpp>
 
 #include <core/Types.hpp>
@@ -99,11 +97,6 @@ static inline uint32 DecRefCount_Impl(void* ptr, RefCountDataType& refCountData,
         {
             countValue = refCountData.strongCount.Decrement(1, MemoryOrder::ACQUIRE_RELEASE) - 1;
         }
-
-        if constexpr (IsHypObject<T>::value)
-        {
-            HypObject_OnDecRefCount_Strong(static_cast<T*>(ptr), countValue);
-        }
     }
     else
     {
@@ -115,10 +108,6 @@ static inline uint32 DecRefCount_Impl(void* ptr, RefCountDataType& refCountData,
         {
             countValue = refCountData.weakCount.Decrement(1, MemoryOrder::ACQUIRE_RELEASE) - 1;
         }
-
-        // if constexpr (IsHypObject<T>::value) {
-        //     HypObject_OnDecRefCount_Weak(static_cast<T *>(ptr), countValue);
-        // }
     }
 
     return countValue;
@@ -697,15 +686,7 @@ public:
         static_assert(std::is_constructible_v<T, Args...>, "T must be constructible using the given args");
 
         RefCountedPtr rc;
-
-        if constexpr (IsHypObject<T>::value)
-        {
-            rc.Reset(Memory::AllocateAndConstructWithContext<T, HypObjectInitializerGuard<T>>(std::forward<Args>(args)...));
-        }
-        else
-        {
-            rc.Reset(Memory::AllocateAndConstruct<T>(std::forward<Args>(args)...));
-        }
+        rc.Reset(Memory::AllocateAndConstruct<T>(std::forward<Args>(args)...));
 
         return rc;
     }
@@ -1510,14 +1491,7 @@ public:
     {
         if constexpr (std::is_default_constructible_v<T>)
         {
-            if constexpr (IsHypObject<T>::value)
-            {
-                Memory::ConstructWithContext<T, HypObjectInitializerGuard<T>>(m_value.GetPointer());
-            }
-            else
-            {
-                Memory::Construct<T>(m_value.GetPointer());
-            }
+            Memory::Construct<T>(m_value.GetPointer());
 
             auto* refCountData = GetRefCountData_Internal();
             refCountData->IncRefCount_Strong(m_value.GetPointer());
@@ -1530,14 +1504,7 @@ public:
     OwningRefCountedPtr(Arg0&& arg0, Args&&... args)
         : m_isInitialized(true)
     {
-        if constexpr (IsHypObject<T>::value)
-        {
-            Memory::ConstructWithContext<T, HypObjectInitializerGuard<T>>(m_value.GetPointer(), std::forward<Arg0>(arg0), std::forward<Args>(args)...);
-        }
-        else
-        {
-            Memory::Construct<T>(m_value.GetPointer(), std::forward<Arg0>(arg0), std::forward<Args>(args)...);
-        }
+        Memory::Construct<T>(m_value.GetPointer(), std::forward<Arg0>(arg0), std::forward<Args>(args)...);
 
         auto* refCountData = GetRefCountData_Internal();
         refCountData->IncRefCount_Strong(m_value.GetPointer());
@@ -1548,14 +1515,7 @@ public:
     {
         if (m_isInitialized)
         {
-            if constexpr (IsHypObject<T>::value)
-            {
-                Memory::ConstructWithContext<T, HypObjectInitializerGuard<T>>(m_value.GetPointer(), other.m_value.Get());
-            }
-            else
-            {
-                Memory::Construct<T>(m_value.GetPointer(), other.m_value.Get());
-            }
+            Memory::Construct<T>(m_value.GetPointer(), other.m_value.Get());
 
             auto* refCountData = GetRefCountData_Internal();
             refCountData->IncRefCount_Strong(m_value.GetPointer());
@@ -1593,14 +1553,7 @@ public:
 
         if (other.m_isInitialized)
         {
-            if constexpr (IsHypObject<T>::value)
-            {
-                Memory::ConstructWithContext<T, HypObjectInitializerGuard<T>>(m_value.GetPointer(), other.m_value.Get());
-            }
-            else
-            {
-                Memory::Construct<T>(m_value.GetPointer(), other.m_value.Get());
-            }
+            Memory::Construct<T>(m_value.GetPointer(), other.m_value.Get());
 
             auto* refCountData = GetRefCountData_Internal();
             refCountData->IncRefCount_Strong(m_value.GetPointer());
@@ -1617,14 +1570,7 @@ public:
     {
         if (other.m_isInitialized)
         {
-            if constexpr (IsHypObject<T>::value)
-            {
-                Memory::ConstructWithContext<T, HypObjectInitializerGuard<T>>(m_value.GetPointer(), std::move(other.m_value.Get()));
-            }
-            else
-            {
-                Memory::Construct<T>(m_value.GetPointer(), std::move(other.m_value.Get()));
-            }
+            Memory::Construct<T>(m_value.GetPointer(), std::move(other.m_value.Get()));
 
             auto* refCountData = GetRefCountData_Internal();
             refCountData->IncRefCount_Strong(m_value.GetPointer());
@@ -1663,14 +1609,7 @@ public:
 
         if (other.m_isInitialized)
         {
-            if constexpr (IsHypObject<T>::value)
-            {
-                Memory::ConstructWithContext<T, HypObjectInitializerGuard<T>>(m_value.GetPointer(), std::move(other.m_value.Get()));
-            }
-            else
-            {
-                Memory::Construct<T>(m_value.GetPointer(), std::move(other.m_value.Get()));
-            }
+            Memory::Construct<T>(m_value.GetPointer(), std::move(other.m_value.Get()));
 
             auto* refCountData = GetRefCountData_Internal();
             refCountData->DecRefCount_Strong(m_value.GetPointer());

@@ -8,15 +8,15 @@
 
 namespace hyperion {
 
+class HypClass;
+
+extern HYP_API const HypClass* GetClass(TypeId typeId);
+
 #define HYP_OBJECT_BODY(T, ...)                                                  \
 private:                                                                         \
-    friend class HypObjectInitializer<T>;                                        \
     friend struct HypClassInitializer_##T;                                       \
     friend class HypClassInstance<T>;                                            \
     friend struct HypClassRegistration<T>;                                       \
-                                                                                 \
-    HypObjectInitializer<T> m_hypObjectInitializer { this };                     \
-    IHypObjectInitializer* m_hypObjectInitializerPtr = &m_hypObjectInitializer;  \
                                                                                  \
 public:                                                                          \
     struct HypObjectData                                                         \
@@ -31,14 +31,10 @@ public:                                                                         
         return (ObjId<T>)(HypObjectBase::Id());                                  \
     }                                                                            \
                                                                                  \
-    HYP_FORCE_INLINE IHypObjectInitializer* GetObjectInitializer() const         \
-    {                                                                            \
-        return m_hypObjectInitializerPtr;                                        \
-    }                                                                            \
-                                                                                 \
     HYP_FORCE_INLINE static const HypClass* Class()                              \
     {                                                                            \
-        return HypObjectInitializer<T>::GetClass_Static();                       \
+        static const HypClass* hypClass = GetClass(TypeId::ForType<T>());        \
+        return hypClass;                                                         \
     }                                                                            \
                                                                                  \
     template <class TOther>                                                      \

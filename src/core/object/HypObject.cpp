@@ -77,8 +77,6 @@ HypObjectInitializerGuardBase::~HypObjectInitializerGuardBase()
                 ptr.GetClass()->GetName());
         }
     }
-
-    FixupObjectInitializerPointer(ptr.GetPointer(), ptr.GetObjectInitializer());
 }
 
 #pragma endregion HypObjectInitializerGuardBase
@@ -100,20 +98,21 @@ HypObjectBase::HypObjectBase()
 
     m_header = reinterpret_cast<HypObjectHeader*>(uintptr_t(this) - headerOffset);
     m_header->IncRefWeak();
-    
+
     // increment the strong reference count for the Handle<T> that will be returned from CreateObject<T>().
     m_header->refCountStrong.Increment(1, MemoryOrder::RELEASE);
 }
 
 HypObjectBase::~HypObjectBase()
 {
+    HYP_CORE_ASSERT(m_header != nullptr);
+
     if (m_managedObjectResource)
     {
         FreeResource(m_managedObjectResource);
         m_managedObjectResource = nullptr;
     }
 
-    HYP_CORE_ASSERT(m_header != nullptr);
     m_header->DecRefWeak();
 }
 
@@ -121,180 +120,94 @@ HypObjectBase::~HypObjectBase()
 
 #pragma region HypObjectPtr
 
-HYP_API uint32 HypObjectPtr::GetRefCount_Strong() const
+HYP_API uint32 HypObjectPtr::GetRefCountStrong() const
 {
     if (!IsValid())
     {
         return 0;
     }
+    
+    HYP_CORE_ASSERT(m_hypClass->UseHandles()); // check is HypObjectBase
 
-    IHypObjectInitializer* initializer = m_hypClass->GetObjectInitializer(m_ptr);
-    HYP_CORE_ASSERT(initializer != nullptr);
+    HypObjectBase* hypObjectBase = reinterpret_cast<HypObjectBase*>(m_ptr);
 
-    return initializer->GetRefCount_Strong(m_ptr);
+    return hypObjectBase->GetObjectHeader_Internal()->GetRefCountStrong();
 }
 
-HYP_API uint32 HypObjectPtr::GetRefCount_Weak() const
+HYP_API uint32 HypObjectPtr::GetRefCountWeak() const
 {
     if (!IsValid())
     {
         return 0;
     }
+    
+    HYP_CORE_ASSERT(m_hypClass->UseHandles()); // check is HypObjectBase
 
-    IHypObjectInitializer* initializer = m_hypClass->GetObjectInitializer(m_ptr);
-    HYP_CORE_ASSERT(initializer != nullptr);
+    HypObjectBase* hypObjectBase = reinterpret_cast<HypObjectBase*>(m_ptr);
 
-    return initializer->GetRefCount_Weak(m_ptr);
+    return hypObjectBase->GetObjectHeader_Internal()->GetRefCountWeak();
 }
 
 HYP_API void HypObjectPtr::IncRef(bool weak)
 {
     HYP_CORE_ASSERT(IsValid());
+    
+    HYP_CORE_ASSERT(m_hypClass->UseHandles()); // check is HypObjectBase
 
-    IHypObjectInitializer* initializer = m_hypClass->GetObjectInitializer(m_ptr);
-    HYP_CORE_ASSERT(initializer != nullptr);
+    HypObjectBase* hypObjectBase = reinterpret_cast<HypObjectBase*>(m_ptr);
 
-    initializer->IncRef(m_ptr, weak);
+    if (weak)
+    {
+        hypObjectBase->GetObjectHeader_Internal()->IncRefWeak();
+    }
+    else
+    {
+        hypObjectBase->GetObjectHeader_Internal()->IncRefStrong();
+    }
 }
 
 HYP_API void HypObjectPtr::DecRef(bool weak)
 {
     HYP_CORE_ASSERT(IsValid());
+    
+    HYP_CORE_ASSERT(m_hypClass->UseHandles()); // check is HypObjectBase
 
-    IHypObjectInitializer* initializer = m_hypClass->GetObjectInitializer(m_ptr);
-    HYP_CORE_ASSERT(initializer != nullptr);
+    HypObjectBase* hypObjectBase = reinterpret_cast<HypObjectBase*>(m_ptr);
 
-    initializer->DecRef(m_ptr, weak);
-}
-
-HYP_API IHypObjectInitializer* HypObjectPtr::GetObjectInitializer() const
-{
-    if (!m_hypClass || !m_ptr)
+    if (weak)
     {
-        return nullptr;
+        hypObjectBase->GetObjectHeader_Internal()->DecRefWeak();
     }
-
-    return m_hypClass->GetObjectInitializer(m_ptr);
-}
-
-HYP_API const HypClass* HypObjectPtr::GetHypClass(TypeId typeId) const
-{
-    const HypClass* hypClass = ::hyperion::GetClass(typeId);
-    HYP_CORE_ASSERT(hypClass != nullptr);
-
-    if (m_ptr != nullptr)
+    else
     {
-        const IHypObjectInitializer* initializer = hypClass->GetObjectInitializer(m_ptr);
-        HYP_CORE_ASSERT(initializer != nullptr);
-
-        hypClass = initializer->GetClass();
-        HYP_CORE_ASSERT(hypClass != nullptr);
+        hypObjectBase->GetObjectHeader_Internal()->DecRefStrong();
     }
-
-    return hypClass;
 }
 
 #pragma endregion HypObjectPtr
 
-#pragma region DynamicHypObjectInitializer
-
-DynamicHypObjectInitializer::DynamicHypObjectInitializer(const HypClass* hypClass, IHypObjectInitializer* parentInitializer)
-    : m_hypClass(hypClass),
-      m_parentInitializer(parentInitializer)
+HYP_API void HypObject_AcquireManagedObjectLock(HypObjectPtr ptr)
 {
-    HYP_CORE_ASSERT(hypClass != nullptr);
-    HYP_CORE_ASSERT(hypClass->IsDynamic());
+    HYP_CORE_ASSERT(ptr.GetClass()->UseHandles()); // check is HypObjectBase
+    
+    HypObjectBase* hypObject = reinterpret_cast<HypObjectBase*>(ptr.GetPointer());
 
-    HYP_CORE_ASSERT(hypClass->IsReferenceCounted(),
-        "DynamicHypObjectInitializer: HypClass is not reference counted. Class: %s"
-        "\n\tDynamic HypClass types must be reference counted to ensure proper cleanup and deletion of allocations.",
-        *hypClass->GetName());
-
-    HYP_CORE_ASSERT(parentInitializer != nullptr);
-
-    HYP_CORE_ASSERT(parentInitializer->GetClass() == hypClass->GetParent(),
-        "DynamicHypObjectInitializer: Parent initializer class does not match hyp_class parent class. Parent initializer class: %s, hyp_class parent class: %s",
-        *parentInitializer->GetClass()->GetName(), *hypClass->GetParent()->GetName());
-}
-
-DynamicHypObjectInitializer::~DynamicHypObjectInitializer()
-{
-    // delete up the chain, if the parent is also dynamic.
-    if (m_parentInitializer->GetClass()->IsDynamic())
+    if (ManagedObjectResource* managedObjectResource = hypObject->GetManagedObjectResource())
     {
-        delete m_parentInitializer;
+        managedObjectResource->IncRef();
     }
 }
 
-TypeId DynamicHypObjectInitializer::GetTypeId() const
+HYP_API void HypObject_ReleaseManagedObjectLock(HypObjectPtr ptr)
 {
-    return m_hypClass->GetTypeId();
-}
+    HYP_CORE_ASSERT(ptr.GetClass()->UseHandles()); // check is HypObjectBase
+    
+    HypObjectBase* hypObject = reinterpret_cast<HypObjectBase*>(ptr.GetPointer());
 
-#pragma endregion DynamicHypObjectInitializer
-
-HYP_API void FixupObjectInitializerPointer(void* target, IHypObjectInitializer* initializer)
-{
-    const HypClass* hypClass = initializer->GetClass();
-
-    while (hypClass != nullptr)
+    if (ManagedObjectResource* managedObjectResource = hypObject->GetManagedObjectResource())
     {
-        hypClass->FixupPointer(target, initializer);
-
-        const HypClass* parentHypClass = hypClass->GetParent();
-
-        // Check to ensure no non-dynamic initializers are in the chain after the first dynamic one found.
-        // This ensures we can properly delete the dynamic initializers up the chain, when the reference count goes to 0.
-        if (parentHypClass && parentHypClass->IsDynamic())
-        {
-            HYP_CORE_ASSERT(hypClass->IsDynamic(),
-                "Found a dynamic initializer in the chain, but the current initializer is not dynamic. Only dynamic initializers are allowed proceeding a dynamic initializer.\n\tCurrent initializer class: %s, next initializer class: %s",
-                *hypClass->GetName(), *parentHypClass->GetName());
-        }
-
-        hypClass = parentHypClass;
+        managedObjectResource->DecRef();
     }
-}
-
-HYP_API void HypObject_OnIncRefCount_Strong(HypObjectPtr ptr, uint32 count)
-{
-    HypObjectBase *hypObject = reinterpret_cast<HypObjectBase *>(ptr.GetPointer());
-
-    if (count > 1)
-    {
-        if (ManagedObjectResource* managedObjectResource = hypObject->GetManagedObjectResource())
-        {
-            managedObjectResource->IncRef();
-        }
-    }
-}
-
-HYP_API void HypObject_OnDecRefCount_Strong(HypObjectPtr ptr, uint32 count)
-{
-    HypObjectBase *hypObject = reinterpret_cast<HypObjectBase *>(ptr.GetPointer());
-
-    if (count >= 1)
-    {
-        if (ManagedObjectResource* managedObjectResource = hypObject->GetManagedObjectResource())
-        {
-            managedObjectResource->DecRef();
-        }
-    }
-    else if (ptr.GetClass()->IsDynamic())
-    {
-        // Dynamic HypClass initializers need to be deleted manually, as they are not stored inline on the class and are heap allocated.
-        // They will delete up the chain if the parent is also dynamic.
-        // We don't allow any non-dynamic initializers in the chain after a dynamic one is added.
-        delete ptr.GetObjectInitializer();
-    }
-}
-
-HYP_API void HypObject_OnIncRefCount_Weak(HypObjectPtr ptr, uint32 count)
-{
-}
-
-HYP_API void HypObject_OnDecRefCount_Weak(HypObjectPtr ptr, uint32 count)
-{
 }
 
 } // namespace hyperion
