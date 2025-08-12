@@ -1094,6 +1094,15 @@ public:
      *  \param coords The screen coordinates to transform.
      *  \return The relative coordinates within the UIObject. */
     Vec2f TransformScreenCoordsToRelative(Vec2i coords) const;
+    
+    /*! \brief Does this object allow the material to be updated?
+     *  If true, a dynamic material will be created for this object. */
+    bool AllowMaterialUpdate() const
+    {
+        return m_allowMaterialUpdate;
+    }
+    
+    void SetAllowMaterialUpdate(bool allowMaterialUpdate);
 
     /*! \brief Get the data source associated with this UIObject. The data source is used to populate the UIObject with data.
      *  \return The data source associated with this UIObject. */
@@ -1319,15 +1328,6 @@ protected:
     virtual BoundingBox CalculateInnerAABB_Internal() const;
 
     const Handle<Mesh>& GetMesh() const;
-
-    /*! \brief Does this object allow the material to be updated?
-     *  If true, a dynamic material will be created for this object. */
-    bool AllowMaterialUpdate() const
-    {
-        return m_allowMaterialUpdate;
-    }
-    
-    void SetAllowMaterialUpdate(bool allowMaterialUpdate);
 
     virtual MaterialAttributes GetMaterialAttributes() const;
     virtual Material::ParameterTable GetMaterialParameters() const;
