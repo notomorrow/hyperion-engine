@@ -389,7 +389,7 @@ namespace Hyperion
                     {
                         var editorAction = currentProject.GetActionStack().GetRedoAction();
                         Assert.Throw(editorAction != null, "Redo action should not be null");
-                        
+
                         string actionRedoText = editorAction.GetName().ToString();
 
                         if (actionRedoText.Length > 0)
@@ -535,7 +535,7 @@ namespace Hyperion
                 GC.Collect();
 
                 World world = this.World;
-                
+
                 if (world.GetGameState().Mode == GameStateMode.Simulating)
                 {
                     Logger.Log(LogType.Info, "Stop simulation");
@@ -630,30 +630,36 @@ namespace Hyperion
                 }
 
                 PointLight light = activeScene.GetEntityManager().AddEntity<PointLight>();
-                light.SetPosition(new Vec3f(0.0f, 3.0f, 5.0f));
                 light.SetColor(new Color(1.0f, 1.0f, 1.0f, 1.0f));
                 light.SetRadius(10.0f);
                 light.SetIntensity(3.0f);
                 // light.SetLightFlags(((light.GetLightFlags() & ~LightFlags.Shadow) & ~LightFlags.ShadowFilterMask));
 
-                var lightNode = new Node();
-                lightNode.SetName(activeScene.GetUniqueNodeName("PointLight"));
-                lightNode.SetEntity(light);
-                lightNode.SetWorldTranslation(new Vec3f(0.0f, 3.0f, 5.0f));
+                light.SetName(activeScene.GetUniqueNodeName("PointLight"));
+                light.SetWorldTranslation(new Vec3f(0.0f, 3.0f, 5.0f));
+
+                WeakReference<Node> previousFocusedNode = new WeakReference<Node>(editorSubsystem.GetFocusedNode());
 
                 currentProject.GetActionStack().Push(new EditorAction(
                     new Name("AddPointLight"),
                     (EditorSubsystem editorSubsystem, EditorProject project) =>
                     {
-                        activeScene.GetRoot().AddChild(lightNode);
-                        editorSubsystem.SetFocusedNode(lightNode, true);
+                        activeScene.GetRoot().AddChild(light);
+                        editorSubsystem.SetFocusedNode(light, true);
                     },
                     (EditorSubsystem editorSubsystem, EditorProject project) =>
                     {
-                        lightNode.Remove();
+                        light.Remove();
 
-                        if (editorSubsystem.GetFocusedNode() == lightNode)
+                        if (editorSubsystem.GetFocusedNode() == light)
+                        {
                             editorSubsystem.SetFocusedNode(null, true);
+
+                            if (previousFocusedNode.TryGetTarget(out Node? focusedNode) && focusedNode != null)
+                            {
+                                editorSubsystem.SetFocusedNode(focusedNode, true);
+                            }
+                        }
                     }
                 ));
 
@@ -813,24 +819,31 @@ namespace Hyperion
                 light.SetIntensity(5.0f);
                 light.SetAreaSize(new Vec2f(2.0f, 2.0f));
 
-                var lightNode = new Node();
-                lightNode.SetName(activeScene.GetUniqueNodeName("AreaRectLight"));
-                lightNode.SetEntity(light);
-                lightNode.SetWorldTranslation(new Vec3f(0.0f, 5.0f, 0.0f));
+                light.SetName(activeScene.GetUniqueNodeName("AreaRectLight"));
+                light.SetWorldTranslation(new Vec3f(0.0f, 5.0f, 0.0f));
+
+                WeakReference<Node> previousFocusedNode = new WeakReference<Node>(editorSubsystem.GetFocusedNode());
 
                 currentProject.GetActionStack().Push(new EditorAction(
                     new Name("AddAreaRectLight"),
                     (EditorSubsystem editorSubsystem, EditorProject project) =>
                     {
-                        activeScene.GetRoot().AddChild(lightNode);
-                        editorSubsystem.SetFocusedNode(lightNode, true);
+                        activeScene.GetRoot().AddChild(light);
+                        editorSubsystem.SetFocusedNode(light, true);
                     },
                     (EditorSubsystem editorSubsystem, EditorProject project) =>
                     {
-                        lightNode.Remove();
+                        light.Remove();
 
-                        if (editorSubsystem.GetFocusedNode() == lightNode)
+                        if (editorSubsystem.GetFocusedNode() == light)
+                        {
                             editorSubsystem.SetFocusedNode(null, true);
+
+                            if (previousFocusedNode.TryGetTarget(out Node? focusedNode) && focusedNode != null)
+                            {
+                                editorSubsystem.SetFocusedNode(focusedNode, true);
+                            }
+                        }
                     }
                 ));
 
@@ -866,31 +879,38 @@ namespace Hyperion
                     return UIEventHandlerResult.Error;
                 }
 
-                var envProbeEntity = activeScene.GetEntityManager().AddEntity<ReflectionProbe>();
-                activeScene.GetEntityManager().AddComponent<BoundingBoxComponent>(envProbeEntity, new BoundingBoxComponent {
+                var reflectionProbe = activeScene.GetEntityManager().AddEntity<ReflectionProbe>();
+                activeScene.GetEntityManager().AddComponent<BoundingBoxComponent>(reflectionProbe, new BoundingBoxComponent
+                {
                     LocalAABB = new BoundingBox(new Vec3f(-15.0f, 0.0f, -15.0f), new Vec3f(15.0f, 15.0f, 15.0f)),
                     WorldAABB = new BoundingBox(new Vec3f(-15.0f, 0.0f, -15.0f), new Vec3f(15.0f, 15.0f, 15.0f))
                 });
 
-                var envProbeNode = new Node();
-                envProbeNode.SetName(activeScene.GetUniqueNodeName("ReflectionProbe"));
-                envProbeNode.SetWorldTranslation(new Vec3f(0.0f, 5.0f, 0.0f));
+                reflectionProbe.SetName(activeScene.GetUniqueNodeName("ReflectionProbe"));
+                reflectionProbe.SetWorldTranslation(new Vec3f(0.0f, 5.0f, 0.0f));
 
-                envProbeNode.AddChild(envProbeEntity);
+                WeakReference<Node> previousFocusedNode = new WeakReference<Node>(editorSubsystem.GetFocusedNode());
 
                 currentProject.GetActionStack().Push(new EditorAction(
                     new Name("AddReflectionProbe"),
                     (EditorSubsystem editorSubsystem, EditorProject project) =>
                     {
-                        activeScene.GetRoot().AddChild(envProbeNode);
-                        editorSubsystem.SetFocusedNode(envProbeNode, true);
+                        activeScene.GetRoot().AddChild(reflectionProbe);
+                        editorSubsystem.SetFocusedNode(reflectionProbe, true);
                     },
                     (EditorSubsystem editorSubsystem, EditorProject project) =>
                     {
-                        envProbeNode.Remove();
+                        reflectionProbe.Remove();
 
-                        if (editorSubsystem.GetFocusedNode() == envProbeNode)
+                        if (editorSubsystem.GetFocusedNode() == reflectionProbe)
+                        {
                             editorSubsystem.SetFocusedNode(null, true);
+
+                            if (previousFocusedNode.TryGetTarget(out Node? focusedNode) && focusedNode != null)
+                            {
+                                editorSubsystem.SetFocusedNode(focusedNode, true);
+                            }
+                        }
                     }
                 ));
 
@@ -940,7 +960,7 @@ namespace Hyperion
                 if (editorSubsystem == null)
                 {
                     Logger.Log(LogType.Error, "EditorSubsystem not found");
-                    
+
                     return UIEventHandlerResult.Error;
                 }
 
@@ -967,44 +987,130 @@ namespace Hyperion
 
             public UIEventHandlerResult AddNode()
             {
-                // var editorSubsystem = World.GetSubsystem<EditorSubsystem>();
+                var editorSubsystem = World.GetSubsystem<EditorSubsystem>();
 
-                // if (editorSubsystem == null)
-                // {
-                //     Logger.Log(LogType.Error, "EditorSubsystem not found");
+                if (editorSubsystem == null)
+                {
+                    Logger.Log(LogType.Error, "EditorSubsystem not found");
 
-                //     return UIEventHandlerResult.Ok;
-                // }
+                    return UIEventHandlerResult.Ok;
+                }
 
-                // EditorProject currentProject = editorSubsystem.GetCurrentProject();
+                EditorProject currentProject = editorSubsystem.GetCurrentProject();
 
-                // if (currentProject == null)
-                // {
-                //     Logger.Log(LogType.Error, "No project loaded; cannot save");
+                if (currentProject == null)
+                {
+                    Logger.Log(LogType.Error, "No project loaded; cannot save");
 
-                //     return UIEventHandlerResult.Ok;
-                // }
+                    return UIEventHandlerResult.Ok;
+                }
 
-                // var node = new Node();
-                // node.SetName(new Name("New Node"));
+                Scene activeScene = editorSubsystem.GetActiveScene();
 
-                // currentProject.GetActionStack().Push(new EditorAction(
-                //     new Name("AddNewNode"),
-                //     (EditorSubsystem editorSubsystem, EditorProject project) =>
-                //     {
-                //         currentProject.GetScene().GetRoot().AddChild(node);
-                //         editorSubsystem.SetFocusedNode(node, true);
-                //     },
-                //     (EditorSubsystem editorSubsystem, EditorProject project) =>
-                //     {
-                //         node.Remove();
+                if (activeScene == null)
+                {
+                    Logger.Log(LogType.Error, "No active scene found");
 
-                //         if (editorSubsystem.GetFocusedNode() == node)
-                //             editorSubsystem.SetFocusedNode(null, true);
-                //     }
-                // ));
+                    return UIEventHandlerResult.Error;
+                }
 
-                // // @TODO Focus on node in scene view
+                WeakReference<Node> currentFocusedNode = new WeakReference<Node>(editorSubsystem.GetFocusedNode());
+
+                var node = new Node();
+                node.SetName(new Name("New Node"));
+
+                currentProject.GetActionStack().Push(new EditorAction(
+                    new Name("AddNewNode"),
+                    (EditorSubsystem editorSubsystem, EditorProject project) =>
+                    {
+                        activeScene.GetRoot().AddChild(node);
+
+                        editorSubsystem.SetFocusedNode(node, true);
+                    },
+                    (EditorSubsystem editorSubsystem, EditorProject project) =>
+                    {
+                        node.Remove();
+
+                        if (editorSubsystem.GetFocusedNode() == node)
+                        {
+                            // If the focused node was the node we just removed, clear the focus
+                            editorSubsystem.SetFocusedNode(null, true);
+
+                            // If we had a previous focused node, restore it
+                            if (currentFocusedNode != null && currentFocusedNode.TryGetTarget(out var previousFocusedNode))
+                            {
+                                editorSubsystem.SetFocusedNode(previousFocusedNode, true);
+                            }
+                        }
+                    }
+                ));
+
+                // @TODO Focus on node in scene view
+
+                return UIEventHandlerResult.Ok;
+            }
+            
+            public UIEventHandlerResult AddEntity()
+            {
+                var editorSubsystem = World.GetSubsystem<EditorSubsystem>();
+
+                if (editorSubsystem == null)
+                {
+                    Logger.Log(LogType.Error, "EditorSubsystem not found");
+
+                    return UIEventHandlerResult.Ok;
+                }
+
+                EditorProject currentProject = editorSubsystem.GetCurrentProject();
+
+                if (currentProject == null)
+                {
+                    Logger.Log(LogType.Error, "No project loaded; cannot save");
+
+                    return UIEventHandlerResult.Ok;
+                }
+
+                Scene activeScene = editorSubsystem.GetActiveScene();
+
+                if (activeScene == null)
+                {
+                    Logger.Log(LogType.Error, "No active scene found");
+
+                    return UIEventHandlerResult.Error;
+                }
+
+                WeakReference<Node> currentFocusedNode = new WeakReference<Node>(editorSubsystem.GetFocusedNode());
+
+                var entity = new Entity();
+                entity.SetName(new Name("New Entity"));
+
+                currentProject.GetActionStack().Push(new EditorAction(
+                    new Name("AddNewEntity"),
+                    (EditorSubsystem editorSubsystem, EditorProject project) =>
+                    {
+                        activeScene.GetRoot().AddChild(entity);
+
+                        editorSubsystem.SetFocusedNode(entity, true);
+                    },
+                    (EditorSubsystem editorSubsystem, EditorProject project) =>
+                    {
+                        entity.Remove();
+
+                        if (editorSubsystem.GetFocusedNode() == entity)
+                        {
+                            // If the focused node was the entity we just removed, clear the focus
+                            editorSubsystem.SetFocusedNode(null, true);
+
+                            // If we had a previous focused node, restore it
+                            if (currentFocusedNode != null && currentFocusedNode.TryGetTarget(out var previousFocusedNode))
+                            {
+                                editorSubsystem.SetFocusedNode(previousFocusedNode, true);
+                            }
+                        }
+                    }
+                ));
+
+                // @TODO Focus on entity in scene view
 
                 return UIEventHandlerResult.Ok;
             }

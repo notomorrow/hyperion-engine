@@ -628,7 +628,8 @@ public:
                         IScriptableDelegate* scriptableDelegate = reinterpret_cast<IScriptableDelegate*>(fieldAddress);
 
                         scriptableDelegate
-                            ->BindManaged(attributeValue,
+                            ->BindManaged(
+                                attributeValue,
                                 [uiObjectWeak = uiObject->WeakHandleFromThis()]() -> ManagedObjectResource*
                                 {
                                     Handle<UIObject> uiObject = uiObjectWeak.Lock();

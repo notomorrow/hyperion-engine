@@ -47,6 +47,9 @@ class ResourceTracker final : public ResourceTrackerBase
 public:
     struct Impl;
 
+    using TIdType = IdType;
+    using TElementType = ElementType;
+
     template <class Derived, bool IsConst>
     struct IteratorBase
     {
@@ -605,32 +608,6 @@ public:
         for (Bitset::BitIndex i : subclassIndices)
         {
             subclassImpls[i]->GetChanged(out);
-        }
-    }
-
-    template <class AllocatorType>
-    void GetCurrent(Array<ElementType, AllocatorType>& out) const
-    {
-        HYP_SCOPE;
-
-        baseImpl.GetCurrent(out);
-
-        for (Bitset::BitIndex i : subclassIndices)
-        {
-            subclassImpls[i]->GetCurrent(out);
-        }
-    }
-
-    template <class AllocatorType>
-    void GetCurrent(Array<ElementType*, AllocatorType>& out) const
-    {
-        HYP_SCOPE;
-
-        baseImpl.GetCurrent(out);
-
-        for (Bitset::BitIndex i : subclassIndices)
-        {
-            subclassImpls[i]->GetCurrent(out);
         }
     }
 

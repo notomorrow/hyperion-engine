@@ -154,66 +154,6 @@ struct HypObjectMemory final : HypObjectHeader
     HypObjectMemory& operator=(HypObjectMemory&&) noexcept = delete;
     ~HypObjectMemory() = default;
 
-    uint32 IncRefStrong()
-    {
-        const uint32 count = refCountStrong.Increment(1, MemoryOrder::ACQUIRE_RELEASE) + 1;
-
-        if (count > 1)
-        {
-            HypObject_AcquireManagedObjectLock(HypObjectPtr(GetPointer()));
-        }
-
-        return count;
-    }
-
-    uint32 IncRefWeak()
-    {
-        return refCountWeak.Increment(1, MemoryOrder::ACQUIRE_RELEASE) + 1;
-    }
-
-    uint32 DecRefStrong()
-    {
-        uint32 count;
-
-        if ((count = refCountStrong.Decrement(1, MemoryOrder::ACQUIRE_RELEASE)) == 1)
-        {
-            // Increment weak reference count by 1 so any WeakHandleFromThis() calls in the destructor do not immediately cause the item to be removed from the pool
-            refCountWeak.Increment(1, MemoryOrder::RELEASE);
-
-            GetPointer()->~T();
-
-            if (refCountWeak.Decrement(1, MemoryOrder::ACQUIRE_RELEASE) == 1)
-            {
-                // Free the slot for this
-                container->ReleaseIndex(index);
-            }
-        }
-        else
-        {
-            HypObject_ReleaseManagedObjectLock(HypObjectPtr(GetPointer()));
-        }
-
-        return count - 1;
-    }
-
-    uint32 DecRefWeak()
-    {
-        uint32 count;
-
-        if ((count = refCountWeak.Decrement(1, MemoryOrder::ACQUIRE_RELEASE)) == 1)
-        {
-            if (refCountStrong.Get(MemoryOrder::ACQUIRE) == 0)
-            {
-                // Free the slot for this
-                container->ReleaseIndex(index);
-            }
-        }
-
-        HYP_CORE_ASSERT(count != 0);
-
-        return count - 1;
-    }
-
     HYP_NODISCARD T* Release()
     {
         T* ptr = storage.GetPointer();
@@ -292,24 +232,62 @@ public:
 
     virtual void IncRefStrong(HypObjectHeader* ptr) override
     {
-        static_cast<HypObjectMemory*>(ptr)->HypObjectMemory::IncRefStrong();
+        const uint32 count = ptr->refCountStrong.Increment(1, MemoryOrder::ACQUIRE_RELEASE) + 1;
+
+        if (count > 1)
+        {
+            HypObject_AcquireManagedObjectLock(HypObjectPtr(static_cast<HypObjectMemory*>(ptr)->GetPointer()));
+        }
+
+        return count;
     }
 
     virtual void IncRefWeak(HypObjectHeader* ptr) override
     {
-        static_cast<HypObjectMemory*>(ptr)->HypObjectMemory::IncRefWeak();
+        ptr->refCountWeak.Increment(1, MemoryOrder::RELEASE);
     }
 
     virtual void DecRefStrong(HypObjectHeader* ptr) override
     {
-        // Have to call the derived implementation or it will recursive infinitely
-        static_cast<HypObjectMemory*>(ptr)->HypObjectMemory::DecRefStrong();
+        uint32 count;
+
+        if ((count = ptr->refCountStrong.Decrement(1, MemoryOrder::ACQUIRE_RELEASE)) == 1)
+        {
+            // Increment weak reference count by 1 so any WeakHandleFromThis() calls in the destructor do not immediately cause the item to be removed from the pool
+            ptr->refCountWeak.Increment(1, MemoryOrder::RELEASE);
+
+            static_cast<HypObjectMemory*>(ptr)->GetPointer()->~T();
+
+            if (ptr->refCountWeak.Decrement(1, MemoryOrder::ACQUIRE_RELEASE) == 1)
+            {
+                // Free the slot for this
+                ReleaseIndex(ptr->index);
+            }
+        }
+        else
+        {
+            HypObject_ReleaseManagedObjectLock(HypObjectPtr(static_cast<HypObjectMemory*>(ptr)->GetPointer()));
+        }
+
+        return count - 1;
     }
 
     virtual void DecRefWeak(HypObjectHeader* ptr) override
     {
-        // Have to call the derived implementation or it will recursive infinitely
-        static_cast<HypObjectMemory*>(ptr)->HypObjectMemory::DecRefWeak();
+        uint32 count;
+
+        if ((count = ptr->refCountWeak.Decrement(1, MemoryOrder::ACQUIRE_RELEASE)) == 1)
+        {
+            if (ptr->refCountStrong.Get(MemoryOrder::ACQUIRE) == 0)
+            {
+                // Free the slot for this
+                ReleaseIndex(ptr->index);
+            }
+        }
+
+        HYP_CORE_ASSERT(count != 0);
+
+        return count - 1;
     }
 
     virtual void* Release(HypObjectHeader* ptr) override
