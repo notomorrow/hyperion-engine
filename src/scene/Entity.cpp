@@ -47,7 +47,8 @@ Entity::~Entity()
         return;
     }
 
-    Threads::AssertOnThread(entityManager->GetOwnerThreadId(), "Entity destructor must be called on the EntityManager's owner thread");
+    Threads::AssertOnThread(entityManager->GetOwnerThreadId(),
+        "Entity destructor must be called on the EntityManager's owner thread!");
 
     WeakHandle<Entity> weakThis = WeakHandleFromThis();
 

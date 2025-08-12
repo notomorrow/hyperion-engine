@@ -1871,10 +1871,10 @@ static void AddNodeToSceneOutline(const Handle<UIListView>& listView, Node* node
 
     for (Node* child : node->GetChildren())
     {
-         if (child->GetFlags() & NodeFlags::HIDE_IN_SCENE_OUTLINE)
-         {
-             continue;
-         }
+        if (child->GetFlags() & NodeFlags::HIDE_IN_SCENE_OUTLINE)
+        {
+            continue;
+        }
 
         AddNodeToSceneOutline(listView, child);
     }
@@ -1912,10 +1912,10 @@ void EditorSubsystem::StartWatchingNode(const Handle<Node>& node)
         [this, listViewWeak = listView.ToWeak()](Node* node, const HypProperty* property)
         {
             // Update name in list view
-             if (node->GetFlags() & NodeFlags::HIDE_IN_SCENE_OUTLINE)
-             {
-                 return;
-             }
+            if (node->GetFlags() & NodeFlags::HIDE_IN_SCENE_OUTLINE)
+            {
+                return;
+            }
 
             HYP_LOG(Editor, Debug, "Node {} property changed : {}", *node->GetName(), *property->GetName());
 

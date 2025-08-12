@@ -216,7 +216,7 @@ static Handle<RenderGroup> CreateRenderGroup(RenderCollector* renderCollector, D
 template <class Functor, SizeType... Indices>
 static inline void ForEachResourceTrackerType_Impl(Span<ResourceTrackerBase*> resourceTrackers, const Functor& functor, std::index_sequence<Indices...>)
 {
-    (functor(TypeWrapper<typename TupleElement_Tuple<Indices, RenderProxyList::ResourceTrackerTypes>::Type>(), resourceTrackers[Indices]), ...);
+    (functor(TypeWrapper<typename TupleElement_Tuple<Indices, RenderProxyList::ResourceTrackerTypes>::Type>(), resourceTrackers[Indices], Indices), ...);
 }
 
 template <class Functor>
@@ -229,14 +229,56 @@ RenderProxyList::RenderProxyList(bool isShared)
     : isShared(isShared),
       viewport(Viewport { Vec2u::One(), Vec2i::Zero() }),
       priority(0),
-      resourceTrackers {}
+      resourceTrackers {},
+      releaseRefsFunctions {}
 {
     // initialize the resource trackers
-    ForEachResourceTrackerType(resourceTrackers, []<class ResourceTrackerType>(TypeWrapper<ResourceTrackerType>, ResourceTrackerBase*& pResourceTracker)
+    ForEachResourceTrackerType(resourceTrackers, [this]<class ResourceTrackerType>(TypeWrapper<ResourceTrackerType>, ResourceTrackerBase*& pResourceTracker, SizeType idx)
         {
             AssertDebug(!pResourceTracker);
 
             pResourceTracker = new ResourceTrackerType();
+
+            releaseRefsFunctions[idx] = [](ResourceTrackerBase* resourceTracker) -> void
+            {
+                ResourceTrackerType* resourceTrackerCasted = static_cast<ResourceTrackerType*>(resourceTracker);
+                resourceTrackerCasted->Advance(/* clearNextState */ true);
+
+                const auto releaseRefs = [](auto& elements)
+                {
+                    // Release weak references to all tracked elements
+                    for (auto* elem : elements)
+                    {
+                        AssertDebug(elem != nullptr);
+                        
+                        HypObjectBase* elemCasted = reinterpret_cast<HypObjectBase*>(elem);
+                        AssertDebug(elemCasted->GetObjectHeader_Internal()->GetRefCountStrong() > 0);
+
+                        elemCasted->GetObjectHeader_Internal()->DecRefStrong();
+                    }
+                };
+
+                Array<typename ResourceTrackerType::TElementType> elements;
+                // get current "removed" elements
+                resourceTrackerCasted->GetRemoved(elements, false);
+                releaseRefs(elements);
+                elements.Clear();
+                
+                // get "new" elements
+                resourceTrackerCasted->GetAdded(elements, false);
+                releaseRefs(elements);
+                elements.Clear();
+
+                // advance, moving all remaining elements to "removed"
+                // ("removed" before this get discarded, and "new" get moved to "current")
+                resourceTrackerCasted->Advance(/* clearNextState */ true);
+
+                // release refs on removed elements
+                resourceTrackerCasted->GetRemoved(elements, false);
+                releaseRefs(elements);
+
+                AssertDebug(resourceTrackerCasted->NumCurrent() == 0);
+            };
         });
 }
 
@@ -246,8 +288,17 @@ RenderProxyList::~RenderProxyList()
     debugIsDestroyed = true;
 #endif
 
-    for (ResourceTrackerBase* resourceTracker : resourceTrackers)
+    // Have to dec refs on all objects we hold a strong reference to.
+
+    for (SizeType i = 0; i < resourceTrackers.Size(); i++)
     {
+        ResourceTrackerBase* resourceTracker = resourceTrackers[i];
+        AssertDebug(resourceTracker != nullptr);
+
+        // Release all strong references to tracked elements
+        AssertDebug(releaseRefsFunctions[i] != nullptr);
+        releaseRefsFunctions[i](resourceTracker);
+
         delete resourceTracker;
     }
 

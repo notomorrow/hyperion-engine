@@ -25,38 +25,6 @@ class Bone;
 class Animation;
 class RenderProxySkeleton;
 
-struct SkeletonBoneData
-{
-    using BoneMatricesPtr = RC<FixedArray<Matrix4, 128>>;
-
-    BoneMatricesPtr matrices;
-
-    SkeletonBoneData()
-        : matrices(BoneMatricesPtr::Construct())
-    {
-    }
-
-    SkeletonBoneData(const SkeletonBoneData& other) = default;
-    SkeletonBoneData& operator=(const SkeletonBoneData& other) = default;
-    SkeletonBoneData(SkeletonBoneData&& other) noexcept = default;
-    SkeletonBoneData& operator=(SkeletonBoneData&& other) noexcept = default;
-    ~SkeletonBoneData() = default;
-
-    void SetMatrix(uint32 index, const Matrix4& matrix)
-    {
-        Assert(matrices && index < matrices->Size());
-
-        (*matrices)[index] = matrix;
-    }
-
-    const Matrix4& GetMatrix(uint32 index)
-    {
-        Assert(matrices && index < matrices->Size());
-
-        return (*matrices)[index];
-    }
-};
-
 HYP_CLASS()
 class HYP_API Skeleton final : public HypObjectBase
 {

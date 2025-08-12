@@ -51,7 +51,7 @@ public:
     ScriptableDelegate& operator=(ScriptableDelegate&& other) noexcept = delete;
 
     virtual ~ScriptableDelegate() override = default;
-
+    
     HYP_NODISCARD virtual DelegateHandler BindManaged(const String& methodName, Proc<ManagedObjectResource*()>&& getFn) override
     {
         if (!getFn)
@@ -72,7 +72,20 @@ public:
 
                 if (!object->GetMethod(methodName))
                 {
-                    HYP_FAIL("Failed to find method %s!", methodName.Data());
+                    char buffer[256];
+                    std::snprintf(buffer, 256, "Script method missing: %s", *methodName);
+                    
+                    LogScriptableDelegateError(buffer, object);
+                    
+                    
+                    if constexpr (std::is_void_v<ReturnType>)
+                    {
+                        return;
+                    }
+                    else
+                    {
+                        return ReturnType();
+                    }
                 }
 
                 if constexpr (std::is_void_v<ReturnType>)
@@ -106,7 +119,6 @@ public:
                 HYP_CORE_ASSERT(managedObjectResource != nullptr, "Managed object resource is null!");
 
                 managedObjectResource->IncRef();
-                HYP_DEFER({ managedObjectResource->DecRef(); });
 
                 dotnet::Object* object = managedObjectResource->GetManagedObject();
                 HYP_CORE_ASSERT(object != nullptr, "Managed object is null!");
@@ -114,10 +126,36 @@ public:
 
                 if (!object->GetMethod(methodName))
                 {
-                    return defaultReturn;
+                    char buffer[256];
+                    std::snprintf(buffer, 256, "Script method missing: %s", *methodName);
+                    
+                    LogScriptableDelegateError(buffer, object);
+                    
+                    if constexpr (std::is_void_v<ReturnType>)
+                    {
+                        return;
+                    }
+                    else
+                    {
+                        return defaultReturn;
+                    }
+                    
                 }
 
-                return object->InvokeMethodByName<ReturnType>(methodName, std::forward<ArgTypes>(args)...);
+                if constexpr (std::is_void_v<ReturnType>)
+                {
+                    object->InvokeMethodByName<void>(methodName, std::forward<ArgTypes>(args)...);
+
+                    managedObjectResource->DecRef();
+                }
+                else
+                {
+                    ReturnType result = object->InvokeMethodByName<ReturnType>(methodName, std::forward<ArgTypes>(args)...);
+
+                    managedObjectResource->DecRef();
+
+                    return result;
+                }
             });
     }
 

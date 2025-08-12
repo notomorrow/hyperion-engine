@@ -20,7 +20,8 @@
     <Panel name="Main_Toolbar" position="0 25" size="100% 40">
         <MenuBar name="Tools_MenuBar" position="0 0" size="auto 100%" depth="10">
             <MenuItem name="Add_MenuItem" text="Add" size="auto 100%" backgroundColor="#000000" borderRadius="5">
-                <MenuItem name="Node_MenuItem" text="Node" OnClick="AddNode"></MenuItem>
+                <MenuItem name="Node_MenuItem" text="Empty Node" OnClick="AddNode"></MenuItem>
+                <MenuItem name="Node_MenuItem" text="Basic Entity" OnClick="AddEntity"></MenuItem>
                 <MenuItem name="Light_MenuItem" text="Light">
                     <MenuItem name="PointLight_MenuItem" text="Point Light" OnClick="AddPointLight"></MenuItem>
                     <MenuItem name="DirectionalLight_MenuItem" text="Directional Light" OnClick="AddDirectionalLight"></MenuItem>

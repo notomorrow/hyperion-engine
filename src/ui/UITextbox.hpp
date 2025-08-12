@@ -52,6 +52,12 @@ public:
 protected:
     virtual void Init() override;
 
+    virtual bool NeedsUpdate() const override
+    {
+        return UIPanel::NeedsUpdate()
+            || (GetFocusState() & UIObjectFocusState::FOCUSED); // need to update for cursor blinking
+    }
+
     virtual void Update_Internal(float delta) override;
     virtual void SetFocusState_Internal(EnumFlags<UIObjectFocusState> focusState) override;
 
