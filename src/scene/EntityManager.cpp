@@ -606,12 +606,17 @@ void EntityManager::AddExistingEntity_Internal(const Handle<Entity>& entity)
     }
 }
 
-bool EntityManager::RemoveEntity(const WeakHandle<Entity>& entityWeak)
+/// Called from Entity destructor or from a task enqueued during Entity destructor.
+/// Does not operate on the Entity pointer as it would be invalid at this point,
+/// so NotifySystemsOfEntityRemoved() is not called (it's expected that this is a non-world EntityManager so it wouldn't be called anyway).
+bool EntityManager::RemoveEntity(ObjId<Entity> entityId)
 {
     HYP_SCOPE;
     Threads::AssertOnThread(m_ownerThreadId);
 
-    if (!entityWeak)
+    Assert(m_world == nullptr, "RemoveEntity() can only be called on non-world EntityManagers. Use MoveEntity() to move entities out of a world EntityManager on its owner thread.");
+
+    if (!entityId.IsValid())
     {
         return false;
     }
@@ -623,13 +628,8 @@ bool EntityManager::RemoveEntity(const WeakHandle<Entity>& entityWeak)
 
     HYP_MT_CHECK_RW(m_entitiesDataRaceDetector);
 
-    EntityData* entityData = m_entities.TryGetEntityData(entityWeak.Id());
+    EntityData* entityData = m_entities.TryGetEntityData(entityId);
     Assert(entityData != nullptr, "Entity does not exist");
-    
-    Handle<Entity> entity = entityWeak.Lock();
-    Assert(entity != nullptr, "Entity handle expired");
-
-    NotifySystemsOfEntityRemoved(entity, entityData->components);
 
     for (auto componentInfoPairIt = entityData->components.Begin(); componentInfoPairIt != entityData->components.End();)
     {
@@ -643,19 +643,6 @@ bool EntityManager::RemoveEntity(const WeakHandle<Entity>& entityWeak)
         AnyRef componentRef = componentContainerIt->second->TryGetComponent(componentId);
         Assert(componentRef.HasValue(), "Component of type '{}' with id {} does not exist in component container", *GetComponentTypeName(componentTypeId), componentId);
 
-        // Notify the entity that the component is being removed
-        // - needed to ensure proper lifecycle. every OnComponentRemoved() call must be matched with an OnComponentAdded() call and vice versa
-        EntityTag tag;
-        if (IsEntityTagComponent(componentTypeId, tag))
-        {
-            // Remove the tag from the entity
-            entity->OnTagRemoved(tag);
-        }
-        else
-        {
-            entity->OnComponentRemoved(componentRef);
-        }
-
         HypData componentHypData;
         if (!componentContainerIt->second->RemoveComponent(componentId, componentHypData))
         {
@@ -667,9 +654,6 @@ bool EntityManager::RemoveEntity(const WeakHandle<Entity>& entityWeak)
         // Update iterator, erase the component from the entity's component map
         componentInfoPairIt = entityData->components.Erase(componentInfoPairIt);
     }
-
-    /// @NOTE: Do not call OnRemovedFromWorld() or OnRemovedFromScene() here as they are virtual functions
-    /// and we only call RemoveEntity() from Entity's destructor, which is called after the entity has been removed from the scene and world.
 
     {
         Mutex::Guard entitySetsGuard(m_entitySetsMutex);
@@ -687,14 +671,13 @@ bool EntityManager::RemoveEntity(const WeakHandle<Entity>& entityWeak)
                 {
                     EntitySetBase& entitySet = *m_entitySets.At(entitySetTypeId);
 
-                    entitySet.OnEntityUpdated(entity);
+                    entitySet.RemoveEntity(entityId);
                 }
             }
         }
     }
 
-    entity->m_entityManager = nullptr;
-    m_entities.Remove(entity);
+    m_entities.Remove(entityId);
 
     return true;
 }

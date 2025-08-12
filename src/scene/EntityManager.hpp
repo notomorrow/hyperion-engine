@@ -1077,11 +1077,11 @@ private:
 
     /*! \brief Removes an entity from the EntityManager.
      *
-     *  \param[in] entityWeak WeakHandle to the Entity to remove.
+     *  \param[in] entityId The ID of the entity to remove.
      *
      *  \return True if the entity was removed, false otherwise.
      */
-    bool RemoveEntity(const WeakHandle<Entity>& entityWeak);
+    bool RemoveEntity(ObjId<Entity> entityId);
 
     bool IsEntityInitializedForSystem(SystemBase* system, const Entity* entity) const;
 

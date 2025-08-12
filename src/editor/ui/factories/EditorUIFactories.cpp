@@ -368,17 +368,10 @@ public:
 
     void Update(UIObject* uiObject, const Vec3f& value) const
     {
-        uiObject->FindChildUIObject(NAME("Vec3fPanel_X_Value"))
-            .Cast<UITextbox>()
-            ->SetText(HYP_FORMAT("{}", value.x));
+        ObjCast<UITextbox>(uiObject->FindChildUIObject(NAME("Vec3fPanel_X_Value")))->SetText(HYP_FORMAT("{}", value.x));
+        ObjCast<UITextbox>(uiObject->FindChildUIObject(NAME("Vec3fPanel_Y_Value")))->SetText(HYP_FORMAT("{}", value.y));
 
-        uiObject->FindChildUIObject(NAME("Vec3fPanel_Y_Value"))
-            .Cast<UITextbox>()
-            ->SetText(HYP_FORMAT("{}", value.y));
-
-        uiObject->FindChildUIObject(NAME("Vec3fPanel_Z_Value"))
-            .Cast<UITextbox>()
-            ->SetText(HYP_FORMAT("{}", value.z));
+        ObjCast<UITextbox>(uiObject->FindChildUIObject(NAME("Vec3fPanel_Z_Value")))->SetText(HYP_FORMAT("{}", value.z));
     }
 };
 
@@ -428,9 +421,7 @@ public:
 
     void Update(UIObject* uiObject, const uint32& value) const
     {
-        uiObject->FindChildUIObject(NAME("Value"))
-            .Cast<UITextbox>()
-            ->SetText(HYP_FORMAT("{}", value));
+        ObjCast<UITextbox>(uiObject->FindChildUIObject(NAME("Value")))->SetText(HYP_FORMAT("{}", value));
     }
 };
 

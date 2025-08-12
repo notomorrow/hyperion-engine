@@ -54,12 +54,10 @@ struct DetachedScenesContainer
 private:
     Handle<Scene> CreateSceneForThread(const ThreadId& threadId)
     {
-        Handle<Scene> scene = CreateObject<Scene>(world, threadId, SceneFlags::DETACHED);
+        Handle<Scene> scene = CreateObject<Scene>(nullptr, threadId, SceneFlags::DETACHED);
         scene->SetName(CreateNameFromDynamicString(ANSIString("DetachedSceneForThread_") + *threadId.GetName()));
 
         InitObject(scene);
-
-        AssertDebug(world != nullptr && scene->GetWorld() == world);
 
         return scene;
     }
