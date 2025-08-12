@@ -213,7 +213,7 @@ void HyperionEditor::Init()
         scene->GetEntityManager()->AddComponent<BoundingBoxComponent>(skyboxEntity, BoundingBoxComponent { BoundingBox(Vec3f(-1000.0f), Vec3f(1000.0f)) });
 
         Handle<Node> skydomeNode = scene->GetRoot()->AddChild();
-        skydomeNode->SetEntity(skyboxEntity);
+        skydomeNode->AddChild(skyboxEntity);
         skydomeNode->SetName(NAME("Sky"));
 
         scene->GetEntityManager()->GetComponent<TransformComponent>(skyboxEntity) = TransformComponent { Transform(Vec3f::Zero(), Vec3f(1000.0f), Quaternion::Identity()) };
@@ -225,9 +225,6 @@ void HyperionEditor::Init()
     RC<AssetBatch> batch = AssetManager::GetInstance()->CreateBatch();
     batch->Add("test_model", "models/sponza/sponza.obj");
     batch->Add("test_model", "models/testbed/testbed.obj");
-
-    Handle<Entity> rootEntity = scene->GetEntityManager()->AddEntity();
-    scene->GetRoot()->SetEntity(rootEntity);
 
     batch->OnComplete
         .Bind([this, scene](AssetMap& results)
@@ -247,7 +244,7 @@ void HyperionEditor::Init()
                 Handle<Entity> envGridEntity = scene->GetEntityManager()->AddEntity<EnvGrid>(node->GetWorldAABB() * 1.2f, EnvGridOptions { .type = EnvGridType::ENV_GRID_TYPE_LIGHT_FIELD, .density = Vec3u { 10, 3, 10 } });
                 scene->GetEntityManager()->AddComponent<BoundingBoxComponent>(envGridEntity, BoundingBoxComponent { node->GetWorldAABB() * 1.2f, node->GetWorldAABB() * 1.2f });
 
-                envGridNode->SetEntity(envGridEntity);
+                envGridNode->AddChild(envGridEntity);
 #endif
 
                 if (auto& zombieAsset = results["zombie"]; zombieAsset.IsValid())

@@ -636,11 +636,11 @@ public:
                                                 entity = scene->GetEntityManager()->AddEntity();
                                             }
 
-                                            node->SetEntity(entity);
+                                            node->AddChild(entity);
                                         },
                                         [&](EditorSubsystem* editorSubsystem, EditorProject* editorProject)
                                         {
-                                            node->SetEntity(Handle<Entity>::empty);
+                                            node->RemoveChild(entity);
                                         }
                                     };
                                 }));

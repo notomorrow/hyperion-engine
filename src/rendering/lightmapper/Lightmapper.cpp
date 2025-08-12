@@ -67,7 +67,8 @@ namespace hyperion {
 
 #pragma region Render commands
 
-struct RENDER_COMMAND(LightmapRender) : RenderCommand
+struct RENDER_COMMAND(LightmapRender)
+    : RenderCommand
 {
     LightmapJob* job;
     Handle<World> world;
@@ -408,10 +409,10 @@ void LightmapJob::Process()
 
         m_lastLoggedPercentage = percentage;
     }
-    
+
     World* world = GetScene()->GetWorld();
     Assert(world != nullptr);
-    
+
     Handle<World> worldHandle = world->HandleFromThis();
 
     PUSH_RENDER_COMMAND(LightmapRender, this, worldHandle, m_params.view, std::move(rays), rayOffset);
@@ -530,7 +531,7 @@ void Lightmapper::Initialize()
 
     Handle<Node> lightmapVolumeNode = m_scene->GetRoot()->AddChild();
     lightmapVolumeNode->SetName(Name::Unique("LightmapVolume"));
-    lightmapVolumeNode->SetEntity(lightmapVolumeEntity);
+    lightmapVolumeNode->AddChild(lightmapVolumeEntity);
 
     Initialize_Internal();
 

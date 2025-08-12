@@ -63,13 +63,13 @@ void SkydomeRenderer::Init()
 
     InitObject(m_camera);
 
-    cameraNode->SetEntity(m_camera);
+    cameraNode->AddChild(m_camera);
     cameraNode->SetName(m_camera->GetName());
 
     m_envProbe = m_virtualScene->GetEntityManager()->AddEntity<SkyProbe>(BoundingBox(Vec3f(-100.0f), Vec3f(100.0f)), m_dimensions);
 
     Handle<Node> envProbeNode = m_virtualScene->GetRoot()->AddChild();
-    envProbeNode->SetEntity(m_envProbe);
+    envProbeNode->AddChild(m_envProbe);
     InitObject(m_envProbe);
 
     auto domeNodeAsset = g_assetManager->Load<Node>("models/inv_sphere.obj");
