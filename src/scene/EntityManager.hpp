@@ -934,21 +934,19 @@ public:
     HYP_FORCE_INLINE void ForEachEntity(Callback&& callback) const
     {
         Threads::AssertOnThread(m_ownerThreadId);
-
-        ForEach(m_entities, [callback = std::forward<Callback>(callback)](const auto& it)
+        
+        for (auto& subtypeData : m_entities.GetSubtypeData())
+        {
+            for (auto entitiesIt = subtypeData.data.Begin(); entitiesIt != subtypeData.data.End(); ++entitiesIt)
             {
-                const WeakHandle<Entity>& entityWeak = it.first;
-                const EntityData& entityData = it.second;
-
-                Handle<Entity> entity = entityWeak.Lock();
-
-                if (entity.IsValid())
-                {
-                    return callback(entity, entityData);
-                }
-
-                return IterationResult::CONTINUE;
-            });
+                EntityData& entityData = *entitiesIt;
+                
+                Entity* entity = entityData.entityWeak.GetUnsafe();
+                Assert(entity != nullptr);
+                
+                callback(entity);
+            }
+        }
     }
 
     void Shutdown();

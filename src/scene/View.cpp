@@ -302,15 +302,7 @@ void View::BeginAsyncCollection(TaskBatch& batch)
             CollectLightmapVolumes(rpl);
             CollectEnvGrids(rpl);
             CollectEnvProbes(rpl);
-
-            m_lastMeshCollectionResult = CollectMeshEntities(rpl);
-
-            /// temp
-            constexpr uint32 bucketMask = (1 << RB_OPAQUE)
-                | (1 << RB_LIGHTMAP)
-                | (1 << RB_SKYBOX)
-                | (1 << RB_TRANSLUCENT)
-                | (1 << RB_DEBUG);
+            CollectMeshEntities(rpl);
 
             rpl.EndWrite();
         });

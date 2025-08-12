@@ -879,6 +879,22 @@ RenderCollector& RenderApi_GetRenderCollector(View* view)
     return GetViewData(view)->renderCollector;
 }
 
+Array<Pair<View*, RenderCollector*>> RenderApi_GetAllRenderCollectors()
+{
+#ifdef HYP_DEBUG_MODE
+    Threads::AssertOnThread(g_renderThread);
+#endif
+
+    Array<Pair<View*, RenderCollector*>> result;
+
+    for (auto& it : g_viewData)
+    {
+        result.PushBack(Pair<View*, RenderCollector*>(it.first, &it.second->renderCollector));
+    }
+
+    return result;
+}
+
 IRenderProxy* RenderApi_GetRenderProxy(ObjIdBase resourceId)
 {
     AssertDebug(resourceId.IsValid());
@@ -1318,10 +1334,10 @@ void RenderApi_EndFrame_RenderThread()
             }
 
             // safely release all the held resources:
-//            if (resource.IsValid())
-//            {
-//                g_safeDeleter->SafeRelease(std::move(resource));
-//            }
+            //            if (resource.IsValid())
+            //            {
+            //                g_safeDeleter->SafeRelease(std::move(resource));
+            //            }
             resource.Reset();
         }
 

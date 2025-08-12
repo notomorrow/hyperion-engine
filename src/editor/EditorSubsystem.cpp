@@ -1370,6 +1370,51 @@ void EditorSubsystem::InitViewport()
     }
 
     uiSubsystem->GetUIStage()->UpdateSize(true);
+    
+    // bind console key
+    AddDelegateHandler(uiSubsystem->GetUIStage()->OnKeyDown
+        .Bind([this](...)
+        {
+            // Check we aren't entering text
+            UISubsystem* uiSubsystem = GetWorld()->GetSubsystem<UISubsystem>();
+            Assert(uiSubsystem != nullptr && uiSubsystem->GetUIStage() != nullptr);
+        
+            if (Handle<UIObject> focusedObject = uiSubsystem->GetUIStage()->GetFocusedObject().Lock())
+            {
+                if (focusedObject->IsA<UITextbox>())
+                {
+                    return UIEventHandlerResult::OK;
+                }
+            }
+            
+            if (event.keyCode == KeyCode::TILDE)
+            {
+                const bool isConsoleOpen = m_consoleUi && m_consoleUi->IsVisible();
+
+                if (isConsoleOpen)
+                {
+                    m_consoleUi->SetIsVisible(false);
+
+                    if (m_debugOverlayUiObject)
+                    {
+                        m_debugOverlayUiObject->SetIsVisible(true);
+                    }
+                }
+                else
+                {
+                    m_consoleUi->SetIsVisible(true);
+
+                    if (m_debugOverlayUiObject)
+                    {
+                        m_debugOverlayUiObject->SetIsVisible(false);
+                    }
+                }
+
+                return UIEventHandlerResult::STOP_BUBBLING;
+            }
+            
+            return UIEventHandlerResult::OK;
+        }));
 
     HYP_LOG(Editor, Debug, "scene surface : {}", uiSubsystem->GetUIStage()->GetSurfaceSize());
     HYP_LOG(Editor, Debug, "scene image object size : {}", sceneImageObject->GetActualSize());
@@ -1691,32 +1736,6 @@ void EditorSubsystem::InitViewport()
             if (event.keyCode == KeyCode::ESC && GetWorld()->GetGameState().IsSimulating())
             {
                 GetWorld()->StopSimulating();
-
-                return UIEventHandlerResult::STOP_BUBBLING;
-            }
-
-            if (event.keyCode == KeyCode::TILDE)
-            {
-                const bool isConsoleOpen = m_consoleUi && m_consoleUi->IsVisible();
-
-                if (isConsoleOpen)
-                {
-                    m_consoleUi->SetIsVisible(false);
-
-                    if (m_debugOverlayUiObject)
-                    {
-                        m_debugOverlayUiObject->SetIsVisible(true);
-                    }
-                }
-                else
-                {
-                    m_consoleUi->SetIsVisible(true);
-
-                    if (m_debugOverlayUiObject)
-                    {
-                        m_debugOverlayUiObject->SetIsVisible(false);
-                    }
-                }
 
                 return UIEventHandlerResult::STOP_BUBBLING;
             }

@@ -72,6 +72,8 @@ RenderProxyList& RenderApi_GetConsumerProxyList(View* view);
 
 /*! \brief Get the RenderCollector corresponding to the given View, only usable on the Render thread. */
 RenderCollector& RenderApi_GetRenderCollector(View* view);
+/*! For debugging: Get all active render collectors for the current frame. Only usable on the Render thread. */
+Array<Pair<View*, RenderCollector*>> RenderApi_GetAllRenderCollectors();
 
 // Call on render thread or render thread tasks only (consumer threads)
 IRenderProxy* RenderApi_GetRenderProxy(ObjIdBase resourceId);
