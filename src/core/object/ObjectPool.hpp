@@ -10,6 +10,7 @@
 
 #include <core/threading/Mutex.hpp>
 #include <core/threading/DataRaceDetector.hpp>
+#include <core/threading/AtomicVar.hpp>
 
 #include <core/debug/Debug.hpp>
 
@@ -51,12 +52,6 @@ public:
     virtual SizeType NumAllocatedElements() const = 0;
     virtual SizeType NumAllocatedBytes() const = 0;
 
-    virtual void IncRefStrong(HypObjectHeader*) = 0;
-    virtual void IncRefWeak(HypObjectHeader*) = 0;
-    virtual void DecRefStrong(HypObjectHeader*) = 0;
-    virtual void DecRefWeak(HypObjectHeader*) = 0;
-    virtual void* Release(HypObjectHeader*) = 0;
-
     virtual HypObjectBase* GetObjectPointer(HypObjectHeader*) = 0;
     virtual HypObjectHeader* GetObjectHeader(uint32 index) = 0;
 
@@ -80,8 +75,8 @@ struct HypObjectHeader
 {
     ObjectContainerBase* container;
     uint32 index;
-    AtomicVar<uint32> refCountStrong;
-    AtomicVar<uint32> refCountWeak;
+    volatile int32 refCountStrong;
+    volatile int32 refCountWeak;
 
     HypObjectHeader()
         : container(nullptr),
@@ -104,38 +99,104 @@ struct HypObjectHeader
 
     HYP_FORCE_INLINE uint32 GetRefCountStrong() const
     {
-        return refCountStrong.Get(MemoryOrder::ACQUIRE);
+        return AtomicAdd(const_cast<volatile int32*>(&refCountStrong), 0);
     }
 
     HYP_FORCE_INLINE uint32 GetRefCountWeak() const
     {
-        return refCountWeak.Get(MemoryOrder::ACQUIRE);
+        return AtomicAdd(const_cast<volatile int32*>(&refCountStrong), 0);
     }
 
-    HYP_FORCE_INLINE void IncRefStrong()
+    bool TryIncRefStrong()
     {
-        container->IncRefStrong(this);
+        int32 count = AtomicAdd(&refCountStrong, 0);
+
+        while (count != 0)
+        {
+            if (AtomicCompareExchange(&refCountStrong, count, count + 1))
+            {
+                // if count was added successfully (and now, greater than 1), we can acquire the lock for the managed object
+                HypObject_AcquireManagedObjectLock(GetObjectPointer(this));
+
+                return true;
+            }
+        }
+
+        // if count was 0, the object is no longer alive, return false
+        return false;
     }
 
-    HYP_FORCE_INLINE void IncRefWeak()
+    uint32 IncRefStrong()
     {
-        container->IncRefWeak(this);
+        const int32 count = AtomicIncrement(&refCountStrong);
+
+        if (count > 1)
+        {
+            HypObject_AcquireManagedObjectLock(GetObjectPointer(this));
+        }
+
+        return count;
     }
 
-    HYP_FORCE_INLINE void DecRefStrong()
+    uint32 IncRefWeak()
     {
-        container->DecRefStrong(this);
+        return (uint32)AtomicIncrement(&refCountWeak);
     }
 
-    HYP_FORCE_INLINE void DecRefWeak()
+    uint32 DecRefStrong()
     {
-        container->DecRefWeak(this);
+        int32 count;
+
+        if ((count = AtomicDecrement(&refCountStrong)) == 0)
+        {
+            // Increment weak reference count by 1 so any WeakHandleFromThis() calls in the destructor do not immediately cause the item to be removed from the pool
+            AtomicIncrement(&refCountWeak);
+
+            // call virtual destructor of HypObjectBase
+            DestructThisObject(this);
+
+            if (AtomicDecrement(&refCountWeak) == 0)
+            {
+                // Free the slot for this
+                container->ReleaseIndex(index);
+            }
+
+            return 0;
+        }
+
+        HYP_CORE_ASSERT(count > 0, "RefCount bug! strong count went negative");
+
+        if (count > 1)
+        {
+            HypObject_ReleaseManagedObjectLock(GetObjectPointer(this));
+        }
+
+        return (uint32)count;
     }
 
-    HYP_FORCE_INLINE void* Release()
+    uint32 DecRefWeak()
     {
-        return container->Release(this);
+        int32 count;
+
+        if ((count = AtomicDecrement(&refCountWeak)) == 0)
+        {
+            if (AtomicAdd(&refCountStrong, 0) == 0)
+            {
+                // Free the slot for this
+                container->ReleaseIndex(index);
+            }
+
+            return 0;
+        }
+
+        HYP_CORE_ASSERT(count > 0, "RefCount bug! weak count went negative");
+
+        return (uint32)count;
     }
+
+    //! Get the pointer to the actual object that this header is for. Header must be non-null
+    static HYP_API HypObjectBase* GetObjectPointer(HypObjectHeader* header);
+    static HYP_API void DestructThisObject(HypObjectHeader* header);
 };
 
 /*! \brief Memory storage for T where T is a subclass of HypObjectBase.
@@ -153,13 +214,6 @@ struct HypObjectMemory final : HypObjectHeader
     HypObjectMemory(HypObjectMemory&&) noexcept = delete;
     HypObjectMemory& operator=(HypObjectMemory&&) noexcept = delete;
     ~HypObjectMemory() = default;
-
-    HYP_NODISCARD T* Release()
-    {
-        T* ptr = storage.GetPointer();
-
-        return ptr;
-    }
 
     HYP_FORCE_INLINE T& Get()
     {
@@ -225,74 +279,10 @@ public:
         HypObjectMemory* element;
         m_pool.AcquireIndex(&element);
         AssertDebug(element->GetRefCountStrong() == 0 && element->GetRefCountWeak() == 0,
-            "HypObjectMemory should not have any references when allocated from the pool!!");
+            "HypObjectMemory should not have any references when allocated from the pool!! Got: {} strong, {} weak",
+            element->GetRefCountStrong(), element->GetRefCountWeak());
 
         return element;
-    }
-
-    virtual void IncRefStrong(HypObjectHeader* ptr) override
-    {
-        const uint32 count = ptr->refCountStrong.Increment(1, MemoryOrder::ACQUIRE_RELEASE) + 1;
-
-        if (count > 1)
-        {
-            HypObject_AcquireManagedObjectLock(HypObjectPtr(static_cast<HypObjectMemory*>(ptr)->GetPointer()));
-        }
-
-        return count;
-    }
-
-    virtual void IncRefWeak(HypObjectHeader* ptr) override
-    {
-        ptr->refCountWeak.Increment(1, MemoryOrder::RELEASE);
-    }
-
-    virtual void DecRefStrong(HypObjectHeader* ptr) override
-    {
-        uint32 count;
-
-        if ((count = ptr->refCountStrong.Decrement(1, MemoryOrder::ACQUIRE_RELEASE)) == 1)
-        {
-            // Increment weak reference count by 1 so any WeakHandleFromThis() calls in the destructor do not immediately cause the item to be removed from the pool
-            ptr->refCountWeak.Increment(1, MemoryOrder::RELEASE);
-
-            static_cast<HypObjectMemory*>(ptr)->GetPointer()->~T();
-
-            if (ptr->refCountWeak.Decrement(1, MemoryOrder::ACQUIRE_RELEASE) == 1)
-            {
-                // Free the slot for this
-                ReleaseIndex(ptr->index);
-            }
-        }
-        else
-        {
-            HypObject_ReleaseManagedObjectLock(HypObjectPtr(static_cast<HypObjectMemory*>(ptr)->GetPointer()));
-        }
-
-        return count - 1;
-    }
-
-    virtual void DecRefWeak(HypObjectHeader* ptr) override
-    {
-        uint32 count;
-
-        if ((count = ptr->refCountWeak.Decrement(1, MemoryOrder::ACQUIRE_RELEASE)) == 1)
-        {
-            if (ptr->refCountStrong.Get(MemoryOrder::ACQUIRE) == 0)
-            {
-                // Free the slot for this
-                ReleaseIndex(ptr->index);
-            }
-        }
-
-        HYP_CORE_ASSERT(count != 0);
-
-        return count - 1;
-    }
-
-    virtual void* Release(HypObjectHeader* ptr) override
-    {
-        return static_cast<HypObjectMemory*>(ptr)->HypObjectMemory::Release();
     }
 
     virtual HypObjectBase* GetObjectPointer(HypObjectHeader* ptr) override

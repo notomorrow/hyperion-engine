@@ -15,7 +15,12 @@ AnyHandle::AnyHandle(HypObjectBase* hypObjectPtr)
 {
     if (IsValid())
     {
-        ptr->m_header->IncRefStrong();
+        if (!ptr->m_header->TryIncRefStrong())
+        {
+            // not alive; unset
+            ptr = nullptr;
+            typeId = TypeId::Void();
+        }
     }
 }
 
@@ -25,7 +30,12 @@ AnyHandle::AnyHandle(const HypClass* hypClass, HypObjectBase* ptr)
 {
     if (IsValid())
     {
-        ptr->m_header->IncRefStrong();
+        if (!ptr->m_header->TryIncRefStrong())
+        {
+            // not alive; unset
+            ptr = nullptr;
+            typeId = TypeId::Void();
+        }
     }
 }
 

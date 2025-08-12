@@ -288,7 +288,7 @@ void ShadowRendererBase::RenderFrame(FrameBase* frame, const RenderSetup& render
         renderProxyLists.PushBack(&rpl);
 
         if (!rpl.GetMeshEntities().GetDiff().NeedsUpdate()
-            && !rpl.GetSkeletons().GetDiff().NeedsUpdate())
+            /*&& !rpl.GetSkeletons().GetDiff().NeedsUpdate()*/)
         {
             continue;
         }

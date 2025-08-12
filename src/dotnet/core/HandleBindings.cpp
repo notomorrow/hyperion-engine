@@ -47,13 +47,14 @@ extern "C"
     HYP_EXPORT uint8 WeakHandle_Lock(HypObjectBase* ptr)
     {
         Assert(ptr != nullptr);
+        
+        HypObjectHeader* header = ptr->GetObjectHeader_Internal();
+        AssertDebug(header != nullptr);
 
-        if (ptr->GetObjectHeader_Internal()->GetRefCountStrong() == 0)
+        if (!header->TryIncRefStrong())
         {
             return 0;
         }
-
-        ptr->GetObjectHeader_Internal()->IncRefStrong();
 
         return 1;
     }
