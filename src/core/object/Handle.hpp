@@ -70,10 +70,11 @@ struct Handle final : HandleBase
             ptr = container->GetObjectPointer(header);
             HYP_CORE_ASSERT(ptr != nullptr);
 
-            HYP_CORE_ASSERT(ptr->m_header->GetRefCountStrong() > 0, "Object is no longer alive!");
-
             // If strong count == 1 after incrementing, the object has already been destructed and it is invalid to create a strong reference
-            ptr->m_header->IncRefStrong();
+            if (!header->TryIncRefStrong())
+            {
+                ptr = nullptr; // Object is no longer alive, return an empty handle.
+            }
         }
     }
 
@@ -259,42 +260,6 @@ struct Handle final : HandleBase
     }
 
     template <class Ty, std::enable_if_t<!std::is_same_v<Ty, T> && std::is_convertible_v<std::add_pointer_t<T>, std::add_pointer_t<Ty>>, int> = 0>
-    HYP_FORCE_INLINE Handle<Ty> Cast() const&
-    {
-        return reinterpret_cast<const Handle<Ty>&>(*this);
-    }
-
-    template <class Ty, std::enable_if_t<!std::is_same_v<Ty, T> && std::is_convertible_v<std::add_pointer_t<T>, std::add_pointer_t<Ty>>, int> = 0>
-    HYP_FORCE_INLINE Handle<Ty> Cast() &&
-    {
-        return reinterpret_cast<Handle<Ty>&&>(*this);
-    }
-
-    template <class Ty, std::enable_if_t<!std::is_same_v<Ty, T> && (!std::is_convertible_v<std::add_pointer_t<T>, std::add_pointer_t<Ty>> && std::is_base_of_v<T, Ty>), int> = 0>
-    HYP_FORCE_INLINE Handle<Ty> Cast() const&
-    {
-        if (ptr)
-        {
-            const bool instanceOfCheck = IsA(Ty::Class(), ptr, ptr->m_header->container->GetObjectTypeId());
-            HYP_CORE_ASSERT(instanceOfCheck, "Cannot cast Handle<T> to Handle<Ty> because T is not a base class of Ty!");
-        }
-
-        return reinterpret_cast<const Handle<Ty>&>(*this);
-    }
-
-    template <class Ty, std::enable_if_t<!std::is_same_v<Ty, T> && (!std::is_convertible_v<std::add_pointer_t<T>, std::add_pointer_t<Ty>> && std::is_base_of_v<T, Ty>), int> = 0>
-    HYP_FORCE_INLINE Handle<Ty> Cast() &&
-    {
-        if (ptr)
-        {
-            const bool instanceOfCheck = IsA(Ty::Class(), ptr, ptr->m_header->container->GetObjectTypeId());
-            HYP_CORE_ASSERT(instanceOfCheck, "Cannot cast Handle<T> to Handle<Ty> because T is not a base class of Ty!");
-        }
-
-        return reinterpret_cast<Handle<Ty>&&>(*this);
-    }
-
-    template <class Ty, std::enable_if_t<!std::is_same_v<Ty, T> && std::is_convertible_v<std::add_pointer_t<T>, std::add_pointer_t<Ty>>, int> = 0>
     HYP_FORCE_INLINE operator Handle<Ty>() const&
     {
         return reinterpret_cast<const Handle<Ty>&>(*this);
@@ -347,9 +312,6 @@ struct Handle final : HandleBase
 
     static Handle FromPointer(HypObjectBase* ptr)
     {
-        Handle<T> handle;
-        handle.ptr = ptr;
-
         if (ptr)
         {
             if (!IsA(GetClass(TypeId::ForType<T>()), ptr, ptr->m_header->container->GetObjectTypeId()))
@@ -357,8 +319,15 @@ struct Handle final : HandleBase
                 HYP_FAIL("Cannot create WeakHandle because it is not a base class of T!");
             }
 
-            ptr->m_header->IncRefStrong();
+            if (!ptr->m_header->TryIncRefStrong())
+            {
+                return Handle<T>(); // Object is no longer alive, return an empty handle.
+            }
         }
+    
+        Handle<T> handle;
+        handle.ptr = ptr;
+        // Ref count incremented above in condition
 
         return handle;
     }
@@ -516,11 +485,7 @@ struct WeakHandle final
             return Handle<T>();
         }
 
-        /// \FIXME: Potential race condition. What if the object is destroyed while we are locking it?
-        /// we should instead increment the strong reference count and then check if it is still alive. (we'll need to update the semantics around HypObject_OnIncRefCount_Strong first)
-        return ptr->m_header->refCountStrong.Get(MemoryOrder::ACQUIRE) != 0
-            ? Handle<T>::FromPointer(ptr)
-            : Handle<T>();
+        return Handle<T>::FromPointer(ptr);
     }
 
     HYP_FORCE_INLINE T* GetUnsafe() const
@@ -720,7 +685,12 @@ public:
     {
         if (IsValid())
         {
-            this->ptr->m_header->IncRefStrong();
+            if (!this->ptr->m_header->TryIncRefStrong())
+            {
+                // not alive
+                this->ptr = nullptr;
+                typeId = TypeId::Void();
+            }
         }
     }
 

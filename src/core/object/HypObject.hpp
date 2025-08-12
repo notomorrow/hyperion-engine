@@ -66,7 +66,14 @@ public:                                                                         
                                                                                  \
     HYP_FORCE_INLINE Handle<T> HandleFromThis() const                            \
     {                                                                            \
-        return Handle<T>::FromPointer(const_cast<T*>(this));                     \
+        Handle<T> handle = Handle<T>::FromPointer(const_cast<T*>(this));         \
+                                                                                 \
+        if (!handle)                                                             \
+        {                                                                        \
+            HYP_FAIL("HandleFromThis() called in destructor!");                  \
+        }                                                                        \
+                                                                                 \
+        return handle;                                                           \
     }                                                                            \
                                                                                  \
     HYP_FORCE_INLINE WeakHandle<T> WeakHandleFromThis() const                    \

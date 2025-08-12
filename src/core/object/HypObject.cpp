@@ -81,6 +81,39 @@ HypObjectInitializerGuardBase::~HypObjectInitializerGuardBase()
 
 #pragma endregion HypObjectInitializerGuardBase
 
+#pragma region HypObjectHeader
+
+HypObjectBase* HypObjectHeader::GetObjectPointer(HypObjectHeader* header)
+{
+    AssertDebug(header != nullptr);
+    AssertDebug(header->container != nullptr);
+
+    // get offset
+    const SizeType alignment = header->container->GetHypClass()->GetAlignment();
+    const SizeType headerOffset = ((sizeof(HypObjectHeader) + alignment - 1) / alignment) * alignment;
+
+    // get pointer to object
+    HypObjectBase* ptr = reinterpret_cast<HypObjectBase*>(reinterpret_cast<uintptr_t>(header) + headerOffset);
+
+    return ptr;
+}
+
+void HypObjectHeader::DestructThisObject(HypObjectHeader* header)
+{
+    AssertDebug(header != nullptr);
+    
+    // get offset
+    const SizeType alignment = header->container->GetHypClass()->GetAlignment();
+    const SizeType headerOffset = ((sizeof(HypObjectHeader) + alignment - 1) / alignment) * alignment;
+
+    // get pointer to object
+    HypObjectBase* ptr = reinterpret_cast<HypObjectBase*>(reinterpret_cast<uintptr_t>(header) + headerOffset);
+    
+    ptr->~HypObjectBase();
+}
+
+#pragma endregion HypObjectHeader
+
 #pragma region HypObjectBase
 
 HypObjectBase::HypObjectBase()
@@ -100,7 +133,7 @@ HypObjectBase::HypObjectBase()
     m_header->IncRefWeak();
 
     // increment the strong reference count for the Handle<T> that will be returned from CreateObject<T>().
-    m_header->refCountStrong.Increment(1, MemoryOrder::RELEASE);
+    AtomicIncrement(&m_header->refCountStrong);
 }
 
 HypObjectBase::~HypObjectBase()
@@ -126,7 +159,7 @@ HYP_API uint32 HypObjectPtr::GetRefCountStrong() const
     {
         return 0;
     }
-    
+
     HYP_CORE_ASSERT(m_hypClass->UseHandles()); // check is HypObjectBase
 
     HypObjectBase* hypObjectBase = reinterpret_cast<HypObjectBase*>(m_ptr);
@@ -140,7 +173,7 @@ HYP_API uint32 HypObjectPtr::GetRefCountWeak() const
     {
         return 0;
     }
-    
+
     HYP_CORE_ASSERT(m_hypClass->UseHandles()); // check is HypObjectBase
 
     HypObjectBase* hypObjectBase = reinterpret_cast<HypObjectBase*>(m_ptr);
@@ -151,7 +184,7 @@ HYP_API uint32 HypObjectPtr::GetRefCountWeak() const
 HYP_API void HypObjectPtr::IncRef(bool weak)
 {
     HYP_CORE_ASSERT(IsValid());
-    
+
     HYP_CORE_ASSERT(m_hypClass->UseHandles()); // check is HypObjectBase
 
     HypObjectBase* hypObjectBase = reinterpret_cast<HypObjectBase*>(m_ptr);
@@ -169,7 +202,7 @@ HYP_API void HypObjectPtr::IncRef(bool weak)
 HYP_API void HypObjectPtr::DecRef(bool weak)
 {
     HYP_CORE_ASSERT(IsValid());
-    
+
     HYP_CORE_ASSERT(m_hypClass->UseHandles()); // check is HypObjectBase
 
     HypObjectBase* hypObjectBase = reinterpret_cast<HypObjectBase*>(m_ptr);
@@ -186,25 +219,17 @@ HYP_API void HypObjectPtr::DecRef(bool weak)
 
 #pragma endregion HypObjectPtr
 
-HYP_API void HypObject_AcquireManagedObjectLock(HypObjectPtr ptr)
+HYP_API void HypObject_AcquireManagedObjectLock(HypObjectBase* ptr)
 {
-    HYP_CORE_ASSERT(ptr.GetClass()->UseHandles()); // check is HypObjectBase
-    
-    HypObjectBase* hypObject = reinterpret_cast<HypObjectBase*>(ptr.GetPointer());
-
-    if (ManagedObjectResource* managedObjectResource = hypObject->GetManagedObjectResource())
+    if (ManagedObjectResource* managedObjectResource = ptr->GetManagedObjectResource())
     {
         managedObjectResource->IncRef();
     }
 }
 
-HYP_API void HypObject_ReleaseManagedObjectLock(HypObjectPtr ptr)
+HYP_API void HypObject_ReleaseManagedObjectLock(HypObjectBase* ptr)
 {
-    HYP_CORE_ASSERT(ptr.GetClass()->UseHandles()); // check is HypObjectBase
-    
-    HypObjectBase* hypObject = reinterpret_cast<HypObjectBase*>(ptr.GetPointer());
-
-    if (ManagedObjectResource* managedObjectResource = hypObject->GetManagedObjectResource())
+    if (ManagedObjectResource* managedObjectResource = ptr->GetManagedObjectResource())
     {
         managedObjectResource->DecRef();
     }

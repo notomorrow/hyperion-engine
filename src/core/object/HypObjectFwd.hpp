@@ -171,8 +171,8 @@ private:
     const HypClass* m_hypClass;
 };
 
-HYP_API void HypObject_AcquireManagedObjectLock(HypObjectPtr ptr);
-HYP_API void HypObject_ReleaseManagedObjectLock(HypObjectPtr ptr);
+HYP_API void HypObject_AcquireManagedObjectLock(HypObjectBase* ptr);
+HYP_API void HypObject_ReleaseManagedObjectLock(HypObjectBase* ptr);
 
 struct HypObjectInitializerGuardBase
 {

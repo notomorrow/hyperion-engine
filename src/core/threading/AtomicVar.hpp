@@ -234,15 +234,36 @@ static inline int64 AtomicExchange(volatile int64* value, int64 newValue)
 }
 
 //! Returns true if the exchange was successful, false if the expected value did not match
+/// Modifies the expected value to the current value of the variable
 static inline bool AtomicCompareExchange(volatile int32* value, int32& expected, int32 desired)
 {
-    return _InterlockedCompareExchange(reinterpret_cast<long volatile*>(value), desired, expected) == expected;
+    int32 oldValue = _InterlockedCompareExchange(reinterpret_cast<long volatile*>(value), desired, expected);
+    if (oldValue == expected)
+    {
+        expected = oldValue;
+        return true;
+    }
+    else
+    {
+        expected = oldValue;
+        return false;
+    }
 }
 
 //! Returns true if the exchange was successful, false if the expected value did not match
 static inline bool AtomicCompareExchange(volatile int64* value, int64& expected, int64 desired)
 {
-    return _InterlockedCompareExchange64(reinterpret_cast<long long volatile*>(value), desired, expected) == expected;
+    int64 oldValue = _InterlockedCompareExchange64(reinterpret_cast<long long volatile*>(value), desired, expected);
+    if (oldValue == expected)
+    {
+        expected = oldValue;
+        return true;
+    }
+    else
+    {
+        expected = oldValue;
+        return false;
+    }
 }
 
 //! Returns the original value before bitwise OR
