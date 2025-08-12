@@ -101,21 +101,18 @@ Quaternion::Quaternion(const Matrix4& m)
 
 Quaternion::Quaternion(const Vec3f& euler)
 {
-    const float xOver2 = MathUtil::DegToRad(euler.x) * 0.5f;
-    const float yOver2 = MathUtil::DegToRad(euler.y) * 0.5f;
-    const float zOver2 = MathUtil::DegToRad(euler.z) * 0.5f;
+    const float xOver2 = euler.x * 0.5f; // roll
+    const float yOver2 = euler.y * 0.5f; // pitch
+    const float zOver2 = euler.z * 0.5f; // yaw
 
-    const float sinXOver2 = MathUtil::Sin(xOver2);
-    const float cosXOver2 = MathUtil::Cos(xOver2);
-    const float sinYOver2 = MathUtil::Sin(yOver2);
-    const float cosYOver2 = MathUtil::Cos(yOver2);
-    const float sinZOver2 = MathUtil::Sin(zOver2);
-    const float cosZOver2 = MathUtil::Cos(zOver2);
+    const float sx = MathUtil::Sin(xOver2), cx = MathUtil::Cos(xOver2);
+    const float sy = MathUtil::Sin(yOver2), cy = MathUtil::Cos(yOver2);
+    const float sz = MathUtil::Sin(zOver2), cz = MathUtil::Cos(zOver2);
 
-    x = cosYOver2 * sinXOver2 * cosZOver2 + sinYOver2 * cosXOver2 * sinZOver2;
-    y = sinYOver2 * cosXOver2 * cosZOver2 - cosYOver2 * sinXOver2 * sinZOver2;
-    z = cosYOver2 * cosXOver2 * sinZOver2 - sinYOver2 * sinXOver2 * cosZOver2;
-    w = cosYOver2 * cosXOver2 * cosZOver2 + sinYOver2 * sinXOver2 * sinZOver2;
+    x = cy * sx * cz - sy * cx * sz;
+    y = sy * cx * cz + cy * sx * sz;
+    z = cy * cx * sz - sy * sx * cz;
+    w = cy * cx * cz + sy * sx * sz;
 }
 
 Quaternion::Quaternion(const Vec3f& axis, float radians)
@@ -267,35 +264,47 @@ Quaternion& Quaternion::Slerp(const Quaternion& to, float amt)
 
 int Quaternion::GimbalPole() const
 {
-    const float amt = y * x + z * w;
-
-    return amt > 0.499f ? 1 : (amt < -0.499f ? -1 : 0);
+    const float qx = x, qy = y, qz = z, qw = w;
+    const float t = qx * qy + qz * qw;
+    return t > 0.499f ? 1 : (t < -0.499f ? -1 : 0);
 }
 
 float Quaternion::Roll() const
 {
     const int pole = GimbalPole();
-
-    return pole == 0
-        ? atan2(2.0f * (w * z + y * x), 1.0f - 2.0f * (x * x + z * z))
-        : float(pole) * 2.0f * atan2(y, w);
+    if (pole == 0)
+    {
+        const float qx = x, qy = y, qz = z, qw = w;
+        return std::atan2(2.0f * (qw * qx + qy * qz), 1.0f - 2.0f * (qx * qx + qy * qy));
+    }
+    return 0.0f;
 }
 
 float Quaternion::Pitch() const
 {
     const int pole = GimbalPole();
-
-    return pole == 0
-        ? MathUtil::Arcsin(MathUtil::Clamp(2.0f * (w * x - z * y), -1.0f, 1.0f))
-        : float(pole) * MathUtil::pi<float> * 0.5f;
+    if (pole == 0)
+    {
+        const float qx = x, qy = y, qz = z, qw = w;
+        float s = 2.0f * (qw * qy - qz * qx);
+        if (s > 1.0f)
+            s = 1.0f;
+        if (s < -1.0f)
+            s = -1.0f;
+        return std::asin(s);
+    }
+    return float(pole) * MathUtil::pi<float> * 0.5f;
 }
 
 float Quaternion::Yaw() const
 {
-    int pole = GimbalPole();
-    return pole == 0
-        ? atan2(2.0f * (y * w + x * z), 1.0f - 2.0f * (y * y + x * x))
-        : 0.0f;
+    const int pole = GimbalPole();
+    if (pole == 0)
+    {
+        const float qx = x, qy = y, qz = z, qw = w;
+        return std::atan2(2.0f * (qw * qz + qx * qy), 1.0f - 2.0f * (qy * qy + qz * qz));
+    }
+    return float(pole) * 2.0f * std::atan2(x, w);
 }
 
 Quaternion Quaternion::Identity()

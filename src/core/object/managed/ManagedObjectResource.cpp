@@ -52,6 +52,8 @@ ManagedObjectResource::ManagedObjectResource(HypObjectPtr ptr, const RC<dotnet::
             //    // The managed object is responsible for decrementing the ref count using HypObject_DecRef() in finalizer and Dispose().
             //    m_ptr.IncRef();
             //}
+            
+            HYP_LOG(Object, Debug, "Creating new managed object with class {}, reference will be incremented from C#", m_managedClass->GetName());
 
             m_objectPtr = m_managedClass->NewObject(m_ptr.GetClass(), address);
         }

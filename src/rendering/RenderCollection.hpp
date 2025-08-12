@@ -126,27 +126,10 @@ public:
     static_assert(TupleSize<ResourceTrackerTypes>::value == TupleSize<TrackedResourceTypes>::value, "Tuple sizes must match");
 
 private:
-    template <class T>
-    static constexpr SizeType GetTrackedResourceTypeIndex()
-    {
-        return FindTypeElementIndex<T, TrackedResourceTypes>::value;
-    }
-
-    template <class Functor, SizeType... Indices>
-    static inline void ForEachResourceTracker_Impl(Span<ResourceTrackerBase*> resourceTrackers, const Functor& functor, std::index_sequence<Indices...>)
-    {
-        (functor(static_cast<typename TupleElement_Tuple<Indices, ResourceTrackerTypes>::Type&>(*resourceTrackers[Indices])), ...);
-    }
-
-    template <class Functor>
-    static inline void ForEachResourceTracker(Span<ResourceTrackerBase*> resourceTrackers, const Functor& functor)
-    {
-        ForEachResourceTracker_Impl(resourceTrackers, functor, std::make_index_sequence<TupleSize<ResourceTrackerTypes>::value>());
-    }
-
 public:
-    /*! \param isShared if true, uses a spinlock to protect against mutual access of the data */
-    RenderProxyList(bool isShared);
+    /*! \param isShared if true, uses a spinlock to protect against mutual access of the data
+     *  \param useRefCounting if true, will increment reference count (UpdateRefs() will need to be called) and release reference counts on destruction. */
+    RenderProxyList(bool isShared, bool useRefCounting);
 
     RenderProxyList(const RenderProxyList& other) = delete;
     RenderProxyList& operator=(const RenderProxyList& other) = delete;
@@ -156,178 +139,16 @@ public:
 
     ~RenderProxyList();
 
-    void BeginWrite()
-    {
-        if (isShared)
-        {
-            uint64 rwMarkerState = rwMarker.BitOr(writeFlag, MemoryOrder::ACQUIRE);
-            while (HYP_UNLIKELY(rwMarkerState & readMask))
-            {
-                HYP_LOG_TEMP("Busy waiting for read marker to be released! "
-                             "If this is occuring frequently, the View that owns this RenderProxyList should have double / triple buffering enabled");
+    void BeginWrite();
+    void EndWrite();
 
-                rwMarkerState = rwMarker.Get(MemoryOrder::ACQUIRE);
-                HYP_WAIT_IDLE();
-            }
-        }
-
-        AssertDebug(state != CS_READING);
-        state = CS_WRITING;
-
-        // advance all trackers to the next state before we write into them.
-        // this clears their 'next' bits and sets their 'previous' bits so we can tell what changed.
-        ForEachResourceTracker(resourceTrackers.ToSpan(), [](auto&& resourceTracker)
-            {
-                resourceTracker.Advance();
-            });
-    }
-
-    void EndWrite()
-    {
-        AssertDebug(state == CS_WRITING);
-
-        state = CS_WRITTEN;
-
-        if (isShared)
-        {
-            rwMarker.BitAnd(~writeFlag, MemoryOrder::RELEASE);
-        }
-    }
-
-    void BeginRead()
-    {
-        if (isShared)
-        {
-            uint64 rwMarkerState;
-
-            do
-            {
-                rwMarkerState = rwMarker.Increment(2, MemoryOrder::ACQUIRE);
-
-                if (HYP_UNLIKELY(rwMarkerState & writeFlag))
-                {
-                    HYP_LOG_TEMP("Waiting for write marker to be released. "
-                                 "If this is occurring frequently, the View that owns this RenderProxyList should have double / triple buffering enabled");
-
-                    rwMarker.Decrement(2, MemoryOrder::RELAXED);
-
-                    // spin to wait for write flag to be released
-                    HYP_WAIT_IDLE();
-                }
-            }
-            while (HYP_UNLIKELY(rwMarkerState & writeFlag));
-        }
-        else
-        {
-            ++readDepth;
-        }
-
-        AssertDebug(state != CS_WRITING);
-        state = CS_READING;
-    }
-
-    void EndRead()
-    {
-        AssertDebug(state == CS_READING);
-
-        if (isShared)
-        {
-            uint64 rwMarkerState = rwMarker.Decrement(2, MemoryOrder::ACQUIRE_RELEASE);
-            AssertDebug(rwMarkerState & readMask, "Invalid state, expected read mask to be set when calling EndRead()");
-
-            /// FIXME: If BeginRead() is called on other thread between the check and setting state to CS_DONE,
-            /// we could set state to done when it isn't actually.
-            if (((rwMarkerState - 2) & readMask) == 0)
-            {
-                state = CS_DONE;
-            }
-        }
-        else
-        {
-            if (!--readDepth)
-            {
-                state = CS_DONE;
-            }
-        }
-    }
+    void BeginRead();
+    void EndRead();
 
     template <SizeType Index>
     HYP_FORCE_INLINE auto GetResources() -> typename TupleElement_Tuple<Index, ResourceTrackerTypes>::Type*
     {
         return static_cast<typename TupleElement_Tuple<Index, ResourceTrackerTypes>::Type*>(resourceTrackers[Index]);
-    }
-
-    // template hackery to allow usage of undefined types
-    template <class T>
-    static inline void UpdateRefs(T& renderProxyList)
-    {
-        const auto impl = []<class ElementType, class ProxyType>(ResourceTracker<ObjId<ElementType>, ElementType*, ProxyType>& resourceTracker)
-        {
-            auto diff = resourceTracker.GetDiff();
-            if (!diff.NeedsUpdate())
-            {
-                return;
-            }
-
-            Array<ElementType*> removed;
-            resourceTracker.GetRemoved(removed, false);
-
-            Array<ElementType*> added;
-            resourceTracker.GetAdded(added, false);
-
-            for (ElementType* resource : added)
-            {
-                resource->GetObjectHeader_Internal()->IncRefStrong();
-
-                if constexpr (!std::is_same_v<ProxyType, NullProxy>)
-                {
-                    ProxyType* pProxy = resourceTracker.GetProxy(ObjId<ElementType>(resource->Id()));
-
-                    if (!pProxy)
-                    {
-                        pProxy = resourceTracker.SetProxy(ObjId<ElementType>(resource->Id()), ProxyType());
-                    }
-
-                    AssertDebug(pProxy != nullptr);
-
-                    if constexpr (HYP_HAS_METHOD(ElementType, UpdateRenderProxy))
-                    {
-                        resource->UpdateRenderProxy(pProxy);
-                    }
-                }
-            }
-
-            for (ElementType* resource : removed)
-            {
-                resource->GetObjectHeader_Internal()->DecRefStrong();
-
-                if constexpr (!std::is_same_v<ProxyType, NullProxy>)
-                {
-                    resourceTracker.RemoveProxy(ObjId<ElementType>(resource->Id()));
-                }
-            }
-
-            if constexpr (!std::is_same_v<ProxyType, NullProxy> && HYP_HAS_METHOD(ElementType, UpdateRenderProxy))
-            {
-                Array<ObjId<ElementType>> changedIds;
-                resourceTracker.GetChanged(changedIds);
-
-                for (const ObjId<ElementType>& id : changedIds)
-                {
-                    ElementType** ppResource = resourceTracker.GetElement(id);
-                    AssertDebug(ppResource && *ppResource);
-
-                    ElementType& resource = **ppResource;
-
-                    ProxyType* pProxy = resourceTracker.GetProxy(id);
-                    AssertDebug(pProxy != nullptr);
-
-                    resource.UpdateRenderProxy(pProxy);
-                }
-            }
-        };
-
-        ForEachResourceTracker(renderProxyList.resourceTrackers.ToSpan(), impl);
     }
 
     // State for tracking transitions from writing (game thread) to reading (render thread).
@@ -342,6 +163,7 @@ public:
     CollectionState state : 2 = CS_DONE;
 
     const bool isShared : 1 = false;               //!< should we use a spinlock to ensure multiple threads aren't accessing this list at the same time?
+    const bool useRefCounting : 1 = true;           //!< Should we inc/dec ref counts for resources we hold?
     bool useOrdering : 1 = false;                  //!< are mesh entities sorted using an indirect array to map sort order?
     bool disableBuildRenderCollection : 1 = false; //!< Disable building out RenderCollection. Set to true in the case of custom render collection building (See UIRenderer)
 

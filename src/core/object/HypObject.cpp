@@ -221,6 +221,7 @@ HYP_API void HypObjectPtr::DecRef(bool weak)
 
 HYP_API void HypObject_AcquireManagedObjectLock(HypObjectBase* ptr)
 {
+    AssertDebug(ptr->GetObjectHeader_Internal()->GetRefCountStrong() > 1);
     if (ManagedObjectResource* managedObjectResource = ptr->GetManagedObjectResource())
     {
         managedObjectResource->IncRef();

@@ -294,8 +294,6 @@ void UISubsystem::Update(float delta)
         }
     }
 
-    RenderProxyList::UpdateRefs(rpl);
-
     rpl.EndWrite();
 }
 
