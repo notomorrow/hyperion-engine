@@ -38,8 +38,8 @@ struct InputState
     EnumFlags<MouseButtonState> mouseButtonStates;
 
     InputState()
-        : keyStates { },
-          mouseButtonStates { }
+        : keyStates {},
+          mouseButtonStates {}
     {
     }
 };
@@ -63,8 +63,8 @@ public:
 
 private:
     InputEventNotifier m_notifier;
-    AtomicVar<uint64> m_lockState;
     Array<SystemEvent, DynamicAllocator> m_events;
+    volatile int64 m_lockState;
 };
 
 HYP_CLASS()
