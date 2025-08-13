@@ -12,14 +12,11 @@ layout(location = 3) out vec4 v_color;
 
 #ifdef INSTANCING
 layout(location = 4) out flat uint v_object_index;
+layout(location = 5) out flat uvec4 v_properties;
 #endif
 
 HYP_ATTRIBUTE(0) vec3 a_position;
-HYP_ATTRIBUTE(1) vec3 a_normal;
 HYP_ATTRIBUTE(2) vec2 a_texcoord0;
-HYP_ATTRIBUTE(3) vec2 a_texcoord1;
-HYP_ATTRIBUTE(4) vec3 a_tangent;
-HYP_ATTRIBUTE(5) vec3 a_bitangent;
 
 #include "../include/scene.inc"
 
@@ -58,22 +55,12 @@ HYP_DESCRIPTOR_SSBO_DYNAMIC(Global, ObjectsBuffer) readonly buffer ObjectsBuffer
 
 void main()
 {
-    const UIObjectProperties properties = GetUIObjectProperties(object);
-
-    mat4 model_matrix = object.model_matrix;
-    model_matrix[0][0] = 1.0;
-    model_matrix[1][1] = 1.0;
-    model_matrix[2][2] = 1.0;
-    model_matrix[3][0] = 0.0;
-    model_matrix[3][1] = 0.0;
-    model_matrix[3][3] = 1.0;
-
 #ifdef INSTANCING
     vec2 clamped_offset = entity_instance_batch.offsets[gl_InstanceIndex].xy;
     vec2 size = entity_instance_batch.sizes[gl_InstanceIndex].xy;
     vec2 clamped_size = entity_instance_batch.sizes[gl_InstanceIndex].zw;
 
-    vec4 position = entity_instance_batch.batch.transforms[gl_InstanceIndex] * model_matrix * vec4(a_position, 1.0);
+    vec4 position = entity_instance_batch.batch.transforms[gl_InstanceIndex] * vec4(a_position, 1.0);
     vec4 ndc_position = camera.projection * camera.view * position;
 
     // // scale texcoord based on the size diff - need to do this because the quad mesh is always 1x1
@@ -85,10 +72,10 @@ void main()
     v_texcoord0 = instance_texcoords.xy - (clamped_offset / clamped_size * clamped_instance_texcoord_size) + (a_texcoord0 * clamped_instance_texcoord_size);
 
     v_object_index = OBJECT_INDEX;
+    v_properties = entity_instance_batch.properties[gl_InstanceIndex];
 #else
     // texcoord / clamping not implemented for non-instanced UI objects
-
-    vec4 position = model_matrix * vec4(a_position, 1.0);
+    vec4 position = object.model_matrix * vec4(a_position, 1.0);
     vec4 ndc_position = camera.projection * camera.view * position;
 
     v_texcoord0 = a_texcoord0;

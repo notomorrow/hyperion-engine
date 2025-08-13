@@ -32,20 +32,17 @@ struct UIEntityInstanceBatch
     vec4 texcoords[MAX_ENTITIES_PER_INSTANCE_BATCH];
     vec4 offsets[MAX_ENTITIES_PER_INSTANCE_BATCH];
     vec4 sizes[MAX_ENTITIES_PER_INSTANCE_BATCH];
+    uvec4 properties[MAX_ENTITIES_PER_INSTANCE_BATCH];
 };
 
-UIObjectProperties GetUIObjectProperties(in Object obj)
+UIObjectProperties GetUIObjectProperties(uvec4 data)
 {
     UIObjectProperties properties;
-    properties.border_radius = float(obj.user_data0[0] & 0xFFu);
-    properties.border_flags = uint(obj.user_data0[0] >> 8u) & 0xFu;
-    properties.focus_state = uint(obj.user_data0[0] >> 16u) & 0xFFu;
-    properties.size = uvec2(obj.user_data0[2], obj.user_data0[3]);
-    properties.clamped_aabb = vec4(
-        uintBitsToFloat(obj.user_data1[0]),
-        uintBitsToFloat(obj.user_data1[1]),
-        uintBitsToFloat(obj.user_data1[2]),
-        uintBitsToFloat(obj.user_data1[3]));
+    properties.border_radius = float(data[2] & 0xFFu);
+    properties.border_flags = uint(data[2] >> 8u) & 0xFu;
+    properties.focus_state = uint(data[2] >> 16u) & 0xFFu;
+    properties.size = uvec2(data[0], data[1]);
+
     return properties;
 }
 
