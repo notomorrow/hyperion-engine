@@ -275,7 +275,7 @@ void EnvGrid::OnRemovedFromWorld(World* world)
 void EnvGrid::OnAddedToScene(Scene* scene)
 {
     Entity::OnAddedToScene(scene);
-    
+
     if (m_view != nullptr)
     {
         m_view->AddScene(MakeStrongRef(scene));
@@ -285,10 +285,10 @@ void EnvGrid::OnAddedToScene(Scene* scene)
 void EnvGrid::OnRemovedFromScene(Scene* scene)
 {
     Entity::OnRemovedFromScene(scene);
-    
+
     if (m_view != nullptr)
     {
-        m_view->AddScene(MakeStrongRef(scene));
+        m_view->RemoveScene(scene);
     }
 }
 
