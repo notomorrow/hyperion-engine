@@ -413,9 +413,7 @@ void LightmapJob::Process()
     World* world = GetScene()->GetWorld();
     Assert(world != nullptr);
 
-    Handle<World> worldHandle = world->HandleFromThis();
-
-    PUSH_RENDER_COMMAND(LightmapRender, this, worldHandle, m_params.view, std::move(rays), rayOffset);
+    PUSH_RENDER_COMMAND(LightmapRender, this, MakeStrongRef(world), m_params.view, std::move(rays), rayOffset);
 }
 
 void LightmapJob::GatherRays(uint32 maxRayHits, Array<LightmapRay>& outRays)
@@ -630,11 +628,12 @@ void Lightmapper::Build()
         }
 
         m_subElements.PushBack(LightmapSubElement {
-            entity->HandleFromThis(),
+            MakeStrongRef(entity),
             meshComponent.mesh,
             meshComponent.material,
             transformComponent.transform,
-            boundingBoxComponent.worldAabb });
+            boundingBoxComponent.worldAabb
+        });
     }
 
     Build_Internal();
@@ -808,7 +807,7 @@ void Lightmapper::HandleCompletedJob(LightmapJob* job)
         subElement.material->SetTexture(MaterialTextureKey::RADIANCE_MAP, m_volume->GetAtlasTexture(LTT_RADIANCE));
 #endif
 
-        auto updateMeshComponent = [entityManagerWeak = m_scene->GetEntityManager()->WeakHandleFromThis(), elementIndex = job->GetElementIndex(), volume = m_volume, subElement = subElement, newMaterial = (isNewMaterial ? subElement.material : Handle<Material>::empty)]()
+        auto updateMeshComponent = [entityManagerWeak = MakeWeakRef(m_scene->GetEntityManager()), elementIndex = job->GetElementIndex(), volume = m_volume, subElement = subElement, newMaterial = (isNewMaterial ? subElement.material : Handle<Material>::empty)]()
         {
             Handle<EntityManager> entityManager = entityManagerWeak.Lock();
 

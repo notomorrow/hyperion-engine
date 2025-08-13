@@ -355,7 +355,7 @@ public:
 
         if (it != m_values.End())
         {
-            HYP_FAIL("Element with UUID %s already exists in the data source", uuid.ToString().Data());
+            HYP_FAIL("Element with UUID {} already exists in the data source", uuid);
         }
 
         typename Forest<UIDataSourceElement>::ConstIterator parentIt = m_values.End();
@@ -366,6 +366,8 @@ public:
                 {
                     return item.GetUUID() == parentUuid;
                 });
+            
+            AssertDebug(parentIt != m_values.End(), "Element with UUID {} not found to set as parent!", parentUuid);
         }
 
         it = m_values.Add(UIDataSourceElement(uuid, std::move(value)), parentIt);

@@ -38,8 +38,8 @@ protected:
 
     virtual Material::ParameterTable GetMaterialParameters() const override;
 
-    Handle<UIListView> m_historyListView;
-    Handle<UITextbox> m_textbox;
+    UIListView* m_historyListView;
+    UITextbox* m_textbox;
 
     Pimpl<ConsoleHistory> m_history;
 

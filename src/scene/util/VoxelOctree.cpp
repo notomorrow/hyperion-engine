@@ -162,7 +162,7 @@ VoxelOctreeBuildResult VoxelOctree::Build(const VoxelOctreeParams& params, Entit
         newAabb = newAabb.Union(boundingBoxComponent.worldAabb);
 
         VoxelOctreeElement element {};
-        element.entity = entity->HandleFromThis();
+        element.entity = MakeStrongRef(entity);
         element.mesh = meshComponent.mesh;
         element.material = meshComponent.material;
         element.transform = transformComponent.transform;

@@ -30,7 +30,7 @@ void EditorDelegates::AddNodeWatcher(Name watcherKey, Node* rootNode, Span<const
     Assert(rootNode != nullptr);
 
     NodeWatcher& nodeWatcher = m_nodeWatchers.EmplaceBack(watcherKey, NodeWatcher {}).second;
-    nodeWatcher.rootNode = rootNode->WeakHandleFromThis();
+    nodeWatcher.rootNode = MakeWeakRef(rootNode);
     nodeWatcher.OnChange.BindThreaded(std::move(proc), g_gameThread).Detach();
 
     for (const HypProperty& property : propertiesToWatch)
@@ -89,7 +89,7 @@ void EditorDelegates::OnNodeUpdate(Node* node, const HypProperty* property)
     Assert(node != nullptr);
     Assert(property != nullptr);
 
-    auto impl = [this, nodeWeak = node->WeakHandleFromThis(), property]()
+    auto impl = [this, nodeWeak = MakeWeakRef(node), property]()
     {
         HYP_SCOPE;
 

@@ -905,7 +905,7 @@ void EntityManager::AddComponent(Entity* entity, const HypData& componentData)
 
     Assert(entity, "Invalid entity");
 
-    Handle<Entity> entityHandle = entity->HandleFromThis();
+    Handle<Entity> entityHandle = MakeStrongRef(entity);
     Assert(entityHandle.IsValid());
 
     EntityData* entityData = m_entities.TryGetEntityData(entity->Id());
@@ -985,7 +985,7 @@ void EntityManager::AddComponent(Entity* entity, HypData&& componentData)
 
     Assert(entity, "Invalid entity");
 
-    Handle<Entity> entityHandle = entity->HandleFromThis();
+    Handle<Entity> entityHandle = MakeStrongRef(entity);
     Assert(entityHandle.IsValid());
 
     EntityData* entityData = m_entities.TryGetEntityData(entity->Id());
@@ -1187,7 +1187,7 @@ void EntityManager::AddTag(Entity* entity, EntityTag tag)
         return;
     }
 
-    Handle<Entity> entityHandle = entity->HandleFromThis();
+    Handle<Entity> entityHandle = MakeStrongRef(entity);
     Assert(entityHandle.IsValid());
 
     const IComponentInterface* componentInterface = ComponentInterfaceRegistry::GetInstance().GetEntityTagComponentInterface(tag);
@@ -1302,7 +1302,7 @@ void EntityManager::NotifySystemsOfEntityRemoved(Entity* entity, const TypeMap<C
         return;
     }
 
-    WeakHandle<Entity> entityWeak = entity->WeakHandleFromThis();
+    WeakHandle<Entity> entityWeak = MakeWeakRef(entity);
 
     for (SystemExecutionGroup& group : m_systemExecutionGroups)
     {

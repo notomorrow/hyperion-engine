@@ -579,34 +579,17 @@ class EditorWeakNodeFactory : public UIElementFactory<WeakHandle<Node>>
 {
     static String GetNodeName(Node* node)
     {
-        String nodeName = "Invalid";
-
-        if (node->IsRoot() && node->GetScene() != nullptr)
-        {
-            nodeName = HYP_FORMAT("{} Scene Root", node->GetScene()->GetName());
-        }
-        else
-        {
-            nodeName = node->GetName().LookupString();
-        }
-
-        return nodeName;
+        return node->GetName().LookupString();
     }
 
 public:
     Handle<UIObject> Create(UIObject* parent, const WeakHandle<Node>& value) const
     {
         String nodeName = "Invalid";
-        UUID nodeUuid = UUID::Invalid();
 
         if (Handle<Node> node = value.Lock())
         {
             nodeName = GetNodeName(node.Get());
-            nodeUuid = node->GetUUID();
-        }
-        else
-        {
-            nodeUuid = UUID();
         }
 
         Handle<UIText> text = parent->CreateUIObject<UIText>(Vec2i { 0, 0 }, UIObjectSize(UIObjectSize::AUTO));
@@ -895,7 +878,7 @@ public:
 #if 0
                 Handle<UIButton> addComponentButton = parent->CreateUIObject<UIButton>(Vec2i { 0, 0 }, UIObjectSize(UIObjectSize::AUTO));
                 addComponentButton->SetText("Add Component");
-                addComponentButton->OnClick.Bind([stageWeak = parent->GetStage()->WeakHandleFromThis()](...)
+                addComponentButton->OnClick.Bind([stageWeak = MakeWeakRef(parent->GetStage())](...)
                 {
                     if (Handle<UIStage> stage = stageWeak.Lock())
                     {
@@ -962,7 +945,7 @@ public:
             } else {
                 Handle<UIButton> attachScriptButton = parent->CreateUIObject<UIButton>(Vec2i { 0, 0 }, UIObjectSize(UIObjectSize::AUTO));
                 attachScriptButton->SetText("Attach Script");
-                attachScriptButton->OnClick.Bind([world = entityManager->GetWorld()->HandleFromThis(), entityManagerWeak = entityManager->ToWeak(), entity](...)
+                attachScriptButton->OnClick.Bind([world = MakeStrongRef(entityManager->GetWorld()), entityManagerWeak = entityManager->ToWeak(), entity](...)
                 {
                     Handle<EntityManager> entityManager = entityManagerWeak.Lock();
                     

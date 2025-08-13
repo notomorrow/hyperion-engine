@@ -237,11 +237,11 @@ void HyperionEditor::Init()
                 scene->GetRoot()->AddChild(node);
 
 #if 1
-                Handle<Entity> envGridEntity = scene->GetEntityManager()->AddEntity<EnvGrid>(node->GetWorldAABB() * 1.2f, EnvGridOptions { .type = EnvGridType::ENV_GRID_TYPE_LIGHT_FIELD, .density = Vec3u { 10, 3, 10 } });
+                Handle<Entity> envGridEntity = CreateObject<EnvGrid>(node->GetWorldAABB() * 1.2f, EnvGridOptions { .type = EnvGridType::ENV_GRID_TYPE_LIGHT_FIELD, .density = Vec3u { 10, 3, 10 } });
                 envGridEntity->SetName(NAME("EnvGrid2"));
-                scene->GetEntityManager()->AddComponent<BoundingBoxComponent>(envGridEntity, BoundingBoxComponent { node->GetWorldAABB() * 1.2f, node->GetWorldAABB() * 1.2f });
-
                 scene->GetRoot()->AddChild(envGridEntity);
+            
+                envGridEntity->AddComponent<BoundingBoxComponent>(BoundingBoxComponent { node->GetWorldAABB() * 1.2f, node->GetWorldAABB() * 1.2f });
 #endif
 
                 if (auto& zombieAsset = results["zombie"]; zombieAsset.IsValid())

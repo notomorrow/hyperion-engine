@@ -51,7 +51,7 @@ extern "C"
 
         Assert(manager->IsValidComponentType(componentTypeId));
 
-        Handle<Entity> entityHandle = entity->HandleFromThis();
+        Handle<Entity> entityHandle = MakeStrongRef(entity);
 
         manager->AddComponent(entityHandle, *componentHypData);
     }

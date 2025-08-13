@@ -252,7 +252,7 @@ void Scene::SetWorld(World* world)
 
     if (m_world != nullptr && m_world->HasScene(Id()))
     {
-        m_world->RemoveScene(HandleFromThis());
+        m_world->RemoveScene(this);
     }
 
     // When world is changed, entity manager needs all systems to have this change reflected
@@ -379,7 +379,7 @@ bool Scene::RemoveFromWorld()
         return false;
     }
 
-    m_world->RemoveScene(HandleFromThis());
+    m_world->RemoveScene(this);
 
     return true;
 }

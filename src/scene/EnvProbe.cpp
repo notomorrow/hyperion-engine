@@ -154,7 +154,7 @@ void EnvProbe::OnAddedToScene(Scene* scene)
 
     if (m_view.IsValid())
     {
-        m_view->AddScene(scene->HandleFromThis());
+        m_view->AddScene(MakeStrongRef(scene));
     }
 
     Invalidate();
@@ -166,7 +166,7 @@ void EnvProbe::OnRemovedFromScene(Scene* scene)
 
     if (m_view.IsValid())
     {
-        m_view->RemoveScene(scene->HandleFromThis());
+        m_view->RemoveScene(scene);
     }
 
     Invalidate();

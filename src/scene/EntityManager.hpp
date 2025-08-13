@@ -699,7 +699,7 @@ public:
 
         Threads::AssertOnThread(m_ownerThreadId);
 
-        Handle<Entity> entityHandle = entity->HandleFromThis();
+        Handle<Entity> entityHandle = MakeStrongRef(entity);
         Assert(entityHandle.IsValid());
 
         EntityData* entityData = m_entities.TryGetEntityData(entity->Id());
@@ -766,7 +766,7 @@ public:
             return false;
         }
 
-        Handle<Entity> entityHandle = entity->HandleFromThis();
+        Handle<Entity> entityHandle = MakeStrongRef(entity);
         Assert(entityHandle.IsValid());
 
         Threads::AssertOnThread(m_ownerThreadId);

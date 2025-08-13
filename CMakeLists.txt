@@ -213,7 +213,10 @@ endif()
 
 if(CMAKE_GENERATOR STREQUAL "Xcode")
     set(CMAKE_XCODE_SCHEME_ENABLE_GPU_API_VALIDATION FALSE)
-    # set(CMAKE_XCODE_SCHEME_ENABLE_GPU_FRAME_CAPTURE_MODE DISABLED)
+
+    # disable xcode code signing
+    set(CMAKE_TRY_COMPILE_PLATFORM_VARIABLES "CMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_REQUIRED")
+    set(CMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_REQUIRED "NO")
 
 # for VS solutions, we want to add the .natvis file as a custom solution item
 elseif(MSVC)

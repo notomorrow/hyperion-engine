@@ -124,13 +124,22 @@ View::View(const ViewDesc& viewDesc)
     : m_viewDesc(viewDesc),
       m_flags(viewDesc.flags),
       m_viewport(viewDesc.viewport),
-      m_scenes(viewDesc.scenes),
-      m_camera(viewDesc.camera),
+      m_camera(MakeStrongRef(viewDesc.camera)),
       m_priority(viewDesc.priority),
       m_readbackTextureGpuImages {},
       m_overrideAttributes(viewDesc.overrideAttributes),
       m_collectionTaskBatch(nullptr)
 {
+    for (Scene* scene : m_viewDesc.scenes)
+    {
+        if (!scene)
+        {
+            continue;
+        }
+        
+        m_scenes.PushBack(MakeStrongRef(scene));
+    }
+          
     for (auto it = std::begin(m_renderProxyLists); it != std::end(m_renderProxyLists); ++it)
     {
         if ((m_flags & ViewFlags::NOT_MULTI_BUFFERED) && it != std::begin(m_renderProxyLists))
@@ -440,21 +449,26 @@ void View::AddScene(const Handle<Scene>& scene)
     }
 }
 
-void View::RemoveScene(const Handle<Scene>& scene)
+void View::RemoveScene(Scene* scene)
 {
     HYP_SCOPE;
 
-    if (!scene.IsValid())
+    if (!scene)
+    {
+        return;
+    }
+    
+    auto it = m_scenes.FindIf([scene](const auto& item)
+        {
+            return item.Get() == scene;
+        });
+    
+    if (it == m_scenes.End())
     {
         return;
     }
 
-    if (!m_scenes.Contains(scene))
-    {
-        return;
-    }
-
-    m_scenes.Erase(scene);
+    m_scenes.Erase(it);
 }
 
 ResourceTrackerDiff View::CollectMeshEntities(RenderProxyList& rpl)
@@ -776,7 +790,7 @@ ResourceTrackerDiff View::CollectMeshEntities(RenderProxyList& rpl)
             AssertDebug(meshComponent != nullptr);
 
             RenderProxyMesh& meshProxy = *rpl.GetMeshEntities().SetProxy(entity->Id(), RenderProxyMesh());
-            meshProxy.entity = entity->WeakHandleFromThis();
+            meshProxy.entity = MakeWeakRef(entity);
             meshProxy.mesh = meshComponent->mesh;
             meshProxy.material = meshComponent->material;
             meshProxy.skeleton = meshComponent->skeleton;

@@ -303,7 +303,7 @@ Handle<PassData> UIRenderer::CreateViewPassData(View* view, PassDataExt&)
 {
     Handle<UIPassData> pd = CreateObject<UIPassData>();
 
-    pd->view = view->WeakHandleFromThis();
+    pd->view = MakeWeakRef(view);
     pd->viewport = view->GetViewport();
 
     HYP_LOG(UI, Debug, "Creating UI pass data with viewport size {}", pd->viewport.extent);
