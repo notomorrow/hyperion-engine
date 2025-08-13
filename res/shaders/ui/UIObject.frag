@@ -11,6 +11,7 @@ layout(location = 3) in vec4 v_color;
 
 #ifdef INSTANCING
 layout(location = 4) in flat uint v_object_index;
+layout(location = 5) in flat uvec4 v_properties;
 #endif
 
 layout(location = 0) out vec4 gbuffer_albedo;
@@ -89,7 +90,7 @@ float RoundedRectangle(vec2 pos, vec2 size, float radius)
 
 void main()
 {
-    const UIObjectProperties properties = GetUIObjectProperties(object);
+    const UIObjectProperties properties = GetUIObjectProperties(v_properties);
 
     vec4 ui_color = CURRENT_MATERIAL.albedo;
 
