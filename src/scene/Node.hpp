@@ -366,7 +366,7 @@ public:
     Array<Node*> GetDescendants() const;
 
     /*! \brief Set the local-space translation, scale, rotation of this Node (not influenced by the parent Node) */
-    HYP_METHOD(Property = "LocalTransform", Serialize = true, Editor = true, Label = "Local-space Transform")
+    HYP_METHOD(Property = "LocalTransform", Serialize = true, Editor = true, Label = "Local-space Transform", EditorPropertyPanelClass = "TransformEditorPropertyPanel")
     void SetLocalTransform(const Transform& transform);
 
     /*! \returns The local-space translation, scale, rotation of this Node. */
