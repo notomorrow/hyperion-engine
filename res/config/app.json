@@ -15,7 +15,7 @@
         "enabled": false
       },
       "globalIllumination": {
-        "enabled": false
+        "enabled": true
       }
     },
     "taa": {
