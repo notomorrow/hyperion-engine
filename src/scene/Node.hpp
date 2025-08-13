@@ -360,13 +360,8 @@ public:
         return m_childNodes;
     }
 
-    /*! \brief Get all descendant child Nodes from this Node. This vector is pre-calculated,
-     * so no calculation happens when calling this method.
-     * \returns A vector of raw pointers to descendant Nodes */
-    HYP_FORCE_INLINE const Array<Node*>& GetDescendants() const
-    {
-        return m_descendants;
-    }
+    /*! \brief Get all descendant child Nodes from this Node. */
+    Array<Node*> GetDescendants() const;
 
     /*! \brief Set the local-space translation, scale, rotation of this Node (not influenced by the parent Node) */
     HYP_METHOD(Property = "LocalTransform", Serialize = true, Editor = true, Label = "Local-space Transform")
@@ -654,9 +649,6 @@ protected:
     void RefreshEntityTransform();
     virtual void OnTransformUpdated(const Transform& transform);
 
-    void OnNestedNodeAdded(Node* node, bool direct);
-    void OnNestedNodeRemoved(Node* node, bool direct);
-
 #ifdef HYP_EDITOR
     EditorDelegates* GetEditorDelegates();
 
@@ -675,8 +667,6 @@ protected:
     Transform m_localTransform;
     Transform m_worldTransform;
     BoundingBox m_entityAabb;
-
-    Array<Node*> m_descendants;
 
     Scene* m_scene;
 

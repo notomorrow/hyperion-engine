@@ -67,13 +67,9 @@ Result LogEntitiesCommand::Execute_Impl(const CommandLineArguments& args)
         AssertDebug(scene != nullptr);
 
         const Handle<EntityManager>& entityManager = scene->GetEntityManager();
+        AssertDebug(entityManager != nullptr);
 
         json::JSONObject entityManagerJson;
-
-        if (!entityManager->GetScene())
-        {
-            return;
-        }
 
         entityManagerJson["scene"] = entityManager->GetScene()->GetName().LookupString();
         entityManagerJson["ownerThreadId"] = entityManager->GetOwnerThreadId().GetName().LookupString();

@@ -265,31 +265,6 @@ void Node::OnDetachedFromNode(Node* node)
     m_parentNode = nullptr;
 }
 
-void Node::OnNestedNodeAdded(Node* node, bool direct)
-{
-    m_descendants.PushBack(node);
-
-    if (m_parentNode != nullptr)
-    {
-        m_parentNode->OnNestedNodeAdded(node, false);
-    }
-}
-
-void Node::OnNestedNodeRemoved(Node* node, bool direct)
-{
-    const auto it = m_descendants.Find(node);
-
-    if (it != m_descendants.End())
-    {
-        m_descendants.Erase(it);
-    }
-
-    if (m_parentNode != nullptr)
-    {
-        m_parentNode->OnNestedNodeRemoved(node, false);
-    }
-}
-
 Handle<Node> Node::AddChild(const Handle<Node>& node)
 {
     if (!node.IsValid())
@@ -347,13 +322,6 @@ Handle<Node> Node::AddChild(const Handle<Node>& node)
         currentParent = currentParent->m_parentNode;
     }
 
-    OnNestedNodeAdded(node, true);
-
-    for (Node* nested : node->GetDescendants())
-    {
-        OnNestedNodeAdded(nested, false);
-    }
-
     return node;
 }
 
@@ -406,13 +374,6 @@ bool Node::RemoveChild(const Node* node)
 
         currentParent = currentParent->m_parentNode;
     }
-
-    for (Node* nested : node->GetDescendants())
-    {
-        OnNestedNodeRemoved(nested, false);
-    }
-
-    OnNestedNodeRemoved(childNode, true);
 
     UpdateWorldTransform();
 
@@ -468,13 +429,6 @@ void Node::RemoveAllChildren()
 
                 currentParent = currentParent->m_parentNode;
             }
-
-            for (Node* nested : node->GetDescendants())
-            {
-                OnNestedNodeRemoved(nested, false);
-            }
-
-            OnNestedNodeRemoved(node, true);
         }
 
         it = m_childNodes.Erase(it);
@@ -621,6 +575,35 @@ Node::NodeList::ConstIterator Node::FindChild(const char* name) const
 
             return it->GetName() == weakName;
         });
+}
+
+Array<Node*> Node::GetDescendants() const
+{
+    // add all children to the list
+    Array<Node*> descendants;
+
+    // use a stack to traverse the tree
+    Array<Node*> stack;
+    stack.PushBack(const_cast<Node*>(this));
+
+    while (stack.Any())
+    {
+        Node* current = stack.PopBack();
+        descendants.PushBack(current);
+        for (const Handle<Node>& child : current->GetChildren())
+        {
+            if (!child.IsValid())
+            {
+                continue;
+            }
+            stack.PushBack(child.Get());
+        }
+    }
+
+    // remove the first element, which is this node
+    descendants.PopFront();
+
+    return descendants;
 }
 
 void Node::LockTransform()
