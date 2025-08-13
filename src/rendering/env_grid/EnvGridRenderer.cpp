@@ -224,7 +224,7 @@ Handle<PassData> EnvGridRenderer::CreateViewPassData(View* view, PassDataExt& ex
     EnvProbeCollection& envProbeCollection = envGrid->GetEnvProbeCollection();
 
     Handle<EnvGridPassData> pd = CreateObject<EnvGridPassData>();
-    pd->view = view->WeakHandleFromThis();
+    pd->view = MakeWeakRef(view);
     pd->viewport = view->GetViewport();
 
     pd->currentProbeIndex = envProbeCollection.numProbes != 0 ? 0 : ~0u;

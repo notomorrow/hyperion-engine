@@ -28,7 +28,7 @@ extern "C"
         Assert(elementTypeId != nullptr);
         Assert(elementFactory != nullptr);
 
-        dataSource->SetElementFactory(*elementTypeId, elementFactory->HandleFromThis());
+        dataSource->SetElementFactory(*elementTypeId, MakeStrongRef(elementFactory));
     }
 
 } // extern "C"

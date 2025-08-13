@@ -200,7 +200,7 @@ void ShadowRendererBase::RenderFrame(FrameBase* frame, const RenderSetup& render
 
     if (cacheIt == m_cachedShadowMapData.End())
     {
-        WeakHandle<Light> lightWeak = light->WeakHandleFromThis();
+        WeakHandle<Light> lightWeak = MakeWeakRef(light);
 
         shadowMap = AllocateShadowMap(light);
         Assert(shadowMap != nullptr, "Failed to allocate shadow map for Light {}!", light->Id());
@@ -421,7 +421,7 @@ void ShadowRendererBase::RenderFrame(FrameBase* frame, const RenderSetup& render
 Handle<PassData> ShadowRendererBase::CreateViewPassData(View* view, PassDataExt& ext)
 {
     Handle<ShadowPassData> pd = CreateObject<ShadowPassData>();
-    pd->view = view->WeakHandleFromThis();
+    pd->view = MakeWeakRef(view);
     pd->viewport = view->GetViewport();
 
     return pd;

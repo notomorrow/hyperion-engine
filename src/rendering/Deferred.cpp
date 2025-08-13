@@ -1024,7 +1024,7 @@ Handle<PassData> DeferredRenderer::CreateViewPassData(View* view, PassDataExt&)
         Handle<DeferredPassData> pd = CreateObject<DeferredPassData>();
         DeferredPassData& passData = *pd;
 
-        passData.view = view->WeakHandleFromThis();
+        passData.view = MakeWeakRef(view);
         passData.viewport = view->GetViewport();
 
         GBuffer* gbuffer = view->GetOutputTarget().GetGBuffer();
@@ -1115,7 +1115,7 @@ Handle<PassData> DeferredRenderer::CreateViewPassData(View* view, PassDataExt&)
         Handle<RaytracingPassData> pd = CreateObject<RaytracingPassData>();
         RaytracingPassData& passData = *pd;
 
-        passData.view = view->WeakHandleFromThis();
+        passData.view = MakeWeakRef(view);
         passData.viewport = view->GetViewport();
 
         return pd;
@@ -1421,7 +1421,7 @@ void DeferredRenderer::ResizeView(Viewport viewport, View* view, DeferredPassDat
 
     CreateViewRaytracingPasses(view, passData);
 
-    passData.view = view->WeakHandleFromThis();
+    passData.view = MakeWeakRef(view);
     passData.viewport = viewport;
 }
 

@@ -358,7 +358,7 @@ public:
     void Update(float delta) override;
 
     void OnSceneAttached(const Handle<Scene>& scene) override;
-    void OnSceneDetached(const Handle<Scene>& scene) override;
+    void OnSceneDetached(Scene* scene) override;
 
     HYP_FORCE_INLINE const Handle<AppContextBase>& GetAppContext() const
     {

@@ -49,7 +49,7 @@ public:
     virtual void PreUpdate(float delta) { }
     virtual void Update(float delta) = 0;
     virtual void OnSceneAttached(const Handle<Scene>& scene) { };
-    virtual void OnSceneDetached(const Handle<Scene>& scene) { };
+    virtual void OnSceneDetached(Scene* scene) { };
 
 protected:
     virtual void Init() override

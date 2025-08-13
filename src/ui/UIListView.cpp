@@ -528,7 +528,7 @@ void UIListView::SetSelectedItemIndex(int index)
 
     listViewItem->SetIsSelectedItem(true);
 
-    m_selectedItem = listViewItem->WeakHandleFromThis();
+    m_selectedItem = MakeWeakRef(listViewItem);
 
     OnSelectedItemChange(listViewItem);
 }
@@ -593,7 +593,7 @@ void UIListView::SetSelectedItem(UIListViewItem* listViewItem)
 
     ScrollToChild(listViewItem);
 
-    m_selectedItem = listViewItem->WeakHandleFromThis();
+    m_selectedItem = MakeWeakRef(listViewItem);
 
     OnSelectedItemChange(listViewItem);
 }

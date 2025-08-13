@@ -38,7 +38,7 @@ void WorldAABBUpdaterSystem::Process(float delta)
     {
         const bool wasWorldAabbChanged = ProcessEntity(entity, boundingBoxComponent, transformComponent);
         
-        updatedEntities[entity->WeakHandleFromThis()] = wasWorldAabbChanged;
+        updatedEntities[MakeWeakRef(entity)] = wasWorldAabbChanged;
     }
 
     if (updatedEntities.Any())

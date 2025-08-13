@@ -412,7 +412,7 @@ Handle<UIObject> UIStage::GetUIObjectForEntity(const Entity* entity) const
     {
         if (uiComponent->uiObject != nullptr)
         {
-            return uiComponent->uiObject->HandleFromThis();
+            return MakeStrongRef(uiComponent->uiObject);
         }
     }
 
@@ -944,7 +944,7 @@ UIEventHandlerResult UIStage::OnInputEvent(
 
             if (UIObject* parent = uiObject->GetParentUIObject())
             {
-                uiObject = parent->HandleFromThis();
+                uiObject = MakeStrongRef(parent);
             }
             else
             {

@@ -118,7 +118,7 @@ void VisibilityStateUpdaterSystem::Process(float delta)
                     visibilityStateComponent.visibilityState = &octant->GetVisibilityState();
                 }
 
-                updatedEntities.Insert(entity->WeakHandleFromThis());
+                updatedEntities.Insert(MakeWeakRef(entity));
             }
 
             return;
@@ -157,7 +157,7 @@ void VisibilityStateUpdaterSystem::Process(float delta)
             visibilityStateComponent.visibilityState = &octant->GetVisibilityState();
         }
 
-        updatedEntities.Insert(entity->WeakHandleFromThis());
+        updatedEntities.Insert(MakeWeakRef(entity));
     };
 
     for (auto [entity, visibilityStateComponent, boundingBoxComponent, _] : GetEntityManager().GetEntitySet<VisibilityStateComponent, BoundingBoxComponent, EntityTagComponent<EntityTag::UPDATE_VISIBILITY_STATE>>().GetScopedView(GetComponentInfos()))

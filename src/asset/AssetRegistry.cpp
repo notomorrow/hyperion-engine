@@ -1285,7 +1285,7 @@ bool AssetRegistry::RemovePackage(AssetPackage* package)
 
     package->m_registry.Reset();
 
-    Handle<AssetPackage> strongPackage = package->HandleFromThis();
+    Handle<AssetPackage> strongPackage = MakeStrongRef(package);
 
     bool removed = false;
 

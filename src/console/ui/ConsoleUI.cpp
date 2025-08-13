@@ -131,7 +131,9 @@ private:
 #pragma region ConsoleUI
 
 ConsoleUI::ConsoleUI()
-    : m_loggerRedirectId(-1)
+    : m_loggerRedirectId(-1),
+      m_historyListView(nullptr),
+      m_textbox(nullptr)
 {
     SetBorderRadius(0);
     SetBorderFlags(UIObjectBorderFlags::ALL);
@@ -191,22 +193,25 @@ void ConsoleUI::Init()
 {
     UIObject::Init();
 
-    OnMouseDown.Bind([this](const MouseEvent& eventData) -> UIEventHandlerResult
-                   {
-                       return UIEventHandlerResult::STOP_BUBBLING;
-                   })
+    OnMouseDown
+        .Bind([this](const MouseEvent& eventData) -> UIEventHandlerResult
+        {
+            return UIEventHandlerResult::STOP_BUBBLING;
+         })
         .Detach();
 
-    OnKeyDown.Bind([this](const KeyboardEvent& eventData) -> UIEventHandlerResult
-                 {
-                     return UIEventHandlerResult::STOP_BUBBLING;
-                 })
+    OnKeyDown
+        .Bind([this](const KeyboardEvent& eventData) -> UIEventHandlerResult
+        {
+            return UIEventHandlerResult::STOP_BUBBLING;
+        })
         .Detach();
 
-    OnKeyUp.Bind([this](const KeyboardEvent& eventData) -> UIEventHandlerResult
-               {
-                   return UIEventHandlerResult::STOP_BUBBLING;
-               })
+    OnKeyUp
+        .Bind([this](const KeyboardEvent& eventData) -> UIEventHandlerResult
+        {
+            return UIEventHandlerResult::STOP_BUBBLING;
+        })
         .Detach();
 
     Handle<UIDataSource> dataSource = CreateObject<UIDataSource>(
@@ -217,9 +222,9 @@ void ConsoleUI::Init()
             {
                 return nullptr;
             }
-            
+
             const ConsoleHistoryEntry& entry = value.Get<ConsoleHistoryEntry>();
-            
+
             Handle<UIText> text = parent->CreateUIObject<UIText>(Vec2i { 0, 0 }, UIObjectSize({ 0, UIObjectSize::AUTO }, { 0, UIObjectSize::AUTO }));
             text->SetText(entry.text);
             text->SetTextSize(12.0f);
@@ -258,10 +263,7 @@ void ConsoleUI::Init()
     historyListView->OnChildAttached
         .Bind([this](UIObject* child) -> UIEventHandlerResult
             {
-                // m_historyListView->SetScrollOffset(Vec2i {
-                //     m_historyListView->GetScrollOffset().x,
-                //     m_historyListView->GetActualInnerSize().y - m_historyListView->GetActualSize().y
-                // }, /* smooth */ false);
+                m_historyListView->ScrollToChild(child);
 
                 return UIEventHandlerResult::STOP_BUBBLING;
             })
@@ -374,11 +376,6 @@ void ConsoleUI::Init()
                 return UIEventHandlerResult::STOP_BUBBLING;
             })
         .Detach();
-
-    for (int i = 0; i < 10; i++)
-    {
-        HYP_LOG(Console, Info, "Console initialized {}", i);
-    }
 }
 
 void ConsoleUI::UpdateSize_Internal(bool updateChildren)

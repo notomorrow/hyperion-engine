@@ -165,7 +165,7 @@ public:
     void AddScene(const Handle<Scene>& scene);
 
     HYP_METHOD()
-    bool RemoveScene(const Handle<Scene>& scene);
+    bool RemoveScene(Scene* scene);
 
     /*! \brief Get the number of Scenes in the World. Must be called on the game thread.
      *  \return The number of Scenes in the World. */
@@ -211,7 +211,7 @@ public:
     Delegate<void, World*, GameStateMode, GameStateMode> OnGameStateChange;
 
     Delegate<void, World*, const Handle<Scene>& /* scene */> OnSceneAdded;
-    Delegate<void, World*, const Handle<Scene>& /* scene */> OnSceneRemoved;
+    Delegate<void, World*, Scene* /* scene */> OnSceneRemoved;
 
 private:
     void Init() override;

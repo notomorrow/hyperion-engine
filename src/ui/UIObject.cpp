@@ -195,7 +195,7 @@ UIObject::~UIObject()
         else
         {
             // Keep node alive until it can be destroyed on the owner thread
-            Task<void> task = Threads::GetThread(scene->GetOwnerThreadId())->GetScheduler().Enqueue([scene = GetScene()->HandleFromThis(), node = std::move(m_node), entity = std::move(entity)]() mutable
+            Task<void> task = Threads::GetThread(scene->GetOwnerThreadId())->GetScheduler().Enqueue([scene = MakeStrongRef(GetScene()), node = std::move(m_node), entity = std::move(entity)]() mutable
                 {
                     removeUiComponent(scene.Get(), std::move(entity), std::move(node));
                 });
@@ -1683,7 +1683,7 @@ Handle<UIObject> UIObject::FindChildUIObject(WeakName name, bool deep) const
         {
             if (child->GetName() == name)
             {
-                foundObject = child->HandleFromThis();
+                foundObject = MakeStrongRef(child);
 
                 return IterationResult::STOP;
             }
@@ -1705,7 +1705,7 @@ Handle<UIObject> UIObject::FindChildUIObject(ProcRef<bool(UIObject*)> predicate,
         {
             if (predicate(child))
             {
-                foundObject = child->HandleFromThis();
+                foundObject = MakeStrongRef(child);
 
                 return IterationResult::STOP;
             }
@@ -2019,7 +2019,7 @@ Handle<UIObject> UIObject::GetClosestParentUIObject_Proc(const ProcRef<bool(UIOb
                 {
                     if (proc(uiComponent->uiObject))
                     {
-                        return uiComponent->uiObject->HandleFromThis();
+                        return MakeStrongRef(uiComponent->uiObject);
                     }
                 }
             }
@@ -2584,7 +2584,7 @@ Handle<UIObject> UIObject::GetChildUIObject(int index) const
         {
             if (currentIndex == index)
             {
-                foundObject = child ? child->HandleFromThis() : Handle<UIObject>::empty;
+                foundObject = MakeStrongRef(child);
 
                 return IterationResult::STOP;
             }

@@ -630,7 +630,7 @@ public:
                         scriptableDelegate
                             ->BindManaged(
                                 attributeValue,
-                                [uiObjectWeak = uiObject->WeakHandleFromThis()]() -> ManagedObjectResource*
+                                [uiObjectWeak = MakeWeakRef(uiObject)]() -> ManagedObjectResource*
                                 {
                                     Handle<UIObject> uiObject = uiObjectWeak.Lock();
 

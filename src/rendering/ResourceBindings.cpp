@@ -278,7 +278,7 @@ void OnBindingChanged_Texture(Texture* texture, uint32 prev, uint32 next)
     {
         if (next != ~0u)
         {
-            g_renderGlobalState->bindlessStorage->AddResource(texture->Id(), g_renderBackend->GetTextureImageView(texture->HandleFromThis()));
+            g_renderGlobalState->bindlessStorage->AddResource(texture->Id(), g_renderBackend->GetTextureImageView(MakeStrongRef(texture)));
         }
         else
         {

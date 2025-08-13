@@ -75,7 +75,7 @@ void EntityRenderProxySystem_Mesh::Process(float delta)
         {
             HYP_LOG_ONCE(Entity, Warning, "Mesh or material not valid for entity #{}!", entity->Id());
 
-            updatedEntities.Insert(entity->WeakHandleFromThis());
+            updatedEntities.Insert(MakeWeakRef(entity));
 
             continue;
         }
@@ -84,7 +84,7 @@ void EntityRenderProxySystem_Mesh::Process(float delta)
 
         if (meshComponent.previousModelMatrix == transformComponent.transform.GetMatrix())
         {
-            updatedEntities.Insert(entity->WeakHandleFromThis());
+            updatedEntities.Insert(MakeWeakRef(entity));
         }
         else
         {

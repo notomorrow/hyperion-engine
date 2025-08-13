@@ -172,7 +172,7 @@ void UISubsystem::Init()
         .flags = ViewFlags::DEFAULT & ~ViewFlags::ALL_WORLD_SCENES,
         .viewport = Viewport { .extent = surfaceSize, .position = Vec2i::Zero() },
         .outputTargetDesc = outputTargetDesc,
-        .scenes = { m_uiStage->GetScene()->HandleFromThis() },
+        .scenes = { m_uiStage->GetScene() },
         .camera = m_uiStage->GetCamera(),
         .drawCallCollectionImpl = GetOrCreateDrawCallCollectionImpl<UIEntityInstanceBatch>()
     };
@@ -194,7 +194,7 @@ void UISubsystem::OnAddedToWorld()
 
     if (m_uiStage && m_uiStage->GetScene())
     {
-        GetWorld()->AddScene(m_uiStage->GetScene()->HandleFromThis());
+        GetWorld()->AddScene(MakeStrongRef(m_uiStage->GetScene()));
     }
 }
 
@@ -202,7 +202,7 @@ void UISubsystem::OnRemovedFromWorld()
 {
     if (m_uiStage && m_uiStage->GetScene())
     {
-        GetWorld()->RemoveScene(m_uiStage->GetScene()->HandleFromThis());
+        GetWorld()->RemoveScene(m_uiStage->GetScene());
     }
 
     PUSH_RENDER_COMMAND(SetFinalPassImageView, nullptr);
@@ -281,7 +281,7 @@ void UISubsystem::Update(float delta)
             AssertDebug(meshComponent != nullptr);
 
             RenderProxyMesh& meshProxy = *rpl.GetMeshEntities().SetProxy(entity->Id(), RenderProxyMesh());
-            meshProxy.entity = entity->WeakHandleFromThis();
+            meshProxy.entity = MakeWeakRef(entity);
             meshProxy.mesh = meshComponent->mesh;
             meshProxy.material = meshComponent->material;
             meshProxy.skeleton = meshComponent->skeleton;

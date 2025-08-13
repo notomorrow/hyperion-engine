@@ -931,4 +931,40 @@ inline bool InitObject(const Handle<T>& handle)
     return true;
 }
 
+template <class T, typename = std::enable_if_t<!std::is_const_v<T> && std::is_base_of_v<HypObjectBase, T>>>
+static inline Handle<T> MakeStrongRef(const Handle<T>& handle)
+{
+    return handle;
+}
+
+template <class T, typename = std::enable_if_t<!std::is_const_v<T> && std::is_base_of_v<HypObjectBase, T>>>
+static inline Handle<T> MakeStrongRef(const WeakHandle<T>& weakHandle)
+{
+    return weakHandle.Lock();
+}
+
+template <class T, typename = std::enable_if_t<!std::is_const_v<T> && std::is_base_of_v<HypObjectBase, T>>>
+static inline Handle<T> MakeStrongRef(T* ptr)
+{
+    return Handle<T>::FromPointer(ptr);
+}
+
+template <class T, typename = std::enable_if_t<!std::is_const_v<T> && std::is_base_of_v<HypObjectBase, T>>>
+static inline WeakHandle<T> MakeWeakRef(const WeakHandle<T>& weakHandle)
+{
+    return weakHandle;
+}
+
+template <class T, typename = std::enable_if_t<!std::is_const_v<T> && std::is_base_of_v<HypObjectBase, T>>>
+static inline WeakHandle<T> MakeWeakRef(const Handle<T>& handle)
+{
+    return WeakHandle<T>(handle);
+}
+
+template <class T, typename = std::enable_if_t<!std::is_const_v<T> && std::is_base_of_v<HypObjectBase, T>>>
+static inline WeakHandle<T> MakeWeakRef(T* ptr)
+{
+    return WeakHandle<T>::FromPointer(ptr);
+}
+
 } // namespace hyperion

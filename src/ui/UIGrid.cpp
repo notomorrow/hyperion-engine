@@ -83,7 +83,7 @@ bool UIGridRow::RemoveChildUIObject(UIObject* uiObject)
     }
 
     // Keep a reference to the UIObject before removing it
-    Handle<UIObject> uiObjectHandle = uiObject->HandleFromThis();
+    Handle<UIObject> uiObjectHandle = MakeStrongRef(uiObject);
 
     if (!UIObject::RemoveChildUIObject(uiObject))
     {
@@ -391,7 +391,7 @@ bool UIGrid::RemoveChildUIObject(UIObject* uiObject)
     }
 
     // Keep a reference around
-    Handle<UIObject> uiObjectHandle = uiObject->HandleFromThis();
+    Handle<UIObject> uiObjectHandle = MakeStrongRef(uiObject);
 
     if (!UIObject::RemoveChildUIObject(uiObject))
     {

@@ -44,6 +44,7 @@
 #include <ui/UIButton.hpp>
 #include <ui/UIMenuBar.hpp>
 #include <ui/UIDataSource.hpp>
+#include <ui/UITextbox.hpp>
 
 #include <input/InputManager.hpp>
 
@@ -899,9 +900,9 @@ EditorSubsystem::EditorSubsystem(const Handle<AppContextBase>& appContext)
                         }));
 
                 m_delegateHandlers.Add(
-                    project->OnSceneRemoved.Bind([this, projectWeak = project.ToWeak()](const Handle<Scene>& scene)
+                    project->OnSceneRemoved.Bind([this, projectWeak = project.ToWeak()](Scene* scene)
                         {
-                            Assert(scene.IsValid());
+                            Assert(scene != nullptr);
 
                             Handle<EditorProject> project = projectWeak.Lock();
                             Assert(project.IsValid());
@@ -993,9 +994,9 @@ EditorSubsystem::EditorSubsystem(const Handle<AppContextBase>& appContext)
 
                                 m_delegateHandlers.Add(
                                     NAME("World_SceneRemovedDuringSimulation"),
-                                    world->OnSceneRemoved.Bind([this](World*, const Handle<Scene>& scene)
+                                    world->OnSceneRemoved.Bind([this](World*, Scene* scene)
                                         {
-                                            if (!scene.IsValid())
+                                            if (!scene)
                                             {
                                                 return;
                                             }
@@ -1254,7 +1255,7 @@ void EditorSubsystem::OnSceneAttached(const Handle<Scene>& scene)
     HYP_SCOPE;
 }
 
-void EditorSubsystem::OnSceneDetached(const Handle<Scene>& scene)
+void EditorSubsystem::OnSceneDetached(Scene* scene)
 {
     HYP_SCOPE;
 }
@@ -1373,15 +1374,15 @@ void EditorSubsystem::InitViewport()
     
     // bind console key
     AddDelegateHandler(uiSubsystem->GetUIStage()->OnKeyDown
-        .Bind([this](...)
+        .Bind([this](const KeyboardEvent& event)
         {
-            // Check we aren't entering text
+            // Check we aren't entering text in non-console text field
             UISubsystem* uiSubsystem = GetWorld()->GetSubsystem<UISubsystem>();
             Assert(uiSubsystem != nullptr && uiSubsystem->GetUIStage() != nullptr);
         
             if (Handle<UIObject> focusedObject = uiSubsystem->GetUIStage()->GetFocusedObject().Lock())
             {
-                if (focusedObject->IsA<UITextbox>())
+                if (focusedObject->IsA<UITextbox>() && (m_consoleUi && !m_consoleUi->HasFocus()))
                 {
                     return UIEventHandlerResult::OK;
                 }
@@ -1874,15 +1875,13 @@ static void AddNodeToSceneOutline(const Handle<UIListView>& listView, Node* node
 
     if (UIDataSourceBase* dataSource = listView->GetDataSource())
     {
-        WeakHandle<Node> editorNodeWeak = node->WeakHandleFromThis();
+        WeakHandle<Node> editorNodeWeak = MakeWeakRef(node);
 
         UUID parentNodeUuid = UUID::Invalid();
 
         if (Node* parentNode = node->GetParent())
         {
             parentNodeUuid = parentNode->GetUUID();
-
-            AssertDebug(dataSource->Get(parentNodeUuid) != nullptr);
         }
 
         dataSource->Push(node->GetUUID(), HypData(std::move(editorNodeWeak)), parentNodeUuid);
@@ -1906,14 +1905,6 @@ void EditorSubsystem::StartWatchingNode(const Handle<Node>& node)
         return;
     }
 
-    if (GetWorld()->GetGameState().IsEditor())
-    {
-        if (g_showOnlyActiveScene && node->GetScene() != m_activeScene.GetUnsafe())
-        {
-            return;
-        }
-    }
-
     Assert(node->GetScene() != nullptr);
 
     UISubsystem* uiSubsystem = GetWorld()->GetSubsystem<UISubsystem>();
@@ -1924,47 +1915,41 @@ void EditorSubsystem::StartWatchingNode(const Handle<Node>& node)
 
     HYP_LOG(Editor, Debug, "Start watching node: {}", *node->GetName());
 
-    m_editorDelegates->AddNodeWatcher(
-        NAME("SceneView"),
-        node.Get(),
-        { Node::Class()->GetProperty(NAME("Name")), 1 },
-        [this, listViewWeak = listView.ToWeak()](Node* node, const HypProperty* property)
-        {
-            // Update name in list view
-            if (node->GetFlags() & NodeFlags::HIDE_IN_SCENE_OUTLINE)
-            {
-                return;
-            }
-
-            HYP_LOG(Editor, Debug, "Node {} property changed : {}", *node->GetName(), *property->GetName());
-
-            Handle<UIListView> listView = listViewWeak.Lock();
-
-            if (!listView)
-            {
-                return;
-            }
-
-            if (UIDataSourceBase* dataSource = listView->GetDataSource())
-            {
-                const UIDataSourceElement* dataSourceElement = dataSource->Get(node->GetUUID());
-                Assert(dataSourceElement != nullptr);
-
-                dataSource->ForceUpdate(node->GetUUID());
-            }
-        });
+//    m_editorDelegates->AddNodeWatcher(
+//        NAME("SceneView"),
+//        node.Get(),
+//        { Node::Class()->GetProperty(NAME("Name")), 1 },
+//        [this, listViewWeak = listView.ToWeak()](Node* node, const HypProperty* property)
+//        {
+//            // Update name in list view
+//            if (node->GetFlags() & NodeFlags::HIDE_IN_SCENE_OUTLINE)
+//            {
+//                return;
+//            }
+//
+//            HYP_LOG(Editor, Debug, "Node {} property changed : {}", *node->GetName(), *property->GetName());
+//
+//            Handle<UIListView> listView = listViewWeak.Lock();
+//
+//            if (!listView)
+//            {
+//                return;
+//            }
+//
+//            if (UIDataSourceBase* dataSource = listView->GetDataSource())
+//            {
+//                const UIDataSourceElement* dataSourceElement = dataSource->Get(node->GetUUID());
+//                Assert(dataSourceElement != nullptr);
+//
+//                dataSource->ForceUpdate(node->GetUUID());
+//            }
+//        });
 
     AddNodeToSceneOutline(listView, node.Get());
 
     m_delegateHandlers.Remove(&node->GetDelegates()->OnChildAdded);
-
     m_delegateHandlers.Add(node->GetDelegates()->OnChildAdded.Bind([this, listViewWeak = listView.ToWeak()](Node* node, bool isDirect)
         {
-            if (!isDirect)
-            {
-                return;
-            }
-
             Assert(node != nullptr);
 
             if (node->GetFlags() & NodeFlags::HIDE_IN_SCENE_OUTLINE)
@@ -1975,10 +1960,11 @@ void EditorSubsystem::StartWatchingNode(const Handle<Node>& node)
             Handle<UIListView> listView = listViewWeak.Lock();
 
             AddNodeToSceneOutline(listView, node);
+            if (isDirect)
+                HYP_LOG(Editor, Debug, "Added to scene outline: {}\tparent: {}", node->GetName(), (node->GetParent() ? node->GetParent()->GetUUID() : UUID::Invalid()));
         }));
 
     m_delegateHandlers.Remove(&node->GetDelegates()->OnChildRemoved);
-
     m_delegateHandlers.Add(node->GetDelegates()->OnChildRemoved.Bind([this, listViewWeak = listView.ToWeak()](Node* node, bool)
         {
             // If the node being removed is the focused node, clear the focused node
@@ -2656,7 +2642,7 @@ void EditorSubsystem::SetSelectedPackage(const Handle<AssetPackage>& package)
                         return;
                     }
 
-                    m_contentBrowserContents->GetDataSource()->Push(assetObject->GetUUID(), HypData(assetObject->HandleFromThis()));
+                    m_contentBrowserContents->GetDataSource()->Push(assetObject->GetUUID(), HypData(std::move(assetObject)));
                 },
                 g_gameThread));
 
@@ -3238,7 +3224,7 @@ void EditorSubsystem::SetHoveredManipulationWidget(
 
     if (manipulationWidget != nullptr)
     {
-        m_hoveredManipulationWidget = manipulationWidget->WeakHandleFromThis();
+        m_hoveredManipulationWidget = MakeWeakRef(manipulationWidget);
     }
     else
     {

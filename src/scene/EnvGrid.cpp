@@ -238,7 +238,7 @@ void EnvGrid::Init()
             | ViewFlags::NOT_MULTI_BUFFERED,
         .viewport = Viewport { .extent = probeDimensions, .position = Vec2i::Zero() },
         .outputTargetDesc = outputTargetDesc,
-        .scenes = {},
+        .scenes = { m_scene },
         .camera = m_camera,
         .overrideAttributes = RenderableAttributeSet(
             MeshAttributes {},
@@ -246,7 +246,6 @@ void EnvGrid::Init()
     };
 
     m_view = CreateObject<View>(viewDesc);
-
     InitObject(m_view);
 
     SetReady(true);
@@ -276,15 +275,21 @@ void EnvGrid::OnRemovedFromWorld(World* world)
 void EnvGrid::OnAddedToScene(Scene* scene)
 {
     Entity::OnAddedToScene(scene);
-
-    m_view->AddScene(scene->HandleFromThis());
+    
+    if (m_view != nullptr)
+    {
+        m_view->AddScene(MakeStrongRef(scene));
+    }
 }
 
 void EnvGrid::OnRemovedFromScene(Scene* scene)
 {
     Entity::OnRemovedFromScene(scene);
-
-    m_view->RemoveScene(scene->HandleFromThis());
+    
+    if (m_view != nullptr)
+    {
+        m_view->AddScene(MakeStrongRef(scene));
+    }
 }
 
 void EnvGrid::CreateEnvProbes()

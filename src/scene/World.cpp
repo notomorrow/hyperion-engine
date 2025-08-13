@@ -639,7 +639,7 @@ void World::AddScene(const Handle<Scene>& scene)
     m_scenes.PushBack(scene);
 }
 
-bool World::RemoveScene(const Handle<Scene>& scene)
+bool World::RemoveScene(Scene* scene)
 {
     HYP_SCOPE;
     Threads::AssertOnThread(g_gameThread);
@@ -656,7 +656,7 @@ bool World::RemoveScene(const Handle<Scene>& scene)
 
     m_scenes.Erase(it);
 
-    if (scene.IsValid())
+    if (scene != nullptr)
     {
         OnSceneRemoved(this, scene);
 

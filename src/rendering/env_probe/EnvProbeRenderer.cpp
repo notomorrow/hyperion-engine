@@ -93,7 +93,7 @@ void EnvProbeRenderer::RenderFrame(FrameBase* frame, const RenderSetup& renderSe
 Handle<PassData> EnvProbeRenderer::CreateViewPassData(View* view, PassDataExt& ext)
 {
     Handle<EnvProbePassData> pd = CreateObject<EnvProbePassData>();
-    pd->view = view->WeakHandleFromThis();
+    pd->view = MakeWeakRef(view);
     pd->viewport = view->GetViewport();
 
     return pd;
@@ -654,7 +654,7 @@ void ReflectionProbeRenderer::ComputeSH(FrameBase* frame, const RenderSetup& ren
     asyncRenderQueue << InsertBarrier(g_renderGlobalState->gpuBuffers[GRB_ENV_PROBES]->GetBuffer(frame->GetFrameIndex()), RS_UNORDERED_ACCESS, SMT_COMPUTE);
 
     DelegateHandler* delegateHandle = new DelegateHandler();
-    *delegateHandle = frame->OnFrameEnd.Bind([envProbe = envProbe->HandleFromThis(), pipelines = std::move(pipelines), descriptorTables = std::move(computeShDescriptorTables), delegateHandle](FrameBase* frame) mutable
+    *delegateHandle = frame->OnFrameEnd.Bind([envProbe = MakeStrongRef(envProbe), pipelines = std::move(pipelines), descriptorTables = std::move(computeShDescriptorTables), delegateHandle](FrameBase* frame) mutable
         {
             HYP_NAMED_SCOPE("EnvProbe::ComputeSH - Buffer readback");
 

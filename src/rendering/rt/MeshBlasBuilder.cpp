@@ -135,7 +135,7 @@ BLASRef MeshBlasBuilder::Build(Mesh* mesh, Material* material)
     }
 
     BLASRef blas;
-    PUSH_RENDER_COMMAND(BuildMeshBlas, blas, std::move(packedVertices), std::move(packedIndices), material ? material->HandleFromThis() : nullptr);
+    PUSH_RENDER_COMMAND(BuildMeshBlas, blas, std::move(packedVertices), std::move(packedIndices), MakeStrongRef(material));
     blas->SetDebugName(NAME_FMT("MeshBlas_{}", mesh->GetName()));
 
     return blas;

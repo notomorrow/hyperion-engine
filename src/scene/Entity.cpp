@@ -62,7 +62,7 @@ Entity::~Entity()
     else
     {
         // If not on the correct thread, perform the removal asynchronously
-        Threads::GetThread(entityManager->GetOwnerThreadId())->GetScheduler().Enqueue([weakThis = WeakHandleFromThis(), entityManagerWeak = entityManager->WeakHandleFromThis()]()
+        Threads::GetThread(entityManager->GetOwnerThreadId())->GetScheduler().Enqueue([weakThis = MakeWeakRef(this), entityManagerWeak = MakeWeakRef(entityManager)]()
             {
                 Handle<EntityManager> entityManager = entityManagerWeak.Lock();
                 if (!entityManager)

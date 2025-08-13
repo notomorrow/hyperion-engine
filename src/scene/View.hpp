@@ -97,8 +97,8 @@ struct ViewDesc
     EnumFlags<ViewFlags> flags = ViewFlags::DEFAULT;
     Viewport viewport;
     ViewOutputTargetDesc outputTargetDesc;
-    Array<Handle<Scene>> scenes;
-    Handle<Camera> camera;
+    Array<Scene*> scenes;
+    Camera* camera = nullptr;
     int priority = 0;
     Optional<RenderableAttributeSet> overrideAttributes;
     IDrawCallCollectionImpl* drawCallCollectionImpl = nullptr;
@@ -178,7 +178,7 @@ public:
     void AddScene(const Handle<Scene>& scene);
 
     HYP_METHOD()
-    void RemoveScene(const Handle<Scene>& scene);
+    void RemoveScene(Scene* scene);
 
     HYP_METHOD()
     HYP_FORCE_INLINE const Handle<Camera>& GetCamera() const
