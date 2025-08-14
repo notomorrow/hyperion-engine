@@ -46,7 +46,7 @@ struct IndirectDrawCommand
 
 struct ObjectInstance
 {
-    uint entity_id;
+    uint meshEntityBinding;
     uint draw_command_index;
     uint batch_index;
     uint _pad;
@@ -107,18 +107,15 @@ void main()
     }
 
     ObjectInstance object_instance = instances[index];
-    const uint entity_id = object_instance.entity_id;
+    const uint meshEntityBinding = object_instance.meshEntityBinding;
     const uint draw_command_index = object_instance.draw_command_index;
 
-    // entity id should not ever be zero/unset,
-    // but we should make sure we do not cause a gpu crash by indexing
-    // the uint - 1.
-    if (entity_id == 0)
+    if (meshEntityBinding == ~0u)
     {
         return;
     }
 
-    Object entity = entities[entity_id - 1];
+    Object entity = entities[meshEntityBinding];
 
     bool is_visible = false;
 
@@ -191,7 +188,7 @@ void main()
             // `indices` member of EntityInstanceBatch has offset of 16 bytes (4 words)
             uint indicesOffsetWords = bufferOffsetWords + 4 + instance_index;
 
-            atomicExchange(entityInstanceBatchDataRaw[indicesOffsetWords >> 2][indicesOffsetWords & 3], entity_id - 1);
+            atomicExchange(entityInstanceBatchDataRaw[indicesOffsetWords >> 2][indicesOffsetWords & 3], meshEntityBinding);
         }
     }
 }
