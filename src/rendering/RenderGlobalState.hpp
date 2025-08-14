@@ -76,16 +76,15 @@ RenderCollector& RenderApi_GetRenderCollector(View* view);
 Array<Pair<View*, RenderCollector*>> RenderApi_GetAllRenderCollectors();
 
 // Call on render thread or render thread tasks only (consumer threads)
-IRenderProxy* RenderApi_GetRenderProxy(ObjIdBase resourceId);
+IRenderProxy* RenderApi_GetRenderProxy(const HypObjectBase* resource);
 
-/*! \brief Render thread only - update GPU data to match RenderProxy's buffer data for the resource with the given ID */
-void RenderApi_UpdateGpuData(ObjIdBase resourceId);
+/*! \brief Render thread only - update GPU data to match RenderProxy's buffer data for the resource */
+void RenderApi_UpdateGpuData(const HypObjectBase* resource);
 
 // used on render thread only - assigns all render proxy for the given object to the given binding
 void RenderApi_AssignResourceBinding(HypObjectBase* resource, uint32 binding);
 // used on render thread only - retrieves the binding set for the given resource (~0u if unset)
 uint32 RenderApi_RetrieveResourceBinding(const HypObjectBase* resource);
-uint32 RenderApi_RetrieveResourceBinding(ObjIdBase resourceId);
 
 WorldShaderData* RenderApi_GetWorldBufferData();
 

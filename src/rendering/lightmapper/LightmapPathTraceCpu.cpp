@@ -381,7 +381,7 @@ LightmapRenderer_CpuPathTracing::SharedCpuData* LightmapRenderer_CpuPathTracing:
 
     for (Light* light : rpl.GetLights())
     {
-        RenderProxyLight* lightProxy = static_cast<RenderProxyLight*>(RenderApi_GetRenderProxy(light->Id()));
+        RenderProxyLight* lightProxy = static_cast<RenderProxyLight*>(RenderApi_GetRenderProxy(light));
 
         if (lightProxy)
         {
@@ -391,7 +391,7 @@ LightmapRenderer_CpuPathTracing::SharedCpuData* LightmapRenderer_CpuPathTracing:
 
     for (EnvProbe* envProbe : rpl.GetEnvProbes().GetElements<SkyProbe>())
     {
-        RenderProxyEnvProbe* envProbeProxy = static_cast<RenderProxyEnvProbe*>(RenderApi_GetRenderProxy(envProbe->Id()));
+        RenderProxyEnvProbe* envProbeProxy = static_cast<RenderProxyEnvProbe*>(RenderApi_GetRenderProxy(envProbe));
 
         if (envProbeProxy)
         {

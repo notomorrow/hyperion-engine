@@ -255,14 +255,14 @@ void EnvGrid::OnAttachedToNode(Node* node)
 {
     HYP_SCOPE;
     Assert(IsReady());
-    
+
     Entity::OnAttachedToNode(node);
 }
 
 void EnvGrid::OnDetachedFromNode(Node* node)
 {
     HYP_SCOPE;
-    
+
     Entity::OnDetachedFromNode(node);
 }
 
@@ -579,7 +579,7 @@ void EnvGrid::UpdateRenderProxy(RenderProxyEnvGrid* proxy)
         const Handle<EnvProbe>& probe = m_envProbeCollection.GetEnvProbeOnGameThread(index);
         Assert(probe.IsValid());
 
-        proxy->envProbes[index] = probe->Id();
+        proxy->envProbes[index] = probe.Get();
     }
 }
 

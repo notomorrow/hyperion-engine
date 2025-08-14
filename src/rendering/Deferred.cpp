@@ -1783,7 +1783,7 @@ void DeferredRenderer::RenderFrameForView(FrameBase* frame, const RenderSetup& r
     if (useTemporalAa)
     {
         // apply jitter to camera for TAA
-        RenderProxyCamera* cameraProxy = static_cast<RenderProxyCamera*>(RenderApi_GetRenderProxy(view->GetCamera()->Id()));
+        RenderProxyCamera* cameraProxy = static_cast<RenderProxyCamera*>(RenderApi_GetRenderProxy(view->GetCamera()));
         Assert(cameraProxy != nullptr);
 
         CameraShaderData& cameraBufferData = cameraProxy->bufferData;
@@ -1797,7 +1797,7 @@ void DeferredRenderer::RenderFrameForView(FrameBase* frame, const RenderSetup& r
 
             cameraBufferData.jitter = jitter * g_cameraJitterScale;
 
-            RenderApi_UpdateGpuData(view->GetCamera()->Id());
+            RenderApi_UpdateGpuData(view->GetCamera());
         }
     }
 
@@ -2089,7 +2089,7 @@ void DeferredRenderer::UpdateRaytracingView(FrameBase* frame, const RenderSetup&
         }
         else
         {
-            const uint32 materialBinding = RenderApi_RetrieveResourceBinding(meshProxy->material.Id());
+            const uint32 materialBinding = RenderApi_RetrieveResourceBinding(meshProxy->material);
             const bool materialBindingsDiffer = blas->GetMaterialBinding() != materialBinding;
 
             if (materialBindingsDiffer)

@@ -136,10 +136,10 @@ View::View(const ViewDesc& viewDesc)
         {
             continue;
         }
-        
+
         m_scenes.PushBack(MakeStrongRef(scene));
     }
-          
+
     for (auto it = std::begin(m_renderProxyLists); it != std::end(m_renderProxyLists); ++it)
     {
         if ((m_flags & ViewFlags::NOT_MULTI_BUFFERED) && it != std::begin(m_renderProxyLists))
@@ -457,12 +457,12 @@ void View::RemoveScene(Scene* scene)
     {
         return;
     }
-    
+
     auto it = m_scenes.FindIf([scene](const auto& item)
         {
             return item.Get() == scene;
         });
-    
+
     if (it == m_scenes.End())
     {
         return;
