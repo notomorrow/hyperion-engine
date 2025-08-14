@@ -181,7 +181,7 @@ void ReflectionProbeRenderer::RenderProbe(FrameBase* frame, const RenderSetup& r
             return;
         }
 
-        RenderProxyLight* lightProxy = static_cast<RenderProxyLight*>(RenderApi_GetRenderProxy(renderSetup.light->Id()));
+        RenderProxyLight* lightProxy = static_cast<RenderProxyLight*>(RenderApi_GetRenderProxy(renderSetup.light));
         AssertDebug(lightProxy != nullptr);
         AssertDebug(RenderApi_RetrieveResourceBinding(renderSetup.light) != ~0u);
 
@@ -260,7 +260,7 @@ void ReflectionProbeRenderer::ComputePrefilteredEnvMap(FrameBase* frame, const R
     View* view = renderSetup.view;
     AssertDebug(view != nullptr);
 
-    RenderProxyEnvProbe* envProbeProxy = static_cast<RenderProxyEnvProbe*>(RenderApi_GetRenderProxy(envProbe->Id()));
+    RenderProxyEnvProbe* envProbeProxy = static_cast<RenderProxyEnvProbe*>(RenderApi_GetRenderProxy(envProbe));
     AssertDebug(envProbeProxy != nullptr);
 
     RenderProxyList& rpl = RenderApi_GetConsumerProxyList(view);
@@ -408,7 +408,7 @@ void ReflectionProbeRenderer::ComputeSH(FrameBase* frame, const RenderSetup& ren
     View* view = renderSetup.view;
     AssertDebug(view != nullptr);
 
-    RenderProxyEnvProbe* envProbeProxy = static_cast<RenderProxyEnvProbe*>(RenderApi_GetRenderProxy(envProbe->Id()));
+    RenderProxyEnvProbe* envProbeProxy = static_cast<RenderProxyEnvProbe*>(RenderApi_GetRenderProxy(envProbe));
     Assert(envProbeProxy != nullptr);
 
     RenderProxyList& rpl = RenderApi_GetConsumerProxyList(view);
@@ -658,7 +658,7 @@ void ReflectionProbeRenderer::ComputeSH(FrameBase* frame, const RenderSetup& ren
         {
             HYP_NAMED_SCOPE("EnvProbe::ComputeSH - Buffer readback");
 
-            const uint32 boundIndex = RenderApi_RetrieveResourceBinding(envProbe->Id());
+            const uint32 boundIndex = RenderApi_RetrieveResourceBinding(envProbe);
             Assert(boundIndex != ~0u);
 
             EnvProbeShaderData readbackBuffer;

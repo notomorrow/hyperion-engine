@@ -598,7 +598,7 @@ void EnvGridRenderer::RenderFrame(FrameBase* frame, const RenderSetup& renderSet
                 const Handle<EnvProbe>& probe = envProbeCollection.GetEnvProbeDirect(indirectIndex);
                 Assert(probe.IsValid());
 
-                RenderProxyEnvProbe* envProbeProxy = static_cast<RenderProxyEnvProbe*>(RenderApi_GetRenderProxy(probe->Id()));
+                RenderProxyEnvProbe* envProbeProxy = static_cast<RenderProxyEnvProbe*>(RenderApi_GetRenderProxy(probe));
                 Assert(envProbeProxy != nullptr);
 
                 const Vec3f worldPosition = envProbeProxy->bufferData.worldPosition.GetXYZ();
@@ -653,7 +653,7 @@ void EnvGridRenderer::RenderProbe(FrameBase* frame, const RenderSetup& renderSet
     const Handle<EnvProbe>& probe = envProbeCollection.GetEnvProbeDirect(probeIndex);
     Assert(probe.IsValid());
 
-    const uint32 probeBoundIndex = RenderApi_RetrieveResourceBinding(probe.Id());
+    const uint32 probeBoundIndex = RenderApi_RetrieveResourceBinding(probe);
     AssertDebug(probeBoundIndex != ~0u, "EnvProbe {} is not bound when rendering EnvGrid!", probe.Id());
 
     {
@@ -699,7 +699,7 @@ void EnvGridRenderer::ComputeEnvProbeIrradiance_SphericalHarmonics(FrameBase* fr
     AssertDebug(envGrid != nullptr);
     AssertDebug(envGrid->GetEnvGridType() == ENV_GRID_TYPE_SH);
 
-    RenderProxyEnvProbe* envProbeProxy = static_cast<RenderProxyEnvProbe*>(RenderApi_GetRenderProxy(probe.Id()));
+    RenderProxyEnvProbe* envProbeProxy = static_cast<RenderProxyEnvProbe*>(RenderApi_GetRenderProxy(probe));
     AssertDebug(envProbeProxy != nullptr);
 
     View* view = renderSetup.view;
@@ -735,7 +735,7 @@ void EnvGridRenderer::ComputeEnvProbeIrradiance_SphericalHarmonics(FrameBase* fr
         uint32 envProbeIndex;
     } pushConstants;
 
-    pushConstants.envProbeIndex = RenderApi_RetrieveResourceBinding(probe.Id());
+    pushConstants.envProbeIndex = RenderApi_RetrieveResourceBinding(probe);
 
     pushConstants.probeGridPosition = {
         gridSlot % options.density.x,
@@ -873,7 +873,7 @@ void EnvGridRenderer::ComputeEnvProbeIrradiance_SphericalHarmonics(FrameBase* fr
 
             EnvProbeShaderData readbackBuffer;
 
-            const uint32 boundIndex = RenderApi_RetrieveResourceBinding(probe.Id());
+            const uint32 boundIndex = RenderApi_RetrieveResourceBinding(probe);
             Assert(boundIndex != ~0u);
 
             g_renderGlobalState->gpuBuffers[GRB_ENV_PROBES]->ReadbackElement(frame->GetFrameIndex(), boundIndex, &readbackBuffer);
@@ -915,7 +915,7 @@ void EnvGridRenderer::ComputeEnvProbeIrradiance_LightField(FrameBase* frame, con
     rpl.BeginRead();
     HYP_DEFER({ rpl.EndRead(); });
 
-    RenderProxyEnvGrid* proxy = static_cast<RenderProxyEnvGrid*>(RenderApi_GetRenderProxy(envGrid->Id()));
+    RenderProxyEnvGrid* proxy = static_cast<RenderProxyEnvGrid*>(RenderApi_GetRenderProxy(envGrid));
     Assert(proxy != nullptr, "EnvGrid render proxy not found!");
 
     const Vec2i irradianceOctahedronSize = proxy->bufferData.irradianceOctahedronSize;
@@ -934,7 +934,7 @@ void EnvGridRenderer::ComputeEnvProbeIrradiance_LightField(FrameBase* frame, con
             probeIndex % options.density.x,
             (probeIndex % (options.density.x * options.density.y)) / options.density.x,
             probeIndex / (options.density.x * options.density.y),
-            RenderApi_RetrieveResourceBinding(probe.Id())
+            RenderApi_RetrieveResourceBinding(probe)
         };
 
         uniforms.dimensionPerProbe = {
@@ -1085,7 +1085,7 @@ void EnvGridRenderer::VoxelizeProbe(FrameBase* frame, const RenderSetup& renderS
     const FramebufferRef& framebuffer = outputTarget.GetFramebuffer();
     Assert(framebuffer.IsValid());
 
-    RenderProxyEnvProbe* envProbeProxy = static_cast<RenderProxyEnvProbe*>(RenderApi_GetRenderProxy(renderSetup.envProbe->Id()));
+    RenderProxyEnvProbe* envProbeProxy = static_cast<RenderProxyEnvProbe*>(RenderApi_GetRenderProxy(renderSetup.envProbe));
     Assert(envProbeProxy != nullptr);
 
     const EnvGridOptions& options = envGrid->GetOptions();
@@ -1117,7 +1117,7 @@ void EnvGridRenderer::VoxelizeProbe(FrameBase* frame, const RenderSetup& renderS
         probeIndex % options.density.x,
         (probeIndex % (options.density.x * options.density.y)) / options.density.x,
         probeIndex / (options.density.x * options.density.y),
-        RenderApi_RetrieveResourceBinding(probe.Id())
+        RenderApi_RetrieveResourceBinding(probe)
     };
 
     pushConstants.voxelTextureDimensions = Vec4u(voxelGridTextureExtent, 0);

@@ -546,7 +546,7 @@ void DebugDrawer::Render(FrameBase* frame, const RenderSetup& renderSetup)
 
     Assert(renderSetup.HasView());
 
-    RenderProxyCamera* cameraProxy = static_cast<RenderProxyCamera*>(RenderApi_GetRenderProxy(renderSetup.view->GetCamera().Id()));
+    RenderProxyCamera* cameraProxy = static_cast<RenderProxyCamera*>(RenderApi_GetRenderProxy(renderSetup.view->GetCamera()));
     Assert(cameraProxy != nullptr);
 
     const uint32 frameIndex = frame->GetFrameIndex();
