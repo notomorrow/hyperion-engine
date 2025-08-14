@@ -582,26 +582,23 @@ Array<Node*> Node::GetDescendants() const
     // add all children to the list
     Array<Node*> descendants;
 
-    // use a stack to traverse the tree
-    Array<Node*> stack;
-    stack.PushBack(const_cast<Node*>(this));
+    typedef void (*CollectFunc)(Array<Node*>& descendants, const Node& target, void* collectFunc);
 
-    while (stack.Any())
-    {
-        Node* current = stack.PopBack();
-        descendants.PushBack(current);
-        for (const Handle<Node>& child : current->GetChildren())
+    CollectFunc collectFunc = [](Array<Node *> &descendants, const Node& target, void *collectFunc)
         {
-            if (!child.IsValid())
-            {
-                continue;
-            }
-            stack.PushBack(child.Get());
-        }
-    }
+            descendants.Reserve(descendants.Size() + target.GetChildren().Size());
 
-    // remove the first element, which is this node
-    descendants.PopFront();
+            for (const Handle<Node> &child : target.GetChildren())
+            {
+                AssertDebug(child != nullptr);
+
+                descendants.PushBack(child.Get());
+
+                reinterpret_cast<CollectFunc>(collectFunc)(descendants, *child, collectFunc);
+            }
+        };
+
+    collectFunc(descendants, *this, collectFunc);
 
     return descendants;
 }

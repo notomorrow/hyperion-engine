@@ -139,11 +139,11 @@ public:
 
     ~RenderProxyList();
 
-    void BeginWrite();
-    void EndWrite();
+    HYP_API void BeginWrite();
+    HYP_API void EndWrite();
 
-    void BeginRead();
-    void EndRead();
+    HYP_API void BeginRead();
+    HYP_API void EndRead();
 
     template <SizeType Index>
     HYP_FORCE_INLINE auto GetResources() -> typename TupleElement_Tuple<Index, ResourceTrackerTypes>::Type*

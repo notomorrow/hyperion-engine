@@ -9,9 +9,9 @@ const Transform Transform::identity {};
 Transform::Transform()
     : translation(Vec3f::Zero()),
       scale(Vec3f::One()),
-      rotation(Quaternion::Identity())
+      rotation(Quaternion::Identity()),
+      matrix(Matrix4::Identity())
 {
-    UpdateMatrix();
 }
 
 Transform::Transform(const Vec3f& translation, const Vec3f& scale)
