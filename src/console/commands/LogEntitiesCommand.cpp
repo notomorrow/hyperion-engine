@@ -70,11 +70,6 @@ Result LogEntitiesCommand::Execute_Impl(const CommandLineArguments& args)
 
         json::JSONObject entityManagerJson;
 
-        if (!entityManager->GetScene())
-        {
-            return;
-        }
-
         entityManagerJson["scene"] = entityManager->GetScene()->GetName().LookupString();
         entityManagerJson["ownerThreadId"] = entityManager->GetOwnerThreadId().GetName().LookupString();
 

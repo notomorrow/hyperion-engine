@@ -145,7 +145,7 @@ public:
     {
         const ThreadId currentThreadId = Threads::CurrentThreadId();
 
-        Array<json::JSONValue>* jsonValuesArray = nullptr;
+        json::JSONArray* jsonValuesArray = nullptr;
 
         { // critical section - may invalidate iterators
             Mutex::Guard guard(m_valuesMutex);
@@ -154,7 +154,7 @@ public:
 
             if (it == m_perThreadValues.End())
             {
-                it = m_perThreadValues.Insert(currentThreadId, MakeUnique<Array<json::JSONValue>>()).first;
+                it = m_perThreadValues.Insert(currentThreadId, MakeUnique<json::JSONArray>()).first;
             }
 
             jsonValuesArray = it->second.Get();
