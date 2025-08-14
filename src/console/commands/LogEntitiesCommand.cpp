@@ -71,7 +71,7 @@ Result LogEntitiesCommand::Execute_Impl(const CommandLineArguments& args)
 
         json::JSONObject entityManagerJson;
 
-        entityManagerJson["scene"] = entityManager->GetScene()->GetName().LookupString();
+        entityManagerJson["scene"] = scene->GetName().LookupString();
         entityManagerJson["ownerThreadId"] = entityManager->GetOwnerThreadId().GetName().LookupString();
 
         json::JSONArray entityManagerEntitiesJson;
