@@ -46,10 +46,10 @@ namespace dotnet {
 class Class;
 } // namespace dotnet
 
-extern HYP_API const HypClass* GetClass(TypeId typeId);
-
 extern HYP_API bool IsA(const HypClass* hypClass, const void* ptr, TypeId typeId);
 extern HYP_API bool IsA(const HypClass* hypClass, const HypClass* instanceHypClass);
+
+extern HYP_API TypeId GetTypeIdForHypClass(const HypClass* hypClass);
 
 class HYP_API HypObjectBase
 {
@@ -74,22 +74,22 @@ public:
     {
         HYP_CORE_ASSERT(m_header, "Invalid HypObject!");
 
-        return ObjIdBase { m_header->container->GetObjectTypeId(), m_header->index + 1 };
+        return ObjIdBase { GetTypeIdForHypClass(m_header->hypClass), m_header->index + 1 };
     }
 
     HYP_FORCE_INLINE TypeId GetTypeId() const
     {
         HYP_CORE_ASSERT(m_header, "Invalid HypObject!");
 
-        return m_header->container->GetObjectTypeId();
+        return GetTypeIdForHypClass(m_header->hypClass);
     }
 
     HYP_FORCE_INLINE const HypClass* InstanceClass() const
     {
         HYP_CORE_ASSERT(m_header, "Invalid HypObject!");
-        HYP_CORE_ASSERT(m_header->container->GetHypClass(), "No HypClass defined for type");
+        HYP_CORE_ASSERT(m_header->hypClass, "No HypClass defined for type");
 
-        return m_header->container->GetHypClass();
+        return m_header->hypClass;
     }
 
     HYP_FORCE_INLINE HypObjectHeader* GetObjectHeader_Internal() const

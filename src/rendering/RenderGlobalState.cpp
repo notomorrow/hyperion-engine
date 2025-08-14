@@ -200,7 +200,7 @@ struct ResourceBindings
         AssertDebug(resource != nullptr);
 
         SubtypeResourceBindings& bindings = GetSubtypeBindings(resource->InstanceClass());
-        
+
         ObjIdBase resourceId = resource->Id();
         AssertDebug(resourceId.IsValid());
 
@@ -230,16 +230,15 @@ struct ResourceBindings
         Threads::AssertOnThread(g_renderThread | ThreadCategory::THREAD_CATEGORY_TASK);
 #endif
 
-
         if (!resource)
         {
             return Pair<uint32, void*>(~0u, nullptr); // invalid resource
         }
-        
+
         const SubtypeResourceBindings& bindings = const_cast<ResourceBindings*>(this)->GetSubtypeBindings(resource->InstanceClass());
 
         const ObjIdBase resourceId = resource->Id();
-        
+
         const auto* elem = bindings.indexAndMapping.TryGet(resourceId.ToIndex());
 
         AssertDebug(elem != nullptr, "Failed to retrieve resource binding for resource with ID: {}", resourceId);
@@ -252,7 +251,7 @@ struct ResourceBindings
 #ifdef HYP_DEBUG_MODE
         Threads::AssertOnThread(g_renderThread | ThreadCategory::THREAD_CATEGORY_TASK);
 #endif
-        
+
         AssertDebug(hypClass != nullptr);
 
         int staticIndex = hypClass->GetStaticIndex();
@@ -314,8 +313,7 @@ struct ResourceSubtypeData final
     WriteBufferDataFunction writeBufferDataFn;
 
     // == optional render proxy data ==
-    SparsePagedArray<IRenderProxy*, 256> proxies;
-    SparsePagedArray<int, 256> proxyVersions;
+    SparsePagedArray<IRenderProxy*, 1024> proxies;
     bool hasProxyData : 1;
 
     template <class ResourceType, class ProxyType>
@@ -595,7 +593,10 @@ static HYP_FORCE_INLINE void CopyRenderProxy(ResourceSubtypeData& subtypeData, c
 
     const uint32 idx = id.ToIndex();
 
+    AssertDebug(subtypeData.typeId == TypeId::ForType<ElementType>());
+
     subtypeData.proxies.Set(idx, static_cast<IRenderProxy*>(pNewProxy));
+
     subtypeData.indicesPendingUpdate.Set(idx, true);
 }
 
@@ -720,7 +721,7 @@ static inline void SyncResources(
             for (ElementType* pResource : changed)
             {
                 ObjId<ElementType> resourceId = pResource->Id();
-                
+
                 ProxyType* proxy = rhs.GetProxy(resourceId);
                 AssertDebug(proxy != nullptr);
 
@@ -861,7 +862,7 @@ void RenderApi_UpdateGpuData(const HypObjectBase* resource)
 
     const Pair<uint32, void*> bindingData = g_renderGlobalState->resourceBindings->Retrieve(resource);
     AssertDebug(bindingData.first != ~0u && bindingData.second != nullptr);
-    
+
     const uint32 idx = resourceId.ToIndex();
 
     IRenderProxy* pProxy = subtypeData.proxies.Get(idx);
@@ -1017,6 +1018,10 @@ void RenderApi_BeginFrame_RenderThread()
         }
 
         vfd.rplShared->BeginRead();
+
+#ifdef HYP_DEBUG_MODE
+        vfd.rplShared->debugIsSynced = true;
+#endif
 
         AssertDebug(vfd.rplShared->debugIsDestroyed == false, "RenderProxyList for view {} has been destroyed!", vfd.view->Id());
 
@@ -1189,6 +1194,10 @@ void RenderApi_EndFrame_RenderThread()
 
             delete &vfd;
 
+#ifdef HYP_DEBUG_MODE
+            it->second->rplShared->debugIsSynced = false;
+#endif
+
             it = frameData.viewFrameData.Erase(it);
 
             continue;
@@ -1242,7 +1251,6 @@ void RenderApi_EndFrame_RenderThread()
                     resource.Id(), i, slot);
 
                 subtypeData.proxies.EraseAt(i);
-                subtypeData.proxyVersions.EraseAt(i);
             }
 
             // safely release all the held resources:

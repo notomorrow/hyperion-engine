@@ -136,10 +136,6 @@ void main()
 
     output_color = vec4(moments, 0.0, 1.0);
 #else
-
-    const float metalness = GET_MATERIAL_PARAM(CURRENT_MATERIAL, MATERIAL_PARAM_METALNESS);
-    const float roughness = GET_MATERIAL_PARAM(CURRENT_MATERIAL, MATERIAL_PARAM_ROUGHNESS);
-
     vec4 previous_value = vec4(0.0);
 
     output_color.rgb = albedo.rgb;
