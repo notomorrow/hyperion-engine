@@ -20,7 +20,7 @@
 namespace hyperion {
 
 class Texture;
-using FontAtlasBitmap = Bitmap<4, ubyte>;
+using FontAtlasBitmap = Bitmap_RGBA8;
 
 struct HYP_API FontAtlasTextureSet
 {

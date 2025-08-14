@@ -106,8 +106,8 @@ void EnvProbe::Init()
         {
             m_prefilteredEnvMap = CreateObject<Texture>(TextureDesc {
                 TT_TEX2D,
-                TF_RGBA8,
-                Vec3u { 512, 512, 1 },
+                TF_RGBA16F, // @TODO: Make more efficient format, but need to not use compute
+                Vec3u { 128, 128, 1 },
                 TFM_LINEAR_MIPMAP,
                 TFM_LINEAR,
                 TWM_CLAMP_TO_EDGE,

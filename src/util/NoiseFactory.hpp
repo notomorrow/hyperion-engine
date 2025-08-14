@@ -62,7 +62,7 @@ public:
         return GetNoise(xyz.x, xyz.y, xyz.z);
     }
 
-    Bitmap<1> CreateBitmap(uint32 width, uint32 height, float scale = 1.0f);
+    Bitmap_R8 CreateBitmap(uint32 width, uint32 height, float scale = 1.0f);
 
 protected:
     Seed m_seed;

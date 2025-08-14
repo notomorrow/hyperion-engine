@@ -55,6 +55,9 @@ public:
     }
 
     virtual ~LightmapJob_CpuPathTracing() override = default;
+
+    virtual void GatherRays(uint32 maxRayHits, Array<LightmapRay>& outRays) override;
+    virtual void IntegrateRayHits(Span<const LightmapRay> rays, Span<const LightmapHit> hits, LightmapShadingType shadingType) override;
 };
 
 class HYP_API LightmapRenderer_CpuPathTracing : public ILightmapRenderer
@@ -90,8 +93,8 @@ private:
     };
 
     void TraceSingleRayOnCPU(LightmapJob* job, const LightmapRay& ray, LightmapRayHitPayload& outPayload);
-
-    static Vec3f EvaluateDiffuseLighting(Light* light, const LightShaderData& bufferData, const Vec3f& position, const Vec3f& normal);
+    float TraceShadowRay(LightmapJob* job, const Vec3f& pos, const Vec3f& dir, const Vec3f& wi);
+    Vec3f EvaluateDiffuseLighting(LightmapJob* job, Light* light, const LightShaderData& bufferData, const Vec3f& albedo, const Vec3f& position, const Vec3f& normal);
 
     static SharedCpuData* CreateSharedCpuData(RenderProxyList& rpl);
 

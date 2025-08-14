@@ -18,21 +18,11 @@
 namespace hyperion {
 
 template <TextureFormat Format>
-struct TextureFormatHelper
-{
-    static constexpr uint32 numComponents = NumComponents(Format);
-    static constexpr uint32 bytesPerComponent = BytesPerComponent(Format);
-    static constexpr bool isFloatType = uint32(Format) >= TF_RGBA16F && uint32(Format) <= TF_RGBA32F;
-
-    using ElementType = std::conditional_t<isFloatType, float, ubyte>;
-};
-
-template <TextureFormat Format>
 HYP_API void FillPlaceholderBuffer_Tex2D(Vec2u dimensions, ByteBuffer& outBuffer)
 {
     using Helper = TextureFormatHelper<Format>;
 
-    auto bitmap = Bitmap<Helper::numComponents, typename Helper::ElementType>(dimensions.x, dimensions.y);
+    auto bitmap = Bitmap<Format>(dimensions.x, dimensions.y);
 
     // Set to default color to assist in debugging
     for (uint32 y = 0; y < dimensions.y; y++)
@@ -59,7 +49,7 @@ HYP_API void FillPlaceholderBuffer_Cubemap(Vec2u dimensions, ByteBuffer& outBuff
     using Helper = TextureFormatHelper<Format>;
     static_assert(!Helper::isFloatType, "FillPlaceholderBuffer_Cubemap not implemented for floating point type textures");
 
-    auto bitmap = Bitmap<Helper::numComponents, typename Helper::ElementType>(dimensions.x, dimensions.y);
+    auto bitmap = Bitmap<Format>(dimensions.x, dimensions.y);
 
     // Set to default color to assist in debugging
     for (uint32 y = 0; y < dimensions.y; y++)

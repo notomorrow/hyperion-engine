@@ -102,9 +102,9 @@ struct LightmapUVMap
     MeshToUVIndicesMap meshToUvIndices;
 
     /*! \brief Write the UV map radiance data to RGBA32F format. */
-    Bitmap<4, float> ToBitmapRadiance() const;
+    Bitmap_RGBA8 ToBitmapRadiance() const;
     /*! \brief Write the UV map irradiance data to RGBA32F format. */
-    Bitmap<4, float> ToBitmapIrradiance() const;
+    Bitmap_RGBA8 ToBitmapIrradiance() const;
 };
 
 class LightmapUVBuilder

@@ -137,7 +137,7 @@ class LightmapTopLevelAccelerationStructure;
 
 struct LightmapRayHitPayload
 {
-    Vec3f throughput;
+    Vec3f albedo;
     Vec3f emissive;
     Vec3f radiance;
     Vec3f normal;
@@ -279,7 +279,7 @@ public:
     void Start();
     void Process();
 
-    void GatherRays(uint32 maxRayHits, Array<LightmapRay>& outRays);
+    virtual void GatherRays(uint32 maxRayHits, Array<LightmapRay>& outRays) = 0;
 
     void AddTask(TaskBatch* taskBatch);
 
@@ -287,7 +287,7 @@ public:
      *  \param rays The rays that were traced.
      *  \param hits The hits to integrate.
      */
-    void IntegrateRayHits(Span<const LightmapRay> rays, Span<const LightmapHit> hits, LightmapShadingType shadingType);
+    virtual void IntegrateRayHits(Span<const LightmapRay> rays, Span<const LightmapHit> hits, LightmapShadingType shadingType) = 0;
 
     bool IsCompleted() const;
 

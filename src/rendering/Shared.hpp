@@ -414,6 +414,17 @@ static inline constexpr bool FormatSupportsBlending(TextureFormat fmt)
     }
 }
 
+template <TextureFormat Format>
+struct TextureFormatHelper
+{
+    static constexpr uint32 numComponents = NumComponents(Format);
+    static constexpr uint32 bytesPerComponent = BytesPerComponent(Format);
+    static constexpr bool isSrgb = IsSrgbFormat(Format);
+    static constexpr bool isFloatType = uint32(Format) >= TF_RGBA16F && uint32(Format) <= TF_RGBA32F;
+
+    using ElementType = std::conditional_t<isFloatType, float, ubyte>;
+};
+
 HYP_STRUCT()
 struct TextureDesc
 {

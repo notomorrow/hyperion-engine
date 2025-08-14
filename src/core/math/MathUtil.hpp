@@ -603,21 +603,35 @@ public:
         }
     }
 
-    template <class T, class U = T>
-    HYP_FORCE_INLINE static constexpr U Pow(T value, T exponent)
+    template <class T>
+    HYP_FORCE_INLINE static constexpr HYP_ENABLE_IF(!isMathVectorV<T>, T) Pow(T value, T exponent)
     {
-        if constexpr (std::is_same_v<U, double>)
+        if constexpr (std::is_same_v<T, double>)
         {
             return pow(static_cast<double>(value), static_cast<double>(exponent));
         }
-        else if constexpr (std::is_same_v<U, float>)
+        else if constexpr (std::is_same_v<T, float>)
         {
             return powf(static_cast<float>(value), static_cast<float>(exponent));
         }
         else
         {
-            return static_cast<U>(powf(static_cast<float>(value), static_cast<float>(exponent)));
+            return static_cast<T>(powf(static_cast<float>(value), static_cast<float>(exponent)));
         }
+    }
+
+    template <class T>
+    HYP_FORCE_INLINE static constexpr HYP_ENABLE_IF(isMathVectorV<T>, T) Pow(const T& value, typename T::Type exponent)
+    {
+        T result;
+
+        // @TODO: simd
+        for (uint32 i = 0; i < std::size(result.values); i++)
+        {
+            result.values[i] = Pow(value.values[i], exponent);
+        }
+
+        return result;
     }
 
     template <class T>

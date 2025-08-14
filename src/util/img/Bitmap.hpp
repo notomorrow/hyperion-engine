@@ -20,14 +20,16 @@
 
 #include <core/Types.hpp>
 
+#include <rendering/Shared.hpp>
+
 namespace hyperion {
 
 class ByteWriter;
 
-template <class ComponentType, uint32 NumComponents>
+template <class ComponentType, uint32 NumComponents, bool IsSrgb = false>
 struct ConstPixelReference;
 
-template <class ComponentType, uint32 NumComponents>
+template <class ComponentType, uint32 NumComponents, bool IsSrgb = false>
 struct PixelReference
 {
     static constexpr uint32 numComponents = NumComponents;
@@ -54,14 +56,24 @@ struct PixelReference
             return 0.0f;
         }
 
+        float fv;
+
         if constexpr (std::is_same_v<ComponentType, ubyte>)
         {
-            return float(*(byteOffset + index)) / 255.0f;
+            fv = float(*(byteOffset + index)) / 255.0f;
         }
         else
         {
-            return float(*reinterpret_cast<ComponentType*>(reinterpret_cast<uintptr_t>(byteOffset) + (sizeof(ComponentType) * index)));
+            fv = float(*reinterpret_cast<ComponentType*>(reinterpret_cast<uintptr_t>(byteOffset) + (sizeof(ComponentType) * index)));
         }
+
+        if constexpr (IsSrgb)
+        {
+            // convert from sRGB to linear
+            fv = MathUtil::Pow(fv, 2.2f);
+        }
+
+        return fv;
     }
 
     HYP_FORCE_INLINE void SetComponent(uint32 index, float value)
@@ -69,6 +81,12 @@ struct PixelReference
         if (index >= numComponents || !byteOffset)
         {
             return;
+        }
+
+        if constexpr (IsSrgb)
+        {
+            // convert from linear to sRGB
+            value = MathUtil::Pow(value, 1.0f / 2.2f);
         }
 
         if constexpr (std::is_same_v<ComponentType, ubyte>)
@@ -149,6 +167,12 @@ struct PixelReference
             }
         }
 
+        if constexpr (IsSrgb)
+        {
+            // convert from sRGB to linear
+            rg = MathUtil::Pow(rg, 2.2f);
+        }
+
         return rg;
     }
 
@@ -162,6 +186,13 @@ struct PixelReference
         if (HYP_UNLIKELY(!byteOffset))
         {
             return;
+        }
+
+        if constexpr (IsSrgb)
+        {
+            // convert from linear to sRGB
+            r = MathUtil::Pow(r, 1.0f / 2.2f);
+            g = MathUtil::Pow(g, 1.0f / 2.2f);
         }
 
         if constexpr (std::is_same_v<ComponentType, ubyte>)
@@ -222,6 +253,12 @@ struct PixelReference
             }
         }
 
+        if constexpr (IsSrgb)
+        {
+            // convert from sRGB to linear
+            rgb = MathUtil::Pow(rgb, 2.2f);
+        }
+
         return rgb;
     }
 
@@ -235,6 +272,14 @@ struct PixelReference
         if (HYP_UNLIKELY(!byteOffset))
         {
             return;
+        }
+
+        if constexpr (IsSrgb)
+        {
+            // convert from linear to sRGB
+            r = MathUtil::Pow(r, 1.0f / 2.2f);
+            g = MathUtil::Pow(g, 1.0f / 2.2f);
+            b = MathUtil::Pow(b, 1.0f / 2.2f);
         }
 
         if constexpr (std::is_same_v<ComponentType, ubyte>)
@@ -315,6 +360,15 @@ struct PixelReference
             }
         }
 
+        if constexpr (IsSrgb)
+        {
+            // convert from sRGB to linear
+            Vec3f linear = MathUtil::Pow(rgba.GetXYZ(), 2.2f);
+            rgba.x = linear.x;
+            rgba.y = linear.y;
+            rgba.z = linear.z;
+        }
+
         return rgba;
     }
 
@@ -328,6 +382,15 @@ struct PixelReference
         if (HYP_UNLIKELY(!byteOffset))
         {
             return;
+        }
+
+        if constexpr (IsSrgb)
+        {
+            // convert from linear to sRGB
+            r = MathUtil::Pow(r, 1.0f / 2.2f);
+            g = MathUtil::Pow(g, 1.0f / 2.2f);
+            b = MathUtil::Pow(b, 1.0f / 2.2f);
+            // alpha is not converted to sRGB
         }
 
         if constexpr (std::is_same_v<ComponentType, ubyte>)
@@ -420,7 +483,7 @@ struct PixelReference
     }*/
 };
 
-template <class ComponentType, uint32 NumComponents>
+template <class ComponentType, uint32 NumComponents, bool IsSrgb>
 struct ConstPixelReference
 {
     static constexpr uint32 numComponents = NumComponents;
@@ -437,17 +500,17 @@ struct ConstPixelReference
     {
     }
 
-    HYP_FORCE_INLINE ConstPixelReference(const ConstPixelReference<ComponentType, NumComponents>& other) = default;
-    HYP_FORCE_INLINE ConstPixelReference& operator=(const ConstPixelReference<ComponentType, NumComponents>& other) = default;
-    HYP_FORCE_INLINE ConstPixelReference(ConstPixelReference<ComponentType, NumComponents>&& other) noexcept = default;
-    HYP_FORCE_INLINE ConstPixelReference& operator=(ConstPixelReference<ComponentType, NumComponents>&& other) noexcept = default;
+    HYP_FORCE_INLINE ConstPixelReference(const ConstPixelReference<ComponentType, NumComponents, IsSrgb>& other) = default;
+    HYP_FORCE_INLINE ConstPixelReference& operator=(const ConstPixelReference<ComponentType, NumComponents, IsSrgb>& other) = default;
+    HYP_FORCE_INLINE ConstPixelReference(ConstPixelReference<ComponentType, NumComponents, IsSrgb>&& other) noexcept = default;
+    HYP_FORCE_INLINE ConstPixelReference& operator=(ConstPixelReference<ComponentType, NumComponents, IsSrgb>&& other) noexcept = default;
 
-    HYP_FORCE_INLINE ConstPixelReference(const PixelReference<ComponentType, NumComponents>& other)
+    HYP_FORCE_INLINE ConstPixelReference(const PixelReference<ComponentType, NumComponents, IsSrgb>& other)
         : byteOffset(other.byteOffset)
     {
     }
 
-    HYP_FORCE_INLINE ConstPixelReference& operator=(const PixelReference<ComponentType, NumComponents>& other)
+    HYP_FORCE_INLINE ConstPixelReference& operator=(const PixelReference<ComponentType, NumComponents, IsSrgb>& other)
     {
         byteOffset = other.byteOffset;
         return *this;
@@ -460,14 +523,24 @@ struct ConstPixelReference
             return 0.0f;
         }
 
+        float fv;
+
         if constexpr (std::is_same_v<ComponentType, ubyte>)
         {
-            return float(*(byteOffset + index)) / 255.0f;
+            fv = float(*(byteOffset + index)) / 255.0f;
         }
         else
         {
-            return float(*reinterpret_cast<const ComponentType*>(reinterpret_cast<uintptr_t>(byteOffset) + (sizeof(ComponentType) * index)));
+            fv = float(*reinterpret_cast<const ComponentType*>(reinterpret_cast<uintptr_t>(byteOffset) + (sizeof(ComponentType) * index)));
         }
+
+        if constexpr (IsSrgb)
+        {
+            // convert from sRGB to linear
+            fv = MathUtil::Pow(fv, 2.2f);
+        }
+
+        return fv;
     }
 
     HYP_FORCE_INLINE float GetR() const
@@ -518,6 +591,12 @@ struct ConstPixelReference
             }
         }
 
+        if constexpr (IsSrgb)
+        {
+            // convert from sRGB to linear
+            rg = MathUtil::Pow(rg, 2.2f);
+        }
+
         return rg;
     }
 
@@ -557,6 +636,12 @@ struct ConstPixelReference
             {
                 rgb.z = *reinterpret_cast<const ComponentType*>(reinterpret_cast<uintptr_t>(byteOffset) + sizeof(ComponentType) * 2);
             }
+        }
+
+        if constexpr (IsSrgb)
+        {
+            // convert from sRGB to linear
+            rgb = MathUtil::Pow(rgb, 2.2f);
         }
 
         return rgb;
@@ -610,6 +695,15 @@ struct ConstPixelReference
             }
         }
 
+        if constexpr (IsSrgb)
+        {
+            // convert from sRGB to linear
+            Vec3f linear = MathUtil::Pow(rgba.GetXYZ(), 2.2f);
+            rgba.x = linear.x;
+            rgba.y = linear.y;
+            rgba.z = linear.z;
+        }
+
         return rgba;
     }
 
@@ -636,10 +730,17 @@ struct ConstPixelReference
     }*/
 };
 
-template <uint32 NumComponents, class PixelComponentType = ubyte>
+template <TextureFormat Format>
 class Bitmap
 {
 public:
+    using PixelComponentType = typename TextureFormatHelper<Format>::ElementType;
+    static constexpr uint32 numComponents = TextureFormatHelper<Format>::numComponents;
+    static constexpr bool isSrgb = TextureFormatHelper<Format>::isSrgb;
+
+    using PixelReferenceType = PixelReference<PixelComponentType, numComponents, isSrgb>;
+    using ConstPixelReferenceType = ConstPixelReference<PixelComponentType, numComponents, isSrgb>;
+
     Bitmap()
         : m_width(0),
           m_height(0)
@@ -654,9 +755,9 @@ public:
 
         const SizeType numPixels = m_width * m_height;
 
-        for (SizeType i = 0, j = 0; i < float_data.Size() && j < numPixels; i += NumComponents, j++)
+        for (SizeType i = 0, j = 0; i < float_data.Size() && j < numPixels; i += numComponents, j++)
         {
-            for (uint32 k = 0; k < NumComponents; k++)
+            for (uint32 k = 0; k < numComponents; k++)
             {
                 GetPixelReference(j).SetComponent(k, float_data[i + k]);
             }
@@ -739,41 +840,41 @@ public:
     {
         return SizeType(m_width)
             * SizeType(m_height)
-            * SizeType(NumComponents)
+            * SizeType(numComponents)
             * sizeof(PixelComponentType);
     }
 
     // Get reference to the pixel at the given 1-dimensional index
-    HYP_FORCE_INLINE PixelReference<PixelComponentType, NumComponents> GetPixelReference(uint32 idx)
+    HYP_FORCE_INLINE PixelReferenceType GetPixelReference(uint32 idx)
     {
         if (HYP_UNLIKELY(m_width * m_height == 0))
         {
-            return PixelReference<PixelComponentType, NumComponents>(nullptr);
+            return PixelReferenceType(nullptr);
         }
 
-        const uint32 byteIndex = SizeType(idx % (m_width * m_height)) * SizeType(NumComponents) * sizeof(PixelComponentType);
+        const uint32 byteIndex = SizeType(idx % (m_width * m_height)) * SizeType(numComponents) * sizeof(PixelComponentType);
 
-        return PixelReference<PixelComponentType, NumComponents>(m_buffer.Data() + byteIndex);
+        return PixelReferenceType(m_buffer.Data() + byteIndex);
     }
 
     // Get reference to pixel at x,y
-    HYP_FORCE_INLINE PixelReference<PixelComponentType, NumComponents> GetPixelReference(uint32 x, uint32 y)
+    HYP_FORCE_INLINE PixelReferenceType GetPixelReference(uint32 x, uint32 y)
     {
         const uint32 index = (((y) + m_height) % m_height) * m_width
             + ((x + m_width) % m_width);
 
-        return PixelReference<PixelComponentType, NumComponents>(m_buffer.Data() + index * NumComponents * sizeof(PixelComponentType));
+        return PixelReferenceType(m_buffer.Data() + index * numComponents * sizeof(PixelComponentType));
     }
 
     // Get reference to the pixel at the given 1-dimensional index
-    HYP_FORCE_INLINE ConstPixelReference<PixelComponentType, NumComponents> GetPixelReference(uint32 idx) const
+    HYP_FORCE_INLINE ConstPixelReferenceType GetPixelReference(uint32 idx) const
     {
-        return const_cast<Bitmap<NumComponents, PixelComponentType>*>(this)->GetPixelReference(idx);
+        return const_cast<Bitmap<Format>*>(this)->GetPixelReference(idx);
     }
 
-    HYP_FORCE_INLINE ConstPixelReference<PixelComponentType, NumComponents> GetPixelReference(uint32 x, uint32 y) const
+    HYP_FORCE_INLINE ConstPixelReferenceType GetPixelReference(uint32 x, uint32 y) const
     {
-        return const_cast<Bitmap<NumComponents, PixelComponentType>*>(this)->GetPixelReference(x, y);
+        return const_cast<Bitmap<Format>*>(this)->GetPixelReference(x, y);
     }
 
     HYP_FORCE_INLINE void SetPixel(uint32 x, uint32 y, const Vec4f& rgba)
@@ -785,16 +886,12 @@ public:
     {
         HYP_CORE_ASSERT(byteBuffer.Size() == GetByteSize(), "Byte buffer size does not match bitmap size! (%zu != %zu)", byteBuffer.Size(), GetByteSize());
 
-        const uint32 numComponents = NumComponents;
-
         m_buffer = byteBuffer;
     }
 
     void SetPixels(ByteBuffer&& byteBuffer)
     {
         HYP_CORE_ASSERT(byteBuffer.Size() == GetByteSize(), "Byte buffer size does not match bitmap size! (%zu != %zu)", byteBuffer.Size(), GetByteSize());
-
-        const uint32 numComponents = NumComponents;
 
         m_buffer = std::move(byteBuffer);
     }
@@ -822,12 +919,12 @@ public:
             {
                 for (uint32 y = 0; y < m_height; y++)
                 {
-                    ConstPixelReference<PixelComponentType, NumComponents> pixelReference = GetPixelReference(x, y);
+                    ConstPixelReferenceType pixelReference = GetPixelReference(x, y);
                     Vec4f rgba = pixelReference.GetRGBA();
 
                     const Color color { rgba };
 
-                    for (uint32 j = 0; j < MathUtil::Min(NumComponents, bytesPerPixel); j++)
+                    for (uint32 j = 0; j < MathUtil::Min(numComponents, bytesPerPixel); j++)
                     {
                         bytes[((m_height - y - 1) * m_width + x) * bytesPerPixel + j] = color.bytes[j];
                     }
@@ -840,9 +937,9 @@ public:
             {
                 for (uint32 y = 0; y < m_height; y++)
                 {
-                    ConstPixelReference<PixelComponentType, NumComponents> pixelReference = GetPixelReference(x, y);
+                    ConstPixelReferenceType pixelReference = GetPixelReference(x, y);
 
-                    for (uint32 j = 0; j < MathUtil::Min(NumComponents, bytesPerPixel); j++)
+                    for (uint32 j = 0; j < MathUtil::Min(numComponents, bytesPerPixel); j++)
                     {
                         bytes[((m_height - y - 1) * m_width + x) * bytesPerPixel + j] = ubyte(pixelReference.GetComponent(j) * 255.0f);
                     }
@@ -856,17 +953,17 @@ public:
     Array<float> GetUnpackedFloats() const
     {
         Array<float> floats;
-        floats.Resize(m_width * m_height * NumComponents);
+        floats.Resize(m_width * m_height * numComponents);
 
         for (uint32 x = 0; x < m_width; x++)
         {
             for (uint32 y = 0; y < m_height; y++)
             {
-                ConstPixelReference<PixelComponentType, NumComponents> pixelReference = GetPixelReference(x, y);
+                ConstPixelReferenceType pixelReference = GetPixelReference(x, y);
 
-                for (uint32 j = 0; j < NumComponents; j++)
+                for (uint32 j = 0; j < numComponents; j++)
                 {
-                    floats[(y * m_width + x) * NumComponents + j] = pixelReference.GetComponent(j);
+                    floats[(y * m_width + x) * numComponents + j] = pixelReference.GetComponent(j);
                 }
             }
         }
@@ -1033,8 +1130,8 @@ public:
      * \param offset The offset to blit the other bitmap at.
      * \param extent The dimensions of the area to blit.
      */
-    template <uint32 OtherNumComponents, class OtherPixelComponentType>
-    void Blit(const Bitmap<OtherNumComponents, OtherPixelComponentType>& other, Rect<uint32> srcRect, Rect<uint32> dstRect)
+    template <TextureFormat OtherFormat>
+    void Blit(const Bitmap<OtherFormat>& other, Rect<uint32> srcRect, Rect<uint32> dstRect)
     {
         const int dstStartX = dstRect.x0;
         const int dstEndX = dstRect.x1;
@@ -1101,5 +1198,19 @@ private:
     uint32 m_height;
     ByteBuffer m_buffer;
 };
+
+using Bitmap_RGBA8_SRGB = Bitmap<TF_RGBA8_SRGB>;
+using Bitmap_RGBA8 = Bitmap<TF_RGBA8>;
+using Bitmap_RGB8 = Bitmap<TF_RGB8>;
+using Bitmap_RG8 = Bitmap<TF_RG8>;
+using Bitmap_R8 = Bitmap<TF_R8>;
+using Bitmap_RGBA16F = Bitmap<TF_RGBA16F>;
+using Bitmap_RGB16F = Bitmap<TF_RGB16F>;
+using Bitmap_RG16F = Bitmap<TF_RG16F>;
+using Bitmap_R16F = Bitmap<TF_R16F>;
+using Bitmap_RGBA32F = Bitmap<TF_RGBA32F>;
+using Bitmap_RGB32F = Bitmap<TF_RGB32F>;
+using Bitmap_RG32F = Bitmap<TF_RG32F>;
+using Bitmap_R32F = Bitmap<TF_R32F>;
 
 } // namespace hyperion
