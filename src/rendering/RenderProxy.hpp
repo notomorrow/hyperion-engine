@@ -190,7 +190,7 @@ class RenderProxyEnvGrid final : public IRenderProxy
 public:
     WeakHandle<EnvGrid> envGrid;
     EnvGridShaderData bufferData {};
-    ObjId<EnvProbe> envProbes[g_maxBoundAmbientProbes];
+    EnvProbe* envProbes[g_maxBoundAmbientProbes];
 };
 
 struct alignas(16) LightShaderData

@@ -42,8 +42,8 @@ void WriteBufferData_MeshEntity(GpuBufferHolderBase* gpuBufferHolder, uint32 idx
     AssertDebug(idx == proxyCasted->entity.Id().ToIndex());
 
     proxyCasted->bufferData.entityIndex = proxyCasted->entity.Id().ToIndex();
-    proxyCasted->bufferData.materialIndex = RenderApi_RetrieveResourceBinding(proxyCasted->material.Id());
-    proxyCasted->bufferData.skeletonIndex = RenderApi_RetrieveResourceBinding(proxyCasted->skeleton.Id());
+    proxyCasted->bufferData.materialIndex = RenderApi_RetrieveResourceBinding(proxyCasted->material);
+    proxyCasted->bufferData.skeletonIndex = RenderApi_RetrieveResourceBinding(proxyCasted->skeleton);
 
     gpuBufferHolder->WriteBufferData(idx, &proxyCasted->bufferData, sizeof(proxyCasted->bufferData));
 }
@@ -178,19 +178,21 @@ void WriteBufferData_EnvGrid(GpuBufferHolderBase* gpuBufferHolder, uint32 idx, I
 
     for (auto it = std::begin(proxyCasted->envProbes); it != std::end(proxyCasted->envProbes); ++it)
     {
+        EnvProbe* envProbe = *it;
+
         // at first non-valid id, just set all remaining probe indices to -1
-        if (!it->IsValid())
+        if (!envProbe)
         {
             std::fill(proxyCasted->bufferData.probeIndices + offset, std::end(proxyCasted->bufferData.probeIndices), ~0u);
 
             break;
         }
 
-        const uint32 boundIndex = RenderApi_RetrieveResourceBinding(*it);
+        const uint32 boundIndex = RenderApi_RetrieveResourceBinding(envProbe);
 
         if (boundIndex == ~0u)
         {
-            HYP_LOG(Rendering, Warning, "EnvProbe {} not currently bound when writing buffer data for EnvGrid {}", *it, envGrid->Id());
+            HYP_LOG(Rendering, Warning, "EnvProbe {} not currently bound when writing buffer data for EnvGrid {}", envProbe->Id(), envGrid->Id());
 
             continue;
         }
@@ -256,7 +258,7 @@ void OnBindingChanged_Material(Material* material, uint32 prev, uint32 next)
 
         if (next != ~0u)
         {
-            IRenderProxy* proxy = RenderApi_GetRenderProxy(material->Id());
+            IRenderProxy* proxy = RenderApi_GetRenderProxy(material);
             Assert(proxy != nullptr);
 
             RenderProxyMaterial* proxyCasted = static_cast<RenderProxyMaterial*>(proxy);

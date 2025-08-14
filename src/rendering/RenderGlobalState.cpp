@@ -153,8 +153,7 @@ struct ResourceBindings
         }
     };
 
-    SparsePagedArray<SubtypeResourceBindings, 16> subtypeBindings;
-    HashMap<TypeId, SubtypeResourceBindings*> cache;
+    SparsePagedArray<SubtypeResourceBindings, 64> subtypeBindings;
 
     ResourceBindingAllocator<> meshEntityBindingsAllocator;
     ResourceBinder<Entity, &OnBindingChanged_MeshEntity> meshEntityBinder { &meshEntityBindingsAllocator };
@@ -200,10 +199,10 @@ struct ResourceBindings
 
         AssertDebug(resource != nullptr);
 
+        SubtypeResourceBindings& bindings = GetSubtypeBindings(resource->InstanceClass());
+        
         ObjIdBase resourceId = resource->Id();
         AssertDebug(resourceId.IsValid());
-
-        SubtypeResourceBindings& bindings = GetSubtypeBindings(resourceId.GetTypeId());
 
         if (binding == ~0u)
         {
@@ -231,22 +230,16 @@ struct ResourceBindings
         Threads::AssertOnThread(g_renderThread | ThreadCategory::THREAD_CATEGORY_TASK);
 #endif
 
-        return resource ? Retrieve(resource->Id()) : Pair<uint32, void*>(~0u, nullptr);
-    }
 
-    Pair<uint32, void*> Retrieve(ObjIdBase resourceId) const
-    {
-#ifdef HYP_DEBUG_MODE
-        Threads::AssertOnThread(g_renderThread | ThreadCategory::THREAD_CATEGORY_TASK);
-#endif
-
-        if (!resourceId.IsValid())
+        if (!resource)
         {
             return Pair<uint32, void*>(~0u, nullptr); // invalid resource
         }
+        
+        const SubtypeResourceBindings& bindings = const_cast<ResourceBindings*>(this)->GetSubtypeBindings(resource->InstanceClass());
 
-        const SubtypeResourceBindings& bindings = const_cast<ResourceBindings*>(this)->GetSubtypeBindings(resourceId.GetTypeId());
-
+        const ObjIdBase resourceId = resource->Id();
+        
         const auto* elem = bindings.indexAndMapping.TryGet(resourceId.ToIndex());
 
         AssertDebug(elem != nullptr, "Failed to retrieve resource binding for resource with ID: {}", resourceId);
@@ -254,19 +247,13 @@ struct ResourceBindings
         return elem ? *elem : Pair<uint32, void*>(~0u, nullptr);
     }
 
-    SubtypeResourceBindings& GetSubtypeBindings(TypeId typeId)
+    SubtypeResourceBindings& GetSubtypeBindings(const HypClass* hypClass)
     {
 #ifdef HYP_DEBUG_MODE
         Threads::AssertOnThread(g_renderThread | ThreadCategory::THREAD_CATEGORY_TASK);
 #endif
-        auto cacheIt = cache.Find(typeId);
-        if (cacheIt != cache.End())
-        {
-            return *cacheIt->second;
-        }
-
-        const HypClass* hypClass = GetClass(typeId);
-        AssertDebug(hypClass != nullptr, "TypeId {} does not have a HypClass!", typeId.Value());
+        
+        AssertDebug(hypClass != nullptr);
 
         int staticIndex = hypClass->GetStaticIndex();
         AssertDebug(staticIndex >= 0, "Invalid class: '{}' has no assigned static index!", *hypClass->GetName());
@@ -274,46 +261,7 @@ struct ResourceBindings
         SubtypeResourceBindings* bindings = subtypeBindings.TryGet(staticIndex);
         AssertDebug(bindings != nullptr, "No SubtypeBindings container found for {}", hypClass->GetName());
 
-        cache[typeId] = bindings;
-
         return *bindings;
-
-#if 0
-        auto cacheIt = cache.Find(typeId);
-        if (cacheIt != cache.End())
-        {
-            return *cacheIt->second;
-        }
-
-        const HypClass* hypClass = GetClass(typeId);
-        AssertDebug(hypClass != nullptr, "TypeId {} does not have a HypClass!", typeId.Value());
-
-        const HypClass* originalClass = hypClass;
-
-        int staticIndex = -1;
-
-        do
-        {
-            staticIndex = hypClass->GetStaticIndex();
-            AssertDebug(staticIndex >= 0, "Invalid class: '{}' has no assigned static index!", *hypClass->GetName());
-
-            if (SubtypeResourceBindings* bindings = subtypeBindings.TryGet(staticIndex))
-            {
-                cache[typeId] = bindings;
-
-                return *bindings;
-            }
-
-            HYP_LOG_TEMP("Could not find subtype bindings for {}", hypClass->GetName());
-
-            hypClass = hypClass->GetParent();
-        }
-        while (hypClass);
-#endif
-
-        HYP_FAIL(
-            "No SubtypeBindings container found for TypeId %u (HypClass: %s). Missing DECLARE_RENDER_DATA_CONTAINER() macro invocation for type?",
-            typeId.Value(), *GetClass(typeId)->GetName());
     }
 };
 
@@ -412,43 +360,17 @@ struct ResourceSubtypeData final
 
 struct ResourceContainer
 {
-    ResourceSubtypeData& GetSubtypeData(TypeId typeId)
+    ResourceSubtypeData& GetSubtypeData(const HypClass* hypClass)
     {
-        auto cacheIt = cache.Find(typeId);
-        if (cacheIt != cache.End())
-        {
-            return *cacheIt->second;
-        }
+        AssertDebug(hypClass != nullptr);
 
-        const HypClass* hypClass = GetClass(typeId);
-        AssertDebug(hypClass != nullptr, "TypeId {} does not have a HypClass!", typeId.Value());
+        int staticIndex = hypClass->GetStaticIndex();
+        AssertDebug(staticIndex >= 0, "Invalid class: '{}' has no assigned static index!", *hypClass->GetName());
 
-        int staticIndex = -1;
-
-        do
-        {
-            staticIndex = hypClass->GetStaticIndex();
-            AssertDebug(staticIndex >= 0, "Invalid class: '{}' has no assigned static index!", *hypClass->GetName());
-
-            if (ResourceSubtypeData* subtypeData = dataByType.TryGet(staticIndex))
-            {
-                // found the subtype data for this typeId - cache it for O(1) retrieval next time
-                cache[typeId] = subtypeData;
-
-                return *subtypeData;
-            }
-
-            hypClass = hypClass->GetParent();
-        }
-        while (hypClass);
-
-        HYP_FAIL(
-            "No SubtypeData container found for TypeId %u (HypClass: %s)! Missing DECLARE_RENDER_DATA_CONTAINER() macro invocation for type?",
-            typeId.Value(), *GetClass(typeId)->GetName());
+        return dataByType.Get(staticIndex);
     }
 
     SparsePagedArray<ResourceSubtypeData, 16> dataByType;
-    HashMap<TypeId, ResourceSubtypeData*> cache;
 };
 
 struct ResourceContainerFactoryRegistry
@@ -732,17 +654,15 @@ static inline void SyncResources(
     {
         AssertDebug(pResource != nullptr);
 
-        ElementType& resource = *pResource;
-
-        const ObjId<ElementType> resourceId = resource.Id();
+        const ObjId<ElementType> resourceId = pResource->Id();
         AssertDebug(resourceId.IsValid());
 
-        ResourceSubtypeData& subtypeData = g_resources.GetSubtypeData(resourceId.GetTypeId());
+        ResourceSubtypeData& subtypeData = g_resources.GetSubtypeData(pResource->InstanceClass());
         ResourceData* rd = subtypeData.data.TryGet(resourceId.ToIndex());
 
         if (!rd)
         {
-            rd = &*subtypeData.data.Emplace(resourceId.ToIndex(), &resource);
+            rd = &*subtypeData.data.Emplace(resourceId.ToIndex(), pResource);
         }
 
         subtypeData.indicesPendingDelete.Set(resourceId.ToIndex(), false);
@@ -769,12 +689,10 @@ static inline void SyncResources(
     {
         AssertDebug(pResource != nullptr);
 
-        ElementType& resource = *pResource;
-
-        const ObjId<ElementType> resourceId = resource.Id();
+        const ObjId<ElementType> resourceId = pResource->Id();
         AssertDebug(resourceId.IsValid());
 
-        ResourceSubtypeData& subtypeData = g_resources.GetSubtypeData(resourceId.GetTypeId());
+        ResourceSubtypeData& subtypeData = g_resources.GetSubtypeData(pResource->InstanceClass());
         ResourceData* rd = subtypeData.data.TryGet(resourceId.ToIndex());
         AssertDebug(rd != nullptr, "No resource data for {}", resourceId);
 
@@ -791,16 +709,18 @@ static inline void SyncResources(
         }
     }
 
-    Array<ObjId<ElementType>> changedIds;
+    Array<ElementType*> changed;
 
     if constexpr (!std::is_same_v<ProxyType, NullProxy>)
     {
-        lhs.GetChanged(changedIds);
+        lhs.GetChanged(changed);
 
-        if (changedIds.Any())
+        if (changed.Any())
         {
-            for (const ObjId<ElementType>& resourceId : changedIds)
+            for (ElementType* pResource : changed)
             {
+                ObjId<ElementType> resourceId = pResource->Id();
+                
                 ProxyType* proxy = rhs.GetProxy(resourceId);
                 AssertDebug(proxy != nullptr);
 
@@ -811,7 +731,7 @@ static inline void SyncResources(
 
                 lhs.SetProxy(resourceId, *proxy);
 
-                ResourceSubtypeData& subtypeData = g_resources.GetSubtypeData(resourceId.GetTypeId());
+                ResourceSubtypeData& subtypeData = g_resources.GetSubtypeData(pResource->InstanceClass());
 
                 CopyRenderProxy(subtypeData, resourceId, proxy);
             }
@@ -895,17 +815,18 @@ Array<Pair<View*, RenderCollector*>> RenderApi_GetAllRenderCollectors()
     return result;
 }
 
-IRenderProxy* RenderApi_GetRenderProxy(ObjIdBase resourceId)
+IRenderProxy* RenderApi_GetRenderProxy(const HypObjectBase* resource)
 {
-    AssertDebug(resourceId.IsValid());
-    AssertDebug(resourceId.GetTypeId() != TypeId::Void());
+    AssertDebug(resource != nullptr);
 
     Threads::AssertOnThread(g_renderThread);
 
-    ResourceSubtypeData& subtypeData = g_resources.GetSubtypeData(resourceId.GetTypeId());
+    ResourceSubtypeData& subtypeData = g_resources.GetSubtypeData(resource->InstanceClass());
     AssertDebug(subtypeData.hasProxyData,
         "Cannot use GetRenderProxy() for type which does not have a RenderProxy! TypeId: {}, HypClass {}",
         subtypeData.typeId.Value(), *GetClass(subtypeData.typeId)->GetName());
+
+    const ObjIdBase resourceId = resource->Id();
 
     if (!subtypeData.proxies.HasIndex(resourceId.ToIndex()))
     {
@@ -920,14 +841,15 @@ IRenderProxy* RenderApi_GetRenderProxy(ObjIdBase resourceId)
     return pProxy;
 }
 
-void RenderApi_UpdateGpuData(ObjIdBase resourceId)
+void RenderApi_UpdateGpuData(const HypObjectBase* resource)
 {
-    AssertDebug(resourceId.IsValid());
-    AssertDebug(resourceId.GetTypeId() != TypeId::Void());
+    AssertDebug(resource != nullptr);
 
     Threads::AssertOnThread(g_renderThread);
 
-    ResourceSubtypeData& subtypeData = g_resources.GetSubtypeData(resourceId.GetTypeId());
+    const ObjIdBase resourceId = resource->Id();
+
+    ResourceSubtypeData& subtypeData = g_resources.GetSubtypeData(resource->InstanceClass());
 
     AssertDebug(subtypeData.gpuBufferHolder != nullptr,
         "Cannot update GPU data for type which does not have a GpuBufferHolder! TypeId: {}, HypClass {}",
@@ -937,10 +859,10 @@ void RenderApi_UpdateGpuData(ObjIdBase resourceId)
         "Cannot use UpdateGpuData() for type which does not have a RenderProxy! TypeId: {}, HypClass {}",
         subtypeData.typeId.Value(), *GetClass(subtypeData.typeId)->GetName());
 
-    const uint32 idx = resourceId.ToIndex();
-
-    const Pair<uint32, void*> bindingData = g_renderGlobalState->resourceBindings->Retrieve(resourceId);
+    const Pair<uint32, void*> bindingData = g_renderGlobalState->resourceBindings->Retrieve(resource);
     AssertDebug(bindingData.first != ~0u && bindingData.second != nullptr);
+    
+    const uint32 idx = resourceId.ToIndex();
 
     IRenderProxy* pProxy = subtypeData.proxies.Get(idx);
     AssertDebug(pProxy != nullptr);
@@ -968,16 +890,6 @@ uint32 RenderApi_RetrieveResourceBinding(const HypObjectBase* resource)
 #endif
 
     return g_renderGlobalState->resourceBindings->Retrieve(resource).first;
-}
-
-uint32 RenderApi_RetrieveResourceBinding(ObjIdBase resourceId)
-{
-#ifdef HYP_DEBUG_MODE
-    // FIXME: Add better check to ensure it is from a render task thread.
-    Threads::AssertOnThread(g_renderThread | ThreadCategory::THREAD_CATEGORY_TASK);
-#endif
-
-    return g_renderGlobalState->resourceBindings->Retrieve(resourceId).first;
 }
 
 WorldShaderData* RenderApi_GetWorldBufferData()
@@ -1206,15 +1118,15 @@ void RenderApi_BeginFrame_RenderThread()
                     continue;
                 }
 
-                const ObjIdBase resourceId = ObjIdBase(subtypeData.typeId, uint32(i + 1));
+                HypObjectBase* resource = subtypeData.data.Get(i).resource;
 
                 AssertDebug(subtypeData.hasProxyData);
                 AssertDebug(subtypeData.writeBufferDataFn != nullptr);
 
-                const Pair<uint32, void*> bindingData = g_renderGlobalState->resourceBindings->Retrieve(resourceId);
+                const Pair<uint32, void*> bindingData = g_renderGlobalState->resourceBindings->Retrieve(resource);
                 AssertDebug(bindingData.first != ~0u && bindingData.second != nullptr,
                     "Failed to retrieve binding for resource: {} in frame {}, but it is marked as bound (index: {})",
-                    resourceId, slot, i);
+                    i, slot, i);
 
                 IRenderProxy* pProxy = subtypeData.proxies.Get(i);
                 AssertDebug(pProxy != nullptr);
