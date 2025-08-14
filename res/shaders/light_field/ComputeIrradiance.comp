@@ -33,7 +33,7 @@ HYP_DESCRIPTOR_SRV(LightFieldProbeDescriptorSet, InDepthImage) uniform textureCu
 HYP_DESCRIPTOR_SAMPLER(LightFieldProbeDescriptorSet, SamplerLinear) uniform sampler sampler_linear;
 HYP_DESCRIPTOR_SAMPLER(LightFieldProbeDescriptorSet, SamplerNearest) uniform sampler sampler_nearest;
 
-HYP_DESCRIPTOR_UAV(LightFieldProbeDescriptorSet, OutColorImage, format = rgba8) uniform image2D out_color_image;
+HYP_DESCRIPTOR_UAV(LightFieldProbeDescriptorSet, OutColorImage, format = rgba16f) uniform image2D out_color_image;
 HYP_DESCRIPTOR_UAV(LightFieldProbeDescriptorSet, OutDepthImage, format = rg16f) uniform image2D out_depth_image;
 
 HYP_DESCRIPTOR_CBUFF(LightFieldProbeDescriptorSet, UniformBuffer) uniform UniformBuffer

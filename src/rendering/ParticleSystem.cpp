@@ -80,7 +80,7 @@ struct RENDER_COMMAND(CreateParticleSpawnerBuffers)
     {
         static constexpr uint32 seed = 0xff;
 
-        Bitmap<1> noiseMap = SimplexNoiseGenerator(seed).CreateBitmap(128, 128, 1024.0f);
+        Bitmap_R8 noiseMap = SimplexNoiseGenerator(seed).CreateBitmap(128, 128, 1024.0f);
 
         HYP_GFX_CHECK(particleBuffer->Create());
         HYP_GFX_CHECK(indirectBuffer->Create());
@@ -98,7 +98,7 @@ struct RENDER_COMMAND(CreateParticleSpawnerBuffers)
         noiseBuffer->Copy(unpackedFloats.ByteSize(), unpackedFloats.Data());
 
         // don't need it anymore
-        noiseMap = Bitmap<1>();
+        noiseMap = Bitmap_R8();
 
         HYPERION_RETURN_OK;
     }

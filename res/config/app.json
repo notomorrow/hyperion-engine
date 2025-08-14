@@ -24,7 +24,7 @@
     "debug": {
       "reflections": false,
       "debugDrawer": {
-        "enabled": true,
+        "enabled": false,
         "envGridProbes": false
       },
       "irradiance": false
@@ -66,12 +66,12 @@
     "args": "-ResX=1920 -ResY=1080 -Profile=false -TraceURL=http://localhost:8000/trace"
   },
   "lightmapper": {
-    "maxRaysPerFrame": 1000,
+    "maxRaysPerFrame": 3000,
     "traceMode": 0,
-    "numThreadsPerJob": 8,
+    "numThreadsPerJob": 4,
     "radiance": true,
     "idealTrianglesPerJob": 64000,
-    "numSamples": 8,
+    "numSamples": 1,
     "irradiance": true
   }
 }

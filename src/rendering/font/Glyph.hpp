@@ -19,7 +19,7 @@ namespace hyperion {
 
 class Texture;
 
-using GlyphBitmap = Bitmap<4, ubyte>;
+using GlyphBitmap = Bitmap_RGBA8;
 
 struct GlyphImageData
 {

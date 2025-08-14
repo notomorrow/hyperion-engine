@@ -984,71 +984,69 @@ bool SceneOctree::TestRay(const Ray& ray, RayTestResults& outResults, bool useBv
     {
         for (const SceneOctreePayload::Entry& entry : m_payload.entries)
         {
+            if (!entry.value || (entry.value->InstanceClass() != Entity::Class()))
+            {
+                // we only want Entity instances, as we store their ID as a raw value (and they can have a mesh)
+                continue;
+            }
+
             RayTestResults aabbResult;
 
             if (useBvh)
             {
-                if (m_entityManager && entry.value != nullptr)
+                // If the entity has a BVH associated with it, use that instead of the AABB for more accuracy
+                if (MeshComponent* meshComponent = m_entityManager->TryGetComponent<MeshComponent>(entry.value);
+                    meshComponent && meshComponent->mesh && meshComponent->mesh->GetBVH().IsValid())
                 {
-                    if (!m_entityManager->HasEntity(entry.value->Id()))
+                    Matrix4 modelMatrix = Matrix4::Identity();
+                    Matrix4 normalMatrix = Matrix4::Identity();
+
+                    Ray localSpaceRay = ray;
+
+                    if (TransformComponent* transformComponent = m_entityManager->TryGetComponent<TransformComponent>(entry.value))
                     {
-                        continue;
+                        modelMatrix = transformComponent->transform.GetMatrix();
+
+                        Matrix4 invModelMatrix = modelMatrix.Inverted();
+                        normalMatrix = invModelMatrix.Transposed();
+
+                        localSpaceRay = invModelMatrix * ray;
                     }
 
-                    // If the entity has a BVH associated with it, use that instead of the AABB for more accuracy
-                    if (MeshComponent* meshComponent = m_entityManager->TryGetComponent<MeshComponent>(entry.value);
-                        meshComponent && meshComponent->mesh && meshComponent->mesh->GetBVH().IsValid())
+                    RayTestResults localBvhResults = meshComponent->mesh->GetBVH().TestRay(localSpaceRay);
+
+                    if (localBvhResults.Any())
                     {
-                        Matrix4 modelMatrix = Matrix4::Identity();
-                        Matrix4 normalMatrix = Matrix4::Identity();
+                        RayTestResults bvhResults;
 
-                        Ray localSpaceRay = ray;
-
-                        if (TransformComponent* transformComponent = m_entityManager->TryGetComponent<TransformComponent>(entry.value))
+                        for (RayHit hit : localBvhResults)
                         {
-                            modelMatrix = transformComponent->transform.GetMatrix();
+                            hit.id = entry.value->Id().Value();
+                            hit.userData = nullptr;
 
-                            Matrix4 invModelMatrix = modelMatrix.Inverted();
-                            normalMatrix = invModelMatrix.Transposed();
+                            Vec4f transformedNormal = normalMatrix * Vec4f(hit.normal, 0.0f);
+                            hit.normal = transformedNormal.GetXYZ().Normalized();
 
-                            localSpaceRay = invModelMatrix * ray;
+                            Vec4f transformedPosition = modelMatrix * Vec4f(hit.hitpoint, 1.0f);
+                            transformedPosition /= transformedPosition.w;
+
+                            hit.hitpoint = transformedPosition.GetXYZ();
+
+                            hit.distance = (hit.hitpoint - ray.position).Length();
+
+                            bvhResults.AddHit(hit);
                         }
 
-                        RayTestResults localBvhResults = meshComponent->mesh->GetBVH().TestRay(localSpaceRay);
+                        outResults.Merge(std::move(bvhResults));
 
-                        if (localBvhResults.Any())
-                        {
-                            RayTestResults bvhResults;
-
-                            for (RayHit hit : localBvhResults)
-                            {
-                                hit.id = entry.value->Id().Value();
-                                hit.userData = nullptr;
-
-                                Vec4f transformedNormal = normalMatrix * Vec4f(hit.normal, 0.0f);
-                                hit.normal = transformedNormal.GetXYZ().Normalized();
-
-                                Vec4f transformedPosition = modelMatrix * Vec4f(hit.hitpoint, 1.0f);
-                                transformedPosition /= transformedPosition.w;
-
-                                hit.hitpoint = transformedPosition.GetXYZ();
-
-                                hit.distance = (hit.hitpoint - ray.position).Length();
-
-                                bvhResults.AddHit(hit);
-                            }
-
-                            outResults.Merge(std::move(bvhResults));
-
-                            hasHit = true;
-                        }
-
-                        continue;
+                        hasHit = true;
                     }
-                    else
-                    {
-                        HYP_LOG(Scene, Warning, "Entity #{} (node: {}) does not have a BVH component, using AABB instead", entry.value->Id(), entry.value->GetName());
-                    }
+
+                    continue;
+                }
+                else
+                {
+                    HYP_LOG(Scene, Warning, "Entity #{} (node: {}) does not have a BVH component, using AABB instead", entry.value->Id(), entry.value->GetName());
                 }
             }
 

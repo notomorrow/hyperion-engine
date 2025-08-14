@@ -91,7 +91,7 @@ private:
     ComputePipelineRef m_updateParticles;
     GraphicsPipelineRef m_graphicsPipeline;
     ShaderRef m_shader;
-    Bitmap<1> m_noiseMap;
+    Bitmap_R8 m_noiseMap;
 };
 
 HYP_CLASS()

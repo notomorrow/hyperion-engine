@@ -865,7 +865,7 @@ bool Node::TestRay(const Ray& ray, RayTestResults& outResults, bool useBvh) cons
 
     if (ray.TestAABB(worldAabb))
     {
-        if (IsA<Entity>())
+        if (InstanceClass() == Entity::Class())
         {
             const Entity* entity = static_cast<const Entity*>(this);
 
