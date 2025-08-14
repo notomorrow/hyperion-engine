@@ -1,8 +1,20 @@
-/* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
+/* Copyright (c) 2025 No Tomorrow Games. All rights reserved. */
 
 #include <core/object/ObjectPool.hpp>
+#include <core/object/HypClass.hpp>
 
 namespace hyperion {
+
+HYP_API void ReleaseHypClassInstance(const HypClass* hypClass, uint32 index)
+{
+    HYP_CORE_ASSERT(hypClass != nullptr, "HypClass is null");
+    HYP_CORE_ASSERT(index != ~0u, "Invalid index");
+
+    ObjectContainerBase* container = hypClass->GetObjectContainer();
+    HYP_CORE_ASSERT(container != nullptr, "HypClass has no ObjectContainer");
+
+    hypClass->GetObjectContainer()->ReleaseIndex(index);
+}
 
 static ObjectPool::ObjectContainerMap g_objectContainerMap {};
 

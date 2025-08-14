@@ -199,11 +199,14 @@ void ReflectionProbeRenderer::RenderProbe(FrameBase* frame, const RenderSetup& r
     if (!rpl.GetMeshEntities().GetDiff().NeedsUpdate()
         && !rpl.GetLights().GetDiff().NeedsUpdate())
     {
-        // no need to render it just yet if there are no mesh entities
         return;
     }
 
     RenderCollector& renderCollector = RenderApi_GetRenderCollector(view);
+
+    HYP_LOG(Rendering, Info, "Render EnvProbe {} with {} mesh entities (shared: {}), num total draw calls: {}", envProbe->Id(), rpl.GetMeshEntities().NumCurrent(),
+        rpl.isShared,
+        renderCollector.NumDrawCallsCollected());
 
     renderCollector.ExecuteDrawCalls(frame, renderSetup, ((1u << RB_OPAQUE) | (1u << RB_TRANSLUCENT)));
 
@@ -227,8 +230,6 @@ void ReflectionProbeRenderer::RenderProbe(FrameBase* frame, const RenderSetup& r
 
     if (SkyProbe* skyProbe = ObjCast<SkyProbe>(envProbe))
     {
-        HYP_LOG_TEMP("Render SkyProbe {} with {} mesh entities", envProbe->Id(), renderCollector.NumDrawCallsCollected());
-
         Assert(skyProbe->GetSkyboxCubemap().IsValid());
 
         const GpuImageRef& dstImage = skyProbe->GetSkyboxCubemap()->GetGpuImage();
@@ -274,6 +275,8 @@ void ReflectionProbeRenderer::ComputePrefilteredEnvMap(FrameBase* frame, const R
         uint32 numBoundLights;
         alignas(16) uint32 lightIndices[16];
     };
+    
+    HYP_LOG(Rendering, Debug, "Computing Env Map for EnvProbe {}", envProbe->Id());
 
     ShaderProperties shaderProperties;
 
@@ -329,7 +332,6 @@ void ReflectionProbeRenderer::ComputePrefilteredEnvMap(FrameBase* frame, const R
     AssertDebug(framebuffer.IsValid());
 
     AttachmentBase* colorAttachment = framebuffer->GetAttachment(0);
-
     AttachmentBase* normalsAttachment = framebuffer->GetAttachment(1);
     AttachmentBase* momentsAttachment = framebuffer->GetAttachment(2);
 
@@ -382,13 +384,6 @@ void ReflectionProbeRenderer::ComputePrefilteredEnvMap(FrameBase* frame, const R
     }
 
     frame->renderQueue << InsertBarrier(prefilteredEnvMap->GetGpuImage(), RS_SHADER_RESOURCE);
-
-    // for (uint32 frameIndex = 0; frameIndex < g_framesInFlight; frameIndex++)
-    // {
-    //     g_renderGlobalState->globalDescriptorTable->GetDescriptorSet("Global", frameIndex)->SetElement("EnvProbeTextures", m_textureSlot, prefilteredEnvMap->GetRenderResource().GetImageView());
-    //     HYP_LOG(EnvProbe, Debug, "Set EnvProbe texture slot {} for envprobe {} in global descriptor table",
-    //         m_envProbe->GetTextureSlot(), m_envProbe->Id());
-    // }
 
     DelegateHandler* delegateHandle = new DelegateHandler();
     *delegateHandle = frame->OnFrameEnd.Bind([delegateHandle, uniformBuffer = std::move(uniformBuffer), convolveProbeComputePipeline = std::move(convolveProbeComputePipeline), descriptorTable = std::move(descriptorTable)](...) mutable
@@ -668,6 +663,11 @@ void ReflectionProbeRenderer::ComputeSH(FrameBase* frame, const RenderSetup& ren
             // Enqueue on game thread, not safe to write on render thread.
             Threads::GetThread(g_gameThread)->GetScheduler().Enqueue([envProbe = std::move(envProbe), shData = readbackBuffer.sh]()
                 {
+                    HYP_LOG(Rendering, Info, "EnvProbe {} SH data computed:", envProbe->Id());
+                    for (uint32 i = 0; i < 9; i++)
+                    {
+                        HYP_LOG(Rendering, Info, "\tSH[{}] = {}", i, shData.values[i]);
+                    }
                     envProbe->SetSphericalHarmonicsData(shData);
                 },
                 TaskEnqueueFlags::FIRE_AND_FORGET);
