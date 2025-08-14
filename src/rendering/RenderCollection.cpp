@@ -318,12 +318,12 @@ template <class T>
 static inline void UpdateRefs(T& renderProxyList)
 {
     AssertDebug(renderProxyList.useRefCounting);
-    
-    ForEachResourceTracker(renderProxyList.resourceTrackers.ToSpan(), []<class... Args>(Args&&... args) {
-        UpdateRefs_Impl(std::forward<Args>(args)...);
-    });
-}
 
+    ForEachResourceTracker(renderProxyList.resourceTrackers.ToSpan(), []<class... Args>(Args&&... args)
+        {
+            UpdateRefs_Impl(std::forward<Args>(args)...);
+        });
+}
 
 RenderProxyList::RenderProxyList(bool isShared, bool useRefCounting)
     : isShared(isShared),
@@ -346,48 +346,48 @@ RenderProxyList::RenderProxyList(bool isShared, bool useRefCounting)
                 {
                     ResourceTrackerType* resourceTrackerCasted = static_cast<ResourceTrackerType*>(resourceTracker);
                     resourceTrackerCasted->Advance(/* clearNextState */ true);
-                    
+
                     HashSet<HypObjectBase*> releasedObjects;
-                    
+
                     const auto releaseRefs = [&](auto& elements)
                     {
                         // Release weak references to all tracked elements
                         for (auto* elem : elements)
                         {
                             AssertDebug(elem != nullptr);
-                            
+
                             HypObjectBase* elemCasted = reinterpret_cast<HypObjectBase*>(elem);
                             AssertDebug(elemCasted->GetObjectHeader_Internal()->GetRefCountStrong() > 0);
-                            
+
                             AssertDebug(!releasedObjects.Contains(elemCasted));
-                            
+
                             elemCasted->GetObjectHeader_Internal()->DecRefStrong();
-                            
+
                             releasedObjects.Insert(elemCasted);
                         }
                     };
-                    
+
                     Assert(!resourceTrackerCasted->GetDiff().NeedsUpdate(),
-                           "Update needed when resources are being released! This will lead to improper ref counts!");
-                    
+                        "Update needed when resources are being released! This will lead to improper ref counts!");
+
                     Array<typename ResourceTrackerType::TElementType> elements;
                     // get current REMOVED elements
                     resourceTrackerCasted->GetRemoved(elements, false);
                     releaseRefs(elements);
                     elements.Clear();
-                    
+
                     // get current ADDED elements
                     resourceTrackerCasted->GetAdded(elements, false);
                     releaseRefs(elements);
                     elements.Clear();
-                    
+
                     // advance, moving the current elements over to the REMOVED bin.
                     resourceTrackerCasted->Advance(/* clearNextState */ true);
-                    
+
                     // release refs on elements that were moved over
                     resourceTrackerCasted->GetRemoved(elements, false);
                     releaseRefs(elements);
-                    
+
                     AssertDebug(resourceTrackerCasted->NumCurrent() == 0);
                 };
             }
@@ -398,6 +398,24 @@ RenderProxyList::~RenderProxyList()
 {
 #ifdef HYP_DEBUG_MODE
     debugIsDestroyed = true;
+#endif
+
+#ifdef HYP_DEBUG_MODE
+    int numRenderProxies = 0;
+
+    ForEachResourceTracker(resourceTrackers.ToSpan(), [&](auto&& resourceTracker)
+        {
+            for (Bitset::BitIndex bit : resourceTracker.GetSubclassIndices())
+            {
+                auto&& impl = resourceTracker.GetSubclassImpl(int(bit));
+                numRenderProxies += impl.proxies.Count();
+            }
+        });
+
+    HYP_LOG(Rendering, Debug, "RenderProxyList destroyed with {} render proxies still in it", numRenderProxies);
+    AssertDebug(numRenderProxies == 0 || !debugIsSynced,
+        "RenderProxyList destroyed with render proxies still in it!\n"
+        "This could cause danglng pointers as the RenderGlobalState copies the pointers (see SyncDependencies() in RenderGlobalState.cpp)");
 #endif
 
     // Have to dec refs on all objects we hold a strong reference to.
@@ -449,7 +467,7 @@ void RenderProxyList::BeginWrite()
 void RenderProxyList::EndWrite()
 {
     AssertDebug(state == CS_WRITING);
-    
+
     if (useRefCounting)
     {
         UpdateRefs(*this);

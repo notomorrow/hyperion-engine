@@ -26,6 +26,7 @@ struct ObjectReference;
 } // namespace dotnet
 
 class IResource;
+class ObjectContainerBase;
 
 struct HypMember;
 class HypProperty;
@@ -385,6 +386,11 @@ public:
         return false;
     }
 
+    virtual ObjectContainerBase* GetObjectContainer() const
+    {
+        return nullptr;
+    }
+
     virtual HypClassAllocationMethod GetAllocationMethod() const = 0;
 
     HYP_FORCE_INLINE bool UseHandles() const
@@ -709,6 +715,12 @@ public:
     virtual bool IsValid() const override
     {
         return true;
+    }
+
+    virtual ObjectContainerBase* GetObjectContainer() const override
+    {
+        static ObjectContainer<T>& container = ObjectPool::GetObjectContainerMap().GetOrCreate<T>();
+        return &container;
     }
 
     virtual HypClassAllocationMethod GetAllocationMethod() const override

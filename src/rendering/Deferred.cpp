@@ -661,7 +661,7 @@ void EnvGridPass::Render(FrameBase* frame, const RenderSetup& rs)
 #pragma region ReflectionsPass
 
 ReflectionsPass::ReflectionsPass(Vec2u extent, GBuffer* gbuffer, const GpuImageViewRef& mipChainImageView, const GpuImageViewRef& deferredResultImageView)
-    : FullScreenPass(TF_R10G10B10A2, extent, gbuffer),
+    : FullScreenPass(TF_RGBA16F, extent, gbuffer),
       m_mipChainImageView(mipChainImageView),
       m_deferredResultImageView(deferredResultImageView),
       m_isFirstFrame(true)
@@ -913,6 +913,8 @@ void ReflectionsPass::Render(FrameBase* frame, const RenderSetup& rs)
             ++numRenderedEnvProbes;
         }
     }
+
+    HYP_LOG(Rendering, Debug, "Rendered {} env probes", numRenderedEnvProbes);
 
     if (ShouldRenderSSR())
     {
@@ -1777,8 +1779,8 @@ void DeferredRenderer::RenderFrameForView(FrameBase* frame, const RenderSetup& r
 
     const bool useTemporalAa = passData.temporalAa != nullptr && m_rendererConfig.taaEnabled;
 
-    const bool useReflectionProbes = rpl.GetEnvProbes().GetElements<SkyProbe>().Any()
-        || rpl.GetEnvProbes().GetElements<ReflectionProbe>().Any();
+    const bool useReflectionProbes = true; /*rpl.GetEnvProbes().GetElements<SkyProbe>().Any()
+         || rpl.GetEnvProbes().GetElements<ReflectionProbe>().Any();*/
 
     if (useTemporalAa)
     {

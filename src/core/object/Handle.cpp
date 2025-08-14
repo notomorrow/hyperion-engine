@@ -5,13 +5,23 @@
 
 namespace hyperion {
 
+HYP_API TypeId GetTypeIdForHypClass(const HypClass* hypClass)
+{
+    if (hypClass == nullptr)
+    {
+        return TypeId::Void();
+    }
+
+    return hypClass->GetTypeId();
+}
+
 #pragma region AnyHandle
 
 const AnyHandle AnyHandle::empty = {};
 
 AnyHandle::AnyHandle(HypObjectBase* hypObjectPtr)
     : ptr(hypObjectPtr),
-      typeId(hypObjectPtr ? hypObjectPtr->m_header->container->GetObjectTypeId() : TypeId::Void())
+      typeId(hypObjectPtr ? GetTypeIdForHypClass(hypObjectPtr->m_header->hypClass) : TypeId::Void())
 {
     if (IsValid())
     {
@@ -122,7 +132,7 @@ AnyHandle::IdType AnyHandle::Id() const
         return IdType();
     }
 
-    return IdType { ptr->m_header->container->GetObjectTypeId(), ptr->m_header->index + 1 };
+    return IdType { ptr->m_header->hypClass->GetTypeId(), ptr->m_header->index + 1 };
 }
 
 TypeId AnyHandle::GetTypeId() const

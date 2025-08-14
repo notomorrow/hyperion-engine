@@ -34,6 +34,8 @@ class ObjectContainerBase;
 struct HypObjectHeader;
 class HypClass;
 
+HYP_API extern void ReleaseHypClassInstance(const HypClass* hypClass, uint32 index);
+
 class ObjectContainerBase
 {
 public:
@@ -73,13 +75,13 @@ protected:
 /*! \brief Metadata for a generic object in the object pool. */
 struct HypObjectHeader
 {
-    ObjectContainerBase* container;
+    const HypClass* hypClass;
     uint32 index;
     volatile int32 refCountStrong;
     volatile int32 refCountWeak;
 
     HypObjectHeader()
-        : container(nullptr),
+        : hypClass(nullptr),
           index(~0u),
           refCountStrong(0),
           refCountWeak(0)
@@ -158,7 +160,7 @@ struct HypObjectHeader
             if (AtomicDecrement(&refCountWeak) == 0)
             {
                 // Free the slot for this
-                container->ReleaseIndex(index);
+                ReleaseHypClassInstance(hypClass, index);
             }
 
             return 0;
@@ -183,7 +185,7 @@ struct HypObjectHeader
             if (AtomicAdd(&refCountStrong, 0) == 0)
             {
                 // Free the slot for this
-                container->ReleaseIndex(index);
+                ReleaseHypClassInstance(hypClass, index);
             }
 
             return 0;
@@ -234,12 +236,11 @@ struct HypObjectMemory final : HypObjectHeader
 template <class T>
 static inline void ObjectContainer_OnBlockAllocated(void* ctx, HypObjectMemory<T>* elements, uint32 offset, uint32 count)
 {
-    ObjectContainerBase* container = static_cast<ObjectContainer<T>*>(ctx);
-    HYP_CORE_ASSERT(container != nullptr);
+    static const HypClass* hypClass = T::Class();
 
     for (uint32 index = 0; index < count; index++)
     {
-        elements[index].container = container;
+        elements[index].hypClass = hypClass;
         elements[index].index = offset + index;
     }
 }

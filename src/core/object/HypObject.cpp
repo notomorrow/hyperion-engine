@@ -86,10 +86,10 @@ HypObjectInitializerGuardBase::~HypObjectInitializerGuardBase()
 HypObjectBase* HypObjectHeader::GetObjectPointer(HypObjectHeader* header)
 {
     AssertDebug(header != nullptr);
-    AssertDebug(header->container != nullptr);
+    AssertDebug(header->hypClass != nullptr);
 
     // get offset
-    const SizeType alignment = header->container->GetHypClass()->GetAlignment();
+    const SizeType alignment = header->hypClass->GetAlignment();
     const SizeType headerOffset = ((sizeof(HypObjectHeader) + alignment - 1) / alignment) * alignment;
 
     // get pointer to object
@@ -101,14 +101,15 @@ HypObjectBase* HypObjectHeader::GetObjectPointer(HypObjectHeader* header)
 void HypObjectHeader::DestructThisObject(HypObjectHeader* header)
 {
     AssertDebug(header != nullptr);
-    
+    AssertDebug(header->hypClass != nullptr);
+
     // get offset
-    const SizeType alignment = header->container->GetHypClass()->GetAlignment();
+    const SizeType alignment = header->hypClass->GetAlignment();
     const SizeType headerOffset = ((sizeof(HypObjectHeader) + alignment - 1) / alignment) * alignment;
 
     // get pointer to object
     HypObjectBase* ptr = reinterpret_cast<HypObjectBase*>(reinterpret_cast<uintptr_t>(header) + headerOffset);
-    
+
     ptr->~HypObjectBase();
 }
 
