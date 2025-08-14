@@ -21,6 +21,7 @@ namespace hyperion {
 
 class Texture;
 struct LightmapUVMap;
+class LightmapJob;
 class RenderProxyLightmapVolume;
 
 HYP_ENUM()
@@ -143,7 +144,7 @@ public:
 
     const LightmapElement* GetElement(uint32 index) const;
 
-    bool BuildElementTextures(const LightmapUVMap& uvMap, uint32 index);
+    bool BuildElementTextures(LightmapJob* job);
     
     void UpdateRenderProxy(RenderProxyLightmapVolume* proxy);
 

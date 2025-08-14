@@ -1493,10 +1493,10 @@ void EditorSubsystem::InitViewport()
                 return UIEventHandlerResult::STOP_BUBBLING;
             }
 
-            if (m_camera->GetCameraController()->GetInputHandler()->OnClick(event))
-            {
-                return UIEventHandlerResult::STOP_BUBBLING;
-            }
+            // if (m_camera->GetCameraController()->GetInputHandler()->OnClick(event))
+            // {
+            //     return UIEventHandlerResult::STOP_BUBBLING;
+            // }
 
             if (GetWorld()->GetGameState().IsEditor())
             {
@@ -1529,6 +1529,8 @@ void EditorSubsystem::InitViewport()
                         if (ObjId<Entity> entityId = ObjId<Entity>(ObjIdBase { TypeId::ForType<Entity>(), hit.id }))
                         {
                             Handle<Entity> entity { entityId };
+                            HYP_LOG(Editor, Debug, "Clicked on entity: {} ({})", *entity->GetName(), entityId);
+
                             EntityManager* entityManager = entity->GetEntityManager();
 
                             if (!entityManager)

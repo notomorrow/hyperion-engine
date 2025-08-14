@@ -14,9 +14,9 @@ NoiseGenerator::NoiseGenerator(NoiseGenerationType type, Seed seed)
 {
 }
 
-Bitmap<1> NoiseGenerator::CreateBitmap(uint32 width, uint32 height, float scale)
+Bitmap_R8 NoiseGenerator::CreateBitmap(uint32 width, uint32 height, float scale)
 {
-    Bitmap<1> bitmap(width, height);
+    Bitmap_R8 bitmap(width, height);
 
     for (uint32 x = 0; x < width; x++)
     {

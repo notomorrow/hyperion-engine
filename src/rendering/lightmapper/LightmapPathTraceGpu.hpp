@@ -19,6 +19,9 @@ public:
     }
 
     virtual ~LightmapJob_GpuPathTracing() override = default;
+
+    virtual void GatherRays(uint32 maxRayHits, Array<LightmapRay>& outRays) override;
+    virtual void IntegrateRayHits(Span<const LightmapRay> rays, Span<const LightmapHit> hits, LightmapShadingType shadingType) override;
 };
 
 class HYP_API LightmapRenderer_GpuPathTracing : public ILightmapRenderer

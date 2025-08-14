@@ -429,12 +429,16 @@ Vec4f Texture::Sample(Vec3f uvw, uint32 faceIndex)
     {
         HYP_LOG_ONCE(Texture, Warning, "Texture is not ready, cannot sample");
 
+        HYP_BREAKPOINT;
+
         return Vec4f::Zero();
     }
 
     if (faceIndex >= NumFaces())
     {
         HYP_LOG_ONCE(Texture, Error, "Face index out of bounds: {} >= {}", faceIndex, NumFaces());
+
+        HYP_BREAKPOINT;
 
         return Vec4f::Zero();
     }
@@ -443,12 +447,9 @@ Vec4f Texture::Sample(Vec3f uvw, uint32 faceIndex)
     {
         HYP_LOG_ONCE(Texture, Warning, "Texture asset is not valid, cannot sample");
 
-        return Vec4f::Zero();
-    }
+        HYP_BREAKPOINT;
 
-    if (!m_asset->IsLoaded())
-    {
-        HYP_LOG_ONCE(Texture, Debug, "Texture does not have data loaded, will be streamed in");
+        return Vec4f::Zero();
     }
 
     ResourceHandle resourceHandle = ResourceHandle(*m_asset->GetResource());
@@ -456,6 +457,8 @@ Vec4f Texture::Sample(Vec3f uvw, uint32 faceIndex)
     if (!resourceHandle)
     {
         HYP_LOG_ONCE(Texture, Warning, "Texture resource handle is not valid, cannot sample");
+
+        HYP_BREAKPOINT;
 
         return Vec4f::Zero();
     }
@@ -487,12 +490,17 @@ Vec4f Texture::Sample(Vec3f uvw, uint32 faceIndex)
         + coord.y * (textureData->desc.extent.x * bytesPerComponent * numComponents)
         + coord.x * bytesPerComponent * numComponents;
 
-    if (index + (bytesPerComponent * numComponents) >= textureData->imageData.Size())
+    if (index + (bytesPerComponent * numComponents) > textureData->imageData.Size())
     {
-        HYP_LOG_ONCE(Texture, Warning, "Sample() call would attempt to read out of bounds of data for Texture {} ({})!\n\tTexel index: {}, texture data buffer size: {}, coord: {}, dimensions: {}, num faces: {}",
+        HYP_LOG_ONCE(Texture, Warning, "Sample() call would attempt to read out of bounds of data for Texture {} ({})!\n"
+                                       "Texture format: {}, Texel index: {}, texture data buffer size: {}, coord: {}, dimensions: {}, num faces: {}, bytes per component: {}, num components: {}",
             GetName(), Id(),
+            EnumToString(textureData->desc.format),
             index, textureData->imageData.Size(),
-            coord, textureData->desc.extent, NumFaces());
+            coord, textureData->desc.extent, NumFaces(),
+            bytesPerComponent, numComponents);
+
+        HYP_BREAKPOINT;
 
         return Vec4f::Zero();
     }
@@ -550,23 +558,45 @@ Vec4f Texture::Sample(Vec3f uvw, uint32 faceIndex)
     }
     else
     {
-        // ubyte format
-        switch (numComponents)
+        if (IsSrgbFormat(textureData->desc.format))
         {
-        case 1:
-            return PixelReference<ubyte, 1>(textureData->imageData.Data() + index).GetRGBA();
-        case 2:
-            return PixelReference<ubyte, 2>(textureData->imageData.Data() + index).GetRGBA();
-        case 3:
-            return PixelReference<ubyte, 3>(textureData->imageData.Data() + index).GetRGBA();
-        case 4:
-            return PixelReference<ubyte, 4>(textureData->imageData.Data() + index).GetRGBA();
-        default:
-            break;
+            // convert from sRGB to linear
+            switch (numComponents)
+            {
+            case 1:
+                return PixelReference<ubyte, 1, true>(textureData->imageData.Data() + index).GetRGBA();
+            case 2:
+                return PixelReference<ubyte, 2, true>(textureData->imageData.Data() + index).GetRGBA();
+            case 3:
+                return PixelReference<ubyte, 3, true>(textureData->imageData.Data() + index).GetRGBA();
+            case 4:
+                return PixelReference<ubyte, 4, true>(textureData->imageData.Data() + index).GetRGBA();
+            default:
+                break;
+            }
+        }
+        else
+        {
+            // ubyte format
+            switch (numComponents)
+            {
+            case 1:
+                return PixelReference<ubyte, 1>(textureData->imageData.Data() + index).GetRGBA();
+            case 2:
+                return PixelReference<ubyte, 2>(textureData->imageData.Data() + index).GetRGBA();
+            case 3:
+                return PixelReference<ubyte, 3>(textureData->imageData.Data() + index).GetRGBA();
+            case 4:
+                return PixelReference<ubyte, 4>(textureData->imageData.Data() + index).GetRGBA();
+            default:
+                break;
+            }
         }
     }
 
     HYP_LOG_ONCE(Texture, Error, "Unsupported texture format to read on CPU: {}", int(textureData->desc.format));
+
+    HYP_BREAKPOINT;
 
     return Vec4f::Zero();
 }

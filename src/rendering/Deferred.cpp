@@ -914,8 +914,6 @@ void ReflectionsPass::Render(FrameBase* frame, const RenderSetup& rs)
         }
     }
 
-    HYP_LOG(Rendering, Debug, "Rendered {} env probes", numRenderedEnvProbes);
-
     if (ShouldRenderSSR())
     {
         m_renderSsrToScreenPass->RenderToFramebuffer(frame, rs, GetFramebuffer());

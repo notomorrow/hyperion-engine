@@ -302,6 +302,50 @@ uint32 LightmapThreadPool::NumThreadsToCreate()
 
 #pragma endregion LightmapThreadPool
 
+#pragma region LightmapJob_CpuPathTracing
+
+void LightmapJob_CpuPathTracing::GatherRays(uint32 maxRayHits, Array<LightmapRay>& outRays)
+{
+    for (uint32 rayIndex = 0; rayIndex < maxRayHits && HasRemainingTexels(); ++rayIndex)
+    {
+        const uint32 texelIndex = NextTexel();
+
+        LightmapRay ray = m_uvMap->uvs[texelIndex].ray;
+        ray.texelIndex = texelIndex;
+
+        outRays.PushBack(ray);
+    }
+}
+
+void LightmapJob_CpuPathTracing::IntegrateRayHits(Span<const LightmapRay> rays, Span<const LightmapHit> hits, LightmapShadingType shadingType)
+{
+    Assert(rays.Size() == hits.Size());
+
+    LightmapUVMap& uvMap = GetUVMap();
+
+    for (SizeType i = 0; i < hits.Size(); i++)
+    {
+        const LightmapRay& ray = rays[i];
+        const LightmapHit& hit = hits[i];
+
+        LightmapUV& uv = uvMap.uvs[ray.texelIndex];
+
+        switch (shadingType)
+        {
+        case LightmapShadingType::RADIANCE:
+            uv.radiance += Vec4f(hit.color, 1.0f); //= Vec4f(MathUtil::Lerp(uv.radiance.GetXYZ() * uv.radiance.w, hit.color.GetXYZ(), hit.color.w), 1.0f);
+            break;
+        case LightmapShadingType::IRRADIANCE:
+            uv.irradiance += Vec4f(hit.color, 1.0f); //= Vec4f(MathUtil::Lerp(uv.irradiance.GetXYZ() * uv.irradiance.w, hit.color.GetXYZ(), hit.color.w), 1.0f);
+            break;
+        default:
+            HYP_UNREACHABLE();
+        }
+    }
+}
+
+#pragma endregion LightmapJob_CpuPathTracing
+
 #pragma region LightmapRenderer_CpuPathTracing
 
 LightmapRenderer_CpuPathTracing::LightmapRenderer_CpuPathTracing(
@@ -345,14 +389,35 @@ void LightmapRenderer_CpuPathTracing::ReadHitsBuffer(FrameBase* frame, Span<Ligh
     Memory::MemCpy(outHits.Data(), m_hitsBuffer.Data(), m_hitsBuffer.ByteSize());
 }
 
-Vec3f LightmapRenderer_CpuPathTracing::EvaluateDiffuseLighting(Light* light, const LightShaderData& bufferData, const Vec3f& position, const Vec3f& normal)
+Vec3f LightmapRenderer_CpuPathTracing::EvaluateDiffuseLighting(LightmapJob* job, Light* light, const LightShaderData& bufferData, const Vec3f& albedo, const Vec3f& position, const Vec3f& normal)
 {
     Assert(light != nullptr);
 
     switch (light->GetLightType())
     {
     case LT_DIRECTIONAL:
-        return (ByteUtil::UnpackVec4f(SwapEndian(bufferData.colorPacked)) * MathUtil::Max(0.0f, normal.Dot(bufferData.positionIntensity.GetXYZ().Normalized())) * bufferData.positionIntensity.w).GetXYZ();
+    {
+        // return (ByteUtil::UnpackVec4f(SwapEndian(bufferData.colorPacked)) * MathUtil::Max(0.0f, normal.Dot(bufferData.positionIntensity.GetXYZ().Normalized())) * bufferData.positionIntensity.w).GetXYZ();
+        const Vec3f wi = -bufferData.positionIntensity.GetXYZ().Normalized();
+        const float NoL = MathUtil::Max(0.0f, normal.Dot(wi));
+        if (NoL <= 0.0f)
+        {
+            return Vec3f(0.0f);
+        }
+
+        const float shadow = TraceShadowRay(job, position, normal, wi);
+        if (MathUtil::ApproxEqual(shadow, 0.0f))
+        {
+            // skip
+            return Vec3f(0.0f);
+        }
+
+        // Lambert BRDF with delta light sampling (pdf = 1)
+        const Vec3f f = albedo * (1.0f / MathUtil::pi<float>);
+        const Vec3f Li = ByteUtil::UnpackVec4f(SwapEndian(bufferData.colorPacked)).GetXYZ() * bufferData.positionIntensity.w;
+
+        return f * Li * NoL;
+    }
     case LT_POINT:
     {
         const float radius = Float16::FromRaw(bufferData.radiusFalloffPacked & 0xFFFFu);
@@ -444,10 +509,10 @@ void LightmapRenderer_CpuPathTracing::Render(FrameBase* frame, const RenderSetup
     {
         taskBatch->AddTask([this, view = renderSetup.view, sharedCpuData, job, batchIndex, itemsPerBatch, numItems, envProbeTexture](...)
             {
+                uint32 seed = std::rand();
+
                 // Keep the ViewData alive to prevent needing to recreate it a bunch
                 RenderApi_GetConsumerProxyList(view);
-
-                uint32 seed = std::rand();
 
                 const uint32 offsetIndex = batchIndex * itemsPerBatch;
                 const uint32 maxIndex = MathUtil::Min(offsetIndex + itemsPerBatch, numItems);
@@ -458,131 +523,88 @@ void LightmapRenderer_CpuPathTracing::Render(FrameBase* frame, const RenderSetup
 
                     const LightmapRay& firstRay = m_currentRays[index];
 
-                    FixedArray<LightmapRay, g_maxBouncesCpu + 1> recursiveRays;
-                    FixedArray<LightmapRayHitPayload, g_maxBouncesCpu + 1> bounces;
+                    Vec3f N0 = firstRay.ray.direction.Normalized(); // first ray direction is set to surface normal.
+                    Vec3f origin = firstRay.ray.position + N0 * 0.01f;
 
-                    int numBounces = 0;
+                    Vec3f radiance = Vec3f(0.0f);
+                    Vec3f beta = Vec3f(1.0f);
 
-                    Vec3f direction = firstRay.ray.direction.Normalized();
-
+                    Vec3f direction;
                     if (m_shadingType == LightmapShadingType::IRRADIANCE)
                     {
-                        direction = MathUtil::RandomInHemisphere(
-                            Vec3f(MathUtil::RandomFloat(seed), MathUtil::RandomFloat(seed), MathUtil::RandomFloat(seed)),
-                            firstRay.ray.direction)
-                                        .Normalize();
+                        Vec3f rnd(MathUtil::RandomFloat(seed), MathUtil::RandomFloat(seed), MathUtil::RandomFloat(seed));
+                        direction = MathUtil::RandomInHemisphere(rnd, N0).Normalize();
+                    }
+                    else
+                    {
+                        direction = N0;
                     }
 
-                    Vec3f origin = firstRay.ray.position + direction * 0.001f;
-
-                    // Vec4f skyColor;
-
-                    // if (envProbeTexture.IsValid()) {
-                    //     Vec4f envProbeSample = envProbeTexture->SampleCube(direction);
-
-                    //     skyColor = envProbeSample;
-                    // }
-
-                    for (int bounceIndex = 0; bounceIndex < g_maxBouncesCpu; bounceIndex++)
+                    for (int bounceIndex = 0; bounceIndex < g_maxBouncesCpu; ++bounceIndex)
                     {
-                        LightmapRay bounceRay = firstRay;
+                        LightmapRay ray = firstRay;
+                        ray.ray = Ray { origin, direction };
 
-                        if (bounceIndex != 0)
+                        LightmapRayHitPayload payload {};
+                        TraceSingleRayOnCPU(job, ray, payload);
+
+                        if (payload.distance < 0.0f)
                         {
-                            bounceRay.meshId = bounces[bounceIndex - 1].meshId;
-                            bounceRay.triangleIndex = bounces[bounceIndex - 1].triangleIndex;
-                        }
-
-                        bounceRay.ray = Ray {
-                            origin,
-                            direction
-                        };
-
-                        recursiveRays[bounceIndex] = bounceRay;
-
-                        LightmapRayHitPayload& payload = bounces[bounceIndex];
-                        payload = {};
-
-                        TraceSingleRayOnCPU(job, bounceRay, payload);
-
-                        if (payload.distance <= -1.0f)
-                        {
-                            payload.throughput = Vec3f(0.0f);
-
-                            Assert(bounceIndex < bounces.Size());
-
-                            // @TODO Sample environment map
-                            const Vec3f normal = bounceRay.ray.direction;
-
-                            // if (envProbeTexture.IsValid()) {
-                            //     Vec4f envProbeSample = envProbeTexture->SampleCube(direction);
-
-                            //     payload.emissive += envProbeSample;
-                            // }
-
-                            for (const auto& [light, lightBufferData] : sharedCpuData->lightData)
+                            if (envProbeTexture.IsValid())
                             {
-                                payload.emissive += EvaluateDiffuseLighting(light, lightBufferData, origin, normal);
+                                Vec3f env = envProbeTexture->SampleCube(direction).GetXYZ();
+                                radiance += beta * env;
                             }
-
-                            ++numBounces;
-
                             break;
                         }
 
-                        Vec3f hitPosition = origin + direction * payload.distance;
+                        Vec3f albedo = payload.albedo;
+                        Vec3f f = albedo * (1.0f / MathUtil::pi<float>);
 
-                        if (m_shadingType == LightmapShadingType::IRRADIANCE)
-                        {
-                            const Vec3f rnd = Vec3f(MathUtil::RandomFloat(seed), MathUtil::RandomFloat(seed), MathUtil::RandomFloat(seed));
+                        Vec3f hitPos = origin + direction * payload.distance;
+                        Vec3f N = payload.normal.Normalized();
 
-                            direction = MathUtil::RandomInHemisphere(rnd, payload.normal).Normalize();
-                        }
-                        else
+                        if (!MathUtil::ApproxEqual(payload.emissive, Vec3f::Zero()))
                         {
-                            ++numBounces;
-                            break;
+                            radiance += beta * payload.emissive;
                         }
 
-                        origin = hitPosition + direction * 0.02f;
-
-                        ++numBounces;
-                    }
-
-                    for (int bounceIndex = int(numBounces - 1); bounceIndex >= 0; bounceIndex--)
-                    {
-                        Vec3f radiance = bounces[bounceIndex].emissive;
-
-                        if (bounceIndex != numBounces - 1)
+                        for (const auto& [light, lightBuf] : sharedCpuData->lightData)
                         {
-                            radiance += bounces[bounceIndex + 1].radiance * bounces[bounceIndex].throughput;
+                            radiance += beta * EvaluateDiffuseLighting(job, light, lightBuf, albedo, hitPos, N);
                         }
 
-                        float p = MathUtil::Max(radiance.x, MathUtil::Max(radiance.y, radiance.z));
-
-                        if (MathUtil::RandomFloat(seed) > p)
+                        if (m_shadingType != LightmapShadingType::IRRADIANCE)
                         {
                             break;
                         }
 
-                        radiance /= MathUtil::Max(p, 0.0001f);
+                        Vec3f rnd(MathUtil::RandomFloat(seed), MathUtil::RandomFloat(seed), MathUtil::RandomFloat(seed));
+                        Vec3f wi = MathUtil::RandomInHemisphere(rnd, N).Normalize();
 
-                        bounces[bounceIndex].radiance = radiance;
-                    }
+                        float cosTheta = MathUtil::Max(0.0f, N.Dot(wi));
+                        const float pdf = 1.0f / (2.0f * MathUtil::pi<float>);
 
-                    LightmapHit& hit = m_hitsBuffer[index];
+                        beta *= f * (cosTheta / pdf);
 
-                    if (numBounces != 0)
-                    {
-                        hit.color = bounces[0].radiance;
-
-                        if (MathUtil::IsNaN(hit.color) || !MathUtil::IsFinite(hit.color))
+                        if (bounceIndex >= 2)
                         {
-                            HYP_LOG_ONCE(Lightmap, Warning, "NaN or infinite color detected while tracing rays");
-
-                            hit.color = Vec3f(0.0f);
+                            float p = MathUtil::Clamp(beta.Max(), 0.05f, 0.99f);
+                            if (MathUtil::RandomFloat(seed) > p)
+                            {
+                                break;
+                            }
+                            beta /= p;
                         }
+
+                        direction = wi;
+
+                        float sign = N.Dot(direction) > 0.0f ? 1.0f : -1.0f;
+                        origin = hitPos + N * (0.01f * sign);
                     }
+
+                    // write result
+                    m_hitsBuffer[index].color = radiance;
                 }
             });
     }
@@ -601,7 +623,7 @@ void LightmapRenderer_CpuPathTracing::Render(FrameBase* frame, const RenderSetup
 
 void LightmapRenderer_CpuPathTracing::TraceSingleRayOnCPU(LightmapJob* job, const LightmapRay& ray, LightmapRayHitPayload& outPayload)
 {
-    outPayload.throughput = Vec3f(0.0f);
+    outPayload.albedo = Vec3f(0.0f);
     outPayload.emissive = Vec3f(0.0f);
     outPayload.radiance = Vec3f(0.0f);
     outPayload.normal = Vec3f(0.0f);
@@ -661,7 +683,7 @@ void LightmapRenderer_CpuPathTracing::TraceSingleRayOnCPU(LightmapJob* job, cons
         }
 
         outPayload.emissive = Vec3f(0.0f);
-        outPayload.throughput = albedo.GetXYZ() * albedo.GetW();
+        outPayload.albedo = MathUtil::Clamp(albedo.GetXYZ(), Vec3f(0.0f), Vec3f(1.0f));
         outPayload.barycentricCoords = barycentricCoords;
         outPayload.meshId = meshId;
         outPayload.triangleIndex = hit.id;
@@ -670,6 +692,23 @@ void LightmapRenderer_CpuPathTracing::TraceSingleRayOnCPU(LightmapJob* job, cons
 
         return;
     }
+}
+
+float LightmapRenderer_CpuPathTracing::TraceShadowRay(LightmapJob* job, const Vec3f& pos, const Vec3f& dir, const Vec3f& wi)
+{
+    const float eps = 1e-3f;
+    const float sign = dir.Dot(wi) > 0.0f ? 1.0f : -1.0f;
+
+    LightmapRay shadowRay {};
+
+    shadowRay.triangleIndex = 0;
+    shadowRay.ray.position = pos + dir * (eps * sign);
+    shadowRay.ray.direction = wi;
+
+    LightmapRayHitPayload payload {};
+    TraceSingleRayOnCPU(job, shadowRay, payload);
+
+    return float(payload.distance >= 0.0f);
 }
 
 #pragma endregion LightmapRenderer_CpuPathTracing

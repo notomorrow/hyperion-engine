@@ -1,6 +1,7 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
 #include <scene/lightmapper/LightmapVolume.hpp>
+#include <scene/lightmapper/Lightmapper.hpp>
 #include <rendering/Texture.hpp>
 
 #include <rendering/RenderProxy.hpp>
@@ -163,7 +164,7 @@ struct RENDER_COMMAND(BakeLightmapVolumeTexture)
                         return;
                     }
 
-                    Bitmap<4> bitmap(atlasTexture->GetExtent().x, atlasTexture->GetExtent().y);
+                    Bitmap_RGBA8 bitmap(atlasTexture->GetExtent().x, atlasTexture->GetExtent().y);
                     bitmap.SetPixels(std::move(byteBuffer));
 
                     const String filename = HYP_FORMAT("lightmap_atlas_texture_{}_{}.bmp",
@@ -229,20 +230,25 @@ const LightmapElement* LightmapVolume::GetElement(uint32 index) const
     return &m_atlas.elements[index];
 }
 
-bool LightmapVolume::BuildElementTextures(const LightmapUVMap& uvMap, uint32 index)
+bool LightmapVolume::BuildElementTextures(LightmapJob* job)
 {
     Threads::AssertOnThread(g_gameThread);
 
-    if (index >= m_atlas.elements.Size())
+    Assert(job != nullptr);
+
+    const uint32 elementIndex = job->GetElementIndex();
+
+    if (elementIndex >= m_atlas.elements.Size())
     {
         return false;
     }
 
-    LightmapElement& element = m_atlas.elements[index];
+    LightmapElement& element = m_atlas.elements[elementIndex];
 
     const Vec2u elementDimensions = element.dimensions;
 
-    FixedArray<Bitmap<4, float>, uint32(LTT_MAX)> bitmaps = {
+    const LightmapUVMap& uvMap = job->GetUVMap();
+    FixedArray<Bitmap_RGBA8, uint32(LTT_MAX)> bitmaps = {
         uvMap.ToBitmapRadiance(),  /* RADIANCE */
         uvMap.ToBitmapIrradiance() /* IRRADIANCE */
     };

@@ -391,8 +391,6 @@ void LightmapJob::Process()
 
     GatherRays(maxRays, rays);
 
-    const uint32 rayOffset = uint32(m_texelIndex % (m_texelIndices.Size() * m_params.config->numSamples));
-
     for (UniquePtr<ILightmapRenderer>& lightmapRenderer : lightmapRenderers)
     {
         AssertDebug(lightmapRenderer != nullptr);
@@ -413,47 +411,9 @@ void LightmapJob::Process()
     World* world = GetScene()->GetWorld();
     Assert(world != nullptr);
 
+    const uint32 rayOffset = uint32(m_texelIndex % (m_texelIndices.Size() * m_params.config->numSamples));
+
     PUSH_RENDER_COMMAND(LightmapRender, this, MakeStrongRef(world), m_params.view, std::move(rays), rayOffset);
-}
-
-void LightmapJob::GatherRays(uint32 maxRayHits, Array<LightmapRay>& outRays)
-{
-    for (uint32 rayIndex = 0; rayIndex < maxRayHits && HasRemainingTexels(); ++rayIndex)
-    {
-        const uint32 texelIndex = NextTexel();
-
-        LightmapRay ray = m_uvMap->uvs[texelIndex].ray;
-        ray.texelIndex = texelIndex;
-
-        outRays.PushBack(ray);
-    }
-}
-
-void LightmapJob::IntegrateRayHits(Span<const LightmapRay> rays, Span<const LightmapHit> hits, LightmapShadingType shadingType)
-{
-    Assert(rays.Size() == hits.Size());
-
-    LightmapUVMap& uvMap = GetUVMap();
-
-    for (SizeType i = 0; i < hits.Size(); i++)
-    {
-        const LightmapRay& ray = rays[i];
-        const LightmapHit& hit = hits[i];
-
-        LightmapUV& uv = uvMap.uvs[ray.texelIndex];
-
-        switch (shadingType)
-        {
-        case LightmapShadingType::RADIANCE:
-            uv.radiance += Vec4f(hit.color, 1.0f); //= Vec4f(MathUtil::Lerp(uv.radiance.GetXYZ() * uv.radiance.w, hit.color.GetXYZ(), hit.color.w), 1.0f);
-            break;
-        case LightmapShadingType::IRRADIANCE:
-            uv.irradiance += Vec4f(hit.color, 1.0f); //= Vec4f(MathUtil::Lerp(uv.irradiance.GetXYZ() * uv.irradiance.w, hit.color.GetXYZ(), hit.color.w), 1.0f);
-            break;
-        default:
-            HYP_UNREACHABLE();
-        }
-    }
 }
 
 #pragma endregion LightmapJob
@@ -605,6 +565,12 @@ void Lightmapper::Build()
 
     for (auto [entity, meshComponent, transformComponent, boundingBoxComponent] : mgr.GetEntitySet<MeshComponent, TransformComponent, BoundingBoxComponent>().GetScopedView(DataAccessFlags::ACCESS_READ, HYP_FUNCTION_NAME_LIT))
     {
+        if (entity->InstanceClass() != Entity::Class())
+        {
+            // skip non-Entity instances (we only want Entities with MeshComponent)
+            continue;
+        }
+
         if (!meshComponent.mesh.IsValid())
         {
             HYP_LOG(Lightmap, Info, "Skip entity with invalid mesh on MeshComponent");
@@ -632,8 +598,7 @@ void Lightmapper::Build()
             meshComponent.mesh,
             meshComponent.material,
             transformComponent.transform,
-            boundingBoxComponent.worldAabb
-        });
+            boundingBoxComponent.worldAabb });
     }
 
     Build_Internal();
@@ -715,20 +680,17 @@ void Lightmapper::HandleCompletedJob(LightmapJob* job)
 
     HYP_LOG(Lightmap, Debug, "Tracing completed for lightmapping job {} ({} subelements)", job->GetUUID(), job->GetSubElements().Size());
 
-    const LightmapUVMap& uvMap = job->GetUVMap();
-    const uint32 elementIndex = job->GetElementIndex();
-
-    if (!m_volume->BuildElementTextures(uvMap, elementIndex))
+    if (!m_volume->BuildElementTextures(job))
     {
         HYP_LOG(Lightmap, Error, "Failed to build LightmapElement textures for LightmapVolume, element index: {}", job->GetElementIndex());
 
         return;
     }
 
-    const LightmapElement* element = m_volume->GetElement(elementIndex);
+    const LightmapElement* element = m_volume->GetElement(job->GetElementIndex());
     Assert(element != nullptr);
 
-    HYP_LOG(Lightmap, Debug, "Lightmap job {}: Building element with index {}, UV offset: {}, Scale: {}", job->GetUUID(), elementIndex,
+    HYP_LOG(Lightmap, Debug, "Lightmap job {}: Building element with index {}, UV offset: {}, Scale: {}", job->GetUUID(), job->GetElementIndex(),
         element->offsetUv, element->scale);
 
     for (SizeType subElementIndex = 0; subElementIndex < job->GetSubElements().Size(); subElementIndex++)
@@ -774,13 +736,13 @@ void Lightmapper::HandleCompletedJob(LightmapJob* job)
 
 #if 0
         // temp ; testing. - will instead be set in the lightmap volume
-        Bitmap<4, float> radianceBitmap = uvMap.ToBitmapRadiance();
-        Bitmap<4, float> irradianceBitmap = uvMap.ToBitmapIrradiance();
+        Bitmap_RGBA8 radianceBitmap = uvMap.ToBitmapRadiance();
+        Bitmap_RGBA8 irradianceBitmap = uvMap.ToBitmapIrradiance();
 
         Handle<Texture> irradianceTexture = CreateObject<Texture>(TextureData {
             TextureDesc {
                 TT_TEX2D,
-                TF_RGBA32F,
+                TF_RGBA8,
                 Vec3u { uvMap.width, uvMap.height, 1 },
                 TFM_LINEAR,
                 TFM_LINEAR,
@@ -791,7 +753,7 @@ void Lightmapper::HandleCompletedJob(LightmapJob* job)
         Handle<Texture> radianceTexture = CreateObject<Texture>(TextureData {
             TextureDesc {
                 TT_TEX2D,
-                TF_RGBA32F,
+                TF_RGBA8,
                 Vec3u { uvMap.width, uvMap.height, 1 },
                 TFM_LINEAR,
                 TFM_LINEAR,

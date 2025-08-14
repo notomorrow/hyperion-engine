@@ -430,6 +430,9 @@ struct ResourceContainerFactory
 
                 container.dataByType.Emplace(staticIndex, TypeWrapper<ResourceType>(), TypeWrapper<ProxyType>(),
                     gpuBufferHolder, resourceBinder, writeBufferDataFn);
+
+                HYP_LOG(Rendering, Debug, "Registered resource container for resource class '{}'",
+                    *resourceClass->GetName());
             });
     }
 };
@@ -593,7 +596,10 @@ static HYP_FORCE_INLINE void CopyRenderProxy(ResourceSubtypeData& subtypeData, c
 
     const uint32 idx = id.ToIndex();
 
-    AssertDebug(subtypeData.typeId == TypeId::ForType<ElementType>());
+    AssertDebug(subtypeData.typeId == id.GetTypeId(),
+                "Attempting to use ID for type {} as index into proxy collection that requires index type {}",
+                LookupTypeName(id.GetTypeId()),
+                LookupTypeName(subtypeData.typeId));
 
     subtypeData.proxies.Set(idx, static_cast<IRenderProxy*>(pNewProxy));
 
@@ -1191,12 +1197,12 @@ void RenderApi_EndFrame_RenderThread()
 
                 delete &vd;
             }
+            
+#ifdef HYP_DEBUG_MODE
+            vfd.rplShared->debugIsSynced = false;
+#endif
 
             delete &vfd;
-
-#ifdef HYP_DEBUG_MODE
-            it->second->rplShared->debugIsSynced = false;
-#endif
 
             it = frameData.viewFrameData.Erase(it);
 
@@ -1595,6 +1601,8 @@ DECLARE_RENDER_DATA_CONTAINER(Camera, RenderProxyCamera, GRB_CAMERAS, &ResourceB
 
 DECLARE_RENDER_DATA_CONTAINER(EnvGrid, RenderProxyEnvGrid, GRB_ENV_GRIDS, &ResourceBindings::envGridBinder, &WriteBufferData_EnvGrid);
 
+// FIXME: Overlap with ambient probes / reflection and sky probes causing issues where indices are overlapping,
+// due to using same bindings allocator.
 DECLARE_RENDER_DATA_CONTAINER(ReflectionProbe, RenderProxyEnvProbe, GRB_ENV_PROBES, &ResourceBindings::reflectionProbeBinder, &WriteBufferData_EnvProbe);
 DECLARE_RENDER_DATA_CONTAINER(SkyProbe, RenderProxyEnvProbe, GRB_ENV_PROBES, &ResourceBindings::reflectionProbeBinder, &WriteBufferData_EnvProbe);
 DECLARE_RENDER_DATA_CONTAINER(EnvProbe, RenderProxyEnvProbe, GRB_ENV_PROBES, &ResourceBindings::ambientProbeBinder, &WriteBufferData_EnvProbe);

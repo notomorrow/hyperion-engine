@@ -197,7 +197,7 @@ void HyperionEditor::Init()
     Handle<DirectionalLight> sunEntity = scene->GetEntityManager()->AddEntity<DirectionalLight>(
         Vec3f(-0.4f, 0.8f, 0.0f).Normalize(),
         Color(Vec4f(1.0f, 0.9f, 0.8f, 1.0f)),
-        5.0f);
+        1.0f);
 
     sunNode->AddChild(sunEntity);
 #endif
@@ -308,7 +308,7 @@ void HyperionEditor::Logic(float delta)
         // };
 
         // drawOctant(*g_voxelOctree, 0);
-        //
+        // //
         //        clock.Stop();
         //
         //        HYP_LOG_TEMP("Time to draw boxes: {}", clock.ElapsedMs());
