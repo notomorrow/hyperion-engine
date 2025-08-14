@@ -28,7 +28,7 @@ class JSONObject;
 using JSONString = String;
 using JSONNumber = double;
 using JSONBool = bool;
-using JSONArray = Array<JSONValue>;
+using JSONArray = Array<JSONValue, DynamicAllocator>;
 using JSONArrayRef = RC<JSONArray>;
 using JSONObjectRef = RC<JSONObject>;
 
@@ -739,10 +739,10 @@ private:
     InnerType m_inner;
 };
 
-class JSONObject : public HashMap<JSONString, JSONValue>
+class JSONObject : public HashMap<JSONString, JSONValue, HashTable_DynamicNodeAllocator<KeyValuePair<JSONString, JSONValue>>>
 {
 public:
-    using Base = HashMap<JSONString, JSONValue>;
+    using Base = HashMap<JSONString, JSONValue, HashTable_DynamicNodeAllocator<KeyValuePair<JSONString, JSONValue>>>;
 
     JSONObject() = default;
 
