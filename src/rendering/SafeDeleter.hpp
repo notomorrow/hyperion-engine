@@ -164,6 +164,19 @@ public:
         m_numDeletionEntries.Increment(1, MemoryOrder::RELEASE);
     }
 
+    template <class T>
+    void SafeRelease(Array<T>&& resources)
+    {
+        Mutex::Guard guard(m_mutex);
+
+        for (T& resource : resources)
+        {
+            m_deletionEntries.PushBack(MakeUnique<DeletionEntry<T>>(std::move(resource)));
+
+            m_numDeletionEntries.Increment(1, MemoryOrder::RELEASE);
+        }
+    }
+
     void SafeRelease(RenderProxyMesh&& proxy)
     {
         SafeRelease(std::move(proxy.mesh));

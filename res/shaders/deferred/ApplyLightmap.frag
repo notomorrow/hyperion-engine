@@ -163,7 +163,7 @@ void main()
 
         vec4 lightmap = Texture2D(HYP_SAMPLER_NEAREST, gbuffer_albedo_lightmap_texture, texcoord);
 
-        result = lightmap;//(albedo * lightmap) + vec4(spec, 0.0);
+        result = (albedo * lightmap) + vec4(spec, 0.0);
     }
 
     color_output = result;

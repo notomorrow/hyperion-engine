@@ -1441,9 +1441,9 @@ void DeferredRenderer::RenderFrame(FrameBase* frame, const RenderSetup& rs)
 
     // Collect view-independent renderable types from all views, binned
     /// @TODO: We could use the existing binning by subclass that ResourceTracker now provides.
-    FixedArray<Array<EnvProbe*>, EPT_MAX> envProbes;
-    FixedArray<Array<Light*>, LT_MAX> lights;
-    Array<EnvGrid*> envGrids;
+    FixedArray<HashSet<EnvProbe*>, EPT_MAX> envProbes;
+    FixedArray<HashSet<Light*>, LT_MAX> lights;
+    HashSet<EnvGrid*> envGrids;
 
     // For rendering EnvGrids and EnvProbes, we use a directional light from one of the Views that references it (if found)
     /// TODO: This could be a little bit more robust.
@@ -1500,7 +1500,7 @@ void DeferredRenderer::RenderFrame(FrameBase* frame, const RenderSetup& rs)
         {
             AssertDebug(light != nullptr);
 
-            lights[light->GetLightType()].PushBack(light);
+            lights[light->GetLightType()].Insert(light);
         }
 
         for (EnvProbe* envProbe : rpl.GetEnvProbes())
@@ -1531,7 +1531,7 @@ void DeferredRenderer::RenderFrame(FrameBase* frame, const RenderSetup& rs)
                 }
             }
 
-            envProbes[envProbe->GetEnvProbeType()].PushBack(envProbe);
+            envProbes[envProbe->GetEnvProbeType()].Insert(envProbe);
         }
 
         for (EnvGrid* envGrid : rpl.GetEnvGrids())
@@ -1554,7 +1554,7 @@ void DeferredRenderer::RenderFrame(FrameBase* frame, const RenderSetup& rs)
                 }
             }
 
-            envGrids.PushBack(envGrid);
+            envGrids.Insert(envGrid);
         }
     }
 
@@ -1591,12 +1591,12 @@ void DeferredRenderer::RenderFrame(FrameBase* frame, const RenderSetup& rs)
         // Set sky as fallback probe
         if (envProbes[EPT_SKY].Any())
         {
-            newRs.envProbe = envProbes[EPT_SKY][0];
+            newRs.envProbe = envProbes[EPT_SKY].Front();
         }
 
         if (lights[LT_DIRECTIONAL].Any())
         {
-            newRs.light = lights[LT_DIRECTIONAL][0];
+            newRs.light = lights[LT_DIRECTIONAL].Front();
         }
 
         if (envProbes.Any())

@@ -203,7 +203,7 @@ TResult<LightmapUVMap> LightmapUVBuilder::Build()
     }
 
     xatlas::PackOptions packOptions {};
-    packOptions.resolution = 512;
+    packOptions.resolution = 1024;
     packOptions.bilinear = true;
 
     xatlas::ComputeCharts(atlas);
