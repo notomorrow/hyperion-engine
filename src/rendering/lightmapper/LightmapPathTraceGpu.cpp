@@ -226,6 +226,19 @@ void LightmapRenderer_GpuPathTracing::UpdatePipelineState(FrameBase* frame)
     }
     else if (m_tlas->IsCreated())
     {
+        RTUpdateStateFlags updateStateFlags = RTUpdateStateFlagBits::RT_UPDATE_STATE_FLAGS_NONE;
+        m_tlas->UpdateStructure(updateStateFlags);
+
+        if (updateStateFlags)
+        {
+            Assert(m_raytracingPipeline != nullptr);
+            
+            const DescriptorSetRef& descriptorSet = m_raytracingPipeline->GetDescriptorTable()->GetDescriptorSet("RTRadianceDescriptorSet", frame->GetFrameIndex());
+            Assert(descriptorSet != nullptr);
+
+            descriptorSet->Update(true);
+        }
+
         return; // already created
     }
 
@@ -251,6 +264,12 @@ void LightmapRenderer_GpuPathTracing::UpdatePipelineState(FrameBase* frame)
         Assert(blas != nullptr);
 
         blas->SetTransform(meshProxy->bufferData.modelMatrix);
+
+        if (meshProxy->material != nullptr)
+        {
+            const uint32 materialBinding = RenderApi_RetrieveResourceBinding(meshProxy->material);
+            blas->SetMaterialBinding(materialBinding);
+        }
 
         if (!blas->IsCreated())
         {
@@ -330,9 +349,6 @@ void LightmapRenderer_GpuPathTracing::UpdatePipelineState(FrameBase* frame)
 
     m_raytracingPipeline = g_renderBackend->MakeRaytracingPipeline(shader, descriptorTable);
     DeferCreate(m_raytracingPipeline);
-
-    RTUpdateStateFlags updateStateFlags = RTUpdateStateFlagBits::RT_UPDATE_STATE_FLAGS_NONE;
-    m_tlas->UpdateStructure(updateStateFlags);
 }
 
 void LightmapRenderer_GpuPathTracing::UpdateUniforms(FrameBase* frame, uint32 rayOffset)
