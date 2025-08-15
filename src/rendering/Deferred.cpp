@@ -593,11 +593,13 @@ void EnvGridPass::Render(FrameBase* frame, const RenderSetup& rs)
         RenderPreviousTextureToScreen(frame, rs);
     }
 
-    for (EnvGrid* envGrid : rpl.GetEnvGrids())
+    for (EnvGrid* envGrid : rpl.GetEnvGrids().GetElements<LegacyEnvGrid>())
     {
+        LegacyEnvGrid* legacyEnvGrid = static_cast<LegacyEnvGrid*>(envGrid);
+
         const GraphicsPipelineRef& graphicsPipeline = m_mode == EGPM_RADIANCE
             ? m_graphicsPipeline
-            : m_graphicsPipelines[EnvGridTypeToApplyEnvGridMode(envGrid->GetEnvGridType())];
+            : m_graphicsPipelines[EnvGridTypeToApplyEnvGridMode(legacyEnvGrid->GetEnvGridType())];
 
         Assert(graphicsPipeline.IsValid());
 
@@ -1491,6 +1493,8 @@ void DeferredRenderer::RenderFrame(FrameBase* frame, const RenderSetup& rs)
             newRs.passData = pd;
             newRs.view = view;
 
+            HYP_LOG(Rendering, Debug, "Update ray tracing view {}", view->Id());
+
             UpdateRaytracingView(frame, newRs);
         }
 
@@ -2043,10 +2047,7 @@ void DeferredRenderer::UpdateRaytracingView(FrameBase* frame, const RenderSetup&
 
     if (!pd->raytracingTlases[frameIndex])
     {
-        for (TLASRef& tlas : pd->raytracingTlases)
-        {
-            tlas = g_renderBackend->MakeTLAS();
-        }
+        pd->raytracingTlases[frameIndex] = g_renderBackend->MakeTLAS();
     }
 
     bool hasBlas = false;
@@ -2069,18 +2070,18 @@ void DeferredRenderer::UpdateRaytracingView(FrameBase* frame, const RenderSetup&
         {
             if (blas != nullptr)
             {
-                for (TLASRef& tlas : pd->raytracingTlases)
-                {
-                    tlas->RemoveBLAS(blas);
-                }
+                pd->raytracingTlases[frame->GetFrameIndex()]->RemoveBLAS(blas);
 
                 SafeRelease(std::move(blas));
             }
 
             blas = MeshBlasBuilder::Build(meshProxy->mesh, meshProxy->material);
             Assert(blas != nullptr);
-
+            
             blas->SetTransform(meshProxy->bufferData.modelMatrix);
+
+            const uint32 materialBinding = RenderApi_RetrieveResourceBinding(meshProxy->material);
+            blas->SetMaterialBinding(materialBinding);
 
             if (!blas->IsCreated())
             {
@@ -2090,23 +2091,14 @@ void DeferredRenderer::UpdateRaytracingView(FrameBase* frame, const RenderSetup&
         else
         {
             const uint32 materialBinding = RenderApi_RetrieveResourceBinding(meshProxy->material);
-            const bool materialBindingsDiffer = blas->GetMaterialBinding() != materialBinding;
 
-            if (materialBindingsDiffer)
-            {
-                // needs to rebuild mesh descriptions if material binding changed
-                blas->SetMaterialBinding(materialBinding);
-            }
-
+            blas->SetMaterialBinding(materialBinding);
             blas->SetTransform(meshProxy->bufferData.modelMatrix);
         }
 
         if (!pd->raytracingTlases[frameIndex]->HasBLAS(blas))
         {
-            for (TLASRef& tlas : pd->raytracingTlases)
-            {
-                tlas->AddBLAS(blas);
-            }
+            pd->raytracingTlases[frame->GetFrameIndex()]->AddBLAS(blas);
 
             hasBlas = true;
         }
@@ -2116,10 +2108,7 @@ void DeferredRenderer::UpdateRaytracingView(FrameBase* frame, const RenderSetup&
     {
         if (hasBlas)
         {
-            for (TLASRef& tlas : pd->raytracingTlases)
-            {
-                HYP_GFX_ASSERT(tlas->Create());
-            }
+            HYP_GFX_ASSERT(pd->raytracingTlases[frame->GetFrameIndex()]->Create());
         }
 
         return;

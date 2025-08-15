@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
 #include <scene/lightmapper/LightmapVolume.hpp>
-#include <scene/lightmapper/Lightmapper.hpp>
 #include <rendering/Texture.hpp>
 
 #include <rendering/RenderProxy.hpp>
@@ -230,25 +229,20 @@ const LightmapElement* LightmapVolume::GetElement(uint32 index) const
     return &m_atlas.elements[index];
 }
 
-bool LightmapVolume::BuildElementTextures(LightmapJob* job)
+bool LightmapVolume::BuildElementTextures(const LightmapUVMap& uvMap, uint32 index)
 {
     Threads::AssertOnThread(g_gameThread);
 
-    Assert(job != nullptr);
-
-    const uint32 elementIndex = job->GetElementIndex();
-
-    if (elementIndex >= m_atlas.elements.Size())
+    if (index >= m_atlas.elements.Size())
     {
         return false;
     }
 
-    LightmapElement& element = m_atlas.elements[elementIndex];
+    LightmapElement& element = m_atlas.elements[index];
 
     const Vec2u elementDimensions = element.dimensions;
 
-    const LightmapUVMap& uvMap = job->GetUVMap();
-    FixedArray<Bitmap_RGBA8, uint32(LTT_MAX)> bitmaps = {
+    FixedArray<Bitmap<TF_RGBA8>, uint32(LTT_MAX)> bitmaps = {
         uvMap.ToBitmapRadiance(),  /* RADIANCE */
         uvMap.ToBitmapIrradiance() /* IRRADIANCE */
     };
@@ -260,6 +254,8 @@ bool LightmapVolume::BuildElementTextures(LightmapJob* job)
     for (uint32 i = 0; i < uint32(LTT_MAX); i++)
     {
         element.entries[i].type = LightmapTextureType(i);
+
+        //ByteBuffer unpackedBytes = bitmaps[i].GetUnpackedBytes(4);
 
         Handle<Texture> texture = CreateObject<Texture>(TextureData {
             TextureDesc {

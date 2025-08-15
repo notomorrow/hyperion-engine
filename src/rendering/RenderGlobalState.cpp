@@ -365,6 +365,8 @@ struct ResourceContainer
         int staticIndex = hypClass->GetStaticIndex();
         AssertDebug(staticIndex >= 0, "Invalid class: '{}' has no assigned static index!", *hypClass->GetName());
 
+        AssertDebug(dataByType.HasIndex(staticIndex), "Missing resource data for {}", *hypClass->GetName());
+
         return dataByType.Get(staticIndex);
     }
 
@@ -1600,6 +1602,7 @@ DECLARE_RENDER_DATA_CONTAINER(Entity, RenderProxyMesh, GRB_ENTITIES, &ResourceBi
 DECLARE_RENDER_DATA_CONTAINER(Camera, RenderProxyCamera, GRB_CAMERAS, &ResourceBindings::cameraBinder);
 
 DECLARE_RENDER_DATA_CONTAINER(EnvGrid, RenderProxyEnvGrid, GRB_ENV_GRIDS, &ResourceBindings::envGridBinder, &WriteBufferData_EnvGrid);
+DECLARE_RENDER_DATA_CONTAINER(LegacyEnvGrid, RenderProxyEnvGrid, GRB_ENV_GRIDS, &ResourceBindings::envGridBinder, &WriteBufferData_EnvGrid);
 
 // FIXME: Overlap with ambient probes / reflection and sky probes causing issues where indices are overlapping,
 // due to using same bindings allocator.

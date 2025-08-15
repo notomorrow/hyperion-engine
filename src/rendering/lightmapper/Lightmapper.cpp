@@ -256,6 +256,7 @@ void LightmapJob::AddTask(TaskBatch* taskBatch)
     m_currentTasks.PushBack(taskBatch);
 }
 
+HYP_DISABLE_OPTIMIZATION;
 void LightmapJob::Process()
 {
     Assert(IsRunning());
@@ -384,6 +385,18 @@ void LightmapJob::Process()
 
     AssertDebug(lightmapRenderers[0] != nullptr);
 
+    for (UniquePtr<ILightmapRenderer>& lightmapRenderer : lightmapRenderers)
+    {
+        AssertDebug(lightmapRenderer != nullptr);
+
+        if (!lightmapRenderer->CanRender())
+        {
+            HYP_LOG(Lightmap, Info, "Waiting for lightmap renderers to be ready...");
+
+            return;
+        }
+    }
+
     const SizeType maxRays = MathUtil::Min(lightmapRenderers[0]->MaxRaysPerFrame(), m_params.config->maxRaysPerFrame);
 
     Array<LightmapRay> rays;
@@ -393,8 +406,6 @@ void LightmapJob::Process()
 
     for (UniquePtr<ILightmapRenderer>& lightmapRenderer : lightmapRenderers)
     {
-        AssertDebug(lightmapRenderer != nullptr);
-
         lightmapRenderer->UpdateRays(rays);
     }
 
@@ -415,6 +426,7 @@ void LightmapJob::Process()
 
     PUSH_RENDER_COMMAND(LightmapRender, this, MakeStrongRef(world), m_params.view, std::move(rays), rayOffset);
 }
+HYP_ENABLE_OPTIMIZATION;
 
 #pragma endregion LightmapJob
 
@@ -466,7 +478,8 @@ void Lightmapper::Initialize()
             | ViewFlags::NO_FRUSTUM_CULLING
             | ViewFlags::SKIP_ENV_GRIDS | ViewFlags::SKIP_LIGHTMAP_VOLUMES
             | ViewFlags::RAYTRACING
-            | ViewFlags::NO_DRAW_CALLS,
+            | ViewFlags::NO_DRAW_CALLS
+            | ViewFlags::NOT_MULTI_BUFFERED,
         .viewport = Viewport { .extent = Vec2u::One(), .position = Vec2i::Zero() },
         .outputTargetDesc = outputTargetDesc,
         .scenes = { m_scene },
@@ -475,6 +488,10 @@ void Lightmapper::Initialize()
 
     m_view = CreateObject<View>(viewDesc);
     InitObject(m_view);
+
+    m_view->UpdateViewport();
+    m_view->UpdateVisibility();
+    m_view->CollectSync();
 
     HYP_LOG_TEMP("Created View {} for Lightmaper : Num meshes collected : {}",
         m_view->Id(),
@@ -638,10 +655,6 @@ void Lightmapper::Update(float delta)
 {
     HYP_SCOPE;
 
-    m_view->UpdateViewport();
-    m_view->UpdateVisibility();
-    m_view->CollectSync();
-
     uint32 numJobs = m_numJobs.Get(MemoryOrder::ACQUIRE);
 
     Mutex::Guard guard(m_queueMutex);
@@ -680,7 +693,10 @@ void Lightmapper::HandleCompletedJob(LightmapJob* job)
 
     HYP_LOG(Lightmap, Debug, "Tracing completed for lightmapping job {} ({} subelements)", job->GetUUID(), job->GetSubElements().Size());
 
-    if (!m_volume->BuildElementTextures(job))
+    const LightmapUVMap& uvMap = job->GetUVMap();
+    const uint32 elementIndex = job->GetElementIndex();
+
+    if (!m_volume->BuildElementTextures(uvMap, elementIndex))
     {
         HYP_LOG(Lightmap, Error, "Failed to build LightmapElement textures for LightmapVolume, element index: {}", job->GetElementIndex());
 
@@ -747,7 +763,7 @@ void Lightmapper::HandleCompletedJob(LightmapJob* job)
                 TFM_LINEAR,
                 TFM_LINEAR,
                 TWM_REPEAT },
-            ByteBuffer(irradianceBitmap.GetUnpackedFloats().ToByteView()) });
+            irradianceBitmap.GetUnpackedBytes(4) });
         InitObject(irradianceTexture);
 
         Handle<Texture> radianceTexture = CreateObject<Texture>(TextureData {
@@ -758,7 +774,7 @@ void Lightmapper::HandleCompletedJob(LightmapJob* job)
                 TFM_LINEAR,
                 TFM_LINEAR,
                 TWM_REPEAT },
-            ByteBuffer(radianceBitmap.GetUnpackedFloats().ToByteView()) });
+            irradianceBitmap.GetUnpackedBytes(4) });
         InitObject(radianceTexture);
 
         subElement.material->SetTexture(MaterialTextureKey::IRRADIANCE_MAP, irradianceTexture);

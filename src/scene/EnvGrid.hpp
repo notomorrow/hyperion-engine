@@ -104,7 +104,7 @@ struct EnvProbeCollection
 
 struct EnvGridOptions
 {
-    EnvGridType type = ENV_GRID_TYPE_SH;
+    EnvGridType legacyEnvGridType = ENV_GRID_TYPE_SH;
     Vec3u density = { 3, 3, 3 };
     EnumFlags<EnvGridFlags> flags = EnvGridFlags::NONE;
 };
@@ -121,14 +121,57 @@ public:
     EnvGrid& operator=(const EnvGrid& other) = delete;
     ~EnvGrid() override;
 
-    HYP_FORCE_INLINE EnvGridType GetEnvGridType() const
-    {
-        return m_options.type;
-    }
-
     HYP_FORCE_INLINE const EnvGridOptions& GetOptions() const
     {
         return m_options;
+    }
+
+    HYP_METHOD()
+    const BoundingBox& GetAABB() const
+    {
+        return m_aabb;
+    }
+
+    virtual void UpdateRenderProxy(RenderProxyEnvGrid* proxy) = 0;
+
+protected:
+    HYP_FORCE_INLINE Vec3f SizeOfProbe() const
+    {
+        return m_aabb.GetExtent() / Vec3f(m_options.density);
+    }
+
+    EnvGridOptions m_options;
+
+    HYP_FIELD(Property = "AABB", Serialize = true)
+    BoundingBox m_aabb;
+
+    Vec3f m_offset;
+};
+
+HYP_CLASS()
+class HYP_API LegacyEnvGrid : public EnvGrid
+{
+    HYP_OBJECT_BODY(LegacyEnvGrid);
+
+public:
+    LegacyEnvGrid()
+        : LegacyEnvGrid(BoundingBox(-50.0f, 50.0f), {})
+    {
+    }
+
+    LegacyEnvGrid(const BoundingBox& aabb, const EnvGridOptions& options)
+        : EnvGrid(aabb, options),
+          m_voxelGridAabb(aabb)
+    {
+        m_entityInitInfo.receivesUpdate = true;
+        m_entityInitInfo.canEverUpdate = true;
+    }
+
+    ~LegacyEnvGrid() override = default;
+
+    HYP_FORCE_INLINE EnvGridType GetEnvGridType() const
+    {
+        return m_options.legacyEnvGridType;
     }
 
     HYP_FORCE_INLINE EnvProbeCollection& GetEnvProbeCollection()
@@ -157,12 +200,6 @@ public:
     }
 
     HYP_METHOD()
-    const BoundingBox& GetAABB() const
-    {
-        return m_aabb;
-    }
-
-    HYP_METHOD()
     void SetAABB(const BoundingBox& aabb);
 
     HYP_METHOD()
@@ -180,38 +217,26 @@ public:
     HYP_METHOD()
     void Translate(const BoundingBox& aabb, const Vec3f& translation);
 
-    void UpdateRenderProxy(RenderProxyEnvGrid* proxy);
+    void UpdateRenderProxy(RenderProxyEnvGrid* proxy) override;
 
 private:
-    virtual void OnAttachedToNode(Node* node) override;
-    virtual void OnDetachedFromNode(Node* node) override;
-
-    virtual void OnAddedToWorld(World* world) override;
-    virtual void OnRemovedFromWorld(World* world) override;
-
-    virtual void OnAddedToScene(Scene* scene) override;
-    virtual void OnRemovedFromScene(Scene* scene) override;
-
-    virtual void Update(float delta) override;
-
-    HYP_FORCE_INLINE Vec3f SizeOfProbe() const
-    {
-        return m_aabb.GetExtent() / Vec3f(m_options.density);
-    }
-
     void Init() override;
+    void Update(float delta) override;
 
+    void OnAttachedToNode(Node* node) override;
+    void OnDetachedFromNode(Node* node) override;
+
+    void OnAddedToWorld(World* world) override;
+    void OnRemovedFromWorld(World* world) override;
+
+    void OnAddedToScene(Scene* scene) override;
+    void OnRemovedFromScene(Scene* scene) override;
+    
     void CreateEnvProbes();
 
     Handle<View> m_view;
     Handle<Camera> m_camera;
 
-    EnvGridOptions m_options;
-
-    HYP_FIELD(Property = "AABB", Serialize = true)
-    BoundingBox m_aabb;
-
-    Vec3f m_offset;
     BoundingBox m_voxelGridAabb;
 
     EnvProbeCollection m_envProbeCollection;

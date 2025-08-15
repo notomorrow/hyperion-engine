@@ -42,7 +42,7 @@
       "pathTracing": {
         "enabled": false
       },
-      "enabled": false
+      "enabled": true
     },
     "hbao": {
       "radius": 2.500000,
@@ -66,11 +66,11 @@
     "args": "-ResX=1920 -ResY=1080 -Profile=false -TraceURL=http://localhost:8000/trace"
   },
   "lightmapper": {
-    "maxRaysPerFrame": 3000,
+    "maxRaysPerFrame": 10000,
     "traceMode": 0,
     "numThreadsPerJob": 4,
-    "radiance": true,
-    "idealTrianglesPerJob": 64000,
+    "radiance": false,
+    "idealTrianglesPerJob": 16000,
     "numSamples": 1,
     "irradiance": true
   }

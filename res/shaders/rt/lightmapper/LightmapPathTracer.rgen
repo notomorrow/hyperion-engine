@@ -61,20 +61,20 @@ HYP_DESCRIPTOR_SSBO_DYNAMIC(Global, CurrentEnvProbe) readonly buffer CurrentEnvP
 
 layout(location = 0) rayPayloadEXT RayPayload payload;
 
-HYP_DESCRIPTOR_SSBO(RTRadianceDescriptorSet, HitsBuffer, standard = std140) buffer HitsBuffer
+HYP_DESCRIPTOR_SSBO(RTRadianceDescriptorSet, HitsBuffer, standard = scalar) buffer HitsBuffer
 {
-    vec4    hits[512 * 512];
+    vec4 hits[];
 };
 
 struct LightmapRay
 {
-    vec4    origin;
-    vec4    direction;
+    vec4 origin;
+    vec4 direction;
 };
 
-HYP_DESCRIPTOR_SSBO(RTRadianceDescriptorSet, RaysBuffer, standard = std140) readonly buffer RaysBuffer
+HYP_DESCRIPTOR_SSBO(RTRadianceDescriptorSet, RaysBuffer, standard = scalar) readonly buffer RaysBuffer
 {
-    LightmapRay ray_data[512 * 512];
+    vec4 ray_data[];
 };
 
 HYP_DESCRIPTOR_CBUFF(RTRadianceDescriptorSet, RTRadianceUniforms) uniform RTRadianceUniformBuffer
@@ -83,12 +83,12 @@ HYP_DESCRIPTOR_CBUFF(RTRadianceDescriptorSet, RTRadianceUniforms) uniform RTRadi
 };
 
 #ifdef MODE_IRRADIANCE
-#define RAY_OFFSET 0.005
+#define RAY_OFFSET 0.0002
 #define NUM_BOUNCES 4
 
 #define NUM_SAMPLES 4
 #else
-#define RAY_OFFSET 0.0005
+#define RAY_OFFSET 0.00002
 #define NUM_BOUNCES 1
 #define NUM_SAMPLES 1
 #endif
@@ -107,7 +107,9 @@ void main()
 {
     const uint ray_index = gl_LaunchIDEXT.x;
 
-    const LightmapRay ray = ray_data[ray_index];
+    LightmapRay ray;
+    ray.origin = vec4(ray_data[ray_index * 2].xyz, 1.0);
+    ray.direction = vec4(ray_data[ray_index * 2 + 1].xyz, 0.0);
 
     const uint flags = gl_RayFlagsOpaqueEXT;
     const uint mask = 0xff;
@@ -194,7 +196,7 @@ void main()
                 vec3(RandomFloat(ray_seed), RandomFloat(ray_seed), RandomFloat(ray_seed)),
                 payload.normal
             ));
-            origin = hit_position + direction * RAY_OFFSET;
+            origin = hit_position + payload.normal * RAY_OFFSET;
 
             /*ComputeOrthonormalBasis(payload.normal, tangent, bitangent);
 
@@ -214,14 +216,14 @@ void main()
                 radiance += bounces[bounce_index + 1].radiance * bounces[bounce_index].throughput;
             }
 
-            // As the throughput is multiplied by the albedo, the probability of the ray getting discarded is higher
-            float p = max(radiance.r, max(radiance.g, radiance.b));
+            // // As the throughput is multiplied by the albedo, the probability of the ray getting discarded is higher
+            // float p = max(radiance.r, max(radiance.g, radiance.b));
 
-            if (RandomFloat(ray_seed) > p) {
-                break;
-            }
+            // if (RandomFloat(ray_seed) > p) {
+            //     break;
+            // }
 
-            radiance /= max(p, 0.0001);
+            // radiance /= max(p, 0.0001);
             
             bounces[bounce_index].radiance = radiance;
         }
@@ -261,5 +263,7 @@ void main()
 
     vec4 color = radiance / float(NUM_SAMPLES);
 
-    hits[ray_index] = color;
+    // color = vec4(1.0, 1.0, 0.0, 1.0);// DEBUG TEST
+
+    hits[ray_index] = vec4(color.rgb, 1.0);
 }
