@@ -105,6 +105,8 @@ void AppContextBase::UpdateConfigurationOverrides()
 
 #pragma region SDLApplicationWindow
 
+#ifdef HYP_SDL
+
 SDLApplicationWindow::SDLApplicationWindow(ANSIString title, Vec2i size)
     : ApplicationWindow(std::move(title), size),
       m_windowHandle(nullptr)
@@ -215,11 +217,58 @@ bool SDLApplicationWindow::IsHighDPI() const
     return false;
 }
 
+#else
+
+SDLApplicationWindow::SDLApplicationWindow(ANSIString title, Vec2i size)
+    : ApplicationWindow(std::move(title), size)
+{
+}
+
+SDLApplicationWindow::~SDLApplicationWindow() = default;
+
+void SDLApplicationWindow::Initialize(WindowOptions windowOptions)
+{
+    HYP_NOT_IMPLEMENTED();
+}
+
+void SDLApplicationWindow::SetMousePosition(Vec2i position)
+{
+    HYP_NOT_IMPLEMENTED();
+}
+
+Vec2i SDLApplicationWindow::GetMousePosition() const
+{
+    HYP_NOT_IMPLEMENTED();
+}
+
+Vec2i SDLApplicationWindow::GetDimensions() const
+{
+    HYP_NOT_IMPLEMENTED();
+}
+
+void SDLApplicationWindow::SetIsMouseLocked(bool locked)
+{
+    HYP_NOT_IMPLEMENTED();
+}
+
+bool SDLApplicationWindow::HasMouseFocus() const
+{
+    HYP_NOT_IMPLEMENTED();
+}
+
+bool SDLApplicationWindow::IsHighDPI() const
+{
+    HYP_NOT_IMPLEMENTED();
+}
+
+#endif
+
 #pragma endregion SDLApplicationWindow
 
 #pragma region SDLAppContext
 
-#if defined(HYP_SDL) && defined(HYP_IOS)
+#ifdef HYP_SDL
+#ifdef HYP_IOS
 static struct IOSSDLInitializer
 {
     IOSSDLInitializer()
@@ -351,6 +400,27 @@ int SDLAppContext::PollEvent(SystemEvent& event)
 
     return result;
 }
+
+#else
+
+SDLAppContext::SDLAppContext(ANSIString name, const CommandLineArguments& arguments)
+    : AppContextBase(std::move(name), arguments)
+{
+}
+
+SDLAppContext::~SDLAppContext() = default;
+
+Handle<ApplicationWindow> SDLAppContext::CreateSystemWindow(WindowOptions windowOptions)
+{
+    HYP_NOT_IMPLEMENTED();
+}
+
+int SDLAppContext::PollEvent(SystemEvent& event)
+{
+    HYP_NOT_IMPLEMENTED();
+}
+
+#endif
 
 #pragma endregion SDLAppContext
 

@@ -312,6 +312,8 @@ RendererResult VulkanSwapchain::ChooseSurfaceFormat()
     if (m_imageFormat != TF_NONE)
     {
         HYP_LOG(RenderingBackend, Info, "Found supported surface format for swapchain (non-sRGB): {}", EnumToString(m_imageFormat));
+
+        HYPERION_RETURN_OK;
     }
 
     return HYP_MAKE_ERROR(RendererError, "Failed to find a supported surface format!");

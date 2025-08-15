@@ -38,7 +38,7 @@ ShadowPassData::~ShadowPassData()
 
 #pragma region ShadowRendererBase
 
-static Handle<FullScreenPass> CreateCombineShadowMapsPass(ShadowMapFilter filterMode, TextureFormat format, Vec2u dimensions, Span<Handle<View>> views)
+static Handle<FullScreenPass> CreateCombineShadowMapsPass(ShadowMapFilter filterMode, TextureFormat format, Vec2u dimensions, Span<View*> views)
 {
     AssertDebug(views.Size() == 2, "Combine pass requires 2 views (one for static objects, one for dynamic objects)");
 
@@ -185,12 +185,10 @@ void ShadowRendererBase::RenderFrame(FrameBase* frame, const RenderSetup& render
     Assert(lightProxy != nullptr, "Proxy for Light {} not found when rendering shadows!", light->Id());
     Assert(lightProxy->shadowViews.Any(), "Light {} proxy has no shadow view attached!", light->Id());
 
-    Array<Handle<View>> shadowViews = Map(lightProxy->shadowViews, &WeakHandle<View>::Lock);
-
     // check views validity
-    for (const Handle<View>& shadowView : shadowViews)
+    for (View* shadowView : lightProxy->shadowViews)
     {
-        Assert(shadowView.IsValid());
+        Assert(shadowView != nullptr);
         Assert(shadowView->GetOutputTarget().IsValid());
         Assert(shadowView->GetOutputTarget().GetFramebuffer().IsValid());
         Assert(shadowView->GetOutputTarget().GetFramebuffer()->GetAttachment(0) != nullptr);
@@ -216,7 +214,7 @@ void ShadowRendererBase::RenderFrame(FrameBase* frame, const RenderSetup& render
                 shadowMap->GetFilterMode(),
                 shadowMap->GetImageView()->GetImage()->GetTextureFormat(), // @TODO get format from Light's settings
                 shadowMap->GetAtlasElement()->dimensions,
-                shadowViews);
+                lightProxy->shadowViews);
 
             AssertDebug(cacheIt->second.combineShadowMapsPass->GetExtent() == light->GetShadowMapDimensions());
         }
@@ -225,7 +223,7 @@ void ShadowRendererBase::RenderFrame(FrameBase* frame, const RenderSetup& render
         {
             const GpuImageViewRef& inputImageView = cacheIt->second.combineShadowMapsPass != nullptr
                 ? cacheIt->second.combineShadowMapsPass->GetFinalImageView()
-                : shadowViews[0]->GetOutputTarget().GetFramebuffer()->GetAttachment(0)->GetImageView();
+                : lightProxy->shadowViews[0]->GetOutputTarget().GetFramebuffer()->GetAttachment(0)->GetImageView();
 
             Assert(inputImageView.IsValid());
 
@@ -264,11 +262,11 @@ void ShadowRendererBase::RenderFrame(FrameBase* frame, const RenderSetup& render
     const bool useVsm = shadowMap->GetFilterMode() == SMF_VSM;
 
     Array<RenderProxyList*> renderProxyLists;
-    renderProxyLists.Reserve(shadowViews.Size());
+    renderProxyLists.Reserve(lightProxy->shadowViews.Size());
 
     HYP_DEFER({ for (RenderProxyList* rpl : renderProxyLists) rpl->EndRead(); });
 
-    for (const Handle<View>& shadowView : shadowViews)
+    for (View* shadowView : lightProxy->shadowViews)
     {
         const ViewOutputTarget& outputTarget = shadowView->GetOutputTarget();
         Assert(outputTarget.IsValid());
@@ -345,12 +343,12 @@ void ShadowRendererBase::RenderFrame(FrameBase* frame, const RenderSetup& render
 
     if (combineShadowMapsPass)
     {
-        AssertDebug(shadowViews[0]->GetViewDesc().outputTargetDesc.numViews == 1,
+        AssertDebug(lightProxy->shadowViews[0]->GetViewDesc().outputTargetDesc.numViews == 1,
             "Combining static and dynamic shadow maps does not support cubemap targets!");
 
         RenderSetup rs = renderSetup;
         // FullScreenPass::Render needs a View set
-        rs.view = shadowViews[0];
+        rs.view = lightProxy->shadowViews[0];
 
         // Combine passes into one
         combineShadowMapsPass->Render(frame, rs);

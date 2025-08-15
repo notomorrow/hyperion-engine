@@ -144,7 +144,7 @@ public:
 
     const LightmapElement* GetElement(uint32 index) const;
 
-    bool BuildElementTextures(LightmapJob* job);
+    bool BuildElementTextures(const LightmapUVMap& uvMap, uint32 index);
     
     void UpdateRenderProxy(RenderProxyLightmapVolume* proxy);
 

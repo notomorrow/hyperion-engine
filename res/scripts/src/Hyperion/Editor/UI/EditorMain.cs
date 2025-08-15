@@ -586,7 +586,7 @@ namespace Hyperion
                 Assert.Throw(world != null);
 
                 // @TODO: Allow building a bounding box in editor before starting the task.
-                BoundingBox lightmapVolumeAabb = new BoundingBox(new Vec3f(-20.0f, 0.0f, -20.0f), new Vec3f(20.0f, 25.0f, 20.0f));
+                BoundingBox lightmapVolumeAabb = new BoundingBox(new Vec3f(-60.0f, -5.0f, -60.0f), new Vec3f(60.0f, 40.0f, 60.0f));
 
                 GenerateLightmapsEditorTask generateLightmapsTask = new GenerateLightmapsEditorTask();
                 generateLightmapsTask.SetScene(scene);

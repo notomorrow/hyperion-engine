@@ -42,6 +42,7 @@
 
 #include <core/threading/TaskSystem.hpp>
 #include <core/threading/TaskThread.hpp>
+#include <core/threading/Semaphore.hpp>
 
 #include <core/logging/LogChannels.hpp>
 #include <core/logging/Logger.hpp>
@@ -63,6 +64,11 @@
 
 namespace hyperion {
 
+struct GpuLightmapperReadyNotification : Semaphore<int>
+{
+
+};
+
 #pragma region Render commands
 
 struct RENDER_COMMAND(CreateLightmapGPUPathTracerUniformBuffer)
@@ -75,14 +81,30 @@ struct RENDER_COMMAND(CreateLightmapGPUPathTracerUniformBuffer)
     {
     }
 
-    virtual ~RENDER_COMMAND(CreateLightmapGPUPathTracerUniformBuffer)() override = default;
-
     virtual RendererResult operator()() override
     {
         HYP_GFX_CHECK(uniformBuffer->Create());
         uniformBuffer->Memset(sizeof(RTRadianceUniforms), 0x0);
 
-        HYPERION_RETURN_OK;
+        return {};
+    }
+};
+
+struct RENDER_COMMAND(SetGpuLightmapperReady) : RenderCommand
+{
+    RC<GpuLightmapperReadyNotification> notification;
+
+    RENDER_COMMAND(SetGpuLightmapperReady)(const RC<GpuLightmapperReadyNotification>& notification)
+        : notification(notification)
+    {
+        Assert(notification != nullptr);
+    }
+
+    virtual RendererResult operator()() override
+    {
+        notification->Produce();
+
+        return {};
     }
 };
 
@@ -149,15 +171,17 @@ LightmapRenderer_GpuPathTracing::LightmapRenderer_GpuPathTracing(
 
     for (GpuBufferRef& raysBuffer : m_raysBuffers)
     {
-        raysBuffer = g_renderBackend->MakeGpuBuffer(GpuBufferType::SSBO, sizeof(Vec4f) * 2 * (512 * 512));
+        raysBuffer = g_renderBackend->MakeGpuBuffer(GpuBufferType::SSBO, sizeof(Vec4f) * 2 * (512 * 512), alignof(Vec4f));
     }
 
-    m_hitsBufferGpu = g_renderBackend->MakeGpuBuffer(GpuBufferType::SSBO, sizeof(LightmapHit) * (512 * 512));
+    m_hitsBufferGpu = g_renderBackend->MakeGpuBuffer(GpuBufferType::SSBO, sizeof(LightmapHit) * (512 * 512), alignof(Vec4f));
+
+    m_readyNotification = MakeRefCountedPtr<GpuLightmapperReadyNotification>();
 }
 
 LightmapRenderer_GpuPathTracing::~LightmapRenderer_GpuPathTracing()
 {
-    SafeRelease(std::move(m_accelerationStructures));
+    SafeRelease(std::move(m_tlas));
     SafeRelease(std::move(m_uniformBuffers));
     SafeRelease(std::move(m_raysBuffers));
     SafeRelease(std::move(m_hitsBufferGpu));
@@ -180,6 +204,13 @@ void LightmapRenderer_GpuPathTracing::Create()
 
     Assert(m_scene->GetWorld() != nullptr);
     Assert(m_scene->GetWorld()->IsReady());
+
+    PUSH_RENDER_COMMAND(SetGpuLightmapperReady, m_readyNotification);
+}
+
+bool LightmapRenderer_GpuPathTracing::CanRender() const
+{
+    return m_readyNotification != nullptr && m_readyNotification->IsInSignalState();
 }
 
 void LightmapRenderer_GpuPathTracing::UpdatePipelineState(FrameBase* frame)
@@ -188,18 +219,26 @@ void LightmapRenderer_GpuPathTracing::UpdatePipelineState(FrameBase* frame)
 
     Assert(m_lightmapper != nullptr);
 
-    /// Create acceleration structure
-
-    for (TLASRef& tlas : m_accelerationStructures)
+    if (!m_tlas)
     {
-        if (!tlas)
-        {
-            tlas = g_renderBackend->MakeTLAS();
-        }
+        /// Create acceleration structure
+        m_tlas = g_renderBackend->MakeTLAS();
     }
-
-    if (m_accelerationStructures[frame->GetFrameIndex()]->IsCreated())
+    else if (m_tlas->IsCreated())
     {
+        RTUpdateStateFlags updateStateFlags = RTUpdateStateFlagBits::RT_UPDATE_STATE_FLAGS_NONE;
+        m_tlas->UpdateStructure(updateStateFlags);
+
+        if (updateStateFlags)
+        {
+            Assert(m_raytracingPipeline != nullptr);
+            
+            const DescriptorSetRef& descriptorSet = m_raytracingPipeline->GetDescriptorTable()->GetDescriptorSet("RTRadianceDescriptorSet", frame->GetFrameIndex());
+            Assert(descriptorSet != nullptr);
+
+            descriptorSet->Update(true);
+        }
+
         return; // already created
     }
 
@@ -209,7 +248,6 @@ void LightmapRenderer_GpuPathTracing::UpdatePipelineState(FrameBase* frame)
     Assert(view != nullptr);
 
     RenderProxyList& rpl = RenderApi_GetConsumerProxyList(view);
-
     rpl.BeginRead();
     HYP_DEFER({ rpl.EndRead(); });
 
@@ -227,17 +265,20 @@ void LightmapRenderer_GpuPathTracing::UpdatePipelineState(FrameBase* frame)
 
         blas->SetTransform(meshProxy->bufferData.modelMatrix);
 
+        if (meshProxy->material != nullptr)
+        {
+            const uint32 materialBinding = RenderApi_RetrieveResourceBinding(meshProxy->material);
+            blas->SetMaterialBinding(materialBinding);
+        }
+
         if (!blas->IsCreated())
         {
             HYP_GFX_ASSERT(blas->Create());
         }
 
-        if (!m_accelerationStructures[frame->GetFrameIndex()]->HasBLAS(blas))
-        {
-            for (TLASRef& tlas : m_accelerationStructures)
-            {
-                tlas->AddBLAS(blas);
-            }
+        if (!m_tlas->HasBLAS(blas))
+    {
+            m_tlas->AddBLAS(blas);
 
             hasBlas = true;
         }
@@ -248,10 +289,7 @@ void LightmapRenderer_GpuPathTracing::UpdatePipelineState(FrameBase* frame)
         return;
     }
 
-    for (TLASRef& tlas : m_accelerationStructures)
-    {
-        HYP_GFX_ASSERT(tlas->Create());
-    }
+    HYP_GFX_ASSERT(m_tlas->Create());
 
     /// Buffers
     CreateUniformBuffer();
@@ -293,8 +331,8 @@ void LightmapRenderer_GpuPathTracing::UpdatePipelineState(FrameBase* frame)
         const DescriptorSetRef& descriptorSet = descriptorTable->GetDescriptorSet("RTRadianceDescriptorSet", frameIndex);
         Assert(descriptorSet != nullptr);
 
-        descriptorSet->SetElement("TLAS", m_accelerationStructures[frameIndex]);
-        descriptorSet->SetElement("MeshDescriptionsBuffer", m_accelerationStructures[frameIndex]->GetMeshDescriptionsBuffer());
+        descriptorSet->SetElement("TLAS", m_tlas);
+        descriptorSet->SetElement("MeshDescriptionsBuffer", m_tlas->GetMeshDescriptionsBuffer());
         descriptorSet->SetElement("HitsBuffer", m_hitsBufferGpu);
         descriptorSet->SetElement("RaysBuffer", m_raysBuffers[frameIndex]);
 
@@ -311,9 +349,6 @@ void LightmapRenderer_GpuPathTracing::UpdatePipelineState(FrameBase* frame)
 
     m_raytracingPipeline = g_renderBackend->MakeRaytracingPipeline(shader, descriptorTable);
     DeferCreate(m_raytracingPipeline);
-
-    RTUpdateStateFlags updateStateFlags = RTUpdateStateFlagBits::RT_UPDATE_STATE_FLAGS_NONE;
-    m_accelerationStructures[frame->GetFrameIndex()]->UpdateStructure(updateStateFlags);
 }
 
 void LightmapRenderer_GpuPathTracing::UpdateUniforms(FrameBase* frame, uint32 rayOffset)
@@ -323,35 +358,31 @@ void LightmapRenderer_GpuPathTracing::UpdateUniforms(FrameBase* frame, uint32 ra
 
     uniforms.rayOffset = rayOffset;
 
-    // const uint32 maxBoundLights = MathUtil::Min(g_engineDriver->GetRenderState()->NumBoundLights(), ArraySize(uniforms.lightIndices));
-    // uint32 numBoundLights = 0;
+    RenderProxyList& rpl = RenderApi_GetConsumerProxyList(m_lightmapper->GetView());
+    rpl.BeginRead();
+    HYP_DEFER({ rpl.EndRead(); });
 
-    // for (uint32 lightType = 0; lightType < uint32(LT_MAX); lightType++) {
-    //     if (numBoundLights >= maxBoundLights) {
-    //         break;
-    //     }
+    const uint32 maxBoundLights = ArraySize(uniforms.lightIndices);
+    uint32 numBoundLights = 0;
 
-    //     for (const auto &it : g_engineDriver->GetRenderState()->boundLights[lightType]) {
-    //         if (numBoundLights >= maxBoundLights) {
-    //             break;
-    //         }
+    for (Light* light : rpl.GetLights())
+    {
+        const LightType lightType = light->GetLightType();
 
-    //         uniforms.lightIndices[numBoundLights++] = it->GetBufferIndex();
-    //     }
-    // }
+        if (lightType != LT_DIRECTIONAL && lightType != LT_POINT)
+        {
+            continue;
+        }
 
-    // uniforms.numBoundLights = numBoundLights;
+        if (numBoundLights >= maxBoundLights)
+        {
+            break;
+        }
 
-    // FIXME: Lights are now stored per-view.
-    // We don't have a View for Lightmapper since it is for the entire World it is indirectly attached to.
-    // We'll need to find a way to get the lights for the current view.
-    // Ideas:
-    // a) create a View for the Lightmapper and use that to get the lights. It will need to collect the lights on the Game thread so we'll need to add some kind of System to do that.
-    // b) add a function to the RenderScene to get all the lights in the scene and use that to get the lights for the current view. This has a drawback that we will always have some RenderLight active when it could be inactive if it is not in any view.
-    // OR: We can just use the lights in the current view and ignore the rest. This is a bit of a hack but it will work for now.
-    // HYP_NOT_IMPLEMENTED();
+        uniforms.lightIndices[numBoundLights++] = RenderApi_RetrieveResourceBinding(light);
+    }
 
-    uniforms.numBoundLights = 0;
+    uniforms.numBoundLights = numBoundLights;
 
     m_uniformBuffers[frame->GetFrameIndex()]->Copy(sizeof(uniforms), &uniforms);
 }
@@ -362,13 +393,14 @@ void LightmapRenderer_GpuPathTracing::UpdateRays(Span<const LightmapRay> rays)
 
 void LightmapRenderer_GpuPathTracing::ReadHitsBuffer(FrameBase* frame, Span<LightmapHit> outHits)
 {
-    Assert(m_accelerationStructures[frame->GetFrameIndex()] != nullptr);
+    Assert(m_tlas != nullptr);
 
     const GpuBufferRef& hitsBuffer = m_hitsBufferGpu;
     Assert(hitsBuffer != nullptr && hitsBuffer->IsCreated());
+    Assert(hitsBuffer->Size() >= outHits.Size() * sizeof(LightmapHit));
 
-    /*GpuBufferRef stagingBuffer = g_renderBackend->MakeGpuBuffer(GpuBufferType::STAGING_BUFFER, outHits.Size() * sizeof(LightmapHit));
-    HYP_GFX_ASSERT(stagingBuffer->Create());
+    GpuBufferRef stagingBuffer = g_renderBackend->MakeGpuBuffer(GpuBufferType::STAGING_BUFFER, outHits.Size() * sizeof(LightmapHit), alignof(Vec4f));
+    Assert(stagingBuffer->Create());
     stagingBuffer->Memset(outHits.Size() * sizeof(LightmapHit), 0);
 
     UniquePtr<SingleTimeCommands> singleTimeCommands = g_renderBackend->GetSingleTimeCommands();
@@ -377,30 +409,28 @@ void LightmapRenderer_GpuPathTracing::ReadHitsBuffer(FrameBase* frame, Span<Ligh
         {
             const ResourceState previousResourceState = hitsBuffer->GetResourceState();
 
-            // put src image in state for copying from
             renderQueue << InsertBarrier(hitsBuffer, RS_COPY_SRC);
-
-            // put dst buffer in state for copying to
             renderQueue << InsertBarrier(stagingBuffer, RS_COPY_DST);
 
-            renderQueue << CopyBuffer(stagingBuffer, hitsBuffer, outHits.Size() * sizeof(LightmapHit));
-
+            renderQueue << CopyBuffer(hitsBuffer, stagingBuffer, outHits.Size() * sizeof(LightmapHit));
+            
             renderQueue << InsertBarrier(stagingBuffer, RS_COPY_SRC);
-
             renderQueue << InsertBarrier(hitsBuffer, previousResourceState);
         });
 
-    HYP_GFX_ASSERT(singleTimeCommands->Execute());
+    Assert(singleTimeCommands->Execute());
 
     stagingBuffer->Read(sizeof(LightmapHit) * outHits.Size(), outHits.Data());
 
-    HYP_GFX_ASSERT(stagingBuffer->Destroy());*/
+    SafeRelease(std::move(stagingBuffer));
 }
 
 void LightmapRenderer_GpuPathTracing::Render(FrameBase* frame, const RenderSetup& renderSetup, LightmapJob* job, Span<const LightmapRay> rays, uint32 rayOffset)
 {
     HYP_SCOPE;
     Threads::AssertOnThread(g_renderThread);
+
+    Assert(CanRender());
 
     AssertDebug(renderSetup.IsValid());
 
@@ -410,10 +440,7 @@ void LightmapRenderer_GpuPathTracing::Render(FrameBase* frame, const RenderSetup
     UpdatePipelineState(frame);
     UpdateUniforms(frame, rayOffset);
 
-    if (m_accelerationStructures[frame->GetFrameIndex()] == nullptr)
-    {
-        return; // not ready yet this frame
-    }
+    Assert(m_tlas && m_tlas->IsCreated());
 
     { // rays buffer
         Array<Vec4f> rayData;
@@ -425,30 +452,33 @@ void LightmapRenderer_GpuPathTracing::Render(FrameBase* frame, const RenderSetup
             rayData[i * 2 + 1] = Vec4f(rays[i].ray.direction, 0.0f);
         }
 
-        bool raysBufferResized = false;
-
-        HYP_GFX_ASSERT(m_raysBuffers[frame->GetFrameIndex()]->EnsureCapacity(rayData.ByteSize(), &raysBufferResized));
+        Assert(m_raysBuffers[frame->GetFrameIndex()]->Size() >= rayData.ByteSize());
         m_raysBuffers[frame->GetFrameIndex()]->Copy(rayData.ByteSize(), rayData.Data());
 
-        if (raysBufferResized)
-        {
-            m_raytracingPipeline->GetDescriptorTable()->GetDescriptorSet("RTRadianceDescriptorSet", frame->GetFrameIndex())->SetElement("RaysBuffer", m_raysBuffers[frame->GetFrameIndex()]);
-        }
+        //bool raysBufferResized = false;
 
-        bool hitsBufferResized = false;
+        //HYP_GFX_ASSERT(m_raysBuffers[frame->GetFrameIndex()]->EnsureCapacity(rayData.ByteSize(), &raysBufferResized));
+        //m_raysBuffers[frame->GetFrameIndex()]->Copy(rayData.ByteSize(), rayData.Data());
 
-        /*HYP_GFX_ASSERT(m_hitsBuffers[frame->GetFrameIndex()]->EnsureCapacity(rays.Size() * sizeof(LightmapHit), &hitsBufferResized));
-        m_hitsBuffers[frame->GetFrameIndex()]->Memset(rays.Size() * sizeof(LightmapHit), 0);
+        //if (raysBufferResized)
+        //{
+        //    m_raytracingPipeline->GetDescriptorTable()->GetDescriptorSet("RTRadianceDescriptorSet", frame->GetFrameIndex())->SetElement("RaysBuffer", m_raysBuffers[frame->GetFrameIndex()]);
+        //}
 
-        if (hitsBufferResized) {
-            m_raytracingPipeline->GetDescriptorTable()->GetDescriptorSet("RTRadianceDescriptorSet", frame->GetFrameIndex())
-                ->SetElement("HitsBuffer", m_hitsBuffers[frame->GetFrameIndex()]);
-        }*/
+        //bool hitsBufferResized = false;
 
-        if (raysBufferResized || hitsBufferResized)
-        {
-            m_raytracingPipeline->GetDescriptorTable()->Update(frame->GetFrameIndex());
-        }
+        ///*HYP_GFX_ASSERT(m_hitsBuffers[frame->GetFrameIndex()]->EnsureCapacity(rays.Size() * sizeof(LightmapHit), &hitsBufferResized));
+        //m_hitsBuffers[frame->GetFrameIndex()]->Memset(rays.Size() * sizeof(LightmapHit), 0);
+
+        //if (hitsBufferResized) {
+        //    m_raytracingPipeline->GetDescriptorTable()->GetDescriptorSet("RTRadianceDescriptorSet", frame->GetFrameIndex())
+        //        ->SetElement("HitsBuffer", m_hitsBuffers[frame->GetFrameIndex()]);
+        //}*/
+
+        //if (raysBufferResized || hitsBufferResized)
+        //{
+        //    m_raytracingPipeline->GetDescriptorTable()->Update(frame->GetFrameIndex());
+        //}
     }
 
     frame->renderQueue << BindRaytracingPipeline(m_raytracingPipeline);

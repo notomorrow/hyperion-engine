@@ -165,6 +165,11 @@ public:
 
     virtual LightmapShadingType GetShadingType() const = 0;
 
+    virtual bool CanRender() const
+    {
+        return true;
+    }
+
     virtual void Create() = 0;
     virtual void PrepareJob(LightmapJob* job) { };
     virtual void UpdateRays(Span<const LightmapRay> rays) = 0;

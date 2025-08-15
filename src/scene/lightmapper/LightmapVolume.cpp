@@ -1,16 +1,14 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
 #include <scene/lightmapper/LightmapVolume.hpp>
-#include <scene/lightmapper/Lightmapper.hpp>
 #include <rendering/Texture.hpp>
 
 #include <rendering/RenderProxy.hpp>
-
 #include <rendering/RenderQueue.hpp>
-
 #include <rendering/RenderCommand.hpp>
 #include <rendering/RenderHelpers.hpp>
 #include <rendering/RenderBackend.hpp>
+#include <rendering/RenderFrame.hpp>
 
 #include <rendering/lightmapper/LightmapUVBuilder.hpp>
 
@@ -80,63 +78,11 @@ struct RENDER_COMMAND(BakeLightmapVolumeTexture)
             }
         }
 
-        UniquePtr<SingleTimeCommands> singleTimeCommands = g_renderBackend->GetSingleTimeCommands();
+        FrameBase* currentFrame = g_renderBackend->GetCurrentFrame();
+        Assert(currentFrame != nullptr);
 
-        singleTimeCommands->Push([&](RenderQueue& renderQueue)
-            {
-                for (uint32 textureTypeIndex = 0; textureTypeIndex < uint32(LTT_MAX); textureTypeIndex++)
-                {
-                    if (!atlasTextures[textureTypeIndex])
-                    {
-                        continue;
-                    }
-
-                    const Handle<Texture>& atlasTexture = atlasTextures[textureTypeIndex];
-
-                    renderQueue << InsertBarrier(atlasTexture->GetGpuImage(), RS_COPY_DST);
-
-                    for (const auto& elementTexturePair : elementTextures[textureTypeIndex])
-                    {
-                        const LightmapElement* element = elementTexturePair.first;
-                        const Handle<Texture>& elementTexture = elementTexturePair.second;
-
-                        HYP_LOG(Lightmap, Debug, "Blitting element {} (name: {}) to atlas texture {} (dim: {}), at offset {}, dimensions {}",
-                            element->index,
-                            elementTexture->GetName(),
-                            atlasTexture->GetName(),
-                            elementTexture->GetGpuImage()->GetExtent(),
-                            element->offsetCoords,
-                            element->dimensions);
-
-                        AssertDebug(element->offsetCoords.x < atlasTexture->GetExtent().x);
-                        AssertDebug(element->offsetCoords.y < atlasTexture->GetExtent().y);
-                        AssertDebug(element->offsetCoords.x + element->dimensions.x <= atlasTexture->GetExtent().x);
-                        AssertDebug(element->offsetCoords.y + element->dimensions.y <= atlasTexture->GetExtent().y);
-
-                        renderQueue << InsertBarrier(elementTexture->GetGpuImage(), RS_COPY_SRC);
-
-                        renderQueue << Blit(
-                            elementTexture->GetGpuImage(),
-                            atlasTexture->GetGpuImage(),
-                            Rect<uint32> { 0, 0, elementTexture->GetGpuImage()->GetExtent().x, elementTexture->GetGpuImage()->GetExtent().y },
-                            Rect<uint32> { element->offsetCoords.x, element->offsetCoords.y, element->offsetCoords.x + element->dimensions.x, element->offsetCoords.y + element->dimensions.y },
-                            0, /* srcMip */
-                            0, /* dstMip */
-                            0, /* srcFace */
-                            0  /* dstFace */
-                        );
-
-                        renderQueue << InsertBarrier(elementTexture->GetGpuImage(), RS_SHADER_RESOURCE);
-                    }
-
-                    renderQueue << InsertBarrier(atlasTexture->GetGpuImage(), RS_SHADER_RESOURCE);
-                }
-            });
-
-        Assert(singleTimeCommands->Execute());
-
-        // DEBUGGING: Save each atlas texture to a file for debugging purposes
-        HYP_LOG(Lightmap, Info, "Saving atlas textures to disk for debugging");
+        RenderQueue& renderQueue = currentFrame->renderQueue;
+        
         for (uint32 textureTypeIndex = 0; textureTypeIndex < uint32(LTT_MAX); textureTypeIndex++)
         {
             if (!atlasTextures[textureTypeIndex])
@@ -145,45 +91,88 @@ struct RENDER_COMMAND(BakeLightmapVolumeTexture)
             }
 
             const Handle<Texture>& atlasTexture = atlasTextures[textureTypeIndex];
-            Assert(atlasTexture.IsValid() && atlasTexture->IsReady());
+            Assert(atlasTexture != nullptr && atlasTexture->GetGpuImage()->IsCreated());
 
-            atlasTexture->EnqueueReadback([atlasTextureWeak = atlasTexture.ToWeak(), textureTypeIndex](ByteBuffer&& byteBuffer) mutable
-                {
-                    Handle<Texture> atlasTexture = atlasTextureWeak.Lock();
-                    if (!atlasTexture)
-                    {
-                        HYP_LOG(Lightmap, Error, "Atlas texture {} was not alive after GPU image readback!", atlasTextureWeak.Id());
+            renderQueue << InsertBarrier(atlasTexture->GetGpuImage(), RS_COPY_DST);
 
-                        return;
-                    }
+            for (const auto& elementTexturePair : elementTextures[textureTypeIndex])
+            {
+                const LightmapElement* element = elementTexturePair.first;
+                const Handle<Texture>& elementTexture = elementTexturePair.second;
 
-                    if (byteBuffer.Empty())
-                    {
-                        HYP_LOG(Lightmap, Warning, "Atlas texture {} is empty, skipping save", atlasTexture->GetName());
+                Assert(element->offsetCoords.x < atlasTexture->GetExtent().x);
+                Assert(element->offsetCoords.y < atlasTexture->GetExtent().y);
+                Assert(element->offsetCoords.x + element->dimensions.x <= atlasTexture->GetExtent().x);
+                Assert(element->offsetCoords.y + element->dimensions.y <= atlasTexture->GetExtent().y);
 
-                        return;
-                    }
+                renderQueue << InsertBarrier(elementTexture->GetGpuImage(), RS_COPY_SRC);
 
-                    Bitmap_RGBA8 bitmap(atlasTexture->GetExtent().x, atlasTexture->GetExtent().y);
-                    bitmap.SetPixels(std::move(byteBuffer));
+                renderQueue << Blit(
+                    elementTexture->GetGpuImage(),
+                    atlasTexture->GetGpuImage(),
+                    Rect<uint32> { 0, 0, elementTexture->GetGpuImage()->GetExtent().x, elementTexture->GetGpuImage()->GetExtent().y },
+                    Rect<uint32> { element->offsetCoords.x, element->offsetCoords.y, element->offsetCoords.x + element->dimensions.x, element->offsetCoords.y + element->dimensions.y },
+                    0, /* srcMip */
+                    0, /* dstMip */
+                    0, /* srcFace */
+                    0  /* dstFace */
+                );
 
-                    const String filename = HYP_FORMAT("lightmap_atlas_texture_{}_{}.bmp",
-                        atlasTexture->GetName(),
-                        uint32(LightmapTextureType(textureTypeIndex)));
+                renderQueue << InsertBarrier(elementTexture->GetGpuImage(), RS_SHADER_RESOURCE);
+            }
 
-                    HYP_LOG(Lightmap, Info, "Writing atlas texture {} to file {}", atlasTexture->GetName(), filename);
-
-                    FileByteWriter fileByteWriter { filename };
-                    bool res = bitmap.Write(&fileByteWriter);
-
-                    if (!res)
-                    {
-                        HYP_LOG(Lightmap, Error, "Failed to write atlas texture {} to file", atlasTexture->GetName());
-                    }
-                });
+            renderQueue << InsertBarrier(atlasTexture->GetGpuImage(), RS_SHADER_RESOURCE);
         }
 
-        HYPERION_RETURN_OK;
+        //// DEBUGGING: Save each atlas texture to a file for debugging purposes
+        //HYP_LOG(Lightmap, Info, "Saving atlas textures to disk for debugging");
+        //for (uint32 textureTypeIndex = 0; textureTypeIndex < uint32(LTT_MAX); textureTypeIndex++)
+        //{
+        //    if (!atlasTextures[textureTypeIndex])
+        //    {
+        //        continue;
+        //    }
+
+        //    const Handle<Texture>& atlasTexture = atlasTextures[textureTypeIndex];
+        //    Assert(atlasTexture.IsValid() && atlasTexture->IsReady());
+
+        //    atlasTexture->EnqueueReadback([atlasTextureWeak = atlasTexture.ToWeak(), textureTypeIndex](ByteBuffer&& byteBuffer) mutable
+        //        {
+        //            Handle<Texture> atlasTexture = atlasTextureWeak.Lock();
+        //            if (!atlasTexture)
+        //            {
+        //                HYP_LOG(Lightmap, Error, "Atlas texture {} was not alive after GPU image readback!", atlasTextureWeak.Id());
+
+        //                return;
+        //            }
+
+        //            if (byteBuffer.Empty())
+        //            {
+        //                HYP_LOG(Lightmap, Warning, "Atlas texture {} is empty, skipping save", atlasTexture->GetName());
+
+        //                return;
+        //            }
+
+        //            Bitmap_RGBA8 bitmap(atlasTexture->GetExtent().x, atlasTexture->GetExtent().y);
+        //            bitmap.SetPixels(std::move(byteBuffer));
+
+        //            const String filename = HYP_FORMAT("lightmap_atlas_texture_{}_{}.bmp",
+        //                atlasTexture->GetName(),
+        //                uint32(LightmapTextureType(textureTypeIndex)));
+
+        //            HYP_LOG(Lightmap, Info, "Writing atlas texture {} to file {}", atlasTexture->GetName(), filename);
+
+        //            FileByteWriter fileByteWriter { filename };
+        //            bool res = bitmap.Write(&fileByteWriter);
+
+        //            if (!res)
+        //            {
+        //                HYP_LOG(Lightmap, Error, "Failed to write atlas texture {} to file", atlasTexture->GetName());
+        //            }
+        //        });
+        //}
+
+        return {};
     }
 };
 
@@ -230,25 +219,20 @@ const LightmapElement* LightmapVolume::GetElement(uint32 index) const
     return &m_atlas.elements[index];
 }
 
-bool LightmapVolume::BuildElementTextures(LightmapJob* job)
+bool LightmapVolume::BuildElementTextures(const LightmapUVMap& uvMap, uint32 index)
 {
     Threads::AssertOnThread(g_gameThread);
 
-    Assert(job != nullptr);
-
-    const uint32 elementIndex = job->GetElementIndex();
-
-    if (elementIndex >= m_atlas.elements.Size())
+    if (index >= m_atlas.elements.Size())
     {
         return false;
     }
 
-    LightmapElement& element = m_atlas.elements[elementIndex];
+    LightmapElement& element = m_atlas.elements[index];
 
     const Vec2u elementDimensions = element.dimensions;
 
-    const LightmapUVMap& uvMap = job->GetUVMap();
-    FixedArray<Bitmap_RGBA8, uint32(LTT_MAX)> bitmaps = {
+    FixedArray<Bitmap_RGBA16F, uint32(LTT_MAX)> bitmaps = {
         uvMap.ToBitmapRadiance(),  /* RADIANCE */
         uvMap.ToBitmapIrradiance() /* IRRADIANCE */
     };
@@ -261,15 +245,17 @@ bool LightmapVolume::BuildElementTextures(LightmapJob* job)
     {
         element.entries[i].type = LightmapTextureType(i);
 
+        //ByteBuffer unpackedBytes = bitmaps[i].GetUnpackedBytes(4);
+
         Handle<Texture> texture = CreateObject<Texture>(TextureData {
             TextureDesc {
                 TT_TEX2D,
-                TF_RGBA32F,
+                bitmaps[i].GetFormat(),
                 Vec3u { elementDimensions, 1 },
                 TFM_LINEAR,
                 TFM_LINEAR,
                 TWM_REPEAT },
-            ByteBuffer(bitmaps[i].GetUnpackedFloats().ToByteView()) });
+            ByteBuffer(bitmaps[i].ToByteView()) });
 
         texture->SetName(NAME_FMT("LightmapVolumeTexture_{}_{}_{}", m_uuid, element.index, textureTypeNames[i]));
 
@@ -343,7 +329,7 @@ void LightmapVolume::UpdateAtlasTextures()
         {
             texture = CreateObject<Texture>(TextureDesc {
                 TT_TEX2D,
-                TF_RGBA8,
+                TF_RGBA16F,
                 Vec3u { m_atlas.atlasDimensions, 1 },
                 TFM_LINEAR,
                 TFM_LINEAR,

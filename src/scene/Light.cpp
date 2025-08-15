@@ -14,6 +14,7 @@
 #include <rendering/RenderProxy.hpp>
 #include <rendering/RenderBackend.hpp>
 #include <rendering/RenderGlobalState.hpp>
+#include <rendering/SafeDeleter.hpp>
 
 #include <rendering/shadows/ShadowMap.hpp>
 #include <rendering/shadows/ShadowMapAllocator.hpp>
@@ -106,6 +107,7 @@ Light::Light(LightType type, const Vec3f& position, const Vec3f& normal, const V
 
 Light::~Light()
 {
+    g_safeDeleter->SafeRelease(std::move(m_shadowViews));
 }
 
 void Light::Init()
@@ -144,8 +146,8 @@ void Light::CreateShadowViews()
 
         RemoveChild(shadowCamera);
     }
-
-    m_shadowViews.Clear();
+    
+    g_safeDeleter->SafeRelease(std::move(m_shadowViews));
 
     if (!(m_flags & LF_SHADOW))
     {
@@ -615,7 +617,7 @@ void Light::UpdateRenderProxy(RenderProxyLight* proxy)
 {
     proxy->light = WeakHandleFromThis();
     proxy->lightMaterial = m_material.ToWeak();
-    proxy->shadowViews = Map(m_shadowViews, &Handle<View>::ToWeak);
+    proxy->shadowViews = Map(m_shadowViews, &Handle<View>::Get);
 
     const BoundingBox aabb = GetAABB();
 

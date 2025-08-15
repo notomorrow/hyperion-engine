@@ -199,7 +199,8 @@ VkBufferUsageFlags GetVkUsageFlags(GpuBufferType type)
             | VK_BUFFER_USAGE_TRANSFER_SRC_BIT
             | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
     case GpuBufferType::STAGING_BUFFER:
-        return VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+        return VK_BUFFER_USAGE_TRANSFER_SRC_BIT
+            | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
     case GpuBufferType::INDIRECT_ARGS_BUFFER:
         return VK_BUFFER_USAGE_STORAGE_BUFFER_BIT
             | VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT

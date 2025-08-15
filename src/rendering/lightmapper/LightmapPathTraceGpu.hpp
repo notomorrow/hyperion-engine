@@ -6,9 +6,12 @@
 
 #include <rendering/RenderObject.hpp>
 
+#include <core/memory/RefCountedPtr.hpp>
+
 namespace hyperion {
 
 class RenderProxyList;
+struct GpuLightmapperReadyNotification;
 
 class HYP_API LightmapJob_GpuPathTracing : public LightmapJob
 {
@@ -49,6 +52,8 @@ public:
         return m_shadingType;
     }
 
+    virtual bool CanRender() const override;
+
     virtual void Create() override;
     virtual void UpdateRays(Span<const LightmapRay> rays) override;
     virtual void ReadHitsBuffer(FrameBase* frame, Span<LightmapHit> outHits) override;
@@ -67,7 +72,9 @@ private:
 
     GpuBufferRef m_hitsBufferGpu;
 
-    FixedArray<TLASRef, g_framesInFlight> m_accelerationStructures;
+    RC<GpuLightmapperReadyNotification> m_readyNotification;
+
+    TLASRef m_tlas;
 
     RaytracingPipelineRef m_raytracingPipeline;
 };
