@@ -105,7 +105,10 @@ struct RTRadianceUniforms
     uint32 numBoundLights;
     uint32 rayOffset; // for lightmapper
     float minRoughness;
+    float _pad0;
     Vec2i outputImageResolution;
+    float _pad1;
+    float _pad2;
     alignas(Vec4f) uint32 lightIndices[16];
 };
 

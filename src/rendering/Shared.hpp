@@ -18,6 +18,8 @@
 #include <core/Types.hpp>
 #include <core/HashCode.hpp>
 
+#include <util/Float16.hpp>
+
 namespace hyperion {
 
 HYP_ENUM()
@@ -420,9 +422,12 @@ struct TextureFormatHelper
     static constexpr uint32 numComponents = NumComponents(Format);
     static constexpr uint32 bytesPerComponent = BytesPerComponent(Format);
     static constexpr bool isSrgb = IsSrgbFormat(Format);
-    static constexpr bool isFloatType = uint32(Format) >= TF_RGBA16F && uint32(Format) <= TF_RGBA32F;
+    static constexpr bool isFloatType = uint32(Format) >= TF_R16F && uint32(Format) <= TF_RGBA32F;
 
-    using ElementType = std::conditional_t<isFloatType, float, ubyte>;
+    using ElementType = std::conditional_t<
+        isFloatType,
+        std::conditional_t<(uint32(Format) <= TF_RGBA16F), Float16, float>,
+        ubyte>;
 };
 
 HYP_STRUCT()

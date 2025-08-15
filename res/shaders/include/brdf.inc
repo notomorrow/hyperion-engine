@@ -1,8 +1,6 @@
 #ifndef HYP_BRDF_GLSL
 #define HYP_BRDF_GLSL
 
-#define PI 3.14159265359
-
 float GetSquareFalloffAttenuation(vec3 P, vec3 L, float radius)
 {
     const vec3 position_to_light = P - L;
@@ -81,7 +79,7 @@ float DistributionGGX(vec3 N, vec3 H, float roughness)
 
     // float nom   = a2;
     // float denom = (NdotH2 * (a2 - 1.0) + 1.0);
-    // denom = PI * denom * denom;
+    // denom = HYP_FMATH_PI * denom * denom;
 
     // return nom / denom;
 
@@ -109,7 +107,7 @@ float DistributionGGX(vec3 N, vec3 H, float roughness)
 
 //     float a = NoH * roughness;
 //     float k = roughness / (oneMinusNoHSquared + a * a);
-//     float d = k * k * (1.0 / PI);
+//     float d = k * k * HYP_FMATH_ONE_OVER_PI;
 //     return d;
 
 
@@ -138,7 +136,7 @@ float Trowbridge(float NdotH, float roughness)
     float alpha = roughness * roughness;
     float alpha2 = alpha * alpha;
     float NdotH2 = NdotH * NdotH;
-    float denominator = PI * pow((alpha2 - 1) * NdotH2 + 1, 2);
+    float denominator = HYP_FMATH_PI * pow((alpha2 - 1) * NdotH2 + 1, 2);
     return alpha2 / denominator;
 }
 
@@ -221,7 +219,7 @@ float acosFast(float x)
     float y = abs(x);
     float p = -0.1565827 * y + 1.570796;
     p *= sqrt(1.0 - y);
-    return x >= 0.0 ? p : PI - p;
+    return x >= 0.0 ? p : HYP_FMATH_PI - p;
 }
 
 /**
@@ -334,7 +332,7 @@ vec3 ImportanceSampleGGX(vec2 Xi, vec3 N, float roughness)
     float alpha = roughness * roughness;
     float alpha2 = alpha * alpha;
 	
-    float phi = 2.0 * PI * Xi.x;
+    float phi = 2.0 * HYP_FMATH_PI * Xi.x;
     float cosTheta = sqrt((1.0 - Xi.y) / (1.0 + (alpha2 - 1.0) * Xi.y));
     float sinTheta = sqrt(1.0 - cosTheta * cosTheta);
 	

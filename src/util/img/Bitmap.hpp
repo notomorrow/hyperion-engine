@@ -49,7 +49,17 @@ struct PixelReference
     HYP_FORCE_INLINE PixelReference& operator=(PixelReference&& other) noexcept = default;
     HYP_FORCE_INLINE ~PixelReference() = default;
 
-    HYP_FORCE_INLINE float GetComponent(uint32 index) const
+    HYP_FORCE_INLINE ComponentType GetComponentRaw(uint32 index) const
+    {
+        if (index >= numComponents || !byteOffset)
+        {
+            return 0.0f;
+        }
+
+        return *reinterpret_cast<ComponentType*>(reinterpret_cast<uintptr_t>(byteOffset) + (sizeof(ComponentType) * index));
+    }
+
+    HYP_FORCE_INLINE float GetComponentFloat(uint32 index) const
     {
         if (index >= numComponents || !byteOffset)
         {
@@ -76,7 +86,17 @@ struct PixelReference
         return fv;
     }
 
-    HYP_FORCE_INLINE void SetComponent(uint32 index, float value)
+    HYP_FORCE_INLINE void SetComponentRaw(uint32 index, ComponentType value)
+    {
+        if (index >= numComponents || !byteOffset)
+        {
+            return;
+        }
+
+        *reinterpret_cast<ComponentType*>(reinterpret_cast<uintptr_t>(byteOffset) + (sizeof(ComponentType) * index)) = value;
+    }
+
+    HYP_FORCE_INLINE void SetComponentFloat(uint32 index, float value)
     {
         if (index >= numComponents || !byteOffset)
         {
@@ -101,42 +121,42 @@ struct PixelReference
 
     HYP_FORCE_INLINE float GetR() const
     {
-        return GetComponent(0);
+        return GetComponentFloat(0);
     }
 
     HYP_FORCE_INLINE void SetR(float r)
     {
-        SetComponent(0, r);
+        SetComponentFloat(0, r);
     }
 
     HYP_FORCE_INLINE float GetG() const
     {
-        return GetComponent(1);
+        return GetComponentFloat(1);
     }
 
     HYP_FORCE_INLINE void SetG(float g)
     {
-        SetComponent(1, g);
+        SetComponentFloat(1, g);
     }
 
     HYP_FORCE_INLINE float GetB() const
     {
-        return GetComponent(2);
+        return GetComponentFloat(2);
     }
 
     HYP_FORCE_INLINE void SetB(float b)
     {
-        SetComponent(2, b);
+        SetComponentFloat(2, b);
     }
 
     HYP_FORCE_INLINE float GetA() const
     {
-        return GetComponent(3);
+        return GetComponentFloat(3);
     }
 
     HYP_FORCE_INLINE void SetA(float a)
     {
-        SetComponent(3, a);
+        SetComponentFloat(3, a);
     }
 
     HYP_FORCE_INLINE Vec2f GetRG() const
@@ -516,7 +536,17 @@ struct ConstPixelReference
         return *this;
     }
 
-    HYP_FORCE_INLINE float GetComponent(uint32 index) const
+    HYP_FORCE_INLINE ComponentType GetComponentRaw(uint32 index) const
+    {
+        if (index >= numComponents || !byteOffset)
+        {
+            return 0.0f;
+        }
+
+        return *reinterpret_cast<ComponentType*>(reinterpret_cast<uintptr_t>(byteOffset) + (sizeof(ComponentType) * index));
+    }
+
+    HYP_FORCE_INLINE float GetComponentFloat(uint32 index) const
     {
         if (index >= numComponents || !byteOffset)
         {
@@ -531,7 +561,7 @@ struct ConstPixelReference
         }
         else
         {
-            fv = float(*reinterpret_cast<const ComponentType*>(reinterpret_cast<uintptr_t>(byteOffset) + (sizeof(ComponentType) * index)));
+            fv = float(*reinterpret_cast<ComponentType*>(reinterpret_cast<uintptr_t>(byteOffset) + (sizeof(ComponentType) * index)));
         }
 
         if constexpr (IsSrgb)
@@ -543,24 +573,25 @@ struct ConstPixelReference
         return fv;
     }
 
+
     HYP_FORCE_INLINE float GetR() const
     {
-        return GetComponent(0);
+        return GetComponentFloat(0);
     }
 
     HYP_FORCE_INLINE float GetG() const
     {
-        return GetComponent(1);
+        return GetComponentFloat(1);
     }
 
     HYP_FORCE_INLINE float GetB() const
     {
-        return GetComponent(2);
+        return GetComponentFloat(2);
     }
 
     HYP_FORCE_INLINE float GetA() const
     {
-        return GetComponent(3);
+        return GetComponentFloat(3);
     }
 
     HYP_FORCE_INLINE Vec2f GetRG() const
@@ -747,7 +778,7 @@ public:
     {
     }
 
-    Bitmap(Span<const float> float_data, uint32 width, uint32 height)
+    Bitmap(Span<const PixelComponentType> pixelData, uint32 width, uint32 height)
         : m_width(width),
           m_height(height)
     {
@@ -755,24 +786,15 @@ public:
 
         const SizeType numPixels = m_width * m_height;
 
-        for (SizeType i = 0, j = 0; i < float_data.Size() && j < numPixels; i += numComponents, j++)
+        HYP_CORE_ASSERT((pixelData.Size() / sizeof(PixelComponentType) == GetByteSize()), "Bad pixel data!");
+
+        for (SizeType i = 0, j = 0; i < pixelData.Size() && j < numPixels; i += numComponents, j++)
         {
             for (uint32 k = 0; k < numComponents; k++)
             {
-                GetPixelReference(j).SetComponent(k, float_data[i + k]);
+                GetPixelReference(j).SetComponentRaw(k, pixelData[i + k]);
             }
         }
-    }
-
-    Bitmap(ConstByteView bytes, uint32 width, uint32 height)
-        : m_width(width),
-          m_height(height)
-    {
-        m_buffer.SetSize(GetByteSize());
-
-        HYP_CORE_ASSERT(bytes.Size() == GetByteSize(), "Byte view size does not match bitmap size! (%zu != %zu)", bytes.Size(), GetByteSize());
-
-        m_buffer.Write(MathUtil::Min(m_buffer.Size(), bytes.Size()), 0, bytes.Data());
     }
 
     Bitmap(uint32 width, uint32 height)
@@ -825,6 +847,16 @@ public:
     }
 
     ~Bitmap() = default;
+
+    HYP_FORCE_INLINE static constexpr TextureFormat GetFormat()
+    {
+        return Format;
+    }
+
+    HYP_FORCE_INLINE static constexpr uint32 GetNumComponents()
+    {
+        return numComponents;
+    }
 
     HYP_FORCE_INLINE uint32 GetWidth() const
     {
@@ -906,7 +938,8 @@ public:
         return m_buffer.ToByteView();
     }
 
-    ByteBuffer GetUnpackedBytes(uint32 bytesPerPixel) const
+    /*! \brief Get data as 1 byte per component (e.g RGBA8) */
+    ByteBuffer GetUnpackedBytes(uint32 bytesPerPixel = numComponents) const
     {
         ByteBuffer byteBuffer;
         byteBuffer.SetSize((m_width * m_height) * bytesPerPixel);
@@ -941,7 +974,7 @@ public:
 
                     for (uint32 j = 0; j < MathUtil::Min(numComponents, bytesPerPixel); j++)
                     {
-                        bytes[((m_height - y - 1) * m_width + x) * bytesPerPixel + j] = ubyte(pixelReference.GetComponent(j) * 255.0f);
+                        bytes[((m_height - y - 1) * m_width + x) * bytesPerPixel + j] = ubyte(pixelReference.GetComponentFloat(j) * 255.0f);
                     }
                 }
             }
@@ -950,6 +983,7 @@ public:
         return byteBuffer;
     }
 
+    /*! \brief Get data as raw float array (pixels are converted to 32-bit float */
     Array<float> GetUnpackedFloats() const
     {
         Array<float> floats;
@@ -963,7 +997,7 @@ public:
 
                 for (uint32 j = 0; j < numComponents; j++)
                 {
-                    floats[(y * m_width + x) * numComponents + j] = pixelReference.GetComponent(j);
+                    floats[(y * m_width + x) * numComponents + j] = pixelReference.GetComponentFloat(j);
                 }
             }
         }

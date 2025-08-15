@@ -84,55 +84,14 @@ HYP_DESCRIPTOR_CBUFF(RTRadianceDescriptorSet, RTRadianceUniforms) uniform RTRadi
 
 #ifdef MODE_IRRADIANCE
 
-#define RAY_OFFSET 0.0001
+#define RAY_OFFSET 0.001
 #define NUM_BOUNCES 4
-#define NUM_SAMPLES 4
+#define NUM_SAMPLES 8
 #else
-#define RAY_OFFSET 0.0001
+#define RAY_OFFSET 0.001
 #define NUM_BOUNCES 1
 #define NUM_SAMPLES 1
 #endif
-
-const float INV_PI = 1.0 / 3.14159265358979323846;
-
-vec3 EvaluateDiffuseLighting(in vec3 albedo, float metalness, in vec3 position, in vec3 normal)
-{
-    vec3 outLi = vec3(0.0);
-
-    for (uint light_index = 0; light_index < rt_radiance_uniforms.num_bound_lights; light_index++) {
-        const Light light = HYP_GET_LIGHT(light_index);
-
-        if (light.type == HYP_LIGHT_TYPE_DIRECTIONAL) {
-            vec3 wi = -normalize(light.position_intensity.xyz);
-            float NoL = max(0.0, dot(normal, wi));
-            if (NoL <= 0.0) {
-                continue;
-            }
-
-            vec3 f = albedo * INV_PI * (1.0 - metalness);
-            vec3 Li = UINT_TO_VEC4(light.color_encoded).rgb * light.position_intensity.w;
-            outLi += f * Li * NoL;
-        } else if (light.type == HYP_LIGHT_TYPE_POINT) {
-            vec2 radiusFalloff = unpackHalf2x16(light.radius_falloff);
-            float radius = radiusFalloff.x;
-
-            vec3 lightPos = light.position_intensity.xyz;
-            float dist = length(lightPos - position);
-            float distSqr = dist * dist;
-
-            float invRadius = 1.0 / radius;
-            float factor = distSqr * (invRadius * invRadius);
-            float smoothFactor = max(1.0 - (factor * factor), 0.0);
-
-            float denom = max(distSqr, 1e4);
-            vec3 Li = UINT_TO_VEC4(light.color_encoded).rgb * light.position_intensity.w;
-            outLi += (smoothFactor * smoothFactor / denom) * Li;
-        } else {
-        }
-    }
-
-    return outLi;
-}
 
 // This function is used to debug the albedo color by tracing a ray onto the surface
 // and returning the albedo color at that point.
@@ -175,6 +134,52 @@ vec3 DebugTest_Albedo(in vec3 position, in vec3 normal)
     return albedo;
 }
 
+float CheckInShadow(in vec3 position, in vec3 lightDir)
+{
+    // Save payload state
+    vec4 saved_throughput = payload.throughput;
+    vec4 saved_emissive = payload.emissive;
+    float saved_distance = payload.distance;
+    vec3 saved_normal = payload.normal;
+    vec3 saved_bary = payload.barycentric_coords;
+    uint saved_tri = payload.triangle_index;
+
+    // Set up ray to hit the surface from a small offset
+    vec3 origin = position + lightDir * 0.001;
+    vec3 direction = lightDir;
+
+    // Reset payload for this trace
+    payload.distance = -1.0;
+    payload.throughput = vec4(0.0);
+    payload.emissive = vec4(0.0);
+    payload.triangle_index = ~0u;
+    payload.normal = vec3(0.0);
+
+    traceRayEXT(tlas, gl_RayFlagsOpaqueEXT, 0xff, 0, 0, 0, origin, 0.001, direction, 1000.0, 0);
+
+    float inShadow = (payload.distance < 0.0) ? 1.0 : 0.0;
+
+    // Restore payload
+    payload.throughput = saved_throughput;
+    payload.emissive = saved_emissive;
+    payload.distance = saved_distance;
+    payload.normal = saved_normal;
+    payload.barycentric_coords = saved_bary;
+    payload.triangle_index = saved_tri;
+
+    return inShadow;
+}
+
+vec3 SampleCosineDir(in vec2 xi, in vec3 N)
+{
+    vec3 dir = SampleCosineWeightedHemisphere(xi);
+
+    vec3 T1, T2;
+    ComputeOrthonormalBasis(N, T1, T2);
+
+    return normalize(T1 * dir.x + T2 * dir.y + N * dir.z);
+}
+
 void main()
 {
     const uint ray_index = gl_LaunchIDEXT.x;
@@ -198,13 +203,17 @@ void main()
     uint ray_seed = InitRandomSeed(((rt_radiance_uniforms.ray_offset + ray_index) * 2), ((rt_radiance_uniforms.ray_offset + ray_index) * 2) + 1);
 
     for (uint sample_index = 0; sample_index < NUM_SAMPLES; sample_index++) {
-        // initial direction: if IRRADIANCE -> random hemisphere about N0, else just N0
         vec3 direction;
+        vec2 rnd = vec2(RandomFloat(ray_seed), RandomFloat(ray_seed));
+
 #ifdef MODE_IRRADIANCE
-        direction = normalize(RandomInHemisphere(vec3(RandomFloat(ray_seed), RandomFloat(ray_seed), RandomFloat(ray_seed)), N0));
+        direction = SampleCosineDir(rnd, N0);
 #else
         direction = N0;
 #endif
+
+        direction = normalize(direction);
+
         vec3 origin = ray.origin.xyz + N0 * RAY_OFFSET;
 
         vec3 radiance = vec3(0.0);
@@ -218,7 +227,7 @@ void main()
             payload.triangle_index = ~0u;
             payload.normal = vec3(0.0);
 
-            traceRayEXT(tlas, flags, mask, 0, 0, 0, origin, tmin, normalize(direction), tmax, 0);
+            traceRayEXT(tlas, flags, mask, 0, 0, 0, origin, tmin, direction, tmax, 0);
 
             if (payload.distance < 0.0) {
                 // miss -> sample environment probe if present
@@ -232,7 +241,6 @@ void main()
 
             vec3 albedo = clamp(payload.throughput.rgb, vec3(0.0), vec3(1.0));
             float metalness = payload.throughput.a;
-            vec3 f = albedo * INV_PI * (1.0 - metalness);
 
             vec3 hitPos = origin + direction * payload.distance;
             vec3 N = normalize(payload.normal);
@@ -242,19 +250,35 @@ void main()
                 radiance += beta * payload.emissive.rgb;
             }
 
-            // add contributions from bound lights (with shadow handling for directional)
-            radiance += beta * EvaluateDiffuseLighting(albedo, metalness, hitPos, N);
+            beta *= clamp(payload.throughput.rgb, vec3(0.0), vec3(1.0));
 
-#ifndef MODE_IRRADIANCE
-            // in radiance mode we only look up direct lights and stop
-            break;
-#else
+            for (uint light_index = 0; light_index < rt_radiance_uniforms.num_bound_lights; light_index++) {
+                const Light light = HYP_GET_LIGHT(light_index);
+                vec3 light_color = UINT_TO_VEC4(light.color_encoded).rgb;
 
-            vec3 wi = normalize(RandomInHemisphere(vec3(RandomFloat(ray_seed), RandomFloat(ray_seed), RandomFloat(ray_seed)), N));
-            float cosTheta = max(0.0, dot(N, wi));
-            const float pdf = 1.0 / (2.0 * 3.14159265358979323846);
+                if (light.type == HYP_LIGHT_TYPE_DIRECTIONAL) {
+                    vec3 light_direction = normalize(light.position_intensity.xyz);
+                    vec3 L = light_direction;
 
-            beta *= f * (cosTheta / pdf);
+                    // shadow check
+                    float shadow = 1.0;
+                    if ((light.flags & LF_SHADOW) != 0) {
+                        shadow = 1.0 - CheckInShadow(hitPos, L);
+                    }
+
+                    float NdotL = max(dot(N, L), 0.0);
+                    radiance += beta * NdotL * shadow * light_color * HYP_FMATH_ONE_OVER_PI;
+                } else if (light.type == HYP_LIGHT_TYPE_POINT) {
+                    vec3 L = normalize(light.position_intensity.xyz - hitPos);
+                    float d = length(light.position_intensity.xyz - hitPos);
+                    float attenuation = 1.0 / (d * d);
+
+                    float NdotL = max(dot(N, L), 0.0);
+                    radiance += beta * NdotL * light_color * HYP_FMATH_ONE_OVER_PI * attenuation;
+                } else {
+                    /// ... TODO
+                }
+            }
 
             if (bounceIndex >= 2) {
                 float p = clamp(max(max(beta.r, beta.g), beta.b), 0.05, 0.99);
@@ -264,17 +288,19 @@ void main()
                 beta /= p;
             }
 
-            direction = wi;
+            rnd = vec2(RandomFloat(ray_seed), RandomFloat(ray_seed));
 
-            float sign = dot(N, direction) > 0.0 ? 1.0 : -1.0;
-            origin = hitPos + N * (RAY_OFFSET * sign);
-#endif
+            direction = normalize(SampleCosineDir(rnd, N));
+            origin = hitPos + N * RAY_OFFSET;
         } // end bounces
 
         accumRadiance.rgb += radiance;
     } // end samples
 
     vec3 finalColor = accumRadiance.rgb / float(NUM_SAMPLES);
+
+    // // test
+    // float inShadow = DebugTest_InShadow(ray.origin.xyz, HYP_GET_LIGHT(0).position_intensity.xyz);
 
     hits[ray_index] = vec4(finalColor, 1.0);
 }

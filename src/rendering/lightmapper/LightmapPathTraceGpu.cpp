@@ -171,10 +171,10 @@ LightmapRenderer_GpuPathTracing::LightmapRenderer_GpuPathTracing(
 
     for (GpuBufferRef& raysBuffer : m_raysBuffers)
     {
-        raysBuffer = g_renderBackend->MakeGpuBuffer(GpuBufferType::SSBO, sizeof(Vec4f) * 2 * (512 * 512));
+        raysBuffer = g_renderBackend->MakeGpuBuffer(GpuBufferType::SSBO, sizeof(Vec4f) * 2 * (512 * 512), alignof(Vec4f));
     }
 
-    m_hitsBufferGpu = g_renderBackend->MakeGpuBuffer(GpuBufferType::SSBO, sizeof(LightmapHit) * (512 * 512));
+    m_hitsBufferGpu = g_renderBackend->MakeGpuBuffer(GpuBufferType::SSBO, sizeof(LightmapHit) * (512 * 512), alignof(Vec4f));
 
     m_readyNotification = MakeRefCountedPtr<GpuLightmapperReadyNotification>();
 }
@@ -399,8 +399,9 @@ void LightmapRenderer_GpuPathTracing::ReadHitsBuffer(FrameBase* frame, Span<Ligh
     Assert(hitsBuffer != nullptr && hitsBuffer->IsCreated());
     Assert(hitsBuffer->Size() >= outHits.Size() * sizeof(LightmapHit));
 
-    GpuBufferRef stagingBuffer = g_renderBackend->MakeGpuBuffer(GpuBufferType::STAGING_BUFFER, outHits.Size() * sizeof(LightmapHit));
+    GpuBufferRef stagingBuffer = g_renderBackend->MakeGpuBuffer(GpuBufferType::STAGING_BUFFER, outHits.Size() * sizeof(LightmapHit), alignof(Vec4f));
     Assert(stagingBuffer->Create());
+    stagingBuffer->Memset(outHits.Size() * sizeof(LightmapHit), 0);
 
     UniquePtr<SingleTimeCommands> singleTimeCommands = g_renderBackend->GetSingleTimeCommands();
 
@@ -412,7 +413,8 @@ void LightmapRenderer_GpuPathTracing::ReadHitsBuffer(FrameBase* frame, Span<Ligh
             renderQueue << InsertBarrier(stagingBuffer, RS_COPY_DST);
 
             renderQueue << CopyBuffer(hitsBuffer, stagingBuffer, outHits.Size() * sizeof(LightmapHit));
-
+            
+            renderQueue << InsertBarrier(stagingBuffer, RS_COPY_SRC);
             renderQueue << InsertBarrier(hitsBuffer, previousResourceState);
         });
 

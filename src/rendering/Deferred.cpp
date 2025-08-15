@@ -1493,8 +1493,6 @@ void DeferredRenderer::RenderFrame(FrameBase* frame, const RenderSetup& rs)
             newRs.passData = pd;
             newRs.view = view;
 
-            HYP_LOG(Rendering, Debug, "Update ray tracing view {}", view->Id());
-
             UpdateRaytracingView(frame, newRs);
         }
 
