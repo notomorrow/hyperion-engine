@@ -205,12 +205,12 @@ void main()
             traceRayEXT(tlas, flags, mask, 0, 0, 0, origin, tmin, direction, tmax, 0);
 
             if (payload.distance < 0.0) {
-                // // miss -> sample environment probe if present
-                // if (current_env_probe.texture_index != ~0u) {
-                //     uint probe_texture_index = max(0, min(current_env_probe.texture_index, HYP_MAX_BOUND_REFLECTION_PROBES - 1));
-                //     vec3 env = Texture2D(sampler_linear, env_probe_textures[probe_texture_index], EncodeOctahedralCoord(normalize(direction)) * 0.5 + 0.5).rgb;
-                //     radiance += beta * env;
-                // }
+                // miss -> sample environment probe if present
+                if (current_env_probe.texture_index != ~0u) {
+                    uint probe_texture_index = max(0, min(current_env_probe.texture_index, HYP_MAX_BOUND_REFLECTION_PROBES - 1));
+                    vec3 env = Texture2D(sampler_linear, env_probe_textures[probe_texture_index], EncodeOctahedralCoord(normalize(direction)) * 0.5 + 0.5).rgb;
+                    radiance += beta * env;
+                }
                 break;
             }
 
@@ -271,9 +271,9 @@ void main()
 
     vec3 finalColor = accumRadiance.rgb / float(NUM_SAMPLES);
 
-    // test
-    float inShadow = 1.0-CheckInShadow(ray.origin.xyz, ray.direction.xyz, HYP_GET_LIGHT(0).position_intensity.xyz);
-    finalColor = vec3(N0);//dot(N0, HYP_GET_LIGHT(0).position_intensity.xyz));//vec3(inShadow);
+    // // test
+    // float inShadow = 1.0-CheckInShadow(ray.origin.xyz, ray.direction.xyz, HYP_GET_LIGHT(0).position_intensity.xyz);
+    // finalColor = vec3(N0);//dot(N0, HYP_GET_LIGHT(0).position_intensity.xyz));//vec3(inShadow);
 
     hits[ray_index] = vec4(finalColor, 1.0);
 }
