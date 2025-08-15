@@ -467,9 +467,9 @@ Vec4f Texture::Sample(Vec3f uvw, uint32 faceIndex)
     Assert(textureData != nullptr);
 
     Vec3u coord = {
-        uint32(std::fmodf(uvw.x, 1.0f) * float(textureData->desc.extent.x - 1) + 0.5f),
-        uint32(std::fmodf(uvw.y, 1.0f) * float(textureData->desc.extent.y - 1) + 0.5f),
-        uint32(std::fmodf(uvw.z, 1.0f) * float(textureData->desc.extent.z - 1) + 0.5f)
+        uint32(MathUtil::Abs(std::fmodf(uvw.x, 1.0f)) * float(textureData->desc.extent.x - 1) + 0.5f),
+        uint32(MathUtil::Abs(std::fmodf(uvw.y, 1.0f)) * float(textureData->desc.extent.y - 1) + 0.5f),
+        uint32(MathUtil::Abs(std::fmodf(uvw.z, 1.0f)) * float(textureData->desc.extent.z - 1) + 0.5f)
     };
 
     const uint32 bytesPerComponent = BytesPerComponent(textureData->desc.format);

@@ -256,17 +256,11 @@ void LightmapJob::AddTask(TaskBatch* taskBatch)
     m_currentTasks.PushBack(taskBatch);
 }
 
+HYP_DISABLE_OPTIMIZATION;
 void LightmapJob::Process()
 {
     Assert(IsRunning());
     Assert(!m_result.HasError(), "Unhandled error in lightmap job: {}", *m_result.GetError().GetMessage());
-
-    if (numConcurrentRenderingTasks.Get(MemoryOrder::ACQUIRE) >= g_maxConcurrentRenderingTasksPerJob)
-    {
-        // Wait for current rendering tasks to complete before enqueueing new ones.
-
-        return;
-    }
 
     if (!m_uvMap.HasValue())
     {
@@ -323,6 +317,20 @@ void LightmapJob::Process()
             // Mark as ready to stop further processing
             Stop(HYP_MAKE_ERROR(Error, "Failed to build UV map for lightmap job {}", m_uuid));
         }
+
+        return;
+    }
+
+    View* view = m_params.view;
+    Assert(view != nullptr);
+
+    view->UpdateViewport();
+    view->UpdateVisibility();
+    view->CollectSync();
+    
+    if (numConcurrentRenderingTasks.Get(MemoryOrder::ACQUIRE) >= g_maxConcurrentRenderingTasksPerJob)
+    {
+        // Wait for current rendering tasks to complete before enqueueing new ones.
 
         return;
     }
@@ -384,6 +392,18 @@ void LightmapJob::Process()
 
     AssertDebug(lightmapRenderers[0] != nullptr);
 
+    for (UniquePtr<ILightmapRenderer>& lightmapRenderer : lightmapRenderers)
+    {
+        AssertDebug(lightmapRenderer != nullptr);
+
+        if (!lightmapRenderer->CanRender())
+        {
+            HYP_LOG(Lightmap, Info, "Waiting for lightmap renderers to be ready...");
+
+            return;
+        }
+    }
+
     const SizeType maxRays = MathUtil::Min(lightmapRenderers[0]->MaxRaysPerFrame(), m_params.config->maxRaysPerFrame);
 
     Array<LightmapRay> rays;
@@ -393,8 +413,6 @@ void LightmapJob::Process()
 
     for (UniquePtr<ILightmapRenderer>& lightmapRenderer : lightmapRenderers)
     {
-        AssertDebug(lightmapRenderer != nullptr);
-
         lightmapRenderer->UpdateRays(rays);
     }
 
@@ -415,6 +433,7 @@ void LightmapJob::Process()
 
     PUSH_RENDER_COMMAND(LightmapRender, this, MakeStrongRef(world), m_params.view, std::move(rays), rayOffset);
 }
+HYP_ENABLE_OPTIMIZATION;
 
 #pragma endregion LightmapJob
 
@@ -466,7 +485,8 @@ void Lightmapper::Initialize()
             | ViewFlags::NO_FRUSTUM_CULLING
             | ViewFlags::SKIP_ENV_GRIDS | ViewFlags::SKIP_LIGHTMAP_VOLUMES
             | ViewFlags::RAYTRACING
-            | ViewFlags::NO_DRAW_CALLS,
+            | ViewFlags::NO_DRAW_CALLS
+            | ViewFlags::NOT_MULTI_BUFFERED,
         .viewport = Viewport { .extent = Vec2u::One(), .position = Vec2i::Zero() },
         .outputTargetDesc = outputTargetDesc,
         .scenes = { m_scene },
@@ -476,9 +496,9 @@ void Lightmapper::Initialize()
     m_view = CreateObject<View>(viewDesc);
     InitObject(m_view);
 
-    HYP_LOG_TEMP("Created View {} for Lightmaper : Num meshes collected : {}",
-        m_view->Id(),
-        m_view->GetRenderProxyList(0)->GetMeshEntities().NumCurrent());
+    m_view->UpdateViewport();
+    m_view->UpdateVisibility();
+    m_view->CollectSync();
 
     m_volume = CreateObject<LightmapVolume>(m_aabb);
     InitObject(m_volume);
@@ -638,10 +658,6 @@ void Lightmapper::Update(float delta)
 {
     HYP_SCOPE;
 
-    m_view->UpdateViewport();
-    m_view->UpdateVisibility();
-    m_view->CollectSync();
-
     uint32 numJobs = m_numJobs.Get(MemoryOrder::ACQUIRE);
 
     Mutex::Guard guard(m_queueMutex);
@@ -680,7 +696,10 @@ void Lightmapper::HandleCompletedJob(LightmapJob* job)
 
     HYP_LOG(Lightmap, Debug, "Tracing completed for lightmapping job {} ({} subelements)", job->GetUUID(), job->GetSubElements().Size());
 
-    if (!m_volume->BuildElementTextures(job))
+    const LightmapUVMap& uvMap = job->GetUVMap();
+    const uint32 elementIndex = job->GetElementIndex();
+
+    if (!m_volume->BuildElementTextures(uvMap, elementIndex))
     {
         HYP_LOG(Lightmap, Error, "Failed to build LightmapElement textures for LightmapVolume, element index: {}", job->GetElementIndex());
 
@@ -734,40 +753,8 @@ void Lightmapper::HandleCompletedJob(LightmapJob* job)
 
         subElement.material->SetBucket(RB_LIGHTMAP);
 
-#if 0
-        // temp ; testing. - will instead be set in the lightmap volume
-        Bitmap_RGBA8 radianceBitmap = uvMap.ToBitmapRadiance();
-        Bitmap_RGBA8 irradianceBitmap = uvMap.ToBitmapIrradiance();
-
-        Handle<Texture> irradianceTexture = CreateObject<Texture>(TextureData {
-            TextureDesc {
-                TT_TEX2D,
-                TF_RGBA8,
-                Vec3u { uvMap.width, uvMap.height, 1 },
-                TFM_LINEAR,
-                TFM_LINEAR,
-                TWM_REPEAT },
-            ByteBuffer(irradianceBitmap.GetUnpackedFloats().ToByteView()) });
-        InitObject(irradianceTexture);
-
-        Handle<Texture> radianceTexture = CreateObject<Texture>(TextureData {
-            TextureDesc {
-                TT_TEX2D,
-                TF_RGBA8,
-                Vec3u { uvMap.width, uvMap.height, 1 },
-                TFM_LINEAR,
-                TFM_LINEAR,
-                TWM_REPEAT },
-            ByteBuffer(radianceBitmap.GetUnpackedFloats().ToByteView()) });
-        InitObject(radianceTexture);
-
-        subElement.material->SetTexture(MaterialTextureKey::IRRADIANCE_MAP, irradianceTexture);
-        subElement.material->SetTexture(MaterialTextureKey::RADIANCE_MAP, radianceTexture);
-#else
-        // @TEMP
         subElement.material->SetTexture(MaterialTextureKey::IRRADIANCE_MAP, m_volume->GetAtlasTexture(LTT_IRRADIANCE));
         subElement.material->SetTexture(MaterialTextureKey::RADIANCE_MAP, m_volume->GetAtlasTexture(LTT_RADIANCE));
-#endif
 
         auto updateMeshComponent = [entityManagerWeak = MakeWeakRef(m_scene->GetEntityManager()), elementIndex = job->GetElementIndex(), volume = m_volume, subElement = subElement, newMaterial = (isNewMaterial ? subElement.material : Handle<Material>::empty)]()
         {

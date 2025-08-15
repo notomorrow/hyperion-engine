@@ -15,11 +15,11 @@ namespace hyperion {
 
 #pragma region LightmapUVMap
 
-Bitmap_RGBA8 LightmapUVMap::ToBitmapRadiance() const
+Bitmap_RGBA16F LightmapUVMap::ToBitmapRadiance() const
 {
     Assert(uvs.Size() == width * height, "Invalid UV map size");
 
-    Bitmap_RGBA8 bitmap(width, height);
+    Bitmap_RGBA16F bitmap(width, height);
 
     for (uint32 x = 0; x < width; x++)
     {
@@ -43,11 +43,11 @@ Bitmap_RGBA8 LightmapUVMap::ToBitmapRadiance() const
     return bitmap;
 }
 
-Bitmap_RGBA8 LightmapUVMap::ToBitmapIrradiance() const
+Bitmap_RGBA16F LightmapUVMap::ToBitmapIrradiance() const
 {
     Assert(uvs.Size() == width * height, "Invalid UV map size");
 
-    Bitmap_RGBA8 bitmap(width, height);
+    Bitmap_RGBA16F bitmap(width, height);
 
     for (uint32 x = 0; x < width; x++)
     {
@@ -203,7 +203,7 @@ TResult<LightmapUVMap> LightmapUVBuilder::Build()
     }
 
     xatlas::PackOptions packOptions {};
-    packOptions.resolution = 512;
+    packOptions.resolution = 1024;
     packOptions.bilinear = true;
 
     xatlas::ComputeCharts(atlas);

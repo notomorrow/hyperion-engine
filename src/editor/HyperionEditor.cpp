@@ -195,9 +195,9 @@ void HyperionEditor::Init()
     sunNode->SetName(NAME("Sun"));
 
     Handle<DirectionalLight> sunEntity = scene->GetEntityManager()->AddEntity<DirectionalLight>(
-        Vec3f(-0.4f, 0.8f, 0.0f).Normalize(),
+        Vec3f(0.5f, 0.5f, 0.0f).Normalize(),
         Color(Vec4f(1.0f, 0.9f, 0.8f, 1.0f)),
-        1.0f);
+        10.0f);
 
     sunNode->AddChild(sunEntity);
 #endif
@@ -236,8 +236,8 @@ void HyperionEditor::Init()
 
                 scene->GetRoot()->AddChild(node);
 
-#if 1
-                Handle<Entity> envGridEntity = CreateObject<EnvGrid>(node->GetWorldAABB() * 1.2f, EnvGridOptions { .type = EnvGridType::ENV_GRID_TYPE_LIGHT_FIELD, .density = Vec3u { 10, 3, 10 } });
+#if 0
+                Handle<LegacyEnvGrid> envGridEntity = CreateObject<LegacyEnvGrid>(node->GetWorldAABB() * 1.2f, EnvGridOptions { EnvGridType::ENV_GRID_TYPE_LIGHT_FIELD, Vec3u { 10, 3, 10 } });
                 envGridEntity->SetName(NAME("EnvGrid2"));
                 scene->GetRoot()->AddChild(envGridEntity);
 

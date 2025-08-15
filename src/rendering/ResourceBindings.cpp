@@ -122,25 +122,30 @@ void OnBindingChanged_EnvGrid(EnvGrid* envGrid, uint32 prev, uint32 next)
 {
     AssertDebug(envGrid != nullptr);
 
+    if (!envGrid->IsA<LegacyEnvGrid>())
+    {
+        return;
+    }
+
+    LegacyEnvGrid* legacyEnvGrid = static_cast<LegacyEnvGrid*>(envGrid);
+
     RenderApi_AssignResourceBinding(envGrid, next);
 
-    // if (next != ~0u)
-    // {
-    switch (envGrid->GetEnvGridType())
+    switch (legacyEnvGrid->GetEnvGridType())
     {
     case EnvGridType::ENV_GRID_TYPE_LIGHT_FIELD:
     {
-        AssertDebug(envGrid->GetLightFieldIrradianceTexture().IsValid());
-        AssertDebug(envGrid->GetLightFieldDepthTexture().IsValid());
+        AssertDebug(legacyEnvGrid->GetLightFieldIrradianceTexture().IsValid());
+        AssertDebug(legacyEnvGrid->GetLightFieldDepthTexture().IsValid());
 
         // @TODO: Set based on binding index
         for (uint32 frameIndex = 0; frameIndex < g_framesInFlight; frameIndex++)
         {
             g_renderGlobalState->globalDescriptorTable->GetDescriptorSet("Global", frameIndex)
-                ->SetElement("LightFieldColorTexture", g_renderBackend->GetTextureImageView(envGrid->GetLightFieldIrradianceTexture()));
+                ->SetElement("LightFieldColorTexture", g_renderBackend->GetTextureImageView(legacyEnvGrid->GetLightFieldIrradianceTexture()));
 
             g_renderGlobalState->globalDescriptorTable->GetDescriptorSet("Global", frameIndex)
-                ->SetElement("LightFieldDepthTexture", g_renderBackend->GetTextureImageView(envGrid->GetLightFieldDepthTexture()));
+                ->SetElement("LightFieldDepthTexture", g_renderBackend->GetTextureImageView(legacyEnvGrid->GetLightFieldDepthTexture()));
         }
 
         return;
@@ -149,18 +154,17 @@ void OnBindingChanged_EnvGrid(EnvGrid* envGrid, uint32 prev, uint32 next)
         break;
     }
 
-    if (envGrid->GetOptions().flags & EnvGridFlags::USE_VOXEL_GRID)
+    if (legacyEnvGrid->GetOptions().flags & EnvGridFlags::USE_VOXEL_GRID)
     {
-        AssertDebug(envGrid->GetVoxelGridTexture().IsValid());
+        AssertDebug(legacyEnvGrid->GetVoxelGridTexture().IsValid());
 
         // Set our voxel grid texture in the global descriptor set so we can use it in shaders
         for (uint32 frameIndex = 0; frameIndex < g_framesInFlight; frameIndex++)
         {
             g_renderGlobalState->globalDescriptorTable->GetDescriptorSet("Global", frameIndex)
-                ->SetElement("VoxelGridTexture", g_renderBackend->GetTextureImageView(envGrid->GetVoxelGridTexture()));
+                ->SetElement("VoxelGridTexture", g_renderBackend->GetTextureImageView(legacyEnvGrid->GetVoxelGridTexture()));
         }
     }
-    // }
 }
 
 void WriteBufferData_EnvGrid(GpuBufferHolderBase* gpuBufferHolder, uint32 idx, IRenderProxy* proxy)

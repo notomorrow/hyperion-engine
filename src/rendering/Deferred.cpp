@@ -593,11 +593,13 @@ void EnvGridPass::Render(FrameBase* frame, const RenderSetup& rs)
         RenderPreviousTextureToScreen(frame, rs);
     }
 
-    for (EnvGrid* envGrid : rpl.GetEnvGrids())
+    for (EnvGrid* envGrid : rpl.GetEnvGrids().GetElements<LegacyEnvGrid>())
     {
+        LegacyEnvGrid* legacyEnvGrid = static_cast<LegacyEnvGrid*>(envGrid);
+
         const GraphicsPipelineRef& graphicsPipeline = m_mode == EGPM_RADIANCE
             ? m_graphicsPipeline
-            : m_graphicsPipelines[EnvGridTypeToApplyEnvGridMode(envGrid->GetEnvGridType())];
+            : m_graphicsPipelines[EnvGridTypeToApplyEnvGridMode(legacyEnvGrid->GetEnvGridType())];
 
         Assert(graphicsPipeline.IsValid());
 
@@ -1439,9 +1441,9 @@ void DeferredRenderer::RenderFrame(FrameBase* frame, const RenderSetup& rs)
 
     // Collect view-independent renderable types from all views, binned
     /// @TODO: We could use the existing binning by subclass that ResourceTracker now provides.
-    FixedArray<Array<EnvProbe*>, EPT_MAX> envProbes;
-    FixedArray<Array<Light*>, LT_MAX> lights;
-    Array<EnvGrid*> envGrids;
+    FixedArray<HashSet<EnvProbe*>, EPT_MAX> envProbes;
+    FixedArray<HashSet<Light*>, LT_MAX> lights;
+    HashSet<EnvGrid*> envGrids;
 
     // For rendering EnvGrids and EnvProbes, we use a directional light from one of the Views that references it (if found)
     /// TODO: This could be a little bit more robust.
@@ -1498,7 +1500,7 @@ void DeferredRenderer::RenderFrame(FrameBase* frame, const RenderSetup& rs)
         {
             AssertDebug(light != nullptr);
 
-            lights[light->GetLightType()].PushBack(light);
+            lights[light->GetLightType()].Insert(light);
         }
 
         for (EnvProbe* envProbe : rpl.GetEnvProbes())
@@ -1529,7 +1531,7 @@ void DeferredRenderer::RenderFrame(FrameBase* frame, const RenderSetup& rs)
                 }
             }
 
-            envProbes[envProbe->GetEnvProbeType()].PushBack(envProbe);
+            envProbes[envProbe->GetEnvProbeType()].Insert(envProbe);
         }
 
         for (EnvGrid* envGrid : rpl.GetEnvGrids())
@@ -1552,7 +1554,7 @@ void DeferredRenderer::RenderFrame(FrameBase* frame, const RenderSetup& rs)
                 }
             }
 
-            envGrids.PushBack(envGrid);
+            envGrids.Insert(envGrid);
         }
     }
 
@@ -1589,12 +1591,12 @@ void DeferredRenderer::RenderFrame(FrameBase* frame, const RenderSetup& rs)
         // Set sky as fallback probe
         if (envProbes[EPT_SKY].Any())
         {
-            newRs.envProbe = envProbes[EPT_SKY][0];
+            newRs.envProbe = envProbes[EPT_SKY].Front();
         }
 
         if (lights[LT_DIRECTIONAL].Any())
         {
-            newRs.light = lights[LT_DIRECTIONAL][0];
+            newRs.light = lights[LT_DIRECTIONAL].Front();
         }
 
         if (envProbes.Any())
@@ -2033,7 +2035,7 @@ void DeferredRenderer::UpdateRaytracingView(FrameBase* frame, const RenderSetup&
         return;
     }
 
-    const uint32 frameIndex = frame->GetFrameIndex();
+    const uint32 currentFrameIndex = frame->GetFrameIndex();
 
     RaytracingPassData* pd = ObjCast<RaytracingPassData>(rs.passData);
 
@@ -2041,7 +2043,7 @@ void DeferredRenderer::UpdateRaytracingView(FrameBase* frame, const RenderSetup&
     rpl.BeginRead();
     HYP_DEFER({ rpl.EndRead(); });
 
-    if (!pd->raytracingTlases[frameIndex])
+    if (!pd->raytracingTlases[currentFrameIndex])
     {
         for (TLASRef& tlas : pd->raytracingTlases)
         {
@@ -2060,7 +2062,7 @@ void DeferredRenderer::UpdateRaytracingView(FrameBase* frame, const RenderSetup&
 
         AssertDebug(meshProxy->mesh != nullptr);
 
-        BLASRef& blas = meshProxy->raytracingData.bottomLevelAccelerationStructures[frame->GetFrameIndex()];
+        BLASRef& blas = meshProxy->raytracingData.blas;
 
         const bool materialsDiffer = blas != nullptr
             && blas->GetMaterial() != meshProxy->material;
@@ -2069,9 +2071,9 @@ void DeferredRenderer::UpdateRaytracingView(FrameBase* frame, const RenderSetup&
         {
             if (blas != nullptr)
             {
-                for (TLASRef& tlas : pd->raytracingTlases)
+                for (uint32 frameIndex = 0; frameIndex < g_framesInFlight; frameIndex++)
                 {
-                    tlas->RemoveBLAS(blas);
+                    pd->raytracingTlases[frameIndex]->RemoveBLAS(blas);
                 }
 
                 SafeRelease(std::move(blas));
@@ -2079,40 +2081,34 @@ void DeferredRenderer::UpdateRaytracingView(FrameBase* frame, const RenderSetup&
 
             blas = MeshBlasBuilder::Build(meshProxy->mesh, meshProxy->material);
             Assert(blas != nullptr);
-
+            
             blas->SetTransform(meshProxy->bufferData.modelMatrix);
 
-            if (!blas->IsCreated())
-            {
-                HYP_GFX_ASSERT(blas->Create());
-            }
+            const uint32 materialBinding = RenderApi_RetrieveResourceBinding(meshProxy->material);
+            blas->SetMaterialBinding(materialBinding);
+
+            HYP_GFX_ASSERT(blas->Create());
         }
         else
         {
             const uint32 materialBinding = RenderApi_RetrieveResourceBinding(meshProxy->material);
-            const bool materialBindingsDiffer = blas->GetMaterialBinding() != materialBinding;
 
-            if (materialBindingsDiffer)
-            {
-                // needs to rebuild mesh descriptions if material binding changed
-                blas->SetMaterialBinding(materialBinding);
-            }
-
+            blas->SetMaterialBinding(materialBinding);
             blas->SetTransform(meshProxy->bufferData.modelMatrix);
         }
 
-        if (!pd->raytracingTlases[frameIndex]->HasBLAS(blas))
+        if (!pd->raytracingTlases[currentFrameIndex]->HasBLAS(blas))
         {
-            for (TLASRef& tlas : pd->raytracingTlases)
+            for (uint32 frameIndex = 0; frameIndex < g_framesInFlight; frameIndex++)
             {
-                tlas->AddBLAS(blas);
+                pd->raytracingTlases[frameIndex]->AddBLAS(meshProxy->raytracingData.blas);
             }
 
             hasBlas = true;
         }
     }
 
-    if (!pd->raytracingTlases[frameIndex]->IsCreated())
+    if (!pd->raytracingTlases[currentFrameIndex]->IsCreated())
     {
         if (hasBlas)
         {
@@ -2126,7 +2122,7 @@ void DeferredRenderer::UpdateRaytracingView(FrameBase* frame, const RenderSetup&
     }
 
     RTUpdateStateFlags updateStateFlags = RTUpdateStateFlagBits::RT_UPDATE_STATE_FLAGS_NONE;
-    pd->raytracingTlases[frameIndex]->UpdateStructure(updateStateFlags);
+    pd->raytracingTlases[currentFrameIndex]->UpdateStructure(updateStateFlags);
 }
 
 void DeferredRenderer::PerformOcclusionCulling(FrameBase* frame, const RenderSetup& rs, RenderCollector& renderCollector)

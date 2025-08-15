@@ -16,6 +16,7 @@
 namespace hyperion {
 
 class EnvGrid;
+class LegacyEnvGrid;
 
 HYP_CLASS(NosScriptBindings)
 class HYP_API EnvGridPassData : public PassData
@@ -56,7 +57,7 @@ public:
 
 struct EnvGridPassDataExt : PassDataExt
 {
-    EnvGrid* envGrid = nullptr;
+    LegacyEnvGrid* envGrid = nullptr;
 
     EnvGridPassDataExt()
         : PassDataExt(TypeId::ForType<EnvGridPassDataExt>())
@@ -94,9 +95,9 @@ protected:
     void VoxelizeProbe(FrameBase* frame, const RenderSetup& renderSetup, uint32 probeIndex);
 
     Handle<PassData> CreateViewPassData(View* view, PassDataExt& ext) override;
-    void CreateVoxelGridData(EnvGrid* envGrid, EnvGridPassData& pd);
-    void CreateSphericalHarmonicsData(EnvGrid* envGrid, EnvGridPassData& pd);
-    void CreateLightFieldData(EnvGrid* envGrid, EnvGridPassData& pd);
+    void CreateVoxelGridData(LegacyEnvGrid* envGrid, EnvGridPassData& pd);
+    void CreateSphericalHarmonicsData(LegacyEnvGrid* envGrid, EnvGridPassData& pd);
+    void CreateLightFieldData(LegacyEnvGrid* envGrid, EnvGridPassData& pd);
 };
 
 } // namespace hyperion

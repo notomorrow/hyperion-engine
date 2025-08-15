@@ -101,10 +101,8 @@ struct LightmapUVMap
     // Mapping from mesh Id to the indices of the UVs that correspond to that mesh.
     MeshToUVIndicesMap meshToUvIndices;
 
-    /*! \brief Write the UV map radiance data to RGBA32F format. */
-    Bitmap_RGBA8 ToBitmapRadiance() const;
-    /*! \brief Write the UV map irradiance data to RGBA32F format. */
-    Bitmap_RGBA8 ToBitmapIrradiance() const;
+    Bitmap_RGBA16F ToBitmapRadiance() const;
+    Bitmap_RGBA16F ToBitmapIrradiance() const;
 };
 
 class LightmapUVBuilder

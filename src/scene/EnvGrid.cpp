@@ -102,22 +102,21 @@ EnvGrid::EnvGrid()
 EnvGrid::EnvGrid(const BoundingBox& aabb, const EnvGridOptions& options)
     : m_aabb(aabb),
       m_offset(aabb.GetCenter()),
-      m_voxelGridAabb(aabb),
       m_options(options)
 {
-    m_entityInitInfo.receivesUpdate = true;
-    m_entityInitInfo.canEverUpdate = true;
 }
 
-EnvGrid::~EnvGrid()
-{
-}
+EnvGrid::~EnvGrid() = default;
 
-void EnvGrid::Init()
-{
-    Entity::Init();
+#pragma endregion EnvGrid
 
-    const Vec2u probeDimensions = GetProbeDimensions(m_options.type);
+#pragma region LegacyEnvGrid
+
+void LegacyEnvGrid::Init()
+{
+    EnvGrid::Init();
+
+    const Vec2u probeDimensions = GetProbeDimensions(m_options.legacyEnvGridType);
     Assert(probeDimensions.Volume() != 0);
 
     CreateEnvProbes();
@@ -251,34 +250,34 @@ void EnvGrid::Init()
     SetReady(true);
 }
 
-void EnvGrid::OnAttachedToNode(Node* node)
+void LegacyEnvGrid::OnAttachedToNode(Node* node)
 {
     HYP_SCOPE;
     Assert(IsReady());
 
-    Entity::OnAttachedToNode(node);
+    EnvGrid::OnAttachedToNode(node);
 }
 
-void EnvGrid::OnDetachedFromNode(Node* node)
+void LegacyEnvGrid::OnDetachedFromNode(Node* node)
 {
     HYP_SCOPE;
 
-    Entity::OnDetachedFromNode(node);
+    EnvGrid::OnDetachedFromNode(node);
 }
 
-void EnvGrid::OnAddedToWorld(World* world)
+void LegacyEnvGrid::OnAddedToWorld(World* world)
 {
-    Entity::OnAddedToWorld(world);
+    EnvGrid::OnAddedToWorld(world);
 }
 
-void EnvGrid::OnRemovedFromWorld(World* world)
+void LegacyEnvGrid::OnRemovedFromWorld(World* world)
 {
-    Entity::OnRemovedFromWorld(world);
+    EnvGrid::OnRemovedFromWorld(world);
 }
 
-void EnvGrid::OnAddedToScene(Scene* scene)
+void LegacyEnvGrid::OnAddedToScene(Scene* scene)
 {
-    Entity::OnAddedToScene(scene);
+    EnvGrid::OnAddedToScene(scene);
 
     if (m_view != nullptr)
     {
@@ -286,9 +285,9 @@ void EnvGrid::OnAddedToScene(Scene* scene)
     }
 }
 
-void EnvGrid::OnRemovedFromScene(Scene* scene)
+void LegacyEnvGrid::OnRemovedFromScene(Scene* scene)
 {
-    Entity::OnRemovedFromScene(scene);
+    EnvGrid::OnRemovedFromScene(scene);
 
     if (m_view != nullptr)
     {
@@ -296,14 +295,109 @@ void EnvGrid::OnRemovedFromScene(Scene* scene)
     }
 }
 
-void EnvGrid::CreateEnvProbes()
+void LegacyEnvGrid::Update(float delta)
+{
+    HYP_SCOPE;
+
+    Threads::AssertOnThread(g_gameThread | ThreadCategory::THREAD_CATEGORY_TASK);
+    AssertReady();
+
+    static const ConfigurationValue& configDebugDrawProbes = GetGlobalConfig().Get("rendering.debug.debugDrawer.envGridProbes");
+
+    // Debug draw
+    if (configDebugDrawProbes.ToBool(false))
+    {
+        DebugDrawCommandList& debugDrawer = g_engineDriver->GetDebugDrawer()->CreateCommandList();
+
+        for (uint32 index = 0; index < m_envProbeCollection.numProbes; index++)
+        {
+            const Handle<EnvProbe>& probe = m_envProbeCollection.GetEnvProbeDirect(index);
+
+            if (!probe.IsValid())
+            {
+                continue;
+            }
+
+            debugDrawer.ambientProbe(probe->GetOrigin(), 0.25f, *probe);
+        }
+    }
+
+    bool shouldRecollectEntites = false;
+
+    if (!m_camera->IsReady())
+    {
+        shouldRecollectEntites = true;
+    }
+
+    BoundingBoxComponent* boundingBoxComponent = GetEntityManager()->TryGetComponent<BoundingBoxComponent>(this);
+    if (!boundingBoxComponent)
+    {
+        HYP_LOG(EnvGrid, Error, "EnvGrid {} does not have a BoundingBoxComponent, cannot update", Id());
+        return;
+    }
+
+    SceneOctree const* octree = &GetScene()->GetOctree();
+    octree->GetFittingOctant(boundingBoxComponent->worldAabb, octree);
+
+    // clang-format off
+    const HashCode octantHashCode = octree->GetOctantID().GetHashCode()
+        .Add(octree->GetEntryListHash<EntityTag::STATIC>())
+        .Add(octree->GetEntryListHash<EntityTag::DYNAMIC>())
+        .Add(octree->GetEntryListHash<EntityTag::LIGHT>());
+    // clang-format on
+
+    if (octantHashCode != m_cachedOctantHashCode)
+    {
+        HYP_LOG(EnvGrid, Debug, "EnvGrid octant hash code changed ({} != {}), updating probes", m_cachedOctantHashCode.Value(), octantHashCode.Value());
+
+        m_cachedOctantHashCode = octantHashCode;
+
+        shouldRecollectEntites = true;
+    }
+
+    if (!shouldRecollectEntites)
+    {
+        return;
+    }
+
+    for (uint32 index = 0; index < m_envProbeCollection.numProbes; index++)
+    {
+        const Handle<EnvProbe>& probe = m_envProbeCollection.GetEnvProbeDirect(index);
+        Assert(probe.IsValid());
+
+        // so Collect() on our view updates the EnvProbe's RenderProxy
+        probe->SetNeedsRenderProxyUpdate();
+        probe->SetNeedsRender(true);
+    }
+
+    m_camera->Update(delta);
+
+    m_view->UpdateViewport();
+    m_view->UpdateVisibility();
+    m_view->CollectSync();
+
+    HYP_LOG(EnvGrid, Debug, "View::Collect() for EnvGrid {}", Id());
+
+    // Make sure all our probes were collected - if this doesn't match up, down the line when we try to retrieve resource binding indices, they wouldn't be found
+    RenderProxyList& rpl = RenderApi_GetProducerProxyList(m_view);
+    AssertDebug(rpl.GetEnvProbes().NumCurrent() >= m_envProbeCollection.numProbes,
+        "View only collected {} EnvProbes but EnvGrid {} has {} EnvProbes",
+        rpl.GetEnvProbes().NumCurrent(),
+        Id(),
+        m_envProbeCollection.numProbes);
+
+    HYP_LOG(EnvGrid, Debug, "Updating EnvGrid {} with {} probes\t Found {} meshes", Id(), m_envProbeCollection.numProbes,
+        RenderApi_GetProducerProxyList(m_view).GetMeshEntities().NumCurrent());
+}
+
+void LegacyEnvGrid::CreateEnvProbes()
 {
     HYP_SCOPE;
 
     const uint32 numAmbientProbes = m_options.density.Volume();
     const Vec3f aabbExtent = m_aabb.GetExtent();
 
-    const Vec2u probeDimensions = GetProbeDimensions(m_options.type);
+    const Vec2u probeDimensions = GetProbeDimensions(m_options.legacyEnvGridType);
     Assert(probeDimensions.Volume() != 0);
 
     if (numAmbientProbes != 0)
@@ -343,7 +437,7 @@ void EnvGrid::CreateEnvProbes()
     }
 }
 
-void EnvGrid::SetAABB(const BoundingBox& aabb)
+void LegacyEnvGrid::SetAABB(const BoundingBox& aabb)
 {
     HYP_SCOPE;
 
@@ -355,7 +449,7 @@ void EnvGrid::SetAABB(const BoundingBox& aabb)
     }
 }
 
-void EnvGrid::Translate(const BoundingBox& aabb, const Vec3f& translation)
+void LegacyEnvGrid::Translate(const BoundingBox& aabb, const Vec3f& translation)
 {
     HYP_SCOPE;
     AssertReady();
@@ -458,102 +552,8 @@ void EnvGrid::Translate(const BoundingBox& aabb, const Vec3f& translation)
     SetNeedsRenderProxyUpdate();
 }
 
-void EnvGrid::Update(float delta)
-{
-    HYP_SCOPE;
 
-    Threads::AssertOnThread(g_gameThread | ThreadCategory::THREAD_CATEGORY_TASK);
-    AssertReady();
-
-    static const ConfigurationValue& configDebugDrawProbes = GetGlobalConfig().Get("rendering.debug.debugDrawer.envGridProbes");
-
-    // Debug draw
-    if (configDebugDrawProbes.ToBool(false))
-    {
-        DebugDrawCommandList& debugDrawer = g_engineDriver->GetDebugDrawer()->CreateCommandList();
-
-        for (uint32 index = 0; index < m_envProbeCollection.numProbes; index++)
-        {
-            const Handle<EnvProbe>& probe = m_envProbeCollection.GetEnvProbeDirect(index);
-
-            if (!probe.IsValid())
-            {
-                continue;
-            }
-
-            debugDrawer.ambientProbe(probe->GetOrigin(), 0.25f, *probe);
-        }
-    }
-
-    bool shouldRecollectEntites = false;
-
-    if (!m_camera->IsReady())
-    {
-        shouldRecollectEntites = true;
-    }
-
-    BoundingBoxComponent* boundingBoxComponent = GetEntityManager()->TryGetComponent<BoundingBoxComponent>(this);
-    if (!boundingBoxComponent)
-    {
-        HYP_LOG(EnvGrid, Error, "EnvGrid {} does not have a BoundingBoxComponent, cannot update", Id());
-        return;
-    }
-
-    SceneOctree const* octree = &GetScene()->GetOctree();
-    octree->GetFittingOctant(boundingBoxComponent->worldAabb, octree);
-
-    // clang-format off
-    const HashCode octantHashCode = octree->GetOctantID().GetHashCode()
-        .Add(octree->GetEntryListHash<EntityTag::STATIC>())
-        .Add(octree->GetEntryListHash<EntityTag::DYNAMIC>())
-        .Add(octree->GetEntryListHash<EntityTag::LIGHT>());
-    // clang-format on
-
-    if (octantHashCode != m_cachedOctantHashCode)
-    {
-        HYP_LOG(EnvGrid, Debug, "EnvGrid octant hash code changed ({} != {}), updating probes", m_cachedOctantHashCode.Value(), octantHashCode.Value());
-
-        m_cachedOctantHashCode = octantHashCode;
-
-        shouldRecollectEntites = true;
-    }
-
-    if (!shouldRecollectEntites)
-    {
-        return;
-    }
-
-    for (uint32 index = 0; index < m_envProbeCollection.numProbes; index++)
-    {
-        const Handle<EnvProbe>& probe = m_envProbeCollection.GetEnvProbeDirect(index);
-        Assert(probe.IsValid());
-
-        // so Collect() on our view updates the EnvProbe's RenderProxy
-        probe->SetNeedsRenderProxyUpdate();
-        probe->SetNeedsRender(true);
-    }
-
-    m_camera->Update(delta);
-
-    m_view->UpdateViewport();
-    m_view->UpdateVisibility();
-    m_view->CollectSync();
-
-    HYP_LOG(EnvGrid, Debug, "View::Collect() for EnvGrid {}", Id());
-
-    // Make sure all our probes were collected - if this doesn't match up, down the line when we try to retrieve resource binding indices, they wouldn't be found
-    RenderProxyList& rpl = RenderApi_GetProducerProxyList(m_view);
-    AssertDebug(rpl.GetEnvProbes().NumCurrent() >= m_envProbeCollection.numProbes,
-        "View only collected {} EnvProbes but EnvGrid {} has {} EnvProbes",
-        rpl.GetEnvProbes().NumCurrent(),
-        Id(),
-        m_envProbeCollection.numProbes);
-
-    HYP_LOG(EnvGrid, Debug, "Updating EnvGrid {} with {} probes\t Found {} meshes", Id(), m_envProbeCollection.numProbes,
-        RenderApi_GetProducerProxyList(m_view).GetMeshEntities().NumCurrent());
-}
-
-void EnvGrid::UpdateRenderProxy(RenderProxyEnvGrid* proxy)
+void LegacyEnvGrid::UpdateRenderProxy(RenderProxyEnvGrid* proxy)
 {
     proxy->envGrid = WeakHandleFromThis();
 
@@ -583,6 +583,6 @@ void EnvGrid::UpdateRenderProxy(RenderProxyEnvGrid* proxy)
     }
 }
 
-#pragma endregion EnvGrid
+#pragma endregion LegacyEnvGrid
 
 } // namespace hyperion

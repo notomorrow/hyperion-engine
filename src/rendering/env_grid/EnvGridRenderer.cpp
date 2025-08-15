@@ -219,7 +219,7 @@ Handle<PassData> EnvGridRenderer::CreateViewPassData(View* view, PassDataExt& ex
     AssertDebug(extCasted != nullptr, "EnvGridPassDataExt must be provided for EnvGridRenderer");
     AssertDebug(extCasted->envGrid != nullptr);
 
-    EnvGrid* envGrid = extCasted->envGrid;
+    LegacyEnvGrid* envGrid = ObjCast<LegacyEnvGrid>(extCasted->envGrid);
 
     EnvProbeCollection& envProbeCollection = envGrid->GetEnvProbeCollection();
 
@@ -252,7 +252,7 @@ Handle<PassData> EnvGridRenderer::CreateViewPassData(View* view, PassDataExt& ex
     return pd;
 }
 
-void EnvGridRenderer::CreateVoxelGridData(EnvGrid* envGrid, EnvGridPassData& pd)
+void EnvGridRenderer::CreateVoxelGridData(LegacyEnvGrid* envGrid, EnvGridPassData& pd)
 {
     HYP_SCOPE;
 
@@ -370,7 +370,7 @@ void EnvGridRenderer::CreateVoxelGridData(EnvGrid* envGrid, EnvGridPassData& pd)
     }
 }
 
-void EnvGridRenderer::CreateSphericalHarmonicsData(EnvGrid* envGrid, EnvGridPassData& pd)
+void EnvGridRenderer::CreateSphericalHarmonicsData(LegacyEnvGrid* envGrid, EnvGridPassData& pd)
 {
     HYP_SCOPE;
 
@@ -442,7 +442,7 @@ void EnvGridRenderer::CreateSphericalHarmonicsData(EnvGrid* envGrid, EnvGridPass
     DeferCreate(pd.finalizeSh);
 }
 
-void EnvGridRenderer::CreateLightFieldData(EnvGrid* envGrid, EnvGridPassData& pd)
+void EnvGridRenderer::CreateLightFieldData(LegacyEnvGrid* envGrid, EnvGridPassData& pd)
 {
     HYP_SCOPE;
 
@@ -524,7 +524,7 @@ void EnvGridRenderer::RenderFrame(FrameBase* frame, const RenderSetup& renderSet
     AssertDebug(renderSetup.IsValid());
     AssertDebug(renderSetup.envGrid != nullptr);
 
-    EnvGrid* envGrid = renderSetup.envGrid;
+    LegacyEnvGrid* envGrid = ObjCast<LegacyEnvGrid>(renderSetup.envGrid);
     AssertDebug(envGrid != nullptr);
 
     EnvGridPassDataExt ext;
@@ -635,7 +635,7 @@ void EnvGridRenderer::RenderProbe(FrameBase* frame, const RenderSetup& renderSet
 
     AssertDebug(renderSetup.IsValid());
 
-    EnvGrid* envGrid = renderSetup.envGrid;
+    LegacyEnvGrid* envGrid = ObjCast<LegacyEnvGrid>(renderSetup.envGrid);
     AssertDebug(envGrid != nullptr);
 
     View* view = envGrid->GetView();
@@ -695,7 +695,7 @@ void EnvGridRenderer::ComputeEnvProbeIrradiance_SphericalHarmonics(FrameBase* fr
     AssertDebug(renderSetup.IsValid());
     AssertDebug(renderSetup.HasView());
 
-    EnvGrid* envGrid = renderSetup.envGrid;
+    LegacyEnvGrid* envGrid = ObjCast<LegacyEnvGrid>(renderSetup.envGrid);
     AssertDebug(envGrid != nullptr);
     AssertDebug(envGrid->GetEnvGridType() == ENV_GRID_TYPE_SH);
 
@@ -896,7 +896,7 @@ void EnvGridRenderer::ComputeEnvProbeIrradiance_LightField(FrameBase* frame, con
     AssertDebug(renderSetup.IsValid());
     AssertDebug(renderSetup.HasView());
 
-    EnvGrid* envGrid = renderSetup.envGrid;
+    LegacyEnvGrid* envGrid = ObjCast<LegacyEnvGrid>(renderSetup.envGrid);
     AssertDebug(envGrid != nullptr);
     AssertDebug(envGrid->GetEnvGridType() == ENV_GRID_TYPE_LIGHT_FIELD);
 
@@ -1023,7 +1023,7 @@ void EnvGridRenderer::OffsetVoxelGrid(FrameBase* frame, const RenderSetup& rende
     AssertDebug(renderSetup.IsValid());
     AssertDebug(renderSetup.HasView());
 
-    EnvGrid* envGrid = renderSetup.envGrid;
+    LegacyEnvGrid* envGrid = ObjCast<LegacyEnvGrid>(renderSetup.envGrid);
     AssertDebug(envGrid != nullptr);
     AssertDebug(envGrid->GetEnvGridType() == ENV_GRID_TYPE_LIGHT_FIELD);
 
@@ -1069,7 +1069,7 @@ void EnvGridRenderer::VoxelizeProbe(FrameBase* frame, const RenderSetup& renderS
     AssertDebug(renderSetup.IsValid());
     AssertDebug(renderSetup.HasView());
 
-    EnvGrid* envGrid = renderSetup.envGrid;
+    LegacyEnvGrid* envGrid = ObjCast<LegacyEnvGrid>(renderSetup.envGrid);
     AssertDebug(envGrid != nullptr);
     AssertDebug(envGrid->GetEnvGridType() == ENV_GRID_TYPE_LIGHT_FIELD);
 
