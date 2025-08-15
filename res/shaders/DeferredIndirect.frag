@@ -192,6 +192,5 @@ void main()
     result = irradiance.rgb;
 #endif
 
-    output_color = vec4(albedo.rgb, 1.0);
-    // output_color = vec4(result, 1.0);
+    output_color = vec4(result, 1.0);
 }

@@ -42,11 +42,11 @@ HYP_STRUCT()
 struct MeshRaytracingData
 {
     HYP_FIELD()
-    FixedArray<BLASRef, g_framesInFlight> bottomLevelAccelerationStructures;
+    BLASRef blas;
 
     ~MeshRaytracingData()
     {
-        SafeRelease(std::move(bottomLevelAccelerationStructures));
+        SafeRelease(std::move(blas));
     }
 };
 

@@ -240,7 +240,10 @@ find_package(Bullet)
 if(NOT IOS)
     set(RENDERING_BACKEND "Vulkan")
 
-    find_package(SDL2 REQUIRED)
+    if(NOT WIN32)
+        find_package(SDL2 REQUIRED)
+    endif()
+
     find_package(Vulkan)
     find_package(Freetype)
 endif()
@@ -278,7 +281,7 @@ if(${OpenAL_FOUND})
     add_definitions(-DHYP_OPENAL=1)
 endif()
 
-if(SDL2_FOUND)
+if(SDL2_FOUND AND NOT WIN32)
     message(STATUS "SDL2 found")
 
     add_definitions(-DHYP_SDL=1)
@@ -566,9 +569,12 @@ include_directories(
     ${COMMON_INCLUDE_DIRS}
     ${OPENAL_INCLUDE_DIR}
     ${Vulkan_INCLUDE_DIRS}
-    ${SDL2_INCLUDE_DIRS}
     ${CMAKE_SOURCE_DIR}/src
 )
+
+if(NOT WIN32)
+    include_directories(${SDL2_INCLUDE_DIRS})
+endif()
 
 # set HYP_BUILD_LIBRARY just for this library (so DLL exports are correct)
 add_definitions(-DHYP_BUILD_LIBRARY=1)
@@ -590,8 +596,14 @@ set(COMMON_LIBRARIES
     ${CMAKE_THREADS_LIBS_INIT}
     ${OPENAL_LIBRARY}
     ${Vulkan_LIBRARIES}
-    ${SDL2_LIBRARIES}
 )
+
+if(NOT DEFINED WIN32)
+    set(COMMON_LIBRARIES
+        ${COMMON_LIBRARIES}
+        ${SDL2_LIBRARIES}
+    )
+endif()
 
 message(STATUS "Sub-libraries: ${SUB_LIBRARIES}")
 

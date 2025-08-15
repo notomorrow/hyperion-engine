@@ -940,6 +940,9 @@ RendererResult VulkanBLAS::UpdateStructure(RTUpdateStateFlags& outUpdateStateFla
 
 RendererResult VulkanBLAS::Rebuild(RTUpdateStateFlags& outUpdateStateFlags)
 {
+    HYP_NOT_IMPLEMENTED();
+
+#if 0
     Array<VkAccelerationStructureGeometryKHR> geometries(m_geometries.Size());
     Array<uint32> primitiveCounts(m_geometries.Size());
 
@@ -957,6 +960,7 @@ RendererResult VulkanBLAS::Rebuild(RTUpdateStateFlags& outUpdateStateFlags)
     m_flags &= ~(ACCELERATION_STRUCTURE_FLAGS_NEEDS_REBUILDING | ACCELERATION_STRUCTURE_FLAGS_TRANSFORM_UPDATE);
 
     return RendererResult();
+#endif
 }
 
 #pragma endregion BLAS

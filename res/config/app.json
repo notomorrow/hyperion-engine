@@ -22,7 +22,7 @@
       "enabled": false
     },
     "debug": {
-      "reflections": false,
+      "reflections": true,
       "debugDrawer": {
         "enabled": false,
         "envGridProbes": false
@@ -34,7 +34,7 @@
     },
     "raytracing": {
       "reflections": {
-        "enabled": false
+        "enabled": true
       },
       "globalIllumination": {
         "enabled": false

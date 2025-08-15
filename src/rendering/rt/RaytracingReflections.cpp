@@ -23,13 +23,6 @@
 
 namespace hyperion {
 
-enum RTRadianceUpdates : uint32
-{
-    RT_RADIANCE_UPDATES_NONE = 0x0,
-    RT_RADIANCE_UPDATES_TLAS = 0x1,
-    RT_RADIANCE_UPDATES_SHADOW_MAP = 0x2
-};
-
 #pragma region Render commands
 
 struct RENDER_COMMAND(UnsetRTRadianceImageInGlobalDescriptorSet)
@@ -148,7 +141,6 @@ void RaytracingReflections::UpdateUniforms(FrameBase* frame, const RenderSetup& 
     HYP_DEFER({ rpl.EndRead(); });
 
     RTRadianceUniforms uniforms {};
-
     Memory::MemSet(&uniforms, 0, sizeof(uniforms));
 
     uniforms.minRoughness = 0.4f;
@@ -239,7 +231,7 @@ void RaytracingReflections::Render(FrameBase* frame, const RenderSetup& renderSe
     const SizeType numPixels = imageExtent.Volume();
     const SizeType halfNumPixels = numPixels / 2;
 
-    frame->renderQueue << TraceRays(m_raytracingPipeline, Vec3u { uint32(halfNumPixels), 1, 1 });
+    frame->renderQueue << TraceRays(m_raytracingPipeline, Vec3u { uint32(numPixels), 1, 1 });
     frame->renderQueue << InsertBarrier(m_texture->GetGpuImage(), RS_SHADER_RESOURCE);
 
     // Create a new RenderSetup for temporal blending as it will need to bind View descriptors,
