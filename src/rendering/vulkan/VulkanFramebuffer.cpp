@@ -204,7 +204,7 @@ VulkanFramebuffer::~VulkanFramebuffer()
 {
     if (!IsCreated())
     {
-        HYPERION_RETURN_OK;
+        return;
     }
 
     if (m_handle != VK_NULL_HANDLE)

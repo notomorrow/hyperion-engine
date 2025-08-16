@@ -1,6 +1,7 @@
 #version 460
 #extension GL_GOOGLE_include_directive : require
 #extension GL_EXT_ray_tracing : require
+#extension GL_EXT_ray_query : require
 #extension GL_EXT_scalar_block_layout : require
 
 #include "../../include/defines.inc"
@@ -84,9 +85,9 @@ HYP_DESCRIPTOR_CBUFF(RTRadianceDescriptorSet, RTRadianceUniforms) uniform RTRadi
 
 #ifdef MODE_IRRADIANCE
 
-#define RAY_OFFSET 0.01
-#define NUM_BOUNCES 3
-#define NUM_SAMPLES 8
+#define RAY_OFFSET 0.025
+#define NUM_BOUNCES 4
+#define NUM_SAMPLES 1
 #else
 #define RAY_OFFSET 0.01
 #define NUM_BOUNCES 1
@@ -134,15 +135,55 @@ vec3 DebugTest_Albedo(in vec3 position, in vec3 normal)
     return albedo;
 }
 
-float CheckInShadow(in vec3 position, in vec3 normal, in vec3 lightDir)
+float CheckInShadow(vec3 position, vec3 normal, vec3 lightDir)
 {
-    // Set up ray to hit the surface from a small offset
     vec3 origin = position + normal * 0.01;
     vec3 direction = lightDir;
 
-    traceRayEXT(tlas, gl_RayFlagsOpaqueEXT, 0xff, 0, 0, 0, origin, 0.01, direction, 1000.0, 0);
+    rayQueryEXT rq;
+    rayQueryInitializeEXT(rq, tlas,
+        gl_RayFlagsTerminateOnFirstHitEXT | gl_RayFlagsOpaqueEXT,
+        0xff, origin, 0.0001, direction, 1000.0);
 
-    return 1.0-HYP_FAST_LESS(payload.distance, 0.0);
+    rayQueryProceedEXT(rq);
+
+    return float(rayQueryGetIntersectionTypeEXT(rq, true) != gl_RayQueryCommittedIntersectionNoneEXT);
+}
+
+void BuildONB(in vec3 n, out vec3 t, out vec3 b)
+{
+    float sign = n.z >= 0.0 ? 1.0 : -1.0;
+    float a = -1.0 / (sign + n.z);
+    float bxy = n.x * n.y * a;
+    t = vec3(1.0 + sign * n.x * n.x * a, sign * bxy, -sign * n.x);
+    b = vec3(bxy, sign + n.y * n.y * a, -n.y);
+}
+
+vec2 ConcentricDisk(vec2 u)
+{
+    float sx = 2.0 * u.x - 1.0;
+    float sy = 2.0 * u.y - 1.0;
+    if (sx == 0.0 && sy == 0.0) return vec2(0.0);
+    float r, theta;
+    if (abs(sx) > abs(sy))
+    {
+        r = abs(sx);
+        theta = (HYP_FMATH_PI * 0.25) * (sy / sx);
+    }
+    else
+    {
+        r = abs(sy);
+        theta = (HYP_FMATH_PI * 0.5) - (HYP_FMATH_PI * 0.25) * (sx / sy);
+    }
+    return r * vec2(cos(theta), sin(theta));
+}
+
+void SpinFrame(inout vec3 t, inout vec3 b, float angle)
+{
+    float s = sin(angle), c = cos(angle);
+    vec3 t0 = t;
+    t =  c * t0 + s * b;
+    b = -s * t0 + c * b;
 }
 
 vec3 SampleCosineDir(in vec2 xi, in vec3 N)
@@ -155,6 +196,9 @@ vec3 SampleCosineDir(in vec2 xi, in vec3 N)
     return normalize(T1 * dir.x + T2 * dir.y + N * dir.z);
 }
 
+vec3 radiance = vec3(0.0);
+vec3 beta = vec3(1.0);
+
 void main()
 {
     const uint ray_index = gl_LaunchIDEXT.x;
@@ -165,7 +209,7 @@ void main()
 
     const uint flags = gl_RayFlagsOpaqueEXT;
     const uint mask = 0xff;
-    const float tmin = 0.001;
+    const float tmin = 0.01;
     const float tmax = 1000.0;
 
     const vec3 N0 = normalize(ray.direction.xyz);
@@ -232,7 +276,7 @@ void main()
                 vec3 light_color = UINT_TO_VEC4(light.color_encoded).rgb * light.position_intensity.w;
 
                 if (light.type == HYP_LIGHT_TYPE_DIRECTIONAL) {
-                    vec3 light_direction = light.position_intensity.xyz;
+                    vec3 light_direction = normalize(light.position_intensity.xyz);
                     vec3 L = light_direction;
 
                     // shadow check
@@ -269,11 +313,20 @@ void main()
         accumRadiance.rgb += radiance;
     } // end samples
 
+
     vec3 finalColor = accumRadiance.rgb / float(NUM_SAMPLES);
 
     // // test
     // float inShadow = 1.0-CheckInShadow(ray.origin.xyz, ray.direction.xyz, HYP_GET_LIGHT(0).position_intensity.xyz);
-    // finalColor = vec3(N0);//dot(N0, HYP_GET_LIGHT(0).position_intensity.xyz));//vec3(inShadow);
+    // finalColor = vec3(inShadow);//dot(N0, HYP_GET_LIGHT(0).position_intensity.xyz));//vec3(inShadow);
+
+    // vec3 Normal = normalize(ray.direction.xyz);
+    // vec3 LightDir = normalize(HYP_GET_LIGHT(0).position_intensity.xyz);
+    // vec3 NoL = max(dot(Normal, LightDir), 0.0) * vec3(1.0);
+    // finalColor = NoL;
+
+    // // DEBUG : return first hit normal
+    // finalColor = DebugTest_Albedo(ray.origin.xyz, N0);
 
     hits[ray_index] = vec4(finalColor, 1.0);
 }

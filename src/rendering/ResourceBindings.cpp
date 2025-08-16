@@ -225,10 +225,10 @@ void WriteBufferData_Light(GpuBufferHolderBase* gpuBufferHolder, uint32 idx, IRe
     LightShaderData& bufferData = proxyCasted->bufferData;
 
     // textured area lights can have a material attached
-    if (proxyCasted->lightMaterial.IsValid())
+    if (proxyCasted->lightMaterial != nullptr)
     {
-        const uint32 materialBoundIndex = RenderApi_RetrieveResourceBinding(proxyCasted->lightMaterial.GetUnsafe());
-        AssertDebug(materialBoundIndex != ~0u, "Light uses Material {} but it is not bound", proxyCasted->lightMaterial.Id());
+        const uint32 materialBoundIndex = RenderApi_RetrieveResourceBinding(proxyCasted->lightMaterial);
+        AssertDebug(materialBoundIndex != ~0u, "Light uses Material {} but it is not bound", proxyCasted->lightMaterial->Id());
 
         bufferData.materialIndex = materialBoundIndex;
     }

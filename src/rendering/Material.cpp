@@ -250,7 +250,7 @@ void Material::SetTextures(const TextureSet& textures)
 {
     if (IsStatic() && IsReady())
     {
-        HYP_LOG(Material, Warning, "Setting textures on static material with Id {} (name: {})", Id(), GetName());
+        HYP_LOG(Material, Warning, "Setting textures on static material with id {} (name: {})", Id(), GetName());
 #ifdef HYP_DEBUG_MODE
         HYP_BREAKPOINT;
 #endif // HYP_DEBUG_MODE

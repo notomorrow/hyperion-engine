@@ -438,7 +438,7 @@ VulkanTLAS::~VulkanTLAS()
     SafeDelete(std::move(m_blas));
 }
 
-HYP_API bool VulkanTLAS::IsCreated() const
+bool VulkanTLAS::IsCreated() const
 {
     return m_accelerationStructure != VK_NULL_HANDLE;
 }
@@ -843,7 +843,7 @@ VulkanBLAS::~VulkanBLAS()
     SafeDelete(std::move(m_packedIndicesBuffer));
 }
 
-HYP_API bool VulkanBLAS::IsCreated() const
+bool VulkanBLAS::IsCreated() const
 {
     return m_accelerationStructure != VK_NULL_HANDLE;
 }

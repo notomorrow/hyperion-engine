@@ -51,30 +51,34 @@ HypObjectInitializerGuardBase::~HypObjectInitializerGuardBase()
         return;
     }
 
-    HYP_CORE_ASSERT(ptr.GetClass()->UseHandles());
+    const HypClass* hypClass = ptr.GetClass();
+    HYP_CORE_ASSERT(hypClass->UseHandles()); // check is HypObjectBase
 
     HypObjectBase* target = reinterpret_cast<HypObjectBase*>(ptr.GetPointer());
     AssertDebug(target->GetObjectHeader_Internal()->GetRefCountStrong() == 1);
 
-    HypObjectInitializerContext* context = GetGlobalContext<HypObjectInitializerContext>();
-
-    if ((!context || !(context->flags & HypObjectInitializerFlags::SUPPRESS_MANAGED_OBJECT_CREATION)) && !ptr.GetClass()->IsAbstract())
+    if (!(ptr.GetClass()->GetFlags() & HypClassFlags::NO_SCRIPT_BINDINGS))
     {
-        if (RC<dotnet::Class> managedClass = ptr.GetClass()->GetManagedClass())
-        {
-            ManagedObjectResource* managedObjectResource = AllocateResource<ManagedObjectResource>(ptr, managedClass);
+        HypObjectInitializerContext* context = GetGlobalContext<HypObjectInitializerContext>();
 
-            Assert(managedObjectResource != nullptr);
-            managedObjectResource->IncRef();
-
-            target->SetManagedObjectResource(managedObjectResource);
-        }
-        else
+        if ((!context || !(context->flags & HypObjectInitializerFlags::SUPPRESS_MANAGED_OBJECT_CREATION)) && !hypClass->IsAbstract())
         {
-            HYP_LOG(Object, Warning,
-                "HypObjectInitializerGuardBase: HypClass '{}' does not have a managed class associated with it. "
-                "This means that the object will not be created in the managed runtime, and will not be accessible from C#.",
-                ptr.GetClass()->GetName());
+            if (RC<dotnet::Class> managedClass = hypClass->GetManagedClass())
+            {
+                ManagedObjectResource* managedObjectResource = AllocateResource<ManagedObjectResource>(ptr, managedClass);
+
+                Assert(managedObjectResource != nullptr);
+                managedObjectResource->IncRef();
+
+                target->SetManagedObjectResource(managedObjectResource);
+            }
+            else
+            {
+                HYP_LOG(Object, Warning,
+                    "HypObjectInitializerGuardBase: HypClass '{}' does not have a managed class associated with it. "
+                    "This means that the object will not be created in the managed runtime, and will not be accessible from C#.",
+                    hypClass->GetName());
+            }
         }
     }
 }

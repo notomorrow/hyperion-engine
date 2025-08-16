@@ -176,7 +176,8 @@ LightmapRenderer_GpuPathTracing::LightmapRenderer_GpuPathTracing(
         raysBuffer = g_renderBackend->MakeGpuBuffer(GpuBufferType::SSBO, sizeof(Vec4f) * 2 * (512 * 512), alignof(Vec4f));
     }
 
-    m_hitsBufferGpu = g_renderBackend->MakeGpuBuffer(GpuBufferType::SSBO, sizeof(LightmapHit) * (512 * 512), alignof(Vec4f));
+    // ATOMIC_COUNTER type allows readback to cpu.
+    m_hitsBufferGpu = g_renderBackend->MakeGpuBuffer(GpuBufferType::ATOMIC_COUNTER, sizeof(LightmapHit) * (512 * 512), alignof(Vec4f));
 
     m_readyNotification = MakeRefCountedPtr<GpuLightmapperReadyNotification>();
 }
@@ -398,7 +399,12 @@ void LightmapRenderer_GpuPathTracing::ReadHitsBuffer(FrameBase* frame, Span<Ligh
     Assert(m_tlas != nullptr);
 
     const GpuBufferRef& hitsBuffer = m_hitsBufferGpu;
-    Assert(hitsBuffer != nullptr && hitsBuffer->IsCreated());
+
+    if (!hitsBuffer || !hitsBuffer->IsCreated())
+    {
+        return; // no hit data
+    }
+
     Assert(hitsBuffer->Size() >= outHits.Size() * sizeof(LightmapHit));
 
     GpuBufferRef stagingBuffer = g_renderBackend->MakeGpuBuffer(GpuBufferType::STAGING_BUFFER, outHits.Size() * sizeof(LightmapHit), alignof(Vec4f));
@@ -440,6 +446,13 @@ void LightmapRenderer_GpuPathTracing::Render(FrameBase* frame, const RenderSetup
     const uint32 previousFrameIndex = (frame->GetFrameIndex() + g_framesInFlight - 1) % g_framesInFlight;
 
     UpdatePipelineState(frame);
+
+    if (!m_tlas->IsCreated())
+    {
+        // no BLAS to process if TLAS not created
+        return;
+    }
+
     UpdateUniforms(frame, rayOffset);
 
     Assert(m_tlas && m_tlas->IsCreated());

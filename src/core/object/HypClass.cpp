@@ -315,6 +315,11 @@ void HypClassMemberIterator::Advance()
 
 #pragma region HypClass
 
+static const HashMap<Name, HypClassFlags> g_attributeToFlags = {
+    { NAME("abstract"), HypClassFlags::ABSTRACT },
+    { NAME("noscriptbindings"), HypClassFlags::NO_SCRIPT_BINDINGS }
+};
+
 HypClass::HypClass(TypeId typeId, Name name, int staticIndex, uint32 numDescendants, Name parentName, Span<const HypClassAttribute> attributes, EnumFlags<HypClassFlags> flags, Span<HypMember> members)
     : m_typeId(typeId),
       m_name(name),
@@ -333,9 +338,21 @@ HypClass::HypClass(TypeId typeId, Name name, int staticIndex, uint32 numDescenda
         HYP_CORE_ASSERT(staticIndex < g_maxStaticClassIndex, "Static index %d exceeds maximum static class index %u", staticIndex, g_maxStaticClassIndex);
     }
 
-    if (bool(m_attributes["abstract"]))
+    // Apply flags for all values in g_attributeToFlags
+    for (const HypClassAttribute& attr : m_attributes)
     {
-        m_flags |= HypClassFlags::ABSTRACT;
+        if (!attr.GetValue().GetBool())
+        {
+            // dont set flag if bool value is false
+            continue;
+        }
+
+        auto it = g_attributeToFlags.Find(attr.name);
+
+        if (it != g_attributeToFlags.End())
+        {
+            m_flags |= it->second;
+        }
     }
 
     // initialize properties containers

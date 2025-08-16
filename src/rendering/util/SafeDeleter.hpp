@@ -110,15 +110,26 @@ public:
 
         header.remainingCycles = 3;
 
-        header.destructFn = [](void* ptr)
+        if constexpr (!std::is_trivially_destructible_v<SafeDeleterEntry<T>>)
         {
-            reinterpret_cast<SafeDeleterEntry<T>*>(ptr)->~SafeDeleterEntry<T>();
-        };
+            header.destructFn = &Memory::Destruct<SafeDeleterEntry<T>>;
+        }
+        else
+        {
+            header.destructFn = nullptr;
+        }
 
-        header.moveFn = [](void* dst, void* src)
+        if constexpr (!std::is_trivially_move_assignable_v<SafeDeleterEntry<T>>)
         {
-            new (dst) SafeDeleterEntry<T>(std::move(*reinterpret_cast<SafeDeleterEntry<T>*>(src)));
-        };
+            header.moveFn = [](void* dst, void* src)
+            {
+                new (dst) SafeDeleterEntry<T>(std::move(*reinterpret_cast<SafeDeleterEntry<T>*>(src)));
+            };
+        }
+        else
+        {
+            header.moveFn = nullptr;
+        }
 
         list.Push(header);
 

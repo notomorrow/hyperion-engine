@@ -109,6 +109,7 @@ Light::Light(LightType type, const Vec3f& position, const Vec3f& normal, const V
 Light::~Light()
 {
     SafeDelete(std::move(m_shadowViews));
+    SafeDelete(std::move(m_material));
 }
 
 void Light::Init()
@@ -515,6 +516,11 @@ void Light::SetMaterial(Handle<Material> material)
         return;
     }
 
+    if (m_material)
+    {
+        SafeDelete(std::move(m_material));
+    }
+
     m_material = std::move(material);
 
     if (IsInitCalled())
@@ -617,7 +623,7 @@ BoundingSphere Light::GetBoundingSphere() const
 void Light::UpdateRenderProxy(RenderProxyLight* proxy)
 {
     proxy->light = WeakHandleFromThis();
-    proxy->lightMaterial = m_material.ToWeak();
+    proxy->lightMaterial = m_material.Get();
     
     proxy->shadowViews.Resize(m_shadowViews.Size());
     for (SizeType i = 0; i < m_shadowViews.Size(); i++)

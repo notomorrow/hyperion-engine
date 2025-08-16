@@ -46,6 +46,7 @@ class HypStructInstance;
 template <class T>
 class HypEnumInstance;
 
+HYP_ENUM()
 enum class HypClassFlags : uint32
 {
     NONE = 0x0,
@@ -54,7 +55,8 @@ enum class HypClassFlags : uint32
     ENUM_TYPE = 0x4,
     ABSTRACT = 0x8,
     POD_TYPE = 0x10,
-    DYNAMIC = 0x20 // Dynamic classes are not registered in the class registry
+    DYNAMIC = 0x20, // Dynamic classes are not registered in the class registry
+    NO_SCRIPT_BINDINGS = 0x40
 };
 
 HYP_MAKE_ENUM_FLAGS(HypClassFlags)

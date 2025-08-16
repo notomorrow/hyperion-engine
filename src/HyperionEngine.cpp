@@ -44,6 +44,9 @@
 #include <engine/EngineDriver.hpp>
 #include <game/Game.hpp>
 
+/// ========== If this include is missing, you need to run HypBuildTool (instructions in doc/CompilingTheEngine.md) ==========
+#include <BuildToolOutput.inc>
+
 namespace hyperion {
 
 HYP_DECLARE_LOG_CHANNEL(Engine);

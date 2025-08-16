@@ -200,6 +200,8 @@ void ConsoleUI::Init()
                 {
                     m_textbox->Focus();
                 }
+
+                return UIEventHandlerResult::OK;
             })
         .Detach();
 

@@ -31,6 +31,7 @@ VulkanDevice::VulkanDevice(VkPhysicalDevice physical, VkSurfaceKHR surface)
 
 VulkanDevice::~VulkanDevice()
 {
+    HYP_GFX_ASSERT(m_device == VK_NULL_HANDLE, "Expected device to be destroyed before destructor hits!");
 }
 
 void VulkanDevice::SetRenderSurface(const VkSurfaceKHR& surface)
