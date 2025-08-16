@@ -43,19 +43,12 @@ void App::LaunchGame(const Handle<Game>& game)
 
     Assert(game.IsValid());
 
-    m_gameThread = MakeUnique<GameThread>(g_engineDriver->GetAppContext());
+    m_gameThread = MakeUnique<GameThread>();
     m_gameThread->SetGame(game);
     m_gameThread->Start();
 
     // Loop blocks the main thread until the game is done.
     Assert(g_engineDriver->StartRenderLoop());
-
-    delete g_renderGlobalState;
-    g_renderGlobalState = nullptr;
-
-    RenderObjectDeleter::RemoveAllNow(/* force */ true);
-
-    Assert(g_renderBackend->Destroy());
 }
 
 } // namespace sys

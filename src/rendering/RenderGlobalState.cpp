@@ -3,7 +3,6 @@
 #include <rendering/RenderGlobalState.hpp>
 #include <rendering/RenderMaterial.hpp>
 #include <rendering/Renderer.hpp>
-#include <rendering/SafeDeleter.hpp>
 #include <rendering/Deferred.hpp>
 #include <rendering/DrawCall.hpp>
 #include <rendering/GpuBufferHolderMap.hpp>
@@ -13,10 +12,11 @@
 #include <rendering/Texture.hpp>
 #include <rendering/RenderStats.hpp>
 #include <rendering/RenderObject.hpp>
-#include <rendering/RenderComputePipeline.hpp>
 #include <rendering/RenderShader.hpp>
-#include <rendering/RenderGpuImage.hpp>
 #include <rendering/RenderBackend.hpp>
+
+#include <rendering/util/SafeDeleter.hpp>
+
 #include <rendering/env_probe/EnvProbeRenderer.hpp>
 #include <rendering/env_grid/EnvGridRenderer.hpp>
 
@@ -56,6 +56,10 @@
 #include <util/BlueNoise.hpp>
 
 #include <engine/EngineGlobals.hpp>
+
+#include <system/AppContext.hpp>
+
+#include <HyperionEngine.hpp>
 
 #include <semaphore>
 
@@ -523,16 +527,33 @@ void RenderApi_Init()
     g_threadFrameIndex = &g_frameIndex[CONSUMER];
     g_threadFrameCounter = &g_frameCounter[CONSUMER];
 
-    RenderObjectDeleter::Initialize();
+    Assert(g_appContext != nullptr, "AppContext must be initialized before RenderApi_Init!");
+
+    Assert(g_renderBackend != nullptr);
+    Assert(g_renderBackend->Initialize());
+
+    { // override global config after renderer initialize
+        ConfigurationTable renderGlobalConfigOverrides;
+
+        // if ray tracing is not supported, we need to update the configuration
+        if (!g_renderBackend->GetRenderConfig().IsRaytracingSupported())
+        {
+            renderGlobalConfigOverrides.Set("rendering.raytracing.enabled", false);
+            renderGlobalConfigOverrides.Set("rendering.raytracing.reflections.enabled", false);
+            renderGlobalConfigOverrides.Set("rendering.raytracing.globalIllumination.enabled", false);
+            renderGlobalConfigOverrides.Set("rendering.raytracing.pathTracing.enabled", false);
+
+            UpdateGlobalConfig(renderGlobalConfigOverrides);
+        }
+    }
 
     g_renderGlobalState = new RenderGlobalState();
+    g_renderGlobalState->materialDescriptorSetManager->CreateFallbackMaterialDescriptorSet();
 
     ResourceContainerFactoryRegistry& registry = ResourceContainerFactoryRegistry::GetInstance();
     registry.InvokeAll(*g_renderGlobalState->resourceBindings, g_resources);
 
     registry.funcs.Clear();
-
-    g_renderGlobalState->materialDescriptorSetManager->CreateFallbackMaterialDescriptorSet();
 }
 
 void RenderApi_Shutdown()
@@ -555,6 +576,11 @@ void RenderApi_Shutdown()
     }
 
     g_viewData.Clear();
+
+    delete g_renderGlobalState;
+    g_renderGlobalState = nullptr;
+
+    Assert(g_renderBackend->Destroy());
 }
 
 uint32 RenderApi_GetFrameIndex()
@@ -599,9 +625,9 @@ static HYP_FORCE_INLINE void CopyRenderProxy(ResourceSubtypeData& subtypeData, c
     const uint32 idx = id.ToIndex();
 
     AssertDebug(subtypeData.typeId == id.GetTypeId(),
-                "Attempting to use ID for type {} as index into proxy collection that requires index type {}",
-                LookupTypeName(id.GetTypeId()),
-                LookupTypeName(subtypeData.typeId));
+        "Attempting to use ID for type {} as index into proxy collection that requires index type {}",
+        LookupTypeName(id.GetTypeId()),
+        LookupTypeName(subtypeData.typeId));
 
     subtypeData.proxies.Set(idx, static_cast<IRenderProxy*>(pNewProxy));
 
@@ -968,20 +994,6 @@ void RenderApi_BeginFrame_GameThread()
     g_threadFrameCounter = &g_frameCounter[PRODUCER];
 
     g_freeSemaphore.acquire();
-
-    // for (auto& it : g_frameData[g_frameIndex[PRODUCER]].viewFrameData)
-    // {
-    //     ViewFrameData* vfd = it.second;
-
-    //     if (!vfd)
-    //     {
-    //         continue;
-    //     }
-
-    //     AssertDebug(vfd->view != nullptr);
-
-    //     vfd->viewport = vfd->view->GetViewport();
-    // }
 }
 
 void RenderApi_EndFrame_GameThread()
@@ -1011,6 +1023,9 @@ void RenderApi_BeginFrame_RenderThread()
     const uint32 slot = g_frameIndex[CONSUMER];
 
     FrameData& fd = g_frameData[slot];
+
+    g_safeDeleter->UpdateEntryListQueue();
+    g_safeDeleter->Iterate();
 
     HYP_GFX_ASSERT(RenderCommands::Flush());
 
@@ -1199,7 +1214,7 @@ void RenderApi_EndFrame_RenderThread()
 
                 delete &vd;
             }
-            
+
 #ifdef HYP_DEBUG_MODE
             vfd.rplShared->debugIsSynced = false;
 #endif
@@ -1264,7 +1279,7 @@ void RenderApi_EndFrame_RenderThread()
             // safely release all the held resources:
             //            if (resource.IsValid())
             //            {
-            //                g_safeDeleter->SafeRelease(std::move(resource));
+            //                g_safeDeleter->SafeDelete(std::move(resource));
             //            }
             resource.Reset();
         }

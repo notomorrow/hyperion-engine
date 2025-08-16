@@ -15,6 +15,8 @@
 #include <rendering/vulkan/rt/VulkanRaytracingPipeline.hpp>
 #include <rendering/vulkan/rt/VulkanAccelerationStructure.hpp>
 
+#include <rendering/util/SafeDeleter.hpp>
+
 #include <rendering/RenderableAttributes.hpp>
 
 #include <core/containers/SparsePagedArray.hpp>
@@ -25,6 +27,8 @@
 #include <rendering/Texture.hpp>
 
 #include <system/AppContext.hpp>
+
+#include <engine/EngineGlobals.hpp>
 
 #include <vulkan/vulkan.h>
 
@@ -494,7 +498,7 @@ public:
         {
             for (auto& it : imageViews.Get(idx))
             {
-                SafeRelease(std::move(it.second));
+                SafeDelete(std::move(it.second));
             }
 
             imageViews.EraseAt(idx);
@@ -534,7 +538,7 @@ public:
 
                 for (auto& it : imageViews.Get(idx))
                 {
-                    SafeRelease(std::move(it.second));
+                    SafeDelete(std::move(it.second));
                 }
 
                 imageViews.EraseAt(idx);
@@ -594,10 +598,10 @@ AsyncComputeBase* VulkanRenderBackend::GetAsyncCompute() const
     return m_asyncCompute.Get();
 }
 
-RendererResult VulkanRenderBackend::Initialize(AppContextBase& appContext)
+RendererResult VulkanRenderBackend::Initialize()
 {
     m_instance = new VulkanInstance();
-    HYP_GFX_CHECK(m_instance->Initialize(appContext, g_useDebugLayers));
+    HYP_GFX_CHECK(m_instance->Initialize(g_useDebugLayers));
 
     VulkanDynamicFunctions::Load(m_instance->GetDevice());
 
@@ -1084,10 +1088,10 @@ VkSurfaceKHR VulkanRenderBackend::CreateVkSurface(ApplicationWindow* window, Vul
     HYP_NOT_IMPLEMENTED();
 }
 
-bool VulkanRenderBackend::GetVkExtensions(const AppContextBase* appContext, Array<const char*>& outExtensions)
+bool VulkanRenderBackend::GetVkExtensions(Array<const char*>& outExtensions)
 {
 #ifdef HYP_SDL
-    if (const SDLAppContext* sdlAppContext = ObjCast<SDLAppContext>(appContext))
+    if (const SDLAppContext* sdlAppContext = ObjCast<SDLAppContext>(g_appContext))
     {
         uint32 numExtensions = 0;
         SDL_Window* sdlWindow = static_cast<SDL_Window*>(static_cast<SDLApplicationWindow*>(sdlAppContext->GetMainWindow())->GetInternalWindowHandle());
@@ -1109,7 +1113,7 @@ bool VulkanRenderBackend::GetVkExtensions(const AppContextBase* appContext, Arra
 #endif
 
 #ifdef HYP_WINDOWS
-    if (const Win32AppContext* win32AppContext = ObjCast<Win32AppContext>(appContext))
+    if (const Win32AppContext* win32AppContext = ObjCast<Win32AppContext>(g_appContext))
     {
         // extensions required for Win32 surface support
         static const char* requiredExtensions[] = {

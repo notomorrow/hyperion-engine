@@ -17,6 +17,8 @@
 #include <rendering/RenderConfig.hpp>
 #include <rendering/RenderBackend.hpp>
 
+#include <rendering/util/SafeDeleter.hpp>
+
 #include <scene/Entity.hpp>
 #include <scene/EnvProbe.hpp>
 #include <scene/EnvGrid.hpp>
@@ -78,15 +80,15 @@ RenderGroup::~RenderGroup()
     //     it.second->DecRefs();
     // }
 
-    SafeRelease(std::move(m_shader));
-    SafeRelease(std::move(m_descriptorTable));
+    SafeDelete(std::move(m_shader));
+    SafeDelete(std::move(m_descriptorTable));
 }
 
 void RenderGroup::SetShader(const ShaderRef& shader)
 {
     HYP_SCOPE;
 
-    SafeRelease(std::move(m_shader));
+    SafeDelete(std::move(m_shader));
 
     m_shader = shader;
 }
@@ -104,8 +106,8 @@ void RenderGroup::Init()
         {
             HYP_SCOPE;
 
-            SafeRelease(std::move(m_shader));
-            SafeRelease(std::move(m_descriptorTable));
+            SafeDelete(std::move(m_shader));
+            SafeDelete(std::move(m_descriptorTable));
         }));
 
     // If parallel rendering is globally disabled, disable it for this RenderGroup
@@ -708,7 +710,7 @@ void RenderGroup::PerformRendering(FrameBase* frame, const RenderSetup& renderSe
 
         if (cacheEntry->graphicsPipeline.IsValid())
         {
-            SafeRelease(std::move(cacheEntry->graphicsPipeline));
+            SafeDelete(std::move(cacheEntry->graphicsPipeline));
         }
 
         *cacheEntry = PassData::RenderGroupCacheEntry {

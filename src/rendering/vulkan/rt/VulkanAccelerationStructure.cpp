@@ -12,6 +12,8 @@
 #include <rendering/Material.hpp>
 #include <rendering/Shared.hpp>
 
+#include <rendering/util/SafeDeleter.hpp>
+
 #include <core/utilities/Range.hpp>
 #include <core/math/MathUtil.hpp>
 
@@ -126,7 +128,7 @@ RendererResult VulkanAccelerationGeometry::Create()
     };
 
     m_isCreated = true;
-    
+
     return RendererResult();
 }
 
@@ -134,8 +136,8 @@ RendererResult VulkanAccelerationGeometry::Destroy()
 {
     RendererResult result;
 
-    SafeRelease(std::move(m_packedVerticesBuffer));
-    SafeRelease(std::move(m_packedIndicesBuffer));
+    SafeDelete(std::move(m_packedVerticesBuffer));
+    SafeDelete(std::move(m_packedIndicesBuffer));
 
     m_isCreated = false;
 
@@ -237,23 +239,22 @@ RendererResult VulkanAccelerationStructureBase::CreateAccelerationStructure(
         if (update)
         {
             // delete the current acceleration structure once the frame is done, rather than stalling the gpu here
-            GetRenderBackend()->GetCurrentFrame()->OnFrameEnd
-                .Bind([oldAccelerationStructure = m_accelerationStructure](...)
-                {
-                    g_vulkanDynamicFunctions->vkDestroyAccelerationStructureKHR(
-                        GetRenderBackend()->GetDevice()->GetDevice(),
-                        oldAccelerationStructure,
-                        nullptr);
-                })
+            GetRenderBackend()->GetCurrentFrame()->OnFrameEnd.Bind([oldAccelerationStructure = m_accelerationStructure](...)
+                                                                 {
+                                                                     g_vulkanDynamicFunctions->vkDestroyAccelerationStructureKHR(
+                                                                         GetRenderBackend()->GetDevice()->GetDevice(),
+                                                                         oldAccelerationStructure,
+                                                                         nullptr);
+                                                                 })
                 .Detach();
 
-            //HYP_GFX_ASSERT(GetRenderBackend()->GetDevice()->Wait()); // To prevent deletion while in use 
+            // HYP_GFX_ASSERT(GetRenderBackend()->GetDevice()->Wait()); // To prevent deletion while in use
 
             //// delete the current acceleration structure
-            //g_vulkanDynamicFunctions->vkDestroyAccelerationStructureKHR(
-            //    GetRenderBackend()->GetDevice()->GetDevice(),
-            //    m_accelerationStructure,
-            //    nullptr
+            // g_vulkanDynamicFunctions->vkDestroyAccelerationStructureKHR(
+            //     GetRenderBackend()->GetDevice()->GetDevice(),
+            //     m_accelerationStructure,
+            //     nullptr
             //);
 
             m_accelerationStructure = VK_NULL_HANDLE;
@@ -358,11 +359,11 @@ RendererResult VulkanAccelerationStructureBase::CreateAccelerationStructure(
 
     HYP_GFX_CHECK(commandBuffer->SubmitPrimary(&GetRenderBackend()->GetDevice()->GetGraphicsQueue(), fence, nullptr));
 
-    SafeRelease(std::move(commandBuffer));
-    SafeRelease(std::move(fence));
+    SafeDelete(std::move(commandBuffer));
+    SafeDelete(std::move(fence));
 
     ClearFlag(ACCELERATION_STRUCTURE_FLAGS_NEEDS_REBUILDING);
-    
+
     return RendererResult();
 }
 
@@ -370,9 +371,9 @@ RendererResult VulkanAccelerationStructureBase::Destroy()
 {
     RendererResult result;
 
-    SafeRelease(std::move(m_geometries));
-    SafeRelease(std::move(m_buffer));
-    SafeRelease(std::move(m_scratchBuffer));
+    SafeDelete(std::move(m_geometries));
+    SafeDelete(std::move(m_buffer));
+    SafeDelete(std::move(m_scratchBuffer));
 
     if (m_accelerationStructure != VK_NULL_HANDLE)
     {
@@ -399,7 +400,7 @@ void VulkanAccelerationStructureBase::RemoveGeometry(uint32 index)
         return;
     }
 
-    SafeRelease(std::move(*it));
+    SafeDelete(std::move(*it));
 
     m_geometries.Erase(it);
 
@@ -420,7 +421,7 @@ void VulkanAccelerationStructureBase::RemoveGeometry(const VulkanAccelerationGeo
         return;
     }
 
-    SafeRelease(std::move(*it));
+    SafeDelete(std::move(*it));
 
     m_geometries.Erase(it);
 
@@ -505,16 +506,16 @@ RendererResult VulkanTLAS::Create()
 
     HYP_GFX_CHECK(BuildMeshDescriptionsBuffer());
     updateStateFlags |= RT_UPDATE_STATE_FLAGS_UPDATE_MESH_DESCRIPTIONS;
-    
+
     return RendererResult();
 }
 
 RendererResult VulkanTLAS::Destroy()
 {
-    SafeRelease(std::move(m_instancesBuffer));
-    SafeRelease(std::move(m_meshDescriptionsBuffer));
-    SafeRelease(std::move(m_scratchBuffer));
-    SafeRelease(std::move(m_blas));
+    SafeDelete(std::move(m_instancesBuffer));
+    SafeDelete(std::move(m_meshDescriptionsBuffer));
+    SafeDelete(std::move(m_scratchBuffer));
+    SafeDelete(std::move(m_blas));
 
     return VulkanAccelerationStructureBase::Destroy();
 }
@@ -572,7 +573,7 @@ void VulkanTLAS::RemoveBLAS(const BLASRef& blas)
         VulkanBLASRef vulkanBlas = std::move(*it);
         m_blas.Erase(it);
 
-        SafeRelease(std::move(vulkanBlas));
+        SafeDelete(std::move(vulkanBlas));
 
         SetFlag(ACCELERATION_STRUCTURE_FLAGS_NEEDS_REBUILDING);
     }
@@ -604,11 +605,11 @@ RendererResult VulkanTLAS::BuildInstancesBuffer(uint32 first, uint32 last)
     last = MathUtil::Min(m_blas.Size(), last);
 
     /// Temporarily commented out
-    //if (m_blas.Empty() || last <= first)
+    // if (m_blas.Empty() || last <= first)
     //{
-    //    // no need to update the data inside
-    //    return RendererResult();
-    //}
+    //     // no need to update the data inside
+    //     return RendererResult();
+    // }
 
     constexpr SizeType minInstancesBufferSize = sizeof(VkAccelerationStructureInstanceKHR);
     const SizeType instancesBufferSize = MathUtil::Max(minInstancesBufferSize, m_blas.Size() * sizeof(VkAccelerationStructureInstanceKHR));
@@ -665,7 +666,7 @@ RendererResult VulkanTLAS::BuildInstancesBuffer(uint32 first, uint32 last)
         first * sizeof(VkAccelerationStructureInstanceKHR),
         instances.Size() * sizeof(VkAccelerationStructureInstanceKHR),
         instances.Data());
-    
+
     return RendererResult();
 }
 
@@ -747,7 +748,7 @@ RendererResult VulkanTLAS::BuildMeshDescriptionsBuffer(uint32 first, uint32 last
         first * sizeof(MeshDescription),
         meshDescriptions.Size() * sizeof(MeshDescription),
         meshDescriptions.Data());
-    
+
     return RendererResult();
 }
 
@@ -780,7 +781,7 @@ RendererResult VulkanTLAS::UpdateStructure(RTUpdateStateFlags& outUpdateStateFla
     {
         HYP_GFX_CHECK(BuildInstancesBuffer(dirtyRange.GetStart(), dirtyRange.GetEnd()));
         HYP_GFX_CHECK(BuildMeshDescriptionsBuffer(dirtyRange.GetStart(), dirtyRange.GetEnd()));
-        
+
         Array<VkAccelerationStructureGeometryKHR> geometries = GetGeometries();
         Array<uint32> primitiveCounts = GetPrimitiveCounts();
 
@@ -788,7 +789,7 @@ RendererResult VulkanTLAS::UpdateStructure(RTUpdateStateFlags& outUpdateStateFla
 
         outUpdateStateFlags |= RT_UPDATE_STATE_FLAGS_UPDATE_MESH_DESCRIPTIONS | RT_UPDATE_STATE_FLAGS_UPDATE_INSTANCES;
     }
-    
+
     return RendererResult();
 }
 
@@ -813,7 +814,7 @@ RendererResult VulkanTLAS::Rebuild(RTUpdateStateFlags& outUpdateStateFlags)
 
     HYP_GFX_CHECK(BuildInstancesBuffer());
     outUpdateStateFlags |= RT_UPDATE_STATE_FLAGS_UPDATE_INSTANCES;
-    
+
     Array<VkAccelerationStructureGeometryKHR> geometries = GetGeometries();
     Array<uint32> primitiveCounts = GetPrimitiveCounts();
 
@@ -825,7 +826,7 @@ RendererResult VulkanTLAS::Rebuild(RTUpdateStateFlags& outUpdateStateFlags)
 
     HYP_GFX_CHECK(BuildMeshDescriptionsBuffer());
     outUpdateStateFlags |= RT_UPDATE_STATE_FLAGS_UPDATE_MESH_DESCRIPTIONS;
-    
+
     return RendererResult();
 }
 
@@ -906,8 +907,8 @@ RendererResult VulkanBLAS::Create()
 
 RendererResult VulkanBLAS::Destroy()
 {
-    SafeRelease(std::move(m_packedVerticesBuffer));
-    SafeRelease(std::move(m_packedIndicesBuffer));
+    SafeDelete(std::move(m_packedVerticesBuffer));
+    SafeDelete(std::move(m_packedIndicesBuffer));
 
     return VulkanAccelerationStructureBase::Destroy();
 }
@@ -934,7 +935,7 @@ RendererResult VulkanBLAS::UpdateStructure(RTUpdateStateFlags& outUpdateStateFla
     {
         return Rebuild(outUpdateStateFlags);
     }
-    
+
     return RendererResult();
 }
 

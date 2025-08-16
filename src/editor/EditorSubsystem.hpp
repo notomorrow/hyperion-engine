@@ -362,7 +362,7 @@ class HYP_API EditorSubsystem : public Subsystem
     HYP_OBJECT_BODY(EditorSubsystem);
 
 public:
-    EditorSubsystem(const Handle<AppContextBase>& appContext);
+    EditorSubsystem();
     virtual ~EditorSubsystem() override;
 
     void OnAddedToWorld() override;
@@ -371,11 +371,6 @@ public:
 
     void OnSceneAttached(const Handle<Scene>& scene) override;
     void OnSceneDetached(Scene* scene) override;
-
-    HYP_FORCE_INLINE const Handle<AppContextBase>& GetAppContext() const
-    {
-        return m_appContext;
-    }
 
     HYP_METHOD()
     HYP_FORCE_INLINE const Handle<EditorProject>& GetCurrentProject() const
@@ -484,7 +479,6 @@ private:
 
     void SetActiveScene(const WeakHandle<Scene>& scene);
 
-    Handle<AppContextBase> m_appContext;
     Handle<Scene> m_editorScene;
     Handle<Camera> m_camera;
 

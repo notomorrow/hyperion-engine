@@ -11,6 +11,8 @@
 #include <rendering/RenderFrame.hpp>
 #include <rendering/Texture.hpp>
 
+#include <rendering/util/SafeDeleter.hpp>
+
 #include <scene/Light.hpp>
 #include <scene/View.hpp>
 
@@ -38,7 +40,7 @@ ShadowMap::ShadowMap(ShadowMapType type, ShadowMapFilter filterMode, const Shado
 
 ShadowMap::~ShadowMap()
 {
-    SafeRelease(std::move(m_imageView));
+    SafeDelete(std::move(m_imageView));
 
     if (m_atlasElement)
     {

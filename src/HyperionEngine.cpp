@@ -21,8 +21,10 @@
 #include <streaming/StreamingManager.hpp>
 
 #include <rendering/Material.hpp>
-#include <rendering/SafeDeleter.hpp>
 #include <rendering/RenderGlobalState.hpp>
+
+#include <rendering/util/SafeDeleter.hpp>
+
 #include <rendering/shader_compiler/ShaderCompiler.hpp>
 
 #ifdef HYP_VULKAN
@@ -49,6 +51,7 @@ HYP_DECLARE_LOG_CHANNEL(Engine);
 Handle<EngineDriver> g_engineDriver {};
 Handle<AssetManager> g_assetManager {};
 Handle<EditorState> g_editorState {};
+Handle<AppContextBase> g_appContext {};
 ShaderManager* g_shaderManager = nullptr;
 MaterialCache* g_materialSystem = nullptr;
 SafeDeleter* g_safeDeleter = nullptr;
@@ -145,7 +148,7 @@ HYP_API const FilePath& GetResourceDirectory()
     return resourceDirectoryData.path;
 }
 
-static void UpdateGlobalConfig(const ConfigurationTable& mergeValues)
+void UpdateGlobalConfig(const ConfigurationTable& mergeValues)
 {
     Mutex::Guard guard(g_globalConfigMutex);
 
@@ -237,12 +240,10 @@ HYP_API bool InitializeEngine(int argc, char** argv)
 
     ComponentInterfaceRegistry::GetInstance().Initialize();
 
-    Handle<AppContextBase> appContext;
-
 #ifdef HYP_WINDOWS
-    appContext = CreateObject<Win32AppContext>("Hyperion", GetCommandLineArguments());
+    g_appContext = CreateObject<Win32AppContext>("Hyperion", GetCommandLineArguments());
 #elif defined(HYP_SDL)
-    appContext = CreateObject<SDLAppContext>("Hyperion", GetCommandLineArguments());
+    g_appContext = CreateObject<SDLAppContext>("Hyperion", GetCommandLineArguments());
 #else
     HYP_FAIL("AppContext not implemented for this platform");
 #endif
@@ -270,34 +271,15 @@ HYP_API bool InitializeEngine(int argc, char** argv)
     {
         HYP_LOG(Engine, Info, "Running in windowed mode: {}x{}", resolution.x, resolution.y);
 
-        appContext->SetMainWindow(appContext->CreateSystemWindow({ "Hyperion Engine", resolution, windowFlags }));
+        g_appContext->SetMainWindow(g_appContext->CreateSystemWindow({ "Hyperion Engine", resolution, windowFlags }));
     }
     else
     {
         HYP_LOG(Engine, Info, "Running in headless mode");
     }
 
-    Assert(g_renderBackend != nullptr);
-    Assert(g_renderBackend->Initialize(*appContext));
-
-    { // override global config after renderer initialize
-        ConfigurationTable renderGlobalConfigOverrides;
-
-        // if ray tracing is not supported, we need to update the configuration
-        if (!g_renderBackend->GetRenderConfig().IsRaytracingSupported())
-        {
-            renderGlobalConfigOverrides.Set("rendering.raytracing.enabled", false);
-            renderGlobalConfigOverrides.Set("rendering.raytracing.reflections.enabled", false);
-            renderGlobalConfigOverrides.Set("rendering.raytracing.globalIllumination.enabled", false);
-            renderGlobalConfigOverrides.Set("rendering.raytracing.pathTracing.enabled", false);
-
-            UpdateGlobalConfig(renderGlobalConfigOverrides);
-        }
-    }
-
     RenderApi_Init();
 
-    g_engineDriver->SetAppContext(appContext);
     InitObject(g_engineDriver);
 
     return true;

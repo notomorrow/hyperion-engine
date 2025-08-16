@@ -1,8 +1,9 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
 #include <rendering/Buffers.hpp>
-
 #include <rendering/RenderBackend.hpp>
+
+#include <rendering/util/SafeDeleter.hpp>
 
 #include <core/utilities/ByteUtil.hpp>
 
@@ -14,7 +15,7 @@ namespace hyperion {
 
 GpuBufferHolderBase::~GpuBufferHolderBase()
 {
-    SafeRelease(std::move(m_buffers));
+    SafeDelete(std::move(m_buffers));
 }
 
 void GpuBufferHolderBase::CreateBuffers(GpuBufferType type, SizeType initialCount, SizeType size, SizeType alignment)

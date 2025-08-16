@@ -21,7 +21,10 @@
 #include <rendering/RenderGpuBuffer.hpp>
 #include <rendering/RenderGpuImageView.hpp>
 #include <rendering/RenderSampler.hpp>
+
 #include <rendering/rt/RenderAccelerationStructure.hpp>
+
+#include <rendering/util/SafeDeleter.hpp>
 
 #include <core/Types.hpp>
 #include <core/HashCode.hpp>
@@ -563,7 +566,7 @@ struct DescriptorSetElement
 
             Visit(std::move(it.second), [](auto&& ref)
                 {
-                    SafeRelease(std::move(ref));
+                    SafeDelete(std::move(ref));
                 });
         }
     }
@@ -697,7 +700,7 @@ protected:
 
             if (currentValue)
             {
-                SafeRelease(std::move(*currentValue));
+                SafeDelete(std::move(*currentValue));
             }
 
             elementIt->second.template Set<NormalizedType<T>>(ref);
@@ -877,7 +880,7 @@ public:
     {
         for (auto& it : m_sets)
         {
-            SafeRelease(std::move(it));
+            SafeDelete(std::move(it));
         }
 
         m_sets = {};

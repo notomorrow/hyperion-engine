@@ -5,15 +5,17 @@
 #include <rendering/RenderDescriptorSet.hpp>
 #include <rendering/RenderShader.hpp>
 
+#include <rendering/util/SafeDeleter.hpp>
+
 #include <rendering/shader_compiler/ShaderCompiler.hpp>
 
 namespace hyperion {
 
 GraphicsPipelineBase::~GraphicsPipelineBase()
 {
-    SafeRelease(std::move(m_descriptorTable));
-    SafeRelease(std::move(m_shader));
-    SafeRelease(std::move(m_framebuffers));
+    SafeDelete(std::move(m_descriptorTable));
+    SafeDelete(std::move(m_shader));
+    SafeDelete(std::move(m_framebuffers));
 }
 
 RendererResult GraphicsPipelineBase::Create()
@@ -40,9 +42,9 @@ RendererResult GraphicsPipelineBase::Create()
 
 RendererResult GraphicsPipelineBase::Destroy()
 {
-    SafeRelease(std::move(m_framebuffers));
-    SafeRelease(std::move(m_shader));
-    SafeRelease(std::move(m_descriptorTable));
+    SafeDelete(std::move(m_framebuffers));
+    SafeDelete(std::move(m_shader));
+    SafeDelete(std::move(m_descriptorTable));
 
     HYPERION_RETURN_OK;
 }
@@ -59,7 +61,7 @@ void GraphicsPipelineBase::SetShader(const ShaderRef& shader)
 
 void GraphicsPipelineBase::SetFramebuffers(const Array<FramebufferRef>& framebuffers)
 {
-    SafeRelease(std::move(m_framebuffers));
+    SafeDelete(std::move(m_framebuffers));
     m_framebuffers = framebuffers;
 }
 

@@ -8,6 +8,8 @@
 #include <rendering/RenderBackend.hpp>
 #include <rendering/RenderHelpers.hpp>
 
+#include <rendering/util/SafeDeleter.hpp>
+
 #include <asset/MeshAsset.hpp>
 #include <asset/AssetRegistry.hpp>
 
@@ -58,10 +60,10 @@ struct RENDER_COMMAND(BuildMeshBlas)
 
     virtual ~RENDER_COMMAND(BuildMeshBlas)() override
     {
-        SafeRelease(std::move(packedVerticesBuffer));
-        SafeRelease(std::move(packedIndicesBuffer));
-        SafeRelease(std::move(verticesStagingBuffer));
-        SafeRelease(std::move(indicesStagingBuffer));
+        SafeDelete(std::move(packedVerticesBuffer));
+        SafeDelete(std::move(packedIndicesBuffer));
+        SafeDelete(std::move(verticesStagingBuffer));
+        SafeDelete(std::move(indicesStagingBuffer));
     }
 
     virtual RendererResult operator()() override

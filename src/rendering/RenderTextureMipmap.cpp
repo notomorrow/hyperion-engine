@@ -9,6 +9,8 @@
 #include <rendering/Mesh.hpp>
 #include <rendering/Texture.hpp>
 
+#include <rendering/util/SafeDeleter.hpp>
+
 #include <engine/EngineGlobals.hpp>
 
 namespace hyperion {
@@ -173,7 +175,7 @@ void TextureMipmapRenderer::RenderMipmaps(const Handle<Texture>& texture)
 
     passes.Clear();
 
-    SafeRelease(std::move(mipImageViews));
+    SafeDelete(std::move(mipImageViews));
 }
 
 #pragma endregion TextureMipmapRenderer

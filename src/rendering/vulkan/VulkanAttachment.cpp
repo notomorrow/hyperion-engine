@@ -6,6 +6,8 @@
 #include <rendering/vulkan/VulkanFramebuffer.hpp>
 #include <rendering/vulkan/VulkanHelpers.hpp>
 
+#include <rendering/util/SafeDeleter.hpp>
+
 #include <rendering/RenderBackend.hpp>
 
 namespace hyperion {
@@ -99,8 +101,8 @@ VulkanAttachment::VulkanAttachment(
 
 VulkanAttachment::~VulkanAttachment()
 {
-    SafeRelease(std::move(m_image));
-    SafeRelease(std::move(m_imageView));
+    SafeDelete(std::move(m_image));
+    SafeDelete(std::move(m_imageView));
 }
 
 bool VulkanAttachment::IsCreated() const
@@ -122,8 +124,8 @@ RendererResult VulkanAttachment::Create()
 
 RendererResult VulkanAttachment::Destroy()
 {
-    SafeRelease(std::move(m_image));
-    SafeRelease(std::move(m_imageView));
+    SafeDelete(std::move(m_image));
+    SafeDelete(std::move(m_imageView));
 
     return {};
 }

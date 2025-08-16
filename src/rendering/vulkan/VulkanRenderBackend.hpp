@@ -17,11 +17,9 @@ namespace hyperion {
 
 namespace sys {
 class ApplicationWindow;
-class AppContextBase;
 } // namespace sys
 
 using sys::ApplicationWindow;
-using sys::AppContextBase;
 
 class VulkanInstance;
 class VulkanAsyncCompute;
@@ -87,7 +85,7 @@ public:
 
     const VulkanDeviceRef& GetDevice() const;
 
-    virtual RendererResult Initialize(AppContextBase& appContext) override;
+    virtual RendererResult Initialize() override;
     virtual RendererResult Destroy() override;
 
     virtual const IRenderConfig& GetRenderConfig() const override;
@@ -165,7 +163,7 @@ public:
     HYP_API RendererResult GetOrCreateVkDescriptorSetLayout(const DescriptorSetLayout& layout, VulkanDescriptorSetLayoutWrapperRef& outRef);
 
     VkSurfaceKHR CreateVkSurface(ApplicationWindow* window, VulkanInstance* instance);
-    bool GetVkExtensions(const AppContextBase* appContext, Array<const char*>& outExtensions);
+    bool GetVkExtensions(Array<const char*>& outExtensions);
 
 private:
     Delegate<void, SwapchainBase*> OnSwapchainRecreated;

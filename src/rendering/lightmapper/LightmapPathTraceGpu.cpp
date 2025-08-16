@@ -17,6 +17,8 @@
 #include <rendering/Texture.hpp>
 #include <rendering/Renderer.hpp>
 
+#include <rendering/util/SafeDeleter.hpp>
+
 #include <rendering/rt/MeshBlasBuilder.hpp>
 
 #include <asset/TextureAsset.hpp>
@@ -66,7 +68,6 @@ namespace hyperion {
 
 struct GpuLightmapperReadyNotification : Semaphore<int>
 {
-
 };
 
 #pragma region Render commands
@@ -90,7 +91,8 @@ struct RENDER_COMMAND(CreateLightmapGPUPathTracerUniformBuffer)
     }
 };
 
-struct RENDER_COMMAND(SetGpuLightmapperReady) : RenderCommand
+struct RENDER_COMMAND(SetGpuLightmapperReady)
+    : RenderCommand
 {
     RC<GpuLightmapperReadyNotification> notification;
 
@@ -181,11 +183,11 @@ LightmapRenderer_GpuPathTracing::LightmapRenderer_GpuPathTracing(
 
 LightmapRenderer_GpuPathTracing::~LightmapRenderer_GpuPathTracing()
 {
-    SafeRelease(std::move(m_tlas));
-    SafeRelease(std::move(m_uniformBuffers));
-    SafeRelease(std::move(m_raysBuffers));
-    SafeRelease(std::move(m_hitsBufferGpu));
-    SafeRelease(std::move(m_raytracingPipeline));
+    SafeDelete(std::move(m_tlas));
+    SafeDelete(std::move(m_uniformBuffers));
+    SafeDelete(std::move(m_raysBuffers));
+    SafeDelete(std::move(m_hitsBufferGpu));
+    SafeDelete(std::move(m_raytracingPipeline));
 }
 
 void LightmapRenderer_GpuPathTracing::CreateUniformBuffer()
@@ -232,7 +234,7 @@ void LightmapRenderer_GpuPathTracing::UpdatePipelineState(FrameBase* frame)
         if (updateStateFlags)
         {
             Assert(m_raytracingPipeline != nullptr);
-            
+
             const DescriptorSetRef& descriptorSet = m_raytracingPipeline->GetDescriptorTable()->GetDescriptorSet("RTRadianceDescriptorSet", frame->GetFrameIndex());
             Assert(descriptorSet != nullptr);
 
@@ -277,7 +279,7 @@ void LightmapRenderer_GpuPathTracing::UpdatePipelineState(FrameBase* frame)
         }
 
         if (!m_tlas->HasBLAS(blas))
-    {
+        {
             m_tlas->AddBLAS(blas);
 
             hasBlas = true;
@@ -413,7 +415,7 @@ void LightmapRenderer_GpuPathTracing::ReadHitsBuffer(FrameBase* frame, Span<Ligh
             renderQueue << InsertBarrier(stagingBuffer, RS_COPY_DST);
 
             renderQueue << CopyBuffer(hitsBuffer, stagingBuffer, outHits.Size() * sizeof(LightmapHit));
-            
+
             renderQueue << InsertBarrier(stagingBuffer, RS_COPY_SRC);
             renderQueue << InsertBarrier(hitsBuffer, previousResourceState);
         });
@@ -422,7 +424,7 @@ void LightmapRenderer_GpuPathTracing::ReadHitsBuffer(FrameBase* frame, Span<Ligh
 
     stagingBuffer->Read(sizeof(LightmapHit) * outHits.Size(), outHits.Data());
 
-    SafeRelease(std::move(stagingBuffer));
+    SafeDelete(std::move(stagingBuffer));
 }
 
 void LightmapRenderer_GpuPathTracing::Render(FrameBase* frame, const RenderSetup& renderSetup, LightmapJob* job, Span<const LightmapRay> rays, uint32 rayOffset)
@@ -455,30 +457,30 @@ void LightmapRenderer_GpuPathTracing::Render(FrameBase* frame, const RenderSetup
         Assert(m_raysBuffers[frame->GetFrameIndex()]->Size() >= rayData.ByteSize());
         m_raysBuffers[frame->GetFrameIndex()]->Copy(rayData.ByteSize(), rayData.Data());
 
-        //bool raysBufferResized = false;
+        // bool raysBufferResized = false;
 
-        //HYP_GFX_ASSERT(m_raysBuffers[frame->GetFrameIndex()]->EnsureCapacity(rayData.ByteSize(), &raysBufferResized));
-        //m_raysBuffers[frame->GetFrameIndex()]->Copy(rayData.ByteSize(), rayData.Data());
+        // HYP_GFX_ASSERT(m_raysBuffers[frame->GetFrameIndex()]->EnsureCapacity(rayData.ByteSize(), &raysBufferResized));
+        // m_raysBuffers[frame->GetFrameIndex()]->Copy(rayData.ByteSize(), rayData.Data());
 
-        //if (raysBufferResized)
+        // if (raysBufferResized)
         //{
-        //    m_raytracingPipeline->GetDescriptorTable()->GetDescriptorSet("RTRadianceDescriptorSet", frame->GetFrameIndex())->SetElement("RaysBuffer", m_raysBuffers[frame->GetFrameIndex()]);
-        //}
+        //     m_raytracingPipeline->GetDescriptorTable()->GetDescriptorSet("RTRadianceDescriptorSet", frame->GetFrameIndex())->SetElement("RaysBuffer", m_raysBuffers[frame->GetFrameIndex()]);
+        // }
 
-        //bool hitsBufferResized = false;
+        // bool hitsBufferResized = false;
 
         ///*HYP_GFX_ASSERT(m_hitsBuffers[frame->GetFrameIndex()]->EnsureCapacity(rays.Size() * sizeof(LightmapHit), &hitsBufferResized));
-        //m_hitsBuffers[frame->GetFrameIndex()]->Memset(rays.Size() * sizeof(LightmapHit), 0);
+        // m_hitsBuffers[frame->GetFrameIndex()]->Memset(rays.Size() * sizeof(LightmapHit), 0);
 
-        //if (hitsBufferResized) {
-        //    m_raytracingPipeline->GetDescriptorTable()->GetDescriptorSet("RTRadianceDescriptorSet", frame->GetFrameIndex())
-        //        ->SetElement("HitsBuffer", m_hitsBuffers[frame->GetFrameIndex()]);
-        //}*/
+        // if (hitsBufferResized) {
+        //     m_raytracingPipeline->GetDescriptorTable()->GetDescriptorSet("RTRadianceDescriptorSet", frame->GetFrameIndex())
+        //         ->SetElement("HitsBuffer", m_hitsBuffers[frame->GetFrameIndex()]);
+        // }*/
 
-        //if (raysBufferResized || hitsBufferResized)
+        // if (raysBufferResized || hitsBufferResized)
         //{
-        //    m_raytracingPipeline->GetDescriptorTable()->Update(frame->GetFrameIndex());
-        //}
+        //     m_raytracingPipeline->GetDescriptorTable()->Update(frame->GetFrameIndex());
+        // }
     }
 
     frame->renderQueue << BindRaytracingPipeline(m_raytracingPipeline);

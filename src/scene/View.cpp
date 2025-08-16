@@ -7,7 +7,6 @@
 #include <rendering/Material.hpp>
 #include <scene/EnvGrid.hpp>
 #include <scene/EnvProbe.hpp>
-#include <rendering/Texture.hpp>
 #include <scene/lightmapper/LightmapVolume.hpp>
 #include <scene/camera/Camera.hpp>
 #include <scene/animation/Skeleton.hpp>
@@ -24,8 +23,10 @@
 
 #include <rendering/RenderGlobalState.hpp>
 #include <rendering/GBuffer.hpp>
-#include <rendering/subsystems/sky/SkydomeRenderer.hpp>
 #include <rendering/RenderBackend.hpp>
+#include <rendering/Texture.hpp>
+#include <rendering/util/SafeDeleter.hpp>
+#include <rendering/subsystems/sky/SkydomeRenderer.hpp>
 
 #include <core/object/HypClass.hpp>
 
@@ -167,7 +168,7 @@ View::~View()
     {
         m_outputTarget = ViewOutputTarget();
 
-        SafeRelease(std::move(framebuffer));
+        SafeDelete(std::move(framebuffer));
     }
 
     for (auto it = std::begin(m_renderProxyLists); it != std::end(m_renderProxyLists); ++it)

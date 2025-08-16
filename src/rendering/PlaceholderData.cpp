@@ -4,6 +4,8 @@
 #include <rendering/RenderBackend.hpp>
 #include <rendering/Texture.hpp>
 
+#include <rendering/util/SafeDeleter.hpp>
+
 #include <asset/Assets.hpp>
 #include <asset/AssetRegistry.hpp>
 #include <asset/TextureAsset.hpp>
@@ -329,29 +331,29 @@ void PlaceholderData::Create()
 
 void PlaceholderData::Destroy()
 {
-    SafeRelease(std::move(m_image2d1x1R8));
-    SafeRelease(std::move(m_imageView2d1x1R8));
-    SafeRelease(std::move(m_image2d1x1R8Storage));
-    SafeRelease(std::move(m_imageView2d1x1R8Storage));
-    SafeRelease(std::move(m_image3d1x1x1R8));
-    SafeRelease(std::move(m_imageView3d1x1x1R8));
-    SafeRelease(std::move(m_image3d1x1x1R8Storage));
-    SafeRelease(std::move(m_imageView3d1x1x1R8Storage));
-    SafeRelease(std::move(m_imageCube1x1R8));
-    SafeRelease(std::move(m_imageViewCube1x1R8));
-    SafeRelease(std::move(m_image2d1x1R8Array));
-    SafeRelease(std::move(m_imageView2d1x1R8Array));
-    SafeRelease(std::move(m_imageCube1x1R8Array));
-    SafeRelease(std::move(m_imageViewCube1x1R8Array));
-    SafeRelease(std::move(m_samplerLinear));
-    SafeRelease(std::move(m_samplerLinearMipmap));
-    SafeRelease(std::move(m_samplerNearest));
+    SafeDelete(std::move(m_image2d1x1R8));
+    SafeDelete(std::move(m_imageView2d1x1R8));
+    SafeDelete(std::move(m_image2d1x1R8Storage));
+    SafeDelete(std::move(m_imageView2d1x1R8Storage));
+    SafeDelete(std::move(m_image3d1x1x1R8));
+    SafeDelete(std::move(m_imageView3d1x1x1R8));
+    SafeDelete(std::move(m_image3d1x1x1R8Storage));
+    SafeDelete(std::move(m_imageView3d1x1x1R8Storage));
+    SafeDelete(std::move(m_imageCube1x1R8));
+    SafeDelete(std::move(m_imageViewCube1x1R8));
+    SafeDelete(std::move(m_image2d1x1R8Array));
+    SafeDelete(std::move(m_imageView2d1x1R8Array));
+    SafeDelete(std::move(m_imageCube1x1R8Array));
+    SafeDelete(std::move(m_imageViewCube1x1R8Array));
+    SafeDelete(std::move(m_samplerLinear));
+    SafeDelete(std::move(m_samplerLinearMipmap));
+    SafeDelete(std::move(m_samplerNearest));
 
     for (auto& bufferMap : m_buffers)
     {
         for (auto& it : bufferMap.second)
         {
-            SafeRelease(std::move(it.second));
+            SafeDelete(std::move(it.second));
         }
     }
 

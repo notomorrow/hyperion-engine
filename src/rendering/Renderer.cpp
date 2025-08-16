@@ -4,6 +4,8 @@
 #include <rendering/DrawCall.hpp>
 #include <rendering/RenderBackend.hpp>
 
+#include <rendering/util/SafeDeleter.hpp>
+
 #include <scene/View.hpp>
 
 #include <core/threading/Task.hpp>
@@ -43,10 +45,10 @@ PassData::~PassData()
     {
         HYP_LOG(Rendering, Debug, "Destroying RenderGroupCacheEntry for RenderGroup '{}'", entry.renderGroup.Id());
 
-        SafeRelease(std::move(entry.graphicsPipeline));
+        SafeDelete(std::move(entry.graphicsPipeline));
     }
 
-    SafeRelease(std::move(descriptorSets));
+    SafeDelete(std::move(descriptorSets));
 }
 
 int PassData::CullUnusedGraphicsPipelines(int maxIter)
@@ -78,7 +80,7 @@ int PassData::CullUnusedGraphicsPipelines(int maxIter)
         {
             HYP_LOG(Rendering, Debug, "Removing graphics pipeline for RenderGroup '{}' as it is no longer valid.", entry.renderGroup.Id());
 
-            SafeRelease(std::move(entry.graphicsPipeline));
+            SafeDelete(std::move(entry.graphicsPipeline));
 
             renderGroupCacheIterator = renderGroupCache.Erase(renderGroupCacheIterator);
 

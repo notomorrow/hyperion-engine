@@ -6,6 +6,8 @@
 #include <rendering/vulkan/VulkanHelpers.hpp>
 #include <rendering/vulkan/VulkanRenderBackend.hpp>
 
+#include <rendering/util/SafeDeleter.hpp>
+
 #include <core/debug/Debug.hpp>
 
 namespace hyperion {
@@ -40,7 +42,7 @@ VulkanGpuImageView::~VulkanGpuImageView()
 {
     HYP_GFX_ASSERT(m_handle == VK_NULL_HANDLE, "image view should have been destroyed");
 
-    SafeRelease(std::move(m_image));
+    SafeDelete(std::move(m_image));
 }
 
 bool VulkanGpuImageView::IsCreated() const

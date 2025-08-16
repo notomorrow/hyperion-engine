@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
 #include <rendering/ParticleSystem.hpp>
-
 #include <rendering/Buffers.hpp>
 #include <rendering/RenderGroup.hpp>
 #include <rendering/RenderEnvironment.hpp>
@@ -11,6 +10,8 @@
 #include <rendering/PlaceholderData.hpp>
 #include <rendering/RenderGlobalState.hpp>
 #include <rendering/GraphicsPipelineCache.hpp>
+
+#include <rendering/util/SafeDeleter.hpp>
 
 #include <rendering/RenderQueue.hpp>
 
@@ -71,9 +72,9 @@ struct RENDER_COMMAND(CreateParticleSpawnerBuffers)
 
     virtual ~RENDER_COMMAND(CreateParticleSpawnerBuffers)() override
     {
-        SafeRelease(std::move(particleBuffer));
-        SafeRelease(std::move(indirectBuffer));
-        SafeRelease(std::move(noiseBuffer));
+        SafeDelete(std::move(particleBuffer));
+        SafeDelete(std::move(indirectBuffer));
+        SafeDelete(std::move(noiseBuffer));
     }
 
     virtual RendererResult operator()() override
@@ -173,11 +174,11 @@ ParticleSpawner::ParticleSpawner(const ParticleSpawnerParams& params)
 
 ParticleSpawner::~ParticleSpawner()
 {
-    SafeRelease(std::move(m_graphicsPipeline));
-    SafeRelease(std::move(m_updateParticles));
-    SafeRelease(std::move(m_particleBuffer));
-    SafeRelease(std::move(m_indirectBuffer));
-    SafeRelease(std::move(m_noiseBuffer));
+    SafeDelete(std::move(m_graphicsPipeline));
+    SafeDelete(std::move(m_updateParticles));
+    SafeDelete(std::move(m_particleBuffer));
+    SafeDelete(std::move(m_indirectBuffer));
+    SafeDelete(std::move(m_noiseBuffer));
 
     m_shader.Reset();
 }
@@ -287,7 +288,7 @@ ParticleSystem::ParticleSystem()
 
 ParticleSystem::~ParticleSystem()
 {
-    SafeRelease(std::move(m_stagingBuffer));
+    SafeDelete(std::move(m_stagingBuffer));
 
     m_quadMesh.Reset();
 

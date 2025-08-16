@@ -10,6 +10,8 @@
 #include <rendering/RenderDescriptorSet.hpp>
 #include <rendering/RenderGpuImage.hpp>
 
+#include <rendering/util/SafeDeleter.hpp>
+
 #include <scene/View.hpp>
 #include <scene/EnvProbe.hpp>
 #include <scene/EnvGrid.hpp>
@@ -136,17 +138,17 @@ DDGI::DDGI(DDGIInfo&& gridInfo)
 
 DDGI::~DDGI()
 {
-    SafeRelease(std::move(m_uniformBuffers));
-    SafeRelease(std::move(m_radianceBuffer));
-    SafeRelease(std::move(m_irradianceImage));
-    SafeRelease(std::move(m_irradianceImageView));
-    SafeRelease(std::move(m_depthImage));
-    SafeRelease(std::move(m_depthImageView));
-    SafeRelease(std::move(m_pipeline));
-    SafeRelease(std::move(m_updateIrradiance));
-    SafeRelease(std::move(m_updateDepth));
-    SafeRelease(std::move(m_copyBorderTexelsIrradiance));
-    SafeRelease(std::move(m_copyBorderTexelsDepth));
+    SafeDelete(std::move(m_uniformBuffers));
+    SafeDelete(std::move(m_radianceBuffer));
+    SafeDelete(std::move(m_irradianceImage));
+    SafeDelete(std::move(m_irradianceImageView));
+    SafeDelete(std::move(m_depthImage));
+    SafeDelete(std::move(m_depthImageView));
+    SafeDelete(std::move(m_pipeline));
+    SafeDelete(std::move(m_updateIrradiance));
+    SafeDelete(std::move(m_updateDepth));
+    SafeDelete(std::move(m_copyBorderTexelsIrradiance));
+    SafeDelete(std::move(m_copyBorderTexelsDepth));
 
     PUSH_RENDER_COMMAND(UnsetDDGIDescriptors);
 }

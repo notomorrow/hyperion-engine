@@ -4,6 +4,8 @@
 #include <rendering/RenderDescriptorSet.hpp>
 #include <rendering/RenderConfig.hpp>
 
+#include <rendering/util/SafeDeleter.hpp>
+
 #include <rendering/Buffers.hpp>
 
 namespace hyperion {
@@ -217,7 +219,7 @@ DescriptorSetBase::~DescriptorSetBase()
 
             Visit(std::move(value), [](auto&& ref)
                 {
-                    SafeRelease(std::move(ref));
+                    SafeDelete(std::move(ref));
                 });
         }
     }

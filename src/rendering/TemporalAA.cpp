@@ -5,7 +5,6 @@
 #include <rendering/PlaceholderData.hpp>
 #include <rendering/Deferred.hpp>
 #include <rendering/GBuffer.hpp>
-#include <rendering/SafeDeleter.hpp>
 #include <rendering/RenderGlobalState.hpp>
 #include <rendering/RenderQueue.hpp>
 #include <rendering/RenderFrame.hpp>
@@ -13,6 +12,8 @@
 #include <rendering/RenderComputePipeline.hpp>
 #include <rendering/RenderFramebuffer.hpp>
 #include <rendering/Texture.hpp>
+
+#include <rendering/util/SafeDeleter.hpp>
 
 #include <scene/View.hpp>
 
@@ -43,9 +44,9 @@ TemporalAA::TemporalAA(const GpuImageViewRef& inputImageView, const Vec2u& exten
 
 TemporalAA::~TemporalAA()
 {
-    SafeRelease(std::move(m_inputImageView));
-    SafeRelease(std::move(m_uniformBuffer));
-    SafeRelease(std::move(m_computePipeline));
+    SafeDelete(std::move(m_inputImageView));
+    SafeDelete(std::move(m_uniformBuffer));
+    SafeDelete(std::move(m_computePipeline));
 }
 
 void TemporalAA::Create()

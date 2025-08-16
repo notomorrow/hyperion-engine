@@ -227,9 +227,9 @@ RendererResult VulkanSingleTimeCommands::Execute()
     VulkanFenceRef fence;
 
     HYP_DEFER({
-        SafeRelease(std::move(fence));
-        SafeRelease(std::move(commandBuffer));
-        SafeRelease(std::move(tempFrame));
+        HYP_GFX_ASSERT(fence->Destroy());
+        HYP_GFX_ASSERT(commandBuffer->Destroy());
+        HYP_GFX_ASSERT(tempFrame->Destroy());
     });
 
     RenderQueue renderQueue;

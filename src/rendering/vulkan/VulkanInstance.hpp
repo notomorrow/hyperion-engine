@@ -16,12 +16,6 @@
 
 namespace hyperion {
 
-namespace sys {
-class AppContextBase;
-} // namespace sys
-
-using sys::AppContextBase;
-
 class VulkanInstance
 {
     static ExtensionMap GetExtensionMap();
@@ -33,7 +27,7 @@ class VulkanInstance
 public:
     VulkanInstance();
 
-    RendererResult Initialize(const AppContextBase& appContext, bool loadDebugLayers = false);
+    RendererResult Initialize(bool loadDebugLayers = false);
 
     HYP_FORCE_INLINE VkInstance GetInstance() const
     {

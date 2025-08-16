@@ -97,10 +97,6 @@ void AppContextBase::SetMainWindow(const Handle<ApplicationWindow>& window)
     OnCurrentWindowChanged(m_mainWindow.Get());
 }
 
-void AppContextBase::UpdateConfigurationOverrides()
-{
-}
-
 #pragma endregion AppContextBase
 
 #pragma region SDLApplicationWindow

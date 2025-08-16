@@ -8,6 +8,8 @@
 #include <rendering/vulkan/VulkanHelpers.hpp>
 #include <rendering/vulkan/VulkanResult.hpp>
 
+#include <rendering/util/SafeDeleter.hpp>
+
 #include <rendering/RenderQueue.hpp>
 
 #include <core/math/MathUtil.hpp>
@@ -126,7 +128,7 @@ RendererResult VulkanAttachmentMap::Resize(Vec2u newSize)
 
             if (def.image.IsValid())
             {
-                SafeRelease(std::move(def.image));
+                SafeDelete(std::move(def.image));
             }
         }
         else
@@ -151,7 +153,7 @@ RendererResult VulkanAttachmentMap::Resize(Vec2u newSize)
 
         if (def.attachment.IsValid())
         {
-            SafeRelease(std::move(def.attachment));
+            SafeDelete(std::move(def.attachment));
         }
 
         def = VulkanAttachmentDef {
@@ -296,7 +298,7 @@ RendererResult VulkanFramebuffer::Destroy()
         m_handle = VK_NULL_HANDLE;
     }
 
-    SafeRelease(std::move(m_renderPass));
+    SafeDelete(std::move(m_renderPass));
 
     m_attachmentMap.Reset();
 
@@ -411,7 +413,7 @@ bool VulkanFramebuffer::RemoveAttachment(uint32 binding)
         return false;
     }
 
-    SafeRelease(std::move(it->second.attachment));
+    SafeDelete(std::move(it->second.attachment));
 
     m_attachmentMap.attachments.Erase(it);
 
