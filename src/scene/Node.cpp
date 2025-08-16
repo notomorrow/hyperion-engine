@@ -584,11 +584,11 @@ Array<Node*> Node::GetDescendants() const
 
     typedef void (*CollectFunc)(Array<Node*>& descendants, const Node& target, void* collectFunc);
 
-    CollectFunc collectFunc = [](Array<Node *> &descendants, const Node& target, void *collectFunc)
+    CollectFunc collectFunc = [](Array<Node*>& descendants, const Node& target, void* collectFunc)
         {
             descendants.Reserve(descendants.Size() + target.GetChildren().Size());
 
-            for (const Handle<Node> &child : target.GetChildren())
+            for (const Handle<Node>& child : target.GetChildren())
             {
                 AssertDebug(child != nullptr);
 
@@ -598,7 +598,7 @@ Array<Node*> Node::GetDescendants() const
             }
         };
 
-    collectFunc(descendants, *this, collectFunc);
+    collectFunc(descendants, *this, reinterpret_cast<void*>(collectFunc));
 
     return descendants;
 }
