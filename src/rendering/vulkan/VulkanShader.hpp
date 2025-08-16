@@ -54,8 +54,11 @@ struct VulkanShaderGroup
     VkRayTracingShaderGroupCreateInfoKHR raytracingGroupCreateInfo;
 };
 
+HYP_CLASS(NoScriptBindings)
 class VulkanShader final : public ShaderBase
 {
+    HYP_OBJECT_BODY(VulkanShader);
+
 public:
     VulkanShader();
     VulkanShader(const RC<CompiledShader>& compiledShader);
@@ -84,7 +87,6 @@ public:
     virtual bool IsCreated() const override;
 
     virtual RendererResult Create() override;
-    virtual RendererResult Destroy() override;
 
     HYP_FORCE_INLINE HashCode GetHashCode() const
     {
@@ -100,7 +102,7 @@ public:
     }
 
 #ifdef HYP_DEBUG_MODE
-    virtual void SetDebugName(Name name) override;
+    void SetDebugName(Name name) override;
 #endif
 
 private:

@@ -78,10 +78,14 @@ VulkanDescriptorSet::VulkanDescriptorSet(const DescriptorSetLayout& layout)
 
 VulkanDescriptorSet::~VulkanDescriptorSet()
 {
-    HYP_GFX_ASSERT(
-        !IsCreated(),
-        "Descriptor set %p (%s) was not properly disposed before the destructor was hit. SafeDelete() call is probably missing somewhere.",
-        this, *GetDebugName());
+    if (m_handle != VK_NULL_HANDLE)
+    {
+        GetRenderBackend()->DestroyDescriptorSet(m_handle);
+        m_handle = VK_NULL_HANDLE;
+    }
+
+    // Release reference to layout
+    m_vkLayoutWrapper.Reset();
 }
 
 void VulkanDescriptorSet::UpdateDirtyState(bool* outIsDirty)
@@ -386,22 +390,6 @@ RendererResult VulkanDescriptorSet::Create()
 
     UpdateDirtyState();
     Update();
-
-    return result;
-}
-
-RendererResult VulkanDescriptorSet::Destroy()
-{
-    RendererResult result;
-
-    if (m_handle != VK_NULL_HANDLE)
-    {
-        GetRenderBackend()->DestroyDescriptorSet(m_handle);
-        m_handle = VK_NULL_HANDLE;
-    }
-
-    // Release reference to layout
-    m_vkLayoutWrapper.Reset();
 
     return result;
 }
@@ -755,7 +743,7 @@ void VulkanDescriptorSet::Bind(CommandBufferBase* commandBuffer, const Raytracin
 
 DescriptorSetRef VulkanDescriptorSet::Clone() const
 {
-    DescriptorSetRef descriptorSet = MakeRenderObject<VulkanDescriptorSet>(GetLayout());
+    DescriptorSetRef descriptorSet = CreateObject<VulkanDescriptorSet>(GetLayout());
     descriptorSet->SetDebugName(GetDebugName());
 
     return descriptorSet;
@@ -824,7 +812,7 @@ VulkanDescriptorTable::VulkanDescriptorTable(const DescriptorTableDeclaration* d
 
         for (uint32 frameIndex = 0; frameIndex < g_framesInFlight; frameIndex++)
         {
-            DescriptorSetRef descriptorSet = MakeRenderObject<VulkanDescriptorSet>(layout);
+            DescriptorSetRef descriptorSet = CreateObject<VulkanDescriptorSet>(layout);
             descriptorSet->SetDebugName(layout.GetName());
 
             m_sets[frameIndex].PushBack(std::move(descriptorSet));

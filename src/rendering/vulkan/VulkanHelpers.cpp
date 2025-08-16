@@ -226,12 +226,6 @@ RendererResult VulkanSingleTimeCommands::Execute()
     VulkanCommandBufferRef commandBuffer;
     VulkanFenceRef fence;
 
-    HYP_DEFER({
-        HYP_GFX_ASSERT(fence->Destroy());
-        HYP_GFX_ASSERT(commandBuffer->Destroy());
-        HYP_GFX_ASSERT(tempFrame->Destroy());
-    });
-
     RenderQueue renderQueue;
 
     for (auto& fn : m_functions)
@@ -248,7 +242,7 @@ RendererResult VulkanSingleTimeCommands::Execute()
 
     tempFrame->UpdateUsedDescriptorSets();
 
-    commandBuffer = MakeRenderObject<VulkanCommandBuffer>(VK_COMMAND_BUFFER_LEVEL_PRIMARY);
+    commandBuffer = CreateObject<VulkanCommandBuffer>(VK_COMMAND_BUFFER_LEVEL_PRIMARY);
     HYP_GFX_CHECK(commandBuffer->Create(GetRenderBackend()->GetDevice()->GetGraphicsQueue().commandPools[0]));
 
     HYP_GFX_CHECK(commandBuffer->Begin());
@@ -259,7 +253,7 @@ RendererResult VulkanSingleTimeCommands::Execute()
     HYP_GFX_CHECK(commandBuffer->End());
 
     // @TODO Refactor to use frame's fence instead, just need to make Frame able to not be presentable
-    fence = MakeRenderObject<VulkanFence>();
+    fence = CreateObject<VulkanFence>();
     HYP_GFX_CHECK(fence->Create());
     HYP_GFX_CHECK(fence->Reset());
 

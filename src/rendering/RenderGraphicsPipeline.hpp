@@ -14,8 +14,11 @@ namespace hyperion {
 class RenderableAttributeSet;
 struct DescriptorTableDeclaration;
 
-class GraphicsPipelineBase : public RenderObject<GraphicsPipelineBase>
+HYP_CLASS(Abstract, NoScriptBindings)
+class GraphicsPipelineBase : public HypObjectBase
 {
+    HYP_OBJECT_BODY(GraphicsPipelineBase);
+
 public:
     virtual ~GraphicsPipelineBase() override;
 
@@ -117,13 +120,22 @@ public:
     {
         return m_framebuffers;
     }
-
-    void SetFramebuffers(const Array<FramebufferRef>& framebuffers);
     
+    void SetFramebuffers(const Array<FramebufferRef>& framebuffers);
+
+    Name GetDebugName() const
+    {
+        return m_debugName;
+    }
+    
+    virtual void SetDebugName(Name name)
+    {
+        m_debugName = name;
+    }
+
     virtual bool IsCreated() const = 0;
 
     virtual RendererResult Create();
-    virtual RendererResult Destroy();
 
     virtual void Bind(CommandBufferBase* commandBuffer) = 0;
     virtual void Bind(CommandBufferBase* commandBuffer, Vec2i viewportOffset, Vec2u viewportExtent) = 0;
@@ -165,6 +177,10 @@ protected:
     ShaderRef m_shader;
     DescriptorTableRef m_descriptorTable;
     Array<FramebufferRef> m_framebuffers;
+
+#ifdef HYP_DEBUG_MODE
+    Name m_debugName;
+#endif
 };
 
 } // namespace hyperion

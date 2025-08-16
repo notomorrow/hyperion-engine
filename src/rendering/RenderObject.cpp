@@ -12,12 +12,5 @@
 
 namespace hyperion {
 
-#pragma region RenderObjectContainerBase
-
-RenderObjectContainerBase::RenderObjectContainerBase(ANSIStringView renderObjectTypeName)
-{
-}
-
-#pragma endregion RenderObjectContainerBase
 
 } // namespace hyperion

@@ -26,8 +26,6 @@ class VulkanAsyncCompute;
 class VulkanRenderConfig;
 
 class VulkanDescriptorSetLayoutWrapper;
-using VulkanDescriptorSetLayoutWrapperRef = RenderObjectHandle_Strong<VulkanDescriptorSetLayoutWrapper>;
-using VulkanDescriptorSetLayoutWrapperWeakRef = RenderObjectHandle_Weak<VulkanDescriptorSetLayoutWrapper>;
 
 class VulkanDescriptorSetManager;
 
@@ -158,9 +156,9 @@ public:
         return OnSwapchainRecreated;
     }
 
-    HYP_API RendererResult CreateDescriptorSet(const VulkanDescriptorSetLayoutWrapperRef& layout, VkDescriptorSet& outVkDescriptorSet);
+    HYP_API RendererResult CreateDescriptorSet(const RC<VulkanDescriptorSetLayoutWrapper>& layout, VkDescriptorSet& outVkDescriptorSet);
     HYP_API RendererResult DestroyDescriptorSet(VkDescriptorSet vkDescriptorSet);
-    HYP_API RendererResult GetOrCreateVkDescriptorSetLayout(const DescriptorSetLayout& layout, VulkanDescriptorSetLayoutWrapperRef& outRef);
+    HYP_API RendererResult GetOrCreateVkDescriptorSetLayout(const DescriptorSetLayout& layout, RC<VulkanDescriptorSetLayoutWrapper>& outRef);
 
     VkSurfaceKHR CreateVkSurface(ApplicationWindow* window, VulkanInstance* instance);
     bool GetVkExtensions(Array<const char*>& outExtensions);

@@ -96,7 +96,7 @@ VulkanAttachment::VulkanAttachment(
     : AttachmentBase(image, framebuffer, loadOperation, storeOperation, blendFunction),
       m_stage(stage)
 {
-    m_imageView = MakeRenderObject<VulkanGpuImageView>(image);
+    m_imageView = CreateObject<VulkanGpuImageView>(image);
 }
 
 VulkanAttachment::~VulkanAttachment()
@@ -120,14 +120,6 @@ RendererResult VulkanAttachment::Create()
     }
 
     return m_imageView->Create();
-}
-
-RendererResult VulkanAttachment::Destroy()
-{
-    SafeDelete(std::move(m_image));
-    SafeDelete(std::move(m_imageView));
-
-    return {};
 }
 
 VkAttachmentDescription VulkanAttachment::GetVulkanAttachmentDescription() const

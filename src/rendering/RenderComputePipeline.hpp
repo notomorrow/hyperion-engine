@@ -4,11 +4,17 @@
 
 #include <rendering/RenderObject.hpp>
 
+#include <core/object/HypObject.hpp>
+
 #include <core/Defines.hpp>
 
 namespace hyperion {
-class ComputePipelineBase : public RenderObject<ComputePipelineBase>
+
+HYP_CLASS(Abstract, NoScriptBindings)
+class ComputePipelineBase : public HypObjectBase
 {
+    HYP_OBJECT_BODY(ComputePipelineBase);
+
 public:
     virtual ~ComputePipelineBase() override = default;
 
@@ -31,11 +37,20 @@ public:
     {
         m_shader = shader;
     }
-    
+
+    Name GetDebugName() const
+    {
+        return m_debugName;
+    }
+
+    virtual void SetDebugName(Name name)
+    {
+        m_debugName = name;
+    }
+
     virtual bool IsCreated() const = 0;
 
     virtual RendererResult Create() = 0;
-    virtual RendererResult Destroy() = 0;
 
     virtual void Bind(CommandBufferBase* commandBuffer) = 0;
 
@@ -59,6 +74,8 @@ protected:
 
     ShaderRef m_shader;
     DescriptorTableRef m_descriptorTable;
+
+    Name m_debugName;
 };
 
 } // namespace hyperion

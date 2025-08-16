@@ -35,6 +35,7 @@ class VulkanPipelineBase
 {
 public:
     VulkanPipelineBase();
+    ~VulkanPipelineBase();
 
     HYP_FORCE_INLINE VkPipeline GetVulkanHandle() const
     {
@@ -47,8 +48,6 @@ public:
     }
 
     Array<VkDescriptorSetLayout> GetDescriptorSetLayouts() const;
-
-    RendererResult Destroy();
 
     bool IsCreated() const;
 

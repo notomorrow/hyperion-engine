@@ -27,7 +27,7 @@ VulkanPipelineBase::VulkanPipelineBase()
 {
 }
 
-RendererResult VulkanPipelineBase::Destroy()
+VulkanPipelineBase::~VulkanPipelineBase()
 {
     if (m_handle != VK_NULL_HANDLE)
     {
@@ -40,8 +40,6 @@ RendererResult VulkanPipelineBase::Destroy()
         vkDestroyPipelineLayout(GetRenderBackend()->GetDevice()->GetDevice(), m_layout, nullptr);
         m_layout = VK_NULL_HANDLE;
     }
-
-    HYPERION_RETURN_OK;
 }
 
 bool VulkanPipelineBase::IsCreated() const

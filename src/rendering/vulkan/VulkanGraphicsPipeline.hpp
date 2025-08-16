@@ -30,15 +30,18 @@ namespace hyperion {
 struct DescriptorTableDeclaration;
 
 class VulkanFramebuffer;
-using VulkanFramebufferRef = RenderObjectHandle_Strong<VulkanFramebuffer>;
-using VulkanFramebufferWeakRef = RenderObjectHandle_Weak<VulkanFramebuffer>;
+using VulkanFramebufferRef = Handle<VulkanFramebuffer>;
+using VulkanFramebufferWeakRef = WeakHandle<VulkanFramebuffer>;
 
 class VulkanRenderPass;
-using VulkanRenderPassRef = RenderObjectHandle_Strong<VulkanRenderPass>;
-using VulkanRenderPassWeakRef = RenderObjectHandle_Weak<VulkanRenderPass>;
+using VulkanRenderPassRef = Handle<VulkanRenderPass>;
+using VulkanRenderPassWeakRef = WeakHandle<VulkanRenderPass>;
 
+HYP_CLASS(NoScriptBindings)
 class VulkanGraphicsPipeline final : public GraphicsPipelineBase, public VulkanPipelineBase
 {
+    HYP_OBJECT_BODY(VulkanGraphicsPipeline);
+
 public:
     VulkanGraphicsPipeline();
     VulkanGraphicsPipeline(const VulkanShaderRef& shader, const VulkanDescriptorTableRef& descriptorTable);
@@ -61,10 +64,8 @@ public:
 
     virtual void SetPushConstants(const void* data, SizeType size) override;
 
-    virtual RendererResult Destroy() override;
-
 #ifdef HYP_DEBUG_MODE
-    virtual void SetDebugName(Name name) override;
+    void SetDebugName(Name name) override;
 #endif
 
 private:

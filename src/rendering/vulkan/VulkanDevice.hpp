@@ -45,8 +45,11 @@ struct QueueFamilyIndices
     }
 };
 
+HYP_CLASS(NoScriptBindings)
 class VulkanDevice final : public DeviceBase
 {
+    HYP_OBJECT_BODY(VulkanDevice);
+
     static QueueFamilyIndices FindQueueFamilies(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface);
 
 public:

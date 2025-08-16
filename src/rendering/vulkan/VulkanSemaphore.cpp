@@ -16,33 +16,37 @@ static inline VulkanRenderBackend* GetRenderBackend()
 }
 
 VulkanSemaphore::VulkanSemaphore(VkPipelineStageFlags pipelineStage)
-    : m_semaphore(nullptr),
+    : m_semaphore(VK_NULL_HANDLE),
       m_pipelineStage(pipelineStage)
 {
 }
 
 VulkanSemaphore::~VulkanSemaphore()
 {
-    HYP_GFX_ASSERT(m_semaphore == nullptr, "semaphore should have been destroyed");
+    if (m_semaphore == VK_NULL_HANDLE)
+    {
+        return;
+    }
+
+    vkDestroySemaphore(GetRenderBackend()->GetDevice()->GetDevice(), m_semaphore, nullptr);
+    m_semaphore = nullptr;
 }
 
 RendererResult VulkanSemaphore::Create()
 {
+    if (m_semaphore != VK_NULL_HANDLE)
+    {
+        // already created
+        return {};
+    }
+
     VkSemaphoreCreateInfo semaphoreInfo { VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
 
     VULKAN_CHECK_MSG(
         vkCreateSemaphore(GetRenderBackend()->GetDevice()->GetDevice(), &semaphoreInfo, nullptr, &m_semaphore),
         "Failed to create semaphore");
 
-    HYPERION_RETURN_OK;
-}
-
-RendererResult VulkanSemaphore::Destroy()
-{
-    vkDestroySemaphore(GetRenderBackend()->GetDevice()->GetDevice(), m_semaphore, nullptr);
-    m_semaphore = nullptr;
-
-    HYPERION_RETURN_OK;
+    return {};
 }
 
 std::set<VulkanSemaphoreRef*> VulkanSemaphoreChain::s_refs {};
@@ -77,19 +81,36 @@ VulkanSemaphoreChain::VulkanSemaphoreChain(
 
 VulkanSemaphoreChain::~VulkanSemaphoreChain()
 {
-    HYP_GFX_ASSERT(
-        std::all_of(m_signalSemaphores.begin(), m_signalSemaphores.end(), [](const VulkanSignalSemaphore& semaphore)
-            {
-                return semaphore.m_ref == nullptr;
-            }),
-        "All semaphores must have ref counts decremented via Destroy() before destructor call");
+    const auto decRef = [this](auto& semaphore)
+    {
+        auto* ref = semaphore.m_ref;
 
-    HYP_GFX_ASSERT(
-        std::all_of(m_waitSemaphores.begin(), m_waitSemaphores.end(), [](const VulkanWaitSemaphore& semaphore)
-            {
-                return semaphore.m_ref == nullptr;
-            }),
-        "All semaphores must have ref counts decremented via Destroy() before destructor call");
+        if (ref == nullptr)
+        {
+            return;
+        }
+
+        if (!--ref->count)
+        {
+            auto it = s_refs.find(ref);
+            HYP_GFX_ASSERT(it != s_refs.end());
+
+            delete *it;
+            s_refs.erase(it);
+        }
+
+        semaphore.m_ref = nullptr;
+    };
+
+    for (auto& semaphore : m_signalSemaphores)
+    {
+        decRef(semaphore);
+    }
+
+    for (auto& semaphore : m_waitSemaphores)
+    {
+        decRef(semaphore);
+    }
 }
 
 RendererResult VulkanSemaphoreChain::Create()
@@ -113,46 +134,6 @@ RendererResult VulkanSemaphoreChain::Create()
     }
 
     HYPERION_RETURN_OK;
-}
-
-RendererResult VulkanSemaphoreChain::Destroy()
-{
-    RendererResult result;
-
-    const auto decRef = [this, &result](auto& semaphore)
-    {
-        auto* ref = semaphore.m_ref;
-
-        if (ref == nullptr)
-        {
-            return;
-        }
-
-        if (!--ref->count)
-        {
-            HYPERION_PASS_ERRORS(ref->semaphore.Destroy(), result);
-
-            auto it = s_refs.find(ref);
-            HYP_GFX_ASSERT(it != s_refs.end());
-
-            delete *it;
-            s_refs.erase(it);
-        }
-
-        semaphore.m_ref = nullptr;
-    };
-
-    for (auto& semaphore : m_signalSemaphores)
-    {
-        decRef(semaphore);
-    }
-
-    for (auto& semaphore : m_waitSemaphores)
-    {
-        decRef(semaphore);
-    }
-
-    return result;
 }
 
 VulkanSemaphoreChain& VulkanSemaphoreChain::WaitsFor(const VulkanSignalSemaphore& signalSemaphore)

@@ -16,14 +16,18 @@
 #include <vulkan/vulkan.h>
 
 namespace hyperion {
+
 enum RenderPassMode
 {
     RENDER_PASS_INLINE = 0,
     RENDER_PASS_SECONDARY_COMMAND_BUFFER = 1
 };
 
-class VulkanRenderPass final : public RenderObject<VulkanRenderPass>
+HYP_CLASS(NoScriptBindings)
+class VulkanRenderPass final : public HypObjectBase
 {
+    HYP_OBJECT_BODY(VulkanRenderPass);
+
 public:
     VulkanRenderPass(RenderPassStage stage, RenderPassMode mode);
     VulkanRenderPass(RenderPassStage stage, RenderPassMode mode, uint32 numMultiviewLayers);
@@ -58,7 +62,6 @@ public:
     }
 
     RendererResult Create();
-    RendererResult Destroy();
 
     void Begin(VulkanCommandBuffer* cmd, VulkanFramebuffer* framebuffer);
     void End(VulkanCommandBuffer* cmd);
@@ -83,7 +86,7 @@ private:
     VkRenderPass m_handle;
 };
 
-using VulkanRenderPassRef = RenderObjectHandle_Strong<VulkanRenderPass>;
-using VulkanRenderPassWeakRef = RenderObjectHandle_Weak<VulkanRenderPass>;
+using VulkanRenderPassRef = Handle<VulkanRenderPass>;
+using VulkanRenderPassWeakRef = WeakHandle<VulkanRenderPass>;
 
 } // namespace hyperion

@@ -40,15 +40,6 @@ RendererResult GraphicsPipelineBase::Create()
     HYPERION_RETURN_OK;
 }
 
-RendererResult GraphicsPipelineBase::Destroy()
-{
-    SafeDelete(std::move(m_framebuffers));
-    SafeDelete(std::move(m_shader));
-    SafeDelete(std::move(m_descriptorTable));
-
-    HYPERION_RETURN_OK;
-}
-
 void GraphicsPipelineBase::SetDescriptorTable(const DescriptorTableRef& descriptorTable)
 {
     m_descriptorTable = descriptorTable;

@@ -10,8 +10,12 @@
 #include <core/Defines.hpp>
 
 namespace hyperion {
-class FramebufferBase : public RenderObject<FramebufferBase>
+
+HYP_CLASS(Abstract, NoScriptBindings)
+class FramebufferBase : public HypObjectBase
 {
+    HYP_OBJECT_BODY(FramebufferBase);
+
 public:
     virtual ~FramebufferBase() override = default;
 
@@ -33,7 +37,6 @@ public:
     virtual bool IsCreated() const = 0;
 
     virtual RendererResult Create() = 0;
-    virtual RendererResult Destroy() = 0;
 
     virtual RendererResult Resize(Vec2u newSize) = 0;
 

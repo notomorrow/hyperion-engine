@@ -11,27 +11,38 @@
 #include <core/Types.hpp>
 
 namespace hyperion {
+
 class VulkanShader;
 
+HYP_CLASS(NoScriptBindings)
 class VulkanRaytracingPipeline final : public RaytracingPipelineBase, public VulkanPipelineBase
 {
+    HYP_OBJECT_BODY(VulkanRaytracingPipeline);
+
 public:
-    HYP_API VulkanRaytracingPipeline();
-    HYP_API VulkanRaytracingPipeline(const VulkanShaderRef& shader, const VulkanDescriptorTableRef& descriptorTable);
-    HYP_API virtual ~VulkanRaytracingPipeline() override;
+    VulkanRaytracingPipeline();
+    VulkanRaytracingPipeline(const VulkanShaderRef& shader, const VulkanDescriptorTableRef& descriptorTable);
+    virtual ~VulkanRaytracingPipeline() override;
 
     virtual bool IsCreated() const override
     {
         return VulkanPipelineBase::IsCreated();
     }
 
-    HYP_API virtual RendererResult Create() override;
-    HYP_API virtual RendererResult Destroy() override;
+    virtual RendererResult Create() override;
 
-    HYP_API virtual void Bind(CommandBufferBase* commandBuffer) override;
-    HYP_API virtual void TraceRays(CommandBufferBase* commandBuffer, const Vec3u& extent) const override;
+    virtual void Bind(CommandBufferBase* commandBuffer) override;
+    virtual void TraceRays(CommandBufferBase* commandBuffer, const Vec3u& extent) const override;
 
-    HYP_API virtual void SetPushConstants(const void* data, SizeType size) override;
+    virtual void SetPushConstants(const void* data, SizeType size) override;
+
+#ifdef HYP_DEBUG_MODE
+    virtual void SetDebugName(Name name) override
+    {
+        VulkanPipelineBase::SetDebugName(name);
+        m_debugName = name;
+    }
+#endif
 
 private:
     struct ShaderBindingTableEntry

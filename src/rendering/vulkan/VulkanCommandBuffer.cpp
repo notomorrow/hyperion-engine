@@ -35,7 +35,15 @@ VulkanCommandBuffer::VulkanCommandBuffer(VkCommandBufferLevel type)
 
 VulkanCommandBuffer::~VulkanCommandBuffer()
 {
-    HYP_GFX_ASSERT(m_handle == VK_NULL_HANDLE, "command buffer should have been destroyed");
+    if (m_handle != VK_NULL_HANDLE)
+    {
+        HYP_GFX_ASSERT(m_commandPool != VK_NULL_HANDLE);
+
+        vkFreeCommandBuffers(GetRenderBackend()->GetDevice()->GetDevice(), m_commandPool, 1, &m_handle);
+
+        m_handle = VK_NULL_HANDLE;
+        m_commandPool = VK_NULL_HANDLE;
+    }
 }
 
 bool VulkanCommandBuffer::IsCreated() const
@@ -69,21 +77,6 @@ RendererResult VulkanCommandBuffer::Create()
     VULKAN_CHECK_MSG(
         vkAllocateCommandBuffers(GetRenderBackend()->GetDevice()->GetDevice(), &allocInfo, &m_handle),
         "Failed to allocate command buffer");
-
-    HYPERION_RETURN_OK;
-}
-
-RendererResult VulkanCommandBuffer::Destroy()
-{
-    if (m_handle != VK_NULL_HANDLE)
-    {
-        HYP_GFX_ASSERT(m_commandPool != VK_NULL_HANDLE);
-
-        vkFreeCommandBuffers(GetRenderBackend()->GetDevice()->GetDevice(), m_commandPool, 1, &m_handle);
-
-        m_handle = VK_NULL_HANDLE;
-        m_commandPool = VK_NULL_HANDLE;
-    }
 
     HYPERION_RETURN_OK;
 }

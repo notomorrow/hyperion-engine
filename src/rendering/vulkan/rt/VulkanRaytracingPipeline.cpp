@@ -46,10 +46,27 @@ VulkanRaytracingPipeline::VulkanRaytracingPipeline(const VulkanShaderRef& shader
 
 VulkanRaytracingPipeline::~VulkanRaytracingPipeline()
 {
-    HYP_GFX_ASSERT(!IsCreated());
+    if (!IsCreated())
+    {
+        return;
+    }
 
-    HYP_GFX_ASSERT(m_handle == VK_NULL_HANDLE, "Expected pipeline to have been destroyed");
-    HYP_GFX_ASSERT(m_layout == VK_NULL_HANDLE, "Expected layout to have been destroyed");
+    SafeDelete(std::move(m_shader));
+    SafeDelete(std::move(m_descriptorTable));
+
+    m_shaderBindingTableBuffers.Clear();
+
+    if (m_handle != VK_NULL_HANDLE)
+    {
+        vkDestroyPipeline(GetRenderBackend()->GetDevice()->GetDevice(), m_handle, VK_NULL_HANDLE);
+        m_handle = VK_NULL_HANDLE;
+    }
+
+    if (m_layout != VK_NULL_HANDLE)
+    {
+        vkDestroyPipelineLayout(GetRenderBackend()->GetDevice()->GetDevice(), m_layout, VK_NULL_HANDLE);
+        m_layout = VK_NULL_HANDLE;
+    }
 }
 
 RendererResult VulkanRaytracingPipeline::Create()
@@ -88,16 +105,7 @@ RendererResult VulkanRaytracingPipeline::Create()
     layoutInfo.pushConstantRangeCount = ArraySize(pushConstantRanges);
     layoutInfo.pPushConstantRanges = pushConstantRanges;
 
-    VULKAN_PASS_ERRORS(
-        vkCreatePipelineLayout(GetRenderBackend()->GetDevice()->GetDevice(), &layoutInfo, VK_NULL_HANDLE, &m_layout),
-        result);
-
-    if (!result)
-    {
-        HYPERION_IGNORE_ERRORS(Destroy());
-
-        return result;
-    }
+    VULKAN_CHECK(vkCreatePipelineLayout(GetRenderBackend()->GetDevice()->GetDevice(), &layoutInfo, VK_NULL_HANDLE, &m_layout));
 
     VkRayTracingPipelineCreateInfoKHR pipelineInfo { VK_STRUCTURE_TYPE_RAY_TRACING_PIPELINE_CREATE_INFO_KHR };
 
@@ -120,61 +128,25 @@ RendererResult VulkanRaytracingPipeline::Create()
     pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
     pipelineInfo.basePipelineIndex = -1;
 
-    VULKAN_PASS_ERRORS(
-        g_vulkanDynamicFunctions->vkCreateRayTracingPipelinesKHR(
-            GetRenderBackend()->GetDevice()->GetDevice(),
-            VK_NULL_HANDLE,
-            VK_NULL_HANDLE,
-            1,
-            &pipelineInfo,
-            VK_NULL_HANDLE,
-            &m_handle),
-        result);
+    VULKAN_CHECK(g_vulkanDynamicFunctions->vkCreateRayTracingPipelinesKHR(
+        GetRenderBackend()->GetDevice()->GetDevice(),
+        VK_NULL_HANDLE,
+        VK_NULL_HANDLE,
+        1,
+        &pipelineInfo,
+        VK_NULL_HANDLE,
+        &m_handle));
 
-    if (!result)
+#ifdef HYP_DEBUG_MODE
+    if (Name debugName = GetDebugName())
     {
-        HYPERION_IGNORE_ERRORS(Destroy());
-
-        return result;
+        SetDebugName(debugName);
     }
+#endif
 
     HYPERION_PASS_ERRORS(CreateShaderBindingTables(VULKAN_CAST(m_shader.Get())), result);
 
-    if (!result)
-    {
-        HYPERION_IGNORE_ERRORS(Destroy());
-
-        return result;
-    }
-
     HYPERION_RETURN_OK;
-}
-
-RendererResult VulkanRaytracingPipeline::Destroy()
-{
-    SafeDelete(std::move(m_shader));
-    SafeDelete(std::move(m_descriptorTable));
-
-    RendererResult result;
-
-    for (auto& it : m_shaderBindingTableBuffers)
-    {
-        HYPERION_PASS_ERRORS(it.second.buffer->Destroy(), result);
-    }
-
-    if (m_handle != VK_NULL_HANDLE)
-    {
-        vkDestroyPipeline(GetRenderBackend()->GetDevice()->GetDevice(), m_handle, VK_NULL_HANDLE);
-        m_handle = VK_NULL_HANDLE;
-    }
-
-    if (m_layout != VK_NULL_HANDLE)
-    {
-        vkDestroyPipelineLayout(GetRenderBackend()->GetDevice()->GetDevice(), m_layout, VK_NULL_HANDLE);
-        m_layout = VK_NULL_HANDLE;
-    }
-
-    return result;
 }
 
 void VulkanRaytracingPipeline::Bind(CommandBufferBase* commandBuffer)
@@ -267,7 +239,7 @@ RendererResult VulkanRaytracingPipeline::CreateShaderBindingTables(VulkanShader*
         {
             for (auto& it : buffers)
             {
-                HYPERION_IGNORE_ERRORS(it.second.buffer->Destroy());
+                it.second.buffer.Reset();
             }
 
             return result;
@@ -313,7 +285,7 @@ RendererResult VulkanRaytracingPipeline::CreateShaderBindingTableEntry(
 
     RendererResult result;
 
-    out.buffer = MakeRenderObject<VulkanGpuBuffer>(GpuBufferType::SHADER_BINDING_TABLE, properties.shaderGroupHandleSize * numShaders);
+    out.buffer = CreateObject<VulkanGpuBuffer>(GpuBufferType::SHADER_BINDING_TABLE, properties.shaderGroupHandleSize * numShaders);
     out.buffer->SetDebugName(NAME("SBTBuffer"));
 
     HYPERION_PASS_ERRORS(out.buffer->Create(), result);

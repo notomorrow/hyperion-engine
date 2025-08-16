@@ -40,7 +40,12 @@ VulkanGpuImageView::VulkanGpuImageView(
 
 VulkanGpuImageView::~VulkanGpuImageView()
 {
-    HYP_GFX_ASSERT(m_handle == VK_NULL_HANDLE, "image view should have been destroyed");
+    if (m_handle != VK_NULL_HANDLE)
+    {
+        vkDestroyImageView(GetRenderBackend()->GetDevice()->GetDevice(), m_handle, nullptr);
+
+        m_handle = VK_NULL_HANDLE;
+    }
 
     SafeDelete(std::move(m_image));
 }
@@ -95,17 +100,28 @@ RendererResult VulkanGpuImageView::Create()
     HYPERION_RETURN_OK;
 }
 
-RendererResult VulkanGpuImageView::Destroy()
-{
-    if (m_handle != VK_NULL_HANDLE)
-    {
-        vkDestroyImageView(GetRenderBackend()->GetDevice()->GetDevice(), m_handle, nullptr);
+#ifdef HYP_DEBUG_MODE
 
-        m_handle = VK_NULL_HANDLE;
+void VulkanGpuImageView::SetDebugName(Name name)
+{
+    GpuImageViewBase::SetDebugName(name);
+
+    if (!IsCreated())
+    {
+        return;
     }
 
-    HYPERION_RETURN_OK;
+    const char* strName = name.LookupString();
+
+    VkDebugUtilsObjectNameInfoEXT objectNameInfo { VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT };
+    objectNameInfo.objectType = VK_OBJECT_TYPE_IMAGE_VIEW;
+    objectNameInfo.objectHandle = (uint64)m_handle;
+    objectNameInfo.pObjectName = strName;
+
+    g_vulkanDynamicFunctions->vkSetDebugUtilsObjectNameEXT(GetRenderBackend()->GetDevice()->GetDevice(), &objectNameInfo);
 }
+
+#endif
 
 #pragma endregion VulkanGpuImageView
 

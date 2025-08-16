@@ -12,6 +12,8 @@
 #include <core/containers/ArrayMap.hpp>
 #include <core/containers/FixedArray.hpp>
 
+#include <core/object/HypObject.hpp>
+
 #include <core/utilities/Range.hpp>
 
 #include <core/Defines.hpp>
@@ -577,8 +579,11 @@ struct DescriptorSetElement
     }
 };
 
-class DescriptorSetBase : public RenderObject<DescriptorSetBase>
+HYP_CLASS(Abstract, NoScriptBindings)
+class DescriptorSetBase : public HypObjectBase
 {
+    HYP_OBJECT_BODY(DescriptorSetBase);
+
 public:
     virtual ~DescriptorSetBase() override;
 
@@ -590,6 +595,15 @@ public:
     HYP_FORCE_INLINE const HashMap<Name, DescriptorSetElement>& GetElements() const
     {
         return m_elements;
+    }
+    Name GetDebugName() const
+    {
+        return m_debugName;
+    }
+    
+    virtual void SetDebugName(Name name)
+    {
+        m_debugName = name;
     }
 
 #ifdef HYP_DESCRIPTOR_SET_TRACK_FRAME_USAGE
@@ -607,7 +621,7 @@ public:
     virtual bool IsCreated() const = 0;
 
     virtual RendererResult Create() = 0;
-    virtual RendererResult Destroy() = 0;
+
     virtual void UpdateDirtyState(bool* outIsDirty = nullptr) = 0;
     virtual void Update(bool force = false) = 0;
     virtual DescriptorSetRef Clone() const = 0;
@@ -641,24 +655,27 @@ protected:
     }
 
     template <class T>
-    DescriptorSetElement& SetElement(WeakName name, uint32 index, const T& ref)
+    DescriptorSetElement& SetElementT(WeakName name, uint32 index, const Handle<T>& ref)
     {
         const DescriptorSetLayoutElement* layoutElement = m_layout.GetElement(name);
         AssertDebug(layoutElement != nullptr, "Invalid element: No item with name {} found", Name(name));
-
-        // Type check
-        static const uint32 mask = DescriptorSetElementTypeInfo<typename T::Type>::mask;
-        AssertDebug(mask & (1u << uint32(layoutElement->type)), "Layout type for {} does not match given type", Name(name));
 
         // Range check
         AssertDebug(index < layoutElement->count, "Index {} out of range for element {} with count {}",
             index, Name(name), layoutElement->count);
 
-        // Buffer type check, to make sure the buffer type is allowed for the given element
-        if constexpr (std::is_same_v<typename T::Type, GpuBufferBase>)
+        if constexpr (std::is_base_of_v<GpuBufferBase, T>)
         {
+            static constexpr uint32 mask = (1u << uint32(DescriptorSetElementType::UNIFORM_BUFFER))
+                | (1u << uint32(DescriptorSetElementType::UNIFORM_BUFFER_DYNAMIC))
+                | (1u << uint32(DescriptorSetElementType::SSBO))
+                | (1u << uint32(DescriptorSetElementType::STORAGE_BUFFER_DYNAMIC));
+
+            AssertDebug(mask & (1u << uint32(layoutElement->type)), "Layout type for {} does not match given type", Name(name));
+
             if (ref != nullptr)
             {
+                // Buffer type check, to make sure the buffer type is allowed for the given element
                 const GpuBufferType bufferType = ref->GetBufferType();
 
                 AssertDebug(
@@ -677,6 +694,29 @@ protected:
                 }
             }
         }
+        else if constexpr (std::is_base_of_v<GpuImageViewBase, T>)
+        {
+            static constexpr uint32 mask = (1u << uint32(DescriptorSetElementType::IMAGE))
+                | (1u << uint32(DescriptorSetElementType::IMAGE_STORAGE));
+
+            AssertDebug(mask & (1u << uint32(layoutElement->type)), "Layout type for {} does not match given type", Name(name));
+        }
+        else if constexpr (std::is_base_of_v<SamplerBase, T>)
+        {
+            static constexpr uint32 mask = (1u << uint32(DescriptorSetElementType::SAMPLER));
+
+            AssertDebug(mask & (1u << uint32(layoutElement->type)), "Layout type for {} does not match given type", Name(name));
+        }
+        else if constexpr (std::is_base_of_v<TLASBase, T>)
+        {
+            static constexpr uint32 mask = (1u << uint32(DescriptorSetElementType::TLAS));
+
+            AssertDebug(mask & (1u << uint32(layoutElement->type)), "Layout type for {} does not match given type", Name(name));
+        }
+        else
+        {
+            static_assert(resolutionFailure<T>, "Unsupported type for descriptor set element");
+        }
 
         auto it = m_elements.FindAs(name);
         AssertDebug(it != m_elements.End());
@@ -692,18 +732,18 @@ protected:
 
         if (elementIt == element.values.End())
         {
-            elementIt = element.values.Emplace(index, NormalizedType<T>(ref)).first;
+            elementIt = element.values.Emplace(index, Handle<T>(ref)).first;
         }
         else
         {
-            T* currentValue = elementIt->second.template TryGet<T>();
+            Handle<T>* currentValue = elementIt->second.template TryGet<Handle<T>>();
 
             if (currentValue)
             {
                 SafeDelete(std::move(*currentValue));
             }
 
-            elementIt->second.template Set<NormalizedType<T>>(ref);
+            elementIt->second.template Set<Handle<T>>(ref);
         }
 
         // Mark the range as dirty so that it will be updated in the next update
@@ -764,15 +804,36 @@ protected:
     DescriptorSetLayout m_layout;
     HashMap<Name, DescriptorSetElement> m_elements;
 
+    Name m_debugName;
+
 #ifdef HYP_DESCRIPTOR_SET_TRACK_FRAME_USAGE
     HashSet<FrameWeakRef> m_currentFrames; // frames that are currently using this descriptor set
 #endif
 };
 
-class DescriptorTableBase : public RenderObject<DescriptorTableBase>
+HYP_CLASS(Abstract, NoScriptBindings)
+class DescriptorTableBase : public HypObjectBase
 {
+    HYP_OBJECT_BODY(DescriptorTableBase);
+
 public:
-    virtual ~DescriptorTableBase() override = default;
+    virtual ~DescriptorTableBase() override
+    {
+        for (auto& it : m_sets)
+        {
+            SafeDelete(std::move(it));
+        }
+    }
+
+    virtual void SetDebugName(Name name)
+    {
+        m_debugName = name;
+    }
+
+    HYP_FORCE_INLINE Name GetDebugName() const
+    {
+        return m_debugName;
+    }
 
     HYP_FORCE_INLINE bool IsValid() const
     {
@@ -803,7 +864,7 @@ public:
             }
         }
 
-        return DescriptorSetRef::unset;
+        return DescriptorSetRef::empty;
     }
 
     HYP_FORCE_INLINE const DescriptorSetRef& GetDescriptorSet(uint32 descriptorSetIndex, uint32 frameIndex) const
@@ -821,7 +882,7 @@ public:
             }
         }
 
-        return DescriptorSetRef::unset;
+        return DescriptorSetRef::empty;
     }
 
     /*! \brief Get the index of a descriptor set in the table
@@ -871,21 +932,6 @@ public:
         }
 
         return result;
-    }
-
-    /*! \brief Safely release all descriptor sets in the table
-        \param device The device to destroy the descriptor sets on
-        \return The result of the operation */
-    RendererResult Destroy()
-    {
-        for (auto& it : m_sets)
-        {
-            SafeDelete(std::move(it));
-        }
-
-        m_sets = {};
-
-        return {};
     }
 
     /*! \brief Apply updates to all descriptor sets in the table
@@ -970,6 +1016,8 @@ protected:
 
     const DescriptorTableDeclaration* m_decl;
     FixedArray<Array<DescriptorSetRef>, g_framesInFlight> m_sets;
+
+    Name m_debugName;
 };
 
 } // namespace hyperion

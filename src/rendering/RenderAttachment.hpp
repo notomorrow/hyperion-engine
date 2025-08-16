@@ -6,6 +6,8 @@
 
 #include <core/containers/Array.hpp>
 
+#include <core/object/HypObject.hpp>
+
 #include <rendering/RenderObject.hpp>
 #include <rendering/RenderGpuImage.hpp>
 
@@ -34,8 +36,11 @@ enum class StoreOperation : uint8
     STORE
 };
 
-class AttachmentBase : public RenderObject<AttachmentBase>
+HYP_CLASS(Abstract, NoScriptBindings)
+class AttachmentBase : public HypObjectBase
 {
+    HYP_OBJECT_BODY(AttachmentBase);
+
 public:
     virtual ~AttachmentBase() override = default;
 
@@ -112,7 +117,6 @@ public:
     virtual bool IsCreated() const = 0;
 
     virtual RendererResult Create() = 0;
-    virtual RendererResult Destroy() = 0;
 
 protected:
     AttachmentBase(

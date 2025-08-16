@@ -42,10 +42,23 @@ enum BufferIDMask : uint64
     ID_MASK_IMAGE = (0x2ull << 32ull)
 };
 
-class GpuBufferBase : public RenderObject<GpuBufferBase>
+HYP_CLASS(Abstract, NoScriptBindings)
+class GpuBufferBase : public HypObjectBase
 {
+    HYP_OBJECT_BODY(GpuBufferBase);
+
 public:
     virtual ~GpuBufferBase() override = default;
+
+    Name GetDebugName() const
+    {
+        return m_debugName;
+    }
+    
+    virtual void SetDebugName(Name name)
+    {
+        m_debugName = name;
+    }
 
     HYP_FORCE_INLINE GpuBufferType GetBufferType() const
     {
@@ -63,7 +76,6 @@ public:
     }
 
     virtual RendererResult Create() = 0;
-    virtual RendererResult Destroy() = 0;
 
     virtual bool IsCreated() const = 0;
     virtual bool IsCpuAccessible() const = 0;
@@ -110,6 +122,8 @@ protected:
     SizeType m_alignment;
 
     mutable ResourceState m_resourceState;
+
+    Name m_debugName;
 };
 
 } // namespace hyperion

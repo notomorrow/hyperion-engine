@@ -39,28 +39,17 @@ VulkanFrame::VulkanFrame(uint32 frameIndex)
 
 VulkanFrame::~VulkanFrame()
 {
-    HYP_GFX_ASSERT(!m_queueSubmitFence.IsValid(), "fc_queue_submit should have been released");
+    SafeDelete(std::move(m_queueSubmitFence));
 }
 
 RendererResult VulkanFrame::Create()
 {
     HYP_GFX_CHECK(m_presentSemaphores.Create());
 
-    m_queueSubmitFence = MakeRenderObject<VulkanFence>();
+    m_queueSubmitFence = CreateObject<VulkanFence>();
     HYP_GFX_CHECK(m_queueSubmitFence->Create());
 
     HYPERION_RETURN_OK;
-}
-
-RendererResult VulkanFrame::Destroy()
-{
-    RendererResult result;
-
-    HYPERION_PASS_ERRORS(m_presentSemaphores.Destroy(), result);
-
-    SafeDelete(std::move(m_queueSubmitFence));
-
-    return result;
 }
 
 RendererResult VulkanFrame::ResetFrameState()
@@ -119,7 +108,7 @@ RendererResult VulkanFrame::RecreateFence()
         SafeDelete(std::move(m_queueSubmitFence));
     }
 
-    m_queueSubmitFence = MakeRenderObject<VulkanFence>();
+    m_queueSubmitFence = CreateObject<VulkanFence>();
     return m_queueSubmitFence->Create();
 }
 

@@ -26,6 +26,7 @@ class VulkanInstance
 
 public:
     VulkanInstance();
+    ~VulkanInstance();
 
     RendererResult Initialize(bool loadDebugLayers = false);
 
@@ -54,8 +55,6 @@ public:
     RendererResult CreateDevice(VkPhysicalDevice _physical_device = nullptr);
     RendererResult CreateSwapchain();
     RendererResult RecreateSwapchain();
-
-    RendererResult Destroy();
 
     const char* appName;
     const char* engineName;

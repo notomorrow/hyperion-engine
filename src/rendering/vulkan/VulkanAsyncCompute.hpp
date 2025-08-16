@@ -9,6 +9,7 @@
 #include <vulkan/vulkan.h>
 
 namespace hyperion {
+
 class VulkanAsyncCompute final : public AsyncComputeBase
 {
 public:

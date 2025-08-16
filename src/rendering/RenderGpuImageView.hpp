@@ -7,10 +7,24 @@
 #include <core/Defines.hpp>
 
 namespace hyperion {
-class GpuImageViewBase : public RenderObject<GpuImageViewBase>
+
+HYP_CLASS(Abstract, NoScriptBindings)
+class GpuImageViewBase : public HypObjectBase
 {
+    HYP_OBJECT_BODY(GpuImageViewBase);
+
 public:
     virtual ~GpuImageViewBase() override = default;
+
+    Name GetDebugName() const
+    {
+        return m_debugName;
+    }
+    
+    virtual void SetDebugName(Name name)
+    {
+        m_debugName = name;
+    }
 
     HYP_FORCE_INLINE const GpuImageRef& GetImage() const
     {
@@ -20,7 +34,6 @@ public:
     virtual bool IsCreated() const = 0;
 
     virtual RendererResult Create() = 0;
-    virtual RendererResult Destroy() = 0;
 
 protected:
     GpuImageViewBase(
@@ -52,6 +65,8 @@ protected:
     uint32 m_numMips;
     uint32 m_faceIndex;
     uint32 m_numFaces;
+
+    Name m_debugName;
 };
 
 } // namespace hyperion

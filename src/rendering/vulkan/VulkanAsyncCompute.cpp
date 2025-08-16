@@ -26,9 +26,9 @@ static inline VulkanRenderBackend* GetRenderBackend()
 }
 
 VulkanAsyncCompute::VulkanAsyncCompute()
-    : m_commandBuffers({ MakeRenderObject<VulkanCommandBuffer>(VK_COMMAND_BUFFER_LEVEL_PRIMARY),
-          MakeRenderObject<VulkanCommandBuffer>(VK_COMMAND_BUFFER_LEVEL_PRIMARY) }),
-      m_fences({ MakeRenderObject<VulkanFence>(), MakeRenderObject<VulkanFence>() }),
+    : m_commandBuffers({ CreateObject<VulkanCommandBuffer>(VK_COMMAND_BUFFER_LEVEL_PRIMARY),
+          CreateObject<VulkanCommandBuffer>(VK_COMMAND_BUFFER_LEVEL_PRIMARY) }),
+      m_fences({ CreateObject<VulkanFence>(), CreateObject<VulkanFence>() }),
       m_isSupported(false),
       m_isFallback(false)
 {

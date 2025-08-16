@@ -6,10 +6,24 @@
 #include <core/Defines.hpp>
 
 namespace hyperion {
-class RaytracingPipelineBase : public RenderObject<RaytracingPipelineBase>
+
+HYP_CLASS(Abstract, NoScriptBindings)
+class RaytracingPipelineBase : public HypObjectBase
 {
+    HYP_OBJECT_BODY(RaytracingPipelineBase);
+
 public:
     virtual ~RaytracingPipelineBase() override = default;
+
+    Name GetDebugName() const
+    {
+        return m_debugName;
+    }
+    
+    virtual void SetDebugName(Name name)
+    {
+        m_debugName = name;
+    }
 
     HYP_FORCE_INLINE const DescriptorTableRef& GetDescriptorTable() const
     {
@@ -34,7 +48,6 @@ public:
     virtual bool IsCreated() const = 0;
 
     HYP_API virtual RendererResult Create() = 0;
-    HYP_API virtual RendererResult Destroy() = 0;
 
     HYP_API virtual void Bind(CommandBufferBase* commandBuffer) = 0;
 
@@ -56,6 +69,8 @@ protected:
 
     ShaderRef m_shader;
     DescriptorTableRef m_descriptorTable;
+
+    Name m_debugName;
 };
 
 } // namespace hyperion

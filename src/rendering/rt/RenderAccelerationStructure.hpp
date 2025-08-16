@@ -1,3 +1,4 @@
+
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
 #pragma once
@@ -6,6 +7,7 @@
 #include <core/object/Handle.hpp>
 
 #include <rendering/RenderObject.hpp>
+#include <rendering/util/SafeDeleter.hpp>
 
 #include <core/Types.hpp>
 
@@ -41,12 +43,32 @@ enum AccelerationStructureFlagBits : AccelerationStructureFlags
     ACCELERATION_STRUCTURE_FLAGS_MATERIAL_UPDATE = 0x4
 };
 
-class HYP_API TLASBase : public RenderObject<TLASBase>
+HYP_CLASS(Abstract, NoScriptBindings)
+class TLASBase : public HypObjectBase
 {
-protected:
-    virtual ~TLASBase() override = default;
+    HYP_OBJECT_BODY(TLASBase);
 
 public:
+    TLASBase()
+        : m_meshDescriptionsBuffer(GpuBufferRef::Null())
+    {
+    }
+    
+    virtual ~TLASBase() override
+    {
+        SafeDelete(std::move(m_meshDescriptionsBuffer));
+    }
+
+    Name GetDebugName() const
+    {
+        return m_debugName;
+    }
+    
+    virtual void SetDebugName(Name name)
+    {
+        m_debugName = name;
+    }
+
     HYP_FORCE_INLINE AccelerationStructureType GetType() const
     {
         return AccelerationStructureType::TOP_LEVEL;
@@ -64,25 +86,39 @@ public:
     virtual bool HasBLAS(const BLASRef& blas) = 0;
 
     virtual RendererResult Create() = 0;
-    virtual RendererResult Destroy() = 0;
 
     virtual RendererResult UpdateStructure(RTUpdateStateFlags& outUpdateStateFlags) = 0;
 
 protected:
     GpuBufferRef m_meshDescriptionsBuffer;
+
+    Name m_debugName;
 };
 
-class HYP_API BLASBase : public RenderObject<BLASBase>
+HYP_CLASS(Abstract, NoScriptBindings)
+class BLASBase : public HypObjectBase
 {
+    HYP_OBJECT_BODY(BLASBase);
+
 protected:
     BLASBase()
         : m_materialBinding(0)
     {
     }
 
+public:
     virtual ~BLASBase() override = default;
 
-public:
+    Name GetDebugName() const
+    {
+        return m_debugName;
+    }
+    
+    virtual void SetDebugName(Name name)
+    {
+        m_debugName = name;
+    }
+    
     HYP_FORCE_INLINE AccelerationStructureType GetType() const
     {
         return AccelerationStructureType::BOTTOM_LEVEL;
@@ -91,7 +127,6 @@ public:
     virtual bool IsCreated() const = 0;
 
     virtual RendererResult Create() = 0;
-    virtual RendererResult Destroy() = 0;
 
     HYP_FORCE_INLINE const Handle<Material>& GetMaterial() const
     {
@@ -113,6 +148,8 @@ public:
 protected:
     Handle<Material> m_material;
     uint32 m_materialBinding;
+
+    Name m_debugName;
 };
 
 } // namespace hyperion

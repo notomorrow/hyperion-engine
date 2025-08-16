@@ -72,9 +72,13 @@ static inline bool IsRaytracingShaderModule(ShaderModuleType type)
         || type == SMT_RAY_MISS;
 }
 
-class ShaderBase : public RenderObject<ShaderBase>
+HYP_CLASS(Abstract, NoScriptBindings)
+class ShaderBase : public HypObjectBase
 {
+    HYP_OBJECT_BODY(ShaderBase);
+
 public:
+    ShaderBase() = default;
     virtual ~ShaderBase() override = default;
 
     HYP_FORCE_INLINE const RC<CompiledShader>& GetCompiledShader() const
@@ -85,7 +89,16 @@ public:
     virtual bool IsCreated() const = 0;
 
     virtual RendererResult Create() = 0;
-    virtual RendererResult Destroy() = 0;
+
+    Name GetDebugName() const
+    {
+        return m_debugName;
+    }
+    
+    virtual void SetDebugName(Name name)
+    {
+        m_debugName = name;
+    }
 
 protected:
     ShaderBase(const RC<CompiledShader>& compiledShader)
@@ -94,6 +107,7 @@ protected:
     }
 
     RC<CompiledShader> m_compiledShader;
+    Name m_debugName;
 };
 
 } // namespace hyperion

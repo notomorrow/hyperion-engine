@@ -12,8 +12,12 @@
 #include <core/Types.hpp>
 
 namespace hyperion {
+
+HYP_CLASS(NoScriptBindings)
 class VulkanGpuImage final : public GpuImageBase
 {
+    HYP_OBJECT_BODY(VulkanGpuImage);
+
 public:
     friend class VulkanSwapchain;
 
@@ -30,7 +34,6 @@ public:
 
     virtual RendererResult Create() override;
     virtual RendererResult Create(ResourceState initialState) override;
-    virtual RendererResult Destroy() override;
 
     virtual RendererResult Resize(const Vec3u& extent) override;
 
@@ -93,7 +96,7 @@ public:
     virtual GpuImageViewRef MakeLayerImageView(uint32 layerIndex) const override;
 
 #ifdef HYP_DEBUG_MODE
-    virtual void SetDebugName(Name name) override;
+    void SetDebugName(Name name) override;
 #endif
 
 private:

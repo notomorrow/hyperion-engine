@@ -65,6 +65,10 @@ VulkanAccelerationGeometry::VulkanAccelerationGeometry(const GpuBufferRef& packe
 
 VulkanAccelerationGeometry::~VulkanAccelerationGeometry()
 {
+    SafeDelete(std::move(m_packedVerticesBuffer));
+    SafeDelete(std::move(m_packedIndicesBuffer));
+
+    m_isCreated = false;
 }
 
 bool VulkanAccelerationGeometry::IsCreated() const
@@ -132,18 +136,6 @@ RendererResult VulkanAccelerationGeometry::Create()
     return RendererResult();
 }
 
-RendererResult VulkanAccelerationGeometry::Destroy()
-{
-    RendererResult result;
-
-    SafeDelete(std::move(m_packedVerticesBuffer));
-    SafeDelete(std::move(m_packedIndicesBuffer));
-
-    m_isCreated = false;
-
-    return result;
-}
-
 #pragma endregion VulkanAccelerationGeometry
 
 #pragma region AccelerationStructure
@@ -158,17 +150,19 @@ VulkanAccelerationStructureBase::VulkanAccelerationStructureBase(const Matrix4& 
 
 VulkanAccelerationStructureBase::~VulkanAccelerationStructureBase()
 {
-    HYP_GFX_ASSERT(
-        m_accelerationStructure == VK_NULL_HANDLE,
-        "Expected acceleration structure to have been destroyed before destructor call");
+    SafeDelete(std::move(m_geometries));
+    SafeDelete(std::move(m_buffer));
+    SafeDelete(std::move(m_scratchBuffer));
 
-    HYP_GFX_ASSERT(
-        m_buffer == nullptr,
-        "Acceleration structure buffer should have been destroyed before destructor call");
+    if (m_accelerationStructure != VK_NULL_HANDLE)
+    {
+        g_vulkanDynamicFunctions->vkDestroyAccelerationStructureKHR(
+            GetRenderBackend()->GetDevice()->GetDevice(),
+            m_accelerationStructure,
+            VK_NULL_HANDLE);
 
-    HYP_GFX_ASSERT(
-        m_scratchBuffer == nullptr,
-        "Scratch buffer should have been destroyed before destructor call");
+        m_accelerationStructure = VK_NULL_HANDLE;
+    }
 }
 
 RendererResult VulkanAccelerationStructureBase::CreateAccelerationStructure(
@@ -340,11 +334,11 @@ RendererResult VulkanAccelerationStructureBase::CreateAccelerationStructure(
         rangeInfoPtrs[i] = &rangeInfos[i];
     }
 
-    VulkanFenceRef fence = MakeRenderObject<VulkanFence>();
+    VulkanFenceRef fence = CreateObject<VulkanFence>();
     HYP_GFX_CHECK(fence->Create());
     HYP_GFX_CHECK(fence->Reset());
 
-    VulkanCommandBufferRef commandBuffer = MakeRenderObject<VulkanCommandBuffer>(VK_COMMAND_BUFFER_LEVEL_PRIMARY);
+    VulkanCommandBufferRef commandBuffer = CreateObject<VulkanCommandBuffer>(VK_COMMAND_BUFFER_LEVEL_PRIMARY);
     HYP_GFX_CHECK(commandBuffer->Create(GetRenderBackend()->GetDevice()->GetGraphicsQueue().commandPools[0]));
 
     HYP_GFX_CHECK(commandBuffer->Begin());
@@ -365,30 +359,6 @@ RendererResult VulkanAccelerationStructureBase::CreateAccelerationStructure(
     ClearFlag(ACCELERATION_STRUCTURE_FLAGS_NEEDS_REBUILDING);
 
     return RendererResult();
-}
-
-RendererResult VulkanAccelerationStructureBase::Destroy()
-{
-    RendererResult result;
-
-    SafeDelete(std::move(m_geometries));
-    SafeDelete(std::move(m_buffer));
-    SafeDelete(std::move(m_scratchBuffer));
-
-    if (m_accelerationStructure != VK_NULL_HANDLE)
-    {
-        g_vulkanDynamicFunctions->vkDestroyAccelerationStructureKHR(
-            GetRenderBackend()->GetDevice()->GetDevice(),
-            m_accelerationStructure,
-            VK_NULL_HANDLE);
-
-        m_accelerationStructure = VK_NULL_HANDLE;
-    }
-
-    HYP_GFX_ASSERT(m_buffer == nullptr);
-    HYP_GFX_ASSERT(m_scratchBuffer == nullptr);
-
-    return result;
 }
 
 void VulkanAccelerationStructureBase::RemoveGeometry(uint32 index)
@@ -428,6 +398,29 @@ void VulkanAccelerationStructureBase::RemoveGeometry(const VulkanAccelerationGeo
     SetNeedsRebuildFlag();
 }
 
+void VulkanAccelerationStructureBase::SetDebugName(Name name)
+{
+    m_debugName = name;
+
+#ifdef HYP_DEBUG_MODE
+
+    if (m_accelerationStructure == VK_NULL_HANDLE)
+    {
+        return;
+    }
+
+    const char* strName = name.LookupString();
+
+    VkDebugUtilsObjectNameInfoEXT objectNameInfo { VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT };
+    objectNameInfo.objectType = VK_OBJECT_TYPE_ACCELERATION_STRUCTURE_KHR;
+    objectNameInfo.objectHandle = (uint64)m_accelerationStructure;
+    objectNameInfo.pObjectName = strName;
+
+    g_vulkanDynamicFunctions->vkSetDebugUtilsObjectNameEXT(GetRenderBackend()->GetDevice()->GetDevice(), &objectNameInfo);
+
+#endif
+}
+
 #pragma endregion AccelerationStructure
 
 #pragma region TLAS
@@ -439,11 +432,10 @@ VulkanTLAS::VulkanTLAS()
 
 VulkanTLAS::~VulkanTLAS()
 {
-    HYP_GFX_ASSERT(
-        m_instancesBuffer == nullptr,
-        "Instances buffer should have been destroyed before destructor call");
-
-    HYP_GFX_ASSERT(m_accelerationStructure == VK_NULL_HANDLE, "Acceleration structure should have been destroyed before destructor call");
+    SafeDelete(std::move(m_instancesBuffer));
+    SafeDelete(std::move(m_meshDescriptionsBuffer));
+    SafeDelete(std::move(m_scratchBuffer));
+    SafeDelete(std::move(m_blas));
 }
 
 HYP_API bool VulkanTLAS::IsCreated() const
@@ -508,16 +500,6 @@ RendererResult VulkanTLAS::Create()
     updateStateFlags |= RT_UPDATE_STATE_FLAGS_UPDATE_MESH_DESCRIPTIONS;
 
     return RendererResult();
-}
-
-RendererResult VulkanTLAS::Destroy()
-{
-    SafeDelete(std::move(m_instancesBuffer));
-    SafeDelete(std::move(m_meshDescriptionsBuffer));
-    SafeDelete(std::move(m_scratchBuffer));
-    SafeDelete(std::move(m_blas));
-
-    return VulkanAccelerationStructureBase::Destroy();
 }
 
 void VulkanTLAS::AddBLAS(const BLASRef& blas)
@@ -847,7 +829,7 @@ VulkanBLAS::VulkanBLAS(
 {
     m_material = material;
 
-    m_geometries.PushBack(MakeRenderObject<VulkanAccelerationGeometry>(
+    m_geometries.PushBack(CreateObject<VulkanAccelerationGeometry>(
         m_packedVerticesBuffer,
         m_packedIndicesBuffer,
         numVertices,
@@ -855,7 +837,11 @@ VulkanBLAS::VulkanBLAS(
         m_material));
 }
 
-VulkanBLAS::~VulkanBLAS() = default;
+VulkanBLAS::~VulkanBLAS()
+{
+    SafeDelete(std::move(m_packedVerticesBuffer));
+    SafeDelete(std::move(m_packedIndicesBuffer));
+}
 
 HYP_API bool VulkanBLAS::IsCreated() const
 {
@@ -903,14 +889,6 @@ RendererResult VulkanBLAS::Create()
     HYP_GFX_ASSERT(updateStateFlags & RT_UPDATE_STATE_FLAGS_UPDATE_ACCELERATION_STRUCTURE);
 
     return RendererResult();
-}
-
-RendererResult VulkanBLAS::Destroy()
-{
-    SafeDelete(std::move(m_packedVerticesBuffer));
-    SafeDelete(std::move(m_packedIndicesBuffer));
-
-    return VulkanAccelerationStructureBase::Destroy();
 }
 
 RendererResult VulkanBLAS::UpdateStructure(RTUpdateStateFlags& outUpdateStateFlags)

@@ -24,8 +24,11 @@ namespace hyperion {
 class Entity;
 class Material;
 
-class HYP_API VulkanAccelerationGeometry final : public RenderObject<VulkanAccelerationGeometry>
+HYP_CLASS(NoScriptBindings)
+class HYP_API VulkanAccelerationGeometry final : public HypObjectBase
 {
+    HYP_OBJECT_BODY(VulkanAccelerationGeometry);
+
 public:
     friend class VulkanTLAS;
     friend class VulkanBLAS;
@@ -67,8 +70,6 @@ public:
     bool IsCreated() const;
 
     RendererResult Create();
-    /* Remove from the parent acceleration structure */
-    RendererResult Destroy();
 
 private:
     bool m_isCreated;
@@ -84,8 +85,8 @@ private:
     VkAccelerationStructureGeometryKHR m_geometry;
 };
 
-using VulkanAccelerationGeometryRef = RenderObjectHandle_Strong<VulkanAccelerationGeometry>;
-using VulkanAccelerationGeometryWeakRef = RenderObjectHandle_Weak<VulkanAccelerationGeometry>;
+using VulkanAccelerationGeometryRef = Handle<VulkanAccelerationGeometry>;
+using VulkanAccelerationGeometryWeakRef = WeakHandle<VulkanAccelerationGeometry>;
 
 class HYP_API VulkanAccelerationStructureBase
 {
@@ -164,9 +165,9 @@ public:
         SetTransformUpdateFlag();
     }
 
-    RendererResult Destroy();
-
 protected:
+    void SetDebugName(Name name);
+
     HYP_FORCE_INLINE void SetTransformUpdateFlag()
     {
         SetFlag(ACCELERATION_STRUCTURE_FLAGS_TRANSFORM_UPDATE);
@@ -191,13 +192,18 @@ protected:
     VkAccelerationStructureKHR m_accelerationStructure;
     uint64 m_deviceAddress;
     AccelerationStructureFlags m_flags;
+
+    Name m_debugName;
 };
 
-using VulkanAccelerationStructureRef = RenderObjectHandle_Strong<VulkanAccelerationStructureBase>;
-using VulkanAccelerationStructureWeakRef = RenderObjectHandle_Weak<VulkanAccelerationStructureBase>;
+using VulkanAccelerationStructureRef = Handle<VulkanAccelerationStructureBase>;
+using VulkanAccelerationStructureWeakRef = WeakHandle<VulkanAccelerationStructureBase>;
 
-class HYP_API VulkanBLAS final : public BLASBase, public VulkanAccelerationStructureBase
+HYP_CLASS()
+class VulkanBLAS final : public BLASBase, public VulkanAccelerationStructureBase
 {
+    HYP_OBJECT_BODY(VulkanBLAS);
+
 public:
     friend class VulkanTLAS;
 
@@ -213,7 +219,6 @@ public:
     virtual bool IsCreated() const override;
 
     virtual RendererResult Create() override;
-    virtual RendererResult Destroy() override;
 
     virtual void SetTransform(const Matrix4& transform) override
     {
@@ -240,6 +245,13 @@ public:
     /*! \brief Rebuild IF the rebuild flag has been set. Otherwise this is a no-op. */
     RendererResult UpdateStructure(RTUpdateStateFlags& outUpdateStateFlags);
 
+#ifdef HYP_DEBUG_MODE
+    void SetDebugName(Name name) override
+    {
+        VulkanAccelerationStructureBase::SetDebugName(name);
+    }
+#endif
+
 private:
     RendererResult Rebuild(RTUpdateStateFlags& outUpdateStateFlags);
 
@@ -247,8 +259,11 @@ private:
     GpuBufferRef m_packedIndicesBuffer;
 };
 
-class HYP_API VulkanTLAS final : public TLASBase, public VulkanAccelerationStructureBase
+HYP_CLASS(NoScriptBindings)
+class VulkanTLAS final : public TLASBase, public VulkanAccelerationStructureBase
 {
+    HYP_OBJECT_BODY(VulkanTLAS);
+
 public:
     VulkanTLAS();
     virtual ~VulkanTLAS() override;
@@ -260,10 +275,16 @@ public:
     virtual bool HasBLAS(const BLASRef& blas) override;
 
     virtual RendererResult Create() override;
-    virtual RendererResult Destroy() override;
 
     /*! \brief Rebuild IF the rebuild flag has been set. Otherwise this is a no-op. */
     virtual RendererResult UpdateStructure(RTUpdateStateFlags& outUpdateStateFlags) override;
+
+#ifdef HYP_DEBUG_MODE
+    void SetDebugName(Name name) override
+    {
+        VulkanAccelerationStructureBase::SetDebugName(name);
+    }
+#endif
 
 private:
     RendererResult Rebuild(RTUpdateStateFlags& outUpdateStateFlags);

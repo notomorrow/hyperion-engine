@@ -279,7 +279,7 @@ static void RenderAll(
     const uint32 materialDescriptorSetIndex = pipeline->GetDescriptorTable()->GetDescriptorSetIndex("Material");
     const DescriptorSetRef& materialDescriptorSet = useBindlessTextures
         ? pipeline->GetDescriptorTable()->GetDescriptorSet("Material", frameIndex)
-        : DescriptorSetRef::unset;
+        : DescriptorSetRef::empty;
 
     const uint32 entityDescriptorSetIndex = pipeline->GetDescriptorTable()->GetDescriptorSetIndex("Object");
     const DescriptorSetRef& entityDescriptorSet = pipeline->GetDescriptorTable()->GetDescriptorSet("Object", frameIndex);

@@ -101,9 +101,9 @@ struct VulkanAttachmentMap
         textureDesc.extent = Vec3u { extent.x, extent.y, 1 };
         textureDesc.imageUsage = IU_SAMPLED | IU_ATTACHMENT;
 
-        VulkanGpuImageRef image = MakeRenderObject<VulkanGpuImage>(textureDesc);
+        VulkanGpuImageRef image = CreateObject<VulkanGpuImage>(textureDesc);
 
-        VulkanAttachmentRef attachment = MakeRenderObject<VulkanAttachment>(image, framebufferWeak, stage, loadOp, storeOp);
+        VulkanAttachmentRef attachment = CreateObject<VulkanAttachment>(image, framebufferWeak, stage, loadOp, storeOp);
         attachment->SetBinding(binding);
 
         attachments.Set(
@@ -118,8 +118,11 @@ struct VulkanAttachmentMap
     HYP_DEF_STL_BEGIN_END(attachments.Begin(), attachments.End())
 };
 
+HYP_CLASS(NoScriptBindings)
 class VulkanFramebuffer final : public FramebufferBase
 {
+    HYP_OBJECT_BODY(VulkanFramebuffer);
+
 public:
     VulkanFramebuffer(
         Vec2u extent,
@@ -160,7 +163,6 @@ public:
     virtual bool IsCreated() const override;
 
     virtual RendererResult Create() override;
-    virtual RendererResult Destroy() override;
 
     virtual RendererResult Resize(Vec2u newSize) override;
 

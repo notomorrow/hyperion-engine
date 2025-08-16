@@ -7,8 +7,12 @@
 #include <vulkan/vulkan.h>
 
 namespace hyperion {
-class VulkanFence final : public RenderObject<VulkanFence>
+
+HYP_CLASS(NoScriptBindings)
+class VulkanFence final : public HypObjectBase
 {
+    HYP_OBJECT_BODY(VulkanFence);
+
 public:
     VulkanFence();
     virtual ~VulkanFence() override;
@@ -24,7 +28,6 @@ public:
     }
 
     RendererResult Create();
-    RendererResult Destroy();
     RendererResult WaitForGPU(bool timeoutLoop = false);
     RendererResult Reset();
 

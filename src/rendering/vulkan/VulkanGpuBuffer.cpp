@@ -309,9 +309,21 @@ VulkanGpuBuffer::VulkanGpuBuffer(GpuBufferType type, SizeType size, SizeType ali
 
 VulkanGpuBuffer::~VulkanGpuBuffer()
 {
-    HYP_GFX_ASSERT(m_handle == VK_NULL_HANDLE,
-        "Buffer should have been destroyed! Debug name: %s",
-        GetDebugName().LookupString());
+    if (!IsCreated())
+    {
+        return;
+    }
+
+    if (m_mapping != nullptr)
+    {
+        Unmap();
+    }
+
+    vmaDestroyBuffer(GetRenderBackend()->GetDevice()->GetAllocator(), m_handle, m_vmaAllocation);
+
+    m_handle = VK_NULL_HANDLE;
+    m_vmaAllocation = VK_NULL_HANDLE;
+    m_resourceState = RS_UNDEFINED;
 }
 
 void VulkanGpuBuffer::Memset(SizeType count, ubyte value)
@@ -533,27 +545,6 @@ void VulkanGpuBuffer::CopyFrom(
         &region);
 }
 
-RendererResult VulkanGpuBuffer::Destroy()
-{
-    if (!IsCreated())
-    {
-        HYPERION_RETURN_OK;
-    }
-
-    if (m_mapping != nullptr)
-    {
-        Unmap();
-    }
-
-    vmaDestroyBuffer(GetRenderBackend()->GetDevice()->GetAllocator(), m_handle, m_vmaAllocation);
-
-    m_handle = VK_NULL_HANDLE;
-    m_vmaAllocation = VK_NULL_HANDLE;
-    m_resourceState = RS_UNDEFINED;
-
-    HYPERION_RETURN_OK;
-}
-
 RendererResult VulkanGpuBuffer::Create()
 {
     if (IsCreated())
@@ -645,7 +636,16 @@ RendererResult VulkanGpuBuffer::EnsureCapacity(
 
     if (shouldCreate)
     {
-        HYP_GFX_CHECK(Destroy());
+        if (m_mapping != nullptr)
+        {
+            Unmap();
+        }
+
+        vmaDestroyBuffer(GetRenderBackend()->GetDevice()->GetAllocator(), m_handle, m_vmaAllocation);
+
+        m_handle = VK_NULL_HANDLE;
+        m_vmaAllocation = VK_NULL_HANDLE;
+        m_resourceState = RS_UNDEFINED;
     }
 
     m_size = minimumSize;
