@@ -102,7 +102,7 @@ void Game::Init()
         m_managedGameObject->InvokeMethodByName<void>(
             "BeforeInit",
             m_world,
-            m_appContext->GetInputManager(),
+            g_appContext->GetInputManager(),
             AssetManager::GetInstance(),
             m_uiSubsystem->GetUIStage());
 
@@ -124,7 +124,7 @@ void Game::OnInputEvent(const SystemEvent& event)
 
     Threads::AssertOnThread(g_gameThread);
 
-    m_uiSubsystem->GetUIStage()->OnInputEvent(m_appContext->GetInputManager().Get(), event);
+    m_uiSubsystem->GetUIStage()->OnInputEvent(g_appContext->GetInputManager().Get(), event);
 }
 
 } // namespace hyperion

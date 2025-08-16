@@ -8,6 +8,12 @@
 
 namespace hyperion {
 
+namespace sys {
+class AppContextBase;
+} // namespace sys
+
+using sys::AppContextBase;
+
 class EngineDriver;
 class AssetManager;
 class SafeDeleter;
@@ -25,6 +31,7 @@ class EditorState;
 extern Handle<EngineDriver> g_engineDriver;
 extern Handle<AssetManager> g_assetManager;
 extern Handle<EditorState> g_editorState;
+extern Handle<AppContextBase> g_appContext;
 extern ShaderManager* g_shaderManager;
 extern MaterialCache* g_materialSystem;
 extern SafeDeleter* g_safeDeleter;

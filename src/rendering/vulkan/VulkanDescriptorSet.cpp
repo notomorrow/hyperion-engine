@@ -80,7 +80,7 @@ VulkanDescriptorSet::~VulkanDescriptorSet()
 {
     HYP_GFX_ASSERT(
         !IsCreated(),
-        "Descriptor set %p (%s) was not properly disposed before the destructor was hit. SafeRelease() call is probably missing somewhere.",
+        "Descriptor set %p (%s) was not properly disposed before the destructor was hit. SafeDelete() call is probably missing somewhere.",
         this, *GetDebugName());
 }
 

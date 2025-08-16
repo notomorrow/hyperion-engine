@@ -2,8 +2,6 @@
 
 #include <ui/UIImage.hpp>
 
-#include <rendering/SafeDeleter.hpp>
-
 #include <rendering/Texture.hpp>
 
 #include <engine/EngineDriver.hpp>

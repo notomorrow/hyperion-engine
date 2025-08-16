@@ -6,6 +6,8 @@
 #include <rendering/RenderFrame.hpp>
 #include <rendering/RenderCommand.hpp>
 
+#include <rendering/util/SafeDeleter.hpp>
+
 #include <core/object/HypClassUtils.hpp>
 
 #include <core/containers/SparsePagedArray.hpp>
@@ -149,8 +151,8 @@ Mesh::~Mesh()
     {
         SetReady(false);
 
-        SafeRelease(std::move(m_vertexBuffer));
-        SafeRelease(std::move(m_indexBuffer));
+        SafeDelete(std::move(m_vertexBuffer));
+        SafeDelete(std::move(m_indexBuffer));
     }
 }
 
@@ -234,7 +236,7 @@ void Mesh::CreateGpuBuffers()
     {
         if (!m_vertexBuffer.IsValid() || m_vertexBuffer->Size() != packedBufferSize)
         {
-            SafeRelease(std::move(m_vertexBuffer));
+            SafeDelete(std::move(m_vertexBuffer));
 
             m_vertexBuffer = g_renderBackend->MakeGpuBuffer(GpuBufferType::MESH_VERTEX_BUFFER, packedBufferSize);
 
@@ -247,7 +249,7 @@ void Mesh::CreateGpuBuffers()
 
         if (!m_indexBuffer.IsValid() || m_indexBuffer->Size() != packedIndicesSize)
         {
-            SafeRelease(std::move(m_indexBuffer));
+            SafeDelete(std::move(m_indexBuffer));
 
             m_indexBuffer = g_renderBackend->MakeGpuBuffer(GpuBufferType::MESH_INDEX_BUFFER, packedIndicesSize);
 
@@ -290,8 +292,8 @@ void Mesh::CreateGpuBuffers()
 
             if (!mesh.IsValid())
             {
-                SafeRelease(std::move(vertexBuffer));
-                SafeRelease(std::move(indexBuffer));
+                SafeDelete(std::move(vertexBuffer));
+                SafeDelete(std::move(indexBuffer));
 
                 return {};
             }
@@ -313,11 +315,11 @@ void Mesh::CreateGpuBuffers()
             renderQueue << CopyBuffer(stagingBufferVertices, vertexBuffer, packedBufferSize);
             renderQueue << CopyBuffer(stagingBufferIndices, indexBuffer, packedIndicesSize);
 
-            SafeRelease(std::move(stagingBufferVertices));
-            SafeRelease(std::move(stagingBufferIndices));
+            SafeDelete(std::move(stagingBufferVertices));
+            SafeDelete(std::move(stagingBufferIndices));
 
-            SafeRelease(std::move(mesh->m_vertexBuffer));
-            SafeRelease(std::move(mesh->m_indexBuffer));
+            SafeDelete(std::move(mesh->m_vertexBuffer));
+            SafeDelete(std::move(mesh->m_indexBuffer));
 
             mesh->m_vertexBuffer = std::move(vertexBuffer);
             mesh->m_indexBuffer = std::move(indexBuffer);

@@ -1,7 +1,10 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
 #include <rendering/CullData.hpp>
-#include <rendering/SafeDeleter.hpp>
+#include <rendering/RenderGpuImageView.hpp>
+#include <rendering/RenderGpuBuffer.hpp>
+
+#include <rendering/util/SafeDeleter.hpp>
 
 namespace hyperion {
 
@@ -20,7 +23,7 @@ CullData& CullData::operator=(const CullData& other)
 
     if (depthPyramidImageView != other.depthPyramidImageView)
     {
-        SafeRelease(std::move(depthPyramidImageView));
+        SafeDelete(std::move(depthPyramidImageView));
 
         depthPyramidImageView = other.depthPyramidImageView;
     }
@@ -46,7 +49,7 @@ CullData& CullData::operator=(CullData&& other) noexcept
 
     if (depthPyramidImageView != other.depthPyramidImageView)
     {
-        SafeRelease(std::move(depthPyramidImageView));
+        SafeDelete(std::move(depthPyramidImageView));
 
         depthPyramidImageView = std::move(other.depthPyramidImageView);
     }
@@ -59,7 +62,7 @@ CullData& CullData::operator=(CullData&& other) noexcept
 
 CullData::~CullData()
 {
-    SafeRelease(std::move(depthPyramidImageView));
+    SafeDelete(std::move(depthPyramidImageView));
 }
 
 } // namespace hyperion

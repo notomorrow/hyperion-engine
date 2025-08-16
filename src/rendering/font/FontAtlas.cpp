@@ -3,13 +3,11 @@
 #include <rendering/font/FontAtlas.hpp>
 #include <rendering/RenderGlobalState.hpp>
 #include <rendering/PlaceholderData.hpp>
-#include <rendering/SafeDeleter.hpp>
-
 #include <rendering/RenderQueue.hpp>
-
 #include <rendering/RenderBackend.hpp>
 #include <rendering/RenderCommand.hpp>
 #include <rendering/RenderHelpers.hpp>
+#include <rendering/util/SafeDeleter.hpp>
 
 #include <rendering/Texture.hpp>
 
@@ -30,7 +28,7 @@ FontAtlasTextureSet::~FontAtlasTextureSet()
 {
     for (auto& atlas : atlases)
     {
-        g_safeDeleter->SafeRelease(std::move(atlas.second));
+        SafeDelete(std::move(atlas.second));
     }
 }
 

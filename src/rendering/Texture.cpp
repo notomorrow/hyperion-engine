@@ -11,6 +11,8 @@
 #include <rendering/RenderTextureMipmap.hpp>
 #include <rendering/RenderHelpers.hpp>
 
+#include <rendering/util/SafeDeleter.hpp>
+
 #include <asset/Assets.hpp>
 #include <asset/AssetRegistry.hpp>
 #include <asset/TextureAsset.hpp>
@@ -157,7 +159,7 @@ struct RENDER_COMMAND(CreateTextureGpuImage)
                 HYP_GFX_CHECK(stagingBuffer->Create());
                 stagingBuffer->Copy(imageData->Size(), imageData->Data());
 
-                HYP_DEFER({ SafeRelease(std::move(stagingBuffer)); });
+                HYP_DEFER({ SafeDelete(std::move(stagingBuffer)); });
 
                 FrameBase* frame = g_renderBackend->GetCurrentFrame();
                 RenderQueue& renderQueue = frame->renderQueue;
@@ -224,14 +226,14 @@ Texture::Texture(const Handle<TextureAsset>& asset)
 
 Texture::~Texture()
 {
-    SafeRelease(std::move(m_gpuImage));
+    SafeDelete(std::move(m_gpuImage));
 }
 
 void Texture::Init()
 {
     AddDelegateHandler(g_engineDriver->GetDelegates().OnShutdown.Bind([this]()
         {
-            SafeRelease(std::move(m_gpuImage));
+            SafeDelete(std::move(m_gpuImage));
         }));
 
     if (m_asset.IsValid() && !m_asset->IsRegistered())
@@ -415,8 +417,8 @@ void Texture::EnqueueReadback(Proc<void(ByteBuffer&& byteBuffer)>&& callback)
 
                 stagingBuffer->Read(byteBuffer.Size(), byteBuffer.Data());
 
-                SafeRelease(std::move(stagingBuffer));
-                SafeRelease(std::move(gpuImageRef));
+                SafeDelete(std::move(stagingBuffer));
+                SafeDelete(std::move(gpuImageRef));
 
                 callback(std::move(byteBuffer));
             })

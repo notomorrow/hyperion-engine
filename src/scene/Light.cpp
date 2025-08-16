@@ -14,12 +14,13 @@
 #include <rendering/RenderProxy.hpp>
 #include <rendering/RenderBackend.hpp>
 #include <rendering/RenderGlobalState.hpp>
-#include <rendering/SafeDeleter.hpp>
 
 #include <rendering/shadows/ShadowMap.hpp>
 #include <rendering/shadows/ShadowMapAllocator.hpp>
 #include <rendering/shadows/ShadowRenderer.hpp>
 #include <rendering/shadows/ShadowCameraHelper.hpp>
+
+#include <rendering/util/SafeDeleter.hpp>
 
 #include <core/object/HypClassUtils.hpp>
 
@@ -107,7 +108,7 @@ Light::Light(LightType type, const Vec3f& position, const Vec3f& normal, const V
 
 Light::~Light()
 {
-    g_safeDeleter->SafeRelease(std::move(m_shadowViews));
+    SafeDelete(std::move(m_shadowViews));
 }
 
 void Light::Init()
@@ -146,8 +147,8 @@ void Light::CreateShadowViews()
 
         RemoveChild(shadowCamera);
     }
-    
-    g_safeDeleter->SafeRelease(std::move(m_shadowViews));
+
+    SafeDelete(std::move(m_shadowViews));
 
     if (!(m_flags & LF_SHADOW))
     {
@@ -617,7 +618,12 @@ void Light::UpdateRenderProxy(RenderProxyLight* proxy)
 {
     proxy->light = WeakHandleFromThis();
     proxy->lightMaterial = m_material.ToWeak();
-    proxy->shadowViews = Map(m_shadowViews, &Handle<View>::Get);
+    
+    proxy->shadowViews.Resize(m_shadowViews.Size());
+    for (SizeType i = 0; i < m_shadowViews.Size(); i++)
+    {
+        proxy->shadowViews[i] = m_shadowViews[i].Get();
+    }
 
     const BoundingBox aabb = GetAABB();
 

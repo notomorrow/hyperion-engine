@@ -5,13 +5,13 @@
 #include <rendering/Deferred.hpp>
 #include <rendering/RenderGlobalState.hpp>
 #include <rendering/GBuffer.hpp>
-
 #include <rendering/RenderQueue.hpp>
-
 #include <rendering/RenderBackend.hpp>
 #include <rendering/RenderFrame.hpp>
 #include <rendering/RenderDescriptorSet.hpp>
 #include <rendering/RenderComputePipeline.hpp>
+
+#include <rendering/util/SafeDeleter.hpp>
 
 #include <core/utilities/DeferredScope.hpp>
 
@@ -105,8 +105,8 @@ SSGI::~SSGI()
         m_temporalBlending.Reset();
     }
 
-    SafeRelease(std::move(m_uniformBuffers));
-    SafeRelease(std::move(m_computePipeline));
+    SafeDelete(std::move(m_uniformBuffers));
+    SafeDelete(std::move(m_computePipeline));
 }
 
 void SSGI::Create()

@@ -8,6 +8,8 @@
 #include <rendering/RenderResult.hpp>
 #include <rendering/RenderGlobalState.hpp>
 
+#include <rendering/util/SafeDeleter.hpp>
+
 #include <core/threading/Threads.hpp>
 #include <core/threading/Task.hpp>
 
@@ -77,7 +79,7 @@ GraphicsPipelineCache::~GraphicsPipelineCache()
     {
         for (GraphicsPipelineRef& pipeline : it.second)
         {
-            SafeRelease(std::move(pipeline));
+            SafeDelete(std::move(pipeline));
         }
     }
 
@@ -175,7 +177,7 @@ GraphicsPipelineRef GraphicsPipelineCache::GetOrCreate(
 
         virtual ~RENDER_COMMAND(CreateGraphicsPipelineAndAddToCache)() override
         {
-            SafeRelease(std::move(graphicsPipeline));
+            SafeDelete(std::move(graphicsPipeline));
         }
 
         virtual RendererResult operator()() override
@@ -313,7 +315,7 @@ int GraphicsPipelineCache::RunCleanupCycle(int maxIter)
                             graphicsPipeline->GetDebugName(),
                             frameDiff);
 
-                        SafeRelease(std::move(graphicsPipeline));
+                        SafeDelete(std::move(graphicsPipeline));
 
                         graphicsPipelineIt = it->second.Erase(graphicsPipelineIt);
 

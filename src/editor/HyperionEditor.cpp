@@ -105,7 +105,7 @@ void HyperionEditor::Init()
 {
     Game::Init();
 
-    m_editorSubsystem = CreateObject<EditorSubsystem>(GetAppContext());
+    m_editorSubsystem = CreateObject<EditorSubsystem>();
 
     GetWorld()->AddSubsystem(m_editorSubsystem);
 

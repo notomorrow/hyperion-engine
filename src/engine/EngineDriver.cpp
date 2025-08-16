@@ -10,17 +10,18 @@
 #include <rendering/Deferred.hpp>
 #include <rendering/FinalPass.hpp>
 #include <rendering/RenderMaterial.hpp>
-#include <rendering/SafeDeleter.hpp>
 #include <rendering/ShaderManager.hpp>
 #include <rendering/GraphicsPipelineCache.hpp>
-
-#include <rendering/debug/DebugDrawer.hpp>
 
 #include <rendering/AsyncCompute.hpp>
 #include <rendering/RenderDescriptorSet.hpp>
 #include <rendering/RenderDevice.hpp>
 #include <rendering/RenderSwapchain.hpp>
 #include <rendering/RenderConfig.hpp>
+
+#include <rendering/debug/DebugDrawer.hpp>
+
+#include <rendering/util/SafeDeleter.hpp>
 
 #include <asset/Assets.hpp>
 
@@ -79,9 +80,8 @@ void HandleSignal(int signum);
 class RenderThread final : public Thread<Scheduler>
 {
 public:
-    RenderThread(const Handle<AppContextBase>& appContext)
+    RenderThread()
         : Thread(g_renderThread, ThreadPriorityValue::HIGHEST),
-          m_appContext(appContext),
           m_isRunning(false)
     {
     }
@@ -117,21 +117,19 @@ public:
 private:
     virtual void operator()() override
     {
-        Assert(m_appContext != nullptr);
-
         SystemEvent event;
 
         Queue<Scheduler::ScheduledTask> tasks;
-        
+
         g_renderThreadInstance = this;
 
         while (m_isRunning.Get(MemoryOrder::RELAXED))
         {
             RenderApi_BeginFrame_RenderThread();
 
-            while (m_appContext->PollEvent(event))
+            while (g_appContext->PollEvent(event))
             {
-                m_appContext->GetMainWindow()->GetInputEventSink().Push(std::move(event));
+                g_appContext->GetMainWindow()->GetInputEventSink().Push(std::move(event));
             }
 
             if (uint32 numEnqueued = m_scheduler.NumEnqueued())
@@ -148,11 +146,10 @@ private:
 
             RenderApi_EndFrame_RenderThread();
         }
-        
+
         g_renderThreadInstance = nullptr;
     }
 
-    Handle<AppContextBase> m_appContext;
     AtomicVar<bool> m_isRunning;
 };
 
@@ -162,17 +159,17 @@ void HandleSignal(int signum)
     {
         return;
     }
-    
-//    Time startTime = Time::Now();
+
+    //    Time startTime = Time::Now();
 
     g_renderThreadInstance->Stop();
-//    
-//    while (g_renderThreadInstance->IsRunning())
-//    {
-//        Threads::Sleep(10);
-//    }
-//    
-//    g_renderThreadInstance->Join();
+    //
+    //    while (g_renderThreadInstance->IsRunning())
+    //    {
+    //        Threads::Sleep(10);
+    //    }
+    //
+    //    g_renderThreadInstance->Join();
 
     exit(signum);
 }
@@ -234,20 +231,7 @@ HYP_API void EngineDriver::Init()
     // Set ready to false after render thread stops running.
     HYP_DEFER({ SetReady(false); });
 
-    Assert(m_appContext != nullptr, "App context must be set before initializing the engine!");
-
-    m_renderThread = MakeUnique<RenderThread>(m_appContext);
-
-    Assert(m_appContext->GetMainWindow() != nullptr);
-
-    // m_appContext->GetMainWindow()->OnWindowSizeChanged.Bind(
-    //                                                        [this](Vec2i newWindowSize)
-    //                                                        {
-    //                                                            HYP_LOG(Engine, Info, "Resize window to {}", newWindowSize);
-
-    //                                                            // m_finalPass->Resize(Vec2u(newWindowSize));
-    //                                                        })
-    //     .Detach();
+    m_renderThread = MakeUnique<RenderThread>();
 
     Assert(g_renderBackend != nullptr);
 
@@ -258,9 +242,6 @@ HYP_API void EngineDriver::Init()
                 m_finalPass->Create();
             })
         .Detach();
-
-    // Update app configuration to reflect device, after instance is created (e.g RT is not supported)
-    m_appContext->UpdateConfigurationOverrides();
 
 #ifdef HYP_EDITOR
     // Create script compilation service
@@ -291,11 +272,11 @@ HYP_API void EngineDriver::Init()
 
     m_debugDrawer = MakeUnique<DebugDrawer>();
     m_debugDrawer->Initialize();
-    
+
     m_defaultWorld = CreateObject<World>();
     m_defaultWorld->SetName(NAME("DefaultWorld"));
     InitObject(m_defaultWorld);
-    
+
     for (Handle<World>& currentWorld : m_currentWorldBuffered)
     {
         currentWorld = m_defaultWorld;
@@ -308,7 +289,7 @@ const Handle<World>& EngineDriver::GetCurrentWorld() const
 {
     HYP_SCOPE;
     Threads::AssertOnThread(g_gameThread | g_renderThread);
-    
+
     return m_currentWorldBuffered[RenderApi_GetFrameIndex()];
 }
 
@@ -316,14 +297,14 @@ void EngineDriver::SetCurrentWorld(const Handle<World>& world)
 {
     HYP_SCOPE;
     Threads::AssertOnThread(g_gameThread | g_renderThread);
-    
+
     if (!world)
     {
         m_currentWorldBuffered[RenderApi_GetFrameIndex()] = m_defaultWorld;
-        
+
         return;
     }
-    
+
     m_currentWorldBuffered[RenderApi_GetFrameIndex()] = world;
 }
 
@@ -402,14 +383,28 @@ void EngineDriver::FinalizeStop()
 
         SetGlobalNetRequestThread(nullptr);
     }
-    
+
     m_currentWorldBuffered = {};
 
     m_debugDrawer.Reset();
 
     m_finalPass.Reset();
 
-    g_safeDeleter->ForceDeleteAll();
+    // delete remaining enqueued deletions.
+    // loop until all deletions are done
+
+    // clang-format off
+    FixedArray<int, g_tripleBuffer ? 3 : 2> counts {};
+    
+    do
+    {
+        for (uint32 i = 0; i < (g_tripleBuffer ? 3 : 2); i++)
+        {
+            counts[i] = g_safeDeleter->ForceDeleteAll(i);
+        }
+    }
+    while (AnyOf(counts, [](uint32 count) { return count > 0; }));
+    // clang-format on
 
     m_renderThread->Join();
     m_renderThread.Reset();
@@ -422,7 +417,7 @@ HYP_API void EngineDriver::RenderNextFrame()
     FrameBase* frame = g_renderBackend->PrepareNextFrame();
 
     PreFrameUpdate(frame);
-    
+
     const Handle<World>& currentWorld = m_currentWorldBuffered[RenderApi_GetFrameIndex()];
 
     if (currentWorld && currentWorld->IsReady())
@@ -445,10 +440,6 @@ void EngineDriver::PreFrameUpdate(FrameBase* frame)
     HYP_SCOPE;
 
     Threads::AssertOnThread(g_renderThread);
-
-    RenderObjectDeleter::Iterate();
-
-    g_safeDeleter->PerformEnqueuedDeletions();
 }
 
 #pragma endregion EngineDriver

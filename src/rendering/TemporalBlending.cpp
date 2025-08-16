@@ -4,12 +4,12 @@
 #include <rendering/GBuffer.hpp>
 #include <rendering/PlaceholderData.hpp>
 #include <rendering/Deferred.hpp>
-#include <rendering/SafeDeleter.hpp>
 #include <rendering/RenderGlobalState.hpp>
 #include <rendering/ShaderManager.hpp>
-
 #include <rendering/RenderFrame.hpp>
 #include <rendering/RenderComputePipeline.hpp>
+
+#include <rendering/util/SafeDeleter.hpp>
 
 #include <rendering/Texture.hpp>
 
@@ -110,9 +110,9 @@ TemporalBlending::TemporalBlending(
 
 TemporalBlending::~TemporalBlending()
 {
-    SafeRelease(std::move(m_uniformBuffers));
-    SafeRelease(std::move(m_inputFramebuffer));
-    SafeRelease(std::move(m_csPerformBlending));
+    SafeDelete(std::move(m_uniformBuffers));
+    SafeDelete(std::move(m_inputFramebuffer));
+    SafeDelete(std::move(m_csPerformBlending));
 }
 
 void TemporalBlending::Create()
@@ -164,7 +164,7 @@ void TemporalBlending::Resize_Internal(Vec2u newSize)
 
     CreateImages();
 
-    SafeRelease(std::move(m_csPerformBlending));
+    SafeDelete(std::move(m_csPerformBlending));
 }
 
 ShaderProperties TemporalBlending::GetShaderProperties() const
@@ -225,7 +225,7 @@ void TemporalBlending::CreateImages()
 
 void TemporalBlending::CreatePipeline()
 {
-    SafeRelease(std::move(m_csPerformBlending));
+    SafeDelete(std::move(m_csPerformBlending));
 
     ShaderRef shader = g_shaderManager->GetOrCreate(NAME("TemporalBlending"), GetShaderProperties());
     Assert(shader.IsValid());

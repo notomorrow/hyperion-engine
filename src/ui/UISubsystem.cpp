@@ -137,7 +137,7 @@ void UISubsystem::Init()
     Assert(m_uiStage != nullptr);
     InitObject(m_uiStage);
 
-    m_onResizeHandle = g_engineDriver->GetAppContext()->GetMainWindow()->OnWindowSizeChanged.BindThreaded([weakThis = WeakHandleFromThis()](Vec2i windowSize)
+    m_onResizeHandle = g_appContext->GetMainWindow()->OnWindowSizeChanged.BindThreaded([weakThis = WeakHandleFromThis()](Vec2i windowSize)
         {
             PUSH_RENDER_COMMAND(SetFinalPassImageView, nullptr);
 

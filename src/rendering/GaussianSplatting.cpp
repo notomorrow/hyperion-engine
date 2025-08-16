@@ -1,6 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#include <rendering/GaussianSplatting.hpp>
 
+#include <rendering/GaussianSplatting.hpp>
 #include <rendering/Buffers.hpp>
 #include <rendering/RenderGroup.hpp>
 #include <rendering/RenderEnvironment.hpp>
@@ -8,6 +8,8 @@
 #include <rendering/GBuffer.hpp>
 #include <rendering/Renderer.hpp>
 #include <rendering/GraphicsPipelineCache.hpp>
+
+#include <rendering/util/SafeDeleter.hpp>
 
 #include <rendering/RenderQueue.hpp>
 
@@ -186,11 +188,11 @@ GaussianSplattingInstance::~GaussianSplattingInstance()
 {
     if (IsInitCalled())
     {
-        SafeRelease(std::move(m_splatBuffer));
-        SafeRelease(std::move(m_splatIndicesBuffer));
-        SafeRelease(std::move(m_sceneBuffer));
-        SafeRelease(std::move(m_indirectBuffer));
-        SafeRelease(std::move(m_sortStageDescriptorTables));
+        SafeDelete(std::move(m_splatBuffer));
+        SafeDelete(std::move(m_splatIndicesBuffer));
+        SafeDelete(std::move(m_sceneBuffer));
+        SafeDelete(std::move(m_indirectBuffer));
+        SafeDelete(std::move(m_sortStageDescriptorTables));
     }
 }
 
@@ -564,7 +566,7 @@ GaussianSplatting::~GaussianSplatting()
         m_quadMesh.Reset();
         m_gaussianSplattingInstance.Reset();
 
-        SafeRelease(std::move(m_stagingBuffer));
+        SafeDelete(std::move(m_stagingBuffer));
     }
 }
 
@@ -575,7 +577,7 @@ void GaussianSplatting::Init()
             m_quadMesh.Reset();
             m_gaussianSplattingInstance.Reset();
 
-            SafeRelease(std::move(m_stagingBuffer));
+            SafeDelete(std::move(m_stagingBuffer));
         }));
 
     static const Array<Vertex> vertices = {

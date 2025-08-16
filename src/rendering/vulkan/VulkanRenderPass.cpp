@@ -6,6 +6,8 @@
 #include <rendering/vulkan/VulkanDevice.hpp>
 #include <rendering/vulkan/VulkanRenderBackend.hpp>
 
+#include <rendering/util/SafeDeleter.hpp>
+
 #include <core/containers/HashSet.hpp>
 
 namespace hyperion {
@@ -92,7 +94,7 @@ bool VulkanRenderPass::RemoveAttachment(const VulkanAttachment* attachment)
         return false;
     }
 
-    SafeRelease(std::move(*it));
+    SafeDelete(std::move(*it));
 
     m_renderPassAttachments.Erase(it);
 
@@ -200,7 +202,7 @@ RendererResult VulkanRenderPass::Destroy()
     vkDestroyRenderPass(GetRenderBackend()->GetDevice()->GetDevice(), m_handle, nullptr);
     m_handle = VK_NULL_HANDLE;
 
-    SafeRelease(std::move(m_renderPassAttachments));
+    SafeDelete(std::move(m_renderPassAttachments));
 
     return result;
 }

@@ -836,9 +836,8 @@ static constexpr bool g_showOnlyActiveScene = true; // @TODO: Make this configur
 
 #ifdef HYP_EDITOR
 
-EditorSubsystem::EditorSubsystem(const Handle<AppContextBase>& appContext)
-    : m_appContext(appContext),
-      m_editorCameraEnabled(false),
+EditorSubsystem::EditorSubsystem()
+    : m_editorCameraEnabled(false),
       m_shouldCancelNextClick(false),
       m_manipulationWidgetHolder(this)
 {

@@ -5,15 +5,14 @@
 #include <rendering/RenderGlobalState.hpp>
 #include <rendering/Deferred.hpp>
 #include <rendering/GBuffer.hpp>
-
 #include <rendering/RenderQueue.hpp>
-
 #include <rendering/RenderBackend.hpp>
 #include <rendering/RenderFrame.hpp>
 #include <rendering/RenderDescriptorSet.hpp>
 #include <rendering/RenderComputePipeline.hpp>
-
 #include <rendering/Texture.hpp>
+
+#include <rendering/util/SafeDeleter.hpp>
 
 #include <scene/View.hpp>
 
@@ -93,15 +92,15 @@ SSRRenderer::SSRRenderer(
 
 SSRRenderer::~SSRRenderer()
 {
-    SafeRelease(std::move(m_writeUvs));
-    SafeRelease(std::move(m_sampleGbuffer));
+    SafeDelete(std::move(m_writeUvs));
+    SafeDelete(std::move(m_sampleGbuffer));
 
     if (m_temporalBlending)
     {
         m_temporalBlending.Reset();
     }
 
-    SafeRelease(std::move(m_uniformBuffer));
+    SafeDelete(std::move(m_uniformBuffer));
 }
 
 void SSRRenderer::Create()
@@ -151,8 +150,8 @@ void SSRRenderer::Create()
 
     // m_onGbufferResolutionChanged = m_gbuffer->OnGBufferResolutionChanged.Bind([this](Vec2u newSize)
     // {
-    //     SafeRelease(std::move(m_writeUvs));
-    //     SafeRelease(std::move(m_sampleGbuffer));
+    //     SafeDelete(std::move(m_writeUvs));
+    //     SafeDelete(std::move(m_sampleGbuffer));
 
     //     CreateComputePipelines();
     // });

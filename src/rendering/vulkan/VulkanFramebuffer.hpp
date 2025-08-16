@@ -9,6 +9,8 @@
 #include <rendering/vulkan/VulkanCommandBuffer.hpp>
 #include <rendering/vulkan/VulkanRenderPass.hpp>
 
+#include <rendering/util/SafeDeleter.hpp>
+
 #include <core/containers/FlatMap.hpp>
 
 #include <vulkan/vulkan.h>
@@ -42,7 +44,7 @@ struct VulkanAttachmentMap
     {
         for (auto& it : attachments)
         {
-            SafeRelease(std::move(it.second.attachment));
+            SafeDelete(std::move(it.second.attachment));
         }
 
         attachments.Clear();

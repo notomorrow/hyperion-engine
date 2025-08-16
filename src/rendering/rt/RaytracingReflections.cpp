@@ -5,12 +5,13 @@
 #include <rendering/RenderGlobalState.hpp>
 #include <rendering/Deferred.hpp>
 #include <rendering/PlaceholderData.hpp>
-#include <rendering/SafeDeleter.hpp>
 #include <rendering/RenderBackend.hpp>
 #include <rendering/RenderFrame.hpp>
 #include <rendering/RenderGpuBuffer.hpp>
 #include <rendering/RenderResult.hpp>
 #include <rendering/Texture.hpp>
+
+#include <rendering/util/SafeDeleter.hpp>
 
 #include <scene/View.hpp>
 #include <scene/Light.hpp>
@@ -54,12 +55,12 @@ RaytracingReflections::RaytracingReflections(RaytracingReflectionsConfig&& confi
 
 RaytracingReflections::~RaytracingReflections()
 {
-    SafeRelease(std::move(m_raytracingPipeline));
+    SafeDelete(std::move(m_raytracingPipeline));
 
-    SafeRelease(std::move(m_uniformBuffers));
+    SafeDelete(std::move(m_uniformBuffers));
 
     // remove result image from global descriptor set
-    g_safeDeleter->SafeRelease(std::move(m_texture));
+    SafeDelete(std::move(m_texture));
 
     PUSH_RENDER_COMMAND(UnsetRTRadianceImageInGlobalDescriptorSet);
 }
