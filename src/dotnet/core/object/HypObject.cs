@@ -27,7 +27,7 @@ namespace Hyperion
 
                 if (!hypClass.IsReferenceCounted)
                 {
-                    throw new Exception("Can only create instances of reference counted HypClass objects (using RC<T> or Handle<T>) from managed code");
+                    throw new Exception("Can only create instances of reference counted HypClass objects (using Handle<T>) from managed code");
                 }
 
                 // Need to add this to managed object cache,
@@ -78,12 +78,12 @@ namespace Hyperion
                 HypObject_IncRef(_hypClassPtr, _nativeAddress, false);
             }
             
-            // Logger.Log(LogType.Debug, "Created HypObject of type " + GetType().Name + ", _hypClassPtr: " + _hypClassPtr + ", _nativeAddress: " + _nativeAddress);
+            Logger.Log(LogType.Debug, "Created HypObject of type " + GetType().Name + ", _hypClassPtr: " + _hypClassPtr + ", _nativeAddress: " + _nativeAddress);
         }
 
         ~HypObject()
         {
-            // Logger.Log(LogType.Debug, "Destroying HypObject of type " + GetType().Name + ", _hypClassPtr: " + _hypClassPtr + ", _nativeAddress: " + _nativeAddress);
+            Logger.Log(LogType.Debug, "Destroying HypObject of type " + GetType().Name + ", _hypClassPtr: " + _hypClassPtr + ", _nativeAddress: " + _nativeAddress);
 
             if (IsValid && HypClass.IsReferenceCounted)
                 HypObject_DecRef(_hypClassPtr, _nativeAddress, false);
@@ -100,6 +100,8 @@ namespace Hyperion
 #endif
 
                     HypObject_DecRef(_hypClassPtr, _nativeAddress, false);
+
+                    Logger.Log(LogType.Debug, "Disposed HypObject of type " + GetType().Name + ", _hypClassPtr: " + _hypClassPtr + ", _nativeAddress: " + _nativeAddress);
                 }
 
                 GC.SuppressFinalize(this);

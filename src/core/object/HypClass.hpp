@@ -398,15 +398,9 @@ public:
         return GetAllocationMethod() == HypClassAllocationMethod::HANDLE;
     }
 
-    HYP_FORCE_INLINE bool UseRefCountedPtr() const
-    {
-        return GetAllocationMethod() == HypClassAllocationMethod::REF_COUNTED_PTR;
-    }
-
     HYP_FORCE_INLINE bool IsReferenceCounted() const
     {
-        return GetAllocationMethod() == HypClassAllocationMethod::HANDLE
-            || GetAllocationMethod() == HypClassAllocationMethod::REF_COUNTED_PTR;
+        return GetAllocationMethod() == HypClassAllocationMethod::HANDLE;
     }
 
     HYP_FORCE_INLINE Name GetName() const
@@ -729,10 +723,6 @@ public:
         {
             return HypClassAllocationMethod::HANDLE;
         }
-        else if constexpr (std::is_base_of_v<EnableRefCountedPtrFromThisBase<>, T>)
-        {
-            return HypClassAllocationMethod::REF_COUNTED_PTR;
-        }
         else
         {
             return HypClassAllocationMethod::NONE;
@@ -772,27 +762,6 @@ public:
             }
 
             return true;
-        }
-        else if (UseRefCountedPtr())
-        {
-            if constexpr (std::is_base_of_v<EnableRefCountedPtrFromThisBase<>, T>)
-            {
-                EnableRefCountedPtrFromThisBase<>* ptrCasted = static_cast<EnableRefCountedPtrFromThisBase<>*>(ptr);
-
-                auto* refCountData = ptrCasted->weakThis.GetRefCountData_Internal();
-                HYP_CORE_ASSERT(refCountData != nullptr);
-
-                RC<void> rc;
-                rc.SetRefCountData_Internal(ptrCasted->weakThis.GetUnsafe(), refCountData, /* incRef */ true);
-
-                outHypData = HypData(std::move(rc));
-
-                return true;
-            }
-            else
-            {
-                HYP_UNREACHABLE();
-            }
         }
         else
         {
