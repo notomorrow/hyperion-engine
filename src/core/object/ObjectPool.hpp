@@ -252,10 +252,12 @@ class ObjectContainer final : public ObjectContainerBase
 
     using HypObjectMemory = HypObjectMemory<T>;
 
+    static const Name s_poolName;
+
 public:
     ObjectContainer()
         : ObjectContainerBase(TypeId::ForType<T>(), T::Class()),
-          m_pool(2048, /* createInitialBlocks */ true, /* blockInitCtx */ this)
+          m_pool(s_poolName, 2048, /* createInitialBlocks */ true, /* blockInitCtx */ this)
     {
     }
 
@@ -306,9 +308,12 @@ public:
         m_pool.ReleaseIndex(index);
     }
 
-    // private:
+private:
     MemoryPoolType m_pool;
 };
+
+template <class T>
+const Name ObjectContainer<T>::s_poolName = CreateNameFromDynamicString(ANSIString("HypObjectPool_") + TypeNameWithoutNamespace<T>().Data());
 
 class ObjectPool
 {

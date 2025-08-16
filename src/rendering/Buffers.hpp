@@ -6,6 +6,8 @@
 
 #include <core/threading/DataRaceDetector.hpp>
 
+#include <core/containers/String.hpp>
+
 #include <core/utilities/Range.hpp>
 
 #include <core/Defines.hpp>
@@ -205,8 +207,8 @@ class GpuBufferHolderMemoryPool final : public MemoryPool<StructType>
 public:
     using Base = MemoryPool<StructType>;
 
-    GpuBufferHolderMemoryPool(uint32 initialCount = Base::InitInfo::numInitialElements)
-        : Base(initialCount, /* createInitialBlocks */ true, /* blockInitCtx */ nullptr)
+    GpuBufferHolderMemoryPool(Name poolName, uint32 initialCount = Base::InitInfo::numInitialElements)
+        : Base(poolName, initialCount, /* createInitialBlocks */ true, /* blockInitCtx */ nullptr)
     {
     }
 
@@ -308,7 +310,7 @@ class GpuBufferHolder final : public GpuBufferHolderBase
 public:
     GpuBufferHolder(uint32 initialCount = 0)
         : GpuBufferHolderBase(TypeWrapper<StructType> {}),
-          m_pool(initialCount)
+          m_pool(CreateNameFromDynamicString(ANSIString("GfxBuffers_") + TypeNameWithoutNamespace<StructType>().Data()), initialCount)
     {
         GpuBufferHolderBase::CreateBuffers(BufferType, initialCount, sizeof(StructType));
     }
