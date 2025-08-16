@@ -7,8 +7,12 @@
 #include <system/vma/VmaUsage.hpp>
 
 namespace hyperion {
+
+HYP_CLASS(NoScriptBindings)
 class VulkanGpuBuffer final : public GpuBufferBase
 {
+    HYP_OBJECT_BODY(VulkanGpuBuffer);
+
 public:
     VulkanGpuBuffer(GpuBufferType type, SizeType size, SizeType alignment = 0);
     virtual ~VulkanGpuBuffer() override;
@@ -37,7 +41,6 @@ public:
     uint64 GetBufferDeviceAddress() const;
 
     virtual RendererResult Create() override;
-    virtual RendererResult Destroy() override;
 
     virtual RendererResult EnsureCapacity(
         SizeType minimumSize,
@@ -60,7 +63,7 @@ public:
     virtual void Unmap() const override;
 
 #ifdef HYP_DEBUG_MODE
-    virtual void SetDebugName(Name name) override;
+    void SetDebugName(Name name) override;
 #endif
 
 private:

@@ -53,7 +53,24 @@ VulkanGpuImage::VulkanGpuImage(const TextureDesc& textureDesc)
 
 VulkanGpuImage::~VulkanGpuImage()
 {
-    HYP_GFX_ASSERT(m_handle == VK_NULL_HANDLE);
+    if (IsCreated())
+    {
+        if (m_allocation != VK_NULL_HANDLE)
+        {
+            HYP_GFX_ASSERT(m_isHandleOwned, "If allocation is not VK_NULL_HANDLE, is_handle_owned should be true");
+
+            vmaDestroyImage(GetRenderBackend()->GetDevice()->GetAllocator(), m_handle, m_allocation);
+            m_allocation = VK_NULL_HANDLE;
+        }
+
+        m_handle = VK_NULL_HANDLE;
+
+        // reset back to default
+        m_isHandleOwned = true;
+
+        m_resourceState = RS_UNDEFINED;
+        m_subResourceStates.Clear();
+    }
 }
 
 bool VulkanGpuImage::IsCreated() const
@@ -316,34 +333,6 @@ RendererResult VulkanGpuImage::Create(ResourceState initialState)
     HYPERION_RETURN_OK;
 }
 
-RendererResult VulkanGpuImage::Destroy()
-{
-    RendererResult result;
-
-    if (IsCreated())
-    {
-        if (m_allocation != VK_NULL_HANDLE)
-        {
-            HYP_GFX_ASSERT(m_isHandleOwned, "If allocation is not VK_NULL_HANDLE, is_handle_owned should be true");
-
-            vmaDestroyImage(GetRenderBackend()->GetDevice()->GetAllocator(), m_handle, m_allocation);
-            m_allocation = VK_NULL_HANDLE;
-        }
-
-        m_handle = VK_NULL_HANDLE;
-
-        // reset back to default
-        m_isHandleOwned = true;
-
-        m_resourceState = RS_UNDEFINED;
-        m_subResourceStates.Clear();
-
-        HYPERION_RETURN_OK;
-    }
-
-    return result;
-}
-
 RendererResult VulkanGpuImage::Resize(const Vec3u& extent)
 {
     if (extent == m_textureDesc.extent)
@@ -373,8 +362,18 @@ RendererResult VulkanGpuImage::Resize(const Vec3u& extent)
         {
             return HYP_MAKE_ERROR(RendererError, "Cannot resize non-owned image");
         }
+        
+        // destroy and recreate
+        if (m_allocation != VK_NULL_HANDLE)
+        {
+            vmaDestroyImage(GetRenderBackend()->GetDevice()->GetAllocator(), m_handle, m_allocation);
+            m_allocation = VK_NULL_HANDLE;
+        }
 
-        HYP_GFX_CHECK(Destroy());
+        m_handle = VK_NULL_HANDLE;
+        m_resourceState = RS_UNDEFINED;
+        m_subResourceStates.Clear();
+
         HYP_GFX_CHECK(Create());
 
         if (previousResourceState != RS_UNDEFINED)

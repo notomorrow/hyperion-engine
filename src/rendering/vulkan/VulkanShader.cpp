@@ -28,18 +28,37 @@ static inline VulkanRenderBackend* GetRenderBackend()
 
 #pragma region CreateShaderStage
 
+VulkanShader::VulkanShader()
+    : ShaderBase(),
+      m_entryPointName("main")
+{
+}
+
 VulkanShader::VulkanShader(const RC<CompiledShader>& compiledShader)
     : ShaderBase(compiledShader),
       m_entryPointName("main")
 {
+#ifdef HYP_DEBUG_MODE
     if (compiledShader != nullptr)
     {
         SetDebugName(compiledShader->GetName());
     }
+#endif
 }
 
 VulkanShader::~VulkanShader()
 {
+    if (!IsCreated())
+    {
+        return;
+    }
+
+    for (const VulkanShaderModule& shaderModule : m_shaderModules)
+    {
+        vkDestroyShaderModule(GetRenderBackend()->GetDevice()->GetDevice(), shaderModule.handle, nullptr);
+    }
+
+    m_shaderModules.Clear();
 }
 
 bool VulkanShader::IsCreated() const
@@ -226,23 +245,6 @@ RendererResult VulkanShader::Create()
         SetDebugName(debugName);
     }
 #endif
-
-    HYPERION_RETURN_OK;
-}
-
-RendererResult VulkanShader::Destroy()
-{
-    if (!IsCreated())
-    {
-        HYPERION_RETURN_OK;
-    }
-
-    for (const VulkanShaderModule& shaderModule : m_shaderModules)
-    {
-        vkDestroyShaderModule(GetRenderBackend()->GetDevice()->GetDevice(), shaderModule.handle, nullptr);
-    }
-
-    m_shaderModules.Clear();
 
     HYPERION_RETURN_OK;
 }

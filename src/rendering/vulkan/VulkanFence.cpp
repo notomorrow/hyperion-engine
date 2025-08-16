@@ -29,7 +29,11 @@ VulkanFence::VulkanFence()
 
 VulkanFence::~VulkanFence()
 {
-    HYP_GFX_ASSERT(m_handle == VK_NULL_HANDLE, "fence should have been destroyed");
+    if (m_handle != VK_NULL_HANDLE)
+    {
+        vkDestroyFence(GetRenderBackend()->GetDevice()->GetDevice(), m_handle, nullptr);
+        m_handle = VK_NULL_HANDLE;
+    }
 }
 
 RendererResult VulkanFence::Create()
@@ -41,17 +45,6 @@ RendererResult VulkanFence::Create()
     fenceCreateInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
     VULKAN_CHECK(vkCreateFence(GetRenderBackend()->GetDevice()->GetDevice(), &fenceCreateInfo, nullptr, &m_handle));
-
-    HYPERION_RETURN_OK;
-}
-
-RendererResult VulkanFence::Destroy()
-{
-    if (m_handle != VK_NULL_HANDLE)
-    {
-        vkDestroyFence(GetRenderBackend()->GetDevice()->GetDevice(), m_handle, nullptr);
-        m_handle = VK_NULL_HANDLE;
-    }
 
     HYPERION_RETURN_OK;
 }

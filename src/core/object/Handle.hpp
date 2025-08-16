@@ -39,6 +39,12 @@ struct Handle final : HandleBase
 
     static const Handle empty;
 
+    static const Handle& Null()
+    {
+        static const Handle nullHandle;
+        return nullHandle;
+    }
+
     HypObjectBase* ptr;
 
     Handle()
@@ -341,6 +347,12 @@ struct WeakHandle final
     using IdType = ObjId<T>;
 
     static const WeakHandle empty;
+
+    static const WeakHandle& Null()
+    {
+        static const WeakHandle nullHandle;
+        return nullHandle;
+    }
 
     HypObjectBase* ptr;
 

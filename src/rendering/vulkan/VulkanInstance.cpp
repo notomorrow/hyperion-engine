@@ -221,7 +221,7 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(
     return VK_FALSE;
 }
 
-static VkResult CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* createInfo, const VkAllocationCallbacks* callbacks, VkDebugUtilsMessengerEXT* debugMessenger)
+static VkResult CreateDebugUtilsMessenger(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* createInfo, const VkAllocationCallbacks* callbacks, VkDebugUtilsMessengerEXT* debugMessenger)
 {
     if (auto func = reinterpret_cast<PFN_vkCreateDebugUtilsMessengerEXT>(vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT")))
     {
@@ -232,6 +232,16 @@ static VkResult CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugU
         HYP_LOG(RenderingBackend, Error, "vkCreateDebugUtilsMessengerExt not present! disabling message callback...\n");
 
         return VK_ERROR_EXTENSION_NOT_PRESENT;
+    }
+}
+
+static void DestroyDebugUtilsMessenger(VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger, const VkAllocationCallbacks* callbacks)
+{
+    auto func = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkDestroyDebugUtilsMessengerEXT");
+
+    if (func != nullptr)
+    {
+        func(instance, debugMessenger, callbacks);
     }
 }
 
@@ -257,8 +267,31 @@ RendererResult VulkanInstance::SetupDebug()
 VulkanInstance::VulkanInstance()
     : m_surface(VK_NULL_HANDLE),
       m_instance(VK_NULL_HANDLE),
-      m_swapchain(MakeRenderObject<VulkanSwapchain>())
+      m_swapchain(CreateObject<VulkanSwapchain>())
 {
+}
+
+VulkanInstance::~VulkanInstance()
+{
+    if (m_instance == VK_NULL_HANDLE)
+    {
+        return;
+    }
+
+    m_device->DestroyAllocator();
+
+    SafeDelete(std::move(m_swapchain));
+
+    vkDestroySurfaceKHR(m_instance, m_surface, nullptr);
+
+    m_device.Reset();
+
+#ifndef HYPERION_BUILD_RELEASE
+    DestroyDebugUtilsMessenger(m_instance, this->debugMessenger, nullptr);
+#endif
+
+    vkDestroyInstance(m_instance, nullptr);
+    m_instance = VK_NULL_HANDLE;
 }
 
 RendererResult VulkanInstance::SetupDebugMessenger()
@@ -270,7 +303,7 @@ RendererResult VulkanInstance::SetupDebugMessenger()
     messengerInfo.pfnUserCallback = &DebugCallback;
     messengerInfo.pUserData = nullptr;
 
-    VULKAN_CHECK(CreateDebugUtilsMessengerEXT(m_instance, &messengerInfo, nullptr, &this->debugMessenger));
+    VULKAN_CHECK(CreateDebugUtilsMessenger(m_instance, &messengerInfo, nullptr, &this->debugMessenger));
 
     HYP_LOG(RenderingBackend, Info, "Enabling Vulkan debug messenger");
 #endif
@@ -357,41 +390,6 @@ RendererResult VulkanInstance::Initialize(bool loadDebugLayers)
     HYPERION_RETURN_OK;
 }
 
-static void DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger, const VkAllocationCallbacks* callbacks)
-{
-    auto func = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkDestroyDebugUtilsMessengerEXT");
-
-    if (func != nullptr)
-    {
-        func(instance, debugMessenger, callbacks);
-    }
-}
-
-RendererResult VulkanInstance::Destroy()
-{
-    RendererResult result;
-
-    HYPERION_PASS_ERRORS(m_device->Wait(), result);
-
-    m_device->DestroyAllocator();
-
-    SafeDelete(std::move(m_swapchain));
-
-    vkDestroySurfaceKHR(m_instance, m_surface, nullptr);
-
-    m_device->Destroy();
-    m_device.Reset();
-
-#ifndef HYPERION_BUILD_RELEASE
-    DestroyDebugUtilsMessengerEXT(m_instance, this->debugMessenger, nullptr);
-#endif
-
-    vkDestroyInstance(m_instance, nullptr);
-    m_instance = VK_NULL_HANDLE;
-
-    return result;
-}
-
 RendererResult VulkanInstance::CreateDevice(VkPhysicalDevice physicalDevice)
 {
     /* If no physical device passed in, we select one */
@@ -401,7 +399,7 @@ RendererResult VulkanInstance::CreateDevice(VkPhysicalDevice physicalDevice)
         physicalDevice = PickPhysicalDevice(Span<VkPhysicalDevice>(devices.Begin(), devices.End()));
     }
 
-    m_device = MakeRenderObject<VulkanDevice>(physicalDevice, m_surface);
+    m_device = CreateObject<VulkanDevice>(physicalDevice, m_surface);
     m_device->SetRequiredExtensions(GetExtensionMap());
 
     const QueueFamilyIndices& familyIndices = m_device->GetQueueFamilyIndices();
@@ -436,16 +434,7 @@ RendererResult VulkanInstance::CreateSwapchain()
 
 RendererResult VulkanInstance::RecreateSwapchain()
 {
-    if (m_swapchain.IsValid())
-    {
-        // Cannot use SafeRelease here; will get NATIVE_WINDOW_IN_USE_KHR error
-        if (m_swapchain->IsCreated())
-        {
-            HYP_GFX_CHECK(m_swapchain->Destroy());
-        }
-
-        m_swapchain.Reset();
-    }
+    m_swapchain.Reset();
 
     if (m_surface == VK_NULL_HANDLE)
     {
@@ -454,7 +443,7 @@ RendererResult VulkanInstance::RecreateSwapchain()
 
     HYP_LOG(RenderingBackend, Info, "Recreating swapchain...");
 
-    m_swapchain = MakeRenderObject<VulkanSwapchain>();
+    m_swapchain = CreateObject<VulkanSwapchain>();
     m_swapchain->m_surface = m_surface;
     HYP_GFX_CHECK(m_swapchain->Create());
 

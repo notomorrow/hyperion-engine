@@ -27,7 +27,11 @@ VulkanSampler::VulkanSampler(TextureFilterMode minFilterMode, TextureFilterMode 
 
 VulkanSampler::~VulkanSampler()
 {
-    HYP_GFX_ASSERT(m_handle == VK_NULL_HANDLE, "sampler should have been destroyed");
+    if (m_handle != VK_NULL_HANDLE)
+    {
+        vkDestroySampler(GetRenderBackend()->GetDevice()->GetDevice(), m_handle, nullptr);
+        m_handle = VK_NULL_HANDLE;
+    }
 }
 
 bool VulkanSampler::IsCreated() const
@@ -100,15 +104,27 @@ RendererResult VulkanSampler::Create()
     HYPERION_RETURN_OK;
 }
 
-RendererResult VulkanSampler::Destroy()
+#ifdef HYP_DEBUG_MODE
+
+void VulkanSampler::SetDebugName(Name name)
 {
-    if (m_handle != VK_NULL_HANDLE)
+    SamplerBase::SetDebugName(name);
+
+    if (!IsCreated())
     {
-        vkDestroySampler(GetRenderBackend()->GetDevice()->GetDevice(), m_handle, nullptr);
-        m_handle = VK_NULL_HANDLE;
+        return;
     }
 
-    HYPERION_RETURN_OK;
+    const char* strName = name.LookupString();
+
+    VkDebugUtilsObjectNameInfoEXT objectNameInfo { VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT };
+    objectNameInfo.objectType = VK_OBJECT_TYPE_SAMPLER;
+    objectNameInfo.objectHandle = (uint64)m_handle;
+    objectNameInfo.pObjectName = strName;
+
+    g_vulkanDynamicFunctions->vkSetDebugUtilsObjectNameEXT(GetRenderBackend()->GetDevice()->GetDevice(), &objectNameInfo);
 }
+
+#endif
 
 } // namespace hyperion

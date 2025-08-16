@@ -8,8 +8,11 @@
 
 namespace hyperion {
 
-class DeviceBase : public RenderObject<DeviceBase>
+HYP_CLASS(Abstract, NoScriptBindings)
+class DeviceBase : public HypObjectBase
 {
+    HYP_OBJECT_BODY(DeviceBase);
+
 public:
     virtual ~DeviceBase() override = default;
 };

@@ -46,8 +46,11 @@ struct VulkanCachedDescriptorSetBinding
     }
 };
 
+HYP_CLASS(NoScriptBindings)
 class VulkanCommandBuffer final : public CommandBufferBase
 {
+    HYP_OBJECT_BODY(VulkanCommandBuffer);
+
 public:
     friend class VulkanFramebuffer;
     friend class VulkanDescriptorSet;
@@ -79,7 +82,6 @@ public:
 
     virtual RendererResult Create() override;
     RendererResult Create(VkCommandPool commandPool);
-    virtual RendererResult Destroy() override;
 
     RendererResult Begin(const VulkanRenderPass* renderPass = nullptr);
     RendererResult End();

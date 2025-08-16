@@ -13,8 +13,11 @@
 
 namespace hyperion {
 
-class SwapchainBase : public RenderObject<SwapchainBase>
+HYP_CLASS(Abstract, NoScriptBindings)
+class SwapchainBase : public HypObjectBase
 {
+    HYP_OBJECT_BODY(SwapchainBase);
+
 public:
     virtual ~SwapchainBase() override = default;
 
@@ -51,7 +54,6 @@ public:
     }
 
     virtual RendererResult Create() = 0;
-    virtual RendererResult Destroy() = 0;
 
 protected:
     SwapchainBase()

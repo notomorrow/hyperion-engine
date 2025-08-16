@@ -123,7 +123,7 @@ RendererResult VulkanAttachmentMap::Resize(Vec2u newSize)
             TextureDesc textureDesc = def.image->GetTextureDesc();
             textureDesc.extent = Vec3u { newSize.x, newSize.y, 1 };
 
-            newImage = MakeRenderObject<VulkanGpuImage>(textureDesc);
+            newImage = CreateObject<VulkanGpuImage>(textureDesc);
             HYP_GFX_ASSERT(newImage->Create());
 
             if (def.image.IsValid())
@@ -140,7 +140,7 @@ RendererResult VulkanAttachmentMap::Resize(Vec2u newSize)
             }
         }
 
-        VulkanAttachmentRef newAttachment = MakeRenderObject<VulkanAttachment>(
+        VulkanAttachmentRef newAttachment = CreateObject<VulkanAttachment>(
             newImage,
             framebufferWeak,
             def.attachment->GetRenderPassStage(),
@@ -195,14 +195,27 @@ RendererResult VulkanAttachmentMap::Resize(Vec2u newSize)
 VulkanFramebuffer::VulkanFramebuffer(Vec2u extent, RenderPassStage stage, uint32 numMultiviewLayers)
     : FramebufferBase(extent),
       m_handle(VK_NULL_HANDLE),
-      m_renderPass(MakeRenderObject<VulkanRenderPass>(stage, RenderPassMode::RENDER_PASS_INLINE, numMultiviewLayers))
+      m_renderPass(CreateObject<VulkanRenderPass>(stage, RenderPassMode::RENDER_PASS_INLINE, numMultiviewLayers))
 {
     m_attachmentMap.framebufferWeak = VulkanFramebufferWeakRef(WeakHandleFromThis());
 }
 
 VulkanFramebuffer::~VulkanFramebuffer()
 {
-    HYP_GFX_ASSERT(m_handle == VK_NULL_HANDLE, "Expected framebuffer to have been destroyed");
+    if (!IsCreated())
+    {
+        HYPERION_RETURN_OK;
+    }
+
+    if (m_handle != VK_NULL_HANDLE)
+    {
+        vkDestroyFramebuffer(GetRenderBackend()->GetDevice()->GetDevice(), m_handle, nullptr);
+        m_handle = VK_NULL_HANDLE;
+    }
+
+    SafeDelete(std::move(m_renderPass));
+
+    m_attachmentMap.Reset();
 }
 
 bool VulkanFramebuffer::IsCreated() const
@@ -285,26 +298,6 @@ RendererResult VulkanFramebuffer::Create()
     return {};
 }
 
-RendererResult VulkanFramebuffer::Destroy()
-{
-    if (!IsCreated())
-    {
-        HYPERION_RETURN_OK;
-    }
-
-    if (m_handle != VK_NULL_HANDLE)
-    {
-        vkDestroyFramebuffer(GetRenderBackend()->GetDevice()->GetDevice(), m_handle, nullptr);
-        m_handle = VK_NULL_HANDLE;
-    }
-
-    SafeDelete(std::move(m_renderPass));
-
-    m_attachmentMap.Reset();
-
-    HYPERION_RETURN_OK;
-}
-
 RendererResult VulkanFramebuffer::Resize(Vec2u newSize)
 {
     if (m_extent == newSize)
@@ -363,7 +356,7 @@ RendererResult VulkanFramebuffer::Resize(Vec2u newSize)
 
 AttachmentRef VulkanFramebuffer::AddAttachment(const AttachmentRef& attachment)
 {
-    HYP_GFX_ASSERT(attachment->GetFramebuffer() == this,
+    HYP_GFX_ASSERT(attachment->GetFramebuffer().GetUnsafe() == this,
         "Attachment framebuffer does not match framebuffer");
 
     return m_attachmentMap.AddAttachment(VulkanAttachmentRef(attachment));
@@ -375,7 +368,7 @@ AttachmentRef VulkanFramebuffer::AddAttachment(
     LoadOperation loadOp,
     StoreOperation storeOp)
 {
-    VulkanAttachmentRef attachment = MakeRenderObject<VulkanAttachment>(
+    VulkanAttachmentRef attachment = CreateObject<VulkanAttachment>(
         VulkanGpuImageRef(image),
         VulkanFramebufferWeakRef(WeakHandleFromThis()),
         m_renderPass->GetStage(),

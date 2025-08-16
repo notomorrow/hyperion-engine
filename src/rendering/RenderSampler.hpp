@@ -8,8 +8,12 @@
 #include <core/Defines.hpp>
 
 namespace hyperion {
-class SamplerBase : public RenderObject<SamplerBase>
+
+HYP_CLASS(Abstract, NoScriptBindings)
+class SamplerBase : public HypObjectBase
 {
+    HYP_OBJECT_BODY(SamplerBase);
+
 public:
     virtual ~SamplerBase() override = default;
 
@@ -31,12 +35,23 @@ public:
     virtual bool IsCreated() const = 0;
 
     virtual RendererResult Create() = 0;
-    virtual RendererResult Destroy() = 0;
+
+    Name GetDebugName() const
+    {
+        return m_debugName;
+    }
+
+    virtual void SetDebugName(Name name)
+    {
+        m_debugName = name;
+    }
 
 protected:
     TextureFilterMode m_minFilterMode = TFM_NEAREST;
     TextureFilterMode m_magFilterMode = TFM_NEAREST;
     TextureWrapMode m_wrapMode = TWM_CLAMP_TO_EDGE;
+
+    Name m_debugName;
 };
 
 } // namespace hyperion

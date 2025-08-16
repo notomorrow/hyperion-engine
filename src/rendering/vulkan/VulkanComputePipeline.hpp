@@ -10,8 +10,11 @@
 
 namespace hyperion {
 
+HYP_CLASS(NoScriptBindings)
 class VulkanComputePipeline final : public ComputePipelineBase, public VulkanPipelineBase
 {
+    HYP_OBJECT_BODY(VulkanComputePipeline);
+
 public:
     VulkanComputePipeline();
     VulkanComputePipeline(const VulkanShaderRef& shader, const VulkanDescriptorTableRef& descriptorTable);
@@ -23,7 +26,6 @@ public:
     }
 
     virtual RendererResult Create() override;
-    virtual RendererResult Destroy() override;
 
     virtual void Bind(CommandBufferBase* commandBuffer) override;
 

@@ -21,8 +21,11 @@ namespace hyperion {
 
 struct VulkanDeviceQueue;
 
+HYP_CLASS(NoScriptBindings)
 class VulkanSwapchain final : public SwapchainBase
 {
+    HYP_OBJECT_BODY(VulkanSwapchain);
+
 public:
     friend class VulkanInstance;
 
@@ -57,7 +60,6 @@ public:
     RendererResult PresentFrame(VulkanDeviceQueue* queue) const;
 
     virtual RendererResult Create() override;
-    virtual RendererResult Destroy() override;
 
 private:
     RendererResult ChooseSurfaceFormat();

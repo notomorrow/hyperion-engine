@@ -5,19 +5,23 @@
 #include <rendering/RenderDevice.hpp>
 #include <rendering/RenderGpuBuffer.hpp>
 
+#include <core/object/HypObject.hpp>
+
 #include <core/Defines.hpp>
 
 namespace hyperion {
 
-class CommandBufferBase : public RenderObject<CommandBufferBase>
+HYP_CLASS(Abstract, NoScriptBindings)
+class CommandBufferBase : public HypObjectBase
 {
+    HYP_OBJECT_BODY(CommandBufferBase);
+
 public:
     virtual ~CommandBufferBase() override = default;
 
     virtual bool IsCreated() const = 0;
 
     virtual RendererResult Create() = 0;
-    virtual RendererResult Destroy() = 0;
 
     virtual void BindVertexBuffer(const GpuBufferBase* buffer) = 0;
     virtual void BindIndexBuffer(const GpuBufferBase* buffer, GpuElemType elemType = GET_UNSIGNED_INT) = 0;

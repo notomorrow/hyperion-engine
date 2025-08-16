@@ -232,12 +232,12 @@ bool DescriptorSetBase::HasElement(WeakName name) const
 
 void DescriptorSetBase::SetElement(WeakName name, uint32 index, const GpuBufferRef& ref)
 {
-    SetElement<GpuBufferRef>(name, index, ref);
+    SetElementT<GpuBufferBase>(name, index, ref);
 }
 
 void DescriptorSetBase::SetElement(WeakName name, uint32 index, uint32 bufferSize, const GpuBufferRef& ref)
 {
-    SetElement<GpuBufferRef>(name, index, ref);
+    SetElementT<GpuBufferBase>(name, index, ref);
 }
 
 void DescriptorSetBase::SetElement(WeakName name, const GpuBufferRef& ref)
@@ -247,7 +247,7 @@ void DescriptorSetBase::SetElement(WeakName name, const GpuBufferRef& ref)
 
 void DescriptorSetBase::SetElement(WeakName name, uint32 index, const GpuImageViewRef& ref)
 {
-    SetElement<GpuImageViewRef>(name, index, ref);
+    SetElementT<GpuImageViewBase>(name, index, ref);
 }
 
 void DescriptorSetBase::SetElement(WeakName name, const GpuImageViewRef& ref)
@@ -257,7 +257,7 @@ void DescriptorSetBase::SetElement(WeakName name, const GpuImageViewRef& ref)
 
 void DescriptorSetBase::SetElement(WeakName name, uint32 index, const SamplerRef& ref)
 {
-    SetElement<SamplerRef>(name, index, ref);
+    SetElementT<SamplerBase>(name, index, ref);
 }
 
 void DescriptorSetBase::SetElement(WeakName name, const SamplerRef& ref)
@@ -267,7 +267,7 @@ void DescriptorSetBase::SetElement(WeakName name, const SamplerRef& ref)
 
 void DescriptorSetBase::SetElement(WeakName name, uint32 index, const TLASRef& ref)
 {
-    SetElement<TLASRef>(name, index, ref);
+    SetElementT<TLASBase>(name, index, ref);
 }
 
 void DescriptorSetBase::SetElement(WeakName name, const TLASRef& ref)

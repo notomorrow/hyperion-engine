@@ -368,8 +368,7 @@ void Texture::Readback(ByteBuffer& outByteBuffer)
 
     outByteBuffer.SetSize(gpuBuffer->Size());
     gpuBuffer->Read(outByteBuffer.Size(), outByteBuffer.Data());
-
-    gpuBuffer->Destroy();
+    gpuBuffer.Reset();
 }
 
 void Texture::EnqueueReadback(Proc<void(ByteBuffer&& byteBuffer)>&& callback)

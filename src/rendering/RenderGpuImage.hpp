@@ -18,10 +18,23 @@ namespace hyperion {
 
 enum ShaderModuleType : uint32;
 
-class GpuImageBase : public RenderObject<GpuImageBase>
+HYP_CLASS(Abstract, NoScriptBindings)
+class GpuImageBase : public HypObjectBase
 {
+    HYP_OBJECT_BODY(GpuImageBase);
+
 public:
     virtual ~GpuImageBase() override = default;
+
+    Name GetDebugName() const
+    {
+        return m_debugName;
+    }
+    
+    virtual void SetDebugName(Name name)
+    {
+        m_debugName = name;
+    }
 
     HYP_FORCE_INLINE const TextureDesc& GetTextureDesc() const
     {
@@ -106,7 +119,6 @@ public:
 
     virtual RendererResult Create() = 0;
     virtual RendererResult Create(ResourceState initialState) = 0;
-    virtual RendererResult Destroy() = 0;
 
     virtual RendererResult Resize(const Vec3u& extent) = 0;
 
@@ -175,6 +187,8 @@ protected:
 
     TextureDesc m_textureDesc;
     mutable ResourceState m_resourceState;
+
+    Name m_debugName;
 };
 
 } // namespace hyperion

@@ -19,13 +19,15 @@
 
 namespace hyperion {
 
-class FrameBase : public RenderObject<FrameBase>
+HYP_CLASS(Abstract, NoScriptBindings)
+class FrameBase : public HypObjectBase
 {
+    HYP_OBJECT_BODY(FrameBase);
+
 public:
     virtual ~FrameBase() override = default;
 
     virtual RendererResult Create() = 0;
-    virtual RendererResult Destroy() = 0;
 
     virtual RendererResult ResetFrameState() = 0;
 

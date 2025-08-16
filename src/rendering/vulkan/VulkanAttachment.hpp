@@ -13,8 +13,12 @@
 #include <vulkan/vulkan.h>
 
 namespace hyperion {
+
+HYP_CLASS(NoScriptBindings)
 class VulkanAttachment final : public AttachmentBase
 {
+    HYP_OBJECT_BODY(VulkanAttachment);
+
 public:
     VulkanAttachment(
         const VulkanGpuImageRef& image,
@@ -36,7 +40,6 @@ public:
     virtual bool IsCreated() const override;
 
     virtual RendererResult Create() override;
-    virtual RendererResult Destroy() override;
 
 private:
     RenderPassStage m_stage;

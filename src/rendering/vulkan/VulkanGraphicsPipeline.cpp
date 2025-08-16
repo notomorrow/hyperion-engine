@@ -118,13 +118,7 @@ VulkanGraphicsPipeline::VulkanGraphicsPipeline(const VulkanShaderRef& shader, co
 
 VulkanGraphicsPipeline::~VulkanGraphicsPipeline()
 {
-    HYP_GFX_ASSERT(
-        !IsCreated(),
-        "Graphics Pipeline %p (%s) was not properly disposed before the destructor was hit. SafeDelete() call is probably missing somewhere.",
-        this, *GetDebugName());
-
-    HYP_GFX_ASSERT(m_handle == VK_NULL_HANDLE, "Expected pipeline to have been destroyed");
-    HYP_GFX_ASSERT(m_layout == VK_NULL_HANDLE, "Expected layout to have been destroyed");
+    SafeDelete(std::move(m_renderPass));
 }
 
 void VulkanGraphicsPipeline::Bind(CommandBufferBase* cmd)
@@ -436,13 +430,6 @@ RendererResult VulkanGraphicsPipeline::Rebuild()
 #endif
 
     HYPERION_RETURN_OK;
-}
-
-RendererResult VulkanGraphicsPipeline::Destroy()
-{
-    SafeDelete(std::move(m_renderPass));
-
-    return VulkanPipelineBase::Destroy();
 }
 
 void VulkanGraphicsPipeline::SetRenderPass(const VulkanRenderPassRef& renderPass)

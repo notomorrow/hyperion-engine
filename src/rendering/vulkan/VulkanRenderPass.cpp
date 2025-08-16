@@ -37,7 +37,10 @@ VulkanRenderPass::VulkanRenderPass(RenderPassStage stage, RenderPassMode mode, u
 
 VulkanRenderPass::~VulkanRenderPass()
 {
-    HYP_GFX_ASSERT(m_handle == VK_NULL_HANDLE, "handle should have been destroyed");
+    vkDestroyRenderPass(GetRenderBackend()->GetDevice()->GetDevice(), m_handle, nullptr);
+    m_handle = VK_NULL_HANDLE;
+
+    SafeDelete(std::move(m_renderPassAttachments));
 }
 
 void VulkanRenderPass::CreateDependencies()
@@ -193,18 +196,6 @@ RendererResult VulkanRenderPass::Create()
     VULKAN_CHECK(vkCreateRenderPass(GetRenderBackend()->GetDevice()->GetDevice(), &renderPassInfo, nullptr, &m_handle));
 
     HYPERION_RETURN_OK;
-}
-
-RendererResult VulkanRenderPass::Destroy()
-{
-    RendererResult result;
-
-    vkDestroyRenderPass(GetRenderBackend()->GetDevice()->GetDevice(), m_handle, nullptr);
-    m_handle = VK_NULL_HANDLE;
-
-    SafeDelete(std::move(m_renderPassAttachments));
-
-    return result;
 }
 
 void VulkanRenderPass::Begin(VulkanCommandBuffer* cmd, VulkanFramebuffer* framebuffer)

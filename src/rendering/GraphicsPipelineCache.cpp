@@ -136,7 +136,11 @@ GraphicsPipelineRef GraphicsPipelineCache::GetOrCreate(
         table = g_renderBackend->MakeDescriptorTable(descriptorTableDecl);
         if (!table.IsValid())
         {
+#ifdef HYP_DEBUG_MODE
             HYP_LOG(Rendering, Error, "Failed to create descriptor table for shader: {}", shader->GetDebugName());
+#else
+            HYP_LOG(Rendering, Error, "Failed to create descriptor table for shader");
+#endif
 
             return nullptr;
         }
@@ -148,10 +152,12 @@ GraphicsPipelineRef GraphicsPipelineCache::GetOrCreate(
         {
             Mutex::Guard guard(m_mutex);
 
+#ifdef HYP_DEBUG_MODE
             HYP_LOG(Rendering, Debug, "Adding graphics pipeline {} (debug name: {}) to cache with hash: {}", (void*)graphicsPipeline.Get(), graphicsPipeline->GetDebugName(), attributes.GetHashCode().Value());
+#endif
 
             (*m_cachedPipelines)[attributes].PushBack(graphicsPipeline);
-            m_cachedPipelines->reverseMap.Set(graphicsPipeline.header->index, attributes);
+            m_cachedPipelines->reverseMap.Set(graphicsPipeline.Id().ToIndex(), attributes);
         });
 
     graphicsPipeline = g_renderBackend->MakeGraphicsPipeline(
@@ -299,21 +305,21 @@ int GraphicsPipelineCache::RunCleanupCycle(int maxIter)
 
             for (auto graphicsPipelineIt = it->second.Begin(); graphicsPipelineIt != it->second.End() && numCycles < maxIter; ++numCycles)
             {
-                AssertDebug(graphicsPipelineIt->header != nullptr);
-
                 GraphicsPipelineRef& graphicsPipeline = (*graphicsPipelineIt);
 
-                if (graphicsPipeline->GetHeader_Internal()->index == uint32(graphicsPipelineIdx))
+                if (graphicsPipeline->Id().ToIndex() == uint32(graphicsPipelineIdx))
                 {
                     // signed as graphics pipelines that haven't been used yet have -1 as their lastFrame value
                     const int64 frameDiff = int64(currFrame) - int64(graphicsPipeline->lastFrame);
 
                     if (frameDiff >= 10)
                     {
+#ifdef HYP_DEBUG_MODE
                         HYP_LOG(Rendering, Debug, "Removing graphics pipeline from cache for attributes {} (debug name: {}) as it has not been used in {} frames",
                             renderableAttributes.GetHashCode().Value(),
                             graphicsPipeline->GetDebugName(),
                             frameDiff);
+#endif
 
                         SafeDelete(std::move(graphicsPipeline));
 

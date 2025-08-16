@@ -13,15 +13,17 @@ namespace hyperion {
 
 struct VulkanDeviceQueue;
 
+HYP_CLASS(NoScriptBindings)
 class VulkanFrame final : public FrameBase
 {
+    HYP_OBJECT_BODY(VulkanFrame);
+
 public:
     explicit VulkanFrame();
     explicit VulkanFrame(uint32 frameIndex);
     virtual ~VulkanFrame() override;
 
     virtual RendererResult Create() override;
-    virtual RendererResult Destroy() override;
 
     virtual RendererResult ResetFrameState() override;
 

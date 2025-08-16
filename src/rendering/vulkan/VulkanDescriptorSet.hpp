@@ -19,7 +19,6 @@
 namespace hyperion {
 
 class VulkanDescriptorSetLayoutWrapper;
-using VulkanDescriptorSetLayoutWrapperRef = RenderObjectHandle_Strong<VulkanDescriptorSetLayoutWrapper>;
 
 struct VulkanDescriptorElementInfo
 {
@@ -35,8 +34,11 @@ struct VulkanDescriptorElementInfo
     };
 };
 
+HYP_CLASS(NoScriptBindings)
 class VulkanDescriptorSet final : public DescriptorSetBase
 {
+    HYP_OBJECT_BODY(VulkanDescriptorSet);
+
     using ElementCache = HashMap<Name, Array<VulkanDescriptorElementInfo>>;
 
 public:
@@ -56,7 +58,6 @@ public:
     virtual bool IsCreated() const override;
 
     virtual RendererResult Create() override;
-    virtual RendererResult Destroy() override;
 
     virtual void UpdateDirtyState(bool* outIsDirty = nullptr) override;
     virtual void Update(bool force = false) override;
@@ -64,7 +65,7 @@ public:
     virtual DescriptorSetRef Clone() const override;
 
 #ifdef HYP_DEBUG_MODE
-    virtual void SetDebugName(Name name) override;
+    void SetDebugName(Name name) override;
 #endif
 
 protected:
@@ -77,12 +78,15 @@ protected:
 
     VkDescriptorSet m_handle;
     ElementCache m_cachedElements;
-    VulkanDescriptorSetLayoutWrapperRef m_vkLayoutWrapper;
+    RC<VulkanDescriptorSetLayoutWrapper> m_vkLayoutWrapper;
     Array<VulkanDescriptorElementInfo> m_vkDescriptorElementInfos;
 };
 
+HYP_CLASS()
 class VulkanDescriptorTable final : public DescriptorTableBase
 {
+    HYP_OBJECT_BODY(VulkanDescriptorTable);
+
 public:
     VulkanDescriptorTable(const DescriptorTableDeclaration* decl);
     virtual ~VulkanDescriptorTable() override = default;

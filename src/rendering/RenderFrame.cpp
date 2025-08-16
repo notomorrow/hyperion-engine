@@ -53,20 +53,17 @@ void FrameBase::UpdateUsedDescriptorSets()
                     continue;
                 }
 
-                HYP_FAIL("Descriptor set \"%s\" (debug name: %s, index: %u) already in use by frame \"%s\" (index: %u)!",
+                HYP_FAIL("Descriptor set \"%s\" (debug name: %s, index: %u) already in use",
                     descriptorSet->GetLayout().GetName().LookupString(),
                     descriptorSet->GetDebugName().LookupString(),
-                    descriptorSet->GetHeader_Internal()->index,
-                    it->header->debugName.LookupString(),
-                    it->header->index);
+                    descriptorSet->GetHeader_Internal()->index);
             }
         }
 #endif
 
-        HYP_LOG(Rendering, Debug, "Updating descriptor set {} ({}) for frame '{}' (index: {})",
+        HYP_LOG(Rendering, Debug, "Updating descriptor set {} ({}) (index: {})",
             (void*)descriptorSet,
             descriptorSet->GetLayout().GetName().LookupString(),
-            GetDebugName().LookupString(),
             m_frameIndex);
 
         descriptorSet->Update();

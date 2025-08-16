@@ -46,27 +46,6 @@ protected:
     Handle<T> handle;
 };
 
-template <class T>
-class SafeDeleterEntry<RenderObjectHandle_Strong<T>> final : public SafeDeleterEntryBase
-{
-public:
-    SafeDeleterEntry(RenderObjectHandle_Strong<T>&& handle)
-        : handle(std::move(handle))
-    {
-    }
-
-    ~SafeDeleterEntry()
-    {
-        if (handle && handle.GetRefCount() == 1) // only destroy if this is the last reference
-        {
-            HYP_GFX_ASSERT(handle->Destroy());
-        }
-    }
-
-protected:
-    RenderObjectHandle_Strong<T> handle;
-};
-
 class HYP_API SafeDeleter
 {
     static constexpr uint32 g_numMultiBuffers = g_tripleBuffer ? 3 : 2;

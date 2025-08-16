@@ -65,7 +65,18 @@ VulkanSwapchain::VulkanSwapchain()
 
 VulkanSwapchain::~VulkanSwapchain()
 {
-    HYP_GFX_ASSERT(m_handle == VK_NULL_HANDLE);
+    if (m_handle == VK_NULL_HANDLE)
+    {
+        return;
+    }
+
+    SafeDelete(std::move(m_images));
+    SafeDelete(std::move(m_framebuffers));
+    SafeDelete(std::move(m_frames));
+    SafeDelete(std::move(m_commandBuffers));
+
+    vkDestroySwapchainKHR(GetRenderBackend()->GetDevice()->GetDevice(), m_handle, nullptr);
+    m_handle = VK_NULL_HANDLE;
 }
 
 bool VulkanSwapchain::IsCreated() const
@@ -227,7 +238,7 @@ RendererResult VulkanSwapchain::Create()
             HYP_GFX_CHECK(HYP_MAKE_ERROR(RendererError, "Image resource state is not PRESENT!"));
         }
 
-        VulkanFramebufferRef framebuffer = VULKAN_CAST(m_framebuffers.PushBack(MakeRenderObject<VulkanFramebuffer>(m_extent, RenderPassStage::PRESENT)));
+        VulkanFramebufferRef framebuffer = VULKAN_CAST(m_framebuffers.PushBack(CreateObject<VulkanFramebuffer>(m_extent, RenderPassStage::PRESENT)));
         framebuffer->AddAttachment(0, VulkanGpuImageRef(image), LoadOperation::CLEAR, StoreOperation::STORE);
         HYP_GFX_CHECK(framebuffer->Create());
     }
@@ -239,8 +250,8 @@ RendererResult VulkanSwapchain::Create()
         VkCommandPool pool = queue->commandPools[0];
         HYP_GFX_ASSERT(pool != VK_NULL_HANDLE);
 
-        m_commandBuffers[i] = MakeRenderObject<VulkanCommandBuffer>(VK_COMMAND_BUFFER_LEVEL_PRIMARY);
-        m_frames[i] = MakeRenderObject<VulkanFrame>(i);
+        m_commandBuffers[i] = CreateObject<VulkanCommandBuffer>(VK_COMMAND_BUFFER_LEVEL_PRIMARY);
+        m_frames[i] = CreateObject<VulkanFrame>(i);
 
         VulkanCommandBufferRef& commandBuffer = m_commandBuffers[i];
         HYP_GFX_CHECK(commandBuffer->Create(pool));
@@ -248,24 +259,6 @@ RendererResult VulkanSwapchain::Create()
         VulkanFrameRef& frame = m_frames[i];
         HYP_GFX_CHECK(frame->Create());
     }
-
-    HYPERION_RETURN_OK;
-}
-
-RendererResult VulkanSwapchain::Destroy()
-{
-    if (m_handle == VK_NULL_HANDLE)
-    {
-        return HYP_MAKE_ERROR(RendererError, "Swapchain already destroyed");
-    }
-
-    SafeDelete(std::move(m_images));
-    SafeDelete(std::move(m_framebuffers));
-    SafeDelete(std::move(m_frames));
-    SafeDelete(std::move(m_commandBuffers));
-
-    vkDestroySwapchainKHR(GetRenderBackend()->GetDevice()->GetDevice(), m_handle, nullptr);
-    m_handle = VK_NULL_HANDLE;
 
     HYPERION_RETURN_OK;
 }
@@ -357,7 +350,7 @@ RendererResult VulkanSwapchain::RetrieveImageHandles()
             Vec3u { m_extent.x, m_extent.y, 1 }
         };
 
-        VulkanGpuImageRef image = MakeRenderObject<VulkanGpuImage>(desc);
+        VulkanGpuImageRef image = CreateObject<VulkanGpuImage>(desc);
 
         image->m_handle = vkImages[i];
         image->m_isHandleOwned = false;

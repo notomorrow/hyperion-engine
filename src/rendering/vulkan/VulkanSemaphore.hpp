@@ -37,7 +37,6 @@ public:
     }
 
     RendererResult Create();
-    RendererResult Destroy();
 
 private:
     VkSemaphore m_semaphore;
@@ -238,7 +237,6 @@ public:
     }
 
     RendererResult Create();
-    RendererResult Destroy();
 
 private:
     static std::set<VulkanSemaphoreRef*> s_refs;

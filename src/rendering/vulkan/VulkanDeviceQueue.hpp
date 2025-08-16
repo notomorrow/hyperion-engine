@@ -8,6 +8,8 @@
 #include <vulkan/vulkan.h>
 
 namespace hyperion {
+
+HYP_ENUM()
 enum class VulkanDeviceQueueType : uint8
 {
     GRAPHICS,

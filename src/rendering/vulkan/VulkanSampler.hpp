@@ -7,8 +7,12 @@
 #include <vulkan/vulkan.h>
 
 namespace hyperion {
+
+HYP_CLASS(NoScriptBindings)
 class VulkanSampler final : public SamplerBase
 {
+    HYP_OBJECT_BODY(VulkanSampler);
+
 public:
     VulkanSampler(
         TextureFilterMode minFilterMode = TFM_NEAREST,
@@ -25,7 +29,10 @@ public:
     virtual bool IsCreated() const override;
 
     virtual RendererResult Create() override;
-    virtual RendererResult Destroy() override;
+
+#ifdef HYP_DEBUG_MODE
+    void SetDebugName(Name name) override;
+#endif
 
 private:
     VkSampler m_handle;

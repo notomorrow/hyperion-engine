@@ -104,28 +104,28 @@ private:
 
 #pragma region Vulkan struct wrappers
 
-class VulkanDescriptorSetLayoutWrapper final : public RenderObject<VulkanDescriptorSetLayoutWrapper>
+class VulkanDescriptorSetLayoutWrapper final
 {
     VkDescriptorSetLayout m_handle;
     VulkanDevice* m_device;
-    RendererResult (*m_deleteFn)(VulkanDevice* device, VulkanDescriptorSetLayoutWrapper*);
 
 public:
-    VulkanDescriptorSetLayoutWrapper(VulkanDevice* device, RendererResult (*deleteFn)(VulkanDevice*, VulkanDescriptorSetLayoutWrapper*))
-        : RenderObject<VulkanDescriptorSetLayoutWrapper>(),
-          m_handle(VK_NULL_HANDLE),
-          m_device(device),
-          m_deleteFn(deleteFn)
+    VulkanDescriptorSetLayoutWrapper(VulkanDevice* device)
+        : m_handle(VK_NULL_HANDLE),
+          m_device(device)
     {
-        HYP_GFX_ASSERT(m_deleteFn != nullptr);
     }
 
-    virtual ~VulkanDescriptorSetLayoutWrapper() override
+    ~VulkanDescriptorSetLayoutWrapper()
     {
         if (m_handle != VK_NULL_HANDLE)
         {
-            HYP_GFX_ASSERT(m_deleteFn != nullptr);
-            HYP_GFX_ASSERT(m_deleteFn(m_device, this));
+            vkDestroyDescriptorSetLayout(
+                m_device->GetDevice(),
+                m_handle,
+                nullptr);
+
+            m_handle = VK_NULL_HANDLE;
         }
     }
 
@@ -199,20 +199,6 @@ public:
 
         return RendererResult {};
     }
-
-    RendererResult Destroy(VulkanDevice* device)
-    {
-        HYP_GFX_ASSERT(m_handle != VK_NULL_HANDLE);
-
-        vkDestroyDescriptorSetLayout(
-            device->GetDevice(),
-            m_handle,
-            nullptr);
-
-        m_handle = VK_NULL_HANDLE;
-
-        return RendererResult {};
-    }
 };
 
 #pragma endregion Vulkan struct wrappers
@@ -273,14 +259,14 @@ public:
     RendererResult Create(VulkanDevice* device);
     RendererResult Destroy(VulkanDevice* device);
 
-    RendererResult CreateDescriptorSet(VulkanDevice* device, const VulkanDescriptorSetLayoutWrapperRef& layout, VkDescriptorSet& outVkDescriptorSet);
+    RendererResult CreateDescriptorSet(VulkanDevice* device, const RC<VulkanDescriptorSetLayoutWrapper>& layout, VkDescriptorSet& outVkDescriptorSet);
     RendererResult DestroyDescriptorSet(VulkanDevice* device, VkDescriptorSet vkDescriptorSet);
 
-    VulkanDescriptorSetLayoutWrapperRef GetOrCreateVkDescriptorSetLayout(VulkanDevice* device, const DescriptorSetLayout& layout);
+    RC<VulkanDescriptorSetLayoutWrapper> GetOrCreateVkDescriptorSetLayout(VulkanDevice* device, const DescriptorSetLayout& layout);
 
 private:
     Mutex m_mutex;
-    HashMap<HashCode, VulkanDescriptorSetLayoutWrapperWeakRef> m_vkDescriptorSetLayouts;
+    HashMap<HashCode, Weak<VulkanDescriptorSetLayoutWrapper>> m_vkDescriptorSetLayouts;
 
     VkDescriptorPool m_vkDescriptorPool;
 };
@@ -327,16 +313,6 @@ RendererResult VulkanDescriptorSetManager::Destroy(VulkanDevice* device)
 {
     RendererResult result = RendererResult {};
 
-    for (auto& it : m_vkDescriptorSetLayouts)
-    {
-        if (auto rc = it.second.Lock())
-        {
-            HYPERION_PASS_ERRORS(
-                rc->Destroy(device),
-                result);
-        }
-    }
-
     m_vkDescriptorSetLayouts.Clear();
 
     if (m_vkDescriptorPool != VK_NULL_HANDLE)
@@ -352,7 +328,7 @@ RendererResult VulkanDescriptorSetManager::Destroy(VulkanDevice* device)
     return result;
 }
 
-RendererResult VulkanDescriptorSetManager::CreateDescriptorSet(VulkanDevice* device, const VulkanDescriptorSetLayoutWrapperRef& layout, VkDescriptorSet& outVkDescriptorSet)
+RendererResult VulkanDescriptorSetManager::CreateDescriptorSet(VulkanDevice* device, const RC<VulkanDescriptorSetLayoutWrapper>& layout, VkDescriptorSet& outVkDescriptorSet)
 {
     HYP_GFX_ASSERT(m_vkDescriptorPool != VK_NULL_HANDLE);
 
@@ -394,11 +370,11 @@ RendererResult VulkanDescriptorSetManager::DestroyDescriptorSet(VulkanDevice* de
     return RendererResult {};
 }
 
-VulkanDescriptorSetLayoutWrapperRef VulkanDescriptorSetManager::GetOrCreateVkDescriptorSetLayout(VulkanDevice* device, const DescriptorSetLayout& layout)
+RC<VulkanDescriptorSetLayoutWrapper> VulkanDescriptorSetManager::GetOrCreateVkDescriptorSetLayout(VulkanDevice* device, const DescriptorSetLayout& layout)
 {
     const HashCode hashCode = layout.GetHashCode();
 
-    VulkanDescriptorSetLayoutWrapperRef vkDescriptorSetLayout;
+    RC<VulkanDescriptorSetLayoutWrapper> vkDescriptorSetLayout;
 
     Mutex::Guard guard(m_mutex);
 
@@ -414,10 +390,7 @@ VulkanDescriptorSetLayoutWrapperRef VulkanDescriptorSetManager::GetOrCreateVkDes
         return vkDescriptorSetLayout;
     }
 
-    vkDescriptorSetLayout = MakeRenderObject<VulkanDescriptorSetLayoutWrapper>(device, [](VulkanDevice* device, VulkanDescriptorSetLayoutWrapper* wrapper)
-        {
-            return wrapper->Destroy(device);
-        });
+    vkDescriptorSetLayout = MakeRefCountedPtr<VulkanDescriptorSetLayoutWrapper>(device);
 
     HYP_GFX_ASSERT(vkDescriptorSetLayout->Create(device, layout));
 
@@ -466,7 +439,7 @@ public:
         if (it == textureImageViews.End())
         {
 
-            VulkanGpuImageViewRef imageView = MakeRenderObject<VulkanGpuImageView>(
+            VulkanGpuImageViewRef imageView = CreateObject<VulkanGpuImageView>(
                 VulkanGpuImageRef(texture->GetGpuImage()),
                 subResource.baseMipLevel,
                 subResource.numLevels,
@@ -644,7 +617,6 @@ RendererResult VulkanRenderBackend::Destroy()
     m_asyncCompute.Reset();
 
     HYP_GFX_CHECK(m_instance->GetDevice()->Wait());
-    HYP_GFX_CHECK(m_instance->Destroy());
 
     delete m_instance;
     m_instance = nullptr;
@@ -724,7 +696,7 @@ DescriptorSetRef VulkanRenderBackend::MakeDescriptorSet(const DescriptorSetLayou
     newLayout.SetIsTemplate(false);
     newLayout.SetIsReference(false);
 
-    DescriptorSetRef descriptorSet = MakeRenderObject<VulkanDescriptorSet>(newLayout);
+    DescriptorSetRef descriptorSet = CreateObject<VulkanDescriptorSet>(newLayout);
     descriptorSet->SetDebugName(layout.GetName());
 
     return descriptorSet;
@@ -732,7 +704,7 @@ DescriptorSetRef VulkanRenderBackend::MakeDescriptorSet(const DescriptorSetLayou
 
 DescriptorTableRef VulkanRenderBackend::MakeDescriptorTable(const DescriptorTableDeclaration* decl)
 {
-    return MakeRenderObject<VulkanDescriptorTable>(decl);
+    return CreateObject<VulkanDescriptorTable>(decl);
 }
 
 GraphicsPipelineRef VulkanRenderBackend::MakeGraphicsPipeline(
@@ -761,11 +733,11 @@ GraphicsPipelineRef VulkanRenderBackend::MakeGraphicsPipeline(
 
     if (descriptorTable.IsValid())
     {
-        graphicsPipeline = MakeRenderObject<VulkanGraphicsPipeline>(VulkanShaderRef::unset, VulkanDescriptorTableRef(descriptorTable));
+        graphicsPipeline = CreateObject<VulkanGraphicsPipeline>(VulkanShaderRef::empty, VulkanDescriptorTableRef(descriptorTable));
     }
     else
     {
-        graphicsPipeline = MakeRenderObject<VulkanGraphicsPipeline>();
+        graphicsPipeline = CreateObject<VulkanGraphicsPipeline>();
     }
 
     if (shader.IsValid())
@@ -797,44 +769,44 @@ ComputePipelineRef VulkanRenderBackend::MakeComputePipeline(
     const ShaderRef& shader,
     const DescriptorTableRef& descriptorTable)
 {
-    return MakeRenderObject<VulkanComputePipeline>(VulkanShaderRef(shader), VulkanDescriptorTableRef(descriptorTable));
+    return CreateObject<VulkanComputePipeline>(VulkanShaderRef(shader), VulkanDescriptorTableRef(descriptorTable));
 }
 
 RaytracingPipelineRef VulkanRenderBackend::MakeRaytracingPipeline(
     const ShaderRef& shader,
     const DescriptorTableRef& descriptorTable)
 {
-    return MakeRenderObject<VulkanRaytracingPipeline>(VulkanShaderRef(shader), VulkanDescriptorTableRef(descriptorTable));
+    return CreateObject<VulkanRaytracingPipeline>(VulkanShaderRef(shader), VulkanDescriptorTableRef(descriptorTable));
 }
 
 GpuBufferRef VulkanRenderBackend::MakeGpuBuffer(GpuBufferType bufferType, SizeType size, SizeType alignment)
 {
-    return MakeRenderObject<VulkanGpuBuffer>(bufferType, size, alignment);
+    return CreateObject<VulkanGpuBuffer>(bufferType, size, alignment);
 }
 
 GpuImageRef VulkanRenderBackend::MakeImage(const TextureDesc& textureDesc)
 {
-    return MakeRenderObject<VulkanGpuImage>(textureDesc);
+    return CreateObject<VulkanGpuImage>(textureDesc);
 }
 
 GpuImageViewRef VulkanRenderBackend::MakeImageView(const GpuImageRef& image)
 {
-    return MakeRenderObject<VulkanGpuImageView>(VulkanGpuImageRef(image));
+    return CreateObject<VulkanGpuImageView>(VulkanGpuImageRef(image));
 }
 
 GpuImageViewRef VulkanRenderBackend::MakeImageView(const GpuImageRef& image, uint32 mipIndex, uint32 numMips, uint32 faceIndex, uint32 numFaces)
 {
-    return MakeRenderObject<VulkanGpuImageView>(VulkanGpuImageRef(image), mipIndex, numMips, faceIndex, numFaces);
+    return CreateObject<VulkanGpuImageView>(VulkanGpuImageRef(image), mipIndex, numMips, faceIndex, numFaces);
 }
 
 SamplerRef VulkanRenderBackend::MakeSampler(TextureFilterMode filterModeMin, TextureFilterMode filterModeMag, TextureWrapMode wrapMode)
 {
-    return MakeRenderObject<VulkanSampler>(filterModeMin, filterModeMag, wrapMode);
+    return CreateObject<VulkanSampler>(filterModeMin, filterModeMag, wrapMode);
 }
 
 FramebufferRef VulkanRenderBackend::MakeFramebuffer(Vec2u extent, uint32 numViews)
 {
-    return MakeRenderObject<VulkanFramebuffer>(
+    return CreateObject<VulkanFramebuffer>(
         extent,
         RenderPassStage::SHADER,
         numViews);
@@ -842,7 +814,7 @@ FramebufferRef VulkanRenderBackend::MakeFramebuffer(Vec2u extent, uint32 numView
 
 FramebufferRef VulkanRenderBackend::MakeFramebuffer(Vec2u extent, RenderPassStage stage, uint32 numViews)
 {
-    return MakeRenderObject<VulkanFramebuffer>(
+    return CreateObject<VulkanFramebuffer>(
         extent,
         stage,
         numViews);
@@ -850,12 +822,12 @@ FramebufferRef VulkanRenderBackend::MakeFramebuffer(Vec2u extent, RenderPassStag
 
 FrameRef VulkanRenderBackend::MakeFrame(uint32 frameIndex)
 {
-    return MakeRenderObject<VulkanFrame>(frameIndex);
+    return CreateObject<VulkanFrame>(frameIndex);
 }
 
 ShaderRef VulkanRenderBackend::MakeShader(const RC<CompiledShader>& compiledShader)
 {
-    return MakeRenderObject<VulkanShader>(compiledShader);
+    return CreateObject<VulkanShader>(compiledShader);
 }
 
 BLASRef VulkanRenderBackend::MakeBLAS(
@@ -866,7 +838,7 @@ BLASRef VulkanRenderBackend::MakeBLAS(
     const Handle<Material>& material,
     const Matrix4& transform)
 {
-    return MakeRenderObject<VulkanBLAS>(
+    return CreateObject<VulkanBLAS>(
         VulkanGpuBufferRef(packedVerticesBuffer),
         VulkanGpuBufferRef(packedIndicesBuffer),
         numVertices,
@@ -877,14 +849,14 @@ BLASRef VulkanRenderBackend::MakeBLAS(
 
 TLASRef VulkanRenderBackend::MakeTLAS()
 {
-    return MakeRenderObject<VulkanTLAS>();
+    return CreateObject<VulkanTLAS>();
 }
 
 const GpuImageViewRef& VulkanRenderBackend::GetTextureImageView(const Handle<Texture>& texture, uint32 mipIndex, uint32 numMips, uint32 faceIndex, uint32 numFaces)
 {
     if (!texture.IsValid())
     {
-        return GpuImageViewRef::Null();
+        return GpuImageViewRef::empty;
     }
 
     ImageSubResource subResource {};
@@ -1021,7 +993,7 @@ QueryImageCapabilitiesResult VulkanRenderBackend::QueryImageCapabilities(const T
     HYP_NOT_IMPLEMENTED();
 }
 
-RendererResult VulkanRenderBackend::CreateDescriptorSet(const VulkanDescriptorSetLayoutWrapperRef& layout, VkDescriptorSet& outVkDescriptorSet)
+RendererResult VulkanRenderBackend::CreateDescriptorSet(const RC<VulkanDescriptorSetLayoutWrapper>& layout, VkDescriptorSet& outVkDescriptorSet)
 {
     return m_descriptorSetManager->CreateDescriptorSet(m_instance->GetDevice(), layout, outVkDescriptorSet);
 }
@@ -1031,7 +1003,7 @@ RendererResult VulkanRenderBackend::DestroyDescriptorSet(VkDescriptorSet vkDescr
     return m_descriptorSetManager->DestroyDescriptorSet(m_instance->GetDevice(), vkDescriptorSet);
 }
 
-RendererResult VulkanRenderBackend::GetOrCreateVkDescriptorSetLayout(const DescriptorSetLayout& layout, VulkanDescriptorSetLayoutWrapperRef& outRef)
+RendererResult VulkanRenderBackend::GetOrCreateVkDescriptorSetLayout(const DescriptorSetLayout& layout, RC<VulkanDescriptorSetLayoutWrapper>& outRef)
 {
     outRef = m_descriptorSetManager->GetOrCreateVkDescriptorSetLayout(m_instance->GetDevice(), layout);
 
