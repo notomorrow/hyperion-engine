@@ -123,8 +123,6 @@ void UIStage::SetSurfaceSize(Vec2i surfaceSize)
 
     UpdateSize(true);
     UpdatePosition(true);
-
-    SetNeedsRepaintFlag();
 }
 
 Scene* UIStage::GetScene() const
@@ -338,8 +336,6 @@ void UIStage::SetStage_Internal(UIStage* stage)
 
     m_stage = stage;
 
-    SetNeedsRepaintFlag();
-
     // Do not update children
 }
 
@@ -425,7 +421,7 @@ void UIStage::SetFocusedObject(const Handle<UIObject>& uiObject)
     {
         return;
     }
-    
+
     if (Handle<UIStage> parentStage = GetClosestParentUIObject<UIStage>())
     {
         parentStage->SetFocusedObject(uiObject);

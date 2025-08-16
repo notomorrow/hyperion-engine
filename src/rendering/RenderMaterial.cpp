@@ -138,7 +138,10 @@ FixedArray<DescriptorSetRef, g_framesInFlight> MaterialDescriptorSetManager::All
 
     for (uint32 frameIndex = 0; frameIndex < g_framesInFlight; frameIndex++)
     {
-        HYP_GFX_ASSERT(descriptorSets[frameIndex]->Create());
+        if (RendererResult res = descriptorSets[frameIndex]->Create(); res.HasError())
+        {
+            HYP_FAIL("Failed to create descriptor set! {}", res.GetError().GetMessage());
+        }
     }
 
     auto it = m_materialDescriptorSets.Find(boundIndex);
@@ -211,7 +214,10 @@ FixedArray<DescriptorSetRef, g_framesInFlight> MaterialDescriptorSetManager::All
 
     for (uint32 frameIndex = 0; frameIndex < g_framesInFlight; frameIndex++)
     {
-        HYP_GFX_ASSERT(descriptorSets[frameIndex]->Create());
+        if (RendererResult res = descriptorSets[frameIndex]->Create(); res.HasError())
+        {
+            HYP_FAIL("Failed to create descriptor set! {}", res.GetError().GetMessage());
+        }
     }
 
     auto it = m_materialDescriptorSets.Find(boundIndex);
