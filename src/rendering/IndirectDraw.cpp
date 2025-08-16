@@ -8,11 +8,12 @@
 #include <rendering/env_probe/EnvProbeRenderer.hpp>
 #include <rendering/Deferred.hpp>
 #include <rendering/RenderBackend.hpp>
-
 #include <rendering/RenderFrame.hpp>
 #include <rendering/RenderComputePipeline.hpp>
 #include <rendering/RenderGpuBuffer.hpp>
 #include <rendering/RenderHelpers.hpp>
+
+#include <rendering/util/SafeDeleter.hpp>
 
 #include <rendering/Mesh.hpp>
 
@@ -148,9 +149,9 @@ IndirectDrawState::IndirectDrawState()
 
 IndirectDrawState::~IndirectDrawState()
 {
-    SafeRelease(std::move(m_indirectBuffers));
-    SafeRelease(std::move(m_instanceBuffers));
-    SafeRelease(std::move(m_stagingBuffers));
+    SafeDelete(std::move(m_indirectBuffers));
+    SafeDelete(std::move(m_instanceBuffers));
+    SafeDelete(std::move(m_stagingBuffers));
 }
 
 void IndirectDrawState::Create()
@@ -291,7 +292,7 @@ IndirectRenderer::IndirectRenderer()
 
 IndirectRenderer::~IndirectRenderer()
 {
-    SafeRelease(std::move(m_objectVisibility));
+    SafeDelete(std::move(m_objectVisibility));
 }
 
 void IndirectRenderer::Create(IDrawCallCollectionImpl* impl)

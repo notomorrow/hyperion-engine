@@ -7,12 +7,13 @@
 #include <rendering/Deferred.hpp>
 #include <rendering/RenderEnvironment.hpp>
 #include <rendering/GraphicsPipelineCache.hpp>
-
 #include <rendering/RenderBackend.hpp>
 #include <rendering/RenderConfig.hpp>
 #include <rendering/RenderGraphicsPipeline.hpp>
 #include <rendering/RenderFrame.hpp>
 #include <rendering/RenderGpuBuffer.hpp>
+
+#include <rendering/util/SafeDeleter.hpp>
 
 #include <rendering/Mesh.hpp>
 
@@ -395,8 +396,8 @@ DebugDrawer::~DebugDrawer()
 
     m_shader.Reset();
 
-    SafeRelease(std::move(m_instanceBuffers));
-    SafeRelease(std::move(m_descriptorTable));
+    SafeDelete(std::move(m_instanceBuffers));
+    SafeDelete(std::move(m_descriptorTable));
 }
 
 void DebugDrawer::Initialize()

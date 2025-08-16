@@ -261,19 +261,17 @@ void Camera::Init()
     {
         auto initMatchWindowSize = [this]() -> TResult<>
         {
-            const Handle<AppContextBase>& appContext = g_engineDriver->GetAppContext();
-
-            if (!appContext)
+            if (!g_appContext)
             {
                 return HYP_MAKE_ERROR(Error, "No valid app context!");
             }
 
-            if (!appContext->GetMainWindow())
+            if (!g_appContext->GetMainWindow())
             {
                 return HYP_MAKE_ERROR(Error, "No main window set!");
             }
 
-            const Vec2i windowSize = MathUtil::Max(Vec2i(MathUtil::Round(Vec2f(appContext->GetMainWindow()->GetDimensions()) * m_matchWindowSizeRatio)), Vec2i::One());
+            const Vec2i windowSize = MathUtil::Max(Vec2i(MathUtil::Round(Vec2f(g_appContext->GetMainWindow()->GetDimensions()) * m_matchWindowSizeRatio)), Vec2i::One());
 
             m_width = windowSize.x;
             m_height = windowSize.y;
@@ -282,7 +280,7 @@ void Camera::Init()
 
             AddDelegateHandler(
                 NAME("HandleWindowSizeChanged"),
-                appContext->GetMainWindow()->OnWindowSizeChanged.BindThreaded([this](Vec2i windowSize)
+                g_appContext->GetMainWindow()->OnWindowSizeChanged.BindThreaded([this](Vec2i windowSize)
                     {
                         HYP_NAMED_SCOPE("Update Camera size based on window size");
 
@@ -296,8 +294,6 @@ void Camera::Init()
                         HYP_LOG(Camera, Debug, "Camera window size (change): {}", windowSize);
                     },
                     g_gameThread));
-
-            HYP_LOG(Camera, Debug, "Camera window size: {}", windowSize);
 
             return {};
         };
@@ -732,12 +728,9 @@ void Camera::UpdateMouseLocked()
     {
         if (!m_mouseLockScope)
         {
-            if (const Handle<AppContextBase>& appContext = g_engineDriver->GetAppContext())
-            {
-                m_mouseLockScope = appContext->GetInputManager()->AcquireMouseLock();
+            m_mouseLockScope = g_appContext->GetInputManager()->AcquireMouseLock();
 
-                return;
-            }
+            return;
         }
     }
     else

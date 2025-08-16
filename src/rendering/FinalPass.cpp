@@ -8,10 +8,11 @@
 #include <rendering/Deferred.hpp>
 #include <rendering/GBuffer.hpp>
 #include <rendering/RenderGlobalState.hpp>
-
 #include <rendering/RenderFrame.hpp>
 #include <rendering/RenderSwapchain.hpp>
 #include <rendering/RenderGraphicsPipeline.hpp>
+
+#include <rendering/util/SafeDeleter.hpp>
 
 #include <rendering/Mesh.hpp>
 #include <rendering/Texture.hpp>
@@ -53,7 +54,7 @@ struct RENDER_COMMAND(SetUILayerImageView)
 
     virtual RendererResult operator()() override
     {
-        SafeRelease(std::move(finalPass.m_uiLayerImageView));
+        SafeDelete(std::move(finalPass.m_uiLayerImageView));
 
         if (g_engineDriver->IsShuttingDown())
         {
@@ -110,8 +111,8 @@ FinalPass::~FinalPass()
         m_renderTextureToScreenPass.Reset();
     }
 
-    SafeRelease(std::move(m_uiLayerImageView));
-    SafeRelease(std::move(m_swapchain));
+    SafeDelete(std::move(m_uiLayerImageView));
+    SafeDelete(std::move(m_swapchain));
 }
 
 void FinalPass::SetUILayerImageView(const GpuImageViewRef& imageView)

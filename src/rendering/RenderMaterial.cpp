@@ -3,11 +3,12 @@
 #include <rendering/RenderMaterial.hpp>
 #include <rendering/RenderGlobalState.hpp>
 #include <rendering/PlaceholderData.hpp>
-
 #include <rendering/RenderBackend.hpp>
 #include <rendering/RenderObject.hpp>
 #include <rendering/RenderDescriptorSet.hpp>
 #include <rendering/RenderConfig.hpp>
+
+#include <rendering/util/SafeDeleter.hpp>
 
 #include <rendering/Material.hpp>
 #include <rendering/Texture.hpp>
@@ -34,11 +35,11 @@ MaterialDescriptorSetManager::MaterialDescriptorSetManager()
 
 MaterialDescriptorSetManager::~MaterialDescriptorSetManager()
 {
-    SafeRelease(std::move(m_fallbackMaterialDescriptorSets));
+    SafeDelete(std::move(m_fallbackMaterialDescriptorSets));
 
     for (auto& it : m_materialDescriptorSets)
     {
-        SafeRelease(std::move(it.second));
+        SafeDelete(std::move(it.second));
     }
 
     m_materialDescriptorSets.Clear();
@@ -143,7 +144,7 @@ FixedArray<DescriptorSetRef, g_framesInFlight> MaterialDescriptorSetManager::All
     auto it = m_materialDescriptorSets.Find(boundIndex);
     if (it != m_materialDescriptorSets.End())
     {
-        SafeRelease(std::move(it->second));
+        SafeDelete(std::move(it->second));
     }
 
     m_materialDescriptorSets[boundIndex] = descriptorSets;
@@ -216,7 +217,7 @@ FixedArray<DescriptorSetRef, g_framesInFlight> MaterialDescriptorSetManager::All
     auto it = m_materialDescriptorSets.Find(boundIndex);
     if (it != m_materialDescriptorSets.End())
     {
-        SafeRelease(std::move(it->second));
+        SafeDelete(std::move(it->second));
     }
 
     m_materialDescriptorSets[boundIndex] = descriptorSets;
@@ -239,7 +240,7 @@ void MaterialDescriptorSetManager::Remove(uint32 boundIndex)
     {
         for (uint32 frameIndex = 0; frameIndex < g_framesInFlight; frameIndex++)
         {
-            SafeRelease(std::move(it->second[frameIndex]));
+            SafeDelete(std::move(it->second[frameIndex]));
         }
 
         m_materialDescriptorSets.Erase(it);

@@ -10,6 +10,7 @@
 #include <rendering/RenderGpuBuffer.hpp>
 #include <rendering/RenderResult.hpp>
 #include <rendering/Texture.hpp>
+
 #include <rendering/util/SafeDeleter.hpp>
 
 #include <scene/View.hpp>
@@ -54,9 +55,9 @@ RaytracingReflections::RaytracingReflections(RaytracingReflectionsConfig&& confi
 
 RaytracingReflections::~RaytracingReflections()
 {
-    SafeRelease(std::move(m_raytracingPipeline));
+    SafeDelete(std::move(m_raytracingPipeline));
 
-    SafeRelease(std::move(m_uniformBuffers));
+    SafeDelete(std::move(m_uniformBuffers));
 
     // remove result image from global descriptor set
     SafeDelete(std::move(m_texture));

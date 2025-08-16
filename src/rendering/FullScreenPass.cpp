@@ -7,12 +7,12 @@
 #include <rendering/TemporalBlending.hpp>
 #include <rendering/GraphicsPipelineCache.hpp>
 #include <rendering/RenderGlobalState.hpp>
-
 #include <rendering/RenderBackend.hpp>
-#include <rendering/RenderSwapchain.hpp> // temp
 #include <rendering/RenderFrame.hpp>
 #include <rendering/RenderFramebuffer.hpp>
 #include <rendering/RenderGraphicsPipeline.hpp>
+
+#include <rendering/util/SafeDeleter.hpp>
 
 #include <rendering/Mesh.hpp>
 #include <rendering/Texture.hpp>
@@ -148,8 +148,8 @@ FullScreenPass::~FullScreenPass()
 {
     m_fullScreenQuad.Reset();
 
-    SafeRelease(std::move(m_framebuffer));
-    SafeRelease(std::move(m_graphicsPipeline));
+    SafeDelete(std::move(m_framebuffer));
+    SafeDelete(std::move(m_graphicsPipeline));
 }
 
 GpuImageViewRef FullScreenPass::GetFinalImageView() const
@@ -268,8 +268,8 @@ void FullScreenPass::Resize_Internal(Vec2u newSize)
         return;
     }
 
-    SafeRelease(std::move(m_graphicsPipeline));
-    SafeRelease(std::move(m_framebuffer));
+    SafeDelete(std::move(m_graphicsPipeline));
+    SafeDelete(std::move(m_framebuffer));
 
     m_temporalBlending.Reset();
 

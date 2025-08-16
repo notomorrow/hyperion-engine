@@ -6,6 +6,8 @@
 #include <rendering/vulkan/VulkanRenderBackend.hpp>
 #include <rendering/vulkan/VulkanFeatures.hpp>
 
+#include <rendering/util/SafeDeleter.hpp>
+
 #include <core/debug/Debug.hpp>
 
 #include <core/math/MathUtil.hpp>
@@ -150,8 +152,8 @@ RendererResult VulkanRaytracingPipeline::Create()
 
 RendererResult VulkanRaytracingPipeline::Destroy()
 {
-    SafeRelease(std::move(m_shader));
-    SafeRelease(std::move(m_descriptorTable));
+    SafeDelete(std::move(m_shader));
+    SafeDelete(std::move(m_descriptorTable));
 
     RendererResult result;
 

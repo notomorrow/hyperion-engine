@@ -3,9 +3,10 @@
 #include <rendering/GBuffer.hpp>
 #include <rendering/RenderGroup.hpp>
 #include <rendering/Deferred.hpp>
-
 #include <rendering/RenderBackend.hpp>
 #include <rendering/RenderSwapchain.hpp>
+
+#include <rendering/util/SafeDeleter.hpp>
 
 #include <system/App.hpp>
 #include <system/AppContext.hpp>
@@ -92,7 +93,7 @@ GBuffer::~GBuffer()
         it.SetFramebuffer(nullptr);
     }
 
-    SafeRelease(std::move(m_framebuffers));
+    SafeDelete(std::move(m_framebuffers));
 }
 
 void GBuffer::Create()
@@ -132,7 +133,7 @@ void GBuffer::Resize(Vec2u extent)
         it.SetFramebuffer(nullptr);
     }
 
-    SafeRelease(std::move(m_framebuffers));
+    SafeDelete(std::move(m_framebuffers));
 
     CreateBucketFramebuffers();
 
@@ -150,7 +151,7 @@ void GBuffer::Resize(Vec2u extent)
 void GBuffer::CreateBucketFramebuffers()
 {
     HYP_SCOPE;
-    
+
     m_framebuffers.Clear();
 
     for (GBufferTarget& it : m_buckets)

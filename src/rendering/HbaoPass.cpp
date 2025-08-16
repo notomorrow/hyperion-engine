@@ -6,12 +6,12 @@
 #include <rendering/Deferred.hpp>
 #include <rendering/GraphicsPipelineCache.hpp>
 #include <rendering/RenderGlobalState.hpp>
-
 #include <rendering/RenderObject.hpp>
 #include <rendering/RenderFrame.hpp>
 #include <rendering/RenderGraphicsPipeline.hpp>
-
 #include <rendering/Mesh.hpp>
+
+#include <rendering/util/SafeDeleter.hpp>
 
 #include <scene/View.hpp>
 
@@ -148,7 +148,7 @@ void HBAO::Resize_Internal(Vec2u newSize)
 {
     HYP_SCOPE;
 
-    SafeRelease(std::move(m_uniformBuffer));
+    SafeDelete(std::move(m_uniformBuffer));
 
     FullScreenPass::Resize_Internal(newSize);
 }

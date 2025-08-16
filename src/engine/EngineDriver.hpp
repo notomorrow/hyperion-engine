@@ -20,13 +20,6 @@
 #include <rendering/shader_compiler/ShaderCompiler.hpp>
 
 namespace hyperion {
-
-namespace sys {
-class AppContextBase;
-} // namespace sys
-
-using sys::AppContextBase;
-
 namespace net {
 
 class NetRequestThread;
@@ -68,16 +61,6 @@ public:
 
     HYP_API EngineDriver();
     HYP_API ~EngineDriver() override;
-
-    HYP_FORCE_INLINE const Handle<AppContextBase>& GetAppContext() const
-    {
-        return m_appContext;
-    }
-
-    HYP_FORCE_INLINE void SetAppContext(const Handle<AppContextBase>& appContext)
-    {
-        m_appContext = appContext;
-    }
 
     HYP_METHOD()
     const Handle<World>& GetCurrentWorld() const;
@@ -135,8 +118,6 @@ private:
     void PreFrameUpdate(FrameBase* frame);
 
     void FindTextureFormatDefaults();
-
-    Handle<AppContextBase> m_appContext;
 
     UniquePtr<RenderThread> m_renderThread;
 

@@ -9,6 +9,8 @@
 #include <rendering/vulkan/VulkanGpuBuffer.hpp>
 #include <rendering/vulkan/VulkanRenderBackend.hpp>
 
+#include <rendering/util/SafeDeleter.hpp>
+
 #include <core/logging/LogChannels.hpp>
 #include <core/logging/Logger.hpp>
 
@@ -34,8 +36,8 @@ VulkanAsyncCompute::VulkanAsyncCompute()
 
 VulkanAsyncCompute::~VulkanAsyncCompute()
 {
-    SafeRelease(std::move(m_commandBuffers));
-    SafeRelease(std::move(m_fences));
+    SafeDelete(std::move(m_commandBuffers));
+    SafeDelete(std::move(m_fences));
 }
 
 RendererResult VulkanAsyncCompute::Create()

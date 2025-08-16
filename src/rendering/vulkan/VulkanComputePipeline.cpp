@@ -7,6 +7,8 @@
 #include <rendering/vulkan/VulkanDevice.hpp>
 #include <rendering/vulkan/VulkanShader.hpp>
 
+#include <rendering/util/SafeDeleter.hpp>
+
 #include <core/debug/Debug.hpp>
 
 #include <core/logging/Logger.hpp>
@@ -41,7 +43,7 @@ VulkanComputePipeline::VulkanComputePipeline(const VulkanShaderRef& shader, cons
 VulkanComputePipeline::~VulkanComputePipeline()
 {
     HYP_GFX_ASSERT(!IsCreated());
-    
+
     HYP_GFX_ASSERT(m_handle == VK_NULL_HANDLE, "Expected pipeline to have been destroyed");
     HYP_GFX_ASSERT(m_layout == VK_NULL_HANDLE, "Expected layout to have been destroyed");
 }
@@ -176,8 +178,8 @@ RendererResult VulkanComputePipeline::Create()
 
 RendererResult VulkanComputePipeline::Destroy()
 {
-    SafeRelease(std::move(m_shader));
-    SafeRelease(std::move(m_descriptorTable));
+    SafeDelete(std::move(m_shader));
+    SafeDelete(std::move(m_descriptorTable));
 
     return VulkanPipelineBase::Destroy();
 }

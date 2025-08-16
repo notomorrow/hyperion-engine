@@ -44,10 +44,7 @@ struct MeshRaytracingData
     HYP_FIELD()
     BLASRef blas;
 
-    ~MeshRaytracingData()
-    {
-        SafeRelease(std::move(blas));
-    }
+    ~MeshRaytracingData();
 };
 
 class IRenderProxy
@@ -220,8 +217,8 @@ class RenderProxyLight final : public IRenderProxy
 {
 public:
     WeakHandle<Light> light;
-    WeakHandle<Material> lightMaterial;  // for textured area lights
-    Array<View*> shadowViews; // optional, for lights casting shadow
+    WeakHandle<Material> lightMaterial; // for textured area lights
+    Array<View*> shadowViews;           // optional, for lights casting shadow
     LightShaderData bufferData {};
     ShadowMap* shadowMap = nullptr;
 };

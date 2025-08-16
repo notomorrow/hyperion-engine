@@ -179,7 +179,7 @@ static inline void SafeDelete(Array<T, AllocatorType>&& value)
 }
 
 template <class T, SizeType Sz>
-static inline void SafeRelease(FixedArray<T, Sz>&& value)
+static inline void SafeDelete(FixedArray<T, Sz>&& value)
 {
     for (auto& it : value)
     {

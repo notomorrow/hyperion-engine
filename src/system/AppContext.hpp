@@ -172,8 +172,6 @@ public:
     virtual Handle<ApplicationWindow> CreateSystemWindow(WindowOptions windowOptions) = 0;
     virtual int PollEvent(SystemEvent& event) = 0;
 
-    virtual void UpdateConfigurationOverrides();
-
     Delegate<void, ApplicationWindow*> OnCurrentWindowChanged;
 
 protected:

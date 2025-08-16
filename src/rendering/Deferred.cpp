@@ -24,6 +24,8 @@
 #include <rendering/rt/RaytracingReflections.hpp>
 #include <rendering/rt/DDGI.hpp>
 
+#include <rendering/util/SafeDeleter.hpp>
+
 #include <rendering/debug/DebugDrawer.hpp>
 
 #include <rendering/RenderObject.hpp>
@@ -134,7 +136,7 @@ DeferredPass::DeferredPass(DeferredPassMode mode, Vec2u extent, GBuffer* gbuffer
 
 DeferredPass::~DeferredPass()
 {
-    SafeRelease(std::move(m_ltcSampler));
+    SafeDelete(std::move(m_ltcSampler));
 }
 
 void DeferredPass::Create()
@@ -241,7 +243,7 @@ void DeferredPass::CreatePipeline(const RenderableAttributeSet& renderableAttrib
 
 void DeferredPass::Resize_Internal(Vec2u newSize)
 {
-    SafeRelease(std::move(m_directLightGraphicsPipelines));
+    SafeDelete(std::move(m_directLightGraphicsPipelines));
 
     // NOTE: Don't bother discarding sampler, we don't recreate it if it already exists.
 
@@ -560,7 +562,7 @@ void EnvGridPass::CreatePipeline()
 
 void EnvGridPass::Resize_Internal(Vec2u newSize)
 {
-    SafeRelease(std::move(m_graphicsPipelines));
+    SafeDelete(std::move(m_graphicsPipelines));
 
     FullScreenPass::Resize_Internal(newSize);
 }
@@ -780,9 +782,9 @@ void ReflectionsPass::Resize_Internal(Vec2u newSize)
 {
     HYP_SCOPE;
 
-    SafeRelease(std::move(m_mipChainImageView));
-    SafeRelease(std::move(m_deferredResultImageView));
-    SafeRelease(std::move(m_cubemapGraphicsPipelines));
+    SafeDelete(std::move(m_mipChainImageView));
+    SafeDelete(std::move(m_deferredResultImageView));
+    SafeDelete(std::move(m_cubemapGraphicsPipelines));
 
     FullScreenPass::Resize_Internal(newSize);
 
@@ -975,7 +977,7 @@ DeferredPassData::~DeferredPassData()
     raytracingReflections.Reset();
     ddgi.Reset();
 
-    SafeRelease(std::move(finalPassDescriptorSet));
+    SafeDelete(std::move(finalPassDescriptorSet));
 }
 
 #pragma endregion DeferredPassData
@@ -984,7 +986,7 @@ DeferredPassData::~DeferredPassData()
 
 RaytracingPassData::~RaytracingPassData()
 {
-    SafeRelease(std::move(raytracingTlases));
+    SafeDelete(std::move(raytracingTlases));
 }
 
 #pragma endregion RaytracingPassData
@@ -1155,7 +1157,7 @@ void DeferredRenderer::CreateViewFinalPassDescriptorSet(View* view, DeferredPass
 
     DeferCreate(descriptorSet);
 
-    SafeRelease(std::move(passData.finalPassDescriptorSet));
+    SafeDelete(std::move(passData.finalPassDescriptorSet));
 
     passData.finalPassDescriptorSet = std::move(descriptorSet);
 }
@@ -1344,7 +1346,7 @@ void DeferredRenderer::CreateViewRaytracingPasses(View* view, DeferredPassData& 
 
 void DeferredRenderer::CreateViewTopLevelAccelerationStructures(View* view, RaytracingPassData& passData)
 {
-    SafeRelease(std::move(passData.raytracingTlases));
+    SafeDelete(std::move(passData.raytracingTlases));
 
     // Hack to fix driver crash when building TLAS with no meshes
     Handle<Mesh> defaultMesh = MeshBuilder::Cube();
@@ -1414,10 +1416,10 @@ void DeferredRenderer::ResizeView(Viewport viewport, View* view, DeferredPassDat
     passData.depthPyramidRenderer = MakeUnique<DepthPyramidRenderer>(gbuffer);
     passData.depthPyramidRenderer->Create();
 
-    SafeRelease(std::move(passData.descriptorSets));
+    SafeDelete(std::move(passData.descriptorSets));
     CreateViewDescriptorSets(view, passData);
 
-    SafeRelease(std::move(passData.finalPassDescriptorSet));
+    SafeDelete(std::move(passData.finalPassDescriptorSet));
     CreateViewFinalPassDescriptorSet(view, passData);
 
     CreateViewRaytracingPasses(view, passData);
@@ -2075,12 +2077,12 @@ void DeferredRenderer::UpdateRaytracingView(FrameBase* frame, const RenderSetup&
                     pd->raytracingTlases[frameIndex]->RemoveBLAS(blas);
                 }
 
-                SafeRelease(std::move(blas));
+                SafeDelete(std::move(blas));
             }
 
             blas = MeshBlasBuilder::Build(meshProxy->mesh, meshProxy->material);
             Assert(blas != nullptr);
-            
+
             blas->SetTransform(meshProxy->bufferData.modelMatrix);
 
             const uint32 materialBinding = RenderApi_RetrieveResourceBinding(meshProxy->material);

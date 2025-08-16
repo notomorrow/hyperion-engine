@@ -4,7 +4,6 @@
 #include <rendering/Deferred.hpp>
 #include <rendering/PlaceholderData.hpp>
 #include <rendering/RenderGlobalState.hpp>
-
 #include <rendering/RenderBackend.hpp>
 #include <rendering/RenderFrame.hpp>
 #include <rendering/RenderGpuImage.hpp>
@@ -12,6 +11,8 @@
 #include <rendering/RenderGpuBuffer.hpp>
 #include <rendering/AsyncCompute.hpp>
 #include <rendering/Texture.hpp>
+
+#include <rendering/util/SafeDeleter.hpp>
 
 #include <scene/EnvGrid.hpp>
 #include <scene/EnvProbe.hpp>
@@ -171,26 +172,26 @@ struct LightFieldUniforms
 
 EnvGridPassData::~EnvGridPassData()
 {
-    SafeRelease(std::move(clearSh));
-    SafeRelease(std::move(computeSh));
-    SafeRelease(std::move(reduceSh));
-    SafeRelease(std::move(finalizeSh));
+    SafeDelete(std::move(clearSh));
+    SafeDelete(std::move(computeSh));
+    SafeDelete(std::move(reduceSh));
+    SafeDelete(std::move(finalizeSh));
 
-    SafeRelease(std::move(computeIrradiance));
-    SafeRelease(std::move(computeFilteredDepth));
-    SafeRelease(std::move(copyBorderTexels));
+    SafeDelete(std::move(computeIrradiance));
+    SafeDelete(std::move(computeFilteredDepth));
+    SafeDelete(std::move(copyBorderTexels));
 
-    SafeRelease(std::move(voxelizeProbe));
-    SafeRelease(std::move(offsetVoxelGrid));
+    SafeDelete(std::move(voxelizeProbe));
+    SafeDelete(std::move(offsetVoxelGrid));
 
-    SafeRelease(std::move(shTilesBuffers));
+    SafeDelete(std::move(shTilesBuffers));
 
-    SafeRelease(std::move(computeShDescriptorTables));
+    SafeDelete(std::move(computeShDescriptorTables));
 
-    SafeRelease(std::move(voxelGridMips));
+    SafeDelete(std::move(voxelGridMips));
 
-    SafeRelease(std::move(generateVoxelGridMipmaps));
-    SafeRelease(std::move(generateVoxelGridMipmapsDescriptorTables));
+    SafeDelete(std::move(generateVoxelGridMipmaps));
+    SafeDelete(std::move(generateVoxelGridMipmapsDescriptorTables));
 }
 
 #pragma endregion EnvGridPassData

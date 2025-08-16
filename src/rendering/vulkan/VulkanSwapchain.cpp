@@ -8,6 +8,8 @@
 #include <rendering/vulkan/VulkanFeatures.hpp>
 #include <rendering/vulkan/VulkanRenderBackend.hpp>
 
+#include <rendering/util/SafeDeleter.hpp>
+
 #include <core/object/HypClassUtils.hpp>
 
 #include <core/debug/Debug.hpp>
@@ -257,10 +259,10 @@ RendererResult VulkanSwapchain::Destroy()
         return HYP_MAKE_ERROR(RendererError, "Swapchain already destroyed");
     }
 
-    SafeRelease(std::move(m_images));
-    SafeRelease(std::move(m_framebuffers));
-    SafeRelease(std::move(m_frames));
-    SafeRelease(std::move(m_commandBuffers));
+    SafeDelete(std::move(m_images));
+    SafeDelete(std::move(m_framebuffers));
+    SafeDelete(std::move(m_frames));
+    SafeDelete(std::move(m_commandBuffers));
 
     vkDestroySwapchainKHR(GetRenderBackend()->GetDevice()->GetDevice(), m_handle, nullptr);
     m_handle = VK_NULL_HANDLE;

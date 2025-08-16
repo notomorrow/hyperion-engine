@@ -128,7 +128,7 @@ void ReflectionProbeRenderer::Shutdown()
 
     EnvProbeRenderer::Shutdown();
 
-    SafeRelease(std::move(m_shader));
+    SafeDelete(std::move(m_shader));
 }
 
 void ReflectionProbeRenderer::CreateShader()
@@ -176,7 +176,8 @@ void ReflectionProbeRenderer::RenderProbe(FrameBase* frame, const RenderSetup& r
 
         if (renderSetup.light->GetLightType() != LT_DIRECTIONAL)
         {
-            HYP_LOG(Rendering, Warning, "Light bound to SkyProbe pass is not a directional light: {} in view {}", renderSetup.light->Id(), view->Id());
+            HYP_LOG(Rendering, Warning, "Light bound to SkyProbe pass is not a directional light: {} in view {}",
+                renderSetup.light->Id(), view->Id());
 
             pd->cachedLightDirIntensity = MathUtil::NaN<Vec4f>();
 

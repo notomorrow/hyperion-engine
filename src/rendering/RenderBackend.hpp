@@ -20,12 +20,6 @@
 
 namespace hyperion {
 
-namespace sys {
-class AppContextBase;
-} // namespace sys
-
-using sys::AppContextBase;
-
 class RenderableAttributeSet;
 struct CompiledShader;
 class Material;
@@ -65,7 +59,7 @@ class IRenderBackend
 public:
     virtual ~IRenderBackend() = default;
 
-    virtual RendererResult Initialize(AppContextBase& appContext) = 0;
+    virtual RendererResult Initialize() = 0;
     virtual RendererResult Destroy() = 0;
 
     virtual const IRenderConfig& GetRenderConfig() const = 0;

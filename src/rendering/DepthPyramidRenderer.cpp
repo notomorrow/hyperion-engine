@@ -4,7 +4,6 @@
 #include <rendering/GBuffer.hpp>
 #include <rendering/Deferred.hpp>
 #include <rendering/PlaceholderData.hpp>
-
 #include <rendering/RenderAttachment.hpp>
 #include <rendering/RenderComputePipeline.hpp>
 #include <rendering/RenderDescriptorSet.hpp>
@@ -12,6 +11,8 @@
 #include <rendering/RenderGpuImage.hpp>
 #include <rendering/RenderGpuImageView.hpp>
 #include <rendering/RenderSampler.hpp>
+
+#include <rendering/util/SafeDeleter.hpp>
 
 #include <core/profiling/ProfileScope.hpp>
 
@@ -39,18 +40,18 @@ DepthPyramidRenderer::DepthPyramidRenderer(GBuffer* gbuffer)
 
 DepthPyramidRenderer::~DepthPyramidRenderer()
 {
-    SafeRelease(std::move(m_depthImageView));
+    SafeDelete(std::move(m_depthImageView));
 
-    SafeRelease(std::move(m_depthPyramid));
-    SafeRelease(std::move(m_depthPyramidView));
+    SafeDelete(std::move(m_depthPyramid));
+    SafeDelete(std::move(m_depthPyramidView));
 
-    SafeRelease(std::move(m_depthPyramidSampler));
+    SafeDelete(std::move(m_depthPyramidSampler));
 
-    SafeRelease(std::move(m_mipImageViews));
-    SafeRelease(std::move(m_mipUniformBuffers));
-    SafeRelease(std::move(m_mipDescriptorTables));
+    SafeDelete(std::move(m_mipImageViews));
+    SafeDelete(std::move(m_mipUniformBuffers));
+    SafeDelete(std::move(m_mipDescriptorTables));
 
-    SafeRelease(std::move(m_generateDepthPyramid));
+    SafeDelete(std::move(m_generateDepthPyramid));
 }
 
 void DepthPyramidRenderer::Create()
@@ -144,7 +145,7 @@ void DepthPyramidRenderer::Create()
 
         while (m_mipDescriptorTables.Size() > numMipLevels)
         {
-            SafeRelease(m_mipDescriptorTables.PopFront());
+            SafeDelete(m_mipDescriptorTables.PopFront());
         }
 
         while (m_mipDescriptorTables.Size() < numMipLevels)

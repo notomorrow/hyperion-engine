@@ -221,31 +221,28 @@ void UIStage::Init()
     HYP_SCOPE;
     AssertOnOwnerThread();
 
-    if (const Handle<AppContextBase>& appContext = g_engineDriver->GetAppContext())
+    const auto updateSurfaceSize = [this](ApplicationWindow* window)
     {
-        const auto updateSurfaceSize = [this](ApplicationWindow* window)
+        if (window == nullptr)
         {
-            if (window == nullptr)
-            {
-                return;
-            }
+            return;
+        }
 
-            const Vec2i size = Vec2i(window->GetDimensions());
+        const Vec2i size = Vec2i(window->GetDimensions());
 
-            m_surfaceSize = Vec2i(size);
+        m_surfaceSize = Vec2i(size);
 
-            if (m_camera.IsValid())
-            {
-                m_camera->AddCameraController(CreateObject<OrthoCameraController>(
-                    0.0f, -float(m_surfaceSize.x),
-                    0.0f, float(m_surfaceSize.y),
-                    float(g_minDepth), float(g_maxDepth)));
-            }
-        };
+        if (m_camera.IsValid())
+        {
+            m_camera->AddCameraController(CreateObject<OrthoCameraController>(
+                0.0f, -float(m_surfaceSize.x),
+                0.0f, float(m_surfaceSize.y),
+                float(g_minDepth), float(g_maxDepth)));
+        }
+    };
 
-        updateSurfaceSize(appContext->GetMainWindow());
-        m_onCurrentWindowChangedHandler = appContext->OnCurrentWindowChanged.Bind(updateSurfaceSize);
-    }
+    updateSurfaceSize(g_appContext->GetMainWindow());
+    m_onCurrentWindowChangedHandler = g_appContext->OnCurrentWindowChanged.Bind(updateSurfaceSize);
 
     if (!m_defaultFontAtlas)
     {

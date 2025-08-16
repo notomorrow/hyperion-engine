@@ -56,16 +56,6 @@ public:
         return m_world;
     }
 
-    const Handle<AppContextBase>& GetAppContext() const
-    {
-        return m_appContext;
-    }
-
-    void SetAppContext(const Handle<AppContextBase>& appContext)
-    {
-        m_appContext = appContext;
-    }
-
     virtual void Update(float delta) final;
     virtual void HandleEvent(SystemEvent&& event) final;
 
@@ -79,8 +69,6 @@ protected:
     {
         return m_uiSubsystem;
     }
-
-    Handle<AppContextBase> m_appContext;
 
     Handle<UISubsystem> m_uiSubsystem;
 

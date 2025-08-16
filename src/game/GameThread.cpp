@@ -33,11 +33,9 @@ HYP_DEFINE_LOG_CHANNEL(GameThread);
 
 static constexpr float gameThreadTargetTicksPerSecond = 120.0f;
 
-GameThread::GameThread(const Handle<AppContextBase>& appContext)
-    : Thread(g_gameThread, ThreadPriorityValue::HIGHEST),
-      m_appContext(appContext)
+GameThread::GameThread()
+    : Thread(g_gameThread, ThreadPriorityValue::HIGHEST)
 {
-    Assert(m_appContext.IsValid());
 }
 
 void GameThread::SetGame(const Handle<Game>& game)
@@ -51,7 +49,6 @@ void GameThread::SetGame(const Handle<Game>& game)
                 m_game = game;
                 
                 Assert(m_game != nullptr);
-                m_game->SetAppContext(m_appContext);
 
                 InitObject(m_game);
 
@@ -71,7 +68,6 @@ void GameThread::operator()()
     GameCounter counter;
 
     Assert(m_game != nullptr);
-    m_game->SetAppContext(m_appContext);
 
     InitObject(m_game);
 
@@ -95,11 +91,11 @@ void GameThread::operator()()
 
         AssetManager::GetInstance()->Update(counter.delta);
 
-        if (m_appContext->GetMainWindow()->GetInputEventSink().Poll(events))
+        if (g_appContext->GetMainWindow()->GetInputEventSink().Poll(events))
         {
             for (SystemEvent& event : events)
             {
-                m_appContext->GetInputManager()->CheckEvent(&event);
+                g_appContext->GetInputManager()->CheckEvent(&event);
                 
                 m_game->HandleEvent(std::move(event));
             }

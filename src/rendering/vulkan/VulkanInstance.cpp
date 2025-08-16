@@ -277,7 +277,7 @@ RendererResult VulkanInstance::SetupDebugMessenger()
     HYPERION_RETURN_OK;
 }
 
-RendererResult VulkanInstance::Initialize(const AppContextBase& appContext, bool loadDebugLayers)
+RendererResult VulkanInstance::Initialize(bool loadDebugLayers)
 {
 #ifdef HYP_DEBUG_MODE
     /* Set up our debug and validation layers */
@@ -287,8 +287,10 @@ RendererResult VulkanInstance::Initialize(const AppContextBase& appContext, bool
     }
 #endif
 
+    HYP_GFX_ASSERT(g_appContext != nullptr, "AppContext must be set before initializing VulkanInstance");
+
     VkApplicationInfo appInfo { VK_STRUCTURE_TYPE_APPLICATION_INFO };
-    appInfo.pApplicationName = appContext.GetAppName().Data();
+    appInfo.pApplicationName = g_appContext->GetAppName().Data();
     appInfo.applicationVersion = VK_MAKE_VERSION(HYP_VERSION_MAJOR, HYP_VERSION_MINOR, HYP_VERSION_PATCH);
     appInfo.pEngineName = "HyperionEngine";
     appInfo.engineVersion = VK_MAKE_VERSION(HYP_VERSION_MAJOR, HYP_VERSION_MINOR, HYP_VERSION_PATCH);
@@ -312,7 +314,7 @@ RendererResult VulkanInstance::Initialize(const AppContextBase& appContext, bool
     // Setup Vulkan extensions
     Array<const char*> extensionNames;
 
-    if (!GetRenderBackend()->GetVkExtensions(&appContext, extensionNames))
+    if (!GetRenderBackend()->GetVkExtensions(extensionNames))
     {
         return HYP_MAKE_ERROR(RendererError, "Failed to load Vulkan extensions.");
     }
@@ -342,8 +344,8 @@ RendererResult VulkanInstance::Initialize(const AppContextBase& appContext, bool
     VULKAN_CHECK_MSG(instanceResult, "Failed to create Vulkan Instance!");
 
     /* Create our renderable surface from SDL */
-    HYP_GFX_ASSERT(appContext.GetMainWindow() != nullptr);
-    m_surface = GetRenderBackend()->CreateVkSurface(appContext.GetMainWindow(), this);
+    HYP_GFX_ASSERT(g_appContext->GetMainWindow() != nullptr);
+    m_surface = GetRenderBackend()->CreateVkSurface(g_appContext->GetMainWindow(), this);
 
     /* Find and set up an adequate GPU for rendering and presentation */
     HYP_GFX_CHECK(CreateDevice());
@@ -373,7 +375,7 @@ RendererResult VulkanInstance::Destroy()
 
     m_device->DestroyAllocator();
 
-    SafeRelease(std::move(m_swapchain));
+    SafeDelete(std::move(m_swapchain));
 
     vkDestroySurfaceKHR(m_instance, m_surface, nullptr);
 

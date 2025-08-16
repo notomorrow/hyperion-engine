@@ -80,9 +80,8 @@ void HandleSignal(int signum);
 class RenderThread final : public Thread<Scheduler>
 {
 public:
-    RenderThread(const Handle<AppContextBase>& appContext)
+    RenderThread()
         : Thread(g_renderThread, ThreadPriorityValue::HIGHEST),
-          m_appContext(appContext),
           m_isRunning(false)
     {
     }
@@ -118,8 +117,6 @@ public:
 private:
     virtual void operator()() override
     {
-        Assert(m_appContext != nullptr);
-
         SystemEvent event;
 
         Queue<Scheduler::ScheduledTask> tasks;
@@ -130,9 +127,9 @@ private:
         {
             RenderApi_BeginFrame_RenderThread();
 
-            while (m_appContext->PollEvent(event))
+            while (g_appContext->PollEvent(event))
             {
-                m_appContext->GetMainWindow()->GetInputEventSink().Push(std::move(event));
+                g_appContext->GetMainWindow()->GetInputEventSink().Push(std::move(event));
             }
 
             if (uint32 numEnqueued = m_scheduler.NumEnqueued())
@@ -153,7 +150,6 @@ private:
         g_renderThreadInstance = nullptr;
     }
 
-    Handle<AppContextBase> m_appContext;
     AtomicVar<bool> m_isRunning;
 };
 
@@ -235,20 +231,7 @@ HYP_API void EngineDriver::Init()
     // Set ready to false after render thread stops running.
     HYP_DEFER({ SetReady(false); });
 
-    Assert(m_appContext != nullptr, "App context must be set before initializing the engine!");
-
-    m_renderThread = MakeUnique<RenderThread>(m_appContext);
-
-    Assert(m_appContext->GetMainWindow() != nullptr);
-
-    // m_appContext->GetMainWindow()->OnWindowSizeChanged.Bind(
-    //                                                        [this](Vec2i newWindowSize)
-    //                                                        {
-    //                                                            HYP_LOG(Engine, Info, "Resize window to {}", newWindowSize);
-
-    //                                                            // m_finalPass->Resize(Vec2u(newWindowSize));
-    //                                                        })
-    //     .Detach();
+    m_renderThread = MakeUnique<RenderThread>();
 
     Assert(g_renderBackend != nullptr);
 
@@ -259,9 +242,6 @@ HYP_API void EngineDriver::Init()
                 m_finalPass->Create();
             })
         .Detach();
-
-    // Update app configuration to reflect device, after instance is created (e.g RT is not supported)
-    m_appContext->UpdateConfigurationOverrides();
 
 #ifdef HYP_EDITOR
     // Create script compilation service
@@ -460,8 +440,6 @@ void EngineDriver::PreFrameUpdate(FrameBase* frame)
     HYP_SCOPE;
 
     Threads::AssertOnThread(g_renderThread);
-
-    RenderObjectDeleter::Iterate();
 }
 
 #pragma endregion EngineDriver

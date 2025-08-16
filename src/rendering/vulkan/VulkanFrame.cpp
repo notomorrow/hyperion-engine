@@ -8,6 +8,8 @@
 #include <rendering/RenderDevice.hpp>
 #include <rendering/RenderObject.hpp>
 
+#include <rendering/util/SafeDeleter.hpp>
+
 #include <core/logging/Logger.hpp>
 #include <core/logging/LogChannels.hpp>
 
@@ -56,7 +58,7 @@ RendererResult VulkanFrame::Destroy()
 
     HYPERION_PASS_ERRORS(m_presentSemaphores.Destroy(), result);
 
-    SafeRelease(std::move(m_queueSubmitFence));
+    SafeDelete(std::move(m_queueSubmitFence));
 
     return result;
 }
@@ -114,7 +116,7 @@ RendererResult VulkanFrame::RecreateFence()
 {
     if (m_queueSubmitFence.IsValid())
     {
-        SafeRelease(std::move(m_queueSubmitFence));
+        SafeDelete(std::move(m_queueSubmitFence));
     }
 
     m_queueSubmitFence = MakeRenderObject<VulkanFence>();

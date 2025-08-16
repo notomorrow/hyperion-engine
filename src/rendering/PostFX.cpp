@@ -5,6 +5,8 @@
 #include <rendering/RenderBackend.hpp>
 #include <rendering/RenderDescriptorSet.hpp>
 
+#include <rendering/util/SafeDeleter.hpp>
+
 #include <core/object/HypClassUtils.hpp>
 
 #include <core/logging/Logger.hpp>
@@ -147,7 +149,7 @@ void PostProcessing::Destroy()
         m_effects[stageIndex].Clear();
     }
 
-    SafeRelease(std::move(m_uniformBuffer));
+    SafeDelete(std::move(m_uniformBuffer));
 }
 
 void PostProcessing::PerformUpdates()

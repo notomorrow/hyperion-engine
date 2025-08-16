@@ -4,6 +4,8 @@
 #include <rendering/RenderGpuImageView.hpp>
 #include <rendering/RenderGpuBuffer.hpp>
 
+#include <rendering/util/SafeDeleter.hpp>
+
 namespace hyperion {
 
 CullData::CullData(const CullData& other)
@@ -21,7 +23,7 @@ CullData& CullData::operator=(const CullData& other)
 
     if (depthPyramidImageView != other.depthPyramidImageView)
     {
-        SafeRelease(std::move(depthPyramidImageView));
+        SafeDelete(std::move(depthPyramidImageView));
 
         depthPyramidImageView = other.depthPyramidImageView;
     }
@@ -47,7 +49,7 @@ CullData& CullData::operator=(CullData&& other) noexcept
 
     if (depthPyramidImageView != other.depthPyramidImageView)
     {
-        SafeRelease(std::move(depthPyramidImageView));
+        SafeDelete(std::move(depthPyramidImageView));
 
         depthPyramidImageView = std::move(other.depthPyramidImageView);
     }
@@ -60,7 +62,7 @@ CullData& CullData::operator=(CullData&& other) noexcept
 
 CullData::~CullData()
 {
-    SafeRelease(std::move(depthPyramidImageView));
+    SafeDelete(std::move(depthPyramidImageView));
 }
 
 } // namespace hyperion
