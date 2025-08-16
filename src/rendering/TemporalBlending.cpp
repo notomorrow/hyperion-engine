@@ -4,7 +4,6 @@
 #include <rendering/GBuffer.hpp>
 #include <rendering/PlaceholderData.hpp>
 #include <rendering/Deferred.hpp>
-#include <rendering/SafeDeleter.hpp>
 #include <rendering/RenderGlobalState.hpp>
 #include <rendering/ShaderManager.hpp>
 

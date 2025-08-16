@@ -10,17 +10,18 @@
 #include <rendering/Deferred.hpp>
 #include <rendering/FinalPass.hpp>
 #include <rendering/RenderMaterial.hpp>
-#include <rendering/SafeDeleter.hpp>
 #include <rendering/ShaderManager.hpp>
 #include <rendering/GraphicsPipelineCache.hpp>
-
-#include <rendering/debug/DebugDrawer.hpp>
 
 #include <rendering/AsyncCompute.hpp>
 #include <rendering/RenderDescriptorSet.hpp>
 #include <rendering/RenderDevice.hpp>
 #include <rendering/RenderSwapchain.hpp>
 #include <rendering/RenderConfig.hpp>
+
+#include <rendering/debug/DebugDrawer.hpp>
+
+#include <rendering/util/SafeDeleter.hpp>
 
 #include <asset/Assets.hpp>
 
@@ -122,7 +123,7 @@ private:
         SystemEvent event;
 
         Queue<Scheduler::ScheduledTask> tasks;
-        
+
         g_renderThreadInstance = this;
 
         while (m_isRunning.Get(MemoryOrder::RELAXED))
@@ -148,7 +149,7 @@ private:
 
             RenderApi_EndFrame_RenderThread();
         }
-        
+
         g_renderThreadInstance = nullptr;
     }
 
@@ -162,17 +163,17 @@ void HandleSignal(int signum)
     {
         return;
     }
-    
-//    Time startTime = Time::Now();
+
+    //    Time startTime = Time::Now();
 
     g_renderThreadInstance->Stop();
-//    
-//    while (g_renderThreadInstance->IsRunning())
-//    {
-//        Threads::Sleep(10);
-//    }
-//    
-//    g_renderThreadInstance->Join();
+    //
+    //    while (g_renderThreadInstance->IsRunning())
+    //    {
+    //        Threads::Sleep(10);
+    //    }
+    //
+    //    g_renderThreadInstance->Join();
 
     exit(signum);
 }
@@ -291,11 +292,11 @@ HYP_API void EngineDriver::Init()
 
     m_debugDrawer = MakeUnique<DebugDrawer>();
     m_debugDrawer->Initialize();
-    
+
     m_defaultWorld = CreateObject<World>();
     m_defaultWorld->SetName(NAME("DefaultWorld"));
     InitObject(m_defaultWorld);
-    
+
     for (Handle<World>& currentWorld : m_currentWorldBuffered)
     {
         currentWorld = m_defaultWorld;
@@ -308,7 +309,7 @@ const Handle<World>& EngineDriver::GetCurrentWorld() const
 {
     HYP_SCOPE;
     Threads::AssertOnThread(g_gameThread | g_renderThread);
-    
+
     return m_currentWorldBuffered[RenderApi_GetFrameIndex()];
 }
 
@@ -316,14 +317,14 @@ void EngineDriver::SetCurrentWorld(const Handle<World>& world)
 {
     HYP_SCOPE;
     Threads::AssertOnThread(g_gameThread | g_renderThread);
-    
+
     if (!world)
     {
         m_currentWorldBuffered[RenderApi_GetFrameIndex()] = m_defaultWorld;
-        
+
         return;
     }
-    
+
     m_currentWorldBuffered[RenderApi_GetFrameIndex()] = world;
 }
 
@@ -402,14 +403,28 @@ void EngineDriver::FinalizeStop()
 
         SetGlobalNetRequestThread(nullptr);
     }
-    
+
     m_currentWorldBuffered = {};
 
     m_debugDrawer.Reset();
 
     m_finalPass.Reset();
 
-    g_safeDeleter->ForceDeleteAll();
+    // delete remaining enqueued deletions.
+    // loop until all deletions are done
+
+    // clang-format off
+    FixedArray<int, g_tripleBuffer ? 3 : 2> counts {};
+    
+    do
+    {
+        for (uint32 i = 0; i < (g_tripleBuffer ? 3 : 2); i++)
+        {
+            counts[i] = g_safeDeleter->ForceDeleteAll(i);
+        }
+    }
+    while (AnyOf(counts, [](uint32 count) { return count > 0; }));
+    // clang-format on
 
     m_renderThread->Join();
     m_renderThread.Reset();
@@ -422,7 +437,7 @@ HYP_API void EngineDriver::RenderNextFrame()
     FrameBase* frame = g_renderBackend->PrepareNextFrame();
 
     PreFrameUpdate(frame);
-    
+
     const Handle<World>& currentWorld = m_currentWorldBuffered[RenderApi_GetFrameIndex()];
 
     if (currentWorld && currentWorld->IsReady())
@@ -447,8 +462,6 @@ void EngineDriver::PreFrameUpdate(FrameBase* frame)
     Threads::AssertOnThread(g_renderThread);
 
     RenderObjectDeleter::Iterate();
-
-    g_safeDeleter->PerformEnqueuedDeletions();
 }
 
 #pragma endregion EngineDriver

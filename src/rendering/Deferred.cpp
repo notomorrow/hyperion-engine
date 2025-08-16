@@ -11,7 +11,6 @@
 #include <rendering/env_probe/EnvProbeRenderer.hpp>
 #include <rendering/RenderMaterial.hpp>
 #include <rendering/RenderGlobalState.hpp>
-#include <rendering/SafeDeleter.hpp>
 #include <rendering/GraphicsPipelineCache.hpp>
 #include <rendering/SSRRenderer.hpp>
 #include <rendering/SSGI.hpp>

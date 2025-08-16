@@ -3,7 +3,6 @@
 #include <rendering/RenderGlobalState.hpp>
 #include <rendering/RenderMaterial.hpp>
 #include <rendering/Renderer.hpp>
-#include <rendering/SafeDeleter.hpp>
 #include <rendering/Deferred.hpp>
 #include <rendering/DrawCall.hpp>
 #include <rendering/GpuBufferHolderMap.hpp>
@@ -17,6 +16,7 @@
 #include <rendering/RenderShader.hpp>
 #include <rendering/RenderGpuImage.hpp>
 #include <rendering/RenderBackend.hpp>
+#include <rendering/util/SafeDeleter.hpp>
 #include <rendering/env_probe/EnvProbeRenderer.hpp>
 #include <rendering/env_grid/EnvGridRenderer.hpp>
 
@@ -599,9 +599,9 @@ static HYP_FORCE_INLINE void CopyRenderProxy(ResourceSubtypeData& subtypeData, c
     const uint32 idx = id.ToIndex();
 
     AssertDebug(subtypeData.typeId == id.GetTypeId(),
-                "Attempting to use ID for type {} as index into proxy collection that requires index type {}",
-                LookupTypeName(id.GetTypeId()),
-                LookupTypeName(subtypeData.typeId));
+        "Attempting to use ID for type {} as index into proxy collection that requires index type {}",
+        LookupTypeName(id.GetTypeId()),
+        LookupTypeName(subtypeData.typeId));
 
     subtypeData.proxies.Set(idx, static_cast<IRenderProxy*>(pNewProxy));
 
@@ -1012,6 +1012,9 @@ void RenderApi_BeginFrame_RenderThread()
 
     FrameData& fd = g_frameData[slot];
 
+    g_safeDeleter->UpdateEntryListQueue();
+    g_safeDeleter->Iterate();
+
     HYP_GFX_ASSERT(RenderCommands::Flush());
 
     for (auto it = fd.viewFrameData.Begin(); it != fd.viewFrameData.End(); ++it)
@@ -1199,7 +1202,7 @@ void RenderApi_EndFrame_RenderThread()
 
                 delete &vd;
             }
-            
+
 #ifdef HYP_DEBUG_MODE
             vfd.rplShared->debugIsSynced = false;
 #endif

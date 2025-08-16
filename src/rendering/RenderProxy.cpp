@@ -1,4 +1,3 @@
-#include <rendering/SafeDeleter.hpp>
 #include <rendering/RenderProxy.hpp>
 
 #include <scene/Entity.hpp>
@@ -13,7 +12,4 @@
 #include <core/profiling/ProfileScope.hpp>
 
 namespace hyperion {
-
-extern HYP_API SafeDeleter* g_safeDeleter;
-
 } // namespace hyperion

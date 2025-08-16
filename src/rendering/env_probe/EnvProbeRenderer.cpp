@@ -12,8 +12,10 @@
 #include <rendering/RenderDescriptorSet.hpp>
 #include <rendering/RenderObject.hpp>
 #include <rendering/AsyncCompute.hpp>
-
 #include <rendering/Texture.hpp>
+
+#include <rendering/util/SafeDeleter.hpp>
+
 #include <scene/View.hpp>
 #include <scene/EnvProbe.hpp>
 #include <scene/Light.hpp>
@@ -275,7 +277,7 @@ void ReflectionProbeRenderer::ComputePrefilteredEnvMap(FrameBase* frame, const R
         uint32 numBoundLights;
         alignas(16) uint32 lightIndices[16];
     };
-    
+
     HYP_LOG(Rendering, Debug, "Computing Env Map for EnvProbe {}", envProbe->Id());
 
     ShaderProperties shaderProperties;
@@ -388,9 +390,9 @@ void ReflectionProbeRenderer::ComputePrefilteredEnvMap(FrameBase* frame, const R
     DelegateHandler* delegateHandle = new DelegateHandler();
     *delegateHandle = frame->OnFrameEnd.Bind([delegateHandle, uniformBuffer = std::move(uniformBuffer), convolveProbeComputePipeline = std::move(convolveProbeComputePipeline), descriptorTable = std::move(descriptorTable)](...) mutable
         {
-            SafeRelease(std::move(uniformBuffer));
-            SafeRelease(std::move(convolveProbeComputePipeline));
-            SafeRelease(std::move(descriptorTable));
+            SafeDelete(std::move(uniformBuffer));
+            SafeDelete(std::move(convolveProbeComputePipeline));
+            SafeDelete(std::move(descriptorTable));
 
             delete delegateHandle;
         });
@@ -677,11 +679,11 @@ void ReflectionProbeRenderer::ComputeSH(FrameBase* frame, const RenderSetup& ren
                 ShaderRef& shader = it.second.first;
                 ComputePipelineRef& pipeline = it.second.second;
 
-                SafeRelease(std::move(shader));
-                SafeRelease(std::move(pipeline));
+                SafeDelete(std::move(shader));
+                SafeDelete(std::move(pipeline));
             }
 
-            SafeRelease(std::move(descriptorTables));
+            SafeDelete(std::move(descriptorTables));
 
             delete delegateHandle;
         });

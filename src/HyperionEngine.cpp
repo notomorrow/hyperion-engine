@@ -21,8 +21,10 @@
 #include <streaming/StreamingManager.hpp>
 
 #include <rendering/Material.hpp>
-#include <rendering/SafeDeleter.hpp>
 #include <rendering/RenderGlobalState.hpp>
+
+#include <rendering/util/SafeDeleter.hpp>
+
 #include <rendering/shader_compiler/ShaderCompiler.hpp>
 
 #ifdef HYP_VULKAN

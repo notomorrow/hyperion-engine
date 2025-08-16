@@ -3,7 +3,6 @@
 #include <rendering/RenderMaterial.hpp>
 #include <rendering/RenderGlobalState.hpp>
 #include <rendering/PlaceholderData.hpp>
-#include <rendering/SafeDeleter.hpp>
 
 #include <rendering/RenderBackend.hpp>
 #include <rendering/RenderObject.hpp>

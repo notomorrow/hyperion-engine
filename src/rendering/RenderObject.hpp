@@ -1165,7 +1165,7 @@ struct RenderObjectDeleter
 };
 
 template <class T>
-static inline void SafeRelease(RenderObjectHandle_Strong<T>&& handle)
+HYP_DEPRECATED static inline void SafeRelease(RenderObjectHandle_Strong<T>&& handle)
 {
     if (!handle.IsValid())
     {
@@ -1176,7 +1176,7 @@ static inline void SafeRelease(RenderObjectHandle_Strong<T>&& handle)
 }
 
 template <class T, class AllocatorType>
-static inline void SafeRelease(Array<RenderObjectHandle_Strong<T>, AllocatorType>&& handles)
+HYP_DEPRECATED static inline void SafeRelease(Array<RenderObjectHandle_Strong<T>, AllocatorType>&& handles)
 {
     for (auto& it : handles)
     {
@@ -1192,7 +1192,7 @@ static inline void SafeRelease(Array<RenderObjectHandle_Strong<T>, AllocatorType
 }
 
 template <class T, SizeType Sz>
-static inline void SafeRelease(FixedArray<RenderObjectHandle_Strong<T>, Sz>&& handles)
+HYP_DEPRECATED static inline void SafeRelease(FixedArray<RenderObjectHandle_Strong<T>, Sz>&& handles)
 {
     for (auto& it : handles)
     {
@@ -1206,7 +1206,7 @@ static inline void SafeRelease(FixedArray<RenderObjectHandle_Strong<T>, Sz>&& ha
 }
 
 template <class T, auto KeyBy>
-static inline void SafeRelease(HashSet<RenderObjectHandle_Strong<T>, KeyBy>&& handles)
+HYP_DEPRECATED static inline void SafeRelease(HashSet<RenderObjectHandle_Strong<T>, KeyBy>&& handles)
 {
     for (auto& it : handles)
     {

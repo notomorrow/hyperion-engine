@@ -3,8 +3,6 @@
 #pragma once
 
 #include <core/object/Handle.hpp>
-
-#include <rendering/SafeDeleter.hpp>
 #include <rendering/RenderObject.hpp>
 
 #include <core/Types.hpp>
