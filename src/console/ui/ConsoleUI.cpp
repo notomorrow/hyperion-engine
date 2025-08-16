@@ -137,10 +137,10 @@ ConsoleUI::ConsoleUI()
 {
     SetBorderRadius(0);
     SetBorderFlags(UIObjectBorderFlags::ALL);
-    SetPadding({ 5, 0 });
-    SetBackgroundColor(Vec4f { 0.25f, 0.25f, 0.25f, 0.8f });
+    SetPadding({ 2, 0 });
+    SetBackgroundColor(Vec4f { 0.1f, 0.1f, 0.1f, 0.9f });
     SetTextColor(Vec4f { 1.0f, 1.0f, 1.0f, 1.0f });
-    SetTextSize(12.0f);
+    SetTextSize(8.0f);
     SetOriginAlignment(UIObjectAlignment::BOTTOM_LEFT);
     SetParentAlignment(UIObjectAlignment::BOTTOM_LEFT);
 
@@ -193,25 +193,35 @@ void ConsoleUI::Init()
 {
     UIObject::Init();
 
+    OnComputedVisibilityChange
+        .Bind([this]() -> UIEventHandlerResult
+            {
+                if (IsVisible() && m_textbox)
+                {
+                    m_textbox->Focus();
+                }
+            })
+        .Detach();
+
     OnMouseDown
         .Bind([this](const MouseEvent& eventData) -> UIEventHandlerResult
-        {
-            return UIEventHandlerResult::STOP_BUBBLING;
-         })
+            {
+                return UIEventHandlerResult::STOP_BUBBLING;
+            })
         .Detach();
 
     OnKeyDown
         .Bind([this](const KeyboardEvent& eventData) -> UIEventHandlerResult
-        {
-            return UIEventHandlerResult::STOP_BUBBLING;
-        })
+            {
+                return UIEventHandlerResult::STOP_BUBBLING;
+            })
         .Detach();
 
     OnKeyUp
         .Bind([this](const KeyboardEvent& eventData) -> UIEventHandlerResult
-        {
-            return UIEventHandlerResult::STOP_BUBBLING;
-        })
+            {
+                return UIEventHandlerResult::STOP_BUBBLING;
+            })
         .Detach();
 
     Handle<UIDataSource> dataSource = CreateObject<UIDataSource>(
@@ -227,7 +237,6 @@ void ConsoleUI::Init()
 
             Handle<UIText> text = parent->CreateUIObject<UIText>(Vec2i { 0, 0 }, UIObjectSize({ 0, UIObjectSize::AUTO }, { 0, UIObjectSize::AUTO }));
             text->SetText(entry.text);
-            text->SetTextSize(12.0f);
 
             switch (entry.type)
             {
@@ -291,7 +300,7 @@ void ConsoleUI::Init()
     textbox->SetPlaceholder("Enter command");
     textbox->SetBackgroundColor(Vec4f { 0.0f, 0.0f, 0.0f, 0.5f });
     textbox->SetTextColor(Vec4f { 1.0f, 1.0f, 1.0f, 1.0f });
-    textbox->SetTextSize(16.0f);
+    textbox->SetTextSize(8.0f);
     AddChildUIObject(textbox);
 
     m_textbox = textbox;
@@ -325,6 +334,8 @@ void ConsoleUI::Init()
 
                         m_currentCommandText.Clear();
                         m_textbox->SetText("");
+
+                        m_textbox->Focus();
                     }
                 }
                 else if (eventData.keyCode == KeyCode::ARROW_UP)

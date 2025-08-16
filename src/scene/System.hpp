@@ -18,8 +18,6 @@
 
 #include <scene/ComponentContainer.hpp>
 
-#include <util/GameCounter.hpp>
-
 namespace hyperion {
 
 class EntityManager;

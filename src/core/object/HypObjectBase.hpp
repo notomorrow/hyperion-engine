@@ -8,7 +8,7 @@
 #include <core/object/HypObjectFwd.hpp>
 #include <core/object/HypObjectEnums.hpp>
 #include <core/object/ObjId.hpp>
-#include <core/object/ObjectPool.hpp>
+#include <core/object/HypObjectPool.hpp>
 #include <core/object/managed/ManagedObjectResource.hpp>
 
 #include <core/utilities/TypeId.hpp>

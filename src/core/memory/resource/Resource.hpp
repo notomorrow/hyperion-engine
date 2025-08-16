@@ -205,7 +205,7 @@ private:
 };
 
 template <class T>
-static constexpr Name ResourceMemoryPool<T>::s_poolName = CreateNameFromDynamicString(ANSIString("ResourceMemoryPool_") + TypeNameWithoutNamespace<T>().Data());
+const Name ResourceMemoryPool<T>::s_poolName = CreateNameFromDynamicString(ANSIString("ResourceMemoryPool_") + TypeNameWithoutNamespace<T>().Data());
 
 template <class T, class... Args>
 HYP_FORCE_INLINE static T* AllocateResource(Args&&... args)

@@ -10,25 +10,35 @@
 #include <core/Types.hpp>
 #include <core/HashCode.hpp>
 
+#include <util/GameCounter.hpp>
+
 namespace hyperion {
 
 template <class T = double>
 class BlendVar
 {
 public:
-    BlendVar() = default;
-
-    explicit BlendVar(T value)
-        : m_value(value),
-          m_target(value),
-          m_fract(0.0)
+    BlendVar()
+        : m_value(T(0)),
+          m_target(T(0)),
+          m_fract(0.0),
+          m_counter(0.33333) // 30fps
     {
     }
 
-    BlendVar(T value, T target)
+    explicit BlendVar(T value, double rate = 0.3333)
+        : m_value(value),
+          m_target(value),
+          m_fract(0.0),
+          m_counter(1.0 / MathUtil::Max(rate, 0.0001))
+    {
+    }
+
+    BlendVar(T value, T target, double rate = 0.3333)
         : m_value(value),
           m_target(target),
-          m_fract(0.0)
+          m_fract(0.0),
+          m_counter(1.0 / MathUtil::Max(rate, 0.0001))
     {
     }
 
@@ -60,42 +70,72 @@ public:
         m_fract = 0.0;
     }
 
+    /*! \brief Gets the rate of change in Hz (cycles per second).
+     *  \return The rate of change in Hz.
+     */
+    HYP_FORCE_INLINE double GetRate() const
+    {
+        return 1.0 / m_counter.targetInterval;
+    }
+
+    /*! \brief Sets the rate of change in Hz (cycles per second).
+     *  \param rate The rate of change in Hz.
+     */
+    HYP_FORCE_INLINE void SetRate(double rate)
+    {
+        m_counter = LockstepGameCounter(1.0 / MathUtil::Max(rate, 0.0001));
+    }
+
     /*! \brief Advances the blend variable towards the target value.
-     *  \param delta The amount to advance the blend variable.
      *  \param outDelta The delta between the previous value and current value
      *  \return True if the blend variable has changed since the last advancement. False if the blend variable has reached the target value.
      */
-    bool Advance(double delta, T& outDelta)
+    bool Advance(T& outDelta)
     {
-        m_fract = MathUtil::Clamp(m_fract + delta, 0.0, 1.0);
+        // done blending if fraction is >= 1.0
+        if (m_fract >= 1.0)
+        {
+            return false;
+        }
 
-        T nextValue = MathUtil::Lerp(m_value, m_target, m_fract);
+        if (m_counter.Waiting())
+        {
+            return true;
+        }
+
+        m_counter.NextTick();
+
+        const double delta = m_counter.delta;
+
+        const double fract = m_fract + delta;
+
+        T nextValue = MathUtil::Lerp(m_value, m_target, MathUtil::Clamp(fract, 0.0, 1.0));
 
         outDelta = nextValue - m_value;
 
-        // T nextValue = m_value + (m_target - m_value) * T(std::log(1.0 + 25.0 * m_fract) / std::log(1.0 + 25.0));
-        const bool changed = m_value != nextValue; //! MathUtil::ApproxEqual(m_value, m_target);
+        const bool changed = !MathUtil::ApproxEqual(m_value, m_target);
 
         m_value = nextValue;
+        m_fract = fract;
 
         return changed;
     }
 
     /*! \brief Advances the blend variable towards the target value.
-     *  \param delta The amount to advance the blend variable.
      *  \return True if the blend variable has changed since the last advancement. False if the blend variable has reached the target value.
      */
-    bool Advance(double delta)
+    bool Advance()
     {
         T tmpDelta;
 
-        return Advance(delta, tmpDelta);
+        return Advance(tmpDelta);
     }
 
 private:
-    T m_value {};
-    T m_target {};
-    double m_fract = 0.0;
+    T m_value;
+    T m_target;
+    double m_fract;
+    LockstepGameCounter m_counter;
 };
 
 } // namespace hyperion

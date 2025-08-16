@@ -29,8 +29,6 @@
 #include <rendering/RenderObject.hpp>
 #include <rendering/Shared.hpp>
 
-#include <util/GameCounter.hpp>
-
 #include <core/Types.hpp>
 
 namespace hyperion {

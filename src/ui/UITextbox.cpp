@@ -150,13 +150,13 @@ void UITextbox::Init()
     textElement->SetTextSize(12.0f);
     textElement->SetAcceptsFocus(false);
 
-    UpdateTextColor();
-
     // m_textElement->SetAffectsParentSize(false);
 
     UIObject::AddChildUIObject(textElement);
 
     m_textElement = textElement;
+
+    UpdateTextColor();
 }
 
 void UITextbox::SetTextColor(const Color& textColor)
@@ -211,14 +211,9 @@ void UITextbox::Update_Internal(float delta)
 
     if (m_cursorElement != nullptr)
     {
-        constexpr double cursorBlinkSpeed = 0.25;
-
-        if (delta <= 0.0167)
+        if (!m_cursorBlinkBlendVar.Advance())
         {
-            if (!m_cursorBlinkBlendVar.Advance(delta * cursorBlinkSpeed))
-            {
-                m_cursorBlinkBlendVar.SetTarget(1.0f - m_cursorBlinkBlendVar.GetTarget());
-            }
+            m_cursorBlinkBlendVar.SetTarget(1.0f - m_cursorBlinkBlendVar.GetTarget());
         }
 
         // animate cursor
@@ -284,6 +279,7 @@ void UITextbox::UpdateCursor()
 
     m_cursorBlinkBlendVar.SetValue(1.0f);
     m_cursorBlinkBlendVar.SetTarget(1.0f);
+    m_cursorBlinkBlendVar.SetRate(60.0);
 }
 
 Color UITextbox::GetPlaceholderTextColor() const

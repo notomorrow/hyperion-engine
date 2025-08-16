@@ -14,7 +14,6 @@
 
 #include <util/AtlasPacker.hpp>
 
-#include <util/GameCounter.hpp>
 #include <core/Types.hpp>
 
 namespace hyperion {

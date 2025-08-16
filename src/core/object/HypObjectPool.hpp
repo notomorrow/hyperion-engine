@@ -27,19 +27,19 @@
 namespace hyperion {
 
 template <class T>
-class ObjectContainer;
+class HypObjectContainer;
 
-class ObjectContainerBase;
+class HypObjectContainerBase;
 
 struct HypObjectHeader;
 class HypClass;
 
-HYP_API extern void ReleaseHypClassInstance(const HypClass* hypClass, uint32 index);
+HYP_API extern void ReleaseHypObject(const HypClass* hypClass, uint32 index);
 
-class ObjectContainerBase
+class HypObjectContainerBase
 {
 public:
-    virtual ~ObjectContainerBase() = default;
+    virtual ~HypObjectContainerBase() = default;
 
     HYP_FORCE_INLINE const TypeId& GetObjectTypeId() const
     {
@@ -60,7 +60,7 @@ public:
     virtual void ReleaseIndex(uint32 index) = 0;
 
 protected:
-    ObjectContainerBase(TypeId typeId, const HypClass* hypClass)
+    HypObjectContainerBase(TypeId typeId, const HypClass* hypClass)
         : m_typeId(typeId),
           m_hypClass(hypClass)
     {
@@ -160,7 +160,7 @@ struct HypObjectHeader
             if (AtomicDecrement(&refCountWeak) == 0)
             {
                 // Free the slot for this
-                ReleaseHypClassInstance(hypClass, index);
+                ReleaseHypObject(hypClass, index);
             }
 
             return 0;
@@ -185,7 +185,7 @@ struct HypObjectHeader
             if (AtomicAdd(&refCountStrong, 0) == 0)
             {
                 // Free the slot for this
-                ReleaseHypClassInstance(hypClass, index);
+                ReleaseHypObject(hypClass, index);
             }
 
             return 0;
@@ -246,7 +246,7 @@ static inline void ObjectContainer_OnBlockAllocated(void* ctx, HypObjectMemory<T
 }
 
 template <class T>
-class ObjectContainer final : public ObjectContainerBase
+class HypObjectContainer final : public HypObjectContainerBase
 {
     using MemoryPoolType = MemoryPool<HypObjectMemory<T>, MemoryPoolInitInfo<T>, ObjectContainer_OnBlockAllocated<T>>;
 
@@ -255,17 +255,17 @@ class ObjectContainer final : public ObjectContainerBase
     static const Name s_poolName;
 
 public:
-    ObjectContainer()
-        : ObjectContainerBase(TypeId::ForType<T>(), T::Class()),
+    HypObjectContainer()
+        : HypObjectContainerBase(TypeId::ForType<T>(), T::Class()),
           m_pool(s_poolName, 2048, /* createInitialBlocks */ true, /* blockInitCtx */ this)
     {
     }
 
-    ObjectContainer(const ObjectContainer& other) = delete;
-    ObjectContainer& operator=(const ObjectContainer& other) = delete;
-    ObjectContainer(ObjectContainer&& other) noexcept = delete;
-    ObjectContainer& operator=(ObjectContainer&& other) noexcept = delete;
-    virtual ~ObjectContainer() override = default;
+    HypObjectContainer(const HypObjectContainer& other) = delete;
+    HypObjectContainer& operator=(const HypObjectContainer& other) = delete;
+    HypObjectContainer(HypObjectContainer&& other) noexcept = delete;
+    HypObjectContainer& operator=(HypObjectContainer&& other) noexcept = delete;
+    virtual ~HypObjectContainer() override = default;
 
     virtual SizeType NumAllocatedElements() const override
     {
@@ -313,46 +313,46 @@ private:
 };
 
 template <class T>
-const Name ObjectContainer<T>::s_poolName = CreateNameFromDynamicString(ANSIString("HypObjectPool_") + TypeNameWithoutNamespace<T>().Data());
+const Name HypObjectContainer<T>::s_poolName = CreateNameFromDynamicString(ANSIString("HypObjectPool_") + TypeNameWithoutNamespace<T>().Data());
 
-class ObjectPool
+class HypObjectPool
 {
 public:
-    class ObjectContainerMap
+    class ContainerMap
     {
         // Maps type Id to object container
         // Use a linked list so that references are never invalidated.
-        LinkedList<Pair<TypeId, ObjectContainerBase*>> m_map;
+        LinkedList<Pair<TypeId, HypObjectContainerBase*>> m_map;
         Mutex m_mutex;
 
     public:
-        ObjectContainerMap() = default;
-        ObjectContainerMap(const ObjectContainerMap&) = delete;
-        ObjectContainerMap& operator=(const ObjectContainerMap&) = delete;
-        ObjectContainerMap(ObjectContainerMap&&) noexcept = delete;
-        ObjectContainerMap& operator=(ObjectContainerMap&&) noexcept = delete;
-        HYP_API ~ObjectContainerMap();
+        ContainerMap() = default;
+        ContainerMap(const ContainerMap&) = delete;
+        ContainerMap& operator=(const ContainerMap&) = delete;
+        ContainerMap(ContainerMap&&) noexcept = delete;
+        ContainerMap& operator=(ContainerMap&&) noexcept = delete;
+        HYP_API ~ContainerMap();
 
         template <class T>
-        ObjectContainer<T>& GetOrCreate()
+        HypObjectContainer<T>& GetOrCreate()
         {
             // static variable to ensure that the object container is only created once and we don't have to lock everytime this is called
-            static ObjectContainer<T>& container = static_cast<ObjectContainer<T>&>(GetOrCreate(TypeId::ForType<T>(), []() -> ObjectContainerBase*
+            static HypObjectContainer<T>& container = static_cast<HypObjectContainer<T>&>(GetOrCreate(TypeId::ForType<T>(), []() -> HypObjectContainerBase*
                 {
-                    return new ObjectContainer<T>();
+                    return new HypObjectContainer<T>();
                 }));
 
             return container;
         }
 
-        HYP_API ObjectContainerBase& Get(TypeId typeId);
-        HYP_API ObjectContainerBase* TryGet(TypeId typeId);
+        HYP_API HypObjectContainerBase& Get(TypeId typeId);
+        HYP_API HypObjectContainerBase* TryGet(TypeId typeId);
 
     private:
-        HYP_API ObjectContainerBase& GetOrCreate(TypeId typeId, ObjectContainerBase* (*createFn)(void));
+        HYP_API HypObjectContainerBase& GetOrCreate(TypeId typeId, HypObjectContainerBase* (*createFn)(void));
     };
 
-    HYP_API static ObjectContainerMap& GetObjectContainerMap();
+    HYP_API static ContainerMap& GetObjectContainerMap();
 };
 
 } // namespace hyperion

@@ -6,7 +6,6 @@
 #include <core/object/Handle.hpp>
 
 #include <core/HashCode.hpp>
-#include <util/GameCounter.hpp>
 
 namespace hyperion {
 

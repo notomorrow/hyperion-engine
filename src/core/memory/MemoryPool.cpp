@@ -64,7 +64,7 @@ public:
         }
     }
 
-    void CalculateMemoryUsage(Array<SizeType>& outBytesPerPool)
+    void CalculateMemoryUsage(Array<Pair<MemoryPoolBase*, SizeType>>& outBytesPerPool)
     {
         Mutex::Guard guard(m_mutex);
 
@@ -77,7 +77,7 @@ public:
                 continue;
             }
 
-            outBytesPerPool.PushBack(m_registeredPools[i].second(m_registeredPools[i].first));
+            outBytesPerPool.EmplaceBack(m_registeredPools[i].first, m_registeredPools[i].second(m_registeredPools[i].first));
         }
     }
 
@@ -93,7 +93,7 @@ HYP_API MemoryPoolManager& GetMemoryPoolManager()
     return memoryPoolManager;
 }
 
-HYP_API void CalculateMemoryPoolUsage(Array<SizeType>& outBytesPerPool)
+HYP_API void CalculateMemoryUsagePerPool(Array<Pair<MemoryPoolBase*, SizeType>>& outBytesPerPool)
 {
     GetMemoryPoolManager().CalculateMemoryUsage(outBytesPerPool);
 }

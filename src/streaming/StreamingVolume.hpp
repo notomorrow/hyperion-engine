@@ -14,8 +14,6 @@
 
 #include <core/threading/Semaphore.hpp>
 
-#include <util/GameCounter.hpp>
-
 namespace hyperion {
 
 class StreamingNotifier;

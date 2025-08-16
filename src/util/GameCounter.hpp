@@ -33,6 +33,12 @@ struct GameCounter
         lastTimePoint = current;
     }
 
+    void Reset()
+    {
+        lastTimePoint = Now();
+        delta = TickUnit(0.0);
+    }
+
     TickUnit Interval(TimePoint endTimePoint) const
     {
         return std::chrono::duration_cast<std::chrono::duration<TickUnit, std::ratio<1>>>(endTimePoint - lastTimePoint).count();

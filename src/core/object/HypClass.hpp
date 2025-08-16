@@ -26,7 +26,7 @@ struct ObjectReference;
 } // namespace dotnet
 
 class IResource;
-class ObjectContainerBase;
+class HypObjectContainerBase;
 
 struct HypMember;
 class HypProperty;
@@ -386,7 +386,7 @@ public:
         return false;
     }
 
-    virtual ObjectContainerBase* GetObjectContainer() const
+    virtual HypObjectContainerBase* GetObjectContainer() const
     {
         return nullptr;
     }
@@ -717,9 +717,9 @@ public:
         return true;
     }
 
-    virtual ObjectContainerBase* GetObjectContainer() const override
+    virtual HypObjectContainerBase* GetObjectContainer() const override
     {
-        static ObjectContainer<T>& container = ObjectPool::GetObjectContainerMap().GetOrCreate<T>();
+        static HypObjectContainer<T>& container = HypObjectPool::GetObjectContainerMap().GetOrCreate<T>();
         return &container;
     }
 

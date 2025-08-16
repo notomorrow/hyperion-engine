@@ -1,24 +1,24 @@
 /* Copyright (c) 2025 No Tomorrow Games. All rights reserved. */
 
-#include <core/object/ObjectPool.hpp>
+#include <core/object/HypObjectPool.hpp>
 #include <core/object/HypClass.hpp>
 
 namespace hyperion {
 
-HYP_API void ReleaseHypClassInstance(const HypClass* hypClass, uint32 index)
+HYP_API void ReleaseHypObject(const HypClass* hypClass, uint32 index)
 {
     HYP_CORE_ASSERT(hypClass != nullptr, "HypClass is null");
     HYP_CORE_ASSERT(index != ~0u, "Invalid index");
 
-    ObjectContainerBase* container = hypClass->GetObjectContainer();
-    HYP_CORE_ASSERT(container != nullptr, "HypClass has no ObjectContainer");
+    HypObjectContainerBase* container = hypClass->GetObjectContainer();
+    HYP_CORE_ASSERT(container != nullptr, "HypClass has no HypObjectContainer");
 
     hypClass->GetObjectContainer()->ReleaseIndex(index);
 }
 
-static ObjectPool::ObjectContainerMap g_objectContainerMap {};
+static HypObjectPool::ContainerMap g_objectContainerMap {};
 
-ObjectPool::ObjectContainerMap::~ObjectContainerMap()
+HypObjectPool::ContainerMap::~ContainerMap()
 {
     for (auto& it : m_map)
     {
@@ -30,12 +30,12 @@ ObjectPool::ObjectContainerMap::~ObjectContainerMap()
     }
 }
 
-ObjectPool::ObjectContainerMap& ObjectPool::GetObjectContainerMap()
+HypObjectPool::ContainerMap& HypObjectPool::GetObjectContainerMap()
 {
     return g_objectContainerMap;
 }
 
-ObjectContainerBase& ObjectPool::ObjectContainerMap::GetOrCreate(TypeId typeId, ObjectContainerBase* (*createFn)(void))
+HypObjectContainerBase& HypObjectPool::ContainerMap::GetOrCreate(TypeId typeId, HypObjectContainerBase* (*createFn)(void))
 {
     Mutex::Guard guard(m_mutex);
 
@@ -56,13 +56,13 @@ ObjectContainerBase& ObjectPool::ObjectContainerMap::GetOrCreate(TypeId typeId, 
         return *it->second;
     }
 
-    ObjectContainerBase* container = createFn();
+    HypObjectContainerBase* container = createFn();
     HYP_CORE_ASSERT(container != nullptr);
 
     return *m_map.EmplaceBack(typeId, container).second;
 }
 
-ObjectContainerBase& ObjectPool::ObjectContainerMap::Get(TypeId typeId)
+HypObjectContainerBase& HypObjectPool::ContainerMap::Get(TypeId typeId)
 {
     Mutex::Guard guard(m_mutex);
 
@@ -81,7 +81,7 @@ ObjectContainerBase& ObjectPool::ObjectContainerMap::Get(TypeId typeId)
     return *it->second;
 }
 
-ObjectContainerBase* ObjectPool::ObjectContainerMap::TryGet(TypeId typeId)
+HypObjectContainerBase* HypObjectPool::ContainerMap::TryGet(TypeId typeId)
 {
     Mutex::Guard guard(m_mutex);
 

@@ -25,8 +25,6 @@
 
 #include <scene/Entity.hpp>
 
-#include <util/GameCounter.hpp>
-
 #include <atomic>
 #include <mutex>
 
