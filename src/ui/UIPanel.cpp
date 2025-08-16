@@ -159,7 +159,7 @@ void UIPanel::OnScrollOffsetUpdate_Internal(Vec2f delta)
     //     UpdateScrollbarThumbPosition(SA_VERTICAL);
     // }
 
-    const Vec2i scrollOffset = GetScrollOffset();
+    const Vec2i scrollOffset = Vec2i(GetScrollOffset());
 
     if (scrollOffset.x != 0)
     {
@@ -193,7 +193,9 @@ UIEventHandlerResult UIPanel::HandleScroll(const MouseEvent& eventData)
 
     if ((eventData.wheel.x != 0 && CanScrollOnAxis(SA_HORIZONTAL)) || (eventData.wheel.y != 0 && CanScrollOnAxis(SA_VERTICAL)))
     {
-        SetScrollOffset(GetScrollOffset() - eventData.wheel * 10, /* smooth */ true);
+        constexpr float mouseWheelMultiplier = 25.0f;
+
+        SetScrollOffset(GetScrollOffset() - Vec2f(eventData.wheel * mouseWheelMultiplier), /* smooth */ true);
 
         return UIEventHandlerResult::STOP_BUBBLING;
     }
@@ -338,7 +340,7 @@ void UIPanel::UpdateScrollbarSize(ScrollAxis axis)
                             Vec2f ratios;
                             ratios[i] = mouseRelevantPosition / float(scrollbar->GetActualSize()[i]);
 
-                            SetScrollOffset(Vec2i(Vec2f(GetActualInnerSize()) * ratios), /* smooth */ false);
+                            SetScrollOffset(Vec2f(GetActualInnerSize()) * ratios, /* smooth */ false);
                         }
                     }
 
@@ -387,9 +389,9 @@ void UIPanel::UpdateScrollbarThumbPosition(ScrollAxis axis)
         return;
     }
 
-    const Vec2i visibleContentSizeOffset = GetScrollOffset();
+    const Vec2f visibleContentSizeOffset = GetScrollOffset();
     const Vec2i innerContentSize = GetActualInnerSize() - GetActualSize();
-    const Vec2f ratios = Vec2f(visibleContentSizeOffset) / Vec2f(innerContentSize);
+    const Vec2f ratios = visibleContentSizeOffset / Vec2f(innerContentSize);
 
     Vec2i position;
 

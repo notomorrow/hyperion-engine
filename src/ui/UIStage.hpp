@@ -22,7 +22,6 @@
 #include <input/Mouse.hpp>
 #include <input/Keyboard.hpp>
 
-#include <util/GameCounter.hpp>
 #include <core/HashCode.hpp>
 #include <core/Types.hpp>
 

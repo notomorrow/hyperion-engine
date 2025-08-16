@@ -203,11 +203,11 @@ public:
     virtual void RemoveEntity(ObjId<Entity> entityId) override
     {
         HYP_MT_CHECK_RW(m_dataRaceDetector);
-        
+
         Assert(entityId.IsValid());
-        
+
         // Get pointer from ID
-        ObjectContainerBase* container = ObjectPool::GetObjectContainerMap().TryGet(entityId.GetTypeId());
+        HypObjectContainerBase* container = HypObjectPool::GetObjectContainerMap().TryGet(entityId.GetTypeId());
 
         HYP_CORE_ASSERT(container != nullptr,
             "Container is not initialized for type! Possibly using an Id created without pointing to a valid object with TypeId %u?",

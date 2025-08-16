@@ -25,6 +25,8 @@
 namespace hyperion {
 namespace memory {
 
+class MemoryPoolBase;
+
 template <class T>
 struct MemoryPoolInitInfo
 {
@@ -101,7 +103,7 @@ struct MemoryPoolBlock final
 class MemoryPoolManager;
 
 extern HYP_API MemoryPoolManager& GetMemoryPoolManager();
-extern HYP_API void CalculateMemoryPoolUsage(Array<SizeType>& outBytesPerPool);
+extern HYP_API void CalculateMemoryUsagePerPool(Array<Pair<MemoryPoolBase*, SizeType>>& outBytesPerPool);
 
 class HYP_API MemoryPoolBase
 {
@@ -120,7 +122,7 @@ protected:
     MemoryPoolBase(Name poolName, ThreadId ownerThreadId, SizeType (*getNumAllocatedBytes)(MemoryPoolBase*));
     ~MemoryPoolBase();
 
-    Name poolName;
+    Name m_poolName;
     ThreadId m_ownerThreadId;
     IdGenerator m_idGenerator;
 
@@ -430,8 +432,9 @@ protected:
 
 } // namespace memory
 
-using memory::CalculateMemoryPoolUsage;
+using memory::CalculateMemoryUsagePerPool;
 using memory::MemoryPool;
+using memory::MemoryPoolBase;
 using memory::MemoryPoolInitInfo;
 
 } // namespace hyperion

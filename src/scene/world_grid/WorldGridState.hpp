@@ -18,7 +18,6 @@
 
 #include <core/math/Vector2.hpp>
 
-#include <util/GameCounter.hpp>
 #include <core/HashCode.hpp>
 
 namespace hyperion {

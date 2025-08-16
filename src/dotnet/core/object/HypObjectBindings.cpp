@@ -6,7 +6,7 @@
 
 #include <core/utilities/GlobalContext.hpp>
 
-#include <core/object/ObjectPool.hpp>
+#include <core/object/HypObjectPool.hpp>
 
 #include <dotnet/Object.hpp>
 #include <dotnet/Class.hpp>

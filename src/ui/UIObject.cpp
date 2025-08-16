@@ -136,6 +136,8 @@ UIObject::UIObject(const ThreadId& ownerThreadId)
       m_deferredUpdates(UIObjectUpdateType::NONE),
       m_lockedUpdates(UIObjectUpdateType::NONE)
 {
+    m_scrollOffset.SetRate(60.0);
+
     OnInit.BindManaged("OnInit", GetManagedObjectResource(), UIEventHandlerResult::OK).Detach();
     OnAttached.BindManaged("OnAttached", GetManagedObjectResource(), UIEventHandlerResult::OK).Detach();
     OnRemoved.BindManaged("OnRemoved", GetManagedObjectResource(), UIEventHandlerResult::OK).Detach();
@@ -288,7 +290,7 @@ void UIObject::Update_Internal(float delta)
 
     // If the scroll offset has changed, recalculate the position
     Vec2f scrollOffsetDelta;
-    if (m_scrollOffset.Advance(delta, scrollOffsetDelta))
+    if (m_scrollOffset.Advance(scrollOffsetDelta))
     {
         OnScrollOffsetUpdate(scrollOffsetDelta);
     }
@@ -775,7 +777,7 @@ void UIObject::UpdateNodeTransform()
         zValue -= parentNode->GetWorldTranslation().z;
     }
 
-    const Vec2f parentScrollOffset = Vec2f(GetParentScrollOffset());
+    const Vec2f parentScrollOffset = GetParentScrollOffset();
 
     Node* parentNode = m_node->GetParent();
 
@@ -797,28 +799,28 @@ void UIObject::UpdateNodeTransform()
     }
 }
 
-Vec2i UIObject::GetScrollOffset() const
+Vec2f UIObject::GetScrollOffset() const
 {
-    return Vec2i(m_scrollOffset.GetValue());
+    return m_scrollOffset.GetValue();
 }
 
-void UIObject::SetScrollOffset(Vec2i scrollOffset, bool smooth)
+void UIObject::SetScrollOffset(Vec2f scrollOffset, bool smooth)
 {
     HYP_SCOPE;
 
-    scrollOffset.x = m_actualInnerSize.x > m_actualSize.x
-        ? MathUtil::Clamp(scrollOffset.x, 0, m_actualInnerSize.x - m_actualSize.x)
+    scrollOffset.x = m_actualInnerSize.x > float(m_actualSize.x)
+        ? MathUtil::Clamp(scrollOffset.x, 0.0f, float(m_actualInnerSize.x - m_actualSize.x))
         : 0;
 
-    scrollOffset.y = m_actualInnerSize.y > m_actualSize.y
-        ? MathUtil::Clamp(scrollOffset.y, 0, m_actualInnerSize.y - m_actualSize.y)
+    scrollOffset.y = m_actualInnerSize.y > float(m_actualSize.y)
+        ? MathUtil::Clamp(scrollOffset.y, 0.0f, float(m_actualInnerSize.y - m_actualSize.y))
         : 0;
 
-    m_scrollOffset.SetTarget(Vec2f(scrollOffset));
+    m_scrollOffset.SetTarget(scrollOffset);
 
     if (!smooth)
     {
-        m_scrollOffset.SetValue(Vec2f(scrollOffset));
+        m_scrollOffset.SetValue(scrollOffset);
     }
 
     OnScrollOffsetUpdate(m_scrollOffset.GetValue());
@@ -854,7 +856,7 @@ void UIObject::ScrollToChild(UIObject* child)
     // Get the position of the child relative to this object
     Vec2f childPosition = child->GetAbsolutePosition() - GetAbsolutePosition();
 
-    Vec2i scrollOffset = GetScrollOffset();
+    Vec2i scrollOffset = Vec2i(GetScrollOffset());
 
     Vec2i newScrollOffset = scrollOffset;
     Vec2i childSize = child->GetActualSize();
@@ -879,7 +881,7 @@ void UIObject::ScrollToChild(UIObject* child)
 
     if (newScrollOffset != scrollOffset)
     {
-        SetScrollOffset(newScrollOffset, /* smooth */ false);
+        SetScrollOffset(Vec2f(newScrollOffset), /* smooth */ false);
     }
 }
 
@@ -2050,7 +2052,7 @@ Handle<UIObject> UIObject::GetClosestSpawnParent_Proc(const ProcRef<bool(UIObjec
     return Handle<UIObject>::empty;
 }
 
-Vec2i UIObject::GetParentScrollOffset() const
+Vec2f UIObject::GetParentScrollOffset() const
 {
     HYP_SCOPE;
 
@@ -2059,7 +2061,7 @@ Vec2i UIObject::GetParentScrollOffset() const
         return parentUiObject->GetScrollOffset();
     }
 
-    return Vec2i::Zero();
+    return Vec2f::Zero();
 }
 
 Scene* UIObject::GetScene() const

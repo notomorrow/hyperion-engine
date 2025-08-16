@@ -20,7 +20,6 @@
 
 #include <core/math/Color.hpp>
 
-#include <util/GameCounter.hpp>
 #include <core/Types.hpp>
 
 namespace hyperion {

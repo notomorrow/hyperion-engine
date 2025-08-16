@@ -16,7 +16,6 @@
 
 #include <core/math/Matrix4.hpp>
 
-#include <util/GameCounter.hpp>
 #include <core/Types.hpp>
 
 namespace hyperion {

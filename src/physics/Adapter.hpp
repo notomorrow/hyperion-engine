@@ -3,7 +3,6 @@
 #pragma once
 
 #include <core/object/Handle.hpp>
-#include <util/GameCounter.hpp>
 
 namespace hyperion::physics {
 

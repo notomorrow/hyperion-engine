@@ -18,8 +18,6 @@
 
 #include <scene/Scene.hpp>
 
-#include <util/GameCounter.hpp>
-
 #include <core/Types.hpp>
 
 namespace hyperion {

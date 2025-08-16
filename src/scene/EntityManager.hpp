@@ -38,8 +38,6 @@
 #include <scene/System.hpp>
 #include <scene/EntityTag.hpp>
 
-#include <util/GameCounter.hpp>
-
 namespace hyperion {
 
 namespace threading {

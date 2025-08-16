@@ -16,8 +16,6 @@
 #include <core/object/Handle.hpp>
 #include <core/Defines.hpp>
 
-#include <util/GameCounter.hpp>
-
 namespace hyperion {
 
 class Lightmapper;

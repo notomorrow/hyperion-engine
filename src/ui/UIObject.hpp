@@ -618,13 +618,13 @@ public:
     /*! \brief Get the scroll offset (in pixels) of the UI object.
      *  \return The scroll offset of the UI object */
     HYP_METHOD()
-    Vec2i GetScrollOffset() const;
+    Vec2f GetScrollOffset() const;
 
     /*! \brief Set the scroll offset (in pixels) of the UI object.
      *  \param scrollOffset The scroll offset of the UI object
      *  \param smooth Whether or not to interpolate the scroll offset to the given value. If false, it will immediately move to the given value. */
     HYP_METHOD()
-    void SetScrollOffset(Vec2i scrollOffset, bool smooth);
+    void SetScrollOffset(Vec2f scrollOffset, bool smooth);
 
     HYP_METHOD()
     void ScrollToChild(UIObject* child);
@@ -1331,7 +1331,7 @@ protected:
     virtual Material::ParameterTable GetMaterialParameters() const;
     virtual Material::TextureSet GetMaterialTextures() const;
 
-    Vec2i GetParentScrollOffset() const;
+    Vec2f GetParentScrollOffset() const;
 
     /*! \brief Add a DelegateHandler to be removed when the object is destructed */
     void AddDelegateHandler(DelegateHandler&& delegateHandler)
@@ -1393,8 +1393,6 @@ protected:
     BoundingBox m_aabb;
     BoundingBox m_aabbClamped;
 
-    BlendVar<Vec2f> m_scrollOffset;
-
     Handle<UIObject> m_verticalScrollbar;
     Handle<UIObject> m_horizontalScrollbar;
 
@@ -1404,6 +1402,8 @@ protected:
 
     uint32 m_borderRadius;
     EnumFlags<UIObjectBorderFlags> m_borderFlags;
+
+    BlendVar<Vec2f> m_scrollOffset;
 
     UIObjectAlignment m_originAlignment;
     UIObjectAlignment m_parentAlignment;

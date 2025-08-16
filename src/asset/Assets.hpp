@@ -17,8 +17,6 @@
 
 #include <core/logging/LoggerFwd.hpp>
 
-#include <util/GameCounter.hpp>
-
 #include <scene/Node.hpp>
 
 #include <core/Constants.hpp>

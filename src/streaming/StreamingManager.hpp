@@ -21,8 +21,6 @@
 
 #include <core/logging/LoggerFwd.hpp>
 
-#include <util/GameCounter.hpp>
-
 namespace hyperion {
 
 HYP_DECLARE_LOG_CHANNEL(Streaming);

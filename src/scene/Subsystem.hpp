@@ -12,7 +12,6 @@
 #include <core/utilities/StringView.hpp>
 
 #include <core/HashCode.hpp>
-#include <util/GameCounter.hpp>
 
 namespace hyperion {
 
