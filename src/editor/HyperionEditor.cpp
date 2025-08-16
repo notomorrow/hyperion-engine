@@ -122,19 +122,6 @@ void HyperionEditor::Init()
     scene->SetName(NAME("myScene"));
     m_editorSubsystem->GetCurrentProject()->AddScene(scene);
 
-    // Calculate memory pool usage
-    Array<SizeType> memoryUsagePerPool;
-    CalculateMemoryPoolUsage(memoryUsagePerPool);
-
-    SizeType totalMemoryPoolUsage = 0;
-    for (SizeType i = 0; i < memoryUsagePerPool.Size(); i++)
-    {
-        HYP_LOG(Editor, Debug, "Memory Usage for pool {} : {} MiB", i, double(memoryUsagePerPool[i]) / 1024 / 1024);
-        totalMemoryPoolUsage += memoryUsagePerPool[i];
-    }
-
-    HYP_LOG(Editor, Debug, "Total Memory Usage for pools : {} MiB", double(totalMemoryPoolUsage) / 1024 / 1024);
-
     HYP_LOG(Editor, Debug, "ShaderManager memory usage: {} MiB",
         double(ShaderManager::GetInstance()->CalculateMemoryUsage()) / 1024 / 1024);
 

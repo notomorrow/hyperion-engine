@@ -431,7 +431,6 @@ private:
 
     /// TODO: Change to MemoryPool and use Component* rather than ComponentId
     HashMap<ComponentId, Component> m_components;
-    // MemoryPool<Component> m_componentPool;
 };
 
 template <class Component>

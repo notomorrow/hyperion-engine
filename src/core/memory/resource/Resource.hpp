@@ -146,6 +146,8 @@ extern HYP_API IResourceMemoryPool* GetOrCreateResourceMemoryPool(TypeId typeId,
 template <class T>
 class ResourceMemoryPool final : private MemoryPool<ValueStorage<T>, ResourceMemoryPoolInitInfo<T>>, public IResourceMemoryPool
 {
+    static const Name s_poolName;
+
 public:
     static_assert(std::is_base_of_v<IResource, T>, "T must be a subclass of IResource");
 
@@ -162,7 +164,7 @@ public:
     }
 
     ResourceMemoryPool()
-        : Base()
+        : Base(s_poolName)
     {
     }
 
@@ -201,6 +203,9 @@ private:
         Base::ReleaseIndex(poolHandle.index);
     }
 };
+
+template <class T>
+static constexpr Name ResourceMemoryPool<T>::s_poolName = CreateNameFromDynamicString(ANSIString("ResourceMemoryPool_") + TypeNameWithoutNamespace<T>().Data());
 
 template <class T, class... Args>
 HYP_FORCE_INLINE static T* AllocateResource(Args&&... args)

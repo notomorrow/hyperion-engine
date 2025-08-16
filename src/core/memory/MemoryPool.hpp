@@ -5,6 +5,8 @@
 #include <core/containers/LinkedList.hpp>
 #include <core/containers/FixedArray.hpp>
 
+#include <core/Name.hpp>
+
 #include <core/threading/AtomicVar.hpp>
 #include <core/threading/Mutex.hpp>
 #include <core/threading/DataRaceDetector.hpp>
@@ -109,10 +111,16 @@ public:
     MemoryPoolBase(MemoryPoolBase&& other) noexcept = delete;
     MemoryPoolBase& operator=(MemoryPoolBase&& other) noexcept = delete;
 
+    HYP_FORCE_INLINE Name GetPoolName() const
+    {
+        return m_poolName;
+    }
+
 protected:
-    MemoryPoolBase(ThreadId ownerThreadId, SizeType (*getNumAllocatedBytes)(MemoryPoolBase*));
+    MemoryPoolBase(Name poolName, ThreadId ownerThreadId, SizeType (*getNumAllocatedBytes)(MemoryPoolBase*));
     ~MemoryPoolBase();
 
+    Name poolName;
     ThreadId m_ownerThreadId;
     IdGenerator m_idGenerator;
 
@@ -150,8 +158,8 @@ protected:
 public:
     static constexpr uint32 s_invalidIndex = ~0u;
 
-    MemoryPool(uint32 initialCount = InitInfo::numInitialElements, bool createInitialBlocks = true, void* blockInitCtx = nullptr)
-        : MemoryPoolBase(ThreadId::Current(), &CalculateMemoryUsage),
+    MemoryPool(Name poolName, uint32 initialCount = InitInfo::numInitialElements, bool createInitialBlocks = true, void* blockInitCtx = nullptr)
+        : MemoryPoolBase(poolName, ThreadId::Current(), &CalculateMemoryUsage),
           m_initialNumBlocks((initialCount + numElementsPerBlock - 1) / numElementsPerBlock),
           m_numBlocks(0),
           m_blockInitCtx(blockInitCtx)

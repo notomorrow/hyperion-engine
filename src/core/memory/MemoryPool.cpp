@@ -102,8 +102,9 @@ HYP_API void CalculateMemoryPoolUsage(Array<SizeType>& outBytesPerPool)
 
 #pragma region MemoryPoolBase
 
-MemoryPoolBase::MemoryPoolBase(ThreadId ownerThreadId, SizeType (*getNumAllocatedBytes)(MemoryPoolBase*))
-    : m_ownerThreadId(ownerThreadId)
+MemoryPoolBase::MemoryPoolBase(Name poolName, ThreadId ownerThreadId, SizeType (*getNumAllocatedBytes)(MemoryPoolBase*))
+    : m_poolName(poolName),
+      m_ownerThreadId(ownerThreadId)
 {
     GetMemoryPoolManager().RegisterPool(this, getNumAllocatedBytes);
 }
