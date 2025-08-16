@@ -3,10 +3,18 @@ using System.Runtime.InteropServices;
 
 namespace Hyperion
 {
-    [HypClassBinding(Name="EnvGrid")]
+    [HypClassBinding(Name = "EnvGrid")]
     public class EnvGrid : Entity
     {
         public EnvGrid()
+        {
+        }
+    }
+
+    [HypClassBinding(Name = "LegacyEnvGrid")]
+    public class LegacyEnvGrid : Entity
+    {
+        public LegacyEnvGrid()
         {
         }
     }
