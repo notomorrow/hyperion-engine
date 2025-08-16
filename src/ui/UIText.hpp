@@ -115,8 +115,6 @@ protected:
 
     virtual void UpdateMeshData_Internal() override;
 
-    virtual bool Repaint_Internal() override;
-
     void UpdateTextAABB();
     void UpdateRenderData();
 

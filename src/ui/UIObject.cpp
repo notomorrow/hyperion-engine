@@ -128,7 +128,6 @@ UIObject::UIObject(const ThreadId& ownerThreadId)
       m_isEnabled(true),
       m_acceptsFocus(true),
       m_affectsParentSize(true),
-      m_needsRepaint(true),
       m_isPositionAbsolute(false),
       m_allowMaterialUpdate(false),
       m_computedDepth(0),
@@ -334,11 +333,6 @@ void UIObject::Update_Internal(float delta)
         {
             UpdateMeshData(m_deferredUpdates & UIObjectUpdateType::UPDATE_CHILDREN_MESH_DATA);
         }
-    }
-
-    if (m_computedVisibility && NeedsRepaint())
-    {
-        Repaint();
     }
 }
 
@@ -2445,36 +2439,32 @@ void UIObject::UpdateMaterial(bool updateChildren)
 
     if (parametersChanged || texturesChanged)
     {
-        Handle<Material> newMaterial;
-
-        if (currentMaterial->IsDynamic())
+        if (!currentMaterial->IsDynamic())
         {
-            newMaterial = currentMaterial;
-        }
-        else
-        {
-            newMaterial = currentMaterial->Clone();
-            InitObject(newMaterial);
+            HYP_LOG(UI, Warning,
+                "UIObject '{}' material is not dynamic, but parameters or textures have changed. Fetching a new material.\n"
+                "Consider setting the material to dynamic if you want to update it at runtime.",
+                GetName());
 
-            meshComponent->material = newMaterial;
-
+            meshComponent->material = CreateMaterial();
+            
             scene->GetEntityManager()->AddTag<EntityTag::UPDATE_RENDER_PROXY>(GetEntity());
-        }
 
-        Assert(newMaterial->IsDynamic());
+            // return, new material would have the updated parameters and textures
+            // so we don't need to set them again
+            return;
+        }
 
         if (parametersChanged)
         {
-            newMaterial->SetParameters(materialParameters);
+            currentMaterial->SetParameters(materialParameters);
         }
 
         if (texturesChanged)
         {
-            newMaterial->SetTextures(materialTextures);
+            currentMaterial->SetTextures(materialTextures);
         }
     }
-
-    SetNeedsRepaintFlag();
 }
 
 bool UIObject::HasChildUIObjects() const
@@ -2994,31 +2984,6 @@ void UIObject::SetDataSource_Internal(UIDataSourceBase* dataSource)
     {
         return;
     }
-}
-
-bool UIObject::NeedsRepaint() const
-{
-    return m_needsRepaint.Get(MemoryOrder::ACQUIRE);
-}
-
-void UIObject::SetNeedsRepaintFlag(bool needsRepaint)
-{
-    m_needsRepaint.Set(needsRepaint, MemoryOrder::RELEASE);
-}
-
-void UIObject::Repaint()
-{
-    HYP_SCOPE;
-
-    if (Repaint_Internal())
-    {
-        SetNeedsRepaintFlag(false);
-    }
-}
-
-bool UIObject::Repaint_Internal()
-{
-    return true;
 }
 
 Handle<UIObject> UIObject::CreateUIObject(const HypClass* hypClass, Name name, Vec2i position, UIObjectSize size)

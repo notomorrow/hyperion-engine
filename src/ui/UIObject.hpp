@@ -1366,12 +1366,6 @@ protected:
     {
     }
 
-    bool NeedsRepaint() const;
-    void SetNeedsRepaintFlag(bool needsRepaint = true);
-
-    void Repaint();
-    virtual bool Repaint_Internal();
-
     UIStage* m_stage;
     WeakHandle<UIObject> m_spawnParent;
 
@@ -1494,8 +1488,6 @@ private:
 
     float m_textSize;
     float m_computedTextSize;
-
-    AtomicVar<bool> m_needsRepaint;
 
     Handle<Node> m_node;
 

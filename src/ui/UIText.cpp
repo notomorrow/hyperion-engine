@@ -257,8 +257,6 @@ void UIText::SetText(const String& text)
         return;
     }
 
-    SetNeedsRepaintFlag(true);
-
     {
         UILockedUpdatesScope scope(*this, UIObjectUpdateType::UPDATE_TEXT_RENDER_DATA);
 
@@ -294,8 +292,6 @@ void UIText::SetFontAtlas(const RC<FontAtlas>& fontAtlas)
     {
         return;
     }
-
-    SetNeedsRepaintFlag(true);
 
     {
         UILockedUpdatesScope scope(*this, UIObjectUpdateType::UPDATE_TEXT_RENDER_DATA);
@@ -376,8 +372,6 @@ void UIText::UpdateRenderData()
 
         UpdateMaterial(false);
         UpdateMeshData(false);
-
-        SetNeedsRepaintFlag(true);
     }
 }
 
@@ -461,12 +455,6 @@ void UIText::UpdateMeshData_Internal()
     meshComponent.instanceData.SetBufferData(4, instanceProperties.Data(), instanceProperties.Size());
 
     GetScene()->GetEntityManager()->AddTag<EntityTag::UPDATE_RENDER_PROXY>(GetEntity());
-}
-
-bool UIText::Repaint_Internal()
-{
-    // Do nothing
-    return true;
 }
 
 MaterialAttributes UIText::GetMaterialAttributes() const
