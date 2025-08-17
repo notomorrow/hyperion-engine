@@ -315,11 +315,6 @@ void HypClassMemberIterator::Advance()
 
 #pragma region HypClass
 
-static const HashMap<Name, HypClassFlags> g_attributeToFlags = {
-    { NAME("abstract"), HypClassFlags::ABSTRACT },
-    { NAME("noscriptbindings"), HypClassFlags::NO_SCRIPT_BINDINGS }
-};
-
 HypClass::HypClass(TypeId typeId, Name name, int staticIndex, uint32 numDescendants, Name parentName, Span<const HypClassAttribute> attributes, EnumFlags<HypClassFlags> flags, Span<HypMember> members)
     : m_typeId(typeId),
       m_name(name),
@@ -333,12 +328,17 @@ HypClass::HypClass(TypeId typeId, Name name, int staticIndex, uint32 numDescenda
       m_alignment(0),
       m_serializationMode(HypClassSerializationMode::DEFAULT)
 {
+    static const HashMap<Name, HypClassFlags> s_attributeToFlags = {
+        { NAME("abstract"), HypClassFlags::ABSTRACT },
+        { NAME("noscriptbindings"), HypClassFlags::NO_SCRIPT_BINDINGS }
+    };
+
     if (staticIndex >= 0)
     {
         HYP_CORE_ASSERT(staticIndex < g_maxStaticClassIndex, "Static index %d exceeds maximum static class index %u", staticIndex, g_maxStaticClassIndex);
     }
 
-    // Apply flags for all values in g_attributeToFlags
+    // Apply flags for all values in s_attributeToFlags
     for (const HypClassAttribute& attr : m_attributes)
     {
         if (!attr.GetValue().GetBool())
@@ -347,9 +347,9 @@ HypClass::HypClass(TypeId typeId, Name name, int staticIndex, uint32 numDescenda
             continue;
         }
 
-        auto it = g_attributeToFlags.Find(attr.name);
+        auto it = s_attributeToFlags.Find(attr.name);
 
-        if (it != g_attributeToFlags.End())
+        if (it != s_attributeToFlags.End())
         {
             m_flags |= it->second;
         }

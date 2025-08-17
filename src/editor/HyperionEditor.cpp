@@ -182,9 +182,9 @@ void HyperionEditor::Init()
     sunNode->SetName(NAME("Sun"));
 
     Handle<DirectionalLight> sunEntity = scene->GetEntityManager()->AddEntity<DirectionalLight>(
-        Vec3f(-0.9f, 0.3f, 0.2f).Normalize(),
+        Vec3f(-0.2f, 0.8f, 0.2f).Normalize(),
         Color(Vec4f(1.0f, 0.9f, 0.8f, 1.0f)),
-        5.0f);
+        9.0f);
 
     sunNode->AddChild(sunEntity);
 #endif

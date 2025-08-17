@@ -85,8 +85,8 @@ HYP_DESCRIPTOR_CBUFF(RTRadianceDescriptorSet, RTRadianceUniforms) uniform RTRadi
 
 #ifdef MODE_IRRADIANCE
 
-#define RAY_OFFSET 0.025
-#define NUM_BOUNCES 4
+#define RAY_OFFSET 0.005
+#define NUM_BOUNCES 8
 #define NUM_SAMPLES 1
 #else
 #define RAY_OFFSET 0.01
@@ -269,7 +269,7 @@ void main()
                 radiance += beta * payload.emissive.rgb;
             }
 
-            beta *= albedo * (1.0 - metalness);
+            beta *= albedo * (1.0 - metalness) * HYP_FMATH_ONE_OVER_PI;
 
             for (uint light_index = 0; light_index < rt_radiance_uniforms.num_bound_lights; light_index++) {
                 const Light light = HYP_GET_LIGHT(light_index);
@@ -283,14 +283,14 @@ void main()
                     float shadow = 1.0 - CheckInShadow(hitPos, N, L);
 
                     float NdotL = max(dot(N, L), 0.0);
-                    radiance += beta * NdotL * shadow * light_color * HYP_FMATH_ONE_OVER_PI;
+                    radiance += beta * NdotL * shadow * light_color;
                 } else if (light.type == HYP_LIGHT_TYPE_POINT) {
                     vec3 L = normalize(light.position_intensity.xyz - hitPos);
                     float d = length(light.position_intensity.xyz - hitPos);
                     float attenuation = 1.0 / (d * d);
 
                     float NdotL = max(dot(N, L), 0.0);
-                    radiance += beta * NdotL * light_color * attenuation * HYP_FMATH_ONE_OVER_PI;
+                    radiance += beta * NdotL * light_color * attenuation;
                 } else {
                     /// ... TODO
                 }
@@ -316,14 +316,12 @@ void main()
 
     vec3 finalColor = accumRadiance.rgb / float(NUM_SAMPLES);
 
-    // // test
+    // // // test
     // float inShadow = 1.0-CheckInShadow(ray.origin.xyz, ray.direction.xyz, HYP_GET_LIGHT(0).position_intensity.xyz);
-    // finalColor = vec3(inShadow);//dot(N0, HYP_GET_LIGHT(0).position_intensity.xyz));//vec3(inShadow);
-
     // vec3 Normal = normalize(ray.direction.xyz);
     // vec3 LightDir = normalize(HYP_GET_LIGHT(0).position_intensity.xyz);
     // vec3 NoL = max(dot(Normal, LightDir), 0.0) * vec3(1.0);
-    // finalColor = NoL;
+    // finalColor = NoL * inShadow;
 
     // // DEBUG : return first hit normal
     // finalColor = DebugTest_Albedo(ray.origin.xyz, N0);

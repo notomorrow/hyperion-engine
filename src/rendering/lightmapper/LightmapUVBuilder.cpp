@@ -204,7 +204,7 @@ TResult<LightmapUVMap> LightmapUVBuilder::Build()
 
     xatlas::PackOptions packOptions {};
     packOptions.maxChartSize = 2048;
-    packOptions.texelsPerUnit = 32.0f;
+    packOptions.texelsPerUnit = 16.0f;
     packOptions.bilinear = true;
 
     xatlas::ComputeCharts(atlas);
