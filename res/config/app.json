@@ -42,7 +42,7 @@
       "pathTracing": {
         "enabled": false
       },
-      "enabled": true
+      "enabled": false
     },
     "hbao": {
       "radius": 2.500000,
