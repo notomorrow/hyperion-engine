@@ -40,7 +40,7 @@
         "enabled": false
       },
       "pathTracing": {
-        "enabled": true
+        "enabled": false
       },
       "enabled": true
     },
