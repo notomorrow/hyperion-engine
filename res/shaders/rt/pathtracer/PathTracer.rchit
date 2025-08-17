@@ -287,7 +287,7 @@ void main()
     // }
 
     payload.emissive = vec4(0.0);
-    payload.throughput = material_color;
+    payload.throughput = vec4(material_color.rgb, metalness); // metalness is stored in the alpha channel
     payload.distance = gl_HitTEXT;
     payload.normal = normal;
     payload.roughness = roughness;

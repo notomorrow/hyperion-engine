@@ -186,16 +186,6 @@ void SpinFrame(inout vec3 t, inout vec3 b, float angle)
     b = -s * t0 + c * b;
 }
 
-vec3 SampleCosineDir(in vec2 xi, in vec3 N)
-{
-    vec3 dir = SampleCosineWeightedHemisphere(xi);
-
-    vec3 T1, T2;
-    ComputeOrthonormalBasis(N, T1, T2);
-
-    return normalize(T1 * dir.x + T2 * dir.y + N * dir.z);
-}
-
 vec3 radiance = vec3(0.0);
 vec3 beta = vec3(1.0);
 

@@ -424,4 +424,26 @@ vec4 CalculateEnergyCompensation(vec4 F0, vec4 dfg)
     return 1.0 + F0 * ((1.0 / max(dfg.y, 0.0001)) - 1.0);
 }
 
+vec3 SampleCosineWeightedHemisphere(vec2 Xi)
+{
+    float r = sqrt(Xi.x);
+    float phi = 6.28318530718 * Xi.y;
+
+    float x = r * cos(phi);
+    float y = r * sin(phi);
+    float z = sqrt(1.0 - r * r);
+
+    return vec3(x, y, z);
+}
+
+vec3 SampleCosineDir(in vec2 xi, in vec3 N)
+{
+    vec3 dir = SampleCosineWeightedHemisphere(xi);
+
+    vec3 T1, T2;
+    ComputeOrthonormalBasis(N, T1, T2);
+
+    return normalize(T1 * dir.x + T2 * dir.y + N * dir.z);
+}
+
 #endif
