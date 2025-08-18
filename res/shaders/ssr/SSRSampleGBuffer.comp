@@ -5,7 +5,7 @@
 #include "../include/defines.inc"
 
 HYP_DESCRIPTOR_UAV(SSRDescriptorSet, UVImage, format = rgba16f) uniform readonly image2D ssr_uv_image;
-HYP_DESCRIPTOR_UAV(SSRDescriptorSet, SampleImage, format = rgba16f) uniform writeonly image2D ssr_sample;
+HYP_DESCRIPTOR_UAV(SSRDescriptorSet, SampleImage, format = rgba8) uniform writeonly image2D ssr_sample;
 HYP_DESCRIPTOR_CBUFF(SSRDescriptorSet, UniformBuffer) uniform UniformBuffer
 {
     uvec4 dimension;
