@@ -1,18 +1,15 @@
 struct RayPayload
 {
 	vec4 color;
-	float distance;
 	vec3 normal;
+	float distance;
 	float roughness;
 #if defined(PATHTRACER) || defined(LIGHTMAPPER) || defined(DDGI)
 	vec4 throughput;
 	vec4 emissive;
-	vec4 beta;
 #endif
 #ifdef LIGHTMAPPER
 	vec3 barycentric_coords;
-	uint _pad0;
-	uint triangle_index;
 #endif
 };
 

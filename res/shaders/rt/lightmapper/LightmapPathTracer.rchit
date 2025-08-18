@@ -224,7 +224,6 @@ void main()
 
     payload.emissive = vec4(0.0);
     payload.throughput = vec4(material_color.rgb, metalness); // metalness is stored in the alpha channel
-    payload.triangle_index = gl_PrimitiveID;
     payload.barycentric_coords = barycentric_coords;
     payload.distance = gl_HitTEXT;
     payload.normal = normal;

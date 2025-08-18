@@ -69,8 +69,8 @@ HYP_DESCRIPTOR_SSBO(RTRadianceDescriptorSet, HitsBuffer, standard = scalar) buff
 
 struct LightmapRay
 {
-    vec4 origin;
-    vec4 direction;
+    vec3 origin;
+    vec3 direction;
 };
 
 HYP_DESCRIPTOR_SSBO(RTRadianceDescriptorSet, RaysBuffer, standard = scalar) readonly buffer RaysBuffer
@@ -104,7 +104,6 @@ vec3 DebugTest_Albedo(in vec3 position, in vec3 normal)
     float saved_distance = payload.distance;
     vec3 saved_normal = payload.normal;
     vec3 saved_bary = payload.barycentric_coords;
-    uint saved_tri = payload.triangle_index;
 
     // Set up ray to hit the surface from a small offset
     vec3 origin = position + normal * 0.001;
@@ -114,7 +113,6 @@ vec3 DebugTest_Albedo(in vec3 position, in vec3 normal)
     payload.distance = -1.0;
     payload.throughput = vec4(0.0);
     payload.emissive = vec4(0.0);
-    payload.triangle_index = ~0u;
     payload.normal = vec3(0.0);
 
     traceRayEXT(tlas, gl_RayFlagsOpaqueEXT, 0xff, 0, 0, 0, origin, 0.0, direction, 1.0, 0);
@@ -130,7 +128,6 @@ vec3 DebugTest_Albedo(in vec3 position, in vec3 normal)
     payload.distance = saved_distance;
     payload.normal = saved_normal;
     payload.barycentric_coords = saved_bary;
-    payload.triangle_index = saved_tri;
 
     return albedo;
 }
@@ -150,42 +147,6 @@ float CheckInShadow(vec3 position, vec3 normal, vec3 lightDir)
     return float(rayQueryGetIntersectionTypeEXT(rq, true) != gl_RayQueryCommittedIntersectionNoneEXT);
 }
 
-void BuildONB(in vec3 n, out vec3 t, out vec3 b)
-{
-    float sign = n.z >= 0.0 ? 1.0 : -1.0;
-    float a = -1.0 / (sign + n.z);
-    float bxy = n.x * n.y * a;
-    t = vec3(1.0 + sign * n.x * n.x * a, sign * bxy, -sign * n.x);
-    b = vec3(bxy, sign + n.y * n.y * a, -n.y);
-}
-
-vec2 ConcentricDisk(vec2 u)
-{
-    float sx = 2.0 * u.x - 1.0;
-    float sy = 2.0 * u.y - 1.0;
-    if (sx == 0.0 && sy == 0.0) return vec2(0.0);
-    float r, theta;
-    if (abs(sx) > abs(sy))
-    {
-        r = abs(sx);
-        theta = (HYP_FMATH_PI * 0.25) * (sy / sx);
-    }
-    else
-    {
-        r = abs(sy);
-        theta = (HYP_FMATH_PI * 0.5) - (HYP_FMATH_PI * 0.25) * (sx / sy);
-    }
-    return r * vec2(cos(theta), sin(theta));
-}
-
-void SpinFrame(inout vec3 t, inout vec3 b, float angle)
-{
-    float s = sin(angle), c = cos(angle);
-    vec3 t0 = t;
-    t =  c * t0 + s * b;
-    b = -s * t0 + c * b;
-}
-
 vec3 radiance = vec3(0.0);
 vec3 beta = vec3(1.0);
 
@@ -194,15 +155,15 @@ void main()
     const uint ray_index = gl_LaunchIDEXT.x;
 
     LightmapRay ray;
-    ray.origin = vec4(ray_data[ray_index * 2].xyz, 1.0);
-    ray.direction = vec4(ray_data[ray_index * 2 + 1].xyz, 0.0);
+    ray.origin = ray_data[ray_index * 2].xyz;
+    ray.direction = ray_data[ray_index * 2 + 1].xyz;
 
     const uint flags = gl_RayFlagsOpaqueEXT;
     const uint mask = 0xff;
     const float tmin = 0.01;
     const float tmax = 1000.0;
 
-    const vec3 N0 = normalize(ray.direction.xyz);
+    const vec3 N0 = normalize(ray.direction);
 
     vec3 tangent;
     vec3 bitangent;
@@ -211,19 +172,14 @@ void main()
 
     uint ray_seed = InitRandomSeed(((rt_radiance_uniforms.ray_offset + ray_index) * 2), ((rt_radiance_uniforms.ray_offset + ray_index) * 2) + 1);
 
+#ifdef MODE_IRRADIANCE
     for (uint sample_index = 0; sample_index < NUM_SAMPLES; sample_index++) {
-        vec3 direction;
         vec2 rnd = vec2(RandomFloat(ray_seed), RandomFloat(ray_seed));
 
-#ifdef MODE_IRRADIANCE
-        direction = SampleCosineDir(rnd, N0);
-#else
-        direction = N0;
-#endif
-
+        vec3 direction = SampleCosineDir(rnd, N0);
         direction = normalize(direction);
 
-        vec3 origin = ray.origin.xyz + N0 * RAY_OFFSET;
+        vec3 origin = ray.origin + N0 * RAY_OFFSET;
 
         vec3 radiance = vec3(0.0);
         vec3 beta = vec3(1.0);
@@ -233,7 +189,6 @@ void main()
             payload.distance = -1.0;
             payload.throughput = vec4(1.0);
             payload.emissive = vec4(0.0);
-            payload.triangle_index = ~0u;
             payload.normal = vec3(0.0);
 
             traceRayEXT(tlas, flags, mask, 0, 0, 0, origin, tmin, direction, tmax, 0);
@@ -305,16 +260,42 @@ void main()
 
 
     vec3 finalColor = accumRadiance.rgb / float(NUM_SAMPLES);
+#elif defined(MODE_RADIANCE)
+    // direct shading
+    
+    const vec3 N = N0;
 
-    // // // test
-    // float inShadow = 1.0-CheckInShadow(ray.origin.xyz, ray.direction.xyz, HYP_GET_LIGHT(0).position_intensity.xyz);
-    // vec3 Normal = normalize(ray.direction.xyz);
-    // vec3 LightDir = normalize(HYP_GET_LIGHT(0).position_intensity.xyz);
-    // vec3 NoL = max(dot(Normal, LightDir), 0.0) * vec3(1.0);
-    // finalColor = NoL * inShadow;
+    vec3 radiance = vec3(0.0);
 
-    // // DEBUG : return first hit normal
-    // finalColor = DebugTest_Albedo(ray.origin.xyz, N0);
+    for (uint light_index = 0; light_index < rt_radiance_uniforms.num_bound_lights; light_index++) {
+        const Light light = HYP_GET_LIGHT(light_index);
+        vec3 light_color = UINT_TO_VEC4(light.color_encoded).rgb * light.position_intensity.w;
+
+        if (light.type == HYP_LIGHT_TYPE_DIRECTIONAL) {
+            vec3 light_direction = normalize(light.position_intensity.xyz);
+            vec3 L = light_direction;
+
+            // shadow check
+            float shadow = 1.0 - CheckInShadow(ray.origin, N, L);
+
+            float NdotL = max(dot(N, L), 0.0);
+            radiance += light_color * NdotL * shadow;
+        } else if (light.type == HYP_LIGHT_TYPE_POINT) {
+            vec3 L = normalize(light.position_intensity.xyz - ray.origin);
+            float d = length(light.position_intensity.xyz - ray.origin);
+            float attenuation = 1.0 / (d * d);
+
+            float NdotL = max(dot(N, L), 0.0);
+            radiance += light_color * NdotL * attenuation;
+        } else {
+            /// ... TODO
+        }
+    }
+
+    vec3 finalColor = radiance;
+#else
+    vec3 finalColor = vec3(0.0);
+#endif
 
     hits[ray_index] = vec4(finalColor, 1.0);
 }

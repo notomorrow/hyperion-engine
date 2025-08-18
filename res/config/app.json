@@ -69,9 +69,9 @@
     "maxRaysPerFrame": 100000,
     "traceMode": 0,
     "numThreadsPerJob": 4,
-    "radiance": false,
+    "radiance": true,
     "idealTrianglesPerJob": 16000,
     "numSamples": 32,
-    "irradiance": true
+    "irradiance": false
   }
 }
