@@ -1,5 +1,7 @@
 {
   "rendering": {
+    "indirect": true,
+    "parallel": true,
     "ssr": {
       "coneTracing": false,
       "numIterations": 32,
@@ -24,7 +26,7 @@
     "debug": {
       "reflections": false,
       "debugDrawer": {
-        "enabled": false,
+        "enabled": true,
         "envGridProbes": false
       },
       "irradiance": false
@@ -53,6 +55,9 @@
     "ssgi": {
       "quality": 0,
       "enabled": false
+    },
+    "vulkan": {
+      "debugLayers": false
     }
   },
   "editor": {
