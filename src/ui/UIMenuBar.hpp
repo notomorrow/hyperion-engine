@@ -80,6 +80,9 @@ public:
 
     virtual void AddChildUIObject(const Handle<UIObject>& uiObject) override;
     virtual bool RemoveChildUIObject(UIObject* uiObject) override;
+    
+    void UpdateDropDownMenu();
+    void UpdateSubItemsDropDownMenu();
 
 protected:
     virtual void Init() override;
@@ -93,8 +96,6 @@ protected:
     virtual Material::ParameterTable GetMaterialParameters() const override;
 
 private:
-    void UpdateDropDownMenu();
-    void UpdateSubItemsDropDownMenu();
 
     Array<Handle<UIObject>> m_menuItems;
 
