@@ -1288,6 +1288,8 @@ void EditorSubsystem::LoadEditorUIDefinitions()
     loadedUi->SetDefaultFontAtlas(*fontAtlasResult);
 
     uiSubsystem->GetUIStage()->AddChildUIObject(loadedUi);
+
+    loadedUi->Focus();
 }
 
 void EditorSubsystem::CreateHighlightNode()
@@ -1384,13 +1386,14 @@ void EditorSubsystem::InitViewport()
             UISubsystem* uiSubsystem = GetWorld()->GetSubsystem<UISubsystem>();
             Assert(uiSubsystem != nullptr && uiSubsystem->GetUIStage() != nullptr);
 
-            if (Handle<UIObject> focusedObject = uiSubsystem->GetUIStage()->GetFocusedObject().Lock())
-            {
-                if (focusedObject->IsA<UITextbox>() && (m_consoleUi && !m_consoleUi->HasFocus()))
-                {
-                    return UIEventHandlerResult::OK;
-                }
-            }
+            // if (Handle<UIObject> focusedObject = uiSubsystem->GetUIStage()->GetFocusedObject().Lock())
+            // {
+            //     if (focusedObject->IsA<UITextbox>() && (m_consoleUi && !m_consoleUi->HasFocus()))
+            //     {
+            //         HYP_BREAKPOINT;
+            //         return UIEventHandlerResult::OK;
+            //     }
+            // }
 
             if (event.keyCode == KeyCode::TILDE)
             {
@@ -1420,9 +1423,6 @@ void EditorSubsystem::InitViewport()
 
             return UIEventHandlerResult::OK;
         }));
-
-    HYP_LOG(Editor, Debug, "scene surface : {}", uiSubsystem->GetUIStage()->GetSurfaceSize());
-    HYP_LOG(Editor, Debug, "scene image object size : {}", sceneImageObject->GetActualSize());
 
     Vec2u viewportSize = MathUtil::Max(Vec2u(sceneImageObject->GetActualSize()), Vec2u::One());
     ViewDesc viewDesc {

@@ -14,6 +14,8 @@
 #include <core/threading/Mutex.hpp>
 #include <core/threading/DataRaceDetector.hpp>
 
+#include <core/functional/Proc.hpp>
+
 #include <core/Defines.hpp>
 #include <core/Name.hpp>
 #include <core/Util.hpp>

@@ -9,6 +9,7 @@
 #include <core/object/HypClassRegistry.hpp>
 
 #include <core/threading/Threads.hpp>
+#include <core/threading/TaskSystem.hpp>
 
 #include <core/logging/Logger.hpp>
 

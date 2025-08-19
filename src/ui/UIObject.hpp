@@ -109,6 +109,14 @@ struct alignas(8) UIEventHandlerResult
 
     ~UIEventHandlerResult() = default;
 
+    // to allow delegate to stop iterating, the value must be convertible to IterationResult
+    HYP_FORCE_INLINE operator IterationResult() const
+    {
+        return value == OK
+            ? IterationResult::CONTINUE
+            : IterationResult::STOP;
+    }
+
     HYP_FORCE_INLINE explicit operator bool() const
     {
         return value != 0;
@@ -1190,7 +1198,7 @@ public:
         Handle<UIObject> uiObject = CreateUIObjectInternal<T>(name, entity, false /* init */);
         uiObject->SetPosition(position);
         uiObject->SetSize(size);
-        
+
         InitObject(uiObject);
 
         Handle<T> result = ObjCast<T>(uiObject);

@@ -49,6 +49,9 @@ public:
     HYP_METHOD()
     Color GetPlaceholderTextColor() const;
 
+    HYP_FIELD()
+    bool clearOnSubmit;
+
 protected:
     virtual void Init() override;
 

@@ -18,6 +18,8 @@
 
 #include <core/functional/Proc.hpp>
 
+#include <core/threading/TaskSystem.hpp>
+
 #include <core/logging/LogChannels.hpp>
 #include <core/logging/Logger.hpp>
 

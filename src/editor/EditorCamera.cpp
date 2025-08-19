@@ -52,12 +52,50 @@ EditorCameraInputHandler::EditorCameraInputHandler(const WeakHandle<CameraContro
 
 bool EditorCameraInputHandler::OnKeyDown_Impl(const KeyboardEvent& evt)
 {
-    return InputHandlerBase::OnKeyDown_Impl(evt);
+    if (InputHandlerBase::OnKeyDown_Impl(evt))
+    {
+        return true;
+    }
+
+    if (Handle<EditorCameraController> controller = m_controller.Lock())
+    {
+        if (controller->GetMode() == EditorCameraControllerMode::MOUSE_LOCKED)
+        {
+            if (evt.keyCode == KeyCode::ESC)
+            {
+                controller->SetMode(EditorCameraControllerMode::INACTIVE);
+                return true;
+            }
+
+            return true;
+        }
+    }
+
+    return false;
 }
 
 bool EditorCameraInputHandler::OnKeyUp_Impl(const KeyboardEvent& evt)
 {
-    return InputHandlerBase::OnKeyUp_Impl(evt);
+    if (InputHandlerBase::OnKeyUp_Impl(evt))
+    {
+        return true;
+    }
+
+    if (Handle<EditorCameraController> controller = m_controller.Lock())
+    {
+        if (controller->GetMode() == EditorCameraControllerMode::MOUSE_LOCKED)
+        {
+            if (evt.keyCode == KeyCode::ESC)
+            {
+                controller->SetMode(EditorCameraControllerMode::INACTIVE);
+                return true;
+            }
+
+            return true;
+        }
+    }
+
+    return false;
 }
 
 bool EditorCameraInputHandler::OnMouseDown_Impl(const MouseEvent& evt)
