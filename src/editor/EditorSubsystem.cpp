@@ -1226,30 +1226,33 @@ void EditorSubsystem::Update(float delta)
     UpdateTasks(delta);
     UpdateDebugOverlays(delta);
 
-#if 0
     if (m_focusedNode.IsValid()) {
-        g_engineDriver->GetDebugDrawer()->box(m_focusedNode->GetWorldTranslation(), m_focusedNode->GetWorldAABB().GetExtent() + Vec3f(1.0001f), Color(0.0f, 0.0f, 1.0f, 1.0f));
-        g_engineDriver->GetDebugDrawer()->box(m_focusedNode->GetWorldTranslation(), m_focusedNode->GetWorldAABB().GetExtent(), Color(1.0f), RenderableAttributeSet(
-            MeshAttributes {
-                .vertexAttributes = staticMeshVertexAttributes
-            },
-            MaterialAttributes {
-                .bucket             = RB_TRANSLUCENT,
-                .fillMode          = FM_FILL,
-                .blendFunction     = BlendFunction::None(),
-                .flags              = MAF_DEPTH_TEST,
-                .stencilFunction   = StencilFunction {
-                    .passOp        = SO_REPLACE,
-                    .failOp        = SO_REPLACE,
-                    .depthFailOp  = SO_REPLACE,
-                    .compareOp     = SCO_NEVER,
-                    .mask           = 0xFF,
-                    .value          = 0x1
-                }
-            }
-        ));
+        if (Handle<Node> focusedNode = m_focusedNode.Lock())
+        {
+            DebugDrawCommandList& dbg = g_engineDriver->GetDebugDrawer()->CreateCommandList();
+            
+            dbg.box(focusedNode->GetWorldTranslation(), focusedNode->GetWorldAABB().GetExtent() * 0.5f + Vec3f(FLT_EPSILON), Color::Cyan());
+        }
+//        g_engineDriver->GetDebugDrawer()->box(m_focusedNode->GetWorldTranslation(), m_focusedNode->GetWorldAABB().GetExtent(), Color(1.0f), RenderableAttributeSet(
+//            MeshAttributes {
+//                .vertexAttributes = staticMeshVertexAttributes
+//            },
+//            MaterialAttributes {
+//                .bucket             = RB_TRANSLUCENT,
+//                .fillMode          = FM_FILL,
+//                .blendFunction     = BlendFunction::None(),
+//                .flags              = MAF_DEPTH_TEST,
+//                .stencilFunction   = StencilFunction {
+//                    .passOp        = SO_REPLACE,
+//                    .failOp        = SO_REPLACE,
+//                    .depthFailOp  = SO_REPLACE,
+//                    .compareOp     = SCO_NEVER,
+//                    .mask           = 0xFF,
+//                    .value          = 0x1
+//                }
+//            }
+//        ));
     }
-#endif
 }
 
 void EditorSubsystem::OnSceneAttached(const Handle<Scene>& scene)

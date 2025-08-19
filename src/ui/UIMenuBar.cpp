@@ -189,6 +189,7 @@ void UIMenuItem::UpdateDropDownMenu()
 {
     Assert(m_dropDownMenu != nullptr);
 
+    // Update submenu
     m_dropDownMenu->RemoveAllChildUIObjects();
 
     if (m_menuItems.Empty())
@@ -196,16 +197,27 @@ void UIMenuItem::UpdateDropDownMenu()
         return;
     }
 
-    Vec2i offset = { 0, 0 };
-
-    for (const Handle<UIObject>& menuItem : m_menuItems)
+    Vec2i offset;
+    
     {
-        menuItem->SetSize(UIObjectSize({ 100, UIObjectSize::PERCENT }, { 0, UIObjectSize::AUTO }));
-        menuItem->SetPosition(offset);
-
-        m_dropDownMenu->AddChildUIObject(menuItem);
-
-        offset += { 0, menuItem->GetActualSize().y };
+        UILockedUpdatesScope scope(*m_dropDownMenu, UIObjectUpdateType::UPDATE_SIZE);
+        
+        for (SizeType i = 0; i < m_menuItems.Size(); i++)
+        {
+            UIObject* menuItem = m_menuItems[i];
+            
+            if (!menuItem)
+            {
+                continue;
+            }
+            
+            menuItem->UpdateSize();
+            menuItem->SetPosition(offset);
+            
+            m_dropDownMenu->AddChildUIObject(MakeStrongRef(menuItem));
+            
+            offset += Vec2i(0, menuItem->GetActualSize().y);
+        }
     }
 
     m_dropDownMenu->UpdateSize();
@@ -233,8 +245,8 @@ void UIMenuItem::UpdateSubItemsDropDownMenu()
         m_subItemsDropDownMenu->SetOriginAlignment(UIObjectAlignment::TOP_LEFT);
         m_subItemsDropDownMenu->SetBorderFlags(UIObjectBorderFlags::BOTTOM | UIObjectBorderFlags::LEFT | UIObjectBorderFlags::RIGHT);
     }
-
-    m_subItemsDropDownMenu->RemoveAllChildUIObjects();
+    
+    selectedSubItem->UpdateDropDownMenu();
 
     if (!selectedSubItem->GetDropDownMenuElement())
     {
@@ -516,6 +528,8 @@ void UIMenuBar::SetSelectedMenuItemIndex(uint32 index)
         menuItem->SetFocusState(menuItem->GetFocusState() | UIObjectFocusState::TOGGLED);
 
         m_container->AddChildUIObject(MakeStrongRef(dropDownMenuElement));
+        menuItem->UpdateDropDownMenu();
+        
         m_container->SetSize(UIObjectSize({ dropDownMenuElement->GetActualSize().x + m_container->GetPadding().x * 2, UIObjectSize::PIXEL }, { 0, UIObjectSize::AUTO }));
         m_container->SetPosition(GetDropDownMenuPosition(menuItem));
         m_container->SetIsVisible(true);
@@ -550,7 +564,7 @@ void UIMenuBar::AddChildUIObject(const Handle<UIObject>& uiObject)
 
     if (UIMenuItem* menuItem = ObjCast<UIMenuItem>(uiObject))
     {
-        menuItem->SetSize(UIObjectSize({ 0, UIObjectSize::AUTO }, { 100, UIObjectSize::PERCENT }));
+        menuItem->SetSize(UIObjectSize({ 100, UIObjectSize::FILL }, { 100, UIObjectSize::PERCENT }));
 
         const Name name = menuItem->GetName();
 
@@ -646,6 +660,8 @@ bool UIMenuBar::RemoveChildUIObject(UIObject* uiObject)
 
 void UIMenuBar::UpdateSize_Internal(bool updateChildren)
 {
+    HYP_SCOPE;
+
     UIPanel::UpdateSize_Internal(updateChildren);
 
     UpdateMenuItemSizes();

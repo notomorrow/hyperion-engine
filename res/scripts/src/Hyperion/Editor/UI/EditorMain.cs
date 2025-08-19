@@ -168,10 +168,13 @@ namespace Hyperion
                     sb.AppendFormat("DrawCalls: {0}", renderStats.counts[RenderStatsCountType.DrawCalls]);
 
                     if (renderStats.counts[RenderStatsCountType.InstancedDrawCalls] > 0)
-                        sb.AppendFormat(", InstancedDrawCalls: {0}", renderStats.counts[RenderStatsCountType.InstancedDrawCalls]);
+                        sb.AppendFormat(", Instanced: {0}", renderStats.counts[RenderStatsCountType.InstancedDrawCalls]);
+
+                    if (renderStats.counts[RenderStatsCountType.DebugDraws] > 0)
+                        sb.AppendFormat(", DebugDraw: {0}", renderStats.counts[RenderStatsCountType.DebugDraws]);
 
                     sb.AppendFormat(", Tris: {0}", renderStats.counts[RenderStatsCountType.Triangles]);
-                    sb.AppendFormat(", RenderGroups: {0}", renderStats.counts[RenderStatsCountType.RenderGroups]);
+                    sb.AppendFormat(", Groups: {0}", renderStats.counts[RenderStatsCountType.RenderGroups]);
                     sb.AppendFormat(", Views: {0}", renderStats.counts[RenderStatsCountType.Views]);
                     sb.AppendFormat(", Textures: {0}", renderStats.counts[RenderStatsCountType.Textures]);
                     sb.AppendFormat(", Materials: {0}", renderStats.counts[RenderStatsCountType.Materials]);

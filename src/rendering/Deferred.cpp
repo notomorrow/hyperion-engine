@@ -1612,8 +1612,6 @@ void DeferredRenderer::RenderFrame(FrameBase* frame, const RenderSetup& rs)
                         renderer->RenderFrame(frame, newRs);
 
                         newRs.envProbe = nullptr;
-
-                        counts[ERS_ENV_PROBES]++;
                     }
                 }
                 else
@@ -1639,8 +1637,6 @@ void DeferredRenderer::RenderFrame(FrameBase* frame, const RenderSetup& rs)
 
                 newRs.light = nullptr;
                 newRs.envGrid = nullptr;
-
-                counts[ERS_ENV_GRIDS]++;
             }
         }
     }
@@ -1717,7 +1713,9 @@ void DeferredRenderer::RenderFrame(FrameBase* frame, const RenderSetup& rs)
 #endif
     }
 
+#ifdef HYP_ENABLE_RENDER_STATS
     RenderApi_AddRenderStats(counts);
+#endif
 }
 
 void DeferredRenderer::RenderFrameForView(FrameBase* frame, const RenderSetup& rs)
