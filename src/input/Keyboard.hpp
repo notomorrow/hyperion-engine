@@ -91,7 +91,6 @@ enum class KeyCode : uint16
 HYP_API bool KeyCodeToChar(KeyCode keyCode, bool shift, bool alt, bool ctrl, char& outChar);
 
 HYP_STRUCT(Size = 16)
-
 struct KeyboardEvent
 {
     HYP_FIELD()
