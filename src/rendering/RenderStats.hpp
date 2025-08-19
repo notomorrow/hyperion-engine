@@ -26,6 +26,7 @@ enum RenderStatsCountType : uint32
     ERS_LIGHTMAP_VOLUMES,
     ERS_ENV_PROBES,
     ERS_ENV_GRIDS,
+    ERS_DEBUG_DRAWS,
 
     ERS_MAX
 };

@@ -12,6 +12,7 @@
 #include <rendering/RenderGraphicsPipeline.hpp>
 #include <rendering/RenderFrame.hpp>
 #include <rendering/RenderGpuBuffer.hpp>
+#include <rendering/RenderStats.hpp>
 
 #include <rendering/util/SafeDeleter.hpp>
 
@@ -618,6 +619,10 @@ void DebugDrawer::Render(FrameBase* frame, const RenderSetup& renderSetup)
     SizeType totalDrawCalls = 0;
     SizeType totalInstancedDraws = 0;
 
+#ifdef HYP_ENABLE_RENDER_STATS
+    RenderStatsCounts counts {};
+#endif
+
     for (auto& it : partitionedShaderData)
     {
         IDebugDrawShape* shape = it.first;
@@ -637,6 +642,10 @@ void DebugDrawer::Render(FrameBase* frame, const RenderSetup& renderSetup)
         {
             if (numToDraw != 0)
             {
+#ifdef HYP_ENABLE_RENDER_STATS
+                counts[ERS_DEBUG_DRAWS] += numToDraw;
+#endif
+
                 switch (shape->GetDebugDrawType())
                 {
                 case DebugDrawType::MESH:
@@ -712,6 +721,10 @@ void DebugDrawer::Render(FrameBase* frame, const RenderSetup& renderSetup)
 
         commitCurrentDraws();
     }
+
+#ifdef HYP_ENABLE_RENDER_STATS
+    RenderApi_AddRenderStats(counts);
+#endif
 
     ClearCommands(idx);
 }
