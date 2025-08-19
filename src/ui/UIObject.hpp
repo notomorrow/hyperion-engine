@@ -236,7 +236,7 @@ enum class UIObjectUpdateType : uint32
     UPDATE_MESH_DATA = 0x8,
     UPDATE_COMPUTED_VISIBILITY = 0x10,
     UPDATE_CLAMPED_SIZE = 0x20,
-    UPDATE_TEXT_RENDER_DATA = 0x40,
+    UPDATE_ALL = UINT16_MAX,
 
     UPDATE_CHILDREN_SIZE = UPDATE_SIZE << 16,
     UPDATE_CHILDREN_POSITION = UPDATE_POSITION << 16,
@@ -244,7 +244,7 @@ enum class UIObjectUpdateType : uint32
     UPDATE_CHILDREN_MESH_DATA = UPDATE_MESH_DATA << 16,
     UPDATE_CHILDREN_COMPUTED_VISIBILITY = UPDATE_COMPUTED_VISIBILITY << 16,
     UPDATE_CHILDREN_CLAMPED_SIZE = UPDATE_CLAMPED_SIZE << 16,
-    UPDATE_CHILDREN_TEXT_RENDER_DATA = UPDATE_TEXT_RENDER_DATA << 16
+    UPDATE_CHILDREN_ALL = UPDATE_ALL << 16
 };
 
 HYP_MAKE_ENUM_FLAGS(UIObjectUpdateType)
@@ -512,6 +512,7 @@ public:
     friend class UISubsystem;
     friend class UIStage;
     friend struct UILockedUpdatesScope;
+    friend class UIUpdateManager;
 
     static constexpr int scrollbarSize = 15;
 
@@ -1043,15 +1044,7 @@ public:
      *  \details Deferred updates are used to defer updates to the UI object until the next Update() call.
      *  \param updateType The type of update to apply.
      *  \param updateChildren If true, also apply the update on all child UIObjects when the deferred update is processed. */
-    void SetDeferredUpdate(EnumFlags<UIObjectUpdateType> updateType, bool updateChildren = true)
-    {
-        if (updateChildren)
-        {
-            updateType |= updateType << 16;
-        }
-
-        m_deferredUpdates |= updateType;
-    }
+    void SetDeferredUpdate(EnumFlags<UIObjectUpdateType> updateType, bool updateChildren = true);
 
     void SetUpdatesLocked(EnumFlags<UIObjectUpdateType> updateType, bool locked)
     {
@@ -1195,9 +1188,9 @@ public:
         entity->SetFlags(entity->GetFlags() | NodeFlags::IGNORE_PARENT_SCALE);
 
         Handle<UIObject> uiObject = CreateUIObjectInternal<T>(name, entity, false /* init */);
-
         uiObject->SetPosition(position);
         uiObject->SetSize(size);
+        
         InitObject(uiObject);
 
         Handle<T> result = ObjCast<T>(uiObject);
@@ -1343,6 +1336,7 @@ protected:
     virtual void UpdateMeshData_Internal();
 
     void UpdateMaterial(bool updateChildren = true);
+    virtual void UpdateMaterial_Internal();
 
     Array<UIObject*> FilterChildUIObjects(ProcRef<bool(UIObject*)> predicate, bool deep) const;
 

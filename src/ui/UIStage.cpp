@@ -61,6 +61,59 @@ static HYP_FORCE_INLINE bool ShouldTriggerKeyDownEvent(const UIObjectKeyState& k
 
 HYP_DECLARE_LOG_CHANNEL(UI);
 
+#pragma region UIStageUpdateManager
+
+UIStageUpdateManager::UIStageUpdateManager(UIStage* stage)
+    : UIUpdateManager(),
+      m_stage(stage)
+{
+    Assert(stage != nullptr);
+}
+
+void UIStageUpdateManager::ProcessUpdates(float delta)
+{
+    HYP_SCOPE;
+
+    if (!m_stage)
+    {
+        HYP_LOG(UI, Warning, "UIStageUpdateManager: Stage is null, cannot process frame updates");
+        return;
+    }
+
+    UIUpdateManager::ProcessUpdates(delta);
+}
+
+void UIStageUpdateManager::RegisterForUpdate(UIObject* object, EnumFlags<UIObjectUpdateType> updateTypes)
+{
+    HYP_SCOPE;
+
+    if (!object)
+    {
+        HYP_LOG(UI, Warning, "UIStageUpdateManager: Attempted to register null object for update");
+        return;
+    }
+
+    if (!m_stage)
+    {
+        HYP_LOG(UI, Warning, "UIStageUpdateManager: Stage is null, cannot register object for update");
+        return;
+    }
+
+    // Ensure the object belongs to this stage's hierarchy
+    UIStage* objectStage = object->GetStage();
+    if (objectStage != nullptr && objectStage != m_stage && !objectStage->IsOrHasParent(m_stage))
+    {
+        HYP_LOG(UI, Warning, "UIStageUpdateManager: Object {} does not belong to this stage hierarchy", object->GetName());
+        return;
+    }
+
+    UIUpdateManager::RegisterForUpdate(object, updateTypes);
+}
+
+#pragma endregion UIStageUpdateManager
+
+#pragma region UIStage
+
 UIStage::UIStage()
     : UIStage(ThreadId::Current())
 {
@@ -68,18 +121,11 @@ UIStage::UIStage()
 
 UIStage::UIStage(ThreadId ownerThreadId)
     : UIObject(ownerThreadId),
+      m_updateManager(this),
       m_surfaceSize { 1000, 1000 }
 {
     SetName(NAME("Stage"));
-    SetSize(UIObjectSize({ 100, UIObjectSize::PERCENT }, { 100, UIObjectSize::PERCENT }));
-
-    m_camera = CreateObject<Camera>();
-    m_camera->AddCameraController(CreateObject<OrthoCameraController>(
-        0.0f, -float(m_surfaceSize.x),
-        0.0f, float(m_surfaceSize.y),
-        float(g_minDepth), float(g_maxDepth)));
-
-    InitObject(m_camera);
+    m_size = UIObjectSize({ 100, UIObjectSize::PERCENT }, { 100, UIObjectSize::PERCENT });
 }
 
 UIStage::~UIStage()
@@ -219,6 +265,14 @@ void UIStage::Init()
     HYP_SCOPE;
     AssertOnOwnerThread();
 
+    m_camera = CreateObject<Camera>();
+    m_camera->AddCameraController(CreateObject<OrthoCameraController>(
+        0.0f, -float(m_surfaceSize.x),
+        0.0f, float(m_surfaceSize.y),
+        float(g_minDepth), float(g_maxDepth)));
+
+    InitObject(m_camera);
+
     const auto updateSurfaceSize = [this](ApplicationWindow* window)
     {
         if (window == nullptr)
@@ -258,7 +312,6 @@ void UIStage::Init()
 
     // Will create a new Scene
     SetScene(nullptr);
-
     SetNodeProxy(m_scene->GetRoot());
 
     UIObject::Init();
@@ -288,6 +341,8 @@ void UIStage::Update_Internal(float delta)
 {
     HYP_SCOPE;
     AssertOnOwnerThread();
+
+    m_updateManager.ProcessUpdates(delta);
 
     UIObject::Update_Internal(delta);
 
@@ -996,5 +1051,7 @@ bool UIStage::Remove(const Entity* entity)
 
     return GetNode()->RemoveChild(entity);
 }
+
+#pragma endregion UIStage
 
 } // namespace hyperion

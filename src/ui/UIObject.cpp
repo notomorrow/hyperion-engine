@@ -135,7 +135,7 @@ UIObject::UIObject(const ThreadId& ownerThreadId)
       m_deferredUpdates(UIObjectUpdateType::NONE),
       m_lockedUpdates(UIObjectUpdateType::NONE)
 {
-    m_scrollOffset.SetRate(60.0);
+    m_scrollOffset.SetRate(60.0); // 60hz for scroll offset updates
 
     OnInit.BindManaged("OnInit", GetManagedObjectResource(), UIEventHandlerResult::OK).Detach();
     OnAttached.BindManaged("OnAttached", GetManagedObjectResource(), UIEventHandlerResult::OK).Detach();
@@ -265,6 +265,9 @@ void UIObject::Init()
     scene->GetEntityManager()->AddComponent<BoundingBoxComponent>(GetEntity(), BoundingBoxComponent {});
 
     SetReady(true);
+    
+    UpdateSize();
+    UpdatePosition();
 
     OnInit();
 }
@@ -272,29 +275,41 @@ void UIObject::Init()
 void UIObject::Update(float delta)
 {
     HYP_SCOPE;
-
     AssertReady();
 
-    /// @TODO: Built a tree structure of objects that need to be updated
-    // in the next tick. sorted by breadth in the child nodes list
-    // built it out as we mark updates as needed.
-
-    if (NeedsUpdate())
+    // Get the root stage to access the update manager
+    UIStage* rootStage = GetStage();
+    while (rootStage && rootStage->GetStage())
     {
-        Update_Internal(delta);
+        rootStage = rootStage->GetStage();
     }
 
-    // update in breadth-first order
-    ForEachChildUIObject([this, delta](UIObject* child)
+    if (rootStage)
+    {
+        // Use selective update system
+        if (NeedsUpdate())
         {
-            if (child->NeedsUpdate())
+            rootStage->GetUpdateManager().RegisterForUpdate(this, m_deferredUpdates);
+        }
+        
+        // Only process updates at the root level to avoid duplication
+        if (this == rootStage)
+        {
+            rootStage->GetUpdateManager().ProcessUpdates(delta);
+        }
+    }
+    else
+    {
+        Update_Internal(delta);
+
+        ForEachChildUIObject([this, delta](UIObject* child)
             {
                 child->Update_Internal(delta);
-            }
 
-            return IterationResult::CONTINUE;
-        },
-        /* deep */ true);
+                return IterationResult::CONTINUE;
+            },
+            /* deep */ true);
+    }
 }
 
 void UIObject::Update_Internal(float delta)
@@ -350,29 +365,41 @@ void UIObject::Update_Internal(float delta)
     }
 }
 
+void UIObject::SetDeferredUpdate(EnumFlags<UIObjectUpdateType> updateType, bool updateChildren)
+{
+    if (updateChildren)
+    {
+        updateType |= updateType << 16;
+    }
+
+    // Try to use selective update system if available
+    UIStage* rootStage = GetStage();
+    while (rootStage && rootStage->GetStage())
+    {
+        rootStage = rootStage->GetStage();
+    }
+
+    if (rootStage)
+    {
+        rootStage->GetUpdateManager().RegisterForUpdate(this, updateType);
+    }
+    else
+    {
+        // Fallback to original system
+        m_deferredUpdates |= updateType;
+    }
+}
+
 void UIObject::OnAttached_Internal(UIObject* parent)
 {
     HYP_SCOPE;
 
     Assert(parent != nullptr);
 
+    // update all depth for this and all nested UIObjects
+    UpdateComputedDepth(/* updateChildren */ true);
+
     SetStage_Internal(parent->GetStage());
-
-    if (IsInitCalled())
-    {
-        UILockedUpdatesScope scope(*this, UIObjectUpdateType::UPDATE_CLAMPED_SIZE);
-
-        UpdateSize();
-        UpdatePosition();
-
-        UpdateComputedDepth();
-        UpdateComputedTextSize();
-
-        SetDeferredUpdate(UIObjectUpdateType::UPDATE_SIZE, true);
-        SetDeferredUpdate(UIObjectUpdateType::UPDATE_CLAMPED_SIZE, true);
-        SetDeferredUpdate(UIObjectUpdateType::UPDATE_MESH_DATA, true);
-        SetDeferredUpdate(UIObjectUpdateType::UPDATE_COMPUTED_VISIBILITY, true);
-    }
 
     if (m_isEnabled && !parent->IsEnabled())
     {
@@ -382,6 +409,7 @@ void UIObject::OnAttached_Internal(UIObject* parent)
     OnAttached();
 }
 
+    /// @FIXME: Need to remove from parent before, and pass in the prev parent pointer. currently the calcualtions will be wrong
 void UIObject::OnRemoved_Internal()
 {
     HYP_SCOPE;
@@ -402,17 +430,15 @@ void UIObject::OnRemoved_Internal()
         }
     }
 
-    if (IsInitCalled())
-    {
-        UpdateSize();
-        UpdatePosition();
+    UpdateSize();
+    UpdatePosition();
 
-        UpdateMeshData();
+    UpdateMeshData();
 
-        UpdateComputedVisibility();
-        UpdateComputedDepth();
-        UpdateComputedTextSize();
-    }
+    UpdateComputedVisibility();
+
+    UpdateComputedTextSize();
+    OnTextSizeUpdate();
 
     OnRemoved();
 }
@@ -462,7 +488,10 @@ void UIObject::SetPosition(Vec2i position)
 
     m_position = position;
 
-    UpdatePosition(/* updateChildren */ false);
+    if (IsInitCalled())
+    {
+        UpdatePosition(/* updateChildren */ true);
+    }
 }
 
 Vec2f UIObject::GetOffsetPosition() const
@@ -495,17 +524,15 @@ void UIObject::SetIsPositionAbsolute(bool isPositionAbsolute)
 
     m_isPositionAbsolute = isPositionAbsolute;
 
-    UpdatePosition(/* updateChildren */ false);
+    if (IsInitCalled())
+    {
+        UpdatePosition(/* updateChildren */ true);
+    }
 }
 
 void UIObject::UpdatePosition(bool updateChildren)
 {
     HYP_SCOPE;
-
-    if (!IsInitCalled())
-    {
-        return;
-    }
 
     if (m_lockedUpdates & UIObjectUpdateType::UPDATE_POSITION)
     {
@@ -552,12 +579,10 @@ void UIObject::SetSize(UIObjectSize size)
 
     m_size = size;
 
-    if (!IsInitCalled())
+    if (IsInitCalled())
     {
-        return;
+        UpdateSize();
     }
-
-    UpdateSize();
 }
 
 UIObjectSize UIObject::GetInnerSize() const
@@ -571,12 +596,10 @@ void UIObject::SetInnerSize(UIObjectSize size)
 
     m_innerSize = size;
 
-    if (!IsInitCalled())
+    if (IsInitCalled())
     {
-        return;
+        UpdateSize();
     }
-
-    UpdateSize();
 }
 
 UIObjectSize UIObject::GetMaxSize() const
@@ -590,22 +613,15 @@ void UIObject::SetMaxSize(UIObjectSize size)
 
     m_maxSize = size;
 
-    if (!IsInitCalled())
+    if (IsInitCalled())
     {
-        return;
+        UpdateSize();
     }
-
-    UpdateSize();
 }
 
 void UIObject::UpdateSize(bool updateChildren)
 {
     HYP_SCOPE;
-
-    if (!IsInitCalled())
-    {
-        return;
-    }
 
     if (m_lockedUpdates & UIObjectUpdateType::UPDATE_SIZE)
     {
@@ -655,18 +671,15 @@ void UIObject::UpdateSize_Internal(bool updateChildren)
     {
         UILockedUpdatesScope scope(*this, UIObjectUpdateType::UPDATE_SIZE);
 
-        ForEachChildUIObject([updateChildren, &deferredChildren](UIObject* child)
+        ForEachChildUIObject([this, updateChildren, &deferredChildren](UIObject* child)
             {
                 if (child->GetSize().GetAllFlags() & (UIObjectSize::FILL | UIObjectSize::PERCENT))
                 {
-                    // Even if updateChildren is false, these objects will need to be updated anyway
-                    // as they are dependent on the size of this object
-                    // child->SetAffectsParentSize(false);
                     deferredChildren.PushBack(child);
                 }
                 else if (updateChildren)
                 {
-                    child->UpdateSize_Internal(/* updateChildren */ true);
+                    child->UpdateSize_Internal(updateChildren);
                 }
 
                 return IterationResult::CONTINUE;
@@ -676,15 +689,6 @@ void UIObject::UpdateSize_Internal(bool updateChildren)
 
     // auto needs recalculation
     const bool needsUpdateAfterChildren = true; // UseAutoSizing();
-
-    // // FILL needs to update the size of the children
-    // // after the parent has updated its size
-    // {
-    //     UILockedUpdatesScope scope(*this, UIObjectUpdateType::UPDATE_SIZE);
-    //     for (UIObject *child : deferredChildren) {
-    //         child->SetAffectsParentSize(true);
-    //     }
-    // }
 
     if (needsUpdateAfterChildren)
     {
@@ -696,19 +700,19 @@ void UIObject::UpdateSize_Internal(bool updateChildren)
     // after the parent has updated its size
     for (UIObject* child : deferredChildren)
     {
-        child->UpdateSize_Internal(/* updateChildren */ true);
+        child->UpdateSize_Internal(updateChildren);
     }
 
     if (IsPositionDependentOnSize())
     {
-        UpdatePosition(false);
+        SetDeferredUpdate(UIObjectUpdateType::UPDATE_POSITION, false);
     }
 
     ForEachChildUIObject([](UIObject* child)
         {
             if (child->IsPositionDependentOnParentSize())
             {
-                child->UpdatePosition(false);
+                child->UpdatePosition(/* updateChildren */ true);
             }
 
             return IterationResult::CONTINUE;
@@ -786,7 +790,7 @@ void UIObject::UpdateNodeTransform()
     }
 
     const Vec2f parentScrollOffset = GetParentScrollOffset();
-
+    
     Node* parentNode = m_node->GetParent();
 
     Transform worldTransform = m_node->GetWorldTransform();
@@ -1055,7 +1059,12 @@ void UIObject::SetOriginAlignment(UIObjectAlignment alignment)
 
     m_originAlignment = alignment;
 
-    UpdatePosition(/* updateChildren */ false);
+    if (!IsInitCalled())
+    {
+        return;
+    }
+
+    UpdatePosition(/* updateChildren */ true);
 }
 
 UIObjectAlignment UIObject::GetParentAlignment() const
@@ -1069,7 +1078,12 @@ void UIObject::SetParentAlignment(UIObjectAlignment alignment)
 
     m_parentAlignment = alignment;
 
-    UpdatePosition(/* updateChildren */ false);
+    if (!IsInitCalled())
+    {
+        return;
+    }
+
+    UpdatePosition(/* updateChildren */ true);
 }
 
 void UIObject::SetAspectRatio(UIObjectAspectRatio aspectRatio)
@@ -1084,7 +1098,7 @@ void UIObject::SetAspectRatio(UIObjectAspectRatio aspectRatio)
     }
 
     UpdateSize();
-    UpdatePosition(/* updateChildren */ false);
+    UpdatePosition(/* updateChildren */ true);
 }
 
 void UIObject::SetPadding(Vec2i padding)
@@ -1099,7 +1113,7 @@ void UIObject::SetPadding(Vec2i padding)
     }
 
     UpdateSize();
-    UpdatePosition(/* updateChildren */ false);
+    UpdatePosition(/* updateChildren */ true);
 }
 
 void UIObject::SetBackgroundColor(const Color& backgroundColor)
@@ -1113,8 +1127,7 @@ void UIObject::SetBackgroundColor(const Color& backgroundColor)
 
     m_backgroundColor = backgroundColor;
 
-    UpdateMaterial(false);
-    // SetDeferredUpdate(UIObjectUpdateType::UPDATE_MATERIAL, false);
+    SetDeferredUpdate(UIObjectUpdateType::UPDATE_MATERIAL, false);
 }
 
 Color UIObject::ComputeBlendedBackgroundColor() const
@@ -1165,6 +1178,8 @@ void UIObject::SetTextColor(const Color& textColor)
 
     m_textColor = textColor;
 
+    /// @TODO OnTextColorUpdate() is not implemented yet, but it should be called here
+
     SetDeferredUpdate(UIObjectUpdateType::UPDATE_MATERIAL, true);
 }
 
@@ -1200,12 +1215,9 @@ void UIObject::SetTextSize(float textSize)
 
     m_computedTextSize = -1.0f;
 
-    if (!IsInitCalled())
-    {
-        return;
-    }
-
     UpdateComputedTextSize();
+
+    OnTextSizeUpdate();
 }
 
 bool UIObject::IsVisible() const
@@ -1242,9 +1254,8 @@ void UIObject::SetIsVisible(bool isVisible)
     if (IsInitCalled())
     {
         // Will add UPDATE_COMPUTED_VISIBILITY deferred update indirectly.
-
         UpdateSize();
-        UpdatePosition(/* updateChildren */ false);
+        UpdatePosition(/* updateChildren */ true);
     }
 }
 
@@ -1259,12 +1270,11 @@ void UIObject::UpdateComputedVisibility(bool updateChildren)
 
     m_deferredUpdates &= ~(UIObjectUpdateType::UPDATE_COMPUTED_VISIBILITY | (updateChildren ? UIObjectUpdateType::UPDATE_CHILDREN_COMPUTED_VISIBILITY : UIObjectUpdateType::NONE));
 
-    bool computedVisibility = m_computedVisibility;
-
-    // If the object is visible and has a stage (or if this is a UIStage), consider it
-    const bool hasStage = m_stage != nullptr || IsA<UIStage>();
-
-    if (IsVisible() && hasStage)
+    bool computedVisibility = IsVisible();
+    
+    // short circuit - setting IsVisible to false always results in false for computed vis.
+    UIStage* rootStage = nullptr;
+    if (computedVisibility && (rootStage = GetStage()) != nullptr)
     {
         if (UIObject* parentUiObject = GetParentUIObject())
         {
@@ -1276,10 +1286,6 @@ void UIObject::UpdateComputedVisibility(bool updateChildren)
         {
             computedVisibility = true;
         }
-    }
-    else
-    {
-        computedVisibility = false;
     }
 
     if (m_computedVisibility != computedVisibility)
@@ -1417,10 +1423,8 @@ void UIObject::UpdateComputedTextSize()
         m_computedTextSize = m_textSize;
     }
 
-    UpdateSize();
-    UpdatePosition(/* updateChildren */ false);
-
-    OnTextSizeUpdate();
+    SetDeferredUpdate(UIObjectUpdateType::UPDATE_SIZE, false);
+    SetDeferredUpdate(UIObjectUpdateType::UPDATE_POSITION, false);
 }
 
 bool UIObject::HasFocus(bool includeChildren) const
@@ -1539,6 +1543,7 @@ bool UIObject::RemoveChildUIObject(UIObject* uiObject)
     if (parentUiObject == this)
     {
         Handle<Node> childNode = uiObject->GetNode();
+        Handle<UIObject> strongUiObject = MakeStrongRef(uiObject);
 
         {
             uiObject->OnRemoved_Internal();
@@ -1555,9 +1560,11 @@ bool UIObject::RemoveChildUIObject(UIObject* uiObject)
         {
             childNode->Remove();
             childNode.Reset();
-
-            SafeDelete(std::move(childNode));
         }
+
+        // update depths for the child and all nested UIObjects after its been removed
+        strongUiObject->UpdateComputedDepth(true);
+        SafeDelete(std::move(strongUiObject));
 
         if (UseAutoSizing())
         {
@@ -2232,7 +2239,7 @@ void UIObject::ComputeActualSize(const UIObjectSize& inSize, Vec2i& actualSize, 
                 {
                     if (child->IsPositionDependentOnParentSize())
                     {
-                        child->UpdatePosition(/* updateChildren */ false);
+                        child->UpdatePosition(/* updateChildren */ true);
                     }
 
                     return IterationResult::CONTINUE;
@@ -2415,6 +2422,15 @@ void UIObject::UpdateMaterial(bool updateChildren)
             },
             /* deep */ false);
     }
+
+    UpdateMaterial_Internal();
+}
+
+void UIObject::UpdateMaterial_Internal()
+{
+    HYP_SCOPE;
+
+
 
     const Scene* scene = GetScene();
 
@@ -2912,7 +2928,11 @@ void UIObject::SetStage_Internal(UIStage* stage)
     m_stage = stage;
 
     OnFontAtlasUpdate_Internal();
-    OnTextSizeUpdate_Internal();
+
+    UpdateComputedTextSize();
+    
+    UpdateSize(false);
+    UpdatePosition(false);
 
     ForEachChildUIObject([this, stage](UIObject* uiObject)
         {
@@ -2921,6 +2941,7 @@ void UIObject::SetStage_Internal(UIStage* stage)
                 return IterationResult::CONTINUE;
             }
 
+            // calls recursively
             uiObject->SetStage_Internal(stage);
 
             return IterationResult::CONTINUE;
@@ -2931,6 +2952,8 @@ void UIObject::SetStage_Internal(UIStage* stage)
 void UIObject::OnFontAtlasUpdate()
 {
     HYP_SCOPE;
+
+    OnFontAtlasUpdate_Internal();
 
     // Update font atlas for all children
     ForEachChildUIObject([](UIObject* child)
@@ -2945,6 +2968,8 @@ void UIObject::OnFontAtlasUpdate()
 void UIObject::OnTextSizeUpdate()
 {
     HYP_SCOPE;
+
+    OnTextSizeUpdate_Internal();
 
     ForEachChildUIObject([](UIObject* child)
         {
@@ -2962,13 +2987,15 @@ void UIObject::OnScrollOffsetUpdate(Vec2f delta)
     // Update child element's offset positions - they are dependent on parent scroll offset
     ForEachChildUIObject([](UIObject* child)
         {
-            child->UpdatePosition(/* updateChildren */ false);
+            child->UpdatePosition(/* updateChildren */ true);
+
+            child->SetDeferredUpdate(UIObjectUpdateType::UPDATE_CLAMPED_SIZE, false);
 
             return IterationResult::CONTINUE;
         },
         /* deep */ false);
 
-    SetDeferredUpdate(UIObjectUpdateType::UPDATE_CLAMPED_SIZE, true);
+    SetDeferredUpdate(UIObjectUpdateType::UPDATE_CLAMPED_SIZE, false);
 
     OnScrollOffsetUpdate_Internal(delta);
 }
@@ -3029,7 +3056,6 @@ Handle<UIObject> UIObject::CreateUIObject(const HypClass* hypClass, Name name, V
     Handle<UIObject> uiObject = std::move(uiObjectHypData).Get<Handle<UIObject>>();
     Assert(uiObject != nullptr);
 
-    // Assert(IsInitCalled());
     Assert(GetNode().IsValid());
 
     if (!name.IsValid())
@@ -3051,7 +3077,7 @@ Handle<UIObject> UIObject::CreateUIObject(const HypClass* hypClass, Name name, V
     uiObject->SetName(name);
     uiObject->SetPosition(position);
     uiObject->SetSize(size);
-
+    
     InitObject(uiObject);
 
     return uiObject;

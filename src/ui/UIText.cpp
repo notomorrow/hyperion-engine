@@ -210,7 +210,9 @@ UIText::UIText()
             {
                 if (GetComputedVisibility())
                 {
-                    SetDeferredUpdate(UIObjectUpdateType::UPDATE_TEXT_RENDER_DATA, false);
+                    SetDeferredUpdate(UIObjectUpdateType::UPDATE_SIZE, false);
+                    SetDeferredUpdate(UIObjectUpdateType::UPDATE_MATERIAL, false);
+                    SetDeferredUpdate(UIObjectUpdateType::UPDATE_MESH_DATA, false);
                 }
 
                 return UIEventHandlerResult::OK;
@@ -220,18 +222,19 @@ UIText::UIText()
     OnEnabled
         .Bind([this]()
             {
-                UpdateMaterial(false);
+                SetDeferredUpdate(UIObjectUpdateType::UPDATE_MATERIAL, false);
 
                 return UIEventHandlerResult::OK;
             })
         .Detach();
 
-    OnDisabled.Bind([this]()
-                  {
-                      UpdateMaterial(false);
+    OnDisabled
+        .Bind([this]()
+        {
+            SetDeferredUpdate(UIObjectUpdateType::UPDATE_MATERIAL, false);
 
-                      return UIEventHandlerResult::OK;
-                  })
+            return UIEventHandlerResult::OK;
+        })
         .Detach();
 }
 
@@ -256,14 +259,11 @@ void UIText::SetText(const String& text)
     {
         return;
     }
+    
+    UpdateSize();
 
-    {
-        UILockedUpdatesScope scope(*this, UIObjectUpdateType::UPDATE_TEXT_RENDER_DATA);
-
-        UpdateSize();
-    }
-
-    SetDeferredUpdate(UIObjectUpdateType::UPDATE_TEXT_RENDER_DATA, false);
+    SetDeferredUpdate(UIObjectUpdateType::UPDATE_MATERIAL, false);
+    SetDeferredUpdate(UIObjectUpdateType::UPDATE_MESH_DATA, false);
 }
 
 const RC<FontAtlas>& UIText::GetFontAtlasOrDefault() const
@@ -292,14 +292,11 @@ void UIText::SetFontAtlas(const RC<FontAtlas>& fontAtlas)
     {
         return;
     }
+    
+    UpdateSize();
 
-    {
-        UILockedUpdatesScope scope(*this, UIObjectUpdateType::UPDATE_TEXT_RENDER_DATA);
-
-        UpdateSize();
-    }
-
-    SetDeferredUpdate(UIObjectUpdateType::UPDATE_TEXT_RENDER_DATA, false);
+    SetDeferredUpdate(UIObjectUpdateType::UPDATE_MATERIAL, false);
+    SetDeferredUpdate(UIObjectUpdateType::UPDATE_MESH_DATA, false);
 }
 
 Vec2f UIText::GetCharacterOffset(int characterIndex) const
@@ -332,46 +329,10 @@ void UIText::UpdateTextAABB()
 
         m_textAabbWithBearing = CalculateTextAABB(*fontAtlas, m_text, parentBounds, textSize, true, nullptr);
         m_textAabbWithoutBearing = CalculateTextAABB(*fontAtlas, m_text, parentBounds, textSize, false, &m_characterOffsets);
-
-        AssertDebug(m_characterOffsets.Size() == m_text.Length() + 1);
     }
     else
     {
         HYP_LOG_ONCE(UI, Warning, "No font atlas for UIText {}", GetName());
-    }
-}
-
-void UIText::UpdateRenderData()
-{
-    HYP_SCOPE;
-
-    if (m_lockedUpdates & UIObjectUpdateType::UPDATE_TEXT_RENDER_DATA)
-    {
-        return;
-    }
-
-    m_deferredUpdates &= ~(UIObjectUpdateType::UPDATE_TEXT_RENDER_DATA | UIObjectUpdateType::UPDATE_CHILDREN_TEXT_RENDER_DATA);
-
-    // Only update render data if computed visibility is true (visible)
-    // When this changes to be true, UpdateRenderData will be called - no need to update it if we are not visible
-    if (!GetComputedVisibility())
-    {
-        return;
-    }
-
-    if (const RC<FontAtlas>& fontAtlas = GetFontAtlasOrDefault())
-    {
-        const float textSize = GetTextSize();
-
-        m_currentFontAtlasTexture = fontAtlas->GetAtlasTextures().GetAtlasForPixelSize(textSize);
-
-        if (!m_currentFontAtlasTexture.IsValid())
-        {
-            HYP_LOG_ONCE(UI, Warning, "No font atlas texture for text size {}", textSize);
-        }
-
-        UpdateMaterial(false);
-        UpdateMeshData(false);
     }
 }
 
@@ -457,6 +418,26 @@ void UIText::UpdateMeshData_Internal()
     GetScene()->GetEntityManager()->AddTag<EntityTag::UPDATE_RENDER_PROXY>(GetEntity());
 }
 
+void UIText::UpdateMaterial_Internal()
+{
+    HYP_SCOPE;
+
+    if (const RC<FontAtlas>& fontAtlas = GetFontAtlasOrDefault())
+    {
+        const float textSize = GetTextSize();
+
+        m_currentFontAtlasTexture = fontAtlas->GetAtlasTextures().GetAtlasForPixelSize(textSize);
+    }
+
+    if (!m_currentFontAtlasTexture.IsValid())
+    {
+        HYP_LOG(UI, Warning, "No font atlas texture for text \"{}\"",
+            GetText());
+    }
+
+    UIObject::UpdateMaterial_Internal();
+}
+
 MaterialAttributes UIText::GetMaterialAttributes() const
 {
     return UIObject::GetMaterialAttributes();
@@ -492,14 +473,6 @@ void UIText::Update_Internal(float delta)
 {
     HYP_SCOPE;
 
-    if (m_deferredUpdates)
-    {
-        if (m_deferredUpdates & UIObjectUpdateType::UPDATE_TEXT_RENDER_DATA)
-        {
-            UpdateRenderData();
-        }
-    }
-
     UIObject::Update_Internal(delta);
 }
 
@@ -527,7 +500,14 @@ void UIText::UpdateSize_Internal(bool updateChildren)
 
 BoundingBox UIText::CalculateInnerAABB_Internal() const
 {
-    return m_textAabbWithoutBearing * Vec3f(Vec2f(GetTextSize()), 1.0f);
+    float textSize = GetTextSize();
+    
+    if (textSize <= FLT_EPSILON)
+    {
+        HYP_LOG_ONCE(UI, Warning, "Invalid text size for text element {} (text: \"{}\"): {}", GetName(), GetText(), textSize);
+    }
+    
+    return m_textAabbWithoutBearing * Vec3f(Vec2f(textSize), 1.0f);
 }
 
 void UIText::OnFontAtlasUpdate_Internal()
@@ -536,13 +516,9 @@ void UIText::OnFontAtlasUpdate_Internal()
 
     UIObject::OnFontAtlasUpdate_Internal();
 
-    {
-        UILockedUpdatesScope scope(*this, UIObjectUpdateType::UPDATE_TEXT_RENDER_DATA);
-
-        UpdateSize();
-    }
-
-    SetDeferredUpdate(UIObjectUpdateType::UPDATE_TEXT_RENDER_DATA, false);
+    SetDeferredUpdate(UIObjectUpdateType::UPDATE_SIZE, false);
+    SetDeferredUpdate(UIObjectUpdateType::UPDATE_MATERIAL, false);
+    SetDeferredUpdate(UIObjectUpdateType::UPDATE_MESH_DATA, false);
 }
 
 void UIText::OnTextSizeUpdate_Internal()
@@ -551,13 +527,9 @@ void UIText::OnTextSizeUpdate_Internal()
 
     UIObject::OnTextSizeUpdate_Internal();
 
-    {
-        UILockedUpdatesScope scope(*this, UIObjectUpdateType::UPDATE_TEXT_RENDER_DATA);
-
-        UpdateSize();
-    }
-
-    SetDeferredUpdate(UIObjectUpdateType::UPDATE_TEXT_RENDER_DATA, false);
+    SetDeferredUpdate(UIObjectUpdateType::UPDATE_SIZE, false);
+    SetDeferredUpdate(UIObjectUpdateType::UPDATE_MATERIAL, false);
+    SetDeferredUpdate(UIObjectUpdateType::UPDATE_MESH_DATA, false);
 }
 
 Vec2i UIText::GetParentBounds() const
