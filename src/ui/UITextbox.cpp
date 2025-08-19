@@ -16,7 +16,8 @@ HYP_DECLARE_LOG_CHANNEL(UI);
 
 UITextbox::UITextbox()
     : m_textElement(nullptr),
-      m_characterIndex(0)
+      m_characterIndex(0),
+      clearOnSubmit(false)
 {
     SetBorderRadius(4);
     SetBorderFlags(UIObjectBorderFlags::ALL);
@@ -317,6 +318,11 @@ void UITextbox::SubmitTextChange()
         OnTextChange(text);
 
         m_prevText = text;
+        
+        if (clearOnSubmit)
+        {
+            SetText_Internal("");
+        }
     }
 }
 

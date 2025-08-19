@@ -51,7 +51,8 @@ bool InputHandlerBase::OnKeyDown_Impl(const KeyboardEvent& evt)
         m_inputState->keyStates.Set(uint32(evt.keyCode), true);
     }
 
-    return true;
+    // default to not handled
+    return false;
 }
 
 bool InputHandlerBase::OnKeyUp_Impl(const KeyboardEvent& evt)
@@ -61,7 +62,8 @@ bool InputHandlerBase::OnKeyUp_Impl(const KeyboardEvent& evt)
         m_inputState->keyStates.Set(uint32(evt.keyCode), false);
     }
 
-    return true;
+    // default to not handled
+    return false;
 }
 
 bool InputHandlerBase::OnMouseDown_Impl(const MouseEvent& evt)
@@ -74,7 +76,8 @@ bool InputHandlerBase::OnMouseDown_Impl(const MouseEvent& evt)
         }
     }
 
-    return true;
+    // default to not handled
+    return false;
 }
 
 bool InputHandlerBase::OnMouseUp_Impl(const MouseEvent& evt)
@@ -87,7 +90,8 @@ bool InputHandlerBase::OnMouseUp_Impl(const MouseEvent& evt)
         }
     }
 
-    return true;
+    // default to not handled
+    return false;
 }
 
 bool InputHandlerBase::OnMouseLeave_Impl(const MouseEvent& evt)

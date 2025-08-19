@@ -12,6 +12,7 @@
 #include <core/threading/Scheduler.hpp>
 #include <core/threading/Spinlock.hpp>
 
+#include <core/utilities/ForEach.hpp>
 #include <core/utilities/DeferredScope.hpp>
 
 #include <core/Name.hpp>
@@ -532,6 +533,16 @@ public:
                 current->mask.Decrement(2, MemoryOrder::RELEASE);
 
                 resultConstructed = true;
+
+                // special case for IterationResult to allow us to break from the delegate broadcast loop.
+                if constexpr (std::is_same_v<ReturnType, IterationResult> || std::is_convertible_v<ReturnType, IterationResult>)
+                {
+                    if (IterationResult(resultStorage.Get()) == IterationResult::STOP)
+                    {
+                        // stop iterating
+                        break;
+                    }
+                }
 
                 ++it;
             }

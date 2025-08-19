@@ -215,6 +215,14 @@ void ConsoleUI::Init()
     OnKeyDown
         .Bind([this](const KeyboardEvent& eventData) -> UIEventHandlerResult
             {
+                if (eventData.keyCode == KeyCode::TILDE || eventData.keyCode == KeyCode::ESC)
+                {
+                    // let the parent handle these keys
+                    Blur();
+
+                    return UIEventHandlerResult::OK;
+                }
+
                 return UIEventHandlerResult::STOP_BUBBLING;
             })
         .Detach();
@@ -303,13 +311,54 @@ void ConsoleUI::Init()
     textbox->SetBackgroundColor(Vec4f { 0.0f, 0.0f, 0.0f, 0.5f });
     textbox->SetTextColor(Vec4f { 1.0f, 1.0f, 1.0f, 1.0f });
     textbox->SetTextSize(8.0f);
+    textbox->clearOnSubmit = true;
     AddChildUIObject(textbox);
 
     m_textbox = textbox;
 
+    m_textbox->OnTextChange
+        .Bind([this](const String& text) -> UIEventHandlerResult
+            {
+                if (text.Any())
+                {
+                    if (text.ToLower() == "clear")
+                    {
+                        m_history->ClearHistory();
+                    }
+                    else
+                    {
+                        m_history->AddEntry(text, ConsoleHistoryEntryType::COMMAND);
+                    }
+
+                    if (Result result = ConsoleCommandManager::GetInstance().ExecuteCommand(text); result.HasError())
+                    {
+                        HYP_LOG(Console, Error, "Error executing command: {}", result.GetError().GetMessage());
+                    }
+                    else
+                    {
+                        HYP_LOG(Console, Info, "Executed command: {}", text);
+                    }
+
+                    m_currentCommandText.Clear();
+
+                    m_textbox->Focus();
+                }
+
+                return UIEventHandlerResult::STOP_BUBBLING;
+            })
+        .Detach();
+
     m_textbox->OnKeyDown
         .Bind([this](const KeyboardEvent& eventData) -> UIEventHandlerResult
             {
+                if (eventData.keyCode == KeyCode::TILDE || eventData.keyCode == KeyCode::ESC)
+                {
+                    // let the parent handle this key
+                    Blur();
+                    
+                    return UIEventHandlerResult::OK;
+                }
+            
                 if (eventData.keyCode == KeyCode::RETURN)
                 {
                     const String& text = m_textbox->GetText();

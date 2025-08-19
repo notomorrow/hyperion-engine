@@ -6,8 +6,6 @@
 
 #include <core/utilities/Span.hpp>
 
-#include <core/threading/TaskSystem.hpp>
-
 #include <core/Types.hpp>
 
 #include <algorithm>
@@ -18,6 +16,8 @@ namespace hyperion {
 
 enum class IterationResult : uint8
 {
+    INVALID = uint8(-1),
+
     CONTINUE = 0,
     STOP
 };
