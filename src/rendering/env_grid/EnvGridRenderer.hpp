@@ -18,7 +18,7 @@ namespace hyperion {
 class EnvGrid;
 class LegacyEnvGrid;
 
-HYP_CLASS(NosScriptBindings)
+HYP_CLASS(NoScriptBindings)
 class HYP_API EnvGridPassData : public PassData
 {
     HYP_OBJECT_BODY(EnvGridPassData);
