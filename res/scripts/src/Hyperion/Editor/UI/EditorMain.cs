@@ -169,7 +169,7 @@ namespace Hyperion
 
                     if (renderStats.counts[RenderStatsCountType.InstancedDrawCalls] > 0)
                         sb.AppendFormat(", InstancedDrawCalls: {0}", renderStats.counts[RenderStatsCountType.InstancedDrawCalls]);
-                        
+
                     sb.AppendFormat(", Tris: {0}", renderStats.counts[RenderStatsCountType.Triangles]);
                     sb.AppendFormat(", RenderGroups: {0}", renderStats.counts[RenderStatsCountType.RenderGroups]);
                     sb.AppendFormat(", Views: {0}", renderStats.counts[RenderStatsCountType.Views]);

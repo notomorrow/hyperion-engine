@@ -56,7 +56,7 @@ public:
     HYP_FORCE_INLINE void SetValue(T value)
     {
         m_value = value;
-        m_fract = 0.0;
+        m_fract = 0.0; // simply reset fraction when setting value directly
     }
 
     HYP_FORCE_INLINE T GetTarget() const
@@ -64,7 +64,7 @@ public:
         return m_target;
     }
 
-    HYP_FORCE_INLINE void SetTarget(T target)
+    HYP_FORCE_INLINE void SetTarget(T target, bool resetBlending = false)
     {
         m_target = target;
         m_fract = 0.0;
@@ -107,9 +107,9 @@ public:
 
         const double delta = m_counter.delta;
 
-        const double fract = m_fract + delta;
+        const double fract = MathUtil::Clamp(m_fract + delta, 0.0, 1.0);
 
-        T nextValue = MathUtil::Lerp(m_value, m_target, MathUtil::Clamp(fract, 0.0, 1.0));
+        T nextValue = MathUtil::Lerp(m_value, m_target, fract);
 
         outDelta = nextValue - m_value;
 

@@ -115,12 +115,11 @@ protected:
 
     virtual void UpdateMeshData_Internal() override;
 
-    void UpdateTextAABB();
-    void UpdateRenderData();
-
     virtual void Update_Internal(float delta) override;
 
     const RC<FontAtlas>& GetFontAtlasOrDefault() const;
+
+    void UpdateTextAABB();
 
     RC<FontAtlas> m_fontAtlas;
 
@@ -128,6 +127,7 @@ protected:
 
 private:
     virtual void OnTextSizeUpdate_Internal() override;
+    virtual void UpdateMaterial_Internal() override;
 
     Vec2i GetParentBounds() const;
 
