@@ -89,9 +89,25 @@ MeshDebugDrawShapeBase::MeshDebugDrawShapeBase(DebugDrawCommandList& list)
 
 #pragma region SphereDebugDrawShape
 
+// Global counter that is incremented the first time a debug draw shape class is constructed.
+// This number is assigned to each debug draw shape type so we can use it to cache render data on a
+// per-shape basis. It's not meant to be a stable ID but just needs to be unique
+static int g_debugDrawShapeIdCounter = 0;
+
+static inline int NextShapeId()
+{
+    int shapeId = g_debugDrawShapeIdCounter++;
+    AssertDebug(shapeId < g_maxDebugDrawShapeTypes);
+    
+    return shapeId;
+}
+
 SphereDebugDrawShape::SphereDebugDrawShape(DebugDrawCommandList& list)
     : MeshDebugDrawShapeBase(list)
 {
+    static const int s_shapeId = NextShapeId();
+    shapeId = s_shapeId;
+    
     (void)GetMesh(); // hack to preload mesh so it doesn't try to load during render pass
 }
 
@@ -150,6 +166,13 @@ void SphereDebugDrawShape::operator()(const Vec3f& position, float radius, const
 
 #pragma region AmbientProbeDebugDrawShape
 
+AmbientProbeDebugDrawShape::AmbientProbeDebugDrawShape(DebugDrawCommandList& list)
+    : SphereDebugDrawShape(list)
+{
+    static const int s_shapeId = NextShapeId();
+    shapeId = s_shapeId;
+}
+
 void AmbientProbeDebugDrawShape::UpdateBufferData(DebugDrawCommand* cmd, ImmediateDrawShaderData* bufferData) const
 {
     IDebugDrawShape::UpdateBufferData(cmd, bufferData);
@@ -191,6 +214,13 @@ void AmbientProbeDebugDrawShape::operator()(const Vec3f& position, float radius,
 #pragma endregion AmbientProbeDebugDrawShape
 
 #pragma region ReflectionProbeDebugDrawShape
+
+ReflectionProbeDebugDrawShape::ReflectionProbeDebugDrawShape(DebugDrawCommandList& list)
+    : SphereDebugDrawShape(list)
+{
+    static const int s_shapeId = NextShapeId();
+    shapeId = s_shapeId;
+}
 
 void ReflectionProbeDebugDrawShape::UpdateBufferData(DebugDrawCommand* cmd, ImmediateDrawShaderData* bufferData) const
 {
@@ -237,6 +267,9 @@ void ReflectionProbeDebugDrawShape::operator()(const Vec3f& position, float radi
 BoxDebugDrawShape::BoxDebugDrawShape(DebugDrawCommandList& list)
     : MeshDebugDrawShapeBase(list)
 {
+    static const int s_shapeId = NextShapeId();
+    shapeId = s_shapeId;
+    
     (void)GetMesh(); // hack to preload mesh so it doesn't try to load during render pass
 }
 
@@ -305,6 +338,9 @@ void BoxDebugDrawShape::operator()(const Vec3f& position, const Vec3f& size, con
 PlaneDebugDrawShape::PlaneDebugDrawShape(DebugDrawCommandList& list)
     : MeshDebugDrawShapeBase(list)
 {
+    static const int s_shapeId = NextShapeId();
+    shapeId = s_shapeId;
+    
     (void)GetMesh(); // hack to preload mesh so it doesn't try to load during render pass
 }
 
@@ -580,10 +616,15 @@ void DebugDrawer::Render(FrameBase* frame, const RenderSetup& renderSetup)
     for (auto& it : partitionedShaderData)
     {
         // don't want to keep filling up buffers
-        it.second.Clear();
+        it.Clear();
     }
 
-    /// @TODO: Sort debug draws by attributes so the same ones are grouped together
+    // @NOTE: Don't use of list-dependent stuff on any of the shapes in currShapes.
+    // It's simply here because it's faster to cache the pointers to each shape by its shape id,
+    // and we're only using stuff that doesn't use the shape's debug draw list at all.
+    // if we want to use more stuff on each shape, we'll need to devise a different solutoin.
+    IDebugDrawShape* currShapes[g_maxDebugDrawShapeTypes] { nullptr };
+    
     for (SizeType drawCommandIdx = 0; drawCommandIdx < m_headers[idx].Size(); drawCommandIdx++)
     {
         uint32 offset = m_headers[idx][drawCommandIdx].offset;
@@ -599,8 +640,14 @@ void DebugDrawer::Render(FrameBase* frame, const RenderSetup& renderSetup)
         {
             continue;
         }
-
-        auto& shaderData = partitionedShaderData[drawCommand->shape];
+        
+        const int shapeIdx = drawCommand->shape->shapeId;
+        
+        AssertDebug(shapeIdx >= 0 && shapeIdx < g_maxDebugDrawShapeTypes);
+        
+        auto& shaderData = partitionedShaderData[shapeIdx];
+        currShapes[shapeIdx] = drawCommand->shape;
+        
         ImmediateDrawShaderData& shaderDataElement = shaderData.EmplaceBack();
 
         drawCommand->shape->UpdateBufferData(drawCommand, &shaderDataElement);
@@ -623,11 +670,10 @@ void DebugDrawer::Render(FrameBase* frame, const RenderSetup& renderSetup)
     RenderStatsCounts counts {};
 #endif
 
-    for (auto& it : partitionedShaderData)
+    for (uint32 shapeIdx = 0; shapeIdx < HYP_ARRAY_SIZE(partitionedShaderData); shapeIdx++)
     {
-        IDebugDrawShape* shape = it.first;
-        auto& shaderData = it.second;
-
+        auto& shaderData = partitionedShaderData[shapeIdx];
+        
         if (shaderData.Empty())
         {
             continue;
@@ -645,6 +691,8 @@ void DebugDrawer::Render(FrameBase* frame, const RenderSetup& renderSetup)
 #ifdef HYP_ENABLE_RENDER_STATS
                 counts[ERS_DEBUG_DRAWS] += numToDraw;
 #endif
+                IDebugDrawShape* shape = currShapes[shapeIdx];
+                AssertDebug(shape != nullptr);
 
                 switch (shape->GetDebugDrawType())
                 {

@@ -44,6 +44,8 @@ class PassData;
 struct RenderSetup;
 struct ImmediateDrawShaderData;
 
+static constexpr int g_maxDebugDrawShapeTypes = 8; // increase if needed
+
 HYP_STRUCT(ConfigName = "GlobalConfig", JsonPath = "rendering.debug.debugDrawer")
 struct DebugDrawerConfig : public ConfigBase<DebugDrawerConfig>
 {
@@ -88,6 +90,8 @@ public:
     }
 
     virtual void UpdateBufferData(DebugDrawCommand* cmd, ImmediateDrawShaderData* bufferData) const;
+    
+    int shapeId = -1;
 };
 
 class HYP_API MeshDebugDrawShapeBase : public IDebugDrawShape
@@ -138,10 +142,7 @@ private:
 class HYP_API AmbientProbeDebugDrawShape : public SphereDebugDrawShape
 {
 public:
-    AmbientProbeDebugDrawShape(DebugDrawCommandList& list)
-        : SphereDebugDrawShape(list)
-    {
-    }
+    AmbientProbeDebugDrawShape(DebugDrawCommandList& list);
 
     virtual ~AmbientProbeDebugDrawShape() override = default;
 
@@ -153,10 +154,7 @@ public:
 class HYP_API ReflectionProbeDebugDrawShape : public SphereDebugDrawShape
 {
 public:
-    ReflectionProbeDebugDrawShape(DebugDrawCommandList& list)
-        : SphereDebugDrawShape(list)
-    {
-    }
+    ReflectionProbeDebugDrawShape(DebugDrawCommandList& list);
 
     virtual ~ReflectionProbeDebugDrawShape() override = default;
 
@@ -282,7 +280,8 @@ private:
 
     FixedArray<GpuBufferRef, g_framesInFlight> m_instanceBuffers;
 
-    using CachedPartitionedShaderData = HashMap<IDebugDrawShape*, Array<ImmediateDrawShaderData, DynamicAllocator>, HashTable_DynamicNodeAllocator<KeyValuePair<IDebugDrawShape*, Array<ImmediateDrawShaderData, DynamicAllocator>>>>;
+    typedef Array<ImmediateDrawShaderData, DynamicAllocator> CachedPartitionedShaderData[g_maxDebugDrawShapeTypes];
+    
     CachedPartitionedShaderData m_cachedPartitionedShaderData;
 };
 
