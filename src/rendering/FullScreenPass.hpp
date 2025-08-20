@@ -9,9 +9,8 @@
 #include <core/object/Handle.hpp>
 
 #include <rendering/RenderableAttributes.hpp>
-
+#include <rendering/GraphicsPipelineCache.hpp>
 #include <rendering/RenderQueue.hpp>
-
 #include <rendering/RenderObject.hpp>
 #include <rendering/Shared.hpp>
 
@@ -167,7 +166,7 @@ protected:
 
     FramebufferRef m_framebuffer;
     ShaderRef m_shader;
-    GraphicsPipelineRef* m_pGraphicsPipeline;
+    GraphicsPipelineCacheHandle m_graphicsPipelineCacheHandle;
     Handle<Mesh> m_fullScreenQuad;
     Vec2u m_extent;
     GBuffer* m_gbuffer;

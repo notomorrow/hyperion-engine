@@ -14,7 +14,7 @@
 #include <rendering/CullData.hpp>
 #include <rendering/DrawCall.hpp>
 #include <rendering/RenderProxy.hpp>
-
+#include <rendering/GraphicsPipelineCache.hpp>
 #include <rendering/RenderObject.hpp>
 
 #include <core/Constants.hpp>
@@ -87,19 +87,23 @@ public:
         return m_flags;
     }
 
-    void PerformRendering(FrameBase* frame, const RenderSetup& renderSetup, const DrawCallCollection& drawCallCollection, IndirectRenderer* indirectRenderer, ParallelRenderingState* parallelRenderingState);
+    void PerformRendering(
+        FrameBase* frame,
+        const RenderSetup& renderSetup,
+        const DrawCallCollection& drawCallCollection,
+        IndirectRenderer* indirectRenderer,
+        ParallelRenderingState* parallelRenderingState);
 
 private:
     void Init() override;
 
-    GraphicsPipelineRef* CreateGraphicsPipeline(PassData* pd, IDrawCallCollectionImpl* drawCallCollectionImpl) const;
+    GraphicsPipelineCacheHandle CreateGraphicsPipeline(
+        PassData* pd,
+        IDrawCallCollectionImpl* drawCallCollectionImpl) const;
 
     EnumFlags<RenderGroupFlags> m_flags;
-
     ShaderRef m_shader;
-
     DescriptorTableRef m_descriptorTable;
-
     RenderableAttributeSet m_renderableAttributes;
 };
 

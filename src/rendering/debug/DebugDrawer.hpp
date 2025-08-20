@@ -25,7 +25,7 @@
 
 #include <rendering/Buffers.hpp>
 #include <rendering/RenderCollection.hpp>
-
+#include <rendering/GraphicsPipelineCache.hpp>
 #include <rendering/RenderObject.hpp>
 #include <rendering/Shared.hpp>
 
@@ -267,7 +267,7 @@ private:
 
     ShaderRef m_shader;
     DescriptorTableRef m_descriptorTable;
-    HashMap<RenderableAttributeSet, GraphicsPipelineRef*> m_graphicsPipelines;
+    HashMap<RenderableAttributeSet, GraphicsPipelineCacheHandle> m_graphicsPipelines;
 
     FixedArray<Array<DebugDrawCommandHeader>, g_tripleBuffer ? 3 : 2> m_headers;
     FixedArray<ByteBuffer, g_tripleBuffer ? 3 : 2> m_buffers;
