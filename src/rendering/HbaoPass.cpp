@@ -120,7 +120,7 @@ void HBAO::CreatePipeline(const RenderableAttributeSet& renderableAttributes)
 
     m_descriptorTable = descriptorTable;
 
-    m_pGraphicsPipeline = g_renderGlobalState->graphicsPipelineCache->GetOrCreate(
+    m_graphicsPipelineCacheHandle = g_renderGlobalState->graphicsPipelineCache->GetOrCreate(
         m_shader,
         descriptorTable,
         { &m_framebuffer, 1 },
@@ -165,7 +165,7 @@ void HBAO::Render(FrameBase* frame, const RenderSetup& renderSetup)
 
     Begin(frame, renderSetup);
 
-    const GraphicsPipelineRef& graphicsPipeline = *m_pGraphicsPipeline;
+    const GraphicsPipelineRef& graphicsPipeline = GetGraphicsPipeline();
 
     frame->renderQueue << BindDescriptorTable(
         graphicsPipeline->GetDescriptorTable(),

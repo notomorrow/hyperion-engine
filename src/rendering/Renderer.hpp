@@ -16,7 +16,7 @@
 
 #include <rendering/RenderStats.hpp>
 #include <rendering/CullData.hpp>
-
+#include <rendering/GraphicsPipelineCache.hpp>
 #include <rendering/RenderObject.hpp>
 #include <rendering/RenderQueue.hpp>
 
@@ -232,7 +232,7 @@ public:
     struct RenderGroupCacheEntry
     {
         WeakHandle<RenderGroup> renderGroup;
-        GraphicsPipelineRef* pGraphicsPipeline = nullptr;
+        GraphicsPipelineCacheHandle cacheHandle;
     };
 
     WeakHandle<View> view;
@@ -255,13 +255,6 @@ public:
      *  \param maxIter The maximum number of graphics pipelines to iterate over for this frame.
      *  \returns The number of graphics pipelines that were culled */
     int CullUnusedGraphicsPipelines(int maxIter = 10);
-
-    static GraphicsPipelineRef* CreateGraphicsPipeline(
-        PassData* pd,
-        const ShaderRef& shader,
-        const RenderableAttributeSet& renderableAttributes,
-        const DescriptorTableRef& descriptorTable = DescriptorTableRef::Null(),
-        IDrawCallCollectionImpl* impl = nullptr); // @TODO: Make this param part of renderable attributes
 };
 
 class HYP_API RendererBase

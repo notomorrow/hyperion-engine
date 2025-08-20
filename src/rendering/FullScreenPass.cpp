@@ -131,7 +131,6 @@ FullScreenPass::FullScreenPass(
     GBuffer* gbuffer)
     : m_shader(shader),
       m_framebuffer(framebuffer),
-      m_pGraphicsPipeline(nullptr),
       m_imageFormat(imageFormat),
       m_extent(extent),
       m_gbuffer(gbuffer),
@@ -248,18 +247,16 @@ const GraphicsPipelineRef& FullScreenPass::GetGraphicsPipeline()
 {
     HYP_SCOPE;
 
-    AssertDebug(m_pGraphicsPipeline != nullptr);
-
-    if (HYP_LIKELY(*m_pGraphicsPipeline != nullptr))
+    if (HYP_LIKELY(m_graphicsPipelineCacheHandle.IsAlive()))
     {
-        return *m_pGraphicsPipeline;
+        return *m_graphicsPipelineCacheHandle;
     }
 
     CreatePipeline();
 
-    AssertDebug(*m_pGraphicsPipeline != nullptr);
+    AssertDebug(m_graphicsPipelineCacheHandle.IsAlive());
 
-    return *m_pGraphicsPipeline;
+    return *m_graphicsPipelineCacheHandle;
 }
 
 void FullScreenPass::Resize(Vec2u newSize)
@@ -288,7 +285,8 @@ void FullScreenPass::Resize_Internal(Vec2u newSize)
         return;
     }
 
-    m_pGraphicsPipeline = nullptr;
+    // release handle
+    m_graphicsPipelineCacheHandle = GraphicsPipelineCacheHandle();
 
     SafeDelete(std::move(m_framebuffer));
 
@@ -381,13 +379,13 @@ void FullScreenPass::CreatePipeline(const RenderableAttributeSet& renderableAttr
 {
     HYP_SCOPE;
 
-    m_pGraphicsPipeline = g_renderGlobalState->graphicsPipelineCache->GetOrCreate(
+    m_graphicsPipelineCacheHandle = g_renderGlobalState->graphicsPipelineCache->GetOrCreate(
         m_shader,
         m_descriptorTable.GetOr(DescriptorTableRef::Null()),
         { &m_framebuffer, 1 },
         renderableAttributes);
 
-    Assert(m_pGraphicsPipeline != nullptr);
+    Assert(m_graphicsPipelineCacheHandle.IsAlive());
 }
 
 void FullScreenPass::CreateTemporalBlending()

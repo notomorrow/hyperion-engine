@@ -23,6 +23,7 @@ class SparsePagedArray : public ContainerBase<SparsePagedArray<T, PageSize>, Siz
 {
     static_assert(MathUtil::IsPowerOfTwo(PageSize), "PageSize must be power of two!");
 
+protected:
     struct Page
     {
         ValueStorage<T, PageSize, alignof(T)> storage;

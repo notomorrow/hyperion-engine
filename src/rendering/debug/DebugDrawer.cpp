@@ -567,7 +567,7 @@ void DebugDrawer::Render(FrameBase* frame, const RenderSetup& renderSetup)
     Threads::AssertOnThread(g_renderThread);
 
     // wait for initialization on the game thread
-    if (!m_isInitialized.Get(MemoryOrder::ACQUIRE))
+    if (!m_isInitialized.Get(MemoryOrder::RELAXED))
     {
         return;
     }
@@ -833,30 +833,27 @@ GraphicsPipelineRef DebugDrawer::FetchGraphicsPipeline(RenderableAttributeSet at
 
     attributes.SetDrawableLayer(drawableLayer);
 
-    GraphicsPipelineRef* pGraphicsPipeline = nullptr;
 
     auto it = m_graphicsPipelines.Find(attributes);
 
-    if (it != m_graphicsPipelines.End())
+    if (it != m_graphicsPipelines.End() && it->second.IsAlive())
     {
-        pGraphicsPipeline = it->second;
+        return *it->second;
     }
 
-    if (!pGraphicsPipeline || !*pGraphicsPipeline)
-    {
-        Handle<View> view = passData->view.Lock();
-        Assert(view.IsValid());
+    Handle<View> view = passData->view.Lock();
+    Assert(view.IsValid());
 
-        pGraphicsPipeline = g_renderGlobalState->graphicsPipelineCache->GetOrCreate(
-            m_shader,
-            m_descriptorTable,
-            { &view->GetOutputTarget().GetFramebuffer(RB_TRANSLUCENT), 1 },
-            attributes);
+    GraphicsPipelineCacheHandle cacheHandle = g_renderGlobalState->graphicsPipelineCache->GetOrCreate(
+        m_shader,
+        m_descriptorTable,
+        { &view->GetOutputTarget().GetFramebuffer(RB_TRANSLUCENT), 1 },
+        attributes);
 
-        m_graphicsPipelines[attributes] = pGraphicsPipeline;
-    }
+    const GraphicsPipelineRef& graphicsPipeline = *cacheHandle;
+    m_graphicsPipelines[attributes] = std::move(cacheHandle);
 
-    return *pGraphicsPipeline;
+    return graphicsPipeline;
 }
 
 #pragma endregion DebugDrawer

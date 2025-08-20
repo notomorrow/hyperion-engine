@@ -227,18 +227,18 @@ void DeferredPass::CreatePipeline(const RenderableAttributeSet& renderableAttrib
 
         DeferCreate(descriptorTable);
 
-        GraphicsPipelineRef* pGraphicsPipeline = g_renderGlobalState->graphicsPipelineCache->GetOrCreate(
+        GraphicsPipelineCacheHandle cacheHandle = g_renderGlobalState->graphicsPipelineCache->GetOrCreate(
             shader,
             descriptorTable,
             { &m_framebuffer, 1 },
             renderableAttributes);
 
-        m_directLightGraphicsPipelines[i] = pGraphicsPipeline;
-
         if (i == 0)
         {
-            m_pGraphicsPipeline = pGraphicsPipeline;
+            m_graphicsPipelineCacheHandle = cacheHandle;
         }
+
+        m_directLightGraphicsPipelines[i] = std::move(cacheHandle);
     }
 }
 
@@ -487,7 +487,6 @@ static EnvGridApplyMode EnvGridTypeToApplyEnvGridMode(EnvGridType type)
 EnvGridPass::EnvGridPass(EnvGridPassMode mode, Vec2u extent, GBuffer* gbuffer)
     : FullScreenPass(g_envGridPassFormats[mode], extent, gbuffer),
       m_mode(mode),
-      m_graphicsPipelines { nullptr },
       m_isFirstFrame(true)
 {
     if (mode == EGPM_RADIANCE)
@@ -548,16 +547,16 @@ void EnvGridPass::CreatePipeline()
         DescriptorTableRef descriptorTable = g_renderBackend->MakeDescriptorTable(&descriptorTableDecl);
         DeferCreate(descriptorTable);
 
-        GraphicsPipelineRef* pGraphicsPipeline = g_renderGlobalState->graphicsPipelineCache->GetOrCreate(
+        GraphicsPipelineCacheHandle cacheHandle = g_renderGlobalState->graphicsPipelineCache->GetOrCreate(
             shader,
             descriptorTable,
             { &m_framebuffer, 1 },
             renderableAttributes);
 
-        m_graphicsPipelines[uint32(it.first)] = pGraphicsPipeline;
+        m_graphicsPipelines[uint32(it.first)] = std::move(cacheHandle);
     }
 
-    m_pGraphicsPipeline = m_graphicsPipelines[EGAM_SH];
+    m_graphicsPipelineCacheHandle = m_graphicsPipelines[EGAM_SH];
 }
 
 void EnvGridPass::Resize_Internal(Vec2u newSize)
@@ -592,10 +591,10 @@ void EnvGridPass::Render(FrameBase* frame, const RenderSetup& rs)
         RenderPreviousTextureToScreen(frame, rs);
     }
 
-    auto selectPipeline = [this](LegacyEnvGrid* envGrid) -> GraphicsPipelineRef*
+    auto selectPipeline = [this](LegacyEnvGrid* envGrid) -> GraphicsPipelineCacheHandle&
         {
             return m_mode == EGPM_RADIANCE
-                ? m_pGraphicsPipeline
+                ? m_graphicsPipelineCacheHandle
                 : m_graphicsPipelines[EnvGridTypeToApplyEnvGridMode(envGrid->GetEnvGridType())];
         };
 
@@ -603,18 +602,17 @@ void EnvGridPass::Render(FrameBase* frame, const RenderSetup& rs)
     {
         LegacyEnvGrid* legacyEnvGrid = static_cast<LegacyEnvGrid*>(envGrid);
 
-        GraphicsPipelineRef* pGraphicsPipeline = selectPipeline(legacyEnvGrid);
-        AssertDebug(pGraphicsPipeline != nullptr);
+        GraphicsPipelineCacheHandle& cacheHandle = selectPipeline(legacyEnvGrid);
 
-        if (!*pGraphicsPipeline)
+        if (!cacheHandle.IsAlive())
         {
             CreatePipeline();
 
-            pGraphicsPipeline = selectPipeline(legacyEnvGrid);
-            Assert(*pGraphicsPipeline != nullptr);
+            cacheHandle = selectPipeline(legacyEnvGrid);
+            Assert(cacheHandle.IsAlive());
         }
 
-        const GraphicsPipelineRef& graphicsPipeline = *pGraphicsPipeline;
+        const GraphicsPipelineRef& graphicsPipeline = *cacheHandle;
 
         const uint32 globalDescriptorSetIndex = graphicsPipeline->GetDescriptorTable()->GetDescriptorSetIndex("Global");
         const uint32 viewDescriptorSetIndex = graphicsPipeline->GetDescriptorTable()->GetDescriptorSetIndex("View");
@@ -679,7 +677,6 @@ ReflectionsPass::ReflectionsPass(Vec2u extent, GBuffer* gbuffer, const GpuImageV
     : FullScreenPass(TF_RGBA16F, extent, gbuffer),
       m_mipChainImageView(mipChainImageView),
       m_deferredResultImageView(deferredResultImageView),
-      m_cubemapGraphicsPipelines { nullptr },
       m_isFirstFrame(true)
 {
     SetBlendFunction(BlendFunction(
@@ -735,16 +732,16 @@ void ReflectionsPass::CreatePipeline(const RenderableAttributeSet& renderableAtt
         DescriptorTableRef descriptorTable = g_renderBackend->MakeDescriptorTable(&descriptorTableDecl);
         DeferCreate(descriptorTable);
 
-        GraphicsPipelineRef* pGraphicsPipeline = g_renderGlobalState->graphicsPipelineCache->GetOrCreate(
+        GraphicsPipelineCacheHandle cacheHandle = g_renderGlobalState->graphicsPipelineCache->GetOrCreate(
             shader,
             descriptorTable,
             { &m_framebuffer, 1 },
             renderableAttributes);
 
-        m_cubemapGraphicsPipelines[it.first] = pGraphicsPipeline;
+        m_cubemapGraphicsPipelines[it.first] = std::move(cacheHandle);
     }
 
-    m_pGraphicsPipeline = m_cubemapGraphicsPipelines[CMT_DEFAULT];
+    m_graphicsPipelineCacheHandle = m_cubemapGraphicsPipelines[CMT_DEFAULT];
 }
 
 bool ReflectionsPass::ShouldRenderSSR() const
@@ -838,19 +835,15 @@ void ReflectionsPass::Render(FrameBase* frame, const RenderSetup& rs)
         CMT_PARALLAX_CORRECTED // EPT_REFLECTION
     };
 
-    FixedArray<Pair<GraphicsPipelineRef*, Array<EnvProbe*>>, CMT_MAX> passPtrs;
+    FixedArray<Array<EnvProbe*>, CMT_MAX> probesPerCubemapType;
 
     for (uint32 cubemapType = 0; cubemapType < CMT_MAX; cubemapType++)
     {
-        AssertDebug(m_cubemapGraphicsPipelines[cubemapType] != nullptr);
-
-        passPtrs[cubemapType] = { m_cubemapGraphicsPipelines[cubemapType], {} };
-
         const EnvProbeType envProbeType = envProbeTypes[cubemapType];
 
         for (EnvProbe* envProbe : rpl.GetEnvProbes().GetElements(g_envProbeTypeToTypeId[envProbeType]))
         {
-            passPtrs[cubemapType].second.PushBack(envProbe);
+            probesPerCubemapType[cubemapType].PushBack(envProbe);
         }
     }
 
@@ -869,22 +862,21 @@ void ReflectionsPass::Render(FrameBase* frame, const RenderSetup& rs)
         const EnvProbeType envProbeType = envProbeTypes[envProbeTypeIndex];
         const CubemapType cubemapType = cubemapTypes[envProbeTypeIndex];
 
-        const Pair<GraphicsPipelineRef*, Array<EnvProbe*>>& it = passPtrs[cubemapType];
+        const Array<EnvProbe*>& probes = probesPerCubemapType[cubemapType];
 
-        if (it.second.Empty())
+        if (probes.Empty())
         {
             continue;
         }
         
-        if (!*it.first)
+        if (!m_cubemapGraphicsPipelines[cubemapType].IsAlive())
         {
             CreatePipeline();
 
-            AssertDebug(*it.first != nullptr);
+            AssertDebug(m_cubemapGraphicsPipelines[cubemapType].IsAlive());
         }
 
-        const GraphicsPipelineRef& graphicsPipeline = *it.first;
-        const Array<EnvProbe*>& envProbes = it.second;
+        const GraphicsPipelineRef& graphicsPipeline = *m_cubemapGraphicsPipelines[cubemapType];
 
         graphicsPipeline->SetPushConstants(m_pushConstantData.Data(), m_pushConstantData.Size());
 
@@ -903,7 +895,7 @@ void ReflectionsPass::Render(FrameBase* frame, const RenderSetup& rs)
         const uint32 globalDescriptorSetIndex = graphicsPipeline->GetDescriptorTable()->GetDescriptorSetIndex("Global");
         const uint32 viewDescriptorSetIndex = graphicsPipeline->GetDescriptorTable()->GetDescriptorSetIndex("View");
 
-        for (EnvProbe* envProbe : envProbes)
+        for (EnvProbe* envProbe : probes)
         {
             if (numRenderedEnvProbes >= g_maxBoundReflectionProbes)
             {
