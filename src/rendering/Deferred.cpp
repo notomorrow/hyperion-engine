@@ -129,7 +129,8 @@ static constexpr TypeId g_envProbeTypeToTypeId[EPT_MAX] = {
 
 DeferredPass::DeferredPass(DeferredPassMode mode, Vec2u extent, GBuffer* gbuffer)
     : FullScreenPass(TF_RGBA16F, extent, gbuffer),
-      m_mode(mode)
+      m_mode(mode),
+      m_directLightGraphicsPipelines()
 {
     SetBlendFunction(BlendFunction::Additive());
 }
@@ -843,13 +844,6 @@ void ReflectionsPass::Render(FrameBase* frame, const RenderSetup& rs)
     {
         AssertDebug(m_cubemapGraphicsPipelines[cubemapType] != nullptr);
 
-        if (!*m_cubemapGraphicsPipelines[cubemapType])
-        {
-            CreatePipeline();
-
-            AssertDebug(*m_cubemapGraphicsPipelines[cubemapType] != nullptr);
-        }
-
         passPtrs[cubemapType] = { m_cubemapGraphicsPipelines[cubemapType], {} };
 
         const EnvProbeType envProbeType = envProbeTypes[cubemapType];
@@ -880,6 +874,13 @@ void ReflectionsPass::Render(FrameBase* frame, const RenderSetup& rs)
         if (it.second.Empty())
         {
             continue;
+        }
+        
+        if (!*it.first)
+        {
+            CreatePipeline();
+
+            AssertDebug(*it.first != nullptr);
         }
 
         const GraphicsPipelineRef& graphicsPipeline = *it.first;
@@ -1968,11 +1969,14 @@ void DeferredRenderer::RenderFrameForView(FrameBase* frame, const RenderSetup& r
         frame->renderQueue << BeginFramebuffer(translucentFbo);
 
         { // Render the deferred lighting into the translucent pass framebuffer with a full screen quad.
-            frame->renderQueue << BindGraphicsPipeline(passData.combinePass->GetGraphicsPipeline());
+            const GraphicsPipelineRef& pipeline = passData.combinePass->GetGraphicsPipeline();
+            AssertDebug(pipeline != nullptr);
+
+            frame->renderQueue << BindGraphicsPipeline(pipeline);
 
             frame->renderQueue << BindDescriptorTable(
-                passData.combinePass->GetGraphicsPipeline()->GetDescriptorTable(),
-                passData.combinePass->GetGraphicsPipeline(),
+                pipeline->GetDescriptorTable(),
+                pipeline,
                 {},
                 frameIndex);
 
