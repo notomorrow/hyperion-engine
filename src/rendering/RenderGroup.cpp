@@ -120,7 +120,7 @@ void RenderGroup::Init()
     SetReady(true);
 }
 
-GraphicsPipelineRef RenderGroup::CreateGraphicsPipeline(PassData* pd, IDrawCallCollectionImpl* drawCallCollectionImpl) const
+GraphicsPipelineRef* RenderGroup::CreateGraphicsPipeline(PassData* pd, IDrawCallCollectionImpl* drawCallCollectionImpl) const
 {
     HYP_SCOPE;
 
@@ -167,7 +167,7 @@ GraphicsPipelineRef RenderGroup::CreateGraphicsPipeline(PassData* pd, IDrawCallC
 
     Assert(descriptorTable.IsValid());
 
-    GraphicsPipelineRef graphicsPipeline = g_renderGlobalState->graphicsPipelineCache->GetOrCreate(
+    GraphicsPipelineRef* pGraphicsPipeline = g_renderGlobalState->graphicsPipelineCache->GetOrCreate(
         m_shader,
         descriptorTable,
         { &view->GetOutputTarget().GetFramebuffer(m_renderableAttributes.GetMaterialAttributes().bucket), 1 },
@@ -176,7 +176,7 @@ GraphicsPipelineRef RenderGroup::CreateGraphicsPipeline(PassData* pd, IDrawCallC
     clock.Stop();
     HYP_LOG(Rendering, Debug, "Created graphics pipeline ({} ms)", clock.ElapsedMs());
 
-    return graphicsPipeline;
+    return pGraphicsPipeline;
 }
 
 template <class T, class OutArray, typename = std::enable_if_t<std::is_base_of_v<DrawCallBase, T>>>
@@ -692,7 +692,12 @@ static void RenderAll_Parallel(
     }
 }
 
-void RenderGroup::PerformRendering(FrameBase* frame, const RenderSetup& renderSetup, const DrawCallCollection& drawCallCollection, IndirectRenderer* indirectRenderer, ParallelRenderingState* parallelRenderingState)
+void RenderGroup::PerformRendering(
+    FrameBase* frame,
+    const RenderSetup& renderSetup,
+    const DrawCallCollection& drawCallCollection,
+    IndirectRenderer* indirectRenderer,
+    ParallelRenderingState* parallelRenderingState)
 {
     HYP_SCOPE;
     Threads::AssertOnThread(g_renderThread);
@@ -703,19 +708,23 @@ void RenderGroup::PerformRendering(FrameBase* frame, const RenderSetup& renderSe
     AssertDebug(renderSetup.passData != nullptr, "RenderSetup must have valid PassData for rendering!");
 
     auto* cacheEntry = renderSetup.passData->renderGroupCache.TryGet(Id().ToIndex());
-    if (!cacheEntry || cacheEntry->renderGroup.GetUnsafe() != this)
+
+    if (!cacheEntry)
     {
         cacheEntry = &*renderSetup.passData->renderGroupCache.Emplace(Id().ToIndex());
-
-        if (cacheEntry->graphicsPipeline.IsValid())
-        {
-            SafeDelete(std::move(cacheEntry->graphicsPipeline));
-        }
 
         *cacheEntry = PassData::RenderGroupCacheEntry {
             WeakHandleFromThis(),
             CreateGraphicsPipeline(renderSetup.passData, drawCallCollection.impl)
         };
+    }
+
+    AssertDebug(cacheEntry->pGraphicsPipeline != nullptr);
+
+    if (!*cacheEntry->pGraphicsPipeline)
+    {
+        // fetch a new graphics pipeline if it is dead
+        cacheEntry->pGraphicsPipeline = CreateGraphicsPipeline(renderSetup.passData, drawCallCollection.impl);
     }
 
     static const bool isIndirectRenderingEnabled = g_renderBackend->GetRenderConfig().indirectRendering;
@@ -731,7 +740,7 @@ void RenderGroup::PerformRendering(FrameBase* frame, const RenderSetup& renderSe
             RenderAll_Parallel<true>(
                 frame,
                 renderSetup,
-                cacheEntry->graphicsPipeline,
+                *cacheEntry->pGraphicsPipeline,
                 indirectRenderer,
                 drawCallCollection,
                 parallelRenderingState);
@@ -741,7 +750,7 @@ void RenderGroup::PerformRendering(FrameBase* frame, const RenderSetup& renderSe
             RenderAll<true>(
                 frame,
                 renderSetup,
-                cacheEntry->graphicsPipeline,
+                *cacheEntry->pGraphicsPipeline,
                 indirectRenderer,
                 drawCallCollection);
         }
@@ -755,7 +764,7 @@ void RenderGroup::PerformRendering(FrameBase* frame, const RenderSetup& renderSe
             RenderAll_Parallel<false>(
                 frame,
                 renderSetup,
-                cacheEntry->graphicsPipeline,
+                *cacheEntry->pGraphicsPipeline,
                 indirectRenderer,
                 drawCallCollection,
                 parallelRenderingState);
@@ -765,7 +774,7 @@ void RenderGroup::PerformRendering(FrameBase* frame, const RenderSetup& renderSe
             RenderAll<false>(
                 frame,
                 renderSetup,
-                cacheEntry->graphicsPipeline,
+                *cacheEntry->pGraphicsPipeline,
                 indirectRenderer,
                 drawCallCollection);
         }

@@ -226,25 +226,23 @@ void DeferredPass::CreatePipeline(const RenderableAttributeSet& renderableAttrib
 
         DeferCreate(descriptorTable);
 
-        GraphicsPipelineRef graphicsPipeline = g_renderGlobalState->graphicsPipelineCache->GetOrCreate(
+        GraphicsPipelineRef* pGraphicsPipeline = g_renderGlobalState->graphicsPipelineCache->GetOrCreate(
             shader,
             descriptorTable,
             { &m_framebuffer, 1 },
             renderableAttributes);
 
-        m_directLightGraphicsPipelines[i] = graphicsPipeline;
+        m_directLightGraphicsPipelines[i] = pGraphicsPipeline;
 
         if (i == 0)
         {
-            m_graphicsPipeline = graphicsPipeline;
+            m_pGraphicsPipeline = pGraphicsPipeline;
         }
     }
 }
 
 void DeferredPass::Resize_Internal(Vec2u newSize)
 {
-    SafeDelete(std::move(m_directLightGraphicsPipelines));
-
     // NOTE: Don't bother discarding sampler, we don't recreate it if it already exists.
 
     FullScreenPass::Resize_Internal(newSize);
@@ -291,7 +289,7 @@ void DeferredPass::Render(FrameBase* frame, const RenderSetup& rs)
                 continue;
             }
 
-            const GraphicsPipelineRef& pipeline = m_directLightGraphicsPipelines[lightTypeIndex];
+            const GraphicsPipelineRef& pipeline = *m_directLightGraphicsPipelines[lightTypeIndex];
 
             const uint32 globalDescriptorSetIndex = pipeline->GetDescriptorTable()->GetDescriptorSetIndex("Global");
             const uint32 viewDescriptorSetIndex = pipeline->GetDescriptorTable()->GetDescriptorSetIndex("View");
@@ -488,6 +486,7 @@ static EnvGridApplyMode EnvGridTypeToApplyEnvGridMode(EnvGridType type)
 EnvGridPass::EnvGridPass(EnvGridPassMode mode, Vec2u extent, GBuffer* gbuffer)
     : FullScreenPass(g_envGridPassFormats[mode], extent, gbuffer),
       m_mode(mode),
+      m_graphicsPipelines { nullptr },
       m_isFirstFrame(true)
 {
     if (mode == EGPM_RADIANCE)
@@ -548,22 +547,20 @@ void EnvGridPass::CreatePipeline()
         DescriptorTableRef descriptorTable = g_renderBackend->MakeDescriptorTable(&descriptorTableDecl);
         DeferCreate(descriptorTable);
 
-        GraphicsPipelineRef graphicsPipeline = g_renderGlobalState->graphicsPipelineCache->GetOrCreate(
+        GraphicsPipelineRef* pGraphicsPipeline = g_renderGlobalState->graphicsPipelineCache->GetOrCreate(
             shader,
             descriptorTable,
             { &m_framebuffer, 1 },
             renderableAttributes);
 
-        m_graphicsPipelines[uint32(it.first)] = std::move(graphicsPipeline);
+        m_graphicsPipelines[uint32(it.first)] = pGraphicsPipeline;
     }
 
-    m_graphicsPipeline = m_graphicsPipelines[EGAM_SH];
+    m_pGraphicsPipeline = m_graphicsPipelines[EGAM_SH];
 }
 
 void EnvGridPass::Resize_Internal(Vec2u newSize)
 {
-    SafeDelete(std::move(m_graphicsPipelines));
-
     FullScreenPass::Resize_Internal(newSize);
 }
 
@@ -594,15 +591,29 @@ void EnvGridPass::Render(FrameBase* frame, const RenderSetup& rs)
         RenderPreviousTextureToScreen(frame, rs);
     }
 
+    auto selectPipeline = [this](LegacyEnvGrid* envGrid) -> GraphicsPipelineRef*
+        {
+            return m_mode == EGPM_RADIANCE
+                ? m_pGraphicsPipeline
+                : m_graphicsPipelines[EnvGridTypeToApplyEnvGridMode(envGrid->GetEnvGridType())];
+        };
+
     for (EnvGrid* envGrid : rpl.GetEnvGrids().GetElements<LegacyEnvGrid>())
     {
         LegacyEnvGrid* legacyEnvGrid = static_cast<LegacyEnvGrid*>(envGrid);
 
-        const GraphicsPipelineRef& graphicsPipeline = m_mode == EGPM_RADIANCE
-            ? m_graphicsPipeline
-            : m_graphicsPipelines[EnvGridTypeToApplyEnvGridMode(legacyEnvGrid->GetEnvGridType())];
+        GraphicsPipelineRef* pGraphicsPipeline = selectPipeline(legacyEnvGrid);
+        AssertDebug(pGraphicsPipeline != nullptr);
 
-        Assert(graphicsPipeline.IsValid());
+        if (!*pGraphicsPipeline)
+        {
+            CreatePipeline();
+
+            pGraphicsPipeline = selectPipeline(legacyEnvGrid);
+            Assert(*pGraphicsPipeline != nullptr);
+        }
+
+        const GraphicsPipelineRef& graphicsPipeline = *pGraphicsPipeline;
 
         const uint32 globalDescriptorSetIndex = graphicsPipeline->GetDescriptorTable()->GetDescriptorSetIndex("Global");
         const uint32 viewDescriptorSetIndex = graphicsPipeline->GetDescriptorTable()->GetDescriptorSetIndex("View");
@@ -667,6 +678,7 @@ ReflectionsPass::ReflectionsPass(Vec2u extent, GBuffer* gbuffer, const GpuImageV
     : FullScreenPass(TF_RGBA16F, extent, gbuffer),
       m_mipChainImageView(mipChainImageView),
       m_deferredResultImageView(deferredResultImageView),
+      m_cubemapGraphicsPipelines { nullptr },
       m_isFirstFrame(true)
 {
     SetBlendFunction(BlendFunction(
@@ -722,16 +734,16 @@ void ReflectionsPass::CreatePipeline(const RenderableAttributeSet& renderableAtt
         DescriptorTableRef descriptorTable = g_renderBackend->MakeDescriptorTable(&descriptorTableDecl);
         DeferCreate(descriptorTable);
 
-        GraphicsPipelineRef graphicsPipeline = g_renderGlobalState->graphicsPipelineCache->GetOrCreate(
+        GraphicsPipelineRef* pGraphicsPipeline = g_renderGlobalState->graphicsPipelineCache->GetOrCreate(
             shader,
             descriptorTable,
             { &m_framebuffer, 1 },
             renderableAttributes);
 
-        m_cubemapGraphicsPipelines[it.first] = std::move(graphicsPipeline);
+        m_cubemapGraphicsPipelines[it.first] = pGraphicsPipeline;
     }
 
-    m_graphicsPipeline = m_cubemapGraphicsPipelines[CMT_DEFAULT];
+    m_pGraphicsPipeline = m_cubemapGraphicsPipelines[CMT_DEFAULT];
 }
 
 bool ReflectionsPass::ShouldRenderSSR() const
@@ -784,7 +796,6 @@ void ReflectionsPass::Resize_Internal(Vec2u newSize)
 
     SafeDelete(std::move(m_mipChainImageView));
     SafeDelete(std::move(m_deferredResultImageView));
-    SafeDelete(std::move(m_cubemapGraphicsPipelines));
 
     FullScreenPass::Resize_Internal(newSize);
 
@@ -830,7 +841,16 @@ void ReflectionsPass::Render(FrameBase* frame, const RenderSetup& rs)
 
     for (uint32 cubemapType = 0; cubemapType < CMT_MAX; cubemapType++)
     {
-        passPtrs[cubemapType] = { &m_cubemapGraphicsPipelines[cubemapType], {} };
+        AssertDebug(m_cubemapGraphicsPipelines[cubemapType] != nullptr);
+
+        if (!*m_cubemapGraphicsPipelines[cubemapType])
+        {
+            CreatePipeline();
+
+            AssertDebug(*m_cubemapGraphicsPipelines[cubemapType] != nullptr);
+        }
+
+        passPtrs[cubemapType] = { m_cubemapGraphicsPipelines[cubemapType], {} };
 
         const EnvProbeType envProbeType = envProbeTypes[cubemapType];
 

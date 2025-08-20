@@ -17,7 +17,7 @@
 #include <scene/World.hpp>
 #include <scene/View.hpp>
 #include <scene/Light.hpp>
-#include <rendering/Texture.hpp>
+#include <scene/EnvProbe.hpp>
 
 #include <scene/EntityManager.hpp>
 #include <scene/components/MeshComponent.hpp>
@@ -63,6 +63,7 @@
 #include <rendering/Mesh.hpp>
 #include <rendering/debug/DebugDrawer.hpp>
 
+#include <rendering/Texture.hpp>
 #include <rendering/font/FontAtlas.hpp>
 
 // temp
@@ -231,9 +232,9 @@ void EditorManipulationWidgetBase::Shutdown()
 
 void EditorManipulationWidgetBase::UpdateWidget(const Handle<Node>& focusedNode)
 {
-    if (!focusedNode.IsValid() || focusedNode->IsRoot())
+    if (!focusedNode.IsValid() || focusedNode->IsRoot() || focusedNode->IsA<SkyProbe>())
     {
-        // don't want to move the root node.
+        // don't want to move the root node or sky
         m_focusedNode.Reset();
 
         return;

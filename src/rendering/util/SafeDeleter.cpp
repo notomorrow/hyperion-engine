@@ -113,9 +113,9 @@ int SafeDeleter::Iterate(int maxIter)
 
         if (header.destructFn)
         {
-            HYP_LOG_TEMP("Deleting entry with offset {}", header.offset);
             AssertDebug(header.offset < entryList.buffer.Size());
             AssertDebug(header.size <= entryList.buffer.Size() - header.offset);
+
             header.destructFn(reinterpret_cast<void*>(entryList.buffer.Data() + header.offset));
         }
 
