@@ -267,7 +267,7 @@ private:
 
     ShaderRef m_shader;
     DescriptorTableRef m_descriptorTable;
-    HashMap<RenderableAttributeSet, GraphicsPipelineWeakRef> m_graphicsPipelines;
+    HashMap<RenderableAttributeSet, GraphicsPipelineRef*> m_graphicsPipelines;
 
     FixedArray<Array<DebugDrawCommandHeader>, g_tripleBuffer ? 3 : 2> m_headers;
     FixedArray<ByteBuffer, g_tripleBuffer ? 3 : 2> m_buffers;

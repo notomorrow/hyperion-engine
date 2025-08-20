@@ -97,7 +97,7 @@ protected:
 private:
     const DeferredPassMode m_mode;
 
-    FixedArray<GraphicsPipelineRef, LT_MAX> m_directLightGraphicsPipelines;
+    FixedArray<GraphicsPipelineRef*, LT_MAX> m_directLightGraphicsPipelines;
 
     Handle<Texture> m_ltcMatrixTexture;
     Handle<Texture> m_ltcBrdfTexture;
@@ -219,7 +219,7 @@ private:
     virtual void Resize_Internal(Vec2u newSize) override;
 
     const EnvGridPassMode m_mode;
-    FixedArray<GraphicsPipelineRef, EGAM_MAX> m_graphicsPipelines;
+    FixedArray<GraphicsPipelineRef*, EGAM_MAX> m_graphicsPipelines;
     bool m_isFirstFrame;
 };
 
@@ -288,7 +288,7 @@ private:
     GpuImageViewRef m_mipChainImageView;
     GpuImageViewRef m_deferredResultImageView;
 
-    FixedArray<GraphicsPipelineRef, CMT_MAX> m_cubemapGraphicsPipelines;
+    FixedArray<GraphicsPipelineRef*, CMT_MAX> m_cubemapGraphicsPipelines;
 
     UniquePtr<SSRRenderer> m_ssrRenderer;
 
