@@ -131,6 +131,7 @@ FullScreenPass::FullScreenPass(
     GBuffer* gbuffer)
     : m_shader(shader),
       m_framebuffer(framebuffer),
+      m_pGraphicsPipeline(nullptr),
       m_imageFormat(imageFormat),
       m_extent(extent),
       m_gbuffer(gbuffer),
@@ -149,7 +150,8 @@ FullScreenPass::~FullScreenPass()
     m_fullScreenQuad.Reset();
 
     SafeDelete(std::move(m_framebuffer));
-    SafeDelete(std::move(m_graphicsPipeline));
+
+    // not calling SafeDelete() for graphics pipeline as it is managed by the graphics pipeline caching system
 }
 
 GpuImageViewRef FullScreenPass::GetFinalImageView() const
@@ -242,6 +244,24 @@ void FullScreenPass::SetBlendFunction(const BlendFunction& blendFunction)
     m_blendFunction = blendFunction;
 }
 
+const GraphicsPipelineRef& FullScreenPass::GetGraphicsPipeline()
+{
+    HYP_SCOPE;
+
+    AssertDebug(m_pGraphicsPipeline != nullptr);
+
+    if (HYP_LIKELY(*m_pGraphicsPipeline != nullptr))
+    {
+        return *m_pGraphicsPipeline;
+    }
+
+    CreatePipeline();
+
+    AssertDebug(*m_pGraphicsPipeline != nullptr);
+
+    return *m_pGraphicsPipeline;
+}
+
 void FullScreenPass::Resize(Vec2u newSize)
 {
     PUSH_RENDER_COMMAND(RecreateFullScreenPassFramebuffer, WeakHandleFromThis(), newSize);
@@ -268,7 +288,8 @@ void FullScreenPass::Resize_Internal(Vec2u newSize)
         return;
     }
 
-    SafeDelete(std::move(m_graphicsPipeline));
+    m_pGraphicsPipeline = nullptr;
+
     SafeDelete(std::move(m_framebuffer));
 
     m_temporalBlending.Reset();
@@ -360,11 +381,13 @@ void FullScreenPass::CreatePipeline(const RenderableAttributeSet& renderableAttr
 {
     HYP_SCOPE;
 
-    m_graphicsPipeline = g_renderGlobalState->graphicsPipelineCache->GetOrCreate(
+    m_pGraphicsPipeline = g_renderGlobalState->graphicsPipelineCache->GetOrCreate(
         m_shader,
         m_descriptorTable.GetOr(DescriptorTableRef::Null()),
         { &m_framebuffer, 1 },
         renderableAttributes);
+
+    Assert(m_pGraphicsPipeline != nullptr);
 }
 
 void FullScreenPass::CreateTemporalBlending()
@@ -637,7 +660,9 @@ void FullScreenPass::RenderToFramebuffer(FrameBase* frame, const RenderSetup& re
         RenderPreviousTextureToScreen(frame, renderSetup);
     }
 
-    m_graphicsPipeline->SetPushConstants(m_pushConstantData.Data(), m_pushConstantData.Size());
+    const GraphicsPipelineRef& graphicsPipeline = GetGraphicsPipeline();
+
+    graphicsPipeline->SetPushConstants(m_pushConstantData.Data(), m_pushConstantData.Size());
 
     if (ShouldRenderHalfRes())
     {
@@ -647,22 +672,22 @@ void FullScreenPass::RenderToFramebuffer(FrameBase* frame, const RenderSetup& re
         const Vec2u viewportExtent = Vec2u(framebuffer->GetExtent().x / 2, framebuffer->GetExtent().y);
 
         frame->renderQueue << BindGraphicsPipeline(
-            m_graphicsPipeline,
+            graphicsPipeline,
             viewportOffset,
             viewportExtent);
     }
     else
     {
-        frame->renderQueue << BindGraphicsPipeline(m_graphicsPipeline);
+        frame->renderQueue << BindGraphicsPipeline(graphicsPipeline);
     }
 
     frame->renderQueue << BindDescriptorTable(
-        m_graphicsPipeline->GetDescriptorTable(),
-        m_graphicsPipeline,
+        graphicsPipeline->GetDescriptorTable(),
+        graphicsPipeline,
         { { "Global", { { "CamerasBuffer", ShaderDataOffset<CameraShaderData>(renderSetup.view->GetCamera()) } } } },
         frame->GetFrameIndex());
 
-    const uint32 viewDescriptorSetIndex = m_graphicsPipeline->GetDescriptorTable()->GetDescriptorSetIndex("View");
+    const uint32 viewDescriptorSetIndex = graphicsPipeline->GetDescriptorTable()->GetDescriptorSetIndex("View");
 
     if (viewDescriptorSetIndex != ~0u)
     {
@@ -670,7 +695,7 @@ void FullScreenPass::RenderToFramebuffer(FrameBase* frame, const RenderSetup& re
 
         frame->renderQueue << BindDescriptorSet(
             renderSetup.passData->descriptorSets[frame->GetFrameIndex()],
-            m_graphicsPipeline,
+            graphicsPipeline,
             {},
             viewDescriptorSetIndex);
     }
@@ -691,6 +716,8 @@ void FullScreenPass::Begin(FrameBase* frame, const RenderSetup& renderSetup)
     AssertDebug(renderSetup.HasView());
 
     const uint32 frameIndex = frame->GetFrameIndex();
+    
+    const GraphicsPipelineRef& graphicsPipeline = GetGraphicsPipeline();
 
     frame->renderQueue << BeginFramebuffer(m_framebuffer);
 
@@ -700,13 +727,13 @@ void FullScreenPass::Begin(FrameBase* frame, const RenderSetup& renderSetup)
         const Vec2u viewportExtent = Vec2u(m_framebuffer->GetExtent().x / 2, m_framebuffer->GetExtent().y);
 
         frame->renderQueue << BindGraphicsPipeline(
-            m_graphicsPipeline,
+            graphicsPipeline,
             viewportOffset,
             viewportExtent);
     }
     else
     {
-        frame->renderQueue << BindGraphicsPipeline(m_graphicsPipeline);
+        frame->renderQueue << BindGraphicsPipeline(graphicsPipeline);
     }
 }
 

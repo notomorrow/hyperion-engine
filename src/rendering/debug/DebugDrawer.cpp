@@ -833,37 +833,30 @@ GraphicsPipelineRef DebugDrawer::FetchGraphicsPipeline(RenderableAttributeSet at
 
     attributes.SetDrawableLayer(drawableLayer);
 
-    GraphicsPipelineRef graphicsPipeline;
+    GraphicsPipelineRef* pGraphicsPipeline = nullptr;
 
     auto it = m_graphicsPipelines.Find(attributes);
 
     if (it != m_graphicsPipelines.End())
     {
-        graphicsPipeline = it->second.Lock();
+        pGraphicsPipeline = it->second;
     }
 
-    if (!graphicsPipeline)
+    if (!pGraphicsPipeline || !*pGraphicsPipeline)
     {
         Handle<View> view = passData->view.Lock();
         Assert(view.IsValid());
 
-        graphicsPipeline = g_renderGlobalState->graphicsPipelineCache->GetOrCreate(
+        pGraphicsPipeline = g_renderGlobalState->graphicsPipelineCache->GetOrCreate(
             m_shader,
             m_descriptorTable,
             { &view->GetOutputTarget().GetFramebuffer(RB_TRANSLUCENT), 1 },
             attributes);
 
-        if (it != m_graphicsPipelines.End())
-        {
-            it->second = graphicsPipeline;
-        }
-        else
-        {
-            m_graphicsPipelines.Insert(attributes, graphicsPipeline);
-        }
+        m_graphicsPipelines[attributes] = pGraphicsPipeline;
     }
 
-    return graphicsPipeline;
+    return *pGraphicsPipeline;
 }
 
 #pragma endregion DebugDrawer

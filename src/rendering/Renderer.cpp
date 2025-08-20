@@ -42,12 +42,7 @@ PassData::~PassData()
         next = nullptr;
     }
 
-    for (auto& entry : renderGroupCache)
-    {
-        HYP_LOG(Rendering, Debug, "Destroying RenderGroupCacheEntry for RenderGroup '{}'", entry.renderGroup.Id());
-
-        SafeDelete(std::move(entry.graphicsPipeline));
-    }
+    // no need to SafeDelete() the graphics pipelines as they are managed by the global graphics pipeline cache.
 
     SafeDelete(std::move(descriptorSets));
 }
@@ -88,8 +83,6 @@ int PassData::CullUnusedGraphicsPipelines(int maxIter)
         {
             HYP_LOG(Rendering, Debug, "Removing graphics pipeline for RenderGroup '{}' as it is no longer valid.", entry.renderGroup.Id());
 
-            SafeDelete(std::move(entry.graphicsPipeline));
-
             renderGroupCacheIterator = renderGroupCache.Erase(renderGroupCacheIterator);
 
             continue;
@@ -101,7 +94,7 @@ int PassData::CullUnusedGraphicsPipelines(int maxIter)
     return numCycles;
 }
 
-GraphicsPipelineRef PassData::CreateGraphicsPipeline(
+GraphicsPipelineRef* PassData::CreateGraphicsPipeline(
     PassData* pd,
     const ShaderRef& shader,
     const RenderableAttributeSet& renderableAttributes,
@@ -163,7 +156,7 @@ GraphicsPipelineRef PassData::CreateGraphicsPipeline(
 
     Assert(table.IsValid());
 
-    GraphicsPipelineRef graphicsPipeline = g_renderGlobalState->graphicsPipelineCache->GetOrCreate(
+    GraphicsPipelineRef* pGraphicsPipeline = g_renderGlobalState->graphicsPipelineCache->GetOrCreate(
         shader,
         table,
         view->GetOutputTarget().GetFramebuffers(),
@@ -173,7 +166,7 @@ GraphicsPipelineRef PassData::CreateGraphicsPipeline(
 
     HYP_LOG(Rendering, Debug, "Created graphics pipeline ({} ms)", clock.ElapsedMs());
 
-    return graphicsPipeline;
+    return pGraphicsPipeline;
 }
 
 #pragma endregion PassData

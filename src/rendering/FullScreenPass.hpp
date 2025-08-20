@@ -99,11 +99,6 @@ public:
         return m_fullScreenQuad;
     }
 
-    HYP_FORCE_INLINE const GraphicsPipelineRef& GetGraphicsPipeline() const
-    {
-        return m_graphicsPipeline;
-    }
-
     HYP_FORCE_INLINE void SetPushConstants(const PushConstantData& pc)
     {
         m_pushConstantData = pc;
@@ -127,6 +122,8 @@ public:
     {
         return m_descriptorTable;
     }
+
+    const GraphicsPipelineRef& GetGraphicsPipeline();
 
     virtual GpuImageViewRef GetFinalImageView() const;
     virtual GpuImageViewRef GetPreviousFrameColorImageView() const;
@@ -170,7 +167,7 @@ protected:
 
     FramebufferRef m_framebuffer;
     ShaderRef m_shader;
-    GraphicsPipelineRef m_graphicsPipeline;
+    GraphicsPipelineRef* m_pGraphicsPipeline;
     Handle<Mesh> m_fullScreenQuad;
     Vec2u m_extent;
     GBuffer* m_gbuffer;

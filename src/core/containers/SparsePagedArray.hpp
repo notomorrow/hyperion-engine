@@ -554,17 +554,17 @@ public:
         return Iterator(this, pageIndex, elementIndex);
     }
 
-    Iterator Erase(ConstIterator iter)
+    Iterator Erase(ConstIterator iter, bool freeMemory = true)
     {
         if (iter == End())
         {
             return End();
         }
 
-        return EraseAt(SizeType(iter.page * PageSize + iter.elem));
+        return EraseAt(SizeType(iter.page * PageSize + iter.elem), freeMemory);
     }
 
-    Iterator EraseAt(SizeType index)
+    Iterator EraseAt(SizeType index, bool freeMemory = true)
     {
         SizeType pageIndex = PageIndex(index);
         SizeType elementIndex = ElementIndex(index);
@@ -580,7 +580,7 @@ public:
         page->storage.DestructElement(elementIndex);
         page->initializedBits.Set(elementIndex, false);
 
-        if (page->initializedBits.Count() == 0)
+        if (freeMemory && page->initializedBits.Count() == 0)
         {
             // no elems remaining, delete the page
             m_validPages.Set(pageIndex, false);
@@ -643,7 +643,7 @@ public:
         return const_cast<SparsePagedArray&>(*this).FindIf(std::forward<Predicate>(predicate));
     }
 
-    void Clear(bool deletePages = true)
+    void Clear(bool freeMemory = true)
     {
         for (Bitset::BitIndex bit : m_validPages)
         {
@@ -652,7 +652,7 @@ public:
             Page* page = m_pages[bit];
             HYP_CORE_ASSERT(page != nullptr);
 
-            if (deletePages)
+            if (freeMemory)
             {
                 delete page;
                 m_pages[bit] = nullptr;
@@ -671,7 +671,7 @@ public:
             }
         }
 
-        if (deletePages)
+        if (freeMemory)
         {
             m_validPages.Clear();
             m_pages.Clear();

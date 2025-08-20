@@ -232,7 +232,7 @@ public:
     struct RenderGroupCacheEntry
     {
         WeakHandle<RenderGroup> renderGroup;
-        GraphicsPipelineRef graphicsPipeline;
+        GraphicsPipelineRef* pGraphicsPipeline = nullptr;
     };
 
     WeakHandle<View> view;
@@ -256,7 +256,7 @@ public:
      *  \returns The number of graphics pipelines that were culled */
     int CullUnusedGraphicsPipelines(int maxIter = 10);
 
-    static GraphicsPipelineRef CreateGraphicsPipeline(
+    static GraphicsPipelineRef* CreateGraphicsPipeline(
         PassData* pd,
         const ShaderRef& shader,
         const RenderableAttributeSet& renderableAttributes,

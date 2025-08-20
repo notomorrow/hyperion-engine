@@ -120,7 +120,7 @@ void HBAO::CreatePipeline(const RenderableAttributeSet& renderableAttributes)
 
     m_descriptorTable = descriptorTable;
 
-    m_graphicsPipeline = g_renderGlobalState->graphicsPipelineCache->GetOrCreate(
+    m_pGraphicsPipeline = g_renderGlobalState->graphicsPipelineCache->GetOrCreate(
         m_shader,
         descriptorTable,
         { &m_framebuffer, 1 },
@@ -165,13 +165,15 @@ void HBAO::Render(FrameBase* frame, const RenderSetup& renderSetup)
 
     Begin(frame, renderSetup);
 
+    const GraphicsPipelineRef& graphicsPipeline = *m_pGraphicsPipeline;
+
     frame->renderQueue << BindDescriptorTable(
-        m_graphicsPipeline->GetDescriptorTable(),
-        m_graphicsPipeline,
+        graphicsPipeline->GetDescriptorTable(),
+        graphicsPipeline,
         { { "Global", { { "CamerasBuffer", ShaderDataOffset<CameraShaderData>(renderSetup.view->GetCamera()) } } } },
         frameIndex);
 
-    const uint32 viewDescriptorSetIndex = m_graphicsPipeline->GetDescriptorTable()->GetDescriptorSetIndex("View");
+    const uint32 viewDescriptorSetIndex = graphicsPipeline->GetDescriptorTable()->GetDescriptorSetIndex("View");
 
     if (viewDescriptorSetIndex != ~0u)
     {
@@ -180,7 +182,7 @@ void HBAO::Render(FrameBase* frame, const RenderSetup& renderSetup)
 
         frame->renderQueue << BindDescriptorSet(
             renderSetup.passData->descriptorSets[frame->GetFrameIndex()],
-            m_graphicsPipeline,
+            graphicsPipeline,
             {},
             viewDescriptorSetIndex);
     }

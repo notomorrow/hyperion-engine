@@ -92,7 +92,7 @@ public:
 private:
     void Init() override;
 
-    GraphicsPipelineRef CreateGraphicsPipeline(PassData* pd, IDrawCallCollectionImpl* drawCallCollectionImpl) const;
+    GraphicsPipelineRef* CreateGraphicsPipeline(PassData* pd, IDrawCallCollectionImpl* drawCallCollectionImpl) const;
 
     EnumFlags<RenderGroupFlags> m_flags;
 
