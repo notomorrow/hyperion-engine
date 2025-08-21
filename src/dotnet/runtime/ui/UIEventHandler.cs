@@ -142,6 +142,13 @@ namespace Hyperion
 
         [Hyperion.ScriptMethodStub]
         [UIEvent(AllowNested = false)]
+        public virtual UIEventHandlerResult OnRightClick(MouseEvent mouseEvent)
+        {
+            return UIEventHandlerResult.Ok;
+        }
+
+        [Hyperion.ScriptMethodStub]
+        [UIEvent(AllowNested = false)]
         public virtual UIEventHandlerResult OnKeyDown(KeyboardEvent keyboardEvent)
         {
             return UIEventHandlerResult.Ok;
