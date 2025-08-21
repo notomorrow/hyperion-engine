@@ -311,11 +311,11 @@ RendererResult VulkanInstance::SetupDebugMessenger()
     HYPERION_RETURN_OK;
 }
 
-RendererResult VulkanInstance::Initialize(bool loadDebugLayers)
+RendererResult VulkanInstance::Initialize(bool enableDebugging)
 {
 #ifdef HYP_DEBUG_MODE
     /* Set up our debug and validation layers */
-    if (loadDebugLayers)
+    if (enableDebugging)
     {
         HYP_GFX_CHECK(SetupDebug());
     }
@@ -385,7 +385,11 @@ RendererResult VulkanInstance::Initialize(bool loadDebugLayers)
     HYP_GFX_CHECK(CreateDevice());
     HYP_GFX_CHECK(CreateSwapchain());
 
-    SetupDebugMessenger();
+    if (enableDebugging)
+    {
+        SetupDebugMessenger();
+    }
+    
     m_device->SetupAllocator(this);
 
     HYPERION_RETURN_OK;
