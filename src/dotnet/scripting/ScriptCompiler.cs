@@ -271,6 +271,20 @@ namespace Hyperion
                 return false;
             }
 
+            List<string> csFiles = System.IO.Directory.GetFiles(scriptDirectory, "*.cs")
+                .ToList();
+
+            // iterate subdirectories recursively, skipping directories when a .hypmodule file is encountered (they will be a separate module)
+            foreach (string subDirectory in System.IO.Directory.GetDirectories(scriptDirectory, "*", System.IO.SearchOption.AllDirectories))
+            {
+                if (System.IO.File.Exists(System.IO.Path.Combine(subDirectory, ".hypmodule")))
+                {
+                    continue; // skip this directory
+                }
+
+                csFiles.AddRange(System.IO.Directory.GetFiles(subDirectory, "*.cs"));
+            }
+
             string projectContent =
                 "<Project Sdk=\"Microsoft.NET.Sdk\">\n"
                     + "<PropertyGroup>\n"
@@ -291,7 +305,7 @@ namespace Hyperion
                         + $"<HintPath>{EscapePath(System.IO.Path.Combine(dependenciesDirectory, "HyperionRuntime.dll"))}</HintPath>\n"
                         + "<Private>false</Private>\n"
                     + "</Reference>\n"
-                    + string.Join("", System.IO.Directory.GetFiles(scriptDirectory, "*.cs").Select(script => $"<Compile Include=\"{EscapePath(script)}\" />\n"))
+                    + string.Join("", csFiles.Select(script => $"<Compile Include=\"{EscapePath(script)}\" />\n"))
                     + "</ItemGroup>\n"
                 + "</Project>\n";
 
