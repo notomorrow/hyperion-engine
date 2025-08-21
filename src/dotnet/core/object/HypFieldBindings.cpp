@@ -41,4 +41,13 @@ extern "C"
         return field->GetOffset();
     }
 
+    HYP_EXPORT void HypField_Get(const HypField* field, const HypData* targetData, HypData* outData)
+    {
+        Assert(field != nullptr);
+        Assert(targetData != nullptr);
+        Assert(outData != nullptr);
+
+        *outData = field->Get(*targetData);
+    }
+
 } // extern "C"

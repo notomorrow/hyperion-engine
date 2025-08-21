@@ -269,14 +269,14 @@ private:
     DescriptorTableRef m_descriptorTable;
     HashMap<RenderableAttributeSet, GraphicsPipelineCacheHandle> m_graphicsPipelines;
 
-    FixedArray<Array<DebugDrawCommandHeader>, g_tripleBuffer ? 3 : 2> m_headers;
-    FixedArray<ByteBuffer, g_tripleBuffer ? 3 : 2> m_buffers;
-    FixedArray<uint32, g_tripleBuffer ? 3 : 2> m_bufferOffsets;
+    FixedArray<Array<DebugDrawCommandHeader>, g_numMultiBuffers> m_headers;
+    FixedArray<ByteBuffer, g_numMultiBuffers> m_buffers;
+    FixedArray<uint32, g_numMultiBuffers> m_bufferOffsets;
 
     // buffer sizes over the last X frames. we max() this to determine if we should compact the buffer
     FixedArray<SizeType, 10> m_bufferSizeHistory;
 
-    FixedArray<LinkedList<DebugDrawCommandList>, g_tripleBuffer ? 3 : 2> m_commandLists;
+    FixedArray<LinkedList<DebugDrawCommandList>, g_numMultiBuffers> m_commandLists;
 
     FixedArray<GpuBufferRef, g_framesInFlight> m_instanceBuffers;
 

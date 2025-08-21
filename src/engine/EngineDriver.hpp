@@ -2,14 +2,14 @@
 
 #pragma once
 
-#include <core/Types.hpp>
-
 #include <rendering/RenderStats.hpp>
 
 #include <rendering/RenderBackend.hpp>
 
 #include <rendering/RenderObject.hpp>
 #include <rendering/RenderCommand.hpp>
+
+#include <core/Types.hpp>
 
 #include <core/object/Handle.hpp>
 
@@ -40,6 +40,7 @@ class RenderThread;
 class SafeDeleter;
 class RenderState;
 class World;
+class EngineStats;
 
 struct EngineDelegates
 {
@@ -61,6 +62,10 @@ public:
 
     HYP_API EngineDriver();
     HYP_API ~EngineDriver() override;
+
+    /*! \brief Callable on the render thread or game thread */
+    HYP_METHOD()
+    const Handle<EngineStats>& GetEngineStats() const;
 
     HYP_METHOD()
     const Handle<World>& GetCurrentWorld() const;
@@ -119,6 +124,8 @@ private:
 
     void FindTextureFormatDefaults();
 
+    FixedArray<Handle<EngineStats>, g_numMultiBuffers> m_engineStatsBuffered;
+
     UniquePtr<RenderThread> m_renderThread;
 
     Handle<World> m_world;
@@ -129,7 +136,7 @@ private:
 
     UniquePtr<ScriptingService> m_scriptingService;
     
-    FixedArray<Handle<World>, g_tripleBuffer ? 3 : 2> m_currentWorldBuffered;
+    FixedArray<Handle<World>, g_numMultiBuffers> m_currentWorldBuffered;
     Handle<World> m_defaultWorld;
 
     EngineDelegates m_delegates;

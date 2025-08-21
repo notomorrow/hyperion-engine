@@ -221,6 +221,23 @@ namespace Hyperion
             }
         }
 
+        public object? ReadNativeField(Name name)
+        {
+            if (_hypClassPtr == IntPtr.Zero)
+            {
+                throw new Exception("HypClass pointer is null");
+            }
+
+            HypField? field = HypClass.GetField(name);
+
+            if (field == null)
+            {
+                throw new Exception($"Field '{name}' not found in HypClass '{HypClass.Name}'");
+            }
+
+            return ((HypField)field).ReadObject(this);
+        }
+
         public uint RefCount
         {
             get

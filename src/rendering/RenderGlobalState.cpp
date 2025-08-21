@@ -65,7 +65,7 @@
 
 namespace hyperion {
 
-static constexpr uint32 g_numFrames = g_tripleBuffer ? 3 : 2;
+static constexpr uint32 g_numFrames = g_numMultiBuffers;
 static_assert(g_numFrames <= g_minSafeDeleteCycles,
     "g_numFrames must be less than or equal to g_minSafeDeleteCycles to ensure safe deletion of resources.");
 
