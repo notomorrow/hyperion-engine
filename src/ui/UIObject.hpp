@@ -679,10 +679,7 @@ public:
     /*! \brief Check if the UI object accepts focus. All UIObjects accept focus by default, unless overridden by derived classes or set using \ref{SetAcceptsFocus}.
      *  \return True if the this object accepts focus, false otherwise */
     HYP_METHOD(Property = "AcceptsFocus")
-    virtual bool AcceptsFocus() const
-    {
-        return m_acceptsFocus;
-    }
+    virtual bool AcceptsFocus() const;
 
     /*! \brief Set whether the UI object accepts focus.
      *  \details If set to true, the UI object can receive focus. If set to false, the UI object cannot receive focus.
@@ -1437,7 +1434,7 @@ private:
 
         Handle<UIObject> uiObject = CreateObject<T>();
 
-        UIStage* stage = GetStage();
+        UIStage* stage = IsA<UIStage>() ? ObjCast<UIStage>(this) : GetStage();
 
         uiObject->m_spawnParent = WeakHandleFromThis();
         uiObject->m_stage = stage;
