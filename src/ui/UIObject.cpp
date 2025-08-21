@@ -266,7 +266,15 @@ void UIObject::Init()
     scene->GetEntityManager()->AddComponent<BoundingBoxComponent>(GetEntity(), BoundingBoxComponent {});
 
     SetReady(true);
+
+    if (InstanceClass() != Class())
+    {
+        // just in case it was overridden by derived classes,
+        // set m_acceptsFocus to the value returned by AcceptsFocus()
+        m_acceptsFocus = AcceptsFocus();
+    }
     
+    UpdateComputedTextSize(); // so text doesn't have invalid size when we call UpdateSize()
     UpdateSize();
     UpdatePosition();
 
@@ -401,6 +409,9 @@ void UIObject::OnAttached_Internal(UIObject* parent)
     UpdateComputedDepth(/* updateChildren */ true);
 
     SetStage_Internal(parent->GetStage());
+
+    UpdateSize(/* updateChildren */ false);
+    UpdatePosition(/* updateChildren */ true);
 
     if (m_isEnabled && !parent->IsEnabled())
     {
@@ -957,9 +968,41 @@ void UIObject::SetDepth(int depth)
     UpdateComputedDepth();
 }
 
+bool UIObject::AcceptsFocus() const
+{
+    HYP_SCOPE;
+
+    if (!m_isEnabled || !m_acceptsFocus)
+    {
+        return false;
+    }
+
+    bool acceptsFocus = true;
+
+    ForEachParentUIObject([&acceptsFocus](UIObject* parent)
+        {
+            if (!parent->m_isEnabled || !parent->m_acceptsFocus)
+            {
+                acceptsFocus = false;
+
+                return IterationResult::STOP;
+            }
+
+            return IterationResult::CONTINUE;
+        });
+
+    return acceptsFocus;
+}
+
 void UIObject::SetAcceptsFocus(bool acceptsFocus)
 {
     HYP_SCOPE;
+
+    if (m_acceptsFocus == acceptsFocus)
+    {
+        // don't bother changing
+        return;
+    }
 
     m_acceptsFocus = acceptsFocus;
 
@@ -1008,22 +1051,19 @@ void UIObject::Blur(bool blurChildren)
         OnLoseFocus(MouseEvent {});
     }
 
-    if (blurChildren)
-    {
-        ForEachChildUIObject([](UIObject* child)
-            {
-                child->Blur(false);
-
-                return IterationResult::CONTINUE;
-            });
-    }
-
     if (m_stage == nullptr)
     {
         return;
     }
 
-    if (m_stage->GetFocusedObject().GetUnsafe() == this)
+    if (Handle<UIObject> focusedObject = m_stage->GetFocusedObject().Lock())
+    {
+        if (!focusedObject->IsOrHasParent(this))
+        {
+            return;
+        }
+    }
+    else
     {
         return;
     }
@@ -3054,14 +3094,9 @@ Handle<UIObject> UIObject::CreateUIObject(const HypClass* hypClass, Name name, V
         return Handle<UIObject>::empty;
     }
 
-    Handle<UIObject> uiObject = std::move(uiObjectHypData).Get<Handle<UIObject>>();
-    Assert(uiObject != nullptr);
-
-    Assert(GetNode().IsValid());
-
     if (!name.IsValid())
     {
-        name = Name::Unique(ANSIString("Unnamed_") + hypClass->GetName().LookupString());
+        name = hypClass->GetName();
     }
 
     Handle<Entity> entity = CreateObject<Entity>();
@@ -3069,10 +3104,11 @@ Handle<UIObject> UIObject::CreateUIObject(const HypClass* hypClass, Name name, V
     // Set it to ignore parent scale so size of the UI object is not affected by the parent
     entity->SetFlags(entity->GetFlags() | NodeFlags::IGNORE_PARENT_SCALE);
 
-    UIStage* stage = GetStage();
+    Handle<UIObject> uiObject = std::move(uiObjectHypData).Get<Handle<UIObject>>();
+    Assert(uiObject != nullptr);
 
     uiObject->m_spawnParent = WeakHandleFromThis();
-    uiObject->m_stage = stage;
+    uiObject->m_stage = IsA<UIStage>() ? ObjCast<UIStage>(this) : GetStage();
 
     uiObject->SetNodeProxy(entity);
     uiObject->SetName(name);

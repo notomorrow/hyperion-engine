@@ -36,6 +36,9 @@ public:
     void Initialize(UIObject* spawnParent);
 
     HYP_METHOD(Scriptable)
+    int GetPlacement() const; // 0 = top-left, 1 = bottom-left, 2 = top-right, 3 = bottom-right
+    
+    HYP_METHOD(Scriptable)
     void Update(float delta);
 
     HYP_METHOD(Scriptable)
@@ -50,15 +53,24 @@ public:
 protected:
     virtual Handle<UIObject> CreateUIObject_Impl(UIObject* spawnParent);
 
+    HYP_METHOD()
+    virtual int GetPlacement_Impl() const
+    {
+        return 0; // Default to top-left
+    }
+
+    HYP_METHOD()
     virtual void Update_Impl(float delta)
     {
     }
 
+    HYP_METHOD()
     virtual Name GetName_Impl() const
     {
         HYP_PURE_VIRTUAL();
     }
 
+    HYP_METHOD()
     virtual bool IsEnabled_Impl() const
     {
         return true;

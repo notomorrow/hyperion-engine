@@ -504,7 +504,9 @@ private:
     EditorDelegates* m_editorDelegates;
 
     Array<Handle<EditorDebugOverlayBase>> m_debugOverlays;
-    Handle<UIObject> m_debugOverlayUiObject;
+    
+    // top-left, bottom-left, top-right, bottom-right
+    FixedArray<Handle<UIObject>, 4> m_debugOverlayContainers;
 
     Handle<ConsoleUI> m_consoleUi;
 
