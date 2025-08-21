@@ -706,6 +706,18 @@ void RenderGroup::PerformRendering(
     AssertDebug(renderSetup.IsValid(), "RenderSetup must be valid for rendering");
     AssertDebug(renderSetup.HasView(), "RenderSetup must have a valid View for rendering");
     AssertDebug(renderSetup.passData != nullptr, "RenderSetup must have valid PassData for rendering!");
+    
+    static const bool isIndirectRenderingEnabled = g_renderBackend->GetRenderConfig().indirectRendering;
+
+    const bool useIndirectRendering = isIndirectRenderingEnabled
+        && m_flags[RenderGroupFlags::INDIRECT_RENDERING]
+        && (renderSetup.passData && renderSetup.passData->cullData.depthPyramidImageView);
+    
+    if (drawCallCollection.drawCalls.Empty() && drawCallCollection.instancedDrawCalls.Empty())
+    {
+        // No draw calls to render; skip pipeline / cache fetch
+        return;
+    }
 
     auto* cacheEntry = renderSetup.passData->renderGroupCache.TryGet(Id().ToIndex());
 
@@ -724,12 +736,6 @@ void RenderGroup::PerformRendering(
         // fetch a new graphics pipeline if it is dead
         cacheEntry->cacheHandle = CreateGraphicsPipeline(renderSetup.passData, drawCallCollection.impl);
     }
-
-    static const bool isIndirectRenderingEnabled = g_renderBackend->GetRenderConfig().indirectRendering;
-
-    const bool useIndirectRendering = isIndirectRenderingEnabled
-        && m_flags[RenderGroupFlags::INDIRECT_RENDERING]
-        && (renderSetup.passData && renderSetup.passData->cullData.depthPyramidImageView);
 
     if (useIndirectRendering)
     {

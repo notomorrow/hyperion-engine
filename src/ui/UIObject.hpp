@@ -1254,6 +1254,9 @@ public:
     ScriptableDelegate<UIEventHandlerResult, const MouseEvent&> OnClick;
 
     HYP_FIELD()
+    ScriptableDelegate<UIEventHandlerResult, const MouseEvent&> OnRightClick;
+
+    HYP_FIELD()
     ScriptableDelegate<UIEventHandlerResult, const KeyboardEvent&> OnKeyDown;
 
     HYP_FIELD()

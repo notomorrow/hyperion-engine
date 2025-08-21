@@ -152,6 +152,7 @@ UIObject::UIObject(const ThreadId& ownerThreadId)
     OnLoseFocus.BindManaged("OnLoseFocus", GetManagedObjectResource(), UIEventHandlerResult::OK).Detach();
     OnScroll.BindManaged("OnScroll", GetManagedObjectResource(), UIEventHandlerResult::OK).Detach();
     OnClick.BindManaged("OnClick", GetManagedObjectResource(), UIEventHandlerResult::OK).Detach();
+    OnRightClick.BindManaged("OnRightClick", GetManagedObjectResource(), UIEventHandlerResult::OK).Detach();
     OnKeyDown.BindManaged("OnKeyDown", GetManagedObjectResource(), UIEventHandlerResult::OK).Detach();
     OnKeyUp.BindManaged("OnKeyUp", GetManagedObjectResource(), UIEventHandlerResult::OK).Detach();
     OnTextChange.BindManaged("OnTextChange", GetManagedObjectResource(), UIEventHandlerResult::OK).Detach();
