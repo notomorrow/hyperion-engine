@@ -1,0 +1,1 @@
+namespace Hyperion.Editor;
