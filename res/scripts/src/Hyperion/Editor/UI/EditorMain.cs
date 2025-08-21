@@ -105,6 +105,7 @@ public class EditorMain : UIEventHandler
         }
 
         editorSubsystem.AddDebugOverlay(new FpsCounter(World));
+        editorSubsystem.AddDebugOverlay(new StatOverlay());
     }
 
     ~EditorMain()
@@ -298,6 +299,7 @@ public class EditorMain : UIEventHandler
         {
             EditorSubsystem? editorSubsystem = World.GetSubsystem<EditorSubsystem>();
             editorSubsystem?.RemoveDebugOverlay(new Name("FpsCounter", weak: true));
+            editorSubsystem?.RemoveDebugOverlay(new Name("StatOverlay", weak: true));
         }
     }
 

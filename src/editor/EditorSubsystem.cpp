@@ -1404,18 +1404,28 @@ void EditorSubsystem::InitViewport()
                 {
                     m_consoleUi->SetIsVisible(false);
 
-                    if (m_debugOverlayUiObject)
+                    for (const Handle<UIObject>& debugOverlayContainer : m_debugOverlayContainers)
                     {
-                        m_debugOverlayUiObject->SetIsVisible(true);
+                        if (!debugOverlayContainer)
+                        {
+                            continue;
+                        }
+                        
+                        debugOverlayContainer->SetIsVisible(true);
                     }
                 }
                 else
                 {
                     m_consoleUi->SetIsVisible(true);
 
-                    if (m_debugOverlayUiObject)
+                    for (const Handle<UIObject>& debugOverlayContainer : m_debugOverlayContainers)
                     {
-                        m_debugOverlayUiObject->SetIsVisible(false);
+                        if (!debugOverlayContainer)
+                        {
+                            continue;
+                        }
+
+                        debugOverlayContainer->SetIsVisible(false);
                     }
                 }
 
@@ -2264,28 +2274,57 @@ void EditorSubsystem::InitDebugOverlays()
     UISubsystem* uiSubsystem = GetWorld()->GetSubsystem<UISubsystem>();
     Assert(uiSubsystem != nullptr);
 
-    m_debugOverlayUiObject = uiSubsystem->GetUIStage()->CreateUIObject<UIListView>(NAME("DebugOverlay"), Vec2i::Zero(), UIObjectSize({ 100, UIObjectSize::FILL }, { 0, UIObjectSize::AUTO }));
-    m_debugOverlayUiObject->SetDepth(100);
-    m_debugOverlayUiObject->SetBackgroundColor(Color(0.0f, 0.0f, 0.0f, 0.0f));
-    m_debugOverlayUiObject->SetParentAlignment(UIObjectAlignment::BOTTOM_LEFT);
-    m_debugOverlayUiObject->SetOriginAlignment(UIObjectAlignment::BOTTOM_LEFT);
+    static constexpr UIObjectAlignment s_aligments[4] = {
+        UIObjectAlignment::TOP_LEFT,
+        UIObjectAlignment::BOTTOM_LEFT,
+        UIObjectAlignment::TOP_RIGHT,
+        UIObjectAlignment::BOTTOM_RIGHT
+    };
 
-    m_debugOverlayUiObject->OnClick.RemoveAllDetached();
-    m_debugOverlayUiObject->OnKeyDown.RemoveAllDetached();
+    for (int i = 0; i < 4; i++)
+    {
+        Handle<UIObject>& debugOverlayContainer = m_debugOverlayContainers[i];
+
+        debugOverlayContainer = uiSubsystem->GetUIStage()->CreateUIObject<UIListView>(NAME_FMT("DebugOverlay_{}", i), Vec2i::Zero(), UIObjectSize({ 0, UIObjectSize::AUTO }, { 0, UIObjectSize::AUTO }));
+        debugOverlayContainer->SetDepth(100);
+        debugOverlayContainer->SetBackgroundColor(Color(0.0f, 0.0f, 0.0f, 0.0f));
+        debugOverlayContainer->SetParentAlignment(s_aligments[i]);
+        debugOverlayContainer->SetOriginAlignment(s_aligments[i]);
+        debugOverlayContainer->SetAcceptsFocus(false); // so we don't steal focus from the viewport
+
+        debugOverlayContainer->OnClick.RemoveAllDetached();
+        debugOverlayContainer->OnKeyDown.RemoveAllDetached();
+    }
 
     for (const Handle<EditorDebugOverlayBase>& debugOverlay : m_debugOverlays)
     {
-        debugOverlay->Initialize(m_debugOverlayUiObject.Get());
+        int placement = debugOverlay->GetPlacement();
 
-        if (const Handle<UIObject>& uiObject = debugOverlay->GetUIObject())
+        if (placement < 0 || placement >= int(m_debugOverlayContainers.Size()))
         {
-            m_debugOverlayUiObject->AddChildUIObject(uiObject);
+            // Invalid placement, skip this overlay
+            HYP_LOG(Editor, Warning, "Invalid debug overlay placement: {}", placement);
+
+            placement = 0; // Default to the first container
+        }
+
+        debugOverlay->Initialize(m_debugOverlayContainers[placement]);
+
+        const Handle<UIObject>& uiObject = debugOverlay->GetUIObject();
+        AssertDebug(uiObject != nullptr);
+
+        if (uiObject != nullptr)
+        {
+            m_debugOverlayContainers[placement]->AddChildUIObject(uiObject);
         }
     }
 
     if (Handle<UIImage> sceneImage = ObjCast<UIImage>(uiSubsystem->GetUIStage()->FindChildUIObject(NAME("Scene_Image"))))
     {
-        sceneImage->AddChildUIObject(m_debugOverlayUiObject);
+        for (const Handle<UIObject>& debugOverlayContainer : m_debugOverlayContainers)
+        {
+            sceneImage->AddChildUIObject(debugOverlayContainer);
+        }
     }
 }
 
@@ -3092,18 +3131,30 @@ void EditorSubsystem::AddDebugOverlay(const Handle<EditorDebugOverlayBase>& debu
 
     m_debugOverlays.PushBack(debugOverlay);
 
-    if (m_debugOverlayUiObject != nullptr)
+    int placement = debugOverlay->GetPlacement();
+
+    if (placement < 0 || placement >= int(m_debugOverlayContainers.Size()))
     {
-        debugOverlay->Initialize(uiSubsystem->GetUIStage());
+        // Invalid placement, skip this overlay
+        HYP_LOG(Editor, Warning, "Invalid debug overlay placement: {}", placement);
 
-        if (const Handle<UIObject>& object = debugOverlay->GetUIObject())
-        {
-            Handle<UIListViewItem> listViewItem = uiSubsystem->GetUIStage()->CreateUIObject<UIListViewItem>(Vec2i { 0, 0 }, UIObjectSize(UIObjectSize::AUTO));
-            listViewItem->SetBackgroundColor(Color(0.0f, 0.0f, 0.0f, 0.0f));
-            listViewItem->AddChildUIObject(object);
+        placement = 0; // Default to the first corner
+    }
 
-            m_debugOverlayUiObject->AddChildUIObject(listViewItem);
-        }
+    if (!m_debugOverlayContainers[placement])
+    {
+        return; // not initialized yet; it'll be added later
+    }
+
+    debugOverlay->Initialize(uiSubsystem->GetUIStage());
+
+    if (const Handle<UIObject>& object = debugOverlay->GetUIObject())
+    {
+        Handle<UIListViewItem> listViewItem = uiSubsystem->GetUIStage()->CreateUIObject<UIListViewItem>(Vec2i { 0, 0 }, UIObjectSize(UIObjectSize::AUTO));
+        listViewItem->SetBackgroundColor(Color(0.0f, 0.0f, 0.0f, 0.0f));
+        listViewItem->AddChildUIObject(object);
+
+        m_debugOverlayContainers[placement]->AddChildUIObject(listViewItem);
     }
 }
 
@@ -3123,21 +3174,9 @@ bool EditorSubsystem::RemoveDebugOverlay(WeakName name)
         return false;
     }
 
-    if (m_debugOverlayUiObject != nullptr)
+    if (const Handle<UIObject>& object = (*it)->GetUIObject())
     {
-        if (const Handle<UIObject>& object = (*it)->GetUIObject())
-        {
-            Handle<UIListViewItem> listViewItem = object->GetClosestParentUIObject<UIListViewItem>();
-
-            if (listViewItem)
-            {
-                m_debugOverlayUiObject->RemoveChildUIObject(listViewItem);
-            }
-            else
-            {
-                object->RemoveFromParent();
-            }
-        }
+        object->RemoveFromParent();
     }
 
     m_debugOverlays.Erase(it);

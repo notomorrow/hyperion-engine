@@ -62,6 +62,11 @@ public class FpsCounter : EditorDebugOverlayBase
         return panel;
     }
 
+    public override int GetPlacement()
+    {
+        return 1; // Bottom-left corner
+    }
+
     public override Name GetName()
     {
         return new Name("FpsCounter");

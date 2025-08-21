@@ -71,12 +71,12 @@ namespace Hyperion
 
             string[] directories = System.IO.Directory.GetDirectories(sourceDirectory, "*", System.IO.SearchOption.AllDirectories)
                 .Append(sourceDirectory)
-                .Where(directory => System.IO.Directory.GetFiles(directory, "*.cs").Length > 0)
+                .Where(directory => System.IO.Directory.GetFiles(directory, ".hypmodule").Length > 0 && System.IO.Directory.GetFiles(directory, "*.cs").Length > 0)
                 .ToArray();
 
             foreach (string directory in directories)
             {
-                Logger.Log(logChannel, LogType.Info, "Processing directory: {0}", directory);
+                Logger.Log(logChannel, LogType.Info, "Processing module directory: {0}", directory);
 
                 string moduleName;
                 int hotReloadVersion;

@@ -31,6 +31,11 @@ void EditorDebugOverlayBase::Initialize(UIObject* spawnParent)
     Assert(spawnParent != nullptr);
 
     m_uiObject = CreateUIObject(spawnParent);
+
+    if (!m_uiObject)
+    {
+        return;
+    }
 }
 
 Handle<UIObject> EditorDebugOverlayBase::CreateUIObject_Impl(UIObject* spawnParent)

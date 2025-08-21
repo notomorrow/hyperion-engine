@@ -332,7 +332,7 @@ void UIText::UpdateTextAABB()
     }
     else
     {
-        HYP_LOG_ONCE(UI, Warning, "No font atlas for UIText {}", GetName());
+        HYP_LOG_ONCE(UI, Warning, "No font atlas for UIText {} (text: \"{}\")", GetName(), GetText());
     }
 }
 
@@ -489,8 +489,8 @@ void UIText::UpdateSize_Internal(bool updateChildren)
 
     if (extentWithBearing.y <= MathUtil::epsilonF || extentWithoutBearing.y <= MathUtil::epsilonF)
     {
-        HYP_LOG_ONCE(UI, Warning, "Text AABB has zero height, cannot update size for UIText {}\tExtent with bearing: {}\tExtent without bearing: {}",
-            GetName(), extentWithBearing, extentWithoutBearing);
+        HYP_LOG_ONCE(UI, Warning, "Text AABB has zero height, cannot update size for UIText {} (text: \"{}\")\tExtent with bearing: {}\tExtent without bearing: {}",
+            GetName(), GetText(), extentWithBearing, extentWithoutBearing);
 
         return;
     }
