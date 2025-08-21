@@ -65,8 +65,6 @@ protected:
 
 class HYP_API SafeDeleter
 {
-    static constexpr uint32 g_numMultiBuffers = g_tripleBuffer ? 3 : 2;
-
 public:
     struct EntryHeader
     {
