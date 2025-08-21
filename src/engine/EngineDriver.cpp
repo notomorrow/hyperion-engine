@@ -1,6 +1,7 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
 #include <engine/EngineDriver.hpp>
+#include <engine/EngineStats.hpp>
 
 #include <rendering/PostFX.hpp>
 #include <rendering/RenderEnvironment.hpp>
@@ -282,7 +283,21 @@ HYP_API void EngineDriver::Init()
         currentWorld = m_defaultWorld;
     }
 
+    for (Handle<EngineStats>& engineStats : m_engineStatsBuffered)
+    {
+        engineStats = CreateObject<EngineStats>();
+        InitObject(engineStats);
+    }
+
     SetReady(true);
+}
+
+const Handle<EngineStats>& EngineDriver::GetEngineStats() const
+{
+    HYP_SCOPE;
+    Threads::AssertOnThread(g_gameThread | g_renderThread);
+
+    return m_engineStatsBuffered[RenderApi_GetFrameIndex()];
 }
 
 const Handle<World>& EngineDriver::GetCurrentWorld() const
@@ -384,24 +399,26 @@ void EngineDriver::FinalizeStop()
         SetGlobalNetRequestThread(nullptr);
     }
 
-    m_currentWorldBuffered = {};
+    SafeDelete(std::move(m_engineStatsBuffered));
+    SafeDelete(std::move(m_currentWorldBuffered));
 
     m_debugDrawer.Reset();
-
     m_finalPass.Reset();
 
     // delete remaining enqueued deletions.
     // loop until all deletions are done
 
     // clang-format off
-    FixedArray<int, g_tripleBuffer ? 3 : 2> counts {};
+    FixedArray<int, g_numMultiBuffers> counts {};
     
     do
     {
-        for (uint32 i = 0; i < (g_tripleBuffer ? 3 : 2); i++)
+        for (uint32 i = 0; i < g_numMultiBuffers; i++)
         {
             counts[i] = g_safeDeleter->ForceDeleteAll(i);
         }
+
+        Threads::Sleep(1); // give some time for other threads to finish
     }
     while (AnyOf(counts, [](uint32 count) { return count > 0; }));
     // clang-format on
