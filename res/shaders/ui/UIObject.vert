@@ -36,7 +36,7 @@ HYP_DESCRIPTOR_SSBO(Global, ObjectsBuffer) readonly buffer ObjectsBuffer
     Object objects[];
 };
 
-HYP_DESCRIPTOR_SSBO_DYNAMIC(Instancing, EntityInstanceBatchesBuffer) readonly buffer EntityInstanceBatchesBuffer
+HYP_DESCRIPTOR_SSBO_DYNAMIC(Instancing, EntityInstanceBatchesBuffer, standard = scalar) readonly buffer EntityInstanceBatchesBuffer
 {
     UIEntityInstanceBatch entity_instance_batch;
 };
