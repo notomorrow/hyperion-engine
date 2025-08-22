@@ -1,5 +1,8 @@
 {
   "rendering": {
+    "vulkan": {
+      "debugLayers": true
+    },
     "ssr": {
       "coneTracing": false,
       "numIterations": 32,
