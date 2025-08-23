@@ -4,11 +4,13 @@
 convert=0
 files=()
 exclude_patterns=()
+search_dir="buildtool"
 
 # ── arg parsing ──────────────────────────────────────────────────────────────
 while (( $# )); do
     case "$1" in
         --convert) convert=1; shift ;;
+        --dir) search_dir="$2"; shift 2 ;;
         --exclude)
             shift
             while (( $# )) && [[ $1 != --* ]]; do
@@ -31,7 +33,7 @@ if [ ${#files[@]} -eq 0 ]; then
             [[ $f == *"$p"* ]] && { skip=1; break; }
         done
         (( skip )) || files+=("$f")
-    done < <(find buildtool -type f \( \
+    done < <(find "$search_dir" -type f \( \
         -name '*.cpp' -o -name '*.hpp' -o -name '*.h' -o -name '*.inl' -o -name '*.natvis' \
     \) -print0)
 fi
