@@ -1848,14 +1848,14 @@ inline containers::String<TStringType> operator+(const utilities::StringView<TSt
     return containers::String<TStringType>(lhs) + rhs;
 }
 
-// Char pointer + StringView
+// char pointer + StringView
 template <int TStringType>
 inline containers::String<TStringType> operator+(const typename containers::String<TStringType>::CharType* lhs, const utilities::StringView<TStringType>& rhs)
 {
     return containers::String<TStringType>(lhs) + rhs;
 }
 
-// Char pointer + String
+// char pointer + String
 template <int TStringType>
 inline containers::String<TStringType> operator+(const typename containers::String<TStringType>::CharType* lhs, const containers::String<TStringType>& rhs)
 {

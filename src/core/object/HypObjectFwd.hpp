@@ -171,8 +171,10 @@ private:
     const HypClass* m_hypClass;
 };
 
+#ifdef HYP_DOTNET
 HYP_API void HypObject_AcquireManagedObjectLock(HypObjectBase* ptr);
 HYP_API void HypObject_ReleaseManagedObjectLock(HypObjectBase* ptr);
+#endif
 
 struct HypObjectInitializerGuardBase
 {

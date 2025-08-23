@@ -24,7 +24,7 @@
 namespace hyperion {
 namespace debug {
 
-HYP_API char* GetErrorStringBuffer()
+char* GetErrorStringBuffer()
 {
     static char errorStringBuf[4096];
 
@@ -62,7 +62,7 @@ static const char* g_logColourTable[] = {
 };
 
 #ifndef HYP_DEBUG_MODE
-HYP_DEPRECATED HYP_API void DebugLog_Write(LogType type, const char* fmt, ...)
+HYP_DEPRECATED void DebugLog_Write(LogType type, const char* fmt, ...)
 {
     /* Coloured files are less that ideal */
     const int typeN = static_cast<std::underlying_type_t<LogType>>(type);
@@ -74,7 +74,7 @@ HYP_DEPRECATED HYP_API void DebugLog_Write(LogType type, const char* fmt, ...)
     va_end(args);
 }
 #else
-HYP_DEPRECATED HYP_API void DebugLog_Write(LogType type, const char* callee, uint32_t line, const char* fmt, ...)
+HYP_DEPRECATED void DebugLog_Write(LogType type, const char* callee, uint32_t line, const char* fmt, ...)
 {
     const int typeN = static_cast<std::underlying_type_t<LogType>>(type);
     /* Coloured files are less than ideal */
@@ -93,19 +93,19 @@ HYP_DEPRECATED HYP_API void DebugLog_Write(LogType type, const char* callee, uin
 }
 #endif
 
-HYP_API void DebugLog_FlushOutputStream()
+void DebugLog_FlushOutputStream()
 {
     fputs("\n\n", HYP_DEBUG_OUTPUT_STREAM);
     fflush(HYP_DEBUG_OUTPUT_STREAM);
 }
 
-HYP_API void WriteToStandardError(const char* msg)
+void WriteToStandardError(const char* msg)
 {
     fputs(msg, stderr);
     fflush(stderr);
 }
 
-HYP_API bool IsDebuggerAttached()
+bool IsDebuggerAttached()
 {
 #ifdef HYP_WINDOWS
     return ::IsDebuggerPresent();
@@ -124,7 +124,7 @@ HYP_API bool IsDebuggerAttached()
 #endif
 }
 
-HYP_API void LogAssert(const char* str)
+void LogAssert(const char* str)
 {
 #ifdef HYP_DEBUG_MODE
     HYP_LOG_DYNAMIC(Core, Error, str);

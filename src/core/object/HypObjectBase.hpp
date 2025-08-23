@@ -97,6 +97,7 @@ public:
         return m_header;
     }
 
+#ifdef HYP_DOTNET
     void SetManagedObjectResource(ManagedObjectResource* managedObjectResource)
     {
         HYP_CORE_ASSERT(m_managedObjectResource == nullptr);
@@ -113,6 +114,7 @@ public:
     {
         return m_managedObjectResource ? m_managedObjectResource->GetManagedObject() : nullptr;
     }
+#endif
 
     HYP_FORCE_INLINE bool IsInitCalled() const
     {
@@ -202,7 +204,10 @@ protected:
     // Pointer to the header of the object, holding container, index and ref counts. Must be the first member.
     HypObjectHeader* m_header;
     DelegateHandlerSet m_delegateHandlers;
+
+#ifdef HYP_DOTNET
     ManagedObjectResource* m_managedObjectResource;
+#endif
 
 private:
     // Used internally by InitObject() to call derived Init() methods.

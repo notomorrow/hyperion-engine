@@ -13,7 +13,9 @@
 
 #include <core/threading/ThreadLocalStorage.hpp>
 
+#ifdef HYP_DOTNET
 #include <dotnet/Object.hpp>
+#endif
 
 #include <core/serialization/fbom/FBOM.hpp>
 #include <core/serialization/fbom/FBOMData.hpp>
@@ -780,6 +782,8 @@ bool HypClass::IsDerivedFrom(const HypClass* other) const
     return false;
 }
 
+#ifdef HYP_DOTNET
+
 bool HypClass::GetManagedObject(const void* objectPtr, dotnet::ObjectReference& outObjectReference) const
 {
     if (!UseHandles()) // check is HypObjectBase
@@ -805,6 +809,8 @@ bool HypClass::GetManagedObject(const void* objectPtr, dotnet::ObjectReference& 
 
     return true;
 }
+
+#endif
 
 #pragma endregion HypClass
 

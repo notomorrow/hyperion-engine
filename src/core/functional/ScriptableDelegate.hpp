@@ -2,6 +2,7 @@
 
 #pragma once
 
+#ifdef HYP_DOTNET
 #include <core/functional/ScriptableDelegateFwd.hpp>
 #include <core/functional/Delegate.hpp>
 
@@ -257,3 +258,5 @@ public:
 
 } // namespace functional
 } // namespace hyperion
+
+#endif

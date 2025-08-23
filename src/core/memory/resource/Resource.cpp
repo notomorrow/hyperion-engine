@@ -22,7 +22,7 @@ HYP_DEFINE_LOG_SUBCHANNEL(Resource, Memory);
 static TypeMap<UniquePtr<IResourceMemoryPool>> g_resourceMemoryPools;
 static Mutex g_resourceMemoryPoolsMutex;
 
-HYP_API IResourceMemoryPool* GetOrCreateResourceMemoryPool(TypeId typeId, UniquePtr<IResourceMemoryPool> (*createFn)(void))
+IResourceMemoryPool* GetOrCreateResourceMemoryPool(TypeId typeId, UniquePtr<IResourceMemoryPool> (*createFn)(void))
 {
     Mutex::Guard guard(g_resourceMemoryPoolsMutex);
 

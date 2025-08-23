@@ -18,7 +18,9 @@
 #include <core/logging/LogChannels.hpp>
 #include <core/logging/Logger.hpp>
 
+#ifdef HYPERION_BUILD_LIBRARY
 #include <HyperionEngine.hpp>
+#endif
 
 namespace hyperion {
 namespace config {
@@ -111,7 +113,11 @@ bool ConfigurationTable::IsChanged() const
 
 FilePath ConfigurationTable::GetFilePath() const
 {
+#ifdef HYPERION_BUILD_LIBRARY
     FilePath configPath = GetExecutablePath() / m_name;
+#else
+    FilePath configPath = FilePath::Current() / m_name;
+#endif
 
     if (!configPath.EndsWith(".json"))
     {

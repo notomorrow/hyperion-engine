@@ -216,7 +216,7 @@ struct StaticString
 
     /*! \brief Count the number of occurrences of a character in the StaticString.
      *
-     *  \tparam Char The character to count.
+     *  \tparam char The character to count.
      *
      *  \returns The number of occurrences of the character in the StaticString. */
     template <CharType Char>

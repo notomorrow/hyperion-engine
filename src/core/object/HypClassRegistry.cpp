@@ -9,9 +9,11 @@
 #include <core/logging/Logger.hpp>
 #include <core/logging/LogChannels.hpp>
 
+#ifdef HYP_DOTNET
 #include <dotnet/Class.hpp>
 #include <dotnet/Assembly.hpp>
 #include <dotnet/DotNetSystem.hpp>
+#endif
 
 namespace hyperion {
 
@@ -191,29 +193,6 @@ void HypClassRegistry::ForEachClass(const ProcRef<IterationResult(const HypClass
         }
     }
 }
-
-#if defined(HYP_DOTNET) && HYP_DOTNET
-
-RC<dotnet::Class> HypClassRegistry::GetManagedClass(const HypClass* hypClass) const
-{
-    if (!hypClass)
-    {
-        return nullptr;
-    }
-
-    Mutex::Guard guard(m_managedClassesMutex);
-
-    auto it = m_managedClasses.FindAs(hypClass);
-
-    if (it == m_managedClasses.End())
-    {
-        return nullptr;
-    }
-
-    return it->second;
-}
-
-#endif
 
 void HypClassRegistry::Initialize()
 {
