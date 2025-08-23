@@ -1,0 +1,60 @@
+#include <script/vm/BytecodeStream.hpp>
+
+#include <core/debug/Debug.hpp>
+
+namespace hyperion {
+namespace vm {
+
+BytecodeStream BytecodeStream::FromSourceFile(SourceFile &file)
+{
+    return BytecodeStream(file.GetBuffer(), 0);
+}
+
+BytecodeStream::BytecodeStream()
+    : m_position(0)
+{
+}
+
+BytecodeStream::BytecodeStream(const ubyte *buffer, SizeType size, SizeType position)
+    : m_byte_buffer(size, buffer),
+      m_position(position)
+{
+}
+
+BytecodeStream::BytecodeStream(const ByteBuffer &byte_buffer, SizeType position)
+    : m_byte_buffer(byte_buffer),
+      m_position(position)
+{
+    
+}
+
+BytecodeStream::BytecodeStream(const BytecodeStream &other)
+    : m_byte_buffer(other.m_byte_buffer),
+      m_position(other.m_position)
+{
+}
+
+BytecodeStream &BytecodeStream::operator=(const BytecodeStream &other)
+{
+    m_byte_buffer = other.m_byte_buffer;
+    m_position = other.m_position;
+
+    return *this;
+}
+
+void BytecodeStream::ReadZeroTerminatedString(char *ptr)
+{
+    ubyte ch;
+    SizeType i = 0;
+
+    const auto *data = m_byte_buffer.Data();
+
+    do {
+        Assert(m_position < m_byte_buffer.Size(), "Attempted to read past end of buffer!");
+
+        ptr[i++] = char(ch = data[m_position++]);
+    } while (ch);
+}
+
+} // namespace vm
+} // namespace hyperion

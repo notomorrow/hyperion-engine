@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.5)
 cmake_policy(SET CMP0091 NEW)
 
-set(BUILD_NAME hyperion-core)
+set(BUILD_NAME hyperion-script)
 
 project(${BUILD_NAME} CXX C)
 
@@ -29,52 +29,9 @@ else()
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -O3 -fpermissive")
 endif()
 
-if(NOT IOS)
-    if(APPLE)
-        set(CURL_LIBRARY /opt/homebrew/opt/curl/lib/libcurl.dylib)
-        set(CURL_INCLUDE_DIR /opt/homebrew/opt/curl/include)
-    endif()
-    
-    find_package(CURL)
-endif()
-
-if(CURL_FOUND)
-    message(STATUS "CURL found at ${CURL_INCLUDE_DIRS}")
-
-    add_definitions(-DHYP_CURL=1)
-
-    include_directories(${CURL_INCLUDE_DIRS})
-    set(COMMON_LIBRARIES ${COMMON_LIBRARIES} ${CURL_LIBRARIES})
-endif()
-
-if(ZLIB_FOUND)
-    message(STATUS "Zlib found at ${ZLIB_INCLUDE_DIRS}")
-
-    add_definitions(-DHYP_ZLIB=1)
-
-    include_directories(${ZLIB_INCLUDE_DIRS})
-    set(COMMON_LIBRARIES ${COMMON_LIBRARIES} ${ZLIB_LIBRARIES})
-elseif(EXISTS "${CMAKE_SOURCE_DIR}/submodules/zlib/CMakeLists.txt")
-    message(STATUS "Zlib submodule found")
-
-    add_definitions(-DHYP_ZLIB=1)
-
-    set(ZLIB_BUILD_TESTING OFF CACHE BOOL "" FORCE)
-    set(ZLIB_BUILD_MINIZIP OFF CACHE BOOL "" FORCE)
-    set(ZLIB_INSTALL OFF CACHE BOOL "" FORCE)
-
-    include_directories(${CMAKE_SOURCE_DIR}/submodules/zlib PUBLIC "${CMAKE_CURRENT_BINARY_DIR}/zlib")
-    add_subdirectory(${CMAKE_SOURCE_DIR}/submodules/zlib ${CMAKE_CURRENT_BINARY_DIR}/zlib)
-
-    set(COMMON_LIBRARIES
-        ${COMMON_LIBRARIES}
-        zlibstatic
-    )
-endif()
-
 file(GLOB_RECURSE SOURCES "*.cpp" "*.cc" "*.c")
 file(GLOB_RECURSE HEADERS "*.h" "*.hpp")
-source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} PREFIX "Core Library Code" FILES ${SOURCES} ${HEADERS})
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} PREFIX "HypScript Code" FILES ${SOURCES} ${HEADERS})
 
 add_definitions(-DHYP_BUILD_LIBRARY=1)
 
@@ -84,6 +41,7 @@ include_directories(
     ${CMAKE_SOURCE_DIR}/include
     ${CMAKE_SOURCE_DIR}/src
     ${CMAKE_SOURCE_DIR}/src/core
+    ${CMAKE_SOURCE_DIR}/src/script
 )
 
 add_library(${BUILD_NAME} ${SOURCES} ${HEADERS})
