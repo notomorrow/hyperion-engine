@@ -94,7 +94,8 @@ public:
     }
 
     virtual ~HypStructInstance() override = default;
-
+    
+#ifdef HYP_DOTNET
     virtual bool GetManagedObject(const void* objectPtr, dotnet::ObjectReference& outObjectReference) const override
     {
         HYP_CORE_ASSERT(objectPtr != nullptr);
@@ -107,6 +108,7 @@ public:
 
         return true;
     }
+#endif
 
     virtual bool CanCreateInstance() const override
     {

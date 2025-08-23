@@ -73,19 +73,29 @@ struct VariantHelper<T, Ts...>
     static inline bool MoveAssign(TypeId typeId, void* dst, void* src)
     {
         HYP_CORE_ASSERT(typeId == thisTypeId);
+        
+        if constexpr (std::is_move_assignable_v<T>)
+        {
+            *static_cast<NormalizedType<T>*>(dst) = std::move(*static_cast<NormalizedType<T>*>(src));
 
-        *static_cast<NormalizedType<T>*>(dst) = std::move(*static_cast<NormalizedType<T>*>(src));
+            return true;
+        }
 
-        return true;
+        return false;
     }
 
     static inline bool MoveConstruct(TypeId typeId, void* dst, void* src)
     {
         HYP_CORE_ASSERT(typeId == thisTypeId);
+        
+        if constexpr (std::is_move_assignable_v<T>)
+        {
+            Memory::Construct<NormalizedType<T>>(dst, std::move(*static_cast<NormalizedType<T>*>(src)));
 
-        Memory::Construct<NormalizedType<T>>(dst, std::move(*static_cast<NormalizedType<T>*>(src)));
+            return true;
+        }
 
-        return true;
+        return false;
     }
 
     static inline void Destruct(TypeId typeId, void* data)

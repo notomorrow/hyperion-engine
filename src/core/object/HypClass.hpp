@@ -555,7 +555,8 @@ public:
     }
 
     Array<HypConstant*> GetConstantsInherited() const;
-
+    
+#ifdef HYP_DOTNET
     HYP_FORCE_INLINE RC<dotnet::Class> GetManagedClass() const
     {
         Mutex::Guard guard(m_managedClassMutex);
@@ -571,6 +572,7 @@ public:
     }
 
     virtual bool GetManagedObject(const void* objectPtr, dotnet::ObjectReference& outObjectReference) const;
+#endif
 
     virtual bool CanCreateInstance() const = 0;
 
@@ -906,8 +908,10 @@ public:
     virtual bool IsValid() const override;
 
     virtual HypClassAllocationMethod GetAllocationMethod() const override;
-
+    
+#ifdef HYP_DOTNET
     virtual bool GetManagedObject(const void* objectPtr, dotnet::ObjectReference& outObjectReference) const override;
+#endif
 
     virtual bool CanCreateInstance() const override;
 

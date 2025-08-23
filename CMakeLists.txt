@@ -311,6 +311,49 @@ add_definitions(-DVMA_DYNAMIC_VULKAN_FUNCTIONS=1)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DHYP_ROOT_DIR=\\\"${CMAKE_CURRENT_LIST_DIR}\\\"")
 
+# if dotnet headers exist, set HYP_DOTNET to 1
+if(EXISTS "${CMAKE_SOURCE_DIR}/include/dotnetcore/hostfxr.h")
+    message(STATUS ".NET headers found, building .NET core runtime")
+    
+    file(GLOB DOTNET_LIBS "${CMAKE_SOURCE_DIR}/submodules/runtime/artifacts/obj/dotnet-nethost/${HYP_BUILD_TYPE}/net8.0/**/output/*.dylib"
+        "${CMAKE_SOURCE_DIR}/submodules/runtime/artifacts/obj/dotnet-nethost/${HYP_BUILD_TYPE}/net8.0/**/output/*.so"
+        "${CMAKE_SOURCE_DIR}/submodules/runtime/artifacts/obj/dotnet-nethost/${HYP_BUILD_TYPE}/net8.0/**/output/*.a"
+        "${CMAKE_SOURCE_DIR}/submodules/runtime/artifacts/obj/dotnet-nethost/${HYP_BUILD_TYPE}/net8.0/**/output/*.lib"
+        "${CMAKE_SOURCE_DIR}/submodules/runtime/artifacts/obj/dotnet-nethost/${HYP_BUILD_TYPE}/net8.0/**/output/*.dll")
+
+    foreach(DOTNET_LIB ${DOTNET_LIBS})
+        message(STATUS "Copying ${DOTNET_LIB} to ${CMAKE_SOURCE_DIR}/lib/${HYP_PLATFORM_NAME}/${HYP_BUILD_TYPE}")
+
+        file(COPY ${DOTNET_LIB} DESTINATION "${CMAKE_SOURCE_DIR}/lib/${HYP_PLATFORM_NAME}/${HYP_BUILD_TYPE}")
+    endforeach()
+
+    if(EXISTS "${CMAKE_SOURCE_DIR}/lib/${HYP_PLATFORM_NAME}/${HYP_BUILD_TYPE}/libnethost.a")
+        message(STATUS ".NET core found, setting HYP_DOTNET to 1")
+
+        set(COMMON_LIBRARIES ${COMMON_LIBRARIES} "${CMAKE_SOURCE_DIR}/lib/${HYP_PLATFORM_NAME}/${HYP_BUILD_TYPE}/libnethost.a")
+
+        set(HYP_DOTNET 1)
+    elseif(EXISTS "${CMAKE_SOURCE_DIR}/lib/${HYP_PLATFORM_NAME}/${HYP_BUILD_TYPE}/nethost.lib")
+        message(STATUS ".NET core found, setting HYP_DOTNET to 1")
+
+        set(COMMON_LIBRARIES ${COMMON_LIBRARIES} "${CMAKE_SOURCE_DIR}/lib/${HYP_PLATFORM_NAME}/${HYP_BUILD_TYPE}/nethost.lib")
+
+        # copy the dll to the build directory
+        file(COPY "${CMAKE_SOURCE_DIR}/lib/${HYP_PLATFORM_NAME}/${HYP_BUILD_TYPE}/nethost.dll" DESTINATION ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
+
+        set(HYP_DOTNET 1)
+    else()
+        message(WARNING "Dotnet headers found, but libnethost not found.")
+    endif()
+
+    if(HYP_DOTNET)
+        add_definitions(-DHYP_DOTNET=1)
+        set(HYP_GENERATE_CSHARP_LIBRARIES true)
+    else()
+        set(HYP_GENERATE_CSHARP_LIBRARIES false)
+    endif()
+endif()
+
 function(collect_sources_and_modules dir out_sources out_modules)
     set(local_sources "")
     set(local_modules "")
@@ -445,50 +488,6 @@ endif()
 #         OpenImageDenoise
 #     )
 # endif()
-
-# if dotnet headers exist, set HYP_DOTNET to 1
-
-if(EXISTS "${CMAKE_SOURCE_DIR}/include/dotnetcore/hostfxr.h")
-    message(STATUS ".NET headers found, building .NET core runtime")
-    
-    file(GLOB DOTNET_LIBS "${CMAKE_SOURCE_DIR}/submodules/runtime/artifacts/obj/dotnet-nethost/${HYP_BUILD_TYPE}/net8.0/**/output/*.dylib"
-        "${CMAKE_SOURCE_DIR}/submodules/runtime/artifacts/obj/dotnet-nethost/${HYP_BUILD_TYPE}/net8.0/**/output/*.so"
-        "${CMAKE_SOURCE_DIR}/submodules/runtime/artifacts/obj/dotnet-nethost/${HYP_BUILD_TYPE}/net8.0/**/output/*.a"
-        "${CMAKE_SOURCE_DIR}/submodules/runtime/artifacts/obj/dotnet-nethost/${HYP_BUILD_TYPE}/net8.0/**/output/*.lib"
-        "${CMAKE_SOURCE_DIR}/submodules/runtime/artifacts/obj/dotnet-nethost/${HYP_BUILD_TYPE}/net8.0/**/output/*.dll")
-
-    foreach(DOTNET_LIB ${DOTNET_LIBS})
-        message(STATUS "Copying ${DOTNET_LIB} to ${CMAKE_SOURCE_DIR}/lib/${HYP_PLATFORM_NAME}/${HYP_BUILD_TYPE}")
-
-        file(COPY ${DOTNET_LIB} DESTINATION "${CMAKE_SOURCE_DIR}/lib/${HYP_PLATFORM_NAME}/${HYP_BUILD_TYPE}")
-    endforeach()
-
-    if(EXISTS "${CMAKE_SOURCE_DIR}/lib/${HYP_PLATFORM_NAME}/${HYP_BUILD_TYPE}/libnethost.a")
-        message(STATUS ".NET core found, setting HYP_DOTNET to 1")
-
-        set(COMMON_LIBRARIES ${COMMON_LIBRARIES} "${CMAKE_SOURCE_DIR}/lib/${HYP_PLATFORM_NAME}/${HYP_BUILD_TYPE}/libnethost.a")
-
-        set(HYP_DOTNET 1)
-    elseif(EXISTS "${CMAKE_SOURCE_DIR}/lib/${HYP_PLATFORM_NAME}/${HYP_BUILD_TYPE}/nethost.lib")
-        message(STATUS ".NET core found, setting HYP_DOTNET to 1")
-
-        set(COMMON_LIBRARIES ${COMMON_LIBRARIES} "${CMAKE_SOURCE_DIR}/lib/${HYP_PLATFORM_NAME}/${HYP_BUILD_TYPE}/nethost.lib")
-
-        # copy the dll to the build directory
-        file(COPY "${CMAKE_SOURCE_DIR}/lib/${HYP_PLATFORM_NAME}/${HYP_BUILD_TYPE}/nethost.dll" DESTINATION ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
-
-        set(HYP_DOTNET 1)
-    else()
-        message(WARNING "Dotnet headers found, but libnethost not found.")
-    endif()
-
-    if(HYP_DOTNET)
-        add_definitions(-DHYP_DOTNET=1)
-        set(HYP_GENERATE_CSHARP_LIBRARIES true)
-    else()
-        set(HYP_GENERATE_CSHARP_LIBRARIES false)
-    endif()
-endif()
 
 # if Win32, link with DbgHelp
 if(WIN32)

@@ -2,8 +2,10 @@
 
 #include <core/object/HypStruct.hpp>
 
+#ifdef HYP_DOTNET
 #include <dotnet/Class.hpp>
 #include <dotnet/Object.hpp>
+#endif
 
 namespace hyperion {
 
@@ -16,7 +18,8 @@ bool HypStruct::CreateStructInstance(dotnet::ObjectReference& outObjectReference
     };
 
     HYP_CORE_ASSERT(objectPtr != nullptr);
-
+    
+#ifdef HYP_DOTNET
     if (dotnet::Class* managedClass = HypClass::GetManagedClass())
     {
         ManagedStructInitializerContext context;
@@ -35,6 +38,7 @@ bool HypStruct::CreateStructInstance(dotnet::ObjectReference& outObjectReference
 
         return true;
     }
+#endif
 
     return false;
 }

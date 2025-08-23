@@ -28,8 +28,10 @@ public:
     {
         return HypClassAllocationMethod::NONE;
     }
-
+    
+#ifdef HYP_DOTNET
     virtual bool GetManagedObject(const void* objectPtr, dotnet::ObjectReference& outObjectReference) const override = 0;
+#endif
 
     virtual bool CanCreateInstance() const override = 0;
 
@@ -61,11 +63,13 @@ public:
     }
 
     virtual ~HypEnumInstance() override = default;
-
+    
+#ifdef HYP_DOTNET
     virtual bool GetManagedObject(const void* objectPtr, dotnet::ObjectReference& outObjectReference) const override
     {
         HYP_NOT_IMPLEMENTED();
     }
+#endif
 
     virtual bool CanCreateInstance() const override
     {

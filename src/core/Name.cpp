@@ -146,22 +146,22 @@ const ANSIString& NameRegistry::LookupStringForName(Name name) const
     return it->second.first;
 }
 
-HYP_API Name RegisterName(NameRegistry* nameRegistry, NameID id, const ANSIString& str, bool lock)
+Name RegisterName(NameRegistry* nameRegistry, NameID id, const ANSIString& str, bool lock)
 {
     return nameRegistry->RegisterName(id, str, lock);
 }
 
-HYP_API const ANSIString& LookupStringForName(const NameRegistry* nameRegistry, Name name)
+const ANSIString& LookupStringForName(const NameRegistry* nameRegistry, Name name)
 {
     return nameRegistry->LookupStringForName(name);
 }
 
-HYP_API bool ShouldLockNameRegistry()
+bool ShouldLockNameRegistry()
 {
     return g_isNameRegistryInitialized;
 }
 
-HYP_API void InitializeNameRegistry()
+void InitializeNameRegistry()
 {
     g_isNameRegistryInitialized = true;
 }

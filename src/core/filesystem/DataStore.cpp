@@ -11,13 +11,15 @@
 #include <core/utilities/Time.hpp>
 
 #include <core/io/ByteWriter.hpp>
+#include <core/io/BufferedByteReader.hpp>
+#include <core/io/ByteReader.hpp>
 
 #include <core/logging/Logger.hpp>
 #include <core/logging/LogChannels.hpp>
 
-#include <asset/Assets.hpp>
-
+#ifdef HYPERION_BUILD_LIBRARY
 #include <HyperionEngine.hpp>
+#endif
 
 namespace hyperion {
 namespace filesystem {
@@ -236,7 +238,11 @@ bool DataStoreBase::Exists(const String& key) const
 
 FilePath DataStoreBase::GetDirectory() const
 {
-    return GetResourceDirectory() / "data" / m_prefix;
+#ifdef HYPERION_BUILD_LIBRARY
+    return GetExecutablePath() / "data" / m_prefix;
+#else
+    return FilePath::Current() / "data" / m_prefix;
+#endif
 }
 
 } // namespace filesystem

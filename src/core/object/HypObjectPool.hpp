@@ -117,8 +117,10 @@ struct HypObjectHeader
         {
             if (AtomicCompareExchange(&refCountStrong, count, count + 1))
             {
+#ifdef HYP_DOTNET
                 // if count was added successfully (and now, greater than 1), we can acquire the lock for the managed object
                 HypObject_AcquireManagedObjectLock(GetObjectPointer(this));
+#endif
 
                 return true;
             }
@@ -131,11 +133,13 @@ struct HypObjectHeader
     uint32 IncRefStrong()
     {
         const int32 count = AtomicIncrement(&refCountStrong);
-
+        
+#ifdef HYP_DOTNET
         if (count > 1)
         {
             HypObject_AcquireManagedObjectLock(GetObjectPointer(this));
         }
+#endif
 
         return count;
     }
@@ -167,11 +171,13 @@ struct HypObjectHeader
         }
 
         HYP_CORE_ASSERT(count > 0, "RefCount bug! strong count went negative");
-
+        
+#ifdef HYP_DOTNET
         if (count > 1)
         {
             HypObject_ReleaseManagedObjectLock(GetObjectPointer(this));
         }
+#endif
 
         return (uint32)count;
     }

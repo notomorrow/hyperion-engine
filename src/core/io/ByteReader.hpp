@@ -6,6 +6,8 @@
 #include <core/memory/ByteBuffer.hpp>
 #include <core/Types.hpp>
 
+#include <iostream>
+
 namespace hyperion {
 class ByteReader
 {

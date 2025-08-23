@@ -11,7 +11,7 @@
 namespace hyperion {
 namespace utilities {
 
-// Int types
+// int types
 template <class StringType, class T>
 struct Formatter<StringType, T, std::enable_if_t<std::is_integral_v<T>>>
 {

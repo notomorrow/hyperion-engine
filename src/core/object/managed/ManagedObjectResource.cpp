@@ -4,6 +4,7 @@
 
 #include <core/logging/Logger.hpp>
 
+#ifdef HYP_DOTNET
 #include <dotnet/Object.hpp>
 #include <dotnet/Class.hpp>
 
@@ -137,3 +138,5 @@ void ManagedObjectResource::Destroy()
 }
 
 } // namespace hyperion
+
+#endif

@@ -13,8 +13,10 @@
 
 #include <core/containers/Stack.hpp>
 
+#ifdef HYP_DOTNET
 #include <dotnet/Class.hpp>
 #include <dotnet/Object.hpp>
+#endif
 
 namespace hyperion {
 
@@ -57,6 +59,7 @@ HypObjectInitializerGuardBase::~HypObjectInitializerGuardBase()
     HypObjectBase* target = reinterpret_cast<HypObjectBase*>(ptr.GetPointer());
     AssertDebug(target->GetObjectHeader_Internal()->GetRefCountStrong() == 1);
 
+#ifdef HYP_DOTNET
     if (!(ptr.GetClass()->GetFlags() & HypClassFlags::NO_SCRIPT_BINDINGS))
     {
         HypObjectInitializerContext* context = GetGlobalContext<HypObjectInitializerContext>();
@@ -81,6 +84,7 @@ HypObjectInitializerGuardBase::~HypObjectInitializerGuardBase()
             }
         }
     }
+#endif
 }
 
 #pragma endregion HypObjectInitializerGuardBase
@@ -143,12 +147,14 @@ HypObjectBase::HypObjectBase()
 HypObjectBase::~HypObjectBase()
 {
     HYP_CORE_ASSERT(m_header != nullptr);
-
+    
+#ifdef HYP_DOTNET
     if (m_managedObjectResource)
     {
         FreeResource(m_managedObjectResource);
         m_managedObjectResource = nullptr;
     }
+#endif
 }
 
 #pragma endregion HypObjectBase
@@ -221,6 +227,8 @@ HYP_API void HypObjectPtr::DecRef(bool weak)
 
 #pragma endregion HypObjectPtr
 
+#ifdef HYP_DOTNET
+
 HYP_API void HypObject_AcquireManagedObjectLock(HypObjectBase* ptr)
 {
     AssertDebug(ptr->GetObjectHeader_Internal()->GetRefCountStrong() > 1);
@@ -237,5 +245,7 @@ HYP_API void HypObject_ReleaseManagedObjectLock(HypObjectBase* ptr)
         managedObjectResource->DecRef();
     }
 }
+
+#endif
 
 } // namespace hyperion

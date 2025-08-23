@@ -2,6 +2,8 @@
 
 #pragma once
 
+#ifdef HYP_DOTNET
+
 #include <core/Defines.hpp>
 
 #include <core/object/HypObjectFwd.hpp>
@@ -60,3 +62,5 @@ protected:
 };
 
 } // namespace hyperion
+
+#endif
