@@ -22,7 +22,7 @@ public:
 
     virtual Tribool IsTrue() const override;
     virtual bool MayHaveSideEffects() const override;
-    virtual SymbolTypePtr_t GetExprType() const override;
+    virtual SymbolTypeRef GetExprType() const override;
 
     virtual HashCode GetHashCode() const override
     {
@@ -36,7 +36,7 @@ protected:
     String m_fieldName;
 
     // set while analyzing
-    SymbolTypePtr_t m_exprType;
+    SymbolTypeRef m_exprType;
     RC<AstExpression> m_exprValue;
 
     RC<AstModuleProperty> CloneImpl() const

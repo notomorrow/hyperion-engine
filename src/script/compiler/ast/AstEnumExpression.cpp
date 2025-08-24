@@ -94,7 +94,7 @@ void AstEnumExpression::Visit(AstVisitor* visitor, Module* mod)
         ++enumCounter;
     }
 
-    SymbolTypePtr_t underlyingType = BuiltinTypes::INT;
+    SymbolTypeRef underlyingType = BuiltinTypes::INT;
 
     if (auto heldType = m_underlyingType->GetHeldType())
     {
@@ -147,7 +147,7 @@ bool AstEnumExpression::MayHaveSideEffects() const
     return m_expr->MayHaveSideEffects();
 }
 
-SymbolTypePtr_t AstEnumExpression::GetExprType() const
+SymbolTypeRef AstEnumExpression::GetExprType() const
 {
     Assert(m_expr != nullptr);
     return m_expr->GetExprType();

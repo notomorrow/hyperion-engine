@@ -9,7 +9,7 @@ class AstTypeRef : public AstExpression
 {
 public:
     AstTypeRef(
-        const SymbolTypePtr_t& symbolType,
+        const SymbolTypeRef& symbolType,
         const SourceLocation& location);
 
     virtual ~AstTypeRef() = default;
@@ -23,8 +23,8 @@ public:
     virtual Tribool IsTrue() const override;
     virtual bool MayHaveSideEffects() const override;
 
-    virtual SymbolTypePtr_t GetExprType() const override;
-    virtual SymbolTypePtr_t GetHeldType() const override;
+    virtual SymbolTypeRef GetExprType() const override;
+    virtual SymbolTypeRef GetHeldType() const override;
 
     virtual HashCode GetHashCode() const override
     {
@@ -35,7 +35,7 @@ public:
     }
 
 private:
-    SymbolTypePtr_t m_symbolType;
+    SymbolTypeRef m_symbolType;
 
     // set while analyzing
     bool m_isVisited;

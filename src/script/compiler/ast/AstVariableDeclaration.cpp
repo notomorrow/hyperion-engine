@@ -80,11 +80,11 @@ void AstVariableDeclaration::Visit(AstVisitor* visitor, Module* mod)
             auto* valueOf = m_proto->GetDeepValueOf();
             Assert(valueOf != nullptr);
 
-            SymbolTypePtr_t protoExprType = valueOf->GetExprType();
+            SymbolTypeRef protoExprType = valueOf->GetExprType();
             Assert(protoExprType != nullptr);
             protoExprType = protoExprType->GetUnaliased();
 
-            SymbolTypePtr_t protoHeldType = valueOf->GetHeldType();
+            SymbolTypeRef protoHeldType = valueOf->GetHeldType();
             if (protoHeldType != nullptr)
             {
                 protoHeldType = protoHeldType->GetUnaliased();

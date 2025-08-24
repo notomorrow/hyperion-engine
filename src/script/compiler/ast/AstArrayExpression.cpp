@@ -44,7 +44,7 @@ void AstArrayExpression::Visit(AstVisitor* visitor, Module* mod)
 
     m_replacedMembers.Reserve(m_members.Size());
 
-    FlatSet<SymbolTypePtr_t> heldTypes;
+    FlatSet<SymbolTypeRef> heldTypes;
 
     for (auto& member : m_members)
     {
@@ -98,7 +98,7 @@ void AstArrayExpression::Visit(AstVisitor* visitor, Module* mod)
         auto& member = m_members[index];
         Assert(member != nullptr);
 
-        if (SymbolTypePtr_t exprType = member->GetExprType())
+        if (SymbolTypeRef exprType = member->GetExprType())
         {
             if (!exprType->TypeEqual(*m_heldType))
             {
@@ -171,7 +171,7 @@ void AstArrayExpression::Visit(AstVisitor* visitor, Module* mod)
     auto* arrayTypeExprValueOf = m_arrayTypeExpr->GetDeepValueOf();
     Assert(arrayTypeExprValueOf != nullptr);
 
-    SymbolTypePtr_t arrayType = arrayTypeExprValueOf->GetHeldType();
+    SymbolTypeRef arrayType = arrayTypeExprValueOf->GetHeldType();
 
     if (arrayType == nullptr)
     {
@@ -384,7 +384,7 @@ bool AstArrayExpression::MayHaveSideEffects() const
     return sideEffects;
 }
 
-SymbolTypePtr_t AstArrayExpression::GetExprType() const
+SymbolTypeRef AstArrayExpression::GetExprType() const
 {
     if (m_exprType == nullptr)
     {

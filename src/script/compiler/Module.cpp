@@ -220,9 +220,9 @@ RC<Identifier> Module::LookUpIdentifierDepth(const String& name, int depthLevel)
     return nullptr;
 }
 
-SymbolTypePtr_t Module::LookupSymbolType(const String& name)
+SymbolTypeRef Module::LookupSymbolType(const String& name)
 {
-    return PerformLookup<SymbolTypePtr_t>(
+    return PerformLookup<SymbolTypeRef>(
         [&name](TreeNode<Scope>* top)
         {
             return top->Get().GetIdentifierTable().LookupSymbolType(name);
@@ -232,24 +232,24 @@ SymbolTypePtr_t Module::LookupSymbolType(const String& name)
             return mod->LookupSymbolType(name);
         });
 }
-Variant<RC<Identifier>, SymbolTypePtr_t> Module::LookUpIdentifierOrSymbolType(const String& name)
+Variant<RC<Identifier>, SymbolTypeRef> Module::LookUpIdentifierOrSymbolType(const String& name)
 {
-    return PerformLookup<Variant<RC<Identifier>, SymbolTypePtr_t>>(
-        [&name](TreeNode<Scope>* top) -> Variant<RC<Identifier>, SymbolTypePtr_t>
+    return PerformLookup<Variant<RC<Identifier>, SymbolTypeRef>>(
+        [&name](TreeNode<Scope>* top) -> Variant<RC<Identifier>, SymbolTypeRef>
         {
-            if (SymbolTypePtr_t symbolType = top->Get().GetIdentifierTable().LookupSymbolType(name))
+            if (SymbolTypeRef symbolType = top->Get().GetIdentifierTable().LookupSymbolType(name))
             {
-                return Variant<RC<Identifier>, SymbolTypePtr_t>(symbolType);
+                return Variant<RC<Identifier>, SymbolTypeRef>(symbolType);
             }
 
             if (RC<Identifier> result = top->Get().GetIdentifierTable().LookUpIdentifier(name))
             {
-                return Variant<RC<Identifier>, SymbolTypePtr_t>(result);
+                return Variant<RC<Identifier>, SymbolTypeRef>(result);
             }
 
-            return Variant<RC<Identifier>, SymbolTypePtr_t>();
+            return Variant<RC<Identifier>, SymbolTypeRef>();
         },
-        [&name](Module* mod) -> Variant<RC<Identifier>, SymbolTypePtr_t>
+        [&name](Module* mod) -> Variant<RC<Identifier>, SymbolTypeRef>
         {
             return mod->LookUpIdentifierOrSymbolType(name);
         });

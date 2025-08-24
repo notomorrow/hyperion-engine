@@ -37,7 +37,7 @@ void AstPrototypeSpecification::Visit(AstVisitor* visitor, Module* mod)
     const AstExpression* valueOf = m_expr->GetDeepValueOf();
     Assert(valueOf != nullptr);
 
-    SymbolTypePtr_t heldType = valueOf->GetHeldType();
+    SymbolTypeRef heldType = valueOf->GetHeldType();
 
     if (heldType == nullptr)
     {
@@ -131,7 +131,7 @@ void AstPrototypeSpecification::Optimize(AstVisitor* visitor, Module* mod)
     m_expr->Optimize(visitor, mod);
 }
 
-bool AstPrototypeSpecification::FindPrototypeType(const SymbolTypePtr_t& symbolType)
+bool AstPrototypeSpecification::FindPrototypeType(const SymbolTypeRef& symbolType)
 {
     if (symbolType->GetTypeClass() == TYPE_BUILTIN || symbolType->IsGenericParameter())
     {
@@ -178,7 +178,7 @@ bool AstPrototypeSpecification::MayHaveSideEffects() const
     return m_expr->MayHaveSideEffects();
 }
 
-SymbolTypePtr_t AstPrototypeSpecification::GetExprType() const
+SymbolTypeRef AstPrototypeSpecification::GetExprType() const
 {
     if (m_expr != nullptr)
     {
@@ -208,7 +208,7 @@ const AstExpression* AstPrototypeSpecification::GetDeepValueOf() const
     return AstExpression::GetDeepValueOf();
 }
 
-SymbolTypePtr_t AstPrototypeSpecification::GetHeldType() const
+SymbolTypeRef AstPrototypeSpecification::GetHeldType() const
 {
     if (m_symbolType != nullptr)
     {

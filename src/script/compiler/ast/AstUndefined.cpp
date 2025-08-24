@@ -39,7 +39,7 @@ float AstUndefined::FloatValue() const
     return 0.0f;
 }
 
-SymbolTypePtr_t AstUndefined::GetExprType() const
+SymbolTypeRef AstUndefined::GetExprType() const
 {
     return BuiltinTypes::UNDEFINED;
 }

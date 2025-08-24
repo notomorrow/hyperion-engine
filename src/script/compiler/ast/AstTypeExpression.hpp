@@ -31,7 +31,7 @@ public:
         const Array<RC<AstVariableDeclaration>>& dataMembers,
         const Array<RC<AstVariableDeclaration>>& functionMembers,
         const Array<RC<AstVariableDeclaration>>& staticMembers,
-        const SymbolTypePtr_t& enumUnderlyingType,
+        const SymbolTypeRef& enumUnderlyingType,
         bool isProxyClass,
         const SourceLocation& location);
 
@@ -93,8 +93,8 @@ public:
     virtual Tribool IsTrue() const override;
     virtual bool MayHaveSideEffects() const override;
 
-    virtual SymbolTypePtr_t GetExprType() const override;
-    virtual SymbolTypePtr_t GetHeldType() const override;
+    virtual SymbolTypeRef GetExprType() const override;
+    virtual SymbolTypeRef GetHeldType() const override;
 
     virtual const AstExpression* GetValueOf() const override;
     virtual const AstExpression* GetDeepValueOf() const override;
@@ -138,10 +138,10 @@ protected:
     Array<RC<AstVariableDeclaration>> m_dataMembers;
     Array<RC<AstVariableDeclaration>> m_functionMembers;
     Array<RC<AstVariableDeclaration>> m_staticMembers;
-    SymbolTypePtr_t m_enumUnderlyingType;
+    SymbolTypeRef m_enumUnderlyingType;
     bool m_isProxyClass;
 
-    SymbolTypePtr_t m_symbolType;
+    SymbolTypeRef m_symbolType;
 
     RC<AstTypeObject> m_typeObject;
     RC<AstTypeObject> m_prototypeExpr;

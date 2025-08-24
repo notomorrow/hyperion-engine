@@ -45,7 +45,7 @@ void AstAsExpression::Visit(AstVisitor* visitor, Module* mod)
     auto* targetValueOf = m_target->GetDeepValueOf();
     Assert(targetValueOf != nullptr);
 
-    SymbolTypePtr_t targetType = targetValueOf->GetExprType();
+    SymbolTypeRef targetType = targetValueOf->GetExprType();
     if (targetType == nullptr)
     {
         return; // should be caught by the type specification
@@ -56,7 +56,7 @@ void AstAsExpression::Visit(AstVisitor* visitor, Module* mod)
     auto* typeSpecificationValueOf = m_typeSpecification->GetDeepValueOf();
     Assert(typeSpecificationValueOf != nullptr);
 
-    SymbolTypePtr_t heldType = typeSpecificationValueOf->GetHeldType();
+    SymbolTypeRef heldType = typeSpecificationValueOf->GetHeldType();
     if (heldType == nullptr)
     {
         return; // should be caught by the type specification
@@ -136,7 +136,7 @@ UniquePtr<Buildable> AstAsExpression::Build(AstVisitor* visitor, Module* mod)
     auto* valueOf = m_typeSpecification->GetDeepValueOf();
     Assert(valueOf != nullptr);
 
-    SymbolTypePtr_t heldType = valueOf->GetHeldType();
+    SymbolTypeRef heldType = valueOf->GetHeldType();
     Assert(heldType != nullptr);
     heldType = heldType->GetUnaliased();
 
@@ -199,12 +199,12 @@ RC<AstStatement> AstAsExpression::Clone() const
     return CloneImpl();
 }
 
-SymbolTypePtr_t AstAsExpression::GetExprType() const
+SymbolTypeRef AstAsExpression::GetExprType() const
 {
     Assert(m_target != nullptr);
     Assert(m_typeSpecification != nullptr);
 
-    if (SymbolTypePtr_t heldType = m_typeSpecification->GetHeldType())
+    if (SymbolTypeRef heldType = m_typeSpecification->GetHeldType())
     {
         return heldType;
     }

@@ -113,11 +113,11 @@ public:
     {
         Unalias()->m_currentValue = expr;
     }
-    const SymbolTypePtr_t& GetSymbolType() const
+    const SymbolTypeRef& GetSymbolType() const
     {
         return Unalias()->m_symbolType;
     }
-    void SetSymbolType(const SymbolTypePtr_t& symbolType)
+    void SetSymbolType(const SymbolTypeRef& symbolType)
     {
         Unalias()->m_symbolType = symbolType;
     }
@@ -149,7 +149,7 @@ private:
     IdentifierFlagBits m_flags;
     Identifier* m_aliasee;
     RC<AstExpression> m_currentValue;
-    SymbolTypePtr_t m_symbolType;
+    SymbolTypeRef m_symbolType;
     bool m_isReassigned;
 
     Array<GenericInstanceTypeInfo::Arg> m_templateParams;

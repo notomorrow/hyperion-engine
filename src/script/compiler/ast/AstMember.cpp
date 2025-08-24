@@ -61,11 +61,11 @@ void AstMember::Visit(AstVisitor* visitor, Module* mod)
             m_location));
     }
 
-    const SymbolTypePtr_t originalType = m_targetType;
+    const SymbolTypeRef originalType = m_targetType;
 
     // start looking at the target type,
     // iterate through base type
-    SymbolTypePtr_t fieldType = nullptr;
+    SymbolTypeRef fieldType = nullptr;
     SymbolTypeMember member;
 
     for (uint32 depth = 0; fieldType == nullptr && m_targetType != nullptr; depth++)
@@ -148,7 +148,7 @@ void AstMember::Visit(AstVisitor* visitor, Module* mod)
         const AstExpression* valueOf = m_target->GetDeepValueOf();
         Assert(valueOf != nullptr);
 
-        if (SymbolTypePtr_t heldType = valueOf->GetHeldType())
+        if (SymbolTypeRef heldType = valueOf->GetHeldType())
         {
             if (heldType->IsAnyType())
             {
@@ -355,7 +355,7 @@ bool AstMember::MayHaveSideEffects() const
     return m_target->MayHaveSideEffects() || m_accessMode == ACCESS_MODE_STORE;
 }
 
-SymbolTypePtr_t AstMember::GetExprType() const
+SymbolTypeRef AstMember::GetExprType() const
 {
     return m_symbolType;
     // if (m_overrideExpr != nullptr) {
@@ -370,7 +370,7 @@ SymbolTypePtr_t AstMember::GetExprType() const
     // return m_symbolType;
 }
 
-SymbolTypePtr_t AstMember::GetHeldType() const
+SymbolTypeRef AstMember::GetHeldType() const
 {
     if (m_heldType != nullptr)
     {

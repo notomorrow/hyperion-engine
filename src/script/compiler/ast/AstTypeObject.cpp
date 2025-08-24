@@ -19,17 +19,17 @@
 namespace hyperion::compiler {
 
 AstTypeObject::AstTypeObject(
-    const SymbolTypePtr_t& symbolType,
-    const SymbolTypePtr_t& baseSymbolType,
+    const SymbolTypeRef& symbolType,
+    const SymbolTypeRef& baseSymbolType,
     const SourceLocation& location)
     : AstTypeObject(symbolType, baseSymbolType, nullptr, false, location)
 {
 }
 
 AstTypeObject::AstTypeObject(
-    const SymbolTypePtr_t& symbolType,
-    const SymbolTypePtr_t& baseSymbolType,
-    const SymbolTypePtr_t& enumUnderlyingType,
+    const SymbolTypeRef& symbolType,
+    const SymbolTypeRef& baseSymbolType,
+    const SymbolTypeRef& enumUnderlyingType,
     bool isProxyClass,
     const SourceLocation& location)
     : AstExpression(location, ACCESS_MODE_LOAD),
@@ -53,7 +53,7 @@ void AstTypeObject::Visit(AstVisitor* visitor, Module* mod)
 
     if (m_baseSymbolType != nullptr)
     {
-        SymbolTypePtr_t baseType = m_baseSymbolType->GetUnaliased();
+        SymbolTypeRef baseType = m_baseSymbolType->GetUnaliased();
         m_baseTypeRef.Reset(new AstTypeRef(baseType, m_location));
         m_baseTypeRef->Visit(visitor, mod);
     }
@@ -66,7 +66,7 @@ void AstTypeObject::Visit(AstVisitor* visitor, Module* mod)
     {
         const SymbolTypeMember& member = m_symbolType->GetMembers()[index];
 
-        SymbolTypePtr_t memberType = member.type;
+        SymbolTypeRef memberType = member.type;
         Assert(memberType != nullptr);
         memberType = memberType->GetUnaliased();
 
@@ -282,7 +282,7 @@ bool AstTypeObject::MayHaveSideEffects() const
     return false;
 }
 
-SymbolTypePtr_t AstTypeObject::GetExprType() const
+SymbolTypeRef AstTypeObject::GetExprType() const
 {
     if (m_baseSymbolType == nullptr)
     {
@@ -292,7 +292,7 @@ SymbolTypePtr_t AstTypeObject::GetExprType() const
     return m_baseSymbolType;
 }
 
-SymbolTypePtr_t AstTypeObject::GetHeldType() const
+SymbolTypeRef AstTypeObject::GetHeldType() const
 {
     Assert(m_symbolType != nullptr);
 

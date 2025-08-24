@@ -441,7 +441,7 @@ bool AstVariable::MayHaveSideEffects() const
 
 bool AstVariable::IsLiteral() const
 {
-    if (SymbolTypePtr_t exprType = GetExprType())
+    if (SymbolTypeRef exprType = GetExprType())
     {
         exprType = exprType->GetUnaliased();
 
@@ -505,7 +505,7 @@ bool AstVariable::IsLiteral() const
     return false;
 }
 
-SymbolTypePtr_t AstVariable::GetExprType() const
+SymbolTypeRef AstVariable::GetExprType() const
 {
     if (m_typeRef != nullptr)
     {

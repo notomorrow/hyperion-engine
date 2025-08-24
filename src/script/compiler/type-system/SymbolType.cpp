@@ -16,7 +16,7 @@ namespace hyperion::compiler {
 SymbolType::SymbolType(
     const String& name,
     SymbolTypeClass typeClass,
-    const SymbolTypePtr_t& base)
+    const SymbolTypeRef& base)
     : m_name(name),
       m_typeClass(typeClass),
       m_defaultValue(nullptr),
@@ -29,7 +29,7 @@ SymbolType::SymbolType(
 SymbolType::SymbolType(
     const String& name,
     SymbolTypeClass typeClass,
-    const SymbolTypePtr_t& base,
+    const SymbolTypeRef& base,
     const RC<AstExpression>& defaultValue,
     const Array<SymbolTypeMember>& members)
     : m_name(name),
@@ -66,7 +66,7 @@ bool SymbolType::TypeEqual(const SymbolType& other) const
     case TYPE_BUILTIN:
         return true;
     case TYPE_ALIAS:
-        if (SymbolTypePtr_t sp = m_aliasInfo.m_aliasee.lock())
+        if (SymbolTypeRef sp = m_aliasInfo.m_aliasee.Lock())
         {
             return *sp == other;
         }
@@ -91,11 +91,11 @@ bool SymbolType::TypeEqual(const SymbolType& other) const
             return false;
         }
 
-        SymbolTypePtr_t base = m_base;
+        SymbolTypeRef base = m_base;
         Assert(base != nullptr);
 
         // check for compatibility between instances
-        SymbolTypePtr_t otherBase = other.GetBaseType();
+        SymbolTypeRef otherBase = other.GetBaseType();
         Assert(otherBase != nullptr);
 
         if (!base->TypeEqual(*otherBase))
@@ -112,8 +112,8 @@ bool SymbolType::TypeEqual(const SymbolType& other) const
         // check each substituted parameter
         for (SizeType i = 0; i < m_genericInstanceInfo.m_genericArgs.Size(); i++)
         {
-            const SymbolTypePtr_t& instanceArgType = m_genericInstanceInfo.m_genericArgs[i].m_type;
-            const SymbolTypePtr_t& otherArgType = other.m_genericInstanceInfo.m_genericArgs[i].m_type;
+            const SymbolTypeRef& instanceArgType = m_genericInstanceInfo.m_genericArgs[i].m_type;
+            const SymbolTypeRef& otherArgType = other.m_genericInstanceInfo.m_genericArgs[i].m_type;
 
             Assert(instanceArgType != nullptr);
             Assert(otherArgType != nullptr);
@@ -144,7 +144,7 @@ bool SymbolType::TypeEqual(const SymbolType& other) const
 
     for (const SymbolTypeMember& leftMember : m_members)
     {
-        const SymbolTypePtr_t& leftMemberType = leftMember.type;
+        const SymbolTypeRef& leftMemberType = leftMember.type;
         Assert(leftMemberType != nullptr);
 
         SymbolTypeMember rightMember;
@@ -233,7 +233,7 @@ bool SymbolType::TypeCompatible(
     {
     case TYPE_ALIAS:
     {
-        SymbolTypePtr_t sp = m_aliasInfo.m_aliasee.lock();
+        SymbolTypeRef sp = m_aliasInfo.m_aliasee.Lock();
         Assert(sp != nullptr);
 
         return sp->TypeCompatible(right, strictNumbers);
@@ -255,13 +255,13 @@ bool SymbolType::TypeCompatible(
     }
     case TYPE_GENERIC_INSTANCE:
     {
-        SymbolTypePtr_t base = m_base;
+        SymbolTypeRef base = m_base;
         Assert(base != nullptr);
 
         if (right.m_typeClass == TYPE_GENERIC_INSTANCE)
         {
             // check for compatibility between instances
-            SymbolTypePtr_t otherBase = right.GetBaseType();
+            SymbolTypeRef otherBase = right.GetBaseType();
             Assert(otherBase != nullptr);
 
             if (!base->TypeEqual(*otherBase))
@@ -278,8 +278,8 @@ bool SymbolType::TypeCompatible(
             // check each substituted parameter
             for (SizeType i = 0; i < m_genericInstanceInfo.m_genericArgs.Size(); i++)
             {
-                const SymbolTypePtr_t& paramType = m_genericInstanceInfo.m_genericArgs[i].m_type;
-                const SymbolTypePtr_t& otherParamType = right.m_genericInstanceInfo.m_genericArgs[i].m_type;
+                const SymbolTypeRef& paramType = m_genericInstanceInfo.m_genericArgs[i].m_type;
+                const SymbolTypeRef& otherParamType = right.m_genericInstanceInfo.m_genericArgs[i].m_type;
 
                 Assert(paramType != nullptr);
                 Assert(otherParamType != nullptr);
@@ -318,7 +318,7 @@ bool SymbolType::TypeCompatible(
     return true;
 }
 
-const SymbolTypePtr_t SymbolType::FindMember(const String& name) const
+const SymbolTypeRef SymbolType::FindMember(const String& name) const
 {
     for (const SymbolTypeMember& member : m_members)
     {
@@ -393,7 +393,7 @@ bool SymbolType::FindMemberDeep(const String& name, SymbolTypeMember& out, uint3
 
     outDepth++;
 
-    SymbolTypePtr_t basePtr = GetBaseType();
+    SymbolTypeRef basePtr = GetBaseType();
 
     while (basePtr != nullptr)
     {
@@ -410,9 +410,9 @@ bool SymbolType::FindMemberDeep(const String& name, SymbolTypeMember& out, uint3
     return false;
 }
 
-const SymbolTypePtr_t SymbolType::FindPrototypeMember(const String& name) const
+const SymbolTypeRef SymbolType::FindPrototypeMember(const String& name) const
 {
-    if (SymbolTypePtr_t protoType = FindMember("$proto"))
+    if (SymbolTypeRef protoType = FindMember("$proto"))
     {
         if (protoType->IsAnyType() || protoType->IsPlaceholderType())
         {
@@ -427,7 +427,7 @@ const SymbolTypePtr_t SymbolType::FindPrototypeMember(const String& name) const
 
 bool SymbolType::FindPrototypeMember(const String& name, SymbolTypeMember& out) const
 {
-    if (SymbolTypePtr_t protoType = FindMember("$proto"))
+    if (SymbolTypeRef protoType = FindMember("$proto"))
     {
         return protoType->FindMember(name, out);
     }
@@ -449,7 +449,7 @@ bool SymbolType::FindPrototypeMemberDeep(const String& name, SymbolTypeMember& o
         return true;
     }
 
-    SymbolTypePtr_t basePtr = GetBaseType();
+    SymbolTypeRef basePtr = GetBaseType();
 
     while (basePtr != nullptr)
     {
@@ -469,7 +469,7 @@ bool SymbolType::FindPrototypeMember(const String& name, SymbolTypeMember& out, 
     bool found = false;
 
     // for instance members (do it last, so it can be overridden by instances)
-    if (SymbolTypePtr_t protoType = FindMember("$proto"))
+    if (SymbolTypeRef protoType = FindMember("$proto"))
     {
         // get member index from name
         for (SizeType i = 0; i < protoType->GetMembers().Size(); i++)
@@ -526,7 +526,7 @@ bool SymbolType::IsOrHasBase(const SymbolType& baseType) const
 
 bool SymbolType::HasBase(const SymbolType& baseType) const
 {
-    if (SymbolTypePtr_t thisBase = GetBaseType())
+    if (SymbolTypeRef thisBase = GetBaseType())
     {
         if (thisBase->TypeEqual(baseType))
         {
@@ -541,13 +541,13 @@ bool SymbolType::HasBase(const SymbolType& baseType) const
     return false;
 }
 
-SymbolTypePtr_t SymbolType::GetUnaliased()
+SymbolTypeRef SymbolType::GetUnaliased()
 {
     if (m_typeClass == TYPE_ALIAS)
     {
-        if (const SymbolTypePtr_t aliasee = m_aliasInfo.m_aliasee.lock())
+        if (SymbolTypeRef aliasee = m_aliasInfo.m_aliasee.Lock())
         {
-            if (aliasee.get() == this)
+            if (aliasee.Get() == this)
             {
                 return aliasee;
             }
@@ -556,7 +556,7 @@ SymbolTypePtr_t SymbolType::GetUnaliased()
         }
     }
 
-    return shared_from_this();
+    return RefCountedPtrFromThis();
 }
 
 bool SymbolType::IsNumber() const
@@ -657,13 +657,13 @@ bool SymbolType::IsEnumType() const
     return IsOrHasBase(*BuiltinTypes::ENUM_TYPE);
 }
 
-SymbolTypePtr_t SymbolType::Alias(
+SymbolTypeRef SymbolType::Alias(
     const String& name,
     const AliasTypeInfo& info)
 {
-    if (auto sp = info.m_aliasee.lock())
+    if (auto sp = info.m_aliasee.Lock())
     {
-        SymbolTypePtr_t res(new SymbolType(
+        SymbolTypeRef res(new SymbolType(
             name,
             TYPE_ALIAS,
             nullptr));
@@ -677,11 +677,11 @@ SymbolTypePtr_t SymbolType::Alias(
     return nullptr;
 }
 
-SymbolTypePtr_t SymbolType::Primitive(
+SymbolTypeRef SymbolType::Primitive(
     const String& name,
     const RC<AstExpression>& defaultValue)
 {
-    return SymbolTypePtr_t(new SymbolType(
+    return SymbolTypeRef(new SymbolType(
         name,
         TYPE_BUILTIN,
         BuiltinTypes::PRIMITIVE_TYPE,
@@ -689,12 +689,12 @@ SymbolTypePtr_t SymbolType::Primitive(
         {}));
 }
 
-SymbolTypePtr_t SymbolType::Primitive(
+SymbolTypeRef SymbolType::Primitive(
     const String& name,
     const RC<AstExpression>& defaultValue,
-    const SymbolTypePtr_t& base)
+    const SymbolTypeRef& base)
 {
-    return SymbolTypePtr_t(new SymbolType(
+    return SymbolTypeRef(new SymbolType(
         name,
         TYPE_BUILTIN,
         base,
@@ -702,11 +702,11 @@ SymbolTypePtr_t SymbolType::Primitive(
         {}));
 }
 
-SymbolTypePtr_t SymbolType::Object(
+SymbolTypeRef SymbolType::Object(
     const String& name,
     const Array<SymbolTypeMember>& members)
 {
-    SymbolTypePtr_t symbolType(new SymbolType(
+    SymbolTypeRef symbolType(new SymbolType(
         name,
         TYPE_USER_DEFINED,
         BuiltinTypes::CLASS_TYPE,
@@ -720,11 +720,11 @@ SymbolTypePtr_t SymbolType::Object(
     return symbolType;
 }
 
-SymbolTypePtr_t SymbolType::Object(const String& name,
+SymbolTypeRef SymbolType::Object(const String& name,
     const Array<SymbolTypeMember>& members,
-    const SymbolTypePtr_t& base)
+    const SymbolTypeRef& base)
 {
-    SymbolTypePtr_t symbolType(new SymbolType(
+    SymbolTypeRef symbolType(new SymbolType(
         name,
         TYPE_USER_DEFINED,
         base,
@@ -738,12 +738,12 @@ SymbolTypePtr_t SymbolType::Object(const String& name,
     return symbolType;
 }
 
-SymbolTypePtr_t SymbolType::Generic(const String& name,
+SymbolTypeRef SymbolType::Generic(const String& name,
     const Array<SymbolTypeMember>& members,
     const GenericTypeInfo& info,
-    const SymbolTypePtr_t& base)
+    const SymbolTypeRef& base)
 {
-    SymbolTypePtr_t res(new SymbolType(
+    SymbolTypeRef res(new SymbolType(
         name,
         TYPE_GENERIC,
         base,
@@ -755,13 +755,13 @@ SymbolTypePtr_t SymbolType::Generic(const String& name,
     return res;
 }
 
-SymbolTypePtr_t SymbolType::Generic(const String& name,
+SymbolTypeRef SymbolType::Generic(const String& name,
     const RC<AstExpression>& defaultValue,
     const Array<SymbolTypeMember>& members,
     const GenericTypeInfo& info,
-    const SymbolTypePtr_t& base)
+    const SymbolTypeRef& base)
 {
-    SymbolTypePtr_t res(new SymbolType(
+    SymbolTypeRef res(new SymbolType(
         name,
         TYPE_GENERIC,
         base,
@@ -777,7 +777,7 @@ String SymbolType::ToString(bool includeParameterNames) const
 {
     String res = m_name;
 
-    if (SymbolTypePtr_t sp = m_aliasInfo.m_aliasee.lock())
+    if (SymbolTypeRef sp = m_aliasInfo.m_aliasee.Lock())
     {
         res += " (aka " + sp->ToString() + ")";
     }
@@ -800,7 +800,7 @@ String SymbolType::ToString(bool includeParameterNames) const
         {
             if (IsVarArgsType())
             {
-                const SymbolTypePtr_t& heldType = info.m_genericArgs.Front().m_type;
+                const SymbolTypeRef& heldType = info.m_genericArgs.Front().m_type;
                 Assert(heldType != nullptr);
 
                 return heldType->ToString() + "...";
@@ -815,7 +815,7 @@ String SymbolType::ToString(bool includeParameterNames) const
                 for (SizeType i = 0; i < info.m_genericArgs.Size(); i++)
                 {
                     const String& genericArgName = info.m_genericArgs[i].m_name;
-                    const SymbolTypePtr_t& genericArgType = info.m_genericArgs[i].m_type;
+                    const SymbolTypeRef& genericArgType = info.m_genericArgs[i].m_type;
 
                     Assert(genericArgType != nullptr);
 
@@ -869,8 +869,8 @@ String SymbolType::ToString(bool includeParameterNames) const
     return res;
 }
 
-SymbolTypePtr_t SymbolType::GenericInstance(
-    const SymbolTypePtr_t& base,
+SymbolTypeRef SymbolType::GenericInstance(
+    const SymbolTypeRef& base,
     const GenericInstanceTypeInfo& info,
     const Array<SymbolTypeMember>& members)
 {
@@ -893,7 +893,7 @@ SymbolTypePtr_t SymbolType::GenericInstance(
             CloneAstNode(member.expr) });
     }
 
-    SymbolTypePtr_t currentBase = base;
+    SymbolTypeRef currentBase = base;
 
     while (currentBase != nullptr)
     {
@@ -920,7 +920,7 @@ SymbolTypePtr_t SymbolType::GenericInstance(
         currentBase = currentBase->GetBaseType();
     }
 
-    SymbolTypePtr_t res(new SymbolType(
+    SymbolTypeRef res(new SymbolType(
         name,
         TYPE_GENERIC_INSTANCE,
         base,
@@ -936,18 +936,18 @@ SymbolTypePtr_t SymbolType::GenericInstance(
     return res;
 }
 
-SymbolTypePtr_t SymbolType::GenericInstance(
-    const SymbolTypePtr_t& base,
+SymbolTypeRef SymbolType::GenericInstance(
+    const SymbolTypeRef& base,
     const GenericInstanceTypeInfo& info)
 {
     return GenericInstance(base, info, {});
 }
 
-SymbolTypePtr_t SymbolType::GenericParameter(
+SymbolTypeRef SymbolType::GenericParameter(
     const String& name,
-    const SymbolTypePtr_t& base)
+    const SymbolTypeRef& base)
 {
-    SymbolTypePtr_t res(new SymbolType(
+    SymbolTypeRef res(new SymbolType(
         name,
         TYPE_GENERIC_PARAMETER,
         base));
@@ -955,14 +955,14 @@ SymbolTypePtr_t SymbolType::GenericParameter(
     return res;
 }
 
-SymbolTypePtr_t SymbolType::Extend(
+SymbolTypeRef SymbolType::Extend(
     const String& name,
-    const SymbolTypePtr_t& base,
+    const SymbolTypeRef& base,
     const Array<SymbolTypeMember>& members)
 {
     Assert(base != nullptr);
 
-    SymbolTypePtr_t symbolType(new SymbolType(
+    SymbolTypeRef symbolType(new SymbolType(
         name,
         base->GetTypeClass() == TYPE_BUILTIN
             ? TYPE_USER_DEFINED
@@ -983,9 +983,9 @@ SymbolTypePtr_t SymbolType::Extend(
     return symbolType;
 }
 
-SymbolTypePtr_t SymbolType::TypePromotion(
-    const SymbolTypePtr_t& lptr,
-    const SymbolTypePtr_t& rptr)
+SymbolTypeRef SymbolType::TypePromotion(
+    const SymbolTypeRef& lptr,
+    const SymbolTypeRef& rptr)
 {
     if (lptr == nullptr || rptr == nullptr)
     {
@@ -1038,9 +1038,9 @@ SymbolTypePtr_t SymbolType::TypePromotion(
     return BuiltinTypes::UNDEFINED;
 }
 
-SymbolTypePtr_t SymbolType::GenericPromotion(
-    const SymbolTypePtr_t& lptr,
-    const SymbolTypePtr_t& rptr)
+SymbolTypeRef SymbolType::GenericPromotion(
+    const SymbolTypeRef& lptr,
+    const SymbolTypeRef& rptr)
 {
     Assert(lptr != nullptr);
     Assert(rptr != nullptr);
@@ -1082,10 +1082,10 @@ SymbolTypePtr_t SymbolType::GenericPromotion(
     return lptr;
 }
 
-SymbolTypePtr_t SymbolType::SubstituteGenericParams(
-    const SymbolTypePtr_t& lptr,
-    const SymbolTypePtr_t& placeholder,
-    const SymbolTypePtr_t& substitute)
+SymbolTypeRef SymbolType::SubstituteGenericParams(
+    const SymbolTypeRef& lptr,
+    const SymbolTypeRef& placeholder,
+    const SymbolTypeRef& substitute)
 {
     Assert(lptr != nullptr);
     Assert(placeholder != nullptr);
@@ -1100,14 +1100,14 @@ SymbolTypePtr_t SymbolType::SubstituteGenericParams(
     {
     case TYPE_GENERIC_INSTANCE:
     {
-        SymbolTypePtr_t baseType = lptr->GetBaseType();
+        SymbolTypeRef baseType = lptr->GetBaseType();
         Assert(baseType != nullptr);
 
         Array<GenericInstanceTypeInfo::Arg> newGenericTypes;
 
         for (const GenericInstanceTypeInfo::Arg& arg : lptr->GetGenericInstanceInfo().m_genericArgs)
         {
-            const SymbolTypePtr_t& argType = arg.m_type;
+            const SymbolTypeRef& argType = arg.m_type;
             Assert(argType != nullptr);
 
             GenericInstanceTypeInfo::Arg newArg;
@@ -1115,7 +1115,7 @@ SymbolTypePtr_t SymbolType::SubstituteGenericParams(
             newArg.m_defaultValue = arg.m_defaultValue;
 
             // perform substitution
-            SymbolTypePtr_t argTypeSubstituted = SubstituteGenericParams(
+            SymbolTypeRef argTypeSubstituted = SubstituteGenericParams(
                 argType,
                 placeholder,
                 substitute);
@@ -1156,7 +1156,7 @@ HashCode SymbolType::GetHashCodeWithDuplicateRemoval(FlatSet<String>& duplicateN
     case TYPE_BUILTIN:
         break;
     case TYPE_ALIAS:
-        if (auto aliasee = m_aliasInfo.m_aliasee.lock())
+        if (auto aliasee = m_aliasInfo.m_aliasee.Lock())
         {
             hc.Add(aliasee->GetHashCodeWithDuplicateRemoval(duplicateNames));
         }

@@ -27,7 +27,7 @@ CompilationUnit::CompilationUnit()
 
 CompilationUnit::~CompilationUnit() = default;
 
-void CompilationUnit::RegisterType(const SymbolTypePtr_t& typePtr)
+void CompilationUnit::RegisterType(const SymbolTypeRef& typePtr)
 {
     Assert(typePtr != nullptr);
 
@@ -41,7 +41,7 @@ void CompilationUnit::RegisterType(const SymbolTypePtr_t& typePtr)
 
     const HashCode typePtrHashCode = typePtr->GetHashCode();
 
-    auto registeredTypesIt = m_registeredTypes.FindIf([typePtrHashCode](const SymbolTypePtr_t& type)
+    auto registeredTypesIt = m_registeredTypes.FindIf([typePtrHashCode](const SymbolTypeRef& type)
         {
             return type->GetHashCode() == typePtrHashCode;
         });

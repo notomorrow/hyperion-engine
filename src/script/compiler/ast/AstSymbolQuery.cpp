@@ -43,7 +43,7 @@ void AstSymbolQuery::Visit(AstVisitor* visitor, Module* mod)
         auto* valueOf = m_expr->GetDeepValueOf();
         Assert(valueOf != nullptr);
 
-        SymbolTypePtr_t heldType = valueOf->GetHeldType();
+        SymbolTypeRef heldType = valueOf->GetHeldType();
         if (heldType == nullptr)
         {
             visitor->GetCompilationUnit()->GetErrorList().AddError(CompilerError(
@@ -86,7 +86,7 @@ void AstSymbolQuery::Visit(AstVisitor* visitor, Module* mod)
         auto* valueOf = m_expr->GetDeepValueOf();
         Assert(valueOf != nullptr);
 
-        SymbolTypePtr_t heldType = valueOf->GetHeldType();
+        SymbolTypeRef heldType = valueOf->GetHeldType();
         if (heldType == nullptr)
         {
             visitor->GetCompilationUnit()->GetErrorList().AddError(CompilerError(
@@ -211,7 +211,7 @@ bool AstSymbolQuery::MayHaveSideEffects() const
     return false;
 }
 
-SymbolTypePtr_t AstSymbolQuery::GetExprType() const
+SymbolTypeRef AstSymbolQuery::GetExprType() const
 {
     if (m_resultValue != nullptr)
     {

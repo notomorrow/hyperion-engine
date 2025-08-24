@@ -27,9 +27,9 @@ void AstIdentifier::PerformLookup(AstVisitor* visitor, Module* mod)
             m_properties.m_identifier = identifierOrSymbolType.Get<RC<Identifier>>();
             m_properties.SetIdentifierType(IDENTIFIER_TYPE_VARIABLE);
         }
-        else if (identifierOrSymbolType.Is<SymbolTypePtr_t>())
+        else if (identifierOrSymbolType.Is<SymbolTypeRef>())
         {
-            m_properties.m_foundType = identifierOrSymbolType.Get<SymbolTypePtr_t>();
+            m_properties.m_foundType = identifierOrSymbolType.Get<SymbolTypeRef>();
             m_properties.SetIdentifierType(IDENTIFIER_TYPE_TYPE);
         }
 
@@ -144,7 +144,7 @@ const String& AstIdentifier::GetName() const
     return m_name;
 }
 
-SymbolTypePtr_t AstIdentifier::GetHeldType() const
+SymbolTypeRef AstIdentifier::GetHeldType() const
 {
     if (m_properties.GetIdentifierType() == IDENTIFIER_TYPE_TYPE)
     {

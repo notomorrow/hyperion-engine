@@ -164,7 +164,7 @@ bool AstTernaryExpression::MayHaveSideEffects() const
     return false;
 }
 
-SymbolTypePtr_t AstTernaryExpression::GetExprType() const
+SymbolTypeRef AstTernaryExpression::GetExprType() const
 {
     Assert(m_conditional != nullptr);
     Assert(m_left != nullptr);
@@ -176,14 +176,14 @@ SymbolTypePtr_t AstTernaryExpression::GetExprType() const
     {
         Assert(m_left != nullptr);
 
-        SymbolTypePtr_t lTypePtr = m_left->GetExprType();
+        SymbolTypeRef lTypePtr = m_left->GetExprType();
         Assert(lTypePtr != nullptr);
 
         if (m_right != nullptr)
         {
             // the right was not optimized away,
             // return type promotion
-            SymbolTypePtr_t rTypePtr = m_right->GetExprType();
+            SymbolTypeRef rTypePtr = m_right->GetExprType();
             Assert(rTypePtr != nullptr);
 
             return SymbolType::TypePromotion(lTypePtr, rTypePtr);

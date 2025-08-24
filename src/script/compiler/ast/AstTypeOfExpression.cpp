@@ -32,7 +32,7 @@ void AstTypeOfExpression::Visit(AstVisitor* visitor, Module* mod)
     Assert(valueOf != nullptr);
 
 #if HYP_SCRIPT_TYPEOF_RETURN_OBJECT
-    if (SymbolTypePtr_t exprType = valueOf->GetExprType())
+    if (SymbolTypeRef exprType = valueOf->GetExprType())
     {
         m_heldType = exprType->GetUnaliased();
     }
@@ -47,8 +47,8 @@ void AstTypeOfExpression::Visit(AstVisitor* visitor, Module* mod)
 #else
     m_symbolType = BuiltinTypes::STRING;
 
-    SymbolTypePtr_t exprType;
-    SymbolTypePtr_t unaliased;
+    SymbolTypeRef exprType;
+    SymbolTypeRef unaliased;
 
     if ((exprType = m_expr->GetExprType()) && (unaliased = exprType->GetUnaliased()))
     {
@@ -103,7 +103,7 @@ RC<AstStatement> AstTypeOfExpression::Clone() const
     return CloneImpl();
 }
 
-SymbolTypePtr_t AstTypeOfExpression::GetExprType() const
+SymbolTypeRef AstTypeOfExpression::GetExprType() const
 {
 #if HYP_SCRIPT_TYPEOF_RETURN_OBJECT
     Assert(m_typeRef != nullptr);
@@ -114,7 +114,7 @@ SymbolTypePtr_t AstTypeOfExpression::GetExprType() const
 #endif
 }
 
-SymbolTypePtr_t AstTypeOfExpression::GetHeldType() const
+SymbolTypeRef AstTypeOfExpression::GetHeldType() const
 {
 #if HYP_SCRIPT_TYPEOF_RETURN_OBJECT
     Assert(m_typeRef != nullptr);

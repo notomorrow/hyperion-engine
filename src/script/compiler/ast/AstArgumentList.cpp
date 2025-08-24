@@ -84,7 +84,7 @@ bool AstArgumentList::MayHaveSideEffects() const
     return false;
 }
 
-SymbolTypePtr_t AstArgumentList::GetExprType() const
+SymbolTypeRef AstArgumentList::GetExprType() const
 {
     return BuiltinTypes::ANY;
 }

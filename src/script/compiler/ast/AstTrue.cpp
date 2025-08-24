@@ -48,7 +48,7 @@ float AstTrue::FloatValue() const
     return 1.0f;
 }
 
-SymbolTypePtr_t AstTrue::GetExprType() const
+SymbolTypeRef AstTrue::GetExprType() const
 {
     return BuiltinTypes::BOOLEAN;
 }

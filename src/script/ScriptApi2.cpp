@@ -342,7 +342,7 @@ void Context::BindAll(APIInstance& apiInstance, VM* vm)
             classDefinition.name.Data());
 
         // Ensure class SymbolType is registered
-        SymbolTypePtr_t heldType = classDefinition.expr->GetHeldType();
+        SymbolTypeRef heldType = classDefinition.expr->GetHeldType();
         Assert(heldType != nullptr);
         heldType = heldType->GetUnaliased();
 

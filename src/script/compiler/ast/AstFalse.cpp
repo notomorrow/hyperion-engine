@@ -50,7 +50,7 @@ float AstFalse::FloatValue() const
     return 0.0f;
 }
 
-SymbolTypePtr_t AstFalse::GetExprType() const
+SymbolTypeRef AstFalse::GetExprType() const
 {
     return BuiltinTypes::BOOLEAN;
 }

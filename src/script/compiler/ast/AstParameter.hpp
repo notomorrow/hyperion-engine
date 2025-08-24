@@ -71,7 +71,7 @@ public:
         m_typeSpec = typeSpec;
     }
 
-    SymbolTypePtr_t GetExprType() const;
+    SymbolTypeRef GetExprType() const;
 
     virtual HashCode GetHashCode() const override
     {
@@ -95,7 +95,7 @@ private:
     bool m_isGenericParam;
 
     // Set while analyzing
-    SymbolTypePtr_t m_symbolType;
+    SymbolTypeRef m_symbolType;
     RC<AstExpression> m_varargsTypeSpec;
 
     RC<AstParameter> CloneImpl() const

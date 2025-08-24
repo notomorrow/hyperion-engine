@@ -18,7 +18,7 @@ public:
     virtual bool IsNumber() const override;
     virtual hyperion::int32 IntValue() const override;
     virtual float FloatValue() const override;
-    virtual SymbolTypePtr_t GetExprType() const override;
+    virtual SymbolTypeRef GetExprType() const override;
 
     virtual RC<AstConstant> HandleOperator(Operators opType, const AstConstant* right) const override;
 

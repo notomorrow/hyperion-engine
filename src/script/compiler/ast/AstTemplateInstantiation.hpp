@@ -43,8 +43,8 @@ public:
 
     virtual Tribool IsTrue() const override;
     virtual bool MayHaveSideEffects() const override;
-    virtual SymbolTypePtr_t GetExprType() const override;
-    virtual SymbolTypePtr_t GetHeldType() const override;
+    virtual SymbolTypeRef GetExprType() const override;
+    virtual SymbolTypeRef GetHeldType() const override;
 
     virtual const AstExpression* GetValueOf() const override;
     virtual const AstExpression* GetDeepValueOf() const override;
@@ -63,14 +63,14 @@ public:
     }
 
 private:
-    void MakeSymbolTypeGenericInstance(SymbolTypePtr_t& symbolType);
+    void MakeSymbolTypeGenericInstance(SymbolTypeRef& symbolType);
 
     RC<AstExpression> m_expr;
     Array<GenericInstanceTypeInfo::Arg> m_genericArgs;
 
     // set while analyzing
-    SymbolTypePtr_t m_exprType;
-    SymbolTypePtr_t m_heldType;
+    SymbolTypeRef m_exprType;
+    SymbolTypeRef m_heldType;
 
     RC<AstTemplateInstantiationWrapper> CloneImpl() const
     {
@@ -98,8 +98,8 @@ public:
 
     virtual Tribool IsTrue() const override;
     virtual bool MayHaveSideEffects() const override;
-    virtual SymbolTypePtr_t GetExprType() const override;
-    virtual SymbolTypePtr_t GetHeldType() const override;
+    virtual SymbolTypeRef GetExprType() const override;
+    virtual SymbolTypeRef GetHeldType() const override;
 
     virtual const AstExpression* GetValueOf() const override;
     virtual const AstExpression* GetDeepValueOf() const override;
@@ -128,8 +128,8 @@ private:
     RC<AstExpression> m_targetExpr;
     RC<AstTypeObject> m_typeObject;
     Array<RC<AstArgument>> m_substitutedArgs;
-    SymbolTypePtr_t m_exprType;
-    SymbolTypePtr_t m_heldType;
+    SymbolTypeRef m_exprType;
+    SymbolTypeRef m_heldType;
     bool m_isVisited = false;
     bool m_isNative = false;
 

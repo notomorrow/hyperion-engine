@@ -96,7 +96,7 @@ RC<AstStatement> AstIsExpression::Clone() const
     return CloneImpl();
 }
 
-SymbolTypePtr_t AstIsExpression::GetExprType() const
+SymbolTypeRef AstIsExpression::GetExprType() const
 {
     return BuiltinTypes::BOOLEAN;
 }

@@ -26,7 +26,7 @@ struct ArgInfo
 {
     bool isNamed;
     String name;
-    SymbolTypePtr_t type;
+    SymbolTypeRef type;
 };
 
 class SemanticAnalyzer : public AstVisitor
@@ -51,13 +51,13 @@ public:
             SizeType numSuppliedArgs = -1);
 
     public:
-        static SymbolTypePtr_t GetVarArgType(
+        static SymbolTypeRef GetVarArgType(
             const Array<GenericInstanceTypeInfo::Arg>& genericArgs);
 
-        static SymbolTypePtr_t SubstituteGenericParameters(
+        static SymbolTypeRef SubstituteGenericParameters(
             AstVisitor* visitor,
             Module* mod,
-            const SymbolTypePtr_t& inputType,
+            const SymbolTypeRef& inputType,
             const Array<GenericInstanceTypeInfo::Arg>& genericArgs,
             const Array<SubstitutionResult>& substitutionResults,
             const SourceLocation& location);
@@ -65,7 +65,7 @@ public:
         static Optional<SymbolTypeFunctionSignature> ExtractGenericArgs(
             AstVisitor* visitor,
             Module* mod,
-            const SymbolTypePtr_t& symbolType,
+            const SymbolTypeRef& symbolType,
             const Array<RC<AstArgument>>& args,
             const SourceLocation& location,
             Array<SubstitutionResult> (*fn)(
@@ -78,35 +78,35 @@ public:
         static void CheckArgTypeCompatible(
             AstVisitor* visitor,
             const SourceLocation& location,
-            const SymbolTypePtr_t& argType,
-            const SymbolTypePtr_t& paramType);
+            const SymbolTypeRef& argType,
+            const SymbolTypeRef& paramType);
 
         static Optional<SymbolTypeFunctionSignature> SubstituteFunctionArgs(
             AstVisitor* visitor,
             Module* mod,
-            const SymbolTypePtr_t& symbolType,
+            const SymbolTypeRef& symbolType,
             const Array<RC<AstArgument>>& args,
             const SourceLocation& location);
 
         static void EnsureFunctionArgCompatibility(
             AstVisitor* visitor,
             Module* mod,
-            const SymbolTypePtr_t& symbolType,
+            const SymbolTypeRef& symbolType,
             const Array<RC<AstArgument>>& args,
             const SourceLocation& location);
 
         static void EnsureLooseTypeAssignmentCompatibility(
             AstVisitor* visitor,
             Module* mod,
-            const SymbolTypePtr_t& symbolType,
-            const SymbolTypePtr_t& assignmentType,
+            const SymbolTypeRef& symbolType,
+            const SymbolTypeRef& assignmentType,
             const SourceLocation& location);
 
         static void EnsureTypeAssignmentCompatibility(
             AstVisitor* visitor,
             Module* mod,
-            const SymbolTypePtr_t& symbolType,
-            const SymbolTypePtr_t& assignmentType,
+            const SymbolTypeRef& symbolType,
+            const SymbolTypeRef& assignmentType,
             const SourceLocation& location);
     };
 

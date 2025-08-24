@@ -493,7 +493,7 @@ UniquePtr<BytecodeChunk> Compiler::Compile()
 
     // For all registered types, we need to build their type objects.
 
-    // for (const SymbolTypePtr_t &symbolType : m_compilationUnit->GetRegisteredTypes()) {
+    // for (const SymbolTypeRef &symbolType : m_compilationUnit->GetRegisteredTypes()) {
     //     Assert(symbolType != nullptr);
     //     Assert(symbolType->GetId() != -1, "Type %s has not been registered", symbolType->GetName().Data());
 

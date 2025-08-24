@@ -133,7 +133,7 @@ bool AstArgument::MayHaveSideEffects() const
     return m_expr->MayHaveSideEffects();
 }
 
-SymbolTypePtr_t AstArgument::GetExprType() const
+SymbolTypeRef AstArgument::GetExprType() const
 {
     Assert(m_expr != nullptr);
     return m_expr->GetExprType();

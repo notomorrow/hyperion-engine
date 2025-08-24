@@ -16,8 +16,6 @@
 
 namespace hyperion::compiler {
 
-typedef std::pair<SymbolTypePtr_t, SourceLocation> ReturnType_t;
-
 /*! \brief A cache for generic instances.
     \details
     Generic instances are cached so that they can be reused when the same
@@ -232,12 +230,12 @@ public:
         m_scopeFlags = flags;
     }
 
-    void AddReturnType(const SymbolTypePtr_t& type, const SourceLocation& location)
+    void AddReturnType(const SymbolTypeRef& type)
     {
-        m_returnTypes.PushBack({ type, location });
+        m_returnTypes.PushBack(type);
     }
 
-    const Array<ReturnType_t>& GetReturnTypes() const
+    const Array<SymbolTypeRef>& GetReturnTypes() const
     {
         return m_returnTypes;
     }
@@ -273,7 +271,7 @@ private:
     IdentifierTable m_identifierTable;
     ScopeType m_scopeType;
     int m_scopeFlags;
-    Array<ReturnType_t> m_returnTypes;
+    Array<SymbolTypeRef> m_returnTypes;
     HashMap<String, RC<Identifier>> m_closureCaptures;
     GenericInstanceCache m_genericInstanceCache;
 };

@@ -28,7 +28,7 @@ AstTypeExpression::AstTypeExpression(
     const Array<RC<AstVariableDeclaration>>& dataMembers,
     const Array<RC<AstVariableDeclaration>>& functionMembers,
     const Array<RC<AstVariableDeclaration>>& staticMembers,
-    const SymbolTypePtr_t& enumUnderlyingType,
+    const SymbolTypeRef& enumUnderlyingType,
     bool isProxyClass,
     const SourceLocation& location)
     : AstExpression(location, ACCESS_MODE_LOAD),
@@ -75,12 +75,12 @@ void AstTypeExpression::Visit(AstVisitor* visitor, Module* mod)
     // Create scope
     ScopeGuard scope(mod, SCOPE_TYPE_NORMAL, IsEnum() ? ScopeFunctionFlags::ENUM_MEMBERS_FLAG : 0);
 
-    SymbolTypePtr_t prototypeType = SymbolType::Object(
+    SymbolTypeRef prototypeType = SymbolType::Object(
         "$$" + m_name + "Prototype",
         {},
         BuiltinTypes::OBJECT);
 
-    SymbolTypePtr_t baseType = BuiltinTypes::OBJECT;
+    SymbolTypeRef baseType = BuiltinTypes::OBJECT;
 
     if (m_baseSpecification != nullptr)
     {
@@ -207,7 +207,7 @@ void AstTypeExpression::Visit(AstVisitor* visitor, Module* mod)
     // scope->GetIdentifierTable().AddSymbolType(m_symbolType);
 
     // if (mod->IsInScopeOfType(SCOPE_TYPE_NORMAL, UNINSTANTIATED_GENERIC_FLAG)) { // add symbol type to be usable within members
-    //     SymbolTypePtr_t placeholderType = m_symbolType;
+    //     SymbolTypeRef placeholderType = m_symbolType;
 
     //     // If the type is generic, we need to use a placeholder type
     //     // so that we can use the type within the type definition, without having to
@@ -246,7 +246,7 @@ void AstTypeExpression::Visit(AstVisitor* visitor, Module* mod)
             String memName = mem->GetName();
 
             Assert(mem->GetIdentifier() != nullptr);
-            SymbolTypePtr_t memType = mem->GetIdentifier()->GetSymbolType();
+            SymbolTypeRef memType = mem->GetIdentifier()->GetSymbolType();
 
             m_symbolType->AddMember(SymbolTypeMember {
                 memName,
@@ -357,7 +357,7 @@ void AstTypeExpression::Visit(AstVisitor* visitor, Module* mod)
 
             const SymbolTypeMember& constructorMemberRef = constructorMember.Get();
 
-            SymbolTypePtr_t constructorMemberType = constructorMemberRef.type;
+            SymbolTypeRef constructorMemberType = constructorMemberRef.type;
             Assert(constructorMemberType != nullptr);
             constructorMemberType = constructorMemberType->GetUnaliased();
 
@@ -376,7 +376,7 @@ void AstTypeExpression::Visit(AstVisitor* visitor, Module* mod)
                 {
                     const GenericInstanceTypeInfo::Arg& param = params[i];
 
-                    SymbolTypePtr_t paramType = param.m_type;
+                    SymbolTypeRef paramType = param.m_type;
                     Assert(paramType != nullptr);
                     paramType = paramType->GetUnaliased();
 
@@ -554,12 +554,12 @@ bool AstTypeExpression::MayHaveSideEffects() const
     return true;
 }
 
-SymbolTypePtr_t AstTypeExpression::GetExprType() const
+SymbolTypeRef AstTypeExpression::GetExprType() const
 {
     return BuiltinTypes::CLASS_TYPE;
 }
 
-SymbolTypePtr_t AstTypeExpression::GetHeldType() const
+SymbolTypeRef AstTypeExpression::GetHeldType() const
 {
     Assert(m_symbolType != nullptr);
 

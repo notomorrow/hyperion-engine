@@ -61,7 +61,7 @@ float AstInteger::FloatValue() const
     return (float)m_value;
 }
 
-SymbolTypePtr_t AstInteger::GetExprType() const
+SymbolTypeRef AstInteger::GetExprType() const
 {
     return BuiltinTypes::INT;
 }

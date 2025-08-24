@@ -30,7 +30,7 @@ public:
 
     virtual Tribool IsTrue() const override;
     virtual bool MayHaveSideEffects() const override;
-    virtual SymbolTypePtr_t GetExprType() const override;
+    virtual SymbolTypeRef GetExprType() const override;
     virtual AstExpression* GetTarget() const override;
 
     virtual HashCode GetHashCode() const override
@@ -50,8 +50,8 @@ private:
 
     /** Set while analyzing */
     RC<AstExpression> m_objectValue;
-    SymbolTypePtr_t m_instanceType;
-    SymbolTypePtr_t m_prototypeType;
+    SymbolTypeRef m_instanceType;
+    SymbolTypeRef m_prototypeType;
     RC<AstBlock> m_constructorBlock; // create a block to store temporary vars
     RC<AstExpression> m_constructorCall;
 

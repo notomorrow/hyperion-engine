@@ -12,14 +12,14 @@ class AstTypeObject : public AstExpression
 {
 public:
     AstTypeObject(
-        const SymbolTypePtr_t& symbolType,
-        const SymbolTypePtr_t& baseSymbolType, // base here is usually CLASS_TYPE - it is not the same as polymorphic base
+        const SymbolTypeRef& symbolType,
+        const SymbolTypeRef& baseSymbolType, // base here is usually CLASS_TYPE - it is not the same as polymorphic base
         const SourceLocation& location);
 
     AstTypeObject(
-        const SymbolTypePtr_t& symbolType,
-        const SymbolTypePtr_t& baseSymbolType,
-        const SymbolTypePtr_t& enumUnderlyingType,
+        const SymbolTypeRef& symbolType,
+        const SymbolTypeRef& baseSymbolType,
+        const SymbolTypeRef& enumUnderlyingType,
         bool isProxyClass,
         const SourceLocation& location);
 
@@ -30,7 +30,7 @@ public:
         return m_enumUnderlyingType != nullptr;
     }
 
-    const SymbolTypePtr_t& GetEnumUnderlyingType() const
+    const SymbolTypeRef& GetEnumUnderlyingType() const
     {
         return m_enumUnderlyingType;
     }
@@ -54,8 +54,8 @@ public:
     virtual Tribool IsTrue() const override;
     virtual bool MayHaveSideEffects() const override;
 
-    virtual SymbolTypePtr_t GetExprType() const override;
-    virtual SymbolTypePtr_t GetHeldType() const override;
+    virtual SymbolTypeRef GetExprType() const override;
+    virtual SymbolTypeRef GetHeldType() const override;
 
     virtual HashCode GetHashCode() const override
     {
@@ -69,9 +69,9 @@ public:
     }
 
 private:
-    SymbolTypePtr_t m_symbolType;
-    SymbolTypePtr_t m_baseSymbolType;
-    SymbolTypePtr_t m_enumUnderlyingType;
+    SymbolTypeRef m_symbolType;
+    SymbolTypeRef m_baseSymbolType;
+    SymbolTypeRef m_enumUnderlyingType;
     bool m_isProxyClass;
 
     // set while analyzing

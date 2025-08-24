@@ -40,7 +40,7 @@ void AstParameter::Visit(AstVisitor* visitor, Module* mod)
     // params are `Any` by default
     m_symbolType = BuiltinTypes::ANY;
 
-    SymbolTypePtr_t specifiedSymbolType;
+    SymbolTypeRef specifiedSymbolType;
 
     if (m_typeSpec != nullptr)
     {
@@ -60,7 +60,7 @@ void AstParameter::Visit(AstVisitor* visitor, Module* mod)
     {
         m_defaultParam->Visit(visitor, mod);
 
-        const SymbolTypePtr_t defaultParamType = m_defaultParam->GetExprType();
+        const SymbolTypeRef defaultParamType = m_defaultParam->GetExprType();
         Assert(defaultParamType != nullptr);
 
         if (specifiedSymbolType == nullptr)
@@ -110,7 +110,7 @@ void AstParameter::Visit(AstVisitor* visitor, Module* mod)
         auto* varargsValueOf = m_varargsTypeSpec->GetDeepValueOf();
         Assert(varargsValueOf != nullptr);
 
-        SymbolTypePtr_t heldType = varargsValueOf->GetHeldType();
+        SymbolTypeRef heldType = varargsValueOf->GetHeldType();
         Assert(heldType != nullptr);
         heldType = heldType->GetUnaliased();
 
@@ -184,7 +184,7 @@ RC<AstStatement> AstParameter::Clone() const
     return CloneImpl();
 }
 
-SymbolTypePtr_t AstParameter::GetExprType() const
+SymbolTypeRef AstParameter::GetExprType() const
 {
     return m_symbolType;
 }

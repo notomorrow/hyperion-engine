@@ -87,7 +87,7 @@ void AstUnaryExpression::Visit(AstVisitor* visitor, Module* mod)
 
     m_target->Visit(visitor, mod);
 
-    SymbolTypePtr_t type = m_target->GetExprType();
+    SymbolTypeRef type = m_target->GetExprType();
 
     if (!type->IsAnyType() && !type->IsGenericParameter() && !type->IsPlaceholderType())
     {
@@ -300,7 +300,7 @@ bool AstUnaryExpression::MayHaveSideEffects() const
     return m_target->MayHaveSideEffects();
 }
 
-SymbolTypePtr_t AstUnaryExpression::GetExprType() const
+SymbolTypeRef AstUnaryExpression::GetExprType() const
 {
     if (m_binExpr != nullptr)
     {

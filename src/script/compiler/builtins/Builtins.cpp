@@ -112,7 +112,7 @@ Builtins::Builtins(CompilationUnit* unit)
 
 void Builtins::Visit(AstVisitor* visitor)
 {
-    Array<SymbolTypePtr_t> builtinTypes {
+    Array<SymbolTypeRef> builtinTypes {
         BuiltinTypes::PRIMITIVE_TYPE,
         BuiltinTypes::ANY,
         BuiltinTypes::OBJECT,
@@ -128,7 +128,7 @@ void Builtins::Visit(AstVisitor* visitor)
 
     AstIterator ast;
 
-    for (const SymbolTypePtr_t& typePtr : builtinTypes)
+    for (const SymbolTypeRef& typePtr : builtinTypes)
     {
         Assert(typePtr != nullptr);
         Assert(typePtr->GetId() == -1);

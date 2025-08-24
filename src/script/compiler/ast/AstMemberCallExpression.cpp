@@ -250,7 +250,7 @@ bool AstMemberCallExpression::MayHaveSideEffects() const
     return true;
 }
 
-SymbolTypePtr_t AstMemberCallExpression::GetExprType() const
+SymbolTypeRef AstMemberCallExpression::GetExprType() const
 {
     Assert(m_returnType != nullptr);
     return m_returnType;

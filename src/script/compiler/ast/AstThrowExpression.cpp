@@ -63,7 +63,7 @@ RC<AstStatement> AstThrowExpression::Clone() const
     return CloneImpl();
 }
 
-SymbolTypePtr_t AstThrowExpression::GetExprType() const
+SymbolTypeRef AstThrowExpression::GetExprType() const
 {
     Assert(m_expr != nullptr);
 

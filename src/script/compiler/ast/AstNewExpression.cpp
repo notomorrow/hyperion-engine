@@ -52,11 +52,11 @@ void AstNewExpression::Visit(AstVisitor* visitor, Module* mod)
     m_instanceType = BuiltinTypes::UNDEFINED;
     m_prototypeType = BuiltinTypes::UNDEFINED;
 
-    SymbolTypePtr_t exprType = valueOf->GetExprType();
+    SymbolTypeRef exprType = valueOf->GetExprType();
     Assert(exprType != nullptr);
     exprType = exprType->GetUnaliased();
 
-    if (SymbolTypePtr_t heldType = valueOf->GetHeldType())
+    if (SymbolTypeRef heldType = valueOf->GetHeldType())
     {
         m_instanceType = heldType->GetUnaliased();
         m_objectValue = m_proto->GetDefaultValue(); // may be nullptr
@@ -281,7 +281,7 @@ bool AstNewExpression::MayHaveSideEffects() const
     return true;
 }
 
-SymbolTypePtr_t AstNewExpression::GetExprType() const
+SymbolTypeRef AstNewExpression::GetExprType() const
 {
     if (m_constructorCall != nullptr)
     {

@@ -58,7 +58,7 @@ float AstFloat::FloatValue() const
     return m_value;
 }
 
-SymbolTypePtr_t AstFloat::GetExprType() const
+SymbolTypeRef AstFloat::GetExprType() const
 {
     return BuiltinTypes::FLOAT;
 }

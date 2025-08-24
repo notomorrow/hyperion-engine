@@ -21,7 +21,7 @@ public:
     virtual UniquePtr<Buildable> Build(AstVisitor* visitor, Module* mod) override;
     virtual void Optimize(AstVisitor* visitor, Module* mod) override;
 
-    const SymbolTypePtr_t& GetPrototypeType() const
+    const SymbolTypeRef& GetPrototypeType() const
     {
         return m_prototypeType;
     }
@@ -38,12 +38,12 @@ public:
 
     virtual Tribool IsTrue() const override;
     virtual bool MayHaveSideEffects() const override;
-    virtual SymbolTypePtr_t GetExprType() const override;
+    virtual SymbolTypeRef GetExprType() const override;
 
     virtual const AstExpression* GetValueOf() const override;
     virtual const AstExpression* GetDeepValueOf() const override;
 
-    virtual SymbolTypePtr_t GetHeldType() const override;
+    virtual SymbolTypeRef GetHeldType() const override;
 
     virtual HashCode GetHashCode() const override
     {
@@ -54,13 +54,13 @@ public:
     }
 
 protected:
-    bool FindPrototypeType(const SymbolTypePtr_t& symbolType);
+    bool FindPrototypeType(const SymbolTypeRef& symbolType);
 
     RC<AstExpression> m_expr;
 
     /** Set while analyzing */
-    SymbolTypePtr_t m_symbolType;
-    SymbolTypePtr_t m_prototypeType;
+    SymbolTypeRef m_symbolType;
+    SymbolTypeRef m_prototypeType;
     RC<AstExpression> m_defaultValue;
 
 private:

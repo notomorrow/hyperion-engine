@@ -44,14 +44,14 @@ public:
 
     virtual Tribool IsTrue() const override;
     virtual bool MayHaveSideEffects() const override;
-    virtual SymbolTypePtr_t GetExprType() const override;
+    virtual SymbolTypeRef GetExprType() const override;
 
-    const SymbolTypePtr_t& GetReturnType() const
+    const SymbolTypeRef& GetReturnType() const
     {
         return m_returnType;
     }
 
-    void SetReturnType(const SymbolTypePtr_t& returnType)
+    void SetReturnType(const SymbolTypeRef& returnType)
     {
         m_returnType = returnType;
     }
@@ -86,8 +86,8 @@ protected:
 
     bool m_isConstructorDefinition;
 
-    SymbolTypePtr_t m_symbolType;
-    SymbolTypePtr_t m_returnType;
+    SymbolTypeRef m_symbolType;
+    SymbolTypeRef m_returnType;
 
     int m_closureObjectLocation;
 

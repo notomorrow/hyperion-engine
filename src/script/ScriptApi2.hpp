@@ -30,7 +30,7 @@ using namespace compiler;
 struct Type
 {
     String typeString;
-    SymbolTypePtr_t symbolType;
+    SymbolTypeRef symbolType;
 
     bool IsValid() const
     {

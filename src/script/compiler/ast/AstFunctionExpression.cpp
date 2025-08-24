@@ -163,22 +163,22 @@ void AstFunctionExpression::Visit(AstVisitor* visitor, Module* mod)
     if (functionScope->GetReturnTypes().Any())
     {
         // search through return types for ambiguities
-        for (const auto& it : functionScope->GetReturnTypes())
+        for (const SymbolTypeRef& symbolType : functionScope->GetReturnTypes())
         {
-            Assert(it.first != nullptr);
+            Assert(symbolType != nullptr);
 
             if (m_returnTypeSpecification != nullptr)
             {
                 // strict mode, because user specifically stated the intended return type
-                if (!m_returnType->TypeCompatible(*it.first, true))
+                if (!m_returnType->TypeCompatible(*symbolType, true))
                 {
                     // error; does not match what user specified
                     visitor->GetCompilationUnit()->GetErrorList().AddError(CompilerError(
                         LEVEL_ERROR,
                         Msg_mismatched_return_type,
-                        it.second,
+                        GetLocation(),
                         m_returnType->ToString(),
-                        it.first->ToString()));
+                        symbolType->ToString()));
                 }
             }
             else
@@ -186,11 +186,11 @@ void AstFunctionExpression::Visit(AstVisitor* visitor, Module* mod)
                 // deduce return type
                 if (m_returnType->IsAnyType() || m_returnType->IsPlaceholderType())
                 {
-                    m_returnType = it.first;
+                    m_returnType = symbolType;
                 }
-                else if (m_returnType->TypeCompatible(*it.first, false))
+                else if (m_returnType->TypeCompatible(*symbolType, false))
                 {
-                    m_returnType = SymbolType::TypePromotion(m_returnType, it.first);
+                    m_returnType = SymbolType::TypePromotion(m_returnType, symbolType);
                 }
                 else
                 {
@@ -198,7 +198,7 @@ void AstFunctionExpression::Visit(AstVisitor* visitor, Module* mod)
                     visitor->GetCompilationUnit()->GetErrorList().AddError(CompilerError(
                         LEVEL_ERROR,
                         Msg_multiple_return_types,
-                        it.second));
+                        GetLocation()));
 
                     break;
                 }
@@ -293,7 +293,7 @@ void AstFunctionExpression::Visit(AstVisitor* visitor, Module* mod)
 
     functionTypeSpec->Visit(visitor, mod);
 
-    SymbolTypePtr_t functionType = functionTypeSpec->GetHeldType();
+    SymbolTypeRef functionType = functionTypeSpec->GetHeldType();
 
     if (functionType == nullptr)
     {
@@ -370,7 +370,7 @@ void AstFunctionExpression::Visit(AstVisitor* visitor, Module* mod)
 
         m_closureTypeExpr->Visit(visitor, mod);
 
-        SymbolTypePtr_t closureHeldType = m_closureTypeExpr->GetHeldType();
+        SymbolTypeRef closureHeldType = m_closureTypeExpr->GetHeldType();
         Assert(closureHeldType != nullptr);
         closureHeldType = closureHeldType->GetUnaliased();
 
@@ -620,11 +620,11 @@ bool AstFunctionExpression::MayHaveSideEffects() const
     return true;
 }
 
-SymbolTypePtr_t AstFunctionExpression::GetExprType() const
+SymbolTypeRef AstFunctionExpression::GetExprType() const
 {
     if (m_isClosure && m_closureTypeExpr != nullptr)
     {
-        SymbolTypePtr_t heldType = m_closureTypeExpr->GetHeldType();
+        SymbolTypeRef heldType = m_closureTypeExpr->GetHeldType();
         Assert(heldType != nullptr);
 
         return heldType->GetUnaliased();

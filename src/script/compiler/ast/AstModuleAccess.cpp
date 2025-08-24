@@ -97,7 +97,7 @@ bool AstModuleAccess::MayHaveSideEffects() const
     return m_expr->MayHaveSideEffects();
 }
 
-SymbolTypePtr_t AstModuleAccess::GetExprType() const
+SymbolTypeRef AstModuleAccess::GetExprType() const
 {
     Assert(m_expr != nullptr);
     return m_expr->GetExprType();

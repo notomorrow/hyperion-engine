@@ -91,7 +91,7 @@ public:
 
     virtual RC<AstStatement> Clone() const override;
 
-    SymbolTypePtr_t GetExprType() const
+    SymbolTypeRef GetExprType() const
     {
         return m_symbolType;
     }
@@ -115,7 +115,7 @@ protected:
     // set while analyzing
     RC<AstExpression> m_realAssignment;
 
-    SymbolTypePtr_t m_symbolType;
+    SymbolTypeRef m_symbolType;
 
     RC<AstVariableDeclaration> CloneImpl() const
     {

@@ -57,7 +57,7 @@ void AstBinaryExpression::Visit(AstVisitor* visitor, Module* mod)
     if (m_operatorOverloadingEnabled && m_op->SupportsOverloading())
     {
         // look for operator overloading
-        SymbolTypePtr_t targetType = m_left->GetExprType();
+        SymbolTypeRef targetType = m_left->GetExprType();
         Assert(targetType != nullptr);
 
         targetType = targetType->GetUnaliased();
@@ -146,10 +146,10 @@ void AstBinaryExpression::Visit(AstVisitor* visitor, Module* mod)
 
     m_right->Visit(visitor, mod);
 
-    SymbolTypePtr_t leftType = m_left->GetExprType();
+    SymbolTypeRef leftType = m_left->GetExprType();
     Assert(leftType != nullptr);
 
-    SymbolTypePtr_t rightType = m_right->GetExprType();
+    SymbolTypeRef rightType = m_right->GetExprType();
     Assert(rightType != nullptr);
 
     if (!leftType->IsAnyType() && !rightType->IsAnyType())
@@ -782,7 +782,7 @@ bool AstBinaryExpression::MayHaveSideEffects() const
     return leftSideEffects || rightSideEffects;
 }
 
-SymbolTypePtr_t AstBinaryExpression::GetExprType() const
+SymbolTypeRef AstBinaryExpression::GetExprType() const
 {
     if (m_operatorOverload != nullptr)
     {
@@ -798,14 +798,14 @@ SymbolTypePtr_t AstBinaryExpression::GetExprType() const
 
     Assert(m_left != nullptr);
 
-    SymbolTypePtr_t lTypePtr = m_left->GetExprType();
+    SymbolTypeRef lTypePtr = m_left->GetExprType();
     Assert(lTypePtr != nullptr);
 
     if (m_right != nullptr)
     {
         // the right was not optimized away,
         // return type promotion
-        SymbolTypePtr_t rTypePtr = m_right->GetExprType();
+        SymbolTypeRef rTypePtr = m_right->GetExprType();
 
         Assert(rTypePtr != nullptr);
 

@@ -19,8 +19,8 @@ namespace hyperion::compiler {
 void SemanticAnalyzer::Helpers::CheckArgTypeCompatible(
     AstVisitor* visitor,
     const SourceLocation& location,
-    const SymbolTypePtr_t& argType,
-    const SymbolTypePtr_t& paramType)
+    const SymbolTypeRef& argType,
+    const SymbolTypeRef& paramType)
 {
     Assert(argType != nullptr);
     Assert(paramType != nullptr);
@@ -109,10 +109,10 @@ SizeType SemanticAnalyzer::Helpers::ArgIndex(
         numSuppliedArgs);
 }
 
-SymbolTypePtr_t SemanticAnalyzer::Helpers::SubstituteGenericParameters(
+SymbolTypeRef SemanticAnalyzer::Helpers::SubstituteGenericParameters(
     AstVisitor* visitor,
     Module* mod,
-    const SymbolTypePtr_t& inputType,
+    const SymbolTypeRef& inputType,
     const Array<GenericInstanceTypeInfo::Arg>& genericArgs,
     const Array<SubstitutionResult>& substitutionResults,
     const SourceLocation& location)
@@ -171,7 +171,7 @@ SymbolTypePtr_t SemanticAnalyzer::Helpers::SubstituteGenericParameters(
             auto* deepValueOf = foundSubstitutionResult->arg->GetDeepValueOf();
             Assert(deepValueOf != nullptr);
 
-            if (SymbolTypePtr_t heldType = deepValueOf->GetHeldType())
+            if (SymbolTypeRef heldType = deepValueOf->GetHeldType())
             {
                 if (!heldType->IsOrHasBase(*BuiltinTypes::UNDEFINED))
                 {
@@ -208,7 +208,7 @@ SymbolTypePtr_t SemanticAnalyzer::Helpers::SubstituteGenericParameters(
                 location);
         }
 
-        SymbolTypePtr_t substitutedType = SymbolType::GenericInstance(
+        SymbolTypeRef substitutedType = SymbolType::GenericInstance(
             baseType,
             GenericInstanceTypeInfo {
                 std::move(resArgs) });
@@ -236,7 +236,7 @@ SymbolTypePtr_t SemanticAnalyzer::Helpers::SubstituteGenericParameters(
 Optional<SymbolTypeFunctionSignature> SemanticAnalyzer::Helpers::ExtractGenericArgs(
     AstVisitor* visitor,
     Module* mod,
-    const SymbolTypePtr_t& symbolType,
+    const SymbolTypeRef& symbolType,
     const Array<RC<AstArgument>>& args,
     const SourceLocation& location,
     Array<SubstitutionResult> (*fn)(
@@ -275,7 +275,7 @@ Optional<SymbolTypeFunctionSignature> SemanticAnalyzer::Helpers::ExtractGenericA
     }
 
     // replace generics used within the "return type" of the function/generic
-    const SymbolTypePtr_t returnType = SubstituteGenericParameters(
+    const SymbolTypeRef returnType = SubstituteGenericParameters(
         visitor,
         mod,
         genericArgs[0].m_type,
@@ -299,14 +299,14 @@ Optional<SymbolTypeFunctionSignature> SemanticAnalyzer::Helpers::ExtractGenericA
     };
 }
 
-SymbolTypePtr_t SemanticAnalyzer::Helpers::GetVarArgType(const Array<GenericInstanceTypeInfo::Arg>& genericArgs)
+SymbolTypeRef SemanticAnalyzer::Helpers::GetVarArgType(const Array<GenericInstanceTypeInfo::Arg>& genericArgs)
 {
     if (genericArgs.Empty())
     {
         return nullptr;
     }
 
-    SymbolTypePtr_t lastGenericArgType = genericArgs.Back().m_type;
+    SymbolTypeRef lastGenericArgType = genericArgs.Back().m_type;
     Assert(lastGenericArgType != nullptr);
     lastGenericArgType = lastGenericArgType->GetUnaliased();
 
@@ -332,7 +332,7 @@ SymbolTypePtr_t SemanticAnalyzer::Helpers::GetVarArgType(const Array<GenericInst
 void SemanticAnalyzer::Helpers::EnsureFunctionArgCompatibility(
     AstVisitor* visitor,
     Module* mod,
-    const SymbolTypePtr_t& symbolType,
+    const SymbolTypeRef& symbolType,
     const Array<RC<AstArgument>>& args,
     const SourceLocation& location)
 {
@@ -348,7 +348,7 @@ void SemanticAnalyzer::Helpers::EnsureFunctionArgCompatibility(
             const Array<RC<AstArgument>>& args,
             const SourceLocation& location)
         {
-            SymbolTypePtr_t varargType = GetVarArgType(genericArgs);
+            SymbolTypeRef varargType = GetVarArgType(genericArgs);
 
             const SizeType numGenericArgs = varargType != nullptr
                 ? genericArgs.Size() - 1
@@ -398,7 +398,7 @@ void SemanticAnalyzer::Helpers::EnsureFunctionArgCompatibility(
 
 Optional<SymbolTypeFunctionSignature> SemanticAnalyzer::Helpers::SubstituteFunctionArgs(
     AstVisitor* visitor, Module* mod,
-    const SymbolTypePtr_t& symbolType,
+    const SymbolTypeRef& symbolType,
     const Array<RC<AstArgument>>& args,
     const SourceLocation& location)
 {
@@ -414,7 +414,7 @@ Optional<SymbolTypeFunctionSignature> SemanticAnalyzer::Helpers::SubstituteFunct
             const Array<RC<AstArgument>>& args,
             const SourceLocation& location)
         {
-            SymbolTypePtr_t varargType = GetVarArgType(genericArgs);
+            SymbolTypeRef varargType = GetVarArgType(genericArgs);
 
             const SizeType numGenericArgs = varargType != nullptr
                 ? genericArgs.Size() - 1
@@ -483,7 +483,7 @@ Optional<SymbolTypeFunctionSignature> SemanticAnalyzer::Helpers::SubstituteFunct
                         usedIndices.Insert(foundIndex);
 
                         // found successfully, check type compatibility
-                        // const SymbolTypePtr_t &paramType = genericArgs[foundIndex].m_type;
+                        // const SymbolTypeRef &paramType = genericArgs[foundIndex].m_type;
 
                         // CheckArgTypeCompatible(
                         //     visitor,
@@ -732,15 +732,15 @@ Optional<SymbolTypeFunctionSignature> SemanticAnalyzer::Helpers::SubstituteFunct
 void SemanticAnalyzer::Helpers::EnsureLooseTypeAssignmentCompatibility(
     AstVisitor* visitor,
     Module* mod,
-    const SymbolTypePtr_t& symbolType,
-    const SymbolTypePtr_t& assignmentType,
+    const SymbolTypeRef& symbolType,
+    const SymbolTypeRef& assignmentType,
     const SourceLocation& location)
 {
     Assert(symbolType != nullptr);
     Assert(assignmentType != nullptr);
 
     // symbolType should be the user-specified type
-    SymbolTypePtr_t symbolTypePromoted = SymbolType::GenericPromotion(symbolType, assignmentType);
+    SymbolTypeRef symbolTypePromoted = SymbolType::GenericPromotion(symbolType, assignmentType);
     Assert(symbolTypePromoted != nullptr);
 
     // generic not yet promoted to an instance
@@ -754,7 +754,7 @@ void SemanticAnalyzer::Helpers::EnsureLooseTypeAssignmentCompatibility(
             symbolTypePromoted->GetGenericInfo().m_numParameters));
     }
 
-    SymbolTypePtr_t comparisonType = symbolType;
+    SymbolTypeRef comparisonType = symbolType;
 
     SemanticAnalyzer::Helpers::EnsureTypeAssignmentCompatibility(
         visitor,
@@ -767,8 +767,8 @@ void SemanticAnalyzer::Helpers::EnsureLooseTypeAssignmentCompatibility(
 void SemanticAnalyzer::Helpers::EnsureTypeAssignmentCompatibility(
     AstVisitor* visitor,
     Module* mod,
-    const SymbolTypePtr_t& symbolType,
-    const SymbolTypePtr_t& assignmentType,
+    const SymbolTypeRef& symbolType,
+    const SymbolTypeRef& assignmentType,
     const SourceLocation& location)
 {
     Assert(symbolType != nullptr);

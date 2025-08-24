@@ -30,7 +30,7 @@ public:
 
     virtual Tribool IsTrue() const override;
     virtual bool MayHaveSideEffects() const override;
-    virtual SymbolTypePtr_t GetExprType() const override;
+    virtual SymbolTypeRef GetExprType() const override;
 
     virtual HashCode GetHashCode() const override
     {
@@ -62,9 +62,9 @@ private:
     Array<RC<AstExpression>> m_replacedValues;
     RC<AstPrototypeSpecification> m_mapTypeExpr;
     RC<AstExpression> m_arrayExpr;
-    SymbolTypePtr_t m_keyType;
-    SymbolTypePtr_t m_valueType;
-    SymbolTypePtr_t m_exprType;
+    SymbolTypeRef m_keyType;
+    SymbolTypeRef m_valueType;
+    SymbolTypeRef m_exprType;
     RC<AstTypeObject> m_typeObject;
     RC<AstBlock> m_block;
 

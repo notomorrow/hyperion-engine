@@ -60,7 +60,7 @@ float AstUnsignedInteger::FloatValue() const
     return (float)m_value;
 }
 
-SymbolTypePtr_t AstUnsignedInteger::GetExprType() const
+SymbolTypeRef AstUnsignedInteger::GetExprType() const
 {
     return BuiltinTypes::UNSIGNED_INT;
 }

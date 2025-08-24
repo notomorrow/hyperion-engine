@@ -95,9 +95,9 @@ public:
     RC<Identifier> LookUpIdentifierDepth(const String& name, int depthLevel);
 
     /** Look up a symbol in this module by name */
-    SymbolTypePtr_t LookupSymbolType(const String& name);
+    SymbolTypeRef LookupSymbolType(const String& name);
 
-    Variant<RC<Identifier>, SymbolTypePtr_t> LookUpIdentifierOrSymbolType(const String& name);
+    Variant<RC<Identifier>, SymbolTypeRef> LookUpIdentifierOrSymbolType(const String& name);
 
     Optional<GenericInstanceCache::CachedObject> LookupGenericInstance(const GenericInstanceCache::Key& key);
 

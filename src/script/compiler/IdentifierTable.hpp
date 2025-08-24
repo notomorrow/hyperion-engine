@@ -34,19 +34,19 @@ public:
         const String& name,
         int flags = 0,
         RC<AstExpression> currentValue = nullptr,
-        SymbolTypePtr_t symbolType = nullptr);
+        SymbolTypeRef symbolType = nullptr);
 
     bool AddIdentifier(const RC<Identifier>& identifier);
 
     /** Look up an identifier by name. Returns nullptr if not found */
     RC<Identifier> LookUpIdentifier(const String& name);
 
-    void BindTypeToIdentifier(const String& name, SymbolTypePtr_t symbolType);
+    void BindTypeToIdentifier(const String& name, SymbolTypeRef symbolType);
 
     /** Look up symbol type by name */
-    SymbolTypePtr_t LookupSymbolType(const String& name) const;
+    SymbolTypeRef LookupSymbolType(const String& name) const;
 
-    void AddSymbolType(const SymbolTypePtr_t& type);
+    void AddSymbolType(const SymbolTypeRef& type);
 
 private:
     /** To be incremented every time a new identifier is added */
@@ -55,7 +55,7 @@ private:
     Array<RC<Identifier>> m_identifiers;
 
     /** All types that are defined in this identifier table */
-    Array<SymbolTypePtr_t> m_symbolTypes;
+    Array<SymbolTypeRef> m_symbolTypes;
 };
 
 } // namespace hyperion::compiler

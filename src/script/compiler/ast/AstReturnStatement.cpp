@@ -59,11 +59,11 @@ void AstReturnStatement::Visit(AstVisitor* visitor, Module* mod)
 
         if (m_expr != nullptr)
         {
-            top->Get().AddReturnType(m_expr->GetExprType(), m_location);
+            top->Get().AddReturnType(m_expr->GetExprType());
         }
         else
         {
-            top->Get().AddReturnType(BuiltinTypes::VOID_TYPE, m_location);
+            top->Get().AddReturnType(BuiltinTypes::VOID_TYPE);
         }
     }
     else

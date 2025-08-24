@@ -24,7 +24,7 @@ void AstTypeAlias::Visit(AstVisitor* visitor, Module* mod)
 
     m_aliasee->Visit(visitor, mod);
 
-    SymbolTypePtr_t aliaseeType = m_aliasee->GetHeldType();
+    SymbolTypeRef aliaseeType = m_aliasee->GetHeldType();
     Assert(aliaseeType != nullptr);
     aliaseeType = aliaseeType->GetUnaliased();
 
@@ -41,7 +41,7 @@ void AstTypeAlias::Visit(AstVisitor* visitor, Module* mod)
     }
     else
     {
-        SymbolTypePtr_t aliasType = SymbolType::Alias(
+        SymbolTypeRef aliasType = SymbolType::Alias(
             m_name, { aliaseeType });
 
         // add it

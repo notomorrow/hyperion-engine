@@ -70,14 +70,14 @@ void AstTemplateExpression::Visit(AstVisitor* visitor, Module* mod)
     // visit params before expression to make declarations
     // for things that may be used in the expression
 
-    Array<SymbolTypePtr_t> paramSymbolTypes;
+    Array<SymbolTypeRef> paramSymbolTypes;
     paramSymbolTypes.Reserve(m_genericParams.Size());
 
     for (RC<AstParameter>& genericParam : m_genericParams)
     {
         Assert(genericParam != nullptr);
 
-        SymbolTypePtr_t genericParamType = SymbolType::GenericParameter(
+        SymbolTypeRef genericParamType = SymbolType::GenericParameter(
             genericParam->GetName(),
             BuiltinTypes::CLASS_TYPE);
 
@@ -97,7 +97,7 @@ void AstTemplateExpression::Visit(AstVisitor* visitor, Module* mod)
             auto* genericParamTypeObjectValueOf = genericParamTypeObject->GetDeepValueOf();
             Assert(genericParamTypeObjectValueOf != nullptr);
 
-            SymbolTypePtr_t genericParamTypeObjectValueOfType = genericParamTypeObjectValueOf->GetHeldType();
+            SymbolTypeRef genericParamTypeObjectValueOfType = genericParamTypeObjectValueOf->GetHeldType();
             Assert(genericParamTypeObjectValueOfType != nullptr);
             genericParamType = genericParamTypeObjectValueOfType->GetUnaliased();
         }
@@ -133,7 +133,7 @@ void AstTemplateExpression::Visit(AstVisitor* visitor, Module* mod)
                 auto* variadicTemplateInstantiationValueOf = variadicTemplateInstantiation->GetDeepValueOf();
                 Assert(variadicTemplateInstantiationValueOf != nullptr);
 
-                SymbolTypePtr_t variadicTemplateInstantiationType = variadicTemplateInstantiationValueOf->GetHeldType();
+                SymbolTypeRef variadicTemplateInstantiationType = variadicTemplateInstantiationValueOf->GetHeldType();
                 Assert(variadicTemplateInstantiationType != nullptr);
                 variadicTemplateInstantiationType = variadicTemplateInstantiationType->GetUnaliased();
 
@@ -178,8 +178,8 @@ void AstTemplateExpression::Visit(AstVisitor* visitor, Module* mod)
     Array<GenericInstanceTypeInfo::Arg> genericParamTypes;
     genericParamTypes.Reserve(m_genericParams.Size() + 1); // anotha one for @return
 
-    SymbolTypePtr_t exprReturnType;
-    SymbolTypePtr_t explicitReturnType = m_returnTypeSpecification != nullptr
+    SymbolTypeRef exprReturnType;
+    SymbolTypeRef explicitReturnType = m_returnTypeSpecification != nullptr
         ? m_returnTypeSpecification->GetHeldType()
         : nullptr;
 
@@ -204,7 +204,7 @@ void AstTemplateExpression::Visit(AstVisitor* visitor, Module* mod)
     for (SizeType i = 0; i < m_genericParams.Size(); i++)
     {
         const RC<AstParameter>& param = m_genericParams[i];
-        const SymbolTypePtr_t& paramSymbolType = paramSymbolTypes[i];
+        const SymbolTypeRef& paramSymbolType = paramSymbolTypes[i];
 
         RC<AstExpression> defaultValue = CloneAstNode(param->GetDefaultValue());
 
@@ -302,7 +302,7 @@ bool AstTemplateExpression::MayHaveSideEffects() const
     return true;
 }
 
-SymbolTypePtr_t AstTemplateExpression::GetExprType() const
+SymbolTypeRef AstTemplateExpression::GetExprType() const
 {
     Assert(m_isVisited);
     Assert(m_symbolType != nullptr);
@@ -310,7 +310,7 @@ SymbolTypePtr_t AstTemplateExpression::GetExprType() const
     return m_symbolType;
 }
 
-SymbolTypePtr_t AstTemplateExpression::GetHeldType() const
+SymbolTypeRef AstTemplateExpression::GetHeldType() const
 {
     Assert(m_isVisited);
     Assert(m_expr != nullptr);

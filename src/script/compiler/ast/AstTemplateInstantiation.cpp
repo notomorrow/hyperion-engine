@@ -55,7 +55,7 @@ void AstTemplateInstantiationWrapper::Visit(AstVisitor* visitor, Module* mod)
     }
 }
 
-void AstTemplateInstantiationWrapper::MakeSymbolTypeGenericInstance(SymbolTypePtr_t& symbolType)
+void AstTemplateInstantiationWrapper::MakeSymbolTypeGenericInstance(SymbolTypeRef& symbolType)
 {
     // Set it to a GenericInstance version,
     // So we can use the params that were provided, later
@@ -120,7 +120,7 @@ bool AstTemplateInstantiationWrapper::MayHaveSideEffects() const
     return true;
 }
 
-SymbolTypePtr_t AstTemplateInstantiationWrapper::GetExprType() const
+SymbolTypeRef AstTemplateInstantiationWrapper::GetExprType() const
 {
     if (m_exprType != nullptr)
     {
@@ -130,7 +130,7 @@ SymbolTypePtr_t AstTemplateInstantiationWrapper::GetExprType() const
     return BuiltinTypes::UNDEFINED;
 }
 
-SymbolTypePtr_t AstTemplateInstantiationWrapper::GetHeldType() const
+SymbolTypeRef AstTemplateInstantiationWrapper::GetHeldType() const
 {
     if (m_heldType != nullptr)
     {
@@ -224,7 +224,7 @@ void AstTemplateInstantiation::Visit(AstVisitor* visitor, Module* mod)
     const AstExpression* valueOf = m_expr->GetDeepValueOf();
     Assert(valueOf != nullptr);
 
-    SymbolTypePtr_t exprType = m_expr->GetExprType();
+    SymbolTypeRef exprType = m_expr->GetExprType();
     Assert(exprType != nullptr);
     exprType = exprType->GetUnaliased();
 
@@ -312,14 +312,14 @@ void AstTemplateInstantiation::Visit(AstVisitor* visitor, Module* mod)
         const AstExpression* valueOf = arg->GetDeepValueOf();
         Assert(valueOf != nullptr);
 
-        SymbolTypePtr_t memberExprType = valueOf->GetExprType();
+        SymbolTypeRef memberExprType = valueOf->GetExprType();
         Assert(memberExprType != nullptr);
         memberExprType = memberExprType->GetUnaliased();
 
         // For each generic parameter, we add a new symbol type to the current scope
         // as an alias to the held type of the argument.
 
-        SymbolTypePtr_t heldType = valueOf->GetHeldType();
+        SymbolTypeRef heldType = valueOf->GetHeldType();
 
         if (heldType == nullptr)
         {
@@ -535,7 +535,7 @@ bool AstTemplateInstantiation::MayHaveSideEffects() const
     return true;
 }
 
-SymbolTypePtr_t AstTemplateInstantiation::GetExprType() const
+SymbolTypeRef AstTemplateInstantiation::GetExprType() const
 {
     if (m_exprType != nullptr)
     {
@@ -545,7 +545,7 @@ SymbolTypePtr_t AstTemplateInstantiation::GetExprType() const
     return BuiltinTypes::UNDEFINED;
 }
 
-SymbolTypePtr_t AstTemplateInstantiation::GetHeldType() const
+SymbolTypeRef AstTemplateInstantiation::GetHeldType() const
 {
     if (m_heldType)
     {

@@ -69,8 +69,8 @@ void AstHashMap::Visit(AstVisitor* visitor, Module* mod)
             keyValuePair.first->Visit(visitor, mod);
             keyValuePair.second->Visit(visitor, mod);
 
-            SymbolTypePtr_t keyType = keyValuePair.first->GetExprType();
-            SymbolTypePtr_t valueType = keyValuePair.second->GetExprType();
+            SymbolTypeRef keyType = keyValuePair.first->GetExprType();
+            SymbolTypeRef valueType = keyValuePair.second->GetExprType();
 
             if (keyType == nullptr || valueType == nullptr)
             {
@@ -138,7 +138,7 @@ void AstHashMap::Visit(AstVisitor* visitor, Module* mod)
         auto& replacedValue = m_replacedValues[i];
         Assert(replacedValue != nullptr);
 
-        if (SymbolTypePtr_t keyType = key->GetExprType())
+        if (SymbolTypeRef keyType = key->GetExprType())
         {
             if (!keyType->TypeEqual(*m_keyType))
             {
@@ -154,7 +154,7 @@ void AstHashMap::Visit(AstVisitor* visitor, Module* mod)
             }
         }
 
-        if (SymbolTypePtr_t valueType = value->GetExprType())
+        if (SymbolTypeRef valueType = value->GetExprType())
         {
             if (!valueType->TypeEqual(*m_valueType))
             {
@@ -203,7 +203,7 @@ void AstHashMap::Visit(AstVisitor* visitor, Module* mod)
 
     m_mapTypeExpr->Visit(visitor, mod);
 
-    SymbolTypePtr_t mapType = m_mapTypeExpr->GetHeldType();
+    SymbolTypeRef mapType = m_mapTypeExpr->GetHeldType();
 
     if (mapType == nullptr)
     {
@@ -356,7 +356,7 @@ bool AstHashMap::MayHaveSideEffects() const
     return true;
 }
 
-SymbolTypePtr_t AstHashMap::GetExprType() const
+SymbolTypeRef AstHashMap::GetExprType() const
 {
     if (m_exprType == nullptr)
     {

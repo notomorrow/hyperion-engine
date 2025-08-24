@@ -45,7 +45,7 @@ void AstArrayAccess::Visit(AstVisitor* visitor, Module* mod)
         m_rhs->Visit(visitor, mod);
     }
 
-    SymbolTypePtr_t targetType = m_target->GetExprType();
+    SymbolTypeRef targetType = m_target->GetExprType();
     Assert(targetType != nullptr);
     targetType = targetType->GetUnaliased();
 
@@ -298,7 +298,7 @@ bool AstArrayAccess::MayHaveSideEffects() const
         || m_accessMode == ACCESS_MODE_STORE;
 }
 
-SymbolTypePtr_t AstArrayAccess::GetExprType() const
+SymbolTypeRef AstArrayAccess::GetExprType() const
 {
     if (m_overrideExpr != nullptr)
     {
@@ -312,7 +312,7 @@ SymbolTypePtr_t AstArrayAccess::GetExprType() const
 
     Assert(m_target != nullptr);
 
-    SymbolTypePtr_t targetType = m_target->GetExprType();
+    SymbolTypeRef targetType = m_target->GetExprType();
     Assert(targetType != nullptr);
     targetType = targetType->GetUnaliased();
 

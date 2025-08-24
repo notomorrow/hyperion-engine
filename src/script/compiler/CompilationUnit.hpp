@@ -74,7 +74,7 @@ public:
         return m_astNodeBuilder;
     }
 
-    const Array<SymbolTypePtr_t>& GetRegisteredTypes() const
+    const Array<SymbolTypeRef>& GetRegisteredTypes() const
     {
         return m_registeredTypes;
     }
@@ -92,7 +92,7 @@ public:
     /**
         Allows a non-builtin type to be used
     */
-    void RegisterType(const SymbolTypePtr_t& typePtr);
+    void RegisterType(const SymbolTypeRef& typePtr);
 
     /** Looks up the module with the name, taking scope into account.
         Modules with the name that are in the current module or any module
@@ -112,7 +112,7 @@ private:
     ErrorList m_errorList;
     InstructionStream m_instructionStream;
     AstNodeBuilder m_astNodeBuilder;
-    Array<SymbolTypePtr_t> m_registeredTypes;
+    Array<SymbolTypeRef> m_registeredTypes;
     Builtins m_builtins;
 
     // the global module

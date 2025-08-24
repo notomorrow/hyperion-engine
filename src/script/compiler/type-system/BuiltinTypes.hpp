@@ -8,7 +8,7 @@
 namespace hyperion::compiler {
 
 class SymbolType;
-using SymbolTypePtr_t = std::shared_ptr<SymbolType>;
+using SymbolTypeRef = RC<SymbolType>;
 
 class SymbolTypeTrait;
 
@@ -19,24 +19,24 @@ struct BuiltinTypeTraits
 
 struct BuiltinTypes
 {
-    static const SymbolTypePtr_t PRIMITIVE_TYPE;
-    static const SymbolTypePtr_t UNDEFINED;
-    static const SymbolTypePtr_t OBJECT;
-    static const SymbolTypePtr_t CLASS_TYPE;
-    static const SymbolTypePtr_t ENUM_TYPE;
-    static const SymbolTypePtr_t ANY;
-    static const SymbolTypePtr_t PLACEHOLDER;
-    static const SymbolTypePtr_t VOID_TYPE;
-    static const SymbolTypePtr_t INT;
-    static const SymbolTypePtr_t UNSIGNED_INT;
-    static const SymbolTypePtr_t FLOAT;
-    static const SymbolTypePtr_t BOOLEAN;
-    static const SymbolTypePtr_t STRING;
-    static const SymbolTypePtr_t FUNCTION;
-    static const SymbolTypePtr_t HASH_MAP;
-    static const SymbolTypePtr_t NULL_TYPE;
-    static const SymbolTypePtr_t MODULE_INFO;
-    static const SymbolTypePtr_t GENERIC_VARIABLE_TYPE;
+    static const SymbolTypeRef PRIMITIVE_TYPE;
+    static const SymbolTypeRef UNDEFINED;
+    static const SymbolTypeRef OBJECT;
+    static const SymbolTypeRef CLASS_TYPE;
+    static const SymbolTypeRef ENUM_TYPE;
+    static const SymbolTypeRef ANY;
+    static const SymbolTypeRef PLACEHOLDER;
+    static const SymbolTypeRef VOID_TYPE;
+    static const SymbolTypeRef INT;
+    static const SymbolTypeRef UNSIGNED_INT;
+    static const SymbolTypeRef FLOAT;
+    static const SymbolTypeRef BOOLEAN;
+    static const SymbolTypeRef STRING;
+    static const SymbolTypeRef FUNCTION;
+    static const SymbolTypeRef HASH_MAP;
+    static const SymbolTypeRef NULL_TYPE;
+    static const SymbolTypeRef MODULE_INFO;
+    static const SymbolTypeRef GENERIC_VARIABLE_TYPE;
 };
 
 } // namespace hyperion::compiler

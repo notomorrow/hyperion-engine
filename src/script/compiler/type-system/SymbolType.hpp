@@ -21,26 +21,19 @@ class AstExpression;
 class AstTypeObject;
 class AstArgument;
 
-using SymbolTypePtr_t = std::shared_ptr<SymbolType>;
-using SymbolTypeWeakPtr_t = std::weak_ptr<SymbolType>;
-
-// struct SymbolMember
-// {
-//     String name;
-//     SymbolTypePtr_t type;
-//     RC<AstExpression> expr;
-// };
+using SymbolTypeRef = RC<SymbolType>;
+using SymbolTypeWeakRef = Weak<SymbolType>;
 
 struct SymbolTypeFunctionSignature
 {
-    SymbolTypePtr_t returnType;
+    SymbolTypeRef returnType;
     Array<RC<AstArgument>> params;
 };
 
 struct SymbolTypeMember
 {
     String name;
-    SymbolTypePtr_t type;
+    SymbolTypeRef type;
     RC<AstExpression> expr;
 };
 
@@ -66,19 +59,19 @@ enum SymbolTypeFlagsBits : SymbolTypeFlags
 
 struct AliasTypeInfo
 {
-    SymbolTypeWeakPtr_t m_aliasee;
+    SymbolTypeWeakRef m_aliasee;
 };
 
 struct FunctionTypeInfo
 {
-    Array<SymbolTypePtr_t> m_paramTypes;
-    SymbolTypePtr_t m_returnType;
+    Array<SymbolTypeRef> m_paramTypes;
+    SymbolTypeRef m_returnType;
 };
 
 struct GenericTypeInfo
 {
     int m_numParameters = 0; // -1 for variadic
-    Array<SymbolTypePtr_t> m_params;
+    Array<SymbolTypeRef> m_params;
 };
 
 struct GenericInstanceTypeInfo
@@ -86,7 +79,7 @@ struct GenericInstanceTypeInfo
     struct Arg
     {
         String m_name;
-        SymbolTypePtr_t m_type;
+        SymbolTypeRef m_type;
         RC<AstExpression> m_defaultValue;
         bool m_isRef = false;
         bool m_isConst = false;
@@ -122,90 +115,90 @@ struct SymbolTypeTrait
     }
 };
 
-class SymbolType : public std::enable_shared_from_this<SymbolType>
+class SymbolType : public EnableRefCountedPtrFromThis<SymbolType>
 {
 public:
-    static SymbolTypePtr_t Alias(
+    static SymbolTypeRef Alias(
         const String& name,
         const AliasTypeInfo& info);
 
-    static SymbolTypePtr_t Primitive(
+    static SymbolTypeRef Primitive(
         const String& name,
         const RC<AstExpression>& defaultValue);
 
-    static SymbolTypePtr_t Primitive(
+    static SymbolTypeRef Primitive(
         const String& name,
         const RC<AstExpression>& defaultValue,
-        const SymbolTypePtr_t& base);
+        const SymbolTypeRef& base);
 
-    static SymbolTypePtr_t Object(
+    static SymbolTypeRef Object(
         const String& name,
         const Array<SymbolTypeMember>& members);
 
-    static SymbolTypePtr_t Object(
+    static SymbolTypeRef Object(
         const String& name,
         const Array<SymbolTypeMember>& members,
-        const SymbolTypePtr_t& base);
+        const SymbolTypeRef& base);
 
     /** A generic type template. Members may have the type class TYPE_GENERIC_PARAMETER.
         They will be substituted when an instance of the generic type is created.
     */
-    static SymbolTypePtr_t Generic(
+    static SymbolTypeRef Generic(
         const String& name,
         const Array<SymbolTypeMember>& members,
         const GenericTypeInfo& info,
-        const SymbolTypePtr_t& base);
+        const SymbolTypeRef& base);
 
-    static SymbolTypePtr_t Generic(
+    static SymbolTypeRef Generic(
         const String& name,
         const RC<AstExpression>& defaultValue,
         const Array<SymbolTypeMember>& members,
         const GenericTypeInfo& info,
-        const SymbolTypePtr_t& base);
+        const SymbolTypeRef& base);
 
-    static SymbolTypePtr_t GenericInstance(
-        const SymbolTypePtr_t& base,
+    static SymbolTypeRef GenericInstance(
+        const SymbolTypeRef& base,
         const GenericInstanceTypeInfo& info,
         const Array<SymbolTypeMember>& members);
 
-    static SymbolTypePtr_t GenericInstance(
-        const SymbolTypePtr_t& base,
+    static SymbolTypeRef GenericInstance(
+        const SymbolTypeRef& base,
         const GenericInstanceTypeInfo& info);
 
-    static SymbolTypePtr_t GenericParameter(
+    static SymbolTypeRef GenericParameter(
         const String& name,
-        const SymbolTypePtr_t& base);
+        const SymbolTypeRef& base);
 
-    static SymbolTypePtr_t Extend(
+    static SymbolTypeRef Extend(
         const String& name,
-        const SymbolTypePtr_t& base,
+        const SymbolTypeRef& base,
         const Array<SymbolTypeMember>& members);
 
-    static SymbolTypePtr_t TypePromotion(
-        const SymbolTypePtr_t& lptr,
-        const SymbolTypePtr_t& rptr);
+    static SymbolTypeRef TypePromotion(
+        const SymbolTypeRef& lptr,
+        const SymbolTypeRef& rptr);
 
-    static SymbolTypePtr_t GenericPromotion(
-        const SymbolTypePtr_t& lptr,
-        const SymbolTypePtr_t& rptr);
+    static SymbolTypeRef GenericPromotion(
+        const SymbolTypeRef& lptr,
+        const SymbolTypeRef& rptr);
 
     /** Substitute this or any generic parameters of this object which
         are the given generic type with the supplied substitution */
-    static SymbolTypePtr_t SubstituteGenericParams(
-        const SymbolTypePtr_t& lptr,
-        const SymbolTypePtr_t& placeholder,
-        const SymbolTypePtr_t& substitute);
+    static SymbolTypeRef SubstituteGenericParams(
+        const SymbolTypeRef& lptr,
+        const SymbolTypeRef& placeholder,
+        const SymbolTypeRef& substitute);
 
 public:
     SymbolType(
         const String& name,
         SymbolTypeClass typeClass,
-        const SymbolTypePtr_t& base);
+        const SymbolTypeRef& base);
 
     SymbolType(
         const String& name,
         SymbolTypeClass typeClass,
-        const SymbolTypePtr_t& base,
+        const SymbolTypeRef& base,
         const RC<AstExpression>& defaultValue,
         const Array<SymbolTypeMember>& members);
 
@@ -223,7 +216,7 @@ public:
     {
         return m_typeClass;
     }
-    const SymbolTypePtr_t& GetBaseType() const
+    const SymbolTypeRef& GetBaseType() const
     {
         return m_base;
     }
@@ -346,14 +339,14 @@ public:
         return !operator==(other);
     }
 
-    const SymbolTypePtr_t FindMember(const String& name) const;
+    const SymbolTypeRef FindMember(const String& name) const;
     bool FindMember(const String& name, SymbolTypeMember& out) const;
     bool FindMember(const String& name, SymbolTypeMember& out, uint32& outIndex) const;
     bool FindMemberDeep(const String& name, SymbolTypeMember& out) const;
     bool FindMemberDeep(const String& name, SymbolTypeMember& out, uint32& outIndex) const;
     bool FindMemberDeep(const String& name, SymbolTypeMember& out, uint32& outIndex, uint32& outDepth) const;
 
-    const SymbolTypePtr_t FindPrototypeMember(const String& name) const;
+    const SymbolTypeRef FindPrototypeMember(const String& name) const;
     bool FindPrototypeMember(const String& name, SymbolTypeMember& out) const;
     bool FindPrototypeMember(const String& name, SymbolTypeMember& out, uint32& outIndex) const;
     bool FindPrototypeMemberDeep(const String& name) const;
@@ -377,7 +370,7 @@ public:
         is a base of this type. */
     bool HasBase(const SymbolType& baseType) const;
     /** Find the root aliasee. If not an alias, just returns itself */
-    SymbolTypePtr_t GetUnaliased();
+    SymbolTypeRef GetUnaliased();
 
     bool IsNumber() const;
     bool IsIntegral() const;
@@ -437,7 +430,7 @@ private:
     Array<SymbolTypeMember> m_members;
 
     // type that this type is based off of
-    SymbolTypePtr_t m_base;
+    SymbolTypeRef m_base;
 
     Weak<AstTypeObject> m_typeObject;
 

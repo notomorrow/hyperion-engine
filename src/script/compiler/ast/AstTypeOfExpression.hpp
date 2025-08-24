@@ -29,8 +29,8 @@ public:
 
     virtual RC<AstStatement> Clone() const override;
 
-    virtual SymbolTypePtr_t GetExprType() const override;
-    virtual SymbolTypePtr_t GetHeldType() const override;
+    virtual SymbolTypeRef GetExprType() const override;
+    virtual SymbolTypeRef GetHeldType() const override;
 
     virtual const AstExpression* GetValueOf() const override;
     virtual const AstExpression* GetDeepValueOf() const override;
@@ -38,7 +38,7 @@ public:
 private:
 #if HYP_SCRIPT_TYPEOF_RETURN_OBJECT
     RC<AstTypeRef> m_typeRef;
-    SymbolTypePtr_t m_heldType;
+    SymbolTypeRef m_heldType;
 #else
     RC<AstExpression> m_stringExpr;
 #endif

@@ -116,7 +116,7 @@ bool AstModuleProperty::MayHaveSideEffects() const
     }
 }
 
-SymbolTypePtr_t AstModuleProperty::GetExprType() const
+SymbolTypeRef AstModuleProperty::GetExprType() const
 {
     Assert(m_exprType != nullptr);
     return m_exprType;

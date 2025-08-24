@@ -30,7 +30,7 @@ public:
         return m_args;
     }
 
-    const SymbolTypePtr_t& GetReturnType() const
+    const SymbolTypeRef& GetReturnType() const
     {
         return m_returnType;
     }
@@ -43,7 +43,7 @@ public:
 
     virtual Tribool IsTrue() const override;
     virtual bool MayHaveSideEffects() const override;
-    virtual SymbolTypePtr_t GetExprType() const override;
+    virtual SymbolTypeRef GetExprType() const override;
     virtual AstExpression* GetTarget() const override;
 
     virtual HashCode GetHashCode() const override
@@ -69,7 +69,7 @@ protected:
     // set while analyzing
     RC<AstExpression> m_overrideExpr;
     Array<RC<AstArgument>> m_substitutedArgs;
-    SymbolTypePtr_t m_returnType;
+    SymbolTypeRef m_returnType;
     bool m_isVisited = false;
 
     RC<AstCallExpression> CloneImpl() const

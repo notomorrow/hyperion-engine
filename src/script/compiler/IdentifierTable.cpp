@@ -57,7 +57,7 @@ RC<Identifier> IdentifierTable::AddIdentifier(
     const String& name,
     int flags,
     RC<AstExpression> currentValue,
-    SymbolTypePtr_t symbolType)
+    SymbolTypeRef symbolType)
 {
     RC<Identifier> ident(new Identifier(
         name,
@@ -117,7 +117,7 @@ RC<Identifier> IdentifierTable::LookUpIdentifier(const String& name)
     return nullptr;
 }
 
-void IdentifierTable::BindTypeToIdentifier(const String& name, SymbolTypePtr_t symbolType)
+void IdentifierTable::BindTypeToIdentifier(const String& name, SymbolTypeRef symbolType)
 {
     AddIdentifier(
         name,
@@ -126,7 +126,7 @@ void IdentifierTable::BindTypeToIdentifier(const String& name, SymbolTypePtr_t s
         symbolType->GetBaseType());
 }
 
-SymbolTypePtr_t IdentifierTable::LookupSymbolType(const String& name) const
+SymbolTypeRef IdentifierTable::LookupSymbolType(const String& name) const
 {
     for (auto& type : m_symbolTypes)
     {
@@ -139,7 +139,7 @@ SymbolTypePtr_t IdentifierTable::LookupSymbolType(const String& name) const
     return nullptr;
 }
 
-void IdentifierTable::AddSymbolType(const SymbolTypePtr_t& type)
+void IdentifierTable::AddSymbolType(const SymbolTypeRef& type)
 {
     m_symbolTypes.PushBack(type);
 }

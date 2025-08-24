@@ -27,7 +27,7 @@ struct AstIdentifierProperties
     Scope* m_functionScope = nullptr;
 
     // if the found identifier was a type...
-    SymbolTypePtr_t m_foundType = nullptr;
+    SymbolTypeRef m_foundType = nullptr;
 
     // getters & setters
     RC<Identifier>& GetIdentifier()
@@ -106,8 +106,8 @@ public:
     virtual Tribool IsTrue() const override = 0;
     virtual bool MayHaveSideEffects() const override = 0;
 
-    virtual SymbolTypePtr_t GetExprType() const override = 0;
-    virtual SymbolTypePtr_t GetHeldType() const override;
+    virtual SymbolTypeRef GetExprType() const override = 0;
+    virtual SymbolTypeRef GetHeldType() const override;
 
     virtual const AstExpression* GetValueOf() const override;
     virtual const AstExpression* GetDeepValueOf() const override;
