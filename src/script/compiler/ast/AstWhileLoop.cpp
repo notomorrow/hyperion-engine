@@ -45,13 +45,13 @@ void AstWhileLoop::Visit(AstVisitor* visitor, Module* mod)
     mod->m_scopes.Close();
 }
 
-std::unique_ptr<Buildable> AstWhileLoop::Build(AstVisitor* visitor, Module* mod)
+UniquePtr<Buildable> AstWhileLoop::Build(AstVisitor* visitor, Module* mod)
 {
     InstructionStreamContextGuard contextGuard(
         &visitor->GetCompilationUnit()->GetInstructionStream().GetContextTree(),
         INSTRUCTION_STREAM_CONTEXT_LOOP);
 
-    std::unique_ptr<BytecodeChunk> chunk = BytecodeUtil::Make<BytecodeChunk>();
+    UniquePtr<BytecodeChunk> chunk = BytecodeUtil::Make<BytecodeChunk>();
 
     const Tribool conditionIsTrue = m_conditional->IsTrue();
 

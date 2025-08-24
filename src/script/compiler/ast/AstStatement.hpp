@@ -2,12 +2,13 @@
 #define AST_STATEMENT_HPP
 
 #include <core/memory/RefCountedPtr.hpp>
+#include <core/memory/UniquePtr.hpp>
+
 #include <core/containers/String.hpp>
 
 #include <script/SourceLocation.hpp>
 #include <script/compiler/emit/Buildable.hpp>
 
-#include <memory>
 #include <vector>
 #include <sstream>
 
@@ -48,7 +49,7 @@ public:
     }
 
     virtual void Visit(AstVisitor* visitor, Module* mod) = 0;
-    virtual std::unique_ptr<Buildable> Build(AstVisitor* visitor, Module* mod) = 0;
+    virtual UniquePtr<Buildable> Build(AstVisitor* visitor, Module* mod) = 0;
     virtual void Optimize(AstVisitor* visitor, Module* mod) = 0;
 
     virtual HashCode GetHashCode() const = 0;

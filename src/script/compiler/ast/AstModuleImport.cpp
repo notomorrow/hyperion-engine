@@ -6,11 +6,9 @@
 #include <script/compiler/Optimizer.hpp>
 
 #include <core/filesystem/FsUtil.hpp>
+#include <core/filesystem/FilePath.hpp>
 
-#include <fstream>
-#include <iostream>
-#include <sstream>
-#include <functional>
+#include <core/io/BufferedByteReader.hpp>
 
 namespace hyperion::compiler {
 
@@ -76,7 +74,7 @@ void AstModuleImportPart::Visit(AstVisitor* visitor, Module* mod)
     }
 }
 
-std::unique_ptr<Buildable> AstModuleImportPart::Build(AstVisitor* visitor, Module* mod)
+UniquePtr<Buildable> AstModuleImportPart::Build(AstVisitor* visitor, Module* mod)
 {
     return nullptr;
 }
@@ -128,15 +126,18 @@ void AstModuleImport::Visit(AstVisitor* visitor, Module* mod)
     if (first->GetParts().Empty() || !opened)
     {
         // find the folder which the current file is in
-        const SizeType index = std::string(m_location.GetFileName().Data()).findLastOf("/\\");
+        SizeType slashIndex = m_location.GetFileName().FindLastIndex('/');
+        slashIndex = (slashIndex == String::notFound)
+            ? m_location.GetFileName().FindLastIndex('\\')
+            : MathUtil::Max(slashIndex, m_location.GetFileName().FindLastIndex('\\'));
 
         String currentDir;
-        if (index != std::string::npos)
+        if (slashIndex != String::notFound)
         {
-            currentDir = m_location.GetFileName().Substr(0, index);
+            currentDir = m_location.GetFileName().Substr(0, slashIndex);
         }
 
-        std::ifstream file;
+        BufferedReader reader;
 
         FlatSet<String> scanPaths;
         String foundPath;
@@ -165,20 +166,20 @@ void AstModuleImport::Visit(AstVisitor* visitor, Module* mod)
             const String& filename = first->GetLeft();
             const String ext = ".hypscript";
 
-            foundPath = String(FileSystem::Join(scanPath.Data(), (filename + ext).Data()).c_str());
+            foundPath = FilePath::Join(scanPath, filename + ext);
             triedPaths.PushBack(foundPath);
 
-            if (AstImport::TryOpenFile(foundPath, file))
+            if (AstImport::TryOpenFile(foundPath, reader))
             {
                 opened = true;
                 break;
             }
 
             // try it without extension
-            foundPath = String(FileSystem::Join(scanPath.Data(), filename.Data()).c_str());
+            foundPath = FilePath::Join(scanPath, filename);
             triedPaths.PushBack(foundPath);
 
-            if (AstImport::TryOpenFile(foundPath, file))
+            if (AstImport::TryOpenFile(foundPath, reader))
             {
                 opened = true;
                 break;
@@ -187,6 +188,8 @@ void AstModuleImport::Visit(AstVisitor* visitor, Module* mod)
 
         if (opened)
         {
+            delete reader.GetSource();
+
             AstImport::PerformImport(
                 visitor,
                 mod,
@@ -226,9 +229,9 @@ void AstModuleImport::Visit(AstVisitor* visitor, Module* mod)
         std::stringstream triedPathsString;
         triedPathsString << "[";
 
-        for (size_t i = 0; i < triedPaths.Size(); i++)
+        for (SizeType i = 0; i < triedPaths.Size(); i++)
         {
-            triedPathsString << '"' << tried_paths[i] << '"';
+            triedPathsString << '"' << triedPaths[i] << '"';
 
             if (i != triedPaths.Size() - 1)
             {

@@ -1,5 +1,8 @@
 #include <script/compiler/ast/AstSymbolQuery.hpp>
 #include <script/compiler/ast/AstTypeObject.hpp>
+#include <script/compiler/ast/AstFalse.hpp>
+#include <script/compiler/ast/AstTrue.hpp>
+
 #include <script/compiler/AstVisitor.hpp>
 #include <script/compiler/Configuration.hpp>
 
@@ -8,16 +11,13 @@
 #include <script/compiler/emit/BytecodeChunk.hpp>
 #include <script/compiler/emit/BytecodeUtil.hpp>
 
-#include <script/Script.hpp>
+#include <script/HypScript.hpp>
 #include <script/SourceFile.hpp>
 
 #include <core/debug/Debug.hpp>
 
 #include <core/io/ByteReader.hpp>
 #include <core/memory/UniquePtr.hpp>
-
-#include "AstFalse.hpp"
-#include "AstTrue.hpp"
 
 namespace hyperion::compiler {
 
@@ -38,7 +38,7 @@ void AstSymbolQuery::Visit(AstVisitor* visitor, Module* mod)
 
     m_symbolType = BuiltinTypes::UNDEFINED;
 
-    if (m_commandName == "inspect_type")
+    if (m_commandName == "inspectType")
     {
         auto* valueOf = m_expr->GetDeepValueOf();
         Assert(valueOf != nullptr);
@@ -157,7 +157,7 @@ void AstSymbolQuery::Visit(AstVisitor* visitor, Module* mod)
         SourceFile sourceFile(value, value.Size());
         sourceFile.ReadIntoBuffer(byteBuffer);
 
-        UniquePtr<Script> script(new Script(sourceFile));
+        UniquePtr<HypScript> script(new HypScript(sourceFile));
 
         scriptapi2::Context context;
 
@@ -182,7 +182,7 @@ void AstSymbolQuery::Visit(AstVisitor* visitor, Module* mod)
     }
 }
 
-std::unique_ptr<Buildable> AstSymbolQuery::Build(AstVisitor* visitor, Module* mod)
+UniquePtr<Buildable> AstSymbolQuery::Build(AstVisitor* visitor, Module* mod)
 {
     if (m_resultValue != nullptr)
     {

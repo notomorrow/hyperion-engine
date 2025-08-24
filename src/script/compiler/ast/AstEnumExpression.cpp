@@ -114,7 +114,7 @@ void AstEnumExpression::Visit(AstVisitor* visitor, Module* mod)
     m_expr->Visit(visitor, mod);
 }
 
-std::unique_ptr<Buildable> AstEnumExpression::Build(AstVisitor* visitor, Module* mod)
+UniquePtr<Buildable> AstEnumExpression::Build(AstVisitor* visitor, Module* mod)
 {
     Assert(m_expr != nullptr);
     return m_expr->Build(visitor, mod);

@@ -410,7 +410,7 @@ void AstFunctionExpression::Visit(AstVisitor* visitor, Module* mod)
     }
 }
 
-std::unique_ptr<Buildable> AstFunctionExpression::Build(AstVisitor* visitor, Module* mod)
+UniquePtr<Buildable> AstFunctionExpression::Build(AstVisitor* visitor, Module* mod)
 {
     Assert(m_blockWithParameters != nullptr);
 
@@ -418,7 +418,7 @@ std::unique_ptr<Buildable> AstFunctionExpression::Build(AstVisitor* visitor, Mod
         &visitor->GetCompilationUnit()->GetInstructionStream().GetContextTree(),
         INSTRUCTION_STREAM_CONTEXT_DEFAULT);
 
-    std::unique_ptr<BytecodeChunk> chunk = BytecodeUtil::Make<BytecodeChunk>();
+    UniquePtr<BytecodeChunk> chunk = BytecodeUtil::Make<BytecodeChunk>();
 
     if (m_closureTypeExpr != nullptr)
     {
@@ -546,11 +546,11 @@ std::unique_ptr<Buildable> AstFunctionExpression::Build(AstVisitor* visitor, Mod
     return chunk;
 }
 
-std::unique_ptr<Buildable> AstFunctionExpression::BuildFunctionBody(AstVisitor* visitor, Module* mod)
+UniquePtr<Buildable> AstFunctionExpression::BuildFunctionBody(AstVisitor* visitor, Module* mod)
 {
     Assert(m_blockWithParameters != nullptr);
 
-    std::unique_ptr<BytecodeChunk> chunk = BytecodeUtil::Make<BytecodeChunk>();
+    UniquePtr<BytecodeChunk> chunk = BytecodeUtil::Make<BytecodeChunk>();
 
     // increase stack size by the number of parameters
     const SizeType paramStackSize = m_parameters.Size() + ((m_isClosure && m_closureSelfParam != nullptr) ? 1 : 0);

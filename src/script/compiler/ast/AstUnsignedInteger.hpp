@@ -12,7 +12,7 @@ class AstUnsignedInteger : public AstConstant
 public:
     AstUnsignedInteger(hyperion::uint32 value, const SourceLocation& location);
 
-    virtual std::unique_ptr<Buildable> Build(AstVisitor* visitor, Module* mod) override;
+    virtual UniquePtr<Buildable> Build(AstVisitor* visitor, Module* mod) override;
 
     virtual RC<AstStatement> Clone() const override;
 

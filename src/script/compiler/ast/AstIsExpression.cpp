@@ -61,7 +61,7 @@ void AstIsExpression::Visit(AstVisitor* visitor, Module* mod)
     }
 }
 
-std::unique_ptr<Buildable> AstIsExpression::Build(AstVisitor* visitor, Module* mod)
+UniquePtr<Buildable> AstIsExpression::Build(AstVisitor* visitor, Module* mod)
 {
     if (m_overrideExpr != nullptr)
     {

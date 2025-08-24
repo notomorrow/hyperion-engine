@@ -20,7 +20,7 @@ AstFloat::AstFloat(float value, const SourceLocation& location)
 {
 }
 
-std::unique_ptr<Buildable> AstFloat::Build(AstVisitor* visitor, Module* mod)
+UniquePtr<Buildable> AstFloat::Build(AstVisitor* visitor, Module* mod)
 {
     // get active register
     const uint8 rp = visitor->GetCompilationUnit()->GetInstructionStream().GetCurrentRegister();

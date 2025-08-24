@@ -17,7 +17,7 @@ AstString::AstString(const String& value, const SourceLocation& location)
 {
 }
 
-std::unique_ptr<Buildable> AstString::Build(AstVisitor* visitor, Module* mod)
+UniquePtr<Buildable> AstString::Build(AstVisitor* visitor, Module* mod)
 {
     // get active register
     uint8 rp = visitor->GetCompilationUnit()->GetInstructionStream().GetCurrentRegister();

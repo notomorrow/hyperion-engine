@@ -556,7 +556,7 @@ SymbolTypePtr_t SymbolType::GetUnaliased()
         }
     }
 
-    return sharedFromThis();
+    return shared_from_this();
 }
 
 bool SymbolType::IsNumber() const

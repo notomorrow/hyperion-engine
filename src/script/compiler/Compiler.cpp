@@ -16,12 +16,12 @@
 
 namespace hyperion::compiler {
 
-std::unique_ptr<Buildable> Compiler::BuildArgumentsStart(
+UniquePtr<Buildable> Compiler::BuildArgumentsStart(
     AstVisitor* visitor,
     Module* mod,
     const Array<RC<AstArgument>>& args)
 {
-    std::unique_ptr<BytecodeChunk> chunk = BytecodeUtil::Make<BytecodeChunk>();
+    UniquePtr<BytecodeChunk> chunk = BytecodeUtil::Make<BytecodeChunk>();
 
     uint8 rp;
 
@@ -50,7 +50,7 @@ std::unique_ptr<Buildable> Compiler::BuildArgumentsStart(
     return chunk;
 }
 
-std::unique_ptr<Buildable> Compiler::BuildArgumentsEnd(
+UniquePtr<Buildable> Compiler::BuildArgumentsEnd(
     AstVisitor* visitor,
     Module* mod,
     uint8 nargs)
@@ -68,13 +68,13 @@ std::unique_ptr<Buildable> Compiler::BuildArgumentsEnd(
     return Compiler::PopStack(visitor, nargs);
 }
 
-std::unique_ptr<Buildable> Compiler::BuildCall(
+UniquePtr<Buildable> Compiler::BuildCall(
     AstVisitor* visitor,
     Module* mod,
     const RC<AstExpression>& target,
     uint8 nargs)
 {
-    std::unique_ptr<BytecodeChunk> chunk = BytecodeUtil::Make<BytecodeChunk>();
+    UniquePtr<BytecodeChunk> chunk = BytecodeUtil::Make<BytecodeChunk>();
 
     // if no target provided, do not build it in
     if (target != nullptr)
@@ -94,7 +94,7 @@ std::unique_ptr<Buildable> Compiler::BuildCall(
     return chunk;
 }
 
-std::unique_ptr<Buildable> Compiler::LoadMemberFromHash(AstVisitor* visitor, Module* mod, uint32 hash)
+UniquePtr<Buildable> Compiler::LoadMemberFromHash(AstVisitor* visitor, Module* mod, uint32 hash)
 {
     uint8 rp = visitor->GetCompilationUnit()->GetInstructionStream().GetCurrentRegister();
 
@@ -103,7 +103,7 @@ std::unique_ptr<Buildable> Compiler::LoadMemberFromHash(AstVisitor* visitor, Mod
     return instrLoadMemHash;
 }
 
-std::unique_ptr<Buildable> Compiler::StoreMemberFromHash(AstVisitor* visitor, Module* mod, uint32 hash)
+UniquePtr<Buildable> Compiler::StoreMemberFromHash(AstVisitor* visitor, Module* mod, uint32 hash)
 {
     uint8 rp = visitor->GetCompilationUnit()->GetInstructionStream().GetCurrentRegister();
 
@@ -112,7 +112,7 @@ std::unique_ptr<Buildable> Compiler::StoreMemberFromHash(AstVisitor* visitor, Mo
     return instrMovMemHash;
 }
 
-std::unique_ptr<Buildable> Compiler::LoadMemberAtIndex(AstVisitor* visitor, Module* mod, uint8 index)
+UniquePtr<Buildable> Compiler::LoadMemberAtIndex(AstVisitor* visitor, Module* mod, uint8 index)
 {
     uint8 rp = visitor->GetCompilationUnit()->GetInstructionStream().GetCurrentRegister();
 
@@ -125,7 +125,7 @@ std::unique_ptr<Buildable> Compiler::LoadMemberAtIndex(AstVisitor* visitor, Modu
     return instrLoadMem;
 }
 
-std::unique_ptr<Buildable> Compiler::StoreMemberAtIndex(AstVisitor* visitor, Module* mod, uint8 index)
+UniquePtr<Buildable> Compiler::StoreMemberAtIndex(AstVisitor* visitor, Module* mod, uint8 index)
 {
     uint8 rp = visitor->GetCompilationUnit()->GetInstructionStream().GetCurrentRegister();
 
@@ -138,7 +138,7 @@ std::unique_ptr<Buildable> Compiler::StoreMemberAtIndex(AstVisitor* visitor, Mod
     return instrMovMem;
 }
 
-std::unique_ptr<Buildable> Compiler::CreateConditional(
+UniquePtr<Buildable> Compiler::CreateConditional(
     AstVisitor* visitor,
     Module* mod,
     AstStatement* cond,
@@ -152,7 +152,7 @@ std::unique_ptr<Buildable> Compiler::CreateConditional(
         &visitor->GetCompilationUnit()->GetInstructionStream().GetContextTree(),
         INSTRUCTION_STREAM_CONTEXT_DEFAULT);
 
-    std::unique_ptr<BytecodeChunk> chunk = BytecodeUtil::Make<BytecodeChunk>();
+    UniquePtr<BytecodeChunk> chunk = BytecodeUtil::Make<BytecodeChunk>();
 
     uint8 rp;
 
@@ -209,9 +209,9 @@ std::unique_ptr<Buildable> Compiler::CreateConditional(
     return chunk;
 }
 
-std::unique_ptr<Buildable> Compiler::LoadLeftThenRight(AstVisitor* visitor, Module* mod, Compiler::ExprInfo info)
+UniquePtr<Buildable> Compiler::LoadLeftThenRight(AstVisitor* visitor, Module* mod, Compiler::ExprInfo info)
 {
-    std::unique_ptr<BytecodeChunk> chunk = BytecodeUtil::Make<BytecodeChunk>();
+    UniquePtr<BytecodeChunk> chunk = BytecodeUtil::Make<BytecodeChunk>();
 
     // load left-hand side into register 0
     chunk->Append(info.left->Build(visitor, mod));
@@ -228,9 +228,9 @@ std::unique_ptr<Buildable> Compiler::LoadLeftThenRight(AstVisitor* visitor, Modu
     return chunk;
 }
 
-std::unique_ptr<Buildable> Compiler::LoadRightThenLeft(AstVisitor* visitor, Module* mod, Compiler::ExprInfo info)
+UniquePtr<Buildable> Compiler::LoadRightThenLeft(AstVisitor* visitor, Module* mod, Compiler::ExprInfo info)
 {
-    std::unique_ptr<BytecodeChunk> chunk = BytecodeUtil::Make<BytecodeChunk>();
+    UniquePtr<BytecodeChunk> chunk = BytecodeUtil::Make<BytecodeChunk>();
 
     uint8 rp;
 
@@ -296,12 +296,12 @@ std::unique_ptr<Buildable> Compiler::LoadRightThenLeft(AstVisitor* visitor, Modu
     return chunk;
 }
 
-std::unique_ptr<Buildable> Compiler::LoadLeftAndStore(
+UniquePtr<Buildable> Compiler::LoadLeftAndStore(
     AstVisitor* visitor,
     Module* mod,
     Compiler::ExprInfo info)
 {
-    std::unique_ptr<BytecodeChunk> chunk = BytecodeUtil::Make<BytecodeChunk>();
+    UniquePtr<BytecodeChunk> chunk = BytecodeUtil::Make<BytecodeChunk>();
 
     uint8 rp;
 
@@ -356,13 +356,13 @@ std::unique_ptr<Buildable> Compiler::LoadLeftAndStore(
     return chunk;
 }
 
-std::unique_ptr<Buildable> Compiler::BuildBinOp(
+UniquePtr<Buildable> Compiler::BuildBinOp(
     uint8 opcode,
     AstVisitor* visitor,
     Module* mod,
     Compiler::ExprInfo info)
 {
-    std::unique_ptr<BytecodeChunk> chunk = BytecodeUtil::Make<BytecodeChunk>();
+    UniquePtr<BytecodeChunk> chunk = BytecodeUtil::Make<BytecodeChunk>();
 
     AstBinaryExpression* leftAsBinop = dynamic_cast<AstBinaryExpression*>(info.left);
     AstBinaryExpression* rightAsBinop = dynamic_cast<AstBinaryExpression*>(info.right);
@@ -440,7 +440,7 @@ std::unique_ptr<Buildable> Compiler::BuildBinOp(
     return chunk;
 }
 
-std::unique_ptr<Buildable> Compiler::PopStack(AstVisitor* visitor, int amt)
+UniquePtr<Buildable> Compiler::PopStack(AstVisitor* visitor, int amt)
 {
     if (amt == 1)
     {
@@ -484,9 +484,9 @@ Compiler::Compiler(const Compiler& other)
 {
 }
 
-std::unique_ptr<BytecodeChunk> Compiler::Compile()
+UniquePtr<BytecodeChunk> Compiler::Compile()
 {
-    std::unique_ptr<BytecodeChunk> chunk(new BytecodeChunk);
+    UniquePtr<BytecodeChunk> chunk(new BytecodeChunk);
 
     Module* mod = m_compilationUnit->GetCurrentModule();
     Assert(mod != nullptr);

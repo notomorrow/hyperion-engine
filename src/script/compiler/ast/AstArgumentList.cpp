@@ -31,12 +31,12 @@ void AstArgumentList::Visit(AstVisitor* visitor, Module* mod)
     }
 }
 
-std::unique_ptr<Buildable> AstArgumentList::Build(AstVisitor* visitor, Module* mod)
+UniquePtr<Buildable> AstArgumentList::Build(AstVisitor* visitor, Module* mod)
 {
     Assert(visitor != nullptr);
     Assert(mod != nullptr);
 
-    std::unique_ptr<BytecodeChunk> chunk = BytecodeUtil::Make<BytecodeChunk>();
+    UniquePtr<BytecodeChunk> chunk = BytecodeUtil::Make<BytecodeChunk>();
 
     for (const RC<AstArgument>& arg : m_args)
     {

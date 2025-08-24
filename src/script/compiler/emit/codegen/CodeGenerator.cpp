@@ -26,7 +26,7 @@ void CodeGenerator::Visit(BytecodeChunk* chunk)
 
     for (auto& buildable : chunk->buildables)
     {
-        codeGenerator.BuildableVisitor::Visit(buildable.get());
+        codeGenerator.BuildableVisitor::Visit(buildable.Get());
     }
 
     // bake the chunk's byte stream

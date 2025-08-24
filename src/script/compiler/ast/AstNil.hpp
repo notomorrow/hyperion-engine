@@ -10,7 +10,7 @@ class AstNil : public AstConstant
 public:
     AstNil(const SourceLocation& location);
 
-    virtual std::unique_ptr<Buildable> Build(AstVisitor* visitor, Module* mod) override;
+    virtual UniquePtr<Buildable> Build(AstVisitor* visitor, Module* mod) override;
 
     virtual RC<AstStatement> Clone() const override;
 

@@ -1,11 +1,12 @@
 #include <script/compiler/ErrorList.hpp>
-#include <util/Termcolor.hpp>
+
 #include <core/utilities/StringUtil.hpp>
+
 #include <core/containers/FlatSet.hpp>
 #include <core/containers/FixedArray.hpp>
 
-#include <unordered_set>
-#include <map>
+#include <core/io/BufferedByteReader.hpp>
+
 #include <fstream>
 
 namespace hyperion::compiler {
@@ -58,7 +59,7 @@ bool ErrorList::HasFatalErrors() const
 std::ostream& ErrorList::WriteOutput(std::ostream& os) const
 {
     FlatSet<String> errorFilenames;
-    Array<std::string> currentFileLines;
+    Array<String> currentFileLines;
 
     for (const CompilerError& error : m_errors)
     {
@@ -67,16 +68,13 @@ std::ostream& ErrorList::WriteOutput(std::ostream& os) const
         if (errorFilenames.Insert(path).second)
         {
             currentFileLines.Clear();
-            // read lines into currentLines vector
-            // this is used so that we can print out the line that an error occured on
-            std::ifstream is(path.Data());
-            if (is.isOpen())
+            
+            FileBufferedReaderSource source { path };
+            BufferedReader reader { &source };
+            
+            if (reader.IsOpen())
             {
-                std::string line;
-                while (std::getline(is, line))
-                {
-                    currentFileLines.PushBack(line);
-                }
+                currentFileLines = reader.ReadAllLines();
             }
 
             Array<String> split = path.Split('\\', '/');
@@ -85,9 +83,9 @@ std::ostream& ErrorList::WriteOutput(std::ostream& os) const
                 ? split.Back()
                 : path;
 
-            realFilename = StringUtil::StripExtension(realFilename);
+            realFilename = FilePath(realFilename).StripExtension();
 
-            os << termcolor::reset << "In file \"" << realFilename << "\":\n";
+            os << "\33[0m" << "In file \"" << realFilename << "\":\n";
         }
 
         const String& errorText = error.GetText();
@@ -95,17 +93,17 @@ std::ostream& ErrorList::WriteOutput(std::ostream& os) const
         switch (error.GetLevel())
         {
         case LEVEL_INFO:
-            os << termcolor::white << termcolor::onBlue << termcolor::bold << "Info";
+            os << "Info";
             break;
         case LEVEL_WARN:
-            os << termcolor::white << termcolor::onYellow << termcolor::bold << "Warning";
+            os << "\33[33m" << "Warning";
             break;
         case LEVEL_ERROR:
-            os << termcolor::white << termcolor::onRed << termcolor::bold << "Error";
+            os << "\33[31m" << "Error";
             break;
         }
 
-        os << termcolor::reset
+        os << "\33[0m"
            << " at line " << (error.GetLocation().GetLine() + 1)
            << ", col " << (error.GetLocation().GetColumn() + 1);
 
@@ -122,14 +120,14 @@ std::ostream& ErrorList::WriteOutput(std::ostream& os) const
                 os << ' ';
             }
 
-            os << termcolor::green << "^";
+            os << "^";
         }
         else
         {
             os << '\t' << "<line not found>";
         }
 
-        os << termcolor::reset << '\n';
+        os << "\33[0m" << '\n';
     }
 
     return os;

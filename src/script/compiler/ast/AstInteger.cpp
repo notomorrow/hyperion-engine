@@ -23,7 +23,7 @@ AstInteger::AstInteger(hyperion::int32 value, const SourceLocation& location)
 {
 }
 
-std::unique_ptr<Buildable> AstInteger::Build(AstVisitor* visitor, Module* mod)
+UniquePtr<Buildable> AstInteger::Build(AstVisitor* visitor, Module* mod)
 {
     // get active register
     const uint8 rp = visitor->GetCompilationUnit()->GetInstructionStream().GetCurrentRegister();

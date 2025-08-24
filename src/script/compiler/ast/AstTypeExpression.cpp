@@ -495,7 +495,7 @@ void AstTypeExpression::Visit(AstVisitor* visitor, Module* mod)
     m_isVisited = true;
 }
 
-std::unique_ptr<Buildable> AstTypeExpression::Build(AstVisitor* visitor, Module* mod)
+UniquePtr<Buildable> AstTypeExpression::Build(AstVisitor* visitor, Module* mod)
 {
     Assert(m_symbolType != nullptr);
     Assert(m_symbolType->GetId() != -1);
@@ -504,7 +504,7 @@ std::unique_ptr<Buildable> AstTypeExpression::Build(AstVisitor* visitor, Module*
 
     // Assert(!m_isUninstantiatedGeneric, "Cannot build an uninstantiated generic type.");
 
-    std::unique_ptr<BytecodeChunk> chunk = BytecodeUtil::Make<BytecodeChunk>();
+    UniquePtr<BytecodeChunk> chunk = BytecodeUtil::Make<BytecodeChunk>();
 
     if (m_prototypeExpr != nullptr)
     {

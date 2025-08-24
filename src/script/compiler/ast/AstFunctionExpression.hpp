@@ -37,7 +37,7 @@ public:
     }
 
     virtual void Visit(AstVisitor* visitor, Module* mod) override;
-    virtual std::unique_ptr<Buildable> Build(AstVisitor* visitor, Module* mod) override;
+    virtual UniquePtr<Buildable> Build(AstVisitor* visitor, Module* mod) override;
     virtual void Optimize(AstVisitor* visitor, Module* mod) override;
 
     virtual RC<AstStatement> Clone() const override;
@@ -93,7 +93,7 @@ protected:
 
     int m_staticId;
 
-    std::unique_ptr<Buildable> BuildFunctionBody(AstVisitor* visitor, Module* mod);
+    UniquePtr<Buildable> BuildFunctionBody(AstVisitor* visitor, Module* mod);
     RC<AstFunctionExpression> CloneImpl() const
     {
         return RC<AstFunctionExpression>(new AstFunctionExpression(

@@ -141,9 +141,9 @@ void AstMemberCallExpression::Visit(AstVisitor* visitor, Module* mod)
     }
 }
 
-std::unique_ptr<Buildable> AstMemberCallExpression::Build(AstVisitor* visitor, Module* mod)
+UniquePtr<Buildable> AstMemberCallExpression::Build(AstVisitor* visitor, Module* mod)
 {
-    std::unique_ptr<BytecodeChunk> chunk = BytecodeUtil::Make<BytecodeChunk>();
+    UniquePtr<BytecodeChunk> chunk = BytecodeUtil::Make<BytecodeChunk>();
 
     Assert(m_target != nullptr);
     chunk->Append(m_target->Build(visitor, mod));

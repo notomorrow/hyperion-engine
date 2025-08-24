@@ -47,9 +47,9 @@ void AstBreakStatement::Visit(AstVisitor* visitor, Module* mod)
     }
 }
 
-std::unique_ptr<Buildable> AstBreakStatement::Build(AstVisitor* visitor, Module* mod)
+UniquePtr<Buildable> AstBreakStatement::Build(AstVisitor* visitor, Module* mod)
 {
-    std::unique_ptr<BytecodeChunk> chunk = BytecodeUtil::Make<BytecodeChunk>();
+    UniquePtr<BytecodeChunk> chunk = BytecodeUtil::Make<BytecodeChunk>();
 
     const auto* closestLoop = visitor->GetCompilationUnit()->GetInstructionStream().GetContextTree().FindClosestMatch(
         [](const TreeNode<InstructionStreamContext>*, const InstructionStreamContext& context)

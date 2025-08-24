@@ -223,7 +223,7 @@ void AstBinaryExpression::Visit(AstVisitor* visitor, Module* mod)
     }
 }
 
-std::unique_ptr<Buildable> AstBinaryExpression::Build(AstVisitor* visitor, Module* mod)
+UniquePtr<Buildable> AstBinaryExpression::Build(AstVisitor* visitor, Module* mod)
 {
     if (m_operatorOverload != nullptr)
     {
@@ -241,7 +241,7 @@ std::unique_ptr<Buildable> AstBinaryExpression::Build(AstVisitor* visitor, Modul
         &visitor->GetCompilationUnit()->GetInstructionStream().GetContextTree(),
         INSTRUCTION_STREAM_CONTEXT_DEFAULT);
 
-    std::unique_ptr<BytecodeChunk> chunk = BytecodeUtil::Make<BytecodeChunk>();
+    UniquePtr<BytecodeChunk> chunk = BytecodeUtil::Make<BytecodeChunk>();
 
     Compiler::ExprInfo info {
         m_left.Get(),

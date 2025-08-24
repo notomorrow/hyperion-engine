@@ -252,7 +252,7 @@ void AstTemplateExpression::Visit(AstVisitor* visitor, Module* mod)
     visitor->GetCompilationUnit()->GetErrorList().SuppressErrors(false);
 }
 
-std::unique_ptr<Buildable> AstTemplateExpression::Build(AstVisitor* visitor, Module* mod)
+UniquePtr<Buildable> AstTemplateExpression::Build(AstVisitor* visitor, Module* mod)
 {
     Assert(m_isVisited);
 

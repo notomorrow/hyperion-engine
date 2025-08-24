@@ -140,9 +140,9 @@ void AstParameter::Visit(AstVisitor* visitor, Module* mod)
     }
 }
 
-std::unique_ptr<Buildable> AstParameter::Build(AstVisitor* visitor, Module* mod)
+UniquePtr<Buildable> AstParameter::Build(AstVisitor* visitor, Module* mod)
 {
-    std::unique_ptr<BytecodeChunk> chunk = BytecodeUtil::Make<BytecodeChunk>();
+    UniquePtr<BytecodeChunk> chunk = BytecodeUtil::Make<BytecodeChunk>();
 
     Assert(m_identifier != nullptr);
 

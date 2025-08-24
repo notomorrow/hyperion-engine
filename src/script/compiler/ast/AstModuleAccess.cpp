@@ -64,7 +64,7 @@ void AstModuleAccess::Visit(AstVisitor* visitor, Module* mod)
     }
 }
 
-std::unique_ptr<Buildable> AstModuleAccess::Build(AstVisitor* visitor, Module* mod)
+UniquePtr<Buildable> AstModuleAccess::Build(AstVisitor* visitor, Module* mod)
 {
     Assert(m_expr != nullptr);
     Assert(m_modAccess != nullptr);

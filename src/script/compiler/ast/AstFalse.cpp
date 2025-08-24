@@ -17,7 +17,7 @@ AstFalse::AstFalse(const SourceLocation& location)
 {
 }
 
-std::unique_ptr<Buildable> AstFalse::Build(AstVisitor* visitor, Module* mod)
+UniquePtr<Buildable> AstFalse::Build(AstVisitor* visitor, Module* mod)
 {
     // get active register
     const uint8 rp = visitor->GetCompilationUnit()->GetInstructionStream().GetCurrentRegister();

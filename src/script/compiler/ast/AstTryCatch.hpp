@@ -19,7 +19,7 @@ public:
     virtual ~AstTryCatch() = default;
 
     virtual void Visit(AstVisitor* visitor, Module* mod) override;
-    virtual std::unique_ptr<Buildable> Build(AstVisitor* visitor, Module* mod) override;
+    virtual UniquePtr<Buildable> Build(AstVisitor* visitor, Module* mod) override;
     virtual void Optimize(AstVisitor* visitor, Module* mod) override;
 
     virtual RC<AstStatement> Clone() const override;

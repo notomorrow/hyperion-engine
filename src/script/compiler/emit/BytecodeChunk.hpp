@@ -2,14 +2,16 @@
 #define BYTECODE_CHUNK_HPP
 
 #include <script/compiler/emit/Instruction.hpp>
+
 #include <core/containers/Array.hpp>
+
 #include <core/utilities/Optional.hpp>
-#include <core/Name.hpp>
+
+#include <core/memory/UniquePtr.hpp>
 
 #include <core/debug/Debug.hpp>
 
-#include <vector>
-#include <memory>
+#include <core/Name.hpp>
 
 namespace hyperion::compiler {
 
@@ -21,7 +23,7 @@ struct BytecodeChunk final : public Buildable
     BytecodeChunk(const BytecodeChunk& other) = delete;
     virtual ~BytecodeChunk() = default;
 
-    void Append(std::unique_ptr<Buildable> buildable)
+    void Append(UniquePtr<Buildable>&& buildable)
     {
         if (buildable != nullptr)
         {
@@ -34,7 +36,7 @@ struct BytecodeChunk final : public Buildable
         labels.PushBack(labelId);
     }
 
-    Array<std::uniquePtr<Buildable>> buildables;
+    Array<UniquePtr<Buildable>> buildables;
 };
 
 } // namespace hyperion::compiler

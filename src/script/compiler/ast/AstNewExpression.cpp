@@ -97,7 +97,7 @@ void AstNewExpression::Visit(AstVisitor* visitor, Module* mod)
     if (m_enableConstructorCall)
     {
         static constexpr const char* constructMethodName = "$construct";
-        static constexpr const char* tempVarName = "__$temp_new_target";
+        static constexpr const char* tempVarName = "__$tempNewTarget";
 
         const bool isAny = m_prototypeType->IsAnyType();
         const bool isPlaceholder = m_prototypeType->IsPlaceholderType();
@@ -170,14 +170,14 @@ void AstNewExpression::Visit(AstVisitor* visitor, Module* mod)
     }
 }
 
-std::unique_ptr<Buildable> AstNewExpression::Build(AstVisitor* visitor, Module* mod)
+UniquePtr<Buildable> AstNewExpression::Build(AstVisitor* visitor, Module* mod)
 {
     if (m_constructorBlock != nullptr)
     {
         return m_constructorBlock->Build(visitor, mod);
     }
 
-    std::unique_ptr<BytecodeChunk> chunk = BytecodeUtil::Make<BytecodeChunk>();
+    UniquePtr<BytecodeChunk> chunk = BytecodeUtil::Make<BytecodeChunk>();
 
     Assert(m_prototypeType != nullptr);
 

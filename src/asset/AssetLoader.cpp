@@ -49,9 +49,7 @@ FilePath AssetLoaderBase::GetRebasedFilepath(const FilePath& basePath, const Fil
 
     if (basePath.Any())
     {
-        return FilePath::Join(
-            basePath.Data(),
-            relativeFilepath.Data());
+        return FilePath::Join(basePath, relativeFilepath);
     }
 
     return relativeFilepath;

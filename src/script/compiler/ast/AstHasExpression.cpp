@@ -94,7 +94,7 @@ void AstHasExpression::Visit(AstVisitor* visitor, Module* mod)
     }
 }
 
-std::unique_ptr<Buildable> AstHasExpression::Build(AstVisitor* visitor, Module* mod)
+UniquePtr<Buildable> AstHasExpression::Build(AstVisitor* visitor, Module* mod)
 {
     Assert(m_target != nullptr);
 
@@ -102,11 +102,11 @@ std::unique_ptr<Buildable> AstHasExpression::Build(AstVisitor* visitor, Module* 
         &visitor->GetCompilationUnit()->GetInstructionStream().GetContextTree(),
         INSTRUCTION_STREAM_CONTEXT_DEFAULT);
 
-    std::unique_ptr<BytecodeChunk> chunk = BytecodeUtil::Make<BytecodeChunk>();
+    UniquePtr<BytecodeChunk> chunk = BytecodeUtil::Make<BytecodeChunk>();
 
     if (!m_isExpr)
     {
-        Assert(m_hasMember != TRI_INDETERMINATE, "m_has_member should only be -1 for expression member checks.");
+        Assert(m_hasMember != TRI_INDETERMINATE, "m_hasMember should only be -1 for expression member checks.");
     }
 
     if (m_hasMember != TRI_INDETERMINATE && !m_hasSideEffects)

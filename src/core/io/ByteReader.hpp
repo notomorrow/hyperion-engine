@@ -156,13 +156,13 @@ protected:
 class FileByteReader : public ByteReader
 {
 public:
-    FileByteReader(const std::string& filepath, std::streampos begin = 0)
+    FileByteReader(const FilePath& filepath, std::streampos begin = 0)
         : m_filepath(filepath),
           m_pos(0),
           m_maxPos(0)
     {
         m_file = new std::ifstream(
-            filepath,
+            filepath.Data(),
             std::ifstream::in
                 | std::ifstream::binary
                 | std::ifstream::ate);
@@ -177,7 +177,7 @@ public:
         delete m_file;
     }
 
-    const std::string& GetFilepath() const
+    const FilePath& GetFilepath() const
     {
         return m_filepath;
     }
@@ -211,7 +211,7 @@ protected:
     std::istream* m_file;
     SizeType m_pos;
     SizeType m_maxPos;
-    std::string m_filepath;
+    FilePath m_filepath;
 
     virtual void ReadBytes(void* ptr, size_t size) override
     {

@@ -22,7 +22,7 @@ AstUnsignedInteger::AstUnsignedInteger(hyperion::uint32 value, const SourceLocat
 {
 }
 
-std::unique_ptr<Buildable> AstUnsignedInteger::Build(AstVisitor* visitor, Module* mod)
+UniquePtr<Buildable> AstUnsignedInteger::Build(AstVisitor* visitor, Module* mod)
 {
     // get active register
     uint8 rp = visitor->GetCompilationUnit()->GetInstructionStream().GetCurrentRegister();

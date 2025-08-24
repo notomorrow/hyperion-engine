@@ -76,9 +76,9 @@ void AstReturnStatement::Visit(AstVisitor* visitor, Module* mod)
     }
 }
 
-std::unique_ptr<Buildable> AstReturnStatement::Build(AstVisitor* visitor, Module* mod)
+UniquePtr<Buildable> AstReturnStatement::Build(AstVisitor* visitor, Module* mod)
 {
-    std::unique_ptr<BytecodeChunk> chunk = BytecodeUtil::Make<BytecodeChunk>();
+    UniquePtr<BytecodeChunk> chunk = BytecodeUtil::Make<BytecodeChunk>();
 
     if (m_expr != nullptr)
     {

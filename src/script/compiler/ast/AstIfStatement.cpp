@@ -40,9 +40,9 @@ void AstIfStatement::Visit(AstVisitor* visitor, Module* mod)
     }
 }
 
-std::unique_ptr<Buildable> AstIfStatement::Build(AstVisitor* visitor, Module* mod)
+UniquePtr<Buildable> AstIfStatement::Build(AstVisitor* visitor, Module* mod)
 {
-    std::unique_ptr<BytecodeChunk> chunk = BytecodeUtil::Make<BytecodeChunk>();
+    UniquePtr<BytecodeChunk> chunk = BytecodeUtil::Make<BytecodeChunk>();
 
     int conditionIsTrue = m_conditional->IsTrue();
 

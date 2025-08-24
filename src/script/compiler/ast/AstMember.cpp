@@ -217,7 +217,7 @@ void AstMember::Visit(AstVisitor* visitor, Module* mod)
     }
 }
 
-std::unique_ptr<Buildable> AstMember::Build(AstVisitor* visitor, Module* mod)
+UniquePtr<Buildable> AstMember::Build(AstVisitor* visitor, Module* mod)
 {
     if (m_overrideExpr != nullptr)
     {
@@ -230,7 +230,7 @@ std::unique_ptr<Buildable> AstMember::Build(AstVisitor* visitor, Module* mod)
     //     return m_proxyExpr->Build(visitor, mod);
     // }
 
-    std::unique_ptr<BytecodeChunk> chunk = BytecodeUtil::Make<BytecodeChunk>();
+    UniquePtr<BytecodeChunk> chunk = BytecodeUtil::Make<BytecodeChunk>();
 
     if (m_proxyExpr != nullptr)
     {

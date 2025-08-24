@@ -84,13 +84,13 @@ void AstArgument::Visit(AstVisitor* visitor, Module* mod)
     }
 }
 
-std::unique_ptr<Buildable> AstArgument::Build(AstVisitor* visitor, Module* mod)
+UniquePtr<Buildable> AstArgument::Build(AstVisitor* visitor, Module* mod)
 {
     Assert(m_expr != nullptr);
 
     Assert(m_isVisited);
 
-    std::unique_ptr<BytecodeChunk> chunk = BytecodeUtil::Make<BytecodeChunk>();
+    UniquePtr<BytecodeChunk> chunk = BytecodeUtil::Make<BytecodeChunk>();
 
     chunk->Append(m_expr->Build(visitor, mod));
 

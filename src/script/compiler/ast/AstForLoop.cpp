@@ -71,7 +71,7 @@ void AstForLoop::Visit(AstVisitor* visitor, Module* mod)
     mod->m_scopes.Close();
 }
 
-std::unique_ptr<Buildable> AstForLoop::Build(AstVisitor* visitor, Module* mod)
+UniquePtr<Buildable> AstForLoop::Build(AstVisitor* visitor, Module* mod)
 {
     Assert(m_conditionPart != nullptr);
 
@@ -79,7 +79,7 @@ std::unique_ptr<Buildable> AstForLoop::Build(AstVisitor* visitor, Module* mod)
         &visitor->GetCompilationUnit()->GetInstructionStream().GetContextTree(),
         INSTRUCTION_STREAM_CONTEXT_LOOP);
 
-    std::unique_ptr<BytecodeChunk> chunk = BytecodeUtil::Make<BytecodeChunk>();
+    UniquePtr<BytecodeChunk> chunk = BytecodeUtil::Make<BytecodeChunk>();
 
     int conditionIsTrue = m_conditionPart->IsTrue();
 

@@ -7,6 +7,10 @@
 #include <script/compiler/CompilationUnit.hpp>
 #include <core/containers/String.hpp>
 
+namespace hyperion {
+class BufferedReader;
+} // namespace hyperion
+
 namespace hyperion::compiler {
 
 class AstImport : public AstStatement
@@ -20,12 +24,13 @@ public:
         Module* modToCopy,
         bool updateTreeLink = false);
 
+    /*! \brief Caller is required to delete the reader's source on success */
     static bool TryOpenFile(
         const String& path,
-        std::ifstream& is);
+        BufferedReader& outReader);
 
     virtual void Visit(AstVisitor* visitor, Module* mod) override = 0;
-    virtual std::unique_ptr<Buildable> Build(AstVisitor* visitor, Module* mod) override;
+    virtual UniquePtr<Buildable> Build(AstVisitor* visitor, Module* mod) override;
     virtual void Optimize(AstVisitor* visitor, Module* mod) override;
 
     virtual RC<AstStatement> Clone() const override = 0;

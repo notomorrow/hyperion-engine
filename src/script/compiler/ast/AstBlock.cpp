@@ -51,9 +51,9 @@ void AstBlock::Visit(AstVisitor* visitor, Module* mod)
     mod->m_scopes.Close();
 }
 
-std::unique_ptr<Buildable> AstBlock::Build(AstVisitor* visitor, Module* mod)
+UniquePtr<Buildable> AstBlock::Build(AstVisitor* visitor, Module* mod)
 {
-    std::unique_ptr<BytecodeChunk> chunk = BytecodeUtil::Make<BytecodeChunk>();
+    UniquePtr<BytecodeChunk> chunk = BytecodeUtil::Make<BytecodeChunk>();
 
     const int stackSizeBefore = visitor->GetCompilationUnit()->GetInstructionStream().GetStackSize();
 

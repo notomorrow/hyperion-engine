@@ -3,9 +3,10 @@
 #include <script/compiler/ast/AstTypeObject.hpp>
 #include <script/compiler/ast/AstTypeRef.hpp>
 
+#include <core/containers/HashSet.hpp>
+
 #include <core/debug/Debug.hpp>
 
-#include <unordered_set>
 #include <algorithm>
 
 namespace hyperion::compiler {
@@ -23,20 +24,20 @@ IdentifierTable::IdentifierTable(const IdentifierTable& other)
 
 int IdentifierTable::CountUsedVariables() const
 {
-    std::unordered_set<int> usedVariables;
+    HashSet<int> usedVariables;
 
     for (auto& ident : m_identifiers)
     {
         if (!Config::cullUnusedObjects || ident->GetUseCount() > 0)
         {
-            if (usedVariables.find(ident->GetIndex()) == usedVariables.end())
+            if (usedVariables.Find(ident->GetIndex()) == usedVariables.End())
             {
-                usedVariables.insert(ident->GetIndex());
+                usedVariables.Insert(ident->GetIndex());
             }
         }
     }
 
-    return usedVariables.size();
+    return usedVariables.Size();
 }
 
 RC<Identifier> IdentifierTable::AddAlias(const String& name, Identifier* aliasee)

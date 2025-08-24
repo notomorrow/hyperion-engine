@@ -7,6 +7,8 @@
 
 #include <core/utilities/StringUtil.hpp>
 
+#include <core/filesystem/FilePath.hpp>
+
 #include <core/Types.hpp>
 
 #include <fstream>
@@ -25,21 +27,22 @@ AstFileImport::AstFileImport(
 void AstFileImport::Visit(AstVisitor* visitor, Module* mod)
 {
     // find the folder which the current file is in
-    std::string dir = m_location.GetFileName().Data();
-    const SizeType index = dir.findLastOf("/\\");
+    String dir = m_location.GetFileName();
 
-    if (index != std::string::npos)
+    SizeType slashIndex = dir.FindLastIndex('/');
+    slashIndex = (slashIndex == String::notFound)
+        ? dir.FindLastIndex('\\')
+        : MathUtil::Max(slashIndex, dir.FindLastIndex('\\'));
+
+    if (slashIndex != String::notFound)
     {
-        dir = dir.substr(0, index) + "/";
+        dir = dir.Substr(0, slashIndex);
     }
 
     // create relative path
-    String filepath = String(dir.c_str()) + m_path;
+    String filepath = FilePath::Join(dir, m_path);
 
-    AstImport::PerformImport(
-        visitor,
-        mod,
-        filepath);
+    AstImport::PerformImport(visitor, mod, filepath);
 }
 
 RC<AstStatement> AstFileImport::Clone() const

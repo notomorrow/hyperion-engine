@@ -171,7 +171,7 @@ void AstArrayAccess::Visit(AstVisitor* visitor, Module* mod)
     }
 }
 
-std::unique_ptr<Buildable> AstArrayAccess::Build(AstVisitor* visitor, Module* mod)
+UniquePtr<Buildable> AstArrayAccess::Build(AstVisitor* visitor, Module* mod)
 {
     if (m_overrideExpr != nullptr)
     {
@@ -181,7 +181,7 @@ std::unique_ptr<Buildable> AstArrayAccess::Build(AstVisitor* visitor, Module* mo
     Assert(m_target != nullptr);
     Assert(m_index != nullptr);
 
-    std::unique_ptr<BytecodeChunk> chunk = BytecodeUtil::Make<BytecodeChunk>();
+    UniquePtr<BytecodeChunk> chunk = BytecodeUtil::Make<BytecodeChunk>();
 
     const bool targetSideEffects = m_target->MayHaveSideEffects();
     const bool indexSideEffects = m_index->MayHaveSideEffects();

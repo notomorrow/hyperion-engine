@@ -67,7 +67,7 @@ void AstTypeOfExpression::Visit(AstVisitor* visitor, Module* mod)
 #endif
 }
 
-std::unique_ptr<Buildable> AstTypeOfExpression::Build(AstVisitor* visitor, Module* mod)
+UniquePtr<Buildable> AstTypeOfExpression::Build(AstVisitor* visitor, Module* mod)
 {
     auto chunk = BytecodeUtil::Make<BytecodeChunk>();
     chunk->Append(AstPrototypeSpecification::Build(visitor, mod));

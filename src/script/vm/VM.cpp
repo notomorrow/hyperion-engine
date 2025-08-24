@@ -327,7 +327,7 @@ HYP_FORCE_INLINE static void HandleInstruction(
         delete[] typeName;
 
         // delete the names
-        for (size_t i = 0; i < size; i++)
+        for (uint16 i = 0; i < size; i++)
         {
             delete[] names[i];
         }
@@ -1203,7 +1203,7 @@ HYP_FORCE_INLINE static void HandleInstruction(
 VM::VM(APIInstance& apiInstance)
     : m_apiInstance(apiInstance)
 {
-    m_state.m_vm = nonOwningPtr<VM>(this);
+    m_state.m_vm = this;
     // create main thread
     m_state.CreateThread();
 }
@@ -1532,7 +1532,7 @@ bool VM::HandleException(InstructionHandler* handler)
         StackTrace stackTrace;
         CreateStackTrace(thread, &stackTrace);
 
-        std::cout << "stack_trace = \n";
+        std::cout << "stackTrace = \n";
 
         for (auto callAddress : stackTrace.callAddresses)
         {

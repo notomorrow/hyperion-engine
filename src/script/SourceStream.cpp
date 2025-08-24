@@ -145,18 +145,18 @@ void SourceStream::GoBack(int n)
 {
     if (((int)m_position - n) < 0)
     {
-        throw std::out_of_range("not large enough to go back");
+        HYP_FAIL("not large enough to go back");
     }
     m_position -= n;
 }
 
 void SourceStream::Read(char* ptr, SizeType numBytes)
 {
-    for (size_t i = 0; i < numBytes; i++)
+    for (SizeType i = 0; i < numBytes; i++)
     {
         if (m_position >= m_file->GetSize())
         {
-            throw std::out_of_range("attempted to read past the limit");
+            HYP_FAIL("attempted to read past the limit");
         }
 
         ptr[i] = m_file->GetBuffer()[m_position++];

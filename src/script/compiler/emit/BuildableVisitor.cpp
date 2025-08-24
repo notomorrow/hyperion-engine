@@ -114,7 +114,7 @@ void BuildableVisitor::Visit(Buildable* buildable)
     }
     else
     {
-        throw "Not implemented";
+        HYP_NOT_IMPLEMENTED();
     }
 }
 

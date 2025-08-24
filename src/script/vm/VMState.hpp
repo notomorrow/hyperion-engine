@@ -19,8 +19,6 @@
 
 #include <core/Types.hpp>
 
-#include <util/NonOwningPtr.hpp>
-
 #include <atomic>
 
 #define ENABLE_GC 1
@@ -108,7 +106,7 @@ struct VMState
     ExecutionThread* m_threads[VM_MAX_THREADS];
     Heap m_heap;
     StaticMemory m_staticMemory;
-    nonOwningPtr<VM> m_vm;
+    VM* m_vm = nullptr;
     Tracemap m_tracemap;
     ExportedSymbolTable m_exportedSymbols;
     FlatMap<uint32, Weak<DynModule>> m_dynModules;

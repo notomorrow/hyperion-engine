@@ -339,9 +339,9 @@ void AstVariableDeclaration::Visit(AstVisitor* visitor, Module* mod)
     }
 }
 
-std::unique_ptr<Buildable> AstVariableDeclaration::Build(AstVisitor* visitor, Module* mod)
+UniquePtr<Buildable> AstVariableDeclaration::Build(AstVisitor* visitor, Module* mod)
 {
-    std::unique_ptr<BytecodeChunk> chunk = BytecodeUtil::Make<BytecodeChunk>();
+    UniquePtr<BytecodeChunk> chunk = BytecodeUtil::Make<BytecodeChunk>();
 
     Assert(m_realAssignment != nullptr);
 

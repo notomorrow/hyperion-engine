@@ -137,13 +137,13 @@ void AstUnaryExpression::Visit(AstVisitor* visitor, Module* mod)
     }
 }
 
-std::unique_ptr<Buildable> AstUnaryExpression::Build(AstVisitor* visitor, Module* mod)
+UniquePtr<Buildable> AstUnaryExpression::Build(AstVisitor* visitor, Module* mod)
 {
     InstructionStreamContextGuard contextGuard(
         &visitor->GetCompilationUnit()->GetInstructionStream().GetContextTree(),
         INSTRUCTION_STREAM_CONTEXT_DEFAULT);
 
-    std::unique_ptr<BytecodeChunk> chunk = BytecodeUtil::Make<BytecodeChunk>();
+    UniquePtr<BytecodeChunk> chunk = BytecodeUtil::Make<BytecodeChunk>();
 
     uint8 rp;
 

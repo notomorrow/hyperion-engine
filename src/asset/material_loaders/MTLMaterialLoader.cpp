@@ -266,12 +266,9 @@ AssetLoadResult MTLMaterialLoader::LoadAsset(LoaderState& state) const
     {
         for (const auto& it : item.textures)
         {
-            const auto texturePath = String(FileSystem::Join(
-                FileSystem::RelativePath(
-                    StringUtil::BasePath(library.filepath.Data()),
-                    FileSystem::CurrentPath()),
-                it.name.Data())
-                    .c_str());
+            const FilePath texturePath = FilePath::Join(
+                FilePath::Relative(FilePath(library.filepath).BasePath(), FilePath::Current()),
+                it.name);
 
             textureNamesToPath[it.name] = texturePath;
         }

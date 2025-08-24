@@ -58,7 +58,7 @@ void AstDirective::Visit(AstVisitor* visitor, Module* mod)
     }
 }
 
-std::unique_ptr<Buildable> AstDirective::Build(AstVisitor* visitor, Module* mod)
+UniquePtr<Buildable> AstDirective::Build(AstVisitor* visitor, Module* mod)
 {
     return nullptr;
 }

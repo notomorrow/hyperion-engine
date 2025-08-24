@@ -250,9 +250,9 @@ void AstHashMap::Visit(AstVisitor* visitor, Module* mod)
     m_arrayExpr->Visit(visitor, mod);
 }
 
-std::unique_ptr<Buildable> AstHashMap::Build(AstVisitor* visitor, Module* mod)
+UniquePtr<Buildable> AstHashMap::Build(AstVisitor* visitor, Module* mod)
 {
-    std::unique_ptr<BytecodeChunk> chunk = BytecodeUtil::Make<BytecodeChunk>();
+    UniquePtr<BytecodeChunk> chunk = BytecodeUtil::Make<BytecodeChunk>();
 
     Assert(m_mapTypeExpr != nullptr);
     chunk->Append(m_mapTypeExpr->Build(visitor, mod));

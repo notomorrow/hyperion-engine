@@ -51,11 +51,11 @@ void AstExportStatement::Visit(AstVisitor* visitor, Module* mod)
     // TODO: ensure thing not already exported globally (or in module?)
 }
 
-std::unique_ptr<Buildable> AstExportStatement::Build(AstVisitor* visitor, Module* mod)
+UniquePtr<Buildable> AstExportStatement::Build(AstVisitor* visitor, Module* mod)
 {
     Assert(m_stmt != nullptr);
 
-    std::unique_ptr<BytecodeChunk> chunk = BytecodeUtil::Make<BytecodeChunk>();
+    UniquePtr<BytecodeChunk> chunk = BytecodeUtil::Make<BytecodeChunk>();
 
     // Bake the value in, let it do what it needs
     chunk->Append(m_stmt->Build(visitor, mod));

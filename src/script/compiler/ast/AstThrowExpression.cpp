@@ -30,11 +30,11 @@ void AstThrowExpression::Visit(AstVisitor* visitor, Module* mod)
     m_expr->Visit(visitor, mod);
 }
 
-std::unique_ptr<Buildable> AstThrowExpression::Build(AstVisitor* visitor, Module* mod)
+UniquePtr<Buildable> AstThrowExpression::Build(AstVisitor* visitor, Module* mod)
 {
     Assert(m_expr != nullptr);
 
-    std::unique_ptr<BytecodeChunk> chunk = BytecodeUtil::Make<BytecodeChunk>();
+    UniquePtr<BytecodeChunk> chunk = BytecodeUtil::Make<BytecodeChunk>();
 
     chunk->Append(m_expr->Build(visitor, mod));
 

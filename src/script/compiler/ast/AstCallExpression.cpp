@@ -188,7 +188,7 @@ void AstCallExpression::Visit(AstVisitor* visitor, Module* mod)
     }
 }
 
-std::unique_ptr<Buildable> AstCallExpression::Build(AstVisitor* visitor, Module* mod)
+UniquePtr<Buildable> AstCallExpression::Build(AstVisitor* visitor, Module* mod)
 {
     Assert(m_isVisited);
 
@@ -197,7 +197,7 @@ std::unique_ptr<Buildable> AstCallExpression::Build(AstVisitor* visitor, Module*
         return m_overrideExpr->Build(visitor, mod);
     }
 
-    std::unique_ptr<BytecodeChunk> chunk = BytecodeUtil::Make<BytecodeChunk>();
+    UniquePtr<BytecodeChunk> chunk = BytecodeUtil::Make<BytecodeChunk>();
 
     // build arguments
     chunk->Append(Compiler::BuildArgumentsStart(

@@ -12,15 +12,11 @@
 #include <script/vm/VMTypeInfo.hpp>
 
 #include <script/Instructions.hpp>
-#include <core/Types.hpp>
 #include <script/Hasher.hpp>
 
 #include <core/Defines.hpp>
 #include <core/debug/Debug.hpp>
-
-#include <cmath>
-#include <cstdint>
-#include <cstring>
+#include <core/Types.hpp>
 
 #define HYP_NUMERIC_OPERATION(a, b, oper)                                              \
     do                                                                                 \
@@ -494,7 +490,7 @@ public:
         // create members
         Member* members = new Member[size];
 
-        for (size_t i = 0; i < size; i++)
+        for (uint16 i = 0; i < size; i++)
         {
             Memory::StrCpy(members[i].name, names[i], sizeof(Member::name));
             members[i].hash = hashFnv1(names[i]);
@@ -708,7 +704,7 @@ public:
             {
                 // wrap around (python style)
                 key.index.i = (int64)(array->GetSize() + key.index.i);
-                if (key.index.i < 0 || (size_t)key.index.i >= array->GetSize())
+                if (key.index.i < 0 || key.index.i >= array->GetSize())
                 {
                     state->ThrowException(
                         thread,

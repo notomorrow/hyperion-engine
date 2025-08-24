@@ -9,7 +9,7 @@ AstUndefined::AstUndefined(const SourceLocation& location)
 {
 }
 
-std::unique_ptr<Buildable> AstUndefined::Build(AstVisitor* visitor, Module* mod)
+UniquePtr<Buildable> AstUndefined::Build(AstVisitor* visitor, Module* mod)
 {
     return nullptr;
 }

@@ -666,10 +666,10 @@ AssetLoadResult FBXModelLoader::LoadAsset(LoaderState& state) const
 
     // Include our root dir as part of the path
     const String path = state.filepath;
-    const auto currentDir = FileSystem::CurrentPath();
-    const auto basePath = StringUtil::BasePath(path.Data());
+    const FilePath currentDir = FilePath::Current();
+    const FilePath basePath = FilePath(path).BasePath();
 
-    FileByteReader reader(FileSystem::Join(basePath, std::string(FilePath(path).Basename().Data())));
+    FileByteReader reader(FilePath::Join(basePath, FilePath(path).Basename()));
 
     if (reader.Eof())
     {

@@ -19,9 +19,9 @@ VMTypeInfo::VMTypeInfo(
     Memory::MemCpy(m_name, name, nameLen);
 
     // copy all names
-    for (size_t i = 0; i < m_size; i++)
+    for (SizeType i = 0; i < m_size; i++)
     {
-        size_t len = std::strlen(names[i]);
+        SizeType len = std::strlen(names[i]);
         m_names[i] = new char[len + 1];
         m_names[i][len] = '\0';
         Memory::MemCpy(m_names[i], names[i], len);

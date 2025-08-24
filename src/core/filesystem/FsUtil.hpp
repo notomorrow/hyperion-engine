@@ -31,41 +31,6 @@ public:
     static int MkDir(const std::string& path);
     static std::string CurrentPath();
     static std::string RelativePath(const std::string& path, const std::string& base);
-
-    template <class... String>
-    static inline std::string Join(String&&... args)
-    {
-        std::array<std::string, sizeof...(args)> argsArray = { args... };
-
-        enum
-        {
-            SEPARATOR_MODE_WINDOWS,
-            SEPARATOR_MODE_UNIX
-        } separatorMode;
-
-        if (!std::strcmp(HYP_FILESYSTEM_SEPARATOR, "\\"))
-        {
-            separatorMode = SEPARATOR_MODE_WINDOWS;
-        }
-        else
-        {
-            separatorMode = SEPARATOR_MODE_UNIX;
-        }
-
-        for (auto& arg : argsArray)
-        {
-            if (separatorMode == SEPARATOR_MODE_WINDOWS)
-            {
-                arg = StringUtil::ReplaceAll(arg, "/", "\\");
-            }
-            else
-            {
-                arg = StringUtil::ReplaceAll(arg, "\\", "/");
-            }
-        }
-
-        return StringUtil::Join(argsArray, HYP_FILESYSTEM_SEPARATOR);
-    }
 };
 } // namespace filesystem
 

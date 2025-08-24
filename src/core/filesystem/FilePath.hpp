@@ -3,9 +3,11 @@
 #pragma once
 
 #include <core/containers/String.hpp>
-#include <core/containers/ContainerBase.hpp>
+#include <core/containers/FixedArray.hpp>
+
 #include <core/utilities/Time.hpp>
 #include <core/utilities/FormatFwd.hpp>
+
 #include <core/Defines.hpp>
 
 #include <core/filesystem/FsUtil.hpp>
@@ -162,12 +164,39 @@ public:
         return FilePath(FileSystem::RelativePath(path.Data(), base.Data()).c_str());
     }
 
-    template <class... Paths>
-    static inline FilePath Join(Paths&&... paths)
+    template <class... Strings>
+    static inline FilePath Join(Strings&&... args)
     {
-        const auto str = FileSystem::Join(std::forward<Paths>(paths)...);
+        FixedArray<String, sizeof...(args)> argsArray = { args... };
 
-        return FilePath(str.c_str());
+        enum
+        {
+            SEPARATOR_MODE_WINDOWS,
+            SEPARATOR_MODE_UNIX
+        } separatorMode;
+
+        if (!std::strcmp(HYP_FILESYSTEM_SEPARATOR, "\\"))
+        {
+            separatorMode = SEPARATOR_MODE_WINDOWS;
+        }
+        else
+        {
+            separatorMode = SEPARATOR_MODE_UNIX;
+        }
+
+        for (auto& arg : argsArray)
+        {
+            if (separatorMode == SEPARATOR_MODE_WINDOWS)
+            {
+                arg = arg.ReplaceAll("/", "\\");
+            }
+            else
+            {
+                arg = arg.ReplaceAll("\\", "/");
+            }
+        }
+
+        return FilePath(String::Join(argsArray, HYP_FILESYSTEM_SEPARATOR));
     }
 
     HYP_API hyperion::Array<FilePath> GetAllFilesInDirectory() const;

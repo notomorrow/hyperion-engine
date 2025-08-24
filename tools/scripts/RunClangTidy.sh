@@ -3,11 +3,13 @@
 fix_flag=""
 convert=0
 files=()
+search_dir="src"
 
 while (( $# )); do
     case "$1" in
         --fix)     fix_flag="--fix --fix-errors"; shift ;;
         --convert) convert=1;                       shift ;;
+        --dir)     search_dir="$2";                 shift 2 ;;
         --files)
             shift
             while (( $# )) && [[ $1 != --* ]]; do
@@ -23,7 +25,7 @@ done
 if [ ${#files[@]} -eq 0 ]; then
     while IFS= read -r -d '' file; do
         files+=("$file")
-    done < <(find src -type f \( -name '*.cpp' -o -name '*.hpp' -o -name '*.h' \) -print0)
+    done < <(find "$search_dir" -type f \( -name '*.cpp' -o -name '*.hpp' -o -name '*.h' \) -print0)
 fi
 
 # Optional snake→camel conversion.

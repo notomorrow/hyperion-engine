@@ -15,7 +15,7 @@ public:
     virtual ~AstConstant() = default;
 
     virtual void Visit(AstVisitor* visitor, Module* mod) override;
-    virtual std::unique_ptr<Buildable> Build(AstVisitor* visitor, Module* mod) override = 0;
+    virtual UniquePtr<Buildable> Build(AstVisitor* visitor, Module* mod) override = 0;
     virtual void Optimize(AstVisitor* visitor, Module* mod) override;
 
     virtual bool IsLiteral() const override

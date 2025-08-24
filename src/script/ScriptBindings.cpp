@@ -8,7 +8,7 @@
 #include <script/compiler/ast/AstString.hpp>
 #include <script/compiler/dis/DecompilationUnit.hpp>
 
-#include <script/Script.hpp>
+#include <script/HypScript.hpp>
 
 #include <core/math/MathUtil.hpp>
 
@@ -39,7 +39,7 @@ void ScriptBindings::DeclareAll(APIInstance& apiInstance)
         .Class<Name>(
             "Name",
             {
-                API::NativeMemberDefine("hash_code", BuiltinTypes::UNSIGNED_INT, vm::Value(vm::Value::U64, { .u64 = 0 })),
+                API::NativeMemberDefine("hashCode", BuiltinTypes::UNSIGNED_INT, vm::Value(vm::Value::U64, { .u64 = 0 })),
 
                 API::NativeMemberDefine(
                     "LookupString",
@@ -120,7 +120,7 @@ void ScriptBindings::DeclareAll(APIInstance& apiInstance)
                     BuiltinTypes::ANY
                 },
                 {
-                    "member_name",
+                    "memberName",
                     BuiltinTypes::STRING
                 }
             },
@@ -135,7 +135,7 @@ void ScriptBindings::DeclareAll(APIInstance& apiInstance)
                     BuiltinTypes::ANY
                 },
                 {
-                    "member_name",
+                    "memberName",
                     BuiltinTypes::STRING
                 },
                 {
@@ -176,7 +176,7 @@ void ScriptBindings::DeclareAll(APIInstance& apiInstance)
             BuiltinTypes::BOOLEAN,
             {
                 {
-                    "file_id",
+                    "fileId",
                     BuiltinTypes::UNSIGNED_INT
                 }
             },
@@ -187,7 +187,7 @@ void ScriptBindings::DeclareAll(APIInstance& apiInstance)
             BuiltinTypes::VOID_TYPE,
             {
                 {
-                    "file_id",
+                    "fileId",
                     BuiltinTypes::UNSIGNED_INT
                 },
                 {
@@ -202,7 +202,7 @@ void ScriptBindings::DeclareAll(APIInstance& apiInstance)
             BuiltinTypes::VOID_TYPE,
             {
                 {
-                    "file_id",
+                    "fileId",
                     BuiltinTypes::UNSIGNED_INT
                 }
             },
@@ -265,7 +265,7 @@ void ScriptBindings::DeclareAll(APIInstance& apiInstance)
             BuiltinTypes::BOOLEAN,
             {
                 { "object", BuiltinTypes::ANY },
-                { "member_name", BuiltinTypes::STRING }
+                { "memberName", BuiltinTypes::STRING }
             },
             Runtime_HasMember
         )
@@ -274,7 +274,7 @@ void ScriptBindings::DeclareAll(APIInstance& apiInstance)
             BuiltinTypes::ANY,
             {
                 { "object", BuiltinTypes::ANY },
-                { "member_name", BuiltinTypes::STRING }
+                { "memberName", BuiltinTypes::STRING }
             },
             Runtime_GetMember
         )
@@ -283,7 +283,7 @@ void ScriptBindings::DeclareAll(APIInstance& apiInstance)
             BuiltinTypes::VOID_TYPE,
             {
                 { "object", BuiltinTypes::ANY },
-                { "member_name", BuiltinTypes::STRING },
+                { "memberName", BuiltinTypes::STRING },
                 { "value", BuiltinTypes::ANY }
             },
             Runtime_SetMember

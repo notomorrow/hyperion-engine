@@ -49,7 +49,7 @@ void AstTypeAlias::Visit(AstVisitor* visitor, Module* mod)
     }
 }
 
-std::unique_ptr<Buildable> AstTypeAlias::Build(AstVisitor* visitor, Module* mod)
+UniquePtr<Buildable> AstTypeAlias::Build(AstVisitor* visitor, Module* mod)
 {
     return nullptr;
 }

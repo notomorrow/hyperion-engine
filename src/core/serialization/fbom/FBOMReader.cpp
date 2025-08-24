@@ -320,14 +320,14 @@ FBOMResult FBOMReader::LoadFromFile(FBOMLoadContext& context, const String& path
     // Include our root dir as part of the path
     if (m_config.basePath.Empty())
     {
-        m_config.basePath = FileSystem::RelativePath(StringUtil::BasePath(path.Data()), FileSystem::CurrentPath()).c_str();
+        m_config.basePath = FilePath::Relative(FilePath(path).BasePath(), FilePath::Current());
     }
 
     FilePath readPath = FilePath(path);
 
     if (!readPath.Exists())
     {
-        readPath = FilePath { FileSystem::Join(FileSystem::CurrentPath(), m_config.basePath.Data(), FilePath(path).Basename().Data()).c_str() };
+        readPath = FilePath::Join(FilePath::Current(), m_config.basePath, FilePath(path).Basename());
     }
 
     if (!readPath.Exists())
@@ -360,7 +360,7 @@ FBOMResult FBOMReader::LoadFromFile(const String& path, FBOMObject& out)
 
     if (!readPath.Exists())
     {
-        readPath = FilePath { FileSystem::Join(FileSystem::CurrentPath(), m_config.basePath.Data(), FilePath(path).Basename().Data()).c_str() };
+        readPath = FilePath::Join(FilePath::Current(), m_config.basePath, FilePath(path).Basename());
     }
 
     if (!readPath.Exists())

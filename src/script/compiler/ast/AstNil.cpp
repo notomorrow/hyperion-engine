@@ -21,7 +21,7 @@ AstNil::AstNil(const SourceLocation& location)
 {
 }
 
-std::unique_ptr<Buildable> AstNil::Build(AstVisitor* visitor, Module* mod)
+UniquePtr<Buildable> AstNil::Build(AstVisitor* visitor, Module* mod)
 {
     // get active register
     uint8 rp = visitor->GetCompilationUnit()->GetInstructionStream().GetCurrentRegister();

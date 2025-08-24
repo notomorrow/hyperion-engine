@@ -23,12 +23,12 @@ static struct RuntimeScriptBindings : ScriptBindingsBase
 
     virtual void Generate(scriptapi2::Context& context) override
     {
-        context.Global("test_generic_fn", "<T>", "function< T, T >", CxxFn<vm::Value, vm::Value, [](vm::Value value) -> vm::Value
+        context.Global("testGenericFn", "<T>", "function< T, T >", CxxFn<vm::Value, vm::Value, [](vm::Value value) -> vm::Value
                                                                          {
                                                                              return value;
                                                                          }>);
 
-        context.Global("is_instance", "function< bool, any, Class >", CxxFn<bool, vm::Value, VMObject*, [](vm::Value value, VMObject* classPtr) -> bool
+        context.Global("isInstance", "function< bool, any, Class >", CxxFn<bool, vm::Value, VMObject*, [](vm::Value value, VMObject* classPtr) -> bool
                                                                           {
                                                                               if (!classPtr)
                                                                               {

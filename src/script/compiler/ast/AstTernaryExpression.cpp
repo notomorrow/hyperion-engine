@@ -56,13 +56,13 @@ void AstTernaryExpression::Visit(AstVisitor* visitor, Module* mod)
     }
 }
 
-std::unique_ptr<Buildable> AstTernaryExpression::Build(AstVisitor* visitor, Module* mod)
+UniquePtr<Buildable> AstTernaryExpression::Build(AstVisitor* visitor, Module* mod)
 {
     Assert(m_conditional != nullptr);
     Assert(m_left != nullptr);
     Assert(m_right != nullptr);
 
-    std::unique_ptr<BytecodeChunk> chunk = BytecodeUtil::Make<BytecodeChunk>();
+    UniquePtr<BytecodeChunk> chunk = BytecodeUtil::Make<BytecodeChunk>();
 
     int conditionIsTrue = m_conditional->IsTrue();
 

@@ -101,11 +101,11 @@ void AstModuleDeclaration::Visit(AstVisitor* visitor, Module* mod)
     }
 }
 
-std::unique_ptr<Buildable> AstModuleDeclaration::Build(AstVisitor* visitor, Module* mod)
+UniquePtr<Buildable> AstModuleDeclaration::Build(AstVisitor* visitor, Module* mod)
 {
     Assert(m_module != nullptr);
 
-    std::unique_ptr<BytecodeChunk> chunk = BytecodeUtil::Make<BytecodeChunk>();
+    UniquePtr<BytecodeChunk> chunk = BytecodeUtil::Make<BytecodeChunk>();
 
     // build all children
     for (auto& child : m_children)

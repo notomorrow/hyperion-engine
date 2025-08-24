@@ -29,13 +29,13 @@ void AstTryCatch::Visit(AstVisitor* visitor, Module* mod)
     m_catchBlock->Visit(visitor, mod);
 }
 
-std::unique_ptr<Buildable> AstTryCatch::Build(AstVisitor* visitor, Module* mod)
+UniquePtr<Buildable> AstTryCatch::Build(AstVisitor* visitor, Module* mod)
 {
     InstructionStreamContextGuard contextGuard(
         &visitor->GetCompilationUnit()->GetInstructionStream().GetContextTree(),
         INSTRUCTION_STREAM_CONTEXT_DEFAULT);
 
-    std::unique_ptr<BytecodeChunk> chunk = BytecodeUtil::Make<BytecodeChunk>();
+    UniquePtr<BytecodeChunk> chunk = BytecodeUtil::Make<BytecodeChunk>();
 
     // the label to jump to the very end
     LabelId endLabel = contextGuard->NewLabel();

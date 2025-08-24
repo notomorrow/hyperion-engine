@@ -4,7 +4,6 @@
 #include <core/Types.hpp>
 
 #include <sstream>
-#include <cstring>
 #include <cstdio>
 
 namespace hyperion::compiler {
@@ -269,7 +268,7 @@ void DecompilationUnit::DecodeNext(
         if (os != nullptr)
         {
             (*os)
-                << "load_offset ["
+                << "loadOffset ["
                 << "%" << (int)reg << ", "
                                       "$(sp-"
                 << offset << ")"
@@ -290,7 +289,7 @@ void DecompilationUnit::DecodeNext(
         if (os != nullptr)
         {
             (*os)
-                << "load_index ["
+                << "loadIndex ["
                 << "%" << (int)reg << ", "
                                       "u16("
                 << idx << ")"
@@ -311,7 +310,7 @@ void DecompilationUnit::DecodeNext(
         if (os != nullptr)
         {
             (*os)
-                << "load_static ["
+                << "loadStatic ["
                 << "%" << (int)reg << ", "
                 << "#" << index
                 << "]"
@@ -337,7 +336,7 @@ void DecompilationUnit::DecodeNext(
         if (os != nullptr)
         {
             (*os)
-                << "load_str ["
+                << "loadStr ["
                 << "%" << (int)reg << ", "
                 << "u32(" << len << "), "
                 << "\"" << str << "\""
@@ -359,7 +358,7 @@ void DecompilationUnit::DecodeNext(
 
         if (os != nullptr)
         {
-            (*os) << "load_addr [%" << (int)reg << ", @(" << std::hex << val << std::dec << ")]" << std::endl;
+            (*os) << "loadAddr [%" << (int)reg << ", @(" << std::hex << val << std::dec << ")]" << std::endl;
         }
 
         break;
@@ -380,7 +379,7 @@ void DecompilationUnit::DecodeNext(
 
         if (os != nullptr)
         {
-            (*os) << "load_func [%" << (int)reg
+            (*os) << "loadFunc [%" << (int)reg
                   << ", @(" << std::hex << addr << std::dec << "), "
                   << "u8(" << (int)nargs << ")], "
                   << "u8(" << (int)flags << ")]"
@@ -421,7 +420,7 @@ void DecompilationUnit::DecodeNext(
         if (os != nullptr)
         {
             (*os)
-                << "load_type ["
+                << "loadType ["
                 << "%" << (int)reg << ", "
                 << "str(" << typeName.Data() << "), "
                 << "u16(" << (int)size << ")";
@@ -452,7 +451,7 @@ void DecompilationUnit::DecodeNext(
         if (os != nullptr)
         {
             (*os)
-                << "load_mem ["
+                << "loadMem ["
                 << "%" << (int)reg << ", "
                 << "%" << (int)src << ", "
                 << "u8(" << (int)idx << ")"
@@ -476,7 +475,7 @@ void DecompilationUnit::DecodeNext(
         if (os != nullptr)
         {
             (*os)
-                << "load_mem_hash ["
+                << "loadMemHash ["
                 << "%" << (int)reg << ", "
                 << "%" << (int)src << ", "
                 << "u32(" << hash << ")"
@@ -500,7 +499,7 @@ void DecompilationUnit::DecodeNext(
         if (os != nullptr)
         {
             (*os)
-                << "load_arrayidx ["
+                << "loadArrayidx ["
                 << "%" << (int)reg << ", "
                 << "%" << (int)src << ", "
                 << "%" << (int)idx << ")"
@@ -521,7 +520,7 @@ void DecompilationUnit::DecodeNext(
         if (os != nullptr)
         {
             (*os)
-                << "load_offset_ref ["
+                << "loadOffsetRef ["
                 << "%" << (int)reg << ", "
                                       "$(sp-"
                 << offset << ")"
@@ -542,7 +541,7 @@ void DecompilationUnit::DecodeNext(
         if (os != nullptr)
         {
             (*os)
-                << "load_index_ref ["
+                << "loadIndexRef ["
                 << "%" << (int)reg << ", "
                                       "u16("
                 << idx << ")"
@@ -600,7 +599,7 @@ void DecompilationUnit::DecodeNext(
         if (os != nullptr)
         {
             (*os)
-                << "load_null ["
+                << "loadNull ["
                 << "%" << (int)reg
                 << "]"
                 << std::endl;
@@ -616,7 +615,7 @@ void DecompilationUnit::DecodeNext(
         if (os != nullptr)
         {
             (*os)
-                << "load_true ["
+                << "loadTrue ["
                 << "%" << (int)reg
                 << "]"
                 << std::endl;
@@ -632,7 +631,7 @@ void DecompilationUnit::DecodeNext(
         if (os != nullptr)
         {
             (*os)
-                << "load_false ["
+                << "loadFalse ["
                 << "%" << (int)reg
                 << "]"
                 << std::endl;
@@ -651,7 +650,7 @@ void DecompilationUnit::DecodeNext(
         if (os != nullptr)
         {
             (*os)
-                << "mov_offset ["
+                << "movOffset ["
                 << "$(sp-" << dst << "), "
                 << "%" << (int)src
                 << "]"
@@ -671,7 +670,7 @@ void DecompilationUnit::DecodeNext(
         if (os != nullptr)
         {
             (*os)
-                << "mov_index ["
+                << "movIndex ["
                 << "u16(" << dst << "), "
                 << "%" << (int)src
                 << "]"
@@ -691,7 +690,7 @@ void DecompilationUnit::DecodeNext(
         if (os != nullptr)
         {
             (*os)
-                << "mov_static ["
+                << "movStatic ["
                 << "#" << dst << ", "
                 << "%" << (int)src
                 << "]"
@@ -714,7 +713,7 @@ void DecompilationUnit::DecodeNext(
         if (os != nullptr)
         {
             (*os)
-                << "mov_mem ["
+                << "movMem ["
                 << "%" << (int)reg << ", "
                 << "u8(" << (int)idx << "), "
                 << "%" << (int)src << ""
@@ -738,7 +737,7 @@ void DecompilationUnit::DecodeNext(
         if (os != nullptr)
         {
             (*os)
-                << "mov_mem_hash ["
+                << "movMemHash ["
                 << "%" << (int)reg << ", "
                 << "u32(" << hash << "), "
                 << "%" << (int)src
@@ -762,7 +761,7 @@ void DecompilationUnit::DecodeNext(
         if (os != nullptr)
         {
             (*os)
-                << "mov_arrayidx ["
+                << "movArrayidx ["
                 << "%" << (int)reg << ", "
                 << "u32(" << (int)idx << "), "
                 << "%" << (int)src << ""
@@ -786,7 +785,7 @@ void DecompilationUnit::DecodeNext(
         if (os != nullptr)
         {
             (*os)
-                << "mov_arrayidx_reg ["
+                << "movArrayidxReg ["
                 << "%" << (int)reg << ", "
                 << "%" << (int)idx << ", "
                 << "%" << (int)src << ""
@@ -807,7 +806,7 @@ void DecompilationUnit::DecodeNext(
         if (os != nullptr)
         {
             (*os)
-                << "mov_reg ["
+                << "movReg ["
                 << "%" << (int)dst << ", "
                 << "%" << (int)src << ""
                 << "]"
@@ -830,7 +829,7 @@ void DecompilationUnit::DecodeNext(
         if (os != nullptr)
         {
             (*os)
-                << "has_mem_hash ["
+                << "hasMemHash ["
                 << "%" << (int)reg << ", "
                 << "%" << (int)src << ", "
                 << "u32(" << hash << ")"
@@ -878,7 +877,7 @@ void DecompilationUnit::DecodeNext(
         if (os != nullptr)
         {
             (*os)
-                << "push_array ["
+                << "pushArray ["
                 << "% " << (int)dst << ", "
                 << "% " << (int)src
                 << "]" << std::endl;
@@ -894,7 +893,7 @@ void DecompilationUnit::DecodeNext(
         if (os != nullptr)
         {
             (*os)
-                << "add_sp ["
+                << "addSp ["
                 << "u16(" << val << ")"
                 << "]"
                 << std::endl;
@@ -910,7 +909,7 @@ void DecompilationUnit::DecodeNext(
         if (os != nullptr)
         {
             (*os)
-                << "sub_sp ["
+                << "subSp ["
                 << "u16(" << val << ")"
                 << "]"
                 << std::endl;
@@ -1038,7 +1037,7 @@ void DecompilationUnit::DecodeNext(
         if (os != nullptr)
         {
             (*os)
-                << "begin_try ["
+                << "beginTry ["
                 << "@(" << std::hex << addr << std::dec << ")"
                 << "]"
                 << std::endl;
@@ -1050,7 +1049,7 @@ void DecompilationUnit::DecodeNext(
     {
         if (os != nullptr)
         {
-            (*os) << "end_try" << std::endl;
+            (*os) << "endTry" << std::endl;
         }
 
         break;
@@ -1086,7 +1085,7 @@ void DecompilationUnit::DecodeNext(
         if (os != nullptr)
         {
             (*os)
-                << "new_array ["
+                << "newArray ["
                 << "%" << (int)dst << ", "
                 << "u32(" << (int)size << ")"
                 << "]"
@@ -1673,7 +1672,7 @@ void DecompilationUnit::DecodeNext(
         if (os != nullptr)
         {
             (*os)
-                << "cast_bool ["
+                << "castBool ["
                 << "%" << (int)regDst << ", "
                 << "%" << (int)regSrc
                 << "]"
@@ -1693,7 +1692,7 @@ void DecompilationUnit::DecodeNext(
         if (os != nullptr)
         {
             (*os)
-                << "cast_dynamic ["
+                << "castDynamic ["
                 << "%" << (int)regDst << ", "
                 << "%" << (int)regSrc
                 << "]"
@@ -1732,7 +1731,7 @@ InstructionStream DecompilationUnit::Decompile(hyperion::vm::BytecodeStream& bs,
 
     while (!bs.Eof())
     {
-        const size_t pos = bs.Position();
+        const SizeType pos = bs.Position();
 
         if (os != nullptr)
         {

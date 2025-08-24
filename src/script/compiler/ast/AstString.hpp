@@ -18,7 +18,7 @@ public:
         return m_value;
     }
 
-    virtual std::unique_ptr<Buildable> Build(AstVisitor* visitor, Module* mod) override;
+    virtual UniquePtr<Buildable> Build(AstVisitor* visitor, Module* mod) override;
 
     virtual RC<AstStatement> Clone() const override;
 

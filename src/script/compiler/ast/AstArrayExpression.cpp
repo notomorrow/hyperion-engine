@@ -185,9 +185,9 @@ void AstArrayExpression::Visit(AstVisitor* visitor, Module* mod)
     m_exprType = arrayType;
 }
 
-std::unique_ptr<Buildable> AstArrayExpression::Build(AstVisitor* visitor, Module* mod)
+UniquePtr<Buildable> AstArrayExpression::Build(AstVisitor* visitor, Module* mod)
 {
-    std::unique_ptr<BytecodeChunk> chunk = BytecodeUtil::Make<BytecodeChunk>();
+    UniquePtr<BytecodeChunk> chunk = BytecodeUtil::Make<BytecodeChunk>();
 
     Assert(m_arrayTypeExpr != nullptr);
     chunk->Append(m_arrayTypeExpr->Build(visitor, mod));

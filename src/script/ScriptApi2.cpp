@@ -66,7 +66,7 @@ void ClassBuilder::Build()
 
     // Add `nativeTypeId` member to class
     m_classDefinition.staticMembers.PushBack(
-        { "native_type_id",
+        { "nativeTypeId",
             { "uint" },
             vm::Value { vm::Value::U32,
                 { .u32 = m_classDefinition.nativeTypeId.Value() } } });

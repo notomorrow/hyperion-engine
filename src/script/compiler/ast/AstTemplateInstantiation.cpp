@@ -81,7 +81,7 @@ void AstTemplateInstantiationWrapper::MakeSymbolTypeGenericInstance(SymbolTypePt
     }
 }
 
-std::unique_ptr<Buildable> AstTemplateInstantiationWrapper::Build(AstVisitor* visitor, Module* mod)
+UniquePtr<Buildable> AstTemplateInstantiationWrapper::Build(AstVisitor* visitor, Module* mod)
 {
     Assert(m_expr != nullptr);
 
@@ -422,7 +422,7 @@ void AstTemplateInstantiation::Visit(AstVisitor* visitor, Module* mod)
     }
 }
 
-std::unique_ptr<Buildable> AstTemplateInstantiation::Build(AstVisitor* visitor, Module* mod)
+UniquePtr<Buildable> AstTemplateInstantiation::Build(AstVisitor* visitor, Module* mod)
 {
     Assert(m_isVisited);
 
@@ -458,7 +458,7 @@ std::unique_ptr<Buildable> AstTemplateInstantiation::Build(AstVisitor* visitor, 
 
     return chunk;
 
-    // std::unique_ptr<BytecodeChunk> chunk = BytecodeUtil::Make<BytecodeChunk>();
+    // UniquePtr<BytecodeChunk> chunk = BytecodeUtil::Make<BytecodeChunk>();
 
     // // Build the arguments
     // chunk->Append(Compiler::BuildArgumentsStart(

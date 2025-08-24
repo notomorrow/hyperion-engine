@@ -36,9 +36,9 @@ void AstFunctionDefinition::Visit(AstVisitor* visitor, Module* mod)
     }
 }
 
-std::unique_ptr<Buildable> AstFunctionDefinition::Build(AstVisitor* visitor, Module* mod)
+UniquePtr<Buildable> AstFunctionDefinition::Build(AstVisitor* visitor, Module* mod)
 {
-    std::unique_ptr<BytecodeChunk> chunk = BytecodeUtil::Make<BytecodeChunk>();
+    UniquePtr<BytecodeChunk> chunk = BytecodeUtil::Make<BytecodeChunk>();
 
     if (!Config::cullUnusedObjects || m_identifier->GetUseCount() > 0)
     {

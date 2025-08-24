@@ -99,12 +99,12 @@ void AstAsExpression::Visit(AstVisitor* visitor, Module* mod)
     }
 }
 
-std::unique_ptr<Buildable> AstAsExpression::Build(AstVisitor* visitor, Module* mod)
+UniquePtr<Buildable> AstAsExpression::Build(AstVisitor* visitor, Module* mod)
 {
     Assert(m_target != nullptr);
     Assert(m_typeSpecification != nullptr);
 
-    std::unique_ptr<BytecodeChunk> chunk = BytecodeUtil::Make<BytecodeChunk>();
+    UniquePtr<BytecodeChunk> chunk = BytecodeUtil::Make<BytecodeChunk>();
 
     bool typeSpecBuilt = false;
 

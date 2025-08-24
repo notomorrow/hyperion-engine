@@ -7,6 +7,8 @@
 #include <script/compiler/Parser.hpp>
 #include <script/compiler/SemanticAnalyzer.hpp>
 
+#include <core/io/BufferedByteReader.hpp>
+
 #include <core/utilities/StringUtil.hpp>
 
 #include <core/Types.hpp>
@@ -96,10 +98,19 @@ void AstImport::CopyModules(
     visitor->GetCompilationUnit()->m_moduleTree.Close();
 }
 
-bool AstImport::TryOpenFile(const String& path, std::ifstream& is)
+bool AstImport::TryOpenFile(const String& path, BufferedReader& outReader)
 {
-    is.open(path.Data(), std::ios::in | std::ios::ate);
-    return is.isOpen();
+    FileBufferedReaderSource* source = new FileBufferedReaderSource { FilePath(path) };
+    outReader = BufferedReader(source);
+
+    if (!outReader.IsOpen())
+    {
+        delete source;
+
+        return false;
+    }
+
+    return true;
 }
 
 void AstImport::PerformImport(
@@ -146,45 +157,42 @@ void AstImport::PerformImport(
     else
     {
         // file hasn't been imported, so open it
-        std::ifstream file;
+        BufferedReader reader;
 
-        if (!TryOpenFile(filepath, file))
+        if (!TryOpenFile(filepath, reader))
         {
             visitor->GetCompilationUnit()->GetErrorList().AddError(CompilerError(
                 LEVEL_ERROR,
                 Msg_could_not_open_file,
                 m_location,
                 filepath));
+
+            return;
         }
-        else
-        {
-            // get number of bytes
-            SizeType max = file.tellg();
-            // seek to beginning
-            file.seekg(0, std::ios::beg);
-            // load stream into file buffer
-            SourceFile sourceFile(filepath, max);
 
-            ByteBuffer temp;
-            temp.SetSize(max);
+        SizeType max = reader.Max();
+        reader.Seek(0);
 
-            file.read(reinterpret_cast<char*>(temp.Data()), max);
+        SourceFile sourceFile(filepath, max);
 
-            sourceFile.ReadIntoBuffer(temp);
+        ByteBuffer temp = reader.ReadBytes(max);
 
-            // use the lexer and parser on this file buffer
-            TokenStream tokenStream(TokenStreamInfo {
-                filepath });
+        sourceFile.ReadIntoBuffer(temp);
 
-            Lexer lexer(SourceStream(&sourceFile), &tokenStream, visitor->GetCompilationUnit());
-            lexer.Analyze();
+        delete reader.GetSource();
 
-            Parser parser(&m_astIterator, &tokenStream, visitor->GetCompilationUnit());
-            parser.Parse();
+        // use the lexer and parser on this file buffer
+        TokenStream tokenStream(TokenStreamInfo {
+            filepath });
 
-            SemanticAnalyzer semanticAnalyzer(&m_astIterator, visitor->GetCompilationUnit());
-            semanticAnalyzer.Analyze();
-        }
+        Lexer lexer(SourceStream(&sourceFile), &tokenStream, visitor->GetCompilationUnit());
+        lexer.Analyze();
+
+        Parser parser(&m_astIterator, &tokenStream, visitor->GetCompilationUnit());
+        parser.Parse();
+
+        SemanticAnalyzer semanticAnalyzer(&m_astIterator, visitor->GetCompilationUnit());
+        semanticAnalyzer.Analyze();
 
         /*if (makeParentModule) {
             visitor->GetCompilationUnit()->m_moduleTree.Close();
@@ -192,7 +200,7 @@ void AstImport::PerformImport(
     }
 }
 
-std::unique_ptr<Buildable> AstImport::Build(AstVisitor* visitor, Module* mod)
+UniquePtr<Buildable> AstImport::Build(AstVisitor* visitor, Module* mod)
 {
     m_astIterator.ResetPosition();
 
