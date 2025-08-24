@@ -112,7 +112,7 @@ VMStruct VMStruct::MakeStruct(const VMStructDefinition& definition)
             Assert(value.m_type == Value::ValueType::HEAP_POINTER);
             Assert(memberSize == sizeof(void*));
 
-            void* vp = GetRawPointerForHeapValue(value.m_value.ptr);
+            void* vp = GetRawPointerForHeapValue(value.m_value.internal.ptr);
             result.m_bytes.Write(sizeof(void*), offset, &vp);
 
             result.m_dynamicMemory.values[index] = value;
@@ -254,7 +254,7 @@ Value VMStruct::ReadMember(const char* name) const
         }
     }
 
-    return Value(Value::ValueType::HEAP_POINTER, { .ptr = nullptr });
+    return Value(Value::ValueType::HEAP_POINTER, { .internal = { .ptr = nullptr } });
 }
 
 bool VMStruct::WriteMember(const char* name, Value value)
@@ -321,7 +321,7 @@ bool VMStruct::WriteMember(const char* name, Value value)
     default:
         if (givenType >= VM_STRUCT_TYPE_DYNAMIC)
         {
-            if (!value.GetPointer(&newValueData.ptr))
+            if (!value.GetPointer(&newValueData.internal.ptr))
             {
                 return false;
             }
@@ -419,7 +419,7 @@ bool VMStruct::WriteMember(const char* name, Value value)
 
             m_dynamicMemory.values[memberIndex] = value;
 
-            m_bytes.Write(byteSize, offset, &newValueData.ptr);
+            m_bytes.Write(byteSize, offset, &newValueData.internal.ptr);
 
             break;
         }

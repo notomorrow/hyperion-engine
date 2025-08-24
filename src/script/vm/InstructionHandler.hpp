@@ -291,7 +291,7 @@ public:
 
         // Value sv;
         // sv.m_type = Value::HEAP_POINTER;
-        // sv.m_value.ptr = hv;
+        // sv.m_value.internal.ptr = hv;
 
         // state->m_staticMemory.Store(std::move(sv));
     }
@@ -314,9 +314,9 @@ public:
         Assert(false, "Not implemented, will be removed soon.");
         // Value sv;
         // sv.m_type = Value::FUNCTION;
-        // sv.m_value.func.m_addr = addr;
-        // sv.m_value.func.m_nargs = nargs;
-        // sv.m_value.func.m_flags = flags;
+        // sv.m_value.internal.func.m_addr = addr;
+        // sv.m_value.internal.func.m_nargs = nargs;
+        // sv.m_value.internal.func.m_flags = flags;
 
         // state->m_staticMemory.Store(std::move(sv));
     }
@@ -334,7 +334,7 @@ public:
 
         // Value sv;
         // sv.m_type = Value::HEAP_POINTER;
-        // sv.m_value.ptr = hv;
+        // sv.m_value.internal.ptr = hv;
         // state->m_staticMemory.Store(std::move(sv));
     }
 
@@ -443,7 +443,7 @@ public:
             // assign register value to the allocated object
             Value v;
             v.m_type = Value::HEAP_POINTER;
-            v.m_value.ptr = hv;
+            v.m_value.internal.ptr = hv;
 
             thread->m_regs[reg].AssignValue(v, false);
 
@@ -455,7 +455,7 @@ public:
     {
         Value v;
         v.m_type = Value::ADDRESS;
-        v.m_value.addr = addr;
+        v.m_value.internal.addr = addr;
 
         thread->m_regs[reg].AssignValue(v, false);
     }
@@ -468,9 +468,9 @@ public:
     {
         Value v;
         v.m_type = Value::FUNCTION;
-        v.m_value.func.m_addr = addr;
-        v.m_value.func.m_nargs = nargs;
-        v.m_value.func.m_flags = flags;
+        v.m_value.internal.func.m_addr = addr;
+        v.m_value.internal.func.m_nargs = nargs;
+        v.m_value.internal.func.m_flags = flags;
 
         thread->m_regs[reg].AssignValue(v, false);
     }
@@ -493,7 +493,7 @@ public:
         {
             Memory::StrCpy(members[i].name, names[i], sizeof(Member::name));
             members[i].hash = hashFnv1(names[i]);
-            members[i].value = Value(Value::HEAP_POINTER, { .ptr = nullptr });
+            members[i].value = Value(Value::HEAP_POINTER, { .internal = { .ptr = nullptr } });
         }
 
         Value parentClassValue = thread->m_regs[reg];
@@ -503,14 +503,14 @@ public:
             parentClassValue.GetTypeString());
 
         // create prototype object
-        hv->Assign(VMObject(members, size, parentClassValue.m_value.ptr));
+        hv->Assign(VMObject(members, size, parentClassValue.m_value.internal.ptr));
 
         delete[] members;
 
         // assign register value to the allocated object
         Value v;
         v.m_type = Value::HEAP_POINTER;
-        v.m_value.ptr = hv;
+        v.m_value.internal.ptr = hv;
 
         thread->m_regs[reg].AssignValue(v, false);
 
@@ -523,7 +523,7 @@ public:
 
         if (sv.m_type == Value::HEAP_POINTER)
         {
-            HeapValue* hv = sv.m_value.ptr;
+            HeapValue* hv = sv.m_value.internal.ptr;
             if (hv == nullptr)
             {
                 state->ThrowException(
@@ -554,7 +554,7 @@ public:
 
         if (sv.m_type == Value::HEAP_POINTER)
         {
-            HeapValue* hv = sv.m_value.ptr;
+            HeapValue* hv = sv.m_value.internal.ptr;
 
             if (hv == nullptr)
             {
@@ -596,7 +596,7 @@ public:
             return;
         }
 
-        HeapValue* ptr = sv.m_value.ptr;
+        HeapValue* ptr = sv.m_value.internal.ptr;
 
         if (ptr == nullptr)
         {
@@ -732,7 +732,7 @@ public:
     {
         thread->m_regs[reg] = Value(
             Value::ValueType::VALUE_REF,
-            Value::ValueData { .valueRef = &thread->m_stack[thread->m_stack.GetStackPointer() - offset] });
+            Value::ValueData { .internal = {.valueRef = &thread->m_stack[thread->m_stack.GetStackPointer() - offset] } });
     }
 
     HYP_FORCE_INLINE void LoadIndexRef(BCRegister reg, uint16 index)
@@ -747,14 +747,14 @@ public:
 
         thread->m_regs[reg] = Value(
             Value::ValueType::VALUE_REF,
-            Value::ValueData { .valueRef = &stk[index] });
+            Value::ValueData { .internal = { .valueRef = &stk[index] } });
     }
 
     HYP_FORCE_INLINE void LoadRef(BCRegister dstReg, BCRegister srcReg)
     {
         Value value;
         value.m_type = Value::ValueType::VALUE_REF;
-        value.m_value.valueRef = &thread->m_regs[srcReg];
+        value.m_value.internal.valueRef = &thread->m_regs[srcReg];
 
         thread->m_regs[dstReg] = value;
     }
@@ -764,9 +764,9 @@ public:
         Value& src = thread->m_regs[srcReg];
         Assert(src.m_type == Value::VALUE_REF,
             "Value type must be VALUE_REF in order to deref, got %d", src.m_type);
-        Assert(src.m_value.valueRef != nullptr);
+        Assert(src.m_value.internal.valueRef != nullptr);
 
-        Value deref = *src.m_value.valueRef;
+        Value deref = *src.m_value.internal.valueRef;
 
         thread->m_regs[dstReg] = deref;
     }
@@ -775,7 +775,7 @@ public:
     {
         Value v;
         v.m_type = Value::HEAP_POINTER;
-        v.m_value.ptr = nullptr;
+        v.m_value.internal.ptr = nullptr;
 
         thread->m_regs[reg].AssignValue(v, false);
     }
@@ -811,7 +811,7 @@ public:
         // it could cause corruption in places where we expect something to always exist.
         if (state->m_staticMemory[index].m_type == Value::HEAP_POINTER)
         {
-            HeapValue* hv = state->m_staticMemory[index].m_value.ptr;
+            HeapValue* hv = state->m_staticMemory[index].m_value.internal.ptr;
             if (hv != nullptr && (hv->GetFlags() & GC_ALWAYS_ALIVE))
             {
                 // state->ThrowException(
@@ -829,9 +829,9 @@ public:
         // Mark our new value as ALWAYS_ALIVE if applicable.
         if (thread->m_regs[reg].m_type == Value::HEAP_POINTER)
         {
-            if (HeapValue* hv = thread->m_regs[reg].m_value.ptr)
+            if (HeapValue* hv = thread->m_regs[reg].m_value.internal.ptr)
             {
-                thread->m_regs[reg].m_value.ptr->EnableFlags(GC_ALWAYS_ALIVE);
+                thread->m_regs[reg].m_value.internal.ptr->EnableFlags(GC_ALWAYS_ALIVE);
             }
         }
 
@@ -851,7 +851,7 @@ public:
             return;
         }
 
-        HeapValue* hv = sv.m_value.ptr;
+        HeapValue* hv = sv.m_value.internal.ptr;
         if (hv == nullptr)
         {
             state->ThrowException(
@@ -893,7 +893,7 @@ public:
             return;
         }
 
-        HeapValue* hv = sv.m_value.ptr;
+        HeapValue* hv = sv.m_value.internal.ptr;
         if (hv == nullptr)
         {
             state->ThrowException(
@@ -944,7 +944,7 @@ public:
             return;
         }
 
-        HeapValue* hv = sv.m_value.ptr;
+        HeapValue* hv = sv.m_value.internal.ptr;
         if (hv == nullptr)
         {
             state->ThrowException(
@@ -1073,7 +1073,7 @@ public:
             return;
         }
 
-        HeapValue* hv = sv.m_value.ptr;
+        HeapValue* hv = sv.m_value.internal.ptr;
         if (hv == nullptr)
         {
             state->ThrowException(
@@ -1264,7 +1264,7 @@ public:
             return;
         }
 
-        HeapValue* hv = dst.m_value.ptr;
+        HeapValue* hv = dst.m_value.internal.ptr;
         if (hv == nullptr)
         {
             state->ThrowException(
@@ -1344,11 +1344,13 @@ public:
         Value& top = thread->GetStack().Top();
         Assert(top.GetType() == Value::FUNCTION_CALL);
 
+        auto& callInfo = top.GetValue().internal.call;
+
         // leave function and return to previous position
-        bs->Seek(top.GetValue().call.returnAddress);
+        bs->Seek(callInfo.returnAddress);
 
         // increase stack size by the amount required by the call
-        thread->GetStack().m_sp += top.GetValue().call.varargsPush - 1;
+        thread->GetStack().m_sp += callInfo.varargsPush - 1;
         // NOTE: the -1 is because we will be popping the FUNCTION_CALL
         // object from the stack anyway...
 
@@ -1363,7 +1365,7 @@ public:
         // increase stack size to store data about this try block
         Value info;
         info.m_type = Value::TRY_CATCH_INFO;
-        info.m_value.tryCatchInfo.catchAddress = addr;
+        info.m_value.internal.tryCatchInfo.catchAddress = addr;
 
         // store the info
         thread->m_stack.Push(info);
@@ -1386,7 +1388,7 @@ public:
         Value& classSv = thread->m_regs[src];
         Assert(classSv.m_type == Value::HEAP_POINTER, "NEW operand must be a pointer type (%d), got %d", Value::HEAP_POINTER, classSv.m_type);
 
-        HeapValue* classPtr = classSv.m_value.ptr;
+        HeapValue* classPtr = classSv.m_value.internal.ptr;
         Assert(classPtr != nullptr);
 
         Array<Span<Member>> memberSpans;
@@ -1431,14 +1433,14 @@ public:
                 return;
             }
 
-            if (protoMem->value.m_value.ptr == nullptr)
+            if (protoMem->value.m_value.internal.ptr == nullptr)
             {
                 break;
             }
 
             VMObject* protoMemberObject = nullptr;
 
-            if (!(protoMemberObject = protoMem->value.m_value.ptr->GetPointer<VMObject>()))
+            if (!(protoMemberObject = protoMem->value.m_value.internal.ptr->GetPointer<VMObject>()))
             {
                 if (depth == 0)
                 {
@@ -1464,7 +1466,7 @@ public:
             {
                 Assert(baseMember->value.m_type == Value::HEAP_POINTER, "Base class must be pointer type (%d), got %d", Value::HEAP_POINTER, baseMember->value.m_type);
 
-                basePtr = baseMember->value.m_value.ptr;
+                basePtr = baseMember->value.m_value.internal.ptr;
             }
             else
             {
@@ -1495,7 +1497,7 @@ public:
         hv->Assign(VMObject(allMembers.Data(), allMembers.Size(), classPtr));
 
         res.m_type = Value::HEAP_POINTER;
-        res.m_value.ptr = hv;
+        res.m_value.internal.ptr = hv;
 
         hv->Mark();
     }
@@ -1511,7 +1513,7 @@ public:
         // assign register value to the allocated object
         Value& sv = thread->m_regs[dst];
         sv.m_type = Value::HEAP_POINTER;
-        sv.m_value.ptr = hv;
+        sv.m_value.internal.ptr = hv;
 
         hv->Mark();
     }
@@ -1638,7 +1640,7 @@ public:
         }
         else if (lhs->m_type == Value::HEAP_POINTER)
         {
-            thread->m_regs.m_flags = !lhs->m_value.ptr ? EQUAL : NONE;
+            thread->m_regs.m_flags = !lhs->m_value.internal.ptr ? EQUAL : NONE;
         }
         else if (lhs->m_type == Value::FUNCTION)
         {
@@ -2967,7 +2969,7 @@ public:
         bool isInstance = false;
 
         // Check if the target is an instance of the type
-        vm::Value base = vm::Value(vm::Value::NONE, { .ptr = nullptr });
+        vm::Value base = vm::Value(vm::Value::NONE, { .internal = { .ptr = nullptr } });
 
         if (HeapValue* targetClass = targetObjectPtr->GetClassPointer())
         {

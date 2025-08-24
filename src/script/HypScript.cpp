@@ -234,7 +234,7 @@ bool HypScript::GetMember(const Value& objectValue, const char* memberName, Valu
         return false;
     }
 
-    if (VMObject* ptr = objectValue.m_value.ptr->GetPointer<VMObject>())
+    if (VMObject* ptr = objectValue.m_value.internal.ptr->GetPointer<VMObject>())
     {
         if (Member* member = ptr->LookupMemberFromHash(hashFnv1(memberName)))
         {
@@ -254,7 +254,7 @@ bool HypScript::SetMember(const Value& objectValue, const char* memberName, cons
         return false;
     }
 
-    if (VMObject* ptr = objectValue.m_value.ptr->GetPointer<VMObject>())
+    if (VMObject* ptr = objectValue.m_value.internal.ptr->GetPointer<VMObject>())
     {
         if (Member* member = ptr->LookupMemberFromHash(hashFnv1(memberName)))
         {

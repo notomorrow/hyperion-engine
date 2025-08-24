@@ -66,8 +66,8 @@ int Value::CompareAsPointers(
     Value* lhs,
     Value* rhs)
 {
-    HeapValue* a = lhs->m_value.ptr;
-    HeapValue* b = rhs->m_value.ptr;
+    HeapValue* a = lhs->m_value.internal.ptr;
+    HeapValue* b = rhs->m_value.internal.ptr;
 
     if (a == b)
     {
@@ -117,18 +117,18 @@ void Value::Mark()
     switch (m_type)
     {
     case Value::VALUE_REF:
-        Assert(m_value.valueRef != nullptr);
+        Assert(m_value.internal.valueRef != nullptr);
 
-        if (m_value.valueRef != this)
+        if (m_value.internal.valueRef != this)
         {
-            m_value.valueRef->Mark();
+            m_value.internal.valueRef->Mark();
         }
 
         break;
 
     case Value::HEAP_POINTER:
     {
-        HeapValue* ptr = m_value.ptr;
+        HeapValue* ptr = m_value.internal.ptr;
 
         if (ptr != nullptr)
         {
@@ -176,15 +176,15 @@ Any Value::ToAny() const
     case Value::BOOLEAN:
         return Any(m_value.b);
     case Value::VALUE_REF:
-        Assert(m_value.valueRef != nullptr);
-        Assert(m_value.valueRef != this, "Circular reference detected!");
-        return m_value.valueRef->ToAny();
+        Assert(m_value.internal.valueRef != nullptr);
+        Assert(m_value.internal.valueRef != this, "Circular reference detected!");
+        return m_value.internal.valueRef->ToAny();
     case Value::HEAP_POINTER:
-        if (m_value.ptr == nullptr) {
+        if (m_value.internal.ptr == nullptr) {
             return Any(static_cast<const void *>(nullptr));
-        } else if (VMString *string = m_value.ptr->GetPointer<VMString>()) {
+        } else if (VMString *string = m_value.internal.ptr->GetPointer<VMString>()) {
             return Any(string->GetString());
-        } else if (VMArray *array = m_value.ptr->GetPointer<VMArray>()) {
+        } else if (VMArray *array = m_value.internal.ptr->GetPointer<VMArray>()) {
             Array<Any> anyArray;
             anyArray.Reserve(array->GetSize());
 
@@ -193,7 +193,7 @@ Any Value::ToAny() const
             }
 
             return Any(std::move(anyArray));
-        } else if (VMArraySlice *slice = m_value.ptr->GetPointer<VMArraySlice>()) {
+        } else if (VMArraySlice *slice = m_value.internal.ptr->GetPointer<VMArraySlice>()) {
             Array<Any> anyArray;
             anyArray.Reserve(slice->GetSize());
 
@@ -202,9 +202,9 @@ Any Value::ToAny() const
             }
 
             return Any(std::move(anyArray));
-        } else if (VMMemoryBuffer *memoryBuffer = m_value.ptr->GetPointer<VMMemoryBuffer>()) {
+        } else if (VMMemoryBuffer *memoryBuffer = m_value.internal.ptr->GetPointer<VMMemoryBuffer>()) {
             return Any(memoryBuffer->GetByteBuffer());
-        } else if (VMObject *object = m_value.ptr->GetPointer<VMObject>()) {
+        } else if (VMObject *object = m_value.internal.ptr->GetPointer<VMObject>()) {
             HashMap<String, Any> anyMap;
 
             for (SizeType i = 0; i < object->GetSize(); ++i) {
@@ -214,7 +214,7 @@ Any Value::ToAny() const
             }
 
             return Any(std::move(anyMap));
-        } else if (VMMap *map = m_value.ptr->GetPointer<VMMap>()) {
+        } else if (VMMap *map = m_value.internal.ptr->GetPointer<VMMap>()) {
             const auto &hashMap = map->GetMap();
 
             HashMap<Any, Any> anyMap;
@@ -225,10 +225,10 @@ Any Value::ToAny() const
 
             return Any(std::move(anyMap));
         } else {
-            return Any(static_cast<const void *>(m_value.ptr));
+            return Any(static_cast<const void *>(m_value.internal.ptr));
         }
     case Value::USER_DATA:
-        return Any(static_cast<const void *>(m_value.userData));
+        return Any(static_cast<const void *>(m_value.internal.userData));
     default:
         return Any::Empty();
     }
@@ -270,11 +270,11 @@ const char* Value::GetTypeString() const
     case BOOLEAN:
         return "bool";
     case VALUE_REF:
-        Assert(m_value.valueRef != nullptr);
+        Assert(m_value.internal.valueRef != nullptr);
 
-        if (m_value.valueRef != this)
+        if (m_value.internal.valueRef != this)
         {
-            return m_value.valueRef->GetTypeString();
+            return m_value.internal.valueRef->GetTypeString();
         }
         else
         {
@@ -282,27 +282,27 @@ const char* Value::GetTypeString() const
         }
 
     case HEAP_POINTER:
-        if (m_value.ptr == nullptr)
+        if (m_value.internal.ptr == nullptr)
         {
             return "Null";
         }
-        else if (m_value.ptr->GetPointer<VMString>())
+        else if (m_value.internal.ptr->GetPointer<VMString>())
         {
             return "String";
         }
-        else if (m_value.ptr->GetPointer<VMArray>() || m_value.ptr->GetPointer<VMArraySlice>())
+        else if (m_value.internal.ptr->GetPointer<VMArray>() || m_value.internal.ptr->GetPointer<VMArraySlice>())
         {
             return "Array";
         }
-        else if (m_value.ptr->GetPointer<VMMemoryBuffer>())
+        else if (m_value.internal.ptr->GetPointer<VMMemoryBuffer>())
         {
             return "MemoryBuffer";
         }
-        else if (m_value.ptr->GetPointer<VMStruct>())
+        else if (m_value.internal.ptr->GetPointer<VMStruct>())
         {
             return "Struct";
         }
-        else if (VMObject* object = m_value.ptr->GetPointer<VMObject>())
+        else if (VMObject* object = m_value.internal.ptr->GetPointer<VMObject>())
         {
             return "Object"; // TODO prototype name
         }
@@ -399,59 +399,59 @@ VMString Value::ToString() const
         return BOOLEAN_STRINGS[m_value.b];
 
     case Value::VALUE_REF:
-        Assert(m_value.valueRef != nullptr);
-        if (m_value.valueRef == this)
+        Assert(m_value.internal.valueRef != nullptr);
+        if (m_value.internal.valueRef == this)
         {
             return VMString("<Circular Reference>");
         }
         else
         {
-            return m_value.valueRef->ToString();
+            return m_value.internal.valueRef->ToString();
         }
     case Value::USER_DATA:
     {
-        int n = snprintf(buf, bufSize, "%p", m_value.userData);
+        int n = snprintf(buf, bufSize, "%p", m_value.internal.userData);
         return VMString(buf, n);
     }
     case Value::HEAP_POINTER:
     {
-        if (m_value.ptr == nullptr)
+        if (m_value.internal.ptr == nullptr)
         {
             return NULL_STRING;
         }
-        else if (VMString* string = m_value.ptr->GetPointer<VMString>())
+        else if (VMString* string = m_value.internal.ptr->GetPointer<VMString>())
         {
             return *string;
         }
-        else if (VMArray* array = m_value.ptr->GetPointer<VMArray>())
+        else if (VMArray* array = m_value.internal.ptr->GetPointer<VMArray>())
         {
             std::stringstream ss;
             array->GetRepresentation(ss, true, depth);
             const std::string& str = ss.str();
             return VMString(str.c_str());
         }
-        else if (VMMemoryBuffer* memoryBuffer = m_value.ptr->GetPointer<VMMemoryBuffer>())
+        else if (VMMemoryBuffer* memoryBuffer = m_value.internal.ptr->GetPointer<VMMemoryBuffer>())
         {
             std::stringstream ss;
             memoryBuffer->GetRepresentation(ss, true, depth);
             const std::string& str = ss.str();
             return VMString(str.c_str());
         }
-        else if (VMArraySlice* slice = m_value.ptr->GetPointer<VMArraySlice>())
+        else if (VMArraySlice* slice = m_value.internal.ptr->GetPointer<VMArraySlice>())
         {
             std::stringstream ss;
             slice->GetRepresentation(ss, true, depth);
             const std::string& str = ss.str();
             return VMString(str.c_str());
         }
-        else if (VMObject* object = m_value.ptr->GetPointer<VMObject>())
+        else if (VMObject* object = m_value.internal.ptr->GetPointer<VMObject>())
         {
             std::stringstream ss;
             object->GetRepresentation(ss, true, depth);
             const std::string& str = ss.str();
             return VMString(str.c_str());
         }
-        else if (VMMap* map = m_value.ptr->GetPointer<VMMap>())
+        else if (VMMap* map = m_value.internal.ptr->GetPointer<VMMap>())
         {
             std::stringstream ss;
             map->GetRepresentation(ss, true, depth);
@@ -461,7 +461,7 @@ VMString Value::ToString() const
         else
         {
             // return memory address as string
-            int n = snprintf(buf, bufSize, "%p", (void*)m_value.ptr);
+            int n = snprintf(buf, bufSize, "%p", (void*)m_value.internal.ptr);
             return VMString(buf, n);
         }
 
@@ -481,15 +481,15 @@ void Value::ToRepresentation(
     switch (m_type)
     {
     case Value::VALUE_REF:
-        Assert(m_value.valueRef != nullptr);
+        Assert(m_value.internal.valueRef != nullptr);
 
-        if (m_value.valueRef == this)
+        if (m_value.internal.valueRef == this)
         {
             ss << "<Circular Reference>";
         }
         else
         {
-            m_value.valueRef->ToRepresentation(
+            m_value.internal.valueRef->ToRepresentation(
                 ss,
                 addTypeName,
                 depth);
@@ -498,29 +498,29 @@ void Value::ToRepresentation(
         return;
 
     case Value::HEAP_POINTER:
-        if (m_value.ptr == nullptr)
+        if (m_value.internal.ptr == nullptr)
         {
             ss << "null";
         }
-        else if (VMString* string = m_value.ptr->GetPointer<VMString>())
+        else if (VMString* string = m_value.internal.ptr->GetPointer<VMString>())
         {
             ss << '\"';
             ss << string->GetData();
             ss << '\"';
         }
-        else if (VMArray* array = m_value.ptr->GetPointer<VMArray>())
+        else if (VMArray* array = m_value.internal.ptr->GetPointer<VMArray>())
         {
             array->GetRepresentation(ss, addTypeName, depth);
         }
-        else if (VMArraySlice* slice = m_value.ptr->GetPointer<VMArraySlice>())
+        else if (VMArraySlice* slice = m_value.internal.ptr->GetPointer<VMArraySlice>())
         {
             slice->GetRepresentation(ss, addTypeName, depth);
         }
-        else if (VMObject* object = m_value.ptr->GetPointer<VMObject>())
+        else if (VMObject* object = m_value.internal.ptr->GetPointer<VMObject>())
         {
             object->GetRepresentation(ss, addTypeName, depth);
         }
-        else if (VMMap* map = m_value.ptr->GetPointer<VMMap>())
+        else if (VMMap* map = m_value.internal.ptr->GetPointer<VMMap>())
         {
             map->GetRepresentation(ss, addTypeName, depth);
         }
@@ -573,25 +573,25 @@ HashCode Value::GetHashCode() const
     case Value::BOOLEAN:
         return HashCode::GetHashCode(m_value.b);
     case Value::VALUE_REF:
-        Assert(m_value.valueRef != nullptr);
-        return m_value.valueRef->GetHashCode();
+        Assert(m_value.internal.valueRef != nullptr);
+        return m_value.internal.valueRef->GetHashCode();
     // case Value::HEAP_POINTER:
-    //     if (m_value.ptr == nullptr) {
+    //     if (m_value.internal.ptr == nullptr) {
     //         return HashCode::GetHashCode(0);
-    //     } else if (VMString *string = m_value.ptr->GetPointer<VMString>()) {
+    //     } else if (VMString *string = m_value.internal.ptr->GetPointer<VMString>()) {
     //         return string->GetHashCode();
-    //     } else if (VMArray *array = m_value.ptr->GetPointer<VMArray>()) {
+    //     } else if (VMArray *array = m_value.internal.ptr->GetPointer<VMArray>()) {
     //         return array->GetHashCode();
-    //     } else if (VMArraySlice *slice = m_value.ptr->GetPointer<VMArraySlice>()) {
+    //     } else if (VMArraySlice *slice = m_value.internal.ptr->GetPointer<VMArraySlice>()) {
     //         return slice->GetHashCode();
-    //     } else if (VMObject *object = m_value.ptr->GetPointer<VMObject>()) {
+    //     } else if (VMObject *object = m_value.internal.ptr->GetPointer<VMObject>()) {
     //         return object->GetHashCode();
     //     } else {
-    //         return HashCode::GetHashCode(m_value.ptr);
+    //         return HashCode::GetHashCode(m_value.internal.ptr);
     //     }
     case Value::USER_DATA:
         // hash the void*
-        return HashCode::GetHashCode(m_value.userData);
+        return HashCode::GetHashCode(m_value.internal.userData);
     case Value::HEAP_POINTER: // fallthrough
     default:
     {

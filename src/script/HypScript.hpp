@@ -32,7 +32,7 @@ class ValueHandle
 {
     friend class HypScript;
 
-    Value _inner = Value(Value::NONE, Value::ValueData { .userData = nullptr });
+    Value _inner = Value(Value::NONE, {});
 
 public:
     bool IsNull() const
@@ -157,7 +157,7 @@ public:
         {
             // set to userdata
             firstValue.m_type = Value::USER_DATA;
-            firstValue.m_value.userData = static_cast<void*>(item);
+            firstValue.m_value.internal.userData = static_cast<void*>(item);
         }
         else
         {

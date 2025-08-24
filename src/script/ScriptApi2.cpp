@@ -314,7 +314,7 @@ void Context::BindAll(APIInstance& apiInstance, VM* vm)
         else if (global.symbol.value.Is<NativeFunctionPtr_t>())
         {
             value = { Value::NATIVE_FUNCTION,
-                { .nativeFunc = global.symbol.value.Get<NativeFunctionPtr_t>() } };
+                { .internal = { .nativeFunc = global.symbol.value.Get<NativeFunctionPtr_t>() } } };
         }
         else
         {
@@ -385,7 +385,7 @@ void Context::BindAll(APIInstance& apiInstance, VM* vm)
             {
                 symbolValue = {
                     Value::NATIVE_FUNCTION,
-                    { .nativeFunc = symbol.value.Get<NativeFunctionPtr_t>() }
+                    { .internal = { .nativeFunc = symbol.value.Get<NativeFunctionPtr_t>() } }
                 };
             }
             else
@@ -426,7 +426,7 @@ void Context::BindAll(APIInstance& apiInstance, VM* vm)
             {
                 symbolValue = {
                     Value::NATIVE_FUNCTION,
-                    { .nativeFunc = symbol.value.Get<NativeFunctionPtr_t>() }
+                    { .internal = { .nativeFunc = symbol.value.Get<NativeFunctionPtr_t>() } }
                 };
             }
 
@@ -453,14 +453,14 @@ void Context::BindAll(APIInstance& apiInstance, VM* vm)
 
         // Set $proto for class object
         classObjectPtr->SetMember(
-            "$proto", Value { Value::HEAP_POINTER, { .ptr = protoObjectHeapValue } });
+            "$proto", Value { Value::HEAP_POINTER, { .internal = { .ptr = protoObjectHeapValue } } });
 
         apiInstance.classBindings.classPrototypes.Set(classDefinition.name,
             protoObjectHeapValue);
         apiInstance.classBindings.classNames.Set(classDefinition.nativeTypeId,
             classDefinition.name);
 
-        Value value { Value::HEAP_POINTER, { .ptr = classObjectHeapValue } };
+        Value value { Value::HEAP_POINTER, { .internal = { .ptr = classObjectHeapValue } } };
 
         // Set class object in static memory
         vmState.m_staticMemory[index] = value;

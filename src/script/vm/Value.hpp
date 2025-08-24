@@ -93,6 +93,44 @@ enum CompareFlags : uint8
     GREATER = 0x02
 };
 
+struct InternalVMData
+{
+    union
+    {
+        Value* valueRef;
+
+        HeapValue* ptr;
+
+        struct
+        {
+            BCAddress m_addr;
+            uint8 m_nargs;
+            uint8 m_flags;
+        } func;
+
+        NativeFunctionPtr_t nativeFunc;
+        UserData_t userData;
+
+        struct
+        {
+            BCAddress returnAddress;
+            int32 varargsPush;
+        } call;
+
+        BCAddress addr;
+
+        struct
+        {
+            BCAddress catchAddress;
+        } tryCatchInfo;
+
+        struct
+        {
+            const char* errorMessage; // make sure it is a string literal, as it is not managed
+        } invalidStateObject;
+    };
+};
+
 struct Value
 {
     enum ValueType
@@ -141,37 +179,7 @@ struct Value
 
         bool b;
 
-        Value* valueRef;
-
-        HeapValue* ptr;
-
-        struct
-        {
-            BCAddress m_addr;
-            uint8 m_nargs;
-            uint8 m_flags;
-        } func;
-
-        NativeFunctionPtr_t nativeFunc;
-        UserData_t userData;
-
-        struct
-        {
-            BCAddress returnAddress;
-            int32 varargsPush;
-        } call;
-
-        BCAddress addr;
-
-        struct
-        {
-            BCAddress catchAddress;
-        } tryCatchInfo;
-
-        struct
-        {
-            const char* errorMessage; // make sure it is a string literal, as it is not managed
-        } invalidStateObject;
+        InternalVMData internal;
     } m_value;
 
     Value() = default;
@@ -198,7 +206,7 @@ struct Value
     {
         if (assignRef && m_type == VALUE_REF)
         {
-            *m_value.valueRef = other;
+            *m_value.internal.valueRef = other;
         }
         else
         {
@@ -426,7 +434,7 @@ struct Value
             return false;
         }
 
-        *out = m_value.ptr;
+        *out = m_value.internal.ptr;
 
         return true;
     }
@@ -439,9 +447,9 @@ struct Value
             return false;
         }
 
-        if (TypeId::ForType<T>() == GetTypeIdForHeapValue(m_value.ptr))
+        if (TypeId::ForType<T>() == GetTypeIdForHeapValue(m_value.internal.ptr))
         {
-            *out = static_cast<T*>(GetRawPointerForHeapValue(m_value.ptr));
+            *out = static_cast<T*>(GetRawPointerForHeapValue(m_value.internal.ptr));
 
             return true;
         }
@@ -459,7 +467,7 @@ struct Value
             return false;
         }
 
-        *out = static_cast<T*>(m_value.userData);
+        *out = static_cast<T*>(m_value.internal.userData);
 
         return true;
     }
@@ -470,7 +478,7 @@ struct Value
         Value* lhs,
         Value* rhs)
     {
-        return (lhs->m_value.func.m_addr == rhs->m_value.func.m_addr)
+        return (lhs->m_value.internal.func.m_addr == rhs->m_value.internal.func.m_addr)
             ? CompareFlags::EQUAL
             : CompareFlags::NONE;
     }
@@ -479,7 +487,7 @@ struct Value
         Value* lhs,
         Value* rhs)
     {
-        return (lhs->m_value.nativeFunc == rhs->m_value.nativeFunc)
+        return (lhs->m_value.internal.nativeFunc == rhs->m_value.internal.nativeFunc)
             ? CompareFlags::EQUAL
             : CompareFlags::NONE;
     }

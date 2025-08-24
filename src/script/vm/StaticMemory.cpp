@@ -27,9 +27,9 @@ void StaticMemory::MarkAllForDeallocation()
     {
         Value& sv = m_data[i - 1];
 
-        if (sv.m_type == Value::HEAP_POINTER && sv.m_value.ptr != nullptr)
+        if (sv.m_type == Value::HEAP_POINTER && sv.m_value.internal.ptr != nullptr)
         {
-            sv.m_value.ptr->DisableFlags(GC_ALWAYS_ALIVE);
+            sv.m_value.internal.ptr->DisableFlags(GC_ALWAYS_ALIVE);
         }
     }
 }

@@ -77,7 +77,7 @@
         value->Mark();                         \
         vm::Value _res;                        \
         _res.m_type = vm::Value::HEAP_POINTER; \
-        _res.m_value.ptr = value;              \
+        _res.m_value.internal.ptr = value;              \
         HYP_SCRIPT_RETURN(_res);               \
     }                                          \
     while (false)
@@ -87,7 +87,7 @@
     {                                          \
         vm::Value _res;                        \
         _res.m_type = vm::Value::HEAP_POINTER; \
-        _res.m_value.ptr = nullptr;            \
+        _res.m_value.internal.ptr = nullptr;            \
         HYP_SCRIPT_RETURN(_res);               \
     }                                          \
     while (false)
@@ -505,7 +505,7 @@ struct CxxToScriptValueImpl
         {
             vm::Value finalValue;
             finalValue.m_type = vm::Value::USER_DATA;
-            finalValue.m_value.userData = value;
+            finalValue.m_value.internal.userData = value;
 
             return finalValue;
         }
@@ -524,7 +524,7 @@ struct CxxToScriptValueImpl
 
                 ptrResult->Assign(std::forward<Ty>(value));
                 ptrResult->Mark();
-                internValue = vm::Value(vm::Value::HEAP_POINTER, { .ptr = ptrResult });
+                internValue = vm::Value(vm::Value::HEAP_POINTER, { .internal = { .ptr = ptrResult } });
             }
 
             vm::VMObject boxedValue(prototypeIt->second);
@@ -668,7 +668,7 @@ struct CxxToScriptValueImpl<String>
 
             ptrResult->Assign(std::move(str));
             ptrResult->Mark();
-            finalValue = vm::Value(vm::Value::HEAP_POINTER, { .ptr = ptrResult });
+            finalValue = vm::Value(vm::Value::HEAP_POINTER, { .internal = { .ptr = ptrResult } });
         }
 
         return finalValue;
@@ -883,12 +883,12 @@ struct ScriptToCxxValueImpl<void*>
     {
         if (value.m_type == vm::Value::ValueType::HEAP_POINTER)
         {
-            return GetRawPointerForHeapValue(value.m_value.ptr);
+            return GetRawPointerForHeapValue(value.m_value.internal.ptr);
         }
 
         if (value.m_type == vm::Value::ValueType::USER_DATA)
         {
-            return value.m_value.userData;
+            return value.m_value.internal.userData;
         }
 
         return {};

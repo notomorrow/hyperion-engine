@@ -1216,7 +1216,7 @@ void VM::PushNativeFunctionPtr(NativeFunctionPtr_t ptr)
 {
     Value sv;
     sv.m_type = Value::NATIVE_FUNCTION;
-    sv.m_value.nativeFunc = ptr;
+    sv.m_value.internal.nativeFunc = ptr;
 
     Assert(m_state.GetMainThread() != nullptr);
     m_state.GetMainThread()->m_stack.Push(sv);
@@ -1260,7 +1260,7 @@ void VM::Invoke(
             state->enableAutoGc = false;
 
             // call the native function
-            value.m_value.nativeFunc(params);
+            value.m_value.internal.nativeFunc(params);
 
             // re-enable auto gc
             state->enableAutoGc = ENABLE_GC;
@@ -1271,14 +1271,14 @@ void VM::Invoke(
         }
         else if (value.m_type == Value::HEAP_POINTER)
         {
-            if (value.m_value.ptr == nullptr)
+            if (value.m_value.internal.ptr == nullptr)
             {
                 state->ThrowException(
                     thread,
                     Exception::NullReferenceException());
                 return;
             }
-            else if (VMObject* object = value.m_value.ptr->GetPointer<VMObject>())
+            else if (VMObject* object = value.m_value.internal.ptr->GetPointer<VMObject>())
             {
                 if (Member* member = object->LookupMemberFromHash(invokeHash))
                 {
@@ -1315,7 +1315,7 @@ void VM::Invoke(
                     // bookkeeping to remove the closure object
                     // normally, arguments are popped after the call is returned,
                     // rather than within the body
-                    top.m_value.call.varargsPush--;
+                    top.m_value.internal.call.varargsPush--;
 
                     return;
                 }
@@ -1335,43 +1335,43 @@ void VM::Invoke(
         return;
     }
 
-    if ((value.m_value.func.m_flags & FunctionFlags::VARIADIC) && nargs < value.m_value.func.m_nargs - 1)
+    if ((value.m_value.internal.func.m_flags & FunctionFlags::VARIADIC) && nargs < value.m_value.internal.func.m_nargs - 1)
     {
         // if variadic, make sure the arg count is /at least/ what is required
         state->ThrowException(
             thread,
             Exception::InvalidArgsException(
-                value.m_value.func.m_nargs,
+                value.m_value.internal.func.m_nargs,
                 nargs,
                 true));
     }
-    else if (!(value.m_value.func.m_flags & FunctionFlags::VARIADIC) && value.m_value.func.m_nargs != nargs)
+    else if (!(value.m_value.internal.func.m_flags & FunctionFlags::VARIADIC) && value.m_value.internal.func.m_nargs != nargs)
     {
         state->ThrowException(
             thread,
             Exception::InvalidArgsException(
-                value.m_value.func.m_nargs,
+                value.m_value.internal.func.m_nargs,
                 nargs));
     }
     else
     {
         Value previousAddr;
         previousAddr.m_type = Value::FUNCTION_CALL;
-        previousAddr.m_value.call.varargsPush = 0;
-        previousAddr.m_value.call.returnAddress = static_cast<BCAddress>(bs->Position());
+        previousAddr.m_value.internal.call.varargsPush = 0;
+        previousAddr.m_value.internal.call.returnAddress = static_cast<BCAddress>(bs->Position());
 
-        if (value.m_value.func.m_flags & FunctionFlags::VARIADIC)
+        if (value.m_value.internal.func.m_flags & FunctionFlags::VARIADIC)
         {
             // for each argument that is over the expected size, we must pop it from
             // the stack and add it to a new array.
-            int varargsAmt = nargs - value.m_value.func.m_nargs + 1;
+            int varargsAmt = nargs - value.m_value.internal.func.m_nargs + 1;
             if (varargsAmt < 0)
             {
                 varargsAmt = 0;
             }
 
             // set varargsPush value so we know how to get back to the stack size before.
-            previousAddr.m_value.call.varargsPush = varargsAmt - 1;
+            previousAddr.m_value.internal.call.varargsPush = varargsAmt - 1;
 
             // allocate heap object
             HeapValue* hv = state->HeapAlloc(thread);
@@ -1392,7 +1392,7 @@ void VM::Invoke(
 
             Value arrayValue;
             arrayValue.m_type = Value::HEAP_POINTER;
-            arrayValue.m_value.ptr = hv;
+            arrayValue.m_value.internal.ptr = hv;
 
             hv->Mark();
 
@@ -1403,7 +1403,7 @@ void VM::Invoke(
         // push the address
         thread->GetStack().Push(previousAddr);
         // seek to the new address
-        bs->Seek(value.m_value.func.m_addr);
+        bs->Seek(value.m_value.internal.func.m_addr);
 
         // increase function depth
         thread->m_funcDepth++;
@@ -1492,7 +1492,7 @@ void VM::CreateStackTrace(ExecutionThread* thread, StackTrace* out)
 
         if (top.m_type == Value::FUNCTION_CALL)
         {
-            out->callAddresses[numRecordedCallAddresses++] = static_cast<int>(top.m_value.call.returnAddress);
+            out->callAddresses[numRecordedCallAddresses++] = static_cast<int>(top.m_value.internal.call.returnAddress);
         }
     }
 }
@@ -1520,7 +1520,7 @@ bool VM::HandleException(InstructionHandler* handler)
         Assert(top != nullptr && top->m_type == Value::TRY_CATCH_INFO);
 
         // jump to the catch block
-        bs->Seek(top->m_value.tryCatchInfo.catchAddress);
+        bs->Seek(top->m_value.internal.tryCatchInfo.catchAddress);
 
         // pop exception data from stack
         thread->m_stack.Pop();

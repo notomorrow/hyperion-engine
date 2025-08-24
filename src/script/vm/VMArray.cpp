@@ -17,7 +17,7 @@ VMArray::VMArray(SizeType size)
     for (SizeType index = 0; index < m_capacity; index++)
     {
         m_buffer[index].m_type = Value::NONE;
-        m_buffer[index].m_value.userData = nullptr;
+        m_buffer[index].m_value.internal.userData = nullptr;
     }
 }
 
@@ -115,7 +115,7 @@ void VMArray::Resize(SizeType capacity)
 
     for (SizeType index = m_size; index < m_capacity; index++)
     {
-        newBuffer[index] = Value(Value::NONE, { .userData = nullptr });
+        newBuffer[index] = Value(Value::NONE, {});
     }
 
     // delete old buffer
