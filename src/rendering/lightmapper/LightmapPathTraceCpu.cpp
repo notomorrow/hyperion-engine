@@ -61,7 +61,7 @@
 
 namespace hyperion {
 
-HYP_API extern const GlobalConfig& GetGlobalConfig();
+extern const GlobalConfig& CoreApi_GetGlobalConfig();
 
 static constexpr uint32 g_maxBouncesCpu = 4;
 
@@ -295,7 +295,7 @@ private:
 
 uint32 LightmapThreadPool::NumThreadsToCreate()
 {
-    uint32 numThreads = GetGlobalConfig().Get("lightmapper.numThreadsPerJob").ToUInt32(4);
+    uint32 numThreads = CoreApi_GetGlobalConfig().Get("lightmapper.numThreadsPerJob").ToUInt32(4);
     return MathUtil::Clamp(numThreads, 1u, Threads::NumCores());
 }
 

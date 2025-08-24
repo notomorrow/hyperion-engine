@@ -22,6 +22,9 @@
 #endif
 
 namespace hyperion {
+
+extern FilePath CoreApi_GetExecutablePath();
+
 namespace filesystem {
 
 HYP_DEFINE_LOG_SUBCHANNEL(DataStore, IO);
@@ -238,11 +241,7 @@ bool DataStoreBase::Exists(const String& key) const
 
 FilePath DataStoreBase::GetDirectory() const
 {
-#ifdef HYPERION_BUILD_LIBRARY
-    return GetExecutablePath() / "data" / m_prefix;
-#else
-    return FilePath::Current() / "data" / m_prefix;
-#endif
+    return CoreApi_GetExecutablePath() / "data" / m_prefix;
 }
 
 } // namespace filesystem

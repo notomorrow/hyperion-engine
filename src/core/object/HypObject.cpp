@@ -74,16 +74,22 @@ HypObjectInitializerGuardBase::~HypObjectInitializerGuardBase()
                 scriptObjectResource->IncRef();
 
                 target->SetScriptObjectResource(scriptObjectResource);
-            }
-            else
-            {
-                HYP_LOG(Object, Warning,
-                    "HypObjectInitializerGuardBase: HypClass '{}' does not have a managed class associated with it. "
-                    "This means that the object will not be created in the managed runtime, and will not be accessible from C#.",
-                    hypClass->GetName());
-
+                
                 return;
             }
+#endif
+
+#ifdef HYP_SCRIPT
+            // @TODO
+            
+            ScriptObjectResource* scriptObjectResource = AllocateResource<ScriptObjectResource>(ptr, vm::Value());
+
+            Assert(scriptObjectResource != nullptr);
+            scriptObjectResource->IncRef();
+
+            target->SetScriptObjectResource(scriptObjectResource);
+
+            return;
 #endif
         }
     }
@@ -150,7 +156,7 @@ HypObjectBase::~HypObjectBase()
 {
     HYP_CORE_ASSERT(m_header != nullptr);
 
-#ifdef HYP_DOTNET
+#if defined(HYP_DOTNET) || defined(HYP_SCRIPT)
     if (m_scriptObjectResource)
     {
         FreeResource(m_scriptObjectResource);

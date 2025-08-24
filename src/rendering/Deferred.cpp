@@ -94,11 +94,11 @@ static const FixedArray<ShaderProperties, LT_MAX> g_deferredLightTypeProperties 
     ShaderProperties { { NAME("LIGHT_TYPE_AREA_RECT") } }
 };
 
-HYP_API extern const GlobalConfig& GetGlobalConfig();
+extern const GlobalConfig& CoreApi_GetGlobalConfig();
 
 void GetDeferredShaderProperties(ShaderProperties& outShaderProperties)
 {
-    static const GlobalConfig& globalConfig = GetGlobalConfig();
+    static const GlobalConfig& globalConfig = CoreApi_GetGlobalConfig();
     static const IRenderConfig& renderConfig = g_renderBackend->GetRenderConfig();
 
     outShaderProperties.Set(NAME("RT_REFLECTIONS_ENABLED"), renderConfig.raytracing && globalConfig.Get("rendering.raytracing.reflections.enabled").ToBool());
@@ -767,8 +767,8 @@ void ReflectionsPass::CreatePipeline(const RenderableAttributeSet& renderableAtt
 
 bool ReflectionsPass::ShouldRenderSSR() const
 {
-    static const ConfigurationValue& ssrEnabled = GetGlobalConfig().Get("rendering.ssr.enabled");
-    static const ConfigurationValue& raytracingReflectionsEnabled = GetGlobalConfig().Get("rendering.raytracing.reflections.enabled");
+    static const ConfigurationValue& ssrEnabled = CoreApi_GetGlobalConfig().Get("rendering.ssr.enabled");
+    static const ConfigurationValue& raytracingReflectionsEnabled = CoreApi_GetGlobalConfig().Get("rendering.raytracing.reflections.enabled");
 
     return ssrEnabled.ToBool(true) && !raytracingReflectionsEnabled.ToBool(false);
 }
@@ -1357,7 +1357,7 @@ void DeferredRenderer::CreateViewRaytracingPasses(View* view, DeferredPassData& 
     }
 
     const bool shouldEnableRaytracingForView = view->GetRaytracingView().IsValid()
-        && GetGlobalConfig().Get("rendering.raytracing.enabled").ToBool();
+        && CoreApi_GetGlobalConfig().Get("rendering.raytracing.enabled").ToBool();
 
     if (!shouldEnableRaytracingForView)
     {

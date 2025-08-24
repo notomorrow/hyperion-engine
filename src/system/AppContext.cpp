@@ -29,27 +29,7 @@ namespace hyperion {
 
 HYP_DECLARE_LOG_CHANNEL(Core);
 
-HYP_API extern const GlobalConfig& GetGlobalConfig();
-
-HYP_API const CommandLineArgumentDefinitions& DefaultCommandLineArgumentDefinitions()
-{
-    static const struct DefaultCommandLineArgumentDefinitionsInitializer
-    {
-        CommandLineArgumentDefinitions definitions;
-
-        DefaultCommandLineArgumentDefinitionsInitializer()
-        {
-            definitions.Add("Profile", {}, "Enable collection of profiling data for functions that opt in using HYP_SCOPE.", CommandLineArgumentFlags::NONE, CommandLineArgumentType::BOOLEAN, false);
-            definitions.Add("TraceURL", {}, "The endpoint url that profiling data will be submitted to (this url will have /start appended to it to start the session and /results to add results)", CommandLineArgumentFlags::NONE, CommandLineArgumentType::STRING);
-            definitions.Add("ResX", {}, {}, CommandLineArgumentFlags::NONE, CommandLineArgumentType::INTEGER);
-            definitions.Add("ResY", {}, {}, CommandLineArgumentFlags::NONE, CommandLineArgumentType::INTEGER);
-            definitions.Add("Headless", {}, {}, CommandLineArgumentFlags::NONE, CommandLineArgumentType::BOOLEAN, false);
-            definitions.Add("Mode", "m", {}, CommandLineArgumentFlags::NONE, Array<String> { "precompile_shaders", "editor" }, String("editor"));
-        }
-    } initializer;
-
-    return initializer.definitions;
-}
+extern const GlobalConfig& CoreApi_GetGlobalConfig();
 
 namespace sys {
 
@@ -80,9 +60,9 @@ AppContextBase::AppContextBase(ANSIString name, const CommandLineArguments& argu
 
     if (m_name.Empty())
     {
-        if (json::JSONValue configAppName = GetGlobalConfig().Get("app.name"))
+        if (json::JSONValue configAppName = CoreApi_GetGlobalConfig().Get("app.name"))
         {
-            m_name = GetGlobalConfig().Get("app.name").ToString();
+            m_name = CoreApi_GetGlobalConfig().Get("app.name").ToString();
         }
     }
 }

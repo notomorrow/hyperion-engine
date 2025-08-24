@@ -23,6 +23,9 @@
 #endif
 
 namespace hyperion {
+
+extern FilePath CoreApi_GetExecutablePath();
+
 namespace config {
 
 static const ConfigurationValue g_invalidConfigurationValue {};
@@ -113,11 +116,7 @@ bool ConfigurationTable::IsChanged() const
 
 FilePath ConfigurationTable::GetFilePath() const
 {
-#ifdef HYPERION_BUILD_LIBRARY
-    FilePath configPath = GetExecutablePath() / m_name;
-#else
-    FilePath configPath = FilePath::Current() / m_name;
-#endif
+    FilePath configPath = CoreApi_GetExecutablePath() / m_name;
 
     if (!configPath.EndsWith(".json"))
     {

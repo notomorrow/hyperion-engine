@@ -88,17 +88,17 @@ static struct ArrayScriptBindings : ScriptBindingsBase
                                                                              return VMArray();
                                                                          }
 
-                                                                         if (value.GetValue().ptr == nullptr)
+                                                                         if (value.GetValue().internal.ptr == nullptr)
                                                                          {
                                                                              return VMArray();
                                                                          }
 
-                                                                         if (value.GetValue().ptr->GetPointer<VMArray>() == nullptr)
+                                                                         if (value.GetValue().internal.ptr->GetPointer<VMArray>() == nullptr)
                                                                          {
                                                                              return VMArray();
                                                                          }
 
-                                                                         return VMArray(*value.GetValue().ptr->GetPointer<VMArray>());
+                                                                         return VMArray(*value.GetValue().internal.ptr->GetPointer<VMArray>());
                                                                      }>)
             .Build();
     }

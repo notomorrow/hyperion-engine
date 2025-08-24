@@ -61,7 +61,7 @@ static struct RuntimeScriptBindings : ScriptBindingsBase
                                                                                              break;
                                                                                          }
 
-                                                                                         vm::Value base = vm::Value(vm::Value::NONE, { .ptr = nullptr });
+                                                                                         vm::Value base = vm::Value(vm::Value::NONE, { .internal = { .ptr = nullptr } });
 
                                                                                          if (!(targetClassObject->LookupBasePointer(&base) && base.GetPointer<vm::VMObject>(&targetClassObject)))
                                                                                          {

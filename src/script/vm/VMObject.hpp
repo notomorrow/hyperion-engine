@@ -68,7 +68,7 @@ public:
     static const uint32 BASE_MEMBER_HASH;
 
     // construct from prototype (holds pointer)
-    VMObject(HeapValue* classPtr);
+    explicit VMObject(HeapValue* classPtr);
     VMObject(const Member* members, SizeType size, HeapValue* classPtr);
     VMObject(const VMObject& other);
     ~VMObject();

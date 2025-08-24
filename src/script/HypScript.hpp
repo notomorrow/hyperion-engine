@@ -27,6 +27,7 @@ class Context;
 } // namespace scriptapi2
 
 class ScriptHandle;
+class HypScript;
 
 class ValueHandle
 {

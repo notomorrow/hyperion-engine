@@ -5,8 +5,6 @@ set(BUILD_NAME hyperion-core)
 
 project(${BUILD_NAME} CXX C)
 
-set(OpenGL_GL_PREFERENCE GLVND)
-
 message(STATUS "Building ${BUILD_NAME} library, base directory: ${CMAKE_SOURCE_DIR}")
 
 link_directories(${CMAKE_SOURCE_DIR}/lib /usr/local/lib)

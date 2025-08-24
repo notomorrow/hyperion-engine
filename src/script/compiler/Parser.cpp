@@ -693,17 +693,9 @@ RC<AstExpression> Parser::ParseTerm(
     {
         expr = ParseFunctionExpression();
     }
-    else if (MatchKeyword(Keyword_valueof))
-    {
-        expr = ParseValueOfExpression();
-    }
     else if (MatchKeyword(Keyword_typeof))
     {
         expr = ParseTypeOfExpression();
-    }
-    else if (MatchKeyword(Keyword_meta))
-    {
-        expr = ParseMetaProperty();
     }
     else if (MatchKeyword(Keyword_class))
     {
@@ -2398,38 +2390,6 @@ RC<AstHashMap> Parser::ParseHashMap()
     return nullptr;
 }
 
-RC<AstExpression> Parser::ParseValueOfExpression()
-{
-    if (Token token = ExpectKeyword(Keyword_valueof, true))
-    {
-        RC<AstExpression> expr;
-
-        if (!MatchAhead(TK_DOUBLE_COLON, 1))
-        {
-            Token ident = Expect(TK_IDENT, true);
-            expr.Reset(new AstVariable(
-                ident.GetValue(),
-                token.GetLocation()));
-        }
-        else
-        {
-            do
-            {
-                Token ident = Expect(TK_IDENT, true);
-                expr.Reset(new AstModuleAccess(
-                    ident.GetValue(),
-                    expr,
-                    ident.GetLocation()));
-            }
-            while (Match(TK_DOUBLE_COLON, true));
-        }
-
-        return expr;
-    }
-
-    return nullptr;
-}
-
 RC<AstTypeOfExpression> Parser::ParseTypeOfExpression()
 {
     const SourceLocation location = CurrentLocation();
@@ -3176,35 +3136,6 @@ RC<AstReturnStatement> Parser::ParseReturnStatement()
 
         return RC<AstReturnStatement>(new AstReturnStatement(
             expr,
-            location));
-    }
-
-    return nullptr;
-}
-
-RC<AstExpression> Parser::ParseMetaProperty()
-{
-    const SourceLocation location = CurrentLocation();
-
-    if (Token token = ExpectKeyword(Keyword_meta, true))
-    {
-        Expect(TK_DOUBLE_COLON, true);
-
-        const Token ident = ExpectIdentifier(true, true);
-
-        Expect(TK_OPEN_PARENTH, true);
-
-        RC<AstExpression> term = ParseTerm();
-        if (term == nullptr)
-        {
-            return nullptr;
-        }
-
-        Expect(TK_CLOSE_PARENTH, true);
-
-        return RC<AstSymbolQuery>(new AstSymbolQuery(
-            ident.GetValue(),
-            term,
             location));
     }
 

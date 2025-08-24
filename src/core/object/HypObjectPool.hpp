@@ -172,7 +172,7 @@ struct HypObjectHeader
 
         HYP_CORE_ASSERT(count > 0, "RefCount bug! strong count went negative");
 
-#ifdef HYP_DOTNET
+#if defined(HYP_DOTNET) || defined(HYP_SCRIPT)
         if (count > 1)
         {
             HypObject_DecScriptObjectRef(GetObjectPointer(this));

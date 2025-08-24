@@ -54,7 +54,7 @@
 
 namespace hyperion {
 
-HYP_API extern const GlobalConfig& GetGlobalConfig();
+extern const GlobalConfig& CoreApi_GetGlobalConfig();
 
 static inline VulkanRenderBackend* GetRenderBackend()
 {
@@ -73,8 +73,8 @@ public:
         uniqueDrawCallPerMaterial = true;
         bindlessTextures = renderBackend->GetDevice()->GetFeatures().SupportsBindlessTextures();
         raytracing = renderBackend->GetDevice()->GetFeatures().IsRaytracingSupported();
-        indirectRendering = GetGlobalConfig().Get("rendering.indirect").ToBool(true);
-        parallelRendering = GetGlobalConfig().Get("rendering.parallel").ToBool(true);
+        indirectRendering = CoreApi_GetGlobalConfig().Get("rendering.indirect").ToBool(true);
+        parallelRendering = CoreApi_GetGlobalConfig().Get("rendering.parallel").ToBool(true);
         dynamicDescriptorIndexing = false;
     }
 };
@@ -655,7 +655,7 @@ AsyncComputeBase* VulkanRenderBackend::GetAsyncCompute() const
 
 RendererResult VulkanRenderBackend::Initialize()
 {
-    static const ConfigurationValue& cfgDebugLayers = GetGlobalConfig().Get("rendering.vulkan.debugLayers");
+    static const ConfigurationValue& cfgDebugLayers = CoreApi_GetGlobalConfig().Get("rendering.vulkan.debugLayers");
 
     if (cfgDebugLayers.ToBool(false))
     {

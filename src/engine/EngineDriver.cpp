@@ -65,7 +65,6 @@
 namespace hyperion {
 
 class RenderThread;
-
 static RenderThread* g_renderThreadInstance = nullptr;
 
 static struct GlobalDescriptorSetsDeclarations
@@ -77,6 +76,10 @@ static struct GlobalDescriptorSetsDeclarations
 } g_globalDescriptorSetsDeclarations;
 
 void HandleSignal(int signum);
+
+extern const GlobalConfig& CoreApi_GetGlobalConfig();
+extern FilePath CoreApi_GetExecutablePath();
+extern const CommandLineArguments& CoreApi_GetCommandLineArguments();
 
 class RenderThread final : public Thread<Scheduler>
 {
@@ -249,7 +252,7 @@ HYP_API void EngineDriver::Init()
     m_scriptingService = MakeUnique<ScriptingService>(
         GetResourceDirectory() / "scripts" / "src",
         GetResourceDirectory() / "scripts" / "projects",
-        GetExecutablePath()); // copy script binaries into executable path
+        CoreApi_GetExecutablePath()); // copy script binaries into executable path
 
     m_scriptingService->Start();
 #endif
@@ -261,10 +264,10 @@ HYP_API void EngineDriver::Init()
     // g_streamingManager->Start();
 
     // must start after net request thread
-    if (GetCommandLineArguments()["Profile"])
+    if (CoreApi_GetCommandLineArguments()["Profile"])
     {
         StartProfilerConnectionThread(ProfilerConnectionParams {
-            /* endpointUrl */ GetCommandLineArguments()["TraceURL"].ToString(),
+            /* endpointUrl */ CoreApi_GetCommandLineArguments()["TraceURL"].ToString(),
             /* enabled */ true });
     }
 

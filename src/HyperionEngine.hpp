@@ -22,13 +22,7 @@ class CommandLineArguments;
 
 using cli::CommandLineArguments;
 
-HYP_API const CommandLineArguments& GetCommandLineArguments();
-HYP_API const FilePath& GetExecutablePath();
-
 HYP_API const FilePath& GetResourceDirectory();
-
-HYP_API const GlobalConfig& GetGlobalConfig();
-HYP_API void UpdateGlobalConfig(const ConfigurationTable& mergeValues);
 
 HYP_API bool InitializeEngine(int argc, char** argv);
 HYP_API void DestroyEngine();

@@ -65,11 +65,6 @@ IRenderBackend* g_renderBackend = nullptr;
 RenderGlobalState* g_renderGlobalState = nullptr;
 ShaderCompiler* g_shaderCompiler = nullptr;
 
-static LinkedList<GlobalConfig> g_globalConfigChain;
-static Mutex g_globalConfigMutex;
-
-static CommandLineArguments g_commandLineArguments;
-
 static void HandleFatalError(const char* message)
 {
     SystemMessageBox(MessageBoxType::CRITICAL)
@@ -78,59 +73,6 @@ static void HandleFatalError(const char* message)
         .Show();
 
     std::terminate();
-}
-
-static bool InitializeCommandLineArguments(int argc, char** argv)
-{
-    g_commandLineArguments = CommandLineArguments(argv[0]);
-
-    CommandLineParser argParse { &DefaultCommandLineArgumentDefinitions() };
-
-    TResult<CommandLineArguments> parseResult = argParse.Parse(argc, argv);
-
-    if (parseResult.HasError())
-    {
-        const Error& error = parseResult.GetError();
-
-        HYP_LOG(Engine, Error, "Failed to parse command line arguments!\n\t{}", error.GetMessage().Any() ? error.GetMessage() : "<no message>");
-
-        return false;
-    }
-
-    GlobalConfig config { "GlobalConfig" };
-
-    if (json::JSONValue configArgs = config.Get("app.args"))
-    {
-        json::JSONString configArgsString = configArgs.ToString();
-        Array<String> configArgsStringSplit = configArgsString.Split(' ');
-
-        parseResult = argParse.Parse(g_commandLineArguments.GetCommand(), configArgsStringSplit);
-
-        if (parseResult.HasError())
-        {
-            HYP_LOG(Engine, Error, "Failed to parse config command line value \"{}\":\n\t{}", configArgsString, parseResult.GetError().GetMessage());
-
-            return false;
-        }
-
-        g_commandLineArguments = CommandLineArguments::Merge(*argParse.GetDefinitions(), *parseResult, g_commandLineArguments);
-    }
-
-    return true;
-}
-
-HYP_API const CommandLineArguments& GetCommandLineArguments()
-{
-    return g_commandLineArguments;
-}
-
-HYP_API const FilePath& GetExecutablePath()
-{
-    static FilePath executablePath = FilePath(g_commandLineArguments.GetCommand()).BasePath();
-
-    HYP_LOG_TEMP("command : {}\tthread : {}", g_commandLineArguments.GetCommand(), Threads::CurrentThreadId().GetName());
-
-    return executablePath;
 }
 
 HYP_API const FilePath& GetResourceDirectory()
@@ -144,7 +86,7 @@ HYP_API const FilePath& GetResourceDirectory()
 #ifdef HYP_DEBUG_MODE
             path = FilePath(HYP_ROOT_DIR) / "res";
 #else
-            path = GetExecutablePath() / "res";
+            path = CoreApi_GetExecutablePath() / "res";
 #endif
             Assert(path.Exists() && path.IsDirectory(), "Resource directory does not exist or is not a directory: %s", path.Data());
 
@@ -154,40 +96,6 @@ HYP_API const FilePath& GetResourceDirectory()
     } resourceDirectoryData;
 
     return resourceDirectoryData.path;
-}
-
-void UpdateGlobalConfig(const ConfigurationTable& mergeValues)
-{
-    Mutex::Guard guard(g_globalConfigMutex);
-
-    GlobalConfig* prevGlobalConfig = nullptr;
-
-    if (g_globalConfigChain.Any())
-    {
-        prevGlobalConfig = &g_globalConfigChain.Back();
-    }
-
-    GlobalConfig& newGlobalConfig = g_globalConfigChain.EmplaceBack("GlobalConfig");
-
-    if (prevGlobalConfig != nullptr)
-    {
-        newGlobalConfig.Merge(*prevGlobalConfig);
-    }
-
-    newGlobalConfig.Merge(mergeValues);
-    newGlobalConfig.Save();
-}
-
-HYP_API const GlobalConfig& GetGlobalConfig()
-{
-    Mutex::Guard guard(g_globalConfigMutex);
-
-    if (g_globalConfigChain.Empty())
-    {
-        g_globalConfigChain.EmplaceBack("GlobalConfig");
-    }
-
-    return g_globalConfigChain.Back();
 }
 
 HYP_API bool InitializeEngine(int argc, char** argv)
@@ -202,17 +110,13 @@ HYP_API bool InitializeEngine(int argc, char** argv)
     HypClassRegistry::GetInstance().Initialize();
     HypScript::GetInstance().Initialize();
 
-    if (!InitializeCommandLineArguments(argc, argv))
+    if (!CoreApi_InitializeCommandLineArguments(argc, argv))
     {
         return false;
     }
 
-    {
-        Mutex::Guard guard(g_globalConfigMutex);
-        g_globalConfigChain.EmplaceBack("GlobalConfig");
-    }
-
-    const FilePath basePath = GetExecutablePath();
+    const FilePath basePath = FilePath(CoreApi_GetCommandLineArguments().GetCommand()).BasePath();
+    CoreApi_SetExecutablePath(basePath);
 
     dotnet::DotNetSystem::GetInstance().Initialize(basePath);
     ConsoleCommandManager::GetInstance().Initialize();
@@ -249,10 +153,12 @@ HYP_API bool InitializeEngine(int argc, char** argv)
 
     ComponentInterfaceRegistry::GetInstance().Initialize();
 
+    const CommandLineArguments& cliArgs = CoreApi_GetCommandLineArguments();
+
 #ifdef HYP_WINDOWS
-    g_appContext = CreateObject<Win32AppContext>("Hyperion", GetCommandLineArguments());
+    g_appContext = CreateObject<Win32AppContext>("Hyperion", cliArgs);
 #elif defined(HYP_SDL)
-    g_appContext = CreateObject<SDLAppContext>("Hyperion", GetCommandLineArguments());
+    g_appContext = CreateObject<SDLAppContext>("Hyperion", cliArgs);
 #else
     HYP_FAIL("AppContext not implemented for this platform");
 #endif
@@ -261,19 +167,19 @@ HYP_API bool InitializeEngine(int argc, char** argv)
 
     EnumFlags<WindowFlags> windowFlags = WindowFlags::HIGH_DPI;
 
-    if (GetCommandLineArguments()["Headless"].ToBool())
+    if (cliArgs["Headless"].ToBool())
     {
         windowFlags |= WindowFlags::HEADLESS;
     }
 
-    if (GetCommandLineArguments()["ResX"].IsNumber())
+    if (cliArgs["ResX"].IsNumber())
     {
-        resolution.x = GetCommandLineArguments()["ResX"].ToInt32();
+        resolution.x = cliArgs["ResX"].ToInt32();
     }
 
-    if (GetCommandLineArguments()["ResY"].IsNumber())
+    if (cliArgs["ResY"].IsNumber())
     {
-        resolution.y = GetCommandLineArguments()["ResY"].ToInt32();
+        resolution.y = cliArgs["ResY"].ToInt32();
     }
 
     if (!(windowFlags & WindowFlags::HEADLESS))
@@ -330,8 +236,6 @@ HYP_API void DestroyEngine()
 
     delete g_renderBackend;
     g_renderBackend = nullptr;
-
-    g_globalConfigChain.Clear();
 }
 
 } // namespace hyperion

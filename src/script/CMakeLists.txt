@@ -5,8 +5,6 @@ set(BUILD_NAME hyperion-script)
 
 project(${BUILD_NAME} CXX C)
 
-set(OpenGL_GL_PREFERENCE GLVND)
-
 message(STATUS "Building ${BUILD_NAME} library, base directory: ${CMAKE_SOURCE_DIR}")
 
 link_directories(${CMAKE_SOURCE_DIR}/lib /usr/local/lib)
@@ -14,14 +12,9 @@ link_directories(${CMAKE_SOURCE_DIR}/lib /usr/local/lib)
 set(CMAKE_BUILD_PARALLEL_LEVEL 8)
 set(CMAKE_CXX_STANDARD 20 CACHE STRING "C++ standard to be used")
 
-set(COMMON_LIBRARIES 
-    ${COMMON_LIBRARIES}
+set(COMMON_LIBRARIES
     hyperion-core
-    ${CMAKE_THREAD_LIBS_INIT}
 )
-
-find_package(Threads REQUIRED)
-find_package(ZLIB)
 
 if(MSVC)
     set(CMAKE_CXX_FLAGS "/Zc:preprocessor /MD /O2 /Zi /MP")

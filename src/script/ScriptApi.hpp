@@ -410,7 +410,7 @@
         ptrResult->Assign((assignment));                                                     \
         ptrResult->Mark();                                                                   \
                                                                                              \
-        outName = vm::Value(vm::Value::HEAP_POINTER, { .ptr = ptrResult });                  \
+        outName = vm::Value(vm::Value::HEAP_POINTER, { .internal = { .ptr = ptrResult } });                  \
     }                                                                                        \
     while (false)
 
@@ -537,7 +537,7 @@ struct CxxToScriptValueImpl
 
                 ptrResult->Assign(boxedValue);
                 ptrResult->Mark();
-                finalValue = vm::Value(vm::Value::HEAP_POINTER, { .ptr = ptrResult });
+                finalValue = vm::Value(vm::Value::HEAP_POINTER, { .internal = { .ptr = ptrResult } });
             }
 
             return finalValue;

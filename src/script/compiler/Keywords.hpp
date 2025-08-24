@@ -49,10 +49,7 @@ enum Keywords
     Keyword_yield,
     Keyword_break,
     Keyword_continue,
-    Keyword_async,
-    Keyword_valueof,
     Keyword_typeof,
-    Keyword_meta,
     Keyword_end
 };
 

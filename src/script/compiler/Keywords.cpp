@@ -41,10 +41,7 @@ const HashMap<String, Keywords> Keyword::keywordStrings = {
     { "yield", Keyword_yield },
     { "break", Keyword_break },
     { "continue", Keyword_continue },
-    { "async", Keyword_async },
-    { "valueof", Keyword_valueof },
     { "typeof", Keyword_typeof },
-    { "$meta", Keyword_meta },
     { "end", Keyword_end }
 };
 

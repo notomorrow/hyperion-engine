@@ -99,6 +99,8 @@ enum
     CONSUMER
 };
 
+extern void CoreApi_UpdateGlobalConfig(const ConfigurationTable& mergeValues);
+
 #pragma region ResourceBindings
 
 /// TODO: refactor to use mappings instead of idx (void* directly to element on cpu)
@@ -542,7 +544,7 @@ void RenderApi_Init()
             renderGlobalConfigOverrides.Set("rendering.raytracing.globalIllumination.enabled", false);
             renderGlobalConfigOverrides.Set("rendering.raytracing.pathTracing.enabled", false);
 
-            UpdateGlobalConfig(renderGlobalConfigOverrides);
+            CoreApi_UpdateGlobalConfig(renderGlobalConfigOverrides);
         }
     }
 

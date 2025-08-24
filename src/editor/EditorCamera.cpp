@@ -18,7 +18,7 @@
 
 namespace hyperion {
 
-HYP_API extern const GlobalConfig& GetGlobalConfig();
+extern const GlobalConfig& CoreApi_GetGlobalConfig();
 
 HYP_DECLARE_LOG_CHANNEL(Camera);
 
@@ -140,8 +140,8 @@ bool EditorCameraInputHandler::OnMouseDrag_Impl(const MouseEvent& evt)
 {
     HYP_SCOPE;
     
-    static const ConfigurationValue& editorLookSensitivity = GetGlobalConfig().Get("editor.camera.lookSensitivity");
-    static const ConfigurationValue& editorMoveSensitivity = GetGlobalConfig().Get("editor.camera.lookSensitivity");
+    static const ConfigurationValue& editorLookSensitivity = CoreApi_GetGlobalConfig().Get("editor.camera.lookSensitivity");
+    static const ConfigurationValue& editorMoveSensitivity = CoreApi_GetGlobalConfig().Get("editor.camera.lookSensitivity");
 
     Handle<EditorCameraController> controller = m_controller.Lock();
 

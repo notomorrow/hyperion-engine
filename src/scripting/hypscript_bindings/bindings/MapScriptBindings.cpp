@@ -29,7 +29,7 @@ static struct MapScriptBindings : ScriptBindingsBase
                                                                {
                                                                    if (!map)
                                                                    {
-                                                                       return vm::Value { vm::Value::HEAP_POINTER, { .ptr = nullptr } };
+                                                                       return vm::Value { vm::Value::HEAP_POINTER, { .internal = { .ptr = nullptr } } };
                                                                    }
 
                                                                    VMMap::VMMapKey mapKey;
@@ -40,7 +40,7 @@ static struct MapScriptBindings : ScriptBindingsBase
 
                                                                    if (!value)
                                                                    {
-                                                                       return vm::Value { vm::Value::HEAP_POINTER, { .ptr = nullptr } };
+                                                                       return vm::Value { vm::Value::HEAP_POINTER, { .internal = { .ptr = nullptr } } };
                                                                    }
 
                                                                    return *value;
@@ -87,7 +87,7 @@ static struct MapScriptBindings : ScriptBindingsBase
                                                                                continue;
                                                                            }
 
-                                                                           if (element.GetValue().ptr == nullptr)
+                                                                           if (element.GetValue().internal.ptr == nullptr)
                                                                            {
                                                                                continue;
                                                                            }
@@ -95,7 +95,7 @@ static struct MapScriptBindings : ScriptBindingsBase
                                                                            VMArray* pairArrayPtr = nullptr;
                                                                            VMObject* pairObjectPtr = nullptr;
 
-                                                                           if (!(pairObjectPtr = element.GetValue().ptr->GetPointer<VMObject>()))
+                                                                           if (!(pairObjectPtr = element.GetValue().internal.ptr->GetPointer<VMObject>()))
                                                                            {
                                                                                continue;
                                                                            }

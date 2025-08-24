@@ -56,7 +56,6 @@
 #include <script/compiler/ast/AstPrototypeSpecification.hpp>
 #include <script/compiler/ast/AstTypeOfExpression.hpp>
 #include <script/compiler/ast/AstReturnStatement.hpp>
-#include <script/compiler/ast/AstSymbolQuery.hpp>
 #include <script/compiler/ast/AstTemplateExpression.hpp>
 #include <script/compiler/ast/AstTemplateInstantiation.hpp>
 
@@ -150,7 +149,6 @@ public:
         Array<RC<AstParameter>> params = {});
     RC<AstArrayExpression> ParseArrayExpression();
     RC<AstHashMap> ParseHashMap();
-    RC<AstExpression> ParseValueOfExpression();
     RC<AstTypeOfExpression> ParseTypeOfExpression();
     Array<RC<AstParameter>> ParseFunctionParameters();
     Array<RC<AstParameter>> ParseGenericParameters();
@@ -171,7 +169,6 @@ public:
     RC<AstModuleImport> ParseModuleImport();
     RC<AstModuleImportPart> ParseModuleImportPart(bool allowBraces = false);
     RC<AstReturnStatement> ParseReturnStatement();
-    RC<AstExpression> ParseMetaProperty();
 
 private:
     int m_templateArgumentDepth = 0; // until a better way is found..

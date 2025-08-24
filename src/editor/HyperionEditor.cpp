@@ -106,6 +106,7 @@ void HyperionEditor::Init()
 {
     Game::Init();
 
+    #if 0
     // temp
     String str;
     str = "Logger.print(\"hello\")";
@@ -123,6 +124,7 @@ void HyperionEditor::Init()
         HypScript::GetInstance().Run(scriptHandle);
         HypScript::GetInstance().DestroyScript(scriptHandle);
     }
+    #endif
 
     HYP_BREAKPOINT;
     // temp

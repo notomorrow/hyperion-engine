@@ -57,8 +57,6 @@ struct CommandLineArgumentDefinitions;
 using cli::CommandLineArgumentDefinitions;
 using cli::CommandLineArguments;
 
-extern HYP_API const CommandLineArgumentDefinitions& DefaultCommandLineArgumentDefinitions();
-
 namespace sys {
 
 class SystemEvent;

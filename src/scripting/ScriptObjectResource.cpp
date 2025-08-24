@@ -47,14 +47,6 @@ ScriptObjectResource::ScriptObjectResource(HypObjectPtr ptr, const RC<dotnet::Cl
         }
         else
         {
-            /// VVVV NOTE: moved HypObject_IncRef into C# constructor instead
-            // if (m_ptr.GetClass()->IsReferenceCounted())
-            //{
-            //     // Increment reference count for the managed object (creating from managed does this already via HypObject_Initialize())
-            //     // The managed object is responsible for decrementing the ref count using HypObject_DecRef() in finalizer and Dispose().
-            //     m_ptr.IncRef();
-            // }
-
             HYP_LOG(Object, Debug, "Creating new managed object with class {}, reference will be incremented from C#", m_managedClass->GetName());
 
             m_objectPtr = m_managedClass->NewObject(m_ptr.GetClass(), address);
@@ -70,6 +62,11 @@ ScriptObjectResource::ScriptObjectResource(HypObjectPtr ptr, vm::Value value)
     : m_ptr(ptr),
       m_value(value)
 {
+    // Need to inc ref for proper book keeping w/ creating new .NET objects
+    if (ptr.IsValid())
+    {
+        ptr.IncRef();
+    }
 }
 
 #endif
@@ -134,12 +131,6 @@ void ScriptObjectResource::Initialize()
 
     if (m_managedClass)
     {
-        //// VVVV NOTE: moved HypObject_IncRef into C# constructor instead
-        /*if (hypClass->IsReferenceCounted())
-        {
-            m_ptr.IncRef();
-        }*/
-
         dotnet::Object* newManagedObject = m_managedClass->NewObject(hypClass, m_ptr.GetPointer());
 
         if (!newManagedObject)
