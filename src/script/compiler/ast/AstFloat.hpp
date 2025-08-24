@@ -1,5 +1,4 @@
-#ifndef AST_FLOAT_HPP
-#define AST_FLOAT_HPP
+#pragma once
 
 #include <script/compiler/ast/AstConstant.hpp>
 
@@ -45,4 +44,3 @@ private:
 
 } // namespace hyperion::compiler
 
-#endif

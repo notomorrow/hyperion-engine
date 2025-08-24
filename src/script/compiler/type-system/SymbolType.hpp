@@ -1,5 +1,4 @@
-#ifndef SYMBOL_TYPE_HPP
-#define SYMBOL_TYPE_HPP
+#pragma once
 
 #include <core/memory/RefCountedPtr.hpp>
 #include <core/containers/Array.hpp>
@@ -449,4 +448,3 @@ private:
 
 } // namespace hyperion::compiler
 
-#endif

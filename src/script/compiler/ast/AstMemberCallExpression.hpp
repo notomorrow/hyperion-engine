@@ -1,5 +1,4 @@
-#ifndef AST_MEMBER_CALL_EXPRESSION_HPP
-#define AST_MEMBER_CALL_EXPRESSION_HPP
+#pragma once
 
 #include <script/compiler/ast/AstMember.hpp>
 #include <script/compiler/ast/AstArgumentList.hpp>
@@ -50,4 +49,3 @@ protected:
 
 } // namespace hyperion::compiler
 
-#endif

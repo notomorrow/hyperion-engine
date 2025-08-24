@@ -1,5 +1,4 @@
-#ifndef AST_FOR_LOOP_HPP
-#define AST_FOR_LOOP_HPP
+#pragma once
 
 #include <script/compiler/ast/AstStatement.hpp>
 #include <script/compiler/ast/AstVariableDeclaration.hpp>
@@ -66,4 +65,3 @@ private:
 
 } // namespace hyperion::compiler
 
-#endif

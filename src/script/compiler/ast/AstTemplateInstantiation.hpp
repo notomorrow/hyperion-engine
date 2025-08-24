@@ -1,5 +1,4 @@
-#ifndef AST_TEMPLATE_INSTANTIATION_HPP
-#define AST_TEMPLATE_INSTANTIATION_HPP
+#pragma once
 
 #include <script/compiler/ast/AstExpression.hpp>
 #include <script/compiler/ast/AstArgumentList.hpp>
@@ -144,4 +143,3 @@ private:
 
 } // namespace hyperion::compiler
 
-#endif

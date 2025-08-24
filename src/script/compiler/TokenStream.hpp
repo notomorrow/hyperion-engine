@@ -1,5 +1,4 @@
-#ifndef TOKEN_STREAM_HPP
-#define TOKEN_STREAM_HPP
+#pragma once
 
 #include <core/containers/Array.hpp>
 #include <core/containers/String.hpp>
@@ -92,4 +91,3 @@ private:
 
 } // namespace hyperion::compiler
 
-#endif

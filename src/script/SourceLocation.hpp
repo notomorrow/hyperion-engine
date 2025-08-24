@@ -1,5 +1,4 @@
-#ifndef SOURCE_LOCATION_HPP
-#define SOURCE_LOCATION_HPP
+#pragma once
 
 #include <core/containers/String.hpp>
 #include <core/HashCode.hpp>
@@ -61,4 +60,3 @@ private:
 
 } // namespace hyperion
 
-#endif

@@ -1,5 +1,4 @@
-#ifndef SCRIPT_API_HPP
-#define SCRIPT_API_HPP
+#pragma once
 
 #include <script/vm/VMObject.hpp>
 #include <script/vm/VMArray.hpp>
@@ -1383,4 +1382,3 @@ struct ScriptBindingsBase
 
 } // namespace hyperion
 
-#endif

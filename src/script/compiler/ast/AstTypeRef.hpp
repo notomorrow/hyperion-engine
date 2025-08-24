@@ -1,5 +1,4 @@
-#ifndef AST_TYPE_REF_HPP
-#define AST_TYPE_REF_HPP
+#pragma once
 
 #include <script/compiler/ast/AstExpression.hpp>
 
@@ -50,4 +49,3 @@ private:
 
 } // namespace hyperion::compiler
 
-#endif

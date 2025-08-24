@@ -1,5 +1,4 @@
-#ifndef AST_IF_STATEMENT_HPP
-#define AST_IF_STATEMENT_HPP
+#pragma once
 
 #include <script/compiler/ast/AstStatement.hpp>
 #include <script/compiler/ast/AstExpression.hpp>
@@ -53,4 +52,3 @@ private:
 
 } // namespace hyperion::compiler
 
-#endif

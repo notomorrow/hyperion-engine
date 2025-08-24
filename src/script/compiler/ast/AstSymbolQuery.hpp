@@ -1,5 +1,4 @@
-#ifndef AST_SYMBOL_QUERY
-#define AST_SYMBOL_QUERY
+#pragma once
 
 #include <script/compiler/ast/AstExpression.hpp>
 #include <script/compiler/ast/AstString.hpp>
@@ -57,4 +56,3 @@ private:
 
 } // namespace hyperion::compiler
 
-#endif

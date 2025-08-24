@@ -1,5 +1,4 @@
-#ifndef SCRIPT_BINDINGS_HPP
-#define SCRIPT_BINDINGS_HPP
+#pragma once
 
 #include <script/ScriptApi.hpp>
 
@@ -19,4 +18,3 @@ public:
 
 } // namespace hyperion
 
-#endif

@@ -1,5 +1,4 @@
-#ifndef HYPERION_COMPILER_MODULE_HPP
-#define HYPERION_COMPILER_MODULE_HPP
+#pragma once
 
 #include <script/compiler/Scope.hpp>
 #include <script/SourceLocation.hpp>
@@ -177,4 +176,3 @@ struct ScopeGuard : TreeNodeGuard<Scope>
 
 } // namespace hyperion::compiler
 
-#endif

@@ -1,5 +1,4 @@
-#ifndef HEAP_VALUE_HPP
-#define HEAP_VALUE_HPP
+#pragma once
 
 #include <core/memory/Any.hpp>
 #include <core/utilities/Variant.hpp>
@@ -264,4 +263,3 @@ private:
 } // namespace vm
 } // namespace hyperion
 
-#endif

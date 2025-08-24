@@ -1,5 +1,4 @@
-#ifndef AST_IS_EXPRESSION_HPP
-#define AST_IS_EXPRESSION_HPP
+#pragma once
 
 #include <script/compiler/ast/AstExpression.hpp>
 #include <script/compiler/ast/AstPrototypeSpecification.hpp>
@@ -59,4 +58,3 @@ private:
 
 } // namespace hyperion::compiler
 
-#endif

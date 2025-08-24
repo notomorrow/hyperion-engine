@@ -1,5 +1,4 @@
-#ifndef AST_UNDEFINED_HPP
-#define AST_UNDEFINED_HPP
+#pragma once
 
 #include <script/compiler/ast/AstConstant.hpp>
 
@@ -32,4 +31,3 @@ private:
 
 } // namespace hyperion::compiler
 
-#endif

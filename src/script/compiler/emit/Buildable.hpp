@@ -1,5 +1,4 @@
-#ifndef BUILDABLE_HPP
-#define BUILDABLE_HPP
+#pragma once
 
 #include <core/containers/Array.hpp>
 #include <core/containers/SortedArray.hpp>
@@ -48,4 +47,3 @@ struct Buildable
 
 } // namespace hyperion::compiler
 
-#endif

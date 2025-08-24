@@ -1,5 +1,4 @@
-#ifndef AST_PARAMETER_HPP
-#define AST_PARAMETER_HPP
+#pragma once
 
 #include <script/compiler/ast/AstDeclaration.hpp>
 #include <script/compiler/ast/AstPrototypeSpecification.hpp>
@@ -113,4 +112,3 @@ private:
 
 } // namespace hyperion::compiler
 
-#endif

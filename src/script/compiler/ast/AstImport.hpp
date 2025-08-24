@@ -1,5 +1,4 @@
-#ifndef AST_IMPORT_HPP
-#define AST_IMPORT_HPP
+#pragma once
 
 #include <script/compiler/ast/AstStatement.hpp>
 #include <script/compiler/AstIterator.hpp>
@@ -55,4 +54,3 @@ protected:
 
 } // namespace hyperion::compiler
 
-#endif

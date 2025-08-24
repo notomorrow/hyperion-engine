@@ -1,5 +1,4 @@
-#ifndef AST_ENUM_EXPRESSION_HPP
-#define AST_ENUM_EXPRESSION_HPP
+#pragma once
 
 #include <script/compiler/ast/AstExpression.hpp>
 #include <script/compiler/ast/AstPrototypeSpecification.hpp>
@@ -96,4 +95,3 @@ protected:
 
 } // namespace hyperion::compiler
 
-#endif

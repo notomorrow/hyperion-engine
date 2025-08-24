@@ -1,5 +1,4 @@
-#ifndef AST_VISITOR_HPP
-#define AST_VISITOR_HPP
+#pragma once
 
 #include <script/compiler/AstIterator.hpp>
 #include <script/compiler/ErrorList.hpp>
@@ -35,4 +34,3 @@ protected:
 
 } // namespace hyperion::compiler
 
-#endif

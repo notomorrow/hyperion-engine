@@ -1,5 +1,4 @@
-#ifndef AST_INTEGER_HPP
-#define AST_INTEGER_HPP
+#pragma once
 
 #include <script/compiler/ast/AstConstant.hpp>
 
@@ -46,4 +45,3 @@ private:
 
 } // namespace hyperion::compiler
 
-#endif

@@ -1,5 +1,4 @@
-#ifndef OBJECT_HPP
-#define OBJECT_HPP
+#pragma once
 
 #include <script/vm/Value.hpp>
 #include <script/vm/VMTypeInfo.hpp>
@@ -148,4 +147,3 @@ private:
 } // namespace vm
 } // namespace hyperion
 
-#endif

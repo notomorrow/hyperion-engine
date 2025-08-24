@@ -1,5 +1,4 @@
-#ifndef BUILTIN_TYPES_HPP
-#define BUILTIN_TYPES_HPP
+#pragma once
 
 #include <script/compiler/type-system/SymbolType.hpp>
 
@@ -41,4 +40,3 @@ struct BuiltinTypes
 
 } // namespace hyperion::compiler
 
-#endif

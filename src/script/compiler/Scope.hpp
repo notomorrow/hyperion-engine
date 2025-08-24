@@ -1,5 +1,4 @@
-#ifndef SCOPE_HPP
-#define SCOPE_HPP
+#pragma once
 
 #include <script/compiler/IdentifierTable.hpp>
 #include <script/compiler/type-system/SymbolType.hpp>
@@ -278,4 +277,3 @@ private:
 
 } // namespace hyperion::compiler
 
-#endif

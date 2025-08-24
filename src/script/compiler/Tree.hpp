@@ -1,5 +1,4 @@
-#ifndef TREE_HPP
-#define TREE_HPP
+#pragma once
 
 #include <core/utilities/ValueStorage.hpp>
 
@@ -261,4 +260,3 @@ struct TreeNodeGuard
 
 } // namespace hyperion::compiler
 
-#endif

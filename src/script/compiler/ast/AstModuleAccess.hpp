@@ -1,5 +1,4 @@
-#ifndef AST_MODULE_ACCESS_HPP
-#define AST_MODULE_ACCESS_HPP
+#pragma once
 
 #include <script/compiler/ast/AstExpression.hpp>
 #include <core/containers/String.hpp>
@@ -97,4 +96,3 @@ private:
 
 } // namespace hyperion::compiler
 
-#endif

@@ -1,5 +1,4 @@
-#ifndef META_HPP
-#define META_HPP
+#pragma once
 
 namespace hyperion {
 namespace vm {
@@ -21,4 +20,3 @@ public:
 } // namespace compiler
 } // namespace hyperion
 
-#endif

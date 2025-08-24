@@ -1,5 +1,4 @@
-#ifndef HYPERION_V2_SCRIPT_BINDING_DEF_GENERATED_HPP
-#define HYPERION_V2_SCRIPT_BINDING_DEF_GENERATED_HPP
+#pragma once
 
 // Include <ScriptApi.hpp> before including this file
 
@@ -2343,4 +2342,3 @@ HYP_SCRIPT_FUNCTION(CxxCtor)
 
 } // namespace hyperion
 
-#endif // HYPERION_V2_SCRIPT_BINDING_DEF_GENERATED_HPP

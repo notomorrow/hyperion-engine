@@ -1,5 +1,4 @@
-#ifndef AST_VARIABLE_HPP
-#define AST_VARIABLE_HPP
+#pragma once
 
 #include <script/compiler/ast/AstIdentifier.hpp>
 #include <script/compiler/ast/AstMember.hpp>
@@ -52,4 +51,3 @@ private:
 
 } // namespace hyperion::compiler
 
-#endif

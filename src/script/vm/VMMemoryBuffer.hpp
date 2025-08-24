@@ -1,5 +1,4 @@
-#ifndef MEMORY_BUFFER_HPP
-#define MEMORY_BUFFER_HPP
+#pragma once
 
 #include <core/memory/ByteBuffer.hpp>
 
@@ -61,4 +60,3 @@ private:
 } // namespace vm
 } // namespace hyperion
 
-#endif

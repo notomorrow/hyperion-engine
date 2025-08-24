@@ -1,5 +1,4 @@
-#ifndef DECOMPILATION_UNIT_HPP
-#define DECOMPILATION_UNIT_HPP
+#pragma once
 
 #include <script/vm/BytecodeStream.hpp>
 #include <script/compiler/emit/InstructionStream.hpp>
@@ -31,4 +30,3 @@ public:
 
 } // namespace hyperion::compiler
 
-#endif

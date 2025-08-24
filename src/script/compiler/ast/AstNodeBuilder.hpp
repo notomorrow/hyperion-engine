@@ -1,5 +1,4 @@
-#ifndef AST_NODE_BUILDER_HPP
-#define AST_NODE_BUILDER_HPP
+#pragma once
 
 #include <script/compiler/ast/AstFunctionDefinition.hpp>
 #include <script/compiler/ast/AstArgument.hpp>
@@ -75,4 +74,3 @@ private:
 
 } // namespace hyperion::compiler
 
-#endif

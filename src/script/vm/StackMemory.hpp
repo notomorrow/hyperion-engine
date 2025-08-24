@@ -1,5 +1,4 @@
-#ifndef STACK_MEMORY_HPP
-#define STACK_MEMORY_HPP
+#pragma once
 
 #include <core/containers/HeapArray.hpp>
 #include <script/vm/Value.hpp>
@@ -103,4 +102,3 @@ public:
 } // namespace vm
 } // namespace hyperion
 
-#endif

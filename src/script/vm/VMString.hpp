@@ -1,5 +1,4 @@
-#ifndef IMMUTABLE_STRING_HPP
-#define IMMUTABLE_STRING_HPP
+#pragma once
 
 #include <core/containers/String.hpp>
 #include <core/Types.hpp>
@@ -63,4 +62,3 @@ private:
 } // namespace vm
 } // namespace hyperion
 
-#endif

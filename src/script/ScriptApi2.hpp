@@ -1,5 +1,4 @@
-#ifndef HYPERION_V2_SCRIPT_SCRIPT_API_2_HPP
-#define HYPERION_V2_SCRIPT_SCRIPT_API_2_HPP
+#pragma once
 
 #include <core/containers/String.hpp>
 #include <core/utilities/Variant.hpp>
@@ -218,4 +217,3 @@ private:
 } // namespace scriptapi2
 } // namespace hyperion
 
-#endif

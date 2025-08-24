@@ -1,5 +1,4 @@
-#ifndef COMPILATION_UNIT_HPP
-#define COMPILATION_UNIT_HPP
+#pragma once
 
 #include <script/compiler/Module.hpp>
 #include <script/compiler/ErrorList.hpp>
@@ -121,4 +120,3 @@ private:
 
 } // namespace hyperion::compiler
 
-#endif

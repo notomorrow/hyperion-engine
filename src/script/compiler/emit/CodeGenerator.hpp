@@ -1,5 +1,4 @@
-#ifndef CODE_GENERATOR_HPP
-#define CODE_GENERATOR_HPP
+#pragma once
 
 namespace hyperion::compiler {
 
@@ -11,4 +10,3 @@ public:
 
 } // namespace hyperion::compiler
 
-#endif

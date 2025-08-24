@@ -1,5 +1,4 @@
-#ifndef ENUMS_HPP
-#define ENUMS_HPP
+#pragma once
 
 #include <core/Types.hpp>
 
@@ -22,4 +21,3 @@ enum IdentifierType : int
 
 } // namespace hyperion::compiler
 
-#endif

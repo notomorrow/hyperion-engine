@@ -1,5 +1,4 @@
-#ifndef ERROR_LIST_HPP
-#define ERROR_LIST_HPP
+#pragma once
 
 #include <core/containers/FlatSet.hpp>
 
@@ -85,4 +84,3 @@ private:
 
 } // namespace hyperion::compiler
 
-#endif

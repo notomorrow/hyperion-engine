@@ -1,5 +1,4 @@
-#ifndef INTERNAL_BYTE_STREAM_HPP
-#define INTERNAL_BYTE_STREAM_HPP
+#pragma once
 
 #include <script/compiler/emit/Buildable.hpp>
 #include <core/Types.hpp>
@@ -62,4 +61,3 @@ private:
 
 } // namespace hyperion::compiler
 
-#endif

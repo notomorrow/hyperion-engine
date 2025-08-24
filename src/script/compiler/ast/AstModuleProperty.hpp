@@ -1,5 +1,4 @@
-#ifndef AST_MODULE_PROPERTY_HPP
-#define AST_MODULE_PROPERTY_HPP
+#pragma once
 
 #include <script/compiler/ast/AstIdentifier.hpp>
 #include <core/containers/String.hpp>
@@ -49,4 +48,3 @@ protected:
 
 } // namespace hyperion::compiler
 
-#endif

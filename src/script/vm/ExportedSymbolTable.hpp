@@ -1,5 +1,4 @@
-#ifndef EXPORTED_SYMBOL_TABLE_HPP
-#define EXPORTED_SYMBOL_TABLE_HPP
+#pragma once
 
 #include <script/vm/Value.hpp>
 #include <script/Hasher.hpp>
@@ -35,4 +34,3 @@ private:
 } // namespace vm
 } // namespace hyperion
 
-#endif

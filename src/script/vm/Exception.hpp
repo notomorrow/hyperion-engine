@@ -1,5 +1,4 @@
-#ifndef EXCEPTION_HPP
-#define EXCEPTION_HPP
+#pragma once
 
 #include <util/UTF8.hpp>
 
@@ -50,4 +49,3 @@ private:
 } // namespace vm
 } // namespace hyperion
 
-#endif

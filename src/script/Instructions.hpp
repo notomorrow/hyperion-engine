@@ -1,5 +1,4 @@
-#ifndef INSTRUCTIONS_HPP
-#define INSTRUCTIONS_HPP
+#pragma once
 
 #include <core/Types.hpp>
 
@@ -175,4 +174,3 @@ enum Instructions : hyperion::uint8
     EXIT = 0xFF
 };
 
-#endif

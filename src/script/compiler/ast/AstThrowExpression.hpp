@@ -1,5 +1,4 @@
-#ifndef AST_THROW_EXPRESSION_HPP
-#define AST_THROW_EXPRESSION_HPP
+#pragma once
 
 #include <script/compiler/ast/AstExpression.hpp>
 #include <script/compiler/ast/AstBlock.hpp>
@@ -48,4 +47,3 @@ private:
 
 } // namespace hyperion::compiler
 
-#endif

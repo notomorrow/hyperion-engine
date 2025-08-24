@@ -1,5 +1,4 @@
-#ifndef HEAP_MEMORY_HPP
-#define HEAP_MEMORY_HPP
+#pragma once
 
 #include <script/vm/HeapValue.hpp>
 #include <core/Types.hpp>
@@ -51,4 +50,3 @@ private:
 } // namespace vm
 } // namespace hyperion
 
-#endif

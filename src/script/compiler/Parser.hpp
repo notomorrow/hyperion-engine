@@ -1,5 +1,4 @@
-#ifndef PARSER_HPP
-#define PARSER_HPP
+#pragma once
 
 #include <script/compiler/TokenStream.hpp>
 #include <script/SourceLocation.hpp>
@@ -200,4 +199,3 @@ private:
 
 } // namespace hyperion::compiler
 
-#endif

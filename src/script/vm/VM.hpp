@@ -1,5 +1,4 @@
-#ifndef VM_HPP
-#define VM_HPP
+#pragma once
 
 #include <script/vm/BytecodeStream.hpp>
 #include <script/vm/VMState.hpp>
@@ -68,4 +67,3 @@ private:
 } // namespace vm
 } // namespace hyperion
 
-#endif

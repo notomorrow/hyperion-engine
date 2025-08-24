@@ -1,5 +1,4 @@
-#ifndef SCRIPT_HPP
-#define SCRIPT_HPP
+#pragma once
 
 #include <script/ScriptApi.hpp>
 #include <script/SourceFile.hpp>
@@ -326,4 +325,3 @@ private:
 
 } // namespace hyperion
 
-#endif

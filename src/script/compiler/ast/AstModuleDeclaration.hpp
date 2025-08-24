@@ -1,5 +1,4 @@
-#ifndef AST_MODULE_DECLARATION_HPP
-#define AST_MODULE_DECLARATION_HPP
+#pragma once
 
 #include <script/compiler/ast/AstStatement.hpp>
 #include <script/compiler/ast/AstDeclaration.hpp>
@@ -74,4 +73,3 @@ private:
 
 } // namespace hyperion::compiler
 
-#endif

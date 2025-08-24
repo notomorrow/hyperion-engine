@@ -1,5 +1,4 @@
-#ifndef AEX_GENERATOR_HPP
-#define AEX_GENERATOR_HPP
+#pragma once
 
 #include <script/compiler/emit/BuildableVisitor.hpp>
 #include <script/compiler/emit/codegen/InternalByteStream.hpp>
@@ -66,4 +65,3 @@ private:
 
 } // namespace hyperion::compiler
 
-#endif

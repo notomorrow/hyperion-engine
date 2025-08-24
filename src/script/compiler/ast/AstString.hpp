@@ -1,5 +1,4 @@
-#ifndef AST_STRING_HPP
-#define AST_STRING_HPP
+#pragma once
 
 #include <script/compiler/ast/AstConstant.hpp>
 #include <core/containers/String.hpp>
@@ -54,4 +53,3 @@ private:
 
 } // namespace hyperion::compiler
 
-#endif

@@ -1,5 +1,4 @@
-#ifndef AST_ARRAY_ACCESS_HPP
-#define AST_ARRAY_ACCESS_HPP
+#pragma once
 
 #include <script/compiler/ast/AstExpression.hpp>
 #include <script/compiler/Enums.hpp>
@@ -79,4 +78,3 @@ private:
 
 } // namespace hyperion::compiler
 
-#endif

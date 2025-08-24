@@ -1,5 +1,4 @@
-#ifndef VM_STATE_HPP
-#define VM_STATE_HPP
+#pragma once
 
 #include <core/containers/Array.hpp>
 #include <core/memory/UniquePtr.hpp>
@@ -170,4 +169,3 @@ private:
 } // namespace vm
 } // namespace hyperion
 
-#endif

@@ -1,5 +1,4 @@
-#ifndef STORAGE_OPERATION_HPP
-#define STORAGE_OPERATION_HPP
+#pragma once
 
 #include <script/compiler/emit/Instruction.hpp>
 
@@ -142,4 +141,3 @@ struct StorageOperation : public Buildable
 
 } // namespace hyperion::compiler
 
-#endif

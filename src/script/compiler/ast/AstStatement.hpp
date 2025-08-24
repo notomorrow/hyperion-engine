@@ -1,5 +1,4 @@
-#ifndef AST_STATEMENT_HPP
-#define AST_STATEMENT_HPP
+#pragma once
 
 #include <core/memory/RefCountedPtr.hpp>
 #include <core/memory/UniquePtr.hpp>
@@ -112,4 +111,3 @@ CloneAllAstNodes(const Array<T*>& stmts)
 
 } // namespace hyperion::compiler
 
-#endif

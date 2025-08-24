@@ -1,5 +1,4 @@
-#ifndef AST_ARGUMENT_HPP
-#define AST_ARGUMENT_HPP
+#pragma once
 
 #include <script/compiler/ast/AstExpression.hpp>
 #include <script/compiler/type-system/SymbolType.hpp>
@@ -108,4 +107,3 @@ private:
 
 } // namespace hyperion::compiler
 
-#endif

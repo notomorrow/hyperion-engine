@@ -1,5 +1,4 @@
-#ifndef BUILTINS_HPP
-#define BUILTINS_HPP
+#pragma once
 
 #include <script/SourceLocation.hpp>
 #include <script/compiler/AstIterator.hpp>
@@ -56,4 +55,3 @@ private:
 
 } // namespace hyperion::compiler
 
-#endif

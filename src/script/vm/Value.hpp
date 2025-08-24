@@ -1,5 +1,4 @@
-#ifndef VALUE_HPP
-#define VALUE_HPP
+#pragma once
 
 #include <core/utilities/TypeId.hpp>
 #include <core/containers/String.hpp>
@@ -505,4 +504,3 @@ struct Value
 } // namespace vm
 } // namespace hyperion
 
-#endif

@@ -1,5 +1,4 @@
-#ifndef AST_HASH_MAP_HPP
-#define AST_HASH_MAP_HPP
+#pragma once
 
 #include <script/compiler/ast/AstExpression.hpp>
 #include <core/containers/Array.hpp>
@@ -79,4 +78,3 @@ private:
 
 } // namespace hyperion::compiler
 
-#endif

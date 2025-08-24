@@ -1,5 +1,4 @@
-#ifndef AST_TERNARY_EXPRESSION_HPP
-#define AST_TERNARY_EXPRESSION_HPP
+#pragma once
 
 #include <script/compiler/ast/AstExpression.hpp>
 #include <script/compiler/ast/AstBlock.hpp>
@@ -62,4 +61,3 @@ private:
 } // namespace compiler
 } // namespace hyperion
 
-#endif

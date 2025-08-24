@@ -1,5 +1,4 @@
-#ifndef HYP_SCRIPT_TYPEDEFS_HPP
-#define HYP_SCRIPT_TYPEDEFS_HPP
+#pragma once
 
 #include <stdint.h>
 
@@ -15,4 +14,3 @@ struct ExecutionThread;
 
 } // namespace hyperion
 
-#endif

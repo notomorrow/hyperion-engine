@@ -1,5 +1,4 @@
-#ifndef CONFIGURATION_HPP
-#define CONFIGURATION_HPP
+#pragma once
 
 #include <string>
 #include <map>
@@ -27,4 +26,3 @@ struct Config
 
 } // namespace hyperion::compiler
 
-#endif

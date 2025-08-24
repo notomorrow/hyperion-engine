@@ -1,5 +1,4 @@
-#ifndef INSTRUCTION_STREAM_HPP
-#define INSTRUCTION_STREAM_HPP
+#pragma once
 
 #include <script/compiler/emit/Instruction.hpp>
 #include <script/compiler/emit/StaticObject.hpp>
@@ -180,4 +179,3 @@ private:
 
 } // namespace hyperion::compiler
 
-#endif

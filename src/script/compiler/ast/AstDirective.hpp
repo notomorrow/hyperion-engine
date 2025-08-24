@@ -1,5 +1,4 @@
-#ifndef AST_DIRECTIVE_HPP
-#define AST_DIRECTIVE_HPP
+#pragma once
 
 #include <script/compiler/ast/AstStatement.hpp>
 #include <script/compiler/ast/AstArrayExpression.hpp>
@@ -54,4 +53,3 @@ private:
 
 } // namespace hyperion::compiler
 
-#endif

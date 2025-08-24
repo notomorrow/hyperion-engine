@@ -1,5 +1,4 @@
-#ifndef LEXER_HPP
-#define LEXER_HPP
+#pragma once
 
 #include <script/SourceStream.hpp>
 #include <script/compiler/TokenStream.hpp>
@@ -60,4 +59,3 @@ private:
 
 } // namespace hyperion::compiler
 
-#endif

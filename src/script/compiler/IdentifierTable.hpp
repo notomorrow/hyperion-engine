@@ -1,5 +1,4 @@
-#ifndef IDENTIFIER_TABLE_HPP
-#define IDENTIFIER_TABLE_HPP
+#pragma once
 
 #include <script/compiler/Identifier.hpp>
 #include <script/compiler/type-system/SymbolType.hpp>
@@ -60,4 +59,3 @@ private:
 
 } // namespace hyperion::compiler
 
-#endif

@@ -1,5 +1,4 @@
-#ifndef SEMANTIC_ANALYZER_HPP
-#define SEMANTIC_ANALYZER_HPP
+#pragma once
 
 #include <script/compiler/AstVisitor.hpp>
 #include <script/compiler/Identifier.hpp>
@@ -120,4 +119,3 @@ public:
 
 } // namespace hyperion::compiler
 
-#endif

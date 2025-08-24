@@ -1,5 +1,4 @@
-#ifndef SLICE_HPP
-#define SLICE_HPP
+#pragma once
 
 #include <script/vm/VMArray.hpp>
 #include <script/vm/Value.hpp>
@@ -55,4 +54,3 @@ private:
 } // namespace vm
 } // namespace hyperion
 
-#endif

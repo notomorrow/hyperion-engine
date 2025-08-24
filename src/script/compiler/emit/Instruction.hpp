@@ -1,5 +1,4 @@
-#ifndef INSTRUCTION_HPP
-#define INSTRUCTION_HPP
+#pragma once
 
 #include <script/compiler/emit/NamesPair.hpp>
 
@@ -433,4 +432,3 @@ struct RawOperation<T, Ts...> : RawOperation<Ts...>
 
 } // namespace hyperion::compiler
 
-#endif

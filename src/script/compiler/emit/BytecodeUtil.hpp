@@ -1,5 +1,4 @@
-#ifndef BYTECODE_UTIL_HPP
-#define BYTECODE_UTIL_HPP
+#pragma once
 
 #include <core/memory/UniquePtr.hpp>
 
@@ -25,4 +24,3 @@ public:
 
 } // namespace hyperion::compiler
 
-#endif

@@ -1,5 +1,4 @@
-#ifndef COMPILER_HPP
-#define COMPILER_HPP
+#pragma once
 
 #include <script/compiler/AstVisitor.hpp>
 #include <script/compiler/ast/AstArgument.hpp>
@@ -97,4 +96,3 @@ public:
 
 } // namespace hyperion::compiler
 
-#endif

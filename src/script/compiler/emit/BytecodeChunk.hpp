@@ -1,5 +1,4 @@
-#ifndef BYTECODE_CHUNK_HPP
-#define BYTECODE_CHUNK_HPP
+#pragma once
 
 #include <script/compiler/emit/Instruction.hpp>
 
@@ -41,4 +40,3 @@ struct BytecodeChunk final : public Buildable
 
 } // namespace hyperion::compiler
 
-#endif

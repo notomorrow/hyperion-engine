@@ -1,5 +1,4 @@
-#ifndef AST_ITERATOR_HPP
-#define AST_ITERATOR_HPP
+#pragma once
 
 #include <script/compiler/ast/AstStatement.hpp>
 #include <core/debug/Debug.hpp>
@@ -81,4 +80,3 @@ private:
 
 } // namespace hyperion::compiler
 
-#endif

@@ -1,5 +1,4 @@
-#ifndef HYPERION_HASHER_HPP
-#define HYPERION_HASHER_HPP
+#pragma once
 
 #include <core/Types.hpp>
 
@@ -27,4 +26,3 @@ constexpr HashFNV1 hashFnv1(const char* str)
 
 } // namespace hyperion
 
-#endif

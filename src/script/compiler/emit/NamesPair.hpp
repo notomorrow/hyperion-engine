@@ -1,5 +1,4 @@
-#ifndef NAMES_PAIR_HPP
-#define NAMES_PAIR_HPP
+#pragma once
 
 #include <core/containers/Array.hpp>
 #include <core/Types.hpp>
@@ -13,4 +12,3 @@ typedef std::pair<uint16, Array<uint8>> NamesPair_t;
 
 } // namespace hyperion::compiler
 
-#endif

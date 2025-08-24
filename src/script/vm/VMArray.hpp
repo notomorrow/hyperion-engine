@@ -1,5 +1,4 @@
-#ifndef VM_SCRIPT_VM_ARRAY_HPP
-#define VM_SCRIPT_VM_ARRAY_HPP
+#pragma once
 
 #include <script/vm/Value.hpp>
 #include <core/math/MathUtil.hpp>
@@ -82,4 +81,3 @@ private:
 } // namespace vm
 } // namespace hyperion
 
-#endif

@@ -1,5 +1,4 @@
-#ifndef BYTECODE_STREAM_HPP
-#define BYTECODE_STREAM_HPP
+#pragma once
 
 #include <script/SourceFile.hpp>
 #include <core/debug/Debug.hpp>
@@ -87,4 +86,3 @@ private:
 } // namespace vm
 } // namespace hyperion
 
-#endif

@@ -1,5 +1,4 @@
-#ifndef HYP_SCRIPT_VM_MAP_HPP
-#define HYP_SCRIPT_VM_MAP_HPP
+#pragma once
 
 #include <core/containers/HashMap.hpp>
 #include <script/vm/Value.hpp>
@@ -86,4 +85,3 @@ private:
 } // namespace vm
 } // namespace hyperion
 
-#endif

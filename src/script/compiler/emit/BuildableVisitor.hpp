@@ -1,5 +1,4 @@
-#ifndef BUILDABLE_VISITOR_HPP
-#define BUILDABLE_VISITOR_HPP
+#pragma once
 
 #include <script/compiler/emit/Buildable.hpp>
 #include <script/compiler/emit/BytecodeChunk.hpp>
@@ -45,4 +44,3 @@ public:
 
 } // namespace hyperion::compiler
 
-#endif

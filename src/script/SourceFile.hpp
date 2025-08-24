@@ -1,5 +1,4 @@
-#ifndef SOURCE_FILE_HPP
-#define SOURCE_FILE_HPP
+#pragma once
 
 #include <core/Types.hpp>
 #include <core/containers/String.hpp>
@@ -52,4 +51,3 @@ private:
 
 } // namespace hyperion
 
-#endif

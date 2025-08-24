@@ -1,5 +1,4 @@
-#ifndef AST_CALL_EXPRESSION_HPP
-#define AST_CALL_EXPRESSION_HPP
+#pragma once
 
 #include <script/compiler/ast/AstIdentifier.hpp>
 #include <script/compiler/ast/AstArgumentList.hpp>
@@ -84,4 +83,3 @@ protected:
 
 } // namespace hyperion::compiler
 
-#endif

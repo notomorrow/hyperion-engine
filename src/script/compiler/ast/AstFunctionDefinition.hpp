@@ -1,5 +1,4 @@
-#ifndef AST_FUNCTION_DEFINITION_HPP
-#define AST_FUNCTION_DEFINITION_HPP
+#pragma once
 
 #include <script/compiler/ast/AstDeclaration.hpp>
 #include <script/compiler/ast/AstFunctionExpression.hpp>
@@ -53,4 +52,3 @@ protected:
 
 } // namespace hyperion::compiler
 
-#endif

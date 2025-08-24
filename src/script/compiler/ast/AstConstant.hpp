@@ -1,5 +1,4 @@
-#ifndef AST_CONSTANT_HPP
-#define AST_CONSTANT_HPP
+#pragma once
 
 #include <script/compiler/ast/AstExpression.hpp>
 #include <script/compiler/Operator.hpp>
@@ -41,4 +40,3 @@ public:
 
 } // namespace hyperion::compiler
 
-#endif

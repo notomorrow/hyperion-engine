@@ -1,5 +1,4 @@
-#ifndef HYPERION_TRACEMAP_HPP
-#define HYPERION_TRACEMAP_HPP
+#pragma once
 
 #include <core/Types.hpp>
 
@@ -46,4 +45,3 @@ private:
 } // namespace vm
 } // namespace hyperion
 
-#endif

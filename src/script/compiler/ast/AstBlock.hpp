@@ -1,5 +1,4 @@
-#ifndef AST_BLOCK_HPP
-#define AST_BLOCK_HPP
+#pragma once
 
 #include <script/compiler/ast/AstStatement.hpp>
 #include <script/compiler/Scope.hpp>
@@ -116,4 +115,3 @@ protected:
 
 } // namespace hyperion::compiler
 
-#endif

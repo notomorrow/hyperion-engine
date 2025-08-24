@@ -1,5 +1,4 @@
-#ifndef AST_DECLARATION_HPP
-#define AST_DECLARATION_HPP
+#pragma once
 
 #include <script/compiler/ast/AstStatement.hpp>
 #include <script/compiler/Identifier.hpp>
@@ -57,4 +56,3 @@ private:
 
 } // namespace hyperion::compiler
 
-#endif

@@ -1,5 +1,4 @@
-#ifndef TYPE_INFO_HPP
-#define TYPE_INFO_HPP
+#pragma once
 
 #include <core/debug/Debug.hpp>
 
@@ -47,4 +46,3 @@ private:
 } // namespace vm
 } // namespace hyperion
 
-#endif

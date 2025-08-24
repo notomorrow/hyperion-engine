@@ -1,5 +1,4 @@
-#ifndef AST_MODULE_IMPORT_HPP
-#define AST_MODULE_IMPORT_HPP
+#pragma once
 
 #include <script/compiler/ast/AstImport.hpp>
 #include <core/containers/String.hpp>
@@ -117,4 +116,3 @@ protected:
 
 } // namespace hyperion::compiler
 
-#endif

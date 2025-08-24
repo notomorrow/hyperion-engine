@@ -1,5 +1,4 @@
-#ifndef HYPERION_VM_STRUCT_HPP
-#define HYPERION_VM_STRUCT_HPP
+#pragma once
 
 #include <core/memory/ByteBuffer.hpp>
 #include <core/utilities/Span.hpp>
@@ -215,4 +214,3 @@ private:
 } // namespace vm
 } // namespace hyperion
 
-#endif

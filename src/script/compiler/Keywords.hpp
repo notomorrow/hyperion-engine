@@ -1,5 +1,4 @@
-#ifndef KEYWORDS_HPP
-#define KEYWORDS_HPP
+#pragma once
 
 #include <core/containers/String.hpp>
 #include <core/containers/HashMap.hpp>
@@ -73,4 +72,3 @@ private:
 
 } // namespace hyperion::compiler
 
-#endif

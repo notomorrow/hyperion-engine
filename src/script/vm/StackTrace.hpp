@@ -1,5 +1,4 @@
-#ifndef STACK_TRACE_HPP
-#define STACK_TRACE_HPP
+#pragma once
 
 #include <core/Core.hpp>
 
@@ -27,4 +26,3 @@ struct StackTrace
     ~StackTrace() = default;
 };
 
-#endif

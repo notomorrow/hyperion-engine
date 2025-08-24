@@ -1,5 +1,4 @@
-#ifndef OPERATOR_HPP
-#define OPERATOR_HPP
+#pragma once
 
 #include <core/Types.hpp>
 #include <core/containers/String.hpp>
@@ -252,4 +251,3 @@ private:
 
 } // namespace hyperion::compiler
 
-#endif

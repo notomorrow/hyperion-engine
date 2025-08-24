@@ -1,5 +1,4 @@
-#ifndef TOKEN_HPP
-#define TOKEN_HPP
+#pragma once
 
 #include <script/SourceLocation.hpp>
 #include <core/containers/String.hpp>
@@ -109,4 +108,3 @@ private:
 
 } // namespace hyperion::compiler
 
-#endif

@@ -1,5 +1,4 @@
-#ifndef OPTIMIZER_HPP
-#define OPTIMIZER_HPP
+#pragma once
 
 #include <script/compiler/AstVisitor.hpp>
 #include <script/compiler/Module.hpp>
@@ -42,4 +41,3 @@ private:
 
 } // namespace hyperion::compiler
 
-#endif

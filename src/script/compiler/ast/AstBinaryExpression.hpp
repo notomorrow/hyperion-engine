@@ -1,5 +1,4 @@
-#ifndef AST_BINARY_EXPRESSION_HPP
-#define AST_BINARY_EXPRESSION_HPP
+#pragma once
 
 #include <script/compiler/ast/AstExpression.hpp>
 #include <script/compiler/ast/AstVariableDeclaration.hpp>
@@ -82,4 +81,3 @@ private:
 
 } // namespace hyperion::compiler
 
-#endif

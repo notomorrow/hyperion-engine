@@ -1,5 +1,4 @@
-#ifndef TRIBOOL_HPP
-#define TRIBOOL_HPP
+#pragma once
 
 #include <core/Types.hpp>
 
@@ -84,4 +83,3 @@ private:
 
 } // namespace hyperion
 
-#endif

@@ -1,5 +1,4 @@
-#ifndef INSTRUCTION_HANDLER_HPP
-#define INSTRUCTION_HANDLER_HPP
+#pragma once
 
 #include <script/vm/BytecodeStream.hpp>
 #include <script/vm/VM.hpp>
@@ -3026,4 +3025,3 @@ public:
 } // namespace vm
 } // namespace hyperion
 
-#endif

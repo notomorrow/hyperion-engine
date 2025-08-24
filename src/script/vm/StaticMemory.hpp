@@ -1,5 +1,4 @@
-#ifndef STATIC_MEMORY_HPP
-#define STATIC_MEMORY_HPP
+#pragma once
 
 #include <script/vm/Value.hpp>
 #include <core/debug/Debug.hpp>
@@ -43,4 +42,3 @@ private:
 } // namespace vm
 } // namespace hyperion
 
-#endif

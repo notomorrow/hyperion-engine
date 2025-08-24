@@ -1,5 +1,4 @@
-#ifndef AST_VARIABLE_DECLARATION_HPP
-#define AST_VARIABLE_DECLARATION_HPP
+#pragma once
 
 #include <script/compiler/ast/AstDeclaration.hpp>
 #include <script/compiler/ast/AstExpression.hpp>
@@ -130,4 +129,3 @@ protected:
 
 } // namespace hyperion::compiler
 
-#endif

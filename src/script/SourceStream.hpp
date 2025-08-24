@@ -1,5 +1,4 @@
-#ifndef SOURCE_STREAM_HPP
-#define SOURCE_STREAM_HPP
+#pragma once
 
 #include <script/SourceFile.hpp>
 #include <util/UTF8.hpp>
@@ -39,4 +38,3 @@ private:
 
 } // namespace hyperion
 
-#endif

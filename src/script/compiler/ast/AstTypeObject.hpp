@@ -1,5 +1,4 @@
-#ifndef AST_TYPE_OBJECT_HPP
-#define AST_TYPE_OBJECT_HPP
+#pragma once
 
 #include <script/compiler/ast/AstExpression.hpp>
 #include <script/compiler/ast/AstVariable.hpp>
@@ -92,4 +91,3 @@ private:
 
 } // namespace hyperion::compiler
 
-#endif

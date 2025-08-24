@@ -1,5 +1,4 @@
-#ifndef COMPILER_ERROR_HPP
-#define COMPILER_ERROR_HPP
+#pragma once
 
 #include <script/SourceLocation.hpp>
 #include <core/containers/String.hpp>
@@ -247,4 +246,3 @@ private:
 
 } // namespace hyperion::compiler
 
-#endif

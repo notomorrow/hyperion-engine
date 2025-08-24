@@ -1,5 +1,4 @@
-#ifndef AST_ARRAY_EXPRESSION_HPP
-#define AST_ARRAY_EXPRESSION_HPP
+#pragma once
 
 #include <script/compiler/ast/AstExpression.hpp>
 
@@ -66,4 +65,3 @@ protected:
 
 } // namespace hyperion::compiler
 
-#endif

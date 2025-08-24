@@ -1,5 +1,4 @@
-#ifndef AST_TYPEOF_EXPRESSION
-#define AST_TYPEOF_EXPRESSION
+#pragma once
 
 #include <string>
 
@@ -53,4 +52,3 @@ private:
 
 } // namespace hyperion::compiler
 
-#endif

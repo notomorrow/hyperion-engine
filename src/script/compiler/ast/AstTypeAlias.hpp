@@ -1,5 +1,4 @@
-#ifndef AST_TYPE_ALIAS_HPP
-#define AST_TYPE_ALIAS_HPP
+#pragma once
 
 #include <script/compiler/ast/AstStatement.hpp>
 #include <script/compiler/ast/AstPrototypeSpecification.hpp>
@@ -52,4 +51,3 @@ private:
 
 } // namespace hyperion::compiler
 
-#endif

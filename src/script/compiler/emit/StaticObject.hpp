@@ -1,5 +1,4 @@
-#ifndef STATIC_OBJECT_HPP
-#define STATIC_OBJECT_HPP
+#pragma once
 
 #include <script/compiler/emit/NamesPair.hpp>
 
@@ -61,4 +60,3 @@ struct StaticObject
 
 } // namespace hyperion::compiler
 
-#endif
