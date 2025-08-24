@@ -57,7 +57,6 @@
 
 #include <core/net/HTTPRequest.hpp>
 
-#include <scripting/Script.hpp>
 #include <scripting/ScriptingService.hpp>
 
 #include <core/profiling/Profile.hpp>

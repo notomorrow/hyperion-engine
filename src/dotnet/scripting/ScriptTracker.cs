@@ -17,7 +17,7 @@ namespace Hyperion
 
         private ScriptCompiler scriptCompiler = null;
 
-        private Dictionary<string, ManagedScriptWrapper> processingScripts = new Dictionary<string, ManagedScriptWrapper>();
+        private Dictionary<string, ScriptInstance> processingScripts = new Dictionary<string, ScriptInstance>();
 
         public void Initialize(string sourceDirectory, string intermediateDirectory, string binaryOutputDirectory, IntPtr callbackPtr, IntPtr callbackSelfPtr)
         {
@@ -52,7 +52,7 @@ namespace Hyperion
 
             List<string> scriptsToRemove = new List<string>();
 
-            foreach (KeyValuePair<string, ManagedScriptWrapper> entry in processingScripts)
+            foreach (KeyValuePair<string, ScriptInstance> entry in processingScripts)
             {
                 if (!entry.Value.IsValid)
                 {
@@ -61,7 +61,7 @@ namespace Hyperion
                     continue;
                 }
 
-                if (entry.Value.Get().State != ManagedScriptState.Processing)
+                if (entry.Value.Get().CompileStatus != ScriptCompileStatus.Processing)
                 {
                     TriggerCallback(new ScriptEvent
                     {
@@ -78,32 +78,32 @@ namespace Hyperion
                 // just testing for now
                 if (scriptCompiler != null)
                 {
-                    ref ManagedScript managedScript = ref entry.Value.Get();
+                    ref ScriptData scriptData = ref entry.Value.Get();
 
                     try
                     {
-                        if (scriptCompiler.Compile(ref managedScript))
+                        if (scriptCompiler.Compile(ref scriptData))
                         {
-                            managedScript.State |= ManagedScriptState.Compiled;
+                            scriptData.CompileStatus |= ScriptCompileStatus.Compiled;
                         }
                         else
                         {
-                            managedScript.State |= ManagedScriptState.Errored;
+                            scriptData.CompileStatus |= ScriptCompileStatus.Errored;
                         }
                     }
                     catch (Exception e)
                     {
                         Logger.Log(logChannel, LogType.Error, "Error compiling script {0}: {1}", entry.Key, e.Message);
 
-                        managedScript.State |= ManagedScriptState.Errored;
+                        scriptData.CompileStatus |= ScriptCompileStatus.Errored;
                     }
 
-                    managedScript.State &= ~ManagedScriptState.Processing;
-                    managedScript.State &= ~ManagedScriptState.Dirty;
+                    scriptData.CompileStatus &= ~ScriptCompileStatus.Processing;
+                    scriptData.CompileStatus &= ~ScriptCompileStatus.Dirty;
                 }
                 else
                 {
-                    entry.Value.Get().State = ManagedScriptState.Errored;
+                    entry.Value.Get().CompileStatus = ScriptCompileStatus.Errored;
                 }
             }
 
@@ -126,20 +126,20 @@ namespace Hyperion
 
             Logger.Log(logChannel, LogType.Info, "Adding script {0} to processing queue...", e.FullPath);
 
-            ManagedScriptWrapper managedScriptWrapper = new ManagedScriptWrapper(new ManagedScript
+            ScriptInstance scriptInstance = new ScriptInstance(new ScriptData
             {
                 Path = e.FullPath,
-                State = ManagedScriptState.Processing,
+                CompileStatus = ScriptCompileStatus.Processing,
                 HotReloadVersion = 0,
                 LastModifiedTimestamp = 0
             });
 
-            processingScripts.Add(e.FullPath, managedScriptWrapper);
+            processingScripts.Add(e.FullPath, scriptInstance);
 
             TriggerCallback(new ScriptEvent
             {
                 Type = ScriptEventType.StateChanged,
-                ScriptPtr = managedScriptWrapper.Address
+                ScriptPtr = scriptInstance.Address
             });
         }
 

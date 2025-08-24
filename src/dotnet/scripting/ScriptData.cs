@@ -4,8 +4,9 @@ using System.Runtime.InteropServices;
 
 namespace Hyperion
 {
+    [HypClassBinding(Name = "ScriptCompileStatus")]
     [Flags]
-    public enum ManagedScriptState : uint
+    public enum ScriptCompileStatus : uint
     {
         Uninitialized = 0x0,
         Compiled = 0x1,
@@ -14,10 +15,21 @@ namespace Hyperion
         Errored = 0x8
     }
 
-    [StructLayout(LayoutKind.Sequential, Size = 3104)]
-    public unsafe struct ManagedScript
+
+    [HypClassBinding(Name = "ScriptLanguage")]
+    public enum ScriptLanguage : uint
+    {
+        HypScript = 0,
+        CSharp = 1
+    }
+
+    [HypClassBinding(Name = "ScriptData")]
+    [StructLayout(LayoutKind.Sequential)]
+    public unsafe struct ScriptData
     {
         private Guid guid;
+
+        private ScriptLanguage language;
 
         private fixed byte path[1024];
 
@@ -26,7 +38,7 @@ namespace Hyperion
         private fixed byte className[1024];
 
         [MarshalAs(UnmanagedType.U4)]
-        private uint state;
+        private uint compileStatus;
 
         [MarshalAs(UnmanagedType.U4)]
         public int hotReloadVersion;
@@ -103,15 +115,15 @@ namespace Hyperion
             }
         }
 
-        public ManagedScriptState State
+        public ScriptCompileStatus CompileStatus
         {
             get
             {
-                return (ManagedScriptState)state;
+                return (ScriptCompileStatus)compileStatus;
             }
             set
             {
-                state = (uint)value;
+                compileStatus = (uint)value;
             }
         }
 
@@ -140,25 +152,25 @@ namespace Hyperion
         }
     }
 
-    public class ManagedScriptWrapper
+    public class ScriptInstance
     {
         private IntPtr ptr;
 
-        public ManagedScriptWrapper(ManagedScript managedScript)
+        public ScriptInstance(ScriptData script)
         {
-            this.ptr = ManagedScript_AllocateNativeObject(ref managedScript);
+            this.ptr = ScriptData_AllocateNativeObject(ref script);
         }
 
-        public ManagedScriptWrapper(IntPtr ptr)
+        public ScriptInstance(IntPtr ptr)
         {
             this.ptr = ptr;
         }
 
-        ~ManagedScriptWrapper()
+        ~ScriptInstance()
         {
             if (IsValid)
             {
-                ManagedScript_FreeNativeObject(ref Get());
+                ScriptData_FreeNativeObject(ref Get());
             }
         }
 
@@ -187,7 +199,7 @@ namespace Hyperion
                     return false;
                 }
 
-                return (Get().State & ManagedScriptState.Errored) != 0;
+                return (Get().CompileStatus & ScriptCompileStatus.Errored) != 0;
             }
         }
 
@@ -200,7 +212,7 @@ namespace Hyperion
                     return false;
                 }
 
-                return (Get().State & ManagedScriptState.Dirty) != 0;
+                return (Get().CompileStatus & ScriptCompileStatus.Dirty) != 0;
             }
         }
 
@@ -213,18 +225,18 @@ namespace Hyperion
                     return false;
                 }
 
-                return (Get().State & ManagedScriptState.Processing) != 0;
+                return (Get().CompileStatus & ScriptCompileStatus.Processing) != 0;
             }
         }
 
-        public unsafe ref ManagedScript Get()
+        public unsafe ref ScriptData Get()
         {
             if (!IsValid)
             {
-                throw new InvalidOperationException("ManagedScriptWrapper is not initialized");
+                throw new InvalidOperationException("ScriptInstance is not initialized");
             }
 
-            return ref System.Runtime.CompilerServices.Unsafe.AsRef<ManagedScript>(ptr.ToPointer());
+            return ref System.Runtime.CompilerServices.Unsafe.AsRef<ScriptData>(ptr.ToPointer());
         }
 
         public void UpdateState()
@@ -234,28 +246,28 @@ namespace Hyperion
                 return;
             }
 
-            ref ManagedScript managedScript = ref Get();
+            ref ScriptData scriptData = ref Get();
 
-            if (!File.Exists(managedScript.Path))
+            if (!File.Exists(scriptData.Path))
             {
-                managedScript.State |= ManagedScriptState.Errored;
+                scriptData.CompileStatus |= ScriptCompileStatus.Errored;
 
                 return;
             }
 
-            ulong lastModifiedTimestamp = (ulong)(new FileInfo(managedScript.Path).LastWriteTimeUtc - new DateTime(1970, 1, 1)).TotalSeconds;
+            ulong lastModifiedTimestamp = (ulong)(new FileInfo(scriptData.Path).LastWriteTimeUtc - new DateTime(1970, 1, 1)).TotalSeconds;
 
-            if (lastModifiedTimestamp > managedScript.LastModifiedTimestamp)
+            if (lastModifiedTimestamp > scriptData.LastModifiedTimestamp)
             {
-                managedScript.State |= ManagedScriptState.Dirty;
-                managedScript.LastModifiedTimestamp = lastModifiedTimestamp;
+                scriptData.CompileStatus |= ScriptCompileStatus.Dirty;
+                scriptData.LastModifiedTimestamp = lastModifiedTimestamp;
             }
         }
 
-        [DllImport("hyperion", EntryPoint = "ManagedScript_AllocateNativeObject")]
-        private static extern IntPtr ManagedScript_AllocateNativeObject([In] ref ManagedScript inManagedScript);
+        [DllImport("hyperion", EntryPoint = "ScriptData_AllocateNativeObject")]
+        private static extern IntPtr ScriptData_AllocateNativeObject([In] ref ScriptData inScriptData);
 
-        [DllImport("hyperion", EntryPoint = "ManagedScript_FreeNativeObject")]
-        private static extern void ManagedScript_FreeNativeObject([In] ref ManagedScript inManagedScript);
+        [DllImport("hyperion", EntryPoint = "ScriptData_FreeNativeObject")]
+        private static extern void ScriptData_FreeNativeObject([In] ref ScriptData inScriptData);
     }
 }

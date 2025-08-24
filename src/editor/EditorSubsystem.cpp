@@ -1156,7 +1156,7 @@ void EditorSubsystem::OnAddedToWorld()
 
     CreateHighlightNode();
 
-    g_engineDriver->GetScriptingService()->OnScriptStateChanged.Bind([](const ManagedScript& script)
+    g_engineDriver->GetScriptingService()->OnScriptStateChanged.Bind([](const ScriptData& script)
                                                                    {
                                                                        HYP_LOG(Script, Debug, "Script state changed: now is {}", EnumToString(ScriptCompileStatus(script.compileStatus)));
                                                                    })
@@ -1227,32 +1227,33 @@ void EditorSubsystem::Update(float delta)
     UpdateTasks(delta);
     UpdateDebugOverlays(delta);
 
-    if (m_focusedNode.IsValid()) {
+    if (m_focusedNode.IsValid())
+    {
         if (Handle<Node> focusedNode = m_focusedNode.Lock())
         {
             DebugDrawCommandList& dbg = g_engineDriver->GetDebugDrawer()->CreateCommandList();
-            
+
             dbg.box(focusedNode->GetWorldTranslation(), focusedNode->GetWorldAABB().GetExtent() * 0.5f + Vec3f(FLT_EPSILON), Color::Cyan());
         }
-//        g_engineDriver->GetDebugDrawer()->box(m_focusedNode->GetWorldTranslation(), m_focusedNode->GetWorldAABB().GetExtent(), Color(1.0f), RenderableAttributeSet(
-//            MeshAttributes {
-//                .vertexAttributes = staticMeshVertexAttributes
-//            },
-//            MaterialAttributes {
-//                .bucket             = RB_TRANSLUCENT,
-//                .fillMode          = FM_FILL,
-//                .blendFunction     = BlendFunction::None(),
-//                .flags              = MAF_DEPTH_TEST,
-//                .stencilFunction   = StencilFunction {
-//                    .passOp        = SO_REPLACE,
-//                    .failOp        = SO_REPLACE,
-//                    .depthFailOp  = SO_REPLACE,
-//                    .compareOp     = SCO_NEVER,
-//                    .mask           = 0xFF,
-//                    .value          = 0x1
-//                }
-//            }
-//        ));
+        //        g_engineDriver->GetDebugDrawer()->box(m_focusedNode->GetWorldTranslation(), m_focusedNode->GetWorldAABB().GetExtent(), Color(1.0f), RenderableAttributeSet(
+        //            MeshAttributes {
+        //                .vertexAttributes = staticMeshVertexAttributes
+        //            },
+        //            MaterialAttributes {
+        //                .bucket             = RB_TRANSLUCENT,
+        //                .fillMode          = FM_FILL,
+        //                .blendFunction     = BlendFunction::None(),
+        //                .flags              = MAF_DEPTH_TEST,
+        //                .stencilFunction   = StencilFunction {
+        //                    .passOp        = SO_REPLACE,
+        //                    .failOp        = SO_REPLACE,
+        //                    .depthFailOp  = SO_REPLACE,
+        //                    .compareOp     = SCO_NEVER,
+        //                    .mask           = 0xFF,
+        //                    .value          = 0x1
+        //                }
+        //            }
+        //        ));
     }
 }
 
@@ -1410,7 +1411,7 @@ void EditorSubsystem::InitViewport()
                         {
                             continue;
                         }
-                        
+
                         debugOverlayContainer->SetIsVisible(true);
                     }
                 }

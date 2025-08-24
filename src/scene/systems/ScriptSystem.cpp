@@ -7,7 +7,13 @@
 
 #include <scene/util/EntityScripting.hpp>
 
+#include <asset/ScriptAsset.hpp>
+
+#include <core/object/managed/ManagedObjectResource.hpp>
+
 #include <core/threading/Threads.hpp>
+
+#include <core/memory/resource/Resource.hpp>
 
 #include <core/logging/LogChannels.hpp>
 #include <core/logging/Logger.hpp>
@@ -36,7 +42,7 @@ ScriptSystem::ScriptSystem(EntityManager& entityManager)
     {
         m_delegateHandlers.Add(
             NAME("OnScriptStateChanged"),
-            g_engineDriver->GetScriptingService()->OnScriptStateChanged.Bind([this](const ManagedScript& script)
+            g_engineDriver->GetScriptingService()->OnScriptStateChanged.Bind([this](const ScriptData& script)
                 {
                     Threads::AssertOnThread(g_gameThread);
 
@@ -47,17 +53,26 @@ ScriptSystem::ScriptSystem(EntityManager& entityManager)
 
                     for (auto [entity, scriptComponent] : GetEntityManager().GetEntitySet<ScriptComponent>().GetScopedView(GetComponentInfos()))
                     {
-                        if (ANSIStringView(script.assemblyPath) == ANSIStringView(scriptComponent.script.assemblyPath))
+                        Assert(scriptComponent.scriptAsset != nullptr);
+
+                        ResourceHandle resourceHandle(*scriptComponent.scriptAsset->GetResource());
+
+                        ScriptData* scriptData = scriptComponent.scriptAsset->GetScriptData();
+                        Assert(scriptData != nullptr);
+
+                        if (ANSIStringView(script.assemblyPath) == ANSIStringView(scriptData->assemblyPath))
                         {
                             HYP_LOG(Script, Info, "ScriptSystem: Reloading script for entity #{}", entity->Id());
 
                             // Reload the script
                             scriptComponent.flags |= ScriptComponentFlags::RELOADING;
 
-                            scriptComponent.script.uuid = script.uuid;
-                            scriptComponent.script.compileStatus = script.compileStatus;
-                            scriptComponent.script.hotReloadVersion = script.hotReloadVersion;
-                            scriptComponent.script.lastModifiedTimestamp = script.lastModifiedTimestamp;
+                            scriptData->uuid = script.uuid;
+                            scriptData->compileStatus = script.compileStatus;
+                            scriptData->hotReloadVersion = script.hotReloadVersion;
+                            scriptData->lastModifiedTimestamp = script.lastModifiedTimestamp;
+
+                            resourceHandle.Reset();
 
                             EntityScripting::DeinitEntityScriptComponent(entity, scriptComponent);
 

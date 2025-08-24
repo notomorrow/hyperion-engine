@@ -7,6 +7,8 @@
 
 #include <scene/components/ScriptComponent.hpp>
 
+#include <asset/ScriptAsset.hpp>
+
 #include <dotnet/Object.hpp>
 #include <dotnet/Class.hpp>
 #include <dotnet/Assembly.hpp>
@@ -63,11 +65,18 @@ void EntityScripting::InitEntityScriptComponent(Entity* entity, ScriptComponent&
         FreeResource<ManagedObjectResource>(scriptComponent.resource);
         scriptComponent.resource = nullptr;
 
+        Assert(scriptComponent.scriptAsset != nullptr);
+
+        ResourceHandle resourceHandle(*scriptComponent.scriptAsset->GetResource());
+
+        ScriptData* scriptData = scriptComponent.scriptAsset->GetScriptData();
+        Assert(scriptData != nullptr);
+
         if (!scriptComponent.assembly)
         {
-            ANSIString assemblyPath(scriptComponent.script.assemblyPath);
+            ANSIString assemblyPath(scriptData->assemblyPath);
 
-            if (scriptComponent.script.hotReloadVersion > 0)
+            if (scriptData->hotReloadVersion > 0)
             {
                 // @FIXME Implement FindLastIndex
                 const SizeType extensionIndex = assemblyPath.FindFirstIndex(".dll");
@@ -75,13 +84,13 @@ void EntityScripting::InitEntityScriptComponent(Entity* entity, ScriptComponent&
                 if (extensionIndex != ANSIString::notFound)
                 {
                     assemblyPath = assemblyPath.Substr(0, extensionIndex)
-                        + "." + ANSIString::ToString(scriptComponent.script.hotReloadVersion)
+                        + "." + ANSIString::ToString(scriptData->hotReloadVersion)
                         + ".dll";
                 }
                 else
                 {
                     assemblyPath = assemblyPath
-                        + "." + ANSIString::ToString(scriptComponent.script.hotReloadVersion)
+                        + "." + ANSIString::ToString(scriptData->hotReloadVersion)
                         + ".dll";
                 }
             }
@@ -92,19 +101,19 @@ void EntityScripting::InitEntityScriptComponent(Entity* entity, ScriptComponent&
             }
             else
             {
-                HYP_LOG(Script, Error, "ScriptSystem::OnEntityAdded: Failed to load assembly '{}'", scriptComponent.script.assemblyPath);
+                HYP_LOG(Script, Error, "ScriptSystem::OnEntityAdded: Failed to load assembly '{}'", scriptData->assemblyPath);
 
                 return;
             }
         }
 
-        if (RC<dotnet::Class> classPtr = scriptComponent.assembly->FindClassByName(scriptComponent.script.className))
+        if (RC<dotnet::Class> classPtr = scriptComponent.assembly->FindClassByName(scriptData->className))
         {
-            HYP_LOG(Script, Info, "ScriptSystem::OnEntityAdded: Loaded class '{}' from assembly '{}'", scriptComponent.script.className, scriptComponent.script.assemblyPath);
+            HYP_LOG(Script, Info, "ScriptSystem::OnEntityAdded: Loaded class '{}' from assembly '{}'", scriptData->className, scriptData->assemblyPath);
 
             if (!classPtr->HasParentClass("Script"))
             {
-                HYP_LOG(Script, Error, "ScriptSystem::OnEntityAdded: Class '{}' from assembly '{}' does not inherit from 'Script'", scriptComponent.script.className, scriptComponent.script.assemblyPath);
+                HYP_LOG(Script, Error, "ScriptSystem::OnEntityAdded: Class '{}' from assembly '{}' does not inherit from 'Script'", scriptData->className, scriptData->assemblyPath);
 
                 return;
             }
@@ -115,7 +124,7 @@ void EntityScripting::InitEntityScriptComponent(Entity* entity, ScriptComponent&
             scriptComponent.resource = AllocateResource<ManagedObjectResource>(object, classPtr);
             scriptComponent.resource->IncRef();
 
-            HYP_LOG(Script, Debug, "Created ManagedScriptResource for ScriptComponent, .NET class: {}", classPtr->GetName());
+            HYP_LOG(Script, Debug, "Created ManagedObjectResource for ScriptComponent, .NET class: {}", classPtr->GetName());
 
             if (!(scriptComponent.flags & ScriptComponentFlags::BEFORE_INIT_CALLED))
             {
@@ -146,13 +155,13 @@ void EntityScripting::InitEntityScriptComponent(Entity* entity, ScriptComponent&
 #ifdef HYP_DEBUG_MODE
         else
         {
-            HYP_FAIL("Failed to load .NET class {} from Assembly {}", scriptComponent.script.className, scriptComponent.assembly->GetGuid().ToUUID().ToString());
+            HYP_FAIL("Failed to load .NET class {} from Assembly {}", scriptData->className, scriptComponent.assembly->GetGuid().ToUUID().ToString());
         }
 #endif
 
         if (!scriptComponent.resource || !scriptComponent.resource->GetManagedObject() || !scriptComponent.resource->GetManagedObject()->IsValid())
         {
-            HYP_LOG(Script, Error, "ScriptSystem::OnEntityAdded: Failed to create object of class '{}' from assembly '{}'", scriptComponent.script.className, scriptComponent.script.assemblyPath);
+            HYP_LOG(Script, Error, "ScriptSystem::OnEntityAdded: Failed to create object of class '{}' from assembly '{}'", scriptData->className, scriptData->assemblyPath);
 
             if (scriptComponent.resource)
             {

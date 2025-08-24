@@ -26,7 +26,7 @@ enum class ScriptEventType : uint32
 struct ScriptEvent
 {
     ScriptEventType type;
-    ManagedScript* script;
+    ScriptData* script;
 };
 
 class HYP_API ScriptingService
@@ -51,7 +51,7 @@ public:
     /*! \brief To be called from ScriptingService thread only */
     void PushScriptEvent(const ScriptEvent& event);
 
-    Delegate<void, const ManagedScript&> OnScriptStateChanged;
+    Delegate<void, const ScriptData&> OnScriptStateChanged;
 
 private:
     bool HasEvents() const;

@@ -32,6 +32,13 @@ enum ScriptCompileStatus : uint32
 
 HYP_MAKE_ENUM_FLAGS(ScriptCompileStatus)
 
+HYP_ENUM()
+enum ScriptLanguage : uint32
+{
+    SL_HYPSCRIPT = 0,
+    SL_CSHARP = 1
+};
+
 struct ScriptDesc
 {
     FilePath path;
@@ -41,27 +48,30 @@ static constexpr SizeType scriptMaxPathLength = 1024;
 static constexpr SizeType scriptMaxClassNameLength = 1024;
 
 HYP_STRUCT()
-struct ManagedScript
+struct ScriptData
 {
-    HYP_FIELD(Property = "UUID", Serialize = true)
+    HYP_FIELD(Serialize)
     UUID uuid;
 
-    HYP_FIELD(Property = "Path", Serialize = true)
+    HYP_FIELD(Serialize)
+    ScriptLanguage language = SL_HYPSCRIPT;
+
+    HYP_FIELD(Serialize)
     char path[scriptMaxPathLength];
 
-    HYP_FIELD(Property = "AssemblyPath", Serialize = true)
+    HYP_FIELD(Serialize)
     char assemblyPath[scriptMaxPathLength];
 
-    HYP_FIELD(Property = "ClassName", Serialize = true)
+    HYP_FIELD(Serialize)
     char className[scriptMaxClassNameLength];
 
-    HYP_FIELD(Property = "CompileStatus", Serialize = false)
+    HYP_FIELD(Serialize)
     uint32 compileStatus;
 
-    HYP_FIELD(Property = "HotReloadVersion", Serialize = true)
+    HYP_FIELD(Serialize)
     int32 hotReloadVersion;
 
-    HYP_FIELD(Property = "LastModifiedTimestamp", Serialize = true)
+    HYP_FIELD(Serialize)
     uint64 lastModifiedTimestamp;
 
     HYP_FORCE_INLINE HashCode GetHashCode() const
@@ -69,6 +79,7 @@ struct ManagedScript
         HashCode hashCode;
 
         hashCode.Add(uuid);
+        hashCode.Add(language);
         hashCode.Add(&path[0]);
         hashCode.Add(&assemblyPath[0]);
         hashCode.Add(&className[0]);
@@ -78,50 +89,7 @@ struct ManagedScript
     }
 };
 
-static_assert(std::is_standard_layout_v<ManagedScript>, "ManagedScript struct must be standard layout");
-static_assert(std::is_trivially_copyable_v<ManagedScript>, "ManagedScript struct must be a trivial type");
-static_assert(sizeof(ManagedScript) == 3104, "ManagedScript struct size must match C# struct size");
-
-HYP_CLASS()
-class HYP_API Script : public HypObjectBase
-{
-    HYP_OBJECT_BODY(Script);
-
-public:
-    Script();
-    Script(const ScriptDesc& desc);
-    Script(const Script& other) = delete;
-    Script& operator=(const Script& other) = delete;
-    Script(Script&& other) noexcept = delete;
-    Script& operator=(Script&& other) noexcept = delete;
-    ~Script();
-
-    HYP_FORCE_INLINE const ScriptDesc& GetDescriptor() const
-    {
-        return m_desc;
-    }
-
-    HYP_FORCE_INLINE ManagedScript& GetManagedScript()
-    {
-        return m_managedScript;
-    }
-
-    HYP_FORCE_INLINE const ManagedScript& GetManagedScript() const
-    {
-        return m_managedScript;
-    }
-
-    HYP_FORCE_INLINE void SetManagedScript(const ManagedScript& managedScript)
-    {
-        m_managedScript = managedScript;
-    }
-
-    EnumFlags<ScriptCompileStatus> GetCompileStatus() const;
-
-private:
-    ScriptDesc m_desc;
-    ManagedScript m_managedScript;
-};
+static_assert(std::is_standard_layout_v<ScriptData>, "ScriptData struct must be standard layout");
+static_assert(std::is_trivially_copyable_v<ScriptData>, "ScriptData struct must be a trivial type");
 
 } // namespace hyperion
-

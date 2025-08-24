@@ -1,6 +1,9 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
 #include <asset/ui_loaders/UILoader.hpp>
+#include <asset/AssetRegistry.hpp>
+#include <asset/Assets.hpp>
+#include <asset/ScriptAsset.hpp>
 
 #include <core/serialization/fbom/FBOM.hpp>
 #include <core/serialization/fbom/FBOMLoadContext.hpp>
@@ -388,8 +391,10 @@ class UISAXHandler : public xml::SAXHandler
 {
 public:
     UISAXHandler(LoaderState* state, UIStage* uiStage)
-        : m_uiStage(uiStage)
+        : m_state(state),
+          m_uiStage(uiStage)
     {
+        Assert(m_state != nullptr);
         Assert(uiStage != nullptr);
 
         m_uiObjectStack.Push(uiStage);
@@ -604,10 +609,10 @@ public:
 
                         continue;
                     }
-//                    
-//                    AssertDebug(uiObject->GetScene() != nullptr && uiObject->GetScene()->IsReady());
-//                    AssertDebug(uiObject->GetEntity() != nullptr && uiObject->GetScene()->IsReady());
-//                    AssertDebug(scriptComponent->resource != nullptr);
+                    //
+                    //                    AssertDebug(uiObject->GetScene() != nullptr && uiObject->GetScene()->IsReady());
+                    //                    AssertDebug(uiObject->GetEntity() != nullptr && uiObject->GetScene()->IsReady());
+                    //                    AssertDebug(scriptComponent->resource != nullptr);
 
                     // May be null if script not found because it needs to be compiled the first time...
                     // @FIXME
@@ -862,12 +867,29 @@ public:
             if (assemblyIt && classIt)
             {
                 ScriptComponent scriptComponent {};
-                Memory::StrCpy(scriptComponent.script.assemblyPath, assemblyIt->second.Data(), ArraySize(scriptComponent.script.assemblyPath));
-                Memory::StrCpy(scriptComponent.script.className, classIt->second.Data(), ArraySize(scriptComponent.script.className));
 
-                if (m_uiObjectStack.Any())
+                ScriptData scriptData {};
+                scriptData.language = SL_CSHARP;
+                Memory::StrCpy(scriptData.assemblyPath, assemblyIt->second.Data(), ArraySize(scriptData.assemblyPath));
+                Memory::StrCpy(scriptData.className, classIt->second.Data(), ArraySize(scriptData.className));
+
+                Handle<ScriptAsset> scriptAsset = CreateObject<ScriptAsset>(CreateNameFromDynamicString(scriptData.assemblyPath), scriptData);
+                InitObject(scriptAsset);
+
+                Result assetObjectResult = m_state->assetManager->GetAssetRegistry()->RegisterAsset("$Import/Scripts", scriptAsset);
+
+                if (assetObjectResult)
                 {
-                    LastObject()->SetScriptComponent(std::move(scriptComponent));
+                    scriptComponent.scriptAsset = std::move(scriptAsset);
+                    
+                    if (m_uiObjectStack.Any())
+                    {
+                        LastObject()->SetScriptComponent(std::move(scriptComponent));
+                    }
+                }
+                else
+                {
+                    HYP_LOG(Assets, Error, "Failed to register UI script {}", assetObjectResult.GetError().GetMessage());
                 }
             }
             else
@@ -919,6 +941,7 @@ public:
     }
 
 private:
+    LoaderState* m_state;
     UIStage* m_uiStage;
     Stack<UIObject*> m_uiObjectStack;
 };

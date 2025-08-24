@@ -968,10 +968,10 @@ public:
                     Handle<AssetPackage> scriptsPackage = assetRegistry->GetPackageFromPath("Scripts", true);
                     Assert(scriptsPackage.IsValid());
 
-                    Handle<Script> script = CreateObject<Script>();
+                    Handle<ScriptAsset> scriptAsset = CreateObject<ScriptAsset>(NAME("NewScript"), ScriptData());
 
                     // @TODO: better name for script asset
-                    TResult<Handle<AssetObject>> assetObjectResult = scriptsPackage->NewAssetObject(Name::Unique("TestScript"), script);
+                    Result assetObjectResult = scriptsPackage->AddAssetObject(scriptAsset);
 
                     if (assetObjectResult.HasError())
                     {
@@ -980,6 +980,11 @@ public:
                         return UIEventHandlerResult::ERR;
                     }
 
+                    ResourceHandle resourceHandle(*scriptAsset->GetResource());
+                    
+                    ScriptData* scriptData = scriptAsset->GetScriptData();
+                    Assert(scriptData != nullptr);
+
                     Handle<AssetObject> assetObject = assetObjectResult.GetValue();
                     
                     if (Result saveResult = assetObject->Save(); saveResult.HasError()) {
@@ -987,13 +992,16 @@ public:
 
                         return UIEventHandlerResult::ERR;
                     }
+
+                    // copy the asset path to script the data
+                    Memory::StrCpy(scriptData->path, assetObject->GetPath().Data(), sizeof(scriptData->path));
                     
                     if (entityManager->HasComponent<ScriptComponent>(entity)) {
                         entityManager->RemoveComponent<ScriptComponent>(entity);
                     }
 
                     ScriptComponent scriptComponent;
-                    Memory::StrCpy(scriptComponent.script.path, assetObject->GetPath().Data(), sizeof(scriptComponent.script.path));
+                    scriptComponent.scriptAsset = scriptAsset;
 
                     entityManager->AddComponent<ScriptComponent>(entity, scriptComponent);
 
