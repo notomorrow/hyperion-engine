@@ -231,7 +231,7 @@ HYP_API void HypObjectPtr::DecRef(bool weak)
 
 #if defined(HYP_DOTNET) || defined(HYP_SCRIPT)
 
-HYP_API void HypObject_AcquireManagedObjectLock(HypObjectBase* ptr)
+HYP_API void HypObject_IncScriptObjectRef(HypObjectBase* ptr)
 {
     AssertDebug(ptr->GetObjectHeader_Internal()->GetRefCountStrong() > 1);
     if (ScriptObjectResource* scriptObjectResource = ptr->GetScriptObjectResource())
@@ -240,7 +240,7 @@ HYP_API void HypObject_AcquireManagedObjectLock(HypObjectBase* ptr)
     }
 }
 
-HYP_API void HypObject_ReleaseManagedObjectLock(HypObjectBase* ptr)
+HYP_API void HypObject_DecScriptObjectRef(HypObjectBase* ptr)
 {
     if (ScriptObjectResource* scriptObjectResource = ptr->GetScriptObjectResource())
     {

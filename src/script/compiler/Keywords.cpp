@@ -42,12 +42,9 @@ const HashMap<String, Keywords> Keyword::keywordStrings = {
     { "break", Keyword_break },
     { "continue", Keyword_continue },
     { "async", Keyword_async },
-    { "pure", Keyword_pure },
-    { "impure", Keyword_impure },
     { "valueof", Keyword_valueof },
     { "typeof", Keyword_typeof },
     { "$meta", Keyword_meta },
-    { "template", Keyword_template },
     { "end", Keyword_end }
 };
 

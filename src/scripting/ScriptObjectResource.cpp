@@ -1,4 +1,6 @@
 #include <scripting/ScriptObjectResource.hpp>
+#include <scripting/Script.hpp>
+
 #include <core/object/HypClass.hpp>
 #include <core/object/HypClassRegistry.hpp>
 
@@ -84,9 +86,9 @@ ScriptObjectResource::~ScriptObjectResource()
 ScriptLanguage ScriptObjectResource::GetScriptLanguage() const
 {
 #ifdef HYP_SCRIPT
-    if (m_value.IsValid())
+    if (m_value.GetType() != vm::Value::NONE)
     {
-        return SL_SCRIPT;
+        return SL_HYPSCRIPT;
     }
 #endif
 

@@ -50,12 +50,9 @@ enum Keywords
     Keyword_break,
     Keyword_continue,
     Keyword_async,
-    Keyword_pure,
-    Keyword_impure,
     Keyword_valueof,
     Keyword_typeof,
     Keyword_meta,
-    Keyword_template,
     Keyword_end
 };
 
@@ -71,4 +68,3 @@ private:
 };
 
 } // namespace hyperion::compiler
-

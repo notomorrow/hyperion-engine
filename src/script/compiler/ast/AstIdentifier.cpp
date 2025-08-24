@@ -67,11 +67,6 @@ void AstIdentifier::CheckInFunction(AstVisitor* visitor, Module* mod)
             m_properties.m_functionScope = &top->Get();
             m_properties.m_isInFunction = true;
 
-            if (top->Get().GetScopeFlags() & ScopeFunctionFlags::PURE_FUNCTION_FLAG)
-            {
-                m_properties.m_isInPureFunction = true;
-            }
-
             break;
         }
 

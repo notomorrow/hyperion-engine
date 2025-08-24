@@ -68,7 +68,6 @@ const HashMap<ErrorMessage, String> CompilerError::errorMessageStrings {
     { MSG_NOT_A_FUNCTION, "An object of type '%' is not callable as a function" },
     { MSG_MEMBER_NOT_A_METHOD, "Data member '%' is not a method" },
     { MSG_CLOSURE_CAPTURE_MUST_BE_PARAMETER, "'%' was declared in a function above this one, and must be passed as a parameter to be captured" },
-    { MSG_PURE_FUNCTION_SCOPE, "variables declared from an outside scope may not be used in a pure function" },
     { MSG_INVALID_SUBSCRIPT, "Subscript operator invalid on type '%'" },
     { MSG_NOT_A_TYPE, "'%' is not a type" },
     { MSG_UNDEFINED_TYPE, "'%' is not a built-in or user-defined type" },

@@ -1,3 +1,5 @@
+#ifdef HYP_SCRIPT
+
 #include <core/logging/Logger.hpp>
 #include <core/logging/LogChannels.hpp>
 
@@ -168,3 +170,5 @@ static struct LoggerScriptBindings : ScriptBindingsBase
 } // namespace bindings
 } // namespace script
 } // namespace hyperion
+
+#endif

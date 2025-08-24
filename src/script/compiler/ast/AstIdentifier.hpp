@@ -20,7 +20,6 @@ struct AstIdentifierProperties
     IdentifierType m_identifierType = IDENTIFIER_TYPE_UNKNOWN;
 
     bool m_isInFunction = false;
-    bool m_isInPureFunction = false;
 
     int m_depth = 0;
     Scope* m_functionScope = nullptr;
@@ -57,11 +56,6 @@ struct AstIdentifierProperties
     bool IsInFunction() const
     {
         return m_isInFunction;
-    }
-
-    bool IsInPureFunction() const
-    {
-        return m_isInPureFunction;
     }
 
     int GetDepth() const
@@ -127,4 +121,3 @@ protected:
 };
 
 } // namespace hyperion::compiler
-

@@ -119,7 +119,7 @@ struct HypObjectHeader
             {
 #if defined(HYP_DOTNET) || defined(HYP_SCRIPT)
                 // if count was added successfully (and now, greater than 1), we can acquire the lock for the managed object
-                HypObject_AcquireManagedObjectLock(GetObjectPointer(this));
+                HypObject_IncScriptObjectRef(GetObjectPointer(this));
 #endif
 
                 return true;
@@ -137,7 +137,7 @@ struct HypObjectHeader
 #if defined(HYP_DOTNET) || defined(HYP_SCRIPT)
         if (count > 1)
         {
-            HypObject_AcquireManagedObjectLock(GetObjectPointer(this));
+            HypObject_IncScriptObjectRef(GetObjectPointer(this));
         }
 #endif
 
@@ -175,7 +175,7 @@ struct HypObjectHeader
 #ifdef HYP_DOTNET
         if (count > 1)
         {
-            HypObject_ReleaseManagedObjectLock(GetObjectPointer(this));
+            HypObject_DecScriptObjectRef(GetObjectPointer(this));
         }
 #endif
 

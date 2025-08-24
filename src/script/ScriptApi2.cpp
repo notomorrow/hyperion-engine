@@ -141,13 +141,12 @@ RC<AstExpression> Context::ParseTypeExpression(const String& typeString)
         parser.ParsePrototypeSpecification();
 
     Assert(!compilationUnit.GetErrorList().HasFatalErrors(),
-        "Failed to parse type expression: %s", typeString.Data());
+        "Failed to parse type expression: {}", typeString.Data());
 
     return typeSpec;
 }
 
-Array<RC<AstParameter>>
-Context::ParseGenericParams(const String& genericParamsString)
+Array<RC<AstParameter>> Context::ParseGenericParams(const String& genericParamsString)
 {
     AstIterator astIterator;
 
@@ -171,7 +170,7 @@ Context::ParseGenericParams(const String& genericParamsString)
     Array<RC<AstParameter>> genericParams = parser.ParseGenericParameters();
 
     Assert(!compilationUnit.GetErrorList().HasFatalErrors(),
-        "Failed to parse generic parameters: %s",
+        "Failed to parse generic parameters: {}",
         genericParamsString.Data());
 
     return genericParams;
@@ -183,8 +182,7 @@ void Context::Visit(AstVisitor* visitor, CompilationUnit* compilationUnit)
 
     for (GlobalDefinition& global : m_globals)
     {
-        IdentifierFlagBits identifierFlags =
-            IdentifierFlags::FLAG_CONST | IdentifierFlags::FLAG_NATIVE;
+        IdentifierFlagBits identifierFlags = IdentifierFlags::FLAG_CONST | IdentifierFlags::FLAG_NATIVE;
 
         RC<AstPrototypeSpecification> typeSpec =
             ParseTypeExpression(global.symbol.type.typeString)
@@ -304,7 +302,7 @@ void Context::BindAll(APIInstance& apiInstance, VM* vm)
 
         const int stackLocation =
             global.varDecl->GetIdentifier()->GetStackLocation();
-        Assert(stackLocation != -1, "Global %s has no stack location",
+        Assert(stackLocation != -1, "Global {} has no stack location",
             global.symbol.name.Data());
 
         Value value { Value::NONE, {} };
@@ -338,7 +336,7 @@ void Context::BindAll(APIInstance& apiInstance, VM* vm)
 
         const int stackLocation =
             classDefinition.varDecl->GetIdentifier()->GetStackLocation();
-        Assert(stackLocation != -1, "Class %s has no stack location",
+        Assert(stackLocation != -1, "Class {} has no stack location",
             classDefinition.name.Data());
 
         // Ensure class SymbolType is registered
@@ -346,7 +344,7 @@ void Context::BindAll(APIInstance& apiInstance, VM* vm)
         Assert(heldType != nullptr);
         heldType = heldType->GetUnaliased();
 
-        Assert(heldType->GetId() != -1, "Class %s has no ID",
+        Assert(heldType->GetId() != -1, "Class {} has no ID",
             classDefinition.name.Data());
 
         // Load the class object from the VM - it is stored in StaticMemory
@@ -470,9 +468,6 @@ void Context::BindAll(APIInstance& apiInstance, VM* vm)
         // Set class object in global scope
         Assert(vmState.GetMainThread()->GetStack().STACK_SIZE > stackLocation);
         vmState.GetMainThread()->GetStack().GetData()[stackLocation] = value;
-
-        DebugLog(LogType::Info, "Set class %s at index %d\n",
-            classDefinition.name.Data(), index);
     }
 }
 

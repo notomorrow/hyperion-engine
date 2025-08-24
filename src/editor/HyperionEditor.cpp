@@ -34,6 +34,8 @@
 #include <scene/world_grid/terrain/TerrainWorldGridPlugin.hpp>
 #include <scene/world_grid/WorldGrid.hpp>
 
+#include <script/HypScript.hpp>
+
 #include <asset/AssetBatch.hpp>
 #include <asset/Assets.hpp>
 #include <core/serialization/fbom/FBOMWriter.hpp>
@@ -103,6 +105,27 @@ HyperionEditor::~HyperionEditor()
 void HyperionEditor::Init()
 {
     Game::Init();
+
+    // temp
+    String str;
+    str = "Logger.print(\"hello\")";
+
+    ByteBuffer byteBuffer(ConstByteView(reinterpret_cast<const ubyte*>(str.Data()), reinterpret_cast<const ubyte*>(str.Data() + str.Size())));
+
+    SourceFile sourceFile("<temp>", byteBuffer.Size());
+    sourceFile.ReadIntoBuffer(byteBuffer);
+
+    ErrorList errorList;
+    ScriptHandle* scriptHandle = HypScript::GetInstance().Compile(sourceFile, errorList);
+
+    if (scriptHandle)
+    {
+        HypScript::GetInstance().Run(scriptHandle);
+        HypScript::GetInstance().DestroyScript(scriptHandle);
+    }
+
+    HYP_BREAKPOINT;
+    // temp
 
     m_editorSubsystem = CreateObject<EditorSubsystem>();
 

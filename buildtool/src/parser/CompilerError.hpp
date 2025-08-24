@@ -89,7 +89,6 @@ enum ErrorMessage
     Msg_not_a_function,
     Msg_member_not_a_method,
     Msg_closure_capture_must_be_parameter,
-    Msg_pure_function_scope,
 
     /* ARRAYS */
     Msg_invalid_subscript,

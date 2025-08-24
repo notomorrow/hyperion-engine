@@ -41,7 +41,7 @@ SafeDeleterEntry<HypObjectBase*>::SafeDeleterEntry(HypObjectBase* ptr, Construct
 
 #if defined(HYP_DOTNET) || defined(HYP_SCRIPT)
                 if (hasScriptObjectResource)
-                    HypObject_ReleaseManagedObjectLock(ptr);
+                    HypObject_DecScriptObjectRef(ptr);
 #endif
 
                 break;

@@ -167,20 +167,6 @@ void AstVariable::Visit(AstVisitor* visitor, Module* mod)
 
             if (m_properties.IsInFunction())
             {
-                if (m_properties.IsInPureFunction())
-                {
-                    // check if pure function - in a pure function, only variables from this scope may be used
-                    if (!mod->LookUpIdentifierDepth(m_name, m_properties.GetDepth()))
-                    {
-                        // add error that the variable must be passed as a parameter
-                        visitor->GetCompilationUnit()->GetErrorList().AddError(CompilerError(
-                            LEVEL_ERROR,
-                            Msg_pure_function_scope,
-                            m_location,
-                            m_name));
-                    }
-                }
-
                 const SymbolTypeFlags flags = m_properties.GetIdentifier()->GetFlags();
 
                 // if the variable is declared in a function, and is not a generic substitution,

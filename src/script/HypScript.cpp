@@ -11,7 +11,6 @@
 #include <script/compiler/Compiler.hpp>
 #include <script/compiler/dis/DecompilationUnit.hpp>
 #include <script/compiler/emit/codegen/CodeGenerator.hpp>
-#include <script/compiler/dis/DecompilationUnit.hpp>
 #include <script/compiler/builtins/Builtins.hpp>
 
 #include <script/ScriptBindings.hpp>
@@ -41,18 +40,64 @@ HypScript::HypScript()
     : m_apiInstance(),
       m_vm(new VM(m_apiInstance))
 {
-    // Generate our context stuff
-    g_scriptBindings.GenerateAll(m_context);
-
-    m_apiInstance.SetVM(m_vm);
-
-    m_context.BindAll(m_apiInstance, m_vm);
 }
 
 HypScript::~HypScript()
 {
     m_apiInstance.SetVM(nullptr);
     delete m_vm;
+}
+
+void HypScript::Initialize()
+{
+    g_scriptBindings.GenerateAll(m_context);
+
+    m_apiInstance.SetVM(m_vm);
+
+    // Initialize builtins
+    TokenStream tokenStream(TokenStreamInfo { "<builtins>" });
+
+    AstIterator astIterator;
+    CompilationUnit compilationUnit;
+    SemanticAnalyzer semanticAnalyzer(&astIterator, &compilationUnit);
+
+    compilationUnit.GetBuiltins().Visit(&semanticAnalyzer);
+
+    m_context.Visit(&semanticAnalyzer, &compilationUnit);
+
+    Parser parser(&astIterator, &tokenStream, &compilationUnit);
+    parser.Parse(false);
+
+    semanticAnalyzer.Analyze(false);
+
+    ErrorList errorList = compilationUnit.GetErrorList();
+
+    if (errorList.HasFatalErrors())
+    {
+        // write errors to stdout
+        errorList.WriteOutput(std::cout);
+
+        HYP_FAIL("Fatal errors occurred while initializing HypScript!");
+    }
+
+    // only optimize if there were no errors
+    // before this point
+    astIterator.ResetPosition();
+
+    Optimizer optimizer(&astIterator, &compilationUnit);
+    optimizer.Optimize();
+
+    // compile into bytecode instructions
+    astIterator.ResetPosition();
+
+    Compiler compiler(&astIterator, &compilationUnit);
+
+    if (!compiler.Compile())
+    {
+        HYP_FAIL("Failed to compile HypScript builtins!");
+    }
+
+    m_context.BindAll(m_apiInstance, m_vm);
 }
 
 void HypScript::DestroyScript(ScriptHandle* scriptHandle)
@@ -83,7 +128,6 @@ ScriptHandle* HypScript::Compile(
     lex.Analyze();
 
     AstIterator astIterator;
-
     SemanticAnalyzer semanticAnalyzer(&astIterator, &compilationUnit);
 
     compilationUnit.GetBuiltins().Visit(&semanticAnalyzer);
@@ -111,18 +155,6 @@ ScriptHandle* HypScript::Compile(
         astIterator.ResetPosition();
 
         Compiler compiler(&astIterator, &compilationUnit);
-
-        // if (auto builtinsResult = builtins.Build(&m_compilationUnit)) {
-        //     m_bytecodeChunk.Append(std::move(builtinsResult));
-        // } else {
-        //     DebugLog(
-        //         LogType::Error,
-        //         "Failed to add builtins to script\n"
-        //     );
-
-        //     return false;
-        // }
-
         BytecodeChunk bytecodeChunk;
 
         if (auto compileResult = compiler.Compile())

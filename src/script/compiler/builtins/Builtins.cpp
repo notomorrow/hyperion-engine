@@ -131,31 +131,33 @@ void Builtins::Visit(AstVisitor* visitor)
     for (const SymbolTypeRef& typePtr : builtinTypes)
     {
         Assert(typePtr != nullptr);
-        Assert(typePtr->GetId() == -1);
-        Assert(typePtr->GetTypeObject() == nullptr);
-
-        // add 'name' member here
-        typePtr->AddMember({ "name",
-            BuiltinTypes::STRING,
-            RC<AstString>(new AstString(typePtr->GetName(), BUILTIN_SOURCE_LOCATION)) });
-
-        // Add "$proto" so we can use isInstance to check if a value is an instance of a type
-        if (typePtr->IsPrimitive() && typePtr->GetDefaultValue() != nullptr)
+        if (typePtr->GetId() == -1)
         {
-            typePtr->AddMember({ "$proto",
+            Assert(typePtr->GetTypeObject() == nullptr);
+
+            // add 'name' member here
+            typePtr->AddMember({ "name",
+                BuiltinTypes::STRING,
+                RC<AstString>(new AstString(typePtr->GetName(), BUILTIN_SOURCE_LOCATION)) });
+
+            // Add "$proto" so we can use isInstance to check if a value is an instance of a type
+            if (typePtr->IsPrimitive() && typePtr->GetDefaultValue() != nullptr)
+            {
+                typePtr->AddMember({ "$proto",
+                    typePtr,
+                    typePtr->GetDefaultValue() });
+            }
+
+            RC<AstTypeObject> typeObject(new AstTypeObject(
                 typePtr,
-                typePtr->GetDefaultValue() });
+                typePtr->GetBaseType(),
+                BUILTIN_SOURCE_LOCATION));
+
+            // push it so that it can be visited, and registered
+            visitor->GetAstIterator()->Push(typeObject);
+
+            typePtr->SetTypeObject(typeObject);
         }
-
-        RC<AstTypeObject> typeObject(new AstTypeObject(
-            typePtr,
-            typePtr->GetBaseType(),
-            BUILTIN_SOURCE_LOCATION));
-
-        // push it so that it can be visited, and registered
-        visitor->GetAstIterator()->Push(typeObject);
-
-        typePtr->SetTypeObject(typeObject);
 
         // add it to the global scope
         Scope& scope = m_unit->GetGlobalModule()->m_scopes.Top();

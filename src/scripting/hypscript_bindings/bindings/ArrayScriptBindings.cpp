@@ -1,3 +1,5 @@
+#ifdef HYP_SCRIPT
+
 #include <script/ScriptApi.hpp>
 #include <script/ScriptBindingDef.generated.hpp>
 #include <script/vm/Value.hpp>
@@ -106,3 +108,5 @@ static struct ArrayScriptBindings : ScriptBindingsBase
 } // namespace bindings
 } // namespace script
 } // namespace hyperion
+
+#endif

@@ -180,7 +180,6 @@ enum ScopeType
 
 enum ScopeFunctionFlags : int
 {
-    PURE_FUNCTION_FLAG = 0x1,
     CLOSURE_FUNCTION_FLAG = 0x2,
     GENERATOR_FUNCTION_FLAG = 0x4,
     UNINSTANTIATED_GENERIC_FLAG = 0x8,
@@ -276,4 +275,3 @@ private:
 };
 
 } // namespace hyperion::compiler
-

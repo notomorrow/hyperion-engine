@@ -69,6 +69,8 @@ public:
         return m_vm;
     }
 
+    void Initialize();
+
     void DestroyScript(ScriptHandle* scriptHandle);
 
     ScriptHandle* Compile(

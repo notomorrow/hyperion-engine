@@ -5,7 +5,6 @@
 #include <core/logging/Logger.hpp>
 #include <core/logging/LogChannels.hpp>
 
-#ifdef HYP_DOTNET
 #include <dotnet/Class.hpp>
 
 namespace hyperion {
@@ -27,5 +26,3 @@ HYP_API void LogScriptableDelegateError(const char* message, dotnet::Object* obj
 } // namespace functional
 
 } // namespace hyperion
-
-#endif

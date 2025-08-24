@@ -172,8 +172,8 @@ private:
 };
 
 #if defined(HYP_DOTNET) || defined(HYP_SCRIPT)
-HYP_API void HypObject_AcquireManagedObjectLock(HypObjectBase* ptr);
-HYP_API void HypObject_ReleaseManagedObjectLock(HypObjectBase* ptr);
+HYP_API void HypObject_IncScriptObjectRef(HypObjectBase* ptr);
+HYP_API void HypObject_DecScriptObjectRef(HypObjectBase* ptr);
 #endif
 
 struct HypObjectInitializerGuardBase
