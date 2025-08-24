@@ -9,7 +9,10 @@
 #include <core/object/HypObjectEnums.hpp>
 #include <core/object/ObjId.hpp>
 #include <core/object/HypObjectPool.hpp>
+
+#if defined(HYP_DOTNET) || defined(HYP_SCRIPT)
 #include <scripting/ScriptObjectResource.hpp>
+#endif
 
 #include <core/utilities/TypeId.hpp>
 #include <core/utilities/GlobalContext.hpp>
@@ -97,7 +100,7 @@ public:
         return m_header;
     }
 
-#ifdef HYP_DOTNET
+#if defined(HYP_DOTNET) || defined(HYP_SCRIPT)
     void SetScriptObjectResource(ScriptObjectResource* scriptObjectResource)
     {
         HYP_CORE_ASSERT(m_scriptObjectResource == nullptr);
@@ -205,7 +208,7 @@ protected:
     HypObjectHeader* m_header;
     DelegateHandlerSet m_delegateHandlers;
 
-#ifdef HYP_DOTNET
+#if defined(HYP_DOTNET) || defined(HYP_SCRIPT)
     ScriptObjectResource* m_scriptObjectResource;
 #endif
 

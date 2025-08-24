@@ -33,6 +33,7 @@ public:
         HypClassRegistry::GetInstance().UnregisterClass(this);
     }
 
+#ifdef HYP_DOTNET
     virtual bool GetManagedObject(const void* objectPtr, dotnet::ObjectReference& outObjectReference) const override
     {
         Assert(objectPtr != nullptr);
@@ -45,6 +46,7 @@ public:
 
         return true;
     }
+#endif
 
     virtual bool CanCreateInstance() const override
     {

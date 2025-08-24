@@ -29,14 +29,17 @@ Assembly::Assembly(EnumFlags<AssemblyFlags> flags)
 
 Assembly::~Assembly()
 {
+#ifdef HYP_DOTNET
     if (!Unload())
     {
         HYP_LOG(DotNET, Warning, "Failed to unload assembly");
     }
+#endif
 }
 
 bool Assembly::Unload()
 {
+#ifdef HYP_DOTNET
     if (!IsLoaded())
     {
         return true;
@@ -53,17 +56,19 @@ bool Assembly::Unload()
 
         if (const HypClass* hypClass = classObject->GetHypClass())
         {
-            Assert(hypClass->GetManagedClass() == classObject, "HypClass '{}' does not match the expected managed class '{}'", *hypClass->GetName(), *classObject->GetName());
-
             hypClass->SetManagedClass(nullptr);
         }
     }
 
     return DotNetSystem::GetInstance().UnloadAssembly(m_guid);
+#else
+    return false;
+#endif
 }
 
 RC<Class> Assembly::NewClass(const HypClass* hypClass, int32 typeHash, const char* typeName, uint32 typeSize, TypeId typeId, Class* parentClass, uint32 flags)
 {
+#ifdef HYP_DOTNET
     auto it = m_classObjects.Find(typeHash);
 
     if (it != m_classObjects.End())
@@ -81,10 +86,14 @@ RC<Class> Assembly::NewClass(const HypClass* hypClass, int32 typeHash, const cha
     }
 
     return it->second;
+#else
+    return nullptr;
+#endif
 }
 
 RC<Class> Assembly::FindClassByName(const char* typeName)
 {
+#ifdef HYP_DOTNET
     for (auto& pair : m_classObjects)
     {
         if (pair.second->GetName() == typeName)
@@ -94,10 +103,14 @@ RC<Class> Assembly::FindClassByName(const char* typeName)
     }
 
     return nullptr;
+#else
+    return nullptr;
+#endif
 }
 
 RC<Class> Assembly::FindClassByTypeHash(int32 typeHash)
 {
+#ifdef HYP_DOTNET
     auto it = m_classObjects.Find(typeHash);
 
     if (it != m_classObjects.End())
@@ -106,6 +119,9 @@ RC<Class> Assembly::FindClassByTypeHash(int32 typeHash)
     }
 
     return nullptr;
+#else
+    return nullptr;
+#endif
 }
 
 } // namespace dotnet

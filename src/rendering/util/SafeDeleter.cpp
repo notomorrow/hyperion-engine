@@ -38,8 +38,11 @@ SafeDeleterEntry<HypObjectBase*>::SafeDeleterEntry(HypObjectBase* ptr, Construct
         {
             if (AtomicCompareExchange(&ptr->GetObjectHeader_Internal()->refCountStrong, count, count - 1))
             {
+
+#if defined(HYP_DOTNET) || defined(HYP_SCRIPT)
                 if (hasScriptObjectResource)
                     HypObject_ReleaseManagedObjectLock(ptr);
+#endif
 
                 break;
             }

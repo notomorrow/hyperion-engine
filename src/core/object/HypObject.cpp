@@ -229,7 +229,7 @@ HYP_API void HypObjectPtr::DecRef(bool weak)
 
 #pragma endregion HypObjectPtr
 
-#ifdef HYP_DOTNET
+#if defined(HYP_DOTNET) || defined(HYP_SCRIPT)
 
 HYP_API void HypObject_AcquireManagedObjectLock(HypObjectBase* ptr)
 {

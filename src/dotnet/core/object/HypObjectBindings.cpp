@@ -36,6 +36,7 @@ extern "C"
 
         Assert(hypClass->UseHandles());
 
+#ifdef HYP_DOTNET
         HypObjectPtr ptr;
 
         *outInstancePtr = nullptr;
@@ -70,6 +71,7 @@ extern "C"
         HypObjectBase* target = reinterpret_cast<HypObjectBase*>(ptr.GetPointer());
 
         target->SetScriptObjectResource(scriptObjectResource);
+#endif
 
         /// NOTE: CREATED_FROM_MANAGED is set to true here, so we don't set keep alive to true
     }

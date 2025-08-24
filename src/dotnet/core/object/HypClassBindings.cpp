@@ -26,6 +26,7 @@ namespace hyperion {
 
 #pragma region DynamicHypClassInstance
 
+#ifdef HYP_DOTNET
 DynamicHypClassInstance::DynamicHypClassInstance(TypeId typeId, Name name, const HypClass* parentClass, dotnet::Class* classPtr, Span<const HypClassAttribute> attributes, EnumFlags<HypClassFlags> flags, Span<HypMember> members)
     : HypClass(typeId, name, -1, 0, Name::Invalid(), attributes, flags, members)
 {
@@ -47,6 +48,7 @@ DynamicHypClassInstance::DynamicHypClassInstance(TypeId typeId, Name name, const
     m_size = m_parent->GetSize();
     m_alignment = m_parent->GetAlignment();
 }
+#endif
 
 DynamicHypClassInstance::~DynamicHypClassInstance()
 {
@@ -66,6 +68,7 @@ HypClassAllocationMethod DynamicHypClassInstance::GetAllocationMethod() const
     return m_parent->GetAllocationMethod();
 }
 
+#ifdef HYP_DOTNET
 bool DynamicHypClassInstance::GetManagedObject(const void* objectPtr, dotnet::ObjectReference& outObjectReference) const
 {
     Assert(m_parent != nullptr);
@@ -90,14 +93,19 @@ bool DynamicHypClassInstance::GetManagedObject(const void* objectPtr, dotnet::Ob
 
     return true;
 }
+#endif
 
 bool DynamicHypClassInstance::CanCreateInstance() const
 {
+#ifdef HYP_DOTNET
     RC<dotnet::Class> managedClass = GetManagedClass();
 
     return m_parent->CanCreateInstance()
         && managedClass != nullptr
         && !(managedClass->GetFlags() & ManagedClassFlags::ABSTRACT);
+#else
+    return false;
+#endif
 }
 
 bool DynamicHypClassInstance::ToHypData(ByteView memory, HypData& outHypData) const
@@ -115,6 +123,7 @@ bool DynamicHypClassInstance::CreateInstance_Internal(HypData& out) const
 {
     Assert(m_parent != nullptr);
 
+#ifdef HYP_DOTNET
     RC<dotnet::Class> managedClass = GetManagedClass();
     Assert(managedClass != nullptr);
 
@@ -159,6 +168,9 @@ bool DynamicHypClassInstance::CreateInstance_Internal(HypData& out) const
     target->SetScriptObjectResource(scriptObjectResource);
 
     return true;
+#else
+    HYP_NOT_IMPLEMENTED();
+#endif
 }
 
 bool DynamicHypClassInstance::CreateInstanceArray_Internal(Span<HypData> elements, HypData& out) const
@@ -407,7 +419,11 @@ extern "C"
         Assert(name != nullptr);
         Assert(parentHypClass != nullptr);
 
+#ifdef HYP_DOTNET
         return new DynamicHypClassInstance(*typeId, CreateNameFromDynamicString(name), parentHypClass, nullptr, Span<const HypClassAttribute>(), HypClassFlags::CLASS_TYPE | HypClassFlags::DYNAMIC, Span<HypMember>());
+#else
+        return nullptr;
+#endif
     }
 
     HYP_EXPORT void HypClass_DestroyDynamicHypClass(DynamicHypClassInstance* hypClass)

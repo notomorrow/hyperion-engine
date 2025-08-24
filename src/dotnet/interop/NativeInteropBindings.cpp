@@ -144,6 +144,7 @@ extern "C"
 
     HYP_EXPORT void ManagedClass_Create(ManagedGuid* assemblyGuid, Assembly* assemblyPtr, const HypClass* hypClass, int32 typeHash, const char* typeName, uint32 typeSize, TypeId typeId, Class* parentClass, uint32 flags, ManagedClass* outManagedClass)
     {
+#ifdef HYP_DOTNET
         Assert(assemblyGuid != nullptr);
         Assert(assemblyPtr != nullptr);
 
@@ -175,6 +176,7 @@ extern "C"
         managedClass.classObject = classObject.Get();
         managedClass.assemblyGuid = *assemblyGuid;
         managedClass.flags = flags;
+#endif
     }
 
     HYP_EXPORT int8 ManagedClass_FindByTypeHash(Assembly* assemblyPtr, int32 typeHash, Class** outManagedClassObjectPtr)

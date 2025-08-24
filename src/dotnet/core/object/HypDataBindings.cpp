@@ -325,6 +325,7 @@ extern "C"
 
     HYP_EXPORT int8 HypData_GetHypObject(const HypData* hypData, dotnet::ObjectReference* outObjectReference)
     {
+#ifdef HYP_DOTNET
         if (!hypData || !outObjectReference)
         {
             return false;
@@ -367,6 +368,9 @@ extern "C"
         HYP_LOG(Object, Error, "Failed to get managed object for instance of HypClass {}", hypClass->GetName());
 
         return false;
+#else
+        return false;
+#endif
     }
 
     HYP_EXPORT int8 HypData_SetHypObject(HypData* hypData, const HypClass* hypClass, void* address)
@@ -388,6 +392,7 @@ extern "C"
 
     HYP_EXPORT int8 HypData_GetHypStruct(const HypData* hypData, dotnet::ObjectReference* outObjectReference)
     {
+#ifdef HYP_DOTNET
         if (!hypData || !outObjectReference)
         {
             return false;
@@ -424,6 +429,9 @@ extern "C"
         }
 
         return false;
+#else
+        return false;
+#endif
     }
 
     HYP_EXPORT int8 HypData_SetHypStruct(HypData* hypData, const HypClass* hypClass, uint32 size, void* objectPtr)

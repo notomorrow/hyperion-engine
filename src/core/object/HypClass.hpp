@@ -555,7 +555,7 @@ public:
     }
 
     Array<HypConstant*> GetConstantsInherited() const;
-    
+
 #ifdef HYP_DOTNET
     HYP_FORCE_INLINE RC<dotnet::Class> GetManagedClass() const
     {
@@ -902,13 +902,16 @@ protected:
 class DynamicHypClassInstance final : public HypClass
 {
 public:
+#ifdef HYP_DOTNET
     DynamicHypClassInstance(TypeId typeId, Name name, const HypClass* parentClass, dotnet::Class* classPtr, Span<const HypClassAttribute> attributes, EnumFlags<HypClassFlags> flags, Span<HypMember> members);
+#endif
+
     virtual ~DynamicHypClassInstance() override;
 
     virtual bool IsValid() const override;
 
     virtual HypClassAllocationMethod GetAllocationMethod() const override;
-    
+
 #ifdef HYP_DOTNET
     virtual bool GetManagedObject(const void* objectPtr, dotnet::ObjectReference& outObjectReference) const override;
 #endif

@@ -200,7 +200,6 @@ HYP_API bool InitializeEngine(int argc, char** argv)
     InitializeNameRegistry();
 
     HypClassRegistry::GetInstance().Initialize();
-    HypScript::Initialize();
 
     if (!InitializeCommandLineArguments(argc, argv))
     {

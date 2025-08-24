@@ -32,12 +32,6 @@
 #error Script requires a C++ compiler
 #endif
 
-#if HYP_WINDOWS
-#define HYP_EXPORT extern "C" __declspec(dllexport)
-#else
-#define HYP_EXPORT extern "C"
-#endif
-
 #pragma region Script helper macros
 
 #define HYP_SCRIPT_PARAMS hyperion::sdk::Params
