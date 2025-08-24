@@ -18,15 +18,15 @@
 namespace hyperion::compiler {
 
 AstForLoop::AstForLoop(
-    const RC<AstStatement> &decl_part,
-    const RC<AstExpression> &condition_part,
-    const RC<AstExpression> &increment_part,
+    const RC<AstStatement> &declPart,
+    const RC<AstExpression> &conditionPart,
+    const RC<AstExpression> &incrementPart,
     const RC<AstBlock> &block,
     const SourceLocation &location
 ) : AstStatement(location),
-    m_decl_part(decl_part),
-    m_condition_part(condition_part),
-    m_increment_part(increment_part),
+    m_declPart(declPart),
+    m_conditionPart(conditionPart),
+    m_incrementPart(incrementPart),
     m_block(block)
 {
 }
@@ -34,35 +34,35 @@ AstForLoop::AstForLoop(
 void AstForLoop::Visit(AstVisitor *visitor, Module *mod)
 {
     // if no condition has been provided, replace it with AstTrue
-    if (m_condition_part == nullptr) {
-        m_increment_part.Reset(new AstTrue(m_location));
+    if (m_conditionPart == nullptr) {
+        m_incrementPart.Reset(new AstTrue(m_location));
     }
 
     // open scope for variable decl
     mod->m_scopes.Open(Scope(SCOPE_TYPE_LOOP, 0));
 
-    if (m_decl_part != nullptr) {
-        m_decl_part->Visit(visitor, mod);
+    if (m_declPart != nullptr) {
+        m_declPart->Visit(visitor, mod);
     }
 
     // visit the conditional
-    m_condition_part->Visit(visitor, mod);
+    m_conditionPart->Visit(visitor, mod);
 
     mod->m_scopes.Open(Scope(SCOPE_TYPE_LOOP, 0));
 
     // visit the body
     m_block->Visit(visitor, mod);
 
-    m_num_locals = mod->m_scopes.Top().GetIdentifierTable().CountUsedVariables();
+    m_numLocals = mod->m_scopes.Top().GetIdentifierTable().CountUsedVariables();
 
     // close variable decl scope
     mod->m_scopes.Close();
 
-    if (m_increment_part != nullptr) {
-        m_increment_part->Visit(visitor, mod);
+    if (m_incrementPart != nullptr) {
+        m_incrementPart->Visit(visitor, mod);
     }
 
-    m_num_used_initializers = mod->m_scopes.Top().GetIdentifierTable().CountUsedVariables();
+    m_numUsedInitializers = mod->m_scopes.Top().GetIdentifierTable().CountUsedVariables();
 
     // close scope
     mod->m_scopes.Close();
@@ -70,163 +70,163 @@ void AstForLoop::Visit(AstVisitor *visitor, Module *mod)
 
 std::unique_ptr<Buildable> AstForLoop::Build(AstVisitor *visitor, Module *mod)
 {
-    Assert(m_condition_part != nullptr);
+    Assert(m_conditionPart != nullptr);
 
-    InstructionStreamContextGuard context_guard(
+    InstructionStreamContextGuard contextGuard(
         &visitor->GetCompilationUnit()->GetInstructionStream().GetContextTree(),
         INSTRUCTION_STREAM_CONTEXT_LOOP
     );
 
     std::unique_ptr<BytecodeChunk> chunk = BytecodeUtil::Make<BytecodeChunk>();
 
-    int condition_is_true = m_condition_part->IsTrue();
+    int conditionIsTrue = m_conditionPart->IsTrue();
 
-    if (condition_is_true == -1) {
+    if (conditionIsTrue == -1) {
         // the condition cannot be determined at compile time
         uint8 rp;
 
-        LabelId top_label = context_guard->NewLabel(HYP_NAME(LoopTopLabel));
-        chunk->TakeOwnershipOfLabel(top_label);
+        LabelId topLabel = contextGuard->NewLabel(HYP_NAME(LoopTopLabel));
+        chunk->TakeOwnershipOfLabel(topLabel);
 
         // the label to jump to the end to BREAK
-        LabelId break_label = context_guard->NewLabel(HYP_NAME(LoopBreakLabel));
-        chunk->TakeOwnershipOfLabel(break_label);
+        LabelId breakLabel = contextGuard->NewLabel(HYP_NAME(LoopBreakLabel));
+        chunk->TakeOwnershipOfLabel(breakLabel);
 
         // the label to for 'continue' statement
-        LabelId continue_label = context_guard->NewLabel(HYP_NAME(LoopContinueLabel));
-        chunk->TakeOwnershipOfLabel(continue_label);
+        LabelId continueLabel = contextGuard->NewLabel(HYP_NAME(LoopContinueLabel));
+        chunk->TakeOwnershipOfLabel(continueLabel);
 
         // get current register index
         rp = visitor->GetCompilationUnit()->GetInstructionStream().GetCurrentRegister();
 
         // initializers
-        if (m_decl_part != nullptr) {
-            chunk->Append(m_decl_part->Build(visitor, mod));
+        if (m_declPart != nullptr) {
+            chunk->Append(m_declPart->Build(visitor, mod));
         }
 
         // where to jump up to
-        chunk->Append(BytecodeUtil::Make<LabelMarker>(top_label));
+        chunk->Append(BytecodeUtil::Make<LabelMarker>(topLabel));
 
         // build the conditional
-        chunk->Append(m_condition_part->Build(visitor, mod));
+        chunk->Append(m_conditionPart->Build(visitor, mod));
 
         // compare the conditional to 0
         chunk->Append(BytecodeUtil::Make<Comparison>(Comparison::CMPZ, rp));
 
         // break away if the condition is false (equal to zero)
-        chunk->Append(BytecodeUtil::Make<Jump>(Jump::JE, break_label));
+        chunk->Append(BytecodeUtil::Make<Jump>(Jump::JE, breakLabel));
 
         // enter the block
         chunk->Append(m_block->Build(visitor, mod));
 
         // where 'continue' jumps to
-        chunk->Append(BytecodeUtil::Make<LabelMarker>(continue_label));
+        chunk->Append(BytecodeUtil::Make<LabelMarker>(continueLabel));
 
-        if (m_increment_part != nullptr) {
-            chunk->Append(m_increment_part->Build(visitor, mod));
+        if (m_incrementPart != nullptr) {
+            chunk->Append(m_incrementPart->Build(visitor, mod));
         }
 
         // pop all local variables off the stack
-        for (int i = 0; i < m_num_locals; i++) {
+        for (int i = 0; i < m_numLocals; i++) {
             visitor->GetCompilationUnit()->GetInstructionStream().DecStackSize();
         }
 
-        chunk->Append(Compiler::PopStack(visitor, m_num_locals));
+        chunk->Append(Compiler::PopStack(visitor, m_numLocals));
 
         // jump back to top here
-        chunk->Append(BytecodeUtil::Make<Jump>(Jump::JMP, top_label));
+        chunk->Append(BytecodeUtil::Make<Jump>(Jump::JMP, topLabel));
 
         // set the label's position to after the block,
         // so we can skip it if the condition is false
-        chunk->Append(BytecodeUtil::Make<LabelMarker>(break_label));
+        chunk->Append(BytecodeUtil::Make<LabelMarker>(breakLabel));
 
         // pop all initializers off the stack
-        for (int i = 0; i < m_num_used_initializers; i++) {
+        for (int i = 0; i < m_numUsedInitializers; i++) {
             visitor->GetCompilationUnit()->GetInstructionStream().DecStackSize();
         }
 
-        chunk->Append(Compiler::PopStack(visitor, m_num_used_initializers));
-    } else if (condition_is_true) {
-        if (m_decl_part != nullptr) {
-            chunk->Append(m_decl_part->Build(visitor, mod));
+        chunk->Append(Compiler::PopStack(visitor, m_numUsedInitializers));
+    } else if (conditionIsTrue) {
+        if (m_declPart != nullptr) {
+            chunk->Append(m_declPart->Build(visitor, mod));
         }
 
-        LabelId top_label = context_guard->NewLabel(HYP_NAME(LoopTopLabel));
+        LabelId topLabel = contextGuard->NewLabel(HYP_NAME(LoopTopLabel));
 
         // the label to jump to the end to BREAK
-        LabelId break_label = context_guard->NewLabel(HYP_NAME(LoopBreakLabel));
+        LabelId breakLabel = contextGuard->NewLabel(HYP_NAME(LoopBreakLabel));
 
         // the label to jump to for 'continue' statement
-        LabelId continue_label = context_guard->NewLabel(HYP_NAME(LoopContinueLabel));
-        chunk->TakeOwnershipOfLabel(continue_label);
+        LabelId continueLabel = contextGuard->NewLabel(HYP_NAME(LoopContinueLabel));
+        chunk->TakeOwnershipOfLabel(continueLabel);
 
-        chunk->Append(BytecodeUtil::Make<LabelMarker>(top_label));
+        chunk->Append(BytecodeUtil::Make<LabelMarker>(topLabel));
 
         // the condition has been determined to be true
-        if (m_condition_part->MayHaveSideEffects()) {
+        if (m_conditionPart->MayHaveSideEffects()) {
             // if there is a possibility of side effects,
             // build the conditional into the binary
-            chunk->Append(m_condition_part->Build(visitor, mod));
+            chunk->Append(m_conditionPart->Build(visitor, mod));
         }
 
         // enter the block
         chunk->Append(m_block->Build(visitor, mod));
 
         // where 'continue' jumps to
-        chunk->Append(BytecodeUtil::Make<LabelMarker>(continue_label));
+        chunk->Append(BytecodeUtil::Make<LabelMarker>(continueLabel));
 
-        if (m_increment_part != nullptr) {
-            chunk->Append(m_increment_part->Build(visitor, mod));
+        if (m_incrementPart != nullptr) {
+            chunk->Append(m_incrementPart->Build(visitor, mod));
         }
 
         // pop all local variables off the stack
-        for (int i = 0; i < m_num_locals; i++) {
+        for (int i = 0; i < m_numLocals; i++) {
             visitor->GetCompilationUnit()->GetInstructionStream().DecStackSize();
         }
 
-        chunk->Append(Compiler::PopStack(visitor, m_num_locals));
+        chunk->Append(Compiler::PopStack(visitor, m_numLocals));
 
         // jump back to top here
-        chunk->Append(BytecodeUtil::Make<Jump>(Jump::JMP, top_label));
+        chunk->Append(BytecodeUtil::Make<Jump>(Jump::JMP, topLabel));
 
         // Break is after the JMP instruction to go back to the top
-        chunk->Append(BytecodeUtil::Make<LabelMarker>(break_label));
+        chunk->Append(BytecodeUtil::Make<LabelMarker>(breakLabel));
 
         // pop all initializers off the stack
-        for (int i = 0; i < m_num_used_initializers; i++) {
+        for (int i = 0; i < m_numUsedInitializers; i++) {
             visitor->GetCompilationUnit()->GetInstructionStream().DecStackSize();
         }
 
-        chunk->Append(Compiler::PopStack(visitor, m_num_used_initializers));
+        chunk->Append(Compiler::PopStack(visitor, m_numUsedInitializers));
     } else {
-        if (m_decl_part != nullptr) {
-            chunk->Append(m_decl_part->Build(visitor, mod));
+        if (m_declPart != nullptr) {
+            chunk->Append(m_declPart->Build(visitor, mod));
         }
 
         // the condition has been determined to be false
-        if (m_condition_part->MayHaveSideEffects()) {
+        if (m_conditionPart->MayHaveSideEffects()) {
             // if there is a possibility of side effects,
             // build the conditional into the binary
-            chunk->Append(m_condition_part->Build(visitor, mod));
+            chunk->Append(m_conditionPart->Build(visitor, mod));
 
-            if (m_increment_part != nullptr) {
-                chunk->Append(m_increment_part->Build(visitor, mod));
+            if (m_incrementPart != nullptr) {
+                chunk->Append(m_incrementPart->Build(visitor, mod));
             }
 
             // pop all local variables off the stack
-            for (int i = 0; i < m_num_locals; i++) {
+            for (int i = 0; i < m_numLocals; i++) {
                 visitor->GetCompilationUnit()->GetInstructionStream().DecStackSize();
             }
 
-            chunk->Append(Compiler::PopStack(visitor, m_num_locals));
+            chunk->Append(Compiler::PopStack(visitor, m_numLocals));
         }
 
         // pop all initializers off the stack
-        for (int i = 0; i < m_num_used_initializers; i++) {
+        for (int i = 0; i < m_numUsedInitializers; i++) {
             visitor->GetCompilationUnit()->GetInstructionStream().DecStackSize();
         }
 
-        chunk->Append(Compiler::PopStack(visitor, m_num_used_initializers));
+        chunk->Append(Compiler::PopStack(visitor, m_numUsedInitializers));
     }
 
     return chunk;
@@ -234,16 +234,16 @@ std::unique_ptr<Buildable> AstForLoop::Build(AstVisitor *visitor, Module *mod)
 
 void AstForLoop::Optimize(AstVisitor *visitor, Module *mod)
 {
-    if (m_decl_part != nullptr) {
-        m_decl_part->Optimize(visitor, mod);
+    if (m_declPart != nullptr) {
+        m_declPart->Optimize(visitor, mod);
     }
 
-    if (m_condition_part != nullptr) {
-        m_condition_part->Optimize(visitor, mod);
+    if (m_conditionPart != nullptr) {
+        m_conditionPart->Optimize(visitor, mod);
     }
 
-    if (m_increment_part != nullptr) {
-        m_increment_part->Optimize(visitor, mod);
+    if (m_incrementPart != nullptr) {
+        m_incrementPart->Optimize(visitor, mod);
     }
 
     if (m_block != nullptr) {

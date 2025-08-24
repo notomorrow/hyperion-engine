@@ -4,74 +4,74 @@
 
 namespace hyperion::compiler {
 
-CodeGenerator::CodeGenerator(BuildParams &build_params)
-    : build_params(build_params)
+CodeGenerator::CodeGenerator(BuildParams &buildParams)
+    : buildParams(buildParams)
 {
 }
 
 void CodeGenerator::Visit(BytecodeChunk *chunk)
 {
-    BuildParams new_params;
-    new_params.block_offset = build_params.block_offset + m_ibs.GetPosition();
-    new_params.labels       = build_params.labels;
+    BuildParams newParams;
+    newParams.blockOffset = buildParams.blockOffset + m_ibs.GetPosition();
+    newParams.labels       = buildParams.labels;
 
-    for (const LabelId label_id : chunk->labels) {
-        new_params.labels.Insert({
-            label_id,
+    for (const LabelId labelId : chunk->labels) {
+        newParams.labels.Insert({
+            labelId,
             LabelPosition(-1),
             HYP_NAME(LabelNameRemoved)
         });
     }
 
-    CodeGenerator code_generator(new_params);
+    CodeGenerator codeGenerator(newParams);
 
     for (auto &buildable : chunk->buildables) {
-        code_generator.BuildableVisitor::Visit(buildable.get());
+        codeGenerator.BuildableVisitor::Visit(buildable.get());
     }
 
     // bake the chunk's byte stream
-    //code_generator.GetInternalByteStream().Bake(new_params);
+    //codeGenerator.GetInternalByteStream().Bake(newParams);
 
-    const Array<ubyte> &bytes = code_generator.GetInternalByteStream().GetData();
-    const Array<Fixup> &fixups = code_generator.GetInternalByteStream().GetFixups();
+    const Array<ubyte> &bytes = codeGenerator.GetInternalByteStream().GetData();
+    const Array<Fixup> &fixups = codeGenerator.GetInternalByteStream().GetFixups();
 
-    const SizeType fixup_offset = m_ibs.GetPosition();
+    const SizeType fixupOffset = m_ibs.GetPosition();
 
     // append bytes to this chunk's InternalByteStream
     m_ibs.Put(bytes.Data(), bytes.Size());
 
     // Copy fixups from the chunk's InternalByteStream to this one's
     for (const Fixup &fixup : fixups) {
-        m_ibs.AddFixup(fixup.label_id, fixup.position + fixup_offset, fixup.offset);
+        m_ibs.AddFixup(fixup.labelId, fixup.position + fixupOffset, fixup.offset);
     }
 
-    build_params.labels = new_params.labels;
+    buildParams.labels = newParams.labels;
 }
 
 void CodeGenerator::Bake()
 {
-    m_ibs.Bake(build_params);
+    m_ibs.Bake(buildParams);
 }
 
 void CodeGenerator::Visit(LabelMarker *node)
 {
-    const LabelId label_id = node->id;
+    const LabelId labelId = node->id;
 
-    const auto it = build_params.labels.FindIf([label_id](const LabelInfo &label_info)
+    const auto it = buildParams.labels.FindIf([labelId](const LabelInfo &labelInfo)
     {
-        return label_info.label_id == label_id;
+        return labelInfo.labelId == labelId;
     });
 
-    Assert(it != build_params.labels.End(), "Label with ID %d not found", label_id);
+    Assert(it != buildParams.labels.End(), "Label with ID %d not found", labelId);
 
     Assert(it->position == LabelPosition(-1), "Label position already set");
 
-    it->position = LabelPosition(m_ibs.GetPosition() + build_params.block_offset);
+    it->position = LabelPosition(m_ibs.GetPosition() + buildParams.blockOffset);
 }
 
 void CodeGenerator::Visit(Jump *node)
 {
-    switch (node->jump_class) {
+    switch (node->jumpClass) {
         case Jump::JumpClass::JMP:
             m_ibs.Put(Instructions::JMP);
             break;
@@ -91,12 +91,12 @@ void CodeGenerator::Visit(Jump *node)
 
     // tell the InternalByteStream to set this to the label position
     // when it is available
-    m_ibs.AddFixup(node->label_id, build_params.block_offset);
+    m_ibs.AddFixup(node->labelId, buildParams.blockOffset);
 }
 
 void CodeGenerator::Visit(Comparison *node)
 {
-    switch (node->comparison_class) {
+    switch (node->comparisonClass) {
         case Comparison::ComparisonClass::CMP:
             m_ibs.Put(Instructions::CMP);
             break;
@@ -105,10 +105,10 @@ void CodeGenerator::Visit(Comparison *node)
             break;
     }
 
-    m_ibs.Put(node->reg_lhs);
+    m_ibs.Put(node->regLhs);
 
-    if (node->comparison_class == Comparison::ComparisonClass::CMP) {
-        m_ibs.Put(node->reg_rhs);
+    if (node->comparisonClass == Comparison::ComparisonClass::CMP) {
+        m_ibs.Put(node->regRhs);
     }
 }
 
@@ -135,8 +135,8 @@ void CodeGenerator::Visit(PopLocal *node)
     if (node->amt > 1) {
         m_ibs.Put(Instructions::SUB_SP);
 
-        uint16 as_u16 = (uint16)node->amt;
-        m_ibs.Put(reinterpret_cast<ubyte *>(&as_u16), sizeof(as_u16));
+        uint16 asU16 = (uint16)node->amt;
+        m_ibs.Put(reinterpret_cast<ubyte *>(&asU16), sizeof(asU16));
     } else {
         m_ibs.Put(Instructions::POP);
     }
@@ -215,7 +215,7 @@ void CodeGenerator::Visit(ConstNull *node)
 void CodeGenerator::Visit(BuildableTryCatch *node)
 {
     m_ibs.Put(Instructions::BEGIN_TRY);
-    m_ibs.AddFixup(node->catch_label_id, build_params.block_offset);
+    m_ibs.AddFixup(node->catchLabelId, buildParams.blockOffset);
 }
 
 void CodeGenerator::Visit(BuildableFunction *node)
@@ -223,7 +223,7 @@ void CodeGenerator::Visit(BuildableFunction *node)
     // TODO: make it store and load statically
     m_ibs.Put(Instructions::LOAD_FUNC);
     m_ibs.Put(node->reg);
-    m_ibs.AddFixup(node->label_id, build_params.block_offset);
+    m_ibs.AddFixup(node->labelId, buildParams.blockOffset);
     m_ibs.Put(node->nargs);
     m_ibs.Put(node->flags);
 }
@@ -234,17 +234,17 @@ void CodeGenerator::Visit(BuildableType *node)
     m_ibs.Put(Instructions::LOAD_TYPE);
     m_ibs.Put(node->reg);
 
-    uint16_t name_len = (uint16_t)node->name.Size();
-    m_ibs.Put(reinterpret_cast<ubyte *>(&name_len), sizeof(name_len));
+    uint16_t nameLen = (uint16_t)node->name.Size();
+    m_ibs.Put(reinterpret_cast<ubyte *>(&nameLen), sizeof(nameLen));
     m_ibs.Put(reinterpret_cast<ubyte *>(node->name.Data()), node->name.Size());
 
     uint16_t size = (uint16_t)node->members.Size();
     m_ibs.Put(reinterpret_cast<ubyte *>(&size), sizeof(size));
 
-    for (const String &member_name : node->members) {
-        uint16_t member_name_len = (uint16_t)member_name.Size();
-        m_ibs.Put(reinterpret_cast<ubyte *>(&member_name_len), sizeof(member_name_len));
-        m_ibs.Put(reinterpret_cast<const ubyte *>(member_name.Data()), member_name.Size());
+    for (const String &memberName : node->members) {
+        uint16_t memberNameLen = (uint16_t)memberName.Size();
+        m_ibs.Put(reinterpret_cast<ubyte *>(&memberNameLen), sizeof(memberNameLen));
+        m_ibs.Put(reinterpret_cast<const ubyte *>(memberName.Data()), memberName.Size());
     }
 }
 
@@ -267,7 +267,7 @@ void CodeGenerator::Visit(StorageOperation *node)
         case Strategies::BY_OFFSET:
             switch (node->operation) {
             case Operations::LOAD:
-                m_ibs.Put(node->op.is_ref ? Instructions::LOAD_OFFSET_REF : Instructions::LOAD_OFFSET);
+                m_ibs.Put(node->op.isRef ? Instructions::LOAD_OFFSET_REF : Instructions::LOAD_OFFSET);
                 m_ibs.Put(reinterpret_cast<ubyte *>(&node->op.a.reg), sizeof(node->op.a.reg));
                 m_ibs.Put(reinterpret_cast<ubyte *>(&node->op.b.offset), sizeof(node->op.b.offset));
 
@@ -285,7 +285,7 @@ void CodeGenerator::Visit(StorageOperation *node)
         case Strategies::BY_INDEX:
             switch (node->operation) {
             case Operations::LOAD:
-                m_ibs.Put(node->op.is_ref ? Instructions::LOAD_INDEX_REF : Instructions::LOAD_INDEX);
+                m_ibs.Put(node->op.isRef ? Instructions::LOAD_INDEX_REF : Instructions::LOAD_INDEX);
                 m_ibs.Put(reinterpret_cast<ubyte *>(&node->op.a.reg), sizeof(node->op.a.reg));
                 m_ibs.Put(reinterpret_cast<ubyte *>(&node->op.b.index), sizeof(node->op.b.index));
 
@@ -353,14 +353,14 @@ void CodeGenerator::Visit(StorageOperation *node)
             case Operations::LOAD:
                 m_ibs.Put(Instructions::LOAD_ARRAYIDX);
                 m_ibs.Put(reinterpret_cast<ubyte *>(&node->op.a.reg), sizeof(node->op.a.reg));
-                m_ibs.Put(reinterpret_cast<ubyte *>(&node->op.b.object_data.reg), sizeof(node->op.b.object_data.reg));
-                m_ibs.Put(reinterpret_cast<ubyte *>(&node->op.b.object_data.member.index), sizeof(node->op.b.object_data.member.index));
+                m_ibs.Put(reinterpret_cast<ubyte *>(&node->op.b.objectData.reg), sizeof(node->op.b.objectData.reg));
+                m_ibs.Put(reinterpret_cast<ubyte *>(&node->op.b.objectData.member.index), sizeof(node->op.b.objectData.member.index));
 
                 break;
             case Operations::STORE:
                 m_ibs.Put(Instructions::MOV_ARRAYIDX);
-                m_ibs.Put(reinterpret_cast<ubyte *>(&node->op.b.object_data.reg), sizeof(node->op.b.object_data.reg));
-                m_ibs.Put(reinterpret_cast<ubyte *>(&node->op.b.object_data.member.index), sizeof(node->op.b.object_data.member.index));
+                m_ibs.Put(reinterpret_cast<ubyte *>(&node->op.b.objectData.reg), sizeof(node->op.b.objectData.reg));
+                m_ibs.Put(reinterpret_cast<ubyte *>(&node->op.b.objectData.member.index), sizeof(node->op.b.objectData.member.index));
                 m_ibs.Put(reinterpret_cast<ubyte *>(&node->op.a.reg), sizeof(node->op.a.reg));
 
                 break;
@@ -388,14 +388,14 @@ void CodeGenerator::Visit(StorageOperation *node)
             case Operations::LOAD:
                 m_ibs.Put(Instructions::LOAD_MEM);
                 m_ibs.Put(reinterpret_cast<ubyte *>(&node->op.a.reg), sizeof(node->op.a.reg));
-                m_ibs.Put(reinterpret_cast<ubyte *>(&node->op.b.object_data.reg), sizeof(node->op.b.object_data.reg));
-                m_ibs.Put(reinterpret_cast<ubyte *>(&node->op.b.object_data.member.index), sizeof(node->op.b.object_data.member.index));
+                m_ibs.Put(reinterpret_cast<ubyte *>(&node->op.b.objectData.reg), sizeof(node->op.b.objectData.reg));
+                m_ibs.Put(reinterpret_cast<ubyte *>(&node->op.b.objectData.member.index), sizeof(node->op.b.objectData.member.index));
 
                 break;
             case Operations::STORE:
                 m_ibs.Put(Instructions::MOV_MEM);
-                m_ibs.Put(reinterpret_cast<ubyte *>(&node->op.b.object_data.reg), sizeof(node->op.b.object_data.reg));
-                m_ibs.Put(reinterpret_cast<ubyte *>(&node->op.b.object_data.member.index), sizeof(node->op.b.object_data.member.index));
+                m_ibs.Put(reinterpret_cast<ubyte *>(&node->op.b.objectData.reg), sizeof(node->op.b.objectData.reg));
+                m_ibs.Put(reinterpret_cast<ubyte *>(&node->op.b.objectData.member.index), sizeof(node->op.b.objectData.member.index));
                 m_ibs.Put(reinterpret_cast<ubyte *>(&node->op.a.reg), sizeof(node->op.a.reg));
 
                 break;
@@ -408,14 +408,14 @@ void CodeGenerator::Visit(StorageOperation *node)
             case Operations::LOAD:
                 m_ibs.Put(Instructions::LOAD_MEM_HASH);
                 m_ibs.Put(reinterpret_cast<ubyte *>(&node->op.a.reg), sizeof(node->op.a.reg));
-                m_ibs.Put(reinterpret_cast<ubyte *>(&node->op.b.object_data.reg), sizeof(node->op.b.object_data.reg));
-                m_ibs.Put(reinterpret_cast<ubyte *>(&node->op.b.object_data.member.hash), sizeof(node->op.b.object_data.member.hash));
+                m_ibs.Put(reinterpret_cast<ubyte *>(&node->op.b.objectData.reg), sizeof(node->op.b.objectData.reg));
+                m_ibs.Put(reinterpret_cast<ubyte *>(&node->op.b.objectData.member.hash), sizeof(node->op.b.objectData.member.hash));
 
                 break;
             case Operations::STORE:
                 m_ibs.Put(Instructions::MOV_MEM_HASH);
-                m_ibs.Put(reinterpret_cast<ubyte *>(&node->op.b.object_data.reg), sizeof(node->op.b.object_data.reg));
-                m_ibs.Put(reinterpret_cast<ubyte *>(&node->op.b.object_data.member.hash), sizeof(node->op.b.object_data.member.hash));
+                m_ibs.Put(reinterpret_cast<ubyte *>(&node->op.b.objectData.reg), sizeof(node->op.b.objectData.reg));
+                m_ibs.Put(reinterpret_cast<ubyte *>(&node->op.b.objectData.member.hash), sizeof(node->op.b.objectData.member.hash));
                 m_ibs.Put(reinterpret_cast<ubyte *>(&node->op.a.reg), sizeof(node->op.a.reg));
 
                 break;
@@ -440,7 +440,7 @@ void CodeGenerator::Visit(Comment *node)
 
 void CodeGenerator::Visit(SymbolExport *node)
 {
-    const uint32 hash = hash_fnv_1(node->name.Data());
+    const uint32 hash = hashFnv1(node->name.Data());
 
     m_ibs.Put(Instructions::EXPORT);
     m_ibs.Put(reinterpret_cast<ubyte *>(&node->reg), sizeof(node->reg));
@@ -449,15 +449,15 @@ void CodeGenerator::Visit(SymbolExport *node)
 
 void CodeGenerator::Visit(CastOperation *node)
 {
-    const uint8 cast_instruction = uint8(Instructions::CAST_U8) + uint8(node->type);
+    const uint8 castInstruction = uint8(Instructions::CAST_U8) + uint8(node->type);
     Assert(
-        cast_instruction >= Instructions::CAST_U8 && cast_instruction <= uint8(Instructions::CAST_DYNAMIC),
+        castInstruction >= Instructions::CAST_U8 && castInstruction <= uint8(Instructions::CAST_DYNAMIC),
         "Invalid cast type"
     );
 
-    m_ibs.Put(cast_instruction);
-    m_ibs.Put(reinterpret_cast<ubyte *>(&node->reg_dst), sizeof(node->reg_dst));
-    m_ibs.Put(reinterpret_cast<ubyte *>(&node->reg_src), sizeof(node->reg_src));
+    m_ibs.Put(castInstruction);
+    m_ibs.Put(reinterpret_cast<ubyte *>(&node->regDst), sizeof(node->regDst));
+    m_ibs.Put(reinterpret_cast<ubyte *>(&node->regSrc), sizeof(node->regSrc));
 }
 
 void CodeGenerator::Visit(RawOperation<> *node)

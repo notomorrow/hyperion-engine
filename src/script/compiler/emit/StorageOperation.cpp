@@ -9,7 +9,7 @@ void StorageOperation::StrategyBuilder::ByIndex(int index)
     switch (parent->method) {
         case Methods::ARRAY:
         case Methods::MEMBER:
-            op->op.b.object_data.member.index = index;
+            op->op.b.objectData.member.index = index;
             break;
         default:
             op->op.b.index = index;
@@ -39,7 +39,7 @@ void StorageOperation::StrategyBuilder::ByHash(int hash)
     switch (parent->method) {
         case Methods::ARRAY:
         case Methods::MEMBER:
-            op->op.b.object_data.member.hash = hash;
+            op->op.b.objectData.member.hash = hash;
             break;
         default:
             op->op.b.hash = hash;
@@ -61,27 +61,27 @@ StorageOperation::StrategyBuilder StorageOperation::MethodBuilder::Static()
     return StrategyBuilder(op, this);
 }
 
-StorageOperation::StrategyBuilder StorageOperation::MethodBuilder::Array(RegIndex array_reg)
+StorageOperation::StrategyBuilder StorageOperation::MethodBuilder::Array(RegIndex arrayReg)
 {
     op->method = method = Methods::ARRAY;
-    op->op.b.object_data.reg = array_reg;
+    op->op.b.objectData.reg = arrayReg;
 
     return StrategyBuilder(op, this);
 }
 
-StorageOperation::StrategyBuilder StorageOperation::MethodBuilder::Member(RegIndex object_reg)
+StorageOperation::StrategyBuilder StorageOperation::MethodBuilder::Member(RegIndex objectReg)
 {
     op->method = method = Methods::MEMBER;
-    op->op.b.object_data.reg = object_reg;
+    op->op.b.objectData.reg = objectReg;
 
     return StrategyBuilder(op, this);
 }
 
-StorageOperation::MethodBuilder StorageOperation::OperationBuilder::Load(RegIndex dst, bool is_ref)
+StorageOperation::MethodBuilder StorageOperation::OperationBuilder::Load(RegIndex dst, bool isRef)
 {
     op->operation = Operations::LOAD;
     op->op.a.reg = dst;
-    op->op.is_ref = is_ref;
+    op->op.isRef = isRef;
 
     return MethodBuilder(op, this);
 }

@@ -26,62 +26,62 @@ std::ostream &operator<<(std::ostream &os, const Heap &heap)
     os << std::setw(16) << "Value";
     os << std::endl;
 
-    HeapNode *tmp_head = heap.m_head;
-    while (tmp_head != nullptr) {
-        os << std::setw(16) << (void*)tmp_head << "| ";
-        os << std::setw(8) << std::bitset<sizeof(tmp_head->value.GetFlags())>(tmp_head->value.GetFlags()) << "| ";
+    HeapNode *tmpHead = heap.m_head;
+    while (tmpHead != nullptr) {
+        os << std::setw(16) << (void*)tmpHead << "| ";
+        os << std::setw(8) << std::bitset<sizeof(tmpHead->value.GetFlags())>(tmpHead->value.GetFlags()) << "| ";
         os << std::setw(10);
 
         {
             union {
-                VMString        *str_ptr;
-                VMArray         *array_ptr;
-                VMMemoryBuffer  *memory_buffer_ptr;
-                VMArraySlice    *slice_ptr;
-                VMObject        *obj_ptr;
-                VMTypeInfo      *type_info_ptr;
+                VMString        *strPtr;
+                VMArray         *arrayPtr;
+                VMMemoryBuffer  *memoryBufferPtr;
+                VMArraySlice    *slicePtr;
+                VMObject        *objPtr;
+                VMTypeInfo      *typeInfoPtr;
             } data;
             
-            if (!tmp_head->value.HasValue()) {
+            if (!tmpHead->value.HasValue()) {
                 os << "NullType" << "| ";
 
                 os << std::setw(16);
                 os << "null";
-            } else if ((data.str_ptr = tmp_head->value.GetPointer<VMString>()) != nullptr) {
+            } else if ((data.strPtr = tmpHead->value.GetPointer<VMString>()) != nullptr) {
                 os << "String" << "| ";
 
-                os << "\"" << data.str_ptr->GetData() << "\"" << std::setw(16);
-            } else if ((data.array_ptr = tmp_head->value.GetPointer<VMArray>()) != nullptr) {
+                os << "\"" << data.strPtr->GetData() << "\"" << std::setw(16);
+            } else if ((data.arrayPtr = tmpHead->value.GetPointer<VMArray>()) != nullptr) {
                 os << "Array" << "| ";
 
                 os << std::setw(16);
                 
                 std::stringstream ss;
-                data.array_ptr->GetRepresentation(ss, false);
+                data.arrayPtr->GetRepresentation(ss, false);
                 os << ss.rdbuf();
-            } else if ((data.memory_buffer_ptr = tmp_head->value.GetPointer<VMMemoryBuffer>()) != nullptr) {
+            } else if ((data.memoryBufferPtr = tmpHead->value.GetPointer<VMMemoryBuffer>()) != nullptr) {
                 os << "MemoryBuffer" << "| ";
 
                 os << std::setw(16);
                 
                 std::stringstream ss;
-                data.memory_buffer_ptr->GetRepresentation(ss, false);
+                data.memoryBufferPtr->GetRepresentation(ss, false);
                 os << ss.rdbuf();
-            } else if ((data.slice_ptr = tmp_head->value.GetPointer<VMArraySlice>()) != nullptr) {
+            } else if ((data.slicePtr = tmpHead->value.GetPointer<VMArraySlice>()) != nullptr) {
                 os << "ArraySlice" << "| ";
                 os << std::setw(16);
 
                 std::stringstream ss;
-                data.slice_ptr->GetRepresentation(ss, false);
+                data.slicePtr->GetRepresentation(ss, false);
                 os << ss.rdbuf();
-            } else if ((data.obj_ptr = tmp_head->value.GetPointer<VMObject>()) != nullptr) {
+            } else if ((data.objPtr = tmpHead->value.GetPointer<VMObject>()) != nullptr) {
                 os << "Object" << "| ";
 
                 os << std::setw(16);
                 std::stringstream ss;
-                data.obj_ptr->GetRepresentation(ss, false);
+                data.objPtr->GetRepresentation(ss, false);
                 os << ss.rdbuf();
-            } else if ((data.type_info_ptr = tmp_head->value.GetPointer<VMTypeInfo>()) != nullptr) {
+            } else if ((data.typeInfoPtr = tmpHead->value.GetPointer<VMTypeInfo>()) != nullptr) {
                 os << "TypeInfo" << "| ";
 
                 os << std::setw(16);
@@ -96,7 +96,7 @@ std::ostream &operator<<(std::ostream &os, const Heap &heap)
 
         os << std::endl;
 
-        tmp_head = tmp_head->before;
+        tmpHead = tmpHead->before;
     }
 
     return os;
@@ -104,7 +104,7 @@ std::ostream &operator<<(std::ostream &os, const Heap &heap)
 
 Heap::Heap()
     : m_head(nullptr),
-      m_num_objects(0)
+      m_numObjects(0)
 {
 }
 
@@ -122,7 +122,7 @@ void Heap::Purge()
         m_head = tmp->before;
         delete tmp;
 
-        m_num_objects--;
+        m_numObjects--;
     }
 }
 
@@ -139,14 +139,14 @@ HeapValue *Heap::Alloc()
     node->before = m_head;
     m_head = node;
 
-    m_num_objects++;
+    m_numObjects++;
 
     return &m_head->value;
 }
 
-void Heap::Sweep(uint32 *out_num_collected)
+void Heap::Sweep(uint32 *outNumCollected)
 {
-    uint32 num_collected = 0;
+    uint32 numCollected = 0;
 
     HeapNode *last = m_head;
 
@@ -186,13 +186,13 @@ void Heap::Sweep(uint32 *out_num_collected)
 
             // decrement number of currently allocated
             // objects
-            --m_num_objects;
-            ++num_collected;
+            --m_numObjects;
+            ++numCollected;
         }
     }
 
-    if (out_num_collected) {
-        *out_num_collected = num_collected;
+    if (outNumCollected) {
+        *outNumCollected = numCollected;
     }
 }
 

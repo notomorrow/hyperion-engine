@@ -2,8 +2,8 @@
 
 namespace hyperion::compiler {
 
-const SizeType Config::max_data_members = 255;
-const char *Config::global_module_name = "global";
-bool Config::cull_unused_objects = false;
+const SizeType Config::maxDataMembers = 255;
+const char *Config::globalModuleName = "global";
+bool Config::cullUnusedObjects = false;
 
 } // namespace hyperion::compiler

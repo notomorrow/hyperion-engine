@@ -53,9 +53,9 @@ void AstModuleDeclaration::Visit(AstVisitor *visitor, Module *mod)
 
     if (m_module != nullptr) {
         // add this module to the compilation unit
-        visitor->GetCompilationUnit()->m_module_tree.Open(m_module.Get());
+        visitor->GetCompilationUnit()->m_moduleTree.Open(m_module.Get());
         // set the link to the module in the tree
-        m_module->SetImportTreeLink(visitor->GetCompilationUnit()->m_module_tree.TopNode());
+        m_module->SetImportTreeLink(visitor->GetCompilationUnit()->m_moduleTree.TopNode());
 
         // add this module to list of imported modules,
         // but only if mod == nullptr, that way we don't add nested modules
@@ -64,14 +64,14 @@ void AstModuleDeclaration::Visit(AstVisitor *visitor, Module *mod)
             Array<String> path = m_location.GetFileName().Split('\\', '/');
             path = StringUtil::CanonicalizePath(path);
             // change it back to string
-            String canon_path = String::Join(path, "/");
+            String canonPath = String::Join(path, "/");
 
             // map filepath to module
-            auto it = visitor->GetCompilationUnit()->m_imported_modules.Find(canon_path);
-            if (it != visitor->GetCompilationUnit()->m_imported_modules.End()) {
+            auto it = visitor->GetCompilationUnit()->m_importedModules.Find(canonPath);
+            if (it != visitor->GetCompilationUnit()->m_importedModules.End()) {
                 it->second.PushBack(m_module);
             } else {
-                visitor->GetCompilationUnit()->m_imported_modules[canon_path.Data()] = { m_module };
+                visitor->GetCompilationUnit()->m_importedModules[canonPath.Data()] = { m_module };
             }
         }
 
@@ -87,7 +87,7 @@ void AstModuleDeclaration::Visit(AstVisitor *visitor, Module *mod)
         }
 
         // close this module
-        visitor->GetCompilationUnit()->m_module_tree.Close();
+        visitor->GetCompilationUnit()->m_moduleTree.Close();
     }
 }
 

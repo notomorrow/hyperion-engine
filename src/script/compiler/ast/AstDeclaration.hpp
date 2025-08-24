@@ -44,7 +44,7 @@ protected:
     RC<Identifier>  m_identifier;
 
 private:
-    bool            m_is_visited = false;
+    bool            m_isVisited = false;
 };
 
 } // namespace hyperion::compiler

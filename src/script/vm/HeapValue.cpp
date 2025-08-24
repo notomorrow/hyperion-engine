@@ -30,8 +30,8 @@ void HeapValue::Mark()
             object->GetMember(i).value.Mark();
         }
 
-        if (HeapValue *class_pointer = object->GetClassPointer()) {
-            class_pointer->Mark();
+        if (HeapValue *classPointer = object->GetClassPointer()) {
+            classPointer->Mark();
         }
     } else if (VMArray *array = GetPointer<VMArray>()) {
         const SizeType size = array->GetSize();
@@ -39,8 +39,8 @@ void HeapValue::Mark()
         for (SizeType i = 0; i < size; i++) {
             array->AtIndex(i).Mark();
         }
-    } else if (VMStruct *vm_struct = GetPointer<VMStruct>()) {
-        for (auto &member : vm_struct->GetDynamicMemberValues()) {
+    } else if (VMStruct *vmStruct = GetPointer<VMStruct>()) {
+        for (auto &member : vmStruct->GetDynamicMemberValues()) {
             member.Mark();
         }
     } else if (VMArraySlice *slice = GetPointer<VMArraySlice>()) {

@@ -13,7 +13,7 @@ namespace hyperion::compiler {
 
 struct Fixup
 {
-    LabelId     label_id = LabelId(-1);
+    LabelId     labelId = LabelId(-1);
     SizeType    position = SizeType(-1);
     SizeType    offset = SizeType(-1);
 };
@@ -40,11 +40,11 @@ public:
         }
     }
 
-    void MarkLabel(LabelId label_id);
-    void AddFixup(LabelId label_id, SizeType position, SizeType offset);
-    void AddFixup(LabelId label_id, SizeType offset);
+    void MarkLabel(LabelId labelId);
+    void AddFixup(LabelId labelId, SizeType position, SizeType offset);
+    void AddFixup(LabelId labelId, SizeType offset);
 
-    void Bake(const BuildParams &build_params);
+    void Bake(const BuildParams &buildParams);
 
 private:
     Array<ubyte> m_stream;

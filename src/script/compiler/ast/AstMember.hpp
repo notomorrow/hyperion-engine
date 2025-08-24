@@ -10,7 +10,7 @@ class AstMember : public AstExpression
 {
 public:
     AstMember(
-        const String &field_name,
+        const String &fieldName,
         const RC<AstExpression> &target,
         const SourceLocation &location
     );
@@ -36,29 +36,29 @@ public:
     virtual HashCode GetHashCode() const override
     {
         HashCode hc = AstExpression::GetHashCode().Add(TypeName<AstMember>());
-        hc.Add(m_field_name);
+        hc.Add(m_fieldName);
         hc.Add(m_target ? m_target->GetHashCode() : HashCode());
 
         return hc;
     }
 
 protected:
-    String              m_field_name;
+    String              m_fieldName;
     RC<AstExpression>   m_target;
 
     // set while analyzing
-    SymbolTypePtr_t     m_symbol_type;
-    SymbolTypePtr_t     m_target_type;
-    SymbolTypePtr_t     m_held_type;
-    RC<AstExpression>   m_proxy_expr;
-    RC<AstExpression>   m_override_expr;
-    uint32                m_found_index;
-    bool                m_enable_generic_member_substitution;
+    SymbolTypePtr_t     m_symbolType;
+    SymbolTypePtr_t     m_targetType;
+    SymbolTypePtr_t     m_heldType;
+    RC<AstExpression>   m_proxyExpr;
+    RC<AstExpression>   m_overrideExpr;
+    uint32                m_foundIndex;
+    bool                m_enableGenericMemberSubstitution;
 
     RC<AstMember> CloneImpl() const
     {
         return RC<AstMember>(new AstMember(
-            m_field_name,
+            m_fieldName,
             CloneAstNode(m_target),
             m_location
         ));

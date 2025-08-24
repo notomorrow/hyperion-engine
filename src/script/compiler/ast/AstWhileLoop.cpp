@@ -23,7 +23,7 @@ AstWhileLoop::AstWhileLoop(const RC<AstExpression> &conditional,
     : AstStatement(location),
       m_conditional(conditional),
       m_block(block),
-      m_num_locals(0)
+      m_numLocals(0)
 {
 }
 
@@ -38,8 +38,8 @@ void AstWhileLoop::Visit(AstVisitor *visitor, Module *mod)
     // visit the body
     m_block->Visit(visitor, mod);
 
-    Scope &this_scope = mod->m_scopes.Top();
-    m_num_locals = this_scope.GetIdentifierTable().CountUsedVariables();
+    Scope &thisScope = mod->m_scopes.Top();
+    m_numLocals = thisScope.GetIdentifierTable().CountUsedVariables();
 
     // close scope
     mod->m_scopes.Close();
@@ -47,35 +47,35 @@ void AstWhileLoop::Visit(AstVisitor *visitor, Module *mod)
 
 std::unique_ptr<Buildable> AstWhileLoop::Build(AstVisitor *visitor, Module *mod)
 {
-    InstructionStreamContextGuard context_guard(
+    InstructionStreamContextGuard contextGuard(
         &visitor->GetCompilationUnit()->GetInstructionStream().GetContextTree(),
         INSTRUCTION_STREAM_CONTEXT_LOOP
     );
 
     std::unique_ptr<BytecodeChunk> chunk = BytecodeUtil::Make<BytecodeChunk>();
 
-    const Tribool condition_is_true = m_conditional->IsTrue();
+    const Tribool conditionIsTrue = m_conditional->IsTrue();
 
-    if (condition_is_true == TRI_INDETERMINATE) {
+    if (conditionIsTrue == TRI_INDETERMINATE) {
         // the condition cannot be determined at compile time
         uint8 rp;
 
-        LabelId top_label = context_guard->NewLabel(HYP_NAME(LoopTopLabel));
-        chunk->TakeOwnershipOfLabel(top_label);
+        LabelId topLabel = contextGuard->NewLabel(HYP_NAME(LoopTopLabel));
+        chunk->TakeOwnershipOfLabel(topLabel);
 
         // the label to jump to the end to BREAK
-        LabelId break_label = context_guard->NewLabel(HYP_NAME(LoopBreakLabel));
-        chunk->TakeOwnershipOfLabel(break_label);
+        LabelId breakLabel = contextGuard->NewLabel(HYP_NAME(LoopBreakLabel));
+        chunk->TakeOwnershipOfLabel(breakLabel);
 
         // the label to jump to the end to CONTINUE
-        LabelId continue_label = context_guard->NewLabel(HYP_NAME(LoopContinueLabel));
-        chunk->TakeOwnershipOfLabel(continue_label);
+        LabelId continueLabel = contextGuard->NewLabel(HYP_NAME(LoopContinueLabel));
+        chunk->TakeOwnershipOfLabel(continueLabel);
 
         // get current register index
         rp = visitor->GetCompilationUnit()->GetInstructionStream().GetCurrentRegister();
 
         // where to jump up to
-        chunk->Append(BytecodeUtil::Make<LabelMarker>(top_label));
+        chunk->Append(BytecodeUtil::Make<LabelMarker>(topLabel));
 
         // build the conditional
         chunk->Append(m_conditional->Build(visitor, mod));
@@ -84,40 +84,40 @@ std::unique_ptr<Buildable> AstWhileLoop::Build(AstVisitor *visitor, Module *mod)
         chunk->Append(BytecodeUtil::Make<Comparison>(Comparison::CMPZ, rp));
 
         // break away if the condition is false (equal to zero)
-        chunk->Append(BytecodeUtil::Make<Jump>(Jump::JE, break_label));
+        chunk->Append(BytecodeUtil::Make<Jump>(Jump::JE, breakLabel));
 
         // enter the block
         chunk->Append(m_block->Build(visitor, mod));
 
         // where 'continue' jumps to
-        chunk->Append(BytecodeUtil::Make<LabelMarker>(continue_label));
+        chunk->Append(BytecodeUtil::Make<LabelMarker>(continueLabel));
 
         // pop all local variables off the stack
-        for (int i = 0; i < m_num_locals; i++) {
+        for (int i = 0; i < m_numLocals; i++) {
             visitor->GetCompilationUnit()->GetInstructionStream().DecStackSize();
         }
 
-        chunk->Append(Compiler::PopStack(visitor, m_num_locals));
+        chunk->Append(Compiler::PopStack(visitor, m_numLocals));
 
         // jump back to top here
-        chunk->Append(BytecodeUtil::Make<Jump>(Jump::JMP, top_label));
+        chunk->Append(BytecodeUtil::Make<Jump>(Jump::JMP, topLabel));
 
         // set the label's position to after the block,
         // so we can skip it if the condition is false
-        chunk->Append(BytecodeUtil::Make<LabelMarker>(break_label));
-    } else if (condition_is_true == TRI_TRUE) {
-        LabelId top_label = context_guard->NewLabel(HYP_NAME(LoopTopLabel));
-        chunk->TakeOwnershipOfLabel(top_label);
+        chunk->Append(BytecodeUtil::Make<LabelMarker>(breakLabel));
+    } else if (conditionIsTrue == TRI_TRUE) {
+        LabelId topLabel = contextGuard->NewLabel(HYP_NAME(LoopTopLabel));
+        chunk->TakeOwnershipOfLabel(topLabel);
 
         // the label to jump to the end to BREAK
-        LabelId break_label = context_guard->NewLabel(HYP_NAME(LoopBreakLabel));
-        chunk->TakeOwnershipOfLabel(break_label);
+        LabelId breakLabel = contextGuard->NewLabel(HYP_NAME(LoopBreakLabel));
+        chunk->TakeOwnershipOfLabel(breakLabel);
 
         // the label to jump to the end to CONTINUE
-        LabelId continue_label = context_guard->NewLabel(HYP_NAME(LoopContinueLabel));
-        chunk->TakeOwnershipOfLabel(continue_label);
+        LabelId continueLabel = contextGuard->NewLabel(HYP_NAME(LoopContinueLabel));
+        chunk->TakeOwnershipOfLabel(continueLabel);
 
-        chunk->Append(BytecodeUtil::Make<LabelMarker>(top_label));
+        chunk->Append(BytecodeUtil::Make<LabelMarker>(topLabel));
 
         // the condition has been determined to be true
         if (m_conditional->MayHaveSideEffects()) {
@@ -130,20 +130,20 @@ std::unique_ptr<Buildable> AstWhileLoop::Build(AstVisitor *visitor, Module *mod)
         chunk->Append(m_block->Build(visitor, mod));
 
         // where 'continue' jumps to
-        chunk->Append(BytecodeUtil::Make<LabelMarker>(continue_label));
+        chunk->Append(BytecodeUtil::Make<LabelMarker>(continueLabel));
 
         // pop all local variables off the stack
-        for (int i = 0; i < m_num_locals; i++) {
+        for (int i = 0; i < m_numLocals; i++) {
             visitor->GetCompilationUnit()->GetInstructionStream().DecStackSize();
         }
 
-        chunk->Append(Compiler::PopStack(visitor, m_num_locals));
+        chunk->Append(Compiler::PopStack(visitor, m_numLocals));
 
         // jump back to top here
-        chunk->Append(BytecodeUtil::Make<Jump>(Jump::JMP, top_label));
+        chunk->Append(BytecodeUtil::Make<Jump>(Jump::JMP, topLabel));
 
         // Add break label after the top label
-        chunk->Append(BytecodeUtil::Make<LabelMarker>(break_label));
+        chunk->Append(BytecodeUtil::Make<LabelMarker>(breakLabel));
     } else { // false
         // the condition has been determined to be false
         if (m_conditional->MayHaveSideEffects()) {
@@ -152,11 +152,11 @@ std::unique_ptr<Buildable> AstWhileLoop::Build(AstVisitor *visitor, Module *mod)
             chunk->Append(m_conditional->Build(visitor, mod));
 
             // pop all local variables off the stack
-            for (int i = 0; i < m_num_locals; i++) {
+            for (int i = 0; i < m_numLocals; i++) {
                 visitor->GetCompilationUnit()->GetInstructionStream().DecStackSize();
             }
 
-            chunk->Append(Compiler::PopStack(visitor, m_num_locals));
+            chunk->Append(Compiler::PopStack(visitor, m_numLocals));
         }
     }
 

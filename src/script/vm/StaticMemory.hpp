@@ -13,7 +13,7 @@ namespace vm {
 class StaticMemory
 {
 public:
-    static const uint16 static_size;
+    static const uint16 staticSize;
 
 public:
     StaticMemory();
@@ -27,14 +27,14 @@ public:
     HYP_FORCE_INLINE
     Value &operator[](SizeType index)
     {
-        Assert(index < static_size, "out of bounds");
+        Assert(index < staticSize, "out of bounds");
         return m_data[index];
     }
     
     HYP_FORCE_INLINE
     const Value &operator[](SizeType index) const
     {
-        Assert(index < static_size, "out of bounds");
+        Assert(index < staticSize, "out of bounds");
         return m_data[index];
     }
 

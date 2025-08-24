@@ -47,15 +47,15 @@ public:
         { m_errors.Merge(other.m_errors); }
 
     bool ErrorsSuppressed() const
-        { return m_error_suppression_depth > 0; }
+        { return m_errorSuppressionDepth > 0; }
 
     void SuppressErrors(bool suppress)
     {
         if (suppress) {
-            m_error_suppression_depth++;
+            m_errorSuppressionDepth++;
         } else {
-            Assert(m_error_suppression_depth > 0);
-            m_error_suppression_depth--;
+            Assert(m_errorSuppressionDepth > 0);
+            m_errorSuppressionDepth--;
         }
     }
 
@@ -64,7 +64,7 @@ public:
 
 private:
     FlatSet<CompilerError>  m_errors;
-    uint32                    m_error_suppression_depth;
+    uint32                    m_errorSuppressionDepth;
 };
 
 } // namespace hyperion::compiler

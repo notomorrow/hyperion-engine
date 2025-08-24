@@ -43,7 +43,7 @@ VMArraySlice &VMArraySlice::operator=(const VMArraySlice &other)
 
 void VMArraySlice::GetRepresentation(
     std::stringstream &ss,
-    bool add_type_name,
+    bool addTypeName,
     int depth
 ) const
 {
@@ -56,7 +56,7 @@ void VMArraySlice::GetRepresentation(
     }
 
     // convert array list to string
-    const char sep_str[3] = ", ";
+    const char sepStr[3] = ", ";
 
     ss << '[';
 
@@ -64,12 +64,12 @@ void VMArraySlice::GetRepresentation(
     for (SizeType i = m_start; i < m_end; i++) {
         m_ary->AtIndex(i).ToRepresentation(
             ss,
-            add_type_name,
+            addTypeName,
             depth - 1
         );
 
         if (i != m_end - 1) {
-            ss << sep_str;
+            ss << sepStr;
         }
     }
 
@@ -80,13 +80,13 @@ HashCode VMArraySlice::GetHashCode() const
 {
     Assert(m_ary != nullptr);
 
-    HashCode hash_code;
+    HashCode hashCode;
 
     for (SizeType i = m_start; i < m_end; i++) {
-        hash_code.Add(m_ary->AtIndex(i).GetHashCode());
+        hashCode.Add(m_ary->AtIndex(i).GetHashCode());
     }
 
-    return hash_code;
+    return hashCode;
 }
 
 } // namespace vm

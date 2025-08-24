@@ -18,22 +18,22 @@ class AstTypeExpression : public AstExpression
 public:
     AstTypeExpression(
         const String &name,
-        const RC<AstPrototypeSpecification> &base_specification,
-        const Array<RC<AstVariableDeclaration>> &data_members,
-        const Array<RC<AstVariableDeclaration>> &function_members,
-        const Array<RC<AstVariableDeclaration>> &static_members,
-        bool is_proxy_class,
+        const RC<AstPrototypeSpecification> &baseSpecification,
+        const Array<RC<AstVariableDeclaration>> &dataMembers,
+        const Array<RC<AstVariableDeclaration>> &functionMembers,
+        const Array<RC<AstVariableDeclaration>> &staticMembers,
+        bool isProxyClass,
         const SourceLocation &location
     );
 
     AstTypeExpression(
         const String &name,
-        const RC<AstPrototypeSpecification> &base_specification,
-        const Array<RC<AstVariableDeclaration>> &data_members,
-        const Array<RC<AstVariableDeclaration>> &function_members,
-        const Array<RC<AstVariableDeclaration>> &static_members,
-        const SymbolTypePtr_t &enum_underlying_type,
-        bool is_proxy_class,
+        const RC<AstPrototypeSpecification> &baseSpecification,
+        const Array<RC<AstVariableDeclaration>> &dataMembers,
+        const Array<RC<AstVariableDeclaration>> &functionMembers,
+        const Array<RC<AstVariableDeclaration>> &staticMembers,
+        const SymbolTypePtr_t &enumUnderlyingType,
+        bool isProxyClass,
         const SourceLocation &location
     );
 
@@ -44,28 +44,28 @@ public:
         { m_name = name; }
 
     Array<RC<AstVariableDeclaration>> &GetDataMembers()
-        { return m_data_members; }
+        { return m_dataMembers; }
 
     const Array<RC<AstVariableDeclaration>> &GetDataMembers() const
-        { return m_data_members; }
+        { return m_dataMembers; }
 
     Array<RC<AstVariableDeclaration>> &GetFunctionMembers()
-        { return m_function_members; }
+        { return m_functionMembers; }
 
     const Array<RC<AstVariableDeclaration>> &GetFunctionMembers() const
-        { return m_function_members; }
+        { return m_functionMembers; }
 
     Array<RC<AstVariableDeclaration>> &GetStaticMembers()
-        { return m_static_members; }
+        { return m_staticMembers; }
 
     const Array<RC<AstVariableDeclaration>> &GetStaticMembers() const
-        { return m_function_members; }
+        { return m_functionMembers; }
 
     bool IsEnum() const
-        { return m_enum_underlying_type != nullptr; }
+        { return m_enumUnderlyingType != nullptr; }
 
     bool IsProxyClass() const
-        { return m_is_proxy_class; }
+        { return m_isProxyClass; }
 
     virtual void Visit(AstVisitor *visitor, Module *mod) override;
     virtual std::unique_ptr<Buildable> Build(AstVisitor *visitor, Module *mod) override;
@@ -89,58 +89,58 @@ public:
     {
         HashCode hc = AstExpression::GetHashCode().Add(TypeName<AstTypeExpression>());
         hc.Add(m_name);
-        hc.Add(m_base_specification ? m_base_specification->GetHashCode() : HashCode());
+        hc.Add(m_baseSpecification ? m_baseSpecification->GetHashCode() : HashCode());
 
-        for (auto &member : m_data_members) {
+        for (auto &member : m_dataMembers) {
             hc.Add(member ? member->GetHashCode() : HashCode());
         }
 
-        for (auto &member : m_function_members) {
+        for (auto &member : m_functionMembers) {
             hc.Add(member ? member->GetHashCode() : HashCode());
         }
 
-        for (auto &member : m_static_members) {
+        for (auto &member : m_staticMembers) {
             hc.Add(member ? member->GetHashCode() : HashCode());
         }
 
-        if (m_enum_underlying_type != nullptr) {
-            hc.Add(m_enum_underlying_type->GetHashCode());
+        if (m_enumUnderlyingType != nullptr) {
+            hc.Add(m_enumUnderlyingType->GetHashCode());
         }
 
-        hc.Add(m_is_proxy_class);
+        hc.Add(m_isProxyClass);
 
         return hc;
     }
 
 protected:
     String                              m_name;
-    RC<AstPrototypeSpecification>       m_base_specification;
-    Array<RC<AstVariableDeclaration>>   m_data_members;
-    Array<RC<AstVariableDeclaration>>   m_function_members;
-    Array<RC<AstVariableDeclaration>>   m_static_members;
-    SymbolTypePtr_t                     m_enum_underlying_type;
-    bool                                m_is_proxy_class;
+    RC<AstPrototypeSpecification>       m_baseSpecification;
+    Array<RC<AstVariableDeclaration>>   m_dataMembers;
+    Array<RC<AstVariableDeclaration>>   m_functionMembers;
+    Array<RC<AstVariableDeclaration>>   m_staticMembers;
+    SymbolTypePtr_t                     m_enumUnderlyingType;
+    bool                                m_isProxyClass;
 
-    SymbolTypePtr_t                     m_symbol_type;
+    SymbolTypePtr_t                     m_symbolType;
 
-    RC<AstTypeObject>                   m_type_object;
-    RC<AstTypeObject>                   m_prototype_expr;
-    RC<AstTypeRef>                      m_type_ref;
-    Array<RC<AstVariableDeclaration>>   m_outside_members;
-    Array<RC<AstVariableDeclaration>>   m_combined_members;
-    bool                                m_is_uninstantiated_generic;
-    bool                                m_is_visited;
+    RC<AstTypeObject>                   m_typeObject;
+    RC<AstTypeObject>                   m_prototypeExpr;
+    RC<AstTypeRef>                      m_typeRef;
+    Array<RC<AstVariableDeclaration>>   m_outsideMembers;
+    Array<RC<AstVariableDeclaration>>   m_combinedMembers;
+    bool                                m_isUninstantiatedGeneric;
+    bool                                m_isVisited;
 
     RC<AstTypeExpression> CloneImpl() const
     {
         return RC<AstTypeExpression>(new AstTypeExpression(
             m_name,
-            CloneAstNode(m_base_specification),
-            CloneAllAstNodes(m_data_members),
-            CloneAllAstNodes(m_function_members),
-            CloneAllAstNodes(m_static_members),
-            m_enum_underlying_type,
-            m_is_proxy_class,
+            CloneAstNode(m_baseSpecification),
+            CloneAllAstNodes(m_dataMembers),
+            CloneAllAstNodes(m_functionMembers),
+            CloneAllAstNodes(m_staticMembers),
+            m_enumUnderlyingType,
+            m_isProxyClass,
             m_location
         ));
     }

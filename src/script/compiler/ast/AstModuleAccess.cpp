@@ -18,38 +18,38 @@ AstModuleAccess::AstModuleAccess(
 ) : AstExpression(location, ACCESS_MODE_LOAD | ACCESS_MODE_STORE),
     m_target(target),
     m_expr(expr),
-    m_mod_access(nullptr),
-    m_is_chained(false),
-    m_looked_up(false)
+    m_modAccess(nullptr),
+    m_isChained(false),
+    m_lookedUp(false)
 {
 }
 
 void AstModuleAccess::PerformLookup(AstVisitor *visitor, Module *mod)
 {
-    if (m_is_chained) {
+    if (m_isChained) {
         Assert(mod != nullptr);
-        m_mod_access = mod->LookupNestedModule(m_target);
+        m_modAccess = mod->LookupNestedModule(m_target);
     } else {
-        m_mod_access = visitor->GetCompilationUnit()->LookupModule(m_target);
+        m_modAccess = visitor->GetCompilationUnit()->LookupModule(m_target);
     }
 
-    m_looked_up = true;
+    m_lookedUp = true;
 }
 
 void AstModuleAccess::Visit(AstVisitor *visitor, Module *mod)
 {
-    if (!m_looked_up) {
+    if (!m_lookedUp) {
         PerformLookup(visitor, mod);
     }
 
-    if (AstModuleAccess *expr_mod_access = dynamic_cast<AstModuleAccess *>(m_expr.Get())) {
+    if (AstModuleAccess *exprModAccess = dynamic_cast<AstModuleAccess *>(m_expr.Get())) {
         // set expr to be chained
-        expr_mod_access->m_is_chained = true;
+        exprModAccess->m_isChained = true;
     }
 
     // check modules for one with the same name
-    if (m_mod_access != nullptr) {
-        m_expr->Visit(visitor, m_mod_access);
+    if (m_modAccess != nullptr) {
+        m_expr->Visit(visitor, m_modAccess);
     } else {
         CompilerError err(LEVEL_ERROR, Msg_unknown_module, m_location, m_target);
         visitor->GetCompilationUnit()->GetErrorList().AddError(err);
@@ -59,17 +59,17 @@ void AstModuleAccess::Visit(AstVisitor *visitor, Module *mod)
 std::unique_ptr<Buildable> AstModuleAccess::Build(AstVisitor *visitor, Module *mod)
 {
     Assert(m_expr != nullptr);
-    Assert(m_mod_access != nullptr);
+    Assert(m_modAccess != nullptr);
 
-    m_expr->SetAccessMode(m_access_mode);
-    return m_expr->Build(visitor, m_mod_access);
+    m_expr->SetAccessMode(m_accessMode);
+    return m_expr->Build(visitor, m_modAccess);
 }
 
 void AstModuleAccess::Optimize(AstVisitor *visitor, Module *mod)
 {
     Assert(m_expr != nullptr);
-    Assert(m_mod_access != nullptr);
-    m_expr->Optimize(visitor, m_mod_access);
+    Assert(m_modAccess != nullptr);
+    m_expr->Optimize(visitor, m_modAccess);
 }
 
 RC<AstStatement> AstModuleAccess::Clone() const

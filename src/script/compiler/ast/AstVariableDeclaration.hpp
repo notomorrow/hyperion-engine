@@ -39,7 +39,7 @@ public:
         { m_assignment = assignment; }
 
     const RC<AstExpression> &GetRealAssignment() const
-        { return m_real_assignment; }
+        { return m_realAssignment; }
 
     bool IsConst() const { return m_flags & IdentifierFlags::FLAG_CONST; }
     bool IsRef() const { return m_flags & IdentifierFlags::FLAG_REF; }
@@ -67,7 +67,7 @@ public:
     virtual RC<AstStatement> Clone() const override;
 
     SymbolTypePtr_t GetExprType() const
-        { return m_symbol_type; }
+        { return m_symbolType; }
 
     virtual HashCode GetHashCode() const override
     {
@@ -86,9 +86,9 @@ protected:
     IdentifierFlagBits              m_flags;
 
     // set while analyzing
-    RC<AstExpression>               m_real_assignment;
+    RC<AstExpression>               m_realAssignment;
 
-    SymbolTypePtr_t                 m_symbol_type;
+    SymbolTypePtr_t                 m_symbolType;
 
     RC<AstVariableDeclaration> CloneImpl() const
     {

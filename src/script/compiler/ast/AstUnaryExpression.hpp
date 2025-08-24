@@ -14,7 +14,7 @@ public:
     AstUnaryExpression(
         const RC<AstExpression> &target,
         const Operator *op,
-        bool is_postfix_version,
+        bool isPostfixVersion,
         const SourceLocation &location
     );
 
@@ -33,7 +33,7 @@ public:
         HashCode hc = AstExpression::GetHashCode().Add(TypeName<AstUnaryExpression>());
         hc.Add(m_target ? m_target->GetHashCode() : HashCode());
         hc.Add(m_op ? m_op->GetHashCode() : HashCode());
-        hc.Add(m_is_postfix_version);
+        hc.Add(m_isPostfixVersion);
 
         return hc;
     }
@@ -41,19 +41,19 @@ public:
 private:
     RC<AstExpression>   m_target;
     const Operator      *m_op;
-    bool                m_is_postfix_version;
+    bool                m_isPostfixVersion;
 
     // set while analyzing
     bool                m_folded;
 
-    RC<AstBinaryExpression> m_bin_expr; // internally use a binary expr for somethings (like ++ and -- operators)
+    RC<AstBinaryExpression> m_binExpr; // internally use a binary expr for somethings (like ++ and -- operators)
 
     RC<AstUnaryExpression> CloneImpl() const
     {
         return RC<AstUnaryExpression>(new AstUnaryExpression(
             CloneAstNode(m_target),
             m_op,
-            m_is_postfix_version,
+            m_isPostfixVersion,
             m_location
         ));
     }

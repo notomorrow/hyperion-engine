@@ -14,8 +14,8 @@
 
 #define MAIN_THREAD m_threads[0]
 
-#define MATCH_TYPES(left_type, right_type) \
-    ((left_type) < (right_type)) ? (right_type) : (left_type)
+#define MATCH_TYPES(leftType, rightType) \
+    ((leftType) < (rightType)) ? (rightType) : (leftType)
 
 namespace hyperion {
 
@@ -26,7 +26,7 @@ namespace vm {
 class VM
 {
 public:
-    VM(APIInstance &api_instance);
+    VM(APIInstance &apiInstance);
     VM(const VM &other) = delete;
     VM &operator=(const VM &other) = delete;
     VM(VM &&other) noexcept = delete;
@@ -59,7 +59,7 @@ private:
     bool HandleException(InstructionHandler *handler);
     void CreateStackTrace(ExecutionThread *thread, StackTrace *out);
 
-    APIInstance     &m_api_instance;
+    APIInstance     &m_apiInstance;
     VMState         m_state;
 };
 

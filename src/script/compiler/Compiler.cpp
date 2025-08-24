@@ -38,10 +38,10 @@ std::unique_ptr<Buildable> Compiler::BuildArgumentsStart(
 
         // now that it's loaded into the register, make a copy
         // add instruction to store on stack
-        auto instr_push = BytecodeUtil::Make<RawOperation<>>();
-        instr_push->opcode = PUSH;
-        instr_push->Accept<uint8>(rp);
-        chunk->Append(std::move(instr_push));
+        auto instrPush = BytecodeUtil::Make<RawOperation<>>();
+        instrPush->opcode = PUSH;
+        instrPush->Accept<uint8>(rp);
+        chunk->Append(std::move(instrPush));
 
         // increment stack size
         visitor->GetCompilationUnit()->GetInstructionStream().IncStackSize();
@@ -85,11 +85,11 @@ std::unique_ptr<Buildable> Compiler::BuildCall(
     // get active register
     uint8 rp = visitor->GetCompilationUnit()->GetInstructionStream().GetCurrentRegister();
     
-    auto instr_call = BytecodeUtil::Make<RawOperation<>>();
-    instr_call->opcode = CALL;
-    instr_call->Accept<uint8>(rp);
-    instr_call->Accept<uint8>(nargs);
-    chunk->Append(std::move(instr_call));
+    auto instrCall = BytecodeUtil::Make<RawOperation<>>();
+    instrCall->opcode = CALL;
+    instrCall->Accept<uint8>(rp);
+    instrCall->Accept<uint8>(nargs);
+    chunk->Append(std::move(instrCall));
 
     return chunk;
 }
@@ -98,57 +98,57 @@ std::unique_ptr<Buildable> Compiler::LoadMemberFromHash(AstVisitor *visitor, Mod
 {
     uint8 rp = visitor->GetCompilationUnit()->GetInstructionStream().GetCurrentRegister();
 
-    auto instr_load_mem_hash = BytecodeUtil::Make<StorageOperation>();
-    instr_load_mem_hash->GetBuilder().Load(rp).Member(rp).ByHash(hash);
-    return instr_load_mem_hash;
+    auto instrLoadMemHash = BytecodeUtil::Make<StorageOperation>();
+    instrLoadMemHash->GetBuilder().Load(rp).Member(rp).ByHash(hash);
+    return instrLoadMemHash;
 }
 
 std::unique_ptr<Buildable> Compiler::StoreMemberFromHash(AstVisitor *visitor, Module *mod, uint32 hash)
 {
     uint8 rp = visitor->GetCompilationUnit()->GetInstructionStream().GetCurrentRegister();
 
-    auto instr_mov_mem_hash = BytecodeUtil::Make<StorageOperation>();
-    instr_mov_mem_hash->GetBuilder().Store(rp - 1).Member(rp).ByHash(hash);
-    return instr_mov_mem_hash;
+    auto instrMovMemHash = BytecodeUtil::Make<StorageOperation>();
+    instrMovMemHash->GetBuilder().Store(rp - 1).Member(rp).ByHash(hash);
+    return instrMovMemHash;
 }
 
 std::unique_ptr<Buildable> Compiler::LoadMemberAtIndex(AstVisitor *visitor, Module *mod, uint8 index)
 {
     uint8 rp = visitor->GetCompilationUnit()->GetInstructionStream().GetCurrentRegister();
 
-    auto instr_load_mem = BytecodeUtil::Make<RawOperation<>>();
-    instr_load_mem->opcode = LOAD_MEM;
-    instr_load_mem->Accept<uint8>(rp); // dst
-    instr_load_mem->Accept<uint8>(rp); // src
-    instr_load_mem->Accept<uint8>(index); // index
+    auto instrLoadMem = BytecodeUtil::Make<RawOperation<>>();
+    instrLoadMem->opcode = LOAD_MEM;
+    instrLoadMem->Accept<uint8>(rp); // dst
+    instrLoadMem->Accept<uint8>(rp); // src
+    instrLoadMem->Accept<uint8>(index); // index
     
-    return instr_load_mem;
+    return instrLoadMem;
 }
 
 std::unique_ptr<Buildable> Compiler::StoreMemberAtIndex(AstVisitor *visitor, Module *mod, uint8 index)
 {
     uint8 rp = visitor->GetCompilationUnit()->GetInstructionStream().GetCurrentRegister();
     
-    auto instr_mov_mem = BytecodeUtil::Make<RawOperation<>>();
-    instr_mov_mem->opcode = MOV_MEM;
-    instr_mov_mem->Accept<uint8>(rp); // dst
-    instr_mov_mem->Accept<uint8>(index); // index
-    instr_mov_mem->Accept<uint8>(rp - 1); // src
+    auto instrMovMem = BytecodeUtil::Make<RawOperation<>>();
+    instrMovMem->opcode = MOV_MEM;
+    instrMovMem->Accept<uint8>(rp); // dst
+    instrMovMem->Accept<uint8>(index); // index
+    instrMovMem->Accept<uint8>(rp - 1); // src
     
-    return instr_mov_mem;
+    return instrMovMem;
 }
 
 std::unique_ptr<Buildable> Compiler::CreateConditional(
     AstVisitor *visitor,
     Module *mod,
     AstStatement *cond,
-    AstStatement *then_part,
-    AstStatement *else_part)
+    AstStatement *thenPart,
+    AstStatement *elsePart)
 {
     Assert(cond != nullptr);
-    Assert(then_part != nullptr);
+    Assert(thenPart != nullptr);
 
-    InstructionStreamContextGuard context_guard(
+    InstructionStreamContextGuard contextGuard(
         &visitor->GetCompilationUnit()->GetInstructionStream().GetContextTree(),
         INSTRUCTION_STREAM_CONTEXT_DEFAULT
     );
@@ -157,11 +157,11 @@ std::unique_ptr<Buildable> Compiler::CreateConditional(
 
     uint8 rp;
 
-    LabelId end_label = context_guard->NewLabel();
-    chunk->TakeOwnershipOfLabel(end_label);
+    LabelId endLabel = contextGuard->NewLabel();
+    chunk->TakeOwnershipOfLabel(endLabel);
 
-    LabelId else_label = context_guard->NewLabel();
-    chunk->TakeOwnershipOfLabel(else_label);
+    LabelId elseLabel = contextGuard->NewLabel();
+    chunk->TakeOwnershipOfLabel(elseLabel);
 
     // get current register index
     rp = visitor->GetCompilationUnit()->GetInstructionStream().GetCurrentRegister();
@@ -175,33 +175,33 @@ std::unique_ptr<Buildable> Compiler::CreateConditional(
     rp = visitor->GetCompilationUnit()->GetInstructionStream().GetCurrentRegister();
 
     {
-        LabelId label_id;
+        LabelId labelId;
 
-        if (else_part != nullptr) {
-            label_id = else_label;
+        if (elsePart != nullptr) {
+            labelId = elseLabel;
         } else {
-            label_id = end_label;
+            labelId = endLabel;
         }
 
-        chunk->Append(BytecodeUtil::Make<Jump>(Jump::JE, label_id));
+        chunk->Append(BytecodeUtil::Make<Jump>(Jump::JE, labelId));
     }
 
     // enter the block
-    chunk->Append(then_part->Build(visitor, mod));
+    chunk->Append(thenPart->Build(visitor, mod));
 
-    if (else_part != nullptr) {
+    if (elsePart != nullptr) {
         // jump to the very end now that we've accepted the if-block
-        chunk->Append(BytecodeUtil::Make<Jump>(Jump::JMP, end_label));
+        chunk->Append(BytecodeUtil::Make<Jump>(Jump::JMP, endLabel));
 
         // set the label's position to where the else-block would be
-        chunk->Append(BytecodeUtil::Make<LabelMarker>(else_label));
+        chunk->Append(BytecodeUtil::Make<LabelMarker>(elseLabel));
         // build the else-block
-        chunk->Append(else_part->Build(visitor, mod));
+        chunk->Append(elsePart->Build(visitor, mod));
     }
 
     // set the label's position to after the block,
     // so we can skip it if the condition is false
-    chunk->Append(BytecodeUtil::Make<LabelMarker>(end_label));
+    chunk->Append(BytecodeUtil::Make<LabelMarker>(endLabel));
 
     return chunk;
 }
@@ -234,20 +234,20 @@ std::unique_ptr<Buildable> Compiler::LoadRightThenLeft(AstVisitor *visitor, Modu
     chunk->Append(info.right->Build(visitor, mod));
     rp = visitor->GetCompilationUnit()->GetInstructionStream().GetCurrentRegister();
 
-    bool left_side_effects = info.left->MayHaveSideEffects();
+    bool leftSideEffects = info.left->MayHaveSideEffects();
 
     // if left is a function call, we have to move rhs to the stack!
     // otherwise, the function call will overwrite what's in register 0.
-    int stack_size_before = 0;
-    if (left_side_effects) {
+    int stackSizeBefore = 0;
+    if (leftSideEffects) {
         { // store value of the right hand side on the stack
-            auto instr_push = BytecodeUtil::Make<RawOperation<>>();
-            instr_push->opcode = PUSH;
-            instr_push->Accept<uint8>(rp);
-            chunk->Append(std::move(instr_push));
+            auto instrPush = BytecodeUtil::Make<RawOperation<>>();
+            instrPush->opcode = PUSH;
+            instrPush->Accept<uint8>(rp);
+            chunk->Append(std::move(instrPush));
         }
 
-        stack_size_before = visitor->GetCompilationUnit()->GetInstructionStream().GetStackSize();
+        stackSizeBefore = visitor->GetCompilationUnit()->GetInstructionStream().GetStackSize();
         // increment stack size
         visitor->GetCompilationUnit()->GetInstructionStream().IncStackSize();
     } else {
@@ -257,28 +257,28 @@ std::unique_ptr<Buildable> Compiler::LoadRightThenLeft(AstVisitor *visitor, Modu
     // load left-hand side into register 1
     chunk->Append(info.left->Build(visitor, mod));
 
-    if (left_side_effects) {
+    if (leftSideEffects) {
         // now, we increase register usage to load rhs from the stack into register 1.
         visitor->GetCompilationUnit()->GetInstructionStream().IncRegisterUsage();
         // get register position
         rp = visitor->GetCompilationUnit()->GetInstructionStream().GetCurrentRegister();
         // load from stack
-        int stack_size_after = visitor->GetCompilationUnit()->GetInstructionStream().GetStackSize();
-        int diff = stack_size_after - stack_size_before;
+        int stackSizeAfter = visitor->GetCompilationUnit()->GetInstructionStream().GetStackSize();
+        int diff = stackSizeAfter - stackSizeBefore;
         Assert(diff == 1);
 
         {
-            auto instr_load_offset = BytecodeUtil::Make<RawOperation<>>();
-            instr_load_offset->opcode = LOAD_OFFSET;
-            instr_load_offset->Accept<uint8>(rp);
-            instr_load_offset->Accept<uint16>(diff);
-            chunk->Append(std::move(instr_load_offset));
+            auto instrLoadOffset = BytecodeUtil::Make<RawOperation<>>();
+            instrLoadOffset->opcode = LOAD_OFFSET;
+            instrLoadOffset->Accept<uint8>(rp);
+            instrLoadOffset->Accept<uint16>(diff);
+            chunk->Append(std::move(instrLoadOffset));
         }
 
         {
-            auto instr_pop = BytecodeUtil::Make<RawOperation<>>();
-            instr_pop->opcode = POP;
-            chunk->Append(std::move(instr_pop));
+            auto instrPop = BytecodeUtil::Make<RawOperation<>>();
+            instrPop->opcode = POP;
+            chunk->Append(std::move(instrPop));
         }
 
         // decrement stack size
@@ -304,13 +304,13 @@ std::unique_ptr<Buildable> Compiler::LoadLeftAndStore(
     rp = visitor->GetCompilationUnit()->GetInstructionStream().GetCurrentRegister();
     
     { // store value of lhs on the stack
-        auto instr_push = BytecodeUtil::Make<RawOperation<>>();
-        instr_push->opcode = PUSH;
-        instr_push->Accept<uint8>(rp);
-        chunk->Append(std::move(instr_push));
+        auto instrPush = BytecodeUtil::Make<RawOperation<>>();
+        instrPush->opcode = PUSH;
+        instrPush->Accept<uint8>(rp);
+        chunk->Append(std::move(instrPush));
     }
 
-    int stack_size_before = visitor->GetCompilationUnit()->GetInstructionStream().GetStackSize();
+    int stackSizeBefore = visitor->GetCompilationUnit()->GetInstructionStream().GetStackSize();
     // increment stack size
     visitor->GetCompilationUnit()->GetInstructionStream().IncStackSize();
 
@@ -324,23 +324,23 @@ std::unique_ptr<Buildable> Compiler::LoadLeftAndStore(
     rp = visitor->GetCompilationUnit()->GetInstructionStream().GetCurrentRegister();
 
     // load from stack
-    int stack_size_after = visitor->GetCompilationUnit()->GetInstructionStream().GetStackSize();
-    int diff = stack_size_after - stack_size_before;
+    int stackSizeAfter = visitor->GetCompilationUnit()->GetInstructionStream().GetStackSize();
+    int diff = stackSizeAfter - stackSizeBefore;
 
     Assert(diff == 1);
 
     {
-        auto instr_load_offset = BytecodeUtil::Make<RawOperation<>>();
-        instr_load_offset->opcode = LOAD_OFFSET;
-        instr_load_offset->Accept<uint8>(rp);
-        instr_load_offset->Accept<uint16>(diff);
-        chunk->Append(std::move(instr_load_offset));
+        auto instrLoadOffset = BytecodeUtil::Make<RawOperation<>>();
+        instrLoadOffset->opcode = LOAD_OFFSET;
+        instrLoadOffset->Accept<uint8>(rp);
+        instrLoadOffset->Accept<uint16>(diff);
+        chunk->Append(std::move(instrLoadOffset));
     }
 
     { // pop from stack
-        auto instr_pop = BytecodeUtil::Make<RawOperation<>>();
-        instr_pop->opcode = POP;
-        chunk->Append(std::move(instr_pop));
+        auto instrPop = BytecodeUtil::Make<RawOperation<>>();
+        instrPop->opcode = POP;
+        chunk->Append(std::move(instrPop));
     }
 
     // decrement stack size
@@ -358,25 +358,25 @@ std::unique_ptr<Buildable> Compiler::BuildBinOp(
 {
     std::unique_ptr<BytecodeChunk> chunk = BytecodeUtil::Make<BytecodeChunk>();
 
-    AstBinaryExpression *left_as_binop = dynamic_cast<AstBinaryExpression*>(info.left);
-    AstBinaryExpression *right_as_binop = dynamic_cast<AstBinaryExpression*>(info.right);
+    AstBinaryExpression *leftAsBinop = dynamic_cast<AstBinaryExpression*>(info.left);
+    AstBinaryExpression *rightAsBinop = dynamic_cast<AstBinaryExpression*>(info.right);
 
     uint8 rp;
 
-    if (left_as_binop == nullptr && right_as_binop != nullptr) {
+    if (leftAsBinop == nullptr && rightAsBinop != nullptr) {
         // if the right hand side is a binary operation,
         // we should build in the rhs first in order to
         // transverse the parse tree.
         chunk->Append(Compiler::LoadRightThenLeft(visitor, mod, info));
         rp = visitor->GetCompilationUnit()->GetInstructionStream().GetCurrentRegister();
 
-        auto raw_operation = BytecodeUtil::Make<RawOperation<>>();
-        raw_operation->opcode = opcode;
-        raw_operation->Accept<uint8>(rp); // lhs
-        raw_operation->Accept<uint8>(rp - 1); // rhs
-        raw_operation->Accept<uint8>(rp - 1); // dst
+        auto rawOperation = BytecodeUtil::Make<RawOperation<>>();
+        rawOperation->opcode = opcode;
+        rawOperation->Accept<uint8>(rp); // lhs
+        rawOperation->Accept<uint8>(rp - 1); // rhs
+        rawOperation->Accept<uint8>(rp - 1); // dst
 
-        chunk->Append(std::move(raw_operation));
+        chunk->Append(std::move(rawOperation));
     } else if (info.right != nullptr && info.right->MayHaveSideEffects()) {
         // lhs must be temporary stored on the stack,
         // to avoid the rhs overwriting it.
@@ -384,26 +384,26 @@ std::unique_ptr<Buildable> Compiler::BuildBinOp(
             chunk->Append(Compiler::LoadLeftAndStore(visitor, mod, info));
             rp = visitor->GetCompilationUnit()->GetInstructionStream().GetCurrentRegister();
 
-            auto raw_operation = BytecodeUtil::Make<RawOperation<>>();
-            raw_operation->opcode = opcode;
-            raw_operation->Accept<uint8>(rp - 1); // lhs
-            raw_operation->Accept<uint8>(rp); // rhs
-            raw_operation->Accept<uint8>(rp - 1); // dst
+            auto rawOperation = BytecodeUtil::Make<RawOperation<>>();
+            rawOperation->opcode = opcode;
+            rawOperation->Accept<uint8>(rp - 1); // lhs
+            rawOperation->Accept<uint8>(rp); // rhs
+            rawOperation->Accept<uint8>(rp - 1); // dst
 
-            chunk->Append(std::move(raw_operation));
+            chunk->Append(std::move(rawOperation));
         } else {
             // left  doesn't have side effects,
             // so just evaluate right without storing the lhs.
             chunk->Append(Compiler::LoadRightThenLeft(visitor, mod, info));
             rp = visitor->GetCompilationUnit()->GetInstructionStream().GetCurrentRegister();
             
-            auto raw_operation = BytecodeUtil::Make<RawOperation<>>();
-            raw_operation->opcode = opcode;
-            raw_operation->Accept<uint8>(rp); // lhs
-            raw_operation->Accept<uint8>(rp - 1); // rhs
-            raw_operation->Accept<uint8>(rp - 1); // dst
+            auto rawOperation = BytecodeUtil::Make<RawOperation<>>();
+            rawOperation->opcode = opcode;
+            rawOperation->Accept<uint8>(rp); // lhs
+            rawOperation->Accept<uint8>(rp - 1); // rhs
+            rawOperation->Accept<uint8>(rp - 1); // dst
 
-            chunk->Append(std::move(raw_operation));
+            chunk->Append(std::move(rawOperation));
         }
     } else {
         chunk->Append(Compiler::LoadLeftThenRight(visitor, mod, info));
@@ -412,13 +412,13 @@ std::unique_ptr<Buildable> Compiler::BuildBinOp(
             // perform operation
             rp = visitor->GetCompilationUnit()->GetInstructionStream().GetCurrentRegister();
 
-            auto raw_operation = BytecodeUtil::Make<RawOperation<>>();
-            raw_operation->opcode = opcode;
-            raw_operation->Accept<uint8>(rp - 1); // lhs
-            raw_operation->Accept<uint8>(rp); // rhs
-            raw_operation->Accept<uint8>(rp - 1); // dst
+            auto rawOperation = BytecodeUtil::Make<RawOperation<>>();
+            rawOperation->opcode = opcode;
+            rawOperation->Accept<uint8>(rp - 1); // lhs
+            rawOperation->Accept<uint8>(rp); // rhs
+            rawOperation->Accept<uint8>(rp - 1); // dst
 
-            chunk->Append(std::move(raw_operation));
+            chunk->Append(std::move(rawOperation));
         }
     }
 
@@ -428,10 +428,10 @@ std::unique_ptr<Buildable> Compiler::BuildBinOp(
 std::unique_ptr<Buildable> Compiler::PopStack(AstVisitor *visitor, int amt)
 {
     if (amt == 1) {
-        auto instr_pop = BytecodeUtil::Make<RawOperation<>>();
-        instr_pop->opcode = POP;
+        auto instrPop = BytecodeUtil::Make<RawOperation<>>();
+        instrPop->opcode = POP;
 
-        return instr_pop;
+        return instrPop;
     }
 
     for (int i = 0; i < amt;) {
@@ -444,24 +444,24 @@ std::unique_ptr<Buildable> Compiler::PopStack(AstVisitor *visitor, int amt)
         if (j > 0) {
             Assert(j <= MathUtil::MaxSafeValue<uint16>());
 
-            auto instr_sub_sp = BytecodeUtil::Make<RawOperation<>>();
-            instr_sub_sp->opcode = SUB_SP;
-            instr_sub_sp->Accept<uint16>(j);
+            auto instrSubSp = BytecodeUtil::Make<RawOperation<>>();
+            instrSubSp->opcode = SUB_SP;
+            instrSubSp->Accept<uint16>(j);
 
-            return instr_sub_sp;
+            return instrSubSp;
         }
     }
 
     return nullptr;
 }
 
-Compiler::Compiler(AstIterator *ast_iterator, CompilationUnit *compilation_unit)
-    : AstVisitor(ast_iterator, compilation_unit)
+Compiler::Compiler(AstIterator *astIterator, CompilationUnit *compilationUnit)
+    : AstVisitor(astIterator, compilationUnit)
 {
 }
 
 Compiler::Compiler(const Compiler &other)
-    : AstVisitor(other.m_ast_iterator, other.m_compilation_unit)
+    : AstVisitor(other.m_astIterator, other.m_compilationUnit)
 {
 }
 
@@ -469,28 +469,28 @@ std::unique_ptr<BytecodeChunk> Compiler::Compile()
 {
     std::unique_ptr<BytecodeChunk> chunk(new BytecodeChunk);
 
-    Module *mod = m_compilation_unit->GetCurrentModule();
+    Module *mod = m_compilationUnit->GetCurrentModule();
     Assert(mod != nullptr);
 
     // For all registered types, we need to build their type objects.
 
-    // for (const SymbolTypePtr_t &symbol_type : m_compilation_unit->GetRegisteredTypes()) {
-    //     Assert(symbol_type != nullptr);
-    //     Assert(symbol_type->GetId() != -1, "Type %s has not been registered", symbol_type->GetName().Data());
+    // for (const SymbolTypePtr_t &symbolType : m_compilationUnit->GetRegisteredTypes()) {
+    //     Assert(symbolType != nullptr);
+    //     Assert(symbolType->GetId() != -1, "Type %s has not been registered", symbolType->GetName().Data());
 
-    //     // if (symbol_type->IsGenericType()) {
+    //     // if (symbolType->IsGenericType()) {
     //     //     continue; // generic types are not buildable
     //     // }
 
-    //     const RC<AstTypeObject> type_object = symbol_type->GetTypeObject().Lock();
-    //     Assert(type_object != nullptr, "No AstTypeObject bound to SymbolType %s", symbol_type->GetName().Data());
-    //     Assert(type_object->IsVisited(), "AstTypeObject %s has not been visited", type_object->GetName().Data());
+    //     const RC<AstTypeObject> typeObject = symbolType->GetTypeObject().Lock();
+    //     Assert(typeObject != nullptr, "No AstTypeObject bound to SymbolType %s", symbolType->GetName().Data());
+    //     Assert(typeObject->IsVisited(), "AstTypeObject %s has not been visited", typeObject->GetName().Data());
 
-    //     chunk->Append(type_object->Build(this, mod));
+    //     chunk->Append(typeObject->Build(this, mod));
     // }
     
-    while (m_ast_iterator->HasNext()) {
-        auto next = m_ast_iterator->Next();
+    while (m_astIterator->HasNext()) {
+        auto next = m_astIterator->Next();
         Assert(next != nullptr);
 
         chunk->Append(next->Build(this, mod));

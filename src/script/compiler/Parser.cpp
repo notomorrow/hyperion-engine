@@ -16,29 +16,29 @@
 
 namespace hyperion::compiler {
 
-Parser::Parser(AstIterator *ast_iterator,
-    TokenStream *token_stream,
-    CompilationUnit *compilation_unit
-) : m_ast_iterator(ast_iterator),
-    m_token_stream(token_stream),
-    m_compilation_unit(compilation_unit)
+Parser::Parser(AstIterator *astIterator,
+    TokenStream *tokenStream,
+    CompilationUnit *compilationUnit
+) : m_astIterator(astIterator),
+    m_tokenStream(tokenStream),
+    m_compilationUnit(compilationUnit)
 {
 }
 
 Parser::Parser(const Parser &other)
-    : m_ast_iterator(other.m_ast_iterator),
-      m_token_stream(other.m_token_stream),
-      m_compilation_unit(other.m_compilation_unit)
+    : m_astIterator(other.m_astIterator),
+      m_tokenStream(other.m_tokenStream),
+      m_compilationUnit(other.m_compilationUnit)
 {
 }
 
-Token Parser::Match(TokenClass token_class, bool read)
+Token Parser::Match(TokenClass tokenClass, bool read)
 {
-    Token peek = m_token_stream->Peek();
+    Token peek = m_tokenStream->Peek();
     
-    if (peek && peek.GetTokenClass() == token_class) {
-        if (read && m_token_stream->HasNext()) {
-            m_token_stream->Next();
+    if (peek && peek.GetTokenClass() == tokenClass) {
+        if (read && m_tokenStream->HasNext()) {
+            m_tokenStream->Next();
         }
         
         return peek;
@@ -47,11 +47,11 @@ Token Parser::Match(TokenClass token_class, bool read)
     return Token::EMPTY;
 }
 
-Token Parser::MatchAhead(TokenClass token_class, int n)
+Token Parser::MatchAhead(TokenClass tokenClass, int n)
 {
-    Token peek = m_token_stream->Peek(n);
+    Token peek = m_tokenStream->Peek(n);
     
-    if (peek && peek.GetTokenClass() == token_class) {
+    if (peek && peek.GetTokenClass() == tokenClass) {
         return peek;
     }
     
@@ -60,14 +60,14 @@ Token Parser::MatchAhead(TokenClass token_class, int n)
 
 Token Parser::MatchKeyword(Keywords keyword, bool read)
 {
-    Token peek = m_token_stream->Peek();
+    Token peek = m_tokenStream->Peek();
     
     if (peek && peek.GetTokenClass() == TK_KEYWORD) {
         auto str = Keyword::ToString(keyword);
 
         if (str && peek.GetValue() == str.Get()) {
-            if (read && m_token_stream->HasNext()) {
-                m_token_stream->Next();
+            if (read && m_tokenStream->HasNext()) {
+                m_tokenStream->Next();
             }
             
             return peek;
@@ -79,7 +79,7 @@ Token Parser::MatchKeyword(Keywords keyword, bool read)
 
 Token Parser::MatchKeywordAhead(Keywords keyword, int n)
 {
-    Token peek = m_token_stream->Peek(n);
+    Token peek = m_tokenStream->Peek(n);
     
     if (peek && peek.GetTokenClass() == TK_KEYWORD) {
         auto str = Keyword::ToString(keyword);
@@ -94,12 +94,12 @@ Token Parser::MatchKeywordAhead(Keywords keyword, int n)
 
 Token Parser::MatchOperator(const String &op, bool read)
 {
-    Token peek = m_token_stream->Peek();
+    Token peek = m_tokenStream->Peek();
     
     if (peek && peek.GetTokenClass() == TK_OPERATOR) {
         if (peek.GetValue() == op) {
-            if (read && m_token_stream->HasNext()) {
-                m_token_stream->Next();
+            if (read && m_tokenStream->HasNext()) {
+                m_tokenStream->Next();
             }
             
             return peek;
@@ -111,7 +111,7 @@ Token Parser::MatchOperator(const String &op, bool read)
 
 Token Parser::MatchOperatorAhead(const String &op, int n)
 {
-    Token peek = m_token_stream->Peek(n);
+    Token peek = m_tokenStream->Peek(n);
     
     if (peek && peek.GetTokenClass() == TK_OPERATOR) {
         if (peek.GetValue() == op) {
@@ -122,30 +122,30 @@ Token Parser::MatchOperatorAhead(const String &op, int n)
     return Token::EMPTY;
 }
 
-Token Parser::Expect(TokenClass token_class, bool read)
+Token Parser::Expect(TokenClass tokenClass, bool read)
 {
-    Token token = Match(token_class, read);
+    Token token = Match(tokenClass, read);
     
     if (!token) {
         const SourceLocation location = CurrentLocation();
 
-        ErrorMessage error_msg;
-        String error_str;
+        ErrorMessage errorMsg;
+        String errorStr;
 
-        switch (token_class) {
+        switch (tokenClass) {
             case TK_IDENT:
-                error_msg = Msg_expected_identifier;
+                errorMsg = Msg_expected_identifier;
                 break;
             default:
-                error_msg = Msg_expected_token;
-                error_str = Token::TokenTypeToString(token_class);
+                errorMsg = Msg_expected_token;
+                errorStr = Token::TokenTypeToString(tokenClass);
         }
 
-        m_compilation_unit->GetErrorList().AddError(CompilerError(
+        m_compilationUnit->GetErrorList().AddError(CompilerError(
             LEVEL_ERROR,
-            error_msg,
+            errorMsg,
             location,
-            error_str
+            errorStr
         ));
     }
 
@@ -159,30 +159,30 @@ Token Parser::ExpectKeyword(Keywords keyword, bool read)
     if (!token) {
         const SourceLocation location = CurrentLocation();
 
-        if (read && m_token_stream->HasNext()) {
-            m_token_stream->Next();
+        if (read && m_tokenStream->HasNext()) {
+            m_tokenStream->Next();
         }
 
-        ErrorMessage error_msg;
-        String error_str;
+        ErrorMessage errorMsg;
+        String errorStr;
 
         switch (keyword) {
         case Keyword_module:
-            error_msg = Msg_expected_module;
+            errorMsg = Msg_expected_module;
             break;
         default: {
-            const String *keyword_str = Keyword::ToString(keyword).TryGet();
+            const String *keywordStr = Keyword::ToString(keyword).TryGet();
 
-            error_msg = Msg_expected_token;
-            error_str = keyword_str ? *keyword_str : "<unknown keyword>";
+            errorMsg = Msg_expected_token;
+            errorStr = keywordStr ? *keywordStr : "<unknown keyword>";
         }
         }
 
-        m_compilation_unit->GetErrorList().AddError(CompilerError(
+        m_compilationUnit->GetErrorList().AddError(CompilerError(
             LEVEL_ERROR,
-            error_msg,
+            errorMsg,
             location,
-            error_str
+            errorStr
         ));
     }
 
@@ -196,11 +196,11 @@ Token Parser::ExpectOperator(const String &op, bool read)
     if (!token) {
         const SourceLocation location = CurrentLocation();
 
-        if (read && m_token_stream->HasNext()) {
-            m_token_stream->Next();
+        if (read && m_tokenStream->HasNext()) {
+            m_tokenStream->Next();
         }
 
-        m_compilation_unit->GetErrorList().AddError(CompilerError(
+        m_compilationUnit->GetErrorList().AddError(CompilerError(
             LEVEL_ERROR,
             Msg_expected_token,
             location,
@@ -211,7 +211,7 @@ Token Parser::ExpectOperator(const String &op, bool read)
     return token;
 }
 
-Token Parser::MatchIdentifier(bool allow_keyword, bool read)
+Token Parser::MatchIdentifier(bool allowKeyword, bool read)
 {
     Token ident = Match(TK_IDENT, read);
 
@@ -219,12 +219,12 @@ Token Parser::MatchIdentifier(bool allow_keyword, bool read)
         Token kw = Match(TK_KEYWORD, read);
         
         if (kw) {
-            if (allow_keyword) {
+            if (allowKeyword) {
                 return kw;
             }
 
             // keyword may not be used as an identifier here.
-            m_compilation_unit->GetErrorList().AddError(CompilerError(
+            m_compilationUnit->GetErrorList().AddError(CompilerError(
                 LEVEL_ERROR,
                 Msg_keyword_cannot_be_used_as_identifier, 
                 kw.GetLocation(),
@@ -238,7 +238,7 @@ Token Parser::MatchIdentifier(bool allow_keyword, bool read)
     return ident;
 }
 
-Token Parser::ExpectIdentifier(bool allow_keyword, bool read)
+Token Parser::ExpectIdentifier(bool allowKeyword, bool read)
 {
     Token kw = Match(TK_KEYWORD, read);
 
@@ -248,11 +248,11 @@ Token Parser::ExpectIdentifier(bool allow_keyword, bool read)
     }
 
     // handle ident as keyword
-    if (allow_keyword) {
+    if (allowKeyword) {
         return kw;
     }
     
-    m_compilation_unit->GetErrorList().AddError(CompilerError(
+    m_compilationUnit->GetErrorList().AddError(CompilerError(
         LEVEL_ERROR,
         Msg_keyword_cannot_be_used_as_identifier, 
         kw.GetLocation(),
@@ -267,7 +267,7 @@ bool Parser::ExpectEndOfStmt()
     const SourceLocation location = CurrentLocation();
 
     if (!Match(TK_NEWLINE, true) && !Match(TK_SEMICOLON, true) && !Match(TK_CLOSE_BRACE, false)) {
-        m_compilation_unit->GetErrorList().AddError(CompilerError(
+        m_compilationUnit->GetErrorList().AddError(CompilerError(
             LEVEL_ERROR,
             Msg_expected_end_of_statement,
             location
@@ -281,11 +281,11 @@ bool Parser::ExpectEndOfStmt()
 
 SourceLocation Parser::CurrentLocation() const
 {
-    if (m_token_stream->GetSize() != 0 && !m_token_stream->HasNext()) {
-        return m_token_stream->Last().GetLocation();
+    if (m_tokenStream->GetSize() != 0 && !m_tokenStream->HasNext()) {
+        return m_tokenStream->Last().GetLocation();
     }
 
-    return m_token_stream->Peek().GetLocation();
+    return m_tokenStream->Peek().GetLocation();
 }
 
 void Parser::SkipStatementTerminators()
@@ -294,28 +294,28 @@ void Parser::SkipStatementTerminators()
     while (Match(TK_SEMICOLON, true) || Match(TK_NEWLINE, true));
 }
 
-void Parser::Parse(bool expect_module_decl)
+void Parser::Parse(bool expectModuleDecl)
 {
     SkipStatementTerminators();
 
-    if (expect_module_decl) {
+    if (expectModuleDecl) {
         // create a module based upon the filename
-        const String filepath = m_token_stream->GetInfo().filepath;
+        const String filepath = m_tokenStream->GetInfo().filepath;
         const Array<String> split = filepath.Split('\\', '/');
 
-        String real_filename = split.Any()
+        String realFilename = split.Any()
             ? split.Back()
             : filepath;
 
-        real_filename = StringUtil::StripExtension(real_filename);
+        realFilename = StringUtil::StripExtension(realFilename);
 
-        RC<AstModuleDeclaration> module_ast(new AstModuleDeclaration(
-            real_filename.Data(),
+        RC<AstModuleDeclaration> moduleAst(new AstModuleDeclaration(
+            realFilename.Data(),
             SourceLocation(0, 0, filepath)
         ));
 
         // build up the module declaration with statements
-        while (m_token_stream->HasNext()) {
+        while (m_tokenStream->HasNext()) {
             // skip statement terminator tokens
             if (Match(TK_SEMICOLON, true) || Match(TK_NEWLINE, true)) {
                 continue;
@@ -323,14 +323,14 @@ void Parser::Parse(bool expect_module_decl)
 
             // parse at top level, to allow for nested modules
             if (auto stmt = ParseStatement(true)) {
-                module_ast->AddChild(stmt);
+                moduleAst->AddChild(stmt);
             }
         }
 
-        m_ast_iterator->Push(module_ast);
+        m_astIterator->Push(moduleAst);
     } else {
         // build up the module declaration with statements
-        while (m_token_stream->HasNext()) {
+        while (m_tokenStream->HasNext()) {
             // skip statement terminator tokens
             if (Match(TK_SEMICOLON, true) || Match(TK_NEWLINE, true)) {
                 return;
@@ -338,7 +338,7 @@ void Parser::Parse(bool expect_module_decl)
 
             // parse at top level, to allow for nested modules
             if (auto stmt = ParseStatement(true)) {
-                m_ast_iterator->Push(stmt);
+                m_astIterator->Push(stmt);
             }
         }
     }
@@ -348,12 +348,12 @@ int Parser::OperatorPrecedence(const Operator *&out)
 {
     out = nullptr;
     
-    Token token = m_token_stream->Peek();
+    Token token = m_tokenStream->Peek();
 
     if (token && token.GetTokenClass() == TK_OPERATOR) {
         if (!Operator::IsBinaryOperator(token.GetValue(), out)) {
             // internal error: operator not defined
-            m_compilation_unit->GetErrorList().AddError(CompilerError(
+            m_compilationUnit->GetErrorList().AddError(CompilerError(
                 LEVEL_ERROR,
                 Msg_internal_error,
                 token.GetLocation()
@@ -369,24 +369,24 @@ int Parser::OperatorPrecedence(const Operator *&out)
 }
 
 RC<AstStatement> Parser::ParseStatement(
-    bool top_level,
-    bool read_terminators
+    bool topLevel,
+    bool readTerminators
 )
 {
     RC<AstStatement> res;
 
     if (Match(TK_KEYWORD, false)) {
         if (MatchKeyword(Keyword_module, false) && !MatchAhead(TK_DOT, 1)) {
-            auto module_decl = ParseModuleDeclaration();
+            auto moduleDecl = ParseModuleDeclaration();
             
-            if (top_level) {
-                res = module_decl;
+            if (topLevel) {
+                res = moduleDecl;
             } else {
                 // module may not be declared in a block
-                m_compilation_unit->GetErrorList().AddError(CompilerError(
+                m_compilationUnit->GetErrorList().AddError(CompilerError(
                     LEVEL_ERROR,
                     Msg_module_declared_in_block,
-                    m_token_stream->Next().GetLocation()
+                    m_tokenStream->Next().GetLocation()
                 ));
 
                 res = nullptr;
@@ -437,7 +437,7 @@ RC<AstStatement> Parser::ParseStatement(
         res = ParseExpression(false);
     }
 
-    if (read_terminators && res != nullptr && m_token_stream->HasNext()) {
+    if (readTerminators && res != nullptr && m_tokenStream->HasNext()) {
         ExpectEndOfStmt();
     }
 
@@ -446,30 +446,30 @@ RC<AstStatement> Parser::ParseStatement(
 
 RC<AstModuleDeclaration> Parser::ParseModuleDeclaration()
 {
-    if (Token module_decl = ExpectKeyword(Keyword_module, true)) {
-        if (Token module_name = Expect(TK_IDENT, true)) {
+    if (Token moduleDecl = ExpectKeyword(Keyword_module, true)) {
+        if (Token moduleName = Expect(TK_IDENT, true)) {
             // expect open brace
             if (Expect(TK_OPEN_BRACE, true)) {
-                RC<AstModuleDeclaration> module_ast(new AstModuleDeclaration(
-                    module_name.GetValue(),
-                    module_decl.GetLocation()
+                RC<AstModuleDeclaration> moduleAst(new AstModuleDeclaration(
+                    moduleName.GetValue(),
+                    moduleDecl.GetLocation()
                 ));
 
                 // build up the module declaration with statements
-                while (m_token_stream->HasNext() && !Match(TK_CLOSE_BRACE, false)) {
+                while (m_tokenStream->HasNext() && !Match(TK_CLOSE_BRACE, false)) {
                     // skip statement terminator tokens
                     if (!Match(TK_SEMICOLON, true) && !Match(TK_NEWLINE, true)) {
 
                         // parse at top level, to allow for nested modules
                         if (auto stmt = ParseStatement(true)) {
-                            module_ast->AddChild(stmt);
+                            moduleAst->AddChild(stmt);
                         }
                     }
                 }
 
                 // expect close brace
                 if (Expect(TK_CLOSE_BRACE, true)) {
-                    return module_ast;
+                    return moduleAst;
                 }
             }
         }
@@ -484,11 +484,11 @@ RC<AstDirective> Parser::ParseDirective()
         // the arguments will be held in an array expression
         Array<String> args;
 
-        while (m_token_stream->HasNext() && !(Match(TK_SEMICOLON, true) || Match(TK_NEWLINE, true))) {
-            Token token = m_token_stream->Peek();
+        while (m_tokenStream->HasNext() && !(Match(TK_SEMICOLON, true) || Match(TK_NEWLINE, true))) {
+            Token token = m_tokenStream->Peek();
 
             args.PushBack(token.GetValue());
-            m_token_stream->Next();
+            m_tokenStream->Next();
         }
 
         return RC<AstDirective>(new AstDirective(
@@ -502,30 +502,30 @@ RC<AstDirective> Parser::ParseDirective()
 }
 
 RC<AstExpression> Parser::ParseTerm(
-    bool override_commas,
-    bool override_fat_arrows,
-    bool override_angle_brackets,
-    bool override_square_brackets,
-    bool override_parentheses,
-    bool override_question_mark
+    bool overrideCommas,
+    bool overrideFatArrows,
+    bool overrideAngleBrackets,
+    bool overrideSquareBrackets,
+    bool overrideParentheses,
+    bool overrideQuestionMark
 )
 {
     Token token = Token::EMPTY;
 
     // Skip comments, newlines, etc between terms
     do {
-        token = m_token_stream->Peek();
+        token = m_tokenStream->Peek();
     } while (Match(TokenClass::TK_NEWLINE, true));
     
     if (!token) {
-        m_compilation_unit->GetErrorList().AddError(CompilerError(
+        m_compilationUnit->GetErrorList().AddError(CompilerError(
             LEVEL_ERROR,
             Msg_unexpected_eof,
             CurrentLocation()
         ));
 
-        if (m_token_stream->HasNext()) {
-            m_token_stream->Next();
+        if (m_tokenStream->HasNext()) {
+            m_tokenStream->Next();
         }
 
         return nullptr;
@@ -551,7 +551,7 @@ RC<AstExpression> Parser::ParseTerm(
         } else {
             auto identifier = ParseIdentifier();
 
-            if (!override_angle_brackets && MatchOperator("<")) {
+            if (!overrideAngleBrackets && MatchOperator("<")) {
                 expr = ParseAngleBrackets(identifier);
             } else {
                 expr = std::move(identifier);
@@ -589,13 +589,13 @@ RC<AstExpression> Parser::ParseTerm(
         expr = ParseUnaryExpressionPrefix();
     } else {
         if (token.GetTokenClass() == TK_NEWLINE) {
-            m_compilation_unit->GetErrorList().AddError(CompilerError(
+            m_compilationUnit->GetErrorList().AddError(CompilerError(
                 LEVEL_ERROR,
                 Msg_unexpected_eol,
                 token.GetLocation()
             ));
         } else {
-            m_compilation_unit->GetErrorList().AddError(CompilerError(
+            m_compilationUnit->GetErrorList().AddError(CompilerError(
                 LEVEL_ERROR,
                 Msg_unexpected_token,
                 token.GetLocation(),
@@ -603,45 +603,45 @@ RC<AstExpression> Parser::ParseTerm(
             ));
         }
 
-        if (m_token_stream->HasNext()) {
-            m_token_stream->Next();
+        if (m_tokenStream->HasNext()) {
+            m_tokenStream->Next();
         }
 
         return nullptr;
     }
 
-    Token operator_token = Token::EMPTY;
+    Token operatorToken = Token::EMPTY;
 
     while (expr != nullptr && (
         Match(TK_DOT) ||
-        (!override_parentheses && Match(TK_OPEN_PARENTH)) ||
-        //(!override_fat_arrows && Match(TK_FAT_ARROW)) ||
-        (!override_square_brackets && Match(TK_OPEN_BRACKET)) ||
-        // (!override_angle_brackets && MatchOperator("<")) ||
+        (!overrideParentheses && Match(TK_OPEN_PARENTH)) ||
+        //(!overrideFatArrows && Match(TK_FAT_ARROW)) ||
+        (!overrideSquareBrackets && Match(TK_OPEN_BRACKET)) ||
+        // (!overrideAngleBrackets && MatchOperator("<")) ||
         MatchKeyword(Keyword_has) ||
         MatchKeyword(Keyword_is) ||
         MatchKeyword(Keyword_as) ||
-        ((operator_token = Match(TK_OPERATOR)) && Operator::IsUnaryOperator(operator_token.GetValue(), OperatorType::POSTFIX))
+        ((operatorToken = Match(TK_OPERATOR)) && Operator::IsUnaryOperator(operatorToken.GetValue(), OperatorType::POSTFIX))
     ))
     {
-        if (operator_token) {
+        if (operatorToken) {
             expr = ParseUnaryExpressionPostfix(expr);
-            operator_token = Token::EMPTY;
+            operatorToken = Token::EMPTY;
         }
 
         if (Match(TK_DOT)) {
             expr = ParseMemberExpression(expr);
         }
 
-        if (!override_square_brackets && Match(TK_OPEN_BRACKET)) {
-            expr = ParseArrayAccess(expr, override_commas, override_fat_arrows, override_angle_brackets, override_square_brackets, override_parentheses, override_question_mark);
+        if (!overrideSquareBrackets && Match(TK_OPEN_BRACKET)) {
+            expr = ParseArrayAccess(expr, overrideCommas, overrideFatArrows, overrideAngleBrackets, overrideSquareBrackets, overrideParentheses, overrideQuestionMark);
         }
 
-        // if (!override_angle_brackets && MatchOperator("<")) {
+        // if (!overrideAngleBrackets && MatchOperator("<")) {
         //     expr = ParseAngleBrackets(expr);
         // }
 
-        if (!override_parentheses && Match(TK_OPEN_PARENTH)) {
+        if (!overrideParentheses && Match(TK_OPEN_PARENTH)) {
             expr = ParseCallExpression(expr);
         }
 
@@ -665,7 +665,7 @@ RC<AstExpression> Parser::ParseParentheses()
 {
     SourceLocation location = CurrentLocation();
     RC<AstExpression> expr;
-    const SizeType before_pos = m_token_stream->GetPosition();
+    const SizeType beforePos = m_tokenStream->GetPosition();
 
     Expect(TK_OPEN_PARENTH, true);
 
@@ -676,7 +676,7 @@ RC<AstExpression> Parser::ParseParentheses()
         if (Match(TK_CLOSE_PARENTH, true)) {
             // if '()' found, it is a function with empty parameters
             // allow ParseFunctionParameters() to handle parentheses
-            m_token_stream->SetPosition(before_pos);
+            m_tokenStream->SetPosition(beforePos);
 
             Array<RC<AstParameter>> params;
             
@@ -687,10 +687,10 @@ RC<AstExpression> Parser::ParseParentheses()
 
             expr = ParseFunctionExpression(false, params);
         } else {
-            bool found_function_token = false;
+            bool foundFunctionToken = false;
 
             if (MatchKeyword(Keyword_const) || MatchKeyword(Keyword_var)) {
-                found_function_token = true;
+                foundFunctionToken = true;
             } else {
                 expr = ParseExpression(true);
             }
@@ -699,24 +699,24 @@ RC<AstExpression> Parser::ParseParentheses()
                 Match(TK_COLON) ||
                 Match(TK_ELLIPSIS)) {
             
-                found_function_token = true;
+                foundFunctionToken = true;
             } else if (Match(TK_CLOSE_PARENTH, false)) {
-                const SizeType before = m_token_stream->GetPosition();
-                m_token_stream->Next();
+                const SizeType before = m_tokenStream->GetPosition();
+                m_tokenStream->Next();
 
                 // function return type
                 if (Match(TK_RIGHT_ARROW)) {
-                    found_function_token = true;
+                    foundFunctionToken = true;
                 }
                 
                 // go back to where it was before reading the ')' token
-                m_token_stream->SetPosition(before);
+                m_tokenStream->SetPosition(before);
             }
 
-            if (found_function_token) {
+            if (foundFunctionToken) {
                 // go back to before open '(' found, 
                 // to allow ParseFunctionParameters() to handle it
-                m_token_stream->SetPosition(before_pos);
+                m_tokenStream->SetPosition(beforePos);
 
                 Array<RC<AstParameter>> params;
                 
@@ -732,7 +732,7 @@ RC<AstExpression> Parser::ParseParentheses()
 
                 if (Match(TK_OPEN_BRACE, true)) {
                     // if '{' found after ')', it is a function
-                    m_token_stream->SetPosition(before_pos);
+                    m_tokenStream->SetPosition(beforePos);
 
                     Array<RC<AstParameter>> params;
                     
@@ -753,7 +753,7 @@ RC<AstExpression> Parser::ParseParentheses()
 RC<AstTemplateInstantiation> Parser::ParseTemplateInstantiation(RC<AstExpression> target)
 {
     SourceLocation location = CurrentLocation();
-    const SizeType before_pos = m_token_stream->GetPosition();
+    const SizeType beforePos = m_tokenStream->GetPosition();
 
     Array<RC<AstArgument>> args;
 
@@ -768,25 +768,25 @@ RC<AstTemplateInstantiation> Parser::ParseTemplateInstantiation(RC<AstExpression
             ));
         }
 
-        ++m_template_argument_depth;
+        ++m_templateArgumentDepth;
 
         do {
-            const SourceLocation arg_location = CurrentLocation();
-            bool is_splat_arg = false;
-            bool is_named_arg = false;
-            String arg_name;
+            const SourceLocation argLocation = CurrentLocation();
+            bool isSplatArg = false;
+            bool isNamedArg = false;
+            String argName;
 
             if (Match(TK_ELLIPSIS, true)) {
-                is_splat_arg = true;
+                isSplatArg = true;
             }
 
             // check for name: value expressions (named arguments)
             if (Match(TK_IDENT)) {
                 if (MatchAhead(TK_COLON, 1)) {
                     // named argument
-                    is_named_arg = true;
-                    Token name_token = Expect(TK_IDENT, true);
-                    arg_name = name_token.GetValue();
+                    isNamedArg = true;
+                    Token nameToken = Expect(TK_IDENT, true);
+                    argName = nameToken.GetValue();
 
                     // read the colon
                     Expect(TK_COLON, true);
@@ -796,16 +796,16 @@ RC<AstTemplateInstantiation> Parser::ParseTemplateInstantiation(RC<AstExpression
             if (auto term = ParseExpression(true, false, false)) { // override commas
                 args.PushBack(RC<AstArgument>(new AstArgument(
                     term,
-                    is_splat_arg,
-                    is_named_arg,
+                    isSplatArg,
+                    isNamedArg,
                     false,
                     false,
-                    arg_name,
-                    arg_location
+                    argName,
+                    argLocation
                 )));
             } else {
                 // not an argument, revert to start.
-                m_token_stream->SetPosition(before_pos);
+                m_tokenStream->SetPosition(beforePos);
 
                 breakout = true;
 
@@ -814,7 +814,7 @@ RC<AstTemplateInstantiation> Parser::ParseTemplateInstantiation(RC<AstExpression
             }
         } while (Match(TK_COMMA, true));
 
-        --m_template_argument_depth;
+        --m_templateArgumentDepth;
 
         if (!breakout && MatchOperator(">", true)) {
             return RC<AstTemplateInstantiation>(new AstTemplateInstantiation(
@@ -825,7 +825,7 @@ RC<AstTemplateInstantiation> Parser::ParseTemplateInstantiation(RC<AstExpression
         }
 
         // no closing bracket found, revert to start.
-        m_token_stream->SetPosition(before_pos);
+        m_tokenStream->SetPosition(beforePos);
     }
 
     return nullptr;
@@ -836,8 +836,8 @@ RC<AstExpression> Parser::ParseAngleBrackets(RC<AstExpression> target)
     SourceLocation location = CurrentLocation();
 
     if (Token token = ExpectOperator("<", false)) {
-        if (auto template_instantiation = ParseTemplateInstantiation(target)) {
-            return template_instantiation;
+        if (auto templateInstantiation = ParseTemplateInstantiation(target)) {
+            return templateInstantiation;
         }
 
         // return as comparison expression
@@ -877,7 +877,7 @@ RC<AstConstant> Parser::ParseIntegerLiteral()
                 token.GetLocation()
             ));
         } else {
-            m_compilation_unit->GetErrorList().AddError(CompilerError(
+            m_compilationUnit->GetErrorList().AddError(CompilerError(
                 LEVEL_ERROR,
                 Msg_illegal_expression,
                 token.GetLocation()
@@ -914,12 +914,12 @@ RC<AstString> Parser::ParseStringLiteral()
     return nullptr;
 }
 
-RC<AstIdentifier> Parser::ParseIdentifier(bool allow_keyword)
+RC<AstIdentifier> Parser::ParseIdentifier(bool allowKeyword)
 {
-    if (Token token = ExpectIdentifier(allow_keyword, false)) {
+    if (Token token = ExpectIdentifier(allowKeyword, false)) {
         // read identifier token
-        if (m_token_stream->HasNext()) {
-            m_token_stream->Next();
+        if (m_tokenStream->HasNext()) {
+            m_tokenStream->Next();
         }
 
         // return variable
@@ -936,19 +936,19 @@ RC<AstArgument> Parser::ParseArgument(RC<AstExpression> expr)
 {
     SourceLocation location = CurrentLocation();
 
-    bool is_splat_arg = false;
-    bool is_named_arg = false;
-    String arg_name;
+    bool isSplatArg = false;
+    bool isNamedArg = false;
+    String argName;
 
     if (expr == nullptr) {
         if (Match(TK_ELLIPSIS, true)) {
-            is_splat_arg = true;
+            isSplatArg = true;
         } else if (Match(TK_IDENT)) { // check for name: value expressions (named arguments)
             if (MatchAhead(TK_COLON, 1)) {
                 // named argument
-                is_named_arg = true;
-                Token name_token = Expect(TK_IDENT, true);
-                arg_name = name_token.GetValue();
+                isNamedArg = true;
+                Token nameToken = Expect(TK_IDENT, true);
+                argName = nameToken.GetValue();
 
                 // read the colon
                 Expect(TK_COLON, true);
@@ -961,16 +961,16 @@ RC<AstArgument> Parser::ParseArgument(RC<AstExpression> expr)
     if (expr != nullptr) {
         return RC<AstArgument>(new AstArgument(
             expr,
-            is_splat_arg,
-            is_named_arg,
+            isSplatArg,
+            isNamedArg,
             false,
             false,
-            arg_name,
+            argName,
             location
         ));
     }
 
-    m_compilation_unit->GetErrorList().AddError(CompilerError(
+    m_compilationUnit->GetErrorList().AddError(CompilerError(
         LEVEL_ERROR,
         Msg_illegal_expression,
         location
@@ -979,17 +979,17 @@ RC<AstArgument> Parser::ParseArgument(RC<AstExpression> expr)
     return nullptr;
 }
 
-RC<AstArgumentList> Parser::ParseArguments(bool require_parentheses)
+RC<AstArgumentList> Parser::ParseArguments(bool requireParentheses)
 {
     const SourceLocation location = CurrentLocation();
 
     Array<RC<AstArgument>> args;
 
-    if (require_parentheses) {
+    if (requireParentheses) {
         Expect(TK_OPEN_PARENTH, true);
     }
 
-    while (!require_parentheses || !Match(TK_CLOSE_PARENTH, false)) {
+    while (!requireParentheses || !Match(TK_CLOSE_PARENTH, false)) {
         if (auto arg = ParseArgument(nullptr)) {
             args.PushBack(arg);
 
@@ -1001,7 +1001,7 @@ RC<AstArgumentList> Parser::ParseArguments(bool require_parentheses)
         }
     }
 
-    if (require_parentheses) {
+    if (requireParentheses) {
         Expect(TK_CLOSE_PARENTH, true);
     }
 
@@ -1011,10 +1011,10 @@ RC<AstArgumentList> Parser::ParseArguments(bool require_parentheses)
     ));
 }
 
-RC<AstCallExpression> Parser::ParseCallExpression(RC<AstExpression> target, bool require_parentheses)
+RC<AstCallExpression> Parser::ParseCallExpression(RC<AstExpression> target, bool requireParentheses)
 {
     if (target != nullptr) {
-        if (auto args = ParseArguments(require_parentheses)) {
+        if (auto args = ParseArguments(requireParentheses)) {
             return RC<AstCallExpression>(new AstCallExpression(
                 target,
                 args->GetArguments(),
@@ -1032,17 +1032,17 @@ RC<AstModuleAccess> Parser::ParseModuleAccess()
     const SourceLocation location = CurrentLocation();
 
     Token token = Token::EMPTY;
-    bool global_module_access = false;
+    bool globalModuleAccess = false;
 
     if (Match(TK_DOUBLE_COLON, true)) {
         // global module access for prepended double colon.
-        global_module_access = true;
+        globalModuleAccess = true;
     } else {
         token = Expect(TK_IDENT, true);
         Expect(TK_DOUBLE_COLON, true);
     }
 
-    if (token || global_module_access) {
+    if (token || globalModuleAccess) {
         RC<AstExpression> expr;
 
         if (MatchAhead(TK_DOUBLE_COLON, 1)) {
@@ -1059,8 +1059,8 @@ RC<AstModuleAccess> Parser::ParseModuleAccess()
 
         if (expr != nullptr) {
             return RC<AstModuleAccess>(new AstModuleAccess(
-                global_module_access
-                    ? Config::global_module_name
+                globalModuleAccess
+                    ? Config::globalModuleName
                     : token.GetValue(),
                 expr,
                 location
@@ -1100,7 +1100,7 @@ RC<AstExpression> Parser::ParseMemberExpression(RC<AstExpression> target)
 
     // allow quoted strings as data member names
     Token ident = Match(TK_STRING, false)
-        ? m_token_stream->Next()
+        ? m_tokenStream->Next()
         : ExpectIdentifier(true, true);
 
     RC<AstExpression> expr;
@@ -1114,8 +1114,8 @@ RC<AstExpression> Parser::ParseMemberExpression(RC<AstExpression> target)
 
         // match template arguments
         if (MatchOperator("<")) {
-            if (auto template_instantiation = ParseTemplateInstantiation(expr)) {
-                expr = std::move(template_instantiation);
+            if (auto templateInstantiation = ParseTemplateInstantiation(expr)) {
+                expr = std::move(templateInstantiation);
             }
         }
     }
@@ -1125,12 +1125,12 @@ RC<AstExpression> Parser::ParseMemberExpression(RC<AstExpression> target)
 
 RC<AstArrayAccess> Parser::ParseArrayAccess(
     RC<AstExpression> target,
-    bool override_commas,
-    bool override_fat_arrows,
-    bool override_angle_brackets,
-    bool override_square_brackets,
-    bool override_parentheses,
-    bool override_question_mark
+    bool overrideCommas,
+    bool overrideFatArrows,
+    bool overrideAngleBrackets,
+    bool overrideSquareBrackets,
+    bool overrideParentheses,
+    bool overrideQuestionMark
 )
 {
     if (Token token = Expect(TK_OPEN_BRACKET, true)) {
@@ -1138,7 +1138,7 @@ RC<AstArrayAccess> Parser::ParseArrayAccess(
         RC<AstExpression> rhs;
 
         if (Match(TK_CLOSE_BRACKET, true)) {
-            m_compilation_unit->GetErrorList().AddError(CompilerError(
+            m_compilationUnit->GetErrorList().AddError(CompilerError(
                 LEVEL_ERROR,
                 Msg_illegal_expression,
                 token.GetLocation()
@@ -1149,18 +1149,18 @@ RC<AstArrayAccess> Parser::ParseArrayAccess(
         }
 
         // check for assignment operator
-        Token operator_token = Token::EMPTY;
+        Token operatorToken = Token::EMPTY;
 
-        if (Token operator_token = Match(TK_OPERATOR)) {
-            if (Operator::IsBinaryOperator(operator_token.GetValue(), OperatorType::ASSIGNMENT)) {
+        if (Token operatorToken = Match(TK_OPERATOR)) {
+            if (Operator::IsBinaryOperator(operatorToken.GetValue(), OperatorType::ASSIGNMENT)) {
                 // eat the operator token
-                m_token_stream->Next();
+                m_tokenStream->Next();
 
                 rhs = ParseExpression(
-                    override_commas,
-                    override_fat_arrows,
-                    override_angle_brackets,
-                    override_question_mark
+                    overrideCommas,
+                    overrideFatArrows,
+                    overrideAngleBrackets,
+                    overrideQuestionMark
                 );
             }
         }
@@ -1197,10 +1197,10 @@ RC<AstHasExpression> Parser::ParseHasExpression(RC<AstExpression> target)
 RC<AstIsExpression> Parser::ParseIsExpression(RC<AstExpression> target)
 {
     if (Token token = ExpectKeyword(Keyword_is, true)) {
-        if (auto type_expression = ParsePrototypeSpecification()) {
+        if (auto typeExpression = ParsePrototypeSpecification()) {
             return RC<AstIsExpression>(new AstIsExpression(
                 target,
-                type_expression,
+                typeExpression,
                 target->GetLocation()
             ));
         }
@@ -1212,10 +1212,10 @@ RC<AstIsExpression> Parser::ParseIsExpression(RC<AstExpression> target)
 RC<AstAsExpression> Parser::ParseAsExpression(RC<AstExpression> target)
 {
     if (Token token = ExpectKeyword(Keyword_as, true)) {
-        if (auto type_expression = ParsePrototypeSpecification()) {
+        if (auto typeExpression = ParsePrototypeSpecification()) {
             return RC<AstAsExpression>(new AstAsExpression(
                 target,
-                type_expression,
+                typeExpression,
                 target->GetLocation()
             ));
         }
@@ -1228,16 +1228,16 @@ RC<AstNewExpression> Parser::ParseNewExpression()
 {
     if (Token token = ExpectKeyword(Keyword_new, true)) {
         if (auto proto = ParsePrototypeSpecification()) {
-            RC<AstArgumentList> arg_list;
+            RC<AstArgumentList> argList;
 
             if (Match(TK_OPEN_PARENTH, false)) {
                 // parse args
-                arg_list = ParseArguments();
+                argList = ParseArguments();
             }
 
             return RC<AstNewExpression>(new AstNewExpression(
                 proto,
-                arg_list,
+                argList,
                 true, // enable construct call
                 token.GetLocation()
             ));
@@ -1280,11 +1280,11 @@ RC<AstNil> Parser::ParseNil()
     return nullptr;
 }
 
-RC<AstBlock> Parser::ParseBlock(bool require_braces, bool skip_end)
+RC<AstBlock> Parser::ParseBlock(bool requireBraces, bool skipEnd)
 {
     SourceLocation location = CurrentLocation();
 
-    if (require_braces) {
+    if (requireBraces) {
         if (!Expect(TK_OPEN_BRACE, true)) {
             return nullptr;
         }
@@ -1292,7 +1292,7 @@ RC<AstBlock> Parser::ParseBlock(bool require_braces, bool skip_end)
 
     RC<AstBlock> block(new AstBlock(location));
 
-    while (require_braces ? !Match(TK_CLOSE_BRACE, false) : !MatchKeyword(Keyword_end, false)) {
+    while (requireBraces ? !Match(TK_CLOSE_BRACE, false) : !MatchKeyword(Keyword_end, false)) {
         // skip statement terminator tokens
         if (!Match(TK_SEMICOLON, true) && !Match(TK_NEWLINE, true)) {
             if (auto stmt = ParseStatement()) {
@@ -1303,9 +1303,9 @@ RC<AstBlock> Parser::ParseBlock(bool require_braces, bool skip_end)
         }
     }
 
-    if (require_braces) {
+    if (requireBraces) {
         Expect(TK_CLOSE_BRACE, true);
-    } else if (!skip_end) {
+    } else if (!skipEnd) {
         ExpectKeyword(Keyword_end, true);
     }
 
@@ -1315,10 +1315,10 @@ RC<AstBlock> Parser::ParseBlock(bool require_braces, bool skip_end)
 RC<AstIfStatement> Parser::ParseIfStatement()
 {
     if (Token token = ExpectKeyword(Keyword_if, true)) {
-        bool has_parentheses = false;
+        bool hasParentheses = false;
 
         if (Match(TK_OPEN_PARENTH, true)) {
-            has_parentheses = true;
+            hasParentheses = true;
         }
 
         RC<AstExpression> conditional;
@@ -1326,16 +1326,16 @@ RC<AstIfStatement> Parser::ParseIfStatement()
             return nullptr;
         }
 
-        if (has_parentheses) {
+        if (hasParentheses) {
             if (!Match(TK_CLOSE_PARENTH, true)) {
-                m_compilation_unit->GetErrorList().AddError(CompilerError(
+                m_compilationUnit->GetErrorList().AddError(CompilerError(
                     LEVEL_ERROR,
                     Msg_unmatched_parentheses,
                     token.GetLocation()
                 ));
                 
-                if (m_token_stream->HasNext()) {
-                    m_token_stream->Next();
+                if (m_tokenStream->HasNext()) {
+                    m_tokenStream->Next();
                 }
             }
         }
@@ -1345,17 +1345,17 @@ RC<AstIfStatement> Parser::ParseIfStatement()
             return nullptr;
         }
 
-        RC<AstBlock> else_block = nullptr;
+        RC<AstBlock> elseBlock = nullptr;
         // parse else statement if the "else" keyword is found
-        if (Token else_token = MatchKeyword(Keyword_else, true)) {
+        if (Token elseToken = MatchKeyword(Keyword_else, true)) {
             // check for "if" keyword for else-if
             if (MatchKeyword(Keyword_if, false)) {
-                else_block = RC<AstBlock>(new AstBlock(
-                    else_token.GetLocation()
+                elseBlock = RC<AstBlock>(new AstBlock(
+                    elseToken.GetLocation()
                 ));
 
-                if (auto else_if_block = ParseIfStatement()) {
-                    else_block->AddChild(else_if_block);
+                if (auto elseIfBlock = ParseIfStatement()) {
+                    elseBlock->AddChild(elseIfBlock);
                 }
             } else {
                 // parse block after "else keyword
@@ -2668,9 +2668,9 @@ RC<AstEnumExpression> Parser::ParseEnumExpression(
     // ExpectKeyword(Keyword_end, true);
 
     return RC<AstEnumExpression>(new AstEnumExpression(
-        enum_name,
+        enumName,
         entries,
-        underlying_type,
+        underlyingType,
         location
     ));
 }
@@ -2690,11 +2690,11 @@ RC<AstImport> Parser::ParseImport()
 
 RC<AstExportStatement> Parser::ParseExportStatement()
 {
-    if (Token export_token = ExpectKeyword(Keyword_export, true)) {
+    if (Token exportToken = ExpectKeyword(Keyword_export, true)) {
         if (auto stmt = ParseStatement()) {
             return RC<AstExportStatement>(new AstExportStatement(
                 stmt,
-                export_token.GetLocation()
+                exportToken.GetLocation()
             ));
         }
     }
@@ -2718,7 +2718,7 @@ RC<AstFileImport> Parser::ParseFileImport()
     return nullptr;
 }
 
-RC<AstModuleImportPart> Parser::ParseModuleImportPart(bool allow_braces)
+RC<AstModuleImportPart> Parser::ParseModuleImportPart(bool allowBraces)
 {
     const SourceLocation location = CurrentLocation();
 

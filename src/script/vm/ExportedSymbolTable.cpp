@@ -15,7 +15,7 @@ void ExportedSymbolTable::MarkAll()
 
 bool ExportedSymbolTable::Find(const char *name, Value *out)
 {
-    return Find(hash_fnv_1(name), out);
+    return Find(hashFnv1(name), out);
 }
 
 bool ExportedSymbolTable::Find(HashFNV1 hash, Value *out)
@@ -33,7 +33,7 @@ bool ExportedSymbolTable::Find(HashFNV1 hash, Value *out)
 
 auto ExportedSymbolTable::Store(const char *name, const Value &value) -> typename SymbolMap::InsertResult
 {
-    return Store(hash_fnv_1(name), value);
+    return Store(hashFnv1(name), value);
 }
 
 auto ExportedSymbolTable::Store(HashFNV1 hash, const Value &value) -> typename SymbolMap::InsertResult

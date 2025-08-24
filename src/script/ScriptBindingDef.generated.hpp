@@ -25,15 +25,15 @@ namespace hyperion {
 
         
 
-        auto &&this_arg = GetArgument<0, ThisType *>(params);
+        auto &&thisArg = GetArgument<0, ThisType *>(params);
 
         
         if constexpr (std::is_same_v<void, Normalized>) {
-            HYP_SCRIPT_RETURN_VOID((this_arg->*MemFn)());
+            HYP_SCRIPT_RETURN_VOID((thisArg->*MemFn)());
         } else {
-            auto return_value = CxxToScriptValueInternal<ReturnType>(params.api_instance, (this_arg->*MemFn)());
+            auto returnValue = CxxToScriptValueInternal<ReturnType>(params.apiInstance, (thisArg->*MemFn)());
                                                                                                  
-            HYP_SCRIPT_RETURN(return_value);
+            HYP_SCRIPT_RETURN(returnValue);
         }
     }
 
@@ -48,15 +48,15 @@ namespace hyperion {
 
         
 
-        auto &&this_arg = *GetArgument<0, WrappedThisType *>(params);
+        auto &&thisArg = *GetArgument<0, WrappedThisType *>(params);
 
         
         if constexpr (std::is_same_v<void, Normalized>) {
-            HYP_SCRIPT_RETURN_VOID(((*this_arg).*MemFn)());
+            HYP_SCRIPT_RETURN_VOID(((*thisArg).*MemFn)());
         } else {
-            auto return_value = CxxToScriptValueInternal<ReturnType>(params.api_instance, ((*this_arg).*MemFn)());
+            auto returnValue = CxxToScriptValueInternal<ReturnType>(params.apiInstance, ((*thisArg).*MemFn)());
                                                                                                  
-            HYP_SCRIPT_RETURN(return_value);
+            HYP_SCRIPT_RETURN(returnValue);
         }
     }
 
@@ -74,15 +74,15 @@ namespace hyperion {
 
         
 
-        auto &&this_arg = GetArgument<0, ThisType *>(params);
+        auto &&thisArg = GetArgument<0, ThisType *>(params);
 
         
         if constexpr (std::is_same_v<void, Normalized>) {
-            HYP_SCRIPT_RETURN_VOID((this_arg->*MemFn)());
+            HYP_SCRIPT_RETURN_VOID((thisArg->*MemFn)());
         } else {
-            auto return_value = CxxToScriptValueInternal<ReturnType>(params.api_instance, (this_arg->*MemFn)());
+            auto returnValue = CxxToScriptValueInternal<ReturnType>(params.apiInstance, (thisArg->*MemFn)());
                                                                                                  
-            HYP_SCRIPT_RETURN(return_value);
+            HYP_SCRIPT_RETURN(returnValue);
         }
     }
 
@@ -97,15 +97,15 @@ namespace hyperion {
 
         
 
-        auto &&this_arg = *GetArgument<0, WrappedThisType *>(params);
+        auto &&thisArg = *GetArgument<0, WrappedThisType *>(params);
 
         
         if constexpr (std::is_same_v<void, Normalized>) {
-            HYP_SCRIPT_RETURN_VOID(((*this_arg).*MemFn)());
+            HYP_SCRIPT_RETURN_VOID(((*thisArg).*MemFn)());
         } else {
-            auto return_value = CxxToScriptValueInternal<ReturnType>(params.api_instance, ((*this_arg).*MemFn)());
+            auto returnValue = CxxToScriptValueInternal<ReturnType>(params.apiInstance, ((*thisArg).*MemFn)());
                                                                                                  
-            HYP_SCRIPT_RETURN(return_value);
+            HYP_SCRIPT_RETURN(returnValue);
         }
     }
 
@@ -123,18 +123,18 @@ namespace hyperion {
 
         
 
-        auto &&this_arg = GetArgument<0, ThisType *>(params);
+        auto &&thisArg = GetArgument<0, ThisType *>(params);
 
             auto &&arg0 = GetArgument<1, Arg0Type>(params);
 
             
         
         if constexpr (std::is_same_v<void, Normalized>) {
-            HYP_SCRIPT_RETURN_VOID((this_arg->*MemFn)(std::forward<Arg0Type>(arg0)));
+            HYP_SCRIPT_RETURN_VOID((thisArg->*MemFn)(std::forward<Arg0Type>(arg0)));
         } else {
-            auto return_value = CxxToScriptValueInternal<ReturnType>(params.api_instance, (this_arg->*MemFn)(std::forward<Arg0Type>(arg0)));
+            auto returnValue = CxxToScriptValueInternal<ReturnType>(params.apiInstance, (thisArg->*MemFn)(std::forward<Arg0Type>(arg0)));
                                                                                                  
-            HYP_SCRIPT_RETURN(return_value);
+            HYP_SCRIPT_RETURN(returnValue);
         }
     }
 
@@ -149,18 +149,18 @@ namespace hyperion {
 
         
 
-        auto &&this_arg = *GetArgument<0, WrappedThisType *>(params);
+        auto &&thisArg = *GetArgument<0, WrappedThisType *>(params);
 
             auto &&arg0 = GetArgument<1, Arg0Type>(params);
 
             
         
         if constexpr (std::is_same_v<void, Normalized>) {
-            HYP_SCRIPT_RETURN_VOID(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0)));
+            HYP_SCRIPT_RETURN_VOID(((*thisArg).*MemFn)(std::forward<Arg0Type>(arg0)));
         } else {
-            auto return_value = CxxToScriptValueInternal<ReturnType>(params.api_instance, ((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0)));
+            auto returnValue = CxxToScriptValueInternal<ReturnType>(params.apiInstance, ((*thisArg).*MemFn)(std::forward<Arg0Type>(arg0)));
                                                                                                  
-            HYP_SCRIPT_RETURN(return_value);
+            HYP_SCRIPT_RETURN(returnValue);
         }
     }
 
@@ -178,18 +178,18 @@ namespace hyperion {
 
         
 
-        auto &&this_arg = GetArgument<0, ThisType *>(params);
+        auto &&thisArg = GetArgument<0, ThisType *>(params);
 
             auto &&arg0 = GetArgument<1, Arg0Type>(params);
 
             
         
         if constexpr (std::is_same_v<void, Normalized>) {
-            HYP_SCRIPT_RETURN_VOID((this_arg->*MemFn)(std::forward<Arg0Type>(arg0)));
+            HYP_SCRIPT_RETURN_VOID((thisArg->*MemFn)(std::forward<Arg0Type>(arg0)));
         } else {
-            auto return_value = CxxToScriptValueInternal<ReturnType>(params.api_instance, (this_arg->*MemFn)(std::forward<Arg0Type>(arg0)));
+            auto returnValue = CxxToScriptValueInternal<ReturnType>(params.apiInstance, (thisArg->*MemFn)(std::forward<Arg0Type>(arg0)));
                                                                                                  
-            HYP_SCRIPT_RETURN(return_value);
+            HYP_SCRIPT_RETURN(returnValue);
         }
     }
 
@@ -204,18 +204,18 @@ namespace hyperion {
 
         
 
-        auto &&this_arg = *GetArgument<0, WrappedThisType *>(params);
+        auto &&thisArg = *GetArgument<0, WrappedThisType *>(params);
 
             auto &&arg0 = GetArgument<1, Arg0Type>(params);
 
             
         
         if constexpr (std::is_same_v<void, Normalized>) {
-            HYP_SCRIPT_RETURN_VOID(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0)));
+            HYP_SCRIPT_RETURN_VOID(((*thisArg).*MemFn)(std::forward<Arg0Type>(arg0)));
         } else {
-            auto return_value = CxxToScriptValueInternal<ReturnType>(params.api_instance, ((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0)));
+            auto returnValue = CxxToScriptValueInternal<ReturnType>(params.apiInstance, ((*thisArg).*MemFn)(std::forward<Arg0Type>(arg0)));
                                                                                                  
-            HYP_SCRIPT_RETURN(return_value);
+            HYP_SCRIPT_RETURN(returnValue);
         }
     }
 
@@ -233,7 +233,7 @@ namespace hyperion {
 
         
 
-        auto &&this_arg = GetArgument<0, ThisType *>(params);
+        auto &&thisArg = GetArgument<0, ThisType *>(params);
 
             auto &&arg0 = GetArgument<1, Arg0Type>(params);
 
@@ -243,11 +243,11 @@ namespace hyperion {
             
         
         if constexpr (std::is_same_v<void, Normalized>) {
-            HYP_SCRIPT_RETURN_VOID((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1)));
+            HYP_SCRIPT_RETURN_VOID((thisArg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1)));
         } else {
-            auto return_value = CxxToScriptValueInternal<ReturnType>(params.api_instance, (this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1)));
+            auto returnValue = CxxToScriptValueInternal<ReturnType>(params.apiInstance, (thisArg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1)));
                                                                                                  
-            HYP_SCRIPT_RETURN(return_value);
+            HYP_SCRIPT_RETURN(returnValue);
         }
     }
 
@@ -262,7 +262,7 @@ namespace hyperion {
 
         
 
-        auto &&this_arg = *GetArgument<0, WrappedThisType *>(params);
+        auto &&thisArg = *GetArgument<0, WrappedThisType *>(params);
 
             auto &&arg0 = GetArgument<1, Arg0Type>(params);
 
@@ -272,11 +272,11 @@ namespace hyperion {
             
         
         if constexpr (std::is_same_v<void, Normalized>) {
-            HYP_SCRIPT_RETURN_VOID(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1)));
+            HYP_SCRIPT_RETURN_VOID(((*thisArg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1)));
         } else {
-            auto return_value = CxxToScriptValueInternal<ReturnType>(params.api_instance, ((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1)));
+            auto returnValue = CxxToScriptValueInternal<ReturnType>(params.apiInstance, ((*thisArg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1)));
                                                                                                  
-            HYP_SCRIPT_RETURN(return_value);
+            HYP_SCRIPT_RETURN(returnValue);
         }
     }
 
@@ -294,7 +294,7 @@ namespace hyperion {
 
         
 
-        auto &&this_arg = GetArgument<0, ThisType *>(params);
+        auto &&thisArg = GetArgument<0, ThisType *>(params);
 
             auto &&arg0 = GetArgument<1, Arg0Type>(params);
 
@@ -304,11 +304,11 @@ namespace hyperion {
             
         
         if constexpr (std::is_same_v<void, Normalized>) {
-            HYP_SCRIPT_RETURN_VOID((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1)));
+            HYP_SCRIPT_RETURN_VOID((thisArg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1)));
         } else {
-            auto return_value = CxxToScriptValueInternal<ReturnType>(params.api_instance, (this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1)));
+            auto returnValue = CxxToScriptValueInternal<ReturnType>(params.apiInstance, (thisArg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1)));
                                                                                                  
-            HYP_SCRIPT_RETURN(return_value);
+            HYP_SCRIPT_RETURN(returnValue);
         }
     }
 
@@ -323,7 +323,7 @@ namespace hyperion {
 
         
 
-        auto &&this_arg = *GetArgument<0, WrappedThisType *>(params);
+        auto &&thisArg = *GetArgument<0, WrappedThisType *>(params);
 
             auto &&arg0 = GetArgument<1, Arg0Type>(params);
 
@@ -333,11 +333,11 @@ namespace hyperion {
             
         
         if constexpr (std::is_same_v<void, Normalized>) {
-            HYP_SCRIPT_RETURN_VOID(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1)));
+            HYP_SCRIPT_RETURN_VOID(((*thisArg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1)));
         } else {
-            auto return_value = CxxToScriptValueInternal<ReturnType>(params.api_instance, ((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1)));
+            auto returnValue = CxxToScriptValueInternal<ReturnType>(params.apiInstance, ((*thisArg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1)));
                                                                                                  
-            HYP_SCRIPT_RETURN(return_value);
+            HYP_SCRIPT_RETURN(returnValue);
         }
     }
 
@@ -355,7 +355,7 @@ namespace hyperion {
 
         
 
-        auto &&this_arg = GetArgument<0, ThisType *>(params);
+        auto &&thisArg = GetArgument<0, ThisType *>(params);
 
             auto &&arg0 = GetArgument<1, Arg0Type>(params);
 
@@ -368,11 +368,11 @@ namespace hyperion {
             
         
         if constexpr (std::is_same_v<void, Normalized>) {
-            HYP_SCRIPT_RETURN_VOID((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2)));
+            HYP_SCRIPT_RETURN_VOID((thisArg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2)));
         } else {
-            auto return_value = CxxToScriptValueInternal<ReturnType>(params.api_instance, (this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2)));
+            auto returnValue = CxxToScriptValueInternal<ReturnType>(params.apiInstance, (thisArg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2)));
                                                                                                  
-            HYP_SCRIPT_RETURN(return_value);
+            HYP_SCRIPT_RETURN(returnValue);
         }
     }
 
@@ -387,7 +387,7 @@ namespace hyperion {
 
         
 
-        auto &&this_arg = *GetArgument<0, WrappedThisType *>(params);
+        auto &&thisArg = *GetArgument<0, WrappedThisType *>(params);
 
             auto &&arg0 = GetArgument<1, Arg0Type>(params);
 
@@ -400,11 +400,11 @@ namespace hyperion {
             
         
         if constexpr (std::is_same_v<void, Normalized>) {
-            HYP_SCRIPT_RETURN_VOID(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2)));
+            HYP_SCRIPT_RETURN_VOID(((*thisArg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2)));
         } else {
-            auto return_value = CxxToScriptValueInternal<ReturnType>(params.api_instance, ((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2)));
+            auto returnValue = CxxToScriptValueInternal<ReturnType>(params.apiInstance, ((*thisArg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2)));
                                                                                                  
-            HYP_SCRIPT_RETURN(return_value);
+            HYP_SCRIPT_RETURN(returnValue);
         }
     }
 
@@ -422,7 +422,7 @@ namespace hyperion {
 
         
 
-        auto &&this_arg = GetArgument<0, ThisType *>(params);
+        auto &&thisArg = GetArgument<0, ThisType *>(params);
 
             auto &&arg0 = GetArgument<1, Arg0Type>(params);
 
@@ -435,11 +435,11 @@ namespace hyperion {
             
         
         if constexpr (std::is_same_v<void, Normalized>) {
-            HYP_SCRIPT_RETURN_VOID((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2)));
+            HYP_SCRIPT_RETURN_VOID((thisArg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2)));
         } else {
-            auto return_value = CxxToScriptValueInternal<ReturnType>(params.api_instance, (this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2)));
+            auto returnValue = CxxToScriptValueInternal<ReturnType>(params.apiInstance, (thisArg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2)));
                                                                                                  
-            HYP_SCRIPT_RETURN(return_value);
+            HYP_SCRIPT_RETURN(returnValue);
         }
     }
 
@@ -454,7 +454,7 @@ namespace hyperion {
 
         
 
-        auto &&this_arg = *GetArgument<0, WrappedThisType *>(params);
+        auto &&thisArg = *GetArgument<0, WrappedThisType *>(params);
 
             auto &&arg0 = GetArgument<1, Arg0Type>(params);
 
@@ -467,11 +467,11 @@ namespace hyperion {
             
         
         if constexpr (std::is_same_v<void, Normalized>) {
-            HYP_SCRIPT_RETURN_VOID(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2)));
+            HYP_SCRIPT_RETURN_VOID(((*thisArg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2)));
         } else {
-            auto return_value = CxxToScriptValueInternal<ReturnType>(params.api_instance, ((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2)));
+            auto returnValue = CxxToScriptValueInternal<ReturnType>(params.apiInstance, ((*thisArg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2)));
                                                                                                  
-            HYP_SCRIPT_RETURN(return_value);
+            HYP_SCRIPT_RETURN(returnValue);
         }
     }
 
@@ -489,7 +489,7 @@ namespace hyperion {
 
         
 
-        auto &&this_arg = GetArgument<0, ThisType *>(params);
+        auto &&thisArg = GetArgument<0, ThisType *>(params);
 
             auto &&arg0 = GetArgument<1, Arg0Type>(params);
 
@@ -505,11 +505,11 @@ namespace hyperion {
             
         
         if constexpr (std::is_same_v<void, Normalized>) {
-            HYP_SCRIPT_RETURN_VOID((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3)));
+            HYP_SCRIPT_RETURN_VOID((thisArg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3)));
         } else {
-            auto return_value = CxxToScriptValueInternal<ReturnType>(params.api_instance, (this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3)));
+            auto returnValue = CxxToScriptValueInternal<ReturnType>(params.apiInstance, (thisArg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3)));
                                                                                                  
-            HYP_SCRIPT_RETURN(return_value);
+            HYP_SCRIPT_RETURN(returnValue);
         }
     }
 
@@ -524,7 +524,7 @@ namespace hyperion {
 
         
 
-        auto &&this_arg = *GetArgument<0, WrappedThisType *>(params);
+        auto &&thisArg = *GetArgument<0, WrappedThisType *>(params);
 
             auto &&arg0 = GetArgument<1, Arg0Type>(params);
 
@@ -540,11 +540,11 @@ namespace hyperion {
             
         
         if constexpr (std::is_same_v<void, Normalized>) {
-            HYP_SCRIPT_RETURN_VOID(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3)));
+            HYP_SCRIPT_RETURN_VOID(((*thisArg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3)));
         } else {
-            auto return_value = CxxToScriptValueInternal<ReturnType>(params.api_instance, ((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3)));
+            auto returnValue = CxxToScriptValueInternal<ReturnType>(params.apiInstance, ((*thisArg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3)));
                                                                                                  
-            HYP_SCRIPT_RETURN(return_value);
+            HYP_SCRIPT_RETURN(returnValue);
         }
     }
 
@@ -562,7 +562,7 @@ namespace hyperion {
 
         
 
-        auto &&this_arg = GetArgument<0, ThisType *>(params);
+        auto &&thisArg = GetArgument<0, ThisType *>(params);
 
             auto &&arg0 = GetArgument<1, Arg0Type>(params);
 
@@ -578,11 +578,11 @@ namespace hyperion {
             
         
         if constexpr (std::is_same_v<void, Normalized>) {
-            HYP_SCRIPT_RETURN_VOID((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3)));
+            HYP_SCRIPT_RETURN_VOID((thisArg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3)));
         } else {
-            auto return_value = CxxToScriptValueInternal<ReturnType>(params.api_instance, (this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3)));
+            auto returnValue = CxxToScriptValueInternal<ReturnType>(params.apiInstance, (thisArg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3)));
                                                                                                  
-            HYP_SCRIPT_RETURN(return_value);
+            HYP_SCRIPT_RETURN(returnValue);
         }
     }
 
@@ -597,7 +597,7 @@ namespace hyperion {
 
         
 
-        auto &&this_arg = *GetArgument<0, WrappedThisType *>(params);
+        auto &&thisArg = *GetArgument<0, WrappedThisType *>(params);
 
             auto &&arg0 = GetArgument<1, Arg0Type>(params);
 
@@ -613,11 +613,11 @@ namespace hyperion {
             
         
         if constexpr (std::is_same_v<void, Normalized>) {
-            HYP_SCRIPT_RETURN_VOID(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3)));
+            HYP_SCRIPT_RETURN_VOID(((*thisArg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3)));
         } else {
-            auto return_value = CxxToScriptValueInternal<ReturnType>(params.api_instance, ((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3)));
+            auto returnValue = CxxToScriptValueInternal<ReturnType>(params.apiInstance, ((*thisArg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3)));
                                                                                                  
-            HYP_SCRIPT_RETURN(return_value);
+            HYP_SCRIPT_RETURN(returnValue);
         }
     }
 
@@ -635,7 +635,7 @@ namespace hyperion {
 
         
 
-        auto &&this_arg = GetArgument<0, ThisType *>(params);
+        auto &&thisArg = GetArgument<0, ThisType *>(params);
 
             auto &&arg0 = GetArgument<1, Arg0Type>(params);
 
@@ -654,11 +654,11 @@ namespace hyperion {
             
         
         if constexpr (std::is_same_v<void, Normalized>) {
-            HYP_SCRIPT_RETURN_VOID((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4)));
+            HYP_SCRIPT_RETURN_VOID((thisArg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4)));
         } else {
-            auto return_value = CxxToScriptValueInternal<ReturnType>(params.api_instance, (this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4)));
+            auto returnValue = CxxToScriptValueInternal<ReturnType>(params.apiInstance, (thisArg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4)));
                                                                                                  
-            HYP_SCRIPT_RETURN(return_value);
+            HYP_SCRIPT_RETURN(returnValue);
         }
     }
 
@@ -673,7 +673,7 @@ namespace hyperion {
 
         
 
-        auto &&this_arg = *GetArgument<0, WrappedThisType *>(params);
+        auto &&thisArg = *GetArgument<0, WrappedThisType *>(params);
 
             auto &&arg0 = GetArgument<1, Arg0Type>(params);
 
@@ -692,11 +692,11 @@ namespace hyperion {
             
         
         if constexpr (std::is_same_v<void, Normalized>) {
-            HYP_SCRIPT_RETURN_VOID(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4)));
+            HYP_SCRIPT_RETURN_VOID(((*thisArg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4)));
         } else {
-            auto return_value = CxxToScriptValueInternal<ReturnType>(params.api_instance, ((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4)));
+            auto returnValue = CxxToScriptValueInternal<ReturnType>(params.apiInstance, ((*thisArg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4)));
                                                                                                  
-            HYP_SCRIPT_RETURN(return_value);
+            HYP_SCRIPT_RETURN(returnValue);
         }
     }
 
@@ -714,7 +714,7 @@ namespace hyperion {
 
         
 
-        auto &&this_arg = GetArgument<0, ThisType *>(params);
+        auto &&thisArg = GetArgument<0, ThisType *>(params);
 
             auto &&arg0 = GetArgument<1, Arg0Type>(params);
 
@@ -733,11 +733,11 @@ namespace hyperion {
             
         
         if constexpr (std::is_same_v<void, Normalized>) {
-            HYP_SCRIPT_RETURN_VOID((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4)));
+            HYP_SCRIPT_RETURN_VOID((thisArg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4)));
         } else {
-            auto return_value = CxxToScriptValueInternal<ReturnType>(params.api_instance, (this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4)));
+            auto returnValue = CxxToScriptValueInternal<ReturnType>(params.apiInstance, (thisArg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4)));
                                                                                                  
-            HYP_SCRIPT_RETURN(return_value);
+            HYP_SCRIPT_RETURN(returnValue);
         }
     }
 
@@ -752,7 +752,7 @@ namespace hyperion {
 
         
 
-        auto &&this_arg = *GetArgument<0, WrappedThisType *>(params);
+        auto &&thisArg = *GetArgument<0, WrappedThisType *>(params);
 
             auto &&arg0 = GetArgument<1, Arg0Type>(params);
 
@@ -771,11 +771,11 @@ namespace hyperion {
             
         
         if constexpr (std::is_same_v<void, Normalized>) {
-            HYP_SCRIPT_RETURN_VOID(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4)));
+            HYP_SCRIPT_RETURN_VOID(((*thisArg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4)));
         } else {
-            auto return_value = CxxToScriptValueInternal<ReturnType>(params.api_instance, ((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4)));
+            auto returnValue = CxxToScriptValueInternal<ReturnType>(params.apiInstance, ((*thisArg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4)));
                                                                                                  
-            HYP_SCRIPT_RETURN(return_value);
+            HYP_SCRIPT_RETURN(returnValue);
         }
     }
 
@@ -793,7 +793,7 @@ namespace hyperion {
 
         
 
-        auto &&this_arg = GetArgument<0, ThisType *>(params);
+        auto &&thisArg = GetArgument<0, ThisType *>(params);
 
             auto &&arg0 = GetArgument<1, Arg0Type>(params);
 
@@ -815,11 +815,11 @@ namespace hyperion {
             
         
         if constexpr (std::is_same_v<void, Normalized>) {
-            HYP_SCRIPT_RETURN_VOID((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5)));
+            HYP_SCRIPT_RETURN_VOID((thisArg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5)));
         } else {
-            auto return_value = CxxToScriptValueInternal<ReturnType>(params.api_instance, (this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5)));
+            auto returnValue = CxxToScriptValueInternal<ReturnType>(params.apiInstance, (thisArg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5)));
                                                                                                  
-            HYP_SCRIPT_RETURN(return_value);
+            HYP_SCRIPT_RETURN(returnValue);
         }
     }
 
@@ -834,7 +834,7 @@ namespace hyperion {
 
         
 
-        auto &&this_arg = *GetArgument<0, WrappedThisType *>(params);
+        auto &&thisArg = *GetArgument<0, WrappedThisType *>(params);
 
             auto &&arg0 = GetArgument<1, Arg0Type>(params);
 
@@ -856,11 +856,11 @@ namespace hyperion {
             
         
         if constexpr (std::is_same_v<void, Normalized>) {
-            HYP_SCRIPT_RETURN_VOID(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5)));
+            HYP_SCRIPT_RETURN_VOID(((*thisArg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5)));
         } else {
-            auto return_value = CxxToScriptValueInternal<ReturnType>(params.api_instance, ((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5)));
+            auto returnValue = CxxToScriptValueInternal<ReturnType>(params.apiInstance, ((*thisArg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5)));
                                                                                                  
-            HYP_SCRIPT_RETURN(return_value);
+            HYP_SCRIPT_RETURN(returnValue);
         }
     }
 
@@ -878,7 +878,7 @@ namespace hyperion {
 
         
 
-        auto &&this_arg = GetArgument<0, ThisType *>(params);
+        auto &&thisArg = GetArgument<0, ThisType *>(params);
 
             auto &&arg0 = GetArgument<1, Arg0Type>(params);
 
@@ -900,11 +900,11 @@ namespace hyperion {
             
         
         if constexpr (std::is_same_v<void, Normalized>) {
-            HYP_SCRIPT_RETURN_VOID((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5)));
+            HYP_SCRIPT_RETURN_VOID((thisArg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5)));
         } else {
-            auto return_value = CxxToScriptValueInternal<ReturnType>(params.api_instance, (this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5)));
+            auto returnValue = CxxToScriptValueInternal<ReturnType>(params.apiInstance, (thisArg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5)));
                                                                                                  
-            HYP_SCRIPT_RETURN(return_value);
+            HYP_SCRIPT_RETURN(returnValue);
         }
     }
 
@@ -919,7 +919,7 @@ namespace hyperion {
 
         
 
-        auto &&this_arg = *GetArgument<0, WrappedThisType *>(params);
+        auto &&thisArg = *GetArgument<0, WrappedThisType *>(params);
 
             auto &&arg0 = GetArgument<1, Arg0Type>(params);
 
@@ -941,11 +941,11 @@ namespace hyperion {
             
         
         if constexpr (std::is_same_v<void, Normalized>) {
-            HYP_SCRIPT_RETURN_VOID(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5)));
+            HYP_SCRIPT_RETURN_VOID(((*thisArg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5)));
         } else {
-            auto return_value = CxxToScriptValueInternal<ReturnType>(params.api_instance, ((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5)));
+            auto returnValue = CxxToScriptValueInternal<ReturnType>(params.apiInstance, ((*thisArg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5)));
                                                                                                  
-            HYP_SCRIPT_RETURN(return_value);
+            HYP_SCRIPT_RETURN(returnValue);
         }
     }
 
@@ -963,7 +963,7 @@ namespace hyperion {
 
         
 
-        auto &&this_arg = GetArgument<0, ThisType *>(params);
+        auto &&thisArg = GetArgument<0, ThisType *>(params);
 
             auto &&arg0 = GetArgument<1, Arg0Type>(params);
 
@@ -988,11 +988,11 @@ namespace hyperion {
             
         
         if constexpr (std::is_same_v<void, Normalized>) {
-            HYP_SCRIPT_RETURN_VOID((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6)));
+            HYP_SCRIPT_RETURN_VOID((thisArg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6)));
         } else {
-            auto return_value = CxxToScriptValueInternal<ReturnType>(params.api_instance, (this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6)));
+            auto returnValue = CxxToScriptValueInternal<ReturnType>(params.apiInstance, (thisArg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6)));
                                                                                                  
-            HYP_SCRIPT_RETURN(return_value);
+            HYP_SCRIPT_RETURN(returnValue);
         }
     }
 
@@ -1007,7 +1007,7 @@ namespace hyperion {
 
         
 
-        auto &&this_arg = *GetArgument<0, WrappedThisType *>(params);
+        auto &&thisArg = *GetArgument<0, WrappedThisType *>(params);
 
             auto &&arg0 = GetArgument<1, Arg0Type>(params);
 
@@ -1032,11 +1032,11 @@ namespace hyperion {
             
         
         if constexpr (std::is_same_v<void, Normalized>) {
-            HYP_SCRIPT_RETURN_VOID(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6)));
+            HYP_SCRIPT_RETURN_VOID(((*thisArg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6)));
         } else {
-            auto return_value = CxxToScriptValueInternal<ReturnType>(params.api_instance, ((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6)));
+            auto returnValue = CxxToScriptValueInternal<ReturnType>(params.apiInstance, ((*thisArg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6)));
                                                                                                  
-            HYP_SCRIPT_RETURN(return_value);
+            HYP_SCRIPT_RETURN(returnValue);
         }
     }
 
@@ -1054,7 +1054,7 @@ namespace hyperion {
 
         
 
-        auto &&this_arg = GetArgument<0, ThisType *>(params);
+        auto &&thisArg = GetArgument<0, ThisType *>(params);
 
             auto &&arg0 = GetArgument<1, Arg0Type>(params);
 
@@ -1079,11 +1079,11 @@ namespace hyperion {
             
         
         if constexpr (std::is_same_v<void, Normalized>) {
-            HYP_SCRIPT_RETURN_VOID((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6)));
+            HYP_SCRIPT_RETURN_VOID((thisArg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6)));
         } else {
-            auto return_value = CxxToScriptValueInternal<ReturnType>(params.api_instance, (this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6)));
+            auto returnValue = CxxToScriptValueInternal<ReturnType>(params.apiInstance, (thisArg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6)));
                                                                                                  
-            HYP_SCRIPT_RETURN(return_value);
+            HYP_SCRIPT_RETURN(returnValue);
         }
     }
 
@@ -1098,7 +1098,7 @@ namespace hyperion {
 
         
 
-        auto &&this_arg = *GetArgument<0, WrappedThisType *>(params);
+        auto &&thisArg = *GetArgument<0, WrappedThisType *>(params);
 
             auto &&arg0 = GetArgument<1, Arg0Type>(params);
 
@@ -1123,11 +1123,11 @@ namespace hyperion {
             
         
         if constexpr (std::is_same_v<void, Normalized>) {
-            HYP_SCRIPT_RETURN_VOID(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6)));
+            HYP_SCRIPT_RETURN_VOID(((*thisArg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6)));
         } else {
-            auto return_value = CxxToScriptValueInternal<ReturnType>(params.api_instance, ((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6)));
+            auto returnValue = CxxToScriptValueInternal<ReturnType>(params.apiInstance, ((*thisArg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6)));
                                                                                                  
-            HYP_SCRIPT_RETURN(return_value);
+            HYP_SCRIPT_RETURN(returnValue);
         }
     }
 
@@ -1145,7 +1145,7 @@ namespace hyperion {
 
         
 
-        auto &&this_arg = GetArgument<0, ThisType *>(params);
+        auto &&thisArg = GetArgument<0, ThisType *>(params);
 
             auto &&arg0 = GetArgument<1, Arg0Type>(params);
 
@@ -1173,11 +1173,11 @@ namespace hyperion {
             
         
         if constexpr (std::is_same_v<void, Normalized>) {
-            HYP_SCRIPT_RETURN_VOID((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7)));
+            HYP_SCRIPT_RETURN_VOID((thisArg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7)));
         } else {
-            auto return_value = CxxToScriptValueInternal<ReturnType>(params.api_instance, (this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7)));
+            auto returnValue = CxxToScriptValueInternal<ReturnType>(params.apiInstance, (thisArg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7)));
                                                                                                  
-            HYP_SCRIPT_RETURN(return_value);
+            HYP_SCRIPT_RETURN(returnValue);
         }
     }
 
@@ -1192,7 +1192,7 @@ namespace hyperion {
 
         
 
-        auto &&this_arg = *GetArgument<0, WrappedThisType *>(params);
+        auto &&thisArg = *GetArgument<0, WrappedThisType *>(params);
 
             auto &&arg0 = GetArgument<1, Arg0Type>(params);
 
@@ -1220,11 +1220,11 @@ namespace hyperion {
             
         
         if constexpr (std::is_same_v<void, Normalized>) {
-            HYP_SCRIPT_RETURN_VOID(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7)));
+            HYP_SCRIPT_RETURN_VOID(((*thisArg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7)));
         } else {
-            auto return_value = CxxToScriptValueInternal<ReturnType>(params.api_instance, ((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7)));
+            auto returnValue = CxxToScriptValueInternal<ReturnType>(params.apiInstance, ((*thisArg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7)));
                                                                                                  
-            HYP_SCRIPT_RETURN(return_value);
+            HYP_SCRIPT_RETURN(returnValue);
         }
     }
 
@@ -1242,7 +1242,7 @@ namespace hyperion {
 
         
 
-        auto &&this_arg = GetArgument<0, ThisType *>(params);
+        auto &&thisArg = GetArgument<0, ThisType *>(params);
 
             auto &&arg0 = GetArgument<1, Arg0Type>(params);
 
@@ -1270,11 +1270,11 @@ namespace hyperion {
             
         
         if constexpr (std::is_same_v<void, Normalized>) {
-            HYP_SCRIPT_RETURN_VOID((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7)));
+            HYP_SCRIPT_RETURN_VOID((thisArg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7)));
         } else {
-            auto return_value = CxxToScriptValueInternal<ReturnType>(params.api_instance, (this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7)));
+            auto returnValue = CxxToScriptValueInternal<ReturnType>(params.apiInstance, (thisArg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7)));
                                                                                                  
-            HYP_SCRIPT_RETURN(return_value);
+            HYP_SCRIPT_RETURN(returnValue);
         }
     }
 
@@ -1289,7 +1289,7 @@ namespace hyperion {
 
         
 
-        auto &&this_arg = *GetArgument<0, WrappedThisType *>(params);
+        auto &&thisArg = *GetArgument<0, WrappedThisType *>(params);
 
             auto &&arg0 = GetArgument<1, Arg0Type>(params);
 
@@ -1317,11 +1317,11 @@ namespace hyperion {
             
         
         if constexpr (std::is_same_v<void, Normalized>) {
-            HYP_SCRIPT_RETURN_VOID(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7)));
+            HYP_SCRIPT_RETURN_VOID(((*thisArg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7)));
         } else {
-            auto return_value = CxxToScriptValueInternal<ReturnType>(params.api_instance, ((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7)));
+            auto returnValue = CxxToScriptValueInternal<ReturnType>(params.apiInstance, ((*thisArg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7)));
                                                                                                  
-            HYP_SCRIPT_RETURN(return_value);
+            HYP_SCRIPT_RETURN(returnValue);
         }
     }
 
@@ -1339,7 +1339,7 @@ namespace hyperion {
 
         
 
-        auto &&this_arg = GetArgument<0, ThisType *>(params);
+        auto &&thisArg = GetArgument<0, ThisType *>(params);
 
             auto &&arg0 = GetArgument<1, Arg0Type>(params);
 
@@ -1370,11 +1370,11 @@ namespace hyperion {
             
         
         if constexpr (std::is_same_v<void, Normalized>) {
-            HYP_SCRIPT_RETURN_VOID((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7), std::forward<Arg8Type>(arg8)));
+            HYP_SCRIPT_RETURN_VOID((thisArg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7), std::forward<Arg8Type>(arg8)));
         } else {
-            auto return_value = CxxToScriptValueInternal<ReturnType>(params.api_instance, (this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7), std::forward<Arg8Type>(arg8)));
+            auto returnValue = CxxToScriptValueInternal<ReturnType>(params.apiInstance, (thisArg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7), std::forward<Arg8Type>(arg8)));
                                                                                                  
-            HYP_SCRIPT_RETURN(return_value);
+            HYP_SCRIPT_RETURN(returnValue);
         }
     }
 
@@ -1389,7 +1389,7 @@ namespace hyperion {
 
         
 
-        auto &&this_arg = *GetArgument<0, WrappedThisType *>(params);
+        auto &&thisArg = *GetArgument<0, WrappedThisType *>(params);
 
             auto &&arg0 = GetArgument<1, Arg0Type>(params);
 
@@ -1420,11 +1420,11 @@ namespace hyperion {
             
         
         if constexpr (std::is_same_v<void, Normalized>) {
-            HYP_SCRIPT_RETURN_VOID(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7), std::forward<Arg8Type>(arg8)));
+            HYP_SCRIPT_RETURN_VOID(((*thisArg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7), std::forward<Arg8Type>(arg8)));
         } else {
-            auto return_value = CxxToScriptValueInternal<ReturnType>(params.api_instance, ((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7), std::forward<Arg8Type>(arg8)));
+            auto returnValue = CxxToScriptValueInternal<ReturnType>(params.apiInstance, ((*thisArg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7), std::forward<Arg8Type>(arg8)));
                                                                                                  
-            HYP_SCRIPT_RETURN(return_value);
+            HYP_SCRIPT_RETURN(returnValue);
         }
     }
 
@@ -1442,7 +1442,7 @@ namespace hyperion {
 
         
 
-        auto &&this_arg = GetArgument<0, ThisType *>(params);
+        auto &&thisArg = GetArgument<0, ThisType *>(params);
 
             auto &&arg0 = GetArgument<1, Arg0Type>(params);
 
@@ -1473,11 +1473,11 @@ namespace hyperion {
             
         
         if constexpr (std::is_same_v<void, Normalized>) {
-            HYP_SCRIPT_RETURN_VOID((this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7), std::forward<Arg8Type>(arg8)));
+            HYP_SCRIPT_RETURN_VOID((thisArg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7), std::forward<Arg8Type>(arg8)));
         } else {
-            auto return_value = CxxToScriptValueInternal<ReturnType>(params.api_instance, (this_arg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7), std::forward<Arg8Type>(arg8)));
+            auto returnValue = CxxToScriptValueInternal<ReturnType>(params.apiInstance, (thisArg->*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7), std::forward<Arg8Type>(arg8)));
                                                                                                  
-            HYP_SCRIPT_RETURN(return_value);
+            HYP_SCRIPT_RETURN(returnValue);
         }
     }
 
@@ -1492,7 +1492,7 @@ namespace hyperion {
 
         
 
-        auto &&this_arg = *GetArgument<0, WrappedThisType *>(params);
+        auto &&thisArg = *GetArgument<0, WrappedThisType *>(params);
 
             auto &&arg0 = GetArgument<1, Arg0Type>(params);
 
@@ -1523,11 +1523,11 @@ namespace hyperion {
             
         
         if constexpr (std::is_same_v<void, Normalized>) {
-            HYP_SCRIPT_RETURN_VOID(((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7), std::forward<Arg8Type>(arg8)));
+            HYP_SCRIPT_RETURN_VOID(((*thisArg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7), std::forward<Arg8Type>(arg8)));
         } else {
-            auto return_value = CxxToScriptValueInternal<ReturnType>(params.api_instance, ((*this_arg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7), std::forward<Arg8Type>(arg8)));
+            auto returnValue = CxxToScriptValueInternal<ReturnType>(params.apiInstance, ((*thisArg).*MemFn)(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7), std::forward<Arg8Type>(arg8)));
                                                                                                  
-            HYP_SCRIPT_RETURN(return_value);
+            HYP_SCRIPT_RETURN(returnValue);
         }
     }
 
@@ -1556,9 +1556,9 @@ namespace hyperion {
         if constexpr (std::is_same_v<void, Normalized>) {
             HYP_SCRIPT_RETURN_VOID(Fn());
         } else {
-            auto return_value = CxxToScriptValueInternal(params.api_instance, Fn());
+            auto returnValue = CxxToScriptValueInternal(params.apiInstance, Fn());
                                                                                                  
-            HYP_SCRIPT_RETURN(return_value);
+            HYP_SCRIPT_RETURN(returnValue);
         }
     }
 
@@ -1581,9 +1581,9 @@ namespace hyperion {
         if constexpr (std::is_same_v<void, Normalized>) {
             HYP_SCRIPT_RETURN_VOID(Fn(std::forward<Arg0Type>(arg0)));
         } else {
-            auto return_value = CxxToScriptValueInternal(params.api_instance, Fn(std::forward<Arg0Type>(arg0)));
+            auto returnValue = CxxToScriptValueInternal(params.apiInstance, Fn(std::forward<Arg0Type>(arg0)));
                                                                                                  
-            HYP_SCRIPT_RETURN(return_value);
+            HYP_SCRIPT_RETURN(returnValue);
         }
     }
 
@@ -1609,9 +1609,9 @@ namespace hyperion {
         if constexpr (std::is_same_v<void, Normalized>) {
             HYP_SCRIPT_RETURN_VOID(Fn(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1)));
         } else {
-            auto return_value = CxxToScriptValueInternal(params.api_instance, Fn(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1)));
+            auto returnValue = CxxToScriptValueInternal(params.apiInstance, Fn(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1)));
                                                                                                  
-            HYP_SCRIPT_RETURN(return_value);
+            HYP_SCRIPT_RETURN(returnValue);
         }
     }
 
@@ -1640,9 +1640,9 @@ namespace hyperion {
         if constexpr (std::is_same_v<void, Normalized>) {
             HYP_SCRIPT_RETURN_VOID(Fn(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2)));
         } else {
-            auto return_value = CxxToScriptValueInternal(params.api_instance, Fn(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2)));
+            auto returnValue = CxxToScriptValueInternal(params.apiInstance, Fn(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2)));
                                                                                                  
-            HYP_SCRIPT_RETURN(return_value);
+            HYP_SCRIPT_RETURN(returnValue);
         }
     }
 
@@ -1674,9 +1674,9 @@ namespace hyperion {
         if constexpr (std::is_same_v<void, Normalized>) {
             HYP_SCRIPT_RETURN_VOID(Fn(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3)));
         } else {
-            auto return_value = CxxToScriptValueInternal(params.api_instance, Fn(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3)));
+            auto returnValue = CxxToScriptValueInternal(params.apiInstance, Fn(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3)));
                                                                                                  
-            HYP_SCRIPT_RETURN(return_value);
+            HYP_SCRIPT_RETURN(returnValue);
         }
     }
 
@@ -1711,9 +1711,9 @@ namespace hyperion {
         if constexpr (std::is_same_v<void, Normalized>) {
             HYP_SCRIPT_RETURN_VOID(Fn(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4)));
         } else {
-            auto return_value = CxxToScriptValueInternal(params.api_instance, Fn(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4)));
+            auto returnValue = CxxToScriptValueInternal(params.apiInstance, Fn(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4)));
                                                                                                  
-            HYP_SCRIPT_RETURN(return_value);
+            HYP_SCRIPT_RETURN(returnValue);
         }
     }
 
@@ -1751,9 +1751,9 @@ namespace hyperion {
         if constexpr (std::is_same_v<void, Normalized>) {
             HYP_SCRIPT_RETURN_VOID(Fn(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5)));
         } else {
-            auto return_value = CxxToScriptValueInternal(params.api_instance, Fn(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5)));
+            auto returnValue = CxxToScriptValueInternal(params.apiInstance, Fn(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5)));
                                                                                                  
-            HYP_SCRIPT_RETURN(return_value);
+            HYP_SCRIPT_RETURN(returnValue);
         }
     }
 
@@ -1794,9 +1794,9 @@ namespace hyperion {
         if constexpr (std::is_same_v<void, Normalized>) {
             HYP_SCRIPT_RETURN_VOID(Fn(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6)));
         } else {
-            auto return_value = CxxToScriptValueInternal(params.api_instance, Fn(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6)));
+            auto returnValue = CxxToScriptValueInternal(params.apiInstance, Fn(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6)));
                                                                                                  
-            HYP_SCRIPT_RETURN(return_value);
+            HYP_SCRIPT_RETURN(returnValue);
         }
     }
 
@@ -1840,9 +1840,9 @@ namespace hyperion {
         if constexpr (std::is_same_v<void, Normalized>) {
             HYP_SCRIPT_RETURN_VOID(Fn(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7)));
         } else {
-            auto return_value = CxxToScriptValueInternal(params.api_instance, Fn(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7)));
+            auto returnValue = CxxToScriptValueInternal(params.apiInstance, Fn(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7)));
                                                                                                  
-            HYP_SCRIPT_RETURN(return_value);
+            HYP_SCRIPT_RETURN(returnValue);
         }
     }
 
@@ -1889,9 +1889,9 @@ namespace hyperion {
         if constexpr (std::is_same_v<void, Normalized>) {
             HYP_SCRIPT_RETURN_VOID(Fn(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7), std::forward<Arg8Type>(arg8)));
         } else {
-            auto return_value = CxxToScriptValueInternal(params.api_instance, Fn(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7), std::forward<Arg8Type>(arg8)));
+            auto returnValue = CxxToScriptValueInternal(params.apiInstance, Fn(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7), std::forward<Arg8Type>(arg8)));
                                                                                                  
-            HYP_SCRIPT_RETURN(return_value);
+            HYP_SCRIPT_RETURN(returnValue);
         }
     }
 
@@ -1941,9 +1941,9 @@ namespace hyperion {
         if constexpr (std::is_same_v<void, Normalized>) {
             HYP_SCRIPT_RETURN_VOID(Fn(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7), std::forward<Arg8Type>(arg8), std::forward<Arg9Type>(arg9)));
         } else {
-            auto return_value = CxxToScriptValueInternal(params.api_instance, Fn(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7), std::forward<Arg8Type>(arg8), std::forward<Arg9Type>(arg9)));
+            auto returnValue = CxxToScriptValueInternal(params.apiInstance, Fn(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7), std::forward<Arg8Type>(arg8), std::forward<Arg9Type>(arg9)));
                                                                                                  
-            HYP_SCRIPT_RETURN(return_value);
+            HYP_SCRIPT_RETURN(returnValue);
         }
     }
 
@@ -1985,16 +1985,16 @@ namespace hyperion {
         } else {
             HYP_SCRIPT_CREATE_PTR(Type(), result);
 
-            const auto class_name_it = params.api_instance.class_bindings.class_names.Find<Type>();
-            Assert(class_name_it != params.api_instance.class_bindings.class_names.End(), "Class not registered!");
+            const auto classNameIt = params.apiInstance.classBindings.classNames.Find<Type>();
+            Assert(classNameIt != params.apiInstance.classBindings.classNames.End(), "Class not registered!");
 
-            const auto prototype_it = params.api_instance.class_bindings.class_prototypes.Find(class_name_it->second);
-            Assert(prototype_it != params.api_instance.class_bindings.class_prototypes.End(), "Class not registered!");
+            const auto prototypeIt = params.apiInstance.classBindings.classPrototypes.Find(classNameIt->second);
+            Assert(prototypeIt != params.apiInstance.classBindings.classPrototypes.End(), "Class not registered!");
 
-            vm::VMObject result_value(prototype_it->second); // construct from prototype
-            HYP_SCRIPT_SET_MEMBER(result_value, "__intern", result);
+            vm::VMObject resultValue(prototypeIt->second); // construct from prototype
+            HYP_SCRIPT_SET_MEMBER(resultValue, "__intern", result);
 
-            HYP_SCRIPT_CREATE_PTR(result_value, ptr);
+            HYP_SCRIPT_CREATE_PTR(resultValue, ptr);
 
             HYP_SCRIPT_RETURN(ptr);
         }
@@ -2033,16 +2033,16 @@ namespace hyperion {
         } else {
             HYP_SCRIPT_CREATE_PTR(Type(std::forward<Arg0Type>(arg0)), result);
 
-            const auto class_name_it = params.api_instance.class_bindings.class_names.Find<Type>();
-            Assert(class_name_it != params.api_instance.class_bindings.class_names.End(), "Class not registered!");
+            const auto classNameIt = params.apiInstance.classBindings.classNames.Find<Type>();
+            Assert(classNameIt != params.apiInstance.classBindings.classNames.End(), "Class not registered!");
 
-            const auto prototype_it = params.api_instance.class_bindings.class_prototypes.Find(class_name_it->second);
-            Assert(prototype_it != params.api_instance.class_bindings.class_prototypes.End(), "Class not registered!");
+            const auto prototypeIt = params.apiInstance.classBindings.classPrototypes.Find(classNameIt->second);
+            Assert(prototypeIt != params.apiInstance.classBindings.classPrototypes.End(), "Class not registered!");
 
-            vm::VMObject result_value(prototype_it->second); // construct from prototype
-            HYP_SCRIPT_SET_MEMBER(result_value, "__intern", result);
+            vm::VMObject resultValue(prototypeIt->second); // construct from prototype
+            HYP_SCRIPT_SET_MEMBER(resultValue, "__intern", result);
 
-            HYP_SCRIPT_CREATE_PTR(result_value, ptr);
+            HYP_SCRIPT_CREATE_PTR(resultValue, ptr);
 
             HYP_SCRIPT_RETURN(ptr);
         }
@@ -2084,16 +2084,16 @@ namespace hyperion {
         } else {
             HYP_SCRIPT_CREATE_PTR(Type(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1)), result);
 
-            const auto class_name_it = params.api_instance.class_bindings.class_names.Find<Type>();
-            Assert(class_name_it != params.api_instance.class_bindings.class_names.End(), "Class not registered!");
+            const auto classNameIt = params.apiInstance.classBindings.classNames.Find<Type>();
+            Assert(classNameIt != params.apiInstance.classBindings.classNames.End(), "Class not registered!");
 
-            const auto prototype_it = params.api_instance.class_bindings.class_prototypes.Find(class_name_it->second);
-            Assert(prototype_it != params.api_instance.class_bindings.class_prototypes.End(), "Class not registered!");
+            const auto prototypeIt = params.apiInstance.classBindings.classPrototypes.Find(classNameIt->second);
+            Assert(prototypeIt != params.apiInstance.classBindings.classPrototypes.End(), "Class not registered!");
 
-            vm::VMObject result_value(prototype_it->second); // construct from prototype
-            HYP_SCRIPT_SET_MEMBER(result_value, "__intern", result);
+            vm::VMObject resultValue(prototypeIt->second); // construct from prototype
+            HYP_SCRIPT_SET_MEMBER(resultValue, "__intern", result);
 
-            HYP_SCRIPT_CREATE_PTR(result_value, ptr);
+            HYP_SCRIPT_CREATE_PTR(resultValue, ptr);
 
             HYP_SCRIPT_RETURN(ptr);
         }
@@ -2138,16 +2138,16 @@ namespace hyperion {
         } else {
             HYP_SCRIPT_CREATE_PTR(Type(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2)), result);
 
-            const auto class_name_it = params.api_instance.class_bindings.class_names.Find<Type>();
-            Assert(class_name_it != params.api_instance.class_bindings.class_names.End(), "Class not registered!");
+            const auto classNameIt = params.apiInstance.classBindings.classNames.Find<Type>();
+            Assert(classNameIt != params.apiInstance.classBindings.classNames.End(), "Class not registered!");
 
-            const auto prototype_it = params.api_instance.class_bindings.class_prototypes.Find(class_name_it->second);
-            Assert(prototype_it != params.api_instance.class_bindings.class_prototypes.End(), "Class not registered!");
+            const auto prototypeIt = params.apiInstance.classBindings.classPrototypes.Find(classNameIt->second);
+            Assert(prototypeIt != params.apiInstance.classBindings.classPrototypes.End(), "Class not registered!");
 
-            vm::VMObject result_value(prototype_it->second); // construct from prototype
-            HYP_SCRIPT_SET_MEMBER(result_value, "__intern", result);
+            vm::VMObject resultValue(prototypeIt->second); // construct from prototype
+            HYP_SCRIPT_SET_MEMBER(resultValue, "__intern", result);
 
-            HYP_SCRIPT_CREATE_PTR(result_value, ptr);
+            HYP_SCRIPT_CREATE_PTR(resultValue, ptr);
 
             HYP_SCRIPT_RETURN(ptr);
         }
@@ -2195,16 +2195,16 @@ namespace hyperion {
         } else {
             HYP_SCRIPT_CREATE_PTR(Type(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3)), result);
 
-            const auto class_name_it = params.api_instance.class_bindings.class_names.Find<Type>();
-            Assert(class_name_it != params.api_instance.class_bindings.class_names.End(), "Class not registered!");
+            const auto classNameIt = params.apiInstance.classBindings.classNames.Find<Type>();
+            Assert(classNameIt != params.apiInstance.classBindings.classNames.End(), "Class not registered!");
 
-            const auto prototype_it = params.api_instance.class_bindings.class_prototypes.Find(class_name_it->second);
-            Assert(prototype_it != params.api_instance.class_bindings.class_prototypes.End(), "Class not registered!");
+            const auto prototypeIt = params.apiInstance.classBindings.classPrototypes.Find(classNameIt->second);
+            Assert(prototypeIt != params.apiInstance.classBindings.classPrototypes.End(), "Class not registered!");
 
-            vm::VMObject result_value(prototype_it->second); // construct from prototype
-            HYP_SCRIPT_SET_MEMBER(result_value, "__intern", result);
+            vm::VMObject resultValue(prototypeIt->second); // construct from prototype
+            HYP_SCRIPT_SET_MEMBER(resultValue, "__intern", result);
 
-            HYP_SCRIPT_CREATE_PTR(result_value, ptr);
+            HYP_SCRIPT_CREATE_PTR(resultValue, ptr);
 
             HYP_SCRIPT_RETURN(ptr);
         }
@@ -2255,16 +2255,16 @@ namespace hyperion {
         } else {
             HYP_SCRIPT_CREATE_PTR(Type(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4)), result);
 
-            const auto class_name_it = params.api_instance.class_bindings.class_names.Find<Type>();
-            Assert(class_name_it != params.api_instance.class_bindings.class_names.End(), "Class not registered!");
+            const auto classNameIt = params.apiInstance.classBindings.classNames.Find<Type>();
+            Assert(classNameIt != params.apiInstance.classBindings.classNames.End(), "Class not registered!");
 
-            const auto prototype_it = params.api_instance.class_bindings.class_prototypes.Find(class_name_it->second);
-            Assert(prototype_it != params.api_instance.class_bindings.class_prototypes.End(), "Class not registered!");
+            const auto prototypeIt = params.apiInstance.classBindings.classPrototypes.Find(classNameIt->second);
+            Assert(prototypeIt != params.apiInstance.classBindings.classPrototypes.End(), "Class not registered!");
 
-            vm::VMObject result_value(prototype_it->second); // construct from prototype
-            HYP_SCRIPT_SET_MEMBER(result_value, "__intern", result);
+            vm::VMObject resultValue(prototypeIt->second); // construct from prototype
+            HYP_SCRIPT_SET_MEMBER(resultValue, "__intern", result);
 
-            HYP_SCRIPT_CREATE_PTR(result_value, ptr);
+            HYP_SCRIPT_CREATE_PTR(resultValue, ptr);
 
             HYP_SCRIPT_RETURN(ptr);
         }
@@ -2318,16 +2318,16 @@ namespace hyperion {
         } else {
             HYP_SCRIPT_CREATE_PTR(Type(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5)), result);
 
-            const auto class_name_it = params.api_instance.class_bindings.class_names.Find<Type>();
-            Assert(class_name_it != params.api_instance.class_bindings.class_names.End(), "Class not registered!");
+            const auto classNameIt = params.apiInstance.classBindings.classNames.Find<Type>();
+            Assert(classNameIt != params.apiInstance.classBindings.classNames.End(), "Class not registered!");
 
-            const auto prototype_it = params.api_instance.class_bindings.class_prototypes.Find(class_name_it->second);
-            Assert(prototype_it != params.api_instance.class_bindings.class_prototypes.End(), "Class not registered!");
+            const auto prototypeIt = params.apiInstance.classBindings.classPrototypes.Find(classNameIt->second);
+            Assert(prototypeIt != params.apiInstance.classBindings.classPrototypes.End(), "Class not registered!");
 
-            vm::VMObject result_value(prototype_it->second); // construct from prototype
-            HYP_SCRIPT_SET_MEMBER(result_value, "__intern", result);
+            vm::VMObject resultValue(prototypeIt->second); // construct from prototype
+            HYP_SCRIPT_SET_MEMBER(resultValue, "__intern", result);
 
-            HYP_SCRIPT_CREATE_PTR(result_value, ptr);
+            HYP_SCRIPT_CREATE_PTR(resultValue, ptr);
 
             HYP_SCRIPT_RETURN(ptr);
         }
@@ -2384,16 +2384,16 @@ namespace hyperion {
         } else {
             HYP_SCRIPT_CREATE_PTR(Type(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6)), result);
 
-            const auto class_name_it = params.api_instance.class_bindings.class_names.Find<Type>();
-            Assert(class_name_it != params.api_instance.class_bindings.class_names.End(), "Class not registered!");
+            const auto classNameIt = params.apiInstance.classBindings.classNames.Find<Type>();
+            Assert(classNameIt != params.apiInstance.classBindings.classNames.End(), "Class not registered!");
 
-            const auto prototype_it = params.api_instance.class_bindings.class_prototypes.Find(class_name_it->second);
-            Assert(prototype_it != params.api_instance.class_bindings.class_prototypes.End(), "Class not registered!");
+            const auto prototypeIt = params.apiInstance.classBindings.classPrototypes.Find(classNameIt->second);
+            Assert(prototypeIt != params.apiInstance.classBindings.classPrototypes.End(), "Class not registered!");
 
-            vm::VMObject result_value(prototype_it->second); // construct from prototype
-            HYP_SCRIPT_SET_MEMBER(result_value, "__intern", result);
+            vm::VMObject resultValue(prototypeIt->second); // construct from prototype
+            HYP_SCRIPT_SET_MEMBER(resultValue, "__intern", result);
 
-            HYP_SCRIPT_CREATE_PTR(result_value, ptr);
+            HYP_SCRIPT_CREATE_PTR(resultValue, ptr);
 
             HYP_SCRIPT_RETURN(ptr);
         }
@@ -2453,16 +2453,16 @@ namespace hyperion {
         } else {
             HYP_SCRIPT_CREATE_PTR(Type(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7)), result);
 
-            const auto class_name_it = params.api_instance.class_bindings.class_names.Find<Type>();
-            Assert(class_name_it != params.api_instance.class_bindings.class_names.End(), "Class not registered!");
+            const auto classNameIt = params.apiInstance.classBindings.classNames.Find<Type>();
+            Assert(classNameIt != params.apiInstance.classBindings.classNames.End(), "Class not registered!");
 
-            const auto prototype_it = params.api_instance.class_bindings.class_prototypes.Find(class_name_it->second);
-            Assert(prototype_it != params.api_instance.class_bindings.class_prototypes.End(), "Class not registered!");
+            const auto prototypeIt = params.apiInstance.classBindings.classPrototypes.Find(classNameIt->second);
+            Assert(prototypeIt != params.apiInstance.classBindings.classPrototypes.End(), "Class not registered!");
 
-            vm::VMObject result_value(prototype_it->second); // construct from prototype
-            HYP_SCRIPT_SET_MEMBER(result_value, "__intern", result);
+            vm::VMObject resultValue(prototypeIt->second); // construct from prototype
+            HYP_SCRIPT_SET_MEMBER(resultValue, "__intern", result);
 
-            HYP_SCRIPT_CREATE_PTR(result_value, ptr);
+            HYP_SCRIPT_CREATE_PTR(resultValue, ptr);
 
             HYP_SCRIPT_RETURN(ptr);
         }
@@ -2525,16 +2525,16 @@ namespace hyperion {
         } else {
             HYP_SCRIPT_CREATE_PTR(Type(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7), std::forward<Arg8Type>(arg8)), result);
 
-            const auto class_name_it = params.api_instance.class_bindings.class_names.Find<Type>();
-            Assert(class_name_it != params.api_instance.class_bindings.class_names.End(), "Class not registered!");
+            const auto classNameIt = params.apiInstance.classBindings.classNames.Find<Type>();
+            Assert(classNameIt != params.apiInstance.classBindings.classNames.End(), "Class not registered!");
 
-            const auto prototype_it = params.api_instance.class_bindings.class_prototypes.Find(class_name_it->second);
-            Assert(prototype_it != params.api_instance.class_bindings.class_prototypes.End(), "Class not registered!");
+            const auto prototypeIt = params.apiInstance.classBindings.classPrototypes.Find(classNameIt->second);
+            Assert(prototypeIt != params.apiInstance.classBindings.classPrototypes.End(), "Class not registered!");
 
-            vm::VMObject result_value(prototype_it->second); // construct from prototype
-            HYP_SCRIPT_SET_MEMBER(result_value, "__intern", result);
+            vm::VMObject resultValue(prototypeIt->second); // construct from prototype
+            HYP_SCRIPT_SET_MEMBER(resultValue, "__intern", result);
 
-            HYP_SCRIPT_CREATE_PTR(result_value, ptr);
+            HYP_SCRIPT_CREATE_PTR(resultValue, ptr);
 
             HYP_SCRIPT_RETURN(ptr);
         }
@@ -2600,16 +2600,16 @@ namespace hyperion {
         } else {
             HYP_SCRIPT_CREATE_PTR(Type(std::forward<Arg0Type>(arg0), std::forward<Arg1Type>(arg1), std::forward<Arg2Type>(arg2), std::forward<Arg3Type>(arg3), std::forward<Arg4Type>(arg4), std::forward<Arg5Type>(arg5), std::forward<Arg6Type>(arg6), std::forward<Arg7Type>(arg7), std::forward<Arg8Type>(arg8), std::forward<Arg9Type>(arg9)), result);
 
-            const auto class_name_it = params.api_instance.class_bindings.class_names.Find<Type>();
-            Assert(class_name_it != params.api_instance.class_bindings.class_names.End(), "Class not registered!");
+            const auto classNameIt = params.apiInstance.classBindings.classNames.Find<Type>();
+            Assert(classNameIt != params.apiInstance.classBindings.classNames.End(), "Class not registered!");
 
-            const auto prototype_it = params.api_instance.class_bindings.class_prototypes.Find(class_name_it->second);
-            Assert(prototype_it != params.api_instance.class_bindings.class_prototypes.End(), "Class not registered!");
+            const auto prototypeIt = params.apiInstance.classBindings.classPrototypes.Find(classNameIt->second);
+            Assert(prototypeIt != params.apiInstance.classBindings.classPrototypes.End(), "Class not registered!");
 
-            vm::VMObject result_value(prototype_it->second); // construct from prototype
-            HYP_SCRIPT_SET_MEMBER(result_value, "__intern", result);
+            vm::VMObject resultValue(prototypeIt->second); // construct from prototype
+            HYP_SCRIPT_SET_MEMBER(resultValue, "__intern", result);
 
-            HYP_SCRIPT_CREATE_PTR(result_value, ptr);
+            HYP_SCRIPT_CREATE_PTR(resultValue, ptr);
 
             HYP_SCRIPT_RETURN(ptr);
         }

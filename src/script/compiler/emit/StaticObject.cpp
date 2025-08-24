@@ -33,18 +33,18 @@ StaticObject::StaticObject(const StaticFunction &func)
     m_value.func = func;
 }
 
-StaticObject::StaticObject(const StaticTypeInfo &type_info)
+StaticObject::StaticObject(const StaticTypeInfo &typeInfo)
     : m_id(0),
       m_type(TYPE_TYPE_INFO)
 {
     Assert(
-        type_info.m_names.Size() == type_info.m_size,
+        typeInfo.m_names.Size() == typeInfo.m_size,
         "number of names must be equal to the number of members"
     );
     
-    m_value.type_info.m_name = type_info.m_name;
-    m_value.type_info.m_size = type_info.m_size;
-    m_value.type_info.m_names = type_info.m_names;
+    m_value.typeInfo.m_name = typeInfo.m_name;
+    m_value.typeInfo.m_size = typeInfo.m_size;
+    m_value.typeInfo.m_names = typeInfo.m_names;
 }
 
 StaticObject::StaticObject(const StaticObject &other)
@@ -58,9 +58,9 @@ StaticObject::StaticObject(const StaticObject &other)
     } else if (other.m_type == TYPE_FUNCTION) {
         m_value.func = other.m_value.func;
     } else if (other.m_type == TYPE_TYPE_INFO) {
-        m_value.type_info.m_name = other.m_value.type_info.m_name;
-        m_value.type_info.m_names = other.m_value.type_info.m_names;
-        m_value.type_info.m_size = other.m_value.type_info.m_size;
+        m_value.typeInfo.m_name = other.m_value.typeInfo.m_name;
+        m_value.typeInfo.m_names = other.m_value.typeInfo.m_names;
+        m_value.typeInfo.m_size = other.m_value.typeInfo.m_size;
     }
 }
 
@@ -78,9 +78,9 @@ StaticObject &StaticObject::operator=(const StaticObject &other)
     } else if (other.m_type == TYPE_FUNCTION) {
         m_value.func = other.m_value.func;
     } else if (other.m_type == TYPE_TYPE_INFO) {
-        m_value.type_info.m_name = other.m_value.type_info.m_name;
-        m_value.type_info.m_names = other.m_value.type_info.m_names;
-        m_value.type_info.m_size = other.m_value.type_info.m_size;
+        m_value.typeInfo.m_name = other.m_value.typeInfo.m_name;
+        m_value.typeInfo.m_names = other.m_value.typeInfo.m_names;
+        m_value.typeInfo.m_size = other.m_value.typeInfo.m_size;
     }
 
     return *this;
@@ -101,17 +101,17 @@ bool StaticObject::operator==(const StaticObject &other) const
     case TYPE_FUNCTION:
         return m_value.func.m_addr == other.m_value.func.m_addr;
     case TYPE_TYPE_INFO:
-        if (m_value.type_info.m_size != other.m_value.type_info.m_size) {
+        if (m_value.typeInfo.m_size != other.m_value.typeInfo.m_size) {
             return false;
         }
 
-        if (m_value.type_info.m_name != other.m_value.type_info.m_name) {
+        if (m_value.typeInfo.m_name != other.m_value.typeInfo.m_name) {
             return false;
         }
 
-        for (size_t i = 0; i < m_value.type_info.m_size; i++) {
-            const NamesPair_t &a = m_value.type_info.m_names[i];
-            const NamesPair_t &b = other.m_value.type_info.m_names[i];
+        for (size_t i = 0; i < m_value.typeInfo.m_size; i++) {
+            const NamesPair_t &a = m_value.typeInfo.m_names[i];
+            const NamesPair_t &b = other.m_value.typeInfo.m_names[i];
 
             if (a.first != b.first) {
                 return false;

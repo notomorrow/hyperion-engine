@@ -12,7 +12,7 @@ class AstAsExpression : public AstExpression
 public:
     AstAsExpression(
         const RC<AstExpression> &target,
-        const RC<AstPrototypeSpecification> &type_specification,
+        const RC<AstPrototypeSpecification> &typeSpecification,
         const SourceLocation &location
     );
 
@@ -32,25 +32,25 @@ public:
     {
         HashCode hc = AstExpression::GetHashCode().Add(TypeName<AstAsExpression>());
         hc.Add(m_target ? m_target->GetHashCode() : HashCode());
-        hc.Add(m_type_specification ? m_type_specification->GetHashCode() : HashCode());
+        hc.Add(m_typeSpecification ? m_typeSpecification->GetHashCode() : HashCode());
 
         return hc;
     }
 
 protected:
     RC<AstExpression>               m_target;
-    RC<AstPrototypeSpecification>   m_type_specification;
+    RC<AstPrototypeSpecification>   m_typeSpecification;
 
     // set while analyzing
-    RC<AstExpression>               m_dynamic_type_expr;
-    Tribool                         m_is_type;
+    RC<AstExpression>               m_dynamicTypeExpr;
+    Tribool                         m_isType;
 
 private:
     RC<AstAsExpression> CloneImpl() const
     {
         return RC<AstAsExpression>(new AstAsExpression(
             CloneAstNode(m_target),
-            CloneAstNode(m_type_specification),
+            CloneAstNode(m_typeSpecification),
             m_location
         ));
     }

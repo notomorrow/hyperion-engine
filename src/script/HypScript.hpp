@@ -41,7 +41,7 @@ public:
         Value _inner = Value(
             Value::NONE,
             Value::ValueData {
-                .user_data = nullptr });
+                .userData = nullptr });
 
         bool IsNull() const
         {
@@ -56,24 +56,24 @@ public:
     {
     };
 
-    HypScript(const SourceFile& source_file);
+    HypScript(const SourceFile& sourceFile);
     HypScript(const HypScript& other) = delete;
     HypScript& operator=(const HypScript& other) = delete;
     ~HypScript();
 
     APIInstance& GetAPIInstance()
     {
-        return m_api_instance;
+        return m_apiInstance;
     }
 
     const APIInstance& GetAPIInstance() const
     {
-        return m_api_instance;
+        return m_apiInstance;
     }
 
     const SourceFile& GetSourceFile() const
     {
-        return m_source_file;
+        return m_sourceFile;
     }
 
     const ErrorList& GetErrors() const
@@ -101,11 +101,11 @@ public:
 
     bool IsBaked() const
     {
-        return m_baked_bytes.Any();
+        return m_bakedBytes.Any();
     }
     bool IsCompiled() const
     {
-        return m_bytecode_chunk.buildables.Any();
+        return m_bytecodeChunk.buildables.Any();
     }
 
     bool Compile(scriptapi2::Context& context);
@@ -113,7 +113,7 @@ public:
     InstructionStream Decompile(std::ostream* os = nullptr) const;
 
     void Bake();
-    void Bake(BuildParams& build_params);
+    void Bake(BuildParams& buildParams);
 
     void Run(scriptapi2::Context& context);
 
@@ -122,83 +122,83 @@ public:
     {
         using ArgType = std::remove_cv_t<std::decay_t<T>>;
 
-        Value first_value;
+        Value firstValue;
 
         if constexpr (std::is_same_v<Value, ArgType>)
         {
-            first_value = item;
+            firstValue = item;
         }
         else if constexpr (std::is_base_of_v<ValueHandle, ArgType>)
         {
-            first_value = item._inner;
+            firstValue = item._inner;
         }
         else if constexpr (std::is_same_v<int8_t, ArgType>)
         {
-            first_value.m_type = Value::I8;
-            first_value.m_value.i8 = item;
+            firstValue.m_type = Value::I8;
+            firstValue.m_value.i8 = item;
         }
         else if constexpr (std::is_same_v<int16_t, ArgType>)
         {
-            first_value.m_type = Value::I16;
-            first_value.m_value.i16 = item;
+            firstValue.m_type = Value::I16;
+            firstValue.m_value.i16 = item;
         }
         else if constexpr (std::is_same_v<int32_t, ArgType>)
         {
-            first_value.m_type = Value::I32;
-            first_value.m_value.i32 = item;
+            firstValue.m_type = Value::I32;
+            firstValue.m_value.i32 = item;
         }
         else if constexpr (std::is_same_v<int64_t, ArgType>)
         {
-            first_value.m_type = Value::I64;
-            first_value.m_value.i64 = item;
+            firstValue.m_type = Value::I64;
+            firstValue.m_value.i64 = item;
         }
         else if constexpr (std::is_same_v<uint8_t, ArgType>)
         {
-            first_value.m_type = Value::U8;
-            first_value.m_value.u8 = item;
+            firstValue.m_type = Value::U8;
+            firstValue.m_value.u8 = item;
         }
         else if constexpr (std::is_same_v<uint16_t, ArgType>)
         {
-            first_value.m_type = Value::U16;
-            first_value.m_value.u16 = item;
+            firstValue.m_type = Value::U16;
+            firstValue.m_value.u16 = item;
         }
         else if constexpr (std::is_same_v<uint32_t, ArgType>)
         {
-            first_value.m_type = Value::U32;
-            first_value.m_value.u32 = item;
+            firstValue.m_type = Value::U32;
+            firstValue.m_value.u32 = item;
         }
         else if constexpr (std::is_same_v<uint64_t, ArgType>)
         {
-            first_value.m_type = Value::U64;
-            first_value.m_value.u64 = item;
+            firstValue.m_type = Value::U64;
+            firstValue.m_value.u64 = item;
         }
         else if constexpr (std::is_same_v<float, ArgType>)
         {
-            first_value.m_type = Value::F32;
-            first_value.m_value.f = item;
+            firstValue.m_type = Value::F32;
+            firstValue.m_value.f = item;
         }
         else if constexpr (std::is_same_v<double, ArgType>)
         {
-            first_value.m_type = Value::F64;
-            first_value.m_value.d = item;
+            firstValue.m_type = Value::F64;
+            firstValue.m_value.d = item;
         }
         else if constexpr (std::is_same_v<bool, ArgType>)
         {
-            first_value.m_type = Value::BOOLEAN;
-            first_value.m_value.b = item;
+            firstValue.m_type = Value::BOOLEAN;
+            firstValue.m_value.b = item;
         }
         else if constexpr (std::is_pointer_v<ArgType>)
         {
             // set to userdata
-            first_value.m_type = Value::USER_DATA;
-            first_value.m_value.user_data = static_cast<void*>(item);
+            firstValue.m_type = Value::USER_DATA;
+            firstValue.m_value.userData = static_cast<void*>(item);
         }
         else
         {
             static_assert(resolutionFailure<ArgType>, "Cannot pass value type to script function!");
         }
 
-        return first_value;
+        return firstValue;
     }
 
     template <class... Args>
@@ -209,24 +209,24 @@ public:
         };
     }
 
-    void CallFunctionArgV(const FunctionHandle& handle, Value* args, ArgCount num_args);
+    void CallFunctionArgV(const FunctionHandle& handle, Value* args, ArgCount numArgs);
 
-    bool GetFunctionHandle(const char* name, FunctionHandle& out_handle)
+    bool GetFunctionHandle(const char* name, FunctionHandle& outHandle)
     {
-        return GetExportedValue(name, &out_handle._inner);
+        return GetExportedValue(name, &outHandle._inner);
     }
 
-    bool GetObjectHandle(const char* name, ObjectHandle& out_handle)
+    bool GetObjectHandle(const char* name, ObjectHandle& outHandle)
     {
-        return GetExportedValue(name, &out_handle._inner);
+        return GetExportedValue(name, &outHandle._inner);
     }
 
     bool GetExportedValue(const char* name, Value* value)
     {
-        return GetExportedSymbols().Find(hash_fnv_1(name), value);
+        return GetExportedSymbols().Find(hashFnv1(name), value);
     }
 
-    bool GetMember(const ObjectHandle& object, const char* member_name, ValueHandle& out_value)
+    bool GetMember(const ObjectHandle& object, const char* memberName, ValueHandle& outValue)
     {
         if (object._inner.m_type != Value::HEAP_POINTER)
         {
@@ -235,9 +235,9 @@ public:
 
         if (VMObject* ptr = object._inner.m_value.ptr->GetPointer<VMObject>())
         {
-            if (Member* member = ptr->LookupMemberFromHash(hash_fnv_1(member_name)))
+            if (Member* member = ptr->LookupMemberFromHash(hashFnv1(memberName)))
             {
-                out_value = ValueHandle { member->value };
+                outValue = ValueHandle { member->value };
 
                 return true;
             }
@@ -246,7 +246,7 @@ public:
         return false;
     }
 
-    bool SetMember(const ObjectHandle& object, const char* member_name, const Value& value)
+    bool SetMember(const ObjectHandle& object, const char* memberName, const Value& value)
     {
         if (object._inner.m_type != Value::HEAP_POINTER)
         {
@@ -255,7 +255,7 @@ public:
 
         if (VMObject* ptr = object._inner.m_value.ptr->GetPointer<VMObject>())
         {
-            if (Member* member = ptr->LookupMemberFromHash(hash_fnv_1(member_name)))
+            if (Member* member = ptr->LookupMemberFromHash(hashFnv1(memberName)))
             {
                 member->value = value;
 
@@ -277,48 +277,48 @@ public:
     template <class RegisteredType, class T>
     ValueHandle CreateInternedObject(const T& value)
     {
-        const auto class_name_it = m_api_instance.class_bindings.class_names.Find<RegisteredType>();
-        Assert(class_name_it != m_api_instance.class_bindings.class_names.End(), "Class %s not registered!", TypeName<RegisteredType>().Data());
+        const auto classNameIt = m_apiInstance.classBindings.classNames.Find<RegisteredType>();
+        Assert(classNameIt != m_apiInstance.classBindings.classNames.End(), "Class %s not registered!", TypeName<RegisteredType>().Data());
 
-        const auto prototype_it = m_api_instance.class_bindings.class_prototypes.Find(class_name_it->second);
-        Assert(prototype_it != m_api_instance.class_bindings.class_prototypes.End(), "Class %s not registered!", TypeName<RegisteredType>().Data());
+        const auto prototypeIt = m_apiInstance.classBindings.classPrototypes.Find(classNameIt->second);
+        Assert(prototypeIt != m_apiInstance.classBindings.classPrototypes.End(), "Class %s not registered!", TypeName<RegisteredType>().Data());
 
-        vm::Value intern_value;
+        vm::Value internValue;
         {
-            vm::HeapValue* ptr_result = m_vm.GetState().HeapAlloc(m_vm.GetState().GetMainThread());
-            Assert(ptr_result != nullptr);
+            vm::HeapValue* ptrResult = m_vm.GetState().HeapAlloc(m_vm.GetState().GetMainThread());
+            Assert(ptrResult != nullptr);
 
-            ptr_result->Assign(value);
-            ptr_result->Mark();
-            intern_value = vm::Value(vm::Value::HEAP_POINTER, { .ptr = ptr_result });
+            ptrResult->Assign(value);
+            ptrResult->Mark();
+            internValue = vm::Value(vm::Value::HEAP_POINTER, { .ptr = ptrResult });
         }
 
-        vm::VMObject boxed_value(prototype_it->second);
-        HYP_SCRIPT_SET_MEMBER(boxed_value, "__intern", intern_value);
+        vm::VMObject boxedValue(prototypeIt->second);
+        HYP_SCRIPT_SET_MEMBER(boxedValue, "__intern", internValue);
 
-        vm::Value final_value;
+        vm::Value finalValue;
         {
-            vm::HeapValue* ptr_result = m_vm.GetState().HeapAlloc(m_vm.GetState().GetMainThread());
-            Assert(ptr_result != nullptr);
+            vm::HeapValue* ptrResult = m_vm.GetState().HeapAlloc(m_vm.GetState().GetMainThread());
+            Assert(ptrResult != nullptr);
 
-            ptr_result->Assign(boxed_value);
-            ptr_result->Mark();
-            final_value = vm::Value(vm::Value::HEAP_POINTER, { .ptr = ptr_result });
+            ptrResult->Assign(boxedValue);
+            ptrResult->Mark();
+            finalValue = vm::Value(vm::Value::HEAP_POINTER, { .ptr = ptrResult });
         }
 
-        return { final_value };
+        return { finalValue };
     }
 
 private:
-    APIInstance m_api_instance;
+    APIInstance m_apiInstance;
 
-    SourceFile m_source_file;
-    CompilationUnit m_compilation_unit;
+    SourceFile m_sourceFile;
+    CompilationUnit m_compilationUnit;
     ErrorList m_errors;
 
-    BytecodeChunk m_bytecode_chunk;
+    BytecodeChunk m_bytecodeChunk;
 
-    Bytes m_baked_bytes;
+    Bytes m_bakedBytes;
 
     VM m_vm;
     BytecodeStream m_bs;

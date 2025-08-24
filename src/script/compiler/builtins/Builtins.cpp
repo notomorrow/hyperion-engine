@@ -137,7 +137,7 @@ Builtins::Builtins(CompilationUnit *unit)
 
 void Builtins::Visit(AstVisitor *visitor)
 {
-    Array<SymbolTypePtr_t> builtin_types {
+    Array<SymbolTypePtr_t> builtinTypes {
         BuiltinTypes::PRIMITIVE_TYPE,
         BuiltinTypes::ANY,
         BuiltinTypes::OBJECT,
@@ -153,41 +153,41 @@ void Builtins::Visit(AstVisitor *visitor)
 
     AstIterator ast;
 
-    for (const SymbolTypePtr_t &type_ptr : builtin_types) {
-        Assert(type_ptr != nullptr);
-        Assert(type_ptr->GetId() == -1);
-        Assert(type_ptr->GetTypeObject() == nullptr);
+    for (const SymbolTypePtr_t &typePtr : builtinTypes) {
+        Assert(typePtr != nullptr);
+        Assert(typePtr->GetId() == -1);
+        Assert(typePtr->GetTypeObject() == nullptr);
 
         // add 'name' member here
-        type_ptr->AddMember({
+        typePtr->AddMember({
             "name",
             BuiltinTypes::STRING,
-            RC<AstString>(new AstString(type_ptr->GetName(), BUILTIN_SOURCE_LOCATION))
+            RC<AstString>(new AstString(typePtr->GetName(), BUILTIN_SOURCE_LOCATION))
         });
 
-        // Add "$proto" so we can use is_instance to check if a value is an instance of a type
-        if (type_ptr->IsPrimitive() && type_ptr->GetDefaultValue() != nullptr) {
-            type_ptr->AddMember({
+        // Add "$proto" so we can use isInstance to check if a value is an instance of a type
+        if (typePtr->IsPrimitive() && typePtr->GetDefaultValue() != nullptr) {
+            typePtr->AddMember({
                 "$proto",
-                type_ptr,
-                type_ptr->GetDefaultValue()
+                typePtr,
+                typePtr->GetDefaultValue()
             });
         }
 
-        RC<AstTypeObject> type_object(new AstTypeObject(
-            type_ptr,
-            type_ptr->GetBaseType(),
+        RC<AstTypeObject> typeObject(new AstTypeObject(
+            typePtr,
+            typePtr->GetBaseType(),
             BUILTIN_SOURCE_LOCATION
         ));
 
         // push it so that it can be visited, and registered
-        visitor->GetAstIterator()->Push(type_object);
+        visitor->GetAstIterator()->Push(typeObject);
 
-        type_ptr->SetTypeObject(type_object);
+        typePtr->SetTypeObject(typeObject);
 
         // add it to the global scope
         Scope &scope = m_unit->GetGlobalModule()->m_scopes.Top();
-        scope.GetIdentifierTable().AddSymbolType(type_ptr);
+        scope.GetIdentifierTable().AddSymbolType(typePtr);
     }
 
     for (auto &it : m_vars) {

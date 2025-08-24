@@ -35,18 +35,18 @@ class AstExpression : public AstStatement
 public:
     AstExpression(
         const SourceLocation &location,
-        int access_options
+        int accessOptions
     );
     virtual ~AstExpression() = default;
 
     int GetAccessOptions() const
-        { return m_access_options; }
+        { return m_accessOptions; }
 
     AccessMode GetAccessMode() const
-        { return m_access_mode; }
+        { return m_accessMode; }
 
-    void SetAccessMode(AccessMode access_mode)
-        { m_access_mode = access_mode; }
+    void SetAccessMode(AccessMode accessMode)
+        { m_accessMode = accessMode; }
 
     virtual void Visit(AstVisitor *visitor, Module *mod) override = 0;
     virtual std::unique_ptr<Buildable> Build(AstVisitor *visitor, Module *mod) override = 0;
@@ -82,24 +82,24 @@ public:
         { return false; }
 
     ExpressionFlags GetExpressionFlags() const
-        { return m_expression_flags; }
+        { return m_expressionFlags; }
 
-    void SetExpressionFlags(ExpressionFlags expression_flags)
-        { m_expression_flags = expression_flags; }
+    void SetExpressionFlags(ExpressionFlags expressionFlags)
+        { m_expressionFlags = expressionFlags; }
 
-    void ApplyExpressionFlags(ExpressionFlags expression_flags, bool set = true)
+    void ApplyExpressionFlags(ExpressionFlags expressionFlags, bool set = true)
     {
         if (set) {
-            m_expression_flags |= expression_flags;
+            m_expressionFlags |= expressionFlags;
         } else {
-            m_expression_flags &= ~expression_flags;
+            m_expressionFlags &= ~expressionFlags;
         }
     }
     
 protected:
-    AccessMode      m_access_mode;
-    int             m_access_options;
-    ExpressionFlags m_expression_flags = EXPR_FLAGS_NONE;
+    AccessMode      m_accessMode;
+    int             m_accessOptions;
+    ExpressionFlags m_expressionFlags = EXPR_FLAGS_NONE;
 };
 
 } // namespace hyperion::compiler

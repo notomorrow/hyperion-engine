@@ -68,7 +68,7 @@ public:
     static Optional<String> ToString(Keywords keyword);
 
 private:
-    static const HashMap<String, Keywords> keyword_strings;
+    static const HashMap<String, Keywords> keywordStrings;
 };
 
 } // namespace hyperion::compiler

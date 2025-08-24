@@ -46,8 +46,8 @@ Exception::~Exception()
 }
 
 Exception Exception::InvalidComparisonException(
-    const char *left_type_str,
-    const char *right_type_str
+    const char *leftTypeStr,
+    const char *rightTypeStr
 )
 {
     char buffer[256];
@@ -55,16 +55,16 @@ Exception Exception::InvalidComparisonException(
         buffer,
         255,
         "Cannot compare %s with %s",
-        left_type_str,
-        right_type_str
+        leftTypeStr,
+        rightTypeStr
     );
     return Exception(buffer);
 }
 
 Exception Exception::InvalidOperationException(
-    const char *op_name,
-    const char *left_type_str,
-    const char *right_type_str
+    const char *opName,
+    const char *leftTypeStr,
+    const char *rightTypeStr
 )
 {
     char buffer[256];
@@ -72,22 +72,22 @@ Exception Exception::InvalidOperationException(
         buffer,
         255,
         "Invalid operation (%s) on types %s and %s",
-        op_name,
-        left_type_str,
-        right_type_str
+        opName,
+        leftTypeStr,
+        rightTypeStr
     );
     return Exception(buffer);
 }
 
-Exception Exception::InvalidOperationException(const char *op_name, const char *type_str)
+Exception Exception::InvalidOperationException(const char *opName, const char *typeStr)
 {
     char buffer[256];
     std::snprintf(
         buffer,
         255,
         "Invalid operation (%s) on type %s",
-        op_name,
-        type_str
+        opName,
+        typeStr
     );
     return Exception(buffer);
 }
@@ -108,17 +108,17 @@ Exception Exception::InvalidArgsException(int expected, int received, bool varia
     return Exception(buffer);
 }
 
-Exception Exception::InvalidArgsException(const char *expected_str, int received)
+Exception Exception::InvalidArgsException(const char *expectedStr, int received)
 {
     char buffer[256];
-    std::sprintf(buffer, "Invalid arguments: expected %s, received %d", expected_str, received);
+    std::sprintf(buffer, "Invalid arguments: expected %s, received %d", expectedStr, received);
     return Exception(buffer);
 }
 
-Exception Exception::InvalidArgsException(const char *expected_str)
+Exception Exception::InvalidArgsException(const char *expectedStr)
 {
     char buffer[256];
-    std::sprintf(buffer, "Invalid arguments: expected %s", expected_str);
+    std::sprintf(buffer, "Invalid arguments: expected %s", expectedStr);
     return Exception(buffer);
 }
 
@@ -142,18 +142,18 @@ Exception Exception::OutOfBoundsException()
     return Exception("Index out of bounds of Array");
 }
 
-Exception Exception::MemberNotFoundException(uint32 hash_code)
+Exception Exception::MemberNotFoundException(uint32 hashCode)
 {
     char buffer[256];
-    std::snprintf(buffer, 256, "Member with hash code %u not found", hash_code);
+    std::snprintf(buffer, 256, "Member with hash code %u not found", hashCode);
 
     return Exception(buffer);
 }
 
-Exception Exception::FileOpenException(const char *file_name)
+Exception Exception::FileOpenException(const char *fileName)
 {
     char buffer[256];
-    std::sprintf(buffer, "Failed to open file `%s`", file_name);
+    std::sprintf(buffer, "Failed to open file `%s`", fileName);
 
     return Exception(buffer);
 }
@@ -173,18 +173,18 @@ Exception Exception::UnopenedFileCloseException()
     return Exception("Attempted to close an unopened file");
 }
 
-Exception Exception::LibraryLoadException(const char *lib_name)
+Exception Exception::LibraryLoadException(const char *libName)
 {
     char buffer[256];
-    std::snprintf(buffer, 256, "Failed to open library `%s`", lib_name);
+    std::snprintf(buffer, 256, "Failed to open library `%s`", libName);
 
     return Exception(buffer);
 }
 
-Exception Exception::LibraryFunctionLoadException(const char *func_name)
+Exception Exception::LibraryFunctionLoadException(const char *funcName)
 {
     char buffer[256];
-    std::snprintf(buffer, 256, "Failed to open library function `%s`", func_name);
+    std::snprintf(buffer, 256, "Failed to open library function `%s`", funcName);
 
     return Exception(buffer);
 }

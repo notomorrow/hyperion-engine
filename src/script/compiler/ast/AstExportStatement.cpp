@@ -36,9 +36,9 @@ void AstExportStatement::Visit(AstVisitor *visitor, Module *mod)
         return;
     }
 
-    m_exported_symbol_name = m_stmt->GetName();
+    m_exportedSymbolName = m_stmt->GetName();
 
-    if (m_exported_symbol_name == AstStatement::unnamed) {
+    if (m_exportedSymbolName == AstStatement::unnamed) {
         visitor->GetCompilationUnit()->GetErrorList().AddError(CompilerError(
             LEVEL_ERROR,
             Msg_export_invalid_name,
@@ -64,7 +64,7 @@ std::unique_ptr<Buildable> AstExportStatement::Build(AstVisitor *visitor, Module
     uint8_t rp = visitor->GetCompilationUnit()->GetInstructionStream().GetCurrentRegister();
 
     // add EXPORT instruction
-    chunk->Append(BytecodeUtil::Make<SymbolExport>(rp, m_exported_symbol_name));
+    chunk->Append(BytecodeUtil::Make<SymbolExport>(rp, m_exportedSymbolName));
     
     return chunk;
 }

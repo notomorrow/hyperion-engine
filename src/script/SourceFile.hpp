@@ -31,7 +31,7 @@ public:
     void SetSize(SizeType size)
         { m_buffer.SetSize(size); }
     
-    void ReadIntoBuffer(const ByteBuffer &input_buffer);
+    void ReadIntoBuffer(const ByteBuffer &inputBuffer);
     void ReadIntoBuffer(const ubyte *data, SizeType size);
 
 private:

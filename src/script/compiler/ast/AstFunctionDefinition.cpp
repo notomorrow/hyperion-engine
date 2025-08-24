@@ -39,11 +39,11 @@ std::unique_ptr<Buildable> AstFunctionDefinition::Build(AstVisitor *visitor, Mod
 {
     std::unique_ptr<BytecodeChunk> chunk = BytecodeUtil::Make<BytecodeChunk>();
 
-    if (!Config::cull_unused_objects || m_identifier->GetUseCount() > 0) {
+    if (!Config::cullUnusedObjects || m_identifier->GetUseCount() > 0) {
         // get current stack size
-        int stack_location = visitor->GetCompilationUnit()->GetInstructionStream().GetStackSize();
+        int stackLocation = visitor->GetCompilationUnit()->GetInstructionStream().GetStackSize();
         // set identifier stack location
-        m_identifier->SetStackLocation(stack_location);
+        m_identifier->SetStackLocation(stackLocation);
 
         // increment stack size before we build the expression
         visitor->GetCompilationUnit()->GetInstructionStream().IncStackSize();
@@ -55,10 +55,10 @@ std::unique_ptr<Buildable> AstFunctionDefinition::Build(AstVisitor *visitor, Mod
         uint8 rp = visitor->GetCompilationUnit()->GetInstructionStream().GetCurrentRegister();
         
         // store on stack
-        auto instr_push = BytecodeUtil::Make<RawOperation<>>();
-        instr_push->opcode = PUSH;
-        instr_push->Accept<uint8>(rp);
-        chunk->Append(std::move(instr_push));
+        auto instrPush = BytecodeUtil::Make<RawOperation<>>();
+        instrPush->opcode = PUSH;
+        instrPush->Accept<uint8>(rp);
+        chunk->Append(std::move(instrPush));
     }
 
     return chunk;

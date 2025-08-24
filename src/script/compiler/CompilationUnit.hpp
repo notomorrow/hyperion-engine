@@ -26,34 +26,34 @@ public:
     ~CompilationUnit();
 
     Module *GetGlobalModule()
-        { return m_global_module.Get(); }
+        { return m_globalModule.Get(); }
 
     const Module *GetGlobalModule() const
-        { return m_global_module.Get(); }
+        { return m_globalModule.Get(); }
 
     Module *GetCurrentModule()
-        { return m_module_tree.Top(); }
+        { return m_moduleTree.Top(); }
 
     const Module *GetCurrentModule() const
-        { return m_module_tree.Top(); }
+        { return m_moduleTree.Top(); }
 
-    ErrorList &GetErrorList() { return m_error_list; }
-    const ErrorList &GetErrorList() const { return m_error_list; }
+    ErrorList &GetErrorList() { return m_errorList; }
+    const ErrorList &GetErrorList() const { return m_errorList; }
 
     InstructionStream &GetInstructionStream()
-        { return m_instruction_stream; }
+        { return m_instructionStream; }
 
     const InstructionStream &GetInstructionStream() const
-        { return m_instruction_stream; }
+        { return m_instructionStream; }
 
     AstNodeBuilder &GetAstNodeBuilder()
-        { return m_ast_node_builder; }
+        { return m_astNodeBuilder; }
 
     const AstNodeBuilder &GetAstNodeBuilder() const
-        { return m_ast_node_builder; }
+        { return m_astNodeBuilder; }
 
     const Array<SymbolTypePtr_t> &GetRegisteredTypes() const
-        { return m_registered_types; }
+        { return m_registeredTypes; }
 
     Builtins &GetBuiltins()
         { return m_builtins; }
@@ -64,7 +64,7 @@ public:
     /**
         Allows a non-builtin type to be used
     */
-    void RegisterType(const SymbolTypePtr_t &type_ptr);
+    void RegisterType(const SymbolTypePtr_t &typePtr);
 
     /** Looks up the module with the name, taking scope into account.
         Modules with the name that are in the current module or any module
@@ -75,20 +75,20 @@ public:
     /** Maps filepath to a vector of modules, so that no module has to be parsed
         and analyze more than once.
     */
-    HashMap<String, Array<RC<Module>>>  m_imported_modules;
-    Tree<Module*>                       m_module_tree;
+    HashMap<String, Array<RC<Module>>>  m_importedModules;
+    Tree<Module*>                       m_moduleTree;
 
 private:
-    String                  m_exec_path;
+    String                  m_execPath;
 
-    ErrorList               m_error_list;
-    InstructionStream       m_instruction_stream;
-    AstNodeBuilder          m_ast_node_builder;
-    Array<SymbolTypePtr_t>  m_registered_types;
+    ErrorList               m_errorList;
+    InstructionStream       m_instructionStream;
+    AstNodeBuilder          m_astNodeBuilder;
+    Array<SymbolTypePtr_t>  m_registeredTypes;
     Builtins                m_builtins;
 
     // the global module
-    RC<Module>              m_global_module;
+    RC<Module>              m_globalModule;
 };
 
 } // namespace hyperion::compiler

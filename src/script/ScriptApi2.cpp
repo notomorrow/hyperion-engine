@@ -21,35 +21,35 @@ namespace scriptapi2 {
 
 // ClassBuilder
 
-ClassBuilder::ClassBuilder(Context *context, ClassDefinition class_definition)
-    : m_context(context), m_class_definition(std::move(class_definition)) {
+ClassBuilder::ClassBuilder(Context *context, ClassDefinition classDefinition)
+    : m_context(context), m_classDefinition(std::move(classDefinition)) {
   Assert(m_context != nullptr);
 }
 
-ClassBuilder &ClassBuilder::Member(String name, String type_string,
+ClassBuilder &ClassBuilder::Member(String name, String typeString,
                                    Value value) {
-  m_class_definition.members.PushBack(Symbol{name, type_string, value});
+  m_classDefinition.members.PushBack(Symbol{name, typeString, value});
 
   return *this;
 }
 
-ClassBuilder &ClassBuilder::Method(String name, String type_string,
+ClassBuilder &ClassBuilder::Method(String name, String typeString,
                                    NativeFunctionPtr_t fn) {
-  m_class_definition.members.PushBack(Symbol{name, type_string, fn});
+  m_classDefinition.members.PushBack(Symbol{name, typeString, fn});
 
   return *this;
 }
 
-ClassBuilder &ClassBuilder::StaticMember(String name, String type_string,
+ClassBuilder &ClassBuilder::StaticMember(String name, String typeString,
                                          Value value) {
-  m_class_definition.static_members.PushBack(Symbol{name, type_string, value});
+  m_classDefinition.staticMembers.PushBack(Symbol{name, typeString, value});
 
   return *this;
 }
 
-ClassBuilder &ClassBuilder::StaticMethod(String name, String type_string,
+ClassBuilder &ClassBuilder::StaticMethod(String name, String typeString,
                                          NativeFunctionPtr_t fn) {
-  m_class_definition.static_members.PushBack(Symbol{name, type_string, fn});
+  m_classDefinition.staticMembers.PushBack(Symbol{name, typeString, fn});
 
   return *this;
 }
@@ -57,124 +57,124 @@ ClassBuilder &ClassBuilder::StaticMethod(String name, String type_string,
 void ClassBuilder::Build() {
   Mutex::Guard guard(m_context->m_mutex);
 
-  // Add `native_type_id` member to class
-  m_class_definition.static_members.PushBack(
+  // Add `nativeTypeId` member to class
+  m_classDefinition.staticMembers.PushBack(
       {"native_type_id",
        {"uint"},
        vm::Value{vm::Value::U32,
-                 {.u32 = m_class_definition.native_type_id.Value()}}});
+                 {.u32 = m_classDefinition.nativeTypeId.Value()}}});
 
-  m_context->m_class_definitions.PushBack(std::move(m_class_definition));
+  m_context->m_classDefinitions.PushBack(std::move(m_classDefinition));
 }
 
 // Context
 
-Context &Context::Global(String name, String type_string, Value value) {
+Context &Context::Global(String name, String typeString, Value value) {
   Mutex::Guard guard(m_mutex);
 
-  m_globals.PushBack(GlobalDefinition{Symbol{name, type_string, value}});
+  m_globals.PushBack(GlobalDefinition{Symbol{name, typeString, value}});
 
   return *this;
 }
 
-Context &Context::Global(String name, String generic_params_string,
-                         String type_string, Value value) {
+Context &Context::Global(String name, String genericParamsString,
+                         String typeString, Value value) {
   Mutex::Guard guard(m_mutex);
 
-  m_globals.PushBack(GlobalDefinition{Symbol{name, type_string, value},
-                                      std::move(generic_params_string)});
+  m_globals.PushBack(GlobalDefinition{Symbol{name, typeString, value},
+                                      std::move(genericParamsString)});
 
   return *this;
 }
 
-Context &Context::Global(String name, String type_string,
+Context &Context::Global(String name, String typeString,
                          NativeFunctionPtr_t fn) {
   Mutex::Guard guard(m_mutex);
 
-  m_globals.PushBack(GlobalDefinition{Symbol{name, type_string, fn}});
+  m_globals.PushBack(GlobalDefinition{Symbol{name, typeString, fn}});
 
   return *this;
 }
 
-Context &Context::Global(String name, String generic_params_string,
-                         String type_string, NativeFunctionPtr_t fn) {
+Context &Context::Global(String name, String genericParamsString,
+                         String typeString, NativeFunctionPtr_t fn) {
   Mutex::Guard guard(m_mutex);
 
-  m_globals.PushBack(GlobalDefinition{Symbol{name, type_string, fn},
-                                      std::move(generic_params_string)});
+  m_globals.PushBack(GlobalDefinition{Symbol{name, typeString, fn},
+                                      std::move(genericParamsString)});
 
   return *this;
 }
 
-RC<AstExpression> Context::ParseTypeExpression(const String &type_string) {
-  AstIterator ast_iterator;
+RC<AstExpression> Context::ParseTypeExpression(const String &typeString) {
+  AstIterator astIterator;
 
-  SourceFile source_file(SourceLocation::eof.GetFileName(),
-                         type_string.Size() + 1);
+  SourceFile sourceFile(SourceLocation::eof.GetFileName(),
+                         typeString.Size() + 1);
 
-  ByteBuffer temp(type_string.Size() + 1, type_string.Data());
-  source_file.ReadIntoBuffer(temp);
+  ByteBuffer temp(typeString.Size() + 1, typeString.Data());
+  sourceFile.ReadIntoBuffer(temp);
 
   // use the lexer and parser on this file buffer
-  TokenStream token_stream(TokenStreamInfo{SourceLocation::eof.GetFileName()});
+  TokenStream tokenStream(TokenStreamInfo{SourceLocation::eof.GetFileName()});
 
-  CompilationUnit compilation_unit;
+  CompilationUnit compilationUnit;
 
-  Lexer lexer(SourceStream(&source_file), &token_stream, &compilation_unit);
+  Lexer lexer(SourceStream(&sourceFile), &tokenStream, &compilationUnit);
   lexer.Analyze();
 
-  Parser parser(&ast_iterator, &token_stream, &compilation_unit);
+  Parser parser(&astIterator, &tokenStream, &compilationUnit);
 
-  RC<AstPrototypeSpecification> type_spec =
+  RC<AstPrototypeSpecification> typeSpec =
       parser.ParsePrototypeSpecification();
 
-  Assert(!compilation_unit.GetErrorList().HasFatalErrors(),
-                 "Failed to parse type expression: %s", type_string.Data());
+  Assert(!compilationUnit.GetErrorList().HasFatalErrors(),
+                 "Failed to parse type expression: %s", typeString.Data());
 
-  return type_spec;
+  return typeSpec;
 }
 
 Array<RC<AstParameter>>
-Context::ParseGenericParams(const String &generic_params_string) {
-  AstIterator ast_iterator;
+Context::ParseGenericParams(const String &genericParamsString) {
+  AstIterator astIterator;
 
-  SourceFile source_file(SourceLocation::eof.GetFileName(),
-                         generic_params_string.Size() + 1);
+  SourceFile sourceFile(SourceLocation::eof.GetFileName(),
+                         genericParamsString.Size() + 1);
 
-  ByteBuffer temp(generic_params_string.Size() + 1,
-                  generic_params_string.Data());
-  source_file.ReadIntoBuffer(temp);
+  ByteBuffer temp(genericParamsString.Size() + 1,
+                  genericParamsString.Data());
+  sourceFile.ReadIntoBuffer(temp);
 
   // use the lexer and parser on this file buffer
-  TokenStream token_stream(TokenStreamInfo{SourceLocation::eof.GetFileName()});
+  TokenStream tokenStream(TokenStreamInfo{SourceLocation::eof.GetFileName()});
 
-  CompilationUnit compilation_unit;
+  CompilationUnit compilationUnit;
 
-  Lexer lexer(SourceStream(&source_file), &token_stream, &compilation_unit);
+  Lexer lexer(SourceStream(&sourceFile), &tokenStream, &compilationUnit);
   lexer.Analyze();
 
-  Parser parser(&ast_iterator, &token_stream, &compilation_unit);
+  Parser parser(&astIterator, &tokenStream, &compilationUnit);
 
-  Array<RC<AstParameter>> generic_params = parser.ParseGenericParameters();
+  Array<RC<AstParameter>> genericParams = parser.ParseGenericParameters();
 
-  Assert(!compilation_unit.GetErrorList().HasFatalErrors(),
+  Assert(!compilationUnit.GetErrorList().HasFatalErrors(),
                  "Failed to parse generic parameters: %s",
-                 generic_params_string.Data());
+                 genericParamsString.Data());
 
-  return generic_params;
+  return genericParams;
 }
 
-void Context::Visit(AstVisitor *visitor, CompilationUnit *compilation_unit) {
+void Context::Visit(AstVisitor *visitor, CompilationUnit *compilationUnit) {
   Mutex::Guard guard(m_mutex);
 
   for (GlobalDefinition &global : m_globals) {
-    IdentifierFlagBits identifier_flags =
+    IdentifierFlagBits identifierFlags =
         IdentifierFlags::FLAG_CONST | IdentifierFlags::FLAG_NATIVE;
 
-    RC<AstPrototypeSpecification> type_spec =
-        ParseTypeExpression(global.symbol.type.type_string)
+    RC<AstPrototypeSpecification> typeSpec =
+        ParseTypeExpression(global.symbol.type.typeString)
             .Cast<AstPrototypeSpecification>();
-    Assert(type_spec != nullptr);
+    Assert(typeSpec != nullptr);
 
     RC<AstExpression> expr(new AstAsExpression(
         RC<AstNil>(new AstNil(SourceLocation::eof)),
@@ -184,54 +184,54 @@ void Context::Visit(AstVisitor *visitor, CompilationUnit *compilation_unit) {
             SourceLocation::eof)),
         SourceLocation::eof));
 
-    if (global.generic_params_string.HasValue()) {
-      const Array<RC<AstParameter>> generic_params =
-          ParseGenericParams(*global.generic_params_string);
+    if (global.genericParamsString.HasValue()) {
+      const Array<RC<AstParameter>> genericParams =
+          ParseGenericParams(*global.genericParamsString);
 
-      if (generic_params.Any()) {
+      if (genericParams.Any()) {
         expr.Reset(new AstTemplateExpression(
-            expr, generic_params, type_spec,
+            expr, genericParams, typeSpec,
             AST_TEMPLATE_EXPRESSION_FLAG_NATIVE, SourceLocation::eof));
 
-        identifier_flags |= IdentifierFlags::FLAG_GENERIC;
+        identifierFlags |= IdentifierFlags::FLAG_GENERIC;
 
-        type_spec.Reset(); // reset type_spec so we don't double-visit it
+        typeSpec.Reset(); // reset typeSpec so we don't double-visit it
       }
     }
 
-    global.var_decl.Reset(
-        new AstVariableDeclaration(global.symbol.name, type_spec, expr,
-                                   identifier_flags, SourceLocation::eof));
+    global.varDecl.Reset(
+        new AstVariableDeclaration(global.symbol.name, typeSpec, expr,
+                                   identifierFlags, SourceLocation::eof));
 
-    visitor->GetAstIterator()->Push(global.var_decl);
+    visitor->GetAstIterator()->Push(global.varDecl);
   }
 
-  for (ClassDefinition &class_definition : m_class_definitions) {
+  for (ClassDefinition &classDefinition : m_classDefinitions) {
     Array<RC<AstVariableDeclaration>> members;
-    members.Resize(class_definition.members.Size());
+    members.Resize(classDefinition.members.Size());
 
-    Array<RC<AstVariableDeclaration>> static_members;
-    static_members.Resize(class_definition.static_members.Size());
+    Array<RC<AstVariableDeclaration>> staticMembers;
+    staticMembers.Resize(classDefinition.staticMembers.Size());
 
     FixedArray<Pair<Array<RC<AstVariableDeclaration>> *, Array<Symbol> *>, 2>
-        member_arrays{
+        memberArrays{
             Pair<Array<RC<AstVariableDeclaration>> *, Array<Symbol> *>{
-                &members, &class_definition.members},
+                &members, &classDefinition.members},
             Pair<Array<RC<AstVariableDeclaration>> *, Array<Symbol> *>{
-                &static_members, &class_definition.static_members}};
+                &staticMembers, &classDefinition.staticMembers}};
 
     for (Pair<Array<RC<AstVariableDeclaration>> *, Array<Symbol> *>
-             &member_array : member_arrays) {
-      for (SizeType i = 0; i < member_array.second->Size(); ++i) {
-        const Symbol &symbol = (*member_array.second)[i];
+             &memberArray : memberArrays) {
+      for (SizeType i = 0; i < memberArray.second->Size(); ++i) {
+        const Symbol &symbol = (*memberArray.second)[i];
 
-        RC<AstPrototypeSpecification> type_spec =
-            ParseTypeExpression(symbol.type.type_string)
+        RC<AstPrototypeSpecification> typeSpec =
+            ParseTypeExpression(symbol.type.typeString)
                 .Cast<AstPrototypeSpecification>();
-        Assert(type_spec != nullptr);
+        Assert(typeSpec != nullptr);
 
-        (*member_array.first)[i].Reset(new AstVariableDeclaration(
-            symbol.name, type_spec,
+        (*memberArray.first)[i].Reset(new AstVariableDeclaration(
+            symbol.name, typeSpec,
             RC<AstAsExpression>(new AstAsExpression(
                 RC<AstNil>(new AstNil(SourceLocation::eof)),
                 RC<AstPrototypeSpecification>(new AstPrototypeSpecification(
@@ -243,44 +243,44 @@ void Context::Visit(AstVisitor *visitor, CompilationUnit *compilation_unit) {
       }
     }
 
-    class_definition.expr.Reset(
-        new AstTypeExpression(class_definition.name, nullptr, members, {},
-                              static_members, false, SourceLocation::eof));
+    classDefinition.expr.Reset(
+        new AstTypeExpression(classDefinition.name, nullptr, members, {},
+                              staticMembers, false, SourceLocation::eof));
 
-    IdentifierFlagBits identifier_flags =
+    IdentifierFlagBits identifierFlags =
         IdentifierFlags::FLAG_CONST | IdentifierFlags::FLAG_NATIVE;
 
-    if (class_definition.generic_params_string.HasValue()) {
-      const Array<RC<AstParameter>> generic_params =
-          ParseGenericParams(*class_definition.generic_params_string);
+    if (classDefinition.genericParamsString.HasValue()) {
+      const Array<RC<AstParameter>> genericParams =
+          ParseGenericParams(*classDefinition.genericParamsString);
 
-      if (generic_params.Any()) {
-        class_definition.expr.Reset(new AstTemplateExpression(
-            class_definition.expr, generic_params, nullptr,
+      if (genericParams.Any()) {
+        classDefinition.expr.Reset(new AstTemplateExpression(
+            classDefinition.expr, genericParams, nullptr,
             AST_TEMPLATE_EXPRESSION_FLAG_NATIVE, SourceLocation::eof));
 
-        identifier_flags |= IdentifierFlags::FLAG_GENERIC;
+        identifierFlags |= IdentifierFlags::FLAG_GENERIC;
       }
     }
 
-    class_definition.var_decl.Reset(new AstVariableDeclaration(
-        class_definition.name, nullptr, class_definition.expr, identifier_flags,
+    classDefinition.varDecl.Reset(new AstVariableDeclaration(
+        classDefinition.name, nullptr, classDefinition.expr, identifierFlags,
         SourceLocation::eof));
 
-    visitor->GetAstIterator()->Push(class_definition.var_decl);
+    visitor->GetAstIterator()->Push(classDefinition.varDecl);
   }
 }
 
-void Context::BindAll(APIInstance &api_instance, VM *vm) {
+void Context::BindAll(APIInstance &apiInstance, VM *vm) {
   Mutex::Guard guard(m_mutex);
 
   for (const GlobalDefinition &global : m_globals) {
-    Assert(global.var_decl != nullptr);
-    Assert(global.var_decl->GetIdentifier() != nullptr);
+    Assert(global.varDecl != nullptr);
+    Assert(global.varDecl->GetIdentifier() != nullptr);
 
-    const int stack_location =
-        global.var_decl->GetIdentifier()->GetStackLocation();
-    Assert(stack_location != -1, "Global %s has no stack location",
+    const int stackLocation =
+        global.varDecl->GetIdentifier()->GetStackLocation();
+    Assert(stackLocation != -1, "Global %s has no stack location",
                    global.symbol.name.Data());
 
     Value value{Value::NONE, {}};
@@ -289,148 +289,148 @@ void Context::BindAll(APIInstance &api_instance, VM *vm) {
       value = global.symbol.value.Get<Value>();
     } else if (global.symbol.value.Is<NativeFunctionPtr_t>()) {
       value = {Value::NATIVE_FUNCTION,
-               {.native_func = global.symbol.value.Get<NativeFunctionPtr_t>()}};
+               {.nativeFunc = global.symbol.value.Get<NativeFunctionPtr_t>()}};
     } else {
       Assert(false);
     }
 
-    VMState &vm_state = vm->GetState();
+    VMState &vmState = vm->GetState();
 
-    Assert(vm_state.GetMainThread()->GetStack().STACK_SIZE >
-                stack_location);
-    vm_state.GetMainThread()->GetStack().GetData()[stack_location] = value;
+    Assert(vmState.GetMainThread()->GetStack().STACK_SIZE >
+                stackLocation);
+    vmState.GetMainThread()->GetStack().GetData()[stackLocation] = value;
   }
 
-  for (const ClassDefinition &class_definition : m_class_definitions) {
-    Assert(class_definition.expr != nullptr);
+  for (const ClassDefinition &classDefinition : m_classDefinitions) {
+    Assert(classDefinition.expr != nullptr);
 
-    Assert(class_definition.var_decl != nullptr);
-    Assert(class_definition.var_decl->GetIdentifier() != nullptr);
+    Assert(classDefinition.varDecl != nullptr);
+    Assert(classDefinition.varDecl->GetIdentifier() != nullptr);
 
-    const int stack_location =
-        class_definition.var_decl->GetIdentifier()->GetStackLocation();
-    Assert(stack_location != -1, "Class %s has no stack location",
-                   class_definition.name.Data());
+    const int stackLocation =
+        classDefinition.varDecl->GetIdentifier()->GetStackLocation();
+    Assert(stackLocation != -1, "Class %s has no stack location",
+                   classDefinition.name.Data());
 
     // Ensure class SymbolType is registered
-    SymbolTypePtr_t held_type = class_definition.expr->GetHeldType();
-    Assert(held_type != nullptr);
-    held_type = held_type->GetUnaliased();
+    SymbolTypePtr_t heldType = classDefinition.expr->GetHeldType();
+    Assert(heldType != nullptr);
+    heldType = heldType->GetUnaliased();
 
-    Assert(held_type->GetId() != -1, "Class %s has no ID",
-                   class_definition.name.Data());
+    Assert(heldType->GetId() != -1, "Class %s has no ID",
+                   classDefinition.name.Data());
 
     // Load the class object from the VM - it is stored in StaticMemory
     // at the index
 
-    VMState &vm_state = vm->GetState();
+    VMState &vmState = vm->GetState();
 
-    const int index = held_type->GetId();
-    Assert(vm_state.m_static_memory.static_size > index);
+    const int index = heldType->GetId();
+    Assert(vmState.m_staticMemory.staticSize > index);
 
-    Array<Member> class_object_members;
-    class_object_members.Resize(held_type->GetMembers().Size());
+    Array<Member> classObjectMembers;
+    classObjectMembers.Resize(heldType->GetMembers().Size());
 
-    for (SizeType i = 0; i < held_type->GetMembers().Size(); ++i) {
-      const SymbolTypeMember &member = held_type->GetMembers()[i];
+    for (SizeType i = 0; i < heldType->GetMembers().Size(); ++i) {
+      const SymbolTypeMember &member = heldType->GetMembers()[i];
 
-      auto symbol_it = class_definition.static_members.FindIf(
+      auto symbolIt = classDefinition.staticMembers.FindIf(
           [&member](const Symbol &symbol) {
             return symbol.name == member.name;
           });
 
-      if (symbol_it == class_definition.static_members.End()) {
+      if (symbolIt == classDefinition.staticMembers.End()) {
         continue;
       }
 
-      const Symbol &symbol = *symbol_it;
+      const Symbol &symbol = *symbolIt;
 
-      Value symbol_value{Value::NONE, {}};
+      Value symbolValue{Value::NONE, {}};
 
       if (symbol.value.Is<Value>()) {
-        symbol_value = symbol.value.Get<Value>();
+        symbolValue = symbol.value.Get<Value>();
       } else if (symbol.value.Is<NativeFunctionPtr_t>()) {
-        symbol_value = {
+        symbolValue = {
             Value::NATIVE_FUNCTION,
-            {.native_func = symbol.value.Get<NativeFunctionPtr_t>()}};
+            {.nativeFunc = symbol.value.Get<NativeFunctionPtr_t>()}};
       } else {
         Assert(false);
       }
 
-      Memory::StrCpy(class_object_members[i].name, symbol.name.Data(),
+      Memory::StrCpy(classObjectMembers[i].name, symbol.name.Data(),
                      MathUtil::Min(symbol.name.Size(), 255));
-      class_object_members[i].hash = hash_fnv_1(class_object_members[i].name);
-      class_object_members[i].value = symbol_value;
+      classObjectMembers[i].hash = hashFnv1(classObjectMembers[i].name);
+      classObjectMembers[i].value = symbolValue;
     }
 
-    HeapValue *class_object_heap_value =
-        vm_state.HeapAlloc(vm_state.GetMainThread());
-    class_object_heap_value->Assign(VMObject(
-        class_object_members.Data(), class_object_members.Size(), nullptr));
-    class_object_heap_value->Mark();
+    HeapValue *classObjectHeapValue =
+        vmState.HeapAlloc(vmState.GetMainThread());
+    classObjectHeapValue->Assign(VMObject(
+        classObjectMembers.Data(), classObjectMembers.Size(), nullptr));
+    classObjectHeapValue->Mark();
 
-    VMObject *class_object_ptr =
-        class_object_heap_value->GetPointer<VMObject>();
-    Assert(class_object_ptr != nullptr);
+    VMObject *classObjectPtr =
+        classObjectHeapValue->GetPointer<VMObject>();
+    Assert(classObjectPtr != nullptr);
 
-    Array<Member> proto_object_members;
-    proto_object_members.Resize(class_definition.members.Size());
+    Array<Member> protoObjectMembers;
+    protoObjectMembers.Resize(classDefinition.members.Size());
 
-    for (SizeType i = 0; i < class_definition.members.Size(); ++i) {
-      const Symbol &symbol = class_definition.members[i];
+    for (SizeType i = 0; i < classDefinition.members.Size(); ++i) {
+      const Symbol &symbol = classDefinition.members[i];
 
-      Value symbol_value{Value::NONE, {}};
+      Value symbolValue{Value::NONE, {}};
 
       if (symbol.value.Is<Value>()) {
-        symbol_value = symbol.value.Get<Value>();
+        symbolValue = symbol.value.Get<Value>();
       } else if (symbol.value.Is<NativeFunctionPtr_t>()) {
-        symbol_value = {
+        symbolValue = {
             Value::NATIVE_FUNCTION,
-            {.native_func = symbol.value.Get<NativeFunctionPtr_t>()}};
+            {.nativeFunc = symbol.value.Get<NativeFunctionPtr_t>()}};
       }
 
-      Memory::StrCpy(proto_object_members[i].name, symbol.name.Data(),
+      Memory::StrCpy(protoObjectMembers[i].name, symbol.name.Data(),
                      MathUtil::Min(symbol.name.Size(), 255));
-      proto_object_members[i].hash = hash_fnv_1(proto_object_members[i].name);
-      proto_object_members[i].value = symbol_value;
+      protoObjectMembers[i].hash = hashFnv1(protoObjectMembers[i].name);
+      protoObjectMembers[i].value = symbolValue;
     }
 
     // Add __intern member
-    proto_object_members.PushBack(
-        Member{"__intern", hash_fnv_1("__intern"), Value{Value::NONE, {}}});
+    protoObjectMembers.PushBack(
+        Member{"__intern", hashFnv1("__intern"), Value{Value::NONE, {}}});
 
-    HeapValue *proto_object_heap_value =
-        vm_state.HeapAlloc(vm_state.GetMainThread());
-    proto_object_heap_value->Assign(VMObject(proto_object_members.Data(),
-                                             proto_object_members.Size(),
-                                             class_object_heap_value));
-    proto_object_heap_value->Mark();
+    HeapValue *protoObjectHeapValue =
+        vmState.HeapAlloc(vmState.GetMainThread());
+    protoObjectHeapValue->Assign(VMObject(protoObjectMembers.Data(),
+                                             protoObjectMembers.Size(),
+                                             classObjectHeapValue));
+    protoObjectHeapValue->Mark();
 
-    VMObject *proto_object_ptr =
-        proto_object_heap_value->GetPointer<VMObject>();
-    Assert(proto_object_ptr != nullptr);
+    VMObject *protoObjectPtr =
+        protoObjectHeapValue->GetPointer<VMObject>();
+    Assert(protoObjectPtr != nullptr);
 
     // Set $proto for class object
-    class_object_ptr->SetMember(
-        "$proto", Value{Value::HEAP_POINTER, {.ptr = proto_object_heap_value}});
+    classObjectPtr->SetMember(
+        "$proto", Value{Value::HEAP_POINTER, {.ptr = protoObjectHeapValue}});
 
-    api_instance.class_bindings.class_prototypes.Set(class_definition.name,
-                                                     proto_object_heap_value);
-    api_instance.class_bindings.class_names.Set(class_definition.native_type_id,
-                                                class_definition.name);
+    apiInstance.classBindings.classPrototypes.Set(classDefinition.name,
+                                                     protoObjectHeapValue);
+    apiInstance.classBindings.classNames.Set(classDefinition.nativeTypeId,
+                                                classDefinition.name);
 
-    Value value{Value::HEAP_POINTER, {.ptr = class_object_heap_value}};
+    Value value{Value::HEAP_POINTER, {.ptr = classObjectHeapValue}};
 
     // Set class object in static memory
-    vm_state.m_static_memory[index] = value;
+    vmState.m_staticMemory[index] = value;
 
     // Set class object in global scope
-    Assert(vm_state.GetMainThread()->GetStack().STACK_SIZE >
-                stack_location);
-    vm_state.GetMainThread()->GetStack().GetData()[stack_location] = value;
+    Assert(vmState.GetMainThread()->GetStack().STACK_SIZE >
+                stackLocation);
+    vmState.GetMainThread()->GetStack().GetData()[stackLocation] = value;
 
     DebugLog(LogType::Info, "Set class %s at index %d\n",
-             class_definition.name.Data(), index);
+             classDefinition.name.Data(), index);
   }
 }
 

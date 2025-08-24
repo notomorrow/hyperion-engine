@@ -22,11 +22,11 @@
 namespace hyperion::compiler {
 
 AstSymbolQuery::AstSymbolQuery(
-    const String &command_name,
+    const String &commandName,
     const RC<AstExpression> &expr,
     const SourceLocation &location
 ) : AstExpression(location, ACCESS_MODE_LOAD),
-    m_command_name(command_name),
+    m_commandName(commandName),
     m_expr(expr)
 {
 }
@@ -36,14 +36,14 @@ void AstSymbolQuery::Visit(AstVisitor *visitor, Module *mod)
     Assert(m_expr != nullptr);
     m_expr->Visit(visitor, mod);
 
-    m_symbol_type = BuiltinTypes::UNDEFINED;
+    m_symbolType = BuiltinTypes::UNDEFINED;
 
-    if (m_command_name == "inspect_type") {
-        auto *value_of = m_expr->GetDeepValueOf();
-        Assert(value_of != nullptr);
+    if (m_commandName == "inspect_type") {
+        auto *valueOf = m_expr->GetDeepValueOf();
+        Assert(valueOf != nullptr);
 
-        SymbolTypePtr_t held_type = value_of->GetHeldType();
-        if (held_type == nullptr) {
+        SymbolTypePtr_t heldType = valueOf->GetHeldType();
+        if (heldType == nullptr) {
             visitor->GetCompilationUnit()->GetErrorList().AddError(CompilerError(
                 LEVEL_ERROR,
                 Msg_custom_error,
@@ -54,29 +54,29 @@ void AstSymbolQuery::Visit(AstVisitor *visitor, Module *mod)
             return;
         }
 
-        held_type = held_type->GetUnaliased();
+        heldType = heldType->GetUnaliased();
 
-        m_result_value = RC<AstString>::Construct(held_type->ToString(true), m_location);
-    } else if (m_command_name == "log") {
-        const auto *value_of = m_expr->GetDeepValueOf();
+        m_resultValue = RC<AstString>::Construct(heldType->ToString(true), m_location);
+    } else if (m_commandName == "log") {
+        const auto *valueOf = m_expr->GetDeepValueOf();
 
-        if (value_of) {
-            const auto *string_value = dynamic_cast<const AstString *>(value_of);
+        if (valueOf) {
+            const auto *stringValue = dynamic_cast<const AstString *>(valueOf);
 
-            if (string_value) {
-                DebugLog(LogType::Info, "$meta::log(): %s\n", string_value->GetValue().Data());
+            if (stringValue) {
+                DebugLog(LogType::Info, "$meta::log(): %s\n", stringValue->GetValue().Data());
             } else {
                 DebugLog(LogType::Warn, "$meta::log(): Not a constant string\n");
             }
         } else {
             DebugLog(LogType::Warn, "$meta::log(): No value found for expression\n");
         }
-    } else if (m_command_name == "fields") {
-        auto *value_of = m_expr->GetDeepValueOf();
-        Assert(value_of != nullptr);
+    } else if (m_commandName == "fields") {
+        auto *valueOf = m_expr->GetDeepValueOf();
+        Assert(valueOf != nullptr);
 
-        SymbolTypePtr_t held_type = value_of->GetHeldType();
-        if (held_type == nullptr) {
+        SymbolTypePtr_t heldType = valueOf->GetHeldType();
+        if (heldType == nullptr) {
             visitor->GetCompilationUnit()->GetErrorList().AddError(CompilerError(
                 LEVEL_ERROR,
                 Msg_custom_error,
@@ -87,43 +87,43 @@ void AstSymbolQuery::Visit(AstVisitor *visitor, Module *mod)
             return;
         }
 
-        held_type = held_type->GetUnaliased();
+        heldType = heldType->GetUnaliased();
 
-        String field_names;
+        String fieldNames;
 
-        for (SizeType i = 0; i < held_type->GetMembers().Size(); ++i) {
-            const SymbolTypeMember &member = held_type->GetMembers()[i];
+        for (SizeType i = 0; i < heldType->GetMembers().Size(); ++i) {
+            const SymbolTypeMember &member = heldType->GetMembers()[i];
 
             if (i > 0) {
-                field_names += ",";
+                fieldNames += ",";
             }
 
-            field_names += member.name;
+            fieldNames += member.name;
         }
 
-        m_result_value = RC<AstString>::Construct(field_names, m_location);
+        m_resultValue = RC<AstString>::Construct(fieldNames, m_location);
 
-        // Array<RC<AstExpression>> field_names;
+        // Array<RC<AstExpression>> fieldNames;
 
-        // for (const SymbolTypeMember &member : held_type->GetMembers()) {
-        //     field_names.PushBack(RC<AstString>::Construct(member.name, m_location));
+        // for (const SymbolTypeMember &member : heldType->GetMembers()) {
+        //     fieldNames.PushBack(RC<AstString>::Construct(member.name, m_location));
         // }
 
-        // m_result_value = RC<AstArrayExpression>(new AstArrayExpression(
-        //     field_names,
+        // m_resultValue = RC<AstArrayExpression>(new AstArrayExpression(
+        //     fieldNames,
         //     m_location
         // ));
 
-        m_result_value->Visit(visitor, mod);
-    } else if (m_command_name == "compiles") {
-        const auto *value_of = m_expr->GetDeepValueOf();
-        const AstString *string_value = nullptr;
+        m_resultValue->Visit(visitor, mod);
+    } else if (m_commandName == "compiles") {
+        const auto *valueOf = m_expr->GetDeepValueOf();
+        const AstString *stringValue = nullptr;
 
-        if (value_of) {
-            string_value = dynamic_cast<const AstString *>(value_of);
+        if (valueOf) {
+            stringValue = dynamic_cast<const AstString *>(valueOf);
         }
 
-        if (!string_value) {
+        if (!stringValue) {
             visitor->GetCompilationUnit()->GetErrorList().AddError(CompilerError(
                 LEVEL_ERROR,
                 Msg_internal_error,
@@ -133,39 +133,39 @@ void AstSymbolQuery::Visit(AstVisitor *visitor, Module *mod)
             return;
         }
 
-        String value = string_value->GetValue();
+        String value = stringValue->GetValue();
 
-        ByteBuffer byte_buffer;
-        byte_buffer.SetData(value.Size(), value.Data());
+        ByteBuffer byteBuffer;
+        byteBuffer.SetData(value.Size(), value.Data());
 
-        SourceFile source_file(value, value.Size());
-        source_file.ReadIntoBuffer(byte_buffer);
+        SourceFile sourceFile(value, value.Size());
+        sourceFile.ReadIntoBuffer(byteBuffer);
 
-        UniquePtr<Script> script(new Script(source_file));
+        UniquePtr<Script> script(new Script(sourceFile));
 
         scriptapi2::Context context;
 
         if (script->Compile(context)) {
             script->Bake();
 
-            m_result_value = RC<AstTrue>(new AstTrue(m_location));
+            m_resultValue = RC<AstTrue>(new AstTrue(m_location));
         } else {
-            m_result_value = RC<AstFalse>(new AstFalse(m_location));
+            m_resultValue = RC<AstFalse>(new AstFalse(m_location));
         }
     } else {
         visitor->GetCompilationUnit()->GetErrorList().AddError(CompilerError(
             LEVEL_ERROR,
             Msg_invalid_symbol_query,
             m_location,
-            m_command_name
+            m_commandName
         ));
     }
 }
 
 std::unique_ptr<Buildable> AstSymbolQuery::Build(AstVisitor *visitor, Module *mod)
 {
-    if (m_result_value != nullptr) {
-        return m_result_value->Build(visitor, mod);
+    if (m_resultValue != nullptr) {
+        return m_resultValue->Build(visitor, mod);
     }
 
     return nullptr;
@@ -192,8 +192,8 @@ bool AstSymbolQuery::MayHaveSideEffects() const
 
 SymbolTypePtr_t AstSymbolQuery::GetExprType() const
 {
-    if (m_result_value != nullptr) {
-        return m_result_value->GetExprType();
+    if (m_resultValue != nullptr) {
+        return m_resultValue->GetExprType();
     }
 
     return BuiltinTypes::UNDEFINED;
@@ -201,8 +201,8 @@ SymbolTypePtr_t AstSymbolQuery::GetExprType() const
 
 const AstExpression *AstSymbolQuery::GetValueOf() const
 {
-    if (m_result_value != nullptr) {
-        return m_result_value.Get();
+    if (m_resultValue != nullptr) {
+        return m_resultValue.Get();
     }
 
     return this;

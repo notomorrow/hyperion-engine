@@ -20,8 +20,8 @@ public:
     struct CondInfo
     {
         AstStatement *cond;
-        AstStatement *then_part;
-        AstStatement *else_part;
+        AstStatement *thenPart;
+        AstStatement *elsePart;
     };
 
     struct ExprInfo
@@ -64,8 +64,8 @@ public:
         AstVisitor *visitor,
         Module *mod,
         AstStatement *cond,
-        AstStatement *then_part,
-        AstStatement *else_part
+        AstStatement *thenPart,
+        AstStatement *elsePart
     );
 
     /** Standard evaluation order. Load left into register 0,
@@ -93,7 +93,7 @@ public:
     static std::unique_ptr<Buildable> PopStack(AstVisitor *visitor, int amt);
 
 public:
-    Compiler(AstIterator *ast_iterator, CompilationUnit *compilation_unit);
+    Compiler(AstIterator *astIterator, CompilationUnit *compilationUnit);
     Compiler(const Compiler &other);
 
     std::unique_ptr<BytecodeChunk> Compile();

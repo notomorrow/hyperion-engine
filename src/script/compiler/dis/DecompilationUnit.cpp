@@ -87,13 +87,13 @@ void DecompilationUnit::DecodeNext(
     }
     case STORE_STATIC_TYPE:
     {
-        uint16 type_name_len;
-        bs.Read(&type_name_len);
+        uint16 typeNameLen;
+        bs.Read(&typeNameLen);
 
-        Array<uint8> type_name;
-        type_name.Resize(type_name_len + 1);
-        type_name[type_name_len] = '\0';
-        bs.Read(&type_name[0], type_name_len);
+        Array<uint8> typeName;
+        typeName.Resize(typeNameLen + 1);
+        typeName[typeNameLen] = '\0';
+        bs.Read(&typeName[0], typeNameLen);
 
         uint16 size;
         bs.Read(&size);
@@ -113,7 +113,7 @@ void DecompilationUnit::DecodeNext(
         if (os != nullptr) {
             (*os)
                 << "type ["
-                    << "str(" << type_name.Data() << "), "
+                    << "str(" << typeName.Data() << "), "
                     << "u16(" << (int)size << "), ";
 
             for (int i = 0; i < size; i++) {
@@ -372,13 +372,13 @@ void DecompilationUnit::DecodeNext(
         uint8 reg;
         bs.Read(&reg);
 
-        uint16 type_name_len;
-        bs.Read(&type_name_len);
+        uint16 typeNameLen;
+        bs.Read(&typeNameLen);
 
-        Array<uint8> type_name;
-        type_name.Resize(type_name_len + 1);
-        type_name[type_name_len] = '\0';
-        bs.Read(&type_name[0], type_name_len);
+        Array<uint8> typeName;
+        typeName.Resize(typeNameLen + 1);
+        typeName[typeNameLen] = '\0';
+        bs.Read(&typeName[0], typeNameLen);
 
         uint16 size;
         bs.Read(&size);
@@ -399,7 +399,7 @@ void DecompilationUnit::DecodeNext(
             (*os)
                 << "load_type ["
                     << "%" << (int)reg << ", "
-                    << "str(" << type_name.Data() << "), "
+                    << "str(" << typeName.Data() << "), "
                     << "u16(" << (int)size << ")";
 
             for (int i = 0; i < size; i++) {
@@ -522,17 +522,17 @@ void DecompilationUnit::DecodeNext(
     }
     case REF:
     {
-        uint8 src_reg;
-        uint8 dst_reg;
+        uint8 srcReg;
+        uint8 dstReg;
 
-        bs.Read(&src_reg);
-        bs.Read(&dst_reg);
+        bs.Read(&srcReg);
+        bs.Read(&dstReg);
 
         if (os != nullptr) {
             (*os)
                 << "ref ["
-                    << "%" << (int)dst_reg << ", "
-                    << "%" << (int)src_reg
+                    << "%" << (int)dstReg << ", "
+                    << "%" << (int)srcReg
                 << "]"
                 << std::endl;
         }
@@ -541,17 +541,17 @@ void DecompilationUnit::DecodeNext(
     }
     case DEREF:
     {
-        uint8 src_reg;
-        uint8 dst_reg;
+        uint8 srcReg;
+        uint8 dstReg;
 
-        bs.Read(&src_reg);
-        bs.Read(&dst_reg);
+        bs.Read(&srcReg);
+        bs.Read(&dstReg);
 
         if (os != nullptr) {
             (*os)
                 << "deref ["
-                    << "%" << (int)dst_reg << ", "
-                    << "%" << (int)src_reg
+                    << "%" << (int)dstReg << ", "
+                    << "%" << (int)srcReg
                 << "]"
                 << std::endl;
         }
@@ -1385,17 +1385,17 @@ void DecompilationUnit::DecodeNext(
     }
     case CAST_U8:
     {
-        uint8 reg_dst;
-        bs.Read(&reg_dst);
+        uint8 regDst;
+        bs.Read(&regDst);
 
-        uint8 reg_src;
-        bs.Read(&reg_src);
+        uint8 regSrc;
+        bs.Read(&regSrc);
 
         if (os != nullptr) {
             (*os)
                 << "cast_u8 ["
-                    << "%" << (int)reg_dst << ", "
-                    << "%" << (int)reg_src
+                    << "%" << (int)regDst << ", "
+                    << "%" << (int)regSrc
                 << "]"
                 << std::endl;
         }
@@ -1404,17 +1404,17 @@ void DecompilationUnit::DecodeNext(
     }
     case CAST_U16:
     {
-        uint8 reg_dst;
-        bs.Read(&reg_dst);
+        uint8 regDst;
+        bs.Read(&regDst);
 
-        uint8 reg_src;
-        bs.Read(&reg_src);
+        uint8 regSrc;
+        bs.Read(&regSrc);
 
         if (os != nullptr) {
             (*os)
                 << "cast_u16 ["
-                    << "%" << (int)reg_dst << ", "
-                    << "%" << (int)reg_src
+                    << "%" << (int)regDst << ", "
+                    << "%" << (int)regSrc
                 << "]"
                 << std::endl;
         }
@@ -1423,17 +1423,17 @@ void DecompilationUnit::DecodeNext(
     }
     case CAST_U32:
     {
-        uint8 reg_dst;
-        bs.Read(&reg_dst);
+        uint8 regDst;
+        bs.Read(&regDst);
 
-        uint8 reg_src;
-        bs.Read(&reg_src);
+        uint8 regSrc;
+        bs.Read(&regSrc);
 
         if (os != nullptr) {
             (*os)
                 << "cast_u32 ["
-                    << "%" << (int)reg_dst << ", "
-                    << "%" << (int)reg_src
+                    << "%" << (int)regDst << ", "
+                    << "%" << (int)regSrc
                 << "]"
                 << std::endl;
         }
@@ -1442,17 +1442,17 @@ void DecompilationUnit::DecodeNext(
     }
     case CAST_U64:
     {
-        uint8 reg_dst;
-        bs.Read(&reg_dst);
+        uint8 regDst;
+        bs.Read(&regDst);
 
-        uint8 reg_src;
-        bs.Read(&reg_src);
+        uint8 regSrc;
+        bs.Read(&regSrc);
 
         if (os != nullptr) {
             (*os)
                 << "cast_u64 ["
-                    << "%" << (int)reg_dst << ", "
-                    << "%" << (int)reg_src
+                    << "%" << (int)regDst << ", "
+                    << "%" << (int)regSrc
                 << "]"
                 << std::endl;
         }
@@ -1461,17 +1461,17 @@ void DecompilationUnit::DecodeNext(
     }
     case CAST_I8:
     {
-        uint8 reg_dst;
-        bs.Read(&reg_dst);
+        uint8 regDst;
+        bs.Read(&regDst);
 
-        uint8 reg_src;
-        bs.Read(&reg_src);
+        uint8 regSrc;
+        bs.Read(&regSrc);
 
         if (os != nullptr) {
             (*os)
                 << "cast_i8 ["
-                    << "%" << (int)reg_dst << ", "
-                    << "%" << (int)reg_src
+                    << "%" << (int)regDst << ", "
+                    << "%" << (int)regSrc
                 << "]"
                 << std::endl;
         }
@@ -1480,17 +1480,17 @@ void DecompilationUnit::DecodeNext(
     }
     case CAST_I16:
     {
-        uint8 reg_dst;
-        bs.Read(&reg_dst);
+        uint8 regDst;
+        bs.Read(&regDst);
 
-        uint8 reg_src;
-        bs.Read(&reg_src);
+        uint8 regSrc;
+        bs.Read(&regSrc);
 
         if (os != nullptr) {
             (*os)
                 << "cast_i16 ["
-                    << "%" << (int)reg_dst << ", "
-                    << "%" << (int)reg_src
+                    << "%" << (int)regDst << ", "
+                    << "%" << (int)regSrc
                 << "]"
                 << std::endl;
         }
@@ -1499,17 +1499,17 @@ void DecompilationUnit::DecodeNext(
     }
     case CAST_I32:
     {
-        uint8 reg_dst;
-        bs.Read(&reg_dst);
+        uint8 regDst;
+        bs.Read(&regDst);
 
-        uint8 reg_src;
-        bs.Read(&reg_src);
+        uint8 regSrc;
+        bs.Read(&regSrc);
 
         if (os != nullptr) {
             (*os)
                 << "cast_i32 ["
-                    << "%" << (int)reg_dst << ", "
-                    << "%" << (int)reg_src
+                    << "%" << (int)regDst << ", "
+                    << "%" << (int)regSrc
                 << "]"
                 << std::endl;
         }
@@ -1518,17 +1518,17 @@ void DecompilationUnit::DecodeNext(
     }
     case CAST_I64:
     {
-        uint8 reg_dst;
-        bs.Read(&reg_dst);
+        uint8 regDst;
+        bs.Read(&regDst);
 
-        uint8 reg_src;
-        bs.Read(&reg_src);
+        uint8 regSrc;
+        bs.Read(&regSrc);
 
         if (os != nullptr) {
             (*os)
                 << "cast_i64 ["
-                    << "%" << (int)reg_dst << ", "
-                    << "%" << (int)reg_src
+                    << "%" << (int)regDst << ", "
+                    << "%" << (int)regSrc
                 << "]"
                 << std::endl;
         }
@@ -1537,17 +1537,17 @@ void DecompilationUnit::DecodeNext(
     }
     case CAST_F32:
     {
-        uint8 reg_dst;
-        bs.Read(&reg_dst);
+        uint8 regDst;
+        bs.Read(&regDst);
 
-        uint8 reg_src;
-        bs.Read(&reg_src);
+        uint8 regSrc;
+        bs.Read(&regSrc);
 
         if (os != nullptr) {
             (*os)
                 << "cast_f32 ["
-                    << "%" << (int)reg_dst << ", "
-                    << "%" << (int)reg_src
+                    << "%" << (int)regDst << ", "
+                    << "%" << (int)regSrc
                 << "]"
                 << std::endl;
         }
@@ -1556,17 +1556,17 @@ void DecompilationUnit::DecodeNext(
     }
     case CAST_F64:
     {
-        uint8 reg_dst;
-        bs.Read(&reg_dst);
+        uint8 regDst;
+        bs.Read(&regDst);
 
-        uint8 reg_src;
-        bs.Read(&reg_src);
+        uint8 regSrc;
+        bs.Read(&regSrc);
 
         if (os != nullptr) {
             (*os)
                 << "cast_f64 ["
-                    << "%" << (int)reg_dst << ", "
-                    << "%" << (int)reg_src
+                    << "%" << (int)regDst << ", "
+                    << "%" << (int)regSrc
                 << "]"
                 << std::endl;
         }
@@ -1575,17 +1575,17 @@ void DecompilationUnit::DecodeNext(
     }
     case CAST_BOOL:
     {
-        uint8 reg_dst;
-        bs.Read(&reg_dst);
+        uint8 regDst;
+        bs.Read(&regDst);
 
-        uint8 reg_src;
-        bs.Read(&reg_src);
+        uint8 regSrc;
+        bs.Read(&regSrc);
 
         if (os != nullptr) {
             (*os)
                 << "cast_bool ["
-                    << "%" << (int)reg_dst << ", "
-                    << "%" << (int)reg_src
+                    << "%" << (int)regDst << ", "
+                    << "%" << (int)regSrc
                 << "]"
                 << std::endl;
         }
@@ -1594,17 +1594,17 @@ void DecompilationUnit::DecodeNext(
     }
     case CAST_DYNAMIC:
     {
-        uint8 reg_dst;
-        bs.Read(&reg_dst);
+        uint8 regDst;
+        bs.Read(&regDst);
 
-        uint8 reg_src;
-        bs.Read(&reg_src);
+        uint8 regSrc;
+        bs.Read(&regSrc);
 
         if (os != nullptr) {
             (*os)
                 << "cast_dynamic ["
-                    << "%" << (int)reg_dst << ", "
-                    << "%" << (int)reg_src
+                    << "%" << (int)regDst << ", "
+                    << "%" << (int)regSrc
                 << "]"
                 << std::endl;
         }

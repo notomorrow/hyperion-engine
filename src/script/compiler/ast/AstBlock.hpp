@@ -36,25 +36,25 @@ public:
         { return m_children; }
 
     int NumLocals() const
-        { return m_num_locals; }
+        { return m_numLocals; }
 
     bool IsLastStatementReturn() const
-        { return m_last_is_return; }
+        { return m_lastIsReturn; }
 
     Scope *GetScope() const
         { return m_scope; }
 
     ScopeType GetScopeType() const
-        { return m_scope_type; }
+        { return m_scopeType; }
     
-    void SetScopeType(ScopeType scope_type)
-        { m_scope_type = scope_type; }
+    void SetScopeType(ScopeType scopeType)
+        { m_scopeType = scopeType; }
 
     int GetScopeFlags() const
-        { return m_scope_flags; }
+        { return m_scopeFlags; }
 
-    void SetScopeFlags(int scope_flags)
-        { m_scope_flags = scope_flags; }
+    void SetScopeFlags(int scopeFlags)
+        { m_scopeFlags = scopeFlags; }
 
     virtual void Visit(AstVisitor *visitor, Module *mod) override;
     virtual std::unique_ptr<Buildable> Build(AstVisitor *visitor, Module *mod) override;
@@ -78,11 +78,11 @@ protected:
     Array<RC<AstStatement>> m_children;
 
     // set while analyzing
-    int         m_num_locals;
-    bool        m_last_is_return;
+    int         m_numLocals;
+    bool        m_lastIsReturn;
     Scope       *m_scope = nullptr;
-    ScopeType   m_scope_type = ScopeType::SCOPE_TYPE_NORMAL;
-    int         m_scope_flags = 0;
+    ScopeType   m_scopeType = ScopeType::SCOPE_TYPE_NORMAL;
+    int         m_scopeFlags = 0;
 
     RC<AstBlock> CloneImpl() const
     {

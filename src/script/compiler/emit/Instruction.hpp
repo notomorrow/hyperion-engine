@@ -46,13 +46,13 @@ struct Jump final : public Buildable
         JNE,
         JG,
         JGE,
-    } jump_class;
-    LabelId label_id;
+    } jumpClass;
+    LabelId labelId;
 
     Jump() = default;
-    Jump(JumpClass jump_class, LabelId label_id)
-        : jump_class(jump_class),
-          label_id(label_id)
+    Jump(JumpClass jumpClass, LabelId labelId)
+        : jumpClass(jumpClass),
+          labelId(labelId)
     {
     }
 
@@ -65,23 +65,23 @@ struct Comparison final : public Buildable
     {
         CMP,
         CMPZ
-    } comparison_class;
+    } comparisonClass;
 
-    RegIndex reg_lhs;
-    RegIndex reg_rhs;
+    RegIndex regLhs;
+    RegIndex regRhs;
 
     Comparison() = default;
 
-    Comparison(ComparisonClass comparison_class, RegIndex reg)
-        : comparison_class(comparison_class),
-          reg_lhs(reg)
+    Comparison(ComparisonClass comparisonClass, RegIndex reg)
+        : comparisonClass(comparisonClass),
+          regLhs(reg)
     {
     }
 
-    Comparison(ComparisonClass comparison_class, RegIndex reg_lhs, RegIndex reg_rhs)
-        : comparison_class(comparison_class),
-          reg_lhs(reg_lhs),
-          reg_rhs(reg_rhs)
+    Comparison(ComparisonClass comparisonClass, RegIndex regLhs, RegIndex regRhs)
+        : comparisonClass(comparisonClass),
+          regLhs(regLhs),
+          regRhs(regRhs)
     {
     }
 
@@ -283,13 +283,13 @@ struct ConstNull : public Buildable
 
 struct BuildableTryCatch final : public Buildable
 {
-    LabelId catch_label_id;
+    LabelId catchLabelId;
 };
 
 struct BuildableFunction final : public Buildable
 {
     RegIndex reg;
-    LabelId label_id;
+    LabelId labelId;
     uint8_t nargs;
     uint8_t flags;
 };
@@ -313,9 +313,9 @@ struct BuildableString final : public Buildable
 
 struct BinOp final : public Instruction
 {
-    RegIndex reg_lhs;
-    RegIndex reg_rhs;
-    RegIndex reg_dst;
+    RegIndex regLhs;
+    RegIndex regRhs;
+    RegIndex regDst;
 
     virtual ~BinOp() = default;
 };
@@ -360,14 +360,14 @@ struct CastOperation final : public Instruction
     };
 
     Type        type = CAST_U8;
-    RegIndex    reg_dst;
-    RegIndex    reg_src;
+    RegIndex    regDst;
+    RegIndex    regSrc;
 
     CastOperation() = default;
-    CastOperation(Type type, RegIndex reg_dst, RegIndex reg_src)
+    CastOperation(Type type, RegIndex regDst, RegIndex regSrc)
         : type(type),
-          reg_dst(reg_dst),
-          reg_src(reg_src)
+          regDst(regDst),
+          regSrc(regSrc)
     {
     }
 
@@ -390,9 +390,9 @@ struct RawOperation final : public Instruction
         // do not copy NUL byte
         SizeType length = std::strlen(str);
 
-        const SizeType previous_size = data.Size();
-        data.Resize(previous_size + length);
-        Memory::MemCpy(data.Data() + previous_size, str, length);
+        const SizeType previousSize = data.Size();
+        data.Resize(previousSize + length);
+        Memory::MemCpy(data.Data() + previousSize, str, length);
     }
 
     template <typename T>
@@ -406,9 +406,9 @@ struct RawOperation final : public Instruction
     template <typename T>
     void Accept(const T &t)
     {
-        const SizeType previous_size = data.Size();
-        data.Resize(previous_size + sizeof(T));
-        Memory::MemCpy(data.Data() + previous_size, &t, sizeof(T));
+        const SizeType previousSize = data.Size();
+        data.Resize(previousSize + sizeof(T));
+        Memory::MemCpy(data.Data() + previousSize, &t, sizeof(T));
     }
 };
 

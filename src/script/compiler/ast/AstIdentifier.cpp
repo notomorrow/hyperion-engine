@@ -20,12 +20,12 @@ AstIdentifier::AstIdentifier(const String &name, const SourceLocation &location)
 
 void AstIdentifier::PerformLookup(AstVisitor *visitor, Module *mod)
 {
-    if (auto identifier_or_symbol_type = mod->LookUpIdentifierOrSymbolType(m_name)) {
-        if (identifier_or_symbol_type.Is<RC<Identifier>>()) {
-            m_properties.m_identifier = identifier_or_symbol_type.Get<RC<Identifier>>();
+    if (auto identifierOrSymbolType = mod->LookUpIdentifierOrSymbolType(m_name)) {
+        if (identifierOrSymbolType.Is<RC<Identifier>>()) {
+            m_properties.m_identifier = identifierOrSymbolType.Get<RC<Identifier>>();
             m_properties.SetIdentifierType(IDENTIFIER_TYPE_VARIABLE);
-        } else if (identifier_or_symbol_type.Is<SymbolTypePtr_t>()) {
-            m_properties.m_found_type = identifier_or_symbol_type.Get<SymbolTypePtr_t>();
+        } else if (identifierOrSymbolType.Is<SymbolTypePtr_t>()) {
+            m_properties.m_foundType = identifierOrSymbolType.Get<SymbolTypePtr_t>();
             m_properties.SetIdentifierType(IDENTIFIER_TYPE_TYPE);
         }
 
@@ -53,11 +53,11 @@ void AstIdentifier::CheckInFunction(AstVisitor *visitor, Module *mod)
         m_properties.m_depth++;
 
         if (top->Get().GetScopeType() == SCOPE_TYPE_FUNCTION) {
-            m_properties.m_function_scope = &top->Get();
-            m_properties.m_is_in_function = true;
+            m_properties.m_functionScope = &top->Get();
+            m_properties.m_isInFunction = true;
 
             if (top->Get().GetScopeFlags() & ScopeFunctionFlags::PURE_FUNCTION_FLAG) {
-                m_properties.m_is_in_pure_function = true;
+                m_properties.m_isInPureFunction = true;
             }
             
             break;
@@ -76,10 +76,10 @@ void AstIdentifier::Visit(AstVisitor *visitor, Module *mod)
     CheckInFunction(visitor, mod);
 }
 
-int AstIdentifier::GetStackOffset(int stack_size) const
+int AstIdentifier::GetStackOffset(int stackSize) const
 {
     Assert(m_properties.GetIdentifier() != nullptr);
-    return stack_size - m_properties.GetIdentifier()->GetStackLocation();
+    return stackSize - m_properties.GetIdentifier()->GetStackLocation();
 }
 
 const AstExpression *AstIdentifier::GetValueOf() const
@@ -87,12 +87,12 @@ const AstExpression *AstIdentifier::GetValueOf() const
     if (const RC<Identifier> &ident = m_properties.GetIdentifier()) {
         if (((ident->GetFlags() & IdentifierFlags::FLAG_CONST) || (ident->GetFlags() & IdentifierFlags::FLAG_GENERIC))
             && !(ident->GetFlags() & IdentifierFlags::FLAG_ARGUMENT)) {
-            if (const auto current_value = ident->GetCurrentValue()) {
-                if (current_value.Get() == this) {
+            if (const auto currentValue = ident->GetCurrentValue()) {
+                if (currentValue.Get() == this) {
                     return this;
                 }
 
-                return current_value->GetValueOf();
+                return currentValue->GetValueOf();
             }
         }
     }
@@ -105,12 +105,12 @@ const AstExpression *AstIdentifier::GetDeepValueOf() const
     if (const RC<Identifier> &ident = m_properties.GetIdentifier()) {
         if (((ident->GetFlags() & IdentifierFlags::FLAG_CONST) || (ident->GetFlags() & IdentifierFlags::FLAG_GENERIC))
             && !(ident->GetFlags() & IdentifierFlags::FLAG_ARGUMENT)) {
-            if (const auto current_value = ident->GetCurrentValue()) {
-                if (current_value.Get() == this) {
+            if (const auto currentValue = ident->GetCurrentValue()) {
+                if (currentValue.Get() == this) {
                     return this;
                 }
 
-                return current_value->GetDeepValueOf();
+                return currentValue->GetDeepValueOf();
             }
         }
     }
@@ -126,7 +126,7 @@ const String &AstIdentifier::GetName() const
 SymbolTypePtr_t AstIdentifier::GetHeldType() const
 {
     if (m_properties.GetIdentifierType() == IDENTIFIER_TYPE_TYPE) {
-        return m_properties.m_found_type;
+        return m_properties.m_foundType;
     }
 
     return AstExpression::GetHeldType();

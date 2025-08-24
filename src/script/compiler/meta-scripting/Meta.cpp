@@ -16,13 +16,13 @@ void MetaDefine(sdk::Params params)
     //   identifier (String)
     //   value (Any)
 
-    vm::Value *meta_context_ptr = params.args[0];
-    Assert(meta_context_ptr != nullptr);
-    Assert(meta_context_ptr->m_type == vm::Value::USER_DATA);
+    vm::Value *metaContextPtr = params.args[0];
+    Assert(metaContextPtr != nullptr);
+    Assert(metaContextPtr->m_type == vm::Value::USER_DATA);
 }
 
 void Meta::BuildMetaLibrary(vm::VM &vm,
-    CompilationUnit &compilation_unit,
+    CompilationUnit &compilationUnit,
     APIInstance &api)
 {
 }

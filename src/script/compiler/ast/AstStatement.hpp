@@ -32,8 +32,8 @@ public:
     SourceLocation &GetLocation() { return m_location; }
     const SourceLocation &GetLocation() const { return m_location; }
 
-    uint32 GetScopeDepth() const { return m_scope_depth; }
-    void SetScopeDepth(uint32 depth) { m_scope_depth = depth; }
+    uint32 GetScopeDepth() const { return m_scopeDepth; }
+    void SetScopeDepth(uint32 depth) { m_scopeDepth = depth; }
 
     virtual void Visit(AstVisitor *visitor, Module *mod) = 0;
     virtual std::unique_ptr<Buildable> Build(AstVisitor *visitor, Module *mod) = 0;
@@ -47,11 +47,11 @@ public:
 
 protected:
     SourceLocation  m_location;
-    uint32            m_scope_depth;
+    uint32            m_scopeDepth;
 };
 
 template <typename T>
-typename std::enable_if<std::is_base_of<AstStatement, T>::value, RC<T>>::type
+typename std::enable_if<std::isBaseOf<AstStatement, T>::value, RC<T>>::type
 CloneAstNode(const RC<T> &stmt) 
 { 
     return (stmt != nullptr) 
@@ -60,7 +60,7 @@ CloneAstNode(const RC<T> &stmt)
 }
 
 template <typename T>
-typename std::enable_if<std::is_base_of<AstStatement, T>::value, RC<T>>::type
+typename std::enable_if<std::isBaseOf<AstStatement, T>::value, RC<T>>::type
 CloneAstNode(const T *stmt) 
 { 
     return (stmt != nullptr) 
@@ -69,7 +69,7 @@ CloneAstNode(const T *stmt)
 }
 
 template <typename T>
-typename std::enable_if<std::is_base_of<AstStatement, T>::value, Array<RC<T>>>::type
+typename std::enable_if<std::isBaseOf<AstStatement, T>::value, Array<RC<T>>>::type
 CloneAllAstNodes(const Array<RC<T>> &stmts) 
 {
     Array<RC<T>> res;
@@ -81,7 +81,7 @@ CloneAllAstNodes(const Array<RC<T>> &stmts)
 }
 
 template <typename T>
-typename std::enable_if<std::is_base_of<AstStatement, T>::value, Array<RC<T>>>::type
+typename std::enable_if<std::isBaseOf<AstStatement, T>::value, Array<RC<T>>>::type
 CloneAllAstNodes(const Array<T *> &stmts) 
 {
     Array<RC<T>> res;

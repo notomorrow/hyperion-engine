@@ -47,14 +47,14 @@ public:
     int GetIndex() const { return Unalias()->m_index; }
     
     int GetStackLocation() const
-        { return Unalias()->m_stack_location; }
+        { return Unalias()->m_stackLocation; }
 
-    void SetStackLocation(int stack_location)
+    void SetStackLocation(int stackLocation)
     {
         Identifier *unaliased = Unalias();
-        Assert(unaliased->m_stack_location == -1, "Stack location already set, cannot set again");
+        Assert(unaliased->m_stackLocation == -1, "Stack location already set, cannot set again");
 
-        unaliased->m_stack_location = stack_location;
+        unaliased->m_stackLocation = stackLocation;
     }
 
     void IncUseCount() const
@@ -76,21 +76,21 @@ public:
         { m_flags = flags; }
 
     bool IsReassigned() const
-        { return m_is_reassigned; }
+        { return m_isReassigned; }
 
-    void SetIsReassigned(bool is_reassigned)
-        { m_is_reassigned = is_reassigned; }
+    void SetIsReassigned(bool isReassigned)
+        { m_isReassigned = isReassigned; }
 
-    const RC<AstExpression> &GetCurrentValue() const { return Unalias()->m_current_value; }
-    void SetCurrentValue(const RC<AstExpression> &expr) { Unalias()->m_current_value = expr; }
-    const SymbolTypePtr_t &GetSymbolType() const { return Unalias()->m_symbol_type; }
-    void SetSymbolType(const SymbolTypePtr_t &symbol_type) { Unalias()->m_symbol_type = symbol_type; }
+    const RC<AstExpression> &GetCurrentValue() const { return Unalias()->m_currentValue; }
+    void SetCurrentValue(const RC<AstExpression> &expr) { Unalias()->m_currentValue = expr; }
+    const SymbolTypePtr_t &GetSymbolType() const { return Unalias()->m_symbolType; }
+    void SetSymbolType(const SymbolTypePtr_t &symbolType) { Unalias()->m_symbolType = symbolType; }
 
     const Array<GenericInstanceTypeInfo::Arg> &GetTemplateParams() const
-        { return Unalias()->m_template_params; }
+        { return Unalias()->m_templateParams; }
 
-    void SetTemplateParams(const Array<GenericInstanceTypeInfo::Arg> &template_params)
-        { Unalias()->m_template_params = template_params; }
+    void SetTemplateParams(const Array<GenericInstanceTypeInfo::Arg> &templateParams)
+        { Unalias()->m_templateParams = templateParams; }
 
     Identifier *Unalias() { return (m_aliasee != nullptr) ? m_aliasee : this; }
     const Identifier *Unalias() const { return (m_aliasee != nullptr) ? m_aliasee : this; }
@@ -98,15 +98,15 @@ public:
 private:
     String              m_name;
     int                 m_index;
-    int                 m_stack_location;
+    int                 m_stackLocation;
     mutable int         m_usecount;
     IdentifierFlagBits  m_flags;
     Identifier          *m_aliasee;
-    RC<AstExpression>   m_current_value;
-    SymbolTypePtr_t     m_symbol_type;
-    bool                m_is_reassigned;
+    RC<AstExpression>   m_currentValue;
+    SymbolTypePtr_t     m_symbolType;
+    bool                m_isReassigned;
 
-    Array<GenericInstanceTypeInfo::Arg> m_template_params;
+    Array<GenericInstanceTypeInfo::Arg> m_templateParams;
 };
 
 } // namespace hyperion::compiler

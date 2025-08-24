@@ -5,17 +5,17 @@
 
 namespace hyperion::compiler {
 
-void InternalByteStream::MarkLabel(LabelId label_id)
+void InternalByteStream::MarkLabel(LabelId labelId)
 {
-    //m_labels[label_id] = LabelInfo {
+    //m_labels[labelId] = LabelInfo {
     //    LabelPosition(m_stream.Size())
     //};
 }
 
-void InternalByteStream::AddFixup(LabelId label_id, SizeType position, SizeType offset)
+void InternalByteStream::AddFixup(LabelId labelId, SizeType position, SizeType offset)
 {
     Fixup fixup;
-    fixup.label_id = label_id;
+    fixup.labelId = labelId;
     fixup.position = position;
     fixup.offset   = offset;
 
@@ -29,40 +29,40 @@ void InternalByteStream::AddFixup(LabelId label_id, SizeType position, SizeType 
     }
 }
 
-void InternalByteStream::AddFixup(LabelId label_id, SizeType offset)
+void InternalByteStream::AddFixup(LabelId labelId, SizeType offset)
 {
     const SizeType position = m_stream.Size();
 
     m_stream.Resize(m_stream.Size() + sizeof(LabelPosition));
 
-    AddFixup(label_id, position, offset);
+    AddFixup(labelId, position, offset);
 }
 
-void InternalByteStream::Bake(const BuildParams &build_params)
+void InternalByteStream::Bake(const BuildParams &buildParams)
 {
 
     for (const Fixup &fixup : m_fixups) {
-        auto it = build_params.labels.FindIf([label_id = fixup.label_id](const LabelInfo &label_info)
+        auto it = buildParams.labels.FindIf([labelId = fixup.labelId](const LabelInfo &labelInfo)
         {
-            return label_info.label_id == label_id;
+            return labelInfo.labelId == labelId;
         });
 
-        Assert(it != build_params.labels.End(), "No label with fixup ID was found");
+        Assert(it != buildParams.labels.End(), "No label with fixup ID was found");
 
-        LabelPosition label_position = it->position;
-        Assert(label_position != LabelPosition(-1), "Label position not set!");
-        //label_position += fixup.offset;
+        LabelPosition labelPosition = it->position;
+        Assert(labelPosition != LabelPosition(-1), "Label position not set!");
+        //labelPosition += fixup.offset;
 
-        const SizeType fixup_position = fixup.position;
+        const SizeType fixupPosition = fixup.position;
         
         // first, make sure there is enough space in the stream at that position
-        Assert(m_stream.Size() >= fixup_position + sizeof(LabelPosition), "Not enough space allotted for the LabelPosition");
+        Assert(m_stream.Size() >= fixupPosition + sizeof(LabelPosition), "Not enough space allotted for the LabelPosition");
         
         // now, make sure that each item in the buffer has been set to -1
         // if this is not the case, it is likely the wrong position
         for (SizeType i = 0; i < sizeof(LabelPosition); i++) {
-            Assert(m_stream[fixup_position + i] == ubyte(-1), "Placeholder value in buffer should be set to -1");
-            m_stream[fixup_position + i] = (label_position >> (i << 3)) & 0xFF;
+            Assert(m_stream[fixupPosition + i] == ubyte(-1), "Placeholder value in buffer should be set to -1");
+            m_stream[fixupPosition + i] = (labelPosition >> (i << 3)) & 0xFF;
         }
     }
 

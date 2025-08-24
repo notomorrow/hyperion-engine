@@ -21,7 +21,7 @@ class AstTemplateInstantiationWrapper : public AstExpression
 public:
     AstTemplateInstantiationWrapper(
         const RC<AstExpression> &expr,
-        const Array<GenericInstanceTypeInfo::Arg> &generic_args,
+        const Array<GenericInstanceTypeInfo::Arg> &genericArgs,
         const SourceLocation &location
     );
     virtual ~AstTemplateInstantiationWrapper() = default;
@@ -30,7 +30,7 @@ public:
         { return m_expr; }
 
     const Array<GenericInstanceTypeInfo::Arg> &GetGenericArgs() const
-        { return m_generic_args; }
+        { return m_genericArgs; }
 
     virtual void Visit(AstVisitor *visitor, Module *mod) override;
     virtual std::unique_ptr<Buildable> Build(AstVisitor *visitor, Module *mod) override;
@@ -51,7 +51,7 @@ public:
         HashCode hc = AstExpression::GetHashCode().Add(TypeName<AstTemplateInstantiationWrapper>());
         hc.Add(m_expr ? m_expr->GetHashCode() : HashCode());
 
-        for (auto &arg : m_generic_args) {
+        for (auto &arg : m_genericArgs) {
             hc.Add(arg.m_type ? arg.m_type->GetHashCode() : HashCode());
         }
 
@@ -59,20 +59,20 @@ public:
     }
 
 private:
-    void MakeSymbolTypeGenericInstance(SymbolTypePtr_t &symbol_type);
+    void MakeSymbolTypeGenericInstance(SymbolTypePtr_t &symbolType);
 
     RC<AstExpression>                   m_expr;
-    Array<GenericInstanceTypeInfo::Arg> m_generic_args;
+    Array<GenericInstanceTypeInfo::Arg> m_genericArgs;
 
     // set while analyzing
-    SymbolTypePtr_t                     m_expr_type;
-    SymbolTypePtr_t                     m_held_type;
+    SymbolTypePtr_t                     m_exprType;
+    SymbolTypePtr_t                     m_heldType;
 
     RC<AstTemplateInstantiationWrapper> CloneImpl() const
     {
         return RC<AstTemplateInstantiationWrapper>(new AstTemplateInstantiationWrapper(
             CloneAstNode(m_expr),
-            m_generic_args,
+            m_genericArgs,
             m_location
         ));
     }
@@ -83,7 +83,7 @@ class AstTemplateInstantiation : public AstExpression
 public:
     AstTemplateInstantiation(
         const RC<AstExpression> &expr,
-        const Array<RC<AstArgument>> &generic_args,
+        const Array<RC<AstArgument>> &genericArgs,
         const SourceLocation &location
     );
     virtual ~AstTemplateInstantiation() = default;
@@ -108,7 +108,7 @@ public:
         HashCode hc = AstExpression::GetHashCode().Add(TypeName<AstTemplateInstantiation>());
         hc.Add(m_expr ? m_expr->GetHashCode() : HashCode());
         
-        for (auto &arg : m_generic_args) {
+        for (auto &arg : m_genericArgs) {
             hc.Add(arg ? arg->GetHashCode() : HashCode());
         }
 
@@ -117,24 +117,24 @@ public:
 
 private:
     RC<AstExpression>       m_expr;
-    Array<RC<AstArgument>>  m_generic_args;
+    Array<RC<AstArgument>>  m_genericArgs;
 
     // set while analyzing
-    RC<AstTemplateInstantiationWrapper> m_inner_expr;
+    RC<AstTemplateInstantiationWrapper> m_innerExpr;
     RC<AstBlock>                        m_block;
-    RC<AstExpression>                   m_target_expr;
-    RC<AstTypeObject>                   m_type_object;
-    Array<RC<AstArgument>>              m_substituted_args;
-    SymbolTypePtr_t                     m_expr_type;
-    SymbolTypePtr_t                     m_held_type;
-    bool                                m_is_visited = false;
-    bool                                m_is_native = false;
+    RC<AstExpression>                   m_targetExpr;
+    RC<AstTypeObject>                   m_typeObject;
+    Array<RC<AstArgument>>              m_substitutedArgs;
+    SymbolTypePtr_t                     m_exprType;
+    SymbolTypePtr_t                     m_heldType;
+    bool                                m_isVisited = false;
+    bool                                m_isNative = false;
 
     RC<AstTemplateInstantiation> CloneImpl() const
     {
         return RC<AstTemplateInstantiation>(new AstTemplateInstantiation(
             CloneAstNode(m_expr),
-            CloneAllAstNodes(m_generic_args),
+            CloneAllAstNodes(m_genericArgs),
             m_location
         ));
     }

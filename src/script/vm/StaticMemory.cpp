@@ -4,12 +4,12 @@
 namespace hyperion {
 namespace vm {
 
-const uint16 StaticMemory::static_size = 65535;
+const uint16 StaticMemory::staticSize = 65535;
 
 StaticMemory::StaticMemory()
-    : m_data(new Value[static_size])
+    : m_data(new Value[staticSize])
 {
-    Memory::MemSet(m_data, 0, static_size * sizeof(Value));
+    Memory::MemSet(m_data, 0, staticSize * sizeof(Value));
 }
 
 StaticMemory::~StaticMemory()
@@ -23,7 +23,7 @@ StaticMemory::~StaticMemory()
 void StaticMemory::MarkAllForDeallocation()
 {
     // delete all objects that are heap allocated
-    for (uint32 i = static_size; i != 0; i--) {
+    for (uint32 i = staticSize; i != 0; i--) {
         Value &sv = m_data[i - 1];
 
         if (sv.m_type == Value::HEAP_POINTER && sv.m_value.ptr != nullptr) {

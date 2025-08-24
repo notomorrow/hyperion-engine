@@ -34,7 +34,7 @@ struct StaticObject
         int             lbl;
         String          str;
         StaticFunction  func;
-        StaticTypeInfo  type_info;
+        StaticTypeInfo  typeInfo;
     } m_value;
 
     enum {
@@ -49,7 +49,7 @@ struct StaticObject
     explicit StaticObject(int i);
     explicit StaticObject(const char *str);
     explicit StaticObject(const StaticFunction &func);
-    explicit StaticObject(const StaticTypeInfo &type_info);
+    explicit StaticObject(const StaticTypeInfo &typeInfo);
     StaticObject(const StaticObject &other);
     ~StaticObject();
 

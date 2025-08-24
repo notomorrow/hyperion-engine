@@ -18,10 +18,10 @@ void AstDeclaration::Visit(AstVisitor *visitor, Module *mod)
     Assert(visitor != nullptr);
     Assert(mod != nullptr);
 
-    Assert(!m_is_visited);
-    m_is_visited = true;
+    Assert(!m_isVisited);
+    m_isVisited = true;
 
-    CompilationUnit *compilation_unit = visitor->GetCompilationUnit();
+    CompilationUnit *compilationUnit = visitor->GetCompilationUnit();
     Scope &scope = mod->m_scopes.Top();
 
     // look up variable to make sure it doesn't already exist
@@ -30,7 +30,7 @@ void AstDeclaration::Visit(AstVisitor *visitor, Module *mod)
 
     if ((m_identifier = mod->LookUpIdentifier(m_name, true))) {
         // a collision was found, add an error
-        compilation_unit->GetErrorList().AddError(CompilerError(
+        compilationUnit->GetErrorList().AddError(CompilerError(
             LEVEL_ERROR,
             Msg_redeclared_identifier,
             m_location,

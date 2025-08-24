@@ -11,29 +11,29 @@
 namespace hyperion::compiler {
 
 IdentifierTable::IdentifierTable()
-    : m_identifier_index(0)
+    : m_identifierIndex(0)
 {
 }
 
 IdentifierTable::IdentifierTable(const IdentifierTable &other)
-    : m_identifier_index(other.m_identifier_index),
+    : m_identifierIndex(other.m_identifierIndex),
       m_identifiers(other.m_identifiers)
 {
 }
 
 int IdentifierTable::CountUsedVariables() const
 {
-    std::unordered_set<int> used_variables;
+    std::unordered_set<int> usedVariables;
     
     for (auto &ident : m_identifiers) {
-        if (!Config::cull_unused_objects || ident->GetUseCount() > 0) {
-            if (used_variables.find(ident->GetIndex()) == used_variables.end()) {
-                used_variables.insert(ident->GetIndex());
+        if (!Config::cullUnusedObjects || ident->GetUseCount() > 0) {
+            if (usedVariables.find(ident->GetIndex()) == usedVariables.end()) {
+                usedVariables.insert(ident->GetIndex());
             }
         }
     }
     
-    return used_variables.size();
+    return usedVariables.size();
 }
 
 RC<Identifier> IdentifierTable::AddAlias(const String &name, Identifier *aliasee)
@@ -53,26 +53,26 @@ RC<Identifier> IdentifierTable::AddAlias(const String &name, Identifier *aliasee
 RC<Identifier> IdentifierTable::AddIdentifier(
     const String &name,
     int flags,
-    RC<AstExpression> current_value,
-    SymbolTypePtr_t symbol_type
+    RC<AstExpression> currentValue,
+    SymbolTypePtr_t symbolType
 )
 {
     RC<Identifier> ident(new Identifier(
         name,
-        m_identifier_index++,
+        m_identifierIndex++,
         flags
     ));
 
-    if (current_value != nullptr) {
-        ident->SetCurrentValue(current_value);
+    if (currentValue != nullptr) {
+        ident->SetCurrentValue(currentValue);
 
-        if (symbol_type == nullptr) {
-            ident->SetSymbolType(symbol_type);
+        if (symbolType == nullptr) {
+            ident->SetSymbolType(symbolType);
         }
     }
 
-    if (symbol_type != nullptr) {
-        ident->SetSymbolType(symbol_type);
+    if (symbolType != nullptr) {
+        ident->SetSymbolType(symbolType);
     }
 
     m_identifiers.PushBack(ident);
@@ -86,7 +86,7 @@ bool IdentifierTable::AddIdentifier(const RC<Identifier> &identifier)
         return false;
     }
 
-    if (auto already_existing_identifier = LookUpIdentifier(identifier->GetName())) {
+    if (auto alreadyExistingIdentifier = LookUpIdentifier(identifier->GetName())) {
         return false;
     }
 
@@ -108,19 +108,19 @@ RC<Identifier> IdentifierTable::LookUpIdentifier(const String &name)
     return nullptr;
 }
 
-void IdentifierTable::BindTypeToIdentifier(const String &name, SymbolTypePtr_t symbol_type)
+void IdentifierTable::BindTypeToIdentifier(const String &name, SymbolTypePtr_t symbolType)
 {
     AddIdentifier(
         name,
         0,
-        RC<AstTypeRef>(new AstTypeRef(symbol_type, SourceLocation::eof)),
-        symbol_type->GetBaseType()
+        RC<AstTypeRef>(new AstTypeRef(symbolType, SourceLocation::eof)),
+        symbolType->GetBaseType()
     );
 }
 
 SymbolTypePtr_t IdentifierTable::LookupSymbolType(const String &name) const
 {
-    for (auto &type : m_symbol_types) {
+    for (auto &type : m_symbolTypes) {
         if (type != nullptr && type->GetName() == name) {
             return type;
         }
@@ -131,7 +131,7 @@ SymbolTypePtr_t IdentifierTable::LookupSymbolType(const String &name) const
 
 void IdentifierTable::AddSymbolType(const SymbolTypePtr_t &type)
 {
-    m_symbol_types.PushBack(type);
+    m_symbolTypes.PushBack(type);
 }
 
 } // namespace hyperion::compiler

@@ -67,8 +67,8 @@ public:
     static const uint32 BASE_MEMBER_HASH;
 
     // construct from prototype (holds pointer)
-    VMObject(HeapValue *class_ptr);
-    VMObject(const Member *members, SizeType size, HeapValue *class_ptr);
+    VMObject(HeapValue *classPtr);
+    VMObject(const Member *members, SizeType size, HeapValue *classPtr);
     VMObject(const VMObject &other);
     ~VMObject();
 
@@ -91,22 +91,22 @@ public:
         { return m_members[index]; }
 
     ObjectMap *GetObjectMap() const
-        { return m_object_map; }
+        { return m_objectMap; }
 
     void SetMember(const char *name, const Value &value);
 
     SizeType GetSize() const
-        { return m_object_map->GetSize(); }
+        { return m_objectMap->GetSize(); }
 
     HeapValue *GetClassPointer() const
-        { return m_class_ptr; }
+        { return m_classPtr; }
 
     bool LookupBasePointer(Value *out) const
     {
-        Member *member_ptr = LookupMemberFromHash(BASE_MEMBER_HASH, false);
+        Member *memberPtr = LookupMemberFromHash(BASE_MEMBER_HASH, false);
 
-        if (member_ptr) {
-            *out = member_ptr->value;
+        if (memberPtr) {
+            *out = memberPtr->value;
 
             return true;
         }
@@ -116,16 +116,16 @@ public:
     
     void GetRepresentation(
         std::stringstream &ss,
-        bool add_type_name = true,
+        bool addTypeName = true,
         int depth = 3
     ) const;
 
     HashCode GetHashCode() const;
 
 private:
-    HeapValue   *m_class_ptr;
+    HeapValue   *m_classPtr;
 
-    ObjectMap   *m_object_map;
+    ObjectMap   *m_objectMap;
     Member      *m_members;
 };
 

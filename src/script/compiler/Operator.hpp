@@ -68,29 +68,29 @@ class Operator;
 class Operator
 {
 public:
-    static const HashMap<String, Operator*> binary_operators;
-    static const HashMap<String, Operator*> unary_operators;
+    static const HashMap<String, Operator*> binaryOperators;
+    static const HashMap<String, Operator*> unaryOperators;
 
-    static inline bool IsBinaryOperator(const String &str, OperatorTypeBits match_bits = 0)
+    static inline bool IsBinaryOperator(const String &str, OperatorTypeBits matchBits = 0)
     {
-        const auto it = binary_operators.Find(str);
+        const auto it = binaryOperators.Find(str);
 
-        if (it == binary_operators.end()) {
+        if (it == binaryOperators.end()) {
             return false;
         }
 
-        if (match_bits == 0) {
+        if (matchBits == 0) {
             return true;
         }
 
-        return bool(it->second->GetType() & match_bits);
+        return bool(it->second->GetType() & matchBits);
     }
 
     static inline bool IsBinaryOperator(const String &str, const Operator *&out)
     {
-        const auto it = binary_operators.Find(str);
+        const auto it = binaryOperators.Find(str);
 
-        if (it == binary_operators.end()) {
+        if (it == binaryOperators.end()) {
             return false;
         }
 
@@ -99,21 +99,21 @@ public:
         return true;
     }
 
-    static inline bool IsBinaryOperator(const String &str, OperatorTypeBits match_bits, const Operator *&out)
+    static inline bool IsBinaryOperator(const String &str, OperatorTypeBits matchBits, const Operator *&out)
     {
-        const auto it = binary_operators.Find(str);
+        const auto it = binaryOperators.Find(str);
 
-        if (it == binary_operators.end()) {
+        if (it == binaryOperators.end()) {
             return false;
         }
 
-        if (match_bits == 0) {
+        if (matchBits == 0) {
             out = it->second;
 
             return true;
         }
 
-        if (it->second->GetType() & match_bits) {
+        if (it->second->GetType() & matchBits) {
             out = it->second;
 
             return true;
@@ -122,26 +122,26 @@ public:
         return false;
     }
 
-    static inline bool IsUnaryOperator(const String &str, OperatorTypeBits match_bits = 0)
+    static inline bool IsUnaryOperator(const String &str, OperatorTypeBits matchBits = 0)
     {
-        const auto it = unary_operators.Find(str);
+        const auto it = unaryOperators.Find(str);
 
-        if (it == unary_operators.end()) {
+        if (it == unaryOperators.end()) {
             return false;
         }
 
-        if (match_bits == 0) {
+        if (matchBits == 0) {
             return true;
         }
 
-        return bool(it->second->GetType() & match_bits);
+        return bool(it->second->GetType() & matchBits);
     }
 
     static inline bool IsUnaryOperator(const String &str, const Operator *&out)
     {
-        const auto it = unary_operators.Find(str);
+        const auto it = unaryOperators.Find(str);
 
-        if (it == unary_operators.end()) {
+        if (it == unaryOperators.end()) {
             return false;
         }
 
@@ -150,21 +150,21 @@ public:
         return true;
     }
 
-    static inline bool IsUnaryOperator(const String &str, OperatorTypeBits match_bits, const Operator *&out)
+    static inline bool IsUnaryOperator(const String &str, OperatorTypeBits matchBits, const Operator *&out)
     {
-        const auto it = unary_operators.Find(str);
+        const auto it = unaryOperators.Find(str);
 
-        if (it == unary_operators.end()) {
+        if (it == unaryOperators.end()) {
             return false;
         }
 
-        if (match_bits == 0) {
+        if (matchBits == 0) {
             out = it->second;
 
             return true;
         }
 
-        if (it->second->GetType() & match_bits) {
+        if (it->second->GetType() & matchBits) {
             out = it->second;
 
             return true;
@@ -178,16 +178,16 @@ public:
 
 public:
     Operator(
-        Operators op_type,
+        Operators opType,
         int precedence,
         int type,
-        bool modifies_value = false,
-        bool supports_overloading = false
+        bool modifiesValue = false,
+        bool supportsOverloading = false
     );
     Operator(const Operator &other);
 
     Operators GetOperatorType() const
-        { return m_op_type; }
+        { return m_opType; }
 
     int GetType() const
         { return m_type; }
@@ -199,10 +199,10 @@ public:
         { return m_precedence == 0; }
 
     bool ModifiesValue() const
-        { return m_modifies_value; }
+        { return m_modifiesValue; }
 
     bool SupportsOverloading() const
-        { return m_supports_overloading; }
+        { return m_supportsOverloading; }
 
     String LookupStringValue() const;
 
@@ -210,21 +210,21 @@ public:
     {
         HashCode hc;
 
-        hc.Add(m_op_type);
+        hc.Add(m_opType);
         hc.Add(m_precedence);
         hc.Add(m_type);
-        hc.Add(m_modifies_value);
-        hc.Add(m_supports_overloading);
+        hc.Add(m_modifiesValue);
+        hc.Add(m_supportsOverloading);
 
         return hc;
     }
 
 private:
-    Operators   m_op_type;
+    Operators   m_opType;
     int         m_precedence;
     int         m_type;
-    bool        m_modifies_value;
-    bool        m_supports_overloading;
+    bool        m_modifiesValue;
+    bool        m_supportsOverloading;
 };
 
 } // namespace hyperion::compiler

@@ -4,7 +4,7 @@
 
 namespace hyperion::compiler {
 
-const HashMap<String, Operator*> Operator::binary_operators = {
+const HashMap<String, Operator*> Operator::binaryOperators = {
     { "+", new Operator(OP_add, 13, ARITHMETIC, false, true) },
     { "-", new Operator(OP_subtract, 13, ARITHMETIC, false, true) },
     { "*", new Operator(OP_multiply, 14, ARITHMETIC, false, true) },
@@ -42,7 +42,7 @@ const HashMap<String, Operator*> Operator::binary_operators = {
     { "|=", new Operator(OP_bitwise_or_assign, 3, ASSIGNMENT | BITWISE, true, true) },
 };
 
-const HashMap<String, Operator*> Operator::unary_operators = {
+const HashMap<String, Operator*> Operator::unaryOperators = {
     // Unary operators
     { "!", new Operator(OP_logical_not, 0, LOGICAL | PREFIX, false, true) },
     { "-", new Operator(OP_negative, 0, ARITHMETIC | PREFIX, false, true) },
@@ -53,38 +53,38 @@ const HashMap<String, Operator*> Operator::unary_operators = {
 };
 
 Operator::Operator(
-    Operators op_type,
+    Operators opType,
     int precedence,
     int type,
-    bool modifies_value,
-    bool supports_overloading
-) : m_op_type(op_type),
+    bool modifiesValue,
+    bool supportsOverloading
+) : m_opType(opType),
     m_precedence(precedence),
     m_type(type),
-    m_modifies_value(modifies_value),
-    m_supports_overloading(supports_overloading)
+    m_modifiesValue(modifiesValue),
+    m_supportsOverloading(supportsOverloading)
 {
 }
 
 Operator::Operator(const Operator &other)
-    : m_op_type(other.m_op_type),
+    : m_opType(other.m_opType),
       m_precedence(other.m_precedence),
       m_type(other.m_type),
-      m_modifies_value(other.m_modifies_value),
-      m_supports_overloading(other.m_supports_overloading)
+      m_modifiesValue(other.m_modifiesValue),
+      m_supportsOverloading(other.m_supportsOverloading)
 {
 }
 
 String Operator::LookupStringValue() const
 {
-    const auto *map = &Operator::binary_operators;
+    const auto *map = &Operator::binaryOperators;
 
     if (IsUnary()) {
-        map = &Operator::unary_operators;
+        map = &Operator::unaryOperators;
     }
 
     for (const auto &it : *map) {
-        if (it.second->GetOperatorType() == m_op_type) {
+        if (it.second->GetOperatorType() == m_opType) {
             return it.first;
         }
     }
@@ -94,7 +94,7 @@ String Operator::LookupStringValue() const
 
 const Operator *Operator::FindBinaryOperator(Operators op)
 {
-    for (auto &it : binary_operators) {
+    for (auto &it : binaryOperators) {
         if (it.second->GetOperatorType() == op) {
             return it.second;
         }
@@ -105,7 +105,7 @@ const Operator *Operator::FindBinaryOperator(Operators op)
 
 const Operator *Operator::FindUnaryOperator(Operators op)
 {
-    for (auto &it : unary_operators) {
+    for (auto &it : unaryOperators) {
         if (it.second->GetOperatorType() == op) {
             return it.second;
         }

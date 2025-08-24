@@ -18,7 +18,7 @@ VMMemoryBuffer::VMMemoryBuffer(const ByteBuffer &bytes)
 
 void VMMemoryBuffer::GetRepresentation(
     std::stringstream &ss,
-    bool add_type_name,
+    bool addTypeName,
     int depth
 ) const
 {

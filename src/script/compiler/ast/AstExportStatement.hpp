@@ -39,7 +39,7 @@ private:
     RC<AstStatement> m_stmt;
 
     // set while analyzing
-    String m_exported_symbol_name;
+    String m_exportedSymbolName;
 
     RC<AstExportStatement> CloneImpl() const
     {

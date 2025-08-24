@@ -12,32 +12,32 @@ class AstTypeObject : public AstExpression
 {
 public:
     AstTypeObject(
-        const SymbolTypePtr_t &symbol_type,
-        const SymbolTypePtr_t &base_symbol_type, // base here is usually CLASS_TYPE - it is not the same as polymorphic base
+        const SymbolTypePtr_t &symbolType,
+        const SymbolTypePtr_t &baseSymbolType, // base here is usually CLASS_TYPE - it is not the same as polymorphic base
         const SourceLocation &location
     );
 
     AstTypeObject(
-        const SymbolTypePtr_t &symbol_type,
-        const SymbolTypePtr_t &base_symbol_type,
-        const SymbolTypePtr_t &enum_underlying_type,
-        bool is_proxy_class,
+        const SymbolTypePtr_t &symbolType,
+        const SymbolTypePtr_t &baseSymbolType,
+        const SymbolTypePtr_t &enumUnderlyingType,
+        bool isProxyClass,
         const SourceLocation &location
     );
 
     virtual ~AstTypeObject() = default;
 
     bool IsEnum() const
-        { return m_enum_underlying_type != nullptr; }
+        { return m_enumUnderlyingType != nullptr; }
 
     const SymbolTypePtr_t &GetEnumUnderlyingType() const
-        { return m_enum_underlying_type; }
+        { return m_enumUnderlyingType; }
 
     bool IsProxyClass() const
-        { return m_is_proxy_class; }
+        { return m_isProxyClass; }
 
     bool IsVisited() const
-        { return m_is_visited; }
+        { return m_isVisited; }
 
     virtual void Visit(AstVisitor *visitor, Module *mod) override;
     virtual std::unique_ptr<Buildable> Build(AstVisitor *visitor, Module *mod) override;
@@ -54,32 +54,32 @@ public:
     virtual HashCode GetHashCode() const override
     {
         HashCode hc = AstExpression::GetHashCode().Add(TypeName<AstTypeObject>());
-        hc.Add(m_symbol_type ? m_symbol_type->GetHashCode() : HashCode());
-        hc.Add(m_base_symbol_type ? m_base_symbol_type->GetHashCode() : HashCode());
-        hc.Add(m_enum_underlying_type ? m_enum_underlying_type->GetHashCode() : HashCode());
-        hc.Add(m_is_proxy_class);
+        hc.Add(m_symbolType ? m_symbolType->GetHashCode() : HashCode());
+        hc.Add(m_baseSymbolType ? m_baseSymbolType->GetHashCode() : HashCode());
+        hc.Add(m_enumUnderlyingType ? m_enumUnderlyingType->GetHashCode() : HashCode());
+        hc.Add(m_isProxyClass);
 
         return hc;
     }
 
 private:
-    SymbolTypePtr_t             m_symbol_type;
-    SymbolTypePtr_t             m_base_symbol_type;
-    SymbolTypePtr_t             m_enum_underlying_type;
-    bool                        m_is_proxy_class;
+    SymbolTypePtr_t             m_symbolType;
+    SymbolTypePtr_t             m_baseSymbolType;
+    SymbolTypePtr_t             m_enumUnderlyingType;
+    bool                        m_isProxyClass;
 
     // set while analyzing
-    RC<AstTypeRef>              m_base_type_ref;
-    Array<RC<AstExpression>>    m_member_expressions;
-    bool                        m_is_visited;
+    RC<AstTypeRef>              m_baseTypeRef;
+    Array<RC<AstExpression>>    m_memberExpressions;
+    bool                        m_isVisited;
 
     RC<AstTypeObject> CloneImpl() const
     {
         return RC<AstTypeObject>(new AstTypeObject(
-            m_symbol_type,
-            m_base_symbol_type,
-            m_enum_underlying_type,
-            m_is_proxy_class,
+            m_symbolType,
+            m_baseSymbolType,
+            m_enumUnderlyingType,
+            m_isProxyClass,
             m_location
         ));
     }

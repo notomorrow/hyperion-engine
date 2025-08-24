@@ -9,7 +9,7 @@ class AstTypeRef : public AstExpression
 {
 public:
     AstTypeRef(
-        const SymbolTypePtr_t &symbol_type,
+        const SymbolTypePtr_t &symbolType,
         const SourceLocation &location
     );
 
@@ -30,21 +30,21 @@ public:
     virtual HashCode GetHashCode() const override
     {
         HashCode hc = AstExpression::GetHashCode().Add(TypeName<AstTypeRef>());
-        hc.Add(m_symbol_type ? m_symbol_type->GetHashCode() : HashCode());
+        hc.Add(m_symbolType ? m_symbolType->GetHashCode() : HashCode());
 
         return hc;
     }
 
 private:
-    SymbolTypePtr_t             m_symbol_type;
+    SymbolTypePtr_t             m_symbolType;
     
     // set while analyzing
-    bool                        m_is_visited;
+    bool                        m_isVisited;
 
     RC<AstTypeRef> CloneImpl() const
     {
         return RC<AstTypeRef>(new AstTypeRef(
-            m_symbol_type,
+            m_symbolType,
             m_location
         ));
     }

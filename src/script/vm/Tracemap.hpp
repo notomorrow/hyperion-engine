@@ -18,7 +18,7 @@ public:
             ENTRY_TYPE_FILENAME,
             ENTRY_TYPE_SYMBOL_NAME,
             ENTRY_TYPE_MODULE_NAME
-        } entry_type;
+        } entryType;
 
         char data[255];
     };
@@ -26,9 +26,9 @@ public:
     // a mapping from binary instruction location, to line number as well as optionally, stringmap index (-1 if not set). 
     struct LinemapEntry
     {
-        uint64  instruction_location;
-        uint64  line_num;
-        int64   stringmap_index;
+        uint64  instructionLocation;
+        uint64  lineNum;
+        int64   stringmapIndex;
     };
 
     Tracemap();

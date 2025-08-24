@@ -23,16 +23,16 @@ AstVariable::AstVariable(
     const String &name,
     const SourceLocation &location
 ) : AstIdentifier(name, location),
-    m_should_inline(false),
-    m_is_in_ref_assignment(false),
-    m_is_in_const_assignment(false)
+    m_shouldInline(false),
+    m_isInRefAssignment(false),
+    m_isInConstAssignment(false)
 {
 }
 
 void AstVariable::Visit(AstVisitor *visitor, Module *mod)
 {
-    Assert(!m_is_visited);
-    m_is_visited = true;
+    Assert(!m_isVisited);
+    m_isVisited = true;
 
     AstIdentifier::Visit(visitor, mod);
 
@@ -45,28 +45,28 @@ void AstVariable::Visit(AstVisitor *visitor, Module *mod)
         // if alias or const, load direct value.
         // if it's an alias then it will just refer to whatever other variable
         // is being referenced. if it is const, load the direct value held in the variable
-        const bool is_alias = m_properties.GetIdentifier()->GetFlags() & IdentifierFlags::FLAG_ALIAS;
-        const bool is_mixin = m_properties.GetIdentifier()->GetFlags() & IdentifierFlags::FLAG_MIXIN;
-        const bool is_generic = m_properties.GetIdentifier()->GetFlags() & IdentifierFlags::FLAG_GENERIC;
-        const bool is_argument = m_properties.GetIdentifier()->GetFlags() & IdentifierFlags::FLAG_ARGUMENT;
-        const bool is_const = m_properties.GetIdentifier()->GetFlags() & IdentifierFlags::FLAG_CONST;
-        const bool is_ref = m_properties.GetIdentifier()->GetFlags() & IdentifierFlags::FLAG_REF;
-        const bool is_member = m_properties.GetIdentifier()->GetFlags() & IdentifierFlags::FLAG_MEMBER;
-        const bool is_substitution = m_properties.GetIdentifier()->GetFlags() & IdentifierFlags::FLAG_GENERIC_SUBSTITUTION;
+        const bool isAlias = m_properties.GetIdentifier()->GetFlags() & IdentifierFlags::FLAG_ALIAS;
+        const bool isMixin = m_properties.GetIdentifier()->GetFlags() & IdentifierFlags::FLAG_MIXIN;
+        const bool isGeneric = m_properties.GetIdentifier()->GetFlags() & IdentifierFlags::FLAG_GENERIC;
+        const bool isArgument = m_properties.GetIdentifier()->GetFlags() & IdentifierFlags::FLAG_ARGUMENT;
+        const bool isConst = m_properties.GetIdentifier()->GetFlags() & IdentifierFlags::FLAG_CONST;
+        const bool isRef = m_properties.GetIdentifier()->GetFlags() & IdentifierFlags::FLAG_REF;
+        const bool isMember = m_properties.GetIdentifier()->GetFlags() & IdentifierFlags::FLAG_MEMBER;
+        const bool isSubstitution = m_properties.GetIdentifier()->GetFlags() & IdentifierFlags::FLAG_GENERIC_SUBSTITUTION;
 
 #if HYP_SCRIPT_ENABLE_VARIABLE_INLINING
         // clone the AST node so we don't double-visit
-        if (auto current_value = m_properties.GetIdentifier()->GetCurrentValue()) {
-            const AstConstant *constant_value = nullptr;
+        if (auto currentValue = m_properties.GetIdentifier()->GetCurrentValue()) {
+            const AstConstant *constantValue = nullptr;
 
-            if (current_value->IsLiteral() && (constant_value = dynamic_cast<const AstConstant *>(current_value->GetDeepValueOf()))) {
-                m_inline_value = CloneAstNode(constant_value);
+            if (currentValue->IsLiteral() && (constantValue = dynamic_cast<const AstConstant *>(currentValue->GetDeepValueOf()))) {
+                m_inlineValue = CloneAstNode(constantValue);
             }
         }
 #endif
 
-        if (false) {//is_member) { // temporarily disabled; allows for self.<variable name> to be used without prefixing with 'self.'
-            m_self_member_access.Reset(new AstMember(
+        if (false) {//isMember) { // temporarily disabled; allows for self.<variable name> to be used without prefixing with 'self.'
+            m_selfMemberAccess.Reset(new AstMember(
                 m_name,
                 RC<AstVariable>(new AstVariable(
                     "self",
@@ -75,13 +75,13 @@ void AstVariable::Visit(AstVisitor *visitor, Module *mod)
                 m_location
             ));
 
-            m_self_member_access->Visit(visitor, mod);
+            m_selfMemberAccess->Visit(visitor, mod);
         } else {
-            m_is_in_ref_assignment = mod->IsInScopeOfType(ScopeType::SCOPE_TYPE_NORMAL, ScopeFunctionFlags::REF_VARIABLE_FLAG);
-            m_is_in_const_assignment = mod->IsInScopeOfType(ScopeType::SCOPE_TYPE_NORMAL, ScopeFunctionFlags::CONST_VARIABLE_FLAG);
+            m_isInRefAssignment = mod->IsInScopeOfType(ScopeType::SCOPE_TYPE_NORMAL, ScopeFunctionFlags::REF_VARIABLE_FLAG);
+            m_isInConstAssignment = mod->IsInScopeOfType(ScopeType::SCOPE_TYPE_NORMAL, ScopeFunctionFlags::CONST_VARIABLE_FLAG);
 
-            if (m_is_in_ref_assignment) {
-                if (is_const && !m_is_in_const_assignment) {
+            if (m_isInRefAssignment) {
+                if (isConst && !m_isInConstAssignment) {
                     visitor->GetCompilationUnit()->GetErrorList().AddError(CompilerError(
                         LEVEL_ERROR,
                         Msg_const_assigned_to_non_const_ref,
@@ -91,7 +91,7 @@ void AstVariable::Visit(AstVisitor *visitor, Module *mod)
                 }
             }
 
-            if (is_generic) {
+            if (isGeneric) {
                 if (!mod->IsInScopeOfType(ScopeType::SCOPE_TYPE_GENERIC_INSTANTIATION)) { //&& !mod->IsInScopeOfType(ScopeType::SCOPE_TYPE_ALIAS_DECLARATION)
                 //     && !mod->IsInScopeOfType(ScopeType::SCOPE_TYPE_NORMAL, UNINSTANTIATED_GENERIC_FLAG)) {
                     visitor->GetCompilationUnit()->GetErrorList().AddError(CompilerError(
@@ -106,9 +106,9 @@ void AstVariable::Visit(AstVisitor *visitor, Module *mod)
             }
 
 #if HYP_SCRIPT_ENABLE_VARIABLE_INLINING
-            const bool force_inline = is_alias || is_mixin;// || is_substitution;
+            const bool forceInline = isAlias || isMixin;// || isSubstitution;
 
-            if (force_inline && m_inline_value == nullptr) {
+            if (forceInline && m_inlineValue == nullptr) {
                 visitor->GetCompilationUnit()->GetErrorList().AddError(CompilerError(
                     LEVEL_ERROR,
                     Msg_cannot_inline_variable,
@@ -120,23 +120,23 @@ void AstVariable::Visit(AstVisitor *visitor, Module *mod)
             // don't inline arguments.
             // can run into an issue with a param is const with default assignment,
             // where it would inline the default assignment instead of the passed in value
-            m_should_inline = force_inline || (!is_generic && is_const && !is_argument);
+            m_shouldInline = forceInline || (!isGeneric && isConst && !isArgument);
 
-            if (m_should_inline) {
-                if (m_inline_value != nullptr) {
+            if (m_shouldInline) {
+                if (m_inlineValue != nullptr) {
                     // set access options for this variable based on those of the current value
-                    m_access_options = m_inline_value->GetAccessOptions();
+                    m_accessOptions = m_inlineValue->GetAccessOptions();
                     // if alias, accept the current value instead
-                    m_inline_value->Visit(visitor, mod);
+                    m_inlineValue->Visit(visitor, mod);
                 } else {
-                    m_should_inline = false;
+                    m_shouldInline = false;
                 }
             } else {
-                m_inline_value.Reset();
+                m_inlineValue.Reset();
             }
 #else
-            static constexpr bool force_inline = false;
-            m_should_inline = false;
+            static constexpr bool forceInline = false;
+            m_shouldInline = false;
 #endif
 
             // if it is alias or mixin, update symbol type of this expression
@@ -144,7 +144,7 @@ void AstVariable::Visit(AstVisitor *visitor, Module *mod)
 
 #if HYP_SCRIPT_ENABLE_VARIABLE_INLINING
             // increase usage count for variable loads (non-inlined)
-            if (!m_should_inline) {
+            if (!m_shouldInline) {
 #endif
                 m_properties.GetIdentifier()->IncUseCount();
 
@@ -173,10 +173,10 @@ void AstVariable::Visit(AstVisitor *visitor, Module *mod)
                 if ((flags & FLAG_DECLARED_IN_FUNCTION) && !(flags & FLAG_GENERIC_SUBSTITUTION)) {
                     // lookup the variable by depth to make sure it was declared in the current function
                     if (!mod->LookUpIdentifierDepth(m_name, m_properties.GetDepth())) {
-                        Scope *function_scope = m_properties.GetFunctionScope();
-                        Assert(function_scope != nullptr);
+                        Scope *functionScope = m_properties.GetFunctionScope();
+                        Assert(functionScope != nullptr);
 
-                        function_scope->AddClosureCapture(
+                        functionScope->AddClosureCapture(
                             m_name,
                             m_properties.GetIdentifier()
                         );
@@ -184,7 +184,7 @@ void AstVariable::Visit(AstVisitor *visitor, Module *mod)
                         // closures are objects with a method named '$invoke',
                         // because we are in the '$invoke' method currently,
                         // we use the variable as 'self.<variable name>'
-                        m_closure_member_access.Reset(new AstMember(
+                        m_closureMemberAccess.Reset(new AstMember(
                             m_name,
                             RC<AstVariable>(new AstVariable(
                                 "$functor",
@@ -193,7 +193,7 @@ void AstVariable::Visit(AstVisitor *visitor, Module *mod)
                             m_location
                         ));
 
-                        m_closure_member_access->Visit(visitor, mod);
+                        m_closureMemberAccess->Visit(visitor, mod);
                     }
                 }
             }
@@ -222,103 +222,103 @@ void AstVariable::Visit(AstVisitor *visitor, Module *mod)
         break;
     }
 
-    if (auto held_type = GetHeldType()) {
-        held_type = held_type->GetUnaliased();
+    if (auto heldType = GetHeldType()) {
+        heldType = heldType->GetUnaliased();
 
-        m_type_ref.Reset(new AstTypeRef(
-            held_type,
+        m_typeRef.Reset(new AstTypeRef(
+            heldType,
             m_location
         ));
 
-        m_type_ref->Visit(visitor, mod);
+        m_typeRef->Visit(visitor, mod);
     }
 }
 
 std::unique_ptr<Buildable> AstVariable::Build(AstVisitor *visitor, Module *mod)
 {
-    Assert(m_is_visited);
+    Assert(m_isVisited);
 
     std::unique_ptr<BytecodeChunk> chunk = BytecodeUtil::Make<BytecodeChunk>();
 
-    if (m_closure_member_access != nullptr) {
-        m_closure_member_access->SetAccessMode(m_access_mode);
-        return m_closure_member_access->Build(visitor, mod);
-    } else if (m_self_member_access != nullptr) {
-        m_self_member_access->SetAccessMode(m_access_mode);
-        return m_self_member_access->Build(visitor, mod);
-    } else if (m_type_ref != nullptr) {
-        m_type_ref->SetAccessMode(m_access_mode);
-        return m_type_ref->Build(visitor, mod);
+    if (m_closureMemberAccess != nullptr) {
+        m_closureMemberAccess->SetAccessMode(m_accessMode);
+        return m_closureMemberAccess->Build(visitor, mod);
+    } else if (m_selfMemberAccess != nullptr) {
+        m_selfMemberAccess->SetAccessMode(m_accessMode);
+        return m_selfMemberAccess->Build(visitor, mod);
+    } else if (m_typeRef != nullptr) {
+        m_typeRef->SetAccessMode(m_accessMode);
+        return m_typeRef->Build(visitor, mod);
     }
     
     Assert(m_properties.GetIdentifierType() == IDENTIFIER_TYPE_VARIABLE);
     Assert(m_properties.GetIdentifier() != nullptr, "Identifier not found for variable %s", m_name.Data());
 
 #if HYP_SCRIPT_ENABLE_VARIABLE_INLINING
-    if (m_should_inline) {
+    if (m_shouldInline) {
         // if alias, accept the current value instead
-        const AccessMode current_access_mode = m_inline_value->GetAccessMode();
-        m_inline_value->SetAccessMode(m_access_mode);
-        chunk->Append(m_inline_value->Build(visitor, mod));
+        const AccessMode currentAccessMode = m_inlineValue->GetAccessMode();
+        m_inlineValue->SetAccessMode(m_accessMode);
+        chunk->Append(m_inlineValue->Build(visitor, mod));
         // reset access mode
-        m_inline_value->SetAccessMode(current_access_mode);
+        m_inlineValue->SetAccessMode(currentAccessMode);
     } else {
 #endif
-        int stack_size = visitor->GetCompilationUnit()->GetInstructionStream().GetStackSize();
-        int stack_location = m_properties.GetIdentifier()->GetStackLocation();
+        int stackSize = visitor->GetCompilationUnit()->GetInstructionStream().GetStackSize();
+        int stackLocation = m_properties.GetIdentifier()->GetStackLocation();
 
-        Assert(stack_location != -1, "Variable %s has invalid stack location stored; maybe the AstVariableDeclaration was not built?", m_name.Data());
+        Assert(stackLocation != -1, "Variable %s has invalid stack location stored; maybe the AstVariableDeclaration was not built?", m_name.Data());
 
-        int offset = stack_size - stack_location;
+        int offset = stackSize - stackLocation;
 
         // get active register
         uint8 rp = visitor->GetCompilationUnit()->GetInstructionStream().GetCurrentRegister();
 
         // if we are a reference, we deference it before doing anything
-        const bool is_ref = m_properties.GetIdentifier()->GetFlags() & IdentifierFlags::FLAG_REF;
+        const bool isRef = m_properties.GetIdentifier()->GetFlags() & IdentifierFlags::FLAG_REF;
 
         if (m_properties.GetIdentifier()->GetFlags() & FLAG_DECLARED_IN_FUNCTION) {
-            if (m_access_mode == ACCESS_MODE_LOAD) {
+            if (m_accessMode == ACCESS_MODE_LOAD) {
                 // load stack value at offset value into register
-                auto instr_load_offset = BytecodeUtil::Make<StorageOperation>();
-                instr_load_offset->GetBuilder().Load(rp, m_is_in_ref_assignment && !is_ref).Local().ByOffset(offset);
-                chunk->Append(std::move(instr_load_offset));
+                auto instrLoadOffset = BytecodeUtil::Make<StorageOperation>();
+                instrLoadOffset->GetBuilder().Load(rp, m_isInRefAssignment && !isRef).Local().ByOffset(offset);
+                chunk->Append(std::move(instrLoadOffset));
 
                 chunk->Append(BytecodeUtil::Make<Comment>("Load variable " + m_name));
 
-                if (is_ref && !m_is_in_ref_assignment) {
+                if (isRef && !m_isInRefAssignment) {
                     chunk->Append(BytecodeUtil::Make<LoadDeref>(rp, rp));
 
                     chunk->Append(BytecodeUtil::Make<Comment>("Dereference variable " + m_name));
                 }
-            } else if (m_access_mode == ACCESS_MODE_STORE) {
+            } else if (m_accessMode == ACCESS_MODE_STORE) {
                 // store the value at (rp - 1) into this local variable
-                auto instr_mov_index = BytecodeUtil::Make<StorageOperation>();
-                instr_mov_index->GetBuilder().Store(rp - 1).Local().ByOffset(offset);
-                chunk->Append(std::move(instr_mov_index));
+                auto instrMovIndex = BytecodeUtil::Make<StorageOperation>();
+                instrMovIndex->GetBuilder().Store(rp - 1).Local().ByOffset(offset);
+                chunk->Append(std::move(instrMovIndex));
 
                 chunk->Append(BytecodeUtil::Make<Comment>("Store variable " + m_name));
             }
         } else {
             // load globally, rather than from offset.
-            if (m_access_mode == ACCESS_MODE_LOAD) {
+            if (m_accessMode == ACCESS_MODE_LOAD) {
                 // load stack value at index into register
-                auto instr_load_index = BytecodeUtil::Make<StorageOperation>();
-                instr_load_index->GetBuilder().Load(rp, m_is_in_ref_assignment && !is_ref).Local().ByIndex(stack_location);
-                chunk->Append(std::move(instr_load_index));
+                auto instrLoadIndex = BytecodeUtil::Make<StorageOperation>();
+                instrLoadIndex->GetBuilder().Load(rp, m_isInRefAssignment && !isRef).Local().ByIndex(stackLocation);
+                chunk->Append(std::move(instrLoadIndex));
 
                 chunk->Append(BytecodeUtil::Make<Comment>("Load variable " + m_name));
 
-                if (is_ref && !m_is_in_ref_assignment) {
+                if (isRef && !m_isInRefAssignment) {
                     chunk->Append(BytecodeUtil::Make<LoadDeref>(rp, rp));
 
                     chunk->Append(BytecodeUtil::Make<Comment>("Dereference variable " + m_name));
                 }
-            } else if (m_access_mode == ACCESS_MODE_STORE) {
+            } else if (m_accessMode == ACCESS_MODE_STORE) {
                 // store the value at the index into this local variable
-                auto instr_mov_index = BytecodeUtil::Make<StorageOperation>();
-                instr_mov_index->GetBuilder().Store(rp - 1).Local().ByIndex(stack_location);
-                chunk->Append(std::move(instr_mov_index));
+                auto instrMovIndex = BytecodeUtil::Make<StorageOperation>();
+                instrMovIndex->GetBuilder().Store(rp - 1).Local().ByIndex(stackLocation);
+                chunk->Append(std::move(instrMovIndex));
 
                 chunk->Append(BytecodeUtil::Make<Comment>("Store variable " + m_name));
             }
@@ -333,20 +333,20 @@ std::unique_ptr<Buildable> AstVariable::Build(AstVisitor *visitor, Module *mod)
 
 void AstVariable::Optimize(AstVisitor *visitor, Module *mod)
 {
-    if (m_type_ref != nullptr) {
-        return m_type_ref->Optimize(visitor, mod);
+    if (m_typeRef != nullptr) {
+        return m_typeRef->Optimize(visitor, mod);
     }
 
-    if (m_inline_value != nullptr) {
-        return m_inline_value->Optimize(visitor, mod);
+    if (m_inlineValue != nullptr) {
+        return m_inlineValue->Optimize(visitor, mod);
     }
 
-    if (m_closure_member_access != nullptr) {
-        m_closure_member_access->Optimize(visitor, mod);
+    if (m_closureMemberAccess != nullptr) {
+        m_closureMemberAccess->Optimize(visitor, mod);
     }
 
-    if (m_self_member_access != nullptr) {
-        m_self_member_access->Optimize(visitor, mod);
+    if (m_selfMemberAccess != nullptr) {
+        m_selfMemberAccess->Optimize(visitor, mod);
     }
 }
 
@@ -357,20 +357,20 @@ RC<AstStatement> AstVariable::Clone() const
 
 Tribool AstVariable::IsTrue() const
 {
-    if (m_type_ref != nullptr) {
-        return m_type_ref->IsTrue();
+    if (m_typeRef != nullptr) {
+        return m_typeRef->IsTrue();
     }
 
-    if (m_inline_value != nullptr) {
-        return m_inline_value->IsTrue();
+    if (m_inlineValue != nullptr) {
+        return m_inlineValue->IsTrue();
     }
 
-    // if (m_closure_member_access != nullptr) {
-    //     return m_closure_member_access->IsTrue();
+    // if (m_closureMemberAccess != nullptr) {
+    //     return m_closureMemberAccess->IsTrue();
     // }
 
-    if (m_self_member_access != nullptr) {
-        return m_self_member_access->IsTrue();
+    if (m_selfMemberAccess != nullptr) {
+        return m_selfMemberAccess->IsTrue();
     }
 
     return Tribool::Indeterminate();
@@ -378,20 +378,20 @@ Tribool AstVariable::IsTrue() const
 
 bool AstVariable::MayHaveSideEffects() const
 {
-    if (m_type_ref != nullptr) {
-        return m_type_ref->MayHaveSideEffects();
+    if (m_typeRef != nullptr) {
+        return m_typeRef->MayHaveSideEffects();
     }
 
-    if (m_inline_value != nullptr) {
-        return m_inline_value->MayHaveSideEffects();
+    if (m_inlineValue != nullptr) {
+        return m_inlineValue->MayHaveSideEffects();
     }
 
-    // if (m_closure_member_access != nullptr) {
-    //     return m_closure_member_access->MayHaveSideEffects();
+    // if (m_closureMemberAccess != nullptr) {
+    //     return m_closureMemberAccess->MayHaveSideEffects();
     // }
 
-    if (m_self_member_access != nullptr) {
-        return m_self_member_access->MayHaveSideEffects();
+    if (m_selfMemberAccess != nullptr) {
+        return m_selfMemberAccess->MayHaveSideEffects();
     }
 
     // a simple variable reference does not cause side effects
@@ -400,22 +400,22 @@ bool AstVariable::MayHaveSideEffects() const
 
 bool AstVariable::IsLiteral() const
 {
-    if (SymbolTypePtr_t expr_type = GetExprType()) {
-        expr_type = expr_type->GetUnaliased();
+    if (SymbolTypePtr_t exprType = GetExprType()) {
+        exprType = exprType->GetUnaliased();
 
-        if (expr_type->IsObject() || expr_type->IsClass()) {
+        if (exprType->IsObject() || exprType->IsClass()) {
             return false;
         }
 
-        if (expr_type->IsAnyType()) {
+        if (exprType->IsAnyType()) {
             return false;
         }
 
-        if (expr_type->IsPlaceholderType()) {
+        if (exprType->IsPlaceholderType()) {
             return false;
         }
 
-        if (!(expr_type->IsIntegral() || expr_type->IsFloat())) {
+        if (!(exprType->IsIntegral() || exprType->IsFloat())) {
             return false;
         }
     } else {
@@ -423,31 +423,31 @@ bool AstVariable::IsLiteral() const
         return false;
     }
 
-    if (m_type_ref != nullptr) {
-        return m_type_ref->IsLiteral();
+    if (m_typeRef != nullptr) {
+        return m_typeRef->IsLiteral();
     }
 
-    if (m_inline_value != nullptr) {
-        return m_inline_value->IsLiteral();
+    if (m_inlineValue != nullptr) {
+        return m_inlineValue->IsLiteral();
     }
 
-    // if (m_closure_member_access != nullptr) {
-    //     return m_closure_member_access->IsLiteral();
+    // if (m_closureMemberAccess != nullptr) {
+    //     return m_closureMemberAccess->IsLiteral();
     // }
 
-    if (m_self_member_access != nullptr) {
-        return m_self_member_access->IsLiteral();
+    if (m_selfMemberAccess != nullptr) {
+        return m_selfMemberAccess->IsLiteral();
     }
 
     if (const RC<Identifier> &ident = m_properties.GetIdentifier()) {
-        const Identifier *ident_unaliased = ident->Unalias();
-        Assert(ident_unaliased != nullptr);
+        const Identifier *identUnaliased = ident->Unalias();
+        Assert(identUnaliased != nullptr);
 
-        const bool is_const = ident_unaliased->GetFlags() & IdentifierFlags::FLAG_CONST;
-        const bool is_generic = ident_unaliased->GetFlags() & IdentifierFlags::FLAG_GENERIC;
-        const bool is_argument = ident_unaliased->GetFlags() & IdentifierFlags::FLAG_ARGUMENT;
+        const bool isConst = identUnaliased->GetFlags() & IdentifierFlags::FLAG_CONST;
+        const bool isGeneric = identUnaliased->GetFlags() & IdentifierFlags::FLAG_GENERIC;
+        const bool isArgument = identUnaliased->GetFlags() & IdentifierFlags::FLAG_ARGUMENT;
 
-        return !is_argument && (is_const || is_generic);
+        return !isArgument && (isConst || isGeneric);
     }
 
     return false;
@@ -455,20 +455,20 @@ bool AstVariable::IsLiteral() const
 
 SymbolTypePtr_t AstVariable::GetExprType() const
 {
-    if (m_type_ref != nullptr) {
-        return m_type_ref->GetExprType();
+    if (m_typeRef != nullptr) {
+        return m_typeRef->GetExprType();
     }
  
-    if (m_inline_value != nullptr) {
-        return m_inline_value->GetExprType();
+    if (m_inlineValue != nullptr) {
+        return m_inlineValue->GetExprType();
     }
 
-    // if (m_closure_member_access != nullptr) {
-    //     return m_closure_member_access->GetExprType();
+    // if (m_closureMemberAccess != nullptr) {
+    //     return m_closureMemberAccess->GetExprType();
     // }
 
-    if (m_self_member_access != nullptr) {
-        return m_self_member_access->GetExprType();
+    if (m_selfMemberAccess != nullptr) {
+        return m_selfMemberAccess->GetExprType();
     }
 
     if (m_properties.GetIdentifier() != nullptr && m_properties.GetIdentifier()->GetSymbolType() != nullptr) {
@@ -484,29 +484,29 @@ bool AstVariable::IsMutable() const
         return false;
     }
 
-    if (m_type_ref != nullptr) {
-        return m_type_ref->IsMutable();
+    if (m_typeRef != nullptr) {
+        return m_typeRef->IsMutable();
     }
 
-    if (m_inline_value != nullptr) {
-        return m_inline_value->IsMutable();
+    if (m_inlineValue != nullptr) {
+        return m_inlineValue->IsMutable();
     }
 
-    // if (m_closure_member_access != nullptr) {
-    //     return m_closure_member_access->IsMutable();
+    // if (m_closureMemberAccess != nullptr) {
+    //     return m_closureMemberAccess->IsMutable();
     // }
 
-    if (m_self_member_access != nullptr) {
-        return m_self_member_access->IsMutable();
+    if (m_selfMemberAccess != nullptr) {
+        return m_selfMemberAccess->IsMutable();
     }
 
     if (const RC<Identifier> &ident = m_properties.GetIdentifier()) {
-        const Identifier *ident_unaliased = ident->Unalias();
-        Assert(ident_unaliased != nullptr);
+        const Identifier *identUnaliased = ident->Unalias();
+        Assert(identUnaliased != nullptr);
 
-        const bool is_const = ident_unaliased->GetFlags() & IdentifierFlags::FLAG_CONST;
+        const bool isConst = identUnaliased->GetFlags() & IdentifierFlags::FLAG_CONST;
 
-        if (is_const) {
+        if (isConst) {
             return false;
         }
     }
@@ -516,12 +516,12 @@ bool AstVariable::IsMutable() const
 
 const AstExpression *AstVariable::GetValueOf() const
 {
-    if (m_type_ref != nullptr) {
-        return m_type_ref->GetValueOf();
+    if (m_typeRef != nullptr) {
+        return m_typeRef->GetValueOf();
     }
 
-    if (m_inline_value != nullptr) {
-        return m_inline_value->GetValueOf();
+    if (m_inlineValue != nullptr) {
+        return m_inlineValue->GetValueOf();
     }
 
     return AstIdentifier::GetValueOf();
@@ -529,12 +529,12 @@ const AstExpression *AstVariable::GetValueOf() const
 
 const AstExpression *AstVariable::GetDeepValueOf() const
 {
-    if (m_type_ref != nullptr) {
-        return m_type_ref->GetDeepValueOf();
+    if (m_typeRef != nullptr) {
+        return m_typeRef->GetDeepValueOf();
     }
 
-    if (m_inline_value != nullptr) {
-        return m_inline_value->GetDeepValueOf();
+    if (m_inlineValue != nullptr) {
+        return m_inlineValue->GetDeepValueOf();
     }
 
     return AstIdentifier::GetDeepValueOf();

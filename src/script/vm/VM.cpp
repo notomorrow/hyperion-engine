@@ -71,11 +71,11 @@ HYP_FORCE_INLINE static void HandleInstruction(
         break;
     }
     case STORE_STATIC_TYPE: {
-        uint16 type_name_len; bs->Read(&type_name_len);
+        uint16 typeNameLen; bs->Read(&typeNameLen);
 
-        char *type_name = new char[type_name_len + 1];
-        type_name[type_name_len] = '\0';
-        bs->Read(type_name, type_name_len);
+        char *typeName = new char[typeNameLen + 1];
+        typeName[typeNameLen] = '\0';
+        bs->Read(typeName, typeNameLen);
 
         uint16 size; bs->Read(&size);
 
@@ -93,12 +93,12 @@ HYP_FORCE_INLINE static void HandleInstruction(
         }
 
         handler.StoreStaticType(
-            type_name,
+            typeName,
             size,
             names
         );
 
-        delete[] type_name;
+        delete[] typeName;
         
         // delete the names
         for (uint16 i = 0; i < size; i++) {
@@ -256,11 +256,11 @@ HYP_FORCE_INLINE static void HandleInstruction(
     }
     case LOAD_TYPE: {
         BCRegister reg; bs->Read(&reg);
-        uint16 type_name_len; bs->Read(&type_name_len);
+        uint16 typeNameLen; bs->Read(&typeNameLen);
 
-        char *type_name = new char[type_name_len + 1];
-        type_name[type_name_len] = '\0';
-        bs->Read(type_name, type_name_len);
+        char *typeName = new char[typeNameLen + 1];
+        typeName[typeNameLen] = '\0';
+        bs->Read(typeName, typeNameLen);
 
         // number of members
         uint16 size;
@@ -280,13 +280,13 @@ HYP_FORCE_INLINE static void HandleInstruction(
 
         handler.LoadType(
             reg,
-            type_name_len,
-            type_name,
+            typeNameLen,
+            typeName,
             size,
             names
         );
 
-        delete[] type_name;
+        delete[] typeName;
         
         // delete the names
         for (size_t i = 0; i < size; i++) {
@@ -324,14 +324,14 @@ HYP_FORCE_INLINE static void HandleInstruction(
         break;
     }
     case LOAD_ARRAYIDX: {
-        BCRegister dst_reg; bs->Read(&dst_reg);
-        BCRegister src_reg; bs->Read(&src_reg);
-        BCRegister index_reg; bs->Read(&index_reg);
+        BCRegister dstReg; bs->Read(&dstReg);
+        BCRegister srcReg; bs->Read(&srcReg);
+        BCRegister indexReg; bs->Read(&indexReg);
 
         handler.LoadArrayIdx(
-            dst_reg,
-            src_reg,
-            index_reg
+            dstReg,
+            srcReg,
+            indexReg
         );
 
         break;
@@ -359,29 +359,29 @@ HYP_FORCE_INLINE static void HandleInstruction(
         break;
     }
     case REF: {
-        BCRegister dst_reg;
-        BCRegister src_reg;
+        BCRegister dstReg;
+        BCRegister srcReg;
 
-        bs->Read(&dst_reg);
-        bs->Read(&src_reg);
+        bs->Read(&dstReg);
+        bs->Read(&srcReg);
 
         handler.LoadRef(
-            dst_reg,
-            src_reg
+            dstReg,
+            srcReg
         );
 
         break;
     }
     case DEREF: {
-        BCRegister dst_reg;
-        BCRegister src_reg;
+        BCRegister dstReg;
+        BCRegister srcReg;
 
-        bs->Read(&dst_reg);
-        bs->Read(&src_reg);
+        bs->Read(&dstReg);
+        bs->Read(&srcReg);
 
         handler.LoadDeref(
-            dst_reg,
-            src_reg
+            dstReg,
+            srcReg
         );
 
         break;
@@ -487,12 +487,12 @@ HYP_FORCE_INLINE static void HandleInstruction(
     }
     case MOV_ARRAYIDX_REG: {
         BCRegister dst; bs->Read(&dst);
-        BCRegister index_reg; bs->Read(&index_reg);
+        BCRegister indexReg; bs->Read(&indexReg);
         BCRegister src; bs->Read(&src);
 
         handler.MovArrayIdxReg(
             dst,
-            index_reg,
+            indexReg,
             src
         );
 
@@ -633,11 +633,11 @@ HYP_FORCE_INLINE static void HandleInstruction(
         break;
     }
     case BEGIN_TRY: {
-        BCAddress catch_address;
-        bs->Read(&catch_address);
+        BCAddress catchAddress;
+        bs->Read(&catchAddress);
 
         handler.BeginTry(
-            catch_address
+            catchAddress
         );
 
         break;
@@ -670,12 +670,12 @@ HYP_FORCE_INLINE static void HandleInstruction(
         break;
     }
     case CMP: {
-        BCRegister lhs_reg; bs->Read(&lhs_reg);
-        BCRegister rhs_reg; bs->Read(&rhs_reg);
+        BCRegister lhsReg; bs->Read(&lhsReg);
+        BCRegister rhsReg; bs->Read(&rhsReg);
 
         handler.Cmp(
-            lhs_reg,
-            rhs_reg
+            lhsReg,
+            rhsReg
         );
 
         break;
@@ -690,131 +690,131 @@ HYP_FORCE_INLINE static void HandleInstruction(
         break;
     }
     case ADD: {
-        BCRegister lhs_reg; bs->Read(&lhs_reg);
-        BCRegister rhs_reg; bs->Read(&rhs_reg);
-        BCRegister dst_reg; bs->Read(&dst_reg);
+        BCRegister lhsReg; bs->Read(&lhsReg);
+        BCRegister rhsReg; bs->Read(&rhsReg);
+        BCRegister dstReg; bs->Read(&dstReg);
 
         handler.Add(
-            lhs_reg,
-            rhs_reg,
-            dst_reg
+            lhsReg,
+            rhsReg,
+            dstReg
         );
 
         break;
     }
     case SUB: {
-        BCRegister lhs_reg; bs->Read(&lhs_reg);
-        BCRegister rhs_reg; bs->Read(&rhs_reg);
-        BCRegister dst_reg; bs->Read(&dst_reg);
+        BCRegister lhsReg; bs->Read(&lhsReg);
+        BCRegister rhsReg; bs->Read(&rhsReg);
+        BCRegister dstReg; bs->Read(&dstReg);
 
         handler.Sub(
-            lhs_reg,
-            rhs_reg,
-            dst_reg
+            lhsReg,
+            rhsReg,
+            dstReg
         );
 
         break;
     }
     case MUL: {
-        BCRegister lhs_reg; bs->Read(&lhs_reg);
-        BCRegister rhs_reg; bs->Read(&rhs_reg);
-        BCRegister dst_reg; bs->Read(&dst_reg);
+        BCRegister lhsReg; bs->Read(&lhsReg);
+        BCRegister rhsReg; bs->Read(&rhsReg);
+        BCRegister dstReg; bs->Read(&dstReg);
 
         handler.Mul(
-            lhs_reg,
-            rhs_reg,
-            dst_reg
+            lhsReg,
+            rhsReg,
+            dstReg
         );
 
         break;
     }
     case DIV: {
-        BCRegister lhs_reg; bs->Read(&lhs_reg);
-        BCRegister rhs_reg; bs->Read(&rhs_reg);
-        BCRegister dst_reg; bs->Read(&dst_reg);
+        BCRegister lhsReg; bs->Read(&lhsReg);
+        BCRegister rhsReg; bs->Read(&rhsReg);
+        BCRegister dstReg; bs->Read(&dstReg);
 
         handler.Div(
-            lhs_reg,
-            rhs_reg,
-            dst_reg
+            lhsReg,
+            rhsReg,
+            dstReg
         );
 
         break;
     }
     case MOD: {
-        BCRegister lhs_reg; bs->Read(&lhs_reg);
-        BCRegister rhs_reg; bs->Read(&rhs_reg);
-        BCRegister dst_reg; bs->Read(&dst_reg);
+        BCRegister lhsReg; bs->Read(&lhsReg);
+        BCRegister rhsReg; bs->Read(&rhsReg);
+        BCRegister dstReg; bs->Read(&dstReg);
 
         handler.Mod(
-            lhs_reg,
-            rhs_reg,
-            dst_reg
+            lhsReg,
+            rhsReg,
+            dstReg
         );
 
         break;
     }
     case AND: {
-        BCRegister lhs_reg; bs->Read(&lhs_reg);
-        BCRegister rhs_reg; bs->Read(&rhs_reg);
-        BCRegister dst_reg; bs->Read(&dst_reg);
+        BCRegister lhsReg; bs->Read(&lhsReg);
+        BCRegister rhsReg; bs->Read(&rhsReg);
+        BCRegister dstReg; bs->Read(&dstReg);
 
         handler.And(
-            lhs_reg,
-            rhs_reg,
-            dst_reg
+            lhsReg,
+            rhsReg,
+            dstReg
         );
 
         break;
     }
     case OR: {
-        BCRegister lhs_reg; bs->Read(&lhs_reg);
-        BCRegister rhs_reg; bs->Read(&rhs_reg);
-        BCRegister dst_reg; bs->Read(&dst_reg);
+        BCRegister lhsReg; bs->Read(&lhsReg);
+        BCRegister rhsReg; bs->Read(&rhsReg);
+        BCRegister dstReg; bs->Read(&dstReg);
 
         handler.Or(
-            lhs_reg,
-            rhs_reg,
-            dst_reg
+            lhsReg,
+            rhsReg,
+            dstReg
         );
 
         break;
     }
     case XOR: {
-        BCRegister lhs_reg; bs->Read(&lhs_reg);
-        BCRegister rhs_reg; bs->Read(&rhs_reg);
-        BCRegister dst_reg; bs->Read(&dst_reg);
+        BCRegister lhsReg; bs->Read(&lhsReg);
+        BCRegister rhsReg; bs->Read(&rhsReg);
+        BCRegister dstReg; bs->Read(&dstReg);
 
         handler.Xor(
-            lhs_reg,
-            rhs_reg,
-            dst_reg
+            lhsReg,
+            rhsReg,
+            dstReg
         );
 
         break;
     }
     case SHL: {
-        BCRegister lhs_reg; bs->Read(&lhs_reg);
-        BCRegister rhs_reg; bs->Read(&rhs_reg);
-        BCRegister dst_reg; bs->Read(&dst_reg);
+        BCRegister lhsReg; bs->Read(&lhsReg);
+        BCRegister rhsReg; bs->Read(&rhsReg);
+        BCRegister dstReg; bs->Read(&dstReg);
 
         handler.Shl(
-            lhs_reg,
-            rhs_reg,
-            dst_reg
+            lhsReg,
+            rhsReg,
+            dstReg
         );
 
         break;
     }
     case SHR: {
-        BCRegister lhs_reg; bs->Read(&lhs_reg);
-        BCRegister rhs_reg; bs->Read(&rhs_reg);
-        BCRegister dst_reg; bs->Read(&dst_reg);
+        BCRegister lhsReg; bs->Read(&lhsReg);
+        BCRegister rhsReg; bs->Read(&rhsReg);
+        BCRegister dstReg; bs->Read(&dstReg);
 
         handler.Shr(
-            lhs_reg,
-            rhs_reg,
-            dst_reg
+            lhsReg,
+            rhsReg,
+            dstReg
         );
 
         break;
@@ -849,28 +849,28 @@ HYP_FORCE_INLINE static void HandleInstruction(
     case TRACEMAP: {
         uint32 len; bs->Read(&len);
 
-        uint32 stringmap_count;
-        bs->Read(&stringmap_count);
+        uint32 stringmapCount;
+        bs->Read(&stringmapCount);
 
         Tracemap::StringmapEntry *stringmap = nullptr;
 
-        if (stringmap_count != 0) {
-            stringmap = new Tracemap::StringmapEntry[stringmap_count];
+        if (stringmapCount != 0) {
+            stringmap = new Tracemap::StringmapEntry[stringmapCount];
 
-            for (uint32 i = 0; i < stringmap_count; i++) {
-                bs->Read(&stringmap[i].entry_type);
+            for (uint32 i = 0; i < stringmapCount; i++) {
+                bs->Read(&stringmap[i].entryType);
                 bs->ReadZeroTerminatedString(stringmap[i].data);
             }
         }
 
-        uint32 linemap_count;
-        bs->Read(&linemap_count);
+        uint32 linemapCount;
+        bs->Read(&linemapCount);
 
         Tracemap::LinemapEntry *linemap = nullptr;
 
-        if (linemap_count != 0) {
-            linemap = new Tracemap::LinemapEntry[linemap_count];
-            bs->Read(linemap, sizeof(Tracemap::LinemapEntry) * linemap_count);
+        if (linemapCount != 0) {
+            linemap = new Tracemap::LinemapEntry[linemapCount];
+            bs->Read(linemap, sizeof(Tracemap::LinemapEntry) * linemapCount);
         }
 
         handler.state->m_tracemap.Set(stringmap, linemap);
@@ -1028,8 +1028,8 @@ HYP_FORCE_INLINE static void HandleInstruction(
         break;
     }
     default: {
-        int64 last_pos = int64(bs->Position()) - sizeof(ubyte);
-        HYP_FAIL("unknown instruction '{}' referenced at location {}", code, last_pos);
+        int64 lastPos = int64(bs->Position()) - sizeof(ubyte);
+        HYP_FAIL("unknown instruction '{}' referenced at location {}", code, lastPos);
         // seek to end of bytecode stream
         bs->Seek(bs->Size());
 
@@ -1038,10 +1038,10 @@ HYP_FORCE_INLINE static void HandleInstruction(
     }
 }
 
-VM::VM(APIInstance &api_instance)
-    : m_api_instance(api_instance)
+VM::VM(APIInstance &apiInstance)
+    : m_apiInstance(apiInstance)
 {
-    m_state.m_vm = non_owning_ptr<VM>(this);
+    m_state.m_vm = nonOwningPtr<VM>(this);
     // create main thread
     m_state.CreateThread();
 }
@@ -1054,7 +1054,7 @@ void VM::PushNativeFunctionPtr(NativeFunctionPtr_t ptr)
 {
     Value sv;
     sv.m_type = Value::NATIVE_FUNCTION;
-    sv.m_value.native_func = ptr;
+    sv.m_value.nativeFunc = ptr;
 
     Assert(m_state.GetMainThread() != nullptr);
     m_state.GetMainThread()->m_stack.Push(sv);
@@ -1066,7 +1066,7 @@ void VM::Invoke(
     uint8 nargs
 )
 {
-    static const uint32 invoke_hash = hash_fnv_1("$invoke");
+    static const uint32 invokeHash = hashFnv1("$invoke");
 
     VMState *state = handler->state;
     ExecutionThread *thread = handler->thread;
@@ -1086,20 +1086,20 @@ void VM::Invoke(
             }
 
             sdk::Params params {
-                .api_instance   = m_api_instance,
+                .apiInstance   = m_apiInstance,
                 .handler        = handler,
                 .args           = args,
                 .nargs          = nargs
             };
 
             // disable auto gc so no collections happen during a native function
-            state->enable_auto_gc = false;
+            state->enableAutoGc = false;
 
             // call the native function
-            value.m_value.native_func(params);
+            value.m_value.nativeFunc(params);
 
             // re-enable auto gc
-            state->enable_auto_gc = ENABLE_GC;
+            state->enableAutoGc = ENABLE_GC;
 
             delete[] args;
 
@@ -1112,21 +1112,21 @@ void VM::Invoke(
                 );
                 return;
             } else if (VMObject *object = value.m_value.ptr->GetPointer<VMObject>()) {
-                if (Member *member = object->LookupMemberFromHash(invoke_hash)) {
+                if (Member *member = object->LookupMemberFromHash(invokeHash)) {
                     const int64 sp = static_cast<int64>(thread->m_stack.GetStackPointer());
-                    const int64 args_start = sp - nargs;
+                    const int64 argsStart = sp - nargs;
 
                     if (nargs > 0) {
                         // shift over by 1 -- and insert 'self' to start of args
                         // make a copy of last item to not overwrite it
                         thread->m_stack.Push(thread->m_stack[sp - 1]);
 
-                        for (SizeType i = args_start; i < sp - 1; i++) {
+                        for (SizeType i = argsStart; i < sp - 1; i++) {
                             thread->m_stack[i + 1] = thread->m_stack[i];
                         }
                         
                         // set 'self' object to start of args
-                        thread->m_stack[args_start] = value;
+                        thread->m_stack[argsStart] = value;
                     } else {
                         thread->m_stack.Push(value);
                     }
@@ -1143,7 +1143,7 @@ void VM::Invoke(
                     // bookkeeping to remove the closure object
                     // normally, arguments are popped after the call is returned,
                     // rather than within the body
-                    top.m_value.call.varargs_push--;
+                    top.m_value.call.varargsPush--;
 
                     return;
                 }
@@ -1184,30 +1184,30 @@ void VM::Invoke(
             )
         );
     } else {
-        Value previous_addr;
-        previous_addr.m_type = Value::FUNCTION_CALL;
-        previous_addr.m_value.call.varargs_push = 0;
-        previous_addr.m_value.call.return_address = static_cast<BCAddress>(bs->Position());
+        Value previousAddr;
+        previousAddr.m_type = Value::FUNCTION_CALL;
+        previousAddr.m_value.call.varargsPush = 0;
+        previousAddr.m_value.call.returnAddress = static_cast<BCAddress>(bs->Position());
 
         if (value.m_value.func.m_flags & FunctionFlags::VARIADIC) {
             // for each argument that is over the expected size, we must pop it from
             // the stack and add it to a new array.
-            int varargs_amt = nargs - value.m_value.func.m_nargs + 1;
-            if (varargs_amt < 0) {
-                varargs_amt = 0;
+            int varargsAmt = nargs - value.m_value.func.m_nargs + 1;
+            if (varargsAmt < 0) {
+                varargsAmt = 0;
             }
             
-            // set varargs_push value so we know how to get back to the stack size before.
-            previous_addr.m_value.call.varargs_push = varargs_amt - 1;
+            // set varargsPush value so we know how to get back to the stack size before.
+            previousAddr.m_value.call.varargsPush = varargsAmt - 1;
             
             // allocate heap object
             HeapValue *hv = state->HeapAlloc(thread);
             Assert(hv != nullptr);
 
             // create VMArray object to hold variadic args
-            VMArray arr(varargs_amt);
+            VMArray arr(varargsAmt);
 
-            for (int i = varargs_amt - 1; i >= 0; i--) {
+            for (int i = varargsAmt - 1; i >= 0; i--) {
                 // push to array
                 arr.AtIndex(i, thread->GetStack().Top());
                 thread->GetStack().Pop();
@@ -1216,23 +1216,23 @@ void VM::Invoke(
             // assign heap value to our array
             hv->Assign(std::move(arr));
 
-            Value array_value;
-            array_value.m_type = Value::HEAP_POINTER;
-            array_value.m_value.ptr = hv;
+            Value arrayValue;
+            arrayValue.m_type = Value::HEAP_POINTER;
+            arrayValue.m_value.ptr = hv;
 
             hv->Mark();
 
             // push the array to the stack
-            thread->GetStack().Push(array_value);
+            thread->GetStack().Push(arrayValue);
         }
 
         // push the address
-        thread->GetStack().Push(previous_addr);
+        thread->GetStack().Push(previousAddr);
         // seek to the new address
         bs->Seek(value.m_value.func.m_addr);
 
         // increase function depth
-        thread->m_func_depth++;
+        thread->m_funcDepth++;
     }
 }
 
@@ -1244,9 +1244,9 @@ void VM::InvokeNow(
 {
     ExecutionThread *thread = m_state.MAIN_THREAD;
     
-    const SizeType position_before = bs->Position();
-    const uint32 original_function_depth = thread->m_func_depth;
-    const SizeType stack_size_before = thread->GetStack().GetStackPointer();
+    const SizeType positionBefore = bs->Position();
+    const uint32 originalFunctionDepth = thread->m_funcDepth;
+    const SizeType stackSizeBefore = thread->GetStack().GetStackPointer();
 
     InstructionHandler handler(
         &m_state,
@@ -1274,45 +1274,45 @@ void VM::InvokeNow(
 
             if (handler.thread->GetExceptionState().HasExceptionOccurred()) {
                 if (!HandleException(&handler)) {
-                    thread->m_exception_state.m_exception_depth = 0;
+                    thread->m_exceptionState.m_exceptionDepth = 0;
 
-                    Assert(thread->GetStack().GetStackPointer() >= stack_size_before);
-                    thread->GetStack().Pop(thread->GetStack().GetStackPointer() - stack_size_before);
+                    Assert(thread->GetStack().GetStackPointer() >= stackSizeBefore);
+                    thread->GetStack().Pop(thread->GetStack().GetStackPointer() - stackSizeBefore);
 
                     break;
                 }
             }
 
             if (code == RET) {
-                if (thread->m_func_depth == original_function_depth) {
+                if (thread->m_funcDepth == originalFunctionDepth) {
                     break;
                 }
             }
         }
     }
     
-    bs->SetPosition(position_before);
+    bs->SetPosition(positionBefore);
 }
 
 void VM::CreateStackTrace(ExecutionThread *thread, StackTrace *out)
 {
-    const SizeType max_stack_trace_size = std::size(out->call_addresses);
+    const SizeType maxStackTraceSize = std::size(out->callAddresses);
 
-    for (int &call_address : out->call_addresses) {
-        call_address = -1;
+    for (int &callAddress : out->callAddresses) {
+        callAddress = -1;
     }
 
-    SizeType num_recorded_call_addresses = 0;
+    SizeType numRecordedCallAddresses = 0;
 
     for (SizeType sp = thread->m_stack.GetStackPointer(); sp != 0; sp--) {
-        if (num_recorded_call_addresses >= max_stack_trace_size) {
+        if (numRecordedCallAddresses >= maxStackTraceSize) {
             break;
         }
 
         const Value &top = thread->m_stack[sp - 1];
 
         if (top.m_type == Value::FUNCTION_CALL) {
-            out->call_addresses[num_recorded_call_addresses++] = static_cast<int>(top.m_value.call.return_address);
+            out->callAddresses[numRecordedCallAddresses++] = static_cast<int>(top.m_value.call.returnAddress);
         }
     }
 }
@@ -1322,12 +1322,12 @@ bool VM::HandleException(InstructionHandler *handler)
     ExecutionThread *thread = handler->thread;
     BytecodeStream *bs = handler->bs;
 
-    if (thread->m_exception_state.m_try_counter != 0) {
+    if (thread->m_exceptionState.m_tryCounter != 0) {
         // handle exception
-        --thread->m_exception_state.m_try_counter;
+        --thread->m_exceptionState.m_tryCounter;
 
-        Assert(thread->m_exception_state.m_exception_depth != 0);
-        --thread->m_exception_state.m_exception_depth;
+        Assert(thread->m_exceptionState.m_exceptionDepth != 0);
+        --thread->m_exceptionState.m_exceptionDepth;
 
         Value *top = nullptr;
         while ((top = &thread->m_stack.Top()) && top->m_type != Value::TRY_CATCH_INFO) {
@@ -1338,24 +1338,24 @@ bool VM::HandleException(InstructionHandler *handler)
         Assert(top != nullptr && top->m_type == Value::TRY_CATCH_INFO);
 
         // jump to the catch block
-        bs->Seek(top->m_value.try_catch_info.catch_address);
+        bs->Seek(top->m_value.tryCatchInfo.catchAddress);
 
         // pop exception data from stack
         thread->m_stack.Pop();
 
         return true;
     } else {
-        StackTrace stack_trace;
-        CreateStackTrace(thread, &stack_trace);
+        StackTrace stackTrace;
+        CreateStackTrace(thread, &stackTrace);
 
         std::cout << "stack_trace = \n";
 
-        for (auto call_address : stack_trace.call_addresses) {
-            if (call_address == -1) {
+        for (auto callAddress : stackTrace.callAddresses) {
+            if (callAddress == -1) {
                 break;
             }
             
-            std::cout << "\t" << std::hex << call_address << "\n";
+            std::cout << "\t" << std::hex << callAddress << "\n";
         }
 
         std::cout << "=====\n";

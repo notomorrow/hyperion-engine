@@ -40,7 +40,7 @@ private:
     RC<AstBlock>        m_block;
 
     // set while analyzing
-    int                 m_num_locals;
+    int                 m_numLocals;
 
     RC<AstWhileLoop> CloneImpl() const
     {

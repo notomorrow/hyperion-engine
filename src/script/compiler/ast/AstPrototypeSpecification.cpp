@@ -34,88 +34,88 @@ void AstPrototypeSpecification::Visit(AstVisitor *visitor, Module *mod)
     Assert(m_expr != nullptr);
     m_expr->Visit(visitor, mod);
 
-    const AstExpression *value_of = m_expr->GetDeepValueOf();
-    Assert(value_of != nullptr);
+    const AstExpression *valueOf = m_expr->GetDeepValueOf();
+    Assert(valueOf != nullptr);
 
-    SymbolTypePtr_t held_type = value_of->GetHeldType();
+    SymbolTypePtr_t heldType = valueOf->GetHeldType();
 
-    if (held_type == nullptr) {
+    if (heldType == nullptr) {
         visitor->GetCompilationUnit()->GetErrorList().AddError(CompilerError(
             LEVEL_ERROR,
             Msg_not_a_type,
             m_location,
-            value_of->GetExprType()->ToString()
+            valueOf->GetExprType()->ToString()
         ));
 
         return;
     }
 
-    held_type = held_type->GetUnaliased();
+    heldType = heldType->GetUnaliased();
 
-    if (held_type->IsEnumType()) {
-        Assert(held_type->GetGenericInstanceInfo().m_generic_args.Size() == 1);
+    if (heldType->IsEnumType()) {
+        Assert(heldType->GetGenericInstanceInfo().m_genericArgs.Size() == 1);
 
-        auto enum_underlying_type = held_type->GetGenericInstanceInfo().m_generic_args.Front().m_type;
-        Assert(enum_underlying_type != nullptr);
-        enum_underlying_type = enum_underlying_type->GetUnaliased();
+        auto enumUnderlyingType = heldType->GetGenericInstanceInfo().m_genericArgs.Front().m_type;
+        Assert(enumUnderlyingType != nullptr);
+        enumUnderlyingType = enumUnderlyingType->GetUnaliased();
 
         // for enum types, we use the underlying type.
-        held_type = enum_underlying_type;
+        heldType = enumUnderlyingType;
     }
 
-    m_symbol_type = held_type;
-    FindPrototypeType(held_type);
+    m_symbolType = heldType;
+    FindPrototypeType(heldType);
 
-    // m_symbol_type = BuiltinTypes::UNDEFINED;
-    // m_prototype_type = BuiltinTypes::UNDEFINED;
+    // m_symbolType = BuiltinTypes::UNDEFINED;
+    // m_prototypeType = BuiltinTypes::UNDEFINED;
     
-    // if (held_type->IsAnyType()) {
+    // if (heldType->IsAnyType()) {
     //     // it is a dynamic type
-    //     m_symbol_type = BuiltinTypes::ANY;
-    //     m_prototype_type = BuiltinTypes::ANY;
-    //     m_default_value = BuiltinTypes::ANY->GetDefaultValue();
+    //     m_symbolType = BuiltinTypes::ANY;
+    //     m_prototypeType = BuiltinTypes::ANY;
+    //     m_defaultValue = BuiltinTypes::ANY->GetDefaultValue();
 
     //     return;
     // }
     
-    // if (held_type->IsPlaceholderType()) {
-    //     m_symbol_type = BuiltinTypes::PLACEHOLDER;
-    //     m_prototype_type = BuiltinTypes::PLACEHOLDER;
-    //     m_default_value = BuiltinTypes::PLACEHOLDER->GetDefaultValue();
+    // if (heldType->IsPlaceholderType()) {
+    //     m_symbolType = BuiltinTypes::PLACEHOLDER;
+    //     m_prototypeType = BuiltinTypes::PLACEHOLDER;
+    //     m_defaultValue = BuiltinTypes::PLACEHOLDER->GetDefaultValue();
 
     //     return;
     // }
 
-    // if (FindPrototypeType(held_type)) {
-    //     m_symbol_type = held_type;
+    // if (FindPrototypeType(heldType)) {
+    //     m_symbolType = heldType;
     // } else {
     //     visitor->GetCompilationUnit()->GetErrorList().AddError(CompilerError(
     //         LEVEL_ERROR,
     //         Msg_type_missing_prototype,
     //         m_location,
-    //         held_type->ToString()
+    //         heldType->ToString()
     //     ));
     // }
 
-        // if (found_symbol_type != held_type && found_symbol_type != nullptr) {
+        // if (foundSymbolType != heldType && foundSymbolType != nullptr) {
         //     visitor->GetCompilationUnit()->GetErrorList().AddError(CompilerError(
         //         LEVEL_ERROR,
         //         Msg_type_missing_prototype,
         //         m_location,
-        //         expr_type->ToString() + " (expanded: " + found_symbol_type->ToString() + ")"
+        //         exprType->ToString() + " (expanded: " + foundSymbolType->ToString() + ")"
         //     ));
         // } else {
         //     visitor->GetCompilationUnit()->GetErrorList().AddError(CompilerError(
         //         LEVEL_ERROR,
         //         Msg_type_missing_prototype,
         //         m_location,
-        //         expr_type->ToString()
+        //         exprType->ToString()
         //     ));
         // }
     // }
 
-    Assert(m_symbol_type != nullptr);
-    // Assert(m_prototype_type != nullptr);
+    Assert(m_symbolType != nullptr);
+    // Assert(m_prototypeType != nullptr);
 }
 
 std::unique_ptr<Buildable> AstPrototypeSpecification::Build(AstVisitor *visitor, Module *mod)
@@ -130,26 +130,26 @@ void AstPrototypeSpecification::Optimize(AstVisitor *visitor, Module *mod)
     m_expr->Optimize(visitor, mod);
 }
 
-bool AstPrototypeSpecification::FindPrototypeType(const SymbolTypePtr_t &symbol_type)
+bool AstPrototypeSpecification::FindPrototypeType(const SymbolTypePtr_t &symbolType)
 {
-    if (symbol_type->GetTypeClass() == TYPE_BUILTIN || symbol_type->IsGenericParameter()) {
-        m_prototype_type = symbol_type;
-        m_prototype_type = m_prototype_type->GetUnaliased();
+    if (symbolType->GetTypeClass() == TYPE_BUILTIN || symbolType->IsGenericParameter()) {
+        m_prototypeType = symbolType;
+        m_prototypeType = m_prototypeType->GetUnaliased();
 
-        m_default_value = symbol_type->GetDefaultValue();
+        m_defaultValue = symbolType->GetDefaultValue();
 
         return true;
     }
 
-    SymbolTypeMember proto_member;
+    SymbolTypeMember protoMember;
 
-    if (symbol_type->FindMember("$proto", proto_member)) {
-        m_prototype_type = proto_member.type;
-        Assert(m_prototype_type != nullptr);
-        m_prototype_type = m_prototype_type->GetUnaliased();
+    if (symbolType->FindMember("$proto", protoMember)) {
+        m_prototypeType = protoMember.type;
+        Assert(m_prototypeType != nullptr);
+        m_prototypeType = m_prototypeType->GetUnaliased();
 
-        if (m_prototype_type->GetTypeClass() == TYPE_BUILTIN) {
-            m_default_value = proto_member.expr;
+        if (m_prototypeType->GetTypeClass() == TYPE_BUILTIN) {
+            m_defaultValue = protoMember.expr;
         }
 
         return true;
@@ -203,8 +203,8 @@ const AstExpression *AstPrototypeSpecification::GetDeepValueOf() const
 
 SymbolTypePtr_t AstPrototypeSpecification::GetHeldType() const
 {
-    if (m_symbol_type != nullptr) {
-        return m_symbol_type;
+    if (m_symbolType != nullptr) {
+        return m_symbolType;
     }
 
     return AstExpression::GetHeldType();

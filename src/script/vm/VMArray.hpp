@@ -51,17 +51,17 @@ public:
 
     void GetRepresentation(
         std::stringstream &ss,
-        bool add_type_name = true,
+        bool addTypeName = true,
         int depth = 3
     ) const;
 
     HashCode GetHashCode() const;
 
 private:
-    static SizeType GetCapacityForSize(SizeType new_size)
+    static SizeType GetCapacityForSize(SizeType newSize)
     {
         return static_cast<SizeType>(1) <<
-            static_cast<SizeType>(std::ceil(std::log(MathUtil::Max(new_size, 1)) / std::log(2.0)));
+            static_cast<SizeType>(std::ceil(std::log(MathUtil::Max(newSize, 1)) / std::log(2.0)));
     }
 
     SizeType    m_size;

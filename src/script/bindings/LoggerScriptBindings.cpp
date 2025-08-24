@@ -19,7 +19,7 @@ static String FormatString(const String &str, const Array<vm::Value> &args)
 {
     String result;
 
-    int unnumbered_arg_index = 0;
+    int unnumberedArgIndex = 0;
 
     for (SizeType i = 0; i < str.Size(); ++i) {
         if (str[i] == '{') {
@@ -37,18 +37,18 @@ static String FormatString(const String &str, const Array<vm::Value> &args)
                     break;
                 }
 
-                String index_str = str.Substr(i + 1, j);
+                String indexStr = str.Substr(i + 1, j);
 
                 int index = 0;
 
-                if (index_str.Any()) {
-                    if (!StringUtil::Parse<int>(index_str, &index)) {
+                if (indexStr.Any()) {
+                    if (!StringUtil::Parse<int>(indexStr, &index)) {
                         i = j;
 
                         continue;
                     }
                 } else {
-                    index = unnumbered_arg_index++;
+                    index = unnumberedArgIndex++;
                 }
 
                 if (index < args.Size()) {
@@ -86,48 +86,48 @@ static struct LoggerScriptBindings : ScriptBindingsBase
                 {
                     HYP_SCRIPT_CHECK_ARGS(>=, 3);
 
-                    vm::Number log_level_num;
-                    if (!params.args[1]->GetSignedOrUnsigned(&log_level_num)) {
+                    vm::Number logLevelNum;
+                    if (!params.args[1]->GetSignedOrUnsigned(&logLevelNum)) {
                         HYP_SCRIPT_THROW(vm::Exception ("log() expects a number as the first argument"));
                     }
 
-                    const uint64 log_level = (log_level_num.flags & vm::Number::FLAG_SIGNED)
-                        ? uint64(log_level_num.i)
-                        : log_level_num.u;
+                    const uint64 logLevel = (logLevelNum.flags & vm::Number::FLAG_SIGNED)
+                        ? uint64(logLevelNum.i)
+                        : logLevelNum.u;
 
-                    vm::VMString *format_string_ptr = nullptr;
-                    if (!params.args[2]->GetPointer<vm::VMString>(&format_string_ptr)) {
+                    vm::VMString *formatStringPtr = nullptr;
+                    if (!params.args[2]->GetPointer<vm::VMString>(&formatStringPtr)) {
                         HYP_SCRIPT_THROW(vm::Exception ("log() expects a string as the first argument"));
                     }
 
-                    Array<vm::Value> args_array;
-                    args_array.Reserve(params.nargs - 3);
+                    Array<vm::Value> argsArray;
+                    argsArray.Reserve(params.nargs - 3);
 
                     for (SizeType i = 3; i < params.nargs; ++i) {
-                        args_array.PushBack(*params.args[i]);
+                        argsArray.PushBack(*params.args[i]);
                     }
 
-                    String formatted_string = FormatString(
-                        format_string_ptr->GetString(),
-                        args_array
+                    String formattedString = FormatString(
+                        formatStringPtr->GetString(),
+                        argsArray
                     );
 
-                    switch (log_level)
+                    switch (logLevel)
                     {
                     case logging::Debug().value:
-                        LogDynamic<logging::Debug(), HYP_MAKE_CONST_ARG(&g_logChannel_HypScript)>(Logger::GetInstance(), formatted_string.Data());
+                        LogDynamic<logging::Debug(), HYP_MAKE_CONST_ARG(&g_logChannel_HypScript)>(Logger::GetInstance(), formattedString.Data());
                         break;
                     case logging::Info().value:
-                        LogDynamic<logging::Info(), HYP_MAKE_CONST_ARG(&g_logChannel_HypScript)>(Logger::GetInstance(), formatted_string.Data());
+                        LogDynamic<logging::Info(), HYP_MAKE_CONST_ARG(&g_logChannel_HypScript)>(Logger::GetInstance(), formattedString.Data());
                         break;
                     case logging::Warning().value:
-                        LogDynamic<logging::Warning(), HYP_MAKE_CONST_ARG(&g_logChannel_HypScript)>(Logger::GetInstance(), formatted_string.Data());
+                        LogDynamic<logging::Warning(), HYP_MAKE_CONST_ARG(&g_logChannel_HypScript)>(Logger::GetInstance(), formattedString.Data());
                         break;
                     case logging::Error().value:
-                        LogDynamic<logging::Error(), HYP_MAKE_CONST_ARG(&g_logChannel_HypScript)>(Logger::GetInstance(), formatted_string.Data());
+                        LogDynamic<logging::Error(), HYP_MAKE_CONST_ARG(&g_logChannel_HypScript)>(Logger::GetInstance(), formattedString.Data());
                         break;
                     case logging::Fatal().value:
-                        LogDynamic<logging::Fatal(), HYP_MAKE_CONST_ARG(&g_logChannel_HypScript)>(Logger::GetInstance(), formatted_string.Data());
+                        LogDynamic<logging::Fatal(), HYP_MAKE_CONST_ARG(&g_logChannel_HypScript)>(Logger::GetInstance(), formattedString.Data());
                         break;
                     default:
                         break;
@@ -150,7 +150,7 @@ static struct LoggerScriptBindings : ScriptBindingsBase
             .Build();
     }
 
-} logger_script_bindings { };
+} loggerScriptBindings { };
 
 } // namespace bindings
 } // namespace script

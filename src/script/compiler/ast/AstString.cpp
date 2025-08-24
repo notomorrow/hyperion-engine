@@ -13,7 +13,7 @@ namespace hyperion::compiler {
 AstString::AstString(const String &value, const SourceLocation &location)
     : AstConstant(location),
       m_value(value),
-      m_static_id(0)
+      m_staticId(0)
 {
 }
 
@@ -22,11 +22,11 @@ std::unique_ptr<Buildable> AstString::Build(AstVisitor *visitor, Module *mod)
     // get active register
     uint8 rp = visitor->GetCompilationUnit()->GetInstructionStream().GetCurrentRegister();
 
-    auto instr_string = BytecodeUtil::Make<BuildableString>();
-    instr_string->reg = rp;
-    instr_string->value = m_value;
+    auto instrString = BytecodeUtil::Make<BuildableString>();
+    instrString->reg = rp;
+    instrString->value = m_value;
 
-    return instr_string;
+    return instrString;
 }
 
 RC<AstStatement> AstString::Clone() const
@@ -62,9 +62,9 @@ SymbolTypePtr_t AstString::GetExprType() const
     return BuiltinTypes::STRING;
 }
 
-RC<AstConstant> AstString::HandleOperator(Operators op_type, const AstConstant *right) const
+RC<AstConstant> AstString::HandleOperator(Operators opType, const AstConstant *right) const
 {
-    switch (op_type) {
+    switch (opType) {
     case OP_logical_and:
         // literal strings evaluate to true.
         switch (right->IsTrue()) {
@@ -80,8 +80,8 @@ RC<AstConstant> AstString::HandleOperator(Operators op_type, const AstConstant *
         return RC<AstTrue>(new AstTrue(m_location));
 
     case OP_equals:
-        if (const AstString *right_string = dynamic_cast<const AstString*>(right)) {
-            if (m_value == right_string->GetValue()) {
+        if (const AstString *rightString = dynamic_cast<const AstString*>(right)) {
+            if (m_value == rightString->GetValue()) {
                 return RC<AstTrue>(new AstTrue(m_location));
             } else {
                 return RC<AstFalse>(new AstFalse(m_location));

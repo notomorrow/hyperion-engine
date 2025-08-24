@@ -10,7 +10,7 @@ namespace hyperion::compiler {
 class AstMemberCallExpression : public AstMember {
 public:
     AstMemberCallExpression(
-        const String &field_name,
+        const String &fieldName,
         const RC<AstExpression> &target,
         const RC<AstArgumentList> &arguments,
         const SourceLocation &location
@@ -35,13 +35,13 @@ protected:
     RC<AstArgumentList>     m_arguments;
 
     // set while analyzing
-    Array<RC<AstArgument>>  m_substituted_args;
-    SymbolTypePtr_t         m_return_type;
+    Array<RC<AstArgument>>  m_substitutedArgs;
+    SymbolTypePtr_t         m_returnType;
 
     RC<AstMemberCallExpression> CloneImpl() const
     {
         return RC<AstMemberCallExpression>(new AstMemberCallExpression(
-            m_field_name,
+            m_fieldName,
             CloneAstNode(m_target),
             CloneAstNode(m_arguments),
             m_location

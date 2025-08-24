@@ -42,10 +42,10 @@ std::unique_ptr<Buildable> AstThrowExpression::Build(AstVisitor *visitor, Module
     uint8 rp = visitor->GetCompilationUnit()->GetInstructionStream().GetCurrentRegister();
 
     { // compile in the instruction to check if it has the member
-        auto instr_throw = BytecodeUtil::Make<RawOperation<>>();
-        instr_throw->opcode = THROW;
-        instr_throw->Accept<uint8>(rp);
-        chunk->Append(std::move(instr_throw));
+        auto instrThrow = BytecodeUtil::Make<RawOperation<>>();
+        instrThrow->opcode = THROW;
+        instrThrow->Accept<uint8>(rp);
+        chunk->Append(std::move(instrThrow));
     }
 
     return chunk;

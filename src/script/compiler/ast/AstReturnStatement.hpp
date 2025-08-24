@@ -37,8 +37,8 @@ private:
     RC<AstExpression>   m_expr;
 
     // set while analyzing
-    uint32                m_num_pops;
-    bool                m_is_visited = false;
+    uint32                m_numPops;
+    bool                m_isVisited = false;
 
     RC<AstReturnStatement> CloneImpl() const
     {

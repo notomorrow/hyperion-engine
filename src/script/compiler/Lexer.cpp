@@ -15,21 +15,21 @@ namespace hyperion::compiler {
 using namespace utf;
 
 Lexer::Lexer(
-    const SourceStream &source_stream,
-    TokenStream *token_stream,
-    CompilationUnit *compilation_unit)
-    : m_source_stream(source_stream),
-      m_token_stream(token_stream),
-      m_compilation_unit(compilation_unit),
-      m_source_location(0, 0, source_stream.GetFile()->GetFilePath())
+    const SourceStream &sourceStream,
+    TokenStream *tokenStream,
+    CompilationUnit *compilationUnit)
+    : m_sourceStream(sourceStream),
+      m_tokenStream(tokenStream),
+      m_compilationUnit(compilationUnit),
+      m_sourceLocation(0, 0, sourceStream.GetFile()->GetFilePath())
 {
 }
 
 Lexer::Lexer(const Lexer &other)
-    : m_source_stream(other.m_source_stream),
-      m_token_stream(other.m_token_stream),
-      m_compilation_unit(other.m_compilation_unit),
-      m_source_location(other.m_source_location)
+    : m_sourceStream(other.m_sourceStream),
+      m_tokenStream(other.m_tokenStream),
+      m_compilationUnit(other.m_compilationUnit),
+      m_sourceLocation(other.m_sourceLocation)
 {
 }
 
@@ -38,14 +38,14 @@ void Lexer::Analyze()
     // skip initial whitespace
     SkipWhitespace();
 
-    while (m_source_stream.HasNext() && m_source_stream.Peek() != '\0') {
+    while (m_sourceStream.HasNext() && m_sourceStream.Peek() != '\0') {
         Token token = NextToken();
         if (!token.Empty()) {
-            m_token_stream->Push(token);
+            m_tokenStream->Push(token);
         }
 
         // SkipWhitespace() returns true if there was a newline
-        const SourceLocation location = m_source_location;
+        const SourceLocation location = m_sourceLocation;
 
         if (SkipWhitespace()) {
             // add the `newline` statement terminator if not a continuation token
@@ -54,8 +54,8 @@ void Lexer::Analyze()
                 SkipWhitespace();
 
                 // check if next token is connected
-                if (m_source_stream.HasNext() && m_source_stream.Peek() != '\0') {
-                    auto peek = m_source_stream.Peek();
+                if (m_sourceStream.HasNext() && m_sourceStream.Peek() != '\0') {
+                    auto peek = m_sourceStream.Peek();
                     if (peek == '{' || peek == '.') {
                         // do not add newline
                         continue;
@@ -63,7 +63,7 @@ void Lexer::Analyze()
                 }
 
                 // add newline
-                m_token_stream->Push(Token(TK_NEWLINE, "newline", location));
+                m_tokenStream->Push(Token(TK_NEWLINE, "newline", location));
             }
         }
     }
@@ -71,18 +71,18 @@ void Lexer::Analyze()
 
 Token Lexer::NextToken()
 {
-    SourceLocation location = m_source_location;
+    SourceLocation location = m_sourceLocation;
 
     std::array<u32char, 3> ch;
-    int total_pos_change = 0;
+    int totalPosChange = 0;
     for (int i = 0; i < 3; i++) {
-        int pos_change = 0;
-        ch[i] = m_source_stream.Next(pos_change);
-        total_pos_change += pos_change;
+        int posChange = 0;
+        ch[i] = m_sourceStream.Next(posChange);
+        totalPosChange += posChange;
     }
 
     // go back to previous position
-    m_source_stream.GoBack(total_pos_change);
+    m_sourceStream.GoBack(totalPosChange);
 
     if (ch[0] == '\"' || ch[0] == '\'') {
         return ReadStringLiteral();
@@ -691,27 +691,27 @@ Token Lexer::ReadIdentifier()
             }
 
             // rewind
-            m_source_stream.GoBack(pos_change);
-            m_source_location.GetColumn() -= pos_change;
+            m_sourceStream.GoBack(posChange);
+            m_sourceLocation.GetColumn() -= posChange;
         }
 
-        if (Token operator_token = ReadOperator()) {
-            value += operator_token.GetValue();
+        if (Token operatorToken = ReadOperator()) {
+            value += operatorToken.GetValue();
 
             const Operator *op = nullptr;
 
-            if (!Operator::IsBinaryOperator(operator_token.GetValue(), op)) {
-                Assert(Operator::IsUnaryOperator(operator_token.GetValue(), op));
+            if (!Operator::IsBinaryOperator(operatorToken.GetValue(), op)) {
+                Assert(Operator::IsUnaryOperator(operatorToken.GetValue(), op));
             }
 
             Assert(op != nullptr);
 
             if (!op->SupportsOverloading()) {
-                m_compilation_unit->GetErrorList().AddError(CompilerError(
+                m_compilationUnit->GetErrorList().AddError(CompilerError(
                     LEVEL_ERROR,
                     Msg_cannot_overload_operator,
-                    m_source_location,
-                    operator_token.GetValue()
+                    m_sourceLocation,
+                    operatorToken.GetValue()
                 ));
             }
         }
@@ -722,11 +722,11 @@ Token Lexer::ReadIdentifier()
 
 bool Lexer::HasNext()
 {
-    if (!m_source_stream.HasNext()) {
-        m_compilation_unit->GetErrorList().AddError(CompilerError(
+    if (!m_sourceStream.HasNext()) {
+        m_compilationUnit->GetErrorList().AddError(CompilerError(
             LEVEL_ERROR,
             Msg_unexpected_eof,
-            m_source_location
+            m_sourceLocation
         ));
 
         return false;
@@ -737,20 +737,20 @@ bool Lexer::HasNext()
 
 bool Lexer::SkipWhitespace()
 {
-    bool had_newline = false;
+    bool hadNewline = false;
 
-    while (m_source_stream.HasNext() && utf::utf32Isspace(m_source_stream.Peek())) {
-        int pos_change = 0;
-        if (m_source_stream.Next(pos_change) == (u32char)'\n') {
-            m_source_location.GetLine()++;
-            m_source_location.GetColumn() = 0;
-            had_newline = true;
+    while (m_sourceStream.HasNext() && utf::utf32Isspace(m_sourceStream.Peek())) {
+        int posChange = 0;
+        if (m_sourceStream.Next(posChange) == (u32char)'\n') {
+            m_sourceLocation.GetLine()++;
+            m_sourceLocation.GetColumn() = 0;
+            hadNewline = true;
         } else {
-            m_source_location.GetColumn() += pos_change;
+            m_sourceLocation.GetColumn() += posChange;
         }
     }
 
-    return had_newline;
+    return hadNewline;
 }
 
 } // namespace hyperion::compiler

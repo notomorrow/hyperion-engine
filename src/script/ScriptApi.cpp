@@ -15,24 +15,24 @@ namespace hyperion {
 using namespace vm;
 using namespace compiler;
 
-ScriptBindingsHolder g_script_bindings { };
+ScriptBindingsHolder g_scriptBindings { };
 
 // ScriptBindingsBase
 
-ScriptBindingsBase::ScriptBindingsBase(TypeId type_id)
+ScriptBindingsBase::ScriptBindingsBase(TypeId typeId)
 {
-    g_script_bindings.AddBinding(this);
+    g_scriptBindings.AddBinding(this);
 }
 
 // ScriptBindingsHolder
 
-void ScriptBindingsHolder::AddBinding(ScriptBindingsBase *script_bindings)
+void ScriptBindingsHolder::AddBinding(ScriptBindingsBase *scriptBindings)
 {
-    const uint32 index = binding_index++;
+    const uint32 index = bindingIndex++;
 
-    Assert(index < max_bindings, "Too many script bindings attached.");
+    Assert(index < maxBindings, "Too many script bindings attached.");
 
-    bindings[index] = script_bindings;
+    bindings[index] = scriptBindings;
 }
 
 void ScriptBindingsHolder::GenerateAll(scriptapi2::Context &context)
@@ -46,8 +46,8 @@ void ScriptBindingsHolder::GenerateAll(scriptapi2::Context &context)
     }
 }
 
-APIInstance::APIInstance(const SourceFile &source_file)
-    : m_source_file(source_file),
+APIInstance::APIInstance(const SourceFile &sourceFile)
+    : m_sourceFile(sourceFile),
       m_vm(nullptr)
 {
 }

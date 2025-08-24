@@ -26,12 +26,12 @@
 namespace hyperion::compiler {
 
 AstMemberCallExpression::AstMemberCallExpression(
-    const String &field_name,
+    const String &fieldName,
     const RC<AstExpression> &target,
     const RC<AstArgumentList> &arguments,
     const SourceLocation &location
 ) : AstMember(
-        field_name,
+        fieldName,
         target,
         location
     ),
@@ -43,34 +43,34 @@ void AstMemberCallExpression::Visit(AstVisitor *visitor, Module *mod)
 {
     AstMember::Visit(visitor, mod);
 
-    RC<AstExpression> self_target = CloneAstNode(m_target);
+    RC<AstExpression> selfTarget = CloneAstNode(m_target);
 
-    RC<AstArgument> self_arg(new AstArgument(
-        self_target,
+    RC<AstArgument> selfArg(new AstArgument(
+        selfTarget,
         false,
         false,
         false,
         false,
         "self",
-        self_target->GetLocation()
+        selfTarget->GetLocation()
     ));
 
-    const SizeType num_arguments = m_arguments != nullptr
+    const SizeType numArguments = m_arguments != nullptr
         ? m_arguments->GetArguments().Size() + 1
         : 1;
 
-    Array<RC<AstArgument>> args_with_self;
-    args_with_self.Reserve(num_arguments);
-    args_with_self.PushBack(self_arg);
+    Array<RC<AstArgument>> argsWithSelf;
+    argsWithSelf.Reserve(numArguments);
+    argsWithSelf.PushBack(selfArg);
 
     if (m_arguments != nullptr) {
         for (auto &arg : m_arguments->GetArguments()) {
-            args_with_self.PushBack(arg);
+            argsWithSelf.PushBack(arg);
         }
     }
 
     // visit each argument
-    for (const RC<AstArgument> &arg : args_with_self) {
+    for (const RC<AstArgument> &arg : argsWithSelf) {
         Assert(arg != nullptr);
 
         // note, visit in current module rather than module access
@@ -79,41 +79,41 @@ void AstMemberCallExpression::Visit(AstVisitor *visitor, Module *mod)
         arg->Visit(visitor, visitor->GetCompilationUnit()->GetCurrentModule());
     }
 
-    if (m_symbol_type->IsAnyType()) {
-        m_return_type = BuiltinTypes::ANY;
-        m_substituted_args = args_with_self; // NOTE: do not clone because we don't need to visit again.
+    if (m_symbolType->IsAnyType()) {
+        m_returnType = BuiltinTypes::ANY;
+        m_substitutedArgs = argsWithSelf; // NOTE: do not clone because we don't need to visit again.
     } else {
         Optional<SymbolTypeFunctionSignature> substituted = SemanticAnalyzer::Helpers::SubstituteFunctionArgs(
             visitor,
             mod,
-            m_symbol_type,
-            args_with_self,
+            m_symbolType,
+            argsWithSelf,
             m_location
         );
 
         if (!substituted.HasValue()) {
-            m_return_type = BuiltinTypes::UNDEFINED;
+            m_returnType = BuiltinTypes::UNDEFINED;
 
             // not a function type
             visitor->GetCompilationUnit()->GetErrorList().AddError(CompilerError(
                 LEVEL_ERROR,
                 Msg_not_a_function,
                 m_location,
-                m_symbol_type->ToString(true)
+                m_symbolType->ToString(true)
             ));
 
             return;
         }
 
-        Assert(substituted->return_type != nullptr);
+        Assert(substituted->returnType != nullptr);
     
-        m_return_type = substituted->return_type;
+        m_returnType = substituted->returnType;
 
         // change args to be newly ordered array
-        m_substituted_args = CloneAllAstNodes(substituted->params);
+        m_substitutedArgs = CloneAllAstNodes(substituted->params);
 
         // visit each argument (again, substituted)
-        for (const RC<AstArgument> &arg : m_substituted_args) {
+        for (const RC<AstArgument> &arg : m_substitutedArgs) {
             Assert(arg != nullptr);
             
             arg->Visit(visitor, visitor->GetCompilationUnit()->GetCurrentModule());
@@ -122,14 +122,14 @@ void AstMemberCallExpression::Visit(AstVisitor *visitor, Module *mod)
         SemanticAnalyzer::Helpers::EnsureFunctionArgCompatibility(
             visitor,
             mod,
-            m_symbol_type,
-            m_substituted_args,
+            m_symbolType,
+            m_substitutedArgs,
             m_location
         );
     }
 
     // should never be empty; self is needed
-    if (m_substituted_args.Empty()) {
+    if (m_substitutedArgs.Empty()) {
         visitor->GetCompilationUnit()->GetErrorList().AddError(CompilerError(
             LEVEL_ERROR,
             Msg_internal_error,
@@ -145,71 +145,71 @@ std::unique_ptr<Buildable> AstMemberCallExpression::Build(AstVisitor *visitor, M
     Assert(m_target != nullptr);
     chunk->Append(m_target->Build(visitor, mod));
 
-    Assert(m_target_type != nullptr);
+    Assert(m_targetType != nullptr);
 
     // now we have to call the function. we pop the first arg from
     // m_substituted args because we have already pushed self to stack
-    m_substituted_args.PopFront();
+    m_substitutedArgs.PopFront();
 
     // location of 'self' var
-    const auto target_stack_location = visitor->GetCompilationUnit()->GetInstructionStream().GetStackSize();
+    const auto targetStackLocation = visitor->GetCompilationUnit()->GetInstructionStream().GetStackSize();
 
     // use above as self arg so PUSH
     uint8 rp = visitor->GetCompilationUnit()->GetInstructionStream().GetCurrentRegister();
 
     { // add instruction to store on stack
-        auto instr_push = BytecodeUtil::Make<RawOperation<>>();
-        instr_push->opcode = PUSH;
-        instr_push->Accept<uint8>(rp);
-        chunk->Append(std::move(instr_push));
+        auto instrPush = BytecodeUtil::Make<RawOperation<>>();
+        instrPush->opcode = PUSH;
+        instrPush->Accept<uint8>(rp);
+        chunk->Append(std::move(instrPush));
     }
 
     // increment stack size for 'self' var
     visitor->GetCompilationUnit()->GetInstructionStream().IncStackSize();
 
-    if (m_substituted_args.Any()) {
+    if (m_substitutedArgs.Any()) {
         // build arguments
         chunk->Append(Compiler::BuildArgumentsStart(
             visitor,
             mod,
-            m_substituted_args
+            m_substitutedArgs
         ));
 
-        int stack_size = visitor->GetCompilationUnit()->GetInstructionStream().GetStackSize();
+        int stackSize = visitor->GetCompilationUnit()->GetInstructionStream().GetStackSize();
         rp = visitor->GetCompilationUnit()->GetInstructionStream().GetCurrentRegister();
 
         // load our target from the stack into the current register (where we put it before)
-        auto instr_load_offset = BytecodeUtil::Make<StorageOperation>();
-        instr_load_offset->GetBuilder().Load(rp).Local().ByOffset(stack_size - target_stack_location);
-        chunk->Append(std::move(instr_load_offset));
+        auto instrLoadOffset = BytecodeUtil::Make<StorageOperation>();
+        instrLoadOffset->GetBuilder().Load(rp).Local().ByOffset(stackSize - targetStackLocation);
+        chunk->Append(std::move(instrLoadOffset));
     }
 
     // now we load the member into the register, we call that
-    if (m_found_index != -1) {
+    if (m_foundIndex != -1) {
         chunk->Append(Compiler::LoadMemberAtIndex(
             visitor,
             mod,
-            m_found_index
+            m_foundIndex
         ));
     } else {
-        const uint32 hash = hash_fnv_1(m_field_name.Data());
+        const uint32 hash = hashFnv1(m_fieldName.Data());
 
         chunk->Append(Compiler::LoadMemberFromHash(visitor, mod, hash));
     }
 
-    chunk->Append(BytecodeUtil::Make<Comment>("Load member " + m_field_name));
+    chunk->Append(BytecodeUtil::Make<Comment>("Load member " + m_fieldName));
 
     chunk->Append(Compiler::BuildCall(
         visitor,
         mod,
         nullptr, // no target -- handled above
-        uint8(m_substituted_args.Size() + 1) // call w/ self as first arg
+        uint8(m_substitutedArgs.Size() + 1) // call w/ self as first arg
     ));
 
     chunk->Append(Compiler::BuildArgumentsEnd(
         visitor,
         mod,
-        m_substituted_args.Size() + 1 // pops self off stack as well
+        m_substitutedArgs.Size() + 1 // pops self off stack as well
     ));
 
     return chunk;
@@ -219,7 +219,7 @@ void AstMemberCallExpression::Optimize(AstVisitor *visitor, Module *mod)
 {
     AstMember::Optimize(visitor, mod);
 
-    for (auto &arg : m_substituted_args) {
+    for (auto &arg : m_substitutedArgs) {
         Assert(arg != nullptr);
 
         arg->Optimize(visitor, mod);
@@ -246,14 +246,14 @@ bool AstMemberCallExpression::MayHaveSideEffects() const
 
 SymbolTypePtr_t AstMemberCallExpression::GetExprType() const
 {
-    Assert(m_return_type != nullptr);
-    return m_return_type;
+    Assert(m_returnType != nullptr);
+    return m_returnType;
 }
 
 const AstExpression *AstMemberCallExpression::GetValueOf() const
 {
-    // if (m_symbol_type != nullptr && m_symbol_type->GetDefaultValue() != nullptr) {
-    //     return m_symbol_type->GetDefaultValue()->GetValueOf();
+    // if (m_symbolType != nullptr && m_symbolType->GetDefaultValue() != nullptr) {
+    //     return m_symbolType->GetDefaultValue()->GetValueOf();
     // }
 
     return AstExpression::GetValueOf();
@@ -261,8 +261,8 @@ const AstExpression *AstMemberCallExpression::GetValueOf() const
 
 const AstExpression *AstMemberCallExpression::GetDeepValueOf() const
 {
-    // if (m_symbol_type != nullptr && m_symbol_type->GetDefaultValue() != nullptr) {
-    //     return m_symbol_type->GetDefaultValue()->GetDeepValueOf();
+    // if (m_symbolType != nullptr && m_symbolType->GetDefaultValue() != nullptr) {
+    //     return m_symbolType->GetDefaultValue()->GetDeepValueOf();
     // }
 
     return AstExpression::GetDeepValueOf();
@@ -271,8 +271,8 @@ const AstExpression *AstMemberCallExpression::GetDeepValueOf() const
 AstExpression *AstMemberCallExpression::GetTarget() const
 {
     if (m_target != nullptr) {
-        // if (auto *nested_target = m_target->GetTarget()) {
-        //     return nested_target;
+        // if (auto *nestedTarget = m_target->GetTarget()) {
+        //     return nestedTarget;
         // }
 
         return m_target.Get();

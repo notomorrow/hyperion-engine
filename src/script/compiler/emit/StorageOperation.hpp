@@ -65,10 +65,10 @@ struct StorageOperation : public Buildable
                     uint8 index;
                     uint32 hash;
                 } member;
-            } object_data;
+            } objectData;
         } b;
 
-        bool is_ref = false;
+        bool isRef = false;
     } op;
 
     Operations operation;
@@ -89,7 +89,7 @@ struct StorageOperation : public Buildable
 
         virtual ~OperationBuilder() = default;
 
-        MethodBuilder Load(RegIndex dst, bool is_ref = false);
+        MethodBuilder Load(RegIndex dst, bool isRef = false);
         MethodBuilder Store(RegIndex src);
 
     private:
@@ -108,8 +108,8 @@ struct StorageOperation : public Buildable
 
         StrategyBuilder Local();
         StrategyBuilder Static();
-        StrategyBuilder Array(RegIndex array_reg);
-        StrategyBuilder Member(RegIndex object_reg);
+        StrategyBuilder Array(RegIndex arrayReg);
+        StrategyBuilder Member(RegIndex objectReg);
 
         Methods method;
 

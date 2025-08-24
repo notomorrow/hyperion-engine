@@ -25,13 +25,13 @@ namespace hyperion::compiler {
 AstCallExpression::AstCallExpression(
     const RC<AstExpression> &expr,
     const Array<RC<AstArgument>> &args,
-    bool insert_self,
+    bool insertSelf,
     const SourceLocation &location
 ) : AstExpression(location, ACCESS_MODE_LOAD),
     m_expr(expr),
     m_args(args),
-    m_insert_self(insert_self),
-    m_return_type(BuiltinTypes::UNDEFINED)
+    m_insertSelf(insertSelf),
+    m_returnType(BuiltinTypes::UNDEFINED)
 {
     for (auto &arg : m_args) {
         Assert(arg != nullptr);
@@ -40,53 +40,53 @@ AstCallExpression::AstCallExpression(
 
 void AstCallExpression::Visit(AstVisitor *visitor, Module *mod)
 {
-    Assert(!m_is_visited);
-    m_is_visited = true;
+    Assert(!m_isVisited);
+    m_isVisited = true;
 
     Assert(m_expr != nullptr);
     m_expr->Visit(visitor, mod);
 
-    SymbolTypePtr_t target_type = m_expr->GetExprType();
-    Assert(target_type != nullptr);
+    SymbolTypePtr_t targetType = m_expr->GetExprType();
+    Assert(targetType != nullptr);
 
-    Array<RC<AstArgument>> args_with_self = m_args;
+    Array<RC<AstArgument>> argsWithSelf = m_args;
 
-    if (m_insert_self) {
-        auto *value_of = m_expr->GetValueOf();
-        Assert(value_of != nullptr);
+    if (m_insertSelf) {
+        auto *valueOf = m_expr->GetValueOf();
+        Assert(valueOf != nullptr);
 
-        if (const auto *left_target = m_expr->GetTarget()) {
-            const auto self_target = CloneAstNode(left_target);
-            Assert(self_target != nullptr);
+        if (const auto *leftTarget = m_expr->GetTarget()) {
+            const auto selfTarget = CloneAstNode(leftTarget);
+            Assert(selfTarget != nullptr);
 
-            RC<AstArgument> self_arg(new AstArgument(
-                self_target,
+            RC<AstArgument> selfArg(new AstArgument(
+                selfTarget,
                 false,
                 false,
                 false,
                 false,
                 "self",
-                self_target->GetLocation()
+                selfTarget->GetLocation()
             ));
             
-            args_with_self.PushFront(std::move(self_arg));
+            argsWithSelf.PushFront(std::move(selfArg));
         }
     }
 
-    SymbolTypePtr_t unaliased = target_type->GetUnaliased();
+    SymbolTypePtr_t unaliased = targetType->GetUnaliased();
     Assert(unaliased != nullptr);
 
-    SymbolTypePtr_t call_member_type;
-    String call_member_name;
+    SymbolTypePtr_t callMemberType;
+    String callMemberName;
 
     // check if $invoke is found on the object or its prototype
-    if ((call_member_type = unaliased->FindMember("$invoke")) || (call_member_type = unaliased->FindPrototypeMember("$invoke"))) {
-        call_member_name = "$invoke";
+    if ((callMemberType = unaliased->FindMember("$invoke")) || (callMemberType = unaliased->FindPrototypeMember("$invoke"))) {
+        callMemberName = "$invoke";
     }
 
-    if (call_member_type != nullptr) {
+    if (callMemberType != nullptr) {
         // closure objects have a self parameter for the '$invoke' call.
-        RC<AstArgument> closure_self_arg(new AstArgument(
+        RC<AstArgument> closureSelfArg(new AstArgument(
             CloneAstNode(m_expr),
             false,
             false,
@@ -97,31 +97,31 @@ void AstCallExpression::Visit(AstVisitor *visitor, Module *mod)
         ));
         
         // insert at front
-        args_with_self.PushFront(std::move(closure_self_arg));
+        argsWithSelf.PushFront(std::move(closureSelfArg));
 
-        m_override_expr.Reset(new AstCallExpression(
+        m_overrideExpr.Reset(new AstCallExpression(
             RC<AstMember>(new AstMember(
-                call_member_name,
+                callMemberName,
                 CloneAstNode(m_expr),
                 m_location
             )),
-            CloneAllAstNodes(args_with_self),
+            CloneAllAstNodes(argsWithSelf),
             false,
             m_location
         ));
         
-        m_override_expr->Visit(visitor, mod);
+        m_overrideExpr->Visit(visitor, mod);
 
-        unaliased = call_member_type->GetUnaliased();
+        unaliased = callMemberType->GetUnaliased();
         Assert(unaliased != nullptr);
     }
 
-    if (m_override_expr != nullptr) {
+    if (m_overrideExpr != nullptr) {
         return;
     }
 
     // visit each argument
-    for (const RC<AstArgument> &arg : args_with_self) {
+    for (const RC<AstArgument> &arg : argsWithSelf) {
         Assert(arg != nullptr);
 
         // note, visit in current module rather than module access
@@ -131,14 +131,14 @@ void AstCallExpression::Visit(AstVisitor *visitor, Module *mod)
     }
 
     if (unaliased->IsAnyType()) {
-        m_return_type = BuiltinTypes::ANY;
-        m_substituted_args = args_with_self; // NOTE: do not clone because we don't need to visit again.
+        m_returnType = BuiltinTypes::ANY;
+        m_substitutedArgs = argsWithSelf; // NOTE: do not clone because we don't need to visit again.
     } else {
         Optional<SymbolTypeFunctionSignature> substituted = SemanticAnalyzer::Helpers::SubstituteFunctionArgs(
             visitor,
             mod,
             unaliased,
-            args_with_self,
+            argsWithSelf,
             m_location
         );
 
@@ -148,20 +148,20 @@ void AstCallExpression::Visit(AstVisitor *visitor, Module *mod)
                 LEVEL_ERROR,
                 Msg_not_a_function,
                 m_location,
-                target_type->ToString(true)
+                targetType->ToString(true)
             ));
 
             return;
         }
 
-        Assert(substituted->return_type != nullptr);
+        Assert(substituted->returnType != nullptr);
 
-        m_return_type = substituted->return_type;
+        m_returnType = substituted->returnType;
 
         // change args to be newly ordered array
-        m_substituted_args = CloneAllAstNodes(substituted->params);
+        m_substitutedArgs = CloneAllAstNodes(substituted->params);
 
-        for (const RC<AstArgument> &arg : m_substituted_args) {
+        for (const RC<AstArgument> &arg : m_substitutedArgs) {
             arg->Visit(visitor, visitor->GetCompilationUnit()->GetCurrentModule());
         }
 
@@ -169,12 +169,12 @@ void AstCallExpression::Visit(AstVisitor *visitor, Module *mod)
             visitor,
             mod,
             unaliased,
-            m_substituted_args,
+            m_substitutedArgs,
             m_location
         );
     }
 
-    if (m_substituted_args.Size() > MathUtil::MaxSafeValue<uint8>()) {
+    if (m_substitutedArgs.Size() > MathUtil::MaxSafeValue<uint8>()) {
         visitor->GetCompilationUnit()->GetErrorList().AddError(CompilerError(
             LEVEL_ERROR,
             Msg_maximum_number_of_arguments,
@@ -185,10 +185,10 @@ void AstCallExpression::Visit(AstVisitor *visitor, Module *mod)
 
 std::unique_ptr<Buildable> AstCallExpression::Build(AstVisitor *visitor, Module *mod)
 {
-    Assert(m_is_visited);
+    Assert(m_isVisited);
 
-    if (m_override_expr != nullptr) {
-        return m_override_expr->Build(visitor, mod);
+    if (m_overrideExpr != nullptr) {
+        return m_overrideExpr->Build(visitor, mod);
     }
     
     std::unique_ptr<BytecodeChunk> chunk = BytecodeUtil::Make<BytecodeChunk>();
@@ -197,31 +197,31 @@ std::unique_ptr<Buildable> AstCallExpression::Build(AstVisitor *visitor, Module 
     chunk->Append(Compiler::BuildArgumentsStart(
         visitor,
         mod,
-        m_substituted_args
+        m_substitutedArgs
     ));
 
-    const int stack_size_before = visitor->GetCompilationUnit()->GetInstructionStream().GetStackSize();
+    const int stackSizeBefore = visitor->GetCompilationUnit()->GetInstructionStream().GetStackSize();
 
     chunk->Append(Compiler::BuildCall(
         visitor,
         mod,
         m_expr,
-        uint8(m_substituted_args.Size())
+        uint8(m_substitutedArgs.Size())
     ));
 
-    const int stack_size_now = visitor->GetCompilationUnit()->GetInstructionStream().GetStackSize();
+    const int stackSizeNow = visitor->GetCompilationUnit()->GetInstructionStream().GetStackSize();
 
     Assert(
-        stack_size_now == stack_size_before,
+        stackSizeNow == stackSizeBefore,
         "Stack size mismatch detected! Internal record of stack does not match. (%d != %d)",
-        stack_size_now,
-        stack_size_before
+        stackSizeNow,
+        stackSizeBefore
     );
 
     chunk->Append(Compiler::BuildArgumentsEnd(
         visitor,
         mod,
-        m_substituted_args.Size()
+        m_substitutedArgs.Size()
     ));
 
     return chunk;
@@ -229,14 +229,14 @@ std::unique_ptr<Buildable> AstCallExpression::Build(AstVisitor *visitor, Module 
 
 void AstCallExpression::Optimize(AstVisitor *visitor, Module *mod)
 {
-    if (m_override_expr != nullptr) {
-        m_override_expr->Optimize(visitor, mod);
+    if (m_overrideExpr != nullptr) {
+        m_overrideExpr->Optimize(visitor, mod);
 
         return;
     }
 
     // optimize each argument
-    for (auto &arg : m_substituted_args) {
+    for (auto &arg : m_substitutedArgs) {
         if (arg != nullptr) {
             arg->Optimize(visitor, visitor->GetCompilationUnit()->GetCurrentModule());
         }
@@ -250,8 +250,8 @@ RC<AstStatement> AstCallExpression::Clone() const
 
 Tribool AstCallExpression::IsTrue() const
 {
-    if (m_override_expr != nullptr) {
-        return m_override_expr->IsTrue();
+    if (m_overrideExpr != nullptr) {
+        return m_overrideExpr->IsTrue();
     }
 
     // cannot deduce if return value is true
@@ -260,8 +260,8 @@ Tribool AstCallExpression::IsTrue() const
 
 bool AstCallExpression::MayHaveSideEffects() const
 {
-    if (m_override_expr != nullptr) {
-        return m_override_expr->MayHaveSideEffects();
+    if (m_overrideExpr != nullptr) {
+        return m_overrideExpr->MayHaveSideEffects();
     }
 
     // assume a function call has side effects
@@ -271,18 +271,18 @@ bool AstCallExpression::MayHaveSideEffects() const
 
 SymbolTypePtr_t AstCallExpression::GetExprType() const
 {
-    if (m_override_expr != nullptr) {
-        return m_override_expr->GetExprType();
+    if (m_overrideExpr != nullptr) {
+        return m_overrideExpr->GetExprType();
     }
 
-    Assert(m_return_type != nullptr);
-    return m_return_type;
+    Assert(m_returnType != nullptr);
+    return m_returnType;
 }
 
 AstExpression *AstCallExpression::GetTarget() const
 {
-    if (m_override_expr != nullptr) {
-        return m_override_expr->GetTarget();
+    if (m_overrideExpr != nullptr) {
+        return m_overrideExpr->GetTarget();
     }
 
     return AstExpression::GetTarget();

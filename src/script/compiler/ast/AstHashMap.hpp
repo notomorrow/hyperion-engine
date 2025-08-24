@@ -57,14 +57,14 @@ private:
     Array<RC<AstExpression>>        m_values;
 
     // set while analyzing
-    Array<RC<AstExpression>>        m_replaced_keys;
-    Array<RC<AstExpression>>        m_replaced_values;
-    RC<AstPrototypeSpecification>   m_map_type_expr;
-    RC<AstExpression>               m_array_expr;
-    SymbolTypePtr_t                 m_key_type;
-    SymbolTypePtr_t                 m_value_type;
-    SymbolTypePtr_t                 m_expr_type;
-    RC<AstTypeObject>               m_type_object;
+    Array<RC<AstExpression>>        m_replacedKeys;
+    Array<RC<AstExpression>>        m_replacedValues;
+    RC<AstPrototypeSpecification>   m_mapTypeExpr;
+    RC<AstExpression>               m_arrayExpr;
+    SymbolTypePtr_t                 m_keyType;
+    SymbolTypePtr_t                 m_valueType;
+    SymbolTypePtr_t                 m_exprType;
+    RC<AstTypeObject>               m_typeObject;
     RC<AstBlock>                    m_block;
 
     RC<AstHashMap> CloneImpl() const

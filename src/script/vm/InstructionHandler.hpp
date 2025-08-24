@@ -216,7 +216,7 @@ public:
     {
         Assert(false, "Not implemented, will be removed soon.");
         // the value will be freed on
-        // the destructor call of state->m_static_memory
+        // the destructor call of state->m_staticMemory
         // HeapValue *hv = new HeapValue();
         // hv->Assign(VMString(str));
 
@@ -224,7 +224,7 @@ public:
         // sv.m_type = Value::HEAP_POINTER;
         // sv.m_value.ptr = hv;
 
-        // state->m_static_memory.Store(std::move(sv));
+        // state->m_staticMemory.Store(std::move(sv));
     }
 
     HYP_FORCE_INLINE void StoreStaticAddress(BCAddress addr)
@@ -234,7 +234,7 @@ public:
         // sv.m_type = Value::ADDRESS;
         // sv.m_value.addr = addr;
 
-        // state->m_static_memory.Store(std::move(sv));
+        // state->m_staticMemory.Store(std::move(sv));
     }
 
     HYP_FORCE_INLINE void StoreStaticFunction(
@@ -250,25 +250,25 @@ public:
         // sv.m_value.func.m_nargs = nargs;
         // sv.m_value.func.m_flags = flags;
 
-        // state->m_static_memory.Store(std::move(sv));
+        // state->m_staticMemory.Store(std::move(sv));
     }
 
     HYP_FORCE_INLINE void StoreStaticType(
-        const char *type_name,
+        const char *typeName,
         uint16 size,
         char **names
     )
     {
         Assert(false, "Not implemented, will be removed soon.");
         // the value will be freed on
-        // the destructor call of state->m_static_memory
+        // the destructor call of state->m_staticMemory
         // HeapValue *hv = new HeapValue();
-        // hv->Assign(VMTypeInfo(type_name, size, names));
+        // hv->Assign(VMTypeInfo(typeName, size, names));
 
         // Value sv;
         // sv.m_type = Value::HEAP_POINTER;
         // sv.m_value.ptr = hv;
-        // state->m_static_memory.Store(std::move(sv));
+        // state->m_staticMemory.Store(std::move(sv));
     }
 
     HYP_FORCE_INLINE void LoadI32(BCRegister reg, int32 i32)
@@ -366,7 +366,7 @@ public:
     {
         // read value from static memory
         // at the index into the the register
-        thread->m_regs[reg].AssignValue(state->m_static_memory[index], false);
+        thread->m_regs[reg].AssignValue(state->m_staticMemory[index], false);
     }
 
     HYP_FORCE_INLINE void LoadConstantString(BCRegister reg, uint32 len, const char *str)
@@ -412,8 +412,8 @@ public:
 
     HYP_FORCE_INLINE void LoadType(
         BCRegister reg,
-        uint16 type_name_len,
-        const char *type_name,
+        uint16 typeNameLen,
+        const char *typeName,
         uint16 size,
         char **names
     )
@@ -427,19 +427,19 @@ public:
         
         for (size_t i = 0; i < size; i++) {
             Memory::StrCpy(members[i].name, names[i], sizeof(Member::name));
-            members[i].hash = hash_fnv_1(names[i]);
+            members[i].hash = hashFnv1(names[i]);
             members[i].value = Value(Value::HEAP_POINTER, { .ptr = nullptr });
         }
 
-        Value parent_class_value = thread->m_regs[reg];
-        Assert(parent_class_value.GetType() == Value::HEAP_POINTER,
+        Value parentClassValue = thread->m_regs[reg];
+        Assert(parentClassValue.GetType() == Value::HEAP_POINTER,
             "Parent class for type %s must be a heap pointer, got %s",
-            type_name,
-            parent_class_value.GetTypeString()
+            typeName,
+            parentClassValue.GetTypeString()
         );
 
         // create prototype object
-        hv->Assign(VMObject(members, size, parent_class_value.m_value.ptr));
+        hv->Assign(VMObject(members, size, parentClassValue.m_value.ptr));
 
         delete[] members;
 
@@ -465,14 +465,14 @@ public:
                     Exception::NullReferenceException()
                 );
                 return;
-            } else if (VMObject *obj_ptr = hv->GetPointer<VMObject>()) {
+            } else if (VMObject *objPtr = hv->GetPointer<VMObject>()) {
                 Assert(
-                    index < obj_ptr->GetSize(),
+                    index < objPtr->GetSize(),
                     "Index out of bounds (%u >= %llu)",
                     index,
-                    obj_ptr->GetSize()
+                    objPtr->GetSize()
                 );
-                thread->m_regs[dst].AssignValue(obj_ptr->GetMember(index).value, false);
+                thread->m_regs[dst].AssignValue(objPtr->GetMember(index).value, false);
                 return;
             }
         }
@@ -483,9 +483,9 @@ public:
         );
     }
 
-    HYP_FORCE_INLINE void LoadMemHash(BCRegister dst_reg, BCRegister src_reg, uint32 hash)
+    HYP_FORCE_INLINE void LoadMemHash(BCRegister dstReg, BCRegister srcReg, uint32 hash)
     {
-        Value &sv = thread->m_regs[src_reg];
+        Value &sv = thread->m_regs[srcReg];
 
         if (sv.m_type == Value::HEAP_POINTER) {
             HeapValue *hv = sv.m_value.ptr;
@@ -498,7 +498,7 @@ public:
                 return;
             } else if (VMObject *object = hv->GetPointer<VMObject>()) {
                 if (Member *member = object->LookupMemberFromHash(hash)) {
-                    thread->m_regs[dst_reg].AssignValue(member->value, false);
+                    thread->m_regs[dstReg].AssignValue(member->value, false);
                 } else {
                     state->ThrowException(
                         thread,
@@ -515,9 +515,9 @@ public:
         );
     }
 
-    HYP_FORCE_INLINE void LoadArrayIdx(BCRegister dst_reg, BCRegister src_reg, BCRegister index_reg)
+    HYP_FORCE_INLINE void LoadArrayIdx(BCRegister dstReg, BCRegister srcReg, BCRegister indexReg)
     {
-        Value &sv = thread->m_regs[src_reg];
+        Value &sv = thread->m_regs[srcReg];
 
         if (sv.m_type != Value::HEAP_POINTER) {
             state->ThrowException(
@@ -541,7 +541,7 @@ public:
             Number index;
         } key;
 
-        if (!thread->m_regs[index_reg].GetSignedOrUnsigned(&key.index)) {
+        if (!thread->m_regs[indexReg].GetSignedOrUnsigned(&key.index)) {
             state->ThrowException(
                 thread,
                 Exception("Array index must be of type int or uint32")
@@ -552,13 +552,13 @@ public:
         VMArray *array = ptr->GetPointer<VMArray>();
 
         if (array == nullptr) {
-            if (auto *memory_buffer = ptr->GetPointer<VMMemoryBuffer>()) {
+            if (auto *memoryBuffer = ptr->GetPointer<VMMemoryBuffer>()) {
                 // load the uint8 in the memory buffer, store it as int32
-                Value memory_buffer_data;
-                memory_buffer_data.m_type = Value::I32;
+                Value memoryBufferData;
+                memoryBufferData.m_type = Value::I32;
 
                 if (key.index.flags & Number::FLAG_SIGNED) {
-                    if (static_cast<SizeType>(key.index.i) >= memory_buffer->GetSize()) {
+                    if (static_cast<SizeType>(key.index.i) >= memoryBuffer->GetSize()) {
                         state->ThrowException(
                             thread,
                             Exception::OutOfBoundsException()
@@ -569,8 +569,8 @@ public:
 
                     if (key.index.i < 0) {
                         // wrap around (python style)
-                        key.index.i = static_cast<int64>(memory_buffer->GetSize() + key.index.i);
-                        if (key.index.i < 0 || static_cast<SizeType>(key.index.i) >= memory_buffer->GetSize()) {
+                        key.index.i = static_cast<int64>(memoryBuffer->GetSize() + key.index.i);
+                        if (key.index.i < 0 || static_cast<SizeType>(key.index.i) >= memoryBuffer->GetSize()) {
                             state->ThrowException(
                                 thread,
                                 Exception::OutOfBoundsException()
@@ -580,9 +580,9 @@ public:
                         }
                     }
 
-                    memory_buffer_data.m_value.i32 = static_cast<int32>(static_cast<uint8 *>(memory_buffer->GetBuffer())[key.index.i]);
+                    memoryBufferData.m_value.i32 = static_cast<int32>(static_cast<uint8 *>(memoryBuffer->GetBuffer())[key.index.i]);
                 } else if (key.index.flags & Number::FLAG_UNSIGNED) {
-                    if (static_cast<SizeType>(key.index.u) >= memory_buffer->GetSize()) {
+                    if (static_cast<SizeType>(key.index.u) >= memoryBuffer->GetSize()) {
                         state->ThrowException(
                             thread,
                             Exception::OutOfBoundsException()
@@ -591,10 +591,10 @@ public:
                         return;
                     }
 
-                    memory_buffer_data.m_value.i32 = static_cast<int32>(static_cast<uint8 *>(memory_buffer->GetBuffer())[key.index.u]);
+                    memoryBufferData.m_value.i32 = static_cast<int32>(static_cast<uint8 *>(memoryBuffer->GetBuffer())[key.index.u]);
                 }
 
-                thread->m_regs[dst_reg].AssignValue(memory_buffer_data, false);
+                thread->m_regs[dstReg].AssignValue(memoryBufferData, false);
 
                 return;
             }
@@ -636,7 +636,7 @@ public:
                 }
             }
 
-            thread->m_regs[dst_reg].AssignValue(array->AtIndex(key.index.i), false);
+            thread->m_regs[dstReg].AssignValue(array->AtIndex(key.index.i), false);
         } else if (key.index.flags & Number::FLAG_UNSIGNED) {
             if (static_cast<SizeType>(key.index.u) >= array->GetSize()) {
                 state->ThrowException(
@@ -646,7 +646,7 @@ public:
                 return;
             }
             
-            thread->m_regs[dst_reg].AssignValue(array->AtIndex(key.index.u), false);
+            thread->m_regs[dstReg].AssignValue(array->AtIndex(key.index.u), false);
         }
     }
 
@@ -654,7 +654,7 @@ public:
     {
         thread->m_regs[reg] = Value(
             Value::ValueType::VALUE_REF,
-            Value::ValueData { .value_ref = &thread->m_stack[thread->m_stack.GetStackPointer() - offset] }
+            Value::ValueData { .valueRef = &thread->m_stack[thread->m_stack.GetStackPointer() - offset] }
         );
     }
 
@@ -671,29 +671,29 @@ public:
 
         thread->m_regs[reg] = Value(
             Value::ValueType::VALUE_REF,
-            Value::ValueData { .value_ref = &stk[index] }
+            Value::ValueData { .valueRef = &stk[index] }
         );
     }
 
-    HYP_FORCE_INLINE void LoadRef(BCRegister dst_reg, BCRegister src_reg)
+    HYP_FORCE_INLINE void LoadRef(BCRegister dstReg, BCRegister srcReg)
     {
         Value value;
         value.m_type = Value::ValueType::VALUE_REF;
-        value.m_value.value_ref = &thread->m_regs[src_reg];
+        value.m_value.valueRef = &thread->m_regs[srcReg];
 
-        thread->m_regs[dst_reg] = value;
+        thread->m_regs[dstReg] = value;
     }
 
-    HYP_FORCE_INLINE void LoadDeref(BCRegister dst_reg, BCRegister src_reg)
+    HYP_FORCE_INLINE void LoadDeref(BCRegister dstReg, BCRegister srcReg)
     {
-        Value &src = thread->m_regs[src_reg];
+        Value &src = thread->m_regs[srcReg];
         Assert(src.m_type == Value::VALUE_REF,
             "Value type must be VALUE_REF in order to deref, got %d", src.m_type);
-        Assert(src.m_value.value_ref != nullptr);
+        Assert(src.m_value.valueRef != nullptr);
 
-        Value deref = *src.m_value.value_ref;
+        Value deref = *src.m_value.valueRef;
 
-        thread->m_regs[dst_reg] = deref;
+        thread->m_regs[dstReg] = deref;
     }
 
     HYP_FORCE_INLINE void LoadNull(BCRegister reg)
@@ -729,13 +729,13 @@ public:
 
     HYP_FORCE_INLINE void MovStatic(uint16 index, BCRegister reg)
     {
-        Assert(index < state->m_static_memory.static_size);
+        Assert(index < state->m_staticMemory.staticSize);
 
         // ensure we will not be overwriting something that is marked ALWAYS_ALIVE
         // will cause a memory leak if we overwrite it, or if we did change the flag,
         // it could cause corruption in places where we expect something to always exist.
-        if (state->m_static_memory[index].m_type == Value::HEAP_POINTER) {
-            HeapValue *hv = state->m_static_memory[index].m_value.ptr;
+        if (state->m_staticMemory[index].m_type == Value::HEAP_POINTER) {
+            HeapValue *hv = state->m_staticMemory[index].m_value.ptr;
             if (hv != nullptr && (hv->GetFlags() & GC_ALWAYS_ALIVE)) {
                 // state->ThrowException(
                 //     thread,
@@ -759,12 +759,12 @@ public:
 
         // copy value from register to static memory at index
         // moves to static do not impact refs
-        state->m_static_memory[index].AssignValue(thread->m_regs[reg], false);
+        state->m_staticMemory[index].AssignValue(thread->m_regs[reg], false);
     }
 
-    HYP_FORCE_INLINE void MovMem(BCRegister dst_reg, uint8 index, BCRegister src_reg)
+    HYP_FORCE_INLINE void MovMem(BCRegister dstReg, uint8 index, BCRegister srcReg)
     {
-        Value &sv = thread->m_regs[dst_reg];
+        Value &sv = thread->m_regs[dstReg];
         if (sv.m_type != Value::HEAP_POINTER) {
             state->ThrowException(
                 thread,
@@ -799,13 +799,13 @@ public:
             return;
         }
         
-        object->GetMember(index).value.AssignValue(thread->m_regs[src_reg], true);
+        object->GetMember(index).value.AssignValue(thread->m_regs[srcReg], true);
         object->GetMember(index).value.Mark();
     }
 
-    HYP_FORCE_INLINE void MovMemHash(BCRegister dst_reg, uint32_t hash, BCRegister src_reg)
+    HYP_FORCE_INLINE void MovMemHash(BCRegister dstReg, uint32_t hash, BCRegister srcReg)
     {
-        Value &sv = thread->m_regs[dst_reg];
+        Value &sv = thread->m_regs[dstReg];
 
         if (sv.m_type != Value::HEAP_POINTER) {
             state->ThrowException(
@@ -843,13 +843,13 @@ public:
         }
         
         // set value in member
-        member->value.AssignValue(thread->m_regs[src_reg], true);
+        member->value.AssignValue(thread->m_regs[srcReg], true);
         member->value.Mark();
     }
 
-    HYP_FORCE_INLINE void MovArrayIdx(BCRegister dst_reg, uint32 index, BCRegister src_reg)
+    HYP_FORCE_INLINE void MovArrayIdx(BCRegister dstReg, uint32 index, BCRegister srcReg)
     {
-        Value &sv = thread->m_regs[dst_reg];
+        Value &sv = thread->m_regs[dstReg];
 
         if (sv.m_type != Value::HEAP_POINTER) {
             char buffer[256];
@@ -879,8 +879,8 @@ public:
         VMArray *array = hv->GetPointer<VMArray>();
 
         if (array == nullptr) {
-            if (auto *memory_buffer = hv->GetPointer<VMMemoryBuffer>()) {
-                if (static_cast<SizeType>(index) >= memory_buffer->GetSize()) {
+            if (auto *memoryBuffer = hv->GetPointer<VMMemoryBuffer>()) {
+                if (static_cast<SizeType>(index) >= memoryBuffer->GetSize()) {
                     state->ThrowException(
                         thread,
                         Exception::OutOfBoundsException()
@@ -891,8 +891,8 @@ public:
 
                 if (index < 0) {
                     // wrap around (python style)
-                    index = static_cast<int64>(memory_buffer->GetSize() + static_cast<SizeType>(index));
-                    if (index < 0 || static_cast<SizeType>(index) >= memory_buffer->GetSize()) {
+                    index = static_cast<int64>(memoryBuffer->GetSize() + static_cast<SizeType>(index));
+                    if (index < 0 || static_cast<SizeType>(index) >= memoryBuffer->GetSize()) {
                         state->ThrowException(
                             thread,
                             Exception::OutOfBoundsException()
@@ -901,9 +901,9 @@ public:
                     }
                 }
 
-                Number dst_data;
+                Number dstData;
 
-                if (!thread->m_regs[src_reg].GetSignedOrUnsigned(&dst_data)) {
+                if (!thread->m_regs[srcReg].GetSignedOrUnsigned(&dstData)) {
                     state->ThrowException(
                         thread,
                         Exception::InvalidArgsException("integer")
@@ -912,20 +912,20 @@ public:
                     return;
                 }
 
-                ubyte byte_value = 0x0;
+                ubyte byteValue = 0x0;
 
                 // take the passed int/uint value and clip it to the first byte.
-                if (dst_data.flags & Number::FLAG_SIGNED) {
+                if (dstData.flags & Number::FLAG_SIGNED) {
                     // convert -128..127 to 0..255 for signed integers.
-                    byte_value = static_cast<ubyte>((dst_data.i + 128) & 0xff);
-                } else if (dst_data.flags & Number::FLAG_UNSIGNED) {
-                    byte_value = static_cast<ubyte>(dst_data.u & 0xff);
+                    byteValue = static_cast<ubyte>((dstData.i + 128) & 0xff);
+                } else if (dstData.flags & Number::FLAG_UNSIGNED) {
+                    byteValue = static_cast<ubyte>(dstData.u & 0xff);
                 } else {
                     Assert(false, "Should not reach!");
                 }
 
                 // copy first byte from value
-                Memory::MemCpy(static_cast<ubyte *>(memory_buffer->GetBuffer()) + index, &byte_value, sizeof(ubyte));
+                Memory::MemCpy(static_cast<ubyte *>(memoryBuffer->GetBuffer()) + index, &byteValue, sizeof(ubyte));
 
                 return;
             }
@@ -966,13 +966,13 @@ public:
             }
         }*/
         
-        array->AtIndex(index) = thread->m_regs[src_reg];
+        array->AtIndex(index) = thread->m_regs[srcReg];
         array->AtIndex(index).Mark();
     }
 
-    HYP_FORCE_INLINE void MovArrayIdxReg(BCRegister dst_reg, BCRegister index_reg, BCRegister src_reg)
+    HYP_FORCE_INLINE void MovArrayIdxReg(BCRegister dstReg, BCRegister indexReg, BCRegister srcReg)
     {
-        Value &sv = thread->m_regs[dst_reg];
+        Value &sv = thread->m_regs[dstReg];
 
         if (sv.m_type != Value::HEAP_POINTER) {
             char buffer[256];
@@ -1003,9 +1003,9 @@ public:
         VMArray *array = hv->GetPointer<VMArray>();
 
         Number index;
-        Value &index_register_value = thread->m_regs[index_reg];
+        Value &indexRegisterValue = thread->m_regs[indexReg];
 
-        if (!index_register_value.GetSignedOrUnsigned(&index)) {
+        if (!indexRegisterValue.GetSignedOrUnsigned(&index)) {
             state->ThrowException(
                 thread,
                 Exception::InvalidArgsException("integer")
@@ -1015,10 +1015,10 @@ public:
         }
 
         if (array == nullptr) {
-            if (auto *memory_buffer = hv->GetPointer<VMMemoryBuffer>()) {
-                Number dst_data;
+            if (auto *memoryBuffer = hv->GetPointer<VMMemoryBuffer>()) {
+                Number dstData;
 
-                if (!thread->m_regs[src_reg].GetSignedOrUnsigned(&dst_data)) {
+                if (!thread->m_regs[srcReg].GetSignedOrUnsigned(&dstData)) {
                     state->ThrowException(
                         thread,
                         Exception::InvalidArgsException("integer")
@@ -1028,9 +1028,9 @@ public:
                 }
 
                 if (index.flags & Number::FLAG_SIGNED) {
-                    int64 index_value = index.i;
+                    int64 indexValue = index.i;
 
-                    if (static_cast<SizeType>(index_value) >= memory_buffer->GetSize()) {
+                    if (static_cast<SizeType>(indexValue) >= memoryBuffer->GetSize()) {
                         state->ThrowException(
                             thread,
                             Exception::OutOfBoundsException()
@@ -1039,10 +1039,10 @@ public:
                         return;
                     }
 
-                    if (index_value < 0) {
+                    if (indexValue < 0) {
                         // wrap around (python style)
-                        index_value = static_cast<int64>(memory_buffer->GetSize() + static_cast<SizeType>(index_value));
-                        if (index_value < 0 || static_cast<SizeType>(index_value) >= memory_buffer->GetSize()) {
+                        indexValue = static_cast<int64>(memoryBuffer->GetSize() + static_cast<SizeType>(indexValue));
+                        if (indexValue < 0 || static_cast<SizeType>(indexValue) >= memoryBuffer->GetSize()) {
                             state->ThrowException(
                                 thread,
                                 Exception::OutOfBoundsException()
@@ -1051,11 +1051,11 @@ public:
                         }
                     }
                     
-                    Memory::MemCpy(&static_cast<uint8 *>(memory_buffer->GetBuffer())[index_value], &dst_data, sizeof(dst_data));
+                    Memory::MemCpy(&static_cast<uint8 *>(memoryBuffer->GetBuffer())[indexValue], &dstData, sizeof(dstData));
                 } else { // unsigned
-                    const uint64 index_value = index.u;
+                    const uint64 indexValue = index.u;
 
-                    if (static_cast<SizeType>(index_value) >= memory_buffer->GetSize()) {
+                    if (static_cast<SizeType>(indexValue) >= memoryBuffer->GetSize()) {
                         state->ThrowException(
                             thread,
                             Exception::OutOfBoundsException()
@@ -1064,7 +1064,7 @@ public:
                         return;
                     }
 
-                    Memory::MemCpy(&static_cast<uint8 *>(memory_buffer->GetBuffer())[index_value], &dst_data, sizeof(dst_data));
+                    Memory::MemCpy(&static_cast<uint8 *>(memoryBuffer->GetBuffer())[indexValue], &dstData, sizeof(dstData));
                 }
 
                 return;
@@ -1075,7 +1075,7 @@ public:
                 buffer,
                 sizeof(buffer),
                 "Expected Array or MemoryBuffer, got %s",
-                index_register_value.GetTypeString()
+                indexRegisterValue.GetTypeString()
             );
 
             state->ThrowException(
@@ -1087,9 +1087,9 @@ public:
         }
 
         if (index.flags & Number::FLAG_SIGNED) {
-            int64 index_value = index.i;
+            int64 indexValue = index.i;
 
-            if (static_cast<SizeType>(index_value) >= array->GetSize()) {
+            if (static_cast<SizeType>(indexValue) >= array->GetSize()) {
                 state->ThrowException(
                     thread,
                     Exception::OutOfBoundsException()
@@ -1098,10 +1098,10 @@ public:
                 return;
             }
 
-            if (index_value < 0) {
+            if (indexValue < 0) {
                 // wrap around (python style)
-                index_value = static_cast<int64>(array->GetSize() + static_cast<SizeType>(index_value));
-                if (index_value < 0 || static_cast<SizeType>(index_value >= array->GetSize())) {
+                indexValue = static_cast<int64>(array->GetSize() + static_cast<SizeType>(indexValue));
+                if (indexValue < 0 || static_cast<SizeType>(indexValue >= array->GetSize())) {
                     state->ThrowException(
                         thread,
                         Exception::OutOfBoundsException()
@@ -1110,12 +1110,12 @@ public:
                 }
             }
 
-            array->AtIndex(index_value) = thread->m_regs[src_reg];
-            array->AtIndex(index_value).Mark();
+            array->AtIndex(indexValue) = thread->m_regs[srcReg];
+            array->AtIndex(indexValue).Mark();
         } else { // unsigned
-            const uint64 index_value = index.u;
+            const uint64 indexValue = index.u;
 
-            if (static_cast<SizeType>(index_value) >= array->GetSize()) {
+            if (static_cast<SizeType>(indexValue) >= array->GetSize()) {
                 state->ThrowException(
                     thread,
                     Exception::OutOfBoundsException()
@@ -1124,19 +1124,19 @@ public:
                 return;
             }
 
-            array->AtIndex(index_value) = thread->m_regs[src_reg];
-            array->AtIndex(index_value).Mark();
+            array->AtIndex(indexValue) = thread->m_regs[srcReg];
+            array->AtIndex(indexValue).Mark();
         }
     }
 
-    HYP_FORCE_INLINE void MovReg(BCRegister dst_reg, BCRegister src_reg)
+    HYP_FORCE_INLINE void MovReg(BCRegister dstReg, BCRegister srcReg)
     {
-        thread->m_regs[dst_reg] = thread->m_regs[src_reg];
+        thread->m_regs[dstReg] = thread->m_regs[srcReg];
     }
 
-    HYP_FORCE_INLINE void HasMemHash(BCRegister dst_reg, BCRegister src_reg, uint32 hash)
+    HYP_FORCE_INLINE void HasMemHash(BCRegister dstReg, BCRegister srcReg, uint32 hash)
     {
-        Value &src = thread->m_regs[src_reg];
+        Value &src = thread->m_regs[srcReg];
 
         Value result;
         result.m_value.b = false;
@@ -1148,7 +1148,7 @@ public:
             result.m_value.b = (ptr->LookupMemberFromHash(hash) != nullptr);
         }
 
-        thread->m_regs[dst_reg] = result;
+        thread->m_regs[dstReg] = result;
     }
 
     HYP_FORCE_INLINE void Push(BCRegister reg)
@@ -1162,9 +1162,9 @@ public:
         thread->m_stack.Pop();
     }
 
-    HYP_FORCE_INLINE void PushArray(BCRegister dst_reg, BCRegister src_reg)
+    HYP_FORCE_INLINE void PushArray(BCRegister dstReg, BCRegister srcReg)
     {
-        Value &dst = thread->m_regs[dst_reg];
+        Value &dst = thread->m_regs[dstReg];
         if (dst.m_type != Value::HEAP_POINTER) {
             state->ThrowException(
                 thread,
@@ -1191,7 +1191,7 @@ public:
             return;
         }
 
-        array->Push(thread->m_regs[src_reg]);
+        array->Push(thread->m_regs[srcReg]);
         array->AtIndex(array->GetSize() - 1).Mark();
     }
     
@@ -1250,25 +1250,25 @@ public:
         Assert(top.GetType() == Value::FUNCTION_CALL);
         
         // leave function and return to previous position
-        bs->Seek(top.GetValue().call.return_address);
+        bs->Seek(top.GetValue().call.returnAddress);
 
         // increase stack size by the amount required by the call
-        thread->GetStack().m_sp += top.GetValue().call.varargs_push - 1;
+        thread->GetStack().m_sp += top.GetValue().call.varargsPush - 1;
         // NOTE: the -1 is because we will be popping the FUNCTION_CALL 
         // object from the stack anyway...
 
         // decrease function depth
-        thread->m_func_depth--;
+        thread->m_funcDepth--;
     }
 
     HYP_FORCE_INLINE void BeginTry(BCAddress addr)
     {
-        ++thread->m_exception_state.m_try_counter;
+        ++thread->m_exceptionState.m_tryCounter;
 
         // increase stack size to store data about this try block
         Value info;
         info.m_type = Value::TRY_CATCH_INFO;
-        info.m_value.try_catch_info.catch_address = addr;
+        info.m_value.tryCatchInfo.catchAddress = addr;
 
         // store the info
         thread->m_stack.Push(info);
@@ -1278,49 +1278,49 @@ public:
     {
         // pop the try catch info from the stack
         Assert(thread->m_stack.Top().m_type == Value::TRY_CATCH_INFO);
-        Assert(thread->m_exception_state.m_try_counter != 0);
+        Assert(thread->m_exceptionState.m_tryCounter != 0);
 
         // pop try catch info
         thread->m_stack.Pop();
-        --thread->m_exception_state.m_try_counter;
+        --thread->m_exceptionState.m_tryCounter;
     }
 
     HYP_FORCE_INLINE void New(BCRegister dst, BCRegister src)
     {
         // read value from register
-        Value &class_sv = thread->m_regs[src];
-        Assert(class_sv.m_type == Value::HEAP_POINTER, "NEW operand must be a pointer type (%d), got %d", Value::HEAP_POINTER, class_sv.m_type);
+        Value &classSv = thread->m_regs[src];
+        Assert(classSv.m_type == Value::HEAP_POINTER, "NEW operand must be a pointer type (%d), got %d", Value::HEAP_POINTER, classSv.m_type);
 
-        HeapValue *class_ptr = class_sv.m_value.ptr;
-        Assert(class_ptr != nullptr);
+        HeapValue *classPtr = classSv.m_value.ptr;
+        Assert(classPtr != nullptr);
 
-        Array<Span<Member>> member_spans;
+        Array<Span<Member>> memberSpans;
 
-        HeapValue *base_ptr = class_ptr;
+        HeapValue *basePtr = classPtr;
         uint32 depth = 0;
 
         Value &res = thread->m_regs[dst];
 
-        while (base_ptr != nullptr) {
+        while (basePtr != nullptr) {
             // @TODO Depth limit
 
             // the NEW instruction makes a copy of the $proto data member
             // of the prototype object.
-            VMObject *base_vm_object = base_ptr->GetPointer<VMObject>();
-            Assert(base_vm_object != nullptr, "NEW operand should be a VMObject");
+            VMObject *baseVmObject = basePtr->GetPointer<VMObject>();
+            Assert(baseVmObject != nullptr, "NEW operand should be a VMObject");
 
-            Member *proto_mem = base_vm_object->LookupMemberFromHash(VMObject::PROTO_MEMBER_HASH, false);
+            Member *protoMem = baseVmObject->LookupMemberFromHash(VMObject::PROTO_MEMBER_HASH, false);
 
-            if (!proto_mem) {
+            if (!protoMem) {
                 // This base class does not have a prototype member.
                 break;
             }
 
-            if (proto_mem->value.m_type != Value::HEAP_POINTER) {
+            if (protoMem->value.m_type != Value::HEAP_POINTER) {
                 if (depth == 0) {
                     // simply copy the value into the new value as it is not a heap pointer.
-                    res.m_type = proto_mem->value.m_type;
-                    res.m_value = proto_mem->value.m_value;
+                    res.m_type = protoMem->value.m_type;
+                    res.m_value = protoMem->value.m_value;
                 } else {
                     state->ThrowException(
                         thread,
@@ -1331,17 +1331,17 @@ public:
                 return;
             }
 
-            if (proto_mem->value.m_value.ptr == nullptr) {
+            if (protoMem->value.m_value.ptr == nullptr) {
                 break;
             }
 
-            VMObject *proto_member_object = nullptr;
+            VMObject *protoMemberObject = nullptr;
 
-            if (!(proto_member_object = proto_mem->value.m_value.ptr->GetPointer<VMObject>())) {
+            if (!(protoMemberObject = protoMem->value.m_value.ptr->GetPointer<VMObject>())) {
                 if (depth == 0) {
                     // simply copy the value into the new value as it is not a heap pointer.
-                    res.m_type = proto_mem->value.m_type;
-                    res.m_value = proto_mem->value.m_value;
+                    res.m_type = protoMem->value.m_type;
+                    res.m_value = protoMem->value.m_value;
                 } else {
                     state->ThrowException(
                         thread,
@@ -1352,16 +1352,16 @@ public:
                 return;
             }
 
-            member_spans.PushBack({ proto_member_object->GetMembers(), proto_member_object->GetSize() });
+            memberSpans.PushBack({ protoMemberObject->GetMembers(), protoMemberObject->GetSize() });
 
-            Member *base_member = base_vm_object->LookupMemberFromHash(VMObject::BASE_MEMBER_HASH, false);
+            Member *baseMember = baseVmObject->LookupMemberFromHash(VMObject::BASE_MEMBER_HASH, false);
 
-            if (base_member) {
-                Assert(base_member->value.m_type == Value::HEAP_POINTER, "Base class must be pointer type (%d), got %d", Value::HEAP_POINTER, base_member->value.m_type);
+            if (baseMember) {
+                Assert(baseMember->value.m_type == Value::HEAP_POINTER, "Base class must be pointer type (%d), got %d", Value::HEAP_POINTER, baseMember->value.m_type);
 
-                base_ptr = base_member->value.m_value.ptr;
+                basePtr = baseMember->value.m_value.ptr;
             } else {
-                base_ptr = nullptr;
+                basePtr = nullptr;
             }
 
             depth++;
@@ -1374,16 +1374,16 @@ public:
         // Combine all proto members
         // The topmost type (first in the chain)
         // MUST be first so that loads/stores using member index match up!
-        Array<Member> all_members;
-        all_members.Reserve(1);
+        Array<Member> allMembers;
+        allMembers.Reserve(1);
 
-        for (auto &it : member_spans) {
+        for (auto &it : memberSpans) {
             for (SizeType index = 0; index < it.Size(); index++) {
-                all_members.PushBack(it.Data()[index]);
+                allMembers.PushBack(it.Data()[index]);
             }
         }
 
-        hv->Assign(VMObject(all_members.Data(), all_members.Size(), class_ptr));
+        hv->Assign(VMObject(allMembers.Data(), allMembers.Size(), classPtr));
 
         res.m_type = Value::HEAP_POINTER;
         res.m_value.ptr = hv;
@@ -1407,17 +1407,17 @@ public:
         hv->Mark();
     }
 
-    HYP_FORCE_INLINE void Cmp(BCRegister lhs_reg, BCRegister rhs_reg)
+    HYP_FORCE_INLINE void Cmp(BCRegister lhsReg, BCRegister rhsReg)
     {
         // dropout early for comparing something against itself
-        if (lhs_reg == rhs_reg) {
+        if (lhsReg == rhsReg) {
             thread->m_regs.m_flags = EQUAL;
             return;
         }
 
         // load values from registers
-        Value *lhs = &thread->m_regs[lhs_reg];
-        Value *rhs = &thread->m_regs[rhs_reg];
+        Value *lhs = &thread->m_regs[lhsReg];
+        Value *rhs = &thread->m_regs[rhsReg];
 
         Number a, b;
 
@@ -1510,14 +1510,14 @@ public:
     }
 
     HYP_FORCE_INLINE void Add(
-        BCRegister lhs_reg,
-        BCRegister rhs_reg,
-        BCRegister dst_reg
+        BCRegister lhsReg,
+        BCRegister rhsReg,
+        BCRegister dstReg
     )
     {
         // load values from registers
-        Value *lhs = &thread->m_regs[lhs_reg];
-        Value *rhs = &thread->m_regs[rhs_reg];
+        Value *lhs = &thread->m_regs[lhsReg];
+        Value *rhs = &thread->m_regs[rhsReg];
 
         Value result;
         result.m_type = MATCH_TYPES(lhs->m_type, rhs->m_type);
@@ -1539,18 +1539,18 @@ public:
         }
 
         // set the destination register to be the result
-        thread->m_regs[dst_reg] = result;
+        thread->m_regs[dstReg] = result;
     }
 
     HYP_FORCE_INLINE void Sub(
-        BCRegister lhs_reg,
-        BCRegister rhs_reg,
-        BCRegister dst_reg
+        BCRegister lhsReg,
+        BCRegister rhsReg,
+        BCRegister dstReg
     )
     {
         // load values from registers
-        Value *lhs = &thread->m_regs[lhs_reg];
-        Value *rhs = &thread->m_regs[rhs_reg];
+        Value *lhs = &thread->m_regs[lhsReg];
+        Value *rhs = &thread->m_regs[rhsReg];
 
         Value result;
         result.m_type = MATCH_TYPES(lhs->m_type, rhs->m_type);
@@ -1572,18 +1572,18 @@ public:
         }
 
         // set the destination register to be the result
-        thread->m_regs[dst_reg] = result;
+        thread->m_regs[dstReg] = result;
     }
 
     HYP_FORCE_INLINE void Mul(
-        BCRegister lhs_reg,
-        BCRegister rhs_reg,
-        BCRegister dst_reg
+        BCRegister lhsReg,
+        BCRegister rhsReg,
+        BCRegister dstReg
     )
     {
         // load values from registers
-        Value *lhs = &thread->m_regs[lhs_reg];
-        Value *rhs = &thread->m_regs[rhs_reg];
+        Value *lhs = &thread->m_regs[lhsReg];
+        Value *rhs = &thread->m_regs[rhsReg];
 
         Value result;
         result.m_type = MATCH_TYPES(lhs->m_type, rhs->m_type);
@@ -1605,18 +1605,18 @@ public:
         }
 
         // set the destination register to be the result
-        thread->m_regs[dst_reg] = result;
+        thread->m_regs[dstReg] = result;
     }
 
     HYP_FORCE_INLINE void Div(
-        BCRegister lhs_reg,
-        BCRegister rhs_reg,
-        BCRegister dst_reg
+        BCRegister lhsReg,
+        BCRegister rhsReg,
+        BCRegister dstReg
     )
     {
         // load values from registers
-        Value *lhs = &thread->m_regs[lhs_reg];
-        Value *rhs = &thread->m_regs[rhs_reg];
+        Value *lhs = &thread->m_regs[lhsReg];
+        Value *rhs = &thread->m_regs[rhsReg];
 
         Value result;
         result.m_type = MATCH_TYPES(lhs->m_type, rhs->m_type);
@@ -1782,18 +1782,18 @@ public:
         }
 
         // set the destination register to be the result
-        thread->m_regs[dst_reg] = result;
+        thread->m_regs[dstReg] = result;
     }
 
     HYP_FORCE_INLINE void Mod(
-        BCRegister lhs_reg,
-        BCRegister rhs_reg,
-        BCRegister dst_reg
+        BCRegister lhsReg,
+        BCRegister rhsReg,
+        BCRegister dstReg
     )
     {
         // load values from registers
-        Value *lhs = &thread->m_regs[lhs_reg];
-        Value *rhs = &thread->m_regs[rhs_reg];
+        Value *lhs = &thread->m_regs[lhsReg];
+        Value *rhs = &thread->m_regs[rhsReg];
 
         Value result;
         result.m_type = MATCH_TYPES(lhs->m_type, rhs->m_type);
@@ -1959,18 +1959,18 @@ public:
         }
 
         // set the destination register to be the result
-        thread->m_regs[dst_reg] = result;
+        thread->m_regs[dstReg] = result;
     }
 
     HYP_FORCE_INLINE void And(
-        BCRegister lhs_reg,
-        BCRegister rhs_reg,
-        BCRegister dst_reg
+        BCRegister lhsReg,
+        BCRegister rhsReg,
+        BCRegister dstReg
     )
     {
         // load values from registers
-        Value *lhs = &thread->m_regs[lhs_reg];
-        Value *rhs = &thread->m_regs[rhs_reg];
+        Value *lhs = &thread->m_regs[lhsReg];
+        Value *rhs = &thread->m_regs[rhsReg];
 
         Value result;
         result.m_type = MATCH_TYPES(lhs->m_type, rhs->m_type);
@@ -1992,18 +1992,18 @@ public:
         }
 
         // set the destination register to be the result
-        thread->m_regs[dst_reg] = result;
+        thread->m_regs[dstReg] = result;
     }
 
     HYP_FORCE_INLINE void Or(
-        BCRegister lhs_reg,
-        BCRegister rhs_reg,
-        BCRegister dst_reg
+        BCRegister lhsReg,
+        BCRegister rhsReg,
+        BCRegister dstReg
     )
     {
         // load values from registers
-        Value *lhs = &thread->m_regs[lhs_reg];
-        Value *rhs = &thread->m_regs[rhs_reg];
+        Value *lhs = &thread->m_regs[lhsReg];
+        Value *rhs = &thread->m_regs[rhsReg];
 
         Value result;
         result.m_type = MATCH_TYPES(lhs->m_type, rhs->m_type);
@@ -2025,18 +2025,18 @@ public:
         }
 
         // set the destination register to be the result
-        thread->m_regs[dst_reg] = result;
+        thread->m_regs[dstReg] = result;
     }
 
     HYP_FORCE_INLINE void Xor(
-        BCRegister lhs_reg,
-        BCRegister rhs_reg,
-        BCRegister dst_reg
+        BCRegister lhsReg,
+        BCRegister rhsReg,
+        BCRegister dstReg
     )
     {
         // load values from registers
-        Value *lhs = &thread->m_regs[lhs_reg];
-        Value *rhs = &thread->m_regs[rhs_reg];
+        Value *lhs = &thread->m_regs[lhsReg];
+        Value *rhs = &thread->m_regs[rhsReg];
 
         Value result;
         result.m_type = MATCH_TYPES(lhs->m_type, rhs->m_type);
@@ -2058,16 +2058,16 @@ public:
         }
 
         // set the destination register to be the result
-        thread->m_regs[dst_reg] = result;
+        thread->m_regs[dstReg] = result;
     }
 
-    HYP_FORCE_INLINE void Shl(BCRegister lhs_reg,
-        BCRegister rhs_reg,
-        BCRegister dst_reg)
+    HYP_FORCE_INLINE void Shl(BCRegister lhsReg,
+        BCRegister rhsReg,
+        BCRegister dstReg)
     {
         // load values from registers
-        Value *lhs = &thread->m_regs[lhs_reg];
-        Value *rhs = &thread->m_regs[rhs_reg];
+        Value *lhs = &thread->m_regs[lhsReg];
+        Value *rhs = &thread->m_regs[rhsReg];
 
         Value result;
         result.m_type = MATCH_TYPES(lhs->m_type, rhs->m_type);
@@ -2089,16 +2089,16 @@ public:
         }
 
         // set the destination register to be the result
-        thread->m_regs[dst_reg] = result;
+        thread->m_regs[dstReg] = result;
     }
 
-    HYP_FORCE_INLINE void Shr(BCRegister lhs_reg,
-        BCRegister rhs_reg,
-        BCRegister dst_reg)
+    HYP_FORCE_INLINE void Shr(BCRegister lhsReg,
+        BCRegister rhsReg,
+        BCRegister dstReg)
     {
         // load values from registers
-        Value *lhs = &thread->m_regs[lhs_reg];
-        Value *rhs = &thread->m_regs[rhs_reg];
+        Value *lhs = &thread->m_regs[lhsReg];
+        Value *rhs = &thread->m_regs[rhsReg];
 
         Value result;
         result.m_type = MATCH_TYPES(lhs->m_type, rhs->m_type);
@@ -2120,7 +2120,7 @@ public:
         }
 
         // set the destination register to be the result
-        thread->m_regs[dst_reg] = result;
+        thread->m_regs[dstReg] = result;
     }
 
     HYP_FORCE_INLINE void Not(BCRegister reg)
@@ -2579,9 +2579,9 @@ public:
         Value *value = &thread->m_regs[dst];
 
         // Ensure it is a VMObject
-        VMObject *class_object_ptr = nullptr;
+        VMObject *classObjectPtr = nullptr;
 
-        if (!value->GetPointer<VMObject>(&class_object_ptr)) {
+        if (!value->GetPointer<VMObject>(&classObjectPtr)) {
             state->ThrowException(
                 thread,
                 Exception::InvalidOperationException(
@@ -2597,9 +2597,9 @@ public:
         Value *target = &thread->m_regs[src];
 
         // Ensure it is a VMObject
-        VMObject *target_object_ptr = nullptr;
+        VMObject *targetObjectPtr = nullptr;
 
-        if (!target->GetPointer<VMObject>(&target_object_ptr)) {
+        if (!target->GetPointer<VMObject>(&targetObjectPtr)) {
             state->ThrowException(
                 thread,
                 Exception::InvalidOperationException(
@@ -2611,32 +2611,32 @@ public:
             return;
         }
 
-        bool is_instance = false;
+        bool isInstance = false;
 
         // Check if the target is an instance of the type
         vm::Value base = vm::Value(vm::Value::NONE, { .ptr = nullptr });
 
-        if (HeapValue *target_class = target_object_ptr->GetClassPointer()) {
-            constexpr uint32 max_depth = 1024;
+        if (HeapValue *targetClass = targetObjectPtr->GetClassPointer()) {
+            constexpr uint32 maxDepth = 1024;
             uint32 depth = 0;
 
-            vm::VMObject *target_class_object = target_class->GetPointer<vm::VMObject>();
+            vm::VMObject *targetClassObject = targetClass->GetPointer<vm::VMObject>();
 
-            while (target_class_object != nullptr && depth < max_depth) {
-                is_instance = (*target_class_object == *class_object_ptr);
+            while (targetClassObject != nullptr && depth < maxDepth) {
+                isInstance = (*targetClassObject == *classObjectPtr);
 
-                if (is_instance) {
+                if (isInstance) {
                     break;
                 }
 
-                if (!(target_class_object->LookupBasePointer(&base) && base.GetPointer<vm::VMObject>(&target_class_object))) {
+                if (!(targetClassObject->LookupBasePointer(&base) && base.GetPointer<vm::VMObject>(&targetClassObject))) {
                     break;
                 }
 
                 depth++;
             }
 
-            if (depth == max_depth) {
+            if (depth == maxDepth) {
                 state->ThrowException(
                     thread,
                     Exception::InvalidOperationException(
@@ -2650,7 +2650,7 @@ public:
         }
 
         // If it is not an instance, throw an exception
-        if (!is_instance) {
+        if (!isInstance) {
             state->ThrowException(
                 thread,
                 Exception::InvalidOperationException(

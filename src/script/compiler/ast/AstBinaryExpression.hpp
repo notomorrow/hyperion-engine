@@ -22,9 +22,9 @@ public:
     const RC<AstExpression> &GetRight() const { return m_right; }
 
     bool IsOperatorOverloadingEnabled() const
-        { return m_operator_overloading_enabled; }
-    void SetIsOperatorOverloadingEnabled(bool operator_overloading_enabled)
-        { m_operator_overloading_enabled = operator_overloading_enabled; }
+        { return m_operatorOverloadingEnabled; }
+    void SetIsOperatorOverloadingEnabled(bool operatorOverloadingEnabled)
+        { m_operatorOverloadingEnabled = operatorOverloadingEnabled; }
 
     virtual void Visit(AstVisitor *visitor, Module *mod) override;
     virtual std::unique_ptr<Buildable> Build(AstVisitor *visitor, Module *mod) override;
@@ -51,12 +51,12 @@ private:
     RC<AstExpression>   m_right;
     const Operator      *m_op;
 
-    RC<AstExpression>   m_operator_overload;
-    bool                m_operator_overloading_enabled;
+    RC<AstExpression>   m_operatorOverload;
+    bool                m_operatorOverloadingEnabled;
 
 #if HYP_SCRIPT_ENABLE_LAZY_DECLARATIONS
     // if the expression is lazy declaration
-    RC<AstVariableDeclaration> m_variable_declaration;
+    RC<AstVariableDeclaration> m_variableDeclaration;
     RC<AstVariableDeclaration> CheckLazyDeclaration(AstVisitor *visitor, Module *mod);
 #endif
 

@@ -42,17 +42,17 @@ SourceFile &SourceFile::operator=(const SourceFile &other)
 
 SourceFile::~SourceFile() = default;
 
-void SourceFile::ReadIntoBuffer(const ByteBuffer &input_buffer)
+void SourceFile::ReadIntoBuffer(const ByteBuffer &inputBuffer)
 {
-    Assert(m_buffer.Size() >= input_buffer.Size());
+    Assert(m_buffer.Size() >= inputBuffer.Size());
 
     // make sure we have enough space in the buffer
-    if (m_position + input_buffer.Size() >= m_buffer.Size()) {
+    if (m_position + inputBuffer.Size() >= m_buffer.Size()) {
         Assert("not enough space in buffer");
     }
 
-    for (SizeType i = 0; i < input_buffer.Size(); i++) {
-        m_buffer.Data()[m_position++] = input_buffer.Data()[i];
+    for (SizeType i = 0; i < inputBuffer.Size(); i++) {
+        m_buffer.Data()[m_position++] = inputBuffer.Data()[i];
     }
 }
 

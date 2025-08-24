@@ -26,7 +26,7 @@ void AstFileImport::Visit(AstVisitor *visitor, Module *mod)
 {
     // find the folder which the current file is in
     std::string dir = m_location.GetFileName().Data();
-    const SizeType index = dir.find_last_of("/\\");
+    const SizeType index = dir.findLastOf("/\\");
 
     if (index != std::string::npos) {
         dir = dir.substr(0, index) + "/";

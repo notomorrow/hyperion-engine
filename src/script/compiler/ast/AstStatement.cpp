@@ -6,7 +6,7 @@ const String AstStatement::unnamed = "<unnamed>";
 
 AstStatement::AstStatement(const SourceLocation &location)
     : m_location(location),
-      m_scope_depth(0)
+      m_scopeDepth(0)
 {
 }
 

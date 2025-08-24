@@ -38,10 +38,10 @@ public:
     
 private:
 #if HYP_SCRIPT_TYPEOF_RETURN_OBJECT
-    RC<AstTypeRef>      m_type_ref;
-    SymbolTypePtr_t     m_held_type;
+    RC<AstTypeRef>      m_typeRef;
+    SymbolTypePtr_t     m_heldType;
 #else
-    RC<AstExpression>   m_string_expr;
+    RC<AstExpression>   m_stringExpr;
 #endif
 
     inline RC<AstTypeOfExpression> CloneImpl() const

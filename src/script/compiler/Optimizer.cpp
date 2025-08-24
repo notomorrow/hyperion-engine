@@ -11,20 +11,20 @@ namespace hyperion::compiler {
 RC<AstConstant> Optimizer::ConstantFold(
     RC<AstExpression> &left,
     RC<AstExpression> &right,
-    Operators op_type,
+    Operators opType,
     AstVisitor *visitor
 )
 {
     Assert(left != nullptr);
     Assert(right != nullptr);
 
-    const AstConstant *left_as_constant  = dynamic_cast<const AstConstant*>(left->GetValueOf());
-    const AstConstant *right_as_constant = dynamic_cast<const AstConstant*>(right->GetValueOf());
+    const AstConstant *leftAsConstant  = dynamic_cast<const AstConstant*>(left->GetValueOf());
+    const AstConstant *rightAsConstant = dynamic_cast<const AstConstant*>(right->GetValueOf());
 
     RC<AstConstant> result;
 
-    if (left_as_constant != nullptr && right_as_constant != nullptr) {
-        result = left_as_constant->HandleOperator(op_type, right_as_constant);
+    if (leftAsConstant != nullptr && rightAsConstant != nullptr) {
+        result = leftAsConstant->HandleOperator(opType, rightAsConstant);
         // don't have to worry about assignment operations,
         // because at this point both sides are const and literal.
     }
@@ -41,47 +41,47 @@ RC<AstExpression> Optimizer::OptimizeExpr(
     Assert(expr != nullptr);
     expr->Optimize(visitor, mod);
 
-    if (const AstIdentifier *expr_as_identifier = dynamic_cast<AstIdentifier *>(expr.Get())) {
+    if (const AstIdentifier *exprAsIdentifier = dynamic_cast<AstIdentifier *>(expr.Get())) {
         // the side is a variable, so we can further optimize by inlining,
         // only if it is literal.
-        if (expr_as_identifier->IsLiteral()) {
-            if (const RC<Identifier> &ident = expr_as_identifier->GetProperties().GetIdentifier()) {
-                if (const RC<AstExpression> &current_value = ident->GetCurrentValue()) {
+        if (exprAsIdentifier->IsLiteral()) {
+            if (const RC<Identifier> &ident = exprAsIdentifier->GetProperties().GetIdentifier()) {
+                if (const RC<AstExpression> &currentValue = ident->GetCurrentValue()) {
                     // decrement use count because it would have been incremented by Visit()
                     ident->DecUseCount();
-                    return Optimizer::OptimizeExpr(current_value, visitor, mod);
+                    return Optimizer::OptimizeExpr(currentValue, visitor, mod);
                 }
             }
         }
-    } else if (const AstBinaryExpression *expr_as_binop = dynamic_cast<AstBinaryExpression *>(expr.Get())) {
-        if (expr_as_binop->GetRight() == nullptr) {
+    } else if (const AstBinaryExpression *exprAsBinop = dynamic_cast<AstBinaryExpression *>(expr.Get())) {
+        if (exprAsBinop->GetRight() == nullptr) {
             // right side has been optimized away
-            return Optimizer::OptimizeExpr(expr_as_binop->GetLeft(), visitor, mod);
+            return Optimizer::OptimizeExpr(exprAsBinop->GetLeft(), visitor, mod);
         }
     }
 
     return expr;
 }
 
-Optimizer::Optimizer(AstIterator *ast_iterator, CompilationUnit *compilation_unit)
-    : AstVisitor(ast_iterator, compilation_unit)
+Optimizer::Optimizer(AstIterator *astIterator, CompilationUnit *compilationUnit)
+    : AstVisitor(astIterator, compilationUnit)
 {
 }
 
 Optimizer::Optimizer(const Optimizer &other)
-    : AstVisitor(other.m_ast_iterator, other.m_compilation_unit)
+    : AstVisitor(other.m_astIterator, other.m_compilationUnit)
 {
 }
 
-void Optimizer::Optimize(bool expect_module_decl)
+void Optimizer::Optimize(bool expectModuleDecl)
 {
-    /*if (expect_module_decl) {
-        if (m_ast_iterator->HasNext()) {
-            RC<AstStatement> first_stmt = m_ast_iterator->Next();
+    /*if (expectModuleDecl) {
+        if (m_astIterator->HasNext()) {
+            RC<AstStatement> firstStmt = m_astIterator->Next();
 
-            if (AstModuleDeclaration *mod_decl = dynamic_cast<AstModuleDeclaration*>(first_stmt.Get())) {
+            if (AstModuleDeclaration *modDecl = dynamic_cast<AstModuleDeclaration*>(firstStmt.Get())) {
                 // all files must begin with a module declaration
-                mod_decl->Optimize(this, nullptr);
+                modDecl->Optimize(this, nullptr);
                 OptimizeInner();
             }
         }
@@ -94,11 +94,11 @@ void Optimizer::Optimize(bool expect_module_decl)
 
 void Optimizer::OptimizeInner()
 {
-    Module *mod = m_compilation_unit->GetCurrentModule();
+    Module *mod = m_compilationUnit->GetCurrentModule();
     Assert(mod != nullptr);
     
-    while (m_ast_iterator->HasNext()) {
-        m_ast_iterator->Next()->Optimize(this, mod);
+    while (m_astIterator->HasNext()) {
+        m_astIterator->Next()->Optimize(this, mod);
     }
 }
 

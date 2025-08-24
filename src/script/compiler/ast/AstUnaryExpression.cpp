@@ -22,14 +22,14 @@ namespace hyperion::compiler {
 /** Attempts to evaluate the optimized expression at compile-time. */
 static RC<AstConstant> ConstantFold(
     RC<AstExpression> &target, 
-    Operators op_type,
+    Operators opType,
     AstVisitor *visitor
 )
 {
     RC<AstConstant> result;
 
-    if (const AstConstant *target_as_constant = dynamic_cast<const AstConstant *>(target.Get())) {
-        result = target_as_constant->HandleOperator(op_type, nullptr);
+    if (const AstConstant *targetAsConstant = dynamic_cast<const AstConstant *>(target.Get())) {
+        result = targetAsConstant->HandleOperator(opType, nullptr);
     }
 
     return result;
@@ -38,12 +38,12 @@ static RC<AstConstant> ConstantFold(
 AstUnaryExpression::AstUnaryExpression(
     const RC<AstExpression> &target,
     const Operator *op,
-    bool is_postfix_version,
+    bool isPostfixVersion,
     const SourceLocation &location
 ) : AstExpression(location, ACCESS_MODE_LOAD),
     m_target(target),
     m_op(op),
-    m_is_postfix_version(is_postfix_version),
+    m_isPostfixVersion(isPostfixVersion),
     m_folded(false)
 {
 }
@@ -55,31 +55,31 @@ void AstUnaryExpression::Visit(AstVisitor *visitor, Module *mod)
     // use a bin op for operators that modify their argument
     if (m_op->ModifiesValue()) {
         RC<AstExpression> expr;
-        const Operator *bin_op = nullptr;
+        const Operator *binOp = nullptr;
 
         switch (m_op->GetOperatorType()) {
         case OP_increment:
             expr.Reset(new AstInteger(1, m_location));
-            bin_op = Operator::FindBinaryOperator(Operators::OP_add_assign);
+            binOp = Operator::FindBinaryOperator(Operators::OP_add_assign);
 
             break;
         case OP_decrement:
             expr.Reset(new AstInteger(1, m_location));
-            bin_op = Operator::FindBinaryOperator(Operators::OP_subtract_assign);
+            binOp = Operator::FindBinaryOperator(Operators::OP_subtract_assign);
 
             break;
         default:
             Assert(false, "Unhandled operator type");
         }
 
-        m_bin_expr.Reset(new AstBinaryExpression(
+        m_binExpr.Reset(new AstBinaryExpression(
             m_target,
             expr,
-            bin_op,
+            binOp,
             m_location
         ));
 
-        m_bin_expr->Visit(visitor, mod);
+        m_binExpr->Visit(visitor, mod);
 
         return;
     }
@@ -137,7 +137,7 @@ void AstUnaryExpression::Visit(AstVisitor *visitor, Module *mod)
 
 std::unique_ptr<Buildable> AstUnaryExpression::Build(AstVisitor *visitor, Module *mod)
 {
-    InstructionStreamContextGuard context_guard(
+    InstructionStreamContextGuard contextGuard(
         &visitor->GetCompilationUnit()->GetInstructionStream().GetContextTree(),
         INSTRUCTION_STREAM_CONTEXT_DEFAULT
     );
@@ -146,8 +146,8 @@ std::unique_ptr<Buildable> AstUnaryExpression::Build(AstVisitor *visitor, Module
 
     uint8 rp;
 
-    if (m_bin_expr != nullptr) {
-        if (m_is_postfix_version) {
+    if (m_binExpr != nullptr) {
+        if (m_isPostfixVersion) {
             // for postfix version:
             //  - load var into register
             //  - do binary op
@@ -159,14 +159,14 @@ std::unique_ptr<Buildable> AstUnaryExpression::Build(AstVisitor *visitor, Module
             visitor->GetCompilationUnit()->GetInstructionStream().IncRegisterUsage();
             rp = visitor->GetCompilationUnit()->GetInstructionStream().GetCurrentRegister();
 
-            chunk->Append(m_bin_expr->Build(visitor, mod));
+            chunk->Append(m_binExpr->Build(visitor, mod));
 
             visitor->GetCompilationUnit()->GetInstructionStream().DecRegisterUsage();
             rp = visitor->GetCompilationUnit()->GetInstructionStream().GetCurrentRegister();
 
             return chunk;
         } else {
-            return m_bin_expr->Build(visitor, mod);
+            return m_binExpr->Build(visitor, mod);
         }
     }
 
@@ -190,26 +190,26 @@ std::unique_ptr<Buildable> AstUnaryExpression::Build(AstVisitor *visitor, Module
         } else if (m_op->GetType() & LOGICAL) {
             if (m_op->GetOperatorType() == Operators::OP_logical_not) {
                 // the label to jump to the very end, and set the result to false
-                LabelId false_label = context_guard->NewLabel();
-                chunk->TakeOwnershipOfLabel(false_label);
+                LabelId falseLabel = contextGuard->NewLabel();
+                chunk->TakeOwnershipOfLabel(falseLabel);
 
-                LabelId true_label = context_guard->NewLabel();
-                chunk->TakeOwnershipOfLabel(true_label);
+                LabelId trueLabel = contextGuard->NewLabel();
+                chunk->TakeOwnershipOfLabel(trueLabel);
 
                 // compare lhs to 0 (false)
                 chunk->Append(BytecodeUtil::Make<Comparison>(Comparison::CMPZ, rp));
 
                 // jump if they are not equal: i.e the value is true
-                chunk->Append(BytecodeUtil::Make<Jump>(Jump::JE, true_label));
+                chunk->Append(BytecodeUtil::Make<Jump>(Jump::JE, trueLabel));
 
                 // didn't skip past: load the false value
                 chunk->Append(BytecodeUtil::Make<ConstBool>(rp, false));
 
                 // now, jump to the very end so we don't load the true value.
-                chunk->Append(BytecodeUtil::Make<Jump>(Jump::JMP, false_label));
+                chunk->Append(BytecodeUtil::Make<Jump>(Jump::JMP, falseLabel));
 
                 // skip to here to load true
-                chunk->Append(BytecodeUtil::Make<LabelMarker>(true_label));
+                chunk->Append(BytecodeUtil::Make<LabelMarker>(trueLabel));
 
                 // get current register index
                 rp = visitor->GetCompilationUnit()->GetInstructionStream().GetCurrentRegister();
@@ -218,7 +218,7 @@ std::unique_ptr<Buildable> AstUnaryExpression::Build(AstVisitor *visitor, Module
                 chunk->Append(BytecodeUtil::Make<ConstBool>(rp, true));
 
                 // skip to here to avoid loading 'true' into the register
-                chunk->Append(BytecodeUtil::Make<LabelMarker>(false_label));
+                chunk->Append(BytecodeUtil::Make<LabelMarker>(falseLabel));
             } else {
                 Assert(false, "Operator not implemented: %s", Operator::FindUnaryOperator(m_op->GetOperatorType())->LookupStringValue().Data());
             }
@@ -232,8 +232,8 @@ std::unique_ptr<Buildable> AstUnaryExpression::Build(AstVisitor *visitor, Module
 
 void AstUnaryExpression::Optimize(AstVisitor *visitor, Module *mod)
 {
-    if (m_bin_expr != nullptr) {
-        m_bin_expr->Optimize(visitor, mod);
+    if (m_binExpr != nullptr) {
+        m_binExpr->Optimize(visitor, mod);
 
         return;
     }
@@ -242,12 +242,12 @@ void AstUnaryExpression::Optimize(AstVisitor *visitor, Module *mod)
 
     if (m_op->GetOperatorType() == Operators::OP_positive) {
         m_folded = true;
-    } else if (auto constant_value = ConstantFold(
+    } else if (auto constantValue = ConstantFold(
         m_target,
         m_op->GetOperatorType(),
         visitor
     )) {
-        m_target = constant_value;
+        m_target = constantValue;
         m_folded = true;
     }
 }
@@ -259,8 +259,8 @@ RC<AstStatement> AstUnaryExpression::Clone() const
 
 Tribool AstUnaryExpression::IsTrue() const
 {
-    if (m_bin_expr != nullptr) {
-        return m_bin_expr->IsTrue();
+    if (m_binExpr != nullptr) {
+        return m_binExpr->IsTrue();
     }
 
     if (m_folded) {
@@ -272,8 +272,8 @@ Tribool AstUnaryExpression::IsTrue() const
 
 bool AstUnaryExpression::MayHaveSideEffects() const
 {
-    if (m_bin_expr != nullptr) {
-        return m_bin_expr->MayHaveSideEffects();
+    if (m_binExpr != nullptr) {
+        return m_binExpr->MayHaveSideEffects();
     }
 
     return m_target->MayHaveSideEffects();
@@ -281,8 +281,8 @@ bool AstUnaryExpression::MayHaveSideEffects() const
 
 SymbolTypePtr_t AstUnaryExpression::GetExprType() const
 {
-    if (m_bin_expr != nullptr) {
-        return m_bin_expr->GetExprType();
+    if (m_binExpr != nullptr) {
+        return m_binExpr->GetExprType();
     }
 
     return m_target->GetExprType();

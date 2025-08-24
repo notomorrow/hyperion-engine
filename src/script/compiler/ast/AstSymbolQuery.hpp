@@ -13,7 +13,7 @@ class AstSymbolQuery : public AstExpression
 {
 public:
     AstSymbolQuery(
-        const String &command_name,
+        const String &commandName,
         const RC<AstExpression> &expr,
         const SourceLocation &location
     );
@@ -33,24 +33,24 @@ public:
     virtual HashCode GetHashCode() const override
     {
         HashCode hc = AstExpression::GetHashCode().Add(TypeName<AstSymbolQuery>());
-        hc.Add(m_command_name);
+        hc.Add(m_commandName);
         hc.Add(m_expr ? m_expr->GetHashCode() : HashCode());
 
         return hc;
     }
 
 private:
-    String                  m_command_name;
+    String                  m_commandName;
     RC<AstExpression>       m_expr;
 
     // set while analyzing
-    SymbolTypePtr_t         m_symbol_type;
-    RC<AstExpression>       m_result_value;
+    SymbolTypePtr_t         m_symbolType;
+    RC<AstExpression>       m_resultValue;
 
     RC<AstSymbolQuery> CloneImpl() const
     {
         return RC<AstSymbolQuery>(new AstSymbolQuery(
-            m_command_name,
+            m_commandName,
             CloneAstNode(m_expr),
             m_location
         ));

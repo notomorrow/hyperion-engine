@@ -15,7 +15,7 @@ class Meta
 {
 public:
     static void BuildMetaLibrary(hyperion::vm::VM &vm,
-        CompilationUnit &compilation_unit,
+        CompilationUnit &compilationUnit,
         hyperion::APIInstance &api);
 };
 } // namespace compiler

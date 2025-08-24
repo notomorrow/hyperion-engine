@@ -13,93 +13,93 @@
 namespace hyperion::compiler {
 
 CompilationUnit::CompilationUnit()
-    : m_global_module(new Module(
-          hyperion::compiler::Config::global_module_name,
+    : m_globalModule(new Module(
+          hyperion::compiler::Config::globalModuleName,
           SourceLocation::eof
       )),
       m_builtins(this)
 {
-    m_global_module->SetImportTreeLink(m_module_tree.TopNode());
+    m_globalModule->SetImportTreeLink(m_moduleTree.TopNode());
 
-    Scope &top = m_global_module->m_scopes.Top();
+    Scope &top = m_globalModule->m_scopes.Top();
 
-    m_module_tree.TopNode()->Get() = m_global_module.Get();
+    m_moduleTree.TopNode()->Get() = m_globalModule.Get();
 }
 
 CompilationUnit::~CompilationUnit() = default;
 
-void CompilationUnit::RegisterType(const SymbolTypePtr_t &type_ptr)
+void CompilationUnit::RegisterType(const SymbolTypePtr_t &typePtr)
 {
-    Assert(type_ptr != nullptr);
+    Assert(typePtr != nullptr);
 
     Assert(
-        type_ptr->GetTypeObject().Lock() != nullptr,
+        typePtr->GetTypeObject().Lock() != nullptr,
         "Type object must be assigned to SymbolType before RegisterType() is called. SymbolType name: %s",
-        type_ptr->GetName().Data()
+        typePtr->GetName().Data()
     );
 
     // @TODO Use a more efficient data structure
-    // for registered_types like an IntrusiveHashSet or something
+    // for registeredTypes like an IntrusiveHashSet or something
 
-    const HashCode type_ptr_hash_code = type_ptr->GetHashCode();
+    const HashCode typePtrHashCode = typePtr->GetHashCode();
 
-    auto registered_types_it = m_registered_types.FindIf([type_ptr_hash_code](const SymbolTypePtr_t &type)
+    auto registeredTypesIt = m_registeredTypes.FindIf([typePtrHashCode](const SymbolTypePtr_t &type)
     {
-        return type->GetHashCode() == type_ptr_hash_code;
+        return type->GetHashCode() == typePtrHashCode;
     });
 
-    if (registered_types_it != m_registered_types.End()) {
-        Assert((*registered_types_it)->GetId() != -1);
+    if (registeredTypesIt != m_registeredTypes.End()) {
+        Assert((*registeredTypesIt)->GetId() != -1);
 
         // re-use the id because the type is already registered
-        type_ptr->SetId((*registered_types_it)->GetId());
+        typePtr->SetId((*registeredTypesIt)->GetId());
 
         return;
     }
 
     Array<NamesPair_t> names;
 
-    for (const SymbolTypeMember &member : type_ptr->GetMembers()) {
-        const String &member_name = member.name;
+    for (const SymbolTypeMember &member : typePtr->GetMembers()) {
+        const String &memberName = member.name;
 
-        Array<uint8> array_elements;
-        array_elements.Resize(member_name.Size());
-        Memory::MemCpy(array_elements.Data(), member_name.Data(), member_name.Size());
+        Array<uint8> arrayElements;
+        arrayElements.Resize(memberName.Size());
+        Memory::MemCpy(arrayElements.Data(), memberName.Data(), memberName.Size());
 
         names.PushBack(NamesPair_t {
-            member_name.Size(),
-            std::move(array_elements)
+            memberName.Size(),
+            std::move(arrayElements)
         });
     }
 
-    Assert(type_ptr->GetMembers().Size() < hyperion::compiler::Config::max_data_members);
+    Assert(typePtr->GetMembers().Size() < hyperion::compiler::Config::maxDataMembers);
 
     // create static object
     StaticTypeInfo st;
-    st.m_size = type_ptr->GetMembers().Size();
+    st.m_size = typePtr->GetMembers().Size();
     st.m_names = names;
-    st.m_name = type_ptr->GetName();
+    st.m_name = typePtr->GetName();
 
     int id;
 
     StaticObject so(st);
-    int found_id = m_instruction_stream.FindStaticObject(so);
-    if (found_id == -1) {
-        so.m_id = m_instruction_stream.NewStaticId();
-        m_instruction_stream.AddStaticObject(so);
+    int foundId = m_instructionStream.FindStaticObject(so);
+    if (foundId == -1) {
+        so.m_id = m_instructionStream.NewStaticId();
+        m_instructionStream.AddStaticObject(so);
         id = so.m_id;
     } else {
-        id = found_id;
+        id = foundId;
     }
 
-    type_ptr->SetId(id);
+    typePtr->SetId(id);
 
-    m_registered_types.PushBack(type_ptr);
+    m_registeredTypes.PushBack(typePtr);
 }
 
 Module *CompilationUnit::LookupModule(const String &name)
 {
-    TreeNode<Module *> *top = m_module_tree.TopNode();
+    TreeNode<Module *> *top = m_moduleTree.TopNode();
 
     while (top != nullptr) {
         if (top->Get() != nullptr && top->Get()->GetName() == name) {

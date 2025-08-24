@@ -16,27 +16,27 @@ BytecodeStream::BytecodeStream()
 }
 
 BytecodeStream::BytecodeStream(const ubyte *buffer, SizeType size, SizeType position)
-    : m_byte_buffer(size, buffer),
+    : m_byteBuffer(size, buffer),
       m_position(position)
 {
 }
 
-BytecodeStream::BytecodeStream(const ByteBuffer &byte_buffer, SizeType position)
-    : m_byte_buffer(byte_buffer),
+BytecodeStream::BytecodeStream(const ByteBuffer &byteBuffer, SizeType position)
+    : m_byteBuffer(byteBuffer),
       m_position(position)
 {
     
 }
 
 BytecodeStream::BytecodeStream(const BytecodeStream &other)
-    : m_byte_buffer(other.m_byte_buffer),
+    : m_byteBuffer(other.m_byteBuffer),
       m_position(other.m_position)
 {
 }
 
 BytecodeStream &BytecodeStream::operator=(const BytecodeStream &other)
 {
-    m_byte_buffer = other.m_byte_buffer;
+    m_byteBuffer = other.m_byteBuffer;
     m_position = other.m_position;
 
     return *this;
@@ -47,10 +47,10 @@ void BytecodeStream::ReadZeroTerminatedString(char *ptr)
     ubyte ch;
     SizeType i = 0;
 
-    const auto *data = m_byte_buffer.Data();
+    const auto *data = m_byteBuffer.Data();
 
     do {
-        Assert(m_position < m_byte_buffer.Size(), "Attempted to read past end of buffer!");
+        Assert(m_position < m_byteBuffer.Size(), "Attempted to read past end of buffer!");
 
         ptr[i++] = char(ch = data[m_position++]);
     } while (ch);

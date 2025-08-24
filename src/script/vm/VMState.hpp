@@ -49,13 +49,13 @@ struct ExceptionState
 {
     // incremented each time BEGIN_TRY is encountered,
     // decremented each time END_TRY is encountered
-    uint32 m_try_counter = 0;
+    uint32 m_tryCounter = 0;
 
     // set to true when an exception occurs,
     // set to false when handled in BEGIN_TRY
-    uint32 m_exception_depth = 0;
+    uint32 m_exceptionDepth = 0;
 
-    bool HasExceptionOccurred() const { return m_exception_depth != 0; }
+    bool HasExceptionOccurred() const { return m_exceptionDepth != 0; }
 };
 
 struct ExecutionThread
@@ -63,17 +63,17 @@ struct ExecutionThread
     friend struct VMState;
 
     StackMemory     m_stack;
-    ExceptionState  m_exception_state;
+    ExceptionState  m_exceptionState;
     Registers       m_regs;
 
-    uint32            m_func_depth = 0;
+    uint32            m_funcDepth = 0;
     int             m_id = -1;
 
     StackMemory &GetStack()
         { return m_stack; }
 
     ExceptionState &GetExceptionState()
-        { return m_exception_state; }
+        { return m_exceptionState; }
 
     Registers &GetRegisters()
         { return m_regs; }
@@ -92,15 +92,15 @@ struct VMState
 
     ExecutionThread                     *m_threads[VM_MAX_THREADS];
     Heap                                m_heap;
-    StaticMemory                        m_static_memory;
-    non_owning_ptr<VM>                  m_vm;
+    StaticMemory                        m_staticMemory;
+    nonOwningPtr<VM>                  m_vm;
     Tracemap                            m_tracemap;
-    ExportedSymbolTable                 m_exported_symbols;
-    FlatMap<uint32, Weak<DynModule>>    m_dyn_modules;
+    ExportedSymbolTable                 m_exportedSymbols;
+    FlatMap<uint32, Weak<DynModule>>    m_dynModules;
 
     bool                                good = true;
-    bool                                enable_auto_gc = ENABLE_GC;
-    int                                 m_max_heap_objects = GC_THRESHOLD_MIN;
+    bool                                enableAutoGc = ENABLE_GC;
+    int                                 m_maxHeapObjects = GC_THRESHOLD_MIN;
 
     /** Reset the state of the VM, destroying all heap objects,
         stack objects and exception flags, etc.
@@ -120,10 +120,10 @@ struct VMState
     
     /** Get the number of threads currently in use */
     SizeType GetNumThreads() const
-        { return m_num_threads; }
+        { return m_numThreads; }
 
     ExecutionThread *GetMainThread() const
-        { Assert(m_num_threads != 0); return m_threads[0]; }
+        { Assert(m_numThreads != 0); return m_threads[0]; }
 
     Heap &GetHeap()
         { return m_heap; }
@@ -132,13 +132,13 @@ struct VMState
         { return m_heap; }
 
     ExportedSymbolTable &GetExportedSymbols()
-        { return m_exported_symbols; }
+        { return m_exportedSymbols; }
 
     const ExportedSymbolTable &GetExportedSymbols() const
-        { return m_exported_symbols; }
+        { return m_exportedSymbols; }
 
 private:
-    SizeType m_num_threads = 0;
+    SizeType m_numThreads = 0;
 };
 
 } // namespace vm

@@ -16,7 +16,7 @@ VMStruct VMStruct::MakeStruct(const VMStructDefinition &definition)
     VMStruct result;
 
     result.m_header.count = uint32(definition.members.Size());
-    result.m_header.total_size = 0;
+    result.m_header.totalSize = 0;
     result.m_header.offsets = new uint32[definition.members.Size()];
     result.m_header.types = new VMStructType[definition.members.Size()];
     result.m_header.names = new char*[definition.members.Size()];
@@ -38,88 +38,88 @@ VMStruct VMStruct::MakeStruct(const VMStructDefinition &definition)
                 definition.members[index].first.Size() + 1
             );
 
-            const uint8 byte_size = type < VM_STRUCT_TYPE_DYNAMIC
+            const uint8 byteSize = type < VM_STRUCT_TYPE_DYNAMIC
                 ? GetByteSize(type)
                 : uint8(sizeof(void *)) /* Sizeof pointer */;
 
-            offset += byte_size;
+            offset += byteSize;
         }
 
-        result.m_header.total_size = uint32(offset);
+        result.m_header.totalSize = uint32(offset);
     }
 
-    result.m_bytes.SetSize(result.m_header.total_size);
+    result.m_bytes.SetSize(result.m_header.totalSize);
 
-    result.m_dynamic_memory.values.Resize(result.m_header.count);
+    result.m_dynamicMemory.values.Resize(result.m_header.count);
 
     for (uint32 index = 0; index < result.m_header.count; index++) {
         VMStructType type = result.m_header.types[index];
         uint32 offset = result.m_header.offsets[index];
 
-        const uint32 member_size = index != result.m_header.count - 1
+        const uint32 memberSize = index != result.m_header.count - 1
             ? result.m_header.offsets[index + 1] - offset
-            : result.m_header.total_size - offset;
+            : result.m_header.totalSize - offset;
 
         const Value &value = definition.members[index].second;
 
         if (type < VM_STRUCT_TYPE_DYNAMIC) {
-            Assert(member_size <= sizeof(Value::ValueData), "Byte size of struct member must be <= sizeof(Value::ValueData)");
+            Assert(memberSize <= sizeof(Value::ValueData), "Byte size of struct member must be <= sizeof(Value::ValueData)");
 
-            const Value::ValueData &value_data = value.m_value;
+            const Value::ValueData &valueData = value.m_value;
 
             // read next n bytes
             switch (type) {
             case VM_STRUCT_TYPE_I8:
-                result.m_bytes.Write(member_size, offset, &value_data.i8);
+                result.m_bytes.Write(memberSize, offset, &valueData.i8);
                 break;
             case VM_STRUCT_TYPE_U8:
-                result.m_bytes.Write(member_size, offset, &value_data.u8);
+                result.m_bytes.Write(memberSize, offset, &valueData.u8);
                 break;
             case VM_STRUCT_TYPE_I16:
-                result.m_bytes.Write(member_size, offset, &value_data.i16);
+                result.m_bytes.Write(memberSize, offset, &valueData.i16);
                 break;
             case VM_STRUCT_TYPE_U16:
-                result.m_bytes.Write(member_size, offset, &value_data.u16);
+                result.m_bytes.Write(memberSize, offset, &valueData.u16);
                 break;
             case VM_STRUCT_TYPE_I32:
-                result.m_bytes.Write(member_size, offset, &value_data.i32);
+                result.m_bytes.Write(memberSize, offset, &valueData.i32);
                 break;
             case VM_STRUCT_TYPE_U32:
-                result.m_bytes.Write(member_size, offset, &value_data.u32);
+                result.m_bytes.Write(memberSize, offset, &valueData.u32);
                 break;
             case VM_STRUCT_TYPE_I64:
-                result.m_bytes.Write(member_size, offset, &value_data.i64);
+                result.m_bytes.Write(memberSize, offset, &valueData.i64);
                 break;
             case VM_STRUCT_TYPE_U64:
-                result.m_bytes.Write(member_size, offset, &value_data.u64);
+                result.m_bytes.Write(memberSize, offset, &valueData.u64);
                 break;
             case VM_STRUCT_TYPE_F32:
-                result.m_bytes.Write(member_size, offset, &value_data.f);
+                result.m_bytes.Write(memberSize, offset, &valueData.f);
                 break;
             case VM_STRUCT_TYPE_F64:
-                result.m_bytes.Write(member_size, offset, &value_data.d);
+                result.m_bytes.Write(memberSize, offset, &valueData.d);
                 break;
             default:
-                result.m_bytes.Write(member_size, offset, &value_data.i8);
+                result.m_bytes.Write(memberSize, offset, &valueData.i8);
                 break;
             }
         } else {
             Assert(value.m_type == Value::ValueType::HEAP_POINTER);
-            Assert(member_size == sizeof(void *));
+            Assert(memberSize == sizeof(void *));
 
             void *vp = GetRawPointerForHeapValue(value.m_value.ptr);
             result.m_bytes.Write(sizeof(void *), offset, &vp);
 
-            result.m_dynamic_memory.values[index] = value;
+            result.m_dynamicMemory.values[index] = value;
         }
     }
 
     return result;
 }
 
-VMStructType VMStruct::ToStructType(vm::Value::ValueType value_type)
+VMStructType VMStruct::ToStructType(vm::Value::ValueType valueType)
 {
-    switch (value_type) {
+    switch (valueType) {
     case Value::ValueType::I8:
         return VM_STRUCT_TYPE_I8;
     case Value::ValueType::U8:
@@ -235,7 +235,7 @@ Value VMStruct::ReadMember(const char *name) const
                     Assert(false, "Not implemented");
                 }
             } else {
-                return m_dynamic_memory.values[index];
+                return m_dynamicMemory.values[index];
             }
         }
     }
@@ -247,36 +247,36 @@ bool VMStruct::WriteMember(const char *name, Value value)
 {
     Assert(m_header.names != nullptr, "Struct not allocated");
 
-    uint32 member_index = uint32(-1);
+    uint32 memberIndex = uint32(-1);
 
     for (uint32 index = 0; index < m_header.count; index++) {
         if (std::strcmp(name, m_header.names[index]) == 0) {
-            member_index = index;
+            memberIndex = index;
 
             break;
         }
     }
 
-    if (member_index == uint32(-1)) {
+    if (memberIndex == uint32(-1)) {
         return false;
     }
 
-    const uint32 offset = m_header.offsets[member_index];
-    const VMStructType type = m_header.types[member_index];
-    const uint8 byte_size = GetByteSize(type);
+    const uint32 offset = m_header.offsets[memberIndex];
+    const VMStructType type = m_header.types[memberIndex];
+    const uint8 byteSize = GetByteSize(type);
 
-    Assert(offset + byte_size <= m_header.total_size);
+    Assert(offset + byteSize <= m_header.totalSize);
 
-    const VMStructType given_type = ToStructType(value.GetType());
+    const VMStructType givenType = ToStructType(value.GetType());
 
-    Value::ValueData new_value_data;
+    Value::ValueData newValueData;
 
-    switch (given_type) {
+    switch (givenType) {
     case VM_STRUCT_TYPE_I8: // fallthrough
     case VM_STRUCT_TYPE_I16:
     case VM_STRUCT_TYPE_I32:
     case VM_STRUCT_TYPE_I64:
-        if (!value.GetInteger(&new_value_data.i64)) {
+        if (!value.GetInteger(&newValueData.i64)) {
             return false;
         }
 
@@ -285,21 +285,21 @@ bool VMStruct::WriteMember(const char *name, Value value)
     case VM_STRUCT_TYPE_U16:
     case VM_STRUCT_TYPE_U32:
     case VM_STRUCT_TYPE_U64:
-        if (!value.GetUnsigned(&new_value_data.u64)) {
+        if (!value.GetUnsigned(&newValueData.u64)) {
             return false;
         }
 
         break;
     case VM_STRUCT_TYPE_F32: // fallthrough
     case VM_STRUCT_TYPE_F64:
-        if (!value.GetFloatingPointCoerce(&new_value_data.d)) {
+        if (!value.GetFloatingPointCoerce(&newValueData.d)) {
             return false;
         }
 
         break;
     default:
-        if (given_type >= VM_STRUCT_TYPE_DYNAMIC) {
-            if (!value.GetPointer(&new_value_data.ptr)) {
+        if (givenType >= VM_STRUCT_TYPE_DYNAMIC) {
+            if (!value.GetPointer(&newValueData.ptr)) {
                 return false;
             }
         }
@@ -309,92 +309,92 @@ bool VMStruct::WriteMember(const char *name, Value value)
 
     switch (type) {
     case VM_STRUCT_TYPE_I8:
-        Assert(byte_size == sizeof(int8));
+        Assert(byteSize == sizeof(int8));
 
-        new_value_data.i8 = static_cast<int8>(new_value_data.i64);
+        newValueData.i8 = static_cast<int8>(newValueData.i64);
 
-        m_bytes.Write(byte_size, offset, &new_value_data.i8);
+        m_bytes.Write(byteSize, offset, &newValueData.i8);
 
         break;
     case VM_STRUCT_TYPE_I16:
-        Assert(byte_size == sizeof(int16));
+        Assert(byteSize == sizeof(int16));
 
-        new_value_data.i16 = static_cast<int16>(new_value_data.i64);
+        newValueData.i16 = static_cast<int16>(newValueData.i64);
 
-        m_bytes.Write(byte_size, offset, &new_value_data.i16);
+        m_bytes.Write(byteSize, offset, &newValueData.i16);
 
         break;
     case VM_STRUCT_TYPE_I32:
-        Assert(byte_size == sizeof(int32));
+        Assert(byteSize == sizeof(int32));
 
-        new_value_data.i32 = static_cast<int32>(new_value_data.i64);
+        newValueData.i32 = static_cast<int32>(newValueData.i64);
 
-        m_bytes.Write(byte_size, offset, &new_value_data.i32);
+        m_bytes.Write(byteSize, offset, &newValueData.i32);
 
         break;
     case VM_STRUCT_TYPE_I64:
-        Assert(byte_size == sizeof(int64));
+        Assert(byteSize == sizeof(int64));
 
-        new_value_data.i64 = static_cast<int64>(new_value_data.i64);
+        newValueData.i64 = static_cast<int64>(newValueData.i64);
 
-        m_bytes.Write(byte_size, offset, &new_value_data.i64);
+        m_bytes.Write(byteSize, offset, &newValueData.i64);
 
         break;
     case VM_STRUCT_TYPE_U8:
-        Assert(byte_size == sizeof(uint8));
+        Assert(byteSize == sizeof(uint8));
 
-        new_value_data.u8 = static_cast<uint8>(new_value_data.u64);
+        newValueData.u8 = static_cast<uint8>(newValueData.u64);
 
-        m_bytes.Write(byte_size, offset, &new_value_data.u8);
+        m_bytes.Write(byteSize, offset, &newValueData.u8);
 
         break;
     case VM_STRUCT_TYPE_U16:
-        Assert(byte_size == sizeof(uint16));
+        Assert(byteSize == sizeof(uint16));
 
-        new_value_data.u16 = static_cast<uint16>(new_value_data.u64);
+        newValueData.u16 = static_cast<uint16>(newValueData.u64);
 
-        m_bytes.Write(byte_size, offset, &new_value_data.u16);
+        m_bytes.Write(byteSize, offset, &newValueData.u16);
 
         break;
     case VM_STRUCT_TYPE_U32:
-        Assert(byte_size == sizeof(uint32));
+        Assert(byteSize == sizeof(uint32));
 
-        new_value_data.u32 = static_cast<uint32>(new_value_data.u64);
+        newValueData.u32 = static_cast<uint32>(newValueData.u64);
 
-        m_bytes.Write(byte_size, offset, &new_value_data.u32);
+        m_bytes.Write(byteSize, offset, &newValueData.u32);
 
         break;
     case VM_STRUCT_TYPE_U64:
-        Assert(byte_size == sizeof(uint64));
+        Assert(byteSize == sizeof(uint64));
 
-        new_value_data.u64 = static_cast<uint64>(new_value_data.u64);
+        newValueData.u64 = static_cast<uint64>(newValueData.u64);
 
-        m_bytes.Write(byte_size, offset, &new_value_data.u64);
+        m_bytes.Write(byteSize, offset, &newValueData.u64);
 
         break;
     case VM_STRUCT_TYPE_F32:
-        Assert(byte_size == sizeof(float));
+        Assert(byteSize == sizeof(float));
 
-        new_value_data.f = static_cast<float>(new_value_data.d);
+        newValueData.f = static_cast<float>(newValueData.d);
 
-        m_bytes.Write(byte_size, offset, &new_value_data.f);
+        m_bytes.Write(byteSize, offset, &newValueData.f);
 
         break;
     case VM_STRUCT_TYPE_F64:
-        Assert(byte_size == sizeof(double));
+        Assert(byteSize == sizeof(double));
 
-        new_value_data.d = static_cast<double>(new_value_data.d);
+        newValueData.d = static_cast<double>(newValueData.d);
 
-        m_bytes.Write(byte_size, offset, &new_value_data.d);
+        m_bytes.Write(byteSize, offset, &newValueData.d);
 
         break;
     default:
         if (type >= VM_STRUCT_TYPE_DYNAMIC) {
-            Assert(byte_size == sizeof(void *));
+            Assert(byteSize == sizeof(void *));
 
-            m_dynamic_memory.values[member_index] = value;
+            m_dynamicMemory.values[memberIndex] = value;
 
-            m_bytes.Write(byte_size, offset, &new_value_data.ptr);
+            m_bytes.Write(byteSize, offset, &newValueData.ptr);
 
             break;
         }

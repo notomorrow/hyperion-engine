@@ -17,7 +17,7 @@ public:
         const RC<AstExpression> &target,
         const RC<AstExpression> &index,
         const RC<AstExpression> &rhs,
-        bool operator_overloading_enabled,
+        bool operatorOverloadingEnabled,
         const SourceLocation &location
     );
     virtual ~AstArrayAccess() = default;
@@ -27,10 +27,10 @@ public:
     virtual void Optimize(AstVisitor *visitor, Module *mod) override;
 
     bool IsOperatorOverloadingEnabled() const
-        { return m_operator_overloading_enabled; }
+        { return m_operatorOverloadingEnabled; }
 
-    void SetIsOperatorOverloadingEnabled(bool operator_overloading_enabled)
-        { m_operator_overloading_enabled = operator_overloading_enabled; }
+    void SetIsOperatorOverloadingEnabled(bool operatorOverloadingEnabled)
+        { m_operatorOverloadingEnabled = operatorOverloadingEnabled; }
     
     virtual RC<AstStatement> Clone() const override;
 
@@ -49,7 +49,7 @@ public:
         hc.Add(m_target ? m_target->GetHashCode() : HashCode());
         hc.Add(m_index ? m_index->GetHashCode() : HashCode());
         hc.Add(m_rhs ? m_rhs->GetHashCode() : HashCode());
-        hc.Add(m_operator_overloading_enabled);
+        hc.Add(m_operatorOverloadingEnabled);
 
         return hc;
     }
@@ -58,10 +58,10 @@ private:
     RC<AstExpression>   m_target;
     RC<AstExpression>   m_index;
     RC<AstExpression>   m_rhs;
-    bool                m_operator_overloading_enabled;
+    bool                m_operatorOverloadingEnabled;
 
     // set while analyzing
-    RC<AstExpression>   m_override_expr;
+    RC<AstExpression>   m_overrideExpr;
 
     RC<AstArrayAccess> CloneImpl() const
     {
@@ -69,7 +69,7 @@ private:
             CloneAstNode(m_target),
             CloneAstNode(m_index),
             CloneAstNode(m_rhs),
-            m_operator_overloading_enabled,
+            m_operatorOverloadingEnabled,
             m_location
         ));
     }

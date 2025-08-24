@@ -10,7 +10,7 @@ class AstModuleProperty : public AstExpression
 {
 public:
     AstModuleProperty(
-      const String &field_name,
+      const String &fieldName,
       const SourceLocation &location
     );
     virtual ~AstModuleProperty() override = default;
@@ -28,22 +28,22 @@ public:
     virtual HashCode GetHashCode() const override
     {
         HashCode hc = AstExpression::GetHashCode().Add(TypeName<AstModuleProperty>());
-        hc.Add(m_field_name);
+        hc.Add(m_fieldName);
 
         return hc;
     }
 
 protected:
-    String              m_field_name;
+    String              m_fieldName;
 
     // set while analyzing
-    SymbolTypePtr_t     m_expr_type;
-    RC<AstExpression>   m_expr_value;
+    SymbolTypePtr_t     m_exprType;
+    RC<AstExpression>   m_exprValue;
 
     RC<AstModuleProperty> CloneImpl() const
     {
         return RC<AstModuleProperty>(new AstModuleProperty(
-            m_field_name,
+            m_fieldName,
             m_location
         ));
     }

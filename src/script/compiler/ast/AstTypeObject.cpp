@@ -19,25 +19,25 @@
 namespace hyperion::compiler {
 
 AstTypeObject::AstTypeObject(
-    const SymbolTypePtr_t &symbol_type,
-    const SymbolTypePtr_t &base_symbol_type,
+    const SymbolTypePtr_t &symbolType,
+    const SymbolTypePtr_t &baseSymbolType,
     const SourceLocation &location
-) : AstTypeObject(symbol_type, base_symbol_type, nullptr, false, location)
+) : AstTypeObject(symbolType, baseSymbolType, nullptr, false, location)
 {
 }
 
 AstTypeObject::AstTypeObject(
-    const SymbolTypePtr_t &symbol_type,
-    const SymbolTypePtr_t &base_symbol_type,
-    const SymbolTypePtr_t &enum_underlying_type,
-    bool is_proxy_class,
+    const SymbolTypePtr_t &symbolType,
+    const SymbolTypePtr_t &baseSymbolType,
+    const SymbolTypePtr_t &enumUnderlyingType,
+    bool isProxyClass,
     const SourceLocation &location
 ) : AstExpression(location, ACCESS_MODE_LOAD),
-    m_symbol_type(symbol_type),
-    m_base_symbol_type(base_symbol_type),
-    m_enum_underlying_type(enum_underlying_type),
-    m_is_proxy_class(is_proxy_class),
-    m_is_visited(false)
+    m_symbolType(symbolType),
+    m_baseSymbolType(baseSymbolType),
+    m_enumUnderlyingType(enumUnderlyingType),
+    m_isProxyClass(isProxyClass),
+    m_isVisited(false)
 {
 }
 
@@ -46,85 +46,85 @@ void AstTypeObject::Visit(AstVisitor *visitor, Module *mod)
     Assert(visitor != nullptr);
     Assert(mod != nullptr);
 
-    Assert(!m_is_visited);
+    Assert(!m_isVisited);
 
-    Assert(m_symbol_type != nullptr);
-    Assert(m_symbol_type->GetId() == -1, "Type %s already registered", m_symbol_type->ToString(true).Data());
+    Assert(m_symbolType != nullptr);
+    Assert(m_symbolType->GetId() == -1, "Type %s already registered", m_symbolType->ToString(true).Data());
 
-    if (m_base_symbol_type != nullptr) {
-        SymbolTypePtr_t base_type = m_base_symbol_type->GetUnaliased();
-        m_base_type_ref.Reset(new AstTypeRef(base_type, m_location));
-        m_base_type_ref->Visit(visitor, mod);
+    if (m_baseSymbolType != nullptr) {
+        SymbolTypePtr_t baseType = m_baseSymbolType->GetUnaliased();
+        m_baseTypeRef.Reset(new AstTypeRef(baseType, m_location));
+        m_baseTypeRef->Visit(visitor, mod);
     }
 
     // @TODO Ensure that the base type is able to be used (e.g CLASS_TYPE)
 
-    m_member_expressions.Resize(m_symbol_type->GetMembers().Size());
+    m_memberExpressions.Resize(m_symbolType->GetMembers().Size());
 
-    for (SizeType index = 0; index < m_symbol_type->GetMembers().Size(); index++) {
-        const SymbolTypeMember &member = m_symbol_type->GetMembers()[index];
+    for (SizeType index = 0; index < m_symbolType->GetMembers().Size(); index++) {
+        const SymbolTypeMember &member = m_symbolType->GetMembers()[index];
 
-        SymbolTypePtr_t member_type = member.type;
-        Assert(member_type != nullptr);
-        member_type = member_type->GetUnaliased();
+        SymbolTypePtr_t memberType = member.type;
+        Assert(memberType != nullptr);
+        memberType = memberType->GetUnaliased();
 
-        RC<AstExpression> previous_expr;
+        RC<AstExpression> previousExpr;
 
         if (member.expr != nullptr) {
-            previous_expr = member.expr;
+            previousExpr = member.expr;
         } else {
-            previous_expr = member_type->GetDefaultValue();
+            previousExpr = memberType->GetDefaultValue();
         }
 
         Assert(
-            previous_expr != nullptr,
+            previousExpr != nullptr,
             "No assigned value for member %s and no default value for type (%s)",
             member.name.Data(),
-            member_type->ToString(true).Data()
+            memberType->ToString(true).Data()
         );
 
-        m_member_expressions[index] = CloneAstNode(previous_expr);
-        m_member_expressions[index]->SetExpressionFlags(previous_expr->GetExpressionFlags());
+        m_memberExpressions[index] = CloneAstNode(previousExpr);
+        m_memberExpressions[index]->SetExpressionFlags(previousExpr->GetExpressionFlags());
     }
 
-    for (const RC<AstExpression> &expr : m_member_expressions) {
+    for (const RC<AstExpression> &expr : m_memberExpressions) {
         Assert(expr != nullptr);
 
         expr->Visit(visitor, mod);
     }
 
     // register the type
-    visitor->GetCompilationUnit()->RegisterType(m_symbol_type);
-    Assert(m_symbol_type->GetId() != -1);
+    visitor->GetCompilationUnit()->RegisterType(m_symbolType);
+    Assert(m_symbolType->GetId() != -1);
 
-    m_is_visited = true;
+    m_isVisited = true;
 }
 
 std::unique_ptr<Buildable> AstTypeObject::Build(AstVisitor *visitor, Module *mod)
 {
-    Assert(m_symbol_type != nullptr);
-    Assert(m_symbol_type->GetId() != -1);
+    Assert(m_symbolType != nullptr);
+    Assert(m_symbolType->GetId() != -1);
 
     std::unique_ptr<BytecodeChunk> chunk = BytecodeUtil::Make<BytecodeChunk>();
 
     // get active register
     uint8 rp = visitor->GetCompilationUnit()->GetInstructionStream().GetCurrentRegister();
     
-    // if (m_symbol_type->GetId() != -1) {
-    //     chunk->Append(BytecodeUtil::Make<Comment>("Load class " + m_symbol_type->GetName() + (m_is_proxy_class ? " <Proxy>" : "")));
+    // if (m_symbolType->GetId() != -1) {
+    //     chunk->Append(BytecodeUtil::Make<Comment>("Load class " + m_symbolType->GetName() + (m_isProxyClass ? " <Proxy>" : "")));
 
     //     // already built, we can just load it from the static table
-    //     auto instr_load_static = BytecodeUtil::Make<StorageOperation>();
-    //     instr_load_static->GetBuilder().Load(rp).Static().ByIndex(m_symbol_type->GetId());
-    //     chunk->Append(std::move(instr_load_static));
+    //     auto instrLoadStatic = BytecodeUtil::Make<StorageOperation>();
+    //     instrLoadStatic->GetBuilder().Load(rp).Static().ByIndex(m_symbolType->GetId());
+    //     chunk->Append(std::move(instrLoadStatic));
 
     //     return chunk;
     // }
 
-    chunk->Append(BytecodeUtil::Make<Comment>("Begin class " + m_symbol_type->GetName() + (m_is_proxy_class ? " <Proxy>" : "")));
+    chunk->Append(BytecodeUtil::Make<Comment>("Begin class " + m_symbolType->GetName() + (m_isProxyClass ? " <Proxy>" : "")));
 
-    if (m_base_type_ref != nullptr) {
-        chunk->Append(m_base_type_ref->Build(visitor, mod));
+    if (m_baseTypeRef != nullptr) {
+        chunk->Append(m_baseTypeRef->Build(visitor, mod));
     } else {
         chunk->Append(BytecodeUtil::Make<ConstNull>(rp));
     }
@@ -132,43 +132,43 @@ std::unique_ptr<Buildable> AstTypeObject::Build(AstVisitor *visitor, Module *mod
     rp = visitor->GetCompilationUnit()->GetInstructionStream().GetCurrentRegister();
 
     // store object's register location
-    const uint8 obj_reg = rp;
+    const uint8 objReg = rp;
 
-    { // load the type into register obj_reg
-        auto instr_type = BytecodeUtil::Make<BuildableType>();
-        instr_type->reg = obj_reg;
-        instr_type->name = m_symbol_type->GetName();
+    { // load the type into register objReg
+        auto instrType = BytecodeUtil::Make<BuildableType>();
+        instrType->reg = objReg;
+        instrType->name = m_symbolType->GetName();
 
-        for (const SymbolTypeMember &mem : m_symbol_type->GetMembers()) {
-            instr_type->members.PushBack(mem.name);
+        for (const SymbolTypeMember &mem : m_symbolType->GetMembers()) {
+            instrType->members.PushBack(mem.name);
         }
 
-        chunk->Append(std::move(instr_type));
+        chunk->Append(std::move(instrType));
     }
 
-    Assert(m_member_expressions.Size() == m_symbol_type->GetMembers().Size());
+    Assert(m_memberExpressions.Size() == m_symbolType->GetMembers().Size());
 
-    if (m_member_expressions.Any()) {
+    if (m_memberExpressions.Any()) {
         // push the class to the stack
-        const int class_stack_location = visitor->GetCompilationUnit()->GetInstructionStream().GetStackSize();
+        const int classStackLocation = visitor->GetCompilationUnit()->GetInstructionStream().GetStackSize();
 
         // use above as self arg so PUSH
         rp = visitor->GetCompilationUnit()->GetInstructionStream().GetCurrentRegister();
 
         { // add instruction to store on stack
-            auto instr_push = BytecodeUtil::Make<RawOperation<>>();
-            instr_push->opcode = PUSH;
-            instr_push->Accept<uint8>(rp);
-            chunk->Append(std::move(instr_push));
+            auto instrPush = BytecodeUtil::Make<RawOperation<>>();
+            instrPush->opcode = PUSH;
+            instrPush->Accept<uint8>(rp);
+            chunk->Append(std::move(instrPush));
         }
 
         // increment stack size for class
         visitor->GetCompilationUnit()->GetInstructionStream().IncStackSize();
 
-        for (SizeType index = 0; index < m_member_expressions.Size(); index++) {
+        for (SizeType index = 0; index < m_memberExpressions.Size(); index++) {
             Assert(index < MathUtil::MaxSafeValue<uint8>(), "Argument out of bouds of max arguments");
 
-            const RC<AstExpression> &mem = m_member_expressions[index];
+            const RC<AstExpression> &mem = m_memberExpressions[index];
             Assert(mem != nullptr);
 
             chunk->Append(mem->Build(visitor, mod));
@@ -176,73 +176,73 @@ std::unique_ptr<Buildable> AstTypeObject::Build(AstVisitor *visitor, Module *mod
             // increment to not overwrite object in register with out class
             rp = visitor->GetCompilationUnit()->GetInstructionStream().IncRegisterUsage();
 
-            const int stack_size = visitor->GetCompilationUnit()->GetInstructionStream().GetStackSize();
+            const int stackSize = visitor->GetCompilationUnit()->GetInstructionStream().GetStackSize();
  
             { // load class from stack into register
-                auto instr_load_offset = BytecodeUtil::Make<StorageOperation>();
-                instr_load_offset->GetBuilder().Load(rp).Local().ByOffset(stack_size - class_stack_location);
-                chunk->Append(std::move(instr_load_offset));
+                auto instrLoadOffset = BytecodeUtil::Make<StorageOperation>();
+                instrLoadOffset->GetBuilder().Load(rp).Local().ByOffset(stackSize - classStackLocation);
+                chunk->Append(std::move(instrLoadOffset));
             }
 
             { // store data member
-                auto instr_mov_mem = BytecodeUtil::Make<RawOperation<>>();
-                instr_mov_mem->opcode = MOV_MEM;
-                instr_mov_mem->Accept<uint8>(rp);
-                instr_mov_mem->Accept<uint8>(uint8(index));
-                instr_mov_mem->Accept<uint8>(obj_reg);
-                chunk->Append(std::move(instr_mov_mem));
+                auto instrMovMem = BytecodeUtil::Make<RawOperation<>>();
+                instrMovMem->opcode = MOV_MEM;
+                instrMovMem->Accept<uint8>(rp);
+                instrMovMem->Accept<uint8>(uint8(index));
+                instrMovMem->Accept<uint8>(objReg);
+                chunk->Append(std::move(instrMovMem));
             }
 
             // no longer using obj in reg
             rp = visitor->GetCompilationUnit()->GetInstructionStream().DecRegisterUsage();
 
             { // comment for debug
-                chunk->Append(BytecodeUtil::Make<Comment>("Store member " + m_symbol_type->GetMembers()[index].name));
+                chunk->Append(BytecodeUtil::Make<Comment>("Store member " + m_symbolType->GetMembers()[index].name));
             }
         }
 
         // "return" our class to the last used register before popping
         rp = visitor->GetCompilationUnit()->GetInstructionStream().GetCurrentRegister();
 
-        const int stack_size = visitor->GetCompilationUnit()->GetInstructionStream().GetStackSize();
+        const int stackSize = visitor->GetCompilationUnit()->GetInstructionStream().GetStackSize();
 
         { // load class from stack into register so it is back in rp
-            auto instr_load_offset = BytecodeUtil::Make<StorageOperation>();
-            instr_load_offset->GetBuilder()
+            auto instrLoadOffset = BytecodeUtil::Make<StorageOperation>();
+            instrLoadOffset->GetBuilder()
                 .Load(rp)
                 .Local()
-                .ByOffset(stack_size - class_stack_location);
+                .ByOffset(stackSize - classStackLocation);
 
-            chunk->Append(std::move(instr_load_offset));
+            chunk->Append(std::move(instrLoadOffset));
         }
 
         // pop class off stack
         visitor->GetCompilationUnit()->GetInstructionStream().DecStackSize();
         chunk->Append(Compiler::PopStack(visitor, 1));
     } else {
-        Assert(obj_reg == visitor->GetCompilationUnit()->GetInstructionStream().GetCurrentRegister());
+        Assert(objReg == visitor->GetCompilationUnit()->GetInstructionStream().GetCurrentRegister());
     }
 
     { // store class in static table
-        chunk->Append(BytecodeUtil::Make<Comment>("Store class " + m_symbol_type->GetName() + " in static data at index " + String::ToString(m_symbol_type->GetId())));
+        chunk->Append(BytecodeUtil::Make<Comment>("Store class " + m_symbolType->GetName() + " in static data at index " + String::ToString(m_symbolType->GetId())));
 
-        auto instr_store_static = BytecodeUtil::Make<StorageOperation>();
-        instr_store_static->GetBuilder().Store(rp).Static().ByIndex(m_symbol_type->GetId());
-        chunk->Append(std::move(instr_store_static));
+        auto instrStoreStatic = BytecodeUtil::Make<StorageOperation>();
+        instrStoreStatic->GetBuilder().Store(rp).Static().ByIndex(m_symbolType->GetId());
+        chunk->Append(std::move(instrStoreStatic));
     }
 
-    chunk->Append(BytecodeUtil::Make<Comment>("End class " + m_symbol_type->GetName()));
+    chunk->Append(BytecodeUtil::Make<Comment>("End class " + m_symbolType->GetName()));
 
     return chunk;
 }
 
 void AstTypeObject::Optimize(AstVisitor *visitor, Module *mod)
 {
-    if (m_base_type_ref != nullptr) {
-        m_base_type_ref->Optimize(visitor, mod);
+    if (m_baseTypeRef != nullptr) {
+        m_baseTypeRef->Optimize(visitor, mod);
     }
 
-    for (const RC<AstExpression> &expr : m_member_expressions) {
+    for (const RC<AstExpression> &expr : m_memberExpressions) {
         if (expr == nullptr) {
             continue;
         }
@@ -268,18 +268,18 @@ bool AstTypeObject::MayHaveSideEffects() const
 
 SymbolTypePtr_t AstTypeObject::GetExprType() const
 {
-    if (m_base_symbol_type == nullptr) {
+    if (m_baseSymbolType == nullptr) {
         return BuiltinTypes::CLASS_TYPE;
     }
 
-    return m_base_symbol_type;
+    return m_baseSymbolType;
 }
 
 SymbolTypePtr_t AstTypeObject::GetHeldType() const
 {
-    Assert(m_symbol_type != nullptr);
+    Assert(m_symbolType != nullptr);
 
-    return m_symbol_type;
+    return m_symbolType;
 }
 
 } // namespace hyperion::compiler

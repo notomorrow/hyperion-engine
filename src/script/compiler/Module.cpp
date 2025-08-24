@@ -9,32 +9,32 @@ Module::Module(
     const SourceLocation &location
 ) : m_name(name),
     m_location(location),
-    m_tree_link(nullptr)
+    m_treeLink(nullptr)
 {
 }
 
 FlatSet<String> Module::GenerateAllScanPaths() const
 {
-    FlatSet<String> all_scan_paths = m_scan_paths;
+    FlatSet<String> allScanPaths = m_scanPaths;
 
-    TreeNode<Module*> *top = m_tree_link;
+    TreeNode<Module*> *top = m_treeLink;
     
     while (top != nullptr) {
         Assert(top->Get() != nullptr);
 
-        for (const auto &other_scan_path : top->Get()->GetScanPaths()) {
-            all_scan_paths.Insert(other_scan_path);
+        for (const auto &otherScanPath : top->Get()->GetScanPaths()) {
+            allScanPaths.Insert(otherScanPath);
         }
 
         top = top->m_parent;
     }
 
-    return all_scan_paths;
+    return allScanPaths;
 }
 
 String Module::GenerateFullModuleName() const
 {
-    TreeNode<Module*> *top = m_tree_link;
+    TreeNode<Module*> *top = m_treeLink;
     
     if (top != nullptr) {
         Array<String> parts;
@@ -71,12 +71,12 @@ bool Module::IsInGlobalScope() const
     return m_scopes.TopNode()->m_parent == nullptr;
 }
 
-bool Module::IsInScopeOfType(ScopeType scope_type) const
+bool Module::IsInScopeOfType(ScopeType scopeType) const
 {
     const TreeNode<Scope> *top = m_scopes.TopNode();
 
     while (top != nullptr) {
-        if (top->Get().GetScopeType() == scope_type) {
+        if (top->Get().GetScopeType() == scopeType) {
             return true;
         }
         
@@ -86,12 +86,12 @@ bool Module::IsInScopeOfType(ScopeType scope_type) const
     return false;
 }
 
-bool Module::IsInScopeOfType(ScopeType scope_type, uint32 scope_flags) const
+bool Module::IsInScopeOfType(ScopeType scopeType, uint32 scopeFlags) const
 {
     const TreeNode<Scope> *top = m_scopes.TopNode();
 
     while (top != nullptr) {
-        if (top->Get().GetScopeType() == scope_type && bool(uint32(top->Get().GetScopeFlags()) & scope_flags)) {
+        if (top->Get().GetScopeType() == scopeType && bool(uint32(top->Get().GetScopeFlags()) & scopeFlags)) {
             return true;
         }
         
@@ -103,11 +103,11 @@ bool Module::IsInScopeOfType(ScopeType scope_type, uint32 scope_flags) const
 
 Module *Module::LookupNestedModule(const String &name)
 {
-    Assert(m_tree_link != nullptr);
+    Assert(m_treeLink != nullptr);
 
     // search siblings of the current module,
     // rather than global lookup.
-    for (auto *sibling : m_tree_link->m_siblings) {
+    for (auto *sibling : m_treeLink->m_siblings) {
         Assert(sibling != nullptr);
         Assert(sibling->Get() != nullptr);
         
@@ -121,23 +121,23 @@ Module *Module::LookupNestedModule(const String &name)
 
 Array<Module *> Module::CollectNestedModules() const
 {
-    Assert(m_tree_link != nullptr);
+    Assert(m_treeLink != nullptr);
 
-    Array<Module *> nested_modules;
+    Array<Module *> nestedModules;
 
     // search siblings of the current module,
     // rather than global lookup.
-    for (auto *sibling : m_tree_link->m_siblings) {
+    for (auto *sibling : m_treeLink->m_siblings) {
         Assert(sibling != nullptr);
         Assert(sibling->Get() != nullptr);
 
-        nested_modules.PushBack(sibling->Get());
+        nestedModules.PushBack(sibling->Get());
     }
 
-    return nested_modules;
+    return nestedModules;
 }
 
-RC<Identifier> Module::LookUpIdentifier(const String &name, bool this_scope_only, bool outside_modules)
+RC<Identifier> Module::LookUpIdentifier(const String &name, bool thisScopeOnly, bool outsideModules)
 {
     TreeNode<Scope> *top = m_scopes.TopNode();
 
@@ -147,30 +147,30 @@ RC<Identifier> Module::LookUpIdentifier(const String &name, bool this_scope_only
             return result;
         }
 
-        if (this_scope_only) {
+        if (thisScopeOnly) {
             return nullptr;
         }
 
         top = top->m_parent;
     }
 
-    if (outside_modules) {
-        if (m_tree_link != nullptr && m_tree_link->m_parent != nullptr) {
-            if (Module *other = m_tree_link->m_parent->Get()) {
+    if (outsideModules) {
+        if (m_treeLink != nullptr && m_treeLink->m_parent != nullptr) {
+            if (Module *other = m_treeLink->m_parent->Get()) {
                 if (other->GetLocation().GetFileName() == m_location.GetFileName()) {
                     return other->LookUpIdentifier(name, false);
                 } else {
                     // we are outside of file scope, so loop until root/global module found
-                    const TreeNode<Module*> *mod_link = m_tree_link->m_parent;
+                    const TreeNode<Module*> *modLink = m_treeLink->m_parent;
 
-                    while (mod_link->m_parent != nullptr) {
-                        mod_link = mod_link->m_parent;
+                    while (modLink->m_parent != nullptr) {
+                        modLink = modLink->m_parent;
                     }
 
-                    Assert(mod_link->Get() != nullptr);
-                    Assert(mod_link->Get()->GetName() == Config::global_module_name);
+                    Assert(modLink->Get() != nullptr);
+                    Assert(modLink->Get()->GetName() == Config::globalModuleName);
 
-                    return mod_link->Get()->LookUpIdentifier(name, false);
+                    return modLink->Get()->LookUpIdentifier(name, false);
                 }
             }
         }
@@ -179,11 +179,11 @@ RC<Identifier> Module::LookUpIdentifier(const String &name, bool this_scope_only
     return nullptr;
 }
 
-RC<Identifier> Module::LookUpIdentifierDepth(const String &name, int depth_level)
+RC<Identifier> Module::LookUpIdentifierDepth(const String &name, int depthLevel)
 {
     TreeNode<Scope> *top = m_scopes.TopNode();
 
-    for (int i = 0; top != nullptr && i < depth_level; i++) {
+    for (int i = 0; top != nullptr && i < depthLevel; i++) {
         if (RC<Identifier> result = top->Get().GetIdentifierTable().LookUpIdentifier(name)) {
             return result;
         }
@@ -212,8 +212,8 @@ Variant<RC<Identifier>, SymbolTypePtr_t> Module::LookUpIdentifierOrSymbolType(co
     return PerformLookup<Variant<RC<Identifier>, SymbolTypePtr_t>>(
         [&name](TreeNode<Scope> *top) -> Variant<RC<Identifier>, SymbolTypePtr_t>
         {
-            if (SymbolTypePtr_t symbol_type = top->Get().GetIdentifierTable().LookupSymbolType(name)) {
-                return Variant<RC<Identifier>, SymbolTypePtr_t>(symbol_type);
+            if (SymbolTypePtr_t symbolType = top->Get().GetIdentifierTable().LookupSymbolType(name)) {
+                return Variant<RC<Identifier>, SymbolTypePtr_t>(symbolType);
             }
 
             if (RC<Identifier> result = top->Get().GetIdentifierTable().LookUpIdentifier(name)) {

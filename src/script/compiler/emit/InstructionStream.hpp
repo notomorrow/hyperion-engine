@@ -26,7 +26,7 @@ public:
         InstructionStreamContextType type = INSTRUCTION_STREAM_CONTEXT_DEFAULT
     ) : m_parent(parent),
         m_type(type),
-        m_next_label_id(0)
+        m_nextLabelId(0)
     {
     }
 
@@ -41,31 +41,31 @@ public:
 
     LabelId NewLabel()
     {
-        const LabelId label_id = NextLabelID();
-        m_labels.PushBack(LabelInfo { label_id, LabelPosition(-1), HYP_NAME(LabelNotNamed) });
-        return label_id;
+        const LabelId labelId = NextLabelID();
+        m_labels.PushBack(LabelInfo { labelId, LabelPosition(-1), HYP_NAME(LabelNotNamed) });
+        return labelId;
     }
 
     LabelId NewLabel(Name name)
     {
         Assert(!FindLabelByName(name).HasValue(), "Cannot duplicate label identifier");
 
-        const LabelId label_id = NextLabelID();
-        m_labels.PushBack(LabelInfo { label_id, LabelPosition(-1), name });
-        return label_id;
+        const LabelId labelId = NextLabelID();
+        m_labels.PushBack(LabelInfo { labelId, LabelPosition(-1), name });
+        return labelId;
     }
 
     Optional<LabelId> FindLabelByName(Name name) const
     {
-        const auto it = m_labels.FindIf([name](const LabelInfo &label_info) {
-            return label_info.name == name;
+        const auto it = m_labels.FindIf([name](const LabelInfo &labelInfo) {
+            return labelInfo.name == name;
         });
 
         if (it == m_labels.End()) {
             return Optional<LabelId> { };
         }
 
-        return it->label_id;
+        return it->labelId;
     }
 
 private:
@@ -75,14 +75,14 @@ private:
             return m_parent->NextLabelID();
         }
 
-        return m_next_label_id++;
+        return m_nextLabelId++;
     }
 
     InstructionStreamContext        *m_parent;
     InstructionStreamContextType    m_type;
     Array<LabelInfo>                m_labels;
 
-    uint32                          m_next_label_id;
+    uint32                          m_nextLabelId;
 };
 
 struct InstructionStreamContextGuard : TreeNodeGuard<InstructionStreamContext>
@@ -101,52 +101,52 @@ public:
     InstructionStream();
     InstructionStream(const InstructionStream &other);
 
-    uint8 GetCurrentRegister() const { return m_register_counter; }
-    uint8 IncRegisterUsage() { return ++m_register_counter; }
-    uint8 DecRegisterUsage() { return --m_register_counter; }
+    uint8 GetCurrentRegister() const { return m_registerCounter; }
+    uint8 IncRegisterUsage() { return ++m_registerCounter; }
+    uint8 DecRegisterUsage() { return --m_registerCounter; }
 
     int GetStackSize() const
-        { return m_stack_size; }
+        { return m_stackSize; }
 
-    void SetStackSize(int stack_size)
-        { m_stack_size = stack_size; }
+    void SetStackSize(int stackSize)
+        { m_stackSize = stackSize; }
 
     int IncStackSize()
-        { return ++m_stack_size; }
+        { return ++m_stackSize; }
 
     int DecStackSize()
     {
-        Assert(m_stack_size > 0, "Compiler stack size record invalid");
+        Assert(m_stackSize > 0, "Compiler stack size record invalid");
 
-        return --m_stack_size;
+        return --m_stackSize;
     }
 
-    int NewStaticId() { return m_static_id++; }
+    int NewStaticId() { return m_staticId++; }
 
-    void AddStaticObject(const StaticObject &static_object)
-        { m_static_objects.PushBack(static_object); }
+    void AddStaticObject(const StaticObject &staticObject)
+        { m_staticObjects.PushBack(staticObject); }
 
-    int FindStaticObject(const StaticObject &static_object) const;
+    int FindStaticObject(const StaticObject &staticObject) const;
 
     Tree<InstructionStreamContext> &GetContextTree()
-        { return m_context_tree; }
+        { return m_contextTree; }
 
     const Tree<InstructionStreamContext> &GetContextTree() const
-        { return m_context_tree; }
+        { return m_contextTree; }
 
 private:
     // incremented and decremented each time a register
     // is used/unused
-    uint8                               m_register_counter;
+    uint8                               m_registerCounter;
     // incremented each time a variable is pushed,
     // decremented each time a stack frame is closed
-    int                                 m_stack_size;
+    int                                 m_stackSize;
     // the current static object id
-    int                                 m_static_id;
+    int                                 m_staticId;
 
-    Array<StaticObject>                 m_static_objects;
+    Array<StaticObject>                 m_staticObjects;
 
-    Tree<InstructionStreamContext>      m_context_tree;
+    Tree<InstructionStreamContext>      m_contextTree;
 };
 
 } // namespace hyperion::compiler

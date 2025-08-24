@@ -27,7 +27,7 @@ public:
     }
 
 private:
-    uint32 m_num_pops;
+    uint32 m_numPops;
 
     RC<AstContinueStatement> CloneImpl() const
     {

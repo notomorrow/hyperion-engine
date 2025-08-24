@@ -18,25 +18,25 @@ public:
 
     const char *ToString() const { return m_str; }
 
-    static Exception InvalidComparisonException(const char *left_type_str, const char *right_type_str);
-    static Exception InvalidOperationException(const char *op_name,
-        const char *left_type_str, const char *right_type_str);
-    static Exception InvalidOperationException(const char *op_name, const char *type_str);
+    static Exception InvalidComparisonException(const char *leftTypeStr, const char *rightTypeStr);
+    static Exception InvalidOperationException(const char *opName,
+        const char *leftTypeStr, const char *rightTypeStr);
+    static Exception InvalidOperationException(const char *opName, const char *typeStr);
     static Exception InvalidBitwiseArgument();
     static Exception InvalidArgsException(int expected, int received, bool variadic = false);
-    static Exception InvalidArgsException(const char *expected_str, int received);
-    static Exception InvalidArgsException(const char *expected_str);
+    static Exception InvalidArgsException(const char *expectedStr, int received);
+    static Exception InvalidArgsException(const char *expectedStr);
     static Exception InvalidConstructorException();
     static Exception NullReferenceException();
     static Exception DivisionByZeroException();
     static Exception OutOfBoundsException();
-    static Exception MemberNotFoundException(uint32 hash_code);
-    static Exception FileOpenException(const char *file_name);
+    static Exception MemberNotFoundException(uint32 hashCode);
+    static Exception FileOpenException(const char *fileName);
     static Exception UnopenedFileWriteException();
     static Exception UnopenedFileReadException();
     static Exception UnopenedFileCloseException();
-    static Exception LibraryLoadException(const char *lib_name);
-    static Exception LibraryFunctionLoadException(const char *func_name);
+    static Exception LibraryLoadException(const char *libName);
+    static Exception LibraryFunctionLoadException(const char *funcName);
     static Exception DuplicateExportException();
     static Exception KeyNotFoundException(const char *key);
 

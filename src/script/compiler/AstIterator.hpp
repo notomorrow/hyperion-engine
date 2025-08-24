@@ -16,7 +16,7 @@ public:
     AstIterator();
     AstIterator(const AstIterator &other);
 
-    void Prepend(AstIterator &&other, bool reset_position = false);
+    void Prepend(AstIterator &&other, bool resetPosition = false);
     void Append(AstIterator &&other);
 
     void Push(const RC<AstStatement> &statement)

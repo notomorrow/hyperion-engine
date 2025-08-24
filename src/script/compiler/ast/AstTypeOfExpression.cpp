@@ -26,43 +26,43 @@ void AstTypeOfExpression::Visit(AstVisitor *visitor, Module *mod)
     Assert(m_expr != nullptr);
     m_expr->Visit(visitor, mod);
 
-    m_held_type = BuiltinTypes::UNDEFINED;
+    m_heldType = BuiltinTypes::UNDEFINED;
 
-    auto *value_of = m_expr->GetDeepValueOf();
-    Assert(value_of != nullptr);
+    auto *valueOf = m_expr->GetDeepValueOf();
+    Assert(valueOf != nullptr);
 
 #if HYP_SCRIPT_TYPEOF_RETURN_OBJECT
-    if (SymbolTypePtr_t expr_type = value_of->GetExprType()) {
-        m_held_type = expr_type->GetUnaliased();
+    if (SymbolTypePtr_t exprType = valueOf->GetExprType()) {
+        m_heldType = exprType->GetUnaliased();
     }
 
-    Assert(m_held_type != nullptr);
+    Assert(m_heldType != nullptr);
 
-    m_type_ref.Reset(new AstTypeRef(
-        m_held_type,
+    m_typeRef.Reset(new AstTypeRef(
+        m_heldType,
         m_location
     ));
 
-    m_type_ref->Visit(visitor, mod);
+    m_typeRef->Visit(visitor, mod);
 #else
-    m_symbol_type = BuiltinTypes::STRING;
+    m_symbolType = BuiltinTypes::STRING;
 
-    SymbolTypePtr_t expr_type;
+    SymbolTypePtr_t exprType;
     SymbolTypePtr_t unaliased;
 
-    if ((expr_type = m_expr->GetExprType()) && (unaliased = expr_type->GetUnaliased())) {
-        m_string_expr.Reset(new AstString(
+    if ((exprType = m_expr->GetExprType()) && (unaliased = exprType->GetUnaliased())) {
+        m_stringExpr.Reset(new AstString(
             unaliased->ToString(false),
             m_location
         ));
     } else {
-        m_string_expr.Reset(new AstString(
+        m_stringExpr.Reset(new AstString(
             BuiltinTypes::UNDEFINED->ToString(),
             m_location
         ));
     }
 
-    m_string_expr->Visit(visitor, mod);
+    m_stringExpr->Visit(visitor, mod);
 #endif
 }
 
@@ -72,12 +72,12 @@ std::unique_ptr<Buildable> AstTypeOfExpression::Build(AstVisitor *visitor, Modul
     chunk->Append(AstPrototypeSpecification::Build(visitor, mod));
 
 #if HYP_SCRIPT_TYPEOF_RETURN_OBJECT
-    Assert(m_type_ref != nullptr);
+    Assert(m_typeRef != nullptr);
 
-    chunk->Append(m_type_ref->Build(visitor, mod));
+    chunk->Append(m_typeRef->Build(visitor, mod));
 #else
-    Assert(m_string_expr != nullptr);
-    chunk->Append(m_string_expr->Build(visitor, mod));
+    Assert(m_stringExpr != nullptr);
+    chunk->Append(m_stringExpr->Build(visitor, mod));
 #endif
 
     return chunk;
@@ -88,12 +88,12 @@ void AstTypeOfExpression::Optimize(AstVisitor *visitor, Module *mod)
     AstPrototypeSpecification::Optimize(visitor, mod);
     
 #if HYP_SCRIPT_TYPEOF_RETURN_OBJECT
-    Assert(m_type_ref != nullptr);
+    Assert(m_typeRef != nullptr);
 
-    return m_type_ref->Optimize(visitor, mod);
+    return m_typeRef->Optimize(visitor, mod);
 #else
-    Assert(m_string_expr != nullptr);
-    m_string_expr->Optimize(visitor, mod);
+    Assert(m_stringExpr != nullptr);
+    m_stringExpr->Optimize(visitor, mod);
 #endif
 }
 
@@ -105,9 +105,9 @@ RC<AstStatement> AstTypeOfExpression::Clone() const
 SymbolTypePtr_t AstTypeOfExpression::GetExprType() const
 {
 #if HYP_SCRIPT_TYPEOF_RETURN_OBJECT
-    Assert(m_type_ref != nullptr);
+    Assert(m_typeRef != nullptr);
 
-    return m_type_ref->GetExprType();
+    return m_typeRef->GetExprType();
 #else
     return BuiltinTypes::STRING;
 #endif
@@ -116,9 +116,9 @@ SymbolTypePtr_t AstTypeOfExpression::GetExprType() const
 SymbolTypePtr_t AstTypeOfExpression::GetHeldType() const
 {
 #if HYP_SCRIPT_TYPEOF_RETURN_OBJECT
-    Assert(m_type_ref != nullptr);
+    Assert(m_typeRef != nullptr);
 
-    return m_type_ref->GetHeldType();
+    return m_typeRef->GetHeldType();
 #else
     return AstExpression::GetHeldType();
 #endif
@@ -127,26 +127,26 @@ SymbolTypePtr_t AstTypeOfExpression::GetHeldType() const
 const AstExpression *AstTypeOfExpression::GetValueOf() const
 {
 #if HYP_SCRIPT_TYPEOF_RETURN_OBJECT
-    Assert(m_type_ref != nullptr);
+    Assert(m_typeRef != nullptr);
 
-    return m_type_ref->GetValueOf();
+    return m_typeRef->GetValueOf();
 #else
-    Assert(m_string_expr != nullptr);
+    Assert(m_stringExpr != nullptr);
 
-    return m_string_expr->GetValueOf();
+    return m_stringExpr->GetValueOf();
 #endif
 }
 
 const AstExpression *AstTypeOfExpression::GetDeepValueOf() const
 {
 #if HYP_SCRIPT_TYPEOF_RETURN_OBJECT
-    Assert(m_type_ref != nullptr);
+    Assert(m_typeRef != nullptr);
 
-    return m_type_ref->GetDeepValueOf();
+    return m_typeRef->GetDeepValueOf();
 #else
-    Assert(m_string_expr != nullptr);
+    Assert(m_stringExpr != nullptr);
 
-    return m_string_expr->GetDeepValueOf();
+    return m_stringExpr->GetDeepValueOf();
 #endif
 }
 

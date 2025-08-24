@@ -30,42 +30,42 @@ static struct RuntimeScriptBindings : ScriptBindingsBase
         >);
 
         context.Global("is_instance", "function< bool, any, Class >", CxxFn<bool, vm::Value, VMObject *,
-            [](vm::Value value, VMObject *class_ptr) -> bool
+            [](vm::Value value, VMObject *classPtr) -> bool
             {
-                if (!class_ptr) {
+                if (!classPtr) {
                     return false;
                 }
 
-                vm::VMObject *target_ptr = nullptr;
-                bool is_instance = false;
+                vm::VMObject *targetPtr = nullptr;
+                bool isInstance = false;
 
-                if (value.GetPointer<vm::VMObject>(&target_ptr)) {
+                if (value.GetPointer<vm::VMObject>(&targetPtr)) {
                     // target is an object, we compare the base class of target
-                    // to the value we have in class_object_ptr.
+                    // to the value we have in classObjectPtr.
 
-                    if (HeapValue *target_class = target_ptr->GetClassPointer()) {
-                        constexpr uint32 max_depth = 1024;
+                    if (HeapValue *targetClass = targetPtr->GetClassPointer()) {
+                        constexpr uint32 maxDepth = 1024;
                         uint32 depth = 0;
 
-                        vm::VMObject *target_class_object = target_class->GetPointer<vm::VMObject>();
+                        vm::VMObject *targetClassObject = targetClass->GetPointer<vm::VMObject>();
 
-                        while (target_class_object != nullptr && depth < max_depth) {
-                            is_instance = (*target_class_object == *class_ptr);
+                        while (targetClassObject != nullptr && depth < maxDepth) {
+                            isInstance = (*targetClassObject == *classPtr);
 
-                            if (is_instance) {
+                            if (isInstance) {
                                 break;
                             }
 
                             vm::Value base = vm::Value(vm::Value::NONE, { .ptr = nullptr });
 
-                            if (!(target_class_object->LookupBasePointer(&base) && base.GetPointer<vm::VMObject>(&target_class_object))) {
+                            if (!(targetClassObject->LookupBasePointer(&base) && base.GetPointer<vm::VMObject>(&targetClassObject))) {
                                 break;
                             }
 
                             depth++;
                         }
 
-                        if (depth == max_depth) {
+                        if (depth == maxDepth) {
                             // max depth reached
 
                             DebugLog(LogType::Warn, "Max depth reached while checking if object is instance of class\n");
@@ -74,21 +74,21 @@ static struct RuntimeScriptBindings : ScriptBindingsBase
                         }
                     }
                 } else {
-                    Member *proto_mem = class_ptr->LookupMemberFromHash(VMObject::PROTO_MEMBER_HASH, false);
+                    Member *protoMem = classPtr->LookupMemberFromHash(VMObject::PROTO_MEMBER_HASH, false);
 
-                    if (proto_mem != nullptr) {
+                    if (protoMem != nullptr) {
                         // check target's type is equal to the type of $proto value,
                         // since it is not an object pointer
-                        is_instance = (value.m_type == proto_mem->value.m_type);
+                        isInstance = (value.m_type == protoMem->value.m_type);
                     }
                 }
 
-                return is_instance;
+                return isInstance;
             }
         >);
     }
 
-} runtime_script_bindings { };
+} runtimeScriptBindings { };
 
 } // namespace bindings
 } // namespace script

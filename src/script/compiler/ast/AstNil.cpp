@@ -59,9 +59,9 @@ SymbolTypePtr_t AstNil::GetExprType() const
     return BuiltinTypes::NULL_TYPE;
 }
 
-RC<AstConstant> AstNil::HandleOperator(Operators op_type, const AstConstant *right) const
+RC<AstConstant> AstNil::HandleOperator(Operators opType, const AstConstant *right) const
 {
-    switch (op_type) {
+    switch (opType) {
         case OP_logical_and:
             // logical operations still work, so that we can do
             // things like testing for null in an if statement.

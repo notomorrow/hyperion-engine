@@ -25,7 +25,7 @@ public:
     virtual float FloatValue() const override;
     virtual SymbolTypePtr_t GetExprType() const override;
 
-    virtual RC<AstConstant> HandleOperator(Operators op_type, const AstConstant *right) const override;
+    virtual RC<AstConstant> HandleOperator(Operators opType, const AstConstant *right) const override;
 
     virtual HashCode GetHashCode() const override
     {
@@ -39,7 +39,7 @@ private:
     String  m_value;
 
     // set while compiling
-    int     m_static_id;
+    int     m_staticId;
 
     RC<AstString> CloneImpl() const
     {

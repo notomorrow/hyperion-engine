@@ -42,7 +42,7 @@ enum TokenClass
 class Token
 {
 public:
-    static String TokenTypeToString(TokenClass token_class);
+    static String TokenTypeToString(TokenClass tokenClass);
     
     static const Token EMPTY;
 
@@ -50,13 +50,13 @@ public:
     using Flags = char[4];
 
     Token(
-        TokenClass token_class,
+        TokenClass tokenClass,
         const String &value,
         const SourceLocation &location
     );
 
     Token(
-        TokenClass token_class,
+        TokenClass tokenClass,
         const String &value,
         Flags flags,
         const SourceLocation &location
@@ -64,15 +64,15 @@ public:
 
     Token(const Token &other);
 
-    TokenClass GetTokenClass() const { return m_token_class; }
+    TokenClass GetTokenClass() const { return m_tokenClass; }
     const String &GetValue() const { return m_value; }
     const Flags &GetFlags() const { return m_flags; }
     const SourceLocation &GetLocation() const { return m_location; }
-    bool Empty() const { return m_token_class == TK_EMPTY; }
+    bool Empty() const { return m_tokenClass == TK_EMPTY; }
     
     Token &operator=(const Token &other)
     {
-        m_token_class = other.m_token_class;
+        m_tokenClass = other.m_tokenClass;
         m_value = other.m_value;
         m_location = other.m_location;
         
@@ -80,12 +80,12 @@ public:
     }
 
     // return true if not empty
-    explicit operator bool() const { return m_token_class != TK_EMPTY; }
+    explicit operator bool() const { return m_tokenClass != TK_EMPTY; }
 
     bool IsContinuationToken() const;
 
 private:
-    TokenClass m_token_class;
+    TokenClass m_tokenClass;
     String m_value;
     Flags m_flags;
     SourceLocation m_location;

@@ -48,11 +48,11 @@ protected:
     Array<RC<AstExpression>>        m_members;
 
     // set while analyzing
-    Array<RC<AstExpression>>        m_replaced_members;
-    SymbolTypePtr_t                 m_held_type;
-    SymbolTypePtr_t                 m_expr_type;
-    RC<AstPrototypeSpecification>   m_array_type_expr;
-    RC<AstExpression>               m_array_from_call;
+    Array<RC<AstExpression>>        m_replacedMembers;
+    SymbolTypePtr_t                 m_heldType;
+    SymbolTypePtr_t                 m_exprType;
+    RC<AstPrototypeSpecification>   m_arrayTypeExpr;
+    RC<AstExpression>               m_arrayFromCall;
 
     RC<AstArrayExpression> CloneImpl() const
     {

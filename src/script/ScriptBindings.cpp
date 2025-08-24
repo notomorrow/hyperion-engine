@@ -25,17 +25,17 @@ struct FilePointerMap
     uint32 counter = 0;
 };
 
-thread_local FilePointerMap file_pointer_map;
+thread_local FilePointerMap filePointerMap;
 
-APIInstance::ClassBindings ScriptBindings::class_bindings = {};
-// static APIInstance::ClassBindings class_bindings = {};
+APIInstance::ClassBindings ScriptBindings::classBindings = {};
+// static APIInstance::ClassBindings classBindings = {};
 
-void ScriptBindings::DeclareAll(APIInstance &api_instance)
+void ScriptBindings::DeclareAll(APIInstance &apiInstance)
 {
     using namespace hyperion::compiler;
 
 #if 0
-    api_instance.Module(Config::global_module_name)
+    apiInstance.Module(Config::globalModuleName)
         .Class<Name>(
             "Name",
             {
@@ -62,7 +62,7 @@ void ScriptBindings::DeclareAll(APIInstance &api_instance)
             }
         );
 
-    api_instance.Module(Config::global_module_name)
+    apiInstance.Module(Config::globalModuleName)
         .Class<RC<DynModule>>(
             "Module",
             {
@@ -89,7 +89,7 @@ void ScriptBindings::DeclareAll(APIInstance &api_instance)
             }
         );
 
-    api_instance.Module("vm")
+    apiInstance.Module("vm")
         .Function(
             "ReadStackVar",
             BuiltinTypes::ANY,
@@ -99,7 +99,7 @@ void ScriptBindings::DeclareAll(APIInstance &api_instance)
             VM_ReadStackVar
         );
 
-    api_instance.Module(Config::global_module_name)
+    apiInstance.Module(Config::globalModuleName)
         .Function(
             "MakeStruct",
             BuiltinTypes::ANY,
@@ -297,7 +297,7 @@ void ScriptBindings::DeclareAll(APIInstance &api_instance)
             Runtime_GetMembers
         );
 
-    api_instance.Module(Config::global_module_name)
+    apiInstance.Module(Config::globalModuleName)
         .Function(
             "Engine_CreateEntity",
             BuiltinTypes::ANY,
@@ -307,7 +307,7 @@ void ScriptBindings::DeclareAll(APIInstance &api_instance)
             EngineCreateEntity
         );
 
-    api_instance.Module(Config::global_module_name)
+    apiInstance.Module(Config::globalModuleName)
         .Class<Vec2f>(
             "Vec2f",
             {
@@ -455,7 +455,7 @@ void ScriptBindings::DeclareAll(APIInstance &api_instance)
             }
         );
 
-    api_instance.Module(Config::global_module_name)
+    apiInstance.Module(Config::globalModuleName)
         .Class<Vec3f>(
             "Vec3f",
             {
@@ -691,7 +691,7 @@ void ScriptBindings::DeclareAll(APIInstance &api_instance)
             }
         );
 
-    api_instance.Module(Config::global_module_name)
+    apiInstance.Module(Config::globalModuleName)
         .Class<BoundingBox>(
             "BoundingBox",
             {
@@ -724,7 +724,7 @@ void ScriptBindings::DeclareAll(APIInstance &api_instance)
             }
         );
 
-    api_instance.Module(Config::global_module_name)
+    apiInstance.Module(Config::globalModuleName)
         .Variable("SCRIPT_VERSION", 200)
         .Variable("ENGINE_VERSION", 200)
 #ifdef HYP_DEBUG_MODE

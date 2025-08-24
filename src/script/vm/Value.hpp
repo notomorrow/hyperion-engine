@@ -67,7 +67,7 @@ namespace sdk {
 
 struct Params
 {
-    APIInstance             &api_instance;
+    APIInstance             &apiInstance;
     vm::InstructionHandler  *handler;
     vm::Value               **args;
     int32                   nargs;
@@ -143,7 +143,7 @@ struct Value
 
         bool        b;
 
-        Value       *value_ref;
+        Value       *valueRef;
 
         HeapValue   *ptr;
 
@@ -154,30 +154,30 @@ struct Value
             uint8       m_flags;
         } func;
 
-        NativeFunctionPtr_t native_func;
-        UserData_t          user_data;
+        NativeFunctionPtr_t nativeFunc;
+        UserData_t          userData;
         
         struct
         {
-            BCAddress   return_address;
-            int32       varargs_push;
+            BCAddress   returnAddress;
+            int32       varargsPush;
         } call;
 
         BCAddress addr;
 
         struct
         {
-            BCAddress catch_address;
-        } try_catch_info;
+            BCAddress catchAddress;
+        } tryCatchInfo;
 
         struct {
-            const char *error_message; // make sure it is a string literal, as it is not managed
-        } invalid_state_object;
+            const char *errorMessage; // make sure it is a string literal, as it is not managed
+        } invalidStateObject;
     } m_value;
 
     Value() = default;
     Value(const Value &other);
-    Value(ValueType value_type, ValueData value_data);
+    Value(ValueType valueType, ValueData valueData);
 
     HYP_DEF_STRUCT_COMPARE_EQL(Value)
     HYP_DEF_STRUCT_COMPARE_LT(Value)
@@ -186,10 +186,10 @@ struct Value
     HYP_FORCE_INLINE ValueData &GetValue() { return m_value; }
     HYP_FORCE_INLINE const ValueData &GetValue() const { return m_value; }
 
-    HYP_FORCE_INLINE void AssignValue(const Value &other, bool assign_ref)
+    HYP_FORCE_INLINE void AssignValue(const Value &other, bool assignRef)
     {
-        if (assign_ref && m_type == VALUE_REF) {
-            *m_value.value_ref = other;
+        if (assignRef && m_type == VALUE_REF) {
+            *m_value.valueRef = other;
         } else {
             *this = other;
         }
@@ -341,7 +341,7 @@ struct Value
             return false;
         }
 
-        *out = static_cast<T *>(m_value.user_data);
+        *out = static_cast<T *>(m_value.userData);
 
         return true;
     }
@@ -363,7 +363,7 @@ struct Value
         Value *rhs
     )
     {
-        return (lhs->m_value.native_func == rhs->m_value.native_func)
+        return (lhs->m_value.nativeFunc == rhs->m_value.nativeFunc)
             ? CompareFlags::EQUAL
             : CompareFlags::NONE;
     }
@@ -379,7 +379,7 @@ struct Value
     VMString ToString() const;
     void ToRepresentation(
         std::stringstream &ss,
-        bool add_type_name = true,
+        bool addTypeName = true,
         int depth = 3
     ) const;
 

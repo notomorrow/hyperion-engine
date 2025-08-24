@@ -34,7 +34,7 @@ public:
     AstEnumExpression(
         const String &name,
         const Array<EnumEntry> &entries,
-        const RC<AstPrototypeSpecification> &underlying_type,
+        const RC<AstPrototypeSpecification> &underlyingType,
         const SourceLocation &location
     );
     virtual ~AstEnumExpression() = default;
@@ -66,7 +66,7 @@ public:
             hc.Add(entry.GetHashCode());
         }
 
-        hc.Add(m_underlying_type ? m_underlying_type->GetHashCode() : HashCode());
+        hc.Add(m_underlyingType ? m_underlyingType->GetHashCode() : HashCode());
         hc.Add(m_expr ? m_expr->GetHashCode() : HashCode());
 
         return hc;
@@ -75,7 +75,7 @@ public:
 protected:
     String                          m_name;
     Array<EnumEntry>                m_entries;
-    RC<AstPrototypeSpecification>   m_underlying_type;
+    RC<AstPrototypeSpecification>   m_underlyingType;
     RC<AstTypeExpression>           m_expr;
 
     RC<AstEnumExpression> CloneImpl() const
@@ -83,7 +83,7 @@ protected:
         return RC<AstEnumExpression>(new AstEnumExpression(
             m_name,
             m_entries,
-            CloneAstNode(m_underlying_type),
+            CloneAstNode(m_underlyingType),
             m_location
         ));
     }

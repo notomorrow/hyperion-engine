@@ -62,9 +62,9 @@ std::unique_ptr<Buildable> AstTernaryExpression::Build(AstVisitor *visitor, Modu
 
     std::unique_ptr<BytecodeChunk> chunk = BytecodeUtil::Make<BytecodeChunk>();
 
-    int condition_is_true = m_conditional->IsTrue();
+    int conditionIsTrue = m_conditional->IsTrue();
 
-    if (condition_is_true == -1) {
+    if (conditionIsTrue == -1) {
         // the condition cannot be determined at compile time
         chunk->Append(Compiler::CreateConditional(
             visitor,
@@ -73,7 +73,7 @@ std::unique_ptr<Buildable> AstTernaryExpression::Build(AstVisitor *visitor, Modu
             m_left.Get(),
             m_right.Get()
         ));
-    } else if (condition_is_true) {
+    } else if (conditionIsTrue) {
         // the condition has been determined to be true
         if (m_conditional->MayHaveSideEffects()) {
             // if there is a possibility of side effects,
@@ -163,19 +163,19 @@ SymbolTypePtr_t AstTernaryExpression::GetExprType() const
     case TRI_INDETERMINATE: {
         Assert(m_left != nullptr);
 
-        SymbolTypePtr_t l_type_ptr = m_left->GetExprType();
-        Assert(l_type_ptr != nullptr);
+        SymbolTypePtr_t lTypePtr = m_left->GetExprType();
+        Assert(lTypePtr != nullptr);
 
         if (m_right != nullptr) {
             // the right was not optimized away,
             // return type promotion
-            SymbolTypePtr_t r_type_ptr = m_right->GetExprType();
-            Assert(r_type_ptr != nullptr);
+            SymbolTypePtr_t rTypePtr = m_right->GetExprType();
+            Assert(rTypePtr != nullptr);
 
-            return SymbolType::TypePromotion(l_type_ptr, r_type_ptr);
+            return SymbolType::TypePromotion(lTypePtr, rTypePtr);
         } else {
             // right was optimized away, return only left type
-            return l_type_ptr;
+            return lTypePtr;
         }
     }
     case TRI_TRUE:
@@ -193,13 +193,13 @@ bool AstTernaryExpression::IsLiteral() const
     Assert(m_left != nullptr);
     Assert(m_right != nullptr);
 
-    const auto conditional_value = m_conditional->IsTrue();
+    const auto conditionalValue = m_conditional->IsTrue();
 
-    if (conditional_value == Tribool::Indeterminate()) {
+    if (conditionalValue == Tribool::Indeterminate()) {
         return false;
     }
 
-    if (conditional_value == Tribool::True()) {
+    if (conditionalValue == Tribool::True()) {
         return m_left->IsLiteral();
     }
 
@@ -212,13 +212,13 @@ const AstExpression *AstTernaryExpression::GetValueOf() const
     Assert(m_left != nullptr);
     Assert(m_right != nullptr);
 
-    const auto conditional_value = m_conditional->IsTrue();
+    const auto conditionalValue = m_conditional->IsTrue();
 
-    if (conditional_value == Tribool::Indeterminate()) {
+    if (conditionalValue == Tribool::Indeterminate()) {
         return AstExpression::GetValueOf();
     }
 
-    if (conditional_value == Tribool::True()) {
+    if (conditionalValue == Tribool::True()) {
         return m_left->GetValueOf();
     }
 
@@ -231,13 +231,13 @@ const AstExpression *AstTernaryExpression::GetDeepValueOf() const
     Assert(m_left != nullptr);
     Assert(m_right != nullptr);
 
-    const auto conditional_value = m_conditional->IsTrue();
+    const auto conditionalValue = m_conditional->IsTrue();
 
-    if (conditional_value == Tribool::Indeterminate()) {
+    if (conditionalValue == Tribool::Indeterminate()) {
         return AstExpression::GetDeepValueOf();
     }
 
-    if (conditional_value == Tribool::True()) {
+    if (conditionalValue == Tribool::True()) {
         return m_left->GetDeepValueOf();
     }
 

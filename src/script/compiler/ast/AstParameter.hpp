@@ -13,21 +13,21 @@ class AstParameter : public AstDeclaration
 public:
     AstParameter(
         const String &name,
-        const RC<AstPrototypeSpecification> &type_spec,
-        const RC<AstExpression> &default_param,
-        bool is_variadic,
-        bool is_const,
-        bool is_ref,
+        const RC<AstPrototypeSpecification> &typeSpec,
+        const RC<AstExpression> &defaultParam,
+        bool isVariadic,
+        bool isConst,
+        bool isRef,
         const SourceLocation &location
     );
 
     virtual ~AstParameter() override = default;
 
     const RC<AstExpression> &GetDefaultValue() const
-        { return m_default_param; }
+        { return m_defaultParam; }
 
-    void SetDefaultValue(const RC<AstExpression> &default_param)
-        { m_default_param = default_param; }
+    void SetDefaultValue(const RC<AstExpression> &defaultParam)
+        { m_defaultParam = defaultParam; }
 
     virtual void Visit(AstVisitor *visitor, Module *mod) override;
     virtual std::unique_ptr<Buildable> Build(AstVisitor *visitor, Module *mod) override;
@@ -35,56 +35,56 @@ public:
     
     virtual RC<AstStatement> Clone() const override;
 
-    bool IsVariadic() const { return m_is_variadic; }
-    bool IsConst() const { return m_is_const; }
-    bool IsRef() const { return m_is_ref; }
+    bool IsVariadic() const { return m_isVariadic; }
+    bool IsConst() const { return m_isConst; }
+    bool IsRef() const { return m_isRef; }
 
-    bool IsGenericParam() const { return m_is_generic_param; }
-    void SetIsGenericParam(bool is_generic_param) { m_is_generic_param = is_generic_param; }
+    bool IsGenericParam() const { return m_isGenericParam; }
+    void SetIsGenericParam(bool isGenericParam) { m_isGenericParam = isGenericParam; }
 
     // used by AstTemplateExpression
     const RC<AstPrototypeSpecification> &GetPrototypeSpecification() const
-        { return m_type_spec; } 
+        { return m_typeSpec; } 
 
-    void SetPrototypeSpecification(const RC<AstPrototypeSpecification> &type_spec)
-        { m_type_spec = type_spec; }
+    void SetPrototypeSpecification(const RC<AstPrototypeSpecification> &typeSpec)
+        { m_typeSpec = typeSpec; }
 
     SymbolTypePtr_t GetExprType() const;
 
     virtual HashCode GetHashCode() const override
     {
         HashCode hc = AstDeclaration::GetHashCode().Add(TypeName<AstParameter>());
-        hc.Add(m_type_spec ? m_type_spec->GetHashCode() : HashCode());
-        hc.Add(m_default_param ? m_default_param->GetHashCode() : HashCode());
-        hc.Add(m_is_variadic);
-        hc.Add(m_is_const);
-        hc.Add(m_is_ref);
-        hc.Add(m_is_generic_param);
+        hc.Add(m_typeSpec ? m_typeSpec->GetHashCode() : HashCode());
+        hc.Add(m_defaultParam ? m_defaultParam->GetHashCode() : HashCode());
+        hc.Add(m_isVariadic);
+        hc.Add(m_isConst);
+        hc.Add(m_isRef);
+        hc.Add(m_isGenericParam);
 
         return hc;
     }
 
 private:
-    RC<AstPrototypeSpecification>   m_type_spec;
-    RC<AstExpression>               m_default_param;
-    bool                            m_is_variadic;
-    bool                            m_is_const;
-    bool                            m_is_ref;
-    bool                            m_is_generic_param;
+    RC<AstPrototypeSpecification>   m_typeSpec;
+    RC<AstExpression>               m_defaultParam;
+    bool                            m_isVariadic;
+    bool                            m_isConst;
+    bool                            m_isRef;
+    bool                            m_isGenericParam;
 
     // Set while analyzing
-    SymbolTypePtr_t                 m_symbol_type;
-    RC<AstExpression>               m_varargs_type_spec;
+    SymbolTypePtr_t                 m_symbolType;
+    RC<AstExpression>               m_varargsTypeSpec;
 
     RC<AstParameter> CloneImpl() const
     {
         return RC<AstParameter>(new AstParameter(
             m_name,
-            CloneAstNode(m_type_spec),
-            CloneAstNode(m_default_param),
-            m_is_variadic,
-            m_is_const,
-            m_is_ref,
+            CloneAstNode(m_typeSpec),
+            CloneAstNode(m_defaultParam),
+            m_isVariadic,
+            m_isConst,
+            m_isRef,
             m_location
         ));
     }

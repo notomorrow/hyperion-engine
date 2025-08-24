@@ -25,12 +25,12 @@ namespace hyperion::compiler {
 
 AstAsExpression::AstAsExpression(
     const RC<AstExpression> &target,
-    const RC<AstPrototypeSpecification> &type_specification,
+    const RC<AstPrototypeSpecification> &typeSpecification,
     const SourceLocation &location
 ) : AstExpression(location, ACCESS_MODE_LOAD),
     m_target(target),
-    m_type_specification(type_specification),
-    m_is_type(TRI_INDETERMINATE)
+    m_typeSpecification(typeSpecification),
+    m_isType(TRI_INDETERMINATE)
 {
 }
 
@@ -39,55 +39,55 @@ void AstAsExpression::Visit(AstVisitor *visitor, Module *mod)
     Assert(m_target != nullptr);
     m_target->Visit(visitor, mod);
 
-    Assert(m_type_specification != nullptr);
-    m_type_specification->Visit(visitor, mod);
+    Assert(m_typeSpecification != nullptr);
+    m_typeSpecification->Visit(visitor, mod);
 
-    auto *target_value_of = m_target->GetDeepValueOf();
-    Assert(target_value_of != nullptr);
+    auto *targetValueOf = m_target->GetDeepValueOf();
+    Assert(targetValueOf != nullptr);
 
-    SymbolTypePtr_t target_type = target_value_of->GetExprType();
-    if (target_type == nullptr) {
+    SymbolTypePtr_t targetType = targetValueOf->GetExprType();
+    if (targetType == nullptr) {
         return; // should be caught by the type specification
     }
 
-    target_type = target_type->GetUnaliased();
+    targetType = targetType->GetUnaliased();
 
-    auto *type_specification_value_of = m_type_specification->GetDeepValueOf();
-    Assert(type_specification_value_of != nullptr);
+    auto *typeSpecificationValueOf = m_typeSpecification->GetDeepValueOf();
+    Assert(typeSpecificationValueOf != nullptr);
 
-    SymbolTypePtr_t held_type = type_specification_value_of->GetHeldType();
-    if (held_type == nullptr) {
+    SymbolTypePtr_t heldType = typeSpecificationValueOf->GetHeldType();
+    if (heldType == nullptr) {
         return; // should be caught by the type specification
     }
     
-    held_type = held_type->GetUnaliased();
+    heldType = heldType->GetUnaliased();
 
-    if (held_type->IsAnyType()) {
-        m_is_type = TRI_TRUE;
-
-        return;
-    }
-
-    if (held_type->IsPlaceholderType()) {
-        m_is_type = TRI_INDETERMINATE;
+    if (heldType->IsAnyType()) {
+        m_isType = TRI_TRUE;
 
         return;
     }
 
-    if (target_type->TypeEqual(*held_type)) {
-        m_is_type = TRI_TRUE;
+    if (heldType->IsPlaceholderType()) {
+        m_isType = TRI_INDETERMINATE;
 
         return;
     }
 
-    if (!target_type->TypeCompatible(*held_type, false)) {
+    if (targetType->TypeEqual(*heldType)) {
+        m_isType = TRI_TRUE;
+
+        return;
+    }
+
+    if (!targetType->TypeCompatible(*heldType, false)) {
         // not compatible
         visitor->GetCompilationUnit()->GetErrorList().AddError(CompilerError(
             LEVEL_ERROR,
             Msg_incompatible_cast,
             m_location,
-            target_type->ToString(),
-            held_type->ToString()
+            targetType->ToString(),
+            heldType->ToString()
         ));
 
         return;
@@ -97,70 +97,70 @@ void AstAsExpression::Visit(AstVisitor *visitor, Module *mod)
 std::unique_ptr<Buildable> AstAsExpression::Build(AstVisitor *visitor, Module *mod)
 {
     Assert(m_target != nullptr);
-    Assert(m_type_specification != nullptr);
+    Assert(m_typeSpecification != nullptr);
 
     std::unique_ptr<BytecodeChunk> chunk = BytecodeUtil::Make<BytecodeChunk>();
 
-    bool type_spec_built = false;
+    bool typeSpecBuilt = false;
 
     // if the type spec has side effects, build it in even though it's not needed for the cast
-    if (m_type_specification->MayHaveSideEffects()) {
-        chunk->Append(m_type_specification->Build(visitor, mod));
+    if (m_typeSpecification->MayHaveSideEffects()) {
+        chunk->Append(m_typeSpecification->Build(visitor, mod));
 
-        type_spec_built = true;
+        typeSpecBuilt = true;
     }
 
-    if (m_is_type == TRI_TRUE) {
+    if (m_isType == TRI_TRUE) {
         // just build the target
         chunk->Append(m_target->Build(visitor, mod));
 
         return chunk;
     }
 
-    const uint8 src_register = visitor->GetCompilationUnit()->GetInstructionStream().GetCurrentRegister();
+    const uint8 srcRegister = visitor->GetCompilationUnit()->GetInstructionStream().GetCurrentRegister();
 
     // Load the target into src
     chunk->Append(m_target->Build(visitor, mod));
 
     visitor->GetCompilationUnit()->GetInstructionStream().IncRegisterUsage();
 
-    const uint8 dst_register = visitor->GetCompilationUnit()->GetInstructionStream().GetCurrentRegister();
+    const uint8 dstRegister = visitor->GetCompilationUnit()->GetInstructionStream().GetCurrentRegister();
 
-    auto *value_of = m_type_specification->GetDeepValueOf();
-    Assert(value_of != nullptr);
+    auto *valueOf = m_typeSpecification->GetDeepValueOf();
+    Assert(valueOf != nullptr);
 
-    SymbolTypePtr_t held_type = value_of->GetHeldType();
-    Assert(held_type != nullptr);
-    held_type = held_type->GetUnaliased();
+    SymbolTypePtr_t heldType = valueOf->GetHeldType();
+    Assert(heldType != nullptr);
+    heldType = heldType->GetUnaliased();
 
-    Assert(!held_type->IsAnyType());
+    Assert(!heldType->IsAnyType());
 
-    if (held_type->IsSignedIntegral()) {
-        chunk->Append(BytecodeUtil::Make<CastOperation>(CastOperation::CAST_I32, dst_register, src_register));
-    } else if (held_type->IsUnsignedIntegral()) {
-        chunk->Append(BytecodeUtil::Make<CastOperation>(CastOperation::CAST_U32, dst_register, src_register));
-    } else if (held_type->IsFloat()) {
-        chunk->Append(BytecodeUtil::Make<CastOperation>(CastOperation::CAST_F32, dst_register, src_register));
-    } else if (held_type->IsBoolean()) {
-        chunk->Append(BytecodeUtil::Make<CastOperation>(CastOperation::CAST_BOOL, dst_register, src_register));
+    if (heldType->IsSignedIntegral()) {
+        chunk->Append(BytecodeUtil::Make<CastOperation>(CastOperation::CAST_I32, dstRegister, srcRegister));
+    } else if (heldType->IsUnsignedIntegral()) {
+        chunk->Append(BytecodeUtil::Make<CastOperation>(CastOperation::CAST_U32, dstRegister, srcRegister));
+    } else if (heldType->IsFloat()) {
+        chunk->Append(BytecodeUtil::Make<CastOperation>(CastOperation::CAST_F32, dstRegister, srcRegister));
+    } else if (heldType->IsBoolean()) {
+        chunk->Append(BytecodeUtil::Make<CastOperation>(CastOperation::CAST_BOOL, dstRegister, srcRegister));
     } else {
         // dynamic type needs to load the type object into the dst register.
         // if the type spec has side effects, it's already built in
-        if (!type_spec_built) {
-            chunk->Append(m_type_specification->Build(visitor, mod));
+        if (!typeSpecBuilt) {
+            chunk->Append(m_typeSpecification->Build(visitor, mod));
 
-            type_spec_built = true;
+            typeSpecBuilt = true;
         }
 
-        chunk->Append(BytecodeUtil::Make<CastOperation>(CastOperation::CAST_DYNAMIC, dst_register, src_register));
+        chunk->Append(BytecodeUtil::Make<CastOperation>(CastOperation::CAST_DYNAMIC, dstRegister, srcRegister));
     }
 
     { // swap dst and src
-        auto instr_mov_reg = BytecodeUtil::Make<RawOperation<>>();
-        instr_mov_reg->opcode = MOV_REG;
-        instr_mov_reg->Accept<uint8>(src_register);
-        instr_mov_reg->Accept<uint8>(dst_register);
-        chunk->Append(std::move(instr_mov_reg));
+        auto instrMovReg = BytecodeUtil::Make<RawOperation<>>();
+        instrMovReg->opcode = MOV_REG;
+        instrMovReg->Accept<uint8>(srcRegister);
+        instrMovReg->Accept<uint8>(dstRegister);
+        chunk->Append(std::move(instrMovReg));
     }
 
     visitor->GetCompilationUnit()->GetInstructionStream().DecRegisterUsage();
@@ -173,8 +173,8 @@ void AstAsExpression::Optimize(AstVisitor *visitor, Module *mod)
     Assert(m_target != nullptr);
     m_target->Optimize(visitor, mod);
 
-    Assert(m_type_specification != nullptr);
-    m_type_specification->Optimize(visitor, mod);
+    Assert(m_typeSpecification != nullptr);
+    m_typeSpecification->Optimize(visitor, mod);
 }
 
 RC<AstStatement> AstAsExpression::Clone() const
@@ -185,10 +185,10 @@ RC<AstStatement> AstAsExpression::Clone() const
 SymbolTypePtr_t AstAsExpression::GetExprType() const
 {
     Assert(m_target != nullptr);
-    Assert(m_type_specification != nullptr);
+    Assert(m_typeSpecification != nullptr);
 
-    if (SymbolTypePtr_t held_type = m_type_specification->GetHeldType()) {
-        return held_type;
+    if (SymbolTypePtr_t heldType = m_typeSpecification->GetHeldType()) {
+        return heldType;
     }
 
     return BuiltinTypes::UNDEFINED;
@@ -202,11 +202,11 @@ Tribool AstAsExpression::IsTrue() const
 bool AstAsExpression::MayHaveSideEffects() const
 {
     Assert(
-        m_target != nullptr && m_type_specification != nullptr
+        m_target != nullptr && m_typeSpecification != nullptr
     );
 
     return m_target->MayHaveSideEffects()
-        || m_type_specification->MayHaveSideEffects();
+        || m_typeSpecification->MayHaveSideEffects();
 }
 
 } // namespace hyperion::compiler

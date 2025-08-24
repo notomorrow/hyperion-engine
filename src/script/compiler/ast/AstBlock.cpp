@@ -16,22 +16,22 @@ AstBlock::AstBlock(const Array<RC<AstStatement>> &children,
     const SourceLocation &location)
     : AstStatement(location),
       m_children(children),
-      m_num_locals(0),
-      m_last_is_return(false)
+      m_numLocals(0),
+      m_lastIsReturn(false)
 {
 }
 
 AstBlock::AstBlock(const SourceLocation &location)
     : AstStatement(location),
-      m_num_locals(0),
-      m_last_is_return(false)
+      m_numLocals(0),
+      m_lastIsReturn(false)
 {
 }
 
 void AstBlock::Visit(AstVisitor *visitor, Module *mod)
 {
     // open the new scope
-    mod->m_scopes.Open(Scope(m_scope_type, m_scope_flags));
+    mod->m_scopes.Open(Scope(m_scopeType, m_scopeFlags));
     m_scope = &mod->m_scopes.Top();
 
     // visit all children in the block
@@ -41,11 +41,11 @@ void AstBlock::Visit(AstVisitor *visitor, Module *mod)
         child->Visit(visitor, mod);
     }
 
-    m_last_is_return = m_children.Any() &&
+    m_lastIsReturn = m_children.Any() &&
         (dynamic_cast<AstReturnStatement *>(m_children.Back().Get()) != nullptr);
 
     // store number of locals, so we can pop them from the stack later
-    m_num_locals = m_scope->GetIdentifierTable().CountUsedVariables();
+    m_numLocals = m_scope->GetIdentifierTable().CountUsedVariables();
 
     // go down to previous scope
     mod->m_scopes.Close();
@@ -55,7 +55,7 @@ std::unique_ptr<Buildable> AstBlock::Build(AstVisitor *visitor, Module *mod)
 {
     std::unique_ptr<BytecodeChunk> chunk = BytecodeUtil::Make<BytecodeChunk>();
 
-    const int stack_size_before = visitor->GetCompilationUnit()->GetInstructionStream().GetStackSize();
+    const int stackSizeBefore = visitor->GetCompilationUnit()->GetInstructionStream().GetStackSize();
 
     for (RC<AstStatement> &stmt : m_children) {
         Assert(stmt != nullptr);
@@ -64,27 +64,27 @@ std::unique_ptr<Buildable> AstBlock::Build(AstVisitor *visitor, Module *mod)
     }
 
     // how many times to pop the stack
-    SizeType pop_times = 0;
+    SizeType popTimes = 0;
 
     // pop all local variables off the stack
-    for (int i = 0; i < m_num_locals; i++) {
-        if (!m_last_is_return) {
-            pop_times++;
+    for (int i = 0; i < m_numLocals; i++) {
+        if (!m_lastIsReturn) {
+            popTimes++;
         }
 
         visitor->GetCompilationUnit()->GetInstructionStream().DecStackSize();
     }
 
-    const int stack_size_now = visitor->GetCompilationUnit()->GetInstructionStream().GetStackSize();
+    const int stackSizeNow = visitor->GetCompilationUnit()->GetInstructionStream().GetStackSize();
 
     Assert(
-        stack_size_now == stack_size_before,
+        stackSizeNow == stackSizeBefore,
         "Stack size mismatch detected! Internal record of stack does not match. (%d != %d)",
-        stack_size_now,
-        stack_size_before
+        stackSizeNow,
+        stackSizeBefore
     );
 
-    chunk->Append(Compiler::PopStack(visitor, pop_times));
+    chunk->Append(Compiler::PopStack(visitor, popTimes));
 
     return chunk;
 }

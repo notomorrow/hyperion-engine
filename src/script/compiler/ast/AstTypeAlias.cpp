@@ -24,9 +24,9 @@ void AstTypeAlias::Visit(AstVisitor *visitor, Module *mod)
 
     m_aliasee->Visit(visitor, mod);
 
-    SymbolTypePtr_t aliasee_type = m_aliasee->GetHeldType();
-    Assert(aliasee_type != nullptr);
-    aliasee_type = aliasee_type->GetUnaliased();
+    SymbolTypePtr_t aliaseeType = m_aliasee->GetHeldType();
+    Assert(aliaseeType != nullptr);
+    aliaseeType = aliaseeType->GetUnaliased();
 
     // make sure name isn't already defined
     if (mod->LookupSymbolType(m_name)) {
@@ -40,12 +40,12 @@ void AstTypeAlias::Visit(AstVisitor *visitor, Module *mod)
             )
         );
     } else {
-        SymbolTypePtr_t alias_type = SymbolType::Alias(
-            m_name, { aliasee_type }
+        SymbolTypePtr_t aliasType = SymbolType::Alias(
+            m_name, { aliaseeType }
         );
 
         // add it
-        mod->m_scopes.Top().GetIdentifierTable().AddSymbolType(alias_type);
+        mod->m_scopes.Top().GetIdentifierTable().AddSymbolType(aliasType);
     }
 }
 

@@ -17,7 +17,7 @@ namespace hyperion::compiler {
 class CodeGenerator : public BuildableVisitor
 {
 public:
-    CodeGenerator(BuildParams &build_params);
+    CodeGenerator(BuildParams &buildParams);
     virtual ~CodeGenerator() = default;
 
     InternalByteStream &GetInternalByteStream() { return m_ibs; }
@@ -54,7 +54,7 @@ public:
     virtual void Visit(RawOperation<> *);
 
 private:
-    BuildParams &build_params;
+    BuildParams &buildParams;
     InternalByteStream m_ibs;
 };
 

@@ -15,7 +15,7 @@ class AstModuleImportPart : public AstStatement
 public:
     AstModuleImportPart(
         const String &left,
-        const Array<RC<AstModuleImportPart>> &right_parts,
+        const Array<RC<AstModuleImportPart>> &rightParts,
         const SourceLocation &location
     );
     virtual ~AstModuleImportPart() = default;
@@ -24,10 +24,10 @@ public:
         { return m_left; }
 
     const Array<RC<AstModuleImportPart>> &GetParts() const
-        { return m_right_parts; }
+        { return m_rightParts; }
 
-    void SetPullInModules(bool pull_in_modules)
-        { m_pull_in_modules = pull_in_modules; }
+    void SetPullInModules(bool pullInModules)
+        { m_pullInModules = pullInModules; }
 
     Array<RC<Identifier>> &GetIdentifiers()
         { return m_identifiers; }
@@ -47,7 +47,7 @@ public:
         hc.Add(TypeName<AstModuleImportPart>());
         hc.Add(m_left);
 
-        for (auto &part : m_right_parts) {
+        for (auto &part : m_rightParts) {
             hc.Add(part ? part->GetHashCode() : HashCode());
         }
 
@@ -56,17 +56,17 @@ public:
 
 private:
     String                          m_left;
-    Array<RC<AstModuleImportPart>>  m_right_parts;
+    Array<RC<AstModuleImportPart>>  m_rightParts;
 
     // set while analyzing
-    bool                            m_pull_in_modules;
+    bool                            m_pullInModules;
     Array<RC<Identifier>>           m_identifiers;
 
     RC<AstModuleImportPart> CloneImpl() const
     {
         return RC<AstModuleImportPart>(new AstModuleImportPart(
             m_left,
-            CloneAllAstNodes(m_right_parts),
+            CloneAllAstNodes(m_rightParts),
             m_location
         ));
     }

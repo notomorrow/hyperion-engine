@@ -16,7 +16,7 @@ VMArray::VMArray(SizeType size)
 {
     for (SizeType index = 0; index < m_capacity; index++) {
         m_buffer[index].m_type = Value::NONE;
-        m_buffer[index].m_value.user_data = nullptr;
+        m_buffer[index].m_value.userData = nullptr;
     }
 }
 
@@ -95,17 +95,17 @@ void VMArray::Resize(SizeType capacity)
 {
     // delete and copy all over again
     m_capacity = capacity;
-    auto *new_buffer = new Value[m_capacity];
+    auto *newBuffer = new Value[m_capacity];
 
     Assert(m_size <= m_capacity);
 
     // copy all objects into new buffer
     for (SizeType index = 0; index < m_size; index++) {
-        new_buffer[index] = m_buffer[index];
+        newBuffer[index] = m_buffer[index];
     }
 
     for (SizeType index = m_size; index < m_capacity; index++) {
-        new_buffer[index] = Value(Value::NONE, { .user_data = nullptr });
+        newBuffer[index] = Value(Value::NONE, { .userData = nullptr });
     }
 
     // delete old buffer
@@ -113,7 +113,7 @@ void VMArray::Resize(SizeType capacity)
         delete[] m_buffer;
     }
     // set internal buffer to the new one
-    m_buffer = new_buffer;
+    m_buffer = newBuffer;
 }
 
 void VMArray::Push(const Value &value)
@@ -171,7 +171,7 @@ void VMArray::Pop()
 
 void VMArray::GetRepresentation(
     std::stringstream &ss,
-    bool add_type_name,
+    bool addTypeName,
     int depth
 ) const
 {
@@ -182,7 +182,7 @@ void VMArray::GetRepresentation(
     }
 
     // convert array list to string
-    const char sep_str[3] = ", ";
+    const char sepStr[3] = ", ";
 
     ss << '[';
 
@@ -190,12 +190,12 @@ void VMArray::GetRepresentation(
     for (SizeType i = 0; i < m_size; i++) {
         m_buffer[i].ToRepresentation(
             ss,
-            add_type_name,
+            addTypeName,
             depth - 1
         );
 
         if (i != m_size - 1) {
-            ss << sep_str;
+            ss << sepStr;
         }
     }
 
@@ -204,13 +204,13 @@ void VMArray::GetRepresentation(
 
 HashCode VMArray::GetHashCode() const
 {
-    HashCode hash_code;
+    HashCode hashCode;
 
     for (SizeType i = 0; i < m_size; i++) {
-        hash_code.Add(m_buffer[i].GetHashCode());
+        hashCode.Add(m_buffer[i].GetHashCode());
     }
 
-    return hash_code;
+    return hashCode;
 }
 
 } // namespace vm

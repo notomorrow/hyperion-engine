@@ -15,7 +15,7 @@ public:
     AstIfStatement(
         const RC<AstExpression> &conditional,
         const RC<AstBlock> &block,
-        const RC<AstBlock> &else_block,
+        const RC<AstBlock> &elseBlock,
         const SourceLocation &location
     );
     virtual ~AstIfStatement() = default;
@@ -32,7 +32,7 @@ public:
         hc.Add(TypeName<AstIfStatement>());
         hc.Add(m_conditional ? m_conditional->GetHashCode() : HashCode());
         hc.Add(m_block ? m_block->GetHashCode() : HashCode());
-        hc.Add(m_else_block ? m_else_block->GetHashCode() : HashCode());
+        hc.Add(m_elseBlock ? m_elseBlock->GetHashCode() : HashCode());
 
         return hc;
     }
@@ -40,14 +40,14 @@ public:
 private:
     RC<AstExpression>   m_conditional;
     RC<AstBlock>        m_block;
-    RC<AstBlock>        m_else_block;
+    RC<AstBlock>        m_elseBlock;
 
     RC<AstIfStatement> CloneImpl() const
     {
         return RC<AstIfStatement>(new AstIfStatement(
             CloneAstNode(m_conditional),
             CloneAstNode(m_block),
-            CloneAstNode(m_else_block),
+            CloneAstNode(m_elseBlock),
             m_location
         ));
     }

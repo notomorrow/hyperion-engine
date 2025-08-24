@@ -10,8 +10,8 @@
 namespace hyperion {
 namespace vm {
 
-const uint32 VMObject::PROTO_MEMBER_HASH = hash_fnv_1("$proto");
-const uint32 VMObject::BASE_MEMBER_HASH = hash_fnv_1("base");
+const uint32 VMObject::PROTO_MEMBER_HASH = hashFnv1("$proto");
+const uint32 VMObject::BASE_MEMBER_HASH = hashFnv1("base");
 
 ObjectMap::ObjectBucket::ObjectBucket()
     : m_data(new Member*[DEFAULT_BUCKET_CAPACITY]),
@@ -59,17 +59,17 @@ ObjectMap::ObjectBucket &ObjectMap::ObjectBucket::operator=(const ObjectBucket &
 void ObjectMap::ObjectBucket::Resize(SizeType capacity)
 {
     if (m_capacity < capacity) {
-        const SizeType new_capacity = COMPUTE_CAPACITY(capacity);
+        const SizeType newCapacity = COMPUTE_CAPACITY(capacity);
         // create new bucket and copy
-        Member **new_data = new Member*[new_capacity];
+        Member **newData = new Member*[newCapacity];
         Memory::MemCpy(
-            new_data,
+            newData,
             m_data,
             sizeof(Member *) * m_size
         );
-        m_capacity = new_capacity;
+        m_capacity = newCapacity;
         delete[] m_data;
-        m_data = new_data;
+        m_data = newData;
     }
 }
 
@@ -153,62 +153,62 @@ Member *ObjectMap::Get(uint32 hash)
     return res;
 }
 
-VMObject::VMObject(HeapValue *class_ptr)
-    : m_class_ptr(class_ptr)
+VMObject::VMObject(HeapValue *classPtr)
+    : m_classPtr(classPtr)
 {
-    Assert(m_class_ptr != nullptr);
+    Assert(m_classPtr != nullptr);
 
-    const VMObject *proto_obj = m_class_ptr->GetPointer<VMObject>();
-    Assert(proto_obj != nullptr);
+    const VMObject *protoObj = m_classPtr->GetPointer<VMObject>();
+    Assert(protoObj != nullptr);
 
-    SizeType size = proto_obj->GetSize();
+    SizeType size = protoObj->GetSize();
 
     m_members = new Member[size];
-    Memory::MemCpy(m_members, proto_obj->GetMembers(), sizeof(Member) * size);
+    Memory::MemCpy(m_members, protoObj->GetMembers(), sizeof(Member) * size);
 
-    m_object_map = new ObjectMap(size);
+    m_objectMap = new ObjectMap(size);
     for (SizeType i = 0; i < size; i++) {
-        m_object_map->Push(m_members[i].hash, &m_members[i]);
+        m_objectMap->Push(m_members[i].hash, &m_members[i]);
     }
 }
 
-VMObject::VMObject(const Member *members, SizeType size, HeapValue *class_ptr)
-    : m_class_ptr(class_ptr)
+VMObject::VMObject(const Member *members, SizeType size, HeapValue *classPtr)
+    : m_classPtr(classPtr)
 {
     Assert(members != nullptr);
 
     m_members = new Member[size];
     Memory::MemCpy(m_members, members, sizeof(Member) * size);
 
-    m_object_map = new ObjectMap(size);
+    m_objectMap = new ObjectMap(size);
     for (SizeType i = 0; i < size; i++) {
-        m_object_map->Push(m_members[i].hash, &m_members[i]);
+        m_objectMap->Push(m_members[i].hash, &m_members[i]);
     }
 }
 
 VMObject::VMObject(const VMObject &other)
-    : m_class_ptr(other.m_class_ptr)
+    : m_classPtr(other.m_classPtr)
 {
     const SizeType size = other.GetSize();
 
     m_members = new Member[size];
 
     Assert(other.GetObjectMap() != nullptr);
-    m_object_map = new ObjectMap(*other.GetObjectMap());
+    m_objectMap = new ObjectMap(*other.GetObjectMap());
 
     Memory::MemCpy(m_members, other.m_members, sizeof(Member) * size);
 
     for (SizeType i = 0; i < size; i++) {
-        m_object_map->Push(m_members[i].hash, &m_members[i]);
+        m_objectMap->Push(m_members[i].hash, &m_members[i]);
     }
 }
 
 VMObject::~VMObject()
 {
-    m_class_ptr = nullptr;
+    m_classPtr = nullptr;
 
-    delete m_object_map;
-    m_object_map = nullptr;
+    delete m_objectMap;
+    m_objectMap = nullptr;
 
     delete[] m_members;
     m_members = nullptr;
@@ -216,13 +216,13 @@ VMObject::~VMObject()
 
 Member *VMObject::LookupMemberFromHash(uint32 hash, bool deep) const
 {
-    if (Member *member = m_object_map->Get(hash)) {
+    if (Member *member = m_objectMap->Get(hash)) {
         return member;
     }
 
-    if (deep && m_class_ptr != nullptr) {
-        if (VMObject *base_object = m_class_ptr->GetPointer<VMObject>()) {
-            return base_object->LookupMemberFromHash(hash);
+    if (deep && m_classPtr != nullptr) {
+        if (VMObject *baseObject = m_classPtr->GetPointer<VMObject>()) {
+            return baseObject->LookupMemberFromHash(hash);
         }
     }
 
@@ -231,7 +231,7 @@ Member *VMObject::LookupMemberFromHash(uint32 hash, bool deep) const
 
 void VMObject::SetMember(const char *name, const Value &value)
 {
-    const uint32 hash = hash_fnv_1(name);
+    const uint32 hash = hashFnv1(name);
     
     Member *member = LookupMemberFromHash(hash, /* deep */ false);
 
@@ -241,33 +241,33 @@ void VMObject::SetMember(const char *name, const Value &value)
         return;
     }
 
-    const SizeType prev_size = m_object_map->GetSize();
-    const SizeType new_size = prev_size + 1;
+    const SizeType prevSize = m_objectMap->GetSize();
+    const SizeType newSize = prevSize + 1;
 
-    Member *new_members = new Member[new_size];
-    Memory::MemCpy(new_members, m_members, sizeof(Member) * prev_size);
+    Member *newMembers = new Member[newSize];
+    Memory::MemCpy(newMembers, m_members, sizeof(Member) * prevSize);
 
-    Memory::StrCpy(new_members[new_size - 1].name, name, sizeof(new_members[new_size - 1].name));
-    new_members[new_size - 1].hash = hash;
-    new_members[new_size - 1].value = value;
+    Memory::StrCpy(newMembers[newSize - 1].name, name, sizeof(newMembers[newSize - 1].name));
+    newMembers[newSize - 1].hash = hash;
+    newMembers[newSize - 1].value = value;
 
-    ObjectMap *new_object_map = new ObjectMap(new_size);
-    for (SizeType i = 0; i < new_size; i++) {
-        new_object_map->Push(new_members[i].hash, &new_members[i]);
+    ObjectMap *newObjectMap = new ObjectMap(newSize);
+    for (SizeType i = 0; i < newSize; i++) {
+        newObjectMap->Push(newMembers[i].hash, &newMembers[i]);
     }
 
-    new_object_map->Push(hash, &new_members[new_size - 1]);
+    newObjectMap->Push(hash, &newMembers[newSize - 1]);
 
     delete[] m_members;
-    delete m_object_map;
+    delete m_objectMap;
 
-    m_members = new_members;
-    m_object_map = new_object_map;
+    m_members = newMembers;
+    m_objectMap = newObjectMap;
 }
 
 void VMObject::GetRepresentation(
     std::stringstream &ss,
-    bool add_type_name,
+    bool addTypeName,
     int depth
 ) const
 {
@@ -292,13 +292,13 @@ void VMObject::GetRepresentation(
         {
             mem.value.ToRepresentation(
                 ss,
-                add_type_name,
+                addTypeName,
                 0 // prevent circular reference causing infinite loop
             );
         } else {
             mem.value.ToRepresentation(
                 ss,
-                add_type_name,
+                addTypeName,
                 depth - 1
             );
         }

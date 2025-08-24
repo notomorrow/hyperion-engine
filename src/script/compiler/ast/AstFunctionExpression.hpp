@@ -20,7 +20,7 @@ class AstFunctionExpression : public AstExpression
 public:
     AstFunctionExpression(
         const Array<RC<AstParameter>> &parameters,
-        const RC<AstPrototypeSpecification> &return_type_specification,
+        const RC<AstPrototypeSpecification> &returnTypeSpecification,
         const RC<AstBlock> &block,
         const SourceLocation &location
     );
@@ -28,10 +28,10 @@ public:
     virtual ~AstFunctionExpression() override = default;
 
     bool IsConstructorDefinition() const
-        { return m_is_constructor_definition; }
+        { return m_isConstructorDefinition; }
 
-    void SetIsConstructorDefinition(bool is_constructor_definition)
-        { m_is_constructor_definition = is_constructor_definition; }
+    void SetIsConstructorDefinition(bool isConstructorDefinition)
+        { m_isConstructorDefinition = isConstructorDefinition; }
 
     virtual void Visit(AstVisitor *visitor, Module *mod) override;
     virtual std::unique_ptr<Buildable> Build(AstVisitor *visitor, Module *mod) override;
@@ -44,10 +44,10 @@ public:
     virtual SymbolTypePtr_t GetExprType() const override;
     
     const SymbolTypePtr_t &GetReturnType() const
-        { return m_return_type; }
+        { return m_returnType; }
 
-    void SetReturnType(const SymbolTypePtr_t &return_type)
-        { m_return_type = return_type; }
+    void SetReturnType(const SymbolTypePtr_t &returnType)
+        { m_returnType = returnType; }
 
     virtual HashCode GetHashCode() const override
     {
@@ -57,7 +57,7 @@ public:
             hc.Add(param ? param->GetHashCode() : HashCode());
         }
 
-        hc.Add(m_return_type_specification ? m_return_type_specification->GetHashCode() : HashCode());
+        hc.Add(m_returnTypeSpecification ? m_returnTypeSpecification->GetHashCode() : HashCode());
 
         hc.Add(m_block ? m_block->GetHashCode() : HashCode());
 
@@ -66,31 +66,31 @@ public:
 
 protected:
     Array<RC<AstParameter>>         m_parameters;
-    RC<AstPrototypeSpecification>   m_return_type_specification;
+    RC<AstPrototypeSpecification>   m_returnTypeSpecification;
     RC<AstBlock>                    m_block;
 
-    bool                            m_is_closure;
+    bool                            m_isClosure;
 
-    RC<AstParameter>                m_closure_self_param;
-    RC<AstPrototypeSpecification>   m_function_type_expr;
-    RC<AstTypeExpression>           m_closure_type_expr;
-    RC<AstBlock>                    m_block_with_parameters;
+    RC<AstParameter>                m_closureSelfParam;
+    RC<AstPrototypeSpecification>   m_functionTypeExpr;
+    RC<AstTypeExpression>           m_closureTypeExpr;
+    RC<AstBlock>                    m_blockWithParameters;
 
-    bool                            m_is_constructor_definition;
+    bool                            m_isConstructorDefinition;
 
-    SymbolTypePtr_t                 m_symbol_type;
-    SymbolTypePtr_t                 m_return_type;
+    SymbolTypePtr_t                 m_symbolType;
+    SymbolTypePtr_t                 m_returnType;
 
-    int                             m_closure_object_location;
+    int                             m_closureObjectLocation;
 
-    int                             m_static_id;
+    int                             m_staticId;
 
     std::unique_ptr<Buildable> BuildFunctionBody(AstVisitor *visitor, Module *mod);
     RC<AstFunctionExpression> CloneImpl() const
     {
         return RC<AstFunctionExpression>(new AstFunctionExpression(
             CloneAllAstNodes(m_parameters),
-            CloneAstNode(m_return_type_specification),
+            CloneAstNode(m_returnTypeSpecification),
             CloneAstNode(m_block),
             m_location
         ));

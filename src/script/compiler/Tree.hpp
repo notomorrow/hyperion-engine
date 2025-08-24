@@ -45,19 +45,19 @@ struct TreeNode
         }
     }
 
-    void PrintToStream(std::stringstream &ss, int &indent_level) const
+    void PrintToStream(std::stringstream &ss, int &indentLevel) const
     {
-        for (int i = 0; i < indent_level; i++) {
+        for (int i = 0; i < indentLevel; i++) {
             ss << "  ";
         }
         ss << m_value.Get() << "\n";
 
-        indent_level++;
+        indentLevel++;
         for (int i = 0; i < m_siblings.Size(); i++) {
-            m_siblings[i]->PrintToStream(ss, indent_level);
+            m_siblings[i]->PrintToStream(ss, indentLevel);
         }
 
-        indent_level--;
+        indentLevel--;
     }
 
     T &Get()
@@ -79,10 +79,10 @@ public:
     std::ostream &operator<<(std::ostream &os) const
     {
         std::stringstream ss;
-        int indent_level = 0;
+        int indentLevel = 0;
 
         for (int i = 0; i < m_nodes.Size(); i++) {
-            m_nodes[i]->PrintToStream(ss, indent_level);
+            m_nodes[i]->PrintToStream(ss, indentLevel);
         }
 
         os << ss.str() << "\n";

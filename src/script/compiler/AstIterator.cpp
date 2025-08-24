@@ -17,17 +17,17 @@ AstIterator::AstIterator(const AstIterator &other)
 {
 }
 
-void AstIterator::Prepend(AstIterator &&other, bool reset_position)
+void AstIterator::Prepend(AstIterator &&other, bool resetPosition)
 {
-    if (reset_position) {
+    if (resetPosition) {
         m_position = 0;
     } else {
         m_position += other.m_list.Size();
     }
 
-    Array<RC<AstStatement>> new_list = std::move(other.m_list);
-    new_list.Concat(std::move(m_list));
-    m_list = std::move(new_list);
+    Array<RC<AstStatement>> newList = std::move(other.m_list);
+    newList.Concat(std::move(m_list));
+    m_list = std::move(newList);
 
     other.m_position = 0;
 }

@@ -17,25 +17,25 @@ using LabelId = SizeType;
 
 struct LabelInfo
 {
-    LabelId         label_id = LabelId(-1);
+    LabelId         labelId = LabelId(-1);
     LabelPosition   position = LabelPosition(-1);
     Name            name     = HYP_NAME(LabelNameNotSet);
 
     bool operator==(const LabelInfo &other) const
     {
-        return label_id == other.label_id
+        return labelId == other.labelId
             && position == other.position
             && name == other.name;
     }
 
     bool operator<(const LabelInfo &other) const
-        { return label_id < other.label_id; }
+        { return labelId < other.labelId; }
 };
 
 struct BuildParams
 {
-    SizeType                block_offset = 0;
-    SizeType                local_offset = 0;
+    SizeType                blockOffset = 0;
+    SizeType                localOffset = 0;
     SortedArray<LabelInfo>  labels;
 };
 

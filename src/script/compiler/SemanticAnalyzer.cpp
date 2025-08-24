@@ -19,22 +19,22 @@ namespace hyperion::compiler {
 void SemanticAnalyzer::Helpers::CheckArgTypeCompatible(
     AstVisitor *visitor,
     const SourceLocation &location,
-    const SymbolTypePtr_t &arg_type,
-    const SymbolTypePtr_t &param_type
+    const SymbolTypePtr_t &argType,
+    const SymbolTypePtr_t &paramType
 )
 {
-    Assert(arg_type != nullptr);
-    Assert(param_type != nullptr);
+    Assert(argType != nullptr);
+    Assert(paramType != nullptr);
 
     // make sure argument types are compatible
     // use strict numbers so that floats cannot be passed as explicit ints
     // @NOTE: do not add error for undefined, it causes too many unnecessary errors
     //        that would've already been conveyed via 'not declared' errors
-    if (arg_type == BuiltinTypes::UNDEFINED) {
+    if (argType == BuiltinTypes::UNDEFINED) {
         return;
     }
 
-    if (param_type->TypeCompatible(*arg_type, true)) {
+    if (paramType->TypeCompatible(*argType, true)) {
         return;
     }
 
@@ -42,34 +42,34 @@ void SemanticAnalyzer::Helpers::CheckArgTypeCompatible(
         LEVEL_ERROR,
         Msg_arg_type_incompatible,
         location,
-        arg_type->ToString(),
-        param_type->ToString()
+        argType->ToString(),
+        paramType->ToString()
     ));
 }
 
 SizeType SemanticAnalyzer::Helpers::FindFreeSlot(
-    SizeType current_index,
-    const FlatSet<SizeType> &used_indices,
-    const Array<GenericInstanceTypeInfo::Arg> &generic_args,
-    bool is_variadic,
-    SizeType num_supplied_args
+    SizeType currentIndex,
+    const FlatSet<SizeType> &usedIndices,
+    const Array<GenericInstanceTypeInfo::Arg> &genericArgs,
+    bool isVariadic,
+    SizeType numSuppliedArgs
 )
 {
-    const SizeType num_params = generic_args.Size();
+    const SizeType numParams = genericArgs.Size();
     
-    for (SizeType counter = 0; counter < num_params; counter++) {
+    for (SizeType counter = 0; counter < numParams; counter++) {
         // variadic keeps counting
-        if (!is_variadic && current_index == num_params) {
-            current_index = 0;
+        if (!isVariadic && currentIndex == numParams) {
+            currentIndex = 0;
         }
 
         // check if index is used
-        if (used_indices.Find(current_index) == used_indices.End()) {
+        if (usedIndices.Find(currentIndex) == usedIndices.End()) {
             // not found, return the index
-            return current_index;
+            return currentIndex;
         }
 
-        current_index++;
+        currentIndex++;
     }
 
     // no slot available
@@ -77,19 +77,19 @@ SizeType SemanticAnalyzer::Helpers::FindFreeSlot(
 }
 
 SizeType SemanticAnalyzer::Helpers::ArgIndex(
-    SizeType current_index,
-    const ArgInfo &arg_info,
-    const FlatSet<SizeType> &used_indices,
-    const Array<GenericInstanceTypeInfo::Arg> &generic_args,
-    bool is_variadic,
-    SizeType num_supplied_args
+    SizeType currentIndex,
+    const ArgInfo &argInfo,
+    const FlatSet<SizeType> &usedIndices,
+    const Array<GenericInstanceTypeInfo::Arg> &genericArgs,
+    bool isVariadic,
+    SizeType numSuppliedArgs
 )
 {
-    if (arg_info.is_named) {
-        for (SizeType i = 0; i < generic_args.Size(); i++) {
-            const String &generic_arg_name = generic_args[i].m_name;
+    if (argInfo.isNamed) {
+        for (SizeType i = 0; i < genericArgs.Size(); i++) {
+            const String &genericArgName = genericArgs[i].m_name;
 
-            if (generic_arg_name == arg_info.name && used_indices.Find(i) == used_indices.End()) {
+            if (genericArgName == argInfo.name && usedIndices.Find(i) == usedIndices.End()) {
                 return i;
             }
         }
@@ -98,73 +98,73 @@ SizeType SemanticAnalyzer::Helpers::ArgIndex(
     }
 
     return FindFreeSlot(
-        current_index,
-        used_indices,
-        generic_args,
-        is_variadic,
-        num_supplied_args
+        currentIndex,
+        usedIndices,
+        genericArgs,
+        isVariadic,
+        numSuppliedArgs
     );
 }
 
 SymbolTypePtr_t SemanticAnalyzer::Helpers::SubstituteGenericParameters(
     AstVisitor *visitor,
     Module *mod,
-    const SymbolTypePtr_t &input_type,
-    const Array<GenericInstanceTypeInfo::Arg> &generic_args,
-    const Array<SubstitutionResult> &substitution_results,
+    const SymbolTypePtr_t &inputType,
+    const Array<GenericInstanceTypeInfo::Arg> &genericArgs,
+    const Array<SubstitutionResult> &substitutionResults,
     const SourceLocation &location
 )
 {
-    if (!input_type) {
+    if (!inputType) {
         return nullptr;
     }
 
     const auto FindArgForInputType = [&]() -> const SubstitutionResult *
     {
-        SizeType generic_arg_index = SizeType(-1);
+        SizeType genericArgIndex = SizeType(-1);
 
-        for (SizeType index = 0; index < generic_args.Size(); index++) {
-            if (generic_args[index].m_name == input_type->GetName()) {
-                generic_arg_index = index;
+        for (SizeType index = 0; index < genericArgs.Size(); index++) {
+            if (genericArgs[index].m_name == inputType->GetName()) {
+                genericArgIndex = index;
 
                 break;
             }
         }
 
-        const auto substitution_result_it = substitution_results.FindIf([generic_arg_index](const SubstitutionResult &substitution_result)
+        const auto substitutionResultIt = substitutionResults.FindIf([genericArgIndex](const SubstitutionResult &substitutionResult)
         {
-            return substitution_result.index == generic_arg_index;
+            return substitutionResult.index == genericArgIndex;
         });
 
-        if (substitution_result_it == substitution_results.End()) {
+        if (substitutionResultIt == substitutionResults.End()) {
             return nullptr;
         }
         
-        return substitution_result_it;
+        return substitutionResultIt;
     };
 
-    switch (input_type->GetTypeClass()) {
+    switch (inputType->GetTypeClass()) {
     case TYPE_GENERIC_PARAMETER: {
-        const SubstitutionResult *found_substitution_result = FindArgForInputType();
+        const SubstitutionResult *foundSubstitutionResult = FindArgForInputType();
 
-        if (found_substitution_result) {
-            Assert(found_substitution_result->arg != nullptr);
+        if (foundSubstitutionResult) {
+            Assert(foundSubstitutionResult->arg != nullptr);
 
-            const GenericInstanceTypeInfo::Arg &generic_arg = generic_args[found_substitution_result->index];
+            const GenericInstanceTypeInfo::Arg &genericArg = genericArgs[foundSubstitutionResult->index];
 
             // @TODO We need to reevaluate the order of which Arguments are visited VS. this chain of methods gets called.
             /// We need a way to mark ref/const BEFORE visiting OR we need to ignore it in the first visiting stage and just use it for building..
             /// // Or we could do first visit, mark ref/const, then clone + visit again.
 
-            found_substitution_result->arg->SetIsPassByRef(generic_arg.m_is_ref);
-            found_substitution_result->arg->SetIsPassConst(generic_arg.m_is_const);
+            foundSubstitutionResult->arg->SetIsPassByRef(genericArg.m_isRef);
+            foundSubstitutionResult->arg->SetIsPassConst(genericArg.m_isConst);
 
-            auto *deep_value_of = found_substitution_result->arg->GetDeepValueOf();
-            Assert(deep_value_of != nullptr);
+            auto *deepValueOf = foundSubstitutionResult->arg->GetDeepValueOf();
+            Assert(deepValueOf != nullptr);
 
-            if (SymbolTypePtr_t held_type = deep_value_of->GetHeldType()) {
-                if (!held_type->IsOrHasBase(*BuiltinTypes::UNDEFINED)) {
-                    return held_type;
+            if (SymbolTypePtr_t heldType = deepValueOf->GetHeldType()) {
+                if (!heldType->IsOrHasBase(*BuiltinTypes::UNDEFINED)) {
+                    return heldType;
                 }
             }
         }
@@ -173,147 +173,147 @@ SymbolTypePtr_t SemanticAnalyzer::Helpers::SubstituteGenericParameters(
             LEVEL_ERROR,
             Msg_no_substitution_for_generic_arg,
             location,
-            input_type->GetName()
+            inputType->GetName()
         ));
 
         return BuiltinTypes::UNDEFINED;
     }
     case TYPE_GENERIC_INSTANCE: {
-        auto base_type = input_type->GetBaseType();
-        Assert(base_type != nullptr);
+        auto baseType = inputType->GetBaseType();
+        Assert(baseType != nullptr);
 
-        const GenericInstanceTypeInfo &generic_instance_info = input_type->GetGenericInstanceInfo();
+        const GenericInstanceTypeInfo &genericInstanceInfo = inputType->GetGenericInstanceInfo();
 
-        Array<GenericInstanceTypeInfo::Arg> res_args = generic_instance_info.m_generic_args;
+        Array<GenericInstanceTypeInfo::Arg> resArgs = genericInstanceInfo.m_genericArgs;
 
-        for (SizeType index = 0; index < generic_instance_info.m_generic_args.Size(); index++) {
-            res_args[index].m_type = SubstituteGenericParameters(
+        for (SizeType index = 0; index < genericInstanceInfo.m_genericArgs.Size(); index++) {
+            resArgs[index].m_type = SubstituteGenericParameters(
                 visitor,
                 mod,
-                generic_instance_info.m_generic_args[index].m_type,
-                generic_args,
-                substitution_results,
+                genericInstanceInfo.m_genericArgs[index].m_type,
+                genericArgs,
+                substitutionResults,
                 location
             );
         }
 
-        SymbolTypePtr_t substituted_type = SymbolType::GenericInstance(
-            base_type,
+        SymbolTypePtr_t substitutedType = SymbolType::GenericInstance(
+            baseType,
             GenericInstanceTypeInfo {
-                std::move(res_args)
+                std::move(resArgs)
             }
         );
 
-        for (const SymbolTypeMember &member : input_type->GetMembers()) {
-            substituted_type->AddMember({
+        for (const SymbolTypeMember &member : inputType->GetMembers()) {
+            substitutedType->AddMember({
                 member.name,
                 SubstituteGenericParameters(
                     visitor,
                     mod,
                     member.type,
-                    generic_args,
-                    substitution_results,
+                    genericArgs,
+                    substitutionResults,
                     location
                 ),
                 member.expr
             });
         }
 
-        return substituted_type;
+        return substitutedType;
     }
     default:
-        return input_type;
+        return inputType;
     }
 }
 
 Optional<SymbolTypeFunctionSignature> SemanticAnalyzer::Helpers::ExtractGenericArgs(
     AstVisitor *visitor,
     Module *mod,
-    const SymbolTypePtr_t &symbol_type, 
+    const SymbolTypePtr_t &symbolType, 
     const Array<RC<AstArgument>> &args,
     const SourceLocation &location,
     Array<SubstitutionResult>(*fn) (
         AstVisitor *visitor,
         Module *mod,
-        const Array<GenericInstanceTypeInfo::Arg> &generic_args,
+        const Array<GenericInstanceTypeInfo::Arg> &genericArgs,
         const Array<RC<AstArgument>> &args,
         const SourceLocation &location
     )
 )
 {
-    const Array<GenericInstanceTypeInfo::Arg> &generic_args = symbol_type->GetGenericInstanceInfo().m_generic_args;
+    const Array<GenericInstanceTypeInfo::Arg> &genericArgs = symbolType->GetGenericInstanceInfo().m_genericArgs;
 
-    if (generic_args.Empty()) {
+    if (genericArgs.Empty()) {
         return { };
     }
 
     // make sure the "return type" of the function is not null
-    Assert(generic_args[0].m_type != nullptr);
+    Assert(genericArgs[0].m_type != nullptr);
 
-    const Array<GenericInstanceTypeInfo::Arg> generic_args_without_return(generic_args.Begin() + 1, generic_args.End());
+    const Array<GenericInstanceTypeInfo::Arg> genericArgsWithoutReturn(genericArgs.Begin() + 1, genericArgs.End());
 
-    const auto substitution_results = fn(
+    const auto substitutionResults = fn(
         visitor,
         mod,
-        generic_args_without_return,
+        genericArgsWithoutReturn,
         args,
         location
     );
 
-    for (const auto &substitution_result : substitution_results) {
-        if (!substitution_result.arg) {
+    for (const auto &substitutionResult : substitutionResults) {
+        if (!substitutionResult.arg) {
             // Error occurred
             return { };
         }
     }
     
     // replace generics used within the "return type" of the function/generic
-    const SymbolTypePtr_t return_type = SubstituteGenericParameters(
+    const SymbolTypePtr_t returnType = SubstituteGenericParameters(
         visitor,
         mod,
-        generic_args[0].m_type,
-        generic_args_without_return,
-        substitution_results,
+        genericArgs[0].m_type,
+        genericArgsWithoutReturn,
+        substitutionResults,
         location
     );
 
-    Assert(return_type != nullptr);
+    Assert(returnType != nullptr);
 
-    Array<RC<AstArgument>> res_args;
-    res_args.Reserve(substitution_results.Size());
+    Array<RC<AstArgument>> resArgs;
+    resArgs.Reserve(substitutionResults.Size());
 
-    for (const auto &substitution_result : substitution_results) {
-        res_args.PushBack(substitution_result.arg);
+    for (const auto &substitutionResult : substitutionResults) {
+        resArgs.PushBack(substitutionResult.arg);
     }
 
     return SymbolTypeFunctionSignature {
-        return_type,
-        res_args
+        returnType,
+        resArgs
     };
 }
 
-SymbolTypePtr_t SemanticAnalyzer::Helpers::GetVarArgType(const Array<GenericInstanceTypeInfo::Arg> &generic_args)
+SymbolTypePtr_t SemanticAnalyzer::Helpers::GetVarArgType(const Array<GenericInstanceTypeInfo::Arg> &genericArgs)
 {
-    if (generic_args.Empty()) {
+    if (genericArgs.Empty()) {
         return nullptr;
     }
 
-    SymbolTypePtr_t last_generic_arg_type = generic_args.Back().m_type;
-    Assert(last_generic_arg_type != nullptr);
-    last_generic_arg_type = last_generic_arg_type->GetUnaliased();
+    SymbolTypePtr_t lastGenericArgType = genericArgs.Back().m_type;
+    Assert(lastGenericArgType != nullptr);
+    lastGenericArgType = lastGenericArgType->GetUnaliased();
 
-    if (last_generic_arg_type->IsVarArgsType()) {
-        if (last_generic_arg_type->IsGenericParameter()) {
+    if (lastGenericArgType->IsVarArgsType()) {
+        if (lastGenericArgType->IsGenericParameter()) {
             return BuiltinTypes::PLACEHOLDER;
         }
 
-        const auto &last_generic_arg_type_args = last_generic_arg_type->GetGenericInstanceInfo().m_generic_args;
-        Assert(!last_generic_arg_type_args.Empty());
+        const auto &lastGenericArgTypeArgs = lastGenericArgType->GetGenericInstanceInfo().m_genericArgs;
+        Assert(!lastGenericArgTypeArgs.Empty());
 
-        const auto &last_generic_arg_type_args_first = last_generic_arg_type_args.Front();
-        Assert(last_generic_arg_type_args_first.m_type != nullptr);
+        const auto &lastGenericArgTypeArgsFirst = lastGenericArgTypeArgs.Front();
+        Assert(lastGenericArgTypeArgsFirst.m_type != nullptr);
 
-        return last_generic_arg_type_args_first.m_type;
+        return lastGenericArgTypeArgsFirst.m_type;
     }
 
     return nullptr;
@@ -322,7 +322,7 @@ SymbolTypePtr_t SemanticAnalyzer::Helpers::GetVarArgType(const Array<GenericInst
 void SemanticAnalyzer::Helpers::EnsureFunctionArgCompatibility(
     AstVisitor *visitor,
     Module *mod,
-    const SymbolTypePtr_t &symbol_type, 
+    const SymbolTypePtr_t &symbolType, 
     const Array<RC<AstArgument>> &args,
     const SourceLocation &location
 )
@@ -330,64 +330,64 @@ void SemanticAnalyzer::Helpers::EnsureFunctionArgCompatibility(
     ExtractGenericArgs(
         visitor,
         mod,
-        symbol_type,
+        symbolType,
         args,
         location,
         [](
             AstVisitor *visitor, Module *mod,
-            const Array<GenericInstanceTypeInfo::Arg> &generic_args,
+            const Array<GenericInstanceTypeInfo::Arg> &genericArgs,
             const Array<RC<AstArgument>> &args,
             const SourceLocation &location
         )
         {
-            SymbolTypePtr_t vararg_type = GetVarArgType(generic_args);
+            SymbolTypePtr_t varargType = GetVarArgType(genericArgs);
 
-            const SizeType num_generic_args = vararg_type != nullptr
-                ? generic_args.Size() - 1
-                : generic_args.Size();
+            const SizeType numGenericArgs = varargType != nullptr
+                ? genericArgs.Size() - 1
+                : genericArgs.Size();
 
             for (SizeType index = 0; index < args.Size(); index++) {
-                if (index >= num_generic_args && vararg_type != nullptr) {
+                if (index >= numGenericArgs && varargType != nullptr) {
                     CheckArgTypeCompatible(
                         visitor,
                         args[index]->GetLocation(),
                         args[index]->GetExprType(),
-                        vararg_type
+                        varargType
                     );
-                } else if (index < num_generic_args && generic_args[index].m_type != nullptr) {
+                } else if (index < numGenericArgs && genericArgs[index].m_type != nullptr) {
                     CheckArgTypeCompatible(
                         visitor,
                         args[index]->GetLocation(),
                         args[index]->GetExprType(),
-                        generic_args[index].m_type
+                        genericArgs[index].m_type
                     );
                 } else {
                     visitor->GetCompilationUnit()->GetErrorList().AddError(CompilerError(
                         LEVEL_ERROR,
                         Msg_incorrect_number_of_arguments,
                         location,
-                        generic_args.Size(),
+                        genericArgs.Size(),
                         args.Size()
                     ));
                 }
             }
 
-            Array<SubstitutionResult> substitution_results;
-            substitution_results.Resize(args.Size());
+            Array<SubstitutionResult> substitutionResults;
+            substitutionResults.Resize(args.Size());
 
             for (SizeType index = 0; index < args.Size(); index++) {
-                substitution_results[index].arg = args[index];
-                substitution_results[index].index = index;
+                substitutionResults[index].arg = args[index];
+                substitutionResults[index].index = index;
             }
 
-            return substitution_results;
+            return substitutionResults;
         }
     );
 }
 
 Optional<SymbolTypeFunctionSignature> SemanticAnalyzer::Helpers::SubstituteFunctionArgs(
     AstVisitor *visitor, Module *mod, 
-    const SymbolTypePtr_t &symbol_type, 
+    const SymbolTypePtr_t &symbolType, 
     const Array<RC<AstArgument>> &args,
     const SourceLocation &location
 )
@@ -395,100 +395,100 @@ Optional<SymbolTypeFunctionSignature> SemanticAnalyzer::Helpers::SubstituteFunct
     return ExtractGenericArgs(
         visitor,
         mod,
-        symbol_type,
+        symbolType,
         args,
         location,
         [](
             AstVisitor *visitor, Module *mod,
-            const Array<GenericInstanceTypeInfo::Arg> &generic_args,
+            const Array<GenericInstanceTypeInfo::Arg> &genericArgs,
             const Array<RC<AstArgument>> &args,
             const SourceLocation &location
         )
         {
-            SymbolTypePtr_t vararg_type = GetVarArgType(generic_args);
+            SymbolTypePtr_t varargType = GetVarArgType(genericArgs);
 
-            const SizeType num_generic_args = vararg_type != nullptr
-                ? generic_args.Size() - 1
-                : generic_args.Size();
+            const SizeType numGenericArgs = varargType != nullptr
+                ? genericArgs.Size() - 1
+                : genericArgs.Size();
 
-            SizeType num_generic_args_without_default_assigned = num_generic_args;
+            SizeType numGenericArgsWithoutDefaultAssigned = numGenericArgs;
 
-            for (SizeType index = 0; index < num_generic_args; ++index) {
-                if (generic_args[index].m_default_value != nullptr) {
-                    --num_generic_args_without_default_assigned;
+            for (SizeType index = 0; index < numGenericArgs; ++index) {
+                if (genericArgs[index].m_defaultValue != nullptr) {
+                    --numGenericArgsWithoutDefaultAssigned;
                 }
             }
 
-            FlatSet<SizeType> used_indices;
+            FlatSet<SizeType> usedIndices;
 
-            Array<SubstitutionResult> substitution_results;
-            substitution_results.Resize(num_generic_args);
+            Array<SubstitutionResult> substitutionResults;
+            substitutionResults.Resize(numGenericArgs);
 
-            if (num_generic_args_without_default_assigned <= args.Size()) {
+            if (numGenericArgsWithoutDefaultAssigned <= args.Size()) {
                 using ArgDataPair = std::pair<ArgInfo, RC<AstArgument>>;
 
-                Array<ArgDataPair> named_args;
-                Array<ArgDataPair> unnamed_args;
+                Array<ArgDataPair> namedArgs;
+                Array<ArgDataPair> unnamedArgs;
 
                 // sort into two separate buckets
                 for (SizeType i = 0; i < args.Size(); i++) {
                     Assert(args[i] != nullptr);
 
-                    ArgInfo arg_info;
-                    arg_info.is_named = args[i]->IsNamed();
-                    arg_info.name = args[i]->GetName();
+                    ArgInfo argInfo;
+                    argInfo.isNamed = args[i]->IsNamed();
+                    argInfo.name = args[i]->GetName();
 
-                    ArgDataPair arg_data_pair = {
-                        arg_info,
+                    ArgDataPair argDataPair = {
+                        argInfo,
                         args[i]
                     };
 
-                    if (arg_info.is_named) {
-                        named_args.PushBack(std::move(arg_data_pair));
+                    if (argInfo.isNamed) {
+                        namedArgs.PushBack(std::move(argDataPair));
                     } else {
-                        unnamed_args.PushBack(std::move(arg_data_pair));
+                        unnamedArgs.PushBack(std::move(argDataPair));
                     }
                 }
 
                 // handle named arguments first
-                for (SizeType i = 0; i < named_args.Size(); i++) {
-                    const ArgDataPair &arg = named_args[i];
+                for (SizeType i = 0; i < namedArgs.Size(); i++) {
+                    const ArgDataPair &arg = namedArgs[i];
                     Assert(std::get<1>(arg) != nullptr);
 
-                    const SizeType found_index = ArgIndex(
+                    const SizeType foundIndex = ArgIndex(
                         i,
                         std::get<0>(arg),
-                        used_indices,
-                        generic_args
+                        usedIndices,
+                        genericArgs
                     );
 
-                    if (found_index != SizeType(-1)) {
-                        used_indices.Insert(found_index);
+                    if (foundIndex != SizeType(-1)) {
+                        usedIndices.Insert(foundIndex);
 
                         // found successfully, check type compatibility
-                        // const SymbolTypePtr_t &param_type = generic_args[found_index].m_type;
+                        // const SymbolTypePtr_t &paramType = genericArgs[foundIndex].m_type;
 
                         // CheckArgTypeCompatible(
                         //     visitor,
                         //     std::get<1>(arg)->GetLocation(),
                         //     std::get<0>(arg).type,
-                        //     param_type
+                        //     paramType
                         // );
 
                         Assert(
-                            SizeType(found_index) < substitution_results.Size(),
+                            SizeType(foundIndex) < substitutionResults.Size(),
                             "Index out of bounds: %llu >= %llu",
-                            found_index,
-                            substitution_results.Size()
+                            foundIndex,
+                            substitutionResults.Size()
                         );
                         
-                        RC<AstArgument> arg_type = std::get<1>(arg);
-                        Assert(arg_type != nullptr);
+                        RC<AstArgument> argType = std::get<1>(arg);
+                        Assert(argType != nullptr);
 
-                        substitution_results[found_index].arg = arg_type;
-                        substitution_results[found_index].arg->SetIsPassByRef(generic_args[found_index].m_is_ref);
-                        substitution_results[found_index].arg->SetIsPassConst(generic_args[found_index].m_is_const);
-                        substitution_results[found_index].index = found_index;
+                        substitutionResults[foundIndex].arg = argType;
+                        substitutionResults[foundIndex].arg->SetIsPassByRef(genericArgs[foundIndex].m_isRef);
+                        substitutionResults[foundIndex].arg->SetIsPassConst(genericArgs[foundIndex].m_isConst);
+                        substitutionResults[foundIndex].index = foundIndex;
                     } else {
                         // not found so add error
                         visitor->GetCompilationUnit()->GetErrorList().AddError(CompilerError(
@@ -501,86 +501,86 @@ Optional<SymbolTypeFunctionSignature> SemanticAnalyzer::Helpers::SubstituteFunct
                 }
 
                 // handle unnamed arguments
-                for (SizeType i = 0; i < unnamed_args.Size(); i++) {
-                    const ArgDataPair &arg = unnamed_args[i];
+                for (SizeType i = 0; i < unnamedArgs.Size(); i++) {
+                    const ArgDataPair &arg = unnamedArgs[i];
                     Assert(std::get<1>(arg) != nullptr);
 
-                    SizeType found_index = ArgIndex(
+                    SizeType foundIndex = ArgIndex(
                         i,
                         std::get<0>(arg),
-                        used_indices,
-                        generic_args,
-                        vararg_type != nullptr
+                        usedIndices,
+                        genericArgs,
+                        varargType != nullptr
                     );
 
-                    if (vararg_type != nullptr && ((i + named_args.Size())) >= generic_args.Size() - 1) {
+                    if (varargType != nullptr && ((i + namedArgs.Size())) >= genericArgs.Size() - 1) {
                         // in varargs... check against vararg base type
                         // CheckArgTypeCompatible(
                         //     visitor,
                         //     std::get<1>(arg)->GetLocation(),
                         //     std::get<0>(arg).type,
-                        //     vararg_type
+                        //     varargType
                         // );
 
                         // check should not be neccessary but added just in case
-                        const bool is_ref = generic_args.Size() != 0
-                            ? generic_args[generic_args.Size() - 1].m_is_ref
+                        const bool isRef = genericArgs.Size() != 0
+                            ? genericArgs[genericArgs.Size() - 1].m_isRef
                             : false;
 
-                        const bool is_const = generic_args.Size() != 0
-                            ? generic_args[generic_args.Size() - 1].m_is_const
+                        const bool isConst = genericArgs.Size() != 0
+                            ? genericArgs[genericArgs.Size() - 1].m_isConst
                             : false;
                         
-                        RC<AstArgument> arg_type = std::get<1>(arg);
-                        Assert(arg_type != nullptr);
+                        RC<AstArgument> argType = std::get<1>(arg);
+                        Assert(argType != nullptr);
 
-                        arg_type->SetIsPassByRef(is_ref);
-                        arg_type->SetIsPassConst(is_const);
+                        argType->SetIsPassByRef(isRef);
+                        argType->SetIsPassConst(isConst);
 
-                        if (found_index == SizeType(-1) || found_index >= substitution_results.Size()) {
-                            found_index = substitution_results.Size();
+                        if (foundIndex == SizeType(-1) || foundIndex >= substitutionResults.Size()) {
+                            foundIndex = substitutionResults.Size();
 
                             // at end, push to make room
-                            substitution_results.Resize(substitution_results.Size() + 1);
+                            substitutionResults.Resize(substitutionResults.Size() + 1);
                         }
 
                         Assert(
-                            SizeType(found_index) < substitution_results.Size(),
+                            SizeType(foundIndex) < substitutionResults.Size(),
                             "Index out of bounds: %llu >= %llu",
-                            found_index,
-                            substitution_results.Size()
+                            foundIndex,
+                            substitutionResults.Size()
                         );
 
-                        used_indices.Insert(found_index);
+                        usedIndices.Insert(foundIndex);
 
-                        substitution_results[found_index] = {
-                            std::move(arg_type),
-                            found_index
+                        substitutionResults[foundIndex] = {
+                            std::move(argType),
+                            foundIndex
                         };
-                    } else if (found_index != SizeType(-1)) {
+                    } else if (foundIndex != SizeType(-1)) {
                         Assert(
-                            SizeType(found_index) < substitution_results.Size(),
+                            SizeType(foundIndex) < substitutionResults.Size(),
                             "Index out of bounds: %llu >= %llu",
-                            found_index,
-                            substitution_results.Size()
+                            foundIndex,
+                            substitutionResults.Size()
                         );
 
                         // store used index
-                        used_indices.Insert(found_index);
+                        usedIndices.Insert(foundIndex);
 
-                        const GenericInstanceTypeInfo::Arg &param = (found_index < generic_args.Size())
-                            ? generic_args[found_index]
-                            : generic_args.Back();
+                        const GenericInstanceTypeInfo::Arg &param = (foundIndex < genericArgs.Size())
+                            ? genericArgs[foundIndex]
+                            : genericArgs.Back();
                         
-                        RC<AstArgument> arg_type = std::get<1>(arg);
-                        Assert(arg_type != nullptr);
+                        RC<AstArgument> argType = std::get<1>(arg);
+                        Assert(argType != nullptr);
 
-                        arg_type->SetIsPassByRef(param.m_is_ref);
-                        arg_type->SetIsPassConst(param.m_is_const);
+                        argType->SetIsPassByRef(param.m_isRef);
+                        argType->SetIsPassConst(param.m_isConst);
 
-                        substitution_results[found_index] = {
-                            std::move(arg_type),
-                            found_index
+                        substitutionResults[foundIndex] = {
+                            std::move(argType),
+                            foundIndex
                         };
                     } else {
                         // too many args supplied
@@ -588,50 +588,50 @@ Optional<SymbolTypeFunctionSignature> SemanticAnalyzer::Helpers::SubstituteFunct
                             LEVEL_ERROR,
                             Msg_incorrect_number_of_arguments,
                             location,
-                            generic_args.Size(),
+                            genericArgs.Size(),
                             args.Size()
                         ));
                     }
                 }
             
                 // handle arguments that weren't passed in, but have default assignments.
-                Array<SizeType> unused_indices;
+                Array<SizeType> unusedIndices;
 
-                for (SizeType index = 0; index < num_generic_args; ++index) {
-                    if (!unused_indices.Contains(index) && !used_indices.Contains(index)) {
-                        unused_indices.PushBack(index);
+                for (SizeType index = 0; index < numGenericArgs; ++index) {
+                    if (!unusedIndices.Contains(index) && !usedIndices.Contains(index)) {
+                        unusedIndices.PushBack(index);
                     }
                 }
 
-                SizeType unused_index_counter = 0;
+                SizeType unusedIndexCounter = 0;
 
-                for (auto it = unused_indices.Begin(); it != unused_indices.End();) {
-                    const SizeType unused_index = *it;
+                for (auto it = unusedIndices.Begin(); it != unusedIndices.End();) {
+                    const SizeType unusedIndex = *it;
 
-                    Assert(unused_index < generic_args.Size());
+                    Assert(unusedIndex < genericArgs.Size());
             
-                    const bool has_default_value = generic_args[unused_index].m_default_value != nullptr;
-                    const bool is_ref = generic_args[unused_index].m_is_ref;
-                    const bool is_const = generic_args[unused_index].m_is_const;
+                    const bool hasDefaultValue = genericArgs[unusedIndex].m_defaultValue != nullptr;
+                    const bool isRef = genericArgs[unusedIndex].m_isRef;
+                    const bool isConst = genericArgs[unusedIndex].m_isConst;
 
-                    RC<AstArgument> substituted_arg;
+                    RC<AstArgument> substitutedArg;
 
                     {
                         RC<AstExpression> expr;
 
-                        if (has_default_value) {
-                            expr = CloneAstNode(generic_args[unused_index].m_default_value);
+                        if (hasDefaultValue) {
+                            expr = CloneAstNode(genericArgs[unusedIndex].m_defaultValue);
                         } else {
                             expr.Reset(new AstUndefined(location));
                         }
 
-                        substituted_arg.Reset(new AstArgument(
+                        substitutedArg.Reset(new AstArgument(
                             expr,
                             false,
                             true,
-                            is_ref,
-                            is_const,
-                            generic_args[unused_index].m_name,
+                            isRef,
+                            isConst,
+                            genericArgs[unusedIndex].m_name,
                             location
                         ));
                     }
@@ -639,52 +639,52 @@ Optional<SymbolTypeFunctionSignature> SemanticAnalyzer::Helpers::SubstituteFunct
                     // push the default value as argument
                     // use named argument, same name as in definition
                     
-                    substituted_arg->Visit(visitor, mod);
+                    substitutedArg->Visit(visitor, mod);
 
-                    ArgInfo arg_info;
-                    arg_info.is_named = substituted_arg->IsNamed();
-                    arg_info.name = substituted_arg->GetName();
-                    arg_info.type = substituted_arg->GetExprType();
+                    ArgInfo argInfo;
+                    argInfo.isNamed = substitutedArg->IsNamed();
+                    argInfo.name = substitutedArg->GetName();
+                    argInfo.type = substitutedArg->GetExprType();
 
-                    SizeType found_index = ArgIndex(
-                        unused_index_counter,
-                        arg_info,
-                        used_indices,
-                        generic_args
+                    SizeType foundIndex = ArgIndex(
+                        unusedIndexCounter,
+                        argInfo,
+                        usedIndices,
+                        genericArgs
                     );
 
-                    if (found_index == SizeType(-1)) {
-                        found_index = substitution_results.Size();
-                        substitution_results.Resize(substitution_results.Size() + 1);
+                    if (foundIndex == SizeType(-1)) {
+                        foundIndex = substitutionResults.Size();
+                        substitutionResults.Resize(substitutionResults.Size() + 1);
                     }
 
-                    Assert(SizeType(found_index) < substitution_results.Size());
-                    substitution_results[found_index] = {
-                        std::move(substituted_arg),
-                        found_index
+                    Assert(SizeType(foundIndex) < substitutionResults.Size());
+                    substitutionResults[foundIndex] = {
+                        std::move(substitutedArg),
+                        foundIndex
                     };
                 
-                    if (!has_default_value) {
+                    if (!hasDefaultValue) {
                         // not provided and no default value
                         visitor->GetCompilationUnit()->GetErrorList().AddError(CompilerError(
                             LEVEL_ERROR,
                             Msg_generic_expression_invalid_arguments,
                             location,
-                            generic_args[unused_index].m_name
+                            genericArgs[unusedIndex].m_name
                         ));
                     }
 
-                    ++unused_index_counter;
+                    ++unusedIndexCounter;
 
-                    it = unused_indices.Erase(it);
+                    it = unusedIndices.Erase(it);
                 }
 
-                if (unused_indices.Any()) {
+                if (unusedIndices.Any()) {
                     visitor->GetCompilationUnit()->GetErrorList().AddError(CompilerError(
                         LEVEL_ERROR,
                         Msg_incorrect_number_of_arguments,
                         location,
-                        num_generic_args_without_default_assigned,
+                        numGenericArgsWithoutDefaultAssigned,
                         args.Size()
                     ));
                 }
@@ -694,12 +694,12 @@ Optional<SymbolTypeFunctionSignature> SemanticAnalyzer::Helpers::SubstituteFunct
                     LEVEL_ERROR,
                     Msg_incorrect_number_of_arguments,
                     location,
-                    num_generic_args_without_default_assigned,
+                    numGenericArgsWithoutDefaultAssigned,
                     args.Size()
                 ));
             }
 
-            return substitution_results;
+            return substitutionResults;
         }
     );
 }
@@ -707,35 +707,35 @@ Optional<SymbolTypeFunctionSignature> SemanticAnalyzer::Helpers::SubstituteFunct
 void SemanticAnalyzer::Helpers::EnsureLooseTypeAssignmentCompatibility(
     AstVisitor *visitor,
     Module *mod,
-    const SymbolTypePtr_t &symbol_type,
-    const SymbolTypePtr_t &assignment_type,
+    const SymbolTypePtr_t &symbolType,
+    const SymbolTypePtr_t &assignmentType,
     const SourceLocation &location)
 {
-    Assert(symbol_type != nullptr);
-    Assert(assignment_type != nullptr);
+    Assert(symbolType != nullptr);
+    Assert(assignmentType != nullptr);
 
-    // symbol_type should be the user-specified type
-    SymbolTypePtr_t symbol_type_promoted = SymbolType::GenericPromotion(symbol_type, assignment_type);
-    Assert(symbol_type_promoted != nullptr);
+    // symbolType should be the user-specified type
+    SymbolTypePtr_t symbolTypePromoted = SymbolType::GenericPromotion(symbolType, assignmentType);
+    Assert(symbolTypePromoted != nullptr);
 
     // generic not yet promoted to an instance
-    if (symbol_type_promoted->GetTypeClass() == TYPE_GENERIC) {
+    if (symbolTypePromoted->GetTypeClass() == TYPE_GENERIC) {
         visitor->GetCompilationUnit()->GetErrorList().AddError(CompilerError(
             LEVEL_ERROR,
             Msg_generic_parameters_missing,
             location,
-            symbol_type_promoted->ToString(),
-            symbol_type_promoted->GetGenericInfo().m_num_parameters
+            symbolTypePromoted->ToString(),
+            symbolTypePromoted->GetGenericInfo().m_numParameters
         ));
     }
 
-    SymbolTypePtr_t comparison_type = symbol_type;
+    SymbolTypePtr_t comparisonType = symbolType;
 
     SemanticAnalyzer::Helpers::EnsureTypeAssignmentCompatibility(
         visitor,
         mod,
-        comparison_type,
-        assignment_type,
+        comparisonType,
+        assignmentType,
         location
     );
 }
@@ -743,29 +743,29 @@ void SemanticAnalyzer::Helpers::EnsureLooseTypeAssignmentCompatibility(
 void SemanticAnalyzer::Helpers::EnsureTypeAssignmentCompatibility(
     AstVisitor *visitor,
     Module *mod,
-    const SymbolTypePtr_t &symbol_type,
-    const SymbolTypePtr_t &assignment_type,
+    const SymbolTypePtr_t &symbolType,
+    const SymbolTypePtr_t &assignmentType,
     const SourceLocation &location
 )
 {
-    Assert(symbol_type != nullptr);
-    Assert(assignment_type != nullptr);
+    Assert(symbolType != nullptr);
+    Assert(assignmentType != nullptr);
 
-    if (!symbol_type->TypeCompatible(*assignment_type, true)) {
+    if (!symbolType->TypeCompatible(*assignmentType, true)) {
         CompilerError error(
             LEVEL_ERROR,
             Msg_mismatched_types_assignment,
             location,
-            assignment_type->ToString(),
-            symbol_type->ToString()
+            assignmentType->ToString(),
+            symbolType->ToString()
         );
 
-        if (assignment_type->IsAnyType()) {
+        if (assignmentType->IsAnyType()) {
             error = CompilerError(
                 LEVEL_ERROR,
                 Msg_implicit_any_mismatch,
                 location,
-                symbol_type->ToString()
+                symbolType->ToString()
             );
         }
 
@@ -774,28 +774,28 @@ void SemanticAnalyzer::Helpers::EnsureTypeAssignmentCompatibility(
 }
 
 SemanticAnalyzer::SemanticAnalyzer(
-    AstIterator *ast_iterator,
-    CompilationUnit *compilation_unit)
-    : AstVisitor(ast_iterator, compilation_unit)
+    AstIterator *astIterator,
+    CompilationUnit *compilationUnit)
+    : AstVisitor(astIterator, compilationUnit)
 {
 }
 
 SemanticAnalyzer::SemanticAnalyzer(const SemanticAnalyzer &other)
-    : AstVisitor(other.m_ast_iterator, other.m_compilation_unit)
+    : AstVisitor(other.m_astIterator, other.m_compilationUnit)
 {
 }
 
-void SemanticAnalyzer::Analyze(bool expect_module_decl)
+void SemanticAnalyzer::Analyze(bool expectModuleDecl)
 {
-    Module *mod = m_compilation_unit->GetCurrentModule();
+    Module *mod = m_compilationUnit->GetCurrentModule();
     Assert(mod != nullptr);
 
-    while (m_ast_iterator->HasNext()) {
-        auto node = m_ast_iterator->Next();
+    while (m_astIterator->HasNext()) {
+        auto node = m_astIterator->Next();
         Assert(node != nullptr);
 
         // this will not work due to nseted Visit() calls
-        node->SetScopeDepth(m_compilation_unit->GetCurrentModule()->m_scopes.TopNode()->m_depth);
+        node->SetScopeDepth(m_compilationUnit->GetCurrentModule()->m_scopes.TopNode()->m_depth);
 
         node->Visit(this, mod);
     }

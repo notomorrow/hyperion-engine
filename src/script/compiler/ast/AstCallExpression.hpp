@@ -16,7 +16,7 @@ public:
     AstCallExpression(
         const RC<AstExpression> &expr,
         const Array<RC<AstArgument>> &args,
-        bool insert_self,
+        bool insertSelf,
         const SourceLocation &location
     );
     virtual ~AstCallExpression() = default;
@@ -28,7 +28,7 @@ public:
         { return m_args; }
     
     const SymbolTypePtr_t &GetReturnType() const
-        { return m_return_type; }
+        { return m_returnType; }
 
     virtual void Visit(AstVisitor *visitor, Module *mod) override;
     virtual std::unique_ptr<Buildable> Build(AstVisitor *visitor, Module *mod) override;
@@ -50,7 +50,7 @@ public:
             hc.Add(arg ? arg->GetHashCode() : HashCode());
         }
 
-        hc.Add(m_insert_self);
+        hc.Add(m_insertSelf);
 
         return hc;
     }
@@ -58,20 +58,20 @@ public:
 protected:
     RC<AstExpression>       m_expr;
     Array<RC<AstArgument>>  m_args;
-    bool                    m_insert_self;
+    bool                    m_insertSelf;
 
     // set while analyzing
-    RC<AstExpression>       m_override_expr;
-    Array<RC<AstArgument>>  m_substituted_args;
-    SymbolTypePtr_t         m_return_type;
-    bool                    m_is_visited = false;
+    RC<AstExpression>       m_overrideExpr;
+    Array<RC<AstArgument>>  m_substitutedArgs;
+    SymbolTypePtr_t         m_returnType;
+    bool                    m_isVisited = false;
 
     RC<AstCallExpression> CloneImpl() const
     {
         return RC<AstCallExpression>(new AstCallExpression(
             CloneAstNode(m_expr),
             CloneAllAstNodes(m_args),
-            m_insert_self,
+            m_insertSelf,
             m_location
         ));
     }

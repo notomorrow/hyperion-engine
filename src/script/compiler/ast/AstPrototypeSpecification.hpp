@@ -22,8 +22,8 @@ public:
     virtual std::unique_ptr<Buildable> Build(AstVisitor *visitor, Module *mod) override;
     virtual void Optimize(AstVisitor *visitor, Module *mod) override;
     
-    const SymbolTypePtr_t &GetPrototypeType() const { return m_prototype_type; }
-    const RC<AstExpression> &GetDefaultValue() const { return m_default_value; }
+    const SymbolTypePtr_t &GetPrototypeType() const { return m_prototypeType; }
+    const RC<AstExpression> &GetDefaultValue() const { return m_defaultValue; }
     virtual const RC<AstExpression> &GetExpr() const { return m_expr; }
 
     virtual RC<AstStatement> Clone() const override;
@@ -46,14 +46,14 @@ public:
     }
 
 protected:
-    bool FindPrototypeType(const SymbolTypePtr_t &symbol_type);
+    bool FindPrototypeType(const SymbolTypePtr_t &symbolType);
 
     RC<AstExpression>   m_expr;
 
     /** Set while analyzing */
-    SymbolTypePtr_t     m_symbol_type;
-    SymbolTypePtr_t     m_prototype_type;
-    RC<AstExpression>   m_default_value;
+    SymbolTypePtr_t     m_symbolType;
+    SymbolTypePtr_t     m_prototypeType;
+    RC<AstExpression>   m_defaultValue;
 
 private:
     RC<AstPrototypeSpecification> CloneImpl() const

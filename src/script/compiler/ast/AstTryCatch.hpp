@@ -13,8 +13,8 @@ class AstTryCatch : public AstStatement
 {
 public:
     AstTryCatch(
-        const RC<AstBlock> &try_block,
-        const RC<AstBlock> &catch_block,
+        const RC<AstBlock> &tryBlock,
+        const RC<AstBlock> &catchBlock,
         const SourceLocation &location
     );
     virtual ~AstTryCatch() = default;
@@ -29,21 +29,21 @@ public:
     {
         HashCode hc;
         hc.Add(TypeName<AstTryCatch>());
-        hc.Add(m_try_block ? m_try_block->GetHashCode() : HashCode());
-        hc.Add(m_catch_block ? m_catch_block->GetHashCode() : HashCode());
+        hc.Add(m_tryBlock ? m_tryBlock->GetHashCode() : HashCode());
+        hc.Add(m_catchBlock ? m_catchBlock->GetHashCode() : HashCode());
 
         return hc;
     }
 
 private:
-    RC<AstBlock>    m_try_block;
-    RC<AstBlock>    m_catch_block;
+    RC<AstBlock>    m_tryBlock;
+    RC<AstBlock>    m_catchBlock;
 
     RC<AstTryCatch> CloneImpl() const
     {
         return RC<AstTryCatch>(new AstTryCatch(
-            CloneAstNode(m_try_block),
-            CloneAstNode(m_catch_block),
+            CloneAstNode(m_tryBlock),
+            CloneAstNode(m_catchBlock),
             m_location
         ));
     }

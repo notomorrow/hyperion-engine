@@ -44,7 +44,7 @@ SymbolTypePtr_t AstUndefined::GetExprType() const
     return BuiltinTypes::UNDEFINED;
 }
 
-RC<AstConstant> AstUndefined::HandleOperator(Operators op_type, const AstConstant *right) const
+RC<AstConstant> AstUndefined::HandleOperator(Operators opType, const AstConstant *right) const
 {
     return nullptr;
 }

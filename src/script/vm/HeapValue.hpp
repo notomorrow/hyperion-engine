@@ -47,13 +47,13 @@ public:
     HYP_FORCE_INLINE
     TypeId GetTypeId() const
     {
-        TypeId type_id = m_variant.GetTypeId();
+        TypeId typeId = m_variant.GetTypeId();
 
-        if (type_id == TypeId::ForType<Any>()) {
+        if (typeId == TypeId::ForType<Any>()) {
             return m_variant.Get<Any>().GetTypeId();
         }
 
-        return type_id;
+        return typeId;
     }
     
     template <class T>
@@ -90,9 +90,9 @@ public:
     HYP_FORCE_INLINE
     void *GetRawPointer()
     {
-        const TypeId type_id = m_variant.GetTypeId();
+        const TypeId typeId = m_variant.GetTypeId();
 
-        if (type_id == TypeId::ForType<Any>()) {
+        if (typeId == TypeId::ForType<Any>()) {
             return m_variant.Get<Any>().GetPointer();
         }
 
@@ -102,9 +102,9 @@ public:
     HYP_FORCE_INLINE
     const void *GetRawPointer() const
     {
-        const TypeId type_id = m_variant.GetTypeId();
+        const TypeId typeId = m_variant.GetTypeId();
 
-        if (type_id == TypeId::ForType<Any>()) {
+        if (typeId == TypeId::ForType<Any>()) {
             return m_variant.Get<Any>().GetPointer();
         }
 
@@ -118,8 +118,8 @@ public:
         if constexpr (IS_INLINE_TYPE(T)) {
             return m_variant.TryGet<T>();
         } else {
-            if (auto *any_ptr = m_variant.TryGet<Any>()) {
-                return any_ptr->TryGet<T>();
+            if (auto *anyPtr = m_variant.TryGet<Any>()) {
+                return anyPtr->TryGet<T>();
             }
 
             return nullptr;

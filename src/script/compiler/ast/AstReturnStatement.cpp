@@ -18,7 +18,7 @@ AstReturnStatement::AstReturnStatement(
     const SourceLocation &location
 ) : AstStatement(location),
     m_expr(expr),
-    m_num_pops(0)
+    m_numPops(0)
 {
 }
 
@@ -29,27 +29,27 @@ void AstReturnStatement::Visit(AstVisitor *visitor, Module *mod)
     }
 
     // transverse the scope tree to make sure we are in a function
-    bool in_function = false;
-    bool is_constructor = false;
+    bool inFunction = false;
+    bool isConstructor = false;
 
     TreeNode<Scope> *top = mod->m_scopes.TopNode();
 
     while (top != nullptr) {
         if (top->Get().GetScopeType() == SCOPE_TYPE_FUNCTION) {
-            in_function = true;
+            inFunction = true;
 
             if (top->Get().GetScopeFlags() & CONSTRUCTOR_DEFINITION_FLAG) {
-                is_constructor = true;
+                isConstructor = true;
             }
 
             break;
         }
 
-        m_num_pops += top->Get().GetIdentifierTable().CountUsedVariables();
+        m_numPops += top->Get().GetIdentifierTable().CountUsedVariables();
         top = top->m_parent;
     }
 
-    if (in_function) {
+    if (inFunction) {
         Assert(top != nullptr);
 
         if (m_expr != nullptr) {
@@ -75,12 +75,12 @@ std::unique_ptr<Buildable> AstReturnStatement::Build(AstVisitor *visitor, Module
         chunk->Append(m_expr->Build(visitor, mod));
     }
 
-    chunk->Append(Compiler::PopStack(visitor, m_num_pops));
+    chunk->Append(Compiler::PopStack(visitor, m_numPops));
 
     // add RET instruction
-    auto instr_ret = BytecodeUtil::Make<RawOperation<>>();
-    instr_ret->opcode = RET;
-    chunk->Append(std::move(instr_ret));
+    auto instrRet = BytecodeUtil::Make<RawOperation<>>();
+    instrRet->opcode = RET;
+    chunk->Append(std::move(instrRet));
     
     return chunk;
 }

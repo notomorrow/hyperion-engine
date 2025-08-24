@@ -33,14 +33,14 @@ public:
 private:
     // set while analyzing
     // used to get locals from outer function in a closure
-    RC<AstMember>       m_closure_member_access;
-    RC<AstMember>       m_self_member_access;
-    RC<AstTypeRef>      m_type_ref;
-    RC<AstExpression>   m_inline_value;
-    bool                m_should_inline;
-    bool                m_is_in_ref_assignment;
-    bool                m_is_in_const_assignment;
-    bool                m_is_visited = false;
+    RC<AstMember>       m_closureMemberAccess;
+    RC<AstMember>       m_selfMemberAccess;
+    RC<AstTypeRef>      m_typeRef;
+    RC<AstExpression>   m_inlineValue;
+    bool                m_shouldInline;
+    bool                m_isInRefAssignment;
+    bool                m_isInConstAssignment;
+    bool                m_isVisited = false;
 
     RC<AstVariable> CloneImpl() const
     {

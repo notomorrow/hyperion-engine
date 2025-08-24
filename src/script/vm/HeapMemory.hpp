@@ -31,18 +31,18 @@ public:
     ~Heap();
 
     SizeType Size() const
-        { return m_num_objects; }
+        { return m_numObjects; }
 
     /** Destroy everything on the heap */
     void Purge();
     /** Allocate a new value on the heap. */
     HeapValue *Alloc();
     /** Delete all nodes that are not marked */
-    void Sweep(uint32 *out_num_collected = nullptr);
+    void Sweep(uint32 *outNumCollected = nullptr);
 
 private:
     HeapNode *m_head;
-    SizeType m_num_objects;
+    SizeType m_numObjects;
 };
 
 } // namespace vm

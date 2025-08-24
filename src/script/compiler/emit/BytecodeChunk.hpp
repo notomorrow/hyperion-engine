@@ -28,12 +28,12 @@ struct BytecodeChunk final : public Buildable
         }
     }
 
-    void TakeOwnershipOfLabel(LabelId label_id)
+    void TakeOwnershipOfLabel(LabelId labelId)
     {
-        labels.PushBack(label_id);
+        labels.PushBack(labelId);
     }
 
-    Array<std::unique_ptr<Buildable>> buildables;
+    Array<std::uniquePtr<Buildable>> buildables;
 };
 
 } // namespace hyperion::compiler

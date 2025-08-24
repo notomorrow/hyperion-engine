@@ -30,15 +30,15 @@ void AstDirective::Visit(AstVisitor *visitor, Module *mod)
             ));
         } else {
             // split current file path and remove file name
-            const String current_dir = String::Join(m_location.GetFileName().Split('/', '\\').Slice(0, -2), '/') + "/";
+            const String currentDir = String::Join(m_location.GetFileName().Split('/', '\\').Slice(0, -2), '/') + "/";
             
-            for (const String &path_arg : m_args) {
-                const String scan_path = current_dir + path_arg;
+            for (const String &pathArg : m_args) {
+                const String scanPath = currentDir + pathArg;
 
                 // create relative path
-                DebugLog(LogType::Info, "[Script] add scan path %s\n", scan_path.Data());
+                DebugLog(LogType::Info, "[Script] add scan path %s\n", scanPath.Data());
 
-                mod->AddScanPath(scan_path);
+                mod->AddScanPath(scanPath);
             }
         }
     } else {

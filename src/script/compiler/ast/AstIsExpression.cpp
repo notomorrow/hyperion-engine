@@ -20,12 +20,12 @@ namespace hyperion::compiler {
 
 AstIsExpression::AstIsExpression(
     const RC<AstExpression> &target,
-    const RC<AstPrototypeSpecification> &type_specification,
+    const RC<AstPrototypeSpecification> &typeSpecification,
     const SourceLocation &location
 ) : AstExpression(location, ACCESS_MODE_LOAD),
     m_target(target),
-    m_type_specification(type_specification),
-    m_is_type(TRI_INDETERMINATE)
+    m_typeSpecification(typeSpecification),
+    m_isType(TRI_INDETERMINATE)
 {
 }
 
@@ -34,50 +34,50 @@ void AstIsExpression::Visit(AstVisitor *visitor, Module *mod)
     Assert(m_target != nullptr);
     m_target->Visit(visitor, mod);
 
-    Assert(m_type_specification != nullptr);
-    m_type_specification->Visit(visitor, mod);
+    Assert(m_typeSpecification != nullptr);
+    m_typeSpecification->Visit(visitor, mod);
 
-    if (const auto target_type = m_target->GetExprType()) {
-        if (const auto held_type = m_type_specification->GetHeldType()) {
-            if (target_type->TypeCompatible(*held_type, true)) {
-                m_is_type = TRI_TRUE;
+    if (const auto targetType = m_target->GetExprType()) {
+        if (const auto heldType = m_typeSpecification->GetHeldType()) {
+            if (targetType->TypeCompatible(*heldType, true)) {
+                m_isType = TRI_TRUE;
             } else {
-                m_is_type = TRI_FALSE;
+                m_isType = TRI_FALSE;
             }
         }
     }
 
-    if (m_is_type == TRI_INDETERMINATE) {
+    if (m_isType == TRI_INDETERMINATE) {
         // runtime check
-        m_override_expr = visitor->GetCompilationUnit()->GetAstNodeBuilder()
-            .Module(Config::global_module_name)
+        m_overrideExpr = visitor->GetCompilationUnit()->GetAstNodeBuilder()
+            .Module(Config::globalModuleName)
             .Function("IsInstance")
             .Call({
                 RC<AstArgument>(new AstArgument(CloneAstNode(m_target), false, false, false, false, "", m_target->GetLocation())),
-                RC<AstArgument>(new AstArgument(CloneAstNode(m_type_specification->GetExpr()), false, false, false, false, "", m_type_specification->GetLocation()))
+                RC<AstArgument>(new AstArgument(CloneAstNode(m_typeSpecification->GetExpr()), false, false, false, false, "", m_typeSpecification->GetLocation()))
             });
 
-        m_override_expr->Visit(visitor, mod);
+        m_overrideExpr->Visit(visitor, mod);
     }
 }
 
 std::unique_ptr<Buildable> AstIsExpression::Build(AstVisitor *visitor, Module *mod)
 {
-    if (m_override_expr != nullptr) {
-        return m_override_expr->Build(visitor, mod);
+    if (m_overrideExpr != nullptr) {
+        return m_overrideExpr->Build(visitor, mod);
     }
 
-    Assert(m_is_type == TRI_TRUE || m_is_type == TRI_FALSE);
+    Assert(m_isType == TRI_TRUE || m_isType == TRI_FALSE);
     
     uint8 rp = visitor->GetCompilationUnit()->GetInstructionStream().GetCurrentRegister();
 
-    return BytecodeUtil::Make<ConstBool>(rp, bool(m_is_type.Value()));
+    return BytecodeUtil::Make<ConstBool>(rp, bool(m_isType.Value()));
 }
 
 void AstIsExpression::Optimize(AstVisitor *visitor, Module *mod)
 {
-    if (m_override_expr != nullptr) {
-        m_override_expr->Optimize(visitor, mod);
+    if (m_overrideExpr != nullptr) {
+        m_overrideExpr->Optimize(visitor, mod);
 
         return;
     }
@@ -85,8 +85,8 @@ void AstIsExpression::Optimize(AstVisitor *visitor, Module *mod)
     Assert(m_target != nullptr);
     m_target->Optimize(visitor, mod);
 
-    Assert(m_type_specification != nullptr);
-    m_type_specification->Optimize(visitor, mod);
+    Assert(m_typeSpecification != nullptr);
+    m_typeSpecification->Optimize(visitor, mod);
 }
 
 RC<AstStatement> AstIsExpression::Clone() const
@@ -101,17 +101,17 @@ SymbolTypePtr_t AstIsExpression::GetExprType() const
 
 Tribool AstIsExpression::IsTrue() const
 {
-    return m_is_type;
+    return m_isType;
 }
 
 bool AstIsExpression::MayHaveSideEffects() const
 {
     Assert(
-        m_target != nullptr && m_type_specification != nullptr
+        m_target != nullptr && m_typeSpecification != nullptr
     );
 
     return m_target->MayHaveSideEffects()
-        || m_type_specification->MayHaveSideEffects();
+        || m_typeSpecification->MayHaveSideEffects();
 }
 
 } // namespace hyperion::compiler

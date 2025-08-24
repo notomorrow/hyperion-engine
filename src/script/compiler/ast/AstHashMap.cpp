@@ -43,33 +43,33 @@ void AstHashMap::Visit(AstVisitor *visitor, Module *mod)
 {
     Assert(m_keys.Size() == m_values.Size());
 
-    m_replaced_keys.Reserve(m_keys.Size());
-    m_replaced_values.Reserve(m_values.Size());
+    m_replacedKeys.Reserve(m_keys.Size());
+    m_replacedValues.Reserve(m_values.Size());
 
-    m_expr_type = BuiltinTypes::UNDEFINED;
+    m_exprType = BuiltinTypes::UNDEFINED;
 
-    m_key_type = BuiltinTypes::UNDEFINED;
-    m_value_type = BuiltinTypes::UNDEFINED;
+    m_keyType = BuiltinTypes::UNDEFINED;
+    m_valueType = BuiltinTypes::UNDEFINED;
 
-    Array<Pair<RC<AstExpression>, RC<AstExpression>>> key_value_pairs;
-    key_value_pairs.Reserve(m_keys.Size());
+    Array<Pair<RC<AstExpression>, RC<AstExpression>>> keyValuePairs;
+    keyValuePairs.Reserve(m_keys.Size());
 
     for (SizeType i = 0; i < m_keys.Size(); ++i) {
         Assert(m_keys[i] != nullptr);
         Assert(m_values[i] != nullptr);
 
-        key_value_pairs.PushBack({ m_keys[i], m_values[i] });
+        keyValuePairs.PushBack({ m_keys[i], m_values[i] });
     }
 
-    if (key_value_pairs.Any()) {
-        for (auto &key_value_pair : key_value_pairs) {
-            key_value_pair.first->Visit(visitor, mod);
-            key_value_pair.second->Visit(visitor, mod);
+    if (keyValuePairs.Any()) {
+        for (auto &keyValuePair : keyValuePairs) {
+            keyValuePair.first->Visit(visitor, mod);
+            keyValuePair.second->Visit(visitor, mod);
 
-            SymbolTypePtr_t key_type = key_value_pair.first->GetExprType();
-            SymbolTypePtr_t value_type = key_value_pair.second->GetExprType();
+            SymbolTypePtr_t keyType = keyValuePair.first->GetExprType();
+            SymbolTypePtr_t valueType = keyValuePair.second->GetExprType();
 
-            if (key_type == nullptr || value_type == nullptr) {
+            if (keyType == nullptr || valueType == nullptr) {
                 visitor->GetCompilationUnit()->GetErrorList().AddError(CompilerError(
                     LEVEL_ERROR,
                     Msg_internal_error,
@@ -79,32 +79,32 @@ void AstHashMap::Visit(AstVisitor *visitor, Module *mod)
                 continue;
             }
 
-            key_type = key_type->GetUnaliased();
-            value_type = value_type->GetUnaliased();
+            keyType = keyType->GetUnaliased();
+            valueType = valueType->GetUnaliased();
 
-            if (m_key_type == BuiltinTypes::UNDEFINED) {
-                m_key_type = key_type;
+            if (m_keyType == BuiltinTypes::UNDEFINED) {
+                m_keyType = keyType;
             } else {
-                m_key_type = SymbolType::TypePromotion(m_key_type, key_type);
+                m_keyType = SymbolType::TypePromotion(m_keyType, keyType);
             }
 
-            if (m_value_type == BuiltinTypes::UNDEFINED) {
-                m_value_type = value_type;
-            } else if (!m_value_type->TypeEqual(*value_type)) {
-                m_value_type = SymbolType::TypePromotion(m_value_type, value_type);
+            if (m_valueType == BuiltinTypes::UNDEFINED) {
+                m_valueType = valueType;
+            } else if (!m_valueType->TypeEqual(*valueType)) {
+                m_valueType = SymbolType::TypePromotion(m_valueType, valueType);
             }
 
-            m_replaced_keys.PushBack(CloneAstNode(key_value_pair.first));
-            m_replaced_values.PushBack(CloneAstNode(key_value_pair.second));
+            m_replacedKeys.PushBack(CloneAstNode(keyValuePair.first));
+            m_replacedValues.PushBack(CloneAstNode(keyValuePair.second));
         }
     } else {
-        m_key_type = BuiltinTypes::ANY;
-        m_value_type = BuiltinTypes::ANY;
+        m_keyType = BuiltinTypes::ANY;
+        m_valueType = BuiltinTypes::ANY;
     }
 
     // if either key or value type is undefined, set it to `Any`
 
-    if (m_key_type == BuiltinTypes::UNDEFINED || m_value_type == BuiltinTypes::UNDEFINED) {
+    if (m_keyType == BuiltinTypes::UNDEFINED || m_valueType == BuiltinTypes::UNDEFINED) {
         // add error
         visitor->GetCompilationUnit()->GetErrorList().AddError(CompilerError(
             LEVEL_ERROR,
@@ -113,27 +113,27 @@ void AstHashMap::Visit(AstVisitor *visitor, Module *mod)
         ));
     }
 
-    for (SizeType i = 0; i < m_replaced_keys.Size(); ++i) {
-        auto &key = m_replaced_keys[i];
+    for (SizeType i = 0; i < m_replacedKeys.Size(); ++i) {
+        auto &key = m_replacedKeys[i];
         Assert(key != nullptr);
 
-        auto &value = m_replaced_values[i];
+        auto &value = m_replacedValues[i];
         Assert(value != nullptr);
 
-        auto &replaced_key = m_replaced_keys[i];
-        Assert(replaced_key != nullptr);
+        auto &replacedKey = m_replacedKeys[i];
+        Assert(replacedKey != nullptr);
 
-        auto &replaced_value = m_replaced_values[i];
-        Assert(replaced_value != nullptr);
+        auto &replacedValue = m_replacedValues[i];
+        Assert(replacedValue != nullptr);
 
-        if (SymbolTypePtr_t key_type = key->GetExprType()) {
-            if (!key_type->TypeEqual(*m_key_type)) {
+        if (SymbolTypePtr_t keyType = key->GetExprType()) {
+            if (!keyType->TypeEqual(*m_keyType)) {
                 // Add cast
-                replaced_key.Reset(new AstAsExpression(
-                    replaced_key,
+                replacedKey.Reset(new AstAsExpression(
+                    replacedKey,
                     RC<AstPrototypeSpecification>(new AstPrototypeSpecification(
                         RC<AstTypeRef>(new AstTypeRef(
-                            m_key_type,
+                            m_keyType,
                             key->GetLocation()
                         )),
                         key->GetLocation()
@@ -143,14 +143,14 @@ void AstHashMap::Visit(AstVisitor *visitor, Module *mod)
             }
         }
 
-        if (SymbolTypePtr_t value_type = value->GetExprType()) {
-            if (!value_type->TypeEqual(*m_value_type)) {
+        if (SymbolTypePtr_t valueType = value->GetExprType()) {
+            if (!valueType->TypeEqual(*m_valueType)) {
                 // Add cast
-                replaced_value.Reset(new AstAsExpression(
-                    replaced_value,
+                replacedValue.Reset(new AstAsExpression(
+                    replacedValue,
                     RC<AstPrototypeSpecification>(new AstPrototypeSpecification(
                         RC<AstTypeRef>(new AstTypeRef(
-                            m_value_type,
+                            m_valueType,
                             value->GetLocation()
                         )),
                         value->GetLocation()
@@ -162,7 +162,7 @@ void AstHashMap::Visit(AstVisitor *visitor, Module *mod)
     }
 
     // @TODO: Cache generic instance types
-    m_map_type_expr.Reset(new AstPrototypeSpecification(
+    m_mapTypeExpr.Reset(new AstPrototypeSpecification(
         RC<AstTemplateInstantiation>(new AstTemplateInstantiation(
             RC<AstVariable>(new AstVariable(
                 "Map",
@@ -171,7 +171,7 @@ void AstHashMap::Visit(AstVisitor *visitor, Module *mod)
             {
                 RC<AstArgument>(new AstArgument(
                     RC<AstTypeRef>(new AstTypeRef(
-                        m_key_type,
+                        m_keyType,
                         m_location
                     )),
                     false,
@@ -184,7 +184,7 @@ void AstHashMap::Visit(AstVisitor *visitor, Module *mod)
 
                 RC<AstArgument>(new AstArgument(
                     RC<AstTypeRef>(new AstTypeRef(
-                        m_value_type,
+                        m_valueType,
                         m_location
                     )),
                     false,
@@ -200,11 +200,11 @@ void AstHashMap::Visit(AstVisitor *visitor, Module *mod)
         m_location
     ));
 
-    m_map_type_expr->Visit(visitor, mod);
+    m_mapTypeExpr->Visit(visitor, mod);
 
-    SymbolTypePtr_t map_type = m_map_type_expr->GetHeldType();
+    SymbolTypePtr_t mapType = m_mapTypeExpr->GetHeldType();
     
-    if (map_type == nullptr) {
+    if (mapType == nullptr) {
         // add error
 
         visitor->GetCompilationUnit()->GetErrorList().AddError(CompilerError(
@@ -216,91 +216,91 @@ void AstHashMap::Visit(AstVisitor *visitor, Module *mod)
         return;
     }
 
-    map_type = map_type->GetUnaliased();
+    mapType = mapType->GetUnaliased();
 
-    m_expr_type = map_type;
+    m_exprType = mapType;
 
-    Array<RC<AstExpression>> key_value_array_expressions;
-    key_value_array_expressions.Reserve(m_replaced_keys.Size());
+    Array<RC<AstExpression>> keyValueArrayExpressions;
+    keyValueArrayExpressions.Reserve(m_replacedKeys.Size());
 
-    for (SizeType i = 0; i < m_replaced_keys.Size(); ++i) {
-        auto &key = m_replaced_keys[i];
+    for (SizeType i = 0; i < m_replacedKeys.Size(); ++i) {
+        auto &key = m_replacedKeys[i];
         Assert(key != nullptr);
 
-        auto &value = m_replaced_values[i];
+        auto &value = m_replacedValues[i];
         Assert(value != nullptr);
 
-        Array<RC<AstExpression>> key_value_pair;
-        key_value_pair.Reserve(2);
+        Array<RC<AstExpression>> keyValuePair;
+        keyValuePair.Reserve(2);
 
-        key_value_pair.PushBack(key);
-        key_value_pair.PushBack(value);
+        keyValuePair.PushBack(key);
+        keyValuePair.PushBack(value);
 
-        key_value_array_expressions.PushBack(RC<AstArrayExpression>(new AstArrayExpression(
-            key_value_pair,
+        keyValueArrayExpressions.PushBack(RC<AstArrayExpression>(new AstArrayExpression(
+            keyValuePair,
             m_location
         )));
     }
 
-    m_array_expr.Reset(new AstArrayExpression(
-        key_value_array_expressions,
+    m_arrayExpr.Reset(new AstArrayExpression(
+        keyValueArrayExpressions,
         m_location
     ));
     
-    m_array_expr->Visit(visitor, mod);
+    m_arrayExpr->Visit(visitor, mod);
 }
 
 std::unique_ptr<Buildable> AstHashMap::Build(AstVisitor *visitor, Module *mod)
 {
     std::unique_ptr<BytecodeChunk> chunk = BytecodeUtil::Make<BytecodeChunk>();
 
-    Assert(m_map_type_expr != nullptr);
-    chunk->Append(m_map_type_expr->Build(visitor, mod));
+    Assert(m_mapTypeExpr != nullptr);
+    chunk->Append(m_mapTypeExpr->Build(visitor, mod));
     
     // get active register
     uint8 rp = visitor->GetCompilationUnit()->GetInstructionStream().GetCurrentRegister();
 
     { // keep type obj in memory so we can do Map<K, V>.from(...), so push it to the stack
-        auto instr_push = BytecodeUtil::Make<RawOperation<>>();
-        instr_push->opcode = PUSH;
-        instr_push->Accept<uint8>(rp);
-        chunk->Append(std::move(instr_push));
+        auto instrPush = BytecodeUtil::Make<RawOperation<>>();
+        instrPush->opcode = PUSH;
+        instrPush->Accept<uint8>(rp);
+        chunk->Append(std::move(instrPush));
     }
 
-    int class_stack_location = visitor->GetCompilationUnit()->GetInstructionStream().GetStackSize();
+    int classStackLocation = visitor->GetCompilationUnit()->GetInstructionStream().GetStackSize();
     visitor->GetCompilationUnit()->GetInstructionStream().IncStackSize();
 
-    Assert(m_array_expr != nullptr);
-    chunk->Append(m_array_expr->Build(visitor, mod));
+    Assert(m_arrayExpr != nullptr);
+    chunk->Append(m_arrayExpr->Build(visitor, mod));
 
-    const uint8 array_reg = rp;
+    const uint8 arrayReg = rp;
 
     // move array to stack
     { 
-        auto instr_push = BytecodeUtil::Make<RawOperation<>>();
-        instr_push->opcode = PUSH;
-        instr_push->Accept<uint8>(rp);
-        chunk->Append(std::move(instr_push));
+        auto instrPush = BytecodeUtil::Make<RawOperation<>>();
+        instrPush->opcode = PUSH;
+        instrPush->Accept<uint8>(rp);
+        chunk->Append(std::move(instrPush));
     }
     
-    int array_stack_location = visitor->GetCompilationUnit()->GetInstructionStream().GetStackSize();
+    int arrayStackLocation = visitor->GetCompilationUnit()->GetInstructionStream().GetStackSize();
     // increment stack size
     visitor->GetCompilationUnit()->GetInstructionStream().IncStackSize();
 
     { // load class from stack back into register
-        auto instr_load_offset = BytecodeUtil::Make<StorageOperation>();
-        instr_load_offset->GetBuilder()
+        auto instrLoadOffset = BytecodeUtil::Make<StorageOperation>();
+        instrLoadOffset->GetBuilder()
             .Load(rp)
             .Local()
-            .ByOffset(visitor->GetCompilationUnit()->GetInstructionStream().GetStackSize() - class_stack_location);
+            .ByOffset(visitor->GetCompilationUnit()->GetInstructionStream().GetStackSize() - classStackLocation);
 
-        chunk->Append(std::move(instr_load_offset));
+        chunk->Append(std::move(instrLoadOffset));
     }
 
     { // load member `from` from array type expr
-        constexpr uint32 from_hash = hash_fnv_1("from");
+        constexpr uint32 fromHash = hashFnv1("from");
 
-        chunk->Append(Compiler::LoadMemberFromHash(visitor, mod, from_hash));
+        chunk->Append(Compiler::LoadMemberFromHash(visitor, mod, fromHash));
     }
 
     // Here map class and array should be the 2 items on the stack
@@ -328,12 +328,12 @@ std::unique_ptr<Buildable> AstHashMap::Build(AstVisitor *visitor, Module *mod)
 
 void AstHashMap::Optimize(AstVisitor *visitor, Module *mod)
 {
-    if (m_map_type_expr != nullptr) {
-        m_map_type_expr->Optimize(visitor, mod);
+    if (m_mapTypeExpr != nullptr) {
+        m_mapTypeExpr->Optimize(visitor, mod);
     }
 
-    if (m_array_expr != nullptr) {
-        m_array_expr->Optimize(visitor, mod);
+    if (m_arrayExpr != nullptr) {
+        m_arrayExpr->Optimize(visitor, mod);
     }
 }
 
@@ -355,11 +355,11 @@ bool AstHashMap::MayHaveSideEffects() const
 
 SymbolTypePtr_t AstHashMap::GetExprType() const
 {
-    if (m_expr_type == nullptr) {
+    if (m_exprType == nullptr) {
         return BuiltinTypes::UNDEFINED;
     }
 
-    return m_expr_type;
+    return m_exprType;
 }
 
 } // namespace hyperion::compiler

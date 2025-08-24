@@ -67,7 +67,7 @@ static struct MathScriptBindings : ScriptBindingsBase
             .Build();
     }
 
-} math_util_script_bindings { };
+} mathUtilScriptBindings { };
 
 } // namespace bindings
 } // namespace script

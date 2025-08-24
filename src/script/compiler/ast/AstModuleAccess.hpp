@@ -21,10 +21,10 @@ public:
     virtual ~AstModuleAccess() override = default;
 
     Module *GetModule()
-        { return m_mod_access; }
+        { return m_modAccess; }
 
     const Module *GetModule() const
-        { return m_mod_access; }
+        { return m_modAccess; }
 
     const String &GetTargetName() const
         { return m_target; }
@@ -35,8 +35,8 @@ public:
     void SetExpression(const RC<AstExpression> &expr)
         { m_expr = expr; }
 
-    void SetChained(bool is_chained)
-        { m_is_chained = is_chained; }
+    void SetChained(bool isChained)
+        { m_isChained = isChained; }
 
     void PerformLookup(AstVisitor *visitor, Module *mod);
 
@@ -70,10 +70,10 @@ private:
     RC<AstExpression>   m_expr;
 
     // set while analyzing
-    Module              *m_mod_access;
+    Module              *m_modAccess;
     // is this module access chained to another before it?
-    bool                m_is_chained;
-    bool                m_looked_up;
+    bool                m_isChained;
+    bool                m_lookedUp;
 
     RC<AstModuleAccess> CloneImpl() const
     {

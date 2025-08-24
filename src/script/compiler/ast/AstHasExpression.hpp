@@ -13,7 +13,7 @@ class AstHasExpression : public AstExpression
 public:
     AstHasExpression(
         const RC<AstStatement> &target,
-        const String &field_name,
+        const String &fieldName,
         const SourceLocation &location
     );
     virtual ~AstHasExpression() override = default;
@@ -32,28 +32,28 @@ public:
     {
         HashCode hc = AstExpression::GetHashCode().Add(TypeName<AstHasExpression>());
         hc.Add(m_target ? m_target->GetHashCode() : HashCode());
-        hc.Add(m_field_name);
+        hc.Add(m_fieldName);
 
         return hc;
     }
 
 protected:
     RC<AstStatement>    m_target;
-    String              m_field_name;
+    String              m_fieldName;
 
     // set while analyzing
-    Tribool             m_has_member;
+    Tribool             m_hasMember;
     // is it a check if an expression has the member,
     // or is it a check if a type has a member?
-    bool                m_is_expr;
-    bool                m_has_side_effects;
+    bool                m_isExpr;
+    bool                m_hasSideEffects;
 
 private:
     RC<AstHasExpression> CloneImpl() const
     {
         return RC<AstHasExpression>(new AstHasExpression(
             CloneAstNode(m_target),
-            m_field_name,
+            m_fieldName,
             m_location
         ));
     }

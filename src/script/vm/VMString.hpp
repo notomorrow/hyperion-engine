@@ -17,7 +17,7 @@ public:
 
 public:
     VMString(const char *str);
-    VMString(const char *str, int max_len);
+    VMString(const char *str, int maxLen);
     VMString(const String &str);
     VMString(String &&str);
     VMString(const VMString &other);

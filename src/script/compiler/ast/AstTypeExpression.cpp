@@ -24,42 +24,42 @@ namespace hyperion::compiler {
 
 AstTypeExpression::AstTypeExpression(
     const String &name,
-    const RC<AstPrototypeSpecification> &base_specification,
-    const Array<RC<AstVariableDeclaration>> &data_members,
-    const Array<RC<AstVariableDeclaration>> &function_members,
-    const Array<RC<AstVariableDeclaration>> &static_members,
-    const SymbolTypePtr_t &enum_underlying_type,
-    bool is_proxy_class,
+    const RC<AstPrototypeSpecification> &baseSpecification,
+    const Array<RC<AstVariableDeclaration>> &dataMembers,
+    const Array<RC<AstVariableDeclaration>> &functionMembers,
+    const Array<RC<AstVariableDeclaration>> &staticMembers,
+    const SymbolTypePtr_t &enumUnderlyingType,
+    bool isProxyClass,
     const SourceLocation &location
 ) : AstExpression(location, ACCESS_MODE_LOAD),
     m_name(name),
-    m_base_specification(base_specification),
-    m_data_members(data_members),
-    m_function_members(function_members),
-    m_static_members(static_members),
-    m_enum_underlying_type(enum_underlying_type),
-    m_is_proxy_class(is_proxy_class),
-    m_is_uninstantiated_generic(false),
-    m_is_visited(false)
+    m_baseSpecification(baseSpecification),
+    m_dataMembers(dataMembers),
+    m_functionMembers(functionMembers),
+    m_staticMembers(staticMembers),
+    m_enumUnderlyingType(enumUnderlyingType),
+    m_isProxyClass(isProxyClass),
+    m_isUninstantiatedGeneric(false),
+    m_isVisited(false)
 {
 }
 
 AstTypeExpression::AstTypeExpression(
     const String &name,
-    const RC<AstPrototypeSpecification> &base_specification,
-    const Array<RC<AstVariableDeclaration>> &data_members,
-    const Array<RC<AstVariableDeclaration>> &function_members,
-    const Array<RC<AstVariableDeclaration>> &static_members,
-    bool is_proxy_class,
+    const RC<AstPrototypeSpecification> &baseSpecification,
+    const Array<RC<AstVariableDeclaration>> &dataMembers,
+    const Array<RC<AstVariableDeclaration>> &functionMembers,
+    const Array<RC<AstVariableDeclaration>> &staticMembers,
+    bool isProxyClass,
     const SourceLocation &location
 ) : AstTypeExpression(
         name,
-        base_specification,
-        data_members,
-        function_members,
-        static_members,
+        baseSpecification,
+        dataMembers,
+        functionMembers,
+        staticMembers,
         nullptr,
-        is_proxy_class,
+        isProxyClass,
         location
     )
 {
@@ -68,122 +68,122 @@ AstTypeExpression::AstTypeExpression(
 void AstTypeExpression::Visit(AstVisitor *visitor, Module *mod)
 {   
     Assert(visitor != nullptr && mod != nullptr);
-    Assert(!m_is_visited);
+    Assert(!m_isVisited);
 
-    m_is_uninstantiated_generic = mod->IsInScopeOfType(SCOPE_TYPE_NORMAL, UNINSTANTIATED_GENERIC_FLAG);
-    bool has_custom_proto = false;
+    m_isUninstantiatedGeneric = mod->IsInScopeOfType(SCOPE_TYPE_NORMAL, UNINSTANTIATED_GENERIC_FLAG);
+    bool hasCustomProto = false;
 
     // Create scope
     ScopeGuard scope(mod, SCOPE_TYPE_NORMAL, IsEnum() ? ScopeFunctionFlags::ENUM_MEMBERS_FLAG : 0);
 
-    SymbolTypePtr_t prototype_type = SymbolType::Object(
+    SymbolTypePtr_t prototypeType = SymbolType::Object(
         "$$" + m_name + "Prototype",
         {},
         BuiltinTypes::OBJECT
     );
 
-    SymbolTypePtr_t base_type = BuiltinTypes::OBJECT;
+    SymbolTypePtr_t baseType = BuiltinTypes::OBJECT;
 
-    if (m_base_specification != nullptr) {
-        m_base_specification->Visit(visitor, mod);
+    if (m_baseSpecification != nullptr) {
+        m_baseSpecification->Visit(visitor, mod);
 
-        Assert(m_base_specification->GetExprType() != nullptr);
+        Assert(m_baseSpecification->GetExprType() != nullptr);
 
-        if (auto base_type_inner = m_base_specification->GetHeldType()) {
-            base_type = base_type_inner;
+        if (auto baseTypeInner = m_baseSpecification->GetHeldType()) {
+            baseType = baseTypeInner;
         } else {
             visitor->GetCompilationUnit()->GetErrorList().AddError(CompilerError(
                 LEVEL_ERROR,
                 Msg_not_a_type,
                 m_location,
-                m_base_specification->GetExprType()->ToString()
+                m_baseSpecification->GetExprType()->ToString()
             ));
         }
     }
 
     if (IsEnum()) {
         // Create a generic instance of the enum type
-        m_symbol_type = SymbolType::GenericInstance(
+        m_symbolType = SymbolType::GenericInstance(
             BuiltinTypes::ENUM_TYPE,
             GenericInstanceTypeInfo {
                 {
-                    { "of", m_enum_underlying_type }
+                    { "of", m_enumUnderlyingType }
                 }
             }
         );
 
-        m_type_object.Reset(new AstTypeObject(
-            m_symbol_type,
+        m_typeObject.Reset(new AstTypeObject(
+            m_symbolType,
             BuiltinTypes::CLASS_TYPE,
-            m_enum_underlying_type,
-            m_is_proxy_class,
+            m_enumUnderlyingType,
+            m_isProxyClass,
             m_location
         ));
     } else {
-        m_symbol_type = SymbolType::Extend(
+        m_symbolType = SymbolType::Extend(
             m_name,
-            base_type,
+            baseType,
             {}
         );
         
-        if (m_is_proxy_class) {
-            m_symbol_type->GetFlags() |= SYMBOL_TYPE_FLAGS_PROXY;
+        if (m_isProxyClass) {
+            m_symbolType->GetFlags() |= SYMBOL_TYPE_FLAGS_PROXY;
         }
 
-        if (m_is_uninstantiated_generic) {
-            m_symbol_type->GetFlags() |= SYMBOL_TYPE_FLAGS_UNINSTANTIATED_GENERIC;
+        if (m_isUninstantiatedGeneric) {
+            m_symbolType->GetFlags() |= SYMBOL_TYPE_FLAGS_UNINSTANTIATED_GENERIC;
         }
 
-        m_type_object.Reset(new AstTypeObject(
-            m_symbol_type,
+        m_typeObject.Reset(new AstTypeObject(
+            m_symbolType,
             BuiltinTypes::CLASS_TYPE,
-            m_enum_underlying_type,
-            m_is_proxy_class,
+            m_enumUnderlyingType,
+            m_isProxyClass,
             m_location
         ));
 
         // special names
-        bool proto_found = false;
-        bool base_found = false;
-        bool name_found = false;
+        bool protoFound = false;
+        bool baseFound = false;
+        bool nameFound = false;
 
-        for (const auto &mem : m_static_members) {
+        for (const auto &mem : m_staticMembers) {
             Assert(mem != nullptr);
 
             if (mem->GetName() == "$proto") {
-                proto_found = true;
-                has_custom_proto = true;
+                protoFound = true;
+                hasCustomProto = true;
             } else if (mem->GetName() == "base") {
-                base_found = true;
+                baseFound = true;
             } else if (mem->GetName() == "name") {
-                name_found = true;
+                nameFound = true;
             }
         }
 
-        if (!proto_found) { // no custom '$proto' member, add default.
-            m_symbol_type->AddMember(SymbolTypeMember {
+        if (!protoFound) { // no custom '$proto' member, add default.
+            m_symbolType->AddMember(SymbolTypeMember {
                 "$proto",
-                prototype_type,
+                prototypeType,
                 RC<AstTypeRef>(new AstTypeRef(
-                    prototype_type,
+                    prototypeType,
                     m_location
                 ))
             });
         }
 
-        if (!base_found) { // no custom 'base' member, add default
-            m_symbol_type->AddMember(SymbolTypeMember {
+        if (!baseFound) { // no custom 'base' member, add default
+            m_symbolType->AddMember(SymbolTypeMember {
                 "base",
                 BuiltinTypes::CLASS_TYPE,
                 RC<AstTypeRef>(new AstTypeRef(
-                    base_type,
+                    baseType,
                     m_location
                 ))
             });
         }
 
-        if (!name_found) { // no custom 'name' member, add default
-            m_symbol_type->AddMember(SymbolTypeMember {
+        if (!nameFound) { // no custom 'name' member, add default
+            m_symbolType->AddMember(SymbolTypeMember {
                 "name",
                 BuiltinTypes::STRING,
                 RC<AstString>(new AstString(
@@ -193,63 +193,63 @@ void AstTypeExpression::Visit(AstVisitor *visitor, Module *mod)
             });
         }
 
-        if (has_custom_proto) {
-            m_symbol_type->GetFlags() |= SYMBOL_TYPE_FLAGS_PROXY;
+        if (hasCustomProto) {
+            m_symbolType->GetFlags() |= SYMBOL_TYPE_FLAGS_PROXY;
         }
     }
 
-    m_symbol_type->SetTypeObject(m_type_object);
+    m_symbolType->SetTypeObject(m_typeObject);
 
     // Add the symbol type to the identifier table so that it can be used within the type definition.
-    // scope->GetIdentifierTable().AddSymbolType(m_symbol_type);
+    // scope->GetIdentifierTable().AddSymbolType(m_symbolType);
 
     // if (mod->IsInScopeOfType(SCOPE_TYPE_NORMAL, UNINSTANTIATED_GENERIC_FLAG)) { // add symbol type to be usable within members
-    //     SymbolTypePtr_t placeholder_type = m_symbol_type;
+    //     SymbolTypePtr_t placeholderType = m_symbolType;
 
     //     // If the type is generic, we need to use a placeholder type
     //     // so that we can use the type within the type definition, without having to
     //     // instantiate it first.
-    //     // if (m_symbol_type->IsGeneric()) {
-    //         placeholder_type = SymbolType::Alias(
-    //             m_symbol_type->GetName(),
+    //     // if (m_symbolType->IsGeneric()) {
+    //         placeholderType = SymbolType::Alias(
+    //             m_symbolType->GetName(),
     //             { BuiltinTypes::PLACEHOLDER }
     //         );
     //     // }
 
-    //     scope->GetIdentifierTable().AddSymbolType(placeholder_type);
+    //     scope->GetIdentifierTable().AddSymbolType(placeholderType);
     // }
 
     { // add type aliases to be usable within members
         scope->GetIdentifierTable().AddSymbolType(SymbolType::Alias(
             "SelfType",
-            { m_symbol_type }
+            { m_symbolType }
         ));
 
         scope->GetIdentifierTable().AddSymbolType(SymbolType::Alias(
-            m_symbol_type->GetName(),
-            { m_symbol_type }
+            m_symbolType->GetName(),
+            { m_symbolType }
         ));
     }
 
     // ===== STATIC DATA MEMBERS ======
     {
-        ScopeGuard static_data_members(mod, SCOPE_TYPE_TYPE_DEFINITION, 0);
+        ScopeGuard staticDataMembers(mod, SCOPE_TYPE_TYPE_DEFINITION, 0);
 
         // Add a static $invoke method which will be used to invoke the constructor.
         
 
-        for (const auto &mem : m_static_members) {
+        for (const auto &mem : m_staticMembers) {
             Assert(mem != nullptr);
             mem->Visit(visitor, mod);
 
-            String mem_name = mem->GetName();
+            String memName = mem->GetName();
 
             Assert(mem->GetIdentifier() != nullptr);
-            SymbolTypePtr_t mem_type = mem->GetIdentifier()->GetSymbolType();
+            SymbolTypePtr_t memType = mem->GetIdentifier()->GetSymbolType();
             
-            m_symbol_type->AddMember(SymbolTypeMember {
-                mem_name,
-                mem_type,
+            m_symbolType->AddMember(SymbolTypeMember {
+                memName,
+                memType,
                 mem->GetRealAssignment()
             });
         }
@@ -257,21 +257,21 @@ void AstTypeExpression::Visit(AstVisitor *visitor, Module *mod)
 
     // ===== INSTANCE DATA MEMBERS =====
 
-    Optional<SymbolTypeMember> constructor_member;
+    Optional<SymbolTypeMember> constructorMember;
 
     // open the scope for data members
     {
-        ScopeGuard instance_data_members(mod, SCOPE_TYPE_TYPE_DEFINITION, 0);
+        ScopeGuard instanceDataMembers(mod, SCOPE_TYPE_TYPE_DEFINITION, 0);
 
         // Do data members first so we can use them all in functions.
 
-        for (const RC<AstVariableDeclaration> &mem : m_data_members) {
+        for (const RC<AstVariableDeclaration> &mem : m_dataMembers) {
             if (mem != nullptr) {
                 mem->Visit(visitor, mod);
 
                 Assert(mem->GetIdentifier() != nullptr);
                 
-                prototype_type->AddMember(SymbolTypeMember {
+                prototypeType->AddMember(SymbolTypeMember {
                     mem->GetName(),
                     mem->GetIdentifier()->GetSymbolType(),
                     mem->GetRealAssignment()
@@ -279,13 +279,13 @@ void AstTypeExpression::Visit(AstVisitor *visitor, Module *mod)
             }
         }
 
-        for (const RC<AstVariableDeclaration> &mem : m_function_members) {
+        for (const RC<AstVariableDeclaration> &mem : m_functionMembers) {
             if (mem != nullptr) {
                 // if name of the method matches that of the class, it is the constructor.
-                const bool is_constructor_definition = mem->GetName() == m_name;
+                const bool isConstructorDefinition = mem->GetName() == m_name;
 
-                if (is_constructor_definition) {
-                    // ScopeGuard constructor_definition_scope(mod, SCOPE_TYPE_FUNCTION, CONSTRUCTOR_DEFINITION_FLAG);
+                if (isConstructorDefinition) {
+                    // ScopeGuard constructorDefinitionScope(mod, SCOPE_TYPE_FUNCTION, CONSTRUCTOR_DEFINITION_FLAG);
 
                     mem->ApplyIdentifierFlags(FLAG_CONSTRUCTOR);
                     mem->SetName("$construct");
@@ -303,32 +303,32 @@ void AstTypeExpression::Visit(AstVisitor *visitor, Module *mod)
                     mem->GetRealAssignment()
                 };
 
-                if (is_constructor_definition) {
-                    constructor_member = member;
+                if (isConstructorDefinition) {
+                    constructorMember = member;
                 }
                 
-                prototype_type->AddMember(std::move(member));
+                prototypeType->AddMember(std::move(member));
             }
         }
     }
 
 #if HYP_SCRIPT_CALLABLE_CLASS_CONSTRUCTORS
-    bool invoke_found = false;
+    bool invokeFound = false;
 
     // Find the $invoke member on the class object (if it exists)
-    for (const SymbolTypeMember &it : m_symbol_type->GetMembers()) {
+    for (const SymbolTypeMember &it : m_symbolType->GetMembers()) {
         if (it.name == "$invoke") {
-            invoke_found = true;
+            invokeFound = true;
             break;
         }
     }
 
-    if (!invoke_found && !IsProxyClass() && !IsEnum()) { // Add an '$invoke' static member, if not already defined.
-        Array<RC<AstParameter>> invoke_params;
-        invoke_params.Reserve(1);
+    if (!invokeFound && !IsProxyClass() && !IsEnum()) { // Add an '$invoke' static member, if not already defined.
+        Array<RC<AstParameter>> invokeParams;
+        invokeParams.Reserve(1);
 
         // Add `self: typeof SelfType`
-        invoke_params.PushBack(RC<AstParameter>(new AstParameter(
+        invokeParams.PushBack(RC<AstParameter>(new AstParameter(
             "self", // self: typeof SelfType
             RC<AstPrototypeSpecification>(new AstPrototypeSpecification(
                 RC<AstTypeRef>(new AstTypeRef(
@@ -344,49 +344,49 @@ void AstTypeExpression::Visit(AstVisitor *visitor, Module *mod)
             m_location
         )));
 
-        if (constructor_member.HasValue()) {
+        if (constructorMember.HasValue()) {
             // We need to get the arguments for the constructor member, if possible
 
-            const SymbolTypeMember &constructor_member_ref = constructor_member.Get();
+            const SymbolTypeMember &constructorMemberRef = constructorMember.Get();
 
-            SymbolTypePtr_t constructor_member_type = constructor_member_ref.type;
-            Assert(constructor_member_type != nullptr);
-            constructor_member_type = constructor_member_type->GetUnaliased();
+            SymbolTypePtr_t constructorMemberType = constructorMemberRef.type;
+            Assert(constructorMemberType != nullptr);
+            constructorMemberType = constructorMemberType->GetUnaliased();
 
             // Rely on the fact that the constructor member type is a function type
-            if (constructor_member_type->IsGenericInstanceType()) {
+            if (constructorMemberType->IsGenericInstanceType()) {
                 // Get params from generic expression type
-                const Array<GenericInstanceTypeInfo::Arg> &params = constructor_member_type->GetGenericInstanceInfo().m_generic_args;
+                const Array<GenericInstanceTypeInfo::Arg> &params = constructorMemberType->GetGenericInstanceInfo().m_genericArgs;
                 Assert(params.Size() >= 1, "Generic param list must have at least one parameter (return type should be first).");
 
                 // `self` not guaranteed to be first parameter, so reserve with what we know we have
-                invoke_params.Reserve(params.Size() - 1);
+                invokeParams.Reserve(params.Size() - 1);
 
                 // Start at 2 to skip the return type and `self` parameter - it will be supplied by `new SelfType()`
                 for (SizeType i = 2; i < params.Size(); i++) {
                     const GenericInstanceTypeInfo::Arg &param = params[i];
 
-                    SymbolTypePtr_t param_type = param.m_type;
-                    Assert(param_type != nullptr);
-                    param_type = param_type->GetUnaliased();
+                    SymbolTypePtr_t paramType = param.m_type;
+                    Assert(paramType != nullptr);
+                    paramType = paramType->GetUnaliased();
 
-                    const bool is_variadic = param_type->IsVarArgsType() && i == params.Size() - 1;
+                    const bool isVariadic = paramType->IsVarArgsType() && i == params.Size() - 1;
 
-                    RC<AstPrototypeSpecification> param_type_spec(new AstPrototypeSpecification(
+                    RC<AstPrototypeSpecification> paramTypeSpec(new AstPrototypeSpecification(
                         RC<AstTypeRef>(new AstTypeRef(
-                            param_type,
+                            paramType,
                             m_location
                         )),
                         m_location
                     ));
                     
-                    invoke_params.PushBack(RC<AstParameter>(new AstParameter(
+                    invokeParams.PushBack(RC<AstParameter>(new AstParameter(
                         param.m_name,
-                        param_type_spec,
-                        CloneAstNode(param.m_default_value),
-                        is_variadic,
-                        param.m_is_const,
-                        param.m_is_ref,
+                        paramTypeSpec,
+                        CloneAstNode(param.m_defaultValue),
+                        isVariadic,
+                        param.m_isConst,
+                        param.m_isRef,
                         m_location
                     )));
                 }
@@ -395,15 +395,15 @@ void AstTypeExpression::Visit(AstVisitor *visitor, Module *mod)
 
         // we don't provide `self` (the class) to the new expression
         
-        Array<RC<AstArgument>> invoke_args;
-        invoke_args.Reserve(invoke_params.Size() - 1);
+        Array<RC<AstArgument>> invokeArgs;
+        invokeArgs.Reserve(invokeParams.Size() - 1);
         
         // Pass each parameter as an argument to the constructor
-        for (SizeType index = 1; index < invoke_params.Size(); index++) {
-            const RC<AstParameter> &param = invoke_params[index];
+        for (SizeType index = 1; index < invokeParams.Size(); index++) {
+            const RC<AstParameter> &param = invokeParams[index];
             Assert(param != nullptr);
 
-            invoke_args.PushBack(RC<AstArgument>(new AstArgument(
+            invokeArgs.PushBack(RC<AstArgument>(new AstArgument(
                 RC<AstVariable>(new AstVariable(
                     param->GetName(),
                     m_location
@@ -417,21 +417,21 @@ void AstTypeExpression::Visit(AstVisitor *visitor, Module *mod)
             )));
         }
 
-        RC<AstBlock> invoke_block(new AstBlock(m_location));
+        RC<AstBlock> invokeBlock(new AstBlock(m_location));
 
         // Add AstNewExpression to the block
-        // `new Self($invoke_args...)`
-        invoke_block->AddChild(RC<AstReturnStatement>(new AstReturnStatement(
+        // `new Self($invokeArgs...)`
+        invokeBlock->AddChild(RC<AstReturnStatement>(new AstReturnStatement(
             RC<AstNewExpression>(new AstNewExpression(
                 RC<AstPrototypeSpecification>(new AstPrototypeSpecification(
                     RC<AstTypeRef>(new AstTypeRef(
-                        m_symbol_type,
+                        m_symbolType,
                         m_location
                     )),
                     m_location
                 )),
                 RC<AstArgumentList>(new AstArgumentList(
-                    invoke_args,
+                    invokeArgs,
                     m_location
                 )),
                 true, // enable constructor call
@@ -440,102 +440,102 @@ void AstTypeExpression::Visit(AstVisitor *visitor, Module *mod)
             m_location
         )));
 
-        RC<AstFunctionExpression> invoke_expr(new AstFunctionExpression(
-            invoke_params,
+        RC<AstFunctionExpression> invokeExpr(new AstFunctionExpression(
+            invokeParams,
             RC<AstPrototypeSpecification>(new AstPrototypeSpecification(
                 RC<AstTypeRef>(new AstTypeRef(
-                    m_symbol_type,
+                    m_symbolType,
                     m_location
                 )),
                 m_location
             )),
-            invoke_block,
+            invokeBlock,
             m_location
         ));
 
-        invoke_expr->Visit(visitor, mod);
+        invokeExpr->Visit(visitor, mod);
 
         // // add it to the list of static members
-        // m_static_members.PushBack(RC<AstVariableDeclaration>(new AstVariableDeclaration(
+        // m_staticMembers.PushBack(RC<AstVariableDeclaration>(new AstVariableDeclaration(
         //     "$invoke",
         //     nullptr,
-        //     invoke_expr,
+        //     invokeExpr,
         //     IdentifierFlags::FLAG_CONST,
         //     m_location
         // )));
 
         // Add $invoke member to the symbol type
-        m_symbol_type->AddMember(SymbolTypeMember {
+        m_symbolType->AddMember(SymbolTypeMember {
             "$invoke",
-            invoke_expr->GetExprType(),
-            CloneAstNode(invoke_expr)
+            invokeExpr->GetExprType(),
+            CloneAstNode(invokeExpr)
         });
     }
 #endif
 
     { // create a type object for the prototype type
-        m_prototype_expr.Reset(new AstTypeObject(
-            prototype_type,
+        m_prototypeExpr.Reset(new AstTypeObject(
+            prototypeType,
             BuiltinTypes::CLASS_TYPE,
             m_location
         ));
 
-        prototype_type->SetTypeObject(m_prototype_expr);
-        m_prototype_expr->Visit(visitor, mod); // will register the type. it will be built later.
+        prototypeType->SetTypeObject(m_prototypeExpr);
+        m_prototypeExpr->Visit(visitor, mod); // will register the type. it will be built later.
     }
 
     { // Finally we visit the newly created AstTypeObject, this will Register our SymbolType
-        m_type_object->Visit(visitor, mod);
+        m_typeObject->Visit(visitor, mod);
     }
 
     { // create a type ref for the symbol type
-        m_type_ref.Reset(new AstTypeRef(
-            m_symbol_type,
+        m_typeRef.Reset(new AstTypeRef(
+            m_symbolType,
             m_location
         ));
 
-        m_type_ref->Visit(visitor, mod);
+        m_typeRef->Visit(visitor, mod);
     }
 
-    m_is_visited = true;
+    m_isVisited = true;
 }
 
 std::unique_ptr<Buildable> AstTypeExpression::Build(AstVisitor *visitor, Module *mod)
 {
-    Assert(m_symbol_type != nullptr);
-    Assert(m_symbol_type->GetId() != -1);
+    Assert(m_symbolType != nullptr);
+    Assert(m_symbolType->GetId() != -1);
 
-    Assert(m_is_visited);
+    Assert(m_isVisited);
 
-    // Assert(!m_is_uninstantiated_generic, "Cannot build an uninstantiated generic type.");
+    // Assert(!m_isUninstantiatedGeneric, "Cannot build an uninstantiated generic type.");
 
     std::unique_ptr<BytecodeChunk> chunk = BytecodeUtil::Make<BytecodeChunk>();
 
-    if (m_prototype_expr != nullptr) {
-        chunk->Append(m_prototype_expr->Build(visitor, mod));
+    if (m_prototypeExpr != nullptr) {
+        chunk->Append(m_prototypeExpr->Build(visitor, mod));
     }
 
-    Assert(m_type_object != nullptr);
-    chunk->Append(m_type_object->Build(visitor, mod));
+    Assert(m_typeObject != nullptr);
+    chunk->Append(m_typeObject->Build(visitor, mod));
 
-    Assert(m_type_ref != nullptr);
-    chunk->Append(m_type_ref->Build(visitor, mod));
+    Assert(m_typeRef != nullptr);
+    chunk->Append(m_typeRef->Build(visitor, mod));
 
     return chunk;
 }
 
 void AstTypeExpression::Optimize(AstVisitor *visitor, Module *mod)
 {
-    Assert(m_is_visited);
+    Assert(m_isVisited);
 
-    Assert(m_type_object != nullptr);
-    m_type_object->Optimize(visitor, mod);
+    Assert(m_typeObject != nullptr);
+    m_typeObject->Optimize(visitor, mod);
 
-    Assert(m_prototype_expr != nullptr);
-    m_prototype_expr->Optimize(visitor, mod);
+    Assert(m_prototypeExpr != nullptr);
+    m_prototypeExpr->Optimize(visitor, mod);
 
-    Assert(m_type_ref != nullptr);
-    m_type_ref->Optimize(visitor, mod);
+    Assert(m_typeRef != nullptr);
+    m_typeRef->Optimize(visitor, mod);
 }
 
 RC<AstStatement> AstTypeExpression::Clone() const
@@ -565,25 +565,25 @@ SymbolTypePtr_t AstTypeExpression::GetExprType() const
 
 SymbolTypePtr_t AstTypeExpression::GetHeldType() const
 {
-    Assert(m_symbol_type != nullptr);
+    Assert(m_symbolType != nullptr);
 
-    return m_symbol_type;
+    return m_symbolType;
 }
 
 const AstExpression *AstTypeExpression::GetValueOf() const
 {
-    Assert(m_is_visited);
-    Assert(m_type_ref != nullptr);
+    Assert(m_isVisited);
+    Assert(m_typeRef != nullptr);
 
-    return m_type_ref->GetValueOf();
+    return m_typeRef->GetValueOf();
 }
 
 const AstExpression *AstTypeExpression::GetDeepValueOf() const
 {
-    Assert(m_is_visited);
-    Assert(m_type_ref != nullptr);
+    Assert(m_isVisited);
+    Assert(m_typeRef != nullptr);
 
-    return m_type_ref->GetDeepValueOf();
+    return m_typeRef->GetDeepValueOf();
 }
 
 const String &AstTypeExpression::GetName() const

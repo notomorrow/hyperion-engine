@@ -78,7 +78,7 @@ const VMMap::VMMapValue *VMMap::GetElement(const VMMapKey &key) const
 
 void VMMap::GetRepresentation(
     std::stringstream &ss,
-    bool add_type_name,
+    bool addTypeName,
     int depth
 ) const
 {
@@ -89,7 +89,7 @@ void VMMap::GetRepresentation(
     }
 
     // convert hashmap to string
-    const char sep_str[3] = ", ";
+    const char sepStr[3] = ", ";
 
     ss << '{';
 
@@ -98,7 +98,7 @@ void VMMap::GetRepresentation(
         // convert key to string
         it->first.key.ToRepresentation(
             ss,
-            add_type_name,
+            addTypeName,
             depth - 1
         );
 
@@ -107,7 +107,7 @@ void VMMap::GetRepresentation(
         // convert value to string
         it->second.ToRepresentation(
             ss,
-            add_type_name,
+            addTypeName,
             depth - 1
         );
 
@@ -115,7 +115,7 @@ void VMMap::GetRepresentation(
         ++next;
 
         if (next != m_map.end()) {
-            ss << sep_str;
+            ss << sepStr;
         }
     }
 

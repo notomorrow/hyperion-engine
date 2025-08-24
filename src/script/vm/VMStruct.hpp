@@ -40,8 +40,8 @@ struct VMStructMemberView
     uint32                                          offset; // offset in binary object
 
     VMStructType                                    type;
-    VMStructMemoryView                              name_view;
-    Variant<VMStructMemoryView, Value::ValueData>   data_view;
+    VMStructMemoryView                              nameView;
+    Variant<VMStructMemoryView, Value::ValueData>   dataView;
 };
 
 struct VMStructView
@@ -57,7 +57,7 @@ struct VMStructDynamicMemory
 struct VMStructHeader
 {
     uint32              count;
-    uint32              total_size;
+    uint32              totalSize;
     uint32              *offsets;
     VMStructType        *types;
     char                **names;
@@ -72,14 +72,14 @@ struct VMStructMember
 {
     VMStructType type;
     ANSIString name;
-    Variant<ByteBuffer, Value::ValueData> data_buffer;
+    Variant<ByteBuffer, Value::ValueData> dataBuffer;
 };
 
 class VMStruct
 {
 public:
     static VMStruct MakeStruct(const VMStructDefinition &definition);
-    static VMStructType ToStructType(vm::Value::ValueType value_type);
+    static VMStructType ToStructType(vm::Value::ValueType valueType);
     static uint8 GetByteSize(VMStructType type);
 
     VMStruct() = default;
@@ -92,7 +92,7 @@ public:
     {
         m_header.count = other.m_header.count;
         
-        m_header.total_size = 0;
+        m_header.totalSize = 0;
         m_header.offsets = new uint32[other.m_header.count];
         m_header.types = new VMStructType[other.m_header.count];
         m_header.names = new char*[other.m_header.count];
@@ -131,7 +131,7 @@ public:
         {
             m_header.count = other.m_header.count;
         
-            m_header.total_size = 0;
+            m_header.totalSize = 0;
             m_header.offsets = new uint32[other.m_header.count];
             m_header.types = new VMStructType[other.m_header.count];
             m_header.names = new char*[other.m_header.count];
@@ -190,17 +190,17 @@ public:
         { return m_bytes; }
 
     Array<Value> &GetDynamicMemberValues()
-        { return m_dynamic_memory.values; }
+        { return m_dynamicMemory.values; }
 
     const Array<Value> &GetDynamicMemberValues() const
-        { return m_dynamic_memory.values; }
+        { return m_dynamicMemory.values; }
 
     Value ReadMember(const char *name) const;
     bool WriteMember(const char *name, Value value);
 
 private:
     VMStructHeader          m_header;
-    VMStructDynamicMemory   m_dynamic_memory;
+    VMStructDynamicMemory   m_dynamicMemory;
     VMStructMemory          m_bytes;
 };
 

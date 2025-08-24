@@ -34,7 +34,7 @@ using SymbolTypeWeakPtr_t = std::weak_ptr<SymbolType>;
 
 struct SymbolTypeFunctionSignature
 {
-    SymbolTypePtr_t         return_type;
+    SymbolTypePtr_t         returnType;
     Array<RC<AstArgument>>  params;
 };
 
@@ -72,13 +72,13 @@ struct AliasTypeInfo
 
 struct FunctionTypeInfo
 {
-    Array<SymbolTypePtr_t>  m_param_types;
-    SymbolTypePtr_t         m_return_type;
+    Array<SymbolTypePtr_t>  m_paramTypes;
+    SymbolTypePtr_t         m_returnType;
 };
 
 struct GenericTypeInfo
 {
-    int                     m_num_parameters = 0; // -1 for variadic
+    int                     m_numParameters = 0; // -1 for variadic
     Array<SymbolTypePtr_t>  m_params;
 };
 
@@ -88,12 +88,12 @@ struct GenericInstanceTypeInfo
     {
         String              m_name;
         SymbolTypePtr_t     m_type;
-        RC<AstExpression>   m_default_value;
-        bool                m_is_ref = false;
-        bool                m_is_const = false;
+        RC<AstExpression>   m_defaultValue;
+        bool                m_isRef = false;
+        bool                m_isConst = false;
     };
 
-    Array<Arg>  m_generic_args;
+    Array<Arg>  m_genericArgs;
 };
 
 struct GenericParameterTypeInfo
@@ -132,12 +132,12 @@ public:
 
     static SymbolTypePtr_t Primitive(
         const String &name, 
-        const RC<AstExpression> &default_value
+        const RC<AstExpression> &defaultValue
     );
 
     static SymbolTypePtr_t Primitive(
         const String &name,
-        const RC<AstExpression> &default_value,
+        const RC<AstExpression> &defaultValue,
         const SymbolTypePtr_t &base
     );
 
@@ -164,7 +164,7 @@ public:
     
     static SymbolTypePtr_t Generic(
         const String &name, 
-        const RC<AstExpression> &default_value, 
+        const RC<AstExpression> &defaultValue, 
         const Array<SymbolTypeMember> &members, 
         const GenericTypeInfo &info,
         const SymbolTypePtr_t &base
@@ -213,15 +213,15 @@ public:
 public:
     SymbolType(
         const String &name, 
-        SymbolTypeClass type_class, 
+        SymbolTypeClass typeClass, 
         const SymbolTypePtr_t &base
     );
 
     SymbolType(
         const String &name, 
-        SymbolTypeClass type_class, 
+        SymbolTypeClass typeClass, 
         const SymbolTypePtr_t &base,
-        const RC<AstExpression> &default_value,
+        const RC<AstExpression> &defaultValue,
         const Array<SymbolTypeMember> &members
     );
         
@@ -232,14 +232,14 @@ public:
     ~SymbolType()                                   = default;
 
     const String &GetName() const { return m_name; }
-    SymbolTypeClass GetTypeClass() const { return m_type_class; }
+    SymbolTypeClass GetTypeClass() const { return m_typeClass; }
     const SymbolTypePtr_t &GetBaseType() const { return m_base; }
 
     const RC<AstExpression> &GetDefaultValue() const
-        { return m_default_value; }
+        { return m_defaultValue; }
 
-    void SetDefaultValue(const RC<AstExpression> &default_value)
-        { m_default_value = default_value; }
+    void SetDefaultValue(const RC<AstExpression> &defaultValue)
+        { m_defaultValue = defaultValue; }
     
     Array<SymbolTypeMember> &GetMembers()
         { return m_members; }
@@ -254,29 +254,29 @@ public:
         { m_members.PushBack(member); }
 
     AliasTypeInfo &GetAliasInfo()
-        { return m_alias_info; }
+        { return m_aliasInfo; }
     const AliasTypeInfo &GetAliasInfo() const
-        { return m_alias_info; }
+        { return m_aliasInfo; }
 
     FunctionTypeInfo &GetFunctionInfo()
-        { return m_function_info; }
+        { return m_functionInfo; }
     const FunctionTypeInfo &GetFunctionInfo() const
-        { return m_function_info; }
+        { return m_functionInfo; }
 
     GenericTypeInfo &GetGenericInfo()
-        { return m_generic_info; }
+        { return m_genericInfo; }
     const GenericTypeInfo &GetGenericInfo() const
-        { return m_generic_info; }
+        { return m_genericInfo; }
 
     GenericInstanceTypeInfo &GetGenericInstanceInfo()
-        { return m_generic_instance_info; }
+        { return m_genericInstanceInfo; }
     const GenericInstanceTypeInfo &GetGenericInstanceInfo() const
-        { return m_generic_instance_info; }
+        { return m_genericInstanceInfo; }
 
     GenericParameterTypeInfo &GetGenericParameterInfo()
-        { return m_generic_param_info; }
+        { return m_genericParamInfo; }
     const GenericParameterTypeInfo &GetGenericParameterInfo() const
-        { return m_generic_param_info; }
+        { return m_genericParamInfo; }
 
     int GetId() const { return m_id; }
     void SetId(int id) { m_id = id; }
@@ -285,14 +285,14 @@ public:
     SymbolTypeFlags &GetFlags() { return m_flags; }
     void SetFlags(SymbolTypeFlags flags) { m_flags = flags; }
 
-    String ToString(bool include_parameter_names = false) const;
+    String ToString(bool includeParameterNames = false) const;
 
-    bool IsAlias() const { return m_type_class == TYPE_ALIAS; }
+    bool IsAlias() const { return m_typeClass == TYPE_ALIAS; }
 
     bool TypeEqual(const SymbolType &other) const;
     bool TypeCompatible(
         const SymbolType &other,
-        bool strict_numbers
+        bool strictNumbers
     ) const;
 
     bool operator==(const SymbolType &other) const { return TypeEqual(other); }
@@ -300,14 +300,14 @@ public:
 
     const SymbolTypePtr_t FindMember(const String &name) const;
     bool FindMember(const String &name, SymbolTypeMember &out) const;
-    bool FindMember(const String &name, SymbolTypeMember &out, uint32 &out_index) const;
+    bool FindMember(const String &name, SymbolTypeMember &out, uint32 &outIndex) const;
     bool FindMemberDeep(const String &name, SymbolTypeMember &out) const;
-    bool FindMemberDeep(const String &name, SymbolTypeMember &out, uint32 &out_index) const;
-    bool FindMemberDeep(const String &name, SymbolTypeMember &out, uint32 &out_index, uint32 &out_depth) const;
+    bool FindMemberDeep(const String &name, SymbolTypeMember &out, uint32 &outIndex) const;
+    bool FindMemberDeep(const String &name, SymbolTypeMember &out, uint32 &outIndex, uint32 &outDepth) const;
 
     const SymbolTypePtr_t FindPrototypeMember(const String &name) const;
     bool FindPrototypeMember(const String &name, SymbolTypeMember &out) const;
-    bool FindPrototypeMember(const String &name, SymbolTypeMember &out, uint32 &out_index) const;
+    bool FindPrototypeMember(const String &name, SymbolTypeMember &out, uint32 &outIndex) const;
     bool FindPrototypeMemberDeep(const String &name) const;
     bool FindPrototypeMemberDeep(const String &name, SymbolTypeMember &out) const;
 
@@ -315,15 +315,15 @@ public:
     bool HasTraitDeep(const SymbolTypeTrait &trait) const;
 
     const Weak<AstTypeObject> &GetTypeObject() const
-        { return m_type_object; }
+        { return m_typeObject; }
 
-    void SetTypeObject(const Weak<AstTypeObject> &type_object)
-        { m_type_object = type_object; }
+    void SetTypeObject(const Weak<AstTypeObject> &typeObject)
+        { m_typeObject = typeObject; }
 
-    bool IsOrHasBase(const SymbolType &base_type) const;
+    bool IsOrHasBase(const SymbolType &baseType) const;
     /** Search the inheritance chain to see if the given type
         is a base of this type. */
-    bool HasBase(const SymbolType &base_type) const;
+    bool HasBase(const SymbolType &baseType) const;
     /** Find the root aliasee. If not an alias, just returns itself */
     SymbolTypePtr_t GetUnaliased();
     
@@ -366,35 +366,35 @@ public:
 
     HashCode GetHashCode() const
     {
-        FlatSet<String> duplicate_names;
+        FlatSet<String> duplicateNames;
 
-        return GetHashCodeWithDuplicateRemoval(duplicate_names);
+        return GetHashCodeWithDuplicateRemoval(duplicateNames);
     }
 
     // if this is an instance of a generic type
-    SymbolTypeClass             m_type_class;
-    GenericInstanceTypeInfo     m_generic_instance_info;
+    SymbolTypeClass             m_typeClass;
+    GenericInstanceTypeInfo     m_genericInstanceInfo;
 
 private:
-    HashCode GetHashCodeWithDuplicateRemoval(FlatSet<String> &duplicate_names) const;
+    HashCode GetHashCodeWithDuplicateRemoval(FlatSet<String> &duplicateNames) const;
 
     String                      m_name;
-    RC<AstExpression>           m_default_value;
+    RC<AstExpression>           m_defaultValue;
     Array<SymbolTypeMember>     m_members;
 
     // type that this type is based off of
     SymbolTypePtr_t             m_base;
 
-    Weak<AstTypeObject>         m_type_object;
+    Weak<AstTypeObject>         m_typeObject;
 
     // if this is an alias of another type
-    AliasTypeInfo               m_alias_info;
+    AliasTypeInfo               m_aliasInfo;
     // if this type is a function
-    FunctionTypeInfo            m_function_info;
+    FunctionTypeInfo            m_functionInfo;
     // if this is a generic type
-    GenericTypeInfo             m_generic_info;
+    GenericTypeInfo             m_genericInfo;
     // if this is a generic param
-    GenericParameterTypeInfo    m_generic_param_info;
+    GenericParameterTypeInfo    m_genericParamInfo;
 
     int                         m_id;
     SymbolTypeFlags             m_flags;

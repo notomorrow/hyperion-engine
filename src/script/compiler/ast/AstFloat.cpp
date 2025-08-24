@@ -63,9 +63,9 @@ SymbolTypePtr_t AstFloat::GetExprType() const
     return BuiltinTypes::FLOAT;
 }
 
-RC<AstConstant> AstFloat::HandleOperator(Operators op_type, const AstConstant *right) const
+RC<AstConstant> AstFloat::HandleOperator(Operators opType, const AstConstant *right) const
 {
-    switch (op_type) {
+    switch (opType) {
         case OP_add:
             if (!right->IsNumber()) {
                 return nullptr;
@@ -92,12 +92,12 @@ RC<AstConstant> AstFloat::HandleOperator(Operators op_type, const AstConstant *r
                 return nullptr;
             }
 
-            auto right_float = right->FloatValue();
-            if (right_float == 0.0) {
+            auto rightFloat = right->FloatValue();
+            if (rightFloat == 0.0) {
                 // division by zero
                 return nullptr;
             }
-            return RC<AstFloat>(new AstFloat(FloatValue() / right_float, m_location));
+            return RC<AstFloat>(new AstFloat(FloatValue() / rightFloat, m_location));
         }
 
         case OP_modulus: {
@@ -105,18 +105,18 @@ RC<AstConstant> AstFloat::HandleOperator(Operators op_type, const AstConstant *r
                 return nullptr;
             }
 
-            auto right_float = right->FloatValue();
-            if (right_float == 0.0) {
+            auto rightFloat = right->FloatValue();
+            if (rightFloat == 0.0) {
                 // division by zero
                 return nullptr;
             }
 
-            return RC<AstFloat>(new AstFloat(std::fmod(FloatValue(), right_float), m_location));
+            return RC<AstFloat>(new AstFloat(std::fmod(FloatValue(), rightFloat), m_location));
         }
 
         case OP_logical_and: {
-            int this_true = IsTrue();
-            int right_true = right->IsTrue();
+            int thisTrue = IsTrue();
+            int rightTrue = right->IsTrue();
 
             if (!right->IsNumber()) {
                 // this operator is valid to compare against null
@@ -127,9 +127,9 @@ RC<AstConstant> AstFloat::HandleOperator(Operators op_type, const AstConstant *r
                 return nullptr;
             }
 
-            if (this_true == 1 && right_true == 1) {
+            if (thisTrue == 1 && rightTrue == 1) {
                 return RC<AstTrue>(new AstTrue(m_location));
-            } else if (this_true == 0 && right_true == 0) {
+            } else if (thisTrue == 0 && rightTrue == 0) {
                 return RC<AstFalse>(new AstFalse(m_location));
             } else {
                 // indeterminate
@@ -138,24 +138,24 @@ RC<AstConstant> AstFloat::HandleOperator(Operators op_type, const AstConstant *r
         }
 
         case OP_logical_or: {
-            int this_true = IsTrue();
-            int right_true = right->IsTrue();
+            int thisTrue = IsTrue();
+            int rightTrue = right->IsTrue();
 
             if (!right->IsNumber()) {
                 // this operator is valid to compare against null
                 if (dynamic_cast<const AstNil*>(right)) {
-                    if (this_true == 1) {
+                    if (thisTrue == 1) {
                         return RC<AstTrue>(new AstTrue(m_location));
-                    } else if (this_true == 0) {
+                    } else if (thisTrue == 0) {
                         return RC<AstFalse>(new AstFalse(m_location));
                     }
                 }
                 return nullptr;
             }
 
-            if (this_true == 1 || right_true == 1) {
+            if (thisTrue == 1 || rightTrue == 1) {
                 return RC<AstTrue>(new AstTrue(m_location));
-            } else if (this_true == 0 || right_true == 0) {
+            } else if (thisTrue == 0 || rightTrue == 0) {
                 return RC<AstFalse>(new AstFalse(m_location));
             } else {
                 // indeterminate

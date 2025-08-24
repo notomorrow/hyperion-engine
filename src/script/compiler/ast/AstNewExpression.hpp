@@ -17,8 +17,8 @@ class AstNewExpression : public AstExpression
 public:
     AstNewExpression(
         const RC<AstPrototypeSpecification> &proto,
-        const RC<AstArgumentList> &arg_list,
-        bool enable_constructor_call,
+        const RC<AstArgumentList> &argList,
+        bool enableConstructorCall,
         const SourceLocation &location
     );
     virtual ~AstNewExpression() override = default;
@@ -38,30 +38,30 @@ public:
     {
         HashCode hc = AstExpression::GetHashCode().Add(TypeName<AstNewExpression>());
         hc.Add(m_proto ? m_proto->GetHashCode() : HashCode());
-        hc.Add(m_arg_list ? m_arg_list->GetHashCode() : HashCode());
-        hc.Add(m_enable_constructor_call);
+        hc.Add(m_argList ? m_argList->GetHashCode() : HashCode());
+        hc.Add(m_enableConstructorCall);
 
         return hc;
     }
 
 private:
     RC<AstPrototypeSpecification>   m_proto;
-    RC<AstArgumentList>             m_arg_list;
-    bool                            m_enable_constructor_call;
+    RC<AstArgumentList>             m_argList;
+    bool                            m_enableConstructorCall;
 
     /** Set while analyzing */
-    RC<AstExpression>               m_object_value;
-    SymbolTypePtr_t                 m_instance_type;
-    SymbolTypePtr_t                 m_prototype_type;
-    RC<AstBlock>                    m_constructor_block; // create a block to store temporary vars
-    RC<AstExpression>               m_constructor_call;
+    RC<AstExpression>               m_objectValue;
+    SymbolTypePtr_t                 m_instanceType;
+    SymbolTypePtr_t                 m_prototypeType;
+    RC<AstBlock>                    m_constructorBlock; // create a block to store temporary vars
+    RC<AstExpression>               m_constructorCall;
 
     RC<AstNewExpression> CloneImpl() const
     {
         return RC<AstNewExpression>(new AstNewExpression(
             CloneAstNode(m_proto),
-            CloneAstNode(m_arg_list),
-            m_enable_constructor_call,
+            CloneAstNode(m_argList),
+            m_enableConstructorCall,
             m_location
         ));
     }

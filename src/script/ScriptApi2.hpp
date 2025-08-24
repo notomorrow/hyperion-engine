@@ -29,11 +29,11 @@ using namespace compiler;
 
 struct Type
 {
-    String          type_string;
-    SymbolTypePtr_t symbol_type;
+    String          typeString;
+    SymbolTypePtr_t symbolType;
 
     bool IsValid() const
-        { return symbol_type != nullptr; }
+        { return symbolType != nullptr; }
 };
 
 struct Symbol
@@ -44,20 +44,20 @@ struct Symbol
 
     Symbol(
         const String &name,
-        const String &type_string,
+        const String &typeString,
         const Value &value
     ) : name(name),
-        type { type_string, nullptr },
+        type { typeString, nullptr },
         value(value)
     {
     }
 
     Symbol(
         const String &name,
-        const String &type_string,
+        const String &typeString,
         NativeFunctionPtr_t value
     ) : name(name),
-        type { type_string, nullptr },
+        type { typeString, nullptr },
         value(value)
     {
     }
@@ -99,29 +99,29 @@ struct Symbol
 
 struct ClassDefinition
 {
-    TypeId                      native_type_id;
+    TypeId                      nativeTypeId;
     String                      name;
-    Optional<String>            generic_params_string;
+    Optional<String>            genericParamsString;
     Array<Symbol>               members;
-    Array<Symbol>               static_members;
+    Array<Symbol>               staticMembers;
 
     RC<AstExpression>           expr;
-    RC<AstVariableDeclaration>  var_decl;
+    RC<AstVariableDeclaration>  varDecl;
 };
 
 struct GlobalDefinition
 {
     Symbol                      symbol;
-    Optional<String>            generic_params_string;
+    Optional<String>            genericParamsString;
 
-    RC<AstVariableDeclaration>  var_decl;
+    RC<AstVariableDeclaration>  varDecl;
 };
 
 class Context;
 class ClassBuilder
 {
 public:
-    ClassBuilder(Context *context, ClassDefinition class_definition);
+    ClassBuilder(Context *context, ClassDefinition classDefinition);
     ClassBuilder(const ClassBuilder &other)                 = delete;
     ClassBuilder &operator=(const ClassBuilder &other)      = delete;
     ClassBuilder(ClassBuilder &&other) noexcept             = default;
@@ -130,25 +130,25 @@ public:
 
     ClassBuilder &Member(
         String name,
-        String type_string,
+        String typeString,
         Value value
     );
 
     ClassBuilder &Method(
         String name,
-        String type_string,
+        String typeString,
         NativeFunctionPtr_t fn
     );
 
     ClassBuilder &StaticMember(
         String name,
-        String type_string,
+        String typeString,
         Value value
     );
 
     ClassBuilder &StaticMethod(
         String name,
-        String type_string,
+        String typeString,
         NativeFunctionPtr_t fn
     );
 
@@ -156,7 +156,7 @@ public:
 
 private:
     Context         *m_context;
-    ClassDefinition m_class_definition;
+    ClassDefinition m_classDefinition;
 };
 
 class Context
@@ -165,12 +165,12 @@ class Context
 
 public:
     template <class T>
-    ClassBuilder Class(String name, Optional<String> generic_params_string = { })
+    ClassBuilder Class(String name, Optional<String> genericParamsString = { })
     {
         ClassDefinition def {
             TypeId::ForType<T>(),
             std::move(name),
-            std::move(generic_params_string),
+            std::move(genericParamsString),
             {},
             {}
         };
@@ -180,46 +180,46 @@ public:
 
     Context &Global(
         String name,
-        String type_string,
+        String typeString,
         Value value
     );
 
     Context &Global(
         String name,
-        String generic_params_string,
-        String type_string,
+        String genericParamsString,
+        String typeString,
         Value value
     );
 
     Context &Global(
         String name,
-        String type_string,
+        String typeString,
         NativeFunctionPtr_t fn
     );
 
     Context &Global(
         String name,
-        String generic_params_string,
-        String type_string,
+        String genericParamsString,
+        String typeString,
         NativeFunctionPtr_t fn
     );
 
     void Visit(
         AstVisitor *visitor,
-        CompilationUnit *compilation_unit
+        CompilationUnit *compilationUnit
     );
 
     void BindAll(
-        APIInstance &api_instance,
+        APIInstance &apiInstance,
         VM *vm
     );
 
 private:
-    static Array<RC<AstParameter>> ParseGenericParams(const String &generic_params_string);
-    static RC<AstExpression> ParseTypeExpression(const String &type_string);
+    static Array<RC<AstParameter>> ParseGenericParams(const String &genericParamsString);
+    static RC<AstExpression> ParseTypeExpression(const String &typeString);
 
     Array<GlobalDefinition>     m_globals;
-    Array<ClassDefinition>      m_class_definitions;
+    Array<ClassDefinition>      m_classDefinitions;
     Mutex                       m_mutex;
 };
 

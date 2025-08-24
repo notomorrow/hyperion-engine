@@ -12,26 +12,26 @@
 
 namespace hyperion::compiler {
 
-AstTryCatch::AstTryCatch(const RC<AstBlock> &try_block,
-    const RC<AstBlock> &catch_block,
+AstTryCatch::AstTryCatch(const RC<AstBlock> &tryBlock,
+    const RC<AstBlock> &catchBlock,
     const SourceLocation &location)
     : AstStatement(location),
-      m_try_block(try_block),
-      m_catch_block(catch_block)
+      m_tryBlock(tryBlock),
+      m_catchBlock(catchBlock)
 {
 }
 
 void AstTryCatch::Visit(AstVisitor *visitor, Module *mod)
 {
     // accept the try block
-    m_try_block->Visit(visitor, mod);
+    m_tryBlock->Visit(visitor, mod);
     // accept the catch block
-    m_catch_block->Visit(visitor, mod);
+    m_catchBlock->Visit(visitor, mod);
 }
 
 std::unique_ptr<Buildable> AstTryCatch::Build(AstVisitor *visitor, Module *mod)
 {
-    InstructionStreamContextGuard context_guard(
+    InstructionStreamContextGuard contextGuard(
         &visitor->GetCompilationUnit()->GetInstructionStream().GetContextTree(),
         INSTRUCTION_STREAM_CONTEXT_DEFAULT
     );
@@ -39,47 +39,47 @@ std::unique_ptr<Buildable> AstTryCatch::Build(AstVisitor *visitor, Module *mod)
     std::unique_ptr<BytecodeChunk> chunk = BytecodeUtil::Make<BytecodeChunk>();
 
     // the label to jump to the very end
-    LabelId end_label = context_guard->NewLabel();
-    chunk->TakeOwnershipOfLabel(end_label);
+    LabelId endLabel = contextGuard->NewLabel();
+    chunk->TakeOwnershipOfLabel(endLabel);
 
     // the label to jump to the catch-block
-    LabelId catch_label = context_guard->NewLabel();
-    chunk->TakeOwnershipOfLabel(catch_label);
+    LabelId catchLabel = contextGuard->NewLabel();
+    chunk->TakeOwnershipOfLabel(catchLabel);
 
     { // send the instruction to enter the try-block
-        auto instr_begin_try = BytecodeUtil::Make<BuildableTryCatch>();
-        instr_begin_try->catch_label_id = catch_label;
-        chunk->Append(std::move(instr_begin_try));
+        auto instrBeginTry = BytecodeUtil::Make<BuildableTryCatch>();
+        instrBeginTry->catchLabelId = catchLabel;
+        chunk->Append(std::move(instrBeginTry));
     }
 
     // try block increases stack size to hold the data about the catch block
     visitor->GetCompilationUnit()->GetInstructionStream().IncStackSize();
 
     // build the try-block
-    chunk->Append(m_try_block->Build(visitor, mod));
+    chunk->Append(m_tryBlock->Build(visitor, mod));
 
     { // send the instruction to end the try-block
-        auto instr_end_try = BytecodeUtil::Make<RawOperation<>>();
-        instr_end_try->opcode = END_TRY;
-        chunk->Append(std::move(instr_end_try));
+        auto instrEndTry = BytecodeUtil::Make<RawOperation<>>();
+        instrEndTry->opcode = END_TRY;
+        chunk->Append(std::move(instrEndTry));
     }
     
     // decrease stack size for the try block
     visitor->GetCompilationUnit()->GetInstructionStream().DecStackSize();
 
     // jump to the end, as to not execute the catch-block
-    chunk->Append(BytecodeUtil::Make<Jump>(Jump::JMP, end_label));
+    chunk->Append(BytecodeUtil::Make<Jump>(Jump::JMP, endLabel));
 
     // set the label's position to where the catch-block would be
-    chunk->Append(BytecodeUtil::Make<LabelMarker>(catch_label));
+    chunk->Append(BytecodeUtil::Make<LabelMarker>(catchLabel));
 
     // exception was thrown, pop all local variables from the try-block
-    chunk->Append(Compiler::PopStack(visitor, m_try_block->NumLocals()));
+    chunk->Append(Compiler::PopStack(visitor, m_tryBlock->NumLocals()));
 
     // build the catch-block
-    chunk->Append(m_catch_block->Build(visitor, mod));
+    chunk->Append(m_catchBlock->Build(visitor, mod));
 
-    chunk->Append(BytecodeUtil::Make<LabelMarker>(end_label));
+    chunk->Append(BytecodeUtil::Make<LabelMarker>(endLabel));
 
     return chunk;
 }
@@ -87,9 +87,9 @@ std::unique_ptr<Buildable> AstTryCatch::Build(AstVisitor *visitor, Module *mod)
 void AstTryCatch::Optimize(AstVisitor *visitor, Module *mod)
 {
     // optimize the try block
-    m_try_block->Optimize(visitor, mod);
+    m_tryBlock->Optimize(visitor, mod);
     // optimize the catch block
-    m_catch_block->Optimize(visitor, mod);
+    m_catchBlock->Optimize(visitor, mod);
 }
 
 RC<AstStatement> AstTryCatch::Clone() const

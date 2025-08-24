@@ -18,16 +18,16 @@ struct AstIdentifierProperties
 {
     RC<Identifier>  m_identifier = nullptr;
 
-    IdentifierType  m_identifier_type = IDENTIFIER_TYPE_UNKNOWN;
+    IdentifierType  m_identifierType = IDENTIFIER_TYPE_UNKNOWN;
 
-    bool            m_is_in_function = false;
-    bool            m_is_in_pure_function = false;
+    bool            m_isInFunction = false;
+    bool            m_isInPureFunction = false;
 
     int             m_depth = 0;
-    Scope           *m_function_scope = nullptr;
+    Scope           *m_functionScope = nullptr;
 
     // if the found identifier was a type...
-    SymbolTypePtr_t m_found_type = nullptr;
+    SymbolTypePtr_t m_foundType = nullptr;
 
     // getters & setters
     RC<Identifier> &GetIdentifier()
@@ -40,22 +40,22 @@ struct AstIdentifierProperties
         { m_identifier = identifier; }
 
     IdentifierType GetIdentifierType() const
-        { return m_identifier_type; }
+        { return m_identifierType; }
 
-    void SetIdentifierType(IdentifierType identifier_type)
-        { m_identifier_type = identifier_type; }
+    void SetIdentifierType(IdentifierType identifierType)
+        { m_identifierType = identifierType; }
 
     bool IsInFunction() const
-        { return m_is_in_function; }
+        { return m_isInFunction; }
 
     bool IsInPureFunction() const
-        { return m_is_in_pure_function; }
+        { return m_isInPureFunction; }
 
     int GetDepth() const
         { return m_depth; }
 
     Scope *GetFunctionScope() const
-        { return m_function_scope; }
+        { return m_functionScope; }
 };
 
 class AstIdentifier : public AstExpression
@@ -101,7 +101,7 @@ protected:
     
     AstIdentifierProperties m_properties;
 
-    int GetStackOffset(int stack_size) const;
+    int GetStackOffset(int stackSize) const;
 };
 
 } // namespace hyperion::compiler

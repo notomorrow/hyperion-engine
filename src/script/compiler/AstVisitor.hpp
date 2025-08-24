@@ -12,20 +12,20 @@ class AstVisitor
 {
 public:
     AstVisitor(
-        AstIterator *ast_iterator,
-        CompilationUnit *compilation_unit
+        AstIterator *astIterator,
+        CompilationUnit *compilationUnit
     );
     virtual ~AstVisitor() = default;
 
-    AstIterator *GetAstIterator() const { return m_ast_iterator; }
-    CompilationUnit *GetCompilationUnit() const { return m_compilation_unit; }
+    AstIterator *GetAstIterator() const { return m_astIterator; }
+    CompilationUnit *GetCompilationUnit() const { return m_compilationUnit; }
 
     /** If expr is false, the given error is added to the error list. */
     bool AddErrorIfFalse(bool expr, const CompilerError &error);
 
 protected:
-    AstIterator *m_ast_iterator;
-    CompilationUnit *m_compilation_unit;
+    AstIterator *m_astIterator;
+    CompilationUnit *m_compilationUnit;
 };
 
 } // namespace hyperion::compiler

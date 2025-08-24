@@ -12,9 +12,9 @@ class Context;
 class ScriptBindings
 {
 public:
-    static APIInstance::ClassBindings class_bindings;
+    static APIInstance::ClassBindings classBindings;
 
-    static void DeclareAll(APIInstance &api_instance);
+    static void DeclareAll(APIInstance &apiInstance);
 };
 
 } // namespace hyperion

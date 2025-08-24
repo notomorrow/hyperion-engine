@@ -66,9 +66,9 @@ SymbolTypePtr_t AstInteger::GetExprType() const
     return BuiltinTypes::INT;
 }
 
-RC<AstConstant> AstInteger::HandleOperator(Operators op_type, const AstConstant *right) const
+RC<AstConstant> AstInteger::HandleOperator(Operators opType, const AstConstant *right) const
 {
-    switch (op_type) {
+    switch (opType) {
     case OP_add:
         if (!right->IsNumber()) {
             return nullptr;
@@ -128,32 +128,32 @@ RC<AstConstant> AstInteger::HandleOperator(Operators op_type, const AstConstant 
         // we have to determine weather or not to promote this to a float
         if (dynamic_cast<const AstFloat*>(right)) {
             float result;
-            auto right_float = right->FloatValue();
-            if (right_float == 0.0) {
+            auto rightFloat = right->FloatValue();
+            if (rightFloat == 0.0) {
                 // division by zero, return Undefined
                 return nullptr;
             } else {
-                result = FloatValue() / right_float;
+                result = FloatValue() / rightFloat;
             }
             return RC<AstFloat>(
                 new AstFloat(result, m_location));
         } else if (dynamic_cast<const AstUnsignedInteger *>(right)) {
-            auto right_uint = right->UnsignedValue();
-            if (right_uint == 0) {
+            auto rightUint = right->UnsignedValue();
+            if (rightUint == 0) {
                 // division by zero, return Undefined
                 return nullptr;
             } else {
                 return RC<AstUnsignedInteger>(
-                    new AstUnsignedInteger(UnsignedValue() / right_uint, m_location));
+                    new AstUnsignedInteger(UnsignedValue() / rightUint, m_location));
             }
         } else {
-            auto right_int = right->IntValue();
-            if (right_int == 0) {
+            auto rightInt = right->IntValue();
+            if (rightInt == 0) {
                 // division by zero, return Undefined
                 return nullptr;
             } else {
                 return RC<AstInteger>(
-                    new AstInteger(IntValue() / right_int, m_location));
+                    new AstInteger(IntValue() / rightInt, m_location));
             }
         }
 
@@ -164,32 +164,32 @@ RC<AstConstant> AstInteger::HandleOperator(Operators op_type, const AstConstant 
 
         if (dynamic_cast<const AstFloat*>(right)) {
             float result;
-            auto right_float = right->FloatValue();
-            if (right_float == 0.0) {
+            auto rightFloat = right->FloatValue();
+            if (rightFloat == 0.0) {
                 // division by zero, return Undefined
                 return nullptr;
             } else {
-                result = std::fmod(FloatValue(), right_float);
+                result = std::fmod(FloatValue(), rightFloat);
             }
             return RC<AstFloat>(
                 new AstFloat(result, m_location));
         } else if (dynamic_cast<const AstUnsignedInteger *>(right)) {
-            auto right_uint = right->UnsignedValue();
-            if (right_uint == 0) {
+            auto rightUint = right->UnsignedValue();
+            if (rightUint == 0) {
                 // division by zero, return Undefined
                 return nullptr;
             } else {
                 return RC<AstUnsignedInteger>(
-                    new AstUnsignedInteger(UnsignedValue() % right_uint, m_location));
+                    new AstUnsignedInteger(UnsignedValue() % rightUint, m_location));
             }
         } else {
-            auto right_int = right->IntValue();
-            if (right_int == 0) {
+            auto rightInt = right->IntValue();
+            if (rightInt == 0) {
                 // division by zero, return Undefined
                 return nullptr;
             } else {
                 return RC<AstInteger>(
-                    new AstInteger(IntValue() % right_int, m_location));
+                    new AstInteger(IntValue() % rightInt, m_location));
             }
         }
 
@@ -202,10 +202,10 @@ RC<AstConstant> AstInteger::HandleOperator(Operators op_type, const AstConstant 
         }
 
         if (dynamic_cast<const AstUnsignedInteger *>(right)) {
-            auto right_uint = right->UnsignedValue();
+            auto rightUint = right->UnsignedValue();
 
             return RC<AstUnsignedInteger>(
-                new AstUnsignedInteger(UnsignedValue() ^ right_uint, m_location));
+                new AstUnsignedInteger(UnsignedValue() ^ rightUint, m_location));
         }
 
         return RC<AstInteger>(
@@ -220,10 +220,10 @@ RC<AstConstant> AstInteger::HandleOperator(Operators op_type, const AstConstant 
         }
 
         if (dynamic_cast<const AstUnsignedInteger *>(right)) {
-            auto right_uint = right->UnsignedValue();
+            auto rightUint = right->UnsignedValue();
 
             return RC<AstUnsignedInteger>(
-                new AstUnsignedInteger(UnsignedValue() & right_uint, m_location));
+                new AstUnsignedInteger(UnsignedValue() & rightUint, m_location));
         }
 
         return RC<AstInteger>(
@@ -237,10 +237,10 @@ RC<AstConstant> AstInteger::HandleOperator(Operators op_type, const AstConstant 
         }
 
         if (dynamic_cast<const AstUnsignedInteger *>(right)) {
-            auto right_uint = right->UnsignedValue();
+            auto rightUint = right->UnsignedValue();
 
             return RC<AstUnsignedInteger>(
-                new AstUnsignedInteger(UnsignedValue() | right_uint, m_location));
+                new AstUnsignedInteger(UnsignedValue() | rightUint, m_location));
         }
 
         return RC<AstInteger>(
@@ -255,10 +255,10 @@ RC<AstConstant> AstInteger::HandleOperator(Operators op_type, const AstConstant 
         }
 
         if (dynamic_cast<const AstUnsignedInteger *>(right)) {
-            auto right_uint = right->UnsignedValue();
+            auto rightUint = right->UnsignedValue();
 
             return RC<AstUnsignedInteger>(
-                new AstUnsignedInteger(UnsignedValue() << right_uint, m_location));
+                new AstUnsignedInteger(UnsignedValue() << rightUint, m_location));
         }
 
         return RC<AstInteger>(
@@ -273,18 +273,18 @@ RC<AstConstant> AstInteger::HandleOperator(Operators op_type, const AstConstant 
         }
 
         if (dynamic_cast<const AstUnsignedInteger *>(right)) {
-            auto right_uint = right->UnsignedValue();
+            auto rightUint = right->UnsignedValue();
 
             return RC<AstUnsignedInteger>(
-                new AstUnsignedInteger(UnsignedValue() >> right_uint, m_location));
+                new AstUnsignedInteger(UnsignedValue() >> rightUint, m_location));
         }
 
         return RC<AstInteger>(
             new AstInteger(IntValue() >> right->IntValue(), m_location));
 
     case OP_logical_and: {
-        int this_true = IsTrue();
-        int right_true = right->IsTrue();
+        int thisTrue = IsTrue();
+        int rightTrue = right->IsTrue();
 
         if (!right->IsNumber()) {
             // this operator is valid to compare against null
@@ -297,9 +297,9 @@ RC<AstConstant> AstInteger::HandleOperator(Operators op_type, const AstConstant 
             return nullptr;
         }
 
-        if (this_true == 1 && right_true == 1) {
+        if (thisTrue == 1 && rightTrue == 1) {
             return RC<AstTrue>(new AstTrue(m_location));
-        } else if (this_true == 0 && right_true == 0) {
+        } else if (thisTrue == 0 && rightTrue == 0) {
             return RC<AstFalse>(new AstFalse(m_location));
         } else {
             // indeterminate
@@ -308,24 +308,24 @@ RC<AstConstant> AstInteger::HandleOperator(Operators op_type, const AstConstant 
     }
 
     case OP_logical_or: {
-        int this_true = IsTrue();
-        int right_true = right->IsTrue();
+        int thisTrue = IsTrue();
+        int rightTrue = right->IsTrue();
 
         if (!right->IsNumber()) {
             // this operator is valid to compare against null
             if (dynamic_cast<const AstNil*>(right)) {
-                if (this_true == 1) {
+                if (thisTrue == 1) {
                     return RC<AstTrue>(new AstTrue(m_location));
-                } else if (this_true == 0) {
+                } else if (thisTrue == 0) {
                     return RC<AstFalse>(new AstFalse(m_location));
                 }
             }
             return nullptr;
         }
 
-        if (this_true == 1 || right_true == 1) {
+        if (thisTrue == 1 || rightTrue == 1) {
             return RC<AstTrue>(new AstTrue(m_location));
-        } else if (this_true == 0 || right_true == 0) {
+        } else if (thisTrue == 0 || rightTrue == 0) {
             return RC<AstFalse>(new AstFalse(m_location));
         } else {
             // indeterminate

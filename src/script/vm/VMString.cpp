@@ -8,8 +8,8 @@ VMString::VMString(const char *str)
 {
 }
   
-VMString::VMString(const char *str, int max_len)
-    : m_str(UTF8StringView(str, str + max_len))
+VMString::VMString(const char *str, int maxLen)
+    : m_str(UTF8StringView(str, str + maxLen))
 {
 }
 

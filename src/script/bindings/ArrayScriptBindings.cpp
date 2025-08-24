@@ -99,7 +99,7 @@ static struct ArrayScriptBindings : ScriptBindingsBase
             .Build();
     }
 
-} array_script_bindings { };
+} arrayScriptBindings { };
 
 } // namespace bindings
 } // namespace script

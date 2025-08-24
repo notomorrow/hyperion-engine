@@ -19,7 +19,7 @@ public:
     static RC<AstConstant> ConstantFold(
         RC<AstExpression> &left,
         RC<AstExpression> &right, 
-        Operators op_type,
+        Operators opType,
         AstVisitor *visitor);
 
     /** Attemps to reduce a variable that is const literal to the actual value. */
@@ -29,11 +29,11 @@ public:
         Module *mod);
 
 public:
-    Optimizer(AstIterator *ast_iterator,
-        CompilationUnit *compilation_unit);
+    Optimizer(AstIterator *astIterator,
+        CompilationUnit *compilationUnit);
     Optimizer(const Optimizer &other);
 
-    void Optimize(bool expect_module_decl = true);
+    void Optimize(bool expectModuleDecl = true);
 
 private:
     void OptimizeInner();

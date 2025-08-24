@@ -41,7 +41,7 @@ public:
 
     void GetRepresentation(
         std::stringstream &ss,
-        bool add_type_name = true,
+        bool addTypeName = true,
         int depth = 3
     ) const;
 

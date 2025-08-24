@@ -32,7 +32,7 @@ AstBinaryExpression::AstBinaryExpression(
     m_left(left),
     m_right(right),
     m_op(op),
-    m_operator_overloading_enabled(true)
+    m_operatorOverloadingEnabled(true)
 {
 }
 
@@ -43,8 +43,8 @@ void AstBinaryExpression::Visit(AstVisitor *visitor, Module *mod)
 
 #if HYP_SCRIPT_ENABLE_LAZY_DECLARATIONS
     // check for lazy declaration first
-    if ((m_variable_declaration = CheckLazyDeclaration(visitor, mod))) {
-        m_variable_declaration->Visit(visitor, mod);
+    if ((m_variableDeclaration = CheckLazyDeclaration(visitor, mod))) {
+        m_variableDeclaration->Visit(visitor, mod);
         // return, our work here is done
         return;
     }
@@ -53,21 +53,21 @@ void AstBinaryExpression::Visit(AstVisitor *visitor, Module *mod)
     m_left->Visit(visitor, mod);
 
     // operator overloading
-    if (m_operator_overloading_enabled && m_op->SupportsOverloading()) {
+    if (m_operatorOverloadingEnabled && m_op->SupportsOverloading()) {
         // look for operator overloading
-        SymbolTypePtr_t target_type = m_left->GetExprType();
-        Assert(target_type != nullptr);
+        SymbolTypePtr_t targetType = m_left->GetExprType();
+        Assert(targetType != nullptr);
 
-        target_type = target_type->GetUnaliased();
-        Assert(target_type != nullptr);
+        targetType = targetType->GetUnaliased();
+        Assert(targetType != nullptr);
 
-        const String operator_string = m_op->LookupStringValue();
-        const String overload_function_name = "operator" + operator_string;
+        const String operatorString = m_op->LookupStringValue();
+        const String overloadFunctionName = "operator" + operatorString;
 
-        RC<AstExpression> call_operator_overload_expr;
+        RC<AstExpression> callOperatorOverloadExpr;
         
-        call_operator_overload_expr.Reset(new AstMemberCallExpression(
-            overload_function_name,
+        callOperatorOverloadExpr.Reset(new AstMemberCallExpression(
+            overloadFunctionName,
             CloneAstNode(m_left),
             RC<AstArgumentList>(new AstArgumentList(
                 {
@@ -86,10 +86,10 @@ void AstBinaryExpression::Visit(AstVisitor *visitor, Module *mod)
             m_location
         ));
 
-        if (target_type->IsProxyClass() && target_type->FindMember(overload_function_name)) {
-            m_operator_overload.Reset(new AstCallExpression(
+        if (targetType->IsProxyClass() && targetType->FindMember(overloadFunctionName)) {
+            m_operatorOverload.Reset(new AstCallExpression(
                 RC<AstMember>(new AstMember(
-                    overload_function_name,
+                    overloadFunctionName,
                     CloneAstNode(m_left),
                     m_location
                 )),
@@ -113,34 +113,34 @@ void AstBinaryExpression::Visit(AstVisitor *visitor, Module *mod)
         // also, for proxy class that does not have the operator overloaded,
         // we build in the condition as well
         else if (
-            target_type->IsAnyType() || target_type->IsPlaceholderType()
-            // target_type != BuiltinTypes::STRING // Special case for String class to override checking for members like operator== and operator+
-            // && (target_type->IsAnyType() || target_type->IsClass())
+            targetType->IsAnyType() || targetType->IsPlaceholderType()
+            // targetType != BuiltinTypes::STRING // Special case for String class to override checking for members like operator== and operator+
+            // && (targetType->IsAnyType() || targetType->IsClass())
         ) {
-            RC<AstBinaryExpression> sub_bin_expr = Clone().CastUnsafe<AstBinaryExpression>();
-            sub_bin_expr->SetIsOperatorOverloadingEnabled(false); // don't look for overload again
+            RC<AstBinaryExpression> subBinExpr = Clone().CastUnsafe<AstBinaryExpression>();
+            subBinExpr->SetIsOperatorOverloadingEnabled(false); // don't look for overload again
 
-            m_operator_overload.Reset(new AstTernaryExpression(
+            m_operatorOverload.Reset(new AstTernaryExpression(
                 RC<AstHasExpression>(new AstHasExpression(
                     CloneAstNode(m_left),
-                    overload_function_name,
+                    overloadFunctionName,
                     m_location
                 )),
-                call_operator_overload_expr,
-                sub_bin_expr,
+                callOperatorOverloadExpr,
+                subBinExpr,
                 m_location
             ));
-        } else if (target_type->FindPrototypeMemberDeep(overload_function_name)) {
+        } else if (targetType->FindPrototypeMemberDeep(overloadFunctionName)) {
             // @TODO: This check currently won't hit for a class type,
             // unless we add something like "final classes".
 
-            m_operator_overload = call_operator_overload_expr;
+            m_operatorOverload = callOperatorOverloadExpr;
         }
 
-        if (m_operator_overload != nullptr) {
-            m_operator_overload->SetAccessMode(GetAccessMode());
-            m_operator_overload->SetExpressionFlags(GetExpressionFlags());
-            m_operator_overload->Visit(visitor, mod);
+        if (m_operatorOverload != nullptr) {
+            m_operatorOverload->SetAccessMode(GetAccessMode());
+            m_operatorOverload->SetExpressionFlags(GetExpressionFlags());
+            m_operatorOverload->Visit(visitor, mod);
 
             return;
         }
@@ -151,38 +151,38 @@ void AstBinaryExpression::Visit(AstVisitor *visitor, Module *mod)
 
     m_right->Visit(visitor, mod);
 
-    SymbolTypePtr_t left_type = m_left->GetExprType();
-    Assert(left_type != nullptr);
+    SymbolTypePtr_t leftType = m_left->GetExprType();
+    Assert(leftType != nullptr);
 
-    SymbolTypePtr_t right_type = m_right->GetExprType();
-    Assert(right_type != nullptr);
+    SymbolTypePtr_t rightType = m_right->GetExprType();
+    Assert(rightType != nullptr);
 
-    if (!left_type->IsAnyType() && !right_type->IsAnyType()) {
+    if (!leftType->IsAnyType() && !rightType->IsAnyType()) {
         if (m_op->GetType() & BITWISE) {
             // no bitwise operators on floats allowed.
             visitor->AddErrorIfFalse(
-                (left_type == BuiltinTypes::INT || left_type == BuiltinTypes::UNSIGNED_INT) &&
-                (right_type == BuiltinTypes::INT || left_type == BuiltinTypes::UNSIGNED_INT),
+                (leftType == BuiltinTypes::INT || leftType == BuiltinTypes::UNSIGNED_INT) &&
+                (rightType == BuiltinTypes::INT || leftType == BuiltinTypes::UNSIGNED_INT),
                 CompilerError(
                     LEVEL_ERROR,
                     Msg_bitwise_operands_must_be_int,
                     m_location,
-                    left_type->GetName(),
-                    right_type->GetName()
+                    leftType->GetName(),
+                    rightType->GetName()
                 )
             );
         } else if (m_op->GetType() & ARITHMETIC) {
             // arithmetic operators are only for numbers
             visitor->AddErrorIfFalse(
-                (left_type->TypeCompatible(*BuiltinTypes::INT, false) || left_type->TypeCompatible(*BuiltinTypes::UNSIGNED_INT, false) || left_type->TypeCompatible(*BuiltinTypes::FLOAT, false)) &&
-                    (right_type->TypeCompatible(*BuiltinTypes::INT, false) || right_type->TypeCompatible(*BuiltinTypes::UNSIGNED_INT, false) || right_type->TypeCompatible(*BuiltinTypes::FLOAT, false)),
+                (leftType->TypeCompatible(*BuiltinTypes::INT, false) || leftType->TypeCompatible(*BuiltinTypes::UNSIGNED_INT, false) || leftType->TypeCompatible(*BuiltinTypes::FLOAT, false)) &&
+                    (rightType->TypeCompatible(*BuiltinTypes::INT, false) || rightType->TypeCompatible(*BuiltinTypes::UNSIGNED_INT, false) || rightType->TypeCompatible(*BuiltinTypes::FLOAT, false)),
                 CompilerError(
                     LEVEL_ERROR,
                     Msg_arithmetic_operands_must_be_numbers,
                     m_location,
                     m_op->LookupStringValue(),
-                    left_type->GetName(),
-                    right_type->GetName()
+                    leftType->GetName(),
+                    rightType->GetName()
                 )
             );
         }
@@ -192,8 +192,8 @@ void AstBinaryExpression::Visit(AstVisitor *visitor, Module *mod)
         SemanticAnalyzer::Helpers::EnsureTypeAssignmentCompatibility(
             visitor,
             mod,
-            left_type,
-            right_type,
+            leftType,
+            rightType,
             m_location
         );
         
@@ -216,13 +216,13 @@ void AstBinaryExpression::Visit(AstVisitor *visitor, Module *mod)
         }
     } else {
         // compare both sides because assignment does not matter in this case
-        if (!left_type->TypeCompatible(*right_type, false)) {
+        if (!leftType->TypeCompatible(*rightType, false)) {
             visitor->GetCompilationUnit()->GetErrorList().AddError(CompilerError(
                 LEVEL_ERROR,
                 Msg_mismatched_types,
                 m_location,
-                left_type->GetName(),
-                right_type->GetName()
+                leftType->GetName(),
+                rightType->GetName()
             ));
         }
     }
@@ -230,17 +230,17 @@ void AstBinaryExpression::Visit(AstVisitor *visitor, Module *mod)
 
 std::unique_ptr<Buildable> AstBinaryExpression::Build(AstVisitor *visitor, Module *mod)
 {
-    if (m_operator_overload != nullptr) {
-        return m_operator_overload->Build(visitor, mod);
+    if (m_operatorOverload != nullptr) {
+        return m_operatorOverload->Build(visitor, mod);
     }
 
 #if HYP_SCRIPT_ENABLE_LAZY_DECLARATIONS
-    if (m_variable_declaration != nullptr) {
-        return m_variable_declaration->Build(visitor, mod);
+    if (m_variableDeclaration != nullptr) {
+        return m_variableDeclaration->Build(visitor, mod);
     }
 #endif
 
-    InstructionStreamContextGuard context_guard(
+    InstructionStreamContextGuard contextGuard(
         &visitor->GetCompilationUnit()->GetInstructionStream().GetContextTree(),
         INSTRUCTION_STREAM_CONTEXT_DEFAULT
     );
@@ -295,10 +295,10 @@ std::unique_ptr<Buildable> AstBinaryExpression::Build(AstVisitor *visitor, Modul
         RC<AstExpression> first = nullptr;
         RC<AstExpression> second = nullptr;
 
-        AstBinaryExpression *left_as_binop = dynamic_cast<AstBinaryExpression *>(m_left.Get());
-        AstBinaryExpression *right_as_binop = dynamic_cast<AstBinaryExpression *>(m_right.Get());
+        AstBinaryExpression *leftAsBinop = dynamic_cast<AstBinaryExpression *>(m_left.Get());
+        AstBinaryExpression *rightAsBinop = dynamic_cast<AstBinaryExpression *>(m_right.Get());
 
-        if (left_as_binop == nullptr && right_as_binop != nullptr) {
+        if (leftAsBinop == nullptr && rightAsBinop != nullptr) {
             first = m_right;
             second = m_left;
         } else {
@@ -309,15 +309,15 @@ std::unique_ptr<Buildable> AstBinaryExpression::Build(AstVisitor *visitor, Modul
         if (m_op->GetOperatorType() == Operators::OP_logical_and) {
             uint8 rp;
 
-            LabelId false_label = context_guard->NewLabel();
-            chunk->TakeOwnershipOfLabel(false_label);
+            LabelId falseLabel = contextGuard->NewLabel();
+            chunk->TakeOwnershipOfLabel(falseLabel);
 
-            LabelId true_label = context_guard->NewLabel();
-            chunk->TakeOwnershipOfLabel(true_label);
+            LabelId trueLabel = contextGuard->NewLabel();
+            chunk->TakeOwnershipOfLabel(trueLabel);
 
             rp = visitor->GetCompilationUnit()->GetInstructionStream().GetCurrentRegister();
 
-            int folded_values[2] = { 0, 0 };
+            int foldedValues[2] = { 0, 0 };
 
             // TODO: There is some duplicated code in here, needs to be cleaned up.
 
@@ -326,15 +326,15 @@ std::unique_ptr<Buildable> AstBinaryExpression::Build(AstVisitor *visitor, Modul
                 // attempt to constant fold the values
                 RC<AstExpression> tmp(new AstFalse(SourceLocation::eof));
                 
-                if (auto constant_folded = Optimizer::ConstantFold(first, tmp, Operators::OP_equals, visitor)) {
-                    folded_values[0] = constant_folded->IsTrue();
-                    folded = folded_values[0] == 1 || folded_values[1] == 0;
+                if (auto constantFolded = Optimizer::ConstantFold(first, tmp, Operators::OP_equals, visitor)) {
+                    foldedValues[0] = constantFolded->IsTrue();
+                    folded = foldedValues[0] == 1 || foldedValues[1] == 0;
 
-                    if (folded_values[0] == 1) {
+                    if (foldedValues[0] == 1) {
                         // value is equal to 0, therefore it is false.
                         // load the label address from static memory into register 0
-                        chunk->Append(BytecodeUtil::Make<Jump>(Jump::JMP, false_label));
-                    } else if (folded_values[0] == 0) {
+                        chunk->Append(BytecodeUtil::Make<Jump>(Jump::JMP, falseLabel));
+                    } else if (foldedValues[0] == 0) {
                         // do not jump at all, only accept the code that it is true
                     }
                 }
@@ -350,7 +350,7 @@ std::unique_ptr<Buildable> AstBinaryExpression::Build(AstVisitor *visitor, Modul
                     chunk->Append(BytecodeUtil::Make<Comparison>(Comparison::CMPZ, rp));
 
                     // jump if they are equal: i.e the value is false
-                    chunk->Append(BytecodeUtil::Make<Jump>(Jump::JE, false_label));
+                    chunk->Append(BytecodeUtil::Make<Jump>(Jump::JE, falseLabel));
                 }
             }
 
@@ -360,14 +360,14 @@ std::unique_ptr<Buildable> AstBinaryExpression::Build(AstVisitor *visitor, Modul
                 // attempt to constant fold the values
                 RC<AstExpression> tmp(new AstFalse(SourceLocation::eof));
                 
-                if (auto constant_folded = Optimizer::ConstantFold(second, tmp, Operators::OP_equals, visitor)) {
-                    folded_values[1] = constant_folded->IsTrue();
-                    folded = folded_values[1] == 1 || folded_values[1] == 0;
+                if (auto constantFolded = Optimizer::ConstantFold(second, tmp, Operators::OP_equals, visitor)) {
+                    foldedValues[1] = constantFolded->IsTrue();
+                    folded = foldedValues[1] == 1 || foldedValues[1] == 0;
 
-                    if (folded_values[1] == 1) {
+                    if (foldedValues[1] == 1) {
                         // value is equal to 0, therefore it is false.
                         // load the label address from static memory into register 0
-                        chunk->Append(BytecodeUtil::Make<Jump>(Jump::JMP, false_label));
+                        chunk->Append(BytecodeUtil::Make<Jump>(Jump::JMP, falseLabel));
                     }
                 }
 
@@ -382,32 +382,32 @@ std::unique_ptr<Buildable> AstBinaryExpression::Build(AstVisitor *visitor, Modul
                     chunk->Append(BytecodeUtil::Make<Comparison>(Comparison::CMPZ, rp));
 
                     // jump if they are equal: i.e the value is false
-                    chunk->Append(BytecodeUtil::Make<Jump>(Jump::JE, false_label));
+                    chunk->Append(BytecodeUtil::Make<Jump>(Jump::JE, falseLabel));
                 }
             }
 
             // both values were true at this point so load the value 'true'
             chunk->Append(BytecodeUtil::Make<ConstBool>(rp, true));
 
-            if (folded_values[0] != 1 || folded_values[1] != 1) {
+            if (foldedValues[0] != 1 || foldedValues[1] != 1) {
                 // jump to the VERY end (so we don't load 'false' value)
-                chunk->Append(BytecodeUtil::Make<Jump>(Jump::JMP, true_label));
+                chunk->Append(BytecodeUtil::Make<Jump>(Jump::JMP, trueLabel));
 
-                chunk->Append(BytecodeUtil::Make<LabelMarker>(false_label));
+                chunk->Append(BytecodeUtil::Make<LabelMarker>(falseLabel));
                 
                 // here is where the value is false
                 chunk->Append(BytecodeUtil::Make<ConstBool>(rp, false));
 
-                chunk->Append(BytecodeUtil::Make<LabelMarker>(true_label));
+                chunk->Append(BytecodeUtil::Make<LabelMarker>(trueLabel));
             }
         } else if (m_op->GetOperatorType() == Operators::OP_logical_or) {
             uint8 rp;
 
-            LabelId false_label = context_guard->NewLabel();
-            chunk->TakeOwnershipOfLabel(false_label);
+            LabelId falseLabel = contextGuard->NewLabel();
+            chunk->TakeOwnershipOfLabel(falseLabel);
 
-            LabelId true_label = context_guard->NewLabel();
-            chunk->TakeOwnershipOfLabel(true_label);
+            LabelId trueLabel = contextGuard->NewLabel();
+            chunk->TakeOwnershipOfLabel(trueLabel);
 
             rp = visitor->GetCompilationUnit()->GetInstructionStream().GetCurrentRegister();
 
@@ -416,15 +416,15 @@ std::unique_ptr<Buildable> AstBinaryExpression::Build(AstVisitor *visitor, Modul
                 // attempt to constant fold the values
                 RC<AstExpression> tmp(new AstFalse(SourceLocation::eof));
                 
-                if (auto constant_folded = Optimizer::ConstantFold(first, tmp, Operators::OP_equals, visitor)) {
-                    int folded_value = constant_folded->IsTrue();
-                    folded = folded_value == 1 || folded_value == 0;
+                if (auto constantFolded = Optimizer::ConstantFold(first, tmp, Operators::OP_equals, visitor)) {
+                    int foldedValue = constantFolded->IsTrue();
+                    folded = foldedValue == 1 || foldedValue == 0;
 
-                    if (folded_value == 1) {
+                    if (foldedValue == 1) {
                         // do not jump at all, we still have to test the second half of the expression
-                    } else if (folded_value == 0) {
+                    } else if (foldedValue == 0) {
                         // jump to end, the value is true and we don't have to check the second half
-                        chunk->Append(BytecodeUtil::Make<Jump>(Jump::JMP, true_label));
+                        chunk->Append(BytecodeUtil::Make<Jump>(Jump::JMP, trueLabel));
                     }
                 }
 
@@ -436,7 +436,7 @@ std::unique_ptr<Buildable> AstBinaryExpression::Build(AstVisitor *visitor, Modul
 
                     // compare lhs to 0 (false)
                     chunk->Append(BytecodeUtil::Make<Comparison>(Comparison::CMPZ, rp));
-                    chunk->Append(BytecodeUtil::Make<Jump>(Jump::JNE, true_label));
+                    chunk->Append(BytecodeUtil::Make<Jump>(Jump::JNE, trueLabel));
                 }
             }
 
@@ -446,16 +446,16 @@ std::unique_ptr<Buildable> AstBinaryExpression::Build(AstVisitor *visitor, Modul
                 { // attempt to constant fold the values
                     RC<AstExpression> tmp(new AstFalse(SourceLocation::eof));
                     
-                    if (auto constant_folded = Optimizer::ConstantFold(second, tmp, Operators::OP_equals, visitor)) {
-                        Tribool folded_value = constant_folded->IsTrue();
+                    if (auto constantFolded = Optimizer::ConstantFold(second, tmp, Operators::OP_equals, visitor)) {
+                        Tribool foldedValue = constantFolded->IsTrue();
 
-                        if (folded_value == Tribool::True()) {
+                        if (foldedValue == Tribool::True()) {
                             // value is equal to 0
                             folded = true;
-                        } else if (folded_value == Tribool::False()) {
+                        } else if (foldedValue == Tribool::False()) {
                             folded = true;
                             // value is equal to 1 so jump to end
-                            chunk->Append(BytecodeUtil::Make<Jump>(Jump::JMP, true_label));
+                            chunk->Append(BytecodeUtil::Make<Jump>(Jump::JMP, trueLabel));
                         }
                     }
                 }
@@ -470,7 +470,7 @@ std::unique_ptr<Buildable> AstBinaryExpression::Build(AstVisitor *visitor, Modul
                     chunk->Append(BytecodeUtil::Make<Comparison>(Comparison::CMPZ, rp));
 
                     // jump if they are equal: i.e the value is true
-                    chunk->Append(BytecodeUtil::Make<Jump>(Jump::JNE, true_label));
+                    chunk->Append(BytecodeUtil::Make<Jump>(Jump::JNE, trueLabel));
                 }
             }
 
@@ -478,58 +478,58 @@ std::unique_ptr<Buildable> AstBinaryExpression::Build(AstVisitor *visitor, Modul
             chunk->Append(BytecodeUtil::Make<ConstBool>(rp, false));
 
             // jump to the VERY end (so we don't load 'true' value)
-            chunk->Append(BytecodeUtil::Make<Jump>(Jump::JMP, false_label));
-            chunk->Append(BytecodeUtil::Make<LabelMarker>(true_label));
+            chunk->Append(BytecodeUtil::Make<Jump>(Jump::JMP, falseLabel));
+            chunk->Append(BytecodeUtil::Make<LabelMarker>(trueLabel));
 
             // here is where the value is true
             chunk->Append(BytecodeUtil::Make<ConstBool>(rp, true));
-            chunk->Append(BytecodeUtil::Make<LabelMarker>(false_label));
+            chunk->Append(BytecodeUtil::Make<LabelMarker>(falseLabel));
         }
     } else if (m_op->GetType() & COMPARISON) {
         uint8 rp;
         
-        Jump::JumpClass jump_class;
+        Jump::JumpClass jumpClass;
         
         bool swapped = false;
 
         switch (m_op->GetOperatorType()) {
             case Operators::OP_equals:
-                jump_class = Jump::JNE;
+                jumpClass = Jump::JNE;
                 break;
             case Operators::OP_not_eql:
-                jump_class = Jump::JE;
+                jumpClass = Jump::JE;
                 break;
             case Operators::OP_less:
-                jump_class = Jump::JGE;
+                jumpClass = Jump::JGE;
                 break;
             case Operators::OP_less_eql:
-                jump_class = Jump::JG;
+                jumpClass = Jump::JG;
                 break;
             case Operators::OP_greater:
-                jump_class = Jump::JGE;
+                jumpClass = Jump::JGE;
                 swapped = true;
                 break;
             case Operators::OP_greater_eql:
-                jump_class = Jump::JG;
+                jumpClass = Jump::JG;
                 swapped = true;
                 break;
             default:
                 Assert(false, "Invalid operator for comparison");
         }
 
-        AstBinaryExpression *left_as_binop = dynamic_cast<AstBinaryExpression *>(m_left.Get());
-        AstBinaryExpression *right_as_binop = dynamic_cast<AstBinaryExpression *>(m_right.Get());
+        AstBinaryExpression *leftAsBinop = dynamic_cast<AstBinaryExpression *>(m_left.Get());
+        AstBinaryExpression *rightAsBinop = dynamic_cast<AstBinaryExpression *>(m_right.Get());
 
         if (m_right != nullptr) {
             uint8 r0, r1;
 
-            LabelId true_label = context_guard->NewLabel();
-            chunk->TakeOwnershipOfLabel(true_label);
+            LabelId trueLabel = contextGuard->NewLabel();
+            chunk->TakeOwnershipOfLabel(trueLabel);
 
-            LabelId false_label = context_guard->NewLabel();
-            chunk->TakeOwnershipOfLabel(false_label);
+            LabelId falseLabel = contextGuard->NewLabel();
+            chunk->TakeOwnershipOfLabel(falseLabel);
 
-            if (left_as_binop == nullptr && right_as_binop != nullptr) {
+            if (leftAsBinop == nullptr && rightAsBinop != nullptr) {
                 // if the right hand side is a binary operation,
                 // we should build in the rhs first in order to
                 // transverse the parse tree.
@@ -578,20 +578,20 @@ std::unique_ptr<Buildable> AstBinaryExpression::Build(AstVisitor *visitor, Modul
             rp = visitor->GetCompilationUnit()->GetInstructionStream().GetCurrentRegister();
 
             // jump if they are equal
-            chunk->Append(BytecodeUtil::Make<Jump>(jump_class, true_label));
+            chunk->Append(BytecodeUtil::Make<Jump>(jumpClass, trueLabel));
             
             // values are not equal at this point
             chunk->Append(BytecodeUtil::Make<ConstBool>(rp, true));
 
             // jump to the false label, the value is false at this point
-            chunk->Append(BytecodeUtil::Make<Jump>(Jump::JMP, false_label));
+            chunk->Append(BytecodeUtil::Make<Jump>(Jump::JMP, falseLabel));
             
-            chunk->Append(BytecodeUtil::Make<LabelMarker>(true_label));
+            chunk->Append(BytecodeUtil::Make<LabelMarker>(trueLabel));
 
             // values are equal
             chunk->Append(BytecodeUtil::Make<ConstBool>(rp, false));
 
-            chunk->Append(BytecodeUtil::Make<LabelMarker>(false_label));
+            chunk->Append(BytecodeUtil::Make<LabelMarker>(falseLabel));
         } else {
             // load left-hand side into register
             // right-hand side has been optimized away
@@ -646,15 +646,15 @@ std::unique_ptr<Buildable> AstBinaryExpression::Build(AstVisitor *visitor, Modul
 
 void AstBinaryExpression::Optimize(AstVisitor *visitor, Module *mod)
 {
-    if (m_operator_overload != nullptr) {
-        m_operator_overload->Optimize(visitor, mod);
+    if (m_operatorOverload != nullptr) {
+        m_operatorOverload->Optimize(visitor, mod);
 
         return;
     }
 
 #if HYP_SCRIPT_ENABLE_LAZY_DECLARATIONS
-    if (m_variable_declaration != nullptr) {
-        m_variable_declaration->Optimize(visitor, mod);
+    if (m_variableDeclaration != nullptr) {
+        m_variableDeclaration->Optimize(visitor, mod);
         return;
     }
 #endif
@@ -675,16 +675,16 @@ void AstBinaryExpression::Optimize(AstVisitor *visitor, Module *mod)
     // binary expression by optimizing away the right
     // side, and combining the resulting value into
     // the left side of the operation.
-    auto constant_value = Optimizer::ConstantFold(
+    auto constantValue = Optimizer::ConstantFold(
         m_left,
         m_right,
         m_op->GetOperatorType(),
         visitor
     );
 
-    if (constant_value != nullptr) {
+    if (constantValue != nullptr) {
         // compile-time evaluation was successful
-        m_left = constant_value;
+        m_left = constantValue;
         m_right = nullptr;
     }
 }
@@ -708,28 +708,28 @@ Tribool AstBinaryExpression::IsTrue() const
 
 bool AstBinaryExpression::MayHaveSideEffects() const
 {
-    if (m_operator_overload != nullptr) {
-        return m_operator_overload->MayHaveSideEffects();
+    if (m_operatorOverload != nullptr) {
+        return m_operatorOverload->MayHaveSideEffects();
     }
 
-    bool left_side_effects = m_left->MayHaveSideEffects();
-    bool right_side_effects = false;
+    bool leftSideEffects = m_left->MayHaveSideEffects();
+    bool rightSideEffects = false;
 
     if (m_right != nullptr) {
-        right_side_effects = m_right->MayHaveSideEffects();
+        rightSideEffects = m_right->MayHaveSideEffects();
     }
 
     if (m_op->ModifiesValue()) {
         return true;
     }
 
-    return left_side_effects || right_side_effects;
+    return leftSideEffects || rightSideEffects;
 }
 
 SymbolTypePtr_t AstBinaryExpression::GetExprType() const
 {
-    if (m_operator_overload != nullptr) {
-        return m_operator_overload->GetExprType();
+    if (m_operatorOverload != nullptr) {
+        return m_operatorOverload->GetExprType();
     }
 
     Assert(m_op != nullptr);
@@ -740,20 +740,20 @@ SymbolTypePtr_t AstBinaryExpression::GetExprType() const
     
     Assert(m_left != nullptr);
 
-    SymbolTypePtr_t l_type_ptr = m_left->GetExprType();
-    Assert(l_type_ptr != nullptr);
+    SymbolTypePtr_t lTypePtr = m_left->GetExprType();
+    Assert(lTypePtr != nullptr);
 
     if (m_right != nullptr) {
         // the right was not optimized away,
         // return type promotion
-        SymbolTypePtr_t r_type_ptr = m_right->GetExprType();
+        SymbolTypePtr_t rTypePtr = m_right->GetExprType();
 
-        Assert(r_type_ptr != nullptr);
+        Assert(rTypePtr != nullptr);
 
-        return SymbolType::TypePromotion(l_type_ptr, r_type_ptr);
+        return SymbolType::TypePromotion(lTypePtr, rTypePtr);
     } else {
         // right was optimized away, return only left type
-        return l_type_ptr;
+        return lTypePtr;
     }
 }
 
@@ -761,25 +761,25 @@ SymbolTypePtr_t AstBinaryExpression::GetExprType() const
 RC<AstVariableDeclaration> AstBinaryExpression::CheckLazyDeclaration(AstVisitor *visitor, Module *mod)
 {
     if (m_op->GetOperatorType() == Operators::OP_assign) {
-        if (AstVariable *left_as_var = dynamic_cast<AstVariable*>(m_left.Get())) {
-            String var_name = left_as_var->GetName();
+        if (AstVariable *leftAsVar = dynamic_cast<AstVariable*>(m_left.Get())) {
+            String varName = leftAsVar->GetName();
             // lookup variable name
-            if (mod->LookUpIdentifier(var_name, false)) {
+            if (mod->LookUpIdentifier(varName, false)) {
                 return nullptr;
             }
             // not found as variable name
             // look up in the global module
-            if (visitor->GetCompilationUnit()->GetGlobalModule()->LookUpIdentifier(var_name, false)) {
+            if (visitor->GetCompilationUnit()->GetGlobalModule()->LookUpIdentifier(varName, false)) {
                 return nullptr;
             }
 
             // check all modules for one with the same name
-            if (visitor->GetCompilationUnit()->LookupModule(var_name)) {
+            if (visitor->GetCompilationUnit()->LookupModule(varName)) {
                 return nullptr;
             }
 
             return RC<AstVariableDeclaration>(new AstVariableDeclaration(
-                var_name,
+                varName,
                 nullptr,
                 m_right,
                 false, // not const

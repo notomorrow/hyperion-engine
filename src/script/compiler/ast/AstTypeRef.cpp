@@ -18,35 +18,35 @@
 namespace hyperion::compiler {
 
 AstTypeRef::AstTypeRef(
-    const SymbolTypePtr_t &symbol_type,
+    const SymbolTypePtr_t &symbolType,
     const SourceLocation &location
 ) : AstExpression(location, ACCESS_MODE_LOAD),
-    m_symbol_type(symbol_type),
-    m_is_visited(false)
+    m_symbolType(symbolType),
+    m_isVisited(false)
 {
 }
 
 void AstTypeRef::Visit(AstVisitor *visitor, Module *mod)
 {
-    Assert(m_symbol_type != nullptr);
+    Assert(m_symbolType != nullptr);
 
-    m_is_visited = true;
+    m_isVisited = true;
 }
 
 std::unique_ptr<Buildable> AstTypeRef::Build(AstVisitor *visitor, Module *mod)
 {
-    Assert(m_symbol_type != nullptr);
+    Assert(m_symbolType != nullptr);
 
     Assert(
-        m_symbol_type->GetId() != -1,
+        m_symbolType->GetId() != -1,
         "SymbolType %s not registered, invalid type ref",
-        m_symbol_type->ToString(true).Data()
+        m_symbolType->ToString(true).Data()
     );
 
     Assert(
-        m_symbol_type->GetTypeObject() != nullptr,
+        m_symbolType->GetTypeObject() != nullptr,
         "SymbolType %s has no type object set, invalid type ref",
-        m_symbol_type->ToString(true).Data()
+        m_symbolType->ToString(true).Data()
     );
 
     std::unique_ptr<BytecodeChunk> chunk = BytecodeUtil::Make<BytecodeChunk>();
@@ -54,9 +54,9 @@ std::unique_ptr<Buildable> AstTypeRef::Build(AstVisitor *visitor, Module *mod)
     const uint8 rp = visitor->GetCompilationUnit()->GetInstructionStream().GetCurrentRegister();
 
     // Load it from static storage
-    auto instr_load_static = BytecodeUtil::Make<StorageOperation>();
-    instr_load_static->GetBuilder().Load(rp).Static().ByIndex(m_symbol_type->GetId());
-    chunk->Append(std::move(instr_load_static));
+    auto instrLoadStatic = BytecodeUtil::Make<StorageOperation>();
+    instrLoadStatic->GetBuilder().Load(rp).Static().ByIndex(m_symbolType->GetId());
+    chunk->Append(std::move(instrLoadStatic));
 
     return chunk;
 }
@@ -88,9 +88,9 @@ SymbolTypePtr_t AstTypeRef::GetExprType() const
 
 SymbolTypePtr_t AstTypeRef::GetHeldType() const
 {
-    Assert(m_symbol_type != nullptr);
+    Assert(m_symbolType != nullptr);
 
-    return m_symbol_type;
+    return m_symbolType;
 }
 
 } // namespace hyperion::compiler

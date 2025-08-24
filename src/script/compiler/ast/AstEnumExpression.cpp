@@ -19,21 +19,21 @@ namespace hyperion::compiler {
 AstEnumExpression::AstEnumExpression(
     const String &name,
     const Array<EnumEntry> &entries,
-    const RC<AstPrototypeSpecification> &underlying_type,
+    const RC<AstPrototypeSpecification> &underlyingType,
     const SourceLocation &location
 ) : AstExpression(location, ACCESS_MODE_LOAD),
     m_name(name),
     m_entries(entries),
-    m_underlying_type(underlying_type)
+    m_underlyingType(underlyingType)
 {
 }
 
 void AstEnumExpression::Visit(AstVisitor *visitor, Module *mod)
 {
-    int64 enum_counter = 0;
+    int64 enumCounter = 0;
 
-    if (m_underlying_type == nullptr) {
-        m_underlying_type.Reset(new AstPrototypeSpecification(
+    if (m_underlyingType == nullptr) {
+        m_underlyingType.Reset(new AstPrototypeSpecification(
             RC<AstVariable>(new AstVariable(
                 BuiltinTypes::INT->GetName(),
                 m_location
@@ -42,36 +42,36 @@ void AstEnumExpression::Visit(AstVisitor *visitor, Module *mod)
         ));
     }
 
-    m_underlying_type->Visit(visitor, mod);
+    m_underlyingType->Visit(visitor, mod);
 
-    Array<RC<AstVariableDeclaration>> enum_members;
-    enum_members.Reserve(m_entries.Size());
+    Array<RC<AstVariableDeclaration>> enumMembers;
+    enumMembers.Reserve(m_entries.Size());
 
     for (auto &entry : m_entries) {
-        bool assignment_ok = false;
+        bool assignmentOk = false;
 
         if (entry.assignment != nullptr) {
-            if (const auto *deep_value = entry.assignment->GetDeepValueOf()) {
-                if (deep_value->IsLiteral()) {
-                    if (const auto *as_constant = dynamic_cast<const AstConstant *>(deep_value)) {
-                        enum_counter = as_constant->IntValue(); // for next item to use the incremented value from
-                        assignment_ok = true;
+            if (const auto *deepValue = entry.assignment->GetDeepValueOf()) {
+                if (deepValue->IsLiteral()) {
+                    if (const auto *asConstant = dynamic_cast<const AstConstant *>(deepValue)) {
+                        enumCounter = asConstant->IntValue(); // for next item to use the incremented value from
+                        assignmentOk = true;
                     }
                 }
             }
         } else {
             entry.assignment.Reset(new AstInteger(
-                enum_counter,
+                enumCounter,
                 entry.location
             ));
     
-            assignment_ok = true;
+            assignmentOk = true;
         }
 
-        if (assignment_ok) {
-            enum_members.PushBack(RC<AstVariableDeclaration>(new AstVariableDeclaration(
+        if (assignmentOk) {
+            enumMembers.PushBack(RC<AstVariableDeclaration>(new AstVariableDeclaration(
                 entry.name,
-                CloneAstNode(m_underlying_type),
+                CloneAstNode(m_underlyingType),
                 entry.assignment,
                 IdentifierFlags::FLAG_CONST,
                 entry.location
@@ -85,13 +85,13 @@ void AstEnumExpression::Visit(AstVisitor *visitor, Module *mod)
             ));
         }
 
-        ++enum_counter;
+        ++enumCounter;
     }
 
-    SymbolTypePtr_t underlying_type = BuiltinTypes::INT;
+    SymbolTypePtr_t underlyingType = BuiltinTypes::INT;
 
-    if (auto held_type = m_underlying_type->GetHeldType()) {
-        underlying_type = held_type->GetUnaliased();
+    if (auto heldType = m_underlyingType->GetHeldType()) {
+        underlyingType = heldType->GetUnaliased();
     }
 
     m_expr.Reset(new AstTypeExpression(
@@ -99,8 +99,8 @@ void AstEnumExpression::Visit(AstVisitor *visitor, Module *mod)
         nullptr,
         {},
         {},
-        enum_members,
-        underlying_type,
+        enumMembers,
+        underlyingType,
         false,
         m_location
     ));

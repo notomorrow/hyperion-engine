@@ -17,8 +17,8 @@ public:
 
     static void CopyModules(
         AstVisitor *visitor,
-        Module *mod_to_copy,
-        bool update_tree_link = false
+        Module *modToCopy,
+        bool updateTreeLink = false
     );
 
     static bool TryOpenFile(
@@ -42,7 +42,7 @@ public:
 
 protected:
     /** The AST iterator that will be used by the imported module */
-    AstIterator m_ast_iterator;
+    AstIterator m_astIterator;
 
     void PerformImport(
         AstVisitor *visitor,

@@ -65,9 +65,9 @@ SymbolTypePtr_t AstUnsignedInteger::GetExprType() const
     return BuiltinTypes::UNSIGNED_INT;
 }
 
-RC<AstConstant> AstUnsignedInteger::HandleOperator(Operators op_type, const AstConstant *right) const
+RC<AstConstant> AstUnsignedInteger::HandleOperator(Operators opType, const AstConstant *right) const
 {
-    switch (op_type) {
+    switch (opType) {
         case OP_add:
             if (!right->IsNumber()) {
                 return nullptr;
@@ -118,23 +118,23 @@ RC<AstConstant> AstUnsignedInteger::HandleOperator(Operators op_type, const AstC
             // we have to determine weather or not to promote this to a float
             if (dynamic_cast<const AstFloat*>(right)) {
                 float result;
-                auto right_float = right->FloatValue();
-                if (right_float == 0.0) {
+                auto rightFloat = right->FloatValue();
+                if (rightFloat == 0.0) {
                     // division by zero, return Undefined
                     return nullptr;
                 } else {
-                    result = FloatValue() / right_float;
+                    result = FloatValue() / rightFloat;
                 }
                 return RC<AstFloat>(
                     new AstFloat(result, m_location));
             } else {
-                auto right_int = right->UnsignedValue();
-                if (right_int == 0) {
+                auto rightInt = right->UnsignedValue();
+                if (rightInt == 0) {
                     // division by zero, return Undefined
                     return nullptr;
                 } else {
                     return RC<AstUnsignedInteger>(
-                        new AstUnsignedInteger(UnsignedValue() / right_int, m_location));
+                        new AstUnsignedInteger(UnsignedValue() / rightInt, m_location));
                 }
             }
 
@@ -146,23 +146,23 @@ RC<AstConstant> AstUnsignedInteger::HandleOperator(Operators op_type, const AstC
             // we have to determine weather or not to promote this to a float
             if (dynamic_cast<const AstFloat *>(right)) {
                 float result;
-                auto right_float = right->FloatValue();
-                if (right_float == 0.0) {
+                auto rightFloat = right->FloatValue();
+                if (rightFloat == 0.0) {
                     // division by zero, return Undefined
                     return nullptr;
                 } else {
-                    result = std::fmod(FloatValue(), right_float);
+                    result = std::fmod(FloatValue(), rightFloat);
                 }
                 return RC<AstFloat>(
                     new AstFloat(result, m_location));
             } else {
-                auto right_int = right->UnsignedValue();
-                if (right_int == 0) {
+                auto rightInt = right->UnsignedValue();
+                if (rightInt == 0) {
                     // division by zero, return Undefined
                     return nullptr;
                 } else {
                     return RC<AstUnsignedInteger>(
-                        new AstUnsignedInteger(UnsignedValue() % right_int, m_location));
+                        new AstUnsignedInteger(UnsignedValue() % rightInt, m_location));
                 }
             }
 
@@ -217,8 +217,8 @@ RC<AstConstant> AstUnsignedInteger::HandleOperator(Operators op_type, const AstC
                 new AstUnsignedInteger(UnsignedValue() >> right->UnsignedValue(), m_location));
 
         case OP_logical_and: {
-            int this_true = IsTrue();
-            int right_true = right->IsTrue();
+            int thisTrue = IsTrue();
+            int rightTrue = right->IsTrue();
 
             if (!right->IsNumber()) {
                 // this operator is valid to compare against null
@@ -230,9 +230,9 @@ RC<AstConstant> AstUnsignedInteger::HandleOperator(Operators op_type, const AstC
                 return nullptr;
             }
 
-            if (this_true == 1 && right_true == 1) {
+            if (thisTrue == 1 && rightTrue == 1) {
                 return RC<AstTrue>(new AstTrue(m_location));
-            } else if (this_true == 0 && right_true == 0) {
+            } else if (thisTrue == 0 && rightTrue == 0) {
                 return RC<AstFalse>(new AstFalse(m_location));
             } else {
                 // indeterminate
@@ -241,24 +241,24 @@ RC<AstConstant> AstUnsignedInteger::HandleOperator(Operators op_type, const AstC
         }
 
         case OP_logical_or: {
-            int this_true = IsTrue();
-            int right_true = right->IsTrue();
+            int thisTrue = IsTrue();
+            int rightTrue = right->IsTrue();
 
             if (!right->IsNumber()) {
                 // this operator is valid to compare against null
                 if (dynamic_cast<const AstNil*>(right)) {
-                    if (this_true == 1) {
+                    if (thisTrue == 1) {
                         return RC<AstTrue>(new AstTrue(m_location));
-                    } else if (this_true == 0) {
+                    } else if (thisTrue == 0) {
                         return RC<AstFalse>(new AstFalse(m_location));
                     }
                 }
                 return nullptr;
             }
 
-            if (this_true == 1 || right_true == 1) {
+            if (thisTrue == 1 || rightTrue == 1) {
                 return RC<AstTrue>(new AstTrue(m_location));
-            } else if (this_true == 0 || right_true == 0) {
+            } else if (thisTrue == 0 || rightTrue == 0) {
                 return RC<AstFalse>(new AstFalse(m_location));
             } else {
                 // indeterminate

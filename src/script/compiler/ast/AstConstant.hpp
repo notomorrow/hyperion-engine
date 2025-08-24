@@ -33,7 +33,7 @@ public:
         return AstExpression::GetHashCode().Add(TypeName<AstConstant>());
     }
 
-    virtual RC<AstConstant> HandleOperator(Operators op_type, const AstConstant *right) const = 0;
+    virtual RC<AstConstant> HandleOperator(Operators opType, const AstConstant *right) const = 0;
 };
 
 } // namespace hyperion::compiler

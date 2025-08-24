@@ -30,11 +30,11 @@ static struct MapScriptBindings : ScriptBindingsBase
                         return vm::Value { vm::Value::HEAP_POINTER, { .ptr = nullptr } };
                     }
 
-                    VMMap::VMMapKey map_key;
-                    map_key.key = key;
-                    map_key.hash = key.GetHashCode().Value();
+                    VMMap::VMMapKey mapKey;
+                    mapKey.key = key;
+                    mapKey.hash = key.GetHashCode().Value();
 
-                    vm::Value *value = map->GetElement(map_key);
+                    vm::Value *value = map->GetElement(mapKey);
 
                     if (!value) {
                         return vm::Value { vm::Value::HEAP_POINTER, { .ptr = nullptr } };
@@ -50,11 +50,11 @@ static struct MapScriptBindings : ScriptBindingsBase
                         return;
                     }
 
-                    VMMap::VMMapKey map_key;
-                    map_key.key = key;
-                    map_key.hash = key.GetHashCode().Value();
+                    VMMap::VMMapKey mapKey;
+                    mapKey.key = key;
+                    mapKey.hash = key.GetHashCode().Value();
 
-                    map->SetElement(map_key, value);
+                    map->SetElement(mapKey, value);
                 }
             >)
             .Method("size", "function< int, any >", CxxFn<int32, VMMap *,
@@ -89,38 +89,38 @@ static struct MapScriptBindings : ScriptBindingsBase
                             continue;
                         }
 
-                        VMArray *pair_array_ptr = nullptr;
-                        VMObject *pair_object_ptr = nullptr;
+                        VMArray *pairArrayPtr = nullptr;
+                        VMObject *pairObjectPtr = nullptr;
 
-                        if (!(pair_object_ptr = element.GetValue().ptr->GetPointer<VMObject>())) {
+                        if (!(pairObjectPtr = element.GetValue().ptr->GetPointer<VMObject>())) {
                             continue;
                         }
 
                         // Get __intern member
-                        Member *intern_member = pair_object_ptr->LookupMemberFromHash(hash_fnv_1("__intern"));
+                        Member *internMember = pairObjectPtr->LookupMemberFromHash(hashFnv1("__intern"));
 
-                        if (!intern_member) {
+                        if (!internMember) {
                             continue;
                         }
 
-                        if (!intern_member->value.GetPointer<VMArray>(&pair_array_ptr)) {
+                        if (!internMember->value.GetPointer<VMArray>(&pairArrayPtr)) {
                             continue;
                         }
 
-                        if (pair_array_ptr->GetSize() < 2) {
+                        if (pairArrayPtr->GetSize() < 2) {
                             continue;
                         }
 
-                        Value &key = pair_array_ptr->AtIndex(0);
-                        Value &value = pair_array_ptr->AtIndex(1);
+                        Value &key = pairArrayPtr->AtIndex(0);
+                        Value &value = pairArrayPtr->AtIndex(1);
 
-                        const HashCode key_hash = key.GetHashCode();
+                        const HashCode keyHash = key.GetHashCode();
 
-                        VMMap::VMMapKey map_key;
-                        map_key.key = key;
-                        map_key.hash = key_hash.Value();
+                        VMMap::VMMapKey mapKey;
+                        mapKey.key = key;
+                        mapKey.hash = keyHash.Value();
 
-                        map.SetElement(map_key, value);
+                        map.SetElement(mapKey, value);
                     }
 
                     return map;
@@ -129,7 +129,7 @@ static struct MapScriptBindings : ScriptBindingsBase
             .Build();
     }
 
-} map_script_bindings { };
+} mapScriptBindings { };
 
 } // namespace bindings
 } // namespace script

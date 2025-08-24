@@ -27,11 +27,11 @@ void VMState::Reset()
 {
     // mark all static memory for deallocation,
     // objects will be deallocated when the heap is purged
-    m_static_memory.MarkAllForDeallocation();
+    m_staticMemory.MarkAllForDeallocation();
     // purge the heap
     m_heap.Purge();
     // reset heap threshold
-    m_max_heap_objects = GC_THRESHOLD_MIN;
+    m_maxHeapObjects = GC_THRESHOLD_MIN;
 
     for (uint32 i = 0; i < VM_MAX_THREADS; i++) {
         DestroyThread(i);
@@ -43,9 +43,9 @@ void VMState::Reset()
 
 void VMState::ThrowException(ExecutionThread *thread, const Exception &exception)
 {
-    ++thread->m_exception_state.m_exception_depth;
+    ++thread->m_exceptionState.m_exceptionDepth;
 
-    if (thread->m_exception_state.m_try_counter == 0) {
+    if (thread->m_exceptionState.m_tryCounter == 0) {
         // exception cannot be handled, no try block found
         if (thread->m_id == 0) {
             HYP_FAIL("unhandled exception in main thread: {}", exception.ToString());
@@ -61,16 +61,16 @@ HeapValue *VMState::HeapAlloc(ExecutionThread *thread)
 {
     Assert(thread != nullptr);
 
-    const SizeType heap_size = m_heap.Size();
+    const SizeType heapSize = m_heap.Size();
         
-    if (heap_size >= m_max_heap_objects) {
-        if (heap_size >= GC_THRESHOLD_MAX) {
+    if (heapSize >= m_maxHeapObjects) {
+        if (heapSize >= GC_THRESHOLD_MAX) {
             // heap overflow.
             char buffer[256];
             std::sprintf(
                 buffer,
                 "out of budgeted heap memory : size is %zu, max is %d",
-                heap_size,
+                heapSize,
                 GC_THRESHOLD_MAX
             );
 
@@ -80,16 +80,16 @@ HeapValue *VMState::HeapAlloc(ExecutionThread *thread)
         }
 
 #if ENABLE_GC
-        if (enable_auto_gc) {
+        if (enableAutoGc) {
             // run the gc
             GC();
 
             // check if size is still over the maximum,
             // and resize the maximum if necessary.
-            if (m_heap.Size() >= m_max_heap_objects) {
+            if (m_heap.Size() >= m_maxHeapObjects) {
                 // resize max number of objects
-                m_max_heap_objects = std::min(
-                    1 << (unsigned)std::ceil(std::log(m_max_heap_objects) / std::log(2.0)),
+                m_maxHeapObjects = std::min(
+                    1 << (unsigned)std::ceil(std::log(m_maxHeapObjects) / std::log(2.0)),
                     GC_THRESHOLD_MAX
                 );
             }
@@ -107,7 +107,7 @@ void VMState::GC()
         "Begin gc\n"
     );
 
-    m_exported_symbols.MarkAll();
+    m_exportedSymbols.MarkAll();
 
     // mark stack objects on each thread
     for (uint32 i = 0; i < VM_MAX_THREADS; i++) {
@@ -120,19 +120,19 @@ void VMState::GC()
         }
     }
 
-    uint32 num_collected;
-    m_heap.Sweep(&num_collected);
+    uint32 numCollected;
+    m_heap.Sweep(&numCollected);
 
     DebugLog(
         LogType::Debug,
         "%u objects garbage collected\n",
-        num_collected
+        numCollected
     );
 }
 
 ExecutionThread *VMState::CreateThread()
 {
-    Assert(m_num_threads < VM_MAX_THREADS);
+    Assert(m_numThreads < VM_MAX_THREADS);
 
     // find a free slot
     for (uint32 i = 0; i < VM_MAX_THREADS; i++) {
@@ -141,7 +141,7 @@ ExecutionThread *VMState::CreateThread()
             thread->m_id = i;
 
             m_threads[i] = thread;
-            m_num_threads++;
+            m_numThreads++;
 
             return thread;
         }
@@ -160,7 +160,7 @@ void VMState::DestroyThread(int id)
         // purge the stack
         thread->m_stack.Purge();
         // reset exception state
-        thread->m_exception_state = { };
+        thread->m_exceptionState = { };
         // reset register flags
         thread->m_regs.ResetFlags();
 
@@ -168,7 +168,7 @@ void VMState::DestroyThread(int id)
         delete m_threads[id];
         m_threads[id] = nullptr;
 
-        m_num_threads--;
+        m_numThreads--;
     }
 }
 

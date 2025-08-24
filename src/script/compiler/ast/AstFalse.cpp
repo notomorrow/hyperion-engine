@@ -55,9 +55,9 @@ SymbolTypePtr_t AstFalse::GetExprType() const
     return BuiltinTypes::BOOLEAN;
 }
 
-RC<AstConstant> AstFalse::HandleOperator(Operators op_type, const AstConstant *right) const
+RC<AstConstant> AstFalse::HandleOperator(Operators opType, const AstConstant *right) const
 {
-    switch (op_type) {
+    switch (opType) {
         case OP_logical_and:
             return RC<AstFalse>(new AstFalse(m_location));
 

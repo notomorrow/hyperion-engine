@@ -23,7 +23,7 @@ public:
     virtual float FloatValue() const override;
     virtual SymbolTypePtr_t GetExprType() const override;
 
-    virtual RC<AstConstant> HandleOperator(Operators op_type, const AstConstant *right) const override;
+    virtual RC<AstConstant> HandleOperator(Operators opType, const AstConstant *right) const override;
 
     virtual HashCode GetHashCode() const override
     {

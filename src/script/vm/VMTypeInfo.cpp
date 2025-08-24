@@ -13,10 +13,10 @@ VMTypeInfo::VMTypeInfo(
 ) : m_size(size),
     m_names(new char*[size])
 {
-    SizeType name_len = std::strlen(name);
-    m_name = new char[name_len + 1];
-    m_name[name_len] = '\0';
-    Memory::MemCpy(m_name, name, name_len);
+    SizeType nameLen = std::strlen(name);
+    m_name = new char[nameLen + 1];
+    m_name[nameLen] = '\0';
+    Memory::MemCpy(m_name, name, nameLen);
 
     // copy all names
     for (size_t i = 0; i < m_size; i++) {
@@ -31,10 +31,10 @@ VMTypeInfo::VMTypeInfo(const VMTypeInfo &other)
     : m_size(other.m_size),
       m_names(new char*[other.m_size])
 {
-    SizeType name_len = std::strlen(other.m_name);
-    m_name = new char[name_len + 1];
-    m_name[name_len] = '\0';
-    Memory::MemCpy(m_name, other.m_name, name_len);
+    SizeType nameLen = std::strlen(other.m_name);
+    m_name = new char[nameLen + 1];
+    m_name[nameLen] = '\0';
+    Memory::MemCpy(m_name, other.m_name, nameLen);
 
     // copy all names
     for (SizeType i = 0; i < m_size; i++) {
@@ -64,10 +64,10 @@ VMTypeInfo &VMTypeInfo::operator=(const VMTypeInfo &other)
 
     m_size = other.m_size;
 
-    SizeType name_len = std::strlen(other.m_name);
-    m_name = new char[name_len + 1];
-    m_name[name_len] = '\0';
-    Memory::MemCpy(m_name, other.m_name, name_len);
+    SizeType nameLen = std::strlen(other.m_name);
+    m_name = new char[nameLen + 1];
+    m_name[nameLen] = '\0';
+    Memory::MemCpy(m_name, other.m_name, nameLen);
 
     // copy all names
     for (SizeType i = 0; i < m_size; i++) {

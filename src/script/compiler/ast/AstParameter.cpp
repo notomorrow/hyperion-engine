@@ -17,19 +17,19 @@ namespace hyperion::compiler {
 
 AstParameter::AstParameter(
     const String &name, 
-    const RC<AstPrototypeSpecification> &type_spec, 
-    const RC<AstExpression> &default_param, 
-    bool is_variadic,
-    bool is_const,
-    bool is_ref,
+    const RC<AstPrototypeSpecification> &typeSpec, 
+    const RC<AstExpression> &defaultParam, 
+    bool isVariadic,
+    bool isConst,
+    bool isRef,
     const SourceLocation &location
 ) : AstDeclaration(name, location),
-    m_type_spec(type_spec),
-    m_default_param(default_param),
-    m_is_variadic(is_variadic),
-    m_is_const(is_const),
-    m_is_ref(is_ref),
-    m_is_generic_param(false)
+    m_typeSpec(typeSpec),
+    m_defaultParam(defaultParam),
+    m_isVariadic(isVariadic),
+    m_isConst(isConst),
+    m_isRef(isRef),
+    m_isGenericParam(false)
 {
 }
 
@@ -38,47 +38,47 @@ void AstParameter::Visit(AstVisitor *visitor, Module *mod)
     AstDeclaration::Visit(visitor, mod);
 
     // params are `Any` by default
-    m_symbol_type = BuiltinTypes::ANY;
+    m_symbolType = BuiltinTypes::ANY;
 
-    SymbolTypePtr_t specified_symbol_type;
+    SymbolTypePtr_t specifiedSymbolType;
 
-    if (m_type_spec != nullptr) {
-        m_type_spec->Visit(visitor, mod);
+    if (m_typeSpec != nullptr) {
+        m_typeSpec->Visit(visitor, mod);
 
-        if ((specified_symbol_type = m_type_spec->GetHeldType())) {
-            m_symbol_type = specified_symbol_type;
+        if ((specifiedSymbolType = m_typeSpec->GetHeldType())) {
+            m_symbolType = specifiedSymbolType;
         }
     } else {
-        m_symbol_type = BuiltinTypes::ANY;
+        m_symbolType = BuiltinTypes::ANY;
     }
 
-    if (m_default_param != nullptr) {
-        m_default_param->Visit(visitor, mod);
+    if (m_defaultParam != nullptr) {
+        m_defaultParam->Visit(visitor, mod);
 
-        const SymbolTypePtr_t default_param_type = m_default_param->GetExprType();
-        Assert(default_param_type != nullptr);
+        const SymbolTypePtr_t defaultParamType = m_defaultParam->GetExprType();
+        Assert(defaultParamType != nullptr);
 
-        if (specified_symbol_type == nullptr) { // no symbol type specified; just set to the default arg type
-            m_symbol_type = default_param_type;
+        if (specifiedSymbolType == nullptr) { // no symbol type specified; just set to the default arg type
+            m_symbolType = defaultParamType;
         } else { // have to check compatibility
-            Assert(m_symbol_type == specified_symbol_type); // just sanity check, assigned above
+            Assert(m_symbolType == specifiedSymbolType); // just sanity check, assigned above
            
             // verify types compatible
-            if (!specified_symbol_type->TypeCompatible(*default_param_type, true)) {
+            if (!specifiedSymbolType->TypeCompatible(*defaultParamType, true)) {
                 visitor->GetCompilationUnit()->GetErrorList().AddError(CompilerError(
                     LEVEL_ERROR,
                     Msg_arg_type_incompatible,
-                    m_default_param->GetLocation(),
-                    m_symbol_type->ToString(),
-                    default_param_type->ToString()
+                    m_defaultParam->GetLocation(),
+                    m_symbolType->ToString(),
+                    defaultParamType->ToString()
                 ));
             }
         }
     }
 
     // if variadic, then change symbol type to `varargs<T>`
-    if (m_is_variadic) {
-        m_varargs_type_spec.Reset(new AstPrototypeSpecification(
+    if (m_isVariadic) {
+        m_varargsTypeSpec.Reset(new AstPrototypeSpecification(
             RC<AstTemplateInstantiation>(new AstTemplateInstantiation(
                 RC<AstVariable>(new AstVariable(
                     "varargs",
@@ -87,7 +87,7 @@ void AstParameter::Visit(AstVisitor *visitor, Module *mod)
                 {
                     RC<AstArgument>(new AstArgument(
                         RC<AstTypeRef>(new AstTypeRef(
-                            m_symbol_type,
+                            m_symbolType,
                             m_location
                         )),
                         false,
@@ -103,33 +103,33 @@ void AstParameter::Visit(AstVisitor *visitor, Module *mod)
             m_location
         ));
 
-        m_varargs_type_spec->Visit(visitor, mod);
+        m_varargsTypeSpec->Visit(visitor, mod);
 
-        auto *varargs_value_of = m_varargs_type_spec->GetDeepValueOf();
-        Assert(varargs_value_of != nullptr);
+        auto *varargsValueOf = m_varargsTypeSpec->GetDeepValueOf();
+        Assert(varargsValueOf != nullptr);
 
-        SymbolTypePtr_t held_type = varargs_value_of->GetHeldType();
-        Assert(held_type != nullptr);
-        held_type = held_type->GetUnaliased();
+        SymbolTypePtr_t heldType = varargsValueOf->GetHeldType();
+        Assert(heldType != nullptr);
+        heldType = heldType->GetUnaliased();
 
-        m_symbol_type = held_type;
-        Assert(m_symbol_type->IsVarArgsType());
+        m_symbolType = heldType;
+        Assert(m_symbolType->IsVarArgsType());
     }
 
     if (m_identifier != nullptr) {
-        m_identifier->SetSymbolType(m_symbol_type);
+        m_identifier->SetSymbolType(m_symbolType);
         m_identifier->SetFlags(m_identifier->GetFlags() | IdentifierFlags::FLAG_ARGUMENT);
 
-        if (m_is_const) {
+        if (m_isConst) {
             m_identifier->SetFlags(m_identifier->GetFlags() | IdentifierFlags::FLAG_CONST);
         }
 
-        if (m_is_ref) {
+        if (m_isRef) {
             m_identifier->SetFlags(m_identifier->GetFlags() | IdentifierFlags::FLAG_REF);
         }
 
-        if (m_default_param != nullptr) {
-            m_identifier->SetCurrentValue(m_default_param);
+        if (m_defaultParam != nullptr) {
+            m_identifier->SetCurrentValue(m_defaultParam);
         }
     }
 }
@@ -140,19 +140,19 @@ std::unique_ptr<Buildable> AstParameter::Build(AstVisitor *visitor, Module *mod)
 
     Assert(m_identifier != nullptr);
 
-    if (m_varargs_type_spec != nullptr) {
-        chunk->Append(m_varargs_type_spec->Build(visitor, mod));
+    if (m_varargsTypeSpec != nullptr) {
+        chunk->Append(m_varargsTypeSpec->Build(visitor, mod));
     }
 
     // get current stack size
-    const int stack_location = visitor->GetCompilationUnit()->GetInstructionStream().GetStackSize();
+    const int stackLocation = visitor->GetCompilationUnit()->GetInstructionStream().GetStackSize();
     // set identifier stack location
-    m_identifier->SetStackLocation(stack_location);
+    m_identifier->SetStackLocation(stackLocation);
 
     if (IsGenericParam()) {
-        Assert(m_default_param != nullptr, "Generic params must be set to a default value");
+        Assert(m_defaultParam != nullptr, "Generic params must be set to a default value");
     
-        chunk->Append(m_default_param->Build(visitor, mod));
+        chunk->Append(m_defaultParam->Build(visitor, mod));
 
         uint8 rp = visitor->GetCompilationUnit()->GetInstructionStream().GetCurrentRegister();
         chunk->Append(BytecodeUtil::Make<StoreLocal>(rp));
@@ -165,8 +165,8 @@ std::unique_ptr<Buildable> AstParameter::Build(AstVisitor *visitor, Module *mod)
 
 void AstParameter::Optimize(AstVisitor *visitor, Module *mod)
 {
-    if (m_varargs_type_spec != nullptr) {
-        m_varargs_type_spec->Optimize(visitor, mod);
+    if (m_varargsTypeSpec != nullptr) {
+        m_varargsTypeSpec->Optimize(visitor, mod);
     }
 }
 
@@ -177,7 +177,7 @@ RC<AstStatement> AstParameter::Clone() const
 
 SymbolTypePtr_t AstParameter::GetExprType() const
 {
-    return m_symbol_type;
+    return m_symbolType;
 }
 
 } // namespace hyperion::compiler

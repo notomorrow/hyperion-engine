@@ -3,24 +3,24 @@
 namespace hyperion::compiler {
 
 Scope::Scope()
-    : m_scope_type(SCOPE_TYPE_NORMAL),
-      m_scope_flags(0)
+    : m_scopeType(SCOPE_TYPE_NORMAL),
+      m_scopeFlags(0)
 {
 }
 
-Scope::Scope(ScopeType scope_type, int scope_flags)
-    : m_scope_type(scope_type),
-      m_scope_flags(scope_flags)
+Scope::Scope(ScopeType scopeType, int scopeFlags)
+    : m_scopeType(scopeType),
+      m_scopeFlags(scopeFlags)
 {
 }
 
 Scope::Scope(const Scope &other)
-    : m_identifier_table(other.m_identifier_table),
-      m_scope_type(other.m_scope_type),
-      m_scope_flags(other.m_scope_flags),
-      m_return_types(other.m_return_types),
-      m_closure_captures(other.m_closure_captures),
-      m_generic_instance_cache(other.m_generic_instance_cache)
+    : m_identifierTable(other.m_identifierTable),
+      m_scopeType(other.m_scopeType),
+      m_scopeFlags(other.m_scopeFlags),
+      m_returnTypes(other.m_returnTypes),
+      m_closureCaptures(other.m_closureCaptures),
+      m_genericInstanceCache(other.m_genericInstanceCache)
 {
 }
 
