@@ -12,16 +12,16 @@
 
 namespace hyperion::compiler {
 
-AstTryCatch::AstTryCatch(const RC<AstBlock> &tryBlock,
-    const RC<AstBlock> &catchBlock,
-    const SourceLocation &location)
+AstTryCatch::AstTryCatch(const RC<AstBlock>& tryBlock,
+    const RC<AstBlock>& catchBlock,
+    const SourceLocation& location)
     : AstStatement(location),
       m_tryBlock(tryBlock),
       m_catchBlock(catchBlock)
 {
 }
 
-void AstTryCatch::Visit(AstVisitor *visitor, Module *mod)
+void AstTryCatch::Visit(AstVisitor* visitor, Module* mod)
 {
     // accept the try block
     m_tryBlock->Visit(visitor, mod);
@@ -29,12 +29,11 @@ void AstTryCatch::Visit(AstVisitor *visitor, Module *mod)
     m_catchBlock->Visit(visitor, mod);
 }
 
-std::unique_ptr<Buildable> AstTryCatch::Build(AstVisitor *visitor, Module *mod)
+std::unique_ptr<Buildable> AstTryCatch::Build(AstVisitor* visitor, Module* mod)
 {
     InstructionStreamContextGuard contextGuard(
         &visitor->GetCompilationUnit()->GetInstructionStream().GetContextTree(),
-        INSTRUCTION_STREAM_CONTEXT_DEFAULT
-    );
+        INSTRUCTION_STREAM_CONTEXT_DEFAULT);
 
     std::unique_ptr<BytecodeChunk> chunk = BytecodeUtil::Make<BytecodeChunk>();
 
@@ -63,7 +62,7 @@ std::unique_ptr<Buildable> AstTryCatch::Build(AstVisitor *visitor, Module *mod)
         instrEndTry->opcode = END_TRY;
         chunk->Append(std::move(instrEndTry));
     }
-    
+
     // decrease stack size for the try block
     visitor->GetCompilationUnit()->GetInstructionStream().DecStackSize();
 
@@ -84,7 +83,7 @@ std::unique_ptr<Buildable> AstTryCatch::Build(AstVisitor *visitor, Module *mod)
     return chunk;
 }
 
-void AstTryCatch::Optimize(AstVisitor *visitor, Module *mod)
+void AstTryCatch::Optimize(AstVisitor* visitor, Module* mod)
 {
     // optimize the try block
     m_tryBlock->Optimize(visitor, mod);

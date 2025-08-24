@@ -13,22 +13,21 @@ class AstSymbolQuery : public AstExpression
 {
 public:
     AstSymbolQuery(
-        const String &commandName,
-        const RC<AstExpression> &expr,
-        const SourceLocation &location
-    );
+        const String& commandName,
+        const RC<AstExpression>& expr,
+        const SourceLocation& location);
     virtual ~AstSymbolQuery() = default;
 
-    virtual void Visit(AstVisitor *visitor, Module *mod) override;
-    virtual std::unique_ptr<Buildable> Build(AstVisitor *visitor, Module *mod) override;
-    virtual void Optimize(AstVisitor *visitor, Module *mod) override;
-    
+    virtual void Visit(AstVisitor* visitor, Module* mod) override;
+    virtual std::unique_ptr<Buildable> Build(AstVisitor* visitor, Module* mod) override;
+    virtual void Optimize(AstVisitor* visitor, Module* mod) override;
+
     virtual RC<AstStatement> Clone() const override;
 
     virtual Tribool IsTrue() const override;
     virtual bool MayHaveSideEffects() const override;
     virtual SymbolTypePtr_t GetExprType() const override;
-    virtual const AstExpression *GetValueOf() const override;
+    virtual const AstExpression* GetValueOf() const override;
 
     virtual HashCode GetHashCode() const override
     {
@@ -40,20 +39,19 @@ public:
     }
 
 private:
-    String                  m_commandName;
-    RC<AstExpression>       m_expr;
+    String m_commandName;
+    RC<AstExpression> m_expr;
 
     // set while analyzing
-    SymbolTypePtr_t         m_symbolType;
-    RC<AstExpression>       m_resultValue;
+    SymbolTypePtr_t m_symbolType;
+    RC<AstExpression> m_resultValue;
 
     RC<AstSymbolQuery> CloneImpl() const
     {
         return RC<AstSymbolQuery>(new AstSymbolQuery(
             m_commandName,
             CloneAstNode(m_expr),
-            m_location
-        ));
+            m_location));
     }
 };
 

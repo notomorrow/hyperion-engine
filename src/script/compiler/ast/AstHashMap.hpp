@@ -16,17 +16,16 @@ class AstHashMap : public AstExpression
 {
 public:
     AstHashMap(
-        const Array<RC<AstExpression>> &keys,
-        const Array<RC<AstExpression>> &values,
-        const SourceLocation &location
-    );
+        const Array<RC<AstExpression>>& keys,
+        const Array<RC<AstExpression>>& values,
+        const SourceLocation& location);
 
     virtual ~AstHashMap() = default;
 
-    virtual void Visit(AstVisitor *visitor, Module *mod) override;
-    virtual std::unique_ptr<Buildable> Build(AstVisitor *visitor, Module *mod) override;
-    virtual void Optimize(AstVisitor *visitor, Module *mod) override;    
-    
+    virtual void Visit(AstVisitor* visitor, Module* mod) override;
+    virtual std::unique_ptr<Buildable> Build(AstVisitor* visitor, Module* mod) override;
+    virtual void Optimize(AstVisitor* visitor, Module* mod) override;
+
     virtual RC<AstStatement> Clone() const override;
 
     virtual Tribool IsTrue() const override;
@@ -36,11 +35,13 @@ public:
     virtual HashCode GetHashCode() const override
     {
         HashCode hc = AstExpression::GetHashCode().Add(TypeName<AstHashMap>());
-        
-        for (SizeType index = 0; index < m_keys.Size(); ++index) {
+
+        for (SizeType index = 0; index < m_keys.Size(); ++index)
+        {
             hc.Add(m_keys[index] ? m_keys[index]->GetHashCode() : HashCode());
 
-            if (index >= m_values.Size()) {
+            if (index >= m_values.Size())
+            {
                 hc.Add(HashCode());
 
                 continue;
@@ -53,27 +54,26 @@ public:
     }
 
 private:
-    Array<RC<AstExpression>>        m_keys;
-    Array<RC<AstExpression>>        m_values;
+    Array<RC<AstExpression>> m_keys;
+    Array<RC<AstExpression>> m_values;
 
     // set while analyzing
-    Array<RC<AstExpression>>        m_replacedKeys;
-    Array<RC<AstExpression>>        m_replacedValues;
-    RC<AstPrototypeSpecification>   m_mapTypeExpr;
-    RC<AstExpression>               m_arrayExpr;
-    SymbolTypePtr_t                 m_keyType;
-    SymbolTypePtr_t                 m_valueType;
-    SymbolTypePtr_t                 m_exprType;
-    RC<AstTypeObject>               m_typeObject;
-    RC<AstBlock>                    m_block;
+    Array<RC<AstExpression>> m_replacedKeys;
+    Array<RC<AstExpression>> m_replacedValues;
+    RC<AstPrototypeSpecification> m_mapTypeExpr;
+    RC<AstExpression> m_arrayExpr;
+    SymbolTypePtr_t m_keyType;
+    SymbolTypePtr_t m_valueType;
+    SymbolTypePtr_t m_exprType;
+    RC<AstTypeObject> m_typeObject;
+    RC<AstBlock> m_block;
 
     RC<AstHashMap> CloneImpl() const
     {
         return RC<AstHashMap>(new AstHashMap(
             CloneAllAstNodes(m_keys),
             CloneAllAstNodes(m_values),
-            m_location
-        ));
+            m_location));
     }
 };
 

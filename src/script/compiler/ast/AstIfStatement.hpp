@@ -13,17 +13,16 @@ class AstIfStatement : public AstStatement
 {
 public:
     AstIfStatement(
-        const RC<AstExpression> &conditional,
-        const RC<AstBlock> &block,
-        const RC<AstBlock> &elseBlock,
-        const SourceLocation &location
-    );
+        const RC<AstExpression>& conditional,
+        const RC<AstBlock>& block,
+        const RC<AstBlock>& elseBlock,
+        const SourceLocation& location);
     virtual ~AstIfStatement() = default;
 
-    virtual void Visit(AstVisitor *visitor, Module *mod) override;
-    virtual std::unique_ptr<Buildable> Build(AstVisitor *visitor, Module *mod) override;
-    virtual void Optimize(AstVisitor *visitor, Module *mod) override;
-    
+    virtual void Visit(AstVisitor* visitor, Module* mod) override;
+    virtual std::unique_ptr<Buildable> Build(AstVisitor* visitor, Module* mod) override;
+    virtual void Optimize(AstVisitor* visitor, Module* mod) override;
+
     virtual RC<AstStatement> Clone() const override;
 
     virtual HashCode GetHashCode() const override
@@ -38,9 +37,9 @@ public:
     }
 
 private:
-    RC<AstExpression>   m_conditional;
-    RC<AstBlock>        m_block;
-    RC<AstBlock>        m_elseBlock;
+    RC<AstExpression> m_conditional;
+    RC<AstBlock> m_block;
+    RC<AstBlock> m_elseBlock;
 
     RC<AstIfStatement> CloneImpl() const
     {
@@ -48,8 +47,7 @@ private:
             CloneAstNode(m_conditional),
             CloneAstNode(m_block),
             CloneAstNode(m_elseBlock),
-            m_location
-        ));
+            m_location));
     }
 };
 

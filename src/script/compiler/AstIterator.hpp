@@ -14,45 +14,68 @@ class AstIterator
 {
 public:
     AstIterator();
-    AstIterator(const AstIterator &other);
+    AstIterator(const AstIterator& other);
 
-    void Prepend(AstIterator &&other, bool resetPosition = false);
-    void Append(AstIterator &&other);
+    void Prepend(AstIterator&& other, bool resetPosition = false);
+    void Append(AstIterator&& other);
 
-    void Push(const RC<AstStatement> &statement)
-        { m_list.PushBack(statement); }
+    void Push(const RC<AstStatement>& statement)
+    {
+        m_list.PushBack(statement);
+    }
 
     void Pop()
-        { m_list.PopBack(); }
+    {
+        m_list.PopBack();
+    }
 
     SizeType GetPosition() const
-        { return m_position; }
+    {
+        return m_position;
+    }
 
     void ResetPosition()
-        { m_position = 0; }
+    {
+        m_position = 0;
+    }
 
     void SetPosition(SizeType position)
-        { m_position = position; }
+    {
+        m_position = position;
+    }
 
     SizeType GetSize() const
-        { return m_list.Size(); }
+    {
+        return m_list.Size();
+    }
 
-    RC<AstStatement> &Peek()
-        { return m_list[m_position]; }
+    RC<AstStatement>& Peek()
+    {
+        return m_list[m_position];
+    }
 
-    const RC<AstStatement> &Peek() const
-        { return m_list[m_position]; }
+    const RC<AstStatement>& Peek() const
+    {
+        return m_list[m_position];
+    }
 
     RC<AstStatement> Next()
-        { return m_list[m_position++]; }
+    {
+        return m_list[m_position++];
+    }
 
     bool HasNext() const
-        { return m_position < m_list.Size(); }
-        
-    const SourceLocation &GetLocation() const { return m_list[m_position]->m_location; }
+    {
+        return m_position < m_list.Size();
+    }
+
+    const SourceLocation& GetLocation() const
+    {
+        return m_list[m_position]->m_location;
+    }
 
 private:
-    SizeType                m_position;
+    SizeType m_position;
     Array<RC<AstStatement>> m_list;
 };
 

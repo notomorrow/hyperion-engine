@@ -12,8 +12,8 @@
 
 namespace hyperion::compiler {
 
-AstBlock::AstBlock(const Array<RC<AstStatement>> &children, 
-    const SourceLocation &location)
+AstBlock::AstBlock(const Array<RC<AstStatement>>& children,
+    const SourceLocation& location)
     : AstStatement(location),
       m_children(children),
       m_numLocals(0),
@@ -21,28 +21,28 @@ AstBlock::AstBlock(const Array<RC<AstStatement>> &children,
 {
 }
 
-AstBlock::AstBlock(const SourceLocation &location)
+AstBlock::AstBlock(const SourceLocation& location)
     : AstStatement(location),
       m_numLocals(0),
       m_lastIsReturn(false)
 {
 }
 
-void AstBlock::Visit(AstVisitor *visitor, Module *mod)
+void AstBlock::Visit(AstVisitor* visitor, Module* mod)
 {
     // open the new scope
     mod->m_scopes.Open(Scope(m_scopeType, m_scopeFlags));
     m_scope = &mod->m_scopes.Top();
 
     // visit all children in the block
-    for (RC<AstStatement> &child : m_children) {
+    for (RC<AstStatement>& child : m_children)
+    {
         Assert(child != nullptr);
 
         child->Visit(visitor, mod);
     }
 
-    m_lastIsReturn = m_children.Any() &&
-        (dynamic_cast<AstReturnStatement *>(m_children.Back().Get()) != nullptr);
+    m_lastIsReturn = m_children.Any() && (dynamic_cast<AstReturnStatement*>(m_children.Back().Get()) != nullptr);
 
     // store number of locals, so we can pop them from the stack later
     m_numLocals = m_scope->GetIdentifierTable().CountUsedVariables();
@@ -51,13 +51,14 @@ void AstBlock::Visit(AstVisitor *visitor, Module *mod)
     mod->m_scopes.Close();
 }
 
-std::unique_ptr<Buildable> AstBlock::Build(AstVisitor *visitor, Module *mod)
+std::unique_ptr<Buildable> AstBlock::Build(AstVisitor* visitor, Module* mod)
 {
     std::unique_ptr<BytecodeChunk> chunk = BytecodeUtil::Make<BytecodeChunk>();
 
     const int stackSizeBefore = visitor->GetCompilationUnit()->GetInstructionStream().GetStackSize();
 
-    for (RC<AstStatement> &stmt : m_children) {
+    for (RC<AstStatement>& stmt : m_children)
+    {
         Assert(stmt != nullptr);
 
         chunk->Append(stmt->Build(visitor, mod));
@@ -67,8 +68,10 @@ std::unique_ptr<Buildable> AstBlock::Build(AstVisitor *visitor, Module *mod)
     SizeType popTimes = 0;
 
     // pop all local variables off the stack
-    for (int i = 0; i < m_numLocals; i++) {
-        if (!m_lastIsReturn) {
+    for (int i = 0; i < m_numLocals; i++)
+    {
+        if (!m_lastIsReturn)
+        {
             popTimes++;
         }
 
@@ -81,18 +84,19 @@ std::unique_ptr<Buildable> AstBlock::Build(AstVisitor *visitor, Module *mod)
         stackSizeNow == stackSizeBefore,
         "Stack size mismatch detected! Internal record of stack does not match. (%d != %d)",
         stackSizeNow,
-        stackSizeBefore
-    );
+        stackSizeBefore);
 
     chunk->Append(Compiler::PopStack(visitor, popTimes));
 
     return chunk;
 }
 
-void AstBlock::Optimize(AstVisitor *visitor, Module *mod)
+void AstBlock::Optimize(AstVisitor* visitor, Module* mod)
 {
-    for (auto &child : m_children) {
-        if (child) {
+    for (auto& child : m_children)
+    {
+        if (child)
+        {
             child->Optimize(visitor, mod);
         }
     }

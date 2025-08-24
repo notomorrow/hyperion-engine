@@ -16,7 +16,7 @@
 namespace hyperion {
 namespace vm {
 
-std::ostream &operator<<(std::ostream &os, const Heap &heap)
+std::ostream& operator<<(std::ostream& os, const Heap& heap)
 {
     // print table header
     os << std::left;
@@ -26,67 +26,84 @@ std::ostream &operator<<(std::ostream &os, const Heap &heap)
     os << std::setw(16) << "Value";
     os << std::endl;
 
-    HeapNode *tmpHead = heap.m_head;
-    while (tmpHead != nullptr) {
+    HeapNode* tmpHead = heap.m_head;
+    while (tmpHead != nullptr)
+    {
         os << std::setw(16) << (void*)tmpHead << "| ";
         os << std::setw(8) << std::bitset<sizeof(tmpHead->value.GetFlags())>(tmpHead->value.GetFlags()) << "| ";
         os << std::setw(10);
 
         {
-            union {
-                VMString        *strPtr;
-                VMArray         *arrayPtr;
-                VMMemoryBuffer  *memoryBufferPtr;
-                VMArraySlice    *slicePtr;
-                VMObject        *objPtr;
-                VMTypeInfo      *typeInfoPtr;
+            union
+            {
+                VMString* strPtr;
+                VMArray* arrayPtr;
+                VMMemoryBuffer* memoryBufferPtr;
+                VMArraySlice* slicePtr;
+                VMObject* objPtr;
+                VMTypeInfo* typeInfoPtr;
             } data;
-            
-            if (!tmpHead->value.HasValue()) {
+
+            if (!tmpHead->value.HasValue())
+            {
                 os << "NullType" << "| ";
 
                 os << std::setw(16);
                 os << "null";
-            } else if ((data.strPtr = tmpHead->value.GetPointer<VMString>()) != nullptr) {
+            }
+            else if ((data.strPtr = tmpHead->value.GetPointer<VMString>()) != nullptr)
+            {
                 os << "String" << "| ";
 
                 os << "\"" << data.strPtr->GetData() << "\"" << std::setw(16);
-            } else if ((data.arrayPtr = tmpHead->value.GetPointer<VMArray>()) != nullptr) {
+            }
+            else if ((data.arrayPtr = tmpHead->value.GetPointer<VMArray>()) != nullptr)
+            {
                 os << "Array" << "| ";
 
                 os << std::setw(16);
-                
+
                 std::stringstream ss;
                 data.arrayPtr->GetRepresentation(ss, false);
                 os << ss.rdbuf();
-            } else if ((data.memoryBufferPtr = tmpHead->value.GetPointer<VMMemoryBuffer>()) != nullptr) {
+            }
+            else if ((data.memoryBufferPtr = tmpHead->value.GetPointer<VMMemoryBuffer>()) != nullptr)
+            {
                 os << "MemoryBuffer" << "| ";
 
                 os << std::setw(16);
-                
+
                 std::stringstream ss;
                 data.memoryBufferPtr->GetRepresentation(ss, false);
                 os << ss.rdbuf();
-            } else if ((data.slicePtr = tmpHead->value.GetPointer<VMArraySlice>()) != nullptr) {
+            }
+            else if ((data.slicePtr = tmpHead->value.GetPointer<VMArraySlice>()) != nullptr)
+            {
                 os << "ArraySlice" << "| ";
                 os << std::setw(16);
 
                 std::stringstream ss;
                 data.slicePtr->GetRepresentation(ss, false);
                 os << ss.rdbuf();
-            } else if ((data.objPtr = tmpHead->value.GetPointer<VMObject>()) != nullptr) {
+            }
+            else if ((data.objPtr = tmpHead->value.GetPointer<VMObject>()) != nullptr)
+            {
                 os << "Object" << "| ";
 
                 os << std::setw(16);
                 std::stringstream ss;
                 data.objPtr->GetRepresentation(ss, false);
                 os << ss.rdbuf();
-            } else if ((data.typeInfoPtr = tmpHead->value.GetPointer<VMTypeInfo>()) != nullptr) {
+            }
+            else if ((data.typeInfoPtr = tmpHead->value.GetPointer<VMTypeInfo>()) != nullptr)
+            {
                 os << "TypeInfo" << "| ";
 
                 os << std::setw(16);
                 os << " ";
-            } else {
+            }
+            else
+            {
                 os << "Pointer" << "| ";
 
                 os << std::setw(16);
@@ -117,8 +134,9 @@ Heap::~Heap()
 void Heap::Purge()
 {
     // clean up all allocated objects
-    while (m_head) {
-        HeapNode *tmp = m_head;
+    while (m_head)
+    {
+        HeapNode* tmp = m_head;
         m_head = tmp->before;
         delete tmp;
 
@@ -126,16 +144,17 @@ void Heap::Purge()
     }
 }
 
-HeapValue *Heap::Alloc()
+HeapValue* Heap::Alloc()
 {
-    auto *node = new HeapNode;
+    auto* node = new HeapNode;
 
     node->after = nullptr;
-    
-    if (m_head != nullptr) {
+
+    if (m_head != nullptr)
+    {
         m_head->after = node;
     }
-    
+
     node->before = m_head;
     m_head = node;
 
@@ -144,34 +163,42 @@ HeapValue *Heap::Alloc()
     return &m_head->value;
 }
 
-void Heap::Sweep(uint32 *outNumCollected)
+void Heap::Sweep(uint32* outNumCollected)
 {
     uint32 numCollected = 0;
 
-    HeapNode *last = m_head;
+    HeapNode* last = m_head;
 
-    while (last) {
-        if (last->value.GetFlags() & GC_ALIVE) {
+    while (last)
+    {
+        if (last->value.GetFlags() & GC_ALIVE)
+        {
             // the object is currently marked, so
             // we unmark it for the next time
             last->value.GetFlags() &= ~GC_MARKED;
             last = last->before;
-        } else {
+        }
+        else
+        {
             // unmarked object, so delete it
 
-            HeapNode *after = last->after;
-            HeapNode *before = last->before;
+            HeapNode* after = last->after;
+            HeapNode* before = last->before;
 
-            if (before) {
+            if (before)
+            {
                 before->after = after;
             }
 
-            if (after) {
+            if (after)
+            {
                 // removing an item from the middle, so
                 // make the nodes to the other sides now
                 // point to each other
                 after->before = before;
-            } else {
+            }
+            else
+            {
                 // since there are no nodes after this,
                 // set the head to be this node here
                 m_head = before;
@@ -191,7 +218,8 @@ void Heap::Sweep(uint32 *outNumCollected)
         }
     }
 
-    if (outNumCollected) {
+    if (outNumCollected)
+    {
         *outNumCollected = numCollected;
     }
 }

@@ -30,15 +30,15 @@
 namespace hyperion::compiler {
 
 AstArrayExpression::AstArrayExpression(
-    const Array<RC<AstExpression>> &members,
-    const SourceLocation &location
-) : AstExpression(location, ACCESS_MODE_LOAD),
-    m_members(members),
-    m_heldType(BuiltinTypes::ANY)
+    const Array<RC<AstExpression>>& members,
+    const SourceLocation& location)
+    : AstExpression(location, ACCESS_MODE_LOAD),
+      m_members(members),
+      m_heldType(BuiltinTypes::ANY)
 {
 }
 
-void AstArrayExpression::Visit(AstVisitor *visitor, Module *mod)
+void AstArrayExpression::Visit(AstVisitor* visitor, Module* mod)
 {
     m_exprType = BuiltinTypes::UNDEFINED;
 
@@ -46,60 +46,71 @@ void AstArrayExpression::Visit(AstVisitor *visitor, Module *mod)
 
     FlatSet<SymbolTypePtr_t> heldTypes;
 
-    for (auto &member : m_members) {
+    for (auto& member : m_members)
+    {
         Assert(member != nullptr);
         member->Visit(visitor, mod);
 
-        if (member->GetExprType() != nullptr) {
+        if (member->GetExprType() != nullptr)
+        {
             heldTypes.Insert(member->GetExprType());
-        } else {
+        }
+        else
+        {
             heldTypes.Insert(BuiltinTypes::ANY);
         }
 
         m_replacedMembers.PushBack(CloneAstNode(member));
     }
 
-    for (const auto &it : heldTypes) {
+    for (const auto& it : heldTypes)
+    {
         Assert(it != nullptr);
 
-        if (m_heldType->IsOrHasBase(*BuiltinTypes::UNDEFINED)) {
+        if (m_heldType->IsOrHasBase(*BuiltinTypes::UNDEFINED))
+        {
             // `Undefined` invalidates the array type
             break;
         }
-        
-        if (m_heldType->IsAnyType() || m_heldType->IsPlaceholderType()) {
+
+        if (m_heldType->IsAnyType() || m_heldType->IsPlaceholderType())
+        {
             // take first item found that is not `Any`
             m_heldType = it;
-        } else if (m_heldType->TypeCompatible(*it, false)) { // allow non-strict numbers because we can do a cast
+        }
+        else if (m_heldType->TypeCompatible(*it, false))
+        { // allow non-strict numbers because we can do a cast
             m_heldType = SymbolType::TypePromotion(m_heldType, it);
-        } else {
+        }
+        else
+        {
             // more than one differing type, use Any.
             m_heldType = BuiltinTypes::ANY;
             break;
         }
     }
 
-    for (SizeType index = 0; index < m_replacedMembers.Size(); index++) {
-        auto &replacedMember = m_replacedMembers[index];
+    for (SizeType index = 0; index < m_replacedMembers.Size(); index++)
+    {
+        auto& replacedMember = m_replacedMembers[index];
         Assert(replacedMember != nullptr);
 
-        auto &member = m_members[index];
+        auto& member = m_members[index];
         Assert(member != nullptr);
 
-        if (SymbolTypePtr_t exprType = member->GetExprType()) {
-            if (!exprType->TypeEqual(*m_heldType)) {
+        if (SymbolTypePtr_t exprType = member->GetExprType())
+        {
+            if (!exprType->TypeEqual(*m_heldType))
+            {
                 // replace with a cast to the held type
                 replacedMember.Reset(new AstAsExpression(
                     replacedMember,
                     RC<AstPrototypeSpecification>(new AstPrototypeSpecification(
                         RC<AstTypeRef>(new AstTypeRef(
                             m_heldType,
-                            member->GetLocation()
-                        )),
-                        member->GetLocation()
-                    )),
-                    member->GetLocation()
-                ));
+                            member->GetLocation())),
+                        member->GetLocation())),
+                    member->GetLocation()));
             }
         }
 
@@ -137,40 +148,33 @@ void AstArrayExpression::Visit(AstVisitor *visitor, Module *mod)
     //     m_location
     // ));
 
-
     m_arrayTypeExpr.Reset(new AstPrototypeSpecification(
         RC<AstTemplateInstantiation>(new AstTemplateInstantiation(
             RC<AstVariable>(new AstVariable(
                 "Array",
-                m_location
-            )),
-            {
-                RC<AstArgument>(new AstArgument(
-                    RC<AstTypeRef>(new AstTypeRef(
-                        m_heldType,
-                        m_location
-                    )),
-                    false,
-                    false,
-                    false,
-                    false,
-                    "T",
-                    m_location
-                ))
-            },
-            m_location
-        )),
-        m_location
-    ));
+                m_location)),
+            { RC<AstArgument>(new AstArgument(
+                RC<AstTypeRef>(new AstTypeRef(
+                    m_heldType,
+                    m_location)),
+                false,
+                false,
+                false,
+                false,
+                "T",
+                m_location)) },
+            m_location)),
+        m_location));
 
     m_arrayTypeExpr->Visit(visitor, mod);
 
-    auto *arrayTypeExprValueOf = m_arrayTypeExpr->GetDeepValueOf();
+    auto* arrayTypeExprValueOf = m_arrayTypeExpr->GetDeepValueOf();
     Assert(arrayTypeExprValueOf != nullptr);
 
     SymbolTypePtr_t arrayType = arrayTypeExprValueOf->GetHeldType();
-    
-    if (arrayType == nullptr) {
+
+    if (arrayType == nullptr)
+    {
         // error already reported
         return;
     }
@@ -181,13 +185,13 @@ void AstArrayExpression::Visit(AstVisitor *visitor, Module *mod)
     m_exprType = arrayType;
 }
 
-std::unique_ptr<Buildable> AstArrayExpression::Build(AstVisitor *visitor, Module *mod)
+std::unique_ptr<Buildable> AstArrayExpression::Build(AstVisitor* visitor, Module* mod)
 {
     std::unique_ptr<BytecodeChunk> chunk = BytecodeUtil::Make<BytecodeChunk>();
 
     Assert(m_arrayTypeExpr != nullptr);
     chunk->Append(m_arrayTypeExpr->Build(visitor, mod));
-    
+
     // get active register
     uint8 rp = visitor->GetCompilationUnit()->GetInstructionStream().GetCurrentRegister();
 
@@ -201,7 +205,7 @@ std::unique_ptr<Buildable> AstArrayExpression::Build(AstVisitor *visitor, Module
     int classStackLocation = visitor->GetCompilationUnit()->GetInstructionStream().GetStackSize();
     visitor->GetCompilationUnit()->GetInstructionStream().IncStackSize();
 
-    const bool hasSideEffects = true;//MayHaveSideEffects();
+    const bool hasSideEffects = true; // MayHaveSideEffects();
     const uint32 arraySize = uint32(m_members.Size());
 
     { // add NEW_ARRAY instruction
@@ -215,17 +219,18 @@ std::unique_ptr<Buildable> AstArrayExpression::Build(AstVisitor *visitor, Module
     const uint8 arrayReg = rp;
 
     // move array to stack
-    { 
+    {
         auto instrPush = BytecodeUtil::Make<RawOperation<>>();
         instrPush->opcode = PUSH;
         instrPush->Accept<uint8>(rp);
         chunk->Append(std::move(instrPush));
     }
-    
+
     int arrayStackLocation = visitor->GetCompilationUnit()->GetInstructionStream().GetStackSize();
     visitor->GetCompilationUnit()->GetInstructionStream().IncStackSize();
-    
-    if (!hasSideEffects) {
+
+    if (!hasSideEffects)
+    {
         // claim register for array
         visitor->GetCompilationUnit()->GetInstructionStream().IncRegisterUsage();
 
@@ -234,14 +239,16 @@ std::unique_ptr<Buildable> AstArrayExpression::Build(AstVisitor *visitor, Module
     }
 
     // assign all array items
-    for (SizeType index = 0; index < m_replacedMembers.Size(); index++) {
-        auto &member = m_replacedMembers[index];
+    for (SizeType index = 0; index < m_replacedMembers.Size(); index++)
+    {
+        auto& member = m_replacedMembers[index];
 
         chunk->Append(member->Build(visitor, mod));
 
         rp = visitor->GetCompilationUnit()->GetInstructionStream().GetCurrentRegister();
 
-        if (hasSideEffects) {
+        if (hasSideEffects)
+        {
             // claim register for member
             visitor->GetCompilationUnit()->GetInstructionStream().IncRegisterUsage();
             // get active register
@@ -272,7 +279,9 @@ std::unique_ptr<Buildable> AstArrayExpression::Build(AstVisitor *visitor, Module
             visitor->GetCompilationUnit()->GetInstructionStream().DecRegisterUsage();
             // get active register
             rp = visitor->GetCompilationUnit()->GetInstructionStream().GetCurrentRegister();
-        } else {
+        }
+        else
+        {
             // send to the array
             auto instrMovArrayIdx = BytecodeUtil::Make<RawOperation<>>();
             instrMovArrayIdx->opcode = MOV_ARRAYIDX;
@@ -283,7 +292,8 @@ std::unique_ptr<Buildable> AstArrayExpression::Build(AstVisitor *visitor, Module
         }
     }
 
-    if (!hasSideEffects) {
+    if (!hasSideEffects)
+    {
         // unclaim register for array
         visitor->GetCompilationUnit()->GetInstructionStream().DecRegisterUsage();
         // get active register
@@ -315,28 +325,32 @@ std::unique_ptr<Buildable> AstArrayExpression::Build(AstVisitor *visitor, Module
             mod,
             nullptr, // no target -- handled above
             uint8(2) // self, array
-        ));
+            ));
     }
 
     // decrement stack size for array type expr
     chunk->Append(BytecodeUtil::Make<PopLocal>(2));
 
     // pop array and type from stack
-    for (uint32 i = 0; i < 2; i++) {
+    for (uint32 i = 0; i < 2; i++)
+    {
         visitor->GetCompilationUnit()->GetInstructionStream().DecStackSize();
     }
 
     return chunk;
 }
 
-void AstArrayExpression::Optimize(AstVisitor *visitor, Module *mod)
+void AstArrayExpression::Optimize(AstVisitor* visitor, Module* mod)
 {
-    if (m_arrayTypeExpr != nullptr) {
+    if (m_arrayTypeExpr != nullptr)
+    {
         m_arrayTypeExpr->Optimize(visitor, mod);
     }
 
-    for (auto &member : m_replacedMembers) {
-        if (member != nullptr) {
+    for (auto& member : m_replacedMembers)
+    {
+        if (member != nullptr)
+        {
             member->Optimize(visitor, mod);
         }
     }
@@ -356,10 +370,12 @@ bool AstArrayExpression::MayHaveSideEffects() const
 {
     bool sideEffects = false;
 
-    for (const auto &member : m_replacedMembers) {
+    for (const auto& member : m_replacedMembers)
+    {
         Assert(member != nullptr);
-        
-        if (member->MayHaveSideEffects()) {
+
+        if (member->MayHaveSideEffects())
+        {
             sideEffects = true;
             break;
         }
@@ -370,7 +386,8 @@ bool AstArrayExpression::MayHaveSideEffects() const
 
 SymbolTypePtr_t AstArrayExpression::GetExprType() const
 {
-    if (m_exprType == nullptr) {
+    if (m_exprType == nullptr)
+    {
         return BuiltinTypes::UNDEFINED;
     }
 

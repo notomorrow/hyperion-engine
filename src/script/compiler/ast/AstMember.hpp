@@ -10,16 +10,15 @@ class AstMember : public AstExpression
 {
 public:
     AstMember(
-        const String &fieldName,
-        const RC<AstExpression> &target,
-        const SourceLocation &location
-    );
+        const String& fieldName,
+        const RC<AstExpression>& target,
+        const SourceLocation& location);
     virtual ~AstMember() = default;
-    
-    virtual void Visit(AstVisitor *visitor, Module *mod) override;
-    virtual std::unique_ptr<Buildable> Build(AstVisitor *visitor, Module *mod) override;
-    virtual void Optimize(AstVisitor *visitor, Module *mod) override;
-    
+
+    virtual void Visit(AstVisitor* visitor, Module* mod) override;
+    virtual std::unique_ptr<Buildable> Build(AstVisitor* visitor, Module* mod) override;
+    virtual void Optimize(AstVisitor* visitor, Module* mod) override;
+
     virtual RC<AstStatement> Clone() const override;
 
     virtual Tribool IsTrue() const override;
@@ -27,10 +26,10 @@ public:
 
     virtual SymbolTypePtr_t GetExprType() const override;
     virtual SymbolTypePtr_t GetHeldType() const override;
-  
-    virtual const AstExpression *GetValueOf() const override;
-    virtual const AstExpression *GetDeepValueOf() const override;
-    virtual AstExpression *GetTarget() const override;
+
+    virtual const AstExpression* GetValueOf() const override;
+    virtual const AstExpression* GetDeepValueOf() const override;
+    virtual AstExpression* GetTarget() const override;
     virtual bool IsMutable() const override;
 
     virtual HashCode GetHashCode() const override
@@ -43,25 +42,24 @@ public:
     }
 
 protected:
-    String              m_fieldName;
-    RC<AstExpression>   m_target;
+    String m_fieldName;
+    RC<AstExpression> m_target;
 
     // set while analyzing
-    SymbolTypePtr_t     m_symbolType;
-    SymbolTypePtr_t     m_targetType;
-    SymbolTypePtr_t     m_heldType;
-    RC<AstExpression>   m_proxyExpr;
-    RC<AstExpression>   m_overrideExpr;
-    uint32                m_foundIndex;
-    bool                m_enableGenericMemberSubstitution;
+    SymbolTypePtr_t m_symbolType;
+    SymbolTypePtr_t m_targetType;
+    SymbolTypePtr_t m_heldType;
+    RC<AstExpression> m_proxyExpr;
+    RC<AstExpression> m_overrideExpr;
+    uint32 m_foundIndex;
+    bool m_enableGenericMemberSubstitution;
 
     RC<AstMember> CloneImpl() const
     {
         return RC<AstMember>(new AstMember(
             m_fieldName,
             CloneAstNode(m_target),
-            m_location
-        ));
+            m_location));
     }
 };
 

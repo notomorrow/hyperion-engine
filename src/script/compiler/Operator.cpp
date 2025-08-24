@@ -57,16 +57,16 @@ Operator::Operator(
     int precedence,
     int type,
     bool modifiesValue,
-    bool supportsOverloading
-) : m_opType(opType),
-    m_precedence(precedence),
-    m_type(type),
-    m_modifiesValue(modifiesValue),
-    m_supportsOverloading(supportsOverloading)
+    bool supportsOverloading)
+    : m_opType(opType),
+      m_precedence(precedence),
+      m_type(type),
+      m_modifiesValue(modifiesValue),
+      m_supportsOverloading(supportsOverloading)
 {
 }
 
-Operator::Operator(const Operator &other)
+Operator::Operator(const Operator& other)
     : m_opType(other.m_opType),
       m_precedence(other.m_precedence),
       m_type(other.m_type),
@@ -77,14 +77,17 @@ Operator::Operator(const Operator &other)
 
 String Operator::LookupStringValue() const
 {
-    const auto *map = &Operator::binaryOperators;
+    const auto* map = &Operator::binaryOperators;
 
-    if (IsUnary()) {
+    if (IsUnary())
+    {
         map = &Operator::unaryOperators;
     }
 
-    for (const auto &it : *map) {
-        if (it.second->GetOperatorType() == m_opType) {
+    for (const auto& it : *map)
+    {
+        if (it.second->GetOperatorType() == m_opType)
+        {
             return it.first;
         }
     }
@@ -92,10 +95,12 @@ String Operator::LookupStringValue() const
     return "??";
 }
 
-const Operator *Operator::FindBinaryOperator(Operators op)
+const Operator* Operator::FindBinaryOperator(Operators op)
 {
-    for (auto &it : binaryOperators) {
-        if (it.second->GetOperatorType() == op) {
+    for (auto& it : binaryOperators)
+    {
+        if (it.second->GetOperatorType() == op)
+        {
             return it.second;
         }
     }
@@ -103,10 +108,12 @@ const Operator *Operator::FindBinaryOperator(Operators op)
     return nullptr;
 }
 
-const Operator *Operator::FindUnaryOperator(Operators op)
+const Operator* Operator::FindUnaryOperator(Operators op)
 {
-    for (auto &it : unaryOperators) {
-        if (it.second->GetOperatorType() == op) {
+    for (auto& it : unaryOperators)
+    {
+        if (it.second->GetOperatorType() == op)
+        {
             return it.second;
         }
     }

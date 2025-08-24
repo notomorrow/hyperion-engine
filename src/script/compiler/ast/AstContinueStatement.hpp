@@ -12,13 +12,13 @@ namespace hyperion::compiler {
 class AstContinueStatement : public AstStatement
 {
 public:
-    AstContinueStatement(const SourceLocation &location);
+    AstContinueStatement(const SourceLocation& location);
     virtual ~AstContinueStatement() = default;
 
-    virtual void Visit(AstVisitor *visitor, Module *mod) override;
-    virtual std::unique_ptr<Buildable> Build(AstVisitor *visitor, Module *mod) override;
-    virtual void Optimize(AstVisitor *visitor, Module *mod) override;
-    
+    virtual void Visit(AstVisitor* visitor, Module* mod) override;
+    virtual std::unique_ptr<Buildable> Build(AstVisitor* visitor, Module* mod) override;
+    virtual void Optimize(AstVisitor* visitor, Module* mod) override;
+
     virtual RC<AstStatement> Clone() const override;
 
     virtual HashCode GetHashCode() const override
@@ -32,8 +32,7 @@ private:
     RC<AstContinueStatement> CloneImpl() const
     {
         return RC<AstContinueStatement>(new AstContinueStatement(
-            m_location
-        ));
+            m_location));
     }
 };
 

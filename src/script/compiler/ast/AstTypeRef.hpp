@@ -9,16 +9,15 @@ class AstTypeRef : public AstExpression
 {
 public:
     AstTypeRef(
-        const SymbolTypePtr_t &symbolType,
-        const SourceLocation &location
-    );
+        const SymbolTypePtr_t& symbolType,
+        const SourceLocation& location);
 
     virtual ~AstTypeRef() = default;
 
-    virtual void Visit(AstVisitor *visitor, Module *mod) override;
-    virtual std::unique_ptr<Buildable> Build(AstVisitor *visitor, Module *mod) override;
-    virtual void Optimize(AstVisitor *visitor, Module *mod) override;
-    
+    virtual void Visit(AstVisitor* visitor, Module* mod) override;
+    virtual std::unique_ptr<Buildable> Build(AstVisitor* visitor, Module* mod) override;
+    virtual void Optimize(AstVisitor* visitor, Module* mod) override;
+
     virtual RC<AstStatement> Clone() const override;
 
     virtual Tribool IsTrue() const override;
@@ -36,17 +35,16 @@ public:
     }
 
 private:
-    SymbolTypePtr_t             m_symbolType;
-    
+    SymbolTypePtr_t m_symbolType;
+
     // set while analyzing
-    bool                        m_isVisited;
+    bool m_isVisited;
 
     RC<AstTypeRef> CloneImpl() const
     {
         return RC<AstTypeRef>(new AstTypeRef(
             m_symbolType,
-            m_location
-        ));
+            m_location));
     }
 };
 

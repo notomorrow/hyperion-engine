@@ -4,12 +4,12 @@
 
 namespace hyperion::compiler {
 
-AstUndefined::AstUndefined(const SourceLocation &location)
+AstUndefined::AstUndefined(const SourceLocation& location)
     : AstConstant(location)
 {
 }
 
-std::unique_ptr<Buildable> AstUndefined::Build(AstVisitor *visitor, Module *mod)
+std::unique_ptr<Buildable> AstUndefined::Build(AstVisitor* visitor, Module* mod)
 {
     return nullptr;
 }
@@ -44,7 +44,7 @@ SymbolTypePtr_t AstUndefined::GetExprType() const
     return BuiltinTypes::UNDEFINED;
 }
 
-RC<AstConstant> AstUndefined::HandleOperator(Operators opType, const AstConstant *right) const
+RC<AstConstant> AstUndefined::HandleOperator(Operators opType, const AstConstant* right) const
 {
     return nullptr;
 }

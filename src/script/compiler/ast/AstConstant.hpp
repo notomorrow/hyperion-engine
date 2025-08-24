@@ -11,14 +11,17 @@ namespace hyperion::compiler {
 class AstConstant : public AstExpression
 {
 public:
-    AstConstant(const SourceLocation &location);
+    AstConstant(const SourceLocation& location);
     virtual ~AstConstant() = default;
 
-    virtual void Visit(AstVisitor *visitor, Module *mod) override;
-    virtual std::unique_ptr<Buildable> Build(AstVisitor *visitor, Module *mod) override = 0;
-    virtual void Optimize(AstVisitor *visitor, Module *mod) override;
+    virtual void Visit(AstVisitor* visitor, Module* mod) override;
+    virtual std::unique_ptr<Buildable> Build(AstVisitor* visitor, Module* mod) override = 0;
+    virtual void Optimize(AstVisitor* visitor, Module* mod) override;
 
-    virtual bool IsLiteral() const override { return true; }
+    virtual bool IsLiteral() const override
+    {
+        return true;
+    }
     virtual RC<AstStatement> Clone() const override = 0;
 
     virtual Tribool IsTrue() const override = 0;
@@ -33,7 +36,7 @@ public:
         return AstExpression::GetHashCode().Add(TypeName<AstConstant>());
     }
 
-    virtual RC<AstConstant> HandleOperator(Operators opType, const AstConstant *right) const = 0;
+    virtual RC<AstConstant> HandleOperator(Operators opType, const AstConstant* right) const = 0;
 };
 
 } // namespace hyperion::compiler

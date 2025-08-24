@@ -14,31 +14,40 @@ class AstModuleImportPart : public AstStatement
 {
 public:
     AstModuleImportPart(
-        const String &left,
-        const Array<RC<AstModuleImportPart>> &rightParts,
-        const SourceLocation &location
-    );
+        const String& left,
+        const Array<RC<AstModuleImportPart>>& rightParts,
+        const SourceLocation& location);
     virtual ~AstModuleImportPart() = default;
 
-    const String &GetLeft() const
-        { return m_left; }
+    const String& GetLeft() const
+    {
+        return m_left;
+    }
 
-    const Array<RC<AstModuleImportPart>> &GetParts() const
-        { return m_rightParts; }
+    const Array<RC<AstModuleImportPart>>& GetParts() const
+    {
+        return m_rightParts;
+    }
 
     void SetPullInModules(bool pullInModules)
-        { m_pullInModules = pullInModules; }
+    {
+        m_pullInModules = pullInModules;
+    }
 
-    Array<RC<Identifier>> &GetIdentifiers()
-        { return m_identifiers; }
+    Array<RC<Identifier>>& GetIdentifiers()
+    {
+        return m_identifiers;
+    }
 
-    const Array<RC<Identifier>> &GetIdentifiers() const
-        { return m_identifiers; }
+    const Array<RC<Identifier>>& GetIdentifiers() const
+    {
+        return m_identifiers;
+    }
 
-    virtual void Visit(AstVisitor *visitor, Module *mod) override;
-    virtual std::unique_ptr<Buildable> Build(AstVisitor *visitor, Module *mod) override;
-    virtual void Optimize(AstVisitor *visitor, Module *mod) override;
-    
+    virtual void Visit(AstVisitor* visitor, Module* mod) override;
+    virtual std::unique_ptr<Buildable> Build(AstVisitor* visitor, Module* mod) override;
+    virtual void Optimize(AstVisitor* visitor, Module* mod) override;
+
     virtual RC<AstStatement> Clone() const override;
 
     virtual HashCode GetHashCode() const override
@@ -47,7 +56,8 @@ public:
         hc.Add(TypeName<AstModuleImportPart>());
         hc.Add(m_left);
 
-        for (auto &part : m_rightParts) {
+        for (auto& part : m_rightParts)
+        {
             hc.Add(part ? part->GetHashCode() : HashCode());
         }
 
@@ -55,20 +65,19 @@ public:
     }
 
 private:
-    String                          m_left;
-    Array<RC<AstModuleImportPart>>  m_rightParts;
+    String m_left;
+    Array<RC<AstModuleImportPart>> m_rightParts;
 
     // set while analyzing
-    bool                            m_pullInModules;
-    Array<RC<Identifier>>           m_identifiers;
+    bool m_pullInModules;
+    Array<RC<Identifier>> m_identifiers;
 
     RC<AstModuleImportPart> CloneImpl() const
     {
         return RC<AstModuleImportPart>(new AstModuleImportPart(
             m_left,
             CloneAllAstNodes(m_rightParts),
-            m_location
-        ));
+            m_location));
     }
 };
 
@@ -76,19 +85,19 @@ class AstModuleImport : public AstImport
 {
 public:
     AstModuleImport(
-        const Array<RC<AstModuleImportPart>> &parts,
-        const SourceLocation &location
-    );
+        const Array<RC<AstModuleImportPart>>& parts,
+        const SourceLocation& location);
 
-    virtual void Visit(AstVisitor *visitor, Module *mod) override;
-    
+    virtual void Visit(AstVisitor* visitor, Module* mod) override;
+
     virtual RC<AstStatement> Clone() const override;
 
     virtual HashCode GetHashCode() const override
     {
         HashCode hc = AstImport::GetHashCode().Add(TypeName<AstModuleImport>());
 
-        for (auto &part : m_parts) {
+        for (auto& part : m_parts)
+        {
             hc.Add(part ? part->GetHashCode() : HashCode());
         }
 
@@ -102,8 +111,7 @@ protected:
     {
         return RC<AstModuleImport>(new AstModuleImport(
             CloneAllAstNodes(m_parts),
-            m_location
-        ));
+            m_location));
     }
 };
 

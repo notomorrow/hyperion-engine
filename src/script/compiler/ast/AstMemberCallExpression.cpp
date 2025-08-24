@@ -26,20 +26,19 @@
 namespace hyperion::compiler {
 
 AstMemberCallExpression::AstMemberCallExpression(
-    const String &fieldName,
-    const RC<AstExpression> &target,
-    const RC<AstArgumentList> &arguments,
-    const SourceLocation &location
-) : AstMember(
-        fieldName,
-        target,
-        location
-    ),
-    m_arguments(arguments)
+    const String& fieldName,
+    const RC<AstExpression>& target,
+    const RC<AstArgumentList>& arguments,
+    const SourceLocation& location)
+    : AstMember(
+          fieldName,
+          target,
+          location),
+      m_arguments(arguments)
 {
 }
 
-void AstMemberCallExpression::Visit(AstVisitor *visitor, Module *mod)
+void AstMemberCallExpression::Visit(AstVisitor* visitor, Module* mod)
 {
     AstMember::Visit(visitor, mod);
 
@@ -52,8 +51,7 @@ void AstMemberCallExpression::Visit(AstVisitor *visitor, Module *mod)
         false,
         false,
         "self",
-        selfTarget->GetLocation()
-    ));
+        selfTarget->GetLocation()));
 
     const SizeType numArguments = m_arguments != nullptr
         ? m_arguments->GetArguments().Size() + 1
@@ -63,14 +61,17 @@ void AstMemberCallExpression::Visit(AstVisitor *visitor, Module *mod)
     argsWithSelf.Reserve(numArguments);
     argsWithSelf.PushBack(selfArg);
 
-    if (m_arguments != nullptr) {
-        for (auto &arg : m_arguments->GetArguments()) {
+    if (m_arguments != nullptr)
+    {
+        for (auto& arg : m_arguments->GetArguments())
+        {
             argsWithSelf.PushBack(arg);
         }
     }
 
     // visit each argument
-    for (const RC<AstArgument> &arg : argsWithSelf) {
+    for (const RC<AstArgument>& arg : argsWithSelf)
+    {
         Assert(arg != nullptr);
 
         // note, visit in current module rather than module access
@@ -79,19 +80,22 @@ void AstMemberCallExpression::Visit(AstVisitor *visitor, Module *mod)
         arg->Visit(visitor, visitor->GetCompilationUnit()->GetCurrentModule());
     }
 
-    if (m_symbolType->IsAnyType()) {
+    if (m_symbolType->IsAnyType())
+    {
         m_returnType = BuiltinTypes::ANY;
         m_substitutedArgs = argsWithSelf; // NOTE: do not clone because we don't need to visit again.
-    } else {
+    }
+    else
+    {
         Optional<SymbolTypeFunctionSignature> substituted = SemanticAnalyzer::Helpers::SubstituteFunctionArgs(
             visitor,
             mod,
             m_symbolType,
             argsWithSelf,
-            m_location
-        );
+            m_location);
 
-        if (!substituted.HasValue()) {
+        if (!substituted.HasValue())
+        {
             m_returnType = BuiltinTypes::UNDEFINED;
 
             // not a function type
@@ -99,23 +103,23 @@ void AstMemberCallExpression::Visit(AstVisitor *visitor, Module *mod)
                 LEVEL_ERROR,
                 Msg_not_a_function,
                 m_location,
-                m_symbolType->ToString(true)
-            ));
+                m_symbolType->ToString(true)));
 
             return;
         }
 
         Assert(substituted->returnType != nullptr);
-    
+
         m_returnType = substituted->returnType;
 
         // change args to be newly ordered array
         m_substitutedArgs = CloneAllAstNodes(substituted->params);
 
         // visit each argument (again, substituted)
-        for (const RC<AstArgument> &arg : m_substitutedArgs) {
+        for (const RC<AstArgument>& arg : m_substitutedArgs)
+        {
             Assert(arg != nullptr);
-            
+
             arg->Visit(visitor, visitor->GetCompilationUnit()->GetCurrentModule());
         }
 
@@ -124,21 +128,20 @@ void AstMemberCallExpression::Visit(AstVisitor *visitor, Module *mod)
             mod,
             m_symbolType,
             m_substitutedArgs,
-            m_location
-        );
+            m_location);
     }
 
     // should never be empty; self is needed
-    if (m_substitutedArgs.Empty()) {
+    if (m_substitutedArgs.Empty())
+    {
         visitor->GetCompilationUnit()->GetErrorList().AddError(CompilerError(
             LEVEL_ERROR,
             Msg_internal_error,
-            m_location
-        ));
+            m_location));
     }
 }
 
-std::unique_ptr<Buildable> AstMemberCallExpression::Build(AstVisitor *visitor, Module *mod)
+std::unique_ptr<Buildable> AstMemberCallExpression::Build(AstVisitor* visitor, Module* mod)
 {
     std::unique_ptr<BytecodeChunk> chunk = BytecodeUtil::Make<BytecodeChunk>();
 
@@ -167,13 +170,13 @@ std::unique_ptr<Buildable> AstMemberCallExpression::Build(AstVisitor *visitor, M
     // increment stack size for 'self' var
     visitor->GetCompilationUnit()->GetInstructionStream().IncStackSize();
 
-    if (m_substitutedArgs.Any()) {
+    if (m_substitutedArgs.Any())
+    {
         // build arguments
         chunk->Append(Compiler::BuildArgumentsStart(
             visitor,
             mod,
-            m_substitutedArgs
-        ));
+            m_substitutedArgs));
 
         int stackSize = visitor->GetCompilationUnit()->GetInstructionStream().GetStackSize();
         rp = visitor->GetCompilationUnit()->GetInstructionStream().GetCurrentRegister();
@@ -185,13 +188,15 @@ std::unique_ptr<Buildable> AstMemberCallExpression::Build(AstVisitor *visitor, M
     }
 
     // now we load the member into the register, we call that
-    if (m_foundIndex != -1) {
+    if (m_foundIndex != -1)
+    {
         chunk->Append(Compiler::LoadMemberAtIndex(
             visitor,
             mod,
-            m_foundIndex
-        ));
-    } else {
+            m_foundIndex));
+    }
+    else
+    {
         const uint32 hash = hashFnv1(m_fieldName.Data());
 
         chunk->Append(Compiler::LoadMemberFromHash(visitor, mod, hash));
@@ -202,24 +207,25 @@ std::unique_ptr<Buildable> AstMemberCallExpression::Build(AstVisitor *visitor, M
     chunk->Append(Compiler::BuildCall(
         visitor,
         mod,
-        nullptr, // no target -- handled above
+        nullptr,                            // no target -- handled above
         uint8(m_substitutedArgs.Size() + 1) // call w/ self as first arg
-    ));
+        ));
 
     chunk->Append(Compiler::BuildArgumentsEnd(
         visitor,
         mod,
         m_substitutedArgs.Size() + 1 // pops self off stack as well
-    ));
+        ));
 
     return chunk;
 }
 
-void AstMemberCallExpression::Optimize(AstVisitor *visitor, Module *mod)
+void AstMemberCallExpression::Optimize(AstVisitor* visitor, Module* mod)
 {
     AstMember::Optimize(visitor, mod);
 
-    for (auto &arg : m_substitutedArgs) {
+    for (auto& arg : m_substitutedArgs)
+    {
         Assert(arg != nullptr);
 
         arg->Optimize(visitor, mod);
@@ -250,7 +256,7 @@ SymbolTypePtr_t AstMemberCallExpression::GetExprType() const
     return m_returnType;
 }
 
-const AstExpression *AstMemberCallExpression::GetValueOf() const
+const AstExpression* AstMemberCallExpression::GetValueOf() const
 {
     // if (m_symbolType != nullptr && m_symbolType->GetDefaultValue() != nullptr) {
     //     return m_symbolType->GetDefaultValue()->GetValueOf();
@@ -259,7 +265,7 @@ const AstExpression *AstMemberCallExpression::GetValueOf() const
     return AstExpression::GetValueOf();
 }
 
-const AstExpression *AstMemberCallExpression::GetDeepValueOf() const
+const AstExpression* AstMemberCallExpression::GetDeepValueOf() const
 {
     // if (m_symbolType != nullptr && m_symbolType->GetDefaultValue() != nullptr) {
     //     return m_symbolType->GetDefaultValue()->GetDeepValueOf();
@@ -268,9 +274,10 @@ const AstExpression *AstMemberCallExpression::GetDeepValueOf() const
     return AstExpression::GetDeepValueOf();
 }
 
-AstExpression *AstMemberCallExpression::GetTarget() const
+AstExpression* AstMemberCallExpression::GetTarget() const
 {
-    if (m_target != nullptr) {
+    if (m_target != nullptr)
+    {
         // if (auto *nestedTarget = m_target->GetTarget()) {
         //     return nestedTarget;
         // }

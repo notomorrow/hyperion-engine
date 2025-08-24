@@ -15,20 +15,21 @@
 namespace hyperion::compiler {
 
 AstFileImport::AstFileImport(
-    const String &path,
-    const SourceLocation &location)
+    const String& path,
+    const SourceLocation& location)
     : AstImport(location),
       m_path(path)
 {
 }
 
-void AstFileImport::Visit(AstVisitor *visitor, Module *mod)
+void AstFileImport::Visit(AstVisitor* visitor, Module* mod)
 {
     // find the folder which the current file is in
     std::string dir = m_location.GetFileName().Data();
     const SizeType index = dir.findLastOf("/\\");
 
-    if (index != std::string::npos) {
+    if (index != std::string::npos)
+    {
         dir = dir.substr(0, index) + "/";
     }
 
@@ -38,8 +39,7 @@ void AstFileImport::Visit(AstVisitor *visitor, Module *mod)
     AstImport::PerformImport(
         visitor,
         mod,
-        filepath
-    );
+        filepath);
 }
 
 RC<AstStatement> AstFileImport::Clone() const

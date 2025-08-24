@@ -4,13 +4,13 @@
 
 namespace hyperion {
 
-SourceStream::SourceStream(SourceFile *file)
+SourceStream::SourceStream(SourceFile* file)
     : m_file(file),
       m_position(0)
 {
 }
 
-SourceStream::SourceStream(const SourceStream &other)
+SourceStream::SourceStream(const SourceStream& other)
     : m_file(other.m_file),
       m_position(other.m_position)
 {
@@ -19,7 +19,8 @@ SourceStream::SourceStream(const SourceStream &other)
 utf::u32char SourceStream::Peek() const
 {
     SizeType pos = m_position;
-    if (pos >= m_file->GetSize()) {
+    if (pos >= m_file->GetSize())
+    {
         return '\0';
     }
 
@@ -38,25 +39,34 @@ utf::u32char SourceStream::Peek() const
     // check to see if it is a utf-8 character
     const unsigned char uc = (unsigned char)ch;
 
-    if (uc >= 0 && uc <= 127) {
+    if (uc >= 0 && uc <= 127)
+    {
         // 1-byte character
         bytes[0] = ch;
-    } else if ((uc & 0xE0) == 0xC0) {
+    }
+    else if ((uc & 0xE0) == 0xC0)
+    {
         // 2-byte character
         bytes[0] = ch;
         bytes[1] = m_file->GetBuffer()[pos + 1];
-    } else if ((uc & 0xF0) == 0xE0) {
+    }
+    else if ((uc & 0xF0) == 0xE0)
+    {
         // 3-byte character
         bytes[0] = ch;
         bytes[1] = m_file->GetBuffer()[pos + 1];
         bytes[2] = m_file->GetBuffer()[pos + 2];
-    } else if ((uc & 0xF8) == 0xF0) {
+    }
+    else if ((uc & 0xF8) == 0xF0)
+    {
         // 4-byte character
         bytes[0] = ch;
         bytes[1] = m_file->GetBuffer()[pos + 1];
         bytes[2] = m_file->GetBuffer()[pos + 2];
         bytes[3] = m_file->GetBuffer()[pos + 3];
-    } else {
+    }
+    else
+    {
         // invalid utf-8
         u32Ch = (utf::u32char)('\0');
     }
@@ -70,11 +80,12 @@ utf::u32char SourceStream::Next()
     return Next(tmp);
 }
 
-utf::u32char SourceStream::Next(int &posChange)
+utf::u32char SourceStream::Next(int& posChange)
 {
     int posBefore = m_position;
 
-    if (m_position >= m_file->GetSize()) {
+    if (m_position >= m_file->GetSize())
+    {
         return (utf::u32char)('\0');
     }
 
@@ -92,26 +103,35 @@ utf::u32char SourceStream::Next(int &posChange)
 
     // check to see if it is a utf-8 character
     const unsigned char uc = (unsigned char)ch;
-    
-    if (uc >= 0 && uc <= 127) {
+
+    if (uc >= 0 && uc <= 127)
+    {
         // 1-byte character
         bytes[0] = ch;
-    } else if ((uc & 0xE0) == 0xC0) {
+    }
+    else if ((uc & 0xE0) == 0xC0)
+    {
         // 2-byte character
         bytes[0] = ch;
         bytes[1] = m_file->GetBuffer()[m_position++];
-    } else if ((uc & 0xF0) == 0xE0) {
+    }
+    else if ((uc & 0xF0) == 0xE0)
+    {
         // 3-byte character
         bytes[0] = ch;
         bytes[1] = m_file->GetBuffer()[m_position++];
         bytes[2] = m_file->GetBuffer()[m_position++];
-    } else if ((uc & 0xF8) == 0xF0) {
+    }
+    else if ((uc & 0xF8) == 0xF0)
+    {
         // 4-byte character
         bytes[0] = ch;
         bytes[1] = m_file->GetBuffer()[m_position++];
         bytes[2] = m_file->GetBuffer()[m_position++];
         bytes[3] = m_file->GetBuffer()[m_position++];
-    } else {
+    }
+    else
+    {
         // invalid utf-8
         u32Ch = (utf::u32char)('\0');
     }
@@ -123,19 +143,22 @@ utf::u32char SourceStream::Next(int &posChange)
 
 void SourceStream::GoBack(int n)
 {
-    if (((int)m_position - n) < 0) {
+    if (((int)m_position - n) < 0)
+    {
         throw std::out_of_range("not large enough to go back");
     }
     m_position -= n;
 }
 
-void SourceStream::Read(char *ptr, SizeType numBytes)
+void SourceStream::Read(char* ptr, SizeType numBytes)
 {
-    for (size_t i = 0; i < numBytes; i++) {
-        if (m_position >= m_file->GetSize()) {
+    for (size_t i = 0; i < numBytes; i++)
+    {
+        if (m_position >= m_file->GetSize())
+        {
             throw std::out_of_range("attempted to read past the limit");
         }
-        
+
         ptr[i] = m_file->GetBuffer()[m_position++];
     }
 }

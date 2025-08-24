@@ -16,18 +16,17 @@ class AstForLoop : public AstStatement
 {
 public:
     AstForLoop(
-        const RC<AstStatement> &declPart,
-        const RC<AstExpression> &conditionPart,
-        const RC<AstExpression> &incrementPart,
-        const RC<AstBlock> &block,
-        const SourceLocation &location
-    );
+        const RC<AstStatement>& declPart,
+        const RC<AstExpression>& conditionPart,
+        const RC<AstExpression>& incrementPart,
+        const RC<AstBlock>& block,
+        const SourceLocation& location);
     virtual ~AstForLoop() override = default;
 
-    virtual void Visit(AstVisitor *visitor, Module *mod) override;
-    virtual std::unique_ptr<Buildable> Build(AstVisitor *visitor, Module *mod) override;
-    virtual void Optimize(AstVisitor *visitor, Module *mod) override;
-    
+    virtual void Visit(AstVisitor* visitor, Module* mod) override;
+    virtual std::unique_ptr<Buildable> Build(AstVisitor* visitor, Module* mod) override;
+    virtual void Optimize(AstVisitor* visitor, Module* mod) override;
+
     virtual RC<AstStatement> Clone() const override;
 
     virtual HashCode GetHashCode() const override
@@ -43,16 +42,16 @@ public:
     }
 
 private:
-    RC<AstStatement>    m_declPart;
-    RC<AstExpression>   m_conditionPart;
-    RC<AstExpression>   m_incrementPart;
-    RC<AstBlock>        m_block;
+    RC<AstStatement> m_declPart;
+    RC<AstExpression> m_conditionPart;
+    RC<AstExpression> m_incrementPart;
+    RC<AstBlock> m_block;
 
     // set while analyzing
-    int                 m_numLocals;
-    int                 m_numUsedInitializers;
+    int m_numLocals;
+    int m_numUsedInitializers;
 
-    RC<AstExpression>   m_expr;
+    RC<AstExpression> m_expr;
 
     RC<AstForLoop> CloneImpl() const
     {
@@ -61,8 +60,7 @@ private:
             CloneAstNode(m_conditionPart),
             CloneAstNode(m_incrementPart),
             CloneAstNode(m_block),
-            m_location
-        ));
+            m_location));
     }
 };
 

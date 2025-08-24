@@ -12,32 +12,34 @@
 namespace hyperion::compiler {
 
 AstArgumentList::AstArgumentList(
-    const Array<RC<AstArgument>> &args,
-    const SourceLocation &location)
+    const Array<RC<AstArgument>>& args,
+    const SourceLocation& location)
     : AstExpression(location, ACCESS_MODE_LOAD),
       m_args(args)
 {
 }
 
-void AstArgumentList::Visit(AstVisitor *visitor, Module *mod)
+void AstArgumentList::Visit(AstVisitor* visitor, Module* mod)
 {
     Assert(visitor != nullptr);
     Assert(mod != nullptr);
 
-    for (const RC<AstArgument> &arg : m_args) {
+    for (const RC<AstArgument>& arg : m_args)
+    {
         Assert(arg != nullptr);
         arg->Visit(visitor, mod);
     }
 }
 
-std::unique_ptr<Buildable> AstArgumentList::Build(AstVisitor *visitor, Module *mod)
+std::unique_ptr<Buildable> AstArgumentList::Build(AstVisitor* visitor, Module* mod)
 {
     Assert(visitor != nullptr);
     Assert(mod != nullptr);
 
     std::unique_ptr<BytecodeChunk> chunk = BytecodeUtil::Make<BytecodeChunk>();
 
-    for (const RC<AstArgument> &arg : m_args) {
+    for (const RC<AstArgument>& arg : m_args)
+    {
         Assert(arg != nullptr);
         chunk->Append(arg->Build(visitor, mod));
     }
@@ -45,12 +47,13 @@ std::unique_ptr<Buildable> AstArgumentList::Build(AstVisitor *visitor, Module *m
     return chunk;
 }
 
-void AstArgumentList::Optimize(AstVisitor *visitor, Module *mod)
+void AstArgumentList::Optimize(AstVisitor* visitor, Module* mod)
 {
     Assert(visitor != nullptr);
     Assert(mod != nullptr);
 
-    for (const RC<AstArgument> &arg : m_args) {
+    for (const RC<AstArgument>& arg : m_args)
+    {
         Assert(arg != nullptr);
         arg->Optimize(visitor, mod);
     }
@@ -68,10 +71,12 @@ Tribool AstArgumentList::IsTrue() const
 
 bool AstArgumentList::MayHaveSideEffects() const
 {
-    for (const RC<AstArgument> &arg : m_args) {
+    for (const RC<AstArgument>& arg : m_args)
+    {
         Assert(arg != nullptr);
-        
-        if (arg->MayHaveSideEffects()) {
+
+        if (arg->MayHaveSideEffects())
+        {
             return true;
         }
     }

@@ -47,312 +47,388 @@
 
 #define HYP_SCRIPT_FUNCTION(name) void name(hyperion::sdk::Params params)
 
-#define HYP_SCRIPT_CHECK_ARGS(cmp, amt) \
-    do { \
-        if (!(params.nargs cmp amt)) { \
-            params.handler->state->ThrowException(params.handler->thread, \
+#define HYP_SCRIPT_CHECK_ARGS(cmp, amt)                                                      \
+    do                                                                                       \
+    {                                                                                        \
+        if (!(params.nargs cmp amt))                                                         \
+        {                                                                                    \
+            params.handler->state->ThrowException(params.handler->thread,                    \
                 hyperion::vm::Exception::InvalidArgsException(#cmp " " #amt, params.nargs)); \
-            return; \
-        } \
-    } while (false)
+            return;                                                                          \
+        }                                                                                    \
+    }                                                                                        \
+    while (false)
 
-#define HYP_SCRIPT_THROW(exception) \
-    do { \
-        params.handler->state->ThrowException(\
-            params.handler->thread, \
-            exception \
-        ); \
-        return; \
-    } while (0)
+#define HYP_SCRIPT_THROW(exception)            \
+    do                                         \
+    {                                          \
+        params.handler->state->ThrowException( \
+            params.handler->thread,            \
+            exception);                        \
+        return;                                \
+    }                                          \
+    while (0)
 
-#define HYP_SCRIPT_RETURN(value) \
-    do { \
+#define HYP_SCRIPT_RETURN(value)                           \
+    do                                                     \
+    {                                                      \
         params.handler->thread->GetRegisters()[0] = value; \
-        return; \
-    } while (false)
+        return;                                            \
+    }                                                      \
+    while (false)
 
-#define HYP_SCRIPT_RETURN_PTR(value) \
-    do { \
-        Assert(value != nullptr); \
-        value->Mark(); \
-        vm::Value _res; \
+#define HYP_SCRIPT_RETURN_PTR(value)           \
+    do                                         \
+    {                                          \
+        Assert(value != nullptr);              \
+        value->Mark();                         \
+        vm::Value _res;                        \
         _res.m_type = vm::Value::HEAP_POINTER; \
-        _res.m_value.ptr = value; \
-        HYP_SCRIPT_RETURN(_res); \
-    } while (false)
+        _res.m_value.ptr = value;              \
+        HYP_SCRIPT_RETURN(_res);               \
+    }                                          \
+    while (false)
 
-#define HYP_SCRIPT_RETURN_NULL() \
-    do { \
-        vm::Value _res; \
+#define HYP_SCRIPT_RETURN_NULL()               \
+    do                                         \
+    {                                          \
+        vm::Value _res;                        \
         _res.m_type = vm::Value::HEAP_POINTER; \
-        _res.m_value.ptr = nullptr; \
-        HYP_SCRIPT_RETURN(_res); \
-    } while (false)
+        _res.m_value.ptr = nullptr;            \
+        HYP_SCRIPT_RETURN(_res);               \
+    }                                          \
+    while (false)
 
-#define HYP_SCRIPT_RETURN_VOID(value) \
-    do { \
-        (void)(value); \
-        vm::Value _res; \
+#define HYP_SCRIPT_RETURN_VOID(value)  \
+    do                                 \
+    {                                  \
+        (void)(value);                 \
+        vm::Value _res;                \
         _res.m_type = vm::Value::NONE; \
-        HYP_SCRIPT_RETURN(_res); \
-    } while (false)
+        HYP_SCRIPT_RETURN(_res);       \
+    }                                  \
+    while (false)
 
 #define HYP_SCRIPT_RETURN_INT32(value) \
-    do { \
-        vm::Value _res; \
-        _res.m_type = vm::Value::I32; \
-        _res.m_value.i32 = value; \
-        HYP_SCRIPT_RETURN(_res); \
-    } while (false)
+    do                                 \
+    {                                  \
+        vm::Value _res;                \
+        _res.m_type = vm::Value::I32;  \
+        _res.m_value.i32 = value;      \
+        HYP_SCRIPT_RETURN(_res);       \
+    }                                  \
+    while (false)
 
 #define HYP_SCRIPT_RETURN_INT64(value) \
-    do { \
-        vm::Value _res; \
-        _res.m_type = vm::Value::I64; \
-        _res.m_value.i64 = value; \
-        HYP_SCRIPT_RETURN(_res); \
-    } while (false)
+    do                                 \
+    {                                  \
+        vm::Value _res;                \
+        _res.m_type = vm::Value::I64;  \
+        _res.m_value.i64 = value;      \
+        HYP_SCRIPT_RETURN(_res);       \
+    }                                  \
+    while (false)
 
 #define HYP_SCRIPT_RETURN_UINT32(value) \
-    do { \
-        vm::Value _res; \
-        _res.m_type = vm::Value::U32; \
-        _res.m_value.u32 = value; \
-        HYP_SCRIPT_RETURN(_res); \
-    } while (false)
+    do                                  \
+    {                                   \
+        vm::Value _res;                 \
+        _res.m_type = vm::Value::U32;   \
+        _res.m_value.u32 = value;       \
+        HYP_SCRIPT_RETURN(_res);        \
+    }                                   \
+    while (false)
 
 #define HYP_SCRIPT_RETURN_UINT64(value) \
-    do { \
-        vm::Value _res; \
-        _res.m_type = vm::Value::U64; \
-        _res.m_value.u64 = value; \
-        HYP_SCRIPT_RETURN(_res); \
-    } while (false)
+    do                                  \
+    {                                   \
+        vm::Value _res;                 \
+        _res.m_type = vm::Value::U64;   \
+        _res.m_value.u64 = value;       \
+        HYP_SCRIPT_RETURN(_res);        \
+    }                                   \
+    while (false)
 
 #define HYP_SCRIPT_RETURN_FLOAT32(value) \
-    do { \
-        vm::Value _res; \
-        _res.m_type = vm::Value::F32; \
-        _res.m_value.f = value; \
-        HYP_SCRIPT_RETURN(_res); \
-    } while (false)
+    do                                   \
+    {                                    \
+        vm::Value _res;                  \
+        _res.m_type = vm::Value::F32;    \
+        _res.m_value.f = value;          \
+        HYP_SCRIPT_RETURN(_res);         \
+    }                                    \
+    while (false)
 
 #define HYP_SCRIPT_RETURN_FLOAT64(value) \
-    do { \
-        vm::Value _res; \
-        _res.m_type = vm::Value::F64; \
-        _res.m_value.d = value; \
-        HYP_SCRIPT_RETURN(_res); \
-    } while (false)
+    do                                   \
+    {                                    \
+        vm::Value _res;                  \
+        _res.m_type = vm::Value::F64;    \
+        _res.m_value.d = value;          \
+        HYP_SCRIPT_RETURN(_res);         \
+    }                                    \
+    while (false)
 
-#define HYP_SCRIPT_RETURN_BOOLEAN(value) \
-    do { \
-        vm::Value _res; \
+#define HYP_SCRIPT_RETURN_BOOLEAN(value)  \
+    do                                    \
+    {                                     \
+        vm::Value _res;                   \
         _res.m_type = vm::Value::BOOLEAN; \
-        _res.m_value.b = value; \
-        HYP_SCRIPT_RETURN(_res); \
-    } while (false)
+        _res.m_value.b = value;           \
+        HYP_SCRIPT_RETURN(_res);          \
+    }                                     \
+    while (false)
 
-
-#define HYP_SCRIPT_GET_ARG_INT(index, name) \
-    int64 name; \
-    do { \
-        vm::Number num; \
-        if (!params.args[index]->GetSignedOrUnsigned(&num)) { \
+#define HYP_SCRIPT_GET_ARG_INT(index, name)                                                                                                                  \
+    int64 name;                                                                                                                                              \
+    do                                                                                                                                                       \
+    {                                                                                                                                                        \
+        vm::Number num;                                                                                                                                      \
+        if (!params.args[index]->GetSignedOrUnsigned(&num))                                                                                                  \
+        {                                                                                                                                                    \
             params.handler->state->ThrowException(params.handler->thread, vm::Exception("Expected argument at index " #index " to be of type int or uint")); \
-            return (decltype(name))0; \
-        } \
-        name = (num.flags & vm::Number::FLAG_UNSIGNED) ? static_cast<int64>(num.u) : num.i; \
-    } while (false)
+            return (decltype(name))0;                                                                                                                        \
+        }                                                                                                                                                    \
+        name = (num.flags & vm::Number::FLAG_UNSIGNED) ? static_cast<int64>(num.u) : num.i;                                                                  \
+    }                                                                                                                                                        \
+    while (false)
 
-#define HYP_SCRIPT_GET_ARG_UINT(index, name) \
-    uint64 name; \
-    do { \
-        vm::Number num; \
-        if (!params.args[index]->GetSignedOrUnsigned(&num)) { \
+#define HYP_SCRIPT_GET_ARG_UINT(index, name)                                                                                                                 \
+    uint64 name;                                                                                                                                             \
+    do                                                                                                                                                       \
+    {                                                                                                                                                        \
+        vm::Number num;                                                                                                                                      \
+        if (!params.args[index]->GetSignedOrUnsigned(&num))                                                                                                  \
+        {                                                                                                                                                    \
             params.handler->state->ThrowException(params.handler->thread, vm::Exception("Expected argument at index " #index " to be of type int or uint")); \
-            return (decltype(name))0; \
-        } \
-        name = (num.flags & vm::Number::FLAG_SIGNED) ? static_cast<uint64>(num.i) : num.u; \
-    } while (false)
+            return (decltype(name))0;                                                                                                                        \
+        }                                                                                                                                                    \
+        name = (num.flags & vm::Number::FLAG_SIGNED) ? static_cast<uint64>(num.i) : num.u;                                                                   \
+    }                                                                                                                                                        \
+    while (false)
 
-#define HYP_SCRIPT_GET_ARG_BOOLEAN(index, name) \
-    bool name; \
-    do { \
-        if (!params.args[index]->GetBoolean(&name)) { \
+#define HYP_SCRIPT_GET_ARG_BOOLEAN(index, name)                                                                                                       \
+    bool name;                                                                                                                                        \
+    do                                                                                                                                                \
+    {                                                                                                                                                 \
+        if (!params.args[index]->GetBoolean(&name))                                                                                                   \
+        {                                                                                                                                             \
             params.handler->state->ThrowException(params.handler->thread, vm::Exception("Expected argument at index " #index " to be of type bool")); \
-            return (decltype(name))0; \
-        } \
-    } while (false)
+            return (decltype(name))0;                                                                                                                 \
+        }                                                                                                                                             \
+    }                                                                                                                                                 \
+    while (false)
 
-#define HYP_SCRIPT_GET_ARG_FLOAT(index, name) \
-    double name; \
-    do { \
-        if (!params.args[index]->GetFloatingPointCoerce(&name)) { \
+#define HYP_SCRIPT_GET_ARG_FLOAT(index, name)                                                                                                          \
+    double name;                                                                                                                                       \
+    do                                                                                                                                                 \
+    {                                                                                                                                                  \
+        if (!params.args[index]->GetFloatingPointCoerce(&name))                                                                                        \
+        {                                                                                                                                              \
             params.handler->state->ThrowException(params.handler->thread, vm::Exception("Expected argument at index " #index " to be of type float")); \
-            return (decltype(name))0; \
-        } \
-    } while (false) 
+            return (decltype(name))0;                                                                                                                  \
+        }                                                                                                                                              \
+    }                                                                                                                                                  \
+    while (false)
 
-#define HYP_SCRIPT_GET_ARG_PTR(index, type, name) \
-    type *name; \
-    do { \
-        if (!params.args[index]->GetPointer<type>(&name)) { \
+#define HYP_SCRIPT_GET_ARG_PTR(index, type, name)                                                                                                       \
+    type* name;                                                                                                                                         \
+    do                                                                                                                                                  \
+    {                                                                                                                                                   \
+        if (!params.args[index]->GetPointer<type>(&name))                                                                                               \
+        {                                                                                                                                               \
             params.handler->state->ThrowException(params.handler->thread, vm::Exception("Expected argument at index " #index " to be of type " #type)); \
-        } \
-    } while (false)
+        }                                                                                                                                               \
+    }                                                                                                                                                   \
+    while (false)
 
-#define HYP_SCRIPT_GET_ARG_PTR_RAW(index, type, name) \
-    type *name; \
-    do { \
-        if (!params.args[index]->GetUserData<type>(&name)) { \
+#define HYP_SCRIPT_GET_ARG_PTR_RAW(index, type, name)                                                                                                   \
+    type* name;                                                                                                                                         \
+    do                                                                                                                                                  \
+    {                                                                                                                                                   \
+        if (!params.args[index]->GetUserData<type>(&name))                                                                                              \
+        {                                                                                                                                               \
             params.handler->state->ThrowException(params.handler->thread, vm::Exception("Expected argument at index " #index " to be of type " #type)); \
-            return (decltype(name))nullptr; \
-        } \
-    } while (false)
+            return (decltype(name))nullptr;                                                                                                             \
+        }                                                                                                                                               \
+    }                                                                                                                                                   \
+    while (false)
 
-
-
-#define HYP_SCRIPT_GET_ARG_INT_1(index, name) \
-    int64 name; \
-    do { \
-        auto _value = ConvertScriptObject<int64>(params.apiInstance, *params.args[index]); \
-        if (!_value.HasValue()) { \
+#define HYP_SCRIPT_GET_ARG_INT_1(index, name)                                                                                                    \
+    int64 name;                                                                                                                                  \
+    do                                                                                                                                           \
+    {                                                                                                                                            \
+        auto _value = ConvertScriptObject<int64>(params.apiInstance, *params.args[index]);                                                       \
+        if (!_value.HasValue())                                                                                                                  \
+        {                                                                                                                                        \
             params.handler->state->ThrowException(params.handler->thread, vm::Exception("Expected argument at index " #index " to be numeric")); \
-            return (decltype(name))0; \
-        } \
-        name = _value.Get(); \
-    } while (false)
+            return (decltype(name))0;                                                                                                            \
+        }                                                                                                                                        \
+        name = _value.Get();                                                                                                                     \
+    }                                                                                                                                            \
+    while (false)
 
-#define HYP_SCRIPT_GET_ARG_UINT_1(index, name) \
-    uint64 name; \
-    do { \
-        auto _value = ConvertScriptObject<uint64>(params.apiInstance, *params.args[index]); \
-        if (!_value.HasValue()) { \
+#define HYP_SCRIPT_GET_ARG_UINT_1(index, name)                                                                                                  \
+    uint64 name;                                                                                                                                \
+    do                                                                                                                                          \
+    {                                                                                                                                           \
+        auto _value = ConvertScriptObject<uint64>(params.apiInstance, *params.args[index]);                                                     \
+        if (!_value.HasValue())                                                                                                                 \
+        {                                                                                                                                       \
             params.handler->state->ThrowException(params.handler->thread, vm::Exception("Expected argument at index " #index " to be number")); \
-            return (decltype(name))0; \
-        } \
-        name = _value.Get(); \
-    } while (false)
+            return (decltype(name))0;                                                                                                           \
+        }                                                                                                                                       \
+        name = _value.Get();                                                                                                                    \
+    }                                                                                                                                           \
+    while (false)
 
-#define HYP_SCRIPT_GET_ARG_BOOLEAN_1(index, name) \
-    bool name; \
-    do { \
-        auto _value = ConvertScriptObject<bool>(params.apiInstance, *params.args[index]); \
-        if (!_value.HasValue()) { \
+#define HYP_SCRIPT_GET_ARG_BOOLEAN_1(index, name)                                                                                                     \
+    bool name;                                                                                                                                        \
+    do                                                                                                                                                \
+    {                                                                                                                                                 \
+        auto _value = ConvertScriptObject<bool>(params.apiInstance, *params.args[index]);                                                             \
+        if (!_value.HasValue())                                                                                                                       \
+        {                                                                                                                                             \
             params.handler->state->ThrowException(params.handler->thread, vm::Exception("Expected argument at index " #index " to be of type bool")); \
-            return (decltype(name))0; \
-        } \
-        name = _value.Get(); \
-    } while (false)
+            return (decltype(name))0;                                                                                                                 \
+        }                                                                                                                                             \
+        name = _value.Get();                                                                                                                          \
+    }                                                                                                                                                 \
+    while (false)
 
-#define HYP_SCRIPT_GET_ARG_FLOAT_1(index, name) \
-    double name; \
-    do { \
-        auto _value = ConvertScriptObject<double>(params.apiInstance, *params.args[index]); \
-        if (!_value.HasValue()) { \
+#define HYP_SCRIPT_GET_ARG_FLOAT_1(index, name)                                                                                                  \
+    double name;                                                                                                                                 \
+    do                                                                                                                                           \
+    {                                                                                                                                            \
+        auto _value = ConvertScriptObject<double>(params.apiInstance, *params.args[index]);                                                      \
+        if (!_value.HasValue())                                                                                                                  \
+        {                                                                                                                                        \
             params.handler->state->ThrowException(params.handler->thread, vm::Exception("Expected argument at index " #index " to be numeric")); \
-            return (decltype(name))0; \
-        } \
-        name = _value.Get(); \
-    } while (false)
+            return (decltype(name))0;                                                                                                            \
+        }                                                                                                                                        \
+        name = _value.Get();                                                                                                                     \
+    }                                                                                                                                            \
+    while (false)
 
-#define HYP_SCRIPT_GET_ARG_PTR_1(index, type, name) \
-    type *name; \
-    do { \
-        auto _value = ConvertScriptObject<type *>(params.apiInstance, *params.args[index]); \
-        if (!_value.HasValue()) { \
+#define HYP_SCRIPT_GET_ARG_PTR_1(index, type, name)                                                                                                               \
+    type* name;                                                                                                                                                   \
+    do                                                                                                                                                            \
+    {                                                                                                                                                             \
+        auto _value = ConvertScriptObject<type*>(params.apiInstance, *params.args[index]);                                                                        \
+        if (!_value.HasValue())                                                                                                                                   \
+        {                                                                                                                                                         \
             params.handler->state->ThrowException(params.handler->thread, vm::Exception("Expected argument at index " #index " to be a pointer of type " #type)); \
-        } \
-        name = _value.Get(); \
-    } while (false)
+        }                                                                                                                                                         \
+        name = _value.Get();                                                                                                                                      \
+    }                                                                                                                                                             \
+    while (false)
 
-#define HYP_SCRIPT_GET_ARG_PTR_RAW_1(index, type, name) \
-    type *name; \
-    do { \
-        auto _value = ConvertScriptObject<void *>(params.apiInstance, *params.args[index]); \
-        if (!_value.HasValue()) { \
+#define HYP_SCRIPT_GET_ARG_PTR_RAW_1(index, type, name)                                                                                                    \
+    type* name;                                                                                                                                            \
+    do                                                                                                                                                     \
+    {                                                                                                                                                      \
+        auto _value = ConvertScriptObject<void*>(params.apiInstance, *params.args[index]);                                                                 \
+        if (!_value.HasValue())                                                                                                                            \
+        {                                                                                                                                                  \
             params.handler->state->ThrowException(params.handler->thread, vm::Exception("Expected argument at index " #index " to be userdata (void *)")); \
-            return (decltype(name))0; \
-        } \
-        name = static_cast<type *>(_value.Get()); \
-    } while (false)
+            return (decltype(name))0;                                                                                                                      \
+        }                                                                                                                                                  \
+        name = static_cast<type*>(_value.Get());                                                                                                           \
+    }                                                                                                                                                      \
+    while (false)
 
-
-
-#define HYP_SCRIPT_GET_MEMBER_INT(object, name, type, declName) \
-    type declName; \
-    do { \
-        vm::Number num; \
-        vm::Member *_member = nullptr; \
-        if (!(_member = object->LookupMemberFromHash(hashFnv1(name))) || !_member->value.GetSignedOrUnsigned(&num)) { \
+#define HYP_SCRIPT_GET_MEMBER_INT(object, name, type, declName)                                                                                 \
+    type declName;                                                                                                                              \
+    do                                                                                                                                          \
+    {                                                                                                                                           \
+        vm::Number num;                                                                                                                         \
+        vm::Member* _member = nullptr;                                                                                                          \
+        if (!(_member = object->LookupMemberFromHash(hashFnv1(name))) || !_member->value.GetSignedOrUnsigned(&num))                             \
+        {                                                                                                                                       \
             params.handler->state->ThrowException(params.handler->thread, vm::Exception("Expected member " name " to be of type int or uint")); \
-            return; \
-        } \
-        declName = (num.flags & vm::Number::FLAG_UNSIGNED) ? static_cast<int64>(num.u) : num.i; \
-    } while (false)
+            return;                                                                                                                             \
+        }                                                                                                                                       \
+        declName = (num.flags & vm::Number::FLAG_UNSIGNED) ? static_cast<int64>(num.u) : num.i;                                                 \
+    }                                                                                                                                           \
+    while (false)
 
-#define HYP_SCRIPT_GET_MEMBER_UINT(object, name, type, declName) \
-    type declName; \
-    do { \
-        uint64 num; \
-        vm::Member *_member = nullptr; \
-        if (!(_member = object->LookupMemberFromHash(hashFnv1(name))) || !_member->value.GetUnsigned(&num)) { \
+#define HYP_SCRIPT_GET_MEMBER_UINT(object, name, type, declName)                                                                         \
+    type declName;                                                                                                                       \
+    do                                                                                                                                   \
+    {                                                                                                                                    \
+        uint64 num;                                                                                                                      \
+        vm::Member* _member = nullptr;                                                                                                   \
+        if (!(_member = object->LookupMemberFromHash(hashFnv1(name))) || !_member->value.GetUnsigned(&num))                              \
+        {                                                                                                                                \
             params.handler->state->ThrowException(params.handler->thread, vm::Exception("Expected member " name " to be of type uint")); \
-            return; \
-        } \
-        declName = static_cast<type>(num); \
-    } while (false)
+            return;                                                                                                                      \
+        }                                                                                                                                \
+        declName = static_cast<type>(num);                                                                                               \
+    }                                                                                                                                    \
+    while (false)
 
-#define HYP_SCRIPT_GET_MEMBER_FLOAT(object, name, type, declName) \
-    type declName; \
-    do { \
-        double num; \
-        vm::Member *_member = nullptr; \
-        if (!(_member = object->LookupMemberFromHash(hashFnv1(name))) || !_member->value.GetFloatingPointCoerce(&num)) { \
+#define HYP_SCRIPT_GET_MEMBER_FLOAT(object, name, type, declName)                                                                         \
+    type declName;                                                                                                                        \
+    do                                                                                                                                    \
+    {                                                                                                                                     \
+        double num;                                                                                                                       \
+        vm::Member* _member = nullptr;                                                                                                    \
+        if (!(_member = object->LookupMemberFromHash(hashFnv1(name))) || !_member->value.GetFloatingPointCoerce(&num))                    \
+        {                                                                                                                                 \
             params.handler->state->ThrowException(params.handler->thread, vm::Exception("Expected member " name " to be of type float")); \
-            return; \
-        } \
-        declName = static_cast<type>(num); \
-    } while (false)
+            return;                                                                                                                       \
+        }                                                                                                                                 \
+        declName = static_cast<type>(num);                                                                                                \
+    }                                                                                                                                     \
+    while (false)
 
-#define HYP_SCRIPT_GET_MEMBER_PTR(object, name, type, declName) \
-    type *declName; \
-    do { \
-        vm::Member *_member = nullptr; \
-        if (!(_member = object->LookupMemberFromHash(hashFnv1(name))) || !_member->value.GetPointer<type>(&declName)) { \
+#define HYP_SCRIPT_GET_MEMBER_PTR(object, name, type, declName)                                                                            \
+    type* declName;                                                                                                                        \
+    do                                                                                                                                     \
+    {                                                                                                                                      \
+        vm::Member* _member = nullptr;                                                                                                     \
+        if (!(_member = object->LookupMemberFromHash(hashFnv1(name))) || !_member->value.GetPointer<type>(&declName))                      \
+        {                                                                                                                                  \
             params.handler->state->ThrowException(params.handler->thread, vm::Exception("Expected member " name " to be of type " #type)); \
-        } \
-    } while (false)
+        }                                                                                                                                  \
+    }                                                                                                                                      \
+    while (false)
 
-#define HYP_SCRIPT_GET_MEMBER_PTR_RAW(object, name, type, declName) \
-    type *declName; \
-    do { \
-        vm::Member *_member = nullptr; \
-        if (!(_member = object->LookupMemberFromHash(hashFnv1(name))) || !_member->value.GetUserData<type>(&declName)) { \
+#define HYP_SCRIPT_GET_MEMBER_PTR_RAW(object, name, type, declName)                                                                        \
+    type* declName;                                                                                                                        \
+    do                                                                                                                                     \
+    {                                                                                                                                      \
+        vm::Member* _member = nullptr;                                                                                                     \
+        if (!(_member = object->LookupMemberFromHash(hashFnv1(name))) || !_member->value.GetUserData<type>(&declName))                     \
+        {                                                                                                                                  \
             params.handler->state->ThrowException(params.handler->thread, vm::Exception("Expected member " name " to be of type " #type)); \
-            return; \
-        } \
-    } while (false)
+            return;                                                                                                                        \
+        }                                                                                                                                  \
+    }                                                                                                                                      \
+    while (false)
 
-#define HYP_SCRIPT_CREATE_PTR(assignment, outName) \
-    vm::Value outName; \
-    do { \
-        vm::HeapValue *ptrResult = params.handler->state->HeapAlloc(params.handler->thread); \
-        Assert(ptrResult != nullptr); \
-        \
-        ptrResult->Assign((assignment)); \
-        ptrResult->Mark(); \
-        \
-        outName = vm::Value(vm::Value::HEAP_POINTER, {.ptr = ptrResult}); \
-    } while (false)
+#define HYP_SCRIPT_CREATE_PTR(assignment, outName)                                           \
+    vm::Value outName;                                                                       \
+    do                                                                                       \
+    {                                                                                        \
+        vm::HeapValue* ptrResult = params.handler->state->HeapAlloc(params.handler->thread); \
+        Assert(ptrResult != nullptr);                                                        \
+                                                                                             \
+        ptrResult->Assign((assignment));                                                     \
+        ptrResult->Mark();                                                                   \
+                                                                                             \
+        outName = vm::Value(vm::Value::HEAP_POINTER, { .ptr = ptrResult });                  \
+    }                                                                                        \
+    while (false)
 
-#define HYP_SCRIPT_SET_MEMBER(object, nameStr, assignment) \
-    do { \
-        auto *member = object.LookupMemberFromHash(hashFnv1(nameStr)); \
+#define HYP_SCRIPT_SET_MEMBER(object, nameStr, assignment)                                                  \
+    do                                                                                                      \
+    {                                                                                                       \
+        auto* member = object.LookupMemberFromHash(hashFnv1(nameStr));                                      \
         Assert(member != nullptr, "Member " nameStr " not set on object, unmatching prototype definition"); \
-        member->value = assignment; \
-    } while (false)
+        member->value = assignment;                                                                         \
+    }                                                                                                       \
+    while (false)
 
 #pragma endregion
 
@@ -362,7 +438,7 @@ namespace vm {
 // forward declarations
 class VM;
 struct VMState;
-//struct Value;
+// struct Value;
 struct ExecutionThread;
 class InstructionHandler;
 class VMString;
@@ -383,30 +459,35 @@ class APIInstance
 public:
     struct ClassBindings
     {
-        TypeMap<String>                     classNames;
-        HashMap<String, vm::HeapValue *>    classPrototypes;
+        TypeMap<String> classNames;
+        HashMap<String, vm::HeapValue*> classPrototypes;
     } classBindings;
 
-    APIInstance(const SourceFile &sourceFile);
-    APIInstance(const APIInstance &other)       = delete;
-    ~APIInstance()                              = default;
+    APIInstance(const SourceFile& sourceFile);
+    APIInstance(const APIInstance& other) = delete;
+    ~APIInstance() = default;
 
-    vm::VM *GetVM() const
-        { return m_vm; }
+    vm::VM* GetVM() const
+    {
+        return m_vm;
+    }
 
-    void SetVM(vm::VM *vm)
-        { m_vm = vm; }
+    void SetVM(vm::VM* vm)
+    {
+        m_vm = vm;
+    }
 
-    const SourceFile &GetSourceFile() const
-        { return m_sourceFile; }
+    const SourceFile& GetSourceFile() const
+    {
+        return m_sourceFile;
+    }
 
 private:
-    vm::VM      *m_vm;
-    SourceFile  m_sourceFile;
+    vm::VM* m_vm;
+    SourceFile m_sourceFile;
 };
 
 #pragma endregion
-
 
 #pragma region Conversion Helpers
 
@@ -414,7 +495,7 @@ template <class T>
 struct CxxToScriptValueImpl;
 
 template <class T>
-static inline vm::Value CxxToScriptValueInternal(APIInstance &apiInstance, T &&value)
+static inline vm::Value CxxToScriptValueInternal(APIInstance& apiInstance, T&& value)
 {
     CxxToScriptValueImpl<NormalizedType<T>> impl;
 
@@ -429,17 +510,20 @@ struct CxxToScriptValueImpl
 
     // use a template param to allow const references and similar but still having T be decayed
     template <class Ty>
-    vm::Value operator()(APIInstance &apiInstance, Ty &&value) const
+    vm::Value operator()(APIInstance& apiInstance, Ty&& value) const
     {
         static_assert(std::is_convertible_v<Ty, T>, "must be convertible; unrelated types T and Ty");
 
-        if constexpr (std::is_pointer_v<T>) {
+        if constexpr (std::is_pointer_v<T>)
+        {
             vm::Value finalValue;
             finalValue.m_type = vm::Value::USER_DATA;
             finalValue.m_value.userData = value;
 
             return finalValue;
-        } else {
+        }
+        else
+        {
             const auto classNameIt = apiInstance.classBindings.classNames.Find<T>();
             Assert(classNameIt != apiInstance.classBindings.classNames.End(), "Class not registered!");
 
@@ -448,7 +532,7 @@ struct CxxToScriptValueImpl
 
             vm::Value internValue;
             {
-                vm::HeapValue *ptrResult = apiInstance.GetVM()->GetState().HeapAlloc(apiInstance.GetVM()->GetState().GetMainThread());
+                vm::HeapValue* ptrResult = apiInstance.GetVM()->GetState().HeapAlloc(apiInstance.GetVM()->GetState().GetMainThread());
                 Assert(ptrResult != nullptr);
 
                 ptrResult->Assign(std::forward<Ty>(value));
@@ -461,7 +545,7 @@ struct CxxToScriptValueImpl
 
             vm::Value finalValue;
             {
-                vm::HeapValue *ptrResult = apiInstance.GetVM()->GetState().HeapAlloc(apiInstance.GetVM()->GetState().GetMainThread());
+                vm::HeapValue* ptrResult = apiInstance.GetVM()->GetState().HeapAlloc(apiInstance.GetVM()->GetState().GetMainThread());
                 Assert(ptrResult != nullptr);
 
                 ptrResult->Assign(boxedValue);
@@ -478,7 +562,7 @@ struct CxxToScriptValueImpl
 template <>
 struct CxxToScriptValueImpl<vm::Value>
 {
-    vm::Value operator()(APIInstance &, vm::Value value) const
+    vm::Value operator()(APIInstance&, vm::Value value) const
     {
         return value;
     }
@@ -487,7 +571,7 @@ struct CxxToScriptValueImpl<vm::Value>
 template <>
 struct CxxToScriptValueImpl<int8>
 {
-    vm::Value operator()(APIInstance &, int8 value) const
+    vm::Value operator()(APIInstance&, int8 value) const
     {
         return vm::Value(vm::Value::I8, { .i8 = value });
     }
@@ -496,7 +580,7 @@ struct CxxToScriptValueImpl<int8>
 template <>
 struct CxxToScriptValueImpl<int16>
 {
-    vm::Value operator()(APIInstance &, int16 value) const
+    vm::Value operator()(APIInstance&, int16 value) const
     {
         return vm::Value(vm::Value::I16, { .i16 = value });
     }
@@ -505,7 +589,7 @@ struct CxxToScriptValueImpl<int16>
 template <>
 struct CxxToScriptValueImpl<int32>
 {
-    vm::Value operator()(APIInstance &, int32 value) const
+    vm::Value operator()(APIInstance&, int32 value) const
     {
         return vm::Value(vm::Value::I32, { .i32 = value });
     }
@@ -514,7 +598,7 @@ struct CxxToScriptValueImpl<int32>
 template <>
 struct CxxToScriptValueImpl<int64>
 {
-    vm::Value operator()(APIInstance &, int64 value) const
+    vm::Value operator()(APIInstance&, int64 value) const
     {
         return vm::Value(vm::Value::I64, { .i64 = value });
     }
@@ -523,7 +607,7 @@ struct CxxToScriptValueImpl<int64>
 template <>
 struct CxxToScriptValueImpl<uint8>
 {
-    vm::Value operator()(APIInstance &, uint8 value) const
+    vm::Value operator()(APIInstance&, uint8 value) const
     {
         return vm::Value(vm::Value::U8, { .u8 = value });
     }
@@ -532,7 +616,7 @@ struct CxxToScriptValueImpl<uint8>
 template <>
 struct CxxToScriptValueImpl<uint16>
 {
-    vm::Value operator()(APIInstance &, uint16 value) const
+    vm::Value operator()(APIInstance&, uint16 value) const
     {
         return vm::Value(vm::Value::U16, { .u16 = value });
     }
@@ -541,7 +625,7 @@ struct CxxToScriptValueImpl<uint16>
 template <>
 struct CxxToScriptValueImpl<uint32>
 {
-    vm::Value operator()(APIInstance &, uint32 value) const
+    vm::Value operator()(APIInstance&, uint32 value) const
     {
         return vm::Value(vm::Value::U32, { .u32 = value });
     }
@@ -550,7 +634,7 @@ struct CxxToScriptValueImpl<uint32>
 template <>
 struct CxxToScriptValueImpl<uint64>
 {
-    vm::Value operator()(APIInstance &, uint64 value) const
+    vm::Value operator()(APIInstance&, uint64 value) const
     {
         return vm::Value(vm::Value::U64, { .u64 = value });
     }
@@ -559,7 +643,7 @@ struct CxxToScriptValueImpl<uint64>
 template <>
 struct CxxToScriptValueImpl<float>
 {
-    vm::Value operator()(APIInstance &, float value) const
+    vm::Value operator()(APIInstance&, float value) const
     {
         return vm::Value(vm::Value::F32, { .f = value });
     }
@@ -568,7 +652,7 @@ struct CxxToScriptValueImpl<float>
 template <>
 struct CxxToScriptValueImpl<double>
 {
-    vm::Value operator()(APIInstance &, double value) const
+    vm::Value operator()(APIInstance&, double value) const
     {
         return vm::Value(vm::Value::F64, { .d = value });
     }
@@ -577,7 +661,7 @@ struct CxxToScriptValueImpl<double>
 template <>
 struct CxxToScriptValueImpl<bool>
 {
-    vm::Value operator()(APIInstance &, bool value) const
+    vm::Value operator()(APIInstance&, bool value) const
     {
         return vm::Value(vm::Value::BOOLEAN, { .b = value });
     }
@@ -586,13 +670,13 @@ struct CxxToScriptValueImpl<bool>
 template <>
 struct CxxToScriptValueImpl<String>
 {
-    vm::Value operator()(APIInstance &apiInstance, const String &value) const
+    vm::Value operator()(APIInstance& apiInstance, const String& value) const
     {
         vm::VMString str = value;
 
         vm::Value finalValue;
         {
-            vm::HeapValue *ptrResult = apiInstance.GetVM()->GetState().HeapAlloc(apiInstance.GetVM()->GetState().GetMainThread());
+            vm::HeapValue* ptrResult = apiInstance.GetVM()->GetState().HeapAlloc(apiInstance.GetVM()->GetState().GetMainThread());
             Assert(ptrResult != nullptr);
 
             ptrResult->Assign(std::move(str));
@@ -606,12 +690,11 @@ struct CxxToScriptValueImpl<String>
 
 // @TODO DynArray -> VMArray
 
-
 template <class T>
 struct ScriptToCxxValueImpl;
 
 template <class T>
-static inline auto ConvertScriptObjectInternal(APIInstance &apiInstance, const vm::Value &value)
+static inline auto ConvertScriptObjectInternal(APIInstance& apiInstance, const vm::Value& value)
 {
     ScriptToCxxValueImpl<T> impl;
 
@@ -619,14 +702,14 @@ static inline auto ConvertScriptObjectInternal(APIInstance &apiInstance, const v
 }
 
 template <class T, class Ty = NormalizedType<T>>
-static inline auto ConvertScriptObject(APIInstance &apiInstance, const vm::Value &value)
+static inline auto ConvertScriptObject(APIInstance& apiInstance, const vm::Value& value)
     -> std::enable_if_t<!std::is_enum_v<Ty>, decltype(ConvertScriptObjectInternal<Ty>(apiInstance, value))>
 {
     return ConvertScriptObjectInternal<Ty>(apiInstance, value);
 }
 
 template <class T, class Ty = NormalizedType<T>>
-static inline auto ConvertScriptObject(APIInstance &apiInstance, const vm::Value &value)
+static inline auto ConvertScriptObject(APIInstance& apiInstance, const vm::Value& value)
     -> std::enable_if_t<std::is_enum_v<Ty>, decltype(ConvertScriptObjectInternal<std::underlying_type_t<Ty>>(apiInstance, value))>
 {
     return ConvertScriptObjectInternal<std::underlying_type_t<Ty>>(apiInstance, value);
@@ -637,23 +720,25 @@ struct ScriptToCxxValueImpl
 {
     static_assert(!isVmObjectType<NormalizedType<T>>, "Should not receive a VM object type as it is handled by other specializations");
 
-    Optional<T> operator()(APIInstance &, const vm::Value &value) const
+    Optional<T> operator()(APIInstance&, const vm::Value& value) const
     {
-        vm::VMObject *object = nullptr;
+        vm::VMObject* object = nullptr;
 
-        if (!value.GetPointer<vm::VMObject>(&object)) {
-            return { };
+        if (!value.GetPointer<vm::VMObject>(&object))
+        {
+            return {};
         }
-        
-        vm::Member *member;
 
-        T *tPtr = nullptr;
+        vm::Member* member;
 
-        if ((member = object->LookupMemberFromHash(hashFnv1("__intern"))) && member->value.GetPointer<T>(&tPtr)) {
+        T* tPtr = nullptr;
+
+        if ((member = object->LookupMemberFromHash(hashFnv1("__intern"))) && member->value.GetPointer<T>(&tPtr))
+        {
             return *tPtr;
         }
 
-        return { };
+        return {};
     }
 };
 
@@ -661,7 +746,7 @@ struct ScriptToCxxValueImpl
 template <>
 struct ScriptToCxxValueImpl<vm::Value>
 {
-    Optional<vm::Value> operator()(APIInstance &, const vm::Value &value) const
+    Optional<vm::Value> operator()(APIInstance&, const vm::Value& value) const
     {
         return { value };
     }
@@ -671,15 +756,16 @@ struct ScriptToCxxValueImpl<vm::Value>
 template <>
 struct ScriptToCxxValueImpl<int32>
 {
-    Optional<int32> operator()(APIInstance &, const vm::Value &value) const
+    Optional<int32> operator()(APIInstance&, const vm::Value& value) const
     {
-        vm::Number num { };
+        vm::Number num {};
 
-        if (value.GetSignedOrUnsigned(&num)) {
+        if (value.GetSignedOrUnsigned(&num))
+        {
             return int32((num.flags & vm::Number::FLAG_UNSIGNED) ? num.u : num.i);
         }
 
-        return { };
+        return {};
     }
 };
 
@@ -687,15 +773,16 @@ struct ScriptToCxxValueImpl<int32>
 template <>
 struct ScriptToCxxValueImpl<int64>
 {
-    Optional<int64> operator()(APIInstance &, const vm::Value &value) const
+    Optional<int64> operator()(APIInstance&, const vm::Value& value) const
     {
-        vm::Number num { };
+        vm::Number num {};
 
-        if (value.GetSignedOrUnsigned(&num)) {
+        if (value.GetSignedOrUnsigned(&num))
+        {
             return int64((num.flags & vm::Number::FLAG_UNSIGNED) ? num.u : num.i);
         }
 
-        return { };
+        return {};
     }
 };
 
@@ -703,15 +790,16 @@ struct ScriptToCxxValueImpl<int64>
 template <>
 struct ScriptToCxxValueImpl<uint32>
 {
-    Optional<uint32> operator()(APIInstance &, const vm::Value &value) const
+    Optional<uint32> operator()(APIInstance&, const vm::Value& value) const
     {
-        vm::Number num { };
+        vm::Number num {};
 
-        if (value.GetSignedOrUnsigned(&num)) {
+        if (value.GetSignedOrUnsigned(&num))
+        {
             return uint32((num.flags & vm::Number::FLAG_UNSIGNED) ? num.u : num.i);
         }
 
-        return { };
+        return {};
     }
 };
 
@@ -719,15 +807,16 @@ struct ScriptToCxxValueImpl<uint32>
 template <>
 struct ScriptToCxxValueImpl<uint64>
 {
-    Optional<uint64> operator()(APIInstance &, const vm::Value &value) const
+    Optional<uint64> operator()(APIInstance&, const vm::Value& value) const
     {
-        vm::Number num { };
+        vm::Number num {};
 
-        if (value.GetSignedOrUnsigned(&num)) {
+        if (value.GetSignedOrUnsigned(&num))
+        {
             return uint64((num.flags & vm::Number::FLAG_UNSIGNED) ? num.u : num.i);
         }
 
-        return { };
+        return {};
     }
 };
 
@@ -735,15 +824,16 @@ struct ScriptToCxxValueImpl<uint64>
 template <>
 struct ScriptToCxxValueImpl<float>
 {
-    Optional<float> operator()(APIInstance &, const vm::Value &value) const
+    Optional<float> operator()(APIInstance&, const vm::Value& value) const
     {
         double dbl;
 
-        if (value.GetFloatingPointCoerce(&dbl)) {
+        if (value.GetFloatingPointCoerce(&dbl))
+        {
             return float(dbl);
         }
 
-        return { };
+        return {};
     }
 };
 
@@ -751,15 +841,16 @@ struct ScriptToCxxValueImpl<float>
 template <>
 struct ScriptToCxxValueImpl<double>
 {
-    Optional<double> operator()(APIInstance &, const vm::Value &value) const
+    Optional<double> operator()(APIInstance&, const vm::Value& value) const
     {
         double dbl;
 
-        if (value.GetFloatingPointCoerce(&dbl)) {
+        if (value.GetFloatingPointCoerce(&dbl))
+        {
             return dbl;
         }
 
-        return { };
+        return {};
     }
 };
 
@@ -767,15 +858,16 @@ struct ScriptToCxxValueImpl<double>
 template <>
 struct ScriptToCxxValueImpl<bool>
 {
-    Optional<bool> operator()(APIInstance &, const vm::Value &value) const
+    Optional<bool> operator()(APIInstance&, const vm::Value& value) const
     {
         bool b;
 
-        if (value.GetBoolean(&b)) {
+        if (value.GetBoolean(&b))
+        {
             return b;
         }
 
-        return { };
+        return {};
     }
 };
 
@@ -783,81 +875,87 @@ struct ScriptToCxxValueImpl<bool>
 template <>
 struct ScriptToCxxValueImpl<String>
 {
-    Optional<String> operator()(APIInstance &, const vm::Value &value) const
+    Optional<String> operator()(APIInstance&, const vm::Value& value) const
     {
-        vm::VMString *str = nullptr;
+        vm::VMString* str = nullptr;
 
-        if (value.GetPointer<vm::VMString>(&str)) {
+        if (value.GetPointer<vm::VMString>(&str))
+        {
             return String(str->GetData());
         }
 
-        return { };
+        return {};
     }
 };
 
 /*! \brief Conversion from VM values to void * */
 template <>
-struct ScriptToCxxValueImpl<void *>
+struct ScriptToCxxValueImpl<void*>
 {
-    Optional<void *> operator()(APIInstance &, const vm::Value &value) const
+    Optional<void*> operator()(APIInstance&, const vm::Value& value) const
     {
-        if (value.m_type == vm::Value::ValueType::HEAP_POINTER) {
+        if (value.m_type == vm::Value::ValueType::HEAP_POINTER)
+        {
             return GetRawPointerForHeapValue(value.m_value.ptr);
         }
 
-        if (value.m_type == vm::Value::ValueType::USER_DATA) {
+        if (value.m_type == vm::Value::ValueType::USER_DATA)
+        {
             return value.m_value.userData;
         }
 
-        return { };
+        return {};
     }
 };
 
 /*! \brief Conversion from VM values to const void * */
 template <>
-struct ScriptToCxxValueImpl<const void *>
+struct ScriptToCxxValueImpl<const void*>
 {
-    Optional<const void *> operator()(APIInstance &apiInstance, const vm::Value &value) const
+    Optional<const void*> operator()(APIInstance& apiInstance, const vm::Value& value) const
     {
-        Optional<void *> result = ScriptToCxxValueImpl<void *>()(apiInstance, value);
+        Optional<void*> result = ScriptToCxxValueImpl<void*>()(apiInstance, value);
 
-        if (!result.HasValue()) {
-            return { };
+        if (!result.HasValue())
+        {
+            return {};
         }
 
         return {
-            const_cast<const void *>(ScriptToCxxValueImpl<void *>()(apiInstance, value).GetOr(nullptr))
+            const_cast<const void*>(ScriptToCxxValueImpl<void*>()(apiInstance, value).GetOr(nullptr))
         };
     }
 };
 
 template <>
-struct ScriptToCxxValueImpl<vm::VMString *>
+struct ScriptToCxxValueImpl<vm::VMString*>
 {
-    Optional<vm::VMString *> operator()(APIInstance &, const vm::Value &value) const
+    Optional<vm::VMString*> operator()(APIInstance&, const vm::Value& value) const
     {
-        vm::VMString *ptr;
+        vm::VMString* ptr;
 
-        if (value.GetPointer<vm::VMString>(&ptr)) {
+        if (value.GetPointer<vm::VMString>(&ptr))
+        {
             return ptr;
         }
 
-        return { };
+        return {};
     }
 };
 
 template <>
-struct ScriptToCxxValueImpl<vm::VMObject *>
+struct ScriptToCxxValueImpl<vm::VMObject*>
 {
-    Optional<vm::VMObject *> operator()(APIInstance &, const vm::Value &value) const
+    Optional<vm::VMObject*> operator()(APIInstance&, const vm::Value& value) const
     {
-        vm::VMObject *ptr;
+        vm::VMObject* ptr;
 
-        if (value.GetPointer<vm::VMObject>(&ptr)) {
+        if (value.GetPointer<vm::VMObject>(&ptr))
+        {
             return ptr;
         }
 
-        return { };
+        return {};
     }
 };
 
@@ -892,28 +990,30 @@ struct ScriptToCxxValueImpl<vm::VMObject *>
 // };
 
 template <>
-struct ScriptToCxxValueImpl<vm::VMStruct *>
+struct ScriptToCxxValueImpl<vm::VMStruct*>
 {
-    Optional<vm::VMStruct *> operator()(APIInstance &, const vm::Value &value) const
+    Optional<vm::VMStruct*> operator()(APIInstance&, const vm::Value& value) const
     {
-        vm::VMStruct *ptr;
+        vm::VMStruct* ptr;
 
-        if (value.GetPointer<vm::VMStruct>(&ptr)) {
+        if (value.GetPointer<vm::VMStruct>(&ptr))
+        {
             return ptr;
         }
 
-        return { };
+        return {};
     }
 };
 
 template <>
 struct ScriptToCxxValueImpl<vm::VMString>
 {
-    vm::VMString *operator()(APIInstance &, const vm::Value &value) const
+    vm::VMString* operator()(APIInstance&, const vm::Value& value) const
     {
-        vm::VMString *ptr;
+        vm::VMString* ptr;
 
-        if (value.GetPointer<vm::VMString>(&ptr)) {
+        if (value.GetPointer<vm::VMString>(&ptr))
+        {
             return ptr;
         }
 
@@ -924,11 +1024,12 @@ struct ScriptToCxxValueImpl<vm::VMString>
 template <>
 struct ScriptToCxxValueImpl<vm::VMObject>
 {
-    vm::VMObject *operator()(APIInstance &, const vm::Value &value) const
+    vm::VMObject* operator()(APIInstance&, const vm::Value& value) const
     {
-        vm::VMObject *ptr;
+        vm::VMObject* ptr;
 
-        if (value.GetPointer<vm::VMObject>(&ptr)) {
+        if (value.GetPointer<vm::VMObject>(&ptr))
+        {
             return ptr;
         }
 
@@ -954,11 +1055,12 @@ struct ScriptToCxxValueImpl<vm::VMObject>
 template <>
 struct ScriptToCxxValueImpl<vm::VMStruct>
 {
-    vm::VMStruct *operator()(APIInstance &, const vm::Value &value) const
+    vm::VMStruct* operator()(APIInstance&, const vm::Value& value) const
     {
-        vm::VMStruct *ptr;
+        vm::VMStruct* ptr;
 
-        if (value.GetPointer<vm::VMStruct>(&ptr)) {
+        if (value.GetPointer<vm::VMStruct>(&ptr))
+        {
             return ptr;
         }
 
@@ -982,31 +1084,33 @@ struct ScriptToCxxValueImpl<vm::VMStruct>
 // };
 
 template <class T>
-struct ScriptToCxxValueImpl<T *> // embedded C++ object (as pointer)
+struct ScriptToCxxValueImpl<T*> // embedded C++ object (as pointer)
 {
     static_assert(!isVmObjectType<NormalizedType<std::remove_pointer_t<T>>>, "Should not receive a VM object type as it is handled by other specializations");
 
-    Optional<T *> operator()(APIInstance &, const vm::Value &value) const
+    Optional<T*> operator()(APIInstance&, const vm::Value& value) const
     {
-        vm::VMObject *object = nullptr;
+        vm::VMObject* object = nullptr;
 
-        if (!value.GetPointer<vm::VMObject>(&object)) {
+        if (!value.GetPointer<vm::VMObject>(&object))
+        {
             DebugLog(LogType::Warn, "Unable to convert VM value to C++ object pointer of type %s\n", TypeName<T>().Data());
 
-            return { };
+            return {};
         }
-        
-        vm::Member *member;
 
-        T *tPtr = nullptr;
+        vm::Member* member;
 
-        if ((member = object->LookupMemberFromHash(hashFnv1("__intern"))) && member->value.GetPointer<T>(&tPtr)) {
+        T* tPtr = nullptr;
+
+        if ((member = object->LookupMemberFromHash(hashFnv1("__intern"))) && member->value.GetPointer<T>(&tPtr))
+        {
             return tPtr;
         }
 
         DebugLog(LogType::Warn, "Unable to convert VM value to C++ object pointer of type %s: No __intern value or __intern was not set to a %s pointer\n", TypeName<T>().Data(), TypeName<T>().Data());
 
-        return { };
+        return {};
     }
 };
 
@@ -1032,22 +1136,25 @@ struct ScriptToCxxValueImpl<AnyPtr>
 template <class T, class AllocatorType>
 struct ScriptToCxxValueImpl<Array<T, AllocatorType>>
 {
-    Optional<Array<T, AllocatorType>> operator()(APIInstance &apiInstance, const vm::Value &value) const
+    Optional<Array<T, AllocatorType>> operator()(APIInstance& apiInstance, const vm::Value& value) const
     {
-        vm::VMArray *ary = nullptr;
+        vm::VMArray* ary = nullptr;
 
-        if (value.GetPointer<vm::VMArray>(&ary)) {
+        if (value.GetPointer<vm::VMArray>(&ary))
+        {
             Array<T, AllocatorType> result;
 
             result.Resize(ary->GetSize());
 
-            for (SizeType index = 0; index < ary->GetSize(); index++) {
+            for (SizeType index = 0; index < ary->GetSize(); index++)
+            {
                 ScriptToCxxValueImpl<T> elementConvertImpl;
-                
+
                 auto elementResult = elementConvertImpl(apiInstance, ary->AtIndex(index));
 
-                if (!elementResult.HasValue()) {
-                    return { };
+                if (!elementResult.HasValue())
+                {
+                    return {};
                 }
 
                 result[index] = std::move(elementResult.Get());
@@ -1056,7 +1163,7 @@ struct ScriptToCxxValueImpl<Array<T, AllocatorType>>
             return Optional<Array<T, AllocatorType>>(std::move(result));
         }
 
-        return { };
+        return {};
     }
 };
 
@@ -1073,9 +1180,9 @@ static inline auto ConvertScriptObject(APIInstance &apiInstance, const vm::Value
 template <class T>
 struct GetArgumentImpl
 {
-    //static_assert(resolutionFailure<T>, "Unable to use type as arg");
-    
-    auto operator()(int index, sdk::Params &params)
+    // static_assert(resolutionFailure<T>, "Unable to use type as arg");
+
+    auto operator()(int index, sdk::Params& params)
     {
         HYP_SCRIPT_GET_ARG_PTR_1(index, T, argValue);
 
@@ -1086,7 +1193,7 @@ struct GetArgumentImpl
 template <>
 struct GetArgumentImpl<int32>
 {
-    auto operator()(int index, sdk::Params &params)
+    auto operator()(int index, sdk::Params& params)
     {
         HYP_SCRIPT_GET_ARG_INT_1(index, argValue);
 
@@ -1097,7 +1204,7 @@ struct GetArgumentImpl<int32>
 template <>
 struct GetArgumentImpl<int64>
 {
-    auto operator()(int index, sdk::Params &params)
+    auto operator()(int index, sdk::Params& params)
     {
         HYP_SCRIPT_GET_ARG_INT_1(index, argValue);
 
@@ -1108,7 +1215,7 @@ struct GetArgumentImpl<int64>
 template <>
 struct GetArgumentImpl<uint32>
 {
-    auto operator()(int index, sdk::Params &params)
+    auto operator()(int index, sdk::Params& params)
     {
         HYP_SCRIPT_GET_ARG_UINT_1(index, argValue);
 
@@ -1119,7 +1226,7 @@ struct GetArgumentImpl<uint32>
 template <>
 struct GetArgumentImpl<uint64>
 {
-    auto operator()(int index, sdk::Params &params)
+    auto operator()(int index, sdk::Params& params)
     {
         HYP_SCRIPT_GET_ARG_UINT_1(index, argValue);
 
@@ -1130,7 +1237,7 @@ struct GetArgumentImpl<uint64>
 template <>
 struct GetArgumentImpl<float>
 {
-    auto operator()(int index, sdk::Params &params)
+    auto operator()(int index, sdk::Params& params)
     {
         HYP_SCRIPT_GET_ARG_FLOAT_1(index, argValue);
 
@@ -1141,7 +1248,7 @@ struct GetArgumentImpl<float>
 template <>
 struct GetArgumentImpl<double>
 {
-    auto operator()(int index, sdk::Params &params)
+    auto operator()(int index, sdk::Params& params)
     {
         HYP_SCRIPT_GET_ARG_FLOAT_1(index, argValue);
 
@@ -1152,7 +1259,7 @@ struct GetArgumentImpl<double>
 template <>
 struct GetArgumentImpl<bool>
 {
-    auto operator()(int index, sdk::Params &params)
+    auto operator()(int index, sdk::Params& params)
     {
         HYP_SCRIPT_GET_ARG_BOOLEAN_1(index, argValue);
 
@@ -1161,9 +1268,9 @@ struct GetArgumentImpl<bool>
 };
 
 template <>
-struct GetArgumentImpl<void *>
+struct GetArgumentImpl<void*>
 {
-    auto operator()(int index, sdk::Params &params)
+    auto operator()(int index, sdk::Params& params)
     {
         HYP_SCRIPT_GET_ARG_PTR_RAW_1(index, void, argValue);
 
@@ -1174,7 +1281,7 @@ struct GetArgumentImpl<void *>
 template <>
 struct GetArgumentImpl<vm::VMString>
 {
-    auto operator()(int index, sdk::Params &params)
+    auto operator()(int index, sdk::Params& params)
     {
         HYP_SCRIPT_GET_ARG_PTR_1(index, vm::VMString, argValue);
 
@@ -1185,7 +1292,7 @@ struct GetArgumentImpl<vm::VMString>
 template <>
 struct GetArgumentImpl<vm::VMObject>
 {
-    auto operator()(int index, sdk::Params &params)
+    auto operator()(int index, sdk::Params& params)
     {
         HYP_SCRIPT_GET_ARG_PTR_1(index, vm::VMObject, argValue);
 
@@ -1196,7 +1303,7 @@ struct GetArgumentImpl<vm::VMObject>
 template <>
 struct GetArgumentImpl<vm::VMArray>
 {
-    auto operator()(int index, sdk::Params &params)
+    auto operator()(int index, sdk::Params& params)
     {
         HYP_SCRIPT_GET_ARG_PTR_1(index, vm::VMArray, argValue);
 
@@ -1207,7 +1314,7 @@ struct GetArgumentImpl<vm::VMArray>
 template <>
 struct GetArgumentImpl<vm::VMStruct>
 {
-    auto operator()(int index, sdk::Params &params)
+    auto operator()(int index, sdk::Params& params)
     {
         HYP_SCRIPT_GET_ARG_PTR_1(index, vm::VMStruct, argValue);
 
@@ -1216,13 +1323,14 @@ struct GetArgumentImpl<vm::VMStruct>
 };
 
 template <int Index, class T>
-auto GetArgument(sdk::Params &params)
+auto GetArgument(sdk::Params& params)
 {
-    vm::Value *value = params.args[Index];
-    
+    vm::Value* value = params.args[Index];
+
     auto converted = ConvertScriptObject<T>(params.apiInstance, *value);
 
-    if (!converted.HasValue()) {
+    if (!converted.HasValue())
+    {
         char buffer[1024];
 
         std::snprintf(
@@ -1230,23 +1338,19 @@ auto GetArgument(sdk::Params &params)
             sizeof(buffer),
             "Unexpected type for argument at index %d, could not convert to expected type `%s`",
             Index,
-            TypeName<T>().Data()
-        );
+            TypeName<T>().Data());
 
         params.handler->state->ThrowException(
             params.handler->thread,
-            vm::Exception(buffer)
-        );
+            vm::Exception(buffer));
 
-        return T { };
+        return T {};
     }
-    
+
     return converted.Get();
 }
 
 #pragma endregion
-
-
 
 #pragma region Native Script Binding Helper Structs
 
@@ -1259,12 +1363,12 @@ struct ScriptBindingsHolder
 {
     static constexpr uint32 maxBindings = 256;
 
-    FixedArray<ScriptBindingsBase *, maxBindings> bindings;
+    FixedArray<ScriptBindingsBase*, maxBindings> bindings;
     uint32 bindingIndex = 0;
 
-    void AddBinding(ScriptBindingsBase *scriptBindings);
+    void AddBinding(ScriptBindingsBase* scriptBindings);
 
-    void GenerateAll(scriptapi2::Context &);
+    void GenerateAll(scriptapi2::Context&);
 };
 
 struct ScriptBindingsBase
@@ -1272,11 +1376,11 @@ struct ScriptBindingsBase
     ScriptBindingsBase(TypeId typeId);
     virtual ~ScriptBindingsBase() = default;
 
-    virtual void Generate(scriptapi2::Context &) = 0;
+    virtual void Generate(scriptapi2::Context&) = 0;
 };
 
 #pragma endregion
 
-}
+} // namespace hyperion
 
 #endif

@@ -16,21 +16,21 @@
 namespace hyperion::compiler {
 
 AstThrowExpression::AstThrowExpression(
-    const RC<AstExpression> &expr,
-    const SourceLocation &location
-) : AstExpression(location, ACCESS_MODE_LOAD),
-    m_expr(expr)
+    const RC<AstExpression>& expr,
+    const SourceLocation& location)
+    : AstExpression(location, ACCESS_MODE_LOAD),
+      m_expr(expr)
 {
 }
 
-void AstThrowExpression::Visit(AstVisitor *visitor, Module *mod)
+void AstThrowExpression::Visit(AstVisitor* visitor, Module* mod)
 {
     Assert(m_expr != nullptr);
 
     m_expr->Visit(visitor, mod);
 }
 
-std::unique_ptr<Buildable> AstThrowExpression::Build(AstVisitor *visitor, Module *mod)
+std::unique_ptr<Buildable> AstThrowExpression::Build(AstVisitor* visitor, Module* mod)
 {
     Assert(m_expr != nullptr);
 
@@ -51,7 +51,7 @@ std::unique_ptr<Buildable> AstThrowExpression::Build(AstVisitor *visitor, Module
     return chunk;
 }
 
-void AstThrowExpression::Optimize(AstVisitor *visitor, Module *mod)
+void AstThrowExpression::Optimize(AstVisitor* visitor, Module* mod)
 {
     Assert(m_expr != nullptr);
 

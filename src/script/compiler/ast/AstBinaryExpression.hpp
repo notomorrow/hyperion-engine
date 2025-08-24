@@ -12,24 +12,33 @@ class AstBinaryExpression : public AstExpression
 {
 public:
     AstBinaryExpression(
-        const RC<AstExpression> &left,
-        const RC<AstExpression> &right,
-        const Operator *op,
-        const SourceLocation &location
-    );
+        const RC<AstExpression>& left,
+        const RC<AstExpression>& right,
+        const Operator* op,
+        const SourceLocation& location);
 
-    const RC<AstExpression> &GetLeft() const { return m_left; }
-    const RC<AstExpression> &GetRight() const { return m_right; }
+    const RC<AstExpression>& GetLeft() const
+    {
+        return m_left;
+    }
+    const RC<AstExpression>& GetRight() const
+    {
+        return m_right;
+    }
 
     bool IsOperatorOverloadingEnabled() const
-        { return m_operatorOverloadingEnabled; }
+    {
+        return m_operatorOverloadingEnabled;
+    }
     void SetIsOperatorOverloadingEnabled(bool operatorOverloadingEnabled)
-        { m_operatorOverloadingEnabled = operatorOverloadingEnabled; }
+    {
+        m_operatorOverloadingEnabled = operatorOverloadingEnabled;
+    }
 
-    virtual void Visit(AstVisitor *visitor, Module *mod) override;
-    virtual std::unique_ptr<Buildable> Build(AstVisitor *visitor, Module *mod) override;
-    virtual void Optimize(AstVisitor *visitor, Module *mod) override;
-    
+    virtual void Visit(AstVisitor* visitor, Module* mod) override;
+    virtual std::unique_ptr<Buildable> Build(AstVisitor* visitor, Module* mod) override;
+    virtual void Optimize(AstVisitor* visitor, Module* mod) override;
+
     virtual RC<AstStatement> Clone() const override;
 
     virtual Tribool IsTrue() const override;
@@ -47,17 +56,17 @@ public:
     }
 
 private:
-    RC<AstExpression>   m_left;
-    RC<AstExpression>   m_right;
-    const Operator      *m_op;
+    RC<AstExpression> m_left;
+    RC<AstExpression> m_right;
+    const Operator* m_op;
 
-    RC<AstExpression>   m_operatorOverload;
-    bool                m_operatorOverloadingEnabled;
+    RC<AstExpression> m_operatorOverload;
+    bool m_operatorOverloadingEnabled;
 
 #if HYP_SCRIPT_ENABLE_LAZY_DECLARATIONS
     // if the expression is lazy declaration
     RC<AstVariableDeclaration> m_variableDeclaration;
-    RC<AstVariableDeclaration> CheckLazyDeclaration(AstVisitor *visitor, Module *mod);
+    RC<AstVariableDeclaration> CheckLazyDeclaration(AstVisitor* visitor, Module* mod);
 #endif
 
     RC<AstBinaryExpression> CloneImpl() const
@@ -67,8 +76,7 @@ private:
                 CloneAstNode(m_left),
                 CloneAstNode(m_right),
                 m_op,
-                m_location
-            ));
+                m_location));
     }
 };
 

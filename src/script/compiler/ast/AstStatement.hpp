@@ -26,67 +26,84 @@ protected:
     static const String unnamed;
 
 public:
-    AstStatement(const SourceLocation &location);
+    AstStatement(const SourceLocation& location);
     virtual ~AstStatement() = default;
 
-    SourceLocation &GetLocation() { return m_location; }
-    const SourceLocation &GetLocation() const { return m_location; }
+    SourceLocation& GetLocation()
+    {
+        return m_location;
+    }
+    const SourceLocation& GetLocation() const
+    {
+        return m_location;
+    }
 
-    uint32 GetScopeDepth() const { return m_scopeDepth; }
-    void SetScopeDepth(uint32 depth) { m_scopeDepth = depth; }
+    uint32 GetScopeDepth() const
+    {
+        return m_scopeDepth;
+    }
+    void SetScopeDepth(uint32 depth)
+    {
+        m_scopeDepth = depth;
+    }
 
-    virtual void Visit(AstVisitor *visitor, Module *mod) = 0;
-    virtual std::unique_ptr<Buildable> Build(AstVisitor *visitor, Module *mod) = 0;
-    virtual void Optimize(AstVisitor *visitor, Module *mod) = 0;
+    virtual void Visit(AstVisitor* visitor, Module* mod) = 0;
+    virtual std::unique_ptr<Buildable> Build(AstVisitor* visitor, Module* mod) = 0;
+    virtual void Optimize(AstVisitor* visitor, Module* mod) = 0;
 
     virtual HashCode GetHashCode() const = 0;
 
-    virtual const String &GetName() const { return unnamed; }
-    
+    virtual const String& GetName() const
+    {
+        return unnamed;
+    }
+
     virtual RC<AstStatement> Clone() const = 0;
 
 protected:
-    SourceLocation  m_location;
-    uint32            m_scopeDepth;
+    SourceLocation m_location;
+    uint32 m_scopeDepth;
 };
 
 template <typename T>
-typename std::enable_if<std::isBaseOf<AstStatement, T>::value, RC<T>>::type
-CloneAstNode(const RC<T> &stmt) 
-{ 
-    return (stmt != nullptr) 
+typename std::enable_if<std::is_base_of_v<AstStatement, T>, RC<T>>::type
+CloneAstNode(const RC<T>& stmt)
+{
+    return (stmt != nullptr)
         ? stmt->Clone().template CastUnsafe<T>()
-        : nullptr; 
+        : nullptr;
 }
 
 template <typename T>
-typename std::enable_if<std::isBaseOf<AstStatement, T>::value, RC<T>>::type
-CloneAstNode(const T *stmt) 
-{ 
-    return (stmt != nullptr) 
+typename std::enable_if<std::is_base_of_v<AstStatement, T>, RC<T>>::type
+CloneAstNode(const T* stmt)
+{
+    return (stmt != nullptr)
         ? stmt->Clone().template CastUnsafe<T>()
-        : nullptr; 
+        : nullptr;
 }
 
 template <typename T>
-typename std::enable_if<std::isBaseOf<AstStatement, T>::value, Array<RC<T>>>::type
-CloneAllAstNodes(const Array<RC<T>> &stmts) 
+typename std::enable_if<std::is_base_of_v<AstStatement, T>, Array<RC<T>>>::type
+CloneAllAstNodes(const Array<RC<T>>& stmts)
 {
     Array<RC<T>> res;
     res.Reserve(stmts.Size());
-    for (auto &stmt : stmts) {
+    for (auto& stmt : stmts)
+    {
         res.PushBack(CloneAstNode(stmt));
     }
     return res;
 }
 
 template <typename T>
-typename std::enable_if<std::isBaseOf<AstStatement, T>::value, Array<RC<T>>>::type
-CloneAllAstNodes(const Array<T *> &stmts) 
+typename std::enable_if<std::is_base_of_v<AstStatement, T>, Array<RC<T>>>::type
+CloneAllAstNodes(const Array<T*>& stmts)
 {
     Array<RC<T>> res;
     res.Reserve(stmts.Size());
-    for (auto &stmt : stmts) {
+    for (auto& stmt : stmts)
+    {
         res.PushBack(CloneAstNode(stmt));
     }
     return res;

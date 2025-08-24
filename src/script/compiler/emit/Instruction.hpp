@@ -40,7 +40,8 @@ struct LabelMarker final : public Buildable
 
 struct Jump final : public Buildable
 {
-    enum JumpClass {
+    enum JumpClass
+    {
         JMP,
         JE,
         JNE,
@@ -296,17 +297,17 @@ struct BuildableFunction final : public Buildable
 
 struct BuildableType final : public Buildable
 {
-    RegIndex        reg;
-    String          name;
-    Array<String>   members;
+    RegIndex reg;
+    String name;
+    Array<String> members;
 
     virtual ~BuildableType() = default;
 };
 
 struct BuildableString final : public Buildable
 {
-    RegIndex    reg;
-    String      value;
+    RegIndex reg;
+    String value;
 
     virtual ~BuildableString() = default;
 };
@@ -325,19 +326,26 @@ struct Comment final : public Instruction
     String value;
 
     Comment() = default;
-    Comment(const String &value) : value(value) {}
-    Comment(const Comment &other) = default;
+    Comment(const String& value)
+        : value(value)
+    {
+    }
+    Comment(const Comment& other) = default;
     virtual ~Comment() = default;
 };
 
 struct SymbolExport final : public Instruction
 {
-    RegIndex    reg;
-    String      name;
+    RegIndex reg;
+    String name;
 
     SymbolExport() = default;
-    SymbolExport(RegIndex reg, const String &name) : reg(reg), name(name) { }
-    SymbolExport(const SymbolExport &other) = default;
+    SymbolExport(RegIndex reg, const String& name)
+        : reg(reg),
+          name(name)
+    {
+    }
+    SymbolExport(const SymbolExport& other) = default;
     virtual ~SymbolExport() = default;
 };
 
@@ -359,9 +367,9 @@ struct CastOperation final : public Instruction
         CAST_DYNAMIC
     };
 
-    Type        type = CAST_U8;
-    RegIndex    regDst;
-    RegIndex    regSrc;
+    Type type = CAST_U8;
+    RegIndex regDst;
+    RegIndex regSrc;
 
     CastOperation() = default;
     CastOperation(Type type, RegIndex regDst, RegIndex regSrc)
@@ -374,18 +382,18 @@ struct CastOperation final : public Instruction
     virtual ~CastOperation() = default;
 };
 
-template <class...Args>
+template <class... Args>
 struct RawOperation final : public Instruction
 {
     Array<char> data;
 
     RawOperation() = default;
-    RawOperation(const RawOperation &other)
+    RawOperation(const RawOperation& other)
         : data(other.data)
     {
     }
 
-    void Accept(const char *str)
+    void Accept(const char* str)
     {
         // do not copy NUL byte
         SizeType length = std::strlen(str);
@@ -396,15 +404,16 @@ struct RawOperation final : public Instruction
     }
 
     template <typename T>
-    void Accept(const Array<T> &ts)
+    void Accept(const Array<T>& ts)
     {
-        for (const T &t : ts) {
+        for (const T& t : ts)
+        {
             this->Accept(t);
         }
     }
 
     template <typename T>
-    void Accept(const T &t)
+    void Accept(const T& t)
     {
         const SizeType previousSize = data.Size();
         data.Resize(previousSize + sizeof(T));
@@ -415,11 +424,13 @@ struct RawOperation final : public Instruction
 template <class T, class... Ts>
 struct RawOperation<T, Ts...> : RawOperation<Ts...>
 {
-    RawOperation(T t, Ts...ts) : RawOperation<Ts...>(ts...)
-        { this->Accept(t); }
+    RawOperation(T t, Ts... ts)
+        : RawOperation<Ts...>(ts...)
+    {
+        this->Accept(t);
+    }
 };
 
 } // namespace hyperion::compiler
-
 
 #endif

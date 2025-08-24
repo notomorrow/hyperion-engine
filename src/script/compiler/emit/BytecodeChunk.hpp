@@ -18,12 +18,13 @@ struct BytecodeChunk final : public Buildable
     Array<LabelId> labels;
 
     BytecodeChunk();
-    BytecodeChunk(const BytecodeChunk &other) = delete;
+    BytecodeChunk(const BytecodeChunk& other) = delete;
     virtual ~BytecodeChunk() = default;
 
     void Append(std::unique_ptr<Buildable> buildable)
     {
-        if (buildable != nullptr) {
+        if (buildable != nullptr)
+        {
             buildables.PushBack(std::move(buildable));
         }
     }

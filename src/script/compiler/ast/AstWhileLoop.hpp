@@ -13,16 +13,15 @@ class AstWhileLoop : public AstStatement
 {
 public:
     AstWhileLoop(
-        const RC<AstExpression> &conditional,
-        const RC<AstBlock> &block,
-        const SourceLocation &location
-    );
+        const RC<AstExpression>& conditional,
+        const RC<AstBlock>& block,
+        const SourceLocation& location);
     virtual ~AstWhileLoop() = default;
 
-    virtual void Visit(AstVisitor *visitor, Module *mod) override;
-    virtual std::unique_ptr<Buildable> Build(AstVisitor *visitor, Module *mod) override;
-    virtual void Optimize(AstVisitor *visitor, Module *mod) override;
-    
+    virtual void Visit(AstVisitor* visitor, Module* mod) override;
+    virtual std::unique_ptr<Buildable> Build(AstVisitor* visitor, Module* mod) override;
+    virtual void Optimize(AstVisitor* visitor, Module* mod) override;
+
     virtual RC<AstStatement> Clone() const override;
 
     virtual HashCode GetHashCode() const override
@@ -36,19 +35,18 @@ public:
     }
 
 private:
-    RC<AstExpression>   m_conditional;
-    RC<AstBlock>        m_block;
+    RC<AstExpression> m_conditional;
+    RC<AstBlock> m_block;
 
     // set while analyzing
-    int                 m_numLocals;
+    int m_numLocals;
 
     RC<AstWhileLoop> CloneImpl() const
     {
         return RC<AstWhileLoop>(new AstWhileLoop(
             CloneAstNode(m_conditional),
             CloneAstNode(m_block),
-            m_location
-        ));
+            m_location));
     }
 };
 

@@ -7,7 +7,7 @@
 namespace hyperion {
 namespace vm {
 
-VMArraySlice::VMArraySlice(VMArray *ary, SizeType start, SizeType end)
+VMArraySlice::VMArraySlice(VMArray* ary, SizeType start, SizeType end)
     : m_ary(ary),
       m_start(start),
       m_end(end)
@@ -16,7 +16,7 @@ VMArraySlice::VMArraySlice(VMArray *ary, SizeType start, SizeType end)
     Assert(m_end >= m_start);
 }
 
-VMArraySlice::VMArraySlice(const VMArraySlice &other)
+VMArraySlice::VMArraySlice(const VMArraySlice& other)
     : m_ary(other.m_ary),
       m_start(other.m_start),
       m_end(other.m_end)
@@ -25,9 +25,10 @@ VMArraySlice::VMArraySlice(const VMArraySlice &other)
     Assert(m_end >= m_start);
 }
 
-VMArraySlice &VMArraySlice::operator=(const VMArraySlice &other)
+VMArraySlice& VMArraySlice::operator=(const VMArraySlice& other)
 {
-    if (&other == this) {
+    if (&other == this)
+    {
         return *this;
     }
 
@@ -42,14 +43,14 @@ VMArraySlice &VMArraySlice::operator=(const VMArraySlice &other)
 }
 
 void VMArraySlice::GetRepresentation(
-    std::stringstream &ss,
+    std::stringstream& ss,
     bool addTypeName,
-    int depth
-) const
+    int depth) const
 {
     Assert(m_ary != nullptr);
 
-    if (depth == 0) {
+    if (depth == 0)
+    {
         ss << "[...]";
 
         return;
@@ -61,14 +62,15 @@ void VMArraySlice::GetRepresentation(
     ss << '[';
 
     // convert all array elements to string
-    for (SizeType i = m_start; i < m_end; i++) {
+    for (SizeType i = m_start; i < m_end; i++)
+    {
         m_ary->AtIndex(i).ToRepresentation(
             ss,
             addTypeName,
-            depth - 1
-        );
+            depth - 1);
 
-        if (i != m_end - 1) {
+        if (i != m_end - 1)
+        {
             ss << sepStr;
         }
     }
@@ -82,7 +84,8 @@ HashCode VMArraySlice::GetHashCode() const
 
     HashCode hashCode;
 
-    for (SizeType i = m_start; i < m_end; i++) {
+    for (SizeType i = m_start; i < m_end; i++)
+    {
         hashCode.Add(m_ary->AtIndex(i).GetHashCode());
     }
 

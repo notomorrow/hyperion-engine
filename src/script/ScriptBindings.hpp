@@ -14,7 +14,7 @@ class ScriptBindings
 public:
     static APIInstance::ClassBindings classBindings;
 
-    static void DeclareAll(APIInstance &apiInstance);
+    static void DeclareAll(APIInstance& apiInstance);
 };
 
 } // namespace hyperion

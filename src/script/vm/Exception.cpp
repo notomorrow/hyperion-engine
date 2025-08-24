@@ -3,23 +3,24 @@
 namespace hyperion {
 namespace vm {
 
-Exception::Exception(const char *str)
+Exception::Exception(const char* str)
 {
     const SizeType len = std::strlen(str);
     m_str = new char[len + 1];
     std::strcpy(m_str, str);
 }
 
-Exception::Exception(const Exception &other)
+Exception::Exception(const Exception& other)
 {
     const SizeType len = std::strlen(other.m_str);
     m_str = new char[len + 1];
     std::strcpy(m_str, other.m_str);
 }
 
-Exception &Exception::operator=(const Exception &other)
+Exception& Exception::operator=(const Exception& other)
 {
-    if (this != &other) {
+    if (this != &other)
+    {
         delete[] m_str;
         const SizeType len = std::strlen(other.m_str);
         m_str = new char[len + 1];
@@ -29,9 +30,10 @@ Exception &Exception::operator=(const Exception &other)
     return *this;
 }
 
-Exception &Exception::operator=(Exception &&other) noexcept
+Exception& Exception::operator=(Exception&& other) noexcept
 {
-    if (this != &other) {
+    if (this != &other)
+    {
         delete[] m_str;
         m_str = other.m_str;
         other.m_str = nullptr;
@@ -46,9 +48,8 @@ Exception::~Exception()
 }
 
 Exception Exception::InvalidComparisonException(
-    const char *leftTypeStr,
-    const char *rightTypeStr
-)
+    const char* leftTypeStr,
+    const char* rightTypeStr)
 {
     char buffer[256];
     std::snprintf(
@@ -56,16 +57,14 @@ Exception Exception::InvalidComparisonException(
         255,
         "Cannot compare %s with %s",
         leftTypeStr,
-        rightTypeStr
-    );
+        rightTypeStr);
     return Exception(buffer);
 }
 
 Exception Exception::InvalidOperationException(
-    const char *opName,
-    const char *leftTypeStr,
-    const char *rightTypeStr
-)
+    const char* opName,
+    const char* leftTypeStr,
+    const char* rightTypeStr)
 {
     char buffer[256];
     std::snprintf(
@@ -74,12 +73,11 @@ Exception Exception::InvalidOperationException(
         "Invalid operation (%s) on types %s and %s",
         opName,
         leftTypeStr,
-        rightTypeStr
-    );
+        rightTypeStr);
     return Exception(buffer);
 }
 
-Exception Exception::InvalidOperationException(const char *opName, const char *typeStr)
+Exception Exception::InvalidOperationException(const char* opName, const char* typeStr)
 {
     char buffer[256];
     std::snprintf(
@@ -87,8 +85,7 @@ Exception Exception::InvalidOperationException(const char *opName, const char *t
         255,
         "Invalid operation (%s) on type %s",
         opName,
-        typeStr
-    );
+        typeStr);
     return Exception(buffer);
 }
 
@@ -100,22 +97,25 @@ Exception Exception::InvalidBitwiseArgument()
 Exception Exception::InvalidArgsException(int expected, int received, bool variadic)
 {
     char buffer[256];
-    if (variadic) {
+    if (variadic)
+    {
         std::sprintf(buffer, "Invalid arguments: expected at least %d, received %d", expected, received);
-    } else {
+    }
+    else
+    {
         std::sprintf(buffer, "Invalid arguments: expected %d, received %d", expected, received);
     }
     return Exception(buffer);
 }
 
-Exception Exception::InvalidArgsException(const char *expectedStr, int received)
+Exception Exception::InvalidArgsException(const char* expectedStr, int received)
 {
     char buffer[256];
     std::sprintf(buffer, "Invalid arguments: expected %s, received %d", expectedStr, received);
     return Exception(buffer);
 }
 
-Exception Exception::InvalidArgsException(const char *expectedStr)
+Exception Exception::InvalidArgsException(const char* expectedStr)
 {
     char buffer[256];
     std::sprintf(buffer, "Invalid arguments: expected %s", expectedStr);
@@ -150,7 +150,7 @@ Exception Exception::MemberNotFoundException(uint32 hashCode)
     return Exception(buffer);
 }
 
-Exception Exception::FileOpenException(const char *fileName)
+Exception Exception::FileOpenException(const char* fileName)
 {
     char buffer[256];
     std::sprintf(buffer, "Failed to open file `%s`", fileName);
@@ -173,7 +173,7 @@ Exception Exception::UnopenedFileCloseException()
     return Exception("Attempted to close an unopened file");
 }
 
-Exception Exception::LibraryLoadException(const char *libName)
+Exception Exception::LibraryLoadException(const char* libName)
 {
     char buffer[256];
     std::snprintf(buffer, 256, "Failed to open library `%s`", libName);
@@ -181,7 +181,7 @@ Exception Exception::LibraryLoadException(const char *libName)
     return Exception(buffer);
 }
 
-Exception Exception::LibraryFunctionLoadException(const char *funcName)
+Exception Exception::LibraryFunctionLoadException(const char* funcName)
 {
     char buffer[256];
     std::snprintf(buffer, 256, "Failed to open library function `%s`", funcName);
@@ -197,7 +197,7 @@ Exception Exception::DuplicateExportException()
     return Exception(buffer);
 }
 
-Exception Exception::KeyNotFoundException(const char *key)
+Exception Exception::KeyNotFoundException(const char* key)
 {
     char buffer[256];
     std::snprintf(buffer, 256, "Key `%s` not found", key);

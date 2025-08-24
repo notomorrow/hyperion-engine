@@ -12,24 +12,22 @@ namespace hyperion::compiler {
 class AstImport : public AstStatement
 {
 public:
-    AstImport(const SourceLocation &location);
+    AstImport(const SourceLocation& location);
     virtual ~AstImport() = default;
 
     static void CopyModules(
-        AstVisitor *visitor,
-        Module *modToCopy,
-        bool updateTreeLink = false
-    );
+        AstVisitor* visitor,
+        Module* modToCopy,
+        bool updateTreeLink = false);
 
     static bool TryOpenFile(
-        const String &path,
-        std::ifstream &is
-    );
+        const String& path,
+        std::ifstream& is);
 
-    virtual void Visit(AstVisitor *visitor, Module *mod) override = 0;
-    virtual std::unique_ptr<Buildable> Build(AstVisitor *visitor, Module *mod) override;
-    virtual void Optimize(AstVisitor *visitor, Module *mod) override;
-    
+    virtual void Visit(AstVisitor* visitor, Module* mod) override = 0;
+    virtual std::unique_ptr<Buildable> Build(AstVisitor* visitor, Module* mod) override;
+    virtual void Optimize(AstVisitor* visitor, Module* mod) override;
+
     virtual RC<AstStatement> Clone() const override = 0;
 
     virtual HashCode GetHashCode() const override
@@ -45,10 +43,9 @@ protected:
     AstIterator m_astIterator;
 
     void PerformImport(
-        AstVisitor *visitor,
-        Module *mod,
-        const String &filepath
-    );
+        AstVisitor* visitor,
+        Module* mod,
+        const String& filepath);
 };
 
 } // namespace hyperion::compiler

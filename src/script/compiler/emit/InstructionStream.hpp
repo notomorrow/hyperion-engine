@@ -22,22 +22,24 @@ class InstructionStreamContext
 {
 public:
     InstructionStreamContext(
-        InstructionStreamContext *parent = nullptr,
-        InstructionStreamContextType type = INSTRUCTION_STREAM_CONTEXT_DEFAULT
-    ) : m_parent(parent),
-        m_type(type),
-        m_nextLabelId(0)
+        InstructionStreamContext* parent = nullptr,
+        InstructionStreamContextType type = INSTRUCTION_STREAM_CONTEXT_DEFAULT)
+        : m_parent(parent),
+          m_type(type),
+          m_nextLabelId(0)
     {
     }
 
-    InstructionStreamContext(const InstructionStreamContext &other) = delete;
-    InstructionStreamContext &operator=(const InstructionStreamContext &other) = delete;
-    InstructionStreamContext(InstructionStreamContext &&other) noexcept = delete;
-    InstructionStreamContext &operator=(InstructionStreamContext &&other) noexcept = delete;
+    InstructionStreamContext(const InstructionStreamContext& other) = delete;
+    InstructionStreamContext& operator=(const InstructionStreamContext& other) = delete;
+    InstructionStreamContext(InstructionStreamContext&& other) noexcept = delete;
+    InstructionStreamContext& operator=(InstructionStreamContext&& other) noexcept = delete;
     ~InstructionStreamContext() = default;
 
     InstructionStreamContextType GetType() const
-        { return m_type; }
+    {
+        return m_type;
+    }
 
     LabelId NewLabel()
     {
@@ -57,12 +59,14 @@ public:
 
     Optional<LabelId> FindLabelByName(Name name) const
     {
-        const auto it = m_labels.FindIf([name](const LabelInfo &labelInfo) {
-            return labelInfo.name == name;
-        });
+        const auto it = m_labels.FindIf([name](const LabelInfo& labelInfo)
+            {
+                return labelInfo.name == name;
+            });
 
-        if (it == m_labels.End()) {
-            return Optional<LabelId> { };
+        if (it == m_labels.End())
+        {
+            return Optional<LabelId> {};
         }
 
         return it->labelId;
@@ -71,26 +75,27 @@ public:
 private:
     LabelId NextLabelID()
     {
-        if (m_parent) {
+        if (m_parent)
+        {
             return m_parent->NextLabelID();
         }
 
         return m_nextLabelId++;
     }
 
-    InstructionStreamContext        *m_parent;
-    InstructionStreamContextType    m_type;
-    Array<LabelInfo>                m_labels;
+    InstructionStreamContext* m_parent;
+    InstructionStreamContextType m_type;
+    Array<LabelInfo> m_labels;
 
-    uint32                          m_nextLabelId;
+    uint32 m_nextLabelId;
 };
 
 struct InstructionStreamContextGuard : TreeNodeGuard<InstructionStreamContext>
 {
     InstructionStreamContextGuard(
-        Tree<InstructionStreamContext> *tree,
-        InstructionStreamContextType type = INSTRUCTION_STREAM_CONTEXT_DEFAULT
-    ) : TreeNodeGuard(tree, &tree->Root(), type)
+        Tree<InstructionStreamContext>* tree,
+        InstructionStreamContextType type = INSTRUCTION_STREAM_CONTEXT_DEFAULT)
+        : TreeNodeGuard(tree, &tree->Root(), type)
     {
     }
 };
@@ -99,20 +104,35 @@ class InstructionStream
 {
 public:
     InstructionStream();
-    InstructionStream(const InstructionStream &other);
+    InstructionStream(const InstructionStream& other);
 
-    uint8 GetCurrentRegister() const { return m_registerCounter; }
-    uint8 IncRegisterUsage() { return ++m_registerCounter; }
-    uint8 DecRegisterUsage() { return --m_registerCounter; }
+    uint8 GetCurrentRegister() const
+    {
+        return m_registerCounter;
+    }
+    uint8 IncRegisterUsage()
+    {
+        return ++m_registerCounter;
+    }
+    uint8 DecRegisterUsage()
+    {
+        return --m_registerCounter;
+    }
 
     int GetStackSize() const
-        { return m_stackSize; }
+    {
+        return m_stackSize;
+    }
 
     void SetStackSize(int stackSize)
-        { m_stackSize = stackSize; }
+    {
+        m_stackSize = stackSize;
+    }
 
     int IncStackSize()
-        { return ++m_stackSize; }
+    {
+        return ++m_stackSize;
+    }
 
     int DecStackSize()
     {
@@ -121,32 +141,41 @@ public:
         return --m_stackSize;
     }
 
-    int NewStaticId() { return m_staticId++; }
+    int NewStaticId()
+    {
+        return m_staticId++;
+    }
 
-    void AddStaticObject(const StaticObject &staticObject)
-        { m_staticObjects.PushBack(staticObject); }
+    void AddStaticObject(const StaticObject& staticObject)
+    {
+        m_staticObjects.PushBack(staticObject);
+    }
 
-    int FindStaticObject(const StaticObject &staticObject) const;
+    int FindStaticObject(const StaticObject& staticObject) const;
 
-    Tree<InstructionStreamContext> &GetContextTree()
-        { return m_contextTree; }
+    Tree<InstructionStreamContext>& GetContextTree()
+    {
+        return m_contextTree;
+    }
 
-    const Tree<InstructionStreamContext> &GetContextTree() const
-        { return m_contextTree; }
+    const Tree<InstructionStreamContext>& GetContextTree() const
+    {
+        return m_contextTree;
+    }
 
 private:
     // incremented and decremented each time a register
     // is used/unused
-    uint8                               m_registerCounter;
+    uint8 m_registerCounter;
     // incremented each time a variable is pushed,
     // decremented each time a stack frame is closed
-    int                                 m_stackSize;
+    int m_stackSize;
     // the current static object id
-    int                                 m_staticId;
+    int m_staticId;
 
-    Array<StaticObject>                 m_staticObjects;
+    Array<StaticObject> m_staticObjects;
 
-    Tree<InstructionStreamContext>      m_contextTree;
+    Tree<InstructionStreamContext> m_contextTree;
 };
 
 } // namespace hyperion::compiler

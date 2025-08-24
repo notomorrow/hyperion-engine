@@ -17,9 +17,9 @@
 
 namespace hyperion::compiler {
 
-AstWhileLoop::AstWhileLoop(const RC<AstExpression> &conditional,
-    const RC<AstBlock> &block,
-    const SourceLocation &location)
+AstWhileLoop::AstWhileLoop(const RC<AstExpression>& conditional,
+    const RC<AstBlock>& block,
+    const SourceLocation& location)
     : AstStatement(location),
       m_conditional(conditional),
       m_block(block),
@@ -27,7 +27,7 @@ AstWhileLoop::AstWhileLoop(const RC<AstExpression> &conditional,
 {
 }
 
-void AstWhileLoop::Visit(AstVisitor *visitor, Module *mod)
+void AstWhileLoop::Visit(AstVisitor* visitor, Module* mod)
 {
     // open scope
     mod->m_scopes.Open(Scope(SCOPE_TYPE_LOOP, 0));
@@ -38,25 +38,25 @@ void AstWhileLoop::Visit(AstVisitor *visitor, Module *mod)
     // visit the body
     m_block->Visit(visitor, mod);
 
-    Scope &thisScope = mod->m_scopes.Top();
+    Scope& thisScope = mod->m_scopes.Top();
     m_numLocals = thisScope.GetIdentifierTable().CountUsedVariables();
 
     // close scope
     mod->m_scopes.Close();
 }
 
-std::unique_ptr<Buildable> AstWhileLoop::Build(AstVisitor *visitor, Module *mod)
+std::unique_ptr<Buildable> AstWhileLoop::Build(AstVisitor* visitor, Module* mod)
 {
     InstructionStreamContextGuard contextGuard(
         &visitor->GetCompilationUnit()->GetInstructionStream().GetContextTree(),
-        INSTRUCTION_STREAM_CONTEXT_LOOP
-    );
+        INSTRUCTION_STREAM_CONTEXT_LOOP);
 
     std::unique_ptr<BytecodeChunk> chunk = BytecodeUtil::Make<BytecodeChunk>();
 
     const Tribool conditionIsTrue = m_conditional->IsTrue();
 
-    if (conditionIsTrue == TRI_INDETERMINATE) {
+    if (conditionIsTrue == TRI_INDETERMINATE)
+    {
         // the condition cannot be determined at compile time
         uint8 rp;
 
@@ -93,7 +93,8 @@ std::unique_ptr<Buildable> AstWhileLoop::Build(AstVisitor *visitor, Module *mod)
         chunk->Append(BytecodeUtil::Make<LabelMarker>(continueLabel));
 
         // pop all local variables off the stack
-        for (int i = 0; i < m_numLocals; i++) {
+        for (int i = 0; i < m_numLocals; i++)
+        {
             visitor->GetCompilationUnit()->GetInstructionStream().DecStackSize();
         }
 
@@ -105,7 +106,9 @@ std::unique_ptr<Buildable> AstWhileLoop::Build(AstVisitor *visitor, Module *mod)
         // set the label's position to after the block,
         // so we can skip it if the condition is false
         chunk->Append(BytecodeUtil::Make<LabelMarker>(breakLabel));
-    } else if (conditionIsTrue == TRI_TRUE) {
+    }
+    else if (conditionIsTrue == TRI_TRUE)
+    {
         LabelId topLabel = contextGuard->NewLabel(HYP_NAME(LoopTopLabel));
         chunk->TakeOwnershipOfLabel(topLabel);
 
@@ -120,7 +123,8 @@ std::unique_ptr<Buildable> AstWhileLoop::Build(AstVisitor *visitor, Module *mod)
         chunk->Append(BytecodeUtil::Make<LabelMarker>(topLabel));
 
         // the condition has been determined to be true
-        if (m_conditional->MayHaveSideEffects()) {
+        if (m_conditional->MayHaveSideEffects())
+        {
             // if there is a possibility of side effects,
             // build the conditional into the binary
             chunk->Append(m_conditional->Build(visitor, mod));
@@ -133,7 +137,8 @@ std::unique_ptr<Buildable> AstWhileLoop::Build(AstVisitor *visitor, Module *mod)
         chunk->Append(BytecodeUtil::Make<LabelMarker>(continueLabel));
 
         // pop all local variables off the stack
-        for (int i = 0; i < m_numLocals; i++) {
+        for (int i = 0; i < m_numLocals; i++)
+        {
             visitor->GetCompilationUnit()->GetInstructionStream().DecStackSize();
         }
 
@@ -144,15 +149,19 @@ std::unique_ptr<Buildable> AstWhileLoop::Build(AstVisitor *visitor, Module *mod)
 
         // Add break label after the top label
         chunk->Append(BytecodeUtil::Make<LabelMarker>(breakLabel));
-    } else { // false
+    }
+    else
+    { // false
         // the condition has been determined to be false
-        if (m_conditional->MayHaveSideEffects()) {
+        if (m_conditional->MayHaveSideEffects())
+        {
             // if there is a possibility of side effects,
             // build the conditional into the binary
             chunk->Append(m_conditional->Build(visitor, mod));
 
             // pop all local variables off the stack
-            for (int i = 0; i < m_numLocals; i++) {
+            for (int i = 0; i < m_numLocals; i++)
+            {
                 visitor->GetCompilationUnit()->GetInstructionStream().DecStackSize();
             }
 
@@ -163,7 +172,7 @@ std::unique_ptr<Buildable> AstWhileLoop::Build(AstVisitor *visitor, Module *mod)
     return chunk;
 }
 
-void AstWhileLoop::Optimize(AstVisitor *visitor, Module *mod)
+void AstWhileLoop::Optimize(AstVisitor* visitor, Module* mod)
 {
     // optimize the conditional
     m_conditional->Optimize(visitor, mod);

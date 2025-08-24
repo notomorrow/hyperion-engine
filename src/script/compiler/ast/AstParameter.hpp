@@ -12,42 +12,64 @@ class AstParameter : public AstDeclaration
 {
 public:
     AstParameter(
-        const String &name,
-        const RC<AstPrototypeSpecification> &typeSpec,
-        const RC<AstExpression> &defaultParam,
+        const String& name,
+        const RC<AstPrototypeSpecification>& typeSpec,
+        const RC<AstExpression>& defaultParam,
         bool isVariadic,
         bool isConst,
         bool isRef,
-        const SourceLocation &location
-    );
+        const SourceLocation& location);
 
     virtual ~AstParameter() override = default;
 
-    const RC<AstExpression> &GetDefaultValue() const
-        { return m_defaultParam; }
+    const RC<AstExpression>& GetDefaultValue() const
+    {
+        return m_defaultParam;
+    }
 
-    void SetDefaultValue(const RC<AstExpression> &defaultParam)
-        { m_defaultParam = defaultParam; }
+    void SetDefaultValue(const RC<AstExpression>& defaultParam)
+    {
+        m_defaultParam = defaultParam;
+    }
 
-    virtual void Visit(AstVisitor *visitor, Module *mod) override;
-    virtual std::unique_ptr<Buildable> Build(AstVisitor *visitor, Module *mod) override;
-    virtual void Optimize(AstVisitor *visitor, Module *mod) override;
-    
+    virtual void Visit(AstVisitor* visitor, Module* mod) override;
+    virtual std::unique_ptr<Buildable> Build(AstVisitor* visitor, Module* mod) override;
+    virtual void Optimize(AstVisitor* visitor, Module* mod) override;
+
     virtual RC<AstStatement> Clone() const override;
 
-    bool IsVariadic() const { return m_isVariadic; }
-    bool IsConst() const { return m_isConst; }
-    bool IsRef() const { return m_isRef; }
+    bool IsVariadic() const
+    {
+        return m_isVariadic;
+    }
+    bool IsConst() const
+    {
+        return m_isConst;
+    }
+    bool IsRef() const
+    {
+        return m_isRef;
+    }
 
-    bool IsGenericParam() const { return m_isGenericParam; }
-    void SetIsGenericParam(bool isGenericParam) { m_isGenericParam = isGenericParam; }
+    bool IsGenericParam() const
+    {
+        return m_isGenericParam;
+    }
+    void SetIsGenericParam(bool isGenericParam)
+    {
+        m_isGenericParam = isGenericParam;
+    }
 
     // used by AstTemplateExpression
-    const RC<AstPrototypeSpecification> &GetPrototypeSpecification() const
-        { return m_typeSpec; } 
+    const RC<AstPrototypeSpecification>& GetPrototypeSpecification() const
+    {
+        return m_typeSpec;
+    }
 
-    void SetPrototypeSpecification(const RC<AstPrototypeSpecification> &typeSpec)
-        { m_typeSpec = typeSpec; }
+    void SetPrototypeSpecification(const RC<AstPrototypeSpecification>& typeSpec)
+    {
+        m_typeSpec = typeSpec;
+    }
 
     SymbolTypePtr_t GetExprType() const;
 
@@ -65,16 +87,16 @@ public:
     }
 
 private:
-    RC<AstPrototypeSpecification>   m_typeSpec;
-    RC<AstExpression>               m_defaultParam;
-    bool                            m_isVariadic;
-    bool                            m_isConst;
-    bool                            m_isRef;
-    bool                            m_isGenericParam;
+    RC<AstPrototypeSpecification> m_typeSpec;
+    RC<AstExpression> m_defaultParam;
+    bool m_isVariadic;
+    bool m_isConst;
+    bool m_isRef;
+    bool m_isGenericParam;
 
     // Set while analyzing
-    SymbolTypePtr_t                 m_symbolType;
-    RC<AstExpression>               m_varargsTypeSpec;
+    SymbolTypePtr_t m_symbolType;
+    RC<AstExpression> m_varargsTypeSpec;
 
     RC<AstParameter> CloneImpl() const
     {
@@ -85,8 +107,7 @@ private:
             m_isVariadic,
             m_isConst,
             m_isRef,
-            m_location
-        ));
+            m_location));
     }
 };
 

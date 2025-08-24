@@ -13,45 +13,62 @@ class AstArgument : public AstExpression
 {
 public:
     AstArgument(
-        const RC<AstExpression> &expr,
+        const RC<AstExpression>& expr,
         bool isSplat,
         bool isNamed,
         bool isPassByRef,
         bool isPassConst,
-        const String &name,
-        const SourceLocation &location
-    );
+        const String& name,
+        const SourceLocation& location);
     virtual ~AstArgument() override = default;
 
-    const RC<AstExpression> &GetExpr() const
-      { return m_expr; }
+    const RC<AstExpression>& GetExpr() const
+    {
+        return m_expr;
+    }
 
-    bool IsSplat() const { return m_isSplat; }
-    bool IsNamed() const { return m_isNamed; }
-    
-    bool IsPassConst() const { return m_isPassConst; }
+    bool IsSplat() const
+    {
+        return m_isSplat;
+    }
+    bool IsNamed() const
+    {
+        return m_isNamed;
+    }
+
+    bool IsPassConst() const
+    {
+        return m_isPassConst;
+    }
     void SetIsPassConst(bool isPassConst)
-        { m_isPassConst = isPassConst; }
+    {
+        m_isPassConst = isPassConst;
+    }
 
-    bool IsPassByRef() const { return m_isPassByRef; }
+    bool IsPassByRef() const
+    {
+        return m_isPassByRef;
+    }
     void SetIsPassByRef(bool isPassByRef)
-        { m_isPassByRef = isPassByRef; }
+    {
+        m_isPassByRef = isPassByRef;
+    }
 
-    virtual void Visit(AstVisitor *visitor, Module *mod) override;
-    virtual std::unique_ptr<Buildable> Build(AstVisitor *visitor, Module *mod) override;
-    virtual void Optimize(AstVisitor *visitor, Module *mod) override;
-    
+    virtual void Visit(AstVisitor* visitor, Module* mod) override;
+    virtual std::unique_ptr<Buildable> Build(AstVisitor* visitor, Module* mod) override;
+    virtual void Optimize(AstVisitor* visitor, Module* mod) override;
+
     virtual RC<AstStatement> Clone() const override;
 
-    //virtual const AstExpression *GetValueOf() const override { return m_expr.Get(); }
+    // virtual const AstExpression *GetValueOf() const override { return m_expr.Get(); }
 
     virtual bool IsLiteral() const override;
     virtual Tribool IsTrue() const override;
     virtual bool MayHaveSideEffects() const override;
     virtual SymbolTypePtr_t GetExprType() const override;
-    virtual const AstExpression *GetValueOf() const override;
-    virtual const AstExpression *GetDeepValueOf() const override;
-    virtual const String &GetName() const override;
+    virtual const AstExpression* GetValueOf() const override;
+    virtual const AstExpression* GetDeepValueOf() const override;
+    virtual const String& GetName() const override;
 
     virtual HashCode GetHashCode() const override
     {
@@ -67,14 +84,14 @@ public:
     }
 
 private:
-    RC<AstExpression>   m_expr;
-    bool                m_isSplat;
-    bool                m_isNamed;
-    bool                m_isPassByRef;
-    bool                m_isPassConst;
-    String              m_name;
-    
-    bool                m_isVisited = false;
+    RC<AstExpression> m_expr;
+    bool m_isSplat;
+    bool m_isNamed;
+    bool m_isPassByRef;
+    bool m_isPassConst;
+    String m_name;
+
+    bool m_isVisited = false;
 
     RC<AstArgument> CloneImpl() const
     {
@@ -85,8 +102,7 @@ private:
             m_isPassByRef,
             m_isPassConst,
             m_name,
-            m_location
-        ));
+            m_location));
     }
 };
 

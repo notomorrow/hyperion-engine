@@ -5,11 +5,11 @@
 namespace hyperion::compiler {
 
 Module::Module(
-    const String &name,
-    const SourceLocation &location
-) : m_name(name),
-    m_location(location),
-    m_treeLink(nullptr)
+    const String& name,
+    const SourceLocation& location)
+    : m_name(name),
+      m_location(location),
+      m_treeLink(nullptr)
 {
 }
 
@@ -17,12 +17,14 @@ FlatSet<String> Module::GenerateAllScanPaths() const
 {
     FlatSet<String> allScanPaths = m_scanPaths;
 
-    TreeNode<Module*> *top = m_treeLink;
-    
-    while (top != nullptr) {
+    TreeNode<Module*>* top = m_treeLink;
+
+    while (top != nullptr)
+    {
         Assert(top->Get() != nullptr);
 
-        for (const auto &otherScanPath : top->Get()->GetScanPaths()) {
+        for (const auto& otherScanPath : top->Get()->GetScanPaths())
+        {
             allScanPaths.Insert(otherScanPath);
         }
 
@@ -34,28 +36,33 @@ FlatSet<String> Module::GenerateAllScanPaths() const
 
 String Module::GenerateFullModuleName() const
 {
-    TreeNode<Module*> *top = m_treeLink;
-    
-    if (top != nullptr) {
+    TreeNode<Module*>* top = m_treeLink;
+
+    if (top != nullptr)
+    {
         Array<String> parts;
         SizeType size = 0;
 
-        do {
+        do
+        {
             Assert(top->Get() != nullptr);
 
             parts.PushBack(top->Get()->GetName());
             size += top->Get()->GetName().Size();
 
             top = top->m_parent;
-        } while (top != nullptr);
+        }
+        while (top != nullptr);
 
         String res;
         res.Reserve(size + (2 * parts.Size()));
 
-        for (int i = int(parts.Size()) - 1; i >= 0; i--) {
+        for (int i = int(parts.Size()) - 1; i >= 0; i--)
+        {
             res += parts[i];
 
-            if (i != 0) {
+            if (i != 0)
+            {
                 res += "::";
             }
         }
@@ -73,13 +80,15 @@ bool Module::IsInGlobalScope() const
 
 bool Module::IsInScopeOfType(ScopeType scopeType) const
 {
-    const TreeNode<Scope> *top = m_scopes.TopNode();
+    const TreeNode<Scope>* top = m_scopes.TopNode();
 
-    while (top != nullptr) {
-        if (top->Get().GetScopeType() == scopeType) {
+    while (top != nullptr)
+    {
+        if (top->Get().GetScopeType() == scopeType)
+        {
             return true;
         }
-        
+
         top = top->m_parent;
     }
 
@@ -88,30 +97,34 @@ bool Module::IsInScopeOfType(ScopeType scopeType) const
 
 bool Module::IsInScopeOfType(ScopeType scopeType, uint32 scopeFlags) const
 {
-    const TreeNode<Scope> *top = m_scopes.TopNode();
+    const TreeNode<Scope>* top = m_scopes.TopNode();
 
-    while (top != nullptr) {
-        if (top->Get().GetScopeType() == scopeType && bool(uint32(top->Get().GetScopeFlags()) & scopeFlags)) {
+    while (top != nullptr)
+    {
+        if (top->Get().GetScopeType() == scopeType && bool(uint32(top->Get().GetScopeFlags()) & scopeFlags))
+        {
             return true;
         }
-        
+
         top = top->m_parent;
     }
 
     return false;
 }
 
-Module *Module::LookupNestedModule(const String &name)
+Module* Module::LookupNestedModule(const String& name)
 {
     Assert(m_treeLink != nullptr);
 
     // search siblings of the current module,
     // rather than global lookup.
-    for (auto *sibling : m_treeLink->m_siblings) {
+    for (auto* sibling : m_treeLink->m_siblings)
+    {
         Assert(sibling != nullptr);
         Assert(sibling->Get() != nullptr);
-        
-        if (sibling->Get()->GetName() == name) {
+
+        if (sibling->Get()->GetName() == name)
+        {
             return sibling->Get();
         }
     }
@@ -119,15 +132,16 @@ Module *Module::LookupNestedModule(const String &name)
     return nullptr;
 }
 
-Array<Module *> Module::CollectNestedModules() const
+Array<Module*> Module::CollectNestedModules() const
 {
     Assert(m_treeLink != nullptr);
 
-    Array<Module *> nestedModules;
+    Array<Module*> nestedModules;
 
     // search siblings of the current module,
     // rather than global lookup.
-    for (auto *sibling : m_treeLink->m_siblings) {
+    for (auto* sibling : m_treeLink->m_siblings)
+    {
         Assert(sibling != nullptr);
         Assert(sibling->Get() != nullptr);
 
@@ -137,33 +151,43 @@ Array<Module *> Module::CollectNestedModules() const
     return nestedModules;
 }
 
-RC<Identifier> Module::LookUpIdentifier(const String &name, bool thisScopeOnly, bool outsideModules)
+RC<Identifier> Module::LookUpIdentifier(const String& name, bool thisScopeOnly, bool outsideModules)
 {
-    TreeNode<Scope> *top = m_scopes.TopNode();
+    TreeNode<Scope>* top = m_scopes.TopNode();
 
-    while (top != nullptr) {
-        if (RC<Identifier> result = top->Get().GetIdentifierTable().LookUpIdentifier(name)) {
+    while (top != nullptr)
+    {
+        if (RC<Identifier> result = top->Get().GetIdentifierTable().LookUpIdentifier(name))
+        {
             // a result was found
             return result;
         }
 
-        if (thisScopeOnly) {
+        if (thisScopeOnly)
+        {
             return nullptr;
         }
 
         top = top->m_parent;
     }
 
-    if (outsideModules) {
-        if (m_treeLink != nullptr && m_treeLink->m_parent != nullptr) {
-            if (Module *other = m_treeLink->m_parent->Get()) {
-                if (other->GetLocation().GetFileName() == m_location.GetFileName()) {
+    if (outsideModules)
+    {
+        if (m_treeLink != nullptr && m_treeLink->m_parent != nullptr)
+        {
+            if (Module* other = m_treeLink->m_parent->Get())
+            {
+                if (other->GetLocation().GetFileName() == m_location.GetFileName())
+                {
                     return other->LookUpIdentifier(name, false);
-                } else {
+                }
+                else
+                {
                     // we are outside of file scope, so loop until root/global module found
-                    const TreeNode<Module*> *modLink = m_treeLink->m_parent;
+                    const TreeNode<Module*>* modLink = m_treeLink->m_parent;
 
-                    while (modLink->m_parent != nullptr) {
+                    while (modLink->m_parent != nullptr)
+                    {
                         modLink = modLink->m_parent;
                     }
 
@@ -179,12 +203,14 @@ RC<Identifier> Module::LookUpIdentifier(const String &name, bool thisScopeOnly, 
     return nullptr;
 }
 
-RC<Identifier> Module::LookUpIdentifierDepth(const String &name, int depthLevel)
+RC<Identifier> Module::LookUpIdentifierDepth(const String& name, int depthLevel)
 {
-    TreeNode<Scope> *top = m_scopes.TopNode();
+    TreeNode<Scope>* top = m_scopes.TopNode();
 
-    for (int i = 0; top != nullptr && i < depthLevel; i++) {
-        if (RC<Identifier> result = top->Get().GetIdentifierTable().LookUpIdentifier(name)) {
+    for (int i = 0; top != nullptr && i < depthLevel; i++)
+    {
+        if (RC<Identifier> result = top->Get().GetIdentifierTable().LookUpIdentifier(name))
+        {
             return result;
         }
 
@@ -194,54 +220,52 @@ RC<Identifier> Module::LookUpIdentifierDepth(const String &name, int depthLevel)
     return nullptr;
 }
 
-SymbolTypePtr_t Module::LookupSymbolType(const String &name)
+SymbolTypePtr_t Module::LookupSymbolType(const String& name)
 {
     return PerformLookup<SymbolTypePtr_t>(
-        [&name](TreeNode<Scope> *top)
+        [&name](TreeNode<Scope>* top)
         {
             return top->Get().GetIdentifierTable().LookupSymbolType(name);
         },
-        [&name](Module *mod)
+        [&name](Module* mod)
         {
             return mod->LookupSymbolType(name);
-        }
-    );
+        });
 }
-Variant<RC<Identifier>, SymbolTypePtr_t> Module::LookUpIdentifierOrSymbolType(const String &name)
+Variant<RC<Identifier>, SymbolTypePtr_t> Module::LookUpIdentifierOrSymbolType(const String& name)
 {
     return PerformLookup<Variant<RC<Identifier>, SymbolTypePtr_t>>(
-        [&name](TreeNode<Scope> *top) -> Variant<RC<Identifier>, SymbolTypePtr_t>
+        [&name](TreeNode<Scope>* top) -> Variant<RC<Identifier>, SymbolTypePtr_t>
         {
-            if (SymbolTypePtr_t symbolType = top->Get().GetIdentifierTable().LookupSymbolType(name)) {
+            if (SymbolTypePtr_t symbolType = top->Get().GetIdentifierTable().LookupSymbolType(name))
+            {
                 return Variant<RC<Identifier>, SymbolTypePtr_t>(symbolType);
             }
 
-            if (RC<Identifier> result = top->Get().GetIdentifierTable().LookUpIdentifier(name)) {
+            if (RC<Identifier> result = top->Get().GetIdentifierTable().LookUpIdentifier(name))
+            {
                 return Variant<RC<Identifier>, SymbolTypePtr_t>(result);
             }
 
             return Variant<RC<Identifier>, SymbolTypePtr_t>();
         },
-        [&name](Module *mod) -> Variant<RC<Identifier>, SymbolTypePtr_t>
+        [&name](Module* mod) -> Variant<RC<Identifier>, SymbolTypePtr_t>
         {
             return mod->LookUpIdentifierOrSymbolType(name);
-        }
-    );
+        });
 }
 
-
-Optional<GenericInstanceCache::CachedObject> Module::LookupGenericInstance(const GenericInstanceCache::Key &key)
+Optional<GenericInstanceCache::CachedObject> Module::LookupGenericInstance(const GenericInstanceCache::Key& key)
 {
     return PerformLookup<Optional<GenericInstanceCache::CachedObject>>(
-        [&key](TreeNode<Scope> *top)
+        [&key](TreeNode<Scope>* top)
         {
             return top->Get().GetGenericInstanceCache().Lookup(key);
         },
-        [&key](Module *mod)
+        [&key](Module* mod)
         {
             return mod->LookupGenericInstance(key);
-        }
-    );
+        });
 }
 
 } // namespace hyperion::compiler

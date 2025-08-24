@@ -17,89 +17,91 @@ static struct ArrayScriptBindings : ScriptBindingsBase
     {
     }
 
-    virtual void Generate(scriptapi2::Context &context) override
+    virtual void Generate(scriptapi2::Context& context) override
     {
         context.Class<VMArray>("Array", String("<T>"))
             .Method("$construct", "function< Array, any >", CxxCtor<VMArray>)
-            .Method("length", "function< int, any >", CxxFn<int32, VMArray *,
-                [](VMArray *array) -> int32
-                {
-                    if (!array) {
-                        return 0;
-                    }
-                    
-                    return int32(array->GetSize());
-                }
-            >)
-            .Method("operator[]", "function< T, any, int >", CxxFn<vm::Value, VMArray *, int32, [](VMArray *array, int32 index) -> vm::Value
-            {
-                if (!array) {
-                    return vm::Value { vm::Value::NONE, { } };
-                }
+            .Method("length", "function< int, any >", CxxFn<int32, VMArray*, [](VMArray* array) -> int32
+                                                          {
+                                                              if (!array)
+                                                              {
+                                                                  return 0;
+                                                              }
 
-                if (index < 0 || index >= array->GetSize()) {
-                    return vm::Value { vm::Value::NONE, { } };
-                }
+                                                              return int32(array->GetSize());
+                                                          }>)
+            .Method("operator[]", "function< T, any, int >", CxxFn<vm::Value, VMArray*, int32, [](VMArray* array, int32 index) -> vm::Value
+                                                                 {
+                                                                     if (!array)
+                                                                     {
+                                                                         return vm::Value { vm::Value::NONE, {} };
+                                                                     }
 
-                return vm::Value(array->AtIndex(index));
-            }>)
-            .Method("operator[]=", "function< void, any, int, T >", CxxFn<void, VMArray *, int32, vm::Value,
-                [](VMArray *array, int32 index, vm::Value value) -> void
-                {
-                    if (!array) {
-                        return;
-                    }
+                                                                     if (index < 0 || index >= array->GetSize())
+                                                                     {
+                                                                         return vm::Value { vm::Value::NONE, {} };
+                                                                     }
 
-                    if (index < 0 || index >= array->GetSize()) {
-                        return;
-                    }
+                                                                     return vm::Value(array->AtIndex(index));
+                                                                 }>)
+            .Method("operator[]=", "function< void, any, int, T >", CxxFn<void, VMArray*, int32, vm::Value, [](VMArray* array, int32 index, vm::Value value) -> void
+                                                                        {
+                                                                            if (!array)
+                                                                            {
+                                                                                return;
+                                                                            }
 
-                    array->AtIndex(index) = value;
-                    array->AtIndex(index).Mark();
-                }
-            >)
-            .Method("push", "function< void, any, T >", CxxFn<void, VMArray *, vm::Value,
-                [](VMArray *array, Value value) -> void
-                {
-                    if (!array) {
-                        return;
-                    }
+                                                                            if (index < 0 || index >= array->GetSize())
+                                                                            {
+                                                                                return;
+                                                                            }
 
-                    array->Push(value);
-                }
-            >)
-            .Method("pop", "function< void, any >", CxxFn<void, VMArray *,
-                [](VMArray *array) -> void
-                {
-                    if (!array) {
-                        return;
-                    }
+                                                                            array->AtIndex(index) = value;
+                                                                            array->AtIndex(index).Mark();
+                                                                        }>)
+            .Method("push", "function< void, any, T >", CxxFn<void, VMArray*, vm::Value, [](VMArray* array, Value value) -> void
+                                                            {
+                                                                if (!array)
+                                                                {
+                                                                    return;
+                                                                }
 
-                    // @TODO Throw exception if array is empty
+                                                                array->Push(value);
+                                                            }>)
+            .Method("pop", "function< void, any >", CxxFn<void, VMArray*, [](VMArray* array) -> void
+                                                        {
+                                                            if (!array)
+                                                            {
+                                                                return;
+                                                            }
 
-                    array->Pop();
-                }
-            >)
-            .StaticMethod("from", "function< Array, any, any >", CxxFn<VMArray, const void *, vm::Value, [](const void *, vm::Value value) -> VMArray
-            {
-                if (value.GetType() != vm::Value::ValueType::HEAP_POINTER) {
-                    return VMArray();
-                }
+                                                            // @TODO Throw exception if array is empty
 
-                if (value.GetValue().ptr == nullptr) {
-                    return VMArray();
-                }
+                                                            array->Pop();
+                                                        }>)
+            .StaticMethod("from", "function< Array, any, any >", CxxFn<VMArray, const void*, vm::Value, [](const void*, vm::Value value) -> VMArray
+                                                                     {
+                                                                         if (value.GetType() != vm::Value::ValueType::HEAP_POINTER)
+                                                                         {
+                                                                             return VMArray();
+                                                                         }
 
-                if (value.GetValue().ptr->GetPointer<VMArray>() == nullptr) {
-                    return VMArray();
-                }
+                                                                         if (value.GetValue().ptr == nullptr)
+                                                                         {
+                                                                             return VMArray();
+                                                                         }
 
-                return VMArray(*value.GetValue().ptr->GetPointer<VMArray>());
-            }>)
+                                                                         if (value.GetValue().ptr->GetPointer<VMArray>() == nullptr)
+                                                                         {
+                                                                             return VMArray();
+                                                                         }
+
+                                                                         return VMArray(*value.GetValue().ptr->GetPointer<VMArray>());
+                                                                     }>)
             .Build();
     }
 
-} arrayScriptBindings { };
+} arrayScriptBindings {};
 
 } // namespace bindings
 } // namespace script

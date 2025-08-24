@@ -14,19 +14,20 @@ class AstFunctionDefinition : public AstDeclaration
 {
 public:
     AstFunctionDefinition(
-        const String &name,
-        const RC<AstFunctionExpression> &expr,
-        const SourceLocation &location
-    );
+        const String& name,
+        const RC<AstFunctionExpression>& expr,
+        const SourceLocation& location);
     virtual ~AstFunctionDefinition() override = default;
 
-    const RC<AstFunctionExpression> &GetAssignment() const
-        { return m_expr; }
+    const RC<AstFunctionExpression>& GetAssignment() const
+    {
+        return m_expr;
+    }
 
-    virtual void Visit(AstVisitor *visitor, Module *mod) override;
-    virtual std::unique_ptr<Buildable> Build(AstVisitor *visitor, Module *mod) override;
-    virtual void Optimize(AstVisitor *visitor, Module *mod) override;
-    
+    virtual void Visit(AstVisitor* visitor, Module* mod) override;
+    virtual std::unique_ptr<Buildable> Build(AstVisitor* visitor, Module* mod) override;
+    virtual void Optimize(AstVisitor* visitor, Module* mod) override;
+
     virtual RC<AstStatement> Clone() const override;
 
     virtual HashCode GetHashCode() const override
@@ -39,15 +40,14 @@ public:
     }
 
 protected:
-    RC<AstFunctionExpression>   m_expr;
+    RC<AstFunctionExpression> m_expr;
 
     RC<AstFunctionDefinition> CloneImpl() const
     {
         return RC<AstFunctionDefinition>(new AstFunctionDefinition(
             m_name,
             CloneAstNode(m_expr),
-            m_location
-        ));
+            m_location));
     }
 };
 

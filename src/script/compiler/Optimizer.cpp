@@ -9,21 +9,21 @@
 namespace hyperion::compiler {
 
 RC<AstConstant> Optimizer::ConstantFold(
-    RC<AstExpression> &left,
-    RC<AstExpression> &right,
+    RC<AstExpression>& left,
+    RC<AstExpression>& right,
     Operators opType,
-    AstVisitor *visitor
-)
+    AstVisitor* visitor)
 {
     Assert(left != nullptr);
     Assert(right != nullptr);
 
-    const AstConstant *leftAsConstant  = dynamic_cast<const AstConstant*>(left->GetValueOf());
-    const AstConstant *rightAsConstant = dynamic_cast<const AstConstant*>(right->GetValueOf());
+    const AstConstant* leftAsConstant = dynamic_cast<const AstConstant*>(left->GetValueOf());
+    const AstConstant* rightAsConstant = dynamic_cast<const AstConstant*>(right->GetValueOf());
 
     RC<AstConstant> result;
 
-    if (leftAsConstant != nullptr && rightAsConstant != nullptr) {
+    if (leftAsConstant != nullptr && rightAsConstant != nullptr)
+    {
         result = leftAsConstant->HandleOperator(opType, rightAsConstant);
         // don't have to worry about assignment operations,
         // because at this point both sides are const and literal.
@@ -34,27 +34,34 @@ RC<AstConstant> Optimizer::ConstantFold(
 }
 
 RC<AstExpression> Optimizer::OptimizeExpr(
-    const RC<AstExpression> &expr,
-    AstVisitor *visitor,
-    Module *mod)
+    const RC<AstExpression>& expr,
+    AstVisitor* visitor,
+    Module* mod)
 {
     Assert(expr != nullptr);
     expr->Optimize(visitor, mod);
 
-    if (const AstIdentifier *exprAsIdentifier = dynamic_cast<AstIdentifier *>(expr.Get())) {
+    if (const AstIdentifier* exprAsIdentifier = dynamic_cast<AstIdentifier*>(expr.Get()))
+    {
         // the side is a variable, so we can further optimize by inlining,
         // only if it is literal.
-        if (exprAsIdentifier->IsLiteral()) {
-            if (const RC<Identifier> &ident = exprAsIdentifier->GetProperties().GetIdentifier()) {
-                if (const RC<AstExpression> &currentValue = ident->GetCurrentValue()) {
+        if (exprAsIdentifier->IsLiteral())
+        {
+            if (const RC<Identifier>& ident = exprAsIdentifier->GetProperties().GetIdentifier())
+            {
+                if (const RC<AstExpression>& currentValue = ident->GetCurrentValue())
+                {
                     // decrement use count because it would have been incremented by Visit()
                     ident->DecUseCount();
                     return Optimizer::OptimizeExpr(currentValue, visitor, mod);
                 }
             }
         }
-    } else if (const AstBinaryExpression *exprAsBinop = dynamic_cast<AstBinaryExpression *>(expr.Get())) {
-        if (exprAsBinop->GetRight() == nullptr) {
+    }
+    else if (const AstBinaryExpression* exprAsBinop = dynamic_cast<AstBinaryExpression*>(expr.Get()))
+    {
+        if (exprAsBinop->GetRight() == nullptr)
+        {
             // right side has been optimized away
             return Optimizer::OptimizeExpr(exprAsBinop->GetLeft(), visitor, mod);
         }
@@ -63,12 +70,12 @@ RC<AstExpression> Optimizer::OptimizeExpr(
     return expr;
 }
 
-Optimizer::Optimizer(AstIterator *astIterator, CompilationUnit *compilationUnit)
+Optimizer::Optimizer(AstIterator* astIterator, CompilationUnit* compilationUnit)
     : AstVisitor(astIterator, compilationUnit)
 {
 }
 
-Optimizer::Optimizer(const Optimizer &other)
+Optimizer::Optimizer(const Optimizer& other)
     : AstVisitor(other.m_astIterator, other.m_compilationUnit)
 {
 }
@@ -94,10 +101,11 @@ void Optimizer::Optimize(bool expectModuleDecl)
 
 void Optimizer::OptimizeInner()
 {
-    Module *mod = m_compilationUnit->GetCurrentModule();
+    Module* mod = m_compilationUnit->GetCurrentModule();
     Assert(mod != nullptr);
-    
-    while (m_astIterator->HasNext()) {
+
+    while (m_astIterator->HasNext())
+    {
         m_astIterator->Next()->Optimize(this, mod);
     }
 }

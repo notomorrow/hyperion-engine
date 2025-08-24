@@ -14,36 +14,36 @@
 namespace hyperion::compiler {
 
 AstExportStatement::AstExportStatement(
-    const RC<AstStatement> &stmt,
-    const SourceLocation &location
-) : AstStatement(location),
-    m_stmt(stmt)
+    const RC<AstStatement>& stmt,
+    const SourceLocation& location)
+    : AstStatement(location),
+      m_stmt(stmt)
 {
 }
 
-void AstExportStatement::Visit(AstVisitor *visitor, Module *mod)
+void AstExportStatement::Visit(AstVisitor* visitor, Module* mod)
 {
     Assert(m_stmt != nullptr);
     m_stmt->Visit(visitor, mod);
 
-    if (!mod->IsInGlobalScope()) {
+    if (!mod->IsInGlobalScope())
+    {
         visitor->GetCompilationUnit()->GetErrorList().AddError(CompilerError(
             LEVEL_ERROR,
             Msg_export_outside_global,
-            m_location
-        ));
+            m_location));
 
         return;
     }
 
     m_exportedSymbolName = m_stmt->GetName();
 
-    if (m_exportedSymbolName == AstStatement::unnamed) {
+    if (m_exportedSymbolName == AstStatement::unnamed)
+    {
         visitor->GetCompilationUnit()->GetErrorList().AddError(CompilerError(
             LEVEL_ERROR,
             Msg_export_invalid_name,
-            m_location
-        ));
+            m_location));
 
         return;
     }
@@ -51,7 +51,7 @@ void AstExportStatement::Visit(AstVisitor *visitor, Module *mod)
     // TODO: ensure thing not already exported globally (or in module?)
 }
 
-std::unique_ptr<Buildable> AstExportStatement::Build(AstVisitor *visitor, Module *mod)
+std::unique_ptr<Buildable> AstExportStatement::Build(AstVisitor* visitor, Module* mod)
 {
     Assert(m_stmt != nullptr);
 
@@ -65,11 +65,11 @@ std::unique_ptr<Buildable> AstExportStatement::Build(AstVisitor *visitor, Module
 
     // add EXPORT instruction
     chunk->Append(BytecodeUtil::Make<SymbolExport>(rp, m_exportedSymbolName));
-    
+
     return chunk;
 }
 
-void AstExportStatement::Optimize(AstVisitor *visitor, Module *mod)
+void AstExportStatement::Optimize(AstVisitor* visitor, Module* mod)
 {
     Assert(m_stmt != nullptr);
     m_stmt->Optimize(visitor, mod);

@@ -17,26 +17,28 @@ using LabelId = SizeType;
 
 struct LabelInfo
 {
-    LabelId         labelId = LabelId(-1);
-    LabelPosition   position = LabelPosition(-1);
-    Name            name     = HYP_NAME(LabelNameNotSet);
+    LabelId labelId = LabelId(-1);
+    LabelPosition position = LabelPosition(-1);
+    Name name = HYP_NAME(LabelNameNotSet);
 
-    bool operator==(const LabelInfo &other) const
+    bool operator==(const LabelInfo& other) const
     {
         return labelId == other.labelId
             && position == other.position
             && name == other.name;
     }
 
-    bool operator<(const LabelInfo &other) const
-        { return labelId < other.labelId; }
+    bool operator<(const LabelInfo& other) const
+    {
+        return labelId < other.labelId;
+    }
 };
 
 struct BuildParams
 {
-    SizeType                blockOffset = 0;
-    SizeType                localOffset = 0;
-    SortedArray<LabelInfo>  labels;
+    SizeType blockOffset = 0;
+    SizeType localOffset = 0;
+    SortedArray<LabelInfo> labels;
 };
 
 struct Buildable

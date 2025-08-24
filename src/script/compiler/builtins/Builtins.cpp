@@ -27,7 +27,7 @@ namespace hyperion::compiler {
 
 const SourceLocation Builtins::BUILTIN_SOURCE_LOCATION(-1, -1, "<builtin>");
 
-Builtins::Builtins(CompilationUnit *unit)
+Builtins::Builtins(CompilationUnit* unit)
     : m_unit(unit)
 {
     // Variadic args wrapper, to be used in the `function` type
@@ -40,44 +40,32 @@ Builtins::Builtins(CompilationUnit *unit)
                 "varargs",
                 nullptr,
                 {},
-                {
-                },
-                {
-                    // variadic trait
+                {},
+                { // variadic trait
                     RC<AstVariableDeclaration>(new AstVariableDeclaration(
                         BuiltinTypeTraits::variadic.name,
                         nullptr,
                         RC<AstTrue>(new AstTrue(BUILTIN_SOURCE_LOCATION)),
                         IdentifierFlags::FLAG_CONST | IdentifierFlags::FLAG_TRAIT,
-                        BUILTIN_SOURCE_LOCATION
-                    ))
-                },
+                        BUILTIN_SOURCE_LOCATION)) },
                 true, // proxy class, so we can use Map<K, V>.length() like {}.length()
-                BUILTIN_SOURCE_LOCATION
-            )),
-            {
-                RC<AstParameter>(new AstParameter(
-                    "T",
-                    RC<AstPrototypeSpecification>(new AstPrototypeSpecification(
-                        RC<AstTypeRef>(new AstTypeRef(
-                            BuiltinTypes::CLASS_TYPE,
-                            BUILTIN_SOURCE_LOCATION
-                        )),
-                        BUILTIN_SOURCE_LOCATION
-                    )),
-                    nullptr,
-                    false,
-                    false,
-                    false,
-                    BUILTIN_SOURCE_LOCATION
-                ))
-            },
+                BUILTIN_SOURCE_LOCATION)),
+            { RC<AstParameter>(new AstParameter(
+                "T",
+                RC<AstPrototypeSpecification>(new AstPrototypeSpecification(
+                    RC<AstTypeRef>(new AstTypeRef(
+                        BuiltinTypes::CLASS_TYPE,
+                        BUILTIN_SOURCE_LOCATION)),
+                    BUILTIN_SOURCE_LOCATION)),
+                nullptr,
+                false,
+                false,
+                false,
+                BUILTIN_SOURCE_LOCATION)) },
             nullptr,
-            BUILTIN_SOURCE_LOCATION
-        )),
+            BUILTIN_SOURCE_LOCATION)),
         IdentifierFlags::FLAG_CONST | IdentifierFlags::FLAG_GENERIC,
-        BUILTIN_SOURCE_LOCATION
-    )));
+        BUILTIN_SOURCE_LOCATION)));
 
     m_vars.PushBack(RC<AstVariableDeclaration>(new AstVariableDeclaration(
         "function",
@@ -87,55 +75,42 @@ Builtins::Builtins(CompilationUnit *unit)
                 "function",
                 nullptr,
                 {},
-                {
-                },
-                {
-                },
+                {},
+                {},
                 true, // proxy class, so we can use Map<K, V>.length() like {}.length()
-                BUILTIN_SOURCE_LOCATION
-            )),
-            {
-                RC<AstParameter>(new AstParameter(
-                    "ReturnType",
-                    RC<AstPrototypeSpecification>(new AstPrototypeSpecification(
-                        RC<AstTypeRef>(new AstTypeRef(
-                            BuiltinTypes::CLASS_TYPE,
-                            BUILTIN_SOURCE_LOCATION
-                        )),
-                        BUILTIN_SOURCE_LOCATION
-                    )),
-                    nullptr,
-                    false,
-                    false,
-                    false,
-                    BUILTIN_SOURCE_LOCATION
-                )),
+                BUILTIN_SOURCE_LOCATION)),
+            { RC<AstParameter>(new AstParameter(
+                  "ReturnType",
+                  RC<AstPrototypeSpecification>(new AstPrototypeSpecification(
+                      RC<AstTypeRef>(new AstTypeRef(
+                          BuiltinTypes::CLASS_TYPE,
+                          BUILTIN_SOURCE_LOCATION)),
+                      BUILTIN_SOURCE_LOCATION)),
+                  nullptr,
+                  false,
+                  false,
+                  false,
+                  BUILTIN_SOURCE_LOCATION)),
 
                 RC<AstParameter>(new AstParameter(
                     "Args",
                     RC<AstPrototypeSpecification>(new AstPrototypeSpecification(
                         RC<AstTypeRef>(new AstTypeRef(
                             BuiltinTypes::CLASS_TYPE,
-                            BUILTIN_SOURCE_LOCATION
-                        )),
-                        BUILTIN_SOURCE_LOCATION
-                    )),
+                            BUILTIN_SOURCE_LOCATION)),
+                        BUILTIN_SOURCE_LOCATION)),
                     nullptr,
                     true, // variadic
                     false,
                     false,
-                    BUILTIN_SOURCE_LOCATION
-                ))
-            },
+                    BUILTIN_SOURCE_LOCATION)) },
             nullptr,
-            BUILTIN_SOURCE_LOCATION
-        )),
+            BUILTIN_SOURCE_LOCATION)),
         IdentifierFlags::FLAG_CONST | IdentifierFlags::FLAG_GENERIC,
-        BUILTIN_SOURCE_LOCATION
-    )));
+        BUILTIN_SOURCE_LOCATION)));
 }
 
-void Builtins::Visit(AstVisitor *visitor)
+void Builtins::Visit(AstVisitor* visitor)
 {
     Array<SymbolTypePtr_t> builtinTypes {
         BuiltinTypes::PRIMITIVE_TYPE,
@@ -153,32 +128,29 @@ void Builtins::Visit(AstVisitor *visitor)
 
     AstIterator ast;
 
-    for (const SymbolTypePtr_t &typePtr : builtinTypes) {
+    for (const SymbolTypePtr_t& typePtr : builtinTypes)
+    {
         Assert(typePtr != nullptr);
         Assert(typePtr->GetId() == -1);
         Assert(typePtr->GetTypeObject() == nullptr);
 
         // add 'name' member here
-        typePtr->AddMember({
-            "name",
+        typePtr->AddMember({ "name",
             BuiltinTypes::STRING,
-            RC<AstString>(new AstString(typePtr->GetName(), BUILTIN_SOURCE_LOCATION))
-        });
+            RC<AstString>(new AstString(typePtr->GetName(), BUILTIN_SOURCE_LOCATION)) });
 
         // Add "$proto" so we can use isInstance to check if a value is an instance of a type
-        if (typePtr->IsPrimitive() && typePtr->GetDefaultValue() != nullptr) {
-            typePtr->AddMember({
-                "$proto",
+        if (typePtr->IsPrimitive() && typePtr->GetDefaultValue() != nullptr)
+        {
+            typePtr->AddMember({ "$proto",
                 typePtr,
-                typePtr->GetDefaultValue()
-            });
+                typePtr->GetDefaultValue() });
         }
 
         RC<AstTypeObject> typeObject(new AstTypeObject(
             typePtr,
             typePtr->GetBaseType(),
-            BUILTIN_SOURCE_LOCATION
-        ));
+            BUILTIN_SOURCE_LOCATION));
 
         // push it so that it can be visited, and registered
         visitor->GetAstIterator()->Push(typeObject);
@@ -186,11 +158,12 @@ void Builtins::Visit(AstVisitor *visitor)
         typePtr->SetTypeObject(typeObject);
 
         // add it to the global scope
-        Scope &scope = m_unit->GetGlobalModule()->m_scopes.Top();
+        Scope& scope = m_unit->GetGlobalModule()->m_scopes.Top();
         scope.GetIdentifierTable().AddSymbolType(typePtr);
     }
 
-    for (auto &it : m_vars) {
+    for (auto& it : m_vars)
+    {
         visitor->GetAstIterator()->Push(std::move(it));
     }
 }

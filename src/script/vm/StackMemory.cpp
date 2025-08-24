@@ -8,7 +8,7 @@
 namespace hyperion {
 namespace vm {
 
-std::ostream &operator<<(std::ostream &os, const StackMemory &stack)
+std::ostream& operator<<(std::ostream& os, const StackMemory& stack)
 {
     // print table header
     os << std::left;
@@ -17,15 +17,19 @@ std::ostream &operator<<(std::ostream &os, const StackMemory &stack)
     os << std::setw(16) << "Value";
     os << std::endl;
 
-    for (SizeType i = 0; i < stack.m_sp; i++) {
-        const Value &value = stack.m_data[i];
-        
+    for (SizeType i = 0; i < stack.m_sp; i++)
+    {
+        const Value& value = stack.m_data[i];
+
         os << std::setw(5) << i << "| ";
 
-        if (value.GetType() == Value::ValueType::HEAP_POINTER) {
-            //os << std::setw(17);
+        if (value.GetType() == Value::ValueType::HEAP_POINTER)
+        {
+            // os << std::setw(17);
             os << std::setw(18) << value.GetTypeString() << "| ";
-        } else {
+        }
+        else
+        {
             os << std::setw(18);
             os << value.GetTypeString() << "| ";
         }
@@ -60,7 +64,8 @@ void StackMemory::Purge()
 
 void StackMemory::MarkAll()
 {
-    for (SizeType i = 0; i < m_sp; i++) {
+    for (SizeType i = 0; i < m_sp; i++)
+    {
         m_data[i].Mark();
     }
 }

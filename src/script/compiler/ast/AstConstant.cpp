@@ -4,23 +4,23 @@
 
 namespace hyperion::compiler {
 
-AstConstant::AstConstant(const SourceLocation &location)
+AstConstant::AstConstant(const SourceLocation& location)
     : AstExpression(location, ACCESS_MODE_LOAD)
 {
 }
 
-void AstConstant::Visit(AstVisitor *visitor, Module *mod)
+void AstConstant::Visit(AstVisitor* visitor, Module* mod)
 {
-    if (mod->IsInScopeOfType(ScopeType::SCOPE_TYPE_NORMAL, ScopeFunctionFlags::REF_VARIABLE_FLAG)) {
+    if (mod->IsInScopeOfType(ScopeType::SCOPE_TYPE_NORMAL, ScopeFunctionFlags::REF_VARIABLE_FLAG))
+    {
         visitor->GetCompilationUnit()->GetErrorList().AddError(CompilerError(
             LEVEL_ERROR,
             Msg_cannot_create_reference,
-            m_location
-        ));
+            m_location));
     }
 }
 
-void AstConstant::Optimize(AstVisitor *visitor, Module *mod)
+void AstConstant::Optimize(AstVisitor* visitor, Module* mod)
 {
     // do nothing
 }

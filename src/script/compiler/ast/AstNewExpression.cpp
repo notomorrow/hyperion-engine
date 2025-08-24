@@ -22,18 +22,18 @@
 namespace hyperion::compiler {
 
 AstNewExpression::AstNewExpression(
-    const RC<AstPrototypeSpecification> &proto,
-    const RC<AstArgumentList> &argList,
+    const RC<AstPrototypeSpecification>& proto,
+    const RC<AstArgumentList>& argList,
     bool enableConstructorCall,
-    const SourceLocation &location
-) : AstExpression(location, ACCESS_MODE_LOAD),
-    m_proto(proto),
-    m_argList(argList),
-    m_enableConstructorCall(enableConstructorCall)
+    const SourceLocation& location)
+    : AstExpression(location, ACCESS_MODE_LOAD),
+      m_proto(proto),
+      m_argList(argList),
+      m_enableConstructorCall(enableConstructorCall)
 {
 }
 
-void AstNewExpression::Visit(AstVisitor *visitor, Module *mod)
+void AstNewExpression::Visit(AstVisitor* visitor, Module* mod)
 {
     Assert(visitor != nullptr);
     Assert(mod != nullptr);
@@ -41,13 +41,14 @@ void AstNewExpression::Visit(AstVisitor *visitor, Module *mod)
     Assert(m_proto != nullptr);
     m_proto->Visit(visitor, mod);
 
-    if (m_argList != nullptr) {
+    if (m_argList != nullptr)
+    {
         Assert(m_enableConstructorCall, "Args provided for non-constructor call new expr");
     }
 
-    auto *valueOf = m_proto->GetDeepValueOf();
+    auto* valueOf = m_proto->GetDeepValueOf();
     Assert(valueOf != nullptr);
-    
+
     m_instanceType = BuiltinTypes::UNDEFINED;
     m_prototypeType = BuiltinTypes::UNDEFINED;
 
@@ -55,28 +56,30 @@ void AstNewExpression::Visit(AstVisitor *visitor, Module *mod)
     Assert(exprType != nullptr);
     exprType = exprType->GetUnaliased();
 
-    if (SymbolTypePtr_t heldType = valueOf->GetHeldType()) {
+    if (SymbolTypePtr_t heldType = valueOf->GetHeldType())
+    {
         m_instanceType = heldType->GetUnaliased();
         m_objectValue = m_proto->GetDefaultValue(); // may be nullptr
         m_prototypeType = m_proto->GetPrototypeType();
-    } else {
+    }
+    else
+    {
         visitor->GetCompilationUnit()->GetErrorList().AddError(CompilerError(
             LEVEL_ERROR,
             Msg_not_a_type,
             m_location,
-            exprType->ToString()
-        ));
+            exprType->ToString()));
 
         return;
     }
 
-    if (m_prototypeType == nullptr) {
+    if (m_prototypeType == nullptr)
+    {
         visitor->GetCompilationUnit()->GetErrorList().AddError(CompilerError(
             LEVEL_ERROR,
             Msg_type_missing_prototype,
             m_location,
-            exprType->ToString()
-        ));
+            exprType->ToString()));
 
         return;
     }
@@ -91,30 +94,33 @@ void AstNewExpression::Visit(AstVisitor *visitor, Module *mod)
     //     return;
     // }
 
-    if (m_enableConstructorCall) {
-        static constexpr const char *constructMethodName = "$construct";
-        static constexpr const char *tempVarName = "__$temp_new_target";
+    if (m_enableConstructorCall)
+    {
+        static constexpr const char* constructMethodName = "$construct";
+        static constexpr const char* tempVarName = "__$temp_new_target";
 
         const bool isAny = m_prototypeType->IsAnyType();
         const bool isPlaceholder = m_prototypeType->IsPlaceholderType();
         const bool hasConstructMember = m_prototypeType->FindMember(constructMethodName) != nullptr;
 
-        if (isAny || isPlaceholder || hasConstructMember) {
+        if (isAny || isPlaceholder || hasConstructMember)
+        {
             m_constructorBlock.Reset(new AstBlock(m_location));
 
-            if (hasConstructMember) {
-                 m_constructorCall.Reset(new AstMemberCallExpression(
+            if (hasConstructMember)
+            {
+                m_constructorCall.Reset(new AstMemberCallExpression(
                     constructMethodName,
                     RC<AstNewExpression>(new AstNewExpression(
                         CloneAstNode(m_proto),
                         nullptr, // no args
-                        false, // do not enable constructor call
-                        m_location
-                    )),
+                        false,   // do not enable constructor call
+                        m_location)),
                     m_argList,
-                    m_location
-                ));
-            } else {
+                    m_location));
+            }
+            else
+            {
                 // conditionally lookup member with the name $construct and call if it exists.
                 // to do this, we need to store a temporary variable holding the left hand side
                 // expression
@@ -124,8 +130,7 @@ void AstNewExpression::Visit(AstVisitor *visitor, Module *mod)
                     nullptr,
                     CloneAstNode(m_proto),
                     IdentifierFlags::FLAG_CONST,
-                    m_location
-                ));
+                    m_location));
 
                 m_constructorBlock->AddChild(lhsDecl);
 
@@ -133,34 +138,26 @@ void AstNewExpression::Visit(AstVisitor *visitor, Module *mod)
                     RC<AstHasExpression>(new AstHasExpression(
                         RC<AstVariable>(new AstVariable(
                             tempVarName,
-                            m_location
-                        )),
+                            m_location)),
                         constructMethodName,
-                        m_location
-                    )),
+                        m_location)),
                     RC<AstMemberCallExpression>(new AstMemberCallExpression(
                         constructMethodName,
                         RC<AstNewExpression>(new AstNewExpression(
                             RC<AstPrototypeSpecification>(new AstPrototypeSpecification(
                                 RC<AstVariable>(new AstVariable(
                                     tempVarName,
-                                    m_location
-                                )),
-                                m_location
-                            )),
+                                    m_location)),
+                                m_location)),
                             nullptr, // no args
-                            false, // do not enable constructor call
-                            m_location
-                        )),
+                            false,   // do not enable constructor call
+                            m_location)),
                         m_argList,
-                        m_location
-                    )),
+                        m_location)),
                     RC<AstVariable>(new AstVariable(
                         tempVarName,
-                        m_location
-                    )),
-                    m_location
-                ));
+                        m_location)),
+                    m_location));
             }
 
             m_constructorBlock->AddChild(m_constructorCall);
@@ -173,9 +170,10 @@ void AstNewExpression::Visit(AstVisitor *visitor, Module *mod)
     }
 }
 
-std::unique_ptr<Buildable> AstNewExpression::Build(AstVisitor *visitor, Module *mod)
+std::unique_ptr<Buildable> AstNewExpression::Build(AstVisitor* visitor, Module* mod)
 {
-    if (m_constructorBlock != nullptr) {
+    if (m_constructorBlock != nullptr)
+    {
         return m_constructorBlock->Build(visitor, mod);
     }
 
@@ -209,8 +207,7 @@ std::unique_ptr<Buildable> AstNewExpression::Build(AstVisitor *visitor, Module *
     // if (m_constructorCall != nullptr) {
     //     chunk->Append(m_constructorCall->Build(visitor, mod));
     // }
-    
-    
+
     /*Assert(m_proto != nullptr);
     chunk->Append(m_proto->Build(visitor, mod));
 
@@ -236,9 +233,10 @@ std::unique_ptr<Buildable> AstNewExpression::Build(AstVisitor *visitor, Module *
     return chunk;
 }
 
-void AstNewExpression::Optimize(AstVisitor *visitor, Module *mod)
+void AstNewExpression::Optimize(AstVisitor* visitor, Module* mod)
 {
-    if (m_constructorBlock != nullptr) {
+    if (m_constructorBlock != nullptr)
+    {
         m_constructorBlock->Optimize(visitor, mod);
 
         return;
@@ -247,7 +245,8 @@ void AstNewExpression::Optimize(AstVisitor *visitor, Module *mod)
     Assert(m_proto != nullptr);
     m_proto->Optimize(visitor, mod);
 
-    if (m_objectValue != nullptr) {
+    if (m_objectValue != nullptr)
+    {
         m_objectValue->Optimize(visitor, mod);
     }
 }
@@ -259,11 +258,13 @@ RC<AstStatement> AstNewExpression::Clone() const
 
 Tribool AstNewExpression::IsTrue() const
 {
-    if (m_constructorCall != nullptr) {
+    if (m_constructorCall != nullptr)
+    {
         return m_constructorCall->IsTrue();
     }
 
-    if (m_objectValue != nullptr) {
+    if (m_objectValue != nullptr)
+    {
         return m_objectValue->IsTrue();
     }
 
@@ -272,7 +273,8 @@ Tribool AstNewExpression::IsTrue() const
 
 bool AstNewExpression::MayHaveSideEffects() const
 {
-    if (m_constructorCall != nullptr) {
+    if (m_constructorCall != nullptr)
+    {
         return m_constructorCall->MayHaveSideEffects();
     }
 
@@ -281,7 +283,8 @@ bool AstNewExpression::MayHaveSideEffects() const
 
 SymbolTypePtr_t AstNewExpression::GetExprType() const
 {
-    if (m_constructorCall != nullptr) {
+    if (m_constructorCall != nullptr)
+    {
         return m_constructorCall->GetExprType();
     }
 
@@ -293,9 +296,10 @@ SymbolTypePtr_t AstNewExpression::GetExprType() const
     // return m_typeExpr->GetSpecifiedType();
 }
 
-AstExpression *AstNewExpression::GetTarget() const
+AstExpression* AstNewExpression::GetTarget() const
 {
-    if (m_constructorCall != nullptr) {
+    if (m_constructorCall != nullptr)
+    {
         return m_constructorCall->GetTarget();
     }
 

@@ -19,54 +19,64 @@ public:
     using SizeType = uint64;
 
     VMArray(SizeType size = 0);
-    VMArray(const VMArray &other);
-    VMArray &operator=(const VMArray &other);
-    VMArray(VMArray &&other) noexcept;
-    VMArray &operator=(VMArray &&other) noexcept;
+    VMArray(const VMArray& other);
+    VMArray& operator=(const VMArray& other);
+    VMArray(VMArray&& other) noexcept;
+    VMArray& operator=(VMArray&& other) noexcept;
     ~VMArray();
 
-    bool operator==(const VMArray &other) const
-        { return this == &other; }
+    bool operator==(const VMArray& other) const
+    {
+        return this == &other;
+    }
 
     SizeType GetSize() const
-        { return m_size; }
+    {
+        return m_size;
+    }
 
-    Value *GetBuffer() const
-        { return m_buffer; }
+    Value* GetBuffer() const
+    {
+        return m_buffer;
+    }
 
-    Value &AtIndex(SizeType index)
-        { return m_buffer[index]; }
+    Value& AtIndex(SizeType index)
+    {
+        return m_buffer[index];
+    }
 
-    const Value &AtIndex(SizeType index) const
-        { return m_buffer[index]; }
+    const Value& AtIndex(SizeType index) const
+    {
+        return m_buffer[index];
+    }
 
-    void AtIndex(SizeType index, const Value &value)
-        { m_buffer[index] = value; }
+    void AtIndex(SizeType index, const Value& value)
+    {
+        m_buffer[index] = value;
+    }
 
     void Resize(SizeType capacity);
-    void Push(const Value &value);
-    void PushMany(SizeType n, Value *values);
-    void PushMany(SizeType n, Value **values);
+    void Push(const Value& value);
+    void PushMany(SizeType n, Value* values);
+    void PushMany(SizeType n, Value** values);
     void Pop();
 
     void GetRepresentation(
-        std::stringstream &ss,
+        std::stringstream& ss,
         bool addTypeName = true,
-        int depth = 3
-    ) const;
+        int depth = 3) const;
 
     HashCode GetHashCode() const;
 
 private:
     static SizeType GetCapacityForSize(SizeType newSize)
     {
-        return static_cast<SizeType>(1) <<
-            static_cast<SizeType>(std::ceil(std::log(MathUtil::Max(newSize, 1)) / std::log(2.0)));
+        return static_cast<SizeType>(1) << static_cast<SizeType>(std::ceil(std::log(MathUtil::Max(newSize, 1)) / std::log(2.0)));
     }
 
-    SizeType    m_size;
-    SizeType    m_capacity;
-    Value       *m_buffer;
+    SizeType m_size;
+    SizeType m_capacity;
+    Value* m_buffer;
 };
 
 } // namespace vm

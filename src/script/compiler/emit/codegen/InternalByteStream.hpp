@@ -13,29 +13,38 @@ namespace hyperion::compiler {
 
 struct Fixup
 {
-    LabelId     labelId = LabelId(-1);
-    SizeType    position = SizeType(-1);
-    SizeType    offset = SizeType(-1);
+    LabelId labelId = LabelId(-1);
+    SizeType position = SizeType(-1);
+    SizeType offset = SizeType(-1);
 };
 
 class InternalByteStream
 {
 public:
     SizeType GetPosition() const
-        { return m_stream.Size(); }
+    {
+        return m_stream.Size();
+    }
 
-    const Array<ubyte> &GetData() const
-        { return m_stream; }
+    const Array<ubyte>& GetData() const
+    {
+        return m_stream;
+    }
 
-    const Array<Fixup> &GetFixups() const
-        { return m_fixups; }
+    const Array<Fixup>& GetFixups() const
+    {
+        return m_fixups;
+    }
 
     void Put(ubyte byte)
-        { m_stream.PushBack(byte); }
-
-    void Put(const ubyte *bytes, SizeType size)
     {
-        for (SizeType i = 0; i < size; i++) {
+        m_stream.PushBack(byte);
+    }
+
+    void Put(const ubyte* bytes, SizeType size)
+    {
+        for (SizeType i = 0; i < size; i++)
+        {
             m_stream.PushBack(bytes[i]);
         }
     }
@@ -44,7 +53,7 @@ public:
     void AddFixup(LabelId labelId, SizeType position, SizeType offset);
     void AddFixup(LabelId labelId, SizeType offset);
 
-    void Bake(const BuildParams &buildParams);
+    void Bake(const BuildParams& buildParams);
 
 private:
     Array<ubyte> m_stream;

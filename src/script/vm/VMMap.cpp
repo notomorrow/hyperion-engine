@@ -13,14 +13,15 @@ VMMap::VMMap()
 {
 }
 
-VMMap::VMMap(const VMMap &other)
+VMMap::VMMap(const VMMap& other)
     : m_map(other.m_map)
 {
 }
 
-VMMap &VMMap::operator=(const VMMap &other)
+VMMap& VMMap::operator=(const VMMap& other)
 {
-    if (&other == this) {
+    if (&other == this)
+    {
         return *this;
     }
 
@@ -29,14 +30,15 @@ VMMap &VMMap::operator=(const VMMap &other)
     return *this;
 }
 
-VMMap::VMMap(VMMap &&other) noexcept
+VMMap::VMMap(VMMap&& other) noexcept
     : m_map(std::move(other.m_map))
 {
 }
 
-VMMap &VMMap::operator=(VMMap &&other) noexcept
+VMMap& VMMap::operator=(VMMap&& other) noexcept
 {
-    if (&other == this) {
+    if (&other == this)
+    {
         return *this;
     }
 
@@ -54,22 +56,24 @@ void VMMap::SetElement(VMMapKey key, VMMapValue value)
     m_map[key] = value;
 }
 
-VMMap::VMMapValue *VMMap::GetElement(const VMMapKey &key)
+VMMap::VMMapValue* VMMap::GetElement(const VMMapKey& key)
 {
     auto it = m_map.Find(key);
 
-    if (it == m_map.End()) {
+    if (it == m_map.End())
+    {
         return nullptr;
     }
 
     return &it->second;
 }
 
-const VMMap::VMMapValue *VMMap::GetElement(const VMMapKey &key) const
+const VMMap::VMMapValue* VMMap::GetElement(const VMMapKey& key) const
 {
     auto it = m_map.Find(key);
 
-    if (it == m_map.End()) {
+    if (it == m_map.End())
+    {
         return nullptr;
     }
 
@@ -77,12 +81,12 @@ const VMMap::VMMapValue *VMMap::GetElement(const VMMapKey &key) const
 }
 
 void VMMap::GetRepresentation(
-    std::stringstream &ss,
+    std::stringstream& ss,
     bool addTypeName,
-    int depth
-) const
+    int depth) const
 {
-    if (depth == 0) {
+    if (depth == 0)
+    {
         ss << "{...}";
 
         return;
@@ -94,13 +98,13 @@ void VMMap::GetRepresentation(
     ss << '{';
 
     // all elements
-    for (auto it = m_map.Begin(); it != m_map.End(); ++it) {
+    for (auto it = m_map.Begin(); it != m_map.End(); ++it)
+    {
         // convert key to string
         it->first.key.ToRepresentation(
             ss,
             addTypeName,
-            depth - 1
-        );
+            depth - 1);
 
         ss << " => ";
 
@@ -108,13 +112,13 @@ void VMMap::GetRepresentation(
         it->second.ToRepresentation(
             ss,
             addTypeName,
-            depth - 1
-        );
+            depth - 1);
 
         auto next = it;
         ++next;
 
-        if (next != m_map.end()) {
+        if (next != m_map.end())
+        {
             ss << sepStr;
         }
     }

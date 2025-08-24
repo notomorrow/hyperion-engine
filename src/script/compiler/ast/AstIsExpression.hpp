@@ -13,17 +13,16 @@ class AstIsExpression : public AstExpression
 {
 public:
     AstIsExpression(
-        const RC<AstExpression> &target,
-        const RC<AstPrototypeSpecification> &typeSpecification,
-        const SourceLocation &location
-    );
+        const RC<AstExpression>& target,
+        const RC<AstPrototypeSpecification>& typeSpecification,
+        const SourceLocation& location);
 
     virtual ~AstIsExpression() = default;
 
-    virtual void Visit(AstVisitor *visitor, Module *mod) override;
-    virtual std::unique_ptr<Buildable> Build(AstVisitor *visitor, Module *mod) override;
-    virtual void Optimize(AstVisitor *visitor, Module *mod) override;
-    
+    virtual void Visit(AstVisitor* visitor, Module* mod) override;
+    virtual std::unique_ptr<Buildable> Build(AstVisitor* visitor, Module* mod) override;
+    virtual void Optimize(AstVisitor* visitor, Module* mod) override;
+
     virtual RC<AstStatement> Clone() const override;
 
     virtual Tribool IsTrue() const override;
@@ -40,13 +39,13 @@ public:
     }
 
 protected:
-    RC<AstExpression>               m_target;
-    RC<AstPrototypeSpecification>   m_typeSpecification;
+    RC<AstExpression> m_target;
+    RC<AstPrototypeSpecification> m_typeSpecification;
 
     // set while analyzing
-    RC<AstExpression>               m_overrideExpr;
+    RC<AstExpression> m_overrideExpr;
 
-    Tribool                         m_isType;
+    Tribool m_isType;
 
 private:
     RC<AstIsExpression> CloneImpl() const
@@ -54,8 +53,7 @@ private:
         return RC<AstIsExpression>(new AstIsExpression(
             CloneAstNode(m_target),
             CloneAstNode(m_typeSpecification),
-            m_location
-        ));
+            m_location));
     }
 };
 

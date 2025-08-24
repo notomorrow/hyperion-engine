@@ -15,64 +15,73 @@
 namespace hyperion::compiler {
 
 AstModuleImportPart::AstModuleImportPart(
-    const String &left,
-    const Array<RC<AstModuleImportPart>> &rightParts,
-    const SourceLocation &location
-) : AstStatement(location),
-    m_left(left),
-    m_rightParts(rightParts),
-    m_pullInModules(true)
+    const String& left,
+    const Array<RC<AstModuleImportPart>>& rightParts,
+    const SourceLocation& location)
+    : AstStatement(location),
+      m_left(left),
+      m_rightParts(rightParts),
+      m_pullInModules(true)
 {
 }
 
-void AstModuleImportPart::Visit(AstVisitor *visitor, Module *mod)
+void AstModuleImportPart::Visit(AstVisitor* visitor, Module* mod)
 {
     Assert(visitor != nullptr);
     Assert(mod != nullptr);
 
     RC<Identifier> leftIdentifier;
 
-    if (Module *thisModule = mod->LookupNestedModule(m_left)) {
-        if (m_pullInModules && m_rightParts.Empty()) {
+    if (Module* thisModule = mod->LookupNestedModule(m_left))
+    {
+        if (m_pullInModules && m_rightParts.Empty())
+        {
             // pull this module into scope
             AstImport::CopyModules(
                 visitor,
                 thisModule,
-                false
-            );
-        } else {
+                false);
+        }
+        else
+        {
             // get nested items
-            for (const RC<AstModuleImportPart> &part : m_rightParts) {
+            for (const RC<AstModuleImportPart>& part : m_rightParts)
+            {
                 Assert(part != nullptr);
                 part->Visit(visitor, thisModule);
 
-                if (part->GetIdentifiers().Any()) {
-                    for (const auto &identifier : part->GetIdentifiers()) {
+                if (part->GetIdentifiers().Any())
+                {
+                    for (const auto& identifier : part->GetIdentifiers())
+                    {
                         m_identifiers.PushBack(identifier);
                     }
                 }
             }
         }
-    } else if (m_rightParts.Empty() && (leftIdentifier = mod->LookUpIdentifier(m_left, false))) {
+    }
+    else if (m_rightParts.Empty() && (leftIdentifier = mod->LookUpIdentifier(m_left, false)))
+    {
         // pull the identifier into local scope
         m_identifiers.PushBack(std::move(leftIdentifier));
-    } else {
+    }
+    else
+    {
         visitor->GetCompilationUnit()->GetErrorList().AddError(CompilerError(
             LEVEL_ERROR,
             Msg_could_not_find_nested_module,
             m_location,
             m_left,
-            mod->GetName()
-        ));
+            mod->GetName()));
     }
 }
 
-std::unique_ptr<Buildable> AstModuleImportPart::Build(AstVisitor *visitor, Module *mod)
+std::unique_ptr<Buildable> AstModuleImportPart::Build(AstVisitor* visitor, Module* mod)
 {
     return nullptr;
 }
 
-void AstModuleImportPart::Optimize(AstVisitor *visitor, Module *mod)
+void AstModuleImportPart::Optimize(AstVisitor* visitor, Module* mod)
 {
 }
 
@@ -81,32 +90,33 @@ RC<AstStatement> AstModuleImportPart::Clone() const
     return CloneImpl();
 }
 
-
 AstModuleImport::AstModuleImport(
-    const Array<RC<AstModuleImportPart>> &parts,
-    const SourceLocation &location
-) : AstImport(location),
-    m_parts(parts)
+    const Array<RC<AstModuleImportPart>>& parts,
+    const SourceLocation& location)
+    : AstImport(location),
+      m_parts(parts)
 {
 }
 
-void AstModuleImport::Visit(AstVisitor *visitor, Module *mod)
+void AstModuleImport::Visit(AstVisitor* visitor, Module* mod)
 {
     Assert(!m_parts.Empty());
 
-    const RC<AstModuleImportPart> &first = m_parts[0];
+    const RC<AstModuleImportPart>& first = m_parts[0];
     Assert(first != nullptr);
 
     bool opened = false;
 
     // already imported into this module, set opened to true
-    if (mod->LookupNestedModule(first->GetLeft()) != nullptr) {
+    if (mod->LookupNestedModule(first->GetLeft()) != nullptr)
+    {
         opened = true;
     }
 
     // do not pull module into scope for single imports
     // i.e `import range` will just import the file
-    if (first->GetParts().Empty()) {
+    if (first->GetParts().Empty())
+    {
         first->SetPullInModules(false);
     }
 
@@ -115,12 +125,14 @@ void AstModuleImport::Visit(AstVisitor *visitor, Module *mod)
     // if this is not a direct import (i.e `import range`),
     // we will allow duplicates in imports like `import range::{_Detail_}`
     // and we won't import the 'range' module again
-    if (first->GetParts().Empty() || !opened) {
+    if (first->GetParts().Empty() || !opened)
+    {
         // find the folder which the current file is in
         const SizeType index = std::string(m_location.GetFileName().Data()).findLastOf("/\\");
 
         String currentDir;
-        if (index != std::string::npos) {
+        if (index != std::string::npos)
+        {
             currentDir = m_location.GetFileName().Substr(0, index);
         }
 
@@ -133,27 +145,31 @@ void AstModuleImport::Visit(AstVisitor *visitor, Module *mod)
         scanPaths.Insert(currentDir);
 
         // add this module's scan paths.
-        for (const auto &scanPath : mod->GetScanPaths()) {
+        for (const auto& scanPath : mod->GetScanPaths())
+        {
             scanPaths.Insert(scanPath);
         }
 
         // add global module's scan paths
-        const FlatSet<String> &globalScanPaths =
+        const FlatSet<String>& globalScanPaths =
             visitor->GetCompilationUnit()->GetGlobalModule()->GetScanPaths();
-        
-        for (const auto &scanPath : globalScanPaths) {
+
+        for (const auto& scanPath : globalScanPaths)
+        {
             scanPaths.Insert(scanPath);
         }
 
         // iterate through library paths to try and find a file
-        for (const String &scanPath : scanPaths) {
-            const String &filename = first->GetLeft();
+        for (const String& scanPath : scanPaths)
+        {
+            const String& filename = first->GetLeft();
             const String ext = ".hypscript";
 
             foundPath = String(FileSystem::Join(scanPath.Data(), (filename + ext).Data()).c_str());
             triedPaths.PushBack(foundPath);
 
-            if (AstImport::TryOpenFile(foundPath, file)) {
+            if (AstImport::TryOpenFile(foundPath, file))
+            {
                 opened = true;
                 break;
             }
@@ -162,51 +178,60 @@ void AstModuleImport::Visit(AstVisitor *visitor, Module *mod)
             foundPath = String(FileSystem::Join(scanPath.Data(), filename.Data()).c_str());
             triedPaths.PushBack(foundPath);
 
-            if (AstImport::TryOpenFile(foundPath, file)) {
+            if (AstImport::TryOpenFile(foundPath, file))
+            {
                 opened = true;
                 break;
             }
         }
 
-        if (opened) {
+        if (opened)
+        {
             AstImport::PerformImport(
                 visitor,
                 mod,
-                foundPath
-            );
+                foundPath);
         }
     }
 
-    if (opened) {
+    if (opened)
+    {
         Array<RC<Identifier>> pulledInIdentifiers;
 
-        for (const RC<AstModuleImportPart> &part : m_parts) {
+        for (const RC<AstModuleImportPart>& part : m_parts)
+        {
             Assert(part != nullptr);
             part->Visit(visitor, mod);
 
-            for (const RC<Identifier> &identifier : part->GetIdentifiers()) {
+            for (const RC<Identifier>& identifier : part->GetIdentifiers())
+            {
                 pulledInIdentifiers.PushBack(identifier);
             }
         }
 
-        for (auto &identifier : pulledInIdentifiers) {
-            if (!mod->m_scopes.Top().GetIdentifierTable().AddIdentifier(identifier)) {
+        for (auto& identifier : pulledInIdentifiers)
+        {
+            if (!mod->m_scopes.Top().GetIdentifierTable().AddIdentifier(identifier))
+            {
                 visitor->GetCompilationUnit()->GetErrorList().AddError(CompilerError(
                     LEVEL_ERROR,
                     Msg_redeclared_identifier,
                     m_location,
-                    identifier->GetName()
-                ));
+                    identifier->GetName()));
             }
         }
-    } else {
+    }
+    else
+    {
         std::stringstream triedPathsString;
         triedPathsString << "[";
 
-        for (size_t i = 0; i < triedPaths.Size(); i++) {
+        for (size_t i = 0; i < triedPaths.Size(); i++)
+        {
             triedPathsString << '"' << tried_paths[i] << '"';
 
-            if (i != triedPaths.Size() - 1) {
+            if (i != triedPaths.Size() - 1)
+            {
                 triedPathsString << ", ";
             }
         }
@@ -218,8 +243,7 @@ void AstModuleImport::Visit(AstVisitor *visitor, Module *mod)
             Msg_could_not_find_module,
             m_location,
             first->GetLeft(),
-            triedPathsString.str()
-        ));
+            triedPathsString.str()));
     }
 }
 

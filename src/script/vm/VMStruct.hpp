@@ -32,35 +32,35 @@ enum VMStructType : uint8
     VM_STRUCT_TYPE_STRUCT
 };
 
-using VMStructMemory        = ByteBuffer;
-using VMStructMemoryView    = Span<const ubyte>;
+using VMStructMemory = ByteBuffer;
+using VMStructMemoryView = Span<const ubyte>;
 
 struct VMStructMemberView
 {
-    uint32                                          offset; // offset in binary object
+    uint32 offset; // offset in binary object
 
-    VMStructType                                    type;
-    VMStructMemoryView                              nameView;
-    Variant<VMStructMemoryView, Value::ValueData>   dataView;
+    VMStructType type;
+    VMStructMemoryView nameView;
+    Variant<VMStructMemoryView, Value::ValueData> dataView;
 };
 
 struct VMStructView
 {
-    Array<VMStructMemberView>   members;
+    Array<VMStructMemberView> members;
 };
 
 struct VMStructDynamicMemory
 {
-    Array<Value>    values;
+    Array<Value> values;
 };
 
 struct VMStructHeader
 {
-    uint32              count;
-    uint32              totalSize;
-    uint32              *offsets;
-    VMStructType        *types;
-    char                **names;
+    uint32 count;
+    uint32 totalSize;
+    uint32* offsets;
+    VMStructType* types;
+    char** names;
 };
 
 struct VMStructDefinition
@@ -78,14 +78,14 @@ struct VMStructMember
 class VMStruct
 {
 public:
-    static VMStruct MakeStruct(const VMStructDefinition &definition);
+    static VMStruct MakeStruct(const VMStructDefinition& definition);
     static VMStructType ToStructType(vm::Value::ValueType valueType);
     static uint8 GetByteSize(VMStructType type);
 
     VMStruct() = default;
 
-    VMStruct(const VMStruct &other) = delete;
-    VMStruct &operator=(const VMStruct &other) = delete;
+    VMStruct(const VMStruct& other) = delete;
+    VMStruct& operator=(const VMStruct& other) = delete;
 
 #if 0
     VMStruct(const VMStruct &other)
@@ -153,23 +153,24 @@ public:
     }
 #endif
 
-    VMStruct(VMStruct &&other) noexcept
+    VMStruct(VMStruct&& other) noexcept
         : m_header(other.m_header),
           m_bytes(std::move(other.m_bytes))
     {
-        other.m_header = { };
+        other.m_header = {};
     }
 
-    VMStruct &operator=(VMStruct &&other) noexcept
+    VMStruct& operator=(VMStruct&& other) noexcept
     {
-        if (std::addressof(*this) == std::addressof(other)) {
+        if (std::addressof(*this) == std::addressof(other))
+        {
             return *this;
         }
 
         other.m_header = m_header;
         other.m_bytes = std::move(m_bytes);
 
-        m_header = VMStructHeader { };
+        m_header = VMStructHeader {};
 
         return *this;
     }
@@ -179,29 +180,36 @@ public:
         delete[] m_header.offsets;
         delete[] m_header.types;
 
-        for (uint32 index = 0; index < m_header.count; index++) {
+        for (uint32 index = 0; index < m_header.count; index++)
+        {
             delete[] m_header.names[index];
         }
 
         delete[] m_header.names;
     }
 
-    const VMStructMemory &GetMemory() const
-        { return m_bytes; }
+    const VMStructMemory& GetMemory() const
+    {
+        return m_bytes;
+    }
 
-    Array<Value> &GetDynamicMemberValues()
-        { return m_dynamicMemory.values; }
+    Array<Value>& GetDynamicMemberValues()
+    {
+        return m_dynamicMemory.values;
+    }
 
-    const Array<Value> &GetDynamicMemberValues() const
-        { return m_dynamicMemory.values; }
+    const Array<Value>& GetDynamicMemberValues() const
+    {
+        return m_dynamicMemory.values;
+    }
 
-    Value ReadMember(const char *name) const;
-    bool WriteMember(const char *name, Value value);
+    Value ReadMember(const char* name) const;
+    bool WriteMember(const char* name, Value value);
 
 private:
-    VMStructHeader          m_header;
-    VMStructDynamicMemory   m_dynamicMemory;
-    VMStructMemory          m_bytes;
+    VMStructHeader m_header;
+    VMStructDynamicMemory m_dynamicMemory;
+    VMStructMemory m_bytes;
 };
 
 } // namespace vm

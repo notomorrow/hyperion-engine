@@ -13,40 +13,51 @@ namespace vm {
 class VMString
 {
 public:
-    static VMString Concat(const VMString &a, const VMString &b);
+    static VMString Concat(const VMString& a, const VMString& b);
 
 public:
-    VMString(const char *str);
-    VMString(const char *str, int maxLen);
-    VMString(const String &str);
-    VMString(String &&str);
-    VMString(const VMString &other);
-    VMString &operator=(const VMString &other);
-    VMString(VMString &&other) noexcept;
-    VMString &operator=(VMString &&other) noexcept;
+    VMString(const char* str);
+    VMString(const char* str, int maxLen);
+    VMString(const String& str);
+    VMString(String&& str);
+    VMString(const VMString& other);
+    VMString& operator=(const VMString& other);
+    VMString(VMString&& other) noexcept;
+    VMString& operator=(VMString&& other) noexcept;
     ~VMString();
 
-    bool operator==(const VMString &other) const
-        { return m_str == other.m_str; }
+    bool operator==(const VMString& other) const
+    {
+        return m_str == other.m_str;
+    }
 
-    const char *GetData() const
-        { return m_str.Data(); }
+    const char* GetData() const
+    {
+        return m_str.Data();
+    }
 
     SizeType GetLength() const
-        { return m_str.Size(); /* need to use size as other places are relying on it for memory size */ }
+    {
+        return m_str.Size(); /* need to use size as other places are relying on it for memory size */
+    }
 
-    const String &GetString() const
-        { return m_str; }
+    const String& GetString() const
+    {
+        return m_str;
+    }
 
     explicit operator String() const
-        { return m_str; }
+    {
+        return m_str;
+    }
 
-    HYP_FORCE_INLINE
-    HashCode GetHashCode() const
-        { return m_str.GetHashCode(); }
+    HYP_FORCE_INLINE HashCode GetHashCode() const
+    {
+        return m_str.GetHashCode();
+    }
 
 private:
-    String  m_str;
+    String m_str;
 };
 
 } // namespace vm

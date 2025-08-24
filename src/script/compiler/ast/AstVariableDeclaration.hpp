@@ -18,56 +18,83 @@ class AstVariableDeclaration : public AstDeclaration
 {
 public:
     AstVariableDeclaration(
-        const String &name,
-        const RC<AstPrototypeSpecification> &proto,
-        const RC<AstExpression> &assignment,
+        const String& name,
+        const RC<AstPrototypeSpecification>& proto,
+        const RC<AstExpression>& assignment,
         IdentifierFlagBits flags,
-        const SourceLocation &location
-    );
+        const SourceLocation& location);
     virtual ~AstVariableDeclaration() = default;
 
-    const RC<AstPrototypeSpecification> &GetPrototypeSpecification() const
-        { return m_proto; }
+    const RC<AstPrototypeSpecification>& GetPrototypeSpecification() const
+    {
+        return m_proto;
+    }
 
-    void SetPrototypeSpecification(const RC<AstPrototypeSpecification> &proto)
-        { m_proto = proto; }
+    void SetPrototypeSpecification(const RC<AstPrototypeSpecification>& proto)
+    {
+        m_proto = proto;
+    }
 
-    const RC<AstExpression> &GetAssignment() const
-        { return m_assignment; }
+    const RC<AstExpression>& GetAssignment() const
+    {
+        return m_assignment;
+    }
 
-    void SetAssignment(const RC<AstExpression> &assignment)
-        { m_assignment = assignment; }
+    void SetAssignment(const RC<AstExpression>& assignment)
+    {
+        m_assignment = assignment;
+    }
 
-    const RC<AstExpression> &GetRealAssignment() const
-        { return m_realAssignment; }
+    const RC<AstExpression>& GetRealAssignment() const
+    {
+        return m_realAssignment;
+    }
 
-    bool IsConst() const { return m_flags & IdentifierFlags::FLAG_CONST; }
-    bool IsRef() const { return m_flags & IdentifierFlags::FLAG_REF; }
-    bool IsGeneric() const { return m_flags & IdentifierFlags::FLAG_GENERIC; }
+    bool IsConst() const
+    {
+        return m_flags & IdentifierFlags::FLAG_CONST;
+    }
+    bool IsRef() const
+    {
+        return m_flags & IdentifierFlags::FLAG_REF;
+    }
+    bool IsGeneric() const
+    {
+        return m_flags & IdentifierFlags::FLAG_GENERIC;
+    }
 
     IdentifierFlagBits GetIdentifierFlags() const
-        { return m_flags; }
-    
+    {
+        return m_flags;
+    }
+
     void SetIdentifierFlags(IdentifierFlagBits flags)
-        { m_flags = flags; }
+    {
+        m_flags = flags;
+    }
 
     void ApplyIdentifierFlags(IdentifierFlagBits flags, bool set = true)
     {
-        if (set) {
+        if (set)
+        {
             m_flags |= flags;
-        } else {
+        }
+        else
+        {
             m_flags &= ~flags;
         }
     }
 
-    virtual void Visit(AstVisitor *visitor, Module *mod) override;
-    virtual std::unique_ptr<Buildable> Build(AstVisitor *visitor, Module *mod) override;
-    virtual void Optimize(AstVisitor *visitor, Module *mod) override;
-    
+    virtual void Visit(AstVisitor* visitor, Module* mod) override;
+    virtual std::unique_ptr<Buildable> Build(AstVisitor* visitor, Module* mod) override;
+    virtual void Optimize(AstVisitor* visitor, Module* mod) override;
+
     virtual RC<AstStatement> Clone() const override;
 
     SymbolTypePtr_t GetExprType() const
-        { return m_symbolType; }
+    {
+        return m_symbolType;
+    }
 
     virtual HashCode GetHashCode() const override
     {
@@ -81,14 +108,14 @@ public:
     }
 
 protected:
-    RC<AstPrototypeSpecification>   m_proto;
-    RC<AstExpression>               m_assignment;
-    IdentifierFlagBits              m_flags;
+    RC<AstPrototypeSpecification> m_proto;
+    RC<AstExpression> m_assignment;
+    IdentifierFlagBits m_flags;
 
     // set while analyzing
-    RC<AstExpression>               m_realAssignment;
+    RC<AstExpression> m_realAssignment;
 
-    SymbolTypePtr_t                 m_symbolType;
+    SymbolTypePtr_t m_symbolType;
 
     RC<AstVariableDeclaration> CloneImpl() const
     {
@@ -97,8 +124,7 @@ protected:
             CloneAstNode(m_proto),
             CloneAstNode(m_assignment),
             m_flags,
-            m_location
-        ));
+            m_location));
     }
 };
 

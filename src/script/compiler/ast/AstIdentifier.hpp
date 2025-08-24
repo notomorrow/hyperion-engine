@@ -16,68 +16,91 @@ class AstTypeObject;
 
 struct AstIdentifierProperties
 {
-    RC<Identifier>  m_identifier = nullptr;
+    RC<Identifier> m_identifier = nullptr;
 
-    IdentifierType  m_identifierType = IDENTIFIER_TYPE_UNKNOWN;
+    IdentifierType m_identifierType = IDENTIFIER_TYPE_UNKNOWN;
 
-    bool            m_isInFunction = false;
-    bool            m_isInPureFunction = false;
+    bool m_isInFunction = false;
+    bool m_isInPureFunction = false;
 
-    int             m_depth = 0;
-    Scope           *m_functionScope = nullptr;
+    int m_depth = 0;
+    Scope* m_functionScope = nullptr;
 
     // if the found identifier was a type...
     SymbolTypePtr_t m_foundType = nullptr;
 
     // getters & setters
-    RC<Identifier> &GetIdentifier()
-        { return m_identifier; }
+    RC<Identifier>& GetIdentifier()
+    {
+        return m_identifier;
+    }
 
-    const RC<Identifier> &GetIdentifier() const
-        { return m_identifier; }
+    const RC<Identifier>& GetIdentifier() const
+    {
+        return m_identifier;
+    }
 
-    void SetIdentifier(const RC<Identifier> &identifier)
-        { m_identifier = identifier; }
+    void SetIdentifier(const RC<Identifier>& identifier)
+    {
+        m_identifier = identifier;
+    }
 
     IdentifierType GetIdentifierType() const
-        { return m_identifierType; }
+    {
+        return m_identifierType;
+    }
 
     void SetIdentifierType(IdentifierType identifierType)
-        { m_identifierType = identifierType; }
+    {
+        m_identifierType = identifierType;
+    }
 
     bool IsInFunction() const
-        { return m_isInFunction; }
+    {
+        return m_isInFunction;
+    }
 
     bool IsInPureFunction() const
-        { return m_isInPureFunction; }
+    {
+        return m_isInPureFunction;
+    }
 
     int GetDepth() const
-        { return m_depth; }
+    {
+        return m_depth;
+    }
 
-    Scope *GetFunctionScope() const
-        { return m_functionScope; }
+    Scope* GetFunctionScope() const
+    {
+        return m_functionScope;
+    }
 };
 
 class AstIdentifier : public AstExpression
 {
 public:
     AstIdentifier(
-        const String &name,
-        const SourceLocation &location
-    );
+        const String& name,
+        const SourceLocation& location);
 
     virtual ~AstIdentifier() override = default;
 
-    void PerformLookup(AstVisitor *visitor, Module *mod);
-    void CheckInFunction(AstVisitor *visitor, Module *mod);
+    void PerformLookup(AstVisitor* visitor, Module* mod);
+    void CheckInFunction(AstVisitor* visitor, Module* mod);
 
-    AstIdentifierProperties &GetProperties() { return m_properties; }
-    const AstIdentifierProperties &GetProperties() const { return m_properties; }
+    AstIdentifierProperties& GetProperties()
+    {
+        return m_properties;
+    }
+    const AstIdentifierProperties& GetProperties() const
+    {
+        return m_properties;
+    }
 
-    virtual void Visit(AstVisitor *visitor, Module *mod) override;
-    virtual std::unique_ptr<Buildable> Build(AstVisitor *visitor, Module *mod) override = 0;
-    virtual void Optimize(AstVisitor *visitor, Module *mod) override = 0;
-    
+    virtual void Visit(AstVisitor* visitor, Module* mod) override;
+    virtual std::unique_ptr<Buildable> Build(AstVisitor* visitor, Module* mod) override = 0;
+    virtual void Optimize(AstVisitor* visitor, Module* mod) override = 0;
+
     virtual RC<AstStatement> Clone() const override = 0;
 
     virtual Tribool IsTrue() const override = 0;
@@ -86,10 +109,10 @@ public:
     virtual SymbolTypePtr_t GetExprType() const override = 0;
     virtual SymbolTypePtr_t GetHeldType() const override;
 
-    virtual const AstExpression *GetValueOf() const override;
-    virtual const AstExpression *GetDeepValueOf() const override;
+    virtual const AstExpression* GetValueOf() const override;
+    virtual const AstExpression* GetDeepValueOf() const override;
 
-    virtual const String &GetName() const override;
+    virtual const String& GetName() const override;
 
     virtual HashCode GetHashCode() const override
     {
@@ -97,8 +120,8 @@ public:
     }
 
 protected:
-    String                  m_name;
-    
+    String m_name;
+
     AstIdentifierProperties m_properties;
 
     int GetStackOffset(int stackSize) const;

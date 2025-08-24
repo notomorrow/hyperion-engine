@@ -15,24 +15,25 @@
 namespace hyperion::compiler {
 
 AstTypeOfExpression::AstTypeOfExpression(
-    const RC<AstExpression> &expr,
-    const SourceLocation &location
-) : AstPrototypeSpecification(expr, location)
+    const RC<AstExpression>& expr,
+    const SourceLocation& location)
+    : AstPrototypeSpecification(expr, location)
 {
 }
 
-void AstTypeOfExpression::Visit(AstVisitor *visitor, Module *mod)
+void AstTypeOfExpression::Visit(AstVisitor* visitor, Module* mod)
 {
     Assert(m_expr != nullptr);
     m_expr->Visit(visitor, mod);
 
     m_heldType = BuiltinTypes::UNDEFINED;
 
-    auto *valueOf = m_expr->GetDeepValueOf();
+    auto* valueOf = m_expr->GetDeepValueOf();
     Assert(valueOf != nullptr);
 
 #if HYP_SCRIPT_TYPEOF_RETURN_OBJECT
-    if (SymbolTypePtr_t exprType = valueOf->GetExprType()) {
+    if (SymbolTypePtr_t exprType = valueOf->GetExprType())
+    {
         m_heldType = exprType->GetUnaliased();
     }
 
@@ -40,8 +41,7 @@ void AstTypeOfExpression::Visit(AstVisitor *visitor, Module *mod)
 
     m_typeRef.Reset(new AstTypeRef(
         m_heldType,
-        m_location
-    ));
+        m_location));
 
     m_typeRef->Visit(visitor, mod);
 #else
@@ -50,23 +50,24 @@ void AstTypeOfExpression::Visit(AstVisitor *visitor, Module *mod)
     SymbolTypePtr_t exprType;
     SymbolTypePtr_t unaliased;
 
-    if ((exprType = m_expr->GetExprType()) && (unaliased = exprType->GetUnaliased())) {
+    if ((exprType = m_expr->GetExprType()) && (unaliased = exprType->GetUnaliased()))
+    {
         m_stringExpr.Reset(new AstString(
             unaliased->ToString(false),
-            m_location
-        ));
-    } else {
+            m_location));
+    }
+    else
+    {
         m_stringExpr.Reset(new AstString(
             BuiltinTypes::UNDEFINED->ToString(),
-            m_location
-        ));
+            m_location));
     }
 
     m_stringExpr->Visit(visitor, mod);
 #endif
 }
 
-std::unique_ptr<Buildable> AstTypeOfExpression::Build(AstVisitor *visitor, Module *mod)
+std::unique_ptr<Buildable> AstTypeOfExpression::Build(AstVisitor* visitor, Module* mod)
 {
     auto chunk = BytecodeUtil::Make<BytecodeChunk>();
     chunk->Append(AstPrototypeSpecification::Build(visitor, mod));
@@ -83,10 +84,10 @@ std::unique_ptr<Buildable> AstTypeOfExpression::Build(AstVisitor *visitor, Modul
     return chunk;
 }
 
-void AstTypeOfExpression::Optimize(AstVisitor *visitor, Module *mod)
+void AstTypeOfExpression::Optimize(AstVisitor* visitor, Module* mod)
 {
     AstPrototypeSpecification::Optimize(visitor, mod);
-    
+
 #if HYP_SCRIPT_TYPEOF_RETURN_OBJECT
     Assert(m_typeRef != nullptr);
 
@@ -124,7 +125,7 @@ SymbolTypePtr_t AstTypeOfExpression::GetHeldType() const
 #endif
 }
 
-const AstExpression *AstTypeOfExpression::GetValueOf() const
+const AstExpression* AstTypeOfExpression::GetValueOf() const
 {
 #if HYP_SCRIPT_TYPEOF_RETURN_OBJECT
     Assert(m_typeRef != nullptr);
@@ -137,7 +138,7 @@ const AstExpression *AstTypeOfExpression::GetValueOf() const
 #endif
 }
 
-const AstExpression *AstTypeOfExpression::GetDeepValueOf() const
+const AstExpression* AstTypeOfExpression::GetDeepValueOf() const
 {
 #if HYP_SCRIPT_TYPEOF_RETURN_OBJECT
     Assert(m_typeRef != nullptr);

@@ -16,7 +16,7 @@ struct Buildable;
 class BytecodeUtil
 {
 public:
-    template<typename T, typename... Args>
+    template <typename T, typename... Args>
     static std::unique_ptr<T> Make(Args&&... args)
     {
         static_assert(std::is_base_of<Buildable, T>::value, "Must be a Buildable type.");

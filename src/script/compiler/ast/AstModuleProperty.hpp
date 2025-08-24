@@ -10,15 +10,14 @@ class AstModuleProperty : public AstExpression
 {
 public:
     AstModuleProperty(
-      const String &fieldName,
-      const SourceLocation &location
-    );
+        const String& fieldName,
+        const SourceLocation& location);
     virtual ~AstModuleProperty() override = default;
-    
-    virtual void Visit(AstVisitor *visitor, Module *mod) override;
-    virtual std::unique_ptr<Buildable> Build(AstVisitor *visitor, Module *mod) override;
-    virtual void Optimize(AstVisitor *visitor, Module *mod) override;
-    
+
+    virtual void Visit(AstVisitor* visitor, Module* mod) override;
+    virtual std::unique_ptr<Buildable> Build(AstVisitor* visitor, Module* mod) override;
+    virtual void Optimize(AstVisitor* visitor, Module* mod) override;
+
     virtual RC<AstStatement> Clone() const override;
 
     virtual Tribool IsTrue() const override;
@@ -34,18 +33,17 @@ public:
     }
 
 protected:
-    String              m_fieldName;
+    String m_fieldName;
 
     // set while analyzing
-    SymbolTypePtr_t     m_exprType;
-    RC<AstExpression>   m_exprValue;
+    SymbolTypePtr_t m_exprType;
+    RC<AstExpression> m_exprValue;
 
     RC<AstModuleProperty> CloneImpl() const
     {
         return RC<AstModuleProperty>(new AstModuleProperty(
             m_fieldName,
-            m_location
-        ));
+            m_location));
     }
 };
 

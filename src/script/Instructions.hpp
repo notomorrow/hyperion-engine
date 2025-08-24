@@ -46,56 +46,56 @@ enum Instructions : hyperion::uint8
     STORE_STATIC_TYPE,     // type     [u16 nameLen, byte[nameLen] name, u16 size, { u16 len, byte[len] memberName }[size]]
 
     /* Load a value into a register */
-    LOAD_I32,          // loadI32          [% reg, i32 val]
-    LOAD_I64,          // loadI64          [% reg, i64 val]
-    LOAD_U32,          // loadU32          [% reg, u32 val]
-    LOAD_U64,          // loadU64          [% reg, u64 val]
-    LOAD_F32,          // loadF32          [% reg, f32 val]
-    LOAD_F64,          // loadF64          [% reg, f64 val]
-    LOAD_OFFSET,       // loadOffset       [% reg, u16 offset]
-    LOAD_INDEX,        // loadIndex        [% reg, u16 idx]
-    LOAD_STATIC,       // loadStatic       [% reg, u16 idx]
-    LOAD_STRING,       // loadStr          [% reg, u32 len, byte[len] str]
-    LOAD_ADDR,         // loadAddr         [% reg, @ addr]
-    LOAD_FUNC,         // loadFunc         [% reg, @ addr, u8 nargs, u8 flags]
-    LOAD_TYPE,         // loadType         [% reg, u16 nameLen, byte[nameLen] name, u16 size, { u16 len, byte[len] memberName }[size]]
-    LOAD_MEM,          // loadMem          [% reg, % src, u8 idx]
-    LOAD_MEM_HASH,     // loadMemHash     [% reg, % src, u32 hash]
-    LOAD_ARRAYIDX,     // loadArrayidx     [% reg, % src, % idx]
-    LOAD_OFFSET_REF,   // loadOffsetRef   [% reg, u16 offset]
-    LOAD_INDEX_REF,    // loadIndexRef    [% reg, u16 idx]
-    LOAD_NULL,         // loadNull         [% reg]
-    LOAD_TRUE,         // loadTrue         [% reg]
-    LOAD_FALSE,        // loadFalse        [% reg]
+    LOAD_I32,        // loadI32          [% reg, i32 val]
+    LOAD_I64,        // loadI64          [% reg, i64 val]
+    LOAD_U32,        // loadU32          [% reg, u32 val]
+    LOAD_U64,        // loadU64          [% reg, u64 val]
+    LOAD_F32,        // loadF32          [% reg, f32 val]
+    LOAD_F64,        // loadF64          [% reg, f64 val]
+    LOAD_OFFSET,     // loadOffset       [% reg, u16 offset]
+    LOAD_INDEX,      // loadIndex        [% reg, u16 idx]
+    LOAD_STATIC,     // loadStatic       [% reg, u16 idx]
+    LOAD_STRING,     // loadStr          [% reg, u32 len, byte[len] str]
+    LOAD_ADDR,       // loadAddr         [% reg, @ addr]
+    LOAD_FUNC,       // loadFunc         [% reg, @ addr, u8 nargs, u8 flags]
+    LOAD_TYPE,       // loadType         [% reg, u16 nameLen, byte[nameLen] name, u16 size, { u16 len, byte[len] memberName }[size]]
+    LOAD_MEM,        // loadMem          [% reg, % src, u8 idx]
+    LOAD_MEM_HASH,   // loadMemHash     [% reg, % src, u32 hash]
+    LOAD_ARRAYIDX,   // loadArrayidx     [% reg, % src, % idx]
+    LOAD_OFFSET_REF, // loadOffsetRef   [% reg, u16 offset]
+    LOAD_INDEX_REF,  // loadIndexRef    [% reg, u16 idx]
+    LOAD_NULL,       // loadNull         [% reg]
+    LOAD_TRUE,       // loadTrue         [% reg]
+    LOAD_FALSE,      // loadFalse        [% reg]
 
-    REF,               // ref               [% reg, % src]
-    DEREF,             // deref             [% reg, % src]
+    REF,   // ref               [% reg, % src]
+    DEREF, // deref             [% reg, % src]
 
     /* Copy register value to stack offset */
-    MOV_OFFSET,     // movOffset   [u16 dst, % src]
+    MOV_OFFSET, // movOffset   [u16 dst, % src]
     /* Copy register value to stack index */
-    MOV_INDEX,      // movIndex    [u16 dst, % src]
+    MOV_INDEX, // movIndex    [u16 dst, % src]
     /* Copy register value to static index */
-    MOV_STATIC,     // movStatic   [u16 dst, % src]
+    MOV_STATIC, // movStatic   [u16 dst, % src]
     /* Copy register value to object member */
-    MOV_MEM,        // movMem      [% dstObj, u8 dstIdx, % src]
+    MOV_MEM, // movMem      [% dstObj, u8 dstIdx, % src]
     /* Copy register value to object member (using hashcode) */
-    MOV_MEM_HASH,   // movMemHash [% dstObj, u32 hash, % src]
+    MOV_MEM_HASH, // movMemHash [% dstObj, u32 hash, % src]
     /* Copy register value to array index */
-    MOV_ARRAYIDX,   // movArrayidx [% dstArray, u32 dstIdx, %src]
+    MOV_ARRAYIDX, // movArrayidx [% dstArray, u32 dstIdx, %src]
     /* Copy register value to array index held in other register */
     MOV_ARRAYIDX_REG, // movArrayidxReg [% dstArray, % dstIdx, % src]
     /* Copy register value to another register */
-    MOV_REG,        // movReg      [% dst, % src]
+    MOV_REG, // movReg      [% dst, % src]
     /* Check if the object in the register has a member with the hash,
         setting a boolean value in the dst register
     */
     HAS_MEM_HASH, // hasMemHash [% dst, % src, u32 hash]
 
     /* Push a value from register to the stack */
-    PUSH,  // push [% src]
+    PUSH, // push [% src]
     /* Pop stack once */
-    POP,   // pop
+    POP, // pop
 
     /* Push a value to the array in %dstArray */
     PUSH_ARRAY, // pushArray [% dst, % src]

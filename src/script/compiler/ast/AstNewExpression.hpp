@@ -16,23 +16,22 @@ class AstNewExpression : public AstExpression
 {
 public:
     AstNewExpression(
-        const RC<AstPrototypeSpecification> &proto,
-        const RC<AstArgumentList> &argList,
+        const RC<AstPrototypeSpecification>& proto,
+        const RC<AstArgumentList>& argList,
         bool enableConstructorCall,
-        const SourceLocation &location
-    );
+        const SourceLocation& location);
     virtual ~AstNewExpression() override = default;
 
-    virtual void Visit(AstVisitor *visitor, Module *mod) override;
-    virtual std::unique_ptr<Buildable> Build(AstVisitor *visitor, Module *mod) override;
-    virtual void Optimize(AstVisitor *visitor, Module *mod) override;
-    
+    virtual void Visit(AstVisitor* visitor, Module* mod) override;
+    virtual std::unique_ptr<Buildable> Build(AstVisitor* visitor, Module* mod) override;
+    virtual void Optimize(AstVisitor* visitor, Module* mod) override;
+
     virtual RC<AstStatement> Clone() const override;
 
     virtual Tribool IsTrue() const override;
     virtual bool MayHaveSideEffects() const override;
     virtual SymbolTypePtr_t GetExprType() const override;
-    virtual AstExpression *GetTarget() const override;
+    virtual AstExpression* GetTarget() const override;
 
     virtual HashCode GetHashCode() const override
     {
@@ -45,16 +44,16 @@ public:
     }
 
 private:
-    RC<AstPrototypeSpecification>   m_proto;
-    RC<AstArgumentList>             m_argList;
-    bool                            m_enableConstructorCall;
+    RC<AstPrototypeSpecification> m_proto;
+    RC<AstArgumentList> m_argList;
+    bool m_enableConstructorCall;
 
     /** Set while analyzing */
-    RC<AstExpression>               m_objectValue;
-    SymbolTypePtr_t                 m_instanceType;
-    SymbolTypePtr_t                 m_prototypeType;
-    RC<AstBlock>                    m_constructorBlock; // create a block to store temporary vars
-    RC<AstExpression>               m_constructorCall;
+    RC<AstExpression> m_objectValue;
+    SymbolTypePtr_t m_instanceType;
+    SymbolTypePtr_t m_prototypeType;
+    RC<AstBlock> m_constructorBlock; // create a block to store temporary vars
+    RC<AstExpression> m_constructorCall;
 
     RC<AstNewExpression> CloneImpl() const
     {
@@ -62,8 +61,7 @@ private:
             CloneAstNode(m_proto),
             CloneAstNode(m_argList),
             m_enableConstructorCall,
-            m_location
-        ));
+            m_location));
     }
 };
 

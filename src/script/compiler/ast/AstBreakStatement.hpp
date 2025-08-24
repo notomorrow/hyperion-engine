@@ -12,13 +12,13 @@ namespace hyperion::compiler {
 class AstBreakStatement : public AstStatement
 {
 public:
-    AstBreakStatement(const SourceLocation &location);
+    AstBreakStatement(const SourceLocation& location);
     virtual ~AstBreakStatement() = default;
 
-    virtual void Visit(AstVisitor *visitor, Module *mod) override;
-    virtual std::unique_ptr<Buildable> Build(AstVisitor *visitor, Module *mod) override;
-    virtual void Optimize(AstVisitor *visitor, Module *mod) override;
-    
+    virtual void Visit(AstVisitor* visitor, Module* mod) override;
+    virtual std::unique_ptr<Buildable> Build(AstVisitor* visitor, Module* mod) override;
+    virtual void Optimize(AstVisitor* visitor, Module* mod) override;
+
     virtual RC<AstStatement> Clone() const override;
 
     virtual HashCode GetHashCode() const override
@@ -32,8 +32,7 @@ private:
     RC<AstBreakStatement> CloneImpl() const
     {
         return RC<AstBreakStatement>(new AstBreakStatement(
-            m_location
-        ));
+            m_location));
     }
 };
 

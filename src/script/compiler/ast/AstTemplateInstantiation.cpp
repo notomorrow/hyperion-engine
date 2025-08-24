@@ -23,22 +23,22 @@ namespace hyperion::compiler {
 
 // AstTemplateInstantiationWrapper
 AstTemplateInstantiationWrapper::AstTemplateInstantiationWrapper(
-    const RC<AstExpression> &expr,
-    const Array<GenericInstanceTypeInfo::Arg> &genericArgs,
-    const SourceLocation &location
-) : AstExpression(location, ACCESS_MODE_LOAD),
-    m_expr(expr),
-    m_genericArgs(genericArgs)
+    const RC<AstExpression>& expr,
+    const Array<GenericInstanceTypeInfo::Arg>& genericArgs,
+    const SourceLocation& location)
+    : AstExpression(location, ACCESS_MODE_LOAD),
+      m_expr(expr),
+      m_genericArgs(genericArgs)
 {
 }
 
-void AstTemplateInstantiationWrapper::Visit(AstVisitor *visitor, Module *mod)
+void AstTemplateInstantiationWrapper::Visit(AstVisitor* visitor, Module* mod)
 {
     Assert(m_expr != nullptr);
 
     m_expr->Visit(visitor, mod);
 
-    auto *valueOf = m_expr->GetDeepValueOf();
+    auto* valueOf = m_expr->GetDeepValueOf();
     Assert(valueOf != nullptr);
 
     m_exprType = valueOf->GetExprType();
@@ -47,18 +47,20 @@ void AstTemplateInstantiationWrapper::Visit(AstVisitor *visitor, Module *mod)
 
     m_heldType = valueOf->GetHeldType();
 
-    if (m_heldType != nullptr) {
+    if (m_heldType != nullptr)
+    {
         m_heldType = m_heldType->GetUnaliased();
 
         MakeSymbolTypeGenericInstance(m_heldType);
     }
 }
 
-void AstTemplateInstantiationWrapper::MakeSymbolTypeGenericInstance(SymbolTypePtr_t &symbolType)
+void AstTemplateInstantiationWrapper::MakeSymbolTypeGenericInstance(SymbolTypePtr_t& symbolType)
 {
     // Set it to a GenericInstance version,
     // So we can use the params that were provided, later
-    if (symbolType != BuiltinTypes::UNDEFINED) {
+    if (symbolType != BuiltinTypes::UNDEFINED)
+    {
         const int currentSymbolTypeId = symbolType->GetId();
         Assert(currentSymbolTypeId != -1);
 
@@ -70,9 +72,7 @@ void AstTemplateInstantiationWrapper::MakeSymbolTypeGenericInstance(SymbolTypePt
         symbolType = SymbolType::GenericInstance(
             symbolType,
             GenericInstanceTypeInfo {
-                m_genericArgs
-            }
-        );
+                m_genericArgs });
 
         // Reuse the same ID
         symbolType->SetId(currentSymbolTypeId);
@@ -81,14 +81,14 @@ void AstTemplateInstantiationWrapper::MakeSymbolTypeGenericInstance(SymbolTypePt
     }
 }
 
-std::unique_ptr<Buildable> AstTemplateInstantiationWrapper::Build(AstVisitor *visitor, Module *mod)
+std::unique_ptr<Buildable> AstTemplateInstantiationWrapper::Build(AstVisitor* visitor, Module* mod)
 {
     Assert(m_expr != nullptr);
 
     return m_expr->Build(visitor, mod);
 }
 
-void AstTemplateInstantiationWrapper::Optimize(AstVisitor *visitor, Module *mod)
+void AstTemplateInstantiationWrapper::Optimize(AstVisitor* visitor, Module* mod)
 {
     Assert(m_expr != nullptr);
 
@@ -102,7 +102,8 @@ RC<AstStatement> AstTemplateInstantiationWrapper::Clone() const
 
 Tribool AstTemplateInstantiationWrapper::IsTrue() const
 {
-    if (m_expr != nullptr) {
+    if (m_expr != nullptr)
+    {
         return m_expr->IsTrue();
     }
 
@@ -111,7 +112,8 @@ Tribool AstTemplateInstantiationWrapper::IsTrue() const
 
 bool AstTemplateInstantiationWrapper::MayHaveSideEffects() const
 {
-    if (m_expr != nullptr) {
+    if (m_expr != nullptr)
+    {
         return m_expr->MayHaveSideEffects();
     }
 
@@ -120,7 +122,8 @@ bool AstTemplateInstantiationWrapper::MayHaveSideEffects() const
 
 SymbolTypePtr_t AstTemplateInstantiationWrapper::GetExprType() const
 {
-    if (m_exprType != nullptr) {
+    if (m_exprType != nullptr)
+    {
         return m_exprType;
     }
 
@@ -129,20 +132,21 @@ SymbolTypePtr_t AstTemplateInstantiationWrapper::GetExprType() const
 
 SymbolTypePtr_t AstTemplateInstantiationWrapper::GetHeldType() const
 {
-    if (m_heldType != nullptr) {
+    if (m_heldType != nullptr)
+    {
         return m_heldType;
     }
 
     return AstExpression::GetHeldType();
 }
 
-const AstExpression *AstTemplateInstantiationWrapper::GetValueOf() const
+const AstExpression* AstTemplateInstantiationWrapper::GetValueOf() const
 {
     // do not return the inner expression - we want to keep the wrapper
     return AstExpression::GetValueOf();
 }
 
-const AstExpression *AstTemplateInstantiationWrapper::GetDeepValueOf() const
+const AstExpression* AstTemplateInstantiationWrapper::GetDeepValueOf() const
 {
     // do not return the inner expression - we want to keep the wrapper
     return AstExpression::GetDeepValueOf();
@@ -151,16 +155,16 @@ const AstExpression *AstTemplateInstantiationWrapper::GetDeepValueOf() const
 // AstTemplateInstantiation
 
 AstTemplateInstantiation::AstTemplateInstantiation(
-    const RC<AstExpression> &expr,
-    const Array<RC<AstArgument>> &genericArgs,
-    const SourceLocation &location
-) : AstExpression(location, ACCESS_MODE_LOAD),
-    m_expr(expr),
-    m_genericArgs(genericArgs)
+    const RC<AstExpression>& expr,
+    const Array<RC<AstArgument>>& genericArgs,
+    const SourceLocation& location)
+    : AstExpression(location, ACCESS_MODE_LOAD),
+      m_expr(expr),
+      m_genericArgs(genericArgs)
 {
 }
 
-void AstTemplateInstantiation::Visit(AstVisitor *visitor, Module *mod)
+void AstTemplateInstantiation::Visit(AstVisitor* visitor, Module* mod)
 {
     Assert(!m_isVisited);
     m_isVisited = true;
@@ -174,14 +178,16 @@ void AstTemplateInstantiation::Visit(AstVisitor *visitor, Module *mod)
 
     bool anyArgsPlaceholder = false;
 
-    for (auto &arg : m_genericArgs) {
+    for (auto& arg : m_genericArgs)
+    {
         Assert(arg != nullptr);
         arg->Visit(visitor, visitor->GetCompilationUnit()->GetCurrentModule());
 
         auto argType = arg->GetExprType();
         Assert(argType != nullptr);
 
-        if (argType->IsPlaceholderType()) {
+        if (argType->IsPlaceholderType())
+        {
             anyArgsPlaceholder = true;
         }
 
@@ -209,12 +215,13 @@ void AstTemplateInstantiation::Visit(AstVisitor *visitor, Module *mod)
     // e.g: `foo.bar<int>()` where `bar` is a generic function. `foo` is the target expression, being passed as the `self` argument
     m_targetExpr = CloneAstNode(m_expr->GetTarget());
 
-    if (m_targetExpr != nullptr) {
+    if (m_targetExpr != nullptr)
+    {
         // Visit it so that it can be analyzed
         m_targetExpr->Visit(visitor, mod);
     }
 
-    const AstExpression *valueOf = m_expr->GetDeepValueOf();
+    const AstExpression* valueOf = m_expr->GetDeepValueOf();
     Assert(valueOf != nullptr);
 
     SymbolTypePtr_t exprType = m_expr->GetExprType();
@@ -222,15 +229,15 @@ void AstTemplateInstantiation::Visit(AstVisitor *visitor, Module *mod)
     exprType = exprType->GetUnaliased();
 
     // Check if the expression is a generic expression.
-    const AstExpression *genericExpr = valueOf->GetHeldGenericExpr();
+    const AstExpression* genericExpr = valueOf->GetHeldGenericExpr();
 
-    if (genericExpr == nullptr) {
+    if (genericExpr == nullptr)
+    {
         visitor->GetCompilationUnit()->GetErrorList().AddError(CompilerError(
             LEVEL_ERROR,
             Msg_expression_not_generic,
             m_expr->GetLocation(),
-            exprType->ToString()
-        ));
+            exprType->ToString()));
 
         return;
     }
@@ -241,17 +248,16 @@ void AstTemplateInstantiation::Visit(AstVisitor *visitor, Module *mod)
         visitor, mod,
         exprType,
         m_genericArgs,
-        m_location
-    );
+        m_location);
 
-    if (!substituted.HasValue()) {
+    if (!substituted.HasValue())
+    {
         // not a generic if it doesnt resolve
         visitor->GetCompilationUnit()->GetErrorList().AddError(CompilerError(
             LEVEL_ERROR,
             Msg_type_not_generic,
             m_location,
-            exprType->ToString()
-        ));
+            exprType->ToString()));
 
         return;
     }
@@ -260,8 +266,7 @@ void AstTemplateInstantiation::Visit(AstVisitor *visitor, Module *mod)
         visitor, mod,
         exprType,
         m_genericArgs,
-        m_location
-    );
+        m_location);
 
     Assert(substituted->returnType != nullptr);
 
@@ -292,18 +297,19 @@ void AstTemplateInstantiation::Visit(AstVisitor *visitor, Module *mod)
     //     }
     // }
 
-    const Array<GenericInstanceTypeInfo::Arg> &params = exprType->GetGenericInstanceInfo().m_genericArgs;
+    const Array<GenericInstanceTypeInfo::Arg>& params = exprType->GetGenericInstanceInfo().m_genericArgs;
     Assert(params.Size() >= 1);
 
     Array<GenericInstanceTypeInfo::Arg> args;
     args.Resize(m_substitutedArgs.Size());
 
     // temporarily define all generic parameters as constants
-    for (SizeType index = 0; index < m_substitutedArgs.Size(); index++) {
-        RC<AstArgument> &arg = m_substitutedArgs[index];
+    for (SizeType index = 0; index < m_substitutedArgs.Size(); index++)
+    {
+        RC<AstArgument>& arg = m_substitutedArgs[index];
         Assert(arg != nullptr);
-        
-        const AstExpression *valueOf = arg->GetDeepValueOf();
+
+        const AstExpression* valueOf = arg->GetDeepValueOf();
         Assert(valueOf != nullptr);
 
         SymbolTypePtr_t memberExprType = valueOf->GetExprType();
@@ -315,13 +321,13 @@ void AstTemplateInstantiation::Visit(AstVisitor *visitor, Module *mod)
 
         SymbolTypePtr_t heldType = valueOf->GetHeldType();
 
-        if (heldType == nullptr) {
+        if (heldType == nullptr)
+        {
             visitor->GetCompilationUnit()->GetErrorList().AddError(CompilerError(
                 LEVEL_ERROR,
                 Msg_not_a_type,
                 arg->GetLocation(),
-                memberExprType->ToString()
-            ));
+                memberExprType->ToString()));
 
             continue;
         }
@@ -330,9 +336,12 @@ void AstTemplateInstantiation::Visit(AstVisitor *visitor, Module *mod)
 
         String paramName;
 
-        if (index + 1 < params.Size()) {
+        if (index + 1 < params.Size())
+        {
             paramName = params[index + 1].m_name;
-        } else {
+        }
+        else
+        {
             // if there are more arguments than generic parameters, we just use a generic name
             paramName = params.Back().m_name + String::ToString(index);
         }
@@ -344,19 +353,16 @@ void AstTemplateInstantiation::Visit(AstVisitor *visitor, Module *mod)
 
         scope->GetIdentifierTable().AddSymbolType(SymbolType::Alias(
             paramName,
-            { heldType }
-        ));
+            { heldType }));
 
         RC<AstVariableDeclaration> paramOverride(new AstVariableDeclaration(
             paramName,
             nullptr,
             RC<AstTypeRef>(new AstTypeRef(
                 heldType,
-                SourceLocation::eof
-            )),
+                SourceLocation::eof)),
             IdentifierFlags::FLAG_CONST | IdentifierFlags::FLAG_GENERIC_SUBSTITUTION,
-            arg->GetLocation()
-        ));
+            arg->GetLocation()));
 
         m_block->AddChild(paramOverride);
     }
@@ -365,46 +371,50 @@ void AstTemplateInstantiation::Visit(AstVisitor *visitor, Module *mod)
     m_innerExpr.Reset(new AstTemplateInstantiationWrapper(
         CloneAstNode(genericExpr),
         args,
-        m_location
-    ));
+        m_location));
 
     m_block->AddChild(m_innerExpr);
     m_block->Visit(visitor, mod);
-    
+
     Assert(m_innerExpr->GetExprType() != nullptr);
 
     // If the current return type is a placeholder, we need to set it to the inner expression's implicit return type
-    if (m_exprType->IsPlaceholderType()) {
+    if (m_exprType->IsPlaceholderType())
+    {
         m_exprType = m_innerExpr->GetExprType();
         m_exprType = m_exprType->GetUnaliased();
-    } else {
+    }
+    else
+    {
         SemanticAnalyzer::Helpers::EnsureLooseTypeAssignmentCompatibility(
             visitor,
             mod,
             m_innerExpr->GetExprType(),
             m_exprType,
-            m_location
-        );
+            m_location);
     }
-    
+
     m_heldType = m_innerExpr->GetHeldType();
 
     // If expr type is native just load the original type.
-    if (exprType->GetFlags() & SYMBOL_TYPE_FLAGS_NATIVE) {
+    if (exprType->GetFlags() & SYMBOL_TYPE_FLAGS_NATIVE)
+    {
         m_isNative = true;
 
         m_block.Reset(new AstBlock({}, m_location));
 
-        if (m_heldType != nullptr) {
+        if (m_heldType != nullptr)
+        {
             Assert(m_heldType->GetId() != -1,
                 "For native generic types, the original generic type must be registered");
 
             // Add a type ref to the original type
             m_block->AddChild(RC<AstTypeRef>(new AstTypeRef(
                 m_heldType,
-                m_location
-            )));
-        } else {
+                m_location)));
+        }
+        else
+        {
             m_block->AddChild(CloneAstNode(m_expr));
         }
 
@@ -412,7 +422,7 @@ void AstTemplateInstantiation::Visit(AstVisitor *visitor, Module *mod)
     }
 }
 
-std::unique_ptr<Buildable> AstTemplateInstantiation::Build(AstVisitor *visitor, Module *mod)
+std::unique_ptr<Buildable> AstTemplateInstantiation::Build(AstVisitor* visitor, Module* mod)
 {
     Assert(m_isVisited);
 
@@ -421,27 +431,32 @@ std::unique_ptr<Buildable> AstTemplateInstantiation::Build(AstVisitor *visitor, 
 
     auto chunk = BytecodeUtil::Make<BytecodeChunk>();
 
-    if (m_heldType != nullptr) {
-        chunk->Append(BytecodeUtil::Make<Comment>(String("Begin generic instantiation for type `" ) + m_heldType->ToString() + String("`")));
-    } else {
+    if (m_heldType != nullptr)
+    {
+        chunk->Append(BytecodeUtil::Make<Comment>(String("Begin generic instantiation for type `") + m_heldType->ToString() + String("`")));
+    }
+    else
+    {
         Assert(m_exprType != nullptr);
 
-        chunk->Append(BytecodeUtil::Make<Comment>(String("Begin generic instantiation for expression of type `" ) + m_exprType->ToString() + String("`")));
+        chunk->Append(BytecodeUtil::Make<Comment>(String("Begin generic instantiation for expression of type `") + m_exprType->ToString() + String("`")));
     }
 
     Assert(m_block != nullptr);
     chunk->Append(m_block->Build(visitor, mod));
 
-    if (m_heldType != nullptr) {
-        chunk->Append(BytecodeUtil::Make<Comment>(String("End generic instantiation for type `" ) + m_heldType->ToString() + String("`")));
-    } else {
+    if (m_heldType != nullptr)
+    {
+        chunk->Append(BytecodeUtil::Make<Comment>(String("End generic instantiation for type `") + m_heldType->ToString() + String("`")));
+    }
+    else
+    {
         Assert(m_exprType != nullptr);
 
-        chunk->Append(BytecodeUtil::Make<Comment>(String("End generic instantiation for expression of type `" ) + m_exprType->ToString() + String("`")));
+        chunk->Append(BytecodeUtil::Make<Comment>(String("End generic instantiation for expression of type `") + m_exprType->ToString() + String("`")));
     }
 
     return chunk;
-
 
     // std::unique_ptr<BytecodeChunk> chunk = BytecodeUtil::Make<BytecodeChunk>();
 
@@ -453,7 +468,7 @@ std::unique_ptr<Buildable> AstTemplateInstantiation::Build(AstVisitor *visitor, 
     // ));
 
     // const int stackSizeBefore = visitor->GetCompilationUnit()->GetInstructionStream().GetStackSize();
-    
+
     // // Build the original expression.
     // // Usage of arguments in the expression will be replaced with the substituted arguments.
     // chunk->Append(m_expr->Build(visitor, mod));
@@ -476,7 +491,7 @@ std::unique_ptr<Buildable> AstTemplateInstantiation::Build(AstVisitor *visitor, 
     // return chunk;
 }
 
-void AstTemplateInstantiation::Optimize(AstVisitor *visitor, Module *mod)
+void AstTemplateInstantiation::Optimize(AstVisitor* visitor, Module* mod)
 {
     Assert(visitor != nullptr);
     Assert(mod != nullptr);
@@ -492,7 +507,8 @@ RC<AstStatement> AstTemplateInstantiation::Clone() const
 
 Tribool AstTemplateInstantiation::IsTrue() const
 {
-    if (m_innerExpr != nullptr) {
+    if (m_innerExpr != nullptr)
+    {
         return m_innerExpr->IsTrue();
     }
 
@@ -501,15 +517,18 @@ Tribool AstTemplateInstantiation::IsTrue() const
 
 bool AstTemplateInstantiation::MayHaveSideEffects() const
 {
-    for (auto &arg : m_genericArgs) {
+    for (auto& arg : m_genericArgs)
+    {
         Assert(arg != nullptr);
 
-        if (arg->MayHaveSideEffects()) {
+        if (arg->MayHaveSideEffects())
+        {
             return true;
         }
     }
-    
-    if (m_innerExpr != nullptr) {
+
+    if (m_innerExpr != nullptr)
+    {
         return m_innerExpr->MayHaveSideEffects();
     }
 
@@ -518,7 +537,8 @@ bool AstTemplateInstantiation::MayHaveSideEffects() const
 
 SymbolTypePtr_t AstTemplateInstantiation::GetExprType() const
 {
-    if (m_exprType != nullptr) {
+    if (m_exprType != nullptr)
+    {
         return m_exprType;
     }
 
@@ -527,16 +547,18 @@ SymbolTypePtr_t AstTemplateInstantiation::GetExprType() const
 
 SymbolTypePtr_t AstTemplateInstantiation::GetHeldType() const
 {
-    if (m_heldType) {
+    if (m_heldType)
+    {
         return m_heldType;
     }
 
     return AstExpression::GetHeldType();
 }
 
-const AstExpression *AstTemplateInstantiation::GetValueOf() const
+const AstExpression* AstTemplateInstantiation::GetValueOf() const
 {
-    if (m_innerExpr != nullptr) {
+    if (m_innerExpr != nullptr)
+    {
         return m_innerExpr.Get();
         // Assert(m_innerExpr.Get() != this);
 
@@ -546,9 +568,10 @@ const AstExpression *AstTemplateInstantiation::GetValueOf() const
     return AstExpression::GetValueOf();
 }
 
-const AstExpression *AstTemplateInstantiation::GetDeepValueOf() const
+const AstExpression* AstTemplateInstantiation::GetDeepValueOf() const
 {
-    if (m_innerExpr != nullptr) {
+    if (m_innerExpr != nullptr)
+    {
         Assert(m_innerExpr->GetExpr().Get() != this);
 
         return m_innerExpr->GetDeepValueOf();
@@ -557,9 +580,10 @@ const AstExpression *AstTemplateInstantiation::GetDeepValueOf() const
     return AstExpression::GetDeepValueOf();
 }
 
-AstExpression *AstTemplateInstantiation::GetTarget() const
+AstExpression* AstTemplateInstantiation::GetTarget() const
 {
-    if (m_targetExpr != nullptr) {
+    if (m_targetExpr != nullptr)
+    {
         Assert(m_targetExpr.Get() != this);
 
         return m_targetExpr.Get();

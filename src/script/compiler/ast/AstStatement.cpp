@@ -4,7 +4,7 @@ namespace hyperion::compiler {
 
 const String AstStatement::unnamed = "<unnamed>";
 
-AstStatement::AstStatement(const SourceLocation &location)
+AstStatement::AstStatement(const SourceLocation& location)
     : m_location(location),
       m_scopeDepth(0)
 {

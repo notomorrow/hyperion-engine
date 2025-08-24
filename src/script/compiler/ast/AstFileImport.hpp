@@ -8,19 +8,22 @@
 
 namespace hyperion::compiler {
 
-class AstFileImport : public AstImport {
+class AstFileImport : public AstImport
+{
 public:
     AstFileImport(
-        const String &path,
-        const SourceLocation &location
-    );
+        const String& path,
+        const SourceLocation& location);
 
     virtual ~AstFileImport() override = default;
 
-    const String &GetPath() const { return m_path; }
+    const String& GetPath() const
+    {
+        return m_path;
+    }
 
-    virtual void Visit(AstVisitor *visitor, Module *mod) override;
-    
+    virtual void Visit(AstVisitor* visitor, Module* mod) override;
+
     virtual RC<AstStatement> Clone() const override;
 
 protected:
@@ -30,8 +33,7 @@ protected:
     {
         return RC<AstFileImport>(new AstFileImport(
             m_path,
-            m_location
-        ));
+            m_location));
     }
 };
 

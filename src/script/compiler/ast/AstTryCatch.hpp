@@ -13,16 +13,15 @@ class AstTryCatch : public AstStatement
 {
 public:
     AstTryCatch(
-        const RC<AstBlock> &tryBlock,
-        const RC<AstBlock> &catchBlock,
-        const SourceLocation &location
-    );
+        const RC<AstBlock>& tryBlock,
+        const RC<AstBlock>& catchBlock,
+        const SourceLocation& location);
     virtual ~AstTryCatch() = default;
 
-    virtual void Visit(AstVisitor *visitor, Module *mod) override;
-    virtual std::unique_ptr<Buildable> Build(AstVisitor *visitor, Module *mod) override;
-    virtual void Optimize(AstVisitor *visitor, Module *mod) override;
-    
+    virtual void Visit(AstVisitor* visitor, Module* mod) override;
+    virtual std::unique_ptr<Buildable> Build(AstVisitor* visitor, Module* mod) override;
+    virtual void Optimize(AstVisitor* visitor, Module* mod) override;
+
     virtual RC<AstStatement> Clone() const override;
 
     virtual HashCode GetHashCode() const override
@@ -36,16 +35,15 @@ public:
     }
 
 private:
-    RC<AstBlock>    m_tryBlock;
-    RC<AstBlock>    m_catchBlock;
+    RC<AstBlock> m_tryBlock;
+    RC<AstBlock> m_catchBlock;
 
     RC<AstTryCatch> CloneImpl() const
     {
         return RC<AstTryCatch>(new AstTryCatch(
             CloneAstNode(m_tryBlock),
             CloneAstNode(m_catchBlock),
-            m_location
-        ));
+            m_location));
     }
 };
 

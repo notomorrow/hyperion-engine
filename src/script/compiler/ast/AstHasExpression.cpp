@@ -21,35 +21,41 @@
 namespace hyperion::compiler {
 
 AstHasExpression::AstHasExpression(
-    const RC<AstStatement> &target,
-    const String &fieldName,
-    const SourceLocation &location
-) : AstExpression(location, ACCESS_MODE_LOAD),
-    m_target(target),
-    m_fieldName(fieldName),
-    m_hasMember(TRI_INDETERMINATE),
-    m_isExpr(false),
-    m_hasSideEffects(false)
+    const RC<AstStatement>& target,
+    const String& fieldName,
+    const SourceLocation& location)
+    : AstExpression(location, ACCESS_MODE_LOAD),
+      m_target(target),
+      m_fieldName(fieldName),
+      m_hasMember(TRI_INDETERMINATE),
+      m_isExpr(false),
+      m_hasSideEffects(false)
 {
 }
 
-void AstHasExpression::Visit(AstVisitor *visitor, Module *mod)
+void AstHasExpression::Visit(AstVisitor* visitor, Module* mod)
 {
     Assert(m_target != nullptr);
     m_target->Visit(visitor, mod);
 
     SymbolTypePtr_t targetType;
 
-    if (auto *ident = dynamic_cast<AstIdentifier *>(m_target.Get())) {
-        if (ident->GetProperties().GetIdentifierType() == IDENTIFIER_TYPE_VARIABLE) {
+    if (auto* ident = dynamic_cast<AstIdentifier*>(m_target.Get()))
+    {
+        if (ident->GetProperties().GetIdentifierType() == IDENTIFIER_TYPE_VARIABLE)
+        {
             m_isExpr = true;
         }
 
         targetType = ident->GetExprType();
         m_hasSideEffects = ident->MayHaveSideEffects();
-    } else if (auto *typeSpec = dynamic_cast<AstPrototypeSpecification *>(m_target.Get())) {
+    }
+    else if (auto* typeSpec = dynamic_cast<AstPrototypeSpecification*>(m_target.Get()))
+    {
         targetType = typeSpec->GetHeldType();
-    } else if (auto *expr = dynamic_cast<AstExpression *>(m_target.Get())) {
+    }
+    else if (auto* expr = dynamic_cast<AstExpression*>(m_target.Get()))
+    {
         targetType = expr->GetExprType();
         m_isExpr = true;
         m_hasSideEffects = expr->MayHaveSideEffects();
@@ -57,54 +63,70 @@ void AstHasExpression::Visit(AstVisitor *visitor, Module *mod)
 
     Assert(targetType != nullptr);
 
-    if (targetType->IsAnyType() || targetType->IsPlaceholderType()) {
+    if (targetType->IsAnyType() || targetType->IsPlaceholderType())
+    {
         m_hasMember = TRI_INDETERMINATE;
-    } else if (targetType->IsClass()) {
+    }
+    else if (targetType->IsClass())
+    {
         SymbolTypeMember member;
 
-        if (targetType->FindMemberDeep(m_fieldName, member)) {
+        if (targetType->FindMemberDeep(m_fieldName, member))
+        {
             m_hasMember = TRI_TRUE;
-        } else {
+        }
+        else
+        {
             // @TODO: If we have 'final' classes,
             // we could make this return false.
             // we have to do a run-time check as there could always be a deriving class
             // which has this member.
             m_hasMember = TRI_INDETERMINATE;
         }
-    } else if (targetType->IsPrimitive()) {
+    }
+    else if (targetType->IsPrimitive())
+    {
         m_hasMember = TRI_FALSE;
-    } else {
+    }
+    else
+    {
         m_hasMember = TRI_INDETERMINATE;
     }
 }
 
-std::unique_ptr<Buildable> AstHasExpression::Build(AstVisitor *visitor, Module *mod)
+std::unique_ptr<Buildable> AstHasExpression::Build(AstVisitor* visitor, Module* mod)
 {
     Assert(m_target != nullptr);
 
     InstructionStreamContextGuard contextGuard(
         &visitor->GetCompilationUnit()->GetInstructionStream().GetContextTree(),
-        INSTRUCTION_STREAM_CONTEXT_DEFAULT
-    );
+        INSTRUCTION_STREAM_CONTEXT_DEFAULT);
 
     std::unique_ptr<BytecodeChunk> chunk = BytecodeUtil::Make<BytecodeChunk>();
 
-    if (!m_isExpr) {
+    if (!m_isExpr)
+    {
         Assert(m_hasMember != TRI_INDETERMINATE, "m_has_member should only be -1 for expression member checks.");
     }
 
-    if (m_hasMember != TRI_INDETERMINATE && !m_hasSideEffects) {
+    if (m_hasMember != TRI_INDETERMINATE && !m_hasSideEffects)
+    {
         // get active register
         uint8 rp = visitor->GetCompilationUnit()->GetInstructionStream().GetCurrentRegister();
 
-        if (m_hasMember == TRI_TRUE) {
+        if (m_hasMember == TRI_TRUE)
+        {
             // load value into register
             chunk->Append(BytecodeUtil::Make<ConstBool>(rp, true));
-        } else if (m_hasMember == TRI_FALSE) {
+        }
+        else if (m_hasMember == TRI_FALSE)
+        {
             // load value into register
             chunk->Append(BytecodeUtil::Make<ConstBool>(rp, false));
         }
-    } else {
+    }
+    else
+    {
         // indeterminate at compile time.
         // check at runtime.
         const HashFNV1 hash = hashFnv1(m_fieldName.Data());
@@ -116,7 +138,7 @@ std::unique_ptr<Buildable> AstHasExpression::Build(AstVisitor *visitor, Module *
         // the label to jump to the else-part
         LabelId elseLabel = contextGuard->NewLabel();
         chunk->TakeOwnershipOfLabel(elseLabel);
-        
+
         chunk->Append(m_target->Build(visitor, mod));
 
         // get active register
@@ -153,7 +175,7 @@ std::unique_ptr<Buildable> AstHasExpression::Build(AstVisitor *visitor, Module *
     return chunk;
 }
 
-void AstHasExpression::Optimize(AstVisitor *visitor, Module *mod)
+void AstHasExpression::Optimize(AstVisitor* visitor, Module* mod)
 {
     Assert(m_target != nullptr);
 

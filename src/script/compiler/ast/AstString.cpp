@@ -10,14 +10,14 @@
 
 namespace hyperion::compiler {
 
-AstString::AstString(const String &value, const SourceLocation &location)
+AstString::AstString(const String& value, const SourceLocation& location)
     : AstConstant(location),
       m_value(value),
       m_staticId(0)
 {
 }
 
-std::unique_ptr<Buildable> AstString::Build(AstVisitor *visitor, Module *mod)
+std::unique_ptr<Buildable> AstString::Build(AstVisitor* visitor, Module* mod)
 {
     // get active register
     uint8 rp = visitor->GetCompilationUnit()->GetInstructionStream().GetCurrentRegister();
@@ -62,28 +62,34 @@ SymbolTypePtr_t AstString::GetExprType() const
     return BuiltinTypes::STRING;
 }
 
-RC<AstConstant> AstString::HandleOperator(Operators opType, const AstConstant *right) const
+RC<AstConstant> AstString::HandleOperator(Operators opType, const AstConstant* right) const
 {
-    switch (opType) {
+    switch (opType)
+    {
     case OP_logical_and:
         // literal strings evaluate to true.
-        switch (right->IsTrue()) {
-            case TRI_TRUE:
-                return RC<AstTrue>(new AstTrue(m_location));
-            case TRI_FALSE:
-                return RC<AstFalse>(new AstFalse(m_location));
-            case TRI_INDETERMINATE:
-                return nullptr;
+        switch (right->IsTrue())
+        {
+        case TRI_TRUE:
+            return RC<AstTrue>(new AstTrue(m_location));
+        case TRI_FALSE:
+            return RC<AstFalse>(new AstFalse(m_location));
+        case TRI_INDETERMINATE:
+            return nullptr;
         }
 
     case OP_logical_or:
         return RC<AstTrue>(new AstTrue(m_location));
 
     case OP_equals:
-        if (const AstString *rightString = dynamic_cast<const AstString*>(right)) {
-            if (m_value == rightString->GetValue()) {
+        if (const AstString* rightString = dynamic_cast<const AstString*>(right))
+        {
+            if (m_value == rightString->GetValue())
+            {
                 return RC<AstTrue>(new AstTrue(m_location));
-            } else {
+            }
+            else
+            {
                 return RC<AstFalse>(new AstFalse(m_location));
             }
         }

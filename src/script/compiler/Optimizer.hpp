@@ -13,25 +13,26 @@ namespace hyperion::compiler {
 // forward declarations
 class AstConstant;
 
-class Optimizer : public AstVisitor {
+class Optimizer : public AstVisitor
+{
 public:
     /** Attemps to evaluate the optimized expression at compile-time. */
     static RC<AstConstant> ConstantFold(
-        RC<AstExpression> &left,
-        RC<AstExpression> &right, 
+        RC<AstExpression>& left,
+        RC<AstExpression>& right,
         Operators opType,
-        AstVisitor *visitor);
+        AstVisitor* visitor);
 
     /** Attemps to reduce a variable that is const literal to the actual value. */
     static RC<AstExpression> OptimizeExpr(
-        const RC<AstExpression> &expr,
-        AstVisitor *visitor,
-        Module *mod);
+        const RC<AstExpression>& expr,
+        AstVisitor* visitor,
+        Module* mod);
 
 public:
-    Optimizer(AstIterator *astIterator,
-        CompilationUnit *compilationUnit);
-    Optimizer(const Optimizer &other);
+    Optimizer(AstIterator* astIterator,
+        CompilationUnit* compilationUnit);
+    Optimizer(const Optimizer& other);
 
     void Optimize(bool expectModuleDecl = true);
 

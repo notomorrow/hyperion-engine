@@ -12,37 +12,43 @@ class AstTypeObject : public AstExpression
 {
 public:
     AstTypeObject(
-        const SymbolTypePtr_t &symbolType,
-        const SymbolTypePtr_t &baseSymbolType, // base here is usually CLASS_TYPE - it is not the same as polymorphic base
-        const SourceLocation &location
-    );
+        const SymbolTypePtr_t& symbolType,
+        const SymbolTypePtr_t& baseSymbolType, // base here is usually CLASS_TYPE - it is not the same as polymorphic base
+        const SourceLocation& location);
 
     AstTypeObject(
-        const SymbolTypePtr_t &symbolType,
-        const SymbolTypePtr_t &baseSymbolType,
-        const SymbolTypePtr_t &enumUnderlyingType,
+        const SymbolTypePtr_t& symbolType,
+        const SymbolTypePtr_t& baseSymbolType,
+        const SymbolTypePtr_t& enumUnderlyingType,
         bool isProxyClass,
-        const SourceLocation &location
-    );
+        const SourceLocation& location);
 
     virtual ~AstTypeObject() = default;
 
     bool IsEnum() const
-        { return m_enumUnderlyingType != nullptr; }
+    {
+        return m_enumUnderlyingType != nullptr;
+    }
 
-    const SymbolTypePtr_t &GetEnumUnderlyingType() const
-        { return m_enumUnderlyingType; }
+    const SymbolTypePtr_t& GetEnumUnderlyingType() const
+    {
+        return m_enumUnderlyingType;
+    }
 
     bool IsProxyClass() const
-        { return m_isProxyClass; }
+    {
+        return m_isProxyClass;
+    }
 
     bool IsVisited() const
-        { return m_isVisited; }
+    {
+        return m_isVisited;
+    }
 
-    virtual void Visit(AstVisitor *visitor, Module *mod) override;
-    virtual std::unique_ptr<Buildable> Build(AstVisitor *visitor, Module *mod) override;
-    virtual void Optimize(AstVisitor *visitor, Module *mod) override;
-    
+    virtual void Visit(AstVisitor* visitor, Module* mod) override;
+    virtual std::unique_ptr<Buildable> Build(AstVisitor* visitor, Module* mod) override;
+    virtual void Optimize(AstVisitor* visitor, Module* mod) override;
+
     virtual RC<AstStatement> Clone() const override;
 
     virtual Tribool IsTrue() const override;
@@ -63,15 +69,15 @@ public:
     }
 
 private:
-    SymbolTypePtr_t             m_symbolType;
-    SymbolTypePtr_t             m_baseSymbolType;
-    SymbolTypePtr_t             m_enumUnderlyingType;
-    bool                        m_isProxyClass;
+    SymbolTypePtr_t m_symbolType;
+    SymbolTypePtr_t m_baseSymbolType;
+    SymbolTypePtr_t m_enumUnderlyingType;
+    bool m_isProxyClass;
 
     // set while analyzing
-    RC<AstTypeRef>              m_baseTypeRef;
-    Array<RC<AstExpression>>    m_memberExpressions;
-    bool                        m_isVisited;
+    RC<AstTypeRef> m_baseTypeRef;
+    Array<RC<AstExpression>> m_memberExpressions;
+    bool m_isVisited;
 
     RC<AstTypeObject> CloneImpl() const
     {
@@ -80,8 +86,7 @@ private:
             m_baseSymbolType,
             m_enumUnderlyingType,
             m_isProxyClass,
-            m_location
-        ));
+            m_location));
     }
 };
 

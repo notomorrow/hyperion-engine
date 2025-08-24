@@ -14,7 +14,7 @@ Scope::Scope(ScopeType scopeType, int scopeFlags)
 {
 }
 
-Scope::Scope(const Scope &other)
+Scope::Scope(const Scope& other)
     : m_identifierTable(other.m_identifierTable),
       m_scopeType(other.m_scopeType),
       m_scopeFlags(other.m_scopeFlags),

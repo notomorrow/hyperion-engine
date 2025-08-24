@@ -21,14 +21,14 @@ namespace hyperion::compiler {
 
 /** Attempts to evaluate the optimized expression at compile-time. */
 static RC<AstConstant> ConstantFold(
-    RC<AstExpression> &target, 
+    RC<AstExpression>& target,
     Operators opType,
-    AstVisitor *visitor
-)
+    AstVisitor* visitor)
 {
     RC<AstConstant> result;
 
-    if (const AstConstant *targetAsConstant = dynamic_cast<const AstConstant *>(target.Get())) {
+    if (const AstConstant* targetAsConstant = dynamic_cast<const AstConstant*>(target.Get()))
+    {
         result = targetAsConstant->HandleOperator(opType, nullptr);
     }
 
@@ -36,28 +36,30 @@ static RC<AstConstant> ConstantFold(
 }
 
 AstUnaryExpression::AstUnaryExpression(
-    const RC<AstExpression> &target,
-    const Operator *op,
+    const RC<AstExpression>& target,
+    const Operator* op,
     bool isPostfixVersion,
-    const SourceLocation &location
-) : AstExpression(location, ACCESS_MODE_LOAD),
-    m_target(target),
-    m_op(op),
-    m_isPostfixVersion(isPostfixVersion),
-    m_folded(false)
+    const SourceLocation& location)
+    : AstExpression(location, ACCESS_MODE_LOAD),
+      m_target(target),
+      m_op(op),
+      m_isPostfixVersion(isPostfixVersion),
+      m_folded(false)
 {
 }
 
-void AstUnaryExpression::Visit(AstVisitor *visitor, Module *mod)
+void AstUnaryExpression::Visit(AstVisitor* visitor, Module* mod)
 {
     // TODO: Overloading to match binop
 
     // use a bin op for operators that modify their argument
-    if (m_op->ModifiesValue()) {
+    if (m_op->ModifiesValue())
+    {
         RC<AstExpression> expr;
-        const Operator *binOp = nullptr;
+        const Operator* binOp = nullptr;
 
-        switch (m_op->GetOperatorType()) {
+        switch (m_op->GetOperatorType())
+        {
         case OP_increment:
             expr.Reset(new AstInteger(1, m_location));
             binOp = Operator::FindBinaryOperator(Operators::OP_add_assign);
@@ -76,8 +78,7 @@ void AstUnaryExpression::Visit(AstVisitor *visitor, Module *mod)
             m_target,
             expr,
             binOp,
-            m_location
-        ));
+            m_location));
 
         m_binExpr->Visit(visitor, mod);
 
@@ -88,8 +89,10 @@ void AstUnaryExpression::Visit(AstVisitor *visitor, Module *mod)
 
     SymbolTypePtr_t type = m_target->GetExprType();
 
-    if (!type->IsAnyType() && !type->IsGenericParameter() && !type->IsPlaceholderType()) {
-        if (m_op->GetType() & BITWISE) {
+    if (!type->IsAnyType() && !type->IsGenericParameter() && !type->IsPlaceholderType())
+    {
+        if (m_op->GetType() & BITWISE)
+        {
             // no bitwise operators on floats allowed.
             // do not allow right-hand side to be 'any', because it might change the data type.
             visitor->AddErrorIfFalse(
@@ -98,10 +101,10 @@ void AstUnaryExpression::Visit(AstVisitor *visitor, Module *mod)
                     LEVEL_ERROR,
                     Msg_bitwise_operand_must_be_int,
                     m_target->GetLocation(),
-                    type->ToString()
-                )
-            );
-        } else if (m_op->GetType() & ARITHMETIC) {
+                    type->ToString()));
+        }
+        else if (m_op->GetType() & ARITHMETIC)
+        {
             visitor->AddErrorIfFalse(
                 type->IsNumber(),
                 CompilerError(
@@ -109,45 +112,45 @@ void AstUnaryExpression::Visit(AstVisitor *visitor, Module *mod)
                     Msg_invalid_operator_for_type,
                     m_target->GetLocation(),
                     m_op->GetOperatorType(),
-                    type->ToString()
-                )
-            );
+                    type->ToString()));
         }
     }
 
-    if (m_op->ModifiesValue()) {
-        if (!m_target->IsMutable()) {
+    if (m_op->ModifiesValue())
+    {
+        if (!m_target->IsMutable())
+        {
             visitor->GetCompilationUnit()->GetErrorList().AddError(CompilerError(
                 LEVEL_ERROR,
                 Msg_expression_cannot_be_modified,
-                m_target->GetLocation()
-            ));
+                m_target->GetLocation()));
         }
 
-        if (!(m_target->GetAccessOptions() & AccessMode::ACCESS_MODE_STORE)) {
+        if (!(m_target->GetAccessOptions() & AccessMode::ACCESS_MODE_STORE))
+        {
             // cannot modify an rvalue
             visitor->GetCompilationUnit()->GetErrorList().AddError(CompilerError(
                 LEVEL_ERROR,
                 Msg_cannot_modify_rvalue,
-                m_target->GetLocation()
-            ));
+                m_target->GetLocation()));
         }
     }
 }
 
-std::unique_ptr<Buildable> AstUnaryExpression::Build(AstVisitor *visitor, Module *mod)
+std::unique_ptr<Buildable> AstUnaryExpression::Build(AstVisitor* visitor, Module* mod)
 {
     InstructionStreamContextGuard contextGuard(
         &visitor->GetCompilationUnit()->GetInstructionStream().GetContextTree(),
-        INSTRUCTION_STREAM_CONTEXT_DEFAULT
-    );
+        INSTRUCTION_STREAM_CONTEXT_DEFAULT);
 
     std::unique_ptr<BytecodeChunk> chunk = BytecodeUtil::Make<BytecodeChunk>();
 
     uint8 rp;
 
-    if (m_binExpr != nullptr) {
-        if (m_isPostfixVersion) {
+    if (m_binExpr != nullptr)
+    {
+        if (m_isPostfixVersion)
+        {
             // for postfix version:
             //  - load var into register
             //  - do binary op
@@ -165,7 +168,9 @@ std::unique_ptr<Buildable> AstUnaryExpression::Build(AstVisitor *visitor, Module
             rp = visitor->GetCompilationUnit()->GetInstructionStream().GetCurrentRegister();
 
             return chunk;
-        } else {
+        }
+        else
+        {
             return m_binExpr->Build(visitor, mod);
         }
     }
@@ -173,13 +178,16 @@ std::unique_ptr<Buildable> AstUnaryExpression::Build(AstVisitor *visitor, Module
     Assert(m_target != nullptr);
     chunk->Append(m_target->Build(visitor, mod));
 
-    if (!m_folded) {
+    if (!m_folded)
+    {
         rp = visitor->GetCompilationUnit()->GetInstructionStream().GetCurrentRegister();
 
-        if (m_op->GetType() & ARITHMETIC) {
+        if (m_op->GetType() & ARITHMETIC)
+        {
             uint8 opcode = 0;
 
-            if (m_op->GetOperatorType() == Operators::OP_negative) {
+            if (m_op->GetOperatorType() == Operators::OP_negative)
+            {
                 opcode = NEG;
             }
 
@@ -187,8 +195,11 @@ std::unique_ptr<Buildable> AstUnaryExpression::Build(AstVisitor *visitor, Module
             oper->opcode = opcode;
             oper->Accept<uint8>(rp);
             chunk->Append(std::move(oper));
-        } else if (m_op->GetType() & LOGICAL) {
-            if (m_op->GetOperatorType() == Operators::OP_logical_not) {
+        }
+        else if (m_op->GetType() & LOGICAL)
+        {
+            if (m_op->GetOperatorType() == Operators::OP_logical_not)
+            {
                 // the label to jump to the very end, and set the result to false
                 LabelId falseLabel = contextGuard->NewLabel();
                 chunk->TakeOwnershipOfLabel(falseLabel);
@@ -213,16 +224,20 @@ std::unique_ptr<Buildable> AstUnaryExpression::Build(AstVisitor *visitor, Module
 
                 // get current register index
                 rp = visitor->GetCompilationUnit()->GetInstructionStream().GetCurrentRegister();
-                
+
                 // here is where the value is true
                 chunk->Append(BytecodeUtil::Make<ConstBool>(rp, true));
 
                 // skip to here to avoid loading 'true' into the register
                 chunk->Append(BytecodeUtil::Make<LabelMarker>(falseLabel));
-            } else {
+            }
+            else
+            {
                 Assert(false, "Operator not implemented: %s", Operator::FindUnaryOperator(m_op->GetOperatorType())->LookupStringValue().Data());
             }
-        } else {
+        }
+        else
+        {
             Assert(false, "Operator not implemented %s", Operator::FindUnaryOperator(m_op->GetOperatorType())->LookupStringValue().Data());
         }
     }
@@ -230,9 +245,10 @@ std::unique_ptr<Buildable> AstUnaryExpression::Build(AstVisitor *visitor, Module
     return chunk;
 }
 
-void AstUnaryExpression::Optimize(AstVisitor *visitor, Module *mod)
+void AstUnaryExpression::Optimize(AstVisitor* visitor, Module* mod)
 {
-    if (m_binExpr != nullptr) {
+    if (m_binExpr != nullptr)
+    {
         m_binExpr->Optimize(visitor, mod);
 
         return;
@@ -240,13 +256,15 @@ void AstUnaryExpression::Optimize(AstVisitor *visitor, Module *mod)
 
     m_target->Optimize(visitor, mod);
 
-    if (m_op->GetOperatorType() == Operators::OP_positive) {
+    if (m_op->GetOperatorType() == Operators::OP_positive)
+    {
         m_folded = true;
-    } else if (auto constantValue = ConstantFold(
-        m_target,
-        m_op->GetOperatorType(),
-        visitor
-    )) {
+    }
+    else if (auto constantValue = ConstantFold(
+                 m_target,
+                 m_op->GetOperatorType(),
+                 visitor))
+    {
         m_target = constantValue;
         m_folded = true;
     }
@@ -259,11 +277,13 @@ RC<AstStatement> AstUnaryExpression::Clone() const
 
 Tribool AstUnaryExpression::IsTrue() const
 {
-    if (m_binExpr != nullptr) {
+    if (m_binExpr != nullptr)
+    {
         return m_binExpr->IsTrue();
     }
 
-    if (m_folded) {
+    if (m_folded)
+    {
         return m_target->IsTrue();
     }
 
@@ -272,7 +292,8 @@ Tribool AstUnaryExpression::IsTrue() const
 
 bool AstUnaryExpression::MayHaveSideEffects() const
 {
-    if (m_binExpr != nullptr) {
+    if (m_binExpr != nullptr)
+    {
         return m_binExpr->MayHaveSideEffects();
     }
 
@@ -281,7 +302,8 @@ bool AstUnaryExpression::MayHaveSideEffects() const
 
 SymbolTypePtr_t AstUnaryExpression::GetExprType() const
 {
-    if (m_binExpr != nullptr) {
+    if (m_binExpr != nullptr)
+    {
         return m_binExpr->GetExprType();
     }
 

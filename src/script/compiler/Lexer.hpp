@@ -10,14 +10,14 @@
 
 namespace hyperion::compiler {
 
-class Lexer {
+class Lexer
+{
 public:
     Lexer(
-        const SourceStream &sourceStream,
-        TokenStream *tokenStream,
-        CompilationUnit *compilationUnit
-    );
-    Lexer(const Lexer &other);
+        const SourceStream& sourceStream,
+        TokenStream* tokenStream,
+        CompilationUnit* compilationUnit);
+    Lexer(const Lexer& other);
 
     /** Forms the given TokenStream from the given SourceStream */
     void Analyze();
@@ -46,8 +46,8 @@ public:
 
 private:
     SourceStream m_sourceStream;
-    TokenStream *m_tokenStream;
-    CompilationUnit *m_compilationUnit;
+    TokenStream* m_tokenStream;
+    CompilationUnit* m_compilationUnit;
     SourceLocation m_sourceLocation;
 
     /** Adds an end-of-file error if at the end, returns true if not */

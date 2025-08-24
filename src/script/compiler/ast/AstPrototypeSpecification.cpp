@@ -19,14 +19,14 @@
 namespace hyperion::compiler {
 
 AstPrototypeSpecification::AstPrototypeSpecification(
-    const RC<AstExpression> &expr,
-    const SourceLocation &location
-) : AstExpression(location, ACCESS_MODE_LOAD),
-    m_expr(expr)
+    const RC<AstExpression>& expr,
+    const SourceLocation& location)
+    : AstExpression(location, ACCESS_MODE_LOAD),
+      m_expr(expr)
 {
 }
 
-void AstPrototypeSpecification::Visit(AstVisitor *visitor, Module *mod)
+void AstPrototypeSpecification::Visit(AstVisitor* visitor, Module* mod)
 {
     Assert(visitor != nullptr);
     Assert(mod != nullptr);
@@ -34,25 +34,26 @@ void AstPrototypeSpecification::Visit(AstVisitor *visitor, Module *mod)
     Assert(m_expr != nullptr);
     m_expr->Visit(visitor, mod);
 
-    const AstExpression *valueOf = m_expr->GetDeepValueOf();
+    const AstExpression* valueOf = m_expr->GetDeepValueOf();
     Assert(valueOf != nullptr);
 
     SymbolTypePtr_t heldType = valueOf->GetHeldType();
 
-    if (heldType == nullptr) {
+    if (heldType == nullptr)
+    {
         visitor->GetCompilationUnit()->GetErrorList().AddError(CompilerError(
             LEVEL_ERROR,
             Msg_not_a_type,
             m_location,
-            valueOf->GetExprType()->ToString()
-        ));
+            valueOf->GetExprType()->ToString()));
 
         return;
     }
 
     heldType = heldType->GetUnaliased();
 
-    if (heldType->IsEnumType()) {
+    if (heldType->IsEnumType())
+    {
         Assert(heldType->GetGenericInstanceInfo().m_genericArgs.Size() == 1);
 
         auto enumUnderlyingType = heldType->GetGenericInstanceInfo().m_genericArgs.Front().m_type;
@@ -68,7 +69,7 @@ void AstPrototypeSpecification::Visit(AstVisitor *visitor, Module *mod)
 
     // m_symbolType = BuiltinTypes::UNDEFINED;
     // m_prototypeType = BuiltinTypes::UNDEFINED;
-    
+
     // if (heldType->IsAnyType()) {
     //     // it is a dynamic type
     //     m_symbolType = BuiltinTypes::ANY;
@@ -77,7 +78,7 @@ void AstPrototypeSpecification::Visit(AstVisitor *visitor, Module *mod)
 
     //     return;
     // }
-    
+
     // if (heldType->IsPlaceholderType()) {
     //     m_symbolType = BuiltinTypes::PLACEHOLDER;
     //     m_prototypeType = BuiltinTypes::PLACEHOLDER;
@@ -97,42 +98,43 @@ void AstPrototypeSpecification::Visit(AstVisitor *visitor, Module *mod)
     //     ));
     // }
 
-        // if (foundSymbolType != heldType && foundSymbolType != nullptr) {
-        //     visitor->GetCompilationUnit()->GetErrorList().AddError(CompilerError(
-        //         LEVEL_ERROR,
-        //         Msg_type_missing_prototype,
-        //         m_location,
-        //         exprType->ToString() + " (expanded: " + foundSymbolType->ToString() + ")"
-        //     ));
-        // } else {
-        //     visitor->GetCompilationUnit()->GetErrorList().AddError(CompilerError(
-        //         LEVEL_ERROR,
-        //         Msg_type_missing_prototype,
-        //         m_location,
-        //         exprType->ToString()
-        //     ));
-        // }
+    // if (foundSymbolType != heldType && foundSymbolType != nullptr) {
+    //     visitor->GetCompilationUnit()->GetErrorList().AddError(CompilerError(
+    //         LEVEL_ERROR,
+    //         Msg_type_missing_prototype,
+    //         m_location,
+    //         exprType->ToString() + " (expanded: " + foundSymbolType->ToString() + ")"
+    //     ));
+    // } else {
+    //     visitor->GetCompilationUnit()->GetErrorList().AddError(CompilerError(
+    //         LEVEL_ERROR,
+    //         Msg_type_missing_prototype,
+    //         m_location,
+    //         exprType->ToString()
+    //     ));
+    // }
     // }
 
     Assert(m_symbolType != nullptr);
     // Assert(m_prototypeType != nullptr);
 }
 
-std::unique_ptr<Buildable> AstPrototypeSpecification::Build(AstVisitor *visitor, Module *mod)
+std::unique_ptr<Buildable> AstPrototypeSpecification::Build(AstVisitor* visitor, Module* mod)
 {
     Assert(m_expr != nullptr);
     return m_expr->Build(visitor, mod);
 }
 
-void AstPrototypeSpecification::Optimize(AstVisitor *visitor, Module *mod)
+void AstPrototypeSpecification::Optimize(AstVisitor* visitor, Module* mod)
 {
     Assert(m_expr != nullptr);
     m_expr->Optimize(visitor, mod);
 }
 
-bool AstPrototypeSpecification::FindPrototypeType(const SymbolTypePtr_t &symbolType)
+bool AstPrototypeSpecification::FindPrototypeType(const SymbolTypePtr_t& symbolType)
 {
-    if (symbolType->GetTypeClass() == TYPE_BUILTIN || symbolType->IsGenericParameter()) {
+    if (symbolType->GetTypeClass() == TYPE_BUILTIN || symbolType->IsGenericParameter())
+    {
         m_prototypeType = symbolType;
         m_prototypeType = m_prototypeType->GetUnaliased();
 
@@ -143,12 +145,14 @@ bool AstPrototypeSpecification::FindPrototypeType(const SymbolTypePtr_t &symbolT
 
     SymbolTypeMember protoMember;
 
-    if (symbolType->FindMember("$proto", protoMember)) {
+    if (symbolType->FindMember("$proto", protoMember))
+    {
         m_prototypeType = protoMember.type;
         Assert(m_prototypeType != nullptr);
         m_prototypeType = m_prototypeType->GetUnaliased();
 
-        if (m_prototypeType->GetTypeClass() == TYPE_BUILTIN) {
+        if (m_prototypeType->GetTypeClass() == TYPE_BUILTIN)
+        {
             m_defaultValue = protoMember.expr;
         }
 
@@ -176,25 +180,28 @@ bool AstPrototypeSpecification::MayHaveSideEffects() const
 
 SymbolTypePtr_t AstPrototypeSpecification::GetExprType() const
 {
-    if (m_expr != nullptr) {
+    if (m_expr != nullptr)
+    {
         return m_expr->GetExprType();
     }
 
     return nullptr;
 }
 
-const AstExpression *AstPrototypeSpecification::GetValueOf() const
+const AstExpression* AstPrototypeSpecification::GetValueOf() const
 {
-    if (m_expr != nullptr) {
+    if (m_expr != nullptr)
+    {
         return m_expr->GetValueOf();
     }
 
     return AstExpression::GetValueOf();
 }
 
-const AstExpression *AstPrototypeSpecification::GetDeepValueOf() const
+const AstExpression* AstPrototypeSpecification::GetDeepValueOf() const
 {
-    if (m_expr != nullptr) {
+    if (m_expr != nullptr)
+    {
         return m_expr->GetDeepValueOf();
     }
 
@@ -203,7 +210,8 @@ const AstExpression *AstPrototypeSpecification::GetDeepValueOf() const
 
 SymbolTypePtr_t AstPrototypeSpecification::GetHeldType() const
 {
-    if (m_symbolType != nullptr) {
+    if (m_symbolType != nullptr)
+    {
         return m_symbolType;
     }
 

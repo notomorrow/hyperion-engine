@@ -14,17 +14,18 @@
 namespace hyperion::compiler {
 
 AstReturnStatement::AstReturnStatement(
-    const RC<AstExpression> &expr,
-    const SourceLocation &location
-) : AstStatement(location),
-    m_expr(expr),
-    m_numPops(0)
+    const RC<AstExpression>& expr,
+    const SourceLocation& location)
+    : AstStatement(location),
+      m_expr(expr),
+      m_numPops(0)
 {
 }
 
-void AstReturnStatement::Visit(AstVisitor *visitor, Module *mod)
+void AstReturnStatement::Visit(AstVisitor* visitor, Module* mod)
 {
-    if (m_expr != nullptr) {
+    if (m_expr != nullptr)
+    {
         m_expr->Visit(visitor, mod);
     }
 
@@ -32,13 +33,16 @@ void AstReturnStatement::Visit(AstVisitor *visitor, Module *mod)
     bool inFunction = false;
     bool isConstructor = false;
 
-    TreeNode<Scope> *top = mod->m_scopes.TopNode();
+    TreeNode<Scope>* top = mod->m_scopes.TopNode();
 
-    while (top != nullptr) {
-        if (top->Get().GetScopeType() == SCOPE_TYPE_FUNCTION) {
+    while (top != nullptr)
+    {
+        if (top->Get().GetScopeType() == SCOPE_TYPE_FUNCTION)
+        {
             inFunction = true;
 
-            if (top->Get().GetScopeFlags() & CONSTRUCTOR_DEFINITION_FLAG) {
+            if (top->Get().GetScopeFlags() & CONSTRUCTOR_DEFINITION_FLAG)
+            {
                 isConstructor = true;
             }
 
@@ -49,29 +53,35 @@ void AstReturnStatement::Visit(AstVisitor *visitor, Module *mod)
         top = top->m_parent;
     }
 
-    if (inFunction) {
+    if (inFunction)
+    {
         Assert(top != nullptr);
 
-        if (m_expr != nullptr) {
+        if (m_expr != nullptr)
+        {
             top->Get().AddReturnType(m_expr->GetExprType(), m_location);
-        } else {
+        }
+        else
+        {
             top->Get().AddReturnType(BuiltinTypes::VOID_TYPE, m_location);
         }
-    } else {
+    }
+    else
+    {
         // error; 'return' not allowed outside of a function
         visitor->GetCompilationUnit()->GetErrorList().AddError(CompilerError(
             LEVEL_ERROR,
             Msg_return_outside_function,
-            m_location
-        ));
+            m_location));
     }
 }
 
-std::unique_ptr<Buildable> AstReturnStatement::Build(AstVisitor *visitor, Module *mod)
+std::unique_ptr<Buildable> AstReturnStatement::Build(AstVisitor* visitor, Module* mod)
 {
     std::unique_ptr<BytecodeChunk> chunk = BytecodeUtil::Make<BytecodeChunk>();
 
-    if (m_expr != nullptr) {
+    if (m_expr != nullptr)
+    {
         chunk->Append(m_expr->Build(visitor, mod));
     }
 
@@ -81,13 +91,14 @@ std::unique_ptr<Buildable> AstReturnStatement::Build(AstVisitor *visitor, Module
     auto instrRet = BytecodeUtil::Make<RawOperation<>>();
     instrRet->opcode = RET;
     chunk->Append(std::move(instrRet));
-    
+
     return chunk;
 }
 
-void AstReturnStatement::Optimize(AstVisitor *visitor, Module *mod)
+void AstReturnStatement::Optimize(AstVisitor* visitor, Module* mod)
 {
-    if (m_expr != nullptr) {
+    if (m_expr != nullptr)
+    {
         m_expr->Optimize(visitor, mod);
     }
 }

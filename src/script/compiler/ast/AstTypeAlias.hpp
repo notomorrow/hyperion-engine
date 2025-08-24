@@ -12,20 +12,19 @@
 
 namespace hyperion::compiler {
 
-class AstTypeAlias: public AstStatement
+class AstTypeAlias : public AstStatement
 {
 public:
     AstTypeAlias(
-        const String &name,
-        const RC<AstPrototypeSpecification> &aliasee,
-        const SourceLocation &location
-    );
+        const String& name,
+        const RC<AstPrototypeSpecification>& aliasee,
+        const SourceLocation& location);
     virtual ~AstTypeAlias() = default;
 
-    virtual void Visit(AstVisitor *visitor, Module *mod) override;
-    virtual std::unique_ptr<Buildable> Build(AstVisitor *visitor, Module *mod) override;
-    virtual void Optimize(AstVisitor *visitor, Module *mod) override;
-    
+    virtual void Visit(AstVisitor* visitor, Module* mod) override;
+    virtual std::unique_ptr<Buildable> Build(AstVisitor* visitor, Module* mod) override;
+    virtual void Optimize(AstVisitor* visitor, Module* mod) override;
+
     virtual RC<AstStatement> Clone() const override;
 
     virtual HashCode GetHashCode() const override
@@ -39,16 +38,15 @@ public:
     }
 
 private:
-    String                          m_name;
-    RC<AstPrototypeSpecification>   m_aliasee;
+    String m_name;
+    RC<AstPrototypeSpecification> m_aliasee;
 
     RC<AstTypeAlias> CloneImpl() const
     {
         return RC<AstTypeAlias>(new AstTypeAlias(
             m_name,
             CloneAstNode(m_aliasee),
-            m_location
-        ));
+            m_location));
     }
 };
 

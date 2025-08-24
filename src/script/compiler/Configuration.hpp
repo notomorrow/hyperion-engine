@@ -20,7 +20,7 @@ namespace hyperion::compiler {
 struct Config
 {
     static const SizeType maxDataMembers;
-    static const char *globalModuleName;
+    static const char* globalModuleName;
     /** Optimize by removing unused variables */
     static bool cullUnusedObjects;
 };

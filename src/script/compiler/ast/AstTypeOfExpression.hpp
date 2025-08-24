@@ -19,37 +19,35 @@ class AstTypeOfExpression : public AstPrototypeSpecification
 {
 public:
     AstTypeOfExpression(
-        const RC<AstExpression> &expr,
-        const SourceLocation &location
-    );
+        const RC<AstExpression>& expr,
+        const SourceLocation& location);
     virtual ~AstTypeOfExpression() = default;
 
-    virtual void Visit(AstVisitor *visitor, Module *mod) override;
-    virtual std::unique_ptr<Buildable> Build(AstVisitor *visitor, Module *mod) override;
-    virtual void Optimize(AstVisitor *visitor, Module *mod) override;
-    
+    virtual void Visit(AstVisitor* visitor, Module* mod) override;
+    virtual std::unique_ptr<Buildable> Build(AstVisitor* visitor, Module* mod) override;
+    virtual void Optimize(AstVisitor* visitor, Module* mod) override;
+
     virtual RC<AstStatement> Clone() const override;
 
     virtual SymbolTypePtr_t GetExprType() const override;
     virtual SymbolTypePtr_t GetHeldType() const override;
-  
-    virtual const AstExpression *GetValueOf() const override;
-    virtual const AstExpression *GetDeepValueOf() const override;
-    
+
+    virtual const AstExpression* GetValueOf() const override;
+    virtual const AstExpression* GetDeepValueOf() const override;
+
 private:
 #if HYP_SCRIPT_TYPEOF_RETURN_OBJECT
-    RC<AstTypeRef>      m_typeRef;
-    SymbolTypePtr_t     m_heldType;
+    RC<AstTypeRef> m_typeRef;
+    SymbolTypePtr_t m_heldType;
 #else
-    RC<AstExpression>   m_stringExpr;
+    RC<AstExpression> m_stringExpr;
 #endif
 
     inline RC<AstTypeOfExpression> CloneImpl() const
     {
         return RC<AstTypeOfExpression>(new AstTypeOfExpression(
             CloneAstNode(m_expr),
-            m_location
-        ));
+            m_location));
     }
 };
 

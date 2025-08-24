@@ -11,25 +11,26 @@ VMMemoryBuffer::VMMemoryBuffer(SizeType size)
 {
 }
 
-VMMemoryBuffer::VMMemoryBuffer(const ByteBuffer &bytes)
+VMMemoryBuffer::VMMemoryBuffer(const ByteBuffer& bytes)
     : m_bytes(bytes)
 {
 }
 
 void VMMemoryBuffer::GetRepresentation(
-    std::stringstream &ss,
+    std::stringstream& ss,
     bool addTypeName,
-    int depth
-) const
+    int depth) const
 {
-    if (depth == 0) {
-        ss << "MemoryBuffer(" << ((const void *)m_bytes.Data()) << ")\n";
+    if (depth == 0)
+    {
+        ss << "MemoryBuffer(" << ((const void*)m_bytes.Data()) << ")\n";
 
         return;
     }
 
     // convert all array elements to string
-    for (SizeType i = 0; i < m_bytes.Size(); i++) {
+    for (SizeType i = 0; i < m_bytes.Size(); i++)
+    {
         ss << "\\0x" << std::hex << static_cast<uint16>(m_bytes.Data()[i]) << std::dec;
     }
 }

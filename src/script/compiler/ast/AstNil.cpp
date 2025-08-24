@@ -16,12 +16,12 @@
 
 namespace hyperion::compiler {
 
-AstNil::AstNil(const SourceLocation &location)
+AstNil::AstNil(const SourceLocation& location)
     : AstConstant(location)
 {
 }
 
-std::unique_ptr<Buildable> AstNil::Build(AstVisitor *visitor, Module *mod)
+std::unique_ptr<Buildable> AstNil::Build(AstVisitor* visitor, Module* mod)
 {
     // get active register
     uint8 rp = visitor->GetCompilationUnit()->GetInstructionStream().GetCurrentRegister();
@@ -59,41 +59,44 @@ SymbolTypePtr_t AstNil::GetExprType() const
     return BuiltinTypes::NULL_TYPE;
 }
 
-RC<AstConstant> AstNil::HandleOperator(Operators opType, const AstConstant *right) const
+RC<AstConstant> AstNil::HandleOperator(Operators opType, const AstConstant* right) const
 {
-    switch (opType) {
-        case OP_logical_and:
-            // logical operations still work, so that we can do
-            // things like testing for null in an if statement.
-            return RC<AstFalse>(new AstFalse(m_location));
+    switch (opType)
+    {
+    case OP_logical_and:
+        // logical operations still work, so that we can do
+        // things like testing for null in an if statement.
+        return RC<AstFalse>(new AstFalse(m_location));
 
-        case OP_logical_or:
-            if (!right->IsNumber()) {
-                // this operator is valid to compare against null
-                if (dynamic_cast<const AstNil*>(right) != nullptr) {
-                    return RC<AstFalse>(new AstFalse(m_location));
-                }
-                return nullptr;
+    case OP_logical_or:
+        if (!right->IsNumber())
+        {
+            // this operator is valid to compare against null
+            if (dynamic_cast<const AstNil*>(right) != nullptr)
+            {
+                return RC<AstFalse>(new AstFalse(m_location));
             }
-
-            return RC<AstInteger>(new AstInteger(
-                right->IntValue(),
-                m_location
-            ));
-
-        case OP_equals:
-            if (dynamic_cast<const AstNil*>(right) != nullptr) {
-                // only another null value should be equal
-                return RC<AstTrue>(new AstTrue(m_location));
-            }
-            // other values never equal to null
-            return RC<AstFalse>(new AstFalse(m_location));
-
-        case OP_logical_not:
-            return RC<AstTrue>(new AstTrue(m_location));
-
-        default:
             return nullptr;
+        }
+
+        return RC<AstInteger>(new AstInteger(
+            right->IntValue(),
+            m_location));
+
+    case OP_equals:
+        if (dynamic_cast<const AstNil*>(right) != nullptr)
+        {
+            // only another null value should be equal
+            return RC<AstTrue>(new AstTrue(m_location));
+        }
+        // other values never equal to null
+        return RC<AstFalse>(new AstFalse(m_location));
+
+    case OP_logical_not:
+        return RC<AstTrue>(new AstTrue(m_location));
+
+    default:
+        return nullptr;
     }
 }
 

@@ -15,18 +15,19 @@ class AstArrayExpression : public AstExpression
 {
 public:
     AstArrayExpression(
-        const Array<RC<AstExpression>> &members,
-        const SourceLocation &location
-    );
+        const Array<RC<AstExpression>>& members,
+        const SourceLocation& location);
     virtual ~AstArrayExpression() = default;
 
-    const Array<RC<AstExpression>> &GetMembers() const
-        { return m_members; };
+    const Array<RC<AstExpression>>& GetMembers() const
+    {
+        return m_members;
+    };
 
-    virtual void Visit(AstVisitor *visitor, Module *mod) override;
-    virtual std::unique_ptr<Buildable> Build(AstVisitor *visitor, Module *mod) override;
-    virtual void Optimize(AstVisitor *visitor, Module *mod) override;
-    
+    virtual void Visit(AstVisitor* visitor, Module* mod) override;
+    virtual std::unique_ptr<Buildable> Build(AstVisitor* visitor, Module* mod) override;
+    virtual void Optimize(AstVisitor* visitor, Module* mod) override;
+
     virtual RC<AstStatement> Clone() const override;
 
     virtual Tribool IsTrue() const override;
@@ -37,7 +38,8 @@ public:
     {
         HashCode hc = AstExpression::GetHashCode().Add(TypeName<AstArrayExpression>());
 
-        for (auto &member : m_members) {
+        for (auto& member : m_members)
+        {
             hc.Add(member ? member->GetHashCode() : HashCode());
         }
 
@@ -45,21 +47,20 @@ public:
     }
 
 protected:
-    Array<RC<AstExpression>>        m_members;
+    Array<RC<AstExpression>> m_members;
 
     // set while analyzing
-    Array<RC<AstExpression>>        m_replacedMembers;
-    SymbolTypePtr_t                 m_heldType;
-    SymbolTypePtr_t                 m_exprType;
-    RC<AstPrototypeSpecification>   m_arrayTypeExpr;
-    RC<AstExpression>               m_arrayFromCall;
+    Array<RC<AstExpression>> m_replacedMembers;
+    SymbolTypePtr_t m_heldType;
+    SymbolTypePtr_t m_exprType;
+    RC<AstPrototypeSpecification> m_arrayTypeExpr;
+    RC<AstExpression> m_arrayFromCall;
 
     RC<AstArrayExpression> CloneImpl() const
     {
         return RC<AstArrayExpression>(new AstArrayExpression(
             CloneAllAstNodes(m_members),
-            m_location
-        ));
+            m_location));
     }
 };
 

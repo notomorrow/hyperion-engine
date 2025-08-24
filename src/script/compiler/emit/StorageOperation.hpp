@@ -57,10 +57,12 @@ struct StorageOperation : public Buildable
             uint16 offset;
             uint32 hash;
 
-            struct {
+            struct
+            {
                 RegIndex reg;
 
-                union {
+                union
+                {
                     RegIndex reg;
                     uint8 index;
                     uint32 hash;
@@ -82,7 +84,7 @@ struct StorageOperation : public Buildable
 
     struct OperationBuilder : public StorageOperationBuilder
     {
-        OperationBuilder(StorageOperation *op)
+        OperationBuilder(StorageOperation* op)
             : op(op)
         {
         }
@@ -93,12 +95,12 @@ struct StorageOperation : public Buildable
         MethodBuilder Store(RegIndex src);
 
     private:
-        StorageOperation *op;
+        StorageOperation* op;
     };
 
     struct MethodBuilder : public StorageOperationBuilder
     {
-        MethodBuilder(StorageOperation *op, OperationBuilder *parent)
+        MethodBuilder(StorageOperation* op, OperationBuilder* parent)
             : op(op),
               parent(parent)
         {
@@ -114,13 +116,13 @@ struct StorageOperation : public Buildable
         Methods method;
 
     private:
-        StorageOperation *op;
-        OperationBuilder *parent;
+        StorageOperation* op;
+        OperationBuilder* parent;
     };
 
     struct StrategyBuilder : public StorageOperationBuilder
     {
-        StrategyBuilder(StorageOperation *op, MethodBuilder *parent)
+        StrategyBuilder(StorageOperation* op, MethodBuilder* parent)
             : op(op),
               parent(parent)
         {
@@ -133,8 +135,8 @@ struct StorageOperation : public Buildable
         Strategies strategy;
 
     private:
-        StorageOperation *op;
-        MethodBuilder *parent;
+        StorageOperation* op;
+        MethodBuilder* parent;
     };
 };
 

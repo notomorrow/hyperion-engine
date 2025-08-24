@@ -15,40 +15,39 @@ namespace hyperion::compiler {
 CompilationUnit::CompilationUnit()
     : m_globalModule(new Module(
           hyperion::compiler::Config::globalModuleName,
-          SourceLocation::eof
-      )),
+          SourceLocation::eof)),
       m_builtins(this)
 {
     m_globalModule->SetImportTreeLink(m_moduleTree.TopNode());
 
-    Scope &top = m_globalModule->m_scopes.Top();
+    Scope& top = m_globalModule->m_scopes.Top();
 
     m_moduleTree.TopNode()->Get() = m_globalModule.Get();
 }
 
 CompilationUnit::~CompilationUnit() = default;
 
-void CompilationUnit::RegisterType(const SymbolTypePtr_t &typePtr)
+void CompilationUnit::RegisterType(const SymbolTypePtr_t& typePtr)
 {
     Assert(typePtr != nullptr);
 
     Assert(
         typePtr->GetTypeObject().Lock() != nullptr,
         "Type object must be assigned to SymbolType before RegisterType() is called. SymbolType name: %s",
-        typePtr->GetName().Data()
-    );
+        typePtr->GetName().Data());
 
     // @TODO Use a more efficient data structure
     // for registeredTypes like an IntrusiveHashSet or something
 
     const HashCode typePtrHashCode = typePtr->GetHashCode();
 
-    auto registeredTypesIt = m_registeredTypes.FindIf([typePtrHashCode](const SymbolTypePtr_t &type)
-    {
-        return type->GetHashCode() == typePtrHashCode;
-    });
+    auto registeredTypesIt = m_registeredTypes.FindIf([typePtrHashCode](const SymbolTypePtr_t& type)
+        {
+            return type->GetHashCode() == typePtrHashCode;
+        });
 
-    if (registeredTypesIt != m_registeredTypes.End()) {
+    if (registeredTypesIt != m_registeredTypes.End())
+    {
         Assert((*registeredTypesIt)->GetId() != -1);
 
         // re-use the id because the type is already registered
@@ -59,8 +58,9 @@ void CompilationUnit::RegisterType(const SymbolTypePtr_t &typePtr)
 
     Array<NamesPair_t> names;
 
-    for (const SymbolTypeMember &member : typePtr->GetMembers()) {
-        const String &memberName = member.name;
+    for (const SymbolTypeMember& member : typePtr->GetMembers())
+    {
+        const String& memberName = member.name;
 
         Array<uint8> arrayElements;
         arrayElements.Resize(memberName.Size());
@@ -68,8 +68,7 @@ void CompilationUnit::RegisterType(const SymbolTypePtr_t &typePtr)
 
         names.PushBack(NamesPair_t {
             memberName.Size(),
-            std::move(arrayElements)
-        });
+            std::move(arrayElements) });
     }
 
     Assert(typePtr->GetMembers().Size() < hyperion::compiler::Config::maxDataMembers);
@@ -84,11 +83,14 @@ void CompilationUnit::RegisterType(const SymbolTypePtr_t &typePtr)
 
     StaticObject so(st);
     int foundId = m_instructionStream.FindStaticObject(so);
-    if (foundId == -1) {
+    if (foundId == -1)
+    {
         so.m_id = m_instructionStream.NewStaticId();
         m_instructionStream.AddStaticObject(so);
         id = so.m_id;
-    } else {
+    }
+    else
+    {
         id = foundId;
     }
 
@@ -97,19 +99,24 @@ void CompilationUnit::RegisterType(const SymbolTypePtr_t &typePtr)
     m_registeredTypes.PushBack(typePtr);
 }
 
-Module *CompilationUnit::LookupModule(const String &name)
+Module* CompilationUnit::LookupModule(const String& name)
 {
-    TreeNode<Module *> *top = m_moduleTree.TopNode();
+    TreeNode<Module*>* top = m_moduleTree.TopNode();
 
-    while (top != nullptr) {
-        if (top->Get() != nullptr && top->Get()->GetName() == name) {
+    while (top != nullptr)
+    {
+        if (top->Get() != nullptr && top->Get()->GetName() == name)
+        {
             return top->Get();
         }
 
         // look up module names in the top module's siblings
-        for (auto &sibling : top->m_siblings) {
-            if (sibling != nullptr && sibling->Get() != nullptr) {
-                if (sibling->Get()->GetName() == name) {
+        for (auto& sibling : top->m_siblings)
+        {
+            if (sibling != nullptr && sibling->Get() != nullptr)
+            {
+                if (sibling->Get()->GetName() == name)
+                {
                     return sibling->Get();
                 }
             }

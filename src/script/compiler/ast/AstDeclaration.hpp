@@ -12,23 +12,31 @@ class AstDeclaration : public AstStatement
 {
 public:
     AstDeclaration(
-        const String &name,
-        const SourceLocation &location
-    );
+        const String& name,
+        const SourceLocation& location);
     virtual ~AstDeclaration() = default;
 
-    void SetName(const String &name) { m_name = name; }
+    void SetName(const String& name)
+    {
+        m_name = name;
+    }
 
-    RC<Identifier> &GetIdentifier() { return m_identifier; }
-    const RC<Identifier> &GetIdentifier() const { return m_identifier; }
+    RC<Identifier>& GetIdentifier()
+    {
+        return m_identifier;
+    }
+    const RC<Identifier>& GetIdentifier() const
+    {
+        return m_identifier;
+    }
 
-    virtual void Visit(AstVisitor *visitor, Module *mod) override;
-    virtual std::unique_ptr<Buildable> Build(AstVisitor *visitor, Module *mod) override = 0;
-    virtual void Optimize(AstVisitor *visitor, Module *mod) override = 0;
-    
+    virtual void Visit(AstVisitor* visitor, Module* mod) override;
+    virtual std::unique_ptr<Buildable> Build(AstVisitor* visitor, Module* mod) override = 0;
+    virtual void Optimize(AstVisitor* visitor, Module* mod) override = 0;
+
     virtual RC<AstStatement> Clone() const override = 0;
 
-    virtual const String &GetName() const override;
+    virtual const String& GetName() const override;
 
     virtual HashCode GetHashCode() const override
     {
@@ -40,11 +48,11 @@ public:
     }
 
 protected:
-    String          m_name;
-    RC<Identifier>  m_identifier;
+    String m_name;
+    RC<Identifier> m_identifier;
 
 private:
-    bool            m_isVisited = false;
+    bool m_isVisited = false;
 };
 
 } // namespace hyperion::compiler

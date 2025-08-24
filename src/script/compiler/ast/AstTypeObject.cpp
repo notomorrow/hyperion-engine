@@ -19,29 +19,29 @@
 namespace hyperion::compiler {
 
 AstTypeObject::AstTypeObject(
-    const SymbolTypePtr_t &symbolType,
-    const SymbolTypePtr_t &baseSymbolType,
-    const SourceLocation &location
-) : AstTypeObject(symbolType, baseSymbolType, nullptr, false, location)
+    const SymbolTypePtr_t& symbolType,
+    const SymbolTypePtr_t& baseSymbolType,
+    const SourceLocation& location)
+    : AstTypeObject(symbolType, baseSymbolType, nullptr, false, location)
 {
 }
 
 AstTypeObject::AstTypeObject(
-    const SymbolTypePtr_t &symbolType,
-    const SymbolTypePtr_t &baseSymbolType,
-    const SymbolTypePtr_t &enumUnderlyingType,
+    const SymbolTypePtr_t& symbolType,
+    const SymbolTypePtr_t& baseSymbolType,
+    const SymbolTypePtr_t& enumUnderlyingType,
     bool isProxyClass,
-    const SourceLocation &location
-) : AstExpression(location, ACCESS_MODE_LOAD),
-    m_symbolType(symbolType),
-    m_baseSymbolType(baseSymbolType),
-    m_enumUnderlyingType(enumUnderlyingType),
-    m_isProxyClass(isProxyClass),
-    m_isVisited(false)
+    const SourceLocation& location)
+    : AstExpression(location, ACCESS_MODE_LOAD),
+      m_symbolType(symbolType),
+      m_baseSymbolType(baseSymbolType),
+      m_enumUnderlyingType(enumUnderlyingType),
+      m_isProxyClass(isProxyClass),
+      m_isVisited(false)
 {
 }
 
-void AstTypeObject::Visit(AstVisitor *visitor, Module *mod)
+void AstTypeObject::Visit(AstVisitor* visitor, Module* mod)
 {
     Assert(visitor != nullptr);
     Assert(mod != nullptr);
@@ -51,7 +51,8 @@ void AstTypeObject::Visit(AstVisitor *visitor, Module *mod)
     Assert(m_symbolType != nullptr);
     Assert(m_symbolType->GetId() == -1, "Type %s already registered", m_symbolType->ToString(true).Data());
 
-    if (m_baseSymbolType != nullptr) {
+    if (m_baseSymbolType != nullptr)
+    {
         SymbolTypePtr_t baseType = m_baseSymbolType->GetUnaliased();
         m_baseTypeRef.Reset(new AstTypeRef(baseType, m_location));
         m_baseTypeRef->Visit(visitor, mod);
@@ -61,8 +62,9 @@ void AstTypeObject::Visit(AstVisitor *visitor, Module *mod)
 
     m_memberExpressions.Resize(m_symbolType->GetMembers().Size());
 
-    for (SizeType index = 0; index < m_symbolType->GetMembers().Size(); index++) {
-        const SymbolTypeMember &member = m_symbolType->GetMembers()[index];
+    for (SizeType index = 0; index < m_symbolType->GetMembers().Size(); index++)
+    {
+        const SymbolTypeMember& member = m_symbolType->GetMembers()[index];
 
         SymbolTypePtr_t memberType = member.type;
         Assert(memberType != nullptr);
@@ -70,9 +72,12 @@ void AstTypeObject::Visit(AstVisitor *visitor, Module *mod)
 
         RC<AstExpression> previousExpr;
 
-        if (member.expr != nullptr) {
+        if (member.expr != nullptr)
+        {
             previousExpr = member.expr;
-        } else {
+        }
+        else
+        {
             previousExpr = memberType->GetDefaultValue();
         }
 
@@ -80,14 +85,14 @@ void AstTypeObject::Visit(AstVisitor *visitor, Module *mod)
             previousExpr != nullptr,
             "No assigned value for member %s and no default value for type (%s)",
             member.name.Data(),
-            memberType->ToString(true).Data()
-        );
+            memberType->ToString(true).Data());
 
         m_memberExpressions[index] = CloneAstNode(previousExpr);
         m_memberExpressions[index]->SetExpressionFlags(previousExpr->GetExpressionFlags());
     }
 
-    for (const RC<AstExpression> &expr : m_memberExpressions) {
+    for (const RC<AstExpression>& expr : m_memberExpressions)
+    {
         Assert(expr != nullptr);
 
         expr->Visit(visitor, mod);
@@ -100,7 +105,7 @@ void AstTypeObject::Visit(AstVisitor *visitor, Module *mod)
     m_isVisited = true;
 }
 
-std::unique_ptr<Buildable> AstTypeObject::Build(AstVisitor *visitor, Module *mod)
+std::unique_ptr<Buildable> AstTypeObject::Build(AstVisitor* visitor, Module* mod)
 {
     Assert(m_symbolType != nullptr);
     Assert(m_symbolType->GetId() != -1);
@@ -109,7 +114,7 @@ std::unique_ptr<Buildable> AstTypeObject::Build(AstVisitor *visitor, Module *mod
 
     // get active register
     uint8 rp = visitor->GetCompilationUnit()->GetInstructionStream().GetCurrentRegister();
-    
+
     // if (m_symbolType->GetId() != -1) {
     //     chunk->Append(BytecodeUtil::Make<Comment>("Load class " + m_symbolType->GetName() + (m_isProxyClass ? " <Proxy>" : "")));
 
@@ -123,9 +128,12 @@ std::unique_ptr<Buildable> AstTypeObject::Build(AstVisitor *visitor, Module *mod
 
     chunk->Append(BytecodeUtil::Make<Comment>("Begin class " + m_symbolType->GetName() + (m_isProxyClass ? " <Proxy>" : "")));
 
-    if (m_baseTypeRef != nullptr) {
+    if (m_baseTypeRef != nullptr)
+    {
         chunk->Append(m_baseTypeRef->Build(visitor, mod));
-    } else {
+    }
+    else
+    {
         chunk->Append(BytecodeUtil::Make<ConstNull>(rp));
     }
 
@@ -139,7 +147,8 @@ std::unique_ptr<Buildable> AstTypeObject::Build(AstVisitor *visitor, Module *mod
         instrType->reg = objReg;
         instrType->name = m_symbolType->GetName();
 
-        for (const SymbolTypeMember &mem : m_symbolType->GetMembers()) {
+        for (const SymbolTypeMember& mem : m_symbolType->GetMembers())
+        {
             instrType->members.PushBack(mem.name);
         }
 
@@ -148,7 +157,8 @@ std::unique_ptr<Buildable> AstTypeObject::Build(AstVisitor *visitor, Module *mod
 
     Assert(m_memberExpressions.Size() == m_symbolType->GetMembers().Size());
 
-    if (m_memberExpressions.Any()) {
+    if (m_memberExpressions.Any())
+    {
         // push the class to the stack
         const int classStackLocation = visitor->GetCompilationUnit()->GetInstructionStream().GetStackSize();
 
@@ -165,10 +175,11 @@ std::unique_ptr<Buildable> AstTypeObject::Build(AstVisitor *visitor, Module *mod
         // increment stack size for class
         visitor->GetCompilationUnit()->GetInstructionStream().IncStackSize();
 
-        for (SizeType index = 0; index < m_memberExpressions.Size(); index++) {
+        for (SizeType index = 0; index < m_memberExpressions.Size(); index++)
+        {
             Assert(index < MathUtil::MaxSafeValue<uint8>(), "Argument out of bouds of max arguments");
 
-            const RC<AstExpression> &mem = m_memberExpressions[index];
+            const RC<AstExpression>& mem = m_memberExpressions[index];
             Assert(mem != nullptr);
 
             chunk->Append(mem->Build(visitor, mod));
@@ -177,7 +188,7 @@ std::unique_ptr<Buildable> AstTypeObject::Build(AstVisitor *visitor, Module *mod
             rp = visitor->GetCompilationUnit()->GetInstructionStream().IncRegisterUsage();
 
             const int stackSize = visitor->GetCompilationUnit()->GetInstructionStream().GetStackSize();
- 
+
             { // load class from stack into register
                 auto instrLoadOffset = BytecodeUtil::Make<StorageOperation>();
                 instrLoadOffset->GetBuilder().Load(rp).Local().ByOffset(stackSize - classStackLocation);
@@ -219,7 +230,9 @@ std::unique_ptr<Buildable> AstTypeObject::Build(AstVisitor *visitor, Module *mod
         // pop class off stack
         visitor->GetCompilationUnit()->GetInstructionStream().DecStackSize();
         chunk->Append(Compiler::PopStack(visitor, 1));
-    } else {
+    }
+    else
+    {
         Assert(objReg == visitor->GetCompilationUnit()->GetInstructionStream().GetCurrentRegister());
     }
 
@@ -236,14 +249,17 @@ std::unique_ptr<Buildable> AstTypeObject::Build(AstVisitor *visitor, Module *mod
     return chunk;
 }
 
-void AstTypeObject::Optimize(AstVisitor *visitor, Module *mod)
+void AstTypeObject::Optimize(AstVisitor* visitor, Module* mod)
 {
-    if (m_baseTypeRef != nullptr) {
+    if (m_baseTypeRef != nullptr)
+    {
         m_baseTypeRef->Optimize(visitor, mod);
     }
 
-    for (const RC<AstExpression> &expr : m_memberExpressions) {
-        if (expr == nullptr) {
+    for (const RC<AstExpression>& expr : m_memberExpressions)
+    {
+        if (expr == nullptr)
+        {
             continue;
         }
 
@@ -268,7 +284,8 @@ bool AstTypeObject::MayHaveSideEffects() const
 
 SymbolTypePtr_t AstTypeObject::GetExprType() const
 {
-    if (m_baseSymbolType == nullptr) {
+    if (m_baseSymbolType == nullptr)
+    {
         return BuiltinTypes::CLASS_TYPE;
     }
 

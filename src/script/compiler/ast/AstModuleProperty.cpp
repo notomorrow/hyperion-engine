@@ -22,58 +22,63 @@
 namespace hyperion::compiler {
 
 AstModuleProperty::AstModuleProperty(
-    const String &fieldName,
-    const SourceLocation &location
-) : AstExpression(location, ACCESS_MODE_LOAD),
-    m_fieldName(fieldName),
-    m_exprType(BuiltinTypes::UNDEFINED)
+    const String& fieldName,
+    const SourceLocation& location)
+    : AstExpression(location, ACCESS_MODE_LOAD),
+      m_fieldName(fieldName),
+      m_exprType(BuiltinTypes::UNDEFINED)
 {
 }
 
-void AstModuleProperty::Visit(AstVisitor *visitor, Module *mod)
+void AstModuleProperty::Visit(AstVisitor* visitor, Module* mod)
 {
     Assert(visitor != nullptr);
     Assert(mod != nullptr);
 
-    if (m_fieldName == "name") {
+    if (m_fieldName == "name")
+    {
         m_exprValue = RC<AstString>(new AstString(
             mod->GetName(),
-            m_location
-        ));
-    } else if (m_fieldName == "path") {
+            m_location));
+    }
+    else if (m_fieldName == "path")
+    {
         m_exprValue = RC<AstString>(new AstString(
             mod->GetLocation().GetFileName().Data(),
-            m_location
-        ));
-    } else if (m_fieldName == "directory") {
+            m_location));
+    }
+    else if (m_fieldName == "directory")
+    {
         m_exprValue = RC<AstString>(new AstString(
             FilePath(mod->GetLocation().GetFileName()).BasePath().Data(),
-            m_location
-        ));
-    } else if (m_fieldName == "basename") {
+            m_location));
+    }
+    else if (m_fieldName == "basename")
+    {
         m_exprValue = RC<AstString>(new AstString(
             FilePath(mod->GetLocation().GetFileName()).Basename().Data(),
-            m_location
-        ));
+            m_location));
     }
-    
-    if (m_exprValue != nullptr) {
-      m_exprValue->Visit(visitor, mod);
 
-      Assert(m_exprValue->GetExprType() != nullptr);
-      m_exprType = m_exprValue->GetExprType();
-    } else {
-      visitor->GetCompilationUnit()->GetErrorList().AddError(CompilerError(
-          LEVEL_ERROR,
-          Msg_not_a_data_member,
-          m_location,
-          m_fieldName,
-          BuiltinTypes::MODULE_INFO->ToString()
-      ));
+    if (m_exprValue != nullptr)
+    {
+        m_exprValue->Visit(visitor, mod);
+
+        Assert(m_exprValue->GetExprType() != nullptr);
+        m_exprType = m_exprValue->GetExprType();
+    }
+    else
+    {
+        visitor->GetCompilationUnit()->GetErrorList().AddError(CompilerError(
+            LEVEL_ERROR,
+            Msg_not_a_data_member,
+            m_location,
+            m_fieldName,
+            BuiltinTypes::MODULE_INFO->ToString()));
     }
 }
 
-std::unique_ptr<Buildable> AstModuleProperty::Build(AstVisitor *visitor, Module *mod)
+std::unique_ptr<Buildable> AstModuleProperty::Build(AstVisitor* visitor, Module* mod)
 {
     Assert(visitor != nullptr);
     Assert(mod != nullptr);
@@ -82,7 +87,7 @@ std::unique_ptr<Buildable> AstModuleProperty::Build(AstVisitor *visitor, Module 
     return m_exprValue->Build(visitor, mod);
 }
 
-void AstModuleProperty::Optimize(AstVisitor *visitor, Module *mod)
+void AstModuleProperty::Optimize(AstVisitor* visitor, Module* mod)
 {
     Assert(m_exprValue != nullptr);
     m_exprValue->Optimize(visitor, mod);
@@ -101,9 +106,12 @@ Tribool AstModuleProperty::IsTrue() const
 
 bool AstModuleProperty::MayHaveSideEffects() const
 {
-    if (m_exprValue != nullptr) {
+    if (m_exprValue != nullptr)
+    {
         return m_exprValue->MayHaveSideEffects();
-    } else {
+    }
+    else
+    {
         return false;
     }
 }

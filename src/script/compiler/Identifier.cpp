@@ -5,22 +5,22 @@
 namespace hyperion::compiler {
 
 Identifier::Identifier(
-  const String &name,
-  int index,
-  IdentifierFlagBits flags,
-  Identifier *aliasee
-) : m_name(name),
-    m_index(index),
-    m_stackLocation(~0u),
-    m_usecount(0),
-    m_flags(flags),
-    m_aliasee(aliasee),
-    m_symbolType(BuiltinTypes::UNDEFINED),
-    m_isReassigned(false)
+    const String& name,
+    int index,
+    IdentifierFlagBits flags,
+    Identifier* aliasee)
+    : m_name(name),
+      m_index(index),
+      m_stackLocation(~0u),
+      m_usecount(0),
+      m_flags(flags),
+      m_aliasee(aliasee),
+      m_symbolType(BuiltinTypes::UNDEFINED),
+      m_isReassigned(false)
 {
 }
 
-Identifier::Identifier(const Identifier &other)
+Identifier::Identifier(const Identifier& other)
     : m_name(other.m_name),
       m_index(other.m_index),
       m_stackLocation(other.m_stackLocation),

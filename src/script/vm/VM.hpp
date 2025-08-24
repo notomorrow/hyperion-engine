@@ -26,41 +26,43 @@ namespace vm {
 class VM
 {
 public:
-    VM(APIInstance &apiInstance);
-    VM(const VM &other) = delete;
-    VM &operator=(const VM &other) = delete;
-    VM(VM &&other) noexcept = delete;
-    VM &operator=(VM &&other) noexcept = delete;
+    VM(APIInstance& apiInstance);
+    VM(const VM& other) = delete;
+    VM& operator=(const VM& other) = delete;
+    VM(VM&& other) noexcept = delete;
+    VM& operator=(VM&& other) noexcept = delete;
     ~VM();
 
     void PushNativeFunctionPtr(NativeFunctionPtr_t ptr);
 
-    VMState &GetState()
-        { return m_state; }
+    VMState& GetState()
+    {
+        return m_state;
+    }
 
-    const VMState &GetState() const
-        { return m_state; }
-    
+    const VMState& GetState() const
+    {
+        return m_state;
+    }
+
     void Invoke(
-        InstructionHandler *handler,
-        const Value &value,
-        uint8 nargs
-    );
+        InstructionHandler* handler,
+        const Value& value,
+        uint8 nargs);
 
     void InvokeNow(
-        BytecodeStream *bs,
-        const Value &value,
-        uint8 nargs
-    );
+        BytecodeStream* bs,
+        const Value& value,
+        uint8 nargs);
 
-    void Execute(BytecodeStream *bs);
+    void Execute(BytecodeStream* bs);
 
 private:
-    bool HandleException(InstructionHandler *handler);
-    void CreateStackTrace(ExecutionThread *thread, StackTrace *out);
+    bool HandleException(InstructionHandler* handler);
+    void CreateStackTrace(ExecutionThread* thread, StackTrace* out);
 
-    APIInstance     &m_apiInstance;
-    VMState         m_state;
+    APIInstance& m_apiInstance;
+    VMState m_state;
 };
 
 } // namespace vm

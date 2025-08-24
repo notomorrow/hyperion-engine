@@ -12,22 +12,23 @@
 namespace hyperion::compiler {
 
 AstFunctionDefinition::AstFunctionDefinition(
-    const String &name,
-    const RC<AstFunctionExpression> &expr,
-    const SourceLocation &location
-) : AstDeclaration(name, location),
-    m_expr(expr)
+    const String& name,
+    const RC<AstFunctionExpression>& expr,
+    const SourceLocation& location)
+    : AstDeclaration(name, location),
+      m_expr(expr)
 {
 }
 
-void AstFunctionDefinition::Visit(AstVisitor *visitor, Module *mod)
+void AstFunctionDefinition::Visit(AstVisitor* visitor, Module* mod)
 {
     Assert(m_expr != nullptr);
     m_expr->Visit(visitor, mod);
 
     AstDeclaration::Visit(visitor, mod);
 
-    if (m_identifier != nullptr) {
+    if (m_identifier != nullptr)
+    {
         // functions are implicitly const
         m_identifier->GetFlags() |= FLAG_CONST;
         m_identifier->SetSymbolType(m_expr->GetExprType());
@@ -35,11 +36,12 @@ void AstFunctionDefinition::Visit(AstVisitor *visitor, Module *mod)
     }
 }
 
-std::unique_ptr<Buildable> AstFunctionDefinition::Build(AstVisitor *visitor, Module *mod)
+std::unique_ptr<Buildable> AstFunctionDefinition::Build(AstVisitor* visitor, Module* mod)
 {
     std::unique_ptr<BytecodeChunk> chunk = BytecodeUtil::Make<BytecodeChunk>();
 
-    if (!Config::cullUnusedObjects || m_identifier->GetUseCount() > 0) {
+    if (!Config::cullUnusedObjects || m_identifier->GetUseCount() > 0)
+    {
         // get current stack size
         int stackLocation = visitor->GetCompilationUnit()->GetInstructionStream().GetStackSize();
         // set identifier stack location
@@ -53,7 +55,7 @@ std::unique_ptr<Buildable> AstFunctionDefinition::Build(AstVisitor *visitor, Mod
 
         // get active register
         uint8 rp = visitor->GetCompilationUnit()->GetInstructionStream().GetCurrentRegister();
-        
+
         // store on stack
         auto instrPush = BytecodeUtil::Make<RawOperation<>>();
         instrPush->opcode = PUSH;
@@ -64,7 +66,7 @@ std::unique_ptr<Buildable> AstFunctionDefinition::Build(AstVisitor *visitor, Mod
     return chunk;
 }
 
-void AstFunctionDefinition::Optimize(AstVisitor *visitor, Module *mod)
+void AstFunctionDefinition::Optimize(AstVisitor* visitor, Module* mod)
 {
     m_expr->Optimize(visitor, mod);
 }

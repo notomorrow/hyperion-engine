@@ -14,18 +14,18 @@ namespace hyperion {
 namespace compiler {
 
 AstTernaryExpression::AstTernaryExpression(
-    const RC<AstExpression> &conditional,
-    const RC<AstExpression> &left,
-    const RC<AstExpression> &right,
-    const SourceLocation &location
-) : AstExpression(location, ACCESS_MODE_LOAD),
-    m_conditional(conditional),
-    m_left(left),
-    m_right(right)
+    const RC<AstExpression>& conditional,
+    const RC<AstExpression>& left,
+    const RC<AstExpression>& right,
+    const SourceLocation& location)
+    : AstExpression(location, ACCESS_MODE_LOAD),
+      m_conditional(conditional),
+      m_left(left),
+      m_right(right)
 {
 }
 
-void AstTernaryExpression::Visit(AstVisitor *visitor, Module *mod)
+void AstTernaryExpression::Visit(AstVisitor* visitor, Module* mod)
 {
     Assert(m_conditional != nullptr);
     Assert(m_left != nullptr);
@@ -35,26 +35,28 @@ void AstTernaryExpression::Visit(AstVisitor *visitor, Module *mod)
 
     // TEMPORARY HACK UNTIL SOMETHING LIKE `AstCompileTimeTernary` exists.
 
-    if (m_conditional->IsTrue() != TRI_FALSE) {
+    if (m_conditional->IsTrue() != TRI_FALSE)
+    {
         m_left->Visit(visitor, mod);
     }
 
-    if (m_conditional->IsTrue() != TRI_TRUE) {
+    if (m_conditional->IsTrue() != TRI_TRUE)
+    {
         m_right->Visit(visitor, mod);
     }
 
-    if (GetExprType() == BuiltinTypes::UNDEFINED) {
+    if (GetExprType() == BuiltinTypes::UNDEFINED)
+    {
         visitor->GetCompilationUnit()->GetErrorList().AddError(CompilerError(
             LEVEL_ERROR,
             Msg_mismatched_types,
             m_location,
             m_left->GetExprType()->ToString(),
-            m_right->GetExprType()->ToString()
-        ));
+            m_right->GetExprType()->ToString()));
     }
 }
 
-std::unique_ptr<Buildable> AstTernaryExpression::Build(AstVisitor *visitor, Module *mod)
+std::unique_ptr<Buildable> AstTernaryExpression::Build(AstVisitor* visitor, Module* mod)
 {
     Assert(m_conditional != nullptr);
     Assert(m_left != nullptr);
@@ -64,18 +66,21 @@ std::unique_ptr<Buildable> AstTernaryExpression::Build(AstVisitor *visitor, Modu
 
     int conditionIsTrue = m_conditional->IsTrue();
 
-    if (conditionIsTrue == -1) {
+    if (conditionIsTrue == -1)
+    {
         // the condition cannot be determined at compile time
         chunk->Append(Compiler::CreateConditional(
             visitor,
             mod,
             m_conditional.Get(),
             m_left.Get(),
-            m_right.Get()
-        ));
-    } else if (conditionIsTrue) {
+            m_right.Get()));
+    }
+    else if (conditionIsTrue)
+    {
         // the condition has been determined to be true
-        if (m_conditional->MayHaveSideEffects()) {
+        if (m_conditional->MayHaveSideEffects())
+        {
             // if there is a possibility of side effects,
             // build the conditional into the binary
             chunk->Append(m_conditional->Build(visitor, mod));
@@ -83,9 +88,12 @@ std::unique_ptr<Buildable> AstTernaryExpression::Build(AstVisitor *visitor, Modu
         // enter the block
         chunk->Append(m_left->Build(visitor, mod));
         // do not accept the else-block
-    } else {
+    }
+    else
+    {
         // the condition has been determined to be false
-        if (m_conditional->MayHaveSideEffects()) {
+        if (m_conditional->MayHaveSideEffects())
+        {
             // if there is a possibility of side effects,
             // build the conditional into the binary
             chunk->Append(m_conditional->Build(visitor, mod));
@@ -97,7 +105,7 @@ std::unique_ptr<Buildable> AstTernaryExpression::Build(AstVisitor *visitor, Modu
     return chunk;
 }
 
-void AstTernaryExpression::Optimize(AstVisitor *visitor, Module *mod)
+void AstTernaryExpression::Optimize(AstVisitor* visitor, Module* mod)
 {
     Assert(m_conditional != nullptr);
     Assert(m_left != nullptr);
@@ -119,7 +127,8 @@ Tribool AstTernaryExpression::IsTrue() const
     Assert(m_left != nullptr);
     Assert(m_right != nullptr);
 
-    switch (int(m_conditional->IsTrue())) {
+    switch (int(m_conditional->IsTrue()))
+    {
     case TRI_INDETERMINATE:
         return Tribool::Indeterminate();
     case TRI_FALSE:
@@ -137,11 +146,13 @@ bool AstTernaryExpression::MayHaveSideEffects() const
     Assert(m_left != nullptr);
     Assert(m_right != nullptr);
 
-    if (m_conditional->MayHaveSideEffects()) {
+    if (m_conditional->MayHaveSideEffects())
+    {
         return true;
     }
 
-    switch (int(m_conditional->IsTrue())) {
+    switch (int(m_conditional->IsTrue()))
+    {
     case TRI_INDETERMINATE:
         return m_left->MayHaveSideEffects() || m_right->MayHaveSideEffects();
     case TRI_TRUE:
@@ -159,21 +170,26 @@ SymbolTypePtr_t AstTernaryExpression::GetExprType() const
     Assert(m_left != nullptr);
     Assert(m_right != nullptr);
 
-    switch (int(m_conditional->IsTrue())) {
-    case TRI_INDETERMINATE: {
+    switch (int(m_conditional->IsTrue()))
+    {
+    case TRI_INDETERMINATE:
+    {
         Assert(m_left != nullptr);
 
         SymbolTypePtr_t lTypePtr = m_left->GetExprType();
         Assert(lTypePtr != nullptr);
 
-        if (m_right != nullptr) {
+        if (m_right != nullptr)
+        {
             // the right was not optimized away,
             // return type promotion
             SymbolTypePtr_t rTypePtr = m_right->GetExprType();
             Assert(rTypePtr != nullptr);
 
             return SymbolType::TypePromotion(lTypePtr, rTypePtr);
-        } else {
+        }
+        else
+        {
             // right was optimized away, return only left type
             return lTypePtr;
         }
@@ -195,18 +211,20 @@ bool AstTernaryExpression::IsLiteral() const
 
     const auto conditionalValue = m_conditional->IsTrue();
 
-    if (conditionalValue == Tribool::Indeterminate()) {
+    if (conditionalValue == Tribool::Indeterminate())
+    {
         return false;
     }
 
-    if (conditionalValue == Tribool::True()) {
+    if (conditionalValue == Tribool::True())
+    {
         return m_left->IsLiteral();
     }
 
     return m_right->IsLiteral();
 }
 
-const AstExpression *AstTernaryExpression::GetValueOf() const
+const AstExpression* AstTernaryExpression::GetValueOf() const
 {
     Assert(m_conditional != nullptr);
     Assert(m_left != nullptr);
@@ -214,18 +232,20 @@ const AstExpression *AstTernaryExpression::GetValueOf() const
 
     const auto conditionalValue = m_conditional->IsTrue();
 
-    if (conditionalValue == Tribool::Indeterminate()) {
+    if (conditionalValue == Tribool::Indeterminate())
+    {
         return AstExpression::GetValueOf();
     }
 
-    if (conditionalValue == Tribool::True()) {
+    if (conditionalValue == Tribool::True())
+    {
         return m_left->GetValueOf();
     }
 
     return m_right->GetValueOf();
 }
 
-const AstExpression *AstTernaryExpression::GetDeepValueOf() const
+const AstExpression* AstTernaryExpression::GetDeepValueOf() const
 {
     Assert(m_conditional != nullptr);
     Assert(m_left != nullptr);
@@ -233,11 +253,13 @@ const AstExpression *AstTernaryExpression::GetDeepValueOf() const
 
     const auto conditionalValue = m_conditional->IsTrue();
 
-    if (conditionalValue == Tribool::Indeterminate()) {
+    if (conditionalValue == Tribool::Indeterminate())
+    {
         return AstExpression::GetDeepValueOf();
     }
 
-    if (conditionalValue == Tribool::True()) {
+    if (conditionalValue == Tribool::True())
+    {
         return m_left->GetDeepValueOf();
     }
 

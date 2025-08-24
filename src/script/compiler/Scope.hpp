@@ -28,15 +28,15 @@ class GenericInstanceCache
 public:
     struct CachedObject
     {
-        uint32                id = 0;
-        RC<AstExpression>   instantiatedExpr;
+        uint32 id = 0;
+        RC<AstExpression> instantiatedExpr;
 
-        HYP_FORCE_INLINE bool operator==(const CachedObject &other) const
+        HYP_FORCE_INLINE bool operator==(const CachedObject& other) const
         {
             return id == other.id;
         }
 
-        HYP_FORCE_INLINE bool operator!=(const CachedObject &other) const
+        HYP_FORCE_INLINE bool operator!=(const CachedObject& other) const
         {
             return !(*this == other);
         }
@@ -44,45 +44,52 @@ public:
 
     struct Key
     {
-        RC<AstExpression>   genericExpr; // the original generic expression
-        Array<HashCode>     argHashCodes; // hashcodes of AstArgument nodes
+        RC<AstExpression> genericExpr; // the original generic expression
+        Array<HashCode> argHashCodes;  // hashcodes of AstArgument nodes
 
         Key() = default;
 
         Key(
             RC<AstExpression> genericExpr,
-            Array<HashCode> argHashCodes
-        ) : genericExpr(std::move(genericExpr)),
-            argHashCodes(std::move(argHashCodes))
+            Array<HashCode> argHashCodes)
+            : genericExpr(std::move(genericExpr)),
+              argHashCodes(std::move(argHashCodes))
         {
             Assert(this->genericExpr != nullptr);
         }
 
-        Key(const Key &other)                   = default;
-        Key &operator=(const Key &other)        = default;
-        Key(Key &&other) noexcept               = default;
-        Key &operator=(Key &&other) noexcept    = default;
-        ~Key()                                  = default;
+        Key(const Key& other) = default;
+        Key& operator=(const Key& other) = default;
+        Key(Key&& other) noexcept = default;
+        Key& operator=(Key&& other) noexcept = default;
+        ~Key() = default;
 
         bool IsValid() const
-            { return genericExpr != nullptr; }
+        {
+            return genericExpr != nullptr;
+        }
 
         bool operator==(const Key& other) const
         {
-            if (!IsValid() || !other.IsValid()) {
+            if (!IsValid() || !other.IsValid())
+            {
                 return false;
             }
 
-            if (genericExpr != other.genericExpr) {
+            if (genericExpr != other.genericExpr)
+            {
                 return false;
             }
 
-            if (argHashCodes.Size() != other.argHashCodes.Size()) {
+            if (argHashCodes.Size() != other.argHashCodes.Size())
+            {
                 return false;
             }
 
-            for (SizeType i = 0; i < argHashCodes.Size(); i++) {
-                if (argHashCodes[i] != other.argHashCodes[i]) {
+            for (SizeType i = 0; i < argHashCodes.Size(); i++)
+            {
+                if (argHashCodes[i] != other.argHashCodes[i])
+                {
                     return false;
                 }
             }
@@ -94,13 +101,15 @@ public:
         {
             HashCode hc;
 
-            if (!IsValid()) {
+            if (!IsValid())
+            {
                 return hc;
             }
 
             hc.Add(genericExpr->GetHashCode());
 
-            for (auto &argHashCode : argHashCodes) {
+            for (auto& argHashCode : argHashCodes)
+            {
                 hc.Add(argHashCode);
             }
 
@@ -108,12 +117,12 @@ public:
         }
     };
 
-    GenericInstanceCache()                                                  = default;
-    GenericInstanceCache(const GenericInstanceCache &other)                 = default;
-    GenericInstanceCache &operator=(const GenericInstanceCache &other)      = default;
-    GenericInstanceCache(GenericInstanceCache &&other) noexcept             = default;
-    GenericInstanceCache &operator=(GenericInstanceCache &&other) noexcept  = default;
-    ~GenericInstanceCache()                                                 = default;
+    GenericInstanceCache() = default;
+    GenericInstanceCache(const GenericInstanceCache& other) = default;
+    GenericInstanceCache& operator=(const GenericInstanceCache& other) = default;
+    GenericInstanceCache(GenericInstanceCache&& other) noexcept = default;
+    GenericInstanceCache& operator=(GenericInstanceCache&& other) noexcept = default;
+    ~GenericInstanceCache() = default;
 
     /*! \brief Looks up a generic instance in the cache.
         \details
@@ -121,12 +130,13 @@ public:
 
         \return The cached object, or an empty optional if the object is not
     */
-    Optional<CachedObject> Lookup(const Key &key) const
+    Optional<CachedObject> Lookup(const Key& key) const
     {
         auto it = m_cache.Find(key);
 
-        if (it == m_cache.End()) {
-            return { };
+        if (it == m_cache.End())
+        {
+            return {};
         }
 
         return it->second;
@@ -151,16 +161,14 @@ public:
             std::move(key),
             CachedObject {
                 id,
-                std::move(instantiatedExpr)
-            }
-        );
+                std::move(instantiatedExpr) });
 
         return id;
     }
 
 private:
-    uint32                        m_nextId = 0;
-    HashMap<Key, CachedObject>  m_cache;
+    uint32 m_nextId = 0;
+    HashMap<Key, CachedObject> m_cache;
 };
 
 enum ScopeType
@@ -175,75 +183,99 @@ enum ScopeType
 
 enum ScopeFunctionFlags : int
 {
-    PURE_FUNCTION_FLAG          = 0x1,
-    CLOSURE_FUNCTION_FLAG       = 0x2,
-    GENERATOR_FUNCTION_FLAG     = 0x4,
+    PURE_FUNCTION_FLAG = 0x1,
+    CLOSURE_FUNCTION_FLAG = 0x2,
+    GENERATOR_FUNCTION_FLAG = 0x4,
     UNINSTANTIATED_GENERIC_FLAG = 0x8,
     CONSTRUCTOR_DEFINITION_FLAG = 0x10,
-    REF_VARIABLE_FLAG           = 0x20,
-    CONST_VARIABLE_FLAG         = 0x40,
-    ENUM_MEMBERS_FLAG           = 0x80
+    REF_VARIABLE_FLAG = 0x20,
+    CONST_VARIABLE_FLAG = 0x40,
+    ENUM_MEMBERS_FLAG = 0x80
 };
 
 class Scope
 {
     friend class Module;
+
 public:
     Scope();
     Scope(ScopeType scopeType, int scopeFlags);
-    Scope(const Scope &other);
+    Scope(const Scope& other);
 
-    IdentifierTable &GetIdentifierTable()
-        { return m_identifierTable; }
+    IdentifierTable& GetIdentifierTable()
+    {
+        return m_identifierTable;
+    }
 
-    const IdentifierTable &GetIdentifierTable() const
-        { return m_identifierTable; }
+    const IdentifierTable& GetIdentifierTable() const
+    {
+        return m_identifierTable;
+    }
 
     ScopeType GetScopeType() const
-        { return m_scopeType; }
+    {
+        return m_scopeType;
+    }
 
     void SetScopeType(ScopeType scopeType)
-        { m_scopeType = scopeType; }
+    {
+        m_scopeType = scopeType;
+    }
 
     int GetScopeFlags() const
-        { return m_scopeFlags; }
+    {
+        return m_scopeFlags;
+    }
 
     void SetScopeFlags(int flags)
-        { m_scopeFlags = flags; }
+    {
+        m_scopeFlags = flags;
+    }
 
-    void AddReturnType(const SymbolTypePtr_t &type, const SourceLocation &location) 
-        { m_returnTypes.PushBack({type, location}); }
+    void AddReturnType(const SymbolTypePtr_t& type, const SourceLocation& location)
+    {
+        m_returnTypes.PushBack({ type, location });
+    }
 
-    const Array<ReturnType_t> &GetReturnTypes() const
-        { return m_returnTypes; }
+    const Array<ReturnType_t>& GetReturnTypes() const
+    {
+        return m_returnTypes;
+    }
 
-    RC<Identifier> FindClosureCapture(const String &name) 
+    RC<Identifier> FindClosureCapture(const String& name)
     {
         auto it = m_closureCaptures.Find(name);
 
         return it != m_closureCaptures.End() ? it->second : nullptr;
     }
 
-    void AddClosureCapture(const String &name, const RC<Identifier> &ident) 
-        { m_closureCaptures.Insert(name, ident); }
+    void AddClosureCapture(const String& name, const RC<Identifier>& ident)
+    {
+        m_closureCaptures.Insert(name, ident);
+    }
 
-    const HashMap<String, RC<Identifier>> &GetClosureCaptures() const
-        { return m_closureCaptures; }
+    const HashMap<String, RC<Identifier>>& GetClosureCaptures() const
+    {
+        return m_closureCaptures;
+    }
 
-    GenericInstanceCache &GetGenericInstanceCache()
-        { return m_genericInstanceCache; }
+    GenericInstanceCache& GetGenericInstanceCache()
+    {
+        return m_genericInstanceCache;
+    }
 
-    const GenericInstanceCache &GetGenericInstanceCache() const
-        { return m_genericInstanceCache; }
-
+    const GenericInstanceCache& GetGenericInstanceCache() const
+    {
+        return m_genericInstanceCache;
+    }
 
 private:
-    IdentifierTable                 m_identifierTable;
-    ScopeType                       m_scopeType;
-    int                             m_scopeFlags;
-    Array<ReturnType_t>             m_returnTypes;
+    IdentifierTable m_identifierTable;
+    ScopeType m_scopeType;
+    int m_scopeFlags;
+    Array<ReturnType_t> m_returnTypes;
     HashMap<String, RC<Identifier>> m_closureCaptures;
-    GenericInstanceCache            m_genericInstanceCache;
+    GenericInstanceCache m_genericInstanceCache;
 };
 
 } // namespace hyperion::compiler

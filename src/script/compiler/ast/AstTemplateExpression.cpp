@@ -23,35 +23,34 @@
 namespace hyperion::compiler {
 
 AstTemplateExpression::AstTemplateExpression(
-    const RC<AstExpression> &expr,
-    const Array<RC<AstParameter>> &genericParams,
-    const RC<AstPrototypeSpecification> &returnTypeSpecification,
+    const RC<AstExpression>& expr,
+    const Array<RC<AstParameter>>& genericParams,
+    const RC<AstPrototypeSpecification>& returnTypeSpecification,
     AstTemplateExpressionFlags flags,
-    const SourceLocation &location
-) : AstExpression(location, ACCESS_MODE_LOAD),
-    m_expr(expr),
-    m_genericParams(genericParams),
-    m_returnTypeSpecification(returnTypeSpecification),
-    m_flags(flags)
+    const SourceLocation& location)
+    : AstExpression(location, ACCESS_MODE_LOAD),
+      m_expr(expr),
+      m_genericParams(genericParams),
+      m_returnTypeSpecification(returnTypeSpecification),
+      m_flags(flags)
 {
 }
 
 AstTemplateExpression::AstTemplateExpression(
-    const RC<AstExpression> &expr,
-    const Array<RC<AstParameter>> &genericParams,
-    const RC<AstPrototypeSpecification> &returnTypeSpecification,
-    const SourceLocation &location
-) : AstTemplateExpression(
-        expr,
-        genericParams,
-        returnTypeSpecification,
-        AST_TEMPLATE_EXPRESSION_FLAG_NONE,
-        location
-    )
+    const RC<AstExpression>& expr,
+    const Array<RC<AstParameter>>& genericParams,
+    const RC<AstPrototypeSpecification>& returnTypeSpecification,
+    const SourceLocation& location)
+    : AstTemplateExpression(
+          expr,
+          genericParams,
+          returnTypeSpecification,
+          AST_TEMPLATE_EXPRESSION_FLAG_NONE,
+          location)
 {
 }
 
-void AstTemplateExpression::Visit(AstVisitor *visitor, Module *mod)
+void AstTemplateExpression::Visit(AstVisitor* visitor, Module* mod)
 {
     Assert(!m_isVisited);
     m_isVisited = true;
@@ -74,19 +73,18 @@ void AstTemplateExpression::Visit(AstVisitor *visitor, Module *mod)
     Array<SymbolTypePtr_t> paramSymbolTypes;
     paramSymbolTypes.Reserve(m_genericParams.Size());
 
-    for (RC<AstParameter> &genericParam : m_genericParams) {
+    for (RC<AstParameter>& genericParam : m_genericParams)
+    {
         Assert(genericParam != nullptr);
 
         SymbolTypePtr_t genericParamType = SymbolType::GenericParameter(
             genericParam->GetName(),
-            BuiltinTypes::CLASS_TYPE
-        );
+            BuiltinTypes::CLASS_TYPE);
 
         RC<AstTypeObject> genericParamTypeObject(new AstTypeObject(
             genericParamType,
             BuiltinTypes::CLASS_TYPE,
-            m_location
-        ));
+            m_location));
 
         genericParamType->SetTypeObject(genericParamTypeObject);
 
@@ -96,7 +94,7 @@ void AstTemplateExpression::Visit(AstVisitor *visitor, Module *mod)
         genericParamTypeObject->Visit(visitor, mod);
 
         {
-            auto *genericParamTypeObjectValueOf = genericParamTypeObject->GetDeepValueOf();
+            auto* genericParamTypeObjectValueOf = genericParamTypeObject->GetDeepValueOf();
             Assert(genericParamTypeObjectValueOf != nullptr);
 
             SymbolTypePtr_t genericParamTypeObjectValueOfType = genericParamTypeObjectValueOf->GetHeldType();
@@ -109,37 +107,32 @@ void AstTemplateExpression::Visit(AstVisitor *visitor, Module *mod)
 
         RC<AstVariableDeclaration> varDecl;
 
-        if (genericParam->IsVariadic()) {
+        if (genericParam->IsVariadic())
+        {
             // if variadic, create a variadic template instantiation
             // so T gets transformed into varargs<T>
             RC<AstTemplateInstantiation> variadicTemplateInstantiation(new AstTemplateInstantiation(
                 RC<AstVariable>(new AstVariable(
                     "varargs",
-                    m_location
-                )),
-                {
-                    RC<AstArgument>(new AstArgument(
-                        RC<AstTypeRef>(new AstTypeRef(
-                            genericParamType,
-                            m_location
-                        )),
-                        false,
-                        false,
-                        false,
-                        false,
-                        "T",
-                        m_location
-                    ))
-                },
-                m_location
-            ));
+                    m_location)),
+                { RC<AstArgument>(new AstArgument(
+                    RC<AstTypeRef>(new AstTypeRef(
+                        genericParamType,
+                        m_location)),
+                    false,
+                    false,
+                    false,
+                    false,
+                    "T",
+                    m_location)) },
+                m_location));
 
             variadicTemplateInstantiation->Visit(visitor, mod);
 
             { // set genericParamType to be the variadic template instantiation type
-                auto *variadicTemplateInstantiationValueOf = variadicTemplateInstantiation->GetDeepValueOf();
+                auto* variadicTemplateInstantiationValueOf = variadicTemplateInstantiation->GetDeepValueOf();
                 Assert(variadicTemplateInstantiationValueOf != nullptr);
-                
+
                 SymbolTypePtr_t variadicTemplateInstantiationType = variadicTemplateInstantiationValueOf->GetHeldType();
                 Assert(variadicTemplateInstantiationType != nullptr);
                 variadicTemplateInstantiationType = variadicTemplateInstantiationType->GetUnaliased();
@@ -153,27 +146,27 @@ void AstTemplateExpression::Visit(AstVisitor *visitor, Module *mod)
                 nullptr,
                 CloneAstNode(variadicTemplateInstantiation),
                 IdentifierFlags::FLAG_CONST,
-                m_location
-            ));
-        } else {
+                m_location));
+        }
+        else
+        {
             varDecl.Reset(new AstVariableDeclaration(
                 genericParam->GetName(),
                 nullptr,
                 RC<AstTypeRef>(new AstTypeRef(
                     genericParamType,
-                    SourceLocation::eof
-                )),
+                    SourceLocation::eof)),
                 IdentifierFlags::FLAG_CONST,
-                m_location
-            ));
+                m_location));
         }
 
         m_block->AddChild(varDecl);
 
         paramSymbolTypes.PushBack(std::move(genericParamType));
     }
-    
-    if (m_returnTypeSpecification != nullptr) {
+
+    if (m_returnTypeSpecification != nullptr)
+    {
         m_block->AddChild(m_returnTypeSpecification);
     }
 
@@ -184,7 +177,7 @@ void AstTemplateExpression::Visit(AstVisitor *visitor, Module *mod)
 
     Array<GenericInstanceTypeInfo::Arg> genericParamTypes;
     genericParamTypes.Reserve(m_genericParams.Size() + 1); // anotha one for @return
-    
+
     SymbolTypePtr_t exprReturnType;
     SymbolTypePtr_t explicitReturnType = m_returnTypeSpecification != nullptr
         ? m_returnTypeSpecification->GetHeldType()
@@ -192,51 +185,51 @@ void AstTemplateExpression::Visit(AstVisitor *visitor, Module *mod)
 
     // if return type has been specified - visit it and check to see
     // if it's compatible with the expression
-    if (m_returnTypeSpecification != nullptr) {
+    if (m_returnTypeSpecification != nullptr)
+    {
         Assert(explicitReturnType != nullptr);
-        
+
         exprReturnType = explicitReturnType;
-    } else {
+    }
+    else
+    {
         exprReturnType = BuiltinTypes::PLACEHOLDER;
     }
 
-    genericParamTypes.PushBack({
-        "@return",
-        exprReturnType
-    });
+    genericParamTypes.PushBack({ "@return",
+        exprReturnType });
 
     Assert(m_genericParams.Size() == paramSymbolTypes.Size());
 
-    for (SizeType i = 0; i < m_genericParams.Size(); i++) {
-        const RC<AstParameter> &param = m_genericParams[i];
-        const SymbolTypePtr_t &paramSymbolType = paramSymbolTypes[i];
+    for (SizeType i = 0; i < m_genericParams.Size(); i++)
+    {
+        const RC<AstParameter>& param = m_genericParams[i];
+        const SymbolTypePtr_t& paramSymbolType = paramSymbolTypes[i];
 
         RC<AstExpression> defaultValue = CloneAstNode(param->GetDefaultValue());
 
-        if (defaultValue == nullptr) {
+        if (defaultValue == nullptr)
+        {
             defaultValue = RC<AstTypeRef>(new AstTypeRef(
                 paramSymbolType,
-                SourceLocation::eof
-            ));
+                SourceLocation::eof));
         }
 
         genericParamTypes.PushBack(GenericInstanceTypeInfo::Arg {
             param->GetName(),
             std::move(paramSymbolType),
-            std::move(defaultValue)
-        });
+            std::move(defaultValue) });
     }
 
     m_symbolType = SymbolType::GenericInstance(
         BuiltinTypes::GENERIC_VARIABLE_TYPE,
         GenericInstanceTypeInfo {
-            genericParamTypes
-        }
-    );
+            genericParamTypes });
 
     Assert(m_symbolType != nullptr);
 
-    if (m_flags & AST_TEMPLATE_EXPRESSION_FLAG_NATIVE) {
+    if (m_flags & AST_TEMPLATE_EXPRESSION_FLAG_NATIVE)
+    {
         Assert(m_symbolType->GetId() == -1, "For native generic expressions, symbol type must not yet be registered");
 
         m_symbolType->SetFlags(m_symbolType->GetFlags() | SYMBOL_TYPE_FLAGS_NATIVE);
@@ -245,8 +238,7 @@ void AstTemplateExpression::Visit(AstVisitor *visitor, Module *mod)
         m_nativeDummyTypeObject.Reset(new AstTypeObject(
             m_symbolType,
             BuiltinTypes::CLASS_TYPE,
-            m_location
-        ));
+            m_location));
 
         m_symbolType->SetTypeObject(m_nativeDummyTypeObject);
 
@@ -260,7 +252,7 @@ void AstTemplateExpression::Visit(AstVisitor *visitor, Module *mod)
     visitor->GetCompilationUnit()->GetErrorList().SuppressErrors(false);
 }
 
-std::unique_ptr<Buildable> AstTemplateExpression::Build(AstVisitor *visitor, Module *mod)
+std::unique_ptr<Buildable> AstTemplateExpression::Build(AstVisitor* visitor, Module* mod)
 {
     Assert(m_isVisited);
 
@@ -290,7 +282,7 @@ std::unique_ptr<Buildable> AstTemplateExpression::Build(AstVisitor *visitor, Mod
     return nullptr; // Uninstantiated generic types are not buildable
 }
 
-void AstTemplateExpression::Optimize(AstVisitor *visitor, Module *mod)
+void AstTemplateExpression::Optimize(AstVisitor* visitor, Module* mod)
 {
     // do nothing - instantiated generic expressions will be optimized
 }
@@ -326,17 +318,17 @@ SymbolTypePtr_t AstTemplateExpression::GetHeldType() const
     return m_expr->GetHeldType();
 }
 
-const AstExpression *AstTemplateExpression::GetValueOf() const
+const AstExpression* AstTemplateExpression::GetValueOf() const
 {
     return AstExpression::GetValueOf();
 }
 
-const AstExpression *AstTemplateExpression::GetDeepValueOf() const
+const AstExpression* AstTemplateExpression::GetDeepValueOf() const
 {
     return AstExpression::GetDeepValueOf();
 }
 
-const AstExpression *AstTemplateExpression::GetHeldGenericExpr() const
+const AstExpression* AstTemplateExpression::GetHeldGenericExpr() const
 {
     return m_expr.Get();
 }

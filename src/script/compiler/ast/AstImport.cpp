@@ -17,28 +17,27 @@
 
 namespace hyperion::compiler {
 
-AstImport::AstImport(const SourceLocation &location)
+AstImport::AstImport(const SourceLocation& location)
     : AstStatement(location)
 {
 }
 
 void AstImport::CopyModules(
-    AstVisitor *visitor,
-    Module *modToCopy,
-    bool updateTreeLink
-)
+    AstVisitor* visitor,
+    Module* modToCopy,
+    bool updateTreeLink)
 {
     Assert(visitor != nullptr);
     Assert(modToCopy != nullptr);
     Assert(visitor->GetCompilationUnit()->GetCurrentModule() != nullptr);
 
-    if (visitor->GetCompilationUnit()->GetCurrentModule()->LookupNestedModule(modToCopy->GetName()) != nullptr) {
+    if (visitor->GetCompilationUnit()->GetCurrentModule()->LookupNestedModule(modToCopy->GetName()) != nullptr)
+    {
         visitor->GetCompilationUnit()->GetErrorList().AddError(CompilerError(
             LEVEL_ERROR,
             Msg_module_already_defined,
             modToCopy->GetLocation(),
-            modToCopy->GetName()
-        ));
+            modToCopy->GetName()));
 
         return;
     }
@@ -46,31 +45,37 @@ void AstImport::CopyModules(
     // add this module to the compilation unit
     visitor->GetCompilationUnit()->m_moduleTree.Open(modToCopy);
     // open scope for module
-    //mod->m_scopes.Open(Scope());
+    // mod->m_scopes.Open(Scope());
 
-    if (updateTreeLink) {
+    if (updateTreeLink)
+    {
         modToCopy->SetImportTreeLink(visitor->GetCompilationUnit()->m_moduleTree.TopNode());
     }
 
-    // function to copy nested modules 
-    std::function<void(TreeNode<Module *> *)> copyNodes = [visitor, &copyNodes, &updateTreeLink](TreeNode<Module*> *link) {
+    // function to copy nested modules
+    std::function<void(TreeNode<Module*>*)> copyNodes = [visitor, &copyNodes, &updateTreeLink](TreeNode<Module*>* link)
+    {
         Assert(link != nullptr);
         Assert(link->Get() != nullptr);
 
-        for (auto *sibling : link->m_siblings) {
+        for (auto* sibling : link->m_siblings)
+        {
             Assert(sibling != nullptr);
 
-            if (visitor->GetCompilationUnit()->GetCurrentModule()->LookupNestedModule(sibling->Get()->GetName()) != nullptr) {
+            if (visitor->GetCompilationUnit()->GetCurrentModule()->LookupNestedModule(sibling->Get()->GetName()) != nullptr)
+            {
                 visitor->GetCompilationUnit()->GetErrorList().AddError(CompilerError(
                     LEVEL_ERROR,
                     Msg_module_already_defined,
                     sibling->Get()->GetLocation(),
-                    sibling->Get()->GetName()
-                ));
-            } else {
+                    sibling->Get()->GetName()));
+            }
+            else
+            {
                 visitor->GetCompilationUnit()->m_moduleTree.Open(sibling->Get());
 
-                if (updateTreeLink) {
+                if (updateTreeLink)
+                {
                     sibling->Get()->SetImportTreeLink(sibling);
                 }
 
@@ -85,33 +90,32 @@ void AstImport::CopyModules(
     copyNodes(modToCopy->GetImportTreeLink());
 
     // close scope for module
-    //mod->m_scopes.Close();
+    // mod->m_scopes.Close();
 
     // close module
     visitor->GetCompilationUnit()->m_moduleTree.Close();
 }
 
-bool AstImport::TryOpenFile(const String &path, std::ifstream &is)
+bool AstImport::TryOpenFile(const String& path, std::ifstream& is)
 {
     is.open(path.Data(), std::ios::in | std::ios::ate);
     return is.isOpen();
 }
 
 void AstImport::PerformImport(
-    AstVisitor *visitor,
-    Module *mod,
-    const String &filepath
-)
+    AstVisitor* visitor,
+    Module* mod,
+    const String& filepath)
 {
     Assert(visitor != nullptr);
     Assert(mod != nullptr);
 
-    if (!mod->IsInGlobalScope()) {
+    if (!mod->IsInGlobalScope())
+    {
         visitor->GetCompilationUnit()->GetErrorList().AddError(CompilerError(
             LEVEL_ERROR,
             Msg_import_outside_global,
-            m_location
-        ));
+            m_location));
 
         return;
     }
@@ -125,30 +129,35 @@ void AstImport::PerformImport(
 
     // first, check if the file has already been imported somewhere in this compilation unit
     const auto it = visitor->GetCompilationUnit()->m_importedModules.Find(canonPath);
-    if (it != visitor->GetCompilationUnit()->m_importedModules.End()) {
+    if (it != visitor->GetCompilationUnit()->m_importedModules.End())
+    {
         // imported file found, so just re-open all
         // modules that belong to the file into this scope
 
         // TODO: Fix issues with duplicated symbols...
-        for (RC<Module> &mod : it->second) {
+        for (RC<Module>& mod : it->second)
+        {
             AstImport::CopyModules(
                 visitor,
                 mod.Get(),
-                false
-            );
+                false);
         }
-    } else {
+    }
+    else
+    {
         // file hasn't been imported, so open it
         std::ifstream file;
 
-        if (!TryOpenFile(filepath, file)) {
+        if (!TryOpenFile(filepath, file))
+        {
             visitor->GetCompilationUnit()->GetErrorList().AddError(CompilerError(
                 LEVEL_ERROR,
                 Msg_could_not_open_file,
                 m_location,
-                filepath
-            ));
-        } else {
+                filepath));
+        }
+        else
+        {
             // get number of bytes
             SizeType max = file.tellg();
             // seek to beginning
@@ -159,14 +168,13 @@ void AstImport::PerformImport(
             ByteBuffer temp;
             temp.SetSize(max);
 
-            file.read(reinterpret_cast<char *>(temp.Data()), max);
+            file.read(reinterpret_cast<char*>(temp.Data()), max);
 
             sourceFile.ReadIntoBuffer(temp);
 
             // use the lexer and parser on this file buffer
             TokenStream tokenStream(TokenStreamInfo {
-                filepath
-            });
+                filepath });
 
             Lexer lexer(SourceStream(&sourceFile), &tokenStream, visitor->GetCompilationUnit());
             lexer.Analyze();
@@ -184,7 +192,7 @@ void AstImport::PerformImport(
     }
 }
 
-std::unique_ptr<Buildable> AstImport::Build(AstVisitor *visitor, Module *mod)
+std::unique_ptr<Buildable> AstImport::Build(AstVisitor* visitor, Module* mod)
 {
     m_astIterator.ResetPosition();
 
@@ -193,7 +201,7 @@ std::unique_ptr<Buildable> AstImport::Build(AstVisitor *visitor, Module *mod)
     return compiler.Compile();
 }
 
-void AstImport::Optimize(AstVisitor *visitor, Module *mod)
+void AstImport::Optimize(AstVisitor* visitor, Module* mod)
 {
     m_astIterator.ResetPosition();
 

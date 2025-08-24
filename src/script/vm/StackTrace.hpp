@@ -12,12 +12,12 @@ struct StackTrace
         hyperion::Memory::MemSet(callAddresses, 0, sizeof(callAddresses));
     }
 
-    StackTrace(const StackTrace &other)
+    StackTrace(const StackTrace& other)
     {
         hyperion::Memory::MemCpy(callAddresses, other.callAddresses, sizeof(callAddresses));
     }
 
-    StackTrace &operator=(const StackTrace &other)
+    StackTrace& operator=(const StackTrace& other)
     {
         hyperion::Memory::MemCpy(callAddresses, other.callAddresses, sizeof(callAddresses));
 

@@ -12,22 +12,24 @@
 
 namespace hyperion::compiler {
 
-AstContinueStatement::AstContinueStatement(const SourceLocation &location)
+AstContinueStatement::AstContinueStatement(const SourceLocation& location)
     : AstStatement(location),
       m_numPops(0)
 {
 }
 
-void AstContinueStatement::Visit(AstVisitor *visitor, Module *mod)
+void AstContinueStatement::Visit(AstVisitor* visitor, Module* mod)
 {
     bool inLoop = false;
 
-    TreeNode<Scope> *top = mod->m_scopes.TopNode();
+    TreeNode<Scope>* top = mod->m_scopes.TopNode();
 
-    while (top != nullptr) {
+    while (top != nullptr)
+    {
         m_numPops += top->Get().GetIdentifierTable().CountUsedVariables();
 
-        if (top->Get().GetScopeType() == SCOPE_TYPE_LOOP) {
+        if (top->Get().GetScopeType() == SCOPE_TYPE_LOOP)
+        {
             inLoop = true;
 
             break;
@@ -36,25 +38,24 @@ void AstContinueStatement::Visit(AstVisitor *visitor, Module *mod)
         top = top->m_parent;
     }
 
-    if (!inLoop) {
+    if (!inLoop)
+    {
         visitor->GetCompilationUnit()->GetErrorList().AddError(CompilerError(
             LEVEL_ERROR,
             Msg_continue_outside_loop,
-            m_location
-        ));
+            m_location));
     }
 }
 
-std::unique_ptr<Buildable> AstContinueStatement::Build(AstVisitor *visitor, Module *mod)
+std::unique_ptr<Buildable> AstContinueStatement::Build(AstVisitor* visitor, Module* mod)
 {
     std::unique_ptr<BytecodeChunk> chunk = BytecodeUtil::Make<BytecodeChunk>();
 
-    const auto *closestLoop = visitor->GetCompilationUnit()->GetInstructionStream().GetContextTree().FindClosestMatch(
-        [](const TreeNode<InstructionStreamContext> *, const InstructionStreamContext &context)
+    const auto* closestLoop = visitor->GetCompilationUnit()->GetInstructionStream().GetContextTree().FindClosestMatch(
+        [](const TreeNode<InstructionStreamContext>*, const InstructionStreamContext& context)
         {
             return context.GetType() == INSTRUCTION_STREAM_CONTEXT_LOOP;
-        }
-    );
+        });
 
     Assert(closestLoop != nullptr, "No loop context found");
 
@@ -69,7 +70,7 @@ std::unique_ptr<Buildable> AstContinueStatement::Build(AstVisitor *visitor, Modu
     return chunk;
 }
 
-void AstContinueStatement::Optimize(AstVisitor *visitor, Module *mod)
+void AstContinueStatement::Optimize(AstVisitor* visitor, Module* mod)
 {
 }
 

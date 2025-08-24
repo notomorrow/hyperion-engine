@@ -11,7 +11,7 @@
 #include <script/Script.hpp>
 
 #include <core/math/MathUtil.hpp>
- 
+
 #include <core/containers/TypeMap.hpp>
 
 namespace hyperion {
@@ -21,7 +21,7 @@ using namespace compiler;
 
 struct FilePointerMap
 {
-    HashMap<uint32, FILE *> data;
+    HashMap<uint32, FILE*> data;
     uint32 counter = 0;
 };
 
@@ -30,7 +30,7 @@ thread_local FilePointerMap filePointerMap;
 APIInstance::ClassBindings ScriptBindings::classBindings = {};
 // static APIInstance::ClassBindings classBindings = {};
 
-void ScriptBindings::DeclareAll(APIInstance &apiInstance)
+void ScriptBindings::DeclareAll(APIInstance& apiInstance)
 {
     using namespace hyperion::compiler;
 

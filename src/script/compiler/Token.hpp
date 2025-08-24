@@ -43,7 +43,7 @@ class Token
 {
 public:
     static String TokenTypeToString(TokenClass tokenClass);
-    
+
     static const Token EMPTY;
 
 public:
@@ -51,36 +51,52 @@ public:
 
     Token(
         TokenClass tokenClass,
-        const String &value,
-        const SourceLocation &location
-    );
+        const String& value,
+        const SourceLocation& location);
 
     Token(
         TokenClass tokenClass,
-        const String &value,
+        const String& value,
         Flags flags,
-        const SourceLocation &location
-    );
+        const SourceLocation& location);
 
-    Token(const Token &other);
+    Token(const Token& other);
 
-    TokenClass GetTokenClass() const { return m_tokenClass; }
-    const String &GetValue() const { return m_value; }
-    const Flags &GetFlags() const { return m_flags; }
-    const SourceLocation &GetLocation() const { return m_location; }
-    bool Empty() const { return m_tokenClass == TK_EMPTY; }
-    
-    Token &operator=(const Token &other)
+    TokenClass GetTokenClass() const
+    {
+        return m_tokenClass;
+    }
+    const String& GetValue() const
+    {
+        return m_value;
+    }
+    const Flags& GetFlags() const
+    {
+        return m_flags;
+    }
+    const SourceLocation& GetLocation() const
+    {
+        return m_location;
+    }
+    bool Empty() const
+    {
+        return m_tokenClass == TK_EMPTY;
+    }
+
+    Token& operator=(const Token& other)
     {
         m_tokenClass = other.m_tokenClass;
         m_value = other.m_value;
         m_location = other.m_location;
-        
+
         return *this;
     }
 
     // return true if not empty
-    explicit operator bool() const { return m_tokenClass != TK_EMPTY; }
+    explicit operator bool() const
+    {
+        return m_tokenClass != TK_EMPTY;
+    }
 
     bool IsContinuationToken() const;
 

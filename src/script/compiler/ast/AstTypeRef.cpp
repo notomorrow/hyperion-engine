@@ -18,36 +18,34 @@
 namespace hyperion::compiler {
 
 AstTypeRef::AstTypeRef(
-    const SymbolTypePtr_t &symbolType,
-    const SourceLocation &location
-) : AstExpression(location, ACCESS_MODE_LOAD),
-    m_symbolType(symbolType),
-    m_isVisited(false)
+    const SymbolTypePtr_t& symbolType,
+    const SourceLocation& location)
+    : AstExpression(location, ACCESS_MODE_LOAD),
+      m_symbolType(symbolType),
+      m_isVisited(false)
 {
 }
 
-void AstTypeRef::Visit(AstVisitor *visitor, Module *mod)
+void AstTypeRef::Visit(AstVisitor* visitor, Module* mod)
 {
     Assert(m_symbolType != nullptr);
 
     m_isVisited = true;
 }
 
-std::unique_ptr<Buildable> AstTypeRef::Build(AstVisitor *visitor, Module *mod)
+std::unique_ptr<Buildable> AstTypeRef::Build(AstVisitor* visitor, Module* mod)
 {
     Assert(m_symbolType != nullptr);
 
     Assert(
         m_symbolType->GetId() != -1,
         "SymbolType %s not registered, invalid type ref",
-        m_symbolType->ToString(true).Data()
-    );
+        m_symbolType->ToString(true).Data());
 
     Assert(
         m_symbolType->GetTypeObject() != nullptr,
         "SymbolType %s has no type object set, invalid type ref",
-        m_symbolType->ToString(true).Data()
-    );
+        m_symbolType->ToString(true).Data());
 
     std::unique_ptr<BytecodeChunk> chunk = BytecodeUtil::Make<BytecodeChunk>();
 
@@ -61,7 +59,7 @@ std::unique_ptr<Buildable> AstTypeRef::Build(AstVisitor *visitor, Module *mod)
     return chunk;
 }
 
-void AstTypeRef::Optimize(AstVisitor *visitor, Module *mod)
+void AstTypeRef::Optimize(AstVisitor* visitor, Module* mod)
 {
     // do nothing
 }

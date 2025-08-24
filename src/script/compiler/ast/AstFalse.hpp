@@ -8,9 +8,9 @@ namespace hyperion::compiler {
 class AstFalse : public AstConstant
 {
 public:
-    AstFalse(const SourceLocation &location);
+    AstFalse(const SourceLocation& location);
 
-    virtual std::unique_ptr<Buildable> Build(AstVisitor *visitor, Module *mod) override;
+    virtual std::unique_ptr<Buildable> Build(AstVisitor* visitor, Module* mod) override;
 
     virtual RC<AstStatement> Clone() const override;
 
@@ -20,7 +20,7 @@ public:
     virtual float FloatValue() const override;
     virtual SymbolTypePtr_t GetExprType() const override;
 
-    virtual RC<AstConstant> HandleOperator(Operators opType, const AstConstant *right) const override;
+    virtual RC<AstConstant> HandleOperator(Operators opType, const AstConstant* right) const override;
 
     virtual HashCode GetHashCode() const override
     {
@@ -31,8 +31,7 @@ private:
     RC<AstFalse> CloneImpl() const
     {
         return RC<AstFalse>(new AstFalse(
-            m_location
-        ));
+            m_location));
     }
 };
 

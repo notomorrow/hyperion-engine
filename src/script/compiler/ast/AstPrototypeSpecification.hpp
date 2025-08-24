@@ -13,28 +13,36 @@ class AstPrototypeSpecification : public AstExpression
 {
 public:
     AstPrototypeSpecification(
-        const RC<AstExpression> &expr,
-        const SourceLocation &location
-    );
+        const RC<AstExpression>& expr,
+        const SourceLocation& location);
     virtual ~AstPrototypeSpecification() = default;
 
-    virtual void Visit(AstVisitor *visitor, Module *mod) override;
-    virtual std::unique_ptr<Buildable> Build(AstVisitor *visitor, Module *mod) override;
-    virtual void Optimize(AstVisitor *visitor, Module *mod) override;
-    
-    const SymbolTypePtr_t &GetPrototypeType() const { return m_prototypeType; }
-    const RC<AstExpression> &GetDefaultValue() const { return m_defaultValue; }
-    virtual const RC<AstExpression> &GetExpr() const { return m_expr; }
+    virtual void Visit(AstVisitor* visitor, Module* mod) override;
+    virtual std::unique_ptr<Buildable> Build(AstVisitor* visitor, Module* mod) override;
+    virtual void Optimize(AstVisitor* visitor, Module* mod) override;
+
+    const SymbolTypePtr_t& GetPrototypeType() const
+    {
+        return m_prototypeType;
+    }
+    const RC<AstExpression>& GetDefaultValue() const
+    {
+        return m_defaultValue;
+    }
+    virtual const RC<AstExpression>& GetExpr() const
+    {
+        return m_expr;
+    }
 
     virtual RC<AstStatement> Clone() const override;
 
     virtual Tribool IsTrue() const override;
     virtual bool MayHaveSideEffects() const override;
     virtual SymbolTypePtr_t GetExprType() const override;
-  
-    virtual const AstExpression *GetValueOf() const override;
-    virtual const AstExpression *GetDeepValueOf() const override;
-    
+
+    virtual const AstExpression* GetValueOf() const override;
+    virtual const AstExpression* GetDeepValueOf() const override;
+
     virtual SymbolTypePtr_t GetHeldType() const override;
 
     virtual HashCode GetHashCode() const override
@@ -46,22 +54,21 @@ public:
     }
 
 protected:
-    bool FindPrototypeType(const SymbolTypePtr_t &symbolType);
+    bool FindPrototypeType(const SymbolTypePtr_t& symbolType);
 
-    RC<AstExpression>   m_expr;
+    RC<AstExpression> m_expr;
 
     /** Set while analyzing */
-    SymbolTypePtr_t     m_symbolType;
-    SymbolTypePtr_t     m_prototypeType;
-    RC<AstExpression>   m_defaultValue;
+    SymbolTypePtr_t m_symbolType;
+    SymbolTypePtr_t m_prototypeType;
+    RC<AstExpression> m_defaultValue;
 
 private:
     RC<AstPrototypeSpecification> CloneImpl() const
     {
         return RC<AstPrototypeSpecification>(new AstPrototypeSpecification(
             CloneAstNode(m_expr),
-            m_location
-        ));
+            m_location));
     }
 };
 

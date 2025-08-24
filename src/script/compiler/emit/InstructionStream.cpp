@@ -12,16 +12,16 @@
 namespace hyperion::compiler {
 
 InstructionStream::InstructionStream()
-    : //m_position(0),
+    : // m_position(0),
       m_registerCounter(0),
       m_stackSize(0),
       m_staticId(0)
 {
 }
 
-InstructionStream::InstructionStream(const InstructionStream &other)
-    : //m_position(other.m_position),
-      //m_data(other.m_data),
+InstructionStream::InstructionStream(const InstructionStream& other)
+    : // m_position(other.m_position),
+      // m_data(other.m_data),
       m_registerCounter(other.m_registerCounter),
       m_stackSize(other.m_stackSize),
       m_staticId(other.m_staticId),
@@ -29,10 +29,12 @@ InstructionStream::InstructionStream(const InstructionStream &other)
 {
 }
 
-int InstructionStream::FindStaticObject(const StaticObject &staticObject) const
+int InstructionStream::FindStaticObject(const StaticObject& staticObject) const
 {
-    for (const StaticObject &so : m_staticObjects) {
-        if (so == staticObject) {
+    for (const StaticObject& so : m_staticObjects)
+    {
+        if (so == staticObject)
+        {
             return so.m_id;
         }
     }

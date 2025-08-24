@@ -20,32 +20,45 @@ class Module
 {
 public:
     Module(
-        const String &name,
-        const SourceLocation &location
-    );
+        const String& name,
+        const SourceLocation& location);
 
-    Module(const Module &other) = delete;
+    Module(const Module& other) = delete;
 
-    const String &GetName() const
-        { return m_name; }
+    const String& GetName() const
+    {
+        return m_name;
+    }
 
-    const SourceLocation &GetLocation() const
-        { return m_location; }
-    
-    const FlatSet<String> &GetScanPaths() const
-        { return m_scanPaths; }
+    const SourceLocation& GetLocation() const
+    {
+        return m_location;
+    }
 
-    void AddScanPath(const String &path)
-        { m_scanPaths.Insert(path); }
+    const FlatSet<String>& GetScanPaths() const
+    {
+        return m_scanPaths;
+    }
 
-    TreeNode<Module*> *GetImportTreeLink()
-        { return m_treeLink; }
+    void AddScanPath(const String& path)
+    {
+        m_scanPaths.Insert(path);
+    }
 
-    const TreeNode<Module*> *GetImportTreeLink() const
-        { return m_treeLink; }
+    TreeNode<Module*>* GetImportTreeLink()
+    {
+        return m_treeLink;
+    }
 
-    void SetImportTreeLink(TreeNode<Module*> *treeLink)
-        { m_treeLink = treeLink; }
+    const TreeNode<Module*>* GetImportTreeLink() const
+    {
+        return m_treeLink;
+    }
+
+    void SetImportTreeLink(TreeNode<Module*>* treeLink)
+    {
+        m_treeLink = treeLink;
+    }
 
     FlatSet<String> GenerateAllScanPaths() const;
     /** Create a string of the module name (including parent module names)
@@ -64,43 +77,44 @@ public:
     bool IsInScopeOfType(ScopeType scopeType, uint32 scopeFlags) const;
 
     /** Look up a child module of this module */
-    Module *LookupNestedModule(const String &name);
+    Module* LookupNestedModule(const String& name);
 
-    Array<Module *> CollectNestedModules() const;
+    Array<Module*> CollectNestedModules() const;
 
     /** Check to see if the identifier exists in multiple scopes, starting
         from the currently opened scope.
         If thisScopeOnly is set to true, only the current scope will be
         searched.
     */
-    RC<Identifier> LookUpIdentifier(const String &name, bool thisScopeOnly, bool outsideModules=HYP_SCRIPT_ALLOW_IDENTIFIERS_OTHER_MODULES);
-    
+    RC<Identifier> LookUpIdentifier(const String& name, bool thisScopeOnly, bool outsideModules = HYP_SCRIPT_ALLOW_IDENTIFIERS_OTHER_MODULES);
+
     /** Check to see if the identifier exists in this scope or above this one.
         Will only search the number of depth levels it is given.
         Pass `1` for this scope only.
     */
-    RC<Identifier> LookUpIdentifierDepth(const String &name, int depthLevel);
+    RC<Identifier> LookUpIdentifierDepth(const String& name, int depthLevel);
 
     /** Look up a symbol in this module by name */
-    SymbolTypePtr_t LookupSymbolType(const String &name);
+    SymbolTypePtr_t LookupSymbolType(const String& name);
 
-    Variant<RC<Identifier>, SymbolTypePtr_t> LookUpIdentifierOrSymbolType(const String &name);
+    Variant<RC<Identifier>, SymbolTypePtr_t> LookUpIdentifierOrSymbolType(const String& name);
 
-    Optional<GenericInstanceCache::CachedObject> LookupGenericInstance(const GenericInstanceCache::Key &key);
+    Optional<GenericInstanceCache::CachedObject> LookupGenericInstance(const GenericInstanceCache::Key& key);
 
     Tree<Scope> m_scopes;
 
 private:
     template <class T>
     T PerformLookup(
-        Proc<T(TreeNode<Scope> *)> &&pred1,
-        Proc<T(Module *)> &&pred2
-    )
+        Proc<T(TreeNode<Scope>*)>&& pred1,
+        Proc<T(Module*)>&& pred2)
     {
-        TreeNode<Scope> *top = m_scopes.TopNode();
+        TreeNode<Scope>* top = m_scopes.TopNode();
 
-        while (top) {
-            if (auto result = pred1(top)) {
+        while (top)
+        {
+            if (auto result = pred1(top))
+            {
                 // a result was found
                 return result;
             }
@@ -108,15 +122,21 @@ private:
             top = top->m_parent;
         }
 
-        if (m_treeLink && m_treeLink->m_parent) {
-            if (Module *other = m_treeLink->m_parent->Get()) {
-                if (other->GetLocation().GetFileName() == m_location.GetFileName()) {
+        if (m_treeLink && m_treeLink->m_parent)
+        {
+            if (Module* other = m_treeLink->m_parent->Get())
+            {
+                if (other->GetLocation().GetFileName() == m_location.GetFileName())
+                {
                     return pred2(other);
-                } else {
+                }
+                else
+                {
                     // we are outside of file scope, so loop until root/global module found
-                    auto *link = m_treeLink->m_parent;
+                    auto* link = m_treeLink->m_parent;
 
-                    while (link->m_parent) {
+                    while (link->m_parent)
+                    {
                         link = link->m_parent;
                     }
 
@@ -128,31 +148,31 @@ private:
             }
         }
 
-        return T { };
+        return T {};
     }
 
-    String              m_name;
-    SourceLocation      m_location;
+    String m_name;
+    SourceLocation m_location;
 
     // module scan paths
-    FlatSet<String>     m_scanPaths;
+    FlatSet<String> m_scanPaths;
 
     /** A link to where this module exists in the import tree */
-    TreeNode<Module*>   *m_treeLink;
+    TreeNode<Module*>* m_treeLink;
 };
 
 struct ScopeGuard : TreeNodeGuard<Scope>
 {
-    ScopeGuard(Module *mod, ScopeType scopeType, int scopeFlags)
+    ScopeGuard(Module* mod, ScopeType scopeType, int scopeFlags)
         : TreeNodeGuard(&mod->m_scopes, scopeType, scopeFlags)
     {
     }
 
-    ScopeGuard(const ScopeGuard &other)                 = delete;
-    ScopeGuard &operator=(const ScopeGuard &other)      = delete;
-    ScopeGuard(ScopeGuard &&other) noexcept             = delete;
-    ScopeGuard &operator=(ScopeGuard &&other) noexcept  = delete;
-    ~ScopeGuard()                                       = default;
+    ScopeGuard(const ScopeGuard& other) = delete;
+    ScopeGuard& operator=(const ScopeGuard& other) = delete;
+    ScopeGuard(ScopeGuard&& other) noexcept = delete;
+    ScopeGuard& operator=(ScopeGuard&& other) noexcept = delete;
+    ~ScopeGuard() = default;
 };
 
 } // namespace hyperion::compiler

@@ -7,36 +7,36 @@
 
 namespace hyperion::compiler {
 
-class AstMemberCallExpression : public AstMember {
+class AstMemberCallExpression : public AstMember
+{
 public:
     AstMemberCallExpression(
-        const String &fieldName,
-        const RC<AstExpression> &target,
-        const RC<AstArgumentList> &arguments,
-        const SourceLocation &location
-    );
+        const String& fieldName,
+        const RC<AstExpression>& target,
+        const RC<AstArgumentList>& arguments,
+        const SourceLocation& location);
     virtual ~AstMemberCallExpression() override = default;
-    
-    virtual void Visit(AstVisitor *visitor, Module *mod) override;
-    virtual std::unique_ptr<Buildable> Build(AstVisitor *visitor, Module *mod) override;
-    virtual void Optimize(AstVisitor *visitor, Module *mod) override;
-    
+
+    virtual void Visit(AstVisitor* visitor, Module* mod) override;
+    virtual std::unique_ptr<Buildable> Build(AstVisitor* visitor, Module* mod) override;
+    virtual void Optimize(AstVisitor* visitor, Module* mod) override;
+
     virtual RC<AstStatement> Clone() const override;
 
     virtual Tribool IsTrue() const override;
     virtual bool MayHaveSideEffects() const override;
     virtual SymbolTypePtr_t GetExprType() const override;
-  
-    virtual const AstExpression *GetValueOf() const override;
-    virtual const AstExpression *GetDeepValueOf() const override;
-    virtual AstExpression *GetTarget() const override;
+
+    virtual const AstExpression* GetValueOf() const override;
+    virtual const AstExpression* GetDeepValueOf() const override;
+    virtual AstExpression* GetTarget() const override;
 
 protected:
-    RC<AstArgumentList>     m_arguments;
+    RC<AstArgumentList> m_arguments;
 
     // set while analyzing
-    Array<RC<AstArgument>>  m_substitutedArgs;
-    SymbolTypePtr_t         m_returnType;
+    Array<RC<AstArgument>> m_substitutedArgs;
+    SymbolTypePtr_t m_returnType;
 
     RC<AstMemberCallExpression> CloneImpl() const
     {
@@ -44,8 +44,7 @@ protected:
             m_fieldName,
             CloneAstNode(m_target),
             CloneAstNode(m_arguments),
-            m_location
-        ));
+            m_location));
     }
 };
 

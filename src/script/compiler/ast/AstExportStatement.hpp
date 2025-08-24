@@ -12,18 +12,19 @@ class AstExportStatement : public AstStatement
 {
 public:
     AstExportStatement(
-        const RC<AstStatement> &stmt,
-        const SourceLocation &location
-    );
+        const RC<AstStatement>& stmt,
+        const SourceLocation& location);
     virtual ~AstExportStatement() = default;
 
-    const RC<AstStatement> &GetStatement() const
-        { return m_stmt; }
+    const RC<AstStatement>& GetStatement() const
+    {
+        return m_stmt;
+    }
 
-    virtual void Visit(AstVisitor *visitor, Module *mod) override;
-    virtual std::unique_ptr<Buildable> Build(AstVisitor *visitor, Module *mod) override;
-    virtual void Optimize(AstVisitor *visitor, Module *mod) override;
-    
+    virtual void Visit(AstVisitor* visitor, Module* mod) override;
+    virtual std::unique_ptr<Buildable> Build(AstVisitor* visitor, Module* mod) override;
+    virtual void Optimize(AstVisitor* visitor, Module* mod) override;
+
     virtual RC<AstStatement> Clone() const override;
 
     virtual HashCode GetHashCode() const override
@@ -45,8 +46,7 @@ private:
     {
         return RC<AstExportStatement>(new AstExportStatement(
             CloneAstNode(m_stmt),
-            m_location
-        ));
+            m_location));
     }
 };
 

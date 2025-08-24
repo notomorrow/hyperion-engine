@@ -10,10 +10,10 @@ namespace hyperion::compiler {
 class AstInteger : public AstConstant
 {
 public:
-    AstInteger(hyperion::int32 value, const SourceLocation &location);
+    AstInteger(hyperion::int32 value, const SourceLocation& location);
 
-    virtual std::unique_ptr<Buildable> Build(AstVisitor *visitor, Module *mod) override;
-    
+    virtual std::unique_ptr<Buildable> Build(AstVisitor* visitor, Module* mod) override;
+
     virtual RC<AstStatement> Clone() const override;
 
     virtual Tribool IsTrue() const override;
@@ -23,7 +23,7 @@ public:
     virtual float FloatValue() const override;
     virtual SymbolTypePtr_t GetExprType() const override;
 
-    virtual RC<AstConstant> HandleOperator(Operators opType, const AstConstant *right) const override;
+    virtual RC<AstConstant> HandleOperator(Operators opType, const AstConstant* right) const override;
 
     virtual HashCode GetHashCode() const override
     {
@@ -40,8 +40,7 @@ private:
     {
         return RC<AstInteger>(new AstInteger(
             m_value,
-            m_location
-        ));
+            m_location));
     }
 };
 

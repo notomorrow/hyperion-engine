@@ -15,7 +15,7 @@ IdentifierTable::IdentifierTable()
 {
 }
 
-IdentifierTable::IdentifierTable(const IdentifierTable &other)
+IdentifierTable::IdentifierTable(const IdentifierTable& other)
     : m_identifierIndex(other.m_identifierIndex),
       m_identifiers(other.m_identifiers)
 {
@@ -24,19 +24,22 @@ IdentifierTable::IdentifierTable(const IdentifierTable &other)
 int IdentifierTable::CountUsedVariables() const
 {
     std::unordered_set<int> usedVariables;
-    
-    for (auto &ident : m_identifiers) {
-        if (!Config::cullUnusedObjects || ident->GetUseCount() > 0) {
-            if (usedVariables.find(ident->GetIndex()) == usedVariables.end()) {
+
+    for (auto& ident : m_identifiers)
+    {
+        if (!Config::cullUnusedObjects || ident->GetUseCount() > 0)
+        {
+            if (usedVariables.find(ident->GetIndex()) == usedVariables.end())
+            {
                 usedVariables.insert(ident->GetIndex());
             }
         }
     }
-    
+
     return usedVariables.size();
 }
 
-RC<Identifier> IdentifierTable::AddAlias(const String &name, Identifier *aliasee)
+RC<Identifier> IdentifierTable::AddAlias(const String& name, Identifier* aliasee)
 {
     Assert(aliasee != nullptr);
 
@@ -44,34 +47,34 @@ RC<Identifier> IdentifierTable::AddAlias(const String &name, Identifier *aliasee
         name,
         aliasee->GetIndex(),
         aliasee->GetFlags() | FLAG_ALIAS,
-        aliasee
-    )));
-    
+        aliasee)));
+
     return m_identifiers.Back();
 }
 
 RC<Identifier> IdentifierTable::AddIdentifier(
-    const String &name,
+    const String& name,
     int flags,
     RC<AstExpression> currentValue,
-    SymbolTypePtr_t symbolType
-)
+    SymbolTypePtr_t symbolType)
 {
     RC<Identifier> ident(new Identifier(
         name,
         m_identifierIndex++,
-        flags
-    ));
+        flags));
 
-    if (currentValue != nullptr) {
+    if (currentValue != nullptr)
+    {
         ident->SetCurrentValue(currentValue);
 
-        if (symbolType == nullptr) {
+        if (symbolType == nullptr)
+        {
             ident->SetSymbolType(symbolType);
         }
     }
 
-    if (symbolType != nullptr) {
+    if (symbolType != nullptr)
+    {
         ident->SetSymbolType(symbolType);
     }
 
@@ -80,13 +83,15 @@ RC<Identifier> IdentifierTable::AddIdentifier(
     return m_identifiers.Back();
 }
 
-bool IdentifierTable::AddIdentifier(const RC<Identifier> &identifier)
+bool IdentifierTable::AddIdentifier(const RC<Identifier>& identifier)
 {
-    if (identifier == nullptr) {
+    if (identifier == nullptr)
+    {
         return false;
     }
 
-    if (auto alreadyExistingIdentifier = LookUpIdentifier(identifier->GetName())) {
+    if (auto alreadyExistingIdentifier = LookUpIdentifier(identifier->GetName()))
+    {
         return false;
     }
 
@@ -95,11 +100,14 @@ bool IdentifierTable::AddIdentifier(const RC<Identifier> &identifier)
     return true;
 }
 
-RC<Identifier> IdentifierTable::LookUpIdentifier(const String &name)
+RC<Identifier> IdentifierTable::LookUpIdentifier(const String& name)
 {
-    for (auto &ident : m_identifiers) {
-        if (ident != nullptr) {
-            if (ident->GetName() == name) {
+    for (auto& ident : m_identifiers)
+    {
+        if (ident != nullptr)
+        {
+            if (ident->GetName() == name)
+            {
                 return ident;
             }
         }
@@ -108,28 +116,29 @@ RC<Identifier> IdentifierTable::LookUpIdentifier(const String &name)
     return nullptr;
 }
 
-void IdentifierTable::BindTypeToIdentifier(const String &name, SymbolTypePtr_t symbolType)
+void IdentifierTable::BindTypeToIdentifier(const String& name, SymbolTypePtr_t symbolType)
 {
     AddIdentifier(
         name,
         0,
         RC<AstTypeRef>(new AstTypeRef(symbolType, SourceLocation::eof)),
-        symbolType->GetBaseType()
-    );
+        symbolType->GetBaseType());
 }
 
-SymbolTypePtr_t IdentifierTable::LookupSymbolType(const String &name) const
+SymbolTypePtr_t IdentifierTable::LookupSymbolType(const String& name) const
 {
-    for (auto &type : m_symbolTypes) {
-        if (type != nullptr && type->GetName() == name) {
+    for (auto& type : m_symbolTypes)
+    {
+        if (type != nullptr && type->GetName() == name)
+        {
             return type;
         }
     }
-    
+
     return nullptr;
 }
 
-void IdentifierTable::AddSymbolType(const SymbolTypePtr_t &type)
+void IdentifierTable::AddSymbolType(const SymbolTypePtr_t& type)
 {
     m_symbolTypes.PushBack(type);
 }

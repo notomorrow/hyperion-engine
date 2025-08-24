@@ -15,18 +15,19 @@ DecompilationUnit::DecompilationUnit()
 
 void DecompilationUnit::DecodeNext(
     uint8 code,
-    hyperion::vm::BytecodeStream &bs,
-    InstructionStream &is,
-    std::ostream *os
-)
+    hyperion::vm::BytecodeStream& bs,
+    InstructionStream& is,
+    std::ostream* os)
 {
     auto opr = BytecodeUtil::Make<RawOperation<>>();
     opr->opcode = code;
 
-    switch (code) {
+    switch (code)
+    {
     case NOP:
     {
-        if (os != nullptr) {
+        if (os != nullptr)
+        {
             (*os) << "nop" << std::endl;
         }
 
@@ -37,15 +38,16 @@ void DecompilationUnit::DecodeNext(
         uint32 len;
         bs.Read(&len);
 
-        char *str = new char[len + 1];
+        char* str = new char[len + 1];
         str[len] = '\0';
         bs.Read(str, len);
 
-        if (os != nullptr) {
+        if (os != nullptr)
+        {
             (*os)
                 << "str ["
-                    << "u32(" << len << "), "
-                    << "\"" << str << "\""
+                << "u32(" << len << "), "
+                << "\"" << str << "\""
                 << "]"
                 << std::endl;
         }
@@ -59,7 +61,8 @@ void DecompilationUnit::DecodeNext(
         uint32 val;
         bs.Read(&val);
 
-        if (os != nullptr) {
+        if (os != nullptr)
+        {
             (*os) << "addr [@(" << std::hex << val << std::dec << ")]" << std::endl;
         }
 
@@ -76,11 +79,12 @@ void DecompilationUnit::DecodeNext(
         uint8 flags;
         bs.Read(&flags);
 
-        if (os != nullptr) {
+        if (os != nullptr)
+        {
             (*os) << "function [@(" << std::hex << addr << std::dec << "), "
-                    << "u8(" << (int)nargs << ")], "
-                    << "u8(" << (int)flags << ")]"
-                    << std::endl;
+                  << "u8(" << (int)nargs << ")], "
+                  << "u8(" << (int)flags << ")]"
+                  << std::endl;
         }
 
         break;
@@ -100,8 +104,9 @@ void DecompilationUnit::DecodeNext(
 
         Array<Array<uint8>> names;
         names.Resize(size);
-        
-        for (int i = 0; i < size; i++) {
+
+        for (int i = 0; i < size; i++)
+        {
             uint16 len;
             bs.Read(&len);
 
@@ -110,19 +115,22 @@ void DecompilationUnit::DecodeNext(
             bs.Read(&names[i][0], len);
         }
 
-        if (os != nullptr) {
+        if (os != nullptr)
+        {
             (*os)
                 << "type ["
-                    << "str(" << typeName.Data() << "), "
-                    << "u16(" << (int)size << "), ";
+                << "str(" << typeName.Data() << "), "
+                << "u16(" << (int)size << "), ";
 
-            for (int i = 0; i < size; i++) {
+            for (int i = 0; i < size; i++)
+            {
                 (*os) << "str(" << names[i].Data() << ")";
-                if (i != size - 1) {
+                if (i != size - 1)
+                {
                     (*os) << ", ";
                 }
             }
-                    
+
             (*os)
                 << "]"
                 << std::endl;
@@ -138,11 +146,12 @@ void DecompilationUnit::DecodeNext(
         int32_t val;
         bs.Read(&val);
 
-        if (os != nullptr) {
+        if (os != nullptr)
+        {
             (*os)
                 << "load_i32 ["
-                    << "%" << (int)reg << ", "
-                    << "i32(" << val << ")"
+                << "%" << (int)reg << ", "
+                << "i32(" << val << ")"
                 << "]"
                 << std::endl;
         }
@@ -157,11 +166,12 @@ void DecompilationUnit::DecodeNext(
         int64_t val;
         bs.Read(&val);
 
-        if (os != nullptr) {
+        if (os != nullptr)
+        {
             (*os)
                 << "load_i64 ["
-                    << "%" << (int)reg << ", "
-                    << "i64(" << val << ")"
+                << "%" << (int)reg << ", "
+                << "i64(" << val << ")"
                 << "]"
                 << std::endl;
         }
@@ -176,11 +186,12 @@ void DecompilationUnit::DecodeNext(
         uint32 val;
         bs.Read(&val);
 
-        if (os != nullptr) {
+        if (os != nullptr)
+        {
             (*os)
                 << "load_u32 ["
-                    << "%" << (int)reg << ", "
-                    << "u32(" << val << ")"
+                << "%" << (int)reg << ", "
+                << "u32(" << val << ")"
                 << "]"
                 << std::endl;
         }
@@ -195,11 +206,12 @@ void DecompilationUnit::DecodeNext(
         uint64 val;
         bs.Read(&val);
 
-        if (os != nullptr) {
+        if (os != nullptr)
+        {
             (*os)
                 << "load_u64 ["
-                    << "%" << (int)reg << ", "
-                    << "u64(" << val << ")"
+                << "%" << (int)reg << ", "
+                << "u64(" << val << ")"
                 << "]"
                 << std::endl;
         }
@@ -214,11 +226,12 @@ void DecompilationUnit::DecodeNext(
         float val;
         bs.Read(&val);
 
-        if (os != nullptr) {
+        if (os != nullptr)
+        {
             (*os)
                 << "load_f32 ["
-                    << "%" << (int)reg << ", "
-                    << "f32(" << val << ")"
+                << "%" << (int)reg << ", "
+                << "f32(" << val << ")"
                 << "]"
                 << std::endl;
         }
@@ -233,11 +246,12 @@ void DecompilationUnit::DecodeNext(
         double val;
         bs.Read(&val);
 
-        if (os != nullptr) {
+        if (os != nullptr)
+        {
             (*os)
                 << "load_f64 ["
-                    << "%" << (int)reg << ", "
-                    << "f64(" << val << ")"
+                << "%" << (int)reg << ", "
+                << "f64(" << val << ")"
                 << "]"
                 << std::endl;
         }
@@ -252,11 +266,13 @@ void DecompilationUnit::DecodeNext(
         uint16 offset;
         bs.Read(&offset);
 
-        if (os != nullptr) {
+        if (os != nullptr)
+        {
             (*os)
                 << "load_offset ["
-                    << "%" << (int)reg << ", "
-                    "$(sp-" << offset << ")"
+                << "%" << (int)reg << ", "
+                                      "$(sp-"
+                << offset << ")"
                 << "]"
                 << std::endl;
         }
@@ -271,11 +287,13 @@ void DecompilationUnit::DecodeNext(
         uint16 idx;
         bs.Read(&idx);
 
-        if (os != nullptr) {
+        if (os != nullptr)
+        {
             (*os)
                 << "load_index ["
-                    << "%" << (int)reg << ", "
-                    "u16(" << idx << ")"
+                << "%" << (int)reg << ", "
+                                      "u16("
+                << idx << ")"
                 << "]"
                 << std::endl;
         }
@@ -290,11 +308,12 @@ void DecompilationUnit::DecodeNext(
         uint16 index;
         bs.Read(&index);
 
-        if (os != nullptr) {
+        if (os != nullptr)
+        {
             (*os)
                 << "load_static ["
-                    << "%" << (int)reg << ", "
-                    << "#" << index
+                << "%" << (int)reg << ", "
+                << "#" << index
                 << "]"
                 << std::endl;
         }
@@ -311,16 +330,17 @@ void DecompilationUnit::DecodeNext(
         bs.Read(&len);
 
         // read string based on length
-        char *str = new char[len + 1];
+        char* str = new char[len + 1];
         bs.Read(str, len);
         str[len] = '\0';
 
-        if (os != nullptr) {
+        if (os != nullptr)
+        {
             (*os)
                 << "load_str ["
-                    << "%" << (int)reg << ", "
-                    << "u32(" << len << "), "
-                    << "\"" << str << "\""
+                << "%" << (int)reg << ", "
+                << "u32(" << len << "), "
+                << "\"" << str << "\""
                 << "]"
                 << std::endl;
         }
@@ -337,7 +357,8 @@ void DecompilationUnit::DecodeNext(
         uint32 val;
         bs.Read(&val);
 
-        if (os != nullptr) {
+        if (os != nullptr)
+        {
             (*os) << "load_addr [%" << (int)reg << ", @(" << std::hex << val << std::dec << ")]" << std::endl;
         }
 
@@ -357,12 +378,13 @@ void DecompilationUnit::DecodeNext(
         uint8 flags;
         bs.Read(&flags);
 
-        if (os != nullptr) {
+        if (os != nullptr)
+        {
             (*os) << "load_func [%" << (int)reg
-                    << ", @(" << std::hex << addr << std::dec << "), "
-                    << "u8(" << (int)nargs << ")], "
-                    << "u8(" << (int)flags << ")]"
-                    << std::endl;
+                  << ", @(" << std::hex << addr << std::dec << "), "
+                  << "u8(" << (int)nargs << ")], "
+                  << "u8(" << (int)flags << ")]"
+                  << std::endl;
         }
 
         break;
@@ -385,8 +407,9 @@ void DecompilationUnit::DecodeNext(
 
         Array<Array<uint8>> names;
         names.Resize(size);
-        
-        for (int i = 0; i < size; i++) {
+
+        for (int i = 0; i < size; i++)
+        {
             uint16 len;
             bs.Read(&len);
 
@@ -395,17 +418,19 @@ void DecompilationUnit::DecodeNext(
             bs.Read(&names[i][0], len);
         }
 
-        if (os != nullptr) {
+        if (os != nullptr)
+        {
             (*os)
                 << "load_type ["
-                    << "%" << (int)reg << ", "
-                    << "str(" << typeName.Data() << "), "
-                    << "u16(" << (int)size << ")";
+                << "%" << (int)reg << ", "
+                << "str(" << typeName.Data() << "), "
+                << "u16(" << (int)size << ")";
 
-            for (int i = 0; i < size; i++) {
+            for (int i = 0; i < size; i++)
+            {
                 (*os) << ", str(" << names[i].Data() << ")";
             }
-                    
+
             (*os)
                 << "]"
                 << std::endl;
@@ -424,12 +449,13 @@ void DecompilationUnit::DecodeNext(
         uint8 idx;
         bs.Read(&idx);
 
-        if (os != nullptr) {
+        if (os != nullptr)
+        {
             (*os)
                 << "load_mem ["
-                    << "%" << (int)reg << ", "
-                    << "%" << (int)src << ", "
-                    << "u8(" << (int)idx << ")"
+                << "%" << (int)reg << ", "
+                << "%" << (int)src << ", "
+                << "u8(" << (int)idx << ")"
                 << "]"
                 << std::endl;
         }
@@ -447,12 +473,13 @@ void DecompilationUnit::DecodeNext(
         uint32 hash;
         bs.Read(&hash);
 
-        if (os != nullptr) {
+        if (os != nullptr)
+        {
             (*os)
                 << "load_mem_hash ["
-                    << "%" << (int)reg << ", "
-                    << "%" << (int)src << ", "
-                    << "u32(" << hash << ")"
+                << "%" << (int)reg << ", "
+                << "%" << (int)src << ", "
+                << "u32(" << hash << ")"
                 << "]"
                 << std::endl;
         }
@@ -470,12 +497,13 @@ void DecompilationUnit::DecodeNext(
         uint8 idx;
         bs.Read(&idx);
 
-        if (os != nullptr) {
+        if (os != nullptr)
+        {
             (*os)
                 << "load_arrayidx ["
-                    << "%" << (int)reg << ", "
-                    << "%" << (int)src << ", "
-                    << "%" << (int)idx << ")"
+                << "%" << (int)reg << ", "
+                << "%" << (int)src << ", "
+                << "%" << (int)idx << ")"
                 << "]"
                 << std::endl;
         }
@@ -490,11 +518,13 @@ void DecompilationUnit::DecodeNext(
         uint16 offset;
         bs.Read(&offset);
 
-        if (os != nullptr) {
+        if (os != nullptr)
+        {
             (*os)
                 << "load_offset_ref ["
-                    << "%" << (int)reg << ", "
-                    "$(sp-" << offset << ")"
+                << "%" << (int)reg << ", "
+                                      "$(sp-"
+                << offset << ")"
                 << "]"
                 << std::endl;
         }
@@ -509,11 +539,13 @@ void DecompilationUnit::DecodeNext(
         uint16 idx;
         bs.Read(&idx);
 
-        if (os != nullptr) {
+        if (os != nullptr)
+        {
             (*os)
                 << "load_index_ref ["
-                    << "%" << (int)reg << ", "
-                    "u16(" << idx << ")"
+                << "%" << (int)reg << ", "
+                                      "u16("
+                << idx << ")"
                 << "]"
                 << std::endl;
         }
@@ -528,11 +560,12 @@ void DecompilationUnit::DecodeNext(
         bs.Read(&srcReg);
         bs.Read(&dstReg);
 
-        if (os != nullptr) {
+        if (os != nullptr)
+        {
             (*os)
                 << "ref ["
-                    << "%" << (int)dstReg << ", "
-                    << "%" << (int)srcReg
+                << "%" << (int)dstReg << ", "
+                << "%" << (int)srcReg
                 << "]"
                 << std::endl;
         }
@@ -547,11 +580,12 @@ void DecompilationUnit::DecodeNext(
         bs.Read(&srcReg);
         bs.Read(&dstReg);
 
-        if (os != nullptr) {
+        if (os != nullptr)
+        {
             (*os)
                 << "deref ["
-                    << "%" << (int)dstReg << ", "
-                    << "%" << (int)srcReg
+                << "%" << (int)dstReg << ", "
+                << "%" << (int)srcReg
                 << "]"
                 << std::endl;
         }
@@ -563,10 +597,11 @@ void DecompilationUnit::DecodeNext(
         uint8 reg;
         bs.Read(&reg);
 
-        if (os != nullptr) {
+        if (os != nullptr)
+        {
             (*os)
                 << "load_null ["
-                    << "%" << (int)reg
+                << "%" << (int)reg
                 << "]"
                 << std::endl;
         }
@@ -578,10 +613,11 @@ void DecompilationUnit::DecodeNext(
         uint8 reg;
         bs.Read(&reg);
 
-        if (os != nullptr) {
+        if (os != nullptr)
+        {
             (*os)
                 << "load_true ["
-                    << "%" << (int)reg
+                << "%" << (int)reg
                 << "]"
                 << std::endl;
         }
@@ -593,10 +629,11 @@ void DecompilationUnit::DecodeNext(
         uint8 reg;
         bs.Read(&reg);
 
-        if (os != nullptr) {
+        if (os != nullptr)
+        {
             (*os)
                 << "load_false ["
-                    << "%" << (int)reg
+                << "%" << (int)reg
                 << "]"
                 << std::endl;
         }
@@ -611,11 +648,12 @@ void DecompilationUnit::DecodeNext(
         uint8 src;
         bs.Read(&src);
 
-        if (os != nullptr) {
+        if (os != nullptr)
+        {
             (*os)
                 << "mov_offset ["
-                    << "$(sp-" << dst << "), "
-                    << "%" << (int)src
+                << "$(sp-" << dst << "), "
+                << "%" << (int)src
                 << "]"
                 << std::endl;
         }
@@ -630,11 +668,12 @@ void DecompilationUnit::DecodeNext(
         uint8 src;
         bs.Read(&src);
 
-        if (os != nullptr) {
+        if (os != nullptr)
+        {
             (*os)
                 << "mov_index ["
-                    << "u16(" << dst << "), "
-                    << "%" << (int)src
+                << "u16(" << dst << "), "
+                << "%" << (int)src
                 << "]"
                 << std::endl;
         }
@@ -649,11 +688,12 @@ void DecompilationUnit::DecodeNext(
         uint8 src;
         bs.Read(&src);
 
-        if (os != nullptr) {
+        if (os != nullptr)
+        {
             (*os)
                 << "mov_static ["
-                    << "#" << dst << ", "
-                    << "%" << (int)src
+                << "#" << dst << ", "
+                << "%" << (int)src
                 << "]"
                 << std::endl;
         }
@@ -671,12 +711,13 @@ void DecompilationUnit::DecodeNext(
         uint8 src;
         bs.Read(&src);
 
-        if (os != nullptr) {
+        if (os != nullptr)
+        {
             (*os)
                 << "mov_mem ["
-                    << "%" << (int)reg << ", "
-                    << "u8(" << (int)idx << "), "
-                    << "%" << (int)src << ""
+                << "%" << (int)reg << ", "
+                << "u8(" << (int)idx << "), "
+                << "%" << (int)src << ""
                 << "]"
                 << std::endl;
         }
@@ -694,12 +735,13 @@ void DecompilationUnit::DecodeNext(
         uint8 src;
         bs.Read(&src);
 
-        if (os != nullptr) {
+        if (os != nullptr)
+        {
             (*os)
                 << "mov_mem_hash ["
-                    << "%" << (int)reg << ", "
-                    << "u32(" << hash << "), "
-                    << "%" << (int)src
+                << "%" << (int)reg << ", "
+                << "u32(" << hash << "), "
+                << "%" << (int)src
                 << "]"
                 << std::endl;
         }
@@ -717,12 +759,13 @@ void DecompilationUnit::DecodeNext(
         uint8 src;
         bs.Read(&src);
 
-        if (os != nullptr) {
+        if (os != nullptr)
+        {
             (*os)
                 << "mov_arrayidx ["
-                    << "%" << (int)reg << ", "
-                    << "u32(" << (int)idx << "), "
-                    << "%" << (int)src << ""
+                << "%" << (int)reg << ", "
+                << "u32(" << (int)idx << "), "
+                << "%" << (int)src << ""
                 << "]"
                 << std::endl;
         }
@@ -740,12 +783,13 @@ void DecompilationUnit::DecodeNext(
         uint8 src;
         bs.Read(&src);
 
-        if (os != nullptr) {
+        if (os != nullptr)
+        {
             (*os)
                 << "mov_arrayidx_reg ["
-                    << "%" << (int)reg << ", "
-                    << "%" << (int)idx << ", "
-                    << "%" << (int)src << ""
+                << "%" << (int)reg << ", "
+                << "%" << (int)idx << ", "
+                << "%" << (int)src << ""
                 << "]"
                 << std::endl;
         }
@@ -760,11 +804,12 @@ void DecompilationUnit::DecodeNext(
         uint8 src;
         bs.Read(&src);
 
-        if (os != nullptr) {
+        if (os != nullptr)
+        {
             (*os)
                 << "mov_reg ["
-                    << "%" << (int)dst << ", "
-                    << "%" << (int)src << ""
+                << "%" << (int)dst << ", "
+                << "%" << (int)src << ""
                 << "]"
                 << std::endl;
         }
@@ -782,12 +827,13 @@ void DecompilationUnit::DecodeNext(
         uint32 hash;
         bs.Read(&hash);
 
-        if (os != nullptr) {
+        if (os != nullptr)
+        {
             (*os)
                 << "has_mem_hash ["
-                    << "%" << (int)reg << ", "
-                    << "%" << (int)src << ", "
-                    << "u32(" << hash << ")"
+                << "%" << (int)reg << ", "
+                << "%" << (int)src << ", "
+                << "u32(" << hash << ")"
                 << "]"
                 << std::endl;
         }
@@ -799,10 +845,11 @@ void DecompilationUnit::DecodeNext(
         uint8 src;
         bs.Read(&src);
 
-        if (os != nullptr) {
+        if (os != nullptr)
+        {
             (*os)
                 << "push ["
-                    << "%" << (int)src
+                << "%" << (int)src
                 << "]"
                 << std::endl;
         }
@@ -811,7 +858,8 @@ void DecompilationUnit::DecodeNext(
     }
     case POP:
     {
-        if (os != nullptr) {
+        if (os != nullptr)
+        {
             (*os)
                 << "pop"
                 << std::endl;
@@ -827,7 +875,8 @@ void DecompilationUnit::DecodeNext(
         uint8 src;
         bs.Read(&src);
 
-        if (os != nullptr) {
+        if (os != nullptr)
+        {
             (*os)
                 << "push_array ["
                 << "% " << (int)dst << ", "
@@ -842,10 +891,11 @@ void DecompilationUnit::DecodeNext(
         uint16 val;
         bs.Read(&val);
 
-        if (os != nullptr) {
+        if (os != nullptr)
+        {
             (*os)
                 << "add_sp ["
-                    << "u16(" << val << ")"
+                << "u16(" << val << ")"
                 << "]"
                 << std::endl;
         }
@@ -857,10 +907,11 @@ void DecompilationUnit::DecodeNext(
         uint16 val;
         bs.Read(&val);
 
-        if (os != nullptr) {
+        if (os != nullptr)
+        {
             (*os)
                 << "sub_sp ["
-                    << "u16(" << val << ")"
+                << "u16(" << val << ")"
                 << "]"
                 << std::endl;
         }
@@ -872,11 +923,12 @@ void DecompilationUnit::DecodeNext(
         uint32 addr;
         bs.Read(&addr);
 
-        if (os != nullptr) {
+        if (os != nullptr)
+        {
 
             (*os)
                 << "jmp ["
-                    << "@(" << std::hex << addr << std::dec << ")"
+                << "@(" << std::hex << addr << std::dec << ")"
                 << "]"
                 << std::endl;
         }
@@ -888,10 +940,11 @@ void DecompilationUnit::DecodeNext(
         uint32 addr;
         bs.Read(&addr);
 
-        if (os != nullptr) {
+        if (os != nullptr)
+        {
             (*os)
                 << "je ["
-                    << "@(" << std::hex << addr << std::dec << ")"
+                << "@(" << std::hex << addr << std::dec << ")"
                 << "]"
                 << std::endl;
         }
@@ -903,10 +956,11 @@ void DecompilationUnit::DecodeNext(
         uint32 addr;
         bs.Read(&addr);
 
-        if (os != nullptr) {
+        if (os != nullptr)
+        {
             (*os)
                 << "jne ["
-                    << "@(" << std::hex << addr << std::dec << ")"
+                << "@(" << std::hex << addr << std::dec << ")"
                 << "]"
                 << std::endl;
         }
@@ -918,10 +972,11 @@ void DecompilationUnit::DecodeNext(
         uint32 addr;
         bs.Read(&addr);
 
-        if (os != nullptr) {
+        if (os != nullptr)
+        {
             (*os)
                 << "jg ["
-                    << "@(" << std::hex << addr << std::dec << ")"
+                << "@(" << std::hex << addr << std::dec << ")"
                 << "]"
                 << std::endl;
         }
@@ -933,10 +988,11 @@ void DecompilationUnit::DecodeNext(
         uint32 addr;
         bs.Read(&addr);
 
-        if (os != nullptr) {
+        if (os != nullptr)
+        {
             (*os)
                 << "jge ["
-                    << "@(" << std::hex << addr << std::dec << ")"
+                << "@(" << std::hex << addr << std::dec << ")"
                 << "]"
                 << std::endl;
         }
@@ -951,11 +1007,12 @@ void DecompilationUnit::DecodeNext(
         uint8 argc;
         bs.Read(&argc);
 
-        if (os != nullptr) {
+        if (os != nullptr)
+        {
             (*os)
                 << "call ["
-                    << "%" << (int)func << ", "
-                    << "u8(" << (int)argc << ")"
+                << "%" << (int)func << ", "
+                << "u8(" << (int)argc << ")"
                 << "]"
                 << std::endl;
         }
@@ -964,7 +1021,8 @@ void DecompilationUnit::DecodeNext(
     }
     case RET:
     {
-        if (os != nullptr) {
+        if (os != nullptr)
+        {
             (*os)
                 << "ret"
                 << std::endl;
@@ -977,10 +1035,11 @@ void DecompilationUnit::DecodeNext(
         uint32 addr;
         bs.Read(&addr);
 
-        if (os != nullptr) {
+        if (os != nullptr)
+        {
             (*os)
                 << "begin_try ["
-                    << "@(" << std::hex << addr << std::dec << ")"
+                << "@(" << std::hex << addr << std::dec << ")"
                 << "]"
                 << std::endl;
         }
@@ -989,7 +1048,8 @@ void DecompilationUnit::DecodeNext(
     }
     case END_TRY:
     {
-        if (os != nullptr) {
+        if (os != nullptr)
+        {
             (*os) << "end_try" << std::endl;
         }
 
@@ -1003,11 +1063,12 @@ void DecompilationUnit::DecodeNext(
         uint8 type;
         bs.Read(&type);
 
-        if (os != nullptr) {
+        if (os != nullptr)
+        {
             (*os)
                 << "new ["
-                    << "%" << (int)dst << ", "
-                    << "%" << (int)type
+                << "%" << (int)dst << ", "
+                << "%" << (int)type
                 << "]"
                 << std::endl;
         }
@@ -1022,11 +1083,12 @@ void DecompilationUnit::DecodeNext(
         uint32 size;
         bs.Read(&size);
 
-        if (os != nullptr) {
+        if (os != nullptr)
+        {
             (*os)
                 << "new_array ["
-                    << "%"    << (int)dst << ", "
-                    << "u32(" << (int)size << ")"
+                << "%" << (int)dst << ", "
+                << "u32(" << (int)size << ")"
                 << "]"
                 << std::endl;
         }
@@ -1041,11 +1103,12 @@ void DecompilationUnit::DecodeNext(
         uint8 rhs;
         bs.Read(&rhs);
 
-        if (os != nullptr) {
+        if (os != nullptr)
+        {
             (*os)
                 << "cmp ["
-                    << "%" << (int)lhs << ", "
-                    << "%" << (int)rhs
+                << "%" << (int)lhs << ", "
+                << "%" << (int)rhs
                 << "]"
                 << std::endl;
         }
@@ -1057,10 +1120,11 @@ void DecompilationUnit::DecodeNext(
         uint8 lhs;
         bs.Read(&lhs);
 
-        if (os != nullptr) {
+        if (os != nullptr)
+        {
             (*os)
                 << "cmpz ["
-                    << "%" << (int)lhs
+                << "%" << (int)lhs
                 << "]"
                 << std::endl;
         }
@@ -1078,12 +1142,13 @@ void DecompilationUnit::DecodeNext(
         uint8 dst;
         bs.Read(&dst);
 
-        if (os != nullptr) {
+        if (os != nullptr)
+        {
             (*os)
                 << "add ["
-                    << "%" << (int)lhs << ", "
-                    << "%" << (int)rhs << ", "
-                    << "%" << (int)dst
+                << "%" << (int)lhs << ", "
+                << "%" << (int)rhs << ", "
+                << "%" << (int)dst
                 << "]"
                 << std::endl;
         }
@@ -1101,12 +1166,13 @@ void DecompilationUnit::DecodeNext(
         uint8 dst;
         bs.Read(&dst);
 
-        if (os != nullptr) {
+        if (os != nullptr)
+        {
             (*os)
                 << "sub ["
-                    << "%" << (int)lhs << ", "
-                    << "%" << (int)rhs << ", "
-                    << "%" << (int)dst
+                << "%" << (int)lhs << ", "
+                << "%" << (int)rhs << ", "
+                << "%" << (int)dst
                 << "]"
                 << std::endl;
         }
@@ -1124,12 +1190,13 @@ void DecompilationUnit::DecodeNext(
         uint8 dst;
         bs.Read(&dst);
 
-        if (os != nullptr) {
+        if (os != nullptr)
+        {
             (*os)
                 << "mul ["
-                    << "%" << (int)lhs << ", "
-                    << "%" << (int)rhs << ", "
-                    << "%" << (int)dst
+                << "%" << (int)lhs << ", "
+                << "%" << (int)rhs << ", "
+                << "%" << (int)dst
                 << "]"
                 << std::endl;
         }
@@ -1147,12 +1214,13 @@ void DecompilationUnit::DecodeNext(
         uint8 dst;
         bs.Read(&dst);
 
-        if (os != nullptr) {
+        if (os != nullptr)
+        {
             (*os)
                 << "div ["
-                    << "%" << (int)lhs << ", "
-                    << "%" << (int)rhs << ", "
-                    << "%" << (int)dst
+                << "%" << (int)lhs << ", "
+                << "%" << (int)rhs << ", "
+                << "%" << (int)dst
                 << "]"
                 << std::endl;
         }
@@ -1170,12 +1238,13 @@ void DecompilationUnit::DecodeNext(
         uint8 dst;
         bs.Read(&dst);
 
-        if (os != nullptr) {
+        if (os != nullptr)
+        {
             (*os)
                 << "mod ["
-                    << "%" << (int)lhs << ", "
-                    << "%" << (int)rhs << ", "
-                    << "%" << (int)dst
+                << "%" << (int)lhs << ", "
+                << "%" << (int)rhs << ", "
+                << "%" << (int)dst
                 << "]"
                 << std::endl;
         }
@@ -1193,12 +1262,13 @@ void DecompilationUnit::DecodeNext(
         uint8 dst;
         bs.Read(&dst);
 
-        if (os != nullptr) {
+        if (os != nullptr)
+        {
             (*os)
                 << "and ["
-                    << "%" << (int)lhs << ", "
-                    << "%" << (int)rhs << ", "
-                    << "%" << (int)dst
+                << "%" << (int)lhs << ", "
+                << "%" << (int)rhs << ", "
+                << "%" << (int)dst
                 << "]"
                 << std::endl;
         }
@@ -1216,12 +1286,13 @@ void DecompilationUnit::DecodeNext(
         uint8 dst;
         bs.Read(&dst);
 
-        if (os != nullptr) {
+        if (os != nullptr)
+        {
             (*os)
                 << "or ["
-                    << "%" << (int)lhs << ", "
-                    << "%" << (int)rhs << ", "
-                    << "%" << (int)dst
+                << "%" << (int)lhs << ", "
+                << "%" << (int)rhs << ", "
+                << "%" << (int)dst
                 << "]"
                 << std::endl;
         }
@@ -1239,12 +1310,13 @@ void DecompilationUnit::DecodeNext(
         uint8 dst;
         bs.Read(&dst);
 
-        if (os != nullptr) {
+        if (os != nullptr)
+        {
             (*os)
                 << "xor ["
-                    << "%" << (int)lhs << ", "
-                    << "%" << (int)rhs << ", "
-                    << "%" << (int)dst
+                << "%" << (int)lhs << ", "
+                << "%" << (int)rhs << ", "
+                << "%" << (int)dst
                 << "]"
                 << std::endl;
         }
@@ -1262,12 +1334,13 @@ void DecompilationUnit::DecodeNext(
         uint8 dst;
         bs.Read(&dst);
 
-        if (os != nullptr) {
+        if (os != nullptr)
+        {
             (*os)
                 << "shl ["
-                    << "%" << (int)lhs << ", "
-                    << "%" << (int)rhs << ", "
-                    << "%" << (int)dst
+                << "%" << (int)lhs << ", "
+                << "%" << (int)rhs << ", "
+                << "%" << (int)dst
                 << "]"
                 << std::endl;
         }
@@ -1286,12 +1359,13 @@ void DecompilationUnit::DecodeNext(
         uint8 dst;
         bs.Read(&dst);
 
-        if (os != nullptr) {
+        if (os != nullptr)
+        {
             (*os)
                 << "shr ["
-                    << "%" << (int)lhs << ", "
-                    << "%" << (int)rhs << ", "
-                    << "%" << (int)dst
+                << "%" << (int)lhs << ", "
+                << "%" << (int)rhs << ", "
+                << "%" << (int)dst
                 << "]"
                 << std::endl;
         }
@@ -1303,10 +1377,11 @@ void DecompilationUnit::DecodeNext(
         uint8 reg;
         bs.Read(&reg);
 
-        if (os != nullptr) {
+        if (os != nullptr)
+        {
             (*os)
                 << "neg ["
-                    << "%" << (int)reg
+                << "%" << (int)reg
                 << "]"
                 << std::endl;
         }
@@ -1318,10 +1393,11 @@ void DecompilationUnit::DecodeNext(
         uint8 reg;
         bs.Read(&reg);
 
-        if (os != nullptr) {
+        if (os != nullptr)
+        {
             (*os)
                 << "throw ["
-                    << "% " << (int)reg
+                << "% " << (int)reg
                 << "]"
                 << std::endl;
         }
@@ -1333,10 +1409,11 @@ void DecompilationUnit::DecodeNext(
         uint32 len;
         bs.Read(&len);
 
-        if (os != nullptr) {
+        if (os != nullptr)
+        {
             (*os)
                 << "tracemap ["
-                    << "u32(" << len << ")"
+                << "u32(" << len << ")"
                 << "]"
                 << std::endl;
         }
@@ -1349,11 +1426,12 @@ void DecompilationUnit::DecodeNext(
         bs.Read(&len);
 
         // read string based on length
-        char *str = new char[len + 1];
+        char* str = new char[len + 1];
         bs.Read(str, len);
         str[len] = '\0';
 
-        if (os != nullptr) {
+        if (os != nullptr)
+        {
             (*os)
                 << "\t; "
                 << str
@@ -1372,11 +1450,12 @@ void DecompilationUnit::DecodeNext(
         uint32 hash;
         bs.Read(&hash);
 
-        if (os != nullptr) {
+        if (os != nullptr)
+        {
             (*os)
                 << "export ["
-                    << "%" << (int)reg << ", "
-                    << "u32(" << hash << ")"
+                << "%" << (int)reg << ", "
+                << "u32(" << hash << ")"
                 << "]"
                 << std::endl;
         }
@@ -1391,11 +1470,12 @@ void DecompilationUnit::DecodeNext(
         uint8 regSrc;
         bs.Read(&regSrc);
 
-        if (os != nullptr) {
+        if (os != nullptr)
+        {
             (*os)
                 << "cast_u8 ["
-                    << "%" << (int)regDst << ", "
-                    << "%" << (int)regSrc
+                << "%" << (int)regDst << ", "
+                << "%" << (int)regSrc
                 << "]"
                 << std::endl;
         }
@@ -1410,11 +1490,12 @@ void DecompilationUnit::DecodeNext(
         uint8 regSrc;
         bs.Read(&regSrc);
 
-        if (os != nullptr) {
+        if (os != nullptr)
+        {
             (*os)
                 << "cast_u16 ["
-                    << "%" << (int)regDst << ", "
-                    << "%" << (int)regSrc
+                << "%" << (int)regDst << ", "
+                << "%" << (int)regSrc
                 << "]"
                 << std::endl;
         }
@@ -1429,11 +1510,12 @@ void DecompilationUnit::DecodeNext(
         uint8 regSrc;
         bs.Read(&regSrc);
 
-        if (os != nullptr) {
+        if (os != nullptr)
+        {
             (*os)
                 << "cast_u32 ["
-                    << "%" << (int)regDst << ", "
-                    << "%" << (int)regSrc
+                << "%" << (int)regDst << ", "
+                << "%" << (int)regSrc
                 << "]"
                 << std::endl;
         }
@@ -1448,11 +1530,12 @@ void DecompilationUnit::DecodeNext(
         uint8 regSrc;
         bs.Read(&regSrc);
 
-        if (os != nullptr) {
+        if (os != nullptr)
+        {
             (*os)
                 << "cast_u64 ["
-                    << "%" << (int)regDst << ", "
-                    << "%" << (int)regSrc
+                << "%" << (int)regDst << ", "
+                << "%" << (int)regSrc
                 << "]"
                 << std::endl;
         }
@@ -1467,11 +1550,12 @@ void DecompilationUnit::DecodeNext(
         uint8 regSrc;
         bs.Read(&regSrc);
 
-        if (os != nullptr) {
+        if (os != nullptr)
+        {
             (*os)
                 << "cast_i8 ["
-                    << "%" << (int)regDst << ", "
-                    << "%" << (int)regSrc
+                << "%" << (int)regDst << ", "
+                << "%" << (int)regSrc
                 << "]"
                 << std::endl;
         }
@@ -1486,11 +1570,12 @@ void DecompilationUnit::DecodeNext(
         uint8 regSrc;
         bs.Read(&regSrc);
 
-        if (os != nullptr) {
+        if (os != nullptr)
+        {
             (*os)
                 << "cast_i16 ["
-                    << "%" << (int)regDst << ", "
-                    << "%" << (int)regSrc
+                << "%" << (int)regDst << ", "
+                << "%" << (int)regSrc
                 << "]"
                 << std::endl;
         }
@@ -1505,11 +1590,12 @@ void DecompilationUnit::DecodeNext(
         uint8 regSrc;
         bs.Read(&regSrc);
 
-        if (os != nullptr) {
+        if (os != nullptr)
+        {
             (*os)
                 << "cast_i32 ["
-                    << "%" << (int)regDst << ", "
-                    << "%" << (int)regSrc
+                << "%" << (int)regDst << ", "
+                << "%" << (int)regSrc
                 << "]"
                 << std::endl;
         }
@@ -1524,11 +1610,12 @@ void DecompilationUnit::DecodeNext(
         uint8 regSrc;
         bs.Read(&regSrc);
 
-        if (os != nullptr) {
+        if (os != nullptr)
+        {
             (*os)
                 << "cast_i64 ["
-                    << "%" << (int)regDst << ", "
-                    << "%" << (int)regSrc
+                << "%" << (int)regDst << ", "
+                << "%" << (int)regSrc
                 << "]"
                 << std::endl;
         }
@@ -1543,11 +1630,12 @@ void DecompilationUnit::DecodeNext(
         uint8 regSrc;
         bs.Read(&regSrc);
 
-        if (os != nullptr) {
+        if (os != nullptr)
+        {
             (*os)
                 << "cast_f32 ["
-                    << "%" << (int)regDst << ", "
-                    << "%" << (int)regSrc
+                << "%" << (int)regDst << ", "
+                << "%" << (int)regSrc
                 << "]"
                 << std::endl;
         }
@@ -1562,11 +1650,12 @@ void DecompilationUnit::DecodeNext(
         uint8 regSrc;
         bs.Read(&regSrc);
 
-        if (os != nullptr) {
+        if (os != nullptr)
+        {
             (*os)
                 << "cast_f64 ["
-                    << "%" << (int)regDst << ", "
-                    << "%" << (int)regSrc
+                << "%" << (int)regDst << ", "
+                << "%" << (int)regSrc
                 << "]"
                 << std::endl;
         }
@@ -1581,11 +1670,12 @@ void DecompilationUnit::DecodeNext(
         uint8 regSrc;
         bs.Read(&regSrc);
 
-        if (os != nullptr) {
+        if (os != nullptr)
+        {
             (*os)
                 << "cast_bool ["
-                    << "%" << (int)regDst << ", "
-                    << "%" << (int)regSrc
+                << "%" << (int)regDst << ", "
+                << "%" << (int)regSrc
                 << "]"
                 << std::endl;
         }
@@ -1600,11 +1690,12 @@ void DecompilationUnit::DecodeNext(
         uint8 regSrc;
         bs.Read(&regSrc);
 
-        if (os != nullptr) {
+        if (os != nullptr)
+        {
             (*os)
                 << "cast_dynamic ["
-                    << "%" << (int)regDst << ", "
-                    << "%" << (int)regSrc
+                << "%" << (int)regDst << ", "
+                << "%" << (int)regSrc
                 << "]"
                 << std::endl;
         }
@@ -1613,7 +1704,8 @@ void DecompilationUnit::DecodeNext(
     }
     case EXIT:
     {
-        if (os != nullptr) {
+        if (os != nullptr)
+        {
             (*os)
                 << "exit"
                 << std::endl;
@@ -1622,7 +1714,8 @@ void DecompilationUnit::DecodeNext(
         break;
     }
     default:
-        if (os != nullptr) {
+        if (os != nullptr)
+        {
             (*os)
                 << "??"
                 << std::endl;
@@ -1633,14 +1726,16 @@ void DecompilationUnit::DecodeNext(
     }
 }
 
-InstructionStream DecompilationUnit::Decompile(hyperion::vm::BytecodeStream &bs, std::ostream *os)
+InstructionStream DecompilationUnit::Decompile(hyperion::vm::BytecodeStream& bs, std::ostream* os)
 {
     InstructionStream is;
 
-    while (!bs.Eof()) {
+    while (!bs.Eof())
+    {
         const size_t pos = bs.Position();
-        
-        if (os != nullptr) {
+
+        if (os != nullptr)
+        {
             (*os) << std::hex << pos << std::dec << "\t";
         }
 

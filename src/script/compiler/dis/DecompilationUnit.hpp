@@ -16,19 +16,17 @@ class DecompilationUnit
 {
 public:
     DecompilationUnit();
-    DecompilationUnit(const DecompilationUnit &other) = delete;
+    DecompilationUnit(const DecompilationUnit& other) = delete;
 
     void DecodeNext(
         uint8 code,
-        hyperion::vm::BytecodeStream &bs,
-        InstructionStream &is,
-        std::ostream *os = nullptr
-    );
+        hyperion::vm::BytecodeStream& bs,
+        InstructionStream& is,
+        std::ostream* os = nullptr);
 
     InstructionStream Decompile(
-        hyperion::vm::BytecodeStream &bs,
-        std::ostream *os = nullptr
-    );
+        hyperion::vm::BytecodeStream& bs,
+        std::ostream* os = nullptr);
 };
 
 } // namespace hyperion::compiler

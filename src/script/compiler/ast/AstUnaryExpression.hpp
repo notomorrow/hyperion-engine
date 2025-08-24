@@ -12,16 +12,15 @@ class AstUnaryExpression : public AstExpression
 {
 public:
     AstUnaryExpression(
-        const RC<AstExpression> &target,
-        const Operator *op,
+        const RC<AstExpression>& target,
+        const Operator* op,
         bool isPostfixVersion,
-        const SourceLocation &location
-    );
+        const SourceLocation& location);
 
-    virtual void Visit(AstVisitor *visitor, Module *mod) override;
-    virtual std::unique_ptr<Buildable> Build(AstVisitor *visitor, Module *mod) override;
-    virtual void Optimize(AstVisitor *visitor, Module *mod) override;
-    
+    virtual void Visit(AstVisitor* visitor, Module* mod) override;
+    virtual std::unique_ptr<Buildable> Build(AstVisitor* visitor, Module* mod) override;
+    virtual void Optimize(AstVisitor* visitor, Module* mod) override;
+
     virtual RC<AstStatement> Clone() const override;
 
     virtual Tribool IsTrue() const override;
@@ -39,12 +38,12 @@ public:
     }
 
 private:
-    RC<AstExpression>   m_target;
-    const Operator      *m_op;
-    bool                m_isPostfixVersion;
+    RC<AstExpression> m_target;
+    const Operator* m_op;
+    bool m_isPostfixVersion;
 
     // set while analyzing
-    bool                m_folded;
+    bool m_folded;
 
     RC<AstBinaryExpression> m_binExpr; // internally use a binary expr for somethings (like ++ and -- operators)
 
@@ -54,8 +53,7 @@ private:
             CloneAstNode(m_target),
             m_op,
             m_isPostfixVersion,
-            m_location
-        ));
+            m_location));
     }
 };
 

@@ -69,19 +69,17 @@ class Parser
 {
 public:
     Parser(
-        AstIterator *astIterator,
-        TokenStream *tokenStream,
-        CompilationUnit *compilationUnit
-    );
+        AstIterator* astIterator,
+        TokenStream* tokenStream,
+        CompilationUnit* compilationUnit);
 
-    Parser(const Parser &other);
+    Parser(const Parser& other);
 
     void Parse(bool expectModuleDecl = true);
 
     RC<AstStatement> ParseStatement(
         bool topLevel = false,
-        bool readTerminators = true
-    );
+        bool readTerminators = true);
     RC<AstModuleDeclaration> ParseModuleDeclaration();
     RC<AstDirective> ParseDirective();
     RC<AstExpression> ParseTerm(
@@ -90,8 +88,7 @@ public:
         bool overrideAngleBrackets = false,
         bool overrideSquareBrackets = false,
         bool overrideParentheses = false,
-        bool overrideQuestionMark = false
-    );
+        bool overrideQuestionMark = false);
     RC<AstExpression> ParseParentheses();
     RC<AstTemplateInstantiation> ParseTemplateInstantiation(RC<AstExpression> expr);
     RC<AstExpression> ParseAngleBrackets(RC<AstExpression> target);
@@ -103,8 +100,7 @@ public:
     RC<AstArgumentList> ParseArguments(bool requireParentheses = true);
     RC<AstCallExpression> ParseCallExpression(
         RC<AstExpression> target,
-        bool requireParentheses = true
-    );
+        bool requireParentheses = true);
     RC<AstModuleAccess> ParseModuleAccess();
     RC<AstModuleProperty> ParseModuleProperty();
     RC<AstExpression> ParseMemberExpression(RC<AstExpression> target);
@@ -115,8 +111,7 @@ public:
         bool overrideAngleBrackets = false,
         bool overrideSquareBrackets = false,
         bool overrideParentheses = false,
-        bool overrideQuestionMark = false
-    );
+        bool overrideQuestionMark = false);
     RC<AstHasExpression> ParseHasExpression(RC<AstExpression> target);
     RC<AstIsExpression> ParseIsExpression(RC<AstExpression> target);
     RC<AstAsExpression> ParseAsExpression(RC<AstExpression> target);
@@ -134,31 +129,26 @@ public:
     RC<AstThrowExpression> ParseThrowExpression();
     RC<AstExpression> ParseBinaryExpression(
         int exprPrec,
-        RC<AstExpression> left
-    );
+        RC<AstExpression> left);
     RC<AstExpression> ParseUnaryExpressionPrefix();
-    RC<AstExpression> ParseUnaryExpressionPostfix(const RC<AstExpression> &expr);
+    RC<AstExpression> ParseUnaryExpressionPostfix(const RC<AstExpression>& expr);
     RC<AstExpression> ParseTernaryExpression(
-        const RC<AstExpression> &conditional
-    );
+        const RC<AstExpression>& conditional);
     RC<AstExpression> ParseExpression(
         bool overrideCommas = false,
         bool overrideFatArrows = false,
         bool overrideAngleBrackets = false,
-        bool overrideQuestionMark = false
-    );
+        bool overrideQuestionMark = false);
     RC<AstPrototypeSpecification> ParsePrototypeSpecification();
     RC<AstExpression> ParseAssignment();
     RC<AstVariableDeclaration> ParseVariableDeclaration(
         bool allowKeywordNames = false,
         bool allowQuotedNames = false,
-        IdentifierFlagBits flags = 0
-    );
+        IdentifierFlagBits flags = 0);
     RC<AstStatement> ParseFunctionDefinition(bool requireKeyword = true);
     RC<AstFunctionExpression> ParseFunctionExpression(
         bool requireKeyword = true,
-        Array<RC<AstParameter>> params = {}
-    );
+        Array<RC<AstParameter>> params = {});
     RC<AstArrayExpression> ParseArrayExpression();
     RC<AstHashMap> ParseHashMap();
     RC<AstExpression> ParseValueOfExpression();
@@ -170,14 +160,12 @@ public:
         bool requireKeyword = true,
         bool allowIdentifier = true,
         bool isProxyClass = false,
-        String typeName = "<Anonymous Type>"
-    );
+        String typeName = "<Anonymous Type>");
     RC<AstStatement> ParseEnumDefinition();
     RC<AstEnumExpression> ParseEnumExpression(
         bool requireKeyword = true,
         bool allowIdentifier = true,
-        String enumName = "<Anonymous Enum>"
-    );
+        String enumName = "<Anonymous Enum>");
     RC<AstImport> ParseImport();
     RC<AstExportStatement> ParseExportStatement();
     RC<AstFileImport> ParseFileImport();
@@ -189,25 +177,25 @@ public:
 private:
     int m_templateArgumentDepth = 0; // until a better way is found..
 
-    AstIterator *m_astIterator;
-    TokenStream *m_tokenStream;
-    CompilationUnit *m_compilationUnit;
+    AstIterator* m_astIterator;
+    TokenStream* m_tokenStream;
+    CompilationUnit* m_compilationUnit;
 
     Token Match(TokenClass tokenClass, bool read = false);
     Token MatchAhead(TokenClass tokenClass, int n);
     Token MatchKeyword(Keywords keyword, bool read = false);
     Token MatchKeywordAhead(Keywords keyword, int n);
-    Token MatchOperator(const String &op, bool read = false);
-    Token MatchOperatorAhead(const String &op, int n);
+    Token MatchOperator(const String& op, bool read = false);
+    Token MatchOperatorAhead(const String& op, int n);
     Token Expect(TokenClass tokenClass, bool read = false);
     Token ExpectKeyword(Keywords keyword, bool read = false);
-    Token ExpectOperator(const String &op, bool read = false);
+    Token ExpectOperator(const String& op, bool read = false);
     Token MatchIdentifier(bool allowKeyword = false, bool read = false);
     Token ExpectIdentifier(bool allowKeyword = false, bool read = false);
     bool ExpectEndOfStmt();
     SourceLocation CurrentLocation() const;
     void SkipStatementTerminators();
-    int OperatorPrecedence(const Operator *&out);
+    int OperatorPrecedence(const Operator*& out);
 };
 
 } // namespace hyperion::compiler

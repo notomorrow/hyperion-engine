@@ -21,20 +21,22 @@ class CompilationUnit;
 class Builtins
 {
 public:
-    Builtins(CompilationUnit *unit);
+    Builtins(CompilationUnit* unit);
 
-    RC<AstVariableDeclaration> FindVariable(const String &name) const
+    RC<AstVariableDeclaration> FindVariable(const String& name) const
     {
-        auto it = m_vars.FindIf([&name](const auto &var)
+        auto it = m_vars.FindIf([&name](const auto& var)
+            {
+                if (!var)
+                {
+                    return false;
+                }
+
+                return var->GetName() == name;
+            });
+
+        if (it == m_vars.End())
         {
-            if (!var) {
-                return false;
-            }
-
-            return var->GetName() == name;
-        });
-
-        if (it == m_vars.End()) {
             return nullptr;
         }
 
@@ -43,13 +45,13 @@ public:
 
     /** This will analyze the builtins, and add them to the syntax tree.
      */
-    void Visit(AstVisitor *visitor);
+    void Visit(AstVisitor* visitor);
 
 private:
     static const SourceLocation BUILTIN_SOURCE_LOCATION;
 
-    CompilationUnit                     *m_unit;
-    Array<RC<AstVariableDeclaration>>   m_vars;
+    CompilationUnit* m_unit;
+    Array<RC<AstVariableDeclaration>> m_vars;
 };
 
 } // namespace hyperion::compiler

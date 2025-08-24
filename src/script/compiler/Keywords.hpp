@@ -62,9 +62,9 @@ enum Keywords
 
 class Keyword
 {
-/* Static class members */
+    /* Static class members */
 public:
-    static bool IsKeyword(const String &str);
+    static bool IsKeyword(const String& str);
     static Optional<String> ToString(Keywords keyword);
 
 private:

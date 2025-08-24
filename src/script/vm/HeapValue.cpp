@@ -23,34 +23,49 @@ void HeapValue::Mark()
 
     m_flags |= GC_MARKED;
 
-    if (VMObject *object = GetPointer<VMObject>()) {
+    if (VMObject* object = GetPointer<VMObject>())
+    {
         const SizeType size = object->GetSize();
 
-        for (SizeType i = 0; i < size; i++) {
+        for (SizeType i = 0; i < size; i++)
+        {
             object->GetMember(i).value.Mark();
         }
 
-        if (HeapValue *classPointer = object->GetClassPointer()) {
+        if (HeapValue* classPointer = object->GetClassPointer())
+        {
             classPointer->Mark();
         }
-    } else if (VMArray *array = GetPointer<VMArray>()) {
+    }
+    else if (VMArray* array = GetPointer<VMArray>())
+    {
         const SizeType size = array->GetSize();
 
-        for (SizeType i = 0; i < size; i++) {
+        for (SizeType i = 0; i < size; i++)
+        {
             array->AtIndex(i).Mark();
         }
-    } else if (VMStruct *vmStruct = GetPointer<VMStruct>()) {
-        for (auto &member : vmStruct->GetDynamicMemberValues()) {
+    }
+    else if (VMStruct* vmStruct = GetPointer<VMStruct>())
+    {
+        for (auto& member : vmStruct->GetDynamicMemberValues())
+        {
             member.Mark();
         }
-    } else if (VMArraySlice *slice = GetPointer<VMArraySlice>()) {
+    }
+    else if (VMArraySlice* slice = GetPointer<VMArraySlice>())
+    {
         const SizeType size = slice->GetSize();
 
-        for (SizeType i = 0; i < size; i++) {
+        for (SizeType i = 0; i < size; i++)
+        {
             slice->AtIndex(i).Mark();
         }
-    } else if (VMMap *map = GetPointer<VMMap>()) {
-        for (auto &pair : map->GetMap()) {
+    }
+    else if (VMMap* map = GetPointer<VMMap>())
+    {
+        for (auto& pair : map->GetMap())
+        {
             pair.first.key.Mark();
             pair.second.Mark();
         }

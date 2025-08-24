@@ -18,15 +18,15 @@ class ExportedSymbolTable
 
 public:
     ExportedSymbolTable();
-    ExportedSymbolTable(const ExportedSymbolTable &other) = delete;
+    ExportedSymbolTable(const ExportedSymbolTable& other) = delete;
     ~ExportedSymbolTable();
 
     void MarkAll();
 
-    bool Find(const char *name, Value *out);
-    bool Find(HashFNV1 hash, Value *out);
-    typename SymbolMap::InsertResult Store(const char *name, const Value &value);
-    typename SymbolMap::InsertResult Store(HashFNV1 hash, const Value &value);
+    bool Find(const char* name, Value* out);
+    bool Find(HashFNV1 hash, Value* out);
+    typename SymbolMap::InsertResult Store(const char* name, const Value& value);
+    typename SymbolMap::InsertResult Store(HashFNV1 hash, const Value& value);
 
 private:
     SymbolMap m_symbols;

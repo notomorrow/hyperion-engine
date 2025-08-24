@@ -1,5 +1,5 @@
 #ifndef MEMORY_BUFFER_HPP
-#define  MEMORY_BUFFER_HPP
+#define MEMORY_BUFFER_HPP
 
 #include <core/memory/ByteBuffer.hpp>
 
@@ -17,33 +17,42 @@ public:
     using ByteType = ubyte;
 
     VMMemoryBuffer(SizeType size = 0);
-    VMMemoryBuffer(const ByteBuffer &bytes);
-    VMMemoryBuffer(const VMMemoryBuffer &other)                 = default;
-    VMMemoryBuffer &operator=(const VMMemoryBuffer &other)      = default;
-    VMMemoryBuffer(VMMemoryBuffer &&other) noexcept             = default;
-    VMMemoryBuffer &operator=(VMMemoryBuffer &&other) noexcept  = default;
-    ~VMMemoryBuffer()                                           = default;
+    VMMemoryBuffer(const ByteBuffer& bytes);
+    VMMemoryBuffer(const VMMemoryBuffer& other) = default;
+    VMMemoryBuffer& operator=(const VMMemoryBuffer& other) = default;
+    VMMemoryBuffer(VMMemoryBuffer&& other) noexcept = default;
+    VMMemoryBuffer& operator=(VMMemoryBuffer&& other) noexcept = default;
+    ~VMMemoryBuffer() = default;
 
-    bool operator==(const VMMemoryBuffer &other) const
-        { return this == &other; }
+    bool operator==(const VMMemoryBuffer& other) const
+    {
+        return this == &other;
+    }
 
     SizeType GetSize() const
-        { return m_bytes.Size(); }
+    {
+        return m_bytes.Size();
+    }
 
-    void *GetBuffer()
-        { return m_bytes.Data(); }
+    void* GetBuffer()
+    {
+        return m_bytes.Data();
+    }
 
-    const void *GetBuffer() const
-        { return m_bytes.Data(); }
+    const void* GetBuffer() const
+    {
+        return m_bytes.Data();
+    }
 
-    const ByteBuffer &GetByteBuffer() const
-        { return m_bytes; }
+    const ByteBuffer& GetByteBuffer() const
+    {
+        return m_bytes;
+    }
 
     void GetRepresentation(
-        std::stringstream &ss,
+        std::stringstream& ss,
         bool addTypeName = true,
-        int depth = 3
-    ) const;
+        int depth = 3) const;
 
 private:
     ByteBuffer m_bytes;

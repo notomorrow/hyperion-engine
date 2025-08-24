@@ -6,44 +6,47 @@ void StorageOperation::StrategyBuilder::ByIndex(int index)
 {
     op->strategy = strategy = Strategies::BY_INDEX;
 
-    switch (parent->method) {
-        case Methods::ARRAY:
-        case Methods::MEMBER:
-            op->op.b.objectData.member.index = index;
-            break;
-        default:
-            op->op.b.index = index;
-            break;
+    switch (parent->method)
+    {
+    case Methods::ARRAY:
+    case Methods::MEMBER:
+        op->op.b.objectData.member.index = index;
+        break;
+    default:
+        op->op.b.index = index;
+        break;
     }
 }
 
 void StorageOperation::StrategyBuilder::ByOffset(int offset)
 {
     op->strategy = strategy = Strategies::BY_OFFSET;
-    
-    switch (parent->method) {
-        case Methods::ARRAY:
-        case Methods::MEMBER:
-            Assert(false, "Not implemented");
-            break;
-        default:
-            op->op.b.offset = offset;
-            break;
+
+    switch (parent->method)
+    {
+    case Methods::ARRAY:
+    case Methods::MEMBER:
+        Assert(false, "Not implemented");
+        break;
+    default:
+        op->op.b.offset = offset;
+        break;
     }
 }
 
 void StorageOperation::StrategyBuilder::ByHash(int hash)
 {
     op->strategy = strategy = Strategies::BY_HASH;
-    
-    switch (parent->method) {
-        case Methods::ARRAY:
-        case Methods::MEMBER:
-            op->op.b.objectData.member.hash = hash;
-            break;
-        default:
-            op->op.b.hash = hash;
-            break;
+
+    switch (parent->method)
+    {
+    case Methods::ARRAY:
+    case Methods::MEMBER:
+        op->op.b.objectData.member.hash = hash;
+        break;
+    default:
+        op->op.b.hash = hash;
+        break;
     }
 }
 

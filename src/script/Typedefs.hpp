@@ -5,7 +5,7 @@
 
 namespace hyperion {
 namespace vm {
-  
+
 // forward declarations
 struct Value;
 struct VMState;

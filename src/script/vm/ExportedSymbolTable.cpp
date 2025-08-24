@@ -8,21 +8,23 @@ ExportedSymbolTable::~ExportedSymbolTable() = default;
 
 void ExportedSymbolTable::MarkAll()
 {
-    for (auto &it : m_symbols) {
+    for (auto& it : m_symbols)
+    {
         it.second.Mark();
     }
 }
 
-bool ExportedSymbolTable::Find(const char *name, Value *out)
+bool ExportedSymbolTable::Find(const char* name, Value* out)
 {
     return Find(hashFnv1(name), out);
 }
 
-bool ExportedSymbolTable::Find(HashFNV1 hash, Value *out)
+bool ExportedSymbolTable::Find(HashFNV1 hash, Value* out)
 {
     const auto it = m_symbols.Find(hash);
 
-    if (it == m_symbols.End()) {
+    if (it == m_symbols.End())
+    {
         return false;
     }
 
@@ -31,16 +33,15 @@ bool ExportedSymbolTable::Find(HashFNV1 hash, Value *out)
     return true;
 }
 
-auto ExportedSymbolTable::Store(const char *name, const Value &value) -> typename SymbolMap::InsertResult
+auto ExportedSymbolTable::Store(const char* name, const Value& value) -> typename SymbolMap::InsertResult
 {
     return Store(hashFnv1(name), value);
 }
 
-auto ExportedSymbolTable::Store(HashFNV1 hash, const Value &value) -> typename SymbolMap::InsertResult
+auto ExportedSymbolTable::Store(HashFNV1 hash, const Value& value) -> typename SymbolMap::InsertResult
 {
     return m_symbols.Insert(hash, value);
 }
-
 
 } // namespace vm
 } // namespace hyperion

@@ -10,12 +10,12 @@
 
 namespace hyperion::compiler {
 
-AstTrue::AstTrue(const SourceLocation &location)
+AstTrue::AstTrue(const SourceLocation& location)
     : AstConstant(location)
 {
 }
 
-std::unique_ptr<Buildable> AstTrue::Build(AstVisitor *visitor, Module *mod)
+std::unique_ptr<Buildable> AstTrue::Build(AstVisitor* visitor, Module* mod)
 {
     // get active register
     const uint8 rp = visitor->GetCompilationUnit()->GetInstructionStream().GetCurrentRegister();
@@ -53,34 +53,37 @@ SymbolTypePtr_t AstTrue::GetExprType() const
     return BuiltinTypes::BOOLEAN;
 }
 
-RC<AstConstant> AstTrue::HandleOperator(Operators opType, const AstConstant *right) const
+RC<AstConstant> AstTrue::HandleOperator(Operators opType, const AstConstant* right) const
 {
-    switch (opType) {
-        case OP_logical_and:
-            switch (right->IsTrue()) {
-                case TRI_TRUE:
-                    return RC<AstTrue>(new AstTrue(m_location));
-                case TRI_FALSE:
-                    return RC<AstFalse>(new AstFalse(m_location));
-                case TRI_INDETERMINATE:
-                    return nullptr;
-            }
-
-        case OP_logical_or:
+    switch (opType)
+    {
+    case OP_logical_and:
+        switch (right->IsTrue())
+        {
+        case TRI_TRUE:
             return RC<AstTrue>(new AstTrue(m_location));
-
-        case OP_equals:
-            if (dynamic_cast<const AstTrue*>(right) != nullptr) {
-                return RC<AstTrue>(new AstTrue(m_location));
-            }
-
+        case TRI_FALSE:
             return RC<AstFalse>(new AstFalse(m_location));
-
-        case OP_logical_not:
-            return RC<AstFalse>(new AstFalse(m_location));
-
-        default:
+        case TRI_INDETERMINATE:
             return nullptr;
+        }
+
+    case OP_logical_or:
+        return RC<AstTrue>(new AstTrue(m_location));
+
+    case OP_equals:
+        if (dynamic_cast<const AstTrue*>(right) != nullptr)
+        {
+            return RC<AstTrue>(new AstTrue(m_location));
+        }
+
+        return RC<AstFalse>(new AstFalse(m_location));
+
+    case OP_logical_not:
+        return RC<AstFalse>(new AstFalse(m_location));
+
+    default:
+        return nullptr;
     }
 }
 

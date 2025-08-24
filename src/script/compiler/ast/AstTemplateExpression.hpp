@@ -18,7 +18,7 @@ using AstTemplateExpressionFlags = uint32;
 
 enum AstTemplateExpressionFlagBits : AstTemplateExpressionFlags
 {
-    AST_TEMPLATE_EXPRESSION_FLAG_NONE   = 0x0,
+    AST_TEMPLATE_EXPRESSION_FLAG_NONE = 0x0,
     AST_TEMPLATE_EXPRESSION_FLAG_NATIVE = 0x1
 };
 
@@ -26,43 +26,48 @@ class AstTemplateExpression final : public AstExpression
 {
 public:
     AstTemplateExpression(
-        const RC<AstExpression> &expr,
-        const Array<RC<AstParameter>> &genericParams,
-        const RC<AstPrototypeSpecification> &returnTypeSpecification,
-        const SourceLocation &location
-    );
+        const RC<AstExpression>& expr,
+        const Array<RC<AstParameter>>& genericParams,
+        const RC<AstPrototypeSpecification>& returnTypeSpecification,
+        const SourceLocation& location);
     AstTemplateExpression(
-        const RC<AstExpression> &expr,
-        const Array<RC<AstParameter>> &genericParams,
-        const RC<AstPrototypeSpecification> &returnTypeSpecification,
+        const RC<AstExpression>& expr,
+        const Array<RC<AstParameter>>& genericParams,
+        const RC<AstPrototypeSpecification>& returnTypeSpecification,
         AstTemplateExpressionFlags flags,
-        const SourceLocation &location
-    );
+        const SourceLocation& location);
     virtual ~AstTemplateExpression() override = default;
 
-    const Array<RC<AstParameter>> &GetGenericParameters() const { return m_genericParams; }
-    const RC<AstExpression> &GetInnerExpression() const { return m_expr; }
+    const Array<RC<AstParameter>>& GetGenericParameters() const
+    {
+        return m_genericParams;
+    }
+    const RC<AstExpression>& GetInnerExpression() const
+    {
+        return m_expr;
+    }
 
-    virtual void Visit(AstVisitor *visitor, Module *mod) override;
-    virtual std::unique_ptr<Buildable> Build(AstVisitor *visitor, Module *mod) override;
-    virtual void Optimize(AstVisitor *visitor, Module *mod) override;
-    
+    virtual void Visit(AstVisitor* visitor, Module* mod) override;
+    virtual std::unique_ptr<Buildable> Build(AstVisitor* visitor, Module* mod) override;
+    virtual void Optimize(AstVisitor* visitor, Module* mod) override;
+
     virtual RC<AstStatement> Clone() const override;
 
     virtual Tribool IsTrue() const override;
     virtual bool MayHaveSideEffects() const override;
     virtual SymbolTypePtr_t GetExprType() const override;
     virtual SymbolTypePtr_t GetHeldType() const override;
-    virtual const AstExpression *GetValueOf() const override;
-    virtual const AstExpression *GetDeepValueOf() const override;
-    virtual const AstExpression *GetHeldGenericExpr() const override;
+    virtual const AstExpression* GetValueOf() const override;
+    virtual const AstExpression* GetDeepValueOf() const override;
+    virtual const AstExpression* GetHeldGenericExpr() const override;
 
     virtual HashCode GetHashCode() const override
     {
         HashCode hc = AstExpression::GetHashCode().Add(TypeName<AstTemplateExpression>());
         hc.Add(m_expr ? m_expr->GetHashCode() : HashCode());
 
-        for (auto &param : m_genericParams) {
+        for (auto& param : m_genericParams)
+        {
             hc.Add(param ? param->GetHashCode() : HashCode());
         }
 
@@ -72,17 +77,17 @@ public:
     }
 
 private:
-    RC<AstExpression>                   m_expr;
-    Array<RC<AstParameter>>             m_genericParams;
-    RC<AstPrototypeSpecification>       m_returnTypeSpecification;
-    AstTemplateExpressionFlags          m_flags;
+    RC<AstExpression> m_expr;
+    Array<RC<AstParameter>> m_genericParams;
+    RC<AstPrototypeSpecification> m_returnTypeSpecification;
+    AstTemplateExpressionFlags m_flags;
 
     // set while analyzing
-    SymbolTypePtr_t                     m_symbolType;
-    RC<AstBlock>                        m_block;
-    RC<AstTypeObject>                   m_nativeDummyTypeObject;
-    Array<RC<AstTypeObject>>            m_genericParamTypeObjects;
-    bool                                m_isVisited = false;
+    SymbolTypePtr_t m_symbolType;
+    RC<AstBlock> m_block;
+    RC<AstTypeObject> m_nativeDummyTypeObject;
+    Array<RC<AstTypeObject>> m_genericParamTypeObjects;
+    bool m_isVisited = false;
 
     RC<AstTemplateExpression> CloneImpl() const
     {
@@ -91,8 +96,7 @@ private:
             CloneAllAstNodes(m_genericParams),
             CloneAstNode(m_returnTypeSpecification),
             m_flags,
-            m_location
-        ));
+            m_location));
     }
 };
 

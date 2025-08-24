@@ -13,16 +13,18 @@ Tracemap::Tracemap()
 
 Tracemap::~Tracemap()
 {
-    if (m_stringmap) {
+    if (m_stringmap)
+    {
         delete[] m_stringmap;
     }
 
-    if (m_linemap) {
+    if (m_linemap)
+    {
         delete[] m_linemap;
     }
 }
 
-void Tracemap::Set(StringmapEntry *stringmap, LinemapEntry *linemap)
+void Tracemap::Set(StringmapEntry* stringmap, LinemapEntry* linemap)
 {
     Assert(m_stringmap == nullptr);
     Assert(m_linemap == nullptr);

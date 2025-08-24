@@ -27,7 +27,7 @@
 #define GC_THRESHOLD_MIN 150
 #define GC_THRESHOLD_MAX 50000
 
-#define VM_MAX_THREADS 1//8
+#define VM_MAX_THREADS 1 // 8
 #define VM_NUM_REGISTERS 8
 
 namespace hyperion {
@@ -38,11 +38,17 @@ class VM;
 
 struct Registers
 {
-    Value   m_reg[VM_NUM_REGISTERS];
-    int     m_flags = 0;
+    Value m_reg[VM_NUM_REGISTERS];
+    int m_flags = 0;
 
-    Value &operator[](uint8 index) { return m_reg[index]; }
-    void ResetFlags() { m_flags = 0; }
+    Value& operator[](uint8 index)
+    {
+        return m_reg[index];
+    }
+    void ResetFlags()
+    {
+        m_flags = 0;
+    }
 };
 
 struct ExceptionState
@@ -55,28 +61,37 @@ struct ExceptionState
     // set to false when handled in BEGIN_TRY
     uint32 m_exceptionDepth = 0;
 
-    bool HasExceptionOccurred() const { return m_exceptionDepth != 0; }
+    bool HasExceptionOccurred() const
+    {
+        return m_exceptionDepth != 0;
+    }
 };
 
 struct ExecutionThread
 {
     friend struct VMState;
 
-    StackMemory     m_stack;
-    ExceptionState  m_exceptionState;
-    Registers       m_regs;
+    StackMemory m_stack;
+    ExceptionState m_exceptionState;
+    Registers m_regs;
 
-    uint32            m_funcDepth = 0;
-    int             m_id = -1;
+    uint32 m_funcDepth = 0;
+    int m_id = -1;
 
-    StackMemory &GetStack()
-        { return m_stack; }
+    StackMemory& GetStack()
+    {
+        return m_stack;
+    }
 
-    ExceptionState &GetExceptionState()
-        { return m_exceptionState; }
+    ExceptionState& GetExceptionState()
+    {
+        return m_exceptionState;
+    }
 
-    Registers &GetRegisters()
-        { return m_regs; }
+    Registers& GetRegisters()
+    {
+        return m_regs;
+    }
 };
 
 struct DynModule
@@ -87,55 +102,68 @@ struct DynModule
 struct VMState
 {
     VMState();
-    VMState(const VMState &other) = delete;
+    VMState(const VMState& other) = delete;
     ~VMState();
 
-    ExecutionThread                     *m_threads[VM_MAX_THREADS];
-    Heap                                m_heap;
-    StaticMemory                        m_staticMemory;
-    nonOwningPtr<VM>                  m_vm;
-    Tracemap                            m_tracemap;
-    ExportedSymbolTable                 m_exportedSymbols;
-    FlatMap<uint32, Weak<DynModule>>    m_dynModules;
+    ExecutionThread* m_threads[VM_MAX_THREADS];
+    Heap m_heap;
+    StaticMemory m_staticMemory;
+    nonOwningPtr<VM> m_vm;
+    Tracemap m_tracemap;
+    ExportedSymbolTable m_exportedSymbols;
+    FlatMap<uint32, Weak<DynModule>> m_dynModules;
 
-    bool                                good = true;
-    bool                                enableAutoGc = ENABLE_GC;
-    int                                 m_maxHeapObjects = GC_THRESHOLD_MIN;
+    bool good = true;
+    bool enableAutoGc = ENABLE_GC;
+    int m_maxHeapObjects = GC_THRESHOLD_MIN;
 
     /** Reset the state of the VM, destroying all heap objects,
         stack objects and exception flags, etc.
      */
     void Reset();
 
-    void ThrowException(ExecutionThread *thread, const Exception &exception);
-    HeapValue *HeapAlloc(ExecutionThread *thread);
+    void ThrowException(ExecutionThread* thread, const Exception& exception);
+    HeapValue* HeapAlloc(ExecutionThread* thread);
     void GC();
 
     // void CloneValue(const Value &other, ExecutionThread *thread, Value &out);
 
     /** Add a thread */
-    ExecutionThread *CreateThread();
+    ExecutionThread* CreateThread();
     /** Destroy thread with ID */
     void DestroyThread(int id);
-    
+
     /** Get the number of threads currently in use */
     SizeType GetNumThreads() const
-        { return m_numThreads; }
+    {
+        return m_numThreads;
+    }
 
-    ExecutionThread *GetMainThread() const
-        { Assert(m_numThreads != 0); return m_threads[0]; }
+    ExecutionThread* GetMainThread() const
+    {
+        Assert(m_numThreads != 0);
+        return m_threads[0];
+    }
 
-    Heap &GetHeap()
-        { return m_heap; }
+    Heap& GetHeap()
+    {
+        return m_heap;
+    }
 
-    const Heap &GetHeap() const
-        { return m_heap; }
+    const Heap& GetHeap() const
+    {
+        return m_heap;
+    }
 
-    ExportedSymbolTable &GetExportedSymbols()
-        { return m_exportedSymbols; }
+    ExportedSymbolTable& GetExportedSymbols()
+    {
+        return m_exportedSymbols;
+    }
 
-    const ExportedSymbolTable &GetExportedSymbols() const
-        { return m_exportedSymbols; }
+    const ExportedSymbolTable& GetExportedSymbols() const
+    {
+        return m_exportedSymbols;
+    }
 
 private:
     SizeType m_numThreads = 0;

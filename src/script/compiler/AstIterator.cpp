@@ -11,17 +11,20 @@ AstIterator::AstIterator()
 {
 }
 
-AstIterator::AstIterator(const AstIterator &other)
+AstIterator::AstIterator(const AstIterator& other)
     : m_position(other.m_position),
       m_list(other.m_list)
 {
 }
 
-void AstIterator::Prepend(AstIterator &&other, bool resetPosition)
+void AstIterator::Prepend(AstIterator&& other, bool resetPosition)
 {
-    if (resetPosition) {
+    if (resetPosition)
+    {
         m_position = 0;
-    } else {
+    }
+    else
+    {
         m_position += other.m_list.Size();
     }
 
@@ -32,9 +35,10 @@ void AstIterator::Prepend(AstIterator &&other, bool resetPosition)
     other.m_position = 0;
 }
 
-void AstIterator::Append(AstIterator &&other)
+void AstIterator::Append(AstIterator&& other)
 {
-    for (auto &item : other.m_list) {
+    for (auto& item : other.m_list)
+    {
         m_list.PushBack(std::move(item));
     }
 

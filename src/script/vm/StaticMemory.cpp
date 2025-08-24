@@ -23,10 +23,12 @@ StaticMemory::~StaticMemory()
 void StaticMemory::MarkAllForDeallocation()
 {
     // delete all objects that are heap allocated
-    for (uint32 i = staticSize; i != 0; i--) {
-        Value &sv = m_data[i - 1];
+    for (uint32 i = staticSize; i != 0; i--)
+    {
+        Value& sv = m_data[i - 1];
 
-        if (sv.m_type == Value::HEAP_POINTER && sv.m_value.ptr != nullptr) {
+        if (sv.m_type == Value::HEAP_POINTER && sv.m_value.ptr != nullptr)
+        {
             sv.m_value.ptr->DisableFlags(GC_ALWAYS_ALIVE);
         }
     }

@@ -17,29 +17,28 @@
 namespace hyperion::compiler {
 
 AstEnumExpression::AstEnumExpression(
-    const String &name,
-    const Array<EnumEntry> &entries,
-    const RC<AstPrototypeSpecification> &underlyingType,
-    const SourceLocation &location
-) : AstExpression(location, ACCESS_MODE_LOAD),
-    m_name(name),
-    m_entries(entries),
-    m_underlyingType(underlyingType)
+    const String& name,
+    const Array<EnumEntry>& entries,
+    const RC<AstPrototypeSpecification>& underlyingType,
+    const SourceLocation& location)
+    : AstExpression(location, ACCESS_MODE_LOAD),
+      m_name(name),
+      m_entries(entries),
+      m_underlyingType(underlyingType)
 {
 }
 
-void AstEnumExpression::Visit(AstVisitor *visitor, Module *mod)
+void AstEnumExpression::Visit(AstVisitor* visitor, Module* mod)
 {
     int64 enumCounter = 0;
 
-    if (m_underlyingType == nullptr) {
+    if (m_underlyingType == nullptr)
+    {
         m_underlyingType.Reset(new AstPrototypeSpecification(
             RC<AstVariable>(new AstVariable(
                 BuiltinTypes::INT->GetName(),
-                m_location
-            )),
-            m_location
-        ));
+                m_location)),
+            m_location));
     }
 
     m_underlyingType->Visit(visitor, mod);
@@ -47,42 +46,49 @@ void AstEnumExpression::Visit(AstVisitor *visitor, Module *mod)
     Array<RC<AstVariableDeclaration>> enumMembers;
     enumMembers.Reserve(m_entries.Size());
 
-    for (auto &entry : m_entries) {
+    for (auto& entry : m_entries)
+    {
         bool assignmentOk = false;
 
-        if (entry.assignment != nullptr) {
-            if (const auto *deepValue = entry.assignment->GetDeepValueOf()) {
-                if (deepValue->IsLiteral()) {
-                    if (const auto *asConstant = dynamic_cast<const AstConstant *>(deepValue)) {
+        if (entry.assignment != nullptr)
+        {
+            if (const auto* deepValue = entry.assignment->GetDeepValueOf())
+            {
+                if (deepValue->IsLiteral())
+                {
+                    if (const auto* asConstant = dynamic_cast<const AstConstant*>(deepValue))
+                    {
                         enumCounter = asConstant->IntValue(); // for next item to use the incremented value from
                         assignmentOk = true;
                     }
                 }
             }
-        } else {
+        }
+        else
+        {
             entry.assignment.Reset(new AstInteger(
                 enumCounter,
-                entry.location
-            ));
-    
+                entry.location));
+
             assignmentOk = true;
         }
 
-        if (assignmentOk) {
+        if (assignmentOk)
+        {
             enumMembers.PushBack(RC<AstVariableDeclaration>(new AstVariableDeclaration(
                 entry.name,
                 CloneAstNode(m_underlyingType),
                 entry.assignment,
                 IdentifierFlags::FLAG_CONST,
-                entry.location
-            )));
-        } else {
+                entry.location)));
+        }
+        else
+        {
             visitor->GetCompilationUnit()->GetErrorList().AddError(CompilerError(
                 LEVEL_ERROR,
                 Msg_enum_assignment_not_constant,
                 entry.location,
-                entry.name
-            ));
+                entry.name));
         }
 
         ++enumCounter;
@@ -90,7 +96,8 @@ void AstEnumExpression::Visit(AstVisitor *visitor, Module *mod)
 
     SymbolTypePtr_t underlyingType = BuiltinTypes::INT;
 
-    if (auto heldType = m_underlyingType->GetHeldType()) {
+    if (auto heldType = m_underlyingType->GetHeldType())
+    {
         underlyingType = heldType->GetUnaliased();
     }
 
@@ -102,19 +109,18 @@ void AstEnumExpression::Visit(AstVisitor *visitor, Module *mod)
         enumMembers,
         underlyingType,
         false,
-        m_location
-    ));
+        m_location));
 
     m_expr->Visit(visitor, mod);
 }
 
-std::unique_ptr<Buildable> AstEnumExpression::Build(AstVisitor *visitor, Module *mod)
+std::unique_ptr<Buildable> AstEnumExpression::Build(AstVisitor* visitor, Module* mod)
 {
     Assert(m_expr != nullptr);
     return m_expr->Build(visitor, mod);
 }
 
-void AstEnumExpression::Optimize(AstVisitor *visitor, Module *mod)
+void AstEnumExpression::Optimize(AstVisitor* visitor, Module* mod)
 {
     Assert(m_expr != nullptr);
     m_expr->Optimize(visitor, mod);
@@ -147,19 +153,19 @@ SymbolTypePtr_t AstEnumExpression::GetExprType() const
     return m_expr->GetExprType();
 }
 
-const AstExpression *AstEnumExpression::GetValueOf() const
+const AstExpression* AstEnumExpression::GetValueOf() const
 {
     Assert(m_expr != nullptr);
     return m_expr->GetValueOf();
 }
 
-const AstExpression *AstEnumExpression::GetDeepValueOf() const
+const AstExpression* AstEnumExpression::GetDeepValueOf() const
 {
     Assert(m_expr != nullptr);
     return m_expr->GetDeepValueOf();
 }
 
-const String &AstEnumExpression::GetName() const
+const String& AstEnumExpression::GetName() const
 {
     return m_name;
 }

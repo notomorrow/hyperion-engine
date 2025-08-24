@@ -17,29 +17,27 @@ public:
 
 public:
     StaticMemory();
-    StaticMemory(const StaticMemory &other) = delete;
+    StaticMemory(const StaticMemory& other) = delete;
     ~StaticMemory();
 
-    /*! \brief Marks all values for deallocation, 
+    /*! \brief Marks all values for deallocation,
         allowing the garbage collector to free them. */
     void MarkAllForDeallocation();
-    
-    HYP_FORCE_INLINE
-    Value &operator[](SizeType index)
+
+    HYP_FORCE_INLINE Value& operator[](SizeType index)
     {
         Assert(index < staticSize, "out of bounds");
         return m_data[index];
     }
-    
-    HYP_FORCE_INLINE
-    const Value &operator[](SizeType index) const
+
+    HYP_FORCE_INLINE const Value& operator[](SizeType index) const
     {
         Assert(index < staticSize, "out of bounds");
         return m_data[index];
     }
 
 private:
-    Value   *m_data;
+    Value* m_data;
 };
 
 } // namespace vm

@@ -11,35 +11,35 @@
 namespace hyperion::compiler {
 
 AstArgument::AstArgument(
-    const RC<AstExpression> &expr,
+    const RC<AstExpression>& expr,
     bool isSplat,
     bool isNamed,
     bool isPassByRef,
     bool isPassConst,
-    const String &name,
-    const SourceLocation &location
-) : AstExpression(location, ACCESS_MODE_LOAD),
-    m_expr(expr),
-    m_isSplat(isSplat),
-    m_isNamed(isNamed),
-    m_isPassByRef(isPassByRef),
-    m_isPassConst(isPassConst),
-    m_name(name)
+    const String& name,
+    const SourceLocation& location)
+    : AstExpression(location, ACCESS_MODE_LOAD),
+      m_expr(expr),
+      m_isSplat(isSplat),
+      m_isNamed(isNamed),
+      m_isPassByRef(isPassByRef),
+      m_isPassConst(isPassConst),
+      m_name(name)
 {
 }
 
-void AstArgument::Visit(AstVisitor *visitor, Module *mod)
+void AstArgument::Visit(AstVisitor* visitor, Module* mod)
 {
     Assert(!m_isVisited);
     m_isVisited = true;
 
-    if (m_isSplat) {
+    if (m_isSplat)
+    {
         visitor->GetCompilationUnit()->GetErrorList().AddError(CompilerError(
             LEVEL_ERROR,
             Msg_not_implemented,
             m_location,
-            "splat-expressions"
-        ));
+            "splat-expressions"));
     }
 
     Assert(m_expr != nullptr);
@@ -47,38 +47,44 @@ void AstArgument::Visit(AstVisitor *visitor, Module *mod)
     bool passByRefScope = false;
     bool passConstScope = false;
 
-    if (IsPassConst()) {
+    if (IsPassConst())
+    {
         mod->m_scopes.Open(Scope(SCOPE_TYPE_NORMAL, CONST_VARIABLE_FLAG));
 
         passConstScope = true;
     }
 
-    if (IsPassByRef()) {
-        if (m_expr->GetAccessOptions() & AccessMode::ACCESS_MODE_STORE) {
+    if (IsPassByRef())
+    {
+        if (m_expr->GetAccessOptions() & AccessMode::ACCESS_MODE_STORE)
+        {
             mod->m_scopes.Open(Scope(SCOPE_TYPE_NORMAL, REF_VARIABLE_FLAG));
 
             passByRefScope = true;
-        } else {
+        }
+        else
+        {
             visitor->GetCompilationUnit()->GetErrorList().AddError(CompilerError(
                 LEVEL_ERROR,
                 Msg_cannot_create_reference,
-                m_location
-            ));
+                m_location));
         }
     }
 
     m_expr->Visit(visitor, mod);
 
-    if (passByRefScope) {
+    if (passByRefScope)
+    {
         mod->m_scopes.Close();
     }
 
-    if (passConstScope) {
+    if (passConstScope)
+    {
         mod->m_scopes.Close();
     }
 }
 
-std::unique_ptr<Buildable> AstArgument::Build(AstVisitor *visitor, Module *mod)
+std::unique_ptr<Buildable> AstArgument::Build(AstVisitor* visitor, Module* mod)
 {
     Assert(m_expr != nullptr);
 
@@ -98,7 +104,7 @@ std::unique_ptr<Buildable> AstArgument::Build(AstVisitor *visitor, Module *mod)
     return chunk;
 }
 
-void AstArgument::Optimize(AstVisitor *visitor, Module *mod)
+void AstArgument::Optimize(AstVisitor* visitor, Module* mod)
 {
     Assert(m_expr != nullptr);
     m_expr->Optimize(visitor, mod);
@@ -133,22 +139,22 @@ SymbolTypePtr_t AstArgument::GetExprType() const
     return m_expr->GetExprType();
 }
 
-
-const AstExpression *AstArgument::GetValueOf() const
+const AstExpression* AstArgument::GetValueOf() const
 {
     return m_expr.Get();
 }
 
-const AstExpression *AstArgument::GetDeepValueOf() const
+const AstExpression* AstArgument::GetDeepValueOf() const
 {
-    if (!m_expr) {
+    if (!m_expr)
+    {
         return nullptr;
     }
 
     return m_expr->GetDeepValueOf();
 }
 
-const String &AstArgument::GetName() const
+const String& AstArgument::GetName() const
 {
     return m_name;
 }

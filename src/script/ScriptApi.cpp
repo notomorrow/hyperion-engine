@@ -15,7 +15,7 @@ namespace hyperion {
 using namespace vm;
 using namespace compiler;
 
-ScriptBindingsHolder g_scriptBindings { };
+ScriptBindingsHolder g_scriptBindings {};
 
 // ScriptBindingsBase
 
@@ -26,7 +26,7 @@ ScriptBindingsBase::ScriptBindingsBase(TypeId typeId)
 
 // ScriptBindingsHolder
 
-void ScriptBindingsHolder::AddBinding(ScriptBindingsBase *scriptBindings)
+void ScriptBindingsHolder::AddBinding(ScriptBindingsBase* scriptBindings)
 {
     const uint32 index = bindingIndex++;
 
@@ -35,10 +35,12 @@ void ScriptBindingsHolder::AddBinding(ScriptBindingsBase *scriptBindings)
     bindings[index] = scriptBindings;
 }
 
-void ScriptBindingsHolder::GenerateAll(scriptapi2::Context &context)
+void ScriptBindingsHolder::GenerateAll(scriptapi2::Context& context)
 {
-    for (auto it = bindings.Begin(); it != bindings.End(); ++it) {
-        if (*it == nullptr) {
+    for (auto it = bindings.Begin(); it != bindings.End(); ++it)
+    {
+        if (*it == nullptr)
+        {
             break;
         }
 
@@ -46,7 +48,7 @@ void ScriptBindingsHolder::GenerateAll(scriptapi2::Context &context)
     }
 }
 
-APIInstance::APIInstance(const SourceFile &sourceFile)
+APIInstance::APIInstance(const SourceFile& sourceFile)
     : m_sourceFile(sourceFile),
       m_vm(nullptr)
 {

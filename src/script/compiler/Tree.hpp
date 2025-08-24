@@ -22,66 +22,75 @@ struct TreeNode;
 template <typename T>
 struct TreeNode
 {
-    template <class ... Args>
-    TreeNode(Args &&... args)
+    template <class... Args>
+    TreeNode(Args&&... args)
     {
         m_value.Construct(std::forward<Args>(args)...);
     }
 
-    TreeNode(const TreeNode &other) = delete;
-    TreeNode &operator=(const TreeNode &other) = delete;
-    TreeNode(TreeNode &&other) noexcept = delete;
-    TreeNode &operator=(TreeNode &&other) noexcept = delete;
+    TreeNode(const TreeNode& other) = delete;
+    TreeNode& operator=(const TreeNode& other) = delete;
+    TreeNode(TreeNode&& other) noexcept = delete;
+    TreeNode& operator=(TreeNode&& other) noexcept = delete;
 
     ~TreeNode()
     {
         m_value.Destruct();
 
-        for (SizeType i = 0; i < m_siblings.Size(); i++) {
-            if (m_siblings[i]) {
+        for (SizeType i = 0; i < m_siblings.Size(); i++)
+        {
+            if (m_siblings[i])
+            {
                 delete m_siblings[i];
                 m_siblings[i] = nullptr;
             }
         }
     }
 
-    void PrintToStream(std::stringstream &ss, int &indentLevel) const
+    void PrintToStream(std::stringstream& ss, int& indentLevel) const
     {
-        for (int i = 0; i < indentLevel; i++) {
+        for (int i = 0; i < indentLevel; i++)
+        {
             ss << "  ";
         }
         ss << m_value.Get() << "\n";
 
         indentLevel++;
-        for (int i = 0; i < m_siblings.Size(); i++) {
+        for (int i = 0; i < m_siblings.Size(); i++)
+        {
             m_siblings[i]->PrintToStream(ss, indentLevel);
         }
 
         indentLevel--;
     }
 
-    T &Get()
-        { return m_value.Get(); }
+    T& Get()
+    {
+        return m_value.Get();
+    }
 
-    const T &Get() const
-        { return m_value.Get(); }
+    const T& Get() const
+    {
+        return m_value.Get();
+    }
 
-    TreeNode<T>         *m_parent = nullptr;
+    TreeNode<T>* m_parent = nullptr;
     Array<TreeNode<T>*, DynamicAllocator> m_siblings;
-    ValueStorage<T>     m_value;
-    uint32                m_depth = 0;
+    ValueStorage<T> m_value;
+    uint32 m_depth = 0;
 };
 
 template <typename T>
 class Tree
 {
 public:
-    std::ostream &operator<<(std::ostream &os) const
+    std::ostream& operator<<(std::ostream& os) const
     {
         std::stringstream ss;
         int indentLevel = 0;
 
-        for (int i = 0; i < m_nodes.Size(); i++) {
+        for (int i = 0; i < m_nodes.Size(); i++)
+        {
             m_nodes[i]->PrintToStream(ss, indentLevel);
         }
 
@@ -91,15 +100,15 @@ public:
     }
 
 public:
-    template <class ... Args>
-    Tree(Args && ...args) 
+    template <class... Args>
+    Tree(Args&&... args)
         : m_top(nullptr)
     {
         // open root
         Open(std::forward<Args>(args)...);
     }
 
-    Tree(const T &root) 
+    Tree(const T& root)
         : m_top(nullptr)
     {
         // open root
@@ -112,58 +121,72 @@ public:
         Close();
 
         // LIFO
-        for (SizeType index = m_nodes.Size(); index != 0; --index) {
+        for (SizeType index = m_nodes.Size(); index != 0; --index)
+        {
             delete m_nodes[index - 1];
         }
     }
 
-    Array<TreeNode<T>*> &GetNodes()
-        { return m_nodes; }
+    Array<TreeNode<T>*>& GetNodes()
+    {
+        return m_nodes;
+    }
 
-    const Array<TreeNode<T>*> &GetNodes() const
-        { return m_nodes; }
+    const Array<TreeNode<T>*>& GetNodes() const
+    {
+        return m_nodes;
+    }
 
-    TreeNode<T> *TopNode() { return m_top; }
-    const TreeNode<T> *TopNode() const { return m_top; }
+    TreeNode<T>* TopNode()
+    {
+        return m_top;
+    }
+    const TreeNode<T>* TopNode() const
+    {
+        return m_top;
+    }
 
-    T &Top()
+    T& Top()
     {
         Assert(m_top != nullptr);
 
         return m_top->m_value.Get();
     }
 
-    const T &Top() const
+    const T& Top() const
     {
         Assert(m_top != nullptr);
 
         return m_top->m_value.Get();
     }
 
-    T &Root()
+    T& Root()
     {
         Assert(!m_nodes.Empty());
 
         return m_nodes.Front()->m_value.Get();
     }
 
-    const T &Root() const
+    const T& Root() const
     {
         Assert(!m_nodes.Empty());
 
         return m_nodes.Front()->m_value.Get();
     }
 
-    template <class ...Args>
-    void Open(Args &&... args)
+    template <class... Args>
+    void Open(Args&&... args)
     {
-        TreeNode<T> *node = new TreeNode<T>(std::forward<Args>(args)...);
+        TreeNode<T>* node = new TreeNode<T>(std::forward<Args>(args)...);
         node->m_parent = m_top;
         node->m_depth = m_top ? m_top->m_depth + 1 : 0;
 
-        if (m_top) {
+        if (m_top)
+        {
             m_top->m_siblings.PushBack(node);
-        } else {
+        }
+        else
+        {
             m_nodes.PushBack(node);
         }
 
@@ -178,12 +201,14 @@ public:
     }
 
     template <class Lambda>
-    T *FindClosestMatch(Lambda lambda) const
+    T* FindClosestMatch(Lambda lambda) const
     {
-        TreeNode<T> *top = m_top;
+        TreeNode<T>* top = m_top;
 
-        while (top) {
-            if (lambda(top, top->m_value.Get())) {
+        while (top)
+        {
+            if (lambda(top, top->m_value.Get()))
+            {
                 return &top->m_value.Get();
             }
 
@@ -195,17 +220,17 @@ public:
 
 private:
     Array<TreeNode<T>*> m_nodes;
-    TreeNode<T>         *m_top;
+    TreeNode<T>* m_top;
 };
 
 template <class T>
 struct TreeNodeGuard
 {
-    Tree<T>     *m_tree;
-    TreeNode<T> *m_node;
+    Tree<T>* m_tree;
+    TreeNode<T>* m_node;
 
-    template <class ... Args>
-    TreeNodeGuard(Tree<T> *tree, Args &&... args)
+    template <class... Args>
+    TreeNodeGuard(Tree<T>* tree, Args&&... args)
         : m_tree(tree),
           m_node(nullptr)
     {
@@ -213,23 +238,27 @@ struct TreeNodeGuard
         m_node = m_tree->TopNode();
     }
 
-    TreeNodeGuard(const TreeNodeGuard &other) = delete;
-    TreeNodeGuard &operator=(const TreeNodeGuard &other) = delete;
-    TreeNodeGuard(TreeNodeGuard &&other) noexcept = delete;
-    TreeNodeGuard &operator=(TreeNodeGuard &&other) noexcept = delete;
+    TreeNodeGuard(const TreeNodeGuard& other) = delete;
+    TreeNodeGuard& operator=(const TreeNodeGuard& other) = delete;
+    TreeNodeGuard(TreeNodeGuard&& other) noexcept = delete;
+    TreeNodeGuard& operator=(TreeNodeGuard&& other) noexcept = delete;
 
     ~TreeNodeGuard()
     {
         m_tree->Close();
     }
 
-    T *operator->()
-        { return &m_node->m_value.Get(); }
+    T* operator->()
+    {
+        return &m_node->m_value.Get();
+    }
 
-    const T *operator->() const
-        { return &m_node->m_value.Get(); }
+    const T* operator->() const
+    {
+        return &m_node->m_value.Get();
+    }
 };
 
-} // namespace hyperion::compielr
+} // namespace hyperion::compiler
 
 #endif
