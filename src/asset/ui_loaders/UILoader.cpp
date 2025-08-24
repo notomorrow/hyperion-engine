@@ -616,7 +616,7 @@ public:
 
                     // May be null if script not found because it needs to be compiled the first time...
                     // @FIXME
-                    if (!scriptComponent->resource)
+                    if (!scriptComponent->managedObjectResource)
                     {
                         HYP_LOG(Assets, Error, "Failed to bind \"{}\" event - No ManagedObjectResource found on ScriptComponent for UIObject \"{}\"",
                             attributeNameUpper, uiObject->GetName());
@@ -652,7 +652,7 @@ public:
                                         return nullptr;
                                     }
 
-                                    return scriptComponent->resource;
+                                    return scriptComponent->managedObjectResource;
                                 })
                             .Detach();
 

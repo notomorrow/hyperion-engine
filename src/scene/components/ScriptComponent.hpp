@@ -33,14 +33,14 @@ HYP_MAKE_ENUM_FLAGS(ScriptComponentFlags);
 HYP_STRUCT(Component, Label = "Script Component", Description = "A script component that can be attached to an entity.")
 struct ScriptComponent
 {
-    HYP_FIELD(Editor)
+    HYP_FIELD()
     Handle<ScriptAsset> scriptAsset;
 
     HYP_FIELD()
     RC<dotnet::Assembly> assembly;
 
-    HYP_FIELD(Transient)
-    ManagedObjectResource* resource = nullptr;
+    HYP_FIELD()
+    ManagedObjectResource* managedObjectResource = nullptr;
 
     HYP_FIELD()
     EnumFlags<ScriptComponentFlags> flags = ScriptComponentFlags::NONE;

@@ -178,10 +178,10 @@ void ScriptSystem::Process(float delta)
             continue;
         }
 
-        AssertDebug(scriptComponent.resource != nullptr);
-        AssertDebug(scriptComponent.resource->GetManagedObject() != nullptr);
+        AssertDebug(scriptComponent.managedObjectResource != nullptr);
+        AssertDebug(scriptComponent.managedObjectResource->GetManagedObject() != nullptr);
 
-        if (dotnet::Class* classPtr = scriptComponent.resource->GetManagedObject()->GetClass())
+        if (dotnet::Class* classPtr = scriptComponent.managedObjectResource->GetManagedObject()->GetClass())
         {
             if (dotnet::Method* updateMethodPtr = classPtr->GetMethod("Update"))
             {
@@ -193,7 +193,7 @@ void ScriptSystem::Process(float delta)
 
                 HYP_NAMED_SCOPE("Call Update() on script component");
 
-                scriptComponent.resource->GetManagedObject()->InvokeMethod<void, float>(updateMethodPtr, float(delta));
+                scriptComponent.managedObjectResource->GetManagedObject()->InvokeMethod<void, float>(updateMethodPtr, float(delta));
             }
         }
     }
@@ -223,10 +223,10 @@ void ScriptSystem::CallScriptMethod(UTF8StringView methodName)
             continue;
         }
 
-        AssertDebug(scriptComponent.resource != nullptr);
-        AssertDebug(scriptComponent.resource->GetManagedObject() != nullptr);
+        AssertDebug(scriptComponent.managedObjectResource != nullptr);
+        AssertDebug(scriptComponent.managedObjectResource->GetManagedObject() != nullptr);
 
-        if (dotnet::Class* classPtr = scriptComponent.resource->GetManagedObject()->GetClass())
+        if (dotnet::Class* classPtr = scriptComponent.managedObjectResource->GetManagedObject()->GetClass())
         {
             if (dotnet::Method* methodPtr = classPtr->GetMethod(methodName))
             {
@@ -236,7 +236,7 @@ void ScriptSystem::CallScriptMethod(UTF8StringView methodName)
                     continue;
                 }
 
-                scriptComponent.resource->GetManagedObject()->InvokeMethod<void>(methodPtr);
+                scriptComponent.managedObjectResource->GetManagedObject()->InvokeMethod<void>(methodPtr);
             }
         }
     }
@@ -249,10 +249,10 @@ void ScriptSystem::CallScriptMethod(UTF8StringView methodName, ScriptComponent& 
         return;
     }
 
-    AssertDebug(target.resource != nullptr);
-    AssertDebug(target.resource->GetManagedObject() != nullptr);
+    AssertDebug(target.managedObjectResource != nullptr);
+    AssertDebug(target.managedObjectResource->GetManagedObject() != nullptr);
 
-    if (dotnet::Class* classPtr = target.resource->GetManagedObject()->GetClass())
+    if (dotnet::Class* classPtr = target.managedObjectResource->GetManagedObject()->GetClass())
     {
         if (dotnet::Method* methodPtr = classPtr->GetMethod(methodName))
         {
@@ -262,7 +262,7 @@ void ScriptSystem::CallScriptMethod(UTF8StringView methodName, ScriptComponent& 
                 return;
             }
 
-            target.resource->GetManagedObject()->InvokeMethod<void>(methodPtr);
+            target.managedObjectResource->GetManagedObject()->InvokeMethod<void>(methodPtr);
         }
     }
 }

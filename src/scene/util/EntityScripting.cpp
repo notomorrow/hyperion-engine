@@ -7,6 +7,8 @@
 
 #include <scene/components/ScriptComponent.hpp>
 
+#include <core/object/managed/ManagedObjectResource.hpp>
+
 #include <asset/ScriptAsset.hpp>
 
 #include <dotnet/Object.hpp>
@@ -26,10 +28,10 @@ static void CallScriptMethod(UTF8StringView methodName, ScriptComponent& target)
         return;
     }
 
-    AssertDebug(target.resource != nullptr);
-    AssertDebug(target.resource->GetManagedObject() != nullptr);
+    AssertDebug(target.managedObjectResource != nullptr);
+    AssertDebug(target.managedObjectResource->GetManagedObject() != nullptr);
 
-    if (dotnet::Class* classPtr = target.resource->GetManagedObject()->GetClass())
+    if (dotnet::Class* classPtr = target.managedObjectResource->GetManagedObject()->GetClass())
     {
         if (dotnet::Method* methodPtr = classPtr->GetMethod(methodName))
         {
@@ -39,7 +41,7 @@ static void CallScriptMethod(UTF8StringView methodName, ScriptComponent& target)
                 return;
             }
 
-            target.resource->GetManagedObject()->InvokeMethod<void>(methodPtr);
+            target.managedObjectResource->GetManagedObject()->InvokeMethod<void>(methodPtr);
         }
     }
 }
@@ -51,7 +53,7 @@ void EntityScripting::InitEntityScriptComponent(Entity* entity, ScriptComponent&
 
     if (scriptComponent.flags & ScriptComponentFlags::INITIALIZED)
     {
-        AssertDebug(scriptComponent.resource != nullptr);
+        AssertDebug(scriptComponent.managedObjectResource != nullptr);
         if (world != nullptr && world->GetGameState().mode == GameStateMode::SIMULATING)
         {
             CallScriptMethod("OnPlayStart", scriptComponent);
@@ -60,10 +62,10 @@ void EntityScripting::InitEntityScriptComponent(Entity* entity, ScriptComponent&
         return;
     }
 
-    if (!scriptComponent.resource || !scriptComponent.resource->GetManagedObject() || !scriptComponent.resource->GetManagedObject()->IsValid())
+    if (!scriptComponent.managedObjectResource || !scriptComponent.managedObjectResource->GetManagedObject() || !scriptComponent.managedObjectResource->GetManagedObject()->IsValid())
     {
-        FreeResource<ManagedObjectResource>(scriptComponent.resource);
-        scriptComponent.resource = nullptr;
+        FreeResource<ManagedObjectResource>(scriptComponent.managedObjectResource);
+        scriptComponent.managedObjectResource = nullptr;
 
         Assert(scriptComponent.scriptAsset != nullptr);
 
@@ -121,8 +123,8 @@ void EntityScripting::InitEntityScriptComponent(Entity* entity, ScriptComponent&
             dotnet::Object* object = classPtr->NewObject();
             Assert(object != nullptr);
 
-            scriptComponent.resource = AllocateResource<ManagedObjectResource>(object, classPtr);
-            scriptComponent.resource->IncRef();
+            scriptComponent.managedObjectResource = AllocateResource<ManagedObjectResource>(object, classPtr);
+            scriptComponent.managedObjectResource->IncRef();
 
             HYP_LOG(Script, Debug, "Created ManagedObjectResource for ScriptComponent, .NET class: {}", classPtr->GetName());
 
@@ -159,16 +161,16 @@ void EntityScripting::InitEntityScriptComponent(Entity* entity, ScriptComponent&
         }
 #endif
 
-        if (!scriptComponent.resource || !scriptComponent.resource->GetManagedObject() || !scriptComponent.resource->GetManagedObject()->IsValid())
+        if (!scriptComponent.managedObjectResource || !scriptComponent.managedObjectResource->GetManagedObject() || !scriptComponent.managedObjectResource->GetManagedObject()->IsValid())
         {
             HYP_LOG(Script, Error, "ScriptSystem::OnEntityAdded: Failed to create object of class '{}' from assembly '{}'", scriptData->className, scriptData->assemblyPath);
 
-            if (scriptComponent.resource)
+            if (scriptComponent.managedObjectResource)
             {
-                scriptComponent.resource->DecRef();
+                scriptComponent.managedObjectResource->DecRef();
 
-                FreeResource<ManagedObjectResource>(scriptComponent.resource);
-                scriptComponent.resource = nullptr;
+                FreeResource<ManagedObjectResource>(scriptComponent.managedObjectResource);
+                scriptComponent.managedObjectResource = nullptr;
             }
 
             return;
@@ -199,25 +201,25 @@ void EntityScripting::DeinitEntityScriptComponent(Entity* entity, ScriptComponen
         CallScriptMethod("OnPlayStop", scriptComponent);
     }
 
-    if (scriptComponent.resource)
+    if (scriptComponent.managedObjectResource)
     {
-        if (scriptComponent.resource->GetManagedObject() && scriptComponent.resource->GetManagedObject()->IsValid())
+        if (scriptComponent.managedObjectResource->GetManagedObject() && scriptComponent.managedObjectResource->GetManagedObject()->IsValid())
         {
-            if (dotnet::Class* classPtr = scriptComponent.resource->GetManagedObject()->GetClass())
+            if (dotnet::Class* classPtr = scriptComponent.managedObjectResource->GetManagedObject()->GetClass())
             {
                 if (classPtr->HasMethod("Destroy"))
                 {
                     HYP_NAMED_SCOPE("Call Destroy() on script component");
 
-                    scriptComponent.resource->GetManagedObject()->InvokeMethodByName<void>("Destroy");
+                    scriptComponent.managedObjectResource->GetManagedObject()->InvokeMethodByName<void>("Destroy");
                 }
             }
         }
 
-        scriptComponent.resource->DecRef();
+        scriptComponent.managedObjectResource->DecRef();
 
-        FreeResource<ManagedObjectResource>(scriptComponent.resource);
-        scriptComponent.resource = nullptr;
+        FreeResource<ManagedObjectResource>(scriptComponent.managedObjectResource);
+        scriptComponent.managedObjectResource = nullptr;
     }
 
     scriptComponent.flags &= ~(ScriptComponentFlags::INITIALIZED | ScriptComponentFlags::BEFORE_INIT_CALLED | ScriptComponentFlags::INIT_CALLED);

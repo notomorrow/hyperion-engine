@@ -79,15 +79,18 @@ public:
             return defaultResult;
         }
 
-        if (!scriptComponent->resource || !scriptComponent->resource->GetManagedObject() || !scriptComponent->resource->GetManagedObject()->IsValid())
+        if (!scriptComponent->managedObjectResource || !scriptComponent->managedObjectResource->GetManagedObject() || !scriptComponent->managedObjectResource->GetManagedObject()->IsValid())
         {
             return UIEventHandlerResult(UIEventHandlerResult::ERR, HYP_STATIC_MESSAGE("Invalid ScriptComponent Object"));
         }
 
-        scriptComponent->resource->IncRef();
-        HYP_DEFER({ scriptComponent->resource->DecRef(); });
+        scriptComponent->managedObjectResource->IncRef();
+        HYP_DEFER({ scriptComponent->managedObjectResource->DecRef(); });
 
-        if (dotnet::Class* classPtr = scriptComponent->resource->GetManagedObject()->GetClass())
+        dotnet::Object* managedObject = scriptComponent->managedObjectResource->GetManagedObject();
+        Assert(managedObject != nullptr);
+
+        if (dotnet::Class* classPtr = managedObject->GetClass())
         {
             if (dotnet::Method* methodPtr = classPtr->GetMethod(m_methodName))
             {
@@ -104,7 +107,7 @@ public:
                 //     return defaultResult;
                 // }
 
-                UIEventHandlerResult result = scriptComponent->resource->GetManagedObject()->InvokeMethod<UIEventHandlerResult>(methodPtr, std::forward<Args>(args)...);
+                UIEventHandlerResult result = managedObject->InvokeMethod<UIEventHandlerResult>(methodPtr, std::forward<Args>(args)...);
 
                 if (result == UIEventHandlerResult::OK)
                 {
