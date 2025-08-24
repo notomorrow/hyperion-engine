@@ -9,7 +9,7 @@
 #include <core/object/HypObjectEnums.hpp>
 #include <core/object/ObjId.hpp>
 #include <core/object/HypObjectPool.hpp>
-#include <core/object/managed/ManagedObjectResource.hpp>
+#include <scripting/ScriptObjectResource.hpp>
 
 #include <core/utilities/TypeId.hpp>
 #include <core/utilities/GlobalContext.hpp>
@@ -98,21 +98,21 @@ public:
     }
 
 #ifdef HYP_DOTNET
-    void SetManagedObjectResource(ManagedObjectResource* managedObjectResource)
+    void SetScriptObjectResource(ScriptObjectResource* scriptObjectResource)
     {
-        HYP_CORE_ASSERT(m_managedObjectResource == nullptr);
+        HYP_CORE_ASSERT(m_scriptObjectResource == nullptr);
 
-        m_managedObjectResource = managedObjectResource;
+        m_scriptObjectResource = scriptObjectResource;
     }
 
-    ManagedObjectResource* GetManagedObjectResource() const
+    ScriptObjectResource* GetScriptObjectResource() const
     {
-        return m_managedObjectResource;
+        return m_scriptObjectResource;
     }
 
     dotnet::Object* GetManagedObject() const
     {
-        return m_managedObjectResource ? m_managedObjectResource->GetManagedObject() : nullptr;
+        return m_scriptObjectResource ? m_scriptObjectResource->GetManagedObject() : nullptr;
     }
 #endif
 
@@ -206,7 +206,7 @@ protected:
     DelegateHandlerSet m_delegateHandlers;
 
 #ifdef HYP_DOTNET
-    ManagedObjectResource* m_managedObjectResource;
+    ScriptObjectResource* m_scriptObjectResource;
 #endif
 
 private:

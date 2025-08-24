@@ -15,7 +15,7 @@ class Object;
 class Assembly;
 } // namespace dotnet
 
-class ManagedObjectResource;
+class ScriptObjectResource;
 class ScriptAsset;
 
 enum class ScriptComponentFlags : uint32
@@ -40,7 +40,7 @@ struct ScriptComponent
     RC<dotnet::Assembly> assembly;
 
     HYP_FIELD()
-    ManagedObjectResource* managedObjectResource = nullptr;
+    ScriptObjectResource* scriptObjectResource = nullptr;
 
     HYP_FIELD()
     EnumFlags<ScriptComponentFlags> flags = ScriptComponentFlags::NONE;

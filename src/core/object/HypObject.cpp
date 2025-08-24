@@ -68,12 +68,12 @@ HypObjectInitializerGuardBase::~HypObjectInitializerGuardBase()
 #ifdef HYP_DOTNET
             if (RC<dotnet::Class> managedClass = hypClass->GetManagedClass())
             {
-                ManagedObjectResource* managedObjectResource = AllocateResource<ManagedObjectResource>(ptr, managedClass);
+                ScriptObjectResource* scriptObjectResource = AllocateResource<ScriptObjectResource>(ptr, managedClass);
 
-                Assert(managedObjectResource != nullptr);
-                managedObjectResource->IncRef();
+                Assert(scriptObjectResource != nullptr);
+                scriptObjectResource->IncRef();
 
-                target->SetManagedObjectResource(managedObjectResource);
+                target->SetScriptObjectResource(scriptObjectResource);
             }
             else
             {
@@ -151,10 +151,10 @@ HypObjectBase::~HypObjectBase()
     HYP_CORE_ASSERT(m_header != nullptr);
 
 #ifdef HYP_DOTNET
-    if (m_managedObjectResource)
+    if (m_scriptObjectResource)
     {
-        FreeResource(m_managedObjectResource);
-        m_managedObjectResource = nullptr;
+        FreeResource(m_scriptObjectResource);
+        m_scriptObjectResource = nullptr;
     }
 #endif
 }
@@ -234,17 +234,17 @@ HYP_API void HypObjectPtr::DecRef(bool weak)
 HYP_API void HypObject_AcquireManagedObjectLock(HypObjectBase* ptr)
 {
     AssertDebug(ptr->GetObjectHeader_Internal()->GetRefCountStrong() > 1);
-    if (ManagedObjectResource* managedObjectResource = ptr->GetManagedObjectResource())
+    if (ScriptObjectResource* scriptObjectResource = ptr->GetScriptObjectResource())
     {
-        managedObjectResource->IncRef();
+        scriptObjectResource->IncRef();
     }
 }
 
 HYP_API void HypObject_ReleaseManagedObjectLock(HypObjectBase* ptr)
 {
-    if (ManagedObjectResource* managedObjectResource = ptr->GetManagedObjectResource())
+    if (ScriptObjectResource* scriptObjectResource = ptr->GetScriptObjectResource())
     {
-        managedObjectResource->DecRef();
+        scriptObjectResource->DecRef();
     }
 }
 

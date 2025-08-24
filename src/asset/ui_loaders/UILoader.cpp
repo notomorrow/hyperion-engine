@@ -616,9 +616,9 @@ public:
 
                     // May be null if script not found because it needs to be compiled the first time...
                     // @FIXME
-                    if (!scriptComponent->managedObjectResource)
+                    if (!scriptComponent->scriptObjectResource)
                     {
-                        HYP_LOG(Assets, Error, "Failed to bind \"{}\" event - No ManagedObjectResource found on ScriptComponent for UIObject \"{}\"",
+                        HYP_LOG(Assets, Error, "Failed to bind \"{}\" event - No ScriptObjectResource found on ScriptComponent for UIObject \"{}\"",
                             attributeNameUpper, uiObject->GetName());
 
                         continue;
@@ -636,7 +636,7 @@ public:
                         scriptableDelegate
                             ->BindManaged(
                                 attributeValue,
-                                [uiObjectWeak = MakeWeakRef(uiObject)]() -> ManagedObjectResource*
+                                [uiObjectWeak = MakeWeakRef(uiObject)]() -> ScriptObjectResource*
                                 {
                                     Handle<UIObject> uiObject = uiObjectWeak.Lock();
 
@@ -652,7 +652,7 @@ public:
                                         return nullptr;
                                     }
 
-                                    return scriptComponent->managedObjectResource;
+                                    return scriptComponent->scriptObjectResource;
                                 })
                             .Detach();
 
@@ -881,7 +881,7 @@ public:
                 if (assetObjectResult)
                 {
                     scriptComponent.scriptAsset = std::move(scriptAsset);
-                    
+
                     if (m_uiObjectStack.Any())
                     {
                         LastObject()->SetScriptComponent(std::move(scriptComponent));

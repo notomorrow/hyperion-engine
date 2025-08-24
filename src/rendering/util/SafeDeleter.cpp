@@ -29,16 +29,16 @@ SafeDeleterEntry<HypObjectBase*>::SafeDeleterEntry(HypObjectBase* ptr, Construct
 {
     if (ptr)
     {
-        const bool hasManagedObjectResource = ptr->GetManagedObjectResource() != nullptr;
+        const bool hasScriptObjectResource = ptr->GetScriptObjectResource() != nullptr;
 
         int32 count = AtomicAdd(&ptr->GetObjectHeader_Internal()->refCountStrong, 0);
 
         // 1 is since the managed object lock would have its own strong reference count of 1.
-        while (count != (hasManagedObjectResource ? 1 : 0))
+        while (count != (hasScriptObjectResource ? 1 : 0))
         {
             if (AtomicCompareExchange(&ptr->GetObjectHeader_Internal()->refCountStrong, count, count - 1))
             {
-                if (hasManagedObjectResource)
+                if (hasScriptObjectResource)
                     HypObject_ReleaseManagedObjectLock(ptr);
 
                 break;

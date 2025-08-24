@@ -61,7 +61,7 @@ extern "C"
 
         *outInstancePtr = ptr.GetPointer();
 
-        ManagedObjectResource* managedObjectResource = AllocateResource<ManagedObjectResource>(
+        ScriptObjectResource* scriptObjectResource = AllocateResource<ScriptObjectResource>(
             ptr,
             classObjectPtr->RefCountedPtrFromThis(),
             *objectReference,
@@ -69,7 +69,7 @@ extern "C"
 
         HypObjectBase* target = reinterpret_cast<HypObjectBase*>(ptr.GetPointer());
 
-        target->SetManagedObjectResource(managedObjectResource);
+        target->SetScriptObjectResource(scriptObjectResource);
 
         /// NOTE: CREATED_FROM_MANAGED is set to true here, so we don't set keep alive to true
     }

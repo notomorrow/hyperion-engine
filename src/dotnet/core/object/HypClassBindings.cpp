@@ -74,12 +74,12 @@ bool DynamicHypClassInstance::GetManagedObject(const void* objectPtr, dotnet::Ob
     HypObjectBase* target = reinterpret_cast<HypObjectBase*>(const_cast<void*>(objectPtr));
     Assert(target != nullptr);
 
-    if (target->GetManagedObjectResource() == nullptr)
+    if (target->GetScriptObjectResource() == nullptr)
     {
         return false;
     }
 
-    TResourceHandle<ManagedObjectResource> resourceHandle(*target->GetManagedObjectResource());
+    TResourceHandle<ScriptObjectResource> resourceHandle(*target->GetScriptObjectResource());
 
     if (!resourceHandle->GetManagedObject()->IsValid())
     {
@@ -150,13 +150,13 @@ bool DynamicHypClassInstance::CreateInstance_Internal(HypData& out) const
     HypObjectBase* target = reinterpret_cast<HypObjectBase*>(out.ToRef().GetPointer());
     Assert(target != nullptr);
 
-    ManagedObjectResource* managedObjectResource = AllocateResource<ManagedObjectResource>(HypObjectPtr(this, target), managedClass);
-    AssertDebug(managedObjectResource != nullptr);
+    ScriptObjectResource* scriptObjectResource = AllocateResource<ScriptObjectResource>(HypObjectPtr(this, target), managedClass);
+    AssertDebug(scriptObjectResource != nullptr);
 
     // keep it alive
-    managedObjectResource->IncRef();
+    scriptObjectResource->IncRef();
 
-    target->SetManagedObjectResource(managedObjectResource);
+    target->SetScriptObjectResource(scriptObjectResource);
 
     return true;
 }

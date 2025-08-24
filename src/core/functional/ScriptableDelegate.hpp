@@ -7,7 +7,7 @@
 
 #include <core/memory/resource/Resource.hpp>
 
-#include <core/object/managed/ManagedObjectResource.hpp>
+#include <scripting/ScriptObjectResource.hpp>
 
 #include <core/utilities/DeferredScope.hpp>
 
@@ -24,8 +24,8 @@ class IScriptableDelegate : public virtual IDelegate
 public:
     virtual ~IScriptableDelegate() = default;
 
-    virtual DelegateHandler BindManaged(const String& methodName, Proc<ManagedObjectResource*()>&& getFn) = 0;
-    virtual DelegateHandler BindManaged(const String& methodName, ManagedObjectResource* managedObjectResource) = 0;
+    virtual DelegateHandler BindManaged(const String& methodName, Proc<ScriptObjectResource*()>&& getFn) = 0;
+    virtual DelegateHandler BindManaged(const String& methodName, ScriptObjectResource* scriptObjectResource) = 0;
     virtual DelegateHandler BindManaged(const String& methodName, UniquePtr<dotnet::Object>&& object) = 0;
 };
 
@@ -52,7 +52,7 @@ public:
 
     virtual ~ScriptableDelegate() override = default;
 
-    HYP_NODISCARD virtual DelegateHandler BindManaged(const String& methodName, Proc<ManagedObjectResource*()>&& getFn) override
+    HYP_NODISCARD virtual DelegateHandler BindManaged(const String& methodName, Proc<ScriptObjectResource*()>&& getFn) override
     {
         if (!getFn)
         {
@@ -61,12 +61,12 @@ public:
 
         return Delegate<ReturnType, Args...>::Bind([methodName = methodName, getFn = std::move(getFn)]<class... ArgTypes>(ArgTypes&&... args) mutable -> ReturnType
             {
-                ManagedObjectResource* managedObjectResource = getFn();
-                HYP_CORE_ASSERT(managedObjectResource != nullptr, "Managed object resource is null!");
+                ScriptObjectResource* scriptObjectResource = getFn();
+                HYP_CORE_ASSERT(scriptObjectResource != nullptr, "Managed object resource is null!");
 
-                managedObjectResource->IncRef();
+                scriptObjectResource->IncRef();
 
-                dotnet::Object* object = managedObjectResource->GetManagedObject();
+                dotnet::Object* object = scriptObjectResource->GetManagedObject();
                 HYP_CORE_ASSERT(object != nullptr, "Managed object is null!");
                 HYP_CORE_ASSERT(object->IsValid(), "Managed object is invalid!");
 
@@ -91,13 +91,13 @@ public:
                 {
                     object->InvokeMethodByName<void>(methodName, std::forward<ArgTypes>(args)...);
 
-                    managedObjectResource->DecRef();
+                    scriptObjectResource->DecRef();
                 }
                 else
                 {
                     ReturnType result = object->InvokeMethodByName<ReturnType>(methodName, std::forward<ArgTypes>(args)...);
 
-                    managedObjectResource->DecRef();
+                    scriptObjectResource->DecRef();
 
                     return result;
                 }
@@ -105,7 +105,7 @@ public:
     }
 
     template <class DefaultReturnType, typename = std::enable_if_t<std::is_copy_constructible_v<NormalizedType<DefaultReturnType>>>>
-    HYP_NODISCARD DelegateHandler BindManaged(const String& methodName, Proc<ManagedObjectResource*()>&& getFn, DefaultReturnType&& defaultReturn)
+    HYP_NODISCARD DelegateHandler BindManaged(const String& methodName, Proc<ScriptObjectResource*()>&& getFn, DefaultReturnType&& defaultReturn)
     {
         if (!getFn)
         {
@@ -114,12 +114,12 @@ public:
 
         return Delegate<ReturnType, Args...>::Bind([methodName = methodName, getFn = std::move(getFn), defaultReturn = std::forward<DefaultReturnType>(defaultReturn)]<class... ArgTypes>(ArgTypes&&... args) mutable -> ReturnType
             {
-                ManagedObjectResource* managedObjectResource = getFn();
-                HYP_CORE_ASSERT(managedObjectResource != nullptr, "Managed object resource is null!");
+                ScriptObjectResource* scriptObjectResource = getFn();
+                HYP_CORE_ASSERT(scriptObjectResource != nullptr, "Managed object resource is null!");
 
-                managedObjectResource->IncRef();
+                scriptObjectResource->IncRef();
 
-                dotnet::Object* object = managedObjectResource->GetManagedObject();
+                dotnet::Object* object = scriptObjectResource->GetManagedObject();
                 HYP_CORE_ASSERT(object != nullptr, "Managed object is null!");
                 HYP_CORE_ASSERT(object->IsValid(), "Managed object is invalid!");
 
@@ -144,32 +144,32 @@ public:
                 {
                     object->InvokeMethodByName<void>(methodName, std::forward<ArgTypes>(args)...);
 
-                    managedObjectResource->DecRef();
+                    scriptObjectResource->DecRef();
                 }
                 else
                 {
                     ReturnType result = object->InvokeMethodByName<ReturnType>(methodName, std::forward<ArgTypes>(args)...);
 
-                    managedObjectResource->DecRef();
+                    scriptObjectResource->DecRef();
 
                     return result;
                 }
             });
     }
 
-    HYP_NODISCARD virtual DelegateHandler BindManaged(const String& methodName, ManagedObjectResource* managedObjectResource) override
+    HYP_NODISCARD virtual DelegateHandler BindManaged(const String& methodName, ScriptObjectResource* scriptObjectResource) override
     {
-        if (!managedObjectResource)
+        if (!scriptObjectResource)
         {
             return DelegateHandler();
         }
 
-        return Delegate<ReturnType, Args...>::Bind([methodName = methodName, managedObjectResource]<class... ArgTypes>(ArgTypes&&... args) mutable -> ReturnType
+        return Delegate<ReturnType, Args...>::Bind([methodName = methodName, scriptObjectResource]<class... ArgTypes>(ArgTypes&&... args) mutable -> ReturnType
             {
-                managedObjectResource->IncRef();
-                HYP_DEFER({ managedObjectResource->DecRef(); });
+                scriptObjectResource->IncRef();
+                HYP_DEFER({ scriptObjectResource->DecRef(); });
 
-                dotnet::Object* object = managedObjectResource->GetManagedObject();
+                dotnet::Object* object = scriptObjectResource->GetManagedObject();
                 HYP_CORE_ASSERT(object != nullptr, "Managed object is null!");
                 HYP_CORE_ASSERT(object->IsValid(), "Managed object is invalid!");
 
@@ -183,19 +183,19 @@ public:
     }
 
     template <class DefaultReturnType, typename = std::enable_if_t<std::is_copy_constructible_v<NormalizedType<DefaultReturnType>>>>
-    HYP_NODISCARD DelegateHandler BindManaged(const String& methodName, ManagedObjectResource* managedObjectResource, DefaultReturnType&& defaultReturn)
+    HYP_NODISCARD DelegateHandler BindManaged(const String& methodName, ScriptObjectResource* scriptObjectResource, DefaultReturnType&& defaultReturn)
     {
-        if (!managedObjectResource)
+        if (!scriptObjectResource)
         {
             return DelegateHandler();
         }
 
-        return Delegate<ReturnType, Args...>::Bind([methodName = methodName, managedObjectResource, defaultReturn = std::forward<DefaultReturnType>(defaultReturn)]<class... ArgTypes>(ArgTypes&&... args) mutable -> ReturnType
+        return Delegate<ReturnType, Args...>::Bind([methodName = methodName, scriptObjectResource, defaultReturn = std::forward<DefaultReturnType>(defaultReturn)]<class... ArgTypes>(ArgTypes&&... args) mutable -> ReturnType
             {
-                managedObjectResource->IncRef();
-                HYP_DEFER({ managedObjectResource->DecRef(); });
+                scriptObjectResource->IncRef();
+                HYP_DEFER({ scriptObjectResource->DecRef(); });
 
-                dotnet::Object* object = managedObjectResource->GetManagedObject();
+                dotnet::Object* object = scriptObjectResource->GetManagedObject();
                 HYP_CORE_ASSERT(object != nullptr, "Managed object is null!");
                 HYP_CORE_ASSERT(object->IsValid(), "Managed object is invalid!");
 

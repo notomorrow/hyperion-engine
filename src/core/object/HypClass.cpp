@@ -798,12 +798,12 @@ bool HypClass::GetManagedObject(const void* objectPtr, dotnet::ObjectReference& 
         return false;
     }
 
-    if (!target->GetManagedObjectResource())
+    if (!target->GetScriptObjectResource())
     {
         return false;
     }
 
-    TResourceHandle<ManagedObjectResource> resourceHandle(*target->GetManagedObjectResource());
+    TResourceHandle<ScriptObjectResource> resourceHandle(*target->GetScriptObjectResource());
 
     outObjectReference = resourceHandle->GetManagedObject()->GetObjectReference();
 

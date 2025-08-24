@@ -79,15 +79,15 @@ public:
             return defaultResult;
         }
 
-        if (!scriptComponent->managedObjectResource || !scriptComponent->managedObjectResource->GetManagedObject() || !scriptComponent->managedObjectResource->GetManagedObject()->IsValid())
+        if (!scriptComponent->scriptObjectResource || !scriptComponent->scriptObjectResource->GetManagedObject() || !scriptComponent->scriptObjectResource->GetManagedObject()->IsValid())
         {
             return UIEventHandlerResult(UIEventHandlerResult::ERR, HYP_STATIC_MESSAGE("Invalid ScriptComponent Object"));
         }
 
-        scriptComponent->managedObjectResource->IncRef();
-        HYP_DEFER({ scriptComponent->managedObjectResource->DecRef(); });
+        scriptComponent->scriptObjectResource->IncRef();
+        HYP_DEFER({ scriptComponent->scriptObjectResource->DecRef(); });
 
-        dotnet::Object* managedObject = scriptComponent->managedObjectResource->GetManagedObject();
+        dotnet::Object* managedObject = scriptComponent->scriptObjectResource->GetManagedObject();
         Assert(managedObject != nullptr);
 
         if (dotnet::Class* classPtr = managedObject->GetClass())

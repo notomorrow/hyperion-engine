@@ -44,7 +44,7 @@ struct HypObjectHeader;
 template <class T>
 struct HypObjectMemory;
 
-class ManagedObjectResource;
+class ScriptObjectResource;
 
 enum class HypClassFlags : uint32;
 

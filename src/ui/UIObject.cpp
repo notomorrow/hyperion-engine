@@ -137,30 +137,30 @@ UIObject::UIObject(const ThreadId& ownerThreadId)
 {
     m_scrollOffset.SetRate(60.0); // 60hz for scroll offset updates
 
-    OnInit.BindManaged("OnInit", GetManagedObjectResource(), UIEventHandlerResult::OK).Detach();
-    OnAttached.BindManaged("OnAttached", GetManagedObjectResource(), UIEventHandlerResult::OK).Detach();
-    OnRemoved.BindManaged("OnRemoved", GetManagedObjectResource(), UIEventHandlerResult::OK).Detach();
-    OnChildAttached.BindManaged("OnChildAttached", GetManagedObjectResource(), UIEventHandlerResult::OK).Detach();
-    OnChildRemoved.BindManaged("OnChildRemoved", GetManagedObjectResource(), UIEventHandlerResult::OK).Detach();
-    OnMouseDown.BindManaged("OnMouseDown", GetManagedObjectResource(), UIEventHandlerResult::OK).Detach();
-    OnMouseUp.BindManaged("OnMouseUp", GetManagedObjectResource(), UIEventHandlerResult::OK).Detach();
-    OnMouseDrag.BindManaged("OnMouseDrag", GetManagedObjectResource(), UIEventHandlerResult::OK).Detach();
-    OnMouseHover.BindManaged("OnMouseHover", GetManagedObjectResource(), UIEventHandlerResult::OK).Detach();
-    OnMouseLeave.BindManaged("OnMouseLeave", GetManagedObjectResource(), UIEventHandlerResult::OK).Detach();
-    OnMouseMove.BindManaged("OnMouseMove", GetManagedObjectResource(), UIEventHandlerResult::OK).Detach();
-    OnGainFocus.BindManaged("OnGainFocus", GetManagedObjectResource(), UIEventHandlerResult::OK).Detach();
-    OnLoseFocus.BindManaged("OnLoseFocus", GetManagedObjectResource(), UIEventHandlerResult::OK).Detach();
-    OnScroll.BindManaged("OnScroll", GetManagedObjectResource(), UIEventHandlerResult::OK).Detach();
-    OnClick.BindManaged("OnClick", GetManagedObjectResource(), UIEventHandlerResult::OK).Detach();
-    OnRightClick.BindManaged("OnRightClick", GetManagedObjectResource(), UIEventHandlerResult::OK).Detach();
-    OnKeyDown.BindManaged("OnKeyDown", GetManagedObjectResource(), UIEventHandlerResult::OK).Detach();
-    OnKeyUp.BindManaged("OnKeyUp", GetManagedObjectResource(), UIEventHandlerResult::OK).Detach();
-    OnTextChange.BindManaged("OnTextChange", GetManagedObjectResource(), UIEventHandlerResult::OK).Detach();
-    OnSizeChange.BindManaged("OnSizeChange", GetManagedObjectResource(), UIEventHandlerResult::OK).Detach();
-    OnComputedVisibilityChange.BindManaged("OnComputedVisibilityChange", GetManagedObjectResource(), UIEventHandlerResult::OK).Detach();
-    OnEnabled.BindManaged("OnEnabled", GetManagedObjectResource(), UIEventHandlerResult::OK).Detach();
-    OnDisabled.BindManaged("OnDisabled", GetManagedObjectResource(), UIEventHandlerResult::OK).Detach();
-    OnValueChange.BindManaged("OnValueChange", GetManagedObjectResource(), UIEventHandlerResult::OK).Detach();
+    OnInit.BindManaged("OnInit", GetScriptObjectResource(), UIEventHandlerResult::OK).Detach();
+    OnAttached.BindManaged("OnAttached", GetScriptObjectResource(), UIEventHandlerResult::OK).Detach();
+    OnRemoved.BindManaged("OnRemoved", GetScriptObjectResource(), UIEventHandlerResult::OK).Detach();
+    OnChildAttached.BindManaged("OnChildAttached", GetScriptObjectResource(), UIEventHandlerResult::OK).Detach();
+    OnChildRemoved.BindManaged("OnChildRemoved", GetScriptObjectResource(), UIEventHandlerResult::OK).Detach();
+    OnMouseDown.BindManaged("OnMouseDown", GetScriptObjectResource(), UIEventHandlerResult::OK).Detach();
+    OnMouseUp.BindManaged("OnMouseUp", GetScriptObjectResource(), UIEventHandlerResult::OK).Detach();
+    OnMouseDrag.BindManaged("OnMouseDrag", GetScriptObjectResource(), UIEventHandlerResult::OK).Detach();
+    OnMouseHover.BindManaged("OnMouseHover", GetScriptObjectResource(), UIEventHandlerResult::OK).Detach();
+    OnMouseLeave.BindManaged("OnMouseLeave", GetScriptObjectResource(), UIEventHandlerResult::OK).Detach();
+    OnMouseMove.BindManaged("OnMouseMove", GetScriptObjectResource(), UIEventHandlerResult::OK).Detach();
+    OnGainFocus.BindManaged("OnGainFocus", GetScriptObjectResource(), UIEventHandlerResult::OK).Detach();
+    OnLoseFocus.BindManaged("OnLoseFocus", GetScriptObjectResource(), UIEventHandlerResult::OK).Detach();
+    OnScroll.BindManaged("OnScroll", GetScriptObjectResource(), UIEventHandlerResult::OK).Detach();
+    OnClick.BindManaged("OnClick", GetScriptObjectResource(), UIEventHandlerResult::OK).Detach();
+    OnRightClick.BindManaged("OnRightClick", GetScriptObjectResource(), UIEventHandlerResult::OK).Detach();
+    OnKeyDown.BindManaged("OnKeyDown", GetScriptObjectResource(), UIEventHandlerResult::OK).Detach();
+    OnKeyUp.BindManaged("OnKeyUp", GetScriptObjectResource(), UIEventHandlerResult::OK).Detach();
+    OnTextChange.BindManaged("OnTextChange", GetScriptObjectResource(), UIEventHandlerResult::OK).Detach();
+    OnSizeChange.BindManaged("OnSizeChange", GetScriptObjectResource(), UIEventHandlerResult::OK).Detach();
+    OnComputedVisibilityChange.BindManaged("OnComputedVisibilityChange", GetScriptObjectResource(), UIEventHandlerResult::OK).Detach();
+    OnEnabled.BindManaged("OnEnabled", GetScriptObjectResource(), UIEventHandlerResult::OK).Detach();
+    OnDisabled.BindManaged("OnDisabled", GetScriptObjectResource(), UIEventHandlerResult::OK).Detach();
+    OnValueChange.BindManaged("OnValueChange", GetScriptObjectResource(), UIEventHandlerResult::OK).Detach();
 }
 
 UIObject::UIObject()
@@ -232,7 +232,7 @@ void UIObject::Init()
         // set m_acceptsFocus to the value returned by AcceptsFocus()
         m_acceptsFocus = AcceptsFocus();
     }
-    
+
     UpdateComputedTextSize(); // so text doesn't have invalid size when we call UpdateSize()
     UpdateSize();
     UpdatePosition();
@@ -290,7 +290,7 @@ void UIObject::Update_Internal(float delta)
         // Register for next update:
         SetDeferredUpdate(UIObjectUpdateType::UPDATE_CUSTOM, false);
     }
-    
+
     if (m_deferredUpdates)
     {
         bool updatedPositionOrSize = false;
@@ -380,7 +380,7 @@ void UIObject::OnAttached_Internal(UIObject* parent)
     OnAttached();
 }
 
-    /// @FIXME: Need to remove from parent before, and pass in the prev parent pointer. currently the calcualtions will be wrong
+/// @FIXME: Need to remove from parent before, and pass in the prev parent pointer. currently the calcualtions will be wrong
 void UIObject::OnRemoved_Internal()
 {
     HYP_SCOPE;
@@ -761,7 +761,7 @@ void UIObject::UpdateNodeTransform()
     }
 
     const Vec2f parentScrollOffset = GetParentScrollOffset();
-    
+
     Node* parentNode = m_node->GetParent();
 
     Transform worldTransform = m_node->GetWorldTransform();
@@ -1271,7 +1271,7 @@ void UIObject::UpdateComputedVisibility(bool updateChildren)
     m_deferredUpdates &= ~(UIObjectUpdateType::UPDATE_COMPUTED_VISIBILITY | (updateChildren ? UIObjectUpdateType::UPDATE_CHILDREN_COMPUTED_VISIBILITY : UIObjectUpdateType::NONE));
 
     bool computedVisibility = IsVisible();
-    
+
     // short circuit - setting IsVisible to false always results in false for computed vis.
     UIStage* rootStage = nullptr;
     if (computedVisibility && (rootStage = GetStage()) != nullptr)
@@ -2430,8 +2430,6 @@ void UIObject::UpdateMaterial_Internal()
 {
     HYP_SCOPE;
 
-
-
     const Scene* scene = GetScene();
 
     if (!scene)
@@ -2930,7 +2928,7 @@ void UIObject::SetStage_Internal(UIStage* stage)
     OnFontAtlasUpdate_Internal();
 
     UpdateComputedTextSize();
-    
+
     UpdateSize(false);
     UpdatePosition(false);
 
@@ -3073,7 +3071,7 @@ Handle<UIObject> UIObject::CreateUIObject(const HypClass* hypClass, Name name, V
     uiObject->SetName(name);
     uiObject->SetPosition(position);
     uiObject->SetSize(size);
-    
+
     InitObject(uiObject);
 
     return uiObject;
