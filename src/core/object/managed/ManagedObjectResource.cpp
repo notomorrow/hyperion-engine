@@ -7,12 +7,14 @@
 #ifdef HYP_DOTNET
 #include <dotnet/Object.hpp>
 #include <dotnet/Class.hpp>
+#endif
 
 namespace hyperion {
 
 HYP_DECLARE_LOG_CHANNEL(Resource);
 HYP_DECLARE_LOG_CHANNEL(Object);
 
+#ifdef HYP_DOTNET
 ManagedObjectResource::ManagedObjectResource(dotnet::Object* objectPtr, const RC<dotnet::Class>& managedClass)
     : m_objectPtr(objectPtr),
       m_managedClass(managedClass)
@@ -47,13 +49,13 @@ ManagedObjectResource::ManagedObjectResource(HypObjectPtr ptr, const RC<dotnet::
         else
         {
             /// VVVV NOTE: moved HypObject_IncRef into C# constructor instead
-            //if (m_ptr.GetClass()->IsReferenceCounted())
+            // if (m_ptr.GetClass()->IsReferenceCounted())
             //{
-            //    // Increment reference count for the managed object (creating from managed does this already via HypObject_Initialize())
-            //    // The managed object is responsible for decrementing the ref count using HypObject_DecRef() in finalizer and Dispose().
-            //    m_ptr.IncRef();
-            //}
-            
+            //     // Increment reference count for the managed object (creating from managed does this already via HypObject_Initialize())
+            //     // The managed object is responsible for decrementing the ref count using HypObject_DecRef() in finalizer and Dispose().
+            //     m_ptr.IncRef();
+            // }
+
             HYP_LOG(Object, Debug, "Creating new managed object with class {}, reference will be incremented from C#", m_managedClass->GetName());
 
             m_objectPtr = m_managedClass->NewObject(m_ptr.GetClass(), address);
@@ -62,18 +64,40 @@ ManagedObjectResource::ManagedObjectResource(HypObjectPtr ptr, const RC<dotnet::
         HYP_CORE_ASSERT(m_objectPtr != nullptr);
     }
 }
+#else
+
+ManagedObjectResource::ManagedObjectResource(HypObjectPtr ptr)
+    : m_ptr(ptr),
+      m_value()
+{
+    if (m_ptr)
+    {
+        const HypClass* hypClass = m_ptr.GetClass();
+        HYP_CORE_ASSERT(hypClass->UseHandles());
+
+        HypObjectBase* target = reinterpret_cast<HypObjectBase*>(m_ptr.GetPointer());
+        HYP_CORE_ASSERT(target != nullptr);
+
+        /// @TODO
+    }
+}
+
+#endif
 
 ManagedObjectResource::~ManagedObjectResource()
 {
+#ifdef HYP_DOTNET
     if (m_objectPtr)
     {
         delete m_objectPtr;
         m_objectPtr = nullptr;
     }
+#endif
 }
 
 void ManagedObjectResource::Initialize()
 {
+#ifdef HYP_DOTNET
     if (!m_objectPtr)
     {
         return;
@@ -125,18 +149,19 @@ void ManagedObjectResource::Initialize()
     {
         HYP_FAIL("Failed to recreate managed object for HypClass %s", hypClass->GetName().LookupString());
     }
+#endif
 }
 
 void ManagedObjectResource::Destroy()
 {
+#ifdef HYP_DOTNET
     if (m_objectPtr)
     {
         const bool result = m_objectPtr->SetKeepAlive(false);
 
         HYP_CORE_ASSERT(result);
     }
+#endif
 }
 
 } // namespace hyperion
-
-#endif

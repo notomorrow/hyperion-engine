@@ -2,8 +2,6 @@
 
 #pragma once
 
-#ifdef HYP_DOTNET
-
 #include <core/Defines.hpp>
 
 #include <core/object/HypObjectFwd.hpp>
@@ -14,6 +12,10 @@
 #include <core/utilities/EnumFlags.hpp>
 
 #include <core/Types.hpp>
+
+#ifndef HYP_DOTNET
+#include <script/vm/Value.hpp>
+#endif
 
 namespace hyperion {
 
@@ -29,10 +31,14 @@ enum class ObjectFlags : uint32;
 class HYP_API ManagedObjectResource final : public ResourceBase
 {
 public:
+#ifdef HYP_DOTNET
     ManagedObjectResource(dotnet::Object* objectPtr, const RC<dotnet::Class>& managedClass);
     ManagedObjectResource(HypObjectPtr ptr, const RC<dotnet::Class>& managedClass);
     ManagedObjectResource(HypObjectPtr ptr, dotnet::Object* objectPtr, const RC<dotnet::Class>& managedClass);
     ManagedObjectResource(HypObjectPtr ptr, const RC<dotnet::Class>& managedClass, const dotnet::ObjectReference& objectReference, EnumFlags<ObjectFlags> objectFlags);
+#else
+    ManagedObjectResource(HypObjectPtr ptr);
+#endif
 
     ManagedObjectResource(const ManagedObjectResource& other) = delete;
     ManagedObjectResource& operator=(const ManagedObjectResource& other) = delete;
@@ -57,10 +63,9 @@ protected:
     virtual void Destroy() override final;
 
     HypObjectPtr m_ptr;
+
     dotnet::Object* m_objectPtr;
     RC<dotnet::Class> m_managedClass;
 };
 
 } // namespace hyperion
-
-#endif

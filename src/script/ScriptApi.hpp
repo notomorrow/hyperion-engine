@@ -462,7 +462,7 @@ public:
         HashMap<String, vm::HeapValue*> classPrototypes;
     } classBindings;
 
-    APIInstance(const SourceFile& sourceFile);
+    APIInstance();
     APIInstance(const APIInstance& other) = delete;
     ~APIInstance() = default;
 
@@ -476,14 +476,8 @@ public:
         m_vm = vm;
     }
 
-    const SourceFile& GetSourceFile() const
-    {
-        return m_sourceFile;
-    }
-
 private:
     vm::VM* m_vm;
-    SourceFile m_sourceFile;
 };
 
 #pragma endregion
@@ -1381,4 +1375,3 @@ struct ScriptBindingsBase
 #pragma endregion
 
 } // namespace hyperion
-

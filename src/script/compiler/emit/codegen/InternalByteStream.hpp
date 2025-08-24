@@ -1,12 +1,10 @@
 #pragma once
 
 #include <script/compiler/emit/Buildable.hpp>
-#include <core/Types.hpp>
 
-#include <map>
-#include <sstream>
-#include <vector>
-#include <cstdint>
+#include <core/memory/ByteBuffer.hpp>
+
+#include <core/Types.hpp>
 
 namespace hyperion::compiler {
 
@@ -22,12 +20,12 @@ class InternalByteStream
 public:
     SizeType GetPosition() const
     {
-        return m_stream.Size();
+        return m_byteBuffer.Size();
     }
 
-    const Array<ubyte>& GetData() const
+    const ByteBuffer& GetData() const
     {
-        return m_stream;
+        return m_byteBuffer;
     }
 
     const Array<Fixup>& GetFixups() const
@@ -37,14 +35,35 @@ public:
 
     void Put(ubyte byte)
     {
-        m_stream.PushBack(byte);
+        if (m_byteBuffer.Size() + 1 >= m_byteBuffer.GetCapacity())
+        {
+            m_byteBuffer.SetCapacity(m_byteBuffer.GetCapacity() * 2);
+        }
+
+        m_byteBuffer.SetSize(m_byteBuffer.Size() + 1);
+        m_byteBuffer.Data()[m_byteBuffer.Size() - 1] = byte;
     }
 
     void Put(const ubyte* bytes, SizeType size)
     {
+        if (m_byteBuffer.Size() + size >= m_byteBuffer.GetCapacity())
+        {
+            SizeType newCapacity = m_byteBuffer.GetCapacity() * 2;
+
+            while (newCapacity < m_byteBuffer.Size() + size)
+            {
+                newCapacity *= 2;
+            }
+
+            m_byteBuffer.SetCapacity(newCapacity);
+        }
+
+        const SizeType oldSize = m_byteBuffer.Size();
+        m_byteBuffer.SetSize(oldSize + size);
+
         for (SizeType i = 0; i < size; i++)
         {
-            m_stream.PushBack(bytes[i]);
+            m_byteBuffer.Data()[oldSize + i] = bytes[i];
         }
     }
 
@@ -55,9 +74,8 @@ public:
     void Bake(const BuildParams& buildParams);
 
 private:
-    Array<ubyte> m_stream;
+    ByteBuffer m_byteBuffer;
     Array<Fixup> m_fixups;
 };
 
 } // namespace hyperion::compiler
-

@@ -2,7 +2,6 @@
 
 #pragma once
 
-#ifdef HYP_DOTNET
 #include <core/functional/ScriptableDelegateFwd.hpp>
 #include <core/functional/Delegate.hpp>
 
@@ -52,7 +51,7 @@ public:
     ScriptableDelegate& operator=(ScriptableDelegate&& other) noexcept = delete;
 
     virtual ~ScriptableDelegate() override = default;
-    
+
     HYP_NODISCARD virtual DelegateHandler BindManaged(const String& methodName, Proc<ManagedObjectResource*()>&& getFn) override
     {
         if (!getFn)
@@ -75,10 +74,9 @@ public:
                 {
                     char buffer[256];
                     std::snprintf(buffer, 256, "Script method missing: %s", *methodName);
-                    
+
                     LogScriptableDelegateError(buffer, object);
-                    
-                    
+
                     if constexpr (std::is_void_v<ReturnType>)
                     {
                         return;
@@ -129,9 +127,9 @@ public:
                 {
                     char buffer[256];
                     std::snprintf(buffer, 256, "Script method missing: %s", *methodName);
-                    
+
                     LogScriptableDelegateError(buffer, object);
-                    
+
                     if constexpr (std::is_void_v<ReturnType>)
                     {
                         return;
@@ -140,7 +138,6 @@ public:
                     {
                         return defaultReturn;
                     }
-                    
                 }
 
                 if constexpr (std::is_void_v<ReturnType>)
@@ -258,5 +255,3 @@ public:
 
 } // namespace functional
 } // namespace hyperion
-
-#endif

@@ -21,66 +21,96 @@
 
 namespace hyperion {
 
-HypScript::HypScript(const SourceFile& sourceFile)
-    : m_apiInstance(sourceFile),
-      m_vm(m_apiInstance),
-      m_sourceFile(sourceFile)
+#pragma region Opaque Handles
+
+struct ScriptHandle
 {
+    BytecodeStream bytecodeStream;
+};
+
+#pragma endregion Opaque Handles
+
+HypScript& HypScript::GetInstance()
+{
+    static HypScript instance;
+
+    return instance;
 }
 
-HypScript::~HypScript() = default;
-
-bool HypScript::Compile(scriptapi2::Context& context)
+HypScript::HypScript()
+    : m_apiInstance(),
+      m_vm(new VM(m_apiInstance))
 {
-    if (!m_sourceFile.IsValid())
-    {
-        DebugLog(
-            LogType::Error,
-            "Source file not valid\n");
+    // Generate our context stuff
+    g_scriptBindings.GenerateAll(m_context);
 
-        return false;
+    m_apiInstance.SetVM(m_vm);
+
+    m_context.BindAll(m_apiInstance, m_vm);
+}
+
+HypScript::~HypScript()
+{
+    m_apiInstance.SetVM(nullptr);
+    delete m_vm;
+}
+
+void HypScript::DestroyScript(ScriptHandle* scriptHandle)
+{
+    if (!scriptHandle)
+    {
+        return;
     }
 
-    SourceStream sourceStream(&m_sourceFile);
+    delete scriptHandle;
+}
 
-    TokenStream tokenStream(TokenStreamInfo {
-        m_sourceFile.GetFilePath() });
+ScriptHandle* HypScript::Compile(
+    SourceFile& sourceFile,
+    ErrorList& outErrorList)
+{
+    if (!sourceFile.IsValid())
+    {
+        return nullptr;
+    }
 
-    Lexer lex(sourceStream, &tokenStream, &m_compilationUnit);
+    SourceStream sourceStream(&sourceFile);
+    TokenStream tokenStream(TokenStreamInfo { sourceFile.GetFilePath() });
+
+    CompilationUnit compilationUnit;
+
+    Lexer lex(sourceStream, &tokenStream, &compilationUnit);
     lex.Analyze();
 
     AstIterator astIterator;
 
-    SemanticAnalyzer semanticAnalyzer(&astIterator, &m_compilationUnit);
+    SemanticAnalyzer semanticAnalyzer(&astIterator, &compilationUnit);
 
-    m_compilationUnit.GetBuiltins().Visit(&semanticAnalyzer);
+    compilationUnit.GetBuiltins().Visit(&semanticAnalyzer);
 
-    // Generate script bindings into our Context for our C++ classes
-    g_scriptBindings.GenerateAll(context);
+    m_context.Visit(&semanticAnalyzer, &compilationUnit);
 
-    context.Visit(&semanticAnalyzer, &m_compilationUnit);
-
-    Parser parser(&astIterator, &tokenStream, &m_compilationUnit);
+    Parser parser(&astIterator, &tokenStream, &compilationUnit);
     parser.Parse();
 
     semanticAnalyzer.Analyze();
 
-    m_errors = m_compilationUnit.GetErrorList();
-    m_errors.WriteOutput(std::cout);
+    outErrorList = compilationUnit.GetErrorList();
+    outErrorList.WriteOutput(std::cout);
 
-    if (!m_errors.HasFatalErrors())
+    if (!outErrorList.HasFatalErrors())
     {
         // only optimize if there were no errors
         // before this point
         astIterator.ResetPosition();
 
-        Optimizer optimizer(&astIterator, &m_compilationUnit);
+        Optimizer optimizer(&astIterator, &compilationUnit);
         optimizer.Optimize();
 
         // compile into bytecode instructions
         astIterator.ResetPosition();
 
-        Compiler compiler(&astIterator, &m_compilationUnit);
+        Compiler compiler(&astIterator, &compilationUnit);
 
         // if (auto builtinsResult = builtins.Build(&m_compilationUnit)) {
         //     m_bytecodeChunk.Append(std::move(builtinsResult));
@@ -93,72 +123,56 @@ bool HypScript::Compile(scriptapi2::Context& context)
         //     return false;
         // }
 
+        BytecodeChunk bytecodeChunk;
+
         if (auto compileResult = compiler.Compile())
         {
-            m_bytecodeChunk.Append(std::move(compileResult));
+            bytecodeChunk.Append(std::move(compileResult));
         }
         else
         {
-            DebugLog(
-                LogType::Error,
-                "Failed to compile source file\n");
-
-            return false;
+            return nullptr;
         }
 
-        return true;
+        BuildParams buildParams {};
+
+        CodeGenerator codeGenerator(buildParams);
+        codeGenerator.Visit(&bytecodeChunk);
+        codeGenerator.Bake();
+
+        return new ScriptHandle(BytecodeStream(codeGenerator.GetInternalByteStream().GetData()));
     }
 
-    return false;
+    return nullptr;
 }
 
-InstructionStream HypScript::Decompile(std::ostream* os) const
+InstructionStream HypScript::Decompile(
+    ScriptHandle* scriptHandle,
+    std::ostream* os) const
 {
-    Assert(IsCompiled() && IsBaked());
+    if (!scriptHandle)
+    {
+        return InstructionStream();
+    }
 
-    BytecodeStream bytecodeStream(m_bakedBytes.Data(), m_bakedBytes.Size());
-
-    return DecompilationUnit().Decompile(bytecodeStream, os);
+    return DecompilationUnit().Decompile(scriptHandle->bytecodeStream, os);
 }
 
-void HypScript::Bake()
+void HypScript::Run(ScriptHandle* scriptHandle)
 {
-    Assert(IsCompiled());
+    if (!scriptHandle)
+    {
+        return;
+    }
 
-    BuildParams buildParams {};
-
-    Bake(buildParams);
+    m_vm->Execute(&scriptHandle->bytecodeStream);
 }
 
-void HypScript::Bake(BuildParams& buildParams)
+void HypScript::CallFunctionArgV(ScriptHandle* scriptHandle, const Value& function, Value* args, ArgCount numArgs)
 {
-    Assert(IsCompiled());
+    Assert(scriptHandle != nullptr);
 
-    CodeGenerator codeGenerator(buildParams);
-    codeGenerator.Visit(&m_bytecodeChunk);
-    codeGenerator.Bake();
-
-    m_bakedBytes = codeGenerator.GetInternalByteStream().GetData();
-
-    m_bs = BytecodeStream(m_bakedBytes.Data(), m_bakedBytes.Size());
-}
-
-void HypScript::Run(scriptapi2::Context& context)
-{
-    Assert(IsCompiled() && IsBaked());
-
-    // bad things will happen if we don't set the VM
-    m_apiInstance.SetVM(&m_vm);
-
-    context.BindAll(m_apiInstance, &m_vm);
-    m_vm.Execute(&m_bs);
-}
-
-void HypScript::CallFunctionArgV(const FunctionHandle& handle, Value* args, ArgCount numArgs)
-{
-    Assert(IsCompiled() && IsBaked());
-
-    auto* mainThread = m_vm.GetState().GetMainThread();
+    ExecutionThread* mainThread = m_vm->GetState().GetMainThread();
 
     if (numArgs != 0)
     {
@@ -170,15 +184,75 @@ void HypScript::CallFunctionArgV(const FunctionHandle& handle, Value* args, ArgC
         }
     }
 
-    m_vm.InvokeNow(
-        &m_bs,
-        handle._inner,
+    m_vm->InvokeNow(
+        &scriptHandle->bytecodeStream,
+        function,
         numArgs);
 
     if (numArgs != 0)
     {
         mainThread->m_stack.Pop(numArgs);
     }
+}
+
+bool HypScript::GetMember(const Value& objectValue, const char* memberName, Value& outValue)
+{
+    if (objectValue.m_type != Value::HEAP_POINTER)
+    {
+        return false;
+    }
+
+    if (VMObject* ptr = objectValue.m_value.ptr->GetPointer<VMObject>())
+    {
+        if (Member* member = ptr->LookupMemberFromHash(hashFnv1(memberName)))
+        {
+            outValue = member->value;
+
+            return true;
+        }
+    }
+
+    return false;
+}
+
+bool HypScript::SetMember(const Value& objectValue, const char* memberName, const Value& value)
+{
+    if (objectValue.m_type != Value::HEAP_POINTER)
+    {
+        return false;
+    }
+
+    if (VMObject* ptr = objectValue.m_value.ptr->GetPointer<VMObject>())
+    {
+        if (Member* member = ptr->LookupMemberFromHash(hashFnv1(memberName)))
+        {
+            member->value = value;
+
+            return true;
+        }
+    }
+
+    return false;
+}
+
+bool HypScript::GetFunctionHandle(const char* name, Value& outFunction)
+{
+    return GetExportedValue(name, &outFunction);
+}
+
+bool HypScript::GetObjectHandle(const char* name, Value& outValue)
+{
+    return GetExportedValue(name, &outValue);
+}
+
+bool HypScript::GetExportedValue(const char* name, Value* value)
+{
+    return GetExportedSymbols().Find(hashFnv1(name), value);
+}
+
+ExportedSymbolTable& HypScript::GetExportedSymbols() const
+{
+    return m_vm->GetState().GetExportedSymbols();
 }
 
 } // namespace hyperion

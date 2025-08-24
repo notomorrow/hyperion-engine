@@ -32,13 +32,13 @@ void CodeGenerator::Visit(BytecodeChunk* chunk)
     // bake the chunk's byte stream
     // codeGenerator.GetInternalByteStream().Bake(newParams);
 
-    const Array<ubyte>& bytes = codeGenerator.GetInternalByteStream().GetData();
+    const ByteBuffer& byteBuffer = codeGenerator.GetInternalByteStream().GetData();
     const Array<Fixup>& fixups = codeGenerator.GetInternalByteStream().GetFixups();
 
     const SizeType fixupOffset = m_ibs.GetPosition();
 
     // append bytes to this chunk's InternalByteStream
-    m_ibs.Put(bytes.Data(), bytes.Size());
+    m_ibs.Put(byteBuffer.Data(), byteBuffer.Size());
 
     // Copy fixups from the chunk's InternalByteStream to this one's
     for (const Fixup& fixup : fixups)

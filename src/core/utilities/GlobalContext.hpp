@@ -32,15 +32,15 @@ public:
 template <class ContextType>
 class GlobalContextHolder;
 
-class GlobalContextRegistry
+class HYP_API GlobalContextRegistry
 {
 public:
-    HYP_API GlobalContextRegistry();
+    GlobalContextRegistry();
     GlobalContextRegistry(const GlobalContextRegistry& other) = delete;
     GlobalContextRegistry& operator=(const GlobalContextRegistry& other) = delete;
     GlobalContextRegistry(GlobalContextRegistry&& other) noexcept = delete;
     GlobalContextRegistry& operator=(GlobalContextRegistry&& other) noexcept = delete;
-    HYP_API ~GlobalContextRegistry();
+    ~GlobalContextRegistry();
 
     template <class T>
     HYP_FORCE_INLINE GlobalContextHolder<T>& GetContextHolder()

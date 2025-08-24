@@ -46,4 +46,3 @@ struct Buildable
 };
 
 } // namespace hyperion::compiler
-

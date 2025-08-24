@@ -48,9 +48,8 @@ void ScriptBindingsHolder::GenerateAll(scriptapi2::Context& context)
     }
 }
 
-APIInstance::APIInstance(const SourceFile& sourceFile)
-    : m_sourceFile(sourceFile),
-      m_vm(nullptr)
+APIInstance::APIInstance()
+    : m_vm(nullptr)
 {
 }
 

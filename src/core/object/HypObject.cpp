@@ -59,13 +59,13 @@ HypObjectInitializerGuardBase::~HypObjectInitializerGuardBase()
     HypObjectBase* target = reinterpret_cast<HypObjectBase*>(ptr.GetPointer());
     AssertDebug(target->GetObjectHeader_Internal()->GetRefCountStrong() == 1);
 
-#ifdef HYP_DOTNET
     if (!(ptr.GetClass()->GetFlags() & HypClassFlags::NO_SCRIPT_BINDINGS))
     {
         HypObjectInitializerContext* context = GetGlobalContext<HypObjectInitializerContext>();
 
         if ((!context || !(context->flags & HypObjectInitializerFlags::SUPPRESS_MANAGED_OBJECT_CREATION)) && !hypClass->IsAbstract())
         {
+#ifdef HYP_DOTNET
             if (RC<dotnet::Class> managedClass = hypClass->GetManagedClass())
             {
                 ManagedObjectResource* managedObjectResource = AllocateResource<ManagedObjectResource>(ptr, managedClass);
@@ -81,10 +81,12 @@ HypObjectInitializerGuardBase::~HypObjectInitializerGuardBase()
                     "HypObjectInitializerGuardBase: HypClass '{}' does not have a managed class associated with it. "
                     "This means that the object will not be created in the managed runtime, and will not be accessible from C#.",
                     hypClass->GetName());
+
+                return;
             }
+#endif
         }
     }
-#endif
 }
 
 #pragma endregion HypObjectInitializerGuardBase
@@ -147,7 +149,7 @@ HypObjectBase::HypObjectBase()
 HypObjectBase::~HypObjectBase()
 {
     HYP_CORE_ASSERT(m_header != nullptr);
-    
+
 #ifdef HYP_DOTNET
     if (m_managedObjectResource)
     {

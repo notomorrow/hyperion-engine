@@ -156,14 +156,14 @@ void AstSymbolQuery::Visit(AstVisitor* visitor, Module* mod)
 
         SourceFile sourceFile(value, value.Size());
         sourceFile.ReadIntoBuffer(byteBuffer);
+        
+        ErrorList errorList;
+        
+        ScriptHandle* scriptHandle = HypScript::GetInstance().Compile(sourceFile, errorList);
 
-        UniquePtr<HypScript> script(new HypScript(sourceFile));
-
-        scriptapi2::Context context;
-
-        if (script->Compile(context))
+        if (scriptHandle != nullptr)
         {
-            script->Bake();
+            HypScript::GetInstance().DestroyScript(scriptHandle);
 
             m_resultValue = RC<AstTrue>(new AstTrue(m_location));
         }

@@ -42,6 +42,8 @@
 
 #include <core/object/Handle.hpp>
 
+#include <script/HypScript.hpp>
+
 #include <engine/EngineDriver.hpp>
 #include <game/Game.hpp>
 
@@ -198,6 +200,7 @@ HYP_API bool InitializeEngine(int argc, char** argv)
     InitializeNameRegistry();
 
     HypClassRegistry::GetInstance().Initialize();
+    HypScript::Initialize();
 
     if (!InitializeCommandLineArguments(argc, argv))
     {

@@ -7,17 +7,15 @@
 #include <script/compiler/emit/BytecodeChunk.hpp>
 #include <script/compiler/emit/InstructionStream.hpp>
 #include <script/vm/BytecodeStream.hpp>
-#include <script/vm/VM.hpp>
 
 #include <core/containers/FixedArray.hpp>
 #include <core/Util.hpp>
 
 #include <core/Constants.hpp>
 #include <core/Types.hpp>
+#include <core/Defines.hpp>
 
 #include <util/UTF8.hpp>
-
-#include <memory>
 
 namespace hyperion {
 
@@ -28,34 +26,30 @@ namespace scriptapi2 {
 class Context;
 } // namespace scriptapi2
 
+class ScriptHandle;
+
+class ValueHandle
+{
+    friend class HypScript;
+
+    Value _inner = Value(Value::NONE, Value::ValueData { .userData = nullptr });
+
+public:
+    bool IsNull() const
+    {
+        return _inner.m_type == Value::NONE;
+    }
+};
+
 class HypScript
 {
-public:
-    using Bytes = Array<ubyte>;
 
+public:
     using ArgCount = uint16;
 
-    struct ValueHandle
-    {
-        Value _inner = Value(
-            Value::NONE,
-            Value::ValueData {
-                .userData = nullptr });
+    static HypScript& GetInstance();
 
-        bool IsNull() const
-        {
-            return _inner.m_type == Value::NONE;
-        }
-    };
-
-    struct ObjectHandle : ValueHandle
-    {
-    };
-    struct FunctionHandle : ValueHandle
-    {
-    };
-
-    HypScript(const SourceFile& sourceFile);
+    HypScript();
     HypScript(const HypScript& other) = delete;
     HypScript& operator=(const HypScript& other) = delete;
     ~HypScript();
@@ -70,51 +64,22 @@ public:
         return m_apiInstance;
     }
 
-    const SourceFile& GetSourceFile() const
-    {
-        return m_sourceFile;
-    }
-
-    const ErrorList& GetErrors() const
-    {
-        return m_errors;
-    }
-
-    ExportedSymbolTable& GetExportedSymbols()
-    {
-        return m_vm.GetState().GetExportedSymbols();
-    }
-    const ExportedSymbolTable& GetExportedSymbols() const
-    {
-        return m_vm.GetState().GetExportedSymbols();
-    }
-
-    VM& GetVM()
-    {
-        return m_vm;
-    }
-    const VM& GetVM() const
+    VM* GetVM() const
     {
         return m_vm;
     }
 
-    bool IsBaked() const
-    {
-        return m_bakedBytes.Any();
-    }
-    bool IsCompiled() const
-    {
-        return m_bytecodeChunk.buildables.Any();
-    }
+    void DestroyScript(ScriptHandle* scriptHandle);
 
-    bool Compile(scriptapi2::Context& context);
+    ScriptHandle* Compile(
+        SourceFile& sourceFile,
+        ErrorList& outErrorList);
 
-    InstructionStream Decompile(std::ostream* os = nullptr) const;
+    InstructionStream Decompile(
+        ScriptHandle* scriptHandle,
+        std::ostream* os = nullptr) const;
 
-    void Bake();
-    void Bake(BuildParams& buildParams);
-
-    void Run(scriptapi2::Context& context);
+    void Run(ScriptHandle* scriptHandle);
 
     template <class T>
     constexpr Value CreateArgument(T&& item)
@@ -208,71 +173,27 @@ public:
         };
     }
 
-    void CallFunctionArgV(const FunctionHandle& handle, Value* args, ArgCount numArgs);
+    void CallFunctionArgV(ScriptHandle* scriptHandle, const Value& function, Value* args, ArgCount numArgs);
 
-    bool GetFunctionHandle(const char* name, FunctionHandle& outHandle)
-    {
-        return GetExportedValue(name, &outHandle._inner);
-    }
+    bool GetFunctionHandle(const char* name, Value& outFunction);
+    bool GetObjectHandle(const char* name, Value& outObject);
 
-    bool GetObjectHandle(const char* name, ObjectHandle& outHandle)
-    {
-        return GetExportedValue(name, &outHandle._inner);
-    }
+    bool GetExportedValue(const char* name, Value* value);
 
-    bool GetExportedValue(const char* name, Value* value)
-    {
-        return GetExportedSymbols().Find(hashFnv1(name), value);
-    }
+    ExportedSymbolTable& GetExportedSymbols() const;
 
-    bool GetMember(const ObjectHandle& object, const char* memberName, ValueHandle& outValue)
-    {
-        if (object._inner.m_type != Value::HEAP_POINTER)
-        {
-            return false;
-        }
-
-        if (VMObject* ptr = object._inner.m_value.ptr->GetPointer<VMObject>())
-        {
-            if (Member* member = ptr->LookupMemberFromHash(hashFnv1(memberName)))
-            {
-                outValue = ValueHandle { member->value };
-
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    bool SetMember(const ObjectHandle& object, const char* memberName, const Value& value)
-    {
-        if (object._inner.m_type != Value::HEAP_POINTER)
-        {
-            return false;
-        }
-
-        if (VMObject* ptr = object._inner.m_value.ptr->GetPointer<VMObject>())
-        {
-            if (Member* member = ptr->LookupMemberFromHash(hashFnv1(memberName)))
-            {
-                member->value = value;
-
-                return true;
-            }
-        }
-
-        return false;
-    }
+    bool GetMember(const Value& objectValue, const char* memberName, Value& outValue);
+    bool SetMember(const Value& objectValue, const char* memberName, const Value& value);
 
     template <class... Args>
-    void CallFunction(const FunctionHandle& handle, Args&&... args)
+    void CallFunction(ScriptHandle* scriptHandle, const Value& function, Args&&... args)
     {
         auto arguments = CreateArguments(std::forward<Args>(args)...);
 
-        CallFunctionArgV(handle, arguments.Data(), arguments.Size());
+        CallFunctionArgV(scriptHandle, function, arguments.Data(), arguments.Size());
     }
 
+#if 0
     template <class RegisteredType, class T>
     ValueHandle CreateInternedObject(const T& value)
     {
@@ -307,21 +228,12 @@ public:
 
         return { finalValue };
     }
+#endif
 
 private:
+    scriptapi2::Context m_context;
     APIInstance m_apiInstance;
-
-    SourceFile m_sourceFile;
-    CompilationUnit m_compilationUnit;
-    ErrorList m_errors;
-
-    BytecodeChunk m_bytecodeChunk;
-
-    Bytes m_bakedBytes;
-
-    VM m_vm;
-    BytecodeStream m_bs;
+    VM* m_vm;
 };
 
 } // namespace hyperion
-
