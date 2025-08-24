@@ -20,9 +20,11 @@
 
 namespace hyperion {
 
+static IdGenerator g_scriptHandleGenerator;
+
 #pragma region Opaque Handles
 
-struct ScriptHandle
+struct ScriptHandleData
 {
     BytecodeStream bytecodeStream;
 };
@@ -44,6 +46,13 @@ HypScript::HypScript()
 
 HypScript::~HypScript()
 {
+    for (auto& pair : m_scripts)
+    {
+        delete pair.second;
+    }
+
+    m_scripts.Clear();
+
     m_apiInstance.SetVM(nullptr);
     delete m_vm;
 }
@@ -100,23 +109,31 @@ void HypScript::Initialize()
     m_context.BindAll(m_apiInstance, m_vm);
 }
 
-void HypScript::DestroyScript(ScriptHandle* scriptHandle)
+void HypScript::DestroyScript(ScriptHandle scriptHandle)
 {
-    if (!scriptHandle)
+    if (scriptHandle == INVALID_SCRIPT)
     {
         return;
     }
 
-    delete scriptHandle;
+    Mutex::Guard guard(m_mutex);
+
+    auto it = m_scripts.Find(scriptHandle);
+
+    if (it != m_scripts.End())
+    {
+        delete it->second;
+        m_scripts.Erase(it);
+    }
 }
 
-ScriptHandle* HypScript::Compile(
+ScriptHandle HypScript::Compile(
     SourceFile& sourceFile,
     ErrorList& outErrorList)
 {
     if (!sourceFile.IsValid())
     {
-        return nullptr;
+        return INVALID_SCRIPT;
     }
 
     SourceStream sourceStream(&sourceFile);
@@ -163,7 +180,7 @@ ScriptHandle* HypScript::Compile(
         }
         else
         {
-            return nullptr;
+            return INVALID_SCRIPT;
         }
 
         BuildParams buildParams {};
@@ -172,37 +189,74 @@ ScriptHandle* HypScript::Compile(
         codeGenerator.Visit(&bytecodeChunk);
         codeGenerator.Bake();
 
-        return new ScriptHandle(BytecodeStream(codeGenerator.GetInternalByteStream().GetData()));
+        ScriptHandle scriptHandle = (ScriptHandle)g_scriptHandleGenerator.Next();
+        ScriptHandleData* scriptHandleData = new ScriptHandleData {
+            BytecodeStream(codeGenerator.GetInternalByteStream().GetData())
+        };
+
+        {
+            Mutex::Guard guard(m_mutex);
+            m_scripts.Insert({ scriptHandle, scriptHandleData });
+        }
+
+        return scriptHandle;
     }
 
-    return nullptr;
+    return INVALID_SCRIPT;
 }
 
 InstructionStream HypScript::Decompile(
-    ScriptHandle* scriptHandle,
+    ScriptHandle scriptHandle,
     std::ostream* os) const
 {
-    if (!scriptHandle)
+    if (scriptHandle == INVALID_SCRIPT)
     {
         return InstructionStream();
     }
 
-    return DecompilationUnit().Decompile(scriptHandle->bytecodeStream, os);
+    Mutex::Guard guard(m_mutex);
+
+    auto it = m_scripts.Find(scriptHandle);
+
+    if (it == m_scripts.End())
+    {
+        return InstructionStream();
+    }
+
+    ScriptHandleData* scriptHandleData = it->second;
+    Assert(scriptHandleData != nullptr);
+
+    return DecompilationUnit().Decompile(scriptHandleData->bytecodeStream, os);
 }
 
-void HypScript::Run(ScriptHandle* scriptHandle)
+void HypScript::Run(ScriptHandle scriptHandle)
 {
-    if (!scriptHandle)
+    if (scriptHandle == INVALID_SCRIPT)
     {
         return;
     }
 
-    m_vm->Execute(&scriptHandle->bytecodeStream);
+    ScriptHandleData* scriptHandleData;
+
+    {
+        Mutex::Guard guard(m_mutex);
+        auto it = m_scripts.Find(scriptHandle);
+
+        if (it == m_scripts.End())
+        {
+            return;
+        }
+
+        scriptHandleData = it->second;
+        Assert(scriptHandleData != nullptr);
+    }
+
+    m_vm->Execute(&scriptHandleData->bytecodeStream);
 }
 
-void HypScript::CallFunctionArgV(ScriptHandle* scriptHandle, const Value& function, Value* args, ArgCount numArgs)
+void HypScript::CallFunctionArgV(ScriptHandle scriptHandle, const Value& function, Value* args, ArgCount numArgs)
 {
-    Assert(scriptHandle != nullptr);
+    Assert(scriptHandle != INVALID_SCRIPT);
 
     ExecutionThread* mainThread = m_vm->GetState().GetMainThread();
 
@@ -216,8 +270,19 @@ void HypScript::CallFunctionArgV(ScriptHandle* scriptHandle, const Value& functi
         }
     }
 
+    ScriptHandleData* scriptHandleData;
+
+    {
+        Mutex::Guard guard(m_mutex);
+        auto it = m_scripts.Find(scriptHandle);
+        Assert(it != m_scripts.End());
+
+        scriptHandleData = it->second;
+        Assert(scriptHandleData != nullptr);
+    }
+
     m_vm->InvokeNow(
-        &scriptHandle->bytecodeStream,
+        &scriptHandleData->bytecodeStream,
         function,
         numArgs);
 

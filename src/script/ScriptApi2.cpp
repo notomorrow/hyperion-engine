@@ -325,6 +325,9 @@ void Context::BindAll(APIInstance& apiInstance, VM* vm)
 
         Assert(vmState.GetMainThread()->GetStack().STACK_SIZE > stackLocation);
         vmState.GetMainThread()->GetStack().GetData()[stackLocation] = value;
+
+        DebugLog(LogType::Debug, "Bound global %s at stack location %u\n",
+            global.symbol.name.Data(), stackLocation);
     }
 
     for (const ClassDefinition& classDefinition : m_classDefinitions)
@@ -468,6 +471,9 @@ void Context::BindAll(APIInstance& apiInstance, VM* vm)
         // Set class object in global scope
         Assert(vmState.GetMainThread()->GetStack().STACK_SIZE > stackLocation);
         vmState.GetMainThread()->GetStack().GetData()[stackLocation] = value;
+
+        DebugLog(LogType::Debug, "Bound class %s at stack location %u\n",
+            classDefinition.name.Data(), stackLocation);
     }
 }
 

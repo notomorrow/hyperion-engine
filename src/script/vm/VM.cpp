@@ -1026,9 +1026,7 @@ HYP_FORCE_INLINE static void HandleInstruction(
         uint32 hash;
         bs->Read(&hash);
 
-        handler.ExportSymbol(
-            reg,
-            hash);
+        handler.ExportSymbol(reg, hash);
 
         break;
     }

@@ -21,20 +21,21 @@ void InternalByteStream::AddFixup(LabelId labelId, SizeType position, SizeType o
 
     m_fixups.PushBack(fixup);
 
-    Assert(m_byteBuffer.Size() >= position + sizeof(LabelPosition), "Not enough space allotted for the LabelPosition");
+    Assert(m_writer.GetBuffer().Size() >= position + sizeof(LabelPosition), "Not enough space allotted for the LabelPosition");
 
     // advance position by adding placeholder bytes
     for (SizeType i = 0; i < sizeof(LabelPosition); i++)
     {
-        m_byteBuffer.Data()[position + i] = ubyte(-1);
+        m_writer.GetBuffer().Data()[position + i] = ubyte(-1);
     }
 }
 
 void InternalByteStream::AddFixup(LabelId labelId, SizeType offset)
 {
-    const SizeType position = m_byteBuffer.Size();
+    const SizeType position = m_writer.Position();
 
-    m_byteBuffer.SetSize(m_byteBuffer.Size() + sizeof(LabelPosition));
+    LabelPosition labelPosition = (LabelPosition)-1;
+    m_writer.Write(labelPosition);
 
     AddFixup(labelId, position, offset);
 }
@@ -57,14 +58,14 @@ void InternalByteStream::Bake(const BuildParams& buildParams)
         const SizeType fixupPosition = fixup.position;
 
         // first, make sure there is enough space in the stream at that position
-        Assert(m_byteBuffer.Size() >= fixupPosition + sizeof(LabelPosition), "Not enough space allotted for the LabelPosition");
+        Assert(m_writer.GetBuffer().Size() >= fixupPosition + sizeof(LabelPosition), "Not enough space allotted for the LabelPosition");
 
         // now, make sure that each item in the buffer has been set to -1
         // if this is not the case, it is likely the wrong position
         for (SizeType i = 0; i < sizeof(LabelPosition); i++)
         {
-            Assert(m_byteBuffer.Data()[fixupPosition + i] == ubyte(-1), "Placeholder value in buffer should be set to -1");
-            m_byteBuffer.Data()[fixupPosition + i] = (labelPosition >> (i << 3)) & 0xFF;
+            Assert(m_writer.GetBuffer().Data()[fixupPosition + i] == ubyte(-1), "Placeholder value in buffer should be set to -1");
+            m_writer.GetBuffer().Data()[fixupPosition + i] = (labelPosition >> (i << 3)) & 0xFF;
         }
     }
 

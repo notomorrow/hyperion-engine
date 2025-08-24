@@ -106,23 +106,60 @@ void HyperionEditor::Init()
 {
     Game::Init();
 
-    #if 0
-    // temp
-    String str;
-    str = "Logger.print(\"hello\")";
+    #if 1
+    //{ // script 1
+    //    // temp
+    //    String str;
+    //    str = "for (i := 0; i < 100; i++) { Logger.print(\"hello!\\n\"); }";
 
-    ByteBuffer byteBuffer(ConstByteView(reinterpret_cast<const ubyte*>(str.Data()), reinterpret_cast<const ubyte*>(str.Data() + str.Size())));
+    //    ByteBuffer byteBuffer(ConstByteView(reinterpret_cast<const ubyte*>(str.Data()), reinterpret_cast<const ubyte*>(str.Data() + str.Size())));
 
-    SourceFile sourceFile("<temp>", byteBuffer.Size());
-    sourceFile.ReadIntoBuffer(byteBuffer);
+    //    SourceFile sourceFile("<temp>", byteBuffer.Size());
+    //    sourceFile.ReadIntoBuffer(byteBuffer);
 
-    ErrorList errorList;
-    ScriptHandle* scriptHandle = HypScript::GetInstance().Compile(sourceFile, errorList);
+    //    ErrorList errorList;
+    //    ScriptHandle scriptHandle = HypScript::GetInstance().Compile(sourceFile, errorList);
 
-    if (scriptHandle)
-    {
-        HypScript::GetInstance().Run(scriptHandle);
-        HypScript::GetInstance().DestroyScript(scriptHandle);
+    //    if (scriptHandle != INVALID_SCRIPT)
+    //    {
+
+    //        HypScript::GetInstance().Run(scriptHandle);
+    //        HypScript::GetInstance().DestroyScript(scriptHandle);
+    //    }
+    //}
+    { // script 2
+        // temp
+        String str;
+        str = "export func x(a, b) { Logger.log(Logger.INFO, \"a = {}, b = {}\", a, b); };";
+
+        ByteBuffer byteBuffer(ConstByteView(reinterpret_cast<const ubyte*>(str.Data()), reinterpret_cast<const ubyte*>(str.Data() + str.Size())));
+
+        SourceFile sourceFile("<temp>", byteBuffer.Size());
+        sourceFile.ReadIntoBuffer(byteBuffer);
+
+        ErrorList errorList;
+        ScriptHandle scriptHandle = HypScript::GetInstance().Compile(sourceFile, errorList);
+
+        if (scriptHandle != INVALID_SCRIPT)
+        {
+
+            HypScript::GetInstance().Decompile(scriptHandle, &std::cout);
+
+            HypScript::GetInstance().Run(scriptHandle);
+
+            // call function
+            Value v;
+            if (HypScript::GetInstance().GetFunctionHandle("x", v))
+            {
+                HypScript::GetInstance().CallFunction(scriptHandle, v, 5, 4);
+            }
+            else
+            {
+                HYP_LOG(Editor, Error, "Failed to get function handle for 'x'!");
+            }
+
+            HypScript::GetInstance().DestroyScript(scriptHandle);
+        }
     }
     #endif
 

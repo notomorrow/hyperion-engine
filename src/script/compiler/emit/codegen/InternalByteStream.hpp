@@ -2,6 +2,8 @@
 
 #include <script/compiler/emit/Buildable.hpp>
 
+#include <core/io/ByteWriter.hpp>
+
 #include <core/memory/ByteBuffer.hpp>
 
 #include <core/Types.hpp>
@@ -20,12 +22,12 @@ class InternalByteStream
 public:
     SizeType GetPosition() const
     {
-        return m_byteBuffer.Size();
+        return m_writer.Position();
     }
 
     const ByteBuffer& GetData() const
     {
-        return m_byteBuffer;
+        return m_writer.GetBuffer();
     }
 
     const Array<Fixup>& GetFixups() const
@@ -33,38 +35,14 @@ public:
         return m_fixups;
     }
 
-    void Put(ubyte byte)
+    HYP_FORCE_INLINE void Put(ubyte byte)
     {
-        if (m_byteBuffer.Size() + 1 >= m_byteBuffer.GetCapacity())
-        {
-            m_byteBuffer.SetCapacity(m_byteBuffer.GetCapacity() * 2);
-        }
-
-        m_byteBuffer.SetSize(m_byteBuffer.Size() + 1);
-        m_byteBuffer.Data()[m_byteBuffer.Size() - 1] = byte;
+        m_writer.Write(ConstByteView(&byte, 1));
     }
 
-    void Put(const ubyte* bytes, SizeType size)
+    HYP_FORCE_INLINE void Put(const ubyte* bytes, SizeType size)
     {
-        if (m_byteBuffer.Size() + size >= m_byteBuffer.GetCapacity())
-        {
-            SizeType newCapacity = m_byteBuffer.GetCapacity() * 2;
-
-            while (newCapacity < m_byteBuffer.Size() + size)
-            {
-                newCapacity *= 2;
-            }
-
-            m_byteBuffer.SetCapacity(newCapacity);
-        }
-
-        const SizeType oldSize = m_byteBuffer.Size();
-        m_byteBuffer.SetSize(oldSize + size);
-
-        for (SizeType i = 0; i < size; i++)
-        {
-            m_byteBuffer.Data()[oldSize + i] = bytes[i];
-        }
+        m_writer.Write(ConstByteView(bytes, size));
     }
 
     void MarkLabel(LabelId labelId);
@@ -74,7 +52,7 @@ public:
     void Bake(const BuildParams& buildParams);
 
 private:
-    ByteBuffer m_byteBuffer;
+    MemoryByteWriter m_writer;
     Array<Fixup> m_fixups;
 };
 

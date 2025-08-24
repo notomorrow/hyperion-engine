@@ -498,7 +498,7 @@ public:
 
         Value parentClassValue = thread->m_regs[reg];
         Assert(parentClassValue.GetType() == Value::HEAP_POINTER,
-            "Parent class for type %s must be a heap pointer, got %s",
+            "Parent class for type {} must be a heap pointer, got {}",
             typeName,
             parentClassValue.GetTypeString());
 

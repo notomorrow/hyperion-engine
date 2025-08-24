@@ -26,8 +26,10 @@ namespace scriptapi2 {
 class Context;
 } // namespace scriptapi2
 
-class ScriptHandle;
 class HypScript;
+
+enum class ScriptHandle : uint32;
+#define INVALID_SCRIPT ScriptHandle(0)
 
 class ValueHandle
 {
@@ -72,17 +74,17 @@ public:
 
     void Initialize();
 
-    void DestroyScript(ScriptHandle* scriptHandle);
+    void DestroyScript(ScriptHandle scriptHandle);
 
-    ScriptHandle* Compile(
+    ScriptHandle Compile(
         SourceFile& sourceFile,
         ErrorList& outErrorList);
 
     InstructionStream Decompile(
-        ScriptHandle* scriptHandle,
+        ScriptHandle scriptHandle,
         std::ostream* os = nullptr) const;
 
-    void Run(ScriptHandle* scriptHandle);
+    void Run(ScriptHandle scriptHandle);
 
     template <class T>
     constexpr Value CreateArgument(T&& item)
@@ -176,7 +178,7 @@ public:
         };
     }
 
-    void CallFunctionArgV(ScriptHandle* scriptHandle, const Value& function, Value* args, ArgCount numArgs);
+    void CallFunctionArgV(ScriptHandle scriptHandle, const Value& function, Value* args, ArgCount numArgs);
 
     bool GetFunctionHandle(const char* name, Value& outFunction);
     bool GetObjectHandle(const char* name, Value& outObject);
@@ -189,7 +191,7 @@ public:
     bool SetMember(const Value& objectValue, const char* memberName, const Value& value);
 
     template <class... Args>
-    void CallFunction(ScriptHandle* scriptHandle, const Value& function, Args&&... args)
+    void CallFunction(ScriptHandle scriptHandle, const Value& function, Args&&... args)
     {
         auto arguments = CreateArguments(std::forward<Args>(args)...);
 
@@ -237,6 +239,9 @@ private:
     scriptapi2::Context m_context;
     APIInstance m_apiInstance;
     VM* m_vm;
+
+    mutable Mutex m_mutex;
+    HashMap<ScriptHandle, struct ScriptHandleData*> m_scripts;
 };
 
 } // namespace hyperion

@@ -1727,6 +1727,8 @@ void DecompilationUnit::DecodeNext(
 
 InstructionStream DecompilationUnit::Decompile(hyperion::vm::BytecodeStream& bs, std::ostream* os)
 {
+    const SizeType prevPosition = bs.Position();
+
     InstructionStream is;
 
     while (!bs.Eof())
@@ -1743,6 +1745,9 @@ InstructionStream DecompilationUnit::Decompile(hyperion::vm::BytecodeStream& bs,
 
         DecodeNext(code, bs, is, os);
     }
+
+    // rewind back to where we started
+    bs.Seek(prevPosition);
 
     return is;
 }
