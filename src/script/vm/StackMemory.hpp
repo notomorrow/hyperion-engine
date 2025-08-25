@@ -9,18 +9,18 @@
 namespace hyperion {
 namespace vm {
 
-class StackMemory
+class Script_StackMemory
 {
 public:
     static constexpr SizeType STACK_SIZE = 20000;
 
-    friend std::ostream& operator<<(std::ostream& os, const StackMemory& stack);
+    friend std::ostream& operator<<(std::ostream& os, const Script_StackMemory& stack);
 
 public:
-    StackMemory();
-    StackMemory(const StackMemory& other) = delete;
-    StackMemory& operator=(const StackMemory& other) = delete;
-    ~StackMemory();
+    Script_StackMemory();
+    Script_StackMemory(const Script_StackMemory& other) = delete;
+    Script_StackMemory& operator=(const Script_StackMemory& other) = delete;
+    ~Script_StackMemory();
 
     /** Purge all items on the stack */
     void Purge();

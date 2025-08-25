@@ -41,7 +41,7 @@ struct Symbol
 {
     String name;
     Type type;
-    Variant<Value, NativeFunctionPtr_t> value;
+    Variant<Value, Script_NativeFunction> value;
 
     Symbol(
         const String& name,
@@ -56,7 +56,7 @@ struct Symbol
     Symbol(
         const String& name,
         const String& typeString,
-        NativeFunctionPtr_t value)
+        Script_NativeFunction value)
         : name(name),
           type { typeString, nullptr },
           value(value)
@@ -137,7 +137,7 @@ public:
     ClassBuilder& Method(
         String name,
         String typeString,
-        NativeFunctionPtr_t fn);
+        Script_NativeFunction fn);
 
     ClassBuilder& StaticMember(
         String name,
@@ -147,7 +147,7 @@ public:
     ClassBuilder& StaticMethod(
         String name,
         String typeString,
-        NativeFunctionPtr_t fn);
+        Script_NativeFunction fn);
 
     void Build();
 
@@ -189,13 +189,13 @@ public:
     Context& Global(
         String name,
         String typeString,
-        NativeFunctionPtr_t fn);
+        Script_NativeFunction fn);
 
     Context& Global(
         String name,
         String genericParamsString,
         String typeString,
-        NativeFunctionPtr_t fn);
+        Script_NativeFunction fn);
 
     void Visit(
         AstVisitor* visitor,

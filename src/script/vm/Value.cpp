@@ -8,6 +8,8 @@
 #include <script/vm/HeapValue.hpp>
 #include <script/Hasher.hpp>
 
+#include <core/object/HypData.hpp>
+
 #include <core/debug/Debug.hpp>
 
 #include <stdio.h>
@@ -15,10 +17,22 @@
 #include <iostream>
 
 namespace hyperion {
+
+extern HYP_API const char* LookupTypeName(TypeId typeId);
+
 namespace vm {
 
 static const VMString NULL_STRING = VMString("null");
 static const VMString BOOLEAN_STRINGS[2] = { VMString("false"), VMString("true") };
+
+static const TypeId typeIdI8 = TypeId::ForType<int8>();
+static const TypeId typeIdI16 = TypeId::ForType<int16>();
+static const TypeId typeIdI32 = TypeId::ForType<int32>();
+static const TypeId typeIdI64 = TypeId::ForType<int64>();
+static const TypeId typeIdU8 = TypeId::ForType<uint8>();
+static const TypeId typeIdU16 = TypeId::ForType<uint16>();
+static const TypeId typeIdU32 = TypeId::ForType<uint32>();
+static const TypeId typeIdU64 = TypeId::ForType<uint64>();
 
 TypeId GetTypeIdForHeapValue(const HeapValue* heapValue)
 {
@@ -50,24 +64,376 @@ const void* GetRawPointerForHeapValue(const HeapValue* heapValue)
     return heapValue->GetRawPointer();
 }
 
-Value::Value(const Value& other)
-    : m_type(other.m_type),
-      m_value(other.m_value)
+Value::Value()
 {
+    new (m_internal) HypData();
 }
 
-Value::Value(ValueType valueType, ValueData valueData)
-    : m_type(valueType),
-      m_value(valueData)
+Value::Value(HypData&& data)
 {
+    new (m_internal) HypData(std::move(data));
 }
 
-int Value::CompareAsPointers(
-    Value* lhs,
-    Value* rhs)
+Value::Value(const Script_VMData& vmData)
 {
-    HeapValue* a = lhs->m_value.internal.ptr;
-    HeapValue* b = rhs->m_value.internal.ptr;
+    static_assert(sizeof(Script_VMData) == sizeof(HypData_UserData128));
+    static_assert(alignof(Script_VMData) <= alignof(HypData_UserData128));
+
+    HypData_UserData128 userData;
+    Memory::MemCpy(&userData, &vmData, sizeof(Script_VMData));
+
+    new (m_internal) HypData(userData);
+}
+
+Value::Value(Value&& other) noexcept
+{
+    new (m_internal) HypData(std::move(*other.GetHypData()));
+}
+
+Value& Value::operator=(Value&& other) noexcept
+{
+    if (this != &other)
+    {
+        *GetHypData() = std::move(*other.GetHypData());
+    }
+
+    return *this;
+}
+
+HypData* Value::GetHypData()
+{
+    static_assert(sizeof(m_internal) == sizeof(HypData), "Size of m_internal must match size of HypData");
+    static_assert(alignof(decltype(m_internal)) <= alignof(HypData), "Alignment of m_internal must be less than or equal to alignment of HypData");
+
+    return reinterpret_cast<HypData*>(m_internal);
+}
+
+const HypData* Value::GetHypData() const
+{
+    static_assert(sizeof(m_internal) == sizeof(HypData), "Size of m_internal must match size of HypData");
+    static_assert(alignof(decltype(m_internal)) <= alignof(HypData), "Alignment of m_internal must be less than or equal to alignment of HypData");
+
+    return reinterpret_cast<const HypData*>(m_internal);
+}
+
+Script_VMData* Value::GetVMData() const
+{
+    return GetHypData()->TryGet<Script_VMData>().TryGet();
+}
+
+void Value::Mark()
+{
+    if (Value* ref = GetRef())
+    {
+        ref->Mark();
+
+        return;
+    }
+
+    // @TODO: Mark heap pointer
+}
+
+Script_VMData* Value::GetVMData() const
+{
+    const HypData& data = *GetHypData();
+
+    return data.TryGet<Script_VMData>().TryGet();
+}
+
+bool Value::IsRef() const
+{
+    Script_VMData* vmData = GetVMData();
+    if (vmData == nullptr)
+    {
+        return false;
+    }
+
+    return vmData->type == Script_VMData::VALUE_REF;
+}
+
+Value* Value::GetRef() const
+{
+    Script_VMData* vmData = GetVMData();
+    if (vmData == nullptr || vmData->type != Script_VMData::VALUE_REF)
+    {
+        return nullptr;
+    }
+
+    return vmData->valueRef;
+}
+
+void Value::AssignValue(Value&& other, bool assignRef)
+{
+    Value* ref;
+    if (assignRef && (ref = GetRef()) != nullptr)
+    {
+        *ref = std::move(other);
+    }
+    else
+    {
+        *this = std::move(other);
+    }
+}
+
+bool Value::GetUnsigned(uint64* out) const
+{
+    const HypData& data = *GetHypData();
+
+    if (!data.Is<uint64>(/* strict */ false))
+    {
+        return false;
+    }
+
+    *out = data.Get<uint64>();
+
+    return true;
+}
+
+bool Value::GetInteger(int64* out) const
+{
+    const HypData& data = *GetHypData();
+
+    if (!data.Is<int64>(/* strict */ false))
+    {
+        return false;
+    }
+
+    *out = data.Get<int64>();
+
+    return true;
+}
+
+bool Value::GetSignedOrUnsigned(Number* out) const
+{
+    const HypData& data = *GetHypData();
+
+    const TypeId typeId = data.GetTypeId();
+
+    if (typeId == typeIdI8)
+    {
+        out->i = static_cast<int64>(data.Get<int8>());
+        out->flags = Number::FLAG_SIGNED | Number::FLAG_8_BIT;
+        return true;
+    }
+
+    if (typeId == typeIdU8)
+    {
+        out->u = static_cast<uint64>(data.Get<uint8>());
+        out->flags = Number::FLAG_UNSIGNED | Number::FLAG_8_BIT;
+        return true;
+    }
+
+    if (typeId == typeIdI16)
+    {
+        out->i = static_cast<int64>(data.Get<int16>());
+        out->flags = Number::FLAG_SIGNED | Number::FLAG_16_BIT;
+        return true;
+    }
+
+    if (typeId == typeIdU16)
+    {
+        out->u = static_cast<uint64>(data.Get<uint16>());
+        out->flags = Number::FLAG_UNSIGNED | Number::FLAG_16_BIT;
+        return true;
+    }
+
+    if (typeId == typeIdI32)
+    {
+        out->i = static_cast<int64>(data.Get<int32>());
+        out->flags = Number::FLAG_SIGNED | Number::FLAG_32_BIT;
+        return true;
+    }
+
+    if (typeId == typeIdU32)
+    {
+        out->u = static_cast<uint64>(data.Get<uint32>());
+        out->flags = Number::FLAG_UNSIGNED | Number::FLAG_32_BIT;
+        return true;
+    }
+
+    if (typeId == typeIdI64)
+    {
+        out->i = data.Get<int64>();
+        out->flags = Number::FLAG_SIGNED | Number::FLAG_64_BIT;
+        return true;
+    }
+
+    if (typeId == typeIdU64)
+    {
+        out->u = data.Get<uint64>();
+        out->flags = Number::FLAG_UNSIGNED | Number::FLAG_64_BIT;
+        return true;
+    }
+
+    return false;
+}
+
+bool Value::GetFloatingPoint(double* out) const
+{
+    const HypData& data = *GetHypData();
+
+    if (!data.Is<double>(/* strict */ true) && !data.Is<float>(/* strict */ true))
+    {
+        return false;
+    }
+
+    *out = data.Get<double>();
+
+    return true;
+}
+
+bool Value::GetFloatingPointCoerce(double* out) const
+{
+    // alias for backwards compatibility
+    return GetNumber(out);
+}
+
+bool Value::GetNumber(double* out) const
+{
+    Number number;
+    if (!GetNumber(&number))
+    {
+        return false;
+    }
+
+    if (number.flags & Number::FLAG_FLOATING_POINT)
+    {
+        *out = number.f;
+
+        return true;
+    }
+
+    if (number.flags & Number::FLAG_SIGNED)
+    {
+        *out = static_cast<double>(number.i);
+
+        return true;
+    }
+    
+    if (number.flags & Number::FLAG_UNSIGNED)
+    {
+        *out = static_cast<double>(number.u);
+
+        return true;
+    }
+
+    return false;
+}
+
+bool Value::GetNumber(Number* out) const
+{
+    const HypData& data = *GetHypData();
+
+    const TypeId typeId = data.GetTypeId();
+
+
+    if (typeId == TypeId::ForType<float>())
+    {
+        out->f = static_cast<double>(data.Get<float>());
+        out->flags = Number::FLAG_FLOATING_POINT | Number::FLAG_32_BIT;
+        return true;
+    }
+
+    if (typeId == TypeId::ForType<double>())
+    {
+        out->f = data.Get<double>();
+        out->flags = Number::FLAG_FLOATING_POINT | Number::FLAG_64_BIT;
+        return true;
+    }
+
+    if (typeId == typeIdI8)
+    {
+        out->i = static_cast<int64>(data.Get<int8>());
+        out->flags = Number::FLAG_SIGNED | Number::FLAG_8_BIT;
+        return true;
+    }
+
+    if (typeId == typeIdU8)
+    {
+        out->u = static_cast<uint64>(data.Get<uint8>());
+        out->flags = Number::FLAG_UNSIGNED | Number::FLAG_8_BIT;
+        return true;
+    }
+
+    if (typeId == typeIdI16)
+    {
+        out->i = static_cast<int64>(data.Get<int16>());
+        out->flags = Number::FLAG_SIGNED | Number::FLAG_16_BIT;
+        return true;
+    }
+
+    if (typeId == typeIdU16)
+    {
+        out->u = static_cast<uint64>(data.Get<uint16>());
+        out->flags = Number::FLAG_UNSIGNED | Number::FLAG_16_BIT;
+        return true;
+    }
+
+    if (typeId == typeIdI32)
+    {
+        out->i = static_cast<int64>(data.Get<int32>());
+        out->flags = Number::FLAG_SIGNED | Number::FLAG_32_BIT;
+        return true;
+    }
+
+    if (typeId == typeIdU32)
+    {
+        out->u = static_cast<uint64>(data.Get<uint32>());
+        out->flags = Number::FLAG_UNSIGNED | Number::FLAG_32_BIT;
+        return true;
+    }
+
+    if (typeId == typeIdI64)
+    {
+        out->i = data.Get<int64>();
+        out->flags = Number::FLAG_SIGNED | Number::FLAG_64_BIT;
+        return true;
+    }
+
+    if (typeId == typeIdU64)
+    {
+        out->u = data.Get<uint64>();
+        out->flags = Number::FLAG_UNSIGNED | Number::FLAG_64_BIT;
+        return true;
+    }
+
+    return false;
+}
+
+bool Value::GetBoolean(bool* out) const
+{
+    const HypData& data = *GetHypData();
+
+    if (!data.Is<bool>())
+    {
+        return false;
+    }
+
+    *out = data.Get<bool>();
+    return true;
+}
+
+AnyRef Value::ToRef() const
+{
+    const HypData& data = *GetHypData();
+    return data.ToRef();
+}
+
+Script_UserData Value::GetUserData() const
+{
+    Script_VMData* vmData = GetVMData();
+    if (!vmData || vmData->type != Script_VMData::USER_DATA)
+    {
+        return nullptr;
+    }
+
+    return vmData->userData;
+}
+
+int Value::CompareAsPointers(Value* lhs, Value* rhs)
+{
+    void* a = lhs->GetHypData()->ToRef().GetPointer();
+    void* b = rhs->GetHypData()->ToRef().GetPointer();
 
     if (a == b)
     {
@@ -78,158 +444,125 @@ int Value::CompareAsPointers(
     {
         return CompareFlags::NONE;
     }
-    else if (a->GetRawPointer() == b->GetRawPointer())
-    {
-        // pointers equal
-        return CompareFlags::EQUAL;
-    }
-    else if (a->GetTypeId() != b->GetTypeId())
-    {
-        // type IDs not equal, drop out
-        return CompareFlags::NONE;
-    }
-    else if (const VMObject* vmObject = a->GetPointer<VMObject>())
-    {
-        return *vmObject == b->Get<VMObject>()
-            ? CompareFlags::EQUAL
-            : CompareFlags::NONE;
-    }
-    else if (const VMString* vmString = a->GetPointer<VMString>())
-    {
-        return *vmString == b->Get<VMString>()
-            ? CompareFlags::EQUAL
-            : CompareFlags::NONE;
-    }
-    else if (const VMArray* vmArray = a->GetPointer<VMArray>())
-    {
-        return *vmArray == b->Get<VMArray>()
-            ? CompareFlags::EQUAL
-            : CompareFlags::NONE;
-    }
     else
     {
         return CompareFlags::NONE;
     }
 }
 
-void Value::Mark()
+int Value::CompareAsFunctions(Value* lhs, Value* rhs)
 {
-    switch (m_type)
+    Script_VMData* lhsVmData = lhs->GetVMData();
+    Script_VMData* rhsVmData = rhs->GetVMData();
+
+    if (lhsVmData == nullptr || rhsVmData == nullptr)
     {
-    case Value::VALUE_REF:
-        Assert(m_value.internal.valueRef != nullptr);
-
-        if (m_value.internal.valueRef != this)
-        {
-            m_value.internal.valueRef->Mark();
-        }
-
-        break;
-
-    case Value::HEAP_POINTER:
-    {
-        HeapValue* ptr = m_value.internal.ptr;
-
-        if (ptr != nullptr)
-        {
-            Assert(!(ptr->GetFlags() & GC_DESTROYED), "VM heap corruption! VMObject had flag GC_DESTROYED in Mark()");
-
-            if (!(ptr->GetFlags() & GC_ALIVE))
-            {
-                ptr->Mark();
-            }
-        }
-
-        break;
+        return lhsVmData == rhsVmData ? CompareFlags::EQUAL : CompareFlags::NONE;
     }
 
-    default:
-        break;
+    return (lhsVmData->func.m_addr == rhsVmData->func.m_addr)
+        ? CompareFlags::EQUAL
+        : CompareFlags::NONE;
+}
+
+int Value::CompareAsNativeFunctions(Value* lhs, Value* rhs)
+{
+    Script_VMData* lhsVmData = lhs->GetVMData();
+    Script_VMData* rhsVmData = rhs->GetVMData();
+
+    if (lhsVmData == nullptr || rhsVmData == nullptr)
+    {
+        return lhsVmData == rhsVmData ? CompareFlags::EQUAL : CompareFlags::NONE;
     }
+
+    return (lhsVmData->nativeFunc == rhsVmData->nativeFunc)
+        ? CompareFlags::EQUAL
+        : CompareFlags::NONE;
 }
 
 const char* Value::GetTypeString() const
 {
-    switch (m_type)
+    const HypData& data = *GetHypData();
+
+    if (!data.IsValid())
     {
-    case NONE:
         return "<Uninitialized data>";
-    case I8:
-        return "int8";
-    case I16:
-        return "int16";
-    case I32:
-        return "int32";
-    case I64:
-        return "int64";
-    case U8:
-        return "uint8";
-    case U16:
-        return "uint16";
-    case U32:
-        return "uint32";
-    case U64:
-        return "uint64";
-    case F32:
-        return "float";
-    case F64:
-        return "double";
-    case BOOLEAN:
-        return "bool";
-    case VALUE_REF:
-        Assert(m_value.internal.valueRef != nullptr);
-
-        if (m_value.internal.valueRef != this)
-        {
-            return m_value.internal.valueRef->GetTypeString();
-        }
-        else
-        {
-            return "<Circular Reference>";
-        }
-
-    case HEAP_POINTER:
-        if (m_value.internal.ptr == nullptr)
-        {
-            return "Null";
-        }
-        else if (m_value.internal.ptr->GetPointer<VMString>())
-        {
-            return "String";
-        }
-        else if (m_value.internal.ptr->GetPointer<VMArray>() || m_value.internal.ptr->GetPointer<VMArraySlice>())
-        {
-            return "Array";
-        }
-        else if (m_value.internal.ptr->GetPointer<VMMemoryBuffer>())
-        {
-            return "MemoryBuffer";
-        }
-        else if (m_value.internal.ptr->GetPointer<VMStruct>())
-        {
-            return "Struct";
-        }
-        else if (VMObject* object = m_value.internal.ptr->GetPointer<VMObject>())
-        {
-            return "Object"; // TODO prototype name
-        }
-
-        return "<Unknown pointer type>";
-
-    case FUNCTION: // fallthrough
-    case NATIVE_FUNCTION:
-        return "Function";
-    case ADDRESS:
-        return "<Function address>";
-    case FUNCTION_CALL:
-        return "<Stack frame>";
-    case TRY_CATCH_INFO:
-        return "<Try catch info>";
-    case USER_DATA:
-        return "UserData";
-    default:
-        return "<Invalid type>";
     }
+
+    const TypeId typeId = data.GetTypeId();
+
+    if (typeId == TypeId::ForType<int8>())
+    {
+        return "int8";
+    }
+    else if (typeId == TypeId::ForType<int16>())
+    {
+        return "int16";
+    }
+    else if (typeId == TypeId::ForType<int32>())
+    {
+        return "int32";
+    }
+    else if (typeId == TypeId::ForType<int64>())
+    {
+        return "int64";
+    }
+    else if (typeId == TypeId::ForType<uint8>())
+    {
+        return "uint8";
+    }
+    else if (typeId == TypeId::ForType<uint16>())
+    {
+        return "uint16";
+    }
+    else if (typeId == TypeId::ForType<uint32>())
+    {
+        return "uint32";
+    }
+    else if (typeId == TypeId::ForType<uint64>())
+    {
+        return "uint64";
+    }
+    else if (typeId == TypeId::ForType<float>())
+    {
+        return "float";
+    }
+    else if (typeId == TypeId::ForType<double>())
+    {
+        return "double";
+    }
+    else if (typeId == TypeId::ForType<bool>())
+    {
+        return "bool";
+    }
+    else if (Script_VMData* vmData = GetVMData())
+    {
+        switch (vmData->type)
+        {
+        case Script_VMData::FUNCTION: // fallthrough
+        case Script_VMData::NATIVE_FUNCTION:
+            return "Function";
+        case Script_VMData::ADDRESS:
+            return "<Function address>";
+        case Script_VMData::FUNCTION_CALL:
+            return "<Stack frame>";
+        case Script_VMData::TRY_CATCH_INFO:
+            return "<Try catch info>";
+        case Script_VMData::USER_DATA:
+            return "UserData";
+        default:
+            HYP_UNREACHABLE();
+        }
+    }
+
+    const char* typeName = LookupTypeName(typeId);
+
+    if (typeName != nullptr)
+    {
+        return typeName;
+    }
+    
+    return "<Unknown type>";
 }
 
 VMString Value::ToString() const
@@ -239,145 +572,104 @@ VMString Value::ToString() const
 
     const int depth = 3;
 
-    switch (m_type)
+    const HypData& data = *GetHypData();
+
+    if (!data.IsValid())
     {
-    case Value::I8:
-    {
-        int n = snprintf(buf, bufSize, "%" PRId8, m_value.i8);
-        return VMString(buf, n);
-    }
-    case Value::I16:
-    {
-        int n = snprintf(buf, bufSize, "%" PRId16, m_value.i16);
-        return VMString(buf, n);
-    }
-    case Value::I32:
-    {
-        int n = snprintf(buf, bufSize, "%" PRId32, m_value.i32);
-        return VMString(buf, n);
-    }
-    case Value::I64:
-    {
-        int n = snprintf(buf, bufSize, "%" PRId64, m_value.i64);
-        return VMString(buf, n);
+        return NULL_STRING;
     }
 
-    case Value::U8:
+    const TypeId typeId = data.GetTypeId();
+
+    if (typeId == TypeId::ForType<int8>())
     {
-        int n = snprintf(buf, bufSize, "%" PRIu8, m_value.u8);
-        return VMString(buf, n);
+        snprintf(buf, bufSize, "%" PRId8, data.Get<int8>());
+        return VMString(buf);
     }
-    case Value::U16:
+    else if (typeId == TypeId::ForType<int16>())
     {
-        int n = snprintf(buf, bufSize, "%" PRIu16, m_value.u16);
-        return VMString(buf, n);
+        snprintf(buf, bufSize, "%" PRId16, data.Get<int16>());
+        return VMString(buf);
     }
-    case Value::U32:
+    else if (typeId == TypeId::ForType<int32>())
     {
-        int n = snprintf(buf, bufSize, "%" PRIu32, m_value.u32);
-        return VMString(buf, n);
+        snprintf(buf, bufSize, "%" PRId32, data.Get<int32>());
+        return VMString(buf);
     }
-    case Value::U64:
+    else if (typeId == TypeId::ForType<int64>())
     {
-        int n = snprintf(buf, bufSize, "%" PRIu64, m_value.u64);
-        return VMString(buf, n);
+        snprintf(buf, bufSize, "%" PRId64, data.Get<int64>());
+        return VMString(buf);
     }
-    case Value::F32:
+    else if (typeId == TypeId::ForType<uint8>())
     {
-        int n = snprintf(
-            buf,
-            bufSize,
-            "%g",
-            m_value.f);
-        return VMString(buf, n);
+        snprintf(buf, bufSize, "%" PRIu8, data.Get<uint8>());
+        return VMString(buf);
+    }
+    else if (typeId == TypeId::ForType<uint16>())
+    {
+        snprintf(buf, bufSize, "%" PRIu16, data.Get<uint16>());
+        return VMString(buf);
+    }
+    else if (typeId == TypeId::ForType<uint32>())
+    {
+        snprintf(buf, bufSize, "%" PRIu32, data.Get<uint32>());
+        return VMString(buf);
+    }
+    else if (typeId == TypeId::ForType<uint64>())
+    {
+        snprintf(buf, bufSize, "%" PRIu64, data.Get<uint64>());
+        return VMString(buf);
+    }
+    else if (typeId == TypeId::ForType<float>())
+    {
+        snprintf(buf, bufSize, "%f", data.Get<float>());
+        return VMString(buf);
+    }
+    else if (typeId == TypeId::ForType<double>())
+    {
+        snprintf(buf, bufSize, "%lf", data.Get<double>());
+        return VMString(buf);
+    }
+    else if (typeId == TypeId::ForType<bool>())
+    {
+        return BOOLEAN_STRINGS[data.Get<bool>() ? 1 : 0];
+    }
+    else if (Script_VMData* vmData = GetVMData())
+    {
+        switch (vmData->type)
+        {
+        case Script_VMData::FUNCTION:
+            return VMString("<Function>");
+        case Script_VMData::NATIVE_FUNCTION:
+            return VMString("<Native Function>");
+        case Script_VMData::ADDRESS:
+            snprintf(buf, bufSize, "<Function address @ %p>", (void*)vmData->func.m_addr);
+            return VMString(buf);
+        case Script_VMData::FUNCTION_CALL:
+            return VMString("<Stack frame>");
+        case Script_VMData::TRY_CATCH_INFO:
+            return VMString("<Try catch info>");
+        case Script_VMData::USER_DATA:
+            snprintf(buf, bufSize, "<User data @ %p>", vmData->userData);
+            return VMString(buf);
+        case Script_VMData::VALUE_REF:
+            Assert(vmData->valueRef != nullptr);
+            if (vmData->valueRef == this)
+            {
+                return VMString("<Circular Reference>");
+            }
+            else
+            {
+                return vmData->valueRef->ToString();
+            }
+        default:
+            HYP_UNREACHABLE();
+            return VMString("<Unknown VM data>");
+        }
     }
 
-    case Value::F64:
-    {
-        int n = snprintf(
-            buf,
-            bufSize,
-            "%g",
-            m_value.d);
-        return VMString(buf, n);
-    }
-
-    case Value::BOOLEAN:
-        return BOOLEAN_STRINGS[m_value.b];
-
-    case Value::VALUE_REF:
-        Assert(m_value.internal.valueRef != nullptr);
-        if (m_value.internal.valueRef == this)
-        {
-            return VMString("<Circular Reference>");
-        }
-        else
-        {
-            return m_value.internal.valueRef->ToString();
-        }
-    case Value::USER_DATA:
-    {
-        int n = snprintf(buf, bufSize, "%p", m_value.internal.userData);
-        return VMString(buf, n);
-    }
-    case Value::HEAP_POINTER:
-    {
-        if (m_value.internal.ptr == nullptr)
-        {
-            return NULL_STRING;
-        }
-        else if (VMString* string = m_value.internal.ptr->GetPointer<VMString>())
-        {
-            return *string;
-        }
-        else if (VMArray* array = m_value.internal.ptr->GetPointer<VMArray>())
-        {
-            std::stringstream ss;
-            array->GetRepresentation(ss, true, depth);
-            const std::string& str = ss.str();
-            return VMString(str.c_str());
-        }
-        else if (VMMemoryBuffer* memoryBuffer = m_value.internal.ptr->GetPointer<VMMemoryBuffer>())
-        {
-            std::stringstream ss;
-            memoryBuffer->GetRepresentation(ss, true, depth);
-            const std::string& str = ss.str();
-            return VMString(str.c_str());
-        }
-        else if (VMArraySlice* slice = m_value.internal.ptr->GetPointer<VMArraySlice>())
-        {
-            std::stringstream ss;
-            slice->GetRepresentation(ss, true, depth);
-            const std::string& str = ss.str();
-            return VMString(str.c_str());
-        }
-        else if (VMObject* object = m_value.internal.ptr->GetPointer<VMObject>())
-        {
-            std::stringstream ss;
-            object->GetRepresentation(ss, true, depth);
-            const std::string& str = ss.str();
-            return VMString(str.c_str());
-        }
-        else if (VMMap* map = m_value.internal.ptr->GetPointer<VMMap>())
-        {
-            std::stringstream ss;
-            map->GetRepresentation(ss, true, depth);
-            const std::string& str = ss.str();
-            return VMString(str.c_str());
-        }
-        else
-        {
-            // return memory address as string
-            int n = snprintf(buf, bufSize, "%p", (void*)m_value.internal.ptr);
-            return VMString(buf, n);
-        }
-
-        break;
-    }
-
-    default:
-        return VMString(GetTypeString());
-    }
+    return VMString("<Object of type ") + VMString(GetTypeString()) + VMString(">");
 }
 
 void Value::ToRepresentation(
@@ -385,128 +677,17 @@ void Value::ToRepresentation(
     bool addTypeName,
     int depth) const
 {
-    switch (m_type)
+    // just use ToString for now
+    if (addTypeName)
     {
-    case Value::VALUE_REF:
-        Assert(m_value.internal.valueRef != nullptr);
-
-        if (m_value.internal.valueRef == this)
-        {
-            ss << "<Circular Reference>";
-        }
-        else
-        {
-            m_value.internal.valueRef->ToRepresentation(
-                ss,
-                addTypeName,
-                depth);
-        }
-
-        return;
-
-    case Value::HEAP_POINTER:
-        if (m_value.internal.ptr == nullptr)
-        {
-            ss << "null";
-        }
-        else if (VMString* string = m_value.internal.ptr->GetPointer<VMString>())
-        {
-            ss << '\"';
-            ss << string->GetData();
-            ss << '\"';
-        }
-        else if (VMArray* array = m_value.internal.ptr->GetPointer<VMArray>())
-        {
-            array->GetRepresentation(ss, addTypeName, depth);
-        }
-        else if (VMArraySlice* slice = m_value.internal.ptr->GetPointer<VMArraySlice>())
-        {
-            slice->GetRepresentation(ss, addTypeName, depth);
-        }
-        else if (VMObject* object = m_value.internal.ptr->GetPointer<VMObject>())
-        {
-            object->GetRepresentation(ss, addTypeName, depth);
-        }
-        else if (VMMap* map = m_value.internal.ptr->GetPointer<VMMap>())
-        {
-            map->GetRepresentation(ss, addTypeName, depth);
-        }
-        else
-        {
-            if (addTypeName)
-            {
-                ss << GetTypeString();
-                ss << '(';
-            }
-
-            ss << ToString().GetData();
-
-            if (addTypeName)
-            {
-                ss << ')';
-            }
-        }
-
-        break;
-    default:
-        ss << ToString().GetData();
+        ss << GetTypeString() << "(";
     }
-}
 
-HashCode Value::GetHashCode() const
-{
-    switch (m_type)
-    {
-    case Value::I8:
-        return HashCode::GetHashCode(m_value.i8);
-    case Value::I16:
-        return HashCode::GetHashCode(m_value.i16);
-    case Value::I32:
-        return HashCode::GetHashCode(m_value.i32);
-    case Value::I64:
-        return HashCode::GetHashCode(m_value.i64);
-    case Value::U8:
-        return HashCode::GetHashCode(m_value.u8);
-    case Value::U16:
-        return HashCode::GetHashCode(m_value.u16);
-    case Value::U32:
-        return HashCode::GetHashCode(m_value.u32);
-    case Value::U64:
-        return HashCode::GetHashCode(m_value.u64);
-    case Value::F32:
-        return HashCode::GetHashCode(m_value.f);
-    case Value::F64:
-        return HashCode::GetHashCode(m_value.d);
-    case Value::BOOLEAN:
-        return HashCode::GetHashCode(m_value.b);
-    case Value::VALUE_REF:
-        Assert(m_value.internal.valueRef != nullptr);
-        return m_value.internal.valueRef->GetHashCode();
-    // case Value::HEAP_POINTER:
-    //     if (m_value.internal.ptr == nullptr) {
-    //         return HashCode::GetHashCode(0);
-    //     } else if (VMString *string = m_value.internal.ptr->GetPointer<VMString>()) {
-    //         return string->GetHashCode();
-    //     } else if (VMArray *array = m_value.internal.ptr->GetPointer<VMArray>()) {
-    //         return array->GetHashCode();
-    //     } else if (VMArraySlice *slice = m_value.internal.ptr->GetPointer<VMArraySlice>()) {
-    //         return slice->GetHashCode();
-    //     } else if (VMObject *object = m_value.internal.ptr->GetPointer<VMObject>()) {
-    //         return object->GetHashCode();
-    //     } else {
-    //         return HashCode::GetHashCode(m_value.internal.ptr);
-    //     }
-    case Value::USER_DATA:
-        // hash the void*
-        return HashCode::GetHashCode(m_value.internal.userData);
-    case Value::HEAP_POINTER: // fallthrough
-    default:
-    {
-        // If we get here, just stringify the value and hash that.
-        const VMString str = ToString();
+    ss << ToString().GetData();
 
-        return str.GetHashCode();
-    }
+    if (addTypeName)
+    {
+        ss << ")";
     }
 }
 

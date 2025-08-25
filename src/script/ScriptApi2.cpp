@@ -37,7 +37,7 @@ ClassBuilder& ClassBuilder::Member(String name, String typeString,
 }
 
 ClassBuilder& ClassBuilder::Method(String name, String typeString,
-    NativeFunctionPtr_t fn)
+    Script_NativeFunction fn)
 {
     m_classDefinition.members.PushBack(Symbol { name, typeString, fn });
 
@@ -53,7 +53,7 @@ ClassBuilder& ClassBuilder::StaticMember(String name, String typeString,
 }
 
 ClassBuilder& ClassBuilder::StaticMethod(String name, String typeString,
-    NativeFunctionPtr_t fn)
+    Script_NativeFunction fn)
 {
     m_classDefinition.staticMembers.PushBack(Symbol { name, typeString, fn });
 
@@ -97,7 +97,7 @@ Context& Context::Global(String name, String genericParamsString,
 }
 
 Context& Context::Global(String name, String typeString,
-    NativeFunctionPtr_t fn)
+    Script_NativeFunction fn)
 {
     Mutex::Guard guard(m_mutex);
 
@@ -107,7 +107,7 @@ Context& Context::Global(String name, String typeString,
 }
 
 Context& Context::Global(String name, String genericParamsString,
-    String typeString, NativeFunctionPtr_t fn)
+    String typeString, Script_NativeFunction fn)
 {
     Mutex::Guard guard(m_mutex);
 
@@ -311,10 +311,10 @@ void Context::BindAll(APIInstance& apiInstance, VM* vm)
         {
             value = global.symbol.value.Get<Value>();
         }
-        else if (global.symbol.value.Is<NativeFunctionPtr_t>())
+        else if (global.symbol.value.Is<Script_NativeFunction>())
         {
             value = { Value::NATIVE_FUNCTION,
-                { .internal = { .nativeFunc = global.symbol.value.Get<NativeFunctionPtr_t>() } } };
+                { .internal = { .nativeFunc = global.symbol.value.Get<Script_NativeFunction>() } } };
         }
         else
         {
@@ -384,11 +384,11 @@ void Context::BindAll(APIInstance& apiInstance, VM* vm)
             {
                 symbolValue = symbol.value.Get<Value>();
             }
-            else if (symbol.value.Is<NativeFunctionPtr_t>())
+            else if (symbol.value.Is<Script_NativeFunction>())
             {
                 symbolValue = {
                     Value::NATIVE_FUNCTION,
-                    { .internal = { .nativeFunc = symbol.value.Get<NativeFunctionPtr_t>() } }
+                    { .internal = { .nativeFunc = symbol.value.Get<Script_NativeFunction>() } }
                 };
             }
             else
@@ -425,11 +425,11 @@ void Context::BindAll(APIInstance& apiInstance, VM* vm)
             {
                 symbolValue = symbol.value.Get<Value>();
             }
-            else if (symbol.value.Is<NativeFunctionPtr_t>())
+            else if (symbol.value.Is<Script_NativeFunction>())
             {
                 symbolValue = {
                     Value::NATIVE_FUNCTION,
-                    { .internal = { .nativeFunc = symbol.value.Get<NativeFunctionPtr_t>() } }
+                    { .internal = { .nativeFunc = symbol.value.Get<Script_NativeFunction>() } }
                 };
             }
 

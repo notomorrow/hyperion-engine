@@ -43,7 +43,7 @@ void VMState::Reset()
     good = true;
 }
 
-void VMState::ThrowException(ExecutionThread* thread, const Exception& exception)
+void VMState::ThrowException(Script_ExecutionThread* thread, const Exception& exception)
 {
     ++thread->m_exceptionState.m_exceptionDepth;
 
@@ -63,7 +63,7 @@ void VMState::ThrowException(ExecutionThread* thread, const Exception& exception
     }
 }
 
-HeapValue* VMState::HeapAlloc(ExecutionThread* thread)
+HeapValue* VMState::HeapAlloc(Script_ExecutionThread* thread)
 {
     Assert(thread != nullptr);
 
@@ -139,7 +139,7 @@ void VMState::GC()
         numCollected);
 }
 
-ExecutionThread* VMState::CreateThread()
+Script_ExecutionThread* VMState::CreateThread()
 {
     Assert(m_numThreads < VM_MAX_THREADS);
 
@@ -148,7 +148,7 @@ ExecutionThread* VMState::CreateThread()
     {
         if (m_threads[i] == nullptr)
         {
-            ExecutionThread* thread = new ExecutionThread();
+            Script_ExecutionThread* thread = new Script_ExecutionThread();
             thread->m_id = i;
 
             m_threads[i] = thread;
@@ -165,7 +165,7 @@ void VMState::DestroyThread(int id)
 {
     Assert(id < VM_MAX_THREADS);
 
-    ExecutionThread* thread = m_threads[id];
+    Script_ExecutionThread* thread = m_threads[id];
 
     if (thread != nullptr)
     {

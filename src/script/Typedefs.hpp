@@ -8,7 +8,7 @@ namespace vm {
 // forward declarations
 struct Value;
 struct VMState;
-struct ExecutionThread;
+struct Script_ExecutionThread;
 
 } // namespace vm
 

@@ -85,6 +85,15 @@ struct DefaultHypDataSerializeFunction<void>
     }
 };
 
+/*! \brief A struct that can hold 128 bits (16 bytes) of user data.
+ *  Useful for storing small amounts of data directly in HypData without heap allocation.
+ *  \note This is primarily for internal use and should be used with care to avoid alignment issues.
+ */
+struct alignas(std::max_align_t) HypData_UserData128
+{
+    uint64 data[2];
+};
+
 /*! \brief A type-safe union that can store multiple different types of run-time data, abstracting away internal engine structures such as Handle<T>, RC<T>, etc.
  *  Providing a unified way of accessing the data via Get<T>() and TryGet<T>() methods.
  *  \note Used in serialization, reflection, scripting, and other systems where data needs to be stored in a generic way.
@@ -109,7 +118,8 @@ struct HypData
         AnyHandle,
         RC<void>,
         AnyRef,
-        Any>;
+        Any,
+        HypData_UserData128>;
 
     template <class T>
     static constexpr bool canStoreDirectly =
@@ -133,7 +143,8 @@ struct HypData
         /*! Pointers are stored as AnyRef which holds TypeId for conversion */
         || std::is_same_v<T, AnyRef> || std::is_pointer_v<T>
 
-        || std::is_same_v<T, Any>;
+        || std::is_same_v<T, Any>
+        || std::is_same_v<T, HypData_UserData128>;
 
     VariantType value;
     HypDataSerializeFunction serializeFunction;
@@ -1376,6 +1387,34 @@ struct HypDataHelper<Any>
         outData = FBOMData::FromObject(std::move(object));
 
         return FBOMResult::FBOM_OK;
+    }
+};
+
+template <>
+struct HypDataHelperDecl<HypData_UserData128>
+{
+};
+
+template <>
+struct HypDataHelper<HypData_UserData128>
+{
+    using StorageType = HypData_UserData128;
+    using ConvertibleFrom = Tuple<>;
+
+    HYP_FORCE_INLINE bool Is(const HypData_UserData128& value) const
+    {
+        // should never be hit
+        HYP_NOT_IMPLEMENTED();
+    }
+
+    HYP_FORCE_INLINE HypData_UserData128& Get(HypData_UserData128& value) const
+    {
+        return value;
+    }
+
+    HYP_FORCE_INLINE const HypData_UserData128& Get(const HypData_UserData128& value) const
+    {
+        return value;
     }
 };
 

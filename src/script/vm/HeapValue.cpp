@@ -46,13 +46,6 @@ void HeapValue::Mark()
             array->AtIndex(i).Mark();
         }
     }
-    else if (VMStruct* vmStruct = GetPointer<VMStruct>())
-    {
-        for (auto& member : vmStruct->GetDynamicMemberValues())
-        {
-            member.Mark();
-        }
-    }
     else if (VMArraySlice* slice = GetPointer<VMArraySlice>())
     {
         const SizeType size = slice->GetSize();

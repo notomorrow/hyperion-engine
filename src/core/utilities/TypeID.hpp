@@ -15,16 +15,15 @@ namespace utilities {
 
 using TypeIdValue = uint32;
 
-static constexpr uint32 g_typeIdHashBitOffset = 2;
+static constexpr uint32 g_typeIdHashBitOffset = 1;
 static constexpr uint32 g_typeIdHashMax = (~0u << g_typeIdHashBitOffset) >> g_typeIdHashBitOffset;
-static constexpr uint32 g_typeIdFlagBitMask = 0x3u;
-static constexpr uint32 g_typeIdFlagMax = 0x3u;
+static constexpr uint32 g_typeIdFlagBitMask = 0x1u;
+static constexpr uint32 g_typeIdFlagMax = 0x1u;
 
 enum TypeIdFlags : uint8
 {
     TYPE_ID_FLAGS_NONE = 0x0,
-    TYPE_ID_FLAGS_DYNAMIC = 0x1, // Type is dynamic - does not map 1:1 to a native C++ type. E.g C# class
-    TYPE_ID_FLAGS_PLACEHOLDER = 0x2
+    TYPE_ID_FLAGS_DYNAMIC = 0x1 // Type is dynamic - does not map 1:1 to a native C++ type. E.g C# class
 };
 
 template <class T, uint8 Flags>

@@ -268,12 +268,12 @@ class InstructionHandler
 {
 public:
     VMState* state;
-    ExecutionThread* thread;
+    Script_ExecutionThread* thread;
     BytecodeStream* bs;
 
     InstructionHandler(
         VMState* state,
-        ExecutionThread* thread,
+        Script_ExecutionThread* thread,
         BytecodeStream* bs)
         : state(state),
           thread(thread),
@@ -445,7 +445,7 @@ public:
             v.m_type = Value::HEAP_POINTER;
             v.m_value.internal.ptr = hv;
 
-            thread->m_regs[reg].AssignValue(v, false);
+            thread->m_regs[reg].AssignValue(std::move(v), false);
 
             hv->Mark();
         }
@@ -468,11 +468,14 @@ public:
     {
         Value v;
         v.m_type = Value::FUNCTION;
-        v.m_value.internal.func.m_addr = addr;
-        v.m_value.internal.func.m_nargs = nargs;
-        v.m_value.internal.func.m_flags = flags;
 
-        thread->m_regs[reg].AssignValue(v, false);
+        Script_VMData vmData;
+        vmData.type = Script_VMData::FUNCTION;
+        vmData.func.m_addr = addr;
+        vmData.func.m_nargs = nargs;
+        vmData.func.m_flags = flags;
+
+        thread->m_regs[reg].AssignValue(Value(vmData), false);
     }
 
     HYP_FORCE_INLINE void LoadType(

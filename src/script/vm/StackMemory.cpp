@@ -8,7 +8,7 @@
 namespace hyperion {
 namespace vm {
 
-std::ostream& operator<<(std::ostream& os, const StackMemory& stack)
+std::ostream& operator<<(std::ostream& os, const Script_StackMemory& stack)
 {
     // print table header
     os << std::left;
@@ -45,14 +45,14 @@ std::ostream& operator<<(std::ostream& os, const StackMemory& stack)
     return os;
 }
 
-StackMemory::StackMemory()
+Script_StackMemory::Script_StackMemory()
     : m_sp(0)
 {
 }
 
-StackMemory::~StackMemory() = default;
+Script_StackMemory::~Script_StackMemory() = default;
 
-void StackMemory::Purge()
+void Script_StackMemory::Purge()
 {
     // just set stack pointer to zero
     // heap allocated objects are not owned,
@@ -62,7 +62,7 @@ void StackMemory::Purge()
     m_sp = 0;
 }
 
-void StackMemory::MarkAll()
+void Script_StackMemory::MarkAll()
 {
     for (SizeType i = 0; i < m_sp; i++)
     {

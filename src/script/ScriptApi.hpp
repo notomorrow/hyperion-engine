@@ -432,7 +432,7 @@ namespace vm {
 class VM;
 struct VMState;
 // struct Value;
-struct ExecutionThread;
+struct Script_ExecutionThread;
 class InstructionHandler;
 class VMString;
 
@@ -443,7 +443,7 @@ using namespace compiler;
 class APIInstance;
 
 template <class T>
-constexpr bool isVmObjectType = std::is_same_v<vm::VMString, T> || std::is_same_v<vm::VMObject, T> || std::is_same_v<vm::VMStruct, T>;
+constexpr bool isVmObjectType = std::is_same_v<vm::VMString, T> || std::is_same_v<vm::VMObject, T>;
 
 #pragma region Script API Instance
 
@@ -977,22 +977,6 @@ struct ScriptToCxxValueImpl<vm::VMObject*>
 // };
 
 template <>
-struct ScriptToCxxValueImpl<vm::VMStruct*>
-{
-    Optional<vm::VMStruct*> operator()(APIInstance&, const vm::Value& value) const
-    {
-        vm::VMStruct* ptr;
-
-        if (value.GetPointer<vm::VMStruct>(&ptr))
-        {
-            return ptr;
-        }
-
-        return {};
-    }
-};
-
-template <>
 struct ScriptToCxxValueImpl<vm::VMString>
 {
     vm::VMString* operator()(APIInstance&, const vm::Value& value) const
@@ -1038,22 +1022,6 @@ struct ScriptToCxxValueImpl<vm::VMObject>
 //         return nullptr;
 //     }
 // };
-
-template <>
-struct ScriptToCxxValueImpl<vm::VMStruct>
-{
-    vm::VMStruct* operator()(APIInstance&, const vm::Value& value) const
-    {
-        vm::VMStruct* ptr;
-
-        if (value.GetPointer<vm::VMStruct>(&ptr))
-        {
-            return ptr;
-        }
-
-        return nullptr;
-    }
-};
 
 // template <>
 // struct ScriptToCxxValueImpl<vm::VMMap>
@@ -1293,17 +1261,6 @@ struct GetArgumentImpl<vm::VMArray>
     auto operator()(int index, sdk::Params& params)
     {
         HYP_SCRIPT_GET_ARG_PTR_1(index, vm::VMArray, argValue);
-
-        return argValue;
-    }
-};
-
-template <>
-struct GetArgumentImpl<vm::VMStruct>
-{
-    auto operator()(int index, sdk::Params& params)
-    {
-        HYP_SCRIPT_GET_ARG_PTR_1(index, vm::VMStruct, argValue);
 
         return argValue;
     }

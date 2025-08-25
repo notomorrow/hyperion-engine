@@ -32,7 +32,7 @@ public:
     VM& operator=(VM&& other) noexcept = delete;
     ~VM();
 
-    void PushNativeFunctionPtr(NativeFunctionPtr_t ptr);
+    void PushNativeFunctionPtr(Script_NativeFunction ptr);
 
     VMState& GetState()
     {
@@ -58,7 +58,7 @@ public:
 
 private:
     bool HandleException(InstructionHandler* handler);
-    void CreateStackTrace(ExecutionThread* thread, StackTrace* out);
+    void CreateStackTrace(Script_ExecutionThread* thread, StackTrace* out);
 
     APIInstance& m_apiInstance;
     VMState m_state;

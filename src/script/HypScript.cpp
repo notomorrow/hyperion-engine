@@ -258,7 +258,7 @@ void HypScript::CallFunctionArgV(ScriptHandle scriptHandle, const Value& functio
 {
     Assert(scriptHandle != INVALID_SCRIPT);
 
-    ExecutionThread* mainThread = m_vm->GetState().GetMainThread();
+    Script_ExecutionThread* mainThread = m_vm->GetState().GetMainThread();
 
     if (numArgs != 0)
     {

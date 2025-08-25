@@ -1210,7 +1210,7 @@ VM::~VM()
 {
 }
 
-void VM::PushNativeFunctionPtr(NativeFunctionPtr_t ptr)
+void VM::PushNativeFunctionPtr(Script_NativeFunction ptr)
 {
     Value sv;
     sv.m_type = Value::NATIVE_FUNCTION;
@@ -1228,7 +1228,7 @@ void VM::Invoke(
     static const uint32 invokeHash = hashFnv1("$invoke");
 
     VMState* state = handler->state;
-    ExecutionThread* thread = handler->thread;
+    Script_ExecutionThread* thread = handler->thread;
     BytecodeStream* bs = handler->bs;
 
     Assert(state != nullptr);
@@ -1413,7 +1413,7 @@ void VM::InvokeNow(
     const Value& value,
     uint8 nargs)
 {
-    ExecutionThread* thread = m_state.MAIN_THREAD;
+    Script_ExecutionThread* thread = m_state.MAIN_THREAD;
 
     const SizeType positionBefore = bs->Position();
     const uint32 originalFunctionDepth = thread->m_funcDepth;
@@ -1468,7 +1468,7 @@ void VM::InvokeNow(
     bs->SetPosition(positionBefore);
 }
 
-void VM::CreateStackTrace(ExecutionThread* thread, StackTrace* out)
+void VM::CreateStackTrace(Script_ExecutionThread* thread, StackTrace* out)
 {
     const SizeType maxStackTraceSize = std::size(out->callAddresses);
 
@@ -1497,7 +1497,7 @@ void VM::CreateStackTrace(ExecutionThread* thread, StackTrace* out)
 
 bool VM::HandleException(InstructionHandler* handler)
 {
-    ExecutionThread* thread = handler->thread;
+    Script_ExecutionThread* thread = handler->thread;
     BytecodeStream* bs = handler->bs;
 
     if (thread->m_exceptionState.m_tryCounter != 0)

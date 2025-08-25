@@ -19,6 +19,7 @@
 namespace hyperion {
 
 class APIInstance;
+struct HypData;
 
 namespace vm {
 
@@ -28,7 +29,7 @@ typedef uint8 BCRegister;
 struct Value;
 
 class InstructionHandler;
-struct ExecutionThread;
+struct Script_ExecutionThread;
 class HeapValue;
 struct VMState;
 
@@ -75,9 +76,9 @@ struct Params
 } // namespace hyperion
 
 // native typedefs
-typedef void (*NativeFunctionPtr_t)(hyperion::sdk::Params);
-typedef void (*NativeInitializerPtr_t)(hyperion::vm::VMState*, hyperion::vm::ExecutionThread* thread, hyperion::vm::Value*);
-typedef void* UserData_t;
+typedef void (*Script_NativeFunction)(hyperion::sdk::Params);
+typedef void (*Script_Initializer)(hyperion::vm::VMState*, hyperion::vm::Script_ExecutionThread* thread, hyperion::vm::Value*);
+typedef void* Script_UserData;
 
 namespace hyperion {
 namespace vm {
@@ -93,7 +94,7 @@ enum CompareFlags : uint8
     GREATER = 0x02
 };
 
-struct InternalVMData
+struct alignas(8) Script_VMData
 {
     union
     {
@@ -108,8 +109,8 @@ struct InternalVMData
             uint8 m_flags;
         } func;
 
-        NativeFunctionPtr_t nativeFunc;
-        UserData_t userData;
+        Script_NativeFunction nativeFunc;
+        Script_UserData userData;
 
         struct
         {
@@ -129,31 +130,10 @@ struct InternalVMData
             const char* errorMessage; // make sure it is a string literal, as it is not managed
         } invalidStateObject;
     };
-};
 
-struct Value
-{
-    enum ValueType
+    enum
     {
-        NONE,
-
-        /* These numeric types are listed in order of conversion precedence.
-         * See the MATCH_TYPES macro to see how that is used. */
-        I8,
-        I16,
-        I32,
-        I64,
-        U8,
-        U16,
-        U32,
-        U64,
-        F32,
-        F64,
-
-        BOOLEAN,
-
         VALUE_REF,
-
         HEAP_POINTER,
         FUNCTION,
         NATIVE_FUNCTION,
@@ -162,335 +142,54 @@ struct Value
         FUNCTION_CALL,
         TRY_CATCH_INFO,
         INVALID_STATE_OBJECT // used for error handling in native functions
-    } m_type;
+    } type;
+};
 
-    union ValueData
-    {
-        int8 i8;
-        uint8 u8;
-        int16 i16;
-        uint16 u16;
-        int32 i32;
-        int64 i64;
-        uint32 u32;
-        uint64 u64;
-        float f;
-        double d;
+class alignas(8) Value
+{
+    char m_internal[40];
 
-        bool b;
+    HypData* GetHypData();
+    const HypData* GetHypData() const;
 
-        InternalVMData internal;
-    } m_value;
+public:
+    Value();
 
-    Value() = default;
-    Value(const Value& other);
-    Value(ValueType valueType, ValueData valueData);
+    explicit Value(HypData&& data);
+    explicit Value(const Script_VMData& vmData);
 
-    HYP_DEF_STRUCT_COMPARE_EQL(Value)
-    HYP_DEF_STRUCT_COMPARE_LT(Value)
+    Value(const Value& other) = delete;
+    Value(Value&& other) noexcept;
 
-    HYP_FORCE_INLINE ValueType GetType() const
-    {
-        return m_type;
-    }
-    HYP_FORCE_INLINE ValueData& GetValue()
-    {
-        return m_value;
-    }
-    HYP_FORCE_INLINE const ValueData& GetValue() const
-    {
-        return m_value;
-    }
+    Value& operator=(const Value& other) = delete;
+    Value& operator=(Value&& other) noexcept;
 
-    HYP_FORCE_INLINE void AssignValue(const Value& other, bool assignRef)
-    {
-        if (assignRef && m_type == VALUE_REF)
-        {
-            *m_value.internal.valueRef = other;
-        }
-        else
-        {
-            *this = other;
-        }
-    }
+    Script_VMData* GetVMData() const;
 
-    HYP_FORCE_INLINE bool GetUnsigned(uint64* out) const
-    {
-        switch (m_type)
-        {
-        case U8:
-            *out = static_cast<uint64>(m_value.u8);
-            return true;
-        case U16:
-            *out = static_cast<uint64>(m_value.u16);
-            return true;
-        case U32:
-            *out = static_cast<uint64>(m_value.u32);
-            return true;
-        case U64:
-            *out = m_value.u64;
-            return true;
-        default:
-            return false;
-        }
-    }
+    bool IsRef() const;
+    Value* GetRef() const;
 
-    HYP_FORCE_INLINE bool GetInteger(int64* out) const
-    {
-        switch (m_type)
-        {
-        case I8:
-            *out = static_cast<int64>(m_value.i8);
-            return true;
-        case I16:
-            *out = static_cast<int64>(m_value.i16);
-            return true;
-        case I32:
-            *out = static_cast<int64>(m_value.i32);
-            return true;
-        case I64:
-            *out = m_value.i64;
-            return true;
-        default:
-            return false;
-        }
-    }
+    void AssignValue(Value&& other, bool assignRef);
 
-    HYP_FORCE_INLINE bool GetSignedOrUnsigned(Number* out) const
-    {
-        switch (m_type)
-        {
-        case I8:
-            out->i = static_cast<int64>(m_value.i8);
-            out->flags = Number::FLAG_SIGNED | Number::FLAG_8_BIT;
-            return true;
-        case I16:
-            out->i = static_cast<int64>(m_value.i16);
-            out->flags = Number::FLAG_SIGNED | Number::FLAG_16_BIT;
-            return true;
-        case I32:
-            out->i = static_cast<int64>(m_value.i32);
-            out->flags = Number::FLAG_SIGNED | Number::FLAG_32_BIT;
-            return true;
-        case I64:
-            out->i = m_value.i64;
-            out->flags = Number::FLAG_SIGNED | Number::FLAG_64_BIT;
-            return true;
-        case U8:
-            out->u = static_cast<uint64>(m_value.u8);
-            out->flags = Number::FLAG_UNSIGNED | Number::FLAG_8_BIT;
-            return true;
-        case U16:
-            out->u = static_cast<uint64>(m_value.u16);
-            out->flags = Number::FLAG_UNSIGNED | Number::FLAG_16_BIT;
-            return true;
-        case U32:
-            out->u = static_cast<uint64>(m_value.u32);
-            out->flags = Number::FLAG_UNSIGNED | Number::FLAG_32_BIT;
-            return true;
-        case U64:
-            out->u = m_value.u64;
-            out->flags = Number::FLAG_UNSIGNED | Number::FLAG_64_BIT;
-            return true;
-        default:
-            return false;
-        }
-    }
+    bool GetUnsigned(uint64* out) const;
+    bool GetInteger(int64* out) const;
+    bool GetSignedOrUnsigned(Number* out) const;
 
-    HYP_FORCE_INLINE bool GetFloatingPoint(double* out) const
-    {
-        switch (m_type)
-        {
-        case F32:
-            *out = static_cast<double>(m_value.f);
-            return true;
-        case F64:
-            *out = m_value.d;
-            return true;
-        default:
-            return false;
-        }
-    }
+    bool GetFloatingPoint(double* out) const;
+    bool GetFloatingPointCoerce(double* out) const;
 
-    HYP_FORCE_INLINE bool GetFloatingPointCoerce(double* out) const
-    {
-        Number num;
+    bool GetNumber(double* out) const;
+    bool GetNumber(Number* out) const;
 
-        if (!GetNumber(&num))
-        {
-            return false;
-        }
+    bool GetBoolean(bool* out) const;
 
-        if (num.flags & Number::FLAG_UNSIGNED)
-        {
-            *out = static_cast<double>(num.u);
-        }
-        else if (num.flags & Number::FLAG_SIGNED)
-        {
-            *out = static_cast<double>(num.i);
-        }
-        else
-        {
-            *out = num.f;
-        }
+    AnyRef ToRef() const;
 
-        return true;
-    }
-
-    HYP_FORCE_INLINE bool GetNumber(double* out) const
-    {
-        switch (m_type)
-        {
-        case I8:
-            *out = static_cast<double>(m_value.i8);
-            return true;
-        case I16:
-            *out = static_cast<double>(m_value.i16);
-            return true;
-        case I32:
-            *out = static_cast<double>(m_value.i32);
-            return true;
-        case I64:
-            *out = static_cast<double>(m_value.i64);
-            return true;
-        case U8:
-            *out = static_cast<double>(m_value.u8);
-            return true;
-        case U16:
-            *out = static_cast<double>(m_value.u16);
-            return true;
-        case U32:
-            *out = static_cast<double>(m_value.u32);
-            return true;
-        case U64:
-            *out = static_cast<double>(m_value.u64);
-            return true;
-        case F32:
-            *out = static_cast<double>(m_value.f);
-            return true;
-        case F64:
-            *out = m_value.d;
-            return true;
-        default:
-            return false;
-        }
-    }
-
-    HYP_FORCE_INLINE bool GetNumber(Number* out) const
-    {
-        switch (m_type)
-        {
-        case I8:
-            *out = { .i = static_cast<int64>(m_value.i8), .flags = Number::FLAG_SIGNED | Number::FLAG_8_BIT };
-            return true;
-        case I16:
-            *out = { .i = static_cast<int64>(m_value.i16), .flags = Number::FLAG_SIGNED | Number::FLAG_16_BIT };
-            return true;
-        case I32:
-            *out = { .i = static_cast<int64>(m_value.i32), .flags = Number::FLAG_SIGNED | Number::FLAG_32_BIT };
-            return true;
-        case I64:
-            *out = { .i = m_value.i64, .flags = Number::FLAG_SIGNED | Number::FLAG_64_BIT };
-            return true;
-        case U8:
-            *out = { .u = static_cast<uint64>(m_value.u8), .flags = Number::FLAG_UNSIGNED | Number::FLAG_8_BIT };
-            return true;
-        case U16:
-            *out = { .u = static_cast<uint64>(m_value.u16), .flags = Number::FLAG_UNSIGNED | Number::FLAG_16_BIT };
-            return true;
-        case U32:
-            *out = { .u = static_cast<uint64>(m_value.u32), .flags = Number::FLAG_UNSIGNED | Number::FLAG_32_BIT };
-            return true;
-        case U64:
-            *out = { .u = m_value.u64, .flags = Number::FLAG_UNSIGNED | Number::FLAG_64_BIT };
-            return true;
-        case F32:
-            *out = { .f = static_cast<double>(m_value.f), .flags = Number::FLAG_FLOATING_POINT | Number::FLAG_32_BIT };
-            return true;
-        case F64:
-            *out = { .f = m_value.d, .flags = Number::FLAG_FLOATING_POINT | Number::FLAG_64_BIT };
-            return true;
-        default:
-            return false;
-        }
-    }
-
-    HYP_FORCE_INLINE bool GetBoolean(bool* out) const
-    {
-        if (m_type == ValueType::BOOLEAN)
-        {
-            *out = m_value.b;
-
-            return true;
-        }
-
-        return false;
-    }
-
-    HYP_FORCE_INLINE bool GetPointer(HeapValue** out) const
-    {
-        if (m_type != HEAP_POINTER)
-        {
-            return false;
-        }
-
-        *out = m_value.internal.ptr;
-
-        return true;
-    }
-
-    template <class T>
-    HYP_FORCE_INLINE bool GetPointer(T** out) const
-    {
-        if (m_type != HEAP_POINTER)
-        {
-            return false;
-        }
-
-        if (TypeId::ForType<T>() == GetTypeIdForHeapValue(m_value.internal.ptr))
-        {
-            *out = static_cast<T*>(GetRawPointerForHeapValue(m_value.internal.ptr));
-
-            return true;
-        }
-
-        *out = nullptr;
-
-        return false;
-    }
-
-    template <class T>
-    HYP_FORCE_INLINE bool GetUserData(T** out) const
-    {
-        if (m_type != USER_DATA)
-        {
-            return false;
-        }
-
-        *out = static_cast<T*>(m_value.internal.userData);
-
-        return true;
-    }
+    Script_UserData GetUserData() const;
 
     static int CompareAsPointers(Value* lhs, Value* rhs);
-
-    HYP_FORCE_INLINE static int CompareAsFunctions(
-        Value* lhs,
-        Value* rhs)
-    {
-        return (lhs->m_value.internal.func.m_addr == rhs->m_value.internal.func.m_addr)
-            ? CompareFlags::EQUAL
-            : CompareFlags::NONE;
-    }
-
-    HYP_FORCE_INLINE static int CompareAsNativeFunctions(
-        Value* lhs,
-        Value* rhs)
-    {
-        return (lhs->m_value.internal.nativeFunc == rhs->m_value.internal.nativeFunc)
-            ? CompareFlags::EQUAL
-            : CompareFlags::NONE;
-    }
+    static int CompareAsFunctions(Value* lhs, Value* rhs);
+    static int CompareAsNativeFunctions(Value* lhs, Value* rhs);
 
 #if 0
     Any ToAny() const;
@@ -505,8 +204,6 @@ struct Value
         std::stringstream& ss,
         bool addTypeName = true,
         int depth = 3) const;
-
-    HashCode GetHashCode() const;
 };
 
 } // namespace vm

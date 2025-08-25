@@ -33,7 +33,7 @@ namespace vm {
 // forward declaration
 class VM;
 
-struct Registers
+struct Script_RegisterMemory
 {
     Value m_reg[VM_NUM_REGISTERS];
     int m_flags = 0;
@@ -42,13 +42,14 @@ struct Registers
     {
         return m_reg[index];
     }
+
     void ResetFlags()
     {
         m_flags = 0;
     }
 };
 
-struct ExceptionState
+struct Script_ExceptionState
 {
     // incremented each time BEGIN_TRY is encountered,
     // decremented each time END_TRY is encountered
@@ -64,28 +65,28 @@ struct ExceptionState
     }
 };
 
-struct ExecutionThread
+struct Script_ExecutionThread
 {
     friend struct VMState;
 
-    StackMemory m_stack;
-    ExceptionState m_exceptionState;
-    Registers m_regs;
+    Script_StackMemory m_stack;
+    Script_ExceptionState m_exceptionState;
+    Script_RegisterMemory m_regs;
 
     uint32 m_funcDepth = 0;
     int m_id = -1;
 
-    StackMemory& GetStack()
+    Script_StackMemory& GetStack()
     {
         return m_stack;
     }
 
-    ExceptionState& GetExceptionState()
+    Script_ExceptionState& GetExceptionState()
     {
         return m_exceptionState;
     }
 
-    Registers& GetRegisters()
+    Script_RegisterMemory& GetRegisters()
     {
         return m_regs;
     }
@@ -102,7 +103,7 @@ struct VMState
     VMState(const VMState& other) = delete;
     ~VMState();
 
-    ExecutionThread* m_threads[VM_MAX_THREADS];
+    Script_ExecutionThread* m_threads[VM_MAX_THREADS];
     Heap m_heap;
     StaticMemory m_staticMemory;
     VM* m_vm = nullptr;
@@ -119,14 +120,14 @@ struct VMState
      */
     void Reset();
 
-    void ThrowException(ExecutionThread* thread, const Exception& exception);
-    HeapValue* HeapAlloc(ExecutionThread* thread);
+    void ThrowException(Script_ExecutionThread* thread, const Exception& exception);
+    HeapValue* HeapAlloc(Script_ExecutionThread* thread);
     void GC();
 
-    // void CloneValue(const Value &other, ExecutionThread *thread, Value &out);
+    // void CloneValue(const Value &other, Script_ExecutionThread *thread, Value &out);
 
     /** Add a thread */
-    ExecutionThread* CreateThread();
+    Script_ExecutionThread* CreateThread();
     /** Destroy thread with ID */
     void DestroyThread(int id);
 
@@ -136,7 +137,7 @@ struct VMState
         return m_numThreads;
     }
 
-    ExecutionThread* GetMainThread() const
+    Script_ExecutionThread* GetMainThread() const
     {
         Assert(m_numThreads != 0);
         return m_threads[0];
