@@ -46,12 +46,12 @@ public:
 
     void Invoke(
         InstructionHandler* handler,
-        const Value& value,
+        Value&& value,
         uint8 nargs);
 
     void InvokeNow(
         BytecodeStream* bs,
-        const Value& value,
+        Value&& value,
         uint8 nargs);
 
     void Execute(BytecodeStream* bs);

@@ -158,12 +158,10 @@ Member* ObjectMap::Get(uint32 hash)
     return res;
 }
 
-VMObject::VMObject(HeapValue* classPtr)
-    : m_classPtr(classPtr)
+VMObject::VMObject(Value&& classValue)
+    : m_classValue(std::move(classValue))
 {
-    Assert(m_classPtr != nullptr);
-
-    const VMObject* protoObj = m_classPtr->GetPointer<VMObject>();
+    const VMObject* protoObj = m_classValue.GetObject();
     Assert(protoObj != nullptr);
 
     SizeType size = protoObj->GetSize();
@@ -178,8 +176,8 @@ VMObject::VMObject(HeapValue* classPtr)
     }
 }
 
-VMObject::VMObject(const Member* members, SizeType size, HeapValue* classPtr)
-    : m_classPtr(classPtr)
+VMObject::VMObject(const Member* members, SizeType size, Value&& classValue)
+    : m_classValue(std::move(classValue))
 {
     Assert(members != nullptr);
 
@@ -193,28 +191,17 @@ VMObject::VMObject(const Member* members, SizeType size, HeapValue* classPtr)
     }
 }
 
-VMObject::VMObject(const VMObject& other)
-    : m_classPtr(other.m_classPtr)
+VMObject::VMObject(VMObject&& other) noexcept
+    : m_classValue(std::move(other.m_classValue)),
+      m_objectMap(other.m_objectMap),
+      m_members(other.m_members)
 {
-    const SizeType size = other.GetSize();
-
-    m_members = new Member[size];
-
-    Assert(other.GetObjectMap() != nullptr);
-    m_objectMap = new ObjectMap(*other.GetObjectMap());
-
-    Memory::MemCpy(m_members, other.m_members, sizeof(Member) * size);
-
-    for (SizeType i = 0; i < size; i++)
-    {
-        m_objectMap->Push(m_members[i].hash, &m_members[i]);
-    }
+    other.m_objectMap = nullptr;
+    other.m_members = nullptr;
 }
 
 VMObject::~VMObject()
 {
-    m_classPtr = nullptr;
-
     delete m_objectMap;
     m_objectMap = nullptr;
 
@@ -229,9 +216,9 @@ Member* VMObject::LookupMemberFromHash(uint32 hash, bool deep) const
         return member;
     }
 
-    if (deep && m_classPtr != nullptr)
+    if (deep && m_classValue.IsValid())
     {
-        if (VMObject* baseObject = m_classPtr->GetPointer<VMObject>())
+        if (VMObject* baseObject = m_classValue.GetObject())
         {
             return baseObject->LookupMemberFromHash(hash);
         }
@@ -240,7 +227,7 @@ Member* VMObject::LookupMemberFromHash(uint32 hash, bool deep) const
     return nullptr;
 }
 
-void VMObject::SetMember(const char* name, const Value& value)
+void VMObject::SetMember(const char* name, Value&& value)
 {
     const uint32 hash = hashFnv1(name);
 
@@ -248,7 +235,7 @@ void VMObject::SetMember(const char* name, const Value& value)
 
     if (member)
     {
-        member->value = value;
+        member->value.AssignValue(std::move(value), false);
 
         return;
     }
@@ -261,7 +248,7 @@ void VMObject::SetMember(const char* name, const Value& value)
 
     Memory::StrCpy(newMembers[newSize - 1].name, name, sizeof(newMembers[newSize - 1].name));
     newMembers[newSize - 1].hash = hash;
-    newMembers[newSize - 1].value = value;
+    newMembers[newSize - 1].value.AssignValue(std::move(value), false);
 
     ObjectMap* newObjectMap = new ObjectMap(newSize);
     for (SizeType i = 0; i < newSize; i++)
@@ -300,7 +287,7 @@ void VMObject::GetRepresentation(
 
         ss << mem.name << ": ";
 
-        if (mem.value.m_type == Value::HEAP_POINTER && mem.value.m_value.internal.ptr != nullptr && mem.value.m_value.internal.ptr->GetRawPointer() == static_cast<const void*>(this))
+        if (mem.value.GetObject() == this)
         {
             mem.value.ToRepresentation(
                 ss,
@@ -323,18 +310,6 @@ void VMObject::GetRepresentation(
     }
 
     ss << "}";
-}
-
-HashCode VMObject::GetHashCode() const
-{
-    // Hash of memory address
-
-    // @NOTE: If we ever implement a generational garbage collector,
-    // we'll need to change this to something else. Perhaps
-    // we could use a hash of an ID that is unique to each
-    // object.
-
-    return HashCode::GetHashCode(static_cast<const void*>(this));
 }
 
 } // namespace vm

@@ -68,13 +68,11 @@ public:
     static const uint32 BASE_MEMBER_HASH;
 
     // construct from prototype (holds pointer)
-    explicit VMObject(HeapValue* classPtr);
-    VMObject(const Member* members, SizeType size, HeapValue* classPtr);
-    VMObject(const VMObject& other);
-    ~VMObject();
-
-    VMObject& operator=(const VMObject& other);
+    explicit VMObject(Value&& classValue);
+    VMObject(const Member* members, SizeType size, Value&& classValue);
+    VMObject(VMObject&& other) noexcept;
     VMObject& operator=(VMObject&& other) noexcept;
+    ~VMObject();
 
     // compare by memory address
     bool operator==(const VMObject& other) const
@@ -104,25 +102,25 @@ public:
         return m_objectMap;
     }
 
-    void SetMember(const char* name, const Value& value);
+    void SetMember(const char* name, Value&& value);
 
     SizeType GetSize() const
     {
         return m_objectMap->GetSize();
     }
 
-    HeapValue* GetClassPointer() const
+    const Value& GetClassPointer() const
     {
-        return m_classPtr;
+        return m_classValue;
     }
 
-    bool LookupBasePointer(Value* out) const
+    bool LookupBasePointer(Value** out) const
     {
         Member* memberPtr = LookupMemberFromHash(BASE_MEMBER_HASH, false);
 
         if (memberPtr)
         {
-            *out = memberPtr->value;
+            *out = &memberPtr->value;
 
             return true;
         }
@@ -135,11 +133,8 @@ public:
         bool addTypeName = true,
         int depth = 3) const;
 
-    HashCode GetHashCode() const;
-
 private:
-    HeapValue* m_classPtr;
-
+    Value m_classValue;
     ObjectMap* m_objectMap;
     Member* m_members;
 };

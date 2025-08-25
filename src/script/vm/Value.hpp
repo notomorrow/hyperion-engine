@@ -33,6 +33,22 @@ struct Script_ExecutionThread;
 class HeapValue;
 struct VMState;
 
+enum NumericType : uint8
+{
+    NT_NONE = 0,
+
+    NT_I8,
+    NT_I16,
+    NT_I32,
+    NT_I64,
+    NT_U8,
+    NT_U16,
+    NT_U32,
+    NT_U64,
+    NT_F32,
+    NT_F64
+};
+
 struct Number
 {
     using Flags = uint32;
@@ -58,6 +74,53 @@ struct Number
     };
 
     Flags flags;
+
+    constexpr Number()
+        : i(0), flags(FLAG_NONE)
+    {
+    }
+
+    explicit constexpr Number(NumericType numericType)
+    {
+        switch (numericType)
+        {
+        case NT_I8:
+            flags = FLAG_SIGNED | FLAG_8_BIT;
+            break;
+        case NT_I16:
+            flags = FLAG_SIGNED | FLAG_16_BIT;
+            break;
+        case NT_I32:
+            flags = FLAG_SIGNED | FLAG_32_BIT;
+            break;
+        case NT_I64:
+            flags = FLAG_SIGNED | FLAG_64_BIT;
+            break;
+        case NT_U8:
+            flags = FLAG_UNSIGNED | FLAG_8_BIT;
+            break;
+        case NT_U16:
+            flags = FLAG_UNSIGNED | FLAG_16_BIT;
+            break;
+        case NT_U32:
+            flags = FLAG_UNSIGNED | FLAG_32_BIT;
+            break;
+        case NT_U64:
+            flags = FLAG_UNSIGNED | FLAG_64_BIT;
+            break;
+        case NT_F32:
+            flags = FLAG_FLOATING_POINT | FLAG_32_BIT;
+            f = 0.0;
+            break;
+        case NT_F64:
+            flags = FLAG_FLOATING_POINT | FLAG_64_BIT;
+            f = 0.0;
+            break;
+        default:
+            flags = FLAG_NONE;
+            break;
+        }
+    }
 };
 
 } // namespace vm
@@ -93,6 +156,9 @@ enum CompareFlags : uint8
     EQUAL = 0x01,
     GREATER = 0x02
 };
+
+class VMObject;
+class VMArray;
 
 struct alignas(8) Script_VMData
 {
@@ -147,6 +213,8 @@ struct alignas(8) Script_VMData
 
 class alignas(8) Value
 {
+    friend class VM;
+
     char m_internal[40];
 
     HypData* GetHypData();
@@ -156,6 +224,7 @@ public:
     Value();
 
     explicit Value(HypData&& data);
+    explicit Value(Number number);
     explicit Value(const Script_VMData& vmData);
 
     Value(const Value& other) = delete;
@@ -165,6 +234,11 @@ public:
     Value& operator=(Value&& other) noexcept;
 
     Script_VMData* GetVMData() const;
+
+    bool IsValid() const;
+
+    bool IsFunction() const;
+    bool IsNativeFunction() const;
 
     bool IsRef() const;
     Value* GetRef() const;
@@ -181,7 +255,12 @@ public:
     bool GetNumber(double* out) const;
     bool GetNumber(Number* out) const;
 
+    NumericType GetNumericType() const;
+
     bool GetBoolean(bool* out) const;
+
+    VMObject* GetObject() const;
+    VMArray* GetArray() const;
 
     AnyRef ToRef() const;
 

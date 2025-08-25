@@ -74,6 +74,63 @@ Value::Value(HypData&& data)
     new (m_internal) HypData(std::move(data));
 }
 
+Value::Value(Number number)
+{
+    if (number.flags & Number::FLAG_FLOATING_POINT)
+    {
+        if (number.flags & Number::FLAG_32_BIT)
+        {
+            new (m_internal) HypData(static_cast<float>(number.f));
+        }
+        else // if (number.flags & Number::FLAG_64_BIT)
+        {
+            new (m_internal) HypData(number.f);
+        }
+    }
+    else if (number.flags & Number::FLAG_SIGNED)
+    {
+        if (number.flags & Number::FLAG_8_BIT)
+        {
+            new (m_internal) HypData(static_cast<int8>(number.i));
+        }
+        else if (number.flags & Number::FLAG_16_BIT)
+        {
+            new (m_internal) HypData(static_cast<int16>(number.i));
+        }
+        else if (number.flags & Number::FLAG_32_BIT)
+        {
+            new (m_internal) HypData(static_cast<int32>(number.i));
+        }
+        else // if (number.flags & Number::FLAG_64_BIT)
+        {
+            new (m_internal) HypData(number.i);
+        }
+    }
+    else if (number.flags & Number::FLAG_UNSIGNED)
+    {
+        if (number.flags & Number::FLAG_8_BIT)
+        {
+            new (m_internal) HypData(static_cast<uint8>(number.u));
+        }
+        else if (number.flags & Number::FLAG_16_BIT)
+        {
+            new (m_internal) HypData(static_cast<uint16>(number.u));
+        }
+        else if (number.flags & Number::FLAG_32_BIT)
+        {
+            new (m_internal) HypData(static_cast<uint32>(number.u));
+        }
+        else // if (number.flags & Number::FLAG_64_BIT)
+        {
+            new (m_internal) HypData(number.u);
+        }
+    }
+    else
+    {
+        HYP_UNREACHABLE();
+    }
+}
+
 Value::Value(const Script_VMData& vmData)
 {
     static_assert(sizeof(Script_VMData) == sizeof(HypData_UserData128));
@@ -138,6 +195,33 @@ Script_VMData* Value::GetVMData() const
     const HypData& data = *GetHypData();
 
     return data.TryGet<Script_VMData>().TryGet();
+}
+
+bool Value::IsValid() const
+{
+    return GetHypData()->IsValid();
+}
+
+bool Value::IsFunction() const
+{
+    Script_VMData* vmData = GetVMData();
+
+    if (vmData == nullptr)
+    {
+        return false;
+    }
+
+    return vmData->type == Script_VMData::FUNCTION || vmData->type == Script_VMData::NATIVE_FUNCTION;
+}
+
+bool Value::IsNativeFunction() const
+{
+    Script_VMData* vmData = GetVMData();
+    if (vmData == nullptr)
+    {
+        return false;
+    }
+    return vmData->type == Script_VMData::NATIVE_FUNCTION;
 }
 
 bool Value::IsRef() const
@@ -400,6 +484,55 @@ bool Value::GetNumber(Number* out) const
     return false;
 }
 
+NumericType Value::GetNumericType() const
+{
+    const HypData& data = *GetHypData();
+    const TypeId typeId = data.GetTypeId();
+
+    if (typeId == typeIdI8)
+    {
+        return NT_I8;
+    }
+    if (typeId == typeIdU8)
+    {
+        return NT_U8;
+    }
+    if (typeId == typeIdI16)
+    {
+        return NT_I16;
+    }
+    if (typeId == typeIdU16)
+    {
+        return NT_U16;
+    }
+    if (typeId == typeIdI32)
+    {
+        return NT_I32;
+    }
+    if (typeId == typeIdU32)
+    {
+        return NT_U32;
+    }
+    if (typeId == typeIdI64)
+    {
+        return NT_I64;
+    }
+    if (typeId == typeIdU64)
+    {
+        return NT_U64;
+    }
+    if (typeId == TypeId::ForType<float>())
+    {
+        return NT_F32;
+    }
+    if (typeId == TypeId::ForType<double>())
+    {
+        return NT_F64;
+    }
+
+    return NT_NONE;
+}
+
 bool Value::GetBoolean(bool* out) const
 {
     const HypData& data = *GetHypData();
@@ -411,6 +544,30 @@ bool Value::GetBoolean(bool* out) const
 
     *out = data.Get<bool>();
     return true;
+}
+
+VMObject* Value::GetObject() const
+{
+    const HypData& data = *GetHypData();
+
+    if (!data.Is<VMObject>())
+    {
+        return nullptr;
+    }
+
+    return &data.Get<VMObject>();
+}
+
+VMArray* Value::GetArray() const
+{
+    const HypData& data = *GetHypData();
+
+    if (!data.Is<VMArray>())
+    {
+        return nullptr;
+
+    }
+    return &data.Get<VMArray>();
 }
 
 AnyRef Value::ToRef() const
@@ -669,7 +826,7 @@ VMString Value::ToString() const
         }
     }
 
-    return VMString("<Object of type ") + VMString(GetTypeString()) + VMString(">");
+    return VMString(String("<Object of type ") + String(GetTypeString()) + String(">"));
 }
 
 void Value::ToRepresentation(

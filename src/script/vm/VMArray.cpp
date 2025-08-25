@@ -10,62 +10,13 @@ namespace hyperion {
 namespace vm {
 
 VMArray::VMArray(SizeType size)
-    : m_size(size),
-      m_capacity(GetCapacityForSize(size)),
-      m_buffer(new Value[m_capacity])
 {
-    for (SizeType index = 0; index < m_capacity; index++)
-    {
-        m_buffer[index].m_type = Value::NONE;
-        m_buffer[index].m_value.internal.userData = nullptr;
-    }
-}
-
-VMArray::VMArray(const VMArray& other)
-    : m_size(other.m_size),
-      m_capacity(other.m_capacity),
-      m_buffer(new Value[other.m_capacity])
-{
-    // copy all members
-    for (SizeType index = 0; index < m_size; index++)
-    {
-        m_buffer[index] = other.m_buffer[index];
-    }
-}
-
-VMArray& VMArray::operator=(const VMArray& other)
-{
-    if (&other == this)
-    {
-        return *this;
-    }
-
-    if (m_buffer != nullptr)
-    {
-        delete[] m_buffer;
-    }
-
-    m_size = other.m_size;
-    m_capacity = other.m_capacity;
-    m_buffer = new Value[other.m_capacity];
-
-    // copy all objects
-    for (SizeType index = 0; index < m_size; index++)
-    {
-        m_buffer[index] = other.m_buffer[index];
-    }
-
-    return *this;
+    m_internalArray.Resize(size);
 }
 
 VMArray::VMArray(VMArray&& other) noexcept
-    : m_size(other.m_size),
-      m_capacity(other.m_capacity),
-      m_buffer(other.m_buffer)
+    : m_internalArray(std::move(other.m_internalArray))
 {
-    other.m_size = 0;
-    other.m_capacity = 0;
-    other.m_buffer = nullptr;
 }
 
 VMArray& VMArray::operator=(VMArray&& other) noexcept
@@ -75,114 +26,47 @@ VMArray& VMArray::operator=(VMArray&& other) noexcept
         return *this;
     }
 
-    if (m_buffer != nullptr)
-    {
-        delete[] m_buffer;
-    }
-
-    m_size = other.m_size;
-    m_capacity = other.m_capacity;
-    m_buffer = other.m_buffer;
-
-    other.m_size = 0;
-    other.m_capacity = 0;
-    other.m_buffer = nullptr;
+    m_internalArray = std::move(other.m_internalArray);
 
     return *this;
 }
 
-VMArray::~VMArray()
+VMArray::~VMArray() = default;
+
+void VMArray::Resize(SizeType newSize)
 {
-    if (m_buffer != nullptr)
-    {
-        delete[] m_buffer;
-    }
+    m_internalArray.Resize(newSize);
 }
 
-void VMArray::Resize(SizeType capacity)
+void VMArray::Push(Value&& value)
 {
-    // delete and copy all over again
-    m_capacity = capacity;
-    auto* newBuffer = new Value[m_capacity];
-
-    Assert(m_size <= m_capacity);
-
-    // copy all objects into new buffer
-    for (SizeType index = 0; index < m_size; index++)
-    {
-        newBuffer[index] = m_buffer[index];
-    }
-
-    for (SizeType index = m_size; index < m_capacity; index++)
-    {
-        newBuffer[index] = Value(Value::NONE, {});
-    }
-
-    // delete old buffer
-    if (m_buffer != nullptr)
-    {
-        delete[] m_buffer;
-    }
-    // set internal buffer to the new one
-    m_buffer = newBuffer;
-}
-
-void VMArray::Push(const Value& value)
-{
-    const SizeType index = m_size;
-
-    if (m_size >= m_capacity)
-    {
-        Resize(GetCapacityForSize(m_size + 1));
-    }
-
-    // set item at index
-    m_buffer[index] = value;
-    m_size++;
+    m_internalArray.PushBack(std::move(value));
 }
 
 void VMArray::PushMany(SizeType n, Value* values)
 {
-    const SizeType index = m_size;
-
-    if (m_size + n >= m_capacity)
-    {
-        // delete and copy all over again
-        Resize(GetCapacityForSize(m_size + n));
-    }
+    m_internalArray.Reserve(m_internalArray.Size() + n);
 
     for (SizeType i = 0; i < n; i++)
     {
-        // set item at index
-        m_buffer[index + i] = values[i];
+        m_internalArray.PushBack(std::move(values[i]));
     }
-
-    m_size += n;
 }
 
 void VMArray::PushMany(SizeType n, Value** values)
 {
-    const SizeType index = m_size;
-
-    if (m_size + n >= m_capacity)
-    {
-        // delete and copy all over again
-        Resize(GetCapacityForSize(m_size + n));
-    }
+    m_internalArray.Reserve(m_internalArray.Size() + n);
 
     for (SizeType i = 0; i < n; i++)
     {
         Assert(values[i] != nullptr);
-        // set item at index
-        m_buffer[index + i] = *values[i];
+        m_internalArray.PushBack(std::move(*values[i]));
     }
-
-    m_size += n;
 }
 
 void VMArray::Pop()
 {
-    m_size--;
+    m_internalArray.PopBack();
 }
 
 void VMArray::GetRepresentation(
@@ -203,32 +87,20 @@ void VMArray::GetRepresentation(
     ss << '[';
 
     // convert all array elements to string
-    for (SizeType i = 0; i < m_size; i++)
+    for (SizeType i = 0; i < m_internalArray.Size(); i++)
     {
-        m_buffer[i].ToRepresentation(
+        m_internalArray[i].ToRepresentation(
             ss,
             addTypeName,
             depth - 1);
 
-        if (i != m_size - 1)
+        if (i != m_internalArray.Size() - 1)
         {
             ss << sepStr;
         }
     }
 
     ss << ']';
-}
-
-HashCode VMArray::GetHashCode() const
-{
-    HashCode hashCode;
-
-    for (SizeType i = 0; i < m_size; i++)
-    {
-        hashCode.Add(m_buffer[i].GetHashCode());
-    }
-
-    return hashCode;
 }
 
 } // namespace vm

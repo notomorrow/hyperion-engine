@@ -68,13 +68,6 @@ public:
     }
 
     // push a value to the stack
-    HYP_FORCE_INLINE void Push(const Value& value)
-    {
-        Assert(m_sp < STACK_SIZE, "stack overflow");
-        m_data[m_sp++] = value;
-    }
-
-    // push a value to the stack
     HYP_FORCE_INLINE void Push(Value&& value)
     {
         Assert(m_sp < STACK_SIZE, "stack overflow");

@@ -5,7 +5,6 @@
 #include <script/vm/VMMap.hpp>
 #include <script/vm/VMString.hpp>
 #include <script/vm/Value.hpp>
-#include <script/vm/InstructionHandler.hpp>
 
 #include <script/compiler/Configuration.hpp>
 #include <script/compiler/CompilationUnit.hpp>

@@ -2,6 +2,7 @@
 
 #include <script/vm/Value.hpp>
 #include <core/math/MathUtil.hpp>
+#include <core/containers/Array.hpp>
 #include <core/Types.hpp>
 #include <core/HashCode.hpp>
 
@@ -15,47 +16,48 @@ namespace vm {
 class VMArray
 {
 public:
-    using SizeType = uint64;
-
-    VMArray(SizeType size = 0);
-    VMArray(const VMArray& other);
-    VMArray& operator=(const VMArray& other);
+    explicit VMArray(SizeType size = 0);
     VMArray(VMArray&& other) noexcept;
     VMArray& operator=(VMArray&& other) noexcept;
     ~VMArray();
 
     bool operator==(const VMArray& other) const
     {
-        return this == &other;
+        return m_internalArray == other.m_internalArray;
     }
 
     SizeType GetSize() const
     {
-        return m_size;
+        return m_internalArray.Size();
     }
 
-    Value* GetBuffer() const
+    Value* GetBuffer()
     {
-        return m_buffer;
+        return m_internalArray.Data();
+    }
+
+    const Value* GetBuffer() const
+    {
+        return m_internalArray.Data();
     }
 
     Value& AtIndex(SizeType index)
     {
-        return m_buffer[index];
+        return m_internalArray[index];
     }
 
     const Value& AtIndex(SizeType index) const
     {
-        return m_buffer[index];
+        return m_internalArray[index];
     }
 
-    void AtIndex(SizeType index, const Value& value)
+    void AtIndex(SizeType index, Value&& value)
     {
-        m_buffer[index] = value;
+        m_internalArray[index] = std::move(value);
     }
 
-    void Resize(SizeType capacity);
-    void Push(const Value& value);
+    void Resize(SizeType newSize);
+    void Push(Value&& value);
     void PushMany(SizeType n, Value* values);
     void PushMany(SizeType n, Value** values);
     void Pop();
@@ -65,17 +67,13 @@ public:
         bool addTypeName = true,
         int depth = 3) const;
 
-    HashCode GetHashCode() const;
-
 private:
     static SizeType GetCapacityForSize(SizeType newSize)
     {
         return static_cast<SizeType>(1) << static_cast<SizeType>(std::ceil(std::log(MathUtil::Max(newSize, 1)) / std::log(2.0)));
     }
 
-    SizeType m_size;
-    SizeType m_capacity;
-    Value* m_buffer;
+    Array<Value> m_internalArray;
 };
 
 } // namespace vm
