@@ -41,43 +41,34 @@ struct Symbol
 {
     String name;
     Type type;
-    Variant<Value, Script_NativeFunction> value;
+    Value value;
 
     Symbol(
         const String& name,
         const String& typeString,
-        const Value& value)
+        Value&& value)
         : name(name),
           type { typeString, nullptr },
-          value(value)
+          value(std::move(value))
     {
     }
 
     Symbol(
         const String& name,
         const String& typeString,
-        Script_NativeFunction value)
+        Script_NativeFunction nativeFunction)
         : name(name),
-          type { typeString, nullptr },
-          value(value)
+          type { typeString, nullptr }
     {
+        Script_VMData vmData;
+        vmData.type = Script_VMData::NATIVE_FUNCTION;
+        vmData.nativeFunc = nativeFunction;
+
+        value = Value(vmData);
     }
 
-    Symbol(const Symbol& other)
-        : name(other.name),
-          type(other.type),
-          value(other.value)
-    {
-    }
-
-    Symbol& operator=(const Symbol& other)
-    {
-        name = other.name;
-        type = other.type;
-        value = other.value;
-
-        return *this;
-    }
+    Symbol(const Symbol& other) = delete;
+    Symbol& operator=(const Symbol& other) = delete;
 
     Symbol(Symbol&& other) noexcept
         : name(std::move(other.name)),
@@ -132,7 +123,7 @@ public:
     ClassBuilder& Member(
         String name,
         String typeString,
-        Value value);
+        HypData&& value);
 
     ClassBuilder& Method(
         String name,
@@ -142,7 +133,7 @@ public:
     ClassBuilder& StaticMember(
         String name,
         String typeString,
-        Value value);
+        HypData&& value);
 
     ClassBuilder& StaticMethod(
         String name,
@@ -178,13 +169,13 @@ public:
     Context& Global(
         String name,
         String typeString,
-        Value value);
+        HypData&& value);
 
     Context& Global(
         String name,
         String genericParamsString,
         String typeString,
-        Value value);
+        HypData&& value);
 
     Context& Global(
         String name,

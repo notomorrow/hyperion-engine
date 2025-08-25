@@ -1194,7 +1194,7 @@ public:
 
     HYP_FORCE_INLINE void Call(BCRegister reg, uint8_t nargs)
     {
-        state->m_vm->Invoke(this, thread->m_regs[reg], nargs);
+        state->m_vm->Invoke(this, std::move(thread->m_regs[reg]), nargs);
     }
 
     HYP_FORCE_INLINE void Ret()
@@ -1305,7 +1305,8 @@ public:
         {
             for (SizeType index = 0; index < it.Size(); index++)
             {
-                allMembers.PushBack(it.Data()[index]);
+                /// FIXME: This will be an issue as we do not clone
+                //allMembers.PushBack(it.Data()[index]);
             }
         }
 

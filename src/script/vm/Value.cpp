@@ -182,11 +182,6 @@ const HypData* Value::GetHypData() const
     return reinterpret_cast<const HypData*>(m_internal);
 }
 
-Script_VMData* Value::GetVMData() const
-{
-    return GetHypData()->TryGet<Script_VMData>().TryGet();
-}
-
 void Value::Mark()
 {
     if (Value* ref = GetRef())

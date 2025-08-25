@@ -13,23 +13,6 @@ VMMap::VMMap()
 {
 }
 
-VMMap::VMMap(const VMMap& other)
-    : m_map(other.m_map)
-{
-}
-
-VMMap& VMMap::operator=(const VMMap& other)
-{
-    if (&other == this)
-    {
-        return *this;
-    }
-
-    m_map = other.m_map;
-
-    return *this;
-}
-
 VMMap::VMMap(VMMap&& other) noexcept
     : m_map(std::move(other.m_map))
 {
@@ -51,12 +34,12 @@ VMMap::~VMMap()
 {
 }
 
-void VMMap::SetElement(VMMapKey key, VMMapValue value)
+void VMMap::SetElement(VMMapKey key, Value&& value)
 {
-    m_map[key] = value;
+    m_map[key] = std::move(value);
 }
 
-VMMap::VMMapValue* VMMap::GetElement(const VMMapKey& key)
+Value* VMMap::GetElement(const VMMapKey& key)
 {
     auto it = m_map.Find(key);
 
@@ -68,7 +51,7 @@ VMMap::VMMapValue* VMMap::GetElement(const VMMapKey& key)
     return &it->second;
 }
 
-const VMMap::VMMapValue* VMMap::GetElement(const VMMapKey& key) const
+const Value* VMMap::GetElement(const VMMapKey& key) const
 {
     auto it = m_map.Find(key);
 

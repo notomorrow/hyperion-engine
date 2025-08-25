@@ -37,13 +37,11 @@ public:
         }
     };
 
-    using VMMapValue = Value;
-
-    using SizeType = uint64;
+    using InternalMapType = HashMap<VMMapKey, Value, HashTable_DynamicNodeAllocator<KeyValuePair<VMMapKey, Value>>>;
 
     VMMap();
-    VMMap(const VMMap& other);
-    VMMap& operator=(const VMMap& other);
+    VMMap(const VMMap& other) = delete;
+    VMMap& operator=(const VMMap& other) = delete;
     VMMap(VMMap&& other) noexcept;
     VMMap& operator=(VMMap&& other) noexcept;
     ~VMMap();
@@ -53,12 +51,12 @@ public:
         return m_map.Size();
     }
 
-    HashMap<VMMapKey, VMMapValue>& GetMap()
+    InternalMapType& GetMap()
     {
         return m_map;
     }
 
-    const HashMap<VMMapKey, VMMapValue>& GetMap() const
+    const InternalMapType& GetMap() const
     {
         return m_map;
     }
@@ -68,10 +66,10 @@ public:
         return this == &other;
     }
 
-    void SetElement(VMMapKey key, VMMapValue value);
+    void SetElement(VMMapKey key, Value&& value);
 
-    VMMapValue* GetElement(const VMMapKey& key);
-    const VMMapValue* GetElement(const VMMapKey& key) const;
+    Value* GetElement(const VMMapKey& key);
+    const Value* GetElement(const VMMapKey& key) const;
 
     void GetRepresentation(
         std::stringstream& ss,
@@ -79,7 +77,7 @@ public:
         int depth = 3) const;
 
 private:
-    HashMap<VMMapKey, VMMapValue> m_map;
+    InternalMapType m_map;
 };
 
 } // namespace vm

@@ -1416,6 +1416,21 @@ struct HypDataHelper<HypData_UserData128>
     {
         return value;
     }
+
+    HYP_FORCE_INLINE void Set(HypData& hypData, const HypData_UserData128& value) const
+    {
+        hypData.Set_Internal(value);
+    }
+
+    HYP_FORCE_INLINE static FBOMResult Serialize(const HypData_UserData128& value, FBOMData& out, EnumFlags<FBOMDataFlags> flags = FBOMDataFlags::NONE)
+    {
+        return { FBOMResult::FBOM_ERR, "Cannot serialize user data!" };
+    }
+
+    HYP_FORCE_INLINE static FBOMResult Deserialize(FBOMLoadContext& context, const FBOMData& data, HypData& out)
+    {
+        return { FBOMResult::FBOM_ERR, "Cannot deserialize user data!" };
+    }
 };
 
 template <int StringType>
