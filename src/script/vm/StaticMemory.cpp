@@ -22,16 +22,16 @@ StaticMemory::~StaticMemory()
 
 void StaticMemory::MarkAllForDeallocation()
 {
-    // delete all objects that are heap allocated
-    for (uint32 i = staticSize; i != 0; i--)
-    {
-        Value& sv = m_data[i - 1];
+    //// delete all objects that are heap allocated
+    //for (uint32 i = staticSize; i != 0; i--)
+    //{
+    //    Value& sv = m_data[i - 1];
 
-        if (sv.m_type == Value::HEAP_POINTER && sv.m_value.internal.ptr != nullptr)
-        {
-            sv.m_value.internal.ptr->DisableFlags(GC_ALWAYS_ALIVE);
-        }
-    }
+    //    if (sv.m_type == Value::HEAP_POINTER && sv.m_value.internal.ptr != nullptr)
+    //    {
+    //        sv.m_value.internal.ptr->DisableFlags(GC_ALWAYS_ALIVE);
+    //    }
+    //}
 }
 
 } // namespace vm

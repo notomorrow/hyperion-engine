@@ -23,16 +23,8 @@ std::ostream& operator<<(std::ostream& os, const Script_StackMemory& stack)
 
         os << std::setw(5) << i << "| ";
 
-        if (value.GetType() == Value::ValueType::HEAP_POINTER)
-        {
-            // os << std::setw(17);
-            os << std::setw(18) << value.GetTypeString() << "| ";
-        }
-        else
-        {
-            os << std::setw(18);
-            os << value.GetTypeString() << "| ";
-        }
+        os << std::setw(18);
+        os << value.GetTypeString() << "| ";
 
         os << std::setw(16);
 

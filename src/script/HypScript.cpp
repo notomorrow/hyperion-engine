@@ -254,9 +254,10 @@ void HypScript::Run(ScriptHandle scriptHandle)
     m_vm->Execute(&scriptHandleData->bytecodeStream);
 }
 
-void HypScript::CallFunctionArgV(ScriptHandle scriptHandle, const Value& function, Value* args, ArgCount numArgs)
+void HypScript::CallFunctionArgV(ScriptHandle scriptHandle, FunctionHandle functionHandle, Value* args, ArgCount numArgs)
 {
     Assert(scriptHandle != INVALID_SCRIPT);
+    Assert(functionHandle != INVALID_FUNCTION);
 
     Script_ExecutionThread* mainThread = m_vm->GetState().GetMainThread();
 
@@ -266,7 +267,7 @@ void HypScript::CallFunctionArgV(ScriptHandle scriptHandle, const Value& functio
 
         for (ArgCount i = 0; i < numArgs; i++)
         {
-            mainThread->m_stack.Push(args[i]);
+            mainThread->m_stack.Push(std::move(args[i]));
         }
     }
 
@@ -281,10 +282,13 @@ void HypScript::CallFunctionArgV(ScriptHandle scriptHandle, const Value& functio
         Assert(scriptHandleData != nullptr);
     }
 
-    m_vm->InvokeNow(
-        &scriptHandleData->bytecodeStream,
-        function,
-        numArgs);
+    // Create a reference since we know the lifetime of the function handle will exist longer than the call
+    // and we don't want to move the underlying value
+    Script_VMData vmData;
+    vmData.type = Script_VMData::VALUE_REF;
+    vmData.valueRef = reinterpret_cast<Value*>(functionHandle);
+
+    m_vm->InvokeNow(&scriptHandleData->bytecodeStream, Value(vmData), numArgs);
 
     if (numArgs != 0)
     {
@@ -292,59 +296,104 @@ void HypScript::CallFunctionArgV(ScriptHandle scriptHandle, const Value& functio
     }
 }
 
-bool HypScript::GetMember(const Value& objectValue, const char* memberName, Value& outValue)
+bool HypScript::GetMember(ObjectHandle objectHandle, const char* memberName, Value*& outValue)
 {
-    if (objectValue.m_type != Value::HEAP_POINTER)
+    if (objectHandle == INVALID_OBJECT)
     {
         return false;
     }
 
-    if (VMObject* ptr = objectValue.m_value.internal.ptr->GetPointer<VMObject>())
-    {
-        if (Member* member = ptr->LookupMemberFromHash(hashFnv1(memberName)))
-        {
-            outValue = member->value;
+    Value& objectValue = *reinterpret_cast<Value*>(objectHandle);
 
-            return true;
-        }
+    VMObject* object = objectValue.GetObject();
+
+    if (!object)
+    {
+        return false;
+    }
+
+    if (Member* member = object->LookupMemberFromHash(hashFnv1(memberName)))
+    {
+        outValue = &member->value;
+
+        return true;
     }
 
     return false;
 }
 
-bool HypScript::SetMember(const Value& objectValue, const char* memberName, const Value& value)
+bool HypScript::SetMember(ObjectHandle objectHandle, const char* memberName, Value&& value)
 {
-    if (objectValue.m_type != Value::HEAP_POINTER)
+    if (objectHandle == INVALID_OBJECT)
     {
         return false;
     }
 
-    if (VMObject* ptr = objectValue.m_value.internal.ptr->GetPointer<VMObject>())
-    {
-        if (Member* member = ptr->LookupMemberFromHash(hashFnv1(memberName)))
-        {
-            member->value = value;
+    Value& objectValue = *reinterpret_cast<Value*>(objectHandle);
 
-            return true;
-        }
+    VMObject* object = objectValue.GetObject();
+
+    if (!object)
+    {
+        return false;
+    }
+
+    if (Member* member = object->LookupMemberFromHash(hashFnv1(memberName)))
+    {
+        member->value.AssignValue(std::move(value), false);
+
+        return true;
     }
 
     return false;
 }
 
-bool HypScript::GetFunctionHandle(const char* name, Value& outFunction)
+bool HypScript::GetFunctionHandle(const char* name, FunctionHandle& outFunctionHandle)
 {
-    return GetExportedValue(name, &outFunction);
+    Value* pValue;
+    if (!GetExportedValue(name, pValue))
+    {
+        return false;
+    }
+
+    if (!pValue->IsFunction())
+    {
+        return false;
+    }
+
+    outFunctionHandle = *reinterpret_cast<FunctionHandle*>(pValue);
+
+    return true;
 }
 
-bool HypScript::GetObjectHandle(const char* name, Value& outValue)
+bool HypScript::GetObjectHandle(const char* name, ObjectHandle& outObjectHandle)
 {
-    return GetExportedValue(name, &outValue);
+    Value* pValue;
+
+    if (!GetExportedValue(name, pValue))
+    {
+        return false;
+    }
+
+    if (!pValue->IsRef())
+    {
+        return false;
+    }
+
+    Value* pRef = pValue->GetRef();
+    if (pRef == nullptr || !pRef->IsValid())
+    {
+        return false;
+    }
+
+    outObjectHandle = *reinterpret_cast<ObjectHandle*>(pRef);
+
+    return true;
 }
 
-bool HypScript::GetExportedValue(const char* name, Value* value)
+bool HypScript::GetExportedValue(const char* name, Value*& outValue)
 {
-    return GetExportedSymbols().Find(hashFnv1(name), value);
+    return GetExportedSymbols().Find(hashFnv1(name), outValue);
 }
 
 ExportedSymbolTable& HypScript::GetExportedSymbols() const

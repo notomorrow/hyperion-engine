@@ -14,6 +14,8 @@
 
 #include <script/vm/VM.hpp>
 
+#include <core/object/HypData.hpp>
+
 #include <core/memory/ByteBuffer.hpp>
 
 namespace hyperion {
@@ -65,12 +67,7 @@ void ClassBuilder::Build()
     Mutex::Guard guard(m_context->m_mutex);
 
     // Add `nativeTypeId` member to class
-    m_classDefinition.staticMembers.PushBack(
-        { "nativeTypeId",
-            { "uint" },
-            vm::Value { vm::Value::U32,
-                { .u32 = m_classDefinition.nativeTypeId.Value() } } });
-
+    m_classDefinition.staticMembers.PushBack({ "nativeTypeId", { "uint" }, Value(HypData(m_classDefinition.nativeTypeId.Value())) });
     m_context->m_classDefinitions.PushBack(std::move(m_classDefinition));
 }
 
@@ -295,60 +292,63 @@ void Context::BindAll(APIInstance& apiInstance, VM* vm)
 {
     Mutex::Guard guard(m_mutex);
 
-    for (const GlobalDefinition& global : m_globals)
+    for (GlobalDefinition& global : m_globals)
     {
         Assert(global.varDecl != nullptr);
         Assert(global.varDecl->GetIdentifier() != nullptr);
 
-        const int stackLocation =
-            global.varDecl->GetIdentifier()->GetStackLocation();
-        Assert(stackLocation != -1, "Global {} has no stack location",
-            global.symbol.name.Data());
+        const int stackLocation = global.varDecl->GetIdentifier()->GetStackLocation();
+        Assert(stackLocation != -1, "Global {} has no stack location", global.symbol.name.Data());
 
-        Value value { Value::NONE, {} };
+        Value value;
 
         if (global.symbol.value.Is<Value>())
         {
-            value = global.symbol.value.Get<Value>();
+            // Make a reference to this value:
+            Script_VMData vmData;
+            vmData.type = Script_VMData::VALUE_REF;
+            vmData.valueRef = global.symbol.value.Get<Value>().Deref();
+
+            value = Value(vmData);
         }
         else if (global.symbol.value.Is<Script_NativeFunction>())
         {
-            value = { Value::NATIVE_FUNCTION,
-                { .internal = { .nativeFunc = global.symbol.value.Get<Script_NativeFunction>() } } };
+            Script_VMData vmData;
+            vmData.type = Script_VMData::NATIVE_FUNCTION;
+            vmData.nativeFunc = global.symbol.value.Get<Script_NativeFunction>();
+
+            value = Value(vmData);
         }
         else
         {
-            Assert(false);
+            HYP_UNREACHABLE(); // something is up if we get here
         }
 
         VMState& vmState = vm->GetState();
 
         Assert(vmState.GetMainThread()->GetStack().STACK_SIZE > stackLocation);
-        vmState.GetMainThread()->GetStack().GetData()[stackLocation] = value;
+        vmState.GetMainThread()->GetStack().GetData()[stackLocation].AssignValue(std::move(value), false);
 
         DebugLog(LogType::Debug, "Bound global %s at stack location %u\n",
             global.symbol.name.Data(), stackLocation);
     }
 
-    for (const ClassDefinition& classDefinition : m_classDefinitions)
+    for (ClassDefinition& classDefinition : m_classDefinitions)
     {
         Assert(classDefinition.expr != nullptr);
 
         Assert(classDefinition.varDecl != nullptr);
         Assert(classDefinition.varDecl->GetIdentifier() != nullptr);
 
-        const int stackLocation =
-            classDefinition.varDecl->GetIdentifier()->GetStackLocation();
-        Assert(stackLocation != -1, "Class {} has no stack location",
-            classDefinition.name.Data());
+        const int stackLocation = classDefinition.varDecl->GetIdentifier()->GetStackLocation();
+        Assert(stackLocation != -1, "Class {} has no stack location", classDefinition.name.Data());
 
         // Ensure class SymbolType is registered
         SymbolTypeRef heldType = classDefinition.expr->GetHeldType();
         Assert(heldType != nullptr);
         heldType = heldType->GetUnaliased();
 
-        Assert(heldType->GetId() != -1, "Class {} has no ID",
-            classDefinition.name.Data());
+        Assert(heldType->GetId() != -1, "Class {} has no ID", classDefinition.name.Data());
 
         // Load the class object from the VM - it is stored in StaticMemory
         // at the index
@@ -363,7 +363,7 @@ void Context::BindAll(APIInstance& apiInstance, VM* vm)
 
         for (SizeType i = 0; i < heldType->GetMembers().Size(); ++i)
         {
-            const SymbolTypeMember& member = heldType->GetMembers()[i];
+            SymbolTypeMember& member = heldType->GetMembers()[i];
 
             auto symbolIt = classDefinition.staticMembers.FindIf(
                 [&member](const Symbol& symbol)
@@ -376,104 +376,113 @@ void Context::BindAll(APIInstance& apiInstance, VM* vm)
                 continue;
             }
 
-            const Symbol& symbol = *symbolIt;
+            Symbol& symbol = *symbolIt;
 
-            Value symbolValue { Value::NONE, {} };
+            Value symbolValue;
 
             if (symbol.value.Is<Value>())
             {
-                symbolValue = symbol.value.Get<Value>();
+                Script_VMData vmData;
+                vmData.type = Script_VMData::VALUE_REF;
+                vmData.valueRef = symbol.value.Get<Value>().Deref();
+
+                symbolValue = Value(vmData);
             }
             else if (symbol.value.Is<Script_NativeFunction>())
             {
-                symbolValue = {
-                    Value::NATIVE_FUNCTION,
-                    { .internal = { .nativeFunc = symbol.value.Get<Script_NativeFunction>() } }
-                };
+                Script_VMData vmData;
+                vmData.type = Script_VMData::NATIVE_FUNCTION;
+                vmData.nativeFunc = symbol.value.Get<Script_NativeFunction>();
+
+                symbolValue = Value(vmData);
             }
             else
             {
-                Assert(false);
+                HYP_UNREACHABLE(); // something is up if we get here
             }
 
-            Memory::StrCpy(classObjectMembers[i].name, symbol.name.Data(),
-                MathUtil::Min(symbol.name.Size(), 255));
+            Memory::StrCpy(classObjectMembers[i].name, symbol.name.Data(), MathUtil::Min(symbol.name.Size(), 255));
             classObjectMembers[i].hash = hashFnv1(classObjectMembers[i].name);
-            classObjectMembers[i].value = symbolValue;
+            classObjectMembers[i].value = std::move(symbolValue);
         }
 
-        HeapValue* classObjectHeapValue =
-            vmState.HeapAlloc(vmState.GetMainThread());
-        classObjectHeapValue->Assign(VMObject(
-            classObjectMembers.Data(), classObjectMembers.Size(), nullptr));
-        classObjectHeapValue->Mark();
-
-        VMObject* classObjectPtr =
-            classObjectHeapValue->GetPointer<VMObject>();
-        Assert(classObjectPtr != nullptr);
+        VMObject classObject(classObjectMembers.Data(), classObjectMembers.Size(), Value());
 
         Array<Member> protoObjectMembers;
         protoObjectMembers.Resize(classDefinition.members.Size());
 
         for (SizeType i = 0; i < classDefinition.members.Size(); ++i)
         {
-            const Symbol& symbol = classDefinition.members[i];
+            Symbol& symbol = classDefinition.members[i];
 
-            Value symbolValue { Value::NONE, {} };
+            Value symbolValue;
 
             if (symbol.value.Is<Value>())
             {
-                symbolValue = symbol.value.Get<Value>();
+                Script_VMData vmData;
+                vmData.type = Script_VMData::VALUE_REF;
+                vmData.valueRef = symbol.value.Get<Value>().Deref();
+
+                symbolValue = Value(vmData);
             }
             else if (symbol.value.Is<Script_NativeFunction>())
             {
-                symbolValue = {
-                    Value::NATIVE_FUNCTION,
-                    { .internal = { .nativeFunc = symbol.value.Get<Script_NativeFunction>() } }
-                };
+                Script_VMData vmData;
+                vmData.type = Script_VMData::NATIVE_FUNCTION;
+                vmData.nativeFunc = symbol.value.Get<Script_NativeFunction>();
+                symbolValue = Value(vmData);
+            }
+            else
+            {
+                HYP_UNREACHABLE(); // something is up if we get here
             }
 
-            Memory::StrCpy(protoObjectMembers[i].name, symbol.name.Data(),
-                MathUtil::Min(symbol.name.Size(), 255));
+            Memory::StrCpy(protoObjectMembers[i].name, symbol.name.Data(), MathUtil::Min(symbol.name.Size(), 255));
             protoObjectMembers[i].hash = hashFnv1(protoObjectMembers[i].name);
-            protoObjectMembers[i].value = symbolValue;
+            protoObjectMembers[i].value = std::move(symbolValue);
         }
 
+        // Set class object in static memory
+        vmState.m_staticMemory[index] = Value(HypData(std::move(classObject)));
+
+        Value& classObjectValue = vmState.m_staticMemory[index];
+
         // Add __intern member
-        protoObjectMembers.PushBack(
-            Member { "__intern", hashFnv1("__intern"), Value { Value::NONE, {} } });
+        protoObjectMembers.PushBack(Member { "__intern", hashFnv1("__intern"), Value() });
 
-        HeapValue* protoObjectHeapValue =
-            vmState.HeapAlloc(vmState.GetMainThread());
-        protoObjectHeapValue->Assign(VMObject(protoObjectMembers.Data(),
-            protoObjectMembers.Size(),
-            classObjectHeapValue));
-        protoObjectHeapValue->Mark();
+        Script_VMData classObjectRefVmData;
+        classObjectRefVmData.type = Script_VMData::VALUE_REF;
+        classObjectRefVmData.valueRef = &classObjectValue;
 
-        VMObject* protoObjectPtr =
-            protoObjectHeapValue->GetPointer<VMObject>();
-        Assert(protoObjectPtr != nullptr);
+        VMObject protoObject(protoObjectMembers.Data(), protoObjectMembers.Size(), Value(classObjectRefVmData));
 
         // Set $proto for class object
-        classObjectPtr->SetMember(
-            "$proto", Value { Value::HEAP_POINTER, { .internal = { .ptr = protoObjectHeapValue } } });
+        VMObject* classObjectPtr = classObjectValue.GetObject();
+        Assert(classObjectPtr != nullptr);
 
-        apiInstance.classBindings.classPrototypes.Set(classDefinition.name,
-            protoObjectHeapValue);
-        apiInstance.classBindings.classNames.Set(classDefinition.nativeTypeId,
-            classDefinition.name);
+        // add $proto member to class object
+        classObjectPtr->SetMember("$proto", Value(HypData(std::move(protoObject))));
 
-        Value value { Value::HEAP_POINTER, { .internal = { .ptr = classObjectHeapValue } } };
+        VMObject* protoObjectPtr = classObjectValue.GetObject()->LookupMemberFromHash(VMObject::PROTO_MEMBER_HASH)->value.GetObject();
+        Assert(protoObjectPtr != nullptr);
 
-        // Set class object in static memory
-        vmState.m_staticMemory[index] = value;
+        apiInstance.classBindings.classPrototypes.Set(classDefinition.name, protoObjectPtr);
+        apiInstance.classBindings.classNames.Set(classDefinition.nativeTypeId, classDefinition.name);
+
+        // add a reference to the class object in the global scope (it's stored in static memory)
+        Value value;
+        {
+            Script_VMData vmData;
+            vmData.type = Script_VMData::VALUE_REF;
+            vmData.valueRef = &classObjectValue;
+            value = Value(vmData);
+        }
 
         // Set class object in global scope
         Assert(vmState.GetMainThread()->GetStack().STACK_SIZE > stackLocation);
-        vmState.GetMainThread()->GetStack().GetData()[stackLocation] = value;
+        vmState.GetMainThread()->GetStack().GetData()[stackLocation].AssignValue(std::move(value), false);
 
-        DebugLog(LogType::Debug, "Bound class %s at stack location %u\n",
-            classDefinition.name.Data(), stackLocation);
+        DebugLog(LogType::Debug, "Bound class %s at stack location %u\n", classDefinition.name.Data(), stackLocation);
     }
 }
 

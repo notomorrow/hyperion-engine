@@ -78,19 +78,5 @@ void VMArraySlice::GetRepresentation(
     ss << ']';
 }
 
-HashCode VMArraySlice::GetHashCode() const
-{
-    Assert(m_ary != nullptr);
-
-    HashCode hashCode;
-
-    for (SizeType i = m_start; i < m_end; i++)
-    {
-        hashCode.Add(m_ary->AtIndex(i).GetHashCode());
-    }
-
-    return hashCode;
-}
-
 } // namespace vm
 } // namespace hyperion

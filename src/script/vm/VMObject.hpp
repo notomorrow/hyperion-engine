@@ -67,7 +67,8 @@ public:
     static const uint32 PROTO_MEMBER_HASH;
     static const uint32 BASE_MEMBER_HASH;
 
-    // construct from prototype (holds pointer)
+    // construct from prototype
+    explicit VMObject(const VMObject* prototype);
     explicit VMObject(Value&& classValue);
     VMObject(const Member* members, SizeType size, Value&& classValue);
     VMObject(VMObject&& other) noexcept;

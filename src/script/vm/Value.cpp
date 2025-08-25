@@ -157,6 +157,15 @@ Value& Value::operator=(Value&& other) noexcept
     return *this;
 }
 
+Value::~Value()
+{
+    // have to manually call destructor because we used placement new
+    GetHypData()->~HypData();
+
+    // set all bytes to 0xFF to indicate garbage
+    Memory::MemSet(m_internal, 0xFFu, sizeof(m_internal));
+}
+
 HypData* Value::GetHypData()
 {
     static_assert(sizeof(m_internal) == sizeof(HypData), "Size of m_internal must match size of HypData");
@@ -202,9 +211,24 @@ bool Value::IsValid() const
     return GetHypData()->IsValid();
 }
 
+bool Value::IsGarbage() const
+{
+    // if all bytes are 0xFF it is considered garbage
+    const uint8* bytes = reinterpret_cast<const uint8*>(m_internal);
+    for (SizeType i = 0; i < sizeof(m_internal); i++)
+    {
+        if (bytes[i] != 0xFF)
+        {
+            return false;
+        }
+    }
+
+    return true;
+}
+
 bool Value::IsFunction() const
 {
-    Script_VMData* vmData = GetVMData();
+    const Script_VMData* vmData = GetVMData();
 
     if (vmData == nullptr)
     {
@@ -216,17 +240,20 @@ bool Value::IsFunction() const
 
 bool Value::IsNativeFunction() const
 {
-    Script_VMData* vmData = GetVMData();
+    const Script_VMData* vmData = GetVMData();
+
     if (vmData == nullptr)
     {
         return false;
     }
+
     return vmData->type == Script_VMData::NATIVE_FUNCTION;
 }
 
 bool Value::IsRef() const
 {
-    Script_VMData* vmData = GetVMData();
+    const Script_VMData* vmData = GetVMData();
+
     if (vmData == nullptr)
     {
         return false;
@@ -237,7 +264,8 @@ bool Value::IsRef() const
 
 Value* Value::GetRef() const
 {
-    Script_VMData* vmData = GetVMData();
+    const Script_VMData* vmData = GetVMData();
+
     if (vmData == nullptr || vmData->type != Script_VMData::VALUE_REF)
     {
         return nullptr;
@@ -249,6 +277,7 @@ Value* Value::GetRef() const
 void Value::AssignValue(Value&& other, bool assignRef)
 {
     Value* ref;
+
     if (assignRef && (ref = GetRef()) != nullptr)
     {
         *ref = std::move(other);
@@ -578,7 +607,8 @@ AnyRef Value::ToRef() const
 
 Script_UserData Value::GetUserData() const
 {
-    Script_VMData* vmData = GetVMData();
+    const Script_VMData* vmData = GetVMData();
+
     if (!vmData || vmData->type != Script_VMData::USER_DATA)
     {
         return nullptr;
@@ -692,7 +722,7 @@ const char* Value::GetTypeString() const
     {
         return "bool";
     }
-    else if (Script_VMData* vmData = GetVMData())
+    else if (const Script_VMData* vmData = GetVMData())
     {
         switch (vmData->type)
         {
@@ -792,7 +822,7 @@ VMString Value::ToString() const
     {
         return BOOLEAN_STRINGS[data.Get<bool>() ? 1 : 0];
     }
-    else if (Script_VMData* vmData = GetVMData())
+    else if (const Script_VMData* vmData = GetVMData())
     {
         switch (vmData->type)
         {

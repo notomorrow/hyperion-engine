@@ -10,8 +10,6 @@ namespace vm {
 class VMArraySlice
 {
 public:
-    using SizeType = VMArray::SizeType;
-
     VMArraySlice(VMArray* ary, SizeType start, SizeType end);
     VMArraySlice(const VMArraySlice& other);
 
@@ -42,8 +40,6 @@ public:
         std::stringstream& ss,
         bool addTypeName = true,
         int depth = 3) const;
-
-    HashCode GetHashCode() const;
 
 private:
     VMArray* m_ary;

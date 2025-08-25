@@ -158,6 +158,22 @@ Member* ObjectMap::Get(uint32 hash)
     return res;
 }
 
+VMObject::VMObject(const VMObject* prototype)
+{
+    Assert(prototype != nullptr);
+
+    SizeType size = prototype->GetSize();
+
+    m_members = new Member[size];
+    Memory::MemCpy(m_members, prototype->GetMembers(), sizeof(Member) * size);
+
+    m_objectMap = new ObjectMap(size);
+    for (SizeType i = 0; i < size; i++)
+    {
+        m_objectMap->Push(m_members[i].hash, &m_members[i]);
+    }
+}
+
 VMObject::VMObject(Value&& classValue)
     : m_classValue(std::move(classValue))
 {
@@ -198,6 +214,26 @@ VMObject::VMObject(VMObject&& other) noexcept
 {
     other.m_objectMap = nullptr;
     other.m_members = nullptr;
+}
+
+VMObject& VMObject::operator=(VMObject&& other) noexcept
+{
+    if (&other == this)
+    {
+        return *this;
+    }
+
+    delete m_objectMap;
+    delete[] m_members;
+
+    m_classValue = std::move(other.m_classValue);
+    m_objectMap = other.m_objectMap;
+    m_members = other.m_members;
+
+    other.m_objectMap = nullptr;
+    other.m_members = nullptr;
+
+    return *this;
 }
 
 VMObject::~VMObject()

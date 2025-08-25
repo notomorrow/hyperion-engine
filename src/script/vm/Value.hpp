@@ -32,6 +32,7 @@ class InstructionHandler;
 struct Script_ExecutionThread;
 class HeapValue;
 struct VMState;
+class Exception;
 
 enum NumericType : uint8
 {
@@ -130,9 +131,14 @@ namespace sdk {
 struct Params
 {
     APIInstance& apiInstance;
-    vm::InstructionHandler* handler;
     vm::Value** args;
     int32 nargs;
+
+    void* ctx; // needs to be passed to the function pointers below.
+
+    // sets the return value of a native function.
+    void (*setReturnValue)(void* ctx, vm::Value&& value);
+    void (*throwException)(void* ctx, const vm::Exception& exception);
 };
 
 } // namespace sdk
@@ -217,9 +223,6 @@ class alignas(8) Value
 
     char m_internal[40];
 
-    HypData* GetHypData();
-    const HypData* GetHypData() const;
-
 public:
     Value();
 
@@ -233,15 +236,44 @@ public:
     Value& operator=(const Value& other) = delete;
     Value& operator=(Value&& other) noexcept;
 
+    ~Value();
+
     Script_VMData* GetVMData() const;
 
+    HypData* GetHypData();
+    const HypData* GetHypData() const;
+
     bool IsValid() const;
+    bool IsGarbage() const;
 
     bool IsFunction() const;
     bool IsNativeFunction() const;
 
     bool IsRef() const;
     Value* GetRef() const;
+
+    Value* Deref()
+    {
+        Value* deref = GetRef();
+        if (deref != nullptr)
+        {
+            return deref;
+        }
+
+        return this;
+    }
+
+    const Value* Deref() const
+    {
+        const Value* deref = GetRef();
+
+        if (deref != nullptr)
+        {
+            return deref;
+        }
+
+        return this;
+    }
 
     void AssignValue(Value&& other, bool assignRef);
 
@@ -269,6 +301,16 @@ public:
     static int CompareAsPointers(Value* lhs, Value* rhs);
     static int CompareAsFunctions(Value* lhs, Value* rhs);
     static int CompareAsNativeFunctions(Value* lhs, Value* rhs);
+
+    HYP_FORCE_INLINE bool operator==(const Value& other) const
+    {
+        return CompareAsPointers(const_cast<Value*>(this), const_cast<Value*>(&other)) & CompareFlags::EQUAL;
+    }
+
+    HYP_FORCE_INLINE bool operator!=(const Value& other) const
+    {
+        return !(*this == other);
+    }
 
 #if 0
     Any ToAny() const;

@@ -4,43 +4,47 @@ namespace hyperion {
 namespace vm {
 
 ExportedSymbolTable::ExportedSymbolTable() = default;
-ExportedSymbolTable::~ExportedSymbolTable() = default;
-
-void ExportedSymbolTable::MarkAll()
+ExportedSymbolTable::~ExportedSymbolTable()
 {
-    for (auto& it : m_symbols)
+    // delete all stored values
+    for (auto& pair : m_symbols)
     {
-        it.second.Mark();
+        delete pair.second;
     }
 }
 
-bool ExportedSymbolTable::Find(const char* name, Value* out)
+void ExportedSymbolTable::MarkAll()
+{
+    // not needed anymore
+}
+
+bool ExportedSymbolTable::Find(const char* name, Value*& out)
 {
     return Find(hashFnv1(name), out);
 }
 
-bool ExportedSymbolTable::Find(HashFNV1 hash, Value* out)
+bool ExportedSymbolTable::Find(HashFNV1 hash, Value*& out)
 {
-    const auto it = m_symbols.Find(hash);
+    auto it = m_symbols.Find(hash);
 
     if (it == m_symbols.End())
     {
         return false;
     }
 
-    *out = it->second;
+    out = it->second;
 
     return true;
 }
 
-auto ExportedSymbolTable::Store(const char* name, const Value& value) -> typename SymbolMap::InsertResult
+auto ExportedSymbolTable::Store(const char* name, Value&& value) -> typename SymbolMap::InsertResult
 {
-    return Store(hashFnv1(name), value);
+    return Store(hashFnv1(name), std::move(value));
 }
 
-auto ExportedSymbolTable::Store(HashFNV1 hash, const Value& value) -> typename SymbolMap::InsertResult
+auto ExportedSymbolTable::Store(HashFNV1 hash, Value&& value) -> typename SymbolMap::InsertResult
 {
-    return m_symbols.Insert(hash, value);
+    return m_symbols.Insert(hash, new Value(std::move(value)));
 }
 
 } // namespace vm

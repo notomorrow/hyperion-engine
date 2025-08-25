@@ -19,7 +19,7 @@ HeapValue::~HeapValue() = default;
 
 void HeapValue::Mark()
 {
-    Assert(!(m_flags & GC_DESTROYED));
+    /*Assert(!(m_flags & GC_DESTROYED));
 
     m_flags |= GC_MARKED;
 
@@ -62,7 +62,9 @@ void HeapValue::Mark()
             pair.first.key.Mark();
             pair.second.Mark();
         }
-    }
+    }*/
+
+    HYP_NOT_IMPLEMENTED(); // removed
 }
 
 } // namespace vm

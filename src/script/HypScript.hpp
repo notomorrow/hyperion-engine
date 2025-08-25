@@ -28,21 +28,15 @@ class Context;
 
 class HypScript;
 
-enum class ScriptHandle : uint32;
-#define INVALID_SCRIPT ScriptHandle(0)
+#define HYP_DEF_SCRIPT_API_HANDLE(handleTypeName, handleTypeNameCaps) \
+    enum class handleTypeName##Handle : uint32; \
+    constexpr handleTypeName##Handle INVALID_##handleTypeNameCaps = handleTypeName##Handle(0);
 
-class ValueHandle
-{
-    friend class HypScript;
+HYP_DEF_SCRIPT_API_HANDLE(Script, SCRIPT)
+HYP_DEF_SCRIPT_API_HANDLE(Function, FUNCTION)
+HYP_DEF_SCRIPT_API_HANDLE(Object, OBJECT)
 
-    Value _inner = Value(Value::NONE, {});
-
-public:
-    bool IsNull() const
-    {
-        return _inner.m_type == Value::NONE;
-    }
-};
+#undef HYP_DEF_SCRIPT_API_HANDLE
 
 class HypScript
 {
@@ -89,85 +83,7 @@ public:
     template <class T>
     constexpr Value CreateArgument(T&& item)
     {
-        using ArgType = std::remove_cv_t<std::decay_t<T>>;
-
-        Value firstValue;
-
-        if constexpr (std::is_same_v<Value, ArgType>)
-        {
-            firstValue = item;
-        }
-        else if constexpr (std::is_base_of_v<ValueHandle, ArgType>)
-        {
-            firstValue = item._inner;
-        }
-        else if constexpr (std::is_same_v<int8_t, ArgType>)
-        {
-            firstValue.m_type = Value::I8;
-            firstValue.m_value.i8 = item;
-        }
-        else if constexpr (std::is_same_v<int16_t, ArgType>)
-        {
-            firstValue.m_type = Value::I16;
-            firstValue.m_value.i16 = item;
-        }
-        else if constexpr (std::is_same_v<int32_t, ArgType>)
-        {
-            firstValue.m_type = Value::I32;
-            firstValue.m_value.i32 = item;
-        }
-        else if constexpr (std::is_same_v<int64_t, ArgType>)
-        {
-            firstValue.m_type = Value::I64;
-            firstValue.m_value.i64 = item;
-        }
-        else if constexpr (std::is_same_v<uint8_t, ArgType>)
-        {
-            firstValue.m_type = Value::U8;
-            firstValue.m_value.u8 = item;
-        }
-        else if constexpr (std::is_same_v<uint16_t, ArgType>)
-        {
-            firstValue.m_type = Value::U16;
-            firstValue.m_value.u16 = item;
-        }
-        else if constexpr (std::is_same_v<uint32_t, ArgType>)
-        {
-            firstValue.m_type = Value::U32;
-            firstValue.m_value.u32 = item;
-        }
-        else if constexpr (std::is_same_v<uint64_t, ArgType>)
-        {
-            firstValue.m_type = Value::U64;
-            firstValue.m_value.u64 = item;
-        }
-        else if constexpr (std::is_same_v<float, ArgType>)
-        {
-            firstValue.m_type = Value::F32;
-            firstValue.m_value.f = item;
-        }
-        else if constexpr (std::is_same_v<double, ArgType>)
-        {
-            firstValue.m_type = Value::F64;
-            firstValue.m_value.d = item;
-        }
-        else if constexpr (std::is_same_v<bool, ArgType>)
-        {
-            firstValue.m_type = Value::BOOLEAN;
-            firstValue.m_value.b = item;
-        }
-        else if constexpr (std::is_pointer_v<ArgType>)
-        {
-            // set to userdata
-            firstValue.m_type = Value::USER_DATA;
-            firstValue.m_value.internal.userData = static_cast<void*>(item);
-        }
-        else
-        {
-            static_assert(resolutionFailure<ArgType>, "Cannot pass value type to script function!");
-        }
-
-        return firstValue;
+        return HypData(std::forward<T>(item));
     }
 
     template <class... Args>
@@ -178,17 +94,17 @@ public:
         };
     }
 
-    void CallFunctionArgV(ScriptHandle scriptHandle, const Value& function, Value* args, ArgCount numArgs);
+    void CallFunctionArgV(ScriptHandle scriptHandle, FunctionHandle functionHandle, Value* args, ArgCount numArgs);
 
-    bool GetFunctionHandle(const char* name, Value& outFunction);
-    bool GetObjectHandle(const char* name, Value& outObject);
+    bool GetFunctionHandle(const char* name, FunctionHandle& outFunctionHandle);
+    bool GetObjectHandle(const char* name, ObjectHandle& outObjectHandle);
 
-    bool GetExportedValue(const char* name, Value* value);
+    bool GetExportedValue(const char* name, Value*& outValue);
 
     ExportedSymbolTable& GetExportedSymbols() const;
 
-    bool GetMember(const Value& objectValue, const char* memberName, Value& outValue);
-    bool SetMember(const Value& objectValue, const char* memberName, const Value& value);
+    bool GetMember(ObjectHandle objectHandle, const char* memberName, Value*& outValue);
+    bool SetMember(ObjectHandle objectHandle, const char* memberName, Value&& value);
 
     template <class... Args>
     void CallFunction(ScriptHandle scriptHandle, const Value& function, Args&&... args)
@@ -240,6 +156,7 @@ private:
     APIInstance m_apiInstance;
     VM* m_vm;
 
+    // global cached data used from native code
     mutable Mutex m_mutex;
     HashMap<ScriptHandle, struct ScriptHandleData*> m_scripts;
 };

@@ -317,34 +317,59 @@
     while (0)
 
 namespace hyperion {
-namespace vm {
 
-template <class T, typename = std::enable_if_t<!std::is_same_v<Script_VMData, NormalizedType<T>> && !std::is_same_v<Number, NormalizedType<T>>>>
-static inline Value MakeScriptValue(T&& data)
+#pragma region ScriptApi
+
+template <class T, typename = std::enable_if_t<!std::is_same_v<vm::Script_VMData, NormalizedType<T>> && !std::is_same_v<vm::Number, NormalizedType<T>>>>
+static inline vm::Value ScriptApi_MakeScriptValue(T&& data)
 {
-    return Value(HypData(std::forward<T>(data)));
+    return vm::Value(HypData(std::forward<T>(data)));
 }
 
-static inline Value MakeScriptValue(const Script_VMData& data)
+static inline vm::Value ScriptApi_MakeScriptValue(const vm::Script_VMData& data)
 {
-    return Value(data);
+    return vm::Value(data);
 }
 
-static inline Value MakeScriptValue(const Number& number)
+static inline vm::Value ScriptApi_MakeScriptValue(const vm::Number& number)
 {
-    return Value(number);
+    return vm::Value(number);
 }
 
-static inline Value MakeScriptValueRef(Value* pRef)
+static inline vm::Value ScriptApi_MakeScriptValueRef(vm::Value* pRef)
 {
     Assert(pRef != nullptr);
 
-    Script_VMData vmData;
-    vmData.type = Script_VMData::VALUE_REF;
+    vm::Script_VMData vmData;
+    vmData.type = vm::Script_VMData::VALUE_REF;
     vmData.valueRef = pRef;
 
-    return Value(vmData);
+    return vm::Value(vmData);
 }
+
+// set return value on main thread
+static void ScriptApi_SetReturnValue(void* ctx, vm::Value&& value)
+{
+    Assert(ctx != nullptr);
+
+    vm::VM* vm = static_cast<vm::VM*>(ctx);
+
+    vm::Script_ExecutionThread* mainThread = vm->GetState().MAIN_THREAD;
+    Assert(mainThread != nullptr);
+
+    mainThread->GetRegisters()[0].AssignValue(std::move(value), false);
+}
+
+static void ScriptApi_ThrowException(void* ctx, const vm::Exception& exception)
+{
+    Assert(ctx != nullptr);
+    vm::VM* vm = static_cast<vm::VM*>(ctx);
+    vm->GetState().ThrowException(vm->GetState().MAIN_THREAD, exception);
+}
+
+#pragma endregion ScriptApi
+
+namespace vm {
 
 class InstructionHandler
 {
@@ -422,32 +447,32 @@ public:
 
     HYP_FORCE_INLINE void LoadI32(BCRegister reg, int32 i32)
     {
-        thread->m_regs[reg].AssignValue(MakeScriptValue(i32), false);
+        thread->m_regs[reg].AssignValue(ScriptApi_MakeScriptValue(i32), false);
     }
 
     HYP_FORCE_INLINE void LoadI64(BCRegister reg, int64 i64)
     {
-        thread->m_regs[reg].AssignValue(MakeScriptValue(i64), false);
+        thread->m_regs[reg].AssignValue(ScriptApi_MakeScriptValue(i64), false);
     }
 
     HYP_FORCE_INLINE void LoadU32(BCRegister reg, uint32 u32)
     {
-        thread->m_regs[reg].AssignValue(MakeScriptValue(u32), false);
+        thread->m_regs[reg].AssignValue(ScriptApi_MakeScriptValue(u32), false);
     }
 
     HYP_FORCE_INLINE void LoadU64(BCRegister reg, uint64 u64)
     {
-        thread->m_regs[reg].AssignValue(MakeScriptValue(u64), false);
+        thread->m_regs[reg].AssignValue(ScriptApi_MakeScriptValue(u64), false);
     }
 
     HYP_FORCE_INLINE void LoadF32(BCRegister reg, float f32)
     {
-        thread->m_regs[reg].AssignValue(MakeScriptValue(f32), false);
+        thread->m_regs[reg].AssignValue(ScriptApi_MakeScriptValue(f32), false);
     }
 
     HYP_FORCE_INLINE void LoadF64(BCRegister reg, double f64)
     {
-        thread->m_regs[reg].AssignValue(MakeScriptValue(f64), false);
+        thread->m_regs[reg].AssignValue(ScriptApi_MakeScriptValue(f64), false);
     }
 
     HYP_FORCE_INLINE void LoadOffset(BCRegister reg, uint16 offset)
@@ -461,7 +486,7 @@ public:
 
         // read value from stack at (sp - offset)
         // into the the register
-        thread->m_regs[reg].AssignValue(MakeScriptValueRef(&thread->m_stack[thread->m_stack.GetStackPointer() - offset]), false);
+        thread->m_regs[reg].AssignValue(ScriptApi_MakeScriptValueRef(&thread->m_stack[thread->m_stack.GetStackPointer() - offset]), false);
     }
 
     HYP_FORCE_INLINE void LoadIndex(BCRegister reg, uint16 index)
@@ -476,14 +501,14 @@ public:
 
         // read value from stack at the index into the the register
         // NOTE: read from main thread
-        thread->m_regs[reg].AssignValue(MakeScriptValueRef(&stk[index]), false);
+        thread->m_regs[reg].AssignValue(ScriptApi_MakeScriptValueRef(&stk[index]), false);
     }
 
     HYP_FORCE_INLINE void LoadStatic(BCRegister reg, uint16 index)
     {
         // read value from static memory
         // at the index into the the register
-        thread->m_regs[reg].AssignValue(MakeScriptValueRef(&state->m_staticMemory[index]), false);
+        thread->m_regs[reg].AssignValue(ScriptApi_MakeScriptValueRef(&state->m_staticMemory[index]), false);
     }
 
     HYP_FORCE_INLINE void LoadConstantString(BCRegister reg, uint32 len, const char* str)
@@ -492,7 +517,7 @@ public:
         {
             hv->Assign(VMString(str));
 
-            thread->m_regs[reg].AssignValue(MakeScriptValue(VMString(str)), false);
+            thread->m_regs[reg].AssignValue(ScriptApi_MakeScriptValue(VMString(str)), false);
 
             hv->Mark();
         }
@@ -504,7 +529,7 @@ public:
         vmData.type = Script_VMData::ADDRESS;
         vmData.addr = addr;
 
-        thread->m_regs[reg].AssignValue(MakeScriptValue(vmData), false);
+        thread->m_regs[reg].AssignValue(ScriptApi_MakeScriptValue(vmData), false);
     }
 
     HYP_FORCE_INLINE void LoadFunc(
@@ -519,7 +544,7 @@ public:
         vmData.func.m_nargs = nargs;
         vmData.func.m_flags = flags;
 
-        thread->m_regs[reg].AssignValue(MakeScriptValue(vmData), false);
+        thread->m_regs[reg].AssignValue(ScriptApi_MakeScriptValue(vmData), false);
     }
 
     HYP_FORCE_INLINE void LoadType( // come back to this
@@ -542,7 +567,7 @@ public:
         Value& parentClassValue = thread->m_regs[reg];
 
         // create prototype object
-        Value value = MakeScriptValue(VMObject(members, size, std::move(parentClassValue)));
+        Value value = ScriptApi_MakeScriptValue(VMObject(members, size, std::move(parentClassValue)));
 
         delete[] members;
 
@@ -561,7 +586,7 @@ public:
                 index,
                 object->GetSize());
 
-            thread->m_regs[dst].AssignValue(MakeScriptValueRef(&object->GetMember(index).value), false);
+            thread->m_regs[dst].AssignValue(ScriptApi_MakeScriptValueRef(&object->GetMember(index).value), false);
 
             return;
         }
@@ -579,7 +604,7 @@ public:
         {
             if (Member* member = object->LookupMemberFromHash(hash))
             {
-                thread->m_regs[dstReg].AssignValue(MakeScriptValueRef(&member->value), false);
+                thread->m_regs[dstReg].AssignValue(ScriptApi_MakeScriptValueRef(&member->value), false);
             }
             else
             {
@@ -638,7 +663,7 @@ public:
                     }
                 }
 
-                thread->m_regs[dstReg].AssignValue(MakeScriptValueRef(&array->AtIndex(key.index.i)), false);
+                thread->m_regs[dstReg].AssignValue(ScriptApi_MakeScriptValueRef(&array->AtIndex(key.index.i)), false);
             }
             else if (key.index.flags & Number::FLAG_UNSIGNED)
             {
@@ -650,7 +675,7 @@ public:
                     return;
                 }
 
-                thread->m_regs[dstReg].AssignValue(MakeScriptValueRef(&array->AtIndex(key.index.u)), false);
+                thread->m_regs[dstReg].AssignValue(ScriptApi_MakeScriptValueRef(&array->AtIndex(key.index.u)), false);
             }
 
             return;
@@ -662,7 +687,7 @@ public:
 
     HYP_FORCE_INLINE void LoadOffsetRef(BCRegister reg, uint16 offset)
     {
-        thread->m_regs[reg] = MakeScriptValueRef(&thread->m_stack[thread->m_stack.GetStackPointer() - offset]);
+        thread->m_regs[reg] = ScriptApi_MakeScriptValueRef(&thread->m_stack[thread->m_stack.GetStackPointer() - offset]);
     }
 
     HYP_FORCE_INLINE void LoadIndexRef(BCRegister reg, uint16 index)
@@ -675,12 +700,12 @@ public:
             index,
             stk.GetStackPointer());
 
-        thread->m_regs[reg] = MakeScriptValueRef(&stk[index]);
+        thread->m_regs[reg] = ScriptApi_MakeScriptValueRef(&stk[index]);
     }
 
     HYP_FORCE_INLINE void LoadRef(BCRegister dstReg, BCRegister srcReg)
     {
-        thread->m_regs[dstReg] = MakeScriptValueRef(&thread->m_regs[srcReg]);
+        thread->m_regs[dstReg] = ScriptApi_MakeScriptValueRef(&thread->m_regs[srcReg]);
     }
 
     HYP_FORCE_INLINE void LoadDeref(BCRegister dstReg, BCRegister srcReg)
@@ -690,7 +715,7 @@ public:
 
         Assert(pRef != nullptr, "Invalid reference!");
 
-        thread->m_regs[dstReg].AssignValue(MakeScriptValueRef(pRef), false);
+        thread->m_regs[dstReg].AssignValue(ScriptApi_MakeScriptValueRef(pRef), false);
     }
 
     HYP_FORCE_INLINE void LoadNull(BCRegister reg)
@@ -700,12 +725,12 @@ public:
 
     HYP_FORCE_INLINE void LoadTrue(BCRegister reg)
     {
-        thread->m_regs[reg].AssignValue(MakeScriptValue(true), false);
+        thread->m_regs[reg].AssignValue(ScriptApi_MakeScriptValue(true), false);
     }
 
     HYP_FORCE_INLINE void LoadFalse(BCRegister reg)
     {
-        thread->m_regs[reg].AssignValue(MakeScriptValue(false), false);
+        thread->m_regs[reg].AssignValue(ScriptApi_MakeScriptValue(false), false);
     }
 
     HYP_FORCE_INLINE void MovOffset(uint16 offset, BCRegister reg)
@@ -1084,7 +1109,7 @@ public:
 
         if (VMObject* object = src.GetObject())
         {
-            result.AssignValue(MakeScriptValue(object->LookupMemberFromHash(hash) != nullptr), false);
+            result.AssignValue(ScriptApi_MakeScriptValue(object->LookupMemberFromHash(hash) != nullptr), false);
         }
         else
         {
@@ -1169,7 +1194,7 @@ public:
 
     HYP_FORCE_INLINE void Call(BCRegister reg, uint8_t nargs)
     {
-        state->m_vm->Invoke(this, std::move(thread->m_regs[reg]), nargs);
+        state->m_vm->Invoke(this, thread->m_regs[reg], nargs);
     }
 
     HYP_FORCE_INLINE void Ret()
@@ -1205,7 +1230,7 @@ public:
         vmData.tryCatchInfo.catchAddress = addr;
 
         // store the info
-        thread->m_stack.Push(MakeScriptValue(vmData));
+        thread->m_stack.Push(ScriptApi_MakeScriptValue(vmData));
     }
 
     HYP_FORCE_INLINE void EndTry()
@@ -1284,14 +1309,14 @@ public:
             }
         }
 
-        thread->m_regs[dst].AssignValue(MakeScriptValue(VMObject(allMembers.Data(), allMembers.Size(), std::move(classValue))), false);
+        thread->m_regs[dst].AssignValue(ScriptApi_MakeScriptValue(VMObject(allMembers.Data(), allMembers.Size(), std::move(classValue))), false);
     }
 
     HYP_FORCE_INLINE void NewArray(BCRegister dst, uint32_t size)
     {
         // assign register value to the allocated object
         Value& value = thread->m_regs[dst];
-        value = MakeScriptValue(VMArray());
+        value = ScriptApi_MakeScriptValue(VMArray());
     }
 
     HYP_FORCE_INLINE void Cmp(BCRegister lhsReg, BCRegister rhsReg)
@@ -1446,7 +1471,7 @@ public:
         }
 
         // set the destination register to be the result
-        thread->m_regs[dstReg] = MakeScriptValue(result);
+        thread->m_regs[dstReg] = ScriptApi_MakeScriptValue(result);
     }
 
     HYP_FORCE_INLINE void Sub(
@@ -1479,7 +1504,7 @@ public:
         }
 
         // set the destination register to be the result
-        thread->m_regs[dstReg] = MakeScriptValue(result);
+        thread->m_regs[dstReg] = ScriptApi_MakeScriptValue(result);
     }
 
     HYP_FORCE_INLINE void Mul(
@@ -1512,7 +1537,7 @@ public:
         }
 
         // set the destination register to be the result
-        thread->m_regs[dstReg] = MakeScriptValue(result);
+        thread->m_regs[dstReg] = ScriptApi_MakeScriptValue(result);
     }
 
     HYP_FORCE_INLINE void Div(
@@ -1556,7 +1581,7 @@ public:
         }
 
         // set the destination register to be the result
-        thread->m_regs[dstReg] = MakeScriptValue(result);
+        thread->m_regs[dstReg] = ScriptApi_MakeScriptValue(result);
     }
 
     HYP_FORCE_INLINE void Mod(
@@ -1630,7 +1655,7 @@ public:
         }
 
         // set the destination register to be the result
-        thread->m_regs[dstReg] = MakeScriptValue(result);
+        thread->m_regs[dstReg] = ScriptApi_MakeScriptValue(result);
     }
 
     HYP_FORCE_INLINE void And(
@@ -1663,7 +1688,7 @@ public:
         }
 
         // set the destination register to be the result
-        thread->m_regs[dstReg] = MakeScriptValue(result);
+        thread->m_regs[dstReg] = ScriptApi_MakeScriptValue(result);
     }
 
     HYP_FORCE_INLINE void Or(
@@ -1696,7 +1721,7 @@ public:
         }
 
         // set the destination register to be the result
-        thread->m_regs[dstReg] = MakeScriptValue(result);
+        thread->m_regs[dstReg] = ScriptApi_MakeScriptValue(result);
     }
 
     HYP_FORCE_INLINE void Xor(
@@ -1729,7 +1754,7 @@ public:
         }
 
         // set the destination register to be the result
-        thread->m_regs[dstReg] = MakeScriptValue(result);
+        thread->m_regs[dstReg] = ScriptApi_MakeScriptValue(result);
     }
 
     HYP_FORCE_INLINE void Shl(BCRegister lhsReg,
@@ -1761,7 +1786,7 @@ public:
         }
 
         // set the destination register to be the result
-        thread->m_regs[dstReg] = MakeScriptValue(result);
+        thread->m_regs[dstReg] = ScriptApi_MakeScriptValue(result);
     }
 
     HYP_FORCE_INLINE void Shr(BCRegister lhsReg,
@@ -1793,7 +1818,7 @@ public:
         }
 
         // set the destination register to be the result
-        thread->m_regs[dstReg] = MakeScriptValue(result);
+        thread->m_regs[dstReg] = ScriptApi_MakeScriptValue(result);
     }
 
     HYP_FORCE_INLINE void Not(BCRegister reg)
@@ -1860,7 +1885,7 @@ public:
             return;
         }
 
-        value = MakeScriptValue(result);
+        value = ScriptApi_MakeScriptValue(result);
     }
 
     HYP_FORCE_INLINE void Throw(BCRegister reg)
@@ -1877,7 +1902,7 @@ public:
 
     HYP_FORCE_INLINE void ExportSymbol(BCRegister reg, uint32_t hash)
     {
-        if (!state->GetExportedSymbols().Store(hash, thread->m_regs[reg]).second)
+        if (!state->GetExportedSymbols().Store(hash, std::move(thread->m_regs[reg])).second)
         {
             state->ThrowException(
                 thread,
@@ -1920,7 +1945,7 @@ public:
             result.f = -num.f;
         }
 
-        value = MakeScriptValue(result);
+        value = ScriptApi_MakeScriptValue(result);
     }
 
     HYP_FORCE_INLINE void CastU8(BCRegister dst, BCRegister src)
@@ -1957,7 +1982,7 @@ public:
             result.u = static_cast<uint8>(num.f);
         }
 
-        thread->m_regs[dst] = MakeScriptValue(result);
+        thread->m_regs[dst] = ScriptApi_MakeScriptValue(result);
     }
 
     HYP_FORCE_INLINE void CastU16(BCRegister dst, BCRegister src)
@@ -1994,7 +2019,7 @@ public:
             result.u = static_cast<uint16>(num.f);
         }
         
-        thread->m_regs[dst] = MakeScriptValue(result);
+        thread->m_regs[dst] = ScriptApi_MakeScriptValue(result);
     }
 
     HYP_FORCE_INLINE void CastU32(BCRegister dst, BCRegister src)
@@ -2029,7 +2054,7 @@ public:
             result.u = static_cast<uint32>(num.f);
         }
 
-        thread->m_regs[dst] = MakeScriptValue(result);
+        thread->m_regs[dst] = ScriptApi_MakeScriptValue(result);
     }
 
     HYP_FORCE_INLINE void CastU64(BCRegister dst, BCRegister src)
@@ -2064,7 +2089,7 @@ public:
             result.u = static_cast<uint64>(num.f);
         }
 
-        thread->m_regs[dst] = MakeScriptValue(result);
+        thread->m_regs[dst] = ScriptApi_MakeScriptValue(result);
     }
 
     HYP_FORCE_INLINE void CastI8(BCRegister dst, BCRegister src)
@@ -2098,7 +2123,7 @@ public:
             result.i = static_cast<int8>(num.f);
         }
 
-        thread->m_regs[dst] = MakeScriptValue(result);
+        thread->m_regs[dst] = ScriptApi_MakeScriptValue(result);
     }
 
     HYP_FORCE_INLINE void CastI16(BCRegister dst, BCRegister src)
@@ -2132,7 +2157,7 @@ public:
             result.i = static_cast<int16>(num.f);
         }
 
-        thread->m_regs[dst] = MakeScriptValue(result);
+        thread->m_regs[dst] = ScriptApi_MakeScriptValue(result);
     }
 
     HYP_FORCE_INLINE void CastI32(BCRegister dst, BCRegister src)
@@ -2166,7 +2191,7 @@ public:
             result.i = static_cast<int32>(num.f);
         }
 
-        thread->m_regs[dst] = MakeScriptValue(result);
+        thread->m_regs[dst] = ScriptApi_MakeScriptValue(result);
     }
 
     HYP_FORCE_INLINE void CastI64(BCRegister dst, BCRegister src)
@@ -2200,7 +2225,7 @@ public:
             result.i = static_cast<int64>(num.f);
         }
 
-        thread->m_regs[dst] = MakeScriptValue(result);
+        thread->m_regs[dst] = ScriptApi_MakeScriptValue(result);
     }
 
     HYP_FORCE_INLINE void CastF32(BCRegister dst, BCRegister src)
@@ -2235,7 +2260,7 @@ public:
             result.f = static_cast<float>(num.f);
         }
 
-        thread->m_regs[dst] = MakeScriptValue(result);
+        thread->m_regs[dst] = ScriptApi_MakeScriptValue(result);
     }
 
     HYP_FORCE_INLINE void CastF64(BCRegister dst, BCRegister src)
@@ -2270,7 +2295,7 @@ public:
             result.f = num.f;
         }
 
-        thread->m_regs[dst] = MakeScriptValue(result);
+        thread->m_regs[dst] = ScriptApi_MakeScriptValue(result);
     }
 
     HYP_FORCE_INLINE void CastBool(BCRegister dst, BCRegister src)
@@ -2300,7 +2325,7 @@ public:
             result = (ptrValue != nullptr);
         }
 
-        thread->m_regs[dst] = MakeScriptValue(result);
+        thread->m_regs[dst] = ScriptApi_MakeScriptValue(result);
     }
 
     HYP_FORCE_INLINE void CastDynamic(BCRegister dst, BCRegister src) // come back to this
@@ -2395,7 +2420,7 @@ public:
         Assert(pBase != nullptr);
 
         // Set the destination register to be the target
-        thread->m_regs[dst].AssignValue(MakeScriptValueRef(pBase), false);
+        thread->m_regs[dst].AssignValue(ScriptApi_MakeScriptValueRef(pBase), false);
     }
 };
 
@@ -3593,7 +3618,7 @@ void VM::PushNativeFunctionPtr(Script_NativeFunction ptr)
     vmData.type = Script_VMData::NATIVE_FUNCTION;
     vmData.nativeFunc = ptr;
 
-    m_state.GetMainThread()->m_stack.Push(MakeScriptValue(vmData));
+    m_state.GetMainThread()->m_stack.Push(ScriptApi_MakeScriptValue(vmData));
 }
 
 void VM::Invoke(InstructionHandler* handler, Value&& value, uint8 nargs)
@@ -3622,9 +3647,16 @@ void VM::Invoke(InstructionHandler* handler, Value&& value, uint8 nargs)
 
             sdk::Params params {
                 .apiInstance = m_apiInstance,
-                .handler = handler,
                 .args = args,
-                .nargs = nargs
+                .nargs = nargs,
+
+                // context value (this VM instance), passed to native functions
+                .ctx = this,
+
+                // callback to set the return value for a native function
+                .setReturnValue = &ScriptApi_SetReturnValue,
+                // sets a script exception from a native function
+                .throwException = &ScriptApi_ThrowException
             };
 
             // disable auto gc so no collections happen during a native function
@@ -3669,10 +3701,7 @@ void VM::Invoke(InstructionHandler* handler, Value&& value, uint8 nargs)
                     thread->m_stack.Push(std::move(value));
                 }
 
-                Invoke(
-                    handler,
-                    MakeScriptValueRef(&member->value),
-                    nargs + 1);
+                Invoke(handler, ScriptApi_MakeScriptValueRef(&member->value), nargs + 1);
 
                 Value& top = thread->m_stack.Top();
 
@@ -3758,11 +3787,11 @@ void VM::Invoke(InstructionHandler* handler, Value&& value, uint8 nargs)
             }
 
             // push the array to the stack
-            thread->GetStack().Push(MakeScriptValue(std::move(arr)));
+            thread->GetStack().Push(ScriptApi_MakeScriptValue(std::move(arr)));
         }
 
         // push the address
-        thread->GetStack().Push(MakeScriptValue(previousAddr));
+        thread->GetStack().Push(ScriptApi_MakeScriptValue(previousAddr));
 
         // seek to the new address
         bs->Seek(vmData->func.m_addr);
