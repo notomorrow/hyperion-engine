@@ -23,7 +23,7 @@
 
 #include <Scene/Node.hpp>
 #include <Scene/EntityTag.hpp>
-#include <Scene/LayerOverrides.hpp>
+#include <Scene/Components/LayerOverridesComponent.hpp>
 
 namespace Hyperion {
 
@@ -42,6 +42,7 @@ struct EntityInitInfo
     // Initial tags to add to the Entity when it is created
     FatArray<EntityTag, InlineAllocator<4, SceneAllocator>> initialTags;
     FatArray<Name, InlineAllocator<4, SceneAllocator>> layerNames;
+    FatArray<EntityLayerOverrideSet, InlineAllocator<4, SceneAllocator>> pendingLayerOverrides;
     
     bool receivesUpdate = false;
     bool canEverUpdate = true;
@@ -132,68 +133,8 @@ public:
 
     //-- Layer overrides --
 
-    HYP_FORCE_INLINE bool HasLayerOverrides() const
-    {
-        return m_layerOverrides.Any();
-    }
-
-    const Array<EntityLayerOverrideSet>& GetLayerOverrides() const
-    {
-        return m_layerOverrides;
-    }
-
-    bool HasLayerOverrideSet(Name layerName) const;
-
-    /*! \brief Adds an empty override set for \param layerName. No-op if one already exists. */
-    void AddLayerOverrideSet(Name layerName);
-
-    /*! \brief Removes the override set for \param layerName, reverting it first if currently applied.
-     *  \returns True if a set was removed. */
-    bool RemoveLayerOverrideSet(Name layerName);
-
-    bool IsPropertyOverriddenInLayer(Name layerName, Name propertyName) const;
-
-    /*! \brief Upserts an override value into the set for \param layerName.
-     *  If the layer is currently applied, the value is also written to the Entity immediately.
-     *  \returns True if the value was set. */
-    bool SetLayerOverrideValue(Name layerName, Name propertyName, BoxedValue value);
-
-    /*! \brief Removes an override value from the set for \param layerName.
-     *  If the layer is currently applied, the property is restored to its base value.
-     *  \returns True if a value was removed. */
-    bool RemoveLayerOverrideValue(Name layerName, Name propertyName);
-
-    /*! \brief The Name of the Layer whose overrides are currently applied, or an invalid Name. */
-    Name GetAppliedOverrideLayer() const
-    {
-        return m_appliedOverrideLayer;
-    }
-
-    /*! \brief Applies the override set for \param layerName on top of the base property set.
-     *  Any currently applied set is reverted first. Base values of all overridden properties
-     *  are snapshotted so they can be restored on revert. */
-    void ApplyLayerOverrides(Name layerName);
-
-    /*! \brief Reverts any applied overrides, restoring the snapshotted base property values. */
-    void RevertLayerOverrides();
-
-    /*! \brief Reads the base value of a property: the snapshotted value if \param layerName is
-     *  currently applied, otherwise the live property value.
-     *  \returns True if a value was read. */
-    bool GetLayerOverrideBaseValue(Name layerName, Name propertyName, BoxedValue& outValue) const;
-
-    /*! \brief Reads a stored override value from the set for \param layerName, without applying it.
-     *  \returns True if the property is overridden in that layer. */
-    bool GetLayerOverrideValue(Name layerName, Name propertyName, BoxedValue& outValue) const;
-
-    /*! \brief Writes a property's BASE value (through its setter), keeping the applied layer's
-     *  base snapshot in sync so a revert returns to the edited base.
-     *  \returns True if the property exists, is settable and was written. */
-    bool SetLayerOverrideBaseValue(Name propertyName, BoxedValue value);
-
-    /*! \brief Replaces all stored override sets (used by the $LayerOverrides HMF deserializer).
-     *  Reverts any applied set first; does not apply. */
-    void DeserializeLayerOverrides(Array<EntityLayerOverrideSet>&& sets);
+    void SetPendingLayerOverrides(Array<EntityLayerOverrideSet>&& sets);
+    void FlushPendingLayerOverrides();
 
     //-- Tick --
 
@@ -297,15 +238,6 @@ private:
 
     HYP_FIELD(Transient)
     BitField<MaxLayersPerWorld> m_layerMask;
-
-    //-- Layer overrides --
-
-    Array<EntityLayerOverrideSet> m_layerOverrides;
-
-    Name m_appliedOverrideLayer;
-
-    // Base values of all overridden properties, captured when a set is applied
-    Array<Pair<Name, BoxedValue>> m_overrideBaseSnapshot;
 
     //--
 };

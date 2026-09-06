@@ -197,8 +197,6 @@ TResult<CSharpTypeMapping> MapToCSharpType(const Analyzer& analyzer, const ASTTy
     return HYP_MAKE_ERROR(Error, "Type is unable to be mapped to a C# type");
 }
 
-}
-
 static String BuildQualifiedCXXName(const ClassDefinition& definition)
 {
     String qualified = "::";

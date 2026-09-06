@@ -27,12 +27,11 @@
 #include <Core/IO/ByteReader.hpp>
 
 #include <Core/Containers/Set.hpp>
+#include <Core/Containers/String.hpp>
 
 #include <Core/Reflection/ClassUtils.hpp>
 
 #include <Core/FileSystem/FilePath.hpp>
-
-#include <Core/Containers/String.hpp>
 
 #include <Core/Logging/Logger.hpp>
 #include <Core/Logging/LogChannels.hpp>

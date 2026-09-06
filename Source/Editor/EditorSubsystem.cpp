@@ -33,6 +33,7 @@
 #include <Scene/System.hpp>
 #include <Scene/Systems/ScriptSystem.hpp>
 #include <Scene/Systems/MeshSystem.hpp>
+#include <Scene/Systems/LayerOverrideSystem.hpp>
 
 #include <Scene/Sky/DynamicSkySystem.hpp>
 
@@ -374,6 +375,23 @@ void TranslateEditorGizmo::OnDragStart(const Handle<Camera>& camera, const Mouse
 
 //-- Layer override transform edits (gizmos) --
 
+static LayerOverrideSystem* GetLayerOverrideSystemFor(const Entity* entity)
+{
+    if (!entity)
+    {
+        return nullptr;
+    }
+
+    World* world = entity->GetWorld();
+
+    if (!world)
+    {
+        return nullptr;
+    }
+
+    return world->GetSystem<LayerOverrideSystem>();
+}
+
 struct LayerOverrideTransformEditState
 {
     Handle<Entity> entity;
@@ -406,6 +424,13 @@ static Array<LayerOverrideTransformEditState> CaptureLayerOverrideTransformEdits
 
         Entity* entity = entityHandle.Get();
 
+        LayerOverrideSystem* overrideSystem = GetLayerOverrideSystemFor(entity);
+
+        if (!overrideSystem)
+        {
+            continue;
+        }
+
         World* world = entity->GetWorld();
 
         if (!world)
@@ -420,19 +445,19 @@ static Array<LayerOverrideTransformEditState> CaptureLayerOverrideTransformEdits
             continue;
         }
 
-        const bool hasSet = entity->HasLayerOverrideSet(activeLayer);
+        const bool hasSet = overrideSystem->HasLayerOverrideSet(entity, activeLayer);
 
         if (overrideMode)
         {
             // Override mode: ensure the active layer's set exists and is applied
             if (!hasSet)
             {
-                entity->AddLayerOverrideSet(activeLayer);
+                overrideSystem->AddLayerOverrideSet(entity, activeLayer);
             }
 
-            if (entity->GetAppliedOverrideLayer() != activeLayer)
+            if (overrideSystem->GetAppliedOverrideLayer(entity) != activeLayer)
             {
-                entity->ApplyLayerOverrides(activeLayer);
+                overrideSystem->ApplyOverrides(entity, activeLayer);
             }
         }
         else if (!hasSet)
@@ -445,14 +470,14 @@ static Array<LayerOverrideTransformEditState> CaptureLayerOverrideTransformEdits
         state.entity = entityHandle;
         state.layer = activeLayer;
         state.routeToOverride = overrideMode;
-        state.wasOverridden = entity->IsPropertyOverriddenInLayer(activeLayer, NAME("LocalTransform"));
+        state.wasOverridden = overrideSystem->IsPropertyOverriddenInLayer(entity, activeLayer, NAME("LocalTransform"));
         state.postTransform = entity->GetLocalTransform();
 
         if (state.wasOverridden)
         {
             BoxedValue preValue;
 
-            if (entity->GetLayerOverrideValue(activeLayer, NAME("LocalTransform"), preValue))
+            if (overrideSystem->GetLayerOverrideValue(entity, activeLayer, NAME("LocalTransform"), preValue))
             {
                 state.preTransform = preValue.Get<Transform>();
             }
@@ -464,7 +489,7 @@ static Array<LayerOverrideTransformEditState> CaptureLayerOverrideTransformEdits
 
         if (overrideMode)
         {
-            entity->SetLayerOverrideValue(activeLayer, NAME("LocalTransform"), BoxedValue(state.postTransform));
+            overrideSystem->SetLayerOverrideValue(entity, activeLayer, NAME("LocalTransform"), BoxedValue(state.postTransform));
         }
 
         result.PushBack(std::move(state));
@@ -483,7 +508,10 @@ static void ExecuteLayerOverrideTransformEdits(const Array<LayerOverrideTransfor
             continue;
         }
 
-        state.entity->SetLayerOverrideValue(state.layer, NAME("LocalTransform"), BoxedValue(state.postTransform));
+        if (LayerOverrideSystem* overrideSystem = GetLayerOverrideSystemFor(state.entity.Get()))
+        {
+            overrideSystem->SetLayerOverrideValue(state.entity.Get(), state.layer, NAME("LocalTransform"), BoxedValue(state.postTransform));
+        }
     }
 }
 
@@ -496,13 +524,20 @@ static void RevertLayerOverrideTransformEdits(const Array<LayerOverrideTransform
             continue;
         }
 
+        LayerOverrideSystem* overrideSystem = GetLayerOverrideSystemFor(state.entity.Get());
+
+        if (!overrideSystem)
+        {
+            continue;
+        }
+
         if (state.wasOverridden)
         {
-            state.entity->SetLayerOverrideValue(state.layer, NAME("LocalTransform"), BoxedValue(state.preTransform));
+            overrideSystem->SetLayerOverrideValue(state.entity.Get(), state.layer, NAME("LocalTransform"), BoxedValue(state.preTransform));
         }
         else
         {
-            state.entity->RemoveLayerOverrideValue(state.layer, NAME("LocalTransform"));
+            overrideSystem->RemoveLayerOverrideValue(state.entity.Get(), state.layer, NAME("LocalTransform"));
         }
     }
 }
@@ -2097,71 +2132,77 @@ void EditorSubsystem::SetSnapToGridEnabled(bool snapToGrid)
     m_snapToGridEnabled = snapToGrid;
 }
 
-//-- Entity layer overrides ($LayerOverrides) --
+//-- Entity layer overrides
 
 Array<Name> EditorSubsystem::GetEntityLayerOverrideSets(Entity* entity) const
 {
-    Array<Name> result;
-
-    if (!entity)
+    if (LayerOverrideSystem* overrideSystem = GetLayerOverrideSystemFor(entity))
     {
-        return result;
+        return overrideSystem->GetSetLayerNames(entity);
     }
 
-    for (const EntityLayerOverrideSet& set : entity->GetLayerOverrides())
-    {
-        result.PushBack(set.layerName);
-    }
-
-    return result;
+    return {};
 }
 
 bool EditorSubsystem::EntityHasLayerOverrideSet(Entity* entity, Name layerName) const
 {
-    return entity && entity->HasLayerOverrideSet(layerName);
+    LayerOverrideSystem* overrideSystem = GetLayerOverrideSystemFor(entity);
+
+    return overrideSystem && overrideSystem->HasLayerOverrideSet(entity, layerName);
 }
 
 void EditorSubsystem::EntityAddLayerOverrideSet(Entity* entity, Name layerName) const
 {
-    if (entity)
+    if (LayerOverrideSystem* overrideSystem = GetLayerOverrideSystemFor(entity))
     {
-        entity->AddLayerOverrideSet(layerName);
+        overrideSystem->AddLayerOverrideSet(entity, layerName);
     }
 }
 
 bool EditorSubsystem::EntityRemoveLayerOverrideSet(Entity* entity, Name layerName) const
 {
-    return entity && entity->RemoveLayerOverrideSet(layerName);
+    LayerOverrideSystem* overrideSystem = GetLayerOverrideSystemFor(entity);
+
+    return overrideSystem && overrideSystem->RemoveLayerOverrideSet(entity, layerName);
 }
 
 bool EditorSubsystem::IsEntityPropertyOverridden(Entity* entity, Name layerName, Name propertyName) const
 {
-    return entity && entity->IsPropertyOverriddenInLayer(layerName, propertyName);
+    LayerOverrideSystem* overrideSystem = GetLayerOverrideSystemFor(entity);
+
+    return overrideSystem && overrideSystem->IsPropertyOverriddenInLayer(entity, layerName, propertyName);
 }
 
 bool EditorSubsystem::EntityRemoveLayerOverrideValue(Entity* entity, Name layerName, Name propertyName) const
 {
-    return entity && entity->RemoveLayerOverrideValue(layerName, propertyName);
+    LayerOverrideSystem* overrideSystem = GetLayerOverrideSystemFor(entity);
+
+    return overrideSystem && overrideSystem->RemoveLayerOverrideValue(entity, layerName, propertyName);
 }
 
 Name EditorSubsystem::GetEntityAppliedOverrideLayer(Entity* entity) const
 {
-    return entity ? entity->GetAppliedOverrideLayer() : Name::Invalid();
+    if (LayerOverrideSystem* overrideSystem = GetLayerOverrideSystemFor(entity))
+    {
+        return overrideSystem->GetAppliedOverrideLayer(entity);
+    }
+
+    return Name::Invalid();
 }
 
 void EditorSubsystem::EntityApplyLayerOverrides(Entity* entity, Name layerName) const
 {
-    if (entity)
+    if (LayerOverrideSystem* overrideSystem = GetLayerOverrideSystemFor(entity))
     {
-        entity->ApplyLayerOverrides(layerName);
+        overrideSystem->ApplyOverrides(entity, layerName);
     }
 }
 
 void EditorSubsystem::EntityRevertLayerOverrides(Entity* entity) const
 {
-    if (entity)
+    if (LayerOverrideSystem* overrideSystem = GetLayerOverrideSystemFor(entity))
     {
-        entity->RevertLayerOverrides();
+        overrideSystem->RevertOverrides(entity);
     }
 }
 
@@ -5404,7 +5445,11 @@ void EditorSubsystem::UpdateNormalizedCubeSpherePreview(uint32 numDivisions)
     }
 
     Handle<Mesh> mesh = MeshBuilder::NormalizedCubeSphere(numDivisions);
+    mesh->SetIsTransient(true);
     mesh->SetName(NAME("NormalizedCubeSphereMesh_Preview"));
+
+    GetCurrentAssetRegistry()->PutAssetUnique(mesh);
+
     InitObject(mesh);
 
     if (!m_meshPreviewEntity.IsValid())
@@ -5415,6 +5460,7 @@ void EditorSubsystem::UpdateNormalizedCubeSpherePreview(uint32 numDivisions)
         attributes.shaderName = NAME("GeometryPass");
 
         m_meshPreviewMaterial = MakeHandle<Material>(NAME("NormalizedCubeSpherePreviewMaterial"), attributes);
+        m_meshPreviewMaterial->SetIsTransient(true);
         InitObject(m_meshPreviewMaterial);
 
         m_meshPreviewEntity = MakeHandle<Entity>();
@@ -5475,6 +5521,7 @@ void EditorSubsystem::CommitMeshPreview()
     Handle<Mesh> mesh = meshComponent->mesh;
 
     entity->SetName(NAME("NormalizedCubeSphereEntity"));
+    
     mesh->SetName(NAME("NormalizedCubeSphereMesh"));
 
     Handle<FunctionalEditorAction> action = MakeHandle<FunctionalEditorAction>(

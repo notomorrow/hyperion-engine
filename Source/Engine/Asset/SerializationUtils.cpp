@@ -9,6 +9,9 @@
 #include <Asset/AssetReference.hpp>
 
 #include <Scene/Entity.hpp>
+#include <Scene/EntityManager.hpp>
+#include <Scene/Scene.hpp>
+#include <Scene/Components/LayerOverridesComponent.hpp>
 
 #include <Core/DataProcessing/HMF/HMF.hpp>
 
@@ -3042,7 +3045,23 @@ static const IMember* ResolveMemberForOverride(const Class* cls, Name propertyNa
 
 static void WriteEntityLayerOverridesSection(const Entity& entity, String& outText, ToHMFOptions& opts, int indent)
 {
-    const Array<EntityLayerOverrideSet>& overrideSets = entity.GetLayerOverrides();
+    Scene* scene = entity.GetScene();
+
+    EntityManager* entityManager = scene ? scene->GetEntityManager() : nullptr;
+
+    if (!entityManager)
+    {
+        return;
+    }
+
+    const LayerOverridesComponent* component = entityManager->TryGetComponent<LayerOverridesComponent>(&entity);
+
+    if (!component)
+    {
+        return;
+    }
+
+    const Array<EntityLayerOverrideSet>& overrideSets = component->sets;
 
     if (overrideSets.Empty())
     {

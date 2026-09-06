@@ -9,7 +9,8 @@
 #include <Scene/EntityManager.hpp>
 #include <Scene/ComponentInterface.hpp>
 #include <Scene/Entity.hpp>
-#include <Scene/LayerOverrides.hpp>
+#include <Scene/World.hpp>
+#include <Scene/Systems/LayerOverrideSystem.hpp>
 
 // Components
 #include <Scene/Components/TransformComponent.hpp>
@@ -222,53 +223,80 @@ extern "C"
     }
 
 
+    static LayerOverrideSystem* GetLayerOverrideSystemForEntity(const Entity* pEntity)
+    {
+        if (!pEntity)
+        {
+            return nullptr;
+        }
+
+        World* world = pEntity->GetWorld();
+
+        if (!world)
+        {
+            return nullptr;
+        }
+
+        return world->GetSystem<LayerOverrideSystem>();
+    }
+
     HYP_EXPORT int8 EntityLayerOverrides_SetValue(Entity* pEntity, uint64 layerHash, uint64 propertyHash, BoxedValue* pValue)
     {
-        if (!pEntity || !pValue)
+        LayerOverrideSystem* system = GetLayerOverrideSystemForEntity(pEntity);
+
+        if (!pValue || !system)
         {
             return false;
         }
 
-        return pEntity->SetLayerOverrideValue(Name(NameID(layerHash)), Name(NameID(propertyHash)), *pValue);
+        return system->SetLayerOverrideValue(pEntity, Name(NameID(layerHash)), Name(NameID(propertyHash)), *pValue);
     }
 
     HYP_EXPORT int8 EntityLayerOverrides_RemoveValue(Entity* pEntity, uint64 layerHash, uint64 propertyHash)
     {
-        if (!pEntity)
+        LayerOverrideSystem* system = GetLayerOverrideSystemForEntity(pEntity);
+
+        if (!system)
         {
             return false;
         }
 
-        return pEntity->RemoveLayerOverrideValue(Name(NameID(layerHash)), Name(NameID(propertyHash)));
+        return system->RemoveLayerOverrideValue(pEntity, Name(NameID(layerHash)), Name(NameID(propertyHash)));
     }
 
     HYP_EXPORT int8 EntityLayerOverrides_GetBaseValue(Entity* pEntity, uint64 layerHash, uint64 propertyHash, BoxedValue* pOutValue)
     {
-        if (!pEntity || !pOutValue)
+        LayerOverrideSystem* system = GetLayerOverrideSystemForEntity(pEntity);
+
+        if (!pOutValue || !system)
         {
             return false;
         }
 
-        return pEntity->GetLayerOverrideBaseValue(Name(NameID(layerHash)), Name(NameID(propertyHash)), *pOutValue);
+        return system->GetLayerOverrideBaseValue(pEntity, Name(NameID(layerHash)), Name(NameID(propertyHash)), *pOutValue);
     }
 
     HYP_EXPORT int8 EntityLayerOverrides_GetValue(Entity* pEntity, uint64 layerHash, uint64 propertyHash, BoxedValue* pOutValue)
     {
-        if (!pEntity || !pOutValue)
+        LayerOverrideSystem* system = GetLayerOverrideSystemForEntity(pEntity);
+
+        if (!pOutValue || !system)
         {
             return false;
         }
 
-        return pEntity->GetLayerOverrideValue(Name(NameID(layerHash)), Name(NameID(propertyHash)), *pOutValue);
+        return system->GetLayerOverrideValue(pEntity, Name(NameID(layerHash)), Name(NameID(propertyHash)), *pOutValue);
     }
 
     HYP_EXPORT int8 EntityLayerOverrides_SetBaseValue(Entity* pEntity, uint64 propertyHash, BoxedValue* pValue)
     {
-        if (!pEntity || !pValue)
+        LayerOverrideSystem* system = GetLayerOverrideSystemForEntity(pEntity);
+
+        if (!pValue || !system)
         {
             return false;
         }
 
-        return pEntity->SetLayerOverrideBaseValue(Name(NameID(propertyHash)), *pValue);
+        return system->SetLayerOverrideBaseValue(pEntity, Name(NameID(propertyHash)), *pValue);
     }
 } // extern "C"

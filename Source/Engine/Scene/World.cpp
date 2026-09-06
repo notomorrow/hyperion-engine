@@ -27,6 +27,7 @@
 #include <Scene/Systems/MeshSystem.hpp>
 #include <Scene/Systems/ReplicationSystem.hpp>
 #include <Scene/Systems/ReplicationApplySystem.hpp>
+#include <Scene/Systems/LayerOverrideSystem.hpp>
 
 #include <Scene/Components/MeshComponent.hpp>
 #include <Scene/Components/TransformComponent.hpp>
@@ -257,6 +258,9 @@ void World::Initialize()
 
     if (!HasSystem<CameraSystem>())
         AddSystem(MakeHandle<CameraSystem>());
+
+    if (!HasSystem<LayerOverrideSystem>())
+        AddSystem(MakeHandle<LayerOverrideSystem>());
 
     if (!(m_worldFlags & WorldFlags::Editor))
     {
@@ -582,79 +586,6 @@ const GameState& World::GetGameState() const
 
 #pragma region Layers
 
-static void ForEachEntityWithLayerOverrides(Node* node, const Proc<void(Entity&)>& proc)
-{
-    if (!node)
-    {
-        return;
-    }
-
-    if (IsA(Entity::StaticClass(), node->InstanceClass()))
-    {
-        auto* entity = static_cast<Entity*>(node);
-
-        if (entity->HasLayerOverrides())
-        {
-            proc(*entity);
-        }
-    }
-
-    for (const Handle<Node>& child : node->GetChildren())
-    {
-        if (!child)
-        {
-            continue;
-        }
-
-        ForEachEntityWithLayerOverrides(child.Get(), proc);
-    }
-}
-
-void World::RevertAllLayerOverrides()
-{
-    AssertOnThread(g_simThread);
-
-    for (const Handle<Scene>& scene : m_scenes)
-    {
-        if (!scene)
-        {
-            continue;
-        }
-
-        ForEachEntityWithLayerOverrides(scene->GetRoot().Get(), [](Entity& entity)
-        {
-            entity.RevertLayerOverrides();
-        });
-    }
-}
-
-void World::ApplyLayerOverridesForActiveLayer()
-{
-    AssertOnThread(g_simThread);
-
-    const Name activeLayerName = GetActiveLayerName();
-
-    uint32 numEntitiesWithOverrides = 0;
-
-    for (const Handle<Scene>& scene : m_scenes)
-    {
-        if (!scene)
-        {
-            continue;
-        }
-
-        ForEachEntityWithLayerOverrides(scene->GetRoot().Get(), [activeLayerName, &numEntitiesWithOverrides](Entity& entity)
-        {
-            ++numEntitiesWithOverrides;
-
-            entity.ApplyLayerOverrides(activeLayerName);
-        });
-    }
-
-    HYP_LOG(Scene, Info, "Applying layer overrides for active layer '{}' across {} entit(ies) with override sets",
-        activeLayerName, numEntitiesWithOverrides);
-}
-
 const Handle<Layer>& World::GetOrCreateLayer(Name layerName)
 {
     auto it = m_layers.FindIf([&layerName](const Handle<Layer>& layer)
@@ -737,20 +668,14 @@ void World::SetActiveLayer(Name layerName)
         layerName = s_defaultLayerName;
     }
 
-    const Name previousLayerName = m_activeLayer;
-
     const Handle<Layer>& layer = GetOrCreateLayer(layerName);
 
     m_activeLayer = layerName;
     m_activeLayerId = layer->layerId;
 
-    // Apply per-layer property overrides for the newly active Layer
-    if (previousLayerName != layerName && m_isInitialized)
+    if (LayerOverrideSystem* layerOverrideSystem = GetSystem<LayerOverrideSystem>())
     {
-        HYP_LOG(Scene, Info, "Active layer changing from '{}' to '{}': applying entity layer overrides",
-            previousLayerName, layerName);
-
-        ApplyLayerOverridesForActiveLayer();
+        layerOverrideSystem->ApplyActive();
     }
 
     OnActiveLayerChanged(m_activeLayer);

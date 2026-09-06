@@ -655,7 +655,7 @@
                         <GridSplitter Grid.Row="1" ResizeDirection="Rows" />
 
                         <!--  layer overrides  -->
-                        <Grid Grid.Row="2" IsVisible="{Binding Inspector.IsEntity}" RowDefinitions="Auto, Auto">
+                        <Grid Grid.Row="2" IsVisible="{Binding Inspector.IsEntity}" RowDefinitions="Auto, Auto, Auto, Auto">
                             <Border Grid.Row="0" Classes="panel-header">
                                 <Grid VerticalAlignment="Center" ColumnDefinitions="*,Auto">
                                     <TextBlock
@@ -672,6 +672,36 @@
                                 Content="Only apply changes to the active layer"
                                 IsChecked="{Binding Inspector.LayerOverrideMode, Mode=TwoWay}"
                                 ToolTip.Tip="When checked, changes made in the inspector will apply only to the active layer. Otherwise changes will apply to the base properties of the Entity" />
+
+                            <TextBlock
+                                Grid.Row="2"
+                                Margin="12,6,4,0"
+                                FontSize="12"
+                                VerticalAlignment="Center"
+                                Text="Copy Properties from Layer" />
+
+                            <Grid Grid.Row="3" Margin="12,6,12,6" ColumnDefinitions="*,Auto">
+                                <ComboBox
+                                    Grid.Column="0"
+                                    Margin="0,0,6,0"
+                                    HorizontalAlignment="Stretch"
+                                    PlaceholderText="Select layer"
+                                    IsEnabled="{Binding Inspector.HasCopyLayerSources}"
+                                    ItemsSource="{Binding Inspector.CopyLayerSources}"
+                                    SelectedItem="{Binding Inspector.SelectedCopyLayerSource, Mode=TwoWay}">
+                                    <ComboBox.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:LayerCopySourceOptionViewModel">
+                                            <TextBlock Text="{Binding Name}" />
+                                        </DataTemplate>
+                                    </ComboBox.ItemTemplate>
+                                </ComboBox>
+                                <Button
+                                    Grid.Column="1"
+                                    Padding="8,2"
+                                    Content="Apply"
+                                    Command="{Binding Inspector.ApplyCopyFromLayerCommand}"
+                                    ToolTip.Tip="Copy the selected source's property values onto the current edit target (active layer when override mode is on, otherwise base). Only differing properties are written and redundant overrides are pruned." />
+                            </Grid>
 
                         </Grid>
 

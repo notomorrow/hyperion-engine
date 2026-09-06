@@ -24,6 +24,7 @@
 #include <Scene/World.hpp>
 #include <Scene/EntityManager.hpp>
 #include <Scene/Systems/ScriptSystem.hpp>
+#include <Scene/Systems/LayerOverrideSystem.hpp>
 
 #include <Scene/Camera/Camera.hpp>
 
@@ -367,7 +368,10 @@ Result EditorProject::SaveAs(FilePath filepath)
     // Ensure base property values are written to manifests, not values from applied layer overrides.
     if (m_editWorld.IsValid())
     {
-        m_editWorld->RevertAllLayerOverrides();
+        if (LayerOverrideSystem* overrideSystem = m_editWorld->GetSystem<LayerOverrideSystem>())
+        {
+            overrideSystem->RevertAll();
+        }
     }
 
     registry.SaveDirtyAssets();
@@ -375,7 +379,10 @@ Result EditorProject::SaveAs(FilePath filepath)
     // Re-apply the active layer's overrides now that all assets have been saved
     if (m_editWorld.IsValid())
     {
-        m_editWorld->ApplyLayerOverridesForActiveLayer();
+        if (LayerOverrideSystem* overrideSystem = m_editWorld->GetSystem<LayerOverrideSystem>())
+        {
+            overrideSystem->ApplyActive();
+        }
     }
 
     // Move files not managed by the registry (eg. script sources in Scripts/) from the old location

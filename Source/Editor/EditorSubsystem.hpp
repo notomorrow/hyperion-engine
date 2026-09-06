@@ -605,10 +605,7 @@ public:
         m_layerOverrideMode = enabled;
     }
 
-    //-- Entity layer overrides ($LayerOverrides) --
-    // Thin forwarders so managed code can reach the Entity API through reflection.
-    // Operations carrying BoxedValue values stay on dedicated P/Invoke exports instead,
-    // as BoxedValue is not supported by the code generator's parameter/return mapping.
+    //-- Layer overrides
 
     HYP_METHOD()
     Array<Name> GetEntityLayerOverrideSets(Entity* entity) const;

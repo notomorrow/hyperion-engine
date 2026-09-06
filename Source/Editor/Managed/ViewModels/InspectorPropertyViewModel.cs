@@ -327,12 +327,9 @@ namespace Hyperion.Editor.ViewModels
             Action<BoxedValue>? capturedSetter = _valueSetter;
             InspectorPropertyViewModelBase capturedThis = this;
 
-            //-- Layer override routing (entity-level rows only).
-            // Override mode ON: writes go to the World's active layer's override set only.
-            // Override mode OFF: writes go to base, keeping the active layer's existing override
-            // of that property in sync. With no active-layer set involved, the plain base write
-            // below runs.
+            //-- Layer override routing
             if (capturedSetter == null && capturedResolver == null
+                && capturedProperty.Name != new Name("Name", weak: true)
                 && LayerOverrideEditContext.CurrentEntity is Entity overrideEntity
                 && overrideEntity.IsValid
                 && capturedTarget != null

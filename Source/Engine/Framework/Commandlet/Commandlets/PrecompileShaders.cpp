@@ -29,7 +29,7 @@ namespace Hyperion {
 
 ENGINE_API extern ShaderCompiler* g_shaderCompiler;
 
-class PrecompileShaders : public CommandletBase
+class PrecompileShaders final : public CommandletBase
 {
     HYP_OBJECT_BODY(PrecompileShaders);
 

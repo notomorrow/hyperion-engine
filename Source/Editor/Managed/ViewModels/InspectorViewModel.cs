@@ -21,6 +21,30 @@ namespace Hyperion.Editor.ViewModels
         public ICommand AddComponentCommand { get; }
         public ICommand RemoveComponentCommand { get; }
 
+        public ObservableCollection<LayerCopySourceOptionViewModel> CopyLayerSources { get; } = new ObservableCollection<LayerCopySourceOptionViewModel>();
+
+        private LayerCopySourceOptionViewModel? _selectedCopyLayerSource;
+        public LayerCopySourceOptionViewModel? SelectedCopyLayerSource
+        {
+            get => _selectedCopyLayerSource;
+            set
+            {
+                if (SetProperty(ref _selectedCopyLayerSource, value) && ApplyCopyFromLayerCommand is AsyncRelayCommand relayCommand)
+                {
+                    relayCommand.RaiseCanExecuteChanged();
+                }
+            }
+        }
+
+        private bool _hasCopyLayerSources;
+        public bool HasCopyLayerSources
+        {
+            get => _hasCopyLayerSources;
+            private set => SetProperty(ref _hasCopyLayerSources, value);
+        }
+
+        public ICommand ApplyCopyFromLayerCommand { get; }
+
         private bool _hasActions;
         public bool HasActions
         {
@@ -113,6 +137,9 @@ namespace Hyperion.Editor.ViewModels
                     {
                         EngineManager.EditorGame?.EditorSubsystem?.SetLayerOverrideMode(value);
                     });
+
+                    // The copy target (active layer vs base) depends on override mode
+                    _ = RefreshCopyLayerSourcesAsync();
                 }
             }
         }
@@ -150,6 +177,7 @@ namespace Hyperion.Editor.ViewModels
         {
             AddComponentCommand = new AsyncRelayCommand(AddComponentAsync, CanAddComponent);
             RemoveComponentCommand = new RelayCommand<object>(RemoveComponent, CanRemoveComponent);
+            ApplyCopyFromLayerCommand = new AsyncRelayCommand(_ => ApplyCopyFromLayerAsync(), _ => SelectedCopyLayerSource != null);
         }
 
         ~InspectorViewModel()
@@ -193,11 +221,15 @@ namespace Hyperion.Editor.ViewModels
             Components.Clear();
             AddableComponents.Clear();
             SceneProperties.Clear();
+            CopyLayerSources.Clear();
 
             AttachedScript = null;
             HasAttachedScript = false;
             EntityTags = null;
             EntityLayers = null;
+
+            SelectedCopyLayerSource = null;
+            HasCopyLayerSources = false;
 
             LayerOverrideEditContext.Reset();
 
@@ -483,6 +515,8 @@ namespace Hyperion.Editor.ViewModels
                 ActiveLayerDisplay = activeLayerName.Length > 0 ? activeLayerName : null;
                 LayerOverrideEditContext.ActiveLayerName = ActiveLayerDisplay;
             });
+
+            _ = RefreshCopyLayerSourcesAsync();
         }
 
         /// <summary>
@@ -496,8 +530,11 @@ namespace Hyperion.Editor.ViewModels
                 return;
             }
 
-            // Entity-level rows only (component / delegate-backed rows are not overridable in v1)
-            List<InspectorPropertyViewModelBase> rows = Properties.Where(p => p.IsEntityLevelRow).ToList();
+            // Entity-level rows only (component / delegate-backed rows are not overridable in v1);
+            // Name is identity metadata and never overridable
+            List<InspectorPropertyViewModelBase> rows = Properties
+                .Where(p => p.IsEntityLevelRow && p.Property.Name != new Name("Name", weak: true))
+                .ToList();
 
             List<string> layerNames = new();
             List<bool> overriddenFlags = new();
@@ -571,6 +608,437 @@ namespace Hyperion.Editor.ViewModels
             }
 
             _ = RefreshOverrideSignifiersAsync();
+            _ = RefreshCopyLayerSourcesAsync();
+        }
+
+        /// <summary>
+        /// Rebuilds the "Copy Properties from Layer" source options: the base state plus every
+        /// World layer except the current edit target (the active layer when override mode is
+        /// on, base otherwise). Copying a source onto itself would be a no-op.
+        /// </summary>
+        private async Task RefreshCopyLayerSourcesAsync()
+        {
+            Entity? entity = SelectedNode as Entity;
+
+            if (entity == null || !entity.IsValid)
+            {
+                CopyLayerSources.Clear();
+                SelectedCopyLayerSource = null;
+                HasCopyLayerSources = false;
+
+                return;
+            }
+
+            Entity capturedEntity = entity;
+            List<string> layerNames = new List<string>();
+
+            await EngineManager.PostToSimThread(() =>
+            {
+                World? world = capturedEntity.World;
+
+                if (world == null)
+                {
+                    EditorProject? project = EngineManager.CurrentProject;
+
+                    if (project != null)
+                    {
+                        world = project.World;
+                    }
+                }
+
+                if (world == null)
+                {
+                    return;
+                }
+
+                foreach (Name layerName in world.GetLayerNames())
+                {
+                    layerNames.Add(layerName.ToString());
+                }
+            });
+
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                if (SelectedNode is not Entity currentEntity || !currentEntity.IsValid
+                    || currentEntity.NativeAddress != capturedEntity.NativeAddress)
+                {
+                    return;
+                }
+
+                string? targetLayerName = LayerOverrideMode ? ActiveLayerDisplay : null;
+                string? previousSelection = SelectedCopyLayerSource?.Name;
+
+                CopyLayerSources.Clear();
+
+                if (targetLayerName != null)
+                {
+                    CopyLayerSources.Add(new LayerCopySourceOptionViewModel("Base", isBase: true));
+                }
+
+                foreach (string layerName in layerNames)
+                {
+                    if (layerName == targetLayerName)
+                    {
+                        continue;
+                    }
+
+                    CopyLayerSources.Add(new LayerCopySourceOptionViewModel(layerName, isBase: false));
+                }
+
+                HasCopyLayerSources = CopyLayerSources.Count > 0;
+
+                SelectedCopyLayerSource = previousSelection != null
+                    ? CopyLayerSources.FirstOrDefault(option => option.Name == previousSelection)
+                    : null;
+            });
+        }
+
+        /// <summary>
+        /// Copies the selected source's effective property values onto the current edit target
+        /// (the active layer's override set when override mode is on, otherwise the entity's
+        /// base values). Diff-based: only properties whose target value actually changes are
+        /// written, and an override that would end up equal to the base value is pruned rather
+        /// than stored (e.g. copying from Base empties the target layer's override set).
+        /// </summary>
+        private async Task ApplyCopyFromLayerAsync()
+        {
+            LayerCopySourceOptionViewModel? sourceOption = SelectedCopyLayerSource;
+
+            if (sourceOption == null)
+            {
+                return;
+            }
+
+            if (SelectedNode is not Entity entity || !entity.IsValid)
+            {
+                return;
+            }
+
+            bool targetIsLayer = LayerOverrideMode && !string.IsNullOrEmpty(ActiveLayerDisplay);
+            string targetDisplay = targetIsLayer ? ActiveLayerDisplay! : "Base";
+            string sourceDisplay = sourceOption.IsBase ? "Base" : sourceOption.Name;
+
+            if (!targetIsLayer && sourceOption.IsBase)
+            {
+                return; // base -> base is a no-op
+            }
+
+            if (targetIsLayer && !sourceOption.IsBase && sourceOption.Name == targetDisplay)
+            {
+                return; // layer -> itself is a no-op
+            }
+
+            Entity capturedEntity = entity;
+            bool capturedTargetIsLayer = targetIsLayer;
+            string capturedTargetName = targetDisplay;
+            string capturedSourceName = sourceOption.Name;
+            bool capturedSourceIsBase = sourceOption.IsBase;
+            string capturedSourceDisplay = sourceDisplay;
+            string capturedTargetDisplay = targetDisplay;
+
+            int changedCount = 0;
+
+            await EngineManager.PostToSimThread(() =>
+            {
+                Name? targetLayer = capturedTargetIsLayer ? new Name(capturedTargetName) : null;
+                Name? sourceLayer = capturedSourceIsBase ? null : new Name(capturedSourceName);
+
+                List<LayerCopyPlanEntry> plan = BuildLayerCopyPlan(capturedEntity, targetLayer, sourceLayer);
+
+                if (plan.Count == 0)
+                {
+                    return;
+                }
+
+                changedCount = plan.Count;
+
+                void ApplyEntries() => ApplyLayerCopyEntries(capturedEntity, targetLayer, plan, applyNewState: true);
+                void RevertEntries() => ApplyLayerCopyEntries(capturedEntity, targetLayer, plan, applyNewState: false);
+
+                EditorProject? project = EngineManager.CurrentProject;
+
+                if (project != null)
+                {
+                    project.ActionStack.PushAction(new EditorAction(
+                        $"Copy Properties ({capturedSourceDisplay} -> {capturedTargetDisplay})",
+                        (_, _) => ApplyEntries(),
+                        (_, _) => RevertEntries()));
+                }
+                else
+                {
+                    // No project to record undo against - still apply the copy.
+                    ApplyEntries();
+                }
+            });
+
+            Logger.Log(LogLevel.Info, changedCount > 0
+                ? $"Copy layer properties: {sourceDisplay} -> {targetDisplay} ({changedCount} propert{(changedCount == 1 ? "y" : "ies")} changed)"
+                : $"Copy layer properties: {sourceDisplay} -> {targetDisplay} (no differences)");
+
+            if (changedCount > 0)
+            {
+                OnPropertyValueChanged();
+            }
+        }
+
+        /// <summary>
+        /// Computes the minimal set of writes needed to make the target (base, or a layer's
+        /// override set) match the source's effective values. Only properties whose target
+        /// value would actually change produce entries, and overrides that would end up
+        /// redundant (equal to the base value) are pruned instead of copied.
+        /// Must be called on the sim thread.
+        /// </summary>
+        private static List<LayerCopyPlanEntry> BuildLayerCopyPlan(Entity entity, Name? targetLayer, Name? sourceLayer)
+        {
+            List<LayerCopyPlanEntry> plan = new List<LayerCopyPlanEntry>();
+
+            if (!targetLayer.HasValue && !sourceLayer.HasValue)
+            {
+                return plan; // base -> base, nothing to do
+            }
+
+            foreach (Property property in entity.Class.Properties)
+            {
+                Name propertyName = property.Name;
+
+                // Entity name is identity metadata, not layer-overridable state
+                if (propertyName == "Name")
+                {
+                    continue;
+                }
+
+                if (property.GetAttribute("jsonignore") != null)
+                {
+                    continue;
+                }
+
+                object? baseValueObj = null;
+                bool hasBaseValue = false;
+
+                if (TryGetEntityBaseValue(entity, propertyName, out BoxedValue baseValue))
+                {
+                    try
+                    {
+                        baseValueObj = baseValue.GetValue();
+                        hasBaseValue = true;
+                    }
+                    catch
+                    {
+                        hasBaseValue = false;
+                    }
+                    finally
+                    {
+                        baseValue.Dispose();
+                    }
+                }
+
+                if (!hasBaseValue)
+                {
+                    continue;
+                }
+
+                //-- Source effective value: the source layer's override when present, base otherwise
+
+                object? sourceValueObj = baseValueObj;
+
+                if (sourceLayer.HasValue
+                    && EntityLayerOverrides.IsPropertyOverridden(entity, sourceLayer.Value, propertyName)
+                    && EntityLayerOverrides.GetValue(entity, sourceLayer.Value, propertyName, out BoxedValue sourceOverride))
+                {
+                    try
+                    {
+                        sourceValueObj = sourceOverride.GetValue();
+                    }
+                    catch
+                    {
+                        sourceValueObj = baseValueObj;
+                    }
+                    finally
+                    {
+                        sourceOverride.Dispose();
+                    }
+                }
+
+                if (Equals(sourceValueObj, baseValueObj))
+                {
+                    // Source matches base here: the only change a copy can need is pruning the
+                    // target's (redundant) override of this property
+                    if (!targetLayer.HasValue
+                        || !EntityLayerOverrides.IsPropertyOverridden(entity, targetLayer.Value, propertyName))
+                    {
+                        continue;
+                    }
+
+                    object? oldOverrideObj = null;
+                    bool hadOldOverride = false;
+
+                    if (EntityLayerOverrides.GetValue(entity, targetLayer.Value, propertyName, out BoxedValue oldOverride))
+                    {
+                        try
+                        {
+                            oldOverrideObj = oldOverride.GetValue();
+                            hadOldOverride = true;
+                        }
+                        catch
+                        {
+                            hadOldOverride = false;
+                        }
+                        finally
+                        {
+                            oldOverride.Dispose();
+                        }
+                    }
+
+                    plan.Add(new LayerCopyPlanEntry(LayerCopyEntryKind.RemoveOverride, propertyName,
+                        newValue: null, hasNewValue: false, oldValue: oldOverrideObj, hasOldValue: hadOldOverride));
+
+                    continue;
+                }
+
+                //-- Source differs from base
+
+                if (!targetLayer.HasValue)
+                {
+                    // Copying into base: write the source value as the new base
+                    plan.Add(new LayerCopyPlanEntry(LayerCopyEntryKind.SetBase, propertyName,
+                        newValue: sourceValueObj, hasNewValue: true, oldValue: baseValueObj, hasOldValue: true));
+
+                    continue;
+                }
+
+                object? currentTargetObj = null;
+                bool hasCurrentTarget = false;
+                bool targetOverridden = EntityLayerOverrides.IsPropertyOverridden(entity, targetLayer.Value, propertyName);
+
+                if (targetOverridden
+                    && EntityLayerOverrides.GetValue(entity, targetLayer.Value, propertyName, out BoxedValue currentOverride))
+                {
+                    try
+                    {
+                        currentTargetObj = currentOverride.GetValue();
+                        hasCurrentTarget = true;
+                    }
+                    catch
+                    {
+                        hasCurrentTarget = false;
+                    }
+                    finally
+                    {
+                        currentOverride.Dispose();
+                    }
+                }
+
+                if (targetOverridden && hasCurrentTarget && Equals(currentTargetObj, sourceValueObj))
+                {
+                    continue; // target already matches the source
+                }
+
+                plan.Add(new LayerCopyPlanEntry(LayerCopyEntryKind.SetOverride, propertyName,
+                    newValue: sourceValueObj, hasNewValue: true, oldValue: currentTargetObj, hasOldValue: targetOverridden && hasCurrentTarget));
+            }
+
+            return plan;
+        }
+
+        /// <summary>
+        /// Reads the entity's true base value for a property. While an override layer is applied
+        /// the live values contain that layer's overrides, so the applied layer's base snapshot
+        /// is consulted first; properties outside the snapshot fall back to the live value (the
+        /// applied set does not modify them). Must be called on the sim thread.
+        /// </summary>
+        private static bool TryGetEntityBaseValue(Entity entity, Name propertyName, out BoxedValue baseValue)
+        {
+            Name appliedLayer = EntityLayerOverrides.GetAppliedLayer(entity);
+
+            if (appliedLayer.Valid && EntityLayerOverrides.GetBaseValue(entity, appliedLayer, propertyName, out baseValue))
+            {
+                return true;
+            }
+
+            // Querying with any layer name other than the applied one reads the live value
+            return EntityLayerOverrides.GetBaseValue(entity, LiveBaseQueryLayerName, propertyName, out baseValue);
+        }
+
+        /// <summary>
+        /// Applies or reverts a copy plan. Must be called on the sim thread.
+        /// </summary>
+        private static void ApplyLayerCopyEntries(Entity entity, Name? targetLayer, List<LayerCopyPlanEntry> entries, bool applyNewState)
+        {
+            foreach (LayerCopyPlanEntry entry in entries)
+            {
+                try
+                {
+                    switch (entry.Kind)
+                    {
+                        case LayerCopyEntryKind.SetBase:
+                        {
+                            object? valueObj = applyNewState ? entry.NewValue : entry.OldValue;
+                            bool hasValue = applyNewState ? entry.HasNewValue : entry.HasOldValue;
+
+                            if (!hasValue)
+                            {
+                                break;
+                            }
+
+                            using BoxedValue value = new BoxedValue(valueObj);
+
+                            EntityLayerOverrides.SetBaseValue(entity, entry.PropertyName, value);
+
+                            break;
+                        }
+
+                        case LayerCopyEntryKind.SetOverride:
+                        case LayerCopyEntryKind.RemoveOverride:
+                        {
+                            if (!targetLayer.HasValue)
+                            {
+                                break;
+                            }
+
+                            // Forward: write a new override / prune; Revert: restore the previous
+                            // override / prune again
+                            bool writeOverride = applyNewState == (entry.Kind == LayerCopyEntryKind.SetOverride);
+
+                            if (!writeOverride)
+                            {
+                                EntityLayerOverrides.RemoveValue(entity, targetLayer.Value, entry.PropertyName);
+
+                                break;
+                            }
+
+                            object? valueObj = applyNewState ? entry.NewValue : entry.OldValue;
+                            bool hasValue = applyNewState ? entry.HasNewValue : entry.HasOldValue;
+
+                            if (!hasValue)
+                            {
+                                EntityLayerOverrides.RemoveValue(entity, targetLayer.Value, entry.PropertyName);
+
+                                break;
+                            }
+
+                            EnsureLayerOverrideSet(entity, targetLayer.Value);
+
+                            using BoxedValue value = new BoxedValue(valueObj);
+
+                            EntityLayerOverrides.SetValue(entity, targetLayer.Value, entry.PropertyName, value);
+
+                            break;
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Logger.Log(LogLevel.Warning, $"Layer copy failed for property '{entry.PropertyName}': {ex.Message}");
+                }
+            }
+        }
+
+        private static void EnsureLayerOverrideSet(Entity entity, Name layerName)
+        {
+            if (!EntityLayerOverrides.HasSet(entity, layerName))
+            {
+                EntityLayerOverrides.AddSet(entity, layerName);
+            }
         }
 
         private void OnScenePropertyValueChanged()
@@ -740,6 +1208,38 @@ namespace Hyperion.Editor.ViewModels
                 .OfType<ComponentTypeDescriptor>()
                 .ToArray());
 
+        // Never a real layer: querying base values with this name makes the native side read the
+        // entity's live property value (any name != applied layer behaves this way)
+        private static readonly Name LiveBaseQueryLayerName = new Name("$EditorLiveBaseQuery");
+
+        private enum LayerCopyEntryKind
+        {
+            SetBase,
+            SetOverride,
+            RemoveOverride
+        }
+
+        private sealed class LayerCopyPlanEntry
+        {
+            public LayerCopyPlanEntry(LayerCopyEntryKind kind, Name propertyName,
+                object? newValue, bool hasNewValue, object? oldValue, bool hasOldValue)
+            {
+                Kind = kind;
+                PropertyName = propertyName;
+                NewValue = newValue;
+                HasNewValue = hasNewValue;
+                OldValue = oldValue;
+                HasOldValue = hasOldValue;
+            }
+
+            public LayerCopyEntryKind Kind { get; }
+            public Name PropertyName { get; }
+            public object? NewValue { get; }
+            public bool HasNewValue { get; }
+            public object? OldValue { get; }
+            public bool HasOldValue { get; }
+        }
+
         private bool CanAddComponent(object? parameter)
         {
             return parameter is AddComponentOptionViewModel option && option.IsEnabled && SelectedNode is Entity;
@@ -903,5 +1403,19 @@ namespace Hyperion.Editor.ViewModels
             get => _isEnabled;
             set => SetProperty(ref _isEnabled, value);
         }
+    }
+
+    public class LayerCopySourceOptionViewModel : ViewModelBase
+    {
+        public LayerCopySourceOptionViewModel(string name, bool isBase)
+        {
+            Name = name;
+            IsBase = isBase;
+        }
+
+        public string Name { get; }
+
+        /// <summary>True when this option refers to the entity's base state rather than a layer.</summary>
+        public bool IsBase { get; }
     }
 }
