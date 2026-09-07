@@ -316,9 +316,11 @@ void ConvolveEnvProbeCubemap(const Handle<Texture>& inTexture, const EnvProbe& e
                 // Update image data and desc
                 bakedTexture->SetTextureDesc(desc);
                 bakedTexture->SetImageData(stream.GetBuffer().ToByteView());
-                Check(bakedTexture->Create());
 
                 textureWriteScope.Reset();
+                
+                // Must be created outside of textureWriteScope lock.
+                Check(bakedTexture->Create());
 
                 auto envProbeWriteScope = TUniqueResLock<EnvProbe>(*envProbeStrong);
                 envProbeStrong->MarkDirty();

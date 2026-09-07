@@ -56,6 +56,32 @@ namespace Hyperion.Editor.ViewModels
             }
         }
 
+        /// <summary>Display-only view over <see cref="Properties"/>: the rows the active layer overrides.</summary>
+        public ObservableCollection<InspectorPropertyViewModelBase> OverriddenProperties { get; } = new ObservableCollection<InspectorPropertyViewModelBase>();
+
+        private int _overriddenPropertyCount;
+        public int OverriddenPropertyCount
+        {
+            get => _overriddenPropertyCount;
+            private set
+            {
+                if (SetProperty(ref _overriddenPropertyCount, value))
+                {
+                    OnPropertyChanged(nameof(HasOverriddenProperties));
+                    OnPropertyChanged(nameof(ShowNoOverridesHint));
+                    OnPropertyChanged(nameof(OverriddenPropertiesHeader));
+                }
+            }
+        }
+
+        public bool HasOverriddenProperties => _overriddenPropertyCount > 0;
+
+        public bool ShowNoOverridesHint => CanUseLayerOverrides && !HasOverriddenProperties;
+
+        public string OverriddenPropertiesHeader => _overriddenPropertyCount == 1
+            ? $"1 PROPERTY OVERRIDDEN IN {ActiveLayerLabel.ToUpperInvariant()}"
+            : $"{_overriddenPropertyCount} PROPERTIES OVERRIDDEN IN {ActiveLayerLabel.ToUpperInvariant()}";
+
         public ICommand ApplyCopyFromLayerCommand { get; }
         public ICommand ResetLayerOverridesCommand { get; }
 
@@ -137,6 +163,23 @@ namespace Hyperion.Editor.ViewModels
                 || (_activeLayerDisplay ?? string.Empty) == "Default";
         }
 
+        /// <summary>False on the Default layer, whose values are the entity's base values - there is nothing to override into.</summary>
+        public bool CanUseLayerOverrides => !IsDefaultLayer;
+
+        /// <summary>
+        /// Publishes the active layer to the shared edit context. The Default layer is the base
+        /// values, so it is published as "no layer" and every edit routes to the base.
+        /// </summary>
+        private void ApplyActiveLayerToEditContext()
+        {
+            LayerOverrideEditContext.ActiveLayerName = IsDefaultLayer ? null : ActiveLayerDisplay;
+
+            if (IsDefaultLayer)
+            {
+                LayerOverrideMode = false;
+            }
+        }
+
         private bool _layerOverrideMode;
         public bool LayerOverrideMode
         {
@@ -151,12 +194,13 @@ namespace Hyperion.Editor.ViewModels
                     {
                         EngineManager.EditorGame?.EditorSubsystem?.SetLayerOverrideMode(value);
                     });
-
-                    // The copy target (active layer vs base) depends on override mode
                     _ = RefreshCopyLayerSourcesAsync();
                 }
             }
         }
+
+        /// <summary>Active layer name for display, falling back to "Default" before the World reports one.</summary>
+        public string ActiveLayerLabel => string.IsNullOrEmpty(_activeLayerDisplay) ? "Default" : _activeLayerDisplay!;
 
         private string? _activeLayerDisplay;
         public string? ActiveLayerDisplay
@@ -167,6 +211,10 @@ namespace Hyperion.Editor.ViewModels
                 if (SetProperty(ref _activeLayerDisplay, value))
                 {
                     OnPropertyChanged(nameof(IsDefaultLayer));
+                    OnPropertyChanged(nameof(CanUseLayerOverrides));
+                    OnPropertyChanged(nameof(ShowNoOverridesHint));
+                    OnPropertyChanged(nameof(ActiveLayerLabel));
+                    OnPropertyChanged(nameof(OverriddenPropertiesHeader));
                 }
             }
         }
@@ -250,6 +298,9 @@ namespace Hyperion.Editor.ViewModels
             SelectedCopyLayerSource = null;
             HasCopyLayerSources = false;
             HasActiveLayerOverrides = false;
+
+            OverriddenProperties.Clear();
+            OverriddenPropertyCount = 0;
 
             LayerOverrideEditContext.Reset();
 
@@ -534,7 +585,7 @@ namespace Hyperion.Editor.ViewModels
             await Dispatcher.UIThread.InvokeAsync(() =>
             {
                 ActiveLayerDisplay = activeLayerName.Length > 0 ? activeLayerName : null;
-                LayerOverrideEditContext.ActiveLayerName = ActiveLayerDisplay;
+                ApplyActiveLayerToEditContext();
             });
 
             _ = RefreshCopyLayerSourcesAsync();
@@ -591,6 +642,8 @@ namespace Hyperion.Editor.ViewModels
                 int flagIndex = 0;
                 string? currentLayerName = LayerOverrideEditContext.ActiveLayerName;
 
+                OverriddenProperties.Clear();
+
                 foreach (InspectorPropertyViewModelBase row in rows)
                 {
                     List<string> overriddenLayers = new();
@@ -604,7 +657,14 @@ namespace Hyperion.Editor.ViewModels
                     }
 
                     row.SetOverrideInfo(overriddenLayers, currentLayerName);
+
+                    if (row.IsOverriddenByCurrentLayer)
+                    {
+                        OverriddenProperties.Add(row);
+                    }
                 }
+
+                OverriddenPropertyCount = OverriddenProperties.Count;
             });
         }
 
@@ -616,8 +676,8 @@ namespace Hyperion.Editor.ViewModels
         {
             Dispatcher.UIThread.VerifyAccess();
 
-            LayerOverrideEditContext.ActiveLayerName = string.IsNullOrEmpty(layerName) ? null : layerName;
-            ActiveLayerDisplay = LayerOverrideEditContext.ActiveLayerName;
+            ActiveLayerDisplay = string.IsNullOrEmpty(layerName) ? null : layerName;
+            ApplyActiveLayerToEditContext();
 
             if (SelectedNode == null || !SelectedNode.IsValid)
             {
@@ -776,6 +836,12 @@ namespace Hyperion.Editor.ViewModels
                         continue;
                     }
 
+                    // Default holds the base values, so it is already covered by the "Base" option
+                    if (layerName == "Default")
+                    {
+                        continue;
+                    }
+
                     CopyLayerSources.Add(new LayerCopySourceOptionViewModel(layerName, isBase: false));
                 }
 
@@ -809,7 +875,8 @@ namespace Hyperion.Editor.ViewModels
                 return;
             }
 
-            bool targetIsLayer = !string.IsNullOrEmpty(ActiveLayerDisplay);
+            // The Default layer is the base values, so copying while it is active targets base
+            bool targetIsLayer = !IsDefaultLayer && !string.IsNullOrEmpty(ActiveLayerDisplay);
             string targetDisplay = targetIsLayer ? ActiveLayerDisplay! : "Base";
 
             if (!targetIsLayer && sourceOption.IsBase)

@@ -265,6 +265,27 @@
                                 </Flyout>
                             </DropDownButton.Flyout>
                         </DropDownButton>
+
+                        <ToggleButton
+                            x:Name="LayerOverrideModeToggle"
+                            Classes="gizmo"
+                            Margin="4,0,0,0"
+                            IsChecked="{Binding Inspector.LayerOverrideMode, Mode=TwoWay}"
+                            IsVisible="{Binding Inspector.CanUseLayerOverrides}"
+                            ToolTip.Tip="Where edits are applied: the active layer only, or the active layer and the base layer">
+                            <Panel>
+                                <TextBlock
+                                    VerticalAlignment="Center"
+                                    FontSize="11"
+                                    IsVisible="{Binding Inspector.LayerOverrideMode}"
+                                    Text="Active Layer Only" />
+                                <TextBlock
+                                    VerticalAlignment="Center"
+                                    FontSize="11"
+                                    IsVisible="{Binding !Inspector.LayerOverrideMode}"
+                                    Text="Active + Base" />
+                            </Panel>
+                        </ToggleButton>
                     </StackPanel>
 
                     <StackPanel
@@ -1011,63 +1032,126 @@
                                             Margin="0"
                                             DataContext="{Binding Inspector}"
                                             IsVisible="{Binding IsEntity}"
-                                            RowDefinitions="Auto, Auto, Auto, Auto">
+                                            RowDefinitions="Auto, Auto">
                                             <Border Grid.Row="0" Classes="panel-header">
-                                                <Grid VerticalAlignment="Center" ColumnDefinitions="*,Auto">
+                                                <Grid VerticalAlignment="Center" ColumnDefinitions="Auto,*,Auto">
                                                     <TextBlock
                                                         Grid.Column="0"
                                                         VerticalAlignment="Center"
                                                         Classes="header"
                                                         Text="Layer Overrides" />
-                                                    <Button
+                                                    <Border
                                                         Grid.Column="1"
-                                                        Margin="0,0,4,0"
-                                                        Padding="8,2"
-                                                        HorizontalAlignment="Right"
+                                                        Margin="6,0,0,0"
+                                                        Padding="6,1"
+                                                        HorizontalAlignment="Left"
                                                         VerticalAlignment="Center"
-                                                        Content="Reset Layer Overrides"
-                                                        Command="{Binding ResetLayerOverridesCommand}"
-                                                        ToolTip.Tip="Remove all property overrides for the active layer on this entity, restoring the base values." />
+                                                        Background="{DynamicResource Brush.AccentSubtle}"
+                                                        BorderBrush="{DynamicResource Brush.Accent}"
+                                                        BorderThickness="1"
+                                                        CornerRadius="{DynamicResource Radius.Large}"
+                                                        IsVisible="{Binding HasOverriddenProperties}">
+                                                        <TextBlock
+                                                            FontSize="10"
+                                                            FontWeight="SemiBold"
+                                                            Foreground="{DynamicResource Brush.AccentHover}"
+                                                            Text="{Binding OverriddenPropertyCount}" />
+                                                    </Border>
                                                 </Grid>
                                             </Border>
-                                            <CheckBox
-                                                Grid.Row="1"
-                                                Margin="12,6,12,0"
-                                                Padding="8,2"
-                                                HorizontalAlignment="Left"
-                                                Content="Only apply changes to the active layer"
-                                                IsChecked="{Binding LayerOverrideMode, Mode=TwoWay}"
-                                                ToolTip.Tip="When checked, changes made in the inspector will apply only to the active layer. Otherwise changes will apply to the base properties of the Entity (fields already overridden by the active layer keep editing that override). Reset when another entity is selected." />
 
-                                            <TextBlock
-                                                Grid.Row="2"
-                                                Margin="12,6,4,0"
-                                                FontSize="12"
-                                                VerticalAlignment="Center"
-                                                Text="Copy Properties from Layer" />
+                                            <StackPanel Grid.Row="1" Margin="12,8,12,10" Spacing="10">
+                                                <TextBlock
+                                                    FontSize="10"
+                                                    Foreground="{DynamicResource Brush.TextMuted}"
+                                                    IsVisible="{Binding !CanUseLayerOverrides}"
+                                                    Text="Default is the base layer - changes made here apply to the entity's base values."
+                                                    TextWrapping="Wrap" />
 
-                                            <Grid Grid.Row="3" Margin="12,6,12,6" ColumnDefinitions="*,Auto">
-                                                <ComboBox
-                                                    Grid.Column="0"
-                                                    Margin="0,0,6,0"
-                                                    HorizontalAlignment="Stretch"
-                                                    PlaceholderText="Select layer"
-                                                    IsEnabled="{Binding HasCopyLayerSources}"
-                                                    ItemsSource="{Binding CopyLayerSources}"
-                                                    SelectedItem="{Binding SelectedCopyLayerSource, Mode=TwoWay}">
-                                                    <ComboBox.ItemTemplate>
-                                                        <DataTemplate x:DataType="vm:LayerCopySourceOptionViewModel">
-                                                            <TextBlock Text="{Binding Name}" />
-                                                        </DataTemplate>
-                                                    </ComboBox.ItemTemplate>
-                                                </ComboBox>
-                                                <Button
-                                                    Grid.Column="1"
-                                                    Padding="8,2"
-                                                    Content="Apply"
-                                                    Command="{Binding ApplyCopyFromLayerCommand}"
-                                                    ToolTip.Tip="Copy the selected source's property values onto the current edit target (active layer when override mode is on, otherwise base). Only differing properties are written and redundant overrides are pruned." />
-                                            </Grid>
+                                                <StackPanel Spacing="4" IsVisible="{Binding HasOverriddenProperties}">
+                                                    <TextBlock
+                                                        Classes="section-label"
+                                                        Text="{Binding OverriddenPropertiesHeader}"
+                                                        TextTrimming="CharacterEllipsis" />
+
+                                                    <ItemsControl ItemsSource="{Binding OverriddenProperties}">
+                                                        <ItemsControl.ItemTemplate>
+                                                            <DataTemplate x:DataType="vm:InspectorPropertyViewModelBase">
+                                                                <Grid Margin="0,1" ColumnDefinitions="Auto,*,Auto">
+                                                                    <Border
+                                                                        Grid.Column="0"
+                                                                        Width="2"
+                                                                        Margin="0,1,7,1"
+                                                                        Background="{DynamicResource Brush.Accent}"
+                                                                        CornerRadius="1" />
+                                                                    <TextBlock
+                                                                        Grid.Column="1"
+                                                                        FontSize="11"
+                                                                        VerticalAlignment="Center"
+                                                                        Text="{Binding Label}"
+                                                                        TextTrimming="CharacterEllipsis"
+                                                                        ToolTip.Tip="{Binding OverrideTooltip}" />
+                                                                    <Button
+                                                                        Grid.Column="2"
+                                                                        Classes="reset-icon"
+                                                                        Command="{Binding RevertOverrideCommand}"
+                                                                        ToolTip.Tip="Revert to base value">
+                                                                        <Path
+                                                                            Width="11"
+                                                                            Height="11"
+                                                                            Stretch="Uniform"
+                                                                            Data="M12.5 8c-2.65 0-5.05.99-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z" />
+                                                                    </Button>
+                                                                </Grid>
+                                                            </DataTemplate>
+                                                        </ItemsControl.ItemTemplate>
+                                                    </ItemsControl>
+                                                    
+                                                    <Grid ColumnDefinitions="*,Auto">
+                                                        <Button
+                                                            Grid.Column="0"
+                                                            Padding="8,2"
+                                                            VerticalAlignment="Center"
+                                                            Content="Revert All"
+                                                            Command="{Binding ResetLayerOverridesCommand}"
+                                                            ToolTip.Tip="Revert layer-specific property overrides back to base values." />
+                                                    </Grid>
+                                                    
+                                                </StackPanel>
+
+                                                <TextBlock
+                                                    FontSize="11"
+                                                    Foreground="{DynamicResource Brush.TextFaint}"
+                                                    IsVisible="{Binding ShowNoOverridesHint}"
+                                                    Text="No properties overridden on this layer."
+                                                    TextWrapping="Wrap" />
+
+                                                <StackPanel Spacing="5">
+                                                    <TextBlock Classes="section-label" Text="COPY PROPERTIES FROM LAYER" />
+                                                    <Grid ColumnDefinitions="*,Auto">
+                                                        <ComboBox
+                                                            Grid.Column="0"
+                                                            Margin="0,0,6,0"
+                                                            HorizontalAlignment="Stretch"
+                                                            PlaceholderText="Select layer"
+                                                            IsEnabled="{Binding HasCopyLayerSources}"
+                                                            ItemsSource="{Binding CopyLayerSources}"
+                                                            SelectedItem="{Binding SelectedCopyLayerSource, Mode=TwoWay}">
+                                                            <ComboBox.ItemTemplate>
+                                                                <DataTemplate x:DataType="vm:LayerCopySourceOptionViewModel">
+                                                                    <TextBlock Text="{Binding Name}" />
+                                                                </DataTemplate>
+                                                            </ComboBox.ItemTemplate>
+                                                        </ComboBox>
+                                                        <Button
+                                                            Grid.Column="1"
+                                                            Padding="8,2"
+                                                            Content="Apply"
+                                                            Command="{Binding ApplyCopyFromLayerCommand}"
+                                                            ToolTip.Tip="Copy the selected source's property values onto the current edit target (active layer when override mode is on, otherwise base). Only differing properties are written and redundant overrides are pruned." />
+                                                    </Grid>
+                                                </StackPanel>
+                                            </StackPanel>
                                         </Grid>
 
                                         <!--  Properties  -->

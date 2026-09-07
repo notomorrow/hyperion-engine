@@ -243,6 +243,12 @@ void Entity::SetPendingLayerOverrides(Array<EntityLayerOverrideSet>&& sets)
 
     for (EntityLayerOverrideSet& set : sets)
     {
+        // scenes may carry a "Default" set from before we changed "Default" == Base value set. drop it.
+        if (IsDefaultLayer(set.layerName))
+        {
+            continue;
+        }
+
         pendingSets.PushBack(std::move(set));
     }
 }

@@ -78,7 +78,9 @@ Light::Light(LightType type, const Vec3f& position, const Color& color, float in
       m_numShadowMapCascades(1),
       forceRedrawShadows(false)
 {
-    m_nodeFlags |= NodeFlags::ExcludeFromParentBounds | NodeFlags::ExcludeFromOctree;
+    m_nodeFlags |= NodeFlags::ExcludeFromParentBounds
+                | NodeFlags::ExcludeFromOctree
+                | NodeFlags::MobilityStatic;
 
     m_entityInitInfo.canEverUpdate = true;
     m_entityInitInfo.receivesUpdate = false;
@@ -102,7 +104,9 @@ Light::Light(LightType type, const Vec3f& position, const Vec3f& normal, const V
       m_numShadowMapCascades(1),
       forceRedrawShadows(false)
 {
-    m_nodeFlags |= NodeFlags::ExcludeFromParentBounds | NodeFlags::ExcludeFromOctree;
+    m_nodeFlags |= NodeFlags::ExcludeFromParentBounds
+                | NodeFlags::ExcludeFromOctree
+                | NodeFlags::MobilityStatic;
 
     m_entityInitInfo.canEverUpdate = true;
     m_entityInitInfo.receivesUpdate = false;

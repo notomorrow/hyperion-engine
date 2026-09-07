@@ -274,6 +274,12 @@ Array<Name> LayerOverrideSystem::GetSetLayerNames(const Entity* entity) const
 
     for (const EntityLayerOverrideSet& set : component->sets)
     {
+        // The Default layer is the base values, so it never counts as an override set
+        if (IsDefaultLayer(set.layerName))
+        {
+            continue;
+        }
+
         layerNames.PushBack(set.layerName);
     }
 
@@ -282,7 +288,7 @@ Array<Name> LayerOverrideSystem::GetSetLayerNames(const Entity* entity) const
 
 bool LayerOverrideSystem::HasLayerOverrideSet(const Entity* entity, Name layerName) const
 {
-    if (!entity)
+    if (!entity || IsDefaultLayer(layerName))
     {
         return false;
     }
@@ -299,7 +305,7 @@ bool LayerOverrideSystem::HasLayerOverrideSet(const Entity* entity, Name layerNa
 
 bool LayerOverrideSystem::IsPropertyOverriddenInLayer(const Entity* entity, Name layerName, Name propertyName) const
 {
-    if (!entity)
+    if (!entity || IsDefaultLayer(layerName))
     {
         return false;
     }
@@ -316,7 +322,7 @@ bool LayerOverrideSystem::IsPropertyOverriddenInLayer(const Entity* entity, Name
 
 bool LayerOverrideSystem::GetLayerOverrideValue(const Entity* entity, Name layerName, Name propertyName, BoxedValue& outValue) const
 {
-    if (!entity)
+    if (!entity || IsDefaultLayer(layerName))
     {
         return false;
     }
@@ -336,6 +342,11 @@ bool LayerOverrideSystem::GetLayerOverrideBaseValue(const Entity* entity, Name l
     if (!entity)
     {
         return false;
+    }
+
+    if (IsDefaultLayer(layerName))
+    {
+        return Helpers::GetEntityTrueBaseValue(const_cast<Entity*>(entity), propertyName, outValue);
     }
 
     const LayerOverridesComponent* component = Helpers::TryGetComponent(*entity);
@@ -384,7 +395,7 @@ bool LayerOverrideSystem::GetLayerOverrideBaseValue(const Entity* entity, Name l
 
 bool LayerOverrideSystem::HasAnyOverriddenProperty(const Entity* entity, Name layerName) const
 {
-    if (!entity || !layerName)
+    if (!entity || !layerName || IsDefaultLayer(layerName))
     {
         return false;
     }
@@ -405,7 +416,7 @@ Array<Pair<Name, BoxedValue>> LayerOverrideSystem::GetLayerOverrideEntries(const
 {
     Array<Pair<Name, BoxedValue>> entries;
 
-    if (!entity || !layerName)
+    if (!entity || !layerName || IsDefaultLayer(layerName))
     {
         return entries;
     }
@@ -438,7 +449,8 @@ Array<Pair<Name, BoxedValue>> LayerOverrideSystem::GetLayerOverrideEntries(const
 
 bool LayerOverrideSystem::AddLayerOverrideSet(Entity* entity, Name layerName)
 {
-    if (!entity || !layerName)
+    // The Default layer has no override set - editing it writes the base values directly
+    if (!entity || !layerName || IsDefaultLayer(layerName))
     {
         return false;
     }
@@ -476,7 +488,7 @@ bool LayerOverrideSystem::AddLayerOverrideSet(Entity* entity, Name layerName)
 
 bool LayerOverrideSystem::RemoveLayerOverrideSet(Entity* entity, Name layerName)
 {
-    if (!entity)
+    if (!entity || IsDefaultLayer(layerName))
     {
         return false;
     }
@@ -513,6 +525,12 @@ bool LayerOverrideSystem::SetLayerOverrideValue(Entity* entity, Name layerName, 
     if (!entity)
     {
         return false;
+    }
+
+    // Writing to the Default layer is writing the base value
+    if (IsDefaultLayer(layerName))
+    {
+        return SetLayerOverrideBaseValue(entity, propertyName, std::move(value));
     }
 
     LayerOverridesComponent* component = Helpers::TryGetComponent(*entity);
@@ -577,7 +595,7 @@ bool LayerOverrideSystem::SetLayerOverrideValue(Entity* entity, Name layerName, 
 
 bool LayerOverrideSystem::RemoveLayerOverrideValue(Entity* entity, Name layerName, Name propertyName)
 {
-    if (!entity)
+    if (!entity || IsDefaultLayer(layerName))
     {
         return false;
     }
@@ -680,6 +698,17 @@ bool LayerOverrideSystem::SetLayerOverrideBaseValue(Entity* entity, Name propert
 Array<LayerPropertyCopyEntry> LayerOverrideSystem::BuildLayerPropertyCopyPlan(Entity* entity, Name sourceLayer, Name targetLayer) const
 {
     Array<LayerPropertyCopyEntry> plan;
+
+    // Copying from/to Default is copying from/to the base values
+    if (IsDefaultLayer(sourceLayer))
+    {
+        sourceLayer = Name::Invalid();
+    }
+
+    if (IsDefaultLayer(targetLayer))
+    {
+        targetLayer = Name::Invalid();
+    }
 
     if (!entity || (!sourceLayer.IsValid() && !targetLayer.IsValid()))
     {
@@ -921,6 +950,14 @@ void LayerOverrideSystem::ApplyOverrides(Entity* entity, Name layerName)
 {
     if (!entity)
     {
+        return;
+    }
+
+    // The Default layer holds no overrides - it is the entity's base state
+    if (IsDefaultLayer(layerName))
+    {
+        RevertOverrides(entity);
+
         return;
     }
 

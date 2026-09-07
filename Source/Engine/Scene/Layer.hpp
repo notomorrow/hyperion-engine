@@ -24,6 +24,13 @@ namespace Hyperion {
 enum class LayerId : uint32;
 static constexpr LayerId InvalidLayerId = Invalid<LayerId>;
 
+ENGINE_API extern const Name g_defaultLayerName;
+
+HYP_FORCE_INLINE bool IsDefaultLayer(Name layerName)
+{
+    return layerName == g_defaultLayerName;
+}
+
 HYP_CLASS()
 class ENGINE_API Layer final : public ObjectBase
 {

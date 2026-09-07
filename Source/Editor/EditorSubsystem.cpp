@@ -440,7 +440,7 @@ static Array<LayerOverrideTransformEditState> CaptureLayerOverrideTransformEdits
 
         const Name activeLayer = world->GetActiveLayerName();
 
-        if (!activeLayer)
+        if (!activeLayer || IsDefaultLayer(activeLayer))
         {
             continue;
         }

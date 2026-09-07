@@ -87,25 +87,7 @@
             </DataTemplate>
             <DataTemplate x:DataType="vm:TransformViewModel">
                 <StackPanel Spacing="4">
-                    <DockPanel IsVisible="{Binding IsOverridden}">
-                        <Button
-                            DockPanel.Dock="Right"
-                            Classes="reset-icon"
-                            IsVisible="{Binding IsOverriddenByCurrentLayer}"
-                            ToolTip.Tip="Revert to base value (drops the override for the current layer)"
-                            Command="{Binding RevertOverrideCommand}">
-                            <Path
-                                Width="11"
-                                Height="11"
-                                Stretch="Uniform"
-                                Data="M12.5 8c-2.65 0-5.05.99-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z" />
-                        </Button>
-                        <TextBlock
-                            FontSize="10"
-                            TextWrapping="Wrap"
-                            Foreground="{DynamicResource Brush.TextMuted}"
-                            Text="{Binding OverrideSignifier}" />
-                    </DockPanel>
+                    <!--  The row's own marker and revert button come from the outer item template  -->
                     <StackPanel Orientation="Vertical" Spacing="2">
                         <TextBlock Text="Translation" />
                         <ContentControl Content="{Binding Translation}" />
@@ -242,39 +224,51 @@
             <DataTemplate x:DataType="vm:InspectorPropertyViewModelBase">
                 <Grid Margin="6,2">
                     <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="Auto" SharedSizeGroup="PropertyLabel" />
                         <ColumnDefinition Width="*" />
                     </Grid.ColumnDefinitions>
-                    <StackPanel
+
+                    <!--  Override marker: accent for the active layer, muted when only other layers override  -->
+                    <Panel
                         Grid.Column="0"
-                        IsVisible="{Binding ShowInlineLabel}"
+                        Width="6"
+                        Background="Transparent"
+                        ToolTip.Tip="{Binding OverrideTooltip}">
+                        <Border
+                            Width="2"
+                            Margin="0,1"
+                            HorizontalAlignment="Left"
+                            Background="{DynamicResource Brush.Accent}"
+                            CornerRadius="1"
+                            IsVisible="{Binding IsOverriddenByCurrentLayer}" />
+                        <Border
+                            Width="2"
+                            Margin="0,1"
+                            HorizontalAlignment="Left"
+                            Background="{DynamicResource Brush.TextFaint}"
+                            CornerRadius="1"
+                            IsVisible="{Binding IsOverriddenByOtherLayerOnly}" />
+                    </Panel>
+
+                    <TextBlock
+                        Grid.Column="1"
                         MaxWidth="110"
                         Margin="0,0,8,0"
-                        Spacing="1">
-                        <StackPanel Orientation="Horizontal" Spacing="4">
-                            <Ellipse
-                                Width="5"
-                                Height="5"
-                                VerticalAlignment="Center"
-                                IsVisible="{Binding IsOverridden}"
-                                Fill="{DynamicResource Brush.Accent}" />
-                            <TextBlock Classes="inspector-name" Text="{Binding Label}" VerticalAlignment="Center" />
-                        </StackPanel>
-                        <TextBlock
-                            FontSize="10"
-                            TextWrapping="Wrap"
-                            Foreground="{DynamicResource Brush.TextMuted}"
-                            IsVisible="{Binding IsOverridden}"
-                            Text="{Binding OverrideSignifier}" />
-                    </StackPanel>
+                        VerticalAlignment="Center"
+                        Classes="inspector-name"
+                        IsVisible="{Binding ShowInlineLabel}"
+                        Text="{Binding Label}"
+                        ToolTip.Tip="{Binding OverrideTooltip}" />
+
                     <ContentControl
-                        Grid.Column="0"
+                        Grid.Column="1"
                         Grid.ColumnSpan="2"
                         IsVisible="{Binding !ShowInlineLabel}"
                         VerticalAlignment="Center"
                         Content="{Binding}" />
                     <DockPanel
-                        Grid.Column="1"
+                        Grid.Column="2"
                         IsVisible="{Binding ShowInlineLabel}"
                         VerticalAlignment="Center"
                         LastChildFill="True">

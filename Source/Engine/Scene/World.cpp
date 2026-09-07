@@ -90,7 +90,6 @@ static EngineStatTimer s_statPhysicsUpdate("Physics/Update");
 
 static const Name s_nameStreamingLayerScenes = NAME("Scenes_Layer");
 static const Name s_nameUnnamedWorld = NAME("<unnamed world>");
-static const Name s_defaultLayerName = NAME("Default");
 
 World::World()
     : World(s_nameUnnamedWorld)
@@ -289,7 +288,7 @@ void World::Initialize()
         if (!m_activeLayer)
         {
             // Set to default layer if no ActiveLayer
-            m_activeLayer = s_defaultLayerName;
+            m_activeLayer = g_defaultLayerName;
         }
 
         const Handle<Layer>& layer = GetOrCreateLayer(m_activeLayer);
@@ -653,7 +652,7 @@ Name World::GetActiveLayerName() const
 
     if (!m_activeLayer)
     {
-        return s_defaultLayerName;
+        return g_defaultLayerName;
     }
 
     return m_activeLayer;
@@ -665,7 +664,7 @@ void World::SetActiveLayer(Name layerName)
 
     if (layerName == Name::Invalid())
     {
-        layerName = s_defaultLayerName;
+        layerName = g_defaultLayerName;
     }
 
     const Handle<Layer>& layer = GetOrCreateLayer(layerName);
@@ -689,7 +688,7 @@ const Handle<Layer>& World::GetActiveLayer()
 
     if (!activeLayer)
     {
-        activeLayer = s_defaultLayerName;
+        activeLayer = g_defaultLayerName;
     }
 
     return GetOrCreateLayer(activeLayer);
@@ -699,7 +698,7 @@ const Handle<Layer>& World::GetDefaultLayer()
 {
     AssertOnThread(g_simThread);
 
-    return GetOrCreateLayer(s_defaultLayerName);
+    return GetOrCreateLayer(g_defaultLayerName);
 }
 
 const Handle<Layer>& World::TryGetLayer(Name layerName)

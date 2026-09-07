@@ -12,4 +12,6 @@
 
 namespace Hyperion {
 
+const Name g_defaultLayerName = NAME("Default");
+
 } // namespace Hyperion

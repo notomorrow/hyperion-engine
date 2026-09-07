@@ -52,12 +52,28 @@ namespace Hyperion.Editor.ViewModels
             private set => SetProperty(ref _overrideSignifier, value);
         }
 
+        private string? _overrideTooltip;
+        /// <summary>Hover text for the row's override marker; null when nothing overrides the property, so no empty tooltip pops up.</summary>
+        public string? OverrideTooltip
+        {
+            get => _overrideTooltip;
+            private set => SetProperty(ref _overrideTooltip, value);
+        }
+
         private bool _isOverriddenByCurrentLayer;
         /// <summary>True when the World's active layer's override set contains this property; shows the per-row revert button.</summary>
         public bool IsOverriddenByCurrentLayer
         {
             get => _isOverriddenByCurrentLayer;
             private set => SetProperty(ref _isOverriddenByCurrentLayer, value);
+        }
+
+        private bool _isOverriddenByOtherLayerOnly;
+        /// <summary>True when only layers other than the active one override this property; draws the marker muted.</summary>
+        public bool IsOverriddenByOtherLayerOnly
+        {
+            get => _isOverriddenByOtherLayerOnly;
+            private set => SetProperty(ref _isOverriddenByOtherLayerOnly, value);
         }
 
         /// <summary>True for rows backed by a real object + Property (entity-level rows), i.e. the rows that support per-layer overrides.</summary>
@@ -68,7 +84,9 @@ namespace Hyperion.Editor.ViewModels
         {
             IsOverridden = layerNames.Count > 0;
             OverrideSignifier = layerNames.Count > 0 ? $"{string.Join(", ", layerNames)} override this value" : string.Empty;
+            OverrideTooltip = layerNames.Count > 0 ? $"Overridden in: {string.Join(", ", layerNames)}" : null;
             IsOverriddenByCurrentLayer = currentLayerName != null && layerNames.Contains(currentLayerName);
+            IsOverriddenByOtherLayerOnly = IsOverridden && !IsOverriddenByCurrentLayer;
         }
 
         public Property Property => _property;

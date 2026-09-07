@@ -40,7 +40,7 @@ struct HypPluginDescriptor
     const char* version;
 
     uint32 abiVersion;
-    uint32 hostFlags;
+    EnumFlags<HypPluginHostFlags> hostFlags;
 };
 
 class IPluginHost
