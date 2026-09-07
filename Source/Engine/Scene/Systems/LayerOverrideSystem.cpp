@@ -134,6 +134,11 @@ const IMember* ResolveOverridableMember(const Class* cls, Name propertyName)
         return nullptr;
     }
 
+    if (member->GetAttribute(Attributes::g_attrNoLayerOverride).IsValid())
+    {
+        return nullptr;
+    }
+
     if (member->GetMemberType() == MemberType::Property && !static_cast<const Property*>(member)->CanSet())
     {
         return nullptr;
@@ -193,6 +198,19 @@ LayerOverridesComponent* TryGetComponent(const Entity& entity)
     }
 
     return entityManager->TryGetComponent<LayerOverridesComponent>(const_cast<const Entity*>(&entity));
+}
+
+void SnapshotBaseValueIfAbsent(Array<Pair<Name, BoxedValue>>& baseSnapshot, const IMember* member, Entity* entity, Name propertyName)
+{
+    for (const Pair<Name, BoxedValue>& snapshot : baseSnapshot)
+    {
+        if (snapshot.first == propertyName)
+        {
+            return;
+        }
+    }
+
+    baseSnapshot.PushBack({ propertyName, GetEntityMemberValue(member, entity) });
 }
 
 bool BoxesEqual(const BoxedValue& a, const BoxedValue& b)
@@ -584,6 +602,10 @@ bool LayerOverrideSystem::SetLayerOverrideValue(Entity* entity, Name layerName, 
     {
         if (const IMember* member = Helpers::ResolveOverridableMember(entity->InstanceClass(), propertyName))
         {
+            // The property wasn't in the set when the layer was applied, so it has no snapshot entry yet.
+            // Without one, RevertOverrides would leave this override sitting in the base value.
+            Helpers::SnapshotBaseValueIfAbsent(component->baseSnapshot, member, entity, propertyName);
+
             Helpers::SetEntityMemberValue(member, entity, set->propertyOverrides.Back().value);
         }
     }
@@ -1001,22 +1023,7 @@ void LayerOverrideSystem::ApplyOverrides(Entity* entity, Name layerName)
         }
 
         // Snapshot the base value (first occurrence wins; duplicates apply last-wins)
-        bool snapshotted = false;
-
-        for (const Pair<Name, BoxedValue>& snapshot : baseSnapshot)
-        {
-            if (snapshot.first == overrideEntry.property)
-            {
-                snapshotted = true;
-
-                break;
-            }
-        }
-
-        if (!snapshotted)
-        {
-            baseSnapshot.PushBack({ overrideEntry.property, Helpers::GetEntityMemberValue(member, entity) });
-        }
+        Helpers::SnapshotBaseValueIfAbsent(baseSnapshot, member, entity, overrideEntry.property);
 
         if (!Helpers::SetEntityMemberValue(member, entity, overrideEntry.value))
         {

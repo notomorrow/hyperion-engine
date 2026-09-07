@@ -677,6 +677,13 @@ void World::SetActiveLayer(Name layerName)
         layerOverrideSystem->ApplyActive();
     }
 
+    // Overrides are applied, so the volumes now carry this layer's atlas textures - re-pick which volume
+    // lights each entity, since a volume with no bake for this layer can no longer be used.
+    if (LightmapSystem* lightmapSystem = GetSystem<LightmapSystem>())
+    {
+        lightmapSystem->ResolveVolumeAssignments();
+    }
+
     OnActiveLayerChanged(m_activeLayer);
 }
 

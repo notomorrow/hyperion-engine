@@ -26,6 +26,8 @@
 
 #include <Scene/Systems/LightmapSystem.hpp>
 
+#include <Scene/Layer.hpp>
+
 #include <Scene/Components/MeshComponent.hpp>
 #include <Scene/Components/TransformComponent.hpp>
 #include <Scene/Components/BoundingBoxComponent.hpp>
@@ -95,75 +97,45 @@ struct LightmapElementBitmaps
 static void UpdateAtlasTextures(
     LightmapVolume* lmv,
     uint16 atlasIndex,
-    uint16 elementIndex,
-    const LightmapElementBitmaps& bitmaps)
+    Name layerName,
+    const LightmapElementBitmaps& atlasBitmaps)
 {
-    HYP_LOG(Lightmap, Verbose, "Updating atlas textures for LightmapVolume {}", lmv->Id());
+    HYP_LOG(Lightmap, Verbose, "Updating atlas textures for LightmapVolume {} on layer '{}'", lmv->Id(), layerName);
 
     Assert(atlasIndex < lmv->GetAtlases().Size());
 
-    LightmapVolumeAtlas& atlas = lmv->GetAtlases()[atlasIndex];
+    const Vec2u atlasDimensions = lmv->GetAtlases()[atlasIndex].atlasDimensions;
 
-    Assert(elementIndex < atlas.elements.Size());
-    const LightmapElement& element = atlas.elements[elementIndex];
-
-    Rect<uint32> dstRect {
-        element.offsetCoords.x, element.offsetCoords.y,
-        element.offsetCoords.x + element.dimensions.x,
-        element.offsetCoords.y + element.dimensions.y
-    };
-
-    auto* irradiance = bitmaps.irradiance.Get();
-    auto* bentNormal = bitmaps.bentNormal.Get();
-
-    if (irradiance)
+    if (auto* irradiance = atlasBitmaps.irradiance.Get())
     {
-        LightmapColorBitmap irradianceAtlasBitmap(atlas.atlasDimensions.x, atlas.atlasDimensions.y);
-
-        Assert(element.offsetCoords.x + element.dimensions.x <= irradianceAtlasBitmap.GetWidth());
-        Assert(element.offsetCoords.y + element.dimensions.y <= irradianceAtlasBitmap.GetHeight());
-
-        Rect<uint32> srcRect { 0, 0, irradiance->GetWidth(), irradiance->GetHeight() };
-
-        BitmapUtils::Blit(*irradiance, irradianceAtlasBitmap, srcRect, dstRect);
-
         Handle<Texture> atlasTexture = MakeHandle<Texture>(
             TextureDesc {
                 TextureType::Texture2D,
-                irradianceAtlasBitmap.GetFormat(),
-                Vec3u { atlas.atlasDimensions, 1 },
+                irradiance->GetFormat(),
+                Vec3u { atlasDimensions, 1 },
                 TFM_LINEAR,
                 TFM_LINEAR,
                 TWM_CLAMP_TO_EDGE
             },
-            irradianceAtlasBitmap.ToByteView());
+            irradiance->ToByteView());
 
-        lmv->SetAtlasTexture(atlasIndex, LightmapVolume::IrradianceTexture, atlasTexture);
+        lmv->SetAtlasTextureForLayer(atlasIndex, LightmapVolume::IrradianceTexture, atlasTexture, layerName);
     }
 
-    if (bentNormal)
+    if (auto* bentNormal = atlasBitmaps.bentNormal.Get())
     {
-        LightmapBentNormalBitmap bentNormalAtlasBitmap(atlas.atlasDimensions.x, atlas.atlasDimensions.y);
-
-        Assert(element.offsetCoords.x + element.dimensions.x <= bentNormalAtlasBitmap.GetWidth());
-        Assert(element.offsetCoords.y + element.dimensions.y <= bentNormalAtlasBitmap.GetHeight());
-
-        Rect<uint32> srcRect { 0, 0, bentNormal->GetWidth(), bentNormal->GetHeight() };
-
-        BitmapUtils::Blit(*bentNormal, bentNormalAtlasBitmap, srcRect, dstRect);
-
         Handle<Texture> atlasTexture = MakeHandle<Texture>(
             TextureDesc {
                 TextureType::Texture2D,
-                bentNormalAtlasBitmap.GetFormat(),
-                Vec3u { atlas.atlasDimensions, 1 },
+                bentNormal->GetFormat(),
+                Vec3u { atlasDimensions, 1 },
                 TFM_LINEAR,
                 TFM_LINEAR,
                 TWM_CLAMP_TO_EDGE
             },
-            bentNormalAtlasBitmap.ToByteView());
+            bentNormal->ToByteView());
 
-        lmv->SetAtlasTexture(atlasIndex, LightmapVolume::BentNormalTexture, atlasTexture);
+        lmv->SetAtlasTextureForLayer(atlasIndex, LightmapVolume::BentNormalTexture, atlasTexture, layerName);
     }
 }
 
@@ -187,12 +159,42 @@ static BitmapType ResizeBitmapToElement(BitmapType&& bitmap, Vec2u targetDimensi
     return resized;
 }
 
+// Places a baked page into its slot in the atlas. When the packing is being reused the bake already
+// rasterized straight into atlas space, so the bitmap passes through untouched.
+template <class BitmapType>
+static BitmapType BuildAtlasBitmap(BitmapType&& bakedBitmap, const LightmapElement& element, Vec2u atlasDimensions, bool reuseExistingPacking)
+{
+    if (reuseExistingPacking)
+    {
+        return std::move(bakedBitmap);
+    }
+
+    BitmapType elementBitmap = ResizeBitmapToElement(std::move(bakedBitmap), element.dimensions);
+
+    Assert(element.offsetCoords.x + element.dimensions.x <= atlasDimensions.x);
+    Assert(element.offsetCoords.y + element.dimensions.y <= atlasDimensions.y);
+
+    BitmapType atlasBitmap(atlasDimensions.x, atlasDimensions.y);
+
+    Rect<uint32> srcRect { 0, 0, elementBitmap.GetWidth(), elementBitmap.GetHeight() };
+    Rect<uint32> dstRect {
+        element.offsetCoords.x, element.offsetCoords.y,
+        element.offsetCoords.x + element.dimensions.x,
+        element.offsetCoords.y + element.dimensions.y
+    };
+
+    BitmapUtils::Blit(elementBitmap, atlasBitmap, srcRect, dstRect);
+
+    return atlasBitmap;
+}
+
 static bool BuildElementTextures(
     LightmapVolume* lmv,
     const BakeData<LightmapVolume>& bakeData,
     LightmapElementId elementId,
     uint32 bakeAtlasIndex,
-    uint32 shadingTypesMask)
+    uint32 shadingTypesMask,
+    Name layerName)
 {
     AssertOnThread(g_simThread);
 
@@ -210,25 +212,26 @@ static bool BuildElementTextures(
         return false;
     }
 
-    LightmapElement& element = lmv->GetAtlases()[atlasIndex].elements[elementIndex];
+    const LightmapVolumeAtlas& atlas = lmv->GetAtlases()[atlasIndex];
+    const LightmapElement& element = atlas.elements[elementIndex];
 
-    const Vec2u elementDimensions = element.dimensions;
+    const bool reuseExistingPacking = bakeData.IsReusingExistingPacking();
 
-    LightmapElementBitmaps elementBitmaps;
+    LightmapElementBitmaps atlasBitmaps;
 
     if (shadingTypesMask & (1u << uint32(LightmapShadingType::LIGHTMAP)))
     {
-        elementBitmaps.irradiance = MakeUniqueWithAllocator<LightmapColorBitmap, BakerAllocator>(
-            ResizeBitmapToElement(bakeData.ToBitmapIrradiance(bakeAtlasIndex), elementDimensions));
+        atlasBitmaps.irradiance = MakeUniqueWithAllocator<LightmapColorBitmap, BakerAllocator>(
+            BuildAtlasBitmap(bakeData.ToBitmapIrradiance(bakeAtlasIndex), element, atlas.atlasDimensions, reuseExistingPacking));
     }
 
     if (shadingTypesMask & (1u << uint32(LightmapShadingType::BENT_NORMAL)))
     {
-        elementBitmaps.bentNormal = MakeUniqueWithAllocator<LightmapBentNormalBitmap, BakerAllocator>(
-            ResizeBitmapToElement(bakeData.ToBitmapBentNormal(bakeAtlasIndex), elementDimensions));
+        atlasBitmaps.bentNormal = MakeUniqueWithAllocator<LightmapBentNormalBitmap, BakerAllocator>(
+            BuildAtlasBitmap(bakeData.ToBitmapBentNormal(bakeAtlasIndex), element, atlas.atlasDimensions, reuseExistingPacking));
     }
 
-    UpdateAtlasTextures(lmv, atlasIndex, elementIndex, elementBitmaps);
+    UpdateAtlasTextures(lmv, atlasIndex, layerName, atlasBitmaps);
 
     return true;
 }
@@ -281,6 +284,19 @@ Baker<LightmapVolume>::Baker(BakerConfig&& config, BakeLayer& bakeLayer, const H
 {
 }
 
+Name Baker<LightmapVolume>::GetBakeLayerName() const
+{
+    return m_bakeLayer ? m_bakeLayer->name : g_defaultLayerName;
+}
+
+bool Baker<LightmapVolume>::ShouldReuseExistingPacking() const
+{
+    /// @TODO: THIS SHOULD COMPARE SOME ENTRY HASH TO SOME CACHED VALUE!!! So we only smash the UV1s when meshes changed to cache. + We then need to make sure each other layer gets invalidated (bake layer epoch???)
+    ///        REBAKING THE 'Default' LAYER SHOULD NOT DESTROY ALL EXISTING LAYERS !!!
+
+    return !IsDefaultLayer(GetBakeLayerName());
+}
+
 UniquePtr<BakeJobBase> Baker<LightmapVolume>::CreateJob(BakeJobParams&& params)
 {
     return MakeUnique<BakeJob<LightmapVolume>>(std::move(params), m_volume, &m_bakeData);
@@ -331,6 +347,7 @@ void Baker<LightmapVolume>::Build()
     m_bakeEntitiesByEntity.Clear();
 
     const bool onlyOverlappingElements = BakerBase::OnlyOverlappingElements();
+    const bool reuseExistingPacking = ShouldReuseExistingPacking();
 
     Set<Mesh*> seenMeshes;
 
@@ -389,11 +406,30 @@ void Baker<LightmapVolume>::Build()
 
         Handle<Mesh> bakeMesh = meshComponent.mesh;
 
-        // We need to dedupe if we'll be writing to UV1.
-        // To do this we maintain a set of visited meshes; then clone the mesh if 
-        // it has already been updated to prevent setting incorrectly shared UV1s.
-        if (seenMeshes.Contains(bakeMesh.Get()))
+        uint32 lightmapAtlasIndex = 0;
+
+        if (reuseExistingPacking)
         {
+            // Reusing the packing means reusing UV1 as it stands, so shared meshes stay shared.
+            const LightmapElementComponent* lightmapElementComponent = mgr.TryGetComponent<LightmapElementComponent>(entity);
+
+            if (!lightmapElementComponent || !m_volume->GetElement(lightmapElementComponent->lightmapElementId))
+            {
+                HYP_LOG(Lightmap, Warning, "Entity {} has no lightmap element in this volume; run a bake on the Default layer first",
+                    entity->GetName());
+
+                continue;
+            }
+
+            uint16 atlasIndex;
+            uint16 elementIndex;
+            LightmapElement::GetAtlasAndElementIndex(lightmapElementComponent->lightmapElementId, atlasIndex, elementIndex);
+
+            lightmapAtlasIndex = atlasIndex;
+        }
+        else if (seenMeshes.Contains(bakeMesh.Get()))
+        {
+            // UV1 is about to be rewritten, so a mesh used by more than one entity has to be split first.
             bakeMesh = CloneMeshForLightmapBake(bakeMesh);
         }
         else
@@ -406,11 +442,17 @@ void Baker<LightmapVolume>::Build()
             bakeMesh,
             meshComponent.material,
             Transform(transformComponent.translation, transformComponent.scale, transformComponent.rotation).GetMatrix(),
-            boundingBoxComponent.worldAabb
+            boundingBoxComponent.worldAabb,
+            lightmapAtlasIndex
         });
     }
 
-    m_bakeData = BakeData<LightmapVolume>(m_bakeEntities.ToSpan(), m_volume);
+    if (m_bakeEntities.Empty())
+    {
+        HYP_LOG(Lightmap, Warning, "No entities to bake for LightmapVolume {}", m_volume->GetName());
+    }
+
+    m_bakeData = BakeData<LightmapVolume>(m_bakeEntities.ToSpan(), m_volume, reuseExistingPacking);
 
     m_atlasBuildTask = TaskSystem::GetInstance().Enqueue(
         [buildData = m_bakeData]() mutable -> BakeData<LightmapVolume>
@@ -450,26 +492,55 @@ void Baker<LightmapVolume>::OnBuildReady()
         }
     }
 
-    m_volume->RemoveAllElements(preserveTextureTypesMask);
-
     m_lightmapElementIds.Clear();
-    m_lightmapElementIds.Reserve(m_bakeData.GetAtlasCount());
 
-    for (uint32 atlasIndex = 0; atlasIndex < m_bakeData.GetAtlasCount(); atlasIndex++)
+    if (ShouldReuseExistingPacking())
     {
-        LightmapElement* lightmapElement = nullptr;
-
-        if (!m_volume->AddElement({ m_bakeData.GetWidth(), m_bakeData.GetHeight() }, lightmapElement, /* shrinkToFit */ true, /* downscaleLimit */ 0.1f))
+        // The packing and the meshes' UV1 are shared by every layer, so only the textures get rebuilt.
+        for (uint32 atlasIndex = 0; atlasIndex < uint32(m_volume->GetAtlases().Size()); atlasIndex++)
         {
-            HYP_LOG(Lightmap, Error, "Failed to add element to volume for atlas {}!", atlasIndex);
+            const LightmapVolumeAtlas& atlas = m_volume->GetAtlases()[atlasIndex];
+
+            if (atlas.elements.Empty())
+            {
+                HYP_LOG(Lightmap, Error, "LightmapVolume atlas {} has no elements to rebake onto", atlasIndex);
+
+                return;
+            }
+
+            m_lightmapElementIds.PushBack(atlas.elements[0].id);
+        }
+
+        if (m_lightmapElementIds.Empty())
+        {
+            HYP_LOG(Lightmap, Error, "LightmapVolume {} has no packing to rebake onto; bake the Default layer first",
+                m_volume->GetName());
 
             return;
         }
+    }
+    else
+    {
+        m_volume->RemoveAllElements(preserveTextureTypesMask);
 
-        AssertDebug(lightmapElement != nullptr);
-        AssertDebug(lightmapElement->id != InvalidLightmapElementId);
+        m_lightmapElementIds.Reserve(m_bakeData.GetAtlasCount());
 
-        m_lightmapElementIds.PushBack(lightmapElement->id);
+        for (uint32 atlasIndex = 0; atlasIndex < m_bakeData.GetAtlasCount(); atlasIndex++)
+        {
+            LightmapElement* lightmapElement = nullptr;
+
+            if (!m_volume->AddElement({ m_bakeData.GetWidth(), m_bakeData.GetHeight() }, lightmapElement, /* shrinkToFit */ true, /* downscaleLimit */ 0.1f))
+            {
+                HYP_LOG(Lightmap, Error, "Failed to add element to volume for atlas {}!", atlasIndex);
+
+                return;
+            }
+
+            AssertDebug(lightmapElement != nullptr);
+            AssertDebug(lightmapElement->id != InvalidLightmapElementId);
+
+            m_lightmapElementIds.PushBack(lightmapElement->id);
+        }
     }
 
     if (!m_config.onlyGenerateUVs)
@@ -487,9 +558,11 @@ void Baker<LightmapVolume>::OnCompleted_Internal()
 
     const uint32 shadingTypesMask = GetShadingTypesMask();
 
+    const Name bakeLayerName = GetBakeLayerName();
+
     for (uint32 atlasIndex = 0; atlasIndex < m_lightmapElementIds.Size(); atlasIndex++)
     {
-        if (!BuildElementTextures(m_volume, m_bakeData, m_lightmapElementIds[atlasIndex], atlasIndex, shadingTypesMask))
+        if (!BuildElementTextures(m_volume, m_bakeData, m_lightmapElementIds[atlasIndex], atlasIndex, shadingTypesMask, bakeLayerName))
         {
             HYP_LOG(Lightmap, Error, "Failed to build LightmapElement textures for LightmapVolume, atlas {}, element id: {}",
                 atlasIndex, m_lightmapElementIds[atlasIndex]);
@@ -519,6 +592,12 @@ void Baker<LightmapVolume>::OnCompleted_Internal()
     
     // Ensure references to texture assets are saved properly.
     m_volume->MarkDirty();
+
+    if (ShouldReuseExistingPacking())
+    {
+        // No need to create UV1s.
+        return;
+    }
 
     // Update meshes
     for (size_t bakeEntityIndex = 0; bakeEntityIndex < m_bakeEntities.Size(); bakeEntityIndex++)

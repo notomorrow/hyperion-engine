@@ -37,6 +37,7 @@
 
 #include <Scene/View.hpp>
 #include <Scene/EnvProbe.hpp>
+#include <Scene/World.hpp>
 #include <Scene/Light.hpp>
 
 #include <Framework/EngineGlobals.hpp>
@@ -401,7 +402,7 @@ static void ComputePrefilteredEnvMap(Frame* frame, const RenderSetup& renderSetu
     ConvolveEnvProbeCubemap(MakeStrongRef(colorAttachment), *envProbe);
 }
 
-void ComputeEnvProbeSphericalHarmonics(const EnvProbe& envProbe, const Texture& inColorTexture)
+void ComputeEnvProbeSphericalHarmonics(const EnvProbe& envProbe, const Texture& inColorTexture, Name layerName)
 {
     //// temp: dump exactly what the SH compute shader is about to read, so we can tell whether
     //// bake-to-bake SH drift comes from the render output itself or from something in the SH pass.
@@ -584,6 +585,7 @@ void ComputeEnvProbeSphericalHarmonics(const EnvProbe& envProbe, const Texture& 
         struct ReadbackSphericalHarmonicsPayload
         {
             Handle<EnvProbe> envProbe;
+            Name layerName;
             GpuBufferRef shBuffer;
             GpuBufferRef readbackBuffer;
             FixedArray<RWStructuredBuffer, ShNumLevels> shTilesBuffers;
@@ -635,15 +637,15 @@ void ComputeEnvProbeSphericalHarmonics(const EnvProbe& envProbe, const Texture& 
                                 outSH[j * 3 + 2] = inSH[j].z;
                             }
 
-                            // SetSphericalHarmonicsData() marks it dirty so we don't need to do that here.
+                            // SetSphericalHarmonicsDataForLayer() marks it dirty so we don't need to do that here.
                             auto envProbeWriteScope = TUniqueResLock<EnvProbe>(*payload.envProbe);
-                            payload.envProbe->SetSphericalHarmonicsData(shData);
+                            payload.envProbe->SetSphericalHarmonicsDataForLayer(shData, payload.layerName);
                             
                             if (payload.envProbe->IsAmbientProbe())
                             {
                                 // Ambient probes have transient baked texture, used for baking the SH.
-                                // Remove it to free the memory.
-                                payload.envProbe->SetBakedTexture(Handle<Texture>::Null());
+                                // Remove it to free the memory (from the baked layer as well).
+                                payload.envProbe->SetBakedTextureForLayer(Handle<Texture>::Null(), payload.layerName);
                             }
 
                             payload.envProbe->NotifyCaptureReadbackComplete();
@@ -663,6 +665,7 @@ void ComputeEnvProbeSphericalHarmonics(const EnvProbe& envProbe, const Texture& 
 
         ReadbackSphericalHarmonicsPayload* payload = new ReadbackSphericalHarmonicsPayload;
         payload->envProbe = MakeStrongRef(&envProbe);
+        payload->layerName = layerName;
         payload->shBuffer = std::move(shBuffer);
         payload->readbackBuffer = std::move(readbackBuffer);
         payload->shTilesBuffers = std::move(shTilesBuffers);
@@ -682,7 +685,7 @@ void ComputeEnvProbeSphericalHarmonics(const EnvProbe& envProbe, const Texture& 
     }
 }
 
-static void ComputeEnvProbeSphericalHarmonics(Frame* frame, EnvProbe* envProbe)
+static void ComputeEnvProbeSphericalHarmonics(Frame* frame, EnvProbe* envProbe, Name layerName = Name::Invalid())
 {
     const FramebufferRef& framebuffer = envProbe->GetViewFramebuffer(0);
     AssertDebug(framebuffer.IsValid() && framebuffer->IsCreated());
@@ -690,7 +693,7 @@ static void ComputeEnvProbeSphericalHarmonics(Frame* frame, EnvProbe* envProbe)
     AttachmentBase* colorAttachment = framebuffer->GetAttachment(0);
     Assert(colorAttachment != nullptr && colorAttachment->IsCreated());
 
-    ComputeEnvProbeSphericalHarmonics(*envProbe, *colorAttachment);
+    ComputeEnvProbeSphericalHarmonics(*envProbe, *colorAttachment, layerName);
 }
 
 /// For raster bake!
@@ -1236,7 +1239,23 @@ void ReflectionProbePass::RenderProbe(Frame* frame, const RenderSetup& renderSet
 
     if (envProbe->ShouldComputeSphericalHarmonics())
     {
-        EnvProbeHelpers::ComputeEnvProbeSphericalHarmonics(frame, envProbe);
+        Name sphericalHarmonicsLayerName = Name::Invalid();
+
+#ifdef HYP_EDITOR
+        if (!isRealtime && envProbe->IsBaked())
+        {
+            // A baked probe re-rendering in the editor is a raster bake; the result belongs to the
+            // active layer, matching the path traced bake flow.
+
+            // @TODO : NEEDS A BETTER WAY TO MAINTAIN THE LAYER THIS WAS BAKING FOR!!!!
+            if (World* world = envProbe->GetWorld())
+            {
+                sphericalHarmonicsLayerName = world->GetActiveLayerName();
+            }
+        }
+#endif // HYP_EDITOR
+
+        EnvProbeHelpers::ComputeEnvProbeSphericalHarmonics(frame, envProbe, sphericalHarmonicsLayerName);
     }
 
     if (envProbe->GetEnvProbeFlags() & EPF_VISIBILITY)
@@ -1353,7 +1372,23 @@ void IrradianceProbePass::RenderProbe(Frame* frame, const RenderSetup& renderSet
         return;
     }
 
-    EnvProbeHelpers::ComputeEnvProbeSphericalHarmonics(frame, irradianceProbe);
+    Name sphericalHarmonicsLayerName = Name::Invalid();
+
+#ifdef HYP_EDITOR
+    if (!isRealtime && irradianceProbe->IsBaked())
+    {
+        // A baked probe re-rendering in the editor is a raster bake; the result belongs to the
+        // active layer, matching the path traced bake flow.
+
+            // @TODO : NEEDS A BETTER WAY TO MAINTAIN THE LAYER THIS WAS BAKING FOR!!!!
+        if (World* world = irradianceProbe->GetWorld())
+        {
+            sphericalHarmonicsLayerName = world->GetActiveLayerName();
+        }
+    }
+#endif // HYP_EDITOR
+
+    EnvProbeHelpers::ComputeEnvProbeSphericalHarmonics(frame, irradianceProbe, sphericalHarmonicsLayerName);
 
     if (irradianceProbe->GetEnvProbeFlags() & EPF_VISIBILITY)
     {

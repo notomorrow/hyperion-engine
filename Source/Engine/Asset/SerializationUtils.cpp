@@ -3040,6 +3040,11 @@ static const IMember* ResolveMemberForOverride(const Class* cls, Name propertyNa
         }
     }
 
+    if (member->GetAttribute(Attributes::g_attrNoLayerOverride).IsValid())
+    {
+        return nullptr;
+    }
+
     return member;
 }
 

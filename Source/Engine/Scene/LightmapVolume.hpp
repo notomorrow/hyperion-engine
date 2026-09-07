@@ -136,13 +136,13 @@ public:
     HYP_METHOD()
     void SetName(Name name) override;
 
-    HYP_METHOD(Property = "LightmapVolumeId", Editor = false, Serialize = true)
+    HYP_METHOD(Property = "LightmapVolumeId", Editor = false, Serialize = true, NoLayerOverride)
     LightmapVolumeId GetLightmapVolumeId() const
     {
         return m_id;
     }
 
-    HYP_METHOD(Property = "LightmapVolumeId", Editor = false, Serialize = true)
+    HYP_METHOD(Property = "LightmapVolumeId", Editor = false, Serialize = true, NoLayerOverride)
     void SetLightmapVolumeId(LightmapVolumeId id);
 
     HYP_FORCE_INLINE Span<const Handle<Texture>> GetAtlasTextures(AtlasTextureType type) const
@@ -160,6 +160,22 @@ public:
 
     const Handle<Texture>& GetAtlasTexture(uint16 atlasIndex, AtlasTextureType type) const;
     void SetAtlasTexture(uint16 atlasIndex, AtlasTextureType type, const Handle<Texture>& texture);
+
+    static Name GetAtlasTexturesPropertyName(AtlasTextureType type);
+
+    FixedArray<Handle<Texture>, MaxAtlasesPerLightmapVolume> GetAtlasTexturesForLayer(AtlasTextureType type, Name layerName) const;
+
+    /*! \brief Assign an atlas texture for \p layerName. The Default layer writes the base fields; any other
+     *  layer is stored as a layer override, leaving the packing and the meshes' UV1 shared across layers. */
+    void SetAtlasTextureForLayer(uint16 atlasIndex, AtlasTextureType type, const Handle<Texture>& texture, Name layerName);
+
+    /*! \brief Discard every layer's atlas texture overrides. They are keyed to a packing, so they cannot outlive it. */
+    void ClearLayerAtlasTextureOverrides(uint32 preserveTextureTypesMask = 0);
+
+#ifdef HYP_EDITOR
+    HYP_METHOD(EditorOnly)
+    Array<Name> GetBakedLayerNames() const;
+#endif // HYP_EDITOR
 
     HYP_FORCE_INLINE const LightmapVolumeAtlas& GetAtlas(uint16 atlasIndex) const
     {
@@ -223,10 +239,10 @@ private:
     HYP_FIELD(Property = "BentNormalAtlasTextures", Serialize, Editor = false)
     FixedArray<Handle<Texture>, MaxAtlasesPerLightmapVolume> m_bentNormalAtlasTextures;
 
-    HYP_FIELD(Property = "Atlases", Serialize, Editor = false)
+    HYP_FIELD(Property = "Atlases", Serialize, Editor = false, NoLayerOverride)
     Array<LightmapVolumeAtlas> m_atlases;
 
-    HYP_FIELD(Property = "LightmapVolumeId", Editor = false, Serialize)
+    HYP_FIELD(Property = "LightmapVolumeId", Editor = false, Serialize, NoLayerOverride)
     LightmapVolumeId m_id;
 };
 

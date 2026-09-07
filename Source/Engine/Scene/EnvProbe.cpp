@@ -13,7 +13,9 @@
 #include <Scene/Light.hpp>
 #include <Scene/EntityManager.hpp>
 
-#include <Scene/Util/SceneHelpers.hpp>
+#include <Scene/Layer.hpp>
+
+#include <Scene/Systems/LayerOverrideSystem.hpp>
 
 #include <Rendering/Texture.hpp>
 #include <Rendering/RenderInterface.hpp>
@@ -59,6 +61,37 @@ static constexpr EnvProbeDimensions DefaultDimensionsByType[EPT_MAX] = {
 };
 
 static constexpr float EnvProbeCameraNearClip = 0.025f;
+
+namespace {
+
+LayerOverrideSystem* GetLayerOverrideSystem(const EnvProbe* envProbe)
+{
+    World* world = envProbe->GetWorld();
+
+    return world ? world->GetSystem<LayerOverrideSystem>() : nullptr;
+}
+
+Name BuildBakedTextureName(Name probeName, Name layerName)
+{
+    if (IsDefaultLayer(layerName))
+    {
+        return NAME_FMT("{}_ColorMap", probeName);
+    }
+
+    return NAME_FMT("{}_{}_ColorMap", probeName, layerName);
+}
+
+Name BuildVisibilityTextureName(Name probeName, Name layerName)
+{
+    if (IsDefaultLayer(layerName))
+    {
+        return NAME_FMT("{}_VisibilityMap", probeName);
+    }
+
+    return NAME_FMT("{}_{}_VisibilityMap", probeName, layerName);
+}
+
+} // namespace
 
 static FixedArray<Mat4f, 6> CreateCubemapMatrices(const Vec3f& origin)
 {
@@ -806,6 +839,247 @@ void EnvProbe::SetSphericalHarmonicsData(const SphericalHarmonicsData& shData)
     MarkDirty();
 }
 
+Handle<Texture> EnvProbe::GetBakedTextureForLayer(Name layerName) const
+{
+    if (!layerName.IsValid() || IsDefaultLayer(layerName))
+    {
+        return GetBakedTexture();
+    }
+
+    LayerOverrideSystem* layerOverrideSystem = GetLayerOverrideSystem(this);
+
+    if (!layerOverrideSystem)
+    {
+        return GetBakedTexture();
+    }
+
+    BoxedValue overrideValue;
+
+    if (!layerOverrideSystem->GetLayerOverrideValue(this, layerName, GetBakedTexturePropertyName(), overrideValue))
+    {
+        return GetBakedTexture();
+    }
+
+    if (overrideValue.Is<Handle<Texture>>())
+    {
+        return overrideValue.Get<Handle<Texture>>();
+    }
+
+    HYP_LOG(Scene, Warning, "Layer override '{}' on EnvProbe '{}' is not a texture",
+        layerName, GetName());
+
+    return GetBakedTexture();
+}
+
+Handle<Texture> EnvProbe::GetVisibilityTextureForLayer(Name layerName) const
+{
+    if (!layerName.IsValid() || IsDefaultLayer(layerName))
+    {
+        return GetVisibilityTexture();
+    }
+
+    LayerOverrideSystem* layerOverrideSystem = GetLayerOverrideSystem(this);
+
+    if (!layerOverrideSystem)
+    {
+        return GetVisibilityTexture();
+    }
+
+    BoxedValue overrideValue;
+
+    if (!layerOverrideSystem->GetLayerOverrideValue(this, layerName, GetVisibilityTexturePropertyName(), overrideValue))
+    {
+        return GetVisibilityTexture();
+    }
+
+    if (overrideValue.Is<Handle<Texture>>())
+    {
+        return overrideValue.Get<Handle<Texture>>();
+    }
+
+    HYP_LOG(Scene, Warning, "Layer override '{}' on EnvProbe '{}' is not a texture",
+        layerName, GetName());
+
+    return GetVisibilityTexture();
+}
+
+SphericalHarmonicsData EnvProbe::GetSphericalHarmonicsDataForLayer(Name layerName) const
+{
+    if (!layerName.IsValid() || IsDefaultLayer(layerName))
+    {
+        return GetSphericalHarmonicsData();
+    }
+
+    LayerOverrideSystem* layerOverrideSystem = GetLayerOverrideSystem(this);
+
+    if (!layerOverrideSystem)
+    {
+        return GetSphericalHarmonicsData();
+    }
+
+    BoxedValue overrideValue;
+
+    if (!layerOverrideSystem->GetLayerOverrideValue(this, layerName, GetSphericalHarmonicsPropertyName(), overrideValue))
+    {
+        return GetSphericalHarmonicsData();
+    }
+
+    if (overrideValue.Is<SphericalHarmonicsData>())
+    {
+        return overrideValue.Get<SphericalHarmonicsData>();
+    }
+
+    HYP_LOG(Scene, Warning, "Layer override '{}' on EnvProbe '{}' is not spherical harmonics data",
+        layerName, GetName());
+
+    return GetSphericalHarmonicsData();
+}
+
+void EnvProbe::SetBakedTextureForLayer(const Handle<Texture>& texture, Name layerName)
+{
+    if (!layerName.IsValid() || IsDefaultLayer(layerName))
+    {
+        SetBakedTexture(texture);
+
+        return;
+    }
+
+    LayerOverrideSystem* layerOverrideSystem = GetLayerOverrideSystem(this);
+
+    if (!layerOverrideSystem)
+    {
+        HYP_LOG(Scene, Error, "Cannot assign baked texture for layer '{}' on EnvProbe '{}': no LayerOverrideSystem",
+            layerName, GetName());
+
+        return;
+    }
+
+    if (GetBakedTextureForLayer(layerName) == texture)
+    {
+        return;
+    }
+
+    if (texture.IsValid())
+    {
+        texture->SetName(BuildBakedTextureName(GetName(), layerName));
+
+        if (!texture->IsTransient())
+        {
+            GetCurrentAssetRegistry()->PutAssetUnique(texture);
+        }
+    }
+
+    layerOverrideSystem->AddLayerOverrideSet(this, layerName);
+    layerOverrideSystem->SetLayerOverrideValue(this, layerName, GetBakedTexturePropertyName(), BoxedValue(texture));
+
+    SetNeedsRenderProxyUpdate();
+    MarkDirty();
+}
+
+void EnvProbe::SetVisibilityTextureForLayer(const Handle<Texture>& visibilityTexture, Name layerName)
+{
+    if (!layerName.IsValid() || IsDefaultLayer(layerName))
+    {
+        SetVisibilityTexture(visibilityTexture);
+
+        return;
+    }
+
+    LayerOverrideSystem* layerOverrideSystem = GetLayerOverrideSystem(this);
+
+    if (!layerOverrideSystem)
+    {
+        HYP_LOG(Scene, Error, "Cannot assign visibility texture for layer '{}' on EnvProbe '{}': no LayerOverrideSystem",
+            layerName, GetName());
+
+        return;
+    }
+
+    if (GetVisibilityTextureForLayer(layerName) == visibilityTexture)
+    {
+        return;
+    }
+
+    if (visibilityTexture.IsValid())
+    {
+        visibilityTexture->SetName(BuildVisibilityTextureName(GetName(), layerName));
+        GetCurrentAssetRegistry()->PutAssetUnique(visibilityTexture);
+    }
+
+    layerOverrideSystem->AddLayerOverrideSet(this, layerName);
+    layerOverrideSystem->SetLayerOverrideValue(this, layerName, GetVisibilityTexturePropertyName(), BoxedValue(visibilityTexture));
+
+    SetNeedsRenderProxyUpdate();
+    MarkDirty();
+}
+
+void EnvProbe::SetSphericalHarmonicsDataForLayer(const SphericalHarmonicsData& shData, Name layerName)
+{
+    if (!layerName.IsValid() || IsDefaultLayer(layerName))
+    {
+        SetSphericalHarmonicsData(shData);
+
+        return;
+    }
+
+    LayerOverrideSystem* layerOverrideSystem = GetLayerOverrideSystem(this);
+
+    if (!layerOverrideSystem)
+    {
+        HYP_LOG(Scene, Error, "Cannot assign spherical harmonics for layer '{}' on EnvProbe '{}': no LayerOverrideSystem",
+            layerName, GetName());
+
+        return;
+    }
+
+    if (GetSphericalHarmonicsDataForLayer(layerName) == shData)
+    {
+        return;
+    }
+
+    layerOverrideSystem->AddLayerOverrideSet(this, layerName);
+    layerOverrideSystem->SetLayerOverrideValue(this, layerName, GetSphericalHarmonicsPropertyName(), BoxedValue(shData));
+
+    SetNeedsRenderProxyUpdate();
+    MarkDirty();
+}
+
+#ifdef HYP_EDITOR
+
+Array<Name> EnvProbe::GetBakedLayerNames() const
+{
+    Array<Name> layerNames;
+
+    if (IsBaked())
+    {
+        layerNames.PushBack(g_defaultLayerName);
+    }
+
+    LayerOverrideSystem* layerOverrideSystem = GetLayerOverrideSystem(this);
+
+    if (!layerOverrideSystem)
+    {
+        return layerNames;
+    }
+
+    // Reflection probes bake a texture, ambient probes bake SH.
+    const Name propertyName = ShouldComputeSphericalHarmonics()
+        ? GetSphericalHarmonicsPropertyName()
+        : GetBakedTexturePropertyName();
+
+    for (Name layerName : layerOverrideSystem->GetSetLayerNames(this))
+    {
+        if (layerOverrideSystem->IsPropertyOverriddenInLayer(this, layerName, propertyName))
+        {
+            layerNames.PushBack(layerName);
+        }
+    }
+
+    return layerNames;
+}
+
+#endif // HYP_EDITOR
+
 void EnvProbe::Update(float delta)
 {
     HYP_SCOPE;
@@ -1140,12 +1414,21 @@ void ReflectionProbe::BakeCubemap()
 
         return;
     }
-    
-    Array<Handle<Layer>> layers = SceneHelpers::GetTargetLayers(*this);
 
-    if (layers.Empty())
+    // Bake only the active layer; the result is written to that layer's override set (or the base
+    // values for the Default layer).
+    const Handle<Layer>& layer = world->GetActiveLayer();
+
+    if (!layer.IsValid())
     {
-        HYP_LOG(Editor, Error, "Cannot bake {}: could not resolve a target layer for it", GetName());
+        HYP_LOG(Editor, Error, "Cannot bake {}: could not resolve the active layer", GetName());
+
+        return;
+    }
+
+    if (!HasNoLayers() && !IsInLayer(layer->layerId))
+    {
+        HYP_LOG(Editor, Error, "Cannot bake {}: it is not in the active layer '{}'", GetName(), layer->name);
 
         return;
     }
@@ -1157,10 +1440,7 @@ void ReflectionProbe::BakeCubemap()
         bakerSubsystem = world->AddSubsystem<BakerSubsystem>();
     }
 
-    for (const Handle<Layer>& layer : layers)
-    {
-        bakerSubsystem->EnqueueBake(layer->bakeLayer, StaticCast<EnvProbe>(MakeStrongRef(this)));
-    }
+    bakerSubsystem->EnqueueBake(layer->bakeLayer, StaticCast<EnvProbe>(MakeStrongRef(this)));
 }
 
 #endif
@@ -1216,11 +1496,20 @@ void IrradianceProbe::RecomputeIrradiance()
         return;
     }
 
-    Array<Handle<Layer>> layers = SceneHelpers::GetTargetLayers(*this);
+    // Bake only the active layer; the result is written to that layer's override set (or the base
+    // values for the Default layer).
+    const Handle<Layer>& layer = world->GetActiveLayer();
 
-    if (layers.Empty())
+    if (!layer.IsValid())
     {
-        HYP_LOG(Editor, Error, "Cannot bake {}: could not resolve a target layer for it", GetName());
+        HYP_LOG(Editor, Error, "Cannot bake {}: could not resolve the active layer", GetName());
+
+        return;
+    }
+
+    if (!HasNoLayers() && !IsInLayer(layer->layerId))
+    {
+        HYP_LOG(Editor, Error, "Cannot bake {}: it is not in the active layer '{}'", GetName(), layer->name);
 
         return;
     }
@@ -1232,10 +1521,7 @@ void IrradianceProbe::RecomputeIrradiance()
         bakerSubsystem = world->AddSubsystem<BakerSubsystem>();
     }
 
-    for (const Handle<Layer>& layer : layers)
-    {
-        bakerSubsystem->EnqueueBake(layer->bakeLayer, StaticCast<EnvProbe>(MakeStrongRef(this)));
-    }
+    bakerSubsystem->EnqueueBake(layer->bakeLayer, StaticCast<EnvProbe>(MakeStrongRef(this)));
 }
 
 #endif // HYP_EDITOR

@@ -64,7 +64,7 @@ struct ENGINE_API LightmapElementComponent
             }
         }
 
-        return 0;
+        return MaxLightmapVolumeAssignments;
     }
 };
 

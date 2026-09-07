@@ -67,6 +67,7 @@ CORE_API const Name g_attrScriptableDelegate = NAME("scriptabledelegate");
 CORE_API const Name g_attrFollowAssetPath = NAME("followassetpath");
 CORE_API const Name g_attrSaveAsReference = NAME("saveasreference");
 CORE_API const Name g_attrReplicated = NAME("replicated");
+CORE_API const Name g_attrNoLayerOverride = NAME("nolayeroverride");
 
 CORE_API const Name g_attrEditor = NAME("editor");
 CORE_API const Name g_attrEditorOnly = NAME("editoronly");

@@ -72,19 +72,14 @@ void LightmapSystem::OnEntityAdded(Entity* entity)
     SystemBase::OnEntityAdded(entity);
 
     LightmapElementComponent& lightmapElementComponent = entity->GetComponent<LightmapElementComponent>();
-    BoundingBoxComponent& boundingBoxComponent = entity->GetComponent<BoundingBoxComponent>();
 
     Scene* scene = entity->GetScene();
     Assert(scene != nullptr);
 
-    // Assign to LightmapVolume if it has a valid path to a LightmapVolume but isn't assigned to one yet
-    if (!lightmapElementComponent.lightmapVolume.IsValid())
+    if (!ResolveVolumeForEntity(*scene, *entity, lightmapElementComponent))
     {
-        if (!AssignLightmapVolume(*scene, *entity, lightmapElementComponent, boundingBoxComponent))
-        {
-            HYP_LOG(Lightmap, Warning, "LightmapElementComponent for Entity {} could not be associated at runtime",
-                    entity->GetName());
-        }
+        HYP_LOG(Lightmap, Warning, "LightmapElementComponent for Entity {} could not be associated at runtime",
+                entity->GetName());
     }
 }
 
@@ -109,33 +104,124 @@ void LightmapSystem::Process(float delta, Span<Handle<Scene>> scenes)
 {
 }
 
-bool LightmapSystem::AssignLightmapVolume(
-    Scene& scene,
-    Entity& srcEntity,
-    LightmapElementComponent& lightmapElementComponent,
-    BoundingBoxComponent& boundingBoxComponent)
+LightmapVolume* LightmapSystem::ResolveVolume(
+    const Array<LightmapVolume*>& candidateVolumes,
+    const LightmapElementComponent& lightmapElementComponent) const
 {
-    for (auto [lightmapVolume] : scene.GetEntityManager()->GetEntitySet<EntityType<LightmapVolume>>().GetScopedView(GetComponentInfos()))
+    // Assignments are kept sorted by how much of the entity each volume covers, so the first usable one wins.
+    const uint32 numAssignments = lightmapElementComponent.NumLightmapVolumeAssignments();
+
+    for (uint32 i = 0; i < numAssignments; i++)
     {
-        if (lightmapElementComponent.lightmapVolume.GetUnsafe() != lightmapVolume
-            && lightmapElementComponent.GetTopAssignment() == lightmapVolume->GetLightmapVolumeId())
+        const LightmapVolumeId lightmapVolumeId = lightmapElementComponent.lightmapVolumeAssignments[i];
+
+        if (!IsIdForAliveLightmapVolume(lightmapVolumeId))
         {
+            continue;
+        }
+
+        for (LightmapVolume* lightmapVolume : candidateVolumes)
+        {
+            if (lightmapVolume->GetLightmapVolumeId() != lightmapVolumeId)
+            {
+                continue;
+            }
+
             const LightmapElement* lightmapElement = lightmapVolume->GetElement(lightmapElementComponent.lightmapElementId);
 
             if (!lightmapElement)
             {
-                return false;
+                continue;
             }
 
-            lightmapElementComponent.lightmapVolume = MakeWeakRef(lightmapVolume);
+            // GetAtlasTexture reads whatever the applied layer put in the field, so a volume with no bake for
+            // the current layer is passed over in favour of the next assignment.
+            if (!lightmapVolume->GetAtlasTexture(lightmapElement->GetAtlasIndex(), LightmapVolume::IrradianceTexture).IsValid())
+            {
+                continue;
+            }
 
-            srcEntity.SetNeedsRenderProxyUpdate();
-
-            return true;
+            return lightmapVolume;
         }
     }
 
-    return false;
+    return nullptr;
+}
+
+bool LightmapSystem::ApplyResolvedVolume(
+    Entity& srcEntity,
+    LightmapElementComponent& lightmapElementComponent,
+    LightmapVolume* resolvedVolume)
+{
+    if (lightmapElementComponent.lightmapVolume.GetUnsafe() != resolvedVolume)
+    {
+        if (resolvedVolume)
+        {
+            lightmapElementComponent.lightmapVolume = MakeWeakRef(resolvedVolume);
+        }
+        else
+        {
+            lightmapElementComponent.lightmapVolume.Reset();
+        }
+
+        srcEntity.SetNeedsRenderProxyUpdate();
+    }
+
+    return resolvedVolume != nullptr;
+}
+
+Array<LightmapVolume*> LightmapSystem::CollectVolumes(Scene& scene)
+{
+    Array<LightmapVolume*> volumes;
+
+    EntityManager* mgr = scene.GetEntityManager();
+
+    if (!mgr)
+    {
+        return volumes;
+    }
+
+    for (auto [lightmapVolume] : mgr->GetEntitySet<EntityType<LightmapVolume>>().GetScopedView(GetComponentInfos()))
+    {
+        volumes.PushBack(lightmapVolume);
+    }
+
+    return volumes;
+}
+
+bool LightmapSystem::ResolveVolumeForEntity(Scene& scene, Entity& srcEntity, LightmapElementComponent& lightmapElementComponent)
+{
+    const Array<LightmapVolume*> volumes = CollectVolumes(scene);
+
+    return ApplyResolvedVolume(srcEntity, lightmapElementComponent, ResolveVolume(volumes, lightmapElementComponent));
+}
+
+void LightmapSystem::ResolveVolumeAssignments()
+{
+    World* world = GetWorld();
+
+    if (!world)
+    {
+        return;
+    }
+
+    for (Scene* scene : world->GetScenes())
+    {
+        EntityManager* mgr = scene->GetEntityManager();
+
+        if (!mgr)
+        {
+            continue;
+        }
+
+        // Collected up front so the LightmapVolume entity set isn't scoped while walking the component set.
+        const Array<LightmapVolume*> volumes = CollectVolumes(*scene);
+
+        for (auto [entity, lightmapElementComponent] : mgr->GetEntitySet<LightmapElementComponent>().GetScopedView(DataAccessFlags::ACCESS_RW))
+        {
+            ApplyResolvedVolume(*entity, lightmapElementComponent, ResolveVolume(volumes, lightmapElementComponent));
+        }
+    }
 }
 
 } // namespace Hyperion

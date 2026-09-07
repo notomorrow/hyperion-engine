@@ -249,6 +249,36 @@ public:
 
     HYP_METHOD(Property = "SHData", NoScriptBindings)
     void SetSphericalHarmonicsData(const SphericalHarmonicsData& shData);
+
+    //-- Per-layer stuff
+
+    static Name GetBakedTexturePropertyName()
+    {
+        return NAME("BakedTexture");
+    }
+
+    static Name GetVisibilityTexturePropertyName()
+    {
+        return NAME("VisibilityTexture");
+    }
+
+    static Name GetSphericalHarmonicsPropertyName()
+    {
+        return NAME("SHData");
+    }
+
+    Handle<Texture> GetBakedTextureForLayer(Name layerName) const;
+    Handle<Texture> GetVisibilityTextureForLayer(Name layerName) const;
+    SphericalHarmonicsData GetSphericalHarmonicsDataForLayer(Name layerName) const;
+
+    void SetBakedTextureForLayer(const Handle<Texture>& texture, Name layerName);
+    void SetVisibilityTextureForLayer(const Handle<Texture>& visibilityTexture, Name layerName);
+    void SetSphericalHarmonicsDataForLayer(const SphericalHarmonicsData& shData, Name layerName);
+
+#ifdef HYP_EDITOR
+    HYP_METHOD(EditorOnly)
+    Array<Name> GetBakedLayerNames() const;
+#endif // HYP_EDITOR
     
     HYP_FORCE_INLINE const Vec4f& GetHitMaskData() const
     {

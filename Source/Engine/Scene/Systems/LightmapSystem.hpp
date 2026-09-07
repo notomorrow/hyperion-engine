@@ -71,6 +71,10 @@ public:
             && !m_freedLightmapVolumeIds.Contains(uint32(id));
     }
 
+    /*! \brief Re-pick the volume lighting each entity. A volume only counts if it has a baked atlas
+     *  texture in the layer that is currently applied, so this has to run again on every layer change. */
+    void ResolveVolumeAssignments();
+
 private:
     void OnAddedToWorld(World* world) override;
 
@@ -86,11 +90,13 @@ private:
         };
     }
 
-    bool AssignLightmapVolume(
-        Scene& scene,
-        Entity& srcEntity,
-        LightmapElementComponent& lightmapElementComponent,
-        BoundingBoxComponent& boundingBoxComponent);
+    Array<LightmapVolume*> CollectVolumes(Scene& scene);
+
+    LightmapVolume* ResolveVolume(const Array<LightmapVolume*>& candidateVolumes, const LightmapElementComponent& lightmapElementComponent) const;
+
+    bool ApplyResolvedVolume(Entity& srcEntity, LightmapElementComponent& lightmapElementComponent, LightmapVolume* resolvedVolume);
+
+    bool ResolveVolumeForEntity(Scene& scene, Entity& srcEntity, LightmapElementComponent& lightmapElementComponent);
 
     HYP_FIELD(Property = "NextLightmapVolumeId", Serialize)
     uint32 m_nextLightmapVolumeId;

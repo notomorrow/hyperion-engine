@@ -30,7 +30,7 @@ public:
     {
     }
 
-    BakeData(Span<const BakeEntity> bakeEntities, LightmapVolume* volume);
+    BakeData(Span<const BakeEntity> bakeEntities, LightmapVolume* volume, bool reuseExistingPacking = false);
 
     BakeData(const BakeData& other) = default;
     BakeData(BakeData&& other) noexcept = default;
@@ -51,6 +51,11 @@ public:
     }
 
     virtual Result Build() override;
+
+    HYP_FORCE_INLINE bool IsReusingExistingPacking() const
+    {
+        return m_reuseExistingPacking;
+    }
 
     HYP_FORCE_INLINE uint32 GetAtlasCount() const
     {
@@ -74,7 +79,18 @@ private:
     Array<MeshFloatDataArray, BakerAllocator> m_meshVertexPositions;
     Array<MeshFloatDataArray, BakerAllocator> m_meshVertexNormals;
     Array<MeshFloatDataArray, BakerAllocator> m_meshVertexUvs;
+    Array<MeshFloatDataArray, BakerAllocator> m_meshVertexLightmapUvs;
     Array<MeshIndexArray, BakerAllocator> m_meshIndices;
+    Array<uint32, BakerAllocator> m_meshAtlasIndices;
+
+    // Rebake onto the packing and UV1 the meshes already carry, rather than unwrapping and repacking.
+    bool m_reuseExistingPacking = false;
+
+    // Snapshotted on the sim thread so Build() doesn't have to read the volume off the task thread.
+    Vec2u m_existingAtlasDimensions {};
+    uint32 m_numExistingAtlases = 0;
+
+    Result BuildFromExistingUVs();
 
     uint32 atlasCount = 1;
 };

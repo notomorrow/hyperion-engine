@@ -96,3 +96,6 @@ compile_commands.json
 *.lock.json
 
 Tools/*/build/**/*
+
+# Generated engine bindings for Strata.
+Engine.strata

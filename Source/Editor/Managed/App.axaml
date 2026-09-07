@@ -74,10 +74,10 @@
             <SolidColorBrush x:Key="Brush.InputBorder" Color="{StaticResource Color.InputBorder}" />
 
             <!--  Metrics  -->
-            <Thickness x:Key="Thickness.ControlPadding">8,5</Thickness>
-            <Thickness x:Key="Thickness.HeaderPadding">10,7</Thickness>
-            <Thickness x:Key="Thickness.HeaderPaddingSmall">8,5</Thickness>
-            <Thickness x:Key="Thickness.TabPadding">10,6</Thickness>
+            <Thickness x:Key="Thickness.ControlPadding">7,5</Thickness>
+            <Thickness x:Key="Thickness.HeaderPadding">7,5</Thickness>
+            <Thickness x:Key="Thickness.HeaderPaddingSmall">5,5</Thickness>
+            <Thickness x:Key="Thickness.TabPadding">7,5</Thickness>
             <Thickness x:Key="Thickness.Border">1</Thickness>
             <CornerRadius x:Key="Radius.Small">4</CornerRadius>
             <CornerRadius x:Key="Radius.Medium">6</CornerRadius>

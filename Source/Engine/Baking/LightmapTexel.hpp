@@ -40,6 +40,9 @@ struct BakeEntity
     Handle<Material> material;
     Mat4f transformMatrix;
     BoundingBox aabb;
+
+    // Atlas this entity's existing lightmap element lives in, used when rebaking onto an existing packing.
+    uint32 lightmapAtlasIndex = 0;
 };
 
 struct BakeMeshData

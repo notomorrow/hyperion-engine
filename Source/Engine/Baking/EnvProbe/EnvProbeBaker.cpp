@@ -24,6 +24,8 @@
 
 #include <Scene/EnvProbe.hpp>
 
+#include <Scene/Layer.hpp>
+
 #include <Framework/EngineGlobals.hpp>
 
 namespace Hyperion {
@@ -38,7 +40,8 @@ void ConvolveEnvProbeCubemap(
 
 void ComputeEnvProbeSphericalHarmonics(
     const EnvProbe& envProbe,
-    const Texture& inColorTexture);
+    const Texture& inColorTexture,
+    Name layerName = Name::Invalid());
 
 } // namespace EnvProbeHelpers
 
@@ -48,6 +51,11 @@ Baker<EnvProbe>::Baker(BakerConfig&& config, BakeLayer& bakeLayer, const Handle<
     : BakerBase(std::move(config), bakeLayer, envProbe, MakeStrongRef(envProbe->GetScene()), BoundingBox::Empty()),
       m_envProbe(envProbe)
 {
+}
+
+Name Baker<EnvProbe>::GetBakeLayerName() const
+{
+    return m_bakeLayer ? m_bakeLayer->name : g_defaultLayerName;
 }
 
 UniquePtr<BakeJobBase> Baker<EnvProbe>::CreateJob(BakeJobParams&& params)
@@ -156,7 +164,7 @@ void Baker<EnvProbe>::OnCompleted_Internal()
 
     buffer.Clear();
 
-    bakedTexture->SetName(NAME_FMT("{}_ColorMap", m_envProbe->GetName()));
+    const Name bakeLayerName = GetBakeLayerName();
 
     // Ambient probes don't save their texture; it is transient,
     // only used for calc'ing SH
@@ -164,14 +172,17 @@ void Baker<EnvProbe>::OnCompleted_Internal()
     {
         bakedTexture->SetIsTransient(true);
     }
-    else
+    else if (IsDefaultLayer(bakeLayerName))
     {
+        // Other layers get their name (and asset registration) from SetBakedTextureForLayer.
+        bakedTexture->SetName(NAME_FMT("{}_ColorMap", m_envProbe->GetName()));
+
         GetCurrentAssetRegistry()->PutAssetUnique(bakedTexture);
     }
 
     Check(bakedTexture->Create());
 
-    m_envProbe->SetBakedTexture(bakedTexture);
+    m_envProbe->SetBakedTextureForLayer(bakedTexture, bakeLayerName);
 
     // Bake visibility texture
     if (m_envProbe->GetEnvProbeFlags() & EPF_VISIBILITY)
@@ -200,10 +211,18 @@ void Baker<EnvProbe>::OnCompleted_Internal()
 
         visBuffer.Clear();
 
-        visibilityTexture->SetName(NAME_FMT("{}_VisibilityMap", m_envProbe->GetName()));
+        if (IsDefaultLayer(bakeLayerName))
+        {
+            visibilityTexture->SetName(NAME_FMT("{}_VisibilityMap", m_envProbe->GetName()));
+        }
+        else
+        {
+            visibilityTexture->SetName(NAME_FMT("{}_{}_VisibilityMap", m_envProbe->GetName(), bakeLayerName));
+        }
 
-        // SetVisibilityTexture handles Create() and asset registration.
-        m_envProbe->SetVisibilityTexture(visibilityTexture);
+        // SetVisibilityTexture handles Create() and asset registration; SetVisibilityTextureForLayer
+        // handles asset registration for non-Default layers.
+        m_envProbe->SetVisibilityTextureForLayer(visibilityTexture, bakeLayerName);
     }
 
     // Convolves the env probe cubemap and computes SH coefficients on the GPU
@@ -215,6 +234,7 @@ void Baker<EnvProbe>::OnCompleted_Internal()
             HYP_DEF_POOL_NEW_DELETE(g_renderPool);
 
             Handle<EnvProbe> envProbe;
+            Name layerName;
             BakeData<EnvProbe>::HitMaskBitmapType hitMaskBitmap;
         };
 
@@ -234,7 +254,7 @@ void Baker<EnvProbe>::OnCompleted_Internal()
 
             auto envProbeWriteScope = TUniqueResLock<EnvProbe>(*envProbe);
 
-            const Handle<Texture>& texture = envProbe->GetBakedTexture();
+            const Handle<Texture>& texture = envProbe->GetBakedTextureForLayer(cmdCasted->payload->layerName);
             Assert(texture.IsValid() && texture->IsCreated());
 
             if (!texture->IsCreated())
@@ -254,7 +274,7 @@ void Baker<EnvProbe>::OnCompleted_Internal()
 
             if (envProbe->ShouldComputeSphericalHarmonics())
             {
-                EnvProbeHelpers::ComputeEnvProbeSphericalHarmonics(*envProbe, *texture);
+                EnvProbeHelpers::ComputeEnvProbeSphericalHarmonics(*envProbe, *texture, cmdCasted->payload->layerName);
             }
             
             if (envProbe->ShouldCreateHitMask())
@@ -277,7 +297,7 @@ void Baker<EnvProbe>::OnCompleted_Internal()
     };
 
     CommandRecorder& cr = RI.commandRecorderAllocator.GetCommandRecorder();
-    cr << PostProcessEnvProbe(new PostProcessEnvProbe::Payload { m_envProbe, m_bakeData.ToHitMaskBitmap() });
+    cr << PostProcessEnvProbe(new PostProcessEnvProbe::Payload { m_envProbe, bakeLayerName, m_bakeData.ToHitMaskBitmap() });
     cr.Done();
 
     m_envProbe->Invalidate(true);

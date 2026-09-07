@@ -68,6 +68,11 @@ public:
         return TypeOf<LightmapVolume>();
     }
 
+    Name GetBakeLayerName() const;
+    
+    /// If true, we should skip UV1 generation for meshes
+    bool ShouldReuseExistingPacking() const;
+
 protected:
     virtual BakeDataBase& GetBakeData() override
     {
