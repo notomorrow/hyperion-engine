@@ -76,6 +76,7 @@
             <!--  Metrics  -->
             <Thickness x:Key="Thickness.ControlPadding">8,5</Thickness>
             <Thickness x:Key="Thickness.HeaderPadding">10,7</Thickness>
+            <Thickness x:Key="Thickness.HeaderPaddingSmall">8,5</Thickness>
             <Thickness x:Key="Thickness.TabPadding">10,6</Thickness>
             <Thickness x:Key="Thickness.Border">1</Thickness>
             <CornerRadius x:Key="Radius.Small">4</CornerRadius>
@@ -260,6 +261,12 @@
             <Setter Property="BorderThickness" Value="0,0,0,1" />
             <Setter Property="Padding" Value="{StaticResource Thickness.HeaderPadding}" />
         </Style>
+        <Style Selector="Border.panel-header-small">
+            <Setter Property="Background" Value="{StaticResource Brush.PanelAlt}" />
+            <Setter Property="BorderBrush" Value="{StaticResource Brush.Border}" />
+            <Setter Property="BorderThickness" Value="0,0,0,1" />
+            <Setter Property="Padding" Value="{StaticResource Thickness.HeaderPaddingSmall}" />
+        </Style>
 
         <!--  Status Bar  -->
         <Style Selector="Border.status-bar">
@@ -327,6 +334,14 @@
         <Style Selector="Button.Primary:pressed">
             <Setter Property="Background" Value="{StaticResource Brush.AccentMuted}" />
             <Setter Property="BorderBrush" Value="{StaticResource Brush.AccentMuted}" />
+            <Setter Property="Foreground" Value="White" />
+        </Style>
+        
+        <Style Selector="Button.Play">
+           <!-- start simulation button. green -->
+
+            <Setter Property="Background" Value="#FF1E7A3C" />
+            <Setter Property="BorderBrush" Value="#FF1E7A3C" />
             <Setter Property="Foreground" Value="White" />
         </Style>
 

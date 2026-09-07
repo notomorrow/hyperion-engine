@@ -231,61 +231,6 @@
                             <LucideIcon Kind="ClipboardPaste" Size="16" />
                         </Button>
 
-                        <DropDownButton
-                            x:Name="BakeLayerDropDown"
-                            Margin="12,0,0,0"
-                            Background="Transparent"
-                            BorderThickness="0"
-                            ToolTip.Tip="Active Bake Layer">
-                            <StackPanel Orientation="Horizontal" Spacing="4">
-                                <LucideIcon Kind="Layers" Size="16" />
-                                <TextBlock
-                                    VerticalAlignment="Center"
-                                    Text="{Binding ActiveBakeLayerName, FallbackValue='Default'}" />
-                            </StackPanel>
-                            <DropDownButton.Flyout>
-                                <Flyout Placement="Bottom">
-                                    <StackPanel MinWidth="150">
-                                        <ItemsControl ItemsSource="{Binding BakeLayers}">
-                                            <ItemsControl.ItemTemplate>
-                                                <DataTemplate x:DataType="x:String">
-                                                    <MenuItem
-                                                        Command="{Binding DataContext.SetActiveBakeLayerCommand, ElementName=Root}"
-                                                        CommandParameter="{Binding}"
-                                                        Header="{Binding}" />
-                                                </DataTemplate>
-                                            </ItemsControl.ItemTemplate>
-                                        </ItemsControl>
-
-                                        <Separator />
-                                        <MenuItem
-                                            Command="{Binding DataContext.AddNewBakeLayerCommand, ElementName=Root}"
-                                            Header="New Bake Layer..." />
-                                    </StackPanel>
-                                </Flyout>
-                            </DropDownButton.Flyout>
-                        </DropDownButton>
-
-                        <ToggleButton
-                            x:Name="LayerOverrideModeToggle"
-                            Classes="gizmo"
-                            Margin="4,0,0,0"
-                            IsChecked="{Binding Inspector.LayerOverrideMode, Mode=TwoWay}"
-                            IsVisible="{Binding Inspector.CanUseLayerOverrides}"
-                            ToolTip.Tip="Where edits are applied: the active layer only, or the active layer and the base layer">
-                            <Panel>
-                                <TextBlock
-                                    VerticalAlignment="Center"
-                                    FontSize="11"
-                                    IsVisible="{Binding Inspector.LayerOverrideMode}"
-                                    Text="Active Layer Only" />
-                                <TextBlock
-                                    VerticalAlignment="Center"
-                                    FontSize="11"
-                                    IsVisible="{Binding !Inspector.LayerOverrideMode}"
-                                    Text="Active + Base" />
-                            </Panel>
-                        </ToggleButton>
                     </StackPanel>
 
                     <StackPanel
@@ -427,7 +372,8 @@
                         <Button
                             Command="{Binding SetGameModePlaying}"
                             IsVisible="{Binding CanSetGameModePlaying}"
-                            ToolTip.Tip="Play">
+                            ToolTip.Tip="Play"
+                            Classes="Play">
                             <LucideIcon Kind="Play" Size="16" />
                         </Button>
                         <Button
@@ -453,9 +399,9 @@
                     <!--  Left Panel: Scene Hierarchy + Actions (cond) + Inspector  -->
                     <Grid Grid.Column="0" RowDefinitions="*, Auto, *">
                         <!--  Scene Hierarchy  -->
-                        <Grid Grid.Row="0" RowDefinitions="Auto, *">
+                        <Grid Grid.Row="0" RowDefinitions="Auto, Auto, *">
                             <Border Grid.Row="0" Classes="panel-header">
-                                <Grid VerticalAlignment="Center" ColumnDefinitions="*,Auto,Auto">
+                                <Grid VerticalAlignment="Center" ColumnDefinitions="*,Auto">
                                     <DropDownButton
                                         x:Name="SceneDropDown"
                                         Grid.Column="0"
@@ -464,6 +410,7 @@
                                         Background="Transparent"
                                         BorderThickness="0">
                                         <StackPanel Orientation="Horizontal" Spacing="4">
+                                            <LucideIcon Kind="Boxes" Size="14" Foreground="{StaticResource Brush.TextMuted}" />
                                             <TextBlock
                                                 VerticalAlignment="Center"
                                                 Classes="header"
@@ -492,19 +439,8 @@
                                             </Flyout>
                                         </DropDownButton.Flyout>
                                     </DropDownButton>
-                                    <ToggleButton
-                                        Grid.Column="1"
-                                        Margin="0,0,4,0"
-                                        Padding="8,2"
-                                        HorizontalAlignment="Right"
-                                        VerticalAlignment="Center"
-                                        Classes="panel-toggle"
-                                        IsChecked="{Binding SceneHierarchy.ShowOnlyActiveLayer}"
-                                        ToolTip.Tip="Show nodes only for the active layer">
-                                        <LucideIcon Kind="{Binding SceneHierarchy.ShowOnlyActiveLayerIconKind}" Size="16" />
-                                    </ToggleButton>
                                     <Button
-                                        Grid.Column="2"
+                                        Grid.Column="1"
                                         Margin="0,0,4,0"
                                         Padding="8,2"
                                         HorizontalAlignment="Right"
@@ -606,9 +542,86 @@
                                     </Button>
                                 </Grid>
                             </Border>
+
+                            <!--  Layers  -->
+                            <Border Grid.Row="1" Classes="panel-header-small">
+                                <Grid VerticalAlignment="Center" ColumnDefinitions="Auto,*,Auto,Auto">
+                                    <DropDownButton
+                                        x:Name="LayerDropDown"
+                                        Grid.Column="0"
+                                        Background="Transparent"
+                                        BorderThickness="0"
+                                        ToolTip.Tip="Active Layer">
+                                        <StackPanel Orientation="Horizontal" Spacing="4">
+                                            <LucideIcon Kind="Layers" Size="12"  Foreground="{StaticResource Brush.TextMuted}" />
+                                            <TextBlock
+                                                VerticalAlignment="Center"
+                                                FontSize="11"
+                                                Text="{Binding ActiveBakeLayerName, FallbackValue='Default'}" />
+                                        </StackPanel>
+                                        <DropDownButton.Flyout>
+                                            <Flyout Placement="Bottom">
+                                                <StackPanel MinWidth="150">
+                                                    <ItemsControl ItemsSource="{Binding BakeLayers}">
+                                                        <ItemsControl.ItemTemplate>
+                                                            <DataTemplate x:DataType="x:String">
+                                                                <MenuItem
+                                                                    Command="{Binding DataContext.SetActiveBakeLayerCommand, ElementName=Root}"
+                                                                    CommandParameter="{Binding}"
+                                                                    Header="{Binding}" />
+                                                            </DataTemplate>
+                                                        </ItemsControl.ItemTemplate>
+                                                    </ItemsControl>
+
+                                                    <Separator />
+                                                    <MenuItem
+                                                        Command="{Binding DataContext.AddNewBakeLayerCommand, ElementName=Root}"
+                                                        Header="New Layer..." />
+                                                </StackPanel>
+                                            </Flyout>
+                                        </DropDownButton.Flyout>
+                                    </DropDownButton>
+
+                                    <ToggleButton
+                                        x:Name="LayerOverrideModeToggle"
+                                        Grid.Column="2"
+                                        Classes="gizmo"
+                                        HorizontalAlignment="Right"
+                                        VerticalAlignment="Center"
+                                        IsChecked="{Binding Inspector.LayerOverrideMode, Mode=TwoWay}"
+                                        IsVisible="{Binding Inspector.CanUseLayerOverrides}"
+                                        ToolTip.Tip="When this toggle button is active, edits will apply as OVERRIDES for the active layer. Otherwise edits will apply on base + active.">
+                                        <Panel>
+                                            <TextBlock
+                                                VerticalAlignment="Center"
+                                                FontSize="9"
+                                                IsVisible="{Binding Inspector.LayerOverrideMode}"
+                                                Text="Override Edits: ON" />
+                                            <TextBlock
+                                                VerticalAlignment="Center"
+                                                FontSize="9"
+                                                IsVisible="{Binding !Inspector.LayerOverrideMode}"
+                                                Text="Override Edits: OFF" />
+                                        </Panel>
+                                    </ToggleButton>
+
+                                    <ToggleButton
+                                        Grid.Column="3"
+                                        Margin="4,0,0,0"
+                                        Padding="8,2"
+                                        HorizontalAlignment="Right"
+                                        VerticalAlignment="Center"
+                                        Classes="panel-toggle"
+                                        IsChecked="{Binding SceneHierarchy.ShowOnlyActiveLayer}"
+                                        ToolTip.Tip="Show nodes only for the active layer">
+                                        <LucideIcon Kind="{Binding SceneHierarchy.ShowOnlyActiveLayerIconKind}" Size="16" />
+                                    </ToggleButton>
+                                </Grid>
+                            </Border>
+
                             <TreeView
                                 x:Name="SceneHierarchyTreeView"
-                                Grid.Row="1"
+                                Grid.Row="2"
                                 ItemsSource="{Binding SceneHierarchy.RootNodes}"
                                 SelectedItem="{Binding SceneHierarchy.SelectedNode}"
                                 SelectionMode="Multiple">
@@ -1148,7 +1161,7 @@
                                                             Padding="8,2"
                                                             Content="Apply"
                                                             Command="{Binding ApplyCopyFromLayerCommand}"
-                                                            ToolTip.Tip="Copy the selected source's property values onto the current edit target (active layer when override mode is on, otherwise base). Only differing properties are written and redundant overrides are pruned." />
+                                                            ToolTip.Tip="Copy the selected source's property values onto the current edit target" />
                                                     </Grid>
                                                 </StackPanel>
                                             </StackPanel>

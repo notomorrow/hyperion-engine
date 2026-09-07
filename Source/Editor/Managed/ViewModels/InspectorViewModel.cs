@@ -260,10 +260,6 @@ namespace Hyperion.Editor.ViewModels
             CurrentScene = scene;
             IsRootNode = isRootNode;
 
-            // Override mode is a transient per-entity toggle (not stored on the Entity) -
-            // it resets whenever the selection changes
-            LayerOverrideMode = false;
-
             // Bind to the new node's TransformUpdated delegate
             if (SelectedNode != null)
             {

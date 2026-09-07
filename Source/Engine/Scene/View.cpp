@@ -661,6 +661,8 @@ void View::PrepareShadowViews(Array<View*, SceneTempAllocator>& outShadowViews)
                     ? shadowViewsDynamic[shadowViewIndex]
                     : shadowViewsStatic[shadowViewIndex];
 
+                //-- Cascade Budget
+
                 if (!g_cvCSMTimeSlicingEnabled.Get() || csmInvalidated || !currentCascadeView)
                 {
                     updateCascade = true;
@@ -694,6 +696,8 @@ void View::PrepareShadowViews(Array<View*, SceneTempAllocator>& outShadowViews)
                 {
                     csmState.lastCommittedFrame[shadowViewIndex] = GetFrameCounter();
                 }
+
+                //--
             }
 
             if (!isDirectional)
