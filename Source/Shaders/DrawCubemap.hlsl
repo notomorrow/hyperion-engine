@@ -293,13 +293,11 @@ PSOutput PSMain(PSInput input)
     const float3 V = normalize(vsPosition);
     const float3 N = normalize(input.normal);
 
-    float4 albedo = float4(1.0, 1.0, 1.0, 1.0);
+    float4 albedo = CURRENT_MATERIAL.albedo;
 
     if (HAS_TEXTURE(CURRENT_MATERIAL, DiffuseMap))
     {
         float2 texcoord = input.texcoord0 * CURRENT_MATERIAL.uv_scale;
-        albedo = CURRENT_MATERIAL.albedo;
-
         float4 albedo_texture = SAMPLE_MATERIAL_TEXTURE(CURRENT_MATERIAL, DiffuseMap, texcoord);
 
         clip(albedo_texture.a - 0.2);
