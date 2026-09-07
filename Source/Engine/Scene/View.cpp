@@ -77,8 +77,9 @@ static CVar<float>* s_csmClipDistances[] = {
 CVar<bool> g_cvCSMTimeSlicingEnabled("Rendering.Shadows.CSMTimeSlicingEnabled", true);
 CVar<int> g_cvCSMMaxUpdatesPerFrame("Rendering.Shadows.CSMMaxUpdatesPerFrame", 1);
 CVar<int> g_cvCSMMaxStaleFrames("Rendering.Shadows.CSMMaxStaleFrames", 8);
-static CVar<float> s_cvCSMBasisAngleThresholdDegrees("Rendering.Shadows.CSMBasisAngleThresholdDegrees", 0.05f);
-static CVar<float> s_cvCSMBasisPositionThreshold("Rendering.Shadows.CSMBasisPositionThreshold", 1.0f);
+CVar<int> g_cvCSMPriorityCascades("Rendering.Shadows.CSMPriorityCascades", 1);
+CVar<float> g_cvCSMBasisAngleThresholdDegrees("Rendering.Shadows.CSMBasisAngleThresholdDegrees", 0.05f);
+CVar<float> g_cvCSMBasisPositionThreshold("Rendering.Shadows.CSMBasisPositionThreshold", 1.0f);
 
 // Always mark dirty at this value
 static const int s_dirtyResourceVersion = -1;
@@ -547,9 +548,9 @@ void View::PrepareShadowViews(Array<View*, SceneTempAllocator>& outShadowViews)
             DirectionalLight::CSMState& csmState = StaticCast<DirectionalLight>(light)->csmState;
 
             bool basisChanged = !csmState.basisInitialized;
-            !basisChanged && (basisChanged |= (csmState.lastCommittedLightDir.Dot(lightDir) < MathUtil::Cos(MathUtil::DegToRad(s_cvCSMBasisAngleThresholdDegrees.Get()))));
-            !basisChanged && (basisChanged |= ((worldBoundsSphere.GetCenter() - csmState.lastCommittedWorldBounds.GetCenter()).Length() > s_cvCSMBasisPositionThreshold.Get()));
-            !basisChanged && (basisChanged |= (MathUtil::Abs(worldBoundsSphere.GetRadius() - csmState.lastCommittedWorldBounds.GetRadius()) > s_cvCSMBasisPositionThreshold.Get()));
+            !basisChanged && (basisChanged |= (csmState.lastCommittedLightDir.Dot(lightDir) < MathUtil::Cos(MathUtil::DegToRad(g_cvCSMBasisAngleThresholdDegrees.Get()))));
+            !basisChanged && (basisChanged |= ((worldBoundsSphere.GetCenter() - csmState.lastCommittedWorldBounds.GetCenter()).Length() > g_cvCSMBasisPositionThreshold.Get()));
+            !basisChanged && (basisChanged |= (MathUtil::Abs(worldBoundsSphere.GetRadius() - csmState.lastCommittedWorldBounds.GetRadius()) > g_cvCSMBasisPositionThreshold.Get()));
 
             csmInvalidated |= basisChanged;
 
@@ -669,21 +670,19 @@ void View::PrepareShadowViews(Array<View*, SceneTempAllocator>& outShadowViews)
                     const bool boundsChanged = shadowViewBounds != currentCascadeView->cachedBounds;
                     const uint32 framesSinceUpdate = GetFrameCounter() - csmState.lastCommittedFrame[shadowViewIndex];
 
-                    // Stagger the deadline per cascade so they do not all fall due on the same frame and
-                    // undo the point of slicing the work up; cascade 0 keeps the tightest one.
+                    // stagger updates for cascades so they don't all fall on the same frame
                     const uint32 staleFrames = uint32(MathUtil::Max(g_cvCSMMaxStaleFrames.Get(), 1)) + shadowViewIndex;
                     const bool isStale = framesSinceUpdate >= staleFrames;
 
-                    // Scan for the budget starting at the cursor so a near cascade whose bounds change
-                    // every frame cannot spend the whole budget before the far ones are ever considered.
+                    const bool isPriorityCascade = (shadowViewIndex < uint32(MathUtil::Max(g_cvCSMPriorityCascades.Get(), 0)));
                     const bool isAtOrAfterCursor = (shadowViewIndex >= csmState.nextUpdateCascade);
 
                     const bool canSpendBudget = isAtOrAfterCursor
                         && csmUpdatesSpentThisFrame < uint32(MathUtil::Max(g_cvCSMMaxUpdatesPerFrame.Get(), 0));
 
-                    updateCascade = isStale || (boundsChanged && canSpendBudget);
+                    updateCascade = isStale || (boundsChanged && (isPriorityCascade || canSpendBudget));
 
-                    if (updateCascade && !isStale)
+                    if (updateCascade && !isStale && !isPriorityCascade)
                     {
                         ++csmUpdatesSpentThisFrame;
 

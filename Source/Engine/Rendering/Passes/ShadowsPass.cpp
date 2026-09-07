@@ -54,6 +54,7 @@ CVar<bool> g_cvCacheShadowMaps("Rendering.CacheShadowMaps", true);
 extern CVar<bool> g_cvCSMTimeSlicingEnabled;
 extern CVar<int> g_cvCSMMaxUpdatesPerFrame;
 extern CVar<int> g_cvCSMMaxStaleFrames;
+extern CVar<int> g_cvCSMPriorityCascades;
 
 static CVar<bool> s_cvDebugCSMUpdates("Rendering.Shadows.DebugCSMUpdates", false);
 
@@ -314,16 +315,21 @@ void ShadowsPassBase::RenderFrame(Frame* frame, const RenderSetup& renderSetup)
                 cachedData->pendingListRedraw[cascadeIndex] = true;
             }
 
-            if (!dirty
-                && cachedData->pendingListRedraw[cascadeIndex]
-                && cascadeIndex >= cachedData->nextDirtyDrawCascade
-                && numDirtyListDraws < maxDirtyListDraws)
+            if (!dirty && cachedData->pendingListRedraw[cascadeIndex])
             {
-                ++numDirtyListDraws;
+                if (cascadeIndex < uint32(MathUtil::Max(g_cvCSMPriorityCascades.Get(), 0)))
+                {
+                    dirty = true;
+                }
+                else if (cascadeIndex >= cachedData->nextDirtyDrawCascade
+                    && numDirtyListDraws < maxDirtyListDraws)
+                {
+                    ++numDirtyListDraws;
 
-                dirty = true;
+                    dirty = true;
 
-                cachedData->nextDirtyDrawCascade = (cascadeIndex + 1) % lightProxy->numCascades;
+                    cachedData->nextDirtyDrawCascade = (cascadeIndex + 1) % lightProxy->numCascades;
+                }
             }
 
             if (s_cvDebugCSMUpdates.Get())
