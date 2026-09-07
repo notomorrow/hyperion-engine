@@ -1632,6 +1632,7 @@ impl EditorSubsystem {
     extern bool IsLayerOverrideModeEnabled(EditorSubsystem self);
     extern void SetLayerOverrideMode(EditorSubsystem self, bool enabled);
     extern bool EntityHasLayerOverrideSet(EditorSubsystem self, Entity entity, const Name layerName);
+    extern bool EntityHasLayerOverrideValues(EditorSubsystem self, Entity entity, const Name layerName);
     extern void EntityAddLayerOverrideSet(EditorSubsystem self, Entity entity, const Name layerName);
     extern bool EntityRemoveLayerOverrideSet(EditorSubsystem self, Entity entity, const Name layerName);
     extern void GetEntityAppliedOverrideLayer(EditorSubsystem self, Entity entity, return Name outReturn);

@@ -98,8 +98,18 @@ void ConvolveEnvProbeCubemap(const Handle<Texture>& inTexture, const EnvProbe& e
 
     ENGINE_STAT_GPU_SCOPE(&s_statConvolveEnvProbe, &cr);
 
-    Handle<Texture> bakedTexture = envProbe.GetPrefilteredEnvMap();
-    Assert(bakedTexture.IsValid() && bakedTexture->IsCreated());
+    const Handle<Texture>& bakedTexture = envProbe.GetPrefilteredEnvMap();
+    Assert(bakedTexture.IsValid(), "EnvProbe {} has no prefiltered env map to convolve into", envProbe.Id());
+
+    if (!bakedTexture->IsCreated())
+    {
+        if (!Check(bakedTexture->Create()))
+        {
+            HYP_LOG(Rendering, Error, "Failed to create prefiltered env map for EnvProbe {}, cannot convolve", envProbe.Id());
+
+            return;
+        }
+    }
 
     Handle<Texture> srcTexture;
     bool needsMipMapGeneration = false;
@@ -306,11 +316,12 @@ void ConvolveEnvProbeCubemap(const Handle<Texture>& inTexture, const EnvProbe& e
                 // Update image data and desc
                 bakedTexture->SetTextureDesc(desc);
                 bakedTexture->SetImageData(stream.GetBuffer().ToByteView());
+                Check(bakedTexture->Create());
 
                 textureWriteScope.Reset();
 
                 auto envProbeWriteScope = TUniqueResLock<EnvProbe>(*envProbeStrong);
-                envProbeStrong->SetBakedTexture(bakedTexture);
+                envProbeStrong->MarkDirty();
             });
     }
 

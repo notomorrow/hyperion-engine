@@ -2151,6 +2151,13 @@ bool EditorSubsystem::EntityHasLayerOverrideSet(Entity* entity, Name layerName) 
     return overrideSystem && overrideSystem->HasLayerOverrideSet(entity, layerName);
 }
 
+bool EditorSubsystem::EntityHasLayerOverrideValues(Entity* entity, Name layerName) const
+{
+    LayerOverrideSystem* overrideSystem = GetLayerOverrideSystemFor(entity);
+
+    return overrideSystem && overrideSystem->HasAnyOverriddenProperty(entity, layerName);
+}
+
 void EditorSubsystem::EntityAddLayerOverrideSet(Entity* entity, Name layerName) const
 {
     if (LayerOverrideSystem* overrideSystem = GetLayerOverrideSystemFor(entity))

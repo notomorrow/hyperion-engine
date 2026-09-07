@@ -220,6 +220,8 @@ void EnvProbe::InitCaptureData()
                 // not a persisted bake asset - don't register it below.
                 m_texture->SetIsTransient(true);
             }
+
+            SetNeedsRenderProxyUpdate();
         }
     }
 

@@ -213,17 +213,36 @@ void FillShadowMapData(
 
 void FillShadowMapDataCSM(
     DirectionalLightCSMData* outCSMData,
-    View** shadowMapViews,
+    View** shadowMapViewsDynamic,
+    View** shadowMapViewsStatic,
     ShadowMap** shadowMaps,
     uint32 numCascades)
 {
+    // default every cascade to unselectable
+    for (uint32 cascadeIndex = 0; cascadeIndex < MaxShadowMapCascades; cascadeIndex++)
+    {
+        outCSMData->cascadeScaleX[cascadeIndex] = 0.0f;
+        outCSMData->cascadeScaleY[cascadeIndex] = 0.0f;
+        outCSMData->cascadeScaleZ[cascadeIndex] = 0.0f;
+
+        outCSMData->cascadeOffsetX[cascadeIndex] = 2.0f;
+        outCSMData->cascadeOffsetY[cascadeIndex] = 2.0f;
+        outCSMData->cascadeOffsetZ[cascadeIndex] = 2.0f;
+    }
+
+    bool hasSharedViewMatrix = false;
+
     for (uint32 cascadeIndex = 0; cascadeIndex < numCascades; cascadeIndex++)
     {
-        View* shadowMapView = shadowMapViews[cascadeIndex];
+        // Lights that only draw statics have no dynamic view at all, so fall back rather than
+        // leaving the whole cbuffer empty.
+        View* shadowMapView = shadowMapViewsDynamic[cascadeIndex] != nullptr
+            ? shadowMapViewsDynamic[cascadeIndex]
+            : shadowMapViewsStatic[cascadeIndex];
 
-        if (!shadowMapView)
+        if (!shadowMapView || !shadowMaps[cascadeIndex])
         {
-            break;
+            continue;
         }
 
         RenderProxyList& shadowViewRpl = GetConsumerProxyList(shadowMapView);
@@ -231,20 +250,34 @@ void FillShadowMapDataCSM(
 
         HYP_DEFER({ shadowViewRpl.EndRead(); });
 
-        if (cascadeIndex == 0)
+        if (!hasSharedViewMatrix)
         {
-            // Shared view matrix for all cascades
+            // Shared view matrix for all cascades. Safe to take from one because View only moves the
+            // basis on a frame where every cascade is recommitted.
             outCSMData->shadowViewMat = shadowViewRpl.cachedMatrices.view;
+
+            hasSharedViewMatrix = true;
         }
 
         ShadowMap* shadowMap = shadowMaps[cascadeIndex];
-        AssertDebug(shadowMap != nullptr);
+
+        const BoundingBox& cascadeBounds = shadowViewRpl.cachedBounds;
+
+        // A view that hasn't committed bounds yet still holds the default inverted box, and a scale
+        // derived from that is inf/NaN. leave it unselectable
+        const Vec3f cascadeExtent = cascadeBounds.max - cascadeBounds.min;
+
+        if (!cascadeBounds.IsValid() || !cascadeBounds.IsFinite()
+            || cascadeExtent.x <= MathUtil::epsilonF
+            || cascadeExtent.y <= MathUtil::epsilonF
+            || cascadeExtent.z <= MathUtil::epsilonF)
+        {
+            continue;
+        }
 
         const Vec2f& atlasScale = shadowMap->GetAtlasElement()->scale;
         const Vec2f& atlasOffset = shadowMap->GetAtlasElement()->offsetUV;
         const uint32 layerIndex = shadowMap->GetAtlasElement()->layerIndex;
-
-        const BoundingBox& cascadeBounds = shadowViewRpl.cachedBounds;
 
         const float rawScaleX = 1.0f / (cascadeBounds.max.x - cascadeBounds.min.x);
         const float rawScaleY = -1.0f / (cascadeBounds.max.y - cascadeBounds.min.y);

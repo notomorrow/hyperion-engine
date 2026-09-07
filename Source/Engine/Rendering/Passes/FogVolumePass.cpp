@@ -167,6 +167,7 @@ void FogVolumePass::Render(Frame* frame, const RenderSetup& renderSetup)
             DeferredRendererHelpers::FillShadowMapDataCSM(
                 &directionalCSMData,
                 shadowMapViewsDynamic,
+                shadowMapViewsStatic,
                 shadowMaps,
                 numCascades);
 

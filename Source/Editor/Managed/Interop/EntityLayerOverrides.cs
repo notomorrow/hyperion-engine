@@ -41,6 +41,12 @@ namespace Hyperion.Editor
             return Subsystem?.EntityHasLayerOverrideSet(entity, layerName) ?? false;
         }
 
+        /// <summary>True when the entity's override set for the layer contains at least one entry.</summary>
+        public static bool HasValues(Entity entity, Name layerName)
+        {
+            return Subsystem?.EntityHasLayerOverrideValues(entity, layerName) ?? false;
+        }
+
         public static void AddSet(Entity entity, Name layerName)
         {
             Subsystem?.EntityAddLayerOverrideSet(entity, layerName);

@@ -9,6 +9,7 @@
 #include <Scene/Scene.hpp>
 #include <Scene/World.hpp>
 #include <Scene/EntityManager.hpp>
+#include <Scene/Entity.hpp>
 #include <Scene/Light.hpp>
 #include <Scene/EnvProbe.hpp>
 #include <Scene/LightmapVolume.hpp>
@@ -19,6 +20,8 @@
 #include <Scene/TextSprite.hpp>
 #include <Scene/Node.hpp>
 #include <Scene/Prefab.hpp>
+
+#include <Scene/Systems/LayerOverrideSystem.hpp>
 
 #include <Scene/Camera/Camera.hpp>
 
@@ -3517,6 +3520,361 @@ public:
 DEFINE_EDITOR_COMMAND(AddNormalizedCubeSphere);
 
 #pragma endregion AddNormalizedCubeSphere
+
+#pragma region CopyLayerProperties
+
+class EditorCommandCopyLayerProperties final : public EditorCommandBase
+{
+    HYP_OBJECT_BODY(EditorCommandCopyLayerProperties);
+
+public:
+    virtual ~EditorCommandCopyLayerProperties() override = default;
+
+    virtual String GetText() const override
+    {
+        return m_text.Length() ? m_text : EditorCommandBase::GetText();
+    }
+
+    virtual void Execute(EditorSubsystem* subsystem) override
+    {
+        AssertOnThread(g_simThread);
+
+        uint64 entityAddress = 0;
+
+        if (!StringUtil::Parse(GetArgument(0), &entityAddress) || entityAddress == 0)
+        {
+            HYP_LOG(Editor, Error, "EditorCommandCopyLayerProperties: invalid entity address");
+
+            return;
+        }
+
+        if (NumArguments() < 5)
+        {
+            HYP_LOG(Editor, Error,
+                "EditorCommandCopyLayerProperties: expected <entity address> <source is base> <source layer> <target is base> <target layer>");
+
+            return;
+        }
+
+        uint32 sourceIsBaseValue = 0;
+        uint32 targetIsBaseValue = 0;
+        StringUtil::Parse(GetArgument(1), &sourceIsBaseValue);
+        StringUtil::Parse(GetArgument(3), &targetIsBaseValue);
+
+        const bool sourceIsBase = sourceIsBaseValue != 0;
+        const bool targetIsBase = targetIsBaseValue != 0;
+
+        const Name sourceLayer = sourceIsBase ? Name::Invalid() : Name(ANSIString(GetArgument(2)));
+        const Name targetLayer = targetIsBase ? Name::Invalid() : Name(ANSIString(GetArgument(4)));
+
+        if (!sourceIsBase && !sourceLayer.IsValid())
+        {
+            HYP_LOG(Editor, Error, "EditorCommandCopyLayerProperties: invalid source layer");
+
+            return;
+        }
+
+        if (!targetIsBase && !targetLayer.IsValid())
+        {
+            HYP_LOG(Editor, Error, "EditorCommandCopyLayerProperties: invalid target layer");
+
+            return;
+        }
+
+        if (sourceLayer.IsValid() && sourceLayer == targetLayer)
+        {
+            // Copying a layer onto itself is a no-op
+            return;
+        }
+
+        Handle<Entity> entity = MakeStrongRef(reinterpret_cast<Entity *>(entityAddress));
+
+        if (!entity.IsValid())
+        {
+            HYP_LOG(Editor, Error, "EditorCommandCopyLayerProperties: invalid entity");
+
+            return;
+        }
+
+        World *world = entity->GetWorld();
+
+        if (!world)
+        {
+            HYP_LOG(Editor, Error, "EditorCommandCopyLayerProperties: entity is not part of a World");
+
+            return;
+        }
+
+        LayerOverrideSystem *layerOverrideSystem = world->GetSystem<LayerOverrideSystem>();
+
+        if (!layerOverrideSystem)
+        {
+            HYP_LOG(Editor, Error, "EditorCommandCopyLayerProperties: World has no LayerOverrideSystem");
+
+            return;
+        }
+
+        Array<LayerPropertyCopyEntry> plan = layerOverrideSystem->BuildLayerPropertyCopyPlan(entity.Get(), sourceLayer, targetLayer);
+
+        const char *sourceDisplay = sourceIsBase ? "Base" : sourceLayer.LookupString();
+        const char *targetDisplay = targetIsBase ? "Base" : targetLayer.LookupString();
+
+        if (plan.Empty())
+        {
+            HYP_LOG(Editor, Info, "Copy layer properties {} -> {}: no differences", sourceDisplay, targetDisplay);
+
+            return;
+        }
+
+        m_text = HYP_FORMAT("Copy Properties ({} -> {})", sourceDisplay, targetDisplay);
+
+        HYP_LOG(Editor, Info, "Copy layer properties {} -> {}: {} propert{} changed",
+            sourceDisplay, targetDisplay, plan.Size(), plan.Size() == 1 ? "y" : "ies");
+
+        const Handle<EditorProject> &currentProject = subsystem->GetCurrentProject();
+
+        if (!currentProject.IsValid())
+        {
+            HYP_LOG(Editor, Warning, "EditorCommandCopyLayerProperties: no project loaded - applying without undo");
+
+            layerOverrideSystem->ApplyLayerPropertyCopyEntries(entity.Get(), targetLayer, plan, true);
+
+            return;
+        }
+
+        auto planPtr = MakeShared<Array<LayerPropertyCopyEntry>>(std::move(plan));
+        Handle<Entity> capturedEntity = entity;
+        Name capturedTargetLayer = targetLayer;
+
+        Handle<FunctionalEditorAction> action = MakeHandle<FunctionalEditorAction>(
+            GetText(),
+            Proc<EditorActionFunctions()>(
+                [capturedEntity, capturedTargetLayer, planPtr]() -> EditorActionFunctions
+                {
+                    return EditorActionFunctions {
+                        .execute = Proc<void(EditorSubsystem *, EditorProject *)>(
+                            [capturedEntity, capturedTargetLayer, planPtr](EditorSubsystem *, EditorProject *)
+                            {
+                                if (LayerOverrideSystem *system = ResolveLayerOverrideSystem(capturedEntity))
+                                {
+                                    system->ApplyLayerPropertyCopyEntries(capturedEntity.Get(), capturedTargetLayer, *planPtr, true);
+                                }
+                            }),
+                        .revert = Proc<void(EditorSubsystem *, EditorProject *)>(
+                            [capturedEntity, capturedTargetLayer, planPtr](EditorSubsystem *, EditorProject *)
+                            {
+                                if (LayerOverrideSystem *system = ResolveLayerOverrideSystem(capturedEntity))
+                                {
+                                    system->ApplyLayerPropertyCopyEntries(capturedEntity.Get(), capturedTargetLayer, *planPtr, false);
+                                }
+                            })
+                    };
+                }));
+
+        InitObject(action);
+
+        currentProject->GetActionStack()->PushAction(action);
+    }
+
+private:
+    static LayerOverrideSystem *ResolveLayerOverrideSystem(const Handle<Entity> &entity)
+    {
+        if (!entity.IsValid())
+        {
+            return nullptr;
+        }
+
+        World *world = entity->GetWorld();
+
+        if (!world)
+        {
+            return nullptr;
+        }
+
+        return world->GetSystem<LayerOverrideSystem>();
+    }
+
+    String m_text;
+};
+
+DEFINE_EDITOR_COMMAND(CopyLayerProperties);
+
+#pragma endregion CopyLayerProperties
+
+#pragma region ResetLayerOverrides
+
+class EditorCommandResetLayerOverrides final : public EditorCommandBase
+{
+    HYP_OBJECT_BODY(EditorCommandResetLayerOverrides);
+
+public:
+    virtual ~EditorCommandResetLayerOverrides() override = default;
+
+    virtual String GetText() const override
+    {
+        return m_text.Length() ? m_text : EditorCommandBase::GetText();
+    }
+
+    virtual void Execute(EditorSubsystem* subsystem) override
+    {
+        AssertOnThread(g_simThread);
+
+        uint64 entityAddress = 0;
+
+        if (!StringUtil::Parse(GetArgument(0), &entityAddress) || entityAddress == 0)
+        {
+            HYP_LOG(Editor, Error, "EditorCommandResetLayerOverrides: invalid entity address");
+
+            return;
+        }
+
+        Handle<Entity> entity = MakeStrongRef(reinterpret_cast<Entity *>(entityAddress));
+
+        if (!entity.IsValid())
+        {
+            HYP_LOG(Editor, Error, "EditorCommandResetLayerOverrides: invalid entity");
+
+            return;
+        }
+
+        World *world = entity->GetWorld();
+
+        if (!world)
+        {
+            HYP_LOG(Editor, Error, "EditorCommandResetLayerOverrides: entity is not part of a World");
+
+            return;
+        }
+
+        LayerOverrideSystem *layerOverrideSystem = world->GetSystem<LayerOverrideSystem>();
+
+        if (!layerOverrideSystem)
+        {
+            HYP_LOG(Editor, Error, "EditorCommandResetLayerOverrides: World has no LayerOverrideSystem");
+
+            return;
+        }
+
+        const Name activeLayer = world->GetActiveLayerName();
+
+        if (!activeLayer.IsValid())
+        {
+            HYP_LOG(Editor, Error, "EditorCommandResetLayerOverrides: World has no active layer");
+
+            return;
+        }
+
+        Array<Pair<Name, BoxedValue>> previousOverrides = layerOverrideSystem->GetLayerOverrideEntries(entity.Get(), activeLayer);
+
+        if (previousOverrides.Empty())
+        {
+            HYP_LOG(Editor, Info, "Reset layer overrides: entity '{}' has no overrides for active layer '{}'",
+                entity->GetName(), activeLayer.LookupString());
+
+            return;
+        }
+
+        const bool wasApplied = layerOverrideSystem->GetAppliedOverrideLayer(entity.Get()) == activeLayer;
+
+        m_text = HYP_FORMAT("Reset Layer Overrides ({})", activeLayer.LookupString());
+
+        HYP_LOG(Editor, Info, "Reset layer overrides for active layer '{}' on entity '{}': {} override(s) removed",
+            activeLayer.LookupString(), entity->GetName(), previousOverrides.Size());
+
+        const Handle<EditorProject> &currentProject = subsystem->GetCurrentProject();
+
+        if (!currentProject.IsValid())
+        {
+            HYP_LOG(Editor, Warning, "EditorCommandResetLayerOverrides: no project loaded - applying without undo");
+
+            layerOverrideSystem->RemoveLayerOverrideSet(entity.Get(), activeLayer);
+
+            return;
+        }
+
+        auto previousOverridesPtr = MakeShared<Array<Pair<Name, BoxedValue>>>(std::move(previousOverrides));
+        Handle<Entity> capturedEntity = entity;
+        Name capturedLayer = activeLayer;
+        bool capturedWasApplied = wasApplied;
+
+        Handle<FunctionalEditorAction> action = MakeHandle<FunctionalEditorAction>(
+            GetText(),
+            Proc<EditorActionFunctions()>(
+                [capturedEntity, capturedLayer, capturedWasApplied, previousOverridesPtr]() -> EditorActionFunctions
+                {
+                    return EditorActionFunctions {
+                        .execute = Proc<void(EditorSubsystem *, EditorProject *)>(
+                            [capturedEntity, capturedLayer](EditorSubsystem *, EditorProject *)
+                            {
+                                if (LayerOverrideSystem *system = ResolveLayerOverrideSystemFor(capturedEntity))
+                                {
+                                    // Reverts the applied overrides first, restoring base values
+                                    system->RemoveLayerOverrideSet(capturedEntity.Get(), capturedLayer);
+                                }
+                            }),
+                        .revert = Proc<void(EditorSubsystem *, EditorProject *)>(
+                            [capturedEntity, capturedLayer, capturedWasApplied, previousOverridesPtr](EditorSubsystem *, EditorProject *)
+                            {
+                                LayerOverrideSystem *system = ResolveLayerOverrideSystemFor(capturedEntity);
+
+                                if (!system)
+                                {
+                                    return;
+                                }
+
+                                if (!system->HasLayerOverrideSet(capturedEntity.Get(), capturedLayer))
+                                {
+                                    system->AddLayerOverrideSet(capturedEntity.Get(), capturedLayer);
+                                }
+
+                                for (const Pair<Name, BoxedValue> &entry : *previousOverridesPtr)
+                                {
+                                    system->SetLayerOverrideValue(capturedEntity.Get(), capturedLayer, entry.first, entry.second);
+                                }
+
+                                // Re-apply when the reset layer is (still) the active one
+                                if (capturedWasApplied)
+                                {
+                                    World *entityWorld = capturedEntity->GetWorld();
+
+                                    if (entityWorld && entityWorld->GetActiveLayerName() == capturedLayer)
+                                    {
+                                        system->ApplyOverrides(capturedEntity.Get(), capturedLayer);
+                                    }
+                                }
+                            })
+                    };
+                }));
+
+        InitObject(action);
+
+        currentProject->GetActionStack()->PushAction(action);
+    }
+
+private:
+    static LayerOverrideSystem *ResolveLayerOverrideSystemFor(const Handle<Entity> &entity)
+    {
+        if (!entity.IsValid())
+        {
+            return nullptr;
+        }
+
+        World *world = entity->GetWorld();
+
+        if (!world)
+        {
+            return nullptr;
+        }
+
+        return world->GetSystem<LayerOverrideSystem>();
+    }
+
+    String m_text;
+};
+
+DEFINE_EDITOR_COMMAND(ResetLayerOverrides);
+
+#pragma endregion ResetLayerOverrides
 
 #undef DEFINE_EDITOR_COMMAND
 

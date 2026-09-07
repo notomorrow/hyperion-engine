@@ -164,8 +164,12 @@ void Baker<EnvProbe>::OnCompleted_Internal()
     {
         bakedTexture->SetIsTransient(true);
     }
+    else
+    {
+        GetCurrentAssetRegistry()->PutAssetUnique(bakedTexture);
+    }
 
-    GetCurrentAssetRegistry()->PutAssetUnique(bakedTexture);
+    Check(bakedTexture->Create());
 
     m_envProbe->SetBakedTexture(bakedTexture);
 
@@ -231,7 +235,7 @@ void Baker<EnvProbe>::OnCompleted_Internal()
             auto envProbeWriteScope = TUniqueResLock<EnvProbe>(*envProbe);
 
             const Handle<Texture>& texture = envProbe->GetBakedTexture();
-            Assert(texture.IsValid());
+            Assert(texture.IsValid() && texture->IsCreated());
 
             if (!texture->IsCreated())
             {

@@ -59,7 +59,8 @@ void FillShadowMapData(
 
 void FillShadowMapDataCSM(
     DirectionalLightCSMData *outCSMData,
-    View **shadowMapViews,
+    View **shadowMapViewsDynamic,
+    View **shadowMapViewsStatic,
     ShadowMap **shadowMaps,
     uint32 numCascades);
 

@@ -192,14 +192,16 @@ void ShadowsPassBase::RenderFrame(Frame* frame, const RenderSetup& renderSetup)
             shadowViewDynamic,
             shadowViewStatic);
             
-        View* firstShadowView = cachedData->shadowViewsDynamic[0] != nullptr
-            ? cachedData->shadowViewsDynamic[0]
-            : cachedData->shadowViewsStatic[0];
-
         cachedData->shadowMaps[cascadeIndex] = shadowMap;
 
         cachedData->shadowViewsDynamic[cascadeIndex] = shadowViewDynamic;
         cachedData->shadowViewsStatic[cascadeIndex] = shadowViewStatic;
+
+        // read after storing this cascade's views, so cascade 0 sees the views it was just handed
+        // rather than the previous frame's (which costs a frame of shadows on first use).
+        View* firstShadowView = cachedData->shadowViewsDynamic[0] != nullptr
+            ? cachedData->shadowViewsDynamic[0]
+            : cachedData->shadowViewsStatic[0];
 
         if (cascadeIndex == 0)
         {
@@ -235,7 +237,11 @@ void ShadowsPassBase::RenderFrame(Frame* frame, const RenderSetup& renderSetup)
             Assert(cascadeView != nullptr);
 
             const uint32 framesSinceRendered = GetFrameCounter() - cachedData->lastRenderedFrame[cascadeIndex];
-            const bool isStale = (framesSinceRendered >= uint32(MathUtil::Max(g_cvCSMMaxStaleFrames.Get(), 1)));
+
+            // Stagger the deadline per cascade, matching View's sim side scheduling, so the cascades
+            // do not all fall due on the same frame and collapse the time slicing into a periodic spike.
+            const uint32 staleFrames = uint32(MathUtil::Max(g_cvCSMMaxStaleFrames.Get(), 1)) + cascadeIndex;
+            const bool isStale = (framesSinceRendered >= staleFrames);
 
             bool dirty = isStale;
 
@@ -548,8 +554,24 @@ void ShadowsPassBase::RenderFrame(Frame* frame, const RenderSetup& renderSetup)
                 const bool isMatrixDirty = pd->prevCameraMatrices[viewIndex] != rpl.cachedMatrices.viewProj;
                 const bool isStaticCacheLatchedDirty = pd->staticCacheNeedsRerender.Test(viewIndex);
 
+                // The static cache was rendered at prevCameraMatrices. If the dynamic half has since
+                // moved to a different matrix, the two layers would be in different light spaces,
+                // so the cache isn't reusable regardless of what the static view's own diff says.
+                bool isDesyncedFromDynamic = false;
+
+                if (View* dynamicView = cachedData->shadowViewsDynamic[viewIndex])
+                {
+                    RenderProxyList& dynamicRpl = GetConsumerProxyList(dynamicView);
+                    dynamicRpl.BeginRead();
+
+                    isDesyncedFromDynamic = (dynamicRpl.cachedMatrices.viewProj != rpl.cachedMatrices.viewProj);
+
+                    dynamicRpl.EndRead();
+                }
+
                 if (!isMatrixDirty
                     && !isStaticCacheLatchedDirty
+                    && !isDesyncedFromDynamic
                     && !rpl.GetMeshEntities().GetDiff().NeedsUpdate()
                     && !rpl.GetSkeletons().GetDiff().NeedsUpdate())
                 {

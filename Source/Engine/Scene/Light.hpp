@@ -327,9 +327,18 @@ public:
         // Per-cascade last committed FC value
         FixedArray<uint32, MaxShadowMapCascades> lastCommittedFrame {};
         FixedArray<HashCode, MaxShadowMapCascades> lastComittedEntryListHashes {};
-        
+
+        // The light space basis every cascade's bounds are currently fit in. All cascades share a
+        // single view matrix on the GPU, so this is only allowed to change on a frame where every
+        // cascade is being recommitted.
+        Mat4f committedViewMatrix = Mat4f::Identity();
+
         Vec3f lastCommittedLightDir;
         BoundingSphere lastCommittedWorldBounds;
+
+        // Cascade the time sliced update budget starts scanning from, so a near cascade that changes
+        // every frame cannot keep spending the whole budget and starve the far ones.
+        uint32 nextUpdateCascade = 0;
 
         bool basisInitialized = false;
     };

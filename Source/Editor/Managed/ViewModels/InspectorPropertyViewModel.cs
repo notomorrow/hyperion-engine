@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Threading;
 using System.Windows.Input;
 using Avalonia.Threading;
@@ -51,14 +52,23 @@ namespace Hyperion.Editor.ViewModels
             private set => SetProperty(ref _overrideSignifier, value);
         }
 
+        private bool _isOverriddenByCurrentLayer;
+        /// <summary>True when the World's active layer's override set contains this property; shows the per-row revert button.</summary>
+        public bool IsOverriddenByCurrentLayer
+        {
+            get => _isOverriddenByCurrentLayer;
+            private set => SetProperty(ref _isOverriddenByCurrentLayer, value);
+        }
+
         /// <summary>True for rows backed by a real object + Property (entity-level rows), i.e. the rows that support per-layer overrides.</summary>
         public bool IsEntityLevelRow => _valueGetter == null && _componentTargetResolver == null;
 
         /// <summary>Called by the owning inspector after querying which layers override this property.</summary>
-        internal void SetOverrideInfo(List<string> layerNames)
+        internal void SetOverrideInfo(List<string> layerNames, string? currentLayerName = null)
         {
             IsOverridden = layerNames.Count > 0;
             OverrideSignifier = layerNames.Count > 0 ? $"{string.Join(", ", layerNames)} override this value" : string.Empty;
+            IsOverriddenByCurrentLayer = currentLayerName != null && layerNames.Contains(currentLayerName);
         }
 
         public Property Property => _property;
@@ -336,14 +346,13 @@ namespace Hyperion.Editor.ViewModels
                 && capturedTarget.NativeAddress == overrideEntity.NativeAddress
                 && LayerOverrideEditContext.ActiveLayerName is string contextLayer)
             {
-                if (LayerOverrideEditContext.OverrideModeActive)
+                // Edits target the active layer's override when override mode is enabled, or
+                // when the property is ALREADY overridden by that layer (editing the existing
+                // override directly). Otherwise the edit writes the base value.
+                if (LayerOverrideEditContext.OverrideModeActive
+                    || EntityLayerOverrides.IsPropertyOverridden(overrideEntity, new Name(contextLayer), capturedProperty.Name))
                 {
                     CommitLayerOverrideChange(overrideEntity, contextLayer, actionText, newValueObj);
-                    return;
-                }
-
-                if (CommitBaseChangeWithOverrideSync(overrideEntity, contextLayer, actionText, newValueObj))
-                {
                     return;
                 }
             }
@@ -410,8 +419,9 @@ namespace Hyperion.Editor.ViewModels
         public virtual void CommitValue() { }
 
         /// <summary>
-        /// Override mode: routes a property edit into the World's active layer's override set for
-        /// the entity (auto-creating and applying the set if needed). Writing the base value
+        /// Routes a property edit into the World's active layer's override set for the entity
+        /// (auto-creating and applying the set if needed). Reached when override mode is enabled
+        /// or when the property is already overridden by that layer. Writing the base value
         /// prunes the override entry; undo/redo restores the previous override state.
         /// Must be called on the sim thread.
         /// </summary>
@@ -546,119 +556,112 @@ namespace Hyperion.Editor.ViewModels
             });
         }
 
+        private ICommand? _revertOverrideCommand;
+        public ICommand RevertOverrideCommand => _revertOverrideCommand ??= new RelayCommand(RevertOverride);
+
         /// <summary>
-        /// Override mode OFF: writes the base value and, when the World's active layer's override
-        /// set already overrides this property, keeps that override in sync with the new base
-        /// value. No-op (returns false) when the entity has no override set for the active layer,
-        /// letting the caller fall back to a plain base write. Must be called on the sim thread.
+        /// Drops this property from the World's active layer's override set, restoring the base
+        /// value (the override entry is removed, not overwritten). Afterwards edits write the
+        /// base value again - unless override mode is enabled, in which case a new override is
+        /// created on the next edit. Only for entity-level rows currently overridden by the
+        /// active layer.
         /// </summary>
-        private bool CommitBaseChangeWithOverrideSync(Entity entity, string layerName, string actionText, object? newValueObj)
+        private void RevertOverride()
         {
+            if (!IsOverriddenByCurrentLayer)
+            {
+                return;
+            }
+
+            if (_valueGetter != null || _componentTargetResolver != null)
+            {
+                return; // entity-level rows only
+            }
+
+            if (LayerOverrideEditContext.CurrentEntity is not Entity entity || !entity.IsValid)
+            {
+                return;
+            }
+
+            if (LayerOverrideEditContext.ActiveLayerName is not string layerName)
+            {
+                return;
+            }
+
             Name layer = new Name(layerName);
             Name propertyName = _property.Name;
+            string label = Label;
 
-            if (!EntityLayerOverrides.HasSet(entity, layer))
+            _ = EngineManager.PostToSimThread(() =>
             {
-                return false;
-            }
-
-            bool wasOverridden = EntityLayerOverrides.IsPropertyOverridden(entity, layer, propertyName);
-
-            object? oldBaseObj = null;
-            bool hasOldBase = EntityLayerOverrides.GetBaseValue(entity, layer, propertyName, out BoxedValue oldBase);
-
-            if (hasOldBase)
-            {
-                try
+                if (!EntityLayerOverrides.IsPropertyOverridden(entity, layer, propertyName))
                 {
-                    oldBaseObj = oldBase.GetValue();
+                    return;
                 }
-                catch
-                {
-                    hasOldBase = false;
-                }
-                finally
-                {
-                    oldBase.Dispose();
-                }
-            }
 
-            object? oldOverrideObj = null;
-            bool hadOldOverride = false;
+                object? previousOverrideObj = null;
+                bool hadPreviousOverride = EntityLayerOverrides.GetValue(entity, layer, propertyName, out BoxedValue previousOverride);
 
-            if (wasOverridden)
-            {
-                hadOldOverride = EntityLayerOverrides.GetValue(entity, layer, propertyName, out BoxedValue oldOverride);
-
-                if (hadOldOverride)
+                if (hadPreviousOverride)
                 {
                     try
                     {
-                        oldOverrideObj = oldOverride.GetValue();
+                        previousOverrideObj = previousOverride.GetValue();
                     }
                     catch
                     {
-                        hadOldOverride = false;
+                        hadPreviousOverride = false;
                     }
                     finally
                     {
-                        oldOverride.Dispose();
+                        previousOverride.Dispose();
                     }
                 }
-            }
 
-            if (!wasOverridden && hasOldBase && Equals(oldBaseObj, newValueObj))
-            {
-                return true; // no change - handled (don't double-apply)
-            }
+                Entity capturedEntity = entity;
+                Name capturedLayer = layer;
 
-            Entity capturedEntity = entity;
-            Name capturedLayer = layer;
-
-            void ApplyState(object? baseObj, object? overrideObj, bool hasOverrideObj)
-            {
-                using BoxedValue baseValue = new BoxedValue(baseObj);
-
-                EntityLayerOverrides.SetBaseValue(capturedEntity, propertyName, baseValue);
-
-                if (wasOverridden)
+                // Removing an applied override makes the native side restore the base value
+                void ApplyRemove()
                 {
-                    if (hasOverrideObj)
-                    {
-                        using BoxedValue overrideValue = new BoxedValue(overrideObj);
+                    EntityLayerOverrides.RemoveValue(capturedEntity, capturedLayer, propertyName);
+                }
 
-                        EntityLayerOverrides.SetValue(capturedEntity, capturedLayer, propertyName, overrideValue);
+                void ApplyRestore()
+                {
+                    if (hadPreviousOverride)
+                    {
+                        using BoxedValue value = new BoxedValue(previousOverrideObj);
+
+                        EntityLayerOverrides.SetValue(capturedEntity, capturedLayer, propertyName, value);
                     }
                     else
                     {
                         EntityLayerOverrides.RemoveValue(capturedEntity, capturedLayer, propertyName);
                     }
                 }
-            }
 
-            EditorAction action = new EditorAction(
-                actionText,
-                execute: (_, _) => ApplyState(newValueObj, newValueObj, true),
-                revert: (_, _) => ApplyState(oldBaseObj, oldOverrideObj, hadOldOverride));
+                EditorProject? project = EngineManager.CurrentProject;
 
-            EditorProject? syncProject = EngineManager.CurrentProject;
+                if (project != null)
+                {
+                    project.ActionStack.PushAction(new EditorAction(
+                        $"Revert Override ({layerName}): {label}",
+                        (_, _) => ApplyRemove(),
+                        (_, _) => ApplyRestore()));
+                }
+                else
+                {
+                    // No project to record undo against - still apply the revert.
+                    ApplyRemove();
+                }
 
-            if (syncProject != null)
-            {
-                syncProject.ActionStack.PushAction(action);
-            }
-            else
-            {
-                ApplyState(newValueObj, newValueObj, true);
-            }
-
-            Dispatcher.UIThread.Post(() =>
-            {
-                RefreshValue();
-                ValueChangedCallback?.Invoke();
+                Dispatcher.UIThread.Post(() =>
+                {
+                    RefreshValue();
+                    ValueChangedCallback?.Invoke();
+                });
             });
-
-            return true;
         }
 
         private ICommand? _commitValueCommand;

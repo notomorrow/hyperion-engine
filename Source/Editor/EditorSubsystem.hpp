@@ -614,6 +614,9 @@ public:
     bool EntityHasLayerOverrideSet(Entity* entity, Name layerName) const;
 
     HYP_METHOD()
+    bool EntityHasLayerOverrideValues(Entity* entity, Name layerName) const;
+
+    HYP_METHOD()
     void EntityAddLayerOverrideSet(Entity* entity, Name layerName) const;
 
     HYP_METHOD()

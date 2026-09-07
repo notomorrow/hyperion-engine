@@ -42,7 +42,9 @@ struct EntityInitInfo
     // Initial tags to add to the Entity when it is created
     FatArray<EntityTag, InlineAllocator<4, SceneAllocator>> initialTags;
     FatArray<Name, InlineAllocator<4, SceneAllocator>> layerNames;
-    FatArray<EntityLayerOverrideSet, InlineAllocator<4, SceneAllocator>> pendingLayerOverrides;
+
+    // @TODO: Can we remove? Just use component..?
+    Array<EntityLayerOverrideSet, SceneAllocator> pendingLayerOverrides;
     
     bool receivesUpdate = false;
     bool canEverUpdate = true;

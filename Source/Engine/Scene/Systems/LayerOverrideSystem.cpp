@@ -195,6 +195,43 @@ LayerOverridesComponent* TryGetComponent(const Entity& entity)
     return entityManager->TryGetComponent<LayerOverridesComponent>(const_cast<const Entity*>(&entity));
 }
 
+bool BoxesEqual(const BoxedValue& a, const BoxedValue& b)
+{
+    return a.value == b.value;
+}
+
+bool GetEntityTrueBaseValue(Entity* entity, Name propertyName, BoxedValue& outValue)
+{
+    LayerOverridesComponent* component = TryGetComponent(*entity);
+
+    if (component && component->appliedLayer.IsValid())
+    {
+        for (const Pair<Name, BoxedValue>& snapshot : component->baseSnapshot)
+        {
+            if (snapshot.first == propertyName)
+            {
+                outValue = snapshot.second;
+
+                return true;
+            }
+        }
+
+        // Not in the snapshot: the applied set does not modify this property, so the live
+        // value is the base value
+    }
+
+    const IMember* member = ResolveOverridableMember(entity->InstanceClass(), propertyName);
+
+    if (!member)
+    {
+        return false;
+    }
+
+    outValue = GetEntityMemberValue(member, entity);
+
+    return true;
+}
+
 } // anonymous namespace
 } // namespace Helpers
 
@@ -343,6 +380,56 @@ bool LayerOverrideSystem::GetLayerOverrideBaseValue(const Entity* entity, Name l
     outValue = Helpers::GetEntityMemberValue(member, const_cast<Entity*>(entity));
 
     return true;
+}
+
+bool LayerOverrideSystem::HasAnyOverriddenProperty(const Entity* entity, Name layerName) const
+{
+    if (!entity || !layerName)
+    {
+        return false;
+    }
+
+    const LayerOverridesComponent* component = Helpers::TryGetComponent(*entity);
+
+    if (!component)
+    {
+        return false;
+    }
+
+    const EntityLayerOverrideSet* set = Helpers::FindLayerOverrideSet(component->sets, layerName);
+
+    return set && !set->propertyOverrides.Empty();
+}
+
+Array<Pair<Name, BoxedValue>> LayerOverrideSystem::GetLayerOverrideEntries(const Entity* entity, Name layerName) const
+{
+    Array<Pair<Name, BoxedValue>> entries;
+
+    if (!entity || !layerName)
+    {
+        return entries;
+    }
+
+    const LayerOverridesComponent* component = Helpers::TryGetComponent(*entity);
+
+    if (!component)
+    {
+        return entries;
+    }
+
+    const EntityLayerOverrideSet* set = Helpers::FindLayerOverrideSet(component->sets, layerName);
+
+    if (!set)
+    {
+        return entries;
+    }
+
+    for (const LayerPropertyOverride& overrideEntry : set->propertyOverrides)
+    {
+        entries.PushBack({ overrideEntry.property, overrideEntry.value });
+    }
+
+    return entries;
 }
 
 #pragma endregion Queries
@@ -587,6 +674,246 @@ bool LayerOverrideSystem::SetLayerOverrideBaseValue(Entity* entity, Name propert
 }
 
 #pragma endregion Editing
+
+#pragma region Copy
+
+Array<LayerPropertyCopyEntry> LayerOverrideSystem::BuildLayerPropertyCopyPlan(Entity* entity, Name sourceLayer, Name targetLayer) const
+{
+    Array<LayerPropertyCopyEntry> plan;
+
+    if (!entity || (!sourceLayer.IsValid() && !targetLayer.IsValid()))
+    {
+        return plan; // base -> base, nothing to do
+    }
+
+    const LayerOverridesComponent* component = Helpers::TryGetComponent(*entity);
+
+    if (!component)
+    {
+        return plan;
+    }
+
+    const EntityLayerOverrideSet* sourceSet = sourceLayer.IsValid()
+        ? Helpers::FindLayerOverrideSet(component->sets, sourceLayer)
+        : nullptr;
+    const EntityLayerOverrideSet* targetSet = targetLayer.IsValid()
+        ? Helpers::FindLayerOverrideSet(component->sets, targetLayer)
+        : nullptr;
+
+    if (!sourceSet && !targetSet)
+    {
+        return plan;
+    }
+
+    // Only properties overridden on either side can differ between source and target; for
+    // everything else both sides evaluate to the base value
+    Array<Name> propertyNames;
+
+    auto addPropertyName = [&propertyNames](Name propertyName)
+    {
+        for (const Name& existing : propertyNames)
+        {
+            if (existing == propertyName)
+            {
+                return;
+            }
+        }
+
+        propertyNames.PushBack(propertyName);
+    };
+
+    if (sourceSet)
+    {
+        for (const LayerPropertyOverride& overrideEntry : sourceSet->propertyOverrides)
+        {
+            addPropertyName(overrideEntry.property);
+        }
+    }
+
+    if (targetSet)
+    {
+        for (const LayerPropertyOverride& overrideEntry : targetSet->propertyOverrides)
+        {
+            addPropertyName(overrideEntry.property);
+        }
+    }
+
+    for (const Name& propertyName : propertyNames)
+    {
+        BoxedValue baseValue;
+
+        if (!Helpers::GetEntityTrueBaseValue(const_cast<Entity *>(entity), propertyName, baseValue))
+        {
+            continue;
+        }
+
+        BoxedValue sourceValue = baseValue;
+
+        if (sourceSet)
+        {
+            for (const LayerPropertyOverride& overrideEntry : sourceSet->propertyOverrides)
+            {
+                if (overrideEntry.property == propertyName)
+                {
+                    sourceValue = overrideEntry.value;
+
+                    break;
+                }
+            }
+        }
+
+        BoxedValue targetOverrideValue;
+        bool targetOverridden = false;
+
+        if (targetSet)
+        {
+            for (const LayerPropertyOverride& overrideEntry : targetSet->propertyOverrides)
+            {
+                if (overrideEntry.property == propertyName)
+                {
+                    targetOverrideValue = overrideEntry.value;
+                    targetOverridden = true;
+
+                    break;
+                }
+            }
+        }
+
+        if (Helpers::BoxesEqual(sourceValue, baseValue))
+        {
+            // Source matches base here: the only change a copy can need is pruning the
+            // target's redundant override of this property
+            if (targetLayer.IsValid() && targetOverridden)
+            {
+                LayerPropertyCopyEntry entry;
+                entry.propertyName = propertyName;
+                entry.op = LayerPropertyCopyOp::RemoveOverride;
+                entry.oldValue = targetOverrideValue;
+                entry.hasOldValue = true;
+
+                plan.PushBack(std::move(entry));
+            }
+
+            continue;
+        }
+
+        if (!targetLayer.IsValid())
+        {
+            // Copying into base: write the source value as the new base
+            LayerPropertyCopyEntry entry;
+            entry.propertyName = propertyName;
+            entry.op = LayerPropertyCopyOp::SetBase;
+            entry.newValue = sourceValue;
+            entry.oldValue = baseValue;
+            entry.hasOldValue = true;
+
+            plan.PushBack(std::move(entry));
+
+            continue;
+        }
+
+        if (targetOverridden && Helpers::BoxesEqual(targetOverrideValue, sourceValue))
+        {
+            continue; // target already matches the source
+        }
+
+        LayerPropertyCopyEntry entry;
+        entry.propertyName = propertyName;
+        entry.op = LayerPropertyCopyOp::WriteOverride;
+        entry.newValue = sourceValue;
+        entry.oldValue = targetOverrideValue;
+        entry.hasOldValue = targetOverridden;
+
+        plan.PushBack(std::move(entry));
+    }
+
+    return plan;
+}
+
+void LayerOverrideSystem::ApplyLayerPropertyCopyEntries(Entity* entity, Name targetLayer, const Array<LayerPropertyCopyEntry>& entries, bool applyNewState)
+{
+    if (!entity)
+    {
+        return;
+    }
+
+    for (const LayerPropertyCopyEntry& entry : entries)
+    {
+        switch (entry.op)
+        {
+        case LayerPropertyCopyOp::SetBase:
+        {
+            if (!applyNewState && !entry.hasOldValue)
+            {
+                break;
+            }
+
+            SetLayerOverrideBaseValue(entity, entry.propertyName, applyNewState ? entry.newValue : entry.oldValue);
+
+            break;
+        }
+
+        case LayerPropertyCopyOp::WriteOverride:
+        {
+            if (!targetLayer.IsValid())
+            {
+                break;
+            }
+
+            if (applyNewState)
+            {
+                if (!HasLayerOverrideSet(entity, targetLayer))
+                {
+                    AddLayerOverrideSet(entity, targetLayer);
+                }
+
+                SetLayerOverrideValue(entity, targetLayer, entry.propertyName, entry.newValue);
+            }
+            else if (entry.hasOldValue)
+            {
+                if (!HasLayerOverrideSet(entity, targetLayer))
+                {
+                    AddLayerOverrideSet(entity, targetLayer);
+                }
+
+                SetLayerOverrideValue(entity, targetLayer, entry.propertyName, entry.oldValue);
+            }
+            else
+            {
+                RemoveLayerOverrideValue(entity, targetLayer, entry.propertyName);
+            }
+
+            break;
+        }
+
+        case LayerPropertyCopyOp::RemoveOverride:
+        {
+            if (!targetLayer.IsValid())
+            {
+                break;
+            }
+
+            if (applyNewState)
+            {
+                RemoveLayerOverrideValue(entity, targetLayer, entry.propertyName);
+            }
+            else if (entry.hasOldValue)
+            {
+                if (!HasLayerOverrideSet(entity, targetLayer))
+                {
+                    AddLayerOverrideSet(entity, targetLayer);
+                }
+
+                SetLayerOverrideValue(entity, targetLayer, entry.propertyName, entry.oldValue);
+            }
+
+            break;
+        }
+        }
+    }
+}
+
+#pragma endregion Copy
 
 #pragma region Apply / revert
 

@@ -87,12 +87,25 @@
             </DataTemplate>
             <DataTemplate x:DataType="vm:TransformViewModel">
                 <StackPanel Spacing="4">
-                    <TextBlock
-                        FontSize="10"
-                        TextWrapping="Wrap"
-                        Foreground="{DynamicResource Brush.TextMuted}"
-                        IsVisible="{Binding IsOverridden}"
-                        Text="{Binding OverrideSignifier}" />
+                    <DockPanel IsVisible="{Binding IsOverridden}">
+                        <Button
+                            DockPanel.Dock="Right"
+                            Classes="reset-icon"
+                            IsVisible="{Binding IsOverriddenByCurrentLayer}"
+                            ToolTip.Tip="Revert to base value (drops the override for the current layer)"
+                            Command="{Binding RevertOverrideCommand}">
+                            <Path
+                                Width="11"
+                                Height="11"
+                                Stretch="Uniform"
+                                Data="M12.5 8c-2.65 0-5.05.99-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z" />
+                        </Button>
+                        <TextBlock
+                            FontSize="10"
+                            TextWrapping="Wrap"
+                            Foreground="{DynamicResource Brush.TextMuted}"
+                            Text="{Binding OverrideSignifier}" />
+                    </DockPanel>
                     <StackPanel Orientation="Vertical" Spacing="2">
                         <TextBlock Text="Translation" />
                         <ContentControl Content="{Binding Translation}" />
@@ -260,11 +273,27 @@
                         IsVisible="{Binding !ShowInlineLabel}"
                         VerticalAlignment="Center"
                         Content="{Binding}" />
-                    <ContentControl
+                    <DockPanel
                         Grid.Column="1"
                         IsVisible="{Binding ShowInlineLabel}"
                         VerticalAlignment="Center"
-                        Content="{Binding}" />
+                        LastChildFill="True">
+                        <Button
+                            DockPanel.Dock="Right"
+                            Margin="4,0,0,0"
+                            VerticalAlignment="Center"
+                            Classes="reset-icon"
+                            IsVisible="{Binding IsOverriddenByCurrentLayer}"
+                            ToolTip.Tip="Revert to base value (drops the override for the current layer)"
+                            Command="{Binding RevertOverrideCommand}">
+                            <Path
+                                Width="11"
+                                Height="11"
+                                Stretch="Uniform"
+                                Data="M12.5 8c-2.65 0-5.05.99-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z" />
+                        </Button>
+                        <ContentControl Content="{Binding}" />
+                    </DockPanel>
                 </Grid>
             </DataTemplate>
         </ItemsControl.ItemTemplate>

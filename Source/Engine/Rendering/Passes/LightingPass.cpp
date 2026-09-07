@@ -610,6 +610,7 @@ void LightingPass::RenderToFramebuffer_Internal(Frame* frame, const RenderSetup&
                     DeferredRendererHelpers::FillShadowMapDataCSM(
                         csmData,
                         shadowMapViewsDynamic,
+                        shadowMapViewsStatic,
                         shadowMaps,
                         numCascadesToWrite);
                 }
