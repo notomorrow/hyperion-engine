@@ -169,6 +169,9 @@ void Light::OnTransformUpdated()
     Entity::OnTransformUpdated();
 
     forceRedrawShadows = true;
+
+    SetNeedsRenderProxyUpdate();
+    MarkDirty();
 }
 
 void Light::Update(float delta)
