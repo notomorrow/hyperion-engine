@@ -28,6 +28,9 @@
 
 #include <Scene/Layer.hpp>
 
+#include <Baking/BakeEpoch.hpp>
+#include <Baking/BakeLayer.hpp>
+
 #include <Scene/Components/MeshComponent.hpp>
 #include <Scene/Components/TransformComponent.hpp>
 #include <Scene/Components/BoundingBoxComponent.hpp>
@@ -289,12 +292,30 @@ Name Baker<LightmapVolume>::GetBakeLayerName() const
     return m_bakeLayer ? m_bakeLayer->name : g_defaultLayerName;
 }
 
-bool Baker<LightmapVolume>::ShouldReuseExistingPacking() const
+bool Baker<LightmapVolume>::ComputeShouldReuseExistingPacking()
 {
-    /// @TODO: THIS SHOULD COMPARE SOME ENTRY HASH TO SOME CACHED VALUE!!! So we only smash the UV1s when meshes changed to cache. + We then need to make sure each other layer gets invalidated (bake layer epoch???)
-    ///        REBAKING THE 'Default' LAYER SHOULD NOT DESTROY ALL EXISTING LAYERS !!!
+    Scene* scene = m_volume->GetScene();
+    Assert(scene && m_bakeLayer);
 
-    return !IsDefaultLayer(GetBakeLayerName());
+    if (!scene || !m_bakeLayer)
+    {
+        HYP_LOG(Lightmap, Error, "Cannot compute packing hash: no scene or bake layer");
+
+        return false;
+    }
+
+    m_packingEntryHash = BakeEpoch::ComputePackingHash(*m_volume, *m_bakeLayer);
+
+    const uint64 cachedPackingHash = m_volume->GetPackingHash();
+
+    if (cachedPackingHash != m_packingEntryHash)
+    {
+        HYP_LOG(Lightmap, Info, "Packing hash mismatch: cached={}, computed={}. UV1s will not be reused between LMV textures", cachedPackingHash, m_packingEntryHash);
+
+        return false;
+    }
+
+    return true;
 }
 
 UniquePtr<BakeJobBase> Baker<LightmapVolume>::CreateJob(BakeJobParams&& params)
@@ -347,7 +368,8 @@ void Baker<LightmapVolume>::Build()
     m_bakeEntitiesByEntity.Clear();
 
     const bool onlyOverlappingElements = BakerBase::OnlyOverlappingElements();
-    const bool reuseExistingPacking = ShouldReuseExistingPacking();
+
+    m_reuseExistingPacking = ComputeShouldReuseExistingPacking();
 
     Set<Mesh*> seenMeshes;
 
@@ -408,7 +430,7 @@ void Baker<LightmapVolume>::Build()
 
         uint32 lightmapAtlasIndex = 0;
 
-        if (reuseExistingPacking)
+        if (m_reuseExistingPacking)
         {
             // Reusing the packing means reusing UV1 as it stands, so shared meshes stay shared.
             const LightmapElementComponent* lightmapElementComponent = mgr.TryGetComponent<LightmapElementComponent>(entity);
@@ -452,7 +474,7 @@ void Baker<LightmapVolume>::Build()
         HYP_LOG(Lightmap, Warning, "No entities to bake for LightmapVolume {}", m_volume->GetName());
     }
 
-    m_bakeData = BakeData<LightmapVolume>(m_bakeEntities.ToSpan(), m_volume, reuseExistingPacking);
+    m_bakeData = BakeData<LightmapVolume>(m_bakeEntities.ToSpan(), m_volume, m_reuseExistingPacking);
 
     m_atlasBuildTask = TaskSystem::GetInstance().Enqueue(
         [buildData = m_bakeData]() mutable -> BakeData<LightmapVolume>
@@ -513,7 +535,7 @@ void Baker<LightmapVolume>::OnBuildReady()
 
         if (m_lightmapElementIds.Empty())
         {
-            HYP_LOG(Lightmap, Error, "LightmapVolume {} has no packing to rebake onto; bake the Default layer first",
+            HYP_LOG(Lightmap, Error, "LightmapVolume {} has no packing to rebake onto",
                 m_volume->GetName());
 
             return;
@@ -542,6 +564,8 @@ void Baker<LightmapVolume>::OnBuildReady()
             m_lightmapElementIds.PushBack(lightmapElement->id);
         }
     }
+
+    m_volume->SetPackingHash(m_packingEntryHash);
 
     if (!m_config.onlyGenerateUVs)
     {

@@ -232,6 +232,9 @@ void LightmapVolume::RemoveAllElements(uint32 preserveTextureTypesMask)
     m_atlases.Clear();
     m_atlases.EmplaceBack(DefaultAtlasDimensions);
 
+    // The packing is gone - the next bake has to generate a new one.
+    m_packingHash = 0;
+
     MarkDirty();
     SetNeedsRenderProxyUpdate();
 }

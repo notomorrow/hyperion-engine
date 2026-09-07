@@ -193,6 +193,16 @@ public:
         return m_atlases.ToSpan();
     }
 
+    HYP_FORCE_INLINE uint64 GetPackingHash() const
+    {
+        return m_packingHash;
+    }
+
+    HYP_FORCE_INLINE void SetPackingHash(uint64 packingHash)
+    {
+        m_packingHash = packingHash;
+    }
+
     /*! \brief Add a LightmapElement to this volume. */
     bool AddElement(Vec2u dimensions, LightmapElement*& outElement, bool shrinkToFit = true, float downscaleLimit = 0.1f);
 
@@ -241,6 +251,9 @@ private:
 
     HYP_FIELD(Property = "Atlases", Serialize, Editor = false, NoLayerOverride)
     Array<LightmapVolumeAtlas> m_atlases;
+
+    HYP_FIELD(Property = "PackingHash", Serialize, Editor = false, NoLayerOverride)
+    uint64 m_packingHash = 0;
 
     HYP_FIELD(Property = "LightmapVolumeId", Editor = false, Serialize, NoLayerOverride)
     LightmapVolumeId m_id;

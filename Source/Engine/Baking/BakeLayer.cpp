@@ -13,5 +13,14 @@
 namespace Hyperion {
 namespace Baking {
 
+#pragma region BakeLayerHashes
+
+BakeLayerHashes::BakeLayerHashes()
+{
+    Memory::Zero(this, sizeof(BakeLayerHashes));
+}
+
+#pragma endregion BakeLayerHashes
+
 } // namespace Baking
 } // namespace Hyperion

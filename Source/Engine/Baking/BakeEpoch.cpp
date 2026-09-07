@@ -32,39 +32,53 @@ void ComputeSceneHashes(const Scene& scene, BakeLayerHashes& inOutResult)
     
     if (hasOctree)
     {
-        const HashCode staticEntitiesHash = scene.GetOctree().GetEntryListHash<EntityTag::MobStatic>();
+        const uint64 checksum = scene.GetOctree().GetEntryListHash<EntityTag::MobStatic>().Value();
 
-        if (staticEntitiesHash == inOutResult.staticEntitiesHash)
+        if (checksum == inOutResult.checksum)
         {
-            // use cached
+            // use cached!!! No need to waste a recalc
             return;
         }
 
-        inOutResult.staticEntitiesHash = staticEntitiesHash;
+        inOutResult.checksum = checksum;
     }
     else
     {
-        inOutResult.staticEntitiesHash = {};
+        inOutResult.checksum = 0;
     }
 
-    auto updateHashForComponent = [&]<class ComponentType>(TypeWrapper<ComponentType>, HashCode& hashCode)
+    auto updateHashForComponent = [&]<class ComponentType>(TypeWrapper<ComponentType>, uint64& hashUUID, uint64& hashTransform)
     {
-        HashCode hc;
+        HashCode hcUUID;
+        HashCode hcTransform;
 
         if (scene.GetEntityManager().IsValid())
         {
+            for (auto [entity, _0, _1] : scene.GetEntityManager()->GetEntitySet<ComponentType, TagComponent<EntityTag::MobStatic>>().GetScopedView(DataAccessFlags::ACCESS_READ, HYP_FUNCTION_NAME_LIT))
+            {
+                hcUUID.Add(entity->GetUUID());
+            }
+
             for (auto [entity, _0, boundingBoxComponent, _1] : scene.GetEntityManager()->GetEntitySet<ComponentType, BoundingBoxComponent, TagComponent<EntityTag::MobStatic>>().GetScopedView(DataAccessFlags::ACCESS_READ, HYP_FUNCTION_NAME_LIT))
             {
-                hc.Add(entity->GetUUID());
-                hc.Add(boundingBoxComponent.worldAabb);
+                hcTransform.Add(entity->GetUUID());
+                hcTransform.Add(boundingBoxComponent.worldAabb);
             }
         }
 
-        hashCode = hc;
+        hashUUID = hcUUID.Value();
+        hashTransform = hcTransform.Value();
     };
 
-    updateHashForComponent(TypeWrapper<MeshComponent>(), inOutResult.staticMeshEntitiesHash);
-    updateHashForComponent(TypeWrapper<TagComponent<EntityTag::Light>>(), inOutResult.staticLightsHash);
+    updateHashForComponent(
+        TypeWrapper<MeshComponent>(),
+        inOutResult.uuidHashes[BakeLayerHashes::StaticMeshEntities],
+        inOutResult.transformHashes[BakeLayerHashes::StaticMeshEntities]);
+
+    updateHashForComponent(
+        TypeWrapper<TagComponent<EntityTag::Light>>(),
+        inOutResult.uuidHashes[BakeLayerHashes::StaticLights],
+        inOutResult.transformHashes[BakeLayerHashes::StaticLights]);
 }
 
 uint64 ComputeEpoch(const LightmapVolume& volume, BakeLayer& bakeLayer)
@@ -79,8 +93,33 @@ uint64 ComputeEpoch(const LightmapVolume& volume, BakeLayer& bakeLayer)
     BakeLayerHashes& hashes = bakeLayer.sceneHashes[scene->GetUUID()];
     ComputeSceneHashes(*scene, hashes);
 
-    return hashes.staticMeshEntitiesHash
-        .Combine(hashes.staticLightsHash)
+    return HashCode(hashes.transformHashes[BakeLayerHashes::StaticMeshEntities])
+        .Combine(hashes.transformHashes[BakeLayerHashes::StaticLights])
+        .Value();
+}
+
+uint64 ComputePackingHash(const LightmapVolume& volume, BakeLayer& bakeLayer)
+{
+    Scene* scene = volume.GetScene();
+
+    if (!scene)
+    {
+        return 0;
+    }
+
+    BakeLayerHashes& hashes = bakeLayer.sceneHashes[scene->GetUUID()];
+    ComputeSceneHashes(*scene, hashes);
+
+    //--
+    // this is for checking if we need to rebuild UV1s so we only include static mesh entities hash
+    // --
+    // We DONT want transforms included in here for that reason!!!
+    // otherwise, everytime we switch layers, if a layer has a static mesh entity with a different transform,
+    // it'll force invalidation of EVERY lightmap-layer-texture-thiggy
+    //--
+
+    return HashCode(hashes.uuidHashes[BakeLayerHashes::StaticMeshEntities])
+        .Combine(volume.GetWorldBounds())
         .Value();
 }
 
@@ -98,8 +137,8 @@ uint64 ComputeEpoch(const EnvProbe& probe, BakeLayer& bakeLayer)
     ComputeSceneHashes(*scene, hashes);
 
     // Lightmap revs affect env probes, as they are sampled when building probes
-    return hashes.staticMeshEntitiesHash
-        .Combine(hashes.staticLightsHash)
+    return HashCode(hashes.transformHashes[BakeLayerHashes::StaticMeshEntities])
+        .Combine(hashes.transformHashes[BakeLayerHashes::StaticLights])
         .Combine(bakeLayer.GetEpochRev(BakeLayerCategory::Lightmap))
         .Value();
 }

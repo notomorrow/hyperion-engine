@@ -144,11 +144,19 @@ void FogVolume::Rebake()
         return;
     }
 
-    Array<Handle<Layer>> layers = SceneHelpers::GetTargetLayers(*this);
+    // Bake only the active layer
+    const Handle<Layer>& layer = world->GetActiveLayer();
 
-    if (layers.Empty())
+    if (!layer.IsValid())
     {
-        HYP_LOG(Editor, Error, "Cannot bake {}: could not resolve a target layer for it", Id());
+        HYP_LOG(Editor, Error, "Cannot bake {}: could not resolve the active layer", GetName());
+
+        return;
+    }
+
+    if (!HasNoLayers() && !IsInLayer(layer->layerId))
+    {
+        HYP_LOG(Editor, Error, "Cannot bake {}: it is not in the active layer '{}'", GetName(), layer->name);
 
         return;
     }
@@ -160,10 +168,7 @@ void FogVolume::Rebake()
         bakerSubsystem = world->AddSubsystem<BakerSubsystem>();
     }
 
-    for (const Handle<Layer>& layer : layers)
-    {
-        bakerSubsystem->EnqueueBake(layer->bakeLayer, MakeStrongRef(this));
-    }
+    bakerSubsystem->EnqueueBake(layer->bakeLayer, MakeStrongRef(this));
 }
 
 #endif

@@ -25,14 +25,25 @@ struct BakeLayerHashes
 {
     HYP_STRUCT_BODY(BakeLayerHashes);
 
+    enum
+    {
+        StaticMeshEntities,
+        StaticLights,
+
+        Max
+    };
+
+    /// just to zeroize the struct
+    BakeLayerHashes();
+
     HYP_FIELD()
-    HashCode staticEntitiesHash;
+    uint64 checksum; //!< used as a signal to determine if we need to recompute.
+
+    HYP_FIELD()
+    FixedArray<uint64, Max> uuidHashes;         //!< JUST UUIDs
     
     HYP_FIELD()
-    HashCode staticMeshEntitiesHash;
-    
-    HYP_FIELD()
-    HashCode staticLightsHash;
+    FixedArray<uint64, Max> transformHashes;    //!< UUID + transform hashes
 };
 
 HYP_STRUCT()
