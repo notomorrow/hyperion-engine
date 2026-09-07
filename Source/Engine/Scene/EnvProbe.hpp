@@ -31,6 +31,7 @@ class Texture;
 class View;
 class Light;
 class Camera;
+struct EnvProbeCaptureState;
 struct RenderProxyEnvProbe;
 
 ENGINE_API extern Pool* g_scenePool;
@@ -287,10 +288,25 @@ public:
 
     void SetHitMaskData(const Vec4f& hitMaskData);
 
-    //-- Baking with raster (todo: move out of here?)
+    //-- Raster capture (EnvProbeCaptureState)
 
-    void BeginRasterCapture();
-    void EndRasterCapture();
+    /*! \brief The capture state this probe is currently rendering through, or null when not
+     *  capturing. The render passes write their results (convolved cubemap, visibility, SH) to
+     *  its targets. Owned by the probe itself for realtime / sky probes (aliased to the live
+     *  textures); owned by the driving bake job while a raster bake capture is running. */
+    HYP_FORCE_INLINE EnvProbeCaptureState* GetCaptureState() const
+    {
+        return m_captureState;
+    }
+
+    /*! \brief Probes that render in realtime own their capture state. */
+    HYP_FORCE_INLINE bool OwnsCaptureState() const
+    {
+        return IsRealtime() || IsSkyProbe();
+    }
+
+    static Name BuildBakedTextureName(Name probeName, Name layerName);
+    static Name BuildVisibilityTextureName(Name probeName, Name layerName);
 
     HYP_FORCE_INLINE void NotifyCaptureReadbackComplete()
     {
@@ -333,6 +349,8 @@ public:
     AtomicFlag needsRender;
 
 protected:
+    friend struct EnvProbeCaptureState;
+
     virtual void OnAttachedToNode(Node* node) override;
     virtual void OnDetachedFromNode(Node* node) override;
 
@@ -349,8 +367,16 @@ protected:
         return !IsRealtime();
     }
 
-    void InitCaptureData();
+    void InitCaptureData(EnvProbeCaptureState* captureState = nullptr);
     void DestroyCaptureData();
+
+    /*! \brief Create the owned capture state if missing and alias its targets to the live
+     *  textures. No-op for probes that don't own their capture state. */
+    void SyncOwnedCaptureState();
+
+    /*! \brief Delete the owned capture state. Never touches a bake job's attached capture state,
+     *  as those belong to probes that don't own their capture state. */
+    void DestroyOwnedCaptureState();
 
     void CreateCamera();
     void RemoveCamera();
@@ -390,11 +416,19 @@ protected:
     HYP_FIELD(Property = "HitMaskData", Editor = false, Serialize)
     Vec4f m_hitMaskData;
 
+    //-- Capture / readback
+
     /// Number of outstanding read backs
     AtomicVar<int32> m_pendingCaptureReadbacks;
 
+    /// Capture state while rendering through the raster path; owned by this probe when
+    /// OwnsCaptureState() (realtime / sky), otherwise attached by a bake job's capture
+    EnvProbeCaptureState* m_captureState = nullptr;
+
     /// for reading/writing back data
     SharedMutex m_mutex;
+
+    //--
 };
 
 HYP_CLASS()

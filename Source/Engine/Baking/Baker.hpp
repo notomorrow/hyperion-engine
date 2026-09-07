@@ -171,6 +171,11 @@ public:
         return m_bakeLayer;
     }
 
+    virtual Name GetBakeLayerName() const
+    {
+        return Name::Invalid();
+    }
+
     HYP_FORCE_INLINE const BoundingBox& GetAABB() const
     {
         return m_aabb;

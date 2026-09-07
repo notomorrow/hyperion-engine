@@ -36,6 +36,7 @@ namespace EnvProbeHelpers {
 
 void ConvolveEnvProbeCubemap(
     const Handle<Texture>& inTexture,
+    const Handle<Texture>& outTexture,
     const EnvProbe& envProbe);
 
 void ComputeEnvProbeSphericalHarmonics(
@@ -269,7 +270,9 @@ void Baker<EnvProbe>::OnCompleted_Internal()
 
             if (envProbe->ShouldComputePrefilteredEnvMap())
             {
-                EnvProbeHelpers::ConvolveEnvProbeCubemap(texture, *envProbe);
+                // Path traced bakes convolve in place into the just-created baked texture (there
+                // is no raster capture state on this path).
+                EnvProbeHelpers::ConvolveEnvProbeCubemap(texture, texture, *envProbe);
             }
 
             if (envProbe->ShouldComputeSphericalHarmonics())

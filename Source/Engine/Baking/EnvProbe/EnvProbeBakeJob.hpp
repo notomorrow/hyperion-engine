@@ -13,6 +13,7 @@
 namespace Hyperion {
 
 class EnvProbe;
+struct EnvProbeCaptureState;
 
 namespace Baking {
 
@@ -23,13 +24,7 @@ public:
     explicit BakeJob(
         BakeJobParams&& params,
         const Handle<EnvProbe>& envProbe,
-        BakeData<EnvProbe>* bakeData)
-        : BakeJobBase(std::move(params)),
-          m_envProbe(envProbe),
-          m_bakeData(bakeData),
-          m_rasterCaptureEnded(false)
-    {
-    }
+        BakeData<EnvProbe>* bakeData);
 
     virtual ~BakeJob() override;
 
@@ -55,8 +50,8 @@ protected:
     Handle<EnvProbe> m_envProbe;
     BakeData<EnvProbe>* m_bakeData;
 
-    /// raster only!
-    bool m_rasterCaptureEnded;
+    /// raster only! capture state the probe renders through; committed to the baked values on completion
+    UniquePtr<EnvProbeCaptureState, BakerAllocator> m_envProbeRasterCaptureState;
 };
 
 } // namespace Baking

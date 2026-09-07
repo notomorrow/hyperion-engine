@@ -37,8 +37,9 @@
 
 #include <Scene/View.hpp>
 #include <Scene/EnvProbe.hpp>
-#include <Scene/World.hpp>
 #include <Scene/Light.hpp>
+
+#include <Rendering/EnvProbeCaptureState.hpp>
 
 #include <Framework/EngineGlobals.hpp>
 #include <Framework/EngineStats.hpp>
@@ -89,9 +90,10 @@ struct ConvolveProbeConstants
     Vec2u inImageDimensions;
 };
 
-void ConvolveEnvProbeCubemap(const Handle<Texture>& inTexture, const EnvProbe& envProbe)
+void ConvolveEnvProbeCubemap(const Handle<Texture>& inTexture, const Handle<Texture>& outTexture, const EnvProbe& envProbe)
 {
     Assert(inTexture != nullptr);
+    Assert(outTexture != nullptr);
     Assert(!envProbe.IsAmbientProbe());
 
     CommandRecorder& cr = RI.commandRecorderAllocator.GetCommandRecorder();
@@ -99,7 +101,7 @@ void ConvolveEnvProbeCubemap(const Handle<Texture>& inTexture, const EnvProbe& e
 
     ENGINE_STAT_GPU_SCOPE(&s_statConvolveEnvProbe, &cr);
 
-    const Handle<Texture>& bakedTexture = envProbe.GetPrefilteredEnvMap();
+    const Handle<Texture>& bakedTexture = outTexture;
     Assert(bakedTexture.IsValid(), "EnvProbe {} has no prefiltered env map to convolve into", envProbe.Id());
 
     if (!bakedTexture->IsCreated())
@@ -397,9 +399,20 @@ static void ComputePrefilteredEnvMap(Frame* frame, const RenderSetup& renderSetu
     AssertDebug(framebuffer.IsValid());
 
     AttachmentBase* colorAttachment = framebuffer->GetAttachment(0);
-    AssertDebug(colorAttachment != nullptr);
+    AssertDebug(colorAttachment != nullptr && colorAttachment->IsCreated());
 
-    ConvolveEnvProbeCubemap(MakeStrongRef(colorAttachment), *envProbe);
+    // Structurally, every probe reaching this path renders through a capture state: realtime /
+    // sky probes own one (aliased to their live textures), and baked probes only render while a
+    // bake capture is attached.
+    EnvProbeCaptureState* captureState = envProbe->GetCaptureState();
+    Assert(captureState != nullptr, "EnvProbe {} is rendering without a capture state", envProbe->Id());
+
+    if (!captureState)
+    {
+        return;
+    }
+
+    ConvolveEnvProbeCubemap(MakeStrongRef(colorAttachment), captureState->texture, *envProbe);
 }
 
 void ComputeEnvProbeSphericalHarmonics(const EnvProbe& envProbe, const Texture& inColorTexture, Name layerName)
@@ -639,12 +652,25 @@ void ComputeEnvProbeSphericalHarmonics(const EnvProbe& envProbe, const Texture& 
 
                             // SetSphericalHarmonicsDataForLayer() marks it dirty so we don't need to do that here.
                             auto envProbeWriteScope = TUniqueResLock<EnvProbe>(*payload.envProbe);
-                            payload.envProbe->SetSphericalHarmonicsDataForLayer(shData, payload.layerName);
-                            
+
+                            if (EnvProbeCaptureState* captureState = payload.envProbe->GetCaptureState();
+                                captureState && !payload.envProbe->OwnsCaptureState())
+                            {
+                                // Raster bake: store on the capture; the capture commits it to
+                                // the baked values (base or layer override) on completion.
+                                captureState->sphericalHarmonics = shData;
+                            }
+                            else
+                            {
+                                // Path traced bake: write directly to the baked layer. Realtime /
+                                // sky probes write to their live (owned) values.
+                                payload.envProbe->SetSphericalHarmonicsDataForLayer(shData, payload.layerName);
+                            }
+
                             if (payload.envProbe->IsAmbientProbe())
                             {
-                                // Ambient probes have transient baked texture, used for baking the SH.
-                                // Remove it to free the memory (from the baked layer as well).
+                                // Ambient probes have transient baked texture (path traced bakes), used
+                                // for baking the SH. Remove it to free the memory.
                                 payload.envProbe->SetBakedTextureForLayer(Handle<Texture>::Null(), payload.layerName);
                             }
 
@@ -685,7 +711,7 @@ void ComputeEnvProbeSphericalHarmonics(const EnvProbe& envProbe, const Texture& 
     }
 }
 
-static void ComputeEnvProbeSphericalHarmonics(Frame* frame, EnvProbe* envProbe, Name layerName = Name::Invalid())
+static void ComputeEnvProbeSphericalHarmonics(Frame* frame, EnvProbe* envProbe)
 {
     const FramebufferRef& framebuffer = envProbe->GetViewFramebuffer(0);
     AssertDebug(framebuffer.IsValid() && framebuffer->IsCreated());
@@ -693,7 +719,9 @@ static void ComputeEnvProbeSphericalHarmonics(Frame* frame, EnvProbe* envProbe, 
     AttachmentBase* colorAttachment = framebuffer->GetAttachment(0);
     Assert(colorAttachment != nullptr && colorAttachment->IsCreated());
 
-    ComputeEnvProbeSphericalHarmonics(*envProbe, *colorAttachment, layerName);
+    // Layer targeting happens via the capture targets during raster bakes; invalid means the
+    // live (applied) values, which is correct for path traced probes reaching this path too.
+    ComputeEnvProbeSphericalHarmonics(*envProbe, *colorAttachment, Name::Invalid());
 }
 
 /// For raster bake!
@@ -883,8 +911,31 @@ void UpdateEnvProbeVisibilityTexture(Frame* frame, EnvProbe* envProbe, bool shou
     Attachment* srcTexture = framebuffer->GetAttachment(1);
     AssertDebug(srcTexture != nullptr);
 
-    Texture* dstTexture = envProbe->GetVisibilityTexture();
+    // Structurally, every probe reaching this path renders through a capture state: realtime /
+    // sky probes own one (aliased to their live textures), and baked probes only render while a
+    // bake capture is attached.
+    EnvProbeCaptureState* captureState = envProbe->GetCaptureState();
+    Assert(captureState != nullptr, "EnvProbe {} is rendering without a capture state", envProbe->Id());
+
+    if (!captureState)
+    {
+        return;
+    }
+
+    Handle<Texture> visibilityTexture = captureState->visibilityTexture;
+
+    Texture* dstTexture = visibilityTexture.Get();
     Assert(dstTexture != nullptr);
+
+    if (!dstTexture->IsCreated())
+    {
+        if (!Check(dstTexture->Create()))
+        {
+            HYP_LOG(Rendering, Error, "Failed to create visibility texture for EnvProbe {}, cannot update", envProbe->Id());
+
+            return;
+        }
+    }
 
     const Vec3u& srcExtent = srcTexture->GetExtent();
     const Vec3u& dstExtent = dstTexture->GetExtent();
@@ -1055,9 +1106,9 @@ void UpdateEnvProbeVisibilityTexture(Frame* frame, EnvProbe* envProbe, bool shou
 
                 textureWriteScope.Reset();
 
-                auto envProbeWriteScope = TUniqueResLock<EnvProbe>(*envProbeStrong);
-                envProbeStrong->SetVisibilityTexture(visTexture);
-
+                // The CPU-side image data is stored so the capture can commit the texture as a
+                // persisted asset when it completes. No live write here - during a raster bake
+                // this texture is a capture target, owned by the capture.
                 envProbeStrong->NotifyCaptureReadbackComplete();
             });
     }
@@ -1239,23 +1290,7 @@ void ReflectionProbePass::RenderProbe(Frame* frame, const RenderSetup& renderSet
 
     if (envProbe->ShouldComputeSphericalHarmonics())
     {
-        Name sphericalHarmonicsLayerName = Name::Invalid();
-
-#ifdef HYP_EDITOR
-        if (!isRealtime && envProbe->IsBaked())
-        {
-            // A baked probe re-rendering in the editor is a raster bake; the result belongs to the
-            // active layer, matching the path traced bake flow.
-
-            // @TODO : NEEDS A BETTER WAY TO MAINTAIN THE LAYER THIS WAS BAKING FOR!!!!
-            if (World* world = envProbe->GetWorld())
-            {
-                sphericalHarmonicsLayerName = world->GetActiveLayerName();
-            }
-        }
-#endif // HYP_EDITOR
-
-        EnvProbeHelpers::ComputeEnvProbeSphericalHarmonics(frame, envProbe, sphericalHarmonicsLayerName);
+        EnvProbeHelpers::ComputeEnvProbeSphericalHarmonics(frame, envProbe);
     }
 
     if (envProbe->GetEnvProbeFlags() & EPF_VISIBILITY)
@@ -1372,23 +1407,9 @@ void IrradianceProbePass::RenderProbe(Frame* frame, const RenderSetup& renderSet
         return;
     }
 
-    Name sphericalHarmonicsLayerName = Name::Invalid();
-
-#ifdef HYP_EDITOR
-    if (!isRealtime && irradianceProbe->IsBaked())
-    {
-        // A baked probe re-rendering in the editor is a raster bake; the result belongs to the
-        // active layer, matching the path traced bake flow.
-
-            // @TODO : NEEDS A BETTER WAY TO MAINTAIN THE LAYER THIS WAS BAKING FOR!!!!
-        if (World* world = irradianceProbe->GetWorld())
-        {
-            sphericalHarmonicsLayerName = world->GetActiveLayerName();
-        }
-    }
-#endif // HYP_EDITOR
-
-    EnvProbeHelpers::ComputeEnvProbeSphericalHarmonics(frame, irradianceProbe, sphericalHarmonicsLayerName);
+    // SH readback lands on the capture targets during a raster bake (committed by the
+    // capture on completion), otherwise on the live (applied) values.
+    EnvProbeHelpers::ComputeEnvProbeSphericalHarmonics(frame, irradianceProbe);
 
     if (irradianceProbe->GetEnvProbeFlags() & EPF_VISIBILITY)
     {

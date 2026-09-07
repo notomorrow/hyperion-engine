@@ -7,6 +7,7 @@
 #include <ScenePch.hpp>
 
 #include <Scene/EnvProbe.hpp>
+
 #include <Scene/View.hpp>
 #include <Scene/World.hpp>
 #include <Scene/Scene.hpp>
@@ -23,6 +24,8 @@
 #include <Rendering/RendererMain.hpp>
 #include <Rendering/DescriptorSet.hpp>
 #include <Rendering/RenderProxy.hpp>
+
+#include <Rendering/EnvProbeCaptureState.hpp>
 
 #include <Rendering/Util/ShaderPropertyDictionary.hpp>
 
@@ -71,26 +74,6 @@ LayerOverrideSystem* GetLayerOverrideSystem(const EnvProbe* envProbe)
     return world ? world->GetSystem<LayerOverrideSystem>() : nullptr;
 }
 
-Name BuildBakedTextureName(Name probeName, Name layerName)
-{
-    if (IsDefaultLayer(layerName))
-    {
-        return NAME_FMT("{}_ColorMap", probeName);
-    }
-
-    return NAME_FMT("{}_{}_ColorMap", probeName, layerName);
-}
-
-Name BuildVisibilityTextureName(Name probeName, Name layerName)
-{
-    if (IsDefaultLayer(layerName))
-    {
-        return NAME_FMT("{}_VisibilityMap", probeName);
-    }
-
-    return NAME_FMT("{}_{}_VisibilityMap", probeName, layerName);
-}
-
 } // namespace
 
 static FixedArray<Mat4f, 6> CreateCubemapMatrices(const Vec3f& origin)
@@ -137,6 +120,14 @@ EnvProbe::~EnvProbe()
     // ensure locks are released before destruction ensues
     TUniqueResLock<EnvProbe> resLock(*this);
 
+    DestroyOwnedCaptureState();
+
+    if (m_captureState)
+    {
+        // MUST LIVE HERE!!!! or the capture state will hold dangling ptr to this
+        m_captureState->m_envProbe = nullptr;
+    }
+
     if (AnyOf(m_views, &Handle<View>::IsValid))
     {
         EnqueueDeletion(std::move(m_views));
@@ -152,6 +143,54 @@ EnvProbe::~EnvProbe()
 EnvProbeDimensions EnvProbe::GetDefaultDimensions(EnvProbeType envProbeType)
 {
     return DefaultDimensionsByType[uint32(envProbeType)];
+}
+
+Name EnvProbe::BuildBakedTextureName(Name probeName, Name layerName)
+{
+    if (!layerName.IsValid() || IsDefaultLayer(layerName))
+    {
+        return NAME_FMT("{}_ColorMap", probeName);
+    }
+
+    return NAME_FMT("{}_{}_ColorMap", probeName, layerName);
+}
+
+Name EnvProbe::BuildVisibilityTextureName(Name probeName, Name layerName)
+{
+    if (!layerName.IsValid() || IsDefaultLayer(layerName))
+    {
+        return NAME_FMT("{}_VisibilityMap", probeName);
+    }
+
+    return NAME_FMT("{}_{}_VisibilityMap", probeName, layerName);
+}
+
+void EnvProbe::SyncOwnedCaptureState()
+{
+    if (!OwnsCaptureState())
+    {
+        return;
+    }
+
+    if (!m_captureState)
+    {
+        // REALTIME, we dont want a layer name assoc'd with it
+        m_captureState = new EnvProbeCaptureState(this, Name::Invalid());
+    }
+
+    m_captureState->texture = m_texture;
+    m_captureState->visibilityTexture = m_visibilityTexture;
+}
+
+void EnvProbe::DestroyOwnedCaptureState()
+{
+    if (!m_captureState || !OwnsCaptureState())
+    {
+        return;
+    }
+
+    delete m_captureState;
+    m_captureState = nullptr;
 }
 
 void EnvProbe::SetDimensions(EnvProbeDimensions dimensions)
@@ -206,7 +245,7 @@ void EnvProbe::SetDiffuseStrength(float diffuseStrength)
     SetNeedsRenderProxyUpdate();
 }
 
-void EnvProbe::InitCaptureData()
+void EnvProbe::InitCaptureData(EnvProbeCaptureState* captureState)
 {
     CreateCamera();
     CreateViewData();
@@ -227,6 +266,51 @@ void EnvProbe::InitCaptureData()
     }
 
     EnqueueViewsUpdate();
+
+    if (captureState)
+    {
+        Assert(uint32(m_dimensions) > 0);
+
+        if (ShouldComputePrefilteredEnvMap() && !captureState->texture.IsValid())
+        {
+            captureState->texture = MakeHandle<Texture>(TextureDesc {
+                TextureType::Cubemap,
+                TextureFormat::RGBA16F,
+                Vec3u(Vec2u(uint32(m_dimensions)), 1),
+                TFM_LINEAR_MIPMAP,
+                TFM_LINEAR,
+                TWM_CLAMP_TO_EDGE,
+                1,
+                IU_STORAGE | IU_SAMPLED
+            });
+
+            captureState->texture->SetName(BuildBakedTextureName(GetName(), captureState->layerName));
+            captureState->texture->SetIsTransient(true);
+        }
+
+        if ((m_envProbeFlags & EPF_VISIBILITY) && !captureState->visibilityTexture.IsValid())
+        {
+            captureState->visibilityTexture = MakeHandle<Texture>(TextureDesc {
+                TextureType::Cubemap,
+                TextureFormat::RG16F,
+                Vec3u {
+                    VisibilityTextureDimensions,
+                    VisibilityTextureDimensions,
+                    1
+                },
+                TFM_LINEAR,
+                TFM_LINEAR,
+                TWM_CLAMP_TO_EDGE,
+                1,
+                IU_SAMPLED | IU_STORAGE
+            });
+
+            captureState->visibilityTexture->SetName(BuildVisibilityTextureName(GetName(), captureState->layerName));
+            captureState->visibilityTexture->SetIsTransient(true);
+        }
+
+        return;
+    }
 
     if (ShouldComputePrefilteredEnvMap())
     {
@@ -274,6 +358,8 @@ void EnvProbe::InitCaptureData()
             CreateVisibilityTexture();
         }
     }
+
+    SyncOwnedCaptureState();
 }
 
 void EnvProbe::DestroyCaptureData()
@@ -286,6 +372,8 @@ void EnvProbe::DestroyCaptureData()
         EnqueueDeletion(std::move(m_texture));
         EnqueueDeletion(std::move(m_visibilityTexture));
     }
+
+    SyncOwnedCaptureState();
 }
 
 void EnvProbe::CreateCamera()
@@ -375,6 +463,8 @@ void EnvProbe::CreateVisibilityTexture()
 
     GetCurrentAssetRegistry()->PutAssetUnique(m_visibilityTexture);
 
+    SyncOwnedCaptureState();
+
     // Assume the caller will MarkDirty() / SetNeedsRenderProxyUpdate()
 }
 
@@ -402,7 +492,11 @@ void EnvProbe::SetEnvProbeFlags(EnumFlags<EnvProbeFlags> envProbeFlags)
         return;
     }
 
+    DestroyOwnedCaptureState();
+
     m_envProbeFlags = envProbeFlags;
+
+    SyncOwnedCaptureState();
 
     bool shouldForceRerender = false;
     bool dirtyViewData = false;
@@ -771,26 +865,6 @@ void EnvProbe::DestroyViewData()
             EnqueueDeletion(std::move(view));
         }
     }
-}
-
-void EnvProbe::BeginRasterCapture()
-{
-    SetDimensions(GetDefaultDimensions(m_envProbeType));
-
-    const int32 numReadbacks = (ShouldComputeSphericalHarmonics() ? 1 : 0)
-        + ((m_envProbeFlags & EPF_VISIBILITY) ? 1 : 0)
-        + ((m_envProbeFlags & EPF_HIT_MASK) ? 1 : 0);
-
-    m_pendingCaptureReadbacks.Set(numReadbacks, MemoryOrder::RELEASE);
-
-    InitCaptureData();
-
-    needsRender.Store(true);
-}
-
-void EnvProbe::EndRasterCapture()
-{
-    DestroyCaptureData();
 }
 
 Vec3f EnvProbe::GetOrigin(bool fromCenter) const
@@ -1350,6 +1424,8 @@ void EnvProbe::SetBakedTexture(const Handle<Texture>& texture)
 
     m_texture = texture;
 
+    SyncOwnedCaptureState();
+
     MarkDirty();
     SetNeedsRenderProxyUpdate();
 }
@@ -1379,6 +1455,8 @@ void EnvProbe::SetVisibilityTexture(const Handle<Texture>& visibilityTexture)
 
         Invalidate(/* forceRerender */ true);
     }
+
+    SyncOwnedCaptureState();
 
     MarkDirty();
     SetNeedsRenderProxyUpdate();
@@ -1469,6 +1547,8 @@ void SkyProbe::CreateTexture()
 
     m_texture->SetName(NAME_FMT("{}_ColorMap", GetName()));
     m_texture->SetIsTransient(true);
+
+    SyncOwnedCaptureState();
 }
 
 #pragma endregion SkyProbe

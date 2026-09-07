@@ -1491,9 +1491,8 @@ void DeferredPass::RenderFrame(Frame* frame, const RenderSetup& rs)
                     }
 
                     // !PathTraced: render realtime probes every frame, and baked (raster) probes
-                    // only while they're actively being captured (BeginRasterCapture() sets
-                    // needsRender; RenderProbe() clears it once all 6 faces are done).
-                    if (envProbe->IsBaked() && !envProbe->needsRender.Load())
+                    // only while they're actively being captured
+                    if (envProbe->IsBaked() && !envProbe->GetCaptureState())
                     {
                         continue;
                     }
