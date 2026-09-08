@@ -1798,13 +1798,40 @@ public:
                     return;
                 }
 
+                struct ImportProgressContext
+                {
+                    AtomicVar<uint32> numProcessed { 0 };
+                    AtomicVar<uint32> numFailed { 0 };
+                    uint32 numTotal = 0;
+                    EditorTaskBase* task = nullptr;
+                };
+
+                auto context = MakeShared<ImportProgressContext>();
+                context->numTotal = uint32(result.GetValue().Size());
+
                 EditorTaskScope* editorTaskScope = new EditorTaskScope(
                     TickableEditorTask::StaticClass(),
-                    []()
-                    { /* no tick function */ },
+                    [context]()
+                    {
+                        const uint32 numProcessed = context->numProcessed.Get(MemoryOrder::RELAXED);
+                        const uint32 numFailed = context->numFailed.Get(MemoryOrder::RELAXED);
+
+                        if (EditorTaskBase* task = context->task)
+                        {
+                            task->SetProgress(context->numTotal > 0
+                                    ? MathUtil::Min(float(numProcessed) / float(context->numTotal), 1.0f)
+                                    : 1.0f);
+
+                            task->SetDescription(numFailed > 0
+                                    ? HYP_FORMAT("Importing {}/{} assets ({} failed)", numProcessed, context->numTotal, numFailed)
+                                    : HYP_FORMAT("Importing {}/{} assets", numProcessed, context->numTotal));
+                        }
+                    },
                     "Importing content...",
-                    "Content is being imported in the background.",
+                    HYP_FORMAT("Importing 0/{} assets", context->numTotal),
                     /* isForegroundTask */ true);
+
+                context->task = editorTaskScope->GetEditorTask();
 
                 // Create identifier based on the common folder of the assets
                 String identifier = "Unknown";
@@ -1822,6 +1849,21 @@ public:
                     batch->Add(file.Basename(), (CoreApi::GetExecutablePath() / file.ToRelative(CoreApi::GetExecutablePath())).ToCanonical());
                 }
 
+                batch->GetCallbacks().OnItemComplete
+                    .Bind([context](const AssetBatchCallbackData&)
+                          {
+                              context->numProcessed.Increment(1, MemoryOrder::RELEASE);
+                          })
+                    .Detach();
+
+                batch->GetCallbacks().OnItemFailed
+                    .Bind([context](const AssetBatchCallbackData&)
+                          {
+                              context->numFailed.Increment(1, MemoryOrder::RELEASE);
+                              context->numProcessed.Increment(1, MemoryOrder::RELEASE);
+                          })
+                    .Detach();
+
                 batch->OnComplete
                     .Bind([editorTaskScope, weakSubsystem = std::move(weakSubsystem)](AssetMap& results) mutable
                           {
@@ -1829,6 +1871,7 @@ public:
 
                               String postText;
                               int numFailed = 0;
+                              uint32 numProcessed = 0;
 
                               Handle<EditorSubsystem> subsystem = weakSubsystem.Lock();
 
@@ -1839,14 +1882,15 @@ public:
                                   String& key = it.first;
                                   LoadedAsset& loadedAsset = it.second;
 
-                                  editorTaskScope->GetEditorTask()->SetDescription("Processing " + key + postText);
+                                  editorTaskScope->GetEditorTask()->SetDescription(HYP_FORMAT("Processing {}/{}: {}", ++numProcessed, results.Size(), key) + postText);
 
                                   if (!loadedAsset.IsValid())
                                   {
                                       HYP_LOG(Editor, Error, "Failed to import asset '{}': {}", key, loadedAsset.GetError().GetMessage());
 
-                                      editorTaskScope->GetEditorTask()->SetDescription("Processing " + key + postText);
                                       postText = HYP_FORMAT(" ({} failed)", ++numFailed);
+
+                                      editorTaskScope->GetEditorTask()->SetDescription(HYP_FORMAT("Processing {}/{}: {}", numProcessed, results.Size(), key) + postText);
 
                                       continue;
                                   }
