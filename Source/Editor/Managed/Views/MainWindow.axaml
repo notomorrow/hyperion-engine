@@ -4,6 +4,8 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:controls="clr-namespace:Hyperion.Editor.Controls;assembly=Hyperion.Editor"
     xmlns:conv="clr-namespace:Avalonia.Data.Converters;assembly=Avalonia.Base"
+    
+    
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:hyp="clr-namespace:Hyperion;assembly=Hyperion.Runtime"
     xmlns:inspector="clr-namespace:Hyperion.Editor.Views.Inspector;assembly=Hyperion.Editor"
@@ -16,6 +18,7 @@
     d:DesignHeight="720"
     d:DesignWidth="1280"
     x:DataType="vm:MainWindowViewModel"
+    x:CompileBindings="False"
     mc:Ignorable="d">
 
     <Window.Styles>
@@ -198,6 +201,9 @@
                     <MenuItem Header="Select All in Viewport" />
                     <MenuItem Header="Select None" />
                 </MenuItem>
+                <MenuItem Header="_Layout">
+                    <MenuItem Header="_Reset Layout" Click="OnResetLayoutClick" ToolTip.Tip="Restore the default dock layout" />
+                </MenuItem>
                 <MenuItem Header="_Build" IsEnabled="{Binding !IsSimulating}">
                   <MenuItem Command="{Binding BuildReflectionProbes}" Header="Reflection Probes" />
                   <MenuItem Command="{Binding BuildIrradianceProbes}" Header="Irradiance Probes" />
@@ -289,23 +295,8 @@
                             IsChecked="{Binding IsMeshEditModeEnabled, Mode=OneWay}"
                             IsEnabled="{Binding CanEnableMeshEditMode}"
                             ToolTip.Tip="{Binding MeshEditModeTooltip}">
-                            <controls:Codicon Kind="MeshEditMode" Size="16" />
+                            <controls:Codicon Kind="CircuitBoard" Size="16" />
                         </ToggleButton>
-                        <!-- <ToggleButton
-                            x:Name="PhysicsDebugDrawToggle"
-                            Classes="gizmo"
-                            Command="{Binding TogglePhysicsDebugDraw}"
-                            IsChecked="{Binding IsPhysicsDebugDrawEnabled, Mode=OneWay}"
-                            ToolTip.Tip="Show Physics Collision Shapes">
-                            <controls:Codicon Kind="Package" Size="16" />
-                        </ToggleButton> -->
-                        <!-- <Button
-                            x:Name="FitPhysicsShapeToMeshButton"
-                            Classes="gizmo"
-                            Command="{Binding FitPhysicsShapeToMesh}"
-                            IsEnabled="{Binding CanFitPhysicsShapeToMesh}"
-                            ToolTip.Tip="Fit Collision Shape To Mesh">
-                        </Button> -->
 
                         <Border
                             Classes="mode-strip"
@@ -398,1128 +389,1056 @@
                 </Grid>
             </Border>
 
-            <Grid RowDefinitions="Auto, Auto, *, Auto">
-                <!--  Main Content Area  -->
-                <Grid x:Name="MainContentGrid" Grid.Row="2" ColumnDefinitions="280, 2, *, 2, 320">
+            <Grid RowDefinitions="*, Auto">
+                <!--  Dockable workspace  -->
+                <DockControl
+                    x:Name="DockControl"
+                    Grid.Row="0"
+                    InitializeLayout="True"
+                    InitializeFactory="True">
+                    <DockControl.Factory>
+                        <Factory HideToolsOnClose="True" HideDocumentsOnClose="True" />
+                    </DockControl.Factory>
 
-                    <!--  Left Panel: Scene Hierarchy + Actions (cond) + Inspector  -->
-                    <Grid Grid.Column="0" RowDefinitions="*, Auto, *">
-                        <!--  Scene Hierarchy  -->
-                        <Grid Grid.Row="0" RowDefinitions="Auto, Auto, *">
-                            <Border Grid.Row="0" Classes="panel-header">
-                                <Grid VerticalAlignment="Center" ColumnDefinitions="*,Auto">
-                                    <DropDownButton
-                                        x:Name="SceneDropDown"
-                                        Grid.Column="0"
-                                        HorizontalAlignment="Left"
-                                        VerticalAlignment="Center"
-                                        Background="Transparent"
-                                        BorderThickness="0">
-                                        <StackPanel Orientation="Horizontal" Spacing="4">
-                                            <controls:Codicon Kind="ListTree" Size="14" Foreground="{StaticResource Brush.TextMuted}" />
-                                            <TextBlock
-                                                VerticalAlignment="Center"
-                                                Classes="header"
-                                                Text="{Binding ActiveScene.Name, FallbackValue='No Active Scene'}" />
-                                        </StackPanel>
-                                        <DropDownButton.Flyout>
-                                            <Flyout Placement="Bottom">
-                                                <StackPanel MinWidth="150">
-                                                    <ItemsControl ItemsSource="{Binding Scenes}">
-                                                        <ItemsControl.ItemTemplate>
-                                                            <DataTemplate x:DataType="vm:SceneViewModel">
-                                                                <MenuItem
-                                                                    Command="{Binding DataContext.SetActiveSceneCommand, ElementName=Root}"
-                                                                    CommandParameter="{Binding}"
-                                                                    Header="{Binding Name}" />
-                                                            </DataTemplate>
-                                                        </ItemsControl.ItemTemplate>
-                                                    </ItemsControl>
+                    <RootDock x:Name="DockRoot" Id="Root" IsCollapsable="False" DefaultDockable="{Binding #MainLayout}">
 
-                                                    <Separator />
-                                                    <MenuItem
-                                                        Command="{Binding DataContext.AddNewSceneCommand, ElementName=Root}"
-                                                        Header="Add New Scene..."
-                                                        IsEnabled="{Binding !DataContext.IsSimulating, ElementName=Root}" />
-                                                </StackPanel>
-                                            </Flyout>
-                                        </DropDownButton.Flyout>
-                                    </DropDownButton>
-                                    <Button
-                                        Grid.Column="1"
-                                        Margin="0,0,4,0"
-                                        Padding="8,2"
-                                        HorizontalAlignment="Right"
-                                        VerticalAlignment="Center"
-                                        IsEnabled="{Binding !IsSimulating}"
-                                        ToolTip.Tip="Add new node to the active scene...">
-                                        <controls:Codicon Kind="Add" Size="16" />
-                                        <Button.Flyout>
-                                            <MenuFlyout>
-                                                <MenuItem
-                                                    Margin="0,2"
-                                                    Padding="8,4"
-                                                    HorizontalAlignment="Center"
-                                                    FontSize="12"
-                                                    Foreground="#808080"
-                                                    Header="Node"
-                                                    IsEnabled="False" />
-                                                <MenuItem Command="{Binding AddEmptyNode}" Header="Base Node" />
-                                                <Separator />
-                                                <MenuItem Command="{Binding AddEntity}" Header="Entity" />
-                                                <MenuItem Command="{Binding AddCamera}" Header="Camera" />
-                                                <Separator />
-                                                <MenuItem
-                                                    Margin="0,2"
-                                                    Padding="8,4"
-                                                    HorizontalAlignment="Center"
-                                                    FontSize="12"
-                                                    Foreground="#808080"
-                                                    Header="Rendering"
-                                                    IsEnabled="False" />
-                                                <MenuItem Command="{Binding AddInstance}" Header="Instanced Mesh" IsEnabled="{Binding CanAddInstance}" />
-                                                <Separator />
-                                                <MenuItem
-                                                    Margin="0,2"
-                                                    Padding="8,4"
-                                                    HorizontalAlignment="Center"
-                                                    FontSize="12"
-                                                    Foreground="#808080"
-                                                    Header="2D"
-                                                    IsEnabled="False" />
-                                                <MenuItem Command="{Binding AddSprite}" Header="Sprite" />
-                                                <MenuItem Command="{Binding AddTextSprite}" Header="Text Sprite" />
-                                                <Separator />
-                                                <MenuItem
-                                                    Margin="0,2"
-                                                    Padding="8,4"
-                                                    HorizontalAlignment="Center"
-                                                    FontSize="12"
-                                                    Foreground="#808080"
-                                                    Header="Lighting"
-                                                    IsEnabled="False" />
-                                                <MenuItem Command="{Binding AddDirectionalLight}" Header="Directional Light" />
-                                                <MenuItem Command="{Binding AddPointLight}" Header="Point Light" />
-                                                <MenuItem Command="{Binding AddSpotLight}" Header="Spot Light" />
-                                                <MenuItem Command="{Binding AddAreaRectLight}" Header="Rectangular Area Light" />
-                                                <Separator />
-                                                <MenuItem Command="{Binding AddReflectionProbe}" Header="Reflection Probe" /> <!-- Tooltip.Tip="Reflection probes capture static objects as a cubemap for reflections as well as spherical harmonics for indirect lighting." /> -->
-                                                <MenuItem Command="{Binding AddIrradianceProbe}" Header="Irradiance Probe" />
-                                                <MenuItem Command="{Binding AddLightmapVolume}" Header="Lightmap Volume" /> <!-- Tooltip.Tip="Lightmap Volumes bake lighting for static objects into an atlas texture. Dynamic objects do not receive light from lightmaps." /> -->
-                                                <Separator />
-                                                <MenuItem
-                                                    Margin="0,2"
-                                                    Padding="8,4"
-                                                    HorizontalAlignment="Center"
-                                                    FontSize="12"
-                                                    Foreground="#808080"
-                                                    Header="FX"
-                                                    IsEnabled="False" />
-                                                <MenuItem Command="{Binding AddParticleVolume}" Header="Particle Volume" />
-                                                <MenuItem Command="{Binding AddFogVolume}" Header="Fog Volume" />
-                                                <!-- <Separator />
-                                                <MenuItem
-                                                    Margin="0,2"
-                                                    Padding="8,4"
-                                                    HorizontalAlignment="Center"
-                                                    FontSize="12"
-                                                    Foreground="#808080"
-                                                    Header="Scripts"
-                                                    IsEnabled="False" />
-                                                <MenuItem Command="{Binding NewScript}" Header="Script" /> -->
+                        <ProportionalDock x:Name="MainLayout" Id="MainLayout" Orientation="Horizontal">
 
-                                                <Separator />
-                                                <MenuItem
-                                                    Margin="0,2"
-                                                    Padding="8,4"
-                                                    HorizontalAlignment="Center"
-                                                    FontSize="12"
-                                                    Foreground="#808080"
-                                                    Header="Shapes"
-                                                    IsEnabled="False" />
+                            <!--  Left column: Scene hierarchy + Inspector  -->
+                            <ProportionalDock x:Name="Left" Id="Left" Orientation="Vertical" Proportion="0.25">
 
-                                                <MenuItem Command="{Binding AddPlane}" Header="Plane" />
-                                                <MenuItem Command="{Binding AddCube}" Header="Cube" />
-                                                <MenuItem Command="{Binding AddNormalizedCubeSphereCommand}" Header="Normalized Cube Sphere" />
-                                                <MenuItem Command="{Binding AddCylinder}" Header="Cylinder" />
+                                <ToolDock x:Name="HierarchyPane" Id="HierarchyPane" Alignment="Left" ActiveDockable="SceneHierarchyTool">
+                                    <Tool x:Name="SceneHierarchyTool" Id="SceneHierarchy" Title="Scene">
+                                        <ContentControl DataContext="{Binding $parent[Window].DataContext}">
+                                            <Grid RowDefinitions="Auto, Auto, *">
+                                                <Border Grid.Row="0" Classes="panel-header">
+                                                    <Grid VerticalAlignment="Center" ColumnDefinitions="*,Auto">
+                                                        <DropDownButton
+                                                            x:Name="SceneDropDown"
+                                                            Grid.Column="0"
+                                                            HorizontalAlignment="Left"
+                                                            VerticalAlignment="Center"
+                                                            Background="Transparent"
+                                                            BorderThickness="0">
+                                                            <StackPanel Orientation="Horizontal" Spacing="4">
+                                                                <controls:Codicon Kind="ListTree" Size="14" Foreground="{StaticResource Brush.TextMuted}" />
+                                                                <TextBlock
+                                                                    VerticalAlignment="Center"
+                                                                    Classes="header"
+                                                                    Text="{Binding ActiveScene.Name, FallbackValue='No Active Scene'}" />
+                                                            </StackPanel>
+                                                            <DropDownButton.Flyout>
+                                                                <Flyout Placement="Bottom">
+                                                                    <StackPanel MinWidth="150">
+                                                                        <ItemsControl ItemsSource="{Binding Scenes}">
+                                                                            <ItemsControl.ItemTemplate>
+                                                                                <DataTemplate x:DataType="vm:SceneViewModel">
+                                                                                    <MenuItem
+                                                                                        Command="{Binding $parent[Window].DataContext.SetActiveSceneCommand}"
+                                                                                        CommandParameter="{Binding}"
+                                                                                        Header="{Binding Name}" />
+                                                                                </DataTemplate>
+                                                                            </ItemsControl.ItemTemplate>
+                                                                        </ItemsControl>
 
-                                            </MenuFlyout>
-                                        </Button.Flyout>
-                                    </Button>
-                                </Grid>
-                            </Border>
-
-                            <!--  Layers  -->
-                            <Border Grid.Row="1" Classes="panel-header-small">
-                                <Grid VerticalAlignment="Center" ColumnDefinitions="Auto,*,Auto,Auto">
-                                    <DropDownButton
-                                        x:Name="LayerDropDown"
-                                        Grid.Column="0"
-                                        Background="Transparent"
-                                        BorderThickness="0"
-                                        ToolTip.Tip="Active Layer">
-                                        <StackPanel Orientation="Horizontal" Spacing="4">
-                                            <controls:Codicon Kind="Layers" Size="12"  Foreground="{StaticResource Brush.TextMuted}" />
-                                            <TextBlock
-                                                VerticalAlignment="Center"
-                                                FontSize="11"
-                                                Text="{Binding ActiveBakeLayerName, FallbackValue='Default'}" />
-                                        </StackPanel>
-                                        <DropDownButton.Flyout>
-                                            <Flyout Placement="Bottom">
-                                                <StackPanel MinWidth="150">
-                                                    <ItemsControl ItemsSource="{Binding BakeLayers}">
-                                                        <ItemsControl.ItemTemplate>
-                                                            <DataTemplate x:DataType="x:String">
-                                                                <MenuItem
-                                                                    Command="{Binding DataContext.SetActiveBakeLayerCommand, ElementName=Root}"
-                                                                    CommandParameter="{Binding}"
-                                                                    Header="{Binding}" />
-                                                            </DataTemplate>
-                                                        </ItemsControl.ItemTemplate>
-                                                    </ItemsControl>
-
-                                                    <Separator />
-                                                    <MenuItem
-                                                        Command="{Binding DataContext.AddNewBakeLayerCommand, ElementName=Root}"
-                                                        Header="New Layer..." />
-                                                </StackPanel>
-                                            </Flyout>
-                                        </DropDownButton.Flyout>
-                                    </DropDownButton>
-
-                                    <ToggleButton
-                                        x:Name="LayerOverrideModeToggle"
-                                        Grid.Column="2"
-                                        Classes="gizmo"
-                                        HorizontalAlignment="Right"
-                                        VerticalAlignment="Center"
-                                        IsChecked="{Binding Inspector.LayerOverrideMode, Mode=TwoWay}"
-                                        IsVisible="{Binding Inspector.CanUseLayerOverrides}"
-                                        ToolTip.Tip="When this toggle button is active, edits will apply as OVERRIDES for the active layer. Otherwise edits will apply on base + active.">
-                                        <Panel>
-                                            <TextBlock
-                                                VerticalAlignment="Center"
-                                                FontSize="9"
-                                                IsVisible="{Binding Inspector.LayerOverrideMode}"
-                                                Text="Override Edits: ON" />
-                                            <TextBlock
-                                                VerticalAlignment="Center"
-                                                FontSize="9"
-                                                IsVisible="{Binding !Inspector.LayerOverrideMode}"
-                                                Text="Override Edits: OFF" />
-                                        </Panel>
-                                    </ToggleButton>
-
-                                    <ToggleButton
-                                        Grid.Column="3"
-                                        Margin="4,0,0,0"
-                                        Padding="8,2"
-                                        HorizontalAlignment="Right"
-                                        VerticalAlignment="Center"
-                                        Classes="panel-toggle"
-                                        IsChecked="{Binding SceneHierarchy.ShowOnlyActiveLayer}"
-                                        ToolTip.Tip="Show nodes only for the active layer">
-                                        <controls:Codicon Kind="{Binding SceneHierarchy.ShowOnlyActiveLayerIconKind}" Size="16" />
-                                    </ToggleButton>
-                                </Grid>
-                            </Border>
-
-                            <TreeView
-                                x:Name="SceneHierarchyTreeView"
-                                Grid.Row="2"
-                                ItemsSource="{Binding SceneHierarchy.RootNodes}"
-                                SelectedItem="{Binding SceneHierarchy.SelectedNode}"
-                                SelectionMode="Multiple">
-                                <TreeView.ItemContainerTheme>
-                                    <ControlTheme
-                                        x:DataType="vm:NodeViewModel"
-                                        BasedOn="{StaticResource {x:Type TreeViewItem}}"
-                                        TargetType="TreeViewItem">
-                                        <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
-                                    </ControlTheme>
-                                </TreeView.ItemContainerTheme>
-                                <TreeView.ItemTemplate>
-                                    <TreeDataTemplate x:DataType="vm:NodeViewModel" ItemsSource="{Binding Children}">
-                                        <Grid Background="Transparent" HorizontalAlignment="Stretch">
-                                            <!--  Drop-target highlight: sits behind the label, shown during drag-over  -->
-                                            <Border
-                                                Background="{DynamicResource Brush.Accent}"
-                                                CornerRadius="3"
-                                                IsVisible="{Binding IsDropTarget}"
-                                                Opacity="0.35" />
-                                            <StackPanel Margin="2,2" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                                                <Ellipse Width="6" Height="6" Fill="{DynamicResource Brush.Accent}" IsVisible="{Binding IsDirty}" VerticalAlignment="Center" />
-                                                <controls:Codicon Kind="{Binding IconKind}" Size="14" Opacity="0.7" VerticalAlignment="Center" />
-                                                <TextBlock FontStyle="{Binding NameFontStyle}" IsVisible="{Binding !IsEditingName}" Text="{Binding DisplayName}" VerticalAlignment="Center" />
-                                                <!-- <TextBlock
-                                                    FontSize="8"
-                                                    Foreground="{DynamicResource Brush.TextMuted}"
-                                                    IsVisible="{Binding !IsEditingName}"
-                                                    Text="{Binding ClassName}"
-                                                    VerticalAlignment="Center" /> -->
-                                                <TextBox
-                                                    Name="NodeRenameTextBox"
-                                                    MinWidth="80"
-                                                    Padding="2,0"
-                                                    IsVisible="{Binding IsEditingName}"
-                                                    Text="{Binding EditingName, Mode=TwoWay}"
-                                                    VerticalAlignment="Center" />
-                                            </StackPanel>
-                                            <Grid.ContextMenu>
-                                                <ContextMenu Opened="OnNodeContextMenuOpened">
-                                                    <MenuItem Command="{Binding DataContext.Copy, ElementName=Root}" Header="{Binding DataContext.CopyHeader, ElementName=Root}" IsEnabled="{Binding !DataContext.IsSimulating, ElementName=Root}" />
-                                                    <MenuItem Command="{Binding DataContext.Paste, ElementName=Root}" Header="{Binding DataContext.PasteHeader, ElementName=Root}" IsEnabled="{Binding !DataContext.IsSimulating, ElementName=Root}" />
-                                                    <Separator />
-                                                    <MenuItem Click="OnRenameNodeMenuItemClick" Header="Rename" IsEnabled="{Binding !DataContext.IsSimulating, ElementName=Root}" />
-                                                    <MenuItem Command="{Binding DataContext.TeleportToNode, ElementName=Root}" CommandParameter="{Binding Name}" Header="Teleport to" IsEnabled="{Binding !DataContext.IsSimulating, ElementName=Root}" />
-                                                    <MenuItem Click="OnMoveToGrandparentMenuItemClick" Header="{Binding MoveToGrandparentHeader}" IsVisible="{Binding CanMoveToGrandparent}" IsEnabled="{Binding !DataContext.IsSimulating, ElementName=Root}" />
-                                                    <Separator IsVisible="{Binding HasActions}" />
-                                                    <MenuItem Header="Actions" IsVisible="{Binding HasActions}" IsEnabled="{Binding !DataContext.IsSimulating, ElementName=Root}" ItemsSource="{Binding Actions}">
-                                                        <MenuItem.ItemTemplate>
-                                                            <DataTemplate x:DataType="vm:InspectorActionViewModel">
-                                                                <MenuItem Command="{Binding ExecuteActionCommand}" Header="{Binding Label}" IsEnabled="{Binding IsEnabled}" />
-                                                            </DataTemplate>
-                                                        </MenuItem.ItemTemplate>
-                                                    </MenuItem>
-                                                    <Separator />
-                                                    <MenuItem Command="{Binding DataContext.DeleteNode, ElementName=Root}" Header="{Binding DataContext.DeleteHeader, ElementName=Root}" IsEnabled="{Binding !DataContext.IsSimulating, ElementName=Root}" />
-                                                </ContextMenu>
-                                            </Grid.ContextMenu>
-                                        </Grid>
-                                    </TreeDataTemplate>
-                                </TreeView.ItemTemplate>
-                            </TreeView>
-                        </Grid>
-
-                        <GridSplitter Grid.Row="1" ResizeDirection="Rows" />
-
-                        <Grid Grid.Row="2" RowDefinitions="Auto, *">
-                            <!--  Inspector  -->
-                            <Grid Grid.Row="1" RowDefinitions="Auto, *">
-                                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
-                                    <StackPanel Spacing="8">
-                                        <Grid
-                                            Margin="0"
-                                            DataContext="{Binding Inspector}"
-                                            IsVisible="{Binding IsEntity}"
-                                            RowDefinitions="Auto, Auto, Auto">
-
-                                            <Border Grid.Row="0" Classes="panel-header">
-                                                <Grid ColumnDefinitions="*,Auto">
-                                                    <ToggleButton
-                                                        Grid.Column="0"
-                                                        Classes="section-toggle"
-                                                        IsChecked="{Binding ComponentsSection.IsExpanded, Mode=TwoWay}">
-                                                        <StackPanel Orientation="Horizontal" Spacing="4">
-                                                            <controls:Codicon Kind="{Binding ComponentsSection.ChevronKind}" Size="10" Margin="2,2,0,0" />
-                                                            <TextBlock VerticalAlignment="Center" Classes="header" Text="Components" />
-                                                        </StackPanel>
-                                                    </ToggleButton>
-
-                                                    <Button
-                                                        Grid.Column="1"
-                                                        Margin="0,0,4,0"
-                                                        Padding="8,2"
-                                                        HorizontalAlignment="Right"
-                                                        VerticalAlignment="Center"
-                                                        Content="Add"
-                                                        IsEnabled="{Binding HasAddableComponents}">
-                                                        <Button.Flyout>
-                                                            <MenuFlyout ItemsSource="{Binding AddableComponents}">
-                                                                <MenuFlyout.ItemTemplate>
-                                                                    <DataTemplate x:DataType="vm:AddComponentOptionViewModel">
+                                                                        <Separator />
                                                                         <MenuItem
-                                                                            Command="{Binding DataContext.Inspector.AddComponentCommand, ElementName=Root}"
-                                                                            CommandParameter="{Binding}"
-                                                                            Header="{Binding Label}"
-                                                                            IsEnabled="{Binding IsEnabled}" />
+                                                                            Command="{Binding $parent[Window].DataContext.AddNewSceneCommand}"
+                                                                            Header="Add New Scene..."
+                                                                            IsEnabled="{Binding !$parent[Window].DataContext.IsSimulating}" />
+                                                                    </StackPanel>
+                                                                </Flyout>
+                                                            </DropDownButton.Flyout>
+                                                        </DropDownButton>
+                                                        <Button
+                                                            Grid.Column="1"
+                                                            Margin="0,0,4,0"
+                                                            Padding="8,2"
+                                                            HorizontalAlignment="Right"
+                                                            VerticalAlignment="Center"
+                                                            IsEnabled="{Binding !IsSimulating}"
+                                                            ToolTip.Tip="Add new node to the active scene...">
+                                                            <controls:Codicon Kind="Add" Size="16" />
+                                                            <Button.Flyout>
+                                                                <MenuFlyout>
+                                                                    <MenuItem
+                                                                        Margin="0,2"
+                                                                        Padding="8,4"
+                                                                        HorizontalAlignment="Center"
+                                                                        FontSize="12"
+                                                                        Foreground="#808080"
+                                                                        Header="Node"
+                                                                        IsEnabled="False" />
+                                                                    <MenuItem Command="{Binding AddEmptyNode}" Header="Base Node" />
+                                                                    <Separator />
+                                                                    <MenuItem Command="{Binding AddEntity}" Header="Entity" />
+                                                                    <MenuItem Command="{Binding AddCamera}" Header="Camera" />
+                                                                    <Separator />
+                                                                    <MenuItem
+                                                                        Margin="0,2"
+                                                                        Padding="8,4"
+                                                                        HorizontalAlignment="Center"
+                                                                        FontSize="12"
+                                                                        Foreground="#808080"
+                                                                        Header="Rendering"
+                                                                        IsEnabled="False" />
+                                                                    <MenuItem Command="{Binding AddInstance}" Header="Instanced Mesh" IsEnabled="{Binding CanAddInstance}" />
+                                                                    <Separator />
+                                                                    <MenuItem
+                                                                        Margin="0,2"
+                                                                        Padding="8,4"
+                                                                        HorizontalAlignment="Center"
+                                                                        FontSize="12"
+                                                                        Foreground="#808080"
+                                                                        Header="2D"
+                                                                        IsEnabled="False" />
+                                                                    <MenuItem Command="{Binding AddSprite}" Header="Sprite" />
+                                                                    <MenuItem Command="{Binding AddTextSprite}" Header="Text Sprite" />
+                                                                    <Separator />
+                                                                    <MenuItem
+                                                                        Margin="0,2"
+                                                                        Padding="8,4"
+                                                                        HorizontalAlignment="Center"
+                                                                        FontSize="12"
+                                                                        Foreground="#808080"
+                                                                        Header="Lighting"
+                                                                        IsEnabled="False" />
+                                                                    <MenuItem Command="{Binding AddDirectionalLight}" Header="Directional Light" />
+                                                                    <MenuItem Command="{Binding AddPointLight}" Header="Point Light" />
+                                                                    <MenuItem Command="{Binding AddSpotLight}" Header="Spot Light" />
+                                                                    <MenuItem Command="{Binding AddAreaRectLight}" Header="Rectangular Area Light" />
+                                                                    <Separator />
+                                                                    <MenuItem Command="{Binding AddReflectionProbe}" Header="Reflection Probe" />
+                                                                    <MenuItem Command="{Binding AddIrradianceProbe}" Header="Irradiance Probe" />
+                                                                    <MenuItem Command="{Binding AddLightmapVolume}" Header="Lightmap Volume" />
+                                                                    <Separator />
+                                                                    <MenuItem
+                                                                        Margin="0,2"
+                                                                        Padding="8,4"
+                                                                        HorizontalAlignment="Center"
+                                                                        FontSize="12"
+                                                                        Foreground="#808080"
+                                                                        Header="FX"
+                                                                        IsEnabled="False" />
+                                                                    <MenuItem Command="{Binding AddParticleVolume}" Header="Particle Volume" />
+                                                                    <MenuItem Command="{Binding AddFogVolume}" Header="Fog Volume" />
+
+                                                                    <Separator />
+                                                                    <MenuItem
+                                                                        Margin="0,2"
+                                                                        Padding="8,4"
+                                                                        HorizontalAlignment="Center"
+                                                                        FontSize="12"
+                                                                        Foreground="#808080"
+                                                                        Header="Shapes"
+                                                                        IsEnabled="False" />
+
+                                                                    <MenuItem Command="{Binding AddPlane}" Header="Plane" />
+                                                                    <MenuItem Command="{Binding AddCube}" Header="Cube" />
+                                                                    <MenuItem Command="{Binding AddNormalizedCubeSphereCommand}" Header="Normalized Cube Sphere" />
+                                                                    <MenuItem Command="{Binding AddCylinder}" Header="Cylinder" />
+
+                                                                </MenuFlyout>
+                                                            </Button.Flyout>
+                                                        </Button>
+                                                    </Grid>
+                                                </Border>
+
+                                                <!--  Layers  -->
+                                                <Border Grid.Row="1" Classes="panel-header-small">
+                                                    <Grid VerticalAlignment="Center" ColumnDefinitions="Auto,*,Auto,Auto">
+                                                        <DropDownButton
+                                                            x:Name="LayerDropDown"
+                                                            Grid.Column="0"
+                                                            Background="Transparent"
+                                                            BorderThickness="0"
+                                                            ToolTip.Tip="Active Layer">
+                                                            <StackPanel Orientation="Horizontal" Spacing="4">
+                                                                <controls:Codicon Kind="Layers" Size="12"  Foreground="{StaticResource Brush.TextMuted}" />
+                                                                <TextBlock
+                                                                    VerticalAlignment="Center"
+                                                                    FontSize="11"
+                                                                    Text="{Binding ActiveBakeLayerName, FallbackValue='Default'}" />
+                                                            </StackPanel>
+                                                            <DropDownButton.Flyout>
+                                                                <Flyout Placement="Bottom">
+                                                                    <StackPanel MinWidth="150">
+                                                                        <ItemsControl ItemsSource="{Binding BakeLayers}">
+                                                                            <ItemsControl.ItemTemplate>
+                                                                                <DataTemplate x:DataType="x:String">
+                                                                                    <MenuItem
+                                                                                        Command="{Binding $parent[Window].DataContext.SetActiveBakeLayerCommand}"
+                                                                                        CommandParameter="{Binding}"
+                                                                                        Header="{Binding}" />
+                                                                                </DataTemplate>
+                                                                            </ItemsControl.ItemTemplate>
+                                                                        </ItemsControl>
+
+                                                                        <Separator />
+                                                                        <MenuItem
+                                                                            Command="{Binding $parent[Window].DataContext.AddNewBakeLayerCommand}"
+                                                                            Header="New Layer..." />
+                                                                    </StackPanel>
+                                                                </Flyout>
+                                                            </DropDownButton.Flyout>
+                                                        </DropDownButton>
+
+                                                        <ToggleButton
+                                                            x:Name="LayerOverrideModeToggle"
+                                                            Grid.Column="2"
+                                                            Classes="gizmo"
+                                                            HorizontalAlignment="Right"
+                                                            VerticalAlignment="Center"
+                                                            IsChecked="{Binding Inspector.LayerOverrideMode, Mode=TwoWay}"
+                                                            IsVisible="{Binding Inspector.CanUseLayerOverrides}"
+                                                            ToolTip.Tip="When this toggle button is active, edits will apply as OVERRIDES for the active layer. Otherwise edits will apply on base + active.">
+                                                            <Panel>
+                                                                <TextBlock
+                                                                    VerticalAlignment="Center"
+                                                                    FontSize="9"
+                                                                    IsVisible="{Binding Inspector.LayerOverrideMode}"
+                                                                    Text="Override Edits: ON" />
+                                                                <TextBlock
+                                                                    VerticalAlignment="Center"
+                                                                    FontSize="9"
+                                                                    IsVisible="{Binding !Inspector.LayerOverrideMode}"
+                                                                    Text="Override Edits: OFF" />
+                                                            </Panel>
+                                                        </ToggleButton>
+
+                                                        <ToggleButton
+                                                            Grid.Column="3"
+                                                            Margin="4,0,0,0"
+                                                            Padding="8,2"
+                                                            HorizontalAlignment="Right"
+                                                            VerticalAlignment="Center"
+                                                            Classes="panel-toggle"
+                                                            IsChecked="{Binding SceneHierarchy.ShowOnlyActiveLayer}"
+                                                            ToolTip.Tip="Show nodes only for the active layer">
+                                                            <controls:Codicon Kind="{Binding SceneHierarchy.ShowOnlyActiveLayerIconKind}" Size="16" />
+                                                        </ToggleButton>
+                                                    </Grid>
+                                                </Border>
+
+                                                <TreeView
+                                                    x:Name="SceneHierarchyTreeView"
+                                                    Grid.Row="2"
+                                                    ItemsSource="{Binding SceneHierarchy.RootNodes}"
+                                                    SelectedItem="{Binding SceneHierarchy.SelectedNode}"
+                                                    SelectionMode="Multiple">
+                                                    <TreeView.ItemContainerTheme>
+                                                        <ControlTheme
+                                                            x:DataType="vm:NodeViewModel"
+                                                            BasedOn="{StaticResource {x:Type TreeViewItem}}"
+                                                            TargetType="TreeViewItem">
+                                                            <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
+                                                        </ControlTheme>
+                                                    </TreeView.ItemContainerTheme>
+                                                    <TreeView.ItemTemplate>
+                                                        <TreeDataTemplate x:DataType="vm:NodeViewModel" ItemsSource="{Binding Children}">
+                                                            <Grid Background="Transparent" HorizontalAlignment="Stretch">
+                                                                <!--  Drop-target highlight: sits behind the label, shown during drag-over  -->
+                                                                <Border
+                                                                    Background="{DynamicResource Brush.Accent}"
+                                                                    CornerRadius="3"
+                                                                    IsVisible="{Binding IsDropTarget}"
+                                                                    Opacity="0.35" />
+                                                                <StackPanel Margin="2,2" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                                                    <Ellipse Width="6" Height="6" Fill="{DynamicResource Brush.Accent}" IsVisible="{Binding IsDirty}" VerticalAlignment="Center" />
+                                                                    <controls:Codicon Kind="{Binding IconKind}" Size="14" Opacity="0.7" VerticalAlignment="Center" />
+                                                                    <TextBlock FontStyle="{Binding NameFontStyle}" IsVisible="{Binding !IsEditingName}" Text="{Binding DisplayName}" VerticalAlignment="Center" />
+                                                                    <TextBox
+                                                                        Name="NodeRenameTextBox"
+                                                                        MinWidth="80"
+                                                                        Padding="2,0"
+                                                                        IsVisible="{Binding IsEditingName}"
+                                                                        Text="{Binding EditingName, Mode=TwoWay}"
+                                                                        VerticalAlignment="Center" />
+                                                                </StackPanel>
+                                                                <Grid.ContextMenu>
+                                                                    <ContextMenu Opened="OnNodeContextMenuOpened">
+                                                                        <MenuItem Command="{Binding $parent[Window].DataContext.Copy}" Header="{Binding $parent[Window].DataContext.CopyHeader}" IsEnabled="{Binding !$parent[Window].DataContext.IsSimulating}" />
+                                                                        <MenuItem Command="{Binding $parent[Window].DataContext.Paste}" Header="{Binding $parent[Window].DataContext.PasteHeader}" IsEnabled="{Binding !$parent[Window].DataContext.IsSimulating}" />
+                                                                        <Separator />
+                                                                        <MenuItem Click="OnRenameNodeMenuItemClick" Header="Rename" IsEnabled="{Binding !$parent[Window].DataContext.IsSimulating}" />
+                                                                        <MenuItem Command="{Binding $parent[Window].DataContext.TeleportToNode}" CommandParameter="{Binding Name}" Header="Teleport to" IsEnabled="{Binding !$parent[Window].DataContext.IsSimulating}" />
+                                                                        <MenuItem Click="OnMoveToGrandparentMenuItemClick" Header="{Binding MoveToGrandparentHeader}" IsVisible="{Binding CanMoveToGrandparent}" IsEnabled="{Binding !$parent[Window].DataContext.IsSimulating}" />
+                                                                        <Separator IsVisible="{Binding HasActions}" />
+                                                                        <MenuItem Header="Actions" IsVisible="{Binding HasActions}" IsEnabled="{Binding !$parent[Window].DataContext.IsSimulating}" ItemsSource="{Binding Actions}">
+                                                                            <MenuItem.ItemTemplate>
+                                                                                <DataTemplate x:DataType="vm:InspectorActionViewModel">
+                                                                                    <MenuItem Command="{Binding ExecuteActionCommand}" Header="{Binding Label}" IsEnabled="{Binding IsEnabled}" />
+                                                                                </DataTemplate>
+                                                                            </MenuItem.ItemTemplate>
+                                                                        </MenuItem>
+                                                                        <Separator />
+                                                                        <MenuItem Command="{Binding $parent[Window].DataContext.DeleteNode}" Header="{Binding $parent[Window].DataContext.DeleteHeader}" IsEnabled="{Binding !$parent[Window].DataContext.IsSimulating}" />
+                                                                    </ContextMenu>
+                                                                </Grid.ContextMenu>
+                                                            </Grid>
+                                                        </TreeDataTemplate>
+                                                    </TreeView.ItemTemplate>
+                                                </TreeView>
+                                            </Grid>
+                                        </ContentControl>
+                                    </Tool>
+                                </ToolDock>
+
+                                <ProportionalDockSplitter x:Name="LeftSplitter" Id="LeftSplitter" />
+
+                                <ToolDock x:Name="InspectorPane" Id="InspectorPane" Alignment="Bottom" ActiveDockable="InspectorTool">
+                                    <Tool x:Name="InspectorTool" Id="Inspector" Title="Inspector">
+                                        <ContentControl DataContext="{Binding $parent[Window].DataContext}">
+                                            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                                <StackPanel Spacing="8">
+                                                    <Grid
+                                                        Margin="0"
+                                                        DataContext="{Binding Inspector}"
+                                                        IsVisible="{Binding IsEntity}"
+                                                        RowDefinitions="Auto, Auto, Auto">
+
+                                                        <Border Grid.Row="0" Classes="panel-header">
+                                                            <Grid ColumnDefinitions="*,Auto">
+                                                                <ToggleButton
+                                                                    Grid.Column="0"
+                                                                    Classes="section-toggle"
+                                                                    IsChecked="{Binding ComponentsSection.IsExpanded, Mode=TwoWay}">
+                                                                    <StackPanel Orientation="Horizontal" Spacing="4">
+                                                                        <controls:Codicon Kind="{Binding ComponentsSection.ChevronKind}" Size="10" Margin="2,2,0,0" />
+                                                                        <TextBlock VerticalAlignment="Center" Classes="header" Text="Components" />
+                                                                    </StackPanel>
+                                                                </ToggleButton>
+
+                                                                <Button
+                                                                    Grid.Column="1"
+                                                                    Margin="0,0,4,0"
+                                                                    Padding="8,2"
+                                                                    HorizontalAlignment="Right"
+                                                                    VerticalAlignment="Center"
+                                                                    Content="Add"
+                                                                    IsEnabled="{Binding HasAddableComponents}">
+                                                                    <Button.Flyout>
+                                                                        <MenuFlyout ItemsSource="{Binding AddableComponents}">
+                                                                            <MenuFlyout.ItemTemplate>
+                                                                                <DataTemplate x:DataType="vm:AddComponentOptionViewModel">
+                                                                                    <MenuItem
+                                                                                        Command="{Binding $parent[Window].DataContext.Inspector.AddComponentCommand}"
+                                                                                        CommandParameter="{Binding}"
+                                                                                        Header="{Binding Label}"
+                                                                                        IsEnabled="{Binding IsEnabled}" />
+                                                                                </DataTemplate>
+                                                                            </MenuFlyout.ItemTemplate>
+                                                                        </MenuFlyout>
+                                                                    </Button.Flyout>
+                                                                </Button>
+                                                            </Grid>
+                                                        </Border>
+
+                                                        <ItemsControl
+                                                            Grid.Row="1"
+                                                            Margin="12,6"
+                                                            ItemsSource="{Binding Components}">
+                                                            <ItemsControl.IsVisible>
+                                                                <MultiBinding Converter="{x:Static conv:BoolConverters.And}">
+                                                                    <Binding Path="HasComponents" />
+                                                                    <Binding Path="ComponentsSection.IsExpanded" />
+                                                                </MultiBinding>
+                                                            </ItemsControl.IsVisible>
+                                                            <ItemsControl.ItemTemplate>
+                                                                <DataTemplate x:DataType="vm:InspectorComponentViewModelBase">
+                                                                    <Border
+                                                                        Margin="0,0,0,6"
+                                                                        Padding="10"
+                                                                        Background="{DynamicResource Brush.PanelRaised}"
+                                                                        BorderBrush="{DynamicResource Brush.BorderLight}"
+                                                                        BorderThickness="1"
+                                                                        CornerRadius="{DynamicResource Radius.Medium}">
+                                                                        <StackPanel Spacing="6">
+                                                                            <Grid ColumnDefinitions="*,Auto">
+                                                                                <TextBlock Grid.Column="0" FontWeight="SemiBold" FontSize="12" VerticalAlignment="Center" Text="{Binding Label}" />
+                                                                                <Button
+                                                                                    Grid.Column="1"
+                                                                                    Padding="4,2"
+                                                                                    ToolTip.Tip="Remove component"
+                                                                                    Command="{Binding $parent[Window].DataContext.Inspector.RemoveComponentCommand}"
+                                                                                    CommandParameter="{Binding}">
+                                                                                    <controls:Codicon Kind="Trash" Size="14" />
+                                                                                </Button>
+                                                                            </Grid>
+
+                                                                            <!--  Component-level scalar properties  -->
+                                                                            <inspector:InspectorPropertyItemsControl
+                                                                                IsVisible="{Binding HasProperties}"
+                                                                                ItemsSource="{Binding Properties}" />
+
+                                                                            <!--  Sub-object groups (Mesh, Material, etc.)  -->
+                                                                            <ItemsControl
+                                                                                IsVisible="{Binding HasSubObjects}"
+                                                                                ItemsSource="{Binding SubObjects}">
+                                                                                <ItemsControl.ItemTemplate>
+                                                                                    <DataTemplate x:DataType="vm:ComponentSubObjectViewModel">
+                                                                                        <StackPanel Margin="0,4,0,0" Spacing="2">
+                                                                                            <TextBlock FontWeight="SemiBold" Margin="0,2,0,2" Text="{Binding Label}" />
+                                                                                            <inspector:InspectorPropertyItemsControl
+                                                                                                IsVisible="{Binding HasProperties}"
+                                                                                                ItemsSource="{Binding Properties}" />
+                                                                                        </StackPanel>
+                                                                                    </DataTemplate>
+                                                                                </ItemsControl.ItemTemplate>
+                                                                            </ItemsControl>
+                                                                        </StackPanel>
+                                                                    </Border>
+                                                                </DataTemplate>
+                                                            </ItemsControl.ItemTemplate>
+                                                        </ItemsControl>
+                                                    </Grid>
+
+                                                    <Grid
+                                                        Margin="0"
+                                                        DataContext="{Binding Inspector}"
+                                                        IsVisible="{Binding IsEntity}"
+                                                        RowDefinitions="Auto, Auto, Auto">
+
+                                                        <Border Grid.Row="0" Classes="panel-header">
+                                                            <ToggleButton
+                                                                Classes="section-toggle"
+                                                                IsChecked="{Binding TagsSection.IsExpanded, Mode=TwoWay}">
+                                                                <StackPanel Orientation="Horizontal" Spacing="4">
+                                                                    <controls:Codicon Kind="{Binding TagsSection.ChevronKind}" Size="10" Margin="2,2,0,0" />
+                                                                    <TextBlock VerticalAlignment="Center" Classes="header" Text="Tags" />
+                                                                </StackPanel>
+                                                            </ToggleButton>
+                                                        </Border>
+
+                                                        <Grid
+                                                            Grid.Row="1"
+                                                            Margin="12,6,12,6"
+                                                            ColumnDefinitions="*,Auto"
+                                                            IsVisible="{Binding TagsSection.IsExpanded}">
+                                                            <ComboBox
+                                                                Grid.Column="0"
+                                                                Margin="0,0,6,0"
+                                                                HorizontalAlignment="Stretch"
+                                                                PlaceholderText="Add tag"
+                                                                IsEnabled="{Binding EntityTags.HasAvailableTags}"
+                                                                ItemsSource="{Binding EntityTags.AvailableTags}"
+                                                                SelectedItem="{Binding EntityTags.SelectedAvailableTag, Mode=TwoWay}">
+                                                                <ComboBox.ItemTemplate>
+                                                                    <DataTemplate x:DataType="vm:EntityTagOptionViewModel">
+                                                                        <TextBlock Text="{Binding Name}" />
                                                                     </DataTemplate>
-                                                                </MenuFlyout.ItemTemplate>
-                                                            </MenuFlyout>
-                                                        </Button.Flyout>
-                                                    </Button>
-                                                </Grid>
-                                            </Border>
+                                                                </ComboBox.ItemTemplate>
+                                                            </ComboBox>
+                                                            <Button
+                                                                Grid.Column="1"
+                                                                Padding="8,2"
+                                                                Content="Add"
+                                                                Command="{Binding EntityTags.AddTagCommand}"
+                                                                CommandParameter="{Binding EntityTags.SelectedAvailableTag}" />
+                                                        </Grid>
 
-                                            <ItemsControl
-                                                Grid.Row="1"
-                                                Margin="12,6"
-                                                ItemsSource="{Binding Components}">
-                                                <ItemsControl.IsVisible>
-                                                    <MultiBinding Converter="{x:Static conv:BoolConverters.And}">
-                                                        <Binding Path="HasComponents" />
-                                                        <Binding Path="ComponentsSection.IsExpanded" />
-                                                    </MultiBinding>
-                                                </ItemsControl.IsVisible>
-                                                <ItemsControl.ItemTemplate>
-                                                    <DataTemplate x:DataType="vm:InspectorComponentViewModelBase">
-                                                        <Border
-                                                            Margin="0,0,0,6"
-                                                            Padding="10"
-                                                            Background="{DynamicResource Brush.PanelRaised}"
-                                                            BorderBrush="{DynamicResource Brush.BorderLight}"
-                                                            BorderThickness="1"
-                                                            CornerRadius="{DynamicResource Radius.Medium}">
-                                                            <StackPanel Spacing="6">
-                                                                <Grid ColumnDefinitions="*,Auto">
-                                                                    <TextBlock Grid.Column="0" FontWeight="SemiBold" FontSize="12" VerticalAlignment="Center" Text="{Binding Label}" />
+                                                        <ItemsControl
+                                                            Grid.Row="2"
+                                                            Margin="12,6,12,6"
+                                                            ItemsSource="{Binding EntityTags.Tags}">
+                                                            <ItemsControl.IsVisible>
+                                                                <MultiBinding Converter="{x:Static conv:BoolConverters.And}">
+                                                                    <Binding Path="EntityTags.HasTags" />
+                                                                    <Binding Path="TagsSection.IsExpanded" />
+                                                                </MultiBinding>
+                                                            </ItemsControl.IsVisible>
+                                                            <ItemsControl.ItemTemplate>
+                                                                <DataTemplate x:DataType="vm:EntityTagItemViewModel">
+                                                                    <Border
+                                                                        Margin="0,0,0,6"
+                                                                        Padding="8,4"
+                                                                        Background="{DynamicResource Brush.PanelRaised}"
+                                                                        BorderBrush="{DynamicResource Brush.BorderLight}"
+                                                                        BorderThickness="1"
+                                                                        CornerRadius="{DynamicResource Radius.Medium}">
+                                                                        <Grid ColumnDefinitions="*,Auto">
+                                                                            <TextBlock Grid.Column="0" FontSize="12" VerticalAlignment="Center" Text="{Binding Name}" />
+                                                                            <Button
+                                                                                Grid.Column="1"
+                                                                                Padding="4,2"
+                                                                                ToolTip.Tip="Remove tag"
+                                                                                Command="{Binding $parent[Window].DataContext.Inspector.EntityTags.RemoveTagCommand}"
+                                                                                CommandParameter="{Binding}">
+                                                                                <controls:Codicon Kind="Trash" Size="14" />
+                                                                            </Button>
+                                                                        </Grid>
+                                                                    </Border>
+                                                                </DataTemplate>
+                                                            </ItemsControl.ItemTemplate>
+                                                        </ItemsControl>
+                                                    </Grid>
+
+                                                    <Grid
+                                                        Margin="0"
+                                                        DataContext="{Binding Inspector}"
+                                                        IsVisible="{Binding IsEntity}"
+                                                        RowDefinitions="Auto, Auto, Auto">
+
+                                                        <Border Grid.Row="0" Classes="panel-header">
+                                                            <Grid ColumnDefinitions="*,Auto">
+                                                                <ToggleButton
+                                                                    Grid.Column="0"
+                                                                    Classes="section-toggle"
+                                                                    IsChecked="{Binding LayersSection.IsExpanded, Mode=TwoWay}">
+                                                                    <StackPanel Orientation="Horizontal" Spacing="4">
+                                                                        <controls:Codicon Kind="{Binding LayersSection.ChevronKind}" Size="10" Margin="2,2,0,0" />
+                                                                        <TextBlock VerticalAlignment="Center" Classes="header" Text="Layers" />
+                                                                    </StackPanel>
+                                                                </ToggleButton>
+
+                                                                <Button
+                                                                    Grid.Column="1"
+                                                                    Margin="0,0,4,0"
+                                                                    Padding="8,2"
+                                                                    HorizontalAlignment="Right"
+                                                                    VerticalAlignment="Center"
+                                                                    Content="Add"
+                                                                    IsEnabled="{Binding EntityLayers.HasAvailableLayers}">
+                                                                    <Button.Flyout>
+                                                                        <MenuFlyout ItemsSource="{Binding EntityLayers.AvailableLayers}">
+                                                                            <MenuFlyout.ItemTemplate>
+                                                                                <DataTemplate x:DataType="vm:EntityLayerOptionViewModel">
+                                                                                    <MenuItem
+                                                                                        Command="{Binding $parent[Window].DataContext.Inspector.EntityLayers.AddLayerCommand}"
+                                                                                        CommandParameter="{Binding}"
+                                                                                        Header="{Binding Name}" />
+                                                                                </DataTemplate>
+                                                                            </MenuFlyout.ItemTemplate>
+                                                                        </MenuFlyout>
+                                                                    </Button.Flyout>
+                                                                </Button>
+                                                            </Grid>
+                                                        </Border>
+
+                                                        <ItemsControl
+                                                            Grid.Row="1"
+                                                            Margin="12,6,12,6"
+                                                            ItemsSource="{Binding EntityLayers.Layers}">
+                                                            <ItemsControl.IsVisible>
+                                                                <MultiBinding Converter="{x:Static conv:BoolConverters.And}">
+                                                                    <Binding Path="EntityLayers.HasLayers" />
+                                                                    <Binding Path="LayersSection.IsExpanded" />
+                                                                </MultiBinding>
+                                                            </ItemsControl.IsVisible>
+                                                            <ItemsControl.ItemTemplate>
+                                                                <DataTemplate x:DataType="vm:EntityLayerItemViewModel">
+                                                                    <Border
+                                                                        Margin="0,0,0,6"
+                                                                        Padding="8,4"
+                                                                        Background="{DynamicResource Brush.PanelRaised}"
+                                                                        BorderBrush="{DynamicResource Brush.BorderLight}"
+                                                                        BorderThickness="1"
+                                                                        CornerRadius="{DynamicResource Radius.Medium}">
+                                                                        <Grid ColumnDefinitions="*,Auto">
+                                                                            <TextBlock Grid.Column="0" FontSize="12" VerticalAlignment="Center" Text="{Binding Name}" />
+                                                                            <Button
+                                                                                Grid.Column="1"
+                                                                                Padding="4,2"
+                                                                                ToolTip.Tip="Remove from layer"
+                                                                                Command="{Binding $parent[Window].DataContext.Inspector.EntityLayers.RemoveLayerCommand}"
+                                                                                CommandParameter="{Binding}">
+                                                                                <controls:Codicon Kind="Trash" Size="14" />
+                                                                            </Button>
+                                                                        </Grid>
+                                                                    </Border>
+                                                                </DataTemplate>
+                                                            </ItemsControl.ItemTemplate>
+                                                        </ItemsControl>
+                                                    </Grid>
+
+                                                    <Grid
+                                                        Margin="0"
+                                                        IsVisible="{Binding Inspector.HasAttachedScript}"
+                                                        RowDefinitions="Auto, Auto">
+                                                        <Border Grid.Row="0" Classes="panel-header">
+                                                            <ToggleButton
+                                                                Classes="section-toggle"
+                                                                IsChecked="{Binding Inspector.ScriptSection.IsExpanded, Mode=TwoWay}">
+                                                                <StackPanel Orientation="Horizontal" Spacing="4">
+                                                                    <controls:Codicon Kind="{Binding Inspector.ScriptSection.ChevronKind}" Size="10" Margin="2,2,0,0" />
+                                                                    <TextBlock VerticalAlignment="Center" Classes="header" Text="Script" />
+                                                                </StackPanel>
+                                                            </ToggleButton>
+                                                        </Border>
+
+                                                        <StackPanel Grid.Row="1" IsVisible="{Binding Inspector.ScriptSection.IsExpanded}">
+                                                            <Grid
+                                                                DataContext="{Binding Inspector.AttachedScript}"
+                                                                ColumnDefinitions="72,*"
+                                                                Margin="12,6,12,4">
+                                                            <Border
+                                                                Width="64"
+                                                                Height="64"
+                                                                Margin="0,0,8,0"
+                                                                VerticalAlignment="Top"
+                                                                Background="{DynamicResource Brush.PanelRaised}"
+                                                                BorderBrush="{DynamicResource Brush.BorderLight}"
+                                                                BorderThickness="1"
+                                                                CornerRadius="{DynamicResource Radius.Medium}">
+                                                                <TextBlock
+                                                                    HorizontalAlignment="Center"
+                                                                    VerticalAlignment="Center"
+                                                                    FontSize="22"
+                                                                    Opacity="0.3"
+                                                                    Text="☐" />
+                                                            </Border>
+
+                                                            <StackPanel Grid.Column="1" Spacing="4">
+                                                                <TextBlock
+                                                                    FontSize="12"
+                                                                    FontWeight="SemiBold"
+                                                                    Text="{Binding ScriptDisplay}" />
+
+                                                                <Border
+                                                                    Background="{DynamicResource Brush.PanelRaised}"
+                                                                    BorderBrush="{DynamicResource Brush.BorderLight}"
+                                                                    BorderThickness="1"
+                                                                    CornerRadius="{DynamicResource Radius.Small}"
+                                                                    Padding="6,5">
+                                                                    <TextBlock
+                                                                        FontSize="11"
+                                                                        Text="{Binding AssetPathDisplay}"
+                                                                        TextTrimming="CharacterEllipsis" />
+                                                                </Border>
+
+                                                                <StackPanel Orientation="Horizontal" Spacing="4">
                                                                     <Button
-                                                                        Grid.Column="1"
-                                                                        Padding="4,2"
-                                                                        ToolTip.Tip="Remove component"
-                                                                        Command="{Binding DataContext.Inspector.RemoveComponentCommand, ElementName=Root}"
-                                                                        CommandParameter="{Binding}">
-                                                                        <controls:Codicon Kind="Trash" Size="14" />
-                                                                    </Button>
-                                                                </Grid>
+                                                                        Padding="8,2"
+                                                                        FontSize="11"
+                                                                        Command="{Binding SelectCommand}"
+                                                                        Content="Swap"
+                                                                        IsEnabled="{Binding CanSelectFromContentBrowser}"
+                                                                        ToolTip.Tip="Assign to the currently selected asset in the Assets drawer" />
+                                                                    <Button
+                                                                        Padding="8,2"
+                                                                        FontSize="11"
+                                                                        Command="{Binding ClearCommand}"
+                                                                        Content="Clear"
+                                                                        IsEnabled="{Binding HasScript}" />
+                                                                </StackPanel>
+                                                            </StackPanel>
+                                                            </Grid>
+                                                        </StackPanel>
+                                                    </Grid>
 
-                                                                <!--  Component-level scalar properties  -->
-                                                                <inspector:InspectorPropertyItemsControl
-                                                                    IsVisible="{Binding HasProperties}"
-                                                                    ItemsSource="{Binding Properties}" />
+                                                    <Grid
+                                                        Margin="0"
+                                                        IsVisible="{Binding Inspector.HasActions}"
+                                                        RowDefinitions="Auto, Auto">
+                                                        <Border Grid.Row="0" Classes="panel-header">
+                                                            <ToggleButton
+                                                                Classes="section-toggle"
+                                                                IsChecked="{Binding Inspector.ActionsSection.IsExpanded, Mode=TwoWay}">
+                                                                <StackPanel Orientation="Horizontal" Spacing="4">
+                                                                    <controls:Codicon Kind="{Binding Inspector.ActionsSection.ChevronKind}" Size="10" Margin="2,2,0,0" />
+                                                                    <TextBlock VerticalAlignment="Center" Classes="header" Text="Actions" />
+                                                                </StackPanel>
+                                                            </ToggleButton>
+                                                        </Border>
 
-                                                                <!--  Sub-object groups (Mesh, Material, etc.)  -->
-                                                                <ItemsControl
-                                                                    IsVisible="{Binding HasSubObjects}"
-                                                                    ItemsSource="{Binding SubObjects}">
+                                                        <ItemsControl
+                                                            Grid.Row="1"
+                                                            VerticalAlignment="Top"
+                                                            ItemsSource="{Binding Inspector.Actions}">
+                                                            <ItemsControl.IsVisible>
+                                                                <MultiBinding Converter="{x:Static conv:BoolConverters.And}">
+                                                                    <Binding Path="Inspector.HasActions" />
+                                                                    <Binding Path="Inspector.ActionsSection.IsExpanded" />
+                                                                </MultiBinding>
+                                                            </ItemsControl.IsVisible>
+                                                            <ItemsControl.ItemTemplate>
+                                                                <DataTemplate x:DataType="vm:InspectorActionViewModel">
+                                                                    <Button
+                                                                        Padding="10,4"
+                                                                        Margin="12,6,12,0"
+                                                                        HorizontalAlignment="Stretch"
+                                                                        VerticalAlignment="Center"
+                                                                        Command="{Binding ExecuteActionCommand}"
+                                                                        Content="{Binding Label}"
+                                                                        IsEnabled="{Binding IsEnabled}" />
+                                                                </DataTemplate>
+                                                            </ItemsControl.ItemTemplate>
+                                                        </ItemsControl>
+                                                    </Grid>
+
+                                                    <!--  Scene Properties (shown when root node is selected)  -->
+                                                    <Grid
+                                                        Margin="0"
+                                                        IsVisible="{Binding Inspector.HasSceneProperties}"
+                                                        RowDefinitions="Auto, Auto">
+                                                        <Border Grid.Row="0" Classes="panel-header">
+                                                            <ToggleButton
+                                                                Classes="section-toggle"
+                                                                IsChecked="{Binding Inspector.ScenePropertiesSection.IsExpanded, Mode=TwoWay}">
+                                                                <StackPanel Orientation="Horizontal" Spacing="4">
+                                                                    <controls:Codicon Kind="{Binding Inspector.ScenePropertiesSection.ChevronKind}" Size="10" Margin="2,2,0,0" />
+                                                                    <TextBlock VerticalAlignment="Center" Classes="header" Text="Scene Properties" />
+                                                                </StackPanel>
+                                                            </ToggleButton>
+                                                        </Border>
+                                                        <inspector:InspectorPropertyItemsControl
+                                                            Grid.Row="1"
+                                                            ItemsSource="{Binding Inspector.SceneProperties}">
+                                                            <inspector:InspectorPropertyItemsControl.IsVisible>
+                                                                <MultiBinding Converter="{x:Static conv:BoolConverters.And}">
+                                                                    <Binding Path="Inspector.HasSceneProperties" />
+                                                                    <Binding Path="Inspector.ScenePropertiesSection.IsExpanded" />
+                                                                </MultiBinding>
+                                                            </inspector:InspectorPropertyItemsControl.IsVisible>
+                                                        </inspector:InspectorPropertyItemsControl>
+                                                    </Grid>
+
+                                                    <!--  Layer Overrides (per-entity edit routing + copy)  -->
+                                                    <Grid
+                                                        Margin="0"
+                                                        DataContext="{Binding Inspector}"
+                                                        IsVisible="{Binding IsEntity}"
+                                                        RowDefinitions="Auto, Auto">
+                                                        <Border Grid.Row="0" Classes="panel-header">
+                                                            <Grid ColumnDefinitions="*,Auto">
+                                                                <ToggleButton
+                                                                    Grid.Column="0"
+                                                                    Classes="section-toggle"
+                                                                    IsChecked="{Binding LayerOverridesSection.IsExpanded, Mode=TwoWay}">
+                                                                    <StackPanel Orientation="Horizontal" Spacing="4">
+                                                                        <controls:Codicon Kind="{Binding LayerOverridesSection.ChevronKind}" Size="10" Margin="2,2,0,0" />
+                                                                        <TextBlock VerticalAlignment="Center" Classes="header" Text="Layer Overrides" />
+                                                                    </StackPanel>
+                                                                </ToggleButton>
+                                                                <Border
+                                                                    Grid.Column="1"
+                                                                    Margin="6,0,4,0"
+                                                                    Padding="6,1"
+                                                                    HorizontalAlignment="Left"
+                                                                    VerticalAlignment="Center"
+                                                                    Background="{DynamicResource Brush.AccentSubtle}"
+                                                                    BorderBrush="{DynamicResource Brush.Accent}"
+                                                                    BorderThickness="1"
+                                                                    CornerRadius="{DynamicResource Radius.Large}"
+                                                                    IsVisible="{Binding HasOverriddenProperties}">
+                                                                    <TextBlock
+                                                                        FontSize="10"
+                                                                        FontWeight="SemiBold"
+                                                                        Foreground="{DynamicResource Brush.AccentHover}"
+                                                                        Text="{Binding OverriddenPropertyCount}" />
+                                                                </Border>
+                                                            </Grid>
+                                                        </Border>
+
+                                                        <StackPanel Grid.Row="1" Margin="12,8,12,10" Spacing="10" IsVisible="{Binding LayerOverridesSection.IsExpanded}">
+                                                            <TextBlock
+                                                                FontSize="10"
+                                                                Foreground="{DynamicResource Brush.TextMuted}"
+                                                                IsVisible="{Binding !CanUseLayerOverrides}"
+                                                                Text="Default is the base layer - changes made here apply to the entity's base values."
+                                                                TextWrapping="Wrap" />
+
+                                                            <StackPanel Spacing="4" IsVisible="{Binding HasOverriddenProperties}">
+                                                                <TextBlock
+                                                                    Classes="section-label"
+                                                                    Text="{Binding OverriddenPropertiesHeader}"
+                                                                    TextTrimming="CharacterEllipsis" />
+
+                                                                <ItemsControl ItemsSource="{Binding OverriddenProperties}">
                                                                     <ItemsControl.ItemTemplate>
-                                                                        <DataTemplate x:DataType="vm:ComponentSubObjectViewModel">
-                                                                            <StackPanel Margin="0,4,0,0" Spacing="2">
-                                                                                <TextBlock FontWeight="SemiBold" Margin="0,2,0,2" Text="{Binding Label}" />
-                                                                                <inspector:InspectorPropertyItemsControl
-                                                                                    IsVisible="{Binding HasProperties}"
-                                                                                    ItemsSource="{Binding Properties}" />
-                                                                            </StackPanel>
+                                                                        <DataTemplate x:DataType="vm:InspectorPropertyViewModelBase">
+                                                                            <Grid Margin="0,1" ColumnDefinitions="Auto,*,Auto">
+                                                                                <Border
+                                                                                    Grid.Column="0"
+                                                                                    Width="2"
+                                                                                    Margin="0,1,7,1"
+                                                                                    Background="{DynamicResource Brush.Accent}"
+                                                                                    CornerRadius="1" />
+                                                                                <TextBlock
+                                                                                    Grid.Column="1"
+                                                                                    FontSize="11"
+                                                                                    VerticalAlignment="Center"
+                                                                                    Text="{Binding Label}"
+                                                                                    TextTrimming="CharacterEllipsis"
+                                                                                    ToolTip.Tip="{Binding OverrideTooltip}" />
+                                                                                <Button
+                                                                                    Grid.Column="2"
+                                                                                    Classes="reset-icon"
+                                                                                    Command="{Binding RevertOverrideCommand}"
+                                                                                    ToolTip.Tip="Revert to base value">
+                                                                                    <Path
+                                                                                        Width="11"
+                                                                                        Height="11"
+                                                                                        Stretch="Uniform"
+                                                                                        Data="M12.5 8c-2.65 0-5.05.99-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z" />
+                                                                                </Button>
+                                                                            </Grid>
                                                                         </DataTemplate>
                                                                     </ItemsControl.ItemTemplate>
                                                                 </ItemsControl>
+
+                                                                <Grid ColumnDefinitions="*,Auto">
+                                                                    <Button
+                                                                        Grid.Column="0"
+                                                                        Padding="8,2"
+                                                                        VerticalAlignment="Center"
+                                                                        Content="Revert All"
+                                                                        Command="{Binding ResetLayerOverridesCommand}"
+                                                                        ToolTip.Tip="Revert layer-specific property overrides back to base values." />
+                                                                </Grid>
+
                                                             </StackPanel>
-                                                        </Border>
-                                                    </DataTemplate>
-                                                </ItemsControl.ItemTemplate>
-                                            </ItemsControl>
-                                        </Grid>
 
-                                        <Grid
-                                            Margin="0"
-                                            DataContext="{Binding Inspector}"
-                                            IsVisible="{Binding IsEntity}"
-                                            RowDefinitions="Auto, Auto, Auto">
+                                                            <TextBlock
+                                                                FontSize="11"
+                                                                Foreground="{DynamicResource Brush.TextFaint}"
+                                                                IsVisible="{Binding ShowNoOverridesHint}"
+                                                                Text="No properties overridden on this layer."
+                                                                TextWrapping="Wrap" />
 
-                                            <Border Grid.Row="0" Classes="panel-header">
-                                                <ToggleButton
-                                                    Classes="section-toggle"
-                                                    IsChecked="{Binding TagsSection.IsExpanded, Mode=TwoWay}">
-                                                    <StackPanel Orientation="Horizontal" Spacing="4">
-                                                        <controls:Codicon Kind="{Binding TagsSection.ChevronKind}" Size="10" Margin="2,2,0,0" />
-                                                        <TextBlock VerticalAlignment="Center" Classes="header" Text="Tags" />
-                                                    </StackPanel>
-                                                </ToggleButton>
-                                            </Border>
-
-                                            <Grid
-                                                Grid.Row="1"
-                                                Margin="12,6,12,6"
-                                                ColumnDefinitions="*,Auto"
-                                                IsVisible="{Binding TagsSection.IsExpanded}">
-                                                <ComboBox
-                                                    Grid.Column="0"
-                                                    Margin="0,0,6,0"
-                                                    HorizontalAlignment="Stretch"
-                                                    PlaceholderText="Add tag"
-                                                    IsEnabled="{Binding EntityTags.HasAvailableTags}"
-                                                    ItemsSource="{Binding EntityTags.AvailableTags}"
-                                                    SelectedItem="{Binding EntityTags.SelectedAvailableTag, Mode=TwoWay}">
-                                                    <ComboBox.ItemTemplate>
-                                                        <DataTemplate x:DataType="vm:EntityTagOptionViewModel">
-                                                            <TextBlock Text="{Binding Name}" />
-                                                        </DataTemplate>
-                                                    </ComboBox.ItemTemplate>
-                                                </ComboBox>
-                                                <Button
-                                                    Grid.Column="1"
-                                                    Padding="8,2"
-                                                    Content="Add"
-                                                    Command="{Binding EntityTags.AddTagCommand}"
-                                                    CommandParameter="{Binding EntityTags.SelectedAvailableTag}" />
-                                            </Grid>
-
-                                            <ItemsControl
-                                                Grid.Row="2"
-                                                Margin="12,6,12,6"
-                                                ItemsSource="{Binding EntityTags.Tags}">
-                                                <ItemsControl.IsVisible>
-                                                    <MultiBinding Converter="{x:Static conv:BoolConverters.And}">
-                                                        <Binding Path="EntityTags.HasTags" />
-                                                        <Binding Path="TagsSection.IsExpanded" />
-                                                    </MultiBinding>
-                                                </ItemsControl.IsVisible>
-                                                <ItemsControl.ItemTemplate>
-                                                    <DataTemplate x:DataType="vm:EntityTagItemViewModel">
-                                                        <Border
-                                                            Margin="0,0,0,6"
-                                                            Padding="8,4"
-                                                            Background="{DynamicResource Brush.PanelRaised}"
-                                                            BorderBrush="{DynamicResource Brush.BorderLight}"
-                                                            BorderThickness="1"
-                                                            CornerRadius="{DynamicResource Radius.Medium}">
-                                                            <Grid ColumnDefinitions="*,Auto">
-                                                                <TextBlock Grid.Column="0" FontSize="12" VerticalAlignment="Center" Text="{Binding Name}" />
-                                                                <Button
-                                                                    Grid.Column="1"
-                                                                    Padding="4,2"
-                                                                    ToolTip.Tip="Remove tag"
-                                                                    Command="{Binding DataContext.Inspector.EntityTags.RemoveTagCommand, ElementName=Root}"
-                                                                    CommandParameter="{Binding}">
-                                                                    <controls:Codicon Kind="Trash" Size="14" />
-                                                                </Button>
-                                                            </Grid>
-                                                        </Border>
-                                                    </DataTemplate>
-                                                </ItemsControl.ItemTemplate>
-                                            </ItemsControl>
-                                        </Grid>
-
-
-                                        <Grid
-                                            Margin="0"
-                                            IsVisible="{Binding Inspector.HasAttachedScript}"
-                                            RowDefinitions="Auto, Auto">
-                                            <Border Grid.Row="0" Classes="panel-header">
-                                                <ToggleButton
-                                                    Classes="section-toggle"
-                                                    IsChecked="{Binding Inspector.ScriptSection.IsExpanded, Mode=TwoWay}">
-                                                    <StackPanel Orientation="Horizontal" Spacing="4">
-                                                        <controls:Codicon Kind="{Binding Inspector.ScriptSection.ChevronKind}" Size="10" Margin="2,2,0,0" />
-                                                        <TextBlock VerticalAlignment="Center" Classes="header" Text="Script" />
-                                                    </StackPanel>
-                                                </ToggleButton>
-                                            </Border>
-
-                                            <StackPanel Grid.Row="1" IsVisible="{Binding Inspector.ScriptSection.IsExpanded}">
-                                                <Grid
-                                                    DataContext="{Binding Inspector.AttachedScript}"
-                                                    ColumnDefinitions="72,*"
-                                                    Margin="12,6,12,4">
-                                                <Border
-                                                    Width="64"
-                                                    Height="64"
-                                                    Margin="0,0,8,0"
-                                                    VerticalAlignment="Top"
-                                                    Background="{DynamicResource Brush.PanelRaised}"
-                                                    BorderBrush="{DynamicResource Brush.BorderLight}"
-                                                    BorderThickness="1"
-                                                    CornerRadius="{DynamicResource Radius.Medium}">
-                                                    <TextBlock
-                                                        HorizontalAlignment="Center"
-                                                        VerticalAlignment="Center"
-                                                        FontSize="22"
-                                                        Opacity="0.3"
-                                                        Text="☐" />
-                                                </Border>
-
-                                                <StackPanel Grid.Column="1" Spacing="4">
-                                                    <TextBlock
-                                                        FontSize="12"
-                                                        FontWeight="SemiBold"
-                                                        Text="{Binding ScriptDisplay}" />
-
-                                                    <Border
-                                                        Background="{DynamicResource Brush.PanelRaised}"
-                                                        BorderBrush="{DynamicResource Brush.BorderLight}"
-                                                        BorderThickness="1"
-                                                        CornerRadius="{DynamicResource Radius.Small}"
-                                                        Padding="6,5">
-                                                        <TextBlock
-                                                            FontSize="11"
-                                                            Text="{Binding AssetPathDisplay}"
-                                                            TextTrimming="CharacterEllipsis" />
-                                                    </Border>
-
-                                                    <StackPanel Orientation="Horizontal" Spacing="4">
-                                                        <Button
-                                                            Padding="8,2"
-                                                            FontSize="11"
-                                                            Command="{Binding SelectCommand}"
-                                                            Content="Swap"
-                                                            IsEnabled="{Binding CanSelectFromContentBrowser}"
-                                                            ToolTip.Tip="Assign to the currently selected asset in the Assets drawer" />
-                                                        <Button
-                                                            Padding="8,2"
-                                                            FontSize="11"
-                                                            Command="{Binding ClearCommand}"
-                                                            Content="Clear"
-                                                            IsEnabled="{Binding HasScript}" />
-                                                    </StackPanel>
-                                                </StackPanel>
-                                                </Grid>
-                                            </StackPanel>
-                                        </Grid>
-
-                                        <Grid
-                                            Margin="0"
-                                            IsVisible="{Binding Inspector.HasActions}"
-                                            RowDefinitions="Auto, Auto">
-                                            <Border Grid.Row="0" Classes="panel-header">
-                                                <ToggleButton
-                                                    Classes="section-toggle"
-                                                    IsChecked="{Binding Inspector.ActionsSection.IsExpanded, Mode=TwoWay}">
-                                                    <StackPanel Orientation="Horizontal" Spacing="4">
-                                                        <controls:Codicon Kind="{Binding Inspector.ActionsSection.ChevronKind}" Size="10" Margin="2,2,0,0" />
-                                                        <TextBlock VerticalAlignment="Center" Classes="header" Text="Actions" />
-                                                    </StackPanel>
-                                                </ToggleButton>
-                                            </Border>
-
-                                            <ItemsControl
-                                                Grid.Row="1"
-                                                VerticalAlignment="Top"
-                                                ItemsSource="{Binding Inspector.Actions}">
-                                                <ItemsControl.IsVisible>
-                                                    <MultiBinding Converter="{x:Static conv:BoolConverters.And}">
-                                                        <Binding Path="Inspector.HasActions" />
-                                                        <Binding Path="Inspector.ActionsSection.IsExpanded" />
-                                                    </MultiBinding>
-                                                </ItemsControl.IsVisible>
-                                                <ItemsControl.ItemTemplate>
-                                                    <DataTemplate x:DataType="vm:InspectorActionViewModel">
-                                                        <Button
-                                                            Padding="10,4"
-                                                            Margin="12,6,12,0"
-                                                            HorizontalAlignment="Stretch"
-                                                            VerticalAlignment="Center"
-                                                            Command="{Binding ExecuteActionCommand}"
-                                                            Content="{Binding Label}"
-                                                            IsEnabled="{Binding IsEnabled}" />
-                                                    </DataTemplate>
-                                                </ItemsControl.ItemTemplate>
-                                            </ItemsControl>
-                                        </Grid>
-
-                                        <!--  Scene Properties (shown when root node is selected)  -->
-                                        <Grid
-                                            Margin="0"
-                                            IsVisible="{Binding Inspector.HasSceneProperties}"
-                                            RowDefinitions="Auto, Auto">
-                                            <Border Grid.Row="0" Classes="panel-header">
-                                                <ToggleButton
-                                                    Classes="section-toggle"
-                                                    IsChecked="{Binding Inspector.ScenePropertiesSection.IsExpanded, Mode=TwoWay}">
-                                                    <StackPanel Orientation="Horizontal" Spacing="4">
-                                                        <controls:Codicon Kind="{Binding Inspector.ScenePropertiesSection.ChevronKind}" Size="10" Margin="2,2,0,0" />
-                                                        <TextBlock VerticalAlignment="Center" Classes="header" Text="Scene Properties" />
-                                                    </StackPanel>
-                                                </ToggleButton>
-                                            </Border>
-                                            <inspector:InspectorPropertyItemsControl
-                                                Grid.Row="1"
-                                                ItemsSource="{Binding Inspector.SceneProperties}">
-                                                <inspector:InspectorPropertyItemsControl.IsVisible>
-                                                    <MultiBinding Converter="{x:Static conv:BoolConverters.And}">
-                                                        <Binding Path="Inspector.HasSceneProperties" />
-                                                        <Binding Path="Inspector.ScenePropertiesSection.IsExpanded" />
-                                                    </MultiBinding>
-                                                </inspector:InspectorPropertyItemsControl.IsVisible>
-                                            </inspector:InspectorPropertyItemsControl>
-                                        </Grid>
-
-                                        <!-- Visibility Layers -->
-                                        <Grid
-                                            Margin="0"
-                                            DataContext="{Binding Inspector}"
-                                            IsVisible="{Binding IsEntity}"
-                                            RowDefinitions="Auto, Auto, Auto">
-
-                                            <Border Grid.Row="0" Classes="panel-header">
-                                                <Grid ColumnDefinitions="*,Auto">
-                                                    <ToggleButton
-                                                        Grid.Column="0"
-                                                        Classes="section-toggle"
-                                                        IsChecked="{Binding LayersSection.IsExpanded, Mode=TwoWay}">
-                                                        <StackPanel Orientation="Horizontal" Spacing="4">
-                                                            <controls:Codicon Kind="{Binding LayersSection.ChevronKind}" Size="10" Margin="2,2,0,0" />
-                                                            <TextBlock VerticalAlignment="Center" Classes="header" Text="Visibility Layers" />
+                                                            <StackPanel Spacing="5">
+                                                                <TextBlock Classes="section-label" Text="COPY PROPERTIES FROM LAYER" />
+                                                                <Grid ColumnDefinitions="*,Auto">
+                                                                    <ComboBox
+                                                                        Grid.Column="0"
+                                                                        Margin="0,0,6,0"
+                                                                        HorizontalAlignment="Stretch"
+                                                                        PlaceholderText="Select layer"
+                                                                        IsEnabled="{Binding HasCopyLayerSources}"
+                                                                        ItemsSource="{Binding CopyLayerSources}"
+                                                                        SelectedItem="{Binding SelectedCopyLayerSource, Mode=TwoWay}">
+                                                                        <ComboBox.ItemTemplate>
+                                                                            <DataTemplate x:DataType="vm:LayerCopySourceOptionViewModel">
+                                                                                <TextBlock Text="{Binding Name}" />
+                                                                            </DataTemplate>
+                                                                        </ComboBox.ItemTemplate>
+                                                                    </ComboBox>
+                                                                    <Button
+                                                                        Grid.Column="1"
+                                                                        Padding="8,2"
+                                                                        Content="Apply"
+                                                                        Command="{Binding ApplyCopyFromLayerCommand}"
+                                                                        ToolTip.Tip="Copy the selected source's property values onto the current edit target" />
+                                                                </Grid>
+                                                            </StackPanel>
                                                         </StackPanel>
-                                                    </ToggleButton>
+                                                    </Grid>
 
-                                                    <Button
+                                                    <!--  Properties  -->
+                                                    <Grid Margin="0" RowDefinitions="Auto, Auto, Auto">
+                                                        <Border Grid.Row="0" Classes="panel-header">
+                                                            <ToggleButton
+                                                                Classes="section-toggle"
+                                                                IsChecked="{Binding Inspector.PropertiesSection.IsExpanded, Mode=TwoWay}">
+                                                                <StackPanel Orientation="Horizontal" Spacing="4">
+                                                                    <controls:Codicon Kind="{Binding Inspector.PropertiesSection.ChevronKind}" Size="10" Margin="2,2,0,0" />
+                                                                    <TextBlock VerticalAlignment="Center" Classes="header" Text="Properties" />
+                                                                </StackPanel>
+                                                            </ToggleButton>
+                                                        </Border>
+                                                        <inspector:InspectorPropertyItemsControl
+                                                            Grid.Row="1"
+                                                            ItemsSource="{Binding Inspector.Properties}"
+                                                            IsVisible="{Binding Inspector.PropertiesSection.IsExpanded}" />
+                                                    </Grid>
+                                                </StackPanel>
+                                            </ScrollViewer>
+                                        </ContentControl>
+                                    </Tool>
+                                </ToolDock>
+
+                            </ProportionalDock>
+
+                            <ProportionalDockSplitter x:Name="MainSplitter1" Id="MainSplitter1" />
+
+                            <!--  Center column: Scene document + bottom panel (Assets/Console)  -->
+                            <ProportionalDock x:Name="Center" Id="Center" Orientation="Vertical">
+
+                                <DocumentDock x:Name="Documents" Id="Documents" CanCreateDocument="True" ActiveDockable="SceneDoc">
+                                    <Document
+                                        x:Name="SceneDoc"
+                                        Id="Scene"
+                                        Title="Scene"
+                                        CanDrag="False"
+                                        CanFloat="False"
+                                        CanPin="False"
+                                        CanClose="False">
+                                        <Grid>
+                                            <Border
+                                                x:Name="ViewportDropTarget"
+                                                Background="{DynamicResource Brush.Background}"
+                                                BorderBrush="{DynamicResource Brush.Border}"
+                                                BorderThickness="0">
+                                                <local:EditorViewportControl
+                                                    x:Name="EditorViewportControl"
+                                                    HorizontalAlignment="Stretch"
+                                                    VerticalAlignment="Stretch" />
+                                            </Border>
+                                        </Grid>
+                                    </Document>
+                                </DocumentDock>
+
+                                <ProportionalDockSplitter x:Name="CenterSplitter" Id="CenterSplitter" />
+
+                                <ProportionalDock x:Name="Bottom" Id="Bottom" Orientation="Horizontal" Proportion="0.3">
+
+                                    <ToolDock x:Name="AssetsPane" Id="AssetsPane" Alignment="Left" ActiveDockable="AssetsTool">
+                                        <Tool x:Name="AssetsTool" Id="ContentBrowser" Title="Assets">
+                                            <ContentControl DataContext="{Binding $parent[Window].DataContext}">
+                                                <DockPanel>
+                                                <Border Classes="panel-header" DockPanel.Dock="Top" Height="36">
+                                                    <Grid VerticalAlignment="Center" ColumnDefinitions="*, Auto, Auto, Auto">
+                                                        <TextBlock Grid.Column="0" Margin="6,0" VerticalAlignment="Center" Classes="header" FontSize="12" Text="Assets" />
+                                                        <ComboBox Grid.Column="1" Margin="0,0,4,0" Padding="6,2" FontSize="11" VerticalAlignment="Center" ToolTip.Tip="Sort order" ItemsSource="{Binding ContentBrowser.SortModeLabels}" SelectedIndex="{Binding ContentBrowser.SortModeIndex, Mode=TwoWay}" />
+                                                        <Button Grid.Column="2" Padding="8,2" VerticalAlignment="Center" Command="{Binding ContentBrowser.ImportCommand}" Content="Import" IsEnabled="{Binding !IsSimulating}" ToolTip.Tip="Import external content into the asset registry." />
+                                                        <Button Grid.Column="3" Padding="8,2" VerticalAlignment="Center" Content="New..." IsEnabled="{Binding !IsSimulating}">
+                                                            <Button.Flyout>
+                                                                <MenuFlyout>
+                                                                    <MenuItem Command="{Binding ContentBrowser.NewPhysicsShapeCommand}" Header="Physics Shape..." />
+                                                                    <MenuItem Command="{Binding ContentBrowser.NewMaterialCommand}" Header="Material" />
+                                                                    <MenuItem Command="{Binding ContentBrowser.NewScriptCommand}" Header="Script..." />
+                                                                </MenuFlyout>
+                                                            </Button.Flyout>
+                                                        </Button>
+                                                    </Grid>
+                                                </Border>
+                                                <Grid ColumnDefinitions="220, *">
+                                                    <ListBox
+                                                        Grid.Column="0"
+                                                        ItemsSource="{Binding ContentBrowser.Buckets}"
+                                                        SelectedItem="{Binding ContentBrowser.CurrentBucket, Mode=TwoWay}">
+                                                        <ListBox.ItemTemplate>
+                                                            <DataTemplate x:DataType="vm:AssetBucketViewModel">
+                                                                <TextBlock Text="{Binding Name}" />
+                                                            </DataTemplate>
+                                                        </ListBox.ItemTemplate>
+                                                    </ListBox>
+                                                    <ListBox
+                                                        x:Name="ContentBrowserAssetList"
                                                         Grid.Column="1"
-                                                        Margin="0,0,4,0"
-                                                        Padding="8,2"
-                                                        HorizontalAlignment="Right"
+                                                        ItemsSource="{Binding ContentBrowser.Assets}"
+                                                        SelectedItem="{Binding ContentBrowser.SelectedAsset, Mode=TwoWay}"
+                                                        ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                                                        <ListBox.ItemsPanel>
+                                                            <ItemsPanelTemplate>
+                                                                <WrapPanel />
+                                                            </ItemsPanelTemplate>
+                                                        </ListBox.ItemsPanel>
+                                                        <ListBox.ItemTemplate>
+                                                            <DataTemplate x:DataType="vm:AssetObjectViewModel">
+                                                                <Border
+                                                                    Width="80"
+                                                                    Height="80"
+                                                                    Margin="4"
+                                                                    Padding="4"
+                                                                    Background="Transparent"
+                                                                    CornerRadius="{DynamicResource Radius.Small}">
+                                                                    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="4">
+                                                                        <controls:Codicon Kind="{Binding IconKind}" Size="28" Opacity="0.85" HorizontalAlignment="Center" Foreground="{DynamicResource Brush.AccentHover}" />
+                                                                        <TextBlock
+                                                                            Text="{Binding DisplayName}"
+                                                                            FontSize="10"
+                                                                            HorizontalAlignment="Center"
+                                                                            TextAlignment="Center"
+                                                                            TextWrapping="Wrap"
+                                                                            TextTrimming="CharacterEllipsis"
+                                                                            MaxWidth="72" />
+                                                                    </StackPanel>
+                                                                    <Border.ContextMenu>
+                                                                        <ContextMenu Opened="OnAssetContextMenuOpened">
+                                                                            <MenuItem
+                                                                                Command="{Binding $parent[Window].DataContext.ContentBrowser.EditAssetCommand}"
+                                                                                CommandParameter="{Binding}"
+                                                                                Header="_Edit"
+                                                                                IsEnabled="{Binding !$parent[Window].DataContext.IsSimulating}" />
+                                                                            <Separator IsVisible="{Binding HasActions}" />
+                                                                            <MenuItem Header="Actions" IsVisible="{Binding HasActions}" IsEnabled="{Binding !$parent[Window].DataContext.IsSimulating}" ItemsSource="{Binding Actions}">
+                                                                                <MenuItem.ItemTemplate>
+                                                                                    <DataTemplate x:DataType="vm:InspectorActionViewModel">
+                                                                                        <MenuItem Command="{Binding ExecuteActionCommand}" Header="{Binding Label}" IsEnabled="{Binding IsEnabled}" />
+                                                                                    </DataTemplate>
+                                                                                </MenuItem.ItemTemplate>
+                                                                            </MenuItem>
+                                                                            <Separator />
+                                                                            <MenuItem
+                                                                                Command="{Binding $parent[Window].DataContext.ContentBrowser.DeleteAssetCommand}"
+                                                                                CommandParameter="{Binding}"
+                                                                                Header="_Delete"
+                                                                                IsEnabled="{Binding !$parent[Window].DataContext.IsSimulating}" />
+                                                                        </ContextMenu>
+                                                                    </Border.ContextMenu>
+                                                                </Border>
+                                                            </DataTemplate>
+                                                        </ListBox.ItemTemplate>
+                                                    </ListBox>
+                                                </Grid>
+                                                </DockPanel>
+                                            </ContentControl>
+                                        </Tool>
+                                    </ToolDock>
+
+                                    <ProportionalDockSplitter x:Name="BottomSplitter" Id="BottomSplitter" />
+
+                                    <ToolDock x:Name="ConsolePane" Id="ConsolePane" Alignment="Right" ActiveDockable="ConsoleTool">
+                                        <Tool x:Name="ConsoleTool" Id="Console" Title="Console">
+                                            <local:ConsoleView />
+                                        </Tool>
+                                    </ToolDock>
+
+                                </ProportionalDock>
+
+                            </ProportionalDock>
+
+                            <ProportionalDockSplitter x:Name="MainSplitter2" Id="MainSplitter2" />
+
+                            <!--  Right column: dynamic editor panel host  -->
+                            <ToolDock x:Name="PropertiesPane" Id="PropertiesPane" Alignment="Right" Proportion="0.2" ActiveDockable="PropertiesTool">
+                                <Tool x:Name="PropertiesTool" Id="Properties" Title="Properties">
+                                    <ContentControl DataContext="{Binding $parent[Window].DataContext}">
+                                        <DockPanel x:Name="RightPanelHost">
+                                            <Border Classes="panel-header" DockPanel.Dock="Top" Height="36">
+                                                <Grid VerticalAlignment="Center" ColumnDefinitions="Auto, *, Auto, Auto">
+                                                    <Button
+                                                        Grid.Column="0"
+                                                        Width="26" Height="26" Padding="0"
+                                                        Margin="4,0,0,0"
                                                         VerticalAlignment="Center"
-                                                        Content="Add"
-                                                        IsEnabled="{Binding EntityLayers.HasAvailableLayers, FallbackValue=False}">
-                                                        <Button.Flyout>
-                                                            <MenuFlyout ItemsSource="{Binding EntityLayers.AvailableLayers}">
-                                                                <MenuFlyout.ItemTemplate>
-                                                                    <DataTemplate x:DataType="vm:EntityLayerOptionViewModel">
-                                                                        <MenuItem
-                                                                            Command="{Binding DataContext.Inspector.EntityLayers.AddLayerCommand, ElementName=Root}"
-                                                                            CommandParameter="{Binding}"
-                                                                            Header="{Binding Name}" />
-                                                                    </DataTemplate>
-                                                                </MenuFlyout.ItemTemplate>
-                                                            </MenuFlyout>
-                                                        </Button.Flyout>
+                                                        IsVisible="{Binding CanGoBackPanel}"
+                                                        Command="{Binding BackPanelCommand}"
+                                                        ToolTip.Tip="Back">
+                                                        <controls:Codicon Kind="ChevronLeft" Size="14" />
+                                                    </Button>
+                                                    <TextBlock
+                                                        Grid.Column="1"
+                                                        Margin="6,0"
+                                                        VerticalAlignment="Center"
+                                                        Classes="header"
+                                                        FontSize="12"
+                                                        Text="{Binding ActivePanel.Title}" />
+                                                    <Button
+                                                        Grid.Column="3"
+                                                        Width="26" Height="26" Padding="0"
+                                                        VerticalAlignment="Center"
+                                                        Command="{Binding ClosePanelCommand}"
+                                                        ToolTip.Tip="Close">
+                                                        <controls:Codicon Kind="Close" Size="14" />
                                                     </Button>
                                                 </Grid>
                                             </Border>
+                                            <ContentControl Content="{Binding ActivePanel}" />
+                                        </DockPanel>
+                                    </ContentControl>
+                                </Tool>
+                            </ToolDock>
 
-                                            <ItemsControl
-                                                Grid.Row="1"
-                                                Margin="12,6,12,6"
-                                                ItemsSource="{Binding EntityLayers.Layers}">
-                                                <ItemsControl.IsVisible>
-                                                    <MultiBinding Converter="{x:Static conv:BoolConverters.And}">
-                                                        <Binding Path="EntityLayers.HasLayers" />
-                                                        <Binding Path="LayersSection.IsExpanded" />
-                                                    </MultiBinding>
-                                                </ItemsControl.IsVisible>
-                                                <ItemsControl.ItemTemplate>
-                                                    <DataTemplate x:DataType="vm:EntityLayerItemViewModel">
-                                                        <Border
-                                                            Margin="0,0,0,6"
-                                                            Padding="8,4"
-                                                            Background="{DynamicResource Brush.PanelRaised}"
-                                                            BorderBrush="{DynamicResource Brush.BorderLight}"
-                                                            BorderThickness="1"
-                                                            CornerRadius="{DynamicResource Radius.Medium}">
-                                                            <Grid ColumnDefinitions="*,Auto">
-                                                                <TextBlock Grid.Column="0" FontSize="12" VerticalAlignment="Center" Text="{Binding Name}" />
-                                                                <Button
-                                                                    Grid.Column="1"
-                                                                    Padding="4,2"
-                                                                    ToolTip.Tip="Remove from layer"
-                                                                    Command="{Binding DataContext.Inspector.EntityLayers.RemoveLayerCommand, ElementName=Root}"
-                                                                    CommandParameter="{Binding}">
-                                                                    <controls:Codicon Kind="Trash" Size="14" />
-                                                                </Button>
-                                                            </Grid>
-                                                        </Border>
-                                                    </DataTemplate>
-                                                </ItemsControl.ItemTemplate>
-                                            </ItemsControl>
-                                        </Grid>
+                        </ProportionalDock>
 
-                                        <!--  Layer Overrides -->
-                                        <Grid
-                                            Margin="0"
-                                            DataContext="{Binding Inspector}"
-                                            IsVisible="{Binding IsEntity}"
-                                            RowDefinitions="Auto, Auto">
-                                            <Border Grid.Row="0" Classes="panel-header">
-                                                <Grid ColumnDefinitions="*,Auto">
-                                                    <ToggleButton
-                                                        Grid.Column="0"
-                                                        Classes="section-toggle"
-                                                        IsChecked="{Binding LayerOverridesSection.IsExpanded, Mode=TwoWay}">
-                                                        <StackPanel Orientation="Horizontal" Spacing="4">
-                                                            <controls:Codicon Kind="{Binding LayerOverridesSection.ChevronKind}" Size="10" Margin="2,2,0,0" />
-                                                            <TextBlock VerticalAlignment="Center" Classes="header" Text="Per-Layer Overrides" />
-                                                        </StackPanel>
-                                                    </ToggleButton>
-                                                    <Border
-                                                        Grid.Column="1"
-                                                        Margin="6,0,4,0"
-                                                        Padding="6,1"
-                                                        HorizontalAlignment="Left"
-                                                        VerticalAlignment="Center"
-                                                        Background="{DynamicResource Brush.AccentSubtle}"
-                                                        BorderBrush="{DynamicResource Brush.Accent}"
-                                                        BorderThickness="1"
-                                                        CornerRadius="{DynamicResource Radius.Large}"
-                                                        IsVisible="{Binding HasOverriddenProperties}">
-                                                        <TextBlock
-                                                            FontSize="10"
-                                                            FontWeight="SemiBold"
-                                                            Foreground="{DynamicResource Brush.AccentHover}"
-                                                            Text="{Binding OverriddenPropertyCount}" />
-                                                    </Border>
-                                                </Grid>
-                                            </Border>
+                    </RootDock>
 
-                                            <StackPanel Grid.Row="1" Margin="12,8,12,10" Spacing="10" IsVisible="{Binding LayerOverridesSection.IsExpanded}">
-                                                
-                                                <StackPanel Spacing="4" IsVisible="{Binding HasOverriddenProperties}">
-                                                    <TextBlock
-                                                        Classes="section-label"
-                                                        Text="{Binding OverriddenPropertiesHeader}"
-                                                        TextTrimming="CharacterEllipsis" />
-
-                                                    <ItemsControl ItemsSource="{Binding OverriddenProperties}">
-                                                        <ItemsControl.ItemTemplate>
-                                                            <DataTemplate x:DataType="vm:InspectorPropertyViewModelBase">
-                                                                <Grid Margin="0,1" ColumnDefinitions="Auto,*,Auto">
-                                                                    <Border
-                                                                        Grid.Column="0"
-                                                                        Width="2"
-                                                                        Margin="0,1,7,1"
-                                                                        Background="{DynamicResource Brush.Accent}"
-                                                                        CornerRadius="1" />
-                                                                    <TextBlock
-                                                                        Grid.Column="1"
-                                                                        FontSize="11"
-                                                                        VerticalAlignment="Center"
-                                                                        Text="{Binding Label}"
-                                                                        TextTrimming="CharacterEllipsis"
-                                                                        ToolTip.Tip="{Binding OverrideTooltip}" />
-                                                                    <Button
-                                                                        Grid.Column="2"
-                                                                        Classes="reset-icon"
-                                                                        Command="{Binding RevertOverrideCommand}"
-                                                                        ToolTip.Tip="Revert to base value">
-                                                                        <Path
-                                                                            Width="11"
-                                                                            Height="11"
-                                                                            Stretch="Uniform"
-                                                                            Data="M12.5 8c-2.65 0-5.05.99-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z" />
-                                                                    </Button>
-                                                                </Grid>
-                                                            </DataTemplate>
-                                                        </ItemsControl.ItemTemplate>
-                                                    </ItemsControl>
-                                                    
-                                                    <Grid ColumnDefinitions="*,Auto">
-                                                        <Button
-                                                            Grid.Column="0"
-                                                            Padding="8,2"
-                                                            VerticalAlignment="Center"
-                                                            Content="Revert All"
-                                                            Command="{Binding ResetLayerOverridesCommand}"
-                                                            ToolTip.Tip="Revert per-layer property overrides back to base values." />
-                                                    </Grid>
-                                                    
-                                                </StackPanel>
-
-                                                <TextBlock
-                                                    FontSize="11"
-                                                    Foreground="{DynamicResource Brush.TextFaint}"
-                                                    IsVisible="{Binding ShowNoOverridesHint}"
-                                                    Text="No properties overridden on this layer."
-                                                    TextWrapping="Wrap" />
-
-                                                <StackPanel Spacing="5">
-                                                    <TextBlock Classes="section-label" Text="Copy properties from other layer" />
-                                                    <Grid ColumnDefinitions="*,Auto">
-                                                        <ComboBox
-                                                            Grid.Column="0"
-                                                            Margin="0,0,6,0"
-                                                            HorizontalAlignment="Stretch"
-                                                            PlaceholderText="Select layer"
-                                                            IsEnabled="{Binding HasCopyLayerSources}"
-                                                            ItemsSource="{Binding CopyLayerSources}"
-                                                            SelectedItem="{Binding SelectedCopyLayerSource, Mode=TwoWay}">
-                                                            <ComboBox.ItemTemplate>
-                                                                <DataTemplate x:DataType="vm:LayerCopySourceOptionViewModel">
-                                                                    <TextBlock Text="{Binding Name}" />
-                                                                </DataTemplate>
-                                                            </ComboBox.ItemTemplate>
-                                                        </ComboBox>
-                                                        <Button
-                                                            Grid.Column="1"
-                                                            Padding="8,2"
-                                                            Content="Apply"
-                                                            Command="{Binding ApplyCopyFromLayerCommand}"
-                                                            ToolTip.Tip="Copy the selected source's property values onto the current edit target" />
-                                                    </Grid>
-                                                </StackPanel>
-                                            </StackPanel>
-                                        </Grid>
-
-                                        <!--  Properties  -->
-                                        <Grid Margin="0" RowDefinitions="Auto, Auto, Auto">
-                                            <Border Grid.Row="0" Classes="panel-header">
-                                                <ToggleButton
-                                                    Classes="section-toggle"
-                                                    IsChecked="{Binding Inspector.PropertiesSection.IsExpanded, Mode=TwoWay}">
-                                                    <StackPanel Orientation="Horizontal" Spacing="4">
-                                                        <controls:Codicon Kind="{Binding Inspector.PropertiesSection.ChevronKind}" Size="10" Margin="2,2,0,0" />
-                                                        <TextBlock VerticalAlignment="Center" Classes="header" Text="Properties" />
-                                                    </StackPanel>
-                                                </ToggleButton>
-                                            </Border>
-                                            <inspector:InspectorPropertyItemsControl
-                                                Grid.Row="1"
-                                                ItemsSource="{Binding Inspector.Properties}"
-                                                IsVisible="{Binding Inspector.PropertiesSection.IsExpanded}" />
-                                        </Grid>
-                                    </StackPanel>
-                                </ScrollViewer>
-                            </Grid>
-                        </Grid>
-                    </Grid>
-
-                    <GridSplitter Grid.Column="1" ResizeDirection="Columns" />
-
-                    <Grid Grid.Column="2" RowDefinitions="*, 2, 240">
-                        <Border
-                            x:Name="ViewportDropTarget"
-                            Grid.Row="0"
-                            Background="{DynamicResource Brush.Background}"
-                            BorderBrush="{DynamicResource Brush.Border}"
-                            BorderThickness="0">
-                            <Grid>
-                                <local:EditorViewportControl
-                                    Name="EditorViewportControl"
-                                    HorizontalAlignment="Stretch"
-                                    VerticalAlignment="Stretch" />
-                            </Grid>
-                        </Border>
-
-                        <GridSplitter Grid.Row="1" ResizeDirection="Rows" />
-
-                        <Grid x:Name="BottomPanelGrid" Grid.Row="2" ColumnDefinitions="*, 2, *">
-                                <Grid Grid.Column="0">
-                                    <DockPanel x:Name="ContentBrowserPanel">
-                                        <Border Classes="panel-header" DockPanel.Dock="Top" Height="36">
-                                            <Grid VerticalAlignment="Center" ColumnDefinitions="Auto, *, Auto, Auto, Auto">
-                                                <Button
-                                                    x:Name="CollapseContentBrowser"
-                                                    Grid.Column="0"
-                                                    Width="26" Height="26" Padding="0"
-                                                    VerticalAlignment="Center"
-                                                    ToolTip.Tip="Collapse">
-                                                    <controls:Codicon Kind="ChevronLeft" Size="14" />
-                                                </Button>
-                                                <TextBlock
-                                                    Grid.Column="1"
-                                                    Margin="6,0"
-                                                    VerticalAlignment="Center"
-                                                    Classes="header"
-                                                    FontSize="12"
-                                                    Text="Assets" />
-                                                <ComboBox
-                                                    Grid.Column="2"
-                                                    Margin="0,0,4,0"
-                                                    Padding="6,2"
-                                                    FontSize="11"
-                                                    VerticalAlignment="Center"
-                                                    ToolTip.Tip="Sort order"
-                                                    ItemsSource="{Binding ContentBrowser.SortModeLabels}"
-                                                    SelectedIndex="{Binding ContentBrowser.SortModeIndex, Mode=TwoWay}" />
-                                                <Button
-                                                    Grid.Column="3"
-                                                    Padding="8,2"
-                                                    VerticalAlignment="Center"
-                                                    Command="{Binding ContentBrowser.ImportCommand}"
-                                                    Content="Import"
-                                                    IsEnabled="{Binding !IsSimulating}"
-                                                    ToolTip.Tip="Import external content into the asset registry." />
-                                                <Button
-                                                    Grid.Column="4"
-                                                    Padding="8,2"
-                                                    VerticalAlignment="Center"
-                                                    Content="New..."
-                                                    IsEnabled="{Binding !IsSimulating}">
-                                                    <Button.Flyout>
-                                                        <MenuFlyout>
-                                                            <MenuItem Command="{Binding ContentBrowser.NewPhysicsShapeCommand}" Header="Physics Shape..." />
-                                                            <MenuItem Command="{Binding ContentBrowser.NewMaterialCommand}" Header="Material" />
-                                                            <MenuItem Command="{Binding ContentBrowser.NewScriptCommand}" Header="Script..." />
-                                                        </MenuFlyout>
-                                                    </Button.Flyout>
-                                                </Button>
-                                            </Grid>
-                                        </Border>
-                                        <Grid ColumnDefinitions="220, *">
-                                            <ListBox
-                                                Grid.Column="0"
-                                                ItemsSource="{Binding ContentBrowser.Buckets}"
-                                                SelectedItem="{Binding ContentBrowser.CurrentBucket, Mode=TwoWay}">
-                                                <ListBox.ItemTemplate>
-                                                    <DataTemplate x:DataType="vm:AssetBucketViewModel">
-                                                        <TextBlock Text="{Binding Name}" />
-                                                    </DataTemplate>
-                                                </ListBox.ItemTemplate>
-                                            </ListBox>
-                                            <ListBox
-                                                x:Name="ContentBrowserAssetList"
-                                                Grid.Column="1"
-                                                ItemsSource="{Binding ContentBrowser.Assets}"
-                                                SelectedItem="{Binding ContentBrowser.SelectedAsset, Mode=TwoWay}"
-                                                ScrollViewer.HorizontalScrollBarVisibility="Disabled">
-                                                <ListBox.ItemsPanel>
-                                                    <ItemsPanelTemplate>
-                                                        <WrapPanel />
-                                                    </ItemsPanelTemplate>
-                                                </ListBox.ItemsPanel>
-                                                <ListBox.ItemTemplate>
-                                                    <DataTemplate x:DataType="vm:AssetObjectViewModel">
-                                                        <Border
-                                                            Width="80"
-                                                            Height="80"
-                                                            Margin="4"
-                                                            Padding="4"
-                                                            Background="Transparent"
-                                                            CornerRadius="{DynamicResource Radius.Small}">
-                                                            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="4">
-                                                                <controls:Codicon Kind="{Binding IconKind}" Size="28" Opacity="0.85" HorizontalAlignment="Center" Foreground="{DynamicResource Brush.AccentHover}" />
-                                                                <TextBlock
-                                                                    Text="{Binding DisplayName}"
-                                                                    FontSize="10"
-                                                                    HorizontalAlignment="Center"
-                                                                    TextAlignment="Center"
-                                                                    TextWrapping="Wrap"
-                                                                    TextTrimming="CharacterEllipsis"
-                                                                    MaxWidth="72" />
-                                                            </StackPanel>
-                                                            <Border.ContextMenu>
-                                                                <ContextMenu Opened="OnAssetContextMenuOpened">
-                                                                    <MenuItem
-                                                                        Command="{Binding DataContext.ContentBrowser.EditAssetCommand, ElementName=Root}"
-                                                                        CommandParameter="{Binding}"
-                                                                        Header="_Edit"
-                                                                        IsEnabled="{Binding !DataContext.IsSimulating, ElementName=Root}" />
-                                                                    <Separator IsVisible="{Binding HasActions}" />
-                                                                    <MenuItem Header="Actions" IsVisible="{Binding HasActions}" IsEnabled="{Binding !DataContext.IsSimulating, ElementName=Root}" ItemsSource="{Binding Actions}">
-                                                                        <MenuItem.ItemTemplate>
-                                                                            <DataTemplate x:DataType="vm:InspectorActionViewModel">
-                                                                                <MenuItem Command="{Binding ExecuteActionCommand}" Header="{Binding Label}" IsEnabled="{Binding IsEnabled}" />
-                                                                            </DataTemplate>
-                                                                        </MenuItem.ItemTemplate>
-                                                                    </MenuItem>
-                                                                    <Separator />
-                                                                    <MenuItem
-                                                                        Command="{Binding DataContext.ContentBrowser.DeleteAssetCommand, ElementName=Root}"
-                                                                        CommandParameter="{Binding}"
-                                                                        Header="_Delete"
-                                                                        IsEnabled="{Binding !DataContext.IsSimulating, ElementName=Root}" />
-                                                                </ContextMenu>
-                                                            </Border.ContextMenu>
-                                                        </Border>
-                                                    </DataTemplate>
-                                                </ListBox.ItemTemplate>
-                                            </ListBox>
-                                        </Grid>
-                                    </DockPanel>
-
-                                    <Border
-                                        x:Name="ContentBrowserCollapsedStrip"
-                                        IsVisible="False"
-                                        Background="{DynamicResource Brush.PanelAlt}"
-                                        BorderBrush="{DynamicResource Brush.Border}"
-                                        BorderThickness="0,0,1,0">
-                                        <Button
-                                            x:Name="ExpandContentBrowser"
-                                            Width="26" Height="26" Padding="0"
-                                            Margin="0,4"
-                                            HorizontalAlignment="Center"
-                                            VerticalAlignment="Top"
-                                            ToolTip.Tip="Expand">
-                                            <controls:Codicon Kind="ChevronRight" Size="14" />
-                                        </Button>
-                                    </Border>
-                                </Grid>
-
-                                <GridSplitter x:Name="BottomPanelSplitter" Grid.Column="1" ResizeDirection="Columns" />
-
-                                <!--  Console slot  -->
-                                <Grid Grid.Column="2">
-                                    <DockPanel x:Name="ConsolePanel">
-                                        <Border Classes="panel-header" DockPanel.Dock="Top" Height="36">
-                                            <Grid VerticalAlignment="Center" ColumnDefinitions="*, Auto">
-                                                <TextBlock
-                                                    Grid.Column="0"
-                                                    Margin="0,0,6,0"
-                                                    VerticalAlignment="Center"
-                                                    Classes="header"
-                                                    FontSize="12"
-                                                    Text="Console" />
-                                                <Button
-                                                    x:Name="CollapseConsole"
-                                                    Grid.Column="1"
-                                                    Width="26" Height="26" Padding="0"
-                                                    VerticalAlignment="Center"
-                                                    ToolTip.Tip="Collapse">
-                                                    <controls:Codicon Kind="ChevronRight" Size="14" />
-                                                </Button>
-                                            </Grid>
-                                        </Border>
-                                        <local:ConsoleView />
-                                    </DockPanel>
-
-                                    <!--  Console collapsed strip  -->
-                                    <Border
-                                        x:Name="ConsoleCollapsedStrip"
-                                        IsVisible="False"
-                                        Background="{DynamicResource Brush.PanelAlt}"
-                                        BorderBrush="{DynamicResource Brush.Border}"
-                                        BorderThickness="1,0,0,0">
-                                        <Button
-                                            x:Name="ExpandConsole"
-                                            Width="26" Height="26" Padding="0"
-                                            Margin="0,4"
-                                            HorizontalAlignment="Center"
-                                            VerticalAlignment="Top"
-                                            ToolTip.Tip="Expand">
-                                            <controls:Codicon Kind="ChevronLeft" Size="14" />
-                                        </Button>
-                                    </Border>
-                                </Grid>
-                            </Grid>
-                    </Grid>
-
-                    <!--  Right panel host (dynamic editor panels)  -->
-                    <GridSplitter x:Name="RightPanelSplitter" Grid.Column="3" ResizeDirection="Columns" />
-
-                    <Grid Grid.Column="4">
-                        <DockPanel x:Name="RightPanelHost">
-                            <Border Classes="panel-header" DockPanel.Dock="Top" Height="36">
-                                <Grid VerticalAlignment="Center" ColumnDefinitions="Auto, *, Auto, Auto">
-                                    <Button
-                                        Grid.Column="0"
-                                        Width="26" Height="26" Padding="0"
-                                        Margin="4,0,0,0"
-                                        VerticalAlignment="Center"
-                                        IsVisible="{Binding CanGoBackPanel}"
-                                        Command="{Binding BackPanelCommand}"
-                                        ToolTip.Tip="Back">
-                                        <controls:Codicon Kind="ChevronLeft" Size="14" />
-                                    </Button>
-                                    <TextBlock
-                                        Grid.Column="1"
-                                        Margin="6,0"
-                                        VerticalAlignment="Center"
-                                        Classes="header"
-                                        FontSize="12"
-                                        Text="{Binding ActivePanel.Title}" />
-                                    <Button
-                                        Grid.Column="3"
-                                        Width="26" Height="26" Padding="0"
-                                        VerticalAlignment="Center"
-                                        Command="{Binding ClosePanelCommand}"
-                                        ToolTip.Tip="Close">
-                                        <controls:Codicon Kind="Close" Size="14" />
-                                    </Button>
-                                </Grid>
-                            </Border>
-                            <ContentControl Content="{Binding ActivePanel}" />
-                        </DockPanel>
-
-                        <Border
-                            x:Name="RightPanelCollapsedStrip"
-                            IsVisible="False"
-                            Background="{DynamicResource Brush.PanelAlt}"
-                            BorderBrush="{DynamicResource Brush.Border}"
-                            BorderThickness="1,0,0,0">
-                            <Button
-                                x:Name="ExpandRightPanel"
-                                Width="26" Height="26" Padding="0"
-                                Margin="0,4"
-                                HorizontalAlignment="Center"
-                                VerticalAlignment="Top"
-                                ToolTip.Tip="Expand">
-                                <controls:Codicon Kind="ChevronLeft" Size="14" />
-                            </Button>
-                        </Border>
-                    </Grid>
-
-                </Grid>
+                </DockControl>
 
                 <!--  Status Bar  -->
-                <Border Grid.Row="3" Classes="status-bar">
+                <Border Grid.Row="1" Classes="status-bar">
                     <Grid ColumnDefinitions="*, Auto">
                         <TextBlock
                             Classes="status-hint"
