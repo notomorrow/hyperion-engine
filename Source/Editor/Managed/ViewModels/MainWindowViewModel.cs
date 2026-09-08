@@ -174,6 +174,9 @@ namespace Hyperion.Editor.ViewModels
         public ICommand AddNormalizedCubeSphereCommand { get; private set; }
         public EditorCommand AddCylinder => new EditorCommand("AddCylinder");
 
+        // Templates
+        public EditorCommand AddPlayerEntity => new EditorCommand("AddPlayerEntity");
+
         private string GetSelectedNodeName() => SceneHierarchy.SelectedNode?.Node?.Name.ToString() ?? string.Empty;
 
         public EditorCommand DeleteNode => new EditorCommand("DeleteNode");

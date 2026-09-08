@@ -420,6 +420,8 @@ namespace Hyperion.Editor
                 if (window.Host is Window hostWindow)
                 {
                     hostWindow.Closed += OnPanelWindowClosed;
+
+                    hostWindow.Activate();
                 }
 
             }
@@ -724,7 +726,7 @@ namespace Hyperion.Editor
 
             DragDrop.SetAllowDrop(_sceneTree, true);
 
-           
+
             _sceneTree.AddHandler(InputElement.PointerPressedEvent, OnSceneTreePointerPressed, RoutingStrategies.Tunnel);
             _sceneTree.AddHandler(InputElement.PointerMovedEvent, OnSceneTreePointerMoved, RoutingStrategies.Tunnel);
             _sceneTree.AddHandler(InputElement.PointerReleasedEvent, OnSceneTreePointerReleased, RoutingStrategies.Tunnel);
@@ -826,6 +828,8 @@ namespace Hyperion.Editor
             _isDragging = true;
             var candidate = _dragCandidate;
 
+            e.Pointer.Capture(_sceneTree);
+
             var data = new DataTransfer();
             data.Add(DataTransferItem.Create(NodeViewModelDragFormat, candidate));
 
@@ -837,6 +841,10 @@ namespace Hyperion.Editor
             {
                 // DoDragDrop can throw on Windows if the drag is cancelled externally
                 // or the pointer state is unexpected; treat as a cancelled drag.
+            }
+            catch (Exception ex)
+            {
+                Logger.Log(LogLevel.Error, $"Scene hierarchy drag-and-drop failed: {ex}");
             }
             finally
             {
@@ -940,6 +948,8 @@ namespace Hyperion.Editor
 
         private void EndDrag()
         {
+            _dragPressedArgs?.Pointer.Capture(null);
+
             _isDragging = false;
             _dragCandidate = null;
             _dragPressedArgs = null;
@@ -1176,7 +1186,7 @@ namespace Hyperion.Editor
         {
             _isClosing = true;
 
-            // Disable main thread loop until this is done 
+            // Disable main thread loop until this is done
             // This should prevent MainThread::Update() from being triggered by avalonia
             // directly after clicking any of the messagebox buttons
             EngineManager.DisableMainLoop = true;

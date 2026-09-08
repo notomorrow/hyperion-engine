@@ -537,6 +537,10 @@
                                                                     <MenuItem Command="{Binding AddCube}" Header="Cube" />
                                                                     <MenuItem Command="{Binding AddNormalizedCubeSphereCommand}" Header="Normalized Cube Sphere" />
                                                                     <MenuItem Command="{Binding AddCylinder}" Header="Cylinder" />
+                                                                    <Separator />
+                                                                    <MenuItem Header="Templates">
+                                                                        <MenuItem Command="{Binding AddPlayerEntity}" Header="Player Entity" />
+                                                                    </MenuItem>
 
                                                                 </MenuFlyout>
                                                             </Button.Flyout>

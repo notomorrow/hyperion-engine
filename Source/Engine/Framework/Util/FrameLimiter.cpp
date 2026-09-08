@@ -81,7 +81,10 @@ void FrameLimiter::SetTargetRate(int targetFps)
     if (targetFps <= 0)
     {
         m_targetFps = 0;
+
+#ifdef _WIN32
         m_win32SetTimerPeriodState.Reset();
+#endif
 
         return;
     }
