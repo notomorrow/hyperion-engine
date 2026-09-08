@@ -289,7 +289,7 @@
                             IsChecked="{Binding IsMeshEditModeEnabled, Mode=OneWay}"
                             IsEnabled="{Binding CanEnableMeshEditMode}"
                             ToolTip.Tip="{Binding MeshEditModeTooltip}">
-                            <controls:Codicon Kind="CircuitBoard" Size="16" />
+                            <controls:Codicon Kind="MeshEditMode" Size="16" />
                         </ToggleButton>
                         <!-- <ToggleButton
                             x:Name="PhysicsDebugDrawToggle"
@@ -346,8 +346,8 @@
                                     Classes="gizmo"
                                     Command="{Binding ToggleMeshEditAlignToNormal}"
                                     IsChecked="{Binding IsMeshEditAlignToNormal, Mode=OneWay}"
-                                    ToolTip.Tip="Constrain movement to surface normal">
-                                    <controls:Codicon Kind="Compass" Size="16" />
+                                    ToolTip.Tip="Align to normal">
+                                    <controls:Codicon Kind="AlignToNormal" Size="16" />
                                 </ToggleButton>
 
                                 <Border Classes="mode-separator" />
@@ -881,83 +881,6 @@
                                             </ItemsControl>
                                         </Grid>
 
-                                        <Grid
-                                            Margin="0"
-                                            DataContext="{Binding Inspector}"
-                                            IsVisible="{Binding IsEntity}"
-                                            RowDefinitions="Auto, Auto, Auto">
-
-                                            <Border Grid.Row="0" Classes="panel-header">
-                                                <Grid ColumnDefinitions="*,Auto">
-                                                    <ToggleButton
-                                                        Grid.Column="0"
-                                                        Classes="section-toggle"
-                                                        IsChecked="{Binding LayersSection.IsExpanded, Mode=TwoWay}">
-                                                        <StackPanel Orientation="Horizontal" Spacing="4">
-                                                            <controls:Codicon Kind="{Binding LayersSection.ChevronKind}" Size="10" Margin="2,2,0,0" />
-                                                            <TextBlock VerticalAlignment="Center" Classes="header" Text="Layers" />
-                                                        </StackPanel>
-                                                    </ToggleButton>
-
-                                                    <Button
-                                                        Grid.Column="1"
-                                                        Margin="0,0,4,0"
-                                                        Padding="8,2"
-                                                        HorizontalAlignment="Right"
-                                                        VerticalAlignment="Center"
-                                                        Content="Add"
-                                                        IsEnabled="{Binding EntityLayers.HasAvailableLayers}">
-                                                        <Button.Flyout>
-                                                            <MenuFlyout ItemsSource="{Binding EntityLayers.AvailableLayers}">
-                                                                <MenuFlyout.ItemTemplate>
-                                                                    <DataTemplate x:DataType="vm:EntityLayerOptionViewModel">
-                                                                        <MenuItem
-                                                                            Command="{Binding DataContext.Inspector.EntityLayers.AddLayerCommand, ElementName=Root}"
-                                                                            CommandParameter="{Binding}"
-                                                                            Header="{Binding Name}" />
-                                                                    </DataTemplate>
-                                                                </MenuFlyout.ItemTemplate>
-                                                            </MenuFlyout>
-                                                        </Button.Flyout>
-                                                    </Button>
-                                                </Grid>
-                                            </Border>
-
-                                            <ItemsControl
-                                                Grid.Row="1"
-                                                Margin="12,6,12,6"
-                                                ItemsSource="{Binding EntityLayers.Layers}">
-                                                <ItemsControl.IsVisible>
-                                                    <MultiBinding Converter="{x:Static conv:BoolConverters.And}">
-                                                        <Binding Path="EntityLayers.HasLayers" />
-                                                        <Binding Path="LayersSection.IsExpanded" />
-                                                    </MultiBinding>
-                                                </ItemsControl.IsVisible>
-                                                <ItemsControl.ItemTemplate>
-                                                    <DataTemplate x:DataType="vm:EntityLayerItemViewModel">
-                                                        <Border
-                                                            Margin="0,0,0,6"
-                                                            Padding="8,4"
-                                                            Background="{DynamicResource Brush.PanelRaised}"
-                                                            BorderBrush="{DynamicResource Brush.BorderLight}"
-                                                            BorderThickness="1"
-                                                            CornerRadius="{DynamicResource Radius.Medium}">
-                                                            <Grid ColumnDefinitions="*,Auto">
-                                                                <TextBlock Grid.Column="0" FontSize="12" VerticalAlignment="Center" Text="{Binding Name}" />
-                                                                <Button
-                                                                    Grid.Column="1"
-                                                                    Padding="4,2"
-                                                                    ToolTip.Tip="Remove from layer"
-                                                                    Command="{Binding DataContext.Inspector.EntityLayers.RemoveLayerCommand, ElementName=Root}"
-                                                                    CommandParameter="{Binding}">
-                                                                    <controls:Codicon Kind="Trash" Size="14" />
-                                                                </Button>
-                                                            </Grid>
-                                                        </Border>
-                                                    </DataTemplate>
-                                                </ItemsControl.ItemTemplate>
-                                            </ItemsControl>
-                                        </Grid>
 
                                         <Grid
                                             Margin="0"
@@ -1101,7 +1024,86 @@
                                             </inspector:InspectorPropertyItemsControl>
                                         </Grid>
 
-                                        <!--  Layer Overrides (per-entity edit routing + copy)  -->
+                                        <!-- Visibility Layers -->
+                                        <Grid
+                                            Margin="0"
+                                            DataContext="{Binding Inspector}"
+                                            IsVisible="{Binding IsEntity}"
+                                            RowDefinitions="Auto, Auto, Auto">
+
+                                            <Border Grid.Row="0" Classes="panel-header">
+                                                <Grid ColumnDefinitions="*,Auto">
+                                                    <ToggleButton
+                                                        Grid.Column="0"
+                                                        Classes="section-toggle"
+                                                        IsChecked="{Binding LayersSection.IsExpanded, Mode=TwoWay}">
+                                                        <StackPanel Orientation="Horizontal" Spacing="4">
+                                                            <controls:Codicon Kind="{Binding LayersSection.ChevronKind}" Size="10" Margin="2,2,0,0" />
+                                                            <TextBlock VerticalAlignment="Center" Classes="header" Text="Visibility Layers" />
+                                                        </StackPanel>
+                                                    </ToggleButton>
+
+                                                    <Button
+                                                        Grid.Column="1"
+                                                        Margin="0,0,4,0"
+                                                        Padding="8,2"
+                                                        HorizontalAlignment="Right"
+                                                        VerticalAlignment="Center"
+                                                        Content="Add"
+                                                        IsEnabled="{Binding EntityLayers.HasAvailableLayers, FallbackValue=False}">
+                                                        <Button.Flyout>
+                                                            <MenuFlyout ItemsSource="{Binding EntityLayers.AvailableLayers}">
+                                                                <MenuFlyout.ItemTemplate>
+                                                                    <DataTemplate x:DataType="vm:EntityLayerOptionViewModel">
+                                                                        <MenuItem
+                                                                            Command="{Binding DataContext.Inspector.EntityLayers.AddLayerCommand, ElementName=Root}"
+                                                                            CommandParameter="{Binding}"
+                                                                            Header="{Binding Name}" />
+                                                                    </DataTemplate>
+                                                                </MenuFlyout.ItemTemplate>
+                                                            </MenuFlyout>
+                                                        </Button.Flyout>
+                                                    </Button>
+                                                </Grid>
+                                            </Border>
+
+                                            <ItemsControl
+                                                Grid.Row="1"
+                                                Margin="12,6,12,6"
+                                                ItemsSource="{Binding EntityLayers.Layers}">
+                                                <ItemsControl.IsVisible>
+                                                    <MultiBinding Converter="{x:Static conv:BoolConverters.And}">
+                                                        <Binding Path="EntityLayers.HasLayers" />
+                                                        <Binding Path="LayersSection.IsExpanded" />
+                                                    </MultiBinding>
+                                                </ItemsControl.IsVisible>
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate x:DataType="vm:EntityLayerItemViewModel">
+                                                        <Border
+                                                            Margin="0,0,0,6"
+                                                            Padding="8,4"
+                                                            Background="{DynamicResource Brush.PanelRaised}"
+                                                            BorderBrush="{DynamicResource Brush.BorderLight}"
+                                                            BorderThickness="1"
+                                                            CornerRadius="{DynamicResource Radius.Medium}">
+                                                            <Grid ColumnDefinitions="*,Auto">
+                                                                <TextBlock Grid.Column="0" FontSize="12" VerticalAlignment="Center" Text="{Binding Name}" />
+                                                                <Button
+                                                                    Grid.Column="1"
+                                                                    Padding="4,2"
+                                                                    ToolTip.Tip="Remove from layer"
+                                                                    Command="{Binding DataContext.Inspector.EntityLayers.RemoveLayerCommand, ElementName=Root}"
+                                                                    CommandParameter="{Binding}">
+                                                                    <controls:Codicon Kind="Trash" Size="14" />
+                                                                </Button>
+                                                            </Grid>
+                                                        </Border>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </Grid>
+
+                                        <!--  Layer Overrides -->
                                         <Grid
                                             Margin="0"
                                             DataContext="{Binding Inspector}"
@@ -1115,7 +1117,7 @@
                                                         IsChecked="{Binding LayerOverridesSection.IsExpanded, Mode=TwoWay}">
                                                         <StackPanel Orientation="Horizontal" Spacing="4">
                                                             <controls:Codicon Kind="{Binding LayerOverridesSection.ChevronKind}" Size="10" Margin="2,2,0,0" />
-                                                            <TextBlock VerticalAlignment="Center" Classes="header" Text="Layer Overrides" />
+                                                            <TextBlock VerticalAlignment="Center" Classes="header" Text="Per-Layer Overrides" />
                                                         </StackPanel>
                                                     </ToggleButton>
                                                     <Border
@@ -1139,13 +1141,7 @@
                                             </Border>
 
                                             <StackPanel Grid.Row="1" Margin="12,8,12,10" Spacing="10" IsVisible="{Binding LayerOverridesSection.IsExpanded}">
-                                                <TextBlock
-                                                    FontSize="10"
-                                                    Foreground="{DynamicResource Brush.TextMuted}"
-                                                    IsVisible="{Binding !CanUseLayerOverrides}"
-                                                    Text="Default is the base layer - changes made here apply to the entity's base values."
-                                                    TextWrapping="Wrap" />
-
+                                                
                                                 <StackPanel Spacing="4" IsVisible="{Binding HasOverriddenProperties}">
                                                     <TextBlock
                                                         Classes="section-label"
@@ -1192,7 +1188,7 @@
                                                             VerticalAlignment="Center"
                                                             Content="Revert All"
                                                             Command="{Binding ResetLayerOverridesCommand}"
-                                                            ToolTip.Tip="Revert layer-specific property overrides back to base values." />
+                                                            ToolTip.Tip="Revert per-layer property overrides back to base values." />
                                                     </Grid>
                                                     
                                                 </StackPanel>
@@ -1205,7 +1201,7 @@
                                                     TextWrapping="Wrap" />
 
                                                 <StackPanel Spacing="5">
-                                                    <TextBlock Classes="section-label" Text="COPY PROPERTIES FROM LAYER" />
+                                                    <TextBlock Classes="section-label" Text="Copy properties from other layer" />
                                                     <Grid ColumnDefinitions="*,Auto">
                                                         <ComboBox
                                                             Grid.Column="0"
