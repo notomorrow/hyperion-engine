@@ -613,14 +613,28 @@ void Camera::UpdateMatchWindowSize()
 
         if (g_appContext.IsValid())
         {
-            const auto handleWindowChanged = [this](ApplicationWindow* window)
+            const auto handleWindowChanged = [weakThis = MakeWeakRef(this)](ApplicationWindow* window)
             {
-                m_onWindowResizedHandle.Reset();
+                Handle<Camera> strongCamera = weakThis.Lock();
+
+                if (!strongCamera.IsValid())
+                {
+                    return;
+                }
+
+                strongCamera->m_onWindowResizedHandle.Reset();
 
                 if (window != nullptr)
                 {
-                    auto matchWindowSize = [this, weakWindow = MakeWeakRef(window)](Vec2i windowSize)
+                    auto matchWindowSize = [weakThis, weakWindow = MakeWeakRef(window)](Vec2i windowSize)
                     {
+                        Handle<Camera> strongCamera = weakThis.Lock();
+
+                        if (!strongCamera.IsValid())
+                        {
+                            return;
+                        }
+
                         Handle<ApplicationWindow> strongWindow = weakWindow.Lock();
 
                         const float renderTargetScale = strongWindow.IsValid()
@@ -628,20 +642,20 @@ void Camera::UpdateMatchWindowSize()
                             : 1.0f;
 
                         Vec2i renderSize = Vec2i(Vec2f(windowSize) * renderTargetScale);
-                        renderSize = MathUtil::Max(Vec2i(MathUtil::Round(Vec2f(renderSize) * m_matchWindowSizeRatio)), Vec2i::One());
+                        renderSize = MathUtil::Max(Vec2i(MathUtil::Round(Vec2f(renderSize) * strongCamera->m_matchWindowSizeRatio)), Vec2i::One());
 
-                        if (m_width != renderSize.x || m_height != renderSize.y)
+                        if (strongCamera->m_width != renderSize.x || strongCamera->m_height != renderSize.y)
                         {
-                            m_width = renderSize.x;
-                            m_height = renderSize.y;
+                            strongCamera->m_width = renderSize.x;
+                            strongCamera->m_height = renderSize.y;
 
-                            UpdateProjectionMatrix();
+                            strongCamera->UpdateProjectionMatrix();
                         }
                     };
 
                     matchWindowSize(window->GetSize());
 
-                    m_onWindowResizedHandle = window->OnWindowSizeChanged.BindThreaded(window, matchWindowSize, g_simThread);
+                    strongCamera->m_onWindowResizedHandle = window->OnWindowSizeChanged.BindThreaded(window, matchWindowSize, g_simThread);
                 }
             };
 

@@ -217,5 +217,23 @@ Array<Handle<Layer>> GetTargetLayers(const Entity& entity, Handle<Layer> fallbac
     return result;
 }
 
+Name GetCurrentLayerForEntity(const Entity& entity)
+{
+    World* world = entity.GetWorld();
+
+    if (!world)
+    {
+        return Name::Invalid();
+    }
+
+    const Handle<Layer>& layer = world->GetActiveLayer();
+    if (!layer)
+    {
+        return Name::Invalid();
+    }
+
+    return layer->name;
+}
+
 } // namespace SceneHelpers
 } // namespace Hyperion

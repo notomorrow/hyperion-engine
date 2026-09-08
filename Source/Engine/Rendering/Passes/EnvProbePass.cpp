@@ -401,9 +401,6 @@ static void ComputePrefilteredEnvMap(Frame* frame, const RenderSetup& renderSetu
     AttachmentBase* colorAttachment = framebuffer->GetAttachment(0);
     AssertDebug(colorAttachment != nullptr && colorAttachment->IsCreated());
 
-    // Structurally, every probe reaching this path renders through a capture state: realtime /
-    // sky probes own one (aliased to their live textures), and baked probes only render while a
-    // bake capture is attached.
     EnvProbeCaptureState* captureState = envProbe->GetCaptureState();
     Assert(captureState != nullptr, "EnvProbe {} is rendering without a capture state", envProbe->Id());
 
@@ -911,9 +908,6 @@ void UpdateEnvProbeVisibilityTexture(Frame* frame, EnvProbe* envProbe, bool shou
     Attachment* srcTexture = framebuffer->GetAttachment(1);
     AssertDebug(srcTexture != nullptr);
 
-    // Structurally, every probe reaching this path renders through a capture state: realtime /
-    // sky probes own one (aliased to their live textures), and baked probes only render while a
-    // bake capture is attached.
     EnvProbeCaptureState* captureState = envProbe->GetCaptureState();
     Assert(captureState != nullptr, "EnvProbe {} is rendering without a capture state", envProbe->Id());
 

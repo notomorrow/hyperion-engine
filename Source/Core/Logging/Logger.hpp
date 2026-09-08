@@ -153,7 +153,8 @@ public:
  *  \param context User-defined context pointer.
  *  \param channel The log channel the message is being written to.
  *  \param message The log message to write.
- *  \return True to allow default output processing, false to suppress it.
+ *  \return True to let the message continue to default output processing, false to suppress it.
+ *  All other redirects in the chain receive the message regardless of the return value.
  */
 typedef bool (*LoggerWriteFnPtr)(void* context, const LogChannel& channel, const LogMessage& message);
 
@@ -230,7 +231,17 @@ public:
 
     ~Logger();
 
-    int AddRedirect(const Bitset& channelMask, void* context, LoggerWriteFnPtr writeFnptr, LoggerWriteFnPtr writeErrorFnptr);
+    /*! \brief Add a redirect, so logs to channels in \p channelMask get sent to the function pointers provided.
+     *  \param channelMask bits corresponding to channels this should capture
+     *  \param context is a user pointer.
+     *  \param writeFnptr "stdout" function pointer
+     *  \param writeErrorFnptr "stderr" function pointer */
+    int AddRedirect(
+        const Bitset& channelMask,
+        void* context,
+        LoggerWriteFnPtr writeFnptr,
+        LoggerWriteFnPtr writeErrorFnptr);
+
     void RemoveRedirect(int id);
 
     void RegisterChannel(LogChannel* channel);

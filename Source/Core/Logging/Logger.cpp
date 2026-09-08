@@ -55,11 +55,7 @@ static bool s_isOutputStreamInitialized = false;
 
 thread_local bool t_isVerboseLoggingEnabled = false;
 
-thread_local uint64 t_localRedirectMask = 0;
 thread_local uint32 t_localGeneration = 0;
-thread_local void* t_localContexts[Logger::MaxChannels];
-thread_local LoggerWriteFnPtr t_localWriteFnptrTable[Logger::MaxChannels];
-thread_local LoggerWriteFnPtr t_localWriteErrorFnptrTable[Logger::MaxChannels];
 
 CORE_API ANSIStringView GetCurrentThreadName()
 {
@@ -103,19 +99,62 @@ struct LoggerRedirect
     LoggerWriteFnPtr writeErrorFn;
 };
 
+struct LoggerRedirectNode
+{
+    LoggerRedirectNode* next;
+    void* context;
+    LoggerWriteFnPtr writeFn;
+    LoggerWriteFnPtr writeErrorFn;
+};
+
+struct LoggerRedirectSnapshot
+{
+    LoggerRedirectNode* heads[Logger::MaxChannels];
+    AtomicVar<uint32> refCount;
+
+    LoggerRedirectSnapshot()
+        : refCount(0)
+    {
+        Memory::Zero(heads, sizeof(heads));
+    }
+
+    void AddRef()
+    {
+        refCount.Increment(1, MemoryOrder::RELAXED);
+    }
+
+    void Release()
+    {
+        if (refCount.Decrement(1, MemoryOrder::ACQUIRE_RELEASE) == 1)
+        {
+            delete this;
+        }
+    }
+};
+
+struct ThreadLocalRedirectSnapshot
+{
+    LoggerRedirectSnapshot* snapshot = nullptr;
+
+    ~ThreadLocalRedirectSnapshot()
+    {
+        if (snapshot != nullptr)
+        {
+            snapshot->Release();
+        }
+    }
+};
+
+thread_local ThreadLocalRedirectSnapshot t_redirectSnapshot;
+
 struct LoggerState
 {
     FILE* m_output;
     FILE* m_outputError;
 
-    void* m_contexts[Logger::MaxChannels];
-
-    LoggerWriteFnPtr m_writeFnptrTable[Logger::MaxChannels];
-    LoggerWriteFnPtr m_writeErrorFnptrTable[Logger::MaxChannels];
-
     Mutex m_mutex;
     Map<int, LoggerRedirect> m_redirects;
-    uint64 m_redirectEnabledMask;
+    LoggerRedirectSnapshot* m_redirectSnapshot;
     int m_redirectIdCounter;
 
     AtomicVar<uint32> m_generation { 0 };
@@ -124,19 +163,86 @@ struct LoggerState
     {
         m_output = stdout;
         m_outputError = stderr;
-        m_redirectEnabledMask = 0;
+        m_redirectSnapshot = nullptr;
         m_redirectIdCounter = -1;
 
         Assert(!s_isOutputStreamInitialized, "Only one instance off LoggerOutputStream can be active");
         s_isOutputStreamInitialized = true;
-
-        Memory::Zero(m_contexts, sizeof(m_contexts));
-        Memory::Zero(m_writeFnptrTable, sizeof(m_writeFnptrTable));
-        Memory::Zero(m_writeErrorFnptrTable, sizeof(m_writeErrorFnptrTable));
     }
 };
 
 static LoggerState s_loggerState;
+
+static void RebuildRedirectsLocked()
+{
+    LoggerRedirectSnapshot* newSnapshot = new LoggerRedirectSnapshot;
+
+    // iterate by id to preserve registration order
+    for (int id = 0; id <= s_loggerState.m_redirectIdCounter; id++)
+    {
+        auto it = s_loggerState.m_redirects.Find(id);
+
+        if (it == s_loggerState.m_redirects.End())
+        {
+            continue;
+        }
+
+        const LoggerRedirect& redirect = it->second;
+
+        for (Bitset::BitIndex bitIndex : redirect.channelMask)
+        {
+            if (bitIndex >= Logger::MaxChannels)
+            {
+                break;
+            }
+
+            LoggerRedirectNode* node = new LoggerRedirectNode { nullptr, redirect.context, redirect.writeFn, redirect.writeErrorFn };
+
+            // append to tail to keep registration order
+            LoggerRedirectNode** tail = &newSnapshot->heads[bitIndex];
+
+            while (*tail != nullptr)
+            {
+                tail = &(*tail)->next;
+            }
+
+            *tail = node;
+        }
+    }
+
+    LoggerRedirectSnapshot* oldSnapshot = s_loggerState.m_redirectSnapshot;
+    s_loggerState.m_redirectSnapshot = newSnapshot;
+
+    if (oldSnapshot != nullptr)
+    {
+        oldSnapshot->Release();
+    }
+
+    s_loggerState.m_generation.Increment(1, MemoryOrder::RELEASE);
+}
+
+static void RefreshLocalRedirectSnapshot(uint32 currentGeneration)
+{
+    LoggerRedirectSnapshot* newSnapshot;
+
+    {
+        Mutex::Guard guard(s_loggerState.m_mutex);
+        newSnapshot = s_loggerState.m_redirectSnapshot;
+
+        if (newSnapshot != nullptr)
+        {
+            newSnapshot->AddRef();
+        }
+    }
+
+    if (t_redirectSnapshot.snapshot != nullptr)
+    {
+        t_redirectSnapshot.snapshot->Release();
+    }
+
+    t_redirectSnapshot.snapshot = newSnapshot;
+    t_localGeneration = currentGeneration;
+}
 
 static void Write(const LogChannel& channel, const LogMessage& message)
 {
@@ -154,37 +260,47 @@ static void Write(const LogChannel& channel, const LogMessage& message)
 
     if (HYP_UNLIKELY(t_localGeneration != currentGeneration))
     {
-        t_localRedirectMask = s_loggerState.m_redirectEnabledMask;
-
-        Memory::Copy(t_localContexts, s_loggerState.m_contexts, sizeof(s_loggerState.m_contexts));
-        Memory::Copy(t_localWriteFnptrTable, s_loggerState.m_writeFnptrTable, sizeof(s_loggerState.m_writeFnptrTable));
-        Memory::Copy(t_localWriteErrorFnptrTable, s_loggerState.m_writeErrorFnptrTable, sizeof(s_loggerState.m_writeErrorFnptrTable));
-
-        t_localGeneration = currentGeneration;
+        RefreshLocalRedirectSnapshot(currentGeneration);
     }
 
-    void* redirectContext = nullptr;
-    LoggerWriteFnPtr redirectFunction = nullptr;
+    LoggerRedirectSnapshot* snapshot = t_redirectSnapshot.snapshot;
 
     const bool isError = uint8(message.level) <= uint8(LogLevel::Warning);
 
+    // find the highest priority channel (most specific) that has a redirect chain
     uint32 bitIndex;
     uint64 mask = pChannel->maskBitset.ToUInt64();
 
+    LoggerRedirectNode* node = nullptr;
+
     while ((bitIndex = ByteUtil::HighestSetBitIndex(mask)) != -1)
     {
-        if (t_localRedirectMask & (1ull << bitIndex))
+        if (snapshot != nullptr && snapshot->heads[bitIndex] != nullptr)
         {
-            redirectContext = t_localContexts[bitIndex];
-            redirectFunction = isError ? t_localWriteErrorFnptrTable[bitIndex] : t_localWriteFnptrTable[bitIndex];
-
+            node = snapshot->heads[bitIndex];
             break;
         }
 
         mask &= ~(1ull << bitIndex);
     }
 
-    if (!redirectFunction || redirectFunction(redirectContext, *pChannel, message))
+    // all redirects in the chain receive the message;
+    // a redirect returning false suppresses default output for anything after it
+    bool allowDefaultOutput = true;
+
+    while (node != nullptr)
+    {
+        const LoggerWriteFnPtr redirectFunction = isError ? node->writeErrorFn : node->writeFn;
+
+        if (redirectFunction && !redirectFunction(node->context, *pChannel, message))
+        {
+            allowDefaultOutput = false;
+        }
+
+        node = node->next;
+    }
+
+    if (allowDefaultOutput)
     {
         FILE* file = isError ? s_loggerState.m_output : s_loggerState.m_outputError;
         const bool isConsole = file == stdout || file == stderr;
@@ -519,7 +635,11 @@ Logger::Logger()
 
 Logger::~Logger() = default;
 
-int Logger::AddRedirect(const Bitset& channelMask, void* context, LoggerWriteFnPtr writeFnptr, LoggerWriteFnPtr writeErrorFnptr)
+int Logger::AddRedirect(
+    const Bitset& channelMask,
+    void* context,
+    LoggerWriteFnPtr writeFnptr,
+    LoggerWriteFnPtr writeErrorFnptr)
 {
     AssertDebug(writeFnptr != nullptr || writeErrorFnptr != nullptr, "At least one of writeFnptr or writeErrorFnptr must be non-null");
 
@@ -529,21 +649,7 @@ int Logger::AddRedirect(const Bitset& channelMask, void* context, LoggerWriteFnP
 
     s_loggerState.m_redirects.Emplace(id, LoggerRedirect { channelMask, context, writeFnptr, writeErrorFnptr });
 
-    for (Bitset::BitIndex bitIndex : channelMask)
-    {
-        if (bitIndex >= Logger::MaxChannels)
-        {
-            break;
-        }
-
-        s_loggerState.m_contexts[bitIndex] = context;
-        s_loggerState.m_writeFnptrTable[bitIndex] = writeFnptr;
-        s_loggerState.m_writeErrorFnptrTable[bitIndex] = writeErrorFnptr;
-
-        s_loggerState.m_redirectEnabledMask |= (1ull << bitIndex);
-    }
-
-    s_loggerState.m_generation.Increment(1, MemoryOrder::RELEASE);
+    RebuildRedirectsLocked();
 
     return id;
 }
@@ -559,23 +665,9 @@ void Logger::RemoveRedirect(int id)
         return;
     }
 
-    for (Bitset::BitIndex bitIndex : it->second.channelMask)
-    {
-        if (s_loggerState.m_contexts[bitIndex] != it->second.context)
-        {
-            continue;
-        }
-
-        s_loggerState.m_contexts[bitIndex] = nullptr;
-        s_loggerState.m_writeFnptrTable[bitIndex] = nullptr;
-        s_loggerState.m_writeErrorFnptrTable[bitIndex] = nullptr;
-
-        s_loggerState.m_redirectEnabledMask &= ~(1ull << bitIndex);
-    }
-
     s_loggerState.m_redirects.Erase(it);
 
-    s_loggerState.m_generation.Increment(1, MemoryOrder::RELEASE);
+    RebuildRedirectsLocked();
 }
 
 const LogChannel* Logger::FindLogChannel(StringHash name) const

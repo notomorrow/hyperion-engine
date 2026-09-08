@@ -105,6 +105,8 @@ void GenerateLightmapsEditorTask::Start()
         bakerSubsystem = m_world->AddSubsystem<BakerSubsystem>();
     }
 
+    uint32 numEnqueued = 0;
+
     for (const Handle<ObjectBase>& source : m_sources)
     {
         Handle<Entity> entitySource = DynamicCast<Entity>(source);
@@ -112,9 +114,12 @@ void GenerateLightmapsEditorTask::Start()
 
         if (!ShouldBakeEntity(*activeLayer, *m_world, *entitySource))
         {
+            HYP_LOG(Editor, Warning, "Skipping bake for {}: it is not in the active layer '{}'",
+                source->Id(), activeLayer->name);
+
             continue;
         }
-        
+
         Task<void> task;
 
         if (source->IsA<LightmapVolume>())
@@ -133,7 +138,20 @@ void GenerateLightmapsEditorTask::Start()
         if (task.IsValid())
         {
             m_tasks.PushBack(std::move(task));
+
+            ++numEnqueued;
         }
+        else
+        {
+            HYP_LOG(Editor, Warning, "Could not enqueue bake for {}: a bake may already be in progress for it",
+                source->Id());
+        }
+    }
+
+    if (numEnqueued == 0)
+    {
+        HYP_LOG(Editor, Error, "No bakes were enqueued for {} source(s); ensure they belong to the active layer '{}' and have no bake currently running",
+            m_sources.Size(), activeLayer->name);
     }
 }
 
@@ -270,10 +288,15 @@ void GenerateBentNormalsEditorTask::Start()
         return;
     }
 
+    uint32 numEnqueued = 0;
+
     for (const Handle<LightmapVolume>& volume : m_volumes)
     {
         if (!ShouldBakeEntity(*activeLayer, *m_world, *volume))
         {
+            HYP_LOG(Editor, Warning, "Skipping bent normals bake for {}: it is not in the active layer '{}'",
+                volume->Id(), activeLayer->name);
+
             continue;
         }
 
@@ -282,7 +305,20 @@ void GenerateBentNormalsEditorTask::Start()
         if (task.IsValid())
         {
             m_tasks.PushBack(std::move(task));
+
+            ++numEnqueued;
         }
+        else
+        {
+            HYP_LOG(Editor, Warning, "Could not enqueue bent normals bake for {}: a bake may already be in progress for it",
+                volume->Id());
+        }
+    }
+
+    if (numEnqueued == 0)
+    {
+        HYP_LOG(Editor, Error, "No bent normals bakes were enqueued for {} volume(s); ensure they belong to the active layer '{}' and have no bake currently running",
+            m_volumes.Size(), activeLayer->name);
     }
 }
 

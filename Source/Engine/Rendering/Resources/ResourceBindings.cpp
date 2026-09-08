@@ -106,7 +106,7 @@ void OnBindingChanged_EnvProbe(EnvProbe* envProbe, uint32 prev, uint32 next)
 
             // Must run before the frame's render commands: this probe's binding index is usable
             // for sampling as soon as we return, so the array texture needs to be up to date this same frame.
-            CommandRecorder& cr = RI.commandRecorderAllocator.GetCommandRecorder(CommandRecorderQueue::PreRender);
+            CommandRecorder& cr = RI.commandRecorderAllocator.GetCommandRecorder();
 
             Texture* dstTexture = RI.envProbesDepthTexture;
 
@@ -142,7 +142,7 @@ void OnBindingChanged_EnvProbe(EnvProbe* envProbe, uint32 prev, uint32 next)
             cr << InsertBarrier(srcImage, RS_SHADER_RESOURCE, srcSubResource);
             cr << InsertBarrier(dstImage, RS_SHADER_RESOURCE, dstSubResource);
 
-            cr.Done();
+            cr.Submit();
         }
     }
 }
@@ -206,7 +206,7 @@ void OnBindingChanged_ReflectionProbe(EnvProbe* envProbe, uint32 prev, uint32 ne
         Texture* srcTexture = proxyCasted->texture;
         CreateTextureIfNotAlready(srcTexture);
 
-        CommandRecorder& cr = RI.commandRecorderAllocator.GetCommandRecorder(CommandRecorderQueue::PreRender);
+        CommandRecorder& cr = RI.commandRecorderAllocator.GetCommandRecorder();
 
         Texture* dstTexture = RI.envProbesColorTexture;
 
@@ -265,7 +265,7 @@ void OnBindingChanged_ReflectionProbe(EnvProbe* envProbe, uint32 prev, uint32 ne
 
         cr << InsertBarrier(dstImage, RS_SHADER_RESOURCE);
 
-        cr.Done();
+        cr.Submit();
     }
 }
 

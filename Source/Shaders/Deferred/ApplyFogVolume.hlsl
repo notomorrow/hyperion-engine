@@ -278,11 +278,11 @@ float GetDirectionalLightCSMShadow(float3 currentPos)
 
     float4 maxDist = max(distX, max(distY, distZ));
     float4 insideMask = step(maxDist, (float4)0.5);
-.
+
     int cascadeIndex = 3;
-    cascadeIndex = (insideMask.z > 0.5) ? 2 : cascadeIndex;
-    cascadeIndex = (insideMask.y > 0.5) ? 1 : cascadeIndex;
-    cascadeIndex = (insideMask.x > 0.5) ? 0 : cascadeIndex;
+    cascadeIndex = select(insideMask.z > 0.5, 2, cascadeIndex);
+    cascadeIndex = select(insideMask.y > 0.5, 1, cascadeIndex);
+    cascadeIndex = select(insideMask.x > 0.5, 0, cascadeIndex);
 
     float4 shadowMapCoord;
     shadowMapCoord.x = uvX[cascadeIndex];

@@ -469,6 +469,13 @@ public:
         return m_editorScene;
     }
 
+    /// Use GetProjectWorld() instead if you need the project's world
+    /// Otherwise, you can cast to Subsystem and call GetWorld on that.
+    World* GetWorld() const = delete;
+
+    HYP_METHOD()
+    const Handle<World>& GetProjectWorld() const;
+
     HYP_METHOD()
     bool StartSimulation();
 

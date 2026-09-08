@@ -649,7 +649,7 @@ public:
 
         editorTask->SetScene(activeScene);
 
-        Handle<World> worldHandle = MakeStrongRef(subsystem->GetWorld());
+        Handle<World> worldHandle = subsystem->GetProjectWorld();
         editorTask->SetWorld(worldHandle);
 
         g_editorState->AddTask(editorTask);
@@ -731,7 +731,7 @@ public:
 
         editorTask->SetScene(activeScene);
 
-        Handle<World> worldHandle = MakeStrongRef(subsystem->GetWorld());
+        Handle<World> worldHandle = subsystem->GetProjectWorld();
         editorTask->SetWorld(worldHandle);
 
         g_editorState->AddTask(editorTask);
@@ -801,9 +801,10 @@ public:
             return;
         }
 
-        Handle<World> worldHandle = MakeStrongRef(subsystem->GetWorld());
+        Handle<World> worldHandle = subsystem->GetProjectWorld();
 
         Handle<GenerateLightmapsEditorTask> editorTask = MakeHandle<GenerateLightmapsEditorTask>(sources);
+        InitObject(editorTask);
         editorTask->SetIsForegroundTask(true);
         editorTask->SetScene(activeScene);
         editorTask->SetWorld(worldHandle);
@@ -877,9 +878,10 @@ public:
         Handle<GenerateBentNormalsEditorTask> generateBentNormalsTask = MakeHandle<GenerateBentNormalsEditorTask>(lightmapVolumes);
         InitObject(generateBentNormalsTask);
 
+        generateBentNormalsTask->SetIsForegroundTask(true);
         generateBentNormalsTask->SetScene(activeScene);
 
-        Handle<World> worldHandle = MakeStrongRef(subsystem->GetWorld());
+        Handle<World> worldHandle = subsystem->GetProjectWorld();
         generateBentNormalsTask->SetWorld(worldHandle);
 
         g_editorState->AddTask(generateBentNormalsTask);
@@ -1203,7 +1205,7 @@ public:
 
             editorTask->SetScene(activeScene);
 
-            Handle<World> worldHandle = MakeStrongRef(subsystem->GetWorld());
+            Handle<World> worldHandle = subsystem->GetProjectWorld();
             editorTask->SetWorld(worldHandle);
 
             g_editorState->AddTask(editorTask);
@@ -1479,7 +1481,7 @@ public:
 
         editorTask->SetScene(activeScene);
 
-        Handle<World> worldHandle = MakeStrongRef(subsystem->GetWorld());
+        Handle<World> worldHandle = subsystem->GetProjectWorld();
         editorTask->SetWorld(worldHandle);
 
         g_editorState->AddTask(editorTask);

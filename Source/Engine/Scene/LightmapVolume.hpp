@@ -161,15 +161,9 @@ public:
     const Handle<Texture>& GetAtlasTexture(uint16 atlasIndex, AtlasTextureType type) const;
     void SetAtlasTexture(uint16 atlasIndex, AtlasTextureType type, const Handle<Texture>& texture);
 
-    static Name GetAtlasTexturesPropertyName(AtlasTextureType type);
-
     FixedArray<Handle<Texture>, MaxAtlasesPerLightmapVolume> GetAtlasTexturesForLayer(AtlasTextureType type, Name layerName) const;
 
-    /*! \brief Assign an atlas texture for \p layerName. The Default layer writes the base fields; any other
-     *  layer is stored as a layer override, leaving the packing and the meshes' UV1 shared across layers. */
     void SetAtlasTextureForLayer(uint16 atlasIndex, AtlasTextureType type, const Handle<Texture>& texture, Name layerName);
-
-    /*! \brief Discard every layer's atlas texture overrides. They are keyed to a packing, so they cannot outlive it. */
     void ClearLayerAtlasTextureOverrides(uint32 preserveTextureTypesMask = 0);
 
 #ifdef HYP_EDITOR
@@ -212,6 +206,8 @@ public:
     void RemoveAllElements(uint32 preserveTextureTypesMask = 0);
 
     void UpdateRenderProxy(RenderProxyLightmapVolume* proxy);
+
+    static Name GetAtlasTexturesPropertyName(AtlasTextureType type);
 
 #pragma region Actions
 

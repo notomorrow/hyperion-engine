@@ -288,12 +288,8 @@ public:
 
     void SetHitMaskData(const Vec4f& hitMaskData);
 
-    //-- Raster capture (EnvProbeCaptureState)
+    //-- Raster capture
 
-    /*! \brief The capture state this probe is currently rendering through, or null when not
-     *  capturing. The render passes write their results (convolved cubemap, visibility, SH) to
-     *  its targets. Owned by the probe itself for realtime / sky probes (aliased to the live
-     *  textures); owned by the driving bake job while a raster bake capture is running. */
     HYP_FORCE_INLINE EnvProbeCaptureState* GetCaptureState() const
     {
         return m_captureState;
@@ -321,7 +317,6 @@ public:
     //--
 
     virtual void Invalidate(bool forceRerender = false);
-
     virtual void Update(float delta) override;
 
     void UpdateRenderProxy(RenderProxyEnvProbe* proxy);

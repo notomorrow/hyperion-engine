@@ -3667,18 +3667,30 @@ EditorSubsystem::~EditorSubsystem()
     delete m_editorDelegates;
 }
 
+const Handle<World>& EditorSubsystem::GetProjectWorld() const
+{
+    if (m_currentProject.IsValid())
+    {
+        return m_currentProject->GetWorld();
+    }
+
+    return nullptr;
+}
+
 void EditorSubsystem::OnAddedToWorld()
 {
-    if (!GetWorld()->GetSubsystem<UISubsystem>())
+    World* world = Subsystem::GetWorld();
+
+    if (!world->GetSubsystem<UISubsystem>())
     {
         HYP_FAIL("EditorSubsystem requires UISubsystem to be initialized");
     }
 
-    GetWorld()->AddSystemT<EditorSpriteSystem>();
+    world->AddSystemT<EditorSpriteSystem>();
 
     m_editorScene = MakeHandle<Scene>(NAME("EditorScene"), SceneFlags::FOREGROUND | SceneFlags::EDITOR);
     m_editorScene->SetIsTransient(true);
-    GetWorld()->AddScene(m_editorScene);
+    world->AddScene(m_editorScene);
 
     InitViewport();
 
@@ -3710,13 +3722,15 @@ void EditorSubsystem::OnRemovedFromWorld()
     {
         vp->OnSceneRemoved(m_editorScene);
     }
+    
+    World* world = Subsystem::GetWorld();
 
-    if (EditorSpriteSystem* spriteSystem = GetWorld()->GetSystem<EditorSpriteSystem>())
+    if (EditorSpriteSystem* spriteSystem = world->GetSystem<EditorSpriteSystem>())
     {
-        GetWorld()->RemoveSystem(spriteSystem);
+        world->RemoveSystem(spriteSystem);
     }
 
-    GetWorld()->RemoveScene(m_editorScene);
+    world->RemoveScene(m_editorScene);
 
     if (m_currentProject)
     {
@@ -4359,7 +4373,7 @@ bool EditorSubsystem::StartSimulation()
 
     gameInstance->StartSimulating();
 
-    if (UISubsystem* uiSubsystem = GetWorld()->GetSubsystem<UISubsystem>())
+    if (UISubsystem* uiSubsystem = Subsystem::GetWorld()->GetSubsystem<UISubsystem>())
     {
         uiSubsystem->SetDebugOverlaysSuppressed(true);
     }
@@ -4392,7 +4406,7 @@ bool EditorSubsystem::StopSimulation()
 
         m_preSimulationProject.Reset();
 
-        if (UISubsystem* uiSubsystem = GetWorld()->GetSubsystem<UISubsystem>())
+        if (UISubsystem* uiSubsystem = Subsystem::GetWorld()->GetSubsystem<UISubsystem>())
         {
             uiSubsystem->SetDebugOverlaysSuppressed(false);
         }
@@ -4423,7 +4437,7 @@ void EditorSubsystem::InitViewport()
     }
     m_editorViewports.Clear();
 
-    UISubsystem* uiSubsystem = GetWorld()->GetSubsystem<UISubsystem>();
+    UISubsystem* uiSubsystem = Subsystem::GetWorld()->GetSubsystem<UISubsystem>();
     Assert(uiSubsystem != nullptr);
 
     Handle<UIPanel> backdropPanel = uiSubsystem->GetUIStage()->CreateUIObject<UIPanel>(NAME("Editor_BackdropPanel"), Vec2i::Zero(), UIObjectSize(100, UIObjectSize::PERCENT));

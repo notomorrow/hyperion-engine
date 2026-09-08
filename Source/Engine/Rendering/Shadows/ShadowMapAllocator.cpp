@@ -191,7 +191,9 @@ ShadowMap* ShadowMapAllocator::AllocateShadowMap(ShadowMapType shadowMapType, co
         {
             Frame* currentFrame = nullptr;
 
-            CommandRecorder& cr = IsOnThread(g_renderThread) && (currentFrame = RI.GetCurrentFrame()) != nullptr
+            const bool useFrameCommands = IsOnThread(g_renderThread) && (currentFrame = RI.GetCurrentFrame()) != nullptr;
+
+            CommandRecorder& cr = useFrameCommands
                 ? currentFrame->preRenderCommands
                 : RI.commandRecorderAllocator.GetCommandRecorder(CommandRecorderQueue::PreRender);
 
@@ -224,6 +226,11 @@ ShadowMap* ShadowMapAllocator::AllocateShadowMap(ShadowMapType shadowMapType, co
                     extent,
                     srcSubResource,
                     dstSubResource);
+            }
+
+            if (!useFrameCommands)
+            {
+                cr.Done();
             }
         }
 
@@ -308,7 +315,9 @@ bool ShadowMapAllocator::FreeShadowMap(ShadowMap* shadowMap, bool clearTextureRe
                 {
                     Frame* currentFrame = nullptr;
 
-                    CommandRecorder& cr = IsOnThread(g_renderThread) && (currentFrame = RI.GetCurrentFrame()) != nullptr
+                    const bool useFrameCommands = IsOnThread(g_renderThread) && (currentFrame = RI.GetCurrentFrame()) != nullptr;
+
+                    CommandRecorder& cr = useFrameCommands
                         ? currentFrame->preRenderCommands
                         : RI.commandRecorderAllocator.GetCommandRecorder(CommandRecorderQueue::PreRender);
 
@@ -340,6 +349,11 @@ bool ShadowMapAllocator::FreeShadowMap(ShadowMap* shadowMap, bool clearTextureRe
                         extent,
                         srcSubResource,
                         dstSubResource);
+
+                    if (!useFrameCommands)
+                    {
+                        cr.Done();
+                    }
                 }
             }
         }

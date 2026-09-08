@@ -13,8 +13,9 @@
 #include <Scene/Scene.hpp>
 #include <Scene/Light.hpp>
 #include <Scene/EntityManager.hpp>
-
 #include <Scene/Layer.hpp>
+
+#include <Scene/Util/SceneHelpers.hpp>
 
 #include <Scene/Systems/LayerOverrideSystem.hpp>
 
@@ -1370,7 +1371,7 @@ void EnvProbe::UpdateRenderProxy(RenderProxyEnvProbe* proxy)
 
     if (m_envProbeFlags & EPF_VISIBILITY)
     {
-        if (proxy->visibilityTexture != m_visibilityTexture)
+        if (proxy->visibilityTexture != m_visibilityTexture.Get())
         {
             proxy->forceRebind = true;
             proxy->visibilityTexture = m_visibilityTexture.Get();

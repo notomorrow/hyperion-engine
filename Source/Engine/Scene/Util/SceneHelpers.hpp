@@ -39,6 +39,8 @@ void MoveCharacter(Entity* entity, CharacterControllerComponent& component, cons
 /// Get target layers for entity to bake into - if no valid fallback is provided, fallback will be set 
 Array<Handle<Layer>> GetTargetLayers(const Entity& entity, Handle<Layer> fallback = Handle<Layer>::Null());
 
+Name GetCurrentLayerForEntity(const Entity& entity);
+
 } // namespace SceneHelpers
 
 } // namespace Hyperion

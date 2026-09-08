@@ -31,8 +31,6 @@ struct ScratchImageAllocatorImpl
         uint32 lastUsedFrame;
         Handle<Texture> texture;
 
-        // cachedImages is kept sorted by this ordering so AcquireScratchImage() can LowerBound()
-        // straight to the first plausible (type, format) group instead of scanning the whole cache.
         HYP_FORCE_INLINE bool operator<(const CachedScratchImage& other) const
         {
             if (type != other.type)
@@ -79,9 +77,6 @@ struct ScratchImageAllocatorImpl
             ++it;
         }
 
-        // usedImages is populated in strictly non-decreasing lastUsedFrame order (frameIndex only
-        // increases across acquisitions), so we can stop at the first entry that isn't old enough
-        // yet instead of scanning the whole list.
         while (!usedImages.Empty())
         {
             CachedScratchImage& usedImage = usedImages.Front();
@@ -113,13 +108,11 @@ struct ScratchImageAllocatorImpl
         searchKey.format = format;
         searchKey.alignedExtent = alignedExtent;
 
-        // cachedImages is sorted by (type, format, volume) - LowerBound() jumps straight to the
-        // first entry that could possibly satisfy this request.
         for (auto it = cachedImages.LowerBound(searchKey); it != cachedImages.End(); ++it)
         {
             if (it->type != type || it->format != format)
             {
-                // Past this (type, format) group entirely - no later entry can match either.
+                // because cachedImages is kept sorted, the first mismatch means we can stop searching.
                 break;
             }
 
