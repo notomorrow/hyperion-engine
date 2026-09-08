@@ -2,6 +2,7 @@
     x:Class="Hyperion.Editor.MainWindow"
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="clr-namespace:Hyperion.Editor.Controls;assembly=Hyperion.Editor"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:hyp="clr-namespace:Hyperion;assembly=Hyperion.Runtime"
     xmlns:inspector="clr-namespace:Hyperion.Editor.Views.Inspector;assembly=Hyperion.Editor"
@@ -213,22 +214,22 @@
                         Orientation="Horizontal"
                         Spacing="4">
                         <Button Command="{Binding OpenProject}" IsEnabled="{Binding !IsSimulating}" ToolTip.Tip="Open">
-                            <LucideIcon Kind="FolderOpen" Size="16" />
+                            <controls:Codicon Kind="FolderOpened" Size="16" />
                         </Button>
                         <Button Command="{Binding SaveProject}" IsEnabled="{Binding !IsSimulating}" ToolTip.Tip="Save">
-                            <LucideIcon Kind="Save" Size="16" />
+                            <controls:Codicon Kind="Save" Size="16" />
                         </Button>
                         <Button Command="{Binding Undo}" ToolTip.Tip="{Binding UndoHeader}" Margin="12,0,0,0" IsEnabled="{Binding CanUndo}">
-                            <LucideIcon Kind="Undo2" Size="16" />
+                            <controls:Codicon Kind="Discard" Size="16" />
                         </Button>
                         <Button Command="{Binding Redo}" ToolTip.Tip="{Binding RedoHeader}" IsEnabled="{Binding CanRedo}">
-                            <LucideIcon Kind="Redo2" Size="16" />
+                            <controls:Codicon Kind="Redo" Size="16" />
                         </Button>
                         <Button Command="{Binding Copy}" ToolTip.Tip="{Binding CopyHeader}" Margin="12,0,0,0" IsEnabled="{Binding CanCopy}">
-                            <LucideIcon Kind="Copy" Size="16" />
+                            <controls:Codicon Kind="Copy" Size="16" />
                         </Button>
                         <Button Command="{Binding Paste}" ToolTip.Tip="{Binding PasteHeader}" IsEnabled="{Binding CanPaste}">
-                            <LucideIcon Kind="ClipboardPaste" Size="16" />
+                            <controls:Codicon Kind="Clippy" Size="16" />
                         </Button>
 
                     </StackPanel>
@@ -246,7 +247,7 @@
                             IsChecked="{Binding IsTransformModeTranslateActive, Mode=OneWay}"
                             IsEnabled="{Binding CanSelectTransformModeTranslate}"
                             ToolTip.Tip="Translate">
-                            <LucideIcon Kind="Move" Size="16" />
+                            <controls:Codicon Kind="Move" Size="16" />
                         </ToggleButton>
                         <ToggleButton
                             x:Name="TransformModeRotate"
@@ -255,7 +256,7 @@
                             IsChecked="{Binding IsTransformModeRotateActive, Mode=OneWay}"
                             IsEnabled="{Binding CanSelectTransformModeRotate}"
                             ToolTip.Tip="Rotate">
-                            <LucideIcon Kind="RotateCw" Size="16" />
+                            <controls:Codicon Kind="Refresh" Size="16" />
                         </ToggleButton>
                         <ToggleButton
                             x:Name="TransformModeScale"
@@ -264,7 +265,7 @@
                             IsChecked="{Binding IsTransformModeScaleActive, Mode=OneWay}"
                             IsEnabled="{Binding CanSelectTransformModeScale}"
                             ToolTip.Tip="Scale">
-                            <LucideIcon Kind="Maximize" Size="16" />
+                            <controls:Codicon Kind="ScreenFull" Size="16" />
                         </ToggleButton>
                         <ToggleButton
                             x:Name="SnapToGridToggle"
@@ -273,7 +274,7 @@
                             Command="{Binding ToggleSnapToGrid}"
                             IsChecked="{Binding IsSnapToGridEnabled, Mode=OneWay}"
                             ToolTip.Tip="Snap Movement To Grid (1 Unit)">
-                            <LucideIcon Kind="Magnet" Size="16" />
+                            <controls:Codicon Kind="Magnet" Size="16" />
                         </ToggleButton>
                         <ToggleButton
                             x:Name="MeshEditModeToggle"
@@ -283,7 +284,7 @@
                             IsChecked="{Binding IsMeshEditModeEnabled, Mode=OneWay}"
                             IsEnabled="{Binding CanEnableMeshEditMode}"
                             ToolTip.Tip="{Binding MeshEditModeTooltip}">
-                            <LucideIcon Kind="Waypoints" Size="16" />
+                            <controls:Codicon Kind="CircuitBoard" Size="16" />
                         </ToggleButton>
                         <!-- <ToggleButton
                             x:Name="PhysicsDebugDrawToggle"
@@ -291,7 +292,7 @@
                             Command="{Binding TogglePhysicsDebugDraw}"
                             IsChecked="{Binding IsPhysicsDebugDrawEnabled, Mode=OneWay}"
                             ToolTip.Tip="Show Physics Collision Shapes">
-                            <LucideIcon Kind="Box" Size="16" />
+                            <controls:Codicon Kind="Package" Size="16" />
                         </ToggleButton> -->
                         <!-- <Button
                             x:Name="FitPhysicsShapeToMeshButton"
@@ -322,7 +323,7 @@
                                     Command="{Binding SelectMeshEditFaceTriangle}"
                                     IsChecked="{Binding !IsMeshEditFaceModeQuad, Mode=OneWay}"
                                     ToolTip.Tip="Edit triangle faces">
-                                    <LucideIcon Kind="TriangleRight" Size="16" />
+                                    <controls:Codicon Kind="TriangleRight" Size="16" />
                                 </ToggleButton>
                                 <ToggleButton
                                     x:Name="MeshEditFaceModeQuad"
@@ -330,7 +331,7 @@
                                     Command="{Binding SelectMeshEditFaceQuad}"
                                     IsChecked="{Binding IsMeshEditFaceModeQuad, Mode=OneWay}"
                                     ToolTip.Tip="Edit as quads">
-                                    <LucideIcon Kind="Square" Size="16" />
+                                    <controls:Codicon Kind="PrimitiveSquare" Size="16" />
                                 </ToggleButton>
 
                                 <Border Classes="mode-separator" />
@@ -341,7 +342,7 @@
                                     Command="{Binding ToggleMeshEditAlignToNormal}"
                                     IsChecked="{Binding IsMeshEditAlignToNormal, Mode=OneWay}"
                                     ToolTip.Tip="Constrain movement to surface normal">
-                                    <LucideIcon Kind="Axis3d" Size="16" />
+                                    <controls:Codicon Kind="Compass" Size="16" />
                                 </ToggleButton>
 
                                 <Border Classes="mode-separator" />
@@ -351,7 +352,7 @@
                                     Classes="gizmo"
                                     Command="{Binding SaveMeshEdits}"
                                     ToolTip.Tip="Save Edits">
-                                    <LucideIcon Kind="Check" Size="16" />
+                                    <controls:Codicon Kind="Check" Size="16" />
                                 </Button>
                                 <Button
                                     x:Name="DiscardMeshEditsButton"
@@ -359,7 +360,7 @@
                                     Command="{Binding DiscardMeshEdits}"
                                     IsEnabled="{Binding HasPendingMeshEdits}"
                                     ToolTip.Tip="Discard Edits">
-                                    <LucideIcon Kind="X" Size="16" />
+                                    <controls:Codicon Kind="Close" Size="16" />
                                 </Button>
                             </StackPanel>
                         </Border>
@@ -374,19 +375,19 @@
                             IsVisible="{Binding CanSetGameModePlaying}"
                             ToolTip.Tip="Play"
                             Classes="Play">
-                            <LucideIcon Kind="Play" Size="16" />
+                            <controls:Codicon Kind="Play" Width="16" Height="16" />
                         </Button>
                         <Button
                             Command="{Binding SetGameModePaused}"
                             IsVisible="{Binding CanSetGameModePaused}"
                             ToolTip.Tip="Pause">
-                            <LucideIcon Kind="Pause" Size="16" />
+                            <controls:Codicon Kind="DebugPause" Width="16" Height="16" />
                         </Button>
                         <Button
                             Command="{Binding SetGameModeStopped}"
                             IsVisible="{Binding CanSetGameModeStopped}"
                             ToolTip.Tip="Stop">
-                            <LucideIcon Kind="Square" Size="16" />
+                            <controls:Codicon Kind="DebugStop" Width="16" Height="16" />
                         </Button>
                     </StackPanel>
                 </Grid>
@@ -410,7 +411,7 @@
                                         Background="Transparent"
                                         BorderThickness="0">
                                         <StackPanel Orientation="Horizontal" Spacing="4">
-                                            <LucideIcon Kind="Boxes" Size="14" Foreground="{StaticResource Brush.TextMuted}" />
+                                            <controls:Codicon Kind="ListTree" Size="14" Foreground="{StaticResource Brush.TextMuted}" />
                                             <TextBlock
                                                 VerticalAlignment="Center"
                                                 Classes="header"
@@ -447,7 +448,7 @@
                                         VerticalAlignment="Center"
                                         IsEnabled="{Binding !IsSimulating}"
                                         ToolTip.Tip="Add new node to the active scene...">
-                                        <LucideIcon Kind="Plus" Size="16" />
+                                        <controls:Codicon Kind="Add" Size="16" />
                                         <Button.Flyout>
                                             <MenuFlyout>
                                                 <MenuItem
@@ -553,7 +554,7 @@
                                         BorderThickness="0"
                                         ToolTip.Tip="Active Layer">
                                         <StackPanel Orientation="Horizontal" Spacing="4">
-                                            <LucideIcon Kind="Layers" Size="12"  Foreground="{StaticResource Brush.TextMuted}" />
+                                            <controls:Codicon Kind="Layers" Size="12"  Foreground="{StaticResource Brush.TextMuted}" />
                                             <TextBlock
                                                 VerticalAlignment="Center"
                                                 FontSize="11"
@@ -614,7 +615,7 @@
                                         Classes="panel-toggle"
                                         IsChecked="{Binding SceneHierarchy.ShowOnlyActiveLayer}"
                                         ToolTip.Tip="Show nodes only for the active layer">
-                                        <LucideIcon Kind="{Binding SceneHierarchy.ShowOnlyActiveLayerIconKind}" Size="16" />
+                                        <controls:Codicon Kind="{Binding SceneHierarchy.ShowOnlyActiveLayerIconKind}" Size="16" />
                                     </ToggleButton>
                                 </Grid>
                             </Border>
@@ -644,7 +645,7 @@
                                                 Opacity="0.35" />
                                             <StackPanel Margin="2,2" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
                                                 <Ellipse Width="6" Height="6" Fill="{DynamicResource Brush.Accent}" IsVisible="{Binding IsDirty}" VerticalAlignment="Center" />
-                                                <LucideIcon Kind="{Binding IconKind}" Size="14" Opacity="0.7" VerticalAlignment="Center" />
+                                                <controls:Codicon Kind="{Binding IconKind}" Size="14" Opacity="0.7" VerticalAlignment="Center" />
                                                 <TextBlock FontStyle="{Binding NameFontStyle}" IsVisible="{Binding !IsEditingName}" Text="{Binding DisplayName}" VerticalAlignment="Center" />
                                                 <!-- <TextBlock
                                                     FontSize="8"
@@ -755,7 +756,7 @@
                                                                         ToolTip.Tip="Remove component"
                                                                         Command="{Binding DataContext.Inspector.RemoveComponentCommand, ElementName=Root}"
                                                                         CommandParameter="{Binding}">
-                                                                        <LucideIcon Kind="Trash" Size="14" />
+                                                                        <controls:Codicon Kind="Trash" Size="14" />
                                                                     </Button>
                                                                 </Grid>
 
@@ -844,7 +845,7 @@
                                                                     ToolTip.Tip="Remove tag"
                                                                     Command="{Binding DataContext.Inspector.EntityTags.RemoveTagCommand, ElementName=Root}"
                                                                     CommandParameter="{Binding}">
-                                                                    <LucideIcon Kind="Trash" Size="14" />
+                                                                    <controls:Codicon Kind="Trash" Size="14" />
                                                                 </Button>
                                                             </Grid>
                                                         </Border>
@@ -911,7 +912,7 @@
                                                                     ToolTip.Tip="Remove from layer"
                                                                     Command="{Binding DataContext.Inspector.EntityLayers.RemoveLayerCommand, ElementName=Root}"
                                                                     CommandParameter="{Binding}">
-                                                                    <LucideIcon Kind="Trash" Size="14" />
+                                                                    <controls:Codicon Kind="Trash" Size="14" />
                                                                 </Button>
                                                             </Grid>
                                                         </Border>
@@ -1214,7 +1215,7 @@
                                                     Width="26" Height="26" Padding="0"
                                                     VerticalAlignment="Center"
                                                     ToolTip.Tip="Collapse">
-                                                    <LucideIcon Kind="ChevronsLeft" Size="14" />
+                                                    <controls:Codicon Kind="ChevronLeft" Size="14" />
                                                 </Button>
                                                 <TextBlock
                                                     Grid.Column="1"
@@ -1288,7 +1289,7 @@
                                                             Background="Transparent"
                                                             CornerRadius="{DynamicResource Radius.Small}">
                                                             <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="4">
-                                                                <LucideIcon Kind="{Binding IconKind}" Size="28" Opacity="0.85" HorizontalAlignment="Center" Foreground="{DynamicResource Brush.AccentHover}" />
+                                                                <controls:Codicon Kind="{Binding IconKind}" Size="28" Opacity="0.85" HorizontalAlignment="Center" Foreground="{DynamicResource Brush.AccentHover}" />
                                                                 <TextBlock
                                                                     Text="{Binding DisplayName}"
                                                                     FontSize="10"
@@ -1341,7 +1342,7 @@
                                             HorizontalAlignment="Center"
                                             VerticalAlignment="Top"
                                             ToolTip.Tip="Expand">
-                                            <LucideIcon Kind="ChevronsRight" Size="14" />
+                                            <controls:Codicon Kind="ChevronRight" Size="14" />
                                         </Button>
                                     </Border>
                                 </Grid>
@@ -1366,7 +1367,7 @@
                                                     Width="26" Height="26" Padding="0"
                                                     VerticalAlignment="Center"
                                                     ToolTip.Tip="Collapse">
-                                                    <LucideIcon Kind="ChevronsRight" Size="14" />
+                                                    <controls:Codicon Kind="ChevronRight" Size="14" />
                                                 </Button>
                                             </Grid>
                                         </Border>
@@ -1387,7 +1388,7 @@
                                             HorizontalAlignment="Center"
                                             VerticalAlignment="Top"
                                             ToolTip.Tip="Expand">
-                                            <LucideIcon Kind="ChevronsLeft" Size="14" />
+                                            <controls:Codicon Kind="ChevronLeft" Size="14" />
                                         </Button>
                                     </Border>
                                 </Grid>
@@ -1409,7 +1410,7 @@
                                         IsVisible="{Binding CanGoBackPanel}"
                                         Command="{Binding BackPanelCommand}"
                                         ToolTip.Tip="Back">
-                                        <LucideIcon Kind="ChevronLeft" Size="14" />
+                                        <controls:Codicon Kind="ChevronLeft" Size="14" />
                                     </Button>
                                     <TextBlock
                                         Grid.Column="1"
@@ -1424,7 +1425,7 @@
                                         VerticalAlignment="Center"
                                         Command="{Binding ClosePanelCommand}"
                                         ToolTip.Tip="Close">
-                                        <LucideIcon Kind="X" Size="14" />
+                                        <controls:Codicon Kind="Close" Size="14" />
                                     </Button>
                                 </Grid>
                             </Border>
@@ -1444,7 +1445,7 @@
                                 HorizontalAlignment="Center"
                                 VerticalAlignment="Top"
                                 ToolTip.Tip="Expand">
-                                <LucideIcon Kind="ChevronsLeft" Size="14" />
+                                <controls:Codicon Kind="ChevronLeft" Size="14" />
                             </Button>
                         </Border>
                     </Grid>

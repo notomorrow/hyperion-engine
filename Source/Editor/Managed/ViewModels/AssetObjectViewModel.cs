@@ -3,7 +3,6 @@ using System.Collections.ObjectModel;
 using System.Threading;
 using Avalonia.Threading;
 using Hyperion;
-using Lucide.Avalonia;
 
 namespace Hyperion.Editor.ViewModels
 {
@@ -26,33 +25,33 @@ namespace Hyperion.Editor.ViewModels
         public DateTime? DateModified => _dateModified;
 
         // @TODO Centralize this somewhere (same for scene hierarchy icons)
-        public LucideIconKind IconKind => _typeName switch
+        public string IconKind => _typeName switch
         {
-            "Mesh" or "MeshAsset"                  => LucideIconKind.Box,
-            "Material"                             => LucideIconKind.Paintbrush, // @TODO Better icon for Material
-            "Texture" or "TextureAsset"            => LucideIconKind.Image,
-            "DirectionalLight"                     => LucideIconKind.Sun,
-            "PointLight"                           => LucideIconKind.Lightbulb,
-            "SpotLight"                            => LucideIconKind.Spotlight,
-            "AreaRectLight"                        => LucideIconKind.RectangleHorizontal,
-            "Camera"                               => LucideIconKind.Video,
-            "ReflectionProbe"                      => LucideIconKind.Orbit,
-            "ParticleVolume"                       => LucideIconKind.Sparkles,
-            "InstancedMeshProxy"                   => LucideIconKind.SquaresUnite,
-            "Skeleton"                             => LucideIconKind.Bone,
-            "Animation" or "AnimationTrack"        => LucideIconKind.Film,
-            "Scene" or "World"                     => LucideIconKind.Globe,
-            "LightmapVolume"                       => LucideIconKind.Box,
-            "FogVolume"                            => LucideIconKind.Cloudy,
-            "Entity"                               => LucideIconKind.Shapes,
-            "Node"                                 => LucideIconKind.Circle,
-            "Shader" or "ShaderBundle"             => LucideIconKind.CodeXml,
-            "FontAtlas"                            => LucideIconKind.Type,
-            "Sound" or "Audio"                     => LucideIconKind.Volume2,
-            "PhysicsShape"                         => LucideIconKind.Triangle,
-            "Script"                               => LucideIconKind.FileCode,
-            _ when _bucket?.BucketIndex >= 0       => LucideIconKind.File,
-            _                                      => LucideIconKind.Circle,
+            "Mesh" or "MeshAsset"                  => "Package",
+            "Material"                             => "SymbolColor",
+            "Texture" or "TextureAsset"            => "FileMedia",
+            "DirectionalLight"                     => "Lightbulb",
+            "PointLight"                           => "Lightbulb",
+            "SpotLight"                            => "Lightbulb",
+            "AreaRectLight"                        => "HorizontalRule",
+            "Camera"                               => "DeviceCamera",
+            "ReflectionProbe"                      => "Globe",
+            "ParticleVolume"                       => "Sparkle",
+            "InstancedMeshProxy"                   => "Combine",
+            "Skeleton"                             => "GitBranch",
+            "Animation" or "AnimationTrack"        => "FileMedia",
+            "Scene" or "World"                     => "Globe",
+            "LightmapVolume"                       => "Package",
+            "FogVolume"                            => "Cloud",
+            "Entity"                               => "CircleLarge",
+            "Node"                                 => "Circle",
+            "Shader" or "ShaderBundle"             => "FileCode",
+            "FontAtlas"                            => "CaseSensitive",
+            "Sound" or "Audio"                     => "Unmute",
+            "PhysicsShape"                         => "Shield",
+            "Script"                               => "FileCode",
+            _ when _bucket?.BucketIndex >= 0       => "File",
+            _                                      => "Circle",
         };
 
         public ObservableCollection<InspectorActionViewModel> Actions { get; } = new ObservableCollection<InspectorActionViewModel>();
