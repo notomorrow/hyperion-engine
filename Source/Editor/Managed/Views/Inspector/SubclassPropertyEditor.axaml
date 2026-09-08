@@ -14,7 +14,7 @@
                 MinWidth="120"
                 MinimumPrefixLength="0"
                 MinimumPopulateDelay="0:0:0.05"
-                Watermark="(Select type...)"
+                PlaceholderText="(Select type...)"
                 FontSize="11"
                 Text="{Binding SubclassFilter, Mode=TwoWay}"
                 ToolTip.Tip="Type to filter subclasses, then select one to create an instance">

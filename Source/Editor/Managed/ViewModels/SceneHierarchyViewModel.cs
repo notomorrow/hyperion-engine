@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Avalonia.Threading;
 using Hyperion;
 using Hyperion.Editor.Services;
+using Lucide.Avalonia;
 
 namespace Hyperion.Editor.ViewModels
 {
@@ -51,7 +52,7 @@ namespace Hyperion.Editor.ViewModels
             }
         }
 
-        public string ShowOnlyActiveLayerIconKind => ShowOnlyActiveLayer ? "EyeOff" : "Eye";
+        public LucideIconKind ShowOnlyActiveLayerIconKind => ShowOnlyActiveLayer ? LucideIconKind.EyeOff : LucideIconKind.Eye;
 
         private DelegateHandler? _onSelectedNodeChanged;
 

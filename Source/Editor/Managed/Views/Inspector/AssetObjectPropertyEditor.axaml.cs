@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Threading.Tasks;
 using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
 using Avalonia.Threading;
@@ -52,7 +53,7 @@ namespace Hyperion.Editor.Views.Inspector
             PART_PickerBox.Focus();
         }
 
-        private void OnPickerBoxLostFocus(object? sender, RoutedEventArgs e)
+        private void OnPickerBoxLostFocus(object? sender, FocusChangedEventArgs e)
         {
             if (DataContext is ObjectPropertyViewModel vm)
             {

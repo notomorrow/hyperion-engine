@@ -19,7 +19,7 @@
             <StackPanel Margin="12,12,12,8" Spacing="12">
                 <StackPanel Spacing="6">
                     <TextBlock Classes="section-label" Text="Name" />
-                    <TextBox Text="{Binding ScriptName, Mode=TwoWay}" Watermark="Script name" />
+                    <TextBox Text="{Binding ScriptName, Mode=TwoWay}" PlaceholderText="Script name" />
                 </StackPanel>
 
                 <Separator />

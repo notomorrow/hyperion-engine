@@ -755,7 +755,7 @@
                                                                         ToolTip.Tip="Remove component"
                                                                         Command="{Binding DataContext.Inspector.RemoveComponentCommand, ElementName=Root}"
                                                                         CommandParameter="{Binding}">
-                                                                        <LucideIcon Kind="Trash2" Size="14" />
+                                                                        <LucideIcon Kind="Trash" Size="14" />
                                                                     </Button>
                                                                 </Grid>
 
@@ -844,7 +844,7 @@
                                                                     ToolTip.Tip="Remove tag"
                                                                     Command="{Binding DataContext.Inspector.EntityTags.RemoveTagCommand, ElementName=Root}"
                                                                     CommandParameter="{Binding}">
-                                                                    <LucideIcon Kind="Trash2" Size="14" />
+                                                                    <LucideIcon Kind="Trash" Size="14" />
                                                                 </Button>
                                                             </Grid>
                                                         </Border>
@@ -911,7 +911,7 @@
                                                                     ToolTip.Tip="Remove from layer"
                                                                     Command="{Binding DataContext.Inspector.EntityLayers.RemoveLayerCommand, ElementName=Root}"
                                                                     CommandParameter="{Binding}">
-                                                                    <LucideIcon Kind="Trash2" Size="14" />
+                                                                    <LucideIcon Kind="Trash" Size="14" />
                                                                 </Button>
                                                             </Grid>
                                                         </Border>

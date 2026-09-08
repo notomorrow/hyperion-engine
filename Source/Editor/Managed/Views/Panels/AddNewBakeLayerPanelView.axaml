@@ -34,7 +34,7 @@
                     <TextBlock Classes="section-label" Text="Layer Name" />
                     <TextBox
                         Text="{Binding LayerName, Mode=TwoWay}"
-                        Watermark="Enter bake layer name..." />
+                        PlaceholderText="Enter bake layer name..." />
                 </StackPanel>
             </StackPanel>
         </ScrollViewer>

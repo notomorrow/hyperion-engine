@@ -1,5 +1,4 @@
 using Avalonia;
-using Avalonia.Vulkan;
 using System;
 using System.Reflection;
 using System.Runtime.InteropServices;
