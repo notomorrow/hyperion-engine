@@ -3,10 +3,11 @@
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:panels="clr-namespace:Hyperion.Editor.Views.Panels;assembly=Hyperion.Editor"
+    xmlns:dac="using:Dock.Avalonia.Controls"
+    xmlns:ds="using:Dock.Avalonia.Themes.Simple"
     xmlns:vm="clr-namespace:Hyperion.Editor.ViewModels;assembly=Hyperion.Editor"
     Name="Hyperion Editor"
     RequestedThemeVariant="Dark">
-    <!--  Ultra-dark editor theme - near-black surfaces, subdued cool accent  -->
 
     <Application.DataTemplates>
         <DataTemplate DataType="vm:NewPhysicsShapePanelViewModel">
@@ -85,11 +86,29 @@
 
             <FontFamily x:Key="Font.Base">Segoe UI Variable, Segoe UI, Helvetica, Arial, sans-serif</FontFamily>
             <FontFamily x:Key="Font.Mono">Cascadia Mono, Menlo, Monaco, SFMono-Regular, Consolas, Courier New, monospace</FontFamily>
+
+            <!--  Empty theme used to blank out dock chrome buttons we don't want (maximize)  -->
+            <ControlTheme x:Key="DockEmptyButtonTheme" TargetType="Button">
+                <Setter Property="Width" Value="0" />
+                <Setter Property="Height" Value="0" />
+                <Setter Property="Margin" Value="0" />
+                <Setter Property="Padding" Value="0" />
+                <Setter Property="MinWidth" Value="0" />
+                <Setter Property="MinHeight" Value="0" />
+                <Setter Property="Template">
+                    <ControlTemplate>
+                        <Panel Width="0" Height="0" />
+                    </ControlTemplate>
+                </Setter>
+            </ControlTheme>
         </ResourceDictionary>
     </Application.Resources>
 
     <Application.Styles>
         <SimpleTheme />
+
+        <!--  Dock layout system theme (matches the SimpleTheme chrome)  -->
+        <ds:DockSimpleTheme DensityStyle="Normal" />
 
         <!--  Text styles  -->
         <Style Selector="TextBlock">
@@ -636,6 +655,11 @@
             <Setter Property="Foreground" Value="{StaticResource Brush.Text}" />
             <Setter Property="FontSize" Value="11" />
             <Setter Property="Padding" Value="8,5" />
+        </Style>
+
+        <!--  Remove the maximize/restore button from dock pane chrome (floating panes).  -->
+        <Style Selector="dac|ToolChromeControl">
+            <Setter Property="MaximizeButtonTheme" Value="{StaticResource DockEmptyButtonTheme}" />
         </Style>
     </Application.Styles>
 </Application>

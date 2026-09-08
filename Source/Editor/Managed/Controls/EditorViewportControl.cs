@@ -51,7 +51,14 @@ namespace Hyperion.Editor
 
             Window = Viewport.CreateViewportWindow(windowOptions);
 
-            AppContext.SetMainWindow(Window);
+            if (Window != null)
+            {
+                AppContext.SetMainWindow(Window);
+            }
+            else
+            {
+                Logger.Log(LogLevel.Error, "Failed to create the editor viewport window.");
+            }
 
             if (OperatingSystem.IsWindows())
             {

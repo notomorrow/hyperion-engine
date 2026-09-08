@@ -7,11 +7,22 @@ using Avalonia.Interactivity;
 using Avalonia.Platform;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
+using Dock.Model;
+using Dock.Model.Core;
+using Dock.Model.Controls;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using Hyperion;
 using Hyperion.Editor.ViewModels;
 using Hyperion.Editor.Services;
+using Document = Dock.Model.Avalonia.Controls.Document;
+using DocumentDock = Dock.Model.Avalonia.Controls.DocumentDock;
+using ProportionalDock = Dock.Model.Avalonia.Controls.ProportionalDock;
+using ProportionalDockSplitter = Dock.Model.Avalonia.Controls.ProportionalDockSplitter;
+using RootDock = Dock.Model.Avalonia.Controls.RootDock;
+using Tool = Dock.Model.Avalonia.Controls.Tool;
+using ToolDock = Dock.Model.Avalonia.Controls.ToolDock;
 
 namespace Hyperion.Editor
 {
@@ -19,21 +30,6 @@ namespace Hyperion.Editor
     {
         private const bool CappedFrameRate = true;
         private const bool IsRenderingOnMainThread = true;
-
-        private Grid? _bottomPanelGrid;
-        private GridSplitter? _bottomPanelSplitter;
-        private Control? _contentBrowserPanel;
-        private Border? _contentBrowserCollapsedStrip;
-        private Control? _consolePanel;
-        private Border? _consoleCollapsedStrip;
-        private bool _contentBrowserExpanded = true;
-        private bool _consoleExpanded = true;
-
-        private Grid? _mainContentGrid;
-        private GridSplitter? _rightPanelSplitter;
-        private Control? _rightPanelHost;
-        private Border? _rightPanelCollapsedStrip;
-        private bool _rightPanelExpanded = true;
 
         private static readonly DataFormat<NodeViewModel> NodeViewModelDragFormat =
             DataFormat.CreateInProcessFormat<NodeViewModel>("hyperion-nodeviewmodel");
@@ -63,56 +59,14 @@ namespace Hyperion.Editor
         private const double AutoScrollZone = 36;  // px from edge that triggers scroll
         private const double AutoScrollSpeed = 10; // px per timer tick (~50 ms)
 
+        private DropDownButton? _sceneDropDown;
+        private readonly Dictionary<string, object?> _dockContents = new Dictionary<string, object?>();
+
         public MainWindow()
         {
             InitializeComponent();
 
-            // Provide engine window to the viewport control via factory
-            EditorViewportControl? evc = this.FindControl<EditorViewportControl>("EditorViewportControl");
-
-            if (evc == null)
-            {
-                throw new Exception("EditorViewportControl control not found in MainWindow.");
-            }
-
-            evc.Focus();
-
             DataContext = new MainWindowViewModel();
-
-            if (this.FindControl<DropDownButton>("SceneDropDown") is { } dropDown
-                && dropDown.Flyout is Flyout flyout)
-            {
-                flyout.Opened += OnSceneFlyoutOpened;
-            }
-
-            _bottomPanelGrid = this.FindControl<Grid>("BottomPanelGrid");
-            _bottomPanelSplitter = this.FindControl<GridSplitter>("BottomPanelSplitter");
-            _contentBrowserPanel = this.FindControl<Control>("ContentBrowserPanel");
-            _contentBrowserCollapsedStrip = this.FindControl<Border>("ContentBrowserCollapsedStrip");
-            _consolePanel = this.FindControl<Control>("ConsolePanel");
-            _consoleCollapsedStrip = this.FindControl<Border>("ConsoleCollapsedStrip");
-
-            var collapseContentBrowser = this.FindControl<Button>("CollapseContentBrowser");
-            var expandContentBrowser = this.FindControl<Button>("ExpandContentBrowser");
-            var collapseConsole = this.FindControl<Button>("CollapseConsole");
-            var expandConsole = this.FindControl<Button>("ExpandConsole");
-
-            if (collapseContentBrowser != null) collapseContentBrowser.Click += OnCollapseContentBrowser;
-            if (expandContentBrowser != null) expandContentBrowser.Click += OnExpandContentBrowser;
-            if (collapseConsole != null) collapseConsole.Click += OnCollapseConsole;
-            if (expandConsole != null) expandConsole.Click += OnExpandConsole;
-
-            _mainContentGrid = this.FindControl<Grid>("MainContentGrid");
-            _rightPanelSplitter = this.FindControl<GridSplitter>("RightPanelSplitter");
-            _rightPanelHost = this.FindControl<Control>("RightPanelHost");
-            _rightPanelCollapsedStrip = this.FindControl<Border>("RightPanelCollapsedStrip");
-
-            PanelService.Instance.ActivePanelChanged += OnActivePanelChanged;
-            UpdateRightPanelLayout();
-
-            SetupSceneHierarchyDragDrop();
-            SetupContentBrowserDragDrop();
-            SetupViewportDropTarget();
 
             AddHandler(InputElement.GotFocusEvent, OnInspectorTextBoxGotFocus, RoutingStrategies.Bubble);
             AddHandler(InputElement.LostFocusEvent, OnInspectorTextBoxLostFocus, RoutingStrategies.Bubble);
@@ -121,13 +75,215 @@ namespace Hyperion.Editor
             AddHandler(InputElement.LostFocusEvent, OnNodeRenameTextBoxLostFocus, RoutingStrategies.Bubble);
             AddHandler(InputElement.KeyDownEvent, OnNodeRenameTextBoxKeyDown, RoutingStrategies.Bubble);
 
+            Opened += OnWindowOpened;
+        }
+
+        private void OnWindowOpened(object? sender, EventArgs e)
+        {
             if (IsRenderingOnMainThread)
             {
-                Opened += (s, e) =>
+                var topLevel = TopLevel.GetTopLevel(this);
+                topLevel?.RequestAnimationFrame(OnFrame);
+            }
+
+            // The dock layout hosts the panel content inside its own template namescope, so the
+            // named controls are not reachable via FindControl from the window. Locate them by
+            // walking the visual tree once the dock has rendered and laid out.
+            Dispatcher.UIThread.Post(OnWindowLoaded, DispatcherPriority.Loaded);
+        }
+
+        private void OnWindowLoaded()
+        {
+            InitializeViewportControl();
+            InitializeSceneFlyout();
+            SetupSceneHierarchyDragDrop();
+            SetupContentBrowserDragDrop();
+            SetupViewportDropTarget();
+            CaptureDockContents();
+        }
+
+        private void OnResetLayoutClick(object? sender, RoutedEventArgs e)
+        {
+            ResetLayout();
+        }
+
+        /// <summary>
+        /// Records each dockable's content by id so "Reset Layout" can rebuild the default
+        /// layout tree with the original panel views.
+        /// </summary>
+        private void CaptureDockContents()
+        {
+            _dockContents.Clear();
+
+            if (DockControl.Layout is not { } root)
+            {
+                return;
+            }
+
+            CollectDockContents(root);
+        }
+
+        private void CollectDockContents(IDockable dockable)
+        {
+            if (!string.IsNullOrEmpty(dockable.Id))
+            {
+                // Content is exposed by the concrete Tool/Document models, not by IDockable.
+                object? content = dockable switch
                 {
-                    var topLevel = TopLevel.GetTopLevel(this);
-                    topLevel?.RequestAnimationFrame(OnFrame);
+                    Tool tool => tool.Content,
+                    Document document => document.Content,
+                    _ => null
                 };
+
+                _dockContents[dockable.Id] = content;
+            }
+
+            if (dockable is IDock { VisibleDockables: { } visible })
+            {
+                foreach (IDockable child in visible)
+                {
+                    CollectDockContents(child);
+                }
+            }
+
+            if (dockable is not IRootDock root)
+            {
+                return;
+            }
+
+            foreach (var list in new[] { root.LeftPinnedDockables, root.RightPinnedDockables, root.TopPinnedDockables, root.BottomPinnedDockables, root.HiddenDockables })
+            {
+                if (list == null)
+                {
+                    continue;
+                }
+
+                foreach (IDockable child in list)
+                {
+                    CollectDockContents(child);
+                }
+            }
+
+            if (root.Windows != null)
+            {
+                foreach (IDockWindow? window in root.Windows)
+                {
+                    if (window?.Layout != null)
+                    {
+                        CollectDockContents(window.Layout);
+                    }
+                }
+            }
+        }
+
+        private object? GetDockContent(string id)
+        {
+            return _dockContents.TryGetValue(id, out object? value) ? value : null;
+        }
+
+        private IList<IDockable> CreateDockList(params IDockable[] items)
+        {
+            if (DockControl.Factory is FactoryBase factory)
+            {
+                return factory.CreateList<IDockable>(items);
+            }
+
+            return new List<IDockable>(items);
+        }
+
+        /// <summary>
+        /// Builds the default dock layout, mirroring the layout declared in MainWindow.axaml.
+        /// </summary>
+        private IDock BuildDefaultLayout()
+        {
+            var hierarchyTool = new Tool { Id = "SceneHierarchy", Title = "Scene", Content = GetDockContent("SceneHierarchy") };
+            var inspectorTool = new Tool { Id = "Inspector", Title = "Inspector", Content = GetDockContent("Inspector") };
+            var assetsTool = new Tool { Id = "ContentBrowser", Title = "Assets", Content = GetDockContent("ContentBrowser") };
+            var consoleTool = new Tool { Id = "Console", Title = "Console", Content = GetDockContent("Console") };
+            var propertiesTool = new Tool { Id = "Properties", Title = "Properties", Content = GetDockContent("Properties") };
+            var sceneDocument = new Document
+            {
+                Id = "Scene",
+                Title = "Scene",
+                Content = GetDockContent("Scene"),
+                CanDrag = false,
+                CanFloat = false,
+                CanPin = false,
+                CanClose = false
+            };
+
+            var hierarchyPane = new ToolDock { Id = "HierarchyPane", Alignment = Alignment.Left, ActiveDockable = hierarchyTool, VisibleDockables = CreateDockList(hierarchyTool) };
+            var inspectorPane = new ToolDock { Id = "InspectorPane", Alignment = Alignment.Bottom, ActiveDockable = inspectorTool, VisibleDockables = CreateDockList(inspectorTool) };
+            var leftDock = new ProportionalDock { Id = "Left", Orientation = Orientation.Vertical, Proportion = 0.25, VisibleDockables = CreateDockList(hierarchyPane, new ProportionalDockSplitter(), inspectorPane) };
+
+            var documentsPane = new DocumentDock { Id = "Documents", ActiveDockable = sceneDocument, VisibleDockables = CreateDockList(sceneDocument) };
+            var assetsPane = new ToolDock { Id = "AssetsPane", Alignment = Alignment.Left, ActiveDockable = assetsTool, VisibleDockables = CreateDockList(assetsTool) };
+            var consolePane = new ToolDock { Id = "ConsolePane", Alignment = Alignment.Right, ActiveDockable = consoleTool, VisibleDockables = CreateDockList(consoleTool) };
+            var bottomDock = new ProportionalDock { Id = "Bottom", Orientation = Orientation.Horizontal, Proportion = 0.3, VisibleDockables = CreateDockList(assetsPane, new ProportionalDockSplitter(), consolePane) };
+            var centerDock = new ProportionalDock { Id = "Center", Orientation = Orientation.Vertical, VisibleDockables = CreateDockList(documentsPane, new ProportionalDockSplitter(), bottomDock) };
+
+            var propertiesPane = new ToolDock { Id = "PropertiesPane", Alignment = Alignment.Right, Proportion = 0.2, ActiveDockable = propertiesTool, VisibleDockables = CreateDockList(propertiesTool) };
+
+            var mainLayout = new ProportionalDock { Id = "MainLayout", Orientation = Orientation.Horizontal, VisibleDockables = CreateDockList(leftDock, new ProportionalDockSplitter(), centerDock, new ProportionalDockSplitter(), propertiesPane) };
+
+            return new RootDock { Id = "Root", IsCollapsable = false, DefaultDockable = mainLayout, VisibleDockables = CreateDockList(mainLayout) };
+        }
+
+        /// <summary>
+        /// Restores the default dock layout. The XAML-declared layout instance is mutated
+        /// in place as panels are moved, so reset rebuilds a fresh tree from code and
+        /// re-assigns the captured panel contents.
+        /// </summary>
+        private void ResetLayout()
+        {
+            if (_dockContents.Count == 0)
+            {
+                CaptureDockContents();
+            }
+
+            if (DockControl.Layout is IDock oldLayout && oldLayout.Close.CanExecute(null))
+            {
+                oldLayout.Close.Execute(null);
+            }
+
+            IDock root = BuildDefaultLayout();
+            DockControl.Layout = root;
+
+            // Mirror DockControl.OnAttachedToVisualTree: give the new root its window model.
+            if (root is IRootDock rootDock && rootDock.Window == null && root.Factory is { } factory)
+            {
+                IDockWindow? windowModel = factory.CreateWindowFrom(rootDock);
+                if (windowModel != null)
+                {
+                    windowModel.Layout = rootDock;
+                    rootDock.Window = windowModel;
+                }
+            }
+        }
+
+        private T? FindVisualChildByName<T>(string name) where T : Control
+        {
+            return this.GetVisualDescendants().OfType<T>().FirstOrDefault(c => c.Name == name);
+        }
+
+        private void InitializeViewportControl()
+        {
+            EditorViewportControl? evc = FindVisualChildByName<EditorViewportControl>("EditorViewportControl");
+            if (evc == null)
+            {
+                Logger.Log(LogLevel.Warning, "EditorViewportControl control not found in the dock layout.");
+                return;
+            }
+
+            evc.Focus();
+        }
+
+        private void InitializeSceneFlyout()
+        {
+            _sceneDropDown = FindVisualChildByName<DropDownButton>("SceneDropDown");
+            if (_sceneDropDown?.Flyout is Flyout flyout)
+            {
+                flyout.Opened += OnSceneFlyoutOpened;
             }
         }
 
@@ -256,7 +412,7 @@ namespace Hyperion.Editor
 
         private void SetupSceneHierarchyDragDrop()
         {
-            _sceneTree = this.FindControl<TreeView>("SceneHierarchyTreeView");
+            _sceneTree = FindVisualChildByName<TreeView>("SceneHierarchyTreeView");
             if (_sceneTree == null)
                 return;
 
@@ -586,7 +742,7 @@ namespace Hyperion.Editor
 
         private void SetupContentBrowserDragDrop()
         {
-            _contentBrowserAssetList = this.FindControl<ListBox>("ContentBrowserAssetList");
+            _contentBrowserAssetList = FindVisualChildByName<ListBox>("ContentBrowserAssetList");
             if (_contentBrowserAssetList == null)
                 return;
 
@@ -668,7 +824,7 @@ namespace Hyperion.Editor
 
         private void SetupViewportDropTarget()
         {
-            _viewportDropTarget = this.FindControl<Border>("ViewportDropTarget");
+            _viewportDropTarget = FindVisualChildByName<Border>("ViewportDropTarget");
             if (_viewportDropTarget == null)
                 return;
 
@@ -708,69 +864,6 @@ namespace Hyperion.Editor
             vm?.AddAssetToSceneAtViewport(bucketIndex, new Name(parts[1]), (float)nx, (float)ny);
 
             e.Handled = true;
-        }
-
-        private void OnCollapseContentBrowser(object? sender, RoutedEventArgs e) { _contentBrowserExpanded = false; UpdateBottomPanelLayout(); }
-        private void OnExpandContentBrowser(object? sender, RoutedEventArgs e) { _contentBrowserExpanded = true; UpdateBottomPanelLayout(); }
-        private void OnCollapseConsole(object? sender, RoutedEventArgs e) { _consoleExpanded = false; UpdateBottomPanelLayout(); }
-        private void OnExpandConsole(object? sender, RoutedEventArgs e) { _consoleExpanded = true; UpdateBottomPanelLayout(); }
-
-        private void OnActivePanelChanged(object? sender, EventArgs e)
-        {
-            // Auto-expand when a new panel opens.
-            if ((DataContext as MainWindowViewModel)?.ActivePanel != null)
-            {
-                _rightPanelExpanded = true;
-            }
-
-            UpdateRightPanelLayout();
-        }
-
-        private void UpdateBottomPanelLayout()
-        {
-            if (_bottomPanelGrid == null) return;
-
-            var cols = _bottomPanelGrid.ColumnDefinitions;
-            cols[0].Width = _contentBrowserExpanded ? new GridLength(1, GridUnitType.Star) : new GridLength(30);
-            cols[1].Width = (!_contentBrowserExpanded && !_consoleExpanded) ? new GridLength(0) : new GridLength(2);
-            cols[2].Width = _consoleExpanded ? new GridLength(1, GridUnitType.Star) : new GridLength(30);
-
-             bool bothExpanded = _contentBrowserExpanded && _consoleExpanded;
-            if (_bottomPanelSplitter != null) _bottomPanelSplitter.IsEnabled = bothExpanded;
-
-            if (_contentBrowserPanel != null) _contentBrowserPanel.IsVisible = _contentBrowserExpanded;
-            if (_contentBrowserCollapsedStrip != null) _contentBrowserCollapsedStrip.IsVisible = !_contentBrowserExpanded;
-            if (_consolePanel != null) _consolePanel.IsVisible = _consoleExpanded;
-            if (_consoleCollapsedStrip != null) _consoleCollapsedStrip.IsVisible = !_consoleExpanded;
-        }
-
-        private void UpdateRightPanelLayout()
-        {
-            if (_mainContentGrid == null) return;
-
-            bool hasPanel = (DataContext as MainWindowViewModel)?.ActivePanel != null;
-
-            var cols = _mainContentGrid.ColumnDefinitions;
-
-            if (!hasPanel)
-            {
-                cols[3].Width = new GridLength(0);
-                cols[4].Width = new GridLength(0);
-            }
-            else if (_rightPanelExpanded)
-            {
-                cols[3].Width = new GridLength(2);
-                cols[4].Width = new GridLength(320, GridUnitType.Pixel);
-            }
-            else
-            {
-                cols[3].Width = new GridLength(2);
-                cols[4].Width = new GridLength(30);
-            }
-
-            if (_rightPanelSplitter != null) _rightPanelSplitter.IsEnabled = hasPanel && _rightPanelExpanded;
-            if (_rightPanelHost != null) _rightPanelHost.IsVisible = hasPanel && _rightPanelExpanded;
-            if (_rightPanelCollapsedStrip != null) _rightPanelCollapsedStrip.IsVisible = hasPanel && !_rightPanelExpanded;
         }
 
         protected override void OnClosing(WindowClosingEventArgs e)
@@ -855,7 +948,7 @@ namespace Hyperion.Editor
         private void OnSceneFlyoutOpened(object? sender, EventArgs e)
         {
             if (_flyoutHandlerAttached
-                || this.FindControl<DropDownButton>("SceneDropDown") is not { } dropDown
+                || _sceneDropDown is not { } dropDown
                 || dropDown.Flyout is not Flyout flyout
                 || flyout.Content is not StackPanel panel)
             {
@@ -873,10 +966,7 @@ namespace Hyperion.Editor
 
         private void OnSceneFlyoutPointerReleased(object? sender, Avalonia.Input.PointerReleasedEventArgs e)
         {
-            if (this.FindControl<DropDownButton>("SceneDropDown") is { } btn)
-            {
-                btn.Flyout?.Hide();
-            }
+            _sceneDropDown?.Flyout?.Hide();
         }
 
         // protected override void OnKeyDown(Avalonia.Input.KeyEventArgs e)

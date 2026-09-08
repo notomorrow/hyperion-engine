@@ -308,6 +308,18 @@ void AppContextBase::SetMainWindow(const Handle<ApplicationWindow>& window)
 {
     AssertOnThread(g_mainThread);
 
+    // The editor can detach/re-attach its embedded viewport while the window is being
+    // re-parented (e.g. by a docking system). Handle an empty handle by clearing the
+    // main window without attempting to set up a swapchain on a dead window.
+    if (!window.IsValid())
+    {
+        m_mainWindow = {};
+
+        OnCurrentWindowChanged.Fire(this, m_mainWindow);
+
+        return;
+    }
+
     if (!m_windows.Contains(window))
     {
         m_windows.PushBack(window);
