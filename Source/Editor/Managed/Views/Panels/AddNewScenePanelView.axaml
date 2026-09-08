@@ -34,7 +34,7 @@
                     <TextBlock Classes="section-label" Text="Scene Name" />
                     <TextBox
                         Text="{Binding SceneName, Mode=TwoWay}"
-                        Watermark="Enter scene name..." />
+                        PlaceholderText="Enter scene name..." />
                 </StackPanel>
 
                 <Separator />

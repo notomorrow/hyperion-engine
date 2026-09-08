@@ -252,7 +252,7 @@ namespace Hyperion
                 "<Project Sdk=\"Microsoft.NET.Sdk\">\n"
                     + "<PropertyGroup>\n"
                         + "<OutputType>Library</OutputType>\n"
-                        + "<TargetFramework>net9.0</TargetFramework>\n"
+                        + "<TargetFramework>net10.0</TargetFramework>\n"
                         + "<ImplicitUsings>enable</ImplicitUsings>\n"
                         + "<Nullable>enable</Nullable>\n"
                         + "<AllowUnsafeBlocks>true</AllowUnsafeBlocks>\n"

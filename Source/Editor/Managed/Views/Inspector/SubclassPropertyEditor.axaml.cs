@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Interactivity;
 using Hyperion.Editor.ViewModels;
 
@@ -43,7 +44,7 @@ namespace Hyperion.Editor.Views.Inspector
             PART_PickerBox.Focus();
         }
 
-        private void OnPickerBoxLostFocus(object? sender, RoutedEventArgs e)
+        private void OnPickerBoxLostFocus(object? sender, FocusChangedEventArgs e)
         {
             if (DataContext is ObjectPropertyViewModel vm)
                 vm.ResetSubclassFilter();

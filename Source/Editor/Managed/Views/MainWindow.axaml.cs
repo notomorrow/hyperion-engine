@@ -35,9 +35,12 @@ namespace Hyperion.Editor
         private Border? _rightPanelCollapsedStrip;
         private bool _rightPanelExpanded = true;
 
-        private const string NodeViewModelDragFormat = "application/x-hyperion-nodeviewmodel";
-        private const string AssetDragFormat = "application/x-hyperion-asset";
+        private static readonly DataFormat<NodeViewModel> NodeViewModelDragFormat =
+            DataFormat.CreateInProcessFormat<NodeViewModel>("hyperion-nodeviewmodel");
+        private static readonly DataFormat<string> AssetDragFormat =
+            DataFormat.CreateStringApplicationFormat("hyperion-asset");
         private NodeViewModel? _dragCandidate;
+        private PointerPressedEventArgs? _dragPressedArgs;
         private Point _dragStartPoint;
         private bool _isDragging;
         private bool _suppressTreeSelectionHandling;
@@ -45,6 +48,7 @@ namespace Hyperion.Editor
         // Content browser drag tracking
         private ListBox? _contentBrowserAssetList;
         private AssetObjectViewModel? _assetDragCandidate;
+        private PointerPressedEventArgs? _assetDragPressedArgs;
         private Point _assetDragStartPoint;
         private bool _isDraggingAsset;
 
@@ -129,7 +133,7 @@ namespace Hyperion.Editor
 
         // While a property's text box has focus its view model must not overwrite the text from an
         // async read, or a refresh triggered by an edit elsewhere wipes out what is being typed.
-        private void OnInspectorTextBoxGotFocus(object? sender, RoutedEventArgs e)
+        private void OnInspectorTextBoxGotFocus(object? sender, FocusChangedEventArgs e)
         {
             if (e.Source is TextBox { DataContext: InspectorPropertyViewModelBase vm })
             {
@@ -137,7 +141,7 @@ namespace Hyperion.Editor
             }
         }
 
-        private void OnInspectorTextBoxLostFocus(object? sender, RoutedEventArgs e)
+        private void OnInspectorTextBoxLostFocus(object? sender, FocusChangedEventArgs e)
         {
             if (e.Source is TextBox { DataContext: InspectorPropertyViewModelBase vm })
             {
@@ -227,7 +231,7 @@ namespace Hyperion.Editor
             }
         }
 
-        private void OnNodeRenameTextBoxLostFocus(object? sender, RoutedEventArgs e)
+        private void OnNodeRenameTextBoxLostFocus(object? sender, FocusChangedEventArgs e)
         {
             if (e.Source is TextBox { DataContext: NodeViewModel nodeViewModel } textBox && nodeViewModel.IsEditingName)
             {
@@ -326,6 +330,7 @@ namespace Hyperion.Editor
                 }
 
                 _dragCandidate = FindNodeViewModelInEventSource(e.Source);
+                _dragPressedArgs = e;
                 _dragStartPoint = e.GetPosition(sender as Visual);
                 _isDragging = false;
             }
@@ -339,6 +344,7 @@ namespace Hyperion.Editor
             if (!e.GetCurrentPoint(sender as Visual).Properties.IsLeftButtonPressed)
             {
                 _dragCandidate = null;
+                _dragPressedArgs = null;
                 return;
             }
 
@@ -349,15 +355,21 @@ namespace Hyperion.Editor
             if (Math.Abs(delta.X) < 5 && Math.Abs(delta.Y) < 5)
                 return;
 
+            if (_dragPressedArgs == null)
+            {
+                _dragCandidate = null;
+                return;
+            }
+
             _isDragging = true;
             var candidate = _dragCandidate;
 
-            var data = new DataObject();
-            data.Set(NodeViewModelDragFormat, candidate);
+            var data = new DataTransfer();
+            data.Add(DataTransferItem.Create(NodeViewModelDragFormat, candidate));
 
             try
             {
-                await DragDrop.DoDragDrop(e, data, DragDropEffects.Move);
+                await DragDrop.DoDragDropAsync(_dragPressedArgs, data, DragDropEffects.Move);
             }
             catch (Exception ex) when (ex is System.Runtime.InteropServices.COMException)
             {
@@ -373,12 +385,15 @@ namespace Hyperion.Editor
         private void OnSceneTreePointerReleased(object? sender, PointerReleasedEventArgs e)
         {
             if (!_isDragging)
+            {
                 _dragCandidate = null;
+                _dragPressedArgs = null;
+            }
         }
 
         private void OnSceneTreeDragOver(object? sender, DragEventArgs e)
         {
-            if (e.Data.Contains(AssetDragFormat))
+            if (e.DataTransfer.Contains(AssetDragFormat))
             {
                 var t = FindNodeViewModelInEventSource(e.Source);
                 e.DragEffects = t != null ? DragDropEffects.Copy : DragDropEffects.None;
@@ -390,14 +405,14 @@ namespace Hyperion.Editor
                 return;
             }
 
-            if (!e.Data.Contains(NodeViewModelDragFormat))
+            if (!e.DataTransfer.Contains(NodeViewModelDragFormat))
             {
                 e.DragEffects = DragDropEffects.None;
                 return;
             }
 
             var vm_node = DataContext as MainWindowViewModel;
-            var dragged = e.Data.Get(NodeViewModelDragFormat) as NodeViewModel;
+            var dragged = e.DataTransfer.TryGetValue(NodeViewModelDragFormat);
             var target = FindNodeViewModelInEventSource(e.Source);
 
             bool valid = dragged != null
@@ -421,7 +436,7 @@ namespace Hyperion.Editor
 
         private void OnSceneTreeDrop(object? sender, DragEventArgs e)
         {
-            if (e.Data.Contains(AssetDragFormat))
+            if (e.DataTransfer.Contains(AssetDragFormat))
             {
                 var t = FindNodeViewModelInEventSource(e.Source);
                 EndDrag();
@@ -429,7 +444,7 @@ namespace Hyperion.Editor
                 var vm = DataContext as MainWindowViewModel;
                 if (vm != null)
                 {
-                    var assetData = e.Data.Get(AssetDragFormat) as string;
+                    var assetData = e.DataTransfer.TryGetValue(AssetDragFormat);
                     if (!string.IsNullOrEmpty(assetData))
                     {
                         var parts = assetData.Split('|');
@@ -444,10 +459,10 @@ namespace Hyperion.Editor
                 return;
             }
 
-            if (!e.Data.Contains(NodeViewModelDragFormat))
+            if (!e.DataTransfer.Contains(NodeViewModelDragFormat))
                 return;
 
-            var dragged = e.Data.Get(NodeViewModelDragFormat) as NodeViewModel;
+            var dragged = e.DataTransfer.TryGetValue(NodeViewModelDragFormat);
             var target = FindNodeViewModelInEventSource(e.Source);
 
             EndDrag();
@@ -465,6 +480,7 @@ namespace Hyperion.Editor
         {
             _isDragging = false;
             _dragCandidate = null;
+            _dragPressedArgs = null;
 
             var vm = DataContext as MainWindowViewModel;
             vm?.SceneHierarchy.SetDropTarget(null);
@@ -587,6 +603,7 @@ namespace Hyperion.Editor
             if (point.Properties.IsLeftButtonPressed)
             {
                 _assetDragCandidate = FindAssetViewModelInEventSource(e.Source);
+                _assetDragPressedArgs = e;
                 _assetDragStartPoint = e.GetPosition(sender as Visual);
                 _isDraggingAsset = false;
             }
@@ -600,6 +617,7 @@ namespace Hyperion.Editor
             if (!e.GetCurrentPoint(sender as Visual).Properties.IsLeftButtonPressed)
             {
                 _assetDragCandidate = null;
+                _assetDragPressedArgs = null;
                 return;
             }
 
@@ -609,15 +627,21 @@ namespace Hyperion.Editor
             if (Math.Abs(delta.X) < 5 && Math.Abs(delta.Y) < 5)
                 return;
 
+            if (_assetDragPressedArgs == null)
+            {
+                _assetDragCandidate = null;
+                return;
+            }
+
             _isDraggingAsset = true;
             var candidate = _assetDragCandidate;
 
-            var data = new DataObject();
-            data.Set(AssetDragFormat, $"{candidate.Bucket?.BucketIndex ?? 0}|{candidate.AssetDesc.Name}");
+            var data = new DataTransfer();
+            data.Add(DataTransferItem.Create(AssetDragFormat, $"{candidate.Bucket?.BucketIndex ?? 0}|{candidate.AssetDesc.Name}"));
 
             try
             {
-                await DragDrop.DoDragDrop(e, data, DragDropEffects.Copy);
+                await DragDrop.DoDragDropAsync(_assetDragPressedArgs, data, DragDropEffects.Copy);
             }
             catch (Exception ex) when (ex is System.Runtime.InteropServices.COMException)
             {
@@ -626,6 +650,7 @@ namespace Hyperion.Editor
             {
                 _isDraggingAsset = false;
                 _assetDragCandidate = null;
+                _assetDragPressedArgs = null;
             }
         }
 
@@ -654,7 +679,7 @@ namespace Hyperion.Editor
 
         private void OnViewportDragOver(object? sender, DragEventArgs e)
         {
-            if (e.Data.Contains(AssetDragFormat))
+            if (e.DataTransfer.Contains(AssetDragFormat))
             {
                 e.DragEffects = DragDropEffects.Copy;
                 e.Handled = true;
@@ -663,10 +688,10 @@ namespace Hyperion.Editor
 
         private void OnViewportDrop(object? sender, DragEventArgs e)
         {
-            if (!e.Data.Contains(AssetDragFormat))
+            if (!e.DataTransfer.Contains(AssetDragFormat))
                 return;
 
-            var assetData = e.Data.Get(AssetDragFormat) as string;
+            var assetData = e.DataTransfer.TryGetValue(AssetDragFormat);
             if (string.IsNullOrEmpty(assetData))
                 return;
 

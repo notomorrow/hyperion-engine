@@ -38,7 +38,7 @@
                         MinWidth="120"
                         MinimumPrefixLength="0"
                         MinimumPopulateDelay="0:0:0.15"
-                        Watermark="(None)"
+                        PlaceholderText="(None)"
                         FontSize="11"
                         Text="{Binding PickerFilter, Mode=TwoWay}"
                         ToolTip.Tip="Filter assets by name">

@@ -35,7 +35,7 @@ DXC headers and libraries are bundled in `External/ThirdParty/Source/dxc/` and `
 
 ### .NET Core (for C# Scripting and Editor UI)
 
-The engine supports C# scripting and the editor UI is built with Avalonia UI on .NET 9.0 (C# 13.0). Requires `HYP_DOTNET=1` to be enabled.
+The engine supports C# scripting and the editor UI is built with Avalonia UI on .NET 10.0 (C# 13.0). Requires `HYP_DOTNET=1` to be enabled.
 
 * Headers (`nethost.h`, `hostfxr.h`, `coreclr_delegates.h`) are in `External/ThirdParty/Source/dotnetcore/`.
 * Native host library must be present in `External/ThirdParty/Binaries/<Platform>/`:
