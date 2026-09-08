@@ -24,10 +24,12 @@
 #include <Scene/Systems/LayerOverrideSystem.hpp>
 
 #include <Scene/Camera/Camera.hpp>
+#include <Scene/Camera/FirstPersonCamera.hpp>
 
 #include <Scene/Components/BoundingBoxComponent.hpp>
 #include <Scene/Components/LightmapElementComponent.hpp>
 #include <Scene/Components/MeshComponent.hpp>
+#include <Scene/Components/CharacterControllerComponent.hpp>
 
 #include <Scripting/Asset/ScriptAsset.hpp>
 
@@ -1752,6 +1754,123 @@ public:
 DEFINE_EDITOR_COMMAND(AddAreaRectLight);
 
 #pragma endregion EditorCommandAddAreaRectLight
+
+#pragma region EditorCommandAddPlayerEntity
+
+class EditorCommandAddPlayerEntity final : public EditorCommandBase
+{
+    HYP_OBJECT_BODY(EditorCommandAddPlayerEntity);
+
+public:
+    virtual ~EditorCommandAddPlayerEntity() override = default;
+
+    virtual String GetText() const override
+    {
+        return "Add Player Entity";
+    }
+
+    virtual void Execute(EditorSubsystem* subsystem) override
+    {
+        const Handle<EditorProject>& currentProject = subsystem->GetCurrentProject();
+        if (!currentProject.IsValid())
+        {
+            HYP_LOG(Editor, Error, "No project loaded; cannot add player entity!");
+
+            return;
+        }
+
+        Handle<Scene> activeScene = subsystem->GetActiveScene();
+        if (!activeScene.IsValid())
+        {
+            HYP_LOG(Editor, Error, "No active scene; cannot add player entity!");
+
+            return;
+        }
+
+        const Vec3f insertionPoint = subsystem->CalculateSceneInsertionPoint(5.0f, 0.5f);
+
+        Handle<Entity> playerEntity = MakeHandle<Entity>();
+        playerEntity->SetName(activeScene->GetUniqueNodeName("Player"));
+        playerEntity->SetWorldTranslation(insertionPoint);
+        playerEntity->SetIsDynamic(true);
+        InitObject(playerEntity);
+
+        Handle<CapsulePhysicsShape> capsuleShape = MakeHandle<CapsulePhysicsShape>();
+        capsuleShape->SetName(NAME_FMT("{}CapsuleShape", playerEntity->GetName()));
+        InitObject(capsuleShape);
+
+        Handle<Camera> camera = MakeHandle<Camera>();
+        camera->SetName(activeScene->GetUniqueNodeNameT<Camera>());
+        camera->SetLocalTranslation(Vec3f(0.0f, 1.6f, 0.0f));
+        camera->AddTag<EntityTag::PrimaryCamera>();
+
+        Handle<FirstPersonCameraController> firstPersonCameraController = MakeHandle<FirstPersonCameraController>();
+        camera->AddCameraController(firstPersonCameraController);
+
+        InitObject(camera);
+
+        WeakHandle<Node> previousFocusedNode = subsystem->GetFocusedNode();
+
+        Handle<FunctionalEditorAction> action = MakeHandle<FunctionalEditorAction>(
+            GetText(),
+            Proc<EditorActionFunctions()>(
+                [playerEntity, capsuleShape, camera, previousFocusedNode, activeScene]() -> EditorActionFunctions
+                {
+                    return EditorActionFunctions {
+                        .execute = Proc<void(EditorSubsystem*, EditorProject*)>(
+                            [playerEntity, capsuleShape, camera, activeScene](EditorSubsystem* editorSubsystem, EditorProject*)
+                            {
+                                GetCurrentAssetRegistry()->PutAssetUnique(capsuleShape);
+
+                                activeScene->GetRoot()->AddChild(playerEntity);
+
+                                if (!playerEntity->HasComponent<CharacterControllerComponent>())
+                                {
+                                    CharacterControllerComponent characterControllerComponent;
+                                    characterControllerComponent.shape = capsuleShape;
+                                    playerEntity->AddComponent<CharacterControllerComponent>(characterControllerComponent);
+                                }
+                                else // has component (can happen if going undo->redo)
+                                {
+                                    playerEntity->GetComponent<CharacterControllerComponent>().shape = capsuleShape;
+                                }
+
+                                playerEntity->AddChild(camera);
+
+                                editorSubsystem->SetSelectedNodes({ playerEntity });
+                                editorSubsystem->SetFocusedNode(playerEntity, true);
+                            }),
+                        .revert = Proc<void(EditorSubsystem*, EditorProject*)>(
+                            [playerEntity, capsuleShape, previousFocusedNode](EditorSubsystem* editorSubsystem, EditorProject*)
+                            {
+                                GetCurrentAssetRegistry()->RemoveAsset(capsuleShape);
+
+                                playerEntity->Remove();
+
+                                if (editorSubsystem->GetFocusedNode() == playerEntity)
+                                {
+                                    editorSubsystem->SetFocusedNode(nullptr, true);
+
+                                    Handle<Node> focusedNode = previousFocusedNode.Lock();
+
+                                    if (focusedNode.IsValid())
+                                    {
+                                        editorSubsystem->SetFocusedNode(focusedNode, true);
+                                    }
+                                }
+                            })
+                    };
+                }));
+
+        InitObject(action);
+
+        currentProject->GetActionStack()->PushAction(action);
+    }
+};
+
+DEFINE_EDITOR_COMMAND(AddPlayerEntity);
+
+#pragma endregion EditorCommandAddPlayerEntity
 
 #pragma region EditorCommandImportContent
 
