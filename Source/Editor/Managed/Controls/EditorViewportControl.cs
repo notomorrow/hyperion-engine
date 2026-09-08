@@ -26,8 +26,35 @@ namespace Hyperion.Editor
             Viewport = new EditorViewport();
         }
 
+        private IPlatformHandle? _nativeParentHandle;
+
+        /// <summary>
+        /// Hides or shows the viewport's native container window without destroying it.
+        /// Native child windows always render above Avalonia overlays (airspace), so the
+        /// whole container is hidden while docking drag indicators or pinned panel
+        /// previews are active.
+        /// </summary>
+        public void SetNativeVisibility(bool visible)
+        {
+            if (_nativeParentHandle == null)
+            {
+                return;
+            }
+
+            if (OperatingSystem.IsWindows())
+            {
+                const int SW_HIDE = 0;
+                const int SW_SHOW = 5;
+                WinInterop.ShowWindow(_nativeParentHandle.Handle, visible ? SW_SHOW : SW_HIDE);
+            }
+
+            // macOS/Linux: hiding without destroying the native view is not wired up yet.
+        }
+
         protected override IPlatformHandle CreateNativeControlCore(IPlatformHandle parent)
         {
+            _nativeParentHandle = parent;
+
             AppContext = AppContextBase.Instance;
             if (AppContext == null)
                 throw new Exception("Failed to get AppContext from Hyperion");
@@ -165,6 +192,9 @@ namespace Hyperion.Editor
         {
             [DllImport("user32.dll")]
             public static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int x, int y, int cx, int cy, uint uFlags);
+
+            [DllImport("user32.dll")]
+            public static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
         }
 
         void InitEditorViewport(EditorViewport viewport)

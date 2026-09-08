@@ -23,6 +23,14 @@ namespace Hyperion.Editor.ViewModels
             get => _title;
             set => SetProperty(ref _title, value);
         }
+
+        /// <summary>
+        /// Shared instance so dock panel content can bind to the main view model from any
+        /// window (docked panes and floating windows alike), since visual-tree relative
+        /// sources do not cross window boundaries.
+        /// </summary>
+        public static MainWindowViewModel? Instance { get; internal set; }
+
         public SceneHierarchyViewModel SceneHierarchy { get; private set; }
         public InspectorViewModel Inspector { get; private set; }
         public ContentBrowserViewModel ContentBrowser { get; private set; }

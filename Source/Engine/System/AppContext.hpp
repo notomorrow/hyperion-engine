@@ -343,6 +343,8 @@ private:
     bool m_mouseLocked = false;
     bool m_isOpen = false;
 
+    WideString m_wndClassName;
+
     Vec2f m_mousePosition;
 };
 
