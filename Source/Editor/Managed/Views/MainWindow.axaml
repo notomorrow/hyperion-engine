@@ -3,6 +3,7 @@
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:controls="clr-namespace:Hyperion.Editor.Controls;assembly=Hyperion.Editor"
+    xmlns:conv="clr-namespace:Avalonia.Data.Converters;assembly=Avalonia.Base"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:hyp="clr-namespace:Hyperion;assembly=Hyperion.Runtime"
     xmlns:inspector="clr-namespace:Hyperion.Editor.Views.Inspector;assembly=Hyperion.Editor"
@@ -138,7 +139,11 @@
             <Setter Property="BorderBrush" Value="{DynamicResource Brush.BorderLight}" />
             <Setter Property="BorderThickness" Value="1" />
             <Setter Property="CornerRadius" Value="{DynamicResource Radius.Small}" />
-            <Setter Property="Padding" Value="6,2" />
+            <Setter Property="Padding" Value="7,4" />
+        </Style>
+
+        <Style Selector="Border.toolbar Button, Border.toolbar ToggleButton, Border.toolbar RadioButton">
+            <Setter Property="Padding" Value="10,6" />
         </Style>
 
         <Style Selector="TextBlock.mode-label">
@@ -207,12 +212,12 @@
                 </MenuItem>
             </Menu>
 
-            <Border Classes="panel-header" DockPanel.Dock="Top" Padding="6,4">
+            <Border Classes="panel-header toolbar" DockPanel.Dock="Top" Padding="8,6">
                 <Grid VerticalAlignment="Center" ColumnDefinitions="Auto,*,Auto">
                     <StackPanel
                         Grid.Column="0"
                         Orientation="Horizontal"
-                        Spacing="4">
+                        Spacing="6">
                         <Button Command="{Binding OpenProject}" IsEnabled="{Binding !IsSimulating}" ToolTip.Tip="Open">
                             <controls:Codicon Kind="FolderOpened" Size="16" />
                         </Button>
@@ -239,7 +244,7 @@
                         HorizontalAlignment="Center"
                         VerticalAlignment="Center"
                         Orientation="Horizontal"
-                        Spacing="4">
+                        Spacing="6">
                         <ToggleButton
                             x:Name="TransformModeTranslate"
                             Classes="gizmo"
@@ -369,25 +374,25 @@
                     <StackPanel
                         Grid.Column="2"
                         Orientation="Horizontal"
-                        Spacing="4">
+                        Spacing="6">
                         <Button
                             Command="{Binding SetGameModePlaying}"
                             IsVisible="{Binding CanSetGameModePlaying}"
                             ToolTip.Tip="Play"
                             Classes="Play">
-                            <controls:Codicon Kind="Play" Width="16" Height="16" />
+                            <controls:Codicon Kind="Play" Size="16" />
                         </Button>
                         <Button
                             Command="{Binding SetGameModePaused}"
                             IsVisible="{Binding CanSetGameModePaused}"
                             ToolTip.Tip="Pause">
-                            <controls:Codicon Kind="DebugPause" Width="16" Height="16" />
+                            <controls:Codicon Kind="DebugPause" Size="16" />
                         </Button>
                         <Button
                             Command="{Binding SetGameModeStopped}"
                             IsVisible="{Binding CanSetGameModeStopped}"
                             ToolTip.Tip="Stop">
-                            <controls:Codicon Kind="DebugStop" Width="16" Height="16" />
+                            <controls:Codicon Kind="DebugStop" Size="16" />
                         </Button>
                     </StackPanel>
                 </Grid>
@@ -701,12 +706,16 @@
                                             RowDefinitions="Auto, Auto, Auto">
 
                                             <Border Grid.Row="0" Classes="panel-header">
-                                                <Grid VerticalAlignment="Center" ColumnDefinitions="*,Auto">
-                                                    <TextBlock
+                                                <Grid ColumnDefinitions="*,Auto">
+                                                    <ToggleButton
                                                         Grid.Column="0"
-                                                        VerticalAlignment="Center"
-                                                        Classes="header"
-                                                        Text="Components" />
+                                                        Classes="section-toggle"
+                                                        IsChecked="{Binding ComponentsSection.IsExpanded, Mode=TwoWay}">
+                                                        <StackPanel Orientation="Horizontal" Spacing="4">
+                                                            <controls:Codicon Kind="{Binding ComponentsSection.ChevronKind}" Size="10" Margin="2,2,0,0" />
+                                                            <TextBlock VerticalAlignment="Center" Classes="header" Text="Components" />
+                                                        </StackPanel>
+                                                    </ToggleButton>
 
                                                     <Button
                                                         Grid.Column="1"
@@ -736,8 +745,13 @@
                                             <ItemsControl
                                                 Grid.Row="1"
                                                 Margin="12,6"
-                                                IsVisible="{Binding HasComponents}"
                                                 ItemsSource="{Binding Components}">
+                                                <ItemsControl.IsVisible>
+                                                    <MultiBinding Converter="{x:Static conv:BoolConverters.And}">
+                                                        <Binding Path="HasComponents" />
+                                                        <Binding Path="ComponentsSection.IsExpanded" />
+                                                    </MultiBinding>
+                                                </ItemsControl.IsVisible>
                                                 <ItemsControl.ItemTemplate>
                                                     <DataTemplate x:DataType="vm:InspectorComponentViewModelBase">
                                                         <Border
@@ -794,13 +808,21 @@
                                             RowDefinitions="Auto, Auto, Auto">
 
                                             <Border Grid.Row="0" Classes="panel-header">
-                                                <TextBlock VerticalAlignment="Center" Classes="header" Text="Tags" />
+                                                <ToggleButton
+                                                    Classes="section-toggle"
+                                                    IsChecked="{Binding TagsSection.IsExpanded, Mode=TwoWay}">
+                                                    <StackPanel Orientation="Horizontal" Spacing="4">
+                                                        <controls:Codicon Kind="{Binding TagsSection.ChevronKind}" Size="10" Margin="2,2,0,0" />
+                                                        <TextBlock VerticalAlignment="Center" Classes="header" Text="Tags" />
+                                                    </StackPanel>
+                                                </ToggleButton>
                                             </Border>
 
                                             <Grid
                                                 Grid.Row="1"
                                                 Margin="12,6,12,6"
-                                                ColumnDefinitions="*,Auto">
+                                                ColumnDefinitions="*,Auto"
+                                                IsVisible="{Binding TagsSection.IsExpanded}">
                                                 <ComboBox
                                                     Grid.Column="0"
                                                     Margin="0,0,6,0"
@@ -826,8 +848,13 @@
                                             <ItemsControl
                                                 Grid.Row="2"
                                                 Margin="12,6,12,6"
-                                                IsVisible="{Binding EntityTags.HasTags}"
                                                 ItemsSource="{Binding EntityTags.Tags}">
+                                                <ItemsControl.IsVisible>
+                                                    <MultiBinding Converter="{x:Static conv:BoolConverters.And}">
+                                                        <Binding Path="EntityTags.HasTags" />
+                                                        <Binding Path="TagsSection.IsExpanded" />
+                                                    </MultiBinding>
+                                                </ItemsControl.IsVisible>
                                                 <ItemsControl.ItemTemplate>
                                                     <DataTemplate x:DataType="vm:EntityTagItemViewModel">
                                                         <Border
@@ -861,40 +888,51 @@
                                             RowDefinitions="Auto, Auto, Auto">
 
                                             <Border Grid.Row="0" Classes="panel-header">
-                                                <TextBlock VerticalAlignment="Center" Classes="header" Text="Layers" />
+                                                <Grid ColumnDefinitions="*,Auto">
+                                                    <ToggleButton
+                                                        Grid.Column="0"
+                                                        Classes="section-toggle"
+                                                        IsChecked="{Binding LayersSection.IsExpanded, Mode=TwoWay}">
+                                                        <StackPanel Orientation="Horizontal" Spacing="4">
+                                                            <controls:Codicon Kind="{Binding LayersSection.ChevronKind}" Size="10" Margin="2,2,0,0" />
+                                                            <TextBlock VerticalAlignment="Center" Classes="header" Text="Layers" />
+                                                        </StackPanel>
+                                                    </ToggleButton>
+
+                                                    <Button
+                                                        Grid.Column="1"
+                                                        Margin="0,0,4,0"
+                                                        Padding="8,2"
+                                                        HorizontalAlignment="Right"
+                                                        VerticalAlignment="Center"
+                                                        Content="Add"
+                                                        IsEnabled="{Binding EntityLayers.HasAvailableLayers}">
+                                                        <Button.Flyout>
+                                                            <MenuFlyout ItemsSource="{Binding EntityLayers.AvailableLayers}">
+                                                                <MenuFlyout.ItemTemplate>
+                                                                    <DataTemplate x:DataType="vm:EntityLayerOptionViewModel">
+                                                                        <MenuItem
+                                                                            Command="{Binding DataContext.Inspector.EntityLayers.AddLayerCommand, ElementName=Root}"
+                                                                            CommandParameter="{Binding}"
+                                                                            Header="{Binding Name}" />
+                                                                    </DataTemplate>
+                                                                </MenuFlyout.ItemTemplate>
+                                                            </MenuFlyout>
+                                                        </Button.Flyout>
+                                                    </Button>
+                                                </Grid>
                                             </Border>
 
-                                            <Grid
+                                            <ItemsControl
                                                 Grid.Row="1"
                                                 Margin="12,6,12,6"
-                                                ColumnDefinitions="*,Auto">
-                                                <ComboBox
-                                                    Grid.Column="0"
-                                                    Margin="0,0,6,0"
-                                                    HorizontalAlignment="Stretch"
-                                                    PlaceholderText="Add layer"
-                                                    IsEnabled="{Binding EntityLayers.HasAvailableLayers}"
-                                                    ItemsSource="{Binding EntityLayers.AvailableLayers}"
-                                                    SelectedItem="{Binding EntityLayers.SelectedAvailableLayer, Mode=TwoWay}">
-                                                    <ComboBox.ItemTemplate>
-                                                        <DataTemplate x:DataType="vm:EntityLayerOptionViewModel">
-                                                            <TextBlock Text="{Binding Name}" />
-                                                        </DataTemplate>
-                                                    </ComboBox.ItemTemplate>
-                                                </ComboBox>
-                                                <Button
-                                                    Grid.Column="1"
-                                                    Padding="8,2"
-                                                    Content="Add"
-                                                    Command="{Binding EntityLayers.AddLayerCommand}"
-                                                    CommandParameter="{Binding EntityLayers.SelectedAvailableLayer}" />
-                                            </Grid>
-
-                                            <ItemsControl
-                                                Grid.Row="2"
-                                                Margin="12,6,12,6"
-                                                IsVisible="{Binding EntityLayers.HasLayers}"
                                                 ItemsSource="{Binding EntityLayers.Layers}">
+                                                <ItemsControl.IsVisible>
+                                                    <MultiBinding Converter="{x:Static conv:BoolConverters.And}">
+                                                        <Binding Path="EntityLayers.HasLayers" />
+                                                        <Binding Path="LayersSection.IsExpanded" />
+                                                    </MultiBinding>
+                                                </ItemsControl.IsVisible>
                                                 <ItemsControl.ItemTemplate>
                                                     <DataTemplate x:DataType="vm:EntityLayerItemViewModel">
                                                         <Border
@@ -926,20 +964,21 @@
                                             IsVisible="{Binding Inspector.HasAttachedScript}"
                                             RowDefinitions="Auto, Auto">
                                             <Border Grid.Row="0" Classes="panel-header">
-                                                <Grid VerticalAlignment="Center" ColumnDefinitions="*,Auto">
-                                                    <TextBlock
-                                                        Grid.Column="0"
-                                                        VerticalAlignment="Center"
-                                                        Classes="header"
-                                                        Text="Script" />
-                                                </Grid>
+                                                <ToggleButton
+                                                    Classes="section-toggle"
+                                                    IsChecked="{Binding Inspector.ScriptSection.IsExpanded, Mode=TwoWay}">
+                                                    <StackPanel Orientation="Horizontal" Spacing="4">
+                                                        <controls:Codicon Kind="{Binding Inspector.ScriptSection.ChevronKind}" Size="10" Margin="2,2,0,0" />
+                                                        <TextBlock VerticalAlignment="Center" Classes="header" Text="Script" />
+                                                    </StackPanel>
+                                                </ToggleButton>
                                             </Border>
 
-                                            <Grid
-                                                Grid.Row="1"
-                                                DataContext="{Binding Inspector.AttachedScript}"
-                                                ColumnDefinitions="72,*"
-                                                Margin="12,6,12,4">
+                                            <StackPanel Grid.Row="1" IsVisible="{Binding Inspector.ScriptSection.IsExpanded}">
+                                                <Grid
+                                                    DataContext="{Binding Inspector.AttachedScript}"
+                                                    ColumnDefinitions="72,*"
+                                                    Margin="12,6,12,4">
                                                 <Border
                                                     Width="64"
                                                     Height="64"
@@ -991,7 +1030,8 @@
                                                             IsEnabled="{Binding HasScript}" />
                                                     </StackPanel>
                                                 </StackPanel>
-                                            </Grid>
+                                                </Grid>
+                                            </StackPanel>
                                         </Grid>
 
                                         <Grid
@@ -999,18 +1039,26 @@
                                             IsVisible="{Binding Inspector.HasActions}"
                                             RowDefinitions="Auto, Auto">
                                             <Border Grid.Row="0" Classes="panel-header">
-                                                <Grid VerticalAlignment="Center" ColumnDefinitions="*,Auto">
-                                                    <TextBlock
-                                                        VerticalAlignment="Center"
-                                                        Classes="header"
-                                                        Text="Actions" />
-                                                </Grid>
+                                                <ToggleButton
+                                                    Classes="section-toggle"
+                                                    IsChecked="{Binding Inspector.ActionsSection.IsExpanded, Mode=TwoWay}">
+                                                    <StackPanel Orientation="Horizontal" Spacing="4">
+                                                        <controls:Codicon Kind="{Binding Inspector.ActionsSection.ChevronKind}" Size="10" Margin="2,2,0,0" />
+                                                        <TextBlock VerticalAlignment="Center" Classes="header" Text="Actions" />
+                                                    </StackPanel>
+                                                </ToggleButton>
                                             </Border>
 
                                             <ItemsControl
                                                 Grid.Row="1"
                                                 VerticalAlignment="Top"
                                                 ItemsSource="{Binding Inspector.Actions}">
+                                                <ItemsControl.IsVisible>
+                                                    <MultiBinding Converter="{x:Static conv:BoolConverters.And}">
+                                                        <Binding Path="Inspector.HasActions" />
+                                                        <Binding Path="Inspector.ActionsSection.IsExpanded" />
+                                                    </MultiBinding>
+                                                </ItemsControl.IsVisible>
                                                 <ItemsControl.ItemTemplate>
                                                     <DataTemplate x:DataType="vm:InspectorActionViewModel">
                                                         <Button
@@ -1032,13 +1080,25 @@
                                             IsVisible="{Binding Inspector.HasSceneProperties}"
                                             RowDefinitions="Auto, Auto">
                                             <Border Grid.Row="0" Classes="panel-header">
-                                                <Grid VerticalAlignment="Center" ColumnDefinitions="*,Auto">
-                                                    <TextBlock Classes="header" Text="Scene Properties" />
-                                                </Grid>
+                                                <ToggleButton
+                                                    Classes="section-toggle"
+                                                    IsChecked="{Binding Inspector.ScenePropertiesSection.IsExpanded, Mode=TwoWay}">
+                                                    <StackPanel Orientation="Horizontal" Spacing="4">
+                                                        <controls:Codicon Kind="{Binding Inspector.ScenePropertiesSection.ChevronKind}" Size="10" Margin="2,2,0,0" />
+                                                        <TextBlock VerticalAlignment="Center" Classes="header" Text="Scene Properties" />
+                                                    </StackPanel>
+                                                </ToggleButton>
                                             </Border>
                                             <inspector:InspectorPropertyItemsControl
                                                 Grid.Row="1"
-                                                ItemsSource="{Binding Inspector.SceneProperties}" />
+                                                ItemsSource="{Binding Inspector.SceneProperties}">
+                                                <inspector:InspectorPropertyItemsControl.IsVisible>
+                                                    <MultiBinding Converter="{x:Static conv:BoolConverters.And}">
+                                                        <Binding Path="Inspector.HasSceneProperties" />
+                                                        <Binding Path="Inspector.ScenePropertiesSection.IsExpanded" />
+                                                    </MultiBinding>
+                                                </inspector:InspectorPropertyItemsControl.IsVisible>
+                                            </inspector:InspectorPropertyItemsControl>
                                         </Grid>
 
                                         <!--  Layer Overrides (per-entity edit routing + copy)  -->
@@ -1048,15 +1108,19 @@
                                             IsVisible="{Binding IsEntity}"
                                             RowDefinitions="Auto, Auto">
                                             <Border Grid.Row="0" Classes="panel-header">
-                                                <Grid VerticalAlignment="Center" ColumnDefinitions="Auto,*,Auto">
-                                                    <TextBlock
+                                                <Grid ColumnDefinitions="*,Auto">
+                                                    <ToggleButton
                                                         Grid.Column="0"
-                                                        VerticalAlignment="Center"
-                                                        Classes="header"
-                                                        Text="Layer Overrides" />
+                                                        Classes="section-toggle"
+                                                        IsChecked="{Binding LayerOverridesSection.IsExpanded, Mode=TwoWay}">
+                                                        <StackPanel Orientation="Horizontal" Spacing="4">
+                                                            <controls:Codicon Kind="{Binding LayerOverridesSection.ChevronKind}" Size="10" Margin="2,2,0,0" />
+                                                            <TextBlock VerticalAlignment="Center" Classes="header" Text="Layer Overrides" />
+                                                        </StackPanel>
+                                                    </ToggleButton>
                                                     <Border
                                                         Grid.Column="1"
-                                                        Margin="6,0,0,0"
+                                                        Margin="6,0,4,0"
                                                         Padding="6,1"
                                                         HorizontalAlignment="Left"
                                                         VerticalAlignment="Center"
@@ -1074,7 +1138,7 @@
                                                 </Grid>
                                             </Border>
 
-                                            <StackPanel Grid.Row="1" Margin="12,8,12,10" Spacing="10">
+                                            <StackPanel Grid.Row="1" Margin="12,8,12,10" Spacing="10" IsVisible="{Binding LayerOverridesSection.IsExpanded}">
                                                 <TextBlock
                                                     FontSize="10"
                                                     Foreground="{DynamicResource Brush.TextMuted}"
@@ -1171,13 +1235,19 @@
                                         <!--  Properties  -->
                                         <Grid Margin="0" RowDefinitions="Auto, Auto, Auto">
                                             <Border Grid.Row="0" Classes="panel-header">
-                                                <Grid VerticalAlignment="Center" ColumnDefinitions="*,Auto">
-                                                    <TextBlock Classes="header" Text="Properties" />
-                                                </Grid>
+                                                <ToggleButton
+                                                    Classes="section-toggle"
+                                                    IsChecked="{Binding Inspector.PropertiesSection.IsExpanded, Mode=TwoWay}">
+                                                    <StackPanel Orientation="Horizontal" Spacing="4">
+                                                        <controls:Codicon Kind="{Binding Inspector.PropertiesSection.ChevronKind}" Size="10" Margin="2,2,0,0" />
+                                                        <TextBlock VerticalAlignment="Center" Classes="header" Text="Properties" />
+                                                    </StackPanel>
+                                                </ToggleButton>
                                             </Border>
                                             <inspector:InspectorPropertyItemsControl
                                                 Grid.Row="1"
-                                                ItemsSource="{Binding Inspector.Properties}" />
+                                                ItemsSource="{Binding Inspector.Properties}"
+                                                IsVisible="{Binding Inspector.PropertiesSection.IsExpanded}" />
                                         </Grid>
                                     </StackPanel>
                                 </ScrollViewer>

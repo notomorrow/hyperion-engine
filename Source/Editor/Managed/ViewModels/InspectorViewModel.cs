@@ -13,6 +13,15 @@ namespace Hyperion.Editor.ViewModels
 {
     public class InspectorViewModel : ViewModelBase
     {
+        public InspectorSectionViewModel ComponentsSection { get; } = new() { IsExpanded = true };
+        public InspectorSectionViewModel TagsSection { get; } = new() { IsExpanded = true };
+        public InspectorSectionViewModel LayersSection { get; } = new() { IsExpanded = true };
+        public InspectorSectionViewModel ScriptSection { get; } = new() { IsExpanded = true };
+        public InspectorSectionViewModel ActionsSection { get; } = new() { IsExpanded = true };
+        public InspectorSectionViewModel ScenePropertiesSection { get; } = new() { IsExpanded = true };
+        public InspectorSectionViewModel LayerOverridesSection { get; } = new() { IsExpanded = true };
+        public InspectorSectionViewModel PropertiesSection { get; } = new() { IsExpanded = true };
+
         public ObservableCollection<InspectorPropertyViewModelBase> Properties { get; } = new ObservableCollection<InspectorPropertyViewModelBase>();
         public ObservableCollection<InspectorActionViewModel> Actions { get; } = new ObservableCollection<InspectorActionViewModel>();
         public ObservableCollection<InspectorComponentViewModelBase> Components { get; } = new ObservableCollection<InspectorComponentViewModelBase>();
@@ -1209,6 +1218,25 @@ namespace Hyperion.Editor.ViewModels
 
             return true; // continue if no condition or invalid condition
         }
+    }
+
+    /// <summary>Expand/collapse state + chevron glyph for one inspector section header.</summary>
+    public class InspectorSectionViewModel : ViewModelBase
+    {
+        private bool _isExpanded;
+        public bool IsExpanded
+        {
+            get => _isExpanded;
+            set
+            {
+                if (SetProperty(ref _isExpanded, value))
+                {
+                    OnPropertyChanged(nameof(ChevronKind));
+                }
+            }
+        }
+
+        public string ChevronKind => _isExpanded ? "ChevronDown" : "ChevronRight";
     }
 
     public class AddComponentOptionViewModel : ViewModelBase

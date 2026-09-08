@@ -127,18 +127,18 @@
             <Setter Property="Background" Value="{StaticResource Brush.Panel}" />
             <Setter Property="BorderBrush" Value="{StaticResource Brush.Border}" />
             <Setter Property="BorderThickness" Value="0,0,0,1" />
-            <Setter Property="Padding" Value="8,0" />
+            <Setter Property="Padding" Value="4,0" />
         </Style>
         <Style Selector="MenuItem">
-            <Setter Property="Padding" Value="10,6" />
+            <Setter Property="Padding" Value="8,4" />
             <Setter Property="Foreground" Value="{StaticResource Brush.Text}" />
             <Setter Property="FontFamily" Value="{StaticResource Font.Base}" />
-            <Setter Property="FontSize" Value="11.5" />
+            <Setter Property="FontSize" Value="11" />
             <Setter Property="CornerRadius" Value="5" />
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="BorderThickness" Value="0" />
             <Setter Property="BorderBrush" Value="Transparent" />
-            <Setter Property="Margin" Value="2,1" />
+            <Setter Property="Margin" Value="1,0" />
         </Style>
 
         <Style Selector="MenuItem:pointerover /template/ Border#root">
@@ -482,6 +482,37 @@
         </Style>
         <Style Selector="Button.picker-toggle:pointerover">
             <Setter Property="Background" Value="{StaticResource Brush.MenuHover}" />
+        </Style>
+
+        <!--  Inspector section headers: flat full-width toggle; hover feedback via chevron color  -->
+        <Style Selector="ToggleButton.section-toggle">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="4,8" />
+            <Setter Property="Margin" Value="-4,-5,0,-5" />
+            <Setter Property="Foreground" Value="{StaticResource Brush.TextMuted}" />
+            <Setter Property="HorizontalContentAlignment" Value="Left" />
+            <Setter Property="CornerRadius" Value="{StaticResource Radius.Small}" />
+            <Setter Property="Template">
+                <ControlTemplate>
+                    <Border
+                        Background="{TemplateBinding Background}"
+                        BorderBrush="{TemplateBinding BorderBrush}"
+                        BorderThickness="{TemplateBinding BorderThickness}"
+                        CornerRadius="{TemplateBinding CornerRadius}">
+                        <ContentPresenter
+                            Margin="{TemplateBinding Padding}"
+                            HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                            VerticalAlignment="Center"
+                            Foreground="{TemplateBinding Foreground}"
+                            Content="{TemplateBinding Content}" />
+                    </Border>
+                </ControlTemplate>
+            </Setter>
+        </Style>
+        <Style Selector="ToggleButton.section-toggle:pointerover">
+            <Setter Property="Foreground" Value="{StaticResource Brush.AccentHover}" />
         </Style>
 
         <Style Selector="ToggleButton.panel-toggle">
