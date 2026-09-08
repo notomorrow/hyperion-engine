@@ -2,7 +2,6 @@ using System.Collections.ObjectModel;
 using Avalonia.Threading;
 using Avalonia.Media;
 using Hyperion;
-using Lucide.Avalonia;
 
 namespace Hyperion.Editor.ViewModels
 {
@@ -76,20 +75,20 @@ namespace Hyperion.Editor.ViewModels
             IsEditingName = false;
         }
 
-        public LucideIconKind IconKind => _node switch
+        public string IconKind => _node switch
         {
-            DirectionalLight    => LucideIconKind.Sun,
-            PointLight          => LucideIconKind.Lightbulb,
-            SpotLight           => LucideIconKind.Spotlight,
-            AreaRectLight       => LucideIconKind.RectangleHorizontal,
-            Camera              => LucideIconKind.Video,
-            ReflectionProbe     => LucideIconKind.Orbit,
-            ParticleVolume      => LucideIconKind.Sparkles,
-            InstancedMeshProxy  => LucideIconKind.SquaresUnite,
-            Bone                => LucideIconKind.Bone,
-            VolumeBase          => LucideIconKind.Box,
-            Entity              => LucideIconKind.Shapes,
-            _                   => LucideIconKind.Circle,
+            DirectionalLight    => "Lightbulb",
+            PointLight          => "Lightbulb",
+            SpotLight           => "Lightbulb",
+            AreaRectLight       => "HorizontalRule",
+            Camera              => "DeviceCamera",
+            ReflectionProbe     => "Globe",
+            ParticleVolume      => "Sparkle",
+            InstancedMeshProxy  => "Combine",
+            Bone                => "GitBranch",
+            VolumeBase          => "Package",
+            Entity              => "CircleLarge",
+            _                   => "Circle",
         };
 
         private readonly List<NodeViewModel> _allChildren = new List<NodeViewModel>();
