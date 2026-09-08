@@ -744,6 +744,14 @@ extern "C"
 #if HYP_DOTNET
         DotNETHost::GetInstance().Shutdown();
 #endif // HYP_DOTNET
+
+        // Needs to be destroyed before render thread is stopped!
+        delete g_shaderManager;
+        g_shaderManager = nullptr;
+
+        delete g_shaderCompiler;
+        g_shaderCompiler = nullptr;
+        //--
     
         if (g_renderThreadInstance != nullptr && g_renderThreadInstance->IsRunning())
         {
@@ -764,12 +772,6 @@ extern "C"
         {
             TaskSystem::GetInstance().Stop();
         }
-
-        delete g_shaderManager;
-        g_shaderManager = nullptr;
-
-        delete g_shaderCompiler;
-        g_shaderCompiler = nullptr;
 
         // must stop before net request thread
         StopProfilerConnectionThread();

@@ -8,6 +8,7 @@
 
 #include <Rendering/Vulkan/VulkanShaderInstance.hpp>
 #include <Rendering/Vulkan/VulkanDevice.hpp>
+#include <Rendering/Vulkan/VulkanInstance.hpp>
 #include <Rendering/Vulkan/VulkanDescriptorSet.hpp>
 #include <Rendering/Vulkan/VulkanRenderInterface.hpp>
 #include <Rendering/Vulkan/VulkanResult.hpp>
@@ -55,11 +56,33 @@ VulkanShaderInstance::~VulkanShaderInstance()
         return;
     }
 
-    EnqueueDeletion(FunctionWrapper<Proc<void()>>([shaderModules = std::move(m_shaderModules)]()
+    if (m_shaderModules.Empty())
+    {
+        return;
+    }
+
+    VulkanInstance* instance = RI.GetInstance();
+    if (!instance)
+    {
+        return;
+    }
+
+    VulkanDeviceRef device = instance->GetDevice();
+    if (!device.IsValid() || device->GetDevice() == VK_NULL_HANDLE)
+    {
+        return;
+    }
+
+    VkDevice vkDevice = device->GetDevice();
+
+    EnqueueDeletion(FunctionWrapper<Proc<void()>>([shaderModules = std::move(m_shaderModules), vkDevice]()
         {
             for (const VulkanShaderModule& shaderModule : shaderModules)
             {
-                vkDestroyShaderModule(RI.GetDevice()->GetDevice(), shaderModule.handle, nullptr);
+                if (shaderModule.handle != VK_NULL_HANDLE)
+                {
+                    vkDestroyShaderModule(vkDevice, shaderModule.handle, nullptr);
+                }
             }
         }));
 }
