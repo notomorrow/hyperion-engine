@@ -5,6 +5,7 @@
     xmlns:panels="clr-namespace:Hyperion.Editor.Views.Panels;assembly=Hyperion.Editor"
     xmlns:dac="using:Dock.Avalonia.Controls"
     xmlns:ds="using:Dock.Avalonia.Themes.Simple"
+    xmlns:sys="clr-namespace:System;assembly=mscorlib"
     xmlns:vm="clr-namespace:Hyperion.Editor.ViewModels;assembly=Hyperion.Editor"
     Name="Hyperion Editor"
     RequestedThemeVariant="Dark">
@@ -38,10 +39,11 @@
             <Color x:Key="Color.PanelRaised">#FF0E0F12</Color>
             <Color x:Key="Color.Border">#FF121416</Color>
             <Color x:Key="Color.BorderLight">#FF1A1C1F</Color>
-            <Color x:Key="Color.Accent">#FF4078E8</Color>
-            <Color x:Key="Color.AccentHover">#FF5088D8</Color>
-            <Color x:Key="Color.AccentMuted">#FF2248A0</Color>
-            <Color x:Key="Color.AccentSubtle">#1440E8FF</Color>
+            <Color x:Key="Color.Accent">#FF81BBB6</Color>
+            <Color x:Key="Color.AccentHover">#FF9CC9C6</Color>
+            <Color x:Key="Color.AccentMuted">#FF49837E</Color>
+            <Color x:Key="Color.AccentSubtle">#1481BBB6</Color>
+            <Color x:Key="Color.AccentSelection">#3D81BBB6</Color>
             <Color x:Key="Color.Text">#FFD0D3D9</Color>
             <Color x:Key="Color.TextMuted">#FF72777E</Color>
             <Color x:Key="Color.TextFaint">#FF4A4E54</Color>
@@ -63,6 +65,7 @@
             <SolidColorBrush x:Key="Brush.AccentHover" Color="{StaticResource Color.AccentHover}" />
             <SolidColorBrush x:Key="Brush.AccentMuted" Color="{StaticResource Color.AccentMuted}" />
             <SolidColorBrush x:Key="Brush.AccentSubtle" Color="{StaticResource Color.AccentSubtle}" />
+            <SolidColorBrush x:Key="Brush.AccentSelection" Color="{StaticResource Color.AccentSelection}" />
             <SolidColorBrush x:Key="Brush.Text" Color="{StaticResource Color.Text}" />
             <SolidColorBrush x:Key="Brush.TextMuted" Color="{StaticResource Color.TextMuted}" />
             <SolidColorBrush x:Key="Brush.TextFaint" Color="{StaticResource Color.TextFaint}" />
@@ -73,6 +76,52 @@
             <SolidColorBrush x:Key="Brush.HoverBorder" Color="{StaticResource Color.HoverBorder}" />
             <SolidColorBrush x:Key="Brush.InputBackground" Color="{StaticResource Color.InputBackground}" />
             <SolidColorBrush x:Key="Brush.InputBorder" Color="{StaticResource Color.InputBorder}" />
+
+            <!--  Dock (Dock.Avalonia) palette overrides - map the dock chrome onto the editor theme  -->
+            <SolidColorBrush x:Key="DockThemeBackgroundBrush" Color="#FF020304" />
+            <SolidColorBrush x:Key="DockThemeBackgroundLowBrush" Color="#FF060709" />
+            <SolidColorBrush x:Key="DockThemeBackgroundMidBrush" Color="#FF0A0B0D" />
+            <SolidColorBrush x:Key="DockThemeBackgroundHighBrush" Color="#FF141618" />
+            <SolidColorBrush x:Key="DockThemeControlBackgroundBrush" Color="#FF0E0F12" />
+            <SolidColorBrush x:Key="DockThemeBorderLowBrush" Color="#FF121416" />
+            <SolidColorBrush x:Key="DockThemeBorderMidBrush" Color="#FF1A1C1F" />
+            <SolidColorBrush x:Key="DockThemeBorderHighBrush" Color="#FF282C32" />
+            <SolidColorBrush x:Key="DockThemeAccentBrush" Color="#FF81BBB6" />
+            <SolidColorBrush x:Key="DockThemeForegroundBrush" Color="#FFD0D3D9" />
+            <SolidColorBrush x:Key="DockThemeForegroundLowBrush" Color="#FF72777E" />
+            <SolidColorBrush x:Key="DockToolChromeIconBrush" Color="#FF72777E" />
+            <SolidColorBrush x:Key="DockApplicationAccentBrushLow" Color="#1481BBB6" />
+            <SolidColorBrush x:Key="DockApplicationAccentBrushMed" Color="#FF9CC9C6" />
+            <SolidColorBrush x:Key="DockApplicationAccentBrushHigh" Color="#FF81BBB6" />
+            <SolidColorBrush x:Key="DockApplicationAccentBrushIndicator" Color="#FF81BBB6" />
+            <SolidColorBrush x:Key="DockApplicationAccentForegroundBrush" Color="#FFD0D3D9" />
+
+            <SolidColorBrush x:Key="DockSurfaceWorkbenchBrush" Color="#FF020304" />
+            <SolidColorBrush x:Key="DockSurfaceSidebarBrush" Color="#FF060709" />
+            <SolidColorBrush x:Key="DockSurfaceEditorBrush" Color="#FF060709" />
+            <SolidColorBrush x:Key="DockSurfacePanelBrush" Color="#FF0A0B0D" />
+            <SolidColorBrush x:Key="DockSurfaceHeaderBrush" Color="#FF0A0B0D" />
+            <SolidColorBrush x:Key="DockSurfaceHeaderActiveBrush" Color="#00000000" />
+            <SolidColorBrush x:Key="DockBorderSubtleBrush" Color="#FF121416" />
+            <SolidColorBrush x:Key="DockBorderStrongBrush" Color="#FF1A1C1F" />
+            <SolidColorBrush x:Key="DockSeparatorBrush" Color="#FF121416" />
+            <SolidColorBrush x:Key="DockSplitterIdleBrush" Color="#FF121416" />
+            <SolidColorBrush x:Key="DockSplitterHoverBrush" Color="#FF282C32" />
+            <SolidColorBrush x:Key="DockSplitterDragBrush" Color="#FF81BBB6" />
+            <SolidColorBrush x:Key="DockTabBackgroundBrush" Color="#00000000" />
+            <SolidColorBrush x:Key="DockTabHoverBackgroundBrush" Color="#FF141618" />
+            <SolidColorBrush x:Key="DockTabActiveBackgroundBrush" Color="#FF0A0B0D" />
+            <SolidColorBrush x:Key="DockTabActiveIndicatorBrush" Color="#FF81BBB6" />
+            <SolidColorBrush x:Key="DockTabForegroundBrush" Color="#FF72777E" />
+            <SolidColorBrush x:Key="DockTabSelectedForegroundBrush" Color="#FFD0D3D9" />
+            <SolidColorBrush x:Key="DockTabActiveForegroundBrush" Color="#FFD0D3D9" />
+            <SolidColorBrush x:Key="DockTabCloseHoverBackgroundBrush" Color="#FF282C32" />
+            <SolidColorBrush x:Key="DockTargetIndicatorBrush" Color="#FF81BBB6" />
+            <SolidColorBrush x:Key="DockChromeButtonForegroundBrush" Color="#FF72777E" />
+            <SolidColorBrush x:Key="DockChromeButtonHoverBackgroundBrush" Color="#FF141618" />
+            <SolidColorBrush x:Key="DockChromeButtonPressedBackgroundBrush" Color="#FF282C32" />
+            <SolidColorBrush x:Key="DockChromeButtonDangerHoverBrush" Color="#FFE0555C" />
+            <sys:Double x:Key="DockCornerRadiusSmall">4</sys:Double>
 
             <!--  Metrics  -->
             <Thickness x:Key="Thickness.ControlPadding">7,5</Thickness>
@@ -98,6 +147,81 @@
                 <Setter Property="Template">
                     <ControlTemplate>
                         <Panel Width="0" Height="0" />
+                    </ControlTemplate>
+                </Setter>
+            </ControlTheme>
+
+            <!--  Dock chrome buttons (close / pin / menu) restyled to match the editor  -->
+            <ControlTheme x:Key="DockCloseButtonTheme" TargetType="Button">
+                <Setter Property="Foreground" Value="{StaticResource Brush.TextMuted}" />
+                <Setter Property="Background" Value="Transparent" />
+                <Setter Property="Padding" Value="0" />
+                <Setter Property="Width" Value="20" />
+                <Setter Property="Height" Value="20" />
+                <Style Selector="^:pointerover">
+                    <Setter Property="Background" Value="{StaticResource Brush.MenuHover}" />
+                    <Setter Property="Foreground" Value="{StaticResource Brush.Text}" />
+                </Style>
+                <Setter Property="Template">
+                    <ControlTemplate>
+                        <Border Background="{TemplateBinding Background}" CornerRadius="3">
+                            <Path
+                                Data="M0,0 L8,8 M8,0 L0,8"
+                                Stroke="{TemplateBinding Foreground}"
+                                StrokeThickness="1.2"
+                                Stretch="Uniform"
+                                Width="8" Height="8"
+                                HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                    </ControlTemplate>
+                </Setter>
+            </ControlTheme>
+
+            <ControlTheme x:Key="DockPinButtonTheme" TargetType="Button">
+                <Setter Property="Foreground" Value="{StaticResource Brush.TextMuted}" />
+                <Setter Property="Background" Value="Transparent" />
+                <Setter Property="Padding" Value="0" />
+                <Setter Property="Width" Value="20" />
+                <Setter Property="Height" Value="20" />
+                <Style Selector="^:pointerover">
+                    <Setter Property="Background" Value="{StaticResource Brush.MenuHover}" />
+                    <Setter Property="Foreground" Value="{StaticResource Brush.Text}" />
+                </Style>
+                <Setter Property="Template">
+                    <ControlTemplate>
+                        <Border Background="{TemplateBinding Background}" CornerRadius="3">
+                            <Path
+                                Data="M8,1 C6.3,1 5,2.3 5,4 C5,5.1 5.6,6 6.5,6.5 L6.5,9 L4,10.75 L4,11.5 L12,11.5 L12,10.75 L9.5,9 L9.5,6.5 C10.4,6 11,5.1 11,4 C11,2.3 9.7,1 8,1 Z M7,12.5 L9,12.5 L9,14.5 C9,15.05 8.55,15.5 8,15.5 C7.45,15.5 7,15.05 7,14.5 Z"
+                                Fill="{TemplateBinding Foreground}"
+                                Stretch="Uniform"
+                                Width="11" Height="11"
+                                HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                    </ControlTemplate>
+                </Setter>
+            </ControlTheme>
+
+            <ControlTheme x:Key="DockMenuButtonTheme" TargetType="Button">
+                <Setter Property="Foreground" Value="{StaticResource Brush.TextMuted}" />
+                <Setter Property="Background" Value="Transparent" />
+                <Setter Property="Padding" Value="0" />
+                <Setter Property="Width" Value="20" />
+                <Setter Property="Height" Value="20" />
+                <Style Selector="^:pointerover">
+                    <Setter Property="Background" Value="{StaticResource Brush.MenuHover}" />
+                    <Setter Property="Foreground" Value="{StaticResource Brush.Text}" />
+                </Style>
+                <Setter Property="Template">
+                    <ControlTemplate>
+                        <Border Background="{TemplateBinding Background}" CornerRadius="3">
+                            <Path
+                                Data="M1,2.5 L11,2.5 M1,6 L11,6 M1,9.5 L11,9.5"
+                                Stroke="{TemplateBinding Foreground}"
+                                StrokeThickness="1.2"
+                                Stretch="Uniform"
+                                Width="10" Height="10"
+                                HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
                     </ControlTemplate>
                 </Setter>
             </ControlTheme>
@@ -245,7 +369,7 @@
             <Setter Property="Background" Value="{StaticResource Brush.MenuHover}" />
         </Style>
         <Style Selector="TreeViewItem:selected, ListBoxItem:selected">
-            <Setter Property="Background" Value="{StaticResource Brush.AccentSubtle}" />
+            <Setter Property="Background" Value="{StaticResource Brush.AccentSelection}" />
             <Setter Property="Foreground" Value="{StaticResource Brush.Text}" />
         </Style>
 
@@ -448,7 +572,7 @@
             <Setter Property="Background" Value="{StaticResource Brush.MenuHover}" />
         </Style>
         <Style Selector="ComboBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter">
-            <Setter Property="Background" Value="{StaticResource Brush.AccentSubtle}" />
+            <Setter Property="Background" Value="{StaticResource Brush.AccentSelection}" />
         </Style>
 
         <Style Selector="AutoCompleteBox">
@@ -660,6 +784,30 @@
         <!--  Remove the maximize/restore button from dock pane chrome (floating panes).  -->
         <Style Selector="dac|ToolChromeControl">
             <Setter Property="MaximizeButtonTheme" Value="{StaticResource DockEmptyButtonTheme}" />
+            <Setter Property="CloseButtonTheme" Value="{StaticResource DockCloseButtonTheme}" />
+            <Setter Property="PinButtonTheme" Value="{StaticResource DockPinButtonTheme}" />
+            <Setter Property="MenuButtonTheme" Value="{StaticResource DockMenuButtonTheme}" />
+        </Style>
+
+        <!--  Tooltips for the dock chrome buttons  -->
+        <Style Selector="dac|ToolChromeControl /template/ Button#PART_CloseButton">
+            <Setter Property="ToolTip.Tip" Value="Close Panel" />
+        </Style>
+        <Style Selector="dac|ToolChromeControl /template/ Button#PART_PinButton">
+            <Setter Property="ToolTip.Tip" Value="Pin Panel" />
+        </Style>
+        <Style Selector="dac|ToolChromeControl /template/ Button#PART_MenuButton">
+            <Setter Property="ToolTip.Tip" Value="Panel Options" />
+        </Style>
+
+        <!--  Dock tab strips use the editor font  -->
+        <Style Selector="dac|ToolTabStripItem, dac|DocumentTabStripItem">
+            <Setter Property="FontFamily" Value="{StaticResource Font.Base}" />
+            <Setter Property="FontSize" Value="11.5" />
+        </Style>
+        <Style Selector="dac|ToolChromeControl">
+            <Setter Property="FontFamily" Value="{StaticResource Font.Base}" />
+            <Setter Property="FontSize" Value="11.5" />
         </Style>
     </Application.Styles>
 </Application>

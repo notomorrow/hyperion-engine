@@ -60,13 +60,29 @@ namespace Hyperion.Editor
         private const double AutoScrollSpeed = 10; // px per timer tick (~50 ms)
 
         private DropDownButton? _sceneDropDown;
+        private EditorViewportControl? _editorViewport;
+        private Tool? _panelTool;
+        private IDockWindow? _panelWindow;
+        private int _frameCounter;
+        private bool _viewportNativeHidden;
+        private bool _isClosing;
+        private bool _suppressPanelSync;
         private readonly Dictionary<string, object?> _dockContents = new Dictionary<string, object?>();
 
         public MainWindow()
         {
+            var viewModel = new MainWindowViewModel();
+            MainWindowViewModel.Instance = viewModel;
+            DataContext = viewModel;
+
             InitializeComponent();
 
-            DataContext = new MainWindowViewModel();
+            PanelService.Instance.ActivePanelChanged += OnPanelServiceActivePanelChanged;
+
+            // Keep the floating panel window lifecycle in sync with dock operations.
+            DockControl.Factory.DockableDocked += OnFactoryDockableChanged;
+            DockControl.Factory.DockableMoved += OnFactoryDockableChanged;
+            DockControl.Factory.DockableClosed += OnFactoryDockableChanged;
 
             AddHandler(InputElement.GotFocusEvent, OnInspectorTextBoxGotFocus, RoutingStrategies.Bubble);
             AddHandler(InputElement.LostFocusEvent, OnInspectorTextBoxLostFocus, RoutingStrategies.Bubble);
@@ -181,6 +197,268 @@ namespace Hyperion.Editor
             return _dockContents.TryGetValue(id, out object? value) ? value : null;
         }
 
+        /// <summary>
+        /// Dynamic editor panels (edit asset, new physics shape, new scene, ...) open as a
+        /// floating tool window. Opening another panel reuses and updates the same window.
+        /// </summary>
+        private void OnFactoryDockableChanged(object? sender, EventArgs e)
+        {
+            CleanupOrphanedPanelWindow();
+        }
+
+        /// <summary>
+        /// Closes the visible floating window and deregisters it from the dock layout.
+        /// The DockWindow model is not an Avalonia control - the visible window is its
+        /// Host - so closing must go through the model's Exit().
+        /// </summary>
+        private void ClosePanelWindow()
+        {
+            if (_panelWindow == null)
+            {
+                return;
+            }
+
+
+            IDockWindow window = _panelWindow;
+            _panelWindow = null;
+            _panelTool = null;
+
+            if (window.Host is Window hostWindow)
+            {
+                hostWindow.Closed -= OnPanelWindowClosed;
+            }
+
+            window.Exit();
+
+            if (DockControl.Factory is FactoryBase factory)
+            {
+                factory.RemoveWindow(window);
+            }
+        }
+
+        /// <summary>
+        /// If the panel tool left the floating window (docked into the main layout, or
+        /// closed via the chrome button), the now-empty floating window is closed.
+        /// </summary>
+        private void CleanupOrphanedPanelWindow()
+        {
+            if (_panelTool == null || _panelWindow == null || _isClosing || _suppressPanelSync)
+            {
+                return;
+            }
+
+            if (_panelWindow.Layout is IRootDock root && ContainsVisibleDockable(root, _panelTool))
+            {
+                return;
+            }
+
+            // The tool no longer lives visibly in the floating window. If it was docked
+            // somewhere else it stays alive; if it was hidden/closed, release the panel.
+            bool stillVisible = DockControl.Layout != null && ContainsVisibleDockable(DockControl.Layout, _panelTool);
+
+
+            ClosePanelWindow();
+
+            if (!stillVisible)
+            {
+                _suppressPanelSync = true;
+                try
+                {
+                    PanelService.Instance.ClosePanel();
+                }
+                finally
+                {
+                    _suppressPanelSync = false;
+                }
+            }
+        }
+
+        private void OnPanelServiceActivePanelChanged(object? sender, EventArgs e)
+        {
+            SyncFloatingPanelWindow();
+        }
+
+        private IDockWindow? FindPanelWindow()
+        {
+            if (_panelTool == null || DockControl.Layout is not IRootDock mainRoot || mainRoot.Windows == null)
+            {
+                return null;
+            }
+
+            foreach (IDockWindow? window in mainRoot.Windows)
+            {
+                if (window?.Layout is IRootDock root && ContainsVisibleDockable(root, _panelTool))
+                {
+                    return window;
+                }
+            }
+
+            return null;
+        }
+
+        private static bool ContainsVisibleDockable(IDockable container, IDockable target)
+        {
+            if (ReferenceEquals(container, target))
+            {
+                return true;
+            }
+
+            if (container is IDock dock && dock.VisibleDockables != null)
+            {
+                foreach (IDockable child in dock.VisibleDockables)
+                {
+                    if (ContainsVisibleDockable(child, target))
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        private void SyncFloatingPanelWindow()
+        {
+            if (_suppressPanelSync || _isClosing)
+            {
+                return;
+            }
+
+            EditorPanelViewModel? panel = PanelService.Instance.ActivePanel;
+
+            if (panel == null)
+            {
+                // Nothing active - make sure the floating panel window is gone.
+                ClosePanelWindow();
+                return;
+            }
+
+            ShowFloatingPanel(panel);
+        }
+
+        private void ShowFloatingPanel(EditorPanelViewModel panel)
+        {
+            try
+            {
+                if (DockControl.Factory is not FactoryBase factory || DockControl.Layout is not IRootDock mainRoot)
+                {
+                    Logger.Log(LogLevel.Warning,
+                        $"PanelWindow: cannot open, Factory={DockControl.Factory?.GetType().Name ?? "null"}, Layout={DockControl.Layout?.GetType().Name ?? "null"}.");
+                    return;
+                }
+
+                // A floating window for panels is already up - update it in place and focus it.
+                if (_panelTool != null && FindPanelWindow() is { } existing)
+                {
+                    // Tool.Content must be a control (it is [TemplateContent]); the wrapper
+                    // resolves the panel's view via the app data templates.
+                    _panelTool.Content = new ContentControl { Content = panel };
+                    _panelTool.Title = panel.Title;
+                    existing.SetActive();
+                    existing.Present(false);
+                    return;
+                }
+
+                if (_panelTool != null)
+                {
+                    // The window still exists but the panel tool inside it was closed/hidden
+                    // (HideToolsOnClose) - tear the stale window down and start fresh.
+                    ClosePanelWindow();
+                }
+
+                _panelTool = new Tool
+                {
+                    Id = "EditorPanel",
+                    Title = panel.Title,
+                    Content = new ContentControl { Content = panel },
+                    CanFloat = true
+                };
+
+                // Host the tool in its own floating window (non-modal).
+                IDockWindow? window = factory.CreateWindowFrom(_panelTool);
+                if (window == null)
+                {
+                    Logger.Log(LogLevel.Error, "Failed to create the editor panel window: CreateWindowFrom returned null.");
+                    _panelTool = null;
+                    return;
+                }
+
+                window.Title = panel.Title;
+
+                if (window.Layout is not IRootDock floatingRoot)
+                {
+                    Logger.Log(LogLevel.Error, "PanelWindow: created window has no layout root.");
+                    _panelTool = null;
+                    return;
+                }
+
+                floatingRoot.Factory = factory;
+
+                // Bind the window model to its host: sets window.Host / host.Window and
+                // initializes the layout tree. Without this, Present skips sizing and
+                // owner resolution and the window never becomes visible.
+                factory.InitDockWindow(window, null, window as IHostWindow);
+                floatingRoot.Window = window;
+
+                mainRoot.Windows ??= factory.CreateList<IDockWindow>();
+                mainRoot.Windows.Add(window);
+                _panelWindow = window;
+
+                // Present as a tall panel anchored to the right edge of the main window.
+                double scaling = RenderScaling;
+                const double panelWidth = 360.0;
+                double panelHeight = Math.Max(240.0, ClientSize.Height - 16.0);
+                window.Width = panelWidth;
+                window.Height = panelHeight;
+                window.X = Position.X + (int)((ClientSize.Width - panelWidth) * scaling) - (int)(8 * scaling);
+                window.Y = Position.Y + (int)(8 * scaling);
+
+                window.Present(false);
+
+                // The host window is resolved during Present; that Avalonia Window is what
+                // actually closes, so watch it for user-initiated closes.
+                if (window.Host is Window hostWindow)
+                {
+                    hostWindow.Closed += OnPanelWindowClosed;
+                }
+
+            }
+            catch (Exception ex)
+            {
+                _panelTool = null;
+                Logger.Log(LogLevel.Error, $"Failed to show editor panel window: {ex}");
+            }
+        }
+
+        private void OnPanelWindowClosed(object? sender, EventArgs e)
+        {
+
+            if (sender is Window window)
+            {
+                window.Closed -= OnPanelWindowClosed;
+            }
+
+            _panelWindow = null;
+            _panelTool = null;
+
+            if (_isClosing)
+            {
+                return;
+            }
+
+            // The user closed the floating window - release the active panel so its
+            // OnClosed callbacks run, without re-triggering this sync recursively.
+            _suppressPanelSync = true;
+            try
+            {
+                PanelService.Instance.ClosePanel();
+            }
+            finally
+            {
+                _suppressPanelSync = false;
+            }
+        }
+
         private IList<IDockable> CreateDockList(params IDockable[] items)
         {
             if (DockControl.Factory is FactoryBase factory)
@@ -200,11 +478,10 @@ namespace Hyperion.Editor
             var inspectorTool = new Tool { Id = "Inspector", Title = "Inspector", Content = GetDockContent("Inspector") };
             var assetsTool = new Tool { Id = "ContentBrowser", Title = "Assets", Content = GetDockContent("ContentBrowser") };
             var consoleTool = new Tool { Id = "Console", Title = "Console", Content = GetDockContent("Console") };
-            var propertiesTool = new Tool { Id = "Properties", Title = "Properties", Content = GetDockContent("Properties") };
             var sceneDocument = new Document
             {
                 Id = "Scene",
-                Title = "Scene",
+                Title = "Viewport",
                 Content = GetDockContent("Scene"),
                 CanDrag = false,
                 CanFloat = false,
@@ -222,9 +499,7 @@ namespace Hyperion.Editor
             var bottomDock = new ProportionalDock { Id = "Bottom", Orientation = Orientation.Horizontal, Proportion = 0.3, VisibleDockables = CreateDockList(assetsPane, new ProportionalDockSplitter(), consolePane) };
             var centerDock = new ProportionalDock { Id = "Center", Orientation = Orientation.Vertical, VisibleDockables = CreateDockList(documentsPane, new ProportionalDockSplitter(), bottomDock) };
 
-            var propertiesPane = new ToolDock { Id = "PropertiesPane", Alignment = Alignment.Right, Proportion = 0.2, ActiveDockable = propertiesTool, VisibleDockables = CreateDockList(propertiesTool) };
-
-            var mainLayout = new ProportionalDock { Id = "MainLayout", Orientation = Orientation.Horizontal, VisibleDockables = CreateDockList(leftDock, new ProportionalDockSplitter(), centerDock, new ProportionalDockSplitter(), propertiesPane) };
+            var mainLayout = new ProportionalDock { Id = "MainLayout", Orientation = Orientation.Horizontal, VisibleDockables = CreateDockList(leftDock, new ProportionalDockSplitter(), centerDock) };
 
             return new RootDock { Id = "Root", IsCollapsable = false, DefaultDockable = mainLayout, VisibleDockables = CreateDockList(mainLayout) };
         }
@@ -268,14 +543,45 @@ namespace Hyperion.Editor
 
         private void InitializeViewportControl()
         {
-            EditorViewportControl? evc = FindVisualChildByName<EditorViewportControl>("EditorViewportControl");
-            if (evc == null)
+            _editorViewport = FindVisualChildByName<EditorViewportControl>("EditorViewportControl");
+            if (_editorViewport == null)
             {
                 Logger.Log(LogLevel.Warning, "EditorViewportControl control not found in the dock layout.");
                 return;
             }
 
-            evc.Focus();
+            _editorViewport.Focus();
+        }
+
+        /// <summary>
+        /// The viewport is a native child window, which always renders above Avalonia
+        /// overlays (airspace). Hide it while docking drag indicators or pinned panel
+        /// previews are active so they stay visible over the viewport.
+        /// </summary>
+        private void UpdateViewportNativeVisibility()
+        {
+            if (_editorViewport == null)
+            {
+                return;
+            }
+
+            bool hide = DockControl.IsDraggingDock || IsPinnedPanelActive();
+
+            if (hide != _viewportNativeHidden)
+            {
+                _viewportNativeHidden = hide;
+                _editorViewport.SetNativeVisibility(!hide);
+            }
+        }
+
+        private bool IsPinnedPanelActive()
+        {
+            if (DockControl.Layout is not IRootDock root || root.ActiveDockable is not IDockable active)
+            {
+                return false;
+            }
+
+            return DockControl.Factory?.IsDockablePinned(active, root) == true;
         }
 
         private void InitializeSceneFlyout()
@@ -868,6 +1174,8 @@ namespace Hyperion.Editor
 
         protected override void OnClosing(WindowClosingEventArgs e)
         {
+            _isClosing = true;
+
             // Disable main thread loop until this is done 
             // This should prevent MainThread::Update() from being triggered by avalonia
             // directly after clicking any of the messagebox buttons
@@ -938,6 +1246,18 @@ namespace Hyperion.Editor
             }
 
             ConsoleService.Instance.ProcessLogQueue();
+
+            // Periodic maintenance: keep the native viewport out of the way of docking
+            // overlays, and close orphaned floating panel windows.
+            if (++_frameCounter % 10 == 0)
+            {
+                UpdateViewportNativeVisibility();
+            }
+
+            if (_frameCounter % 30 == 0)
+            {
+                CleanupOrphanedPanelWindow();
+            }
 
             var topLevel = GetTopLevel(this);
             topLevel?.RequestAnimationFrame(OnFrame);

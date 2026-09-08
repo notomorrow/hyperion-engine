@@ -110,6 +110,12 @@ struct AliveWindows
     }
 };
 
+uint32 NextWindowClassId()
+{
+    static AtomicVar<uint32> s_counter;
+    return s_counter.Increment(1, MemoryOrder::RELAXED);
+}
+
 } // namespace
 
 void Win32_RegisterWindowClass(const WideString& className)
@@ -439,10 +445,12 @@ Win32ApplicationWindow::~Win32ApplicationWindow()
         m_hwnd = nullptr;
     }
 
-    WideString wTitle = m_title.ToWide();
-
-    UnregisterClassW(wTitle.Data(), m_hinst);
-    Win32WindowRegistry::GetInstance().Unregister(wTitle.Data());
+    if (!m_wndClassName.Empty())
+    {
+        UnregisterClassW(m_wndClassName.Data(), m_hinst);
+        Win32WindowRegistry::GetInstance().Unregister(m_wndClassName);
+        m_wndClassName = WideString::empty;
+    }
 }
 
 void Win32ApplicationWindow::ProcessRawInput(void* rawInput)
@@ -531,18 +539,20 @@ void Win32ApplicationWindow::Initialize(WindowOptions windowOptions)
 
     m_useWndProc = !(windowOptions.flags & uint32(WindowFlags::EVENTS_POLLING));
 
+    m_wndClassName = wTitle + L"_HypWindow_" + WideString::ToString(NextWindowClassId());
+
     WNDCLASSEXW wc {};
     wc.cbSize = sizeof(WNDCLASSEXW);
     wc.lpfnWndProc = &Win32ApplicationWindow::StaticWndProc;
     wc.hInstance = m_hinst;
     wc.hCursor = LoadCursor(nullptr, IDC_ARROW);
     wc.hbrBackground = CreateSolidBrush(RGB(10, 10, 10));
-    wc.lpszClassName = wTitle.Data();
+    wc.lpszClassName = m_wndClassName.Data();
 
     ATOM classAtom = RegisterClassExW(&wc);
     Assert(classAtom != 0, "Failed to register Win32 window class! Win32 Error: {}", GetLastError());
 
-    Win32WindowRegistry::GetInstance().Register(wTitle);
+    Win32WindowRegistry::GetInstance().Register(m_wndClassName);
 
     int x = 0, y = 0;
 
@@ -566,7 +576,7 @@ void Win32ApplicationWindow::Initialize(WindowOptions windowOptions)
     AdjustWindowRect(&r, style, FALSE);
 
     m_hwnd = CreateWindowW(
-        wc.lpszClassName, wTitle.Data(), style,
+        m_wndClassName.Data(), wTitle.Data(), style,
         x, y,
         r.right - r.left, r.bottom - r.top,
         windowOptions.parentHwnd, nullptr, m_hinst, this);

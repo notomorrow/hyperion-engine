@@ -383,6 +383,7 @@ namespace Hyperion.Editor.ViewModels
 
                 if (obj == null || !obj.IsValid)
                 {
+                    Logger.Log(LogLevel.Warning, $"EditAsset: asset '{displayName}' could not be resolved.");
                     return;
                 }
 

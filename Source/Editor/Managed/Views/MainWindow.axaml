@@ -295,7 +295,7 @@
                             IsChecked="{Binding IsMeshEditModeEnabled, Mode=OneWay}"
                             IsEnabled="{Binding CanEnableMeshEditMode}"
                             ToolTip.Tip="{Binding MeshEditModeTooltip}">
-                            <controls:Codicon Kind="CircuitBoard" Size="16" />
+                            <controls:Codicon Kind="MeshEditMode" Size="16" />
                         </ToggleButton>
 
                         <Border
@@ -409,7 +409,7 @@
 
                                 <ToolDock x:Name="HierarchyPane" Id="HierarchyPane" Alignment="Left" ActiveDockable="SceneHierarchyTool">
                                     <Tool x:Name="SceneHierarchyTool" Id="SceneHierarchy" Title="Scene">
-                                        <ContentControl DataContext="{Binding $parent[Window].DataContext}">
+                                        <ContentControl DataContext="{Binding Source={x:Static vm:MainWindowViewModel.Instance}}">
                                             <Grid RowDefinitions="Auto, Auto, *">
                                                 <Border Grid.Row="0" Classes="panel-header">
                                                     <Grid VerticalAlignment="Center" ColumnDefinitions="*,Auto">
@@ -434,7 +434,7 @@
                                                                             <ItemsControl.ItemTemplate>
                                                                                 <DataTemplate x:DataType="vm:SceneViewModel">
                                                                                     <MenuItem
-                                                                                        Command="{Binding $parent[Window].DataContext.SetActiveSceneCommand}"
+                                                                                        Command="{Binding SetActiveSceneCommand, Source={x:Static vm:MainWindowViewModel.Instance}}"
                                                                                         CommandParameter="{Binding}"
                                                                                         Header="{Binding Name}" />
                                                                                 </DataTemplate>
@@ -443,9 +443,9 @@
 
                                                                         <Separator />
                                                                         <MenuItem
-                                                                            Command="{Binding $parent[Window].DataContext.AddNewSceneCommand}"
+                                                                            Command="{Binding AddNewSceneCommand, Source={x:Static vm:MainWindowViewModel.Instance}}"
                                                                             Header="Add New Scene..."
-                                                                            IsEnabled="{Binding !$parent[Window].DataContext.IsSimulating}" />
+                                                                            IsEnabled="{Binding !IsSimulating, Source={x:Static vm:MainWindowViewModel.Instance}}" />
                                                                     </StackPanel>
                                                                 </Flyout>
                                                             </DropDownButton.Flyout>
@@ -567,7 +567,7 @@
                                                                             <ItemsControl.ItemTemplate>
                                                                                 <DataTemplate x:DataType="x:String">
                                                                                     <MenuItem
-                                                                                        Command="{Binding $parent[Window].DataContext.SetActiveBakeLayerCommand}"
+                                                                                        Command="{Binding SetActiveBakeLayerCommand, Source={x:Static vm:MainWindowViewModel.Instance}}"
                                                                                         CommandParameter="{Binding}"
                                                                                         Header="{Binding}" />
                                                                                 </DataTemplate>
@@ -576,7 +576,7 @@
 
                                                                         <Separator />
                                                                         <MenuItem
-                                                                            Command="{Binding $parent[Window].DataContext.AddNewBakeLayerCommand}"
+                                                                            Command="{Binding AddNewBakeLayerCommand, Source={x:Static vm:MainWindowViewModel.Instance}}"
                                                                             Header="New Layer..." />
                                                                     </StackPanel>
                                                                 </Flyout>
@@ -657,14 +657,14 @@
                                                                 </StackPanel>
                                                                 <Grid.ContextMenu>
                                                                     <ContextMenu Opened="OnNodeContextMenuOpened">
-                                                                        <MenuItem Command="{Binding $parent[Window].DataContext.Copy}" Header="{Binding $parent[Window].DataContext.CopyHeader}" IsEnabled="{Binding !$parent[Window].DataContext.IsSimulating}" />
-                                                                        <MenuItem Command="{Binding $parent[Window].DataContext.Paste}" Header="{Binding $parent[Window].DataContext.PasteHeader}" IsEnabled="{Binding !$parent[Window].DataContext.IsSimulating}" />
+                                                                        <MenuItem Command="{Binding Copy, Source={x:Static vm:MainWindowViewModel.Instance}}" Header="{Binding CopyHeader, Source={x:Static vm:MainWindowViewModel.Instance}}" IsEnabled="{Binding !IsSimulating, Source={x:Static vm:MainWindowViewModel.Instance}}" />
+                                                                        <MenuItem Command="{Binding Paste, Source={x:Static vm:MainWindowViewModel.Instance}}" Header="{Binding PasteHeader, Source={x:Static vm:MainWindowViewModel.Instance}}" IsEnabled="{Binding !IsSimulating, Source={x:Static vm:MainWindowViewModel.Instance}}" />
                                                                         <Separator />
-                                                                        <MenuItem Click="OnRenameNodeMenuItemClick" Header="Rename" IsEnabled="{Binding !$parent[Window].DataContext.IsSimulating}" />
-                                                                        <MenuItem Command="{Binding $parent[Window].DataContext.TeleportToNode}" CommandParameter="{Binding Name}" Header="Teleport to" IsEnabled="{Binding !$parent[Window].DataContext.IsSimulating}" />
-                                                                        <MenuItem Click="OnMoveToGrandparentMenuItemClick" Header="{Binding MoveToGrandparentHeader}" IsVisible="{Binding CanMoveToGrandparent}" IsEnabled="{Binding !$parent[Window].DataContext.IsSimulating}" />
+                                                                        <MenuItem Click="OnRenameNodeMenuItemClick" Header="Rename" IsEnabled="{Binding !IsSimulating, Source={x:Static vm:MainWindowViewModel.Instance}}" />
+                                                                        <MenuItem Command="{Binding TeleportToNode, Source={x:Static vm:MainWindowViewModel.Instance}}" CommandParameter="{Binding Name}" Header="Teleport to" IsEnabled="{Binding !IsSimulating, Source={x:Static vm:MainWindowViewModel.Instance}}" />
+                                                                        <MenuItem Click="OnMoveToGrandparentMenuItemClick" Header="{Binding MoveToGrandparentHeader}" IsVisible="{Binding CanMoveToGrandparent}" IsEnabled="{Binding !IsSimulating, Source={x:Static vm:MainWindowViewModel.Instance}}" />
                                                                         <Separator IsVisible="{Binding HasActions}" />
-                                                                        <MenuItem Header="Actions" IsVisible="{Binding HasActions}" IsEnabled="{Binding !$parent[Window].DataContext.IsSimulating}" ItemsSource="{Binding Actions}">
+                                                                        <MenuItem Header="Actions" IsVisible="{Binding HasActions}" IsEnabled="{Binding !IsSimulating, Source={x:Static vm:MainWindowViewModel.Instance}}" ItemsSource="{Binding Actions}">
                                                                             <MenuItem.ItemTemplate>
                                                                                 <DataTemplate x:DataType="vm:InspectorActionViewModel">
                                                                                     <MenuItem Command="{Binding ExecuteActionCommand}" Header="{Binding Label}" IsEnabled="{Binding IsEnabled}" />
@@ -672,7 +672,7 @@
                                                                             </MenuItem.ItemTemplate>
                                                                         </MenuItem>
                                                                         <Separator />
-                                                                        <MenuItem Command="{Binding $parent[Window].DataContext.DeleteNode}" Header="{Binding $parent[Window].DataContext.DeleteHeader}" IsEnabled="{Binding !$parent[Window].DataContext.IsSimulating}" />
+                                                                        <MenuItem Command="{Binding DeleteNode, Source={x:Static vm:MainWindowViewModel.Instance}}" Header="{Binding DeleteHeader, Source={x:Static vm:MainWindowViewModel.Instance}}" IsEnabled="{Binding !IsSimulating, Source={x:Static vm:MainWindowViewModel.Instance}}" />
                                                                     </ContextMenu>
                                                                 </Grid.ContextMenu>
                                                             </Grid>
@@ -688,7 +688,7 @@
 
                                 <ToolDock x:Name="InspectorPane" Id="InspectorPane" Alignment="Bottom" ActiveDockable="InspectorTool">
                                     <Tool x:Name="InspectorTool" Id="Inspector" Title="Inspector">
-                                        <ContentControl DataContext="{Binding $parent[Window].DataContext}">
+                                        <ContentControl DataContext="{Binding Source={x:Static vm:MainWindowViewModel.Instance}}">
                                             <ScrollViewer VerticalScrollBarVisibility="Auto">
                                                 <StackPanel Spacing="8">
                                                     <Grid
@@ -722,7 +722,7 @@
                                                                             <MenuFlyout.ItemTemplate>
                                                                                 <DataTemplate x:DataType="vm:AddComponentOptionViewModel">
                                                                                     <MenuItem
-                                                                                        Command="{Binding $parent[Window].DataContext.Inspector.AddComponentCommand}"
+                                                                                        Command="{Binding Inspector.AddComponentCommand, Source={x:Static vm:MainWindowViewModel.Instance}}"
                                                                                         CommandParameter="{Binding}"
                                                                                         Header="{Binding Label}"
                                                                                         IsEnabled="{Binding IsEnabled}" />
@@ -760,7 +760,7 @@
                                                                                     Grid.Column="1"
                                                                                     Padding="4,2"
                                                                                     ToolTip.Tip="Remove component"
-                                                                                    Command="{Binding $parent[Window].DataContext.Inspector.RemoveComponentCommand}"
+                                                                                    Command="{Binding Inspector.RemoveComponentCommand, Source={x:Static vm:MainWindowViewModel.Instance}}"
                                                                                     CommandParameter="{Binding}">
                                                                                     <controls:Codicon Kind="Trash" Size="14" />
                                                                                 </Button>
@@ -862,7 +862,7 @@
                                                                                 Grid.Column="1"
                                                                                 Padding="4,2"
                                                                                 ToolTip.Tip="Remove tag"
-                                                                                Command="{Binding $parent[Window].DataContext.Inspector.EntityTags.RemoveTagCommand}"
+                                                                                Command="{Binding Inspector.EntityTags.RemoveTagCommand, Source={x:Static vm:MainWindowViewModel.Instance}}"
                                                                                 CommandParameter="{Binding}">
                                                                                 <controls:Codicon Kind="Trash" Size="14" />
                                                                             </Button>
@@ -904,7 +904,7 @@
                                                                             <MenuFlyout.ItemTemplate>
                                                                                 <DataTemplate x:DataType="vm:EntityLayerOptionViewModel">
                                                                                     <MenuItem
-                                                                                        Command="{Binding $parent[Window].DataContext.Inspector.EntityLayers.AddLayerCommand}"
+                                                                                        Command="{Binding Inspector.EntityLayers.AddLayerCommand, Source={x:Static vm:MainWindowViewModel.Instance}}"
                                                                                         CommandParameter="{Binding}"
                                                                                         Header="{Binding Name}" />
                                                                                 </DataTemplate>
@@ -940,7 +940,7 @@
                                                                                 Grid.Column="1"
                                                                                 Padding="4,2"
                                                                                 ToolTip.Tip="Remove from layer"
-                                                                                Command="{Binding $parent[Window].DataContext.Inspector.EntityLayers.RemoveLayerCommand}"
+                                                                                Command="{Binding Inspector.EntityLayers.RemoveLayerCommand, Source={x:Static vm:MainWindowViewModel.Instance}}"
                                                                                 CommandParameter="{Binding}">
                                                                                 <controls:Codicon Kind="Trash" Size="14" />
                                                                             </Button>
@@ -1258,7 +1258,7 @@
                                     <Document
                                         x:Name="SceneDoc"
                                         Id="Scene"
-                                        Title="Scene"
+                                        Title="Viewport"
                                         CanDrag="False"
                                         CanFloat="False"
                                         CanPin="False"
@@ -1284,7 +1284,7 @@
 
                                     <ToolDock x:Name="AssetsPane" Id="AssetsPane" Alignment="Left" ActiveDockable="AssetsTool">
                                         <Tool x:Name="AssetsTool" Id="ContentBrowser" Title="Assets">
-                                            <ContentControl DataContext="{Binding $parent[Window].DataContext}">
+                                            <ContentControl DataContext="{Binding Source={x:Static vm:MainWindowViewModel.Instance}}">
                                                 <DockPanel>
                                                 <Border Classes="panel-header" DockPanel.Dock="Top" Height="36">
                                                     <Grid VerticalAlignment="Center" ColumnDefinitions="*, Auto, Auto, Auto">
@@ -1347,12 +1347,12 @@
                                                                     <Border.ContextMenu>
                                                                         <ContextMenu Opened="OnAssetContextMenuOpened">
                                                                             <MenuItem
-                                                                                Command="{Binding $parent[Window].DataContext.ContentBrowser.EditAssetCommand}"
+                                                                                Command="{Binding ContentBrowser.EditAssetCommand, Source={x:Static vm:MainWindowViewModel.Instance}}"
                                                                                 CommandParameter="{Binding}"
                                                                                 Header="_Edit"
-                                                                                IsEnabled="{Binding !$parent[Window].DataContext.IsSimulating}" />
+                                                                                IsEnabled="{Binding !IsSimulating, Source={x:Static vm:MainWindowViewModel.Instance}}" />
                                                                             <Separator IsVisible="{Binding HasActions}" />
-                                                                            <MenuItem Header="Actions" IsVisible="{Binding HasActions}" IsEnabled="{Binding !$parent[Window].DataContext.IsSimulating}" ItemsSource="{Binding Actions}">
+                                                                            <MenuItem Header="Actions" IsVisible="{Binding HasActions}" IsEnabled="{Binding !IsSimulating, Source={x:Static vm:MainWindowViewModel.Instance}}" ItemsSource="{Binding Actions}">
                                                                                 <MenuItem.ItemTemplate>
                                                                                     <DataTemplate x:DataType="vm:InspectorActionViewModel">
                                                                                         <MenuItem Command="{Binding ExecuteActionCommand}" Header="{Binding Label}" IsEnabled="{Binding IsEnabled}" />
@@ -1361,10 +1361,10 @@
                                                                             </MenuItem>
                                                                             <Separator />
                                                                             <MenuItem
-                                                                                Command="{Binding $parent[Window].DataContext.ContentBrowser.DeleteAssetCommand}"
+                                                                                Command="{Binding ContentBrowser.DeleteAssetCommand, Source={x:Static vm:MainWindowViewModel.Instance}}"
                                                                                 CommandParameter="{Binding}"
                                                                                 Header="_Delete"
-                                                                                IsEnabled="{Binding !$parent[Window].DataContext.IsSimulating}" />
+                                                                                IsEnabled="{Binding !IsSimulating, Source={x:Static vm:MainWindowViewModel.Instance}}" />
                                                                         </ContextMenu>
                                                                     </Border.ContextMenu>
                                                                 </Border>
@@ -1388,48 +1388,6 @@
                                 </ProportionalDock>
 
                             </ProportionalDock>
-
-                            <ProportionalDockSplitter x:Name="MainSplitter2" Id="MainSplitter2" />
-
-                            <!--  Right column: dynamic editor panel host  -->
-                            <ToolDock x:Name="PropertiesPane" Id="PropertiesPane" Alignment="Right" Proportion="0.2" ActiveDockable="PropertiesTool">
-                                <Tool x:Name="PropertiesTool" Id="Properties" Title="Properties">
-                                    <ContentControl DataContext="{Binding $parent[Window].DataContext}">
-                                        <DockPanel x:Name="RightPanelHost">
-                                            <Border Classes="panel-header" DockPanel.Dock="Top" Height="36">
-                                                <Grid VerticalAlignment="Center" ColumnDefinitions="Auto, *, Auto, Auto">
-                                                    <Button
-                                                        Grid.Column="0"
-                                                        Width="26" Height="26" Padding="0"
-                                                        Margin="4,0,0,0"
-                                                        VerticalAlignment="Center"
-                                                        IsVisible="{Binding CanGoBackPanel}"
-                                                        Command="{Binding BackPanelCommand}"
-                                                        ToolTip.Tip="Back">
-                                                        <controls:Codicon Kind="ChevronLeft" Size="14" />
-                                                    </Button>
-                                                    <TextBlock
-                                                        Grid.Column="1"
-                                                        Margin="6,0"
-                                                        VerticalAlignment="Center"
-                                                        Classes="header"
-                                                        FontSize="12"
-                                                        Text="{Binding ActivePanel.Title}" />
-                                                    <Button
-                                                        Grid.Column="3"
-                                                        Width="26" Height="26" Padding="0"
-                                                        VerticalAlignment="Center"
-                                                        Command="{Binding ClosePanelCommand}"
-                                                        ToolTip.Tip="Close">
-                                                        <controls:Codicon Kind="Close" Size="14" />
-                                                    </Button>
-                                                </Grid>
-                                            </Border>
-                                            <ContentControl Content="{Binding ActivePanel}" />
-                                        </DockPanel>
-                                    </ContentControl>
-                                </Tool>
-                            </ToolDock>
 
                         </ProportionalDock>
 
