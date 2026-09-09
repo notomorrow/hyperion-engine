@@ -85,7 +85,6 @@ static StaticShaderPropertyId s_lightmapModeProperties[uint32(LightmapShadingTyp
     StaticShaderPropertyId { ShaderProperty(NAME("MODE"), NAME("LIGHTMAP")) },
     StaticShaderPropertyId { ShaderProperty(NAME("MODE"), NAME("FULL")) },
     StaticShaderPropertyId { ShaderProperty(NAME("MODE"), NAME("IRRADIANCE")) },
-    StaticShaderPropertyId { ShaderProperty(NAME("MODE"), NAME("SHADOW")) },
     StaticShaderPropertyId { ShaderProperty(NAME("MODE"), NAME("DISTANCE")) },
     StaticShaderPropertyId { ShaderProperty(NAME("MODE"), NAME("BENT_NORMAL")) }
 };

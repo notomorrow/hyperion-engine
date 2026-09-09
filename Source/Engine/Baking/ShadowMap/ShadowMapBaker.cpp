@@ -9,25 +9,9 @@
 #include <Baking/ShadowMap/ShadowMapBaker.hpp>
 #include <Baking/ShadowMap/ShadowMapBakeJob.hpp>
 
-#include <Baking/Lightmaps/LightmapPathTraceGpu.hpp>
-
-#include <Rendering/RenderInterface.hpp>
-#include <Rendering/Frame.hpp>
-#include <Rendering/Texture.hpp>
-
-#include <Rendering/Util/DeletionQueue.hpp>
-
 #include <Scene/Light.hpp>
 
-#include <Asset/AssetRegistry.hpp>
-
-#include <Framework/EngineGlobals.hpp>
-
 namespace Hyperion {
-
-namespace CoreApi {
-CORE_API extern const FilePath& GetExecutablePath();
-} // namespace CoreApi
 
 namespace Baking {
 
@@ -42,28 +26,6 @@ UniquePtr<BakeJobBase> Baker<Light>::CreateJob(BakeJobParams&& params)
     return MakeUnique<BakeJob<Light>>(std::move(params), m_light, &m_bakeData);
 }
 
-void Baker<Light>::CreateLightmapRenderers()
-{
-    m_pathTracers.Clear();
-
-    if (!PerformsRayTracing())
-    {
-        return;
-    }
-
-    const uint32 maxTexelsPerFrame = MaxTexelsPerFrame();
-    AssertDebug(maxTexelsPerFrame > 0);
-
-    UniquePtr<PathTracer> pathTracer = CreatePathTracer(LightmapShadingType::SHADOW, maxTexelsPerFrame);
-
-    if (pathTracer != nullptr)
-    {
-        pathTracer->Create();
-        m_pathTracers.PushBack(std::move(pathTracer));
-        return;
-    }
-}
-
 Result Baker<Light>::Build_Internal()
 {
     Assert(m_light != nullptr);
@@ -76,42 +38,6 @@ Result Baker<Light>::Build_Internal()
 
 void Baker<Light>::OnCompleted_Internal()
 {
-    HYP_SCOPE;
-
-    AssertDebug(m_bakeData.IsBuilt());
-    if (!m_bakeData.IsBuilt())
-    {
-        HYP_LOG(Lightmap, Warning, "Shadow map bake data for Light {} is not built, skipping texture creation", m_light->Id());
-        return;
-    }
-
-    const bool isCubemap = m_bakeData.GetNumFaces() == 6;
-
-    auto bitmap = m_bakeData.ToBitmap();
-
-    TextureDesc textureDesc {
-        isCubemap ? TextureType::Cubemap : TextureType::Texture2D,
-        TextureFormat::D16,
-        Vec3u { bitmap.GetWidth(), isCubemap ? bitmap.GetHeight() / 6 : bitmap.GetHeight(), 1 },
-        TFM_LINEAR,
-        TFM_LINEAR,
-        TWM_CLAMP_TO_EDGE
-    };
-
-    FileByteWriter tmpWriter { CoreApi::GetExecutablePath() / "TempShadow.bmp" };
-    bitmap.Write(&tmpWriter);
-    tmpWriter.Close();
-
-    Assert(TextureUtils::BytesPerComponent(textureDesc.format) == TextureUtils::BytesPerComponent(bitmap.GetFormat()));
-
-    Handle<Texture> shadowMap = MakeHandle<Texture>(textureDesc, bitmap.ToByteView());
-    shadowMap->SetName(NAME_FMT("{}_BakedShadowMap", m_light->GetName()));
-    GetCurrentAssetRegistry()->PutAssetUnique(shadowMap);
-
-    //auto writeScope = TUniqueResLock<Light>(*m_light);
-    m_light->SetBakedShadowMap(shadowMap);
-
-    HYP_LOG(Lightmap, Verbose, "Shadow map baking for Light {} complete.", m_light->Id());
 }
 
 } // namespace Baking

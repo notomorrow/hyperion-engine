@@ -76,7 +76,6 @@ enum class LightmapShadingType : uint32
     LIGHTMAP = 0,   // Lightmap irradiance
     FULL,           // Full scene bake (reflection probe)
     IRRADIANCE,     // Irradiance probe
-    SHADOW,         // Bake static shadow map for a light (ray-traced)
     DISTANCE,       // Bake ray hit distance (for variance shadow maps / visibility)
     BENT_NORMAL,    // Bake bent normal 
     MAX

@@ -128,8 +128,6 @@ EngineStatCounter<uint32> g_statDebugDraws("Rendering/DebugDraws");
 
 CVar<int> g_cvDeferredDebugVis { "Rendering.Deferred.DebugVis", 0 };
 
-static StaticShaderPropertyId s_propDebugReflections { ShaderProperty(NAME("DEBUG_REFLECTIONS")) };
-
 CVar<bool> g_cvRayTracingEnabled { "Rendering.RayTracingEnabled", true };
 CVar<bool> g_cvDDGI { "Rendering.DDGI", false };
 CVar<bool> g_cvRayTracedReflections { "Rendering.RayTracing.RayTracedReflections", false };
@@ -1883,14 +1881,7 @@ void DeferredPass::RenderFrameForView(Frame* frame, const RenderSetup& rs)
 
         frame->cr << SetCurrentBlendFunction(BlendFunction::Additive());
 
-        ShaderPropertySet reflectionsShaderProperties;
-
-        if (debugVisMode == 1)
-        {
-            reflectionsShaderProperties.Add(s_propDebugReflections);
-        }
-
-        frame->cr << SetCurrentShader(ShaderDesc(NAME("ApplyReflections"), reflectionsShaderProperties));
+        frame->cr << SetCurrentShader(ShaderDesc(NAME("ApplyReflections")));
 
         uint32 uniformIndex = 0;
 

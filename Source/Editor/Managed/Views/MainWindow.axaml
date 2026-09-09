@@ -72,19 +72,16 @@
         </Style>
 
         <Style Selector="RadioButton.gizmo">
-            <Setter Property="Padding" Value="8,5" />
+            <Setter Property="Width" Value="30" />
+            <Setter Property="Height" Value="30" />
             <Setter Property="Background" Value="Transparent" />
-            <Setter Property="BorderBrush" Value="Transparent" />
-            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="BorderThickness" Value="0" />
             <Setter Property="Template">
                 <ControlTemplate>
                     <Border
                         Background="{TemplateBinding Background}"
-                        BorderBrush="{TemplateBinding BorderBrush}"
-                        BorderThickness="{TemplateBinding BorderThickness}"
                         CornerRadius="{DynamicResource Radius.Small}">
                         <ContentPresenter
-                            Margin="{TemplateBinding Padding}"
                             HorizontalAlignment="Center"
                             VerticalAlignment="Center"
                             Content="{TemplateBinding Content}" />
@@ -95,29 +92,24 @@
 
         <Style Selector="RadioButton.gizmo:checked">
             <Setter Property="Background" Value="{DynamicResource Brush.AccentSubtle}" />
-            <Setter Property="BorderBrush" Value="{DynamicResource Brush.Accent}" />
             <Setter Property="Foreground" Value="{DynamicResource Brush.AccentHover}" />
         </Style>
 
         <Style Selector="RadioButton.gizmo:pointerover">
             <Setter Property="Background" Value="{DynamicResource Brush.MenuHover}" />
-            <Setter Property="BorderBrush" Value="{DynamicResource Brush.HoverBorder}" />
         </Style>
 
         <Style Selector="ToggleButton.gizmo">
-            <Setter Property="Padding" Value="8,5" />
+            <Setter Property="Width" Value="30" />
+            <Setter Property="Height" Value="30" />
             <Setter Property="Background" Value="Transparent" />
-            <Setter Property="BorderBrush" Value="Transparent" />
-            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="BorderThickness" Value="0" />
             <Setter Property="Template">
                 <ControlTemplate>
                     <Border
                         Background="{TemplateBinding Background}"
-                        BorderBrush="{TemplateBinding BorderBrush}"
-                        BorderThickness="{TemplateBinding BorderThickness}"
                         CornerRadius="{DynamicResource Radius.Small}">
                         <ContentPresenter
-                            Margin="{TemplateBinding Padding}"
                             HorizontalAlignment="Center"
                             VerticalAlignment="Center"
                             Content="{TemplateBinding Content}" />
@@ -128,13 +120,38 @@
 
         <Style Selector="ToggleButton.gizmo:checked">
             <Setter Property="Background" Value="{DynamicResource Brush.AccentSubtle}" />
-            <Setter Property="BorderBrush" Value="{DynamicResource Brush.Accent}" />
             <Setter Property="Foreground" Value="{DynamicResource Brush.AccentHover}" />
         </Style>
 
         <Style Selector="ToggleButton.gizmo:pointerover">
             <Setter Property="Background" Value="{DynamicResource Brush.MenuHover}" />
-            <Setter Property="BorderBrush" Value="{DynamicResource Brush.HoverBorder}" />
+        </Style>
+
+        <Style Selector="Button.gizmo">
+            <Setter Property="Width" Value="30" />
+            <Setter Property="Height" Value="30" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Template">
+                <ControlTemplate>
+                    <Border
+                        Background="{TemplateBinding Background}"
+                        CornerRadius="{DynamicResource Radius.Small}">
+                        <ContentPresenter
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center"
+                            Content="{TemplateBinding Content}" />
+                    </Border>
+                </ControlTemplate>
+            </Setter>
+        </Style>
+
+        <Style Selector="Button.gizmo:pointerover">
+            <Setter Property="Background" Value="{DynamicResource Brush.MenuHover}" />
+        </Style>
+
+        <Style Selector="Button.gizmo:pressed">
+            <Setter Property="Background" Value="{DynamicResource Brush.AccentMuted}" />
         </Style>
 
         <Style Selector="Border.mode-strip">
@@ -224,22 +241,22 @@
                         Grid.Column="0"
                         Orientation="Horizontal"
                         Spacing="6">
-                        <Button Command="{Binding OpenProject}" IsEnabled="{Binding !IsSimulating}" ToolTip.Tip="Open">
+                        <Button Classes="gizmo" Command="{Binding OpenProject}" IsEnabled="{Binding !IsSimulating}" ToolTip.Tip="Open">
                             <controls:Codicon Kind="FolderOpened" Size="16" />
                         </Button>
-                        <Button Command="{Binding SaveProject}" IsEnabled="{Binding !IsSimulating}" ToolTip.Tip="Save">
+                        <Button Classes="gizmo" Command="{Binding SaveProject}" IsEnabled="{Binding !IsSimulating}" ToolTip.Tip="Save">
                             <controls:Codicon Kind="Save" Size="16" />
                         </Button>
-                        <Button Command="{Binding Undo}" ToolTip.Tip="{Binding UndoHeader}" Margin="12,0,0,0" IsEnabled="{Binding CanUndo}">
+                        <Button Classes="gizmo" Command="{Binding Undo}" ToolTip.Tip="{Binding UndoHeader}" Margin="12,0,0,0" IsEnabled="{Binding CanUndo}">
                             <controls:Codicon Kind="Discard" Size="16" />
                         </Button>
-                        <Button Command="{Binding Redo}" ToolTip.Tip="{Binding RedoHeader}" IsEnabled="{Binding CanRedo}">
+                        <Button Classes="gizmo" Command="{Binding Redo}" ToolTip.Tip="{Binding RedoHeader}" IsEnabled="{Binding CanRedo}">
                             <controls:Codicon Kind="Redo" Size="16" />
                         </Button>
-                        <Button Command="{Binding Copy}" ToolTip.Tip="{Binding CopyHeader}" Margin="12,0,0,0" IsEnabled="{Binding CanCopy}">
+                        <Button Classes="gizmo" Command="{Binding Copy}" ToolTip.Tip="{Binding CopyHeader}" Margin="12,0,0,0" IsEnabled="{Binding CanCopy}">
                             <controls:Codicon Kind="Copy" Size="16" />
                         </Button>
-                        <Button Command="{Binding Paste}" ToolTip.Tip="{Binding PasteHeader}" IsEnabled="{Binding CanPaste}">
+                        <Button Classes="gizmo" Command="{Binding Paste}" ToolTip.Tip="{Binding PasteHeader}" IsEnabled="{Binding CanPaste}">
                             <controls:Codicon Kind="Clippy" Size="16" />
                         </Button>
 
@@ -590,7 +607,8 @@
                                                         <ToggleButton
                                                             x:Name="LayerOverrideModeToggle"
                                                             Grid.Column="2"
-                                                            Classes="gizmo"
+                                                            Padding="8,4"
+                                                            Classes="panel-toggle"
                                                             HorizontalAlignment="Right"
                                                             VerticalAlignment="Center"
                                                             IsChecked="{Binding Inspector.LayerOverrideMode, Mode=TwoWay}"
