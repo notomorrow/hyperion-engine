@@ -682,14 +682,15 @@ void World::SetActiveSwatch(Name swatchName)
         swatchOverrideSystem->ApplyActive();
     }
 
-    // Overrides are applied, so the volumes now carry this swatch's atlas textures - re-pick which volume
-    // lights each entity, since a volume with no bake for this swatch can no longer be used.
     if (LightmapSystem* lightmapSystem = GetSystem<LightmapSystem>())
     {
         lightmapSystem->ResolveVolumeAssignments();
     }
 
     OnActiveSwatchChanged.Fire(this, m_activeSwatch);
+
+    // this gets saved on the World asset
+    MarkDirty();
 }
 
 const Handle<Swatch>& World::GetActiveSwatch()
@@ -776,7 +777,7 @@ Array<Name> World::GetLayerNames() const
         });
 }
 
-const Handle<Layer>& World::TryGetLayer(Name layerName)
+const Handle<Layer>& World::TryGetLayer(Name layerName) const
 {
     AssertOnThread(g_simThread);
 
@@ -818,6 +819,97 @@ const Handle<Layer>& World::TryGetLayerById(LayerId layerId) const
     }
 
     return *it;
+}
+
+const Handle<Layer>& World::GetOrCreateLayer(Name layerName)
+{
+    AssertOnThread(g_simThread);
+
+    auto it = m_layers.FindIf([&layerName](const Handle<Layer>& layer)
+    {
+        if (!layer)
+        {
+            return false;
+        }
+
+        return layer->name == layerName;
+    });
+
+    if (it != m_layers.End())
+    {
+        return *it;
+    }
+
+    BitField<MaxLayersPerWorld> usedIds {};
+
+    for (const Handle<Layer>& layer : m_layers)
+    {
+        Assert(layer);
+
+        if (!layer)
+        {
+            continue;
+        }
+
+        if (uint32(layer->layerId) < MaxLayersPerWorld)
+        {
+            usedIds.Set(uint32(layer->layerId), true);
+        }
+    }
+
+    uint64 freeId = (~usedIds).FirstOneBit();
+
+    if (freeId >= MaxLayersPerWorld)
+    {
+        HYP_LOG(Scene, Error, "Cannot create Layer '{}': maximum of {} Layers already exist on World {}", layerName, MaxLayersPerWorld, GetName());
+
+        return Handle<Layer>::Null();
+    }
+
+    // New layer created, need to save it on the World
+    MarkDirty();
+
+    return m_layers.PushBack(MakeHandle<Layer>(layerName, LayerId(freeId)));
+}
+
+bool World::IsLayerActive(Name layerName) const
+{
+    AssertOnThread(g_simThread);
+
+    const Handle<Layer>& layer = TryGetLayer(layerName);
+
+    if (!layer || uint32(layer->layerId) >= MaxLayersPerWorld)
+    {
+        return false;
+    }
+
+    return m_activeLayers.Test(uint32(layer->layerId));
+}
+
+void World::SetLayerActive(Name layerName, bool layerActive)
+{
+    AssertOnThread(g_simThread);
+
+    const Handle<Layer>& layer = TryGetLayer(layerName);
+
+    if (!layer || uint32(layer->layerId) >= MaxLayersPerWorld)
+    {
+        HYP_LOG(Scene, Warning, "Cannot change active state of Layer '{}' which does not exist on World {}", layerName, GetName());
+
+        return;
+    }
+
+    if (m_activeLayers.Test(uint32(layer->layerId)) == layerActive)
+    {
+        return;
+    }
+
+    m_activeLayers.Set(uint32(layer->layerId), layerActive);
+
+    OnActiveLayersChanged.Fire(this, m_activeLayers);
+
+    // this gets saved on the World asset
+    MarkDirty();
 }
 
 #pragma endregion Layers

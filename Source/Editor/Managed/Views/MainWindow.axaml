@@ -157,6 +157,36 @@
             <Setter Property="Background" Value="{DynamicResource Brush.AccentMuted}" />
         </Style>
 
+        <Style Selector="DropDownButton.gizmo">
+            <Setter Property="Width" Value="30" />
+            <Setter Property="Height" Value="30" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Transitions">
+                <Transitions />
+            </Setter>
+            <Setter Property="Template">
+                <ControlTemplate>
+                    <Border
+                        Background="{TemplateBinding Background}"
+                        CornerRadius="{DynamicResource Radius.Small}">
+                        <ContentPresenter
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center"
+                            Content="{TemplateBinding Content}" />
+                    </Border>
+                </ControlTemplate>
+            </Setter>
+        </Style>
+
+        <Style Selector="DropDownButton.gizmo:pointerover">
+            <Setter Property="Background" Value="{DynamicResource Brush.MenuHover}" />
+        </Style>
+
+        <Style Selector="DropDownButton.gizmo:pressed">
+            <Setter Property="Background" Value="{DynamicResource Brush.AccentMuted}" />
+        </Style>
+
         <Style Selector="Border.mode-strip">
             <Setter Property="Background" Value="{DynamicResource Brush.PanelRaised}" />
             <Setter Property="BorderBrush" Value="{DynamicResource Brush.BorderLight}" />
@@ -262,6 +292,36 @@
                         <Button Classes="gizmo" Command="{Binding Paste}" ToolTip.Tip="{Binding PasteHeader}" IsEnabled="{Binding CanPaste}">
                             <controls:Codicon Kind="Clippy" Size="16" />
                         </Button>
+
+                        <DropDownButton
+                            x:Name="ActiveLayersDropDown"
+                            Classes="gizmo"
+                            Margin="12,0,0,0"
+                            ToolTip.Tip="Active Layers (Visibility)">
+                            <controls:Codicon Kind="Layers" Size="16" />
+                            <DropDownButton.Flyout>
+                                <Flyout Placement="Bottom">
+                                    <StackPanel MinWidth="150">
+                                        <ItemsControl ItemsSource="{Binding ActiveLayerToggles}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate x:DataType="vm:LayerToggleViewModel">
+                                                    <CheckBox
+                                                        Classes="layers-toggle"
+                                                        Content="{Binding Name}"
+                                                        IsChecked="{Binding IsActive, Mode=TwoWay}" />
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+
+                                        <Separator />
+
+                                        <MenuItem
+                                            Command="{Binding AddNewLayerCommand, Source={x:Static vm:MainWindowViewModel.Instance}}"
+                                            Header="Add New Layer..." />
+                                    </StackPanel>
+                                </Flyout>
+                            </DropDownButton.Flyout>
+                        </DropDownButton>
 
                     </StackPanel>
 
@@ -630,18 +690,6 @@
                                                                     Text="Override Edits: OFF" />
                                                             </Panel>
                                                         </ToggleButton>
-
-                                                        <ToggleButton
-                                                            Grid.Column="3"
-                                                            Margin="4,0,0,0"
-                                                            Padding="8,2"
-                                                            HorizontalAlignment="Right"
-                                                            VerticalAlignment="Center"
-                                                            Classes="panel-toggle"
-                                                            IsChecked="{Binding SceneHierarchy.ShowOnlyActiveLayers}"
-                                                            ToolTip.Tip="Show nodes only for the active layers">
-                                                            <controls:Codicon Kind="{Binding SceneHierarchy.ShowOnlyActiveLayersIconKind}" Size="16" />
-                                                        </ToggleButton>
                                                     </Grid>
                                                 </Border>
 
@@ -922,19 +970,27 @@
                                                                     Padding="8,2"
                                                                     HorizontalAlignment="Right"
                                                                     VerticalAlignment="Center"
-                                                                    Content="Add"
-                                                                    IsEnabled="{Binding EntityLayers.HasAvailableLayers}">
+                                                                    Content="Add">
                                                                     <Button.Flyout>
-                                                                        <MenuFlyout ItemsSource="{Binding EntityLayers.AvailableLayers}">
-                                                                            <MenuFlyout.ItemTemplate>
-                                                                                <DataTemplate x:DataType="vm:EntityLayerOptionViewModel">
-                                                                                    <MenuItem
-                                                                                        Command="{Binding Inspector.EntityLayers.AddLayerCommand, Source={x:Static vm:MainWindowViewModel.Instance}}"
-                                                                                        CommandParameter="{Binding}"
-                                                                                        Header="{Binding Name}" />
-                                                                                </DataTemplate>
-                                                                            </MenuFlyout.ItemTemplate>
-                                                                        </MenuFlyout>
+                                                                        <Flyout Placement="Bottom">
+                                                                            <StackPanel MinWidth="150">
+                                                                                <ItemsControl ItemsSource="{Binding EntityLayers.AvailableLayers}">
+                                                                                    <ItemsControl.ItemTemplate>
+                                                                                        <DataTemplate x:DataType="vm:EntityLayerOptionViewModel">
+                                                                                            <MenuItem
+                                                                                                Command="{Binding Inspector.EntityLayers.AddLayerCommand, Source={x:Static vm:MainWindowViewModel.Instance}}"
+                                                                                                CommandParameter="{Binding}"
+                                                                                                Header="{Binding Name}" />
+                                                                                        </DataTemplate>
+                                                                                    </ItemsControl.ItemTemplate>
+                                                                                </ItemsControl>
+
+                                                                                <Separator />
+                                                                                <MenuItem
+                                                                                    Command="{Binding Inspector.EntityLayers.CreateNewLayerCommand, Source={x:Static vm:MainWindowViewModel.Instance}}"
+                                                                                    Header="New Layer..." />
+                                                                            </StackPanel>
+                                                                        </Flyout>
                                                                     </Button.Flyout>
                                                                 </Button>
                                                             </Grid>
