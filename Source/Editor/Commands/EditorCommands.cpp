@@ -2775,23 +2775,8 @@ class EditorCommandNewScript final : public EditorCommandBase
 public:
     virtual ~EditorCommandNewScript() override = default;
 
-    // The language is passed as the first argument (e.g. "strata",
-    // "csharp") by the caller -- see ContentBrowserViewModel. Defaults to
-    // Strata when no argument is supplied.
     virtual String GetText() const override
     {
-        const String& language = GetArgument(0);
-
-        if (language == "strata")
-        {
-            return "New Strata Script";
-        }
-
-        if (language == "csharp")
-        {
-            return "New C# Script";
-        }
-
         return "New Script";
     }
 

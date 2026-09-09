@@ -301,7 +301,7 @@ void UISubsystem::RenderCollect(RenderProxyList& rpl)
 
         /// \todo Include a way to determine the parent tree of the UI Object because some objects will
         // have the same depth but should be rendered in a different order.
-        rpl.GetMeshEntities().Track(entity.Id(), entity, entity->GetRenderProxyVersionPtr(), /* allowDuplicatesInSameFrame */ false);
+        rpl.GetMeshEntities().Track(entity.Id(), entity, entity->GetRenderProxyVersionPtr(), meshComponent.material ? meshComponent.material->GetAttributesVersionPtr() : nullptr, /* allowDuplicatesInSameFrame */ false);
 
         if (Mesh* mesh = meshComponent.mesh)
         {

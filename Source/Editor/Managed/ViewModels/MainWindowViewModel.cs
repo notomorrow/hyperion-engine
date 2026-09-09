@@ -24,11 +24,6 @@ namespace Hyperion.Editor.ViewModels
             set => SetProperty(ref _title, value);
         }
 
-        /// <summary>
-        /// Shared instance so dock panel content can bind to the main view model from any
-        /// window (docked panes and floating windows alike), since visual-tree relative
-        /// sources do not cross window boundaries.
-        /// </summary>
         public static MainWindowViewModel? Instance { get; internal set; }
 
         public SceneHierarchyViewModel SceneHierarchy { get; private set; }
@@ -357,8 +352,11 @@ namespace Hyperion.Editor.ViewModels
                 _activeScene = value;
 
                 OnPropertyChanged(nameof(ActiveScene));
+                OnPropertyChanged(nameof(CanAddToScene));
             }
         }
+
+        public bool CanAddToScene => ActiveScene != null;
 
         public ICommand SetActiveSceneCommand { get; private set; }
         public ICommand AddNewSceneCommand { get; private set; }
@@ -811,6 +809,7 @@ namespace Hyperion.Editor.ViewModels
                     SceneHierarchy.AttachToScene(null);
 
                     OnPropertyChanged(nameof(ActiveScene));
+                    OnPropertyChanged(nameof(CanAddToScene));
 
                     return;
                 }
@@ -830,6 +829,7 @@ namespace Hyperion.Editor.ViewModels
                 SceneHierarchy.AttachToScene(scene);
 
                 OnPropertyChanged(nameof(ActiveScene));
+                OnPropertyChanged(nameof(CanAddToScene));
             });
         }
 

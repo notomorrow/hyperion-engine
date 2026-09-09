@@ -85,6 +85,8 @@ namespace Hyperion.Editor.ViewModels
         public ICommand DeleteAssetCommand { get; }
         public ICommand EditAssetCommand { get; }
 
+        public ICommand AddToSceneCommand { get; }
+
         public ContentBrowserViewModel(EditorSubsystem editorSubsystem)
         {
             _editorSubsystem = editorSubsystem ?? throw new ArgumentNullException(nameof(editorSubsystem));
@@ -154,6 +156,17 @@ namespace Hyperion.Editor.ViewModels
                 });
 
                 PanelService.Instance.OpenPanel(panel);
+            });
+
+            AddToSceneCommand = new RelayCommand<AssetObjectViewModel>(asset =>
+            {
+                if (asset?.Bucket == null)
+                {
+                    return;
+                }
+
+                // add asset to scene by invoking the EditorCommand
+                _editorSubsystem.ExecuteCommandByName(new Name("EditorCommandAddAsset"), $"{asset.Bucket.BucketIndex} {asset.AssetDesc.Name}");
             });
 
             Instance = this;

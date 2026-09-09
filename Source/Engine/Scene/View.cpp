@@ -978,7 +978,7 @@ void View::CollectMeshEntities(RenderProxyList& rpl)
 
                     ++numCollectedEntities;
 
-                    rpl.GetMeshEntities().Track(entity->Id(), entity, GET_RESOURCE_VERSION(entity));
+                    rpl.GetMeshEntities().Track(entity->Id(), entity, GET_RESOURCE_VERSION(entity), meshComponent.material->GetAttributesVersionPtr());
 
                     if (Mesh* mesh = meshComponent.mesh)
                     {
@@ -1049,7 +1049,7 @@ void View::CollectMeshEntities(RenderProxyList& rpl)
 
                     ++numCollectedEntities;
 
-                    rpl.GetMeshEntities().Track(entity->Id(), entity, GET_RESOURCE_VERSION(entity));
+                    rpl.GetMeshEntities().Track(entity->Id(), entity, GET_RESOURCE_VERSION(entity), meshComponent.material->GetAttributesVersionPtr());
 
                     if (Mesh* mesh = meshComponent.mesh)
                     {
@@ -1102,7 +1102,7 @@ void View::CollectMeshEntities(RenderProxyList& rpl)
 
                     ++numCollectedEntities;
 
-                    rpl.GetMeshEntities().Track(entity->Id(), entity, GET_RESOURCE_VERSION(entity));
+                    rpl.GetMeshEntities().Track(entity->Id(), entity, GET_RESOURCE_VERSION(entity), meshComponent.material->GetAttributesVersionPtr());
 
                     if (Mesh* mesh = meshComponent.mesh)
                     {
@@ -1173,7 +1173,7 @@ void View::CollectMeshEntities(RenderProxyList& rpl)
 
                     ++numCollectedEntities;
 
-                    rpl.GetMeshEntities().Track(entity->Id(), entity, GET_RESOURCE_VERSION(entity));
+                    rpl.GetMeshEntities().Track(entity->Id(), entity, GET_RESOURCE_VERSION(entity), meshComponent.material->GetAttributesVersionPtr());
 
                     if (Mesh* mesh = meshComponent.mesh)
                     {
@@ -1226,7 +1226,7 @@ void View::CollectMeshEntities(RenderProxyList& rpl)
 
                     ++numCollectedEntities;
 
-                    rpl.GetMeshEntities().Track(entity->Id(), entity, GET_RESOURCE_VERSION(entity));
+                    rpl.GetMeshEntities().Track(entity->Id(), entity, GET_RESOURCE_VERSION(entity), meshComponent.material->GetAttributesVersionPtr());
 
                     if (Mesh* mesh = meshComponent.mesh)
                     {
@@ -1297,7 +1297,7 @@ void View::CollectMeshEntities(RenderProxyList& rpl)
 
                     ++numCollectedEntities;
 
-                    rpl.GetMeshEntities().Track(entity->Id(), entity, GET_RESOURCE_VERSION(entity));
+                    rpl.GetMeshEntities().Track(entity->Id(), entity, GET_RESOURCE_VERSION(entity), meshComponent.material->GetAttributesVersionPtr());
 
                     if (Mesh* mesh = meshComponent.mesh)
                     {

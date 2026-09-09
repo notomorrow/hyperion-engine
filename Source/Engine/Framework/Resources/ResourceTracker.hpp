@@ -425,6 +425,17 @@ public:
      */
     void Track(IdType id, const ElementType& element, const int* versionPtr = nullptr, bool allowDuplicatesInSameFrame = true)
     {
+        Track_Internal(id, element, versionPtr, nullptr, allowDuplicatesInSameFrame);
+    }
+
+    void Track(IdType id, const ElementType& element, const int* versionPtr, const int* dependencyVersionPtr, bool allowDuplicatesInSameFrame = true)
+    {
+        Track_Internal(id, element, versionPtr, dependencyVersionPtr, allowDuplicatesInSameFrame);
+    }
+
+private:
+    void Track_Internal(IdType id, const ElementType& element, const int* versionPtr, const int* dependencyVersionPtr, bool allowDuplicatesInSameFrame)
+    {
         HYP_SCOPE;
 
         TypeId typeId = id.GetTypeId();
@@ -434,7 +445,7 @@ public:
 
         if (typeId == TypeInfo_GetId(*baseImpl.typeInfo))
         {
-            baseImpl.Track(id, element, versionPtr, allowDuplicatesInSameFrame);
+            baseImpl.Track(id, element, versionPtr, dependencyVersionPtr, allowDuplicatesInSameFrame);
             return;
         }
 
@@ -450,8 +461,10 @@ public:
             subclassIndices.Set(subclassIndex, true);
         }
 
-        subclassImpls[subclassIndex]->Track(id, element, versionPtr, allowDuplicatesInSameFrame);
+        subclassImpls[subclassIndex]->Track(id, element, versionPtr, dependencyVersionPtr, allowDuplicatesInSameFrame);
     }
+
+public:
 
     bool MarkToKeep(IdType id)
     {
@@ -816,6 +829,7 @@ public:
             : typeInfo(typeInfo),
               elements(),
               versions(),
+              dependencyVersions(),
               proxies()
         {
         }
@@ -865,10 +879,11 @@ public:
             return changed;
         }
 
-        void Track(IdType id, const ElementType& value, const int* pVersion = nullptr, bool allowDuplicatesInSameFrame = true)
+        void Track(IdType id, const ElementType& value, const int* pVersion = nullptr, const int* pDependencyVersion = nullptr, bool allowDuplicatesInSameFrame = true)
         {
             ElementType* pCurrentValue = nullptr;
             int* pCurrentVersion = nullptr;
+            int* pCurrentDependencyVersion = nullptr;
 
             ResourceTrackState trackState = ResourceTrackState::UNCHANGED;
 
@@ -883,8 +898,9 @@ public:
 
                 pCurrentValue = &elements.Get(id.ToIndex());
                 pCurrentVersion = &versions.Get(id.ToIndex());
+                pCurrentDependencyVersion = &dependencyVersions.Get(id.ToIndex());
 
-                AssertDebug(pCurrentValue && pCurrentVersion);
+                AssertDebug(pCurrentValue && pCurrentVersion && pCurrentDependencyVersion);
             }
 
             bool isDoublyAddedThisFrame = false;
@@ -908,10 +924,12 @@ public:
             if (pCurrentValue != nullptr)
             {
                 // elements and versions must be kept in sync
-                AssertDebug(pCurrentVersion != nullptr);
+                AssertDebug(pCurrentVersion != nullptr && pCurrentDependencyVersion != nullptr);
 
                 // Advance if version has changed or if elements are not equal
-                if (value != *pCurrentValue || (pVersion && *pVersion != *pCurrentVersion))
+                if (value != *pCurrentValue
+                    || (pVersion && *pVersion != *pCurrentVersion)
+                    || (pDependencyVersion && *pDependencyVersion != *pCurrentDependencyVersion))
                 {
                     if (!next.Test(id.ToIndex()) && previous.Test(id.ToIndex()))
                     {
@@ -922,6 +940,7 @@ public:
                     // update value and version
                     *pCurrentValue = value;
                     *pCurrentVersion = pVersion ? *pVersion : 0;
+                    *pCurrentDependencyVersion = pDependencyVersion ? *pDependencyVersion : 0;
 
                     trackState = ResourceTrackState::CHANGED_MODIFIED;
                 }
@@ -941,6 +960,7 @@ public:
                 // use emplace to destruct / reconstruct current element
                 elements.Set(id.ToIndex(), value);
                 versions.Set(id.ToIndex(), pVersion ? *pVersion : 0);
+                dependencyVersions.Set(id.ToIndex(), pDependencyVersion ? *pDependencyVersion : 0);
 
                 trackState = ResourceTrackState::CHANGED_ADDED;
             }
@@ -1294,6 +1314,7 @@ public:
 
                 elements.EraseAt(index);
                 versions.EraseAt(index);
+                dependencyVersions.EraseAt(index);
 
                 if (!clearNextState)
                 {
@@ -1319,6 +1340,7 @@ public:
         {
             elements.Clear();
             versions.Clear();
+            dependencyVersions.Clear();
 
             proxies.Clear();
 
@@ -1332,6 +1354,8 @@ public:
         ElementArrayType elements;
         // per-element version identifier array - mirrors elements array
         VersionArrayType versions;
+        // per-element version identifier array for a resource the element depends on
+        VersionArrayType dependencyVersions;
 
         ProxyArrayType proxies;
 
