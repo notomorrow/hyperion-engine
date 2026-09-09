@@ -638,9 +638,9 @@
                                                             HorizontalAlignment="Right"
                                                             VerticalAlignment="Center"
                                                             Classes="panel-toggle"
-                                                            IsChecked="{Binding SceneHierarchy.ShowOnlyActiveSwatch}"
-                                                            ToolTip.Tip="Show nodes only for the active swatch">
-                                                            <controls:Codicon Kind="{Binding SceneHierarchy.ShowOnlyActiveSwatchIconKind}" Size="16" />
+                                                            IsChecked="{Binding SceneHierarchy.ShowOnlyActiveLayers}"
+                                                            ToolTip.Tip="Show nodes only for the active layers">
+                                                            <controls:Codicon Kind="{Binding SceneHierarchy.ShowOnlyActiveLayersIconKind}" Size="16" />
                                                         </ToggleButton>
                                                     </Grid>
                                                 </Border>
@@ -909,10 +909,10 @@
                                                                 <ToggleButton
                                                                     Grid.Column="0"
                                                                     Classes="section-toggle"
-                                                                    IsChecked="{Binding SwatchesSection.IsExpanded, Mode=TwoWay}">
+                                                                    IsChecked="{Binding LayersSection.IsExpanded, Mode=TwoWay}">
                                                                     <StackPanel Orientation="Horizontal" Spacing="4">
-                                                                        <controls:Codicon Kind="{Binding SwatchesSection.ChevronKind}" Size="10" Margin="2,2,0,0" />
-                                                                        <TextBlock VerticalAlignment="Center" Classes="header" Text="Swatches" />
+                                                                        <controls:Codicon Kind="{Binding LayersSection.ChevronKind}" Size="10" Margin="2,2,0,0" />
+                                                                        <TextBlock VerticalAlignment="Center" Classes="header" Text="Layers" />
                                                                     </StackPanel>
                                                                 </ToggleButton>
 
@@ -923,13 +923,13 @@
                                                                     HorizontalAlignment="Right"
                                                                     VerticalAlignment="Center"
                                                                     Content="Add"
-                                                                    IsEnabled="{Binding EntitySwatches.HasAvailableSwatches}">
+                                                                    IsEnabled="{Binding EntityLayers.HasAvailableLayers}">
                                                                     <Button.Flyout>
-                                                                        <MenuFlyout ItemsSource="{Binding EntitySwatches.AvailableSwatches}">
+                                                                        <MenuFlyout ItemsSource="{Binding EntityLayers.AvailableLayers}">
                                                                             <MenuFlyout.ItemTemplate>
-                                                                                <DataTemplate x:DataType="vm:EntitySwatchOptionViewModel">
+                                                                                <DataTemplate x:DataType="vm:EntityLayerOptionViewModel">
                                                                                     <MenuItem
-                                                                                        Command="{Binding Inspector.EntitySwatches.AddSwatchCommand, Source={x:Static vm:MainWindowViewModel.Instance}}"
+                                                                                        Command="{Binding Inspector.EntityLayers.AddLayerCommand, Source={x:Static vm:MainWindowViewModel.Instance}}"
                                                                                         CommandParameter="{Binding}"
                                                                                         Header="{Binding Name}" />
                                                                                 </DataTemplate>
@@ -943,15 +943,15 @@
                                                         <ItemsControl
                                                             Grid.Row="1"
                                                             Margin="12,6,12,6"
-                                                            ItemsSource="{Binding EntitySwatches.Swatches}">
+                                                            ItemsSource="{Binding EntityLayers.Layers}">
                                                             <ItemsControl.IsVisible>
                                                                 <MultiBinding Converter="{x:Static conv:BoolConverters.And}">
-                                                                    <Binding Path="EntitySwatches.HasSwatches" />
-                                                                    <Binding Path="SwatchesSection.IsExpanded" />
+                                                                    <Binding Path="EntityLayers.HasLayers" />
+                                                                    <Binding Path="LayersSection.IsExpanded" />
                                                                 </MultiBinding>
                                                             </ItemsControl.IsVisible>
                                                             <ItemsControl.ItemTemplate>
-                                                                <DataTemplate x:DataType="vm:EntitySwatchItemViewModel">
+                                                                <DataTemplate x:DataType="vm:EntityLayerItemViewModel">
                                                                     <Border
                                                                         Margin="0,0,0,6"
                                                                         Padding="8,4"
@@ -964,8 +964,8 @@
                                                                             <Button
                                                                                 Grid.Column="1"
                                                                                 Padding="4,2"
-                                                                                ToolTip.Tip="Remove from swatch"
-                                                                                Command="{Binding Inspector.EntitySwatches.RemoveSwatchCommand, Source={x:Static vm:MainWindowViewModel.Instance}}"
+                                                                                ToolTip.Tip="Remove from layer"
+                                                                                Command="{Binding Inspector.EntityLayers.RemoveLayerCommand, Source={x:Static vm:MainWindowViewModel.Instance}}"
                                                                                 CommandParameter="{Binding}">
                                                                                 <controls:Codicon Kind="Trash" Size="14" />
                                                                             </Button>

@@ -13,6 +13,7 @@
 #include <Scene/Entity.hpp>
 #include <Scene/EntityTag.hpp>
 #include <Scene/SystemExecutionGroup.hpp>
+#include <Scene/Swatch.hpp>
 #include <Scene/Subsystem.hpp>
 
 #include <Scene/Systems/VisibilityStateUpdaterSystem.hpp>
@@ -73,6 +74,8 @@ namespace Hyperion {
 
 ScriptableDelegate<void, World*, const Handle<Scene>&> World::OnSceneAdded;
 ScriptableDelegate<void, World*, Scene*> World::OnSceneRemoved;
+ScriptableDelegate<void, Name> World::OnActiveSwatchChanged;
+ScriptableDelegate<void, LayersMask> World::OnActiveLayersChanged;
 
 #define HYP_WORLD_ASYNC_SUBSYSTEM_UPDATES
 #define HYP_WORLD_ASYNC_VIEW_COLLECTION
@@ -103,7 +106,8 @@ World::World(Name name, EnumFlags<WorldFlags> worldFlags)
       m_rayTracingView(nullptr),
       m_rootSynchronousExecutionGroup(nullptr),
       m_isInitialized(false),
-      m_activeSwatchId(InvalidSwatchId)
+      m_activeSwatchId(InvalidSwatchId),
+      m_activeLayers {}
 {
     if (m_worldFlags & WorldFlags::AllStreamingLayerFlags)
     {
@@ -113,13 +117,14 @@ World::World(Name name, EnumFlags<WorldFlags> worldFlags)
 
 World::~World()
 {
-    // TEMP DEBUG
-    Assert(!m_isInitialized, "World {} is still in init state in dtor", m_name);
+    AssertDebug(!m_isInitialized, "World {} is still in init state in dtor", m_name);
 
     Shutdown();
 
     OnSceneAdded.RemoveAllForTarget(this);
     OnSceneRemoved.RemoveAllForTarget(this);
+    OnActiveSwatchChanged.RemoveAllForTarget(this);
+    OnActiveLayersChanged.RemoveAllForTarget(this);
 }
 
 void World::Initialize()
@@ -296,7 +301,7 @@ void World::Initialize()
 
         m_activeSwatchId = swatch->swatchId;
 
-        OnActiveSwatchChanged(m_activeSwatch);
+        OnActiveSwatchChanged.Fire(this, m_activeSwatch);
     }
 
     m_isInitialized = true;
@@ -684,7 +689,7 @@ void World::SetActiveSwatch(Name swatchName)
         lightmapSystem->ResolveVolumeAssignments();
     }
 
-    OnActiveSwatchChanged(m_activeSwatch);
+    OnActiveSwatchChanged.Fire(this, m_activeSwatch);
 }
 
 const Handle<Swatch>& World::GetActiveSwatch()
@@ -753,6 +758,69 @@ const Handle<Swatch>& World::TryGetSwatchById(SwatchId swatchId) const
 }
 
 #pragma endregion Swatches
+
+#pragma region Layers
+
+Array<Name> World::GetLayerNames() const
+{
+    AssertOnThread(g_simThread);
+
+    return MapToArray(m_layers, [](const Handle<Layer>& layer)
+        {
+            if (!layer.IsValid())
+            {
+                return Name();
+            }
+
+            return layer->name;
+        });
+}
+
+const Handle<Layer>& World::TryGetLayer(Name layerName)
+{
+    AssertOnThread(g_simThread);
+
+    auto it = m_layers.FindIf([&layerName](const Handle<Layer>& layer)
+    {
+        if (!layer)
+        {
+            return false;
+        }
+
+        return layer->name == layerName;
+    });
+
+    if (it == m_layers.End())
+    {
+        return Handle<Layer>::Null();
+    }
+
+    return *it;
+}
+
+const Handle<Layer>& World::TryGetLayerById(LayerId layerId) const
+{
+    AssertOnThread(g_simThread);
+
+    auto it = m_layers.FindIf([layerId](const Handle<Layer>& layer)
+    {
+        if (!layer)
+        {
+            return false;
+        }
+
+        return layer->layerId == layerId;
+    });
+
+    if (it == m_layers.End())
+    {
+        return Handle<Layer>::Null();
+    }
+
+    return *it;
+}
+
+#pragma endregion Layers
 
 void World::ProcessViewAsync(View* view)
 {
@@ -1792,6 +1860,72 @@ Array<Handle<SystemBase>> World::SerializeSystems() const
     }
 
     return systemsToSerialize;
+}
+
+void World::DeserializeActiveLayers(const Array<Name>& activeLayers)
+{
+    // Set layer ids from the names. 
+    // Expected that m_layers is populated at this point.
+
+    // Clear bitset first
+    m_activeLayers = {};
+
+    for (const Name& layerName : activeLayers)
+    {
+        auto layersIt = m_layers.FindIf([layerName](const Handle<Layer>& layer)
+        {
+            if (!layer.IsValid())
+            {
+                return false;
+            }
+
+            return layer->name == layerName;
+        });
+
+        if (layersIt == m_layers.End())
+        {
+            HYP_LOG(Scene, Warning, "Attempted to set active layer with name {} but no layer with that name exists!", layerName);
+            continue;
+        }
+
+        const Handle<Layer>& layer = *layersIt;
+        Assert(layer.IsValid());
+
+        m_activeLayers.Set(uint32(layer->layerId), true);
+    }
+}
+
+Array<Name> World::SerializeActiveLayers() const
+{
+    Array<Name> layerNames;
+    layerNames.Reserve(m_activeLayers.CountOnes());
+
+    for (uint64 bit : m_activeLayers)
+    {
+        // Get the layer with the layer id == that bit
+        auto layersIt = m_layers.FindIf([bit](const Handle<Layer>& layer)
+        {
+            if (!layer.IsValid())
+            {
+                return false;
+            }
+
+            return uint32(layer->layerId) == uint32(bit);
+        });
+
+        if (layersIt == m_layers.End())
+        {
+            HYP_LOG(Scene, Warning, "Attempted to set active layer with id {} but no layer with that id exists!", bit);
+            continue;
+        }
+
+        const Handle<Layer>& layer = *layersIt;
+        Assert(layer.IsValid());
+        
+        layerNames.PushBack(layer->name);
+    }
+
+    return layerNames;
 }
 
 SystemBase* World::AddSystem(const Handle<SystemBase>& system)

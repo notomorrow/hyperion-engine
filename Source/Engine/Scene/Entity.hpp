@@ -23,6 +23,7 @@
 
 #include <Scene/Node.hpp>
 #include <Scene/EntityTag.hpp>
+#include <Scene/Layer.hpp>
 #include <Scene/Components/SwatchOverridesComponent.hpp>
 
 namespace Hyperion {
@@ -35,13 +36,13 @@ struct Transform;
 struct BoxedValue;
 struct RenderProxyMesh;
 
-enum class SwatchId : uint32;
+enum class LayerId : uint32;
 
 struct EntityInitInfo
 {
     // Initial tags to add to the Entity when it is created
     FatArray<EntityTag, InlineAllocator<4, SceneAllocator>> initialTags;
-    FatArray<Name, InlineAllocator<4, SceneAllocator>> swatchNames;
+    FatArray<Name, InlineAllocator<4, SceneAllocator>> layerNames;
 
     // @TODO: Can we remove? Just use component..?
     Array<EntitySwatchOverrideSet, SceneAllocator> pendingSwatchOverrides;
@@ -103,35 +104,41 @@ public:
     template <EntityTag Tag, class EntityManagerPtr = EntityManager*>
     bool HasTag() const;
 
-    //-- Swatches --
+    //-- Layers --
 
     HYP_METHOD()
-    HYP_FORCE_INLINE bool HasNoSwatches() const
+    HYP_FORCE_INLINE bool HasNoLayers() const
     {
-        return m_swatchMask.CountOnes() == 0;
+        return m_layersMask.CountOnes() == 0;
     }
 
     HYP_METHOD()
-    HYP_FORCE_INLINE bool IsInSwatch(SwatchId swatchId) const
+    HYP_FORCE_INLINE bool IsInLayer(LayerId layerId) const
     {
-        return uint32(swatchId) < MaxSwatchesPerWorld
-            && m_swatchMask.Test(uint32(swatchId));
+        return uint32(layerId) < MaxLayersPerWorld
+            && m_layersMask.Test(uint32(layerId));
     }
 
     HYP_METHOD()
-    void AddToSwatch(SwatchId swatchId);
+    HYP_FORCE_INLINE bool IsInAnyLayers(const LayersMask& layerIds) const
+    {
+        return (m_layersMask & layerIds).CountOnes();
+    }
 
     HYP_METHOD()
-    void RemoveFromSwatch(SwatchId swatchId);
+    void AddToLayer(LayerId layerId);
 
     HYP_METHOD()
-    bool IsInSwatchByName(Name swatchName) const;
+    void RemoveFromLayer(LayerId layerId);
 
     HYP_METHOD()
-    void AddToSwatchByName(Name swatchName);
+    bool IsInLayerByName(Name layerName) const;
 
     HYP_METHOD()
-    void RemoveFromSwatchByName(Name swatchName);
+    void AddToLayerByName(Name layerName);
+
+    HYP_METHOD()
+    void RemoveFromLayerByName(Name layerName);
 
     //-- Swatch overrides --
 
@@ -223,11 +230,11 @@ private:
     HYP_METHOD(Property = "Components", NoScriptBindings, LoadOrder = 1000)
     void DeserializeComponents(const Array<BoxedValue, DynamicAllocator>& components);
 
-    HYP_METHOD(Property = "Swatches", NoScriptBindings)
-    Array<Name> SerializeSwatches() const;
+    HYP_METHOD(Property = "Layers", NoScriptBindings)
+    Array<Name> SerializeLayers() const;
 
-    HYP_METHOD(Property = "Swatches", NoScriptBindings, LoadOrder = 1002)
-    void DeserializeSwatches(const Array<Name>& swatchNames);
+    HYP_METHOD(Property = "Layers", NoScriptBindings, LoadOrder = 1002)
+    void DeserializeLayers(const Array<Name>& layerNames);
 
     //-- Transient properties
 
@@ -239,7 +246,7 @@ private:
     bool m_transformChanged : 1;
 
     HYP_FIELD(Transient)
-    BitField<MaxSwatchesPerWorld> m_swatchMask;
+    LayersMask m_layersMask;
 
     //--
 };

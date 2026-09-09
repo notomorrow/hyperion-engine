@@ -22,16 +22,6 @@ namespace Hyperion {
 
 EDITOR_API HYP_DECLARE_LOG_CHANNEL(Editor);
 
-namespace {
-
-/// Based on the active world Swatch, should we include the Entity in the bake?
-bool ShouldBakeEntity(Swatch& swatch, World& world, Entity& entity)
-{
-    return (entity.HasNoSwatches() || entity.IsInSwatch(swatch.swatchId));
-}
-
-} // namespace
-
 #pragma region GenerateLightmapsEditorTask
 
 GenerateLightmapsEditorTask::GenerateLightmapsEditorTask(const Handle<LightmapVolume>& volume)
@@ -111,14 +101,6 @@ void GenerateLightmapsEditorTask::Start()
     {
         Handle<Entity> entitySource = DynamicCast<Entity>(source);
         Assert(entitySource.IsValid());
-
-        if (!ShouldBakeEntity(*activeSwatch, *m_world, *entitySource))
-        {
-            HYP_LOG(Editor, Warning, "Skipping bake for {}: it is not in the active swatch '{}'",
-                source->Id(), activeSwatch->name);
-
-            continue;
-        }
 
         Task<void> task;
 
@@ -292,14 +274,6 @@ void GenerateBentNormalsEditorTask::Start()
 
     for (const Handle<LightmapVolume>& volume : m_volumes)
     {
-        if (!ShouldBakeEntity(*activeSwatch, *m_world, *volume))
-        {
-            HYP_LOG(Editor, Warning, "Skipping bent normals bake for {}: it is not in the active swatch '{}'",
-                volume->Id(), activeSwatch->name);
-
-            continue;
-        }
-
         Task<void> task = lightmapperSubsystem->EnqueueBake(activeSwatch->bakeLayer, volume, bentNormalOnlyMask);
 
         if (task.IsValid())

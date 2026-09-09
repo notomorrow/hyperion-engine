@@ -3076,7 +3076,7 @@ static void WriteEntitySwatchOverridesSection(const Entity& entity, String& outT
     const Class* entityClass = entity.InstanceClass();
 
     WriteIndent(outText, indent);
-    outText += "$SwatchOverrides = {\n";
+    outText += "$Swatches = {\n";
 
     for (size_t setIndex = 0; setIndex < overrideSets.Size(); setIndex++)
     {

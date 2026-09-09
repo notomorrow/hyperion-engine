@@ -15,7 +15,7 @@ namespace Hyperion.Editor.ViewModels
     {
         public InspectorSectionViewModel ComponentsSection { get; } = new() { IsExpanded = true };
         public InspectorSectionViewModel TagsSection { get; } = new() { IsExpanded = true };
-        public InspectorSectionViewModel SwatchesSection { get; } = new() { IsExpanded = true };
+        public InspectorSectionViewModel LayersSection { get; } = new() { IsExpanded = true };
         public InspectorSectionViewModel ScriptSection { get; } = new() { IsExpanded = true };
         public InspectorSectionViewModel ActionsSection { get; } = new() { IsExpanded = true };
         public InspectorSectionViewModel ScenePropertiesSection { get; } = new() { IsExpanded = true };
@@ -159,11 +159,11 @@ namespace Hyperion.Editor.ViewModels
             private set => SetProperty(ref _entityTags, value);
         }
 
-        private EntitySwatchesViewModel? _entitySwatches;
-        public EntitySwatchesViewModel? EntitySwatches
+        private EntityLayersViewModel? _entityLayers;
+        public EntityLayersViewModel? EntityLayers
         {
-            get => _entitySwatches;
-            private set => SetProperty(ref _entitySwatches, value);
+            get => _entityLayers;
+            private set => SetProperty(ref _entityLayers, value);
         }
 
         public bool IsDefaultSwatch
@@ -298,7 +298,7 @@ namespace Hyperion.Editor.ViewModels
             AttachedScript = null;
             HasAttachedScript = false;
             EntityTags = null;
-            EntitySwatches = null;
+            EntityLayers = null;
 
             SelectedCopySwatchSource = null;
             HasCopySwatchSources = false;
@@ -441,7 +441,7 @@ namespace Hyperion.Editor.ViewModels
                 AttachedScript = new AttachedScriptViewModel(entity);
                 HasAttachedScript = true;
                 EntityTags = new EntityTagsViewModel(entity);
-                EntitySwatches = new EntitySwatchesViewModel(entity);
+                EntityLayers = new EntityLayersViewModel(entity);
 
                 SwatchOverrideEditContext.CurrentEntity = entity;
 
@@ -545,9 +545,9 @@ namespace Hyperion.Editor.ViewModels
                 _ = EntityTags.RefreshAsync();
             }
 
-            if (EntitySwatches != null)
+            if (EntityLayers != null)
             {
-                _ = EntitySwatches.RefreshAsync();
+                _ = EntityLayers.RefreshAsync();
             }
 
             _ = RefreshOverrideSignifiersAsync();
@@ -763,10 +763,8 @@ namespace Hyperion.Editor.ViewModels
                     capturedEntity.NativeAddress.ToString());
             });
 
-            // Update enablement immediately - there is nothing left to reset on this swatch now
             await RefreshActiveSwatchOverridesAsync();
-
-            // Re-read all rows + override signifiers (overrides were dropped; rows show base values)
+            
             OnPropertyValueChanged();
         }
 

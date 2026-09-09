@@ -857,9 +857,6 @@ private:
     } m_meshEditState;
 
     bool m_snapToGridEnabled;
-
-    // When true, editor property/transform edits route into the active swatch's override set
-    // instead of the base property set (Entity "$SwatchOverrides" feature).
     bool m_swatchOverrideMode;
 
     WeakHandle<EditorGizmoBase> m_hoveredGizmo;

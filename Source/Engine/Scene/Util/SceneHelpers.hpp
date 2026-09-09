@@ -36,11 +36,6 @@ bool CanSimulateEntityPhysics(const Entity& entity);
 float GetCapsuleHeightOffset(const CharacterControllerComponent& component);
 void MoveCharacter(Entity* entity, CharacterControllerComponent& component, const PlayerMove& move, Vec3f& outResultTranslation);
 
-/// Get target swatches for entity to bake into - if no valid fallback is provided, fallback will be set
-Array<Handle<Swatch>> GetTargetSwatches(const Entity& entity, Handle<Swatch> fallback = Handle<Swatch>::Null());
-
-Name GetCurrentSwatchForEntity(const Entity& entity);
-
 } // namespace SceneHelpers
 
 } // namespace Hyperion

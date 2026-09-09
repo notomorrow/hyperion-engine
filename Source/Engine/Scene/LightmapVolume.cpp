@@ -605,20 +605,11 @@ static void EnqueueBake(LightmapVolume& self)
         return;
     }
 
-    // Bake only the active swatch. The packing and the meshes' UV1 are shared, so baking several swatches at once
-    // would have them race to write the same volume.
     const Handle<Swatch>& swatch = world->GetActiveSwatch();
 
     if (!swatch.IsValid())
     {
         HYP_LOG(Editor, Error, "Cannot bake {}: could not resolve a target swatch for it", self.GetName());
-
-        return;
-    }
-
-    if (!self.HasNoSwatches() && !self.IsInSwatch(swatch->swatchId))
-    {
-        HYP_LOG(Editor, Error, "Cannot bake {}: it is not in the active swatch '{}'", self.GetName(), swatch->name);
 
         return;
     }
