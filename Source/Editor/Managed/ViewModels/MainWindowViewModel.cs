@@ -322,6 +322,7 @@ namespace Hyperion.Editor.ViewModels
         private DelegateHandler? _actionStackStateChangedHandler;
         private DelegateHandler? _meshEditStateChangedHandler;
         private DelegateHandler? _activeSwatchChangedHandler;
+        private DelegateHandler? _activeLayersChangedHandler;
 
         private int _isUpdatingSelectionFromEngine = 0; // atomic
         private int _isUpdatingFocusedNodeFromEngine = 0; // atomic
@@ -372,6 +373,9 @@ namespace Hyperion.Editor.ViewModels
 
         public ICommand SetActiveSwatchCommand { get; private set; }
         public ICommand AddNewSwatchCommand { get; private set; }
+        public ICommand AddNewLayerCommand { get; private set; }
+
+        public ObservableCollection<LayerToggleViewModel> ActiveLayerToggles { get; } = new();
 
         public MainWindowViewModel()
         {
@@ -602,6 +606,50 @@ namespace Hyperion.Editor.ViewModels
                 PanelService.Instance.OpenPanel(panel);
             });
 
+            AddNewLayerCommand = new RelayCommand(() =>
+            {
+                var panel = new AddNewLayerPanelViewModel(result =>
+                {
+                    if (string.IsNullOrEmpty(result))
+                        return;
+
+                    string layerName = result;
+
+                    _ = EngineManager.PostToSimThread(() =>
+                    {
+                        try
+                        {
+                            World? world = EngineManager.CurrentProject?.GetWorld();
+
+                            if (world == null)
+                            {
+                                throw new Exception("No active World");
+                            }
+
+                            world.GetOrCreateLayer(new Name(layerName));
+
+                            // Already on the sim thread here.
+                            RefreshActiveLayerToggles();
+
+                            Dispatcher.UIThread.Post(() =>
+                            {
+                                // new layer, refresh entity's layers set
+                                if (Inspector.EntityLayers != null)
+                                {
+                                    _ = Inspector.EntityLayers.RefreshAsync();
+                                }
+                            });
+                        }
+                        catch (Exception ex)
+                        {
+                            Logger.Log(LogLevel.Warning, $"Failed to add new layer: {ex.Message}");
+                        }
+                    });
+                });
+
+                PanelService.Instance.OpenPanel(panel);
+            });
+
             AddNormalizedCubeSphereCommand = new RelayCommand(() =>
             {
                 var panel = new AddNormalizedCubeSpherePanelViewModel(_editorSubsystem, confirmed => { });
@@ -716,6 +764,7 @@ namespace Hyperion.Editor.ViewModels
             _activeSceneChangedHandler?.Remove();
             _actionStackStateChangedHandler?.Remove();
             _activeSwatchChangedHandler?.Remove();
+            _activeLayersChangedHandler?.Remove();
 
             if (isDisposing)
             {
@@ -981,6 +1030,25 @@ namespace Hyperion.Editor.ViewModels
                     });
             }
 
+            _activeLayersChangedHandler?.Remove();
+            _activeLayersChangedHandler = null;
+
+            World? layerWorld = project?.GetWorld();
+
+            if (layerWorld != null)
+            {
+                _activeLayersChangedHandler = layerWorld.GetOnActiveLayersChangedDelegate()
+                    .Bind((LayersMask activeLayers) =>
+                    {
+                        Dispatcher.UIThread.Post(() =>
+                        {
+                            RefreshActiveLayerToggles();
+
+                            SceneHierarchy.RefreshFilter();
+                        });
+                    });
+            }
+
             UpdateUndoRedoHeaders(project);
             UpdatePasteHeader();
 
@@ -1083,6 +1151,7 @@ namespace Hyperion.Editor.ViewModels
                 OnPropertyChanged(nameof(Scenes));
 
                 _ = EngineManager.PostToSimThread(RefreshSwatches);
+                _ = EngineManager.PostToSimThread(RefreshActiveLayerToggles);
             });
         }
 
@@ -1122,6 +1191,46 @@ namespace Hyperion.Editor.ViewModels
                 OnPropertyChanged(nameof(Swatches));
 
                 SceneHierarchy.RefreshFilter();
+            });
+        }
+
+        private void RefreshActiveLayerToggles()
+        {
+            World? world = EngineManager.CurrentProject?.GetWorld();
+
+            List<(string Name, bool IsActive)>? layers = null;
+
+            if (world != null)
+            {
+                layers = new List<(string, bool)>();
+
+                foreach (Name layerName in world.GetLayerNames())
+                {
+                    layers.Add((layerName.ToString(), world.IsLayerActive(layerName)));
+                }
+            }
+
+            Dispatcher.UIThread.Post(() =>
+            {
+                // Rebuild rather than patch in place - simplest way to stay correct when layers
+                // are added/removed elsewhere, and this flyout is only open occasionally.
+                ActiveLayerToggles.Clear();
+
+                if (layers != null)
+                {
+                    foreach ((string name, bool isActive) in layers)
+                    {
+                        ActiveLayerToggles.Add(new LayerToggleViewModel(name, isActive, OnActiveLayerToggled));
+                    }
+                }
+            });
+        }
+
+        private void OnActiveLayerToggled(string layerName, bool isActive)
+        {
+            _ = EngineManager.PostToSimThread(() =>
+            {
+                EngineManager.CurrentProject?.GetWorld()?.SetLayerActive(new Name(layerName), isActive);
             });
         }
 

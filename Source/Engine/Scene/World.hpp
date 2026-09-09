@@ -207,11 +207,19 @@ public:
     HYP_METHOD()
     Array<Name> GetLayerNames() const;
 
-    HYP_METHOD()
-    const Handle<Layer>& TryGetLayer(Name layerName);
+    const Handle<Layer>& TryGetLayer(Name layerName) const;
 
     HYP_METHOD()
     const Handle<Layer>& TryGetLayerById(LayerId layerId) const;
+
+    HYP_METHOD()
+    const Handle<Layer>& GetOrCreateLayer(Name layerName);
+
+    HYP_METHOD()
+    bool IsLayerActive(Name layerName) const;
+
+    HYP_METHOD()
+    void SetLayerActive(Name layerName, bool layerActive);
 
     //-- Scenes
 

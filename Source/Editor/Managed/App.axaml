@@ -23,6 +23,9 @@
         <DataTemplate DataType="vm:AddNewSwatchPanelViewModel">
             <panels:AddNewSwatchPanelView />
         </DataTemplate>
+        <DataTemplate DataType="vm:AddNewLayerPanelViewModel">
+            <panels:AddNewLayerPanelView />
+        </DataTemplate>
         <DataTemplate DataType="vm:AddNormalizedCubeSpherePanelViewModel">
             <panels:AddNormalizedCubeSpherePanelView />
         </DataTemplate>
@@ -718,6 +721,20 @@
         </Style>
         <Style Selector="CheckBox:pointerover /template/ Border#NormalRectangle">
             <Setter Property="BorderBrush" Value="{StaticResource Brush.Accent}" />
+        </Style>
+
+        <!--  CheckBox as flyout menu row (e.g. layer visibility toggles)  -->
+        <Style Selector="CheckBox.layers-toggle">
+            <Setter Property="Padding" Value="8,4" />
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="CornerRadius" Value="5" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="HorizontalContentAlignment" Value="Left" />
+            <Setter Property="MinWidth" Value="142" />
+            <Setter Property="Margin" Value="1,0" />
+        </Style>
+        <Style Selector="CheckBox.layers-toggle:pointerover">
+            <Setter Property="Background" Value="{StaticResource Brush.MenuHover}" />
         </Style>
 
         <!--  RadioButton  -->

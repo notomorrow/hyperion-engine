@@ -8,6 +8,7 @@ using System.Windows.Input;
 using Avalonia.Threading;
 using Hyperion;
 using Hyperion.Editor.Commands;
+using Hyperion.Editor.Services;
 
 namespace Hyperion.Editor.ViewModels
 {
@@ -58,15 +59,9 @@ namespace Hyperion.Editor.ViewModels
             private set => SetProperty(ref _hasLayers, value);
         }
 
-        private bool _hasAvailableLayers;
-        public bool HasAvailableLayers
-        {
-            get => _hasAvailableLayers;
-            private set => SetProperty(ref _hasAvailableLayers, value);
-        }
-
         public ICommand AddLayerCommand { get; }
         public ICommand RemoveLayerCommand { get; }
+        public ICommand CreateNewLayerCommand { get; }
 
         public EntityLayersViewModel(Entity entity)
         {
@@ -78,6 +73,21 @@ namespace Hyperion.Editor.ViewModels
 
             RemoveLayerCommand = new RelayCommand<EntityLayerItemViewModel>(
                 item => _ = RemoveLayerAsync(item));
+
+            CreateNewLayerCommand = new RelayCommand(() =>
+            {
+                var panel = new AddNewLayerPanelViewModel(result =>
+                {
+                    if (string.IsNullOrEmpty(result))
+                    {
+                        return;
+                    }
+
+                    _ = CreateAndAssignLayerAsync(result);
+                });
+
+                PanelService.Instance.OpenPanel(panel);
+            });
 
             _ = RefreshAsync();
         }
@@ -139,8 +149,6 @@ namespace Hyperion.Editor.ViewModels
                     }
                 }
 
-                HasAvailableLayers = AvailableLayers.Count > 0;
-
                 SelectedAvailableLayer = previousSelection != null
                     ? AvailableLayers.FirstOrDefault(o => o.Name == previousSelection)
                     : null;
@@ -168,6 +176,44 @@ namespace Hyperion.Editor.ViewModels
 
                 project?.ActionStack?.PushAction(new EditorAction(
                     $"Add Layer: {layerName}",
+                    execute: (_, _) => capturedEntity.AddToLayerByName(name),
+                    revert: (_, _) => capturedEntity.RemoveFromLayerByName(name)));
+            });
+
+            await RefreshAsync();
+        }
+
+        private async Task CreateAndAssignLayerAsync(string layerName)
+        {
+            if (_entity == null || !_entity.IsValid)
+            {
+                return;
+            }
+
+            Entity capturedEntity = _entity;
+
+            await EngineManager.PostToSimThread(() =>
+            {
+                World? world = capturedEntity.World;
+
+                if (world == null)
+                {
+                    return;
+                }
+
+                // AddToLayerByName only assigns to an already-registered layer (it does not
+                // create one), so create it first.
+                world.GetOrCreateLayer(new Name(layerName));
+
+                Name name = new Name(layerName);
+
+                capturedEntity.AddToLayerByName(name);
+
+                EditorProject? project = EngineManager.CurrentProject;
+                Debug.Assert(project != null, "No active project found when creating a new layer");
+
+                project?.ActionStack?.PushAction(new EditorAction(
+                    $"New Layer: {layerName}",
                     execute: (_, _) => capturedEntity.AddToLayerByName(name),
                     revert: (_, _) => capturedEntity.RemoveFromLayerByName(name)));
             });

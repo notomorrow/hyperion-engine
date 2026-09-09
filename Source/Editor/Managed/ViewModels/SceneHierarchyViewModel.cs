@@ -37,22 +37,6 @@ namespace Hyperion.Editor.ViewModels
         private Scene? _scene;
         public Scene? Scene => _scene;
 
-        private bool _showOnlyActiveLayers = true;
-        public bool ShowOnlyActiveLayers
-        {
-            get => _showOnlyActiveLayers;
-            set
-            {
-                if (SetProperty(ref _showOnlyActiveLayers, value))
-                {
-                    OnPropertyChanged(nameof(ShowOnlyActiveLayersIconKind));
-                    RefreshFilter();
-                }
-            }
-        }
-
-        public string ShowOnlyActiveLayersIconKind => ShowOnlyActiveLayers ? "EyeClosed" : "Eye";
-
         private DelegateHandler? _onSelectedNodeChanged;
 
         public void AttachToScene(Scene? scene)
@@ -108,13 +92,6 @@ namespace Hyperion.Editor.ViewModels
 
             if (_scene == null)
             {
-                return;
-            }
-
-            if (!ShowOnlyActiveLayers)
-            {
-                SetFilteredOutRecursive(RootNodes, filteredOut: false);
-
                 return;
             }
 
