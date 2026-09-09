@@ -9,8 +9,6 @@
 #include <Baking/BakeData.hpp>
 #include <Baking/BakerMemory.hpp>
 
-#include <Util/Img/Bitmap.hpp>
-
 namespace Hyperion {
 
 class Light;
@@ -21,8 +19,6 @@ template <>
 class BakeData<Light> : public BakeDataBase
 {
 public:
-    using BitmapType = Bitmap_R16;
-
     BakeData()
         : m_light(nullptr)
     {
@@ -47,18 +43,10 @@ public:
         return m_light;
     }
 
-    uint32 GetNumFaces() const;
-
     virtual Result Build() override;
-
-    BitmapType ToBitmap() const;
 
 protected:
     Light* m_light;
-    Array<LightmapRay, BakerAllocator> m_rays;
-
-    Mat4f m_viewProjMats[6];
-    Mat4f m_projMat;
 };
 
 } // namespace Baking

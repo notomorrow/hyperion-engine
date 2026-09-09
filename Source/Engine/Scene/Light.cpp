@@ -28,6 +28,8 @@
 
 #include <Rendering/Passes/ShadowsPass.hpp>
 
+#include <Rendering/ShadowMapCaptureState.hpp>
+
 #include <Rendering/Util/DeletionQueue.hpp>
 
 #include <Core/Threading/Threads.hpp>
@@ -118,6 +120,11 @@ Light::Light(LightType type, const Vec3f& position, const Vec3f& normal, const V
 
 Light::~Light()
 {
+    if (m_shadowMapCaptureState)
+    {
+        m_shadowMapCaptureState->m_light = nullptr;
+    }
+
     if (m_material.IsValid())
     {
         EnqueueDeletion(std::move(m_material));
@@ -412,7 +419,7 @@ void Light::SetBakedShadowMap(const Handle<Texture>& shadowMap)
     {
         m_lightFlags |= LightFlags::BakeStaticShadows | LightFlags::ShadowCaster;
 
-        if (IsInitCalled())
+        if (IsInitCalled() && !m_shadowMap->IsCreated())
         {
             Check(m_shadowMap->Create());
         }

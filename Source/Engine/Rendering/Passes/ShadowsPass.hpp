@@ -19,6 +19,8 @@ namespace Hyperion {
 
 class FullScreenPass;
 class ShadowMap;
+class Light;
+struct ShadowMapCaptureState;
 
 HYP_CLASS(NoScriptBindings)
 class ShadowsPassData : public PassData
@@ -70,6 +72,13 @@ protected:
     virtual PassData* CreateViewPassData(View* view, PassDataExt&) override;
 
 private:
+    /// Rasterized a light that is currently being captured (Bake Shadow Maps)
+    void RenderShadowMapCapture(
+        Frame* frame,
+        const RenderSetup& renderSetup,
+        Light* light,
+        ShadowMapCaptureState* captureState);
+
     struct CachedShadowMapData
     {
         FixedArray<ShadowMap*, MaxShadowMapCascades> shadowMaps;

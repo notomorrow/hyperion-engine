@@ -13,6 +13,7 @@
 namespace Hyperion {
 
 class Light;
+struct ShadowMapCaptureState;
 
 namespace Baking {
 
@@ -20,12 +21,7 @@ template <>
 class BakeJob<Light> : public BakeJobBase
 {
 public:
-    explicit BakeJob(BakeJobParams&& params, const Handle<Light>& light, BakeData<Light>* bakeData)
-        : BakeJobBase(std::move(params)),
-          m_light(light),
-          m_bakeData(bakeData)
-    {
-    }
+    explicit BakeJob(BakeJobParams&& params, const Handle<Light>& light, BakeData<Light>* bakeData);
 
     virtual ~BakeJob() override;
 
@@ -39,14 +35,17 @@ public:
         return *m_bakeData;
     }
 
+    virtual bool IsCompleted() const override;
+
 protected:
     virtual void Start_Internal() override;
     virtual void Process_Internal(bool* outIsReadyToProcess) override;
 
     Handle<Light> m_light;
     BakeData<Light>* m_bakeData;
+
+    UniquePtr<ShadowMapCaptureState, BakerAllocator> m_shadowMapRasterCaptureState;
 };
 
 } // namespace Baking
-
 } // namespace Hyperion

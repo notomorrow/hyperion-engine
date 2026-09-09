@@ -43,7 +43,9 @@ static inline void EndCurrentPass(CommandBuffer* commandBuffer)
 {
     RenderInterface::State& state = RI.state;
 
-    if (state.boundFramebuffer != nullptr)
+    /// It is possible that boundFramebuffer will be non-null, yet  `commandBuffer` may be a transient acquired framebuffer.
+    /// If Submit() is called on that, we don't want to doom the world ending the RP!!!
+    if (state.boundFramebuffer != nullptr && commandBuffer == RI.GetCurrentCommandBuffer())
     {
         state.boundFramebuffer->EndCapture(commandBuffer);
         state.boundFramebuffer = nullptr;

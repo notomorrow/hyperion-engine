@@ -28,6 +28,7 @@ class Material;
 class Texture;
 class View;
 struct RenderProxyLight;
+struct ShadowMapCaptureState;
 
 enum ShadowMapFilter : uint32;
 
@@ -70,6 +71,8 @@ HYP_CLASS()
 class ENGINE_API Light : public Entity
 {
     HYP_OBJECT_BODY(Light);
+
+    friend struct ShadowMapCaptureState;
 
 public:
     Light();
@@ -250,6 +253,11 @@ public:
     HYP_METHOD(Property = "BakedShadowMap")
     void SetBakedShadowMap(const Handle<Texture>& shadowMap);
 
+    HYP_FORCE_INLINE ShadowMapCaptureState* GetShadowMapCaptureState() const
+    {
+        return m_shadowMapCaptureState;
+    }
+
     BoundingSphere GetBoundingSphere(bool worldSpace) const;
 
     // virtual void SetLocalBounds(const BoundingBox& localBounds) override;
@@ -314,6 +322,8 @@ protected:
 
 private:
     Pair<Vec3f, Vec3f> CalculateAreaLightRect() const;
+
+    ShadowMapCaptureState* m_shadowMapCaptureState = nullptr;
 };
 
 HYP_CLASS()

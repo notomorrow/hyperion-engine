@@ -12,6 +12,8 @@
 #include <Rendering/Shadows/ShadowMapAllocator.hpp>
 #include <Rendering/Shadows/ShadowMap.hpp>
 
+#include <Rendering/ShadowMapCaptureState.hpp>
+
 #include <Rendering/RenderInterface.hpp>
 #include <Rendering/ShaderManager.hpp>
 #include <Rendering/PlaceholderData.hpp>
@@ -65,6 +67,88 @@ ShadowsPassData::~ShadowsPassData()
 }
 
 #pragma endregion ShadowsPassData
+
+#pragma region ShadowMapCapture
+
+void ShadowsPassBase::RenderShadowMapCapture(
+    Frame* frame,
+    const RenderSetup& renderSetup,
+    Light* light,
+    ShadowMapCaptureState* captureState)
+{
+    HYP_SCOPE;
+    AssertOnThread(g_renderThread);
+
+    AssertDebug(light != nullptr && captureState != nullptr);
+
+    const uint32 numFaces = captureState->GetNumFaces();
+    const uint32 allFacesMask = (1u << numFaces) - 1;
+
+    uint32 renderedFacesMask = captureState->GetRenderedFacesMask();
+
+    const Vec2u extent = captureState->GetTexture()->GetExtent().GetXY();
+
+    for (uint32 faceIndex = 0; faceIndex < numFaces; faceIndex++)
+    {
+        if (renderedFacesMask & (1u << faceIndex))
+        {
+            continue;
+        }
+
+        View* captureView = captureState->GetView(faceIndex);
+
+        if (captureView == nullptr)
+        {
+            continue;
+        }
+
+        const FramebufferRef& framebuffer = captureState->GetFramebuffer(faceIndex);
+
+        if (!framebuffer.IsValid() || !framebuffer->IsCreated())
+        {
+            continue;
+        }
+
+        RenderCollector& renderCollector = GetRenderCollector(captureView);
+
+        if (renderCollector.isFallback)
+        {
+            continue;
+        }
+
+        RenderSetup rs = renderSetup.Fork();
+        rs.view = captureView;
+        rs.framebuffer = framebuffer;
+        rs.passData = FetchViewPassData(captureView);
+        rs.viewport = Viewport { extent, Vec2i::Zero() };
+
+        Attachment* target = framebuffer->GetAttachment(0);
+        Assert(target != nullptr && target->IsCreated());
+
+        GpuImage* resultImage = target->GetGpuImage();
+        Assert(resultImage != nullptr);
+
+        RenderProxyList& rpl = GetConsumerProxyList(captureView);
+        rpl.BeginRead();
+        HYP_DEFER({ rpl.EndRead(); });
+
+        frame->cr << InsertBarrier(resultImage, RS_RENDER_TARGET, target->GetImageView()->GetImageSubResource());
+
+        renderCollector.ExecuteDrawCalls(frame, rs, BucketMask);
+
+        frame->cr << InsertBarrier(resultImage, RS_SHADER_RESOURCE, target->GetImageView()->GetImageSubResource());
+
+        renderedFacesMask |= (1u << faceIndex);
+        captureState->SetRenderedFacesMask(renderedFacesMask);
+    }
+
+    if ((renderedFacesMask & allFacesMask) == allFacesMask)
+    {
+        captureState->SetRenderComplete();
+    }
+}
+
+#pragma endregion ShadowMapCapture
 
 #pragma region ShadowsPassBase
 
@@ -137,6 +221,13 @@ void ShadowsPassBase::RenderFrame(Frame* frame, const RenderSetup& renderSetup)
 
     Light* light = renderSetup.light;
     View* view = renderSetup.view; // may be null if shadow map is not view dependent (e.g non-directional light)
+
+    if (ShadowMapCaptureState* captureState = light->GetShadowMapCaptureState())
+    {
+        RenderShadowMapCapture(frame, renderSetup, light, captureState);
+
+        return;
+    }
 
     RenderProxyLight* lightProxy = static_cast<RenderProxyLight*>(GetRenderProxy(light));
     Assert(lightProxy != nullptr, "Proxy for Light {} not found when rendering shadows!", light->Id());

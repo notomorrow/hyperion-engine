@@ -35,17 +35,14 @@ public:
         return false;
     }
 
+    virtual bool PerformsRayTracing() const override
+    {
+        return false;
+    }
+
     virtual uint32 NumTexelSamples() const override
     {
         return 1;
-    }
-
-    /*! \brief Shadow map baking uses the new SHADOW shading type, which traces
-     *  shadow rays from each projected texel toward static geometry to compute
-     *  a fully ray-traced, static shadow map for the owning light. */
-    virtual uint32 GetShadingTypesMask() const override
-    {
-        return 1u << int(LightmapShadingType::SHADOW);
     }
 
     virtual const TypeInfo& GetInnerType() const override
@@ -60,8 +57,6 @@ protected:
     }
 
     virtual UniquePtr<BakeJobBase> CreateJob(BakeJobParams&& params) override;
-
-    virtual void CreateLightmapRenderers() override;
 
     virtual Result Build_Internal() override;
     virtual void OnCompleted_Internal() override;
