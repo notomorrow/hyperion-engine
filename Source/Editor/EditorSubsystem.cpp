@@ -5514,7 +5514,6 @@ void EditorSubsystem::CommitMeshPreview()
     }
 
     Handle<Entity> entity = m_meshPreviewEntity;
-    Handle<Material> material = m_meshPreviewMaterial;
 
     m_meshPreviewEntity->Remove();
     m_meshPreviewEntity.Reset();
@@ -5541,8 +5540,17 @@ void EditorSubsystem::CommitMeshPreview()
 
     Handle<Mesh> mesh = meshComponent->mesh;
 
+    // Replace the transient preview material with a proper, non-transient one for the committed entity
+    MaterialAttributes attributes;
+    attributes.shaderName = NAME("GeometryPass");
+
+    Handle<Material> material = MakeHandle<Material>(NAME("NormalizedCubeSphereMaterial"), attributes);
+    InitObject(material);
+
+    meshComponent->material = material;
+
     entity->SetName(NAME("NormalizedCubeSphereEntity"));
-    
+
     mesh->SetName(NAME("NormalizedCubeSphereMesh"));
 
     Handle<FunctionalEditorAction> action = MakeHandle<FunctionalEditorAction>(
