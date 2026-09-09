@@ -1494,20 +1494,11 @@ void ReflectionProbe::BakeCubemap()
         return;
     }
 
-    // Bake only the active swatch; the result is written to that swatch's override set (or the base
-    // values for the Default swatch).
     const Handle<Swatch>& swatch = world->GetActiveSwatch();
 
     if (!swatch.IsValid())
     {
         HYP_LOG(Editor, Error, "Cannot bake {}: could not resolve the active swatch", GetName());
-
-        return;
-    }
-
-    if (!HasNoSwatches() && !IsInSwatch(swatch->swatchId))
-    {
-        HYP_LOG(Editor, Error, "Cannot bake {}: it is not in the active swatch '{}'", GetName(), swatch->name);
 
         return;
     }
@@ -1577,20 +1568,11 @@ void IrradianceProbe::RecomputeIrradiance()
         return;
     }
 
-    // Bake only the active swatch; the result is written to that swatch's override set (or the base
-    // values for the Default swatch).
     const Handle<Swatch>& swatch = world->GetActiveSwatch();
 
     if (!swatch.IsValid())
     {
         HYP_LOG(Editor, Error, "Cannot bake {}: could not resolve the active swatch", GetName());
-
-        return;
-    }
-
-    if (!HasNoSwatches() && !IsInSwatch(swatch->swatchId))
-    {
-        HYP_LOG(Editor, Error, "Cannot bake {}: it is not in the active swatch '{}'", GetName(), swatch->name);
 
         return;
     }

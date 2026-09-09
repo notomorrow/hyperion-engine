@@ -949,7 +949,8 @@ void View::CollectMeshEntities(RenderProxyList& rpl)
         const VisibilityStateSnapshot visibilityStateSnapshot = scene->GetOctree().GetVisibilityState().GetSnapshot(Id());
 
         World* world = scene->GetWorld();
-        const SwatchId activeSwatchId = world->GetActiveSwatchId();
+
+        const LayersMask& activeLayers = world->GetActiveLayers();
 
         [[maybe_unused]] uint32 numCollectedEntities = 0;
         [[maybe_unused]] uint32 numSkippedEntities = 0;
@@ -961,7 +962,7 @@ void View::CollectMeshEntities(RenderProxyList& rpl)
             {
                 for (auto [entity, meshComponent, boundingBoxComponent] : scene->GetEntityManager()->GetEntitySet<MeshComponent, BoundingBoxComponent>().GetScopedView(DataAccessFlags::ACCESS_READ, HYP_FUNCTION_NAME_LIT))
                 {
-                    if (!entity->HasNoSwatches() && !entity->IsInSwatch(activeSwatchId))
+                    if (!entity->HasNoLayers() && !entity->IsInAnyLayers(activeLayers))
                     {
                         continue;
                     }
@@ -1010,7 +1011,7 @@ void View::CollectMeshEntities(RenderProxyList& rpl)
             {
                 for (auto [entity, meshComponent, boundingBoxComponent, visibilityStateComponent] : scene->GetEntityManager()->GetEntitySet<MeshComponent, BoundingBoxComponent, VisibilityStateComponent>().GetScopedView(DataAccessFlags::ACCESS_READ, HYP_FUNCTION_NAME_LIT))
                 {
-                    if (!entity->HasNoSwatches() && !entity->IsInSwatch(activeSwatchId))
+                    if (!entity->HasNoLayers() && !entity->IsInAnyLayers(activeLayers))
                     {
                         continue;
                     }
@@ -1085,7 +1086,7 @@ void View::CollectMeshEntities(RenderProxyList& rpl)
             {
                 for (auto [entity, meshComponent, boundingBoxComponent, _] : scene->GetEntityManager()->GetEntitySet<MeshComponent, BoundingBoxComponent, TagComponent<EntityTag::MobStatic>>().GetScopedView(DataAccessFlags::ACCESS_READ, HYP_FUNCTION_NAME_LIT))
                 {
-                    if (!entity->HasNoSwatches() && !entity->IsInSwatch(activeSwatchId))
+                    if (!entity->HasNoLayers() && !entity->IsInAnyLayers(activeLayers))
                     {
                         continue;
                     }
@@ -1134,7 +1135,7 @@ void View::CollectMeshEntities(RenderProxyList& rpl)
             {
                 for (auto [entity, meshComponent, boundingBoxComponent, visibilityStateComponent, _] : scene->GetEntityManager()->GetEntitySet<MeshComponent, BoundingBoxComponent, VisibilityStateComponent, TagComponent<EntityTag::MobStatic>>().GetScopedView(DataAccessFlags::ACCESS_READ, HYP_FUNCTION_NAME_LIT))
                 {
-                    if (!entity->HasNoSwatches() && !entity->IsInSwatch(activeSwatchId))
+                    if (!entity->HasNoLayers() && !entity->IsInAnyLayers(activeLayers))
                     {
                         continue;
                     }
@@ -1209,7 +1210,7 @@ void View::CollectMeshEntities(RenderProxyList& rpl)
             {
                 for (auto [entity, meshComponent, boundingBoxComponent, _] : scene->GetEntityManager()->GetEntitySet<MeshComponent, BoundingBoxComponent, TagComponent<EntityTag::MobDynamic>>().GetScopedView(DataAccessFlags::ACCESS_READ, HYP_FUNCTION_NAME_LIT))
                 {
-                    if (!entity->HasNoSwatches() && !entity->IsInSwatch(activeSwatchId))
+                    if (!entity->HasNoLayers() && !entity->IsInAnyLayers(activeLayers))
                     {
                         continue;
                     }
@@ -1258,7 +1259,7 @@ void View::CollectMeshEntities(RenderProxyList& rpl)
             {
                 for (auto [entity, meshComponent, boundingBoxComponent, visibilityStateComponent, _] : scene->GetEntityManager()->GetEntitySet<MeshComponent, BoundingBoxComponent, VisibilityStateComponent, TagComponent<EntityTag::MobDynamic>>().GetScopedView(DataAccessFlags::ACCESS_READ, HYP_FUNCTION_NAME_LIT))
                 {
-                    if (!entity->HasNoSwatches() && !entity->IsInSwatch(activeSwatchId))
+                    if (!entity->HasNoLayers() && !entity->IsInAnyLayers(activeLayers))
                     {
                         continue;
                     }
@@ -1373,11 +1374,11 @@ void View::CollectLights(RenderProxyList& rpl)
     for (Scene* scene : m_scenes)
     {
         World* world = scene->GetWorld();
-        const SwatchId activeSwatchId = world->GetActiveSwatchId();
+        const LayersMask& activeLayers = world->GetActiveLayers();
 
         for (auto [light] : scene->GetEntityManager()->GetEntitySet<EntityType<Light>>().GetScopedView(DataAccessFlags::ACCESS_READ, HYP_FUNCTION_NAME_LIT))
         {
-            if (!light->HasNoSwatches() && !light->IsInSwatch(activeSwatchId))
+            if (!light->HasNoLayers() && !light->IsInAnyLayers(activeLayers))
             {
                 continue;
             }
@@ -1446,11 +1447,11 @@ void View::CollectLightmapVolumes(RenderProxyList& rpl)
     for (Scene* scene : m_scenes)
     {
         World* world = scene->GetWorld();
-        const SwatchId activeSwatchId = world->GetActiveSwatchId();
+        const LayersMask& activeLayers = world->GetActiveLayers();
 
         for (auto [lightmapVolume] : scene->GetEntityManager()->GetEntitySet<EntityType<LightmapVolume>>().GetScopedView(DataAccessFlags::ACCESS_READ, HYP_FUNCTION_NAME_LIT))
         {
-            if (!lightmapVolume->HasNoSwatches() && !lightmapVolume->IsInSwatch(activeSwatchId))
+            if (!lightmapVolume->HasNoLayers() && !lightmapVolume->IsInAnyLayers(activeLayers))
             {
                 continue;
             }
@@ -1491,11 +1492,12 @@ void View::CollectParticleVolumes(RenderProxyList& rpl)
     for (Scene* scene : m_scenes)
     {
         World* world = scene->GetWorld();
-        const SwatchId activeSwatchId = world->GetActiveSwatchId();
+
+        const LayersMask& activeLayers = world->GetActiveLayers();
 
         for (auto [volume] : scene->GetEntityManager()->GetEntitySet<EntityType<ParticleVolume>>().GetScopedView(DataAccessFlags::ACCESS_READ, HYP_FUNCTION_NAME_LIT))
         {
-            if (!volume->HasNoSwatches() && !volume->IsInSwatch(activeSwatchId))
+            if (!volume->HasNoLayers() && !volume->IsInAnyLayers(activeLayers))
             {
                 continue;
             }
@@ -1548,11 +1550,11 @@ void View::CollectFogVolumes(RenderProxyList& rpl)
     for (Scene* scene : m_scenes)
     {
         World* world = scene->GetWorld();
-        const SwatchId activeSwatchId = world->GetActiveSwatchId();
+        const LayersMask& activeLayers = world->GetActiveLayers();
 
         for (auto [volume] : scene->GetEntityManager()->GetEntitySet<EntityType<FogVolume>>().GetScopedView(DataAccessFlags::ACCESS_READ, HYP_FUNCTION_NAME_LIT))
         {
-            if (!volume->HasNoSwatches() && !volume->IsInSwatch(activeSwatchId))
+            if (!volume->HasNoLayers() && !volume->IsInAnyLayers(activeLayers))
             {
                 continue;
             }
@@ -1595,11 +1597,11 @@ void View::CollectEnvProbes(RenderProxyList& rpl)
     for (Scene* scene : m_scenes)
     {
         World* world = scene->GetWorld();
-        const SwatchId activeSwatchId = world->GetActiveSwatchId();
+        const LayersMask& activeLayers = world->GetActiveLayers();
 
         for (auto [probe] : scene->GetEntityManager()->GetEntitySet<EntityType<EnvProbe>>().GetScopedView(DataAccessFlags::ACCESS_READ, HYP_FUNCTION_NAME_LIT))
         {
-            if (!probe->HasNoSwatches() && !probe->IsInSwatch(activeSwatchId))
+            if (!probe->HasNoLayers() && !probe->IsInAnyLayers(activeLayers))
             {
                 continue;
             }
@@ -1665,11 +1667,11 @@ void View::CollectSprites(RenderProxyList& rpl)
     for (Scene* scene : m_scenes)
     {
         World* world = scene->GetWorld();
-        const SwatchId activeSwatchId = world->GetActiveSwatchId();
+        const LayersMask& activeLayers = world->GetActiveLayers();
 
         for (auto [sprite] : scene->GetEntityManager()->GetEntitySet<EntityType<Sprite>>().GetScopedView(DataAccessFlags::ACCESS_READ, HYP_FUNCTION_NAME_LIT))
         {
-            if (!sprite->HasNoSwatches() && !sprite->IsInSwatch(activeSwatchId))
+            if (!sprite->HasNoLayers() && !sprite->IsInAnyLayers(activeLayers))
             {
                 continue;
             }

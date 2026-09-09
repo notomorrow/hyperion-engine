@@ -24,9 +24,9 @@
 
 #include <Scripting/ScriptableDelegate.hpp>
 
-#include <Framework/EngineMemory.hpp>
+#include <Scene/Layer.hpp>
 
-#include <Scene/Swatch.hpp>
+#include <Framework/EngineMemory.hpp>
 
 namespace Hyperion {
 
@@ -39,6 +39,7 @@ class WorldGrid;
 class WorldGridLayer;
 class PhysicsWorldBase;
 class SystemBase;
+class Swatch;
 class SystemExecutionGroup;
 
 struct GameState;
@@ -50,6 +51,9 @@ class TaskBatch;
 using threading::TaskBatch;
 
 struct WGLayerDesc;
+
+class Swatch;
+enum class SwatchId : uint32;
 
 // clang-format off
 
@@ -125,6 +129,17 @@ public:
     HYP_METHOD(Property = "WorldFlags", Serialize)
     void SetWorldFlags(EnumFlags<WorldFlags> flags);
 
+    HYP_METHOD()
+    const Handle<WorldGrid>& GetWorldGrid() const
+    {
+        return m_worldGrid;
+    }
+
+    HYP_METHOD()
+    const GameState& GetGameState() const;
+
+    //-- Subsystems
+
     template <class T>
     HYP_FORCE_INLINE const Handle<T>& AddSubsystem()
     {
@@ -163,14 +178,7 @@ public:
     HYP_METHOD()
     bool RemoveSubsystem(Subsystem* subsystem);
 
-    HYP_METHOD()
-    const Handle<WorldGrid>& GetWorldGrid() const
-    {
-        return m_worldGrid;
-    }
-
-    HYP_METHOD()
-    const GameState& GetGameState() const;
+    //-- Swatches
 
     HYP_METHOD()
     Array<Name> GetSwatchNames() const;
@@ -188,15 +196,24 @@ public:
     const Handle<Swatch>& TryGetSwatchById(SwatchId swatchId) const;
     const Handle<Swatch>& GetOrCreateSwatch(Name swatchName);
 
-    /// Read the cached last active swatch id value
-    /// only call from sim thread or from dependant task thread (e.g during View async collection)
-    HYP_FORCE_INLINE SwatchId GetActiveSwatchId() const
+    //-- Layers
+
+    HYP_METHOD()
+    HYP_FORCE_INLINE const LayersMask& GetActiveLayers() const
     {
-        return m_activeSwatchId;
+        return m_activeLayers;
     }
 
-    HYP_FIELD()
-    ScriptableDelegate<void, Name> OnActiveSwatchChanged;
+    HYP_METHOD()
+    Array<Name> GetLayerNames() const;
+
+    HYP_METHOD()
+    const Handle<Layer>& TryGetLayer(Name layerName);
+
+    HYP_METHOD()
+    const Handle<Layer>& TryGetLayerById(LayerId layerId) const;
+
+    //-- Scenes
 
     HYP_METHOD()
     void AddScene(const Handle<Scene>& scene, bool addToStreamingLayer = true);
@@ -221,11 +238,24 @@ public:
         return m_scenes;
     }
 
+    //-- View
+
     HYP_METHOD()
     void AddView(View* view);
 
     HYP_METHOD()
     void RemoveView(View* view);
+
+    /*! \brief Get Views attached to this World. Buffered so it is safe to access from either the render thread or sim thread. */
+    Span<View* const> GetViews() const;
+
+    /*! \brief Copy this frame's Views into render thread owned storage */
+    void SnapshotViewsForRender();
+
+    /*! \brief Adds a View for processing asynchronously for this frame. */
+    void ProcessViewAsync(View* view);
+
+    //-- Systems
 
     /*! \brief Adds a System to the World.
      *  \param[in] system The System to add.
@@ -299,27 +329,18 @@ public:
         return GetSystem<SystemType>() != nullptr;
     }
 
+    //--
+
     HYP_FORCE_INLINE const Array<SystemExecutionGroup*>& GetSystemExecutionGroups() const
     {
         return m_systemExecutionGroups;
     }
-
-    /*! \brief Get Views attached to this World. Buffered so it is safe to access from either the render thread or sim thread. */
-    Span<View* const> GetViews() const;
-
-    /*! \brief Copy this frame's Views into render thread owned storage, so the sim thread is free to collect
-     *  the next frame's Views while this one is still being drawn.
-     *  Call from the render thread while the sim/render exclusive window is held. */
-    void SnapshotViewsForRender();
 
     /*! \brief Gets the View responsible for collecting objects used in ray tracing. Will return nullptr if ray tracing is not enabled. */
     HYP_FORCE_INLINE View* GetRayTracingView() const
     {
         return m_rayTracingView;
     }
-
-    /*! \brief Adds a View for processing asynchronously for this frame. */
-    void ProcessViewAsync(View* view);
 
     void CollectScenes(Array<Scene*, SceneTempAllocator>& outScenes);
     void CollectCameras(Array<Camera*, SceneTempAllocator>& outCameras);
@@ -334,6 +355,12 @@ public:
 
     HYP_FIELD()
     static ScriptableDelegate<void, World*, Scene* /* scene */> OnSceneRemoved;
+
+    HYP_FIELD()
+    static ScriptableDelegate<void, Name> OnActiveSwatchChanged;
+
+    HYP_FIELD()
+    static ScriptableDelegate<void, LayersMask> OnActiveLayersChanged;
 
 private:
     void SyncPhysicsToEntities();
@@ -364,6 +391,13 @@ private:
     HYP_METHOD(Property = "Systems", Serialize)
     Array<Handle<SystemBase>> SerializeSystems() const;
 
+    // Must load before we load the actual Layers!
+    HYP_METHOD(Property = "ActiveLayers", Serialize, LoadOrder = 1)
+    void DeserializeActiveLayers(const Array<Name>& activeLayers);
+
+    HYP_METHOD(Property = "ActiveLayers", Serialize)
+    Array<Name> SerializeActiveLayers() const;
+
     //--
 
     HYP_FIELD(Property = "GameInstance", Transient)
@@ -375,14 +409,26 @@ private:
     HYP_FIELD(Property = "Scenes", Transient)
     Array<Handle<Scene>> m_scenes;
 
+    //-- Swatches
+
     HYP_FIELD(Property = "Swatches", Serialize, LoadOrder = 0)
     Array<Handle<Swatch>> m_swatches;
 
     HYP_FIELD(Property = "ActiveSwatch", Serialize, LoadOrder = 0)
     Name m_activeSwatch;
-
-    // Cached for fast access
+    
+    HYP_FIELD(Property = "ActiveSwatchId", Transient)
     SwatchId m_activeSwatchId;
+
+    //-- Laeyrs
+
+    HYP_FIELD(Property = "Layers", Serialize, LoadOrder = 0)
+    Array<Handle<Layer>> m_layers;
+
+    HYP_FIELD(Property = "ActiveLayers", Serialize)
+    LayersMask m_activeLayers;
+
+    //-- Systems
 
     // systems must load after flags are set
     HYP_FIELD(Property = "Systems", LoadOrder = 200)
@@ -391,16 +437,20 @@ private:
     Array<SystemExecutionGroup*> m_systemExecutionGroups;
     SystemExecutionGroup* m_rootSynchronousExecutionGroup;
 
+    //-- Views
+
+    /// Sim thread owned views list
     Array<View*, SceneAllocator> m_views;
 
-    // Views, buffered so the render thread can safely read from it
+    /// Views, buffered so the render thread can safely read from it
     Array<View*> m_viewsPerFrame[RingBufferDepth];
 
-    // Render thread's own copy, taken during the exclusive window. The sim starts collecting the next
-    // frame's Views before this frame is submitted, so it can't read m_viewsPerFrame during passes.
+    /// Render thread's own copy, taken during the exclusive window
     Array<View*> m_viewsRenderSnapshot;
 
     View* m_rayTracingView;
+
+    //--
 
     SubsystemsMap m_subsystems;
     Array<Subsystem*, SceneAllocator> m_subsystemsArray;

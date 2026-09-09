@@ -29,6 +29,7 @@
 #include <Scene/FogVolume.hpp>
 #include <Scene/EntityManager.hpp>
 #include <Scene/Prefab.hpp>
+#include <Scene/Swatch.hpp>
 
 #include <Scene/System.hpp>
 #include <Scene/Systems/ScriptSystem.hpp>
@@ -396,16 +397,13 @@ struct SwatchOverrideTransformEditState
 {
     Handle<Entity> entity;
     Name swatch;
-    bool routeToOverride = false; // override mode: edits land in the active swatch's set
-    bool wasOverridden = false;   // LocalTransform was overridden in the active swatch's set
+    bool routeToOverride = false;   // override mode: edits land in the active swatch's set
+    bool wasOverridden = false;     // LocalTransform was overridden in the active swatch's set
     Transform preTransform;
     Transform postTransform;
 };
 
-/*! Captures swatch-override state for entities affected by a gizmo transform edit.
- *  In override mode, the post-drag local transform is written into the active swatch's override
- *  set (created and applied if needed). Otherwise, an existing override of LocalTransform in the
- *  active swatch's set is kept in sync with the base edit. */
+/*! Captures swatch-override state for entities affected by a gizmo transform edit */
 template <class T>
 static Array<SwatchOverrideTransformEditState> CaptureSwatchOverrideTransformEdits(
     const Array<Pair<Handle<Node>, T>>& nodeData,
@@ -449,7 +447,6 @@ static Array<SwatchOverrideTransformEditState> CaptureSwatchOverrideTransformEdi
 
         if (overrideMode)
         {
-            // Override mode: ensure the active swatch's set exists and is applied
             if (!hasSet)
             {
                 overrideSystem->AddSwatchOverrideSet(entity, activeSwatch);
@@ -5966,6 +5963,12 @@ void EditorSubsystem::UpdateBakeStatus()
         return;
     }
 
+    Array<Name> swatchNames = world->GetSwatchNames();
+    Array<Handle<Swatch>> swatches = MapToArray(swatchNames, [world](Name swatchName)
+        {
+            return world->TryGetSwatch(swatchName);
+        });
+
     Array<String, EditorAllocator> lightmapVolumeNames;
     Array<String, EditorAllocator> reflectionProbeNames;
     Array<String, EditorAllocator> irradianceProbeNames;
@@ -5989,8 +5992,15 @@ void EditorSubsystem::UpdateBakeStatus()
 
             bool isOutOfDate = false;
 
-            for (const Handle<Swatch>& swatch : SceneHelpers::GetTargetSwatches(*volume))
+            for (const Handle<Swatch>& swatch : swatches)
             {
+                Assert(swatch.IsValid());
+
+                if (!swatch.IsValid())
+                {
+                    continue;
+                }
+
                 Baking::BakeLayer& bakeLayer = swatch->bakeLayer;
 
                 uint64 storedEpoch;
@@ -6044,8 +6054,15 @@ void EditorSubsystem::UpdateBakeStatus()
 
             bool isOutOfDate = false;
 
-            for (const Handle<Swatch>& swatch : SceneHelpers::GetTargetSwatches(*probe))
+            for (const Handle<Swatch>& swatch : swatches)
             {
+                Assert(swatch.IsValid());
+
+                if (!swatch.IsValid())
+                {
+                    continue;
+                }
+
                 uint64 storedEpoch;
 
                 if (!swatch->bakeLayer.TryGetAssetEpoch<Baking::BakeLayerCategory::LightReceiver>(*probe, storedEpoch))

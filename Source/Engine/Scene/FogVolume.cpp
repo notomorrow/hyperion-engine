@@ -347,19 +347,11 @@ void FogVolume::Rebake()
         return;
     }
 
-    // Bake only the active swatch
     const Handle<Swatch>& swatch = world->GetActiveSwatch();
 
     if (!swatch.IsValid())
     {
         HYP_LOG(Editor, Error, "Cannot bake {}: could not resolve the active swatch", GetName());
-
-        return;
-    }
-
-    if (!HasNoSwatches() && !IsInSwatch(swatch->swatchId))
-    {
-        HYP_LOG(Editor, Error, "Cannot bake {}: it is not in the active swatch '{}'", GetName(), swatch->name);
 
         return;
     }

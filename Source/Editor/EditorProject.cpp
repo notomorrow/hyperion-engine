@@ -22,6 +22,7 @@
 
 #include <Scene/Scene.hpp>
 #include <Scene/World.hpp>
+#include <Scene/Swatch.hpp>
 #include <Scene/EntityManager.hpp>
 #include <Scene/Systems/ScriptSystem.hpp>
 #include <Scene/Systems/SwatchOverrideSystem.hpp>

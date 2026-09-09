@@ -10,6 +10,7 @@
 #include <Scene/Scene.hpp>
 #include <Scene/World.hpp>
 #include <Scene/Node.hpp>
+#include <Scene/Swatch.hpp>
 #include <Scene/DetachedScene.hpp>
 
 #include <Scene/EntityManager.hpp>
@@ -61,7 +62,7 @@ Entity::Entity(Name name)
       m_entityManager(nullptr),
       m_renderProxyVersion(0),
       m_transformChanged(false),
-      m_swatchMask {}
+      m_layersMask {}
 {
 }
 
@@ -86,33 +87,33 @@ Entity::~Entity()
     m_entityManager = nullptr;
 }
 
-void Entity::AddToSwatch(SwatchId swatchId)
+void Entity::AddToLayer(LayerId layerId)
 {
-    if (uint32(swatchId) >= MaxSwatchesPerWorld)
+    if (uint32(layerId) >= MaxLayersPerWorld)
     {
         return;
     }
 
-    m_swatchMask.Set(uint32(swatchId), true);
+    m_layersMask.Set(uint32(layerId), true);
 
     SetNeedsRenderProxyUpdate();
     MarkDirty();
 }
 
-void Entity::RemoveFromSwatch(SwatchId swatchId)
+void Entity::RemoveFromLayer(LayerId layerId)
 {
-    if (uint32(swatchId) >= MaxSwatchesPerWorld)
+    if (uint32(layerId) >= MaxLayersPerWorld)
     {
         return;
     }
 
-    m_swatchMask.Set(uint32(swatchId), false);
+    m_layersMask.Set(uint32(layerId), false);
 
     SetNeedsRenderProxyUpdate();
     MarkDirty();
 }
 
-bool Entity::IsInSwatchByName(Name swatchName) const
+bool Entity::IsInLayerByName(Name layerName) const
 {
     World* world = GetWorld();
 
@@ -121,17 +122,17 @@ bool Entity::IsInSwatchByName(Name swatchName) const
         return false;
     }
 
-    const Handle<Swatch>& swatch = world->TryGetSwatch(swatchName);
+    const Handle<Layer>& layer = world->TryGetLayer(layerName);
 
-    if (!swatch)
+    if (!layer)
     {
         return false;
     }
 
-    return IsInSwatch(swatch->swatchId);
+    return IsInLayer(layer->layerId);
 }
 
-void Entity::AddToSwatchByName(Name swatchName)
+void Entity::AddToLayerByName(Name layerName)
 {
     World* world = GetWorld();
 
@@ -140,17 +141,17 @@ void Entity::AddToSwatchByName(Name swatchName)
         return;
     }
 
-    const Handle<Swatch>& swatch = world->TryGetSwatch(swatchName);
+    const Handle<Layer>& layer = world->TryGetLayer(layerName);
 
-    if (!swatch)
+    if (!layer)
     {
         return;
     }
 
-    AddToSwatch(swatch->swatchId);
+    AddToLayer(layer->layerId);
 }
 
-void Entity::RemoveFromSwatchByName(Name swatchName)
+void Entity::RemoveFromLayerByName(Name layerName)
 {
     World* world = GetWorld();
 
@@ -159,15 +160,16 @@ void Entity::RemoveFromSwatchByName(Name swatchName)
         return;
     }
 
-    const Handle<Swatch>& swatch = world->TryGetSwatch(swatchName);
+    const Handle<Layer>& layer = world->TryGetLayer(layerName);
 
-    if (!swatch)
+    if (!layer)
     {
         return;
     }
 
-    RemoveFromSwatch(swatch->swatchId);
+    RemoveFromLayer(layer->layerId);
 }
+
 Handle<Node> Entity::Clone() const
 {
     // Clone Node base
@@ -204,8 +206,8 @@ Handle<Node> Entity::Clone() const
         Array<Name> serializedTags = SerializeTags();
         cloned->DeserializeTags(serializedTags);
 
-        Array<Name> serializedSwatches = SerializeSwatches();
-        cloned->DeserializeSwatches(serializedSwatches);
+        Array<Name> serializedLayers = SerializeLayers();
+        cloned->DeserializeLayers(serializedLayers);
 
         // The SwatchOverridesComponent is excluded from component serialization, so copy it explicitly.
         if (SwatchOverridesComponent* overrides = entityManager->TryGetComponent<SwatchOverridesComponent>(this))
@@ -243,7 +245,6 @@ void Entity::SetPendingSwatchOverrides(Array<EntitySwatchOverrideSet>&& sets)
 
     for (EntitySwatchOverrideSet& set : sets)
     {
-        // scenes may carry a "Default" set from before we changed "Default" == Base value set. drop it.
         if (IsDefaultSwatch(set.swatchName))
         {
             continue;
@@ -403,17 +404,17 @@ void Entity::OnAddedToWorld(World* world)
             EntityTag::UpdateReplication>(this);
     }
 
-    if (m_entityInitInfo.swatchNames.Any())
+    if (m_entityInitInfo.layerNames.Any())
     {
-        for (size_t i = 0; i < m_entityInitInfo.swatchNames.Size();)
+        for (size_t i = 0; i < m_entityInitInfo.layerNames.Size();)
         {
-            const Name swatchName = m_entityInitInfo.swatchNames[i];
+            const Name layerName = m_entityInitInfo.layerNames[i];
 
-            const Handle<Swatch>& swatch = world->TryGetSwatch(swatchName);
+            const Handle<Layer>& layer = world->TryGetLayer(layerName);
 
-            if (!swatch)
+            if (!layer)
             {
-                HYP_LOG(Entity, Warning, "Entity {} references unknown Swatch '{}'", GetName(), swatchName);
+                HYP_LOG(Entity, Warning, "Entity {} references unknown Layer '{}'", GetName(), layerName);
 
                 // don't remove from names list; we want to maybe add it later to the appropriate world
                 ++i;
@@ -421,19 +422,19 @@ void Entity::OnAddedToWorld(World* world)
                 continue;
             }
 
-            AddToSwatch(swatch->swatchId);
+            AddToLayer(layer->layerId);
 
-            m_entityInitInfo.swatchNames.EraseAt(i);
+            m_entityInitInfo.layerNames.EraseAt(i);
         }
 
         // drop allocation if possible
-        if (m_entityInitInfo.swatchNames.Empty())
+        if (m_entityInitInfo.layerNames.Empty())
         {
-            m_entityInitInfo.swatchNames.Clear();
+            m_entityInitInfo.layerNames.Clear();
         }
     }
 
-    // Apply property overrides for the World's active swatch, if any
+    // Apply property overrides for the World's active Swatch, if any
     if (SwatchOverrideSystem* swatchOverrideSystem = world->GetSystem<SwatchOverrideSystem>())
     {
         swatchOverrideSystem->OnEntityAddedToWorld(this);
@@ -443,30 +444,30 @@ void Entity::OnAddedToWorld(World* world)
 void Entity::OnRemovedFromWorld(World* world)
 {
     // Clear our the names list
-    m_entityInitInfo.swatchNames.SetCapacity(m_entityInitInfo.swatchNames.Size() + m_swatchMask.CountOnes());
+    m_entityInitInfo.layerNames.SetCapacity(m_entityInitInfo.layerNames.Size() + m_layersMask.CountOnes());
 
-    // init swatchNames as we otherwise won't be able to reach the swatches we're attached to
-    for (uint64 bit : m_swatchMask)
+    // init layerNames as we otherwise won't be able to reach the swatches we're attached to
+    for (uint64 bit : m_layersMask)
     {
-        const Handle<Swatch>& swatch = world->TryGetSwatchById(SwatchId(bit));
+        const Handle<Layer>& layer = world->TryGetLayerById(LayerId(bit));
 
-        if (!swatch)
+        if (!layer)
         {
-            HYP_LOG(Entity, Warning, "Entity {} references invalid Swatch bit '{}'", GetName(), bit);
+            HYP_LOG(Entity, Warning, "Entity {} references invalid Layer bit '{}'", GetName(), bit);
 
             continue;
         }
 
-        if (m_entityInitInfo.swatchNames.Contains(swatch->name))
+        if (m_entityInitInfo.layerNames.Contains(layer->name))
         {
             continue;
         }
 
-        m_entityInitInfo.swatchNames.PushBack(swatch->name);
+        m_entityInitInfo.layerNames.PushBack(layer->name);
     }
 
-    // zero out the transient swatch mask bits
-    m_swatchMask = {};
+    // zero out the transient Layerid mask bits
+    m_layersMask = {};
 }
 
 void Entity::OnAddedToScene(Scene* scene)
@@ -1016,11 +1017,11 @@ void Entity::DeserializeTags(const Array<Name>& tags)
     }
 }
 
-Array<Name> Entity::SerializeSwatches() const
+Array<Name> Entity::SerializeLayers() const
 {
     Array<Name> result;
 
-    if (HasNoSwatches())
+    if (HasNoLayers())
     {
         return result;
     }
@@ -1032,22 +1033,22 @@ Array<Name> Entity::SerializeSwatches() const
         return result;
     }
 
-    for (uint64 bit : m_swatchMask)
+    for (uint64 bit : m_layersMask)
     {
-        const Handle<Swatch>& swatch = world->TryGetSwatchById(SwatchId(bit));
+        const Handle<Layer>& layer = world->TryGetLayerById(LayerId(bit));
 
-        if (!swatch)
+        if (!layer)
         {
             continue;
         }
 
-        result.PushBack(swatch->name);
+        result.PushBack(layer->name);
     }
 
     return result;
 }
 
-void Entity::DeserializeSwatches(const Array<Name>& swatchNames)
+void Entity::DeserializeLayers(const Array<Name>& layerNames)
 {
     World* world = GetWorld();
 
@@ -1056,43 +1057,43 @@ void Entity::DeserializeSwatches(const Array<Name>& swatchNames)
         // Defer till we are attached to the world.
 
         // Drop dynamic allocation, if possible. Or reserve enough memory upfront.
-        m_entityInitInfo.swatchNames.SetCapacity(m_entityInitInfo.swatchNames.Size() + swatchNames.Size());
+        m_entityInitInfo.layerNames.SetCapacity(m_entityInitInfo.layerNames.Size() + layerNames.Size());
 
-        for (Name swatchName : swatchNames)
+        for (Name layerName : layerNames)
         {
-            if (!m_entityInitInfo.swatchNames.Contains(swatchName))
+            if (!m_entityInitInfo.layerNames.Contains(layerName))
             {
-                m_entityInitInfo.swatchNames.PushBack(swatchName);
+                m_entityInitInfo.layerNames.PushBack(layerName);
             }
         }
 
         return;
     }
 
-    for (const Name swatchName : swatchNames)
+    for (const Name layerName : layerNames)
     {
-        const Handle<Swatch>& swatch = world->TryGetSwatch(swatchName);
+        const Handle<Layer>& layer = world->TryGetLayer(layerName);
 
-        if (!swatch)
+        if (!layer)
         {
-            HYP_LOG(Serialization, Warning, "Entity {} references swatch '{}' which does not exist on World '{}'",
+            HYP_LOG(Serialization, Warning, "Entity {} references Layer '{}' which does not exist on World '{}'",
                 GetName(),
-                swatchName,
+                layerName,
                 world->GetName());
 
             continue;
         }
 
-        const SwatchId swatchId = swatch->swatchId;
+        const LayerId layerId = layer->layerId;
 
-        if (uint32(swatchId) >= MaxSwatchesPerWorld)
+        if (uint32(layerId) >= MaxLayersPerWorld)
         {
-            HYP_LOG(Serialization, Warning, "Swatch '{}' has invalid SwatchId {}", swatchName, uint32(swatchId));
+            HYP_LOG(Serialization, Warning, "Layer '{}' has invalid LayerId {}", layerName, uint32(layerId));
 
             continue;
         }
 
-        m_swatchMask.Set(uint32(swatchId), true);
+        m_layersMask.Set(uint32(layerId), true);
     }
 }
 

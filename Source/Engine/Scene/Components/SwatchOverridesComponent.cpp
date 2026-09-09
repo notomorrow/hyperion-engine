@@ -18,10 +18,6 @@
 
 namespace Hyperion {
 
-//-- $SwatchOverrides schema section parsing --
-
-// The parser types each entry of the section against the owner Entity's own class schema
-// (see Parser::ParseSchemaSection), so the collected values arrive fully typed.
 static bool HandleSwatchOverridesSection(BoxedValue& owner, Array<HMF::SchemaSectionEntry>&& entries)
 {
     Entity* entity = nullptr;
@@ -67,23 +63,19 @@ static bool HandleSwatchOverridesSection(BoxedValue& owner, Array<HMF::SchemaSec
         sets.PushBack(std::move(set));
     }
 
-    // An Entity is generally not registered with an EntityManager while its HMF data is being
-    // parsed (e.g. prefab root data, or Entities referenced from a World mid-load), even though
-    // it has a (detached) Scene. Stash the parsed sets on the Entity; they are written into the
-    // SwatchOverridesComponent once the Entity has been registered (Entity::Init).
     entity->SetPendingSwatchOverrides(std::move(sets));
     entity->FlushPendingSwatchOverrides();
 
     return true;
 }
 
-//-- DI for $SwatchOverrides
+//-- DI for $Swatches parsing.
 
 static struct InitializeSwatchOverridesSinks
 {
     InitializeSwatchOverridesSinks()
     {
-        HMF::SetParseSchemaSectionFn("SwatchOverrides", &HandleSwatchOverridesSection);
+        HMF::SetParseSchemaSectionFn("Swatches", &HandleSwatchOverridesSection);
     }
 } s_installSwatchOverridesSink;
 

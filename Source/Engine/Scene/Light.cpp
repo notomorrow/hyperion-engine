@@ -44,6 +44,8 @@
 #ifdef HYP_EDITOR
 #include <Baking/BakerSubsystem.hpp>
 #include <Baking/ShadowMap/ShadowMapBakeData.hpp>
+
+#include <Scene/Swatch.hpp> // For Swatch::bakeLayer access
 #endif
 
 #include <Light.generated.inl>
@@ -581,19 +583,11 @@ void Light::BakeStaticShadows()
         return;
     }
 
-    // Bake only the active swatch
     const Handle<Swatch>& swatch = world->GetActiveSwatch();
 
     if (!swatch.IsValid())
     {
         HYP_LOG(Editor, Error, "Cannot bake Light {}: could not resolve the active swatch", GetName());
-
-        return;
-    }
-
-    if (!HasNoSwatches() && !IsInSwatch(swatch->swatchId))
-    {
-        HYP_LOG(Editor, Error, "Cannot bake Light {}: it is not in the active swatch '{}'", GetName(), swatch->name);
 
         return;
     }

@@ -964,10 +964,10 @@ namespace Hyperion.Editor.ViewModels
                             }
 
                             // A new/renamed active swatch changes what's assignable in the per-entity
-                            // "Swatches" section of the Inspector too - refresh it if it's showing.
-                            if (Inspector.EntitySwatches != null)
+                            // "Layers" section of the Inspector too - refresh it if it's showing.
+                            if (Inspector.EntityLayers != null)
                             {
-                                _ = Inspector.EntitySwatches.RefreshAsync();
+                                _ = Inspector.EntityLayers.RefreshAsync();
                             }
 
                             // The inspector's swatch-override edit target follows the active swatch

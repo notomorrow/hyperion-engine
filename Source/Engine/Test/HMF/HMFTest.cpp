@@ -2208,7 +2208,7 @@ CameraOrthoRect {
                 String overrideText;
                 ObjectToHMF(entity->InstanceClass(), BoxedValue(entity), overrideText, &opts);
 
-                Check("SwatchOverrides: section present", overrideText.Contains("$SwatchOverrides"), overrideText);
+                Check("Swatches: section present", overrideText.Contains("$Swatches"), overrideText);
                 Check("SwatchOverrides: Morning key present", overrideText.Contains("Morning"), overrideText);
                 Check("SwatchOverrides: Evening key present", overrideText.Contains("Evening"), overrideText);
                 Check("SwatchOverrides: NodeFlags override emitted",

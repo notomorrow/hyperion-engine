@@ -12,6 +12,7 @@
 #include <Scene/EntityManager.hpp>
 #include <Scene/Scene.hpp>
 #include <Scene/World.hpp>
+#include <Scene/Swatch.hpp>
 
 #include <Core/Reflection/Property.hpp>
 #include <Core/Reflection/Field.hpp>

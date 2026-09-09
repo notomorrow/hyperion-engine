@@ -105,17 +105,34 @@ namespace Hyperion.Editor
             // The dock layout hosts the panel content inside its own template namescope, so the
             // named controls are not reachable via FindControl from the window. Locate them by
             // walking the visual tree once the dock has rendered and laid out.
+            //
+            // The dock realizes its content during the first layout pass, which runs at Render
+            // priority - after any dispatcher priority we could post at - so a single posted
+            // callback races the layout and misses the controls. Drive the setup off
+            // LayoutUpdated until every control has been located.
             Dispatcher.UIThread.Post(OnWindowLoaded, DispatcherPriority.Loaded);
+            DockControl.LayoutUpdated += OnDockControlLayoutUpdated;
         }
-        
+
+        private void OnDockControlLayoutUpdated(object? sender, EventArgs e)
+        {
+            OnWindowLoaded();
+        }
+
         private void OnWindowLoaded()
         {
-            InitializeViewportControl();
-            InitializeSceneFlyout();
-            SetupSceneHierarchyDragDrop();
-            SetupContentBrowserDragDrop();
-            SetupViewportDropTarget();
-            CaptureDockContents();
+            bool complete =
+                InitializeViewportControl()
+                & InitializeSceneFlyout()
+                & SetupSceneHierarchyDragDrop()
+                & SetupContentBrowserDragDrop()
+                & SetupViewportDropTarget();
+
+            if (complete)
+            {
+                DockControl.LayoutUpdated -= OnDockControlLayoutUpdated;
+                CaptureDockContents();
+            }
         }
 
         private void OnResetLayoutClick(object? sender, RoutedEventArgs e)
@@ -565,16 +582,14 @@ namespace Hyperion.Editor
             return this.GetVisualDescendants().OfType<T>().FirstOrDefault(c => c.Name == name);
         }
 
-        private void InitializeViewportControl()
+        private bool InitializeViewportControl()
         {
             if (_editorViewport != null)
-                return;
+                return true;
 
             _editorViewport = FindVisualChildByName<EditorViewportControl>("EditorViewportControl");
-            if (_editorViewport == null)
-                return;
-
-            _editorViewport.Focus();
+            _editorViewport?.Focus();
+            return _editorViewport != null;
         }
 
         private bool IsPinnedPanelActive()
@@ -587,16 +602,19 @@ namespace Hyperion.Editor
             return DockControl.Factory?.IsDockablePinned(active, root) == true;
         }
 
-        private void InitializeSceneFlyout()
+        private bool InitializeSceneFlyout()
         {
             if (_sceneDropDown != null)
-                return;
+                return true;
 
             _sceneDropDown = FindVisualChildByName<DropDownButton>("SceneDropDown");
             if (_sceneDropDown?.Flyout is Flyout flyout)
             {
                 flyout.Opened += OnSceneFlyoutOpened;
+                return true;
             }
+
+            return _sceneDropDown != null;
         }
 
         // While a property's text box has focus its view model must not overwrite the text from an
@@ -722,14 +740,14 @@ namespace Hyperion.Editor
             }
         }
 
-        private void SetupSceneHierarchyDragDrop()
+        private bool SetupSceneHierarchyDragDrop()
         {
             if (_sceneTree != null)
-                return;
+                return true;
 
             _sceneTree = FindVisualChildByName<TreeView>("SceneHierarchyTreeView");
             if (_sceneTree == null)
-                return;
+                return false;
 
             DragDrop.SetAllowDrop(_sceneTree, true);
 
@@ -748,6 +766,7 @@ namespace Hyperion.Editor
             {
                 _sceneTreeScrollViewer = _sceneTree.GetVisualDescendants().OfType<ScrollViewer>().FirstOrDefault();
             };
+            return true;
         }
 
         private void OnSceneTreePointerPressed(object? sender, PointerPressedEventArgs e)
@@ -1063,19 +1082,20 @@ namespace Hyperion.Editor
             return null;
         }
 
-        private void SetupContentBrowserDragDrop()
+        private bool SetupContentBrowserDragDrop()
         {
             if (_contentBrowserAssetList != null)
-                return;
+                return true;
 
             _contentBrowserAssetList = FindVisualChildByName<ListBox>("ContentBrowserAssetList");
             if (_contentBrowserAssetList == null)
-                return;
+                return false;
 
             DragDrop.SetAllowDrop(_contentBrowserAssetList, true);
 
             _contentBrowserAssetList.AddHandler(InputElement.PointerPressedEvent, OnContentBrowserPointerPressed, RoutingStrategies.Tunnel);
             _contentBrowserAssetList.AddHandler(InputElement.PointerMovedEvent, OnContentBrowserPointerMoved, RoutingStrategies.Tunnel);
+            return true;
         }
 
         private void OnContentBrowserPointerPressed(object? sender, PointerPressedEventArgs e)
@@ -1148,18 +1168,19 @@ namespace Hyperion.Editor
             return null;
         }
 
-        private void SetupViewportDropTarget()
+        private bool SetupViewportDropTarget()
         {
             if (_viewportDropTarget != null)
-                return;
+                return true;
 
             _viewportDropTarget = FindVisualChildByName<Border>("ViewportDropTarget");
             if (_viewportDropTarget == null)
-                return;
+                return false;
 
             DragDrop.SetAllowDrop(_viewportDropTarget, true);
             _viewportDropTarget.AddHandler(DragDrop.DragOverEvent, OnViewportDragOver);
             _viewportDropTarget.AddHandler(DragDrop.DropEvent, OnViewportDrop);
+            return true;
         }
 
         private void OnViewportDragOver(object? sender, DragEventArgs e)
