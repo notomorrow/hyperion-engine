@@ -132,7 +132,7 @@ DECLARE_BUFFER_DYNAMIC(DeferredPass, CBuffer) cbuffer CBuffer
 
 #ifdef REFLECTIONS_ONLY
 #define HYP_DEFERRED_NO_PROBE_IRRADIANCE
-#elif defined(SSR_ENABLED) && !defined(RT_REFLECTIONS) && !defined(DEBUG_REFLECTIONS)
+#elif defined(SSR_ENABLED) && !defined(RT_REFLECTIONS)
 #define HYP_DEFERRED_NO_PROBE_REFLECTIONS
 #endif
 
@@ -232,6 +232,8 @@ PSOutput PSMain(PSInput input)
 
     irradiance.a = saturate(irradiance.a);
 
+    const float3 rawIrradiance = irradiance.rgb;
+
 #ifdef SSGI_ENABLED
     // Blend ssgi result into irradiance - if no hit, alpha will be zero or close to it so we can lerp it
     float4 ssgi = SAMPLE_TEXTURE_2D_LOD(sampler_linear, SSGIResultTexture, texcoord, 0);
@@ -274,7 +276,7 @@ PSOutput PSMain(PSInput input)
 #elif defined(DEBUG_REFLECTIONS)
     result = E * reflections.rgb * reflections.a;
 #elif defined(DEBUG_IRRADIANCE)
-    result = irradiance.rgb;
+    result = rawIrradiance;
 #elif defined(DEBUG_VELOCITY)
     float4 velocity = SAMPLE_TEXTURE_2D_LOD(sampler_linear, GBufferVelocityTexture, texcoord, 0);
     result = velocity.rgb;

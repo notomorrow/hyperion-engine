@@ -41,8 +41,10 @@
 namespace Hyperion {
 
 extern CVar<bool> g_cvHBAO;
+extern CVar<int> g_cvDeferredDebugVis;
 
 static StaticShaderPropertyId s_propHBAOEnabled { ShaderProperty(NAME("HBAO_ENABLED")) };
+static StaticShaderPropertyId s_propDebugIrradiance { ShaderProperty(NAME("DEBUG_IRRADIANCE")) };
 
 struct LightmapVolumeUniforms
 {
@@ -113,6 +115,11 @@ void LightmapPass::RenderToFramebuffer_Internal(Frame* frame, const RenderSetup&
     if (g_cvHBAO.Get())
     {
         shaderProperties.Add(s_propHBAOEnabled);
+    }
+
+    if (g_cvDeferredDebugVis.Get() == 2)
+    {
+        shaderProperties.Add(s_propDebugIrradiance);
     }
 
     cr << SetCurrentShader(ShaderDesc(NAME("ApplyLightmap"), shaderProperties));

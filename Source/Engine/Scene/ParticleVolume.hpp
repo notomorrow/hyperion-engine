@@ -36,6 +36,45 @@ public:
 
     void UpdateRenderProxy(struct RenderProxyParticleVolume* proxy);
 
+    HYP_METHOD(Property = "ParticleTexture")
+    const Handle<Texture>& GetParticleTexture() const
+    {
+        return texture;
+    }
+
+    HYP_METHOD(Property = "ParticleTexture")
+    void SetParticleTexture(const Handle<Texture>& particleTexture);
+
+    HYP_METHOD(Property = "ParticleMesh")
+    const Handle<Mesh>& GetParticleMesh() const
+    {
+        return mesh;
+    }
+
+    HYP_METHOD(Property = "ParticleMesh")
+    void SetParticleMesh(const Handle<Mesh>& particleMesh);
+
+    //-- Per-layer stuff
+
+    static Name GetParticleTexturePropertyName()
+    {
+        return NAME("ParticleTexture");
+    }
+
+    static Name GetParticleMeshPropertyName()
+    {
+        return NAME("ParticleMesh");
+    }
+
+    static Name BuildParticleTextureName(Name volumeName, Name layerName);
+    static Name BuildParticleMeshName(Name volumeName, Name layerName);
+
+    Handle<Texture> GetParticleTextureForLayer(Name layerName) const;
+    Handle<Mesh> GetParticleMeshForLayer(Name layerName) const;
+
+    void SetParticleTextureForLayer(const Handle<Texture>& particleTexture, Name layerName);
+    void SetParticleMeshForLayer(const Handle<Mesh>& particleMesh, Name layerName);
+
     HYP_FIELD(Property = "ParticleTexture", Serialize, Editor, Title = "Particle Texture")
     Handle<Texture> texture;
 

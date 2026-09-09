@@ -61,6 +61,8 @@ public:
         return TypeOf<FogVolume>();
     }
 
+    virtual Name GetBakeLayerName() const override;
+
 protected:
     virtual BakeDataBase& GetBakeData() override
     {

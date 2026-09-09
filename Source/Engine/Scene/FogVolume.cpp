@@ -9,8 +9,11 @@
 #include <Scene/FogVolume.hpp>
 #include <Scene/Scene.hpp>
 #include <Scene/World.hpp>
+#include <Scene/Layer.hpp>
 
 #include <Scene/Util/SceneHelpers.hpp>
+
+#include <Scene/Systems/LayerOverrideSystem.hpp>
 
 #include <Rendering/Texture.hpp>
 #include <Rendering/RenderProxy.hpp>
@@ -40,6 +43,17 @@ namespace Hyperion {
 EDITOR_API HYP_DECLARE_LOG_CHANNEL(Editor);
 #endif // HYP_EDITOR
 
+namespace {
+
+LayerOverrideSystem* GetLayerOverrideSystem(const FogVolume* volume)
+{
+    World* world = volume->GetWorld();
+
+    return world ? world->GetSystem<LayerOverrideSystem>() : nullptr;
+}
+
+} // namespace
+
 FogVolume::FogVolume()
 {
 }
@@ -62,33 +76,222 @@ FogVolume::~FogVolume()
     }
 }
 
-void FogVolume::SetTextures(
-    const Handle<Texture>& volumeTexture,
-    const Handle<Texture>& noiseTexture)
+void FogVolume::SetVolumeTexture(const Handle<Texture>& volumeTexture)
 {
-    if (m_volumeTexture != volumeTexture)
+    if (m_volumeTexture == volumeTexture)
     {
-        if (m_volumeTexture)
-        {
-            EnqueueDeletion(std::move(m_volumeTexture));
-        }
-
-        m_volumeTexture = volumeTexture;
+        return;
     }
 
-    if (m_noiseTexture != noiseTexture)
+    if (m_volumeTexture)
     {
-        if (m_noiseTexture)
-        {
-            EnqueueDeletion(std::move(m_noiseTexture));
-        }
-
-        m_noiseTexture = noiseTexture;
+        EnqueueDeletion(std::move(m_volumeTexture));
     }
+
+    m_volumeTexture = volumeTexture;
 
     SetNeedsRenderProxyUpdate();
     MarkDirty();
 }
+
+void FogVolume::SetNoiseTexture(const Handle<Texture>& noiseTexture)
+{
+    if (m_noiseTexture == noiseTexture)
+    {
+        return;
+    }
+
+    if (m_noiseTexture)
+    {
+        EnqueueDeletion(std::move(m_noiseTexture));
+    }
+
+    m_noiseTexture = noiseTexture;
+
+    SetNeedsRenderProxyUpdate();
+    MarkDirty();
+}
+
+void FogVolume::SetTextures(
+    const Handle<Texture>& volumeTexture,
+    const Handle<Texture>& noiseTexture)
+{
+    SetVolumeTexture(volumeTexture);
+    SetNoiseTexture(noiseTexture);
+}
+
+Name FogVolume::BuildVolumeTextureName(Name volumeName, Name layerName)
+{
+    if (!layerName.IsValid() || IsDefaultLayer(layerName))
+    {
+        return NAME_FMT("FogVolume_{}_DataMap", volumeName);
+    }
+
+    return NAME_FMT("FogVolume_{}_{}_DataMap", volumeName, layerName);
+}
+
+Name FogVolume::BuildNoiseTextureName(Name volumeName, Name layerName)
+{
+    if (!layerName.IsValid() || IsDefaultLayer(layerName))
+    {
+        return NAME_FMT("FogVolume_{}_NoiseMap", volumeName);
+    }
+
+    return NAME_FMT("FogVolume_{}_{}_NoiseMap", volumeName, layerName);
+}
+
+Handle<Texture> FogVolume::GetVolumeTextureForLayer(Name layerName) const
+{
+    if (!layerName.IsValid() || IsDefaultLayer(layerName))
+    {
+        return GetVolumeTexture();
+    }
+
+    LayerOverrideSystem* layerOverrideSystem = GetLayerOverrideSystem(this);
+
+    if (!layerOverrideSystem)
+    {
+        return GetVolumeTexture();
+    }
+
+    BoxedValue overrideValue;
+
+    if (!layerOverrideSystem->GetLayerOverrideValue(this, layerName, GetVolumeTexturePropertyName(), overrideValue))
+    {
+        return GetVolumeTexture();
+    }
+
+    if (overrideValue.Is<Handle<Texture>>())
+    {
+        return overrideValue.Get<Handle<Texture>>();
+    }
+
+    HYP_LOG(Scene, Warning, "Layer override '{}' on FogVolume '{}' is not a texture",
+        layerName, GetName());
+
+    return GetVolumeTexture();
+}
+
+Handle<Texture> FogVolume::GetNoiseTextureForLayer(Name layerName) const
+{
+    if (!layerName.IsValid() || IsDefaultLayer(layerName))
+    {
+        return GetNoiseTexture();
+    }
+
+    LayerOverrideSystem* layerOverrideSystem = GetLayerOverrideSystem(this);
+
+    if (!layerOverrideSystem)
+    {
+        return GetNoiseTexture();
+    }
+
+    BoxedValue overrideValue;
+
+    if (!layerOverrideSystem->GetLayerOverrideValue(this, layerName, GetNoiseTexturePropertyName(), overrideValue))
+    {
+        return GetNoiseTexture();
+    }
+
+    if (overrideValue.Is<Handle<Texture>>())
+    {
+        return overrideValue.Get<Handle<Texture>>();
+    }
+
+    HYP_LOG(Scene, Warning, "Layer override '{}' on FogVolume '{}' is not a texture",
+        layerName, GetName());
+
+    return GetNoiseTexture();
+}
+
+void FogVolume::SetTexturesForLayer(
+    const Handle<Texture>& volumeTexture,
+    const Handle<Texture>& noiseTexture,
+    Name layerName)
+{
+    if (!layerName.IsValid() || IsDefaultLayer(layerName))
+    {
+        SetTextures(volumeTexture, noiseTexture);
+
+        return;
+    }
+
+    LayerOverrideSystem* layerOverrideSystem = GetLayerOverrideSystem(this);
+
+    if (!layerOverrideSystem)
+    {
+        HYP_LOG(Scene, Error, "Cannot assign textures for layer '{}' on FogVolume '{}': no LayerOverrideSystem",
+            layerName, GetName());
+
+        return;
+    }
+
+    if (GetVolumeTextureForLayer(layerName) == volumeTexture
+        && GetNoiseTextureForLayer(layerName) == noiseTexture)
+    {
+        return;
+    }
+
+    if (volumeTexture.IsValid())
+    {
+        volumeTexture->SetName(BuildVolumeTextureName(GetName(), layerName));
+
+        if (!volumeTexture->IsTransient())
+        {
+            GetCurrentAssetRegistry()->PutAssetUnique(volumeTexture);
+        }
+    }
+
+    if (noiseTexture.IsValid())
+    {
+        noiseTexture->SetName(BuildNoiseTextureName(GetName(), layerName));
+
+        if (!noiseTexture->IsTransient())
+        {
+            GetCurrentAssetRegistry()->PutAssetUnique(noiseTexture);
+        }
+    }
+
+    layerOverrideSystem->AddLayerOverrideSet(this, layerName);
+    layerOverrideSystem->SetLayerOverrideValue(this, layerName, GetVolumeTexturePropertyName(), BoxedValue(volumeTexture));
+    layerOverrideSystem->SetLayerOverrideValue(this, layerName, GetNoiseTexturePropertyName(), BoxedValue(noiseTexture));
+
+    SetNeedsRenderProxyUpdate();
+    MarkDirty();
+}
+
+#ifdef HYP_EDITOR
+
+Array<Name> FogVolume::GetBakedLayerNames() const
+{
+    Array<Name> layerNames;
+
+    if (m_volumeTexture.IsValid())
+    {
+        layerNames.PushBack(g_defaultLayerName);
+    }
+
+    LayerOverrideSystem* layerOverrideSystem = GetLayerOverrideSystem(this);
+
+    if (!layerOverrideSystem)
+    {
+        return layerNames;
+    }
+
+    const Name propertyName = GetVolumeTexturePropertyName();
+
+    for (Name layerName : layerOverrideSystem->GetSetLayerNames(this))
+    {
+        if (layerOverrideSystem->IsPropertyOverriddenInLayer(this, layerName, propertyName))
+        {
+            layerNames.PushBack(layerName);
+        }
+    }
+
+    return layerNames;
+}
+
+#endif // HYP_EDITOR
 
 void FogVolume::UpdateRenderProxy(RenderProxyFogVolume* proxy)
 {

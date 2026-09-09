@@ -180,6 +180,12 @@ PSOutput PSMain(PSInput input)
 
     const float4 irradiance = SAMPLE_TEXTURE_2D_LOD(SamplerLinear, IrradianceTexture, lightmapUV, 0) * irradianceWeight;
 
+#ifdef DEBUG_IRRADIANCE
+    output.color_output = float4(irradiance.rgb, 1.0);
+
+    return output;
+#endif
+
     const float3 diffuse_color = CalculateDiffuseColor(albedo.rgb, metalness);
 
     const float NdotV = max(0.0001, dot(N, V));

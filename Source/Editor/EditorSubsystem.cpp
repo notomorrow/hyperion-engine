@@ -2654,6 +2654,43 @@ void EditorSubsystem::CaptureMeshEditBaseline()
     m_meshEditState.baselineMesh = MakeWeakRef(mesh);
 }
 
+void EditorSubsystem::SyncBoxPhysicsShapeToMeshBounds(const Handle<Node>& node)
+{
+    Entity* entity = node.IsValid() ? DynamicCast<Entity>(node.Get()) : nullptr;
+
+    if (entity == nullptr)
+    {
+        return;
+    }
+
+    MeshComponent* meshComponent = entity->TryGetComponent<MeshComponent>();
+    RigidBodyComponent* rigidBodyComponent = entity->TryGetComponent<RigidBodyComponent>();
+
+    if (meshComponent == nullptr || !meshComponent->mesh.IsValid() || rigidBodyComponent == nullptr)
+    {
+        return;
+    }
+
+    if (!rigidBodyComponent->shape.IsValid() || rigidBodyComponent->shape->GetType() != PhysicsShapeType::Box)
+    {
+        return;
+    }
+
+    // Clone the shape first to prevent stomping something used by another
+    Handle<PhysicsShape> uniqueShape = EnsureUniquePhysicsShape(entity);
+    Handle<BoxPhysicsShape> boxShape = DynamicCast<BoxPhysicsShape>(uniqueShape);
+
+    if (!boxShape.IsValid())
+    {
+        return;
+    }
+
+    boxShape->SetAABB(meshComponent->mesh->GetAABB());
+    boxShape->Invalidate();
+
+    entity->AddTag<EntityTag::UpdatePhysicsShape>();
+}
+
 void EditorSubsystem::CommitMeshEdits()
 {
     AssertOnThread(g_simThread);
@@ -2708,6 +2745,7 @@ void EditorSubsystem::CommitMeshEdits()
                     if (Handle<Node> node = nodeWeak.Lock(); node.IsValid())
                     {
                         WriteAllMeshVertexPositions(node, /* lodIndex */ 0, finalPositions);
+                        editorSubsystem->SyncBoxPhysicsShapeToMeshBounds(node);
                     }
                 },
                 [nodeWeak, baselinePositions](EditorSubsystem* editorSubsystem, EditorProject* editorProject)
@@ -2715,6 +2753,7 @@ void EditorSubsystem::CommitMeshEdits()
                     if (Handle<Node> node = nodeWeak.Lock(); node.IsValid())
                     {
                         WriteAllMeshVertexPositions(node, /* lodIndex */ 0, baselinePositions);
+                        editorSubsystem->SyncBoxPhysicsShapeToMeshBounds(node);
                     }
                 }
             };
