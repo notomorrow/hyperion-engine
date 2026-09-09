@@ -47,7 +47,7 @@
 #include <Scene/Node.hpp>
 #include <Scene/Entity.hpp>
 #include <Scene/EntityManager.hpp>
-#include <Scene/Components/LayerOverridesComponent.hpp>
+#include <Scene/Components/SwatchOverridesComponent.hpp>
 
 #include <Scene/Animation/Animation.hpp>
 
@@ -2167,13 +2167,13 @@ CameraOrthoRect {
 
 #if 0
     {
-        // $LayerOverrides schema section: the writer emits per-layer diffs stored on the
-        // entity's LayerOverridesComponent; the parser collects them (typed against the
+        // $SwatchOverrides schema section: the writer emits per-swatch diffs stored on the
+        // entity's SwatchOverridesComponent; the parser collects them (typed against the
         // entity's own class schema) through the engine's sink, which writes them back
         // into the component.
         Handle<Entity> entity = MakeHandle<Entity>(NAME("OverrideTestEntity"));
 
-        Check("LayerOverrides: entity created", entity.IsValid());
+        Check("SwatchOverrides: entity created", entity.IsValid());
 
         if (entity.IsValid())
         {
@@ -2181,24 +2181,24 @@ CameraOrthoRect {
 
             EntityManager* entityManager = entity->GetEntityManager();
 
-            Check("LayerOverrides: entity manager", entityManager != nullptr);
+            Check("SwatchOverrides: entity manager", entityManager != nullptr);
 
             if (entityManager)
             {
-                LayerOverridesComponent* component
-                    = &entityManager->AddComponent<LayerOverridesComponent>(entity.Get(), LayerOverridesComponent {});
+                SwatchOverridesComponent* component
+                    = &entityManager->AddComponent<SwatchOverridesComponent>(entity.Get(), SwatchOverridesComponent {});
 
-                EntityLayerOverrideSet morningSet;
-                morningSet.layerName = NAME("Morning");
+                EntitySwatchOverrideSet morningSet;
+                morningSet.swatchName = NAME("Morning");
                 morningSet.propertyOverrides.PushBack(
-                    LayerPropertyOverride { NAME("NodeFlags"), BoxedValue(EnumFlags<NodeFlags>(NodeFlags::MobilityDynamic)) });
+                    SwatchPropertyOverride { NAME("NodeFlags"), BoxedValue(EnumFlags<NodeFlags>(NodeFlags::MobilityDynamic)) });
 
                 component->sets.PushBack(std::move(morningSet));
 
-                EntityLayerOverrideSet eveningSet;
-                eveningSet.layerName = NAME("Evening");
+                EntitySwatchOverrideSet eveningSet;
+                eveningSet.swatchName = NAME("Evening");
                 eveningSet.propertyOverrides.PushBack(
-                    LayerPropertyOverride { NAME("Name"), BoxedValue(NAME("EveningSun")) });
+                    SwatchPropertyOverride { NAME("Name"), BoxedValue(NAME("EveningSun")) });
 
                 component->sets.PushBack(std::move(eveningSet));
 
@@ -2208,12 +2208,12 @@ CameraOrthoRect {
                 String overrideText;
                 ObjectToHMF(entity->InstanceClass(), BoxedValue(entity), overrideText, &opts);
 
-                Check("LayerOverrides: section present", overrideText.Contains("$LayerOverrides"), overrideText);
-                Check("LayerOverrides: Morning key present", overrideText.Contains("Morning"), overrideText);
-                Check("LayerOverrides: Evening key present", overrideText.Contains("Evening"), overrideText);
-                Check("LayerOverrides: NodeFlags override emitted",
+                Check("SwatchOverrides: section present", overrideText.Contains("$SwatchOverrides"), overrideText);
+                Check("SwatchOverrides: Morning key present", overrideText.Contains("Morning"), overrideText);
+                Check("SwatchOverrides: Evening key present", overrideText.Contains("Evening"), overrideText);
+                Check("SwatchOverrides: NodeFlags override emitted",
                       overrideText.Contains("NodeFlags = MobilityDynamic"), overrideText);
-                Check("LayerOverrides: Name override emitted",
+                Check("SwatchOverrides: Name override emitted",
                       overrideText.Contains("Name = EveningSun"), overrideText);
 
                 // Parse back into a fresh entity and verify the stored override sets
@@ -2223,39 +2223,39 @@ CameraOrthoRect {
                 BoxedValue targetBoxed = BoxedValue(parseTarget);
 
                 HMF::ParseResult parseResult = HMF::Parse(overrideText, nullptr, &targetBoxed);
-                Check("LayerOverrides: parse succeeds", Success(parseResult), parseResult.GetError().GetMessage());
+                Check("SwatchOverrides: parse succeeds", Success(parseResult), parseResult.GetError().GetMessage());
 
                 if (Success(parseResult) && parseTarget.IsValid())
                 {
-                    const LayerOverridesComponent* parsedComponent
-                        = parseTarget->GetEntityManager()->TryGetComponent<LayerOverridesComponent>(parseTarget.Get());
+                    const SwatchOverridesComponent* parsedComponent
+                        = parseTarget->GetEntityManager()->TryGetComponent<SwatchOverridesComponent>(parseTarget.Get());
 
-                    Check("LayerOverrides RT: component exists", parsedComponent != nullptr);
+                    Check("SwatchOverrides RT: component exists", parsedComponent != nullptr);
 
                     if (parsedComponent)
                     {
-                        Check("LayerOverrides RT: Morning set exists",
-                              HasLayerOverrideSet(parsedComponent->sets, NAME("Morning")));
-                        Check("LayerOverrides RT: Evening set exists",
-                              HasLayerOverrideSet(parsedComponent->sets, NAME("Evening")));
-                        Check("LayerOverrides RT: NodeFlags overridden in Morning",
-                              IsPropertyOverriddenInLayer(parsedComponent->sets, NAME("Morning"), NAME("NodeFlags")));
-                        Check("LayerOverrides RT: Name overridden in Evening",
-                              IsPropertyOverriddenInLayer(parsedComponent->sets, NAME("Evening"), NAME("Name")));
+                        Check("SwatchOverrides RT: Morning set exists",
+                              HasSwatchOverrideSet(parsedComponent->sets, NAME("Morning")));
+                        Check("SwatchOverrides RT: Evening set exists",
+                              HasSwatchOverrideSet(parsedComponent->sets, NAME("Evening")));
+                        Check("SwatchOverrides RT: NodeFlags overridden in Morning",
+                              IsPropertyOverriddenInSwatch(parsedComponent->sets, NAME("Morning"), NAME("NodeFlags")));
+                        Check("SwatchOverrides RT: Name overridden in Evening",
+                              IsPropertyOverriddenInSwatch(parsedComponent->sets, NAME("Evening"), NAME("Name")));
 
                         BoxedValue flagsOverride;
-                        bool readFlags = GetLayerOverrideValue(parsedComponent->sets, NAME("Morning"), NAME("NodeFlags"), flagsOverride);
+                        bool readFlags = GetSwatchOverrideValue(parsedComponent->sets, NAME("Morning"), NAME("NodeFlags"), flagsOverride);
 
-                        Check("LayerOverrides RT: NodeFlags override value read", readFlags);
-                        Check("LayerOverrides RT: NodeFlags override is MobilityDynamic",
+                        Check("SwatchOverrides RT: NodeFlags override value read", readFlags);
+                        Check("SwatchOverrides RT: NodeFlags override is MobilityDynamic",
                               readFlags
                                   && flagsOverride.Get<EnumFlags<NodeFlags>>() == EnumFlags<NodeFlags>(NodeFlags::MobilityDynamic));
 
                         BoxedValue nameOverride;
-                        bool readName = GetLayerOverrideValue(parsedComponent->sets, NAME("Evening"), NAME("Name"), nameOverride);
+                        bool readName = GetSwatchOverrideValue(parsedComponent->sets, NAME("Evening"), NAME("Name"), nameOverride);
 
-                        Check("LayerOverrides RT: Name override value read", readName);
-                        Check("LayerOverrides RT: Name override is EveningSun",
+                        Check("SwatchOverrides RT: Name override value read", readName);
+                        Check("SwatchOverrides RT: Name override is EveningSun",
                               readName && nameOverride.Get<Name>() == NAME("EveningSun"));
                     }
                 }

@@ -66,14 +66,14 @@ public:
         return NAME("ParticleMesh");
     }
 
-    static Name BuildParticleTextureName(Name volumeName, Name layerName);
-    static Name BuildParticleMeshName(Name volumeName, Name layerName);
+    static Name BuildParticleTextureName(Name volumeName, Name swatchName);
+    static Name BuildParticleMeshName(Name volumeName, Name swatchName);
 
-    Handle<Texture> GetParticleTextureForLayer(Name layerName) const;
-    Handle<Mesh> GetParticleMeshForLayer(Name layerName) const;
+    Handle<Texture> GetParticleTextureForSwatch(Name swatchName) const;
+    Handle<Mesh> GetParticleMeshForSwatch(Name swatchName) const;
 
-    void SetParticleTextureForLayer(const Handle<Texture>& particleTexture, Name layerName);
-    void SetParticleMeshForLayer(const Handle<Mesh>& particleMesh, Name layerName);
+    void SetParticleTextureForSwatch(const Handle<Texture>& particleTexture, Name swatchName);
+    void SetParticleMeshForSwatch(const Handle<Mesh>& particleMesh, Name swatchName);
 
     HYP_FIELD(Property = "ParticleTexture", Serialize, Editor, Title = "Particle Texture")
     Handle<Texture> texture;

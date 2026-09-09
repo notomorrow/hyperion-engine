@@ -26,7 +26,7 @@
 
 #include <Framework/EngineMemory.hpp>
 
-#include <Scene/Layer.hpp>
+#include <Scene/Swatch.hpp>
 
 namespace Hyperion {
 
@@ -173,30 +173,30 @@ public:
     const GameState& GetGameState() const;
 
     HYP_METHOD()
-    Array<Name> GetLayerNames() const;
+    Array<Name> GetSwatchNames() const;
 
     HYP_METHOD()
-    Name GetActiveLayerName() const;
+    Name GetActiveSwatchName() const;
 
     HYP_METHOD()
-    void SetActiveLayer(Name layerName);
+    void SetActiveSwatch(Name swatchName);
 
-    const Handle<Layer>& GetActiveLayer();
-    const Handle<Layer>& GetDefaultLayer();
+    const Handle<Swatch>& GetActiveSwatch();
+    const Handle<Swatch>& GetDefaultSwatch();
 
-    const Handle<Layer>& TryGetLayer(Name layerName);
-    const Handle<Layer>& TryGetLayerById(LayerId layerId) const;
-    const Handle<Layer>& GetOrCreateLayer(Name layerName);
+    const Handle<Swatch>& TryGetSwatch(Name swatchName);
+    const Handle<Swatch>& TryGetSwatchById(SwatchId swatchId) const;
+    const Handle<Swatch>& GetOrCreateSwatch(Name swatchName);
 
-    /// Read the cached last active layer id value
+    /// Read the cached last active swatch id value
     /// only call from sim thread or from dependant task thread (e.g during View async collection)
-    HYP_FORCE_INLINE LayerId GetActiveLayerId() const
+    HYP_FORCE_INLINE SwatchId GetActiveSwatchId() const
     {
-        return m_activeLayerId;
+        return m_activeSwatchId;
     }
 
     HYP_FIELD()
-    ScriptableDelegate<void, Name> OnActiveLayerChanged;
+    ScriptableDelegate<void, Name> OnActiveSwatchChanged;
 
     HYP_METHOD()
     void AddScene(const Handle<Scene>& scene, bool addToStreamingLayer = true);
@@ -345,7 +345,7 @@ private:
 
     //-- Serialization Only Properties --
 
-    /// Needs Layers to load before
+    /// Needs Swatches to load before
     HYP_METHOD(Property = "NonStreamingScenes", Serialize, LoadOrder = 5)
     void DeserializeNonStreamingScenes(const Array<Handle<Scene>>& scenes);
 
@@ -375,14 +375,14 @@ private:
     HYP_FIELD(Property = "Scenes", Transient)
     Array<Handle<Scene>> m_scenes;
 
-    HYP_FIELD(Property = "Layers", Serialize, LoadOrder = 0)
-    Array<Handle<Layer>> m_layers;
+    HYP_FIELD(Property = "Swatches", Serialize, LoadOrder = 0)
+    Array<Handle<Swatch>> m_swatches;
 
-    HYP_FIELD(Property = "ActiveLayer", Serialize, LoadOrder = 0)
-    Name m_activeLayer;
+    HYP_FIELD(Property = "ActiveSwatch", Serialize, LoadOrder = 0)
+    Name m_activeSwatch;
 
     // Cached for fast access
-    LayerId m_activeLayerId;
+    SwatchId m_activeSwatchId;
 
     // systems must load after flags are set
     HYP_FIELD(Property = "Systems", LoadOrder = 200)

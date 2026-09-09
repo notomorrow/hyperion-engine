@@ -15,11 +15,11 @@ namespace Hyperion.Editor.ViewModels
     {
         public InspectorSectionViewModel ComponentsSection { get; } = new() { IsExpanded = true };
         public InspectorSectionViewModel TagsSection { get; } = new() { IsExpanded = true };
-        public InspectorSectionViewModel LayersSection { get; } = new() { IsExpanded = true };
+        public InspectorSectionViewModel SwatchesSection { get; } = new() { IsExpanded = true };
         public InspectorSectionViewModel ScriptSection { get; } = new() { IsExpanded = true };
         public InspectorSectionViewModel ActionsSection { get; } = new() { IsExpanded = true };
         public InspectorSectionViewModel ScenePropertiesSection { get; } = new() { IsExpanded = true };
-        public InspectorSectionViewModel LayerOverridesSection { get; } = new() { IsExpanded = true };
+        public InspectorSectionViewModel SwatchOverridesSection { get; } = new() { IsExpanded = true };
         public InspectorSectionViewModel PropertiesSection { get; } = new() { IsExpanded = true };
 
         public ObservableCollection<InspectorPropertyViewModelBase> Properties { get; } = new ObservableCollection<InspectorPropertyViewModelBase>();
@@ -30,42 +30,42 @@ namespace Hyperion.Editor.ViewModels
         public ICommand AddComponentCommand { get; }
         public ICommand RemoveComponentCommand { get; }
 
-        public ObservableCollection<LayerCopySourceOptionViewModel> CopyLayerSources { get; } = new ObservableCollection<LayerCopySourceOptionViewModel>();
+        public ObservableCollection<SwatchCopySourceOptionViewModel> CopySwatchSources { get; } = new ObservableCollection<SwatchCopySourceOptionViewModel>();
 
-        private LayerCopySourceOptionViewModel? _selectedCopyLayerSource;
-        public LayerCopySourceOptionViewModel? SelectedCopyLayerSource
+        private SwatchCopySourceOptionViewModel? _selectedCopySwatchSource;
+        public SwatchCopySourceOptionViewModel? SelectedCopySwatchSource
         {
-            get => _selectedCopyLayerSource;
+            get => _selectedCopySwatchSource;
             set
             {
-                if (SetProperty(ref _selectedCopyLayerSource, value) && ApplyCopyFromLayerCommand is AsyncRelayCommand relayCommand)
+                if (SetProperty(ref _selectedCopySwatchSource, value) && ApplyCopyFromSwatchCommand is AsyncRelayCommand relayCommand)
                 {
                     relayCommand.RaiseCanExecuteChanged();
                 }
             }
         }
 
-        private bool _hasCopyLayerSources;
-        public bool HasCopyLayerSources
+        private bool _hasCopySwatchSources;
+        public bool HasCopySwatchSources
         {
-            get => _hasCopyLayerSources;
-            private set => SetProperty(ref _hasCopyLayerSources, value);
+            get => _hasCopySwatchSources;
+            private set => SetProperty(ref _hasCopySwatchSources, value);
         }
 
-        private bool _hasActiveLayerOverrides;
-        public bool HasActiveLayerOverrides
+        private bool _hasActiveSwatchOverrides;
+        public bool HasActiveSwatchOverrides
         {
-            get => _hasActiveLayerOverrides;
+            get => _hasActiveSwatchOverrides;
             private set
             {
-                if (SetProperty(ref _hasActiveLayerOverrides, value) && ResetLayerOverridesCommand is AsyncRelayCommand relayCommand)
+                if (SetProperty(ref _hasActiveSwatchOverrides, value) && ResetSwatchOverridesCommand is AsyncRelayCommand relayCommand)
                 {
                     relayCommand.RaiseCanExecuteChanged();
                 }
             }
         }
 
-        /// <summary>Display-only view over <see cref="Properties"/>: the rows the active layer overrides.</summary>
+        /// <summary>Display-only view over <see cref="Properties"/>: the rows the active swatch overrides.</summary>
         public ObservableCollection<InspectorPropertyViewModelBase> OverriddenProperties { get; } = new ObservableCollection<InspectorPropertyViewModelBase>();
 
         private int _overriddenPropertyCount;
@@ -85,14 +85,14 @@ namespace Hyperion.Editor.ViewModels
 
         public bool HasOverriddenProperties => _overriddenPropertyCount > 0;
 
-        public bool ShowNoOverridesHint => CanUseLayerOverrides && !HasOverriddenProperties;
+        public bool ShowNoOverridesHint => CanUseSwatchOverrides && !HasOverriddenProperties;
 
         public string OverriddenPropertiesHeader => _overriddenPropertyCount == 1
-            ? $"1 PROPERTY OVERRIDDEN IN {ActiveLayerLabel.ToUpperInvariant()}"
-            : $"{_overriddenPropertyCount} PROPERTIES OVERRIDDEN IN {ActiveLayerLabel.ToUpperInvariant()}";
+            ? $"1 PROPERTY OVERRIDDEN IN {ActiveSwatchLabel.ToUpperInvariant()}"
+            : $"{_overriddenPropertyCount} PROPERTIES OVERRIDDEN IN {ActiveSwatchLabel.ToUpperInvariant()}";
 
-        public ICommand ApplyCopyFromLayerCommand { get; }
-        public ICommand ResetLayerOverridesCommand { get; }
+        public ICommand ApplyCopyFromSwatchCommand { get; }
+        public ICommand ResetSwatchOverridesCommand { get; }
 
         private bool _hasActions;
         public bool HasActions
@@ -159,70 +159,70 @@ namespace Hyperion.Editor.ViewModels
             private set => SetProperty(ref _entityTags, value);
         }
 
-        private EntityLayersViewModel? _entityLayers;
-        public EntityLayersViewModel? EntityLayers
+        private EntitySwatchesViewModel? _entitySwatches;
+        public EntitySwatchesViewModel? EntitySwatches
         {
-            get => _entityLayers;
-            private set => SetProperty(ref _entityLayers, value);
+            get => _entitySwatches;
+            private set => SetProperty(ref _entitySwatches, value);
         }
 
-        public bool IsDefaultLayer
+        public bool IsDefaultSwatch
         {
-            get => (_activeLayerDisplay ?? string.Empty) == string.Empty
-                || (_activeLayerDisplay ?? string.Empty) == "Default";
+            get => (_activeSwatchDisplay ?? string.Empty) == string.Empty
+                || (_activeSwatchDisplay ?? string.Empty) == "Default";
         }
 
-        /// <summary>False on the Default layer, whose values are the entity's base values - there is nothing to override into.</summary>
-        public bool CanUseLayerOverrides => !IsDefaultLayer;
+        /// <summary>False on the Default swatch, whose values are the entity's base values - there is nothing to override into.</summary>
+        public bool CanUseSwatchOverrides => !IsDefaultSwatch;
 
         /// <summary>
-        /// Publishes the active layer to the shared edit context. The Default layer is the base
-        /// values, so it is published as "no layer" and every edit routes to the base.
+        /// Publishes the active swatch to the shared edit context. The Default swatch is the base
+        /// values, so it is published as "no swatch" and every edit routes to the base.
         /// </summary>
-        private void ApplyActiveLayerToEditContext()
+        private void ApplyActiveSwatchToEditContext()
         {
-            LayerOverrideEditContext.ActiveLayerName = IsDefaultLayer ? null : ActiveLayerDisplay;
+            SwatchOverrideEditContext.ActiveSwatchName = IsDefaultSwatch ? null : ActiveSwatchDisplay;
 
-            if (IsDefaultLayer)
+            if (IsDefaultSwatch)
             {
-                LayerOverrideMode = false;
+                SwatchOverrideMode = false;
             }
         }
 
-        private bool _layerOverrideMode;
-        public bool LayerOverrideMode
+        private bool _swatchOverrideMode;
+        public bool SwatchOverrideMode
         {
-            get => _layerOverrideMode;
+            get => _swatchOverrideMode;
             set
             {
-                if (SetProperty(ref _layerOverrideMode, value))
+                if (SetProperty(ref _swatchOverrideMode, value))
                 {
-                    LayerOverrideEditContext.OverrideModeActive = value;
+                    SwatchOverrideEditContext.OverrideModeActive = value;
 
                     _ = EngineManager.PostToSimThread(() =>
                     {
-                        EngineManager.EditorGame?.EditorSubsystem?.SetLayerOverrideMode(value);
+                        EngineManager.EditorGame?.EditorSubsystem?.SetSwatchOverrideMode(value);
                     });
-                    _ = RefreshCopyLayerSourcesAsync();
+                    _ = RefreshCopySwatchSourcesAsync();
                 }
             }
         }
 
-        /// <summary>Active layer name for display, falling back to "Default" before the World reports one.</summary>
-        public string ActiveLayerLabel => string.IsNullOrEmpty(_activeLayerDisplay) ? "Default" : _activeLayerDisplay!;
+        /// <summary>Active swatch name for display, falling back to "Default" before the World reports one.</summary>
+        public string ActiveSwatchLabel => string.IsNullOrEmpty(_activeSwatchDisplay) ? "Default" : _activeSwatchDisplay!;
 
-        private string? _activeLayerDisplay;
-        public string? ActiveLayerDisplay
+        private string? _activeSwatchDisplay;
+        public string? ActiveSwatchDisplay
         {
-            get => _activeLayerDisplay;
+            get => _activeSwatchDisplay;
             private set
             {
-                if (SetProperty(ref _activeLayerDisplay, value))
+                if (SetProperty(ref _activeSwatchDisplay, value))
                 {
-                    OnPropertyChanged(nameof(IsDefaultLayer));
-                    OnPropertyChanged(nameof(CanUseLayerOverrides));
+                    OnPropertyChanged(nameof(IsDefaultSwatch));
+                    OnPropertyChanged(nameof(CanUseSwatchOverrides));
                     OnPropertyChanged(nameof(ShowNoOverridesHint));
-                    OnPropertyChanged(nameof(ActiveLayerLabel));
+                    OnPropertyChanged(nameof(ActiveSwatchLabel));
                     OnPropertyChanged(nameof(OverriddenPropertiesHeader));
                 }
             }
@@ -248,8 +248,8 @@ namespace Hyperion.Editor.ViewModels
         {
             AddComponentCommand = new AsyncRelayCommand(AddComponentAsync, CanAddComponent);
             RemoveComponentCommand = new RelayCommand<object>(RemoveComponent, CanRemoveComponent);
-            ApplyCopyFromLayerCommand = new AsyncRelayCommand(_ => ApplyCopyFromLayerAsync(), _ => SelectedCopyLayerSource != null);
-            ResetLayerOverridesCommand = new AsyncRelayCommand(_ => ResetLayerOverridesAsync(), _ => HasActiveLayerOverrides);
+            ApplyCopyFromSwatchCommand = new AsyncRelayCommand(_ => ApplyCopyFromSwatchAsync(), _ => SelectedCopySwatchSource != null);
+            ResetSwatchOverridesCommand = new AsyncRelayCommand(_ => ResetSwatchOverridesAsync(), _ => HasActiveSwatchOverrides);
         }
 
         ~InspectorViewModel()
@@ -293,21 +293,21 @@ namespace Hyperion.Editor.ViewModels
             Components.Clear();
             AddableComponents.Clear();
             SceneProperties.Clear();
-            CopyLayerSources.Clear();
+            CopySwatchSources.Clear();
 
             AttachedScript = null;
             HasAttachedScript = false;
             EntityTags = null;
-            EntityLayers = null;
+            EntitySwatches = null;
 
-            SelectedCopyLayerSource = null;
-            HasCopyLayerSources = false;
-            HasActiveLayerOverrides = false;
+            SelectedCopySwatchSource = null;
+            HasCopySwatchSources = false;
+            HasActiveSwatchOverrides = false;
 
             OverriddenProperties.Clear();
             OverriddenPropertyCount = 0;
 
-            LayerOverrideEditContext.Reset();
+            SwatchOverrideEditContext.Reset();
 
             HasActions = false;
             HasComponents = false;
@@ -357,7 +357,7 @@ namespace Hyperion.Editor.ViewModels
                 {
                     var mobilityVm = new MobilityPropertyViewModel(SelectedNode, Class.GetClass<Node>().GetProperty("NodeFlags") ?? throw new Exception("Failed to get NodeFlags property"));
                     mobilityVm.RefreshValue();
-                    
+
                     Properties.Add(mobilityVm);
 
                     hasAddedMobility = true;
@@ -441,11 +441,11 @@ namespace Hyperion.Editor.ViewModels
                 AttachedScript = new AttachedScriptViewModel(entity);
                 HasAttachedScript = true;
                 EntityTags = new EntityTagsViewModel(entity);
-                EntityLayers = new EntityLayersViewModel(entity);
+                EntitySwatches = new EntitySwatchesViewModel(entity);
 
-                LayerOverrideEditContext.CurrentEntity = entity;
+                SwatchOverrideEditContext.CurrentEntity = entity;
 
-                _ = RefreshActiveLayerInfoAsync();
+                _ = RefreshActiveSwatchInfoAsync();
                 _ = RefreshOverrideSignifiersAsync();
 
                 _ = EngineManager.PostToSimThread(() =>
@@ -545,22 +545,22 @@ namespace Hyperion.Editor.ViewModels
                 _ = EntityTags.RefreshAsync();
             }
 
-            if (EntityLayers != null)
+            if (EntitySwatches != null)
             {
-                _ = EntityLayers.RefreshAsync();
+                _ = EntitySwatches.RefreshAsync();
             }
 
             _ = RefreshOverrideSignifiersAsync();
-            _ = RefreshActiveLayerOverridesAsync();
+            _ = RefreshActiveSwatchOverridesAsync();
         }
 
         /// <summary>
-        /// Reads the World's active layer name for the selected entity and updates the
-        /// layer-override edit context + panel hint text.
+        /// Reads the World's active swatch name for the selected entity and updates the
+        /// swatch-override edit context + panel hint text.
         /// </summary>
-        public async Task RefreshActiveLayerInfoAsync()
+        public async Task RefreshActiveSwatchInfoAsync()
         {
-            string activeLayerName = string.Empty;
+            string activeSwatchName = string.Empty;
 
             await EngineManager.PostToSimThread(() =>
             {
@@ -583,22 +583,22 @@ namespace Hyperion.Editor.ViewModels
 
                 if (world != null)
                 {
-                    activeLayerName = world.GetActiveLayerName().ToString();
+                    activeSwatchName = world.GetActiveSwatchName().ToString();
                 }
             });
 
             await Dispatcher.UIThread.InvokeAsync(() =>
             {
-                ActiveLayerDisplay = activeLayerName.Length > 0 ? activeLayerName : null;
-                ApplyActiveLayerToEditContext();
+                ActiveSwatchDisplay = activeSwatchName.Length > 0 ? activeSwatchName : null;
+                ApplyActiveSwatchToEditContext();
             });
 
-            _ = RefreshCopyLayerSourcesAsync();
-            _ = RefreshActiveLayerOverridesAsync();
+            _ = RefreshCopySwatchSourcesAsync();
+            _ = RefreshActiveSwatchOverridesAsync();
         }
 
         /// <summary>
-        /// Refreshes per-row override signifiers ("LayerA, LayerB override this value") for the
+        /// Refreshes per-row override signifiers ("SwatchA, SwatchB override this value") for the
         /// selected entity's entity-level property rows.
         /// </summary>
         public async Task RefreshOverrideSignifiersAsync()
@@ -614,25 +614,25 @@ namespace Hyperion.Editor.ViewModels
                 .Where(p => p.IsEntityLevelRow && p.Property.Name != new Name("Name", weak: true))
                 .ToList();
 
-            List<string> layerNames = new();
+            List<string> swatchNames = new();
             List<bool> overriddenFlags = new();
 
             await EngineManager.PostToSimThread(() =>
             {
-                Name[] sets = EntityLayerOverrides.GetSetLayerNames(entity);
+                Name[] sets = EntitySwatchOverrides.GetSetSwatchNames(entity);
 
                 foreach (Name set in sets)
                 {
-                    layerNames.Add(set.ToString());
+                    swatchNames.Add(set.ToString());
                 }
 
                 foreach (InspectorPropertyViewModelBase row in rows)
                 {
                     Name propertyName = row.Property.Name;
 
-                    foreach (Name layer in sets)
+                    foreach (Name swatch in sets)
                     {
-                        overriddenFlags.Add(EntityLayerOverrides.IsPropertyOverridden(entity, layer, propertyName));
+                        overriddenFlags.Add(EntitySwatchOverrides.IsPropertyOverridden(entity, swatch, propertyName));
                     }
                 }
             });
@@ -645,25 +645,25 @@ namespace Hyperion.Editor.ViewModels
                 }
 
                 int flagIndex = 0;
-                string? currentLayerName = LayerOverrideEditContext.ActiveLayerName;
+                string? currentSwatchName = SwatchOverrideEditContext.ActiveSwatchName;
 
                 OverriddenProperties.Clear();
 
                 foreach (InspectorPropertyViewModelBase row in rows)
                 {
-                    List<string> overriddenLayers = new();
+                    List<string> overriddenSwatches = new();
 
-                    foreach (string layerName in layerNames)
+                    foreach (string swatchName in swatchNames)
                     {
                         if (flagIndex < overriddenFlags.Count && overriddenFlags[flagIndex++])
                         {
-                            overriddenLayers.Add(layerName);
+                            overriddenSwatches.Add(swatchName);
                         }
                     }
 
-                    row.SetOverrideInfo(overriddenLayers, currentLayerName);
+                    row.SetOverrideInfo(overriddenSwatches, currentSwatchName);
 
-                    if (row.IsOverriddenByCurrentLayer)
+                    if (row.IsOverriddenByCurrentSwatch)
                     {
                         OverriddenProperties.Add(row);
                     }
@@ -674,53 +674,53 @@ namespace Hyperion.Editor.ViewModels
         }
 
         /// <summary>
-        /// Called when the World's active layer changes; refreshes property rows and override
+        /// Called when the World's active swatch changes; refreshes property rows and override
         /// signifiers (overrides may have applied natively) and updates the edit context.
         /// </summary>
-        public void OnWorldActiveLayerChanged(string layerName)
+        public void OnWorldActiveSwatchChanged(string swatchName)
         {
             Dispatcher.UIThread.VerifyAccess();
 
-            ActiveLayerDisplay = string.IsNullOrEmpty(layerName) ? null : layerName;
-            ApplyActiveLayerToEditContext();
+            ActiveSwatchDisplay = string.IsNullOrEmpty(swatchName) ? null : swatchName;
+            ApplyActiveSwatchToEditContext();
 
             if (SelectedNode == null || !SelectedNode.IsValid)
             {
                 return;
             }
 
-            // Overrides for the new active layer were just applied natively - re-read all rows
+            // Overrides for the new active swatch were just applied natively - re-read all rows
             foreach (InspectorPropertyViewModelBase propertyVm in Properties)
             {
                 propertyVm.RefreshValue();
             }
 
             _ = RefreshOverrideSignifiersAsync();
-            _ = RefreshCopyLayerSourcesAsync();
-            _ = RefreshActiveLayerOverridesAsync();
+            _ = RefreshCopySwatchSourcesAsync();
+            _ = RefreshActiveSwatchOverridesAsync();
         }
 
         /// <summary>
         /// Refreshes whether the selected entity has any property overrides in the World's
-        /// active layer; drives the "Reset Layer Overrides" button enablement.
+        /// active swatch; drives the "Reset Swatch Overrides" button enablement.
         /// </summary>
-        private async Task RefreshActiveLayerOverridesAsync()
+        private async Task RefreshActiveSwatchOverridesAsync()
         {
             Entity? entity = SelectedNode as Entity;
-            string? layerName = ActiveLayerDisplay;
+            string? swatchName = ActiveSwatchDisplay;
 
             bool hasOverrides = false;
             Entity? capturedEntity = null;
 
-            if (entity != null && entity.IsValid && !string.IsNullOrEmpty(layerName))
+            if (entity != null && entity.IsValid && !string.IsNullOrEmpty(swatchName))
             {
                 capturedEntity = entity;
 
-                string capturedLayer = layerName;
+                string capturedSwatch = swatchName;
 
                 await EngineManager.PostToSimThread(() =>
                 {
-                    hasOverrides = EntityLayerOverrides.HasValues(capturedEntity, new Name(capturedLayer));
+                    hasOverrides = EntitySwatchOverrides.HasValues(capturedEntity, new Name(capturedSwatch));
                 });
             }
 
@@ -733,23 +733,23 @@ namespace Hyperion.Editor.ViewModels
                     return;
                 }
 
-                HasActiveLayerOverrides = hasOverrides;
+                HasActiveSwatchOverrides = hasOverrides;
             });
         }
 
         /// <summary>
-        /// Invokes the native <c>EditorCommandResetLayerOverrides</c> command, removing all
-        /// property overrides the entity has in the World's active layer (restoring base
+        /// Invokes the native <c>EditorCommandResetSwatchOverrides</c> command, removing all
+        /// property overrides the entity has in the World's active swatch (restoring base
         /// values). Undoable.
         /// </summary>
-        private async Task ResetLayerOverridesAsync()
+        private async Task ResetSwatchOverridesAsync()
         {
             if (SelectedNode is not Entity entity || !entity.IsValid)
             {
                 return;
             }
 
-            if (string.IsNullOrEmpty(ActiveLayerDisplay))
+            if (string.IsNullOrEmpty(ActiveSwatchDisplay))
             {
                 return;
             }
@@ -759,37 +759,37 @@ namespace Hyperion.Editor.ViewModels
             await EngineManager.PostToSimThread(() =>
             {
                 EngineManager.EditorGame?.EditorSubsystem?.ExecuteCommandByName(
-                    new Name("EditorCommandResetLayerOverrides"),
+                    new Name("EditorCommandResetSwatchOverrides"),
                     capturedEntity.NativeAddress.ToString());
             });
 
-            // Update enablement immediately - there is nothing left to reset on this layer now
-            await RefreshActiveLayerOverridesAsync();
+            // Update enablement immediately - there is nothing left to reset on this swatch now
+            await RefreshActiveSwatchOverridesAsync();
 
             // Re-read all rows + override signifiers (overrides were dropped; rows show base values)
             OnPropertyValueChanged();
         }
 
         /// <summary>
-        /// Rebuilds the "Copy Properties from Layer" source options: the base state plus every
-        /// World layer except the current edit target (the active layer when override mode is
+        /// Rebuilds the "Copy Properties from Swatch" source options: the base state plus every
+        /// World swatch except the current edit target (the active swatch when override mode is
         /// on, base otherwise). Copying a source onto itself would be a no-op.
         /// </summary>
-        private async Task RefreshCopyLayerSourcesAsync()
+        private async Task RefreshCopySwatchSourcesAsync()
         {
             Entity? entity = SelectedNode as Entity;
 
             if (entity == null || !entity.IsValid)
             {
-                CopyLayerSources.Clear();
-                SelectedCopyLayerSource = null;
-                HasCopyLayerSources = false;
+                CopySwatchSources.Clear();
+                SelectedCopySwatchSource = null;
+                HasCopySwatchSources = false;
 
                 return;
             }
 
             Entity capturedEntity = entity;
-            List<string> layerNames = new List<string>();
+            List<string> swatchNames = new List<string>();
 
             await EngineManager.PostToSimThread(() =>
             {
@@ -810,9 +810,9 @@ namespace Hyperion.Editor.ViewModels
                     return;
                 }
 
-                foreach (Name layerName in world.GetLayerNames())
+                foreach (Name swatchName in world.GetSwatchNames())
                 {
-                    layerNames.Add(layerName.ToString());
+                    swatchNames.Add(swatchName.ToString());
                 }
             });
 
@@ -824,51 +824,51 @@ namespace Hyperion.Editor.ViewModels
                     return;
                 }
 
-                string? targetLayerName = LayerOverrideMode ? ActiveLayerDisplay : null;
-                string? previousSelection = SelectedCopyLayerSource?.Name;
+                string? targetSwatchName = SwatchOverrideMode ? ActiveSwatchDisplay : null;
+                string? previousSelection = SelectedCopySwatchSource?.Name;
 
-                CopyLayerSources.Clear();
+                CopySwatchSources.Clear();
 
-                if (targetLayerName != null)
+                if (targetSwatchName != null)
                 {
-                    CopyLayerSources.Add(new LayerCopySourceOptionViewModel("Base", isBase: true));
+                    CopySwatchSources.Add(new SwatchCopySourceOptionViewModel("Base", isBase: true));
                 }
 
-                foreach (string layerName in layerNames)
+                foreach (string swatchName in swatchNames)
                 {
-                    if (layerName == targetLayerName)
+                    if (swatchName == targetSwatchName)
                     {
                         continue;
                     }
 
                     // Default holds the base values, so it is already covered by the "Base" option
-                    if (layerName == "Default")
+                    if (swatchName == "Default")
                     {
                         continue;
                     }
 
-                    CopyLayerSources.Add(new LayerCopySourceOptionViewModel(layerName, isBase: false));
+                    CopySwatchSources.Add(new SwatchCopySourceOptionViewModel(swatchName, isBase: false));
                 }
 
-                HasCopyLayerSources = CopyLayerSources.Count > 0;
+                HasCopySwatchSources = CopySwatchSources.Count > 0;
 
-                SelectedCopyLayerSource = previousSelection != null
-                    ? CopyLayerSources.FirstOrDefault(option => option.Name == previousSelection)
+                SelectedCopySwatchSource = previousSelection != null
+                    ? CopySwatchSources.FirstOrDefault(option => option.Name == previousSelection)
                     : null;
             });
         }
 
         /// <summary>
-        /// Invokes the native <c>EditorCommandCopyLayerProperties</c> command: it computes the
-        /// minimal diff to make the current edit target (the active layer's override set when
+        /// Invokes the native <c>EditorCommandCopySwatchProperties</c> command: it computes the
+        /// minimal diff to make the current edit target (the active swatch's override set when
         /// override mode is on, otherwise the entity's base values) match the selected source's
         /// effective values, applies it as a single undoable action, and prunes overrides that
-        /// would end up redundant (e.g. copying from Base empties the target layer's override
+        /// would end up redundant (e.g. copying from Base empties the target swatch's override
         /// set).
         /// </summary>
-        private async Task ApplyCopyFromLayerAsync()
+        private async Task ApplyCopyFromSwatchAsync()
         {
-            LayerCopySourceOptionViewModel? sourceOption = SelectedCopyLayerSource;
+            SwatchCopySourceOptionViewModel? sourceOption = SelectedCopySwatchSource;
 
             if (sourceOption == null)
             {
@@ -880,29 +880,29 @@ namespace Hyperion.Editor.ViewModels
                 return;
             }
 
-            // The Default layer is the base values, so copying while it is active targets base
-            bool targetIsLayer = !IsDefaultLayer && !string.IsNullOrEmpty(ActiveLayerDisplay);
-            string targetDisplay = targetIsLayer ? ActiveLayerDisplay! : "Base";
+            // The Default swatch is the base values, so copying while it is active targets base
+            bool targetIsSwatch = !IsDefaultSwatch && !string.IsNullOrEmpty(ActiveSwatchDisplay);
+            string targetDisplay = targetIsSwatch ? ActiveSwatchDisplay! : "Base";
 
-            if (!targetIsLayer && sourceOption.IsBase)
+            if (!targetIsSwatch && sourceOption.IsBase)
             {
                 return; // base -> base is a no-op
             }
 
-            if (targetIsLayer && !sourceOption.IsBase && sourceOption.Name == targetDisplay)
+            if (targetIsSwatch && !sourceOption.IsBase && sourceOption.Name == targetDisplay)
             {
-                return; // layer -> itself is a no-op
+                return; // swatch -> itself is a no-op
             }
 
             await EngineManager.PostToSimThread(() =>
             {
                 EngineManager.EditorGame?.EditorSubsystem?.ExecuteCommandByName(
-                    new Name("EditorCommandCopyLayerProperties"),
+                    new Name("EditorCommandCopySwatchProperties"),
                     entity.NativeAddress.ToString(),
                     sourceOption.IsBase ? "1" : "0",
                     sourceOption.IsBase ? "-" : sourceOption.Name,
-                    targetIsLayer ? "0" : "1",
-                    targetIsLayer ? targetDisplay : "-");
+                    targetIsSwatch ? "0" : "1",
+                    targetIsSwatch ? targetDisplay : "-");
             });
 
             // Re-read all rows + override signifiers (the command may have changed values)
@@ -1260,9 +1260,9 @@ namespace Hyperion.Editor.ViewModels
         }
     }
 
-    public class LayerCopySourceOptionViewModel : ViewModelBase
+    public class SwatchCopySourceOptionViewModel : ViewModelBase
     {
-        public LayerCopySourceOptionViewModel(string name, bool isBase)
+        public SwatchCopySourceOptionViewModel(string name, bool isBase)
         {
             Name = name;
             IsBase = isBase;
@@ -1270,7 +1270,7 @@ namespace Hyperion.Editor.ViewModels
 
         public string Name { get; }
 
-        /// <summary>True when this option refers to the entity's base state rather than a layer.</summary>
+        /// <summary>True when this option refers to the entity's base state rather than a swatch.</summary>
         public bool IsBase { get; }
     }
 }

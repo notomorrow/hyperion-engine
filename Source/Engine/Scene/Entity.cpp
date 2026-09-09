@@ -14,7 +14,7 @@
 
 #include <Scene/EntityManager.hpp>
 #include <Scene/EntityTag.hpp>
-#include <Scene/Systems/LayerOverrideSystem.hpp>
+#include <Scene/Systems/SwatchOverrideSystem.hpp>
 
 #include <Core/Utilities/GlobalContext.hpp>
 
@@ -25,7 +25,7 @@
 #include <Scene/Components/VisibilityStateComponent.hpp>
 #include <Scene/Components/BoundingBoxComponent.hpp>
 #include <Scene/Components/LightmapElementComponent.hpp>
-#include <Scene/Components/LayerOverridesComponent.hpp>
+#include <Scene/Components/SwatchOverridesComponent.hpp>
 
 #include <Scripting/EntityScripting.hpp>
 
@@ -61,7 +61,7 @@ Entity::Entity(Name name)
       m_entityManager(nullptr),
       m_renderProxyVersion(0),
       m_transformChanged(false),
-      m_layerMask {}
+      m_swatchMask {}
 {
 }
 
@@ -86,33 +86,33 @@ Entity::~Entity()
     m_entityManager = nullptr;
 }
 
-void Entity::AddToLayer(LayerId layerId)
+void Entity::AddToSwatch(SwatchId swatchId)
 {
-    if (uint32(layerId) >= MaxLayersPerWorld)
+    if (uint32(swatchId) >= MaxSwatchesPerWorld)
     {
         return;
     }
 
-    m_layerMask.Set(uint32(layerId), true);
+    m_swatchMask.Set(uint32(swatchId), true);
 
     SetNeedsRenderProxyUpdate();
     MarkDirty();
 }
 
-void Entity::RemoveFromLayer(LayerId layerId)
+void Entity::RemoveFromSwatch(SwatchId swatchId)
 {
-    if (uint32(layerId) >= MaxLayersPerWorld)
+    if (uint32(swatchId) >= MaxSwatchesPerWorld)
     {
         return;
     }
 
-    m_layerMask.Set(uint32(layerId), false);
+    m_swatchMask.Set(uint32(swatchId), false);
 
     SetNeedsRenderProxyUpdate();
     MarkDirty();
 }
 
-bool Entity::IsInLayerByName(Name layerName) const
+bool Entity::IsInSwatchByName(Name swatchName) const
 {
     World* world = GetWorld();
 
@@ -121,17 +121,17 @@ bool Entity::IsInLayerByName(Name layerName) const
         return false;
     }
 
-    const Handle<Layer>& layer = world->TryGetLayer(layerName);
+    const Handle<Swatch>& swatch = world->TryGetSwatch(swatchName);
 
-    if (!layer)
+    if (!swatch)
     {
         return false;
     }
 
-    return IsInLayer(layer->layerId);
+    return IsInSwatch(swatch->swatchId);
 }
 
-void Entity::AddToLayerByName(Name layerName)
+void Entity::AddToSwatchByName(Name swatchName)
 {
     World* world = GetWorld();
 
@@ -140,17 +140,17 @@ void Entity::AddToLayerByName(Name layerName)
         return;
     }
 
-    const Handle<Layer>& layer = world->TryGetLayer(layerName);
+    const Handle<Swatch>& swatch = world->TryGetSwatch(swatchName);
 
-    if (!layer)
+    if (!swatch)
     {
         return;
     }
 
-    AddToLayer(layer->layerId);
+    AddToSwatch(swatch->swatchId);
 }
 
-void Entity::RemoveFromLayerByName(Name layerName)
+void Entity::RemoveFromSwatchByName(Name swatchName)
 {
     World* world = GetWorld();
 
@@ -159,14 +159,14 @@ void Entity::RemoveFromLayerByName(Name layerName)
         return;
     }
 
-    const Handle<Layer>& layer = world->TryGetLayer(layerName);
+    const Handle<Swatch>& swatch = world->TryGetSwatch(swatchName);
 
-    if (!layer)
+    if (!swatch)
     {
         return;
     }
 
-    RemoveFromLayer(layer->layerId);
+    RemoveFromSwatch(swatch->swatchId);
 }
 Handle<Node> Entity::Clone() const
 {
@@ -204,16 +204,16 @@ Handle<Node> Entity::Clone() const
         Array<Name> serializedTags = SerializeTags();
         cloned->DeserializeTags(serializedTags);
 
-        Array<Name> serializedLayers = SerializeLayers();
-        cloned->DeserializeLayers(serializedLayers);
+        Array<Name> serializedSwatches = SerializeSwatches();
+        cloned->DeserializeSwatches(serializedSwatches);
 
-        // The LayerOverridesComponent is excluded from component serialization, so copy it explicitly.
-        if (LayerOverridesComponent* overrides = entityManager->TryGetComponent<LayerOverridesComponent>(this))
+        // The SwatchOverridesComponent is excluded from component serialization, so copy it explicitly.
+        if (SwatchOverridesComponent* overrides = entityManager->TryGetComponent<SwatchOverridesComponent>(this))
         {
-            LayerOverridesComponent overridesCopy;
+            SwatchOverridesComponent overridesCopy;
             overridesCopy.sets = overrides->sets;
 
-            cloned->AddComponent<LayerOverridesComponent>(std::move(overridesCopy));
+            cloned->AddComponent<SwatchOverridesComponent>(std::move(overridesCopy));
         }
     }
 
@@ -229,22 +229,22 @@ void Entity::Init()
 
     SetReady(true);
 
-    FlushPendingLayerOverrides();
+    FlushPendingSwatchOverrides();
 }
 
-void Entity::SetPendingLayerOverrides(Array<EntityLayerOverrideSet>&& sets)
+void Entity::SetPendingSwatchOverrides(Array<EntitySwatchOverrideSet>&& sets)
 {
-    auto& pendingSets = m_entityInitInfo.pendingLayerOverrides;
+    auto& pendingSets = m_entityInitInfo.pendingSwatchOverrides;
 
     if (pendingSets.Empty())
     {
         pendingSets.Reserve(sets.Size());
     }
 
-    for (EntityLayerOverrideSet& set : sets)
+    for (EntitySwatchOverrideSet& set : sets)
     {
         // scenes may carry a "Default" set from before we changed "Default" == Base value set. drop it.
-        if (IsDefaultLayer(set.layerName))
+        if (IsDefaultSwatch(set.swatchName))
         {
             continue;
         }
@@ -253,9 +253,9 @@ void Entity::SetPendingLayerOverrides(Array<EntityLayerOverrideSet>&& sets)
     }
 }
 
-void Entity::FlushPendingLayerOverrides()
+void Entity::FlushPendingSwatchOverrides()
 {
-    auto& pendingSets = m_entityInitInfo.pendingLayerOverrides;
+    auto& pendingSets = m_entityInitInfo.pendingSwatchOverrides;
 
     if (pendingSets.Empty())
     {
@@ -270,29 +270,29 @@ void Entity::FlushPendingLayerOverrides()
         return;
     }
 
-    if (LayerOverridesComponent* existing = entityManager->TryGetComponent<LayerOverridesComponent>(this))
+    if (SwatchOverridesComponent* existing = entityManager->TryGetComponent<SwatchOverridesComponent>(this))
     {
         existing->sets.Clear();
 
-        for (EntityLayerOverrideSet& set : pendingSets)
+        for (EntitySwatchOverrideSet& set : pendingSets)
         {
             existing->sets.PushBack(std::move(set));
         }
 
-        existing->appliedLayer = Name::Invalid();
+        existing->appliedSwatch = Name::Invalid();
         existing->baseSnapshot.Clear();
     }
     else
     {
-        LayerOverridesComponent component;
+        SwatchOverridesComponent component;
         component.sets.Reserve(pendingSets.Size());
 
-        for (EntityLayerOverrideSet& set : pendingSets)
+        for (EntitySwatchOverrideSet& set : pendingSets)
         {
             component.sets.PushBack(std::move(set));
         }
 
-        entityManager->AddComponent<LayerOverridesComponent>(this, std::move(component));
+        entityManager->AddComponent<SwatchOverridesComponent>(this, std::move(component));
     }
 
     // Stashed values have been consumed; release the memory they held.
@@ -403,17 +403,17 @@ void Entity::OnAddedToWorld(World* world)
             EntityTag::UpdateReplication>(this);
     }
 
-    if (m_entityInitInfo.layerNames.Any())
+    if (m_entityInitInfo.swatchNames.Any())
     {
-        for (size_t i = 0; i < m_entityInitInfo.layerNames.Size();)
+        for (size_t i = 0; i < m_entityInitInfo.swatchNames.Size();)
         {
-            const Name layerName = m_entityInitInfo.layerNames[i];
+            const Name swatchName = m_entityInitInfo.swatchNames[i];
 
-            const Handle<Layer>& layer = world->TryGetLayer(layerName);
+            const Handle<Swatch>& swatch = world->TryGetSwatch(swatchName);
 
-            if (!layer)
+            if (!swatch)
             {
-                HYP_LOG(Entity, Warning, "Entity {} references unknown Layer '{}'", GetName(), layerName);
+                HYP_LOG(Entity, Warning, "Entity {} references unknown Swatch '{}'", GetName(), swatchName);
 
                 // don't remove from names list; we want to maybe add it later to the appropriate world
                 ++i;
@@ -421,52 +421,52 @@ void Entity::OnAddedToWorld(World* world)
                 continue;
             }
 
-            AddToLayer(layer->layerId);
+            AddToSwatch(swatch->swatchId);
 
-            m_entityInitInfo.layerNames.EraseAt(i);
+            m_entityInitInfo.swatchNames.EraseAt(i);
         }
 
         // drop allocation if possible
-        if (m_entityInitInfo.layerNames.Empty())
+        if (m_entityInitInfo.swatchNames.Empty())
         {
-            m_entityInitInfo.layerNames.Clear();
+            m_entityInitInfo.swatchNames.Clear();
         }
     }
 
-    // Apply property overrides for the World's active layer, if any
-    if (LayerOverrideSystem* layerOverrideSystem = world->GetSystem<LayerOverrideSystem>())
+    // Apply property overrides for the World's active swatch, if any
+    if (SwatchOverrideSystem* swatchOverrideSystem = world->GetSystem<SwatchOverrideSystem>())
     {
-        layerOverrideSystem->OnEntityAddedToWorld(this);
+        swatchOverrideSystem->OnEntityAddedToWorld(this);
     }
 }
 
 void Entity::OnRemovedFromWorld(World* world)
 {
     // Clear our the names list
-    m_entityInitInfo.layerNames.SetCapacity(m_entityInitInfo.layerNames.Size() + m_layerMask.CountOnes());
-    
-    // init layerNames as we otherwise won't be able to reach the layers we're attached to
-    for (uint64 bit : m_layerMask)
+    m_entityInitInfo.swatchNames.SetCapacity(m_entityInitInfo.swatchNames.Size() + m_swatchMask.CountOnes());
+
+    // init swatchNames as we otherwise won't be able to reach the swatches we're attached to
+    for (uint64 bit : m_swatchMask)
     {
-        const Handle<Layer>& layer = world->TryGetLayerById(LayerId(bit));
+        const Handle<Swatch>& swatch = world->TryGetSwatchById(SwatchId(bit));
 
-        if (!layer)
+        if (!swatch)
         {
-            HYP_LOG(Entity, Warning, "Entity {} references invalid Layer bit '{}'", GetName(), bit);
+            HYP_LOG(Entity, Warning, "Entity {} references invalid Swatch bit '{}'", GetName(), bit);
 
             continue;
         }
 
-        if (m_entityInitInfo.layerNames.Contains(layer->name))
+        if (m_entityInitInfo.swatchNames.Contains(swatch->name))
         {
             continue;
         }
 
-        m_entityInitInfo.layerNames.PushBack(layer->name);
+        m_entityInitInfo.swatchNames.PushBack(swatch->name);
     }
 
-    // zero out the transient layer mask bits
-    m_layerMask = {};
+    // zero out the transient swatch mask bits
+    m_swatchMask = {};
 }
 
 void Entity::OnAddedToScene(Scene* scene)
@@ -1016,11 +1016,11 @@ void Entity::DeserializeTags(const Array<Name>& tags)
     }
 }
 
-Array<Name> Entity::SerializeLayers() const
+Array<Name> Entity::SerializeSwatches() const
 {
     Array<Name> result;
 
-    if (HasNoLayers())
+    if (HasNoSwatches())
     {
         return result;
     }
@@ -1032,22 +1032,22 @@ Array<Name> Entity::SerializeLayers() const
         return result;
     }
 
-    for (uint64 bit : m_layerMask)
+    for (uint64 bit : m_swatchMask)
     {
-        const Handle<Layer>& layer = world->TryGetLayerById(LayerId(bit));
+        const Handle<Swatch>& swatch = world->TryGetSwatchById(SwatchId(bit));
 
-        if (!layer)
+        if (!swatch)
         {
             continue;
         }
 
-        result.PushBack(layer->name);
+        result.PushBack(swatch->name);
     }
 
     return result;
 }
 
-void Entity::DeserializeLayers(const Array<Name>& layerNames)
+void Entity::DeserializeSwatches(const Array<Name>& swatchNames)
 {
     World* world = GetWorld();
 
@@ -1056,43 +1056,43 @@ void Entity::DeserializeLayers(const Array<Name>& layerNames)
         // Defer till we are attached to the world.
 
         // Drop dynamic allocation, if possible. Or reserve enough memory upfront.
-        m_entityInitInfo.layerNames.SetCapacity(m_entityInitInfo.layerNames.Size() + layerNames.Size());
+        m_entityInitInfo.swatchNames.SetCapacity(m_entityInitInfo.swatchNames.Size() + swatchNames.Size());
 
-        for (Name layerName : layerNames)
+        for (Name swatchName : swatchNames)
         {
-            if (!m_entityInitInfo.layerNames.Contains(layerName))
+            if (!m_entityInitInfo.swatchNames.Contains(swatchName))
             {
-                m_entityInitInfo.layerNames.PushBack(layerName);
+                m_entityInitInfo.swatchNames.PushBack(swatchName);
             }
         }
 
         return;
     }
 
-    for (const Name layerName : layerNames)
+    for (const Name swatchName : swatchNames)
     {
-        const Handle<Layer>& layer = world->TryGetLayer(layerName);
+        const Handle<Swatch>& swatch = world->TryGetSwatch(swatchName);
 
-        if (!layer)
+        if (!swatch)
         {
-            HYP_LOG(Serialization, Warning, "Entity {} references layer '{}' which does not exist on World '{}'",
+            HYP_LOG(Serialization, Warning, "Entity {} references swatch '{}' which does not exist on World '{}'",
                 GetName(),
-                layerName,
+                swatchName,
                 world->GetName());
 
             continue;
         }
 
-        const LayerId layerId = layer->layerId;
-        
-        if (uint32(layerId) >= MaxLayersPerWorld)
+        const SwatchId swatchId = swatch->swatchId;
+
+        if (uint32(swatchId) >= MaxSwatchesPerWorld)
         {
-            HYP_LOG(Serialization, Warning, "Layer '{}' has invalid LayerId {}", layerName, uint32(layerId));
+            HYP_LOG(Serialization, Warning, "Swatch '{}' has invalid SwatchId {}", swatchName, uint32(swatchId));
 
             continue;
         }
 
-        m_layerMask.Set(uint32(layerId), true);
+        m_swatchMask.Set(uint32(swatchId), true);
     }
 }
 

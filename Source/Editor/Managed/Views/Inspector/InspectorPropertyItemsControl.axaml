@@ -241,14 +241,14 @@
                             HorizontalAlignment="Left"
                             Background="{DynamicResource Brush.Accent}"
                             CornerRadius="1"
-                            IsVisible="{Binding IsOverriddenByCurrentLayer}" />
+                            IsVisible="{Binding IsOverriddenByCurrentSwatch}" />
                         <Border
                             Width="2"
                             Margin="0,1"
                             HorizontalAlignment="Left"
                             Background="{DynamicResource Brush.TextFaint}"
                             CornerRadius="1"
-                            IsVisible="{Binding IsOverriddenByOtherLayerOnly}" />
+                            IsVisible="{Binding IsOverriddenByOtherSwatchOnly}" />
                     </Panel>
 
                     <TextBlock
@@ -277,8 +277,8 @@
                             Margin="4,0,0,0"
                             VerticalAlignment="Center"
                             Classes="reset-icon"
-                            IsVisible="{Binding IsOverriddenByCurrentLayer}"
-                            ToolTip.Tip="Revert to base value (drops the override for the current layer)"
+                            IsVisible="{Binding IsOverriddenByCurrentSwatch}"
+                            ToolTip.Tip="Revert to base value (drops the override for the current swatch)"
                             Command="{Binding RevertOverrideCommand}">
                             <Path
                                 Width="11"

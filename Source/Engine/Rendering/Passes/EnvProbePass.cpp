@@ -412,7 +412,7 @@ static void ComputePrefilteredEnvMap(Frame* frame, const RenderSetup& renderSetu
     ConvolveEnvProbeCubemap(MakeStrongRef(colorAttachment), captureState->texture, *envProbe);
 }
 
-void ComputeEnvProbeSphericalHarmonics(const EnvProbe& envProbe, const Texture& inColorTexture, Name layerName)
+void ComputeEnvProbeSphericalHarmonics(const EnvProbe& envProbe, const Texture& inColorTexture, Name swatchName)
 {
     //// temp: dump exactly what the SH compute shader is about to read, so we can tell whether
     //// bake-to-bake SH drift comes from the render output itself or from something in the SH pass.
@@ -595,7 +595,7 @@ void ComputeEnvProbeSphericalHarmonics(const EnvProbe& envProbe, const Texture& 
         struct ReadbackSphericalHarmonicsPayload
         {
             Handle<EnvProbe> envProbe;
-            Name layerName;
+            Name swatchName;
             GpuBufferRef shBuffer;
             GpuBufferRef readbackBuffer;
             FixedArray<RWStructuredBuffer, ShNumLevels> shTilesBuffers;
@@ -647,28 +647,28 @@ void ComputeEnvProbeSphericalHarmonics(const EnvProbe& envProbe, const Texture& 
                                 outSH[j * 3 + 2] = inSH[j].z;
                             }
 
-                            // SetSphericalHarmonicsDataForLayer() marks it dirty so we don't need to do that here.
+                            // SetSphericalHarmonicsDataForSwatch() marks it dirty so we don't need to do that here.
                             auto envProbeWriteScope = TUniqueResLock<EnvProbe>(*payload.envProbe);
 
                             if (EnvProbeCaptureState* captureState = payload.envProbe->GetCaptureState();
                                 captureState && !payload.envProbe->OwnsCaptureState())
                             {
                                 // Raster bake: store on the capture; the capture commits it to
-                                // the baked values (base or layer override) on completion.
+                                // the baked values (base or swatch override) on completion.
                                 captureState->sphericalHarmonics = shData;
                             }
                             else
                             {
-                                // Path traced bake: write directly to the baked layer. Realtime /
+                                // Path traced bake: write directly to the baked swatch. Realtime /
                                 // sky probes write to their live (owned) values.
-                                payload.envProbe->SetSphericalHarmonicsDataForLayer(shData, payload.layerName);
+                                payload.envProbe->SetSphericalHarmonicsDataForSwatch(shData, payload.swatchName);
                             }
 
                             if (payload.envProbe->IsAmbientProbe())
                             {
                                 // Ambient probes have transient baked texture (path traced bakes), used
                                 // for baking the SH. Remove it to free the memory.
-                                payload.envProbe->SetBakedTextureForLayer(Handle<Texture>::Null(), payload.layerName);
+                                payload.envProbe->SetBakedTextureForSwatch(Handle<Texture>::Null(), payload.swatchName);
                             }
 
                             payload.envProbe->NotifyCaptureReadbackComplete();
@@ -688,7 +688,7 @@ void ComputeEnvProbeSphericalHarmonics(const EnvProbe& envProbe, const Texture& 
 
         ReadbackSphericalHarmonicsPayload* payload = new ReadbackSphericalHarmonicsPayload;
         payload->envProbe = MakeStrongRef(&envProbe);
-        payload->layerName = layerName;
+        payload->swatchName = swatchName;
         payload->shBuffer = std::move(shBuffer);
         payload->readbackBuffer = std::move(readbackBuffer);
         payload->shTilesBuffers = std::move(shTilesBuffers);
@@ -716,7 +716,7 @@ static void ComputeEnvProbeSphericalHarmonics(Frame* frame, EnvProbe* envProbe)
     AttachmentBase* colorAttachment = framebuffer->GetAttachment(0);
     Assert(colorAttachment != nullptr && colorAttachment->IsCreated());
 
-    // Layer targeting happens via the capture targets during raster bakes; invalid means the
+    // Swatch targeting happens via the capture targets during raster bakes; invalid means the
     // live (applied) values, which is correct for path traced probes reaching this path too.
     ComputeEnvProbeSphericalHarmonics(*envProbe, *colorAttachment, Name::Invalid());
 }

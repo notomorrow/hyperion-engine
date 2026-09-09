@@ -321,7 +321,7 @@ namespace Hyperion.Editor.ViewModels
         private DelegateHandler? _activeSceneChangedHandler;
         private DelegateHandler? _actionStackStateChangedHandler;
         private DelegateHandler? _meshEditStateChangedHandler;
-        private DelegateHandler? _activeBakeLayerChangedHandler;
+        private DelegateHandler? _activeSwatchChangedHandler;
 
         private int _isUpdatingSelectionFromEngine = 0; // atomic
         private int _isUpdatingFocusedNodeFromEngine = 0; // atomic
@@ -361,17 +361,17 @@ namespace Hyperion.Editor.ViewModels
         public ICommand SetActiveSceneCommand { get; private set; }
         public ICommand AddNewSceneCommand { get; private set; }
 
-        public ObservableCollection<string> BakeLayers { get; } = new();
+        public ObservableCollection<string> Swatches { get; } = new();
 
-        private string? _activeBakeLayerName;
-        public string? ActiveBakeLayerName
+        private string? _activeSwatchName;
+        public string? ActiveSwatchName
         {
-            get => _activeBakeLayerName;
-            set => SetProperty(ref _activeBakeLayerName, value);
+            get => _activeSwatchName;
+            set => SetProperty(ref _activeSwatchName, value);
         }
 
-        public ICommand SetActiveBakeLayerCommand { get; private set; }
-        public ICommand AddNewBakeLayerCommand { get; private set; }
+        public ICommand SetActiveSwatchCommand { get; private set; }
+        public ICommand AddNewSwatchCommand { get; private set; }
 
         public MainWindowViewModel()
         {
@@ -544,9 +544,9 @@ namespace Hyperion.Editor.ViewModels
                 PanelService.Instance.OpenPanel(panel);
             });
 
-            SetActiveBakeLayerCommand = new RelayCommand<string>(layerName =>
+            SetActiveSwatchCommand = new RelayCommand<string>(swatchName =>
             {
-                if (string.IsNullOrEmpty(layerName))
+                if (string.IsNullOrEmpty(swatchName))
                     return;
 
                 _ = EngineManager.PostToSimThread(() =>
@@ -559,23 +559,23 @@ namespace Hyperion.Editor.ViewModels
                             throw new Exception("Current project is null");
                         }
 
-                        project.SetActiveBakeLayer(new Name(layerName));
+                        project.SetActiveSwatch(new Name(swatchName));
                     }
                     catch (Exception ex)
                     {
-                        Logger.Log(LogLevel.Warning, $"Failed to set active bake layer: {ex.Message}");
+                        Logger.Log(LogLevel.Warning, $"Failed to set active swatch: {ex.Message}");
                     }
                 });
             });
 
-            AddNewBakeLayerCommand = new RelayCommand(() =>
+            AddNewSwatchCommand = new RelayCommand(() =>
             {
-                var panel = new AddNewBakeLayerPanelViewModel(result =>
+                var panel = new AddNewSwatchPanelViewModel(result =>
                 {
                     if (string.IsNullOrEmpty(result))
                         return;
 
-                    string layerName = result;
+                    string swatchName = result;
 
                     _ = EngineManager.PostToSimThread(() =>
                     {
@@ -587,14 +587,14 @@ namespace Hyperion.Editor.ViewModels
                                 throw new Exception("Current project is null");
                             }
 
-                            project.SetActiveBakeLayer(new Name(layerName));
+                            project.SetActiveSwatch(new Name(swatchName));
 
                             // Already on the sim thread here.
-                            RefreshBakeLayers();
+                            RefreshSwatches();
                         }
                         catch (Exception ex)
                         {
-                            Logger.Log(LogLevel.Warning, $"Failed to add new bake layer: {ex.Message}");
+                            Logger.Log(LogLevel.Warning, $"Failed to add new swatch: {ex.Message}");
                         }
                     });
                 });
@@ -715,7 +715,7 @@ namespace Hyperion.Editor.ViewModels
             _selectedGizmoChangedHandler?.Remove();
             _activeSceneChangedHandler?.Remove();
             _actionStackStateChangedHandler?.Remove();
-            _activeBakeLayerChangedHandler?.Remove();
+            _activeSwatchChangedHandler?.Remove();
 
             if (isDisposing)
             {
@@ -936,8 +936,8 @@ namespace Hyperion.Editor.ViewModels
                         {
                             SceneHierarchy.RefreshAllNames();
 
-                            // Entity layer assignments are tracked as editor actions (the inspector's
-                            // add/remove-layer buttons push them), so re-apply the layer filter here to
+                            // Entity swatch assignments are tracked as editor actions (the inspector's
+                            // add/remove-swatch buttons push them), so re-apply the swatch filter here to
                             // keep the hierarchy in sync with changes made in the inspector (and
                             // undo/redo of those changes).
                             SceneHierarchy.RefreshFilter();
@@ -945,37 +945,37 @@ namespace Hyperion.Editor.ViewModels
                     });
             }
 
-            _activeBakeLayerChangedHandler?.Remove();
-            _activeBakeLayerChangedHandler = null;
+            _activeSwatchChangedHandler?.Remove();
+            _activeSwatchChangedHandler = null;
 
             if (project != null)
             {
-                _activeBakeLayerChangedHandler = project.GetOnActiveBakeLayerChangedDelegate()
-                    .Bind((Name layerName) =>
+                _activeSwatchChangedHandler = project.GetOnActiveSwatchChangedDelegate()
+                    .Bind((Name swatchName) =>
                     {
                         Dispatcher.UIThread.Post(() =>
                         {
-                            ActiveBakeLayerName = layerName.ToString();
+                            ActiveSwatchName = swatchName.ToString();
 
-                            if (!BakeLayers.Contains(ActiveBakeLayerName))
+                            if (!Swatches.Contains(ActiveSwatchName))
                             {
-                                BakeLayers.Add(ActiveBakeLayerName);
-                                OnPropertyChanged(nameof(BakeLayers));
+                                Swatches.Add(ActiveSwatchName);
+                                OnPropertyChanged(nameof(Swatches));
                             }
 
-                            // A new/renamed active layer changes what's assignable in the per-entity
-                            // "Layers" section of the Inspector too - refresh it if it's showing.
-                            if (Inspector.EntityLayers != null)
+                            // A new/renamed active swatch changes what's assignable in the per-entity
+                            // "Swatches" section of the Inspector too - refresh it if it's showing.
+                            if (Inspector.EntitySwatches != null)
                             {
-                                _ = Inspector.EntityLayers.RefreshAsync();
+                                _ = Inspector.EntitySwatches.RefreshAsync();
                             }
 
-                            // The inspector's layer-override edit target follows the active layer
+                            // The inspector's swatch-override edit target follows the active swatch
                             // when the selected entity has an override set for it.
-                            Inspector.OnWorldActiveLayerChanged(ActiveBakeLayerName);
+                            Inspector.OnWorldActiveSwatchChanged(ActiveSwatchName);
 
-                            // Re-apply the layer filter to the scene hierarchy. This also runs during
-                            // simulation so the hierarchy tracks the active layer live.
+                            // Re-apply the swatch filter to the scene hierarchy. This also runs during
+                            // simulation so the hierarchy tracks the active swatch live.
                             SceneHierarchy.RefreshFilter();
                         });
                     });
@@ -1082,44 +1082,44 @@ namespace Hyperion.Editor.ViewModels
 
                 OnPropertyChanged(nameof(Scenes));
 
-                _ = EngineManager.PostToSimThread(RefreshBakeLayers);
+                _ = EngineManager.PostToSimThread(RefreshSwatches);
             });
         }
 
-        private void RefreshBakeLayers()
+        private void RefreshSwatches()
         {
             EditorProject? project = EngineManager.CurrentProject;
 
-            List<string>? layerNames = null;
-            string? activeLayerName = null;
+            List<string>? swatchNames = null;
+            string? activeSwatchName = null;
 
             if (project != null)
             {
-                layerNames = new List<string>();
+                swatchNames = new List<string>();
 
-                foreach (Name layerName in project.GetBakeLayerNames())
+                foreach (Name swatchName in project.GetSwatchNames())
                 {
-                    layerNames.Add(layerName.ToString());
+                    swatchNames.Add(swatchName.ToString());
                 }
 
-                activeLayerName = project.GetActiveBakeLayerName().ToString();
+                activeSwatchName = project.GetActiveSwatchName().ToString();
             }
 
             Dispatcher.UIThread.Post(() =>
             {
-                BakeLayers.Clear();
+                Swatches.Clear();
 
-                if (layerNames != null)
+                if (swatchNames != null)
                 {
-                    foreach (string layerName in layerNames)
+                    foreach (string swatchName in swatchNames)
                     {
-                        BakeLayers.Add(layerName);
+                        Swatches.Add(swatchName);
                     }
                 }
 
-                ActiveBakeLayerName = activeLayerName;
+                ActiveSwatchName = activeSwatchName;
 
-                OnPropertyChanged(nameof(BakeLayers));
+                OnPropertyChanged(nameof(Swatches));
 
                 SceneHierarchy.RefreshFilter();
             });

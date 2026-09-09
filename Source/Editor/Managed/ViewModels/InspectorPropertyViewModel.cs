@@ -37,7 +37,7 @@ namespace Hyperion.Editor.ViewModels
         private bool _isEditing;
 
         private bool _isOverridden;
-        /// <summary>True when at least one layer's override set contains this property.</summary>
+        /// <summary>True when at least one swatch's override set contains this property.</summary>
         public bool IsOverridden
         {
             get => _isOverridden;
@@ -45,7 +45,7 @@ namespace Hyperion.Editor.ViewModels
         }
 
         private string _overrideSignifier = string.Empty;
-        /// <summary>Small text under the label, e.g. "LayerA, LayerB override this value".</summary>
+        /// <summary>Small text under the label, e.g. "SwatchA, SwatchB override this value".</summary>
         public string OverrideSignifier
         {
             get => _overrideSignifier;
@@ -60,33 +60,33 @@ namespace Hyperion.Editor.ViewModels
             private set => SetProperty(ref _overrideTooltip, value);
         }
 
-        private bool _isOverriddenByCurrentLayer;
-        /// <summary>True when the World's active layer's override set contains this property; shows the per-row revert button.</summary>
-        public bool IsOverriddenByCurrentLayer
+        private bool _isOverriddenByCurrentSwatch;
+        /// <summary>True when the World's active swatch's override set contains this property; shows the per-row revert button.</summary>
+        public bool IsOverriddenByCurrentSwatch
         {
-            get => _isOverriddenByCurrentLayer;
-            private set => SetProperty(ref _isOverriddenByCurrentLayer, value);
+            get => _isOverriddenByCurrentSwatch;
+            private set => SetProperty(ref _isOverriddenByCurrentSwatch, value);
         }
 
-        private bool _isOverriddenByOtherLayerOnly;
-        /// <summary>True when only layers other than the active one override this property; draws the marker muted.</summary>
-        public bool IsOverriddenByOtherLayerOnly
+        private bool _isOverriddenByOtherSwatchOnly;
+        /// <summary>True when only swatches other than the active one override this property; draws the marker muted.</summary>
+        public bool IsOverriddenByOtherSwatchOnly
         {
-            get => _isOverriddenByOtherLayerOnly;
-            private set => SetProperty(ref _isOverriddenByOtherLayerOnly, value);
+            get => _isOverriddenByOtherSwatchOnly;
+            private set => SetProperty(ref _isOverriddenByOtherSwatchOnly, value);
         }
 
-        /// <summary>True for rows backed by a real object + Property (entity-level rows), i.e. the rows that support per-layer overrides.</summary>
+        /// <summary>True for rows backed by a real object + Property (entity-level rows), i.e. the rows that support per-swatch overrides.</summary>
         public bool IsEntityLevelRow => _valueGetter == null && _componentTargetResolver == null;
 
-        /// <summary>Called by the owning inspector after querying which layers override this property.</summary>
-        internal void SetOverrideInfo(List<string> layerNames, string? currentLayerName = null)
+        /// <summary>Called by the owning inspector after querying which swatches override this property.</summary>
+        internal void SetOverrideInfo(List<string> swatchNames, string? currentSwatchName = null)
         {
-            IsOverridden = layerNames.Count > 0;
-            OverrideSignifier = layerNames.Count > 0 ? $"{string.Join(", ", layerNames)} override this value" : string.Empty;
-            OverrideTooltip = layerNames.Count > 0 ? $"Overridden in: {string.Join(", ", layerNames)}" : null;
-            IsOverriddenByCurrentLayer = currentLayerName != null && layerNames.Contains(currentLayerName);
-            IsOverriddenByOtherLayerOnly = IsOverridden && !IsOverriddenByCurrentLayer;
+            IsOverridden = swatchNames.Count > 0;
+            OverrideSignifier = swatchNames.Count > 0 ? $"{string.Join(", ", swatchNames)} override this value" : string.Empty;
+            OverrideTooltip = swatchNames.Count > 0 ? $"Overridden in: {string.Join(", ", swatchNames)}" : null;
+            IsOverriddenByCurrentSwatch = currentSwatchName != null && swatchNames.Contains(currentSwatchName);
+            IsOverriddenByOtherSwatchOnly = IsOverridden && !IsOverriddenByCurrentSwatch;
         }
 
         public Property Property => _property;
@@ -355,22 +355,22 @@ namespace Hyperion.Editor.ViewModels
             Action<BoxedValue>? capturedSetter = _valueSetter;
             InspectorPropertyViewModelBase capturedThis = this;
 
-            //-- Layer override routing
+            //-- Swatch override routing
             if (capturedSetter == null && capturedResolver == null
                 && capturedProperty.Name != new Name("Name", weak: true)
-                && LayerOverrideEditContext.CurrentEntity is Entity overrideEntity
+                && SwatchOverrideEditContext.CurrentEntity is Entity overrideEntity
                 && overrideEntity.IsValid
                 && capturedTarget != null
                 && capturedTarget.NativeAddress == overrideEntity.NativeAddress
-                && LayerOverrideEditContext.ActiveLayerName is string contextLayer)
+                && SwatchOverrideEditContext.ActiveSwatchName is string contextSwatch)
             {
-                // Edits target the active layer's override when override mode is enabled, or
-                // when the property is ALREADY overridden by that layer (editing the existing
+                // Edits target the active swatch's override when override mode is enabled, or
+                // when the property is ALREADY overridden by that swatch (editing the existing
                 // override directly). Otherwise the edit writes the base value.
-                if (LayerOverrideEditContext.OverrideModeActive
-                    || EntityLayerOverrides.IsPropertyOverridden(overrideEntity, new Name(contextLayer), capturedProperty.Name))
+                if (SwatchOverrideEditContext.OverrideModeActive
+                    || EntitySwatchOverrides.IsPropertyOverridden(overrideEntity, new Name(contextSwatch), capturedProperty.Name))
                 {
-                    CommitLayerOverrideChange(overrideEntity, contextLayer, actionText, newValueObj);
+                    CommitSwatchOverrideChange(overrideEntity, contextSwatch, actionText, newValueObj);
                     return;
                 }
             }
@@ -437,32 +437,32 @@ namespace Hyperion.Editor.ViewModels
         public virtual void CommitValue() { }
 
         /// <summary>
-        /// Routes a property edit into the World's active layer's override set for the entity
+        /// Routes a property edit into the World's active swatch's override set for the entity
         /// (auto-creating and applying the set if needed). Reached when override mode is enabled
-        /// or when the property is already overridden by that layer. Writing the base value
+        /// or when the property is already overridden by that swatch. Writing the base value
         /// prunes the override entry; undo/redo restores the previous override state.
         /// Must be called on the sim thread.
         /// </summary>
-        private void CommitLayerOverrideChange(Entity entity, string layerName, string actionText, object? newValueObj)
+        private void CommitSwatchOverrideChange(Entity entity, string swatchName, string actionText, object? newValueObj)
         {
-            Name layer = new Name(layerName);
+            Name swatch = new Name(swatchName);
             Name propertyName = _property.Name;
 
-            // Ensure the set exists for the active layer and is applied, so the edit is visible
-            if (!EntityLayerOverrides.HasSet(entity, layer))
+            // Ensure the set exists for the active swatch and is applied, so the edit is visible
+            if (!EntitySwatchOverrides.HasSet(entity, swatch))
             {
-                EntityLayerOverrides.AddSet(entity, layer);
+                EntitySwatchOverrides.AddSet(entity, swatch);
             }
 
-            if (EntityLayerOverrides.GetAppliedLayer(entity).HashCode != layer.HashCode)
+            if (EntitySwatchOverrides.GetAppliedSwatch(entity).HashCode != swatch.HashCode)
             {
-                EntityLayerOverrides.Apply(entity, layer);
+                EntitySwatchOverrides.Apply(entity, swatch);
             }
 
-            bool wasOverridden = EntityLayerOverrides.IsPropertyOverridden(entity, layer, propertyName);
+            bool wasOverridden = EntitySwatchOverrides.IsPropertyOverridden(entity, swatch, propertyName);
 
             object? baseValueObj = null;
-            bool hasBaseValue = EntityLayerOverrides.GetBaseValue(entity, layer, propertyName, out BoxedValue baseValue);
+            bool hasBaseValue = EntitySwatchOverrides.GetBaseValue(entity, swatch, propertyName, out BoxedValue baseValue);
 
             if (hasBaseValue)
             {
@@ -485,7 +485,7 @@ namespace Hyperion.Editor.ViewModels
 
             if (wasOverridden)
             {
-                hadPreviousOverride = EntityLayerOverrides.GetValue(entity, layer, propertyName, out BoxedValue previousOverride);
+                hadPreviousOverride = EntitySwatchOverrides.GetValue(entity, swatch, propertyName, out BoxedValue previousOverride);
 
                 if (hadPreviousOverride)
                 {
@@ -519,7 +519,7 @@ namespace Hyperion.Editor.ViewModels
             bool removeOverride = hasBaseValue && Equals(baseValueObj, newValueObj);
 
             Entity capturedEntity = entity;
-            Name capturedLayer = layer;
+            Name capturedSwatch = swatch;
 
             void ApplyOverrideState(bool setOverride, object? valueObj, bool hasValue)
             {
@@ -532,16 +532,16 @@ namespace Hyperion.Editor.ViewModels
 
                     using BoxedValue bv = new BoxedValue(valueObj);
 
-                    EntityLayerOverrides.SetValue(capturedEntity, capturedLayer, propertyName, bv);
+                    EntitySwatchOverrides.SetValue(capturedEntity, capturedSwatch, propertyName, bv);
                 }
                 else
                 {
-                    EntityLayerOverrides.RemoveValue(capturedEntity, capturedLayer, propertyName);
+                    EntitySwatchOverrides.RemoveValue(capturedEntity, capturedSwatch, propertyName);
                 }
             }
 
             EditorAction action = new EditorAction(
-                removeOverride ? $"Revert Override ({layerName}): {Label}" : $"Override ({layerName}): {Label}",
+                removeOverride ? $"Revert Override ({swatchName}): {Label}" : $"Override ({swatchName}): {Label}",
                 execute: (_, _) => ApplyOverrideState(!removeOverride, newValueObj, true),
                 revert: (_, _) =>
                 {
@@ -578,15 +578,15 @@ namespace Hyperion.Editor.ViewModels
         public ICommand RevertOverrideCommand => _revertOverrideCommand ??= new RelayCommand(RevertOverride);
 
         /// <summary>
-        /// Drops this property from the World's active layer's override set, restoring the base
+        /// Drops this property from the World's active swatch's override set, restoring the base
         /// value (the override entry is removed, not overwritten). Afterwards edits write the
         /// base value again - unless override mode is enabled, in which case a new override is
         /// created on the next edit. Only for entity-level rows currently overridden by the
-        /// active layer.
+        /// active swatch.
         /// </summary>
         private void RevertOverride()
         {
-            if (!IsOverriddenByCurrentLayer)
+            if (!IsOverriddenByCurrentSwatch)
             {
                 return;
             }
@@ -596,29 +596,29 @@ namespace Hyperion.Editor.ViewModels
                 return; // entity-level rows only
             }
 
-            if (LayerOverrideEditContext.CurrentEntity is not Entity entity || !entity.IsValid)
+            if (SwatchOverrideEditContext.CurrentEntity is not Entity entity || !entity.IsValid)
             {
                 return;
             }
 
-            if (LayerOverrideEditContext.ActiveLayerName is not string layerName)
+            if (SwatchOverrideEditContext.ActiveSwatchName is not string swatchName)
             {
                 return;
             }
 
-            Name layer = new Name(layerName);
+            Name swatch = new Name(swatchName);
             Name propertyName = _property.Name;
             string label = Label;
 
             _ = EngineManager.PostToSimThread(() =>
             {
-                if (!EntityLayerOverrides.IsPropertyOverridden(entity, layer, propertyName))
+                if (!EntitySwatchOverrides.IsPropertyOverridden(entity, swatch, propertyName))
                 {
                     return;
                 }
 
                 object? previousOverrideObj = null;
-                bool hadPreviousOverride = EntityLayerOverrides.GetValue(entity, layer, propertyName, out BoxedValue previousOverride);
+                bool hadPreviousOverride = EntitySwatchOverrides.GetValue(entity, swatch, propertyName, out BoxedValue previousOverride);
 
                 if (hadPreviousOverride)
                 {
@@ -637,12 +637,12 @@ namespace Hyperion.Editor.ViewModels
                 }
 
                 Entity capturedEntity = entity;
-                Name capturedLayer = layer;
+                Name capturedSwatch = swatch;
 
                 // Removing an applied override makes the native side restore the base value
                 void ApplyRemove()
                 {
-                    EntityLayerOverrides.RemoveValue(capturedEntity, capturedLayer, propertyName);
+                    EntitySwatchOverrides.RemoveValue(capturedEntity, capturedSwatch, propertyName);
                 }
 
                 void ApplyRestore()
@@ -651,11 +651,11 @@ namespace Hyperion.Editor.ViewModels
                     {
                         using BoxedValue value = new BoxedValue(previousOverrideObj);
 
-                        EntityLayerOverrides.SetValue(capturedEntity, capturedLayer, propertyName, value);
+                        EntitySwatchOverrides.SetValue(capturedEntity, capturedSwatch, propertyName, value);
                     }
                     else
                     {
-                        EntityLayerOverrides.RemoveValue(capturedEntity, capturedLayer, propertyName);
+                        EntitySwatchOverrides.RemoveValue(capturedEntity, capturedSwatch, propertyName);
                     }
                 }
 
@@ -664,7 +664,7 @@ namespace Hyperion.Editor.ViewModels
                 if (project != null)
                 {
                     project.ActionStack.PushAction(new EditorAction(
-                        $"Revert Override ({layerName}): {label}",
+                        $"Revert Override ({swatchName}): {label}",
                         (_, _) => ApplyRemove(),
                         (_, _) => ApplyRestore()));
                 }

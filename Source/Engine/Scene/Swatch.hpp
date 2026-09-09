@@ -21,38 +21,38 @@
 
 namespace Hyperion {
 
-enum class LayerId : uint32;
-static constexpr LayerId InvalidLayerId = Invalid<LayerId>;
+enum class SwatchId : uint32;
+static constexpr SwatchId InvalidSwatchId = Invalid<SwatchId>;
 
-ENGINE_API extern const Name g_defaultLayerName;
+ENGINE_API extern const Name g_defaultSwatchName;
 
-HYP_FORCE_INLINE bool IsDefaultLayer(Name layerName)
+HYP_FORCE_INLINE bool IsDefaultSwatch(Name swatchName)
 {
-    return layerName == g_defaultLayerName;
+    return swatchName == g_defaultSwatchName;
 }
 
 HYP_CLASS()
-class ENGINE_API Layer final : public ObjectBase
+class ENGINE_API Swatch final : public ObjectBase
 {
-    HYP_OBJECT_BODY(Layer);
+    HYP_OBJECT_BODY(Swatch);
 
 public:
     HYP_FIELD(Property = "Name", Serialize)
     Name name;
 
-    HYP_FIELD(Property = "LayerId", Serialize)
-    LayerId layerId = InvalidLayerId;
+    HYP_FIELD(Property = "SwatchId", Serialize)
+    SwatchId swatchId = InvalidSwatchId;
 
 #ifdef HYP_EDITOR
     HYP_FIELD(Property = "BakeLayer", EditorOnly, Serialize)
     Baking::BakeLayer bakeLayer;
 #endif // HYP_EDITOR
 
-    Layer() = default;
+    Swatch() = default;
 
-    Layer(Name name, LayerId layerId)
+    Swatch(Name name, SwatchId swatchId)
         : name(name),
-          layerId(layerId)
+          swatchId(swatchId)
 #ifdef HYP_EDITOR
          , bakeLayer(name)
 #endif // HYP_EDITOR

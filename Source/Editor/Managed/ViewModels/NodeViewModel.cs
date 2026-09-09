@@ -237,7 +237,7 @@ namespace Hyperion.Editor.ViewModels
 
         /// <summary>
         /// Prunes or restores this node from its parent's <see cref="Children"/> collection based on the
-        /// current layer filter. Removed nodes stay alive in <see cref="AllChildren"/> so they can be
+        /// current swatch filter. Removed nodes stay alive in <see cref="AllChildren"/> so they can be
         /// restored later. Must be called on the UI thread.
         /// </summary>
         public void SetFilteredOut(bool filteredOut)

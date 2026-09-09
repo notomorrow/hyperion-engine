@@ -14,7 +14,7 @@
 #include <Scene/Scene.hpp>
 #include <Scene/EntityManager.hpp>
 #include <Scene/EntityTag.hpp>
-#include <Scene/Layer.hpp>
+#include <Scene/Swatch.hpp>
 
 #include <Scene/Camera/Camera.hpp>
 
@@ -174,9 +174,9 @@ void MoveCharacter(Entity* entity, CharacterControllerComponent& component, cons
     entity->SetWorldTranslation(outResultTranslation, TransformChangeType::Simulation);
 }
 
-Array<Handle<Layer>> GetTargetLayers(const Entity& entity, Handle<Layer> fallback)
+Array<Handle<Swatch>> GetTargetSwatches(const Entity& entity, Handle<Swatch> fallback)
 {
-    Array<Handle<Layer>> result;
+    Array<Handle<Swatch>> result;
 
     World* world = entity.GetWorld();
 
@@ -185,11 +185,11 @@ Array<Handle<Layer>> GetTargetLayers(const Entity& entity, Handle<Layer> fallbac
         return result;
     }
 
-    if (entity.HasNoLayers())
+    if (entity.HasNoSwatches())
     {
         if (!fallback.IsValid())
         {
-            fallback = world->GetDefaultLayer();
+            fallback = world->GetDefaultSwatch();
         }
 
         result.PushBack(fallback);
@@ -197,27 +197,27 @@ Array<Handle<Layer>> GetTargetLayers(const Entity& entity, Handle<Layer> fallbac
         return result;
     }
 
-    for (uint32 layerId = 0; layerId < MaxLayersPerWorld; layerId++)
+    for (uint32 swatchId = 0; swatchId < MaxSwatchesPerWorld; swatchId++)
     {
-        if (!entity.IsInLayer(LayerId(layerId)))
+        if (!entity.IsInSwatch(SwatchId(swatchId)))
         {
             continue;
         }
 
-        const Handle<Layer>& layer = world->TryGetLayerById(LayerId(layerId));
+        const Handle<Swatch>& swatch = world->TryGetSwatchById(SwatchId(swatchId));
 
-        if (!layer)
+        if (!swatch)
         {
             continue;
         }
 
-        result.PushBack(layer);
+        result.PushBack(swatch);
     }
 
     return result;
 }
 
-Name GetCurrentLayerForEntity(const Entity& entity)
+Name GetCurrentSwatchForEntity(const Entity& entity)
 {
     World* world = entity.GetWorld();
 
@@ -226,13 +226,13 @@ Name GetCurrentLayerForEntity(const Entity& entity)
         return Name::Invalid();
     }
 
-    const Handle<Layer>& layer = world->GetActiveLayer();
-    if (!layer)
+    const Handle<Swatch>& swatch = world->GetActiveSwatch();
+    if (!swatch)
     {
         return Name::Invalid();
     }
 
-    return layer->name;
+    return swatch->name;
 }
 
 } // namespace SceneHelpers

@@ -11,7 +11,7 @@
 #include <Scene/Entity.hpp>
 #include <Scene/EntityManager.hpp>
 #include <Scene/Scene.hpp>
-#include <Scene/Components/LayerOverridesComponent.hpp>
+#include <Scene/Components/SwatchOverridesComponent.hpp>
 
 #include <Core/DataProcessing/HMF/HMF.hpp>
 
@@ -3040,7 +3040,7 @@ static const IMember* ResolveMemberForOverride(const Class* cls, Name propertyNa
         }
     }
 
-    if (member->GetAttribute(Attributes::g_attrNoLayerOverride).IsValid())
+    if (member->GetAttribute(Attributes::g_attrNoSwatchOverride).IsValid())
     {
         return nullptr;
     }
@@ -3048,7 +3048,7 @@ static const IMember* ResolveMemberForOverride(const Class* cls, Name propertyNa
     return member;
 }
 
-static void WriteEntityLayerOverridesSection(const Entity& entity, String& outText, ToHMFOptions& opts, int indent)
+static void WriteEntitySwatchOverridesSection(const Entity& entity, String& outText, ToHMFOptions& opts, int indent)
 {
     Scene* scene = entity.GetScene();
 
@@ -3059,14 +3059,14 @@ static void WriteEntityLayerOverridesSection(const Entity& entity, String& outTe
         return;
     }
 
-    const LayerOverridesComponent* component = entityManager->TryGetComponent<LayerOverridesComponent>(&entity);
+    const SwatchOverridesComponent* component = entityManager->TryGetComponent<SwatchOverridesComponent>(&entity);
 
     if (!component)
     {
         return;
     }
 
-    const Array<EntityLayerOverrideSet>& overrideSets = component->sets;
+    const Array<EntitySwatchOverrideSet>& overrideSets = component->sets;
 
     if (overrideSets.Empty())
     {
@@ -3076,22 +3076,22 @@ static void WriteEntityLayerOverridesSection(const Entity& entity, String& outTe
     const Class* entityClass = entity.InstanceClass();
 
     WriteIndent(outText, indent);
-    outText += "$LayerOverrides = {\n";
+    outText += "$SwatchOverrides = {\n";
 
     for (size_t setIndex = 0; setIndex < overrideSets.Size(); setIndex++)
     {
-        const EntityLayerOverrideSet& overrideSet = overrideSets[setIndex];
+        const EntitySwatchOverrideSet& overrideSet = overrideSets[setIndex];
         const bool isLastSet = setIndex + 1 >= overrideSets.Size();
 
         WriteIndent(outText, indent + 1);
-        EscapeString(outText, overrideSet.layerName.IsValid() && overrideSet.layerName.LookupString()
-                ? overrideSet.layerName.LookupString()
+        EscapeString(outText, overrideSet.swatchName.IsValid() && overrideSet.swatchName.LookupString()
+                ? overrideSet.swatchName.LookupString()
                 : "");
         outText += " = {\n";
 
         for (size_t i = 0; i < overrideSet.propertyOverrides.Size(); i++)
         {
-            const LayerPropertyOverride& overrideEntry = overrideSet.propertyOverrides[i];
+            const SwatchPropertyOverride& overrideEntry = overrideSet.propertyOverrides[i];
 
             WriteIndent(outText, indent + 2);
             outText += overrideEntry.property.LookupString();
@@ -3117,7 +3117,7 @@ static void WriteEntityLayerOverridesSection(const Entity& entity, String& outTe
                 if (Result result = BoxedToHMFImpl(overrideEntry.value, outText, &member->GetTypeInfo(), memberOpts, indent + 2);
                     result.HasError())
                 {
-                    HYP_LOG(Core, Warning, "Failed to serialize layer override \"{}\" of Entity \"{}\": {}",
+                    HYP_LOG(Core, Warning, "Failed to serialize swatch override \"{}\" of Entity \"{}\": {}",
                         overrideEntry.property, entity.GetName(), result.GetError().GetMessage());
 
                     outText += "null";
@@ -3125,7 +3125,7 @@ static void WriteEntityLayerOverridesSection(const Entity& entity, String& outTe
             }
             else
             {
-                HYP_LOG(Core, Warning, "Cannot serialize layer override \"{}\": Entity \"{}\" has no such settable property",
+                HYP_LOG(Core, Warning, "Cannot serialize swatch override \"{}\": Entity \"{}\" has no such settable property",
                     overrideEntry.property, entity.GetName());
 
                 outText += "null";
@@ -3255,12 +3255,12 @@ Result ObjectToHMFImpl(
         cls = cls->GetParent();
     }
 
-    // $-prefixed schema sections (e.g. an Entity's $LayerOverrides)
+    // $-prefixed schema sections (e.g. an Entity's $SwatchOverrides)
     if (originalClass != nullptr && originalClass->IsDerivedFrom(Entity::StaticClass()))
     {
         if (Entity* entity = ExtractEntityFromBoxed(target))
         {
-            WriteEntityLayerOverridesSection(*entity, outText, opts, indent);
+            WriteEntitySwatchOverridesSection(*entity, outText, opts, indent);
         }
     }
 

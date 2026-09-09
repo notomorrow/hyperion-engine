@@ -25,7 +25,7 @@ struct ENGINE_API EnvProbeCaptureState
 {
     HYP_DEF_POOL_NEW_DELETE(g_renderPool);
 
-    EnvProbeCaptureState(EnvProbe* envProbe, Name layerName);
+    EnvProbeCaptureState(EnvProbe* envProbe, Name swatchName);
     ~EnvProbeCaptureState();
 
     EnvProbeCaptureState(const EnvProbeCaptureState& other) = delete;
@@ -34,7 +34,7 @@ struct ENGINE_API EnvProbeCaptureState
     void Begin();
     void End(bool commitResult);
 
-    Name layerName;                             //!< layer being baked for
+    Name swatchName;                            //!< swatch being baked for
     Handle<Texture> texture;                    //!< cubemap capture target
     Handle<Texture> visibilityTexture;          //!< visibility capture target
     SphericalHarmonicsData sphericalHarmonics;

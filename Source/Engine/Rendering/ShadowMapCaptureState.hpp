@@ -30,7 +30,7 @@ struct ENGINE_API ShadowMapCaptureState
 {
     HYP_DEF_POOL_NEW_DELETE(g_renderPool);
 
-    ShadowMapCaptureState(Light* light, Name layerName);
+    ShadowMapCaptureState(Light* light, Name swatchName);
     ~ShadowMapCaptureState();
 
     ShadowMapCaptureState(const ShadowMapCaptureState& other) = delete;
@@ -79,7 +79,7 @@ struct ENGINE_API ShadowMapCaptureState
         m_renderedFacesMask.Set(mask, MemoryOrder::RELEASE);
     }
 
-    Name layerName; //!< layer being baked for
+    Name swatchName; //!< swatch being baked for
 
 private:
     friend class Light;

@@ -24,7 +24,7 @@
 #include <Scene/World.hpp>
 #include <Scene/EntityManager.hpp>
 #include <Scene/Systems/ScriptSystem.hpp>
-#include <Scene/Systems/LayerOverrideSystem.hpp>
+#include <Scene/Systems/SwatchOverrideSystem.hpp>
 
 #include <Scene/Camera/Camera.hpp>
 
@@ -365,10 +365,10 @@ Result EditorProject::SaveAs(FilePath filepath)
 
     taskScope.GetEditorTask()->SetDescription("Saving package data");
 
-    // Ensure base property values are written to manifests, not values from applied layer overrides.
+    // Ensure base property values are written to manifests, not values from applied swatch overrides.
     if (m_editWorld.IsValid())
     {
-        if (LayerOverrideSystem* overrideSystem = m_editWorld->GetSystem<LayerOverrideSystem>())
+        if (SwatchOverrideSystem* overrideSystem = m_editWorld->GetSystem<SwatchOverrideSystem>())
         {
             overrideSystem->RevertAll();
         }
@@ -376,10 +376,10 @@ Result EditorProject::SaveAs(FilePath filepath)
 
     registry.SaveDirtyAssets();
 
-    // Re-apply the active layer's overrides now that all assets have been saved
+    // Re-apply the active swatch's overrides now that all assets have been saved
     if (m_editWorld.IsValid())
     {
-        if (LayerOverrideSystem* overrideSystem = m_editWorld->GetSystem<LayerOverrideSystem>())
+        if (SwatchOverrideSystem* overrideSystem = m_editWorld->GetSystem<SwatchOverrideSystem>())
         {
             overrideSystem->ApplyActive();
         }
@@ -444,36 +444,36 @@ BakeLayer& EditorProject::GetActiveBakeLayer()
     const Handle<World>& world = GetWorld();
     Assert(world.IsValid(), "No World set on the project!");
 
-    Handle<Layer> layer = world->GetActiveLayer();
-    Assert(layer.IsValid());
+    Handle<Swatch> swatch = world->GetActiveSwatch();
+    Assert(swatch.IsValid());
 
-    return layer->bakeLayer;
+    return swatch->bakeLayer;
 }
 
-Array<Name> EditorProject::GetBakeLayerNames() const
+Array<Name> EditorProject::GetSwatchNames() const
 {
     const Handle<World>& world = GetWorld();
     Assert(world.IsValid(), "No World set on the project!");
 
-    return world->GetLayerNames();
+    return world->GetSwatchNames();
 }
 
-Name EditorProject::GetActiveBakeLayerName() const
+Name EditorProject::GetActiveSwatchName() const
 {
     const Handle<World>& world = GetWorld();
     Assert(world.IsValid(), "No World set on the project!");
 
-    return world->GetActiveLayerName();
+    return world->GetActiveSwatchName();
 }
 
-void EditorProject::SetActiveBakeLayer(Name layerName)
+void EditorProject::SetActiveSwatch(Name swatchName)
 {
     const Handle<World>& world = GetWorld();
     Assert(world.IsValid(), "No World set on the project!");
 
-    world->SetActiveLayer(layerName);
+    world->SetActiveSwatch(swatchName);
 
-    OnActiveBakeLayerChanged(world->GetActiveLayerName());
+    OnActiveSwatchChanged(world->GetActiveSwatchName());
 }
 
 TResult<Handle<EditorProject>> EditorProject::Load(const FilePath& filepath)

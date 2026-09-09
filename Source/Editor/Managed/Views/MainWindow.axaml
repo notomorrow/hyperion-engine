@@ -568,30 +568,30 @@
                                                     </Grid>
                                                 </Border>
 
-                                                <!--  Layers  -->
+                                                <!--  Swatches  -->
                                                 <Border Grid.Row="1" Classes="panel-header-small">
                                                     <Grid VerticalAlignment="Center" ColumnDefinitions="Auto,*,Auto,Auto">
                                                         <DropDownButton
-                                                            x:Name="LayerDropDown"
+                                                            x:Name="SwatchDropDown"
                                                             Grid.Column="0"
                                                             Background="Transparent"
                                                             BorderThickness="0"
-                                                            ToolTip.Tip="Active Layer">
+                                                            ToolTip.Tip="Active Swatch">
                                                             <StackPanel Orientation="Horizontal" Spacing="4">
                                                                 <controls:Codicon Kind="Layers" Size="12"  Foreground="{StaticResource Brush.TextMuted}" />
                                                                 <TextBlock
                                                                     VerticalAlignment="Center"
                                                                     FontSize="11"
-                                                                    Text="{Binding ActiveBakeLayerName, FallbackValue='Default'}" />
+                                                                    Text="{Binding ActiveSwatchName, FallbackValue='Default'}" />
                                                             </StackPanel>
                                                             <DropDownButton.Flyout>
                                                                 <Flyout Placement="Bottom">
                                                                     <StackPanel MinWidth="150">
-                                                                        <ItemsControl ItemsSource="{Binding BakeLayers}">
+                                                                        <ItemsControl ItemsSource="{Binding Swatches}">
                                                                             <ItemsControl.ItemTemplate>
                                                                                 <DataTemplate x:DataType="x:String">
                                                                                     <MenuItem
-                                                                                        Command="{Binding SetActiveBakeLayerCommand, Source={x:Static vm:MainWindowViewModel.Instance}}"
+                                                                                        Command="{Binding SetActiveSwatchCommand, Source={x:Static vm:MainWindowViewModel.Instance}}"
                                                                                         CommandParameter="{Binding}"
                                                                                         Header="{Binding}" />
                                                                                 </DataTemplate>
@@ -600,33 +600,33 @@
 
                                                                         <Separator />
                                                                         <MenuItem
-                                                                            Command="{Binding AddNewBakeLayerCommand, Source={x:Static vm:MainWindowViewModel.Instance}}"
-                                                                            Header="New Layer..." />
+                                                                            Command="{Binding AddNewSwatchCommand, Source={x:Static vm:MainWindowViewModel.Instance}}"
+                                                                            Header="New Swatch..." />
                                                                     </StackPanel>
                                                                 </Flyout>
                                                             </DropDownButton.Flyout>
                                                         </DropDownButton>
 
                                                         <ToggleButton
-                                                            x:Name="LayerOverrideModeToggle"
+                                                            x:Name="SwatchOverrideModeToggle"
                                                             Grid.Column="2"
                                                             Padding="8,4"
                                                             Classes="panel-toggle"
                                                             HorizontalAlignment="Right"
                                                             VerticalAlignment="Center"
-                                                            IsChecked="{Binding Inspector.LayerOverrideMode, Mode=TwoWay}"
-                                                            IsVisible="{Binding Inspector.CanUseLayerOverrides}"
-                                                            ToolTip.Tip="When this toggle button is active, edits will apply as OVERRIDES for the active layer. Otherwise edits will apply on base + active.">
+                                                            IsChecked="{Binding Inspector.SwatchOverrideMode, Mode=TwoWay}"
+                                                            IsVisible="{Binding Inspector.CanUseSwatchOverrides}"
+                                                            ToolTip.Tip="When this toggle button is active, edits will apply as OVERRIDES for the active swatch. Otherwise edits will apply on base + active.">
                                                             <Panel>
                                                                 <TextBlock
                                                                     VerticalAlignment="Center"
                                                                     FontSize="9"
-                                                                    IsVisible="{Binding Inspector.LayerOverrideMode}"
+                                                                    IsVisible="{Binding Inspector.SwatchOverrideMode}"
                                                                     Text="Override Edits: ON" />
                                                                 <TextBlock
                                                                     VerticalAlignment="Center"
                                                                     FontSize="9"
-                                                                    IsVisible="{Binding !Inspector.LayerOverrideMode}"
+                                                                    IsVisible="{Binding !Inspector.SwatchOverrideMode}"
                                                                     Text="Override Edits: OFF" />
                                                             </Panel>
                                                         </ToggleButton>
@@ -638,9 +638,9 @@
                                                             HorizontalAlignment="Right"
                                                             VerticalAlignment="Center"
                                                             Classes="panel-toggle"
-                                                            IsChecked="{Binding SceneHierarchy.ShowOnlyActiveLayer}"
-                                                            ToolTip.Tip="Show nodes only for the active layer">
-                                                            <controls:Codicon Kind="{Binding SceneHierarchy.ShowOnlyActiveLayerIconKind}" Size="16" />
+                                                            IsChecked="{Binding SceneHierarchy.ShowOnlyActiveSwatch}"
+                                                            ToolTip.Tip="Show nodes only for the active swatch">
+                                                            <controls:Codicon Kind="{Binding SceneHierarchy.ShowOnlyActiveSwatchIconKind}" Size="16" />
                                                         </ToggleButton>
                                                     </Grid>
                                                 </Border>
@@ -909,10 +909,10 @@
                                                                 <ToggleButton
                                                                     Grid.Column="0"
                                                                     Classes="section-toggle"
-                                                                    IsChecked="{Binding LayersSection.IsExpanded, Mode=TwoWay}">
+                                                                    IsChecked="{Binding SwatchesSection.IsExpanded, Mode=TwoWay}">
                                                                     <StackPanel Orientation="Horizontal" Spacing="4">
-                                                                        <controls:Codicon Kind="{Binding LayersSection.ChevronKind}" Size="10" Margin="2,2,0,0" />
-                                                                        <TextBlock VerticalAlignment="Center" Classes="header" Text="Layers" />
+                                                                        <controls:Codicon Kind="{Binding SwatchesSection.ChevronKind}" Size="10" Margin="2,2,0,0" />
+                                                                        <TextBlock VerticalAlignment="Center" Classes="header" Text="Swatches" />
                                                                     </StackPanel>
                                                                 </ToggleButton>
 
@@ -923,13 +923,13 @@
                                                                     HorizontalAlignment="Right"
                                                                     VerticalAlignment="Center"
                                                                     Content="Add"
-                                                                    IsEnabled="{Binding EntityLayers.HasAvailableLayers}">
+                                                                    IsEnabled="{Binding EntitySwatches.HasAvailableSwatches}">
                                                                     <Button.Flyout>
-                                                                        <MenuFlyout ItemsSource="{Binding EntityLayers.AvailableLayers}">
+                                                                        <MenuFlyout ItemsSource="{Binding EntitySwatches.AvailableSwatches}">
                                                                             <MenuFlyout.ItemTemplate>
-                                                                                <DataTemplate x:DataType="vm:EntityLayerOptionViewModel">
+                                                                                <DataTemplate x:DataType="vm:EntitySwatchOptionViewModel">
                                                                                     <MenuItem
-                                                                                        Command="{Binding Inspector.EntityLayers.AddLayerCommand, Source={x:Static vm:MainWindowViewModel.Instance}}"
+                                                                                        Command="{Binding Inspector.EntitySwatches.AddSwatchCommand, Source={x:Static vm:MainWindowViewModel.Instance}}"
                                                                                         CommandParameter="{Binding}"
                                                                                         Header="{Binding Name}" />
                                                                                 </DataTemplate>
@@ -943,15 +943,15 @@
                                                         <ItemsControl
                                                             Grid.Row="1"
                                                             Margin="12,6,12,6"
-                                                            ItemsSource="{Binding EntityLayers.Layers}">
+                                                            ItemsSource="{Binding EntitySwatches.Swatches}">
                                                             <ItemsControl.IsVisible>
                                                                 <MultiBinding Converter="{x:Static conv:BoolConverters.And}">
-                                                                    <Binding Path="EntityLayers.HasLayers" />
-                                                                    <Binding Path="LayersSection.IsExpanded" />
+                                                                    <Binding Path="EntitySwatches.HasSwatches" />
+                                                                    <Binding Path="SwatchesSection.IsExpanded" />
                                                                 </MultiBinding>
                                                             </ItemsControl.IsVisible>
                                                             <ItemsControl.ItemTemplate>
-                                                                <DataTemplate x:DataType="vm:EntityLayerItemViewModel">
+                                                                <DataTemplate x:DataType="vm:EntitySwatchItemViewModel">
                                                                     <Border
                                                                         Margin="0,0,0,6"
                                                                         Padding="8,4"
@@ -964,8 +964,8 @@
                                                                             <Button
                                                                                 Grid.Column="1"
                                                                                 Padding="4,2"
-                                                                                ToolTip.Tip="Remove from layer"
-                                                                                Command="{Binding Inspector.EntityLayers.RemoveLayerCommand, Source={x:Static vm:MainWindowViewModel.Instance}}"
+                                                                                ToolTip.Tip="Remove from swatch"
+                                                                                Command="{Binding Inspector.EntitySwatches.RemoveSwatchCommand, Source={x:Static vm:MainWindowViewModel.Instance}}"
                                                                                 CommandParameter="{Binding}">
                                                                                 <controls:Codicon Kind="Trash" Size="14" />
                                                                             </Button>
@@ -1118,7 +1118,7 @@
                                                         </inspector:InspectorPropertyItemsControl>
                                                     </Grid>
 
-                                                    <!--  Layer Overrides (per-entity edit routing + copy)  -->
+                                                    <!--  Swatch Overrides (per-entity edit routing + copy)  -->
                                                     <Grid
                                                         Margin="0"
                                                         DataContext="{Binding Inspector}"
@@ -1129,10 +1129,10 @@
                                                                 <ToggleButton
                                                                     Grid.Column="0"
                                                                     Classes="section-toggle"
-                                                                    IsChecked="{Binding LayerOverridesSection.IsExpanded, Mode=TwoWay}">
+                                                                    IsChecked="{Binding SwatchOverridesSection.IsExpanded, Mode=TwoWay}">
                                                                     <StackPanel Orientation="Horizontal" Spacing="4">
-                                                                        <controls:Codicon Kind="{Binding LayerOverridesSection.ChevronKind}" Size="10" Margin="2,2,0,0" />
-                                                                        <TextBlock VerticalAlignment="Center" Classes="header" Text="Layer Overrides" />
+                                                                        <controls:Codicon Kind="{Binding SwatchOverridesSection.ChevronKind}" Size="10" Margin="2,2,0,0" />
+                                                                        <TextBlock VerticalAlignment="Center" Classes="header" Text="Swatch Overrides" />
                                                                     </StackPanel>
                                                                 </ToggleButton>
                                                                 <Border
@@ -1155,12 +1155,12 @@
                                                             </Grid>
                                                         </Border>
 
-                                                        <StackPanel Grid.Row="1" Margin="12,8,12,10" Spacing="10" IsVisible="{Binding LayerOverridesSection.IsExpanded}">
+                                                        <StackPanel Grid.Row="1" Margin="12,8,12,10" Spacing="10" IsVisible="{Binding SwatchOverridesSection.IsExpanded}">
                                                             <TextBlock
                                                                 FontSize="10"
                                                                 Foreground="{DynamicResource Brush.TextMuted}"
-                                                                IsVisible="{Binding !CanUseLayerOverrides}"
-                                                                Text="Default is the base layer - changes made here apply to the entity's base values."
+                                                                IsVisible="{Binding !CanUseSwatchOverrides}"
+                                                                Text="Default is the base swatch - changes made here apply to the entity's base values."
                                                                 TextWrapping="Wrap" />
 
                                                             <StackPanel Spacing="4" IsVisible="{Binding HasOverriddenProperties}">
@@ -1208,8 +1208,8 @@
                                                                         Padding="8,2"
                                                                         VerticalAlignment="Center"
                                                                         Content="Revert All"
-                                                                        Command="{Binding ResetLayerOverridesCommand}"
-                                                                        ToolTip.Tip="Revert layer-specific property overrides back to base values." />
+                                                                        Command="{Binding ResetSwatchOverridesCommand}"
+                                                                        ToolTip.Tip="Revert swatch-specific property overrides back to base values." />
                                                                 </Grid>
 
                                                             </StackPanel>
@@ -1218,22 +1218,22 @@
                                                                 FontSize="11"
                                                                 Foreground="{DynamicResource Brush.TextFaint}"
                                                                 IsVisible="{Binding ShowNoOverridesHint}"
-                                                                Text="No properties overridden on this layer."
+                                                                Text="No properties overridden on this swatch."
                                                                 TextWrapping="Wrap" />
 
                                                             <StackPanel Spacing="5">
-                                                                <TextBlock Classes="section-label" Text="COPY PROPERTIES FROM LAYER" />
+                                                                <TextBlock Classes="section-label" Text="COPY PROPERTIES FROM SWATCH" />
                                                                 <Grid ColumnDefinitions="*,Auto">
                                                                     <ComboBox
                                                                         Grid.Column="0"
                                                                         Margin="0,0,6,0"
                                                                         HorizontalAlignment="Stretch"
-                                                                        PlaceholderText="Select layer"
-                                                                        IsEnabled="{Binding HasCopyLayerSources}"
-                                                                        ItemsSource="{Binding CopyLayerSources}"
-                                                                        SelectedItem="{Binding SelectedCopyLayerSource, Mode=TwoWay}">
+                                                                        PlaceholderText="Select swatch"
+                                                                        IsEnabled="{Binding HasCopySwatchSources}"
+                                                                        ItemsSource="{Binding CopySwatchSources}"
+                                                                        SelectedItem="{Binding SelectedCopySwatchSource, Mode=TwoWay}">
                                                                         <ComboBox.ItemTemplate>
-                                                                            <DataTemplate x:DataType="vm:LayerCopySourceOptionViewModel">
+                                                                            <DataTemplate x:DataType="vm:SwatchCopySourceOptionViewModel">
                                                                                 <TextBlock Text="{Binding Name}" />
                                                                             </DataTemplate>
                                                                         </ComboBox.ItemTemplate>
@@ -1242,7 +1242,7 @@
                                                                         Grid.Column="1"
                                                                         Padding="8,2"
                                                                         Content="Apply"
-                                                                        Command="{Binding ApplyCopyFromLayerCommand}"
+                                                                        Command="{Binding ApplyCopyFromSwatchCommand}"
                                                                         ToolTip.Tip="Copy the selected source's property values onto the current edit target" />
                                                                 </Grid>
                                                             </StackPanel>

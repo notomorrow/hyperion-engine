@@ -24,7 +24,7 @@
 
 #include <Scene/EnvProbe.hpp>
 
-#include <Scene/Layer.hpp>
+#include <Scene/Swatch.hpp>
 
 #include <Framework/EngineGlobals.hpp>
 
@@ -42,7 +42,7 @@ void ConvolveEnvProbeCubemap(
 void ComputeEnvProbeSphericalHarmonics(
     const EnvProbe& envProbe,
     const Texture& inColorTexture,
-    Name layerName = Name::Invalid());
+    Name swatchName = Name::Invalid());
 
 } // namespace EnvProbeHelpers
 
@@ -56,7 +56,7 @@ Baker<EnvProbe>::Baker(BakerConfig&& config, BakeLayer& bakeLayer, const Handle<
 
 Name Baker<EnvProbe>::GetBakeLayerName() const
 {
-    return m_bakeLayer ? m_bakeLayer->name : g_defaultLayerName;
+    return m_bakeLayer ? m_bakeLayer->name : g_defaultSwatchName;
 }
 
 UniquePtr<BakeJobBase> Baker<EnvProbe>::CreateJob(BakeJobParams&& params)
@@ -173,9 +173,9 @@ void Baker<EnvProbe>::OnCompleted_Internal()
     {
         bakedTexture->SetIsTransient(true);
     }
-    else if (IsDefaultLayer(bakeLayerName))
+    else if (IsDefaultSwatch(bakeLayerName))
     {
-        // Other layers get their name (and asset registration) from SetBakedTextureForLayer.
+        // Other swatches get their name (and asset registration) from SetBakedTextureForSwatch.
         bakedTexture->SetName(NAME_FMT("{}_ColorMap", m_envProbe->GetName()));
 
         GetCurrentAssetRegistry()->PutAssetUnique(bakedTexture);
@@ -183,7 +183,7 @@ void Baker<EnvProbe>::OnCompleted_Internal()
 
     Check(bakedTexture->Create());
 
-    m_envProbe->SetBakedTextureForLayer(bakedTexture, bakeLayerName);
+    m_envProbe->SetBakedTextureForSwatch(bakedTexture, bakeLayerName);
 
     // Bake visibility texture
     if (m_envProbe->GetEnvProbeFlags() & EPF_VISIBILITY)
@@ -212,7 +212,7 @@ void Baker<EnvProbe>::OnCompleted_Internal()
 
         visBuffer.Clear();
 
-        if (IsDefaultLayer(bakeLayerName))
+        if (IsDefaultSwatch(bakeLayerName))
         {
             visibilityTexture->SetName(NAME_FMT("{}_VisibilityMap", m_envProbe->GetName()));
         }
@@ -221,9 +221,9 @@ void Baker<EnvProbe>::OnCompleted_Internal()
             visibilityTexture->SetName(NAME_FMT("{}_{}_VisibilityMap", m_envProbe->GetName(), bakeLayerName));
         }
 
-        // SetVisibilityTexture handles Create() and asset registration; SetVisibilityTextureForLayer
-        // handles asset registration for non-Default layers.
-        m_envProbe->SetVisibilityTextureForLayer(visibilityTexture, bakeLayerName);
+        // SetVisibilityTexture handles Create() and asset registration; SetVisibilityTextureForSwatch
+        // handles asset registration for non-Default swatches.
+        m_envProbe->SetVisibilityTextureForSwatch(visibilityTexture, bakeLayerName);
     }
 
     // Convolves the env probe cubemap and computes SH coefficients on the GPU
@@ -235,7 +235,7 @@ void Baker<EnvProbe>::OnCompleted_Internal()
             HYP_DEF_POOL_NEW_DELETE(g_renderPool);
 
             Handle<EnvProbe> envProbe;
-            Name layerName;
+            Name swatchName;
             BakeData<EnvProbe>::HitMaskBitmapType hitMaskBitmap;
         };
 
@@ -255,7 +255,7 @@ void Baker<EnvProbe>::OnCompleted_Internal()
 
             auto envProbeWriteScope = TUniqueResLock<EnvProbe>(*envProbe);
 
-            const Handle<Texture>& texture = envProbe->GetBakedTextureForLayer(cmdCasted->payload->layerName);
+            const Handle<Texture>& texture = envProbe->GetBakedTextureForSwatch(cmdCasted->payload->swatchName);
             Assert(texture.IsValid() && texture->IsCreated());
 
             if (!texture->IsCreated())
@@ -277,7 +277,7 @@ void Baker<EnvProbe>::OnCompleted_Internal()
 
             if (envProbe->ShouldComputeSphericalHarmonics())
             {
-                EnvProbeHelpers::ComputeEnvProbeSphericalHarmonics(*envProbe, *texture, cmdCasted->payload->layerName);
+                EnvProbeHelpers::ComputeEnvProbeSphericalHarmonics(*envProbe, *texture, cmdCasted->payload->swatchName);
             }
             
             if (envProbe->ShouldCreateHitMask())

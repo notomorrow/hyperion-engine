@@ -55,7 +55,7 @@ public:
 
     void UpdateRenderProxy(struct RenderProxyFogVolume* proxy);
 
-    //-- Per-layer stuff
+    //-- Per-swatch stuff
 
     static Name GetVolumeTexturePropertyName()
     {
@@ -67,20 +67,20 @@ public:
         return NAME("NoiseTexture");
     }
 
-    static Name BuildVolumeTextureName(Name volumeName, Name layerName);
-    static Name BuildNoiseTextureName(Name volumeName, Name layerName);
+    static Name BuildVolumeTextureName(Name volumeName, Name swatchName);
+    static Name BuildNoiseTextureName(Name volumeName, Name swatchName);
 
-    Handle<Texture> GetVolumeTextureForLayer(Name layerName) const;
-    Handle<Texture> GetNoiseTextureForLayer(Name layerName) const;
+    Handle<Texture> GetVolumeTextureForSwatch(Name swatchName) const;
+    Handle<Texture> GetNoiseTextureForSwatch(Name swatchName) const;
 
-    void SetTexturesForLayer(
+    void SetTexturesForSwatch(
         const Handle<Texture>& volumeTexture,
         const Handle<Texture>& noiseTexture,
-        Name layerName);
+        Name swatchName);
 
 #ifdef HYP_EDITOR
     HYP_METHOD(EditorOnly)
-    Array<Name> GetBakedLayerNames() const;
+    Array<Name> GetBakedSwatchNames() const;
 #endif // HYP_EDITOR
 
 #ifdef HYP_EDITOR

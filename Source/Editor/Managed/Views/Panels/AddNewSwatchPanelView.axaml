@@ -1,11 +1,11 @@
 <UserControl
-    x:Class="Hyperion.Editor.Views.Panels.AddNewBakeLayerPanelView"
+    x:Class="Hyperion.Editor.Views.Panels.AddNewSwatchPanelView"
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:vm="clr-namespace:Hyperion.Editor.ViewModels;assembly=Hyperion.Editor"
-    x:DataType="vm:AddNewBakeLayerPanelViewModel"
+    x:DataType="vm:AddNewSwatchPanelViewModel"
     mc:Ignorable="d">
     <DockPanel>
         <Border
@@ -31,10 +31,10 @@
         <ScrollViewer Padding="4,0" Offset="{Binding ScrollOffset, Mode=TwoWay}">
             <StackPanel Margin="12,12,12,8" Spacing="12">
                 <StackPanel Spacing="6">
-                    <TextBlock Classes="section-label" Text="Layer Name" />
+                    <TextBlock Classes="section-label" Text="Swatch Name" />
                     <TextBox
-                        Text="{Binding LayerName, Mode=TwoWay}"
-                        PlaceholderText="Enter bake layer name..." />
+                        Text="{Binding SwatchName, Mode=TwoWay}"
+                        PlaceholderText="Enter swatch name..." />
                 </StackPanel>
             </StackPanel>
         </ScrollViewer>

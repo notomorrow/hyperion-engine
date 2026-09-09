@@ -5,23 +5,23 @@ using Hyperion.Editor.Commands;
 
 namespace Hyperion.Editor.ViewModels
 {
-    public class AddNewBakeLayerPanelViewModel : EditorPanelViewModel
+    public class AddNewSwatchPanelViewModel : EditorPanelViewModel
     {
         private readonly Action<string?> _onCompleted;
 
-        private string _layerName = "NewLayer";
+        private string _swatchName = "NewSwatch";
 
-        public string LayerName
+        public string SwatchName
         {
-            get => _layerName;
-            set => SetProperty(ref _layerName, value);
+            get => _swatchName;
+            set => SetProperty(ref _swatchName, value);
         }
 
         public ICommand ConfirmCommand { get; }
         public ICommand CancelCommand { get; }
 
-        public AddNewBakeLayerPanelViewModel(Action<string?> onCompleted)
-            : base("New Bake Layer")
+        public AddNewSwatchPanelViewModel(Action<string?> onCompleted)
+            : base("New Swatch")
         {
             _onCompleted = onCompleted ?? throw new ArgumentNullException(nameof(onCompleted));
 
@@ -31,7 +31,7 @@ namespace Hyperion.Editor.ViewModels
 
         private void OnConfirm()
         {
-            _onCompleted(LayerName);
+            _onCompleted(SwatchName);
             PanelService.Instance.ClosePanel();
         }
 

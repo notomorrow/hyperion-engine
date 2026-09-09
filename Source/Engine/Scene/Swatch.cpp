@@ -6,12 +6,12 @@
 
 #include <ScenePch.hpp>
 
-#include <Scene/Layer.hpp>
+#include <Scene/Swatch.hpp>
 
-#include <Layer.generated.inl>
+#include <Swatch.generated.inl>
 
 namespace Hyperion {
 
-const Name g_defaultLayerName = NAME("Default");
+const Name g_defaultSwatchName = NAME("Default");
 
 } // namespace Hyperion
