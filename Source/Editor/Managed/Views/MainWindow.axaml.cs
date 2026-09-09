@@ -413,6 +413,10 @@ namespace Hyperion.Editor
                 window.X = Position.X + (int)((ClientSize.Width - panelWidth) * scaling) - (int)(8 * scaling);
                 window.Y = Position.Y + (int)(8 * scaling);
 
+                Logger.Log(LogLevel.Info,
+                    $"PanelWindow: presenting. MainWindow Position=({Position.X},{Position.Y}) ClientSize=({ClientSize.Width},{ClientSize.Height}) RenderScaling={scaling}. " +
+                    $"Target window X={window.X} Y={window.Y} Width={window.Width} Height={window.Height}. HostBeforePresent={(window.Host == null ? "null" : window.Host.GetType().Name)}.");
+
                 window.Present(false);
 
                 // The host window is resolved during Present; that Avalonia Window is what
@@ -421,7 +425,25 @@ namespace Hyperion.Editor
                 {
                     hostWindow.Closed += OnPanelWindowClosed;
 
+                    // fix for macOS not showing window
+                    if (hostWindow.Bounds.Width <= 0 || hostWindow.Bounds.Height <= 0)
+                    {
+                        hostWindow.Width = panelWidth;
+                        hostWindow.Height = panelHeight;
+                        hostWindow.Position = new PixelPoint((int)window.X, (int)window.Y);
+                    }
+
                     hostWindow.Activate();
+
+                    Logger.Log(LogLevel.Info,
+                        $"PanelWindow: presented. IsVisible={hostWindow.IsVisible} Position=({hostWindow.Position.X},{hostWindow.Position.Y}) " +
+                        $"Bounds={hostWindow.Bounds} Width={hostWindow.Width} Height={hostWindow.Height} WindowState={hostWindow.WindowState} " +
+                        $"ShowInTaskbar={hostWindow.ShowInTaskbar} Opacity={hostWindow.Opacity} Screens={hostWindow.Screens?.All.Count ?? -1}.");
+                }
+                else
+                {
+                    Logger.Log(LogLevel.Error,
+                        $"PanelWindow: after Present(), window.Host is {(window.Host == null ? "null" : window.Host.GetType().Name)} (not an Avalonia Window) - nothing was shown.");
                 }
 
             }
