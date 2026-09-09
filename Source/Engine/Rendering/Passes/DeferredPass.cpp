@@ -128,6 +128,8 @@ EngineStatCounter<uint32> g_statDebugDraws("Rendering/DebugDraws");
 
 CVar<int> g_cvDeferredDebugVis { "Rendering.Deferred.DebugVis", 0 };
 
+static StaticShaderPropertyId s_propDebugReflections { ShaderProperty(NAME("DEBUG_REFLECTIONS")) };
+
 CVar<bool> g_cvRayTracingEnabled { "Rendering.RayTracingEnabled", true };
 CVar<bool> g_cvDDGI { "Rendering.DDGI", false };
 CVar<bool> g_cvRayTracedReflections { "Rendering.RayTracing.RayTracedReflections", false };
@@ -1790,6 +1792,8 @@ void DeferredPass::RenderFrameForView(Frame* frame, const RenderSetup& rs)
         lightingRS.envProbe = *skyProbes.Begin();
     }
 
+    const int debugVisMode = g_cvDeferredDebugVis.Get();
+
     { // deferred lighting on opaque objects
         ENGINE_STAT_GPU_SCOPE(&s_statDeferredPass);
 
@@ -1814,7 +1818,10 @@ void DeferredPass::RenderFrameForView(Frame* frame, const RenderSetup& rs)
 
         passData.indirectLightingPass->RenderToFramebuffer(frame, lightingRS, passData.lightingFramebuffer);
 
-        if (g_cvEnableLightmapVolumes.Get() && rpl.GetLightmapVolumes().NumCurrent() != 0 && !isPathTracer)
+        // Baked lightmap contribution is its own light source - only show it when not in a debug
+        // vis mode, or when specifically visualizing raw baked lighting (mode 2).
+        if (g_cvEnableLightmapVolumes.Get() && rpl.GetLightmapVolumes().NumCurrent() != 0 && !isPathTracer
+            && (debugVisMode == 0 || debugVisMode == 2))
         {
             // Render the objects to have lightmaps applied into the translucent pass framebuffer with a full screen quad.
             // Apply lightmaps over the now shaded opaque objects.
@@ -1840,7 +1847,7 @@ void DeferredPass::RenderFrameForView(Frame* frame, const RenderSetup& rs)
         GenerateMipChain(frame, rs, renderCollector, srcImage);
     }
 
-    if (passData.reflectionsPass->ShouldRenderSSR())
+    if (passData.reflectionsPass->ShouldRenderSSR() && (debugVisMode == 0 || debugVisMode == 1))
     {
         ENGINE_STAT_GPU_SCOPE(&s_statReflections);
 
@@ -1876,7 +1883,14 @@ void DeferredPass::RenderFrameForView(Frame* frame, const RenderSetup& rs)
 
         frame->cr << SetCurrentBlendFunction(BlendFunction::Additive());
 
-        frame->cr << SetCurrentShader(ShaderDesc(NAME("ApplyReflections")));
+        ShaderPropertySet reflectionsShaderProperties;
+
+        if (debugVisMode == 1)
+        {
+            reflectionsShaderProperties.Add(s_propDebugReflections);
+        }
+
+        frame->cr << SetCurrentShader(ShaderDesc(NAME("ApplyReflections"), reflectionsShaderProperties));
 
         uint32 uniformIndex = 0;
 

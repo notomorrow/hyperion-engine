@@ -791,6 +791,8 @@ private:
     /*! \brief Roll the target mesh back to the captured baseline and drop the per-session stack. */
     void DiscardMeshEdits();
 
+    void SyncBoxPhysicsShapeToMeshBounds(const Handle<Node>& node);
+
     bool TryPickMeshEditFace(const Ray& ray, MeshEditFaceSelection& outSelection, bool ensureUniqueMesh);
     void SetSelectedMeshEditFace(Optional<MeshEditFaceSelection> selection);
     void UpdateHoveredMeshEditFace(const Ray& ray);

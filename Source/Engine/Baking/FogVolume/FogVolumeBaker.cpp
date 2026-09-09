@@ -15,6 +15,7 @@
 #include <Asset/Assets.hpp>
 
 #include <Scene/FogVolume.hpp>
+#include <Scene/Layer.hpp>
 
 #include <Core/Threading/TaskSystem.hpp>
 #include <Core/Threading/TaskThread.hpp>
@@ -28,6 +29,11 @@ Baker<FogVolume>::Baker(BakerConfig&& config, BakeLayer& bakeLayer, const Handle
     : BakerBase(std::move(config), bakeLayer, fogVolume, MakeStrongRef(fogVolume->GetScene()), fogVolume->GetWorldBounds()),
       m_fogVolume(fogVolume)
 {
+}
+
+Name Baker<FogVolume>::GetBakeLayerName() const
+{
+    return m_bakeLayer ? m_bakeLayer->name : g_defaultLayerName;
 }
 
 UniquePtr<BakeJobBase> Baker<FogVolume>::CreateJob(BakeJobParams&& params)
@@ -127,8 +133,6 @@ void Baker<FogVolume>::HandleCompletedJob_Internal(BakeJobBase* job)
     };
 
     Handle<Texture> volumeTexture = MakeHandle<Texture>(volumeTextureDesc, volumeBitmap.ToByteView());
-    volumeTexture->SetName(NAME_FMT("FogVolume_{}_DataMap", m_fogVolume->GetName()));
-    GetCurrentAssetRegistry()->PutAssetUnique(volumeTexture);
 
     TextureDesc noiseTextureDesc {
         TextureType::Texture3D,
@@ -140,10 +144,19 @@ void Baker<FogVolume>::HandleCompletedJob_Internal(BakeJobBase* job)
     };
 
     Handle<Texture> noiseTexture = MakeHandle<Texture>(noiseTextureDesc, noiseBitmap.ToByteView());
-    noiseTexture->SetName(NAME_FMT("FogVolume_{}_NoiseMap", m_fogVolume->GetName()));
-    GetCurrentAssetRegistry()->PutAssetUnique(noiseTexture);
 
-    m_fogVolume->SetTextures(volumeTexture, noiseTexture);
+    const Name bakeLayerName = GetBakeLayerName();
+
+    if (IsDefaultLayer(bakeLayerName))
+    {
+        volumeTexture->SetName(FogVolume::BuildVolumeTextureName(m_fogVolume->GetName(), bakeLayerName));
+        GetCurrentAssetRegistry()->PutAssetUnique(volumeTexture);
+
+        noiseTexture->SetName(FogVolume::BuildNoiseTextureName(m_fogVolume->GetName(), bakeLayerName));
+        GetCurrentAssetRegistry()->PutAssetUnique(noiseTexture);
+    }
+
+    m_fogVolume->SetTexturesForLayer(volumeTexture, noiseTexture, bakeLayerName);
 }
 
 } // namespace Baking

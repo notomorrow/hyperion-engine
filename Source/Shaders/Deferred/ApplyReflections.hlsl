@@ -112,11 +112,12 @@ PSOutput PSMain(PSInput input)
     const float3 dfg = CalculateDFG(perceptualRoughness, NdotV);
     const float3 E = CalculateE(F0, dfg);
 
+    float4 reflections = SAMPLE_TEXTURE_2D_LOD(sampler_linear, ReflectionsResultTexture, texcoord, 0);
+
     float3 specular_ao = (float3)SpecularAO_Lagarde(NdotV, ao, perceptualRoughness);
     const float3 energy_compensation = CalculateEnergyCompensation(F0, dfg);
     specular_ao *= energy_compensation;
-    
-    float4 reflections = SAMPLE_TEXTURE_2D_LOD(sampler_linear, ReflectionsResultTexture, texcoord, 0);
+
     reflections.rgb *= specular_ao;
 
     const float3 Fr = E * reflections.rgb;
