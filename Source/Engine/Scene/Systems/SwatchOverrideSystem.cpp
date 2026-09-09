@@ -6,7 +6,7 @@
 
 #include <ScenePch.hpp>
 
-#include <Scene/Systems/LayerOverrideSystem.hpp>
+#include <Scene/Systems/SwatchOverrideSystem.hpp>
 
 #include <Scene/Entity.hpp>
 #include <Scene/EntityManager.hpp>
@@ -16,7 +16,7 @@
 #include <Core/Reflection/Property.hpp>
 #include <Core/Reflection/Field.hpp>
 
-#include <LayerOverrideSystem.generated.inl>
+#include <SwatchOverrideSystem.generated.inl>
 
 namespace Hyperion {
 
@@ -25,11 +25,11 @@ namespace Helpers
 namespace
 {
 
-inline EntityLayerOverrideSet* FindLayerOverrideSet(Array<EntityLayerOverrideSet>& sets, Name layerName)
+inline EntitySwatchOverrideSet* FindSwatchOverrideSet(Array<EntitySwatchOverrideSet>& sets, Name swatchName)
 {
-    for (EntityLayerOverrideSet& set : sets)
+    for (EntitySwatchOverrideSet& set : sets)
     {
-        if (set.layerName == layerName)
+        if (set.swatchName == swatchName)
         {
             return &set;
         }
@@ -38,11 +38,11 @@ inline EntityLayerOverrideSet* FindLayerOverrideSet(Array<EntityLayerOverrideSet
     return nullptr;
 }
 
-inline const EntityLayerOverrideSet* FindLayerOverrideSet(const Array<EntityLayerOverrideSet>& sets, Name layerName)
+inline const EntitySwatchOverrideSet* FindSwatchOverrideSet(const Array<EntitySwatchOverrideSet>& sets, Name swatchName)
 {
-    for (const EntityLayerOverrideSet& set : sets)
+    for (const EntitySwatchOverrideSet& set : sets)
     {
-        if (set.layerName == layerName)
+        if (set.swatchName == swatchName)
         {
             return &set;
         }
@@ -51,21 +51,21 @@ inline const EntityLayerOverrideSet* FindLayerOverrideSet(const Array<EntityLaye
     return nullptr;
 }
 
-inline bool HasLayerOverrideSet(const Array<EntityLayerOverrideSet>& sets, Name layerName)
+inline bool HasSwatchOverrideSet(const Array<EntitySwatchOverrideSet>& sets, Name swatchName)
 {
-    return FindLayerOverrideSet(sets, layerName) != nullptr;
+    return FindSwatchOverrideSet(sets, swatchName) != nullptr;
 }
 
-inline bool IsPropertyOverriddenInLayer(const Array<EntityLayerOverrideSet>& sets, Name layerName, Name propertyName)
+inline bool IsPropertyOverriddenInSwatch(const Array<EntitySwatchOverrideSet>& sets, Name swatchName, Name propertyName)
 {
-    const EntityLayerOverrideSet* set = FindLayerOverrideSet(sets, layerName);
+    const EntitySwatchOverrideSet* set = FindSwatchOverrideSet(sets, swatchName);
 
     if (!set)
     {
         return false;
     }
 
-    for (const LayerPropertyOverride& overrideEntry : set->propertyOverrides)
+    for (const SwatchPropertyOverride& overrideEntry : set->propertyOverrides)
     {
         if (overrideEntry.property == propertyName)
         {
@@ -76,16 +76,16 @@ inline bool IsPropertyOverriddenInLayer(const Array<EntityLayerOverrideSet>& set
     return false;
 }
 
-inline bool GetLayerOverrideValue(const Array<EntityLayerOverrideSet>& sets, Name layerName, Name propertyName, BoxedValue& outValue)
+inline bool GetSwatchOverrideValue(const Array<EntitySwatchOverrideSet>& sets, Name swatchName, Name propertyName, BoxedValue& outValue)
 {
-    const EntityLayerOverrideSet* set = FindLayerOverrideSet(sets, layerName);
+    const EntitySwatchOverrideSet* set = FindSwatchOverrideSet(sets, swatchName);
 
     if (!set)
     {
         return false;
     }
 
-    for (const LayerPropertyOverride& overrideEntry : set->propertyOverrides)
+    for (const SwatchPropertyOverride& overrideEntry : set->propertyOverrides)
     {
         if (overrideEntry.property == propertyName)
         {
@@ -134,7 +134,7 @@ const IMember* ResolveOverridableMember(const Class* cls, Name propertyName)
         return nullptr;
     }
 
-    if (member->GetAttribute(Attributes::g_attrNoLayerOverride).IsValid())
+    if (member->GetAttribute(Attributes::g_attrNoSwatchOverride).IsValid())
     {
         return nullptr;
     }
@@ -188,7 +188,7 @@ EntityManager* GetEntityManagerFor(const Entity& entity)
     return scene ? scene->GetEntityManager() : nullptr;
 }
 
-LayerOverridesComponent* TryGetComponent(const Entity& entity)
+SwatchOverridesComponent* TryGetComponent(const Entity& entity)
 {
     EntityManager* entityManager = GetEntityManagerFor(entity);
 
@@ -197,7 +197,7 @@ LayerOverridesComponent* TryGetComponent(const Entity& entity)
         return nullptr;
     }
 
-    return entityManager->TryGetComponent<LayerOverridesComponent>(const_cast<const Entity*>(&entity));
+    return entityManager->TryGetComponent<SwatchOverridesComponent>(const_cast<const Entity*>(&entity));
 }
 
 void SnapshotBaseValueIfAbsent(Array<Pair<Name, BoxedValue>>& baseSnapshot, const IMember* member, Entity* entity, Name propertyName)
@@ -220,9 +220,9 @@ bool BoxesEqual(const BoxedValue& a, const BoxedValue& b)
 
 bool GetEntityTrueBaseValue(Entity* entity, Name propertyName, BoxedValue& outValue)
 {
-    LayerOverridesComponent* component = TryGetComponent(*entity);
+    SwatchOverridesComponent* component = TryGetComponent(*entity);
 
-    if (component && component->appliedLayer.IsValid())
+    if (component && component->appliedSwatch.IsValid())
     {
         for (const Pair<Name, BoxedValue>& snapshot : component->baseSnapshot)
         {
@@ -255,119 +255,119 @@ bool GetEntityTrueBaseValue(Entity* entity, Name propertyName, BoxedValue& outVa
 
 #pragma region Queries
 
-Name LayerOverrideSystem::GetAppliedOverrideLayer(const Entity* entity) const
+Name SwatchOverrideSystem::GetAppliedOverrideSwatch(const Entity* entity) const
 {
     if (!entity)
     {
         return Name::Invalid();
     }
 
-    const LayerOverridesComponent* component = Helpers::TryGetComponent(*entity);
+    const SwatchOverridesComponent* component = Helpers::TryGetComponent(*entity);
 
     if (!component)
     {
         return Name::Invalid();
     }
 
-    return component->appliedLayer;
+    return component->appliedSwatch;
 }
 
-Array<Name> LayerOverrideSystem::GetSetLayerNames(const Entity* entity) const
+Array<Name> SwatchOverrideSystem::GetSetSwatchNames(const Entity* entity) const
 {
-    Array<Name> layerNames;
+    Array<Name> swatchNames;
 
     if (!entity)
     {
-        return layerNames;
+        return swatchNames;
     }
 
-    const LayerOverridesComponent* component = Helpers::TryGetComponent(*entity);
+    const SwatchOverridesComponent* component = Helpers::TryGetComponent(*entity);
 
     if (!component)
     {
-        return layerNames;
+        return swatchNames;
     }
 
-    layerNames.Reserve(component->sets.Size());
+    swatchNames.Reserve(component->sets.Size());
 
-    for (const EntityLayerOverrideSet& set : component->sets)
+    for (const EntitySwatchOverrideSet& set : component->sets)
     {
-        // The Default layer is the base values, so it never counts as an override set
-        if (IsDefaultLayer(set.layerName))
+        // The Default swatch is the base values, so it never counts as an override set
+        if (IsDefaultSwatch(set.swatchName))
         {
             continue;
         }
 
-        layerNames.PushBack(set.layerName);
+        swatchNames.PushBack(set.swatchName);
     }
 
-    return layerNames;
+    return swatchNames;
 }
 
-bool LayerOverrideSystem::HasLayerOverrideSet(const Entity* entity, Name layerName) const
+bool SwatchOverrideSystem::HasSwatchOverrideSet(const Entity* entity, Name swatchName) const
 {
-    if (!entity || IsDefaultLayer(layerName))
+    if (!entity || IsDefaultSwatch(swatchName))
     {
         return false;
     }
 
-    const LayerOverridesComponent* component = Helpers::TryGetComponent(*entity);
+    const SwatchOverridesComponent* component = Helpers::TryGetComponent(*entity);
 
     if (!component)
     {
         return false;
     }
 
-    return Helpers::HasLayerOverrideSet(component->sets, layerName);
+    return Helpers::HasSwatchOverrideSet(component->sets, swatchName);
 }
 
-bool LayerOverrideSystem::IsPropertyOverriddenInLayer(const Entity* entity, Name layerName, Name propertyName) const
+bool SwatchOverrideSystem::IsPropertyOverriddenInSwatch(const Entity* entity, Name swatchName, Name propertyName) const
 {
-    if (!entity || IsDefaultLayer(layerName))
+    if (!entity || IsDefaultSwatch(swatchName))
     {
         return false;
     }
 
-    const LayerOverridesComponent* component = Helpers::TryGetComponent(*entity);
+    const SwatchOverridesComponent* component = Helpers::TryGetComponent(*entity);
 
     if (!component)
     {
         return false;
     }
 
-    return Helpers::IsPropertyOverriddenInLayer(component->sets, layerName, propertyName);
+    return Helpers::IsPropertyOverriddenInSwatch(component->sets, swatchName, propertyName);
 }
 
-bool LayerOverrideSystem::GetLayerOverrideValue(const Entity* entity, Name layerName, Name propertyName, BoxedValue& outValue) const
+bool SwatchOverrideSystem::GetSwatchOverrideValue(const Entity* entity, Name swatchName, Name propertyName, BoxedValue& outValue) const
 {
-    if (!entity || IsDefaultLayer(layerName))
+    if (!entity || IsDefaultSwatch(swatchName))
     {
         return false;
     }
 
-    const LayerOverridesComponent* component = Helpers::TryGetComponent(*entity);
+    const SwatchOverridesComponent* component = Helpers::TryGetComponent(*entity);
 
     if (!component)
     {
         return false;
     }
 
-    return Helpers::GetLayerOverrideValue(component->sets, layerName, propertyName, outValue);
+    return Helpers::GetSwatchOverrideValue(component->sets, swatchName, propertyName, outValue);
 }
 
-bool LayerOverrideSystem::GetLayerOverrideBaseValue(const Entity* entity, Name layerName, Name propertyName, BoxedValue& outValue) const
+bool SwatchOverrideSystem::GetSwatchOverrideBaseValue(const Entity* entity, Name swatchName, Name propertyName, BoxedValue& outValue) const
 {
     if (!entity)
     {
         return false;
     }
 
-    if (IsDefaultLayer(layerName))
+    if (IsDefaultSwatch(swatchName))
     {
         return Helpers::GetEntityTrueBaseValue(const_cast<Entity*>(entity), propertyName, outValue);
     }
 
-    const LayerOverridesComponent* component = Helpers::TryGetComponent(*entity);
+    const SwatchOverridesComponent* component = Helpers::TryGetComponent(*entity);
 
     if (!component)
     {
@@ -384,7 +384,7 @@ bool LayerOverrideSystem::GetLayerOverrideBaseValue(const Entity* entity, Name l
         return true;
     }
 
-    if (component->appliedLayer == layerName)
+    if (component->appliedSwatch == swatchName)
     {
         for (const Pair<Name, BoxedValue>& snapshot : component->baseSnapshot)
         {
@@ -411,49 +411,49 @@ bool LayerOverrideSystem::GetLayerOverrideBaseValue(const Entity* entity, Name l
     return true;
 }
 
-bool LayerOverrideSystem::HasAnyOverriddenProperty(const Entity* entity, Name layerName) const
+bool SwatchOverrideSystem::HasAnyOverriddenProperty(const Entity* entity, Name swatchName) const
 {
-    if (!entity || !layerName || IsDefaultLayer(layerName))
+    if (!entity || !swatchName || IsDefaultSwatch(swatchName))
     {
         return false;
     }
 
-    const LayerOverridesComponent* component = Helpers::TryGetComponent(*entity);
+    const SwatchOverridesComponent* component = Helpers::TryGetComponent(*entity);
 
     if (!component)
     {
         return false;
     }
 
-    const EntityLayerOverrideSet* set = Helpers::FindLayerOverrideSet(component->sets, layerName);
+    const EntitySwatchOverrideSet* set = Helpers::FindSwatchOverrideSet(component->sets, swatchName);
 
     return set && !set->propertyOverrides.Empty();
 }
 
-Array<Pair<Name, BoxedValue>> LayerOverrideSystem::GetLayerOverrideEntries(const Entity* entity, Name layerName) const
+Array<Pair<Name, BoxedValue>> SwatchOverrideSystem::GetSwatchOverrideEntries(const Entity* entity, Name swatchName) const
 {
     Array<Pair<Name, BoxedValue>> entries;
 
-    if (!entity || !layerName || IsDefaultLayer(layerName))
+    if (!entity || !swatchName || IsDefaultSwatch(swatchName))
     {
         return entries;
     }
 
-    const LayerOverridesComponent* component = Helpers::TryGetComponent(*entity);
+    const SwatchOverridesComponent* component = Helpers::TryGetComponent(*entity);
 
     if (!component)
     {
         return entries;
     }
 
-    const EntityLayerOverrideSet* set = Helpers::FindLayerOverrideSet(component->sets, layerName);
+    const EntitySwatchOverrideSet* set = Helpers::FindSwatchOverrideSet(component->sets, swatchName);
 
     if (!set)
     {
         return entries;
     }
 
-    for (const LayerPropertyOverride& overrideEntry : set->propertyOverrides)
+    for (const SwatchPropertyOverride& overrideEntry : set->propertyOverrides)
     {
         entries.PushBack({ overrideEntry.property, overrideEntry.value });
     }
@@ -465,10 +465,10 @@ Array<Pair<Name, BoxedValue>> LayerOverrideSystem::GetLayerOverrideEntries(const
 
 #pragma region Editing
 
-bool LayerOverrideSystem::AddLayerOverrideSet(Entity* entity, Name layerName)
+bool SwatchOverrideSystem::AddSwatchOverrideSet(Entity* entity, Name swatchName)
 {
-    // The Default layer has no override set - editing it writes the base values directly
-    if (!entity || !layerName || IsDefaultLayer(layerName))
+    // The Default swatch has no override set - editing it writes the base values directly
+    if (!entity || !swatchName || IsDefaultSwatch(swatchName))
     {
         return false;
     }
@@ -480,22 +480,22 @@ bool LayerOverrideSystem::AddLayerOverrideSet(Entity* entity, Name layerName)
         return false;
     }
 
-    LayerOverridesComponent* component = entityManager->TryGetComponent<LayerOverridesComponent>(entity);
+    SwatchOverridesComponent* component = entityManager->TryGetComponent<SwatchOverridesComponent>(entity);
 
     if (!component)
     {
-        LayerOverridesComponent newComponent;
+        SwatchOverridesComponent newComponent;
 
-        component = &entityManager->AddComponent<LayerOverridesComponent>(entity, std::move(newComponent));
+        component = &entityManager->AddComponent<SwatchOverridesComponent>(entity, std::move(newComponent));
     }
 
-    if (Helpers::HasLayerOverrideSet(component->sets, layerName))
+    if (Helpers::HasSwatchOverrideSet(component->sets, swatchName))
     {
         return false;
     }
 
-    EntityLayerOverrideSet set;
-    set.layerName = layerName;
+    EntitySwatchOverrideSet set;
+    set.swatchName = swatchName;
 
     component->sets.PushBack(std::move(set));
 
@@ -504,28 +504,28 @@ bool LayerOverrideSystem::AddLayerOverrideSet(Entity* entity, Name layerName)
     return true;
 }
 
-bool LayerOverrideSystem::RemoveLayerOverrideSet(Entity* entity, Name layerName)
+bool SwatchOverrideSystem::RemoveSwatchOverrideSet(Entity* entity, Name swatchName)
 {
-    if (!entity || IsDefaultLayer(layerName))
+    if (!entity || IsDefaultSwatch(swatchName))
     {
         return false;
     }
 
-    LayerOverridesComponent* component = Helpers::TryGetComponent(*entity);
+    SwatchOverridesComponent* component = Helpers::TryGetComponent(*entity);
 
     if (!component)
     {
         return false;
     }
 
-    if (component->appliedLayer == layerName)
+    if (component->appliedSwatch == swatchName)
     {
         RevertOverrides(entity);
     }
 
     for (size_t i = 0; i < component->sets.Size(); i++)
     {
-        if (component->sets[i].layerName == layerName)
+        if (component->sets[i].swatchName == swatchName)
         {
             component->sets.EraseAt(i);
 
@@ -538,27 +538,27 @@ bool LayerOverrideSystem::RemoveLayerOverrideSet(Entity* entity, Name layerName)
     return false;
 }
 
-bool LayerOverrideSystem::SetLayerOverrideValue(Entity* entity, Name layerName, Name propertyName, BoxedValue value)
+bool SwatchOverrideSystem::SetSwatchOverrideValue(Entity* entity, Name swatchName, Name propertyName, BoxedValue value)
 {
     if (!entity)
     {
         return false;
     }
 
-    // Writing to the Default layer is writing the base value
-    if (IsDefaultLayer(layerName))
+    // Writing to the Default swatch is writing the base value
+    if (IsDefaultSwatch(swatchName))
     {
-        return SetLayerOverrideBaseValue(entity, propertyName, std::move(value));
+        return SetSwatchOverrideBaseValue(entity, propertyName, std::move(value));
     }
 
-    LayerOverridesComponent* component = Helpers::TryGetComponent(*entity);
+    SwatchOverridesComponent* component = Helpers::TryGetComponent(*entity);
 
     if (!component)
     {
         return false;
     }
 
-    EntityLayerOverrideSet* set = Helpers::FindLayerOverrideSet(component->sets, layerName);
+    EntitySwatchOverrideSet* set = Helpers::FindSwatchOverrideSet(component->sets, swatchName);
 
     if (!set)
     {
@@ -570,9 +570,9 @@ bool LayerOverrideSystem::SetLayerOverrideValue(Entity* entity, Name layerName, 
         return false;
     }
 
-    const bool isApplied = component->appliedLayer == layerName;
+    const bool isApplied = component->appliedSwatch == swatchName;
 
-    for (LayerPropertyOverride& overrideEntry : set->propertyOverrides)
+    for (SwatchPropertyOverride& overrideEntry : set->propertyOverrides)
     {
         if (overrideEntry.property == propertyName)
         {
@@ -592,7 +592,7 @@ bool LayerOverrideSystem::SetLayerOverrideValue(Entity* entity, Name layerName, 
         }
     }
 
-    LayerPropertyOverride overrideEntry;
+    SwatchPropertyOverride overrideEntry;
     overrideEntry.property = propertyName;
     overrideEntry.value = std::move(value);
 
@@ -602,7 +602,7 @@ bool LayerOverrideSystem::SetLayerOverrideValue(Entity* entity, Name layerName, 
     {
         if (const IMember* member = Helpers::ResolveOverridableMember(entity->InstanceClass(), propertyName))
         {
-            // The property wasn't in the set when the layer was applied, so it has no snapshot entry yet.
+            // The property wasn't in the set when the swatch was applied, so it has no snapshot entry yet.
             // Without one, RevertOverrides would leave this override sitting in the base value.
             Helpers::SnapshotBaseValueIfAbsent(component->baseSnapshot, member, entity, propertyName);
 
@@ -615,21 +615,21 @@ bool LayerOverrideSystem::SetLayerOverrideValue(Entity* entity, Name layerName, 
     return true;
 }
 
-bool LayerOverrideSystem::RemoveLayerOverrideValue(Entity* entity, Name layerName, Name propertyName)
+bool SwatchOverrideSystem::RemoveSwatchOverrideValue(Entity* entity, Name swatchName, Name propertyName)
 {
-    if (!entity || IsDefaultLayer(layerName))
+    if (!entity || IsDefaultSwatch(swatchName))
     {
         return false;
     }
 
-    LayerOverridesComponent* component = Helpers::TryGetComponent(*entity);
+    SwatchOverridesComponent* component = Helpers::TryGetComponent(*entity);
 
     if (!component)
     {
         return false;
     }
 
-    EntityLayerOverrideSet* set = Helpers::FindLayerOverrideSet(component->sets, layerName);
+    EntitySwatchOverrideSet* set = Helpers::FindSwatchOverrideSet(component->sets, swatchName);
 
     if (!set)
     {
@@ -640,7 +640,7 @@ bool LayerOverrideSystem::RemoveLayerOverrideValue(Entity* entity, Name layerNam
     {
         if (set->propertyOverrides[i].property == propertyName)
         {
-            const bool isApplied = component->appliedLayer == layerName;
+            const bool isApplied = component->appliedSwatch == swatchName;
 
             set->propertyOverrides.EraseAt(i);
 
@@ -674,7 +674,7 @@ bool LayerOverrideSystem::RemoveLayerOverrideValue(Entity* entity, Name layerNam
     return false;
 }
 
-bool LayerOverrideSystem::SetLayerOverrideBaseValue(Entity* entity, Name propertyName, BoxedValue value)
+bool SwatchOverrideSystem::SetSwatchOverrideBaseValue(Entity* entity, Name propertyName, BoxedValue value)
 {
     if (!entity)
     {
@@ -693,8 +693,8 @@ bool LayerOverrideSystem::SetLayerOverrideBaseValue(Entity* entity, Name propert
         return false;
     }
 
-    // Keep the applied layer's base snapshot in sync, so a revert returns to the edited base
-    if (LayerOverridesComponent* component = Helpers::TryGetComponent(*entity); component && component->appliedLayer.IsValid())
+    // Keep the applied swatch's base snapshot in sync, so a revert returns to the edited base
+    if (SwatchOverridesComponent* component = Helpers::TryGetComponent(*entity); component && component->appliedSwatch.IsValid())
     {
         for (Pair<Name, BoxedValue>& snapshot : component->baseSnapshot)
         {
@@ -717,38 +717,38 @@ bool LayerOverrideSystem::SetLayerOverrideBaseValue(Entity* entity, Name propert
 
 #pragma region Copy
 
-Array<LayerPropertyCopyEntry> LayerOverrideSystem::BuildLayerPropertyCopyPlan(Entity* entity, Name sourceLayer, Name targetLayer) const
+Array<SwatchPropertyCopyEntry> SwatchOverrideSystem::BuildSwatchPropertyCopyPlan(Entity* entity, Name sourceSwatch, Name targetSwatch) const
 {
-    Array<LayerPropertyCopyEntry> plan;
+    Array<SwatchPropertyCopyEntry> plan;
 
     // Copying from/to Default is copying from/to the base values
-    if (IsDefaultLayer(sourceLayer))
+    if (IsDefaultSwatch(sourceSwatch))
     {
-        sourceLayer = Name::Invalid();
+        sourceSwatch = Name::Invalid();
     }
 
-    if (IsDefaultLayer(targetLayer))
+    if (IsDefaultSwatch(targetSwatch))
     {
-        targetLayer = Name::Invalid();
+        targetSwatch = Name::Invalid();
     }
 
-    if (!entity || (!sourceLayer.IsValid() && !targetLayer.IsValid()))
+    if (!entity || (!sourceSwatch.IsValid() && !targetSwatch.IsValid()))
     {
         return plan; // base -> base, nothing to do
     }
 
-    const LayerOverridesComponent* component = Helpers::TryGetComponent(*entity);
+    const SwatchOverridesComponent* component = Helpers::TryGetComponent(*entity);
 
     if (!component)
     {
         return plan;
     }
 
-    const EntityLayerOverrideSet* sourceSet = sourceLayer.IsValid()
-        ? Helpers::FindLayerOverrideSet(component->sets, sourceLayer)
+    const EntitySwatchOverrideSet* sourceSet = sourceSwatch.IsValid()
+        ? Helpers::FindSwatchOverrideSet(component->sets, sourceSwatch)
         : nullptr;
-    const EntityLayerOverrideSet* targetSet = targetLayer.IsValid()
-        ? Helpers::FindLayerOverrideSet(component->sets, targetLayer)
+    const EntitySwatchOverrideSet* targetSet = targetSwatch.IsValid()
+        ? Helpers::FindSwatchOverrideSet(component->sets, targetSwatch)
         : nullptr;
 
     if (!sourceSet && !targetSet)
@@ -775,7 +775,7 @@ Array<LayerPropertyCopyEntry> LayerOverrideSystem::BuildLayerPropertyCopyPlan(En
 
     if (sourceSet)
     {
-        for (const LayerPropertyOverride& overrideEntry : sourceSet->propertyOverrides)
+        for (const SwatchPropertyOverride& overrideEntry : sourceSet->propertyOverrides)
         {
             addPropertyName(overrideEntry.property);
         }
@@ -783,7 +783,7 @@ Array<LayerPropertyCopyEntry> LayerOverrideSystem::BuildLayerPropertyCopyPlan(En
 
     if (targetSet)
     {
-        for (const LayerPropertyOverride& overrideEntry : targetSet->propertyOverrides)
+        for (const SwatchPropertyOverride& overrideEntry : targetSet->propertyOverrides)
         {
             addPropertyName(overrideEntry.property);
         }
@@ -802,7 +802,7 @@ Array<LayerPropertyCopyEntry> LayerOverrideSystem::BuildLayerPropertyCopyPlan(En
 
         if (sourceSet)
         {
-            for (const LayerPropertyOverride& overrideEntry : sourceSet->propertyOverrides)
+            for (const SwatchPropertyOverride& overrideEntry : sourceSet->propertyOverrides)
             {
                 if (overrideEntry.property == propertyName)
                 {
@@ -818,7 +818,7 @@ Array<LayerPropertyCopyEntry> LayerOverrideSystem::BuildLayerPropertyCopyPlan(En
 
         if (targetSet)
         {
-            for (const LayerPropertyOverride& overrideEntry : targetSet->propertyOverrides)
+            for (const SwatchPropertyOverride& overrideEntry : targetSet->propertyOverrides)
             {
                 if (overrideEntry.property == propertyName)
                 {
@@ -834,11 +834,11 @@ Array<LayerPropertyCopyEntry> LayerOverrideSystem::BuildLayerPropertyCopyPlan(En
         {
             // Source matches base here: the only change a copy can need is pruning the
             // target's redundant override of this property
-            if (targetLayer.IsValid() && targetOverridden)
+            if (targetSwatch.IsValid() && targetOverridden)
             {
-                LayerPropertyCopyEntry entry;
+                SwatchPropertyCopyEntry entry;
                 entry.propertyName = propertyName;
-                entry.op = LayerPropertyCopyOp::RemoveOverride;
+                entry.op = SwatchPropertyCopyOp::RemoveOverride;
                 entry.oldValue = targetOverrideValue;
                 entry.hasOldValue = true;
 
@@ -848,12 +848,12 @@ Array<LayerPropertyCopyEntry> LayerOverrideSystem::BuildLayerPropertyCopyPlan(En
             continue;
         }
 
-        if (!targetLayer.IsValid())
+        if (!targetSwatch.IsValid())
         {
             // Copying into base: write the source value as the new base
-            LayerPropertyCopyEntry entry;
+            SwatchPropertyCopyEntry entry;
             entry.propertyName = propertyName;
-            entry.op = LayerPropertyCopyOp::SetBase;
+            entry.op = SwatchPropertyCopyOp::SetBase;
             entry.newValue = sourceValue;
             entry.oldValue = baseValue;
             entry.hasOldValue = true;
@@ -868,9 +868,9 @@ Array<LayerPropertyCopyEntry> LayerOverrideSystem::BuildLayerPropertyCopyPlan(En
             continue; // target already matches the source
         }
 
-        LayerPropertyCopyEntry entry;
+        SwatchPropertyCopyEntry entry;
         entry.propertyName = propertyName;
-        entry.op = LayerPropertyCopyOp::WriteOverride;
+        entry.op = SwatchPropertyCopyOp::WriteOverride;
         entry.newValue = sourceValue;
         entry.oldValue = targetOverrideValue;
         entry.hasOldValue = targetOverridden;
@@ -881,81 +881,81 @@ Array<LayerPropertyCopyEntry> LayerOverrideSystem::BuildLayerPropertyCopyPlan(En
     return plan;
 }
 
-void LayerOverrideSystem::ApplyLayerPropertyCopyEntries(Entity* entity, Name targetLayer, const Array<LayerPropertyCopyEntry>& entries, bool applyNewState)
+void SwatchOverrideSystem::ApplySwatchPropertyCopyEntries(Entity* entity, Name targetSwatch, const Array<SwatchPropertyCopyEntry>& entries, bool applyNewState)
 {
     if (!entity)
     {
         return;
     }
 
-    for (const LayerPropertyCopyEntry& entry : entries)
+    for (const SwatchPropertyCopyEntry& entry : entries)
     {
         switch (entry.op)
         {
-        case LayerPropertyCopyOp::SetBase:
+        case SwatchPropertyCopyOp::SetBase:
         {
             if (!applyNewState && !entry.hasOldValue)
             {
                 break;
             }
 
-            SetLayerOverrideBaseValue(entity, entry.propertyName, applyNewState ? entry.newValue : entry.oldValue);
+            SetSwatchOverrideBaseValue(entity, entry.propertyName, applyNewState ? entry.newValue : entry.oldValue);
 
             break;
         }
 
-        case LayerPropertyCopyOp::WriteOverride:
+        case SwatchPropertyCopyOp::WriteOverride:
         {
-            if (!targetLayer.IsValid())
+            if (!targetSwatch.IsValid())
             {
                 break;
             }
 
             if (applyNewState)
             {
-                if (!HasLayerOverrideSet(entity, targetLayer))
+                if (!HasSwatchOverrideSet(entity, targetSwatch))
                 {
-                    AddLayerOverrideSet(entity, targetLayer);
+                    AddSwatchOverrideSet(entity, targetSwatch);
                 }
 
-                SetLayerOverrideValue(entity, targetLayer, entry.propertyName, entry.newValue);
+                SetSwatchOverrideValue(entity, targetSwatch, entry.propertyName, entry.newValue);
             }
             else if (entry.hasOldValue)
             {
-                if (!HasLayerOverrideSet(entity, targetLayer))
+                if (!HasSwatchOverrideSet(entity, targetSwatch))
                 {
-                    AddLayerOverrideSet(entity, targetLayer);
+                    AddSwatchOverrideSet(entity, targetSwatch);
                 }
 
-                SetLayerOverrideValue(entity, targetLayer, entry.propertyName, entry.oldValue);
+                SetSwatchOverrideValue(entity, targetSwatch, entry.propertyName, entry.oldValue);
             }
             else
             {
-                RemoveLayerOverrideValue(entity, targetLayer, entry.propertyName);
+                RemoveSwatchOverrideValue(entity, targetSwatch, entry.propertyName);
             }
 
             break;
         }
 
-        case LayerPropertyCopyOp::RemoveOverride:
+        case SwatchPropertyCopyOp::RemoveOverride:
         {
-            if (!targetLayer.IsValid())
+            if (!targetSwatch.IsValid())
             {
                 break;
             }
 
             if (applyNewState)
             {
-                RemoveLayerOverrideValue(entity, targetLayer, entry.propertyName);
+                RemoveSwatchOverrideValue(entity, targetSwatch, entry.propertyName);
             }
             else if (entry.hasOldValue)
             {
-                if (!HasLayerOverrideSet(entity, targetLayer))
+                if (!HasSwatchOverrideSet(entity, targetSwatch))
                 {
-                    AddLayerOverrideSet(entity, targetLayer);
+                    AddSwatchOverrideSet(entity, targetSwatch);
                 }
 
-                SetLayerOverrideValue(entity, targetLayer, entry.propertyName, entry.oldValue);
+                SetSwatchOverrideValue(entity, targetSwatch, entry.propertyName, entry.oldValue);
             }
 
             break;
@@ -968,29 +968,29 @@ void LayerOverrideSystem::ApplyLayerPropertyCopyEntries(Entity* entity, Name tar
 
 #pragma region Apply / revert
 
-void LayerOverrideSystem::ApplyOverrides(Entity* entity, Name layerName)
+void SwatchOverrideSystem::ApplyOverrides(Entity* entity, Name swatchName)
 {
     if (!entity)
     {
         return;
     }
 
-    // The Default layer holds no overrides - it is the entity's base state
-    if (IsDefaultLayer(layerName))
+    // The Default swatch holds no overrides - it is the entity's base state
+    if (IsDefaultSwatch(swatchName))
     {
         RevertOverrides(entity);
 
         return;
     }
 
-    LayerOverridesComponent* component = Helpers::TryGetComponent(*entity);
+    SwatchOverridesComponent* component = Helpers::TryGetComponent(*entity);
 
     if (!component)
     {
         return;
     }
 
-    if (component->appliedLayer == layerName)
+    if (component->appliedSwatch == swatchName)
     {
         return;
     }
@@ -998,7 +998,7 @@ void LayerOverrideSystem::ApplyOverrides(Entity* entity, Name layerName)
     // Restore base values before applying the new set
     RevertOverrides(entity);
 
-    const EntityLayerOverrideSet* set = Helpers::FindLayerOverrideSet(component->sets, layerName);
+    const EntitySwatchOverrideSet* set = Helpers::FindSwatchOverrideSet(component->sets, swatchName);
 
     if (!set || set->propertyOverrides.Empty())
     {
@@ -1010,13 +1010,13 @@ void LayerOverrideSystem::ApplyOverrides(Entity* entity, Name layerName)
     Array<Pair<Name, BoxedValue>> baseSnapshot;
     uint32 numApplied = 0;
 
-    for (const LayerPropertyOverride& overrideEntry : set->propertyOverrides)
+    for (const SwatchPropertyOverride& overrideEntry : set->propertyOverrides)
     {
         const IMember* member = Helpers::ResolveOverridableMember(cls, overrideEntry.property);
 
         if (!member)
         {
-            HYP_LOG(Entity, Warning, "Cannot apply layer override: Entity {} has no settable property '{}'",
+            HYP_LOG(Entity, Warning, "Cannot apply swatch override: Entity {} has no settable property '{}'",
                 entity->GetName(), overrideEntry.property);
 
             continue;
@@ -1027,7 +1027,7 @@ void LayerOverrideSystem::ApplyOverrides(Entity* entity, Name layerName)
 
         if (!Helpers::SetEntityMemberValue(member, entity, overrideEntry.value))
         {
-            HYP_LOG(Entity, Warning, "Failed to apply layer override '{}' on Entity {}", overrideEntry.property, entity->GetName());
+            HYP_LOG(Entity, Warning, "Failed to apply swatch override '{}' on Entity {}", overrideEntry.property, entity->GetName());
 
             continue;
         }
@@ -1036,24 +1036,24 @@ void LayerOverrideSystem::ApplyOverrides(Entity* entity, Name layerName)
     }
 
     component->baseSnapshot = std::move(baseSnapshot);
-    component->appliedLayer = layerName;
+    component->appliedSwatch = swatchName;
 
-    HYP_LOG(Entity, Info, "Applied {} layer override(s) for layer '{}' on Entity '{}'", numApplied, layerName, entity->GetName());
+    HYP_LOG(Entity, Info, "Applied {} swatch override(s) for swatch '{}' on Entity '{}'", numApplied, swatchName, entity->GetName());
 
     entity->SetNeedsRenderProxyUpdate();
     entity->MarkDirty();
 }
 
-void LayerOverrideSystem::RevertOverrides(Entity* entity)
+void SwatchOverrideSystem::RevertOverrides(Entity* entity)
 {
     if (!entity)
     {
         return;
     }
 
-    LayerOverridesComponent* component = Helpers::TryGetComponent(*entity);
+    SwatchOverridesComponent* component = Helpers::TryGetComponent(*entity);
 
-    if (!component || !component->appliedLayer)
+    if (!component || !component->appliedSwatch)
     {
         return;
     }
@@ -1069,13 +1069,13 @@ void LayerOverrideSystem::RevertOverrides(Entity* entity)
     }
 
     component->baseSnapshot.Clear();
-    component->appliedLayer = Name::Invalid();
+    component->appliedSwatch = Name::Invalid();
 
     entity->SetNeedsRenderProxyUpdate();
     entity->MarkDirty();
 }
 
-void LayerOverrideSystem::ApplyActive()
+void SwatchOverrideSystem::ApplyActive()
 {
     World* world = GetWorld();
 
@@ -1084,7 +1084,7 @@ void LayerOverrideSystem::ApplyActive()
         return;
     }
 
-    const Name activeLayerName = world->GetActiveLayerName();
+    const Name activeSwatchName = world->GetActiveSwatchName();
 
     uint32 numEntitiesWithOverrides = 0;
 
@@ -1095,19 +1095,19 @@ void LayerOverrideSystem::ApplyActive()
             continue;
         }
 
-        for (auto [entity, component] : scene->GetEntityManager()->GetEntitySet<LayerOverridesComponent>().GetScopedView(GetComponentInfos()))
+        for (auto [entity, component] : scene->GetEntityManager()->GetEntitySet<SwatchOverridesComponent>().GetScopedView(GetComponentInfos()))
         {
             ++numEntitiesWithOverrides;
 
-            ApplyOverrides(entity, activeLayerName);
+            ApplyOverrides(entity, activeSwatchName);
         }
     }
 
-    HYP_LOG(Scene, Info, "Applying layer overrides for active layer '{}' across {} entit(ies) with override sets",
-        activeLayerName, numEntitiesWithOverrides);
+    HYP_LOG(Scene, Info, "Applying swatch overrides for active swatch '{}' across {} entit(ies) with override sets",
+        activeSwatchName, numEntitiesWithOverrides);
 }
 
-void LayerOverrideSystem::RevertAll()
+void SwatchOverrideSystem::RevertAll()
 {
     World* world = GetWorld();
 
@@ -1123,14 +1123,14 @@ void LayerOverrideSystem::RevertAll()
             continue;
         }
 
-        for (auto [entity, component] : scene->GetEntityManager()->GetEntitySet<LayerOverridesComponent>().GetScopedView(GetComponentInfos()))
+        for (auto [entity, component] : scene->GetEntityManager()->GetEntitySet<SwatchOverridesComponent>().GetScopedView(GetComponentInfos()))
         {
             RevertOverrides(entity);
         }
     }
 }
 
-void LayerOverrideSystem::OnEntityAddedToWorld(Entity* entity)
+void SwatchOverrideSystem::OnEntityAddedToWorld(Entity* entity)
 {
     World* world = GetWorld();
 
@@ -1144,14 +1144,14 @@ void LayerOverrideSystem::OnEntityAddedToWorld(Entity* entity)
         return;
     }
 
-    ApplyOverrides(entity, world->GetActiveLayerName());
+    ApplyOverrides(entity, world->GetActiveSwatchName());
 }
 
 #pragma endregion Apply / revert
 
 #pragma region SystemBase
 
-void LayerOverrideSystem::OnEntityAdded(Entity* entity)
+void SwatchOverrideSystem::OnEntityAdded(Entity* entity)
 {
     World* world = GetWorld();
 
@@ -1172,10 +1172,10 @@ void LayerOverrideSystem::OnEntityAdded(Entity* entity)
         return;
     }
 
-    ApplyOverrides(entity, world->GetActiveLayerName());
+    ApplyOverrides(entity, world->GetActiveSwatchName());
 }
 
-void LayerOverrideSystem::OnEntityRemoved(Entity* entity)
+void SwatchOverrideSystem::OnEntityRemoved(Entity* entity)
 {
     RevertOverrides(entity);
 }

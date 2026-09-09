@@ -12,9 +12,9 @@
 #include <Scene/EntityManager.hpp>
 
 #include <Scene/Systems/LightmapSystem.hpp>
-#include <Scene/Systems/LayerOverrideSystem.hpp>
+#include <Scene/Systems/SwatchOverrideSystem.hpp>
 
-#include <Scene/Layer.hpp>
+#include <Scene/Swatch.hpp>
 
 #include <Scene/Components/LightmapElementComponent.hpp>
 #include <Scene/Components/BoundingBoxComponent.hpp>
@@ -52,17 +52,17 @@ EDITOR_API HYP_DECLARE_LOG_CHANNEL(Editor);
 
 namespace {
 
-LayerOverrideSystem* GetLayerOverrideSystem(const LightmapVolume* volume)
+SwatchOverrideSystem* GetSwatchOverrideSystem(const LightmapVolume* volume)
 {
     World* world = volume->GetWorld();
 
-    return world ? world->GetSystem<LayerOverrideSystem>() : nullptr;
+    return world ? world->GetSystem<SwatchOverrideSystem>() : nullptr;
 }
 
-Name BuildAtlasTextureName(Name volumeName, Name layerName, uint16 atlasIndex, LightmapVolume::AtlasTextureType type)
+Name BuildAtlasTextureName(Name volumeName, Name swatchName, uint16 atlasIndex, LightmapVolume::AtlasTextureType type)
 {
     return NAME_FMT("LightmapVolumeAtlasTexture_{}_{}_{}_{}",
-        volumeName, layerName, atlasIndex, LightmapVolume::TextureTypeNames[type]);
+        volumeName, swatchName, atlasIndex, LightmapVolume::TextureTypeNames[type]);
 }
 
 } // namespace
@@ -185,7 +185,7 @@ const LightmapElement* LightmapVolume::GetElement(LightmapElementId elementId) c
 
 void LightmapVolume::RemoveAllElements(uint32 preserveTextureTypesMask)
 {
-    ClearLayerAtlasTextureOverrides(preserveTextureTypesMask);
+    ClearSwatchAtlasTextureOverrides(preserveTextureTypesMask);
 
     for (LightmapVolumeAtlas& atlas : m_atlases)
     {
@@ -280,7 +280,7 @@ void LightmapVolume::SetAtlasTexture(uint16 atlasIndex, AtlasTextureType type, c
 
     textures[atlasIndex] = texture;
 
-    texture->SetName(BuildAtlasTextureName(m_name, g_defaultLayerName, atlasIndex, type));
+    texture->SetName(BuildAtlasTextureName(m_name, g_defaultSwatchName, atlasIndex, type));
     GetCurrentAssetRegistry()->PutAssetUnique(texture);
 }
 
@@ -297,7 +297,7 @@ Name LightmapVolume::GetAtlasTexturesPropertyName(AtlasTextureType type)
     }
 }
 
-FixedArray<Handle<Texture>, MaxAtlasesPerLightmapVolume> LightmapVolume::GetAtlasTexturesForLayer(AtlasTextureType type, Name layerName) const
+FixedArray<Handle<Texture>, MaxAtlasesPerLightmapVolume> LightmapVolume::GetAtlasTexturesForSwatch(AtlasTextureType type, Name swatchName) const
 {
     FixedArray<Handle<Texture>, MaxAtlasesPerLightmapVolume> baseTextures;
 
@@ -308,21 +308,21 @@ FixedArray<Handle<Texture>, MaxAtlasesPerLightmapVolume> LightmapVolume::GetAtla
         baseTextures[i] = currentTextures[i];
     }
 
-    if (!layerName.IsValid() || IsDefaultLayer(layerName))
+    if (!swatchName.IsValid() || IsDefaultSwatch(swatchName))
     {
         return baseTextures;
     }
 
-    LayerOverrideSystem* layerOverrideSystem = GetLayerOverrideSystem(this);
+    SwatchOverrideSystem* swatchOverrideSystem = GetSwatchOverrideSystem(this);
 
-    if (!layerOverrideSystem)
+    if (!swatchOverrideSystem)
     {
         return baseTextures;
     }
 
     BoxedValue overrideValue;
 
-    if (!layerOverrideSystem->GetLayerOverrideValue(this, layerName, GetAtlasTexturesPropertyName(type), overrideValue))
+    if (!swatchOverrideSystem->GetSwatchOverrideValue(this, swatchName, GetAtlasTexturesPropertyName(type), overrideValue))
     {
         return baseTextures;
     }
@@ -334,15 +334,15 @@ FixedArray<Handle<Texture>, MaxAtlasesPerLightmapVolume> LightmapVolume::GetAtla
         return overrideValue.Get<AtlasTextureArray>();
     }
 
-    HYP_LOG(Lightmap, Warning, "Layer override '{}' on LightmapVolume '{}' is not an atlas texture array",
-        layerName, m_name);
+    HYP_LOG(Lightmap, Warning, "Swatch override '{}' on LightmapVolume '{}' is not an atlas texture array",
+        swatchName, m_name);
 
     return baseTextures;
 }
 
-void LightmapVolume::SetAtlasTextureForLayer(uint16 atlasIndex, AtlasTextureType type, const Handle<Texture>& texture, Name layerName)
+void LightmapVolume::SetAtlasTextureForSwatch(uint16 atlasIndex, AtlasTextureType type, const Handle<Texture>& texture, Name swatchName)
 {
-    if (!layerName.IsValid() || IsDefaultLayer(layerName))
+    if (!swatchName.IsValid() || IsDefaultSwatch(swatchName))
     {
         SetAtlasTexture(atlasIndex, type, texture);
 
@@ -356,17 +356,17 @@ void LightmapVolume::SetAtlasTextureForLayer(uint16 atlasIndex, AtlasTextureType
         return;
     }
 
-    LayerOverrideSystem* layerOverrideSystem = GetLayerOverrideSystem(this);
+    SwatchOverrideSystem* swatchOverrideSystem = GetSwatchOverrideSystem(this);
 
-    if (!layerOverrideSystem)
+    if (!swatchOverrideSystem)
     {
-        HYP_LOG(Lightmap, Error, "Cannot assign atlas texture for layer '{}' on LightmapVolume '{}': no LayerOverrideSystem",
-            layerName, m_name);
+        HYP_LOG(Lightmap, Error, "Cannot assign atlas texture for swatch '{}' on LightmapVolume '{}': no SwatchOverrideSystem",
+            swatchName, m_name);
 
         return;
     }
 
-    FixedArray<Handle<Texture>, MaxAtlasesPerLightmapVolume> textures = GetAtlasTexturesForLayer(type, layerName);
+    FixedArray<Handle<Texture>, MaxAtlasesPerLightmapVolume> textures = GetAtlasTexturesForSwatch(type, swatchName);
 
     if (textures[atlasIndex] == texture)
     {
@@ -377,27 +377,27 @@ void LightmapVolume::SetAtlasTextureForLayer(uint16 atlasIndex, AtlasTextureType
 
     if (texture.IsValid())
     {
-        texture->SetName(BuildAtlasTextureName(m_name, layerName, atlasIndex, type));
+        texture->SetName(BuildAtlasTextureName(m_name, swatchName, atlasIndex, type));
         GetCurrentAssetRegistry()->PutAssetUnique(texture);
     }
 
-    layerOverrideSystem->AddLayerOverrideSet(this, layerName);
-    layerOverrideSystem->SetLayerOverrideValue(this, layerName, GetAtlasTexturesPropertyName(type), BoxedValue(std::move(textures)));
+    swatchOverrideSystem->AddSwatchOverrideSet(this, swatchName);
+    swatchOverrideSystem->SetSwatchOverrideValue(this, swatchName, GetAtlasTexturesPropertyName(type), BoxedValue(std::move(textures)));
 
     SetNeedsRenderProxyUpdate();
     MarkDirty();
 }
 
-void LightmapVolume::ClearLayerAtlasTextureOverrides(uint32 preserveTextureTypesMask)
+void LightmapVolume::ClearSwatchAtlasTextureOverrides(uint32 preserveTextureTypesMask)
 {
-    LayerOverrideSystem* layerOverrideSystem = GetLayerOverrideSystem(this);
+    SwatchOverrideSystem* swatchOverrideSystem = GetSwatchOverrideSystem(this);
 
-    if (!layerOverrideSystem)
+    if (!swatchOverrideSystem)
     {
         return;
     }
 
-    for (Name layerName : layerOverrideSystem->GetSetLayerNames(this))
+    for (Name swatchName : swatchOverrideSystem->GetSetSwatchNames(this))
     {
         for (uint32 type = 0; type < NumAtlasTextureTypes; type++)
         {
@@ -406,39 +406,39 @@ void LightmapVolume::ClearLayerAtlasTextureOverrides(uint32 preserveTextureTypes
                 continue;
             }
 
-            layerOverrideSystem->RemoveLayerOverrideValue(this, layerName, GetAtlasTexturesPropertyName(AtlasTextureType(type)));
+            swatchOverrideSystem->RemoveSwatchOverrideValue(this, swatchName, GetAtlasTexturesPropertyName(AtlasTextureType(type)));
         }
     }
 }
 
 #ifdef HYP_EDITOR
-Array<Name> LightmapVolume::GetBakedLayerNames() const
+Array<Name> LightmapVolume::GetBakedSwatchNames() const
 {
-    Array<Name> layerNames;
+    Array<Name> swatchNames;
 
     if (m_irradianceAtlasTextures[0].IsValid())
     {
-        layerNames.PushBack(g_defaultLayerName);
+        swatchNames.PushBack(g_defaultSwatchName);
     }
 
-    LayerOverrideSystem* layerOverrideSystem = GetLayerOverrideSystem(this);
+    SwatchOverrideSystem* swatchOverrideSystem = GetSwatchOverrideSystem(this);
 
-    if (!layerOverrideSystem)
+    if (!swatchOverrideSystem)
     {
-        return layerNames;
+        return swatchNames;
     }
 
     const Name propertyName = GetAtlasTexturesPropertyName(IrradianceTexture);
 
-    for (Name layerName : layerOverrideSystem->GetSetLayerNames(this))
+    for (Name swatchName : swatchOverrideSystem->GetSetSwatchNames(this))
     {
-        if (layerOverrideSystem->IsPropertyOverriddenInLayer(this, layerName, propertyName))
+        if (swatchOverrideSystem->IsPropertyOverriddenInSwatch(this, swatchName, propertyName))
         {
-            layerNames.PushBack(layerName);
+            swatchNames.PushBack(swatchName);
         }
     }
 
-    return layerNames;
+    return swatchNames;
 }
 #endif // HYP_EDITOR
 
@@ -605,20 +605,20 @@ static void EnqueueBake(LightmapVolume& self)
         return;
     }
 
-    // Bake only the active layer. The packing and the meshes' UV1 are shared, so baking several layers at once
+    // Bake only the active swatch. The packing and the meshes' UV1 are shared, so baking several swatches at once
     // would have them race to write the same volume.
-    const Handle<Layer>& layer = world->GetActiveLayer();
+    const Handle<Swatch>& swatch = world->GetActiveSwatch();
 
-    if (!layer.IsValid())
+    if (!swatch.IsValid())
     {
-        HYP_LOG(Editor, Error, "Cannot bake {}: could not resolve a target layer for it", self.GetName());
+        HYP_LOG(Editor, Error, "Cannot bake {}: could not resolve a target swatch for it", self.GetName());
 
         return;
     }
 
-    if (!self.HasNoLayers() && !self.IsInLayer(layer->layerId))
+    if (!self.HasNoSwatches() && !self.IsInSwatch(swatch->swatchId))
     {
-        HYP_LOG(Editor, Error, "Cannot bake {}: it is not in the active layer '{}'", self.GetName(), layer->name);
+        HYP_LOG(Editor, Error, "Cannot bake {}: it is not in the active swatch '{}'", self.GetName(), swatch->name);
 
         return;
     }
@@ -630,7 +630,7 @@ static void EnqueueBake(LightmapVolume& self)
         bakerSubsystem = world->AddSubsystem<BakerSubsystem>();
     }
 
-    bakerSubsystem->EnqueueBake(layer->bakeLayer, MakeStrongRef(&self), (1u << uint32(ShadingType)));
+    bakerSubsystem->EnqueueBake(swatch->bakeLayer, MakeStrongRef(&self), (1u << uint32(ShadingType)));
 }
 
 void LightmapVolume::BakeLightmap()

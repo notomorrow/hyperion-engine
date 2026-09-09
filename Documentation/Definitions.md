@@ -36,8 +36,8 @@ A [`World`](../Source/Engine/Scene/World.hpp) is the top-level container for all
 ### Scene
 You can think of a [`Scene`](../Source/Engine/Scene/Scene.hpp) as a region or level in your game's world. It has a root `Node` that can have child `Node`s, which have relative (local) transforms and optionally an `Entity` attached. A `Scene` also has a `SceneOctree` that is used for spatial queries, ray testing, and culling.
 
-### Layer
-A [`Layer`](../Source/Engine/Scene/Layer.hpp) is a state that is applied to the world at runtime that can set different properties for the entities in the Scene. For example, you could have a `Noon` layer where the sun direction is set it a high angle, and a `Dusk` layer where the sun has a more grazing angle. Each layer can have different baked content,  enabling you to have a proper baked lighting setup for your different TODs and not just relying on realtime lighting.
+### Swatch
+A [`Swatch`](../Source/Engine/Scene/Swatch.hpp) is a state that is applied to the world at runtime that can set different properties for the entities in the Scene. For example, you could have a `Noon` swatch where the sun direction is set it a high angle, and a `Dusk` swatch where the sun has a more grazing angle. Each swatch can have different baked content,  enabling you to have a proper baked lighting setup for your different TODs and not just relying on realtime lighting.
 
 
 ### Component

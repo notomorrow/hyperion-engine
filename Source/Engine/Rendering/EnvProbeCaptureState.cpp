@@ -10,9 +10,9 @@
 
 #include <Scene/EnvProbe.hpp>
 
-#include <Scene/Layer.hpp>
+#include <Scene/Swatch.hpp>
 
-#include <Scene/Systems/LayerOverrideSystem.hpp>
+#include <Scene/Systems/SwatchOverrideSystem.hpp>
 
 #include <Scene/World.hpp>
 
@@ -22,8 +22,8 @@
 
 namespace Hyperion {
 
-EnvProbeCaptureState::EnvProbeCaptureState(EnvProbe* envProbe, Name layerName)
-    : layerName(layerName),
+EnvProbeCaptureState::EnvProbeCaptureState(EnvProbe* envProbe, Name swatchName)
+    : swatchName(swatchName),
       m_envProbe(envProbe)
 {
 }
@@ -88,36 +88,36 @@ void EnvProbeCaptureState::End(bool commitResult)
     if (texture.IsValid())
     {
         texture->SetIsTransient(false);
-        texture->SetName(EnvProbe::BuildBakedTextureName(m_envProbe->GetName(), layerName));
+        texture->SetName(EnvProbe::BuildBakedTextureName(m_envProbe->GetName(), swatchName));
 
         GetCurrentAssetRegistry()->PutAssetUnique(texture);
 
-        m_envProbe->SetBakedTextureForLayer(texture, layerName);
+        m_envProbe->SetBakedTextureForSwatch(texture, swatchName);
     }
 
     if (visibilityTexture.IsValid())
     {
         visibilityTexture->SetIsTransient(false);
-        visibilityTexture->SetName(EnvProbe::BuildVisibilityTextureName(m_envProbe->GetName(), layerName));
+        visibilityTexture->SetName(EnvProbe::BuildVisibilityTextureName(m_envProbe->GetName(), swatchName));
 
         GetCurrentAssetRegistry()->PutAssetUnique(visibilityTexture);
 
-        m_envProbe->SetVisibilityTextureForLayer(visibilityTexture, layerName);
+        m_envProbe->SetVisibilityTextureForSwatch(visibilityTexture, swatchName);
     }
 
     if (m_envProbe->ShouldComputeSphericalHarmonics())
     {
-        m_envProbe->SetSphericalHarmonicsDataForLayer(sphericalHarmonics, layerName);
+        m_envProbe->SetSphericalHarmonicsDataForSwatch(sphericalHarmonics, swatchName);
     }
 
     m_envProbe->DestroyCaptureData();
 
     // Set the overrides!
-    if (World* world = m_envProbe->GetWorld(); world && world->GetActiveLayerName() == layerName)
+    if (World* world = m_envProbe->GetWorld(); world && world->GetActiveSwatchName() == swatchName)
     {
-        if (LayerOverrideSystem* layerOverrideSystem = world->GetSystem<LayerOverrideSystem>())
+        if (SwatchOverrideSystem* swatchOverrideSystem = world->GetSystem<SwatchOverrideSystem>())
         {
-            layerOverrideSystem->ApplyOverrides(m_envProbe, layerName);
+            swatchOverrideSystem->ApplyOverrides(m_envProbe, swatchName);
         }
     }
 }

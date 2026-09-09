@@ -181,7 +181,7 @@ protected:
     struct InputMouseLockScope* m_mouseLockScope;
 
     // Keeps the gizmo in sync when the focused node's transform changes externally
-    // (e.g. layer overrides applied on active-layer switch)
+    // (e.g. swatch overrides applied on active-swatch switch)
     DelegateHandler m_focusedNodeTransformHandler;
 
 private:
@@ -601,48 +601,48 @@ public:
     void SetSnapToGridEnabled(bool snapToGrid);
 
     HYP_METHOD()
-    bool IsLayerOverrideModeEnabled() const
+    bool IsSwatchOverrideModeEnabled() const
     {
-        return m_layerOverrideMode;
+        return m_swatchOverrideMode;
     }
 
     HYP_METHOD()
-    void SetLayerOverrideMode(bool enabled)
+    void SetSwatchOverrideMode(bool enabled)
     {
-        m_layerOverrideMode = enabled;
+        m_swatchOverrideMode = enabled;
     }
 
-    //-- Layer overrides
+    //-- Swatch overrides
 
     HYP_METHOD()
-    Array<Name> GetEntityLayerOverrideSets(Entity* entity) const;
+    Array<Name> GetEntitySwatchOverrideSets(Entity* entity) const;
 
     HYP_METHOD()
-    bool EntityHasLayerOverrideSet(Entity* entity, Name layerName) const;
+    bool EntityHasSwatchOverrideSet(Entity* entity, Name swatchName) const;
 
     HYP_METHOD()
-    bool EntityHasLayerOverrideValues(Entity* entity, Name layerName) const;
+    bool EntityHasSwatchOverrideValues(Entity* entity, Name swatchName) const;
 
     HYP_METHOD()
-    void EntityAddLayerOverrideSet(Entity* entity, Name layerName) const;
+    void EntityAddSwatchOverrideSet(Entity* entity, Name swatchName) const;
 
     HYP_METHOD()
-    bool EntityRemoveLayerOverrideSet(Entity* entity, Name layerName) const;
+    bool EntityRemoveSwatchOverrideSet(Entity* entity, Name swatchName) const;
 
     HYP_METHOD()
-    bool IsEntityPropertyOverridden(Entity* entity, Name layerName, Name propertyName) const;
+    bool IsEntityPropertyOverridden(Entity* entity, Name swatchName, Name propertyName) const;
 
     HYP_METHOD()
-    bool EntityRemoveLayerOverrideValue(Entity* entity, Name layerName, Name propertyName) const;
+    bool EntityRemoveSwatchOverrideValue(Entity* entity, Name swatchName, Name propertyName) const;
 
     HYP_METHOD()
-    Name GetEntityAppliedOverrideLayer(Entity* entity) const;
+    Name GetEntityAppliedOverrideSwatch(Entity* entity) const;
 
     HYP_METHOD()
-    void EntityApplyLayerOverrides(Entity* entity, Name layerName) const;
+    void EntityApplySwatchOverrides(Entity* entity, Name swatchName) const;
 
     HYP_METHOD()
-    void EntityRevertLayerOverrides(Entity* entity) const;
+    void EntityRevertSwatchOverrides(Entity* entity) const;
 
     HYP_METHOD()
     bool IsPhysicsDebugDrawEnabled() const;
@@ -858,9 +858,9 @@ private:
 
     bool m_snapToGridEnabled;
 
-    // When true, editor property/transform edits route into the active layer's override set
-    // instead of the base property set (Entity "$LayerOverrides" feature).
-    bool m_layerOverrideMode;
+    // When true, editor property/transform edits route into the active swatch's override set
+    // instead of the base property set (Entity "$SwatchOverrides" feature).
+    bool m_swatchOverrideMode;
 
     WeakHandle<EditorGizmoBase> m_hoveredGizmo;
     WeakHandle<Node> m_hoveredGizmoNode;

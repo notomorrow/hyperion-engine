@@ -9,9 +9,9 @@
 #include <Scene/ParticleVolume.hpp>
 
 #include <Scene/World.hpp>
-#include <Scene/Layer.hpp>
+#include <Scene/Swatch.hpp>
 
-#include <Scene/Systems/LayerOverrideSystem.hpp>
+#include <Scene/Systems/SwatchOverrideSystem.hpp>
 
 #include <Rendering/Texture.hpp>
 #include <Rendering/Mesh.hpp>
@@ -31,11 +31,11 @@ namespace Hyperion {
 
 namespace {
 
-LayerOverrideSystem* GetLayerOverrideSystem(const ParticleVolume* volume)
+SwatchOverrideSystem* GetSwatchOverrideSystem(const ParticleVolume* volume)
 {
     World* world = volume->GetWorld();
 
-    return world ? world->GetSystem<LayerOverrideSystem>() : nullptr;
+    return world ? world->GetSystem<SwatchOverrideSystem>() : nullptr;
 }
 
 } // namespace
@@ -92,43 +92,43 @@ void ParticleVolume::SetParticleMesh(const Handle<Mesh>& particleMesh)
     MarkDirty();
 }
 
-Name ParticleVolume::BuildParticleTextureName(Name volumeName, Name layerName)
+Name ParticleVolume::BuildParticleTextureName(Name volumeName, Name swatchName)
 {
-    if (!layerName.IsValid() || IsDefaultLayer(layerName))
+    if (!swatchName.IsValid() || IsDefaultSwatch(swatchName))
     {
         return NAME_FMT("ParticleVolume_{}_ParticleTexture", volumeName);
     }
 
-    return NAME_FMT("ParticleVolume_{}_{}_ParticleTexture", volumeName, layerName);
+    return NAME_FMT("ParticleVolume_{}_{}_ParticleTexture", volumeName, swatchName);
 }
 
-Name ParticleVolume::BuildParticleMeshName(Name volumeName, Name layerName)
+Name ParticleVolume::BuildParticleMeshName(Name volumeName, Name swatchName)
 {
-    if (!layerName.IsValid() || IsDefaultLayer(layerName))
+    if (!swatchName.IsValid() || IsDefaultSwatch(swatchName))
     {
         return NAME_FMT("ParticleVolume_{}_ParticleMesh", volumeName);
     }
 
-    return NAME_FMT("ParticleVolume_{}_{}_ParticleMesh", volumeName, layerName);
+    return NAME_FMT("ParticleVolume_{}_{}_ParticleMesh", volumeName, swatchName);
 }
 
-Handle<Texture> ParticleVolume::GetParticleTextureForLayer(Name layerName) const
+Handle<Texture> ParticleVolume::GetParticleTextureForSwatch(Name swatchName) const
 {
-    if (!layerName.IsValid() || IsDefaultLayer(layerName))
+    if (!swatchName.IsValid() || IsDefaultSwatch(swatchName))
     {
         return GetParticleTexture();
     }
 
-    LayerOverrideSystem* layerOverrideSystem = GetLayerOverrideSystem(this);
+    SwatchOverrideSystem* swatchOverrideSystem = GetSwatchOverrideSystem(this);
 
-    if (!layerOverrideSystem)
+    if (!swatchOverrideSystem)
     {
         return GetParticleTexture();
     }
 
     BoxedValue overrideValue;
 
-    if (!layerOverrideSystem->GetLayerOverrideValue(this, layerName, GetParticleTexturePropertyName(), overrideValue))
+    if (!swatchOverrideSystem->GetSwatchOverrideValue(this, swatchName, GetParticleTexturePropertyName(), overrideValue))
     {
         return GetParticleTexture();
     }
@@ -138,29 +138,29 @@ Handle<Texture> ParticleVolume::GetParticleTextureForLayer(Name layerName) const
         return overrideValue.Get<Handle<Texture>>();
     }
 
-    HYP_LOG(Scene, Warning, "Layer override '{}' on ParticleVolume '{}' is not a texture",
-        layerName, GetName());
+    HYP_LOG(Scene, Warning, "Swatch override '{}' on ParticleVolume '{}' is not a texture",
+        swatchName, GetName());
 
     return GetParticleTexture();
 }
 
-Handle<Mesh> ParticleVolume::GetParticleMeshForLayer(Name layerName) const
+Handle<Mesh> ParticleVolume::GetParticleMeshForSwatch(Name swatchName) const
 {
-    if (!layerName.IsValid() || IsDefaultLayer(layerName))
+    if (!swatchName.IsValid() || IsDefaultSwatch(swatchName))
     {
         return GetParticleMesh();
     }
 
-    LayerOverrideSystem* layerOverrideSystem = GetLayerOverrideSystem(this);
+    SwatchOverrideSystem* swatchOverrideSystem = GetSwatchOverrideSystem(this);
 
-    if (!layerOverrideSystem)
+    if (!swatchOverrideSystem)
     {
         return GetParticleMesh();
     }
 
     BoxedValue overrideValue;
 
-    if (!layerOverrideSystem->GetLayerOverrideValue(this, layerName, GetParticleMeshPropertyName(), overrideValue))
+    if (!swatchOverrideSystem->GetSwatchOverrideValue(this, swatchName, GetParticleMeshPropertyName(), overrideValue))
     {
         return GetParticleMesh();
     }
@@ -170,39 +170,39 @@ Handle<Mesh> ParticleVolume::GetParticleMeshForLayer(Name layerName) const
         return overrideValue.Get<Handle<Mesh>>();
     }
 
-    HYP_LOG(Scene, Warning, "Layer override '{}' on ParticleVolume '{}' is not a mesh",
-        layerName, GetName());
+    HYP_LOG(Scene, Warning, "Swatch override '{}' on ParticleVolume '{}' is not a mesh",
+        swatchName, GetName());
 
     return GetParticleMesh();
 }
 
-void ParticleVolume::SetParticleTextureForLayer(const Handle<Texture>& particleTexture, Name layerName)
+void ParticleVolume::SetParticleTextureForSwatch(const Handle<Texture>& particleTexture, Name swatchName)
 {
-    if (!layerName.IsValid() || IsDefaultLayer(layerName))
+    if (!swatchName.IsValid() || IsDefaultSwatch(swatchName))
     {
         SetParticleTexture(particleTexture);
 
         return;
     }
 
-    LayerOverrideSystem* layerOverrideSystem = GetLayerOverrideSystem(this);
+    SwatchOverrideSystem* swatchOverrideSystem = GetSwatchOverrideSystem(this);
 
-    if (!layerOverrideSystem)
+    if (!swatchOverrideSystem)
     {
-        HYP_LOG(Scene, Error, "Cannot assign particle texture for layer '{}' on ParticleVolume '{}': no LayerOverrideSystem",
-            layerName, GetName());
+        HYP_LOG(Scene, Error, "Cannot assign particle texture for swatch '{}' on ParticleVolume '{}': no SwatchOverrideSystem",
+            swatchName, GetName());
 
         return;
     }
 
-    if (GetParticleTextureForLayer(layerName) == particleTexture)
+    if (GetParticleTextureForSwatch(swatchName) == particleTexture)
     {
         return;
     }
 
     if (particleTexture.IsValid())
     {
-        particleTexture->SetName(BuildParticleTextureName(GetName(), layerName));
+        particleTexture->SetName(BuildParticleTextureName(GetName(), swatchName));
 
         if (!particleTexture->IsTransient())
         {
@@ -210,40 +210,40 @@ void ParticleVolume::SetParticleTextureForLayer(const Handle<Texture>& particleT
         }
     }
 
-    layerOverrideSystem->AddLayerOverrideSet(this, layerName);
-    layerOverrideSystem->SetLayerOverrideValue(this, layerName, GetParticleTexturePropertyName(), BoxedValue(particleTexture));
+    swatchOverrideSystem->AddSwatchOverrideSet(this, swatchName);
+    swatchOverrideSystem->SetSwatchOverrideValue(this, swatchName, GetParticleTexturePropertyName(), BoxedValue(particleTexture));
 
     SetNeedsRenderProxyUpdate();
     MarkDirty();
 }
 
-void ParticleVolume::SetParticleMeshForLayer(const Handle<Mesh>& particleMesh, Name layerName)
+void ParticleVolume::SetParticleMeshForSwatch(const Handle<Mesh>& particleMesh, Name swatchName)
 {
-    if (!layerName.IsValid() || IsDefaultLayer(layerName))
+    if (!swatchName.IsValid() || IsDefaultSwatch(swatchName))
     {
         SetParticleMesh(particleMesh);
 
         return;
     }
 
-    LayerOverrideSystem* layerOverrideSystem = GetLayerOverrideSystem(this);
+    SwatchOverrideSystem* swatchOverrideSystem = GetSwatchOverrideSystem(this);
 
-    if (!layerOverrideSystem)
+    if (!swatchOverrideSystem)
     {
-        HYP_LOG(Scene, Error, "Cannot assign particle mesh for layer '{}' on ParticleVolume '{}': no LayerOverrideSystem",
-            layerName, GetName());
+        HYP_LOG(Scene, Error, "Cannot assign particle mesh for swatch '{}' on ParticleVolume '{}': no SwatchOverrideSystem",
+            swatchName, GetName());
 
         return;
     }
 
-    if (GetParticleMeshForLayer(layerName) == particleMesh)
+    if (GetParticleMeshForSwatch(swatchName) == particleMesh)
     {
         return;
     }
 
     if (particleMesh.IsValid())
     {
-        particleMesh->SetName(BuildParticleMeshName(GetName(), layerName));
+        particleMesh->SetName(BuildParticleMeshName(GetName(), swatchName));
 
         if (!particleMesh->IsTransient())
         {
@@ -251,8 +251,8 @@ void ParticleVolume::SetParticleMeshForLayer(const Handle<Mesh>& particleMesh, N
         }
     }
 
-    layerOverrideSystem->AddLayerOverrideSet(this, layerName);
-    layerOverrideSystem->SetLayerOverrideValue(this, layerName, GetParticleMeshPropertyName(), BoxedValue(particleMesh));
+    swatchOverrideSystem->AddSwatchOverrideSet(this, swatchName);
+    swatchOverrideSystem->SetSwatchOverrideValue(this, swatchName, GetParticleMeshPropertyName(), BoxedValue(particleMesh));
 
     SetNeedsRenderProxyUpdate();
     MarkDirty();

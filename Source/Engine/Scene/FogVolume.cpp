@@ -9,11 +9,11 @@
 #include <Scene/FogVolume.hpp>
 #include <Scene/Scene.hpp>
 #include <Scene/World.hpp>
-#include <Scene/Layer.hpp>
+#include <Scene/Swatch.hpp>
 
 #include <Scene/Util/SceneHelpers.hpp>
 
-#include <Scene/Systems/LayerOverrideSystem.hpp>
+#include <Scene/Systems/SwatchOverrideSystem.hpp>
 
 #include <Rendering/Texture.hpp>
 #include <Rendering/RenderProxy.hpp>
@@ -45,11 +45,11 @@ EDITOR_API HYP_DECLARE_LOG_CHANNEL(Editor);
 
 namespace {
 
-LayerOverrideSystem* GetLayerOverrideSystem(const FogVolume* volume)
+SwatchOverrideSystem* GetSwatchOverrideSystem(const FogVolume* volume)
 {
     World* world = volume->GetWorld();
 
-    return world ? world->GetSystem<LayerOverrideSystem>() : nullptr;
+    return world ? world->GetSystem<SwatchOverrideSystem>() : nullptr;
 }
 
 } // namespace
@@ -120,43 +120,43 @@ void FogVolume::SetTextures(
     SetNoiseTexture(noiseTexture);
 }
 
-Name FogVolume::BuildVolumeTextureName(Name volumeName, Name layerName)
+Name FogVolume::BuildVolumeTextureName(Name volumeName, Name swatchName)
 {
-    if (!layerName.IsValid() || IsDefaultLayer(layerName))
+    if (!swatchName.IsValid() || IsDefaultSwatch(swatchName))
     {
         return NAME_FMT("FogVolume_{}_DataMap", volumeName);
     }
 
-    return NAME_FMT("FogVolume_{}_{}_DataMap", volumeName, layerName);
+    return NAME_FMT("FogVolume_{}_{}_DataMap", volumeName, swatchName);
 }
 
-Name FogVolume::BuildNoiseTextureName(Name volumeName, Name layerName)
+Name FogVolume::BuildNoiseTextureName(Name volumeName, Name swatchName)
 {
-    if (!layerName.IsValid() || IsDefaultLayer(layerName))
+    if (!swatchName.IsValid() || IsDefaultSwatch(swatchName))
     {
         return NAME_FMT("FogVolume_{}_NoiseMap", volumeName);
     }
 
-    return NAME_FMT("FogVolume_{}_{}_NoiseMap", volumeName, layerName);
+    return NAME_FMT("FogVolume_{}_{}_NoiseMap", volumeName, swatchName);
 }
 
-Handle<Texture> FogVolume::GetVolumeTextureForLayer(Name layerName) const
+Handle<Texture> FogVolume::GetVolumeTextureForSwatch(Name swatchName) const
 {
-    if (!layerName.IsValid() || IsDefaultLayer(layerName))
+    if (!swatchName.IsValid() || IsDefaultSwatch(swatchName))
     {
         return GetVolumeTexture();
     }
 
-    LayerOverrideSystem* layerOverrideSystem = GetLayerOverrideSystem(this);
+    SwatchOverrideSystem* swatchOverrideSystem = GetSwatchOverrideSystem(this);
 
-    if (!layerOverrideSystem)
+    if (!swatchOverrideSystem)
     {
         return GetVolumeTexture();
     }
 
     BoxedValue overrideValue;
 
-    if (!layerOverrideSystem->GetLayerOverrideValue(this, layerName, GetVolumeTexturePropertyName(), overrideValue))
+    if (!swatchOverrideSystem->GetSwatchOverrideValue(this, swatchName, GetVolumeTexturePropertyName(), overrideValue))
     {
         return GetVolumeTexture();
     }
@@ -166,29 +166,29 @@ Handle<Texture> FogVolume::GetVolumeTextureForLayer(Name layerName) const
         return overrideValue.Get<Handle<Texture>>();
     }
 
-    HYP_LOG(Scene, Warning, "Layer override '{}' on FogVolume '{}' is not a texture",
-        layerName, GetName());
+    HYP_LOG(Scene, Warning, "Swatch override '{}' on FogVolume '{}' is not a texture",
+        swatchName, GetName());
 
     return GetVolumeTexture();
 }
 
-Handle<Texture> FogVolume::GetNoiseTextureForLayer(Name layerName) const
+Handle<Texture> FogVolume::GetNoiseTextureForSwatch(Name swatchName) const
 {
-    if (!layerName.IsValid() || IsDefaultLayer(layerName))
+    if (!swatchName.IsValid() || IsDefaultSwatch(swatchName))
     {
         return GetNoiseTexture();
     }
 
-    LayerOverrideSystem* layerOverrideSystem = GetLayerOverrideSystem(this);
+    SwatchOverrideSystem* swatchOverrideSystem = GetSwatchOverrideSystem(this);
 
-    if (!layerOverrideSystem)
+    if (!swatchOverrideSystem)
     {
         return GetNoiseTexture();
     }
 
     BoxedValue overrideValue;
 
-    if (!layerOverrideSystem->GetLayerOverrideValue(this, layerName, GetNoiseTexturePropertyName(), overrideValue))
+    if (!swatchOverrideSystem->GetSwatchOverrideValue(this, swatchName, GetNoiseTexturePropertyName(), overrideValue))
     {
         return GetNoiseTexture();
     }
@@ -198,43 +198,43 @@ Handle<Texture> FogVolume::GetNoiseTextureForLayer(Name layerName) const
         return overrideValue.Get<Handle<Texture>>();
     }
 
-    HYP_LOG(Scene, Warning, "Layer override '{}' on FogVolume '{}' is not a texture",
-        layerName, GetName());
+    HYP_LOG(Scene, Warning, "Swatch override '{}' on FogVolume '{}' is not a texture",
+        swatchName, GetName());
 
     return GetNoiseTexture();
 }
 
-void FogVolume::SetTexturesForLayer(
+void FogVolume::SetTexturesForSwatch(
     const Handle<Texture>& volumeTexture,
     const Handle<Texture>& noiseTexture,
-    Name layerName)
+    Name swatchName)
 {
-    if (!layerName.IsValid() || IsDefaultLayer(layerName))
+    if (!swatchName.IsValid() || IsDefaultSwatch(swatchName))
     {
         SetTextures(volumeTexture, noiseTexture);
 
         return;
     }
 
-    LayerOverrideSystem* layerOverrideSystem = GetLayerOverrideSystem(this);
+    SwatchOverrideSystem* swatchOverrideSystem = GetSwatchOverrideSystem(this);
 
-    if (!layerOverrideSystem)
+    if (!swatchOverrideSystem)
     {
-        HYP_LOG(Scene, Error, "Cannot assign textures for layer '{}' on FogVolume '{}': no LayerOverrideSystem",
-            layerName, GetName());
+        HYP_LOG(Scene, Error, "Cannot assign textures for swatch '{}' on FogVolume '{}': no SwatchOverrideSystem",
+            swatchName, GetName());
 
         return;
     }
 
-    if (GetVolumeTextureForLayer(layerName) == volumeTexture
-        && GetNoiseTextureForLayer(layerName) == noiseTexture)
+    if (GetVolumeTextureForSwatch(swatchName) == volumeTexture
+        && GetNoiseTextureForSwatch(swatchName) == noiseTexture)
     {
         return;
     }
 
     if (volumeTexture.IsValid())
     {
-        volumeTexture->SetName(BuildVolumeTextureName(GetName(), layerName));
+        volumeTexture->SetName(BuildVolumeTextureName(GetName(), swatchName));
 
         if (!volumeTexture->IsTransient())
         {
@@ -244,7 +244,7 @@ void FogVolume::SetTexturesForLayer(
 
     if (noiseTexture.IsValid())
     {
-        noiseTexture->SetName(BuildNoiseTextureName(GetName(), layerName));
+        noiseTexture->SetName(BuildNoiseTextureName(GetName(), swatchName));
 
         if (!noiseTexture->IsTransient())
         {
@@ -252,9 +252,9 @@ void FogVolume::SetTexturesForLayer(
         }
     }
 
-    layerOverrideSystem->AddLayerOverrideSet(this, layerName);
-    layerOverrideSystem->SetLayerOverrideValue(this, layerName, GetVolumeTexturePropertyName(), BoxedValue(volumeTexture));
-    layerOverrideSystem->SetLayerOverrideValue(this, layerName, GetNoiseTexturePropertyName(), BoxedValue(noiseTexture));
+    swatchOverrideSystem->AddSwatchOverrideSet(this, swatchName);
+    swatchOverrideSystem->SetSwatchOverrideValue(this, swatchName, GetVolumeTexturePropertyName(), BoxedValue(volumeTexture));
+    swatchOverrideSystem->SetSwatchOverrideValue(this, swatchName, GetNoiseTexturePropertyName(), BoxedValue(noiseTexture));
 
     SetNeedsRenderProxyUpdate();
     MarkDirty();
@@ -262,33 +262,33 @@ void FogVolume::SetTexturesForLayer(
 
 #ifdef HYP_EDITOR
 
-Array<Name> FogVolume::GetBakedLayerNames() const
+Array<Name> FogVolume::GetBakedSwatchNames() const
 {
-    Array<Name> layerNames;
+    Array<Name> swatchNames;
 
     if (m_volumeTexture.IsValid())
     {
-        layerNames.PushBack(g_defaultLayerName);
+        swatchNames.PushBack(g_defaultSwatchName);
     }
 
-    LayerOverrideSystem* layerOverrideSystem = GetLayerOverrideSystem(this);
+    SwatchOverrideSystem* swatchOverrideSystem = GetSwatchOverrideSystem(this);
 
-    if (!layerOverrideSystem)
+    if (!swatchOverrideSystem)
     {
-        return layerNames;
+        return swatchNames;
     }
 
     const Name propertyName = GetVolumeTexturePropertyName();
 
-    for (Name layerName : layerOverrideSystem->GetSetLayerNames(this))
+    for (Name swatchName : swatchOverrideSystem->GetSetSwatchNames(this))
     {
-        if (layerOverrideSystem->IsPropertyOverriddenInLayer(this, layerName, propertyName))
+        if (swatchOverrideSystem->IsPropertyOverriddenInSwatch(this, swatchName, propertyName))
         {
-            layerNames.PushBack(layerName);
+            swatchNames.PushBack(swatchName);
         }
     }
 
-    return layerNames;
+    return swatchNames;
 }
 
 #endif // HYP_EDITOR
@@ -347,19 +347,19 @@ void FogVolume::Rebake()
         return;
     }
 
-    // Bake only the active layer
-    const Handle<Layer>& layer = world->GetActiveLayer();
+    // Bake only the active swatch
+    const Handle<Swatch>& swatch = world->GetActiveSwatch();
 
-    if (!layer.IsValid())
+    if (!swatch.IsValid())
     {
-        HYP_LOG(Editor, Error, "Cannot bake {}: could not resolve the active layer", GetName());
+        HYP_LOG(Editor, Error, "Cannot bake {}: could not resolve the active swatch", GetName());
 
         return;
     }
 
-    if (!HasNoLayers() && !IsInLayer(layer->layerId))
+    if (!HasNoSwatches() && !IsInSwatch(swatch->swatchId))
     {
-        HYP_LOG(Editor, Error, "Cannot bake {}: it is not in the active layer '{}'", GetName(), layer->name);
+        HYP_LOG(Editor, Error, "Cannot bake {}: it is not in the active swatch '{}'", GetName(), swatch->name);
 
         return;
     }
@@ -371,7 +371,7 @@ void FogVolume::Rebake()
         bakerSubsystem = world->AddSubsystem<BakerSubsystem>();
     }
 
-    bakerSubsystem->EnqueueBake(layer->bakeLayer, MakeStrongRef(this));
+    bakerSubsystem->EnqueueBake(swatch->bakeLayer, MakeStrongRef(this));
 }
 
 #endif

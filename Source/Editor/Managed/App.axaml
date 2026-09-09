@@ -20,8 +20,8 @@
         <DataTemplate DataType="vm:AddNewScenePanelViewModel">
             <panels:AddNewScenePanelView />
         </DataTemplate>
-        <DataTemplate DataType="vm:AddNewBakeLayerPanelViewModel">
-            <panels:AddNewBakeLayerPanelView />
+        <DataTemplate DataType="vm:AddNewSwatchPanelViewModel">
+            <panels:AddNewSwatchPanelView />
         </DataTemplate>
         <DataTemplate DataType="vm:AddNormalizedCubeSpherePanelViewModel">
             <panels:AddNormalizedCubeSpherePanelView />

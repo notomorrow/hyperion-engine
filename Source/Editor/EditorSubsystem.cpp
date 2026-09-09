@@ -33,7 +33,7 @@
 #include <Scene/System.hpp>
 #include <Scene/Systems/ScriptSystem.hpp>
 #include <Scene/Systems/MeshSystem.hpp>
-#include <Scene/Systems/LayerOverrideSystem.hpp>
+#include <Scene/Systems/SwatchOverrideSystem.hpp>
 
 #include <Scene/Sky/DynamicSkySystem.hpp>
 
@@ -214,7 +214,7 @@ void EditorGizmoBase::SetFocusedNode(const Handle<Node>& focusedNode)
     m_node->SetWorldTranslation(focusedNode->GetWorldTranslation());
 
     // Keep the gizmo in sync when the focused node's transform changes externally
-    // (e.g. layer overrides applied on active-layer switch, undo/redo from other paths).
+    // (e.g. swatch overrides applied on active-swatch switch, undo/redo from other paths).
     const WeakHandle<Node> weakFocused = focusedNode;
     const Handle<Node> gizmoNode = m_node;
 
@@ -373,9 +373,9 @@ void TranslateEditorGizmo::OnDragStart(const Handle<Camera>& camera, const Mouse
     }
 }
 
-//-- Layer override transform edits (gizmos) --
+//-- Swatch override transform edits (gizmos) --
 
-static LayerOverrideSystem* GetLayerOverrideSystemFor(const Entity* entity)
+static SwatchOverrideSystem* GetSwatchOverrideSystemFor(const Entity* entity)
 {
     if (!entity)
     {
@@ -389,29 +389,29 @@ static LayerOverrideSystem* GetLayerOverrideSystemFor(const Entity* entity)
         return nullptr;
     }
 
-    return world->GetSystem<LayerOverrideSystem>();
+    return world->GetSystem<SwatchOverrideSystem>();
 }
 
-struct LayerOverrideTransformEditState
+struct SwatchOverrideTransformEditState
 {
     Handle<Entity> entity;
-    Name layer;
-    bool routeToOverride = false; // override mode: edits land in the active layer's set
-    bool wasOverridden = false;   // LocalTransform was overridden in the active layer's set
+    Name swatch;
+    bool routeToOverride = false; // override mode: edits land in the active swatch's set
+    bool wasOverridden = false;   // LocalTransform was overridden in the active swatch's set
     Transform preTransform;
     Transform postTransform;
 };
 
-/*! Captures layer-override state for entities affected by a gizmo transform edit.
- *  In override mode, the post-drag local transform is written into the active layer's override
+/*! Captures swatch-override state for entities affected by a gizmo transform edit.
+ *  In override mode, the post-drag local transform is written into the active swatch's override
  *  set (created and applied if needed). Otherwise, an existing override of LocalTransform in the
- *  active layer's set is kept in sync with the base edit. */
+ *  active swatch's set is kept in sync with the base edit. */
 template <class T>
-static Array<LayerOverrideTransformEditState> CaptureLayerOverrideTransformEdits(
+static Array<SwatchOverrideTransformEditState> CaptureSwatchOverrideTransformEdits(
     const Array<Pair<Handle<Node>, T>>& nodeData,
     bool overrideMode)
 {
-    Array<LayerOverrideTransformEditState> result;
+    Array<SwatchOverrideTransformEditState> result;
 
     for (const auto& pair : nodeData)
     {
@@ -424,7 +424,7 @@ static Array<LayerOverrideTransformEditState> CaptureLayerOverrideTransformEdits
 
         Entity* entity = entityHandle.Get();
 
-        LayerOverrideSystem* overrideSystem = GetLayerOverrideSystemFor(entity);
+        SwatchOverrideSystem* overrideSystem = GetSwatchOverrideSystemFor(entity);
 
         if (!overrideSystem)
         {
@@ -438,26 +438,26 @@ static Array<LayerOverrideTransformEditState> CaptureLayerOverrideTransformEdits
             continue;
         }
 
-        const Name activeLayer = world->GetActiveLayerName();
+        const Name activeSwatch = world->GetActiveSwatchName();
 
-        if (!activeLayer || IsDefaultLayer(activeLayer))
+        if (!activeSwatch || IsDefaultSwatch(activeSwatch))
         {
             continue;
         }
 
-        const bool hasSet = overrideSystem->HasLayerOverrideSet(entity, activeLayer);
+        const bool hasSet = overrideSystem->HasSwatchOverrideSet(entity, activeSwatch);
 
         if (overrideMode)
         {
-            // Override mode: ensure the active layer's set exists and is applied
+            // Override mode: ensure the active swatch's set exists and is applied
             if (!hasSet)
             {
-                overrideSystem->AddLayerOverrideSet(entity, activeLayer);
+                overrideSystem->AddSwatchOverrideSet(entity, activeSwatch);
             }
 
-            if (overrideSystem->GetAppliedOverrideLayer(entity) != activeLayer)
+            if (overrideSystem->GetAppliedOverrideSwatch(entity) != activeSwatch)
             {
-                overrideSystem->ApplyOverrides(entity, activeLayer);
+                overrideSystem->ApplyOverrides(entity, activeSwatch);
             }
         }
         else if (!hasSet)
@@ -466,18 +466,18 @@ static Array<LayerOverrideTransformEditState> CaptureLayerOverrideTransformEdits
             continue;
         }
 
-        LayerOverrideTransformEditState state;
+        SwatchOverrideTransformEditState state;
         state.entity = entityHandle;
-        state.layer = activeLayer;
+        state.swatch = activeSwatch;
         state.routeToOverride = overrideMode;
-        state.wasOverridden = overrideSystem->IsPropertyOverriddenInLayer(entity, activeLayer, NAME("LocalTransform"));
+        state.wasOverridden = overrideSystem->IsPropertyOverriddenInSwatch(entity, activeSwatch, NAME("LocalTransform"));
         state.postTransform = entity->GetLocalTransform();
 
         if (state.wasOverridden)
         {
             BoxedValue preValue;
 
-            if (overrideSystem->GetLayerOverrideValue(entity, activeLayer, NAME("LocalTransform"), preValue))
+            if (overrideSystem->GetSwatchOverrideValue(entity, activeSwatch, NAME("LocalTransform"), preValue))
             {
                 state.preTransform = preValue.Get<Transform>();
             }
@@ -489,7 +489,7 @@ static Array<LayerOverrideTransformEditState> CaptureLayerOverrideTransformEdits
 
         if (overrideMode)
         {
-            overrideSystem->SetLayerOverrideValue(entity, activeLayer, NAME("LocalTransform"), BoxedValue(state.postTransform));
+            overrideSystem->SetSwatchOverrideValue(entity, activeSwatch, NAME("LocalTransform"), BoxedValue(state.postTransform));
         }
 
         result.PushBack(std::move(state));
@@ -499,32 +499,32 @@ static Array<LayerOverrideTransformEditState> CaptureLayerOverrideTransformEdits
 }
 
 // Shared execute/revert loops for gizmo undo actions
-static void ExecuteLayerOverrideTransformEdits(const Array<LayerOverrideTransformEditState>& states)
+static void ExecuteSwatchOverrideTransformEdits(const Array<SwatchOverrideTransformEditState>& states)
 {
-    for (const LayerOverrideTransformEditState& state : states)
+    for (const SwatchOverrideTransformEditState& state : states)
     {
         if (!state.entity.IsValid() || (!state.routeToOverride && !state.wasOverridden))
         {
             continue;
         }
 
-        if (LayerOverrideSystem* overrideSystem = GetLayerOverrideSystemFor(state.entity.Get()))
+        if (SwatchOverrideSystem* overrideSystem = GetSwatchOverrideSystemFor(state.entity.Get()))
         {
-            overrideSystem->SetLayerOverrideValue(state.entity.Get(), state.layer, NAME("LocalTransform"), BoxedValue(state.postTransform));
+            overrideSystem->SetSwatchOverrideValue(state.entity.Get(), state.swatch, NAME("LocalTransform"), BoxedValue(state.postTransform));
         }
     }
 }
 
-static void RevertLayerOverrideTransformEdits(const Array<LayerOverrideTransformEditState>& states)
+static void RevertSwatchOverrideTransformEdits(const Array<SwatchOverrideTransformEditState>& states)
 {
-    for (const LayerOverrideTransformEditState& state : states)
+    for (const SwatchOverrideTransformEditState& state : states)
     {
         if (!state.entity.IsValid() || (!state.routeToOverride && !state.wasOverridden))
         {
             continue;
         }
 
-        LayerOverrideSystem* overrideSystem = GetLayerOverrideSystemFor(state.entity.Get());
+        SwatchOverrideSystem* overrideSystem = GetSwatchOverrideSystemFor(state.entity.Get());
 
         if (!overrideSystem)
         {
@@ -533,11 +533,11 @@ static void RevertLayerOverrideTransformEdits(const Array<LayerOverrideTransform
 
         if (state.wasOverridden)
         {
-            overrideSystem->SetLayerOverrideValue(state.entity.Get(), state.layer, NAME("LocalTransform"), BoxedValue(state.preTransform));
+            overrideSystem->SetSwatchOverrideValue(state.entity.Get(), state.swatch, NAME("LocalTransform"), BoxedValue(state.preTransform));
         }
         else
         {
-            overrideSystem->RemoveLayerOverrideValue(state.entity.Get(), state.layer, NAME("LocalTransform"));
+            overrideSystem->RemoveSwatchOverrideValue(state.entity.Get(), state.swatch, NAME("LocalTransform"));
         }
     }
 }
@@ -568,9 +568,9 @@ void TranslateEditorGizmo::OnDragEnd(const Handle<Camera>& camera, const MouseEv
                 : HYP_FORMAT("Translate {} nodes", nodeData.Size());
 
             EditorSubsystem* overrideModeSubsystem = GetEditorSubsystem();
-            const bool overrideMode = overrideModeSubsystem && overrideModeSubsystem->IsLayerOverrideModeEnabled();
+            const bool overrideMode = overrideModeSubsystem && overrideModeSubsystem->IsSwatchOverrideModeEnabled();
 
-            Array<LayerOverrideTransformEditState> overrideEdits = CaptureLayerOverrideTransformEdits(nodeData, overrideMode);
+            Array<SwatchOverrideTransformEditState> overrideEdits = CaptureSwatchOverrideTransformEdits(nodeData, overrideMode);
 
             project->GetActionStack()->PushAction(MakeHandle<FunctionalEditorAction>(
                 text,
@@ -597,7 +597,7 @@ void TranslateEditorGizmo::OnDragEnd(const Handle<Camera>& camera, const MouseEv
                                 selectedNode->SetWorldTranslation(pair.second + translationDelta);
                             }
 
-                            ExecuteLayerOverrideTransformEdits(*overrideEditsPtr);
+                            ExecuteSwatchOverrideTransformEdits(*overrideEditsPtr);
 
                             if (Node* parent = node->FindParentWithName("TranslateGizmo"))
                             {
@@ -622,7 +622,7 @@ void TranslateEditorGizmo::OnDragEnd(const Handle<Camera>& camera, const MouseEv
                                 selectedNode->SetWorldTranslation(pair.second);
                             }
 
-                            RevertLayerOverrideTransformEdits(*overrideEditsPtr);
+                            RevertSwatchOverrideTransformEdits(*overrideEditsPtr);
 
                             if (Node* parent = node->FindParentWithName("TranslateGizmo"))
                             {
@@ -1065,9 +1065,9 @@ void RotateEditorGizmo::OnDragEnd(const Handle<Camera>& camera, const MouseEvent
                       });
 
             EditorSubsystem* overrideModeSubsystem = GetEditorSubsystem();
-            const bool overrideMode = overrideModeSubsystem && overrideModeSubsystem->IsLayerOverrideModeEnabled();
+            const bool overrideMode = overrideModeSubsystem && overrideModeSubsystem->IsSwatchOverrideModeEnabled();
 
-            Array<LayerOverrideTransformEditState> overrideEdits = CaptureLayerOverrideTransformEdits(nodeData, overrideMode);
+            Array<SwatchOverrideTransformEditState> overrideEdits = CaptureSwatchOverrideTransformEdits(nodeData, overrideMode);
 
             project->GetActionStack()->PushAction(MakeHandle<FunctionalEditorAction>(
                 nodeData.Size() == 1
@@ -1096,7 +1096,7 @@ void RotateEditorGizmo::OnDragEnd(const Handle<Camera>& camera, const MouseEvent
                                 selectedNode->SetWorldRotation(deltaRotation * pair.second);
                             }
 
-                            ExecuteLayerOverrideTransformEdits(*overrideEditsPtr);
+                            ExecuteSwatchOverrideTransformEdits(*overrideEditsPtr);
 
                             editorSubsystem->SetFocusedNode(focusedNode, true);
                         },
@@ -1117,7 +1117,7 @@ void RotateEditorGizmo::OnDragEnd(const Handle<Camera>& camera, const MouseEvent
                                 selectedNode->SetWorldRotation(pair.second);
                             }
 
-                            RevertLayerOverrideTransformEdits(*overrideEditsPtr);
+                            RevertSwatchOverrideTransformEdits(*overrideEditsPtr);
 
                             editorSubsystem->SetFocusedNode(focusedNode, true);
                         }
@@ -1414,9 +1414,9 @@ void ScaleEditorGizmo::OnDragEnd(const Handle<Camera>& camera, const MouseEvent&
                       });
 
             EditorSubsystem* overrideModeSubsystem = GetEditorSubsystem();
-            const bool overrideMode = overrideModeSubsystem && overrideModeSubsystem->IsLayerOverrideModeEnabled();
+            const bool overrideMode = overrideModeSubsystem && overrideModeSubsystem->IsSwatchOverrideModeEnabled();
 
-            Array<LayerOverrideTransformEditState> overrideEdits = CaptureLayerOverrideTransformEdits(nodeData, overrideMode);
+            Array<SwatchOverrideTransformEditState> overrideEdits = CaptureSwatchOverrideTransformEdits(nodeData, overrideMode);
 
             project->GetActionStack()->PushAction(MakeHandle<FunctionalEditorAction>(
                 nodeData.Size() == 1
@@ -1444,7 +1444,7 @@ void ScaleEditorGizmo::OnDragEnd(const Handle<Camera>& camera, const MouseEvent&
                                 selectedNode->SetWorldScale(pair.second.first * scaleFactor);
                             }
 
-                            ExecuteLayerOverrideTransformEdits(*overrideEditsPtr);
+                            ExecuteSwatchOverrideTransformEdits(*overrideEditsPtr);
 
                             editorSubsystem->SetFocusedNode(focusedNode, true);
                         },
@@ -1464,7 +1464,7 @@ void ScaleEditorGizmo::OnDragEnd(const Handle<Camera>& camera, const MouseEvent&
                                 selectedNode->SetWorldScale(pair.second.first);
                             }
 
-                            RevertLayerOverrideTransformEdits(*overrideEditsPtr);
+                            RevertSwatchOverrideTransformEdits(*overrideEditsPtr);
 
                             editorSubsystem->SetFocusedNode(focusedNode, true);
                         }
@@ -2132,82 +2132,82 @@ void EditorSubsystem::SetSnapToGridEnabled(bool snapToGrid)
     m_snapToGridEnabled = snapToGrid;
 }
 
-//-- Entity layer overrides
+//-- Entity swatch overrides
 
-Array<Name> EditorSubsystem::GetEntityLayerOverrideSets(Entity* entity) const
+Array<Name> EditorSubsystem::GetEntitySwatchOverrideSets(Entity* entity) const
 {
-    if (LayerOverrideSystem* overrideSystem = GetLayerOverrideSystemFor(entity))
+    if (SwatchOverrideSystem* overrideSystem = GetSwatchOverrideSystemFor(entity))
     {
-        return overrideSystem->GetSetLayerNames(entity);
+        return overrideSystem->GetSetSwatchNames(entity);
     }
 
     return {};
 }
 
-bool EditorSubsystem::EntityHasLayerOverrideSet(Entity* entity, Name layerName) const
+bool EditorSubsystem::EntityHasSwatchOverrideSet(Entity* entity, Name swatchName) const
 {
-    LayerOverrideSystem* overrideSystem = GetLayerOverrideSystemFor(entity);
+    SwatchOverrideSystem* overrideSystem = GetSwatchOverrideSystemFor(entity);
 
-    return overrideSystem && overrideSystem->HasLayerOverrideSet(entity, layerName);
+    return overrideSystem && overrideSystem->HasSwatchOverrideSet(entity, swatchName);
 }
 
-bool EditorSubsystem::EntityHasLayerOverrideValues(Entity* entity, Name layerName) const
+bool EditorSubsystem::EntityHasSwatchOverrideValues(Entity* entity, Name swatchName) const
 {
-    LayerOverrideSystem* overrideSystem = GetLayerOverrideSystemFor(entity);
+    SwatchOverrideSystem* overrideSystem = GetSwatchOverrideSystemFor(entity);
 
-    return overrideSystem && overrideSystem->HasAnyOverriddenProperty(entity, layerName);
+    return overrideSystem && overrideSystem->HasAnyOverriddenProperty(entity, swatchName);
 }
 
-void EditorSubsystem::EntityAddLayerOverrideSet(Entity* entity, Name layerName) const
+void EditorSubsystem::EntityAddSwatchOverrideSet(Entity* entity, Name swatchName) const
 {
-    if (LayerOverrideSystem* overrideSystem = GetLayerOverrideSystemFor(entity))
+    if (SwatchOverrideSystem* overrideSystem = GetSwatchOverrideSystemFor(entity))
     {
-        overrideSystem->AddLayerOverrideSet(entity, layerName);
+        overrideSystem->AddSwatchOverrideSet(entity, swatchName);
     }
 }
 
-bool EditorSubsystem::EntityRemoveLayerOverrideSet(Entity* entity, Name layerName) const
+bool EditorSubsystem::EntityRemoveSwatchOverrideSet(Entity* entity, Name swatchName) const
 {
-    LayerOverrideSystem* overrideSystem = GetLayerOverrideSystemFor(entity);
+    SwatchOverrideSystem* overrideSystem = GetSwatchOverrideSystemFor(entity);
 
-    return overrideSystem && overrideSystem->RemoveLayerOverrideSet(entity, layerName);
+    return overrideSystem && overrideSystem->RemoveSwatchOverrideSet(entity, swatchName);
 }
 
-bool EditorSubsystem::IsEntityPropertyOverridden(Entity* entity, Name layerName, Name propertyName) const
+bool EditorSubsystem::IsEntityPropertyOverridden(Entity* entity, Name swatchName, Name propertyName) const
 {
-    LayerOverrideSystem* overrideSystem = GetLayerOverrideSystemFor(entity);
+    SwatchOverrideSystem* overrideSystem = GetSwatchOverrideSystemFor(entity);
 
-    return overrideSystem && overrideSystem->IsPropertyOverriddenInLayer(entity, layerName, propertyName);
+    return overrideSystem && overrideSystem->IsPropertyOverriddenInSwatch(entity, swatchName, propertyName);
 }
 
-bool EditorSubsystem::EntityRemoveLayerOverrideValue(Entity* entity, Name layerName, Name propertyName) const
+bool EditorSubsystem::EntityRemoveSwatchOverrideValue(Entity* entity, Name swatchName, Name propertyName) const
 {
-    LayerOverrideSystem* overrideSystem = GetLayerOverrideSystemFor(entity);
+    SwatchOverrideSystem* overrideSystem = GetSwatchOverrideSystemFor(entity);
 
-    return overrideSystem && overrideSystem->RemoveLayerOverrideValue(entity, layerName, propertyName);
+    return overrideSystem && overrideSystem->RemoveSwatchOverrideValue(entity, swatchName, propertyName);
 }
 
-Name EditorSubsystem::GetEntityAppliedOverrideLayer(Entity* entity) const
+Name EditorSubsystem::GetEntityAppliedOverrideSwatch(Entity* entity) const
 {
-    if (LayerOverrideSystem* overrideSystem = GetLayerOverrideSystemFor(entity))
+    if (SwatchOverrideSystem* overrideSystem = GetSwatchOverrideSystemFor(entity))
     {
-        return overrideSystem->GetAppliedOverrideLayer(entity);
+        return overrideSystem->GetAppliedOverrideSwatch(entity);
     }
 
     return Name::Invalid();
 }
 
-void EditorSubsystem::EntityApplyLayerOverrides(Entity* entity, Name layerName) const
+void EditorSubsystem::EntityApplySwatchOverrides(Entity* entity, Name swatchName) const
 {
-    if (LayerOverrideSystem* overrideSystem = GetLayerOverrideSystemFor(entity))
+    if (SwatchOverrideSystem* overrideSystem = GetSwatchOverrideSystemFor(entity))
     {
-        overrideSystem->ApplyOverrides(entity, layerName);
+        overrideSystem->ApplyOverrides(entity, swatchName);
     }
 }
 
-void EditorSubsystem::EntityRevertLayerOverrides(Entity* entity) const
+void EditorSubsystem::EntityRevertSwatchOverrides(Entity* entity) const
 {
-    if (LayerOverrideSystem* overrideSystem = GetLayerOverrideSystemFor(entity))
+    if (SwatchOverrideSystem* overrideSystem = GetSwatchOverrideSystemFor(entity))
     {
         overrideSystem->RevertOverrides(entity);
     }
@@ -3644,7 +3644,7 @@ void EditorSubsystem::UpdateGizmoProximityVisibility()
 EditorSubsystem::EditorSubsystem()
     : m_selectedManipulationMode(EditorManipulationMode::None),
       m_snapToGridEnabled(false),
-      m_layerOverrideMode(false),
+      m_swatchOverrideMode(false),
       m_editorCameraEnabled(false),
       m_shouldCancelNextClick(false),
       m_gizmosHiddenByProximity(false)
@@ -5989,9 +5989,9 @@ void EditorSubsystem::UpdateBakeStatus()
 
             bool isOutOfDate = false;
 
-            for (const Handle<Layer>& layer : SceneHelpers::GetTargetLayers(*volume))
+            for (const Handle<Swatch>& swatch : SceneHelpers::GetTargetSwatches(*volume))
             {
-                Baking::BakeLayer& bakeLayer = layer->bakeLayer;
+                Baking::BakeLayer& bakeLayer = swatch->bakeLayer;
 
                 uint64 storedEpoch;
 
@@ -6044,11 +6044,11 @@ void EditorSubsystem::UpdateBakeStatus()
 
             bool isOutOfDate = false;
 
-            for (const Handle<Layer>& layer : SceneHelpers::GetTargetLayers(*probe))
+            for (const Handle<Swatch>& swatch : SceneHelpers::GetTargetSwatches(*probe))
             {
                 uint64 storedEpoch;
 
-                if (!layer->bakeLayer.TryGetAssetEpoch<Baking::BakeLayerCategory::LightReceiver>(*probe, storedEpoch))
+                if (!swatch->bakeLayer.TryGetAssetEpoch<Baking::BakeLayerCategory::LightReceiver>(*probe, storedEpoch))
                 {
                     // not tracked yet. bake it to track it
                     isOutOfDate = true;
@@ -6056,7 +6056,7 @@ void EditorSubsystem::UpdateBakeStatus()
                     break;
                 }
 
-                const uint64 computedEpoch = Baking::BakeEpoch::ComputeEpoch(*probe, layer->bakeLayer);
+                const uint64 computedEpoch = Baking::BakeEpoch::ComputeEpoch(*probe, swatch->bakeLayer);
 
                 if (storedEpoch != computedEpoch)
                 {

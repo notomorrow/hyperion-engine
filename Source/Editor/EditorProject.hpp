@@ -136,20 +136,20 @@ public:
         return m_actionStack;
     }
 
-    /*! \brief The Layer/BakeLayer data now lives on World (so it works outside the editor too) - these
+    /*! \brief The Swatch/BakeLayer data now lives on World (so it works outside the editor too) - these
      *  are thin forwarders kept so existing callers (editor commands, the toolbar UI) don't need to
-     *  change. \see{World::GetActiveLayer} */
+     *  change. \see{World::GetActiveSwatch} */
     BakeLayer& GetActiveBakeLayer();
 
     /// For editor interop
     HYP_METHOD()
-    Array<Name> GetBakeLayerNames() const;
+    Array<Name> GetSwatchNames() const;
 
     HYP_METHOD()
-    Name GetActiveBakeLayerName() const;
+    Name GetActiveSwatchName() const;
 
     HYP_METHOD()
-    void SetActiveBakeLayer(Name layerName);
+    void SetActiveSwatch(Name swatchName);
 
     static TResult<Handle<EditorProject>> Load(const FilePath& filepath);
     static Handle<EditorProject> CreateNew();
@@ -161,7 +161,7 @@ public:
     ScriptableDelegate<void, const Handle<EditorProject>&> OnProjectSaved;
 
     HYP_FIELD()
-    ScriptableDelegate<void, Name> OnActiveBakeLayerChanged;
+    ScriptableDelegate<void, Name> OnActiveSwatchChanged;
 
 private:
     HYP_FORCE_INLINE void SetEditorSubsystem(const WeakHandle<EditorSubsystem>& editorSubsystem)

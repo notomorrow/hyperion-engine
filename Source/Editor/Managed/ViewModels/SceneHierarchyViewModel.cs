@@ -37,21 +37,21 @@ namespace Hyperion.Editor.ViewModels
         private Scene? _scene;
         public Scene? Scene => _scene;
 
-        private bool _showOnlyActiveLayer = true;
-        public bool ShowOnlyActiveLayer
+        private bool _showOnlyActiveSwatch = true;
+        public bool ShowOnlyActiveSwatch
         {
-            get => _showOnlyActiveLayer;
+            get => _showOnlyActiveSwatch;
             set
             {
-                if (SetProperty(ref _showOnlyActiveLayer, value))
+                if (SetProperty(ref _showOnlyActiveSwatch, value))
                 {
-                    OnPropertyChanged(nameof(ShowOnlyActiveLayerIconKind));
+                    OnPropertyChanged(nameof(ShowOnlyActiveSwatchIconKind));
                     RefreshFilter();
                 }
             }
         }
 
-        public string ShowOnlyActiveLayerIconKind => ShowOnlyActiveLayer ? "EyeClosed" : "Eye";
+        public string ShowOnlyActiveSwatchIconKind => ShowOnlyActiveSwatch ? "EyeClosed" : "Eye";
 
         private DelegateHandler? _onSelectedNodeChanged;
 
@@ -111,7 +111,7 @@ namespace Hyperion.Editor.ViewModels
                 return;
             }
 
-            if (!ShowOnlyActiveLayer)
+            if (!ShowOnlyActiveSwatch)
             {
                 SetFilteredOutRecursive(RootNodes, filteredOut: false);
 
@@ -177,13 +177,13 @@ namespace Hyperion.Editor.ViewModels
                 return hidden;
             }
 
-            Name activeLayerName = world.GetActiveLayerName();
+            Name activeSwatchName = world.GetActiveSwatchName();
 
             void Walk(Node node)
             {
                 if (node is Entity entity)
                 {
-                    bool isVisible = entity.HasNoLayers() || entity.IsInLayerByName(activeLayerName);
+                    bool isVisible = entity.HasNoSwatches() || entity.IsInSwatchByName(activeSwatchName);
 
                     if (!isVisible)
                     {

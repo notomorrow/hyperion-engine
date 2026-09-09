@@ -17,31 +17,31 @@
 
 namespace Hyperion {
 
-struct LayerPropertyOverride
+struct SwatchPropertyOverride
 {
     Name property;
     BoxedValue value;
 };
 
-struct EntityLayerOverrideSet
+struct EntitySwatchOverrideSet
 {
-    Name layerName;
-    Array<LayerPropertyOverride> propertyOverrides;
+    Name swatchName;
+    Array<SwatchPropertyOverride> propertyOverrides;
 };
 
-HYP_STRUCT(Component, NoScriptBindings, Serialize = false, Editor = false, Replicated = false, Label = "Layer Overrides", Description = "Per-layer property overrides for an entity.")
-struct LayerOverridesComponent
+HYP_STRUCT(Component, NoScriptBindings, Serialize = false, Editor = false, Replicated = false, Label = "Swatch Overrides", Description = "Per-swatch property overrides for an entity.")
+struct SwatchOverridesComponent
 {
-    HYP_STRUCT_BODY(LayerOverridesComponent);
+    HYP_STRUCT_BODY(SwatchOverridesComponent);
 
     HYP_FIELD(Transient)
-    Array<EntityLayerOverrideSet> sets;
+    Array<EntitySwatchOverrideSet> sets;
 
-    //--  managed by LayerOverrideSystem  --
+    //--  managed by SwatchOverrideSystem  --
 
-    // Name of the layer active
+    // Name of the swatch active
     HYP_FIELD(Transient)
-    Name appliedLayer;
+    Name appliedSwatch;
 
     // Base values of all overridden properties, captured when a set is applied
     /// @TODO: Just reload the Entity HMF data; apply it that way... Less mem usage / interning.

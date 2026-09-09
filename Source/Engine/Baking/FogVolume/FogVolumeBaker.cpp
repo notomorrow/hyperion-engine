@@ -15,7 +15,7 @@
 #include <Asset/Assets.hpp>
 
 #include <Scene/FogVolume.hpp>
-#include <Scene/Layer.hpp>
+#include <Scene/Swatch.hpp>
 
 #include <Core/Threading/TaskSystem.hpp>
 #include <Core/Threading/TaskThread.hpp>
@@ -33,7 +33,7 @@ Baker<FogVolume>::Baker(BakerConfig&& config, BakeLayer& bakeLayer, const Handle
 
 Name Baker<FogVolume>::GetBakeLayerName() const
 {
-    return m_bakeLayer ? m_bakeLayer->name : g_defaultLayerName;
+    return m_bakeLayer ? m_bakeLayer->name : g_defaultSwatchName;
 }
 
 UniquePtr<BakeJobBase> Baker<FogVolume>::CreateJob(BakeJobParams&& params)
@@ -147,7 +147,7 @@ void Baker<FogVolume>::HandleCompletedJob_Internal(BakeJobBase* job)
 
     const Name bakeLayerName = GetBakeLayerName();
 
-    if (IsDefaultLayer(bakeLayerName))
+    if (IsDefaultSwatch(bakeLayerName))
     {
         volumeTexture->SetName(FogVolume::BuildVolumeTextureName(m_fogVolume->GetName(), bakeLayerName));
         GetCurrentAssetRegistry()->PutAssetUnique(volumeTexture);
@@ -156,7 +156,7 @@ void Baker<FogVolume>::HandleCompletedJob_Internal(BakeJobBase* job)
         GetCurrentAssetRegistry()->PutAssetUnique(noiseTexture);
     }
 
-    m_fogVolume->SetTexturesForLayer(volumeTexture, noiseTexture, bakeLayerName);
+    m_fogVolume->SetTexturesForSwatch(volumeTexture, noiseTexture, bakeLayerName);
 }
 
 } // namespace Baking

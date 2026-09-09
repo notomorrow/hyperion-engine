@@ -13,11 +13,11 @@
 #include <Scene/Scene.hpp>
 #include <Scene/Light.hpp>
 #include <Scene/EntityManager.hpp>
-#include <Scene/Layer.hpp>
+#include <Scene/Swatch.hpp>
 
 #include <Scene/Util/SceneHelpers.hpp>
 
-#include <Scene/Systems/LayerOverrideSystem.hpp>
+#include <Scene/Systems/SwatchOverrideSystem.hpp>
 
 #include <Rendering/Texture.hpp>
 #include <Rendering/RenderInterface.hpp>
@@ -68,11 +68,11 @@ static constexpr float EnvProbeCameraNearClip = 0.025f;
 
 namespace {
 
-LayerOverrideSystem* GetLayerOverrideSystem(const EnvProbe* envProbe)
+SwatchOverrideSystem* GetSwatchOverrideSystem(const EnvProbe* envProbe)
 {
     World* world = envProbe->GetWorld();
 
-    return world ? world->GetSystem<LayerOverrideSystem>() : nullptr;
+    return world ? world->GetSystem<SwatchOverrideSystem>() : nullptr;
 }
 
 } // namespace
@@ -146,24 +146,24 @@ EnvProbeDimensions EnvProbe::GetDefaultDimensions(EnvProbeType envProbeType)
     return DefaultDimensionsByType[uint32(envProbeType)];
 }
 
-Name EnvProbe::BuildBakedTextureName(Name probeName, Name layerName)
+Name EnvProbe::BuildBakedTextureName(Name probeName, Name swatchName)
 {
-    if (!layerName.IsValid() || IsDefaultLayer(layerName))
+    if (!swatchName.IsValid() || IsDefaultSwatch(swatchName))
     {
         return NAME_FMT("{}_ColorMap", probeName);
     }
 
-    return NAME_FMT("{}_{}_ColorMap", probeName, layerName);
+    return NAME_FMT("{}_{}_ColorMap", probeName, swatchName);
 }
 
-Name EnvProbe::BuildVisibilityTextureName(Name probeName, Name layerName)
+Name EnvProbe::BuildVisibilityTextureName(Name probeName, Name swatchName)
 {
-    if (!layerName.IsValid() || IsDefaultLayer(layerName))
+    if (!swatchName.IsValid() || IsDefaultSwatch(swatchName))
     {
         return NAME_FMT("{}_VisibilityMap", probeName);
     }
 
-    return NAME_FMT("{}_{}_VisibilityMap", probeName, layerName);
+    return NAME_FMT("{}_{}_VisibilityMap", probeName, swatchName);
 }
 
 void EnvProbe::SyncOwnedCaptureState()
@@ -175,7 +175,7 @@ void EnvProbe::SyncOwnedCaptureState()
 
     if (!m_captureState)
     {
-        // REALTIME, we dont want a layer name assoc'd with it
+        // REALTIME, we dont want a swatch name assoc'd with it
         m_captureState = new EnvProbeCaptureState(this, Name::Invalid());
     }
 
@@ -285,7 +285,7 @@ void EnvProbe::InitCaptureData(EnvProbeCaptureState* captureState)
                 IU_STORAGE | IU_SAMPLED
             });
 
-            captureState->texture->SetName(BuildBakedTextureName(GetName(), captureState->layerName));
+            captureState->texture->SetName(BuildBakedTextureName(GetName(), captureState->swatchName));
             captureState->texture->SetIsTransient(true);
         }
 
@@ -306,7 +306,7 @@ void EnvProbe::InitCaptureData(EnvProbeCaptureState* captureState)
                 IU_SAMPLED | IU_STORAGE
             });
 
-            captureState->visibilityTexture->SetName(BuildVisibilityTextureName(GetName(), captureState->layerName));
+            captureState->visibilityTexture->SetName(BuildVisibilityTextureName(GetName(), captureState->swatchName));
             captureState->visibilityTexture->SetIsTransient(true);
         }
 
@@ -914,23 +914,23 @@ void EnvProbe::SetSphericalHarmonicsData(const SphericalHarmonicsData& shData)
     MarkDirty();
 }
 
-Handle<Texture> EnvProbe::GetBakedTextureForLayer(Name layerName) const
+Handle<Texture> EnvProbe::GetBakedTextureForSwatch(Name swatchName) const
 {
-    if (!layerName.IsValid() || IsDefaultLayer(layerName))
+    if (!swatchName.IsValid() || IsDefaultSwatch(swatchName))
     {
         return GetBakedTexture();
     }
 
-    LayerOverrideSystem* layerOverrideSystem = GetLayerOverrideSystem(this);
+    SwatchOverrideSystem* swatchOverrideSystem = GetSwatchOverrideSystem(this);
 
-    if (!layerOverrideSystem)
+    if (!swatchOverrideSystem)
     {
         return GetBakedTexture();
     }
 
     BoxedValue overrideValue;
 
-    if (!layerOverrideSystem->GetLayerOverrideValue(this, layerName, GetBakedTexturePropertyName(), overrideValue))
+    if (!swatchOverrideSystem->GetSwatchOverrideValue(this, swatchName, GetBakedTexturePropertyName(), overrideValue))
     {
         return GetBakedTexture();
     }
@@ -940,29 +940,29 @@ Handle<Texture> EnvProbe::GetBakedTextureForLayer(Name layerName) const
         return overrideValue.Get<Handle<Texture>>();
     }
 
-    HYP_LOG(Scene, Warning, "Layer override '{}' on EnvProbe '{}' is not a texture",
-        layerName, GetName());
+    HYP_LOG(Scene, Warning, "Swatch override '{}' on EnvProbe '{}' is not a texture",
+        swatchName, GetName());
 
     return GetBakedTexture();
 }
 
-Handle<Texture> EnvProbe::GetVisibilityTextureForLayer(Name layerName) const
+Handle<Texture> EnvProbe::GetVisibilityTextureForSwatch(Name swatchName) const
 {
-    if (!layerName.IsValid() || IsDefaultLayer(layerName))
+    if (!swatchName.IsValid() || IsDefaultSwatch(swatchName))
     {
         return GetVisibilityTexture();
     }
 
-    LayerOverrideSystem* layerOverrideSystem = GetLayerOverrideSystem(this);
+    SwatchOverrideSystem* swatchOverrideSystem = GetSwatchOverrideSystem(this);
 
-    if (!layerOverrideSystem)
+    if (!swatchOverrideSystem)
     {
         return GetVisibilityTexture();
     }
 
     BoxedValue overrideValue;
 
-    if (!layerOverrideSystem->GetLayerOverrideValue(this, layerName, GetVisibilityTexturePropertyName(), overrideValue))
+    if (!swatchOverrideSystem->GetSwatchOverrideValue(this, swatchName, GetVisibilityTexturePropertyName(), overrideValue))
     {
         return GetVisibilityTexture();
     }
@@ -972,29 +972,29 @@ Handle<Texture> EnvProbe::GetVisibilityTextureForLayer(Name layerName) const
         return overrideValue.Get<Handle<Texture>>();
     }
 
-    HYP_LOG(Scene, Warning, "Layer override '{}' on EnvProbe '{}' is not a texture",
-        layerName, GetName());
+    HYP_LOG(Scene, Warning, "Swatch override '{}' on EnvProbe '{}' is not a texture",
+        swatchName, GetName());
 
     return GetVisibilityTexture();
 }
 
-SphericalHarmonicsData EnvProbe::GetSphericalHarmonicsDataForLayer(Name layerName) const
+SphericalHarmonicsData EnvProbe::GetSphericalHarmonicsDataForSwatch(Name swatchName) const
 {
-    if (!layerName.IsValid() || IsDefaultLayer(layerName))
+    if (!swatchName.IsValid() || IsDefaultSwatch(swatchName))
     {
         return GetSphericalHarmonicsData();
     }
 
-    LayerOverrideSystem* layerOverrideSystem = GetLayerOverrideSystem(this);
+    SwatchOverrideSystem* swatchOverrideSystem = GetSwatchOverrideSystem(this);
 
-    if (!layerOverrideSystem)
+    if (!swatchOverrideSystem)
     {
         return GetSphericalHarmonicsData();
     }
 
     BoxedValue overrideValue;
 
-    if (!layerOverrideSystem->GetLayerOverrideValue(this, layerName, GetSphericalHarmonicsPropertyName(), overrideValue))
+    if (!swatchOverrideSystem->GetSwatchOverrideValue(this, swatchName, GetSphericalHarmonicsPropertyName(), overrideValue))
     {
         return GetSphericalHarmonicsData();
     }
@@ -1004,39 +1004,39 @@ SphericalHarmonicsData EnvProbe::GetSphericalHarmonicsDataForLayer(Name layerNam
         return overrideValue.Get<SphericalHarmonicsData>();
     }
 
-    HYP_LOG(Scene, Warning, "Layer override '{}' on EnvProbe '{}' is not spherical harmonics data",
-        layerName, GetName());
+    HYP_LOG(Scene, Warning, "Swatch override '{}' on EnvProbe '{}' is not spherical harmonics data",
+        swatchName, GetName());
 
     return GetSphericalHarmonicsData();
 }
 
-void EnvProbe::SetBakedTextureForLayer(const Handle<Texture>& texture, Name layerName)
+void EnvProbe::SetBakedTextureForSwatch(const Handle<Texture>& texture, Name swatchName)
 {
-    if (!layerName.IsValid() || IsDefaultLayer(layerName))
+    if (!swatchName.IsValid() || IsDefaultSwatch(swatchName))
     {
         SetBakedTexture(texture);
 
         return;
     }
 
-    LayerOverrideSystem* layerOverrideSystem = GetLayerOverrideSystem(this);
+    SwatchOverrideSystem* swatchOverrideSystem = GetSwatchOverrideSystem(this);
 
-    if (!layerOverrideSystem)
+    if (!swatchOverrideSystem)
     {
-        HYP_LOG(Scene, Error, "Cannot assign baked texture for layer '{}' on EnvProbe '{}': no LayerOverrideSystem",
-            layerName, GetName());
+        HYP_LOG(Scene, Error, "Cannot assign baked texture for swatch '{}' on EnvProbe '{}': no SwatchOverrideSystem",
+            swatchName, GetName());
 
         return;
     }
 
-    if (GetBakedTextureForLayer(layerName) == texture)
+    if (GetBakedTextureForSwatch(swatchName) == texture)
     {
         return;
     }
 
     if (texture.IsValid())
     {
-        texture->SetName(BuildBakedTextureName(GetName(), layerName));
+        texture->SetName(BuildBakedTextureName(GetName(), swatchName));
 
         if (!texture->IsTransient())
         {
@@ -1044,76 +1044,76 @@ void EnvProbe::SetBakedTextureForLayer(const Handle<Texture>& texture, Name laye
         }
     }
 
-    layerOverrideSystem->AddLayerOverrideSet(this, layerName);
-    layerOverrideSystem->SetLayerOverrideValue(this, layerName, GetBakedTexturePropertyName(), BoxedValue(texture));
+    swatchOverrideSystem->AddSwatchOverrideSet(this, swatchName);
+    swatchOverrideSystem->SetSwatchOverrideValue(this, swatchName, GetBakedTexturePropertyName(), BoxedValue(texture));
 
     SetNeedsRenderProxyUpdate();
     MarkDirty();
 }
 
-void EnvProbe::SetVisibilityTextureForLayer(const Handle<Texture>& visibilityTexture, Name layerName)
+void EnvProbe::SetVisibilityTextureForSwatch(const Handle<Texture>& visibilityTexture, Name swatchName)
 {
-    if (!layerName.IsValid() || IsDefaultLayer(layerName))
+    if (!swatchName.IsValid() || IsDefaultSwatch(swatchName))
     {
         SetVisibilityTexture(visibilityTexture);
 
         return;
     }
 
-    LayerOverrideSystem* layerOverrideSystem = GetLayerOverrideSystem(this);
+    SwatchOverrideSystem* swatchOverrideSystem = GetSwatchOverrideSystem(this);
 
-    if (!layerOverrideSystem)
+    if (!swatchOverrideSystem)
     {
-        HYP_LOG(Scene, Error, "Cannot assign visibility texture for layer '{}' on EnvProbe '{}': no LayerOverrideSystem",
-            layerName, GetName());
+        HYP_LOG(Scene, Error, "Cannot assign visibility texture for swatch '{}' on EnvProbe '{}': no SwatchOverrideSystem",
+            swatchName, GetName());
 
         return;
     }
 
-    if (GetVisibilityTextureForLayer(layerName) == visibilityTexture)
+    if (GetVisibilityTextureForSwatch(swatchName) == visibilityTexture)
     {
         return;
     }
 
     if (visibilityTexture.IsValid())
     {
-        visibilityTexture->SetName(BuildVisibilityTextureName(GetName(), layerName));
+        visibilityTexture->SetName(BuildVisibilityTextureName(GetName(), swatchName));
         GetCurrentAssetRegistry()->PutAssetUnique(visibilityTexture);
     }
 
-    layerOverrideSystem->AddLayerOverrideSet(this, layerName);
-    layerOverrideSystem->SetLayerOverrideValue(this, layerName, GetVisibilityTexturePropertyName(), BoxedValue(visibilityTexture));
+    swatchOverrideSystem->AddSwatchOverrideSet(this, swatchName);
+    swatchOverrideSystem->SetSwatchOverrideValue(this, swatchName, GetVisibilityTexturePropertyName(), BoxedValue(visibilityTexture));
 
     SetNeedsRenderProxyUpdate();
     MarkDirty();
 }
 
-void EnvProbe::SetSphericalHarmonicsDataForLayer(const SphericalHarmonicsData& shData, Name layerName)
+void EnvProbe::SetSphericalHarmonicsDataForSwatch(const SphericalHarmonicsData& shData, Name swatchName)
 {
-    if (!layerName.IsValid() || IsDefaultLayer(layerName))
+    if (!swatchName.IsValid() || IsDefaultSwatch(swatchName))
     {
         SetSphericalHarmonicsData(shData);
 
         return;
     }
 
-    LayerOverrideSystem* layerOverrideSystem = GetLayerOverrideSystem(this);
+    SwatchOverrideSystem* swatchOverrideSystem = GetSwatchOverrideSystem(this);
 
-    if (!layerOverrideSystem)
+    if (!swatchOverrideSystem)
     {
-        HYP_LOG(Scene, Error, "Cannot assign spherical harmonics for layer '{}' on EnvProbe '{}': no LayerOverrideSystem",
-            layerName, GetName());
+        HYP_LOG(Scene, Error, "Cannot assign spherical harmonics for swatch '{}' on EnvProbe '{}': no SwatchOverrideSystem",
+            swatchName, GetName());
 
         return;
     }
 
-    if (GetSphericalHarmonicsDataForLayer(layerName) == shData)
+    if (GetSphericalHarmonicsDataForSwatch(swatchName) == shData)
     {
         return;
     }
 
-    layerOverrideSystem->AddLayerOverrideSet(this, layerName);
-    layerOverrideSystem->SetLayerOverrideValue(this, layerName, GetSphericalHarmonicsPropertyName(), BoxedValue(shData));
+    swatchOverrideSystem->AddSwatchOverrideSet(this, swatchName);
+    swatchOverrideSystem->SetSwatchOverrideValue(this, swatchName, GetSphericalHarmonicsPropertyName(), BoxedValue(shData));
 
     SetNeedsRenderProxyUpdate();
     MarkDirty();
@@ -1121,20 +1121,20 @@ void EnvProbe::SetSphericalHarmonicsDataForLayer(const SphericalHarmonicsData& s
 
 #ifdef HYP_EDITOR
 
-Array<Name> EnvProbe::GetBakedLayerNames() const
+Array<Name> EnvProbe::GetBakedSwatchNames() const
 {
-    Array<Name> layerNames;
+    Array<Name> swatchNames;
 
     if (IsBaked())
     {
-        layerNames.PushBack(g_defaultLayerName);
+        swatchNames.PushBack(g_defaultSwatchName);
     }
 
-    LayerOverrideSystem* layerOverrideSystem = GetLayerOverrideSystem(this);
+    SwatchOverrideSystem* swatchOverrideSystem = GetSwatchOverrideSystem(this);
 
-    if (!layerOverrideSystem)
+    if (!swatchOverrideSystem)
     {
-        return layerNames;
+        return swatchNames;
     }
 
     // Reflection probes bake a texture, ambient probes bake SH.
@@ -1142,15 +1142,15 @@ Array<Name> EnvProbe::GetBakedLayerNames() const
         ? GetSphericalHarmonicsPropertyName()
         : GetBakedTexturePropertyName();
 
-    for (Name layerName : layerOverrideSystem->GetSetLayerNames(this))
+    for (Name swatchName : swatchOverrideSystem->GetSetSwatchNames(this))
     {
-        if (layerOverrideSystem->IsPropertyOverriddenInLayer(this, layerName, propertyName))
+        if (swatchOverrideSystem->IsPropertyOverriddenInSwatch(this, swatchName, propertyName))
         {
-            layerNames.PushBack(layerName);
+            swatchNames.PushBack(swatchName);
         }
     }
 
-    return layerNames;
+    return swatchNames;
 }
 
 #endif // HYP_EDITOR
@@ -1494,20 +1494,20 @@ void ReflectionProbe::BakeCubemap()
         return;
     }
 
-    // Bake only the active layer; the result is written to that layer's override set (or the base
-    // values for the Default layer).
-    const Handle<Layer>& layer = world->GetActiveLayer();
+    // Bake only the active swatch; the result is written to that swatch's override set (or the base
+    // values for the Default swatch).
+    const Handle<Swatch>& swatch = world->GetActiveSwatch();
 
-    if (!layer.IsValid())
+    if (!swatch.IsValid())
     {
-        HYP_LOG(Editor, Error, "Cannot bake {}: could not resolve the active layer", GetName());
+        HYP_LOG(Editor, Error, "Cannot bake {}: could not resolve the active swatch", GetName());
 
         return;
     }
 
-    if (!HasNoLayers() && !IsInLayer(layer->layerId))
+    if (!HasNoSwatches() && !IsInSwatch(swatch->swatchId))
     {
-        HYP_LOG(Editor, Error, "Cannot bake {}: it is not in the active layer '{}'", GetName(), layer->name);
+        HYP_LOG(Editor, Error, "Cannot bake {}: it is not in the active swatch '{}'", GetName(), swatch->name);
 
         return;
     }
@@ -1519,7 +1519,7 @@ void ReflectionProbe::BakeCubemap()
         bakerSubsystem = world->AddSubsystem<BakerSubsystem>();
     }
 
-    bakerSubsystem->EnqueueBake(layer->bakeLayer, StaticCast<EnvProbe>(MakeStrongRef(this)));
+    bakerSubsystem->EnqueueBake(swatch->bakeLayer, StaticCast<EnvProbe>(MakeStrongRef(this)));
 }
 
 #endif
@@ -1577,20 +1577,20 @@ void IrradianceProbe::RecomputeIrradiance()
         return;
     }
 
-    // Bake only the active layer; the result is written to that layer's override set (or the base
-    // values for the Default layer).
-    const Handle<Layer>& layer = world->GetActiveLayer();
+    // Bake only the active swatch; the result is written to that swatch's override set (or the base
+    // values for the Default swatch).
+    const Handle<Swatch>& swatch = world->GetActiveSwatch();
 
-    if (!layer.IsValid())
+    if (!swatch.IsValid())
     {
-        HYP_LOG(Editor, Error, "Cannot bake {}: could not resolve the active layer", GetName());
+        HYP_LOG(Editor, Error, "Cannot bake {}: could not resolve the active swatch", GetName());
 
         return;
     }
 
-    if (!HasNoLayers() && !IsInLayer(layer->layerId))
+    if (!HasNoSwatches() && !IsInSwatch(swatch->swatchId))
     {
-        HYP_LOG(Editor, Error, "Cannot bake {}: it is not in the active layer '{}'", GetName(), layer->name);
+        HYP_LOG(Editor, Error, "Cannot bake {}: it is not in the active swatch '{}'", GetName(), swatch->name);
 
         return;
     }
@@ -1602,7 +1602,7 @@ void IrradianceProbe::RecomputeIrradiance()
         bakerSubsystem = world->AddSubsystem<BakerSubsystem>();
     }
 
-    bakerSubsystem->EnqueueBake(layer->bakeLayer, StaticCast<EnvProbe>(MakeStrongRef(this)));
+    bakerSubsystem->EnqueueBake(swatch->bakeLayer, StaticCast<EnvProbe>(MakeStrongRef(this)));
 }
 
 #endif // HYP_EDITOR

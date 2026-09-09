@@ -251,7 +251,7 @@ public:
     HYP_METHOD(Property = "SHData", NoScriptBindings)
     void SetSphericalHarmonicsData(const SphericalHarmonicsData& shData);
 
-    //-- Per-layer stuff
+    //-- Per-swatch stuff
 
     static Name GetBakedTexturePropertyName()
     {
@@ -268,17 +268,17 @@ public:
         return NAME("SHData");
     }
 
-    Handle<Texture> GetBakedTextureForLayer(Name layerName) const;
-    Handle<Texture> GetVisibilityTextureForLayer(Name layerName) const;
-    SphericalHarmonicsData GetSphericalHarmonicsDataForLayer(Name layerName) const;
+    Handle<Texture> GetBakedTextureForSwatch(Name swatchName) const;
+    Handle<Texture> GetVisibilityTextureForSwatch(Name swatchName) const;
+    SphericalHarmonicsData GetSphericalHarmonicsDataForSwatch(Name swatchName) const;
 
-    void SetBakedTextureForLayer(const Handle<Texture>& texture, Name layerName);
-    void SetVisibilityTextureForLayer(const Handle<Texture>& visibilityTexture, Name layerName);
-    void SetSphericalHarmonicsDataForLayer(const SphericalHarmonicsData& shData, Name layerName);
+    void SetBakedTextureForSwatch(const Handle<Texture>& texture, Name swatchName);
+    void SetVisibilityTextureForSwatch(const Handle<Texture>& visibilityTexture, Name swatchName);
+    void SetSphericalHarmonicsDataForSwatch(const SphericalHarmonicsData& shData, Name swatchName);
 
 #ifdef HYP_EDITOR
     HYP_METHOD(EditorOnly)
-    Array<Name> GetBakedLayerNames() const;
+    Array<Name> GetBakedSwatchNames() const;
 #endif // HYP_EDITOR
     
     HYP_FORCE_INLINE const Vec4f& GetHitMaskData() const
@@ -301,8 +301,8 @@ public:
         return IsRealtime() || IsSkyProbe();
     }
 
-    static Name BuildBakedTextureName(Name probeName, Name layerName);
-    static Name BuildVisibilityTextureName(Name probeName, Name layerName);
+    static Name BuildBakedTextureName(Name probeName, Name swatchName);
+    static Name BuildVisibilityTextureName(Name probeName, Name swatchName);
 
     HYP_FORCE_INLINE void NotifyCaptureReadbackComplete()
     {

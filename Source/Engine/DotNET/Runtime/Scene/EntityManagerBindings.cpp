@@ -10,7 +10,7 @@
 #include <Scene/ComponentInterface.hpp>
 #include <Scene/Entity.hpp>
 #include <Scene/World.hpp>
-#include <Scene/Systems/LayerOverrideSystem.hpp>
+#include <Scene/Systems/SwatchOverrideSystem.hpp>
 
 // Components
 #include <Scene/Components/TransformComponent.hpp>
@@ -223,7 +223,7 @@ extern "C"
     }
 
 
-    static LayerOverrideSystem* GetLayerOverrideSystemForEntity(const Entity* pEntity)
+    static SwatchOverrideSystem* GetSwatchOverrideSystemForEntity(const Entity* pEntity)
     {
         if (!pEntity)
         {
@@ -237,66 +237,66 @@ extern "C"
             return nullptr;
         }
 
-        return world->GetSystem<LayerOverrideSystem>();
+        return world->GetSystem<SwatchOverrideSystem>();
     }
 
-    HYP_EXPORT int8 EntityLayerOverrides_SetValue(Entity* pEntity, uint64 layerHash, uint64 propertyHash, BoxedValue* pValue)
+    HYP_EXPORT int8 EntitySwatchOverrides_SetValue(Entity* pEntity, uint64 swatchHash, uint64 propertyHash, BoxedValue* pValue)
     {
-        LayerOverrideSystem* system = GetLayerOverrideSystemForEntity(pEntity);
+        SwatchOverrideSystem* system = GetSwatchOverrideSystemForEntity(pEntity);
 
         if (!pValue || !system)
         {
             return false;
         }
 
-        return system->SetLayerOverrideValue(pEntity, Name(NameID(layerHash)), Name(NameID(propertyHash)), *pValue);
+        return system->SetSwatchOverrideValue(pEntity, Name(NameID(swatchHash)), Name(NameID(propertyHash)), *pValue);
     }
 
-    HYP_EXPORT int8 EntityLayerOverrides_RemoveValue(Entity* pEntity, uint64 layerHash, uint64 propertyHash)
+    HYP_EXPORT int8 EntitySwatchOverrides_RemoveValue(Entity* pEntity, uint64 swatchHash, uint64 propertyHash)
     {
-        LayerOverrideSystem* system = GetLayerOverrideSystemForEntity(pEntity);
+        SwatchOverrideSystem* system = GetSwatchOverrideSystemForEntity(pEntity);
 
         if (!system)
         {
             return false;
         }
 
-        return system->RemoveLayerOverrideValue(pEntity, Name(NameID(layerHash)), Name(NameID(propertyHash)));
+        return system->RemoveSwatchOverrideValue(pEntity, Name(NameID(swatchHash)), Name(NameID(propertyHash)));
     }
 
-    HYP_EXPORT int8 EntityLayerOverrides_GetBaseValue(Entity* pEntity, uint64 layerHash, uint64 propertyHash, BoxedValue* pOutValue)
+    HYP_EXPORT int8 EntitySwatchOverrides_GetBaseValue(Entity* pEntity, uint64 swatchHash, uint64 propertyHash, BoxedValue* pOutValue)
     {
-        LayerOverrideSystem* system = GetLayerOverrideSystemForEntity(pEntity);
+        SwatchOverrideSystem* system = GetSwatchOverrideSystemForEntity(pEntity);
 
         if (!pOutValue || !system)
         {
             return false;
         }
 
-        return system->GetLayerOverrideBaseValue(pEntity, Name(NameID(layerHash)), Name(NameID(propertyHash)), *pOutValue);
+        return system->GetSwatchOverrideBaseValue(pEntity, Name(NameID(swatchHash)), Name(NameID(propertyHash)), *pOutValue);
     }
 
-    HYP_EXPORT int8 EntityLayerOverrides_GetValue(Entity* pEntity, uint64 layerHash, uint64 propertyHash, BoxedValue* pOutValue)
+    HYP_EXPORT int8 EntitySwatchOverrides_GetValue(Entity* pEntity, uint64 swatchHash, uint64 propertyHash, BoxedValue* pOutValue)
     {
-        LayerOverrideSystem* system = GetLayerOverrideSystemForEntity(pEntity);
+        SwatchOverrideSystem* system = GetSwatchOverrideSystemForEntity(pEntity);
 
         if (!pOutValue || !system)
         {
             return false;
         }
 
-        return system->GetLayerOverrideValue(pEntity, Name(NameID(layerHash)), Name(NameID(propertyHash)), *pOutValue);
+        return system->GetSwatchOverrideValue(pEntity, Name(NameID(swatchHash)), Name(NameID(propertyHash)), *pOutValue);
     }
 
-    HYP_EXPORT int8 EntityLayerOverrides_SetBaseValue(Entity* pEntity, uint64 propertyHash, BoxedValue* pValue)
+    HYP_EXPORT int8 EntitySwatchOverrides_SetBaseValue(Entity* pEntity, uint64 propertyHash, BoxedValue* pValue)
     {
-        LayerOverrideSystem* system = GetLayerOverrideSystemForEntity(pEntity);
+        SwatchOverrideSystem* system = GetSwatchOverrideSystemForEntity(pEntity);
 
         if (!pValue || !system)
         {
             return false;
         }
 
-        return system->SetLayerOverrideBaseValue(pEntity, Name(NameID(propertyHash)), *pValue);
+        return system->SetSwatchOverrideBaseValue(pEntity, Name(NameID(propertyHash)), *pValue);
     }
 } // extern "C"

@@ -21,7 +21,7 @@
 #include <Scene/Node.hpp>
 #include <Scene/Prefab.hpp>
 
-#include <Scene/Systems/LayerOverrideSystem.hpp>
+#include <Scene/Systems/SwatchOverrideSystem.hpp>
 
 #include <Scene/Camera/Camera.hpp>
 #include <Scene/Camera/FirstPersonCamera.hpp>
@@ -3671,14 +3671,14 @@ DEFINE_EDITOR_COMMAND(AddNormalizedCubeSphere);
 
 #pragma endregion AddNormalizedCubeSphere
 
-#pragma region CopyLayerProperties
+#pragma region CopySwatchProperties
 
-class EditorCommandCopyLayerProperties final : public EditorCommandBase
+class EditorCommandCopySwatchProperties final : public EditorCommandBase
 {
-    HYP_OBJECT_BODY(EditorCommandCopyLayerProperties);
+    HYP_OBJECT_BODY(EditorCommandCopySwatchProperties);
 
 public:
-    virtual ~EditorCommandCopyLayerProperties() override = default;
+    virtual ~EditorCommandCopySwatchProperties() override = default;
 
     virtual String GetText() const override
     {
@@ -3693,7 +3693,7 @@ public:
 
         if (!StringUtil::Parse(GetArgument(0), &entityAddress) || entityAddress == 0)
         {
-            HYP_LOG(Editor, Error, "EditorCommandCopyLayerProperties: invalid entity address");
+            HYP_LOG(Editor, Error, "EditorCommandCopySwatchProperties: invalid entity address");
 
             return;
         }
@@ -3701,7 +3701,7 @@ public:
         if (NumArguments() < 5)
         {
             HYP_LOG(Editor, Error,
-                "EditorCommandCopyLayerProperties: expected <entity address> <source is base> <source layer> <target is base> <target layer>");
+                "EditorCommandCopySwatchProperties: expected <entity address> <source is base> <source swatch> <target is base> <target swatch>");
 
             return;
         }
@@ -3714,26 +3714,26 @@ public:
         const bool sourceIsBase = sourceIsBaseValue != 0;
         const bool targetIsBase = targetIsBaseValue != 0;
 
-        const Name sourceLayer = sourceIsBase ? Name::Invalid() : Name(ANSIString(GetArgument(2)));
-        const Name targetLayer = targetIsBase ? Name::Invalid() : Name(ANSIString(GetArgument(4)));
+        const Name sourceSwatch = sourceIsBase ? Name::Invalid() : Name(ANSIString(GetArgument(2)));
+        const Name targetSwatch = targetIsBase ? Name::Invalid() : Name(ANSIString(GetArgument(4)));
 
-        if (!sourceIsBase && !sourceLayer.IsValid())
+        if (!sourceIsBase && !sourceSwatch.IsValid())
         {
-            HYP_LOG(Editor, Error, "EditorCommandCopyLayerProperties: invalid source layer");
+            HYP_LOG(Editor, Error, "EditorCommandCopySwatchProperties: invalid source swatch");
 
             return;
         }
 
-        if (!targetIsBase && !targetLayer.IsValid())
+        if (!targetIsBase && !targetSwatch.IsValid())
         {
-            HYP_LOG(Editor, Error, "EditorCommandCopyLayerProperties: invalid target layer");
+            HYP_LOG(Editor, Error, "EditorCommandCopySwatchProperties: invalid target swatch");
 
             return;
         }
 
-        if (sourceLayer.IsValid() && sourceLayer == targetLayer)
+        if (sourceSwatch.IsValid() && sourceSwatch == targetSwatch)
         {
-            // Copying a layer onto itself is a no-op
+            // Copying a swatch onto itself is a no-op
             return;
         }
 
@@ -3741,7 +3741,7 @@ public:
 
         if (!entity.IsValid())
         {
-            HYP_LOG(Editor, Error, "EditorCommandCopyLayerProperties: invalid entity");
+            HYP_LOG(Editor, Error, "EditorCommandCopySwatchProperties: invalid entity");
 
             return;
         }
@@ -3750,72 +3750,72 @@ public:
 
         if (!world)
         {
-            HYP_LOG(Editor, Error, "EditorCommandCopyLayerProperties: entity is not part of a World");
+            HYP_LOG(Editor, Error, "EditorCommandCopySwatchProperties: entity is not part of a World");
 
             return;
         }
 
-        LayerOverrideSystem *layerOverrideSystem = world->GetSystem<LayerOverrideSystem>();
+        SwatchOverrideSystem *swatchOverrideSystem = world->GetSystem<SwatchOverrideSystem>();
 
-        if (!layerOverrideSystem)
+        if (!swatchOverrideSystem)
         {
-            HYP_LOG(Editor, Error, "EditorCommandCopyLayerProperties: World has no LayerOverrideSystem");
+            HYP_LOG(Editor, Error, "EditorCommandCopySwatchProperties: World has no SwatchOverrideSystem");
 
             return;
         }
 
-        Array<LayerPropertyCopyEntry> plan = layerOverrideSystem->BuildLayerPropertyCopyPlan(entity.Get(), sourceLayer, targetLayer);
+        Array<SwatchPropertyCopyEntry> plan = swatchOverrideSystem->BuildSwatchPropertyCopyPlan(entity.Get(), sourceSwatch, targetSwatch);
 
-        const char *sourceDisplay = sourceIsBase ? "Base" : sourceLayer.LookupString();
-        const char *targetDisplay = targetIsBase ? "Base" : targetLayer.LookupString();
+        const char *sourceDisplay = sourceIsBase ? "Base" : sourceSwatch.LookupString();
+        const char *targetDisplay = targetIsBase ? "Base" : targetSwatch.LookupString();
 
         if (plan.Empty())
         {
-            HYP_LOG(Editor, Info, "Copy layer properties {} -> {}: no differences", sourceDisplay, targetDisplay);
+            HYP_LOG(Editor, Info, "Copy swatch properties {} -> {}: no differences", sourceDisplay, targetDisplay);
 
             return;
         }
 
         m_text = HYP_FORMAT("Copy Properties ({} -> {})", sourceDisplay, targetDisplay);
 
-        HYP_LOG(Editor, Info, "Copy layer properties {} -> {}: {} propert{} changed",
+        HYP_LOG(Editor, Info, "Copy swatch properties {} -> {}: {} propert{} changed",
             sourceDisplay, targetDisplay, plan.Size(), plan.Size() == 1 ? "y" : "ies");
 
         const Handle<EditorProject> &currentProject = subsystem->GetCurrentProject();
 
         if (!currentProject.IsValid())
         {
-            HYP_LOG(Editor, Warning, "EditorCommandCopyLayerProperties: no project loaded - applying without undo");
+            HYP_LOG(Editor, Warning, "EditorCommandCopySwatchProperties: no project loaded - applying without undo");
 
-            layerOverrideSystem->ApplyLayerPropertyCopyEntries(entity.Get(), targetLayer, plan, true);
+            swatchOverrideSystem->ApplySwatchPropertyCopyEntries(entity.Get(), targetSwatch, plan, true);
 
             return;
         }
 
-        auto planPtr = MakeShared<Array<LayerPropertyCopyEntry>>(std::move(plan));
+        auto planPtr = MakeShared<Array<SwatchPropertyCopyEntry>>(std::move(plan));
         Handle<Entity> capturedEntity = entity;
-        Name capturedTargetLayer = targetLayer;
+        Name capturedTargetSwatch = targetSwatch;
 
         Handle<FunctionalEditorAction> action = MakeHandle<FunctionalEditorAction>(
             GetText(),
             Proc<EditorActionFunctions()>(
-                [capturedEntity, capturedTargetLayer, planPtr]() -> EditorActionFunctions
+                [capturedEntity, capturedTargetSwatch, planPtr]() -> EditorActionFunctions
                 {
                     return EditorActionFunctions {
                         .execute = Proc<void(EditorSubsystem *, EditorProject *)>(
-                            [capturedEntity, capturedTargetLayer, planPtr](EditorSubsystem *, EditorProject *)
+                            [capturedEntity, capturedTargetSwatch, planPtr](EditorSubsystem *, EditorProject *)
                             {
-                                if (LayerOverrideSystem *system = ResolveLayerOverrideSystem(capturedEntity))
+                                if (SwatchOverrideSystem *system = ResolveSwatchOverrideSystem(capturedEntity))
                                 {
-                                    system->ApplyLayerPropertyCopyEntries(capturedEntity.Get(), capturedTargetLayer, *planPtr, true);
+                                    system->ApplySwatchPropertyCopyEntries(capturedEntity.Get(), capturedTargetSwatch, *planPtr, true);
                                 }
                             }),
                         .revert = Proc<void(EditorSubsystem *, EditorProject *)>(
-                            [capturedEntity, capturedTargetLayer, planPtr](EditorSubsystem *, EditorProject *)
+                            [capturedEntity, capturedTargetSwatch, planPtr](EditorSubsystem *, EditorProject *)
                             {
-                                if (LayerOverrideSystem *system = ResolveLayerOverrideSystem(capturedEntity))
+                                if (SwatchOverrideSystem *system = ResolveSwatchOverrideSystem(capturedEntity))
                                 {
-                                    system->ApplyLayerPropertyCopyEntries(capturedEntity.Get(), capturedTargetLayer, *planPtr, false);
+                                    system->ApplySwatchPropertyCopyEntries(capturedEntity.Get(), capturedTargetSwatch, *planPtr, false);
                                 }
                             })
                     };
@@ -3827,7 +3827,7 @@ public:
     }
 
 private:
-    static LayerOverrideSystem *ResolveLayerOverrideSystem(const Handle<Entity> &entity)
+    static SwatchOverrideSystem *ResolveSwatchOverrideSystem(const Handle<Entity> &entity)
     {
         if (!entity.IsValid())
         {
@@ -3841,24 +3841,24 @@ private:
             return nullptr;
         }
 
-        return world->GetSystem<LayerOverrideSystem>();
+        return world->GetSystem<SwatchOverrideSystem>();
     }
 
     String m_text;
 };
 
-DEFINE_EDITOR_COMMAND(CopyLayerProperties);
+DEFINE_EDITOR_COMMAND(CopySwatchProperties);
 
-#pragma endregion CopyLayerProperties
+#pragma endregion CopySwatchProperties
 
-#pragma region ResetLayerOverrides
+#pragma region ResetSwatchOverrides
 
-class EditorCommandResetLayerOverrides final : public EditorCommandBase
+class EditorCommandResetSwatchOverrides final : public EditorCommandBase
 {
-    HYP_OBJECT_BODY(EditorCommandResetLayerOverrides);
+    HYP_OBJECT_BODY(EditorCommandResetSwatchOverrides);
 
 public:
-    virtual ~EditorCommandResetLayerOverrides() override = default;
+    virtual ~EditorCommandResetSwatchOverrides() override = default;
 
     virtual String GetText() const override
     {
@@ -3873,7 +3873,7 @@ public:
 
         if (!StringUtil::Parse(GetArgument(0), &entityAddress) || entityAddress == 0)
         {
-            HYP_LOG(Editor, Error, "EditorCommandResetLayerOverrides: invalid entity address");
+            HYP_LOG(Editor, Error, "EditorCommandResetSwatchOverrides: invalid entity address");
 
             return;
         }
@@ -3882,7 +3882,7 @@ public:
 
         if (!entity.IsValid())
         {
-            HYP_LOG(Editor, Error, "EditorCommandResetLayerOverrides: invalid entity");
+            HYP_LOG(Editor, Error, "EditorCommandResetSwatchOverrides: invalid entity");
 
             return;
         }
@@ -3891,105 +3891,105 @@ public:
 
         if (!world)
         {
-            HYP_LOG(Editor, Error, "EditorCommandResetLayerOverrides: entity is not part of a World");
+            HYP_LOG(Editor, Error, "EditorCommandResetSwatchOverrides: entity is not part of a World");
 
             return;
         }
 
-        LayerOverrideSystem *layerOverrideSystem = world->GetSystem<LayerOverrideSystem>();
+        SwatchOverrideSystem *swatchOverrideSystem = world->GetSystem<SwatchOverrideSystem>();
 
-        if (!layerOverrideSystem)
+        if (!swatchOverrideSystem)
         {
-            HYP_LOG(Editor, Error, "EditorCommandResetLayerOverrides: World has no LayerOverrideSystem");
+            HYP_LOG(Editor, Error, "EditorCommandResetSwatchOverrides: World has no SwatchOverrideSystem");
 
             return;
         }
 
-        const Name activeLayer = world->GetActiveLayerName();
+        const Name activeSwatch = world->GetActiveSwatchName();
 
-        if (!activeLayer.IsValid())
+        if (!activeSwatch.IsValid())
         {
-            HYP_LOG(Editor, Error, "EditorCommandResetLayerOverrides: World has no active layer");
+            HYP_LOG(Editor, Error, "EditorCommandResetSwatchOverrides: World has no active swatch");
 
             return;
         }
 
-        Array<Pair<Name, BoxedValue>> previousOverrides = layerOverrideSystem->GetLayerOverrideEntries(entity.Get(), activeLayer);
+        Array<Pair<Name, BoxedValue>> previousOverrides = swatchOverrideSystem->GetSwatchOverrideEntries(entity.Get(), activeSwatch);
 
         if (previousOverrides.Empty())
         {
-            HYP_LOG(Editor, Info, "Reset layer overrides: entity '{}' has no overrides for active layer '{}'",
-                entity->GetName(), activeLayer.LookupString());
+            HYP_LOG(Editor, Info, "Reset swatch overrides: entity '{}' has no overrides for active swatch '{}'",
+                entity->GetName(), activeSwatch.LookupString());
 
             return;
         }
 
-        const bool wasApplied = layerOverrideSystem->GetAppliedOverrideLayer(entity.Get()) == activeLayer;
+        const bool wasApplied = swatchOverrideSystem->GetAppliedOverrideSwatch(entity.Get()) == activeSwatch;
 
-        m_text = HYP_FORMAT("Reset Layer Overrides ({})", activeLayer.LookupString());
+        m_text = HYP_FORMAT("Reset Swatch Overrides ({})", activeSwatch.LookupString());
 
-        HYP_LOG(Editor, Info, "Reset layer overrides for active layer '{}' on entity '{}': {} override(s) removed",
-            activeLayer.LookupString(), entity->GetName(), previousOverrides.Size());
+        HYP_LOG(Editor, Info, "Reset swatch overrides for active swatch '{}' on entity '{}': {} override(s) removed",
+            activeSwatch.LookupString(), entity->GetName(), previousOverrides.Size());
 
         const Handle<EditorProject> &currentProject = subsystem->GetCurrentProject();
 
         if (!currentProject.IsValid())
         {
-            HYP_LOG(Editor, Warning, "EditorCommandResetLayerOverrides: no project loaded - applying without undo");
+            HYP_LOG(Editor, Warning, "EditorCommandResetSwatchOverrides: no project loaded - applying without undo");
 
-            layerOverrideSystem->RemoveLayerOverrideSet(entity.Get(), activeLayer);
+            swatchOverrideSystem->RemoveSwatchOverrideSet(entity.Get(), activeSwatch);
 
             return;
         }
 
         auto previousOverridesPtr = MakeShared<Array<Pair<Name, BoxedValue>>>(std::move(previousOverrides));
         Handle<Entity> capturedEntity = entity;
-        Name capturedLayer = activeLayer;
+        Name capturedSwatch = activeSwatch;
         bool capturedWasApplied = wasApplied;
 
         Handle<FunctionalEditorAction> action = MakeHandle<FunctionalEditorAction>(
             GetText(),
             Proc<EditorActionFunctions()>(
-                [capturedEntity, capturedLayer, capturedWasApplied, previousOverridesPtr]() -> EditorActionFunctions
+                [capturedEntity, capturedSwatch, capturedWasApplied, previousOverridesPtr]() -> EditorActionFunctions
                 {
                     return EditorActionFunctions {
                         .execute = Proc<void(EditorSubsystem *, EditorProject *)>(
-                            [capturedEntity, capturedLayer](EditorSubsystem *, EditorProject *)
+                            [capturedEntity, capturedSwatch](EditorSubsystem *, EditorProject *)
                             {
-                                if (LayerOverrideSystem *system = ResolveLayerOverrideSystemFor(capturedEntity))
+                                if (SwatchOverrideSystem *system = ResolveSwatchOverrideSystemFor(capturedEntity))
                                 {
                                     // Reverts the applied overrides first, restoring base values
-                                    system->RemoveLayerOverrideSet(capturedEntity.Get(), capturedLayer);
+                                    system->RemoveSwatchOverrideSet(capturedEntity.Get(), capturedSwatch);
                                 }
                             }),
                         .revert = Proc<void(EditorSubsystem *, EditorProject *)>(
-                            [capturedEntity, capturedLayer, capturedWasApplied, previousOverridesPtr](EditorSubsystem *, EditorProject *)
+                            [capturedEntity, capturedSwatch, capturedWasApplied, previousOverridesPtr](EditorSubsystem *, EditorProject *)
                             {
-                                LayerOverrideSystem *system = ResolveLayerOverrideSystemFor(capturedEntity);
+                                SwatchOverrideSystem *system = ResolveSwatchOverrideSystemFor(capturedEntity);
 
                                 if (!system)
                                 {
                                     return;
                                 }
 
-                                if (!system->HasLayerOverrideSet(capturedEntity.Get(), capturedLayer))
+                                if (!system->HasSwatchOverrideSet(capturedEntity.Get(), capturedSwatch))
                                 {
-                                    system->AddLayerOverrideSet(capturedEntity.Get(), capturedLayer);
+                                    system->AddSwatchOverrideSet(capturedEntity.Get(), capturedSwatch);
                                 }
 
                                 for (const Pair<Name, BoxedValue> &entry : *previousOverridesPtr)
                                 {
-                                    system->SetLayerOverrideValue(capturedEntity.Get(), capturedLayer, entry.first, entry.second);
+                                    system->SetSwatchOverrideValue(capturedEntity.Get(), capturedSwatch, entry.first, entry.second);
                                 }
 
-                                // Re-apply when the reset layer is (still) the active one
+                                // Re-apply when the reset swatch is (still) the active one
                                 if (capturedWasApplied)
                                 {
                                     World *entityWorld = capturedEntity->GetWorld();
 
-                                    if (entityWorld && entityWorld->GetActiveLayerName() == capturedLayer)
+                                    if (entityWorld && entityWorld->GetActiveSwatchName() == capturedSwatch)
                                     {
-                                        system->ApplyOverrides(capturedEntity.Get(), capturedLayer);
+                                        system->ApplyOverrides(capturedEntity.Get(), capturedSwatch);
                                     }
                                 }
                             })
@@ -4002,7 +4002,7 @@ public:
     }
 
 private:
-    static LayerOverrideSystem *ResolveLayerOverrideSystemFor(const Handle<Entity> &entity)
+    static SwatchOverrideSystem *ResolveSwatchOverrideSystemFor(const Handle<Entity> &entity)
     {
         if (!entity.IsValid())
         {
@@ -4016,15 +4016,15 @@ private:
             return nullptr;
         }
 
-        return world->GetSystem<LayerOverrideSystem>();
+        return world->GetSystem<SwatchOverrideSystem>();
     }
 
     String m_text;
 };
 
-DEFINE_EDITOR_COMMAND(ResetLayerOverrides);
+DEFINE_EDITOR_COMMAND(ResetSwatchOverrides);
 
-#pragma endregion ResetLayerOverrides
+#pragma endregion ResetSwatchOverrides
 
 #undef DEFINE_EDITOR_COMMAND
 

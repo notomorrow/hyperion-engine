@@ -32,8 +32,8 @@ extern CVar<float> g_cvShadowDepthBias;
 
 static StaticShaderPropertyId s_propModeShadows { ShaderProperty(NAME("MODE_SHADOWS")) };
 
-ShadowMapCaptureState::ShadowMapCaptureState(Light* light, Name layerName)
-    : layerName(layerName),
+ShadowMapCaptureState::ShadowMapCaptureState(Light* light, Name swatchName)
+    : swatchName(swatchName),
       m_light(light),
       m_numFaces(1)
 {

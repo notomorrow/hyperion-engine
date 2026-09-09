@@ -26,7 +26,7 @@
 
 #include <Scene/Systems/LightmapSystem.hpp>
 
-#include <Scene/Layer.hpp>
+#include <Scene/Swatch.hpp>
 
 #include <Baking/BakeEpoch.hpp>
 #include <Baking/BakeLayer.hpp>
@@ -100,10 +100,10 @@ struct LightmapElementBitmaps
 static void UpdateAtlasTextures(
     LightmapVolume* lmv,
     uint16 atlasIndex,
-    Name layerName,
+    Name swatchName,
     const LightmapElementBitmaps& atlasBitmaps)
 {
-    HYP_LOG(Lightmap, Verbose, "Updating atlas textures for LightmapVolume {} on layer '{}'", lmv->Id(), layerName);
+    HYP_LOG(Lightmap, Verbose, "Updating atlas textures for LightmapVolume {} on swatch '{}'", lmv->Id(), swatchName);
 
     Assert(atlasIndex < lmv->GetAtlases().Size());
 
@@ -122,7 +122,7 @@ static void UpdateAtlasTextures(
             },
             irradiance->ToByteView());
 
-        lmv->SetAtlasTextureForLayer(atlasIndex, LightmapVolume::IrradianceTexture, atlasTexture, layerName);
+        lmv->SetAtlasTextureForSwatch(atlasIndex, LightmapVolume::IrradianceTexture, atlasTexture, swatchName);
     }
 
     if (auto* bentNormal = atlasBitmaps.bentNormal.Get())
@@ -138,7 +138,7 @@ static void UpdateAtlasTextures(
             },
             bentNormal->ToByteView());
 
-        lmv->SetAtlasTextureForLayer(atlasIndex, LightmapVolume::BentNormalTexture, atlasTexture, layerName);
+        lmv->SetAtlasTextureForSwatch(atlasIndex, LightmapVolume::BentNormalTexture, atlasTexture, swatchName);
     }
 }
 
@@ -197,7 +197,7 @@ static bool BuildElementTextures(
     LightmapElementId elementId,
     uint32 bakeAtlasIndex,
     uint32 shadingTypesMask,
-    Name layerName)
+    Name swatchName)
 {
     AssertOnThread(g_simThread);
 
@@ -234,7 +234,7 @@ static bool BuildElementTextures(
             BuildAtlasBitmap(bakeData.ToBitmapBentNormal(bakeAtlasIndex), element, atlas.atlasDimensions, reuseExistingPacking));
     }
 
-    UpdateAtlasTextures(lmv, atlasIndex, layerName, atlasBitmaps);
+    UpdateAtlasTextures(lmv, atlasIndex, swatchName, atlasBitmaps);
 
     return true;
 }
@@ -289,7 +289,7 @@ Baker<LightmapVolume>::Baker(BakerConfig&& config, BakeLayer& bakeLayer, const H
 
 Name Baker<LightmapVolume>::GetBakeLayerName() const
 {
-    return m_bakeLayer ? m_bakeLayer->name : g_defaultLayerName;
+    return m_bakeLayer ? m_bakeLayer->name : g_defaultSwatchName;
 }
 
 bool Baker<LightmapVolume>::ComputeShouldReuseExistingPacking()
@@ -437,7 +437,7 @@ void Baker<LightmapVolume>::Build()
 
             if (!lightmapElementComponent || !m_volume->GetElement(lightmapElementComponent->lightmapElementId))
             {
-                HYP_LOG(Lightmap, Warning, "Entity {} has no lightmap element in this volume; run a bake on the Default layer first",
+                HYP_LOG(Lightmap, Warning, "Entity {} has no lightmap element in this volume; run a bake on the Default swatch first",
                     entity->GetName());
 
                 continue;
@@ -518,7 +518,7 @@ void Baker<LightmapVolume>::OnBuildReady()
 
     if (ShouldReuseExistingPacking())
     {
-        // The packing and the meshes' UV1 are shared by every layer, so only the textures get rebuilt.
+        // The packing and the meshes' UV1 are shared by every swatch, so only the textures get rebuilt.
         for (uint32 atlasIndex = 0; atlasIndex < uint32(m_volume->GetAtlases().Size()); atlasIndex++)
         {
             const LightmapVolumeAtlas& atlas = m_volume->GetAtlases()[atlasIndex];
