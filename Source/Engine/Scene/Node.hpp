@@ -981,7 +981,7 @@ protected:
     HYP_FIELD(Property = "Scene", Transient, Editor = false)
     Scene* m_scene;
 
-    HYP_FIELD(Property = "NodeTags", Serialize)
+    HYP_FIELD(Property = "NodeTags", Serialize, Editor = false)
     NodeTagSet m_tags;
 
     //-- BitFlags --

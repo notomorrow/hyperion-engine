@@ -136,6 +136,18 @@ public:
         ++m_renderProxyVersion;
     }
 
+    HYP_FORCE_INLINE const int* GetAttributesVersionPtr() const
+    {
+        const Material* material = this;
+
+        while (material->m_base.IsValid())
+        {
+            material = material->m_base.Get();
+        }
+
+        return &material->m_renderProxyVersion;
+    }
+
     void UpdateRenderProxy(RenderProxyMaterial* proxy);
 
     HYP_METHOD(NotNullReturn)

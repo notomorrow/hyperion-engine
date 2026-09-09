@@ -107,7 +107,7 @@ namespace Hyperion.Editor
             // walking the visual tree once the dock has rendered and laid out.
             Dispatcher.UIThread.Post(OnWindowLoaded, DispatcherPriority.Loaded);
         }
-
+        
         private void OnWindowLoaded()
         {
             InitializeViewportControl();
@@ -567,35 +567,14 @@ namespace Hyperion.Editor
 
         private void InitializeViewportControl()
         {
+            if (_editorViewport != null)
+                return;
+
             _editorViewport = FindVisualChildByName<EditorViewportControl>("EditorViewportControl");
             if (_editorViewport == null)
-            {
-                Logger.Log(LogLevel.Warning, "EditorViewportControl control not found in the dock layout.");
                 return;
-            }
 
             _editorViewport.Focus();
-        }
-
-        /// <summary>
-        /// The viewport is a native child window, which always renders above Avalonia
-        /// overlays (airspace). Hide it while docking drag indicators or pinned panel
-        /// previews are active so they stay visible over the viewport.
-        /// </summary>
-        private void UpdateViewportNativeVisibility()
-        {
-            if (_editorViewport == null)
-            {
-                return;
-            }
-
-            bool hide = DockControl.IsDraggingDock || IsPinnedPanelActive();
-
-            if (hide != _viewportNativeHidden)
-            {
-                _viewportNativeHidden = hide;
-                _editorViewport.SetNativeVisibility(!hide);
-            }
         }
 
         private bool IsPinnedPanelActive()
@@ -610,6 +589,9 @@ namespace Hyperion.Editor
 
         private void InitializeSceneFlyout()
         {
+            if (_sceneDropDown != null)
+                return;
+
             _sceneDropDown = FindVisualChildByName<DropDownButton>("SceneDropDown");
             if (_sceneDropDown?.Flyout is Flyout flyout)
             {
@@ -742,6 +724,9 @@ namespace Hyperion.Editor
 
         private void SetupSceneHierarchyDragDrop()
         {
+            if (_sceneTree != null)
+                return;
+
             _sceneTree = FindVisualChildByName<TreeView>("SceneHierarchyTreeView");
             if (_sceneTree == null)
                 return;
@@ -1080,6 +1065,9 @@ namespace Hyperion.Editor
 
         private void SetupContentBrowserDragDrop()
         {
+            if (_contentBrowserAssetList != null)
+                return;
+
             _contentBrowserAssetList = FindVisualChildByName<ListBox>("ContentBrowserAssetList");
             if (_contentBrowserAssetList == null)
                 return;
@@ -1162,6 +1150,9 @@ namespace Hyperion.Editor
 
         private void SetupViewportDropTarget()
         {
+            if (_viewportDropTarget != null)
+                return;
+
             _viewportDropTarget = FindVisualChildByName<Border>("ViewportDropTarget");
             if (_viewportDropTarget == null)
                 return;
@@ -1278,18 +1269,6 @@ namespace Hyperion.Editor
             }
 
             ConsoleService.Instance.ProcessLogQueue();
-
-            // Periodic maintenance: keep the native viewport out of the way of docking
-            // overlays, and close orphaned floating panel windows.
-            if (++_frameCounter % 10 == 0)
-            {
-                UpdateViewportNativeVisibility();
-            }
-
-            if (_frameCounter % 30 == 0)
-            {
-                CleanupOrphanedPanelWindow();
-            }
 
             var topLevel = GetTopLevel(this);
             topLevel?.RequestAnimationFrame(OnFrame);

@@ -337,8 +337,9 @@ static inline void SyncResourcesImpl(
     {
         ElementType* elem = impl.elements.Get(i);
         const int version = impl.versions.Get(i);
+        const int dependencyVersion = impl.dependencyVersions.Get(i);
 
-        resourceTracker.Track(elem->Id(), elem, &version);
+        resourceTracker.Track(elem->Id(), elem, &version, &dependencyVersion);
     }
 }
 

@@ -379,7 +379,7 @@ namespace Hyperion.Editor.ViewModels
 
                     if (property.Name == "Tags")
                     {
-                        continue; // skip Entity Tags property -- they're handled separately (not NodeTags, which stays here)
+                        continue; // skip Entity Tags property -- they're handled separately
                     }
 
                     // skip non-editor properties

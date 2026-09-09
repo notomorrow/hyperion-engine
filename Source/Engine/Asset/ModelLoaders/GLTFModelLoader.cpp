@@ -247,7 +247,7 @@ String ResolveTexturePath(GltfLoadContext& ctx, const cgltf_image& image)
     {
         const FilePath relativeToBase = FilePath::Relative(absolutePath, assetBasePath);
 
-        if (relativeToBase.Any())
+        if (relativeToBase.Any() && !relativeToBase.StartsWith(".."))
         {
             return relativeToBase;
         }
