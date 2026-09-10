@@ -650,71 +650,6 @@ Transform BuildTransformFromNode(const cgltf_node& node)
         Mat4f matrix(node.matrix);
         matrix = matrix.Transpose();
 
-        // conjugate
-        matrix[0][2] *= -1.0f;
-        matrix[1][2] *= -1.0f;
-        matrix[2][0] *= -1.0f;
-        matrix[2][1] *= -1.0f;
-        matrix[2][3] *= -1.0f;
-
-        const Vec3f translation = matrix.ExtractTranslation();
-
-        const Vec3f scale = Vec3f(
-            Vec3f(matrix[0][0], matrix[1][0], matrix[2][0]).Length(),
-            Vec3f(matrix[0][1], matrix[1][1], matrix[2][1]).Length(),
-            Vec3f(matrix[0][2], matrix[1][2], matrix[2][2]).Length());
-
-        Quat4f rotation = matrix.ExtractRotation();
-        rotation.Normalize();
-
-        return Transform(translation, scale, rotation);
-    }
-
-    Vec3f translation(0.0f);
-    Vec3f scale(1.0f);
-    Quat4f rotation = Quat4f::Identity();
-
-    if (node.has_translation)
-    {
-        translation = Vec3f(
-            float(node.translation[0]),
-            float(node.translation[1]),
-            -float(node.translation[2]));
-    }
-
-    if (node.has_scale)
-    {
-        scale = Vec3f(
-            float(node.scale[0]),
-            float(node.scale[1]),
-            float(node.scale[2]));
-    }
-
-    if (node.has_rotation)
-    {
-        // mirror - we use LHS
-        rotation = Quat4f(
-                       -float(node.rotation[0]),
-                       -float(node.rotation[1]),
-                       float(node.rotation[2]),
-                       float(node.rotation[3]));
-        rotation.Normalize();
-    }
-
-    return Transform(translation, scale, rotation);
-}
-
-/*! \brief Same as BuildTransformFromNode, but mirrors the transform across the Z axis,
- *  matching the vertex position conversion done in BuildPrimitive (right-handed to left-handed).
- *  This is used for bone binding transforms and animation keyframes, which have to live in the
- *  same space as the (mirrored) skinned vertices. */
-Transform BuildMirroredTransformFromNode(const cgltf_node& node)
-{
-    if (node.has_matrix)
-    {
-        Mat4f matrix(node.matrix);
-        matrix = matrix.Transpose();
-
         // Conjugate with D = diag(1, 1, -1, 1) to mirror across Z: M' = D * M * D
         matrix[0][2] *= -1.0f;
         matrix[1][2] *= -1.0f;
@@ -724,11 +659,24 @@ Transform BuildMirroredTransformFromNode(const cgltf_node& node)
 
         const Vec3f translation = matrix.ExtractTranslation();
 
-        const Vec3f scale = Vec3f(
+        Vec3f scale = Vec3f(
             Vec3f(matrix[0][0], matrix[1][0], matrix[2][0]).Length(),
             Vec3f(matrix[0][1], matrix[1][1], matrix[2][1]).Length(),
             Vec3f(matrix[0][2], matrix[1][2], matrix[2][2]).Length());
 
+        // A negative determinant means the matrix contains a reflection;
+        // fold the mirror into the X axis so a proper rotation can be extracted
+        if (matrix.Determinant() < 0.0f)
+        {
+            scale.x = -scale.x;
+
+            matrix[0][0] *= -1.0f;
+            matrix[1][0] *= -1.0f;
+            matrix[2][0] *= -1.0f;
+        }
+
+        // Mat4f::Rotation builds the transposed rotation matrix, so Transform stores
+        // rotations inverted relative to the standard quaternion convention
         Quat4f rotation = matrix.ExtractRotation().Inverse();
         rotation.Normalize();
 
@@ -757,6 +705,7 @@ Transform BuildMirroredTransformFromNode(const cgltf_node& node)
 
     if (node.has_rotation)
     {
+        // mirror - we use LHS; inverted to match the transposed convention of Mat4f::Rotation
         rotation = Quat4f(
                        -float(node.rotation[0]),
                        -float(node.rotation[1]),
@@ -819,9 +768,8 @@ GltfSkinResource BuildSkinResource(GltfLoadContext& ctx, const cgltf_skin& skin)
             continue;
         }
 
-        // The binding transform is the joint's local transform, with any intermediate non-joint
-        // nodes folded in, so that the resulting bone hierarchy consists of joints only
-        Transform bindingTransform = BuildMirroredTransformFromNode(*jointNode);
+        Transform bindingTransform = BuildTransformFromNode(*jointNode);
+
         const cgltf_node* jointParent = nullptr;
 
         for (const cgltf_node* parentNode = jointNode->parent; parentNode != nullptr; parentNode = parentNode->parent)
@@ -833,7 +781,7 @@ GltfSkinResource BuildSkinResource(GltfLoadContext& ctx, const cgltf_skin& skin)
                 break;
             }
 
-            bindingTransform = BuildMirroredTransformFromNode(*parentNode) * bindingTransform;
+            bindingTransform = BuildTransformFromNode(*parentNode) * bindingTransform;
         }
 
         Name boneName = (jointNode->name && *jointNode->name)
