@@ -309,7 +309,7 @@ namespace Hyperion.Editor.ViewModels
 
         protected bool TryWriteContainerValueToSwatchOverride(BoxedValue value)
         {
-            if (_valueSetter != null || _componentTargetResolver != null || _target == null)
+            if (_valueSetter != null || _componentTargetResolver != null || _target is not Entity)
             {
                 return false;
             }

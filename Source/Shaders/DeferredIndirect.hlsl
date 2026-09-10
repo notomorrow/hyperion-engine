@@ -232,8 +232,6 @@ PSOutput PSMain(PSInput input)
 
     irradiance.a = saturate(irradiance.a);
 
-    const float3 rawIrradiance = irradiance.rgb;
-
 #ifdef SSGI_ENABLED
     // Blend ssgi result into irradiance - if no hit, alpha will be zero or close to it so we can lerp it
     float4 ssgi = SAMPLE_TEXTURE_2D_LOD(sampler_linear, SSGIResultTexture, texcoord, 0);
@@ -276,7 +274,7 @@ PSOutput PSMain(PSInput input)
 #elif defined(DEBUG_REFLECTIONS)
     result = E * reflections.rgb * reflections.a;
 #elif defined(DEBUG_IRRADIANCE)
-    result = rawIrradiance;
+    result = irradiance.rgb;
 #elif defined(DEBUG_VELOCITY)
     float4 velocity = SAMPLE_TEXTURE_2D_LOD(sampler_linear, GBufferVelocityTexture, texcoord, 0);
     result = velocity.rgb;
