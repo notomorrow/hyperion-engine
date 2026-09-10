@@ -891,11 +891,10 @@ namespace Hyperion.Editor
         {
             if (e.DataTransfer.Contains(AssetDragFormat))
             {
-                var t = FindNodeViewModelInEventSource(e.Source);
-                e.DragEffects = t != null ? DragDropEffects.Copy : DragDropEffects.None;
+                e.DragEffects = DragDropEffects.Copy;
 
                 var vm = DataContext as MainWindowViewModel;
-                vm?.SceneHierarchy.SetDropTarget(t);
+                vm?.SceneHierarchy.SetDropTarget(null);
                 UpdateAutoScroll(e.GetPosition(_sceneTree));
                 e.Handled = true;
                 return;
@@ -934,7 +933,6 @@ namespace Hyperion.Editor
         {
             if (e.DataTransfer.Contains(AssetDragFormat))
             {
-                var t = FindNodeViewModelInEventSource(e.Source);
                 EndDrag();
 
                 var vm = DataContext as MainWindowViewModel;

@@ -1755,7 +1755,13 @@ void VolumeEditorGizmo::SetFocusedNode(const Handle<Node>& focusedNode)
 
     m_currentBounds = focusedNode->GetWorldBounds();
 
-    AssertDebug(m_currentBounds.IsValid() && m_currentBounds.IsFinite() && !m_currentBounds.IsZero());
+    if (!m_currentBounds.IsValid() || !m_currentBounds.IsFinite() || m_currentBounds.IsZero())
+    {
+        // unbounded volumes (e.g. sky probe) cannot be reshaped
+        m_focusedNode.Reset();
+
+        return;
+    }
 
     UpdateFaceGeometry(m_currentBounds, focusedNode->GetWorldTranslation());
 }
@@ -2655,19 +2661,16 @@ void EditorSubsystem::CaptureMeshEditBaseline()
     m_meshEditState.baselineMesh = MakeWeakRef(mesh);
 }
 
-void EditorSubsystem::SyncBoxPhysicsShapeToMeshBounds(const Handle<Node>& node)
+void EditorSubsystem::SyncBoxPhysicsShapeToLocalBounds(Entity* entity)
 {
-    Entity* entity = node.IsValid() ? DynamicCast<Entity>(node.Get()) : nullptr;
-
     if (entity == nullptr)
     {
         return;
     }
 
-    MeshComponent* meshComponent = entity->TryGetComponent<MeshComponent>();
     RigidBodyComponent* rigidBodyComponent = entity->TryGetComponent<RigidBodyComponent>();
 
-    if (meshComponent == nullptr || !meshComponent->mesh.IsValid() || rigidBodyComponent == nullptr)
+    if (rigidBodyComponent == nullptr)
     {
         return;
     }
@@ -2686,7 +2689,7 @@ void EditorSubsystem::SyncBoxPhysicsShapeToMeshBounds(const Handle<Node>& node)
         return;
     }
 
-    boxShape->SetAABB(meshComponent->mesh->GetAABB());
+    boxShape->SetAABB(entity->GetLocalBounds());
     boxShape->Invalidate();
 
     entity->AddTag<EntityTag::UpdatePhysicsShape>();
@@ -2746,7 +2749,7 @@ void EditorSubsystem::CommitMeshEdits()
                     if (Handle<Node> node = nodeWeak.Lock(); node.IsValid())
                     {
                         WriteAllMeshVertexPositions(node, /* lodIndex */ 0, finalPositions);
-                        editorSubsystem->SyncBoxPhysicsShapeToMeshBounds(node);
+                        editorSubsystem->SyncBoxPhysicsShapeToLocalBounds(DynamicCast<Entity>(node.Get()));
                     }
                 },
                 [nodeWeak, baselinePositions](EditorSubsystem* editorSubsystem, EditorProject* editorProject)
@@ -2754,7 +2757,7 @@ void EditorSubsystem::CommitMeshEdits()
                     if (Handle<Node> node = nodeWeak.Lock(); node.IsValid())
                     {
                         WriteAllMeshVertexPositions(node, /* lodIndex */ 0, baselinePositions);
-                        editorSubsystem->SyncBoxPhysicsShapeToMeshBounds(node);
+                        editorSubsystem->SyncBoxPhysicsShapeToLocalBounds(DynamicCast<Entity>(node.Get()));
                     }
                 }
             };
@@ -4240,7 +4243,12 @@ void EditorSubsystem::Update(float delta)
         {
             if (node.IsValid())
             {
-                dbg.box(node->GetWorldBounds().GetCenter(), node->GetWorldBounds().GetExtent() * 0.5f + Vec3f(FLT_EPSILON), Color::Cyan());
+                const BoundingBox worldBounds = node->GetWorldBounds();
+
+                if (worldBounds.IsFinite())
+                {
+                    dbg.box(worldBounds.GetCenter(), worldBounds.GetExtent() * 0.5f + Vec3f(FLT_EPSILON), Color::Cyan());
+                }
             }
         }
     }

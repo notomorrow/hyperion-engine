@@ -5,9 +5,7 @@ using Hyperion.Editor.Services;
 namespace Hyperion.Editor.ViewModels
 {
     /// <summary>
-    /// Pop-out editor for the object held by an <see cref="ObjectPropertyViewModel"/>. It follows the
-    /// source property rather than snapshotting its sub-object, so re-assigning the asset re-targets
-    /// the panel (and clearing it closes the panel) instead of leaving it editing a detached object.
+    /// Dynamic panel shown used to edit an asset object's properties
     /// </summary>
     public class AssetObjectEditPanelViewModel : EditorPanelViewModel
     {
@@ -36,7 +34,7 @@ namespace Hyperion.Editor.ViewModels
             private set => SetProperty(ref _hasSubHeading, value);
         }
 
-        public AssetObjectEditPanelViewModel(ObjectPropertyViewModel source)
+        public AssetObjectEditPanelViewModel(ObjectPropertyViewModel source, Action? onClosed = null)
             : base($"Edit {source?.Label}")
         {
             _source = source ?? throw new ArgumentNullException(nameof(source));
@@ -44,7 +42,11 @@ namespace Hyperion.Editor.ViewModels
             Heading = source.Label;
 
             _source.PropertyChanged += OnSourcePropertyChanged;
-            OnClosed = () => _source.PropertyChanged -= OnSourcePropertyChanged;
+            OnClosed = () =>
+            {
+                _source.PropertyChanged -= OnSourcePropertyChanged;
+                onClosed?.Invoke();
+            };
 
             SyncFromSource();
         }
@@ -72,7 +74,6 @@ namespace Hyperion.Editor.ViewModels
 
             if (SubObject == null)
             {
-                // The property no longer points at anything - there is nothing left to edit.
                 PanelService.Instance.RemovePanel(this);
             }
         }

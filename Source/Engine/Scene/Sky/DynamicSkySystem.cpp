@@ -120,7 +120,7 @@ void DynamicSkySystem::InitializeSky()
         m_visScene->GetRoot()->AddChild(m_skyboxEntity);
 
         m_envProbe = m_renderScene->GetEntityManager()->AddEntity<SkyProbe>(
-            BoundingBox(Vec3f(-100.0f), Vec3f(100.0f)),
+            BoundingBox::Infinity(),
             SkyProbe::DefaultDimensions);
 
         m_envProbe->SetName(NAME("DynamicSkyProbe"));

@@ -24,35 +24,10 @@ namespace Hyperion.Editor.ViewModels
         /// <summary>Last-write time of the manifest file on disk, or null if unavailable.</summary>
         public DateTime? DateModified => _dateModified;
 
-        // @TODO Centralize this somewhere (same for scene hierarchy icons)
-        public string IconKind => _typeName switch
-        {
-            "Mesh" or "MeshAsset"                  => "Package",
-            "Material"                             => "SymbolColor",
-            "Texture" or "TextureAsset"            => "FileMedia",
-            "DirectionalLight"                     => "Lightbulb",
-            "PointLight"                           => "Lightbulb",
-            "SpotLight"                            => "Lightbulb",
-            "AreaRectLight"                        => "HorizontalRule",
-            "Camera"                               => "DeviceCamera",
-            "ReflectionProbe"                      => "Globe",
-            "ParticleVolume"                       => "Sparkle",
-            "InstancedMeshProxy"                   => "Combine",
-            "Skeleton"                             => "GitBranch",
-            "Animation" or "AnimationTrack"        => "FileMedia",
-            "Scene" or "World"                     => "Globe",
-            "LightmapVolume"                       => "Package",
-            "FogVolume"                            => "Cloud",
-            "Entity"                               => "CircleLarge",
-            "Node"                                 => "Circle",
-            "Shader" or "ShaderBundle"             => "FileCode",
-            "FontAtlas"                            => "CaseSensitive",
-            "Sound" or "Audio"                     => "Unmute",
-            "PhysicsShape"                         => "Shield",
-            "Script"                               => "FileCode",
-            _ when _bucket?.BucketIndex >= 0       => "File",
-            _                                      => "Circle",
-        };
+        // @TODO also, dont just switch on typename -- switch on class -- we dont want to add a new entry for EVERY subclass !
+        public string IconKind => _typeName != null
+            ? AssetIconHelper.FromTypeName(_typeName)
+            : "File";
 
         public ObservableCollection<InspectorActionViewModel> Actions { get; } = new ObservableCollection<InspectorActionViewModel>();
 

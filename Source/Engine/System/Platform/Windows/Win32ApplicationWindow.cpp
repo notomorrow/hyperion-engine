@@ -416,6 +416,9 @@ LRESULT CALLBACK Win32ApplicationWindow::ParentSubclassProc(HWND hWnd, UINT msg,
 
         break;
     }
+    case WM_GETOBJECT:
+        /// Fix attempt for deadlocking main thread with Avalonia.
+        return 0;
     default:
         break;
     }

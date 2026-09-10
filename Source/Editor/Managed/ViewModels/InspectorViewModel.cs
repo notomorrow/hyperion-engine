@@ -393,8 +393,20 @@ namespace Hyperion.Editor.ViewModels
                         isReadOnly = true;
                     }
 
+                    Action? postWriteCallback = null;
+
+                    if (property.Name == "LocalBounds" && SelectedNode is Entity localBoundsEntity)
+                    {
+                        postWriteCallback = () =>
+                        {
+                            EngineManager.EditorGame?.EditorSubsystem?.ExecuteCommandByName(
+                                new Name("EditorCommandSyncPhysicsShapeToLocalBounds"),
+                                localBoundsEntity.NativeAddress.ToString());
+                        };
+                    }
+
                     Properties.Add(InspectorViewModelFactory.Create(
-                        SelectedNode, property, isReadOnly, 0, null, null, OnPropertyValueChanged));
+                        SelectedNode, property, isReadOnly, 0, null, postWriteCallback, OnPropertyValueChanged));
 
                     if (Properties[Properties.Count - 1] is FlagsPropertyViewModel flagsVm)
                     {

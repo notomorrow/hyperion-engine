@@ -191,10 +191,6 @@ RendererResult VulkanASBase::CreateAccelerationStructure(
     {
         Assert(m_accelerationStructure != VK_NULL_HANDLE);
     }
-    else
-    {
-        Assert(m_accelerationStructure == VK_NULL_HANDLE);
-    }
 
     if (!RI.GetDevice()->GetFeatures().IsRayTracingSupported())
     {
@@ -234,7 +230,6 @@ RendererResult VulkanASBase::CreateAccelerationStructure(
     VkAccelerationStructureBuildGeometryInfoKHR geometryInfo { VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR };
     geometryInfo.type = ToVkAccelerationStructureType(type);
     geometryInfo.flags = VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR | VK_BUILD_ACCELERATION_STRUCTURE_ALLOW_UPDATE_BIT_KHR;
-    geometryInfo.mode = update ? VK_BUILD_ACCELERATION_STRUCTURE_MODE_UPDATE_KHR : VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR;
     geometryInfo.geometryCount = uint32(geometries.Size());
     geometryInfo.pGeometries = pGeometries;
 
@@ -249,16 +244,16 @@ RendererResult VulkanASBase::CreateAccelerationStructure(
         &buildSizesInfo);
 
     const size_t scratchBufferAlignment = RI.GetDevice()->GetFeatures().GetAccelerationStructureProperties().minAccelerationStructureScratchOffsetAlignment;
-    size_t accelerationStructureSize = MathUtil::NextMultiple(buildSizesInfo.accelerationStructureSize, 256ull);
-    size_t buildScratchSize = MathUtil::NextMultiple(buildSizesInfo.buildScratchSize, scratchBufferAlignment);
-    size_t updateScratchSize = MathUtil::NextMultiple(buildSizesInfo.updateScratchSize, scratchBufferAlignment);
+    const size_t accelerationStructureSize = MathUtil::NextMultiple(buildSizesInfo.accelerationStructureSize, 256ull);
+    const size_t buildScratchSize = MathUtil::NextMultiple(buildSizesInfo.buildScratchSize, scratchBufferAlignment);
+    const size_t updateScratchSize = MathUtil::NextMultiple(buildSizesInfo.updateScratchSize, scratchBufferAlignment);
 
-    bool wasRebuilt = false;
+    bool needsNewAccelerationStructure = m_accelerationStructure == VK_NULL_HANDLE;
 
     if (m_buffer && m_buffer->Size() < accelerationStructureSize)
     {
         EnqueueDeletion(std::move(m_buffer));
-        wasRebuilt = true;
+        needsNewAccelerationStructure = true;
     }
 
     if (!m_buffer)
@@ -271,50 +266,35 @@ RendererResult VulkanASBase::CreateAccelerationStructure(
         CheckResultOrReturn(m_buffer->Create());
     }
 
-    if (!update || wasRebuilt)
+    // a refit is only valid in place, into the same acceleration structure it was built with
+    const bool performUpdate = update && !needsNewAccelerationStructure;
+
+    if (needsNewAccelerationStructure)
     {
         outUpdateStateFlags |= RT_UPDATE_STATE_FLAGS_UPDATE_ACCELERATION_STRUCTURE;
 
-        if (wasRebuilt)
+        if (m_accelerationStructure != VK_NULL_HANDLE)
         {
-            // delete the current acceleration structure once the frame is done, rather than stalling the gpu here
-            RI.GetCurrentFrame()->OnFrameEnd.Bind(
-                                                [oldAccelerationStructure = m_accelerationStructure](...)
-                                                {
-                                                    RI.dynamicFunctions.vkDestroyAccelerationStructureKHR(
-                                                        RI.GetDevice()->GetDevice(),
-                                                        oldAccelerationStructure,
-                                                        nullptr);
-                                                })
-                .Detach();
+            EnqueueDeletion(FunctionWrapper<Proc<void()>>(
+                [accelerationStructure = m_accelerationStructure]()
+                {
+                    RI.dynamicFunctions.vkDestroyAccelerationStructureKHR(
+                        RI.GetDevice()->GetDevice(),
+                        accelerationStructure,
+                        VK_NULL_HANDLE);
+                }));
 
             m_accelerationStructure = VK_NULL_HANDLE;
             m_deviceAddress = 0;
-
-            // fetch the corrected acceleration structure and scratch buffer sizes
-            // update was true but we need to rebuild from scratch, have to unset the UPDATE flag.
-            geometryInfo.mode = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR;
-
-            RI.dynamicFunctions.vkGetAccelerationStructureBuildSizesKHR(
-                RI.GetDevice()->GetDevice(),
-                VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR,
-                &geometryInfo,
-                pPrimitiveCounts,
-                &buildSizesInfo);
-
-            accelerationStructureSize = MathUtil::NextMultiple(buildSizesInfo.accelerationStructureSize, 256ull);
-            buildScratchSize = MathUtil::NextMultiple(buildSizesInfo.buildScratchSize, scratchBufferAlignment);
-            updateScratchSize = MathUtil::NextMultiple(buildSizesInfo.updateScratchSize, scratchBufferAlignment);
-
-            Assert(m_buffer->Size() >= accelerationStructureSize);
         }
 
         // to be sure it's zeroed out
         m_buffer->Memset(accelerationStructureSize, 0);
 
+        // cover the whole buffer so later full rebuilds can reuse it in place while it still fits
         VkAccelerationStructureCreateInfoKHR createInfo { VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR };
         createInfo.buffer = m_buffer->GetVulkanHandle();
-        createInfo.size = accelerationStructureSize;
+        createInfo.size = m_buffer->Size();
         createInfo.type = ToVkAccelerationStructureType(type);
 
         VULKAN_CHECK(RI.dynamicFunctions.vkCreateAccelerationStructureKHR(
@@ -333,7 +313,7 @@ RendererResult VulkanASBase::CreateAccelerationStructure(
         RI.GetDevice()->GetDevice(),
         &addressInfo);
 
-    const size_t scratchSize = (update && !wasRebuilt) ? updateScratchSize : buildScratchSize;
+    const size_t scratchSize = performUpdate ? updateScratchSize : buildScratchSize;
 
     if (m_scratchBuffer && m_scratchBuffer->Size() < scratchSize)
     {
@@ -350,8 +330,9 @@ RendererResult VulkanASBase::CreateAccelerationStructure(
         CheckResultOrReturn(m_scratchBuffer->Create());
     }
 
+    geometryInfo.mode = performUpdate ? VK_BUILD_ACCELERATION_STRUCTURE_MODE_UPDATE_KHR : VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR;
     geometryInfo.dstAccelerationStructure = m_accelerationStructure;
-    geometryInfo.srcAccelerationStructure = (update && !wasRebuilt) ? m_accelerationStructure : VK_NULL_HANDLE;
+    geometryInfo.srcAccelerationStructure = performUpdate ? m_accelerationStructure : VK_NULL_HANDLE;
     geometryInfo.scratchData = { .deviceAddress = m_scratchBuffer->GetBufferDeviceAddress() };
 
     pRangeInfos = (VkAccelerationStructureBuildRangeInfoKHR*)g_vulkanPool->Allocate(sizeof(VkAccelerationStructureBuildRangeInfoKHR) * geometries.Size(), alignof(VkAccelerationStructureBuildRangeInfoKHR));
@@ -876,10 +857,11 @@ RendererResult VulkanTopLevelAS::Rebuild(RTUpdateStateFlags& outUpdateStateFlags
     Array<VkAccelerationStructureGeometryKHR, VulkanAllocator> geometries = GetGeometries();
     Array<uint32, VulkanAllocator> primitiveCounts = GetPrimitiveCounts();
 
+    // instance count may have changed since the last build, so this can't be a refit
     CheckResultOrReturn(CreateAccelerationStructure(
         GetType(),
         geometries, primitiveCounts,
-        true,
+        false,
         outUpdateStateFlags));
 
     CheckResultOrReturn(BuildMeshDescriptionsBuffer());

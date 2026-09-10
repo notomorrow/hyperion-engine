@@ -59,6 +59,13 @@
 #include <Framework/EngineDriver.hpp>
 
 #include <Util/Img/Bitmap.hpp>
+#include <Util/Img/ImageUtil.hpp>
+
+#include <Core/Utilities/Span.hpp>
+
+#include <stb_image.h>
+
+#include <cstring>
 
 #define CGLTF_IMPLEMENTATION
 #include <gltf/cgltf.h>
@@ -114,7 +121,6 @@ struct GltfLoadContext
     uint32 unnamedNodeCounter = 0;
     uint32 unnamedMaterialCounter = 0;
     bool loggedMorphTargetWarning = false;
-    bool loggedEmbeddedTextureWarning = false;
     bool loggedTextureWrapModeWarning = false;
     bool loggedJointIndexOutOfRangeWarning = false;
     bool loggedSkinnedPrimitiveWithoutInfluencesWarning = false;
@@ -261,6 +267,186 @@ String ResolveTexturePath(GltfLoadContext& ctx, const cgltf_image& image)
     return String(image.uri ? image.uri : "");
 }
 
+Handle<Texture> LoadTextureFromEncodedBytes(const cgltf_image& image, Span<const ubyte> encodedBytes, bool srgb)
+{
+    const char* debugName = (image.name && *image.name) ? image.name : "<unnamed>";
+
+    if (encodedBytes.Size() == 0)
+    {
+        HYP_LOG(Assets, Warning, "Embedded GLTF texture '{}' has no image data", debugName);
+        return {};
+    }
+
+    if (encodedBytes.Size() > size_t(MathUtil::MaxSafeValue<int>()))
+    {
+        HYP_LOG(Assets, Warning, "Embedded GLTF texture '{}' is too large to decode ({} bytes)", debugName, encodedBytes.Size());
+        return {};
+    }
+
+    if (image.mime_type && *image.mime_type)
+    {
+        const String mimeType(image.mime_type);
+
+        if (mimeType.Contains("ktx") || mimeType.Contains("basis"))
+        {
+            HYP_LOG(Assets, Warning, "Embedded GLTF texture '{}' uses unsupported compressed format '{}'", debugName, image.mime_type);
+            return {};
+        }
+    }
+
+    int width = 0;
+    int height = 0;
+    int numComponents = 0;
+
+    ubyte* imageBytes = stbi_load_from_memory(
+        encodedBytes.Data(),
+        int(encodedBytes.Size()),
+        &width,
+        &height,
+        &numComponents,
+        0);
+
+    if (imageBytes == nullptr || width <= 0 || height <= 0)
+    {
+        HYP_LOG(Assets, Warning, "Failed to decode embedded GLTF texture '{}': {}", debugName, stbi_failure_reason());
+        return {};
+    }
+
+    HYP_DEFER({
+        stbi_image_free(imageBytes);
+    });
+
+    TextureFormat format;
+
+    switch (numComponents)
+    {
+    case STBI_rgb_alpha:
+        format = TextureFormat::RGBA8;
+        break;
+    case STBI_rgb:
+        format = TextureFormat::RGB8;
+        break;
+    case STBI_grey_alpha:
+        format = TextureFormat::RG8;
+        break;
+    case STBI_grey:
+        format = TextureFormat::R8;
+        break;
+    default:
+        HYP_LOG(Assets, Warning, "Embedded GLTF texture '{}' has unsupported component count {}", debugName, numComponents);
+        return {};
+    }
+
+    TextureDesc textureDesc {
+        TextureType::Texture2D,
+        format,
+        Vec3u { uint32(width), uint32(height), 1 },
+        TFM_LINEAR_MIPMAP,
+        TFM_LINEAR,
+        TWM_REPEAT
+    };
+
+    const size_t imageBytesCount = size_t(width)
+        * size_t(height)
+        * size_t(numComponents);
+
+    ByteBuffer baseMipData = ByteBuffer(imageBytesCount, imageBytes);
+
+    if (numComponents == 3)
+    {
+        // convert to bytes per pixel = 4
+        const uint32 faceOffsetStep = textureDesc.GetByteSize() / textureDesc.NumArrayLayers();
+
+        textureDesc.format = TextureUtils::FormatChangeNumComponents(format, 4);
+
+        const uint32 newFaceOffsetStep = textureDesc.GetByteSize() / textureDesc.NumArrayLayers();
+
+        ByteBuffer newByteBuffer(textureDesc.GetByteSize());
+
+        for (uint32 i = 0; i < textureDesc.NumArrayLayers(); i++)
+        {
+            ImageUtil::ConvertBPP(
+                textureDesc.extent.x, textureDesc.extent.y, textureDesc.extent.z,
+                numComponents, 4,
+                &baseMipData.Data()[i * faceOffsetStep],
+                &newByteBuffer.Data()[i * newFaceOffsetStep]);
+        }
+
+        baseMipData = std::move(newByteBuffer);
+    }
+
+    if (srgb)
+    {
+        textureDesc.format = TextureUtils::ChangeFormatSRGB(textureDesc.format, /* useSRGB */ true);
+    }
+
+    Texture::GenerateMipmaps(textureDesc, baseMipData);
+
+    return MakeHandle<Texture>(textureDesc, baseMipData.ToByteView());
+}
+
+Handle<Texture> LoadEmbeddedTexture(GltfLoadContext& ctx, const cgltf_image& image, bool srgb)
+{
+    if (image.buffer_view != nullptr)
+    {
+        const uint8_t* bufferViewData = cgltf_buffer_view_data(image.buffer_view);
+
+        if (bufferViewData == nullptr)
+        {
+            HYP_LOG(Assets, Warning, "Embedded GLTF texture '{}' has inaccessible buffer view", image.name ? image.name : "<unnamed>");
+            return {};
+        }
+
+        return LoadTextureFromEncodedBytes(image, Span<const ubyte>(bufferViewData, size_t(image.buffer_view->size)), srgb);
+    }
+
+    if (image.uri != nullptr && String(image.uri).StartsWith("data:"))
+    {
+        const char* comma = strchr(image.uri, ',');
+
+        if (comma == nullptr)
+        {
+            HYP_LOG(Assets, Warning, "Embedded GLTF texture '{}' has malformed data URI", image.name ? image.name : "<unnamed>");
+            return {};
+        }
+
+        const char* base64 = comma + 1;
+        const cgltf_size base64Length = strlen(base64);
+
+        cgltf_size decodedSize = (base64Length / 4) * 3;
+
+        if (base64Length >= 1 && base64[base64Length - 1] == '=')
+        {
+            decodedSize--;
+        }
+
+        if (base64Length >= 2 && base64[base64Length - 2] == '=')
+        {
+            decodedSize--;
+        }
+
+        void* decodedData = nullptr;
+
+        cgltf_options decodeOptions {};
+        const cgltf_result decodeResult = cgltf_load_buffer_base64(&decodeOptions, decodedSize, base64, &decodedData);
+
+        if (decodeResult != cgltf_result_success || decodedData == nullptr)
+        {
+            HYP_LOG(Assets, Warning, "Failed to decode base64 data URI for GLTF texture '{}': {}", image.name ? image.name : "<unnamed>", ToString(decodeResult));
+            return {};
+        }
+
+        HYP_DEFER({
+            void (*freeFunc)(void*, void*) = ctx.data.memory.free_func ? ctx.data.memory.free_func : &cgltf_default_free;
+            freeFunc(ctx.data.memory.user_data, decodedData);
+        });
+
+        return LoadTextureFromEncodedBytes(image, Span<const ubyte>(static_cast<const ubyte*>(decodedData), size_t(decodedSize)), srgb);
+    }
+
+    return {};
+}
+
 Handle<Texture> AcquireTexture(GltfLoadContext& ctx, const cgltf_texture_view& textureView, bool srgb)
 {
     if (textureView.texture == nullptr)
@@ -287,17 +473,15 @@ Handle<Texture> AcquireTexture(GltfLoadContext& ctx, const cgltf_texture_view& t
 
     if (image->buffer_view != nullptr || (image->uri != nullptr && String(image->uri).StartsWith("data:")))
     {
-        if (!ctx.loggedEmbeddedTextureWarning)
+        textureHandle = LoadEmbeddedTexture(ctx, *image, srgb);
+
+        if (!textureHandle)
         {
-            ctx.loggedEmbeddedTextureWarning = true;
-            HYP_LOG(Assets, Warning, "GLTF embedded textures are not yet supported; skipping texture '{}'", image->name ? image->name : "<unnamed>");
+            ctx.textureCache.Set(textureView.texture, textureHandle);
+            return textureHandle;
         }
-
-        ctx.textureCache.Set(textureView.texture, textureHandle);
-        return textureHandle;
     }
-
-    if (image->uri != nullptr && *image->uri)
+    else if (image->uri != nullptr && *image->uri)
     {
         const String texturePath = ResolveTexturePath(ctx, *image);
 
@@ -466,6 +650,13 @@ Transform BuildTransformFromNode(const cgltf_node& node)
         Mat4f matrix(node.matrix);
         matrix = matrix.Transpose();
 
+        // conjugate
+        matrix[0][2] *= -1.0f;
+        matrix[1][2] *= -1.0f;
+        matrix[2][0] *= -1.0f;
+        matrix[2][1] *= -1.0f;
+        matrix[2][3] *= -1.0f;
+
         const Vec3f translation = matrix.ExtractTranslation();
 
         const Vec3f scale = Vec3f(
@@ -473,7 +664,7 @@ Transform BuildTransformFromNode(const cgltf_node& node)
             Vec3f(matrix[0][1], matrix[1][1], matrix[2][1]).Length(),
             Vec3f(matrix[0][2], matrix[1][2], matrix[2][2]).Length());
 
-        Quat4f rotation = matrix.ExtractRotation().Inverse();
+        Quat4f rotation = matrix.ExtractRotation();
         rotation.Normalize();
 
         return Transform(translation, scale, rotation);
@@ -488,7 +679,7 @@ Transform BuildTransformFromNode(const cgltf_node& node)
         translation = Vec3f(
             float(node.translation[0]),
             float(node.translation[1]),
-            float(node.translation[2]));
+            -float(node.translation[2]));
     }
 
     if (node.has_scale)
@@ -501,12 +692,12 @@ Transform BuildTransformFromNode(const cgltf_node& node)
 
     if (node.has_rotation)
     {
+        // mirror - we use LHS
         rotation = Quat4f(
-                       float(node.rotation[0]),
-                       float(node.rotation[1]),
+                       -float(node.rotation[0]),
+                       -float(node.rotation[1]),
                        float(node.rotation[2]),
-                       float(node.rotation[3]))
-                       .Inverse();
+                       float(node.rotation[3]));
         rotation.Normalize();
     }
 
@@ -1092,7 +1283,22 @@ Handle<Material> AcquireMaterial(GltfLoadContext& ctx, const cgltf_material* glt
         float(gltfMaterial->emissive_factor[1]),
         float(gltfMaterial->emissive_factor[2]));
 
-    if (emissiveFactor != Vec3f::Zero())
+    bool useEmissiveTextureAsDiffuse = false;
+
+    if (gltfMaterial->emissive_texture.texture != nullptr)
+    {
+        if (Handle<Texture> emissiveTexture = AcquireTexture(ctx, gltfMaterial->emissive_texture, /* srgb */ true); emissiveTexture.IsValid())
+        {
+            if (!textures.Has(MaterialTextureKey::Diffuse))
+            {
+                // some exporters bake the base color into the emissive map
+                textures[MaterialTextureKey::Diffuse] = emissiveTexture;
+                useEmissiveTextureAsDiffuse = true;
+            }
+        }
+    }
+
+    if (emissiveFactor != Vec3f::Zero() && !useEmissiveTextureAsDiffuse)
     {
         parameters.emissiveIntensity = emissiveFactor.Length();
         parameters.emissiveColor = Color(Vec4f(emissiveFactor / parameters.emissiveIntensity, 1.0f));
@@ -1459,19 +1665,16 @@ Handle<Node> BuildNodeRecursive(GltfLoadContext& ctx, const cgltf_node& node)
                 {
                     entity->SetIsDynamic(true);
 
-                    if (!skeleton->GetAnimations().Empty())
-                    {
-                        AnimationComponent animationComponent {};
-                        animationComponent.playbackState = {
-                            .animationIndex = 0,
-                            .status = AnimationPlaybackStatus::PLAYING,
-                            .loopMode = AnimationLoopMode::REPEAT,
-                            .speed = 1.0f,
-                            .currentTime = 0.0f
-                        };
+                    AnimationComponent animationComponent {};
+                    animationComponent.playbackState = {
+                        .animationIndex = 0,
+                        .status = AnimationPlaybackStatus::PLAYING,
+                        .loopMode = AnimationLoopMode::REPEAT,
+                        .speed = 1.0f,
+                        .currentTime = 0.0f
+                    };
 
-                        ctx.scene->GetEntityManager()->AddComponent<AnimationComponent>(entity, animationComponent);
-                    }
+                    ctx.scene->GetEntityManager()->AddComponent<AnimationComponent>(entity, animationComponent);
                 }
 
                 nodeHandle->AddChild(entity);

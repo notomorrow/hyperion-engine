@@ -11,6 +11,7 @@ using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Windows.Input;
 
 namespace Hyperion.Editor.ViewModels
@@ -172,11 +173,12 @@ namespace Hyperion.Editor.ViewModels
         // Templates
         public EditorCommand AddPlayerEntity => new EditorCommand("AddPlayerEntity");
 
-        private string GetSelectedNodeName() => SceneHierarchy.SelectedNode?.Node?.Name.ToString() ?? string.Empty;
+        private string GetSelectedNodeUuid() => SceneHierarchy.SelectedNode?.UUID.ToString() ?? string.Empty;
 
         public EditorCommand DeleteNode => new EditorCommand("DeleteNode");
         public EditorCommand Delete => new EditorCommand("DeleteNode");
-        public EditorCommand TeleportToNode => new EditorCommand("TeleportTo", GetSelectedNodeName);
+        public EditorCommand TeleportToNode => new EditorCommand("TeleportTo", GetSelectedNodeUuid);
+        public EditorCommand MoveToCameraNode => new EditorCommand("MoveToCamera", GetSelectedNodeUuid);
         public EditorCommand Copy => new EditorCommand("Copy");
         public EditorCommand Paste => new EditorCommand("Paste");
 
@@ -1231,6 +1233,41 @@ namespace Hyperion.Editor.ViewModels
             _ = EngineManager.PostToSimThread(() =>
             {
                 EngineManager.CurrentProject?.GetWorld()?.SetLayerActive(new Name(layerName), isActive);
+            });
+        }
+
+        public async Task RefreshLayerTogglesAsync()
+        {
+            List<(string Name, bool IsActive)>? layers = null;
+
+            await EngineManager.PostToSimThread(() =>
+            {
+                World? world = EngineManager.CurrentProject?.GetWorld();
+
+                if (world == null)
+                {
+                    return;
+                }
+
+                layers = new List<(string, bool)>();
+
+                foreach (Name layerName in world.GetLayerNames())
+                {
+                    layers.Add((layerName.ToString(), world.IsLayerActive(layerName)));
+                }
+            }).ConfigureAwait(false);
+
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                ActiveLayerToggles.Clear();
+
+                if (layers != null)
+                {
+                    foreach ((string name, bool isActive) in layers)
+                    {
+                        ActiveLayerToggles.Add(new LayerToggleViewModel(name, isActive, OnActiveLayerToggled));
+                    }
+                }
             });
         }
 

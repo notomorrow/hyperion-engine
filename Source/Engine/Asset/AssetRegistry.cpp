@@ -550,9 +550,7 @@ AssetRegistry::AssetRegistry(AssetRegistryId registryId, const FilePath& rootPat
       m_rootPath(rootPath),
       m_isInitialized(false),
       m_isSyncingCache(false),
-      m_scheduler(new Scheduler(s_assetRegistryThread)),
-      m_pruneTimer { 5.0 }, // every 5 seconds
-      m_pruneTaskBatch(nullptr)
+      m_scheduler(new Scheduler(s_assetRegistryThread))
 {
     m_assetBucketData = (AssetBucketData*)g_assetPool->Allocate(sizeof(AssetBucketData) * MaxAssetBuckets);
     Assert(m_assetBucketData != nullptr);
@@ -567,18 +565,6 @@ AssetRegistry::AssetRegistry(AssetRegistryId registryId, const FilePath& rootPat
 
 AssetRegistry::~AssetRegistry()
 {
-    if (m_pruneTaskBatch != nullptr)
-    {
-        if (!m_pruneTaskBatch->IsCompleted())
-        {
-            HYP_LOG(Assets, Info, "Waiting for prune task batch to complete before destroying AssetRegistry...");
-            m_pruneTaskBatch->AwaitCompletion();
-        }
-
-        delete m_pruneTaskBatch;
-        m_pruneTaskBatch = nullptr;
-    }
-
     for (uint32 bucketIndex = 0; bucketIndex < MaxAssetBuckets; bucketIndex++)
     {
         m_assetBucketData[bucketIndex].~AssetBucketData();
@@ -1798,15 +1784,6 @@ void AssetRegistry::Update()
 {
     HYP_SCOPE;
     AssertOnThread(s_assetRegistryThread);
-
-#ifdef HYP_EDITOR
-    if (!m_pruneTimer.Waiting())
-    {
-        m_pruneTimer.NextTick();
-
-        // @TODO
-    }
-#endif
 
     if (m_scheduler->NumEnqueued() > 0)
     {

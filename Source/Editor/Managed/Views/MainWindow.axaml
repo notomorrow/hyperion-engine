@@ -483,7 +483,7 @@
                                 ToolTip.Tip="Bake"
                                 IsEnabled="{Binding !IsSimulating}">
                                 <StackPanel Orientation="Horizontal" Spacing="4">
-                                    <controls:Codicon Kind="Lightbulb" Size="16" VerticalAlignment="Center" />
+                                    <controls:Codicon Kind="Heat" Size="16" VerticalAlignment="Center" />
                                     <controls:Codicon Kind="ChevronDown" Size="10" VerticalAlignment="Center" />
                                 </StackPanel>
                                 <DropDownButton.Flyout>
@@ -866,15 +866,21 @@
                                                                         <MenuItem Command="{Binding Paste, Source={x:Static vm:MainWindowViewModel.Instance}}" Header="{Binding PasteHeader, Source={x:Static vm:MainWindowViewModel.Instance}}" IsEnabled="{Binding !IsSimulating, Source={x:Static vm:MainWindowViewModel.Instance}}" />
                                                                         <Separator />
                                                                         <MenuItem Click="OnRenameNodeMenuItemClick" Header="Rename" IsEnabled="{Binding !IsSimulating, Source={x:Static vm:MainWindowViewModel.Instance}}" />
-                                                                        <MenuItem Command="{Binding TeleportToNode, Source={x:Static vm:MainWindowViewModel.Instance}}" CommandParameter="{Binding Name}" Header="Teleport to" IsEnabled="{Binding !IsSimulating, Source={x:Static vm:MainWindowViewModel.Instance}}" />
+                                                                        <MenuItem Command="{Binding TeleportToNode, Source={x:Static vm:MainWindowViewModel.Instance}}" CommandParameter="{Binding UUID}" Header="Teleport to" IsEnabled="{Binding !IsSimulating, Source={x:Static vm:MainWindowViewModel.Instance}}" />
+                                                                        <MenuItem Command="{Binding MoveToCameraNode, Source={x:Static vm:MainWindowViewModel.Instance}}" CommandParameter="{Binding UUID}" Header="Move to camera" IsEnabled="{Binding !IsSimulating, Source={x:Static vm:MainWindowViewModel.Instance}}" />
                                                                         <MenuItem Click="OnMoveToGrandparentMenuItemClick" Header="{Binding MoveToGrandparentHeader}" IsVisible="{Binding CanMoveToGrandparent}" IsEnabled="{Binding !IsSimulating, Source={x:Static vm:MainWindowViewModel.Instance}}" />
                                                                         <Separator IsVisible="{Binding HasActions}" />
                                                                         <MenuItem Header="Actions" IsVisible="{Binding HasActions}" IsEnabled="{Binding !IsSimulating, Source={x:Static vm:MainWindowViewModel.Instance}}" ItemsSource="{Binding Actions}">
-                                                                            <MenuItem.ItemTemplate>
-                                                                                <DataTemplate x:DataType="vm:InspectorActionViewModel">
-                                                                                    <MenuItem Command="{Binding ExecuteActionCommand}" Header="{Binding Label}" IsEnabled="{Binding IsEnabled}" />
-                                                                                </DataTemplate>
-                                                                            </MenuItem.ItemTemplate>
+                                                                            <MenuItem.ItemContainerTheme>
+                                                                                <ControlTheme
+                                                                                    x:DataType="vm:InspectorActionViewModel"
+                                                                                    BasedOn="{StaticResource {x:Type MenuItem}}"
+                                                                                    TargetType="MenuItem">
+                                                                                    <Setter Property="Header" Value="{Binding Label}" />
+                                                                                    <Setter Property="Command" Value="{Binding ExecuteActionCommand}" />
+                                                                                    <Setter Property="IsEnabled" Value="{Binding IsEnabled}" />
+                                                                                </ControlTheme>
+                                                                            </MenuItem.ItemContainerTheme>
                                                                         </MenuItem>
                                                                         <Separator />
                                                                         <MenuItem Command="{Binding DeleteNode, Source={x:Static vm:MainWindowViewModel.Instance}}" Header="{Binding DeleteHeader, Source={x:Static vm:MainWindowViewModel.Instance}}" IsEnabled="{Binding !IsSimulating, Source={x:Static vm:MainWindowViewModel.Instance}}" />
@@ -1193,12 +1199,13 @@
                                                                 BorderBrush="{DynamicResource Brush.BorderLight}"
                                                                 BorderThickness="1"
                                                                 CornerRadius="{DynamicResource Radius.Medium}">
-                                                                <TextBlock
+                                                                <controls:Codicon
                                                                     HorizontalAlignment="Center"
                                                                     VerticalAlignment="Center"
-                                                                    FontSize="22"
-                                                                    Opacity="0.3"
-                                                                    Text="☐" />
+                                                                    Foreground="{DynamicResource Brush.AccentHover}"
+                                                                    Kind="FileCode"
+                                                                    Opacity="0.85"
+                                                                    Size="28" />
                                                             </Border>
 
                                                             <StackPanel Grid.Column="1" Spacing="4">
@@ -1219,20 +1226,21 @@
                                                                         TextTrimming="CharacterEllipsis" />
                                                                 </Border>
 
-                                                                <StackPanel Orientation="Horizontal" Spacing="4">
+                                                                <StackPanel Orientation="Horizontal" Spacing="2">
                                                                     <Button
-                                                                        Padding="8,2"
-                                                                        FontSize="11"
+                                                                        Classes="gizmo"
                                                                         Command="{Binding SelectCommand}"
-                                                                        Content="Swap"
                                                                         IsEnabled="{Binding CanSelectFromContentBrowser}"
-                                                                        ToolTip.Tip="Assign to the currently selected asset in the Assets drawer" />
+                                                                        ToolTip.Tip="Swap with selected">
+                                                                        <controls:Codicon Kind="Swap" Size="14" />
+                                                                    </Button>
                                                                     <Button
-                                                                        Padding="8,2"
-                                                                        FontSize="11"
+                                                                        Classes="gizmo"
                                                                         Command="{Binding ClearCommand}"
-                                                                        Content="Clear"
-                                                                        IsEnabled="{Binding HasScript}" />
+                                                                        IsEnabled="{Binding HasScript}"
+                                                                        ToolTip.Tip="Clear">
+                                                                        <controls:Codicon Kind="Close" Size="14" />
+                                                                    </Button>
                                                                 </StackPanel>
                                                             </StackPanel>
                                                             </Grid>
@@ -1533,14 +1541,14 @@
                                                         <ListBox.ItemTemplate>
                                                             <DataTemplate x:DataType="vm:AssetObjectViewModel">
                                                                 <Border
-                                                                    Width="80"
-                                                                    Height="80"
-                                                                    Margin="4"
-                                                                    Padding="4"
+                                                                    Width="64"
+                                                                    Height="64"
+                                                                    Margin="3"
+                                                                    Padding="3"
                                                                     Background="Transparent"
                                                                     CornerRadius="{DynamicResource Radius.Small}">
-                                                                    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="4">
-                                                                        <controls:Codicon Kind="{Binding IconKind}" Size="28" Opacity="0.85" HorizontalAlignment="Center" Foreground="{DynamicResource Brush.AccentHover}" />
+                                                                    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="2">
+                                                                        <controls:Codicon Kind="{Binding IconKind}" Size="20" Opacity="0.85" HorizontalAlignment="Center" Foreground="{DynamicResource Brush.AccentHover}" />
                                                                         <TextBlock
                                                                             Text="{Binding DisplayName}"
                                                                             FontSize="10"
@@ -1548,7 +1556,7 @@
                                                                             TextAlignment="Center"
                                                                             TextWrapping="Wrap"
                                                                             TextTrimming="CharacterEllipsis"
-                                                                            MaxWidth="72" />
+                                                                            MaxWidth="58" />
                                                                     </StackPanel>
                                                                     <Border.ContextMenu>
                                                                         <ContextMenu Opened="OnAssetContextMenuOpened">
@@ -1565,11 +1573,17 @@
                                                                                 IsEnabled="{Binding !IsSimulating, Source={x:Static vm:MainWindowViewModel.Instance}}" />
                                                                             <Separator IsVisible="{Binding HasActions}" />
                                                                             <MenuItem Header="Actions" IsVisible="{Binding HasActions}" IsEnabled="{Binding !IsSimulating, Source={x:Static vm:MainWindowViewModel.Instance}}" ItemsSource="{Binding Actions}">
-                                                                                <MenuItem.ItemTemplate>
-                                                                                    <DataTemplate x:DataType="vm:InspectorActionViewModel">
-                                                                                        <MenuItem Command="{Binding ExecuteActionCommand}" Header="{Binding Label}" IsEnabled="{Binding IsEnabled}" />
-                                                                                    </DataTemplate>
-                                                                                </MenuItem.ItemTemplate>
+                                                                                <!--  The generated containers are the menu items themselves; a MenuItem in an ItemTemplate would be nested inside the container's header and render disabled.  -->
+                                                                                <MenuItem.ItemContainerTheme>
+                                                                                    <ControlTheme
+                                                                                        x:DataType="vm:InspectorActionViewModel"
+                                                                                        BasedOn="{StaticResource {x:Type MenuItem}}"
+                                                                                        TargetType="MenuItem">
+                                                                                        <Setter Property="Header" Value="{Binding Label}" />
+                                                                                        <Setter Property="Command" Value="{Binding ExecuteActionCommand}" />
+                                                                                        <Setter Property="IsEnabled" Value="{Binding IsEnabled}" />
+                                                                                    </ControlTheme>
+                                                                                </MenuItem.ItemContainerTheme>
                                                                             </MenuItem>
                                                                             <Separator />
                                                                             <MenuItem

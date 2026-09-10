@@ -57,6 +57,12 @@ namespace Hyperion
             base.Dispose(isDisposing);
         }
 
+        public UUID UUID
+        {
+            get => this.GetUUID();
+            set => this.SetUUID(value);
+        }
+
         public Name Name
         {
             get => this.GetName();

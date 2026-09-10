@@ -78,12 +78,12 @@ namespace Hyperion.Editor.ViewModels
             {
                 var panel = new AddNewLayerPanelViewModel(result =>
                 {
-                    if (string.IsNullOrEmpty(result))
+                    if (string.IsNullOrWhiteSpace(result))
                     {
                         return;
                     }
 
-                    _ = CreateAndAssignLayerAsync(result);
+                    _ = CreateAndAssignLayerAsync(result.Trim());
                 });
 
                 PanelService.Instance.OpenPanel(panel);
@@ -124,7 +124,7 @@ namespace Hyperion.Editor.ViewModels
                 }
             });
 
-            Dispatcher.UIThread.Post(() =>
+            await Dispatcher.UIThread.InvokeAsync(() =>
             {
                 HashSet<string> currentValues = currentLayerNames.ToHashSet();
 
@@ -185,7 +185,9 @@ namespace Hyperion.Editor.ViewModels
 
         private async Task CreateAndAssignLayerAsync(string layerName)
         {
-            if (_entity == null || !_entity.IsValid)
+            layerName = layerName?.Trim() ?? string.Empty;
+
+            if (string.IsNullOrEmpty(layerName) || _entity == null || !_entity.IsValid)
             {
                 return;
             }
@@ -214,11 +216,23 @@ namespace Hyperion.Editor.ViewModels
 
                 project?.ActionStack?.PushAction(new EditorAction(
                     $"New Layer: {layerName}",
-                    execute: (_, _) => capturedEntity.AddToLayerByName(name),
+                    execute: (_, _) =>
+                    {
+                        // Redo must also re-create the layer, not just re-assign, so the
+                        // entity ends up back on the layer even if it was removed meanwhile.
+                        capturedEntity.World?.GetOrCreateLayer(name);
+                        capturedEntity.AddToLayerByName(name);
+                    },
                     revert: (_, _) => capturedEntity.RemoveFromLayerByName(name)));
             });
 
             await RefreshAsync();
+
+            // The new layer also has to show up in the global layer list, not just here.
+            if (MainWindowViewModel.Instance != null)
+            {
+                await MainWindowViewModel.Instance.RefreshLayerTogglesAsync();
+            }
         }
 
         private async Task RemoveLayerAsync(EntityLayerItemViewModel? item)

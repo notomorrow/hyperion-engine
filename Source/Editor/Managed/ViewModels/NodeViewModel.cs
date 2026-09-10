@@ -13,6 +13,8 @@ namespace Hyperion.Editor.ViewModels
         public Node Node => _node;
         public NodeViewModel? Parent => _parent;
 
+        public UUID UUID => _node.UUID;
+
         public bool IsRootNode => _parent == null;
 
         public bool CanMoveToGrandparent => _parent?.Parent != null
@@ -148,16 +150,20 @@ namespace Hyperion.Editor.ViewModels
         private DelegateHandler? _onChildRemoved;
 
         private readonly Action? _onChildrenChanged;
+        private readonly NodeViewModelIndex? _index;
 
-        public NodeViewModel(Node node, NodeViewModel? parent = null, Action? onChildrenChanged = null)
+        public NodeViewModel(Node node, NodeViewModel? parent = null, Action? onChildrenChanged = null, NodeViewModelIndex? index = null)
         {
             _node = node;
             _parent = parent;
             _onChildrenChanged = onChildrenChanged;
+            _index = index;
             _name = node.Name.ToString();
             
             // Root nodes are expanded by default
             _isExpanded = parent == null;
+
+            _index?.Add(this);
 
             // Initialize existing children
             for (uint i = 0; i < node.NumChildren(); i++)
@@ -166,7 +172,7 @@ namespace Hyperion.Editor.ViewModels
 
                 if (child != null)
                 {
-                    NodeViewModel childViewModel = new NodeViewModel(child, this, onChildrenChanged);
+                    NodeViewModel childViewModel = new NodeViewModel(child, this, onChildrenChanged, index);
 
                     _allChildren.Add(childViewModel);
                     Children.Add(childViewModel);
@@ -189,7 +195,7 @@ namespace Hyperion.Editor.ViewModels
 
                 Dispatcher.UIThread.Post(() =>
                 {
-                    NodeViewModel childViewModel = new NodeViewModel(child, target, target!._onChildrenChanged);
+                    NodeViewModel childViewModel = new NodeViewModel(child, target, target!._onChildrenChanged, target!._index);
 
                     target!._allChildren.Add(childViewModel);
                     target!.Children.Add(childViewModel);
@@ -216,6 +222,7 @@ namespace Hyperion.Editor.ViewModels
                     {
                         if (target!._allChildren[i].Node == child)
                         {
+                            target!._index?.Remove(target!._allChildren[i]);
                             target!._allChildren.RemoveAt(i);
                             break;
                         }
@@ -285,6 +292,43 @@ namespace Hyperion.Editor.ViewModels
 
                 parent.Children.Insert(index, this);
             }
+        }
+    }
+
+    /// <summary>
+    /// Maps engine-side node identities onto the hierarchy's view models so a node coming back from
+    /// the engine (a selection change, a focus change) can be resolved without walking the tree.
+    /// </summary>
+    public sealed class NodeViewModelIndex
+    {
+        private readonly Dictionary<UUID, NodeViewModel> _nodeViewModelsByUUID = new();
+
+        public void Add(NodeViewModel nodeViewModel)
+        {
+            _nodeViewModelsByUUID[nodeViewModel.UUID] = nodeViewModel;
+        }
+
+        public void Remove(NodeViewModel nodeViewModel)
+        {
+            if (_nodeViewModelsByUUID.TryGetValue(nodeViewModel.UUID, out NodeViewModel? mapped) && ReferenceEquals(mapped, nodeViewModel))
+            {
+                _nodeViewModelsByUUID.Remove(nodeViewModel.UUID);
+            }
+
+            foreach (NodeViewModel child in nodeViewModel.AllChildren)
+            {
+                Remove(child);
+            }
+        }
+
+        public NodeViewModel? Find(UUID uuid)
+        {
+            return _nodeViewModelsByUUID.TryGetValue(uuid, out NodeViewModel? nodeViewModel) ? nodeViewModel : null;
+        }
+
+        public void Clear()
+        {
+            _nodeViewModelsByUUID.Clear();
         }
     }
 }
