@@ -92,13 +92,13 @@ namespace Hyperion.Editor.ViewModels
             }
 
             _onCompleted(name, SelectedLanguage.LanguageArg);
-            PanelService.Instance.ClosePanel();
+            PanelService.Instance.RemovePanel(this);
         }
 
         private void OnCancel()
         {
             _onCompleted(string.Empty, string.Empty);
-            PanelService.Instance.ClosePanel();
+            PanelService.Instance.RemovePanel(this);
         }
     }
 }

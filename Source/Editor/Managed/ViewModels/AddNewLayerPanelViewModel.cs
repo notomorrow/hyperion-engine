@@ -32,13 +32,13 @@ namespace Hyperion.Editor.ViewModels
         private void OnConfirm()
         {
             _onCompleted(LayerName);
-            PanelService.Instance.ClosePanel();
+            PanelService.Instance.RemovePanel(this);
         }
 
         private void OnCancel()
         {
             _onCompleted(null);
-            PanelService.Instance.ClosePanel();
+            PanelService.Instance.RemovePanel(this);
         }
     }
 }

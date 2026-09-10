@@ -639,7 +639,7 @@
                         Spacing="8"
                         VerticalAlignment="Center">
                         <StackPanel Orientation="Vertical" Spacing="2" VerticalAlignment="Center">
-                            <TextBlock Classes="ribbon-label" Text="PLAY" />
+                            <TextBlock Classes="ribbon-label" Text="{Binding GameStateText}" />
                             <StackPanel Orientation="Horizontal" Spacing="6">
                         <Button
                             Command="{Binding SetGameModePlaying}"
@@ -1614,6 +1614,15 @@
                                 </ProportionalDock>
 
                             </ProportionalDock>
+
+                            <ProportionalDockSplitter x:Name="DynamicPanelsSplitter" Id="DynamicPanelsSplitter" />
+
+                            <!--  Right column: dynamic panels (object editors, etc.) - docked and tabbed, empty until opened  -->
+                            <ToolDock
+                                x:Name="DynamicPanelsPane"
+                                Id="DynamicPanelsPane"
+                                Alignment="Right"
+                                Proportion="0.22" />
 
                         </ProportionalDock>
 

@@ -14,6 +14,8 @@ namespace Hyperion.Editor.Services
 
         public EditorPanelViewModel? ActivePanel => _stack.Count > 0 ? _stack[^1] : null;
 
+        public IReadOnlyList<EditorPanelViewModel> OpenPanels => _stack;
+
         public bool CanGoBack => _stack.Count > 1;
 
         public event EventHandler? ActivePanelChanged;

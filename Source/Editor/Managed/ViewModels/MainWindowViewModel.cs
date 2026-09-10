@@ -205,6 +205,12 @@ namespace Hyperion.Editor.ViewModels
         public ICommand FitPhysicsShapeToMesh { get; private set; }
         public bool CanFitPhysicsShapeToMesh => _canFitPhysicsShapeToMesh;
 
+        // This is the text that's displayed in the main toolbar, dynamic dependent on game state
+        public string GameStateText
+        {
+            get => IsSimulating ? "PAUSE/STOP" : "PLAY";
+        }
+
         /// <summary>
         /// Cached mirror of the engine's mesh edit state.
         /// </summary>
@@ -311,6 +317,7 @@ namespace Hyperion.Editor.ViewModels
             OnPropertyChanged(nameof(CanSetGameModePaused));
             OnPropertyChanged(nameof(CanSetGameModeStopped));
             OnPropertyChanged(nameof(IsSimulating));
+            OnPropertyChanged(nameof(GameStateText));
         }
 
         private DelegateHandler? _gameInstanceLaunchedHandler;

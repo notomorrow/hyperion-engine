@@ -101,7 +101,7 @@ namespace Hyperion.Editor.ViewModels
             });
 
             _onCompleted(true);
-            PanelService.Instance.ClosePanel();
+            PanelService.Instance.RemovePanel(this);
         }
 
         private void OnCancel()
@@ -123,7 +123,7 @@ namespace Hyperion.Editor.ViewModels
             });
 
             _onCompleted(false);
-            PanelService.Instance.ClosePanel();
+            PanelService.Instance.RemovePanel(this);
         }
     }
 }

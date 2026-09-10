@@ -9,6 +9,7 @@ using Avalonia.Threading;
 using Avalonia.VisualTree;
 using Dock.Model;
 using Dock.Model.Core;
+using Dock.Model.Core.Events;
 using Dock.Model.Controls;
 using System;
 using System.Collections.Generic;
@@ -61,8 +62,8 @@ namespace Hyperion.Editor
 
         private DropDownButton? _sceneDropDown;
         private EditorViewportControl? _editorViewport;
-        private Tool? _panelTool;
-        private IDockWindow? _panelWindow;
+        private IDock? _dynamicPanelsDock;
+        private readonly Dictionary<EditorPanelViewModel, Tool> _dynamicPanelTools = new();
         private int _frameCounter;
         private bool _viewportNativeHidden;
         private bool _isClosing;
@@ -79,10 +80,9 @@ namespace Hyperion.Editor
 
             PanelService.Instance.ActivePanelChanged += OnPanelServiceActivePanelChanged;
 
-            // Keep the floating panel window lifecycle in sync with dock operations.
-            DockControl.Factory.DockableDocked += OnFactoryDockableChanged;
-            DockControl.Factory.DockableMoved += OnFactoryDockableChanged;
-            DockControl.Factory.DockableClosed += OnFactoryDockableChanged;
+            // Detect a dynamic panel's tab being closed via its own [x] button so the
+            // matching view model's OnClosed callback still runs.
+            DockControl.Factory.DockableClosed += OnFactoryDockableClosed;
 
             AddHandler(InputElement.GotFocusEvent, OnInspectorTextBoxGotFocus, RoutingStrategies.Bubble);
             AddHandler(InputElement.LostFocusEvent, OnInspectorTextBoxLostFocus, RoutingStrategies.Bubble);
@@ -215,289 +215,147 @@ namespace Hyperion.Editor
         }
 
         /// <summary>
-        /// Dynamic editor panels (edit asset, new physics shape, new scene, ...) open as a
-        /// floating tool window. Opening another panel reuses and updates the same window.
+        /// Dynamic editor panels (edit asset, new physics shape, new scene, ...) each show as
+        /// their own tab in the dynamic panels dock on the right - never as a separate floating
+        /// window. Multiple can be open at once; closing one only removes its own tab.
         /// </summary>
-        private void OnFactoryDockableChanged(object? sender, EventArgs e)
-        {
-            CleanupOrphanedPanelWindow();
-        }
-
-        /// <summary>
-        /// Closes the visible floating window and deregisters it from the dock layout.
-        /// The DockWindow model is not an Avalonia control - the visible window is its
-        /// Host - so closing must go through the model's Exit().
-        /// </summary>
-        private void ClosePanelWindow()
-        {
-            if (_panelWindow == null)
-            {
-                return;
-            }
-
-
-            IDockWindow window = _panelWindow;
-            _panelWindow = null;
-            _panelTool = null;
-
-            if (window.Host is Window hostWindow)
-            {
-                hostWindow.Closed -= OnPanelWindowClosed;
-            }
-
-            window.Exit();
-
-            if (DockControl.Factory is FactoryBase factory)
-            {
-                factory.RemoveWindow(window);
-            }
-        }
-
-        /// <summary>
-        /// If the panel tool left the floating window (docked into the main layout, or
-        /// closed via the chrome button), the now-empty floating window is closed.
-        /// </summary>
-        private void CleanupOrphanedPanelWindow()
-        {
-            if (_panelTool == null || _panelWindow == null || _isClosing || _suppressPanelSync)
-            {
-                return;
-            }
-
-            if (_panelWindow.Layout is IRootDock root && ContainsVisibleDockable(root, _panelTool))
-            {
-                return;
-            }
-
-            // The tool no longer lives visibly in the floating window. If it was docked
-            // somewhere else it stays alive; if it was hidden/closed, release the panel.
-            bool stillVisible = DockControl.Layout != null && ContainsVisibleDockable(DockControl.Layout, _panelTool);
-
-
-            ClosePanelWindow();
-
-            if (!stillVisible)
-            {
-                _suppressPanelSync = true;
-                try
-                {
-                    PanelService.Instance.ClosePanel();
-                }
-                finally
-                {
-                    _suppressPanelSync = false;
-                }
-            }
-        }
-
         private void OnPanelServiceActivePanelChanged(object? sender, EventArgs e)
         {
-            SyncFloatingPanelWindow();
+            SyncDynamicPanels();
         }
 
-        private IDockWindow? FindPanelWindow()
-        {
-            if (_panelTool == null || DockControl.Layout is not IRootDock mainRoot || mainRoot.Windows == null)
-            {
-                return null;
-            }
-
-            foreach (IDockWindow? window in mainRoot.Windows)
-            {
-                if (window?.Layout is IRootDock root && ContainsVisibleDockable(root, _panelTool))
-                {
-                    return window;
-                }
-            }
-
-            return null;
-        }
-
-        private static bool ContainsVisibleDockable(IDockable container, IDockable target)
-        {
-            if (ReferenceEquals(container, target))
-            {
-                return true;
-            }
-
-            if (container is IDock dock && dock.VisibleDockables != null)
-            {
-                foreach (IDockable child in dock.VisibleDockables)
-                {
-                    if (ContainsVisibleDockable(child, target))
-                    {
-                        return true;
-                    }
-                }
-            }
-
-            return false;
-        }
-
-        private void SyncFloatingPanelWindow()
+        /// <summary>
+        /// Reconciles the dynamic panels dock's tabs with <see cref="PanelService"/>'s open
+        /// panels: adds a tab for anything newly opened, removes tabs for anything closed, and
+        /// focuses the most recently opened panel's tab.
+        /// </summary>
+        private void SyncDynamicPanels()
         {
             if (_suppressPanelSync || _isClosing)
             {
                 return;
             }
 
-            EditorPanelViewModel? panel = PanelService.Instance.ActivePanel;
-
-            if (panel == null)
+            if (DockControl.Factory is not FactoryBase factory)
             {
-                // Nothing active - make sure the floating panel window is gone.
-                ClosePanelWindow();
                 return;
             }
 
-            ShowFloatingPanel(panel);
-        }
-
-        private void ShowFloatingPanel(EditorPanelViewModel panel)
-        {
-            try
+            if (_dynamicPanelsDock == null && DockControl.Layout is { } layout)
             {
-                if (DockControl.Factory is not FactoryBase factory || DockControl.Layout is not IRootDock mainRoot)
+                _dynamicPanelsDock = FindDockableById(layout, "DynamicPanelsPane") as IDock;
+            }
+
+            if (_dynamicPanelsDock is not { } dock)
+            {
+                Logger.Log(LogLevel.Warning, "SyncDynamicPanels: could not locate the DynamicPanelsPane dock.");
+                return;
+            }
+
+            IReadOnlyList<EditorPanelViewModel> openPanels = PanelService.Instance.OpenPanels;
+            var openSet = new HashSet<EditorPanelViewModel>(openPanels);
+
+            foreach (EditorPanelViewModel closed in _dynamicPanelTools.Keys.Where(p => !openSet.Contains(p)).ToList())
+            {
+                Tool tool = _dynamicPanelTools[closed];
+                _dynamicPanelTools.Remove(closed);
+
+                factory.RemoveDockable(tool, false);
+            }
+
+            Tool? activeTool = null;
+
+            foreach (EditorPanelViewModel panel in openPanels)
+            {
+                if (!_dynamicPanelTools.TryGetValue(panel, out Tool? tool))
                 {
-                    Logger.Log(LogLevel.Warning,
-                        $"PanelWindow: cannot open, Factory={DockControl.Factory?.GetType().Name ?? "null"}, Layout={DockControl.Layout?.GetType().Name ?? "null"}.");
-                    return;
-                }
-
-                // A floating window for panels is already up - update it in place and focus it.
-                if (_panelTool != null && FindPanelWindow() is { } existing)
-                {
-                    // Tool.Content must be a control (it is [TemplateContent]); the wrapper
-                    // resolves the panel's view via the app data templates.
-                    _panelTool.Content = CreatePanelContent(panel);
-                    _panelTool.Title = panel.Title;
-                    existing.SetActive();
-                    existing.Present(false);
-                    return;
-                }
-
-                if (_panelTool != null)
-                {
-                    // The window still exists but the panel tool inside it was closed/hidden
-                    // (HideToolsOnClose) - tear the stale window down and start fresh.
-                    ClosePanelWindow();
-                }
-
-                _panelTool = new Tool
-                {
-                    Id = "EditorPanel",
-                    Title = panel.Title,
-                    Content = CreatePanelContent(panel),
-                    CanFloat = true
-                };
-
-                // Host the tool in its own floating window (non-modal).
-                IDockWindow? window = factory.CreateWindowFrom(_panelTool);
-                if (window == null)
-                {
-                    Logger.Log(LogLevel.Error, "Failed to create the editor panel window: CreateWindowFrom returned null.");
-                    _panelTool = null;
-                    return;
-                }
-
-                window.Title = panel.Title;
-
-                if (window.Layout is not IRootDock floatingRoot)
-                {
-                    Logger.Log(LogLevel.Error, "PanelWindow: created window has no layout root.");
-                    _panelTool = null;
-                    return;
-                }
-
-                floatingRoot.Factory = factory;
-
-                // Bind the window model to its host: sets window.Host / host.Window and
-                // initializes the layout tree. Without this, Present skips sizing and
-                // owner resolution and the window never becomes visible.
-                factory.InitDockWindow(window, null, window as IHostWindow);
-                floatingRoot.Window = window;
-
-                mainRoot.Windows ??= factory.CreateList<IDockWindow>();
-                mainRoot.Windows.Add(window);
-                _panelWindow = window;
-
-                // Present as a tall panel anchored to the right edge of the main window.
-                double scaling = RenderScaling;
-                const double panelWidth = 360.0;
-                double panelHeight = Math.Max(240.0, ClientSize.Height - 16.0);
-                window.Width = panelWidth;
-                window.Height = panelHeight;
-                window.X = Position.X + (int)((ClientSize.Width - panelWidth) * scaling) - (int)(8 * scaling);
-                window.Y = Position.Y + (int)(8 * scaling);
-
-                Logger.Log(LogLevel.Info,
-                    $"PanelWindow: presenting. MainWindow Position=({Position.X},{Position.Y}) ClientSize=({ClientSize.Width},{ClientSize.Height}) RenderScaling={scaling}. " +
-                    $"Target window X={window.X} Y={window.Y} Width={window.Width} Height={window.Height}. HostBeforePresent={(window.Host == null ? "null" : window.Host.GetType().Name)}.");
-
-                window.Present(false);
-
-                // The host window is resolved during Present; that Avalonia Window is what
-                // actually closes, so watch it for user-initiated closes.
-                if (window.Host is Window hostWindow)
-                {
-                    hostWindow.Closed += OnPanelWindowClosed;
-
-                    // fix for macOS not showing window
-                    if (hostWindow.Bounds.Width <= 0 || hostWindow.Bounds.Height <= 0)
+                    tool = new Tool
                     {
-                        hostWindow.Width = panelWidth;
-                        hostWindow.Height = panelHeight;
-                        hostWindow.Position = new PixelPoint((int)window.X, (int)window.Y);
-                    }
+                        Id = $"DynamicPanel_{panel.GetHashCode()}",
+                        Title = panel.Title,
+                        Content = CreatePanelContent(panel),
+                        CanFloat = true
+                    };
 
-                    hostWindow.Activate();
-
-                    Logger.Log(LogLevel.Info,
-                        $"PanelWindow: presented. IsVisible={hostWindow.IsVisible} Position=({hostWindow.Position.X},{hostWindow.Position.Y}) " +
-                        $"Bounds={hostWindow.Bounds} Width={hostWindow.Width} Height={hostWindow.Height} WindowState={hostWindow.WindowState} " +
-                        $"ShowInTaskbar={hostWindow.ShowInTaskbar} Opacity={hostWindow.Opacity} Screens={hostWindow.Screens?.All.Count ?? -1}.");
+                    dock.VisibleDockables ??= factory.CreateList<IDockable>();
+                    factory.AddDockable(dock, tool);
+                    _dynamicPanelTools[panel] = tool;
                 }
                 else
                 {
-                    Logger.Log(LogLevel.Error,
-                        $"PanelWindow: after Present(), window.Host is {(window.Host == null ? "null" : window.Host.GetType().Name)} (not an Avalonia Window) - nothing was shown.");
+                    tool.Title = panel.Title;
                 }
 
+                activeTool = tool;
             }
-            catch (Exception ex)
+
+            if (activeTool != null)
             {
-                _panelTool = null;
-                Logger.Log(LogLevel.Error, $"Failed to show editor panel window: {ex}");
+                factory.SetActiveDockable(activeTool);
+                factory.SetFocusedDockable(dock, activeTool);
             }
         }
 
-        private void OnPanelWindowClosed(object? sender, EventArgs e)
+        /// <summary>
+        /// The user closed a dynamic panel's tab via its own chrome (rather than through
+        /// whatever opened it) - release the matching view model so its OnClosed callback
+        /// still runs, without re-triggering this sync recursively.
+        /// </summary>
+        private void OnFactoryDockableClosed(object? sender, DockableClosedEventArgs e)
         {
-
-            if (sender is Window window)
-            {
-                window.Closed -= OnPanelWindowClosed;
-            }
-
-            _panelWindow = null;
-            _panelTool = null;
-
-            if (_isClosing)
+            if (_suppressPanelSync || _isClosing)
             {
                 return;
             }
 
-            // The user closed the floating window - release the active panel so its
-            // OnClosed callbacks run, without re-triggering this sync recursively.
+            EditorPanelViewModel? closed = null;
+
+            foreach (var kvp in _dynamicPanelTools)
+            {
+                if (ReferenceEquals(kvp.Value, e.Dockable))
+                {
+                    closed = kvp.Key;
+                    break;
+                }
+            }
+
+            if (closed == null)
+            {
+                return;
+            }
+
+            _dynamicPanelTools.Remove(closed);
+
             _suppressPanelSync = true;
             try
             {
-                PanelService.Instance.ClosePanel();
+                PanelService.Instance.RemovePanel(closed);
             }
             finally
             {
                 _suppressPanelSync = false;
             }
+        }
+
+        private static IDockable? FindDockableById(IDockable dockable, string id)
+        {
+            if (dockable.Id == id)
+            {
+                return dockable;
+            }
+
+            if (dockable is IDock { VisibleDockables: { } visible })
+            {
+                foreach (IDockable child in visible)
+                {
+                    if (FindDockableById(child, id) is { } found)
+                    {
+                        return found;
+                    }
+                }
+            }
+
+            return null;
         }
 
         private IList<IDockable> CreateDockList(params IDockable[] items)
@@ -540,7 +398,14 @@ namespace Hyperion.Editor
             var bottomDock = new ProportionalDock { Id = "Bottom", Orientation = Orientation.Horizontal, Proportion = 0.3, VisibleDockables = CreateDockList(assetsPane, new ProportionalDockSplitter(), consolePane) };
             var centerDock = new ProportionalDock { Id = "Center", Orientation = Orientation.Vertical, VisibleDockables = CreateDockList(documentsPane, new ProportionalDockSplitter(), bottomDock) };
 
-            var mainLayout = new ProportionalDock { Id = "MainLayout", Orientation = Orientation.Horizontal, VisibleDockables = CreateDockList(leftDock, new ProportionalDockSplitter(), centerDock) };
+            var dynamicPanelsPane = new ToolDock { Id = "DynamicPanelsPane", Alignment = Alignment.Right, Proportion = 0.22, VisibleDockables = CreateDockList() };
+
+            var mainLayout = new ProportionalDock
+            {
+                Id = "MainLayout",
+                Orientation = Orientation.Horizontal,
+                VisibleDockables = CreateDockList(leftDock, new ProportionalDockSplitter(), centerDock, new ProportionalDockSplitter(), dynamicPanelsPane)
+            };
 
             return new RootDock { Id = "Root", IsCollapsable = false, DefaultDockable = mainLayout, VisibleDockables = CreateDockList(mainLayout) };
         }
@@ -561,6 +426,12 @@ namespace Hyperion.Editor
             {
                 oldLayout.Close.Execute(null);
             }
+
+            // Any open dynamic panel tabs belong to the layout tree being torn down here -
+            // close them so their view models don't linger with stale Tool references.
+            _dynamicPanelsDock = null;
+            _dynamicPanelTools.Clear();
+            PanelService.Instance.ClosePanel();
 
             IDock root = BuildDefaultLayout();
             DockControl.Layout = root;
